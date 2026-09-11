@@ -54,7 +54,7 @@ export class UIManager {
             <p>Undo/Redo: <span class="hint-key">Ctrl+Z</span> / <span class="hint-key">Ctrl+Y</span> &nbsp; Menu: <span class="hint-key">Esc</span></p>
           </div>
           <div class="touch-only" hidden>
-            <p>Left stick: push up/down to walk, left/right to turn &middot; drag anywhere to look around</p>
+            <p>Left stick to move &middot; drag anywhere to look around</p>
             <p>⛏ breaks &middot; 🧱 places &middot; ✈ toggles fly &middot; ⤴⤵ rise and descend while flying</p>
           </div>
           <button class="primary" id="btn-play">Play</button>

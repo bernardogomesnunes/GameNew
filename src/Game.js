@@ -146,9 +146,8 @@ export class Game {
       },
       onPaste: () => this.pasteClipboard(),
       onCycleSymmetry: () => this.symmetryTool.cycle(),
-      // Tank controls: the stick walks on its Y axis and turns the camera on X.
       onMove: (x, z) => {
-        this.player.turnInput = x;
+        this.player.externalMove.x = x;
         this.player.externalMove.z = z;
       },
       onLook: (dx, dy) => this.player.look(dx, dy),
