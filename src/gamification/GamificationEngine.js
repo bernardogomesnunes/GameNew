@@ -60,6 +60,10 @@ export class GamificationEngine {
       challengesCompletedTotal: 0,
       dailyChallenge: { date: null, ids: [], completed: [] },
       lastBuildScore: null,
+      templatesSaved: 0,
+      templatesPlaced: 0,
+      largestTemplateBlocks: 0,
+      templateNames: new Set(),
     };
     this.session = freshSession();
     this.refreshDailyChallenge();
@@ -230,6 +234,26 @@ export class GamificationEngine {
     this.checkChallenges();
   }
 
+  // ---- templates ----
+
+  /**
+   * Designing a reusable template is a creative act in its own right, so it
+   * pays like one. Templates also give achievements something concrete to
+   * reference: a saved design has a known size and block manifest.
+   */
+  onTemplateSaved(record) {
+    this.state.templatesSaved += 1;
+    this.state.largestTemplateBlocks = Math.max(this.state.largestTemplateBlocks, record.blockCount);
+    this.state.templateNames.add(record.name.toLowerCase());
+    this.addXp(40 + Math.min(120, Math.round(record.blockCount / 4)), `Template: ${record.name}`);
+    this.checkAchievements({ type: 'template:save', record });
+  }
+
+  onTemplatePlaced(record) {
+    this.state.templatesPlaced += 1;
+    this.checkAchievements({ type: 'template:place', record });
+  }
+
   // ---- spatial heuristics ----
 
   detectBridge(world, x, y, z) {
@@ -365,6 +389,10 @@ export class GamificationEngine {
       challengesCompletedTotal: this.state.challengesCompletedTotal,
       dailyChallenge: this.state.dailyChallenge,
       lastBuildScore: this.state.lastBuildScore,
+      templatesSaved: this.state.templatesSaved,
+      templatesPlaced: this.state.templatesPlaced,
+      largestTemplateBlocks: this.state.largestTemplateBlocks,
+      templateNames: [...this.state.templateNames],
     };
   }
 
@@ -386,6 +414,10 @@ export class GamificationEngine {
     this.state.challengesCompletedTotal = json.challengesCompletedTotal ?? 0;
     this.state.dailyChallenge = json.dailyChallenge ?? { date: null, ids: [], completed: [] };
     this.state.lastBuildScore = json.lastBuildScore ?? null;
+    this.state.templatesSaved = json.templatesSaved ?? 0;
+    this.state.templatesPlaced = json.templatesPlaced ?? 0;
+    this.state.largestTemplateBlocks = json.largestTemplateBlocks ?? 0;
+    this.state.templateNames = new Set(json.templateNames ?? []);
     this.refreshDailyChallenge();
   }
 }

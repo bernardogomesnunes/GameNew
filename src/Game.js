@@ -5,7 +5,8 @@ import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { UndoRedo } from './tools/UndoRedo.js';
-import { SelectionTool } from './tools/SelectionTool.js';
+import { SelectorTool, buildTemplatePlacement, rotateTemplate } from './tools/SelectorTool.js';
+import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SaveManager, AUTOSAVE_NAME } from './storage/SaveManager.js';
@@ -95,7 +96,10 @@ export class Game {
     }
 
     this.symmetryTool = new SymmetryTool(this.world);
-    this.selectionTool = new SelectionTool();
+    this.selectorTool = new SelectorTool();
+    this.templates = new TemplateLibrary(this.bus);
+    this.pendingTemplate = null; // the template queued for stamping
+    this.templateRotation = 0;
 
     this.ui = new UIManager(this.uiRoot, {
       bus: this.bus,
@@ -142,12 +146,27 @@ export class Game {
       onToggleFly: () => { this.player.toggleFly(); this.ui.setFlyIndicator(this.player.flying); return this.player.flying; },
       onUndo: () => this.doUndo(),
       onRedo: () => this.doRedo(),
-      onToggleSelection: () => this.selectionTool.toggle(),
-      onCopy: () => {
-        const n = this.selectionTool.copy(this.world);
-        this.ui.toast({ kind: 'xp', title: n ? 'Copied' : 'Nothing selected', body: n ? `${n} blocks copied` : 'Select two points first' });
+      onToggleSelection: () => {
+        const active = this.selectorTool.toggle();
+        if (!active) this.pendingTemplate = null;
+        return active;
       },
-      onPaste: () => this.pasteClipboard(),
+      onCycleSelectorSize: () => this.selectorTool.cycleSize(),
+      onSaveTemplate: (name) => this.saveTemplate(name),
+      onPickTemplate: (id) => {
+        this.pendingTemplate = this.templates.get(id);
+        this.templateRotation = 0;
+        if (this.pendingTemplate) {
+          this.selectorTool.active = true;
+          this.ui.toast({ kind: 'challenge', title: `Ready: ${this.pendingTemplate.name}`, body: 'Aim and place it' });
+        }
+        return !!this.pendingTemplate;
+      },
+      onDeleteTemplate: (id) => this.templates.delete(id),
+      onRotateTemplate: () => { this.templateRotation = (this.templateRotation + 1) % 4; return this.templateRotation; },
+      onPlaceTemplate: () => this.stampTemplate(),
+      getTemplates: () => this.templates.list(),
+      getSelectorSize: () => this.selectorTool.size,
       onCycleSymmetry: () => this.symmetryTool.cycle(),
       onMove: (x, z) => {
         this.player.externalMove.x = x;
@@ -321,7 +340,11 @@ export class Game {
       }
       if (e.repeat) return;
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
-      if (e.code === 'KeyB') { const active = this.selectionTool.toggle(); this.ui.toast({ kind: 'xp', title: active ? 'Selection tool on' : 'Selection tool off' }); }
+      if (e.code === 'KeyB') { this.ui.toggleSelector(); }
+      if (e.code === 'KeyR' && this.pendingTemplate) {
+        this.templateRotation = (this.templateRotation + 1) % 4;
+        this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });
+      }
       if (e.code === 'KeyM') {
         const mode = this.symmetryTool.cycle();
         this.ui.toast({ kind: 'xp', title: `Symmetry: ${mode.toUpperCase()}` });
@@ -332,7 +355,7 @@ export class Game {
   }
 
   closeAllPanels() {
-    ['panel-stats', 'panel-menu', 'panel-score', 'panel-help'].forEach((id) => this.ui.closePanel(id));
+    ['panel-stats', 'panel-menu', 'panel-score', 'panel-help', 'panel-templates'].forEach((id) => this.ui.closePanel(id));
   }
 
   requestPointerLock() {
@@ -352,32 +375,57 @@ export class Game {
   }
 
   primaryAction() {
-    if (this.selectionTool.active) this.pickSelection();
-    else this.breakBlock();
+    if (this.selectorTool.active) {
+      if (this.pendingTemplate) this.stampTemplate();
+      else this.ui.openTemplateSavePrompt();
+      return;
+    }
+    this.breakBlock();
   }
 
   secondaryAction() {
-    if (this.selectionTool.active) this.pickSelection();
-    else this.placeBlock();
-  }
-
-  pickSelection() {
-    const hit = this.raycast();
-    if (!hit) return;
-    this.selectionTool.pick({ x: hit.x, y: hit.y, z: hit.z });
-    if (this.selectionTool.hasSelection) this.ui.toast({ kind: 'xp', title: 'Selection set', body: 'Copy or paste from the toolbar' });
-  }
-
-  pasteClipboard() {
-    if (!this.selectionTool.clipboard) {
-      this.ui.toast({ kind: 'xp', title: 'Clipboard empty', body: 'Copy a selection first' });
+    if (this.selectorTool.active) {
+      this.selectorTool.cycleSize();
+      this.ui.setSelectorSize(this.selectorTool.size);
       return;
     }
-    const hit = this.raycast();
-    const anchor = hit ? { x: hit.x, y: hit.y, z: hit.z } : { x: Math.floor(this.player.position.x), y: Math.floor(this.player.position.y), z: Math.floor(this.player.position.z) };
-    const changes = this.selectionTool.buildPaste(this.world, anchor);
-    this.applyChanges(changes, { viaSymmetry: false });
-    this.ui.toast({ kind: 'xp', title: 'Pasted', body: `${changes.length} blocks` });
+    this.placeBlock();
+  }
+
+  /** Captures whatever sits inside the selector box and stores it by name. */
+  saveTemplate(name) {
+    const captured = this.selectorTool.capture(this.world);
+    if (!captured) {
+      this.ui.toast({ kind: 'xp', title: 'Nothing to save', body: 'The selector is empty — aim it at your build' });
+      return null;
+    }
+    const record = this.templates.save(name, captured);
+    if (record) {
+      this.gamification.onTemplateSaved(record);
+      this.ui.toast({
+        kind: 'challenge',
+        title: `Saved "${record.name}"`,
+        body: `${record.blockCount} blocks · ${record.size}x${record.size}x${record.size}`,
+      });
+    }
+    return record;
+  }
+
+  /** Stamps the queued template at the selector, charged and undoable as one action. */
+  stampTemplate() {
+    if (!this.pendingTemplate) return false;
+    const bounds = this.selectorTool.bounds();
+    if (!bounds) return false;
+    const oriented = rotateTemplate(this.pendingTemplate, this.templateRotation);
+    const changes = buildTemplatePlacement(this.world, oriented, { x: bounds.minX, y: bounds.minY, z: bounds.minZ });
+    if (!changes.length) {
+      this.ui.toast({ kind: 'xp', title: 'Nothing to place', body: 'It already matches what is there' });
+      return false;
+    }
+    if (!this.applyChanges(changes, { viaSymmetry: false })) return false;
+    this.gamification.onTemplatePlaced(this.pendingTemplate);
+    this.ui.toast({ kind: 'challenge', title: `Placed ${this.pendingTemplate.name}`, body: `${changes.length} blocks` });
+    return true;
   }
 
   // ---- raycasting / block edits ----
@@ -386,6 +434,17 @@ export class Game {
     const origin = this.player.eyePosition();
     const dir = this.player.lookDirection();
     return castVoxelRay(this.world, origin, dir, REACH);
+  }
+
+  /** Block coordinate a given distance along the view direction. */
+  pointInFront(distance) {
+    const origin = this.player.eyePosition();
+    const dir = this.player.lookDirection();
+    return {
+      x: Math.floor(origin.x + dir.x * distance),
+      y: Math.max(0, Math.floor(origin.y + dir.y * distance)),
+      z: Math.floor(origin.z + dir.z * distance),
+    };
   }
 
   /**
@@ -574,24 +633,27 @@ export class Game {
   updateHover() {
     const hit = this.raycast();
     this.hoverHit = hit;
-    if (hit && !this.selectionTool.active) {
+    if (hit && !this.selectorTool.active) {
       this.hoverBox.visible = true;
       this.hoverBox.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
     } else {
       this.hoverBox.visible = false;
     }
 
-    if (this.selectionTool.active && this.selectionTool.pointA) {
-      const b = this.selectionTool.pointB || hit || this.selectionTool.pointA;
-      const bounds = {
-        minX: Math.min(this.selectionTool.pointA.x, b.x), maxX: Math.max(this.selectionTool.pointA.x, b.x),
-        minY: Math.min(this.selectionTool.pointA.y, b.y), maxY: Math.max(this.selectionTool.pointA.y, b.y),
-        minZ: Math.min(this.selectionTool.pointA.z, b.z), maxZ: Math.max(this.selectionTool.pointA.z, b.z),
-      };
-      const sx = bounds.maxX - bounds.minX + 1, sy = bounds.maxY - bounds.minY + 1, sz = bounds.maxZ - bounds.minZ + 1;
-      this.selectionBox.scale.set(sx, sy, sz);
-      this.selectionBox.position.set(bounds.minX + sx / 2, bounds.minY + sy / 2, bounds.minZ + sz / 2);
-      this.selectionBox.visible = true;
+    if (this.selectorTool.active) {
+      // Aiming past everything (common while flying over a build) would otherwise
+      // leave the selector with no position at all, so fall back to a spot just
+      // ahead of the player.
+      this.selectorTool.aimAt(hit ? { x: hit.x, y: hit.y, z: hit.z } : this.pointInFront(6));
+      const bounds = this.selectorTool.bounds();
+      if (bounds) {
+        const s = this.selectorTool.size;
+        this.selectionBox.scale.set(s, s, s);
+        this.selectionBox.position.set(bounds.minX + s / 2, bounds.minY + s / 2, bounds.minZ + s / 2);
+        this.selectionBox.visible = true;
+      } else {
+        this.selectionBox.visible = false;
+      }
     } else {
       this.selectionBox.visible = false;
     }

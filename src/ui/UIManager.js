@@ -72,9 +72,9 @@ export class UIManager {
       <div id="top-buttons">
         <button class="icon-btn" id="btn-undo" title="Undo the last change">${icon('undo')}<span>Undo</span></button>
         <button class="icon-btn" id="btn-redo" title="Redo the change you undid">${icon('redo')}<span>Redo</span></button>
-        <button class="icon-btn" id="btn-select" title="Selection tool: click two corners to mark a box">${icon('select')}<span>Select</span></button>
-        <button class="icon-btn" id="btn-copy" title="Copy the blocks inside your selection">${icon('copy')}<span>Copy</span></button>
-        <button class="icon-btn" id="btn-paste" title="Paste the copied blocks where you are looking">${icon('paste')}<span>Paste</span></button>
+        <button class="icon-btn" id="btn-select" title="Selector: aim a grid-snapped box at your build">${icon('select')}<span>Select</span></button>
+        <button class="icon-btn" id="btn-size" title="Change the selector size">${icon('copy')}<span id="size-label">8&sup3;</span></button>
+        <button class="icon-btn" id="btn-templates" title="Your saved building templates">${icon('paste')}<span>Designs</span></button>
         <button class="icon-btn" id="btn-symmetry" title="Mirror your building across the world's centre">${icon('symmetry')}<span>Mirror</span></button>
         <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
         <button class="icon-btn" id="btn-stats" title="Progress, achievements and challenges">${icon('stats')}<span>Stats</span></button>
@@ -129,6 +129,20 @@ export class UIManager {
         </div>
       </div>
 
+
+
+      <div class="overlay" id="panel-templates" hidden>
+        <div class="panel">
+          <button class="icon-btn panel-close" data-close="panel-templates">${icon('close', 16)}</button>
+          <h2>Designs</h2>
+          <div class="sub">Aim the selector at a build, save it, then stamp it anywhere.</div>
+          <div class="field-row">
+            <input type="text" id="template-name" placeholder="Name this design" maxlength="40" />
+            <button class="secondary" id="btn-save-template">Save selection</button>
+          </div>
+          <div id="template-list"></div>
+        </div>
+      </div>
 
       <div class="overlay" id="panel-help" hidden>
         <div class="panel">
@@ -260,12 +274,7 @@ export class UIManager {
 
     this.q('#btn-undo').addEventListener('click', () => this.cb.onUndo());
     this.q('#btn-redo').addEventListener('click', () => this.cb.onRedo());
-    this.q('#btn-select').addEventListener('click', () => {
-      this.selectionActive = this.cb.onToggleSelection();
-      this.q('#btn-select').classList.toggle('active', this.selectionActive);
-    });
-    this.q('#btn-copy').addEventListener('click', () => this.cb.onCopy());
-    this.q('#btn-paste').addEventListener('click', () => this.cb.onPaste());
+    this.q('#btn-select').addEventListener('click', () => this.toggleSelector());
     this.q('#btn-symmetry').addEventListener('click', () => {
       this.symmetryMode = this.cb.onCycleSymmetry();
       this.setSymmetryLabel();
@@ -277,6 +286,12 @@ export class UIManager {
 
     this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
     this.q('#btn-help').addEventListener('click', () => this.openPanel('panel-help'));
+    this.q('#btn-size').addEventListener('click', () => this.setSelectorSize(this.cb.onCycleSelectorSize()));
+    this.q('#btn-templates').addEventListener('click', () => this.openPanel('panel-templates'));
+    this.q('#btn-save-template').addEventListener('click', () => {
+      const input = this.q('#template-name');
+      if (this.cb.onSaveTemplate(input.value)) { input.value = ''; this.refreshTemplateList(); }
+    });
     this.q('#btn-menu').addEventListener('click', () => this.cb.onOpenMenu());
 
     this.root.querySelectorAll('[data-close]').forEach((btn) => {
@@ -487,6 +502,7 @@ export class UIManager {
   openPanel(id) {
     if (id === 'panel-stats') this.populateStats();
     if (id === 'panel-help') this.populateHelp();
+    if (id === 'panel-templates') this.refreshTemplateList();
     this.q('#' + id).hidden = false;
   }
 
@@ -495,7 +511,7 @@ export class UIManager {
   }
 
   isAnyPanelOpen() {
-    return ['panel-stats', 'panel-menu', 'panel-score', 'panel-help'].some((id) => !this.q('#' + id).hidden);
+    return ['panel-stats', 'panel-menu', 'panel-score', 'panel-help', 'panel-templates'].some((id) => !this.q('#' + id).hidden);
   }
 
   populateStats() {
@@ -584,6 +600,57 @@ export class UIManager {
     this.q('#t-down').hidden = !flying; // descend only means anything while flying
   }
 
+  /** Turns the selector on and opens the designs panel — the whole flow in one place. */
+  toggleSelector() {
+    const active = this.cb.onToggleSelection();
+    this.q('#btn-select').classList.toggle('active', active);
+    this.toast({
+      kind: 'xp',
+      title: active ? 'Selector on' : 'Selector off',
+      body: active ? 'Aim it, then use Designs to save or stamp' : '',
+    });
+    return active;
+  }
+
+  setSelectorSize(size) {
+    this.q('#size-label').innerHTML = `${size}&sup3;`;
+  }
+
+  openTemplateSavePrompt() {
+    this.openPanel('panel-templates');
+    this.q('#template-name').focus();
+  }
+
+  refreshTemplateList() {
+    const list = this.q('#template-list');
+    const templates = this.cb.getTemplates();
+    if (!templates.length) {
+      list.innerHTML = `<div class="sub" style="margin:0;">No designs yet. Turn on the selector, frame part of your build, then save it.</div>`;
+      return;
+    }
+    list.innerHTML = templates.map((t) => `
+      <div class="template-row">
+        <div class="template-meta">
+          <div class="template-name">${t.name}</div>
+          <div class="template-dims">${t.size}&sup3; &middot; ${t.blockCount} blocks &middot; ${t.distinctTypes} types</div>
+        </div>
+        <div class="actions">
+          <button class="secondary" data-place="${t.id}">Stamp</button>
+          <button class="danger secondary" data-drop="${t.id}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-place]').forEach((btn) => btn.addEventListener('click', () => {
+      if (this.cb.onPickTemplate(btn.dataset.place)) {
+        this.q('#btn-select').classList.add('active');
+        this.closePanel('panel-templates');
+      }
+    }));
+    list.querySelectorAll('[data-drop]').forEach((btn) => btn.addEventListener('click', () => {
+      if (confirm('Delete this design?')) { this.cb.onDeleteTemplate(btn.dataset.drop); this.refreshTemplateList(); }
+    }));
+  }
+
   setSymmetryLabel() {
     const label = this.symmetryMode === 'off' ? 'Mirror' : `Mirror ${this.symmetryMode.toUpperCase()}`;
     const on = this.symmetryMode !== 'off';
@@ -610,9 +677,9 @@ export class UIManager {
       ['Open the menu', touch ? 'Menu button' : 'Esc'],
     ];
     const tools = [
-      ['Select', 'Turn on, then click two corners to mark out a box of blocks.'],
-      ['Copy', 'Stores whatever is inside your current selection.'],
-      ['Paste', 'Drops the copied blocks at the spot you are looking at.'],
+      ['Select', 'Turns the selector box on. Aim it at your build \u2014 it snaps to a grid so designs line up.'],
+      ['Size', 'Cycles the selector between 2\u00b3, 4\u00b3, 8\u00b3 and 16\u00b3 (one chunk wide).'],
+      ['Designs', 'Save whatever is inside the selector as a named design, then stamp it anywhere. Press R to rotate before placing.'],
       ['Mirror', 'Every block you place is echoed across the world\u2019s centre line. Press again to cycle X, Z, both, off.'],
       ['Screen', 'Enters or leaves fullscreen.'],
       ['Stats', 'Your level, achievements and today\u2019s challenges.'],
