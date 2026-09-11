@@ -188,29 +188,38 @@ body.touch #touch-controls { display: block; }
 #panel-score:not([hidden]) ~ #touch-controls { display: none !important; }
 body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 
-/* The look zone spans the whole screen, so every interactive HUD element has to
-   sit above it explicitly or it swallows their taps. */
-#look-zone { position: absolute; inset: 0; pointer-events: auto; z-index: 1; }
-#joystick-zone { position: absolute; left: 0; width: 50%; z-index: 2; pointer-events: auto;
-  bottom: calc(78px + env(safe-area-inset-bottom)); height: 42%; }
-#touch-buttons { z-index: 3; }
+/* Twin thumbsticks. Each claims its own half of the lower screen; interactive
+   HUD layers sit above them so taps on the hotbar and menus still land. */
+.stick-zone { position: absolute; width: 50%; z-index: 2; pointer-events: auto;
+  bottom: calc(78px + env(safe-area-inset-bottom)); height: 40%; }
+#stick-left { left: 0; }
+#stick-right { right: 0; }
+.touch-buttons { z-index: 3; }
 #hud-top, #top-buttons, #hotbar-wrap { z-index: 5; }
 #toast-stack { z-index: 8; }
 .overlay { z-index: 10; }
 
-#joystick-base {
-  position: absolute; left: 24px; bottom: 24px; width: 104px; height: 104px; border-radius: 50%;
+.stick-base {
+  position: absolute; bottom: 24px; width: 104px; height: 104px; border-radius: 50%;
   background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.22);
   opacity: 0.6; transition: opacity 0.15s ease;
 }
-#joystick-base.active { opacity: 1; background: rgba(255,255,255,0.12); }
-#joystick-knob {
+#stick-left .stick-base { left: 24px; }
+#stick-right .stick-base { right: 24px; }
+.stick-base.active { opacity: 1; background: rgba(255,255,255,0.12); }
+.stick-knob {
   position: absolute; width: 46px; height: 46px; border-radius: 50%; top: 29px; left: 29px;
   background: rgba(255,255,255,0.42); border: 1px solid rgba(255,255,255,0.35);
 }
 
-#touch-buttons { position: absolute; right: 14px; bottom: calc(90px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; pointer-events: auto; align-items: flex-end; }
-#touch-buttons .row { display: flex; gap: 10px; }
+/* Action buttons sit above their own stick, so each thumb keeps its own cluster. */
+.touch-buttons {
+  position: absolute; bottom: calc(212px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 10px; pointer-events: auto;
+}
+#touch-buttons-left { left: 14px; align-items: flex-start; }
+#touch-buttons-right { right: 14px; align-items: flex-end; }
+.touch-buttons .row { display: flex; gap: 10px; }
 .touch-btn {
   width: 56px; height: 56px; border-radius: 50%; background: rgba(20,26,34,0.75); border: 1px solid rgba(255,255,255,0.2);
   color: var(--text); font-size: 20px; display: flex; align-items: center; justify-content: center;

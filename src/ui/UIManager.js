@@ -54,7 +54,7 @@ export class UIManager {
             <p>Undo/Redo: <span class="hint-key">Ctrl+Z</span> / <span class="hint-key">Ctrl+Y</span> &nbsp; Menu: <span class="hint-key">Esc</span></p>
           </div>
           <div class="touch-only" hidden>
-            <p>Left stick to move &middot; drag anywhere to look around</p>
+            <p>Left stick moves &middot; right stick looks around</p>
             <p>⛏ breaks &middot; 🧱 places &middot; ✈ toggles fly &middot; ⤴⤵ rise and descend while flying</p>
           </div>
           <button class="primary" id="btn-play">Play</button>
@@ -138,15 +138,19 @@ export class UIManager {
       </div>
 
       <div id="touch-controls">
-        <div id="look-zone"></div>
-        <div id="joystick-zone">
-          <div id="joystick-base"><div id="joystick-knob"></div></div>
+        <div class="stick-zone" id="stick-left">
+          <div class="stick-base"><div class="stick-knob"></div></div>
         </div>
-        <div id="touch-buttons">
+        <div class="stick-zone" id="stick-right">
+          <div class="stick-base"><div class="stick-knob"></div></div>
+        </div>
+        <div class="touch-buttons" id="touch-buttons-left">
           <div class="row">
             <button class="touch-btn wide" id="t-symmetry">Sym</button>
             <button class="touch-btn" id="t-fly">✈</button>
           </div>
+        </div>
+        <div class="touch-buttons" id="touch-buttons-right">
           <div class="row">
             <button class="touch-btn" id="t-break">⛏</button>
             <button class="touch-btn" id="t-place">🧱</button>
@@ -294,78 +298,70 @@ export class UIManager {
     this.wireTouchControls();
   }
 
-  wireTouchControls() {
-    const joyZone = this.q('#joystick-zone');
-    const joyBase = this.q('#joystick-base');
-    const joyKnob = this.q('#joystick-knob');
-    let joyId = null, joyOrigin = { x: 0, y: 0 };
-    const radius = 42;
+  /**
+   * Wires one thumbstick. The base rests at its CSS home so it's discoverable,
+   * then jumps to wherever the thumb lands and tracks from there. Each stick
+   * claims a single touch id, so both can be driven at once.
+   */
+  bindStick(zoneSel, onChange) {
+    const zone = this.q(zoneSel);
+    const base = zone.querySelector('.stick-base');
+    const knob = zone.querySelector('.stick-knob');
+    const RADIUS = 42;
     const KNOB_HOME = 29;
+    let touchId = null;
+    let origin = { x: 0, y: 0 };
 
-    const centerKnob = (dx = 0, dy = 0) => {
-      joyKnob.style.left = `${KNOB_HOME + dx}px`;
-      joyKnob.style.top = `${KNOB_HOME + dy}px`;
+    const setKnob = (dx = 0, dy = 0) => {
+      knob.style.left = `${KNOB_HOME + dx}px`;
+      knob.style.top = `${KNOB_HOME + dy}px`;
     };
 
-    joyZone.addEventListener('touchstart', (e) => {
+    zone.addEventListener('touchstart', (e) => {
+      if (touchId !== null) return;
       const t = e.changedTouches[0];
-      joyId = t.identifier;
-      joyOrigin = { x: t.clientX, y: t.clientY };
-      // The base is positioned within the zone, so offset by the zone's origin.
-      const rect = joyZone.getBoundingClientRect();
-      joyBase.style.left = `${t.clientX - rect.left - 52}px`;
-      joyBase.style.top = `${t.clientY - rect.top - 52}px`;
-      joyBase.style.bottom = 'auto';
-      joyBase.classList.add('active');
-      centerKnob();
+      touchId = t.identifier;
+      origin = { x: t.clientX, y: t.clientY };
+      // The base is positioned inside the zone, so offset by the zone's origin.
+      const rect = zone.getBoundingClientRect();
+      base.style.left = `${t.clientX - rect.left - 52}px`;
+      base.style.top = `${t.clientY - rect.top - 52}px`;
+      base.style.right = 'auto';
+      base.style.bottom = 'auto';
+      base.classList.add('active');
+      setKnob();
       e.preventDefault();
     }, { passive: false });
 
-    joyZone.addEventListener('touchmove', (e) => {
+    zone.addEventListener('touchmove', (e) => {
       for (const t of e.changedTouches) {
-        if (t.identifier !== joyId) continue;
-        let dx = t.clientX - joyOrigin.x, dy = t.clientY - joyOrigin.y;
+        if (t.identifier !== touchId) continue;
+        let dx = t.clientX - origin.x, dy = t.clientY - origin.y;
         const len = Math.hypot(dx, dy);
-        if (len > radius) { dx = (dx / len) * radius; dy = (dy / len) * radius; }
-        centerKnob(dx, dy);
-        this.cb.onMove(dx / radius, -dy / radius);
+        if (len > RADIUS) { dx = (dx / len) * RADIUS; dy = (dy / len) * RADIUS; }
+        setKnob(dx, dy);
+        onChange(dx / RADIUS, -dy / RADIUS);
       }
       e.preventDefault();
     }, { passive: false });
 
-    const endJoy = (e) => {
+    const release = (e) => {
       for (const t of e.changedTouches) {
-        if (t.identifier !== joyId) continue;
-        joyId = null;
-        joyBase.classList.remove('active');
-        joyBase.style.removeProperty('left');
-        joyBase.style.removeProperty('top');
-        joyBase.style.removeProperty('bottom');
-        centerKnob();
-        this.cb.onMove(0, 0);
+        if (t.identifier !== touchId) continue;
+        touchId = null;
+        base.classList.remove('active');
+        for (const prop of ['left', 'top', 'right', 'bottom']) base.style.removeProperty(prop);
+        setKnob();
+        onChange(0, 0);
       }
     };
-    joyZone.addEventListener('touchend', endJoy);
-    joyZone.addEventListener('touchcancel', endJoy);
+    zone.addEventListener('touchend', release);
+    zone.addEventListener('touchcancel', release);
+  }
 
-    const lookZone = this.q('#look-zone');
-    let lookId = null, lastX = 0, lastY = 0;
-    lookZone.addEventListener('touchstart', (e) => {
-      const t = e.changedTouches[0];
-      lookId = t.identifier;
-      lastX = t.clientX; lastY = t.clientY;
-    });
-    lookZone.addEventListener('touchmove', (e) => {
-      for (const t of e.changedTouches) {
-        if (t.identifier !== lookId) continue;
-        const dx = t.clientX - lastX, dy = t.clientY - lastY;
-        lastX = t.clientX; lastY = t.clientY;
-        this.cb.onLook(dx * 0.0028, dy * 0.0028);
-      }
-    });
-    const endLook = (e) => { for (const t of e.changedTouches) if (t.identifier === lookId) lookId = null; };
-    lookZone.addEventListener('touchend', endLook);
-    lookZone.addEventListener('touchcancel', endLook);
+  wireTouchControls() {
+    this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y));
+    this.bindStick('#stick-right', (x, y) => this.cb.onLookStick(x, y));
 
     const bindHold = (sel, onChange) => {
       const el = this.q(sel);

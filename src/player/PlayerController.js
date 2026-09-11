@@ -9,6 +9,8 @@ const WALK_SPEED = 4.6;
 const SPRINT_SPEED = 7.2;
 const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
+const LOOK_YAW_SPEED = 2.6;   // radians/sec at full stick deflection
+const LOOK_PITCH_SPEED = 1.4; // slower than yaw: pitch only spans 180 degrees total
 
 export class PlayerController {
   constructor(world, camera, spawn) {
@@ -26,6 +28,9 @@ export class PlayerController {
     this.keys = new Set();
     this.externalMove = { x: 0, z: 0 };
     this.externalUp = 0;
+    // Held right-stick deflection: turns the camera at a rate, unlike the
+    // mouse and drag paths which apply one-off deltas.
+    this.lookInput = { x: 0, y: 0 };
     this.sprint = false;
     this.jumpQueued = false;
 
@@ -64,6 +69,9 @@ export class PlayerController {
   update(dt) {
     dt = Math.min(dt, 0.05);
     this.resolveStuck();
+    if (this.lookInput.x || this.lookInput.y) {
+      this.look(this.lookInput.x * LOOK_YAW_SPEED * dt, -this.lookInput.y * LOOK_PITCH_SPEED * dt);
+    }
     let moveX = this.externalMove.x;
     let moveZ = this.externalMove.z;
     if (this.keys.has('KeyW')) moveZ += 1;

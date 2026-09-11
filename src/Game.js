@@ -150,7 +150,7 @@ export class Game {
         this.player.externalMove.x = x;
         this.player.externalMove.z = z;
       },
-      onLook: (dx, dy) => this.player.look(dx, dy),
+      onLookStick: (x, y) => { this.player.lookInput.x = x; this.player.lookInput.y = y; },
       onJumpOrFlyUp: (held) => {
         if (this.player.flying) { this.upHeld = held; this.recomputeVertical(); }
         else if (held) this.player.requestJump();
