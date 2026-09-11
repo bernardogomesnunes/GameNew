@@ -47,8 +47,8 @@ export class UIManager {
             <p>Undo/Redo: <span class="hint-key">Ctrl+Z</span> / <span class="hint-key">Ctrl+Y</span> &nbsp; Menu: <span class="hint-key">Esc</span></p>
           </div>
           <div class="touch-only" hidden>
-            <p>Left joystick to move &middot; drag the right side to look</p>
-            <p>⛏ breaks &middot; 🧱 places &middot; ✈ toggles fly &middot; ▲▼ move up/down while flying</p>
+            <p>Left stick to move &middot; drag anywhere to look &middot; ▲▼ rocker to walk forward/back</p>
+            <p>⛏ breaks &middot; 🧱 places &middot; ✈ toggles fly &middot; ⤴⤵ rise and descend while flying</p>
           </div>
           <button class="primary" id="btn-play">Play</button>
         </div>
@@ -119,10 +119,14 @@ export class UIManager {
       </div>
 
       <div id="touch-controls">
+        <div id="look-zone"></div>
         <div id="joystick-zone">
           <div id="joystick-base"><div id="joystick-knob"></div></div>
         </div>
-        <div id="look-zone"></div>
+        <div id="move-rocker">
+          <button class="rocker-btn" id="t-forward">▲</button>
+          <button class="rocker-btn" id="t-back">▼</button>
+        </div>
         <div id="touch-buttons">
           <div class="row">
             <button class="touch-btn wide" id="t-symmetry">Sym</button>
@@ -133,8 +137,8 @@ export class UIManager {
             <button class="touch-btn" id="t-place">🧱</button>
           </div>
           <div class="row">
-            <button class="touch-btn" id="t-down">▼</button>
-            <button class="touch-btn" id="t-jump">▲</button>
+            <button class="touch-btn" id="t-down" hidden>⤵</button>
+            <button class="touch-btn" id="t-jump">⤴</button>
           </div>
         </div>
       </div>
@@ -236,17 +240,25 @@ export class UIManager {
     const joyBase = this.q('#joystick-base');
     const joyKnob = this.q('#joystick-knob');
     let joyId = null, joyOrigin = { x: 0, y: 0 };
-    const radius = 48;
+    const radius = 42;
+    const KNOB_HOME = 29;
+
+    const centerKnob = (dx = 0, dy = 0) => {
+      joyKnob.style.left = `${KNOB_HOME + dx}px`;
+      joyKnob.style.top = `${KNOB_HOME + dy}px`;
+    };
 
     joyZone.addEventListener('touchstart', (e) => {
       const t = e.changedTouches[0];
       joyId = t.identifier;
       joyOrigin = { x: t.clientX, y: t.clientY };
-      joyBase.style.left = `${t.clientX - 48}px`;
-      joyBase.style.top = `${t.clientY - 48}px`;
-      joyBase.style.display = 'block';
-      joyKnob.style.left = '26px';
-      joyKnob.style.top = '26px';
+      // The base is positioned within the zone, so offset by the zone's origin.
+      const rect = joyZone.getBoundingClientRect();
+      joyBase.style.left = `${t.clientX - rect.left - 52}px`;
+      joyBase.style.top = `${t.clientY - rect.top - 52}px`;
+      joyBase.style.bottom = 'auto';
+      joyBase.classList.add('active');
+      centerKnob();
       e.preventDefault();
     }, { passive: false });
 
@@ -256,8 +268,7 @@ export class UIManager {
         let dx = t.clientX - joyOrigin.x, dy = t.clientY - joyOrigin.y;
         const len = Math.hypot(dx, dy);
         if (len > radius) { dx = (dx / len) * radius; dy = (dy / len) * radius; }
-        joyKnob.style.left = `${26 + dx}px`;
-        joyKnob.style.top = `${26 + dy}px`;
+        centerKnob(dx, dy);
         this.cb.onMove(dx / radius, -dy / radius);
       }
       e.preventDefault();
@@ -267,7 +278,11 @@ export class UIManager {
       for (const t of e.changedTouches) {
         if (t.identifier !== joyId) continue;
         joyId = null;
-        joyBase.style.display = 'none';
+        joyBase.classList.remove('active');
+        joyBase.style.removeProperty('left');
+        joyBase.style.removeProperty('top');
+        joyBase.style.removeProperty('bottom');
+        centerKnob();
         this.cb.onMove(0, 0);
       }
     };
@@ -293,14 +308,26 @@ export class UIManager {
     lookZone.addEventListener('touchend', endLook);
     lookZone.addEventListener('touchcancel', endLook);
 
-    this.q('#t-jump').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onJumpOrFlyUp(true); });
-    this.q('#t-jump').addEventListener('touchend', (e) => { e.preventDefault(); this.cb.onJumpOrFlyUp(false); });
-    this.q('#t-down').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onFlyDown(true); });
-    this.q('#t-down').addEventListener('touchend', (e) => { e.preventDefault(); this.cb.onFlyDown(false); });
+    const bindHold = (sel, onChange) => {
+      const el = this.q(sel);
+      const set = (held) => (e) => {
+        e.preventDefault();
+        el.classList.toggle('active', held);
+        onChange(held);
+      };
+      el.addEventListener('touchstart', set(true), { passive: false });
+      el.addEventListener('touchend', set(false));
+      el.addEventListener('touchcancel', set(false));
+    };
+
+    bindHold('#t-forward', (held) => this.cb.onMoveForward(held));
+    bindHold('#t-back', (held) => this.cb.onMoveBack(held));
+    bindHold('#t-jump', (held) => this.cb.onJumpOrFlyUp(held));
+    bindHold('#t-down', (held) => this.cb.onFlyDown(held));
+
     this.q('#t-fly').addEventListener('touchstart', (e) => {
       e.preventDefault();
-      const flying = this.cb.onToggleFly();
-      this.q('#t-fly').classList.toggle('active', flying);
+      this.setFlyIndicator(this.cb.onToggleFly());
     });
     this.q('#t-break').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onBreakTap(); });
     this.q('#t-place').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onPlaceTap(); });
@@ -464,6 +491,7 @@ export class UIManager {
 
   setFlyIndicator(flying) {
     this.q('#t-fly').classList.toggle('active', flying);
+    this.q('#t-down').hidden = !flying; // descend only means anything while flying
   }
 
   setFullscreenIndicator(isFullscreen) {
