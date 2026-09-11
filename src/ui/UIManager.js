@@ -1,4 +1,5 @@
 import { PLACEABLE_BLOCKS } from '../config/blocks.js';
+import { icon } from './icons.js';
 import { RESOURCES_BY_ID } from '../config/resources.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
@@ -55,7 +56,7 @@ export class UIManager {
           </div>
           <div class="touch-only" hidden>
             <p>Left stick moves &middot; right stick looks around</p>
-            <p>⛏ breaks &middot; 🧱 places &middot; ✈ toggles fly &middot; ⤴⤵ rise and descend while flying</p>
+            <p>Buttons on each side break, place, fly and jump &middot; tap Help any time</p>
           </div>
           <button class="primary" id="btn-play">Play</button>
         </div>
@@ -69,15 +70,16 @@ export class UIManager {
       <div id="resource-bar" hidden></div>
 
       <div id="top-buttons">
-        <button class="icon-btn" id="btn-undo" title="Undo">↺</button>
-        <button class="icon-btn" id="btn-redo" title="Redo">↻</button>
-        <button class="icon-btn" id="btn-select" title="Selection tool">▦</button>
-        <button class="icon-btn" id="btn-copy" title="Copy selection">⧉</button>
-        <button class="icon-btn" id="btn-paste" title="Paste">📋</button>
-        <button class="icon-btn" id="btn-symmetry" title="Cycle symmetry mode">⇄</button>
-        <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">⛶</button>
-        <button class="icon-btn" id="btn-stats" title="Stats & Achievements">📊</button>
-        <button class="icon-btn" id="btn-menu" title="Menu">☰</button>
+        <button class="icon-btn" id="btn-undo" title="Undo the last change">${icon('undo')}<span>Undo</span></button>
+        <button class="icon-btn" id="btn-redo" title="Redo the change you undid">${icon('redo')}<span>Redo</span></button>
+        <button class="icon-btn" id="btn-select" title="Selection tool: click two corners to mark a box">${icon('select')}<span>Select</span></button>
+        <button class="icon-btn" id="btn-copy" title="Copy the blocks inside your selection">${icon('copy')}<span>Copy</span></button>
+        <button class="icon-btn" id="btn-paste" title="Paste the copied blocks where you are looking">${icon('paste')}<span>Paste</span></button>
+        <button class="icon-btn" id="btn-symmetry" title="Mirror your building across the world's centre">${icon('symmetry')}<span>Mirror</span></button>
+        <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
+        <button class="icon-btn" id="btn-stats" title="Progress, achievements and challenges">${icon('stats')}<span>Stats</span></button>
+        <button class="icon-btn" id="btn-help" title="Show all controls">${icon('help')}<span>Help</span></button>
+        <button class="icon-btn" id="btn-menu" title="Save, load and world settings">${icon('menu')}<span>Menu</span></button>
       </div>
 
       <div id="hotbar-wrap"><div id="hotbar"></div></div>
@@ -86,7 +88,7 @@ export class UIManager {
 
       <div class="overlay" id="panel-stats" hidden>
         <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-stats">✕</button>
+          <button class="icon-btn panel-close" data-close="panel-stats">${icon('close', 16)}</button>
           <h2>Progress</h2>
           <div class="sub" id="stats-sub"></div>
           <div class="tab-row">
@@ -102,7 +104,7 @@ export class UIManager {
 
       <div class="overlay" id="panel-menu" hidden>
         <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-menu">✕</button>
+          <button class="icon-btn panel-close" data-close="panel-menu">${icon('close', 16)}</button>
           <h2>Menu</h2>
           <div class="sub">Fly mode, saving, and loading worlds.</div>
           <div class="field-row">
@@ -127,9 +129,19 @@ export class UIManager {
         </div>
       </div>
 
+
+      <div class="overlay" id="panel-help" hidden>
+        <div class="panel">
+          <button class="icon-btn panel-close" data-close="panel-help">${icon('close', 16)}</button>
+          <h2>Controls</h2>
+          <div class="sub">Everything the toolbar and sticks do.</div>
+          <div id="help-body"></div>
+        </div>
+      </div>
+
       <div class="overlay" id="panel-score" hidden>
         <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-score">✕</button>
+          <button class="icon-btn panel-close" data-close="panel-score">${icon('close', 16)}</button>
           <h2>Session Complete</h2>
           <div class="sub">A lightweight read on how this build session went — just for you.</div>
           <div class="score-total" id="score-total">0</div>
@@ -146,18 +158,18 @@ export class UIManager {
         </div>
         <div class="touch-buttons" id="touch-buttons-left">
           <div class="row">
-            <button class="touch-btn wide" id="t-symmetry">Sym</button>
-            <button class="touch-btn" id="t-fly">✈</button>
+            <button class="touch-btn" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
+            <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
           </div>
         </div>
         <div class="touch-buttons" id="touch-buttons-right">
           <div class="row">
-            <button class="touch-btn" id="t-break">⛏</button>
-            <button class="touch-btn" id="t-place">🧱</button>
+            <button class="touch-btn" id="t-break">${icon('mine')}<span>Break</span></button>
+            <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
           </div>
           <div class="row">
-            <button class="touch-btn" id="t-down" hidden>⤵</button>
-            <button class="touch-btn" id="t-jump">⤴</button>
+            <button class="touch-btn" id="t-down" hidden>${icon('down')}<span>Down</span></button>
+            <button class="touch-btn" id="t-jump">${icon('up')}<span>Jump</span></button>
           </div>
         </div>
       </div>
@@ -188,7 +200,7 @@ export class UIManager {
              data-id="${b.id}" title="${b.name}">
           ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
           <div class="swatch" style="background:#${b.color.toString(16).padStart(6, '0')}"></div>
-          ${available ? '' : `<div class="lock">🔒</div>`}
+          ${available ? '' : `<div class="lock">${icon('lock', 15)}</div>`}
           ${costLabel ? `<span class="cost" style="--cost-dot:#${(RESOURCES_BY_ID.get(Object.keys(b.cost)[0])?.color ?? 0x999999).toString(16).padStart(6, '0')}">${costLabel}</span>` : ''}
         </div>
       `);
@@ -256,7 +268,7 @@ export class UIManager {
     this.q('#btn-paste').addEventListener('click', () => this.cb.onPaste());
     this.q('#btn-symmetry').addEventListener('click', () => {
       this.symmetryMode = this.cb.onCycleSymmetry();
-      this.q('#btn-symmetry').textContent = this.symmetryMode === 'off' ? '⇄' : `⇄ ${this.symmetryMode.toUpperCase()}`;
+      this.setSymmetryLabel();
     });
 
     const fsBtn = this.q('#btn-fullscreen');
@@ -264,6 +276,7 @@ export class UIManager {
     else fsBtn.remove();
 
     this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
+    this.q('#btn-help').addEventListener('click', () => this.openPanel('panel-help'));
     this.q('#btn-menu').addEventListener('click', () => this.cb.onOpenMenu());
 
     this.root.querySelectorAll('[data-close]').forEach((btn) => {
@@ -303,7 +316,7 @@ export class UIManager {
    * then jumps to wherever the thumb lands and tracks from there. Each stick
    * claims a single touch id, so both can be driven at once.
    */
-  bindStick(zoneSel, onChange) {
+  bindStick(zoneSel, onChange, { deadZone = 0.14, curve = 1 } = {}) {
     const zone = this.q(zoneSel);
     const base = zone.querySelector('.stick-base');
     const knob = zone.querySelector('.stick-knob');
@@ -311,6 +324,16 @@ export class UIManager {
     const KNOB_HOME = 29;
     let touchId = null;
     let origin = { x: 0, y: 0 };
+
+    // A resting thumb never sits exactly at centre, so anything inside the dead
+    // zone reads as zero. Past it the response is re-normalised from 0 so there
+    // is no jump, then curved to give fine control near centre.
+    const shape = (dx, dy) => {
+      const mag = Math.min(1, Math.hypot(dx, dy) / RADIUS);
+      if (mag < deadZone) return { x: 0, y: 0 };
+      const scaled = Math.pow((mag - deadZone) / (1 - deadZone), curve) / mag;
+      return { x: (dx / RADIUS) * scaled, y: (dy / RADIUS) * scaled };
+    };
 
     const setKnob = (dx = 0, dy = 0) => {
       knob.style.left = `${KNOB_HOME + dx}px`;
@@ -340,7 +363,8 @@ export class UIManager {
         const len = Math.hypot(dx, dy);
         if (len > RADIUS) { dx = (dx / len) * RADIUS; dy = (dy / len) * RADIUS; }
         setKnob(dx, dy);
-        onChange(dx / RADIUS, -dy / RADIUS);
+        const out = shape(dx, dy);
+        onChange(out.x, -out.y);
       }
       e.preventDefault();
     }, { passive: false });
@@ -360,8 +384,10 @@ export class UIManager {
   }
 
   wireTouchControls() {
-    this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y));
-    this.bindStick('#stick-right', (x, y) => this.cb.onLookStick(x, y));
+    // Movement wants to reach full speed readily; the camera wants precision
+    // near centre, so it gets a steeper curve.
+    this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y), { deadZone: 0.12, curve: 1.15 });
+    this.bindStick('#stick-right', (x, y) => this.cb.onLookStick(x, y), { deadZone: 0.14, curve: 1.8 });
 
     const bindHold = (sel, onChange) => {
       const el = this.q(sel);
@@ -387,7 +413,7 @@ export class UIManager {
     this.q('#t-symmetry').addEventListener('touchstart', (e) => {
       e.preventDefault();
       this.symmetryMode = this.cb.onCycleSymmetry();
-      this.q('#t-symmetry').textContent = this.symmetryMode === 'off' ? 'Sym' : this.symmetryMode.toUpperCase();
+      this.setSymmetryLabel();
     });
   }
 
@@ -460,6 +486,7 @@ export class UIManager {
 
   openPanel(id) {
     if (id === 'panel-stats') this.populateStats();
+    if (id === 'panel-help') this.populateHelp();
     this.q('#' + id).hidden = false;
   }
 
@@ -468,7 +495,7 @@ export class UIManager {
   }
 
   isAnyPanelOpen() {
-    return ['panel-stats', 'panel-menu', 'panel-score'].some((id) => !this.q('#' + id).hidden);
+    return ['panel-stats', 'panel-menu', 'panel-score', 'panel-help'].some((id) => !this.q('#' + id).hidden);
   }
 
   populateStats() {
@@ -555,6 +582,50 @@ export class UIManager {
   setFlyIndicator(flying) {
     this.q('#t-fly').classList.toggle('active', flying);
     this.q('#t-down').hidden = !flying; // descend only means anything while flying
+  }
+
+  setSymmetryLabel() {
+    const label = this.symmetryMode === 'off' ? 'Mirror' : `Mirror ${this.symmetryMode.toUpperCase()}`;
+    const on = this.symmetryMode !== 'off';
+    for (const sel of ['#btn-symmetry', '#t-symmetry']) {
+      const btn = this.q(sel);
+      if (!btn) continue;
+      btn.querySelector('span').textContent = label;
+      btn.classList.toggle('active', on);
+    }
+  }
+
+  populateHelp() {
+    const touch = document.body.classList.contains('touch');
+    const rows = [
+      ['Move', touch ? 'Left stick' : 'W A S D'],
+      ['Look around', touch ? 'Right stick' : 'Move the mouse'],
+      ['Break a block', touch ? 'Break button' : 'Left click'],
+      ['Place a block', touch ? 'Place button' : 'Right click'],
+      ['Jump', touch ? 'Jump button' : 'Space'],
+      ['Fly on and off', touch ? 'Fly button' : 'F'],
+      ['Rise / descend while flying', touch ? 'Jump and Down buttons' : 'Space / Shift'],
+      ['Pick a block', touch ? 'Tap the palette' : 'Keys 1-9, or click the palette'],
+      ['Undo / Redo', touch ? 'Undo and Redo buttons' : 'Ctrl+Z / Ctrl+Y'],
+      ['Open the menu', touch ? 'Menu button' : 'Esc'],
+    ];
+    const tools = [
+      ['Select', 'Turn on, then click two corners to mark out a box of blocks.'],
+      ['Copy', 'Stores whatever is inside your current selection.'],
+      ['Paste', 'Drops the copied blocks at the spot you are looking at.'],
+      ['Mirror', 'Every block you place is echoed across the world\u2019s centre line. Press again to cycle X, Z, both, off.'],
+      ['Screen', 'Enters or leaves fullscreen.'],
+      ['Stats', 'Your level, achievements and today\u2019s challenges.'],
+    ];
+    this.q('#help-body').innerHTML = `
+      <div class="help-group">
+        <div class="help-title">Playing</div>
+        ${rows.map(([what, how]) => `<div class="help-row"><span>${what}</span><span class="help-key">${how}</span></div>`).join('')}
+      </div>
+      <div class="help-group">
+        <div class="help-title">Toolbar</div>
+        ${tools.map(([name, desc]) => `<div class="help-tool"><strong>${name}</strong><span>${desc}</span></div>`).join('')}
+      </div>`;
   }
 
   setFullscreenIndicator(isFullscreen) {

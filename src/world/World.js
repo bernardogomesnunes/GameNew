@@ -44,11 +44,17 @@ export class World {
     }
   }
 
+  /**
+   * Numeric, not a template string. getBlock is the hottest call in the engine
+   * — meshing, raycasting and collision all go through it — and building a
+   * string key allocated on every single lookup.
+   */
   chunkKey(cx, cz) {
-    return `${cx},${cz}`;
+    return cx * this.chunksZ + cz;
   }
 
   getChunk(cx, cz) {
+    if (cx < 0 || cz < 0 || cx >= this.chunksX || cz >= this.chunksZ) return undefined;
     return this.chunks.get(this.chunkKey(cx, cz));
   }
 

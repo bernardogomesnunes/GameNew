@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { World } from './world/World.js';
+import { World, CHUNK_SIZE } from './world/World.js';
 import { generateTerrain, generateFlat } from './world/TerrainGenerator.js';
 import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
@@ -16,6 +16,8 @@ import { AIR, BLOCKS_BY_ID, costResourceOf } from './config/blocks.js';
 import { resourceName } from './config/resources.js';
 
 const REACH = 7;
+const RENDER_DISTANCE = 190;  // beyond the fog's far plane, so nothing pops visibly
+const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream in
 const AUTOSAVE_INTERVAL_MS = 60_000;
 export const CREATIVE = 'creative';
 export const CAMPAIGN = 'campaign';
@@ -60,6 +62,7 @@ export class Game {
     this.hoverHit = null;
     this.upHeld = false;
     this.downHeld = false;
+    this.remeshQueue = new Set();
 
     this.hoverBox = this.buildWireBox(0xffffff, 1.002);
     this.hoverBox.visible = false;
@@ -242,9 +245,41 @@ export class Game {
     }
   }
 
+  /**
+   * Meshes what the player can see right away and queues the rest. Meshing a
+   * large world in one go is close to a second of frozen tab; this way the
+   * nearby world is solid immediately and the horizon fills in over a few frames.
+   */
   rebuildAllChunks() {
     this.mesher.clearAll();
-    for (const chunk of this.world.allChunks()) this.mesher.rebuild(this.world, chunk);
+    this.remeshQueue.clear();
+
+    const px = this.player ? this.player.position.x / CHUNK_SIZE : this.world.chunksX / 2;
+    const pz = this.player ? this.player.position.z / CHUNK_SIZE : this.world.chunksZ / 2;
+    const chunks = [...this.world.allChunks()].sort((a, b) =>
+      distSq(a, px, pz) - distSq(b, px, pz));
+
+    for (let i = 0; i < chunks.length; i++) {
+      if (i < IMMEDIATE_CHUNKS) this.mesher.rebuild(this.world, chunks[i]);
+      else this.remeshQueue.add(chunks[i]);
+    }
+  }
+
+  /**
+   * Hides chunk meshes past the render distance. Frustum culling alone still
+   * pays per-object overhead for every chunk behind you in a large world.
+   */
+  updateChunkVisibility() {
+    const px = this.player.position.x, pz = this.player.position.z;
+    const maxSq = RENDER_DISTANCE * RENDER_DISTANCE;
+    for (const mesh of this.mesher.activeMeshes) {
+      const chunk = mesh.userData.chunk;
+      if (!chunk) continue;
+      const cx = chunk.cx * CHUNK_SIZE + CHUNK_SIZE / 2;
+      const cz = chunk.cz * CHUNK_SIZE + CHUNK_SIZE / 2;
+      const dx = cx - px, dz = cz - pz;
+      mesh.visible = dx * dx + dz * dz <= maxSq;
+    }
   }
 
   // ---- input ----
@@ -297,7 +332,7 @@ export class Game {
   }
 
   closeAllPanels() {
-    ['panel-stats', 'panel-menu', 'panel-score'].forEach((id) => this.ui.closePanel(id));
+    ['panel-stats', 'panel-menu', 'panel-score', 'panel-help'].forEach((id) => this.ui.closePanel(id));
   }
 
   requestPointerLock() {
@@ -474,8 +509,24 @@ export class Game {
     return true;
   }
 
+  /**
+   * Queues dirty chunks rather than rebuilding them inline. One edit can dirty
+   * several chunks at a border, and a paste can dirty many — rebuilding them
+   * all in one frame is a visible hitch.
+   */
   remeshDirty() {
-    for (const chunk of this.world.dirtyChunks()) this.mesher.rebuild(this.world, chunk);
+    for (const chunk of this.world.dirtyChunks()) this.remeshQueue.add(chunk);
+  }
+
+  /** Spends a slice of the frame on pending rebuilds, then stops. */
+  drainRemeshQueue(budgetMs = 6) {
+    if (!this.remeshQueue.size) return;
+    const deadline = performance.now() + budgetMs;
+    for (const chunk of this.remeshQueue) {
+      this.remeshQueue.delete(chunk);
+      this.mesher.rebuild(this.world, chunk);
+      if (performance.now() >= deadline) break;
+    }
   }
 
   doUndo() {
@@ -507,6 +558,8 @@ export class Game {
   tick() {
     const dt = this.clock.getDelta();
     this.player.update(dt);
+    this.drainRemeshQueue();
+    this.updateChunkVisibility();
     this.updateHover();
     this.gamification.tick(performance.now());
 
@@ -550,4 +603,9 @@ export class Game {
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
   }
+}
+
+function distSq(chunk, px, pz) {
+  const dx = chunk.cx - px, dz = chunk.cz - pz;
+  return dx * dx + dz * dz;
 }

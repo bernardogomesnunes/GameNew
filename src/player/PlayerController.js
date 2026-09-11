@@ -11,6 +11,7 @@ const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
 const LOOK_YAW_SPEED = 2.6;   // radians/sec at full stick deflection
 const LOOK_PITCH_SPEED = 1.4; // slower than yaw: pitch only spans 180 degrees total
+const LOOK_SMOOTHING = 18;    // higher = snappier, lower = floatier
 
 export class PlayerController {
   constructor(world, camera, spawn) {
@@ -29,8 +30,10 @@ export class PlayerController {
     this.externalMove = { x: 0, z: 0 };
     this.externalUp = 0;
     // Held right-stick deflection: turns the camera at a rate, unlike the
-    // mouse and drag paths which apply one-off deltas.
+    // mouse and drag paths which apply one-off deltas. `lookSmoothed` trails it
+    // so starting and stopping a turn eases instead of snapping.
     this.lookInput = { x: 0, y: 0 };
+    this.lookSmoothed = { x: 0, y: 0 };
     this.sprint = false;
     this.jumpQueued = false;
 
@@ -67,10 +70,16 @@ export class PlayerController {
   }
 
   update(dt) {
-    dt = Math.min(dt, 0.05);
+    // Clamping low enough to matter turns a bad frame into slow motion, which
+    // reads as input lag. 0.1s still can't tunnel through a block at this speed.
+    dt = Math.min(dt, 0.1);
     this.resolveStuck();
-    if (this.lookInput.x || this.lookInput.y) {
-      this.look(this.lookInput.x * LOOK_YAW_SPEED * dt, -this.lookInput.y * LOOK_PITCH_SPEED * dt);
+
+    const k = 1 - Math.exp(-LOOK_SMOOTHING * dt); // frame-rate independent ease
+    this.lookSmoothed.x += (this.lookInput.x - this.lookSmoothed.x) * k;
+    this.lookSmoothed.y += (this.lookInput.y - this.lookSmoothed.y) * k;
+    if (Math.abs(this.lookSmoothed.x) > 1e-4 || Math.abs(this.lookSmoothed.y) > 1e-4) {
+      this.look(this.lookSmoothed.x * LOOK_YAW_SPEED * dt, -this.lookSmoothed.y * LOOK_PITCH_SPEED * dt);
     }
     let moveX = this.externalMove.x;
     let moveZ = this.externalMove.z;
