@@ -1,4 +1,5 @@
-import { BLOCKS, BLOCKS_BY_ID } from '../config/blocks.js';
+import { PLACEABLE_BLOCKS } from '../config/blocks.js';
+import { RESOURCES_BY_ID } from '../config/resources.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 
@@ -14,9 +15,9 @@ function fmtTime(ts) {
 }
 
 export class UIManager {
-  constructor(root, { bus, gamification, saveManager, callbacks }) {
+  constructor(root, { bus, game, saveManager, callbacks }) {
     this.bus = bus;
-    this.gamification = gamification;
+    this.game = game;
     this.saveManager = saveManager;
     this.cb = callbacks;
     this.selectedBlockId = 1;
@@ -33,6 +34,12 @@ export class UIManager {
     this.updateXp();
     this.detectTouch();
   }
+
+  // Read live off the game: both engines are replaced wholesale on New World,
+  // so a stored reference would go stale.
+  get gamification() { return this.game.gamification; }
+  get economy() { return this.game.economy; }
+  get isCampaign() { return this.game.mode === 'campaign'; }
 
   markup() {
     return `
@@ -58,6 +65,8 @@ export class UIManager {
         <div id="level-badge">1</div>
         <div id="xp-bar-track"><div id="xp-bar-fill"></div></div>
       </div>
+
+      <div id="resource-bar" hidden></div>
 
       <div id="top-buttons">
         <button class="icon-btn" id="btn-undo" title="Undo">↺</button>
@@ -101,9 +110,19 @@ export class UIManager {
             <button class="secondary" id="btn-save">Save</button>
           </div>
           <div id="save-list"></div>
+          <div class="mode-block">
+            <div class="mode-label">New world</div>
+            <div class="field-row" style="margin-bottom:0;">
+              <button class="secondary mode-btn" data-mode="campaign">
+                <strong>Campaign</strong><span>Empty ground, blocks cost resources</span>
+              </button>
+              <button class="secondary mode-btn" data-mode="creative">
+                <strong>Creative</strong><span>Generated terrain, build freely</span>
+              </button>
+            </div>
+          </div>
           <div class="field-row" style="margin-top:14px;">
             <button class="secondary" id="btn-resume">Resume</button>
-            <button class="danger secondary" id="btn-new-world">New World</button>
           </div>
         </div>
       </div>
@@ -158,17 +177,58 @@ export class UIManager {
   buildHotbar() {
     const hotbar = this.q('#hotbar');
     hotbar.innerHTML = '';
-    BLOCKS.forEach((b, i) => {
-      const unlocked = this.gamification.isBlockUnlocked(b.id);
+    PLACEABLE_BLOCKS.forEach((b, i) => {
+      const available = this.game.blockAvailability(b.id).ok;
+      const affordable = !available || this.game.canAffordBlock(b.id);
+      const costLabel = this.isCampaign && b.cost
+        ? Object.entries(b.cost).map(([, amount]) => amount).join('')
+        : '';
       const slot = el(`
-        <div class="hotbar-slot ${unlocked ? '' : 'locked'} ${b.id === this.selectedBlockId ? 'selected' : ''}" data-id="${b.id}" title="${b.name}">
+        <div class="hotbar-slot ${available ? '' : 'locked'} ${available && !affordable ? 'unaffordable' : ''} ${b.id === this.selectedBlockId ? 'selected' : ''}"
+             data-id="${b.id}" title="${b.name}">
           ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
           <div class="swatch" style="background:#${b.color.toString(16).padStart(6, '0')}"></div>
-          ${unlocked ? '' : `<div class="lock">🔒</div>`}
+          ${available ? '' : `<div class="lock">🔒</div>`}
+          ${costLabel ? `<span class="cost" style="--cost-dot:#${(RESOURCES_BY_ID.get(Object.keys(b.cost)[0])?.color ?? 0x999999).toString(16).padStart(6, '0')}">${costLabel}</span>` : ''}
         </div>
       `);
       hotbar.appendChild(slot);
     });
+  }
+
+  /**
+   * Affordability changes on every single block placed, so update classes in
+   * place — rebuilding the hotbar would reset its horizontal scroll each time.
+   */
+  refreshHotbarAffordability() {
+    this.root.querySelectorAll('.hotbar-slot').forEach((slot) => {
+      const id = Number(slot.dataset.id);
+      if (slot.classList.contains('locked')) return;
+      slot.classList.toggle('unaffordable', !this.game.canAffordBlock(id));
+    });
+  }
+
+  /** Re-renders everything that differs between Creative and Campaign. */
+  refreshForMode() {
+    document.body.classList.toggle('campaign', this.isCampaign);
+    this.buildHotbar();
+    this.updateResourceBar();
+  }
+
+  updateResourceBar() {
+    const bar = this.q('#resource-bar');
+    if (!this.isCampaign) {
+      bar.hidden = true;
+      return;
+    }
+    bar.hidden = false;
+    bar.innerHTML = this.economy.unlockedResources().map((r) => `
+      <div class="resource" title="${r.name}">
+        <span class="dot" style="background:#${r.color.toString(16).padStart(6, '0')}"></span>
+        <span class="amount">${Math.floor(this.economy.balanceOf(r.id))}</span>
+        <span class="cap">/ ${r.baseCap}</span>
+      </div>
+    `).join('');
   }
 
   wireEvents() {
@@ -178,10 +238,9 @@ export class UIManager {
       const slot = e.target.closest('.hotbar-slot');
       if (!slot) return;
       const id = Number(slot.dataset.id);
-      if (!this.gamification.isBlockUnlocked(id)) {
-        const cfg = BLOCKS_BY_ID.get(id);
-        const hint = cfg.unlock?.type === 'level' ? `Unlocks at level ${cfg.unlock.value}` : 'Unlocks via an achievement';
-        this.toast({ kind: 'xp', title: 'Locked', body: hint });
+      const availability = this.game.blockAvailability(id);
+      if (!availability.ok) {
+        this.toast({ kind: 'xp', title: 'Locked', body: availability.reason });
         return;
       }
       this.selectBlock(id);
@@ -221,8 +280,12 @@ export class UIManager {
     });
 
     this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
-    this.q('#btn-new-world').addEventListener('click', () => {
-      if (confirm('Start a new world? Unsaved changes will be lost.')) this.cb.onNewWorld();
+    this.root.querySelectorAll('.mode-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode;
+        const label = mode === 'campaign' ? 'Campaign' : 'Creative';
+        if (confirm(`Start a new ${label} world? Unsaved changes will be lost.`)) this.cb.onNewWorld(mode);
+      });
     });
     this.q('#btn-save').addEventListener('click', () => {
       const input = this.q('#save-name');
@@ -355,13 +418,23 @@ export class UIManager {
       this.toast({ kind: 'challenge', title: 'Challenge complete!', body: c.description });
     });
     this.bus.on('block:unlock', (b) => {
-      this.toast({ kind: 'challenge', title: 'New block unlocked', body: b.name });
+      // Campaign gates blocks by resource tier, so a level-based unlock
+      // announcement there would be telling the player something untrue.
+      if (!this.isCampaign) this.toast({ kind: 'challenge', title: 'New block unlocked', body: b.name });
       this.buildHotbar();
     });
     this.bus.on('streak:update', ({ count }) => {
       if (count > 1) this.toast({ kind: 'xp', title: `${count}-day streak`, body: 'Back again — nice consistency.' });
     });
     this.bus.on('session:end', ({ score }) => this.showBuildScore(score));
+    this.bus.on('economy:change', () => {
+      this.updateResourceBar();
+      if (this.isCampaign) this.refreshHotbarAffordability();
+    });
+    this.bus.on('economy:tier', ({ tier }) => {
+      this.buildHotbar();
+      this.toast({ kind: 'challenge', title: 'New tier unlocked', body: `Tier ${tier} materials are now available` });
+    });
   }
 
   selectBlock(id) {
@@ -371,9 +444,9 @@ export class UIManager {
   }
 
   cycleHotbarByKey(n) {
-    const b = BLOCKS[n - 1];
+    const b = PLACEABLE_BLOCKS[n - 1];
     if (!b) return;
-    if (!this.gamification.isBlockUnlocked(b.id)) return;
+    if (!this.game.blockAvailability(b.id).ok) return;
     this.selectBlock(b.id);
   }
 
@@ -415,7 +488,7 @@ export class UIManager {
     this.q('#tab-overview').innerHTML = `
       <div class="stat-row"><span>Total blocks placed</span><span>${s.totalBlocksPlaced}</span></div>
       <div class="stat-row"><span>Total blocks broken</span><span>${s.totalBlocksBroken}</span></div>
-      <div class="stat-row"><span>Block types discovered</span><span>${s.distinctTypesPlacedEver.size} / ${BLOCKS.length}</span></div>
+      <div class="stat-row"><span>Block types discovered</span><span>${s.distinctTypesPlacedEver.size} / ${PLACEABLE_BLOCKS.length}</span></div>
       <div class="stat-row"><span>Highest placement</span><span>y = ${s.maxHeightPlaced}</span></div>
       <div class="stat-row"><span>Current streak</span><span>${s.streakCount} day${s.streakCount === 1 ? '' : 's'}</span></div>
       <div class="stat-row"><span>Challenges completed</span><span>${s.challengesCompletedTotal}</span></div>

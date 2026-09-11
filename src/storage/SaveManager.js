@@ -3,7 +3,7 @@ import { World } from '../world/World.js';
 const INDEX_KEY = 'voxelgame:saves';
 const SAVE_PREFIX = 'voxelgame:save:';
 const AUTOSAVE_NAME = '__autosave__';
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 
 function saveKey(name) {
   return SAVE_PREFIX + name;
@@ -27,13 +27,15 @@ export class SaveManager {
       .sort((a, b) => b.timestamp - a.timestamp);
   }
 
-  save(name, { world, player, gamification }) {
+  save(name, { world, player, gamification, economy, mode }) {
     const payload = {
       version: SAVE_VERSION,
       timestamp: Date.now(),
+      mode,
       world: world.serialize(),
       player: { x: player.position.x, y: player.position.y, z: player.position.z, yaw: player.yaw, pitch: player.pitch },
       gamification: gamification.toJSON(),
+      economy: economy.toJSON(),
     };
     const json = JSON.stringify(payload);
     try {
@@ -59,6 +61,9 @@ export class SaveManager {
       world: World.deserialize(payload.world),
       player: payload.player,
       gamification: payload.gamification,
+      // Saves written before the economy existed are Creative worlds.
+      mode: payload.mode ?? 'creative',
+      economy: payload.economy ?? null,
       timestamp: payload.timestamp,
     };
   }

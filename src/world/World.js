@@ -1,4 +1,4 @@
-import { AIR } from '../config/blocks.js';
+import { AIR, isSystemBlock } from '../config/blocks.js';
 
 export const CHUNK_SIZE = 16;
 
@@ -73,6 +73,11 @@ export class World {
 
   isSolid(x, y, z) {
     return this.getBlock(x, y, z) !== AIR;
+  }
+
+  /** World furniture such as the Campaign ground plane: can't be broken or sold. */
+  isIndestructible(x, y, z) {
+    return isSystemBlock(this.getBlock(x, y, z));
   }
 
   surfaceHeight(x, z) {

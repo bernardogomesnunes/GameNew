@@ -30,12 +30,24 @@ const tmpColor = new THREE.Color();
 export class ChunkMesher {
   constructor(scene) {
     this.scene = scene;
+    this.activeMeshes = new Set();
+  }
+
+  /**
+   * Drops every mesh this mesher has added. Replacing the World creates fresh
+   * Chunk objects with no mesh references, so without this the previous world's
+   * geometry stays in the scene forever.
+   */
+  clearAll() {
+    for (const mesh of this.activeMeshes) this.scene.remove(mesh);
+    this.activeMeshes.clear();
   }
 
   rebuild(world, chunk) {
     if (chunk.mesh) {
       for (const mesh of chunk.mesh.values()) {
         this.scene.remove(mesh);
+        this.activeMeshes.delete(mesh);
       }
     }
     const byType = new Map();
@@ -73,6 +85,7 @@ export class ChunkMesher {
       mesh.frustumCulled = true;
       mesh.userData.blockId = id;
       this.scene.add(mesh);
+      this.activeMeshes.add(mesh);
       meshes.set(id, mesh);
     }
 

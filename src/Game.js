@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { World } from './world/World.js';
-import { generateTerrain } from './world/TerrainGenerator.js';
+import { generateTerrain, generateFlat } from './world/TerrainGenerator.js';
 import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
@@ -11,10 +11,14 @@ import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SaveManager, AUTOSAVE_NAME } from './storage/SaveManager.js';
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
-import { AIR } from './config/blocks.js';
+import { EconomyEngine } from './economy/EconomyEngine.js';
+import { AIR, BLOCKS_BY_ID, costResourceOf } from './config/blocks.js';
+import { resourceName } from './config/resources.js';
 
 const REACH = 7;
 const AUTOSAVE_INTERVAL_MS = 60_000;
+export const CREATIVE = 'creative';
+export const CAMPAIGN = 'campaign';
 
 export class Game {
   constructor(container) {
@@ -47,7 +51,9 @@ export class Game {
 
     this.mesher = new ChunkMesher(this.scene);
     this.gamification = new GamificationEngine(this.bus);
+    this.economy = new EconomyEngine(this.bus);
     this.undoRedo = new UndoRedo();
+    this.mode = CREATIVE;
 
     this.selectedBlockId = 1;
     this.pointerLocked = false;
@@ -93,10 +99,11 @@ export class Game {
 
     this.ui = new UIManager(this.uiRoot, {
       bus: this.bus,
-      gamification: this.gamification,
+      game: this,
       saveManager: this.saveManager,
       callbacks: this.buildCallbacks(),
     });
+    this.ui.refreshForMode();
 
     this.wireInput();
     this.lastAutosave = performance.now();
@@ -116,7 +123,7 @@ export class Game {
       onToggleFullscreen: () => this.toggleFullscreen(),
       onSelectSlot: (id) => { this.selectedBlockId = id; },
       onSave: (name) => {
-        this.saveManager.save(name, { world: this.world, player: this.player, gamification: this.gamification });
+        this.saveManager.save(name, this.saveState());
         this.ui.toast({ kind: 'challenge', title: 'World saved', body: name });
       },
       onLoad: (name) => {
@@ -125,7 +132,7 @@ export class Game {
         this.ui.closePanel('panel-menu');
       },
       onDeleteSave: (name) => this.saveManager.delete(name),
-      onNewWorld: () => { this.newWorld(); this.ui.closePanel('panel-menu'); },
+      onNewWorld: (mode) => { this.newWorld({ mode }); this.ui.closePanel('panel-menu'); },
       onResume: () => {
         this.ui.closePanel('panel-menu');
         if (document.body.classList.contains('touch')) this.ui.hideBlocker();
@@ -159,15 +166,37 @@ export class Game {
     };
   }
 
-  newWorld({ silent } = {}) {
+  saveState() {
+    return {
+      world: this.world,
+      player: this.player,
+      gamification: this.gamification,
+      economy: this.economy,
+      mode: this.mode,
+    };
+  }
+
+  newWorld({ silent, mode = this.mode } = {}) {
+    this.mode = mode;
     this.world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
-    generateTerrain(this.world);
+    if (mode === CAMPAIGN) generateFlat(this.world);
+    else generateTerrain(this.world);
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, this.findSafeSpawn());
     this.gamification = new GamificationEngine(this.bus);
+    this.economy = new EconomyEngine(this.bus);
     this.undoRedo = new UndoRedo();
+    if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
     this.rebuildAllChunks();
-    if (!silent) this.ui.toast({ kind: 'xp', title: 'New world generated', body: 'Have fun building!' });
+    this.bus.emit('economy:change', {});
+    if (!silent) {
+      this.ui.refreshForMode();
+      this.ui.toast({
+        kind: 'xp',
+        title: mode === CAMPAIGN ? 'Campaign started' : 'New world generated',
+        body: mode === CAMPAIGN ? 'You have 120 wood. Spend it well.' : 'Have fun building!',
+      });
+    }
   }
 
   /**
@@ -196,19 +225,27 @@ export class Game {
 
   loadFromData(data, { silent } = {}) {
     this.world = data.world;
+    this.mode = data.mode === CAMPAIGN ? CAMPAIGN : CREATIVE;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, data.player);
     this.player.yaw = data.player.yaw || 0;
     this.player.pitch = data.player.pitch || 0;
     if (!this.gamification) this.gamification = new GamificationEngine(this.bus);
     this.gamification.loadJSON(data.gamification);
+    this.economy = new EconomyEngine(this.bus);
+    this.economy.loadJSON(data.economy);
     this.undoRedo = new UndoRedo();
+    if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
     this.rebuildAllChunks();
-    if (this.ui) this.ui.updateXp();
-    if (!silent && this.ui) this.ui.toast({ kind: 'xp', title: 'World loaded', body: '' });
+    if (this.ui) {
+      this.ui.updateXp();
+      this.ui.refreshForMode();
+      if (!silent) this.ui.toast({ kind: 'xp', title: 'World loaded', body: this.mode === CAMPAIGN ? 'Campaign' : 'Creative' });
+    }
   }
 
   rebuildAllChunks() {
+    this.mesher.clearAll();
     for (const chunk of this.world.allChunks()) this.mesher.rebuild(this.world, chunk);
   }
 
@@ -318,6 +355,35 @@ export class Game {
     return castVoxelRay(this.world, origin, dir, REACH);
   }
 
+  /**
+   * Whether a block can be held at all. Creative gates on level/achievement,
+   * Campaign gates on whether its resource tier is unlocked — affordability is
+   * a separate question, answered at purchase time.
+   */
+  blockAvailability(id) {
+    const cfg = BLOCKS_BY_ID.get(id);
+    if (!cfg || cfg.system) return { ok: false, reason: 'Not placeable' };
+    if (this.mode === CAMPAIGN) {
+      const res = costResourceOf(id);
+      if (res && !this.economy.isResourceUnlocked(res)) {
+        return { ok: false, reason: `Unlocks with ${resourceName(res)}` };
+      }
+      return { ok: true };
+    }
+    if (this.gamification.isBlockUnlocked(id)) return { ok: true };
+    return {
+      ok: false,
+      reason: cfg.unlock?.type === 'level' ? `Unlocks at level ${cfg.unlock.value}` : 'Unlocks via an achievement',
+    };
+  }
+
+  canAffordBlock(id) {
+    if (this.mode !== CAMPAIGN) return true;
+    const cost = BLOCKS_BY_ID.get(id)?.cost;
+    if (!cost) return true;
+    return Object.entries(cost).every(([res, amount]) => this.economy.balanceOf(res) >= amount);
+  }
+
   recomputeVertical() {
     this.player.externalUp = (this.upHeld ? 1 : 0) - (this.downHeld ? 1 : 0);
   }
@@ -350,8 +416,9 @@ export class Game {
     const hit = this.raycast();
     if (!hit) return;
     const type = this.selectedBlockId;
-    if (!this.gamification.isBlockUnlocked(type)) {
-      this.ui.toast({ kind: 'xp', title: 'Locked block', body: 'Level up or complete achievements to unlock it' });
+    const availability = this.blockAvailability(type);
+    if (!availability.ok) {
+      this.ui.toast({ kind: 'xp', title: 'Locked block', body: availability.reason });
       return;
     }
     const targets = this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
@@ -374,30 +441,73 @@ export class Game {
     return withinX && withinZ && withinY;
   }
 
-  applyChanges(changes, { viaSymmetry }) {
-    if (!changes.length) return;
+  /**
+   * The one place blocks change. Break, place, paste, symmetry and undo all
+   * route through here, so the economy only has to hook in once.
+   * A batch is atomic: if the player can't afford all of it, none of it lands.
+   */
+  applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
+    changes = changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z));
+    if (!changes.length) return false;
+
+    if (chargeResources && !this.commitResources(changes)) return false;
+
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
     this.undoRedo.push(changes);
-    for (const chunk of this.world.dirtyChunks()) this.mesher.rebuild(this.world, chunk);
+    this.remeshDirty();
     for (const c of changes) {
       if (c.next !== AIR) this.gamification.onBlockPlaced({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.next, viaSymmetry, now });
       else this.gamification.onBlockBroken({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.prev, now });
     }
+    return true;
+  }
+
+  /** Charges (or refunds) a batch in Campaign. Returns false if unaffordable. */
+  commitResources(changes) {
+    if (this.mode !== CAMPAIGN) return true;
+    const delta = this.economy.deltaForChanges(changes);
+    if (!this.economy.canApply(delta)) {
+      const short = this.economy.shortfall(delta);
+      if (short) {
+        this.ui?.toast({
+          kind: 'xp',
+          title: `Not enough ${resourceName(short.resource)}`,
+          body: `Needs ${short.needed}, you have ${short.have}`,
+        });
+      }
+      return false;
+    }
+    this.economy.apply(delta);
+    return true;
+  }
+
+  remeshDirty() {
+    for (const chunk of this.world.dirtyChunks()) this.mesher.rebuild(this.world, chunk);
   }
 
   doUndo() {
     const action = this.undoRedo.undo();
     if (!action) return;
+    // Undoing a break re-places the block, which has to be paid for again.
+    const reversed = action.map((c) => ({ x: c.x, y: c.y, z: c.z, prev: c.next, next: c.prev }));
+    if (!this.commitResources(reversed)) {
+      this.undoRedo.redo(); // roll the pointer back, nothing was applied
+      return;
+    }
     for (const c of action) this.world.setBlock(c.x, c.y, c.z, c.prev);
-    for (const chunk of this.world.dirtyChunks()) this.mesher.rebuild(this.world, chunk);
+    this.remeshDirty();
   }
 
   doRedo() {
     const action = this.undoRedo.redo();
     if (!action) return;
+    if (!this.commitResources(action)) {
+      this.undoRedo.undo();
+      return;
+    }
     for (const c of action) this.world.setBlock(c.x, c.y, c.z, c.next);
-    for (const chunk of this.world.dirtyChunks()) this.mesher.rebuild(this.world, chunk);
+    this.remeshDirty();
   }
 
   // ---- loop ----
@@ -410,7 +520,7 @@ export class Game {
 
     if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) {
       this.lastAutosave = performance.now();
-      try { this.saveManager.autosave({ world: this.world, player: this.player, gamification: this.gamification }); } catch {}
+      try { this.saveManager.autosave(this.saveState()); } catch {}
     }
 
     this.renderer.render(this.scene, this.camera);

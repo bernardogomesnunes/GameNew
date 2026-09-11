@@ -1,4 +1,4 @@
-import { BLOCKS, BLOCKS_BY_ID } from '../config/blocks.js';
+import { BLOCKS, BLOCKS_BY_ID, PLACEABLE_BLOCKS } from '../config/blocks.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID, dailyChallengeIdsFor } from '../config/challenges.js';
 
@@ -123,7 +123,7 @@ export class GamificationEngine {
 
   computeBuildScore() {
     const s = this.session;
-    const totalTypes = BLOCKS.length;
+    const totalTypes = PLACEABLE_BLOCKS.length;
     const heightRange = s.maxY != null ? s.maxY - s.minY : 0;
     const sizeScore = Math.min(100, (s.blocksPlaced / 5));
     const varietyScore = Math.min(100, (s.distinctTypes.size / totalTypes) * 100);
@@ -342,7 +342,7 @@ export class GamificationEngine {
   }
 
   unlockedBlocks() {
-    return BLOCKS.filter((b) => this.isBlockUnlocked(b.id));
+    return PLACEABLE_BLOCKS.filter((b) => this.isBlockUnlocked(b.id));
   }
 
   // ---- persistence ----
