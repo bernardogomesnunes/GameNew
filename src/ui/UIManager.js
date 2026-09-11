@@ -1,0 +1,463 @@
+import { BLOCKS, BLOCKS_BY_ID } from '../config/blocks.js';
+import { ACHIEVEMENTS } from '../config/achievements.js';
+import { CHALLENGES_BY_ID } from '../config/challenges.js';
+
+function el(html) {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+
+function fmtTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+export class UIManager {
+  constructor(root, { bus, gamification, saveManager, callbacks }) {
+    this.bus = bus;
+    this.gamification = gamification;
+    this.saveManager = saveManager;
+    this.cb = callbacks;
+    this.selectedBlockId = 1;
+    this.symmetryMode = 'off';
+    this.selectionActive = false;
+
+    root.innerHTML = this.markup();
+    this.root = root;
+    this.q = (sel) => root.querySelector(sel);
+
+    this.buildHotbar();
+    this.wireEvents();
+    this.wireBus();
+    this.updateXp();
+    this.detectTouch();
+  }
+
+  markup() {
+    return `
+      <div id="crosshair"></div>
+
+      <div id="blocker" class="overlay">
+        <div class="card">
+          <h1>Voxel Sandbox</h1>
+          <div class="desktop-only">
+            <p>Move: <span class="hint-key">WASD</span> &nbsp; Jump: <span class="hint-key">Space</span> &nbsp; Fly: <span class="hint-key">F</span></p>
+            <p>Break: <span class="hint-key">Left Click</span> &nbsp; Place: <span class="hint-key">Right Click</span> &nbsp; Hotbar: <span class="hint-key">1-9</span></p>
+            <p>Undo/Redo: <span class="hint-key">Ctrl+Z</span> / <span class="hint-key">Ctrl+Y</span> &nbsp; Menu: <span class="hint-key">Esc</span></p>
+          </div>
+          <div class="touch-only" hidden>
+            <p>Left joystick to move &middot; drag the right side to look</p>
+            <p>⛏ breaks &middot; 🧱 places &middot; ✈ toggles fly &middot; ▲▼ move up/down while flying</p>
+          </div>
+          <button class="primary" id="btn-play">Play</button>
+        </div>
+      </div>
+
+      <div id="hud-top">
+        <div id="level-badge">1</div>
+        <div id="xp-bar-track"><div id="xp-bar-fill"></div></div>
+      </div>
+
+      <div id="top-buttons">
+        <button class="icon-btn" id="btn-undo" title="Undo">↺</button>
+        <button class="icon-btn" id="btn-redo" title="Redo">↻</button>
+        <button class="icon-btn" id="btn-select" title="Selection tool">▦</button>
+        <button class="icon-btn" id="btn-copy" title="Copy selection">⧉</button>
+        <button class="icon-btn" id="btn-paste" title="Paste">📋</button>
+        <button class="icon-btn" id="btn-symmetry" title="Cycle symmetry mode">⇄</button>
+        <button class="icon-btn" id="btn-stats" title="Stats & Achievements">📊</button>
+        <button class="icon-btn" id="btn-menu" title="Menu">☰</button>
+      </div>
+
+      <div id="hotbar-wrap"><div id="hotbar"></div></div>
+
+      <div id="toast-stack"></div>
+
+      <div class="overlay" id="panel-stats" hidden>
+        <div class="panel">
+          <button class="icon-btn panel-close" data-close="panel-stats">✕</button>
+          <h2>Progress</h2>
+          <div class="sub" id="stats-sub"></div>
+          <div class="tab-row">
+            <button class="tab-btn active" data-tab="tab-overview">Overview</button>
+            <button class="tab-btn" data-tab="tab-achievements">Achievements</button>
+            <button class="tab-btn" data-tab="tab-challenges">Challenges</button>
+          </div>
+          <div class="tab-panel" id="tab-overview"></div>
+          <div class="tab-panel" id="tab-achievements" hidden><div class="ach-grid" id="ach-grid"></div></div>
+          <div class="tab-panel" id="tab-challenges" hidden><div id="challenge-list"></div></div>
+        </div>
+      </div>
+
+      <div class="overlay" id="panel-menu" hidden>
+        <div class="panel">
+          <button class="icon-btn panel-close" data-close="panel-menu">✕</button>
+          <h2>Menu</h2>
+          <div class="sub">Fly mode, saving, and loading worlds.</div>
+          <div class="field-row">
+            <input type="text" id="save-name" placeholder="Save name" maxlength="40" />
+            <button class="secondary" id="btn-save">Save</button>
+          </div>
+          <div id="save-list"></div>
+          <div class="field-row" style="margin-top:14px;">
+            <button class="secondary" id="btn-resume">Resume</button>
+            <button class="danger secondary" id="btn-new-world">New World</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="overlay" id="panel-score" hidden>
+        <div class="panel">
+          <button class="icon-btn panel-close" data-close="panel-score">✕</button>
+          <h2>Session Complete</h2>
+          <div class="sub">A lightweight read on how this build session went — just for you.</div>
+          <div class="score-total" id="score-total">0</div>
+          <div class="score-breakdown" id="score-breakdown"></div>
+        </div>
+      </div>
+
+      <div id="touch-controls">
+        <div id="joystick-zone">
+          <div id="joystick-base"><div id="joystick-knob"></div></div>
+        </div>
+        <div id="look-zone"></div>
+        <div id="touch-buttons">
+          <div class="row">
+            <button class="touch-btn wide" id="t-symmetry">Sym</button>
+            <button class="touch-btn" id="t-fly">✈</button>
+          </div>
+          <div class="row">
+            <button class="touch-btn" id="t-break">⛏</button>
+            <button class="touch-btn" id="t-place">🧱</button>
+          </div>
+          <div class="row">
+            <button class="touch-btn" id="t-down">▼</button>
+            <button class="touch-btn" id="t-jump">▲</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  detectTouch() {
+    const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    if (isTouch) {
+      document.body.classList.add('touch');
+      this.q('.desktop-only').hidden = true;
+      this.q('.touch-only').hidden = false;
+      this.q('#btn-play').textContent = 'Tap to Play';
+    }
+  }
+
+  buildHotbar() {
+    const hotbar = this.q('#hotbar');
+    hotbar.innerHTML = '';
+    BLOCKS.forEach((b, i) => {
+      const unlocked = this.gamification.isBlockUnlocked(b.id);
+      const slot = el(`
+        <div class="hotbar-slot ${unlocked ? '' : 'locked'} ${b.id === this.selectedBlockId ? 'selected' : ''}" data-id="${b.id}" title="${b.name}">
+          ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
+          <div class="swatch" style="background:#${b.color.toString(16).padStart(6, '0')}"></div>
+          ${unlocked ? '' : `<div class="lock">🔒</div>`}
+        </div>
+      `);
+      hotbar.appendChild(slot);
+    });
+  }
+
+  wireEvents() {
+    this.q('#btn-play').addEventListener('click', () => this.cb.onRequestStart());
+
+    this.q('#hotbar').addEventListener('click', (e) => {
+      const slot = e.target.closest('.hotbar-slot');
+      if (!slot) return;
+      const id = Number(slot.dataset.id);
+      if (!this.gamification.isBlockUnlocked(id)) {
+        const cfg = BLOCKS_BY_ID.get(id);
+        const hint = cfg.unlock?.type === 'level' ? `Unlocks at level ${cfg.unlock.value}` : 'Unlocks via an achievement';
+        this.toast({ kind: 'xp', title: 'Locked', body: hint });
+        return;
+      }
+      this.selectBlock(id);
+    });
+
+    this.q('#btn-undo').addEventListener('click', () => this.cb.onUndo());
+    this.q('#btn-redo').addEventListener('click', () => this.cb.onRedo());
+    this.q('#btn-select').addEventListener('click', () => {
+      this.selectionActive = this.cb.onToggleSelection();
+      this.q('#btn-select').classList.toggle('active', this.selectionActive);
+    });
+    this.q('#btn-copy').addEventListener('click', () => this.cb.onCopy());
+    this.q('#btn-paste').addEventListener('click', () => this.cb.onPaste());
+    this.q('#btn-symmetry').addEventListener('click', () => {
+      this.symmetryMode = this.cb.onCycleSymmetry();
+      this.q('#btn-symmetry').textContent = this.symmetryMode === 'off' ? '⇄' : `⇄ ${this.symmetryMode.toUpperCase()}`;
+    });
+
+    this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
+    this.q('#btn-menu').addEventListener('click', () => this.cb.onOpenMenu());
+
+    this.root.querySelectorAll('[data-close]').forEach((btn) => {
+      btn.addEventListener('click', () => this.closePanel(btn.dataset.close));
+    });
+
+    this.root.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.root.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+        this.root.querySelectorAll('.tab-panel').forEach((p) => (p.hidden = true));
+        btn.classList.add('active');
+        this.q('#' + btn.dataset.tab).hidden = false;
+      });
+    });
+
+    this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
+    this.q('#btn-new-world').addEventListener('click', () => {
+      if (confirm('Start a new world? Unsaved changes will be lost.')) this.cb.onNewWorld();
+    });
+    this.q('#btn-save').addEventListener('click', () => {
+      const input = this.q('#save-name');
+      const name = input.value.trim() || `World ${new Date().toLocaleDateString()}`;
+      this.cb.onSave(name);
+      input.value = '';
+      this.refreshSaveList();
+    });
+
+    this.wireTouchControls();
+  }
+
+  wireTouchControls() {
+    const joyZone = this.q('#joystick-zone');
+    const joyBase = this.q('#joystick-base');
+    const joyKnob = this.q('#joystick-knob');
+    let joyId = null, joyOrigin = { x: 0, y: 0 };
+    const radius = 48;
+
+    joyZone.addEventListener('touchstart', (e) => {
+      const t = e.changedTouches[0];
+      joyId = t.identifier;
+      joyOrigin = { x: t.clientX, y: t.clientY };
+      joyBase.style.left = `${t.clientX - 48}px`;
+      joyBase.style.top = `${t.clientY - 48}px`;
+      joyBase.style.display = 'block';
+      joyKnob.style.left = '26px';
+      joyKnob.style.top = '26px';
+      e.preventDefault();
+    }, { passive: false });
+
+    joyZone.addEventListener('touchmove', (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier !== joyId) continue;
+        let dx = t.clientX - joyOrigin.x, dy = t.clientY - joyOrigin.y;
+        const len = Math.hypot(dx, dy);
+        if (len > radius) { dx = (dx / len) * radius; dy = (dy / len) * radius; }
+        joyKnob.style.left = `${26 + dx}px`;
+        joyKnob.style.top = `${26 + dy}px`;
+        this.cb.onMove(dx / radius, -dy / radius);
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    const endJoy = (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier !== joyId) continue;
+        joyId = null;
+        joyBase.style.display = 'none';
+        this.cb.onMove(0, 0);
+      }
+    };
+    joyZone.addEventListener('touchend', endJoy);
+    joyZone.addEventListener('touchcancel', endJoy);
+
+    const lookZone = this.q('#look-zone');
+    let lookId = null, lastX = 0, lastY = 0;
+    lookZone.addEventListener('touchstart', (e) => {
+      const t = e.changedTouches[0];
+      lookId = t.identifier;
+      lastX = t.clientX; lastY = t.clientY;
+    });
+    lookZone.addEventListener('touchmove', (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier !== lookId) continue;
+        const dx = t.clientX - lastX, dy = t.clientY - lastY;
+        lastX = t.clientX; lastY = t.clientY;
+        this.cb.onLook(dx * 0.0028, dy * 0.0028);
+      }
+    });
+    const endLook = (e) => { for (const t of e.changedTouches) if (t.identifier === lookId) lookId = null; };
+    lookZone.addEventListener('touchend', endLook);
+    lookZone.addEventListener('touchcancel', endLook);
+
+    this.q('#t-jump').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onJumpOrFlyUp(true); });
+    this.q('#t-jump').addEventListener('touchend', (e) => { e.preventDefault(); this.cb.onJumpOrFlyUp(false); });
+    this.q('#t-down').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onFlyDown(true); });
+    this.q('#t-down').addEventListener('touchend', (e) => { e.preventDefault(); this.cb.onFlyDown(false); });
+    this.q('#t-fly').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const flying = this.cb.onToggleFly();
+      this.q('#t-fly').classList.toggle('active', flying);
+    });
+    this.q('#t-break').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onBreakTap(); });
+    this.q('#t-place').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onPlaceTap(); });
+    this.q('#t-symmetry').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      this.symmetryMode = this.cb.onCycleSymmetry();
+      this.q('#t-symmetry').textContent = this.symmetryMode === 'off' ? 'Sym' : this.symmetryMode.toUpperCase();
+    });
+  }
+
+  wireBus() {
+    this.bus.on('xp:gain', ({ amount, reason }) => {
+      this.updateXp();
+      if (reason) this.toast({ kind: 'xp', title: `+${amount} XP`, body: reason });
+    });
+    this.bus.on('level:up', ({ level }) => {
+      this.updateXp();
+      this.toast({ kind: 'level', title: `Level ${level}!`, body: 'Keep building to unlock more.' });
+      this.buildHotbar();
+    });
+    this.bus.on('achievement:unlock', (a) => {
+      this.toast({ kind: 'achievement', title: `${a.icon} Achievement: ${a.name}`, body: a.description });
+    });
+    this.bus.on('challenge:complete', (c) => {
+      this.toast({ kind: 'challenge', title: 'Challenge complete!', body: c.description });
+    });
+    this.bus.on('block:unlock', (b) => {
+      this.toast({ kind: 'challenge', title: 'New block unlocked', body: b.name });
+      this.buildHotbar();
+    });
+    this.bus.on('streak:update', ({ count }) => {
+      if (count > 1) this.toast({ kind: 'xp', title: `${count}-day streak`, body: 'Back again — nice consistency.' });
+    });
+    this.bus.on('session:end', ({ score }) => this.showBuildScore(score));
+  }
+
+  selectBlock(id) {
+    this.selectedBlockId = id;
+    this.root.querySelectorAll('.hotbar-slot').forEach((s) => s.classList.toggle('selected', Number(s.dataset.id) === id));
+    this.cb.onSelectSlot(id);
+  }
+
+  cycleHotbarByKey(n) {
+    const b = BLOCKS[n - 1];
+    if (!b) return;
+    if (!this.gamification.isBlockUnlocked(b.id)) return;
+    this.selectBlock(b.id);
+  }
+
+  updateXp() {
+    const { level, xp, required, pct } = this.gamification.xpProgress();
+    this.q('#level-badge').textContent = level;
+    this.q('#xp-bar-fill').style.width = `${Math.round(pct * 100)}%`;
+    this.q('#xp-bar-track').title = `${xp} / ${required} XP`;
+  }
+
+  toast({ kind, title, body }) {
+    const stack = this.q('#toast-stack');
+    const node = el(`<div class="toast ${kind}"><div class="title">${title}</div>${body ? `<div class="body">${body}</div>` : ''}</div>`);
+    stack.appendChild(node);
+    setTimeout(() => {
+      node.classList.add('fade-out');
+      setTimeout(() => node.remove(), 320);
+    }, 3400);
+    while (stack.children.length > 5) stack.removeChild(stack.firstChild);
+  }
+
+  openPanel(id) {
+    if (id === 'panel-stats') this.populateStats();
+    this.q('#' + id).hidden = false;
+  }
+
+  closePanel(id) {
+    this.q('#' + id).hidden = true;
+  }
+
+  isAnyPanelOpen() {
+    return ['panel-stats', 'panel-menu', 'panel-score'].some((id) => !this.q('#' + id).hidden);
+  }
+
+  populateStats() {
+    const s = this.gamification.snapshot();
+    this.q('#stats-sub').textContent = `Level ${s.level} · ${s.totalBlocksPlaced} blocks placed · ${s.streakCount}-day streak`;
+
+    this.q('#tab-overview').innerHTML = `
+      <div class="stat-row"><span>Total blocks placed</span><span>${s.totalBlocksPlaced}</span></div>
+      <div class="stat-row"><span>Total blocks broken</span><span>${s.totalBlocksBroken}</span></div>
+      <div class="stat-row"><span>Block types discovered</span><span>${s.distinctTypesPlacedEver.size} / ${BLOCKS.length}</span></div>
+      <div class="stat-row"><span>Highest placement</span><span>y = ${s.maxHeightPlaced}</span></div>
+      <div class="stat-row"><span>Current streak</span><span>${s.streakCount} day${s.streakCount === 1 ? '' : 's'}</span></div>
+      <div class="stat-row"><span>Challenges completed</span><span>${s.challengesCompletedTotal}</span></div>
+      <div class="stat-row"><span>Achievements unlocked</span><span>${s.achievementsUnlocked.size} / ${ACHIEVEMENTS.length}</span></div>
+    `;
+
+    const achGrid = this.q('#ach-grid');
+    achGrid.innerHTML = ACHIEVEMENTS.map((a) => {
+      const unlocked = s.achievementsUnlocked.has(a.id);
+      return `<div class="ach-card ${unlocked ? '' : 'locked'}">
+        <div class="ach-icon">${a.icon}</div>
+        <div><div class="ach-name">${a.name}</div><div class="ach-desc">${a.description}</div></div>
+      </div>`;
+    }).join('');
+
+    const dc = s.dailyChallenge;
+    const list = this.q('#challenge-list');
+    list.innerHTML = dc.ids.map((id) => {
+      const c = CHALLENGES_BY_ID.get(id);
+      if (!c) return '';
+      const done = dc.completed.includes(id);
+      return `<div class="challenge-card ${done ? 'done' : ''}">
+        <div>${done ? '✅' : '🎯'} ${c.description}</div>
+        <div class="reward">${done ? 'Completed' : `Reward: +${c.xpReward} XP${c.unlockBlock ? ' + early block unlock' : ''}`}</div>
+      </div>`;
+    }).join('');
+  }
+
+  refreshSaveList() {
+    const saves = this.saveManager.listSaves().filter((s) => !s.isAutosave);
+    const list = this.q('#save-list');
+    if (!saves.length) {
+      list.innerHTML = `<div class="sub">No saves yet.</div>`;
+      return;
+    }
+    list.innerHTML = saves.map((s) => `
+      <div class="save-row" data-name="${s.name}">
+        <div><div>${s.name}</div><div class="meta">${fmtTime(s.timestamp)}</div></div>
+        <div class="actions">
+          <button class="secondary" data-load="${s.name}">Load</button>
+          <button class="danger secondary" data-delete="${s.name}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-load]').forEach((btn) => btn.addEventListener('click', () => this.cb.onLoad(btn.dataset.load)));
+    list.querySelectorAll('[data-delete]').forEach((btn) => btn.addEventListener('click', () => {
+      if (confirm('Delete this save?')) { this.cb.onDeleteSave(btn.dataset.delete); this.refreshSaveList(); }
+    }));
+  }
+
+  showBuildScore(score) {
+    if (!score) return;
+    this.q('#score-total').textContent = score.totalScore;
+    this.q('#score-breakdown').innerHTML = `
+      ${row('Size', score.sizeScore)}
+      ${row('Variety', score.varietyScore)}
+      ${row('Height', score.heightScore)}
+      <div class="sub" style="margin-top:6px;">${score.blocksPlaced} blocks · ${score.distinctTypes} types · ${score.heightRange} block height range</div>
+    `;
+    this.openPanel('panel-score');
+    function row(label, value) {
+      return `<div class="score-bar-row"><span style="width:56px;">${label}</span><div class="score-bar-track"><div class="score-bar-fill" style="width:${value}%"></div></div><span>${value}</span></div>`;
+    }
+  }
+
+  hideBlocker() {
+    this.q('#blocker').hidden = true;
+  }
+
+  showBlocker() {
+    this.q('#blocker').hidden = false;
+  }
+
+  setFlyIndicator(flying) {
+    this.q('#t-fly').classList.toggle('active', flying);
+  }
+}
