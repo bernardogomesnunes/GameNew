@@ -113,6 +113,15 @@ export class UIManager {
           </div>
           <div id="save-list"></div>
           <div class="mode-block">
+            <div class="mode-label">Export and import</div>
+            <div class="field-row" style="margin-bottom:0; flex-wrap:wrap;">
+              <button class="secondary" id="btn-export-world">Export world</button>
+              <button class="secondary" id="btn-export-vox">Export .vox</button>
+              <button class="secondary" id="btn-import-world">Import a file</button>
+            </div>
+            <div class="export-note">A world file restores everything, designs included. The .vox opens in MagicaVoxel and Blender.</div>
+          </div>
+          <div class="mode-block">
             <div class="mode-label">New world</div>
             <div class="field-row" style="margin-bottom:0;">
               <button class="secondary mode-btn" data-mode="campaign">
@@ -308,6 +317,9 @@ export class UIManager {
     });
 
     this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
+    this.q('#btn-export-world').addEventListener('click', () => this.cb.onExportWorld(this.q('#save-name').value));
+    this.q('#btn-export-vox').addEventListener('click', () => this.cb.onExportVox(this.q('#save-name').value));
+    this.q('#btn-import-world').addEventListener('click', () => this.cb.onImportWorld());
     this.root.querySelectorAll('.mode-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const mode = btn.dataset.mode;

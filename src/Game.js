@@ -10,6 +10,7 @@ import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SaveManager, AUTOSAVE_NAME } from './storage/SaveManager.js';
+import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
@@ -136,6 +137,30 @@ export class Game {
         this.ui.closePanel('panel-menu');
       },
       onDeleteSave: (name) => this.saveManager.delete(name),
+      onExportWorld: (name) => {
+        const payload = exportWorldFile({ ...this.saveState(), templates: this.templates.list(), name: name || 'My world' });
+        this.ui.toast({ kind: 'challenge', title: 'World exported', body: `${payload.templates.length} designs included` });
+      },
+      onExportVox: (name) => {
+        const bytes = exportVoxFile(this.world, name || 'My world');
+        this.ui.toast({ kind: 'challenge', title: 'Exported .vox', body: `${(bytes / 1024).toFixed(0)} KB \u00b7 opens in MagicaVoxel and Blender` });
+      },
+      onImportWorld: async () => {
+        const file = await pickFile('.json,application/json');
+        if (!file) return;
+        try {
+          const data = parseWorldPayload(file.text);
+          this.loadFromData(data);
+          for (const t of data.templates) {
+            if (!this.templates.get(t.id)) this.templates.templates.push(t);
+          }
+          if (data.templates.length) this.templates.persist();
+          this.ui.closePanel('panel-menu');
+          this.ui.toast({ kind: 'challenge', title: `Imported "${data.name || 'world'}"`, body: `${data.templates.length} designs came with it` });
+        } catch (err) {
+          this.ui.toast({ kind: 'xp', title: 'Could not import', body: err.message });
+        }
+      },
       onNewWorld: (mode) => { this.newWorld({ mode }); this.ui.closePanel('panel-menu'); },
       onResume: () => {
         this.ui.closePanel('panel-menu');

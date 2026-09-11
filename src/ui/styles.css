@@ -300,3 +300,5 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .template-name { font-weight: 600; font-size: 14px; }
 .template-dims { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; font-variant-numeric: tabular-nums; }
 .template-row .actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+.export-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.45; margin-top: 8px; }
