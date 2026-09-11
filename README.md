@@ -17,7 +17,7 @@ npm run preview   # serve the production build locally
 - **Break**: Left click · **Place**: Right click · **Hotbar**: 1-9 or click a slot
 - **Undo/Redo**: Ctrl+Z / Ctrl+Y (or the toolbar icons)
 - **Selection tool**: B, then click two corners · **Symmetry**: M to cycle Off/X/Z/Both
-- **Menu**: Esc
+- **Menu**: Esc · **Fullscreen**: entered automatically on Play, toggled with the ⛶ button
 
 On touch devices the left thumb drives a virtual joystick, the right side of the screen drags to look, and on-screen buttons handle break/place/fly/jump/down/symmetry.
 

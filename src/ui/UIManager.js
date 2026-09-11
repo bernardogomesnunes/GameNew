@@ -66,6 +66,7 @@ export class UIManager {
         <button class="icon-btn" id="btn-copy" title="Copy selection">⧉</button>
         <button class="icon-btn" id="btn-paste" title="Paste">📋</button>
         <button class="icon-btn" id="btn-symmetry" title="Cycle symmetry mode">⇄</button>
+        <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">⛶</button>
         <button class="icon-btn" id="btn-stats" title="Stats & Achievements">📊</button>
         <button class="icon-btn" id="btn-menu" title="Menu">☰</button>
       </div>
@@ -194,6 +195,10 @@ export class UIManager {
       this.symmetryMode = this.cb.onCycleSymmetry();
       this.q('#btn-symmetry').textContent = this.symmetryMode === 'off' ? '⇄' : `⇄ ${this.symmetryMode.toUpperCase()}`;
     });
+
+    const fsBtn = this.q('#btn-fullscreen');
+    if (document.fullscreenEnabled) fsBtn.addEventListener('click', () => this.cb.onToggleFullscreen());
+    else fsBtn.remove();
 
     this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
     this.q('#btn-menu').addEventListener('click', () => this.cb.onOpenMenu());
@@ -459,5 +464,12 @@ export class UIManager {
 
   setFlyIndicator(flying) {
     this.q('#t-fly').classList.toggle('active', flying);
+  }
+
+  setFullscreenIndicator(isFullscreen) {
+    const btn = this.q('#btn-fullscreen');
+    if (!btn) return;
+    btn.classList.toggle('active', isFullscreen);
+    btn.title = isFullscreen ? 'Exit fullscreen' : 'Toggle fullscreen';
   }
 }

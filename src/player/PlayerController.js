@@ -63,6 +63,7 @@ export class PlayerController {
 
   update(dt) {
     dt = Math.min(dt, 0.05);
+    this.resolveStuck();
     let moveX = this.externalMove.x;
     let moveZ = this.externalMove.z;
     if (this.keys.has('KeyW')) moveZ += 1;
@@ -122,7 +123,14 @@ export class PlayerController {
     if (dy !== 0) {
       const ny = p.y + dy;
       if (this.collidesAt(p.x, ny, p.z)) {
-        if (dy < 0) this.grounded = true;
+        // Snap flush against the surface instead of stopping short of it, so
+        // the ground probe below stays reliable and jumping always works.
+        if (dy < 0) {
+          p.y = Math.floor(ny) + 1;
+          this.grounded = true;
+        } else {
+          p.y = Math.floor(ny + HEIGHT) - HEIGHT - 0.001;
+        }
         this.velocity.y = 0;
       } else {
         p.y = ny;
@@ -131,6 +139,32 @@ export class PlayerController {
     } else {
       this.grounded = this.collidesAt(p.x, p.y - 0.05, p.z);
     }
+  }
+
+  /**
+   * Frees the player if they end up embedded in blocks — walled in by their own
+   * building, or dropped into terrain by a spawn or a loaded save. Without this
+   * every axis of movement collides and the player is stuck for good.
+   */
+  resolveStuck() {
+    const p = this.position;
+    if (!this.collidesAt(p.x, p.y, p.z)) return;
+
+    const cx = Math.floor(p.x) + 0.5;
+    const cz = Math.floor(p.z) + 0.5;
+    if (!this.collidesAt(cx, p.y, cz)) {
+      p.x = cx; p.z = cz;
+      return;
+    }
+    for (let y = Math.floor(p.y); y < this.world.height; y++) {
+      if (!this.collidesAt(cx, y, cz)) {
+        p.x = cx; p.y = y; p.z = cz;
+        this.velocity.set(0, 0, 0);
+        return;
+      }
+    }
+    p.x = cx; p.y = this.world.height - HEIGHT - 1; p.z = cz;
+    this.velocity.set(0, 0, 0);
   }
 
   collidesAt(x, y, z) {

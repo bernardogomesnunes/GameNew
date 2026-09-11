@@ -64,6 +64,10 @@ export class Game {
 
     this.boot();
     window.addEventListener('resize', () => this.onResize());
+    document.addEventListener('fullscreenchange', () => {
+      this.onResize();
+      this.ui.setFullscreenIndicator(!!document.fullscreenElement);
+    });
     this.onResize();
   }
 
@@ -100,9 +104,13 @@ export class Game {
   buildCallbacks() {
     return {
       onRequestStart: () => {
+        // Pointer lock first: both requests must stay inside the same user
+        // gesture, and awaiting the fullscreen transition would spend it.
         if (document.body.classList.contains('touch')) this.ui.hideBlocker();
         else this.requestPointerLock();
+        this.enterFullscreen();
       },
+      onToggleFullscreen: () => this.toggleFullscreen(),
       onSelectSlot: (id) => { this.selectedBlockId = id; },
       onSave: (name) => {
         this.saveManager.save(name, { world: this.world, player: this.player, gamification: this.gamification });
@@ -149,14 +157,36 @@ export class Game {
   newWorld({ silent } = {}) {
     this.world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
     generateTerrain(this.world);
-    const spawnX = 32, spawnZ = 32;
-    const spawnY = this.world.surfaceHeight(spawnX, spawnZ) + 1;
     if (this.player) this.player.dispose();
-    this.player = new PlayerController(this.world, this.camera, { x: spawnX, y: spawnY, z: spawnZ });
+    this.player = new PlayerController(this.world, this.camera, this.findSafeSpawn());
     this.gamification = new GamificationEngine(this.bus);
     this.undoRedo = new UndoRedo();
     this.rebuildAllChunks();
     if (!silent) this.ui.toast({ kind: 'xp', title: 'New world generated', body: 'Have fun building!' });
+  }
+
+  /**
+   * Spawns on block centres, not block corners: a corner position straddles four
+   * columns, so a neighbouring hill traps the player's hitbox on arrival.
+   */
+  findSafeSpawn() {
+    const world = this.world;
+    const cx = Math.floor(world.sizeX / 2), cz = Math.floor(world.sizeZ / 2);
+    for (let radius = 0; radius < 16; radius++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dz = -radius; dz <= radius; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== radius) continue;
+          const x = cx + dx, z = cz + dz;
+          if (x < 1 || z < 1 || x >= world.sizeX - 1 || z >= world.sizeZ - 1) continue;
+          for (let y = world.surfaceHeight(x, z); y < world.height - 3; y++) {
+            if (world.isCollidable(x, y - 1, z) && !world.isCollidable(x, y, z) && !world.isCollidable(x, y + 1, z)) {
+              return { x: x + 0.5, y, z: z + 0.5 };
+            }
+          }
+        }
+      }
+    }
+    return { x: cx + 0.5, y: world.height - 4, z: cz + 0.5 };
   }
 
   loadFromData(data, { silent } = {}) {
@@ -233,6 +263,17 @@ export class Game {
   requestPointerLock() {
     if (this.ui.isAnyPanelOpen()) this.closeAllPanels();
     this.renderer.domElement.requestPointerLock?.();
+  }
+
+  enterFullscreen() {
+    if (!document.fullscreenEnabled || document.fullscreenElement) return;
+    this.container.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
+  }
+
+  toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else this.enterFullscreen();
+    return !document.fullscreenElement;
   }
 
   primaryAction() {
@@ -316,8 +357,8 @@ export class Game {
 
   blockOverlapsPlayerAABB(t) {
     const p = this.player.position;
-    const withinX = Math.abs((t.x + 0.5) - p.x) < 0.65;
-    const withinZ = Math.abs((t.z + 0.5) - p.z) < 0.65;
+    const withinX = Math.abs((t.x + 0.5) - p.x) < 0.8; // block half-extent + player half-width
+    const withinZ = Math.abs((t.z + 0.5) - p.z) < 0.8;
     const withinY = t.y < p.y + 1.8 && t.y + 1 > p.y;
     return withinX && withinZ && withinY;
   }

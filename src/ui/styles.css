@@ -75,6 +75,7 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
   width: 38px; height: 38px; border-radius: 8px; background: var(--panel); border: 1px solid var(--panel-border);
   color: var(--text); font-size: 17px; display: flex; align-items: center; justify-content: center; cursor: pointer;
 }
+.icon-btn.active { background: rgba(88,196,220,0.25); border-color: var(--accent); }
 
 /* Hotbar */
 #hotbar-wrap { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); pointer-events: auto; max-width: 96vw; }
