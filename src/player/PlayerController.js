@@ -7,6 +7,7 @@ const GRAVITY = -26;
 const JUMP_SPEED = 8.2;
 const WALK_SPEED = 4.6;
 const SPRINT_SPEED = 7.2;
+const TURN_SPEED = 2.4; // radians/sec at full joystick deflection
 const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
 
@@ -26,6 +27,7 @@ export class PlayerController {
     this.keys = new Set();
     this.externalMove = { x: 0, z: 0 };
     this.externalUp = 0;
+    this.turnInput = 0; // -1..1, held; turns the camera over time rather than by a delta
     this.sprint = false;
     this.jumpQueued = false;
 
@@ -64,6 +66,7 @@ export class PlayerController {
   update(dt) {
     dt = Math.min(dt, 0.05);
     this.resolveStuck();
+    if (this.turnInput) this.yaw -= this.turnInput * TURN_SPEED * dt;
     let moveX = this.externalMove.x;
     let moveZ = this.externalMove.z;
     if (this.keys.has('KeyW')) moveZ += 1;

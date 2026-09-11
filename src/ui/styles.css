@@ -193,7 +193,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #look-zone { position: absolute; inset: 0; pointer-events: auto; z-index: 1; }
 #joystick-zone { position: absolute; left: 0; width: 50%; z-index: 2; pointer-events: auto;
   bottom: calc(78px + env(safe-area-inset-bottom)); height: 42%; }
-#touch-buttons, #move-rocker { z-index: 3; }
+#touch-buttons { z-index: 3; }
 #hud-top, #top-buttons, #hotbar-wrap { z-index: 5; }
 #toast-stack { z-index: 8; }
 .overlay { z-index: 10; }
@@ -209,7 +209,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   background: rgba(255,255,255,0.42); border: 1px solid rgba(255,255,255,0.35);
 }
 
-#touch-buttons { position: absolute; right: 88px; bottom: calc(90px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; pointer-events: auto; align-items: flex-end; }
+#touch-buttons { position: absolute; right: 14px; bottom: calc(90px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; pointer-events: auto; align-items: flex-end; }
 #touch-buttons .row { display: flex; gap: 10px; }
 .touch-btn {
   width: 56px; height: 56px; border-radius: 50%; background: rgba(20,26,34,0.75); border: 1px solid rgba(255,255,255,0.2);
@@ -219,20 +219,6 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .touch-btn[hidden] { display: none; }
 .touch-btn.wide { width: auto; padding: 0 16px; border-radius: 28px; font-size: 13px; }
 
-/* Forward/back rocker, right thumb. Pill shape keeps it visually distinct from
-   the round action buttons. */
-#move-rocker {
-  position: absolute; right: 14px; bottom: calc(90px + env(safe-area-inset-bottom));
-  width: 62px; display: flex; flex-direction: column; pointer-events: auto;
-  border-radius: 31px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(20,26,34,0.75);
-}
-.rocker-btn {
-  height: 62px; border: none; background: transparent; color: var(--text); font-size: 20px;
-  display: flex; align-items: center; justify-content: center;
-}
-.rocker-btn:first-child { border-bottom: 1px solid rgba(255,255,255,0.14); }
-.rocker-btn.active { background: rgba(88,196,220,0.4); }
 
 @media (max-width: 640px) {
   .panel { padding: 14px; }

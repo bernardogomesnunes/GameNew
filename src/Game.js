@@ -60,9 +60,6 @@ export class Game {
     this.hoverHit = null;
     this.upHeld = false;
     this.downHeld = false;
-    this.joyMove = { x: 0, z: 0 };
-    this.padForward = 0;
-    this.padBack = 0;
 
     this.hoverBox = this.buildWireBox(0xffffff, 1.002);
     this.hoverBox.visible = false;
@@ -149,9 +146,11 @@ export class Game {
       },
       onPaste: () => this.pasteClipboard(),
       onCycleSymmetry: () => this.symmetryTool.cycle(),
-      onMove: (x, z) => { this.joyMove.x = x; this.joyMove.z = z; this.applyTouchMove(); },
-      onMoveForward: (held) => { this.padForward = held ? 1 : 0; this.applyTouchMove(); },
-      onMoveBack: (held) => { this.padBack = held ? 1 : 0; this.applyTouchMove(); },
+      // Tank controls: the stick walks on its Y axis and turns the camera on X.
+      onMove: (x, z) => {
+        this.player.turnInput = x;
+        this.player.externalMove.z = z;
+      },
       onLook: (dx, dy) => this.player.look(dx, dy),
       onJumpOrFlyUp: (held) => {
         if (this.player.flying) { this.upHeld = held; this.recomputeVertical(); }
@@ -386,12 +385,6 @@ export class Game {
 
   recomputeVertical() {
     this.player.externalUp = (this.upHeld ? 1 : 0) - (this.downHeld ? 1 : 0);
-  }
-
-  /** Joystick and forward/back rocker both feed movement; combine rather than overwrite. */
-  applyTouchMove() {
-    this.player.externalMove.x = this.joyMove.x;
-    this.player.externalMove.z = Math.max(-1, Math.min(1, this.joyMove.z + this.padForward - this.padBack));
   }
 
   computeTargets(x, y, z) {

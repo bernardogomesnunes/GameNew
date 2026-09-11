@@ -54,7 +54,7 @@ export class UIManager {
             <p>Undo/Redo: <span class="hint-key">Ctrl+Z</span> / <span class="hint-key">Ctrl+Y</span> &nbsp; Menu: <span class="hint-key">Esc</span></p>
           </div>
           <div class="touch-only" hidden>
-            <p>Left stick to move &middot; drag anywhere to look &middot; ▲▼ rocker to walk forward/back</p>
+            <p>Left stick: push up/down to walk, left/right to turn &middot; drag anywhere to look around</p>
             <p>⛏ breaks &middot; 🧱 places &middot; ✈ toggles fly &middot; ⤴⤵ rise and descend while flying</p>
           </div>
           <button class="primary" id="btn-play">Play</button>
@@ -141,10 +141,6 @@ export class UIManager {
         <div id="look-zone"></div>
         <div id="joystick-zone">
           <div id="joystick-base"><div id="joystick-knob"></div></div>
-        </div>
-        <div id="move-rocker">
-          <button class="rocker-btn" id="t-forward">▲</button>
-          <button class="rocker-btn" id="t-back">▼</button>
         </div>
         <div id="touch-buttons">
           <div class="row">
@@ -383,8 +379,6 @@ export class UIManager {
       el.addEventListener('touchcancel', set(false));
     };
 
-    bindHold('#t-forward', (held) => this.cb.onMoveForward(held));
-    bindHold('#t-back', (held) => this.cb.onMoveBack(held));
     bindHold('#t-jump', (held) => this.cb.onJumpOrFlyUp(held));
     bindHold('#t-down', (held) => this.cb.onFlyDown(held));
 
