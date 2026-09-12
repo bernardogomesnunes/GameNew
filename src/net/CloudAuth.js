@@ -101,7 +101,13 @@ export class CloudAuth {
 }
 
 function readableAuthError(error) {
-  const code = error?.errorCode || error?.code || '';
+  const code = error?.errorCode || error?.code || error?.constructor?.name || '';
+  // Password auth is a per-project switch in Stack Auth and ships off by
+  // default, which otherwise surfaces as an opaque SDK error.
+  if (code.includes('PasswordAuthenticationNotEnabled')) {
+    return 'Password sign-in is turned off for this project. Enable it in the Neon console under Auth \u2192 Sign-in methods.';
+  }
+  if (code.includes('SignUpNotEnabled')) return 'New accounts are turned off for this project.';
   if (code.includes('EmailPasswordMismatch')) return 'That email and password do not match.';
   if (code.includes('UserWithEmailAlreadyExists')) return 'There is already an account with that email — sign in instead.';
   if (code.includes('PasswordRequirementsNotMet')) return 'Pick a longer password (at least 8 characters).';
