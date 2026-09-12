@@ -65,9 +65,9 @@ a deliberate trade, not an oversight.
 
 ### How it is wired
 
-- **Neon Auth** (Stack Auth) issues the JWT. The auth SDK is dynamically
-  imported and only when the menu is first opened, so a player who never signs in
-  never downloads it.
+- **Neon Managed Better Auth** issues the JWT. The SDK is dynamically imported,
+  and only when the menu is first opened, so a player who never signs in never
+  downloads it.
 - **Neon Data API** (PostgREST) is the only endpoint. There is no server of ours
   in the path, which is the point: nothing to keep patched, and no Node runtime
   to age out from under the deploy.
@@ -78,9 +78,16 @@ a deliberate trade, not an oversight.
 - **`SyncEngine`** hashes each chunk and uploads only the ones that changed, so
   save cost tracks what you edited rather than how big the world is.
 
-The three `VITE_` values in `.env` are public by design — a publishable key and
-a URL, both meant to ship in a browser bundle. Neither grants access on its own.
-On Vercel, set the same three as Environment Variables.
+`VITE_NEON_URL` in `.env` is the only setting, and Neon derives both the auth
+service and the Data API from it. It is public by design — a URL grants nothing
+on its own. On Vercel, set the same variable under Settings → Environment
+Variables.
+
+Note on history: this was first built against Neon's legacy Stack Auth
+integration, which turned out to be closed to new projects and shipped with
+email/password sign-in disabled and no way to enable it for a Neon-owned
+project. Managed Better Auth is the supported path, enables password sign-in by
+default, and needs one setting instead of three.
 
 Deleting a world from the cloud soft-deletes the row (a mistaken tap is
 recoverable) and drops its chunks immediately, since those are the bulk of it.

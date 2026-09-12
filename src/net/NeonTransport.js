@@ -1,4 +1,4 @@
-import { CLOUD } from './cloudConfig.js';
+import { deriveUrls } from './cloudConfig.js';
 
 /**
  * SyncEngine transport over the Neon Data API (PostgREST).
@@ -31,7 +31,7 @@ export function hexToBytes(hex) {
 
 export class NeonTransport {
   /** @param auth a CloudAuth — asked for a fresh token on every request. */
-  constructor(auth, { baseUrl = CLOUD.dataApiUrl } = {}) {
+  constructor(auth, { baseUrl = deriveUrls().dataApi } = {}) {
     this.auth = auth;
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.playerId = null;

@@ -10,14 +10,17 @@ import { CLOUD, isCloudConfigured } from './cloudConfig.js';
  * So cloud sync is gated on a real account, and playing without one stays
  * entirely local.
  *
- * The Stack Auth SDK is loaded lazily. A player who never signs in never pays
- * for it, which matters more here than in a typical app because the first thing
- * this page has to do is render a world.
+ * Built on Neon's Managed Better Auth. The JWT that authorises Data API calls
+ * comes from `getToken()`; the session behind it is a cookie the SDK manages.
+ *
+ * The SDK is loaded lazily, on first sight of the menu. A player who never
+ * signs in never downloads it, which matters more here than in a typical app
+ * because the first thing this page has to do is render a world.
  */
 export class CloudAuth {
   constructor(bus) {
     this.bus = bus;
-    this.app = null;
+    this.client = null;
     this.user = null;
     this.ready = false;
   }
@@ -27,35 +30,24 @@ export class CloudAuth {
   }
 
   async load() {
-    if (this.app) return this.app;
+    if (this.client) return this.client;
     if (!this.configured) throw new Error('Cloud sync is not configured for this build.');
-    const { StackClientApp } = await import('@stackframe/js');
-    this.app = new StackClientApp({
-      projectId: CLOUD.stackProjectId,
-      publishableClientKey: CLOUD.stackPublishableKey,
-      tokenStore: 'cookie',
-      // This is a single-page canvas with no routes to redirect to; every auth
-      // step is resolved in place and reported through the menu panel.
-      redirectMethod: 'none',
-      devTool: false,           // keeps the SDK's dev overlay out of the bundle
-      noAutomaticPrefetch: true, // nothing should reach the network until asked
-    });
-    return this.app;
+    const { createClient } = await import('@neondatabase/neon-js');
+    // One URL derives both the auth service and the Data API.
+    this.client = createClient(CLOUD.neonUrl);
+    return this.client;
   }
 
   /**
-   * Picks up an existing session. Deferred until the menu is first opened, so a
-   * player who never signs in never downloads the auth SDK at all — the first
-   * thing this page has to do is render a world, not negotiate a login.
-   *
+   * Picks up an existing session. Deferred until the menu is first opened.
    * Never throws: being offline is not an error here.
    */
   async restore() {
     if (this.ready) return this.user;
     if (!this.configured) return null;
     try {
-      const app = await this.load();
-      this.user = await app.getUser();
+      const client = await this.load();
+      this.user = userFrom(await client.auth.getSession());
     } catch {
       this.user = null;
     }
@@ -65,51 +57,77 @@ export class CloudAuth {
   }
 
   async signIn(email, password) {
-    const app = await this.load();
-    const result = await app.signInWithCredential({ email, password, noRedirect: true });
-    if (result.status === 'error') throw new Error(readableAuthError(result.error));
-    this.user = await app.getUser();
+    const client = await this.load();
+    const result = await client.auth.signIn.email({ email, password });
+    this.user = unwrapUser(result);
+    this.ready = true;
     this.bus?.emit('cloud:auth', { user: this.summary() });
     return this.user;
   }
 
   async signUp(email, password) {
-    const app = await this.load();
-    const result = await app.signUpWithCredential({ email, password, noRedirect: true, noVerificationCallback: true });
-    if (result.status === 'error') throw new Error(readableAuthError(result.error));
-    this.user = await app.getUser();
+    const client = await this.load();
+    // Better Auth wants a display name; the local part of the email is a
+    // reasonable default and keeps the form to two fields.
+    const name = email.split('@')[0] || 'Builder';
+    const result = await client.auth.signUp.email({ email, password, name });
+    this.user = unwrapUser(result);
+    this.ready = true;
     this.bus?.emit('cloud:auth', { user: this.summary() });
     return this.user;
   }
 
   async signOut() {
-    if (this.user) await this.user.signOut();
+    if (this.client) await this.client.auth.signOut().catch(() => {});
     this.user = null;
     this.bus?.emit('cloud:auth', { user: null });
   }
 
   /** Short-lived JWT for the Data API. The SDK refreshes it as needed. */
   async accessToken() {
-    if (!this.user) return null;
-    return this.user.getAccessToken();
+    if (!this.client || !this.user) return null;
+    const result = await this.client.auth.getToken();
+    return result?.data?.token ?? result?.token ?? null;
   }
 
   summary() {
     if (!this.user) return null;
-    return { id: this.user.id, email: this.user.primaryEmail, name: this.user.displayName };
+    return { id: this.user.id, email: this.user.email, name: this.user.name };
   }
 }
 
+/**
+ * Better Auth reports failures in the payload rather than by throwing, and
+ * nests the user differently across calls, so both shapes are normalised here
+ * instead of at every call site.
+ */
+function unwrapUser(result) {
+  if (result?.error) throw new Error(readableAuthError(result.error));
+  const user = userFrom(result);
+  if (!user) throw new Error('Signed in, but no account came back. Try again.');
+  return user;
+}
+
+function userFrom(result) {
+  const data = result?.data ?? result;
+  const user = data?.user ?? (data?.id ? data : null);
+  if (!user?.id) return null;
+  return { id: user.id, email: user.email ?? null, name: user.name ?? null };
+}
+
 function readableAuthError(error) {
-  const code = error?.errorCode || error?.code || error?.constructor?.name || '';
-  // Password auth is a per-project switch in Stack Auth and ships off by
-  // default, which otherwise surfaces as an opaque SDK error.
-  if (code.includes('PasswordAuthenticationNotEnabled')) {
-    return 'Password sign-in is turned off for this project. Enable it in the Neon console under Auth \u2192 Sign-in methods.';
+  const code = String(error?.code || '');
+  const message = String(error?.message || '');
+  const hay = `${code} ${message}`.toUpperCase();
+  if (hay.includes('INVALID_EMAIL_OR_PASSWORD') || hay.includes('INVALID_PASSWORD')) {
+    return 'That email and password do not match.';
   }
-  if (code.includes('SignUpNotEnabled')) return 'New accounts are turned off for this project.';
-  if (code.includes('EmailPasswordMismatch')) return 'That email and password do not match.';
-  if (code.includes('UserWithEmailAlreadyExists')) return 'There is already an account with that email — sign in instead.';
-  if (code.includes('PasswordRequirementsNotMet')) return 'Pick a longer password (at least 8 characters).';
-  return error?.message || 'Could not sign in. Try again.';
+  if (hay.includes('USER_ALREADY_EXISTS') || hay.includes('EXISTING')) {
+    return 'There is already an account with that email — sign in instead.';
+  }
+  if (hay.includes('PASSWORD_TOO_SHORT') || hay.includes('PASSWORD')) {
+    return 'Pick a longer password (at least 8 characters).';
+  }
+  if (hay.includes('INVALID_EMAIL')) return 'That does not look like an email address.';
+  return message || 'Could not sign in. Try again.';
 }
