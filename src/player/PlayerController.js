@@ -9,9 +9,18 @@ const WALK_SPEED = 4.6;
 const SPRINT_SPEED = 7.2;
 const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
-const LOOK_YAW_SPEED = 2.6;   // radians/sec at full stick deflection
-const LOOK_PITCH_SPEED = 1.4; // slower than yaw: pitch only spans 180 degrees total
-const LOOK_SMOOTHING = 18;    // higher = snappier, lower = floatier
+// Camera-on-a-stick tuning. A stick can only ask for a turn *rate*, so unlike a
+// mouse it trades top speed against fine aim. The earlier numbers bought
+// precision at the cost of both: half a thumb of travel turned about 30 deg/s,
+// which reads as the camera ignoring you.
+const LOOK_YAW_SPEED = 3.6;   // rad/s at full deflection (~206 deg/s)
+const LOOK_PITCH_SPEED = 2.3; // rad/s; pitch only spans 180 degrees in total
+const LOOK_SMOOTHING = 34;    // ~30ms to settle: filters thumb jitter, not felt as lag
+// Holding the stick out ramps the turn up, so small pushes stay precise while a
+// held push still swings you around. Standard console-shooter behaviour.
+const LOOK_ACCEL_MAX = 1.6;   // multiplier reached at full ramp (~330 deg/s peak)
+const LOOK_ACCEL_TIME = 0.5;  // seconds of sustained deflection to get there
+const LOOK_ACCEL_GATE = 0.7;  // deflection above which the ramp charges
 
 export class PlayerController {
   constructor(world, camera, spawn) {
@@ -34,6 +43,7 @@ export class PlayerController {
     // so starting and stopping a turn eases instead of snapping.
     this.lookInput = { x: 0, y: 0 };
     this.lookSmoothed = { x: 0, y: 0 };
+    this.lookRamp = 0; // 0..1 charge of the turn acceleration
     this.sprint = false;
     this.jumpQueued = false;
 
@@ -78,8 +88,20 @@ export class PlayerController {
     const k = 1 - Math.exp(-LOOK_SMOOTHING * dt); // frame-rate independent ease
     this.lookSmoothed.x += (this.lookInput.x - this.lookSmoothed.x) * k;
     this.lookSmoothed.y += (this.lookInput.y - this.lookSmoothed.y) * k;
+
+    const deflection = Math.min(1, Math.hypot(this.lookInput.x, this.lookInput.y));
+    // Charges while the stick is held out, and drains fast so letting go and
+    // re-aiming starts precise again.
+    this.lookRamp = deflection > LOOK_ACCEL_GATE
+      ? Math.min(1, this.lookRamp + dt / LOOK_ACCEL_TIME)
+      : Math.max(0, this.lookRamp - dt / (LOOK_ACCEL_TIME * 0.5));
+    const boost = 1 + (LOOK_ACCEL_MAX - 1) * this.lookRamp;
+
     if (Math.abs(this.lookSmoothed.x) > 1e-4 || Math.abs(this.lookSmoothed.y) > 1e-4) {
-      this.look(this.lookSmoothed.x * LOOK_YAW_SPEED * dt, -this.lookSmoothed.y * LOOK_PITCH_SPEED * dt);
+      this.look(
+        this.lookSmoothed.x * LOOK_YAW_SPEED * boost * dt,
+        -this.lookSmoothed.y * LOOK_PITCH_SPEED * boost * dt,
+      );
     }
     let moveX = this.externalMove.x;
     let moveZ = this.externalMove.z;

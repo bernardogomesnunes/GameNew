@@ -69,6 +69,13 @@ export class UIManager {
 
       <div id="resource-bar" hidden></div>
 
+      <div id="resume-hint" hidden>Click the world to look around again</div>
+
+      <div id="selector-readout" hidden>
+        <div class="sel-head"><span id="sel-dims">8&sup3;</span><span id="sel-count">0 blocks</span></div>
+        <div class="sel-hint" id="sel-hint"></div>
+      </div>
+
       <div id="top-buttons">
         <button class="icon-btn" id="btn-undo" title="Undo the last change">${icon('undo')}<span>Undo</span></button>
         <button class="icon-btn" id="btn-redo" title="Redo the change you undid">${icon('redo')}<span>Redo</span></button>
@@ -121,6 +128,32 @@ export class UIManager {
             </div>
             <div class="export-note">A world file restores everything, designs included. The .vox opens in MagicaVoxel and Blender.</div>
           </div>
+          <div class="mode-block" id="cloud-block" hidden>
+            <div class="mode-label">Cloud <span id="cloud-status"></span></div>
+
+            <div id="cloud-signed-out">
+              <div class="export-note" style="margin-top:0;">Sign in to keep your worlds off this device. Without an account everything stays in this browser only.</div>
+              <div class="field-row">
+                <input type="email" id="cloud-email" placeholder="Email" autocomplete="email" />
+              </div>
+              <div class="field-row">
+                <input type="password" id="cloud-password" placeholder="Password" autocomplete="current-password" />
+                <button class="secondary" id="btn-cloud-signin">Sign in</button>
+                <button class="secondary" id="btn-cloud-signup">Create</button>
+              </div>
+            </div>
+
+            <div id="cloud-signed-in" hidden>
+              <div class="field-row" style="flex-wrap:wrap;">
+                <button class="secondary" id="btn-cloud-save">Save this world to the cloud</button>
+                <button class="secondary" id="btn-cloud-refresh">Refresh</button>
+                <button class="secondary" id="btn-cloud-signout">Sign out</button>
+              </div>
+              <div id="cloud-list"></div>
+            </div>
+            <div class="export-note" id="cloud-error" hidden></div>
+          </div>
+
           <div class="mode-block">
             <div class="mode-label">New world</div>
             <div class="field-row" style="margin-bottom:0;">
@@ -336,6 +369,7 @@ export class UIManager {
     });
 
     this.wireTouchControls();
+    this.wireCloud();
   }
 
   /**
@@ -348,7 +382,6 @@ export class UIManager {
     const base = zone.querySelector('.stick-base');
     const knob = zone.querySelector('.stick-knob');
     const RADIUS = 42;
-    const KNOB_HOME = 29;
     let touchId = null;
     let origin = { x: 0, y: 0 };
 
@@ -362,9 +395,10 @@ export class UIManager {
       return { x: (dx / RADIUS) * scaled, y: (dy / RADIUS) * scaled };
     };
 
+    // Transform, not left/top: this runs on every touchmove, and moving the
+    // knob by layout forces a reflow of the whole HUD each time.
     const setKnob = (dx = 0, dy = 0) => {
-      knob.style.left = `${KNOB_HOME + dx}px`;
-      knob.style.top = `${KNOB_HOME + dy}px`;
+      knob.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
     };
 
     zone.addEventListener('touchstart', (e) => {
@@ -413,8 +447,11 @@ export class UIManager {
   wireTouchControls() {
     // Movement wants to reach full speed readily; the camera wants precision
     // near centre, so it gets a steeper curve.
-    this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y), { deadZone: 0.12, curve: 1.15 });
-    this.bindStick('#stick-right', (x, y) => this.cb.onLookStick(x, y), { deadZone: 0.14, curve: 1.8 });
+    this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y), { deadZone: 0.10, curve: 1.1 });
+    // 1.8 was too steep: a half-travel push came out at a fifth of the turn
+    // rate, so the camera felt like it was lagging behind the thumb. 1.25 keeps
+    // the fine control near centre and gives back the middle of the range.
+    this.bindStick('#stick-right', (x, y) => this.cb.onLookStick(x, y), { deadZone: 0.09, curve: 1.25 });
 
     const bindHold = (sel, onChange) => {
       const el = this.q(sel);
@@ -563,6 +600,7 @@ export class UIManager {
   }
 
   refreshSaveList() {
+    this.refreshCloudPanel();
     const saves = this.saveManager.listSaves().filter((s) => !s.isAutosave);
     const list = this.q('#save-list');
     if (!saves.length) {
@@ -603,6 +641,106 @@ export class UIManager {
     this.q('#blocker').hidden = true;
   }
 
+  // ---- cloud ----
+
+  wireCloud() {
+    if (!this.cb.isCloudConfigured?.()) return;
+    const busy = async (btn, fn) => {
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Working\u2026';
+      this.q('#cloud-error').hidden = true;
+      try {
+        await fn();
+      } catch (err) {
+        const box = this.q('#cloud-error');
+        box.textContent = err.message;
+        box.hidden = false;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = label;
+        this.refreshCloudPanel();
+      }
+    };
+    const creds = () => [this.q('#cloud-email').value.trim(), this.q('#cloud-password').value];
+
+    this.q('#btn-cloud-signin').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignIn(...creds())));
+    this.q('#btn-cloud-signup').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignUp(...creds())));
+    this.q('#btn-cloud-signout').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignOut()));
+    this.q('#btn-cloud-refresh').addEventListener('click', (e) => busy(e.currentTarget, () => this.refreshCloudList()));
+    this.q('#btn-cloud-save').addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      await this.cb.onCloudSave(this.q('#save-name').value.trim() || undefined);
+      await this.refreshCloudList();
+    }));
+  }
+
+  /** Switches the panel between signed-out and signed-in, and hides it entirely when unconfigured. */
+  refreshCloudPanel() {
+    const block = this.q('#cloud-block');
+    if (!block) return;
+    if (!this.cb.isCloudConfigured?.()) { block.hidden = true; return; }
+    block.hidden = false;
+
+    // First time the panel is seen, go and look for an existing session. Until
+    // that resolves the signed-out form is the honest thing to show.
+    if (!this.cloudRestoreStarted) {
+      this.cloudRestoreStarted = true;
+      this.cb.onCloudRestoreSession?.().then(() => this.refreshCloudPanel());
+    }
+
+    const user = this.cb.getCloudUser();
+    this.q('#cloud-status').textContent = user ? `\u00b7 ${user.email || user.name || 'signed in'}` : '';
+    this.q('#cloud-signed-out').hidden = !!user;
+    this.q('#cloud-signed-in').hidden = !user;
+    if (user) this.refreshCloudList();
+  }
+
+  async refreshCloudList() {
+    const list = this.q('#cloud-list');
+    if (!list || !this.cb.getCloudUser()) return;
+    let worlds = [];
+    try {
+      worlds = await this.cb.getCloudWorlds();
+    } catch (err) {
+      list.innerHTML = `<div class="sub" style="margin:0;">${err.message}</div>`;
+      return;
+    }
+    if (!worlds.length) {
+      list.innerHTML = `<div class="sub" style="margin:0;">Nothing up there yet. Save this world to put it in the cloud.</div>`;
+      return;
+    }
+    list.innerHTML = worlds.map((w) => `
+      <div class="template-row">
+        <div class="template-meta">
+          <div class="template-name">${escapeHtml(w.name)}</div>
+          <div class="template-dims">${w.mode} &middot; ${w.blockCount.toLocaleString()} blocks &middot; ${timeAgo(w.updatedAt)}</div>
+        </div>
+        <div class="actions">
+          <button class="secondary" data-restore="${w.id}">Restore</button>
+          <button class="danger secondary" data-cloud-drop="${w.id}">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-restore]').forEach((btn) => btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try { await this.cb.onCloudRestore(btn.dataset.restore); }
+      catch (err) { const box = this.q('#cloud-error'); box.textContent = err.message; box.hidden = false; }
+      finally { btn.disabled = false; }
+    }));
+    list.querySelectorAll('[data-cloud-drop]').forEach((btn) => btn.addEventListener('click', async () => {
+      if (!confirm('Delete this world from the cloud? Your local copy stays.')) return;
+      btn.disabled = true;
+      try { await this.cb.onCloudDelete(btn.dataset.cloudDrop); await this.refreshCloudList(); }
+      catch (err) { const box = this.q('#cloud-error'); box.textContent = err.message; box.hidden = false; }
+      finally { btn.disabled = false; }
+    }));
+  }
+
+  /** Shown while the mouse is free, so the toolbar is usable without a panel in the way. */
+  setResumeHint(on) {
+    this.q('#resume-hint').hidden = !on;
+  }
+
   showBlocker() {
     this.q('#blocker').hidden = false;
   }
@@ -626,6 +764,34 @@ export class UIManager {
 
   setSelectorSize(size) {
     this.q('#size-label').innerHTML = `${size}&sup3;`;
+  }
+
+  /**
+   * Live state of the selector, next to the crosshair. Without it the selector
+   * gives no feedback at all until you open a panel.
+   */
+  setSelectorReadout(state) {
+    const el = this.q('#selector-readout');
+    if (!state) { el.hidden = true; this.setActionLabels('Break', 'Place'); return; }
+    el.hidden = false;
+    this.q('#sel-dims').innerHTML = `${state.size}&sup3;`;
+    this.q('#sel-count').textContent = `${state.blocks} block${state.blocks === 1 ? '' : 's'} inside`;
+    const touch = document.body.classList.contains('touch');
+    const primary = state.template ? `Stamp ${state.template}` : 'Save design';
+    this.q('#sel-hint').textContent = touch
+      ? `${primary} \u00b7 Size`
+      : `Left click: ${primary.toLowerCase()} \u00b7 right click: change size`;
+    // On touch the two action buttons are the only way to reach either, so they
+    // say what they do while the selector is on.
+    this.setActionLabels(primary, 'Size');
+  }
+
+  /** Retitles the touch Break/Place buttons, which change meaning with the selector. */
+  setActionLabels(breakLabel, placeLabel) {
+    const b = this.q('#t-break'), p = this.q('#t-place');
+    if (!b || !p) return;
+    b.querySelector('span').textContent = breakLabel;
+    p.querySelector('span').textContent = placeLabel;
   }
 
   openTemplateSavePrompt() {
@@ -695,6 +861,7 @@ export class UIManager {
       ['Mirror', 'Every block you place is echoed across the world\u2019s centre line. Press again to cycle X, Z, both, off.'],
       ['Screen', 'Enters or leaves fullscreen.'],
       ['Stats', 'Your level, achievements and today\u2019s challenges.'],
+      ['Menu', 'Saving and loading, export and import, new worlds, and cloud sync if you sign in.'],
     ];
     this.q('#help-body').innerHTML = `
       <div class="help-group">
@@ -713,4 +880,20 @@ export class UIManager {
     btn.classList.toggle('active', isFullscreen);
     btn.title = isFullscreen ? 'Exit fullscreen' : 'Toggle fullscreen';
   }
+}
+
+function escapeHtml(text) {
+  return String(text ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+function timeAgo(ms) {
+  if (!ms) return 'just now';
+  const mins = Math.round((Date.now() - ms) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
 }

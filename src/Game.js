@@ -6,6 +6,10 @@ import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { UndoRedo } from './tools/UndoRedo.js';
 import { SelectorTool, buildTemplatePlacement, rotateTemplate } from './tools/SelectorTool.js';
+import { SelectionHighlight } from './tools/SelectionHighlight.js';
+import { CloudAuth } from './net/CloudAuth.js';
+import { CloudWorlds } from './net/CloudWorlds.js';
+import { isCloudConfigured } from './net/cloudConfig.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
@@ -18,7 +22,7 @@ import { AIR, BLOCKS_BY_ID, costResourceOf } from './config/blocks.js';
 import { resourceName } from './config/resources.js';
 
 const REACH = 7;
-const RENDER_DISTANCE = 190;  // beyond the fog's far plane, so nothing pops visibly
+const RENDER_DISTANCE = 190;  // beyond the fog's far plane, so nothing pops visibly (touch gets less)
 const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream in
 const AUTOSAVE_INTERVAL_MS = 60_000;
 export const CREATIVE = 'creative';
@@ -37,13 +41,19 @@ export class Game {
     container.appendChild(this.canvasRoot);
     container.appendChild(this.uiRoot);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Phones are fill-rate bound, and this scene is flat-shaded cubes: MSAA at
+    // 2x device pixels costs roughly four times the fragments for edges you can
+    // barely see at arm's length, and a halved frame rate is what "the controls
+    // feel slow" actually is. Desktop keeps the nicer settings.
+    const coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    this.renderer = new THREE.WebGLRenderer({ antialias: !coarse, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, coarse ? 1.5 : 2));
     this.canvasRoot.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x8fd0ff);
-    this.scene.fog = new THREE.Fog(0x8fd0ff, 50, 210);
+    this.renderDistance = coarse ? 140 : RENDER_DISTANCE;
+    this.scene.fog = new THREE.Fog(0x8fd0ff, coarse ? 40 : 50, this.renderDistance + 20);
 
     this.camera = new THREE.PerspectiveCamera(75, 1, 0.1, 300);
 
@@ -65,13 +75,12 @@ export class Game {
     this.upHeld = false;
     this.downHeld = false;
     this.remeshQueue = new Set();
+    this.selectionDirty = false; // set when blocks change, so the skin re-reads the world
 
     this.hoverBox = this.buildWireBox(0xffffff, 1.002);
     this.hoverBox.visible = false;
     this.scene.add(this.hoverBox);
-    this.selectionBox = this.buildWireBox(0x58c4dc, 1);
-    this.selectionBox.visible = false;
-    this.scene.add(this.selectionBox);
+    this.selection = new SelectionHighlight(this.scene);
 
     this.boot();
     window.addEventListener('resize', () => this.onResize());
@@ -98,6 +107,12 @@ export class Game {
 
     this.symmetryTool = new SymmetryTool(this.world);
     this.selectorTool = new SelectorTool();
+    // A stable id per world, so incremental sync can tell "the world I already
+    // uploaded, edited" from "a different world with the same name".
+    this.worldId = this.worldId || newWorldId();
+    this.worldName = this.worldName || 'My world';
+    this.cloudAuth = new CloudAuth(this.bus);
+    this.cloud = isCloudConfigured() ? new CloudWorlds({ auth: this.cloudAuth, bus: this.bus }) : null;
     this.templates = new TemplateLibrary(this.bus);
     this.pendingTemplate = null; // the template queued for stamping
     this.templateRotation = 0;
@@ -206,8 +221,34 @@ export class Game {
         this.downHeld = held;
         this.recomputeVertical();
       },
-      onBreakTap: () => this.breakBlock(),
-      onPlaceTap: () => this.placeBlock(),
+      // Touch goes through the same two verbs as mouse buttons, so the
+      // selector behaves identically on a phone.
+      // ---- cloud ----
+      isCloudConfigured: () => !!this.cloud,
+      getCloudUser: () => this.cloudAuth.summary(),
+      onCloudRestoreSession: () => this.cloudAuth.restore(),
+      onCloudSignIn: async (email, password) => {
+        await this.cloudAuth.signIn(email, password);
+        this.ui.toast({ kind: 'challenge', title: 'Signed in', body: 'Your worlds can now sync' });
+      },
+      onCloudSignUp: async (email, password) => {
+        await this.cloudAuth.signUp(email, password);
+        this.ui.toast({ kind: 'challenge', title: 'Account created', body: 'Save a world to start syncing' });
+      },
+      onCloudSignOut: async () => {
+        await this.cloudAuth.signOut();
+        this.ui.toast({ kind: 'xp', title: 'Signed out', body: 'Local saves are untouched' });
+      },
+      getCloudWorlds: () => this.cloud.list(),
+      onCloudSave: (name) => this.saveToCloud(name),
+      onCloudRestore: (id) => this.restoreFromCloud(id),
+      onCloudDelete: async (id) => {
+        await this.cloud.delete(id);
+        this.ui.toast({ kind: 'xp', title: 'Deleted from the cloud', body: 'Your local copy is still here' });
+      },
+
+      onBreakTap: () => this.primaryAction(),
+      onPlaceTap: () => this.secondaryAction(),
     };
   }
 
@@ -218,11 +259,15 @@ export class Game {
       gamification: this.gamification,
       economy: this.economy,
       mode: this.mode,
+      worldId: this.worldId,
+      worldName: this.worldName,
     };
   }
 
   newWorld({ silent, mode = this.mode } = {}) {
     this.mode = mode;
+    this.worldId = newWorldId();
+    this.worldName = mode === CAMPAIGN ? 'Campaign world' : 'Creative world';
     this.world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
     if (mode === CAMPAIGN) generateFlat(this.world);
     else generateTerrain(this.world);
@@ -270,6 +315,9 @@ export class Game {
 
   loadFromData(data, { silent } = {}) {
     this.world = data.world;
+    // A save from before worlds had ids still loads; it just gets a fresh one.
+    this.worldId = data.worldId || newWorldId();
+    this.worldName = data.worldName || data.name || this.worldName || 'My world';
     this.mode = data.mode === CAMPAIGN ? CAMPAIGN : CREATIVE;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, data.player);
@@ -315,7 +363,7 @@ export class Game {
    */
   updateChunkVisibility() {
     const px = this.player.position.x, pz = this.player.position.z;
-    const maxSq = RENDER_DISTANCE * RENDER_DISTANCE;
+    const maxSq = this.renderDistance * this.renderDistance;
     for (const mesh of this.mesher.activeMeshes) {
       const chunk = mesh.userData.chunk;
       if (!chunk) continue;
@@ -340,9 +388,13 @@ export class Game {
       this.pointerLocked = document.pointerLockElement === canvas;
       if (this.pointerLocked) {
         this.ui.hideBlocker();
+        this.ui.setResumeHint(false);
       } else if (wasLocked && !this.ui.isAnyPanelOpen()) {
-        this.ui.refreshSaveList();
-        this.ui.openPanel('panel-menu');
+        // Opening the menu here used to be the only way out of pointer lock,
+        // which meant the toolbar was never reachable with the world visible —
+        // clicking Select appeared to do nothing. Leave the world on screen and
+        // just say how to get the mouse back.
+        this.ui.setResumeHint(true);
       }
     });
 
@@ -451,6 +503,58 @@ export class Game {
     this.gamification.onTemplatePlaced(this.pendingTemplate);
     this.ui.toast({ kind: 'challenge', title: `Placed ${this.pendingTemplate.name}`, body: `${changes.length} blocks` });
     return true;
+  }
+
+  // ---- cloud ----
+
+  /**
+   * Pushes the current world under its own id, so repeated saves overwrite the
+   * same cloud world instead of littering it with copies.
+   */
+  async saveToCloud(name) {
+    if (!this.cloud) throw new Error('This build has no cloud configured.');
+    if (name) this.worldName = name;
+    const result = await this.cloud.save(this.worldId, {
+      world: this.world,
+      name: this.worldName,
+      mode: this.mode,
+      player: this.player,
+      gamification: this.gamification,
+      economy: this.economy,
+    });
+    this.ui.toast({
+      kind: 'challenge',
+      title: 'Saved to the cloud',
+      body: result.pushedChunks
+        ? `${result.pushedChunks} of ${result.totalChunks} chunks changed`
+        : 'Nothing had changed since the last save',
+    });
+    return result;
+  }
+
+  async restoreFromCloud(id) {
+    if (!this.cloud) throw new Error('This build has no cloud configured.');
+    const data = await this.cloud.restore(id);
+    this.loadFromData({
+      world: data.world,
+      mode: data.mode,
+      player: data.player,
+      gamification: this.gamification.toJSON(),
+      economy: data.economy,
+      worldId: id,
+      worldName: data.name,
+    });
+    // Progression belongs to the account, not the world, so it is merged in
+    // separately — and only if the cloud copy is further along than this device.
+    try {
+      const remote = await this.cloud.progression();
+      if (remote && (remote.xp ?? 0) > (this.gamification.toJSON().xp ?? 0)) {
+        this.gamification.loadJSON({ ...this.gamification.toJSON(), ...remote });
+        this.ui.updateXp();
+      }
+    } catch { /* the world is what matters; progression can wait for the next sign-in */ }
+    this.ui.closePanel('panel-menu');
+    this.ui.toast({ kind: 'challenge', title: `Restored "${data.name}"`, body: 'Pulled from the cloud' });
   }
 
   // ---- raycasting / block edits ----
@@ -600,6 +704,7 @@ export class Game {
    */
   remeshDirty() {
     for (const chunk of this.world.dirtyChunks()) this.remeshQueue.add(chunk);
+    this.selectionDirty = true; // blocks moved, so the selection skin is stale
   }
 
   /** Spends a slice of the frame on pending rebuilds, then stops. */
@@ -671,16 +776,16 @@ export class Game {
       // ahead of the player.
       this.selectorTool.aimAt(hit ? { x: hit.x, y: hit.y, z: hit.z } : this.pointInFront(6));
       const bounds = this.selectorTool.bounds();
-      if (bounds) {
-        const s = this.selectorTool.size;
-        this.selectionBox.scale.set(s, s, s);
-        this.selectionBox.position.set(bounds.minX + s / 2, bounds.minY + s / 2, bounds.minZ + s / 2);
-        this.selectionBox.visible = true;
-      } else {
-        this.selectionBox.visible = false;
-      }
+      this.selection.update(bounds, this.selectorTool.size, this.world, { force: this.selectionDirty });
+      this.selectionDirty = false;
+      this.ui.setSelectorReadout(bounds ? {
+        size: this.selectorTool.size,
+        blocks: this.selection.blockCount,
+        template: this.pendingTemplate?.name || null,
+      } : null);
     } else {
-      this.selectionBox.visible = false;
+      this.selection.hide();
+      this.ui.setSelectorReadout(null);
     }
   }
 
@@ -695,4 +800,8 @@ export class Game {
 function distSq(chunk, px, pz) {
   const dx = chunk.cx - px, dz = chunk.cz - pz;
   return dx * dx + dz * dz;
+}
+
+function newWorldId() {
+  return crypto.randomUUID();
 }

@@ -4,13 +4,14 @@ import { AIR } from '../config/blocks.js';
  * A fixed-size cubic selector instead of free corner-picking.
  *
  * Sizes are powers of two up to one chunk footprint, and the box snaps to a
- * grid of its own size horizontally. That makes captured regions tile against
- * each other and against chunks, and — more importantly — gives every template
- * known dimensions, which is what lets achievements and pricing reason about
- * them at all.
+ * grid of its own size on every axis. Snapping all three means the cell you are
+ * aiming at always *contains* the block under the crosshair, the box stops
+ * sliding around as the crosshair drifts within a cell, and captured regions
+ * tile against each other and against chunks. That last property is what lets
+ * achievements and pricing reason about a template at all.
  *
- * Height is not snapped: the box sits on whatever block you are aiming at, so
- * a structure standing on the ground isn't sliced across two grid cells.
+ * To frame something taller than the current size, step the size up rather than
+ * dragging: the grid keeps every design aligned with every other one.
  */
 export const SELECTOR_SIZES = [2, 4, 8, 16];
 
@@ -36,18 +37,21 @@ export class SelectorTool {
     return this.size;
   }
 
-  /**
-   * Places the box from a crosshair target: snapped on X/Z, resting on the
-   * targeted block on Y.
-   */
+  /** Snaps the box to the grid cell containing the targeted block. */
   aimAt(target) {
     if (!target) return;
     const s = this.size;
-    this.anchor = {
-      x: Math.floor(target.x / s) * s,
-      y: target.y,
-      z: Math.floor(target.z / s) * s,
-    };
+    const snap = (v) => Math.floor(v / s) * s;
+    this.anchor = { x: snap(target.x), y: snap(target.y), z: snap(target.z) };
+  }
+
+  /** True when the anchor moved — the caller uses this to avoid rebuilding the highlight every frame. */
+  aimChanged(target) {
+    const before = this.anchor;
+    this.aimAt(target);
+    const a = this.anchor;
+    if (!before || !a) return before !== a;
+    return before.x !== a.x || before.y !== a.y || before.z !== a.z;
   }
 
   bounds() {

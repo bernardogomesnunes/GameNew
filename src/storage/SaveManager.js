@@ -27,11 +27,14 @@ export class SaveManager {
       .sort((a, b) => b.timestamp - a.timestamp);
   }
 
-  save(name, { world, player, gamification, economy, mode }) {
+  save(name, { world, player, gamification, economy, mode, worldId, worldName }) {
     const payload = {
       version: SAVE_VERSION,
       timestamp: Date.now(),
       mode,
+      // Carried so a local save and its cloud copy stay the same world.
+      worldId: worldId ?? null,
+      worldName: worldName ?? name,
       world: world.serialize(),
       player: { x: player.position.x, y: player.position.y, z: player.position.z, yaw: player.yaw, pitch: player.pitch },
       gamification: gamification.toJSON(),
@@ -64,6 +67,8 @@ export class SaveManager {
       // Saves written before the economy existed are Creative worlds.
       mode: payload.mode ?? 'creative',
       economy: payload.economy ?? null,
+      worldId: payload.worldId ?? null,
+      worldName: payload.worldName ?? name,
       timestamp: payload.timestamp,
     };
   }
