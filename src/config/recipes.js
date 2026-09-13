@@ -83,6 +83,26 @@ export const RECIPES = [
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
+/**
+ * Where an item comes from, in one line a player can act on.
+ *
+ * "Needs 2 saplings" is only useful if you know what a sapling is made of.
+ * This is checked against the recipe list rather than written out per item, so
+ * a new recipe explains its own output the moment it exists.
+ */
+export function howToGet(itemId, blockName = null) {
+  const recipe = RECIPES.find((r) => r.output.id === itemId);
+  if (recipe) {
+    const from = Object.entries(recipe.inputs)
+      .map(([id, n]) => `${n} ${id.replace(/_/g, ' ')}`).join(' and ');
+    return recipe.needs === 'water'
+      ? `make it at the workbench by the river, from ${from}`
+      : `make it at the workbench from ${from}`;
+  }
+  if (blockName) return `break ${blockName.toLowerCase()} to collect it`;
+  return null;
+}
+
 export function recipesFor(age, station = null) {
   return RECIPES.filter((r) => r.age <= age && (!station || r.station === station));
 }

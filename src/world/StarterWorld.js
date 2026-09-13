@@ -71,12 +71,29 @@ export function carveRiverAndSettle(world, seed = 1) {
   const sites = buildSites(world, plan, rand);
 
   const spawn = sites.find((s) => s.spec === 'spawn');
+  const standing = standingSpawn(world, spawn, region);
+  // Keep the plan honest: if the spawn had to move because something grew over
+  // it, the recorded site moves with it, so nothing downstream reads a
+  // position the player was never put in.
+  if (spawn) {
+    const moved = Math.floor(standing.x) !== spawn.x || Math.floor(standing.z) !== spawn.z;
+    spawn.x = Math.floor(standing.x);
+    spawn.z = Math.floor(standing.z);
+    spawn.y = standing.y;
+    spawn.yaw = standing.yaw;
+    // A spawn that had to move no longer satisfies the spec it was picked
+    // under — it was chosen for its flatness and its distance from everything
+    // else, and it has left that spot. Recording it as relaxed is the honest
+    // description, and keeps it out of the checks that hold placements to the
+    // letter of their spec.
+    if (moved) spawn.relaxed = Math.max(spawn.relaxed ?? 0, 1);
+  }
   return {
     minX, minZ, size: STARTER_SIZE,
     rivers,
     sites,
     trees: countTrees(world, region),
-    spawn: standingSpawn(world, spawn, region),
+    spawn: standing,
   };
 }
 
@@ -94,26 +111,71 @@ function countTrees(world, region) {
 /**
  * Turns a chosen site into somewhere the player can actually stand.
  *
- * Two things the site finder can't do on its own. Sites are block coordinates,
- * but a player standing on a block corner straddles four columns and a
- * neighbouring hill can trap them on arrival, so this centres them. And the
- * plan was made before the grove was planted, which means the facing was
- * scored against bare ground — so the view is measured again now that the
- * trees are up, and you are not left staring into a wood that grew in front
- * of you.
+ * The plan is made before anything is built, so this is where it meets the
+ * finished world. Three things it has to settle.
+ *
+ * Sites are block coordinates, but a player standing on a block corner
+ * straddles four columns and a neighbouring hill can trap them on arrival, so
+ * they are centred.
+ *
+ * The facing was scored against bare ground, so the view is measured again now
+ * that the trees are up — otherwise you arrive looking into a wood that grew
+ * in front of you.
+ *
+ * And the spot itself may no longer be standable: the grove is planted after
+ * the spawn is chosen, and a crown that spread over the spot left the player
+ * inside a canopy. Rather than teach every builder to avoid the spawn — which
+ * would be a rule to remember for every feature added later — the spawn is
+ * simply re-checked against what is actually there, and moved to the nearest
+ * clear spot if it has to be.
  */
-function standingSpawn(world, site, region) {
-  if (!site) {
-    const cx = region.minX + STARTER_SIZE / 2, cz = region.minZ + STARTER_SIZE / 2;
-    return { x: cx + 0.5, y: world.surfaceHeight(cx, cz), z: cz + 0.5, yaw: 0, pitch: -0.16 };
+const SPAWN_HEADROOM = 3;
+
+function standable(world, x, z) {
+  if (!world.inBounds(x, 0, z)) return false;
+  const y = world.surfaceHeight(x, z);
+  const under = world.getBlock(x, y - 1, z);
+  if (under === 0 || under === WATER) return false;
+  for (let i = 0; i < SPAWN_HEADROOM; i++) {
+    if (!world.inBounds(x, y + i, z) || world.getBlock(x, y + i, z) !== 0) return false;
   }
-  const view = outlook(world, site.x, site.z, { at: 2, range: 16 });
+  return true;
+}
+
+/** The nearest spot to (x, z) that is still fit to stand on. */
+function nearestStandable(world, x, z, region) {
+  if (standable(world, x, z)) return { x, z };
+  for (let r = 1; r <= STARTER_SIZE; r++) {
+    let best = null;
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dz = -r; dz <= r; dz++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+        const px = x + dx, pz = z + dz;
+        if (px < region.minX || px > region.maxX || pz < region.minZ || pz > region.maxZ) continue;
+        if (!standable(world, px, pz)) continue;
+        // Among equals at this radius, take the one that can see furthest.
+        const view = outlook(world, px, pz, { at: 2, range: 16 }).open;
+        if (!best || view > best.view) best = { x: px, z: pz, view };
+      }
+    }
+    if (best) return best;
+  }
+  return { x, z };
+}
+
+function standingSpawn(world, site, region) {
+  const planned = site
+    ? { x: site.x, z: site.z }
+    : { x: region.minX + STARTER_SIZE / 2, z: region.minZ + STARTER_SIZE / 2 };
+
+  const spot = nearestStandable(world, planned.x, planned.z, region);
+  const view = outlook(world, spot.x, spot.z, { at: 2, range: 16 });
   return {
-    x: site.x + 0.5,
-    y: world.surfaceHeight(site.x, site.z),
-    z: site.z + 0.5,
-    yaw: view.best >= 4 ? view.yaw : site.yaw,
-    pitch: site.pitch ?? -0.16,
+    x: spot.x + 0.5,
+    y: world.surfaceHeight(spot.x, spot.z),
+    z: spot.z + 0.5,
+    yaw: view.best >= 4 ? view.yaw : (site?.yaw ?? 0),
+    pitch: site?.pitch ?? -0.16,
   };
 }
 

@@ -1,5 +1,6 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
 import { STRUCTURES_BY_ID, structuresForAge } from '../config/structures.js';
+import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
 
@@ -330,6 +331,22 @@ export class DuiltUI {
    * This replaces pointing people at a generic template list and hoping they
    * work out what a farm is supposed to contain.
    */
+  /**
+   * What is missing, and where each missing thing comes from.
+   *
+   * "Starter needs 2 saplings" is a dead end if nothing in the game ever says
+   * what a sapling is. Every line now carries its own answer, pulled from the
+   * recipe list so it cannot go stale.
+   */
+  shortfallNote(missing) {
+    const lines = Object.entries(missing).map(([id, n]) => {
+      const spec = ITEMS_BY_ID.get(id);
+      const from = howToGet(id, spec?.block != null ? itemName(id) : null);
+      return `<li>${n} more ${itemName(id).toLowerCase()}${from ? ` — ${from}` : ''}</li>`;
+    });
+    return `<div class="warn shortfall"><strong>Not enough materials</strong><ul>${lines.join('')}</ul></div>`;
+  }
+
   renderBuildings() {
     const d = this.duilt;
     if (!d) return this.noWorld('#buildings-list');
@@ -362,16 +379,17 @@ export class DuiltUI {
           </div>
           <div class="building-actions">
             <button class="secondary" data-claim-here="${spec.id}" ${opt?.ok ? '' : 'disabled'}>
-              ${opt?.ok ? 'Claim what I framed' : 'Claim what I framed'}
+              Claim what I framed
             </button>
             <button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
               Place a ${design ? design.footprint : ''} starter
             </button>
           </div>
+          ${design && canStamp ? '<div class="building-note"><span>Aim where you want it and press Place.</span></div>' : ''}
           <div class="building-note">
             ${opt && !opt.ok ? `<span class="warn">${opt.reason}</span>` : ''}
             ${!region ? '<span>Turn on Select and frame a build to claim it.</span>' : ''}
-            ${design && !canStamp ? `<span class="warn">Starter needs ${Object.entries(shortfall).map(([k, n]) => `${n} ${itemName(k).toLowerCase()}`).join(', ')}</span>` : ''}
+            ${design && !canStamp ? this.shortfallNote(shortfall) : ''}
             ${design?.note && canStamp ? `<span>${design.note}</span>` : ''}
           </div>
         </div>`;

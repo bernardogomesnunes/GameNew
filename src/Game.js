@@ -17,6 +17,7 @@ import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SaveManager, AUTOSAVE_NAME } from './storage/SaveManager.js';
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
+import { DESIGN_FOR_STRUCTURE } from './config/starterDesigns.js';
 import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
@@ -688,15 +689,67 @@ export class Game {
       : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
   }
 
-  /** Drops a ready-made building at the selector, charged and undoable as one action. */
+  /**
+   * Where a stamped building goes: the selector if you are using it, otherwise
+   * the ground you are looking at.
+   *
+   * Requiring the selector was a dead end. The button in the buildings panel
+   * says "place a starter", you press it, and it refuses and tells you to go
+   * and turn on a different tool first — so the one-click route into the game
+   * needed three clicks and some guesswork. Aiming is the normal way to put
+   * something down, so that is the default now, and the selector is honoured
+   * when it happens to be on.
+   */
+  stampAnchor(extent) {
+    if (this.selectorTool.active) {
+      const b = this.selectorTool.bounds();
+      // The selector box is the frame you drew, so its corner is the corner.
+      if (b) return { x: b.minX, y: b.minY, z: b.minZ };
+    }
+    const hit = this.raycast();
+    const spot = hit
+      ? { x: hit.x, y: hit.y + 1, z: hit.z }          // on the block, not inside it
+      : (() => { const a = this.pointInFront(6); return { ...a, y: this.world.surfaceHeight(a.x, a.z) }; })();
+
+    // Centred on where you are looking. Anchoring by corner made the building
+    // grow away from the crosshair, so aiming anywhere near your border put
+    // most of it over the line and the only feedback was a refusal.
+    return {
+      x: spot.x - Math.floor((extent?.x ?? 0) / 2),
+      y: spot.y,
+      z: spot.z - Math.floor((extent?.z ?? 0) / 2),
+    };
+  }
+
+  /**
+   * Keeps a stamped building inside your land.
+   *
+   * Aiming near your own border used to be a refusal — you pressed Place, the
+   * game said no, and you were left guessing how far in was far enough. You
+   * clearly meant "about here", so it slides to the closest position that
+   * fits. Only a design too big for the land at all can still fail, and that
+   * says something the player can act on.
+   */
+  fitInsideLand(anchor, extent) {
+    const b = this.duilt.territory.bounds();
+    const span = { x: extent?.x ?? 0, z: extent?.z ?? 0 };
+    return {
+      x: Math.max(b.minX, Math.min(anchor.x, b.maxX - span.x)),
+      y: anchor.y,
+      z: Math.max(b.minZ, Math.min(anchor.z, b.maxZ - span.z)),
+    };
+  }
+
+  /** Drops a ready-made building where you are aiming, charged and undoable as one action. */
   stampStarter(typeId) {
     if (!this.duilt) return;
-    if (!this.selectorTool.active || !this.selectorTool.bounds()) {
-      this.ui.toast({ kind: 'xp', title: 'Aim it first', body: 'Turn on Select and point where it should go' });
-      return;
-    }
-    const b = this.selectorTool.bounds();
-    const plan = this.duilt.starterPlacement(typeId, { x: b.minX, y: b.minY, z: b.minZ });
+    const design = DESIGN_FOR_STRUCTURE.get(typeId);
+    const aimed = this.stampAnchor(design?.extent);
+    const b = this.fitInsideLand(aimed, design?.extent);
+    // Follow the ground where it actually landed, or a slide sideways leaves
+    // the building floating off a slope.
+    if (b.x !== aimed.x || b.z !== aimed.z) b.y = this.world.surfaceHeight(b.x, b.z);
+    const plan = this.duilt.starterPlacement(typeId, { x: b.x, y: b.y, z: b.z });
     if (!plan.ok) {
       this.ui.toast({ kind: 'xp', title: 'Cannot place that', body: plan.reason });
       return;
@@ -705,9 +758,9 @@ export class Game {
     // It was built to pass, so claim it straight away.
     const e = plan.design.extent;
     const region = {
-      minX: b.minX, maxX: b.minX + e.x,
-      minY: b.minY, maxY: b.minY + e.y,
-      minZ: b.minZ, maxZ: b.minZ + e.z,
+      minX: b.x, maxX: b.x + e.x,
+      minY: b.y, maxY: b.y + e.y,
+      minZ: b.z, maxZ: b.z + e.z,
     };
     const claim = this.duilt.claim(region, typeId);
     this.ui.toast(claim.ok

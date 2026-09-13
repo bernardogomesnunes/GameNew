@@ -175,11 +175,20 @@ export class DuiltGame {
         .map(([id, n]) => `${n} more ${itemName(id).toLowerCase()}`);
       return { ok: false, reason: `Needs ${parts.join(' and ')}` };
     }
+    // Resolve the design to one block per cell before charging for it. A design
+    // can write the same cell twice — a leaf covering the top of a trunk, a
+    // trunk standing on the soil bed under it — and billing each entry charged
+    // twice for a cell the world only keeps one block in. That made the grove
+    // cost four dirt and four wood more than the panel said, so collecting
+    // exactly what was asked for still got you refused at the last step.
+    const byCell = new Map();
+    for (const b of design.blocks) byCell.set(`${b.dx},${b.dy},${b.dz}`, b);
+
     const changes = [];
-    for (const b of design.blocks) {
+    for (const b of byCell.values()) {
       const x = anchor.x + b.dx, y = anchor.y + b.dy, z = anchor.z + b.dz;
       if (!this.world.inBounds(x, y, z)) continue;
-      if (!this.territory.contains(x, z)) return { ok: false, reason: 'That reaches outside your land' };
+      if (!this.territory.contains(x, z)) return { ok: false, reason: 'It would cross your border — aim further in' };
       const prev = this.world.getBlock(x, y, z);
       if (prev === b.type) continue;
       changes.push({ x, y, z, prev, next: b.type });

@@ -44,6 +44,12 @@ export const SITES = [
     prefer: { view: 3, flat: 4, water: 1 },
     facing: 'openest',
     pitch: -0.16,           // a shallow tilt down; level puts half the screen in sky
+    // Well inside your own land, not on the edge of it. Landing a block and a
+    // half from the border meant the first building you tried to place was
+    // refused for crossing it, with nothing on screen explaining why. Six
+    // leaves room to centre the largest starter design on yourself and still
+    // finds a spot with a full view in every world tried.
+    margin: 6,
     jitter: 6,
     relaxSteps: 3,
   },
@@ -62,13 +68,21 @@ export const SITES = [
     needs: {
       ground: ['grass', 'dirt'],
       headroom: 1,
-      flatness: 4,
+      // Trees do not need a level platform — woodland on a slope is normal and
+      // looks better than woodland on a table. Demanding a flat nine by nine
+      // meant almost every world had to loosen the spec to place its grove at
+      // all, which is the declaration describing ground the generator does not
+      // make rather than the generator being at fault.
+      flatness: 9,
       reach: 3,             // a grove cares about the lie of the land, not bumps
-      footprint: { w: 9, d: 9 },
-      footprintStep: 2,
+      footprint: { w: 5, d: 5 },
+      footprintStep: 3,
       water: { min: 4, max: 40 },
     },
     prefer: { flat: 4 },
+    // Half a grove over the line is a grove you cannot claim, and claiming one
+    // is an Age 1 goal.
+    margin: 6,
     jitter: 8,
     relaxSteps: 4,
   },
@@ -83,13 +97,15 @@ export const SITES = [
     needs: {
       ground: ['grass', 'dirt', 'sand'],
       headroom: 1,
-      flatness: 6,
-      footprint: { w: 5, d: 5 },
-      footprintStep: 2,
+      // No footprint at all: an outcrop is a lump on the landscape, and asking
+      // for a level pad to put it on contradicted the preference for broken
+      // ground two lines below.
+      flatness: 12,
     },
     // Outcrops belong on broken ground, so rough ground is preferred here —
     // the same weight as the grove uses, with the sign flipped.
     prefer: { flat: -2 },
+    margin: 4,
     jitter: 10,
     relaxSteps: 4,
   },
@@ -108,6 +124,7 @@ export const SITES = [
       water: { min: 2, max: 8, ideal: 4 },
     },
     prefer: { water: 2, flat: 1 },
+    margin: 4,
     jitter: 6,
     relaxSteps: 4,
   },

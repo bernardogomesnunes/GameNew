@@ -254,7 +254,7 @@ export function findSites(world, spec, { region, placed = [], rand = Math.random
       if (taken.length >= want) break;
     }
     if (taken.length >= want || (relax === steps && taken.length)) {
-      return taken.map((t) => site(spec, t, relax));
+      return taken.map((t) => site(spec, t, relax, world));
     }
   }
 
@@ -263,33 +263,53 @@ export function findSites(world, spec, { region, placed = [], rand = Math.random
   // answer the player can do anything with. Anything solid, dry and level
   // enough to stand a feature on will do.
   if (spec.essential) {
-    const spot = anywhereSolid(world, region, margin, ctx, rand);
-    if (spot) return [site(spec, spot, (spec.relaxSteps ?? 3) + 1)];
+    const spot = anywhereSolid(world, region, margin, ctx, rand, spec);
+    if (spot) return [site(spec, spot, (spec.relaxSteps ?? 3) + 1, world)];
   }
   return [];
 }
 
-function site(spec, spot, relaxed) {
+function site(spec, spot, relaxed, world) {
+  let yaw = 0;
+  if (spec.facing === 'openest') {
+    // The scored candidates already carry a view; the fallback does not, so
+    // work one out rather than leaving it facing north into whatever is there.
+    yaw = spot.view?.yaw ?? (world ? outlook(world, spot.x, spot.z, { at: 2 }).yaw : 0);
+  }
   return {
     spec: spec.id,
     x: spot.x, y: spot.y, z: spot.z,
-    yaw: spec.facing === 'openest' ? (spot.view?.yaw ?? 0) : 0,
+    yaw,
     pitch: spec.pitch ?? 0,
     relaxed,
   };
 }
 
-/** The last resort: the flattest solid ground in the region, whatever it is. */
-function anywhereSolid(world, region, margin, ctx, rand) {
+/**
+ * The last resort: the flattest ground in the region that is still fit to
+ * stand a feature on.
+ *
+ * "Fit to stand on" is not negotiable even here. An earlier version took the
+ * flattest solid ground and nothing else, which put the player inside a tree
+ * or ankle-deep in the river on the worlds where it fired — a worse outcome
+ * than the missing feature it existed to prevent. So the hard floor is: dry,
+ * solid underfoot, and whatever headroom the spec asked for.
+ */
+function anywhereSolid(world, region, margin, ctx, rand, spec) {
+  const want = spec?.needs?.headroom ?? 1;
   let best = null;
   for (let x = region.minX + margin; x <= region.maxX - margin; x++) {
     for (let z = region.minZ + margin; z <= region.maxZ - margin; z++) {
       const { y, ground } = footing(world, x, z);
       if (ground === AIR || ctx.waterIds.includes(ground)) continue;
+      if (headroom(world, x, z, want) < want) continue;
       const rough = roughness(world, x, z) + (rand() - 0.5);
       if (!best || rough < best.rough) best = { x, z, y, rough };
     }
   }
+  // A region with nowhere to stand at all is better served by a shorter margin
+  // than by refusing: the plot is the player's whole world at this point.
+  if (!best && margin > 0) return anywhereSolid(world, region, 0, ctx, rand, spec);
   return best;
 }
 

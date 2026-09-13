@@ -513,6 +513,10 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .hotbar-empty { padding: 14px 18px; font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
 
 /* --- buildings panel: one card per type, both routes in --- */
+.shortfall { display: block; }
+.shortfall ul { margin: 4px 0 0; padding-left: 18px; }
+.shortfall li { margin: 2px 0; line-height: 1.35; }
+
 #buildings-list { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
 .building-card {
   border: 1px solid var(--panel-border); border-radius: 10px;
