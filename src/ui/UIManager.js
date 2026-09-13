@@ -411,7 +411,10 @@ export class UIManager {
     this.root.querySelectorAll('.mode-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const mode = btn.dataset.mode;
-        const label = mode === 'campaign' ? 'Campaign' : 'Creative';
+        // The button's own heading is the mode's name, so it can never drift
+        // out of step with the list — "Start a new Creative world?" on the
+        // Duilt button was the version that shipped.
+        const label = btn.querySelector('strong')?.textContent.trim() || mode;
         if (confirm(`Start a new ${label} world? Unsaved changes will be lost.`)) this.cb.onNewWorld(mode);
       });
     });

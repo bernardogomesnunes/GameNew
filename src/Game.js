@@ -130,9 +130,40 @@ export class Game {
     this.ui.refreshForMode();
 
     this.wireInput();
+    this.wireSaveOnLeave();
     this.lastAutosave = performance.now();
     this.clock = new THREE.Clock();
     this.renderer.setAnimationLoop(() => this.tick());
+  }
+
+  /**
+   * Saves the moment the page is put away, not only every minute.
+   *
+   * A phone suspends the animation loop as soon as you switch apps, so the
+   * interval autosave simply stops running, and iOS is free to discard the tab
+   * from there. Anything since the last tick was lost — up to a whole session,
+   * because a brand new world had never reached its first autosave.
+   *
+   * `visibilitychange` is the event that actually fires on mobile;
+   * `pagehide` catches the desktop close. Both are cheap and idempotent.
+   */
+  wireSaveOnLeave() {
+    const save = () => this.autosaveNow();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') save();
+    });
+    window.addEventListener('pagehide', save);
+  }
+
+  /** Writes the autosave straight away, and resets the interval clock with it. */
+  autosaveNow() {
+    try {
+      this.saveManager.autosave(this.saveState());
+      this.lastAutosave = performance.now();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   buildCallbacks() {
@@ -316,10 +347,16 @@ export class Game {
     this.bus.emit('economy:change', {});
     if (!silent) {
       this.ui.refreshForMode();
+      // Write it out now: a brand new world is 60 seconds from its first
+      // interval autosave, and a phone that gets put away in that window used
+      // to lose the whole thing.
+      this.autosaveNow();
       this.ui.toast({
         kind: 'xp',
-        title: mode === CAMPAIGN ? 'Campaign started' : 'New world generated',
-        body: mode === CAMPAIGN ? 'You have 120 wood. Spend it well.' : 'Have fun building!',
+        title: mode === CAMPAIGN ? 'Campaign started' : mode === DUILT ? 'Welcome to Duilt' : 'New world generated',
+        body: mode === CAMPAIGN ? 'You have 120 wood. Spend it well.'
+          : mode === DUILT ? 'You have 32 blocks of land, an axe and a bucket. Build a forest, a farm and a house.'
+          : 'Have fun building!',
       });
     }
   }
@@ -354,7 +391,11 @@ export class Game {
     // A save from before worlds had ids still loads; it just gets a fresh one.
     this.worldId = data.worldId || newWorldId();
     this.worldName = data.worldName || data.name || this.worldName || 'My world';
-    this.mode = data.mode === CAMPAIGN ? CAMPAIGN : CREATIVE;
+    // Anything unrecognised falls back to Creative, which is the mode that
+    // needs nothing alongside it. Listing the modes explicitly matters: while
+    // this read `=== CAMPAIGN ? CAMPAIGN : CREATIVE`, every saved Duilt world
+    // came back as a sandbox and its bag, land, buildings and skills went with it.
+    this.mode = data.mode === CAMPAIGN ? CAMPAIGN : data.mode === DUILT ? DUILT : CREATIVE;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, data.player);
     this.player.yaw = data.player.yaw || 0;
@@ -636,6 +677,7 @@ export class Game {
       player: this.player,
       gamification: this.gamification,
       economy: this.economy,
+      duilt: this.duilt ? this.duilt.toJSON() : null,
     });
     this.ui.toast({
       kind: 'challenge',
@@ -656,6 +698,7 @@ export class Game {
       player: data.player,
       gamification: this.gamification.toJSON(),
       economy: data.economy,
+      duilt: data.duilt,
       worldId: id,
       worldName: data.name,
     });
@@ -900,10 +943,7 @@ export class Game {
     this.updateHover();
     this.gamification.tick(performance.now());
 
-    if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) {
-      this.lastAutosave = performance.now();
-      try { this.saveManager.autosave(this.saveState()); } catch {}
-    }
+    if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.autosaveNow();
 
     this.renderer.render(this.scene, this.camera);
   }

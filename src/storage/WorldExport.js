@@ -2,7 +2,7 @@ import { BLOCKS, BLOCKS_BY_ID, AIR } from '../config/blocks.js';
 import { World } from '../world/World.js';
 
 export const EXPORT_FORMAT = 'voxel-sandbox-world';
-export const EXPORT_VERSION = 1;
+export const EXPORT_VERSION = 2;
 
 function download(filename, blob) {
   const url = URL.createObjectURL(blob);
@@ -24,7 +24,7 @@ function safeName(name) {
  * Full-fidelity snapshot: everything needed to restore the world exactly,
  * including progression and the player's saved designs.
  */
-export function buildWorldPayload({ world, player, gamification, economy, mode, templates, name }) {
+export function buildWorldPayload({ world, player, gamification, economy, mode, templates, name, duilt }) {
   return {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
@@ -35,6 +35,8 @@ export function buildWorldPayload({ world, player, gamification, economy, mode, 
     player: { x: player.position.x, y: player.position.y, z: player.position.z, yaw: player.yaw, pitch: player.pitch },
     gamification: gamification.toJSON(),
     economy: economy.toJSON(),
+    // A Duilt world without its bag, land and buildings is just the terrain.
+    duilt: duilt ?? null,
     templates: templates || [],
   };
 }
@@ -54,7 +56,8 @@ export function parseWorldPayload(text) {
     player: data.player,
     gamification: data.gamification,
     economy: data.economy,
-    mode: data.mode === 'campaign' ? 'campaign' : 'creative',
+    mode: data.mode === 'campaign' ? 'campaign' : data.mode === 'duilt' ? 'duilt' : 'creative',
+    duilt: data.duilt ?? null,
     templates: Array.isArray(data.templates) ? data.templates : [],
     name: data.name,
   };

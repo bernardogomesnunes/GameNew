@@ -3,7 +3,7 @@ import { World } from '../world/World.js';
 const INDEX_KEY = 'voxelgame:saves';
 const SAVE_PREFIX = 'voxelgame:save:';
 const AUTOSAVE_NAME = '__autosave__';
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 
 function saveKey(name) {
   return SAVE_PREFIX + name;
@@ -27,7 +27,7 @@ export class SaveManager {
       .sort((a, b) => b.timestamp - a.timestamp);
   }
 
-  save(name, { world, player, gamification, economy, mode, worldId, worldName }) {
+  save(name, { world, player, gamification, economy, mode, worldId, worldName, duilt }) {
     const payload = {
       version: SAVE_VERSION,
       timestamp: Date.now(),
@@ -39,6 +39,10 @@ export class SaveManager {
       player: { x: player.position.x, y: player.position.y, z: player.position.z, yaw: player.yaw, pitch: player.pitch },
       gamification: gamification.toJSON(),
       economy: economy.toJSON(),
+      // The bag, the land, the buildings, hunger and skills. Left out of this
+      // list once, which meant a Duilt world saved as a plain box of blocks and
+      // came back with nothing in it.
+      duilt: duilt ?? null,
     };
     const json = JSON.stringify(payload);
     try {
@@ -69,6 +73,9 @@ export class SaveManager {
       economy: payload.economy ?? null,
       worldId: payload.worldId ?? null,
       worldName: payload.worldName ?? name,
+      // Absent in version 2 and earlier, which is exactly what a world with no
+      // Duilt state looks like, so old saves need no migration.
+      duilt: payload.duilt ?? null,
       timestamp: payload.timestamp,
     };
   }

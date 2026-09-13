@@ -191,9 +191,29 @@ export class DuiltUI {
 
   // ---- the bag ----
 
+  /**
+   * What a panel says when it is opened without a Duilt world behind it.
+   *
+   * These renderers used to just return, which left the title, the subtitle and
+   * an empty box — indistinguishable from a broken panel, and that is exactly
+   * how it reached a phone. A panel should always be able to explain itself.
+   */
+  noWorld(sel) {
+    const box = this.q(sel);
+    if (box) {
+      box.innerHTML = `<div class="sub" style="margin:0">This is part of a Duilt world.
+        Open Menu \u2192 New world \u2192 Duilt to begin one.</div>`;
+    }
+    return null;
+  }
+
   renderBag() {
     const d = this.duilt;
-    if (!d) return;
+    if (!d) {
+      const g = this.q('#bag-grid');
+      if (g) g.innerHTML = '';
+      return this.noWorld('#bag-detail');
+    }
     const grid = this.q('#bag-grid');
     if (!grid) return;
     const slots = d.inventory.slots;
@@ -312,7 +332,7 @@ export class DuiltUI {
    */
   renderBuildings() {
     const d = this.duilt;
-    if (!d) return;
+    if (!d) return this.noWorld('#buildings-list');
     const framed = this.game.selectorTool?.active ? this.game.selectorTool.bounds() : null;
     const region = framed ? { ...framed } : null;
     const options = region ? d.claimOptionsFor(region) : null;
@@ -373,7 +393,7 @@ export class DuiltUI {
 
   renderBench() {
     const d = this.duilt;
-    if (!d) return;
+    if (!d) return this.noWorld('#bench-list');
     const near = this.game.player?.position;
     const recipes = d.crafting.available(d.age, { station: 'hand', near });
 
@@ -409,7 +429,7 @@ export class DuiltUI {
 
   renderSkills() {
     const d = this.duilt;
-    if (!d) return;
+    if (!d) return this.noWorld('#skills-list');
     this.q('#skills-list').innerHTML = d.skills.summary().map((s) => `
       <div class="skill-row">
         <div class="skill-head">

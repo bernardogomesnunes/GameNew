@@ -34,7 +34,7 @@ export class CloudWorlds {
    * Uploads the world and its progression. Returns how much actually moved, so
    * the UI can say "3 of 16 chunks" rather than a meaningless spinner.
    */
-  async save(worldId, { world, name, mode, player, gamification, economy }) {
+  async save(worldId, { world, name, mode, player, gamification, economy, duilt }) {
     const meta = {
       name: name || 'Untitled world',
       mode,
@@ -43,6 +43,9 @@ export class CloudWorlds {
       height: world.height,
       spawn: player ? { x: player.position.x, y: player.position.y, z: player.position.z, yaw: player.yaw, pitch: player.pitch } : null,
       economy: economy?.toJSON?.() ?? {},
+      // Small enough to ride along in the metadata, and useless apart from it:
+      // restoring a Duilt world without its bag and buildings is a blank map.
+      duilt: duilt ?? null,
       blockCount: countBlocks(world),
       revision: Date.now(),
     };
@@ -83,6 +86,7 @@ export class CloudWorlds {
       name: meta.name,
       player: spawn,
       economy: meta.economy || {},
+      duilt: meta.duilt ?? null,
       gamification: null, // progression is per account, fetched separately
     };
   }
