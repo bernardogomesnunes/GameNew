@@ -1,6 +1,7 @@
 import { PLACEABLE_BLOCKS } from '../config/blocks.js';
 import { icon } from './icons.js';
 import { DuiltUI } from './DuiltUI.js';
+import { HomeScreen } from './HomeScreen.js';
 import { ITEMS_BY_ID, itemName } from '../config/items.js';
 import { RESOURCES_BY_ID } from '../config/resources.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
@@ -48,23 +49,7 @@ export class UIManager {
     return `
       <div id="crosshair"></div>
 
-      <div id="blocker" class="overlay">
-        <div class="card">
-          <h1 id="blocker-title">Duilt</h1>
-          <p id="blocker-sub">You have arrived in a new world. Clear some space and build a civilisation.</p>
-          <div class="desktop-only">
-            <p>Move: <span class="hint-key">WASD</span> &nbsp; Jump: <span class="hint-key">Space</span> &nbsp; Fly: <span class="hint-key">F</span></p>
-            <p>Break: <span class="hint-key">Left Click</span> &nbsp; Place: <span class="hint-key">Right Click</span> &nbsp; Hotbar: <span class="hint-key">1-9</span></p>
-            <p>Undo/Redo: <span class="hint-key">Ctrl+Z</span> / <span class="hint-key">Ctrl+Y</span> &nbsp; Menu: <span class="hint-key">Esc</span></p>
-          </div>
-          <div class="touch-only" hidden>
-            <p>Left stick moves &middot; right stick looks around</p>
-            <p>Buttons on each side break, place, fly and jump &middot; tap Help any time</p>
-          </div>
-          <button class="primary" id="btn-play">Play</button>
-          <button class="secondary" id="btn-play-duilt" hidden>Start a Duilt world</button>
-        </div>
-      </div>
+      <div id="blocker" class="overlay"></div>
 
       <div id="hud-top">
         <div id="level-badge">1</div>
@@ -119,62 +104,15 @@ export class UIManager {
       <div class="overlay" id="panel-menu" hidden>
         <div class="panel">
           <button class="icon-btn panel-close" data-close="panel-menu">${icon('close', 16)}</button>
-          <h2>Menu</h2>
-          <div class="sub">Fly mode, saving, and loading worlds.</div>
+          <h2>This world</h2>
+          <div class="sub" id="menu-world-name"></div>
+
           <div class="field-row">
-            <input type="text" id="save-name" placeholder="Save name" maxlength="40" />
+            <input type="text" id="save-name" placeholder="Save as\u2026" maxlength="40" />
             <button class="secondary" id="btn-save">Save</button>
           </div>
-          <div id="save-list"></div>
-          <div class="mode-block">
-            <div class="mode-label">Export and import</div>
-            <div class="field-row" style="margin-bottom:0; flex-wrap:wrap;">
-              <button class="secondary" id="btn-export-world">Export world</button>
-              <button class="secondary" id="btn-export-vox">Export .vox</button>
-              <button class="secondary" id="btn-import-world">Import a file</button>
-            </div>
-            <div class="export-note">A world file restores everything, designs included. The .vox opens in MagicaVoxel and Blender.</div>
-          </div>
-          <div class="mode-block" id="cloud-block" hidden>
-            <div class="mode-label">Cloud <span id="cloud-status"></span></div>
+          <div id="save-hint" class="export-note" hidden></div>
 
-            <div id="cloud-signed-out">
-              <div class="export-note" style="margin-top:0;">Sign in to keep your worlds off this device. Without an account everything stays in this browser only.</div>
-              <div class="field-row">
-                <input type="email" id="cloud-email" placeholder="Email" autocomplete="email" />
-              </div>
-              <div class="field-row">
-                <input type="password" id="cloud-password" placeholder="Password" autocomplete="current-password" />
-                <button class="secondary" id="btn-cloud-signin">Sign in</button>
-                <button class="secondary" id="btn-cloud-signup">Create</button>
-              </div>
-            </div>
-
-            <div id="cloud-signed-in" hidden>
-              <div class="field-row" style="flex-wrap:wrap;">
-                <button class="secondary" id="btn-cloud-save">Save this world to the cloud</button>
-                <button class="secondary" id="btn-cloud-refresh">Refresh</button>
-                <button class="secondary" id="btn-cloud-signout">Sign out</button>
-              </div>
-              <div id="cloud-list"></div>
-            </div>
-            <div class="export-note" id="cloud-error" hidden></div>
-          </div>
-
-          <div class="mode-block">
-            <div class="mode-label">New world</div>
-            <div class="field-row" style="margin-bottom:0;">
-              <button class="secondary mode-btn" data-mode="campaign">
-                <strong>Campaign</strong><span>Empty ground, blocks cost resources</span>
-              </button>
-              <button class="secondary mode-btn" data-mode="creative">
-                <strong>Creative</strong><span>Generated terrain, build freely</span>
-              </button>
-              <button class="secondary mode-btn" data-mode="duilt">
-                <strong>Duilt</strong><span>Arrive on 32 blocks of land and build a civilisation</span>
-              </button>
-            </div>
-          </div>
           <div class="mode-block">
             <div class="mode-label">Graphics <span id="gfx-fps" class="gfx-fps"></span></div>
             <div class="gfx-grid">
@@ -200,13 +138,58 @@ export class UIManager {
             <div class="export-note" id="gfx-note" hidden></div>
           </div>
 
+          <div class="mode-block">
+            <div class="mode-label">Files</div>
+            <div class="field-row" style="margin-bottom:0; flex-wrap:wrap;">
+              <button class="secondary" id="btn-export-world">Export world</button>
+              <button class="secondary" id="btn-export-vox">Export .vox</button>
+              <button class="secondary" id="btn-import-world">Import a file</button>
+            </div>
+            <div class="export-note">A world file restores everything, designs included. The .vox opens in MagicaVoxel and Blender.</div>
+          </div>
+
           <div class="field-row" style="margin-top:14px;">
-            <button class="secondary" id="btn-resume">Resume</button>
+            <button class="primary" id="btn-resume">Resume</button>
+            <button class="secondary" id="btn-leave">Leave to worlds</button>
           </div>
         </div>
       </div>
 
+      <div class="overlay" id="panel-account" hidden>
+        <div class="panel">
+          <button class="icon-btn panel-close" data-close="panel-account">${icon('close', 16)}</button>
+          <h2 id="account-title">Sign in</h2>
+          <div class="sub" id="account-sub">Keep your worlds off this device, so they survive a cleared browser.</div>
 
+          <div id="cloud-signed-out">
+            <div class="field-row">
+              <input type="email" id="cloud-email" placeholder="Email" autocomplete="email" />
+            </div>
+            <div class="field-row">
+              <input type="password" id="cloud-password" placeholder="Password" autocomplete="current-password" />
+            </div>
+            <div class="field-row">
+              <button class="primary" id="btn-cloud-signin">Sign in</button>
+            </div>
+            <div class="export-note">
+              New here? <button class="home-link" id="btn-account-switch">Create an account instead</button>
+            </div>
+          </div>
+
+          <div id="cloud-signed-in" hidden>
+            <div class="field-row" style="flex-wrap:wrap;">
+              <button class="secondary" id="btn-cloud-save">Save this world to the cloud</button>
+              <button class="secondary" id="btn-cloud-refresh">Refresh</button>
+              <button class="secondary" id="btn-cloud-signout">Sign out</button>
+            </div>
+            <div id="cloud-list"></div>
+          </div>
+          <div class="export-note" id="cloud-error" hidden></div>
+          <div id="cloud-status" hidden></div>
+          <div id="cloud-block" hidden></div>
+          <div id="save-list" hidden></div>
+        </div>
+      </div>
 
       <div class="overlay" id="panel-templates" hidden>
         <div class="panel">
@@ -274,9 +257,6 @@ export class UIManager {
     const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
     if (isTouch) {
       document.body.classList.add('touch');
-      this.q('.desktop-only').hidden = true;
-      this.q('.touch-only').hidden = false;
-      this.q('#btn-play').textContent = 'Tap to Play';
     }
   }
 
@@ -349,7 +329,6 @@ export class UIManager {
   /** Re-renders everything that differs between Creative and Campaign. */
   refreshForMode() {
     this.refreshForDuilt();
-    this.refreshBlocker();
     document.body.classList.toggle('campaign', this.isCampaign);
     this.buildHotbar();
     this.updateResourceBar();
@@ -372,7 +351,25 @@ export class UIManager {
   }
 
   wireEvents() {
-    this.q('#btn-play').addEventListener('click', () => this.cb.onRequestStart());
+    this.home = new HomeScreen(this.q('#blocker'), {
+      listWorlds: () => this.saveManager.listSaves(),
+      onContinue: () => { this.cb.onLoadAutosave(); this.enterWorld(); },
+      onOpen: (name) => { this.cb.onLoad(name); this.enterWorld(); },
+      onRemove: (name) => {
+        if (!confirm('Delete this world? This cannot be undone.')) return false;
+        this.cb.onDeleteSave(name);
+        return true;
+      },
+      // Creating and entering happen in the same gesture: pointer lock has to
+      // be claimed inside the tap that asked for it.
+      onCreate: (mode, name) => { this.cb.onNewWorld(mode, name); this.enterWorld(); },
+      onSettings: () => { this.hideBlocker(); this.openPanel('panel-menu'); },
+      onHelp: () => { this.hideBlocker(); this.openPanel('panel-help'); },
+      onAccount: () => { this.hideBlocker(); this.openPanel('panel-account'); },
+    });
+    // The screen is already on when the page loads, so draw it now rather than
+    // waiting for something to re-open it.
+    this.home.render();
 
     this.q('#hotbar').addEventListener('click', (e) => {
       const slot = e.target.closest('.hotbar-slot');
@@ -432,35 +429,23 @@ export class UIManager {
       });
     });
 
-    this.q('#btn-play-duilt').addEventListener('click', () => {
-      // Start the world and go straight into it. Leaving the player back on
-      // the same card, now with the button gone, reads as nothing having
-      // happened — and the pointer lock has to be claimed inside this same tap
-      // anyway, so asking for a second one would spend the gesture.
-      this.cb.onNewWorld('duilt');
-      this.cb.onRequestStart();
-    });
     this.wireGraphics();
     this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
+    this.q('#btn-leave').addEventListener('click', () => {
+      this.closePanel('panel-menu');
+      this.openHome();
+    });
     this.q('#btn-export-world').addEventListener('click', () => this.cb.onExportWorld(this.q('#save-name').value));
     this.q('#btn-export-vox').addEventListener('click', () => this.cb.onExportVox(this.q('#save-name').value));
     this.q('#btn-import-world').addEventListener('click', () => this.cb.onImportWorld());
-    this.root.querySelectorAll('.mode-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const mode = btn.dataset.mode;
-        // The button's own heading is the mode's name, so it can never drift
-        // out of step with the list — "Start a new Creative world?" on the
-        // Duilt button was the version that shipped.
-        const label = btn.querySelector('strong')?.textContent.trim() || mode;
-        if (confirm(`Start a new ${label} world? Unsaved changes will be lost.`)) this.cb.onNewWorld(mode);
-      });
-    });
     this.q('#btn-save').addEventListener('click', () => {
       const input = this.q('#save-name');
-      const name = input.value.trim() || `World ${new Date().toLocaleDateString()}`;
+      const name = input.value.trim() || this.game.worldName || `World ${new Date().toLocaleDateString()}`;
       this.cb.onSave(name);
       input.value = '';
-      this.refreshSaveList();
+      const hint = this.q('#save-hint');
+      hint.hidden = false;
+      hint.textContent = `Saved as "${name}". You will find it on the worlds screen.`;
     });
 
     this.wireTouchControls();
@@ -655,6 +640,13 @@ export class UIManager {
   }
 
   openPanel(id) {
+    if (id === 'panel-menu') {
+      const label = this.q('#menu-world-name');
+      const kind = this.cb.isDuilt?.() ? 'Duilt' : (this.isCampaign ? 'Campaign' : 'Creative');
+      if (label) label.textContent = `${this.game.worldName || 'Unnamed world'} \u00b7 ${kind}`;
+      const hint = this.q('#save-hint');
+      if (hint) hint.hidden = true;
+    }
     if (id === 'panel-stats') this.populateStats();
     if (id === 'panel-help') this.populateHelp();
     if (id === 'panel-templates') this.refreshTemplateList();
@@ -667,7 +659,7 @@ export class UIManager {
 
   isAnyPanelOpen() {
     if (this.duiltUI?.isAnyPanelOpen()) return true;
-    return ['panel-stats', 'panel-menu', 'panel-score', 'panel-help', 'panel-templates'].some((id) => !this.q('#' + id).hidden);
+    return ['panel-stats', 'panel-menu', 'panel-score', 'panel-help', 'panel-templates', 'panel-account'].some((id) => !this.q('#' + id).hidden);
   }
 
   populateStats() {
@@ -753,17 +745,22 @@ export class UIManager {
    * the restored world is not a Duilt one, the way into Duilt is offered right
    * here instead of three taps down a menu.
    */
-  refreshBlocker() {
-    const duilt = !!this.cb.isDuilt?.();
-    const title = this.q('#blocker-title'), sub = this.q('#blocker-sub');
-    const start = this.q('#btn-play-duilt');
-    if (!title || !sub || !start) return;
+  /** Leaves the worlds screen and takes control of the world behind it. */
+  enterWorld() {
+    this.hideBlocker();
+    this.cb.onRequestStart();
+  }
 
-    title.textContent = duilt ? 'Duilt' : 'Voxel Sandbox';
-    sub.textContent = duilt
-      ? 'You have arrived in a new world. Clear some space and build a civilisation.'
-      : 'Carrying on with your saved world.';
-    start.hidden = duilt;
+  /** Brings up the worlds screen, always at the top of the journey. */
+  openHome() {
+    this.home?.reset();
+    this.showBlocker();
+  }
+
+  /** Label on the worlds screen, so you can see whether you are signed in. */
+  refreshAccountLabel() {
+    const user = this.cb.getCloudUser?.();
+    this.home?.setAccount(user ? (user.email || user.name || 'Account') : 'Sign in');
   }
 
   hideBlocker() {
@@ -793,8 +790,29 @@ export class UIManager {
     };
     const creds = () => [this.q('#cloud-email').value.trim(), this.q('#cloud-password').value];
 
-    this.q('#btn-cloud-signin').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignIn(...creds())));
-    this.q('#btn-cloud-signup').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignUp(...creds())));
+    // One or the other, never both at once. Two equally weighted buttons under
+    // one password field is a guess about which one you meant, and getting it
+    // wrong means either "that account exists" or "no such account" when you
+    // did nothing wrong.
+    this.accountMode = 'signin';
+    const applyAccountMode = () => {
+      const creating = this.accountMode === 'create';
+      this.q('#account-title').textContent = creating ? 'Create an account' : 'Sign in';
+      this.q('#account-sub').textContent = creating
+        ? 'Your worlds follow the account, so a cleared browser or a new phone keeps them.'
+        : 'Keep your worlds off this device, so they survive a cleared browser.';
+      this.q('#btn-cloud-signin').textContent = creating ? 'Create account' : 'Sign in';
+      this.q('#btn-account-switch').textContent = creating
+        ? 'I already have an account' : 'Create an account instead';
+      this.q('#cloud-password').setAttribute('autocomplete', creating ? 'new-password' : 'current-password');
+    };
+    applyAccountMode();
+    this.q('#btn-account-switch').addEventListener('click', () => {
+      this.accountMode = this.accountMode === 'create' ? 'signin' : 'create';
+      applyAccountMode();
+    });
+    this.q('#btn-cloud-signin').addEventListener('click', (e) => busy(e.currentTarget, () =>
+      this.accountMode === 'create' ? this.cb.onCloudSignUp(...creds()) : this.cb.onCloudSignIn(...creds())));
     this.q('#btn-cloud-signout').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignOut()));
     this.q('#btn-cloud-refresh').addEventListener('click', (e) => busy(e.currentTarget, () => this.refreshCloudList()));
     this.q('#btn-cloud-save').addEventListener('click', (e) => busy(e.currentTarget, async () => {
@@ -822,6 +840,7 @@ export class UIManager {
     this.q('#cloud-signed-out').hidden = !!user;
     this.q('#cloud-signed-in').hidden = !user;
     if (user) this.refreshCloudList();
+    this.refreshAccountLabel();
   }
 
   async refreshCloudList() {
@@ -871,7 +890,7 @@ export class UIManager {
   }
 
   showBlocker() {
-    this.refreshBlocker();
+    this.home?.render();
     this.q('#blocker').hidden = false;
   }
 

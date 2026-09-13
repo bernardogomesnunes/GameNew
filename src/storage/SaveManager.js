@@ -18,7 +18,18 @@ export class SaveManager {
           const raw = localStorage.getItem(saveKey(name));
           if (!raw) return null;
           const data = JSON.parse(raw);
-          return { name, timestamp: data.timestamp, isAutosave: name === AUTOSAVE_NAME };
+          // Enough for a world list to describe itself without opening each
+          // save: what kind of world it is, what it was called, and how far it
+          // got. Reading the whole payload here is fine — it is already parsed.
+          return {
+            name,
+            timestamp: data.timestamp,
+            isAutosave: name === AUTOSAVE_NAME,
+            mode: data.mode ?? 'creative',
+            worldName: data.worldName ?? name,
+            age: data.duilt?.territory?.age ?? null,
+            blocks: data.world?.chunks?.length ?? null,
+          };
         } catch {
           return null;
         }

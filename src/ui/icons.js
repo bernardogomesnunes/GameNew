@@ -11,6 +11,7 @@ const PATHS = {
   stats: 'M5 20v-8M12 20V4M19 20v-5M3 20h18',
   menu: 'M4 7h16M4 12h16M4 17h16',
   close: 'M6 6l12 12M18 6 6 18',
+  plus: 'M12 5v14M5 12h14',
   mine: 'M12 3 4 7.5v9L12 21l8-4.5v-9zM9 12h6',
   place: 'M12 3 4 7.5v9L12 21l8-4.5v-9zM12 9v6M9 12h6',
   fly: 'M21.5 2.5 2.5 9.8l7.2 3 3 7.2zM9.7 12.8 21.5 2.5',

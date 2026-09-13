@@ -149,6 +149,9 @@ export class Game {
   }
 
   boot() {
+    // A world is built either way so there is something behind the worlds
+    // screen rather than a blank canvas, and so "Continue" has something to
+    // continue. Which one is decided by the screen, not here.
     const autosave = this.saveManager.load(AUTOSAVE_NAME);
     if (autosave) {
       this.loadFromData(autosave, { silent: true });
@@ -258,7 +261,11 @@ export class Game {
           this.ui.toast({ kind: 'xp', title: 'Could not import', body: err.message });
         }
       },
-      onNewWorld: (mode) => { this.newWorld({ mode }); this.ui.closePanel('panel-menu'); },
+      onNewWorld: (mode, name) => { this.newWorld({ mode, name }); this.ui.closePanel('panel-menu'); },
+      onLoadAutosave: () => {
+        const data = this.saveManager.load(AUTOSAVE_NAME);
+        if (data) this.loadFromData(data, { silent: true });
+      },
       onResume: () => {
         this.ui.closePanel('panel-menu');
         if (document.body.classList.contains('touch')) this.ui.hideBlocker();
@@ -362,10 +369,11 @@ export class Game {
     this.duilt = null;
   }
 
-  newWorld({ silent, mode = this.mode } = {}) {
+  newWorld({ silent, mode = this.mode, name } = {}) {
     this.mode = mode;
     this.worldId = newWorldId();
-    this.worldName = mode === CAMPAIGN ? 'Campaign world' : mode === DUILT ? 'Duilt' : 'Creative world';
+    this.worldName = name
+      || (mode === CAMPAIGN ? 'Campaign world' : mode === DUILT ? 'My settlement' : 'Creative world');
 
     this.disposeDuilt();
     let spawn = null;
