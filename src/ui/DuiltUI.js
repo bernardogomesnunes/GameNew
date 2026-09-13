@@ -1,4 +1,6 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
+import { STRUCTURES_BY_ID, structuresForAge } from '../config/structures.js';
+import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
 
 /**
@@ -68,6 +70,24 @@ export class DuiltUI {
         </div>
       </div>
 
+      <div class="overlay" id="panel-buildings" hidden>
+        <div class="panel panel-wide">
+          <button class="icon-btn panel-close" data-close="panel-buildings">✕</button>
+          <h2>Buildings</h2>
+          <div class="sub">Two ways in: build it yourself and have it checked, or drop a ready-made one.</div>
+          <div id="buildings-list"></div>
+        </div>
+      </div>
+
+      <div class="overlay" id="panel-bench" hidden>
+        <div class="panel panel-wide">
+          <button class="icon-btn panel-close" data-close="panel-bench">✕</button>
+          <h2>Workbench</h2>
+          <div class="sub" id="bench-sub">Small work you can do anywhere. Bigger work will need a workshop.</div>
+          <div id="bench-list"></div>
+        </div>
+      </div>
+
       <div class="overlay" id="panel-skills" hidden>
         <div class="panel">
           <button class="icon-btn panel-close" data-close="panel-skills">✕</button>
@@ -86,7 +106,7 @@ export class DuiltUI {
       b.addEventListener('click', () => this.closePanel(b.dataset.close)));
     this.q('#btn-eat').addEventListener('click', () => this.eat());
 
-    this.bus.on('inventory:change', () => { this.renderBag(); this.renderVitals(); });
+    this.bus.on('inventory:change', () => { this.renderBag(); this.renderVitals(); this.onBagChanged?.(); });
     this.bus.on('hunger:change', () => this.renderVitals());
     this.bus.on('structure:claimed', () => this.renderGoals());
     this.bus.on('structure:broken', () => this.renderGoals());
@@ -99,13 +119,15 @@ export class DuiltUI {
     this.q('#vitals').hidden = !on;
     this.q('#goals').hidden = !on;
     if (on) { this.renderVitals(); this.renderGoals(); }
-    else ['panel-bag', 'panel-claim', 'panel-skills'].forEach((p) => this.closePanel(p));
+    else this.panelIds.forEach((p) => this.closePanel(p));
   }
 
   openPanel(id) {
     this.q(`#${id}`).hidden = false;
     if (id === 'panel-bag') this.renderBag();
     if (id === 'panel-skills') this.renderSkills();
+    if (id === 'panel-buildings') this.renderBuildings();
+    if (id === 'panel-bench') this.renderBench();
   }
 
   closePanel(id) {
@@ -114,8 +136,12 @@ export class DuiltUI {
     if (id === 'panel-bag') this.held = null;
   }
 
+  get panelIds() {
+    return ['panel-bag', 'panel-claim', 'panel-skills', 'panel-buildings', 'panel-bench'];
+  }
+
   isAnyPanelOpen() {
-    return ['panel-bag', 'panel-claim', 'panel-skills'].some((id) => !this.q(`#${id}`).hidden);
+    return this.panelIds.some((id) => !this.q(`#${id}`).hidden);
   }
 
   toggleBag() {
@@ -275,6 +301,108 @@ export class DuiltUI {
     list.querySelectorAll('[data-claim]').forEach((b) =>
       b.addEventListener('click', () => { onClaim(b.dataset.claim); this.closePanel('panel-claim'); }));
     this.openPanel('panel-claim');
+  }
+
+  // ---- buildings ----
+
+  /**
+   * The age's building types, each with what it takes and both routes in.
+   * This replaces pointing people at a generic template list and hoping they
+   * work out what a farm is supposed to contain.
+   */
+  renderBuildings() {
+    const d = this.duilt;
+    if (!d) return;
+    const framed = this.game.selectorTool?.active ? this.game.selectorTool.bounds() : null;
+    const region = framed ? { ...framed } : null;
+    const options = region ? d.claimOptionsFor(region) : null;
+
+    this.q('#buildings-list').innerHTML = structuresForAge(d.age).map((spec) => {
+      const built = d.structures.countOf(spec.id);
+      const design = DESIGN_FOR_STRUCTURE.get(spec.id);
+      const opt = options?.find((o) => o.id === spec.id);
+      const needs = spec.requires.map((r) => r.id).join(' · ');
+      const makes = Object.entries(spec.produces ?? {}).map(([k, v]) => `${v} ${itemName(k).toLowerCase()}`).join(', ');
+      const canStamp = design && d.inventory.hasAll(design.cost);
+      const shortfall = design ? d.inventory.missing(design.cost) : {};
+
+      return `
+        <div class="building-card">
+          <div class="building-head">
+            <span class="building-icon">${spec.icon}</span>
+            <div class="building-title">
+              <strong>${spec.name}</strong>
+              <em>${spec.blurb}</em>
+            </div>
+            ${built ? `<span class="building-count">${built} built</span>` : ''}
+          </div>
+          <div class="building-meta">
+            ${makes ? `<span>Makes ${makes} a minute</span>` : '<span>Houses settlers, later on</span>'}
+            <span>Needs: ${needs}</span>
+          </div>
+          <div class="building-actions">
+            <button class="secondary" data-claim-here="${spec.id}" ${opt?.ok ? '' : 'disabled'}>
+              ${opt?.ok ? 'Claim what I framed' : 'Claim what I framed'}
+            </button>
+            <button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
+              Place a ${design ? design.footprint : ''} starter
+            </button>
+          </div>
+          <div class="building-note">
+            ${opt && !opt.ok ? `<span class="warn">${opt.reason}</span>` : ''}
+            ${!region ? '<span>Turn on Select and frame a build to claim it.</span>' : ''}
+            ${design && !canStamp ? `<span class="warn">Starter needs ${Object.entries(shortfall).map(([k, n]) => `${n} ${itemName(k).toLowerCase()}`).join(', ')}</span>` : ''}
+            ${design?.note && canStamp ? `<span>${design.note}</span>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    this.q('#buildings-list').querySelectorAll('[data-claim-here]').forEach((b) =>
+      b.addEventListener('click', () => {
+        this.closePanel('panel-buildings');
+        this.onClaimType?.(b.dataset.claimHere);
+      }));
+    this.q('#buildings-list').querySelectorAll('[data-stamp]').forEach((b) =>
+      b.addEventListener('click', () => {
+        this.closePanel('panel-buildings');
+        this.onStampStarter?.(b.dataset.stamp);
+      }));
+  }
+
+  // ---- the workbench ----
+
+  renderBench() {
+    const d = this.duilt;
+    if (!d) return;
+    const near = this.game.player?.position;
+    const recipes = d.crafting.available(d.age, { station: 'hand', near });
+
+    this.q('#bench-list').innerHTML = recipes.map((r) => {
+      const inputs = Object.entries(r.inputs)
+        .map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' + ');
+      return `
+        <div class="recipe-row ${r.ok ? '' : 'blocked'}">
+          <div class="recipe-text">
+            <strong>${r.name}</strong>
+            <em>${r.blurb}</em>
+            <span class="recipe-cost">${inputs} → ${r.output.count} ${itemName(r.output.id).toLowerCase()}</span>
+          </div>
+          <div class="recipe-actions">
+            <button class="secondary" data-craft="${r.id}" data-times="1" ${r.ok ? '' : 'disabled'}>Make</button>
+            ${r.batch && r.maxBatch > 1 ? `<button class="secondary" data-craft="${r.id}" data-times="${r.maxBatch}">×${r.maxBatch}</button>` : ''}
+          </div>
+          ${r.reason ? `<div class="recipe-why warn">${r.reason}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    this.q('#bench-list').querySelectorAll('[data-craft]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const res = d.crafting.craft(b.dataset.craft, Number(b.dataset.times), { near: this.game.player?.position });
+        this.bus.emit('toast', res.ok
+          ? { kind: 'challenge', title: `Made ${res.made} ${res.name.toLowerCase()}` }
+          : { kind: 'xp', title: 'Cannot make that', body: res.reason });
+        this.renderBench();
+      }));
   }
 
   // ---- skills ----

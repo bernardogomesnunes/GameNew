@@ -1,6 +1,7 @@
 import { PLACEABLE_BLOCKS } from '../config/blocks.js';
 import { icon } from './icons.js';
 import { DuiltUI } from './DuiltUI.js';
+import { ITEMS_BY_ID, itemName } from '../config/items.js';
 import { RESOURCES_BY_ID } from '../config/resources.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
@@ -82,9 +83,10 @@ export class UIManager {
         <button class="icon-btn" id="btn-redo" title="Redo the change you undid">${icon('redo')}<span>Redo</span></button>
         <button class="icon-btn" id="btn-select" title="Selector: aim a grid-snapped box at your build">${icon('select')}<span>Select</span></button>
         <button class="icon-btn" id="btn-size" title="Change the selector size">${icon('copy')}<span id="size-label">8&sup3;</span></button>
-        <button class="icon-btn" id="btn-templates" title="Your saved building templates">${icon('paste')}<span>Designs</span></button>
+        <button class="icon-btn sandbox-only" id="btn-templates" title="Your saved building templates">${icon('paste')}<span>Designs</span></button>
         <button class="icon-btn duilt-only" id="btn-bag" title="Your bag (I)" hidden>${icon('copy')}<span>Bag</span></button>
-        <button class="icon-btn duilt-only" id="btn-claim" title="Name what you've built (C)" hidden>${icon('select')}<span>Claim</span></button>
+        <button class="icon-btn duilt-only" id="btn-buildings" title="What you can build (B)" hidden>${icon('paste')}<span>Build</span></button>
+        <button class="icon-btn duilt-only" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('symmetry')}<span>Bench</span></button>
         <button class="icon-btn" id="btn-symmetry" title="Mirror your building across the world's centre">${icon('symmetry')}<span>Mirror</span></button>
         <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
         <button class="icon-btn" id="btn-stats" title="Progress, achievements and challenges">${icon('stats')}<span>Stats</span></button>
@@ -251,6 +253,38 @@ export class UIManager {
   buildHotbar() {
     const hotbar = this.q('#hotbar');
     hotbar.innerHTML = '';
+
+    // In Duilt the hotbar is your bag: one slot per kind of thing you actually
+    // hold, carrying the total across every stack of it. A wall of blocks you
+    // don't own is a menu, not a hand.
+    if (this.cb.isDuilt?.()) {
+      const inv = this.game.duilt.inventory;
+      const placeable = inv.heldIds()
+        .map((id) => ({ id, spec: ITEMS_BY_ID.get(id) }))
+        .filter((e) => e.spec?.block != null);
+
+      if (!placeable.length) {
+        hotbar.appendChild(el(`<div class="hotbar-empty">Nothing to build with yet — break something</div>`));
+        return;
+      }
+      placeable.forEach((e, i) => {
+        const total = inv.countOf(e.id);
+        hotbar.appendChild(el(`
+          <div class="hotbar-slot ${e.spec.block === this.selectedBlockId ? 'selected' : ''}"
+               data-id="${e.spec.block}" data-item="${e.id}" title="${itemName(e.id)} — ${total}">
+            ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
+            <div class="swatch" style="background:#${e.spec.color.toString(16).padStart(6, '0')}"></div>
+            <span class="held">${total}</span>
+          </div>
+        `));
+      });
+      // If what was selected has run out, fall to the first thing you do have.
+      if (!placeable.some((e) => e.spec.block === this.selectedBlockId)) {
+        this.selectBlock(placeable[0].spec.block);
+      }
+      return;
+    }
+
     PLACEABLE_BLOCKS.forEach((b, i) => {
       const available = this.game.blockAvailability(b.id).ok;
       const affordable = !available || this.game.canAffordBlock(b.id);
@@ -338,7 +372,8 @@ export class UIManager {
     this.q('#btn-size').addEventListener('click', () => this.setSelectorSize(this.cb.onCycleSelectorSize()));
     this.q('#btn-templates').addEventListener('click', () => this.openPanel('panel-templates'));
     this.q('#btn-bag').addEventListener('click', () => this.cb.onOpenBag());
-    this.q('#btn-claim').addEventListener('click', () => this.cb.onOpenClaim());
+    this.q('#btn-buildings').addEventListener('click', () => this.cb.onOpenBuildings());
+    this.q('#btn-bench').addEventListener('click', () => this.cb.onOpenBench());
     this.q('#btn-save-template').addEventListener('click', () => {
       const input = this.q('#template-name');
       if (this.cb.onSaveTemplate(input.value)) { input.value = ''; this.refreshTemplateList(); }
@@ -380,6 +415,10 @@ export class UIManager {
     this.wireTouchControls();
     this.wireCloud();
     this.duiltUI = new DuiltUI(this.root, { game: this.game, bus: this.bus });
+    // The hotbar is a view of the bag in Duilt, so it re-renders with it.
+    this.duiltUI.onBagChanged = () => { if (this.cb.isDuilt?.()) this.buildHotbar(); };
+    this.duiltUI.onClaimType = (id) => this.cb.onClaimType(id);
+    this.duiltUI.onStampStarter = (id) => this.cb.onStampStarter(id);
     this.refreshForDuilt();
   }
 
@@ -535,6 +574,11 @@ export class UIManager {
   }
 
   cycleHotbarByKey(n) {
+    if (this.cb.isDuilt?.()) {
+      const slot = this.root.querySelectorAll('#hotbar .hotbar-slot')[n - 1];
+      if (slot) this.selectBlock(Number(slot.dataset.id));
+      return;
+    }
     const b = PLACEABLE_BLOCKS[n - 1];
     if (!b) return;
     if (!this.game.blockAvailability(b.id).ok) return;
@@ -778,6 +822,7 @@ export class UIManager {
   refreshForDuilt() {
     const on = !!this.cb.isDuilt?.();
     this.root.querySelectorAll('.duilt-only').forEach((el) => { el.hidden = !on; });
+    this.root.querySelectorAll('.sandbox-only').forEach((el) => { el.hidden = on; });
     this.duiltUI?.setActive(on);
   }
 

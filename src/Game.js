@@ -257,6 +257,10 @@ export class Game {
       isDuilt: () => !!this.duilt,
       onOpenBag: () => this.ui.toggleBag(),
       onOpenClaim: () => this.openClaim(),
+      onClaimType: (id) => this.claimAs(id),
+      onStampStarter: (id) => this.stampStarter(id),
+      onOpenBuildings: () => { document.exitPointerLock?.(); this.ui.openDuiltPanel('panel-buildings'); },
+      onOpenBench: () => { document.exitPointerLock?.(); this.ui.openDuiltPanel('panel-bench'); },
     };
   }
 
@@ -459,9 +463,13 @@ export class Game {
       }
       if (e.repeat) return;
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
-      if (e.code === 'KeyB') { this.ui.toggleSelector(); }
+      if (e.code === 'KeyB') {
+        if (this.duilt) { document.exitPointerLock?.(); this.ui.openDuiltPanel('panel-buildings'); }
+        else this.ui.toggleSelector();
+      }
       if (e.code === 'KeyI' && this.duilt) { document.exitPointerLock?.(); this.ui.toggleBag(); }
       if (e.code === 'KeyC' && this.duilt) { document.exitPointerLock?.(); this.openClaim(); }
+      if (e.code === 'KeyE' && this.duilt) { document.exitPointerLock?.(); this.ui.openDuiltPanel('panel-bench'); }
       if (e.code === 'KeyR' && this.pendingTemplate) {
         this.templateRotation = (this.templateRotation + 1) % 4;
         this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });
@@ -569,6 +577,47 @@ export class Game {
         ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
         : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
     });
+  }
+
+  /** Claims the framed region as a named building type. */
+  claimAs(typeId) {
+    if (!this.duilt || !this.selectorTool.active) {
+      this.ui.toast({ kind: 'xp', title: 'Frame it first', body: 'Turn on Select and aim at what you built' });
+      return;
+    }
+    const bounds = this.selectorTool.bounds();
+    if (!bounds) return;
+    const r = this.duilt.claim({ ...bounds }, typeId);
+    this.ui.toast(r.ok
+      ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
+      : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
+  }
+
+  /** Drops a ready-made building at the selector, charged and undoable as one action. */
+  stampStarter(typeId) {
+    if (!this.duilt) return;
+    if (!this.selectorTool.active || !this.selectorTool.bounds()) {
+      this.ui.toast({ kind: 'xp', title: 'Aim it first', body: 'Turn on Select and point where it should go' });
+      return;
+    }
+    const b = this.selectorTool.bounds();
+    const plan = this.duilt.starterPlacement(typeId, { x: b.minX, y: b.minY, z: b.minZ });
+    if (!plan.ok) {
+      this.ui.toast({ kind: 'xp', title: 'Cannot place that', body: plan.reason });
+      return;
+    }
+    if (!this.applyChanges(plan.changes)) return;
+    // It was built to pass, so claim it straight away.
+    const e = plan.design.extent;
+    const region = {
+      minX: b.minX, maxX: b.minX + e.x,
+      minY: b.minY, maxY: b.minY + e.y,
+      minZ: b.minZ, maxZ: b.minZ + e.z,
+    };
+    const claim = this.duilt.claim(region, typeId);
+    this.ui.toast(claim.ok
+      ? { kind: 'challenge', title: `${plan.design.name} placed`, body: claim.reason }
+      : { kind: 'xp', title: 'Placed, but not claimed', body: claim.reason });
   }
 
   // ---- cloud ----

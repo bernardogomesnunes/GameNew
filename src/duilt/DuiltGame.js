@@ -4,6 +4,8 @@ import { StructureRegistry } from '../structures/StructureRegistry.js';
 import { validateStructure } from '../structures/validate.js';
 import { Hunger } from '../survival/Hunger.js';
 import { Skills } from '../progression/Skills.js';
+import { Crafting } from './Crafting.js';
+import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, itemName } from '../config/items.js';
 import { STRUCTURES_BY_ID, structuresForAge } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
@@ -30,6 +32,7 @@ export class DuiltGame {
     this.structures = new StructureRegistry({ world, bus, inventory: this.inventory });
     this.hunger = new Hunger(bus);
     this.skills = new Skills(bus);
+    this.crafting = new Crafting({ inventory: this.inventory, world, skills: this.skills });
     this.lastCollect = Date.now();
   }
 
@@ -157,6 +160,32 @@ export class DuiltGame {
       this.checkAgeAdvance();
     }
     return result;
+  }
+
+  /**
+   * The blocks a starter design would place at an anchor, plus its bill.
+   * Returned rather than applied so the caller can run it through the same
+   * charged, undoable path as any other placement.
+   */
+  starterPlacement(structureId, anchor) {
+    const design = DESIGN_FOR_STRUCTURE.get(structureId);
+    if (!design) return { ok: false, reason: 'No starter design for that.' };
+    if (!this.inventory.hasAll(design.cost)) {
+      const parts = Object.entries(this.inventory.missing(design.cost))
+        .map(([id, n]) => `${n} more ${itemName(id).toLowerCase()}`);
+      return { ok: false, reason: `Needs ${parts.join(' and ')}` };
+    }
+    const changes = [];
+    for (const b of design.blocks) {
+      const x = anchor.x + b.dx, y = anchor.y + b.dy, z = anchor.z + b.dz;
+      if (!this.world.inBounds(x, y, z)) continue;
+      if (!this.territory.contains(x, z)) return { ok: false, reason: 'That reaches outside your land' };
+      const prev = this.world.getBlock(x, y, z);
+      if (prev === b.type) continue;
+      changes.push({ x, y, z, prev, next: b.type });
+    }
+    if (!changes.length) return { ok: false, reason: "It's already there." };
+    return { ok: true, changes, design };
   }
 
   // ---- the age gate ----

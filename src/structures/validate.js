@@ -106,6 +106,47 @@ export function inspect(world, region) {
       return sealed;
     },
 
+    /**
+     * Air that is roofed and walled on all four sides within the region.
+     *
+     * This replaces a strict flood-fill seal, which counted any doorway as a
+     * hole and so rejected every house anyone would actually build — including
+     * the starter design shipped with the game. Cells in line with a doorway
+     * fail, the rest of the room passes, and an unroofed frame or a solid lump
+     * still scores zero.
+     */
+    shelteredVolume() {
+      if (this._sheltered != null) return this._sheltered;
+      const { minX, maxX, minY, maxY, minZ, maxZ } = region;
+      let sheltered = 0;
+
+      for (let x = minX; x <= maxX; x++) {
+        for (let y = minY; y <= maxY; y++) {
+          for (let z = minZ; z <= maxZ; z++) {
+            if (world.getBlock(x, y, z) !== AIR) continue;
+
+            let roofed = false;
+            for (let ry = y + 1; ry <= maxY; ry++) {
+              if (world.getBlock(x, ry, z) !== AIR) { roofed = true; break; }
+            }
+            if (!roofed) continue;
+
+            let walls = 0;
+            for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+              for (let k = 1; k <= Math.max(maxX - minX, maxZ - minZ) + 1; k++) {
+                const wx = x + dx * k, wz = z + dz * k;
+                if (wx < minX || wx > maxX || wz < minZ || wz > maxZ) break;
+                if (world.getBlock(wx, y, wz) !== AIR) { walls++; break; }
+              }
+            }
+            if (walls === 4) sheltered++;
+          }
+        }
+      }
+      this._sheltered = sheltered;
+      return sheltered;
+    },
+
     /** Every enclosed cell has something solid somewhere above it. */
     hasRoof() {
       const { minX, maxX, minY, maxY, minZ, maxZ } = region;

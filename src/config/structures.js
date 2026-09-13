@@ -96,14 +96,13 @@ export const STRUCTURES = [
         say: (ctx) => `Needs ${20 - count(ctx, [WOOD])} more wood in the walls`,
       },
       {
-        id: 'enclosed',
-        test: (ctx) => ctx.enclosedVolume() >= 8,
-        say: () => 'Needs an enclosed room inside — seal the walls and put a roof on',
-      },
-      {
-        id: 'roof',
-        test: (ctx) => ctx.hasRoof(),
-        say: () => 'Needs a roof over the whole room',
+        // A doorway is expected, so this asks for a sheltered room rather than a
+        // sealed box: walls on all sides and a roof over, with a way in.
+        id: 'shelter',
+        test: (ctx) => ctx.shelteredVolume() >= 8,
+        say: (ctx) => ctx.shelteredVolume() === 0
+          ? 'Needs a room inside — walls all round and a roof over the top'
+          : 'The room is too small — make it at least 3 across inside',
       },
     ],
     produces: {},

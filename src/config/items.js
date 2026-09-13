@@ -31,6 +31,10 @@ export const ITEMS = [
   { id: 'sand', name: 'Sand', kind: 'raw', stackTo: STACK_BULK, color: 0xdcc57a, block: 6, madeBy: 'Dug from the riverbank' },
   { id: 'grass', name: 'Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x5b9c3f, block: 1, madeBy: 'Cut from meadow' },
 
+  // --- worked materials ----------------------------------------------------
+  { id: 'planks', name: 'Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xb98a4b, block: 7, madeBy: 'Sawn from wood' },
+  { id: 'farmland', name: 'Turned Soil', kind: 'refined', stackTo: STACK_BULK, color: 0x6b4a2a, block: 21, madeBy: 'Dirt broken up for planting' },
+
   // --- growing things ------------------------------------------------------
   { id: 'seeds', name: 'Seeds', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8b560, madeBy: 'Shaken from a forest, or saved from a harvest' },
   { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x6aa84f, block: 20, madeBy: 'Grown from seed' },
