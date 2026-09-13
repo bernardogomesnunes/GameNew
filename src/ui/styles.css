@@ -689,3 +689,16 @@ body.touch #touch-buttons-left { max-height: 62vh; }
   .home-head h1 { font-size: 32px; }
   .home-tag { font-size: 14px; }
 }
+
+
+/* --- this world: name at the top, actions at the bottom ------------------ */
+.menu-name { display: flex; flex-direction: column; gap: 5px; margin: 14px 0 0; }
+.menu-name span { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+.menu-name input {
+  width: 100%; background: var(--panel-solid); color: var(--text); font: inherit; font-size: 15px;
+  border: 1px solid var(--panel-border); border-radius: 10px; padding: 11px 13px;
+}
+/* Saving belongs with Resume and Leave: they are all "what do I do now",
+ * and a save box at the top read as a form to fill in before anything else. */
+.menu-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.menu-actions button { flex: 1 1 auto; min-width: 96px; padding: 12px 14px; font-size: 14px; }

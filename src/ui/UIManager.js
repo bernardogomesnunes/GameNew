@@ -105,12 +105,12 @@ export class UIManager {
         <div class="panel">
           <button class="icon-btn panel-close" data-close="panel-menu">${icon('close', 16)}</button>
           <h2>This world</h2>
-          <div class="sub" id="menu-world-name"></div>
+          <div class="sub" id="menu-world-kind"></div>
 
-          <div class="field-row">
-            <input type="text" id="save-name" placeholder="Save as\u2026" maxlength="40" />
-            <button class="secondary" id="btn-save">Save</button>
-          </div>
+          <label class="menu-name">
+            <span>Name</span>
+            <input type="text" id="save-name" maxlength="40" placeholder="Unnamed world" />
+          </label>
           <div id="save-hint" class="export-note" hidden></div>
 
           <div class="mode-block">
@@ -148,8 +148,9 @@ export class UIManager {
             <div class="export-note">A world file restores everything, designs included. The .vox opens in MagicaVoxel and Blender.</div>
           </div>
 
-          <div class="field-row" style="margin-top:14px;">
+          <div class="menu-actions">
             <button class="primary" id="btn-resume">Resume</button>
+            <button class="secondary" id="btn-save">Save</button>
             <button class="secondary" id="btn-leave">Leave to worlds</button>
           </div>
         </div>
@@ -439,13 +440,17 @@ export class UIManager {
     this.q('#btn-export-vox').addEventListener('click', () => this.cb.onExportVox(this.q('#save-name').value));
     this.q('#btn-import-world').addEventListener('click', () => this.cb.onImportWorld());
     this.q('#btn-save').addEventListener('click', () => {
+      // The field holds the world's name, not a separate "save as" box, so
+      // saving and renaming are the same gesture — which is what you mean when
+      // you edit the name and press Save.
       const input = this.q('#save-name');
       const name = input.value.trim() || this.game.worldName || `World ${new Date().toLocaleDateString()}`;
+      input.value = name;
+      this.cb.onRenameWorld?.(name);
       this.cb.onSave(name);
-      input.value = '';
       const hint = this.q('#save-hint');
       hint.hidden = false;
-      hint.textContent = `Saved as "${name}". You will find it on the worlds screen.`;
+      hint.textContent = `Saved. You will find "${name}" on the worlds screen.`;
     });
 
     this.wireTouchControls();
@@ -641,9 +646,11 @@ export class UIManager {
 
   openPanel(id) {
     if (id === 'panel-menu') {
-      const label = this.q('#menu-world-name');
       const kind = this.cb.isDuilt?.() ? 'Duilt' : (this.isCampaign ? 'Campaign' : 'Creative');
-      if (label) label.textContent = `${this.game.worldName || 'Unnamed world'} \u00b7 ${kind}`;
+      const label = this.q('#menu-world-kind');
+      if (label) label.textContent = `A ${kind} world`;
+      const name = this.q('#save-name');
+      if (name) name.value = this.game.worldName || '';
       const hint = this.q('#save-hint');
       if (hint) hint.hidden = true;
     }

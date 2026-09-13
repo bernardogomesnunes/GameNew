@@ -262,6 +262,7 @@ export class Game {
         }
       },
       onNewWorld: (mode, name) => { this.newWorld({ mode, name }); this.ui.closePanel('panel-menu'); },
+      onRenameWorld: (name) => { this.worldName = name; this.autosaveNow(); },
       onLoadAutosave: () => {
         const data = this.saveManager.load(AUTOSAVE_NAME);
         if (data) this.loadFromData(data, { silent: true });
