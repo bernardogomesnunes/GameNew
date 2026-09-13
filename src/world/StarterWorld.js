@@ -260,7 +260,75 @@ function plantTree(world, x, groundY, z, rand) {
 }
 
 /** Dry, level, standing on solid ground, with headroom — and near the water. */
+const EYE = 1;          // the cell the player's eyes occupy, above their feet
+const LOOK_RANGE = 14;  // how far ahead "a clear view" is worth measuring
+
+/**
+ * How much of the world you can actually see from a spot, and which way is
+ * clearest.
+ *
+ * A spot can be perfectly flat and still be a bad place to arrive, because it
+ * sits at the foot of a hill and your whole screen is one brown wall. That is
+ * what the first version did: it checked that the ground was level and that
+ * nothing was inside your head, and nothing at all about the view.
+ */
+function outlook(world, x, y, z) {
+  // Unit vectors, not [1,1] steps. A diagonal taken as [1,1] walks corner to
+  // corner through a different set of blocks than the camera ray does, so the
+  // direction that measured clearest was not always the one you ended up
+  // looking down.
+  const R2 = Math.SQRT1_2;
+  const dirs = [[0, -1], [R2, -R2], [1, 0], [R2, R2], [0, 1], [-R2, R2], [-1, 0], [-R2, -R2]];
+  let open = 0, bestRun = -1, bestDir = dirs[0];
+  for (const [dx, dz] of dirs) {
+    let run = 0;
+    for (let k = 1; k <= LOOK_RANGE; k++) {
+      // Cast from the middle of the block, which is where the player stands,
+      // and floor to a cell. Casting from the block's corner instead put the
+      // ray in the neighbouring column and reported a clear view down a
+      // direction that was in fact blocked.
+      const px = Math.floor(x + 0.5 + dx * k), pz = Math.floor(z + 0.5 + dz * k);
+      if (!world.inBounds(px, y + EYE, pz)) break;
+      if (world.getBlock(px, y + EYE, pz) !== 0) break;
+      run = k;
+    }
+    open += run;
+    if (run > bestRun) { bestRun = run; bestDir = [dx, dz]; }
+  }
+  // Forward is (-sin yaw, 0, -cos yaw), so this points the camera down bestDir.
+  const yaw = Math.atan2(-bestDir[0], -bestDir[1]);
+  return { open, bestRun, yaw };
+}
+
+/**
+ * Where the player arrives, and which way they are facing.
+ *
+ * Ranked on three things, in the order they matter: can you see anything from
+ * here, is the ground level enough to walk off, and is the water a short walk
+ * away. The facing is returned too — arriving on a lovely open ridge while
+ * looking the one way that is blocked is the same bad first impression.
+ */
 function findSpawn(world, minX, minZ, rivers) {
+  // Ask for a proper view first and settle for less only if the plot cannot
+  // offer one. Four blocks of clearance was enough to pass while still putting
+  // the player's nose in a tree; a dense wood can genuinely have nothing better,
+  // so the bar drops rather than the search failing.
+  for (const minRun of [10, 7, 4, 1]) {
+    const spot = searchSpawn(world, minX, minZ, rivers, minRun);
+    if (spot) return spot;
+  }
+  return centreSpawn(world, minX, minZ);
+}
+
+const PITCH = -0.16;   // a shallow downward tilt; level puts half the screen in sky
+
+function centreSpawn(world, minX, minZ) {
+  const cx = minX + STARTER_SIZE / 2, cz = minZ + STARTER_SIZE / 2;
+  const h = world.surfaceHeight(cx, cz);
+  return { x: cx + 0.5, y: h, z: cz + 0.5, yaw: outlook(world, cx, h, cz).yaw, pitch: PITCH };
+}
+
+function searchSpawn(world, minX, minZ, rivers, minRun) {
   let best = null;
   for (let lx = 1; lx < STARTER_SIZE - 1; lx++) {
     for (let lz = 1; lz < STARTER_SIZE - 1; lz++) {
@@ -271,16 +339,21 @@ function findSpawn(world, minX, minZ, rivers) {
       const under = world.getBlock(x, h - 1, z);
       if (under !== GRASS && under !== DIRT && under !== SAND) continue;
       if (world.getBlock(x, h, z) !== 0 || world.getBlock(x, h + 1, z) !== 0) continue;
+
+      const view = outlook(world, x, h, z);
+      if (view.bestRun < minRun) continue;                // hemmed in on every side
+
       // Flat enough that the first few steps aren't a scramble.
       let rough = 0;
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         rough += Math.abs(world.surfaceHeight(x + dx, z + dz) - h);
       }
-      const score = rough * 4 + Math.abs(fromRiver - 7);  // prefer flat, and a short walk to water
-      if (!best || score < best.score) best = { x: x + 0.5, y: h, z: z + 0.5, score };
+      // Openness leads, because it is what you see before you touch anything.
+      const score = -view.open * 3 + rough * 4 + Math.abs(fromRiver - 7);
+      if (!best || score < best.score) {
+        best = { x: x + 0.5, y: h, z: z + 0.5, yaw: view.yaw, score };
+      }
     }
   }
-  return best
-    ? { x: best.x, y: best.y, z: best.z }
-    : { x: minX + STARTER_SIZE / 2 + 0.5, y: world.height - 4, z: minZ + STARTER_SIZE / 2 + 0.5 };
+  return best ? { x: best.x, y: best.y, z: best.z, yaw: best.yaw, pitch: PITCH } : null;
 }

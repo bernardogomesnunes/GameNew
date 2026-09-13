@@ -47,4 +47,31 @@ ok(`at least ${worstTrees} trees at the start in all 25 seeds`, worstTrees >= 6)
 ok(`multiple rivers every time (worst ${worstRivers})`, worstRivers >= 3);
 ok(`spawn is dry and solid in all 25 seeds (${spawnBad} bad)`, spawnBad === 0);
 ok(`generation stays fast (worst ${slowest}ms)`, slowest < 900);
+
+/**
+ * You have to be able to see something when you arrive.
+ *
+ * The first version of the spawn only checked that the ground was flat and that
+ * nothing was inside your head, so it happily dropped you facing a hillside a
+ * block away — the whole screen one flat wall, on the very first frame of the
+ * game. This measures what the camera would actually be looking at.
+ */
+let worstView = 99, facingSet = 0;
+for (let seed = 1; seed <= 25; seed++) {
+  const { world, origin } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed });
+  const s = origin.spawn;
+  if (typeof s.yaw === 'number') facingSet++;
+  // Forward is (-sin yaw, 0, -cos yaw); step along it at eye height.
+  const dx = -Math.sin(s.yaw ?? 0), dz = -Math.cos(s.yaw ?? 0);
+  let run = 0;
+  for (let k = 1; k <= 16; k++) {
+    const x = Math.floor(s.x + dx * k), z = Math.floor(s.z + dz * k);
+    if (!world.inBounds(x, s.y + 1, z) || world.getBlock(x, s.y + 1, z) !== 0) break;
+    run = k;
+  }
+  if (run < worstView) worstView = run;
+}
+ok(`every spawn faces somewhere (${facingSet}/25 carry a yaw)`, facingSet === 25);
+ok(`clear line of sight on arrival (worst ${worstView} blocks)`, worstView >= 10);
+
 process.exit(f?1:0);

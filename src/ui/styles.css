@@ -461,14 +461,34 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .skill-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.3s ease; }
 .skill-effect { font-size: 11.5px; color: var(--text-dim); }
 
-/* --- phone --- */
+/* --- phone ---
+ *
+ * A phone is mostly not a screen, it is a viewfinder with controls drawn over
+ * it. Everything here exists to give the world back the middle of the display:
+ * the goal list had been taking half the width and a quarter of the height,
+ * which on a 390px screen is not a heads-up display, it is a wall.
+ */
 @media (max-width: 720px) {
-  #goals { width: 188px; top: 88px; left: 10px; font-size: 11.5px; padding: 9px 11px; }
+  #goals {
+    width: 150px; top: 84px; left: 10px; font-size: 10.5px; padding: 7px 9px;
+    max-width: 42vw; opacity: 0.92;
+  }
+  .goals-head { font-size: 9px; margin-bottom: 6px; gap: 6px; }
+  #goals-list { gap: 4px; }
+  #goals-list li { line-height: 1.25; }
+  .tick { flex-basis: 12px; height: 12px; font-size: 8px; border-radius: 3px; }
   #vitals { top: 48px; left: 10px; }
   .vital-track { width: 62px; }
   #bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 42vh; }
   .bag-slot { min-height: 52px; }
   .panel-wide { max-width: 100%; }
+  /* A hint, not an announcement — it sat in the middle of the thumb zone. */
+  .hotbar-empty { padding: 8px 12px; font-size: 11px; }
+  /* Big enough to find without looking, small enough to see past. */
+  .stick-base { width: 88px; height: 88px; bottom: 18px; }
+  #stick-left .stick-base { left: 16px; }
+  #stick-right .stick-base { right: 16px; }
+  .stick-knob { width: 40px; height: 40px; top: 24px; left: 24px; }
 }
 @media (min-width: 721px) {
   #bag-grid { grid-template-columns: repeat(8, 1fr); }

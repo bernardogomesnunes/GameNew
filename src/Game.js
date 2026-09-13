@@ -24,7 +24,15 @@ import { AIR, BLOCKS_BY_ID, costResourceOf } from './config/blocks.js';
 import { resourceName } from './config/resources.js';
 
 const REACH = 7;
-const RENDER_DISTANCE = 190;  // beyond the fog's far plane, so nothing pops visibly (touch gets less)
+const FOG_FAR = 210;           // where the world has faded fully into the sky
+const FOG_FAR_COARSE = 160;
+// Chunks are culled past the fog's far edge, never before it. Culling first is
+// what makes chunks pop in and out as you walk; out here they are already the
+// colour of the sky, so nothing can be seen appearing. The extra margin covers
+// a chunk whose centre is beyond the line while its near corner is not.
+const CULL_MARGIN = 24;
+// Resolutions the quality controller may settle on, lowest first.
+const QUALITY_STEPS = [1, 1.25, 1.5, 2];
 const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream in
 const AUTOSAVE_INTERVAL_MS = 60_000;
 export const CREATIVE = 'creative';
@@ -49,16 +57,38 @@ export class Game {
     // barely see at arm's length, and a halved frame rate is what "the controls
     // feel slow" actually is. Desktop keeps the nicer settings.
     const coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-    this.renderer = new THREE.WebGLRenderer({ antialias: !coarse, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, coarse ? 1.5 : 2));
+    // Antialiasing on everywhere. A voxel world is nothing but hard edges, and
+    // an unsmoothed edge crawls and sparkles as you walk past it — which reads
+    // as the picture flickering, not as a missing feature. Phones used to get
+    // this switched off and a half-resolution buffer on top, so they got the
+    // worst of it; the quality controller below earns that back when a device
+    // turns out to be too slow, instead of assuming every phone is.
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.coarse = coarse;
+    this.pixelRatioCap = Math.min(window.devicePixelRatio || 1, 2);
+    // Snapped to one of the controller's steps, so a display with an odd ratio
+    // (1.3, say) still lands on a rung it can climb down from.
+    this.pixelRatio = QUALITY_STEPS.filter((q) => q <= this.pixelRatioCap).pop() ?? 1;
+    this.renderer.setPixelRatio(this.pixelRatio);
     this.canvasRoot.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x8fd0ff);
-    this.renderDistance = coarse ? 140 : RENDER_DISTANCE;
-    this.scene.fog = new THREE.Fog(0x8fd0ff, coarse ? 40 : 50, this.renderDistance + 20);
+    const fogFar = coarse ? FOG_FAR_COARSE : FOG_FAR;
+    // Fog starts at a fixed fraction of the way out rather than at a fixed
+    // distance. At 40 blocks on a phone the haze began almost at arm's length
+    // and the whole world looked washed out; tying it to the far plane keeps
+    // the same amount of clear world in view whatever the device can draw.
+    this.scene.fog = new THREE.Fog(0x8fd0ff, fogFar * 0.45, fogFar);
+    this.renderDistance = fogFar + CULL_MARGIN;
 
-    this.camera = new THREE.PerspectiveCamera(75, 1, 0.1, 300);
+    // The near plane sets how much depth precision the whole scene gets, and
+    // phones commonly hand out a 16-bit depth buffer. At 0.1 with a far plane
+    // of 300 there was not enough precision left for distant surfaces to agree
+    // on which is in front, so they traded places as the camera moved. Nothing
+    // in a voxel world is ever closer than a fraction of a block, so 0.2 costs
+    // nothing to look at and doubles the precision everywhere.
+    this.camera = new THREE.PerspectiveCamera(75, 1, 0.2, this.renderDistance + 20);
 
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const sun = new THREE.DirectionalLight(0xfff3d6, 0.85);
@@ -81,7 +111,10 @@ export class Game {
     this.selectionDirty = false; // set when blocks change, so the skin re-reads the world
     this.duilt = null;           // the Duilt rules, only in Duilt mode
 
-    this.hoverBox = this.buildWireBox(0xffffff, 1.002);
+    // 1.002 left the outline a thousandth of a block off the face it traces —
+    // below what a depth buffer can tell apart, so the two fought and the
+    // outline sparkled. A hundredth of a block is still visually flush.
+    this.hoverBox = this.buildWireBox(0xffffff, 1.01);
     this.hoverBox.visible = false;
     this.scene.add(this.hoverBox);
     this.selection = new SelectionHighlight(this.scene);
@@ -335,6 +368,11 @@ export class Game {
     }
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, spawn ?? this.findSafeSpawn());
+    // Face the way the spawn picked: the open direction. Arriving on a good
+    // open spot while looking at the one wall behind you is the same bad first
+    // impression as arriving inside the hill.
+    if (spawn?.yaw != null) this.player.yaw = spawn.yaw;
+    if (spawn?.pitch != null) this.player.pitch = spawn.pitch;
     if (mode === DUILT) {
       this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus });
       this.duilt.grantStartingKit();
@@ -448,15 +486,24 @@ export class Game {
    * Hides chunk meshes past the render distance. Frustum culling alone still
    * pays per-object overhead for every chunk behind you in a large world.
    */
+  /**
+   * Hides chunks that are past the fog, measured to the nearest corner.
+   *
+   * Measuring to the centre hid a whole chunk while a third of it was still
+   * this side of the line, and the line itself used to sit inside the fog — so
+   * columns of world blinked out in front of you as you walked. Now the test is
+   * against the corner closest to the player and the line sits beyond the point
+   * where everything is already sky-coloured.
+   */
   updateChunkVisibility() {
     const px = this.player.position.x, pz = this.player.position.z;
     const maxSq = this.renderDistance * this.renderDistance;
     for (const mesh of this.mesher.activeMeshes) {
       const chunk = mesh.userData.chunk;
       if (!chunk) continue;
-      const cx = chunk.cx * CHUNK_SIZE + CHUNK_SIZE / 2;
-      const cz = chunk.cz * CHUNK_SIZE + CHUNK_SIZE / 2;
-      const dx = cx - px, dz = cz - pz;
+      const minX = chunk.cx * CHUNK_SIZE, minZ = chunk.cz * CHUNK_SIZE;
+      const dx = Math.max(minX - px, 0, px - (minX + CHUNK_SIZE));
+      const dz = Math.max(minZ - pz, 0, pz - (minZ + CHUNK_SIZE));
       mesh.visible = dx * dx + dz * dz <= maxSq;
     }
   }
@@ -931,8 +978,41 @@ export class Game {
 
   // ---- loop ----
 
+  /**
+   * Trades resolution for frame rate, per device, while you play.
+   *
+   * Phones used to be handed a fixed half-resolution buffer with antialiasing
+   * off, on the assumption that a phone is slow. A recent phone is not, and the
+   * assumption cost it a crawling, sparkling picture for nothing. So start at
+   * full quality and measure: if frames stay slow, step the resolution down;
+   * if there is headroom again, step it back up.
+   *
+   * The gap between the two thresholds is what stops it oscillating — a device
+   * sitting exactly on the boundary settles at one step rather than flipping
+   * between two, which would be its own kind of flicker.
+   */
+  adaptQuality(dt) {
+    const allowed = QUALITY_STEPS.filter((q) => q <= this.pixelRatioCap);
+    if (allowed.length < 2) return;
+
+    this.frameMs = this.frameMs == null ? dt * 1000 : this.frameMs * 0.94 + dt * 1000 * 0.06;
+    if (performance.now() - (this.lastQualityChange ?? 0) < 2500) return;
+
+    const i = allowed.indexOf(this.pixelRatio);
+    let next = null;
+    if (this.frameMs > 26 && i > 0) next = allowed[i - 1];           // below ~38fps: give up pixels
+    else if (this.frameMs < 15 && i >= 0 && i < allowed.length - 1) next = allowed[i + 1];
+
+    if (next == null || next === this.pixelRatio) return;
+    this.pixelRatio = next;
+    this.renderer.setPixelRatio(next);
+    this.onResize();
+    this.lastQualityChange = performance.now();
+  }
+
   tick() {
     const dt = this.clock.getDelta();
+    this.adaptQuality(dt);
     this.player.update(dt);
     if (this.duilt) {
       this.duilt.tick(dt);

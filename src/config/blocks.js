@@ -12,13 +12,19 @@ export const BLOCKS = [
   { id: 2, name: 'Dirt', color: 0x7a5230, cost: { wood: 1 }, unlock: null },
   { id: 3, name: 'Stone', color: 0x8a8a8d, cost: { stone: 1 }, unlock: null },
   { id: 4, name: 'Wood', color: 0x8a5a2b, cost: { wood: 2 }, unlock: null },
-  { id: 5, name: 'Leaves', color: 0x3f7d34, transparent: true, opacity: 0.9, cost: { wood: 1 }, unlock: null },
+  // Opaque on purpose. At 0.9 the transparency was invisible, but it put every
+  // tree in the game into the depth-write-disabled transparent pass, which the
+  // renderer re-sorts on every camera move — the shimmer you saw walking
+  // through a forest. Opaque leaves also merge into the single opaque draw call.
+  { id: 5, name: 'Leaves', color: 0x3f7d34, cost: { wood: 1 }, unlock: null },
   { id: 6, name: 'Sand', color: 0xdcc57a, cost: { wood: 1 }, unlock: null },
   { id: 7, name: 'Planks', color: 0xb98a4b, cost: { wood: 1 }, unlock: null },
   { id: 8, name: 'Cobblestone', color: 0x6b6b6e, cost: { stone: 1 }, unlock: null },
   { id: 9, name: 'Brick', color: 0xa8422f, cost: { brick: 1 }, unlock: null },
   { id: 10, name: 'Glass', color: 0xbfe3f0, transparent: true, opacity: 0.35, cost: { glass: 1 }, unlock: null },
-  { id: 11, name: 'Water', color: 0x2f6fbf, transparent: true, opacity: 0.6, cost: { wood: 3 }, unlock: null },
+  // Thin enough to read as water over a sandy bed, but not so thin that the
+  // sand shows through and turns the rivers grey, which is what 0.6 did.
+  { id: 11, name: 'Water', color: 0x2f7fd0, transparent: true, opacity: 0.78, cost: { wood: 3 }, unlock: null },
   { id: 12, name: 'Snow', color: 0xf2f6fa, cost: { wood: 1 }, unlock: { type: 'level', value: 3 } },
   { id: 13, name: 'Gold Block', color: 0xf4c542, cost: { gold: 1 }, unlock: { type: 'level', value: 6 } },
   { id: 14, name: 'Obsidian', color: 0x1c1424, cost: { stone: 4 }, unlock: { type: 'achievement', value: 'underground' } },
@@ -29,7 +35,7 @@ export const BLOCKS = [
   { id: 19, name: 'Ground', color: 0x4a7c3f, system: true },
   // Duilt blocks. Saplings grow into forests; farmland is soil that has been
   // turned, which is what a farm is actually made of.
-  { id: 20, name: 'Sapling', color: 0x6aa84f, transparent: true, opacity: 0.95, cost: { wood: 1 }, unlock: null },
+  { id: 20, name: 'Sapling', color: 0x6aa84f, cost: { wood: 1 }, unlock: null },
   { id: 21, name: 'Farmland', color: 0x6b4a2a, cost: { wood: 1 }, unlock: null },
 ];
 
