@@ -150,29 +150,30 @@ export class Territory {
     wall(b.minX, midZ, Math.PI / 2);
     wall(b.maxX + 1, midZ, Math.PI / 2);
 
-    // A bright line where the border meets the ground, so it reads from above
-    // as well as from eye level.
+    /*
+     * Two lines marking the edge, both behind the world.
+     *
+     * The ground line used to draw with depth testing off, which put a bright
+     * stripe across whatever happened to be in front of it — a hillside, a
+     * tree, a block you had just placed. A border drawn through solid ground
+     * reads as an overlay stuck to the screen rather than a thing standing in
+     * the world. The wall already says where the edge is from any distance, so
+     * the lines are decoration and are occluded like everything else.
+     */
     const pts = [
       new THREE.Vector3(b.minX, baseY, b.minZ), new THREE.Vector3(b.maxX + 1, baseY, b.minZ),
       new THREE.Vector3(b.maxX + 1, baseY, b.maxZ + 1), new THREE.Vector3(b.minX, baseY, b.maxZ + 1),
       new THREE.Vector3(b.minX, baseY, b.minZ),
     ];
-    const outline = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints(pts.map((p) => p.clone().setY(baseY + 0.05))),
-      new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity: 0.8, depthTest: false }),
-    );
-    outline.renderOrder = 13;
-    this.fence.add(outline);
-
-    // A second line at chest height. The ground line disappears behind the
-    // first hill between you and the border; this one stays in view and is
-    // what you actually see yourself walking towards.
-    const rail = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints(pts.map((p) => p.clone().setY(baseY + 2.2))),
-      new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity: 0.45 }),
-    );
-    rail.renderOrder = 12;
-    this.fence.add(rail);
+    const line = (y, opacity) => {
+      const mesh = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts.map((p) => p.clone().setY(baseY + y))),
+        new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity, depthWrite: false }),
+      );
+      this.fence.add(mesh);
+    };
+    line(0.05, 0.8);   // where the border meets the ground
+    line(2.2, 0.45);   // and again at chest height, for when the ground dips away
   }
 
   /** Representative surface height inside the border, for placing the fence. */
