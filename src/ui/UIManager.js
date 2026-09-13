@@ -84,9 +84,9 @@ export class UIManager {
         <button class="icon-btn" id="btn-select" title="Selector: aim a grid-snapped box at your build">${icon('select')}<span>Select</span></button>
         <button class="icon-btn" id="btn-size" title="Change the selector size">${icon('copy')}<span id="size-label">8&sup3;</span></button>
         <button class="icon-btn sandbox-only" id="btn-templates" title="Your saved building templates">${icon('paste')}<span>Designs</span></button>
-        <button class="icon-btn duilt-only" id="btn-bag" title="Your bag (I)" hidden>${icon('copy')}<span>Bag</span></button>
-        <button class="icon-btn duilt-only" id="btn-buildings" title="What you can build (B)" hidden>${icon('paste')}<span>Build</span></button>
-        <button class="icon-btn duilt-only" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('symmetry')}<span>Bench</span></button>
+        <button class="icon-btn duilt-only duilt-top" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
+        <button class="icon-btn duilt-only duilt-top" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
+        <button class="icon-btn duilt-only duilt-top" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
         <button class="icon-btn" id="btn-symmetry" title="Mirror your building across the world's centre">${icon('symmetry')}<span>Mirror</span></button>
         <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
         <button class="icon-btn" id="btn-stats" title="Progress, achievements and challenges">${icon('stats')}<span>Stats</span></button>
@@ -222,7 +222,10 @@ export class UIManager {
         </div>
         <div class="touch-buttons" id="touch-buttons-left">
           <div class="row">
-            <button class="touch-btn" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
+            <button class="touch-btn duilt-only" id="t-bag" hidden>${icon('bag')}<span>Bag</span></button>
+            <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
+            <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
+            <button class="touch-btn sandbox-only" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
             <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
           </div>
         </div>
@@ -374,6 +377,14 @@ export class UIManager {
     this.q('#btn-bag').addEventListener('click', () => this.cb.onOpenBag());
     this.q('#btn-buildings').addEventListener('click', () => this.cb.onOpenBuildings());
     this.q('#btn-bench').addEventListener('click', () => this.cb.onOpenBench());
+    // Touch gets its own row: a 36px unlabelled square in a corner is not a
+    // control anyone can find with a thumb.
+    for (const [sel, fn] of [['#t-bag', 'onOpenBag'], ['#t-build', 'onOpenBuildings'], ['#t-bench', 'onOpenBench']]) {
+      const btn = this.q(sel);
+      const fire = (e) => { e.preventDefault(); this.cb[fn](); };
+      btn.addEventListener('click', fire);
+      btn.addEventListener('touchstart', fire, { passive: false });
+    }
     this.q('#btn-save-template').addEventListener('click', () => {
       const input = this.q('#template-name');
       if (this.cb.onSaveTemplate(input.value)) { input.value = ''; this.refreshTemplateList(); }

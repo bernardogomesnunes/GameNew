@@ -16,6 +16,11 @@ const PATHS = {
   fly: 'M21.5 2.5 2.5 9.8l7.2 3 3 7.2zM9.7 12.8 21.5 2.5',
   up: 'M12 19V6M6 12l6-6 6 6',
   down: 'M12 5v13M6 12l6 6 6-6',
+  // Duilt needs its own glyphs: Bag was borrowing the copy icon, which made it
+  // identical to the Size button once mobile drops the labels.
+  bag: 'M6 8h12l1 12H5L6 8Z M9 8V6a3 3 0 0 1 6 0v2',
+  hammer: 'M14 4l6 6-2.5 2.5-6-6L14 4Z M11.5 6.5l-7 7a2 2 0 0 0 0 3l2 2a2 2 0 0 0 3 0l7-7',
+  home: 'M4 11 12 4l8 7 M6.5 9.5V20h11V9.5 M10 20v-5.5h4V20',
   lock: 'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v10H5z',
   help: 'M12 17h.01M9.2 9a2.8 2.8 0 1 1 3.8 2.6c-.7.3-1 .9-1 1.6v.3',
 };

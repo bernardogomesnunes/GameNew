@@ -517,3 +517,12 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   .recipe-row { grid-template-columns: 1fr; }
   .recipe-actions { justify-content: flex-start; }
 }
+
+/* Duilt on touch: Bag, Build and Bench as labelled buttons a thumb can reach,
+   sitting above the hotbar. The top-right toolbar drops them on touch — twelve
+   unlabelled 36px squares in a corner is not a menu anyone can read. */
+/* The Duilt actions live in the left thumb cluster alongside Fly, where the
+   other action buttons already sit — and drop out of the top-right toolbar,
+   because twelve unlabelled 36px squares in a corner is not a menu. */
+body.touch #top-buttons .duilt-top { display: none !important; }
+body.touch #touch-buttons-left { max-height: 62vh; }
