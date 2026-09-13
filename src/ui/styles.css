@@ -312,6 +312,12 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #touch-buttons-left { left: 14px; align-items: flex-start; }
 #touch-buttons-right { right: 14px; align-items: flex-end; }
 .touch-buttons .row { display: flex; gap: 10px; }
+/* The tray stacks upward from the More button and wraps rather than running
+ * off the side of a narrow phone. */
+.touch-tray {
+  flex-direction: column-reverse; align-items: flex-end; gap: 8px;
+  margin-bottom: 2px;
+}
 .touch-btn {
   width: 62px; height: 62px; border-radius: 18px;
   background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
@@ -409,10 +415,24 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 #goals[hidden] { display: none; }
 .goals-head {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
   font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
   color: var(--text-dim); margin-bottom: 8px;
+  width: 100%; background: transparent; border: 0; padding: 0; font-family: inherit;
+  cursor: pointer; pointer-events: auto; text-align: left;
 }
+.goals-caret {
+  flex: 0 0 auto; width: 0; height: 0; margin-left: 2px;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid var(--text-dim);
+  transition: transform .16s ease;
+}
+#goals.collapsed .goals-caret { transform: rotate(-90deg); }
+#goals.collapsed .goals-head { margin-bottom: 0; }
+#goals.collapsed #goals-list { display: none; }
+/* The panel itself ignores taps so it never eats a look-drag; only the header
+ * takes them. */
+#goals { pointer-events: none; }
 #goals-land { font-variant-numeric: tabular-nums; }
 #goals-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 #goals-list li { display: flex; align-items: flex-start; gap: 8px; line-height: 1.35; color: var(--text); }

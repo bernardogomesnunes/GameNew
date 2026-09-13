@@ -231,22 +231,31 @@ export class UIManager {
         <div class="stick-zone" id="stick-right">
           <div class="stick-base"><div class="stick-knob"></div></div>
         </div>
+        <!--
+          Break and Place sit over the movement stick, on the left. The right
+          thumb is steering the camera the whole time it is playing, so hanging
+          the two things you do most often off it meant interrupting the look
+          to act. The left thumb only holds a direction, and can leave it for a
+          moment. Everything that opens a panel is one button away instead of
+          five across the bottom of the screen.
+        -->
         <div class="touch-buttons" id="touch-buttons-left">
           <div class="row">
+            <button class="touch-btn" id="t-break">${icon('mine')}<span>Break</span></button>
+            <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
+          </div>
+        </div>
+        <div class="touch-buttons" id="touch-buttons-right">
+          <div class="row touch-tray" id="touch-tray" hidden>
             <button class="touch-btn duilt-only" id="t-bag" hidden>${icon('bag')}<span>Bag</span></button>
             <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
             <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
             <button class="touch-btn sandbox-only" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
             <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
-          </div>
-        </div>
-        <div class="touch-buttons" id="touch-buttons-right">
-          <div class="row">
-            <button class="touch-btn" id="t-break">${icon('mine')}<span>Break</span></button>
-            <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
-          </div>
-          <div class="row">
             <button class="touch-btn" id="t-down" hidden>${icon('down')}<span>Down</span></button>
+          </div>
+          <div class="row">
+            <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
             <button class="touch-btn" id="t-jump">${icon('up')}<span>Jump</span></button>
           </div>
         </div>
@@ -407,10 +416,16 @@ export class UIManager {
     // control anyone can find with a thumb.
     for (const [sel, fn] of [['#t-bag', 'onOpenBag'], ['#t-build', 'onOpenBuildings'], ['#t-bench', 'onOpenBench']]) {
       const btn = this.q(sel);
-      const fire = (e) => { e.preventDefault(); this.cb[fn](); };
+      const fire = (e) => { e.preventDefault(); this.closeTray(); this.cb[fn](); };
       btn.addEventListener('click', fire);
       btn.addEventListener('touchstart', fire, { passive: false });
     }
+
+    // The tray: everything that opens something, behind one button.
+    const more = this.q('#t-more');
+    const toggle = (e) => { e.preventDefault(); this.toggleTray(); };
+    more.addEventListener('click', toggle);
+    more.addEventListener('touchstart', toggle, { passive: false });
     this.q('#btn-save-template').addEventListener('click', () => {
       const input = this.q('#template-name');
       if (this.cb.onSaveTemplate(input.value)) { input.value = ''; this.refreshTemplateList(); }
@@ -916,6 +931,27 @@ export class UIManager {
       body: active ? 'Aim it, then use Designs to save or stamp' : '',
     });
     return active;
+  }
+
+  /**
+   * The tray of panel buttons on touch.
+   *
+   * Five buttons across the bottom of a phone is most of the bottom of the
+   * phone. They open panels, which is not something you do mid-swing, so they
+   * live behind one button and the screen goes back to being the game.
+   */
+  toggleTray() {
+    const tray = this.q('#touch-tray');
+    if (!tray) return;
+    tray.hidden = !tray.hidden;
+    this.q('#t-more')?.classList.toggle('active', !tray.hidden);
+  }
+
+  closeTray() {
+    const tray = this.q('#touch-tray');
+    if (!tray || tray.hidden) return;
+    tray.hidden = true;
+    this.q('#t-more')?.classList.remove('active');
   }
 
   /** Shows or hides everything that only exists in Duilt. */

@@ -15,6 +15,11 @@ import { MAX_HUNGER } from '../survival/Hunger.js';
  */
 
 const HOLD_MS = 420;
+const GOALS_KEY = 'voxelgame:goals-open';
+
+function loadGoalsOpen() {
+  try { return localStorage.getItem(GOALS_KEY) !== '0'; } catch { return true; }
+}
 
 export class DuiltUI {
   constructor(root, { game, bus }) {
@@ -48,7 +53,11 @@ export class DuiltUI {
       </div>
 
       <div id="goals" hidden>
-        <div class="goals-head"><span id="goals-age">Age 1 · Settlement</span><span id="goals-land">32 × 32</span></div>
+        <button class="goals-head" id="goals-toggle" aria-expanded="true">
+          <span id="goals-age">Age 1 · Settlement</span>
+          <span id="goals-land">32 × 32</span>
+          <span class="goals-caret" aria-hidden="true"></span>
+        </button>
         <ul id="goals-list"></ul>
       </div>
 
@@ -106,6 +115,13 @@ export class DuiltUI {
     this.el.querySelectorAll('[data-close]').forEach((b) =>
       b.addEventListener('click', () => this.closePanel(b.dataset.close)));
     this.q('#btn-eat').addEventListener('click', () => this.eat());
+
+    // The task list is a reminder, not a readout you stare at, and on a phone
+    // it was taking a corner of the screen permanently. Collapsed it keeps the
+    // one line that says where you are; the choice is remembered.
+    const toggle = this.q('#goals-toggle');
+    toggle.addEventListener('click', () => this.setGoalsOpen(!this.goalsOpen));
+    this.setGoalsOpen(loadGoalsOpen());
 
     this.bus.on('inventory:change', () => { this.renderBag(); this.renderVitals(); this.onBagChanged?.(); });
     this.bus.on('hunger:change', () => this.renderVitals());
@@ -174,6 +190,14 @@ export class DuiltUI {
       ? { kind: 'challenge', title: 'That helps', body: `+${r.restored} hunger` }
       : { kind: 'xp', title: r.reason });
     this.renderVitals();
+  }
+
+  setGoalsOpen(open) {
+    this.goalsOpen = open;
+    const el = this.q('#goals');
+    el.classList.toggle('collapsed', !open);
+    this.q('#goals-toggle').setAttribute('aria-expanded', String(open));
+    try { localStorage.setItem(GOALS_KEY, open ? '1' : '0'); } catch { /* private window */ }
   }
 
   // ---- goals ----
