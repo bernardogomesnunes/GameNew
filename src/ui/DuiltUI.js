@@ -22,8 +22,9 @@ function loadGoalsOpen() {
 }
 
 export class DuiltUI {
-  constructor(root, { game, bus }) {
+  constructor(root, { game, bus, panels }) {
     this.root = root;
+    this.panels = panels;
     this.game = game;
     this.bus = bus;
     this.held = null;       // slot index lifted and waiting to be placed
@@ -136,35 +137,41 @@ export class DuiltUI {
     this.q('#vitals').hidden = !on;
     this.q('#goals').hidden = !on;
     if (on) { this.renderVitals(); this.renderGoals(); }
-    else this.panelIds.forEach((p) => this.closePanel(p));
+    else this.panels.closeAll();
   }
 
-  openPanel(id) {
-    this.q(`#${id}`).hidden = false;
+  /**
+   * These panels live in the same registry as every other one, so opening and
+   * closing goes through it. What stays here is only what is particular to
+   * them: what to draw on the way in, and what to forget on the way out.
+   */
+  populate(id) {
     if (id === 'panel-bag') this.renderBag();
     if (id === 'panel-skills') this.renderSkills();
     if (id === 'panel-buildings') this.renderBuildings();
     if (id === 'panel-bench') this.renderBench();
   }
 
-  closePanel(id) {
-    const p = this.q(`#${id}`);
-    if (p) p.hidden = true;
+  onPanelClosed(id) {
     if (id === 'panel-bag') this.held = null;
   }
 
-  get panelIds() {
-    return ['panel-bag', 'panel-claim', 'panel-skills', 'panel-buildings', 'panel-bench'];
+  openPanel(id) {
+    this.panels.open(id);
+  }
+
+  closePanel(id) {
+    this.panels.close(id);
   }
 
   isAnyPanelOpen() {
-    return this.panelIds.some((id) => !this.q(`#${id}`).hidden);
+    return this.panels.anyOpen();
   }
 
   toggleBag() {
-    const p = this.q('#panel-bag');
-    p.hidden ? this.openPanel('panel-bag') : this.closePanel('panel-bag');
-    return !p.hidden;
+    if (this.panels.isOpen('panel-bag')) { this.panels.close('panel-bag'); return false; }
+    this.panels.open('panel-bag');
+    return true;
   }
 
   // ---- vitals ----

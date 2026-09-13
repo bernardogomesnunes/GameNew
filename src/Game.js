@@ -17,6 +17,7 @@ import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SaveManager, AUTOSAVE_NAME } from './storage/SaveManager.js';
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
+import { isTyping } from './ui/Panels.js';
 import { DESIGN_FOR_STRUCTURE } from './config/starterDesigns.js';
 import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
@@ -585,9 +586,17 @@ export class Game {
     });
 
     window.addEventListener('keydown', (e) => {
+      // Nothing in here is a shortcut while you are filling in a form. Typing an
+      // email address used to open the workbench on "e" and the buildings panel
+      // on "b", which on a phone buried the keyboard under a panel.
+      if (isTyping(e)) return;
+
       if (e.code === 'Escape') {
         if (this.pointerLocked) return; // browser handles exiting lock
-        this.ui.isAnyPanelOpen() ? this.closeAllPanels() : (this.ui.refreshSaveList(), this.ui.openPanel('panel-menu'));
+        // One at a time, most recent first — Escape means "put away the thing
+        // in front of me", not "put away everything".
+        if (this.ui.isAnyPanelOpen()) this.ui.closeTopPanel();
+        else this.ui.openPanel('panel-menu');
         return;
       }
       if (e.repeat) return;
@@ -613,7 +622,7 @@ export class Game {
   }
 
   closeAllPanels() {
-    ['panel-stats', 'panel-menu', 'panel-score', 'panel-help', 'panel-templates'].forEach((id) => this.ui.closePanel(id));
+    this.ui.closeAllPanels();
   }
 
   requestPointerLock() {

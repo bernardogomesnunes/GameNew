@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isTyping } from '../ui/Panels.js';
 
 const HALF_WIDTH = 0.3;
 const HEIGHT = 1.8;
@@ -51,6 +52,9 @@ export class PlayerController {
     this.jumpQueued = false;
 
     this._onKeyDown = (e) => {
+      // A space in a password field must not make the player jump, and an "f"
+      // in an email address must not start them flying.
+      if (isTyping(e)) return;
       this.keys.add(e.code);
       if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.sprint = true;
       if (e.code === 'Space') this.jumpQueued = true;

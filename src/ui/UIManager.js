@@ -2,6 +2,7 @@ import { PLACEABLE_BLOCKS } from '../config/blocks.js';
 import { icon } from './icons.js';
 import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
+import { Panels } from './Panels.js';
 import { ITEMS_BY_ID, itemName } from '../config/items.js';
 import { RESOURCES_BY_ID } from '../config/resources.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
@@ -31,6 +32,13 @@ export class UIManager {
     root.innerHTML = this.markup();
     this.root = root;
     this.q = (sel) => root.querySelector(sel);
+
+    // Every `.overlay` with an id is a panel, including the ones the Duilt
+    // layer adds later. The worlds screen is an overlay too but is not a panel:
+    // Escape must not dismiss it into a world nobody chose.
+    this.panels = new Panels(root, { exclude: ['blocker'] });
+    this.panels.onOpen((id) => this.populatePanel(id));
+    this.panels.onClose((id) => this.duiltUI?.onPanelClosed(id));
 
     this.buildHotbar();
     this.wireEvents();
@@ -470,7 +478,7 @@ export class UIManager {
 
     this.wireTouchControls();
     this.wireCloud();
-    this.duiltUI = new DuiltUI(this.root, { game: this.game, bus: this.bus });
+    this.duiltUI = new DuiltUI(this.root, { game: this.game, bus: this.bus, panels: this.panels });
     // The hotbar is a view of the bag in Duilt, so it re-renders with it.
     this.duiltUI.onBagChanged = () => { if (this.cb.isDuilt?.()) this.buildHotbar(); };
     this.duiltUI.onClaimType = (id) => this.cb.onClaimType(id);
@@ -659,7 +667,8 @@ export class UIManager {
     while (stack.children.length > 5) stack.removeChild(stack.firstChild);
   }
 
-  openPanel(id) {
+  /** Fills a panel in just before it is shown, if it has anything to fill. */
+  populatePanel(id) {
     if (id === 'panel-menu') {
       const kind = this.cb.isDuilt?.() ? 'Duilt' : (this.isCampaign ? 'Campaign' : 'Creative');
       const label = this.q('#menu-world-kind');
@@ -672,16 +681,29 @@ export class UIManager {
     if (id === 'panel-stats') this.populateStats();
     if (id === 'panel-help') this.populateHelp();
     if (id === 'panel-templates') this.refreshTemplateList();
-    this.q('#' + id).hidden = false;
+    // The Duilt panels draw their own contents.
+    this.duiltUI?.populate(id);
+  }
+
+  openPanel(id) {
+    this.panels.open(id);
   }
 
   closePanel(id) {
-    this.q('#' + id).hidden = true;
+    this.panels.close(id);
+  }
+
+  /** Escape, and anything else that means "put away whatever is in front of me". */
+  closeTopPanel() {
+    return this.panels.closeTop();
+  }
+
+  closeAllPanels() {
+    return this.panels.closeAll();
   }
 
   isAnyPanelOpen() {
-    if (this.duiltUI?.isAnyPanelOpen()) return true;
-    return ['panel-stats', 'panel-menu', 'panel-score', 'panel-help', 'panel-templates', 'panel-account'].some((id) => !this.q('#' + id).hidden);
+    return this.panels.anyOpen();
   }
 
   populateStats() {
