@@ -34,6 +34,7 @@ export class PlayerController {
     this.pitch = 0;
     this.flying = false;
     this.grounded = false;
+    this.bounds = null;   // set by Duilt to the land you have claimed
 
     this.keys = new Set();
     this.externalMove = { x: 0, z: 0 };
@@ -148,17 +149,39 @@ export class PlayerController {
     this.syncCamera();
   }
 
+  /**
+   * A rectangle the player may not walk out of, in block coordinates, or null
+   * for the whole world.
+   *
+   * Duilt gives you a piece of land and says the rest is not yours yet — but
+   * only blocking the *edits* meant you could still stroll off into country
+   * you had no business in, and the only sign of it was that nothing you tried
+   * to do out there worked. The border is a wall now, treated exactly like
+   * block collision so it stops you rather than snatching you back.
+   */
+  setBounds(bounds) {
+    this.bounds = bounds ?? null;
+  }
+
+  /** Whether the player's box at (x, z) would stick out past the border. */
+  outsideBounds(x, z) {
+    const b = this.bounds;
+    if (!b) return false;
+    return x - HALF_WIDTH < b.minX || x + HALF_WIDTH > b.maxX + 1
+        || z - HALF_WIDTH < b.minZ || z + HALF_WIDTH > b.maxZ + 1;
+  }
+
   moveAndCollide(dx, dy, dz) {
     const p = this.position;
 
     if (dx !== 0) {
       const nx = p.x + dx;
-      if (this.collidesAt(nx, p.y, p.z)) this.velocity.x = 0;
+      if (this.collidesAt(nx, p.y, p.z) || this.outsideBounds(nx, p.z)) this.velocity.x = 0;
       else p.x = nx;
     }
     if (dz !== 0) {
       const nz = p.z + dz;
-      if (this.collidesAt(p.x, p.y, nz)) this.velocity.z = 0;
+      if (this.collidesAt(p.x, p.y, nz) || this.outsideBounds(p.x, nz)) this.velocity.z = 0;
       else p.z = nz;
     }
     if (dy !== 0) {

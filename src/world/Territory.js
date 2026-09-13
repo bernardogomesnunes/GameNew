@@ -107,12 +107,33 @@ export class Territory {
     const h = top - baseY;
     const w = this.size;
 
+    /**
+     * One face of the border, fading out with height.
+     *
+     * At a flat 9% this was invisible: you could walk into the edge of your
+     * land with nothing on screen to say so. A wall you cannot see is not a
+     * border, it is a bug. But a solid one would box you in visually, so the
+     * opacity is carried on the vertices — strongest at the ground where you
+     * meet it, gone by the top so it never blocks the view.
+     */
     const wall = (px, pz, rotY) => {
-      const geo = new THREE.PlaneGeometry(w, h);
+      const geo = new THREE.PlaneGeometry(w, h, 1, 12);
+      const pos = geo.attributes.position;
+      const rgba = new Float32Array(pos.count * 4);
+      const base = new THREE.Color(EDGE);
+      for (let i = 0; i < pos.count; i++) {
+        // 0 at the foot of the wall, 1 at the top.
+        const t = (pos.getY(i) + h / 2) / h;
+        rgba[i * 4 + 0] = base.r;
+        rgba[i * 4 + 1] = base.g;
+        rgba[i * 4 + 2] = base.b;
+        rgba[i * 4 + 3] = 0.34 * Math.pow(1 - t, 2.2);
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(rgba, 4));
+
       const mat = new THREE.MeshBasicMaterial({
-        color: EDGE,
+        vertexColors: true,
         transparent: true,
-        opacity: 0.09,
         side: THREE.DoubleSide,
         depthWrite: false,
       });
@@ -142,6 +163,16 @@ export class Territory {
     );
     outline.renderOrder = 13;
     this.fence.add(outline);
+
+    // A second line at chest height. The ground line disappears behind the
+    // first hill between you and the border; this one stays in view and is
+    // what you actually see yourself walking towards.
+    const rail = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(pts.map((p) => p.clone().setY(baseY + 2.2))),
+      new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity: 0.45 }),
+    );
+    rail.renderOrder = 12;
+    this.fence.add(rail);
   }
 
   /** Representative surface height inside the border, for placing the fence. */

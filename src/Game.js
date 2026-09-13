@@ -179,6 +179,9 @@ export class Game {
     });
     this.ui.refreshForMode();
 
+    // The land grows when an age is finished, and the wall has to grow with it.
+    this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
+
     this.wireInput();
     this.wireSaveOnLeave();
     this.lastAutosave = performance.now();
@@ -363,6 +366,17 @@ export class Game {
     };
   }
 
+  /**
+   * Fences the player into the land they have claimed.
+   *
+   * Only Duilt has a border; the sandbox modes get the whole world, so the
+   * bounds are cleared rather than left over from a previous world.
+   */
+  applyTerritoryBounds() {
+    if (!this.player) return;
+    this.player.setBounds(this.duilt ? this.duilt.territory.bounds() : null);
+  }
+
   /** Duilt owns scene objects (the border), so swapping worlds must clean up. */
   disposeDuilt() {
     if (!this.duilt) return;
@@ -400,6 +414,9 @@ export class Game {
       this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus });
       this.duilt.grantStartingKit();
     }
+    // After the rules exist, not before: this reads the border off `duilt`,
+    // and called a line earlier it only ever saw the world that came before.
+    this.applyTerritoryBounds();
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
     this.undoRedo = new UndoRedo();
@@ -477,6 +494,7 @@ export class Game {
         }), 600);
       }
     }
+    this.applyTerritoryBounds();
     this.rebuildAllChunks();
     if (this.ui) {
       this.ui.updateXp();
