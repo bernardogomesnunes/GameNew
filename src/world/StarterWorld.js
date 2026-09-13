@@ -1,5 +1,8 @@
 import { World } from './World.js';
 import { generateTerrain } from './TerrainGenerator.js';
+import { planSites, outlook } from './siteFinder.js';
+import { buildSites } from './features.js';
+import { SITES } from '../config/sites.js';
 
 /**
  * The world Duilt starts in: generated, not flattened — but with a river.
@@ -11,17 +14,17 @@ import { generateTerrain } from './TerrainGenerator.js';
  * enough — and because it spans the map, every ring you unlock later has water
  * in it too, without any further arrangement.
  *
- * Trees are topped up near the start for the same reason: the first ten
- * minutes need wood, and noise is not obliged to provide any.
+ * Everything else the plot needs — somewhere to land, a grove, outcrops, the
+ * riverside scrub — is declared in config/sites.js and found by siteFinder.js.
+ * This file's job is the water, because a river has to be cut across the whole
+ * map in one pass and cannot be expressed as "a spot that satisfies X".
  */
 
-const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, WATER = 11;
+const DIRT = 2, WOOD = 4, SAND = 6, WATER = 11;
 
 export const STARTER_SIZE = 32;
 const RIVER_NEAR = 8;      // how close the river must pass to the settlement
 const RIVER_DEPTH = 3;
-const GROVE_TREES = 6;     // enough in one place to claim as a forest
-const GROVE_SPAN = 9;      // how tightly the grove is packed
 
 function rng(seed) {
   let t = seed >>> 0;
@@ -59,13 +62,58 @@ export function carveRiverAndSettle(world, seed = 1) {
   for (let i = 0; i < 3; i++) rivers.push(wildRiver(world, rand, i));
   for (const r of rivers) carveRiver(world, r);
 
-  const trees = topUpTrees(world, minX, minZ, rivers, rand);
+  // Everything else in the plot — where you land, the grove, the outcrops, the
+  // riverside scrub — comes from the declarations in config/sites.js. Adding a
+  // feature is an entry there and a builder in features.js; nothing in this
+  // file has to know about it.
+  const region = { minX, minZ, maxX: minX + STARTER_SIZE - 1, maxZ: minZ + STARTER_SIZE - 1 };
+  const plan = planSites(world, SITES, { region, rand });
+  const sites = buildSites(world, plan, rand);
 
+  const spawn = sites.find((s) => s.spec === 'spawn');
   return {
     minX, minZ, size: STARTER_SIZE,
     rivers,
-    trees,
-    spawn: findSpawn(world, minX, minZ, rivers),
+    sites,
+    trees: countTrees(world, region),
+    spawn: standingSpawn(world, spawn, region),
+  };
+}
+
+/** Trunks standing in the plot, which is what the forest claim counts. */
+function countTrees(world, region) {
+  let n = 0;
+  for (let x = region.minX; x <= region.maxX; x++) {
+    for (let z = region.minZ; z <= region.maxZ; z++) {
+      if (world.getBlock(x, world.surfaceHeight(x, z), z) === WOOD) n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * Turns a chosen site into somewhere the player can actually stand.
+ *
+ * Two things the site finder can't do on its own. Sites are block coordinates,
+ * but a player standing on a block corner straddles four columns and a
+ * neighbouring hill can trap them on arrival, so this centres them. And the
+ * plan was made before the grove was planted, which means the facing was
+ * scored against bare ground — so the view is measured again now that the
+ * trees are up, and you are not left staring into a wood that grew in front
+ * of you.
+ */
+function standingSpawn(world, site, region) {
+  if (!site) {
+    const cx = region.minX + STARTER_SIZE / 2, cz = region.minZ + STARTER_SIZE / 2;
+    return { x: cx + 0.5, y: world.surfaceHeight(cx, cz), z: cz + 0.5, yaw: 0, pitch: -0.16 };
+  }
+  const view = outlook(world, site.x, site.z, { at: 2, range: 16 });
+  return {
+    x: site.x + 0.5,
+    y: world.surfaceHeight(site.x, site.z),
+    z: site.z + 0.5,
+    yaw: view.best >= 4 ? view.yaw : site.yaw,
+    pitch: site.pitch ?? -0.16,
   };
 }
 
@@ -184,176 +232,4 @@ function carveRiver(world, river) {
       }
     }
   }
-}
-
-/**
- * Makes sure the plot has trees, and that enough of them stand together.
- *
- * Scattered singles are not a forest: the claim wants three or four trunks
- * inside one box, and ten trees spread over a thousand tiles almost never
- * gives you that. So the top-up plants a grove — which is also how woodland
- * actually looks.
- */
-function topUpTrees(world, minX, minZ, rivers, rand) {
-  const standing = [];
-  for (let lx = 0; lx < STARTER_SIZE; lx++) {
-    for (let lz = 0; lz < STARTER_SIZE; lz++) {
-      const x = minX + lx, z = minZ + lz;
-      const h = world.surfaceHeight(x, z);
-      if (world.getBlock(x, h, z) === WOOD) standing.push({ lx, lz });
-    }
-  }
-
-  const grove = findGroveSpot(world, minX, minZ, rivers, rand);
-  let planted = 0, attempts = 0;
-  while (planted < GROVE_TREES && attempts < 800) {
-    attempts++;
-    const lx = grove.lx + Math.floor((rand() - 0.5) * GROVE_SPAN);
-    const lz = grove.lz + Math.floor((rand() - 0.5) * GROVE_SPAN);
-    if (lx < 2 || lz < 2 || lx >= STARTER_SIZE - 2 || lz >= STARTER_SIZE - 2) continue;
-    const x = minX + lx, z = minZ + lz;
-    if (distanceToRivers(rivers, x, z) < 3) continue;
-    if (standing.some((p) => Math.abs(p.lx - lx) < 2 && Math.abs(p.lz - lz) < 2)) continue;
-    const ground = world.surfaceHeight(x, z) - 1;
-    const under = world.getBlock(x, ground, z);
-    if (under !== GRASS && under !== DIRT) continue;
-    plantTree(world, x, ground + 1, z, rand);
-    standing.push({ lx, lz });
-    planted++;
-  }
-  return standing.length;
-}
-
-/** Flat, dry ground with room for a stand of trees. */
-function findGroveSpot(world, minX, minZ, rivers, rand) {
-  let best = null;
-  for (let lx = 6; lx < STARTER_SIZE - 6; lx += 2) {
-    for (let lz = 6; lz < STARTER_SIZE - 6; lz += 2) {
-      const x = minX + lx, z = minZ + lz;
-      if (distanceToRivers(rivers, x, z) < 6) continue;
-      const h = world.surfaceHeight(x, z);
-      let rough = 0;
-      for (const [dx, dz] of [[3, 0], [-3, 0], [0, 3], [0, -3]]) {
-        rough += Math.abs(world.surfaceHeight(x + dx, z + dz) - h);
-      }
-      if (!best || rough < best.rough) best = { lx, lz, rough };
-    }
-  }
-  return best ?? { lx: STARTER_SIZE / 2, lz: STARTER_SIZE / 2 };
-}
-
-function plantTree(world, x, groundY, z, rand) {
-  const trunk = 4 + Math.floor(rand() * 2);
-  for (let i = 0; i < trunk; i++) world.setBlock(x, groundY + i, z, WOOD);
-  const top = groundY + trunk;
-  for (let dx = -2; dx <= 2; dx++) {
-    for (let dz = -2; dz <= 2; dz++) {
-      for (let dy = -2; dy <= 1; dy++) {
-        if (Math.abs(dx) === 2 && Math.abs(dz) === 2) continue;
-        if (dy === 1 && (Math.abs(dx) > 1 || Math.abs(dz) > 1)) continue;
-        const tx = x + dx, ty = top + dy, tz = z + dz;
-        if (!world.inBounds(tx, ty, tz)) continue;
-        if (world.getBlock(tx, ty, tz) === 0) world.setBlock(tx, ty, tz, LEAVES);
-      }
-    }
-  }
-}
-
-/** Dry, level, standing on solid ground, with headroom — and near the water. */
-const EYE = 1;          // the cell the player's eyes occupy, above their feet
-const LOOK_RANGE = 14;  // how far ahead "a clear view" is worth measuring
-
-/**
- * How much of the world you can actually see from a spot, and which way is
- * clearest.
- *
- * A spot can be perfectly flat and still be a bad place to arrive, because it
- * sits at the foot of a hill and your whole screen is one brown wall. That is
- * what the first version did: it checked that the ground was level and that
- * nothing was inside your head, and nothing at all about the view.
- */
-function outlook(world, x, y, z) {
-  // Unit vectors, not [1,1] steps. A diagonal taken as [1,1] walks corner to
-  // corner through a different set of blocks than the camera ray does, so the
-  // direction that measured clearest was not always the one you ended up
-  // looking down.
-  const R2 = Math.SQRT1_2;
-  const dirs = [[0, -1], [R2, -R2], [1, 0], [R2, R2], [0, 1], [-R2, R2], [-1, 0], [-R2, -R2]];
-  let open = 0, bestRun = -1, bestDir = dirs[0];
-  for (const [dx, dz] of dirs) {
-    let run = 0;
-    for (let k = 1; k <= LOOK_RANGE; k++) {
-      // Cast from the middle of the block, which is where the player stands,
-      // and floor to a cell. Casting from the block's corner instead put the
-      // ray in the neighbouring column and reported a clear view down a
-      // direction that was in fact blocked.
-      const px = Math.floor(x + 0.5 + dx * k), pz = Math.floor(z + 0.5 + dz * k);
-      if (!world.inBounds(px, y + EYE, pz)) break;
-      if (world.getBlock(px, y + EYE, pz) !== 0) break;
-      run = k;
-    }
-    open += run;
-    if (run > bestRun) { bestRun = run; bestDir = [dx, dz]; }
-  }
-  // Forward is (-sin yaw, 0, -cos yaw), so this points the camera down bestDir.
-  const yaw = Math.atan2(-bestDir[0], -bestDir[1]);
-  return { open, bestRun, yaw };
-}
-
-/**
- * Where the player arrives, and which way they are facing.
- *
- * Ranked on three things, in the order they matter: can you see anything from
- * here, is the ground level enough to walk off, and is the water a short walk
- * away. The facing is returned too — arriving on a lovely open ridge while
- * looking the one way that is blocked is the same bad first impression.
- */
-function findSpawn(world, minX, minZ, rivers) {
-  // Ask for a proper view first and settle for less only if the plot cannot
-  // offer one. Four blocks of clearance was enough to pass while still putting
-  // the player's nose in a tree; a dense wood can genuinely have nothing better,
-  // so the bar drops rather than the search failing.
-  for (const minRun of [10, 7, 4, 1]) {
-    const spot = searchSpawn(world, minX, minZ, rivers, minRun);
-    if (spot) return spot;
-  }
-  return centreSpawn(world, minX, minZ);
-}
-
-const PITCH = -0.16;   // a shallow downward tilt; level puts half the screen in sky
-
-function centreSpawn(world, minX, minZ) {
-  const cx = minX + STARTER_SIZE / 2, cz = minZ + STARTER_SIZE / 2;
-  const h = world.surfaceHeight(cx, cz);
-  return { x: cx + 0.5, y: h, z: cz + 0.5, yaw: outlook(world, cx, h, cz).yaw, pitch: PITCH };
-}
-
-function searchSpawn(world, minX, minZ, rivers, minRun) {
-  let best = null;
-  for (let lx = 1; lx < STARTER_SIZE - 1; lx++) {
-    for (let lz = 1; lz < STARTER_SIZE - 1; lz++) {
-      const x = minX + lx, z = minZ + lz;
-      const fromRiver = distanceToRivers(rivers, x, z);
-      if (fromRiver < 2) continue;                        // not standing in it
-      const h = world.surfaceHeight(x, z);                // first free y
-      const under = world.getBlock(x, h - 1, z);
-      if (under !== GRASS && under !== DIRT && under !== SAND) continue;
-      if (world.getBlock(x, h, z) !== 0 || world.getBlock(x, h + 1, z) !== 0) continue;
-
-      const view = outlook(world, x, h, z);
-      if (view.bestRun < minRun) continue;                // hemmed in on every side
-
-      // Flat enough that the first few steps aren't a scramble.
-      let rough = 0;
-      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        rough += Math.abs(world.surfaceHeight(x + dx, z + dz) - h);
-      }
-      // Openness leads, because it is what you see before you touch anything.
-      const score = -view.open * 3 + rough * 4 + Math.abs(fromRiver - 7);
-      if (!best || score < best.score) {
-        best = { x: x + 0.5, y: h, z: z + 0.5, yaw: view.yaw, score };
-      }
-    }
-  }
-  return best ? { x: best.x, y: best.y, z: best.z, yaw: best.yaw, pitch: PITCH } : null;
 }
