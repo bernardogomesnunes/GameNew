@@ -706,6 +706,11 @@ export class UIManager {
     return this.panels.anyOpen();
   }
 
+  /** Whether the worlds screen is up, i.e. nobody has entered a world yet. */
+  isHomeOpen() {
+    return !this.q('#blocker').hidden;
+  }
+
   populateStats() {
     const s = this.gamification.snapshot();
     this.q('#stats-sub').textContent = `Level ${s.level} · ${s.totalBlocksPlaced} blocks placed · ${s.streakCount}-day streak`;

@@ -52,12 +52,24 @@ export class Panels {
     return this.all().some((el) => !el.hidden);
   }
 
+  /**
+   * Opens a panel, closing whatever else was open.
+   *
+   * One at a time, always. A shortcut pressed with the bag already up used to
+   * stack a second panel on the first, and the one underneath was then
+   * unreachable without closing the top one — which nothing said you had to
+   * do. Making it a property of the registry means it holds for every panel
+   * that will ever exist, rather than every caller having to remember.
+   */
   open(id) {
     const el = this.el(id);
     if (!el) return false;
-    el.hidden = false;
-    this.order = this.order.filter((x) => x !== id).concat(id);
-    for (const fn of this.openHooks) fn(id);
+    for (const other of this.openIds()) if (other !== id) this.close(other);
+    if (el.hidden) {
+      el.hidden = false;
+      this.order = this.order.filter((x) => x !== id).concat(id);
+      for (const fn of this.openHooks) fn(id);
+    }
     return true;
   }
 
@@ -70,7 +82,11 @@ export class Panels {
     return true;
   }
 
-  /** Closes the most recently opened panel. Returns its id, or null. */
+  /**
+   * Closes the most recently opened panel. With the one-at-a-time rule above
+   * there is normally only one, but the order is still what decides — nothing
+   * stops a future caller from showing two deliberately.
+   */
   closeTop() {
     const open = this.openIds();
     if (!open.length) return null;

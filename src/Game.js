@@ -600,6 +600,9 @@ export class Game {
         return;
       }
       if (e.repeat) return;
+      // Everything below acts on the world, so it only applies while you are in
+      // it. Escape, above, is the way out and always works.
+      if (!this.isPlaying) return;
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
       if (e.code === 'KeyB') {
         if (this.duilt) { document.exitPointerLock?.(); this.ui.openDuiltPanel('panel-buildings'); }
@@ -1106,21 +1109,56 @@ export class Game {
     return { needsReload };
   }
 
+  /**
+   * What the game is doing right now.
+   *
+   *   home     the worlds screen is up; there is a world behind it but nobody
+   *            has said they want to be in it yet
+   *   paused   a panel is open over the world
+   *   playing  you are in it
+   *
+   * One question with one answer, asked by everything that should only happen
+   * while you are actually playing. Without it the world simply ran: the player
+   * fell off whatever they were standing on while you read the worlds list, and
+   * hunger drained behind an open menu.
+   */
+  get phase() {
+    if (!this.ui) return 'home';
+    if (this.ui.isHomeOpen()) return 'home';
+    if (this.ui.isAnyPanelOpen()) return 'paused';
+    return 'playing';
+  }
+
+  get isPlaying() {
+    return this.phase === 'playing';
+  }
+
   tick() {
-    const dt = this.clock.getDelta();
-    this.quality.tick(dt);
-    this.player.update(dt);
-    if (this.duilt) {
-      this.duilt.tick(dt);
-      this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
+    // Always read the clock, even when nothing will use it: skipping it lets
+    // the gap pile up, and the first frame after a pause would move the player
+    // by however long they spent reading a menu. The cap covers the same thing
+    // for a stalled tab — a single frame should never teleport anyone.
+    const dt = Math.min(this.clock.getDelta(), 0.1);
+    const playing = this.isPlaying;
+
+    if (playing) {
+      this.quality.tick(dt);
+      this.player.update(dt);
+      if (this.duilt) {
+        this.duilt.tick(dt);
+        this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
+      }
+      this.updateHover();
+      this.gamification.tick(performance.now());
+      if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.autosaveNow();
     }
+
+    if (!playing) this.player.releaseKeys();
+
+    // These run regardless: the world should finish drawing itself behind the
+    // worlds screen rather than streaming in after you arrive.
     this.drainRemeshQueue();
     this.updateChunkVisibility();
-    this.updateHover();
-    this.gamification.tick(performance.now());
-
-    if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.autosaveNow();
-
     this.renderer.render(this.scene, this.camera);
   }
 

@@ -53,7 +53,7 @@ const make = () => new Root([
   ok('and it closes with everything else', p.closeAll() === 1);
 }
 
-// --- escape closes one at a time, newest first ------------------------------
+// --- one panel at a time ----------------------------------------------------
 
 {
   const root = make();
@@ -61,12 +61,31 @@ const make = () => new Root([
   p.open('panel-menu');
   p.open('panel-bag');
   p.open('panel-account');
-  ok('three open', p.openIds().length === 3);
-  ok('the newest closes first', p.closeTop() === 'panel-account');
-  ok('then the one before it', p.closeTop() === 'panel-bag');
-  ok('then the last', p.closeTop() === 'panel-menu');
-  ok('and then nothing', p.closeTop() === null);
-  ok('nothing is open', !p.anyOpen());
+  ok('opening a panel closes the one before it', p.openIds().join() === 'panel-account');
+  ok('a shortcut cannot stack a second panel on the first', p.openIds().length === 1);
+  ok('closing it leaves nothing', p.closeTop() === 'panel-account' && !p.anyOpen());
+  ok('and then nothing to close', p.closeTop() === null);
+
+  // Re-opening the same panel is not a close-then-open cycle.
+  const seen = [];
+  p.onOpen((id) => seen.push(id));
+  p.open('panel-bag');
+  p.open('panel-bag');
+  ok('re-opening the same panel draws it once', seen.join() === 'panel-bag');
+}
+
+// --- deliberately stacked panels still close newest first -------------------
+
+{
+  const root = make();
+  const p = new Panels(root, { exclude: ['blocker'] });
+  p.open('panel-menu');
+  // Something showing a second panel without going through open() — the order
+  // still decides which Escape takes.
+  root.querySelector('#panel-bag').hidden = false;
+  p.order.push('panel-bag');
+  ok('the newest closes first', p.closeTop() === 'panel-bag');
+  ok('then the one beneath it', p.closeTop() === 'panel-menu');
 }
 
 // --- the excluded overlay is never touched ----------------------------------

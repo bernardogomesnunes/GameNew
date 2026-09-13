@@ -70,6 +70,23 @@ export class PlayerController {
     this.syncCamera();
   }
 
+  /**
+   * Forgets anything currently held down.
+   *
+   * A key pressed before a panel opened is still held when it closes, and the
+   * player would set off walking the moment you came back. The browser sends no
+   * keyup for a key released while something else had focus, so this has to be
+   * explicit.
+   */
+  releaseKeys() {
+    if (!this.keys.size && !this.sprint) return;
+    this.keys.clear();
+    this.sprint = false;
+    this.jumpQueued = false;
+    this.velocity.x = 0;
+    this.velocity.z = 0;
+  }
+
   toggleFly() {
     this.flying = !this.flying;
     this.velocity.set(0, 0, 0);
