@@ -110,11 +110,17 @@ export class Territory {
     /**
      * One face of the border, fading out with height.
      *
-     * At a flat 9% this was invisible: you could walk into the edge of your
-     * land with nothing on screen to say so. A wall you cannot see is not a
-     * border, it is a bug. But a solid one would box you in visually, so the
-     * opacity is carried on the vertices — strongest at the ground where you
-     * meet it, gone by the top so it never blocks the view.
+     * This is the only thing marking the edge. There were lines along the top
+     * and bottom of it too, which had to be drawn over the world to be seen
+     * from a distance — and a bright stripe across a hillside reads as
+     * something stuck to the screen rather than a thing standing in the world.
+     * The wall says it on its own, and says it just as well when the border is
+     * a thousand blocks out and you only ever see it from far away.
+     *
+     * At a flat 9% it was invisible: you could walk into the edge of your land
+     * with nothing on screen to say so. A solid one would box you in visually,
+     * so the opacity is carried on the vertices — strongest at the ground where
+     * you meet it, gone by the top so it never blocks the view.
      */
     const wall = (px, pz, rotY) => {
       const geo = new THREE.PlaneGeometry(w, h, 1, 12);
@@ -149,31 +155,6 @@ export class Territory {
     wall(midX, b.maxZ + 1, 0);
     wall(b.minX, midZ, Math.PI / 2);
     wall(b.maxX + 1, midZ, Math.PI / 2);
-
-    /*
-     * Two lines marking the edge, both behind the world.
-     *
-     * The ground line used to draw with depth testing off, which put a bright
-     * stripe across whatever happened to be in front of it — a hillside, a
-     * tree, a block you had just placed. A border drawn through solid ground
-     * reads as an overlay stuck to the screen rather than a thing standing in
-     * the world. The wall already says where the edge is from any distance, so
-     * the lines are decoration and are occluded like everything else.
-     */
-    const pts = [
-      new THREE.Vector3(b.minX, baseY, b.minZ), new THREE.Vector3(b.maxX + 1, baseY, b.minZ),
-      new THREE.Vector3(b.maxX + 1, baseY, b.maxZ + 1), new THREE.Vector3(b.minX, baseY, b.maxZ + 1),
-      new THREE.Vector3(b.minX, baseY, b.minZ),
-    ];
-    const line = (y, opacity) => {
-      const mesh = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints(pts.map((p) => p.clone().setY(baseY + y))),
-        new THREE.LineBasicMaterial({ color: EDGE, transparent: true, opacity, depthWrite: false }),
-      );
-      this.fence.add(mesh);
-    };
-    line(0.05, 0.8);   // where the border meets the ground
-    line(2.2, 0.45);   // and again at chest height, for when the ground dips away
   }
 
   /** Representative surface height inside the border, for placing the fence. */
