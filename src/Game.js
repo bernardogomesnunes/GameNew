@@ -10,6 +10,8 @@ import { SelectionHighlight } from './tools/SelectionHighlight.js';
 import { CloudAuth } from './net/CloudAuth.js';
 import { CloudWorlds } from './net/CloudWorlds.js';
 import { isCloudConfigured } from './net/cloudConfig.js';
+import { DuiltGame } from './duilt/DuiltGame.js';
+import { generateDuiltWorld } from './world/StarterWorld.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
@@ -27,6 +29,7 @@ const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream 
 const AUTOSAVE_INTERVAL_MS = 60_000;
 export const CREATIVE = 'creative';
 export const CAMPAIGN = 'campaign';
+export const DUILT = 'duilt';
 
 export class Game {
   constructor(container) {
@@ -76,6 +79,7 @@ export class Game {
     this.downHeld = false;
     this.remeshQueue = new Set();
     this.selectionDirty = false; // set when blocks change, so the skin re-reads the world
+    this.duilt = null;           // the Duilt rules, only in Duilt mode
 
     this.hoverBox = this.buildWireBox(0xffffff, 1.002);
     this.hoverBox.visible = false;
@@ -223,7 +227,6 @@ export class Game {
       },
       // Touch goes through the same two verbs as mouse buttons, so the
       // selector behaves identically on a phone.
-      // ---- cloud ----
       isCloudConfigured: () => !!this.cloud,
       getCloudUser: () => this.cloudAuth.summary(),
       onCloudRestoreSession: () => this.cloudAuth.restore(),
@@ -249,6 +252,11 @@ export class Game {
 
       onBreakTap: () => this.primaryAction(),
       onPlaceTap: () => this.secondaryAction(),
+
+      // ---- duilt ----
+      isDuilt: () => !!this.duilt,
+      onOpenBag: () => this.ui.toggleBag(),
+      onOpenClaim: () => this.openClaim(),
     };
   }
 
@@ -261,18 +269,41 @@ export class Game {
       mode: this.mode,
       worldId: this.worldId,
       worldName: this.worldName,
+      duilt: this.duilt ? this.duilt.toJSON() : null,
     };
+  }
+
+  /** Duilt owns scene objects (the border), so swapping worlds must clean up. */
+  disposeDuilt() {
+    if (!this.duilt) return;
+    this.duilt.territory.dispose();
+    this.duilt = null;
   }
 
   newWorld({ silent, mode = this.mode } = {}) {
     this.mode = mode;
     this.worldId = newWorldId();
-    this.worldName = mode === CAMPAIGN ? 'Campaign world' : 'Creative world';
-    this.world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
-    if (mode === CAMPAIGN) generateFlat(this.world);
-    else generateTerrain(this.world);
+    this.worldName = mode === CAMPAIGN ? 'Campaign world' : mode === DUILT ? 'Duilt' : 'Creative world';
+
+    this.disposeDuilt();
+    let spawn = null;
+    if (mode === DUILT) {
+      // A world big enough for the first four ages; the authored settlement
+      // sits in the middle of it and the border does the rest.
+      const built = generateDuiltWorld({ sizeX: 256, sizeZ: 256, height: 64 });
+      this.world = built.world;
+      spawn = built.origin.spawn;
+    } else {
+      this.world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
+      if (mode === CAMPAIGN) generateFlat(this.world);
+      else generateTerrain(this.world);
+    }
     if (this.player) this.player.dispose();
-    this.player = new PlayerController(this.world, this.camera, this.findSafeSpawn());
+    this.player = new PlayerController(this.world, this.camera, spawn ?? this.findSafeSpawn());
+    if (mode === DUILT) {
+      this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus });
+      this.duilt.grantStartingKit();
+    }
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
     this.undoRedo = new UndoRedo();
@@ -315,6 +346,7 @@ export class Game {
 
   loadFromData(data, { silent } = {}) {
     this.world = data.world;
+    this.disposeDuilt();
     // A save from before worlds had ids still loads; it just gets a fresh one.
     this.worldId = data.worldId || newWorldId();
     this.worldName = data.worldName || data.name || this.worldName || 'My world';
@@ -329,6 +361,16 @@ export class Game {
     this.economy.loadJSON(data.economy);
     this.undoRedo = new UndoRedo();
     if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
+    if (this.mode === DUILT) {
+      this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus });
+      const earned = this.duilt.loadJSON(data.duilt);
+      if (earned && Object.keys(earned).length && this.ui) {
+        const parts = Object.entries(earned).map(([id, n]) => `${n} ${id}`);
+        setTimeout(() => this.ui.toast({
+          kind: 'challenge', title: 'Your buildings kept working', body: parts.join(', '),
+        }), 600);
+      }
+    }
     this.rebuildAllChunks();
     if (this.ui) {
       this.ui.updateXp();
@@ -418,6 +460,8 @@ export class Game {
       if (e.repeat) return;
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
       if (e.code === 'KeyB') { this.ui.toggleSelector(); }
+      if (e.code === 'KeyI' && this.duilt) { document.exitPointerLock?.(); this.ui.toggleBag(); }
+      if (e.code === 'KeyC' && this.duilt) { document.exitPointerLock?.(); this.openClaim(); }
       if (e.code === 'KeyR' && this.pendingTemplate) {
         this.templateRotation = (this.templateRotation + 1) % 4;
         this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });
@@ -503,6 +547,28 @@ export class Game {
     this.gamification.onTemplatePlaced(this.pendingTemplate);
     this.ui.toast({ kind: 'challenge', title: `Placed ${this.pendingTemplate.name}`, body: `${changes.length} blocks` });
     return true;
+  }
+
+  /** Offers the framed region to the claim menu. */
+  openClaim() {
+    if (!this.duilt) return;
+    if (!this.selectorTool.active) {
+      this.ui.toast({ kind: 'xp', title: 'Frame it first', body: 'Turn on Select and aim at what you built' });
+      return;
+    }
+    const bounds = this.selectorTool.bounds();
+    if (!bounds) return;
+    const region = {
+      minX: bounds.minX, maxX: bounds.maxX,
+      minY: bounds.minY, maxY: bounds.maxY,
+      minZ: bounds.minZ, maxZ: bounds.maxZ,
+    };
+    this.ui.openClaim(region, (typeId) => {
+      const r = this.duilt.claim(region, typeId);
+      this.ui.toast(r.ok
+        ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
+        : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
+    });
   }
 
   // ---- cloud ----
@@ -665,12 +731,41 @@ export class Game {
     changes = changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z));
     if (!changes.length) return false;
 
-    if (chargeResources && !this.commitResources(changes)) return false;
+    // Duilt has its own economy: the border says where, the bag says whether.
+    let duiltBill = null;
+    if (this.duilt) {
+      const outside = changes.find((c) => !this.duilt.territory.contains(c.x, c.z));
+      if (outside) {
+        this.ui?.toast({
+          kind: 'xp',
+          title: 'Outside your land',
+          body: 'Finish this age to push the border out',
+        });
+        return false;
+      }
+      if (chargeResources) {
+        const paid = this.duilt.payForPlacement(changes);
+        if (!paid.ok) {
+          this.ui?.toast({ kind: 'xp', title: 'Not enough', body: paid.reason });
+          return false;
+        }
+        duiltBill = paid.bill;
+      }
+    } else if (chargeResources && !this.commitResources(changes)) {
+      return false;
+    }
 
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
     this.undoRedo.push(changes);
     this.remeshDirty();
+
+    if (this.duilt) {
+      const gained = this.duilt.onBlocksBroken(changes);
+      if (Object.keys(gained).length) this.bus.emit('duilt:gathered', { gained });
+      this.duilt.structures.revalidateAround(changes);
+      this.duilt.checkAgeAdvance();
+    }
     for (const c of changes) {
       if (c.next !== AIR) this.gamification.onBlockPlaced({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.next, viaSymmetry, now });
       else this.gamification.onBlockBroken({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.prev, now });
@@ -747,6 +842,10 @@ export class Game {
   tick() {
     const dt = this.clock.getDelta();
     this.player.update(dt);
+    if (this.duilt) {
+      this.duilt.tick(dt);
+      this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
+    }
     this.drainRemeshQueue();
     this.updateChunkVisibility();
     this.updateHover();

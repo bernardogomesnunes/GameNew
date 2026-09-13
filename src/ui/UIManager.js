@@ -1,5 +1,6 @@
 import { PLACEABLE_BLOCKS } from '../config/blocks.js';
 import { icon } from './icons.js';
+import { DuiltUI } from './DuiltUI.js';
 import { RESOURCES_BY_ID } from '../config/resources.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
@@ -82,6 +83,8 @@ export class UIManager {
         <button class="icon-btn" id="btn-select" title="Selector: aim a grid-snapped box at your build">${icon('select')}<span>Select</span></button>
         <button class="icon-btn" id="btn-size" title="Change the selector size">${icon('copy')}<span id="size-label">8&sup3;</span></button>
         <button class="icon-btn" id="btn-templates" title="Your saved building templates">${icon('paste')}<span>Designs</span></button>
+        <button class="icon-btn duilt-only" id="btn-bag" title="Your bag (I)" hidden>${icon('copy')}<span>Bag</span></button>
+        <button class="icon-btn duilt-only" id="btn-claim" title="Name what you've built (C)" hidden>${icon('select')}<span>Claim</span></button>
         <button class="icon-btn" id="btn-symmetry" title="Mirror your building across the world's centre">${icon('symmetry')}<span>Mirror</span></button>
         <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
         <button class="icon-btn" id="btn-stats" title="Progress, achievements and challenges">${icon('stats')}<span>Stats</span></button>
@@ -162,6 +165,9 @@ export class UIManager {
               </button>
               <button class="secondary mode-btn" data-mode="creative">
                 <strong>Creative</strong><span>Generated terrain, build freely</span>
+              </button>
+              <button class="secondary mode-btn" data-mode="duilt">
+                <strong>Duilt</strong><span>Arrive on 32 blocks of land and build a civilisation</span>
               </button>
             </div>
           </div>
@@ -278,6 +284,7 @@ export class UIManager {
 
   /** Re-renders everything that differs between Creative and Campaign. */
   refreshForMode() {
+    this.refreshForDuilt();
     document.body.classList.toggle('campaign', this.isCampaign);
     this.buildHotbar();
     this.updateResourceBar();
@@ -330,6 +337,8 @@ export class UIManager {
     this.q('#btn-help').addEventListener('click', () => this.openPanel('panel-help'));
     this.q('#btn-size').addEventListener('click', () => this.setSelectorSize(this.cb.onCycleSelectorSize()));
     this.q('#btn-templates').addEventListener('click', () => this.openPanel('panel-templates'));
+    this.q('#btn-bag').addEventListener('click', () => this.cb.onOpenBag());
+    this.q('#btn-claim').addEventListener('click', () => this.cb.onOpenClaim());
     this.q('#btn-save-template').addEventListener('click', () => {
       const input = this.q('#template-name');
       if (this.cb.onSaveTemplate(input.value)) { input.value = ''; this.refreshTemplateList(); }
@@ -370,6 +379,8 @@ export class UIManager {
 
     this.wireTouchControls();
     this.wireCloud();
+    this.duiltUI = new DuiltUI(this.root, { game: this.game, bus: this.bus });
+    this.refreshForDuilt();
   }
 
   /**
@@ -560,6 +571,7 @@ export class UIManager {
   }
 
   isAnyPanelOpen() {
+    if (this.duiltUI?.isAnyPanelOpen()) return true;
     return ['panel-stats', 'panel-menu', 'panel-score', 'panel-help', 'panel-templates'].some((id) => !this.q('#' + id).hidden);
   }
 
@@ -761,6 +773,17 @@ export class UIManager {
     });
     return active;
   }
+
+  /** Shows or hides everything that only exists in Duilt. */
+  refreshForDuilt() {
+    const on = !!this.cb.isDuilt?.();
+    this.root.querySelectorAll('.duilt-only').forEach((el) => { el.hidden = !on; });
+    this.duiltUI?.setActive(on);
+  }
+
+  toggleBag() { return this.duiltUI?.toggleBag(); }
+  openClaim(region, onClaim) { this.duiltUI?.openClaim(region, onClaim); }
+  openDuiltPanel(id) { this.duiltUI?.openPanel(id); }
 
   setSelectorSize(size) {
     this.q('#size-label').innerHTML = `${size}&sup3;`;

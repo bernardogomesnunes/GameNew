@@ -44,6 +44,8 @@ export class PlayerController {
     this.lookInput = { x: 0, y: 0 };
     this.lookSmoothed = { x: 0, y: 0 };
     this.lookRamp = 0; // 0..1 charge of the turn acceleration
+    // Duilt scales this with hunger and Athletics; 1 everywhere else.
+    this.speedScale = 1;
     this.sprint = false;
     this.jumpQueued = false;
 
@@ -122,7 +124,7 @@ export class PlayerController {
     const sprinting = this.sprint || this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
 
     if (this.flying) {
-      const speed = sprinting ? FLY_SPRINT_SPEED : FLY_SPEED;
+      const speed = (sprinting ? FLY_SPRINT_SPEED : FLY_SPEED) * this.speedScale;
       this.velocity.x = wish.x * speed;
       this.velocity.z = wish.z * speed;
       let up = this.externalUp;
@@ -130,7 +132,7 @@ export class PlayerController {
       if (this.keys.has('ControlLeft') || this.keys.has('ShiftLeft')) up -= 1;
       this.velocity.y = up * speed;
     } else {
-      const speed = sprinting ? SPRINT_SPEED : WALK_SPEED;
+      const speed = (sprinting ? SPRINT_SPEED : WALK_SPEED) * this.speedScale;
       this.velocity.x = wish.x * speed;
       this.velocity.z = wish.z * speed;
       this.velocity.y += GRAVITY * dt;

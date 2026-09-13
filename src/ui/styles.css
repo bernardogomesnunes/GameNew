@@ -331,3 +331,133 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .template-row .actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 .export-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.45; margin-top: 8px; }
+
+/* ============================================================
+   Duilt — bag, vitals, goals, claiming, skills.
+   Sized for a thumb first: nothing tappable is under 44px.
+   ============================================================ */
+
+#duilt-layer { position: absolute; inset: 0; pointer-events: none; }
+#duilt-layer .overlay { pointer-events: auto; }
+
+/* --- vitals: hunger sits opposite the XP bar so they don't fight --- */
+/* Left column: the XP bar owns the top, then vitals, then goals. The right
+   side belongs to the toolbar and the toasts, and crowding them collides. */
+#vitals {
+  position: absolute; top: 52px; left: 12px;
+  display: flex; align-items: center; gap: 8px;
+  pointer-events: auto; z-index: 5;
+}
+#vitals[hidden] { display: none; }
+.vital {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--panel-border); border-radius: 999px; padding: 5px 12px 5px 9px;
+}
+.vital-icon { font-size: 14px; line-height: 1; }
+.vital-track { width: 92px; height: 7px; border-radius: 4px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.vital-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #e2a33c, #f0c674); transition: width 0.4s linear; }
+.vital-fill.low { background: linear-gradient(90deg, #c9483a, #e0714f); }
+.vital-eat {
+  pointer-events: auto; border: 1px solid var(--accent);
+  background: var(--accent-dim); color: var(--text);
+  border-radius: 999px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  min-height: 34px;
+}
+.vital-eat[hidden] { display: none; }
+
+/* --- goals: the age checklist --- */
+#goals {
+  position: absolute; top: 94px; left: 12px; width: 228px;
+  background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--panel-border); border-radius: 10px; padding: 11px 13px;
+  pointer-events: none; z-index: 4; font-size: 12px;
+}
+#goals[hidden] { display: none; }
+.goals-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 8px;
+}
+#goals-land { font-variant-numeric: tabular-nums; }
+#goals-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#goals-list li { display: flex; align-items: flex-start; gap: 8px; line-height: 1.35; color: var(--text); }
+#goals-list li.done { color: var(--text-dim); text-decoration: line-through; }
+.tick {
+  flex: 0 0 15px; height: 15px; border-radius: 4px; margin-top: 1px;
+  border: 1.5px solid var(--panel-border-strong);
+  display: flex; align-items: center; justify-content: center; font-size: 10px;
+}
+#goals-list li.done .tick { border-color: var(--accent); color: var(--accent); }
+
+/* --- the bag --- */
+.panel-wide { max-width: 560px; }
+#bag-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px;
+  margin: 14px 0; max-height: 46vh; overflow-y: auto; padding: 2px;
+}
+.bag-slot {
+  position: relative; aspect-ratio: 1; min-height: 48px;
+  border: 1px solid var(--panel-border); border-radius: 8px;
+  background: rgba(255,255,255,0.04); cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.12s ease, transform 0.12s ease;
+}
+.bag-slot.empty { background: rgba(255,255,255,0.015); }
+.bag-slot:hover:not(.empty) { border-color: var(--panel-border-strong); }
+.bag-slot.held { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
+.bag-slot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.bag-slot .swatch { width: 58%; height: 58%; border-radius: 5px; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25); }
+.bag-slot .count {
+  position: absolute; right: 4px; bottom: 3px;
+  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+}
+.bag-slot .wear { position: absolute; left: 5px; right: 5px; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.45); }
+.bag-slot .wear i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+#bag-detail {
+  border-top: 1px solid var(--panel-border); padding-top: 12px;
+  font-size: 13px;
+}
+.bag-detail-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.bag-detail-row span { font-variant-numeric: tabular-nums; color: var(--text-dim); }
+
+/* --- claiming --- */
+#claim-list { display: flex; flex-direction: column; gap: 9px; margin-top: 6px; }
+.claim-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border);
+  border-radius: 10px; padding: 13px; color: var(--text); cursor: pointer; min-height: 60px;
+}
+.claim-row.ok { border-color: rgba(77,219,196,0.4); }
+.claim-row.ok:hover { border-color: var(--accent); background: var(--accent-dim); }
+.claim-row.blocked { opacity: 0.62; cursor: not-allowed; }
+.claim-icon { font-size: 22px; flex-shrink: 0; }
+.claim-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.claim-text em { font-style: normal; font-size: 12px; color: var(--text-dim); line-height: 1.35; }
+.claim-state { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); flex-shrink: 0; }
+.claim-row.blocked .claim-state { color: var(--text-dim); }
+
+/* --- skills --- */
+#skills-list { display: flex; flex-direction: column; gap: 15px; margin-top: 6px; }
+.skill-row { display: flex; flex-direction: column; gap: 5px; }
+.skill-head { display: flex; align-items: baseline; gap: 8px; }
+.skill-icon { font-size: 15px; }
+.skill-level { margin-left: auto; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.skill-governs { font-size: 12px; color: var(--text-dim); }
+.skill-track { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
+.skill-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.3s ease; }
+.skill-effect { font-size: 11.5px; color: var(--text-dim); }
+
+/* --- phone --- */
+@media (max-width: 720px) {
+  #goals { width: 188px; top: 88px; left: 10px; font-size: 11.5px; padding: 9px 11px; }
+  #vitals { top: 48px; left: 10px; }
+  .vital-track { width: 62px; }
+  #bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 42vh; }
+  .bag-slot { min-height: 52px; }
+  .panel-wide { max-width: 100%; }
+}
+@media (min-width: 721px) {
+  #bag-grid { grid-template-columns: repeat(8, 1fr); }
+}

@@ -27,6 +27,10 @@ export const BLOCKS = [
   { id: 17, name: 'Marble', color: 0xe9e6de, cost: { stone: 3 }, unlock: { type: 'achievement', value: 'architect' } },
   { id: 18, name: 'Amethyst', color: 0x9a5fd9, transparent: true, opacity: 0.55, cost: { gold: 2 }, unlock: { type: 'level', value: 8 } },
   { id: 19, name: 'Ground', color: 0x4a7c3f, system: true },
+  // Duilt blocks. Saplings grow into forests; farmland is soil that has been
+  // turned, which is what a farm is actually made of.
+  { id: 20, name: 'Sapling', color: 0x6aa84f, transparent: true, opacity: 0.95, cost: { wood: 1 }, unlock: null },
+  { id: 21, name: 'Farmland', color: 0x6b4a2a, cost: { wood: 1 }, unlock: null },
 ];
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));

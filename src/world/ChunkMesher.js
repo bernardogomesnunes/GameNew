@@ -165,6 +165,10 @@ export class ChunkMesher {
       geo.computeBoundingSphere();
 
       const mesh = new THREE.Mesh(geo, getMaterial(key));
+      // Greedy quads are emitted in chunk-local space, so the mesh carries the
+      // chunk's world offset. Without this every chunk draws at the origin and
+      // the whole map piles up in one column.
+      mesh.position.set(baseX, 0, baseZ);
       mesh.frustumCulled = true;
       mesh.userData.chunk = chunk;
       this.scene.add(mesh);
