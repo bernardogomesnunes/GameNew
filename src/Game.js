@@ -108,7 +108,13 @@ export class Game {
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
     this.undoRedo = new UndoRedo();
-    this.mode = CREATIVE;
+    // Duilt is the game. Creative and Campaign are the sandbox this grew out
+    // of and are still there on purpose, but arriving in one of them meant a
+    // first-time player landed in a world with no bag, no land and no goals,
+    // and the game itself was three taps deep behind a menu and a browser
+    // confirm box. A save always sets its own mode, so this only decides where
+    // someone with nothing saved begins.
+    this.mode = DUILT;
 
     this.selectedBlockId = 1;
     this.pointerLocked = false;

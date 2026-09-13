@@ -50,7 +50,8 @@ export class UIManager {
 
       <div id="blocker" class="overlay">
         <div class="card">
-          <h1>Voxel Sandbox</h1>
+          <h1 id="blocker-title">Duilt</h1>
+          <p id="blocker-sub">You have arrived in a new world. Clear some space and build a civilisation.</p>
           <div class="desktop-only">
             <p>Move: <span class="hint-key">WASD</span> &nbsp; Jump: <span class="hint-key">Space</span> &nbsp; Fly: <span class="hint-key">F</span></p>
             <p>Break: <span class="hint-key">Left Click</span> &nbsp; Place: <span class="hint-key">Right Click</span> &nbsp; Hotbar: <span class="hint-key">1-9</span></p>
@@ -61,6 +62,7 @@ export class UIManager {
             <p>Buttons on each side break, place, fly and jump &middot; tap Help any time</p>
           </div>
           <button class="primary" id="btn-play">Play</button>
+          <button class="secondary" id="btn-play-duilt" hidden>Start a Duilt world</button>
         </div>
       </div>
 
@@ -347,6 +349,7 @@ export class UIManager {
   /** Re-renders everything that differs between Creative and Campaign. */
   refreshForMode() {
     this.refreshForDuilt();
+    this.refreshBlocker();
     document.body.classList.toggle('campaign', this.isCampaign);
     this.buildHotbar();
     this.updateResourceBar();
@@ -429,6 +432,14 @@ export class UIManager {
       });
     });
 
+    this.q('#btn-play-duilt').addEventListener('click', () => {
+      // Start the world and go straight into it. Leaving the player back on
+      // the same card, now with the button gone, reads as nothing having
+      // happened — and the pointer lock has to be claimed inside this same tap
+      // anyway, so asking for a second one would spend the gesture.
+      this.cb.onNewWorld('duilt');
+      this.cb.onRequestStart();
+    });
     this.wireGraphics();
     this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
     this.q('#btn-export-world').addEventListener('click', () => this.cb.onExportWorld(this.q('#save-name').value));
@@ -733,6 +744,28 @@ export class UIManager {
     }
   }
 
+  /**
+   * The start screen, told what world it is actually starting.
+   *
+   * Someone who played before this mode existed comes back to whatever they
+   * had saved, which may be a plain sandbox — and then the bag, the buildings
+   * and the goals are all missing with nothing on screen to say why. So when
+   * the restored world is not a Duilt one, the way into Duilt is offered right
+   * here instead of three taps down a menu.
+   */
+  refreshBlocker() {
+    const duilt = !!this.cb.isDuilt?.();
+    const title = this.q('#blocker-title'), sub = this.q('#blocker-sub');
+    const start = this.q('#btn-play-duilt');
+    if (!title || !sub || !start) return;
+
+    title.textContent = duilt ? 'Duilt' : 'Voxel Sandbox';
+    sub.textContent = duilt
+      ? 'You have arrived in a new world. Clear some space and build a civilisation.'
+      : 'Carrying on with your saved world.';
+    start.hidden = duilt;
+  }
+
   hideBlocker() {
     this.q('#blocker').hidden = true;
   }
@@ -838,6 +871,7 @@ export class UIManager {
   }
 
   showBlocker() {
+    this.refreshBlocker();
     this.q('#blocker').hidden = false;
   }
 
