@@ -173,6 +173,31 @@ export class UIManager {
               </button>
             </div>
           </div>
+          <div class="mode-block">
+            <div class="mode-label">Graphics <span id="gfx-fps" class="gfx-fps"></span></div>
+            <div class="gfx-grid">
+              <label>Resolution
+                <select id="gfx-resolution">
+                  <option value="auto">Auto</option>
+                  <option value="1">Low (1&times;)</option>
+                  <option value="1.5">Medium (1.5&times;)</option>
+                  <option value="2">High (2&times;)</option>
+                </select>
+              </label>
+              <label>View distance
+                <select id="gfx-distance">
+                  <option value="auto">Auto</option>
+                  <option value="near">Near</option>
+                  <option value="far">Far</option>
+                </select>
+              </label>
+              <label class="gfx-check">
+                <input type="checkbox" id="gfx-antialias" /> Smooth edges
+              </label>
+            </div>
+            <div class="export-note" id="gfx-note" hidden></div>
+          </div>
+
           <div class="field-row" style="margin-top:14px;">
             <button class="secondary" id="btn-resume">Resume</button>
           </div>
@@ -404,6 +429,7 @@ export class UIManager {
       });
     });
 
+    this.wireGraphics();
     this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
     this.q('#btn-export-world').addEventListener('click', () => this.cb.onExportWorld(this.q('#save-name').value));
     this.q('#btn-export-vox').addEventListener('click', () => this.cb.onExportVox(this.q('#save-name').value));
@@ -833,6 +859,47 @@ export class UIManager {
   }
 
   /** Shows or hides everything that only exists in Duilt. */
+  /**
+   * The graphics controls.
+   *
+   * These exist because the artifacts that matter most — edges that crawl,
+   * distant surfaces that trade places — depend on the machine drawing them,
+   * and cannot be found from here. Someone seeing one can change a single
+   * setting and know immediately whether that was it.
+   */
+  wireGraphics() {
+    const g = this.game.graphics ?? {};
+    const res = this.q('#gfx-resolution'), dist = this.q('#gfx-distance'), aa = this.q('#gfx-antialias');
+    res.value = String(g.resolution ?? 'auto');
+    dist.value = String(g.distance ?? 'auto');
+    aa.checked = g.antialias !== false;
+
+    const apply = () => {
+      const resolution = res.value === 'auto' ? 'auto' : Number(res.value);
+      const result = this.game.applyGraphics({
+        resolution,
+        distance: dist.value,
+        antialias: aa.checked,
+        smoothing: resolution === 'auto',
+      });
+      const note = this.q('#gfx-note');
+      note.hidden = !result?.needsReload;
+      if (result?.needsReload) note.textContent = 'Smooth edges applies when you reload the page.';
+    };
+    res.addEventListener('change', apply);
+    dist.addEventListener('change', apply);
+    aa.addEventListener('change', apply);
+
+    // A live frame rate, so a change can be judged on more than a feeling.
+    setInterval(() => {
+      const el = this.q('#gfx-fps');
+      if (!el || this.q('#panel-menu').hidden) return;
+      const fps = this.game.quality?.fps;
+      const at = this.game.quality?.resolution;
+      el.textContent = fps ? `${fps} fps at ${at}\u00d7` : '';
+    }, 500);
+  }
+
   refreshForDuilt() {
     const on = !!this.cb.isDuilt?.();
     this.root.querySelectorAll('.duilt-only').forEach((el) => { el.hidden = !on; });

@@ -234,6 +234,16 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 .field-row input[type=text] { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border); border-radius: 7px; color: var(--text); padding: 9px 10px; font-size: 14px; }
 
 .mode-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--panel-border); }
+.gfx-grid { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; }
+.gfx-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-dim); }
+.gfx-grid select {
+  background: var(--panel-solid); color: var(--text); font: inherit; font-size: 13px;
+  border: 1px solid var(--panel-border); border-radius: 8px; padding: 7px 9px; min-width: 130px;
+}
+.gfx-grid .gfx-check { flex-direction: row; align-items: center; gap: 7px; padding-bottom: 8px; }
+.gfx-grid .gfx-check input { width: 16px; height: 16px; accent-color: var(--accent); }
+.gfx-fps { float: right; text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+
 .mode-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
 .mode-btn { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 12px; }
 .mode-btn strong { font-size: 14px; }

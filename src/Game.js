@@ -16,6 +16,7 @@ import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SaveManager, AUTOSAVE_NAME } from './storage/SaveManager.js';
+import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
@@ -31,8 +32,6 @@ const FOG_FAR_COARSE = 160;
 // colour of the sky, so nothing can be seen appearing. The extra margin covers
 // a chunk whose centre is beyond the line while its near corner is not.
 const CULL_MARGIN = 24;
-// Resolutions the quality controller may settle on, lowest first.
-const QUALITY_STEPS = [1, 1.25, 1.5, 2];
 const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream in
 const AUTOSAVE_INTERVAL_MS = 60_000;
 export const CREATIVE = 'creative';
@@ -57,24 +56,32 @@ export class Game {
     // barely see at arm's length, and a halved frame rate is what "the controls
     // feel slow" actually is. Desktop keeps the nicer settings.
     const coarse = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    this.graphics = loadSettings();
     // Antialiasing on everywhere. A voxel world is nothing but hard edges, and
     // an unsmoothed edge crawls and sparkles as you walk past it — which reads
     // as the picture flickering, not as a missing feature. Phones used to get
     // this switched off and a half-resolution buffer on top, so they got the
     // worst of it; the quality controller below earns that back when a device
     // turns out to be too slow, instead of assuming every phone is.
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: this.graphics.antialias,
+      powerPreference: 'high-performance',
+    });
     this.coarse = coarse;
-    this.pixelRatioCap = Math.min(window.devicePixelRatio || 1, 2);
-    // Snapped to one of the controller's steps, so a display with an odd ratio
-    // (1.3, say) still lands on a rung it can climb down from.
-    this.pixelRatio = QUALITY_STEPS.filter((q) => q <= this.pixelRatioCap).pop() ?? 1;
-    this.renderer.setPixelRatio(this.pixelRatio);
+    this.quality = new QualityController({
+      cap: Math.min(window.devicePixelRatio || 1, 2),
+      onChange: (r) => { this.renderer.setPixelRatio(r); this.onResize(); },
+    });
+    if (this.graphics.resolution !== 'auto' || !this.graphics.smoothing) {
+      this.quality.pin(this.graphics.resolution === 'auto' ? this.quality.resolution : this.graphics.resolution);
+    }
+    this.renderer.setPixelRatio(this.quality.resolution);
     this.canvasRoot.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x8fd0ff);
-    const fogFar = coarse ? FOG_FAR_COARSE : FOG_FAR;
+    const chosen = DISTANCES[this.graphics.distance];
+    const fogFar = chosen ? chosen.fogFar : (coarse ? FOG_FAR_COARSE : FOG_FAR);
     // Fog starts at a fixed fraction of the way out rather than at a fixed
     // distance. At 40 blocks on a phone the haze began almost at arm's length
     // and the whole world looked washed out; tying it to the far plane keeps
@@ -979,40 +986,34 @@ export class Game {
   // ---- loop ----
 
   /**
-   * Trades resolution for frame rate, per device, while you play.
+   * Applies a change from the graphics menu without restarting the world.
    *
-   * Phones used to be handed a fixed half-resolution buffer with antialiasing
-   * off, on the assumption that a phone is slow. A recent phone is not, and the
-   * assumption cost it a crawling, sparkling picture for nothing. So start at
-   * full quality and measure: if frames stay slow, step the resolution down;
-   * if there is headroom again, step it back up.
-   *
-   * The gap between the two thresholds is what stops it oscillating — a device
-   * sitting exactly on the boundary settles at one step rather than flipping
-   * between two, which would be its own kind of flicker.
+   * Antialiasing is fixed when the WebGL context is created, so that one alone
+   * needs a reload — the menu says so rather than appearing to do nothing.
    */
-  adaptQuality(dt) {
-    const allowed = QUALITY_STEPS.filter((q) => q <= this.pixelRatioCap);
-    if (allowed.length < 2) return;
+  applyGraphics(next) {
+    const needsReload = next.antialias !== this.graphics.antialias;
+    this.graphics = { ...this.graphics, ...next };
+    saveSettings(this.graphics);
 
-    this.frameMs = this.frameMs == null ? dt * 1000 : this.frameMs * 0.94 + dt * 1000 * 0.06;
-    if (performance.now() - (this.lastQualityChange ?? 0) < 2500) return;
+    const pinned = this.graphics.smoothing && this.graphics.resolution === 'auto'
+      ? null
+      : (this.graphics.resolution === 'auto' ? this.quality.resolution : this.graphics.resolution);
+    this.renderer.setPixelRatio(this.quality.pin(pinned));
 
-    const i = allowed.indexOf(this.pixelRatio);
-    let next = null;
-    if (this.frameMs > 26 && i > 0) next = allowed[i - 1];           // below ~38fps: give up pixels
-    else if (this.frameMs < 15 && i >= 0 && i < allowed.length - 1) next = allowed[i + 1];
-
-    if (next == null || next === this.pixelRatio) return;
-    this.pixelRatio = next;
-    this.renderer.setPixelRatio(next);
+    const chosen = DISTANCES[this.graphics.distance];
+    const fogFar = chosen ? chosen.fogFar : (this.coarse ? FOG_FAR_COARSE : FOG_FAR);
+    this.scene.fog.near = fogFar * 0.45;
+    this.scene.fog.far = fogFar;
+    this.renderDistance = fogFar + CULL_MARGIN;
+    this.camera.far = this.renderDistance + 20;
     this.onResize();
-    this.lastQualityChange = performance.now();
+    return { needsReload };
   }
 
   tick() {
     const dt = this.clock.getDelta();
-    this.adaptQuality(dt);
+    this.quality.tick(dt);
     this.player.update(dt);
     if (this.duilt) {
       this.duilt.tick(dt);
