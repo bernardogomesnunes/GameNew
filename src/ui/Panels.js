@@ -16,40 +16,50 @@
 export class Panels {
   /**
    * @param root    the element panels live under
-   * @param exclude ids that look like panels but are not — the worlds screen is
-   *                an overlay too, and Escape must not dismiss it into a world
-   *                the player never chose.
+   * @param screens ids that are not panels but backdrops — the worlds screen is
+   *                an overlay too, and it is the thing you are *on*, not a
+   *                thing in front of you. Panels stack over a screen and
+   *                closing one returns you to it.
    */
-  constructor(root, { exclude = [] } = {}) {
+  constructor(root, { screens = [] } = {}) {
     this.root = root;
-    this.exclude = new Set(exclude);
-    this.order = [];          // ids, oldest first
+    this.screens = new Set(screens);
+    this.order = [];          // panel ids, oldest first
     this.openHooks = [];
     this.closeHooks = [];
   }
 
+  isScreen(id) {
+    return this.screens.has(id);
+  }
+
+  /** Every overlay, screens included. */
   all() {
-    return [...this.root.querySelectorAll('.overlay[id]')]
-      .filter((el) => !this.exclude.has(el.id));
+    return [...this.root.querySelectorAll('.overlay[id]')];
+  }
+
+  /** The panels proper — what Escape closes and what counts as "in front of me". */
+  panels() {
+    return this.all().filter((el) => !this.screens.has(el.id));
   }
 
   el(id) {
-    const found = this.root.querySelector(`#${CSS.escape(id)}`);
-    return found && !this.exclude.has(id) ? found : null;
+    return this.root.querySelector(`#${CSS.escape(id)}`);
   }
 
   isOpen(id) {
-    return !!this.el(id) && !this.el(id).hidden;
+    const el = this.el(id);
+    return !!el && !el.hidden;
   }
 
-  /** Open panels, in the order they were opened. */
+  /** Open panels, in the order they were opened. Screens are not panels. */
   openIds() {
-    return this.all().filter((el) => !el.hidden).map((el) => el.id)
+    return this.panels().filter((el) => !el.hidden).map((el) => el.id)
       .sort((a, b) => this.order.indexOf(a) - this.order.indexOf(b));
   }
 
   anyOpen() {
-    return this.all().some((el) => !el.hidden);
+    return this.panels().some((el) => !el.hidden);
   }
 
   /**
@@ -60,14 +70,26 @@ export class Panels {
    * unreachable without closing the top one — which nothing said you had to
    * do. Making it a property of the registry means it holds for every panel
    * that will ever exist, rather than every caller having to remember.
+   *
+   * A screen is the exception, because it is underneath rather than alongside:
+   * opening Settings from the worlds screen used to hide the worlds screen, so
+   * closing Settings dropped you into whatever world happened to be loaded —
+   * one you never chose, already falling. Now the screen stays put and you come
+   * back to it.
    */
   open(id) {
     const el = this.el(id);
     if (!el) return false;
-    for (const other of this.openIds()) if (other !== id) this.close(other);
+    if (this.isScreen(id)) {
+      // A screen coming up is a change of place: nothing that was in front of
+      // the old one belongs in front of the new one.
+      this.closeAll();
+    } else {
+      for (const other of this.openIds()) if (other !== id) this.close(other);
+    }
     if (el.hidden) {
       el.hidden = false;
-      this.order = this.order.filter((x) => x !== id).concat(id);
+      if (!this.isScreen(id)) this.order = this.order.filter((x) => x !== id).concat(id);
       for (const fn of this.openHooks) fn(id);
     }
     return true;
@@ -85,7 +107,9 @@ export class Panels {
   /**
    * Closes the most recently opened panel. With the one-at-a-time rule above
    * there is normally only one, but the order is still what decides — nothing
-   * stops a future caller from showing two deliberately.
+   * stops a future caller from showing two deliberately. A screen is never
+   * closed this way: Escape puts away what is in front of you, and the screen
+   * is what you are standing on.
    */
   closeTop() {
     const open = this.openIds();

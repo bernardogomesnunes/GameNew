@@ -41,14 +41,14 @@ const make = () => new Root([
 
 {
   const root = make();
-  const p = new Panels(root, { exclude: ['blocker'] });
-  ok('every overlay with an id is a panel', p.all().length === 3);
-  ok('excluded overlays are not panels', !p.all().some((e) => e.id === 'blocker'));
+  const p = new Panels(root, { screens: ['blocker'] });
+  ok('every overlay with an id is a panel', p.panels().length === 3);
+  ok('a screen is an overlay but not a panel', !p.panels().some((e) => e.id === 'blocker'));
   ok('non-overlays are not panels', !p.all().some((e) => e.id === 'hud-top'));
 
   // A panel added later needs no registration anywhere.
   root.els.push(new El('panel-later', 'overlay'));
-  ok('a panel added later is found without being listed', p.all().length === 4);
+  ok('a panel added later is found without being listed', p.panels().length === 4);
   p.open('panel-later');
   ok('and it closes with everything else', p.closeAll() === 1);
 }
@@ -57,7 +57,7 @@ const make = () => new Root([
 
 {
   const root = make();
-  const p = new Panels(root, { exclude: ['blocker'] });
+  const p = new Panels(root, { screens: ['blocker'] });
   p.open('panel-menu');
   p.open('panel-bag');
   p.open('panel-account');
@@ -78,7 +78,7 @@ const make = () => new Root([
 
 {
   const root = make();
-  const p = new Panels(root, { exclude: ['blocker'] });
+  const p = new Panels(root, { screens: ['blocker'] });
   p.open('panel-menu');
   // Something showing a second panel without going through open() — the order
   // still decides which Escape takes.
@@ -88,23 +88,41 @@ const make = () => new Root([
   ok('then the one beneath it', p.closeTop() === 'panel-menu');
 }
 
-// --- the excluded overlay is never touched ----------------------------------
+// --- the worlds screen is underneath, not alongside --------------------------
 
 {
   const root = make();
-  const p = new Panels(root, { exclude: ['blocker'] });
-  root.querySelector('#blocker').hidden = false;
+  const p = new Panels(root, { screens: ['blocker'] });
+  p.open('blocker');
+  // Settings opened from the worlds screen sits in front of it. It used to
+  // replace it, so closing Settings dropped you into a world you never chose.
   p.open('panel-menu');
+  ok('a panel opens over the worlds screen', !root.querySelector('#blocker').hidden
+    && !root.querySelector('#panel-menu').hidden);
+  ok('and the screen is not counted as something in front of you', p.openIds().join() === 'panel-menu');
+
+  ok('escape takes the panel', p.closeTop() === 'panel-menu');
+  ok('and leaves you back on the worlds screen', !root.querySelector('#blocker').hidden);
+  ok('escape again takes nothing', p.closeTop() === null);
+
+  p.open('panel-bag');
   p.closeAll();
   ok('closing every panel leaves the worlds screen up', !root.querySelector('#blocker').hidden);
-  ok('and it cannot be opened as a panel', p.open('blocker') === false);
+
+  // Going back to the worlds screen from in-game is a change of place, so
+  // nothing that was in front of the world comes with you.
+  p.close('blocker');
+  p.open('panel-bag');
+  p.open('blocker');
+  ok('arriving at the worlds screen puts away what was in front of the world',
+    !p.anyOpen() && !root.querySelector('#blocker').hidden);
 }
 
 // --- hooks fire so panels can draw and forget -------------------------------
 
 {
   const root = make();
-  const p = new Panels(root, { exclude: ['blocker'] });
+  const p = new Panels(root, { screens: ['blocker'] });
   const opened = [], closed = [];
   p.onOpen((id) => opened.push(id));
   p.onClose((id) => closed.push(id));

@@ -36,7 +36,7 @@ export class UIManager {
     // Every `.overlay` with an id is a panel, including the ones the Duilt
     // layer adds later. The worlds screen is an overlay too but is not a panel:
     // Escape must not dismiss it into a world nobody chose.
-    this.panels = new Panels(root, { exclude: ['blocker'] });
+    this.panels = new Panels(root, { screens: ['blocker'] });
     this.panels.onOpen((id) => this.populatePanel(id));
     this.panels.onClose((id) => this.duiltUI?.onPanelClosed(id));
 
@@ -388,9 +388,12 @@ export class UIManager {
       // Creating and entering happen in the same gesture: pointer lock has to
       // be claimed inside the tap that asked for it.
       onCreate: (mode, name) => { this.cb.onNewWorld(mode, name); this.enterWorld(); },
-      onSettings: () => { this.hideBlocker(); this.openPanel('panel-menu'); },
-      onHelp: () => { this.hideBlocker(); this.openPanel('panel-help'); },
-      onAccount: () => { this.hideBlocker(); this.openPanel('panel-account'); },
+      // These open *over* the worlds screen rather than replacing it. They used
+      // to hide it first, so closing one left you standing in whichever world
+      // was last loaded — one you never chose, already falling.
+      onSettings: () => this.openPanel('panel-menu'),
+      onHelp: () => this.openPanel('panel-help'),
+      onAccount: () => this.openPanel('panel-account'),
     });
     // The screen is already on when the page loads, so draw it now rather than
     // waiting for something to re-open it.
@@ -715,7 +718,7 @@ export class UIManager {
 
   /** Whether the worlds screen is up, i.e. nobody has entered a world yet. */
   isHomeOpen() {
-    return !this.q('#blocker').hidden;
+    return this.panels.isOpen('blocker');
   }
 
   populateStats() {
@@ -820,7 +823,7 @@ export class UIManager {
   }
 
   hideBlocker() {
-    this.q('#blocker').hidden = true;
+    this.panels.close('blocker');
   }
 
   // ---- cloud ----
@@ -947,7 +950,7 @@ export class UIManager {
 
   showBlocker() {
     this.home?.render();
-    this.q('#blocker').hidden = false;
+    this.panels.open('blocker');   // which also puts away anything in front of it
   }
 
   setFlyIndicator(flying) {

@@ -594,9 +594,10 @@ export class Game {
       if (e.code === 'Escape') {
         if (this.pointerLocked) return; // browser handles exiting lock
         // One at a time, most recent first — Escape means "put away the thing
-        // in front of me", not "put away everything".
+        // in front of me", not "put away everything". On the worlds screen
+        // there is nothing to put away and nowhere behind it to go.
         if (this.ui.isAnyPanelOpen()) this.ui.closeTopPanel();
-        else this.ui.openPanel('panel-menu');
+        else if (!this.ui.isHomeOpen()) this.ui.openPanel('panel-menu');
         return;
       }
       if (e.repeat) return;
@@ -604,13 +605,15 @@ export class Game {
       // it. Escape, above, is the way out and always works.
       if (!this.isPlaying) return;
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
+      // No exitPointerLock here: opening a panel changes the phase, and the
+      // phase releases the lock. See syncPhase.
       if (e.code === 'KeyB') {
-        if (this.duilt) { document.exitPointerLock?.(); this.ui.openDuiltPanel('panel-buildings'); }
+        if (this.duilt) this.ui.openDuiltPanel('panel-buildings');
         else this.ui.toggleSelector();
       }
-      if (e.code === 'KeyI' && this.duilt) { document.exitPointerLock?.(); this.ui.toggleBag(); }
-      if (e.code === 'KeyC' && this.duilt) { document.exitPointerLock?.(); this.openClaim(); }
-      if (e.code === 'KeyE' && this.duilt) { document.exitPointerLock?.(); this.ui.openDuiltPanel('panel-bench'); }
+      if (e.code === 'KeyI' && this.duilt) this.ui.toggleBag();
+      if (e.code === 'KeyC' && this.duilt) this.openClaim();
+      if (e.code === 'KeyE' && this.duilt) this.ui.openDuiltPanel('panel-bench');
       if (e.code === 'KeyR' && this.pendingTemplate) {
         this.templateRotation = (this.templateRotation + 1) % 4;
         this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });
@@ -1136,12 +1139,38 @@ export class Game {
     return this.phase === 'playing';
   }
 
+  /**
+   * Applies what the phase means, once, whenever it changes.
+   *
+   * Pointer lock used to be released by hand at each place that opened
+   * something — four keyboard shortcuts remembered to, everything else did
+   * not. So a panel opened from the toolbar left the mouse still captured by
+   * the world: moving it turned the camera behind the panel, and Escape went
+   * to the browser to release the lock instead of closing the panel, which is
+   * why some panels closed on Escape and some did not.
+   *
+   * Reading the phase off the UI every frame means no opener has to remember
+   * anything. Whoever puts something in front of you, by whatever route,
+   * the lock goes.
+   */
+  syncPhase() {
+    const phase = this.phase;
+    if (phase === this.lastPhase) return;
+    this.lastPhase = phase;
+    if (phase !== 'playing') {
+      document.exitPointerLock?.();
+      this.player.releaseKeys();
+    }
+    this.bus?.emit('game:phase', { phase });
+  }
+
   tick() {
     // Always read the clock, even when nothing will use it: skipping it lets
     // the gap pile up, and the first frame after a pause would move the player
     // by however long they spent reading a menu. The cap covers the same thing
     // for a stalled tab — a single frame should never teleport anyone.
     const dt = Math.min(this.clock.getDelta(), 0.1);
+    this.syncPhase();
     const playing = this.isPlaying;
 
     if (playing) {
