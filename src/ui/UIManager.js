@@ -809,6 +809,21 @@ export class UIManager {
     el.hidden = false;
   }
 
+  /**
+   * Names the settler under the crosshair.
+   *
+   * Same strip as the building hint, because it answers the same question —
+   * what is that? — and two labels fighting over the middle of the screen is
+   * worse than either.
+   */
+  setPersonHint(name, doing) {
+    const el = this.q('#building-hint');
+    if (!el) return;
+    el.innerHTML = `<b>${name}</b><span>${doing}</span>`;
+    el.classList.remove('bad');
+    el.hidden = false;
+  }
+
   isPanelOpen(id) {
     return this.panels.isOpen(id);
   }

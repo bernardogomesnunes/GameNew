@@ -53,6 +53,16 @@ export class DuiltUI {
           <div class="vital-track"><div class="vital-fill" id="hunger-fill"></div></div>
         </div>
         <button class="vital-eat" id="btn-eat" hidden>Eat</button>
+        <!--
+          Population sits beside hunger because it is the same kind of fact:
+          how the settlement is doing, not what you are carrying. It says beds
+          as well as people, so "why is nobody coming" is answerable without
+          opening anything.
+        -->
+        <div class="vital" id="vital-people" title="Settlers" hidden>
+          <span class="vital-icon">👤</span>
+          <span class="vital-count" id="people-count">0</span>
+        </div>
       </div>
 
       <div id="goals" hidden>
@@ -103,6 +113,16 @@ export class DuiltUI {
     this.bus.on('structure:claimed', () => this.renderGoals());
     this.bus.on('structure:broken', () => this.renderGoals());
     this.bus.on('territory:expanded', () => this.renderGoals());
+    this.bus.on('structure:claimed', () => this.renderVitals());
+    this.bus.on('settler:left', () => this.renderVitals());
+    this.bus.on('settler:arrived', ({ settler, population }) => {
+      this.renderVitals();
+      this.bus.emit('toast', {
+        kind: 'challenge',
+        title: `${settler.name} moved in`,
+        body: `${population} living here now`,
+      });
+    });
   }
 
   // ---- visibility ----
@@ -211,6 +231,21 @@ export class DuiltUI {
     const eat = this.q('#btn-eat');
     eat.hidden = !(food && d.hunger.value < MAX_HUNGER - 1);
     if (food) eat.textContent = `Eat ${itemName(food)}`;
+    this.renderPeople();
+  }
+
+  /** How many have moved in, out of how many beds there are. */
+  renderPeople() {
+    const d = this.duilt;
+    const box = this.q('#vital-people');
+    if (!d || !box) return;
+    const { population, capacity } = d.settlers;
+    // Hidden until there is somewhere for anyone to sleep: a 0/0 on the HUD
+    // from the first minute is a promise the game has not made yet.
+    box.hidden = capacity === 0 && population === 0;
+    this.q('#people-count').textContent = `${population}/${capacity}`;
+    box.title = d.settlers.blockedReason() ?? `${population} settled, ${capacity - population} free`;
+    box.classList.toggle('full', population >= capacity && capacity > 0);
   }
 
   eat() {

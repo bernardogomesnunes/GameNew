@@ -848,3 +848,10 @@ body.touch #building-hint { pointer-events: auto; }
 }
 .finish-icon { font-size: 16px; width: 22px; text-align: center; }
 .finish-n { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700; }
+
+/* Population, beside hunger. */
+#vital-people { gap: 6px; }
+.vital-count {
+  font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text);
+}
+#vital-people.full .vital-count { color: var(--accent); }

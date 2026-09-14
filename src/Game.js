@@ -8,6 +8,7 @@ import { UndoRedo } from './tools/UndoRedo.js';
 import { SelectorTool, buildTemplatePlacement, rotateTemplate } from './tools/SelectorTool.js';
 import { SelectionHighlight } from './tools/SelectionHighlight.js';
 import { BuildGhost } from './tools/BuildGhost.js';
+import { SettlerView } from './render/SettlerView.js';
 import { CloudAuth } from './net/CloudAuth.js';
 import { CloudWorlds } from './net/CloudWorlds.js';
 import { isCloudConfigured } from './net/cloudConfig.js';
@@ -148,6 +149,7 @@ export class Game {
     this.scene.add(this.hoverBox);
     this.selection = new SelectionHighlight(this.scene);
     this.ghost = new BuildGhost(this.scene);
+    this.settlerView = new SettlerView(this.scene);
     this.moving = null;   // the building currently in the air
 
     this.boot();
@@ -812,6 +814,7 @@ export class Game {
 
     // Off the register first: a locked building refuses edits, including this one.
     this.duilt.structures.remove(structure.id);
+    this.duilt.settlers.revalidate();
     this.ui.closePanel('panel-building');
     if (changes.length) this.applyChanges(changes, { chargeResources: false });
     this.ui.toast({
@@ -952,6 +955,7 @@ export class Game {
     structure.region = region;
     this.duilt.structures.structures.push(structure);
     this.duilt.structures.recheck(structure);
+    this.duilt.settlers.revalidate();
     this.endMove();
 
     const spec = STRUCTURES_BY_ID.get(structure.type);
@@ -1308,6 +1312,7 @@ export class Game {
       const gained = this.duilt.onBlocksBroken(changes);
       if (Object.keys(gained).length) this.bus.emit('duilt:gathered', { gained });
       this.duilt.structures.revalidateAround(changes);
+      this.duilt.settlers.revalidate();
       // The border line is drawn on the blocks that touch it, so digging one
       // out moves the ground under it.
       this.duilt.territory.onBlocksChanged(changes);
@@ -1481,6 +1486,7 @@ export class Game {
         this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
       }
       this.updateHover();
+      this.settlerView.update(this.duilt?.settlers.people ?? []);
       this.tickBreaking(performance.now());
       this.gamification.tick(performance.now());
       if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.autosaveNow();
@@ -1513,8 +1519,19 @@ export class Game {
     }
 
     // Say what you are pointing at before you swing at it, not after it has
-    // refused. Only claimed buildings need announcing — everything else is
-    // just blocks.
+    // refused. A settler takes precedence over the ground behind them: if
+    // somebody is standing between you and a wall, they are what you are
+    // looking at.
+    const person = this.duilt
+      ? this.settlerView.pick(this.duilt.settlers.people, this.player.eyePosition(), this.player.lookDirection())
+      : null;
+    if (person) {
+      const work = this.duilt.structures.list().find((s) => s.id === person.workId);
+      const job = work ? STRUCTURES_BY_ID.get(work.type)?.name?.toLowerCase() : null;
+      this.ui?.setPersonHint(person.name, job ? `works the ${job}` : 'looking for work');
+      return;
+    }
+
     const onBuilding = hit && this.duilt
       ? this.duilt.structures.at(hit.x, hit.y, hit.z)
       : null;

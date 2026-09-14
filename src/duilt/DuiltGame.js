@@ -5,6 +5,7 @@ import { validateStructure } from '../structures/validate.js';
 import { Hunger } from '../survival/Hunger.js';
 import { Skills } from '../progression/Skills.js';
 import { Crafting } from './Crafting.js';
+import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, itemName } from '../config/items.js';
 import { STRUCTURES_BY_ID, structuresForAge } from '../config/structures.js';
@@ -34,6 +35,9 @@ export class DuiltGame {
     this.hunger = new Hunger(bus);
     this.skills = new Skills(bus);
     this.crafting = new Crafting({ inventory: this.inventory, world, skills: this.skills });
+    this.settlers = new Settlers({
+      world, structures: this.structures, inventory: this.inventory, skills: this.skills, bus,
+    });
     this.lastCollect = Date.now();
   }
 
@@ -286,10 +290,16 @@ export class DuiltGame {
 
     // Production is checked on a slow cadence; it's wall-clock based, so the
     // interval only decides how promptly you're told, not how much you get.
+    this.settlers.tick(dtSeconds);
+
     const now = Date.now();
     if (now - this.lastCollect > 5000) {
       this.lastCollect = now;
-      this.structures.collect({ now, yieldMultiplier: this.skills.gatherYield() });
+      this.structures.collect({
+        now,
+        yieldMultiplier: this.skills.gatherYield(),
+        bonusFor: (id) => this.settlers.bonusFor(id),
+      });
     }
   }
 
@@ -308,6 +318,7 @@ export class DuiltGame {
       structures: this.structures.toJSON(),
       hunger: this.hunger.toJSON(),
       skills: this.skills.toJSON(),
+      settlers: this.settlers.toJSON(),
       savedAt: Date.now(),
     };
   }
@@ -319,6 +330,7 @@ export class DuiltGame {
     this.structures.loadJSON(data.structures);
     this.hunger.loadJSON(data.hunger);
     this.skills.loadJSON(data.skills);
+    this.settlers.loadJSON(data.settlers);
     // Pay out everything earned while the tab was shut.
     this.lastCollect = Date.now();
     return this.structures.collect({ now: Date.now(), yieldMultiplier: this.skills.gatherYield() });

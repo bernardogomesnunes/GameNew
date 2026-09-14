@@ -176,7 +176,7 @@ export class StructureRegistry {
    * Pays out everything owed since each building was last paid. Returns a
    * { itemId: amount } summary so the UI can say what arrived.
    */
-  collect({ now = Date.now(), yieldMultiplier = 1 } = {}) {
+  collect({ now = Date.now(), yieldMultiplier = 1, bonusFor = null } = {}) {
     const gained = {};
     const capMs = MAX_OFFLINE_HOURS * 3600_000;
 
@@ -190,9 +190,12 @@ export class StructureRegistry {
       const cycles = Math.floor(elapsed / periodMs);
       if (cycles <= 0) continue;
 
+      // Somebody working a building is the only thing that changes what one
+      // building gives against another of the same kind.
+      const staffing = bonusFor ? bonusFor(s.id) : 1;
       for (const [item, per] of Object.entries(spec.produces)) {
         // Foraging pays out here rather than at the pickaxe — see DuiltGame.yieldFor.
-        const amount = Math.round(per * cycles * yieldMultiplier);
+        const amount = Math.round(per * cycles * yieldMultiplier * staffing);
         // A full bag stops production rather than destroying the overflow.
         const leftover = this.inventory.add(item, amount);
         const stored = amount - leftover;

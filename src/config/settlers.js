@@ -1,0 +1,74 @@
+/**
+ * The people who move in once there is somewhere for them to sleep.
+ *
+ * Houses have granted capacity since Age 1 and nothing ever read it; the
+ * Politics skill has promised "room to govern N more settlers" with no settlers
+ * to govern. This is that promise, given a body: somebody arrives, takes a bed,
+ * walks to a building every morning, and makes it produce more than it would
+ * have on its own.
+ *
+ * They are deliberately not a management screen. You do not assign them, feed
+ * them individually or watch a needs bar — they find their own work, and the
+ * only lever you have is the one you already had: build more, and build it in
+ * reach of where they live.
+ */
+
+export const SETTLERS = {
+  /** How often the next person turns up, while there is room and food. */
+  arriveEverySeconds: 45,
+
+  /**
+   * A settler will not walk further than this to work.
+   *
+   * This is the whole reason where you put a building matters. A quarry on the
+   * far side of your land is a quarry nobody staffs.
+   */
+  workRange: 40,
+
+  /** What a staffed building produces, against the same building empty. */
+  workBonus: 0.5,
+
+  /** Blocks per second on foot. A settler is not in a hurry. */
+  walkSpeed: 1.9,
+
+  /** Seconds spent standing at each end before turning round. */
+  restSeconds: [4, 11],
+
+  /**
+   * Nobody moves in to starve. Food in the bag is the signal that the
+   * settlement can take another mouth — and each settler eats a little,
+   * so a town you cannot feed stops growing on its own.
+   */
+  foodPerSettler: 2,
+  eatEverySeconds: 90,
+
+  /** Height and width in blocks, for the figure that gets drawn. */
+  build: { height: 1.8, width: 0.55 },
+};
+
+/**
+ * Names, so they read as people rather than units.
+ *
+ * Short, plain and from no particular place — a settler called "Villager 3" is
+ * a counter with legs.
+ */
+export const SETTLER_NAMES = [
+  'Ana', 'Bram', 'Cira', 'Dov', 'Esk', 'Fen', 'Gali', 'Haz', 'Ilse', 'Joss',
+  'Kew', 'Lior', 'Mira', 'Nils', 'Oona', 'Pell', 'Quin', 'Rask', 'Sena', 'Torr',
+  'Ubi', 'Vand', 'Wren', 'Xia', 'Yarn', 'Zell', 'Aro', 'Bree', 'Corm', 'Dela',
+];
+
+/** Coats, so a crowd is a crowd and not one person copied. */
+export const SETTLER_COLOURS = [
+  0xc25b52, 0x4f7fbf, 0x6fa85a, 0xc9963f, 0x8a6bb5, 0x3f9d91, 0xb5657f, 0x7b8794,
+];
+
+export function settlerName(n) {
+  const base = SETTLER_NAMES[n % SETTLER_NAMES.length];
+  const round = Math.floor(n / SETTLER_NAMES.length);
+  return round === 0 ? base : `${base} ${'II III IV V VI'.split(' ')[round - 1] ?? round + 1}`;
+}
+
+export function settlerColour(n) {
+  return SETTLER_COLOURS[n % SETTLER_COLOURS.length];
+}
