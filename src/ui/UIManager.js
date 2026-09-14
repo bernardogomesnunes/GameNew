@@ -6,6 +6,7 @@ import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
 import { ITEMS_BY_ID, itemName } from '../config/items.js';
 import { glyphSvg } from '../config/glyphs.js';
+import { cubeSvg, itemIcon } from '../config/cubes.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { guideFor } from '../config/guide.js';
@@ -318,7 +319,7 @@ export class UIManager {
                data-name="${itemName(e.id)}" data-note=""
                title="${itemName(e.id)} — ${total} in your bag">
             ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
-            <div class="swatch" style="background:#${e.spec.color.toString(16).padStart(6, '0')}">${glyphSvg(e.spec.glyph, { size: 18, color: e.spec.color })}</div>
+            <div class="swatch swatch-cube">${itemIcon(e.spec, { size: 30 }) ?? glyphSvg(e.spec.glyph, { size: 18, color: e.spec.color })}</div>
             <span class="held">${total}</span>
           </div>
         `));
@@ -340,7 +341,7 @@ export class UIManager {
         <div class="hotbar-slot ${available ? '' : 'locked'} ${b.id === this.selectedBlockId ? 'selected' : ''}"
              data-id="${b.id}" data-name="${b.name}" data-note="${note}" title="${note ? `${b.name} — ${note}` : b.name}">
           ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
-          <div class="swatch" style="background:#${b.color.toString(16).padStart(6, '0')}">${glyphSvg(b.glyph, { size: 18, color: b.color })}</div>
+          <div class="swatch swatch-cube">${cubeSvg(b.id, { size: 30 })}</div>
           ${available ? '' : `<div class="lock">${icon('lock', 15)}</div>`}
         </div>
       `);

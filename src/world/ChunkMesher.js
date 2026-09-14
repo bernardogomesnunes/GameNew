@@ -36,6 +36,43 @@ function getMaterial(key) {
   return mat;
 }
 
+/**
+ * How much each material's colour is allowed to wander, as a fraction.
+ *
+ * Ground gets the most: grass and moss are the blocks you see by the thousand,
+ * and a field of exactly one green is the thing that makes a voxel world look
+ * printed. Worked stone and glass get none — a brick wall with mottled bricks
+ * looks damaged rather than natural.
+ */
+const VARIATION = new Proxy({
+  1: 0.26, 22: 0.26,           // grass, moss — the big open surfaces
+  2: 0.18, 21: 0.15,           // dirt, farmland
+  6: 0.16, 23: 0.20, 24: 0.15, // sand, gravel, clay
+  3: 0.17, 8: 0.19,            // stone, cobblestone
+  5: 0.28, 4: 0.13,            // leaves vary most of all; wood a little
+  12: 0.07,                    // snow, barely — it is meant to read as clean
+}, { get: (t, k) => t[k] ?? 0 });
+
+/**
+ * A repeatable wobble from a block's position, in 0..1.
+ *
+ * Two scales added together: a broad one that makes patches of a field lighter
+ * or darker than their neighbours, and a fine one so no two adjacent blocks
+ * are identical. Cheap integer hashing — this runs once per quad on every
+ * chunk build and cannot afford to be interesting.
+ */
+function patchNoise(x, z) {
+  const fine = hashInt(x, z);
+  const broad = hashInt(x >> 3, z >> 3);
+  return fine * 0.4 + broad * 0.6;
+}
+
+function hashInt(x, z) {
+  let h = Math.imul(x | 0, 0x27d4eb2d) ^ Math.imul(z | 0, 0x165667b1);
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
+  return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
+}
+
 function baseColor(blockId) {
   let c = colorCache.get(blockId);
   if (!c) {
@@ -222,7 +259,20 @@ export class ChunkMesher {
     const nx = d === 0 ? sign : 0, ny = d === 1 ? sign : 0, nz = d === 2 ? sign : 0;
     const shade = d === 1 ? (sign > 0 ? SHADE.py : SHADE.ny) : d === 0 ? SHADE.px : SHADE.pz;
     const col = baseColor(id);
-    const r = col.r * shade, g = col.g * shade, b = col.b * shade;
+    // A patch of ground was one flat colour over hundreds of blocks, which is
+    // what made a meadow read as a painted plane rather than a field.
+    //
+    // Two wobbles, both fixed to the block's position so nothing shimmers as
+    // you walk. One moves the lightness; the other pulls the channels apart a
+    // little, which is what turns "the same green, dimmer" into "a different
+    // green". Brightness alone left a field looking like one colour under
+    // patchy cloud — the hue has to move as well, or it is still one colour.
+    const vary = VARIATION[id];
+    const light = 1 + vary * (patchNoise(origin[0], origin[2]) - 0.5);
+    const skew = vary * 0.55 * (patchNoise(origin[2] + 8191, origin[0] - 3137) - 0.5);
+    const r = col.r * shade * (light - skew);
+    const g = col.g * shade * (light + skew * 0.7);
+    const b = col.b * shade * (light - skew * 0.35);
 
     for (let k = 0; k < 4; k++) {
       buf.normal.push(nx, ny, nz);

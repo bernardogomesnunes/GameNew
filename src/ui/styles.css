@@ -185,6 +185,18 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 /* The mark sits on the swatch, not beside it, so the colour still does the
    fast recognising and the drawing settles which of the four browns it is. */
 .swatch .glyph { display: block; }
+
+/* A block draws itself as a little cube instead, and the cube *is* the swatch
+   — no coloured tile behind it, no rounded corner, no inset shadow pretending
+   to be a lit surface. The cube already has its own three faces of light. */
+.swatch-cube {
+  background: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  width: auto !important; height: auto !important;
+  overflow: visible;
+}
+.swatch-cube .cube { display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45)); }
 .hotbar-slot.selected { border-color: var(--accent); background: var(--accent-dim); transform: translateY(-3px); }
 .hotbar-slot.locked { opacity: 0.45; }
 .hotbar-slot .lock { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-dim); }
