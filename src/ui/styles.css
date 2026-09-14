@@ -151,7 +151,28 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 .icon-btn.panel-close span { display: none; }
 
 /* Hotbar */
-#hotbar-wrap { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); pointer-events: auto; max-width: 96vw; }
+#hotbar-wrap {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  pointer-events: auto; max-width: 96vw;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+
+/* The name of what you are holding. It sits above the row rather than on the
+   slots: twelve labels on twelve 44px squares is unreadable, and one line that
+   follows your pointer answers the same question. */
+#hotbar-label {
+  display: flex; align-items: baseline; gap: 7px; max-width: 96vw;
+  background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--panel-border); border-radius: 8px;
+  padding: 3px 10px; font-size: 12px; line-height: 1.5;
+  pointer-events: none; white-space: nowrap; overflow: hidden;
+}
+#hotbar-label[hidden] { display: none; }
+#hotbar-name { font-weight: 600; color: var(--text); }
+#hotbar-note { color: var(--text-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+/* Pointing at a slot you have not chosen is a question, not a statement. */
+#hotbar-label.preview { border-color: var(--panel-border-strong); }
+#hotbar-label.preview #hotbar-name { color: var(--accent); }
 #hotbar {
   display: flex; gap: 4px; background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--panel-border); border-radius: 14px; padding: 6px; overflow-x: auto; max-width: 96vw;

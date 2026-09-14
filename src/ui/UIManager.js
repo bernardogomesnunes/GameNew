@@ -5,7 +5,7 @@ import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
 import { ITEMS_BY_ID, itemName } from '../config/items.js';
-import { RESOURCES_BY_ID } from '../config/resources.js';
+import { RESOURCES_BY_ID, resourceName } from '../config/resources.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 
@@ -90,7 +90,17 @@ export class UIManager {
         <button class="icon-btn" id="btn-menu" title="Save, load and world settings">${icon('menu')}<span>Menu</span></button>
       </div>
 
-      <div id="hotbar-wrap"><div id="hotbar"></div></div>
+      <!--
+        What you are holding, in words. The slots are coloured squares and the
+        only thing naming them was a native title tooltip: a hover and a
+        one-second wait on a desktop, and nothing whatsoever on a phone, which
+        is where most of this is played. So the name is on screen instead —
+        the selected block always, or whichever one you are pointing at.
+      -->
+      <div id="hotbar-wrap">
+        <div id="hotbar-label" aria-live="polite"><span id="hotbar-name"></span><span id="hotbar-note"></span></div>
+        <div id="hotbar"></div>
+      </div>
 
       <div id="toast-stack"></div>
 
@@ -272,13 +282,16 @@ export class UIManager {
 
       if (!placeable.length) {
         hotbar.appendChild(el(`<div class="hotbar-empty">Nothing to build with yet — break something</div>`));
+        this.showHotbarLabel();
         return;
       }
       placeable.forEach((e, i) => {
         const total = inv.countOf(e.id);
         hotbar.appendChild(el(`
           <div class="hotbar-slot ${e.spec.block === this.selectedBlockId ? 'selected' : ''}"
-               data-id="${e.spec.block}" data-item="${e.id}" title="${itemName(e.id)} — ${total}">
+               data-id="${e.spec.block}" data-item="${e.id}"
+               data-name="${itemName(e.id)}" data-note="${total} in your bag"
+               title="${itemName(e.id)} — ${total} in your bag">
             ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
             <div class="swatch" style="background:#${e.spec.color.toString(16).padStart(6, '0')}"></div>
             <span class="held">${total}</span>
@@ -288,7 +301,7 @@ export class UIManager {
       // If what was selected has run out, fall to the first thing you do have.
       if (!placeable.some((e) => e.spec.block === this.selectedBlockId)) {
         this.selectBlock(placeable[0].spec.block);
-      }
+      } else this.showHotbarLabel();
       return;
     }
 
@@ -298,9 +311,16 @@ export class UIManager {
       const costLabel = this.isCampaign && b.cost
         ? Object.entries(b.cost).map(([, amount]) => amount).join('')
         : '';
+      // The one line that says why you cannot use this yet, or what it costs.
+      const note = !available
+        ? this.game.blockAvailability(b.id).reason
+        : (this.isCampaign && b.cost
+            ? Object.entries(b.cost).map(([r, n]) => `${n} ${resourceName(r)}`).join(', ')
+              + (affordable ? '' : ' — not enough')
+            : '');
       const slot = el(`
         <div class="hotbar-slot ${available ? '' : 'locked'} ${available && !affordable ? 'unaffordable' : ''} ${b.id === this.selectedBlockId ? 'selected' : ''}"
-             data-id="${b.id}" title="${b.name}">
+             data-id="${b.id}" data-name="${b.name}" data-note="${note}" title="${note ? `${b.name} — ${note}` : b.name}">
           ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
           <div class="swatch" style="background:#${b.color.toString(16).padStart(6, '0')}"></div>
           ${available ? '' : `<div class="lock">${icon('lock', 15)}</div>`}
@@ -309,6 +329,7 @@ export class UIManager {
       `);
       hotbar.appendChild(slot);
     });
+    this.showHotbarLabel();
   }
 
   /**
@@ -371,6 +392,15 @@ export class UIManager {
     // waiting for something to re-open it.
     this.home.render();
 
+    // Pointer, not mouse: a stylus or a trackpad asks the same question.
+    const bar = this.q('#hotbar');
+    bar.addEventListener('pointerover', (e) => {
+      const slot = e.target.closest?.('.hotbar-slot');
+      if (slot) this.showHotbarLabel(slot);
+    });
+    bar.addEventListener('pointerout', (e) => {
+      if (!e.relatedTarget?.closest?.('.hotbar-slot')) this.showHotbarLabel();
+    });
     this.q('#hotbar').addEventListener('click', (e) => {
       const slot = e.target.closest('.hotbar-slot');
       if (!slot) return;
@@ -634,7 +664,30 @@ export class UIManager {
   selectBlock(id) {
     this.selectedBlockId = id;
     this.root.querySelectorAll('.hotbar-slot').forEach((s) => s.classList.toggle('selected', Number(s.dataset.id) === id));
+    this.showHotbarLabel();
     this.cb.onSelectSlot(id);
+  }
+
+  /**
+   * Names the block under the pointer, or the one you have selected.
+   *
+   * Pointing at a slot is a question — "what is that one?" — and it should be
+   * answered while you are pointing, not after you have committed to it. Let
+   * go and it goes back to saying what you are actually holding, which is the
+   * thing you need to know while you build.
+   */
+  showHotbarLabel(slot = null) {
+    const target = slot
+      ?? this.root.querySelector('.hotbar-slot.selected')
+      ?? null;
+    const name = this.q('#hotbar-name');
+    const note = this.q('#hotbar-note');
+    const label = this.q('#hotbar-label');
+    if (!name || !note || !label) return;
+    name.textContent = target?.dataset.name ?? '';
+    note.textContent = target?.dataset.note ?? '';
+    label.classList.toggle('preview', !!slot && !target.classList.contains('selected'));
+    label.hidden = !target;
   }
 
   cycleHotbarByKey(n) {
