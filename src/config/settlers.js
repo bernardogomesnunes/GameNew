@@ -3,9 +3,13 @@
  *
  * Houses have granted capacity since Age 1 and nothing ever read it; the
  * Politics skill has promised "room to govern N more settlers" with no settlers
- * to govern. This is that promise, given a body: somebody arrives, takes a bed,
- * walks to a building every morning, and makes it produce more than it would
- * have on its own.
+ * to govern. This is that promise, given a body: somebody arrives, moves into
+ * an empty house, walks to a building every morning, and makes it produce more
+ * than it would have on its own.
+ *
+ * One roof, one household, and the first house is your own — so the second
+ * house is what brings the first person. Lose somebody and the next one turns
+ * up to take the empty house.
  *
  * They are deliberately not a management screen. You do not assign them, feed
  * them individually or watch a needs bar — they find their own work, and the
@@ -14,8 +18,14 @@
  */
 
 export const SETTLERS = {
-  /** How often the next person turns up, while there is room and food. */
-  arriveEverySeconds: 45,
+  /**
+   * How long before the next household turns up.
+   *
+   * Short, because the rule is now simply one per house past the first: you
+   * put a roof up, somebody should come and live under it while you are still
+   * standing there looking at it.
+   */
+  arriveEverySeconds: 8,
 
   /**
    * A settler will not walk further than this to work.
@@ -35,11 +45,11 @@ export const SETTLERS = {
   restSeconds: [4, 11],
 
   /**
-   * Nobody moves in to starve. Food in the bag is the signal that the
-   * settlement can take another mouth — and each settler eats a little,
-   * so a town you cannot feed stops growing on its own.
+   * A settlement eats. This is a drain on the larder and nothing more: it does
+   * not gate who arrives and it does not starve anyone. Food deciding the
+   * population as well as the houses made "why is nobody coming" a question
+   * with two answers, which is one too many.
    */
-  foodPerSettler: 2,
   eatEverySeconds: 90,
 
   /** Height and width in blocks, for the figure that gets drawn. */

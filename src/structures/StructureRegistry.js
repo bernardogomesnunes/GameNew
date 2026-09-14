@@ -32,7 +32,7 @@ export class StructureRegistry {
     return this.structures.filter((s) => s.type === typeId && s.valid).length;
   }
 
-  /** Total housing from every standing house — what caps settlers later. */
+  /** Households your standing houses have room for — one roof, one family. */
   capacity() {
     return this.structures.reduce((n, s) => {
       if (!s.valid) return n;

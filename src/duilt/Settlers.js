@@ -4,15 +4,19 @@ import { STRUCTURES_BY_ID } from '../config/structures.js';
 /**
  * The population: who has moved in, where they sleep, and what they work on.
  *
- * Arrivals are gated by two things the player controls. Housing says how many
- * beds there are, and food in the bag says whether the place can feed another
- * mouth — so a town grows when you build and when you farm, and stops on its
- * own when you do neither. Nothing here needs managing.
+ * One roof, one household. The first house you build is your own, so nobody
+ * comes for it; every house after that brings a person, and the roster repairs
+ * itself — lose somebody and the next one turns up to take the empty house.
+ *
+ * It used to be a bed count with a food gate and a timer, which meant the
+ * answer to "why is nobody living in my four houses" was three different
+ * things depending on the minute. This is a rule you can hold in your head:
+ * count the houses, take one off, that is how many people there are.
  *
  * Each settler walks between their house and a building in reach, and a
- * building with somebody working it produces more. That is the whole loop, and
- * it is what finally makes *where* you put a quarry matter: one on the far side
- * of your land is one nobody staffs.
+ * building with somebody working it produces more. That is what finally makes
+ * *where* you put a quarry matter: one on the far side of your land is one
+ * nobody staffs.
  */
 
 const centreOf = (r) => ({
@@ -40,42 +44,46 @@ export class Settlers {
     return this.people.length;
   }
 
-  /** Beds available: what the houses grant, plus what Politics allows. */
-  get capacity() {
-    return this.structures.capacity() + (this.skills?.settlerAllowance?.() ?? 0);
+  /** Roofs standing: one household each. */
+  get houses() {
+    return this.structures.capacity();
+  }
+
+  /**
+   * How many people this settlement should have.
+   *
+   * The first house is yours, which is the whole of the minus one. Politics
+   * adds on top — its promise is room to govern *more* than the houses hold.
+   */
+  get target() {
+    return Math.max(0, this.houses - 1) + (this.skills?.settlerAllowance?.() ?? 0);
   }
 
   get hasRoom() {
-    return this.population < this.capacity;
-  }
-
-  /** Food enough to take another mouth on. */
-  get canFeed() {
-    return this.foodOnHand() >= (this.population + 1) * SETTLERS.foodPerSettler;
+    return this.population < this.target;
   }
 
   foodOnHand() {
     return this.inventory.countOf('vegetables') + this.inventory.countOf('fruit');
   }
 
-  /** Why nobody new is coming, in one line, or null when somebody is. */
+  /** Why nobody new is coming, in one line, or null when somebody is on the way. */
   blockedReason() {
-    if (!this.hasRoom) {
-      return this.capacity === 0
-        ? 'Nowhere to sleep — build a house'
-        : 'Every bed is taken — build another house';
-    }
-    if (!this.canFeed) return 'Not enough food put by to feed anyone else';
-    return null;
+    if (this.hasRoom) return null;
+    if (this.houses === 0) return 'Nowhere to live — build a house';
+    if (this.houses === 1) return 'This one is yours — build another and somebody will move in';
+    return 'Everyone has a roof — build another house for another household';
   }
 
   // ---- arrivals ------------------------------------------------------------
 
   tick(dtSeconds) {
+    // One at a time rather than all at once, so raising three houses reads as
+    // three people arriving rather than a crowd appearing in one frame.
     this.sinceArrival += dtSeconds;
     if (this.sinceArrival >= SETTLERS.arriveEverySeconds) {
       this.sinceArrival = 0;
-      if (this.hasRoom && this.canFeed) this.arrive();
+      if (this.hasRoom) this.arrive();
     }
 
     this.sinceMeal += dtSeconds;
@@ -111,7 +119,14 @@ export class Settlers {
     return person;
   }
 
-  /** A settlement eats. Running out does not kill anyone, it stops growth. */
+  /**
+   * A settlement eats what it has.
+   *
+   * Deliberately toothless: running out does not starve anyone and does not
+   * stop the next household arriving. Food gating arrivals made "why is nobody
+   * coming" un-answerable, and the houses are the rule now. This is a drain on
+   * the larder, which is reason enough to farm.
+   */
   eat() {
     if (!this.people.length) return 0;
     let want = this.people.length;
@@ -125,29 +140,27 @@ export class Settlers {
   }
 
   /**
-   * The house with the most beds still free, or failing that the emptiest one.
+   * A house with nobody in it.
    *
-   * The fallback is what the Politics skill buys. It promises "room to govern
-   * N more settlers", and if a free bed were the only way in it would promise
-   * nothing — those people live in the houses that are already there, which is
-   * what a skill about governing rather than building should mean.
+   * One household per house, so the search is for an empty roof rather than a
+   * spare bed. With the target one below the house count, exactly one house
+   * always ends up without a settler in it — yours.
    */
   pickHome() {
-    const taken = new Map();
-    for (const p of this.people) taken.set(p.homeId, (taken.get(p.homeId) ?? 0) + 1);
-    let best = null, bestFree = 0;
-    let fallback = null, fewest = Infinity;
+    const taken = new Set(this.people.map((p) => p.homeId));
+    const free = this.structures.list().filter((s) => s.valid
+      && (STRUCTURES_BY_ID.get(s.type)?.grantsCapacity ?? 0) > 0
+      && !taken.has(s.id));
+    if (free.length) return free[0];
 
-    for (const s of this.structures.list()) {
-      if (!s.valid) continue;
-      const beds = STRUCTURES_BY_ID.get(s.type)?.grantsCapacity ?? 0;
-      if (!beds) continue;
-      const living = taken.get(s.id) ?? 0;
-      const free = beds - living;
-      if (free > bestFree) { bestFree = free; best = s; }
-      if (living < fewest) { fewest = living; fallback = s; }
-    }
-    return best ?? fallback;
+    // Politics buys people beyond the houses; they double up in the fullest
+    // house rather than not existing.
+    const houses = this.structures.list().filter((s) => s.valid
+      && (STRUCTURES_BY_ID.get(s.type)?.grantsCapacity ?? 0) > 0);
+    if (!houses.length) return null;
+    const count = new Map();
+    for (const p of this.people) count.set(p.homeId, (count.get(p.homeId) ?? 0) + 1);
+    return houses.reduce((a, b) => ((count.get(a.id) ?? 0) <= (count.get(b.id) ?? 0) ? a : b));
   }
 
   /**
@@ -239,10 +252,17 @@ export class Settlers {
   /** Drops anyone whose house is gone, and re-employs anyone whose work went. */
   revalidate() {
     const alive = new Set(this.structures.list().filter((s) => s.valid).map((s) => s.id));
-    const homeless = this.people.filter((p) => !alive.has(p.homeId));
-    if (homeless.length) {
-      this.people = this.people.filter((p) => alive.has(p.homeId));
-      this.bus?.emit('settler:left', { count: homeless.length, population: this.population });
+    const before = this.population;
+    this.people = this.people.filter((p) => alive.has(p.homeId));
+    // Pulling houses down can also put the settlement over its own rule — two
+    // people and one house left means somebody is sleeping in your kitchen.
+    // The most recent arrivals move on, newest first.
+    while (this.population > this.target) this.people.pop();
+    if (this.population < before) {
+      // Somebody else will be along if there is room again: the next tick
+      // refills towards the target. Losing a person is a gap, not a cap.
+      this.sinceArrival = SETTLERS.arriveEverySeconds;
+      this.bus?.emit('settler:left', { count: before - this.population, population: this.population });
     }
     for (const p of this.people) {
       if (p.workId != null && !alive.has(p.workId)) { p.workId = null; p.target = null; p.wait = 1; }

@@ -234,18 +234,18 @@ export class DuiltUI {
     this.renderPeople();
   }
 
-  /** How many have moved in, out of how many beds there are. */
+  /** How many have moved in, out of how many your houses have room for. */
   renderPeople() {
     const d = this.duilt;
     const box = this.q('#vital-people');
     if (!d || !box) return;
-    const { population, capacity } = d.settlers;
-    // Hidden until there is somewhere for anyone to sleep: a 0/0 on the HUD
-    // from the first minute is a promise the game has not made yet.
-    box.hidden = capacity === 0 && population === 0;
-    this.q('#people-count').textContent = `${population}/${capacity}`;
-    box.title = d.settlers.blockedReason() ?? `${population} settled, ${capacity - population} free`;
-    box.classList.toggle('full', population >= capacity && capacity > 0);
+    const { population, target, houses } = d.settlers;
+    // Hidden until there is a house: a 0/0 on the HUD from the first minute is
+    // a promise the game has not made yet.
+    box.hidden = houses === 0 && population === 0;
+    this.q('#people-count').textContent = `${population}/${target}`;
+    box.title = d.settlers.blockedReason() ?? `${target - population} more on the way`;
+    box.classList.toggle('full', population >= target && target > 0);
   }
 
   eat() {
@@ -554,7 +554,7 @@ export class DuiltUI {
   whatItGivesYou(spec, makes) {
     if (makes) return `Makes ${makes} a minute`;
     if (spec.station === 'workshop') return 'Lets you make things here that your hands cannot';
-    if (spec.grantsCapacity) return 'Houses settlers, later on';
+    if (spec.grantsCapacity) return 'Somebody moves in — the first one is yours';
     return 'Builds nothing and makes nothing. It is the point of the game';
   }
 

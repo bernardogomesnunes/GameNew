@@ -69,7 +69,7 @@ for (let x=hx;x<hx+5;x++) for (let z=hz;z<hz+5;z++) for (let y=HY;y<HY+4;y++) {
 }
 g.claim({minX:hx,maxX:hx+4,minY:HY,maxY:HY+3,minZ:hz,maxZ:hz+4}, 'house');
 ok('house claimed', g.structures.countOf('house') === 1);
-ok('house grants capacity', g.structures.capacity() === 4);
+ok('house makes room for one household', g.structures.capacity() === 1);
 
 // a forest from the trees the generator planted
 let found = null;

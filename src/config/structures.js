@@ -108,7 +108,9 @@ export const STRUCTURES = [
       },
     ],
     produces: {},
-    grantsCapacity: 4,
+    // One roof, one household. The first house you build is your own, so it is
+    // the second that brings somebody — see duilt/Settlers.js.
+    grantsCapacity: 1,
     everySeconds: 0,
     skill: 'building',
   },

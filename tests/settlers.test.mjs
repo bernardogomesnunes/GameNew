@@ -10,10 +10,10 @@ import { STRUCTURES_BY_ID } from '../src/config/structures.js';
  *
  * Houses granted capacity from Age 1 and nothing ever read it; the Politics
  * skill promised "room to govern N more settlers" and `settlerAllowance` had
- * zero callers. These check that the promise now has a body: that arrivals are
- * gated by beds and food rather than a timer alone, that somebody working a
- * building actually changes what it produces, and that taking a house down
- * does not leave a person standing in the air where it used to be.
+ * zero callers. These check that the promise now has a body: one household per
+ * house with the first house your own, somebody working a building actually
+ * changing what it produces, and taking a house down turning the household out
+ * rather than leaving a person standing in the air where it used to be.
  */
 
 let f = 0;
@@ -43,15 +43,19 @@ function setup({ beds = 0, food = 0 } = {}) {
     structures.structures.push(s);
     return s;
   };
-  for (let i = 0; i < beds / 4; i++) {
-    add('house', { minX: 10 + i * 8, maxX: 14 + i * 8, minY: 11, maxY: 14, minZ: 10, maxZ: 14 });
-  }
+  // `beds` is now simply how many houses to stand up: one household each.
+  let houses = 0;
+  const addHouse = () => add('house', {
+    minX: 10 + houses * 8, maxX: 14 + houses * 8, minY: 11, maxY: 14,
+    minZ: 10, maxZ: 14,
+  }, houses++);
+  for (let i = 0; i < beds; i++) addHouse();
   if (food) inventory.add('vegetables', food);
 
   let r = 0;
   const rand = () => { r = (r * 1103515245 + 12345) % 2147483648; return r / 2147483648; };
   const settlers = new Settlers({ world, structures, inventory, skills, bus: null, rand });
-  return { world, inventory, structures, settlers, add, skills };
+  return { world, inventory, structures, settlers, add, addHouse, skills };
 }
 
 // --- the config holds together ----------------------------------------------
@@ -63,47 +67,69 @@ ok('a settler is person-sized', SETTLERS.build.height > 1 && SETTLERS.build.heig
 ok('working a building is worth something', SETTLERS.workBonus > 0);
 ok('and they walk slower than the player', SETTLERS.walkSpeed < 5);
 
-// --- nobody moves in without a bed ------------------------------------------
+// --- one household per house, and the first house is yours -------------------
 
 {
-  const { settlers } = setup({ beds: 0, food: 100 });
-  ok('no houses means no room', settlers.capacity === 0 && !settlers.hasRoom);
+  const { settlers } = setup({ beds: 0 });
+  ok('no houses, nobody to house', settlers.houses === 0 && settlers.target === 0);
   ok('and it says so', /build a house/i.test(settlers.blockedReason() ?? ''));
   settlers.tick(SETTLERS.arriveEverySeconds + 1);
   ok('so nobody arrives', settlers.population === 0);
 }
 
-// --- or without food ---------------------------------------------------------
-
 {
-  const { settlers } = setup({ beds: 4, food: 0 });
-  ok('a house makes room', settlers.capacity === 4 && settlers.hasRoom);
-  ok('but an empty larder stops it', !settlers.canFeed);
-  ok('and it says so', /food/i.test(settlers.blockedReason() ?? ''));
-  settlers.tick(SETTLERS.arriveEverySeconds + 1);
-  ok('so still nobody arrives', settlers.population === 0);
+  // The one the player lives in.
+  const { settlers } = setup({ beds: 1 });
+  ok('one house is one roof', settlers.houses === 1);
+  ok('and brings nobody, because it is yours', settlers.target === 0);
+  ok('the HUD line says exactly that', /yours/i.test(settlers.blockedReason() ?? ''));
+  for (let i = 0; i < 5; i++) settlers.tick(SETTLERS.arriveEverySeconds + 1);
+  ok('nobody moves in however long you wait', settlers.population === 0);
 }
 
-// --- with both, they come ----------------------------------------------------
-
 {
-  const { settlers } = setup({ beds: 4, food: 100 });
-  ok('with a bed and food, nothing is blocking', settlers.blockedReason() === null);
+  const { settlers, addHouse } = setup({ beds: 1 });
+  addHouse();
+  ok('a second house asks for one person', settlers.target === 1);
   settlers.tick(SETTLERS.arriveEverySeconds + 1);
-  ok('somebody arrives', settlers.population === 1);
-  ok('they have a name', !!settlers.people[0].name);
-  ok('and a house to sleep in', settlers.people[0].homeId != null);
+  ok('and they turn up', settlers.population === 1);
+  ok('nothing is holding anyone back now', settlers.blockedReason() === null
+    || /roof/i.test(settlers.blockedReason()));
 
-  // They keep coming until the beds run out, and then stop.
-  for (let i = 0; i < 10; i++) settlers.tick(SETTLERS.arriveEverySeconds + 1);
-  ok(`the house fills up and stops at its four beds (${settlers.population})`, settlers.population === 4);
-  ok('and it says why nobody else is coming', /bed/i.test(settlers.blockedReason() ?? ''));
+  settlers.tick(SETTLERS.arriveEverySeconds + 1);
+  ok('but only one — the target is met', settlers.population === 1);
 
-  // Politics is the skill that was promising this and doing nothing.
+  addHouse(); addHouse();
+  ok('four houses ask for three people', settlers.target === 3);
+  for (let i = 0; i < 6; i++) settlers.tick(SETTLERS.arriveEverySeconds + 1);
+  ok('and three is what you get', settlers.population === 3);
+  ok('everyone has a house of their own',
+    new Set(settlers.people.map((p) => p.homeId)).size === 3);
+  ok('and one house is still yours',
+    settlers.houses - new Set(settlers.people.map((p) => p.homeId)).size === 1);
+}
+
+// Food is a drain on the larder, not a gate on the door.
+{
+  const { settlers, inventory } = setup({ beds: 3, food: 0 });
+  ok('an empty larder does not stop anyone', settlers.target === 2);
+  for (let i = 0; i < 4; i++) settlers.tick(SETTLERS.arriveEverySeconds + 1);
+  ok('they move in anyway', settlers.population === 2);
+  settlers.sinceMeal = 0;
+  settlers.tick(SETTLERS.eatEverySeconds + 1);
+  ok('and nobody starves for want of it', settlers.population === 2);
+  ok('nor does the bag go negative', inventory.countOf('vegetables') === 0);
+}
+
+// Politics asks for more than the houses hold.
+{
+  const { settlers } = setup({ beds: 3 });
+  for (let i = 0; i < 4; i++) settlers.tick(SETTLERS.arriveEverySeconds + 1);
+  ok('three houses settle two', settlers.population === 2);
   settlers.skills = { settlerAllowance: () => 2 };
-  ok('the Politics skill raises the ceiling', settlers.capacity === 6);
-  settlers.tick(SETTLERS.arriveEverySeconds + 1);
-  ok('and somebody takes the new room', settlers.population === 5);
+  ok('Politics raises what the place asks for', settlers.target === 4);
+  for (let i = 0; i < 4; i++) settlers.tick(SETTLERS.arriveEverySeconds + 1);
+  ok('and the extra people arrive', settlers.population === 4);
 }
 
 // --- a settler works the nearest building in reach ---------------------------
@@ -182,17 +208,31 @@ ok('and they walk slower than the player', SETTLERS.walkSpeed < 5);
 
 {
   const { settlers, structures } = setup({ beds: 4, food: 100 });
-  const job = { minX: 20, maxX: 25, minY: 11, maxY: 13, minZ: 10, maxZ: 15 };
-  const quarry = structures.structures[structures.structures.length - 1]
-    ?? null;
   settlers.tick(SETTLERS.arriveEverySeconds + 1);
   settlers.tick(SETTLERS.arriveEverySeconds + 1);
   ok('two have moved in', settlers.population === 2);
 
-  const house = structures.list().find((s) => STRUCTURES_BY_ID.get(s.type)?.grantsCapacity);
-  structures.remove(house.id);
+  // Pull down the roof over somebody's head: that household goes, and only
+  // that one. Nobody is left standing in the air where the house used to be.
+  const livedIn = settlers.people[0].homeId;
+  structures.remove(livedIn);
   settlers.revalidate();
-  ok('pulling the house down leaves nobody living in mid-air', settlers.population === 0);
+  ok('the household whose house went is gone', settlers.population === 1);
+  ok('and it is the other one still here', settlers.people[0].homeId !== livedIn);
+
+  // Three houses left, so there is still room for two — the next one comes.
+  settlers.tick(SETTLERS.arriveEverySeconds + 1);
+  ok('and somebody moves into the empty house', settlers.population === 2);
+
+  // Take it down to one house and the settlement empties: that last roof is
+  // yours, and there is nobody to house under it.
+  for (const s of structures.list().filter((v) => STRUCTURES_BY_ID.get(v.type)?.grantsCapacity).slice(1)) {
+    structures.remove(s.id);
+  }
+  settlers.revalidate();
+  ok('down to your own house, nobody else lives here', settlers.population === 0);
+  settlers.tick(SETTLERS.arriveEverySeconds + 1);
+  ok('and nobody comes back for it', settlers.population === 0);
 }
 
 {
