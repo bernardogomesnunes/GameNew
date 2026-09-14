@@ -79,6 +79,66 @@ export const RECIPES = [
     batch: 8,
     blurb: 'Two planks from one log — more wall for the same tree.',
   },
+
+  // --- Age 2: what stone is good for --------------------------------------
+  {
+    id: 'cobblestone',
+    name: 'Split stone',
+    station: 'hand',
+    age: 2,
+    inputs: { stone: 1 },
+    output: { id: 'cobblestone', count: 2 },
+    batch: 8,
+    blurb: 'Two rough blocks from one cut one. Cheaper walls, uglier walls.',
+  },
+
+  // --- Age 3: the workshop, and the fire ----------------------------------
+  //
+  // These are the first recipes with a station. Making them at the bench in
+  // your pocket would make the workshop a box you build once and never visit,
+  // which is the opposite of the point of putting it somewhere.
+  {
+    id: 'brick',
+    name: 'Brick',
+    station: 'workshop',
+    age: 3,
+    inputs: { dirt: 3, cobblestone: 1 },
+    output: { id: 'brick', count: 2 },
+    batch: 6,
+    blurb: 'Earth, shaped and fired. Holds a wall up far better than it has any right to.',
+  },
+  {
+    id: 'glass',
+    name: 'Glass',
+    station: 'workshop',
+    age: 3,
+    inputs: { sand: 2 },
+    output: { id: 'glass', count: 1 },
+    batch: 8,
+    blurb: 'Sand, taken hot enough to forget it was sand.',
+  },
+  {
+    id: 'planks_fine',
+    name: 'Dress planks',
+    station: 'workshop',
+    age: 3,
+    inputs: { wood: 1 },
+    output: { id: 'planks', count: 4 },
+    batch: 8,
+    blurb: 'The same log, cut properly. Twice what you get by hand.',
+  },
+
+  // --- Age 5: the expensive end -------------------------------------------
+  {
+    id: 'marble',
+    name: 'Dress marble',
+    station: 'workshop',
+    age: 5,
+    inputs: { stone: 4 },
+    output: { id: 'marble', count: 1 },
+    batch: 4,
+    blurb: 'Four rough blocks down to one good one. Nothing else looks like it.',
+  },
 ];
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));

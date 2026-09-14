@@ -12,14 +12,12 @@ import * as THREE from 'three';
  * rather than read in a toast.
  */
 
-export const RINGS = [
-  { age: 1, size: 32, name: 'Settlement' },
-  { age: 2, size: 64, name: 'Industry' },
-  { age: 3, size: 128, name: 'Craft' },
-  { age: 4, size: 256, name: 'Town' },
-  { age: 5, size: 512, name: 'Domain' },
-  { age: 6, size: 1024, name: 'Frontier' },
-];
+// The rings come from the age list rather than being written out again here.
+// They had already drifted: these went to 512 and 1024, and a Duilt world is
+// generated at 256 — so from Age 5 the border stood outside the terrain it was
+// supposed to enclose.
+export { RINGS } from '../config/ages.js';
+import { RINGS } from '../config/ages.js';
 
 const EDGE = 0xf0c674;
 

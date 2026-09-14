@@ -20,14 +20,24 @@ export class Crafting {
     this.skills = skills;
   }
 
-  /** Recipes for this age, each with what it needs and whether you can make it now. */
-  available(age, { station = 'hand', near = null } = {}) {
+  /**
+   * Recipes for this age, each with what it needs and whether you can make it
+   * now.
+   *
+   * Pass `station: null` to get everything and let each recipe say where it
+   * has to be made. That is what the bench does: a workshop recipe you cannot
+   * see is a workshop you never learn you need, so they are listed from the
+   * age they appear, greyed out until you are standing at one.
+   */
+  available(age, { station = 'hand', near = null, atStations = [] } = {}) {
     return recipesFor(age, station).map((r) => {
       const missing = this.inventory.missing(r.inputs);
       const placeOk = !r.needs || this.conditionMet(r.needs, near);
-      const ok = Object.keys(missing).length === 0 && placeOk;
+      const stationOk = r.station === 'hand' || atStations.includes(r.station);
+      const ok = Object.keys(missing).length === 0 && placeOk && stationOk;
       let reason = null;
-      if (!placeOk) reason = r.needs === 'water' ? 'Stand closer to the river' : `Needs ${r.needs} nearby`;
+      if (!stationOk) reason = 'Stand at your workshop to make this';
+      else if (!placeOk) reason = r.needs === 'water' ? 'Stand closer to the river' : `Needs ${r.needs} nearby`;
       else if (!ok) {
         reason = 'Needs ' + Object.entries(missing)
           .map(([id, n]) => `${n} more ${itemName(id).toLowerCase()}`).join(' and ');
@@ -36,6 +46,7 @@ export class Crafting {
         ...r,
         ok,
         reason,
+        atStation: stationOk,
         maxBatch: this.maxBatch(r),
       };
     });
@@ -68,9 +79,16 @@ export class Crafting {
    * Runs a recipe `times` over. All or nothing: a half-paid craft that produced
    * nothing would be the worst possible outcome.
    */
-  craft(recipeId, times = 1, { near = null } = {}) {
+  craft(recipeId, times = 1, { near = null, atStations = [] } = {}) {
     const recipe = RECIPES_BY_ID.get(recipeId);
     if (!recipe) return { ok: false, reason: 'No such recipe.' };
+
+    // Checked here as well as in `available`, because the button is not the
+    // only way in — a stale panel left open while you walked away would
+    // otherwise still craft.
+    if (recipe.station !== 'hand' && !atStations.includes(recipe.station)) {
+      return { ok: false, reason: 'Stand at your workshop to make this.' };
+    }
 
     if (recipe.needs && !this.conditionMet(recipe.needs, near)) {
       return { ok: false, reason: recipe.needs === 'water' ? 'Stand closer to the river.' : `Needs ${recipe.needs} nearby.` };

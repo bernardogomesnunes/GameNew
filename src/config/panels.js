@@ -134,6 +134,14 @@ export const PANELS = [
     // the same question C already answers, so C answers it here too.
   },
   {
+    id: 'panel-finish',
+    title: 'Finished',
+    subId: 'finish-sub',
+    layer: 'duilt',
+    mode: 'duilt',
+    label: 'Finished',
+  },
+  {
     id: 'panel-skills',
     title: 'Skills',
     sub: 'You get better by doing — and credit lands on milestones, not repetition.',

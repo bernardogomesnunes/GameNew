@@ -35,6 +35,13 @@ export const ITEMS = [
   { id: 'planks', name: 'Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xb98a4b, glyph: 'planks', block: 7, madeBy: 'Sawn from wood' },
   { id: 'farmland', name: 'Turned Soil', kind: 'refined', stackTo: STACK_BULK, color: 0x6b4a2a, glyph: 'farmland', block: 21, madeBy: 'Dirt broken up for planting' },
 
+  // --- what the quarry, kiln and mine give back ----------------------------
+  { id: 'cobblestone', name: 'Cobblestone', kind: 'raw', stackTo: STACK_BULK, color: 0x6b6b6e, glyph: 'cobble', block: 8, madeBy: 'Split from quarried stone' },
+  { id: 'brick', name: 'Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xa8422f, glyph: 'brick', block: 9, madeBy: 'Fired from earth in a kiln' },
+  { id: 'glass', name: 'Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xbfe3f0, glyph: 'pane', block: 10, madeBy: 'Fired from sand in a kiln' },
+  { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe9e6de, glyph: 'marble', block: 17, madeBy: 'Cut and dressed at a workshop' },
+  { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xf4c542, glyph: 'gold', block: 13, madeBy: 'Brought up from a mine' },
+
   // --- growing things ------------------------------------------------------
   { id: 'seeds', name: 'Seeds', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8b560, glyph: 'seeds', madeBy: 'Shaken from a forest, or saved from a harvest' },
   { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x6aa84f, glyph: 'sprout', block: 20, madeBy: 'Grown from seed' },

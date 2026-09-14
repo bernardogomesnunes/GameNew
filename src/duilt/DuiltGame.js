@@ -9,6 +9,7 @@ import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, itemName } from '../config/items.js';
 import { STRUCTURES_BY_ID, structuresForAge } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
+import { ageOf, FINAL_AGE } from '../config/ages.js';
 
 /**
  * Everything that makes Duilt different from the sandbox, in one object.
@@ -200,13 +201,49 @@ export class DuiltGame {
   // ---- the age gate ----
 
   /** What Age 1 asks for before the border moves. */
+  /**
+   * What has to be true before the border moves out.
+   *
+   * Read off the age list rather than written here. This used to return an
+   * empty array for every age but the first, and `ageComplete` required a
+   * non-empty list — so finishing Age 1 advanced you to an age that could
+   * never be finished, and five of the six rings were unreachable.
+   */
   ageGoals() {
-    if (this.age !== 1) return [];
-    return [
-      { id: 'forest', label: 'Plant and claim a forest', done: this.structures.countOf('forest') >= 1 },
-      { id: 'farm', label: 'Break ground on a farm', done: this.structures.countOf('farm') >= 1 },
-      { id: 'house', label: 'Build yourself a house', done: this.structures.countOf('house') >= 1 },
-    ];
+    const spec = ageOf(this.age);
+    return (spec.goals ?? []).map((g) => {
+      const have = g.structure ? this.structures.countOf(g.structure) : 0;
+      const done = g.test ? g.test(this) : have >= (g.count ?? 1);
+      return {
+        id: g.structure ?? g.id,
+        label: g.label,
+        done,
+        // "Have four houses standing" is only useful alongside how many you
+        // have. A single-count goal says it in the label already.
+        progress: g.structure && (g.count ?? 1) > 1 ? `${Math.min(have, g.count)}/${g.count}` : null,
+      };
+    });
+  }
+
+  /**
+   * The stations you are close enough to use.
+   *
+   * A workshop is a place, not a permission: the recipes it unlocks are made
+   * there, which is what makes where you put it a decision.
+   */
+  stationsNear(position, range = 7) {
+    if (!position) return [];
+    const found = new Set();
+    for (const s of this.structures.list()) {
+      const spec = STRUCTURES_BY_ID.get(s.type);
+      if (!spec?.station || !s.valid) continue;
+      const r = s.region;
+      const dx = Math.max(r.minX - position.x, 0, position.x - (r.maxX + 1));
+      const dy = Math.max(r.minY - position.y, 0, position.y - (r.maxY + 1));
+      const dz = Math.max(r.minZ - position.z, 0, position.z - (r.maxZ + 1));
+      if (Math.max(dx, dy, dz) <= range) found.add(spec.station);
+    }
+    return [...found];
   }
 
   ageComplete() {
@@ -214,10 +251,30 @@ export class DuiltGame {
     return goals.length > 0 && goals.every((g) => g.done);
   }
 
+  /** True once the last age's goals are met — there is nothing after this. */
+  get won() {
+    return this.age >= FINAL_AGE && this.ageComplete();
+  }
+
   checkAgeAdvance() {
     if (!this.ageComplete()) return null;
+
+    // The last age has no next ring. Finishing it finishes the game, which is
+    // the one thing the border cannot express.
+    if (this.age >= FINAL_AGE) {
+      if (!this.finished) {
+        this.finished = true;
+        this.bus?.emit('duilt:won', { age: this.age, structures: this.structures.list().length });
+      }
+      return null;
+    }
+
     const next = this.territory.advance();
-    if (next) this.bus?.emit('duilt:age', { age: next.age, name: next.name, size: next.size });
+    if (next) {
+      this.bus?.emit('duilt:age', {
+        age: next.age, name: next.name, size: next.size, intro: ageOf(next.age).intro,
+      });
+    }
     return next;
   }
 

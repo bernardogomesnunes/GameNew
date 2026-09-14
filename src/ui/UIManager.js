@@ -524,6 +524,7 @@ export class UIManager {
     this.duiltUI.onBagChanged = () => { if (this.cb.isDuilt?.()) this.buildHotbar(); };
     this.duiltUI.onClaimType = (id) => this.cb.onClaimType(id);
     this.duiltUI.onStampStarter = (id) => this.cb.onStampStarter(id);
+    this.duiltUI.onLeave = () => { this.closeAllPanels(); this.openHome(); };
     this.refreshForDuilt();
   }
 
@@ -652,6 +653,17 @@ export class UIManager {
   }
 
   wireBus() {
+    // Moving up an age had no listener at all: the border moved, the goal list
+    // changed, and nothing said why or what the new age is for.
+    this.bus.on('duilt:age', ({ age, name, size, intro }) => {
+      this.toast({
+        kind: 'challenge',
+        title: `Age ${age} · ${name}`,
+        body: intro ?? `Your land is ${size} × ${size} now`,
+      });
+    });
+    this.bus.on('duilt:won', () => this.openPanel('panel-finish'));
+
     this.bus.on('xp:gain', ({ amount, reason }) => {
       this.updateXp();
       if (reason) this.toast({ kind: 'xp', title: `+${amount} XP`, body: reason });

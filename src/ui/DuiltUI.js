@@ -76,6 +76,8 @@ export class DuiltUI {
           <div id="bench-list"></div>`,
         'panel-building': `
           <div id="building-body"></div>`,
+        'panel-finish': `
+          <div id="finish-body"></div>`,
         'panel-skills': `
           <div id="skills-list"></div>`,
       })}
@@ -122,6 +124,7 @@ export class DuiltUI {
     if (id === 'panel-skills') this.renderSkills();
     if (id === 'panel-buildings') this.renderBuildings();
     if (id === 'panel-bench') this.renderBench();
+    if (id === 'panel-finish') this.renderFinish();
   }
 
   onPanelClosed(id) {
@@ -234,9 +237,56 @@ export class DuiltUI {
     this.q('#goals-age').textContent = `Age ${ring.age} · ${ring.name}`;
     this.q('#goals-land').textContent = `${ring.size} × ${ring.size}`;
     const goals = d.ageGoals();
-    this.q('#goals-list').innerHTML = goals.length
-      ? goals.map((g) => `<li class="${g.done ? 'done' : ''}"><span class="tick">${g.done ? '✓' : ''}</span>${g.label}</li>`).join('')
-      : `<li class="done"><span class="tick">✓</span>This age is yours</li>`;
+    this.q('#goals-list').innerHTML = d.won
+      ? `<li class="done"><span class="tick">✓</span>Finished. The whole map is yours.</li>`
+      : goals.length
+        ? goals.map((g) => `<li class="${g.done ? 'done' : ''}">`
+            + `<span class="tick">${g.done ? '✓' : ''}</span>${g.label}`
+            + `${g.progress ? `<span class="goal-count">${g.progress}</span>` : ''}</li>`).join('')
+        : `<li class="done"><span class="tick">✓</span>This age is yours</li>`;
+  }
+
+  /**
+   * The end of the game.
+   *
+   * Six ages, and then nothing after — which needed saying somewhere, because
+   * a border that stops moving reads as a bug rather than an ending. It counts
+   * what is actually standing in the world rather than congratulating you in
+   * the abstract: the buildings are the record of what you did.
+   */
+  renderFinish() {
+    const d = this.duilt;
+    if (!d) return this.noWorld('#finish-body');
+    const body = this.q('#finish-body');
+    const sub = this.q('#finish-sub');
+    if (sub) sub.textContent = 'Six ages, from thirty-two blocks to the whole map.';
+
+    const byType = new Map();
+    for (const s of d.structures.list()) {
+      if (!s.valid) continue;
+      byType.set(s.type, (byType.get(s.type) ?? 0) + 1);
+    }
+    const rows = [...byType.entries()]
+      .map(([type, n]) => ({ spec: STRUCTURES_BY_ID.get(type), n }))
+      .filter((r) => r.spec)
+      .sort((a, b) => (a.spec.age - b.spec.age) || a.spec.name.localeCompare(b.spec.name));
+
+    body.innerHTML = `
+      <p class="finish-line">You arrived on thirty-two blocks of land with an axe and a bucket.
+         What is standing now:</p>
+      <ul class="finish-list">
+        ${rows.map((r) => `<li><span class="finish-icon">${r.spec.icon}</span>${r.spec.name}<span class="finish-n">${r.n}</span></li>`).join('')
+          || '<li>Nothing, somehow.</li>'}
+      </ul>
+      <p class="finish-line dim">The world stays as it is. You can keep building in it — nothing
+         is taken away, there is just nothing further to unlock.</p>
+      <div class="building-actions">
+        <button class="primary" data-keep>Keep building</button>
+        <button class="secondary" data-leave>Back to the worlds</button>
+      </div>`;
+
+    body.querySelector('[data-keep]').addEventListener('click', () => this.closePanel('panel-finish'));
+    body.querySelector('[data-leave]').addEventListener('click', () => this.onLeave?.());
   }
 
   // ---- the bag ----
@@ -423,16 +473,16 @@ export class DuiltUI {
             ${built ? `<span class="building-count">${built} built</span>` : ''}
           </div>
           <div class="building-meta">
-            ${makes ? `<span>Makes ${makes} a minute</span>` : '<span>Houses settlers, later on</span>'}
+            <span>${this.whatItGivesYou(spec, makes)}</span>
             <span>Needs: ${needs}</span>
           </div>
           <div class="building-actions">
             <button class="secondary" data-claim-here="${spec.id}" ${opt?.ok ? '' : 'disabled'}>
               Claim what I framed
             </button>
-            <button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
-              Place a ${design ? design.footprint : ''} starter
-            </button>
+            ${design ? `<button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
+              Place a ${design.footprint} starter
+            </button>` : ''}
           </div>
           ${design && canStamp ? '<div class="building-note"><span>Aim where you want it and press Place.</span></div>' : ''}
           <div class="building-note">
@@ -456,13 +506,31 @@ export class DuiltUI {
       }));
   }
 
+  /**
+   * The one line saying why you would want this building.
+   *
+   * Most of them produce something on a timer and that is the answer. The ones
+   * that do not each have their own reason, and "Houses settlers, later on" —
+   * which is what every non-producer used to say — is true of exactly one.
+   */
+  whatItGivesYou(spec, makes) {
+    if (makes) return `Makes ${makes} a minute`;
+    if (spec.station === 'workshop') return 'Lets you make things here that your hands cannot';
+    if (spec.grantsCapacity) return 'Houses settlers, later on';
+    return 'Builds nothing and makes nothing. It is the point of the game';
+  }
+
   // ---- the workbench ----
 
   renderBench() {
     const d = this.duilt;
     if (!d) return this.noWorld('#bench-list');
     const near = this.game.player?.position;
-    const recipes = d.crafting.available(d.age, { station: 'hand', near });
+    const atStations = d.stationsNear(near);
+    // Everything for the age, hand and workshop alike. A workshop recipe you
+    // cannot see is a workshop you never learn you need, so they are listed
+    // from the age they appear and greyed out until you are standing at one.
+    const recipes = d.crafting.available(d.age, { station: null, near, atStations });
 
     this.q('#bench-list').innerHTML = recipes.map((r) => {
       const inputs = Object.entries(r.inputs)
@@ -470,7 +538,7 @@ export class DuiltUI {
       return `
         <div class="recipe-row ${r.ok ? '' : 'blocked'}">
           <div class="recipe-text">
-            <strong>${r.name}</strong>
+            <strong>${r.name}${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${r.station}</span>` : ''}</strong>
             <em>${r.blurb}</em>
             <span class="recipe-cost">${inputs} → ${r.output.count} ${itemName(r.output.id).toLowerCase()}</span>
           </div>
@@ -484,7 +552,9 @@ export class DuiltUI {
 
     this.q('#bench-list').querySelectorAll('[data-craft]').forEach((b) =>
       b.addEventListener('click', () => {
-        const res = d.crafting.craft(b.dataset.craft, Number(b.dataset.times), { near: this.game.player?.position });
+        const pos = this.game.player?.position;
+        const res = d.crafting.craft(b.dataset.craft, Number(b.dataset.times),
+          { near: pos, atStations: d.stationsNear(pos) });
         this.bus.emit('toast', res.ok
           ? { kind: 'challenge', title: `Made ${res.made} ${res.name.toLowerCase()}` }
           : { kind: 'xp', title: 'Cannot make that', body: res.reason });

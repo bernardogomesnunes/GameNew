@@ -175,6 +175,29 @@ export function inspect(world, region) {
       return true;
     },
 
+    /**
+     * Columns of the region with nothing built over them.
+     *
+     * A quarry has to be a hole in the ground rather than a cellar, and a
+     * monument has to be seen. Both are the same question: is the sky above
+     * this, or is it somebody's floor?
+     */
+    openSkyColumns() {
+      if (this._sky != null) return this._sky;
+      let open = 0;
+      for (let x = region.minX; x <= region.maxX; x++) {
+        for (let z = region.minZ; z <= region.maxZ; z++) {
+          let blocked = false;
+          for (let y = region.maxY + 1; y < world.height; y++) {
+            if (world.getBlock(x, y, z) !== AIR) { blocked = true; break; }
+          }
+          if (!blocked) open++;
+        }
+      }
+      this._sky = open;
+      return open;
+    },
+
     columnHasSolid(x, z) {
       for (let y = region.minY; y <= region.maxY; y++) {
         if (world.getBlock(x, y, z) !== AIR) return true;
