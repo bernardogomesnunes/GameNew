@@ -133,6 +133,8 @@ export class UIManager {
               <input type="text" id="save-name" maxlength="40" placeholder="Unnamed world" />
             </label>
             <div id="save-hint" class="export-note" hidden></div>
+            <div class="mode-label">Earlier versions</div>
+            <div id="version-list"></div>
           </div>
 
           <div class="menu-section" id="menu-graphics" hidden>
@@ -183,7 +185,13 @@ export class UIManager {
           <div class="menu-actions menu-resume">
             <button class="primary" id="btn-resume">Back to the world</button>
             <button class="secondary" id="btn-save">Save a copy</button>
-            <button class="secondary" id="btn-leave">Leave to worlds</button>
+            <button class="secondary" id="btn-leave">Save and leave</button>
+            <!--
+              Leaving without saving is the undo for a whole session, so it is
+              a button rather than something buried. Quiet, because it is not
+              what you usually mean.
+            -->
+            <button class="home-link menu-quit" id="btn-leave-nosave">Leave without saving</button>
           </div>`,
         'panel-account': `
 
@@ -509,6 +517,15 @@ export class UIManager {
       btn.addEventListener('click', () => this.showMenuSection(null)));
     this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
     this.q('#btn-leave').addEventListener('click', () => {
+      this.cb.onLeaveWorld?.(true);
+      this.closePanel('panel-menu');
+      this.openHome();
+      this.toast({ kind: 'challenge', title: 'Saved', body: this.game.worldName || 'Your world' });
+    });
+    this.q('#btn-leave-nosave').addEventListener('click', () => {
+      const since = this.lastSavedLabel();
+      if (!confirm(`Leave without saving? Everything since ${since} is lost.`)) return;
+      this.cb.onLeaveWorld?.(false);
       this.closePanel('panel-menu');
       this.openHome();
     });
@@ -777,6 +794,7 @@ export class UIManager {
       // Always back at the index: reopening the menu and landing in whatever
       // section you left is a small mystery every time.
       this.showMenuSection(null);
+      this.renderVersions();
     }
     if (id === 'panel-stats') this.populateStats();
     if (id === 'panel-guide') this.populateGuide();
@@ -1363,6 +1381,46 @@ export class UIManager {
       btn.querySelector('span').textContent = label;
       btn.classList.toggle('active', on);
     }
+  }
+
+  /**
+   * The earlier versions of this world, newest first.
+   *
+   * A list rather than a single undo, because the thing you want back is
+   * rarely the state one minute ago — it is the state before you started
+   * whatever it was that went wrong.
+   */
+  renderVersions() {
+    const box = this.q('#version-list');
+    if (!box) return;
+    const versions = this.cb.listVersions?.() ?? [];
+    if (!versions.length) {
+      box.innerHTML = '<div class="export-note">Nothing yet. A version is kept every few minutes while you play, and whenever you leave.</div>';
+      return;
+    }
+    box.innerHTML = versions.map((v) => `
+      <div class="version-row">
+        <span class="version-when">${timeAgo(v.at)}</span>
+        <span class="version-at">${fmtTime(v.at)}</span>
+        <button class="secondary" data-version="${v.index}">Go back to this</button>
+      </div>`).join('');
+    box.querySelectorAll('[data-version]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const when = versions.find((v) => String(v.index) === btn.dataset.version);
+        if (!confirm(`Go back to the world as it was ${timeAgo(when?.at)}? What you have done since is kept as a version too.`)) return;
+        if (this.cb.onRestoreVersion?.(Number(btn.dataset.version))) {
+          this.closePanel('panel-menu');
+          this.toast({ kind: 'challenge', title: 'Went back', body: `The world as it was ${timeAgo(when?.at)}` });
+        }
+      });
+    });
+  }
+
+  /** When this world was last written down, in words. */
+  lastSavedLabel() {
+    const saves = this.saveManager.listSaves();
+    const current = saves.find((s) => s.isAutosave);
+    return current ? timeAgo(current.timestamp) : 'the world was made';
   }
 
   /**

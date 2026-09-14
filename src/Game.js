@@ -58,7 +58,17 @@ const HORIZON_COARSE = 950;
 // a chunk whose centre is beyond the line while its near corner is not.
 const CULL_MARGIN = 24;
 const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream in
-const AUTOSAVE_INTERVAL_MS = 60_000;
+/**
+ * How often a world writes itself down while you play.
+ *
+ * Five minutes rather than one. A save is no longer a megabyte of map — it is
+ * the seed and the chunks you changed — but it is still a full serialise and a
+ * write to the browser's storage, and doing it every minute for a world that
+ * keeps its own history is twelve copies an hour of very nearly the same
+ * thing. Leaving saves too, and so does putting the page away, so five minutes
+ * is the most you can lose and only by a crash.
+ */
+const AUTOSAVE_INTERVAL_MS = 5 * 60_000;
 // Holding down to keep breaking. The first pause is longer than the rest so a
 // normal click stays a single block — hold past it and it becomes a stream.
 const HOLD_BREAK_DELAY_MS = 320;
@@ -264,6 +274,41 @@ export class Game {
     return true;
   }
 
+  /**
+   * Puts the world down and goes back to the worlds list.
+   *
+   * Saving is a choice because it has to be. An afternoon that went wrong —
+   * a hill levelled that should not have been, a house pulled down — was
+   * previously written over the only copy the moment you walked away. Leaving
+   * without saving is the undo for a whole session.
+   *
+   * Not saving means not saving: the autosave that fires when the page is put
+   * away is held off too, or closing the tab afterwards would quietly write
+   * the very state you just refused.
+   */
+  leaveWorld(save = true) {
+    if (save) this.autosaveNow();
+    else this.discarded = true;
+    return save;
+  }
+
+  /**
+   * Goes back to an earlier version of this world.
+   *
+   * The history is a handful of snapshots taken as you played. Restoring one
+   * is an ordinary load, so everything downstream — the border, the bag, the
+   * settlers — comes back exactly as a load would bring it.
+   */
+  restoreVersion(index) {
+    const data = this.saveManager.loadSnapshot(this.worldId, index);
+    if (!data) return false;
+    this.loadFromData(data);
+    // The state you were in when you went back is itself worth keeping, so
+    // the next autosave records it rather than the version you restored.
+    this.autosaveNow();
+    return true;
+  }
+
   /** Writes the autosave straight away, and resets the interval clock with it. */
   autosaveNow() {
     if (this.discarded) return false;
@@ -298,6 +343,9 @@ export class Game {
       },
       onDeleteSave: (name) => this.saveManager.delete(name),
       onDeleteCurrent: () => this.discardCurrentWorld(),
+      onLeaveWorld: (save) => this.leaveWorld(save),
+      listVersions: () => this.saveManager.history(this.worldId),
+      onRestoreVersion: (index) => this.restoreVersion(index),
       onExportWorld: (name) => {
         const payload = exportWorldFile({ ...this.saveState(), templates: this.templates.list(), name: name || 'My world' });
         this.ui.toast({ kind: 'challenge', title: 'World exported', body: `${payload.templates.length} designs included` });
