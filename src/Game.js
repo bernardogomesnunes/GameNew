@@ -19,6 +19,7 @@ import { SaveManager, AUTOSAVE_NAME } from './storage/SaveManager.js';
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
 import { panelForKey } from './config/panels.js';
+import { STRUCTURES_BY_ID } from './config/structures.js';
 import { DESIGN_FOR_STRUCTURE } from './config/starterDesigns.js';
 import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
@@ -755,8 +756,46 @@ export class Game {
   }
 
   /** Offers the framed region to the claim menu. */
+  /** What the building panel can do to one building. */
+  buildingActions(structure) {
+    return {
+      onToggleLock: () => {
+        this.duilt.structures.setLocked(structure.id, structure.locked === false);
+        this.ui.toast({
+          kind: 'xp',
+          title: structure.locked ? 'Locked again' : 'Unlocked',
+          body: structure.locked
+            ? 'Protected from edits'
+            : 'You can change it now — it will be re-checked as you do',
+        });
+        // Redraw with the state it is in now, rather than the state it was in.
+        this.ui.openBuilding(structure, this.buildingActions(structure));
+      },
+      onRemove: () => {
+        const spec = STRUCTURES_BY_ID.get(structure.type);
+        this.duilt.structures.remove(structure.id);
+        this.ui.closePanel('panel-building');
+        this.ui.toast({
+          kind: 'xp',
+          title: `${spec?.name ?? 'Building'} released`,
+          body: 'The blocks are yours to change again',
+        });
+      },
+    };
+  }
+
   openClaim() {
     if (!this.duilt) return;
+
+    // Pointing at something you already claimed asks a different question —
+    // not "what is this?" but "what do I want to do with it?". No selector
+    // needed: you are already pointing at the whole building.
+    const aimed = this.hoverHit && this.duilt.structures.at(this.hoverHit.x, this.hoverHit.y, this.hoverHit.z);
+    if (aimed) {
+      this.ui.openBuilding(aimed, this.buildingActions(aimed));
+      return;
+    }
+
     if (!this.selectorTool.active) {
       this.ui.toast({ kind: 'xp', title: 'Frame it first', body: 'Turn on Select and aim at what you built' });
       return;
@@ -1043,6 +1082,19 @@ export class Game {
         });
         return false;
       }
+      // A claimed building is not loose blocks any more. Holding the break
+      // button past the edge of your own house should not quietly take a wall
+      // out of it — you unlock it first, on purpose.
+      const guarded = this.duilt.structures.blocking(changes);
+      if (guarded) {
+        const spec = STRUCTURES_BY_ID.get(guarded.type);
+        this.ui?.toast({
+          kind: 'xp',
+          title: `${spec?.name ?? 'That building'} is locked`,
+          body: 'Point at it and press C to unlock or remove it',
+        });
+        return false;
+      }
       if (chargeResources) {
         const paid = this.duilt.payForPlacement(changes);
         if (!paid.ok) {
@@ -1214,6 +1266,7 @@ export class Game {
       document.exitPointerLock?.();
       this.player.releaseKeys();
       this.setBreaking(false);
+      this.ui?.setBuildingHint(null);
     }
     this.bus?.emit('game:phase', { phase });
   }
@@ -1252,6 +1305,17 @@ export class Game {
   updateHover() {
     const hit = this.raycast();
     this.hoverHit = hit;
+
+    // Say what you are pointing at before you swing at it, not after it has
+    // refused. Only claimed buildings need announcing — everything else is
+    // just blocks.
+    const onBuilding = hit && this.duilt
+      ? this.duilt.structures.at(hit.x, hit.y, hit.z)
+      : null;
+    this.ui?.setBuildingHint(onBuilding
+      ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
+        + (onBuilding.locked === false ? ' · unlocked' : '')
+      : null);
     if (hit && !this.selectorTool.active) {
       this.hoverBox.visible = true;
       this.hoverBox.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);

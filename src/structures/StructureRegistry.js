@@ -40,6 +40,40 @@ export class StructureRegistry {
     }, 0);
   }
 
+  /**
+   * The building a block belongs to, if any.
+   *
+   * Claimed buildings are locked: with break-and-hold it is far too easy to
+   * take a wall out of your own house while clearing the ground beside it, and
+   * the first you would know is the structure reporting itself broken. Locking
+   * makes a building a thing you decide to change rather than something you
+   * lose by sweeping past it.
+   */
+  at(x, y, z) {
+    return this.structures.find((s) => {
+      const r = s.region;
+      return x >= r.minX && x <= r.maxX && y >= r.minY && y <= r.maxY && z >= r.minZ && z <= r.maxZ;
+    }) ?? null;
+  }
+
+  /** The building standing in the way of an edit, or null if nothing is. */
+  blocking(changes) {
+    for (const c of changes) {
+      const s = this.at(c.x, c.y, c.z);
+      if (s && s.locked !== false) return s;
+    }
+    return null;
+  }
+
+  /** Unlocked, a building can be edited like any other blocks — and may break. */
+  setLocked(id, locked) {
+    const s = this.structures.find((x) => x.id === id);
+    if (!s) return false;
+    s.locked = locked;
+    this.bus?.emit('structure:locked', { structure: s, locked });
+    return true;
+  }
+
   /** True when a new region would overlap something already claimed. */
   overlaps(region, ignoreId = null) {
     return this.structures.some((s) => {
@@ -85,6 +119,7 @@ export class StructureRegistry {
       type: typeId,
       region: { ...region },
       valid: true,
+      locked: true,
       claimedAt: now,
       lastPaidAt: now,
       brokenReason: null,
@@ -188,6 +223,7 @@ export class StructureRegistry {
       nextId: this.nextId,
       structures: this.structures.map((s) => ({
         id: s.id, type: s.type, region: s.region, valid: s.valid,
+        locked: s.locked !== false,
         claimedAt: s.claimedAt, lastPaidAt: s.lastPaidAt,
       })),
     };
@@ -197,7 +233,9 @@ export class StructureRegistry {
     if (!data?.structures) return;
     this.structures = data.structures
       .filter((s) => STRUCTURES_BY_ID.has(s.type))
-      .map((s) => ({ ...s, brokenReason: null }));
+      // Saves from before buildings could be locked have no flag; locked is the
+      // safe reading of a building someone claimed on purpose.
+      .map((s) => ({ locked: true, ...s, brokenReason: null }));
     this.nextId = data.nextId ?? (this.structures.reduce((m, s) => Math.max(m, s.id), 0) + 1);
     // The world may have changed while we were away — trust the blocks, not the save.
     for (const s of this.structures) this.recheck(s);

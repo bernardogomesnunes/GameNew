@@ -83,4 +83,58 @@ const reg2 = new StructureRegistry({ world, bus: null, inventory });
 reg2.loadJSON(saved);
 ok('load re-checks the blocks, not the save', reg2.list()[0].valid === false);
 
+// --- a claimed building is locked -------------------------------------------
+//
+// Break-and-hold makes it far too easy to take a wall out of your own house
+// while clearing the ground beside it, and the first you would know is the
+// structure reporting itself broken. So it is locked until you say otherwise.
+
+{
+  const { inventory: inv3, reg: reg3 } = setup();
+  inv3.add('seeds', 10);
+  const claimed = reg3.claim(FARM, 'farm');
+  ok('a new claim starts locked', claimed.structure.locked === true);
+
+  ok('a block inside it belongs to it', reg3.at(5, 10, 5)?.id === claimed.structure.id);
+  ok('a block above it does not', reg3.at(5, 20, 5) === null);
+  ok('a block beside it does not', reg3.at(20, 10, 20) === null);
+
+  const inside = [{ x: 5, y: 10, z: 5, prev: FARMLAND, next: 0 }];
+  const outside = [{ x: 20, y: 10, z: 20, prev: 0, next: FARMLAND }];
+  ok('an edit inside it is blocked', reg3.blocking(inside)?.id === claimed.structure.id);
+  ok('an edit elsewhere is not', reg3.blocking(outside) === null);
+  ok('a batch is blocked if any part of it lands inside',
+    reg3.blocking([...outside, ...inside])?.id === claimed.structure.id);
+
+  reg3.setLocked(claimed.structure.id, false);
+  ok('unlocked, the same edit goes through', reg3.blocking(inside) === null);
+  reg3.setLocked(claimed.structure.id, true);
+  ok('and locking it again stops it', reg3.blocking(inside)?.id === claimed.structure.id);
+
+  // Releasing the claim hands the blocks back.
+  reg3.remove(claimed.structure.id);
+  ok('a released building guards nothing', reg3.blocking(inside) === null);
+  ok('and is gone from the registry', reg3.list().length === 0);
+}
+
+// The lock survives a save, and a save written before locks existed is read as
+// locked — someone claimed that building on purpose.
+{
+  const { inventory: inv4, reg: reg4, world: w4 } = setup();
+  inv4.add('seeds', 10);
+  const s4 = reg4.claim(FARM, 'farm').structure;
+  reg4.setLocked(s4.id, false);
+  const saved4 = JSON.parse(JSON.stringify(reg4.toJSON()));
+  ok('the lock state is saved', saved4.structures[0].locked === false);
+
+  const reload = new StructureRegistry({ world: w4, bus: null, inventory: inv4 });
+  reload.loadJSON(saved4);
+  ok('and comes back unlocked', reload.list()[0].locked === false);
+
+  const old = { nextId: 2, structures: [{ id: 1, type: 'farm', region: FARM, valid: true, claimedAt: 1, lastPaidAt: 1 }] };
+  const legacy = new StructureRegistry({ world: w4, bus: null, inventory: inv4 });
+  legacy.loadJSON(old);
+  ok('a save from before locks existed reads as locked', legacy.list()[0].locked === true);
+}
+
 process.exit(f?1:0);

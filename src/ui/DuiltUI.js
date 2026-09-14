@@ -74,6 +74,8 @@ export class DuiltUI {
           <div id="buildings-list"></div>`,
         'panel-bench': `
           <div id="bench-list"></div>`,
+        'panel-building': `
+          <div id="building-body"></div>`,
         'panel-skills': `
           <div id="skills-list"></div>`,
       })}
@@ -124,6 +126,52 @@ export class DuiltUI {
 
   onPanelClosed(id) {
     if (id === 'panel-bag') this.held = null;
+    if (id === 'panel-building') this.building = null;
+  }
+
+  /**
+   * The building you are pointing at, and what you can do to it.
+   *
+   * Claimed buildings are locked, so this is the only way to change one. Two
+   * doors out: unlock it and edit the blocks yourself, or release the claim
+   * entirely and have the blocks back as ordinary blocks.
+   */
+  showBuilding(structure, actions = {}) {
+    this.building = structure;
+    const spec = STRUCTURES_BY_ID.get(structure.type);
+    const body = this.q('#building-body');
+    const sub = this.q('#building-sub');
+    if (!body) return;
+
+    const r = structure.region;
+    const size = `${r.maxX - r.minX + 1} × ${r.maxZ - r.minZ + 1} × ${r.maxY - r.minY + 1}`;
+    const locked = structure.locked !== false;
+    if (sub) sub.textContent = spec?.name ?? 'A building you claimed';
+
+    body.innerHTML = `
+      <div class="building-state ${structure.valid ? 'good' : 'bad'}">
+        ${structure.valid ? 'Standing and producing' : (structure.brokenReason ?? 'Something is missing')}
+      </div>
+      <div class="building-facts">
+        <span>${size} blocks</span>
+        <span>${locked ? 'Locked' : 'Unlocked — edits allowed'}</span>
+      </div>
+      <p class="building-note">
+        ${locked
+          ? 'Locked so you cannot take a wall out of it by accident while clearing the ground beside it.'
+          : 'You can break and place inside it now. It is re-checked as you go, and stops producing if it no longer qualifies.'}
+      </p>
+      <div class="building-actions">
+        <button class="secondary" data-lock>${locked ? 'Unlock to edit' : 'Lock again'}</button>
+        <button class="danger secondary" data-remove>Release the claim</button>
+      </div>`;
+
+    body.querySelector('[data-lock]').addEventListener('click', () => actions.onToggleLock?.());
+    body.querySelector('[data-remove]').addEventListener('click', () => {
+      if (confirm(`Release this ${spec?.name ?? 'building'}? The blocks stay, but it stops producing.`)) {
+        actions.onRemove?.();
+      }
+    });
   }
 
   openPanel(id) {

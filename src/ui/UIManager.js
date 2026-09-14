@@ -75,6 +75,13 @@ export class UIManager {
         <div class="sel-hint" id="sel-hint"></div>
       </div>
 
+      <!--
+        A claimed building under the crosshair says so before you swing at it.
+        On a desktop it is a label and C manages it; on a phone there is no C,
+        so the label is the button.
+      -->
+      <button id="building-hint" hidden></button>
+
       <div id="top-buttons">
         <button class="icon-btn" id="btn-undo" title="Undo the last change">${icon('undo')}<span>Undo</span></button>
         <button class="icon-btn" id="btn-redo" title="Redo the change you undid">${icon('redo')}<span>Redo</span></button>
@@ -262,8 +269,8 @@ export class UIManager {
   }
 
   detectTouch() {
-    const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-    if (isTouch) {
+    this.isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+    if (this.isTouch) {
       document.body.classList.add('touch');
     }
   }
@@ -415,6 +422,8 @@ export class UIManager {
       this.selectBlock(id);
     });
 
+    // On a phone there is no C key, so the hint is what you press.
+    this.q('#building-hint').addEventListener('click', () => this.cb.onOpenClaim());
     this.q('#btn-undo').addEventListener('click', () => this.cb.onUndo());
     this.q('#btn-redo').addEventListener('click', () => this.cb.onRedo());
     this.q('#btn-select').addEventListener('click', () => this.toggleSelector());
@@ -757,6 +766,19 @@ export class UIManager {
 
   openPanel(id) {
     this.panels.open(id);
+  }
+
+  /**
+   * Names the claimed building under the crosshair, or hides the hint.
+   * Called every frame, so it only touches the DOM when something changed.
+   */
+  setBuildingHint(text) {
+    const el = this.q('#building-hint');
+    if (!el) return;
+    if (!text) { if (!el.hidden) el.hidden = true; return; }
+    const wanted = `<b>${text}</b><span>${this.isTouch ? 'Tap to manage' : 'C to manage'}</span>`;
+    if (el.innerHTML !== wanted) el.innerHTML = wanted;
+    el.hidden = false;
   }
 
   isPanelOpen(id) {
@@ -1134,6 +1156,12 @@ export class UIManager {
    * nothing different to do for either.
    */
   openDuiltPanel(id) { this.openPanel(id); }
+
+  /** Shows the building under the crosshair, with what can be done to it. */
+  openBuilding(structure, actions) {
+    this.openPanel('panel-building');
+    this.duiltUI?.showBuilding(structure, actions);
+  }
 
   setSelectorSize(size) {
     this.q('#size-label').innerHTML = `${size}&sup3;`;

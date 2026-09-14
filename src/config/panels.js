@@ -124,6 +124,16 @@ export const PANELS = [
     label: 'Bench',
   },
   {
+    id: 'panel-building',
+    title: 'This building',
+    subId: 'building-sub',
+    layer: 'duilt',
+    mode: 'duilt',
+    label: 'Building',
+    // No key of its own: pointing at a building and asking "what is this?" is
+    // the same question C already answers, so C answers it here too.
+  },
+  {
     id: 'panel-skills',
     title: 'Skills',
     sub: 'You get better by doing — and credit lands on milestones, not repetition.',
