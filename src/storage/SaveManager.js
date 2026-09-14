@@ -23,6 +23,9 @@ export class SaveManager {
           // got. Reading the whole payload here is fine — it is already parsed.
           return {
             name,
+            // The id the cloud knows this world by, so the worlds screen can
+            // tell which of your saves are also on your account.
+            worldId: data.worldId ?? null,
             timestamp: data.timestamp,
             isAutosave: name === AUTOSAVE_NAME,
             mode: data.mode ?? 'creative',

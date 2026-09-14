@@ -74,14 +74,15 @@ export const GUIDE = [
       {
         kind: 'keys',
         rows: [
-          ['Move', touch ? 'Left stick' : 'W A S D'],
-          ['Look around', touch ? 'Right stick' : 'Move the mouse'],
+          ['Look around', touch ? 'Left stick' : 'Move the mouse'],
+          ['Move', touch ? 'Right stick' : 'W A S D'],
           ['Break a block', touch ? 'Break button' : 'Left click'],
           ['Keep breaking', touch ? 'Hold Break' : 'Hold left click'],
           ['Place a block', touch ? 'Place button' : 'Right click'],
           ['Jump', touch ? 'Jump button' : 'Space'],
           ['Fly on and off', touch ? 'Fly button' : 'F'],
-          ['Up and down while flying', touch ? 'Up and Down buttons' : 'Space / Shift'],
+          ['Up and down while flying', touch ? 'Jump and Down buttons' : 'Space / Shift'],
+          ['Everything else', touch ? 'The More button' : 'The toolbar, top right'],
           ['Pick a block', touch ? 'Tap the palette' : 'Keys 1-9, or click the palette'],
           ['Undo / Redo', touch ? 'Undo and Redo buttons' : 'Ctrl+Z / Ctrl+Y'],
           ['Open the menu', touch ? 'Menu button' : 'Esc'],
@@ -91,6 +92,10 @@ export const GUIDE = [
         kind: 'note',
         text: 'Hold the break button down and it keeps going — aim at the next block and it breaks that one too, so clearing a wall is one long press rather than fifty.',
       },
+      ...(touch ? [{
+        kind: 'note',
+        text: 'The sticks are the other way round from most games on purpose: this is a game where you stand still and mine, so the steadier hand gets the camera and the busier one gets Break and Place.',
+      }] : []),
     ],
   },
 

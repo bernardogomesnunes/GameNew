@@ -322,9 +322,13 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 .stick-base.active .stick-knob { border-color: var(--accent); background: var(--accent-dim); }
 
-/* Action buttons sit above their own stick, so each thumb keeps its own cluster. */
+/* Each thumb keeps its own cluster, sitting above its own stick.
+
+   Lower than it used to be: with Bag, Bench and the Duilt row folded into
+   More, the tallest either side ever gets before you open something is two
+   rows, so the cluster does not need to start a third of the way up. */
 .touch-buttons {
-  position: absolute; bottom: calc(212px + env(safe-area-inset-bottom));
+  position: absolute; bottom: calc(150px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 10px; pointer-events: auto;
 }
 #touch-buttons-left { left: 14px; align-items: flex-start; }
@@ -334,19 +338,19 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
  * into the toolbar at the top of the screen — which is what happened the first
  * time a sixth button appeared. So it is given a ceiling and folds into a
  * second column beside the first instead, which holds however many panels the
- * game ends up with. */
+ * game ends up with. It grows rightward now, being on the left of the screen. */
 .touch-tray {
   flex-direction: column-reverse; flex-wrap: wrap-reverse;
-  align-items: flex-end; align-content: flex-end;
+  align-items: flex-start; align-content: flex-start;
   gap: 8px; margin-bottom: 2px;
-  /* Budget: the 212px the cluster sits above the bottom, the three rows that
-     can be under the tray (Bag/Bench, More/Up, and Down once you are flying)
-     at 66px each, and room for the toolbar. Capped rather than free-growing so
-     a tray that outgrows the space folds into a second column instead of
-     walking into the toolbar — but not so tight that it folds into a single
-     row lying across the screen, which is what 560 did. */
-  max-height: calc(100vh - 470px);
-  max-height: calc(100dvh - 470px);
+  /* Budget: the 150px the cluster sits above the bottom, the two rows that can
+     be under the tray (More/Jump, and Down once you are flying) at 66px each,
+     and — the part the first attempt missed — the goal list, which lives at the
+     top left and is exactly where a tall tray on this side ends up. Measured
+     on a 390x800 screen: the goals run down to about 300, so the tray has to
+     stop above that and fold into a second column instead. */
+  max-height: calc(100vh - 530px);
+  max-height: calc(100dvh - 530px);
 }
 .touch-btn {
   width: 62px; height: 62px; border-radius: 18px;
@@ -366,7 +370,9 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   #hud-top { right: auto; width: 55%; }
   /* Labels are worth their space on a desktop toolbar but eat a phone screen;
      the Help panel names every control instead. */
-  #top-buttons { top: 12px; flex-wrap: wrap; justify-content: flex-end; max-width: 46%; gap: 5px; }
+  /* Five buttons at 36px plus gaps. 46% wrapped Menu onto a line of its own
+     the moment the guide moved up here. */
+  #top-buttons { top: 12px; flex-wrap: wrap; justify-content: flex-end; max-width: 58%; gap: 5px; }
   .icon-btn { min-width: 0; width: 36px; height: 36px; padding: 0; border-radius: 9px; }
   .icon-btn span { display: none; }
   .icon-btn.panel-close { width: 30px; height: 30px; }
@@ -743,10 +749,13 @@ body.touch #touch-buttons-left { max-height: 62vh; }
 .where-card[disabled] { opacity: 0.55; cursor: default; }
 @media (max-width: 520px) { .where-list { flex-direction: column; } }
 
-/* Which worlds are on the account, on the worlds list. */
+/* Which worlds are on the account. It rides inside the description line, so
+   it costs no width the world's own name could have used. */
 .world-tag {
-  flex: 0 0 auto; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 2px 8px;
+  display: inline-block; margin-left: 4px;
+  font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--accent); border: 1px solid var(--accent); border-radius: 999px;
+  padding: 1px 6px; vertical-align: 1px;
 }
 
 #home-world-name {

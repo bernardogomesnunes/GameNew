@@ -92,7 +92,9 @@ export class UIManager {
         <button class="icon-btn touch-moved" id="btn-symmetry" title="Mirror your building across the world's centre">${icon('symmetry')}<span>Mirror</span></button>
         <button class="icon-btn touch-moved" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
         <button class="icon-btn touch-moved" id="btn-stats" title="Progress, achievements and challenges">${icon('stats')}<span>Stats</span></button>
-        <button class="icon-btn touch-moved" id="btn-guide" title="How to play">${icon('help')}<span>Guide</span></button>
+        <!-- Not touch-moved: the guide belongs at the top on a phone too,
+             beside the menu, rather than buried in the More tray. -->
+        <button class="icon-btn" id="btn-guide" title="How to play">${icon('help')}<span>Guide</span></button>
         <button class="icon-btn" id="btn-menu" title="Save, load and world settings">${icon('menu')}<span>Menu</span></button>
       </div>
 
@@ -221,6 +223,20 @@ export class UIManager {
           <div class="score-breakdown" id="score-breakdown"></div>`,
       })}
 
+      <!--
+        Two thumbs, and as little else on the glass as the game can manage.
+
+        Camera on the left and movement on the right is the opposite of the
+        console convention, and deliberate: this is a game where you stand
+        still and mine. The hand that is busy is the one aiming, so it gets the
+        stick it never lets go of, and the hand that only occasionally walks
+        somewhere gets the other — along with Break and Place, the two things
+        you do a thousand times a session.
+
+        Everything else lives behind More. The cluster used to carry eight
+        buttons across two columns before you opened anything; a screen that is
+        a third controls is a screen you cannot see the world through.
+      -->
       <div id="touch-controls">
         <div class="stick-zone" id="stick-left">
           <div class="stick-base"><div class="stick-knob"></div></div>
@@ -228,49 +244,33 @@ export class UIManager {
         <div class="stick-zone" id="stick-right">
           <div class="stick-base"><div class="stick-knob"></div></div>
         </div>
-        <!--
-          Break and Place sit over the movement stick, on the left. The right
-          thumb is steering the camera the whole time it is playing, so hanging
-          the two things you do most often off it meant interrupting the look
-          to act. The left thumb only holds a direction, and can leave it for a
-          moment. Everything that opens a panel is one button away instead of
-          five across the bottom of the screen.
-        -->
-        <div class="touch-buttons" id="touch-buttons-left">
-          <div class="row">
-            <button class="touch-btn" id="t-break">${icon('mine')}<span>Break</span></button>
-            <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
-          </div>
-        </div>
-        <!--
-          The right thumb, in the order you reach for things. Bag and Bench are
-          the two you open constantly in Duilt, so they are always out rather
-          than behind More — which is also what let the top toolbar shed its
-          copies of them. Everything you touch once in a while is behind More.
 
-          Up and Down read as a pair: Up above, Down below, the way they point.
-          Down only exists while flying, and it takes the lowest slot when it
-          appears so Up is never the one underneath.
-        -->
-        <div class="touch-buttons" id="touch-buttons-right">
+        <!-- Left thumb: the camera, and the way into everything occasional. -->
+        <div class="touch-buttons" id="touch-buttons-left">
           <div class="row touch-tray" id="touch-tray" hidden>
+            <button class="touch-btn duilt-only" id="t-bag" hidden>${icon('bag')}<span>Bag</span></button>
             <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
+            <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
             <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
-            <button class="touch-btn" id="t-guide">${icon('help')}<span>Guide</span></button>
             <button class="touch-btn sandbox-only" id="t-designs">${icon('paste')}<span>Designs</span></button>
             <button class="touch-btn sandbox-only" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
             <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
             <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
           </div>
-          <div class="row duilt-only" id="touch-duilt-row" hidden>
-            <button class="touch-btn" id="t-bag">${icon('bag')}<span>Bag</span></button>
-            <button class="touch-btn" id="t-bench">${icon('hammer')}<span>Bench</span></button>
-          </div>
           <div class="row">
             <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
             <button class="touch-btn" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
           </div>
+          <!-- Down appears only while flying, and below Up, the way they point. -->
           <button class="touch-btn" id="t-down" hidden>${icon('down')}<span>Down</span></button>
+        </div>
+
+        <!-- Right thumb: walking, and the two things you came here to do. -->
+        <div class="touch-buttons" id="touch-buttons-right">
+          <div class="row">
+            <button class="touch-btn" id="t-break">${icon('mine')}<span>Break</span></button>
+            <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
+          </div>
         </div>
       </div>
     `;
@@ -387,6 +387,17 @@ export class UIManager {
       // Needed by the naming step, to know whether "in the cloud" is on offer.
       isCloudConfigured: () => this.cb.isCloudConfigured?.() ?? false,
       getCloudUser: () => this.cb.getCloudUser?.() ?? null,
+      // What the account is holding, so the list can mark which of your worlds
+      // are up there and offer the ones that are not down here.
+      listCloudWorlds: () => this.cb.getCloudWorlds(),
+      onOpenCloud: async (id) => {
+        try {
+          await this.cb.onCloudRestore(id);
+          this.enterWorld();
+        } catch (err) {
+          this.toast({ kind: 'xp', title: 'Could not fetch that world', body: err.message });
+        }
+      },
       // These open *over* the worlds screen rather than replacing it. They used
       // to hide it first, so closing one left you standing in whichever world
       // was last loaded — one you never chose, already falling.
@@ -455,7 +466,6 @@ export class UIManager {
       // Skills had no way in at all before this — the panel existed, was
       // drawn, and nothing anywhere opened it.
       ['#t-skills', () => this.openPanel('panel-skills')],
-      ['#t-guide', () => this.openPanel('panel-guide')],
       ['#t-designs', () => this.openPanel('panel-templates')],
     ];
     for (const [sel, fn] of openers) {
@@ -593,13 +603,17 @@ export class UIManager {
   }
 
   wireTouchControls() {
-    // Movement wants to reach full speed readily; the camera wants precision
-    // near centre, so it gets a steeper curve.
-    this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y), { deadZone: 0.10, curve: 1.1 });
-    // 1.8 was too steep: a half-travel push came out at a fifth of the turn
-    // rate, so the camera felt like it was lagging behind the thumb. 1.25 keeps
-    // the fine control near centre and gives back the middle of the range.
-    this.bindStick('#stick-right', (x, y) => this.cb.onLookStick(x, y), { deadZone: 0.09, curve: 1.25 });
+    // Camera left, movement right. Backwards against every console pad, and
+    // right for this game: the thumb that never leaves its stick is the one
+    // aiming, and it is the steadier hand that should have it.
+    //
+    // The camera wants precision near centre, so it gets the steeper curve.
+    // 1.8 was too steep — a half-travel push came out at a fifth of the turn
+    // rate and the camera felt like it was lagging behind the thumb. 1.25
+    // keeps the fine control near centre and gives back the middle of the
+    // range. Movement just wants to reach full speed readily.
+    this.bindStick('#stick-left', (x, y) => this.cb.onLookStick(x, y), { deadZone: 0.09, curve: 1.25 });
+    this.bindStick('#stick-right', (x, y) => this.cb.onMove(x, y), { deadZone: 0.10, curve: 1.1 });
 
     const bindHold = (sel, onChange) => {
       const el = this.q(sel);
@@ -1045,6 +1059,8 @@ export class UIManager {
       await (this.accountMode === 'create' ? this.cb.onCloudSignUp(...creds()) : this.cb.onCloudSignIn(...creds()));
       this.q('#cloud-password').value = '';
       this.closePanel('panel-account');
+      // Forget what we knew: it was answered for whoever was signed in before.
+      this.home.cloudWorlds = null;
       this.openHome();
       this.toast({
         kind: 'challenge',

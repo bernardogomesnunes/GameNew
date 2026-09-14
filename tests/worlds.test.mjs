@@ -20,6 +20,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const home = readFileSync(new URL('../src/ui/HomeScreen.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const auth = readFileSync(new URL('../src/net/CloudAuth.js', import.meta.url), 'utf8');
+const saves = readFileSync(new URL('../src/storage/SaveManager.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
 
 // --- where a new world lives -------------------------------------------------
@@ -45,7 +46,7 @@ ok('stacking on a narrow screen', /max-width: 520px[\s\S]{0,80}where-list/.test(
 // --- signing in goes somewhere -----------------------------------------------
 
 ok('signing in closes the account panel', /closePanel\('panel-account'\)/.test(ui));
-ok('and opens the worlds list', /closePanel\('panel-account'\);\s*\n\s*this\.openHome\(\)/.test(ui));
+ok('and opens the worlds list', /closePanel\('panel-account'\);[\s\S]{0,200}this\.openHome\(\)/.test(ui));
 ok('and does not leave your password sitting in the box',
   /#cloud-password'\)\.value = ''/.test(ui));
 
@@ -67,5 +68,30 @@ ok('the host is named, since that is what a screenshot needs to show',
 ok('and every branch says the worlds are safe',
   (auth.match(/safe on this device/g) ?? []).length >= 3);
 ok('an expired session still reads as one', /session expired/.test(auth));
+
+// --- which worlds are on the account ----------------------------------------
+
+// This was left out once on the grounds that a badge for a broken feature
+// would never appear. That was the wrong call: the list is where you go to
+// find a world, and "is this one safe if I lose this phone" is the question it
+// exists to answer.
+ok('the local list carries the id the cloud knows a world by',
+  /worldId: data\.worldId \?\? null/.test(saves));
+ok('worlds also on the account are marked', /class="world-tag">Cloud/.test(home));
+ok('and the mark rides in the description, not beside the name',
+  /\$\{describe\(current\)\}\$\{tag\(current\)\}/.test(home));
+ok('worlds only on the account get their own group', /On your account/.test(home));
+ok('and say they are not on this device', /not on this device/.test(home));
+ok('with a way to fetch one', /data-cloud=/.test(home) && /onOpenCloud/.test(home));
+ok('fetching one is wired to the restore path', /onCloudRestore\(id\)/.test(ui));
+
+// The list must never wait on the network, and must survive it failing.
+ok('the cloud is asked only after the list is drawn',
+  /this\.refreshCloudWorlds\(\);\s*\n\s*\}/.test(home));
+ok('and not at all when signed out', /if \(this\.cloudPending \|\| !this\.cb\.getCloudUser\?\.\(\)\) return;/.test(home));
+ok('a failure leaves the local list alone', /catch \{[\s\S]{0,120}Nothing to say/.test(home));
+ok('and two asks do not overlap', /this\.cloudPending = true/.test(home));
+ok('signing in forgets what the last account was holding',
+  /this\.home\.cloudWorlds = null/.test(ui));
 
 process.exit(f ? 1 : 0);

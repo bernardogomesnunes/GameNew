@@ -109,6 +109,17 @@ export class HomeScreen {
     const saves = this.cb.listWorlds();
     const current = saves.find((s) => s.isAutosave);
     const named = saves.filter((s) => !s.isAutosave);
+    // What is on the account, from the last time we asked. Drawn from a cache
+    // so the list appears instantly; the fetch below refreshes it in place.
+    const onAccount = this.cloudWorlds ?? [];
+    const upThere = new Set(onAccount.map((w) => w.id));
+    const here = new Set(saves.map((s) => s.worldId).filter(Boolean));
+    const onlyUpThere = onAccount.filter((w) => !here.has(w.id));
+    // Inside the description line rather than a column of its own: as a
+    // separate flex item it squeezed the world's name down to "Home settle…"
+    // on a phone, which is the one thing on the card that has to be readable.
+    const tag = (s) => (s.worldId && upThere.has(s.worldId)
+      ? ' <span class="world-tag">Cloud</span>' : '');
 
     this.body.innerHTML = `
       ${current ? `
@@ -116,7 +127,7 @@ export class HomeScreen {
         <div class="world-card world-card-primary" data-continue="1" role="button" tabindex="0">
           <span class="world-text">
             <strong>${escapeHtml(current.worldName || 'Your world')}</strong>
-            <em>${describe(current)}</em>
+            <em>${describe(current)}${tag(current)}</em>
           </span>
           <span class="world-go">Continue</span>
           <button class="world-remove" data-remove-current="1" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
@@ -137,9 +148,22 @@ export class HomeScreen {
             <div class="world-card" data-open="${escapeAttr(s.name)}">
               <span class="world-text">
                 <strong>${escapeHtml(s.worldName || s.name)}</strong>
-                <em>${describe(s)}</em>
+                <em>${describe(s)}${tag(s)}</em>
               </span>
               <button class="world-remove" data-remove="${escapeAttr(s.name)}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
+            </div>`).join('')}
+        </div>` : ''}
+
+      ${onlyUpThere.length ? `
+        <div class="home-label">On your account</div>
+        <div class="world-list">
+          ${onlyUpThere.map((w) => `
+            <div class="world-card" data-cloud="${escapeAttr(w.id)}" role="button" tabindex="0">
+              <span class="world-text">
+                <strong>${escapeHtml(w.name || 'Untitled world')}</strong>
+                <em>${describe({ mode: w.mode, timestamp: w.updatedAt })} · not on this device</em>
+              </span>
+              <span class="world-go">Get it</span>
             </div>`).join('')}
         </div>` : ''}
     `;
@@ -163,6 +187,38 @@ export class HomeScreen {
         if (this.cb.onRemove(el.dataset.remove)) this.render();
       });
     });
+    this.body.querySelectorAll('[data-cloud]').forEach((el) => {
+      el.addEventListener('click', () => this.cb.onOpenCloud?.(el.dataset.cloud));
+    });
+    this.refreshCloudWorlds();
+  }
+
+  /**
+   * Asks the account what it is holding, then redraws with the answer.
+   *
+   * Deliberately after the list is already on screen: the local saves are
+   * there instantly and a network round trip must never be the thing standing
+   * between you and the world you were playing. Signed out, offline, or the
+   * cloud having a bad day all come to the same thing — the list you can see
+   * is the list you had, unbadged.
+   */
+  async refreshCloudWorlds() {
+    if (this.cloudPending || !this.cb.getCloudUser?.()) return;
+    this.cloudPending = true;
+    try {
+      const worlds = await this.cb.listCloudWorlds?.();
+      if (!worlds) return;
+      const changed = JSON.stringify(worlds.map((w) => w.id).sort())
+        !== JSON.stringify((this.cloudWorlds ?? []).map((w) => w.id).sort());
+      this.cloudWorlds = worlds;
+      // Only redraw when the answer is new, and only if the list is still what
+      // is on screen — you may have walked into the new-world journey by now.
+      if (changed && this.step === 'home') this.renderHome();
+    } catch {
+      // Nothing to say. The local list is already correct.
+    } finally {
+      this.cloudPending = false;
+    }
   }
 
   // ---- the journey ----
