@@ -23,6 +23,9 @@ export const RINGS = [
 
 const EDGE = 0xf0c674;
 
+/** How far above a block's top face the edge stroke floats, to avoid z-fighting. */
+const LIFT = 0.03;
+
 export class Territory {
   constructor({ world, scene, bus, age = 1 }) {
     this.world = world;
@@ -155,6 +158,95 @@ export class Territory {
     wall(midX, b.maxZ + 1, 0);
     wall(b.minX, midZ, Math.PI / 2);
     wall(b.maxX + 1, midZ, Math.PI / 2);
+
+    this.buildEdgeStroke(b);
+  }
+
+  /**
+   * A line drawn along the top of the blocks that touch the border.
+   *
+   * The wall says where your land ends when you look up; this says it when you
+   * look down, which is where you are looking while you build. The version
+   * before this was a flat rectangle hung in the air at the boundary: it had to
+   * be drawn over the world to be seen at all, and a bright stripe crossing a
+   * hillside reads as something stuck to the screen.
+   *
+   * This one sits on the ground instead, stepping up and down with it, and is
+   * depth-tested like everything else — so a block in front of it hides it,
+   * which is the whole reason the old one had to go.
+   */
+  buildEdgeStroke(b) {
+    const pts = [];
+
+    // The generator's height map is written once and never updated, so a block
+    // broken on the edge would leave the stroke hanging over a hole. Find the
+    // real top, starting the search a little above the recorded one.
+    const topOf = (x, z) => {
+      if (!this.world.inBounds(x, 0, z)) return null;
+      const from = Math.min(this.world.height - 1, this.world.surfaceHeight(x, z) + 12);
+      for (let y = from; y >= 0; y--) if (this.world.isSolid(x, y, z)) return y + 1;
+      return null;
+    };
+
+    /**
+     * Walks one side, block by block, drawing the top of each block's outward
+     * face. Where two neighbours sit at different heights a riser joins them,
+     * so the stroke stays one unbroken line over broken ground rather than a
+     * row of floating dashes.
+     */
+    const side = (count, cell, ends) => {
+      let prevY = null;
+      let prevEnd = null;
+      for (let i = 0; i < count; i++) {
+        const [x, z] = cell(i);
+        const y = topOf(x, z);
+        if (y == null) { prevY = null; continue; }
+        const [a, c] = ends(x, z);
+        if (prevY != null && prevY !== y) {
+          pts.push(prevEnd[0], prevY + LIFT, prevEnd[1], prevEnd[0], y + LIFT, prevEnd[1]);
+        }
+        pts.push(a[0], y + LIFT, a[1], c[0], y + LIFT, c[1]);
+        prevY = y;
+        prevEnd = c;
+      }
+    };
+
+    const n = this.size;
+    // A block at (x, z) occupies x..x+1 and z..z+1, so the outward face of the
+    // low-side rows is at the block coordinate and the high-side rows at +1.
+    side(n, (i) => [b.minX + i, b.minZ], (x, z) => [[x, z], [x + 1, z]]);
+    side(n, (i) => [b.minX + i, b.maxZ], (x, z) => [[x, z + 1], [x + 1, z + 1]]);
+    side(n, (i) => [b.minX, b.minZ + i], (x, z) => [[x, z], [x, z + 1]]);
+    side(n, (i) => [b.maxX, b.minZ + i], (x, z) => [[x + 1, z], [x + 1, z + 1]]);
+
+    if (!pts.length) return;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    const mat = new THREE.LineBasicMaterial({
+      color: EDGE,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,      // it is a marking on the ground, not a thing with volume
+    });
+    const line = new THREE.LineSegments(geo, mat);
+    line.renderOrder = 2;
+    this.edge = line;
+    this.fence.add(line);
+  }
+
+  /**
+   * Redraws the stroke when something changed under it.
+   *
+   * The border is buildable ground like any other, so a block broken or placed
+   * on the last row moves the surface the line is drawn on. Anything further in
+   * cannot affect it, which is almost every edit — so the common case costs one
+   * comparison per change and nothing else.
+   */
+  onBlocksChanged(changes) {
+    const b = this.bounds();
+    const touches = changes.some(({ x, z }) =>
+      (x === b.minX || x === b.maxX || z === b.minZ || z === b.maxZ) && this.contains(x, z));
+    if (touches) this.rebuildFence();
   }
 
   /** Representative surface height inside the border, for placing the fence. */

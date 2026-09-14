@@ -1008,6 +1008,9 @@ export class Game {
       const gained = this.duilt.onBlocksBroken(changes);
       if (Object.keys(gained).length) this.bus.emit('duilt:gathered', { gained });
       this.duilt.structures.revalidateAround(changes);
+      // The border line is drawn on the blocks that touch it, so digging one
+      // out moves the ground under it.
+      this.duilt.territory.onBlocksChanged(changes);
       this.duilt.checkAgeAdvance();
     }
     for (const c of changes) {

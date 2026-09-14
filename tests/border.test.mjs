@@ -86,4 +86,74 @@ ok(`movement inside the border is unaffected (${stuckInside} stuck)`, stuckInsid
     after.maxX - after.minX > before.maxX - before.minX);
 }
 
+// --- the stroke sits on the blocks that touch the border ---------------------
+
+{
+  const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed: 3 });
+  const g = new DuiltGame({ world, scene, bus: null });
+  const t = g.territory;
+  const b = t.bounds();
+
+  const stroke = () => t.fence.children.find((c) => c.isLineSegments);
+  const verts = () => {
+    const pos = stroke().geometry.attributes.position;
+    const out = [];
+    for (let i = 0; i < pos.count; i++) out.push([pos.getX(i), pos.getY(i), pos.getZ(i)]);
+    return out;
+  };
+
+  ok('the border is drawn as a stroke, not just a wall', !!stroke());
+
+  const pts = verts();
+  // Every point must be on one of the four boundary planes.
+  const onEdge = pts.every(([x, , z]) =>
+    x === b.minX || x === b.maxX + 1 || z === b.minZ || z === b.maxZ + 1);
+  ok('every point of it lies on the boundary', onEdge);
+
+  // And must rest on the block under it, not float or sink.
+  const topOf = (x, z) => {
+    for (let y = world.height - 1; y >= 0; y--) if (world.isSolid(x, y, z)) return y + 1;
+    return null;
+  };
+  let wrong = 0;
+  for (const [x, y, z] of pts) {
+    // Sample the block just inside the boundary from this point.
+    const bx = Math.min(Math.max(Math.floor(x - (x === b.maxX + 1 ? 0.5 : -0.5)), b.minX), b.maxX);
+    const bz = Math.min(Math.max(Math.floor(z - (z === b.maxZ + 1 ? 0.5 : -0.5)), b.minZ), b.maxZ);
+    const top = topOf(bx, bz);
+    if (top == null) continue;
+    // A riser joins two heights, so a point may sit at either neighbour's top.
+    const near = [topOf(bx - 1, bz), topOf(bx + 1, bz), topOf(bx, bz - 1), topOf(bx, bz + 1), top];
+    if (!near.some((h) => h != null && Math.abs(y - h) < 0.1)) wrong++;
+  }
+  ok(`it rests on the ground all the way round (${wrong} stray of ${pts.length})`, wrong === 0);
+
+  // It follows the terrain rather than sitting at one height.
+  const ys = new Set(pts.map(([, y]) => Math.round(y)));
+  ok(`it steps with the land rather than lying flat (${ys.size} heights)`, ys.size > 1);
+
+  // Digging a hole on the edge moves it; digging in the middle does not.
+  const ex = b.minX, ez = b.minZ + 6;
+  const eTop = topOf(ex, ez);
+  const beforeCount = verts().length;
+  world.setBlock(ex, eTop - 1, ez, 0);
+  t.onBlocksChanged([{ x: ex, y: eTop - 1, z: ez }]);
+  const lowered = verts().some(([x, y, z]) =>
+    Math.abs(x - ex) < 1.01 && Math.abs(z - ez) < 1.01 && y < eTop - 0.5);
+  ok('breaking a block on the edge redraws the stroke lower', lowered);
+
+  const mid = { x: (b.minX + b.maxX) >> 1, y: 20, z: (b.minZ + b.maxZ) >> 1 };
+  const snapshot = JSON.stringify(verts());
+  t.onBlocksChanged([mid]);
+  ok('an edit in the middle of the land leaves it alone', JSON.stringify(verts()) === snapshot);
+  ok('and the stroke still closes all four sides', verts().length >= beforeCount - 8);
+
+  // The next ring gets its own, drawn round the wider land.
+  t.setAge(2);
+  const wide = t.bounds();
+  ok('a wider ring gets its own stroke', !!stroke() && verts().length > pts.length);
+  ok('drawn round the new boundary, not the old one', verts().every(([x, , z]) =>
+    x === wide.minX || x === wide.maxX + 1 || z === wide.minZ || z === wide.maxZ + 1));
+}
+
 process.exit(f ? 1 : 0);
