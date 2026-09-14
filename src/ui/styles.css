@@ -261,7 +261,7 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 }
 .gfx-grid .gfx-check { flex-direction: row; align-items: center; gap: 7px; padding-bottom: 8px; }
 .gfx-grid .gfx-check input { width: 16px; height: 16px; accent-color: var(--accent); }
-.gfx-fps { float: right; text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.gfx-fps { text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
 
 .mode-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
 .mode-btn { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 12px; }
@@ -796,6 +796,37 @@ body.touch #touch-buttons-left { max-height: 62vh; }
  * and a save box at the top read as a form to fill in before anything else. */
 .menu-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
 .menu-actions button { flex: 1 1 auto; min-width: 96px; padding: 12px 14px; font-size: 14px; }
+
+/* The menu is an index of places, not one long column. One card per thing you
+   might have opened it for, each saying what is inside. */
+#menu-index { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.menu-card {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--panel); border: 1px solid var(--panel-border); border-radius: 12px;
+  padding: 13px 14px; color: var(--text); font: inherit; cursor: pointer;
+  transition: border-color .14s ease, background .14s ease;
+}
+.menu-card:hover { border-color: var(--panel-border-strong); background: rgba(255,255,255,0.04); }
+.menu-card-icon {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-dim); color: var(--accent);
+}
+.menu-card-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.menu-card-text strong { font-size: 14.5px; }
+.menu-card-text span { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
+.menu-card-go { flex: 0 0 auto; color: var(--text-dim); display: flex; }
+
+.menu-section { margin-top: 4px; }
+.menu-back {
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+  background: transparent; border: 0; color: var(--text-dim); font: inherit;
+  font-size: 12.5px; cursor: pointer; padding: 4px 0;
+}
+.menu-back:hover { color: var(--text); }
+/* The chevron points forward on a card and back on the way out. */
+.menu-back .icon { transform: rotate(180deg); }
+.menu-resume { margin-top: 18px; }
 
 /* --- the top-left column on a phone ---------------------------------------
  *

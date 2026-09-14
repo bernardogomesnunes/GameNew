@@ -27,6 +27,12 @@ const PATHS = {
   // Skills: a step up, not the bar chart Stats already uses — side by side in
   // the tray the two were the same picture.
   skills: 'M12 3.5 17 10h-3v4h-4v-4H7l5-6.5ZM6 19h12',
+
+  // Menu sections.
+  person: 'M12 11.5a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2ZM4.8 20.2c0-3.4 3.2-5.4 7.2-5.4s7.2 2 7.2 5.4',
+  file: 'M13.5 3.5H6.5v17h11V7.5l-4-4ZM13.5 3.5v4h4',
+  chevron: 'M9.5 5.5 16 12l-6.5 6.5',
+  sliders: 'M4 8h9M17 8h3M4 16h3M11 16h9M15 5.5v5M8 13.5v5',
 };
 
 /** Inline SVG markup for an icon name. */

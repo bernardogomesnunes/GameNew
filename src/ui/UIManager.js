@@ -1,6 +1,6 @@
 import { PLACEABLE_BLOCKS } from '../config/blocks.js';
 import { icon } from './icons.js';
-import { renderPanels } from './Panel.js';
+import { renderPanels, panelDef } from './Panel.js';
 import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
@@ -9,6 +9,7 @@ import { glyphSvg } from '../config/glyphs.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { guideFor } from '../config/guide.js';
+import { menuFor, MENU_BY_ID } from '../config/menu.js';
 
 function el(html) {
   const t = document.createElement('template');
@@ -120,15 +121,27 @@ export class UIManager {
           <div class="tab-panel" id="tab-achievements" hidden><div class="ach-grid" id="ach-grid"></div></div>
           <div class="tab-panel" id="tab-challenges" hidden><div id="challenge-list"></div></div>`,
         'panel-menu': `
+          <div id="menu-index"></div>
 
-          <label class="menu-name">
-            <span>Name</span>
-            <input type="text" id="save-name" maxlength="40" placeholder="Unnamed world" />
-          </label>
-          <div id="save-hint" class="export-note" hidden></div>
+          <div class="menu-section" id="menu-world" hidden>
+            <button class="menu-back" data-menu-back="1">${icon('chevron', 14)}<span>Menu</span></button>
+            <label class="menu-name">
+              <span>Name</span>
+              <input type="text" id="save-name" maxlength="40" placeholder="Unnamed world" />
+            </label>
+            <div id="save-hint" class="export-note" hidden></div>
+            <div class="menu-actions">
+              <button class="secondary" id="btn-save">Save a copy</button>
+              <button class="secondary" id="btn-leave">Leave to worlds</button>
+            </div>
+          </div>
 
-          <div class="mode-block">
-            <div class="mode-label">Graphics <span id="gfx-fps" class="gfx-fps"></span></div>
+          <div class="menu-section" id="menu-graphics" hidden>
+            <button class="menu-back" data-menu-back="1">${icon('chevron', 14)}<span>Menu</span></button>
+            <!-- The heading already says Graphics; this line is only here for
+                 the frame counter, which is the one thing you want while you
+                 are turning these up and down. -->
+            <div class="mode-label"><span id="gfx-fps" class="gfx-fps"></span></div>
             <div class="gfx-grid">
               <label>Resolution
                 <select id="gfx-resolution">
@@ -152,8 +165,8 @@ export class UIManager {
             <div class="export-note" id="gfx-note" hidden></div>
           </div>
 
-          <div class="mode-block">
-            <div class="mode-label">Files</div>
+          <div class="menu-section" id="menu-files" hidden>
+            <button class="menu-back" data-menu-back="1">${icon('chevron', 14)}<span>Menu</span></button>
             <div class="field-row" style="margin-bottom:0; flex-wrap:wrap;">
               <button class="secondary" id="btn-export-world">Export world</button>
               <button class="secondary" id="btn-export-vox">Export .vox</button>
@@ -162,10 +175,8 @@ export class UIManager {
             <div class="export-note">A world file restores everything, designs included. The .vox opens in MagicaVoxel and Blender.</div>
           </div>
 
-          <div class="menu-actions">
-            <button class="primary" id="btn-resume">Resume</button>
-            <button class="secondary" id="btn-save">Save</button>
-            <button class="secondary" id="btn-leave">Leave to worlds</button>
+          <div class="menu-actions menu-resume">
+            <button class="primary" id="btn-resume">Back to the world</button>
           </div>`,
         'panel-account': `
 
@@ -245,7 +256,6 @@ export class UIManager {
           <div class="row touch-tray" id="touch-tray" hidden>
             <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
             <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
-            <button class="touch-btn" id="t-stats">${icon('stats')}<span>Stats</span></button>
             <button class="touch-btn" id="t-guide">${icon('help')}<span>Guide</span></button>
             <button class="touch-btn sandbox-only" id="t-designs">${icon('paste')}<span>Designs</span></button>
             <button class="touch-btn sandbox-only" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
@@ -445,7 +455,6 @@ export class UIManager {
       // Skills had no way in at all before this — the panel existed, was
       // drawn, and nothing anywhere opened it.
       ['#t-skills', () => this.openPanel('panel-skills')],
-      ['#t-stats', () => this.openPanel('panel-stats')],
       ['#t-guide', () => this.openPanel('panel-guide')],
       ['#t-designs', () => this.openPanel('panel-templates')],
     ];
@@ -475,6 +484,9 @@ export class UIManager {
     this.wireTabs(this.q('#panel-stats'));
 
     this.wireGraphics();
+    this.renderMenuIndex();
+    this.root.querySelectorAll('[data-menu-back]').forEach((btn) =>
+      btn.addEventListener('click', () => this.showMenuSection(null)));
     this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
     this.q('#btn-leave').addEventListener('click', () => {
       this.closePanel('panel-menu');
@@ -738,12 +750,61 @@ export class UIManager {
       if (name) name.value = this.game.worldName || '';
       const hint = this.q('#save-hint');
       if (hint) hint.hidden = true;
+      // Always back at the index: reopening the menu and landing in whatever
+      // section you left is a small mystery every time.
+      this.showMenuSection(null);
     }
     if (id === 'panel-stats') this.populateStats();
     if (id === 'panel-guide') this.populateGuide();
     if (id === 'panel-templates') this.refreshTemplateList();
     // The Duilt panels draw their own contents.
     this.duiltUI?.populate(id);
+  }
+
+  /**
+   * Draws the menu's index of cards, and shows one section at a time.
+   *
+   * `null` means the index itself. A section that has a panel of its own is
+   * not a section here at all — the card opens that panel instead, so there
+   * is one achievements screen rather than two that can drift apart.
+   */
+  renderMenuIndex() {
+    const box = this.q('#menu-index');
+    if (!box) return;
+    const sections = menuFor({ cloud: !!this.cb.isCloudConfigured?.() });
+    box.innerHTML = sections.map((m) => `
+      <button class="menu-card" data-menu="${m.id}">
+        <span class="menu-card-icon">${icon(m.icon, 20)}</span>
+        <span class="menu-card-text">
+          <strong>${escapeHtml(m.name)}</strong>
+          <span>${escapeHtml(m.blurb)}</span>
+        </span>
+        <span class="menu-card-go">${icon('chevron', 16)}</span>
+      </button>`).join('');
+    box.querySelectorAll('[data-menu]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const def = MENU_BY_ID.get(btn.dataset.menu);
+        if (def?.opens) this.openPanel(def.opens);
+        else this.showMenuSection(btn.dataset.menu);
+      });
+    });
+  }
+
+  showMenuSection(id) {
+    const index = this.q('#menu-index');
+    if (!index) return;
+    if (!index.children.length) this.renderMenuIndex();
+    index.hidden = !!id;
+    for (const el of this.root.querySelectorAll('.menu-section')) el.hidden = el.id !== id;
+    // Resume belongs to the whole menu, not to one section, and on the index
+    // it is the only thing you can do that is not "go somewhere".
+    const resume = this.root.querySelector('.menu-resume');
+    if (resume) resume.hidden = !!id;
+    // The heading follows you in and back out, so the card you tapped and the
+    // page you land on say the same thing.
+    const def = id ? MENU_BY_ID.get(id) : null;
+    const title = this.q('#panel-menu h2');
+    if (title) title.textContent = def ? def.name : (panelDef('panel-menu')?.title ?? 'Menu');
   }
 
   openPanel(id) {

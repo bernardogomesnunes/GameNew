@@ -35,7 +35,7 @@ export const PANELS = [
   },
   {
     id: 'panel-menu',
-    title: 'This world',
+    title: 'Menu',
     subId: 'menu-world-kind',
     layer: 'main',
     mode: 'any',
