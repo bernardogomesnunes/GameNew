@@ -184,7 +184,14 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
   display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(255,255,255,0.03);
   transition: border-color .14s ease, transform .14s ease;
 }
-.hotbar-slot .swatch { width: 26px; height: 26px; border-radius: 6px; box-shadow: inset 0 -6px 10px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.22); }
+.hotbar-slot .swatch {
+  width: 26px; height: 26px; border-radius: 6px;
+  box-shadow: inset 0 -6px 10px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.22);
+  display: flex; align-items: center; justify-content: center;
+}
+/* The mark sits on the swatch, not beside it, so the colour still does the
+   fast recognising and the drawing settles which of the four browns it is. */
+.swatch .glyph { display: block; }
 .hotbar-slot.selected { border-color: var(--accent); background: var(--accent-dim); transform: translateY(-3px); }
 .hotbar-slot.locked { opacity: 0.45; }
 .hotbar-slot .lock { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-dim); }
@@ -494,7 +501,10 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .bag-slot:hover:not(.empty) { border-color: var(--panel-border-strong); }
 .bag-slot.held { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
 .bag-slot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.bag-slot .swatch { width: 58%; height: 58%; border-radius: 5px; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25); }
+.bag-slot .swatch {
+  width: 58%; height: 58%; border-radius: 5px; box-shadow: inset 0 -3px 0 rgba(0,0,0,0.25);
+  display: flex; align-items: center; justify-content: center;
+}
 .bag-slot .count {
   position: absolute; right: 4px; bottom: 3px;
   font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;

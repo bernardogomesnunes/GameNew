@@ -37,6 +37,10 @@ const FOG_FAR_COARSE = 160;
 const CULL_MARGIN = 24;
 const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream in
 const AUTOSAVE_INTERVAL_MS = 60_000;
+// Holding down to keep breaking. The first pause is longer than the rest so a
+// normal click stays a single block — hold past it and it becomes a stream.
+const HOLD_BREAK_DELAY_MS = 320;
+const HOLD_BREAK_INTERVAL_MS = 170;
 export const CREATIVE = 'creative';
 export const CAMPAIGN = 'campaign';
 export const DUILT = 'duilt';
@@ -120,6 +124,13 @@ export class Game {
 
     this.selectedBlockId = 1;
     this.pointerLocked = false;
+    // Held-to-break: when it started and when it last fired. Driven from the
+    // frame loop rather than a timer, so it stops on its own the moment the
+    // game stops playing — a panel opening mid-swing does not leave a timer
+    // chewing through your land behind it.
+    this.breaking = false;
+    this.breakHeldSince = 0;
+    this.lastBreakAt = 0;
     this.hoverHit = null;
     this.upHeld = false;
     this.downHeld = false;
@@ -342,6 +353,7 @@ export class Game {
       },
 
       onBreakTap: () => this.primaryAction(),
+      onBreakHold: (held) => this.setBreaking(held),
       onPlaceTap: () => this.secondaryAction(),
 
       // ---- duilt ----
@@ -582,9 +594,15 @@ export class Game {
 
     canvas.addEventListener('mousedown', (e) => {
       if (!this.pointerLocked) return;
-      if (e.button === 0) this.primaryAction();
+      if (e.button === 0) { this.primaryAction(); this.setBreaking(true); }
       else if (e.button === 2) this.secondaryAction();
     });
+    // Every way the button can stop being down, including the ones that are not
+    // a mouseup: releasing outside the canvas, tabbing away mid-hold, or the
+    // browser taking the pointer back.
+    for (const [target, event] of [[window, 'mouseup'], [window, 'blur'], [document, 'visibilitychange']]) {
+      target.addEventListener(event, () => this.setBreaking(false));
+    }
 
     window.addEventListener('keydown', (e) => {
       // Nothing in here is a shortcut while you are filling in a form. Typing an
@@ -655,6 +673,31 @@ export class Game {
     if (document.fullscreenElement) document.exitFullscreen?.();
     else this.enterFullscreen();
     return !document.fullscreenElement;
+  }
+
+  /**
+   * Starts or stops breaking on repeat.
+   *
+   * Only plain breaking repeats. With the selector on, the same button saves or
+   * stamps a design, and holding it should not stamp forty copies.
+   */
+  setBreaking(on) {
+    const want = on && !this.selectorTool.active;
+    if (want === this.breaking) return;
+    this.breaking = want;
+    if (want) {
+      this.breakHeldSince = performance.now();
+      this.lastBreakAt = this.breakHeldSince;
+    }
+  }
+
+  /** One frame of a held break. Re-aims every time, so it eats what you point at. */
+  tickBreaking(now) {
+    if (!this.breaking) return;
+    if (now - this.breakHeldSince < HOLD_BREAK_DELAY_MS) return;
+    if (now - this.lastBreakAt < HOLD_BREAK_INTERVAL_MS) return;
+    this.lastBreakAt = now;
+    this.breakBlock();
   }
 
   primaryAction() {
@@ -1170,6 +1213,7 @@ export class Game {
     if (phase !== 'playing') {
       document.exitPointerLock?.();
       this.player.releaseKeys();
+      this.setBreaking(false);
     }
     this.bus?.emit('game:phase', { phase });
   }
@@ -1191,6 +1235,7 @@ export class Game {
         this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
       }
       this.updateHover();
+      this.tickBreaking(performance.now());
       this.gamification.tick(performance.now());
       if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.autosaveNow();
     }

@@ -24,37 +24,37 @@ export const STACK_TOOL = 1;
 
 export const ITEMS = [
   // --- raw materials, gathered from the world -----------------------------
-  { id: 'dirt', name: 'Dirt', kind: 'raw', stackTo: STACK_BULK, color: 0x7a5230, block: 2, madeBy: 'Foraged from the ground' },
-  { id: 'wood', name: 'Wood', kind: 'raw', stackTo: STACK_BULK, color: 0x8a5a2b, block: 4, madeBy: 'Cut from trees' },
-  { id: 'leaves', name: 'Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x3f7d34, block: 5, madeBy: 'Stripped from trees' },
-  { id: 'stone', name: 'Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x8a8a8d, block: 3, madeBy: 'Mined from rock' },
-  { id: 'sand', name: 'Sand', kind: 'raw', stackTo: STACK_BULK, color: 0xdcc57a, block: 6, madeBy: 'Dug from the riverbank' },
-  { id: 'grass', name: 'Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x5b9c3f, block: 1, madeBy: 'Cut from meadow' },
+  { id: 'dirt', name: 'Dirt', kind: 'raw', stackTo: STACK_BULK, color: 0x7a5230, glyph: 'dirt', block: 2, madeBy: 'Foraged from the ground' },
+  { id: 'wood', name: 'Wood', kind: 'raw', stackTo: STACK_BULK, color: 0x8a5a2b, glyph: 'log', block: 4, madeBy: 'Cut from trees' },
+  { id: 'leaves', name: 'Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x3f7d34, glyph: 'leaf', block: 5, madeBy: 'Stripped from trees' },
+  { id: 'stone', name: 'Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x8a8a8d, glyph: 'stone', block: 3, madeBy: 'Mined from rock' },
+  { id: 'sand', name: 'Sand', kind: 'raw', stackTo: STACK_BULK, color: 0xdcc57a, glyph: 'sand', block: 6, madeBy: 'Dug from the riverbank' },
+  { id: 'grass', name: 'Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x5b9c3f, glyph: 'grass', block: 1, madeBy: 'Cut from meadow' },
 
   // --- worked materials ----------------------------------------------------
-  { id: 'planks', name: 'Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xb98a4b, block: 7, madeBy: 'Sawn from wood' },
-  { id: 'farmland', name: 'Turned Soil', kind: 'refined', stackTo: STACK_BULK, color: 0x6b4a2a, block: 21, madeBy: 'Dirt broken up for planting' },
+  { id: 'planks', name: 'Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xb98a4b, glyph: 'planks', block: 7, madeBy: 'Sawn from wood' },
+  { id: 'farmland', name: 'Turned Soil', kind: 'refined', stackTo: STACK_BULK, color: 0x6b4a2a, glyph: 'farmland', block: 21, madeBy: 'Dirt broken up for planting' },
 
   // --- growing things ------------------------------------------------------
-  { id: 'seeds', name: 'Seeds', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8b560, madeBy: 'Shaken from a forest, or saved from a harvest' },
-  { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x6aa84f, block: 20, madeBy: 'Grown from seed' },
+  { id: 'seeds', name: 'Seeds', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8b560, glyph: 'seeds', madeBy: 'Shaken from a forest, or saved from a harvest' },
+  { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x6aa84f, glyph: 'sprout', block: 20, madeBy: 'Grown from seed' },
 
   // --- food. Fruit spoils, preserves do not -------------------------------
-  { id: 'fruit', name: 'Fruit', kind: 'food', stackTo: STACK_FOOD, color: 0xd9534f, feeds: 12, madeBy: 'Picked from a forest' },
-  { id: 'vegetables', name: 'Vegetables', kind: 'food', stackTo: STACK_FOOD, color: 0xe08c3c, feeds: 22, madeBy: 'Harvested from a farm' },
+  { id: 'fruit', name: 'Fruit', kind: 'food', stackTo: STACK_FOOD, color: 0xd9534f, glyph: 'fruit', feeds: 12, madeBy: 'Picked from a forest' },
+  { id: 'vegetables', name: 'Vegetables', kind: 'food', stackTo: STACK_FOOD, color: 0xe08c3c, glyph: 'vegetable', feeds: 22, madeBy: 'Harvested from a farm' },
 
   // --- tools. One per slot, and they wear ---------------------------------
   {
-    id: 'axe', name: 'Axe', kind: 'tool', stackTo: STACK_TOOL, color: 0xa07850,
+    id: 'axe', name: 'Axe', kind: 'tool', stackTo: STACK_TOOL, color: 0xa07850, glyph: 'axe',
     durability: 120, madeBy: 'Crafted from wood', unlocks: 'Cutting trees quickly',
   },
   {
-    id: 'bucket', name: 'Bucket', kind: 'tool', stackTo: STACK_TOOL, color: 0x9aa7ad,
+    id: 'bucket', name: 'Bucket', kind: 'tool', stackTo: STACK_TOOL, color: 0x9aa7ad, glyph: 'bucket',
     durability: null, madeBy: 'Crafted from wood', unlocks: 'Carrying water',
     holds: 'water',
   },
   {
-    id: 'bucket_water', name: 'Bucket of Water', kind: 'tool', stackTo: STACK_TOOL, color: 0x2f6fbf,
+    id: 'bucket_water', name: 'Bucket of Water', kind: 'tool', stackTo: STACK_TOOL, color: 0x2f6fbf, glyph: 'bucketFull',
     durability: null, madeBy: 'Filled at a river', unlocks: 'Pouring water where you need it',
   },
 ];

@@ -6,6 +6,7 @@ import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
 import { ITEMS_BY_ID, itemName } from '../config/items.js';
 import { RESOURCES_BY_ID, resourceName } from '../config/resources.js';
+import { glyphSvg } from '../config/glyphs.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 
@@ -290,10 +291,10 @@ export class UIManager {
         hotbar.appendChild(el(`
           <div class="hotbar-slot ${e.spec.block === this.selectedBlockId ? 'selected' : ''}"
                data-id="${e.spec.block}" data-item="${e.id}"
-               data-name="${itemName(e.id)}" data-note="${total} in your bag"
+               data-name="${itemName(e.id)}" data-note=""
                title="${itemName(e.id)} — ${total} in your bag">
             ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
-            <div class="swatch" style="background:#${e.spec.color.toString(16).padStart(6, '0')}"></div>
+            <div class="swatch" style="background:#${e.spec.color.toString(16).padStart(6, '0')}">${glyphSvg(e.spec.glyph, { size: 18, color: e.spec.color })}</div>
             <span class="held">${total}</span>
           </div>
         `));
@@ -311,18 +312,19 @@ export class UIManager {
       const costLabel = this.isCampaign && b.cost
         ? Object.entries(b.cost).map(([, amount]) => amount).join('')
         : '';
-      // The one line that says why you cannot use this yet, or what it costs.
+      // Only what the slot itself cannot show. The count and the cost are
+      // already printed on the swatch, so repeating them is noise; why a block
+      // is locked, or that you cannot afford it, is not written anywhere else.
       const note = !available
         ? this.game.blockAvailability(b.id).reason
-        : (this.isCampaign && b.cost
-            ? Object.entries(b.cost).map(([r, n]) => `${n} ${resourceName(r)}`).join(', ')
-              + (affordable ? '' : ' — not enough')
+        : (this.isCampaign && b.cost && !affordable
+            ? `Not enough ${Object.keys(b.cost).map(resourceName).join(', ')}`
             : '');
       const slot = el(`
         <div class="hotbar-slot ${available ? '' : 'locked'} ${available && !affordable ? 'unaffordable' : ''} ${b.id === this.selectedBlockId ? 'selected' : ''}"
              data-id="${b.id}" data-name="${b.name}" data-note="${note}" title="${note ? `${b.name} — ${note}` : b.name}">
           ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
-          <div class="swatch" style="background:#${b.color.toString(16).padStart(6, '0')}"></div>
+          <div class="swatch" style="background:#${b.color.toString(16).padStart(6, '0')}">${glyphSvg(b.glyph, { size: 18, color: b.color })}</div>
           ${available ? '' : `<div class="lock">${icon('lock', 15)}</div>`}
           ${costLabel ? `<span class="cost" style="--cost-dot:#${(RESOURCES_BY_ID.get(Object.keys(b.cost)[0])?.color ?? 0x999999).toString(16).padStart(6, '0')}">${costLabel}</span>` : ''}
         </div>
@@ -616,7 +618,22 @@ export class UIManager {
       e.preventDefault();
       this.setFlyIndicator(this.cb.onToggleFly());
     });
-    this.q('#t-break').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onBreakTap(); });
+    // Break is a hold, not a tap: one block per tap meant tapping forty times
+    // to clear a wall. The first block lands on the touch, the rest follow
+    // while your thumb stays down.
+    {
+      const btn = this.q('#t-break');
+      const down = (e) => {
+        e.preventDefault();
+        btn.classList.add('active');
+        this.cb.onBreakTap();
+        this.cb.onBreakHold?.(true);
+      };
+      const up = () => { btn.classList.remove('active'); this.cb.onBreakHold?.(false); };
+      btn.addEventListener('touchstart', down, { passive: false });
+      btn.addEventListener('touchend', up);
+      btn.addEventListener('touchcancel', up);
+    }
     this.q('#t-place').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onPlaceTap(); });
     this.q('#t-symmetry').addEventListener('touchstart', (e) => {
       e.preventDefault();

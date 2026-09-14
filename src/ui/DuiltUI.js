@@ -3,6 +3,7 @@ import { STRUCTURES_BY_ID, structuresForAge } from '../config/structures.js';
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
+import { glyphSvg } from '../config/glyphs.js';
 import { renderPanels } from './Panel.js';
 
 /**
@@ -226,7 +227,7 @@ export class DuiltUI {
       const colour = `#${(spec?.color ?? 0x888888).toString(16).padStart(6, '0')}`;
       return `
         <button class="bag-slot ${this.held === i ? 'held' : ''}" data-slot="${i}" aria-label="${itemName(s.id)}, ${s.count}">
-          <span class="swatch" style="background:${colour}"></span>
+          <span class="swatch" style="background:${colour}">${glyphSvg(spec?.glyph, { size: 20, color: spec?.color ?? 0x888888 })}</span>
           ${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}
           ${worn != null ? `<span class="wear"><i style="width:${worn}%"></i></span>` : ''}
         </button>`;
