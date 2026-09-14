@@ -1,4 +1,4 @@
-import { CLOUD, isCloudConfigured } from './cloudConfig.js';
+import { CLOUD, isCloudConfigured, deriveUrls } from './cloudConfig.js';
 
 /**
  * Sign-in, and nothing else.
@@ -83,11 +83,23 @@ export class CloudAuth {
     this.bus?.emit('cloud:auth', { user: null });
   }
 
-  /** Short-lived JWT for the Data API. The SDK refreshes it as needed. */
+  /**
+   * Short-lived JWT for the Data API. The SDK refreshes it as needed.
+   *
+   * The SDK reports a failure here as a bare "HTTP 404 Not Found", which is
+   * the least useful sentence a signed-in player could be shown: it names
+   * nothing, suggests nothing, and reads like the game is broken rather than
+   * the sync being off. So it is translated, and the host is named — that is
+   * the one fact anybody debugging this from a screenshot actually needs.
+   */
   async accessToken() {
     if (!this.client || !this.user) return null;
-    const result = await this.client.auth.getToken();
-    return result?.data?.token ?? result?.token ?? null;
+    try {
+      const result = await this.client.auth.getToken();
+      return result?.data?.token ?? result?.token ?? null;
+    } catch (err) {
+      throw new Error(readableTokenError(err));
+    }
   }
 
   summary() {
@@ -113,6 +125,32 @@ function userFrom(result) {
   const user = data?.user ?? (data?.id ? data : null);
   if (!user?.id) return null;
   return { id: user.id, email: user.email ?? null, name: user.name ?? null };
+}
+
+/**
+ * What to say when the sign-in service will not hand out a token.
+ *
+ * Nothing here is the player's fault and nothing here is fixable by them, so
+ * every branch ends the same way: your world is safe, it just is not synced.
+ */
+function readableTokenError(err) {
+  const status = err?.status ?? err?.body?.status;
+  const host = authHost();
+  if (status === 404) {
+    return `The sign-in service at ${host} did not recognise the token request.`
+      + ' Cloud sync is off for now — your worlds are safe on this device.';
+  }
+  if (status === 401 || status === 403) return 'Your session expired — sign in again.';
+  if (status >= 500) return 'The sign-in service is having a moment. Your worlds are safe on this device.';
+  return `Could not reach the sign-in service at ${host}. Your worlds are safe on this device.`;
+}
+
+function authHost() {
+  try {
+    return new URL(deriveUrls().auth).host;
+  } catch {
+    return 'the cloud';
+  }
 }
 
 function readableAuthError(error) {

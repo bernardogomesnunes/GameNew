@@ -63,6 +63,9 @@ export class HomeScreen {
     this.cb = callbacks;
     this.step = 'home';       // 'home' | 'kind' | 'name'
     this.kind = 'duilt';
+    // 'local' | 'cloud', or null for "whatever suits": signed in, the cloud is
+    // the reason you signed in, so it leads.
+    this.where = null;
     this.mount();
   }
 
@@ -191,17 +194,49 @@ export class HomeScreen {
 
   renderName() {
     const kind = KINDS.find((k) => k.id === this.kind);
+    // Where it lives is decided here, with the name, rather than being a thing
+    // you discover afterwards in an account panel. Signed out, the cloud option
+    // is visible but off — knowing it exists is the point of showing it.
+    const signedIn = !!this.cb.getCloudUser?.();
+    const cloudable = !!this.cb.isCloudConfigured?.();
+    const where = whereToLive(this.where, signedIn);
+
     this.body.innerHTML = `
       <div class="home-label">Name your world</div>
       <p class="home-note">${kind.name} · ${kind.tagline}</p>
       <input type="text" id="home-world-name" maxlength="40" placeholder="${defaultName(kind)}" />
+
+      ${cloudable ? `
+        <div class="home-label">Where does it live?</div>
+        <div class="where-list">
+          <button class="where-card ${where === 'local' ? 'chosen' : ''}" data-where="local">
+            <strong>On this device</strong>
+            <span>Saved in this browser. Fast, private, and gone if you clear it.</span>
+          </button>
+          <button class="where-card ${where === 'cloud' ? 'chosen' : ''}" data-where="cloud"
+                  ${signedIn ? '' : 'disabled'}>
+            <strong>In the cloud</strong>
+            <span>${signedIn
+              ? 'Saved to your account, so a new phone or a cleared browser keeps it.'
+              : 'Sign in to keep worlds on your account.'}</span>
+          </button>
+        </div>
+        ${signedIn ? '' : `<button class="home-link" data-signin="1">Sign in or create an account</button>`}` : ''}
+
       <div class="home-actions">
         <button class="secondary" data-back="1">Back</button>
         <button class="primary" data-create="1">Create world</button>
       </div>`;
 
     const input = this.body.querySelector('#home-world-name');
-    const create = () => this.cb.onCreate(this.kind, input.value.trim() || defaultName(kind));
+    const create = () => this.cb.onCreate(this.kind, input.value.trim() || defaultName(kind), {
+      cloud: where === 'cloud',
+    });
+    this.body.querySelectorAll('[data-where]').forEach((el) => el.addEventListener('click', () => {
+      this.where = el.dataset.where;
+      this.render();
+    }));
+    this.body.querySelector('[data-signin]')?.addEventListener('click', () => this.cb.onAccount?.());
     this.body.querySelector('[data-back]').addEventListener('click', () => { this.step = 'kind'; this.render(); });
     this.body.querySelector('[data-create]').addEventListener('click', create);
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') create(); });
@@ -214,6 +249,19 @@ export class HomeScreen {
     this.step = 'home';
     this.render();
   }
+}
+
+/**
+ * Where a new world should live, given what was picked and who is signed in.
+ *
+ * Nobody signed in can only mean this device — there is no account to put it
+ * on. Signed in and no preference yet means the cloud, because keeping worlds
+ * off the device is the only reason to have signed in at all. An explicit
+ * choice always wins.
+ */
+export function whereToLive(chosen, signedIn) {
+  if (!signedIn) return 'local';
+  return chosen ?? 'cloud';
 }
 
 function defaultName(kind) {

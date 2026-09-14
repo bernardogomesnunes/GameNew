@@ -728,6 +728,27 @@ body.touch #touch-buttons-left { max-height: 62vh; }
 }
 .kind-blurb { font-size: 12.5px; color: var(--text-dim); line-height: 1.45; }
 
+/* On this device, or in the cloud — chosen with the name. Two side by side on
+   a desktop, stacked on a phone, because a 180px card cannot hold a sentence. */
+.where-list { display: flex; gap: 8px; }
+.where-card {
+  flex: 1; display: flex; flex-direction: column; gap: 4px; text-align: left;
+  background: var(--panel); border: 1px solid var(--panel-border); border-radius: 12px;
+  padding: 12px 14px; color: var(--text); font: inherit; cursor: pointer;
+  transition: border-color .14s ease, background .14s ease;
+}
+.where-card strong { font-size: 14px; }
+.where-card span { font-size: 12px; color: var(--text-dim); line-height: 1.45; }
+.where-card.chosen { border-color: var(--accent); background: var(--accent-dim); }
+.where-card[disabled] { opacity: 0.55; cursor: default; }
+@media (max-width: 520px) { .where-list { flex-direction: column; } }
+
+/* Which worlds are on the account, on the worlds list. */
+.world-tag {
+  flex: 0 0 auto; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 2px 8px;
+}
+
 #home-world-name {
   width: 100%; background: var(--panel-solid); color: var(--text); font: inherit; font-size: 15px;
   border: 1px solid var(--panel-border); border-radius: 10px; padding: 12px 14px;

@@ -360,7 +360,23 @@ export class UIManager {
       },
       // Creating and entering happen in the same gesture: pointer lock has to
       // be claimed inside the tap that asked for it.
-      onCreate: (mode, name) => { this.cb.onNewWorld(mode, name); this.enterWorld(); },
+      onCreate: (mode, name, { cloud = false } = {}) => {
+        this.cb.onNewWorld(mode, name);
+        this.enterWorld();
+        // The upload is deliberately after you are in the world: it takes a
+        // moment and there is nothing to look at while it happens. A failure
+        // says so and leaves the world exactly where it is, on this device.
+        if (cloud) {
+          this.cb.onCloudSave(name)
+            .then(() => this.toast({ kind: 'challenge', title: 'Saved to your account', body: name }))
+            .catch((err) => this.toast({
+              kind: 'xp', title: 'Could not reach the cloud', body: `${err.message} — the world is safe on this device.`,
+            }));
+        }
+      },
+      // Needed by the naming step, to know whether "in the cloud" is on offer.
+      isCloudConfigured: () => this.cb.isCloudConfigured?.() ?? false,
+      getCloudUser: () => this.cb.getCloudUser?.() ?? null,
       // These open *over* the worlds screen rather than replacing it. They used
       // to hide it first, so closing one left you standing in whichever world
       // was last loaded — one you never chose, already falling.
@@ -960,8 +976,21 @@ export class UIManager {
       this.accountMode = this.accountMode === 'create' ? 'signin' : 'create';
       applyAccountMode();
     });
-    this.q('#btn-cloud-signin').addEventListener('click', (e) => busy(e.currentTarget, () =>
-      this.accountMode === 'create' ? this.cb.onCloudSignUp(...creds()) : this.cb.onCloudSignIn(...creds())));
+    // Signing in is a way into your worlds, not a destination. Getting in used
+    // to leave you on a panel still titled "Create an account", holding three
+    // unexplained buttons — so it closes and puts you on the worlds list,
+    // which is where you were trying to go.
+    this.q('#btn-cloud-signin').addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      await (this.accountMode === 'create' ? this.cb.onCloudSignUp(...creds()) : this.cb.onCloudSignIn(...creds()));
+      this.q('#cloud-password').value = '';
+      this.closePanel('panel-account');
+      this.openHome();
+      this.toast({
+        kind: 'challenge',
+        title: this.accountMode === 'create' ? 'Account created' : 'Signed in',
+        body: 'New worlds can live on your account now.',
+      });
+    }));
     this.q('#btn-cloud-signout').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignOut()));
     this.q('#btn-cloud-refresh').addEventListener('click', (e) => busy(e.currentTarget, () => this.refreshCloudList()));
     this.q('#btn-cloud-save').addEventListener('click', (e) => busy(e.currentTarget, async () => {
