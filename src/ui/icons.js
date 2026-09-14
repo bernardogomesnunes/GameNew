@@ -24,6 +24,9 @@ const PATHS = {
   home: 'M4 11 12 4l8 7 M6.5 9.5V20h11V9.5 M10 20v-5.5h4V20',
   lock: 'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v10H5z',
   help: 'M12 17h.01M9.2 9a2.8 2.8 0 1 1 3.8 2.6c-.7.3-1 .9-1 1.6v.3',
+  // Skills: a step up, not the bar chart Stats already uses — side by side in
+  // the tray the two were the same picture.
+  skills: 'M12 3.5 17 10h-3v4h-4v-4H7l5-6.5ZM6 19h12',
 };
 
 /** Inline SVG markup for an icon name. */

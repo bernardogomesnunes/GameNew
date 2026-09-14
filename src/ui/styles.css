@@ -321,8 +321,14 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   flex-direction: column-reverse; flex-wrap: wrap-reverse;
   align-items: flex-end; align-content: flex-end;
   gap: 8px; margin-bottom: 2px;
-  max-height: calc(100vh - 500px);
-  max-height: calc(100dvh - 500px);
+  /* Budget: the 212px the cluster sits above the bottom, the three rows that
+     can be under the tray (Bag/Bench, More/Up, and Down once you are flying)
+     at 66px each, and room for the toolbar. Capped rather than free-growing so
+     a tray that outgrows the space folds into a second column instead of
+     walking into the toolbar — but not so tight that it folds into a single
+     row lying across the screen, which is what 560 did. */
+  max-height: calc(100vh - 470px);
+  max-height: calc(100dvh - 470px);
 }
 .touch-btn {
   width: 62px; height: 62px; border-radius: 18px;
@@ -608,7 +614,14 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 /* The Duilt actions live in the left thumb cluster alongside Fly, where the
    other action buttons already sit — and drop out of the top-right toolbar,
    because twelve unlabelled 36px squares in a corner is not a menu. */
-body.touch #top-buttons .duilt-top { display: none !important; }
+/* A control that has a home in the touch tray does not also sit up top.
+ *
+ * The toolbar was nine 36px squares on a 390px screen, wrapped into three rows
+ * and eating the top eighth of the picture, with no labels to say what any of
+ * them were. What is left is what you reach for mid-build — undo, redo, the
+ * selector, and the way out. Everything you touch once in a while is behind
+ * More, where there is room to label it. */
+body.touch #top-buttons .touch-moved { display: none !important; }
 body.touch #touch-buttons-left { max-height: 62vh; }
 
 
@@ -728,3 +741,21 @@ body.touch #touch-buttons-left { max-height: 62vh; }
  * and a save box at the top read as a form to fill in before anything else. */
 .menu-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
 .menu-actions button { flex: 1 1 auto; min-width: 96px; padding: 12px 14px; font-size: 14px; }
+
+/* --- the top-left column on a phone ---------------------------------------
+ *
+ * The toast and the goal list both hung off the top-left and drew on top of
+ * each other: the welcome message landed across "AGE 1 · SETTLEMENT" and
+ * neither could be read. On a phone there is not room for them side by side,
+ * so they stack — the toast takes a band of its own under the bars, capped so
+ * a long one cannot grow into the list, and the list starts below it.
+ *
+ * After #goals so it wins on order rather than by piling on selectors.
+ */
+@media (max-width: 640px) {
+  #toast-stack {
+    top: 94px; left: 12px; right: 12px; max-width: none;
+    align-items: stretch; max-height: 86px; overflow: hidden;
+  }
+  #goals { top: 188px; }
+}

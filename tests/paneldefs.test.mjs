@@ -1,5 +1,6 @@
 import { PANELS, PANELS_BY_ID, panelsOn, panelForKey } from '../src/config/panels.js';
 import { panelMarkup, renderPanels, panelDef } from '../src/ui/Panel.js';
+import { readFileSync } from 'node:fs';
 
 /**
  * The panel declarations, and the shell built from them.
@@ -87,6 +88,23 @@ ok('an undeclared one resolves to nothing', panelDef('panel-nope') === null);
   ok('a layer renders only its own panels',
     panelsOn('duilt').every((p) => only.includes(`id="${p.id}"`))
     && !panelsOn('main').some((p) => only.includes(`id="${p.id}"`)));
+}
+
+// --- every panel has a way in -----------------------------------------------
+
+// The Skills panel existed, was declared, was drawn, and nothing anywhere
+// opened it — there was no button, no shortcut, no menu item. A panel you
+// cannot reach is the same as a panel that is not there.
+
+const sources = ['src/ui/UIManager.js', 'src/ui/DuiltUI.js', 'src/Game.js', 'src/ui/HomeScreen.js']
+  .map((f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8')).join('\n');
+
+for (const p of PANELS) {
+  const opened = sources.includes(`openPanel('${p.id}')`)
+    || sources.includes(`openDuiltPanel('${p.id}')`)
+    || sources.includes(`togglePanel('${p.id}')`)
+    || !!p.key;
+  ok(`${p.id} has a way in`, opened);
 }
 
 process.exit(f ? 1 : 0);

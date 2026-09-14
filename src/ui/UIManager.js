@@ -78,15 +78,15 @@ export class UIManager {
         <button class="icon-btn" id="btn-undo" title="Undo the last change">${icon('undo')}<span>Undo</span></button>
         <button class="icon-btn" id="btn-redo" title="Redo the change you undid">${icon('redo')}<span>Redo</span></button>
         <button class="icon-btn" id="btn-select" title="Selector: aim a grid-snapped box at your build">${icon('select')}<span>Select</span></button>
-        <button class="icon-btn" id="btn-size" title="Change the selector size">${icon('copy')}<span id="size-label">8&sup3;</span></button>
-        <button class="icon-btn sandbox-only" id="btn-templates" title="Your saved building templates">${icon('paste')}<span>Designs</span></button>
-        <button class="icon-btn duilt-only duilt-top" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
-        <button class="icon-btn duilt-only duilt-top" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
-        <button class="icon-btn duilt-only duilt-top" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
-        <button class="icon-btn" id="btn-symmetry" title="Mirror your building across the world's centre">${icon('symmetry')}<span>Mirror</span></button>
-        <button class="icon-btn" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
-        <button class="icon-btn" id="btn-stats" title="Progress, achievements and challenges">${icon('stats')}<span>Stats</span></button>
-        <button class="icon-btn" id="btn-help" title="Show all controls">${icon('help')}<span>Help</span></button>
+        <button class="icon-btn" id="btn-size" title="Change the selector size" hidden>${icon('copy')}<span id="size-label">8&sup3;</span></button>
+        <button class="icon-btn sandbox-only touch-moved" id="btn-templates" title="Your saved building templates">${icon('paste')}<span>Designs</span></button>
+        <button class="icon-btn duilt-only touch-moved" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
+        <button class="icon-btn duilt-only touch-moved" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
+        <button class="icon-btn duilt-only touch-moved" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
+        <button class="icon-btn touch-moved" id="btn-symmetry" title="Mirror your building across the world's centre">${icon('symmetry')}<span>Mirror</span></button>
+        <button class="icon-btn touch-moved" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
+        <button class="icon-btn touch-moved" id="btn-stats" title="Progress, achievements and challenges">${icon('stats')}<span>Stats</span></button>
+        <button class="icon-btn touch-moved" id="btn-help" title="Show all controls">${icon('help')}<span>Help</span></button>
         <button class="icon-btn" id="btn-menu" title="Save, load and world settings">${icon('menu')}<span>Menu</span></button>
       </div>
 
@@ -215,26 +215,36 @@ export class UIManager {
             <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
           </div>
         </div>
+        <!--
+          The right thumb, in the order you reach for things. Bag and Bench are
+          the two you open constantly in Duilt, so they are always out rather
+          than behind More — which is also what let the top toolbar shed its
+          copies of them. Everything you touch once in a while is behind More.
+
+          Up and Down read as a pair: Up above, Down below, the way they point.
+          Down only exists while flying, and it takes the lowest slot when it
+          appears so Up is never the one underneath.
+        -->
         <div class="touch-buttons" id="touch-buttons-right">
           <div class="row touch-tray" id="touch-tray" hidden>
-            <button class="touch-btn duilt-only" id="t-bag" hidden>${icon('bag')}<span>Bag</span></button>
             <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
-            <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
+            <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
+            <button class="touch-btn" id="t-stats">${icon('stats')}<span>Stats</span></button>
+            <button class="touch-btn" id="t-help">${icon('help')}<span>Help</span></button>
+            <button class="touch-btn sandbox-only" id="t-designs">${icon('paste')}<span>Designs</span></button>
             <button class="touch-btn sandbox-only" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
+            <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
             <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
           </div>
-          <!--
-            Down is not a panel, it is the other half of Jump, so it sits with
-            Jump under the thumb rather than inside the tray. In the tray it was
-            a sixth button on a stack that already reached the top toolbar, and
-            it only appeared once you were flying — which is exactly when you
-            need it without opening a menu first.
-          -->
-          <button class="touch-btn" id="t-down" hidden>${icon('down')}<span>Down</span></button>
+          <div class="row duilt-only" id="touch-duilt-row" hidden>
+            <button class="touch-btn" id="t-bag">${icon('bag')}<span>Bag</span></button>
+            <button class="touch-btn" id="t-bench">${icon('hammer')}<span>Bench</span></button>
+          </div>
           <div class="row">
             <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
             <button class="touch-btn" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
           </div>
+          <button class="touch-btn" id="t-down" hidden>${icon('down')}<span>Down</span></button>
         </div>
       </div>
     `;
@@ -381,9 +391,13 @@ export class UIManager {
       this.setSymmetryLabel();
     });
 
-    const fsBtn = this.q('#btn-fullscreen');
-    if (document.fullscreenEnabled) fsBtn.addEventListener('click', () => this.cb.onToggleFullscreen());
-    else fsBtn.remove();
+    for (const sel of ['#btn-fullscreen', '#t-screen']) {
+      const fsBtn = this.q(sel);
+      if (!fsBtn) continue;
+      if (document.fullscreenEnabled) {
+        fsBtn.addEventListener('click', () => { this.closeTray(); this.cb.onToggleFullscreen(); });
+      } else fsBtn.remove();
+    }
 
     this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
     this.q('#btn-help').addEventListener('click', () => this.openPanel('panel-help'));
@@ -393,10 +407,24 @@ export class UIManager {
     this.q('#btn-buildings').addEventListener('click', () => this.cb.onOpenBuildings());
     this.q('#btn-bench').addEventListener('click', () => this.cb.onOpenBench());
     // Touch gets its own row: a 36px unlabelled square in a corner is not a
-    // control anyone can find with a thumb.
-    for (const [sel, fn] of [['#t-bag', 'onOpenBag'], ['#t-build', 'onOpenBuildings'], ['#t-bench', 'onOpenBench']]) {
+    // control anyone can find with a thumb. Opening anything closes the tray,
+    // whether the button was in it or not — you asked for the thing, not for
+    // the menu to stay up behind it.
+    const openers = [
+      ['#t-bag', () => this.cb.onOpenBag()],
+      ['#t-bench', () => this.cb.onOpenBench()],
+      ['#t-build', () => this.cb.onOpenBuildings()],
+      // Skills had no way in at all before this — the panel existed, was
+      // drawn, and nothing anywhere opened it.
+      ['#t-skills', () => this.openPanel('panel-skills')],
+      ['#t-stats', () => this.openPanel('panel-stats')],
+      ['#t-help', () => this.openPanel('panel-help')],
+      ['#t-designs', () => this.openPanel('panel-templates')],
+    ];
+    for (const [sel, fn] of openers) {
       const btn = this.q(sel);
-      const fire = (e) => { e.preventDefault(); this.closeTray(); this.cb[fn](); };
+      if (!btn) continue;
+      const fire = (e) => { e.preventDefault(); this.closeTray(); fn(); };
       btn.addEventListener('click', fire);
       btn.addEventListener('touchstart', fire, { passive: false });
     }
@@ -936,9 +964,20 @@ export class UIManager {
   }
 
   /** Turns the selector on and opens the designs panel — the whole flow in one place. */
+  /**
+   * The selector size reads "8³" and does nothing at all unless the selector is
+   * on, which on a phone made it one more unlabelled square in a toolbar that
+   * had too many. It now comes and goes with the tool it belongs to.
+   */
+  setSelectorActive(active) {
+    this.q('#btn-select').classList.toggle('active', active);
+    const size = this.q('#btn-size');
+    if (size) size.hidden = !active;
+  }
+
   toggleSelector() {
     const active = this.cb.onToggleSelection();
-    this.q('#btn-select').classList.toggle('active', active);
+    this.setSelectorActive(active);
     this.toast({
       kind: 'xp',
       title: active ? 'Selector on' : 'Selector off',
@@ -1084,7 +1123,7 @@ export class UIManager {
     `).join('');
     list.querySelectorAll('[data-place]').forEach((btn) => btn.addEventListener('click', () => {
       if (this.cb.onPickTemplate(btn.dataset.place)) {
-        this.q('#btn-select').classList.add('active');
+        this.setSelectorActive(true);
         this.closePanel('panel-templates');
       }
     }));
