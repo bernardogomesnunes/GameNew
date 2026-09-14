@@ -60,12 +60,12 @@ export const PANELS = [
     label: 'Designs',
   },
   {
-    id: 'panel-help',
-    title: 'Controls',
-    sub: 'Everything the toolbar and sticks do.',
+    id: 'panel-guide',
+    title: 'How to play',
+    sub: 'What the game is, what the buttons do, and what to build next.',
     layer: 'main',
     mode: 'any',
-    label: 'Help',
+    label: 'Guide',
   },
   {
     id: 'panel-score',

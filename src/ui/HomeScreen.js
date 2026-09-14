@@ -85,12 +85,12 @@ export class HomeScreen {
         <div class="home-body" id="home-body"></div>
         <footer class="home-foot">
           <button class="home-link" id="home-settings">Settings</button>
-          <button class="home-link" id="home-help">Controls</button>
+          <button class="home-link" id="home-guide">How to play</button>
         </footer>
       </div>`;
     this.body = this.root.querySelector('#home-body');
     this.root.querySelector('#home-settings').addEventListener('click', () => this.cb.onSettings?.());
-    this.root.querySelector('#home-help').addEventListener('click', () => this.cb.onHelp?.());
+    this.root.querySelector('#home-guide').addEventListener('click', () => this.cb.onGuide?.());
     this.root.querySelector('#home-account').addEventListener('click', () => this.cb.onAccount?.());
   }
 

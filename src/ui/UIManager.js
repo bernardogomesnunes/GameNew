@@ -9,6 +9,7 @@ import { RESOURCES_BY_ID, resourceName } from '../config/resources.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
+import { guideFor } from '../config/guide.js';
 
 function el(html) {
   const t = document.createElement('template');
@@ -94,7 +95,7 @@ export class UIManager {
         <button class="icon-btn touch-moved" id="btn-symmetry" title="Mirror your building across the world's centre">${icon('symmetry')}<span>Mirror</span></button>
         <button class="icon-btn touch-moved" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
         <button class="icon-btn touch-moved" id="btn-stats" title="Progress, achievements and challenges">${icon('stats')}<span>Stats</span></button>
-        <button class="icon-btn touch-moved" id="btn-help" title="Show all controls">${icon('help')}<span>Help</span></button>
+        <button class="icon-btn touch-moved" id="btn-guide" title="How to play">${icon('help')}<span>Guide</span></button>
         <button class="icon-btn" id="btn-menu" title="Save, load and world settings">${icon('menu')}<span>Menu</span></button>
       </div>
 
@@ -205,8 +206,9 @@ export class UIManager {
             <button class="secondary" id="btn-save-template">Save selection</button>
           </div>
           <div id="template-list"></div>`,
-        'panel-help': `
-          <div id="help-body"></div>`,
+        'panel-guide': `
+          <div class="tab-row" id="guide-tabs"></div>
+          <div id="guide-body"></div>`,
         'panel-score': `
           <div class="score-total" id="score-total">0</div>
           <div class="score-breakdown" id="score-breakdown"></div>`,
@@ -248,7 +250,7 @@ export class UIManager {
             <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
             <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
             <button class="touch-btn" id="t-stats">${icon('stats')}<span>Stats</span></button>
-            <button class="touch-btn" id="t-help">${icon('help')}<span>Help</span></button>
+            <button class="touch-btn" id="t-guide">${icon('help')}<span>Guide</span></button>
             <button class="touch-btn sandbox-only" id="t-designs">${icon('paste')}<span>Designs</span></button>
             <button class="touch-btn sandbox-only" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
             <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
@@ -394,7 +396,7 @@ export class UIManager {
       // to hide it first, so closing one left you standing in whichever world
       // was last loaded — one you never chose, already falling.
       onSettings: () => this.openPanel('panel-menu'),
-      onHelp: () => this.openPanel('panel-help'),
+      onGuide: () => this.openPanel('panel-guide'),
       onAccount: () => this.openPanel('panel-account'),
     });
     // The screen is already on when the page loads, so draw it now rather than
@@ -441,7 +443,7 @@ export class UIManager {
     }
 
     this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
-    this.q('#btn-help').addEventListener('click', () => this.openPanel('panel-help'));
+    this.q('#btn-guide').addEventListener('click', () => this.openPanel('panel-guide'));
     this.q('#btn-size').addEventListener('click', () => this.setSelectorSize(this.cb.onCycleSelectorSize()));
     this.q('#btn-templates').addEventListener('click', () => this.openPanel('panel-templates'));
     this.q('#btn-bag').addEventListener('click', () => this.cb.onOpenBag());
@@ -459,7 +461,7 @@ export class UIManager {
       // drawn, and nothing anywhere opened it.
       ['#t-skills', () => this.openPanel('panel-skills')],
       ['#t-stats', () => this.openPanel('panel-stats')],
-      ['#t-help', () => this.openPanel('panel-help')],
+      ['#t-guide', () => this.openPanel('panel-guide')],
       ['#t-designs', () => this.openPanel('panel-templates')],
     ];
     for (const [sel, fn] of openers) {
@@ -485,14 +487,7 @@ export class UIManager {
       btn.addEventListener('click', () => this.closePanel(btn.dataset.close));
     });
 
-    this.root.querySelectorAll('.tab-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        this.root.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
-        this.root.querySelectorAll('.tab-panel').forEach((p) => (p.hidden = true));
-        btn.classList.add('active');
-        this.q('#' + btn.dataset.tab).hidden = false;
-      });
-    });
+    this.wireTabs(this.q('#panel-stats'));
 
     this.wireGraphics();
     this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
@@ -770,7 +765,7 @@ export class UIManager {
       if (hint) hint.hidden = true;
     }
     if (id === 'panel-stats') this.populateStats();
-    if (id === 'panel-help') this.populateHelp();
+    if (id === 'panel-guide') this.populateGuide();
     if (id === 'panel-templates') this.refreshTemplateList();
     // The Duilt panels draw their own contents.
     this.duiltUI?.populate(id);
@@ -1295,38 +1290,55 @@ export class UIManager {
     }
   }
 
-  populateHelp() {
+  /**
+   * Makes one panel's tabs work, and only that panel's.
+   *
+   * This used to run over every `.tab-btn` and `.tab-panel` in the document at
+   * once, which was fine while Stats was the only panel with tabs — with two,
+   * clicking a tab in one would have hidden every tab body in the other.
+   */
+  wireTabs(scope) {
+    if (!scope) return;
+    scope.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        scope.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+        scope.querySelectorAll('.tab-panel').forEach((p) => (p.hidden = true));
+        btn.classList.add('active');
+        const body = scope.querySelector('#' + btn.dataset.tab);
+        if (body) body.hidden = false;
+      });
+    });
+  }
+
+  /**
+   * Draws the guide from its declaration.
+   *
+   * Only the sections that apply: somebody in a sandbox world has no ages,
+   * no claims and no settlers, and a tab explaining all three is a tab that
+   * makes the game look more complicated than the one they are in.
+   */
+  populateGuide() {
     const touch = document.body.classList.contains('touch');
-    const rows = [
-      ['Move', touch ? 'Left stick' : 'W A S D'],
-      ['Look around', touch ? 'Right stick' : 'Move the mouse'],
-      ['Break a block', touch ? 'Break button' : 'Left click'],
-      ['Place a block', touch ? 'Place button' : 'Right click'],
-      ['Jump', touch ? 'Jump button' : 'Space'],
-      ['Fly on and off', touch ? 'Fly button' : 'F'],
-      ['Rise / descend while flying', touch ? 'Jump and Down buttons' : 'Space / Shift'],
-      ['Pick a block', touch ? 'Tap the palette' : 'Keys 1-9, or click the palette'],
-      ['Undo / Redo', touch ? 'Undo and Redo buttons' : 'Ctrl+Z / Ctrl+Y'],
-      ['Open the menu', touch ? 'Menu button' : 'Esc'],
-    ];
-    const tools = [
-      ['Select', 'Turns the selector box on. Aim it at your build \u2014 it snaps to a grid so designs line up.'],
-      ['Size', 'Cycles the selector between 2\u00b3, 4\u00b3, 8\u00b3 and 16\u00b3 (one chunk wide).'],
-      ['Designs', 'Save whatever is inside the selector as a named design, then stamp it anywhere. Press R to rotate before placing.'],
-      ['Mirror', 'Every block you place is echoed across the world\u2019s centre line. Press again to cycle X, Z, both, off.'],
-      ['Screen', 'Enters or leaves fullscreen.'],
-      ['Stats', 'Your level, achievements and today\u2019s challenges.'],
-      ['Menu', 'Saving and loading, export and import, new worlds, and cloud sync if you sign in.'],
-    ];
-    this.q('#help-body').innerHTML = `
-      <div class="help-group">
-        <div class="help-title">Playing</div>
-        ${rows.map(([what, how]) => `<div class="help-row"><span>${what}</span><span class="help-key">${how}</span></div>`).join('')}
-      </div>
-      <div class="help-group">
-        <div class="help-title">Toolbar</div>
-        ${tools.map(([name, desc]) => `<div class="help-tool"><strong>${name}</strong><span>${desc}</span></div>`).join('')}
-      </div>`;
+    const mode = this.cb.isDuilt?.() ? 'duilt' : 'sandbox';
+    const sections = guideFor(mode);
+    const open = this.guideTab && sections.some((g) => g.id === this.guideTab)
+      ? this.guideTab
+      : sections[0]?.id;
+
+    this.q('#guide-tabs').innerHTML = sections
+      .map((g) => `<button class="tab-btn${g.id === open ? ' active' : ''}" data-tab="${g.id}">${escapeHtml(g.name)}</button>`)
+      .join('');
+    this.q('#guide-body').innerHTML = sections
+      .map((g) => `<div class="tab-panel guide-panel" id="${g.id}"${g.id === open ? '' : ' hidden'}>${
+        g.blocks({ touch }).map(guideBlock).join('')
+      }</div>`)
+      .join('');
+    // Remember which tab you were on: closing the panel to go and look at
+    // something and coming back to page one is its own small annoyance.
+    this.q('#guide-tabs').querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => { this.guideTab = btn.dataset.tab; });
+    });
+    this.wireTabs(this.q('#panel-guide'));
   }
 
   setFullscreenIndicator(isFullscreen) {
@@ -1334,6 +1346,32 @@ export class UIManager {
     if (!btn) return;
     btn.classList.toggle('active', isFullscreen);
     btn.title = isFullscreen ? 'Exit fullscreen' : 'Toggle fullscreen';
+  }
+}
+
+/** One block of the guide, in the shape guide.js declared it. */
+function guideBlock(b) {
+  const title = b.title ? `<div class="guide-head">${escapeHtml(b.title)}</div>` : '';
+  switch (b.kind) {
+    case 'lead':
+      return `<p class="guide-lead">${escapeHtml(b.text)}</p>`;
+    case 'keys':
+      return `${title}<div class="guide-keys">${b.rows.map(([what, how]) => (
+        `<div class="guide-key"><span>${escapeHtml(what)}</span><span class="help-key">${escapeHtml(how)}</span></div>`
+      )).join('')}</div>`;
+    case 'defs':
+      return `${title}${b.rows.map(([name, text, ic]) => (
+        `<div class="guide-def">
+          <strong>${ic ? `<span class="guide-icon">${escapeHtml(ic)}</span>` : ''}${escapeHtml(name)}</strong>
+          <span>${escapeHtml(text)}</span>
+        </div>`
+      )).join('')}`;
+    case 'steps':
+      return `${title}<ol class="guide-steps">${b.rows.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ol>`;
+    case 'note':
+      return `<p class="guide-note">${escapeHtml(b.text)}</p>`;
+    default:
+      return '';
   }
 }
 
