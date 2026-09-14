@@ -129,6 +129,110 @@ export class ChunkGen {
     }
     return 0;
   }
+
+  /**
+   * Fills a chunk with land: ground, water, scatter, and the trees whose
+   * canopies reach into it from outside.
+   *
+   * Generation writes with `byHand: false`, so a chunk nobody has touched
+   * stays untouched and need never be saved.
+   */
+  fill(world, chunk) {
+    const ox = chunk.cx * CHUNK_SIZE, oz = chunk.cz * CHUNK_SIZE;
+
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        const x = ox + lx, z = oz + lz;
+        const h = this.heightAt(x, z);
+        const index = this.biomeIndexAt(x, z);
+        const biome = BIOMES[index];
+        chunk.surface[lz * CHUNK_SIZE + lx] = h;
+        chunk.biomes[lz * CHUNK_SIZE + lx] = index;
+
+        const s = biome.surface;
+        const top = surfaceFor(biome, h);
+        const water = this.waterLevelAt(x, z);
+        for (let y = 0; y < h; y++) {
+          let block;
+          if (y < h - 1 - s.depth) block = s.rock;
+          else if (y < h - 1) block = s.under;
+          else block = water ? RIVERBED : top;
+          chunk.set(lx, y, lz, block);
+        }
+        // A river fills the trough it cut. The level is the bed plus one, so
+        // the water sits in the channel rather than flooding the banks.
+        if (water) {
+          for (let y = h; y < Math.min(water, this.height); y++) chunk.set(lx, y, lz, WATER);
+        } else {
+          const sc = this.scatterAt(x, z);
+          if (sc && h < this.height) chunk.set(lx, h, lz, sc);
+        }
+      }
+    }
+
+    // Trees. Every column within a canopy's reach of this chunk is asked
+    // whether it holds one, and only the blocks that land inside these walls
+    // are written — the same tree gets written again, identically, by each
+    // chunk it overhangs.
+    for (let x = ox - FEATURE_MARGIN; x < ox + CHUNK_SIZE + FEATURE_MARGIN; x++) {
+      for (let z = oz - FEATURE_MARGIN; z < oz + CHUNK_SIZE + FEATURE_MARGIN; z++) {
+        const tree = this.treeAt(x, z);
+        if (tree) this.plant(chunk, x, z, tree);
+      }
+    }
+
+    chunk.dirty = true;
+  }
+
+  /** Writes one tree, keeping only what falls inside the given chunk. */
+  plant(chunk, x, z, { style, trunk, ground }) {
+    const ox = chunk.cx * CHUNK_SIZE, oz = chunk.cz * CHUNK_SIZE;
+    const put = (bx, by, bz, block, fillAirOnly) => {
+      const lx = bx - ox, lz = bz - oz;
+      if (lx < 0 || lz < 0 || lx >= CHUNK_SIZE || lz >= CHUNK_SIZE) return;
+      if (by < 0 || by >= chunk.height) return;
+      if (fillAirOnly && chunk.get(lx, by, lz) !== 0) return;
+      chunk.set(lx, by, lz, block);
+    };
+
+    for (let i = 0; i < trunk; i++) put(x, ground + i, z, style.wood, false);
+
+    const canopy = style.canopy ?? 2;
+    const topY = ground + trunk;
+    for (let dy = -1; dy <= 1; dy++) {
+      const r = dy === 1 ? Math.max(1, canopy - 1) : canopy;
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dz = -r; dz <= r; dz++) {
+          if (r > 1 && Math.abs(dx) === r && Math.abs(dz) === r) continue;
+          put(x + dx, topY + dy, z + dz, style.leaves, true);
+        }
+      }
+    }
+    put(x, topY + 2, z, style.leaves, true);
+  }
+
+  /**
+   * Recomputes a loaded chunk's surface and biome columns.
+   *
+   * A saved chunk carries its blocks but not these, and they are cheap to work
+   * out again from the seed — cheaper than storing two more arrays per chunk in
+   * every save.
+   */
+  resurface(chunk) {
+    const ox = chunk.cx * CHUNK_SIZE, oz = chunk.cz * CHUNK_SIZE;
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        // From the blocks rather than the seed: the player may have dug the
+        // ground away or piled it up, and the surface is where it is now.
+        let h = 0;
+        for (let y = chunk.height - 1; y >= 0; y--) {
+          if (chunk.get(lx, y, lz) !== 0) { h = y + 1; break; }
+        }
+        chunk.surface[lz * CHUNK_SIZE + lx] = h;
+        chunk.biomes[lz * CHUNK_SIZE + lx] = this.biomeIndexAt(ox + lx, oz + lz);
+      }
+    }
+  }
 }
 
 function seeded(seed) {
@@ -150,5 +254,7 @@ const RIVER_DEPTH = 6;
 // The bias that keeps the settlement on buildable ground. In blocks now rather
 // than a fraction of the map, because an endless map has no fraction to take.
 const HOME_RADIUS = 51;
+const WATER = 11;
+const RIVERBED = 6;   // sand under the water, the way a bank looks
 
 export { CHUNK_SIZE, surfaceFor };

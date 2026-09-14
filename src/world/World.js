@@ -10,8 +10,23 @@ export class Chunk {
     this.cz = cz;
     this.height = height;
     this.data = new Uint8Array(CHUNK_SIZE * height * CHUNK_SIZE);
+    // Per-chunk rather than one array across the map, because an endless map
+    // has no across. Filled at generation and kept, since everything that asks
+    // later — the site finder, the settlers, the border — asks long after.
+    this.surface = new Int16Array(CHUNK_SIZE * CHUNK_SIZE);
+    this.biomes = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE);
     this.dirty = true;
     this.mesh = null; // populated by ChunkMesher: Map<blockId, InstancedMesh>
+    /**
+     * Whether a person has changed anything in here.
+     *
+     * This is what makes an endless world saveable. Land that is exactly what
+     * the seed says it is need not be written down at all — it can be made
+     * again from the seed in a millisecond. Only the chunks somebody has dug
+     * into or built on have to survive, and in a normal game that is a few
+     * dozen out of however many thousand you walked across.
+     */
+    this.touched = false;
   }
 
   index(lx, ly, lz) {
@@ -26,44 +41,105 @@ export class Chunk {
   set(lx, ly, lz, value) {
     this.data[this.index(lx, ly, lz)] = value;
   }
+
+  surfaceAt(lx, lz) {
+    return this.surface[lz * CHUNK_SIZE + lx];
+  }
+
+  biomeAt(lx, lz) {
+    return this.biomes[lz * CHUNK_SIZE + lx];
+  }
 }
 
+/**
+ * The world, which no longer ends.
+ *
+ * It used to be a fixed grid of chunks made in one pass and serialised whole,
+ * which capped it at 256 blocks a side: 512 came to 4.2MB and would not
+ * reliably survive a browser's storage. That cap was visible from inside the
+ * game — standing in the middle you could see the edge of the map, because
+ * there were only 128 blocks of land in any direction and the fog started
+ * eating them at 95.
+ *
+ * Now chunks are made when something asks for one, from a generator that
+ * needs only a position and the seed, and they are forgotten again when you
+ * walk far enough away. What gets written down is the seed plus the handful of
+ * chunks you actually changed. A world is a few kilobytes however far you walk
+ * across it.
+ *
+ * Worlds saved under the old scheme still load. They carry their own blocks
+ * and their own bounds and stay exactly the size they were — there is no seed
+ * behind them to regrow the rest from.
+ */
 export class World {
-  constructor({ sizeX = 64, sizeZ = 64, height = 64 } = {}) {
-    this.sizeX = sizeX;
-    this.sizeZ = sizeZ;
+  /**
+   * @param gen    a ChunkGen. With one, the world is endless. Without, it is a
+   *               fixed grid of the given size — which is what a save from
+   *               before this change comes back as.
+   * @param keep   how many chunks to hold in memory around the player before
+   *               forgetting the far ones. Touched chunks are never forgotten.
+   */
+  constructor({ sizeX = null, sizeZ = null, height = 64, gen = null, keep = 1600 } = {}) {
     this.height = height;
-    this.chunksX = Math.ceil(sizeX / CHUNK_SIZE);
-    this.chunksZ = Math.ceil(sizeZ / CHUNK_SIZE);
+    this.gen = gen;
+    this.keep = keep;
+    this.endless = !!gen;
+    // A fixed world keeps its bounds; an endless one has none.
+    this.sizeX = this.endless ? null : sizeX ?? 64;
+    this.sizeZ = this.endless ? null : sizeZ ?? 64;
     this.chunks = new Map();
-    this.surfaceHeightMap = new Int16Array(sizeX * sizeZ);
-    // Which biome each column ended up in. Derived at generation, but saved
-    // rather than recomputed: everything that asks — the site finder, the
-    // settlers — asks long after the seed has gone.
-    this.biomeMap = new Uint8Array(sizeX * sizeZ);
-    for (let cx = 0; cx < this.chunksX; cx++) {
-      for (let cz = 0; cz < this.chunksZ; cz++) {
-        this.chunks.set(this.chunkKey(cx, cz), new Chunk(cx, cz, height));
+
+    if (this.endless) {
+      // The settlement sits at the origin. Everything that used to ask "where
+      // is the middle of the map" asks for this instead.
+      this.centreX = 0;
+      this.centreZ = 0;
+    } else {
+      this.chunksX = Math.ceil(this.sizeX / CHUNK_SIZE);
+      this.chunksZ = Math.ceil(this.sizeZ / CHUNK_SIZE);
+      this.centreX = Math.floor(this.sizeX / 2);
+      this.centreZ = Math.floor(this.sizeZ / 2);
+      // A fixed world keeps the flat maps it always had. It is the old thing,
+      // unchanged — there is no seed behind it and nothing to gain by moving
+      // its bookkeeping into the chunks.
+      this.surfaceHeightMap = new Int16Array(this.sizeX * this.sizeZ);
+      this.biomeMap = new Uint8Array(this.sizeX * this.sizeZ);
+      for (let cx = 0; cx < this.chunksX; cx++) {
+        for (let cz = 0; cz < this.chunksZ; cz++) {
+          this.chunks.set(chunkKey(cx, cz), new Chunk(cx, cz, height));
+        }
       }
     }
   }
 
   /**
-   * Numeric, not a template string. getBlock is the hottest call in the engine
-   * — meshing, raycasting and collision all go through it — and building a
-   * string key allocated on every single lookup.
+   * The chunk covering a chunk coordinate, made on the spot if it does not
+   * exist yet and the world is endless.
+   *
+   * `create: false` asks without causing generation — what the mesher and the
+   * cull pass want, since neither should drag a continent into being by
+   * looking at it.
    */
-  chunkKey(cx, cz) {
-    return cx * this.chunksZ + cz;
+  getChunk(cx, cz, create = true) {
+    const key = chunkKey(cx, cz);
+    const existing = this.chunks.get(key);
+    if (existing) return existing;
+    if (!this.endless || !create) return undefined;
+    const chunk = new Chunk(cx, cz, this.height);
+    this.chunks.set(key, chunk);
+    this.gen.fill(this, chunk);
+    return chunk;
   }
 
-  getChunk(cx, cz) {
-    if (cx < 0 || cz < 0 || cx >= this.chunksX || cz >= this.chunksZ) return undefined;
-    return this.chunks.get(this.chunkKey(cx, cz));
+  /** Whether a chunk has been made yet. Never generates. */
+  hasChunk(cx, cz) {
+    return this.chunks.has(chunkKey(cx, cz));
   }
 
   inBounds(x, y, z) {
-    return x >= 0 && x < this.sizeX && y >= 0 && y < this.height && z >= 0 && z < this.sizeZ;
+    if (y < 0 || y >= this.height) return false;
+    if (this.endless) return true;
+    return x >= 0 && x < this.sizeX && z >= 0 && z < this.sizeZ;
   }
 
   getBlock(x, y, z) {
@@ -92,12 +168,27 @@ export class World {
 
   surfaceHeight(x, z) {
     x |= 0; z |= 0;
-    if (x < 0 || x >= this.sizeX || z < 0 || z >= this.sizeZ) return 0;
-    return this.surfaceHeightMap[x * this.sizeZ + z];
+    if (!this.endless) {
+      if (x < 0 || x >= this.sizeX || z < 0 || z >= this.sizeZ) return 0;
+      return this.surfaceHeightMap[x * this.sizeZ + z];
+    }
+    const cx = x >> 4, cz = z >> 4;
+    return this.getChunk(cx, cz).surfaceAt(x - cx * CHUNK_SIZE, z - cz * CHUNK_SIZE);
+  }
+
+  /** The biome index a column ended up in. */
+  biomeIndex(x, z) {
+    x |= 0; z |= 0;
+    if (!this.endless) {
+      if (x < 0 || x >= this.sizeX || z < 0 || z >= this.sizeZ) return 0;
+      return this.biomeMap[x * this.sizeZ + z];
+    }
+    const cx = x >> 4, cz = z >> 4;
+    return this.getChunk(cx, cz).biomeAt(x - cx * CHUNK_SIZE, z - cz * CHUNK_SIZE);
   }
 
   /** Sets a block, marks the owning chunk (and touching neighbors) dirty for remeshing. Returns previous value. */
-  setBlock(x, y, z, value) {
+  setBlock(x, y, z, value, { byHand = true } = {}) {
     x |= 0; y |= 0; z |= 0;
     if (!this.inBounds(x, y, z)) return AIR;
     const cx = x >> 4, cz = z >> 4;
@@ -107,10 +198,17 @@ export class World {
     const prev = chunk.get(lx, y, lz);
     chunk.set(lx, y, lz, value);
     chunk.dirty = true;
-    if (lx === 0) this.getChunk(cx - 1, cz) && (this.getChunk(cx - 1, cz).dirty = true);
-    if (lx === CHUNK_SIZE - 1) this.getChunk(cx + 1, cz) && (this.getChunk(cx + 1, cz).dirty = true);
-    if (lz === 0) this.getChunk(cx, cz - 1) && (this.getChunk(cx, cz - 1).dirty = true);
-    if (lz === CHUNK_SIZE - 1) this.getChunk(cx, cz + 1) && (this.getChunk(cx, cz + 1).dirty = true);
+    // Generation writes with byHand: false. Everything else is somebody
+    // changing the world, and a changed chunk has to be written down.
+    if (byHand) chunk.touched = true;
+    const edge = (ox, oz) => {
+      const n = this.getChunk(cx + ox, cz + oz, false);
+      if (n) n.dirty = true;
+    };
+    if (lx === 0) edge(-1, 0);
+    if (lx === CHUNK_SIZE - 1) edge(1, 0);
+    if (lz === 0) edge(0, -1);
+    if (lz === CHUNK_SIZE - 1) edge(0, 1);
     return prev;
   }
 
@@ -124,7 +222,64 @@ export class World {
     yield* this.chunks.values();
   }
 
+  /**
+   * Makes sure every chunk within `radius` blocks of a point exists.
+   * Returns the ones it had to make, so the caller can queue them for meshing.
+   */
+  ensureAround(x, z, radius) {
+    if (!this.endless) return [];
+    const made = [];
+    const c = Math.ceil(radius / CHUNK_SIZE);
+    const px = Math.floor(x) >> 4, pz = Math.floor(z) >> 4;
+    for (let dx = -c; dx <= c; dx++) {
+      for (let dz = -c; dz <= c; dz++) {
+        if (dx * dx + dz * dz > c * c) continue;
+        if (this.hasChunk(px + dx, pz + dz)) continue;
+        made.push(this.getChunk(px + dx, pz + dz));
+      }
+    }
+    return made;
+  }
+
+  /**
+   * Drops chunks further than `radius` from a point, so walking a long way
+   * does not fill memory with country nobody is looking at.
+   *
+   * Never drops a chunk somebody has changed: that one is the only copy of
+   * what they did until the next save, and the seed cannot make it again.
+   */
+  forgetBeyond(x, z, radius) {
+    if (!this.endless) return [];
+    const dropped = [];
+    const c = radius / CHUNK_SIZE;
+    const px = Math.floor(x) / CHUNK_SIZE, pz = Math.floor(z) / CHUNK_SIZE;
+    for (const [key, chunk] of this.chunks) {
+      if (chunk.touched) continue;
+      const dx = chunk.cx - px, dz = chunk.cz - pz;
+      if (dx * dx + dz * dz <= c * c) continue;
+      this.chunks.delete(key);
+      dropped.push(chunk);
+    }
+    return dropped;
+  }
+
   serialize() {
+    if (this.endless) {
+      // The seed is the world. Only what somebody changed has to come with it.
+      const chunks = [];
+      for (const chunk of this.chunks.values()) {
+        if (!chunk.touched) continue;
+        chunks.push({ cx: chunk.cx, cz: chunk.cz, rle: rleEncode(chunk.data) });
+      }
+      return {
+        endless: true,
+        height: this.height,
+        seed: this.gen.seed,
+        homeX: this.gen.biomes.centreX,
+        homeZ: this.gen.biomes.centreZ,
+        chunks,
+      };
+    }
     const chunks = [];
     for (const chunk of this.chunks.values()) {
       chunks.push({ cx: chunk.cx, cz: chunk.cz, rle: rleEncode(chunk.data) });
@@ -139,14 +294,28 @@ export class World {
     };
   }
 
-  static deserialize(json) {
+  static deserialize(json, { makeGen } = {}) {
+    if (json.endless) {
+      const world = new World({
+        height: json.height,
+        gen: makeGen({ seed: json.seed, height: json.height, homeX: json.homeX ?? 0, homeZ: json.homeZ ?? 0 }),
+      });
+      for (const c of json.chunks) {
+        // Generate the land first, then lay the player's changes over it, so a
+        // chunk they half-dug keeps the ground around the hole.
+        const chunk = world.getChunk(c.cx, c.cz);
+        chunk.data = rleDecode(c.rle, chunk.data.length);
+        chunk.touched = true;
+        chunk.dirty = true;
+        world.gen.resurface(chunk);
+      }
+      return world;
+    }
     const world = new World({ sizeX: json.sizeX, sizeZ: json.sizeZ, height: json.height });
-    world.surfaceHeightMap = Int16Array.from(json.surfaceHeightMap);
+    if (json.surfaceHeightMap) world.surfaceHeightMap = Int16Array.from(json.surfaceHeightMap);
     // Worlds saved before biomes existed have none; they are all meadow, which
     // is what index 0 is and what they actually look like.
-    world.biomeMap = json.biomeMap
-      ? Uint8Array.from(json.biomeMap)
-      : new Uint8Array(world.sizeX * world.sizeZ);
+    if (json.biomeMap) world.biomeMap = Uint8Array.from(json.biomeMap);
     for (const c of json.chunks) {
       const chunk = world.getChunk(c.cx, c.cz);
       if (!chunk) continue;
@@ -155,6 +324,19 @@ export class World {
     }
     return world;
   }
+}
+
+/**
+ * A key for a chunk coordinate that works for negative coordinates too.
+ *
+ * Numeric rather than a template string: getBlock is the hottest call in the
+ * engine — meshing, raycasting and collision all go through it — and a string
+ * key allocates on every single lookup. The offset keeps both halves positive
+ * so the pair packs into one exact number.
+ */
+const KEY_OFFSET = 1 << 20;
+function chunkKey(cx, cz) {
+  return (cx + KEY_OFFSET) * (KEY_OFFSET * 2) + (cz + KEY_OFFSET);
 }
 
 export function rleEncode(uint8arr) {
