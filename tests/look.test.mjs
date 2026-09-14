@@ -1,6 +1,7 @@
 import { cubeSvg, itemIcon, hasCube, shade } from '../src/config/cubes.js';
 import { BLOCKS, BLOCKS_BY_ID, PLACEABLE_BLOCKS } from '../src/config/blocks.js';
 import { ITEMS } from '../src/config/items.js';
+import { TEXTURES, textureFor, TILE_BASE } from '../src/config/textures.js';
 import { readFileSync } from 'node:fs';
 
 /**
@@ -96,5 +97,43 @@ ok('each channel takes the skew differently',
   ok('worked materials are left alone',
     !/\b9:\s*0\./.test(table) && !/\b10:\s*0\./.test(table) && !/\b17:\s*0\./.test(table));
 }
+
+// --- the surface of a block, close up ----------------------------------------
+
+// Dots, lines and shading painted from a recipe rather than downloaded. A
+// texture pack would arrive with its own palette and be the one thing on
+// screen that could not follow the block registry.
+{
+  const names = Object.keys(TEXTURES);
+  ok(`${names.length} materials have a recipe`, names.length >= 15);
+  ok('every recipe darkens by something', Object.values(TEXTURES).every((r) => (r.depth ?? 0) > 0));
+  // Tiles multiply the block's colour, so anything approaching black would
+  // wipe the palette out rather than shade it.
+  ok('and none of them so much that the colour is lost',
+    Object.values(TEXTURES).every((r) => (r.depth ?? 0) <= 0.3));
+  ok('every recipe names something to draw', Object.values(TEXTURES).every((r) =>
+    r.marks || r.lines || r.blobs || r.veins || r.cracks || r.band || r.speck));
+  ok('the glyphs they key off are real',
+    names.every((n) => BLOCKS.some((b) => b.glyph === n) || ITEMS.some((i) => i.glyph === n)));
+  ok('a material with no recipe is simply flat', textureFor('nonesuch') === null);
+  ok('tiles start near white, so they only ever shade', TILE_BASE > 0.9 && TILE_BASE <= 1);
+}
+
+// The shader has to declare its own attributes: three only plumbs `uv` and
+// `vMapUv` through for a material with a `map`, and this one cannot have one —
+// the tiles are an array, which `map` will not hold. Leaning on those was why
+// the first attempt would not compile at all.
+ok('the mesher patches a material rather than writing one',
+  /onBeforeCompile/.test(mesher) && /MeshLambertMaterial/.test(mesher));
+ok('with its own attribute names', /attribute vec2 tileUv/.test(mesher) && /attribute float layer/.test(mesher));
+ok('and its own varyings', /varying vec2 vTileUv/.test(mesher) && /varying float vLayer/.test(mesher));
+ok('hooked where they always exist', /#include <begin_vertex>/.test(mesher) && /#include <color_fragment>/.test(mesher));
+ok('a block with no recipe is left alone', /if \(vLayer > -0\.5\)/.test(mesher));
+// A greedy quad can span ten blocks; its tile has to repeat, not stretch.
+ok('the tile repeats across a merged quad', /fract\(vTileUv\)/.test(mesher));
+ok('and the UVs are sized to the quad', /buf\.uv\.push\(0, 0, w, 0, w, h, 0, h\)/.test(mesher));
+// Shading after the vertex colour, so it shades the colour the block ended up.
+ok('the tile shades the varied colour, not the flat registry one',
+  /#include <color_fragment>[\s\S]{0,200}diffuseColor\.rgb \*= texture/.test(mesher));
 
 process.exit(f ? 1 : 0);

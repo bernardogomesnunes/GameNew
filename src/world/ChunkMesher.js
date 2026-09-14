@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { blockTextureArray, layerFor } from '../render/BlockTextures.js';
 import { BLOCKS_BY_ID, AIR, isTransparent } from '../config/blocks.js';
 import { CHUNK_SIZE } from './World.js';
 
@@ -15,23 +16,77 @@ const colorCache = new Map();
 // already baked into its vertices. That lets a whole chunk's opaque geometry go
 // out as a single draw call instead of one per block type.
 const OPAQUE_KEY = 'opaque';
-const opaqueMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true });
+const opaqueMaterial = withBlockTextures(new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }));
 
 function bufferKeyFor(blockId) {
   return isTransparent(blockId) ? blockId : OPAQUE_KEY;
+}
+
+/**
+ * Teaches a stock Lambert material to read the layered texture.
+ *
+ * Three's own materials take one flat texture, and a flat texture cannot hold
+ * twenty-three tiles that each have to repeat across a merged quad. So the
+ * shader is patched: a `layer` attribute rides through to the fragment stage
+ * and picks the slice, and `fract` on the UV does the tiling within it.
+ *
+ * A patch rather than a material of our own, because everything else Lambert
+ * does — the lighting, the fog that sells the distance — is wanted exactly as
+ * it is. A layer of -1 means a material with no recipe, and it is left alone.
+ */
+function withBlockTextures(mat) {
+  const { texture } = blockTextureArray();
+  if (!texture) return mat;
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.blockTiles = { value: texture };
+    // Our own attribute names and our own varyings. Three only declares `uv`
+    // and `vMapUv` for a material that has a `map`, and this one deliberately
+    // does not have one — the tiles are an array, which `map` cannot hold. The
+    // first attempt leaned on those and the shader would not compile at all.
+    shader.vertexShader = `
+      attribute vec2 tileUv;
+      attribute float layer;
+      varying vec2 vTileUv;
+      varying float vLayer;
+      ${shader.vertexShader}
+    `.replace('#include <begin_vertex>', `
+      #include <begin_vertex>
+      vTileUv = tileUv;
+      vLayer = layer;
+    `);
+    // Injected after the vertex colour has been folded in, so the tile shades
+    // the colour the block actually ended up — variation and all — rather than
+    // the flat registry colour.
+    shader.fragmentShader = `
+      precision highp sampler2DArray;
+      uniform sampler2DArray blockTiles;
+      varying vec2 vTileUv;
+      varying float vLayer;
+      ${shader.fragmentShader}
+    `.replace('#include <color_fragment>', `
+      #include <color_fragment>
+      if (vLayer > -0.5) {
+        diffuseColor.rgb *= texture(blockTiles, vec3(fract(vTileUv), vLayer)).rgb;
+      }
+    `);
+  };
+  // Changing the shader invalidates anything already compiled for it.
+  mat.customProgramCacheKey = () => 'block-tiles-v1';
+  mat.needsUpdate = true;
+  return mat;
 }
 
 function getMaterial(key) {
   if (key === OPAQUE_KEY) return opaqueMaterial;
   if (materialCache.has(key)) return materialCache.get(key);
   const cfg = BLOCKS_BY_ID.get(key);
-  const mat = new THREE.MeshLambertMaterial({
+  const mat = withBlockTextures(new THREE.MeshLambertMaterial({
     color: 0xffffff,
     vertexColors: true,
     transparent: true,
     opacity: cfg?.opacity ?? 1,
     depthWrite: false,
-  });
+  }));
   materialCache.set(key, mat);
   return mat;
 }
@@ -214,6 +269,12 @@ export class ChunkMesher {
       geo.setAttribute('position', new THREE.Float32BufferAttribute(buf.position, 3));
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(buf.normal, 3));
       geo.setAttribute('color', new THREE.Float32BufferAttribute(buf.color, 3));
+      // The surface detail: where on its tile each corner sits, and which
+      // material's tile that is. A quad that greedy meshing merged across ten
+      // blocks gets a UV running 0..10, so the tile repeats rather than being
+      // stretched over the whole floor.
+      geo.setAttribute('tileUv', new THREE.Float32BufferAttribute(buf.uv, 2));
+      geo.setAttribute('layer', new THREE.Float32BufferAttribute(buf.layer, 1));
       geo.setIndex(buf.index);
       geo.computeBoundingSphere();
 
@@ -237,7 +298,7 @@ export class ChunkMesher {
     const key = bufferKeyFor(id);
     let buf = byType.get(key);
     if (!buf) {
-      buf = { position: [], normal: [], color: [], index: [] };
+      buf = { position: [], normal: [], color: [], uv: [], layer: [], index: [] };
       byType.set(key, buf);
     }
 
@@ -274,10 +335,15 @@ export class ChunkMesher {
     const g = col.g * shade * (light + skew * 0.7);
     const b = col.b * shade * (light - skew * 0.35);
 
+    const layer = layerFor(id);
     for (let k = 0; k < 4; k++) {
       buf.normal.push(nx, ny, nz);
       buf.color.push(r, g, b);
+      buf.layer.push(layer);
     }
+    // Corners of the quad in tile space: 0,0 to w,h, so one tile covers one
+    // block however many blocks the quad ended up spanning.
+    buf.uv.push(0, 0, w, 0, w, h, 0, h);
 
     // Reverse the winding for negative faces so both stay counter-clockwise
     // seen from outside and back-face culling keeps working.
