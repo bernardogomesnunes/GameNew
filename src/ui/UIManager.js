@@ -11,6 +11,7 @@ import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { guideFor } from '../config/guide.js';
 import { menuFor, MENU_BY_ID } from '../config/menu.js';
+import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 
 function el(html) {
   const t = document.createElement('template');
@@ -87,6 +88,7 @@ export class UIManager {
         <button class="icon-btn" id="btn-select" title="Selector: aim a grid-snapped box at your build">${icon('select')}<span>Select</span></button>
         <button class="icon-btn" id="btn-size" title="Change the selector size" hidden>${icon('copy')}<span id="size-label">8&sup3;</span></button>
         <button class="icon-btn sandbox-only touch-moved" id="btn-templates" title="Your saved building templates">${icon('paste')}<span>Designs</span></button>
+        <button class="icon-btn touch-moved" id="btn-roof" title="Pitch a roof over the selector">${icon('roof')}<span>Roof</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
@@ -228,6 +230,9 @@ export class UIManager {
             <button class="secondary" id="btn-save-template">Save selection</button>
           </div>
           <div id="template-list"></div>`,
+        'panel-roof': `
+          <div id="roof-list"></div>
+          <div class="export-note" id="roof-note"></div>`,
         'panel-guide': `
           <div class="tab-row" id="guide-tabs"></div>
           <div id="guide-body"></div>`,
@@ -266,6 +271,7 @@ export class UIManager {
             <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
             <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
             <button class="touch-btn sandbox-only" id="t-designs">${icon('paste')}<span>Designs</span></button>
+            <button class="touch-btn" id="t-roof">${icon('roof')}<span>Roof</span></button>
             <button class="touch-btn sandbox-only" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
             <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
           </div>
@@ -470,6 +476,7 @@ export class UIManager {
     this.q('#btn-guide').addEventListener('click', () => this.openPanel('panel-guide'));
     this.q('#btn-size').addEventListener('click', () => this.setSelectorSize(this.cb.onCycleSelectorSize()));
     this.q('#btn-templates').addEventListener('click', () => this.openPanel('panel-templates'));
+    this.q('#btn-roof').addEventListener('click', () => this.openPanel('panel-roof'));
     this.q('#btn-bag').addEventListener('click', () => this.cb.onOpenBag());
     this.q('#btn-buildings').addEventListener('click', () => this.cb.onOpenBuildings());
     this.q('#btn-bench').addEventListener('click', () => this.cb.onOpenBench());
@@ -485,6 +492,7 @@ export class UIManager {
       // drawn, and nothing anywhere opened it.
       ['#t-skills', () => this.openPanel('panel-skills')],
       ['#t-designs', () => this.openPanel('panel-templates')],
+      ['#t-roof', () => this.openPanel('panel-roof')],
     ];
     for (const [sel, fn] of openers) {
       const btn = this.q(sel);
@@ -799,6 +807,7 @@ export class UIManager {
     if (id === 'panel-stats') this.populateStats();
     if (id === 'panel-guide') this.populateGuide();
     if (id === 'panel-templates') this.refreshTemplateList();
+    if (id === 'panel-roof') this.refreshRoofList();
     // The Duilt panels draw their own contents.
     this.duiltUI?.populate(id);
   }
@@ -1309,13 +1318,22 @@ export class UIManager {
     this.q('#sel-dims').innerHTML = `${state.size}&sup3;`;
     this.q('#sel-count').textContent = `${state.blocks} block${state.blocks === 1 ? '' : 's'} inside`;
     const touch = document.body.classList.contains('touch');
-    const primary = state.template ? `Stamp ${state.template}` : 'Save design';
-    this.q('#sel-hint').textContent = touch
-      ? `${primary} \u00b7 Size`
-      : `Left click: ${primary.toLowerCase()} \u00b7 right click: change size`;
+    const primary = state.roof ? `${state.roof} roof`
+      : state.template ? `Stamp ${state.template}`
+      : 'Save design';
+    // A roof that can turn takes over the second button, because a phone has no
+    // R and which way the slope falls matters more, once you have picked a
+    // shape, than the size of a box you have already aimed.
+    const second = state.facing ? 'Turn' : 'Size';
+    // Which way it faces is the one thing a square box cannot tell you, so it
+    // is in words by the crosshair as well as in the preview hanging in the air.
+    const facing = state.facing ? ` \u00b7 ${state.facing}` : '';
+    this.q('#sel-hint').textContent = (touch
+      ? `${primary} \u00b7 ${second}`
+      : `Left click: ${primary.toLowerCase()} \u00b7 right click: ${second === 'Turn' ? 'turn it' : 'change size'}`) + facing;
     // On touch the two action buttons are the only way to reach either, so they
     // say what they do while the selector is on.
-    this.setActionLabels(primary, 'Size');
+    this.setActionLabels(primary, second);
   }
 
   /** Retitles the touch Break/Place buttons, which change meaning with the selector. */
@@ -1370,6 +1388,39 @@ export class UIManager {
     list.querySelectorAll('[data-drop]').forEach((btn) => btn.addEventListener('click', () => {
       if (confirm('Delete this design?')) { this.cb.onDeleteTemplate(btn.dataset.drop); this.refreshTemplateList(); }
     }));
+  }
+
+  /**
+   * The roof shapes, each with a drawing of its own profile.
+   *
+   * Picking one queues it rather than placing it, exactly as picking a design
+   * does, because where it goes is a thing you aim rather than a thing you
+   * type. The panel gets out of the way so you can aim.
+   */
+  refreshRoofList() {
+    const list = this.q('#roof-list');
+    if (!list) return;
+    list.innerHTML = ROOFS.map((r) => `
+      <button class="roof-row" data-roof="${r.id}">
+        <span class="roof-art">${roofProfileSvg(r)}</span>
+        <span class="roof-meta">
+          <span class="roof-name">${escapeHtml(r.name)}</span>
+          <span class="roof-note">${escapeHtml(r.note)}</span>
+        </span>
+      </button>
+    `).join('');
+    list.querySelectorAll('[data-roof]').forEach((btn) => btn.addEventListener('click', () => {
+      if (this.cb.onPickRoof(btn.dataset.roof)) {
+        this.setSelectorActive(true);
+        this.closePanel('panel-roof');
+      }
+    }));
+    const note = this.q('#roof-note');
+    if (note) {
+      note.innerHTML = 'It sits on the highest block inside the box, and is made of whatever you are '
+        + 'holding. R turns it. Place it again over the same box to change the shape, the way it '
+        + 'faces or the material — it replaces the roof rather than stacking one on it.';
+    }
   }
 
   setSymmetryLabel() {

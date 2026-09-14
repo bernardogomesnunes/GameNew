@@ -6,6 +6,8 @@ import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { UndoRedo } from './tools/UndoRedo.js';
 import { SelectorTool, buildTemplatePlacement, rotateTemplate } from './tools/SelectorTool.js';
+import { roofPlan, roofBlocks, roofBase, roofPeak } from './tools/RoofTool.js';
+import { ROOFS_BY_ID, facingLabel } from './config/roofs.js';
 import { SelectionHighlight } from './tools/SelectionHighlight.js';
 import { BuildGhost } from './tools/BuildGhost.js';
 import { SettlerView } from './render/SettlerView.js';
@@ -217,6 +219,11 @@ export class Game {
     this.templates = new TemplateLibrary(this.bus);
     this.pendingTemplate = null; // the template queued for stamping
     this.templateRotation = 0;
+    this.pendingRoof = null;     // the roof shape queued, if any
+    this.roofTurn = 0;
+    this.roofKey = null;         // what the preview was last built for
+    this.lastRoof = null;        // the roof this tool put up, while it is untouched
+    this.roofGhost = new BuildGhost(this.scene);
 
     this.ui = new UIManager(this.uiRoot, {
       bus: this.bus,
@@ -387,12 +394,13 @@ export class Game {
       onRedo: () => this.doRedo(),
       onToggleSelection: () => {
         const active = this.selectorTool.toggle();
-        if (!active) this.pendingTemplate = null;
+        if (!active) this.clearPending();
         return active;
       },
       onCycleSelectorSize: () => this.selectorTool.cycleSize(),
       onSaveTemplate: (name) => this.saveTemplate(name),
       onPickTemplate: (id) => {
+        this.clearPending();
         this.pendingTemplate = this.templates.get(id);
         this.templateRotation = 0;
         if (this.pendingTemplate) {
@@ -401,6 +409,24 @@ export class Game {
         }
         return !!this.pendingTemplate;
       },
+      onPickRoof: (id) => {
+        this.clearPending();
+        this.pendingRoof = ROOFS_BY_ID.get(id) ?? null;
+        this.roofTurn = 0;
+        if (this.pendingRoof) {
+          this.selectorTool.active = true;
+          this.ui.toast({
+            kind: 'challenge',
+            title: `Ready: ${this.pendingRoof.name} roof`,
+            body: this.pendingRoof.turns > 1
+              ? 'Frame the top of your walls · R turns it'
+              : 'Frame the top of your walls',
+          });
+        }
+        return !!this.pendingRoof;
+      },
+      onRotateRoof: () => this.turnRoof(),
+      onPlaceRoof: () => this.stampRoof(),
       onDeleteTemplate: (id) => this.templates.delete(id),
       onRotateTemplate: () => { this.templateRotation = (this.templateRotation + 1) % 4; return this.templateRotation; },
       onPlaceTemplate: () => this.stampTemplate(),
@@ -752,7 +778,10 @@ export class Game {
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
       // B is the selector in a sandbox world, where there are no buildings.
       if (e.code === 'KeyB' && !this.duilt) this.ui.toggleSelector();
-      if (e.code === 'KeyR' && this.pendingTemplate) {
+      // R turns whatever is queued. One key for both, because "turn the thing
+      // before you put it down" is one idea however it got queued.
+      if (e.code === 'KeyR' && this.pendingRoof) this.turnRoof();
+      else if (e.code === 'KeyR' && this.pendingTemplate) {
         this.templateRotation = (this.templateRotation + 1) % 4;
         this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });
       }
@@ -813,7 +842,8 @@ export class Game {
   primaryAction() {
     if (this.moving) return void this.cancelMove();
     if (this.selectorTool.active) {
-      if (this.pendingTemplate) this.stampTemplate();
+      if (this.pendingRoof) this.stampRoof();
+      else if (this.pendingTemplate) this.stampTemplate();
       else this.ui.openTemplateSavePrompt();
       return;
     }
@@ -826,6 +856,9 @@ export class Game {
     // while you are carrying something, so there is nothing to guess.
     if (this.moving) return void this.dropMove();
     if (this.selectorTool.active) {
+      // A roof with more than one way round takes this button, so a phone has
+      // a way to turn it. See setSelectorReadout, which labels it to match.
+      if (this.pendingRoof?.turns > 1) { this.turnRoof(); return; }
       this.selectorTool.cycleSize();
       this.ui.setSelectorSize(this.selectorTool.size);
       return;
@@ -867,6 +900,133 @@ export class Game {
     this.gamification.onTemplatePlaced(this.pendingTemplate);
     this.ui.toast({ kind: 'challenge', title: `Placed ${this.pendingTemplate.name}`, body: `${changes.length} blocks` });
     return true;
+  }
+
+  /** Nothing queued for the selector to put down. */
+  clearPending() {
+    this.pendingTemplate = null;
+    this.pendingRoof = null;
+    this.roofTurn = 0;
+    this.roofGhost.hide();
+    this.roofKey = null;
+  }
+
+  /** Next orientation of the queued roof. A hip roof has only one, and says so. */
+  turnRoof() {
+    if (!this.pendingRoof) return 0;
+    if (this.pendingRoof.turns <= 1) {
+      this.ui.toast({ kind: 'xp', title: `A ${this.pendingRoof.name.toLowerCase()} roof looks the same every way round` });
+      return 0;
+    }
+    this.roofTurn = (this.roofTurn + 1) % this.pendingRoof.turns;
+    this.ui.toast({ kind: 'xp', title: `Turned · ${facingLabel(this.pendingRoof, this.roofTurn)}` });
+    return this.roofTurn;
+  }
+
+  /**
+   * The roof this box already has, if the tool is the one that put it there.
+   *
+   * Placing a roof, seeing it face the wrong way, turning it and placing again
+   * is the normal way this tool gets used, and without this it would leave two
+   * roofs crossed over each other — the second sitting on the first, because
+   * the first is now the highest thing in the box. So the last roof is
+   * remembered, and only while every block of it is still where it was put: as
+   * soon as you break into it, or undo it, or move the box, it is a different
+   * question and the plain rule answers it.
+   */
+  roofRelay(bounds) {
+    const last = this.lastRoof;
+    if (!last) return null;
+    if (last.minX !== bounds.minX || last.minZ !== bounds.minZ) return null;
+    if (last.size !== this.selectorTool.size) return null;
+    for (const c of last.cells) {
+      if (this.world.getBlock(c.x, c.y, c.z) !== c.type) return null;
+    }
+    return last;
+  }
+
+  /** The height the eaves land on, relay included, so the preview matches. */
+  roofEave(bounds) {
+    return this.roofRelay(bounds)?.base ?? roofBase(this.world, bounds);
+  }
+
+  /**
+   * Pitches the queued roof over the selector, out of the block you are
+   * holding, as one undoable action paid for in one go.
+   */
+  stampRoof() {
+    if (!this.pendingRoof) return false;
+    const bounds = this.selectorTool.bounds();
+    if (!bounds) return false;
+    const type = this.selectedBlockId;
+    const availability = this.blockAvailability(type);
+    if (!availability.ok) {
+      this.ui.toast({ kind: 'xp', title: 'Locked block', body: availability.reason });
+      return false;
+    }
+    const relay = this.roofRelay(bounds);
+    const base = relay?.base ?? roofBase(this.world, bounds);
+    const shape = this.pendingRoof, turn = this.roofTurn;
+    const changes = roofPlan(this.world, bounds, { shape, turn, type, base });
+
+    const laid = roofBlocks(bounds, { shape, turn }).map((b) => ({
+      x: bounds.minX + b.dx, y: base + b.dy, z: bounds.minZ + b.dz, type,
+    }));
+    // Re-laying a roof has to take the old one's corners down as well as put
+    // the new one up, or turning a gable leaves a cross on the roof.
+    if (relay) {
+      const wanted = new Set(laid.map((c) => `${c.x},${c.y},${c.z}`));
+      for (const c of relay.cells) {
+        if (wanted.has(`${c.x},${c.y},${c.z}`)) continue;
+        if (this.world.getBlock(c.x, c.y, c.z) !== c.type) continue;
+        changes.push({ x: c.x, y: c.y, z: c.z, prev: c.type, next: AIR });
+      }
+    }
+
+    if (!changes.length) {
+      this.ui.toast({ kind: 'xp', title: 'Nothing to roof', body: 'The box is empty, or that roof is already there' });
+      return false;
+    }
+    if (!this.applyChanges(changes)) return false;
+    this.lastRoof = { minX: bounds.minX, minZ: bounds.minZ, size: this.selectorTool.size, base, cells: laid };
+    const made = BLOCKS_BY_ID.get(type)?.name ?? 'blocks';
+    this.ui.toast({
+      kind: 'challenge',
+      title: `${this.pendingRoof.name} roof up`,
+      body: `${changes.length} blocks of ${made.toLowerCase()}`,
+    });
+    return true;
+  }
+
+  /**
+   * The roof you are about to place, in the air, before you place it.
+   *
+   * Orientation is the part a shape cannot get right on its own — the box is
+   * square and gives it nothing to read the front of the building from. Seeing
+   * the slope turn as you press R is the difference between that being a
+   * guess and being a choice.
+   *
+   * Rebuilt only when it would look different, since the preview is a mesh and
+   * the selector re-aims every frame.
+   */
+  updateRoofPreview(bounds) {
+    if (!this.pendingRoof || !bounds) {
+      if (this.roofKey !== null) { this.roofGhost.hide(); this.roofKey = null; }
+      return;
+    }
+    const base = this.roofEave(bounds);
+    const key = [this.pendingRoof.id, this.roofTurn, this.selectedBlockId,
+      bounds.minX, bounds.minZ, base, this.selectorTool.size].join(':');
+    if (key === this.roofKey) return;
+    this.roofKey = key;
+    const blocks = roofBlocks(bounds, { shape: this.pendingRoof, turn: this.roofTurn })
+      .map((b) => ({ ...b, type: this.selectedBlockId }));
+    this.roofGhost.show(blocks, {
+      x: bounds.maxX - bounds.minX,
+      y: roofPeak(blocks),
+      z: bounds.maxZ - bounds.minZ,
+    });
+    this.roofGhost.moveTo({ x: bounds.minX, y: base, z: bounds.minZ });
   }
 
   /** Offers the framed region to the claim menu. */
@@ -1662,13 +1822,17 @@ export class Game {
       const bounds = this.selectorTool.bounds();
       this.selection.update(bounds, this.selectorTool.size, this.world, { force: this.selectionDirty });
       this.selectionDirty = false;
+      this.updateRoofPreview(bounds);
       this.ui.setSelectorReadout(bounds ? {
         size: this.selectorTool.size,
         blocks: this.selection.blockCount,
         template: this.pendingTemplate?.name || null,
+        roof: this.pendingRoof?.name || null,
+        facing: facingLabel(this.pendingRoof, this.roofTurn),
       } : null);
     } else {
       this.selection.hide();
+      this.updateRoofPreview(null);
       this.ui.setSelectorReadout(null);
     }
   }

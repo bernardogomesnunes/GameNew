@@ -23,6 +23,9 @@ const PATHS = {
   hammer: 'M14 4l6 6-2.5 2.5-6-6L14 4Z M11.5 6.5l-7 7a2 2 0 0 0 0 3l2 2a2 2 0 0 0 3 0l7-7',
   home: 'M4 11 12 4l8 7 M6.5 9.5V20h11V9.5 M10 20v-5.5h4V20',
   lock: 'M7 10V7a5 5 0 0 1 10 0v3M5 10h14v10H5z',
+  // A pitch with two stubs of wall under it. Home has a door in it and would
+  // be the same picture otherwise.
+  roof: 'M2.5 14.5 12 7l9.5 7.5M5.5 12.5V18M18.5 12.5V18',
   help: 'M12 17h.01M9.2 9a2.8 2.8 0 1 1 3.8 2.6c-.7.3-1 .9-1 1.6v.3',
   // Skills: a step up, not the bar chart Stats already uses — side by side in
   // the tray the two were the same picture.

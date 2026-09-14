@@ -60,6 +60,16 @@ export const PANELS = [
     label: 'Designs',
   },
   {
+    id: 'panel-roof',
+    title: 'Roofs',
+    sub: 'Frame the top of your walls with the selector, pick a shape, and place it.',
+    layer: 'main',
+    // Not sandbox-only like Designs: a Duilt house with a hole in the sky is
+    // the exact thing this is for, and the blocks come out of your bag.
+    mode: 'any',
+    label: 'Roof',
+  },
+  {
     id: 'panel-guide',
     title: 'How to play',
     sub: 'What the game is, what the buttons do, and what to build next.',

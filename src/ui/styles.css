@@ -431,6 +431,24 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .template-dims { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; font-variant-numeric: tabular-nums; }
 .template-row .actions { display: flex; gap: 6px; flex-shrink: 0; }
 
+/* Roof shapes. The whole row is the button — a "Pick" on the end would be a
+   smaller target for the same one thing the row does. */
+.roof-row {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: rgba(255,255,255,0.035); border: 1px solid var(--panel-border);
+  border-radius: 10px; padding: 10px 12px; margin-bottom: 6px;
+  color: var(--text); cursor: pointer; font: inherit;
+}
+.roof-row:hover { background: rgba(255,255,255,0.07); border-color: rgba(77,219,196,0.35); }
+.roof-art {
+  flex-shrink: 0; width: 60px; display: flex; align-items: flex-end; justify-content: center;
+  color: var(--accent);
+}
+.roof-profile { width: 100%; height: auto; }
+.roof-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.roof-name { font-weight: 600; font-size: 14px; }
+.roof-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.4; }
+
 .export-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.45; margin-top: 8px; }
 
 /* ============================================================

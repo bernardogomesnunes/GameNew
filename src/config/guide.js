@@ -114,7 +114,17 @@ export const GUIDE = [
           ['Select', 'Turns the box on. It snaps to a grid, so two things built with it line up.'],
           ['Size', 'Cycles the box between 2, 4, 8 and 16 blocks a side. Sixteen is one chunk.'],
           ['Designs', 'Saves whatever is in the box under a name, then stamps it anywhere. Press R to turn it before you put it down.'],
+          ['Roof', 'Pitches a roof over the box — gable, hipped, lean-to or flat. It works out the slope so you do not have to place it a course at a time.'],
           ['Mirror', 'Every block you place is echoed across the middle of the world. Press again for X, Z, both, off.'],
+        ],
+      },
+      {
+        kind: 'steps',
+        rows: [
+          'Build four walls.',
+          'Aim the box at the top of them — the roof sits on the highest block inside it.',
+          'Open Roof and pick a shape. It hangs in the air so you can see it.',
+          'R turns it, or the second button on a phone. Then place it, out of whatever you are holding.',
         ],
       },
       {
