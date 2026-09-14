@@ -7,6 +7,7 @@ import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { UndoRedo } from './tools/UndoRedo.js';
 import { SelectorTool, buildTemplatePlacement, rotateTemplate } from './tools/SelectorTool.js';
 import { SelectionHighlight } from './tools/SelectionHighlight.js';
+import { BuildGhost } from './tools/BuildGhost.js';
 import { CloudAuth } from './net/CloudAuth.js';
 import { CloudWorlds } from './net/CloudWorlds.js';
 import { isCloudConfigured } from './net/cloudConfig.js';
@@ -146,6 +147,8 @@ export class Game {
     this.hoverBox.visible = false;
     this.scene.add(this.hoverBox);
     this.selection = new SelectionHighlight(this.scene);
+    this.ghost = new BuildGhost(this.scene);
+    this.moving = null;   // the building currently in the air
 
     this.boot();
     window.addEventListener('resize', () => this.onResize());
@@ -595,6 +598,11 @@ export class Game {
 
     canvas.addEventListener('mousedown', (e) => {
       if (!this.pointerLocked) return;
+      if (this.moving) {
+        if (e.button === 0) this.dropMove();
+        else if (e.button === 2) this.cancelMove();
+        return;
+      }
       if (e.button === 0) { this.primaryAction(); this.setBreaking(true); }
       else if (e.button === 2) this.secondaryAction();
     });
@@ -612,6 +620,8 @@ export class Game {
       if (isTyping(e)) return;
 
       if (e.code === 'Escape') {
+        // Putting down what you are holding comes before putting away panels.
+        if (this.moving) { this.cancelMove(); return; }
         if (this.pointerLocked) return; // browser handles exiting lock
         // One at a time, most recent first — Escape means "put away the thing
         // in front of me", not "put away everything". On the worlds screen
@@ -683,7 +693,7 @@ export class Game {
    * stamps a design, and holding it should not stamp forty copies.
    */
   setBreaking(on) {
-    const want = on && !this.selectorTool.active;
+    const want = on && !this.selectorTool.active && !this.moving;
     if (want === this.breaking) return;
     this.breaking = want;
     if (want) {
@@ -702,6 +712,7 @@ export class Game {
   }
 
   primaryAction() {
+    if (this.moving) return void this.cancelMove();
     if (this.selectorTool.active) {
       if (this.pendingTemplate) this.stampTemplate();
       else this.ui.openTemplateSavePrompt();
@@ -711,6 +722,10 @@ export class Game {
   }
 
   secondaryAction() {
+    // Place puts down what you are holding, on a mouse and under a thumb
+    // alike. Cancelling is Escape, or the Break button — which says "Cancel"
+    // while you are carrying something, so there is nothing to guess.
+    if (this.moving) return void this.dropMove();
     if (this.selectorTool.active) {
       this.selectorTool.cycleSize();
       this.ui.setSelectorSize(this.selectorTool.size);
@@ -756,32 +771,209 @@ export class Game {
   }
 
   /** Offers the framed region to the claim menu. */
-  /** What the building panel can do to one building. */
+  /**
+   * What the building panel can do to one building.
+   *
+   * These used to be "unlock" and "release the claim", which are words about
+   * the bookkeeping rather than about the building. What you actually want to
+   * do to something you put up is change it, move it, or get rid of it.
+   */
   buildingActions(structure) {
     return {
-      onToggleLock: () => {
+      onChange: () => {
         this.duilt.structures.setLocked(structure.id, structure.locked === false);
         this.ui.toast({
           kind: 'xp',
-          title: structure.locked ? 'Locked again' : 'Unlocked',
+          title: structure.locked ? 'Finished changing' : 'Open for changes',
           body: structure.locked
-            ? 'Protected from edits'
-            : 'You can change it now — it will be re-checked as you do',
+            ? 'Protected again'
+            : 'Break and place inside it — it is re-checked as you go',
         });
         // Redraw with the state it is in now, rather than the state it was in.
         this.ui.openBuilding(structure, this.buildingActions(structure));
       },
-      onRemove: () => {
-        const spec = STRUCTURES_BY_ID.get(structure.type);
-        this.duilt.structures.remove(structure.id);
-        this.ui.closePanel('panel-building');
-        this.ui.toast({
-          kind: 'xp',
-          title: `${spec?.name ?? 'Building'} released`,
-          body: 'The blocks are yours to change again',
-        });
-      },
+      onMove: () => this.beginMove(structure),
+      onDelete: () => this.deleteBuilding(structure),
     };
+  }
+
+  /**
+   * Takes a building down, blocks and all, and puts the materials back.
+   *
+   * Deleting goes through the same path as breaking it by hand, so the bag is
+   * credited the same way and the whole thing is one undo rather than several
+   * hundred.
+   */
+  deleteBuilding(structure) {
+    const spec = STRUCTURES_BY_ID.get(structure.type);
+    const changes = this.cellsOf(structure.region)
+      .map(({ x, y, z }) => ({ x, y, z, prev: this.world.getBlock(x, y, z), next: AIR }))
+      .filter((c) => c.prev !== AIR && !this.world.isIndestructible(c.x, c.y, c.z));
+
+    // Off the register first: a locked building refuses edits, including this one.
+    this.duilt.structures.remove(structure.id);
+    this.ui.closePanel('panel-building');
+    if (changes.length) this.applyChanges(changes, { chargeResources: false });
+    this.ui.toast({
+      kind: 'xp',
+      title: `${spec?.name ?? 'Building'} taken down`,
+      body: `${changes.length} blocks back in your bag`,
+    });
+  }
+
+  /** Every cell of a region, as a flat list. */
+  cellsOf(r) {
+    const out = [];
+    for (let x = r.minX; x <= r.maxX; x++)
+      for (let y = r.minY; y <= r.maxY; y++)
+        for (let z = r.minZ; z <= r.maxZ; z++) out.push({ x, y, z });
+    return out;
+  }
+
+  /**
+   * Lifts a building into the air so you can put it somewhere else.
+   *
+   * The blocks stay where they are until you drop it — so cancelling costs
+   * nothing, and the move lands as one change rather than a demolition
+   * followed by a rebuild you might not be able to afford.
+   */
+  beginMove(structure) {
+    const r = structure.region;
+    const blocks = [];
+    for (const { x, y, z } of this.cellsOf(r)) {
+      const type = this.world.getBlock(x, y, z);
+      if (type === AIR) continue;
+      blocks.push({ dx: x - r.minX, dy: y - r.minY, dz: z - r.minZ, type });
+    }
+    if (!blocks.length) {
+      this.ui.toast({ kind: 'xp', title: 'Nothing to move', body: 'There are no blocks left in it' });
+      return;
+    }
+    this.moving = {
+      structure,
+      blocks,
+      from: { ...r },
+      extent: { x: r.maxX - r.minX, y: r.maxY - r.minY, z: r.maxZ - r.minZ },
+      anchor: null,
+      ok: false,
+      reason: null,
+    };
+    this.ghost.show(blocks, this.moving.extent);
+    this.ui.closePanel('panel-building');
+    this.ui.setCarrying(true);
+    this.ui.setMoveHint(STRUCTURES_BY_ID.get(structure.type)?.name ?? 'Building', null);
+  }
+
+  /** Where the held building would land, given where you are looking. */
+  moveAnchor() {
+    const { extent } = this.moving;
+    const hit = this.hoverHit;
+    const aim = hit
+      ? { x: hit.placeX, y: hit.placeY, z: hit.placeZ }
+      : this.pointInFront(Math.max(6, extent.x));
+    // Centred on where you point, sitting on top of it.
+    return {
+      x: Math.round(aim.x - extent.x / 2),
+      y: aim.y,
+      z: Math.round(aim.z - extent.z / 2),
+    };
+  }
+
+  /** Whether the held building may be put down here, and why not if not. */
+  moveCheck(anchor) {
+    const { extent, structure } = this.moving;
+    const region = {
+      minX: anchor.x, maxX: anchor.x + extent.x,
+      minY: anchor.y, maxY: anchor.y + extent.y,
+      minZ: anchor.z, maxZ: anchor.z + extent.z,
+    };
+    if (!this.world.inBounds(region.minX, region.minY, region.minZ)
+      || !this.world.inBounds(region.maxX, region.maxY, region.maxZ)) {
+      return { ok: false, reason: 'That is off the edge of the world', region };
+    }
+    if (!this.duilt.territory.containsRegion(region)) {
+      return { ok: false, reason: 'That reaches outside your land', region };
+    }
+    if (this.duilt.structures.overlaps(region, structure.id)) {
+      return { ok: false, reason: 'That overlaps another building', region };
+    }
+    return { ok: true, reason: null, region };
+  }
+
+  /** Called each frame while a building is in the air. */
+  updateMove() {
+    const anchor = this.moveAnchor();
+    const check = this.moveCheck(anchor);
+    this.moving.anchor = anchor;
+    this.moving.ok = check.ok;
+    this.moving.reason = check.reason;
+    this.moving.region = check.region;
+    this.ghost.moveTo(anchor);
+    this.ghost.setValid(check.ok);
+    this.ui.setMoveHint(
+      STRUCTURES_BY_ID.get(this.moving.structure.type)?.name ?? 'Building',
+      check.reason,
+    );
+  }
+
+  /** Puts the held building down, if it may go here. */
+  dropMove() {
+    if (!this.moving) return false;
+    const { structure, blocks, from, region, ok, reason, anchor } = this.moving;
+    if (!ok) {
+      this.ui.toast({ kind: 'xp', title: 'Not there', body: reason ?? 'That spot will not take it' });
+      return false;
+    }
+
+    // Clearing the old cells and filling the new ones in one batch keeps it a
+    // single undo, and means a building that overlaps its own old position
+    // does not delete the blocks it is about to stand on.
+    const cleared = new Map();
+    for (const { x, y, z } of this.cellsOf(from)) {
+      const prev = this.world.getBlock(x, y, z);
+      if (prev !== AIR) cleared.set(`${x},${y},${z}`, { x, y, z, prev, next: AIR });
+    }
+    for (const b of blocks) {
+      const x = anchor.x + b.dx, y = anchor.y + b.dy, z = anchor.z + b.dz;
+      const key = `${x},${y},${z}`;
+      const prev = cleared.get(key)?.prev ?? this.world.getBlock(x, y, z);
+      cleared.set(key, { x, y, z, prev, next: b.type });
+    }
+    const changes = [...cleared.values()].filter((c) => c.prev !== c.next);
+
+    // Off the register while the blocks move, so its own lock does not refuse.
+    this.duilt.structures.remove(structure.id);
+    if (!this.applyChanges(changes, { chargeResources: false })) {
+      this.duilt.structures.structures.push(structure);
+      this.ui.toast({ kind: 'xp', title: 'Could not move it', body: 'Nothing was changed' });
+      return this.endMove(), false;
+    }
+
+    structure.region = region;
+    this.duilt.structures.structures.push(structure);
+    this.duilt.structures.recheck(structure);
+    this.endMove();
+
+    const spec = STRUCTURES_BY_ID.get(structure.type);
+    this.ui.toast(structure.valid
+      ? { kind: 'challenge', title: `${spec?.name ?? 'Building'} moved`, body: 'It still counts' }
+      : { kind: 'xp', title: `${spec?.name ?? 'Building'} moved`, body: structure.brokenReason ?? 'It no longer qualifies here' });
+    return true;
+  }
+
+  /** Puts it back where it was. Nothing has changed, so there is nothing to undo. */
+  cancelMove() {
+    if (!this.moving) return;
+    const spec = STRUCTURES_BY_ID.get(this.moving.structure.type);
+    this.endMove();
+    this.ui.toast({ kind: 'xp', title: 'Left where it was', body: `The ${spec?.name?.toLowerCase() ?? 'building'} has not moved` });
+  }
+
+  endMove() {
+    this.moving = null;
+    this.ghost.hide();
+    this.ui.setMoveHint(null);
+    this.ui.setCarrying(false);
   }
 
   openClaim() {
@@ -1267,6 +1459,7 @@ export class Game {
       this.player.releaseKeys();
       this.setBreaking(false);
       this.ui?.setBuildingHint(null);
+      if (this.moving) this.endMove();
     }
     this.bus?.emit('game:phase', { phase });
   }
@@ -1305,6 +1498,19 @@ export class Game {
   updateHover() {
     const hit = this.raycast();
     this.hoverHit = hit;
+
+    // A building in the air follows where you look. Done here rather than on
+    // a timer so it tracks the camera exactly, with no lag behind the view.
+    // updateMove owns the crosshair hint while you are carrying something —
+    // clearing it here as well hid the line the same frame it was written.
+    // The block outline goes: you are choosing where a building lands, not
+    // which block to hit, and a stale white box left over from before you
+    // picked it up is just noise on top of the ghost.
+    if (this.moving) {
+      this.hoverBox.visible = false;
+      this.updateMove();
+      return;
+    }
 
     // Say what you are pointing at before you swing at it, not after it has
     // refused. Only claimed buildings need announcing — everything else is

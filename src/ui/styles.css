@@ -818,6 +818,9 @@ body.touch #touch-buttons-left { max-height: 62vh; }
 body:not(.touch) #building-hint { pointer-events: none; }
 body.touch #building-hint { pointer-events: auto; }
 #building-hint b { color: var(--text); font-weight: 600; }
+/* A spot that will not take the building says so in the same place. */
+#building-hint.bad { border-color: var(--danger); }
+#building-hint.bad span { color: var(--danger); }
 #building-hint span { color: var(--text-dim); margin-left: 7px; font-size: 11px; }
 
 /* A goal that asks for several of something says how many you have. */

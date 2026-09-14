@@ -793,6 +793,22 @@ export class UIManager {
     el.hidden = false;
   }
 
+  /**
+   * The line shown while a building is in the air.
+   *
+   * It replaces the "what am I pointing at" hint, because while you are
+   * holding something the only question is where it is going.
+   */
+  setMoveHint(name, reason) {
+    const el = this.q('#building-hint');
+    if (!el) return;
+    if (!name) { el.hidden = true; el.classList.remove('bad'); return; }
+    const how = this.isTouch ? 'Place to drop it' : 'Click to drop it, Escape to cancel';
+    el.innerHTML = `<b>Moving the ${name.toLowerCase()}</b><span>${reason ?? how}</span>`;
+    el.classList.toggle('bad', !!reason);
+    el.hidden = false;
+  }
+
   isPanelOpen(id) {
     return this.panels.isOpen(id);
   }
@@ -1205,6 +1221,17 @@ export class UIManager {
     if (!b || !p) return;
     b.querySelector('span').textContent = breakLabel;
     p.querySelector('span').textContent = placeLabel;
+  }
+
+  /**
+   * Carrying a building changes what the two thumb buttons mean, so they say
+   * so. Guessing which of Break and Place puts down the thing in your hands is
+   * not a puzzle worth having.
+   */
+  setCarrying(on) {
+    this.carrying = on;
+    this.setActionLabels(on ? 'Cancel' : 'Break', on ? 'Drop' : 'Place');
+    this.q('#t-place')?.classList.toggle('active', !!on);
   }
 
   openTemplateSavePrompt() {

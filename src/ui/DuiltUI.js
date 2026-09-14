@@ -161,19 +161,22 @@ export class DuiltUI {
       </div>
       <p class="building-note">
         ${locked
-          ? 'Locked so you cannot take a wall out of it by accident while clearing the ground beside it.'
-          : 'You can break and place inside it now. It is re-checked as you go, and stops producing if it no longer qualifies.'}
+          ? 'Protected, so you cannot take a wall out of it by accident while clearing the ground beside it. '
+            + 'Move it to pick it up and put it down somewhere else, or change it to edit the blocks.'
+          : 'Open for changes: break and place inside it. It is re-checked as you go, and stops producing '
+            + 'if it no longer qualifies. Press Done when you have finished.'}
       </p>
       <div class="building-actions">
-        <button class="secondary" data-lock>${locked ? 'Unlock to edit' : 'Lock again'}</button>
-        <button class="danger secondary" data-remove>Release the claim</button>
+        <button class="primary" data-move>Move it</button>
+        <button class="secondary" data-change>${locked ? 'Change it' : 'Done changing'}</button>
+        <button class="danger secondary" data-delete>Delete it</button>
       </div>`;
 
-    body.querySelector('[data-lock]').addEventListener('click', () => actions.onToggleLock?.());
-    body.querySelector('[data-remove]').addEventListener('click', () => {
-      if (confirm(`Release this ${spec?.name ?? 'building'}? The blocks stay, but it stops producing.`)) {
-        actions.onRemove?.();
-      }
+    body.querySelector('[data-move]').addEventListener('click', () => actions.onMove?.());
+    body.querySelector('[data-change]').addEventListener('click', () => actions.onChange?.());
+    body.querySelector('[data-delete]').addEventListener('click', () => {
+      if (confirm(`Delete this ${spec?.name?.toLowerCase() ?? 'building'}? `
+        + 'The blocks come back to your bag.')) actions.onDelete?.();
     });
   }
 

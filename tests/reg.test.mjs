@@ -137,4 +137,51 @@ ok('load re-checks the blocks, not the save', reg2.list()[0].valid === false);
   ok('a save from before locks existed reads as locked', legacy.list()[0].locked === true);
 }
 
+// --- moving a building to a new spot ----------------------------------------
+//
+// "Release the claim" was a word about bookkeeping. What you want to do to
+// something you put up is change it, move it, or get rid of it — and moving
+// has to refuse the spots that would make it invalid before you commit, not
+// after.
+
+{
+  const { inventory: inv5, reg: reg5, world: w5 } = setup();
+  inv5.add('seeds', 10);
+  const s5 = reg5.claim(FARM, 'farm').structure;
+
+  // A second farm four blocks over, to collide with.
+  const OTHER = { minX: 12, maxX: 15, minY: 10, maxY: 11, minZ: 12, maxZ: 15 };
+  for (let x = 12; x <= 15; x++) for (let z = 12; z <= 15; z++) w5.setBlock(x, 10, z, FARMLAND);
+  w5.setBlock(17, 10, 14, WATER);
+  inv5.add('seeds', 10);
+  const other = reg5.claim(OTHER, 'farm').structure;
+
+  // overlaps() has to ignore the building being moved, or nothing could ever
+  // be nudged one block sideways.
+  ok('a region over its own old spot does not count as overlapping itself',
+    !reg5.overlaps(FARM, s5.id));
+  ok('but does when asked about a different building',
+    reg5.overlaps(FARM, other.id));
+  ok('and a spot on top of another building is refused',
+    reg5.overlaps({ ...OTHER, minY: 10, maxY: 11 }, s5.id));
+
+  const clear = { minX: 20, maxX: 23, minY: 10, maxY: 11, minZ: 20, maxZ: 23 };
+  ok('an empty spot is free', !reg5.overlaps(clear, s5.id));
+
+  // Moving is just a new region plus a re-check, so the building can stop
+  // qualifying by being moved — away from its water, in a farm's case.
+  s5.region = clear;
+  reg5.recheck(s5);
+  ok('a farm moved onto bare ground stops qualifying', s5.valid === false);
+  // It names the first thing missing, which is the soil it left behind rather
+  // than the water — the rules are checked in the order they are written.
+  ok(`and says what is missing ("${s5.brokenReason}")`, /tilled soil/i.test(s5.brokenReason ?? ''));
+
+  // Move it back onto the original tilled ground and it counts again.
+  s5.region = FARM;
+  reg5.recheck(s5);
+  ok('moved back, it qualifies again', s5.valid === true);
+  ok('and the break reason is cleared', s5.brokenReason === null);
+}
+
 process.exit(f?1:0);
