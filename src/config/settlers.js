@@ -45,12 +45,22 @@ export const SETTLERS = {
   restSeconds: [4, 11],
 
   /**
-   * A settlement eats. This is a drain on the larder and nothing more: it does
-   * not gate who arrives and it does not starve anyone. Food deciding the
-   * population as well as the houses made "why is nobody coming" a question
-   * with two answers, which is one too many.
+   * A settlement eats, and what it eats is what your farms grew.
+   *
+   * Every meal, one food each out of the bag — the cheapest first, so the
+   * fruit goes before the vegetables you were saving. Anyone who gets nothing
+   * spends the day looking for something to eat instead of going to work, so
+   * an empty larder costs you production rather than lives.
+   *
+   * Deliberately not a gate on who moves in: houses decide that, and food
+   * deciding it as well made "why is nobody coming" a question with two
+   * answers. Nobody starves and nobody leaves — they just stop working, and
+   * you can see it in what your buildings hand over.
    */
   eatEverySeconds: 90,
+
+  /** How much one settler puts away per meal. */
+  foodPerMeal: 1,
 
   /** Height and width in blocks, for the figure that gets drawn. */
   build: { height: 1.8, width: 0.55 },

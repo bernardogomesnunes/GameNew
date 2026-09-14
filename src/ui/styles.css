@@ -855,3 +855,7 @@ body.touch #building-hint { pointer-events: auto; }
   font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text);
 }
 #vital-people.full .vital-count { color: var(--accent); }
+/* Nothing in the larder: the count goes amber and breathes, because the cost
+   of ignoring it is quiet — buildings simply hand over less. */
+#vital-people.hungry .vital-count { color: var(--accent-2); animation: people-hungry 1.6s ease-in-out infinite; }
+@keyframes people-hungry { 50% { opacity: 0.45; } }

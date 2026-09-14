@@ -109,7 +109,7 @@ ok('and they walk slower than the player', SETTLERS.walkSpeed < 5);
     settlers.houses - new Set(settlers.people.map((p) => p.homeId)).size === 1);
 }
 
-// Food is a drain on the larder, not a gate on the door.
+// Food decides how well the place runs. It never decides who lives in it.
 {
   const { settlers, inventory } = setup({ beds: 3, food: 0 });
   ok('an empty larder does not stop anyone', settlers.target === 2);
@@ -118,7 +118,15 @@ ok('and they walk slower than the player', SETTLERS.walkSpeed < 5);
   settlers.sinceMeal = 0;
   settlers.tick(SETTLERS.eatEverySeconds + 1);
   ok('and nobody starves for want of it', settlers.population === 2);
+  ok('but everyone is hungry', settlers.hungry === 2);
   ok('nor does the bag go negative', inventory.countOf('vegetables') === 0);
+
+  // Feed them and they are back at it by the next meal.
+  inventory.add('vegetables', 10);
+  settlers.sinceMeal = 0;
+  settlers.tick(SETTLERS.eatEverySeconds + 1);
+  ok('a harvest puts them right', settlers.hungry === 0);
+  ok('and it came out of the bag', inventory.countOf('vegetables') === 8);
 }
 
 // Politics asks for more than the houses hold.
@@ -202,6 +210,38 @@ ok('and they walk slower than the player', SETTLERS.walkSpeed < 5);
   const after = inventory.countOf('vegetables');
   ok(`a settlement of ${settlers.population} eats (${before} -> ${after})`, after < before);
   ok('one meal each, not a feast', before - after === settlers.population);
+}
+
+// The fruit goes before the vegetables you were saving.
+{
+  const { settlers, inventory } = setup({ beds: 3, food: 0 });
+  inventory.add('vegetables', 5);
+  inventory.add('fruit', 5);
+  for (let i = 0; i < 4; i++) settlers.tick(SETTLERS.arriveEverySeconds + 1);
+  settlers.sinceMeal = 0;
+  settlers.tick(SETTLERS.eatEverySeconds + 1);
+  ok('they eat the cheap food first', inventory.countOf('fruit') === 3);
+  ok('and leave the good stuff alone', inventory.countOf('vegetables') === 5);
+}
+
+// An empty larder costs production, which is the whole point of it.
+{
+  const { settlers, inventory, add } = setup({ beds: 3, food: 10 });
+  const quarry = add('quarry', { minX: 20, maxX: 25, minY: 11, maxY: 13, minZ: 10, maxZ: 15 });
+  for (let i = 0; i < 4; i++) settlers.tick(SETTLERS.arriveEverySeconds + 1);
+  ok('somebody works the quarry', settlers.bonusFor(quarry.id) > 1);
+
+  inventory.remove('vegetables', inventory.countOf('vegetables'));
+  settlers.sinceMeal = 0;
+  settlers.tick(SETTLERS.eatEverySeconds + 1);
+  ok('with nothing to eat they stop working', settlers.bonusFor(quarry.id) === 1);
+  ok('but the job is still theirs', settlers.people.some((p) => p.workId === quarry.id));
+  ok('and they are all still here', settlers.population === 2);
+
+  inventory.add('vegetables', 10);
+  settlers.sinceMeal = 0;
+  settlers.tick(SETTLERS.eatEverySeconds + 1);
+  ok('fed again, back at the quarry', settlers.bonusFor(quarry.id) > 1);
 }
 
 // --- taking the house down ---------------------------------------------------

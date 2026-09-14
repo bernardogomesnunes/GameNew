@@ -1,5 +1,6 @@
 import { SETTLERS, settlerName, settlerColour } from '../config/settlers.js';
 import { STRUCTURES_BY_ID } from '../config/structures.js';
+import { ITEMS } from '../config/items.js';
 
 /**
  * The population: who has moved in, where they sleep, and what they work on.
@@ -63,8 +64,25 @@ export class Settlers {
     return this.population < this.target;
   }
 
+  /**
+   * Everything edible in the bag, worst first.
+   *
+   * Settlers are not fussy but they are not given the good stuff either: they
+   * work down from the least nourishing, so the fruit goes before the
+   * vegetables you were keeping for yourself.
+   */
+  larder() {
+    return ITEMS.filter((i) => i.kind === 'food' && this.inventory.countOf(i.id) > 0)
+      .sort((a, b) => (a.feeds ?? 0) - (b.feeds ?? 0));
+  }
+
   foodOnHand() {
-    return this.inventory.countOf('vegetables') + this.inventory.countOf('fruit');
+    return this.larder().reduce((n, i) => n + this.inventory.countOf(i.id), 0);
+  }
+
+  /** People who went without at the last meal. */
+  get hungry() {
+    return this.people.filter((p) => p.hungry).length;
   }
 
   /** Why nobody new is coming, in one line, or null when somebody is on the way. */
@@ -112,6 +130,8 @@ export class Settlers {
       target: null,
       wait: 2 + this.rand() * 4,
       atWork: false,
+      // Nobody arrives hungry; the first meal after they get here decides.
+      hungry: false,
     };
     this.people.push(person);
     this.assignWork(person);
@@ -120,23 +140,37 @@ export class Settlers {
   }
 
   /**
-   * A settlement eats what it has.
+   * A settlement eats what the farms grew.
    *
-   * Deliberately toothless: running out does not starve anyone and does not
-   * stop the next household arriving. Food gating arrivals made "why is nobody
-   * coming" un-answerable, and the houses are the rule now. This is a drain on
-   * the larder, which is reason enough to farm.
+   * One food each, cheapest first. Whoever the bag runs out on goes hungry,
+   * and a hungry settler spends the day looking for something to eat instead
+   * of going to work — so an empty larder shows up as buildings producing what
+   * they would produce with nobody in them.
+   *
+   * Nobody starves and nobody leaves over it. Food not being a matter of life
+   * and death is the point: it decides how well the place runs, and the houses
+   * decide who lives in it.
    */
   eat() {
     if (!this.people.length) return 0;
-    let want = this.people.length;
-    for (const id of ['vegetables', 'fruit']) {
-      if (want <= 0) break;
-      const have = this.inventory.countOf(id);
-      const take = Math.min(have, want);
-      if (take > 0) { this.inventory.remove(id, take); want -= take; }
+    let fed = 0;
+    for (const p of this.people) {
+      const was = p.hungry;
+      const food = this.larder()[0];
+      if (food) {
+        this.inventory.remove(food.id, SETTLERS.foodPerMeal);
+        p.hungry = false;
+        fed++;
+      } else {
+        p.hungry = true;
+        // Back off work and head home — there is nothing to carry them
+        // through the shift.
+        if (!was) { p.target = null; p.wait = 0.5; p.atWork = true; }
+      }
     }
-    return this.people.length - want;
+    const short = this.people.length - fed;
+    if (short > 0) this.bus?.emit('settler:hungry', { count: short, population: this.population });
+    return fed;
   }
 
   /**
@@ -187,9 +221,15 @@ export class Settlers {
     return best;
   }
 
-  /** Building ids with somebody working them. */
+  /**
+   * Building ids with somebody actually working them.
+   *
+   * A hungry settler keeps their job — it is still theirs when the next
+   * harvest comes in — but they are not at it today, so the building it is
+   * does not get the bonus.
+   */
   staffedIds() {
-    return new Set(this.people.filter((p) => p.workId != null).map((p) => p.workId));
+    return new Set(this.people.filter((p) => p.workId != null && !p.hungry).map((p) => p.workId));
   }
 
   /** What a building's output is multiplied by, given who works it. */
@@ -222,7 +262,9 @@ export class Settlers {
       if (p.wait > 0) return;
       const home = this.placeOf(p.homeId);
       if (p.workId == null) this.assignWork(p);
-      const work = this.placeOf(p.workId);
+      // Hungry means not at work: they mill about near home instead, which is
+      // what an empty larder looks like from across the settlement.
+      const work = p.hungry ? null : this.placeOf(p.workId);
       // Nowhere to go: wander a few blocks from home rather than stand still.
       p.atWork = !p.atWork && !!work;
       p.target = p.atWork ? work : (home ?? { x: p.x, z: p.z });
@@ -276,7 +318,7 @@ export class Settlers {
       nextId: this.nextId,
       people: this.people.map((p) => ({
         id: p.id, name: p.name, colour: p.colour,
-        homeId: p.homeId, workId: p.workId,
+        homeId: p.homeId, workId: p.workId, hungry: !!p.hungry,
         x: p.x, y: p.y, z: p.z,
       })),
     };

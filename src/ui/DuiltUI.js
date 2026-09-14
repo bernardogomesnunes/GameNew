@@ -115,6 +115,18 @@ export class DuiltUI {
     this.bus.on('territory:expanded', () => this.renderGoals());
     this.bus.on('structure:claimed', () => this.renderVitals());
     this.bus.on('settler:left', () => this.renderVitals());
+    this.bus.on('settler:hungry', ({ count }) => {
+      this.renderVitals();
+      // Said once when it starts, not every meal: the HUD carries it from
+      // then on and a toast every 90 seconds is nagging.
+      if (this.saidHungry) return;
+      this.saidHungry = true;
+      this.bus.emit('toast', {
+        kind: 'xp',
+        title: count === 1 ? 'Somebody has nothing to eat' : `${count} of your people have nothing to eat`,
+        body: 'They stop working until there is food — build a farm',
+      });
+    });
     this.bus.on('settler:arrived', ({ settler, population }) => {
       this.renderVitals();
       this.bus.emit('toast', {
@@ -239,13 +251,18 @@ export class DuiltUI {
     const d = this.duilt;
     const box = this.q('#vital-people');
     if (!d || !box) return;
-    const { population, target, houses } = d.settlers;
+    const { population, target, houses, hungry } = d.settlers;
     // Hidden until there is a house: a 0/0 on the HUD from the first minute is
     // a promise the game has not made yet.
     box.hidden = houses === 0 && population === 0;
     this.q('#people-count').textContent = `${population}/${target}`;
-    box.title = d.settlers.blockedReason() ?? `${target - population} more on the way`;
-    box.classList.toggle('full', population >= target && target > 0);
+    // Hunger wins the tooltip: it is the one that is costing you something.
+    box.title = hungry
+      ? `${hungry === 1 ? 'Somebody has' : `${hungry} people have`} nothing to eat, so they are not working — build a farm`
+      : (d.settlers.blockedReason() ?? `${target - population} more on the way`);
+    box.classList.toggle('full', population >= target && target > 0 && !hungry);
+    box.classList.toggle('hungry', hungry > 0);
+    if (!hungry) this.saidHungry = false;
   }
 
   eat() {
