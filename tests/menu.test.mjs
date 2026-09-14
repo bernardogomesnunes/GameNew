@@ -71,6 +71,21 @@ ok('and comes back from the panel declaration, not a second copy of the word',
 ok('the cards are styled', css.includes('.menu-card') && css.includes('.menu-card-icon'));
 ok('and the way back is too', css.includes('.menu-back'));
 
+// --- the things you came to do are on the first screen -----------------------
+
+// Save and Leave were inside World details, which made leaving a world two
+// taps down a page named after something else.
+{
+  const index = ui.slice(ui.indexOf('menu-actions menu-resume'), ui.indexOf('panel-account'));
+  ok('Back to the world is on the index', index.includes('id="btn-resume"'));
+  ok('and so is Save', index.includes('id="btn-save"'));
+  ok('and Leave', index.includes('id="btn-leave"'));
+  const worldSection = ui.slice(ui.indexOf('id="menu-world"'), ui.indexOf('id="menu-graphics"'));
+  ok('World details holds the name and nothing you act with',
+    worldSection.includes('id="save-name"')
+    && !worldSection.includes('id="btn-save"') && !worldSection.includes('id="btn-leave"'));
+}
+
 // --- the mobile screen gets its space back ----------------------------------
 
 ok('the touch tray no longer carries a Stats button', !ui.includes('id="t-stats"'));

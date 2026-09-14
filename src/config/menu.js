@@ -29,7 +29,7 @@ export const MENU = [
     id: 'menu-world',
     name: 'World details',
     icon: 'home',
-    blurb: 'Its name, saving it, and leaving for the worlds list.',
+    blurb: 'What this world is called.',
   },
   {
     id: 'menu-graphics',

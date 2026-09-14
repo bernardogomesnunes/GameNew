@@ -132,10 +132,6 @@ export class UIManager {
               <input type="text" id="save-name" maxlength="40" placeholder="Unnamed world" />
             </label>
             <div id="save-hint" class="export-note" hidden></div>
-            <div class="menu-actions">
-              <button class="secondary" id="btn-save">Save a copy</button>
-              <button class="secondary" id="btn-leave">Leave to worlds</button>
-            </div>
           </div>
 
           <div class="menu-section" id="menu-graphics" hidden>
@@ -177,8 +173,16 @@ export class UIManager {
             <div class="export-note">A world file restores everything, designs included. The .vox opens in MagicaVoxel and Blender.</div>
           </div>
 
+          <!--
+            The three things you open the menu *to do*, rather than to go and
+            look at, so they sit on the first screen. Save and Leave were
+            inside World details, which made leaving a world two taps down a
+            page named after something else.
+          -->
           <div class="menu-actions menu-resume">
             <button class="primary" id="btn-resume">Back to the world</button>
+            <button class="secondary" id="btn-save">Save a copy</button>
+            <button class="secondary" id="btn-leave">Leave to worlds</button>
           </div>`,
         'panel-account': `
 
