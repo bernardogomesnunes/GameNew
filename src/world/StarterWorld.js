@@ -1,4 +1,5 @@
 import { World } from './World.js';
+import { ChunkGen } from './ChunkGen.js';
 import { generateTerrain } from './TerrainGenerator.js';
 import { planSites, outlook } from './siteFinder.js';
 import { buildSites } from './features.js';
@@ -34,6 +35,102 @@ function rng(seed) {
     r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
     return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+/**
+ * A world with no edges, and a settlement at the origin of it.
+ *
+ * The land itself comes from the seed as you walk into it — rivers included,
+ * since those are noise now rather than paths drawn across a fixed map. What
+ * still has to be arranged by hand is the first thirty-two blocks: Age 1 asks
+ * you to claim a forest and break ground on a farm, and a farm needs water
+ * within six blocks. Noise cannot promise that, so the plot gets one river
+ * pinned through it and its grove planted, exactly as it always did.
+ *
+ * Those chunks are marked as changed so they are written down. They are the
+ * one part of an endless world the seed cannot make again, and there are nine
+ * of them.
+ */
+export function generateEndlessWorld({ height = 64, seed = Date.now() % 1000000 } = {}) {
+  const gen = new ChunkGen({ seed, height, homeX: 0, homeZ: 0 });
+  const world = new World({ height, gen });
+  const origin = settleOrigin(world, seed);
+  return { world, origin };
+}
+
+/** How far around the origin to have real land before the plot is arranged. */
+const PLOT_MARGIN = 48;
+
+export function settleOrigin(world, seed = 1) {
+  const rand = rng(seed);
+  const half = STARTER_SIZE / 2;
+  const minX = -half, minZ = -half;
+  const region = { minX, minZ, maxX: minX + STARTER_SIZE - 1, maxZ: minZ + STARTER_SIZE - 1 };
+
+  // The plot is arranged against real ground, so the ground has to exist.
+  world.ensureAround(0, 0, PLOT_MARGIN + STARTER_SIZE);
+
+  // One river through the settlement, because the farm rule needs water within
+  // six blocks and a noise river makes no promises about where it runs. The
+  // rest of the world's water is the noise, which goes on forever.
+  const rivers = [localRiver(world, rand)];
+  for (const r of rivers) carveRiver(world, r);
+
+  const plan = planSites(world, SITES, { region, rand });
+  const sites = buildSites(world, plan, rand);
+
+  const spawn = sites.find((s) => s.spec === 'spawn');
+  const standing = standingSpawn(world, spawn, region);
+  if (spawn) {
+    const moved = Math.floor(standing.x) !== spawn.x || Math.floor(standing.z) !== spawn.z;
+    spawn.x = Math.floor(standing.x);
+    spawn.z = Math.floor(standing.z);
+    spawn.y = standing.y;
+    spawn.yaw = standing.yaw;
+    if (moved) spawn.relaxed = Math.max(spawn.relaxed ?? 0, 1);
+  }
+
+  // Nothing to mark by hand: carving the river and building the sites went
+  // through setBlock, which marks exactly the chunks they wrote to. A blanket
+  // region would have kept fifty chunks of untouched meadow along with them.
+
+  return {
+    minX, minZ, size: STARTER_SIZE,
+    rivers,
+    sites,
+    trees: countTrees(world, region),
+    spawn: standing,
+  };
+}
+
+/** How far past the plot the pinned river is carved, and kept. */
+const RIVER_KEEP = 40;
+
+/**
+ * A river that crosses the settlement and stops.
+ *
+ * Bounded, unlike the old map-long one: past the plot the noise rivers take
+ * over, and two kinds of river meeting in the middle distance looks like a
+ * confluence rather than a mistake.
+ */
+function localRiver(world, rand) {
+  const amp = 8 + rand() * 10;
+  const wavelength = 50 + rand() * 60;
+  const phase = rand() * Math.PI * 2;
+  const span = STARTER_SIZE + RIVER_KEEP * 2;
+  const from = -span / 2;
+
+  const atCentre = Math.sin((0 / wavelength) + phase) * amp;
+  const side = rand() < 0.5 ? -1 : 1;
+  const target = side * (3 + rand() * (RIVER_NEAR - 3));
+  const offset = target - atCentre;
+
+  const xs = new Int32Array(span);
+  for (let i = 0; i < span; i++) {
+    const z = from + i;
+    xs[i] = Math.round(Math.sin((z / wavelength) + phase) * amp + offset);
+  }
+  return { axis: 'z', coords: xs, width: 2 + Math.round(rand() * 2), from };
 }
 
 export function generateDuiltWorld({ sizeX = 256, sizeZ = 256, height = 64, seed = Date.now() % 1000000 } = {}) {
@@ -245,7 +342,10 @@ function distanceToRivers(rivers, x, z) {
 function carveRiver(world, river) {
   const { axis, coords, width } = river;
   const along = coords.length;
-  const at = (i, c) => (axis === 'z' ? [c, i] : [i, c]);   // -> [x, z]
+  // `from` shifts the whole run along its axis, so a river can start somewhere
+  // other than zero — which is what a bounded river in an endless world needs.
+  const base = river.from ?? 0;
+  const at = (i, c) => (axis === 'z' ? [c, base + i] : [base + i, c]);   // -> [x, z]
 
   // Smooth the terrain height along the river's length.
   const raw = new Int32Array(along);
@@ -281,7 +381,7 @@ function carveRiver(world, river) {
         for (let y = bed; y < world.height; y++) world.setBlock(x, y, z, 0);
         world.setBlock(x, bed, z, SAND);
         for (let y = bed + 1; y <= surface; y++) world.setBlock(x, y, z, WATER);
-        world.surfaceHeightMap[x * world.sizeZ + z] = surface + 1;
+        world.setSurfaceHeight(x, z, surface + 1);
       } else {
         // Bank: flatten to the water's shoulder so the edge is walkable.
         const shoulder = surface + 1;
@@ -290,7 +390,7 @@ function carveRiver(world, river) {
           if (world.getBlock(x, y, z) === 0) world.setBlock(x, y, z, DIRT);
         }
         world.setBlock(x, shoulder, z, SAND);
-        world.surfaceHeightMap[x * world.sizeZ + z] = shoulder + 1;
+        world.setSurfaceHeight(x, z, shoulder + 1);
       }
     }
   }

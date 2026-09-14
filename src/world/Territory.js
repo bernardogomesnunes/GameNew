@@ -30,8 +30,10 @@ export class Territory {
     this.scene = scene;
     this.bus = bus;
     this.age = age;
-    this.centreX = Math.floor(world.sizeX / 2);
-    this.centreZ = Math.floor(world.sizeZ / 2);
+    // Where the settlement is. A fixed world puts it in the middle of the
+    // map; an endless one has no middle, so it is the origin.
+    this.centreX = world.centreX;
+    this.centreZ = world.centreZ;
 
     this.fence = new THREE.Group();
     this.fence.renderOrder = 9;

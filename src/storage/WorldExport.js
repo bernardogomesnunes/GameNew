@@ -1,5 +1,14 @@
 import { BLOCKS, BLOCKS_BY_ID, AIR } from '../config/blocks.js';
 import { World } from '../world/World.js';
+import { ChunkGen } from '../world/ChunkGen.js';
+
+/**
+ * How an endless world is brought back: its seed, handed to a generator.
+ *
+ * One place rather than at each call site, so a world loaded from a save and
+ * one loaded from an exported file are made by exactly the same recipe.
+ */
+const makeGen = (o) => new ChunkGen(o);
 
 export const EXPORT_FORMAT = 'voxel-sandbox-world';
 export const EXPORT_VERSION = 2;
@@ -52,7 +61,7 @@ export function parseWorldPayload(text) {
   if (data.format !== EXPORT_FORMAT) throw new Error('That file is not a Voxel Sandbox world.');
   if (!data.world?.chunks) throw new Error('That world file is missing its block data.');
   return {
-    world: World.deserialize(data.world),
+    world: World.deserialize(data.world, { makeGen }),
     player: data.player,
     gamification: data.gamification,
     economy: data.economy,

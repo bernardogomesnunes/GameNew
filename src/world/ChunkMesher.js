@@ -82,6 +82,22 @@ export class ChunkMesher {
    * A flat 16x16 floor collapses from 256 quads to 1, which is what makes large
    * worlds affordable — naive per-face meshing would drown a phone.
    */
+  /**
+   * Throws away a chunk's meshes without building new ones.
+   *
+   * What an endless world needs when you walk far enough that a chunk is
+   * forgotten: the blocks go, and the geometry on the GPU has to go with them
+   * or the memory grows for as long as you keep walking.
+   */
+  remove(chunk) {
+    if (!chunk?.mesh) return;
+    for (const mesh of chunk.mesh.values()) {
+      this.disposeMesh(mesh);
+      this.activeMeshes.delete(mesh);
+    }
+    chunk.mesh = null;
+  }
+
   rebuild(world, chunk) {
     if (chunk.mesh) {
       for (const mesh of chunk.mesh.values()) {

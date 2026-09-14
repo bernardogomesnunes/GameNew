@@ -224,9 +224,15 @@ export class ChunkGen {
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
         // From the blocks rather than the seed: the player may have dug the
         // ground away or piled it up, and the surface is where it is now.
+        //
+        // Skipping what grows on it, though. The surface is the ground you
+        // walk on, and counting a tree would have every wooded column report
+        // the top of its canopy — which is where the settlers would then try
+        // to walk and where a building would be checked for a roof.
         let h = 0;
         for (let y = chunk.height - 1; y >= 0; y--) {
-          if (chunk.get(lx, y, lz) !== 0) { h = y + 1; break; }
+          const b = chunk.get(lx, y, lz);
+          if (b !== 0 && !GROWS_ON_TOP.has(b)) { h = y + 1; break; }
         }
         chunk.surface[lz * CHUNK_SIZE + lx] = h;
         chunk.biomes[lz * CHUNK_SIZE + lx] = this.biomeIndexAt(ox + lx, oz + lz);
@@ -256,5 +262,7 @@ const RIVER_DEPTH = 6;
 const HOME_RADIUS = 51;
 const WATER = 11;
 const RIVERBED = 6;   // sand under the water, the way a bank looks
+/** Wood, leaves and saplings: standing on the ground rather than part of it. */
+const GROWS_ON_TOP = new Set([4, 5, 20]);
 
 export { CHUNK_SIZE, surfaceFor };

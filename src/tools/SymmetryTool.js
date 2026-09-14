@@ -4,8 +4,10 @@ export class SymmetryTool {
   constructor(world) {
     this.world = world;
     this.modeIndex = 0;
-    this.originX = Math.floor(world.sizeX / 2);
-    this.originZ = Math.floor(world.sizeZ / 2);
+    // The middle of a fixed world, or the settlement in an endless one —
+    // which has no middle to take half of.
+    this.originX = world.centreX;
+    this.originZ = world.centreZ;
   }
 
   get mode() {

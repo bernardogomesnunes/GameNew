@@ -13,7 +13,9 @@ import { CloudAuth } from './net/CloudAuth.js';
 import { CloudWorlds } from './net/CloudWorlds.js';
 import { isCloudConfigured } from './net/cloudConfig.js';
 import { DuiltGame } from './duilt/DuiltGame.js';
-import { generateDuiltWorld } from './world/StarterWorld.js';
+import { generateEndlessWorld } from './world/StarterWorld.js';
+import { ChunkGen } from './world/ChunkGen.js';
+import { FarTerrain } from './render/FarTerrain.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
@@ -30,8 +32,26 @@ import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, BLOCKS_BY_ID } from './config/blocks.js';
 
 const REACH = 7;
-const FOG_FAR = 210;           // where the world has faded fully into the sky
-const FOG_FAR_COARSE = 160;
+/**
+ * How far the real blocks reach before the coarse distance takes over.
+ *
+ * This used to be the fog distance and the end of everything: past it there
+ * was sky. Now it is only where one kind of ground hands over to the other,
+ * so it can stay modest — meshing blocks is the expensive part and the
+ * horizon no longer depends on it.
+ */
+const BLOCKS_TO = 210;
+const BLOCKS_TO_COARSE = 160;
+/**
+ * Where the world finally fades into the sky.
+ *
+ * Far past the blocks, because the coarse terrain runs to 1400 and fog that
+ * ended at 210 would have hidden all of it. The camera has to be told as
+ * well — its far plane was clipping the distance clean off, which is why the
+ * horizon looked like a torn edge with a pale ridge floating behind it.
+ */
+const HORIZON = 1500;
+const HORIZON_COARSE = 950;
 // Chunks are culled past the fog's far edge, never before it. Culling first is
 // what makes chunks pop in and out as you walk; out here they are already the
 // colour of the sky, so nothing can be seen appearing. The extra margin covers
@@ -89,13 +109,12 @@ export class Game {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x8fd0ff);
     const chosen = DISTANCES[this.graphics.distance];
-    const fogFar = chosen ? chosen.fogFar : (coarse ? FOG_FAR_COARSE : FOG_FAR);
-    // Fog starts at a fixed fraction of the way out rather than at a fixed
-    // distance. At 40 blocks on a phone the haze began almost at arm's length
-    // and the whole world looked washed out; tying it to the far plane keeps
-    // the same amount of clear world in view whatever the device can draw.
-    this.scene.fog = new THREE.Fog(0x8fd0ff, fogFar * 0.45, fogFar);
-    this.renderDistance = fogFar + CULL_MARGIN;
+    const blocksTo = chosen ? chosen.fogFar : (coarse ? BLOCKS_TO_COARSE : BLOCKS_TO);
+    this.horizon = coarse ? HORIZON_COARSE : HORIZON;
+    // Fog starts well out and finishes at the horizon, so the coarse ground is
+    // hazed rather than hidden — it is what sells the distance as distance.
+    this.scene.fog = new THREE.Fog(0x8fd0ff, this.horizon * 0.35, this.horizon);
+    this.renderDistance = blocksTo + CULL_MARGIN;
 
     // The near plane sets how much depth precision the whole scene gets, and
     // phones commonly hand out a 16-bit depth buffer. At 0.1 with a far plane
@@ -103,7 +122,7 @@ export class Game {
     // on which is in front, so they traded places as the camera moved. Nothing
     // in a voxel world is ever closer than a fraction of a block, so 0.2 costs
     // nothing to look at and doubles the precision everywhere.
-    this.camera = new THREE.PerspectiveCamera(75, 1, 0.2, this.renderDistance + 20);
+    this.camera = new THREE.PerspectiveCamera(75, 1, 0.2, this.horizon + 200);
 
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     const sun = new THREE.DirectionalLight(0xfff3d6, 0.85);
@@ -112,6 +131,7 @@ export class Game {
     this.scene.add(new THREE.HemisphereLight(0xbfe3f0, 0x3a2f22, 0.4));
 
     this.mesher = new ChunkMesher(this.scene);
+    this.farTerrain = new FarTerrain(this.scene);
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
     this.undoRedo = new UndoRedo();
@@ -433,9 +453,9 @@ export class Game {
     this.disposeDuilt();
     let spawn = null;
     if (mode === DUILT) {
-      // A world big enough for the first four ages; the authored settlement
-      // sits in the middle of it and the border does the rest.
-      const built = generateDuiltWorld({ sizeX: 256, sizeZ: 256, height: 64 });
+      // No size: the land is made as you walk into it, and the settlement sits
+      // at the origin. The border is what limits you, not the edge of a map.
+      const built = generateEndlessWorld({ height: 64 });
       this.world = built.world;
       spawn = built.origin.spawn;
     } else {
@@ -554,9 +574,15 @@ export class Game {
   rebuildAllChunks() {
     this.mesher.clearAll();
     this.remeshQueue.clear();
+    // An endless world has only the settlement in it until something asks for
+    // more, so the first thing to do is ask for everything within sight.
+    if (this.world.endless && this.player) {
+      this.world.ensureAround(this.player.position.x, this.player.position.z, this.renderDistance);
+      this.streamedAt = null;
+    }
 
-    const px = this.player ? this.player.position.x / CHUNK_SIZE : this.world.chunksX / 2;
-    const pz = this.player ? this.player.position.z / CHUNK_SIZE : this.world.chunksZ / 2;
+    const px = this.player ? this.player.position.x / CHUNK_SIZE : this.world.centreX / CHUNK_SIZE;
+    const pz = this.player ? this.player.position.z / CHUNK_SIZE : this.world.centreZ / CHUNK_SIZE;
     const chunks = [...this.world.allChunks()].sort((a, b) =>
       distSq(a, px, pz) - distSq(b, px, pz));
 
@@ -1340,8 +1366,63 @@ export class Game {
   }
 
   /** Spends a slice of the frame on pending rebuilds, then stops. */
+  /**
+   * Makes the land you are walking towards, and forgets what is behind you.
+   *
+   * Only ever a ring's worth per frame: generating a chunk is a few
+   * milliseconds and doing forty in one frame is a visible stall. The far
+   * terrain covers whatever has not arrived yet, so there is nothing to see
+   * while it catches up.
+   */
+  streamChunks() {
+    if (!this.world?.endless || !this.player) return;
+    const { x, z } = this.player.position;
+    // Only when you have actually moved somewhere new.
+    const cx = Math.floor(x) >> 4, cz = Math.floor(z) >> 4;
+    if (this.streamedAt && this.streamedAt.cx === cx && this.streamedAt.cz === cz) return;
+    this.streamedAt = { cx, cz };
+
+    const made = this.world.ensureAround(x, z, this.renderDistance);
+    for (const chunk of made) this.remeshQueue.add(chunk);
+    // A generous margin past what is drawn, so walking back and forth over a
+    // boundary does not throw away chunks it is about to want again.
+    const dropped = this.world.forgetBeyond(x, z, this.renderDistance * 1.6);
+    for (const chunk of dropped) {
+      this.remeshQueue.delete(chunk);
+      this.mesher.remove(chunk);
+    }
+  }
+
+  /**
+   * Keeps the horizon a long way off.
+   *
+   * Real chunks stop at the render distance; past that this is a coarse mesh
+   * of the same ground, sampled from the generator. Rebuilt only when you have
+   * walked a good way, because it is thousands of samples and the difference a
+   * few steps make at that distance is nothing.
+   */
+  updateFarTerrain() {
+    if (!this.farTerrain) return;
+    if (!this.world?.endless) { this.farTerrain.setVisible(false); return; }
+    this.farTerrain.setVisible(true);
+    const { x, z } = this.player.position;
+    // Start it a little inside where the chunks end, so there is never a
+    // sliver of sky between the two.
+    // Start it where the *meshed* blocks reliably reach rather than where the
+    // generated ones do. Chunks arrive faster than they can be meshed when you
+    // are moving, and a hole in the near ground with sky behind it is exactly
+    // what this exists to prevent.
+    const covered = this.remeshQueue.size > 20
+      ? Math.max(64, this.renderDistance * 0.45)
+      : Math.max(64, this.renderDistance - 40);
+    this.farTerrain.update(this.world.gen, x, z, covered);
+  }
+
   drainRemeshQueue(budgetMs = 6) {
     if (!this.remeshQueue.size) return;
+    // A long queue means you are walking into new country, and the ground
+    // ahead matters more than a couple of frames of headroom.
+    if (this.remeshQueue.size > 60) budgetMs = 11;
     const deadline = performance.now() + budgetMs;
     for (const chunk of this.remeshQueue) {
       this.remeshQueue.delete(chunk);
@@ -1383,11 +1464,13 @@ export class Game {
     this.renderer.setPixelRatio(this.quality.pin(pinned));
 
     const chosen = DISTANCES[this.graphics.distance];
-    const fogFar = chosen ? chosen.fogFar : (this.coarse ? FOG_FAR_COARSE : FOG_FAR);
-    this.scene.fog.near = fogFar * 0.45;
-    this.scene.fog.far = fogFar;
-    this.renderDistance = fogFar + CULL_MARGIN;
-    this.camera.far = this.renderDistance + 20;
+    const blocksTo = chosen ? chosen.fogFar : (this.coarse ? BLOCKS_TO_COARSE : BLOCKS_TO);
+    this.horizon = this.coarse ? HORIZON_COARSE : HORIZON;
+    this.scene.fog.near = this.horizon * 0.35;
+    this.scene.fog.far = this.horizon;
+    this.renderDistance = blocksTo + CULL_MARGIN;
+    // Far enough to contain the coarse ground, not just the blocks.
+    this.camera.far = this.horizon + 200;
     this.onResize();
     return { needsReload };
   }
@@ -1471,8 +1554,10 @@ export class Game {
 
     // These run regardless: the world should finish drawing itself behind the
     // worlds screen rather than streaming in after you arrive.
+    this.streamChunks();
     this.drainRemeshQueue();
     this.updateChunkVisibility();
+    this.updateFarTerrain();
     this.renderer.render(this.scene, this.camera);
   }
 

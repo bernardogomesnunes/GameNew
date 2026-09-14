@@ -1,4 +1,13 @@
 import { World } from '../world/World.js';
+import { ChunkGen } from '../world/ChunkGen.js';
+
+/**
+ * How an endless world is brought back: its seed, handed to a generator.
+ *
+ * One place rather than at each call site, so a world loaded from a save and
+ * one loaded from an exported file are made by exactly the same recipe.
+ */
+const makeGen = (o) => new ChunkGen(o);
 
 const INDEX_KEY = 'voxelgame:saves';
 const SAVE_PREFIX = 'voxelgame:save:';
@@ -79,7 +88,7 @@ export class SaveManager {
     if (!raw) return null;
     const payload = JSON.parse(raw);
     return {
-      world: World.deserialize(payload.world),
+      world: World.deserialize(payload.world, { makeGen }),
       player: payload.player,
       gamification: payload.gamification,
       // Saves written before the economy existed are Creative worlds.
