@@ -48,9 +48,26 @@ export class BiomeMap {
     this.home = BIOMES[BIOME_INDEX.get(HOME_BIOME) ?? 0];
     this.centreX = sizeX / 2;
     this.centreZ = sizeZ / 2;
-    // The radius over which the centre is pulled home. Comfortably wider than
-    // the largest ring, so the whole claimable map is buildable country.
-    this.homeRadius = Math.min(sizeX, sizeZ) * 0.34;
+    // The radius over which the centre is pulled home.
+    //
+    // This was a third of the map — 87 blocks on a 256 world — on the reasoning
+    // that the whole claimable map should be buildable country. That was wrong,
+    // and it is why a new world looked like one green field: the near field was
+    // 93% meadow out to 20 blocks and still 67% at 40, while the fog starts
+    // eating the view at 72 on a phone. Every biome in the game sat in the band
+    // that was already fading into sky.
+    //
+    // Only the *starting plot* has to be buildable, and that is 32 blocks
+    // across. So the thumb covers the first ring with margin to spare and then
+    // lets go, which puts the rest of the country where you can see it — and
+    // makes the border moving out mean arriving somewhere that looks different.
+    //
+    // Swept rather than guessed, because both ends are bad. At 0.13 the
+    // highlands come right up to the settlement and you arrive facing a wall
+    // of gravel four blocks from your nose. At 0.20 the ring you land in is
+    // 88% meadow — open ground to build on — and the country is properly
+    // mixed by 32 to 48 blocks, which is inside the clear band on a phone.
+    this.homeRadius = Math.min(sizeX, sizeZ) * 0.20;
   }
 
   /** Warmth and wet at a column, each 0..1. */

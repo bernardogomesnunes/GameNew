@@ -235,6 +235,48 @@ ok('an out-of-range biome index falls back rather than throwing', biomeAt(999) =
 
 ok('asking outside the world is safe', biomeOf(new World({ sizeX: 16, sizeZ: 16, height: 16 }), -5, 900) === BIOMES[0]);
 
+// --- the variety has to be where you can see it ------------------------------
+
+// The bias that keeps the starting plot buildable used to reach a third of the
+// way across the map — 87 blocks — so the near field was 93% meadow out to 20
+// and still 67% at 40, while the fog starts eating the view at 72 on a phone.
+// Every biome in the game sat in the band that was already fading into sky,
+// and a new world looked like one green field however many biomes it had.
+{
+  const rings = [[0, 20], [20, 40], [40, 60]];
+  const counts = rings.map(() => new Map());
+  for (let seed = 1; seed <= 6; seed++) {
+    const map = new BiomeMap({ sizeX: 256, sizeZ: 256, seed });
+    for (let x = 0; x < 256; x += 2) {
+      for (let z = 0; z < 256; z += 2) {
+        const d = Math.hypot(x - 128, z - 128);
+        const i = rings.findIndex(([lo, hi]) => d >= lo && d < hi);
+        if (i < 0) continue;
+        const id = BIOMES[map.weigh(x, z).index].id;
+        counts[i].set(id, (counts[i].get(id) ?? 0) + 1);
+      }
+    }
+  }
+  const share = (i, id) => {
+    const total = [...counts[i].values()].reduce((a, b) => a + b, 0);
+    return (counts[i].get(id) ?? 0) / total;
+  };
+  // Right where you land it should still mostly be meadow — that is the point
+  // of the bias, and the starting plot has to be buildable.
+  ok(`the ground you land on is mostly meadow (${(share(0, 'meadow') * 100).toFixed(0)}%)`,
+    share(0, 'meadow') > 0.5);
+  // But it must let go quickly enough that the country you can see clearly is
+  // not all one colour. 72 blocks is where a phone's fog begins.
+  ok(`by 40 blocks it is no longer a single field (${(share(1, 'meadow') * 100).toFixed(0)}% meadow)`,
+    share(1, 'meadow') < 0.55);
+  ok(`and by 60 there is real variety (${(share(2, 'meadow') * 100).toFixed(0)}% meadow)`,
+    share(2, 'meadow') < 0.5);
+  for (const ring of [1, 2]) {
+    const kinds = [...counts[ring].entries()].filter(([, n]) => n / [...counts[ring].values()].reduce((a, b) => a + b, 0) > 0.03);
+    ok(`  ring ${rings[ring][0]}-${rings[ring][1]} holds ${kinds.length} kinds of country`, kinds.length >= 3);
+  }
+}
+
 // --- the ground a tree will take ---------------------------------------------
 
 // `soil` is a block property now, because it used to be two hard-coded ids in
