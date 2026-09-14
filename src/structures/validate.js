@@ -176,6 +176,30 @@ export function inspect(world, region) {
     },
 
     /**
+     * Any of these blocks within `range` of the region but *not inside it*.
+     *
+     * `hasWithin` searches the region too, which is right for "is there water
+     * near this farm" and wrong for "is this market among your town": a market
+     * made of planks satisfied a plank rule by existing. This one only counts
+     * what somebody else built.
+     */
+    hasNeighbour(ids, range) {
+      const list = Array.isArray(ids) ? ids : [ids];
+      for (let x = region.minX - range; x <= region.maxX + range; x++) {
+        for (let y = region.minY - range; y <= region.maxY + range; y++) {
+          for (let z = region.minZ - range; z <= region.maxZ + range; z++) {
+            const inside = x >= region.minX && x <= region.maxX
+              && y >= region.minY && y <= region.maxY
+              && z >= region.minZ && z <= region.maxZ;
+            if (inside) continue;
+            if (list.includes(world.getBlock(x, y, z))) return true;
+          }
+        }
+      }
+      return false;
+    },
+
+    /**
      * Columns of the region with nothing built over them.
      *
      * A quarry has to be a hole in the ground rather than a cellar, and a

@@ -13,7 +13,41 @@
 
 import { ITEM_FOR_BLOCK } from './items.js';
 
-const DIRT = 2, WOOD = 4, LEAVES = 5, SAPLING = 20, FARMLAND = 21;
+const DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, PLANKS = 7, COBBLE = 8,
+      BRICK = 9, GOLD = 13, MARBLE = 17, SAPLING = 20, FARMLAND = 21;
+
+/** A solid rectangle of one block, at one height. */
+function slab(x0, z0, w, d, dy, type) {
+  const out = [];
+  for (let dx = x0; dx < x0 + w; dx++) for (let dz = z0; dz < z0 + d; dz++) out.push({ dx, dy, dz, type });
+  return out;
+}
+
+/** The outline of a rectangle — walls without a floor inside them. */
+function ring(x0, z0, w, d, dy, type) {
+  return slab(x0, z0, w, d, dy, type)
+    .filter((b) => b.dx === x0 || b.dx === x0 + w - 1 || b.dz === z0 || b.dz === z0 + d - 1);
+}
+
+/**
+ * A walled room with a doorway, which is what most of these are.
+ *
+ * The doorway matters to more than looks: the shelter test asks for cells with
+ * a roof and four walls, and every cell in line with the door has three. A 5×5
+ * shell loses six of its eighteen sheltered cells that way and lands exactly on
+ * the limit, so these are all a size up from where they look like they should
+ * be.
+ */
+function room({ w, h, wall, floor = null, roof = wall, door = true }) {
+  const blocks = [];
+  if (floor != null) blocks.push(...slab(0, 0, w, w, 0, floor));
+  const base = floor != null ? 1 : 0;
+  for (let dy = base; dy < base + h; dy++) blocks.push(...ring(0, 0, w, w, dy, wall));
+  blocks.push(...slab(0, 0, w, w, base + h, roof));
+  if (!door) return blocks;
+  const mid = Math.floor(w / 2);
+  return blocks.filter((b) => !(b.dz === 0 && b.dx === mid && b.dy >= base && b.dy < base + Math.min(2, h)));
+}
 
 /** A trunk with a leafy crown, at a local offset. */
 function tree(ox, oz, h = 4) {
@@ -63,6 +97,63 @@ function houseBlocks() {
   return blocks.filter((b) => !(b.dz === 0 && b.dx === 2 && (b.dy === 1 || b.dy === 2)));
 }
 
+/**
+ * A cut face of rock, open to the sky.
+ *
+ * A quarry has to be a hole in something — the rules ask for air inside it as
+ * well as stone, so this places a pad and takes a bite out of the top of it.
+ */
+function quarryBlocks() {
+  return [
+    ...slab(0, 0, 6, 6, 0, STONE),
+    ...slab(0, 0, 6, 6, 1, STONE).filter((b) => b.dx < 1 || b.dx > 3 || b.dz < 1 || b.dz > 3),
+  ];
+}
+
+/** A stone hearth with a sealed cobble chamber standing on it. */
+function kilnBlocks() {
+  const blocks = [...slab(0, 0, 5, 5, 0, DIRT)];
+  blocks.push(...slab(1, 1, 3, 3, 1, COBBLE));
+  blocks.push(...ring(1, 1, 3, 3, 2, COBBLE));
+  blocks.push(...ring(1, 1, 3, 3, 3, COBBLE));
+  blocks.push(...slab(1, 1, 3, 3, 4, COBBLE));
+  return blocks;   // the two cells left at (2,2,2) and (2,2,3) are the chamber
+}
+
+/** A roofed stall on a laid floor, with the rest of the square left open. */
+function marketBlocks() {
+  const blocks = [...slab(0, 0, 7, 7, 0, PLANKS)];
+  blocks.push(...ring(1, 1, 5, 5, 1, PLANKS));
+  blocks.push(...ring(1, 1, 5, 5, 2, PLANKS));
+  blocks.push(...slab(1, 1, 5, 5, 3, PLANKS));
+  return blocks.filter((b) => !(b.dz === 1 && b.dx === 3 && (b.dy === 1 || b.dy === 2)));
+}
+
+/** A working with timber holding the roof up. Aim it deep — the rules check. */
+function mineBlocks() {
+  const blocks = [...slab(0, 0, 6, 6, 0, STONE)];
+  for (const dy of [1, 2]) {
+    blocks.push(...ring(0, 0, 6, 6, dy, STONE));
+    for (const [dx, dz] of [[1, 1], [4, 1], [1, 4], [4, 4]]) blocks.push({ dx, dy, dz, type: PLANKS });
+  }
+  return blocks;
+}
+
+/**
+ * A stepped obelisk. Brick at the base where the bulk is, marble up the shaft,
+ * gold at the cap — the rule counts all three, and doing it in marble alone
+ * would cost four hundred stone.
+ */
+function monumentBlocks() {
+  const blocks = [...ring(0, 0, 7, 7, 0, BRICK)];
+  blocks.push(...ring(1, 1, 5, 5, 1, BRICK));
+  blocks.push(...ring(1, 1, 5, 5, 2, BRICK));
+  for (const dy of [3, 4, 5]) blocks.push(...slab(2, 2, 3, 3, dy, MARBLE));
+  blocks.push({ dx: 3, dy: 6, dz: 3, type: GOLD });
+  blocks.push({ dx: 3, dy: 7, dz: 3, type: GOLD });
+  return blocks;
+}
+
 export const STARTER_DESIGNS = [
   {
     id: 'starter_forest',
@@ -88,6 +179,69 @@ export const STARTER_DESIGNS = [
     size: 5,
     footprint: '5 × 5',
     blocks: houseBlocks(),
+  },
+  {
+    id: 'starter_quarry',
+    structure: 'quarry',
+    name: 'Starter cut',
+    size: 6,
+    footprint: '6 × 6',
+    note: 'Put it where the sky can see it — not in a cave.',
+    blocks: quarryBlocks(),
+  },
+  {
+    id: 'starter_workshop',
+    structure: 'workshop',
+    name: 'Starter workshop',
+    size: 6,
+    footprint: '6 × 6',
+    note: 'Stand inside it to use the recipes it unlocks.',
+    blocks: room({ w: 6, h: 2, wall: PLANKS, floor: STONE }),
+  },
+  {
+    id: 'starter_kiln',
+    structure: 'kiln',
+    name: 'Starter kiln',
+    size: 5,
+    footprint: '5 × 5',
+    note: 'Needs sand or earth within 6 blocks; the hearth it sits on counts.',
+    blocks: kilnBlocks(),
+  },
+  {
+    id: 'starter_market',
+    structure: 'market',
+    name: 'Starter market',
+    size: 7,
+    footprint: '7 × 7',
+    note: 'Put it among your buildings — it will not count on its own in a field.',
+    blocks: marketBlocks(),
+  },
+  {
+    id: 'starter_mine',
+    structure: 'mine',
+    name: 'Starter working',
+    size: 6,
+    footprint: '6 × 6',
+    note: 'Aim it low. The floor has to reach y 12 or below.',
+    blocks: mineBlocks(),
+  },
+  {
+    id: 'starter_granary',
+    structure: 'granary',
+    name: 'Starter granary',
+    size: 6,
+    footprint: '6 × 6',
+    note: 'Build it within 16 blocks of your fields.',
+    blocks: room({ w: 6, h: 3, wall: PLANKS }),
+  },
+  {
+    id: 'starter_monument',
+    structure: 'monument',
+    name: 'Obelisk',
+    size: 7,
+    footprint: '7 × 7',
+    note: 'Nothing may stand over it.',
+    blocks: monumentBlocks(),
   },
 ];
 

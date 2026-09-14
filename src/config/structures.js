@@ -240,8 +240,10 @@ export const STRUCTURES = [
       {
         id: 'town',
         // A market with nothing around it is a shed. This is the first rule in
-        // the game about where a building sits rather than what it is made of.
-        test: (ctx) => ctx.hasWithin([PLANKS, BRICK, GLASS], 12),
+        // the game about where a building sits rather than what it is made of,
+        // which is why it looks outside the region: with `hasWithin` a market
+        // built of planks satisfied a plank rule by existing.
+        test: (ctx) => ctx.hasNeighbour([PLANKS, BRICK, GLASS, WOOD], 12),
         say: () => 'Build it among your town, not out in a field',
       },
     ],
