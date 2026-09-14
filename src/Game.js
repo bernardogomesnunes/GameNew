@@ -18,6 +18,7 @@ import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SaveManager, AUTOSAVE_NAME } from './storage/SaveManager.js';
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
+import { panelForKey } from './config/panels.js';
 import { DESIGN_FOR_STRUCTURE } from './config/starterDesigns.js';
 import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
@@ -349,8 +350,8 @@ export class Game {
       onOpenClaim: () => this.openClaim(),
       onClaimType: (id) => this.claimAs(id),
       onStampStarter: (id) => this.stampStarter(id),
-      onOpenBuildings: () => { document.exitPointerLock?.(); this.ui.openDuiltPanel('panel-buildings'); },
-      onOpenBench: () => { document.exitPointerLock?.(); this.ui.openDuiltPanel('panel-bench'); },
+      onOpenBuildings: () => this.ui.openPanel('panel-buildings'),
+      onOpenBench: () => this.ui.openPanel('panel-bench'),
     };
   }
 
@@ -601,19 +602,28 @@ export class Game {
         return;
       }
       if (e.repeat) return;
+
+      // Panel shortcuts come from the panel declarations rather than a chain of
+      // ifs here, so a new panel brings its own key and cannot quietly claim
+      // one another panel already uses. They sit above the "only while playing"
+      // line below because the same key has to put the panel away again, and by
+      // then you are not playing — but not on the worlds screen, where there is
+      // no world for them to act on. No exitPointerLock either: opening a panel
+      // changes the phase, and the phase releases the lock. See syncPhase.
+      const shortcut = this.phase === 'home' ? null : panelForKey(e.code);
+      if (shortcut && (shortcut.mode !== 'duilt' || this.duilt)) {
+        if (this.ui.isPanelOpen(shortcut.id)) this.ui.closePanel(shortcut.id);
+        else if (shortcut.prepare === 'claim') this.openClaim();
+        else this.ui.openPanel(shortcut.id);
+        return;
+      }
+
       // Everything below acts on the world, so it only applies while you are in
       // it. Escape, above, is the way out and always works.
       if (!this.isPlaying) return;
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
-      // No exitPointerLock here: opening a panel changes the phase, and the
-      // phase releases the lock. See syncPhase.
-      if (e.code === 'KeyB') {
-        if (this.duilt) this.ui.openDuiltPanel('panel-buildings');
-        else this.ui.toggleSelector();
-      }
-      if (e.code === 'KeyI' && this.duilt) this.ui.toggleBag();
-      if (e.code === 'KeyC' && this.duilt) this.openClaim();
-      if (e.code === 'KeyE' && this.duilt) this.ui.openDuiltPanel('panel-bench');
+      // B is the selector in a sandbox world, where there are no buildings.
+      if (e.code === 'KeyB' && !this.duilt) this.ui.toggleSelector();
       if (e.code === 'KeyR' && this.pendingTemplate) {
         this.templateRotation = (this.templateRotation + 1) % 4;
         this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });

@@ -1,5 +1,6 @@
 import { PLACEABLE_BLOCKS } from '../config/blocks.js';
 import { icon } from './icons.js';
+import { renderPanels } from './Panel.js';
 import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
@@ -93,11 +94,8 @@ export class UIManager {
 
       <div id="toast-stack"></div>
 
-      <div class="overlay" id="panel-stats" hidden>
-        <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-stats">${icon('close', 16)}</button>
-          <h2>Progress</h2>
-          <div class="sub" id="stats-sub"></div>
+      ${renderPanels('main', {
+        'panel-stats': `
           <div class="tab-row">
             <button class="tab-btn active" data-tab="tab-overview">Overview</button>
             <button class="tab-btn" data-tab="tab-achievements">Achievements</button>
@@ -105,15 +103,8 @@ export class UIManager {
           </div>
           <div class="tab-panel" id="tab-overview"></div>
           <div class="tab-panel" id="tab-achievements" hidden><div class="ach-grid" id="ach-grid"></div></div>
-          <div class="tab-panel" id="tab-challenges" hidden><div id="challenge-list"></div></div>
-        </div>
-      </div>
-
-      <div class="overlay" id="panel-menu" hidden>
-        <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-menu">${icon('close', 16)}</button>
-          <h2>This world</h2>
-          <div class="sub" id="menu-world-kind"></div>
+          <div class="tab-panel" id="tab-challenges" hidden><div id="challenge-list"></div></div>`,
+        'panel-menu': `
 
           <label class="menu-name">
             <span>Name</span>
@@ -160,15 +151,8 @@ export class UIManager {
             <button class="primary" id="btn-resume">Resume</button>
             <button class="secondary" id="btn-save">Save</button>
             <button class="secondary" id="btn-leave">Leave to worlds</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="overlay" id="panel-account" hidden>
-        <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-account">${icon('close', 16)}</button>
-          <h2 id="account-title">Sign in</h2>
-          <div class="sub" id="account-sub">Keep your worlds off this device, so they survive a cleared browser.</div>
+          </div>`,
+        'panel-account': `
 
           <div id="cloud-signed-out">
             <div class="field-row">
@@ -196,41 +180,19 @@ export class UIManager {
           <div class="export-note" id="cloud-error" hidden></div>
           <div id="cloud-status" hidden></div>
           <div id="cloud-block" hidden></div>
-          <div id="save-list" hidden></div>
-        </div>
-      </div>
-
-      <div class="overlay" id="panel-templates" hidden>
-        <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-templates">${icon('close', 16)}</button>
-          <h2>Designs</h2>
-          <div class="sub">Aim the selector at a build, save it, then stamp it anywhere.</div>
+          <div id="save-list" hidden></div>`,
+        'panel-templates': `
           <div class="field-row">
             <input type="text" id="template-name" placeholder="Name this design" maxlength="40" />
             <button class="secondary" id="btn-save-template">Save selection</button>
           </div>
-          <div id="template-list"></div>
-        </div>
-      </div>
-
-      <div class="overlay" id="panel-help" hidden>
-        <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-help">${icon('close', 16)}</button>
-          <h2>Controls</h2>
-          <div class="sub">Everything the toolbar and sticks do.</div>
-          <div id="help-body"></div>
-        </div>
-      </div>
-
-      <div class="overlay" id="panel-score" hidden>
-        <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-score">${icon('close', 16)}</button>
-          <h2>Session Complete</h2>
-          <div class="sub">A lightweight read on how this build session went — just for you.</div>
+          <div id="template-list"></div>`,
+        'panel-help': `
+          <div id="help-body"></div>`,
+        'panel-score': `
           <div class="score-total" id="score-total">0</div>
-          <div class="score-breakdown" id="score-breakdown"></div>
-        </div>
-      </div>
+          <div class="score-breakdown" id="score-breakdown"></div>`,
+      })}
 
       <div id="touch-controls">
         <div class="stick-zone" id="stick-left">
@@ -699,6 +661,17 @@ export class UIManager {
     this.panels.open(id);
   }
 
+  isPanelOpen(id) {
+    return this.panels.isOpen(id);
+  }
+
+  /** What a keyboard shortcut does: the same key puts it away again. */
+  togglePanel(id) {
+    if (this.panels.isOpen(id)) { this.panels.close(id); return false; }
+    this.panels.open(id);
+    return true;
+  }
+
   closePanel(id) {
     this.panels.close(id);
   }
@@ -1046,7 +1019,12 @@ export class UIManager {
 
   toggleBag() { return this.duiltUI?.toggleBag(); }
   openClaim(region, onClaim) { this.duiltUI?.openClaim(region, onClaim); }
-  openDuiltPanel(id) { this.duiltUI?.openPanel(id); }
+  /**
+   * Kept as an alias only because callers outside still use the name. Both the
+   * main panels and the Duilt ones live in the same registry now, so there is
+   * nothing different to do for either.
+   */
+  openDuiltPanel(id) { this.openPanel(id); }
 
   setSelectorSize(size) {
     this.q('#size-label').innerHTML = `${size}&sup3;`;

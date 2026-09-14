@@ -3,6 +3,7 @@ import { STRUCTURES_BY_ID, structuresForAge } from '../config/structures.js';
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
+import { renderPanels } from './Panel.js';
 
 /**
  * The Duilt interface: the bag, the stomach, the claim menu and the goal list.
@@ -62,51 +63,19 @@ export class DuiltUI {
         <ul id="goals-list"></ul>
       </div>
 
-      <div class="overlay" id="panel-bag" hidden>
-        <div class="panel panel-wide">
-          <button class="icon-btn panel-close" data-close="panel-bag">✕</button>
-          <h2>Bag</h2>
-          <div class="sub" id="bag-sub">Tap an item to lift it, tap a slot to put it down. Hold to split a stack.</div>
+      ${renderPanels('duilt', {
+        'panel-bag': `
           <div id="bag-grid"></div>
-          <div id="bag-detail"></div>
-        </div>
-      </div>
-
-      <div class="overlay" id="panel-claim" hidden>
-        <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-claim">✕</button>
-          <h2>What is this?</h2>
-          <div class="sub">The game will check what you've built and tell you if anything's missing.</div>
-          <div id="claim-list"></div>
-        </div>
-      </div>
-
-      <div class="overlay" id="panel-buildings" hidden>
-        <div class="panel panel-wide">
-          <button class="icon-btn panel-close" data-close="panel-buildings">✕</button>
-          <h2>Buildings</h2>
-          <div class="sub">Two ways in: build it yourself and have it checked, or drop a ready-made one.</div>
-          <div id="buildings-list"></div>
-        </div>
-      </div>
-
-      <div class="overlay" id="panel-bench" hidden>
-        <div class="panel panel-wide">
-          <button class="icon-btn panel-close" data-close="panel-bench">✕</button>
-          <h2>Workbench</h2>
-          <div class="sub" id="bench-sub">Small work you can do anywhere. Bigger work will need a workshop.</div>
-          <div id="bench-list"></div>
-        </div>
-      </div>
-
-      <div class="overlay" id="panel-skills" hidden>
-        <div class="panel">
-          <button class="icon-btn panel-close" data-close="panel-skills">✕</button>
-          <h2>Skills</h2>
-          <div class="sub">You get better by doing — and credit lands on milestones, not repetition.</div>
-          <div id="skills-list"></div>
-        </div>
-      </div>
+          <div id="bag-detail"></div>`,
+        'panel-claim': `
+          <div id="claim-list"></div>`,
+        'panel-buildings': `
+          <div id="buildings-list"></div>`,
+        'panel-bench': `
+          <div id="bench-list"></div>`,
+        'panel-skills': `
+          <div id="skills-list"></div>`,
+      })}
     `;
     this.root.appendChild(el);
     this.el = el;
