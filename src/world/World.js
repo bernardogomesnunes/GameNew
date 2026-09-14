@@ -37,6 +37,10 @@ export class World {
     this.chunksZ = Math.ceil(sizeZ / CHUNK_SIZE);
     this.chunks = new Map();
     this.surfaceHeightMap = new Int16Array(sizeX * sizeZ);
+    // Which biome each column ended up in. Derived at generation, but saved
+    // rather than recomputed: everything that asks — the site finder, the
+    // settlers — asks long after the seed has gone.
+    this.biomeMap = new Uint8Array(sizeX * sizeZ);
     for (let cx = 0; cx < this.chunksX; cx++) {
       for (let cz = 0; cz < this.chunksZ; cz++) {
         this.chunks.set(this.chunkKey(cx, cz), new Chunk(cx, cz, height));
@@ -130,6 +134,7 @@ export class World {
       sizeZ: this.sizeZ,
       height: this.height,
       surfaceHeightMap: Array.from(this.surfaceHeightMap),
+      biomeMap: Array.from(this.biomeMap),
       chunks,
     };
   }
@@ -137,6 +142,11 @@ export class World {
   static deserialize(json) {
     const world = new World({ sizeX: json.sizeX, sizeZ: json.sizeZ, height: json.height });
     world.surfaceHeightMap = Int16Array.from(json.surfaceHeightMap);
+    // Worlds saved before biomes existed have none; they are all meadow, which
+    // is what index 0 is and what they actually look like.
+    world.biomeMap = json.biomeMap
+      ? Uint8Array.from(json.biomeMap)
+      : new Uint8Array(world.sizeX * world.sizeZ);
     for (const c of json.chunks) {
       const chunk = world.getChunk(c.cx, c.cz);
       if (!chunk) continue;
