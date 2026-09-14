@@ -228,14 +228,14 @@ export class UIManager {
 
         Camera on the left and movement on the right is the opposite of the
         console convention, and deliberate: this is a game where you stand
-        still and mine. The hand that is busy is the one aiming, so it gets the
-        stick it never lets go of, and the hand that only occasionally walks
-        somewhere gets the other — along with Break and Place, the two things
-        you do a thousand times a session.
+        still and mine, so the hand that never lets go of its stick is the one
+        aiming. Everything you do *to* the world goes with the moving hand —
+        Break, Place and Jump — and the left keeps the two switches: More, and
+        Fly.
 
-        Everything else lives behind More. The cluster used to carry eight
-        buttons across two columns before you opened anything; a screen that is
-        a third controls is a screen you cannot see the world through.
+        Fly earns its place on the screen rather than a slot behind More: it
+        changes how every other control behaves, and a mode switch you have to
+        go looking for is one you forget the game has.
       -->
       <div id="touch-controls">
         <div class="stick-zone" id="stick-left">
@@ -245,7 +245,7 @@ export class UIManager {
           <div class="stick-base"><div class="stick-knob"></div></div>
         </div>
 
-        <!-- Left thumb: the camera, and the way into everything occasional. -->
+        <!-- Left thumb: the camera, the way into everything else, and Fly. -->
         <div class="touch-buttons" id="touch-buttons-left">
           <div class="row touch-tray" id="touch-tray" hidden>
             <button class="touch-btn duilt-only" id="t-bag" hidden>${icon('bag')}<span>Bag</span></button>
@@ -255,22 +255,27 @@ export class UIManager {
             <button class="touch-btn sandbox-only" id="t-designs">${icon('paste')}<span>Designs</span></button>
             <button class="touch-btn sandbox-only" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
             <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
-            <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
           </div>
           <div class="row">
             <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
-            <button class="touch-btn" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
+            <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
           </div>
-          <!-- Down appears only while flying, and below Up, the way they point. -->
-          <button class="touch-btn" id="t-down" hidden>${icon('down')}<span>Down</span></button>
         </div>
 
-        <!-- Right thumb: walking, and the two things you came here to do. -->
+        <!-- Right thumb: walking, and everything you do to the world. -->
         <div class="touch-buttons" id="touch-buttons-right">
           <div class="row">
             <button class="touch-btn" id="t-break">${icon('mine')}<span>Break</span></button>
             <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
           </div>
+          <div class="row">
+            <button class="touch-btn" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
+          </div>
+          <!--
+            Down appears only while flying, and below Jump — which is Up while
+            you are up there — because that is the way the two of them point.
+          -->
+          <button class="touch-btn" id="t-down" hidden>${icon('down')}<span>Down</span></button>
         </div>
       </div>
     `;

@@ -38,16 +38,22 @@ ok('and the camera keeps its finer control near centre',
 
 // --- what is on screen before you open anything ------------------------------
 
+// Everything you do *to* the world goes with the hand that is moving.
 ok('Break is under the moving thumb', rightCluster.includes('id="t-break"'));
 ok('and so is Place', rightCluster.includes('id="t-place"'));
-ok('and nothing else is', (rightCluster.match(/class="touch-btn"/g) ?? []).length === 2);
+ok('and Jump', rightCluster.includes('id="t-jump"'));
+ok('and Down, once you are flying', rightCluster.includes('id="t-down"'));
 
+// The aiming hand keeps the two switches and nothing else.
 ok('More is under the aiming thumb', leftCluster.includes('id="t-more"'));
-ok('and Jump', leftCluster.includes('id="t-jump"'));
-ok('and Down, once you are flying', leftCluster.includes('id="t-down"'));
+ok('and Fly, which is a mode rather than an action', leftCluster.includes('id="t-fly"'));
+ok('and nothing else is', (leftCluster.match(/class="touch-btn"(?![^>]*touch-tray)/g) ?? []).length >= 2);
+// Fly changes what every other control does. Behind More it was a mode you
+// could forget the game had.
+ok('Fly is out on the screen, not in the tray', !tray.includes('id="t-fly"'));
 
 // Everything occasional went behind More. Bag was the last hold-out.
-for (const id of ['t-bag', 't-bench', 't-build', 't-skills', 't-designs', 't-symmetry', 't-screen', 't-fly']) {
+for (const id of ['t-bag', 't-bench', 't-build', 't-skills', 't-designs', 't-symmetry', 't-screen']) {
   ok(`${id} is behind More`, tray.includes(`id="${id}"`));
 }
 ok('there is no always-on row of Duilt buttons any more', !ui.includes('touch-duilt-row'));
@@ -68,7 +74,7 @@ ok('the tray folds into a second column rather than growing forever',
   /max-height: calc\(100dvh - 530px\)/.test(css));
 ok('and it stacks away from the screen edge it sits on',
   /\.touch-tray\b[\s\S]{0,400}align-items: flex-start/.test(css));
-ok('the cluster sits lower than it did, having lost two rows',
+ok('the clusters sit low, having shed their extra rows',
   /bottom: calc\(150px \+ env\(safe-area-inset-bottom\)\)/.test(css));
 ok('and the top toolbar has room for five buttons without wrapping',
   /#top-buttons \{[^}]*max-width: 58%/.test(css));
