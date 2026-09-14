@@ -1,4 +1,4 @@
-import { AIR } from '../config/blocks.js';
+import { AIR, isSoil } from '../config/blocks.js';
 
 /**
  * What gets built once a site has been chosen.
@@ -37,8 +37,29 @@ export function plantTree(world, x, groundY, z, rand) {
 /** Somewhere a tree can actually stand: right ground, nothing in the way. */
 function plantable(world, x, z) {
   const y = world.surfaceHeight(x, z);
+  return isSoil(world.getBlock(x, y - 1, z)) && world.getBlock(x, y, z) === AIR;
+}
+
+/**
+ * Makes a spot plantable by putting soil under it, and says whether it worked.
+ *
+ * The grove is essential — Age 1 asks you to claim a forest — so when nothing
+ * in the plot suits, the finder puts it on the best ground it can find. That
+ * used to be fine while every kind of country was grass. Now the best ground
+ * can be a gravel hillside, where no tree would take, and the grove came out
+ * with four trunks instead of six: a world you cannot finish, placed by the
+ * rule meant to guarantee you could.
+ *
+ * So a grove brings its own forest floor. One block of dirt under each trunk,
+ * only where something solid is already standing.
+ */
+function makePlantable(world, x, z) {
+  const y = world.surfaceHeight(x, z);
+  if (world.getBlock(x, y, z) !== AIR) return false;
   const under = world.getBlock(x, y - 1, z);
-  return (under === GRASS || under === DIRT) && world.getBlock(x, y, z) === AIR;
+  if (under === AIR || world.isIndestructible(x, y - 1, z)) return false;
+  if (!isSoil(under)) world.setBlock(x, y - 1, z, DIRT);
+  return true;
 }
 
 export const FEATURES = {
@@ -54,7 +75,7 @@ export const FEATURES = {
       const x = site.x + Math.round((rand() - 0.5) * SPAN * 2);
       const z = site.z + Math.round((rand() - 0.5) * SPAN * 2);
       if (planted.some((p) => Math.abs(p.x - x) < 2 && Math.abs(p.z - z) < 2)) continue;
-      if (!plantable(world, x, z)) continue;
+      if (!makePlantable(world, x, z)) continue;
       if (plantTree(world, x, world.surfaceHeight(x, z), z, rand)) planted.push({ x, z });
     }
     // A couple of saplings, so the place reads as growing rather than placed.

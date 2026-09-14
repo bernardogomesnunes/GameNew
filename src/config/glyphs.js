@@ -21,6 +21,12 @@ export const GLYPHS = {
   dirt: 'M8 10h.01M14.5 8.5h.01M6 15h.01M12.5 14h.01M17.5 14.5h.01M10 19h.01',
   sand: 'M6.5 10h.01M12 8h.01M17.5 11h.01M9 14.5h.01M15.5 15h.01M12 19h.01',
   farmland: 'M4 9c4 2.5 12 2.5 16 0M4 14c4 2.5 12 2.5 16 0M4 19c4 2.5 12 2.5 16 0',
+  // Low tufts, for a forest floor.
+  moss: 'M4 19h16M7 19c0-2.4 1-4 2.4-4.4M12 19c0-3.4 1.2-5.6 3-6.2M17 19c0-2 .8-3.4 2-3.8',
+  // Loose stones, smaller and more of them than cobble.
+  gravel: 'M7 10.5a1.5 1.5 0 1 0 .01 0M13 8.6a1.3 1.3 0 1 0 .01 0M17.3 12.4a1.5 1.5 0 1 0 .01 0M9.6 15.2a1.4 1.4 0 1 0 .01 0M15 17a1.3 1.3 0 1 0 .01 0',
+  // A soft bank, the way wet ground slumps.
+  clay: 'M4.5 18.5c1.5-6 4-9 7.5-9s6 3 7.5 9ZM8 18.5c.8-3.5 2.2-5.2 4-5.2s3.2 1.7 4 5.2',
 
   // stone
   stone: 'M4 17l4.5-8 4 3.5 3.5-5.5L20 17Z',

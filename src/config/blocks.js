@@ -4,14 +4,18 @@
 // `cost` is left over from Campaign mode, which is gone. Nothing reads it any
 // more; it stays only because the economy it fed is still written into saves.
 // `unlock` gates the block in Creative: a level or an achievement.
+// `soil` is ground a tree will take root in. It used to be a hard-coded pair
+// of ids in features.js, so the moment the world grew a third kind of soil the
+// groves stopped planting on it — hence the flag, which a new block sets for
+// itself.
 // `system` blocks are world furniture — never sold, never breakable, hidden
 // from the hotbar.
 // `glyph` names the mark drawn over the colour wherever the block is shown —
 // four browns and three greens are not told apart by colour at 26 pixels. The
 // marks themselves live in config/glyphs.js.
 export const BLOCKS = [
-  { id: 1, name: 'Grass', glyph: 'grass', color: 0x5b9c3f, cost: { wood: 1 }, unlock: null },
-  { id: 2, name: 'Dirt', glyph: 'dirt', color: 0x7a5230, cost: { wood: 1 }, unlock: null },
+  { id: 1, name: 'Grass', glyph: 'grass', color: 0x5b9c3f, soil: true, cost: { wood: 1 }, unlock: null },
+  { id: 2, name: 'Dirt', glyph: 'dirt', color: 0x7a5230, soil: true, cost: { wood: 1 }, unlock: null },
   { id: 3, name: 'Stone', glyph: 'stone', color: 0x8a8a8d, cost: { stone: 1 }, unlock: null },
   { id: 4, name: 'Wood', glyph: 'log', color: 0x8a5a2b, cost: { wood: 2 }, unlock: null },
   // Opaque on purpose. At 0.9 the transparency was invisible, but it put every
@@ -39,9 +43,24 @@ export const BLOCKS = [
   // turned, which is what a farm is actually made of.
   { id: 20, name: 'Sapling', glyph: 'sprout', color: 0x6aa84f, cost: { wood: 1 }, unlock: null },
   { id: 21, name: 'Farmland', glyph: 'farmland', color: 0x6b4a2a, cost: { wood: 1 }, unlock: null },
+  // Ground the biomes are made of. Six kinds of country used to share four
+  // top blocks between them, so a meadow, a forest, the highlands and a
+  // wetland were all the same green: you could walk from one to another and
+  // the only thing that changed was how many trees there were. These are what
+  // let each one have its own floor.
+  { id: 22, name: 'Moss', glyph: 'moss', color: 0x3c6b31, soil: true, unlock: null },
+  { id: 23, name: 'Gravel', glyph: 'gravel', color: 0x9a948a, unlock: null },
+  { id: 24, name: 'Clay', glyph: 'clay', color: 0x8d9aa0, soil: true, unlock: null },
 ];
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
+
+/** Ground a tree will take root in. */
+export const SOIL_IDS = BLOCKS.filter((b) => b.soil).map((b) => b.id);
+export const SOIL_NAMES = BLOCKS.filter((b) => b.soil).map((b) => b.name.toLowerCase());
+export function isSoil(id) {
+  return !!BLOCKS_BY_ID.get(id)?.soil;
+}
 export const AIR = 0;
 export const GROUND = 19;
 

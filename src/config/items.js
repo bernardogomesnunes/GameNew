@@ -30,6 +30,11 @@ export const ITEMS = [
   { id: 'stone', name: 'Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x8a8a8d, glyph: 'stone', block: 3, madeBy: 'Mined from rock' },
   { id: 'sand', name: 'Sand', kind: 'raw', stackTo: STACK_BULK, color: 0xdcc57a, glyph: 'sand', block: 6, madeBy: 'Dug from the riverbank' },
   { id: 'grass', name: 'Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x5b9c3f, glyph: 'grass', block: 1, madeBy: 'Cut from meadow' },
+  // What the other kinds of country are made of. Without these, digging up a
+  // forest floor or a river bank would hand you nothing at all.
+  { id: 'moss', name: 'Moss', kind: 'raw', stackTo: STACK_BULK, color: 0x3c6b31, glyph: 'moss', block: 22, madeBy: 'Lifted from a forest floor' },
+  { id: 'gravel', name: 'Gravel', kind: 'raw', stackTo: STACK_BULK, color: 0x9a948a, glyph: 'gravel', block: 23, madeBy: 'Scraped off the highlands' },
+  { id: 'clay', name: 'Clay', kind: 'raw', stackTo: STACK_BULK, color: 0x8d9aa0, glyph: 'clay', block: 24, madeBy: 'Dug from wet ground' },
 
   // --- worked materials ----------------------------------------------------
   { id: 'planks', name: 'Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xb98a4b, glyph: 'planks', block: 7, madeBy: 'Sawn from wood' },

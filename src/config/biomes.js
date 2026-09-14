@@ -25,7 +25,8 @@
  * Adding one is an entry here. Nothing else needs to know it exists.
  */
 
-const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, SNOW = 12, SAPLING = 20;
+const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, COBBLE = 8;
+const SNOW = 12, SAPLING = 20, MOSS = 22, GRAVEL = 23, CLAY = 24;
 
 export const BIOMES = [
   {
@@ -43,10 +44,12 @@ export const BIOMES = [
     name: 'Forest',
     niche: { temp: 0.5, wet: 0.8 },
     base: 21, amplitude: 7, rough: 2,
-    surface: { top: GRASS, under: DIRT, depth: 3, rock: STONE },
+    // Moss rather than grass: a forest you can tell you are in while looking
+    // at your feet, not only by counting the trunks.
+    surface: { top: MOSS, under: DIRT, depth: 3, rock: STONE },
     // Dense enough to read as woodland from a distance without being a wall.
-    trees: { chance: 0.055, trunk: [5, 8], canopy: 2, wood: WOOD, leaves: LEAVES },
-    scatter: [{ block: SAPLING, chance: 0.004 }],
+    trees: { chance: 0.11, trunk: [5, 8], canopy: 2, wood: WOOD, leaves: LEAVES },
+    scatter: [{ block: SAPLING, chance: 0.006 }],
   },
   {
     id: 'highlands',
@@ -55,9 +58,9 @@ export const BIOMES = [
     base: 27, amplitude: 13, rough: 4,
     // Bare rock above the soil line is what makes a hill read as a hill, so
     // the top block is chosen by height rather than fixed. See `surfaceFor`.
-    surface: { top: GRASS, under: DIRT, depth: 2, rock: STONE, bareAbove: 32 },
+    surface: { top: GRAVEL, under: STONE, depth: 2, rock: COBBLE, bareAbove: 32 },
     trees: { chance: 0.008, trunk: [4, 6], canopy: 1, wood: WOOD, leaves: LEAVES },
-    scatter: [{ block: STONE, chance: 0.006 }],
+    scatter: [{ block: STONE, chance: 0.01 }],
   },
   {
     id: 'sands',
@@ -75,7 +78,7 @@ export const BIOMES = [
     // Low and almost flat, so the rivers that cross it spread out instead of
     // cutting through.
     base: 16, amplitude: 2, rough: 1,
-    surface: { top: GRASS, under: DIRT, depth: 4, rock: STONE },
+    surface: { top: CLAY, under: DIRT, depth: 4, rock: STONE },
     trees: { chance: 0.012, trunk: [3, 4], canopy: 2, wood: WOOD, leaves: LEAVES },
     scatter: [{ block: SAPLING, chance: 0.012 }],
   },

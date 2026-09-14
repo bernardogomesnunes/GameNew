@@ -2,7 +2,7 @@ import { BIOMES, BIOMES_BY_ID, HOME_BIOME, surfaceFor, biomeAt } from '../src/co
 import { BiomeMap } from '../src/world/biomeMap.js';
 import { generateTerrain, biomeOf } from '../src/world/TerrainGenerator.js';
 import { World } from '../src/world/World.js';
-import { BLOCKS_BY_ID } from '../src/config/blocks.js';
+import { BLOCKS_BY_ID, SOIL_IDS, SOIL_NAMES, isSoil } from '../src/config/blocks.js';
 
 /**
  * The land, and what it is made of.
@@ -45,6 +45,21 @@ for (const b of BIOMES) {
   for (const sc of b.scatter ?? []) {
     ok(`  what it scatters is a real block`, BLOCKS_BY_ID.has(sc.block));
   }
+}
+
+// The whole point of a biome is that you can tell you are in one. Four of the
+// six used to share grass as their top block and stone as their rock, so
+// walking from a meadow into the highlands changed the height of the ground
+// and nothing else — six biomes that looked like two.
+{
+  const tops = BIOMES.map((b) => b.surface.top);
+  ok(`every biome has its own ground (${tops.join(', ')})`, new Set(tops).size === BIOMES.length);
+  // Trees are the other half of how a biome reads. A forest has to be
+  // obviously more wooded than the open country beside it.
+  const forest = BIOMES_BY_ID.get('forest');
+  const meadow = BIOMES_BY_ID.get('meadow');
+  ok('a forest is properly wooded next to a meadow',
+    forest.trees.chance >= meadow.trees.chance * 8);
 }
 
 // Highlands go bare above the soil line; nothing else changes with height.
@@ -219,5 +234,22 @@ ok('an out-of-range biome index falls back rather than throwing', biomeAt(999) =
 }
 
 ok('asking outside the world is safe', biomeOf(new World({ sizeX: 16, sizeZ: 16, height: 16 }), -5, 900) === BIOMES[0]);
+
+// --- the ground a tree will take ---------------------------------------------
+
+// `soil` is a block property now, because it used to be two hard-coded ids in
+// features.js: the moment the world grew a forest floor and a river bank, a
+// grove placed on either planted nothing.
+{
+  ok('there is more than one kind of soil', SOIL_IDS.length >= 3);
+  // The starting plot's grove is an Age 1 goal, and it goes down in the home
+  // biome. If that ground is not something a tree roots in, a new world opens
+  // with a forest you cannot claim.
+  ok(`the home biome is ground a tree takes to`,
+    isSoil(BIOMES_BY_ID.get(HOME_BIOME).surface.top));
+  ok('bare rock and scree are not soil', !isSoil(23) && !isSoil(3));
+  ok('the site specs read the list rather than naming blocks',
+    SOIL_NAMES.length === SOIL_IDS.length && SOIL_NAMES.every((n) => typeof n === 'string'));
+}
 
 process.exit(f ? 1 : 0);

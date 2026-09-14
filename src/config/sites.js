@@ -25,6 +25,8 @@
  * that has already been placed.
  */
 
+import { SOIL_NAMES } from './blocks.js';
+
 export const SITES = [
   {
     id: 'spawn',
@@ -32,7 +34,7 @@ export const SITES = [
     essential: true,   // there is no game without one
     count: 1,
     needs: {
-      ground: ['grass', 'dirt', 'sand'],
+      ground: [...SOIL_NAMES, 'sand'],
       headroom: 3,          // room to stand, and not inside a tree
       flatness: 2,          // the first few steps shouldn't be a scramble
       water: { min: 3, max: 14, ideal: 7 },
@@ -66,7 +68,10 @@ export const SITES = [
     clearOf: ['spawn'],
     clearOfDistance: 8,     // visible from where you land, not on top of you
     needs: {
-      ground: ['grass', 'dirt'],
+      // Any ground a tree roots in. Naming grass and dirt by hand meant that
+      // the moment the world grew a forest floor and a river bank, a grove
+      // could not be placed on either.
+      ground: SOIL_NAMES,
       headroom: 1,
       // Trees do not need a level platform — woodland on a slope is normal and
       // looks better than woodland on a table. Demanding a flat nine by nine
@@ -95,7 +100,7 @@ export const SITES = [
     clearOf: ['spawn', 'grove'],
     clearOfDistance: 6,
     needs: {
-      ground: ['grass', 'dirt', 'sand'],
+      ground: [...SOIL_NAMES, 'sand'],
       headroom: 1,
       // No footprint at all: an outcrop is a lump on the landscape, and asking
       // for a level pad to put it on contradicted the preference for broken
@@ -118,7 +123,7 @@ export const SITES = [
     clearOf: ['spawn'],
     clearOfDistance: 5,
     needs: {
-      ground: ['grass', 'dirt'],
+      ground: SOIL_NAMES,
       headroom: 1,
       flatness: 3,
       water: { min: 2, max: 8, ideal: 4 },
