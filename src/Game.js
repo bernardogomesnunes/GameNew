@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { World, CHUNK_SIZE } from './world/World.js';
-import { generateTerrain, generateFlat } from './world/TerrainGenerator.js';
+import { generateTerrain } from './world/TerrainGenerator.js';
 import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
@@ -27,8 +27,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, BLOCKS_BY_ID, costResourceOf } from './config/blocks.js';
-import { resourceName } from './config/resources.js';
+import { AIR, BLOCKS_BY_ID } from './config/blocks.js';
 
 const REACH = 7;
 const FOG_FAR = 210;           // where the world has faded fully into the sky
@@ -45,7 +44,6 @@ const AUTOSAVE_INTERVAL_MS = 60_000;
 const HOLD_BREAK_DELAY_MS = 320;
 const HOLD_BREAK_INTERVAL_MS = 170;
 export const CREATIVE = 'creative';
-export const CAMPAIGN = 'campaign';
 export const DUILT = 'duilt';
 
 export class Game {
@@ -117,8 +115,8 @@ export class Game {
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
     this.undoRedo = new UndoRedo();
-    // Duilt is the game. Creative and Campaign are the sandbox this grew out
-    // of and are still there on purpose, but arriving in one of them meant a
+    // Duilt is the game. Creative is the sandbox this grew out of and is
+    // still there on purpose, but arriving in it meant a
     // first-time player landed in a world with no bag, no land and no goals,
     // and the game itself was three taps deep behind a menu and a browser
     // confirm box. A save always sets its own mode, so this only decides where
@@ -227,8 +225,28 @@ export class Game {
     window.addEventListener('pagehide', save);
   }
 
+  /**
+   * Throws away the world you were last in.
+   *
+   * The catch is that the world is still loaded in memory, and the autosave
+   * fires on the way out of the page whatever the game is doing — so deleting
+   * it and then closing the tab would have written the whole thing straight
+   * back. The flag is what stops that: nothing autosaves again until a world
+   * is deliberately made or opened.
+   */
+  discardCurrentWorld() {
+    this.saveManager.delete(AUTOSAVE_NAME);
+    this.discarded = true;
+    // If it was synced, take it off the server too — a world you deleted
+    // coming back on your next device is worse than not syncing at all.
+    // Best effort: signed out or offline, the local delete still stands.
+    if (this.worldId) this.cloud?.delete(this.worldId).catch(() => {});
+    return true;
+  }
+
   /** Writes the autosave straight away, and resets the interval clock with it. */
   autosaveNow() {
+    if (this.discarded) return false;
     try {
       this.saveManager.autosave(this.saveState());
       this.lastAutosave = performance.now();
@@ -259,6 +277,7 @@ export class Game {
         this.ui.closePanel('panel-menu');
       },
       onDeleteSave: (name) => this.saveManager.delete(name),
+      onDeleteCurrent: () => this.discardCurrentWorld(),
       onExportWorld: (name) => {
         const payload = exportWorldFile({ ...this.saveState(), templates: this.templates.list(), name: name || 'My world' });
         this.ui.toast({ kind: 'challenge', title: 'World exported', body: `${payload.templates.length} designs included` });
@@ -406,9 +425,10 @@ export class Game {
 
   newWorld({ silent, mode = this.mode, name } = {}) {
     this.mode = mode;
+    // Deliberately making a world un-discards: saving is on again.
+    this.discarded = false;
     this.worldId = newWorldId();
-    this.worldName = name
-      || (mode === CAMPAIGN ? 'Campaign world' : mode === DUILT ? 'My settlement' : 'Creative world');
+    this.worldName = name || (mode === DUILT ? 'My settlement' : 'Creative world');
 
     this.disposeDuilt();
     let spawn = null;
@@ -420,8 +440,7 @@ export class Game {
       spawn = built.origin.spawn;
     } else {
       this.world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
-      if (mode === CAMPAIGN) generateFlat(this.world);
-      else generateTerrain(this.world);
+      generateTerrain(this.world);
     }
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, spawn ?? this.findSafeSpawn());
@@ -451,9 +470,9 @@ export class Game {
       this.autosaveNow();
       this.ui.toast({
         kind: 'xp',
-        title: mode === CAMPAIGN ? 'Campaign started' : mode === DUILT ? 'Welcome to Duilt' : 'New world generated',
-        body: mode === CAMPAIGN ? 'You have 120 wood. Spend it well.'
-          : mode === DUILT ? 'You have 32 blocks of land, an axe and a bucket. Build a forest, a farm and a house.'
+        title: mode === DUILT ? 'Welcome to Duilt' : 'New world generated',
+        body: mode === DUILT
+          ? 'You have 32 blocks of land, an axe and a bucket. Build a forest, a farm and a house.'
           : 'Have fun building!',
       });
     }
@@ -486,14 +505,18 @@ export class Game {
   loadFromData(data, { silent } = {}) {
     this.world = data.world;
     this.disposeDuilt();
+    // Deliberately opening a world un-discards: saving is on again.
+    this.discarded = false;
     // A save from before worlds had ids still loads; it just gets a fresh one.
     this.worldId = data.worldId || newWorldId();
     this.worldName = data.worldName || data.name || this.worldName || 'My world';
     // Anything unrecognised falls back to Creative, which is the mode that
-    // needs nothing alongside it. Listing the modes explicitly matters: while
-    // this read `=== CAMPAIGN ? CAMPAIGN : CREATIVE`, every saved Duilt world
-    // came back as a sandbox and its bag, land, buildings and skills went with it.
-    this.mode = data.mode === CAMPAIGN ? CAMPAIGN : data.mode === DUILT ? DUILT : CREATIVE;
+    // needs nothing alongside it — including worlds saved in Campaign, which
+    // no longer exists. Their blocks are all still there; they simply cost
+    // nothing now. Listing the modes explicitly matters: while this read
+    // `=== CAMPAIGN ? CAMPAIGN : CREATIVE`, every saved Duilt world came back
+    // as a sandbox and its bag, land, buildings and skills went with it.
+    this.mode = data.mode === DUILT ? DUILT : CREATIVE;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, data.player);
     this.player.yaw = data.player.yaw || 0;
@@ -519,7 +542,7 @@ export class Game {
     if (this.ui) {
       this.ui.updateXp();
       this.ui.refreshForMode();
-      if (!silent) this.ui.toast({ kind: 'xp', title: 'World loaded', body: this.mode === CAMPAIGN ? 'Campaign' : 'Creative' });
+      if (!silent) this.ui.toast({ kind: 'xp', title: 'World loaded', body: this.worldName });
     }
   }
 
@@ -1177,33 +1200,15 @@ export class Game {
     };
   }
 
-  /**
-   * Whether a block can be held at all. Creative gates on level/achievement,
-   * Campaign gates on whether its resource tier is unlocked — affordability is
-   * a separate question, answered at purchase time.
-   */
+  /** Whether a block can be held at all: it unlocks with a level or an achievement. */
   blockAvailability(id) {
     const cfg = BLOCKS_BY_ID.get(id);
     if (!cfg || cfg.system) return { ok: false, reason: 'Not placeable' };
-    if (this.mode === CAMPAIGN) {
-      const res = costResourceOf(id);
-      if (res && !this.economy.isResourceUnlocked(res)) {
-        return { ok: false, reason: `Unlocks with ${resourceName(res)}` };
-      }
-      return { ok: true };
-    }
     if (this.gamification.isBlockUnlocked(id)) return { ok: true };
     return {
       ok: false,
       reason: cfg.unlock?.type === 'level' ? `Unlocks at level ${cfg.unlock.value}` : 'Unlocks via an achievement',
     };
-  }
-
-  canAffordBlock(id) {
-    if (this.mode !== CAMPAIGN) return true;
-    const cost = BLOCKS_BY_ID.get(id)?.cost;
-    if (!cost) return true;
-    return Object.entries(cost).every(([res, amount]) => this.economy.balanceOf(res) >= amount);
   }
 
   recomputeVertical() {
@@ -1259,8 +1264,9 @@ export class Game {
 
   /**
    * The one place blocks change. Break, place, paste, symmetry and undo all
-   * route through here, so the economy only has to hook in once.
-   * A batch is atomic: if the player can't afford all of it, none of it lands.
+   * route through here, so the rules only have to hook in once: the border
+   * says where you may build and the bag says whether you can afford it.
+   * A batch is atomic — if you can't pay for all of it, none of it lands.
    */
   applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
     changes = changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z));
@@ -1299,8 +1305,6 @@ export class Game {
         }
         duiltBill = paid.bill;
       }
-    } else if (chargeResources && !this.commitResources(changes)) {
-      return false;
     }
 
     const now = performance.now();
@@ -1322,25 +1326,6 @@ export class Game {
       if (c.next !== AIR) this.gamification.onBlockPlaced({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.next, viaSymmetry, now });
       else this.gamification.onBlockBroken({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.prev, now });
     }
-    return true;
-  }
-
-  /** Charges (or refunds) a batch in Campaign. Returns false if unaffordable. */
-  commitResources(changes) {
-    if (this.mode !== CAMPAIGN) return true;
-    const delta = this.economy.deltaForChanges(changes);
-    if (!this.economy.canApply(delta)) {
-      const short = this.economy.shortfall(delta);
-      if (short) {
-        this.ui?.toast({
-          kind: 'xp',
-          title: `Not enough ${resourceName(short.resource)}`,
-          body: `Needs ${short.needed}, you have ${short.have}`,
-        });
-      }
-      return false;
-    }
-    this.economy.apply(delta);
     return true;
   }
 
@@ -1368,12 +1353,6 @@ export class Game {
   doUndo() {
     const action = this.undoRedo.undo();
     if (!action) return;
-    // Undoing a break re-places the block, which has to be paid for again.
-    const reversed = action.map((c) => ({ x: c.x, y: c.y, z: c.z, prev: c.next, next: c.prev }));
-    if (!this.commitResources(reversed)) {
-      this.undoRedo.redo(); // roll the pointer back, nothing was applied
-      return;
-    }
     for (const c of action) this.world.setBlock(c.x, c.y, c.z, c.prev);
     this.remeshDirty();
   }
@@ -1381,10 +1360,6 @@ export class Game {
   doRedo() {
     const action = this.undoRedo.redo();
     if (!action) return;
-    if (!this.commitResources(action)) {
-      this.undoRedo.undo();
-      return;
-    }
     for (const c of action) this.world.setBlock(c.x, c.y, c.z, c.next);
     this.remeshDirty();
   }

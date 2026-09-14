@@ -64,11 +64,20 @@ html, body { margin: 0; height: 100%; background: var(--bg); overscroll-behavior
 #blocker .card { max-width: 460px; }
 #blocker h1 { font-size: 28px; margin: 0 0 8px; }
 #blocker p { color: var(--text-dim); line-height: 1.5; margin: 6px 0; }
-#blocker button.primary { margin-top: 16px; }
+/* The pointer-lock prompt's one button wants air above it. Scoped to that
+   card, because #blocker also hosts the whole worlds screen: unscoped, this
+   pushed the Next button of the new-world journey 16px down inside its row,
+   which — the row being a stretch flexbox — made it 16px shorter than the
+   Back button beside it. */
+#blocker .card button.primary { margin-top: 16px; }
 .hint-key { display: inline-block; background: rgba(255,255,255,0.1); border: 1px solid var(--panel-border); border-radius: 4px; padding: 1px 7px; font-size: 12px; }
 
 button.primary {
-  background: linear-gradient(180deg, #6fd0e6, #3fa9c2); color: #04202a; border: none; border-radius: 8px;
+  background: linear-gradient(180deg, #6fd0e6, #3fa9c2); color: #04202a; border-radius: 8px;
+  /* Transparent rather than none, so it measures the same as .secondary beside
+     it: a flex row splits the space before adding each item's border, so a
+     bordered button and a border-less one end up 2px apart. */
+  border: 1px solid transparent;
   padding: 12px 22px; font-size: 16px; font-weight: 600; cursor: pointer;
 }
 button.secondary {
@@ -117,22 +126,6 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 #selector-readout #sel-dims { font-weight: 700; color: var(--accent); }
 #selector-readout #sel-count { color: var(--text-dim); }
 #selector-readout .sel-hint { margin-top: 3px; font-size: 11px; color: var(--text-dim); }
-
-/* Resource wallet (Campaign only) */
-#resource-bar {
-  position: absolute; top: 54px; left: 12px; display: flex; gap: 8px; flex-wrap: wrap;
-  pointer-events: none; z-index: 5; max-width: 60%;
-}
-#resource-bar[hidden] { display: none; }
-.resource {
-  display: flex; align-items: center; gap: 7px;
-  background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--panel-border); border-radius: 9px;
-  padding: 5px 10px; font-size: 13px; font-variant-numeric: tabular-nums;
-}
-.resource .dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
-.resource .amount { font-weight: 700; }
-.resource .cap { color: var(--text-dim); font-size: 11px; }
 
 #top-buttons { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; pointer-events: auto; }
 .icon-btn {
@@ -202,8 +195,6 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
   text-shadow: 0 1px 2px rgba(0,0,0,0.8);
 }
 .hotbar-slot .cost::before { content: ''; width: 6px; height: 6px; border-radius: 1px; background: var(--cost-dot); }
-.hotbar-slot.unaffordable .swatch { opacity: 0.3; }
-.hotbar-slot.unaffordable .cost { color: var(--danger); }
 
 /* Toasts */
 #toast-stack { position: absolute; top: 60px; right: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; pointer-events: none; max-width: 300px; }
@@ -297,7 +288,6 @@ body.touch #touch-controls { display: block; }
 #blocker:not([hidden]) ~ #hud-top,
 #blocker:not([hidden]) ~ #top-buttons,
 #blocker:not([hidden]) ~ #hotbar-wrap,
-#blocker:not([hidden]) ~ #resource-bar,
 #blocker:not([hidden]) ~ #toast-stack,
 #blocker:not([hidden]) ~ #selector-readout,
 #blocker:not([hidden]) ~ #duilt-layer #vitals,

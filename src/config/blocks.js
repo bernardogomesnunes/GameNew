@@ -1,10 +1,9 @@
 // Block type registry. Adding a new block = adding an entry here.
 // id 0 is reserved for air (empty space) and must never be used below.
 //
-// `cost` is what one block costs in Campaign mode, and is refunded in full when
-// broken. The resource it costs also decides which tier gates it: a stone-cost
-// block can't be placed until the stone tier is unlocked.
-// `unlock` gates the block in Creative mode only.
+// `cost` is left over from Campaign mode, which is gone. Nothing reads it any
+// more; it stays only because the economy it fed is still written into saves.
+// `unlock` gates the block in Creative: a level or an achievement.
 // `system` blocks are world furniture — never sold, never breakable, hidden
 // from the hotbar.
 // `glyph` names the mark drawn over the colour wherever the block is shown —

@@ -56,7 +56,9 @@ export function parseWorldPayload(text) {
     player: data.player,
     gamification: data.gamification,
     economy: data.economy,
-    mode: data.mode === 'campaign' ? 'campaign' : data.mode === 'duilt' ? 'duilt' : 'creative',
+    // Campaign is gone; a file exported from one opens as a Creative world,
+    // with every block it had still standing.
+    mode: data.mode === 'duilt' ? 'duilt' : 'creative',
     duilt: data.duilt ?? null,
     templates: Array.isArray(data.templates) ? data.templates : [],
     name: data.name,

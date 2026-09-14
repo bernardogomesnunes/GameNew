@@ -1,5 +1,4 @@
 import { createNoise2D } from 'simplex-noise';
-import { GROUND } from '../config/blocks.js';
 import { BIOMES, biomeAt, surfaceFor } from '../config/biomes.js';
 import { BiomeMap } from './biomeMap.js';
 
@@ -10,20 +9,6 @@ function mulberry32(seed) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-/**
- * Campaign start: a bare indestructible plane. Nothing to harvest, nothing in
- * the way — the settlement is entirely what the player pays for.
- */
-export function generateFlat(world, groundY = 0) {
-  for (let x = 0; x < world.sizeX; x++) {
-    for (let z = 0; z < world.sizeZ; z++) {
-      world.setBlock(x, groundY, z, GROUND);
-      world.surfaceHeightMap[x * world.sizeZ + z] = groundY + 1;
-    }
-  }
-  for (const chunk of world.allChunks()) chunk.dirty = true;
 }
 
 /**

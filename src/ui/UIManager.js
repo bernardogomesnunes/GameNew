@@ -5,7 +5,6 @@ import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
 import { ITEMS_BY_ID, itemName } from '../config/items.js';
-import { RESOURCES_BY_ID, resourceName } from '../config/resources.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
@@ -54,7 +53,6 @@ export class UIManager {
   // so a stored reference would go stale.
   get gamification() { return this.game.gamification; }
   get economy() { return this.game.economy; }
-  get isCampaign() { return this.game.mode === 'campaign'; }
 
   markup() {
     return `
@@ -66,8 +64,6 @@ export class UIManager {
         <div id="level-badge">1</div>
         <div id="xp-bar-track"><div id="xp-bar-fill"></div></div>
       </div>
-
-      <div id="resource-bar" hidden></div>
 
       <div id="resume-hint" hidden>Click the world to look around again</div>
 
@@ -317,25 +313,16 @@ export class UIManager {
 
     PLACEABLE_BLOCKS.forEach((b, i) => {
       const available = this.game.blockAvailability(b.id).ok;
-      const affordable = !available || this.game.canAffordBlock(b.id);
-      const costLabel = this.isCampaign && b.cost
-        ? Object.entries(b.cost).map(([, amount]) => amount).join('')
-        : '';
-      // Only what the slot itself cannot show. The count and the cost are
-      // already printed on the swatch, so repeating them is noise; why a block
-      // is locked, or that you cannot afford it, is not written anywhere else.
-      const note = !available
-        ? this.game.blockAvailability(b.id).reason
-        : (this.isCampaign && b.cost && !affordable
-            ? `Not enough ${Object.keys(b.cost).map(resourceName).join(', ')}`
-            : '');
+      // Only what the slot itself cannot show. The name is already on the
+      // swatch, so repeating it is noise; why a block is locked is not
+      // written anywhere else.
+      const note = available ? '' : this.game.blockAvailability(b.id).reason;
       const slot = el(`
-        <div class="hotbar-slot ${available ? '' : 'locked'} ${available && !affordable ? 'unaffordable' : ''} ${b.id === this.selectedBlockId ? 'selected' : ''}"
+        <div class="hotbar-slot ${available ? '' : 'locked'} ${b.id === this.selectedBlockId ? 'selected' : ''}"
              data-id="${b.id}" data-name="${b.name}" data-note="${note}" title="${note ? `${b.name} — ${note}` : b.name}">
           ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
           <div class="swatch" style="background:#${b.color.toString(16).padStart(6, '0')}">${glyphSvg(b.glyph, { size: 18, color: b.color })}</div>
           ${available ? '' : `<div class="lock">${icon('lock', 15)}</div>`}
-          ${costLabel ? `<span class="cost" style="--cost-dot:#${(RESOURCES_BY_ID.get(Object.keys(b.cost)[0])?.color ?? 0x999999).toString(16).padStart(6, '0')}">${costLabel}</span>` : ''}
         </div>
       `);
       hotbar.appendChild(slot);
@@ -347,36 +334,10 @@ export class UIManager {
    * Affordability changes on every single block placed, so update classes in
    * place — rebuilding the hotbar would reset its horizontal scroll each time.
    */
-  refreshHotbarAffordability() {
-    this.root.querySelectorAll('.hotbar-slot').forEach((slot) => {
-      const id = Number(slot.dataset.id);
-      if (slot.classList.contains('locked')) return;
-      slot.classList.toggle('unaffordable', !this.game.canAffordBlock(id));
-    });
-  }
-
-  /** Re-renders everything that differs between Creative and Campaign. */
+  /** Re-renders everything that differs between the sandbox and Duilt. */
   refreshForMode() {
     this.refreshForDuilt();
-    document.body.classList.toggle('campaign', this.isCampaign);
     this.buildHotbar();
-    this.updateResourceBar();
-  }
-
-  updateResourceBar() {
-    const bar = this.q('#resource-bar');
-    if (!this.isCampaign) {
-      bar.hidden = true;
-      return;
-    }
-    bar.hidden = false;
-    bar.innerHTML = this.economy.unlockedResources().map((r) => `
-      <div class="resource" title="${r.name}">
-        <span class="dot" style="background:#${r.color.toString(16).padStart(6, '0')}"></span>
-        <span class="amount">${Math.floor(this.economy.balanceOf(r.id))}</span>
-        <span class="cap">/ ${r.baseCap}</span>
-      </div>
-    `).join('');
   }
 
   wireEvents() {
@@ -385,8 +346,16 @@ export class UIManager {
       onContinue: () => { this.cb.onLoadAutosave(); this.enterWorld(); },
       onOpen: (name) => { this.cb.onLoad(name); this.enterWorld(); },
       onRemove: (name) => {
-        if (!confirm('Delete this world? This cannot be undone.')) return false;
+        if (!confirm(`Delete "${name}"? This cannot be undone.`)) return false;
         this.cb.onDeleteSave(name);
+        return true;
+      },
+      // The world you were last in, rather than a named copy of one. It is
+      // the one people actually want rid of and the only one you could not
+      // delete, so "I have no way to start over" meant starting over by hand.
+      onRemoveCurrent: (label) => {
+        if (!confirm(`Delete "${label}"? Everything built in it goes with it, and this cannot be undone.`)) return false;
+        this.cb.onDeleteCurrent();
         return true;
       },
       // Creating and entering happen in the same gesture: pointer lock has to
@@ -675,23 +644,13 @@ export class UIManager {
       this.toast({ kind: 'challenge', title: 'Challenge complete!', body: c.description });
     });
     this.bus.on('block:unlock', (b) => {
-      // Campaign gates blocks by resource tier, so a level-based unlock
-      // announcement there would be telling the player something untrue.
-      if (!this.isCampaign) this.toast({ kind: 'challenge', title: 'New block unlocked', body: b.name });
+      this.toast({ kind: 'challenge', title: 'New block unlocked', body: b.name });
       this.buildHotbar();
     });
     this.bus.on('streak:update', ({ count }) => {
       if (count > 1) this.toast({ kind: 'xp', title: `${count}-day streak`, body: 'Back again — nice consistency.' });
     });
     this.bus.on('session:end', ({ score }) => this.showBuildScore(score));
-    this.bus.on('economy:change', () => {
-      this.updateResourceBar();
-      if (this.isCampaign) this.refreshHotbarAffordability();
-    });
-    this.bus.on('economy:tier', ({ tier }) => {
-      this.buildHotbar();
-      this.toast({ kind: 'challenge', title: 'New tier unlocked', body: `Tier ${tier} materials are now available` });
-    });
   }
 
   selectBlock(id) {
@@ -756,7 +715,7 @@ export class UIManager {
   /** Fills a panel in just before it is shown, if it has anything to fill. */
   populatePanel(id) {
     if (id === 'panel-menu') {
-      const kind = this.cb.isDuilt?.() ? 'Duilt' : (this.isCampaign ? 'Campaign' : 'Creative');
+      const kind = this.cb.isDuilt?.() ? 'Duilt' : 'Creative';
       const label = this.q('#menu-world-kind');
       if (label) label.textContent = `A ${kind} world`;
       const name = this.q('#save-name');

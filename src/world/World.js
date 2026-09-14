@@ -85,7 +85,7 @@ export class World {
     return this.getBlock(x, y, z) !== AIR;
   }
 
-  /** World furniture such as the Campaign ground plane: can't be broken or sold. */
+  /** World furniture such as bedrock: can't be broken or sold. */
   isIndestructible(x, y, z) {
     return isSystemBlock(this.getBlock(x, y, z));
   }

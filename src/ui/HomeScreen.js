@@ -30,12 +30,6 @@ const KINDS = [
     tagline: 'Free build',
     blurb: 'Generated terrain and every block available from the start. Nothing to earn, nothing to lose.',
   },
-  {
-    id: 'campaign',
-    name: 'Campaign',
-    tagline: 'Build to a budget',
-    blurb: 'Empty ground and a pile of wood. Every block costs something, so what you spend it on matters.',
-  },
 ];
 
 /** "2 hours ago", in the smallest number of words that is still true. */
@@ -116,13 +110,14 @@ export class HomeScreen {
     this.body.innerHTML = `
       ${current ? `
         <div class="home-label">Where you left off</div>
-        <button class="world-card world-card-primary" data-continue="1">
+        <div class="world-card world-card-primary" data-continue="1" role="button" tabindex="0">
           <span class="world-text">
             <strong>${escapeHtml(current.worldName || 'Your world')}</strong>
             <em>${describe(current)}</em>
           </span>
           <span class="world-go">Continue</span>
-        </button>` : ''}
+          <button class="world-remove" data-remove-current="1" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
+        </div>` : ''}
 
       <button class="world-card world-card-new" data-new="1">
         <span class="world-text">
@@ -141,12 +136,18 @@ export class HomeScreen {
                 <strong>${escapeHtml(s.worldName || s.name)}</strong>
                 <em>${describe(s)}</em>
               </span>
-              <button class="world-remove" data-remove="${escapeAttr(s.name)}" title="Delete this world">✕</button>
+              <button class="world-remove" data-remove="${escapeAttr(s.name)}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
             </div>`).join('')}
         </div>` : ''}
     `;
 
-    this.body.querySelector('[data-continue]')?.addEventListener('click', () => this.cb.onContinue());
+    this.body.querySelector('[data-continue]')?.addEventListener('click', (e) => {
+      if (e.target.closest('[data-remove-current]')) return;   // the ✕ is its own button
+      this.cb.onContinue();
+    });
+    this.body.querySelector('[data-remove-current]')?.addEventListener('click', () => {
+      if (this.cb.onRemoveCurrent(current?.worldName || 'Your world')) this.render();
+    });
     this.body.querySelector('[data-new]')?.addEventListener('click', () => { this.step = 'kind'; this.render(); });
     this.body.querySelectorAll('[data-open]').forEach((el) => {
       el.addEventListener('click', (e) => {
