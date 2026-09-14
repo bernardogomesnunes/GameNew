@@ -312,11 +312,17 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #touch-buttons-left { left: 14px; align-items: flex-start; }
 #touch-buttons-right { right: 14px; align-items: flex-end; }
 .touch-buttons .row { display: flex; gap: 10px; }
-/* The tray stacks upward from the More button and wraps rather than running
- * off the side of a narrow phone. */
+/* The tray stacks upward from the More button. Left to grow it walks straight
+ * into the toolbar at the top of the screen — which is what happened the first
+ * time a sixth button appeared. So it is given a ceiling and folds into a
+ * second column beside the first instead, which holds however many panels the
+ * game ends up with. */
 .touch-tray {
-  flex-direction: column-reverse; align-items: flex-end; gap: 8px;
-  margin-bottom: 2px;
+  flex-direction: column-reverse; flex-wrap: wrap-reverse;
+  align-items: flex-end; align-content: flex-end;
+  gap: 8px; margin-bottom: 2px;
+  max-height: calc(100vh - 500px);
+  max-height: calc(100dvh - 500px);
 }
 .touch-btn {
   width: 62px; height: 62px; border-radius: 18px;

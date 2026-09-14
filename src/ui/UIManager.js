@@ -260,11 +260,18 @@ export class UIManager {
             <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
             <button class="touch-btn sandbox-only" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
             <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
-            <button class="touch-btn" id="t-down" hidden>${icon('down')}<span>Down</span></button>
           </div>
+          <!--
+            Down is not a panel, it is the other half of Jump, so it sits with
+            Jump under the thumb rather than inside the tray. In the tray it was
+            a sixth button on a stack that already reached the top toolbar, and
+            it only appeared once you were flying — which is exactly when you
+            need it without opening a menu first.
+          -->
+          <button class="touch-btn" id="t-down" hidden>${icon('down')}<span>Down</span></button>
           <div class="row">
             <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
-            <button class="touch-btn" id="t-jump">${icon('up')}<span>Jump</span></button>
+            <button class="touch-btn" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
           </div>
         </div>
       </div>
@@ -946,6 +953,10 @@ export class UIManager {
   setFlyIndicator(flying) {
     this.q('#t-fly').classList.toggle('active', flying);
     this.q('#t-down').hidden = !flying; // descend only means anything while flying
+    // The same button jumps on the ground and climbs in the air. Once Down is
+    // showing beneath it, "Jump" is the odd one out of a pair.
+    const label = this.q('#t-jump-label');
+    if (label) label.textContent = flying ? 'Up' : 'Jump';
   }
 
   /** Turns the selector on and opens the designs panel — the whole flow in one place. */
