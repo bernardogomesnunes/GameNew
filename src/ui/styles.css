@@ -17,9 +17,12 @@
   /* The thumbstick's resting geometry, as variables rather than numbers, so a
      button placed beside a stick stays beside it when the stick changes size
      on a smaller screen. */
-  /* Inset leaves room for the outboard button: 12px of edge, the button, and
-     air between it and the base. */
-  --stick-inset: 78px;
+  /* Two insets, because the two sticks have different things beside them: the
+     right has Jump outboard of it and has to leave the room, the left has
+     Break *inboard* and can sit out at the edge. Each stick is as far out as
+     its own side allows. */
+  --stick-edge: 12px;      /* a stick with nothing outboard of it */
+  --stick-inset: 78px;     /* a stick with a button outboard of it */
   --stick-size: 104px;
   --stick-bottom: 24px;
   --stick-zone: 78px;      /* how far up the screen the stick's area starts */
@@ -373,7 +376,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
      about where to put your thumb, not something to look at. */
   opacity: 0.38; transition: opacity 0.15s ease, border-color 0.15s ease;
 }
-#stick-left .stick-base { left: var(--stick-inset); }
+#stick-left .stick-base { left: var(--stick-edge); }
 #stick-right .stick-base { right: var(--stick-inset); }
 .stick-base.active { opacity: 1; border-color: var(--accent); }
 .stick-knob {
@@ -403,12 +406,12 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #touch-buttons-left { left: 12px; align-items: flex-start; }
 #touch-buttons-right { right: 12px; align-items: flex-end; }
 
-/* Outboard of its own stick, hard against the screen edge.
+/* Beside its own stick, on the side that side has room for.
  *
- * The sticks are inset far enough to leave the room — that is what
- * --stick-inset is for now, and why it is so much larger than it looks like it
- * needs to be. Outboard keeps the middle of the picture clear and puts these
- * two under the outer edge of a thumb that is already down there.
+ * Break sits inboard of the walking stick and Jump outboard of the aiming one,
+ * which is why they are anchored differently: the left stick can then sit out
+ * at the edge, and the middle of a 320px screen still has air in it. Anchored
+ * off the stick's own variables so a smaller screen moves them with it.
  *
  * Vertically centred on the base, so the reach is sideways only. */
 .stick-side {
@@ -418,8 +421,8 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   display: flex; flex-direction: column; gap: 8px;
   pointer-events: auto; z-index: 3;
 }
-#side-left { left: 12px; }
-#side-right { right: 12px; }
+#side-left { left: calc(var(--stick-edge) + var(--stick-size) + 10px); }
+#side-right { right: var(--stick-edge); }
 .touch-btn.small { width: var(--side-btn); height: var(--side-btn); border-radius: 15px; }
 /* In the air one button becomes two. Shifting the pair down half a button
    centres it on the slot the single one had, so neither Up nor Down lands
@@ -722,7 +725,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   /* A hint, not an announcement — it sat in the middle of the thumb zone. */
   .hotbar-empty { padding: 8px 12px; font-size: 11px; }
   /* Big enough to find without looking, small enough to see past. */
-  :root { --stick-inset: 72px; --stick-size: 84px; --stick-bottom: 18px;
+  :root { --stick-inset: 72px; --stick-edge: 12px; --stick-size: 84px; --stick-bottom: 18px;
           --stick-zone: 78px; --stick-gap: 24px; }
   .stick-knob { width: 40px; height: 40px; top: 24px; left: 24px; }
 }
@@ -1031,7 +1034,7 @@ body.touch #goals { top: calc(84px + env(safe-area-inset-top)); left: 12px; widt
  */
 @media (max-height: 560px) and (pointer: coarse) {
   body.touch {
-    --stick-inset: 62px; --stick-size: 68px; --stick-bottom: 8px;
+    --stick-inset: 62px; --stick-edge: 12px; --stick-size: 68px; --stick-bottom: 8px;
     --stick-zone: 52px; --stick-gap: 8px; --side-btn: 40px;
   }
   body.touch .stick-zone { height: 66%; }

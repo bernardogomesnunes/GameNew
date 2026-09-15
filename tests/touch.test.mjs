@@ -43,8 +43,8 @@ ok('and the camera keeps its finer control near centre',
 // Reaching up the edge for the thing you press between every other thing you
 // press is the reach that was costing time. Jump goes with the thumb that
 // walks, Place with the thumb that aims.
-ok('Break is outboard of the stick that walks', sideLeft.includes('id="t-break"'));
-ok('Jump is outboard of the stick that aims', sideRight.includes('id="t-jump"'));
+ok('Break is beside the stick that walks', sideLeft.includes('id="t-break"'));
+ok('Jump is beside the stick that aims', sideRight.includes('id="t-jump"'));
 ok('with Down under it, once you are flying', sideRight.includes('id="t-down"'));
 {
   // One button on the ground, two in the air. Up has to be the upper one —
@@ -67,11 +67,17 @@ ok('with Down under it, once you are flying', sideRight.includes('id="t-down"'))
 }
 ok('and neither is left up in the column',
   !column.includes('id="t-jump"') && !column.includes('id="t-break"'));
-// Outboard means hard against the screen edge, with the sticks moved in far
-// enough to leave the room — which is what the inset is for now.
-ok('they sit at the edge', /#side-left \{ left: 12px; \}/.test(css) && /#side-right \{ right: 12px; \}/.test(css));
-ok('and the stick is inset far enough to leave them the room',
-  /--stick-inset: 78px;/.test(css) && /:root \{ --stick-inset: 72px;/.test(css));
+// Break inboard and Jump outboard, which is why they anchor differently — and
+// why the two sticks are inset differently: each sits as far out as its own
+// side allows, which is what keeps air in the middle of a 320px screen.
+ok('Break is anchored past the walking stick',
+  /#side-left \{ left: calc\(var\(--stick-edge\) \+ var\(--stick-size\) \+ 10px\); \}/.test(css));
+ok('and Jump against the edge, outboard of the aiming one',
+  /#side-right \{ right: var\(--stick-edge\); \}/.test(css));
+ok('so the stick with nothing outboard sits at the edge',
+  /#stick-left \.stick-base \{ left: var\(--stick-edge\); \}/.test(css));
+ok('and the one with Jump beside it comes in past it',
+  /#stick-right \.stick-base \{ right: var\(--stick-inset\); \}/.test(css));
 ok('and they are centred on the base, so the reach is sideways only',
   /\.stick-side \{[\s\S]{0,200}\(var\(--stick-size\) - var\(--side-btn\)\) \/ 2/.test(css));
 // Smaller than a column button: the edge strip they sit in is narrow, and the
@@ -115,14 +121,17 @@ ok('nothing is laid out in a row', !/class="row"/.test(ui));
   ok(`the stick base reaches ${top(big)}px up`, top(big) === 206);
   ok(`and the column starts ${big.gap}px above it`, big.gap > 0);
   ok('a smaller screen shrinks the base and pulls it in', small.size < big.size && small.inset < big.inset);
-  // Outboard only works if the stick is inset far enough to leave the button
-  // the room, and if the two bases still clear each other across the narrowest
-  // phone worth caring about.
-  ok(`the inset leaves ${small.inset - 12 - 50}px between the button and the base`,
-    small.inset >= 12 + 50 + 4);
+  // Four things across the bottom: the left stick, Break, the right stick and
+  // Jump. They have to clear each other on the narrowest phone worth caring
+  // about, which is where this arrangement is actually tested.
+  const edge = Number(css.match(/:root \{ --stick-inset: 72px; --stick-edge: (\d+)px/)[1]);
+  const side = 50;
+  ok(`the aiming stick is inset ${small.inset}px, past Jump's ${edge + side}px`,
+    small.inset >= edge + side + 4);
   for (const w of [320, 360, 393, 430]) {
-    const between = w - 2 * (small.inset + small.size);
-    ok(`at ${w}px the two stick bases still clear each other by ${between}px`, between >= 0);
+    const breakEnds = edge + small.size + 10 + side;
+    const rightBase = w - small.inset - small.size;
+    ok(`at ${w}px Break clears the aiming stick by ${rightBase - breakEnds}px`, rightBase > breakEnds);
   }
 }
 

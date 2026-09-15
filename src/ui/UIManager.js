@@ -289,12 +289,12 @@ export class UIManager {
         </div>
 
         <!--
-          Break and Jump sit outboard of their own stick — Break to the left
-          of the one that walks, Jump to the right of the one that aims — with
-          the sticks moved in off the edge to leave them the room. Outboard
-          keeps the middle of the screen clear, which is the part you are
-          actually looking at, and puts the two you press hardest under the
-          outer edge of the thumb that is already down there.
+          Break sits to the right of the stick that walks and Jump to the
+          right of the one that aims — each of them a thumb-width from the
+          stick it belongs to, and each on the side that side has room for.
+          That asymmetry is the point: with nothing outboard of the left stick
+          it can sit out at the edge, which leaves the middle of a small screen
+          some air rather than four things elbowing each other.
         -->
         <div class="stick-side" id="side-left">
           <button class="touch-btn small" id="t-break">${icon('mine')}<span>Break</span></button>
