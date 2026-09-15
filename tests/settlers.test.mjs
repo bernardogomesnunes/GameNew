@@ -4,6 +4,7 @@ import { StructureRegistry } from '../src/structures/StructureRegistry.js';
 import { Settlers } from '../src/duilt/Settlers.js';
 import { SETTLERS, settlerName, settlerColour } from '../src/config/settlers.js';
 import { STRUCTURES_BY_ID } from '../src/config/structures.js';
+import { plantTree } from '../src/world/features.js';
 
 /**
  * The people who move in.
@@ -318,6 +319,62 @@ ok('and they walk slower than the player', SETTLERS.walkSpeed < 5);
   });
   orphaned.loadJSON(saved);
   ok('but people whose houses are gone do not come back', orphaned.population === 0);
+}
+
+// --- standing on what is actually there --------------------------------------
+
+/**
+ * They were drawn at the terrain height as generated, and nothing updates that
+ * when you build. So the moment you laid a floor or levelled a site — which is
+ * what everybody does before putting a house on it — the people who lived
+ * there were rendered inside the ground. "I finished Age 1 and there is nobody
+ * here" was three settlers standing under the floorboards.
+ *
+ * A tree is also something standing on the recorded ground, so the step up has
+ * to refuse those, or they climb into the branches instead.
+ */
+{
+  const { world, settlers } = setup({ beds: 2 });
+  const STONE = 3, COBBLE = 8;
+  const at = (x, z) => settlers.groundAt(x, z);
+
+  ok('on untouched land they stand on the ground', at(40, 40) === 11);
+
+  world.setBlock(41, 11, 41, COBBLE);
+  ok('a floor laid under them puts them on it', at(41, 41) === 12);
+
+  for (let y = 11; y <= 13; y++) world.setBlock(42, y, 42, STONE);
+  ok('and a terrace levelling a slope, three blocks up', at(42, 42) === 14);
+
+  for (let y = 11; y <= 14; y++) world.setBlock(43, y, 43, STONE);
+  ok('four is still a step', at(43, 43) === 15);
+
+  for (let y = 11; y <= 15; y++) world.setBlock(44, y, 44, STONE);
+  ok('five is a tower, so they walk round the foot of it', at(44, 44) === 11);
+
+  plantTree(world, 45, 11, 45, () => 0.1);   // the generator's shortest trunk
+  plantTree(world, 50, 11, 50, () => 0.9);   // and its tallest
+  ok('a tree is not a staircase', at(45, 45) === 11 && at(50, 50) === 11);
+
+  // A roof overhead is not something to climb onto either. Well clear of the
+  // trees above — their leaves reach two blocks out.
+  world.setBlock(30, 11, 30, COBBLE);
+  world.setBlock(30, 15, 30, COBBLE);
+  ok('inside a room they stand on its floor, not on its roof', at(30, 30) === 12);
+  for (let x = 20; x < 26; x++) world.setBlock(x, 20, 5, COBBLE);
+  ok('and a bridge overhead changes nothing underneath', at(22, 5) === 11);
+
+  // Digging is the same problem the other way up.
+  for (let y = 5; y <= 9; y++) world.setBlock(33, y, 33, STONE);   // give the column some depth
+  world.setBlock(33, 10, 33, 0);                                   // and take the top off
+  ok('ground dug out from under them takes them down with it', at(33, 33) === 10);
+
+  // And it is applied every tick, not only at the end of a walk: standing
+  // still while the ground changes was up to ten seconds in mid-air.
+  const p = settlers.people[0] ?? (settlers.tick(SETTLERS.arriveEverySeconds + 1), settlers.people[0]);
+  p.x = 41.5; p.z = 41.5; p.y = 0; p.wait = 9;
+  settlers.tick(0.1);
+  ok('and it settles them even while they are standing about', p.y === 12);
 }
 
 ok('loading nothing is safe', (() => {

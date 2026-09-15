@@ -27,6 +27,15 @@ const centreOf = (r) => ({
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
+/**
+ * How far a settler will step up onto something built on the ground.
+ *
+ * Four, because that is a generous floor or terrace and the shortest tree
+ * trunk in the game — so the check above it lands inside the leaves and the
+ * climb is refused.
+ */
+const STEP_UP = 4;
+
 export class Settlers {
   constructor({ world, structures, inventory, skills, bus, rand = Math.random }) {
     this.world = world;
@@ -239,8 +248,41 @@ export class Settlers {
 
   // ---- getting about -------------------------------------------------------
 
+  /**
+   * The floor under a settler — what is there now, not what the land was.
+   *
+   * `surfaceHeight` is the terrain as generated and nothing updates it when
+   * you build, because the rest of the game wants the original ground: it is
+   * how "underground" is worked out, where trees go, and how a flat site is
+   * found. Settlers want the opposite. Level a hillside, lay a floor, raise a
+   * terrace — anything at all on top of the land — and standing people at the
+   * recorded height puts them *inside* it, which is the whole of "I built a
+   * settlement and there is nobody in it". They were there. They were under
+   * the floor.
+   *
+   * Two rules keep the step honest, because a tree is also something standing
+   * on the recorded ground and nobody wants settlers in the branches: it has
+   * to be low enough to be a step up, and there has to be room to stand on
+   * top. A trunk is four or five blocks with leaves right above it, so it
+   * fails both, and they walk past its foot the way they always have.
+   */
   groundAt(x, z) {
-    return this.world.surfaceHeight(Math.floor(x), Math.floor(z));
+    const ix = Math.floor(x), iz = Math.floor(z);
+    const w = this.world;
+    const base = w.surfaceHeight(ix, iz);
+
+    if (w.isSolid(ix, base, iz)) {
+      let y = base;
+      while (y < base + STEP_UP && y < w.height - 2 && w.isSolid(ix, y, iz)) y++;
+      const roomToStand = !w.isSolid(ix, y, iz) && !w.isSolid(ix, y + 1, iz);
+      return roomToStand ? y : base;
+    }
+
+    // Nothing on it, so fall to whatever is under it: the ground itself may
+    // have been dug out from beneath them.
+    let y = base;
+    while (y > 0 && !w.isSolid(ix, y - 1, iz)) y--;
+    return y;
   }
 
   placeOf(id) {
@@ -257,6 +299,13 @@ export class Settlers {
    * ground height rather than colliding with it.
    */
   walk(p, dt) {
+    // Every tick, not only after a step. Somebody standing outside their house
+    // while you lay a path under them should end up on the path, and somebody
+    // whose ground you dig out should come down with it — waiting for their
+    // next walk is up to a ten-second stretch of a person hanging in the air
+    // or buried to the neck.
+    p.y = this.groundAt(p.x, p.z);
+
     if (p.wait > 0) {
       p.wait -= dt;
       if (p.wait > 0) return;
@@ -326,8 +375,11 @@ export class Settlers {
 
   loadJSON(data) {
     if (!data?.people) return;
+    // The saved height is where the ground was when the tab shut; anything
+    // built under them since would leave them standing in it until their next
+    // step, which can be several seconds of looking like nobody is home.
     this.people = data.people.map((p) => ({
-      ...p, target: null, wait: 1 + this.rand() * 3, atWork: false,
+      ...p, y: this.groundAt(p.x, p.z), target: null, wait: 1 + this.rand() * 3, atWork: false,
     }));
     this.nextId = data.nextId ?? this.people.length;
     // Houses and workplaces may have been taken down while we were away.

@@ -1148,8 +1148,10 @@ body.touch #building-hint { pointer-events: auto; }
 .finish-icon { font-size: 16px; width: 22px; text-align: center; }
 .finish-n { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700; }
 
-/* Population, beside hunger. */
-#vital-people { gap: 6px; }
+/* Population, beside hunger. A button, because the count alone does not say
+   why it is the number it is — see DuiltUI.sayPeople. */
+#vital-people { gap: 6px; font: inherit; color: var(--text); cursor: pointer; min-height: 30px; }
+#vital-people:active { background: rgba(255,255,255,0.14); }
 .vital-count {
   font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text);
 }

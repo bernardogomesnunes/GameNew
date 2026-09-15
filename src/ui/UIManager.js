@@ -728,6 +728,11 @@ export class UIManager {
 
   wireBus() {
     this.bus.on('inventory:change', () => this.refreshTools());
+    // Anything that wants to say a line puts it on the bus. Nothing was
+    // listening: six messages in DuiltUI went nowhere, and the loudest of them
+    // was "somebody moved in" — so the settlement filled up in silence and the
+    // game looked like it had forgotten to send anybody.
+    this.bus.on('toast', (t) => this.toast(t));
     // Moving up an age had no listener at all: the border moved, the goal list
     // changed, and nothing said why or what the new age is for.
     this.bus.on('duilt:age', ({ age, name, size, intro }) => {

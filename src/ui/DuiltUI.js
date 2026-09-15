@@ -69,13 +69,14 @@ export class DuiltUI {
         <!--
           Population sits beside hunger because it is the same kind of fact:
           how the settlement is doing, not what you are carrying. It says beds
-          as well as people, so "why is nobody coming" is answerable without
-          opening anything.
+          as well as people, and it is a button, because "0/0" is a number and
+          not an answer — the answer used to be a title attribute, which is a
+          hover on a desktop and nothing whatsoever on a phone.
         -->
-        <div class="vital" id="vital-people" title="Settlers" hidden>
+        <button type="button" class="vital" id="vital-people" title="Settlers" hidden>
           <span class="vital-icon">👤</span>
           <span class="vital-count" id="people-count">0</span>
-        </div>
+        </button>
       </div>
 
       <div id="goals" hidden>
@@ -113,6 +114,7 @@ export class DuiltUI {
     this.el.querySelectorAll('[data-close]').forEach((b) =>
       b.addEventListener('click', () => this.closePanel(b.dataset.close)));
     this.q('#btn-eat').addEventListener('click', () => this.eat());
+    this.q('#vital-people').addEventListener('click', () => this.sayPeople());
 
     // The task list is a reminder, not a readout you stare at, and on a phone
     // it was taking a corner of the screen permanently. Collapsed it keeps the
@@ -276,6 +278,29 @@ export class DuiltUI {
     box.classList.toggle('full', population >= target && target > 0 && !hungry);
     box.classList.toggle('hungry', hungry > 0);
     if (!hungry) this.saidHungry = false;
+  }
+
+  /**
+   * The state of the settlement, said out loud.
+   *
+   * One house reads as "0/0" and looks broken, because from the outside it is
+   * indistinguishable from a game that forgot to send anybody. It isn't: the
+   * first house is yours and the second is the one that brings somebody, and
+   * that rule was only ever written in a hover tooltip. Tapping asks.
+   */
+  sayPeople() {
+    const d = this.duilt;
+    if (!d) return;
+    const { population, target, houses, hungry } = d.settlers;
+    const say = (title, body) => this.bus.emit('toast', { kind: 'xp', title, body });
+    if (hungry) {
+      return say(hungry === 1 ? 'Somebody has nothing to eat' : `${hungry} people have nothing to eat`,
+        'They stop working until there is food — build a farm');
+    }
+    const reason = d.settlers.blockedReason();
+    if (reason) return say(houses ? `${population} living here` : 'Nobody lives here yet', reason);
+    say(`${population} of ${target} moved in`,
+      population < target ? 'Somebody is on the way' : 'Every house has a household');
   }
 
   eat() {

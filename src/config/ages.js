@@ -43,7 +43,10 @@ export const AGES = [
     intro: 'Wood only gets you so far. Open a quarry, and put a second roof up while you are at it.',
     goals: [
       { structure: 'quarry', count: 1, label: 'Open a quarry' },
-      { structure: 'house', count: 2, label: 'Have two houses standing' },
+      // Named for what it does rather than what it counts: the first house is
+      // yours, so this is the one that puts a person in the world, and a goal
+      // that only says "two houses" leaves that a surprise.
+      { structure: 'house', count: 2, label: 'Build a second house — somebody moves in' },
     ],
   },
   {
