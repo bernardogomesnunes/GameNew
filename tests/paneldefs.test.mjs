@@ -103,6 +103,9 @@ for (const p of PANELS) {
   const opened = sources.includes(`openPanel('${p.id}')`)
     || sources.includes(`openDuiltPanel('${p.id}')`)
     || sources.includes(`togglePanel('${p.id}')`)
+    // A tool's button opens its panel or puts the tool away, depending on
+    // whether that tool is the one in hand.
+    || sources.includes(`, '${p.id}')`)
     || !!p.key;
   ok(`${p.id} has a way in`, opened);
 }

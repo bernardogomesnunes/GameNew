@@ -83,6 +83,13 @@ export class UIManager {
       <div id="tool-readout" hidden>
         <div class="sel-head"><span id="tool-name"></span><span id="tool-target"></span></div>
         <div class="sel-hint" id="tool-hint"></div>
+        <!--
+          The way out, on the thing it gets you out of.
+          Both thumb buttons are taken while a tool is queued — one places it,
+          one turns it — so without this there was no way off a roof at all
+          except the key a phone does not have.
+        -->
+        <button id="tool-cancel">Put it away</button>
       </div>
 
       <!--
@@ -487,8 +494,13 @@ export class UIManager {
     }
 
     this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
-    this.q('#btn-templates').addEventListener('click', () => this.openPanel('panel-templates'));
-    this.q('#btn-roof').addEventListener('click', () => this.openPanel('panel-roof'));
+    this.q('#btn-templates').addEventListener('click', () => this.toolButton('design', 'panel-templates'));
+    this.q('#btn-roof').addEventListener('click', () => this.toolButton('roof', 'panel-roof'));
+    this.q('#tool-cancel').addEventListener('click', () => this.cb.onCancelTool?.());
+    this.q('#tool-cancel').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      this.cb.onCancelTool?.();
+    }, { passive: false });
     this.q('#btn-bag').addEventListener('click', () => this.cb.onOpenBag());
     this.q('#btn-buildings').addEventListener('click', () => this.cb.onOpenBuildings());
     this.q('#btn-bench').addEventListener('click', () => this.cb.onOpenBench());
@@ -504,9 +516,9 @@ export class UIManager {
       // drawn, and nothing anywhere opened it.
       ['#t-skills', () => this.openPanel('panel-skills')],
       ['#t-stats', () => this.openPanel('panel-stats')],
-      ['#t-clear', () => this.openPanel('panel-clear')],
-      ['#t-designs', () => this.openPanel('panel-templates')],
-      ['#t-roof', () => this.openPanel('panel-roof')],
+      ['#t-clear', () => this.toolButton('clear', 'panel-clear')],
+      ['#t-designs', () => this.toolButton('design', 'panel-templates')],
+      ['#t-roof', () => this.toolButton('roof', 'panel-roof')],
     ];
     for (const [sel, fn] of openers) {
       const btn = this.q(sel);
@@ -1291,8 +1303,22 @@ export class UIManager {
     btn.classList.toggle('active', mode !== 'off');
   }
 
+  /**
+   * A tool's button: opens its panel, or puts the tool away if it is the one
+   * already queued.
+   *
+   * The button is lit while its tool is in hand, so pressing the lit thing to
+   * put it down is the obvious move — and it was the one route that did not
+   * work, because it just reopened the panel you had already chosen from.
+   */
+  toolButton(id, panel) {
+    if (this.armedTool === id) return void this.cb.onCancelTool?.();
+    this.openPanel(panel);
+  }
+
   /** Lights the button whose tool is queued, so the HUD says what is in hand. */
   setArmedTool(id) {
+    this.armedTool = id;
     const where = {
       roof: ['#btn-roof', '#t-roof'],
       design: ['#btn-templates', '#t-designs'],

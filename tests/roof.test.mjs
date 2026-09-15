@@ -239,7 +239,10 @@ ok('the roof panel is declared with the rest', PANELS_BY_ID.has('panel-roof'));
 ok('and exists in every kind of world', PANELS_BY_ID.get('panel-roof').mode === 'any');
 ok('so does Designs, which used to be creative-only', PANELS_BY_ID.get('panel-templates').mode === 'any');
 ok('there is a button for it', /id="btn-roof"/.test(ui) && /id="t-roof"/.test(ui));
-ok('and it opens the panel', /#btn-roof.*openPanel\('panel-roof'\)/.test(ui));
+// The same button puts the roof away again when it is the one in hand — both
+// thumb buttons are taken while it is queued, so this is one of the ways out.
+ok('and it opens the panel, or puts the roof away',
+  /#btn-roof'\)\.addEventListener\('click', \(\) => this\.toolButton\('roof', 'panel-roof'\)\)/.test(ui));
 ok('picking a shape queues it rather than placing it blind', /onPickRoof\(btn\.dataset\.roof\)/.test(ui));
 
 ok('it goes through the one place blocks change, so it is bounded and paid for',

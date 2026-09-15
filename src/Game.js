@@ -428,6 +428,7 @@ export class Game {
         }
         return !!this.pendingRoof;
       },
+      onCancelTool: () => this.clearPending(),
       onRotateRoof: () => this.turnRoof(),
       onPlaceRoof: () => this.stampRoof(),
       onPickClear: (id) => {
@@ -773,6 +774,11 @@ export class Game {
       if (e.code === 'Escape') {
         // Putting down what you are holding comes before putting away panels.
         if (this.moving) { this.cancelMove(); return; }
+        // And a queued tool is something you are holding. Without this, the one
+        // key that means "put this away" opened the menu instead, and a roof
+        // with more than one way round could not be put away at all — the
+        // second button turns it, so it never reached the cancel underneath.
+        if (this.armed) { this.clearPending(); return; }
         if (this.pointerLocked) return; // browser handles exiting lock
         // One at a time, most recent first — Escape means "put away the thing
         // in front of me", not "put away everything". On the worlds screen

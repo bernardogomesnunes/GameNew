@@ -140,6 +140,16 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 #tool-readout #tool-name { font-weight: 700; color: var(--accent); }
 #tool-readout #tool-target { color: var(--text-dim); }
 #tool-readout .sel-hint { margin-top: 3px; font-size: 11px; color: var(--text-dim); }
+/* The readout ignores taps so it never eats one meant for the world; this is
+   the one part of it you can touch. */
+#tool-cancel {
+  pointer-events: auto; margin-top: 7px; width: 100%;
+  background: rgba(255,255,255,0.08); color: var(--text);
+  border: 1px solid var(--panel-border-strong); border-radius: 7px;
+  padding: 7px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+#tool-cancel:hover { background: rgba(255,255,255,0.15); }
+#tool-cancel:active { background: rgba(255,255,255,0.22); }
 
 #top-buttons { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; pointer-events: auto; }
 .icon-btn {

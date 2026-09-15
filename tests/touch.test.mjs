@@ -267,6 +267,33 @@ ok('the look stick is curved harder than the walking one',
   ok('the More sheet scrolls instead of overflowing', /body\.touch \.touch-tray \{[\s\S]{0,200}overflow-y: auto/.test(short));
 }
 
+// --- getting back out of a tool -----------------------------------------------
+
+// Both thumb buttons are taken while a tool is queued: one places it, one
+// turns it. So the cancel that sat under them was unreachable for any roof
+// with more than one way round — you could pick a gable and never put it down.
+{
+  const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+  ok('the turn still takes the second button, which is what caused this',
+    /if \(this\.pendingRoof\?\.turns > 1\) return void this\.turnRoof\(\);/.test(game));
+  // Three ways out, because the three places you would look are the readout,
+  // the lit button, and the key that means "put this away".
+  ok('the readout carries the way out', /id="tool-cancel"/.test(ui));
+  ok('and it is the one part of the readout you can touch',
+    /#tool-cancel \{[^}]*pointer-events: auto/.test(css));
+  ok('it takes a tap as well as a click', /#tool-cancel'\)\.addEventListener\('touchstart'/.test(ui));
+  ok('the lit tool button puts its own tool away', /toolButton\(id, panel\) \{[\s\S]{0,160}this\.armedTool === id/.test(ui));
+  ok('and every tool button goes through it',
+    (ui.match(/this\.toolButton\('/g) ?? []).length >= 5);
+  // Escape meant "put away the thing in front of me" everywhere else already.
+  ok('Escape puts a queued tool away', /if \(this\.armed\) \{ this\.clearPending\(\); return; \}/.test(game));
+  // Inside the Escape handler, before the fallback that opens the menu —
+  // which is what Escape used to do instead of putting the roof away.
+  const esc = game.slice(game.indexOf("if (e.code === 'Escape')"), game.indexOf('if (e.repeat) return;'));
+  ok('and does it before the fallback that opens the menu',
+    esc.indexOf('this.clearPending(); return;') < esc.indexOf("openPanel('panel-menu')"));
+}
+
 ok('the top toolbar still has room without wrapping', /#top-buttons \{[^}]*max-width: 58%/.test(css));
 
 process.exit(f ? 1 : 0);
