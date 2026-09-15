@@ -43,18 +43,16 @@ ok('and the camera keeps its finer control near centre',
 // Reaching up the edge for the thing you press between every other thing you
 // press is the reach that was costing time. Jump goes with the thumb that
 // walks, Place with the thumb that aims.
-ok('Jump is beside the stick that walks', sideLeft.includes('id="t-jump"'));
-ok('with Down above it, once you are flying', sideLeft.includes('id="t-down"'));
-ok('and Place beside the stick that aims', sideRight.includes('id="t-place"'));
-ok('neither is left up in the column', !column.includes('id="t-jump"') && !column.includes('id="t-place"'));
-// Outboard of either stick is the screen edge, so inboard is the only side
-// there is — and the anchors say so in the stick's own terms rather than in a
-// number that happens to match today.
-ok('they anchor off the stick rather than a number',
-  /#side-left \{ left: calc\(var\(--stick-inset\) \+ var\(--stick-size\)\); \}/.test(css)
-  && /#side-right \{ right: calc\(var\(--stick-inset\) \+ var\(--stick-size\)\); \}/.test(css));
-ok('so a smaller screen moves them with it, not onto it',
-  /:root \{ --stick-inset: 16px; --stick-size: 88px;/.test(css));
+ok('Break is outboard of the stick that walks', sideLeft.includes('id="t-break"'));
+ok('Jump is outboard of the stick that aims', sideRight.includes('id="t-jump"'));
+ok('with Down above it, once you are flying', sideRight.includes('id="t-down"'));
+ok('and neither is left up in the column',
+  !column.includes('id="t-jump"') && !column.includes('id="t-break"'));
+// Outboard means hard against the screen edge, with the sticks moved in far
+// enough to leave the room — which is what the inset is for now.
+ok('they sit at the edge', /#side-left \{ left: 12px; \}/.test(css) && /#side-right \{ right: 12px; \}/.test(css));
+ok('and the stick is inset far enough to leave them the room',
+  /--stick-inset: 78px;/.test(css) && /:root \{ --stick-inset: 72px;/.test(css));
 ok('and they are centred on the base, so the reach is sideways only',
   /\.stick-side \{[\s\S]{0,200}\(var\(--stick-size\) - 54px\) \/ 2/.test(css));
 // The middle of a 320px screen is only 112px wide once both sticks have theirs.
@@ -63,7 +61,7 @@ ok('a stick-side button is smaller than a column one',
 
 // --- what is left in the column ----------------------------------------------
 
-ok('Break stays in the column', column.includes('id="t-break"'));
+ok('Place is in the column, where Break used to be', column.includes('id="t-place"'));
 ok('Fly too, being a mode rather than an action', column.includes('id="t-fly"'));
 ok('and More', column.includes('id="t-more"'));
 
@@ -72,7 +70,7 @@ ok('nothing is laid out in a row', !/class="row"/.test(ui));
 {
   const order = [...column.matchAll(/id="(t-[a-z]+)"/g)].map((m) => m[1]);
   ok(`the column reads ${order.join(', ')}`,
-    JSON.stringify(order) === JSON.stringify(['t-more', 't-fly', 't-break']));
+    JSON.stringify(order) === JSON.stringify(['t-more', 't-fly', 't-place']));
 }
 
 // --- nothing on top of a stick ------------------------------------------------
@@ -89,22 +87,25 @@ ok('nothing is laid out in a row', !/class="row"/.test(ui));
     gap: Number(from.match(/--stick-gap: (\d+)px/)[1]),
   });
   const big = vars(css.slice(css.indexOf(':root {'), css.indexOf('.icon {')));
-  const small = vars(css.slice(css.indexOf(':root { --stick-inset: 16px')));
+  const small = vars(css.slice(css.indexOf(':root { --stick-inset: 72px')));
   const top = (v) => v.zone + v.bottom + v.size;
   ok(`the stick base reaches ${top(big)}px up`, top(big) === 206);
   ok(`and the column starts ${big.gap}px above it`, big.gap > 0);
   ok('a smaller screen shrinks the base and pulls it in', small.size < big.size && small.inset < big.inset);
-  // 320px is the narrowest phone worth caring about; both sticks and both
-  // stick-side buttons have to fit across it.
+  // Outboard only works if the stick is inset far enough to leave the button
+  // the room, and if the two bases still clear each other across the narrowest
+  // phone worth caring about.
+  ok(`the inset leaves ${small.inset - 12 - 50}px between the button and the base`,
+    small.inset >= 12 + 50 + 4);
   for (const w of [320, 360, 393, 430]) {
-    const clear = w - 2 * (small.inset + small.size) - 2 * 50;
-    ok(`at ${w}px there is still ${clear}px between Jump and Place`, clear > 0);
+    const between = w - 2 * (small.inset + small.size);
+    ok(`at ${w}px the two stick bases still clear each other by ${between}px`, between >= 0);
   }
 }
 
 // --- everything occasional is behind More -------------------------------------
 
-for (const id of ['t-bag', 't-bench', 't-build', 't-skills', 't-designs', 't-roof', 't-clear', 't-symmetry', 't-screen']) {
+for (const id of ['t-bag', 't-bench', 't-build', 't-skills', 't-designs', 't-roof', 't-stats', 't-screen']) {
   ok(`${id} is behind More`, tray.includes(`id="${id}"`));
 }
 // Fly changes what every other control does. Behind More it was a mode you
@@ -120,12 +121,17 @@ ok('which grows sideways within the screen rather than up past it',
 ok('and no longer needs a ceiling to stop it', !/max-height: calc\(100dvh - 530px\)/.test(css));
 ok('it sits clear of the hotbar', /\.touch-tray \{[\s\S]{0,300}bottom: calc\(84px/.test(css));
 
-// --- the guide stays at the top ----------------------------------------------
+// --- what is left at the top --------------------------------------------------
 
-ok('the guide has a button at the top', /id="btn-guide"/.test(ui));
-ok('and it is not hidden on a phone like the rest of the toolbar',
-  !/touch-moved" id="btn-guide"/.test(ui));
-ok('so it is gone from the tray', !tray.includes('id="t-guide"'));
+// The How to play panel is gone — the goals teach the game now — so the top
+// right is the one button that is not a game control at all.
+ok('there is no guide button any more', !/id="btn-guide"/.test(ui));
+ok('and the menu reads as settings', /id="btn-menu"[^>]*>\$\{icon\('settings'\)\}<span>Settings<\/span>/.test(ui));
+ok('the goals moved into the tray with everything else you open', tray.includes('id="t-stats"'));
+// Made, not given.
+ok('Clear and Mirror are there only once you have made the tool',
+  /id="t-clear" data-tool="clear" hidden/.test(ui) && /id="t-symmetry" data-tool="mirror" hidden/.test(ui));
+ok('and the game says which ones you hold', /heldTools:/.test(readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8')));
 
 // --- the goal list is out of the way ------------------------------------------
 

@@ -24,7 +24,6 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const LOG = 4, DIRT = 2, GRASS = 1;
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
-const guide = readFileSync(new URL('../src/config/guide.js', import.meta.url), 'utf8');
 
 /** Flat recorded ground at y=20, with a 5x5 hut of logs standing on it. */
 function world({ hut = true } = {}) {
@@ -114,7 +113,11 @@ ok('nothing draws for no shape', clearArtSvg(null) === '');
 
 ok('the panel is declared with the rest', PANELS_BY_ID.has('panel-clear'));
 ok('and works in every kind of world', PANELS_BY_ID.get('panel-clear').mode === 'any');
-ok('there is a button for it', /id="btn-clear"/.test(ui) && /id="t-clear"/.test(ui));
+// Made, not given: the button is there once the pry bar is in your bag.
+ok('there is a button for it once you have made the tool',
+  /id="t-clear" data-tool="clear" hidden/.test(ui));
+ok('and something to make it out of',
+  /id: 'pry_bar'/.test(readFileSync(new URL('../src/config/recipes.js', import.meta.url), 'utf8')));
 ok('picking one queues it rather than clearing blind', /onPickClear\(btn\.dataset\.clear\)/.test(ui));
 
 // Straight through the one place blocks change, so your border refuses it, a
@@ -140,7 +143,5 @@ ok('and it counts as armed, so Break does not break underneath it',
 ok('no undo anywhere in the game', !/undoTool|toolHistory|doUndo|doRedo/.test(game));
 ok('no button for one', !/btn-undo|btn-redo/.test(ui));
 ok('and no key', !/KeyZ|KeyY/.test(game));
-ok('the guide says so plainly', /There is no undo/.test(guide));
-ok('and points at the tool that replaces it', /Clear takes it away/.test(guide));
 
 process.exit(f ? 1 : 0);

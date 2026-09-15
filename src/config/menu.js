@@ -22,6 +22,9 @@
  *   opens  an existing panel id, for sections that already have somewhere
  *          to live. Without it, the section renders inside the menu.
  *   needs  'cloud' — only shown when cloud sync is configured for this build
+ *   dev    a workshop tool rather than something a player came here to do.
+ *          Folded away behind one switch, so the menu is the four things
+ *          somebody actually opens it for and these stay one tap from hand.
  */
 
 export const MENU = [
@@ -33,12 +36,14 @@ export const MENU = [
   },
   {
     id: 'menu-graphics',
+    dev: true,
     name: 'Graphics',
     icon: 'sliders',
     blurb: 'Resolution, view distance and smooth edges — turn these down if it stutters.',
   },
   {
     id: 'menu-files',
+    dev: true,
     name: 'Files',
     icon: 'file',
     blurb: 'Export this world or a .vox model, or import a world from a file.',
@@ -62,10 +67,19 @@ export const MENU = [
 
 export const MENU_BY_ID = new Map(MENU.map((m) => [m.id, m]));
 
-/** The sections this build actually offers. */
-export function menuFor({ cloud = false } = {}) {
-  return MENU.filter((m) => m.needs !== 'cloud' || cloud);
+/**
+ * The sections this build offers.
+ *
+ * `dev` ones are out unless asked for. They are the workshop end of the menu —
+ * the render settings and the file import — and they were sitting in front of
+ * the things a player opens the menu to do.
+ */
+export function menuFor({ cloud = false, dev = false } = {}) {
+  return MENU.filter((m) => (m.needs !== 'cloud' || cloud) && (!m.dev || dev));
 }
+
+/** Whether anything is hidden behind the switch at all. */
+export const HAS_DEV_SECTIONS = MENU.some((m) => m.dev);
 
 /** Sections that render inside the menu rather than opening a panel. */
 export function inlineSections() {

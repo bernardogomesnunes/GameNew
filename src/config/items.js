@@ -69,7 +69,29 @@ export const ITEMS = [
     id: 'bucket_water', name: 'Bucket of Water', kind: 'tool', stackTo: STACK_TOOL, color: 0x2f6fbf, glyph: 'bucketFull',
     durability: null, madeBy: 'Filled at a river', unlocks: 'Pouring water where you need it',
   },
+
+  // --- building tools -------------------------------------------------------
+  //
+  // Clearing a hillside and mirroring a wall were buttons that were simply
+  // there, in a game whose whole shape is that you make the thing before you
+  // can use it. They are made now, like the axe, and the button appears when
+  // you own one.
+  {
+    id: 'pry_bar', name: 'Pry bar', kind: 'tool', stackTo: STACK_TOOL, color: 0x8c6f4a, glyph: 'clear',
+    durability: null, madeBy: 'Crafted at the bench', unlocks: 'Clearing a lot of blocks at once',
+    grants: 'clear',
+  },
+  {
+    id: 'chalk_line', name: 'Chalk line', kind: 'tool', stackTo: STACK_TOOL, color: 0xd8d2c4, glyph: 'symmetry',
+    durability: null, madeBy: 'Crafted at the bench', unlocks: 'Mirroring what you place',
+    grants: 'mirror',
+  },
 ];
+
+/** What a tool lets you do, if it lets you do anything: 'clear' -> 'pry_bar'. */
+export const TOOL_FOR = new Map(
+  ITEMS.filter((i) => i.grants).map((i) => [i.grants, i.id]),
+);
 
 export const ITEMS_BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
 

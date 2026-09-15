@@ -1,161 +1,180 @@
-// Achievement definitions. `check(ctx)` receives { stats, event } and returns
-// true once the achievement should unlock. `stats` is the cumulative
-// gamification snapshot (see gamification/GamificationEngine.js), `event` is
-// the specific action that just happened (place/break/levelup/etc), or null
-// for periodic re-checks.
-export const ACHIEVEMENTS = [
+import { AGES } from './ages.js';
+
+/**
+ * The goals, which are also how the game teaches itself.
+ *
+ * There was a How to play panel: six tabs of prose nobody opens twice, sitting
+ * beside a list of achievements about placing a hundred blocks. Two halves of
+ * the same job done separately and neither done well — the prose told you what
+ * the buttons were, and the achievements rewarded you for things the game does
+ * not actually care whether you do.
+ *
+ * So the prose is gone and this is the teaching. The shape is the world's own
+ * shape: one band per age, each naming the handful of things that age is
+ * about, ending with the border moving out. Read top to bottom it is what to
+ * do next, in order, for as long as there is a next thing.
+ *
+ * The age bands come from ages.js rather than being written out, so adding an
+ * age adds a band and the list cannot describe a game that no longer exists.
+ *
+ * How to read one:
+ *
+ *   id           what the save records as unlocked
+ *   age          which band it sits in
+ *   name         the goal, as an instruction where it can be
+ *   description  what to actually do
+ *   icon         one emoji, for the card
+ *   xpReward     what it pays
+ *   check        a predicate over { stats, event }; see GamificationEngine
+ */
+
+/** The goals that teach the verbs, in the order a new player meets them. */
+const OPENING = [
   {
-    id: 'first_steps',
-    name: 'First Steps',
-    description: 'Place your first block.',
+    id: 'first_break',
+    age: 1,
+    name: 'Take something apart',
+    description: 'Break a block. Whatever it was goes into your bag.',
+    icon: '⛏️',
+    xpReward: 10,
+    check: (c) => c.stats.totalBlocksBroken >= 1,
+  },
+  {
+    id: 'first_place',
+    age: 1,
+    name: 'Put it back',
+    description: 'Place a block out of your bag.',
     icon: '🧱',
     xpReward: 10,
-    check: (ctx) => ctx.stats.totalBlocksPlaced >= 1,
+    check: (c) => c.stats.totalBlocksPlaced >= 1,
   },
   {
-    id: 'getting_started',
-    name: 'Getting Started',
-    description: 'Place 25 blocks.',
-    icon: '🔨',
-    xpReward: 25,
-    check: (ctx) => ctx.stats.totalBlocksPlaced >= 25,
-  },
-  {
-    id: 'builder',
-    name: 'Builder',
-    description: 'Place 100 blocks.',
-    icon: '🏗️',
-    xpReward: 50,
-    check: (ctx) => ctx.stats.totalBlocksPlaced >= 100,
-  },
-  {
-    id: 'architect',
-    name: 'Architect',
-    description: 'Place 500+ blocks in a single build session.',
-    icon: '🏛️',
-    xpReward: 150,
-    check: (ctx) => ctx.stats.sessionBlocksPlaced >= 500,
-  },
-  {
-    id: 'collector',
-    name: 'Block Collector',
-    description: 'Use every base block type at least once.',
-    icon: '🎨',
-    xpReward: 100,
-    check: (ctx) => ctx.stats.distinctTypesPlacedEver.size >= 13,
-  },
-  {
-    id: 'sky_high',
-    name: 'Sky High',
-    description: 'Place a block at height 40 or above.',
-    icon: '🌤️',
-    xpReward: 60,
-    check: (ctx) => ctx.stats.maxHeightPlaced >= 40,
-  },
-  {
-    id: 'underground',
-    name: 'Into the Depths',
-    description: 'Build underground, beneath the surface.',
-    icon: '⛏️',
-    xpReward: 60,
-    check: (ctx) => ctx.stats.undergroundActions >= 1,
-  },
-  {
-    id: 'bridge_builder',
-    name: 'Bridge Builder',
-    description: 'Build a 5+ block bridge over open air.',
-    icon: '🌉',
-    xpReward: 60,
-    check: (ctx) => ctx.stats.bridgesBuilt >= 1,
-  },
-  {
-    id: 'first_house',
-    name: 'First House',
-    description: 'Fully enclose a space with walls and a roof.',
+    id: 'first_walls',
+    age: 1,
+    name: 'Four walls',
+    description: 'Place 40 blocks. A room you can stand in is about that many.',
     icon: '🏠',
-    xpReward: 100,
-    check: (ctx) => ctx.stats.enclosedSpacesFound >= 1,
+    xpReward: 30,
+    check: (c) => c.stats.totalBlocksPlaced >= 40,
   },
   {
-    id: 'level_5',
-    name: 'Leveling Up',
-    description: 'Reach level 5.',
-    icon: '⭐',
-    xpReward: 0,
-    check: (ctx) => ctx.stats.level >= 5,
-  },
-  {
-    id: 'level_10',
-    name: 'Seasoned Builder',
-    description: 'Reach level 10.',
-    icon: '🌟',
-    xpReward: 0,
-    check: (ctx) => ctx.stats.level >= 10,
-  },
-  {
-    id: 'streak_3',
-    name: 'Consistent',
-    description: 'Build on 3 consecutive days.',
-    icon: '🔥',
+    id: 'first_roof',
+    age: 1,
+    name: 'Something over your head',
+    description: 'Point at what you built and put a roof on it.',
+    icon: '🏘️',
     xpReward: 40,
-    check: (ctx) => ctx.stats.streakCount >= 3,
+    check: (c) => c.stats.totalBlocksPlaced >= 100,
   },
   {
-    id: 'streak_7',
-    name: 'Dedicated',
-    description: 'Build on 7 consecutive days.',
-    icon: '🔥',
-    xpReward: 100,
-    check: (ctx) => ctx.stats.streakCount >= 7,
-  },
-  {
-    id: 'streak_30',
-    name: 'Unstoppable',
-    description: 'Build on 30 consecutive days.',
-    icon: '🔥',
-    xpReward: 400,
-    check: (ctx) => ctx.stats.streakCount >= 30,
-  },
-  {
-    id: 'architect_draft',
-    name: 'Draughtsman',
-    description: 'Save your first building template.',
-    icon: '\u{1F4D0}',
+    id: 'first_claim',
+    age: 1,
+    name: 'Make it a building',
+    description: 'Point at what you built and claim it. A claimed building works on its own.',
+    icon: '📐',
     xpReward: 60,
-    check: (ctx) => ctx.stats.templatesSaved >= 1,
+    check: (c) => c.stats.claimedCount >= 1,
   },
   {
-    id: 'template_library',
-    name: 'Pattern Book',
-    description: 'Save 5 different templates.',
-    icon: '\u{1F4DA}',
-    xpReward: 140,
-    check: (ctx) => ctx.stats.templatesSaved >= 5,
-  },
-  {
-    id: 'prefab_town',
-    name: 'Prefab Town',
-    description: 'Stamp your own templates 10 times.',
-    icon: '\u{1F3D8}',
-    xpReward: 160,
-    check: (ctx) => ctx.stats.templatesPlaced >= 10,
-  },
-  {
-    id: 'grand_design',
-    name: 'Grand Design',
-    description: 'Save a template of 400 blocks or more.',
-    icon: '\u{1F3DB}',
-    xpReward: 200,
-    check: (ctx) => ctx.stats.largestTemplateBlocks >= 400,
-  },
-  {
-    id: 'challenge_master',
-    name: 'Challenge Master',
-    description: 'Complete 5 daily challenges.',
-    icon: '🏆',
-    xpReward: 120,
-    check: (ctx) => ctx.stats.challengesCompleted >= 5,
+    id: 'first_settler',
+    age: 1,
+    name: 'Somebody moves in',
+    description: 'Put up a second house. The first one is yours; every one after brings somebody.',
+    icon: '👤',
+    xpReward: 80,
+    check: (c) => c.stats.settlersEver >= 1,
   },
 ];
 
+/** The goals that are about running the place rather than starting it. */
+const LATER = [
+  {
+    id: 'three_kinds',
+    age: 2,
+    name: 'Three different buildings',
+    description: 'Claim three kinds of building. Each one makes something the next one needs.',
+    icon: '🏗️',
+    xpReward: 80,
+    check: (c) => c.stats.claimed.size >= 3,
+  },
+  {
+    id: 'a_street',
+    age: 2,
+    name: 'A street of them',
+    description: 'Claim six buildings.',
+    icon: '🏙️',
+    xpReward: 120,
+    check: (c) => c.stats.claimedCount >= 6,
+  },
+  {
+    id: 'a_crowd',
+    age: 3,
+    name: 'Five people living here',
+    description: 'Houses bring settlers, and settlers work your buildings.',
+    icon: '👥',
+    xpReward: 150,
+    check: (c) => c.stats.settlersEver >= 5,
+  },
+  {
+    id: 'a_design',
+    age: 3,
+    name: 'Build it twice',
+    description: 'Save something you built as a design, then stamp it somewhere else.',
+    icon: '📋',
+    xpReward: 90,
+    check: (c) => c.stats.templatesPlaced >= 1,
+  },
+  {
+    id: 'many_kinds',
+    age: 4,
+    name: 'One of everything',
+    description: 'Claim six different kinds of building.',
+    icon: '🗂️',
+    xpReward: 200,
+    check: (c) => c.stats.claimed.size >= 6,
+  },
+  {
+    id: 'a_town',
+    age: 5,
+    name: 'Fifteen buildings',
+    description: 'A settlement that would show up on a map.',
+    icon: '🌆',
+    xpReward: 300,
+    check: (c) => c.stats.claimedCount >= 15,
+  },
+];
+
+/**
+ * One goal per age for the border moving out.
+ *
+ * Written from ages.js, so the numbers on the card are the numbers the border
+ * actually uses. Age 1 is where you start rather than something you reach, so
+ * it is not in here.
+ */
+const BORDERS = AGES.filter((a) => a.age > 1).map((a) => ({
+  id: `age_${a.age}`,
+  age: a.age,
+  name: `Age ${a.age} · ${a.name}`,
+  description: `Finish Age ${a.age - 1} and your land grows to ${a.size} by ${a.size}.`,
+  icon: '🗺️',
+  xpReward: 100 * a.age,
+  border: true,
+  check: (c) => c.stats.age >= a.age,
+}));
+
+export const ACHIEVEMENTS = [...OPENING, ...LATER, ...BORDERS]
+  .sort((x, y) => x.age - y.age || (x.border ? 1 : 0) - (y.border ? 1 : 0));
+
 export const ACHIEVEMENTS_BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
+
+/** The goals of one age, in the order they are meant to be met. */
+export function achievementsForAge(age) {
+  return ACHIEVEMENTS.filter((a) => a.age === age);
+}
+
+/** Every age that has goals, with its name — what the panel draws as bands. */
+export function goalBands() {
+  return AGES
+    .map(({ age, name }) => ({ age, name, goals: achievementsForAge(age) }))
+    .filter((b) => b.goals.length);
+}

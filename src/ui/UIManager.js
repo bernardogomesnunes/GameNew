@@ -7,10 +7,9 @@ import { Panels } from './Panels.js';
 import { ITEMS_BY_ID, itemName } from '../config/items.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { cubeSvg, itemIcon } from '../config/cubes.js';
-import { ACHIEVEMENTS } from '../config/achievements.js';
+import { ACHIEVEMENTS, goalBands } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
-import { guideFor } from '../config/guide.js';
-import { menuFor, MENU_BY_ID } from '../config/menu.js';
+import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
 import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 import { CLEARS, clearArtSvg } from '../config/clears.js';
 
@@ -32,13 +31,13 @@ export class UIManager {
     this.saveManager = saveManager;
     this.cb = callbacks;
     this.selectedBlockId = 1;
-    this.symmetryMode = 'off';
     this.selectionActive = false;
 
     // Before the markup, because what it decides — a phone or not — is read
     // while the rest of this constructor builds. The goal list asks it, and
     // used to be built two lines too early to get an answer.
     this.detectTouch();
+    this.devOpen = false;   // the workshop end of the menu, folded away
 
     root.innerHTML = this.markup();
     this.root = root;
@@ -96,17 +95,12 @@ export class UIManager {
       <div id="top-buttons">
         <button class="icon-btn touch-moved" id="btn-templates" title="Save a build, and stamp it anywhere">${icon('paste')}<span>Designs</span></button>
         <button class="icon-btn touch-moved" id="btn-roof" title="Pitch a roof over the building you point at">${icon('roof')}<span>Roof</span></button>
-        <button class="icon-btn touch-moved" id="btn-clear" title="Take a lot of blocks away at once">${icon('clear')}<span>Clear</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
-        <button class="icon-btn touch-moved" id="btn-symmetry" title="Mirror your building across the world's centre">${icon('symmetry')}<span>Mirror</span></button>
         <button class="icon-btn touch-moved" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
-        <button class="icon-btn touch-moved" id="btn-stats" title="Progress, achievements and challenges">${icon('stats')}<span>Stats</span></button>
-        <!-- Not touch-moved: the guide belongs at the top on a phone too,
-             beside the menu, rather than buried in the More tray. -->
-        <button class="icon-btn" id="btn-guide" title="How to play">${icon('help')}<span>Guide</span></button>
-        <button class="icon-btn" id="btn-menu" title="Save, load and world settings">${icon('menu')}<span>Menu</span></button>
+        <button class="icon-btn touch-moved" id="btn-stats" title="Your goals, and what to do next">${icon('stats')}<span>Goals</span></button>
+        <button class="icon-btn" id="btn-menu" title="Settings, saves and your account">${icon('settings')}<span>Settings</span></button>
       </div>
 
       <!--
@@ -126,12 +120,10 @@ export class UIManager {
       ${renderPanels('main', {
         'panel-stats': `
           <div class="tab-row">
-            <button class="tab-btn active" data-tab="tab-overview">Overview</button>
-            <button class="tab-btn" data-tab="tab-achievements">Achievements</button>
-            <button class="tab-btn" data-tab="tab-challenges">Challenges</button>
+            <button class="tab-btn active" data-tab="tab-achievements">Goals</button>
+            <button class="tab-btn" data-tab="tab-challenges">Today</button>
           </div>
-          <div class="tab-panel" id="tab-overview"></div>
-          <div class="tab-panel" id="tab-achievements" hidden><div class="ach-grid" id="ach-grid"></div></div>
+          <div class="tab-panel" id="tab-achievements"><div id="ach-grid"></div></div>
           <div class="tab-panel" id="tab-challenges" hidden><div id="challenge-list"></div></div>`,
         'panel-menu': `
           <div id="menu-index"></div>
@@ -244,9 +236,6 @@ export class UIManager {
         'panel-clear': `
           <div id="clear-list"></div>
           <div class="export-note" id="clear-note"></div>`,
-        'panel-guide': `
-          <div class="tab-row" id="guide-tabs"></div>
-          <div id="guide-body"></div>`,
         'panel-score': `
           <div class="score-total" id="score-total">0</div>
           <div class="score-breakdown" id="score-breakdown"></div>`,
@@ -290,22 +279,27 @@ export class UIManager {
           <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
           <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
           <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
+          <button class="touch-btn" id="t-stats">${icon('stats')}<span>Goals</span></button>
+          <!-- Made, not given: these appear once you have the tool in your bag. -->
+          <button class="touch-btn needs-tool" id="t-clear" data-tool="clear" hidden>${icon('clear')}<span>Clear</span></button>
+          <button class="touch-btn needs-tool" id="t-symmetry" data-tool="mirror" hidden>${icon('symmetry')}<span>Mirror</span></button>
           <button class="touch-btn" id="t-designs">${icon('paste')}<span>Designs</span></button>
           <button class="touch-btn" id="t-roof">${icon('roof')}<span>Roof</span></button>
-          <button class="touch-btn" id="t-clear">${icon('clear')}<span>Clear</span></button>
-          <button class="touch-btn" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
           <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
         </div>
 
         <!--
-          Jump and Place sit against their own stick, inboard, where the thumb
-          already is: Jump beside the one that walks, Place beside the one that
-          aims. Reaching up the edge for the thing you press between every
-          other thing you press is the reach that was costing time.
-
-          Inboard is not a preference — outboard is the screen edge.
+          Break and Jump sit outboard of their own stick — Break to the left
+          of the one that walks, Jump to the right of the one that aims — with
+          the sticks moved in off the edge to leave them the room. Outboard
+          keeps the middle of the screen clear, which is the part you are
+          actually looking at, and puts the two you press hardest under the
+          outer edge of the thumb that is already down there.
         -->
         <div class="stick-side" id="side-left">
+          <button class="touch-btn small" id="t-break">${icon('mine')}<span>Break</span></button>
+        </div>
+        <div class="stick-side" id="side-right">
           <!--
             Down appears only while flying, and above Jump — which is Up while
             you are up there — so the pair reads the way it points, with the
@@ -314,15 +308,12 @@ export class UIManager {
           <button class="touch-btn small" id="t-down" hidden>${icon('down')}<span>Down</span></button>
           <button class="touch-btn small" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
         </div>
-        <div class="stick-side" id="side-right">
-          <button class="touch-btn small" id="t-place">${icon('place')}<span>Place</span></button>
-        </div>
 
-        <!-- Left edge, one column: the rest of what you press. -->
+        <!-- Left edge, above Break: the rest of what you press. -->
         <div class="touch-buttons" id="touch-buttons-left">
           <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
           <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
-          <button class="touch-btn" id="t-break">${icon('mine')}<span>Break</span></button>
+          <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
         </div>
       </div>
     `;
@@ -454,7 +445,6 @@ export class UIManager {
       // to hide it first, so closing one left you standing in whichever world
       // was last loaded — one you never chose, already falling.
       onSettings: () => this.openPanel('panel-menu'),
-      onGuide: () => this.openPanel('panel-guide'),
       onAccount: () => this.openPanel('panel-account'),
     });
     // The screen is already on when the page loads, so draw it now rather than
@@ -484,10 +474,6 @@ export class UIManager {
 
     // On a phone there is no C key, so the hint is what you press.
     this.q('#building-hint').addEventListener('click', () => this.cb.onOpenClaim());
-    this.q('#btn-symmetry').addEventListener('click', () => {
-      this.symmetryMode = this.cb.onCycleSymmetry();
-      this.setSymmetryLabel();
-    });
 
     for (const sel of ['#btn-fullscreen', '#t-screen']) {
       const fsBtn = this.q(sel);
@@ -498,10 +484,8 @@ export class UIManager {
     }
 
     this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
-    this.q('#btn-guide').addEventListener('click', () => this.openPanel('panel-guide'));
     this.q('#btn-templates').addEventListener('click', () => this.openPanel('panel-templates'));
     this.q('#btn-roof').addEventListener('click', () => this.openPanel('panel-roof'));
-    this.q('#btn-clear').addEventListener('click', () => this.openPanel('panel-clear'));
     this.q('#btn-bag').addEventListener('click', () => this.cb.onOpenBag());
     this.q('#btn-buildings').addEventListener('click', () => this.cb.onOpenBuildings());
     this.q('#btn-bench').addEventListener('click', () => this.cb.onOpenBench());
@@ -516,9 +500,10 @@ export class UIManager {
       // Skills had no way in at all before this — the panel existed, was
       // drawn, and nothing anywhere opened it.
       ['#t-skills', () => this.openPanel('panel-skills')],
+      ['#t-stats', () => this.openPanel('panel-stats')],
+      ['#t-clear', () => this.openPanel('panel-clear')],
       ['#t-designs', () => this.openPanel('panel-templates')],
       ['#t-roof', () => this.openPanel('panel-roof')],
-      ['#t-clear', () => this.openPanel('panel-clear')],
     ];
     for (const [sel, fn] of openers) {
       const btn = this.q(sel);
@@ -715,15 +700,15 @@ export class UIManager {
       btn.addEventListener('touchend', up);
       btn.addEventListener('touchcancel', up);
     }
-    this.q('#t-place').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onPlaceTap(); });
-    this.q('#t-symmetry').addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      this.symmetryMode = this.cb.onCycleSymmetry();
-      this.setSymmetryLabel();
+    this.q('#t-symmetry').addEventListener('click', () => {
+      this.closeTray();
+      this.setSymmetryLabel(this.cb.onCycleSymmetry());
     });
+    this.q('#t-place').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onPlaceTap(); });
   }
 
   wireBus() {
+    this.bus.on('inventory:change', () => this.refreshTools());
     // Moving up an age had no listener at all: the border moved, the goal list
     // changed, and nothing said why or what the new age is for.
     this.bus.on('duilt:age', ({ age, name, size, intro }) => {
@@ -838,12 +823,23 @@ export class UIManager {
         node.remove();
       }, { passive: false });
     }
+    // On a phone there is one slot, and a new message pushes the old one off to
+    // the right. A stack of five was a column of text down a screen that is
+    // mostly the thing you are trying to look at, and by the third one you were
+    // reading the oldest — the one you had already stopped caring about.
+    if (this.isTouch) for (const old of [...stack.children]) this.dismissToast(old);
+
     stack.appendChild(node);
-    setTimeout(() => {
-      node.classList.add('fade-out');
-      setTimeout(() => node.remove(), 320);
-    }, action ? 7000 : 3400);
+    setTimeout(() => this.dismissToast(node), action ? 7000 : 3400);
     while (stack.children.length > 5) stack.removeChild(stack.firstChild);
+  }
+
+  /** Slides a toast out and takes it off the screen once it has gone. */
+  dismissToast(node) {
+    if (!node || node.classList.contains('going')) return;
+    node.classList.add('going');
+    node.classList.add(this.isTouch ? 'push-out' : 'fade-out');
+    setTimeout(() => node.remove(), this.isTouch ? 280 : 320);
   }
 
   /** Fills a panel in just before it is shown, if it has anything to fill. */
@@ -862,7 +858,6 @@ export class UIManager {
       this.renderVersions();
     }
     if (id === 'panel-stats') this.populateStats();
-    if (id === 'panel-guide') this.populateGuide();
     if (id === 'panel-templates') this.refreshTemplateList();
     if (id === 'panel-roof') this.refreshRoofList();
     if (id === 'panel-clear') this.refreshClearList();
@@ -880,8 +875,8 @@ export class UIManager {
   renderMenuIndex() {
     const box = this.q('#menu-index');
     if (!box) return;
-    const sections = menuFor({ cloud: !!this.cb.isCloudConfigured?.() });
-    box.innerHTML = sections.map((m) => `
+    const sections = menuFor({ cloud: !!this.cb.isCloudConfigured?.(), dev: this.devOpen });
+    const card = (m) => `
       <button class="menu-card" data-menu="${m.id}">
         <span class="menu-card-icon">${icon(m.icon, 20)}</span>
         <span class="menu-card-text">
@@ -889,7 +884,19 @@ export class UIManager {
           <span>${escapeHtml(m.blurb)}</span>
         </span>
         <span class="menu-card-go">${icon('chevron', 16)}</span>
-      </button>`).join('');
+      </button>`;
+    // One switch at the bottom for the workshop end of the menu. Folded away
+    // rather than removed: the render settings and the file import are worth
+    // keeping and are not what anybody opens this menu to do.
+    const toggle = HAS_DEV_SECTIONS ? `
+      <button class="menu-dev-toggle ${this.devOpen ? 'open' : ''}" id="btn-menu-dev">
+        ${this.devOpen ? 'Hide' : 'Show'} the workshop tools
+      </button>` : '';
+    box.innerHTML = sections.map(card).join('') + toggle;
+    this.q('#btn-menu-dev')?.addEventListener('click', () => {
+      this.devOpen = !this.devOpen;
+      this.renderMenuIndex();
+    });
     box.querySelectorAll('[data-menu]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const def = MENU_BY_ID.get(btn.dataset.menu);
@@ -999,25 +1006,28 @@ export class UIManager {
 
   populateStats() {
     const s = this.gamification.snapshot();
-    this.q('#stats-sub').textContent = `Level ${s.level} · ${s.totalBlocksPlaced} blocks placed · ${s.streakCount}-day streak`;
+    this.q('#stats-sub').textContent = `Age ${s.age} · ${s.achievementsUnlocked.size} of ${ACHIEVEMENTS.length} done · level ${s.level}`;
 
-    this.q('#tab-overview').innerHTML = `
-      <div class="stat-row"><span>Total blocks placed</span><span>${s.totalBlocksPlaced}</span></div>
-      <div class="stat-row"><span>Total blocks broken</span><span>${s.totalBlocksBroken}</span></div>
-      <div class="stat-row"><span>Block types discovered</span><span>${s.distinctTypesPlacedEver.size} / ${PLACEABLE_BLOCKS.length}</span></div>
-      <div class="stat-row"><span>Highest placement</span><span>y = ${s.maxHeightPlaced}</span></div>
-      <div class="stat-row"><span>Current streak</span><span>${s.streakCount} day${s.streakCount === 1 ? '' : 's'}</span></div>
-      <div class="stat-row"><span>Challenges completed</span><span>${s.challengesCompletedTotal}</span></div>
-      <div class="stat-row"><span>Achievements unlocked</span><span>${s.achievementsUnlocked.size} / ${ACHIEVEMENTS.length}</span></div>
-    `;
-
-    const achGrid = this.q('#ach-grid');
-    achGrid.innerHTML = ACHIEVEMENTS.map((a) => {
-      const unlocked = s.achievementsUnlocked.has(a.id);
-      return `<div class="ach-card ${unlocked ? '' : 'locked'}">
-        <div class="ach-icon">${a.icon}</div>
-        <div><div class="ach-name">${a.name}</div><div class="ach-desc">${a.description}</div></div>
-      </div>`;
+    // Banded by age, because the bands are the order you are meant to do them
+    // in — this list is the only thing teaching the game now, and a flat grid
+    // of twenty cards answers "what have I done" but never "what next".
+    const done = s.achievementsUnlocked;
+    this.q('#ach-grid').innerHTML = goalBands().map((band) => {
+      const met = band.goals.filter((g) => done.has(g.id)).length;
+      const reached = s.age >= band.age;
+      return `
+        <div class="goal-band ${reached ? '' : 'ahead'}">
+          <div class="goal-band-head">
+            <span>Age ${band.age} \u00b7 ${escapeHtml(band.name)}</span>
+            <span class="goal-band-count">${met} / ${band.goals.length}</span>
+          </div>
+          ${band.goals.map((g) => `
+            <div class="ach-card ${done.has(g.id) ? '' : 'locked'} ${g.border ? 'is-border' : ''}">
+              <div class="ach-icon">${g.icon}</div>
+              <div><div class="ach-name">${escapeHtml(g.name)}</div>
+                   <div class="ach-desc">${escapeHtml(g.description)}</div></div>
+            </div>`).join('')}
+        </div>`;
     }).join('');
 
     const dc = s.dailyChallenge;
@@ -1253,11 +1263,32 @@ export class UIManager {
     if (label) label.textContent = flying ? 'Up' : 'Jump';
   }
 
+  /**
+   * Shows the tools you have actually made.
+   *
+   * A creative world has no bag to make anything with, so there everything is
+   * simply there — the same split as the rest of it: a *system* is a kind of
+   * world, a tool is not.
+   */
+  refreshTools() {
+    const held = this.cb.heldTools?.() ?? null;
+    for (const btn of this.root.querySelectorAll('.needs-tool')) {
+      btn.hidden = held !== null && !held.has(btn.dataset.tool);
+    }
+  }
+
+  /** Says which way the mirror is set, on the button that set it. */
+  setSymmetryLabel(mode) {
+    const btn = this.q('#t-symmetry');
+    if (!btn) return;
+    btn.querySelector('span').textContent = mode === 'off' ? 'Mirror' : `Mirror ${mode.toUpperCase()}`;
+    btn.classList.toggle('active', mode !== 'off');
+  }
+
   /** Lights the button whose tool is queued, so the HUD says what is in hand. */
   setArmedTool(id) {
     const where = {
       roof: ['#btn-roof', '#t-roof'],
-      clear: ['#btn-clear', '#t-clear'],
       design: ['#btn-templates', '#t-designs'],
     };
     for (const sels of Object.values(where)) for (const sel of sels) this.q(sel)?.classList.remove('active');
@@ -1340,6 +1371,7 @@ export class UIManager {
     const on = !!this.cb.isDuilt?.();
     this.root.querySelectorAll('.duilt-only').forEach((el) => { el.hidden = !on; });
     this.duiltUI?.setActive(on);
+    this.refreshTools();
   }
 
   toggleBag() { return this.duiltUI?.toggleBag(); }
@@ -1501,16 +1533,6 @@ export class UIManager {
     }
   }
 
-  setSymmetryLabel() {
-    const label = this.symmetryMode === 'off' ? 'Mirror' : `Mirror ${this.symmetryMode.toUpperCase()}`;
-    const on = this.symmetryMode !== 'off';
-    for (const sel of ['#btn-symmetry', '#t-symmetry']) {
-      const btn = this.q(sel);
-      if (!btn) continue;
-      btn.querySelector('span').textContent = label;
-      btn.classList.toggle('active', on);
-    }
-  }
 
   /**
    * The earlier versions of this world, newest first.
@@ -1572,70 +1594,8 @@ export class UIManager {
     });
   }
 
-  /**
-   * Draws the guide from its declaration.
-   *
-   * Only the sections that apply: somebody in a sandbox world has no ages,
-   * no claims and no settlers, and a tab explaining all three is a tab that
-   * makes the game look more complicated than the one they are in.
-   */
-  populateGuide() {
-    const touch = document.body.classList.contains('touch');
-    const mode = this.cb.isDuilt?.() ? 'duilt' : 'sandbox';
-    const sections = guideFor(mode);
-    const open = this.guideTab && sections.some((g) => g.id === this.guideTab)
-      ? this.guideTab
-      : sections[0]?.id;
-
-    this.q('#guide-tabs').innerHTML = sections
-      .map((g) => `<button class="tab-btn${g.id === open ? ' active' : ''}" data-tab="${g.id}">${escapeHtml(g.name)}</button>`)
-      .join('');
-    this.q('#guide-body').innerHTML = sections
-      .map((g) => `<div class="tab-panel guide-panel" id="${g.id}"${g.id === open ? '' : ' hidden'}>${
-        g.blocks({ touch }).map(guideBlock).join('')
-      }</div>`)
-      .join('');
-    // Remember which tab you were on: closing the panel to go and look at
-    // something and coming back to page one is its own small annoyance.
-    this.q('#guide-tabs').querySelectorAll('.tab-btn').forEach((btn) => {
-      btn.addEventListener('click', () => { this.guideTab = btn.dataset.tab; });
-    });
-    this.wireTabs(this.q('#panel-guide'));
-  }
-
-  setFullscreenIndicator(isFullscreen) {
-    const btn = this.q('#btn-fullscreen');
-    if (!btn) return;
-    btn.classList.toggle('active', isFullscreen);
-    btn.title = isFullscreen ? 'Exit fullscreen' : 'Toggle fullscreen';
-  }
 }
 
-/** One block of the guide, in the shape guide.js declared it. */
-function guideBlock(b) {
-  const title = b.title ? `<div class="guide-head">${escapeHtml(b.title)}</div>` : '';
-  switch (b.kind) {
-    case 'lead':
-      return `<p class="guide-lead">${escapeHtml(b.text)}</p>`;
-    case 'keys':
-      return `${title}<div class="guide-keys">${b.rows.map(([what, how]) => (
-        `<div class="guide-key"><span>${escapeHtml(what)}</span><span class="help-key">${escapeHtml(how)}</span></div>`
-      )).join('')}</div>`;
-    case 'defs':
-      return `${title}${b.rows.map(([name, text, ic]) => (
-        `<div class="guide-def">
-          <strong>${ic ? `<span class="guide-icon">${escapeHtml(ic)}</span>` : ''}${escapeHtml(name)}</strong>
-          <span>${escapeHtml(text)}</span>
-        </div>`
-      )).join('')}`;
-    case 'steps':
-      return `${title}<ol class="guide-steps">${b.rows.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ol>`;
-    case 'note':
-      return `<p class="guide-note">${escapeHtml(b.text)}</p>`;
-    default:
-      return '';
-  }
-}
 
 function escapeHtml(text) {
   return String(text ?? '').replace(/[&<>"']/g, (c) => (

@@ -64,9 +64,48 @@ export class GamificationEngine {
       templatesPlaced: 0,
       largestTemplateBlocks: 0,
       templateNames: new Set(),
+
+      // The settlement's own progress, which is what the goals are about now
+      // that they are the thing teaching the game. Kept here rather than read
+      // off Duilt on demand because a goal has to be checkable in a creative
+      // world too, where there is no Duilt to ask.
+      age: 1,
+      claimed: new Set(),     // structure types you have ever claimed
+      claimedCount: 0,
+      settlersEver: 0,
+      landSize: 0,
     };
     this.session = freshSession();
     this.refreshDailyChallenge();
+    this.watchSettlement();
+  }
+
+  /**
+   * Listens to the settlement so a goal can ask about it.
+   *
+   * One place, rather than every goal reaching into Duilt: a goal is a small
+   * predicate over `stats`, and it stays that way whether the world has a
+   * settlement in it or not.
+   */
+  watchSettlement() {
+    this.bus.on('duilt:age', ({ age, size }) => {
+      this.state.age = Math.max(this.state.age, age ?? 1);
+      if (size) this.state.landSize = Math.max(this.state.landSize, size);
+      this.checkAchievements(null);
+    });
+    this.bus.on('territory:expanded', ({ size } = {}) => {
+      if (size) this.state.landSize = Math.max(this.state.landSize, size);
+      this.checkAchievements(null);
+    });
+    this.bus.on('structure:claimed', ({ type } = {}) => {
+      if (type) this.state.claimed.add(type);
+      this.state.claimedCount += 1;
+      this.checkAchievements(null);
+    });
+    this.bus.on('settler:arrived', () => {
+      this.state.settlersEver += 1;
+      this.checkAchievements(null);
+    });
   }
 
   // ---- daily challenge / streak bookkeeping ----

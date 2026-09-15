@@ -28,7 +28,6 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const PLANKS = 7, STONE = 3, DIRT = 2, GRASS = 1;
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
-const guide = readFileSync(new URL('../src/config/guide.js', import.meta.url), 'utf8');
 
 /** A square building of side `n`, described the way a real pick describes one. */
 function square(n) {
@@ -279,7 +278,5 @@ ok('but only while the roof it remembers is untouched',
   /if \(this\.world\.getBlock\(c\.x, c\.y, c\.z\) !== c\.type\) return null;/.test(game));
 ok('and the preview shows the same height it will land at', /this\.roofEave\(pick\)/.test(game));
 
-ok('the guide says how to use it', /Pitches a roof over the building you point at/.test(guide));
-ok('and that it works everywhere', /works in any world/.test(guide));
 
 process.exit(f ? 1 : 0);

@@ -34,6 +34,7 @@ import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, BLOCKS_BY_ID } from './config/blocks.js';
+import { TOOL_FOR } from './config/items.js';
 
 const REACH = 7;
 /**
@@ -447,6 +448,18 @@ export class Game {
       onRotateTemplate: () => { this.templateRotation = (this.templateRotation + 1) % 4; return this.templateRotation; },
       onPlaceTemplate: () => this.stampTemplate(),
       getTemplates: () => this.templates.list(),
+      /**
+       * Which building tools you have made, or null where the question does not
+       * apply — a creative world has no bag, so nothing there is made.
+       */
+      heldTools: () => {
+        if (!this.duilt) return null;
+        const held = new Set();
+        for (const [grants, item] of TOOL_FOR) {
+          if (this.duilt.inventory.countOf(item) > 0) held.add(grants);
+        }
+        return held;
+      },
       onCycleSymmetry: () => this.symmetryTool.cycle(),
       onMove: (x, z) => {
         this.player.externalMove.x = x;
@@ -795,10 +808,6 @@ export class Game {
       else if (e.code === 'KeyR' && this.pendingTemplate) {
         this.templateRotation = (this.templateRotation + 1) % 4;
         this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });
-      }
-      if (e.code === 'KeyM') {
-        const mode = this.symmetryTool.cycle();
-        this.ui.toast({ kind: 'xp', title: `Symmetry: ${mode.toUpperCase()}` });
       }
     });
   }

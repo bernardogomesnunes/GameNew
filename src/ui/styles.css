@@ -17,7 +17,9 @@
   /* The thumbstick's resting geometry, as variables rather than numbers, so a
      button placed beside a stick stays beside it when the stick changes size
      on a smaller screen. */
-  --stick-inset: 24px;
+  /* Inset leaves room for the outboard button: 12px of edge, the button, and
+     air between it and the base. */
+  --stick-inset: 78px;
   --stick-size: 104px;
   --stick-bottom: 24px;
   --stick-zone: 78px;      /* how far up the screen the stick's area starts */
@@ -218,6 +220,7 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 
 /* Toasts */
 #toast-stack { position: absolute; top: 60px; right: 12px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; pointer-events: none; max-width: 300px; }
+.toast { max-height: 200px; }
 .toast {
   background: var(--panel-solid); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--panel-border); border-left: 2px solid var(--accent);
@@ -243,6 +246,14 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 @keyframes toast-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
 .toast.fade-out { animation: toast-out 0.3s ease forwards; }
 @keyframes toast-out { to { opacity: 0; transform: translateX(16px); } }
+/* On a phone a message does not fade where it stands, it is pushed off the
+   right-hand edge by the one replacing it — so the eye follows one thing
+   leaving rather than hunting a column for which line is new. Collapsing the
+   height as it goes stops the new one jumping down into the gap. */
+.toast.push-out { animation: toast-push 0.28s cubic-bezier(.4, 0, .7, .3) forwards; }
+@keyframes toast-push {
+  to { opacity: 0; transform: translateX(110%); max-height: 0; margin-bottom: -6px; }
+}
 
 /* Generic overlay panels */
 .overlay {
@@ -267,6 +278,22 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 .stat-row span:first-child { color: var(--text-dim); }
 
 .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+/* Goals, banded by age. The band is the point: it says what this stretch of
+   the game is about, and how much of it is left, without anybody writing it
+   down twice. */
+.goal-band { margin-bottom: 14px; }
+.goal-band-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 700;
+  color: var(--accent); margin: 0 2px 7px;
+}
+.goal-band-count { color: var(--text-dim); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+/* An age you have not reached is legible but plainly not yet yours. */
+.goal-band.ahead .goal-band-head { color: var(--text-dim); }
+.goal-band.ahead { opacity: 0.6; }
+.goal-band .ach-card { margin-bottom: 6px; }
+/* The one that moves the border closes the band, so it reads as the door out. */
+.ach-card.is-border { border-color: rgba(77, 219, 196, 0.4); background: var(--accent-dim); }
 .ach-card { display: flex; gap: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; }
 .ach-card.locked { opacity: 0.4; }
 .ach-icon { font-size: 22px; }
@@ -375,16 +402,14 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #touch-buttons-left { left: 12px; align-items: flex-start; }
 #touch-buttons-right { right: 12px; align-items: flex-end; }
 
-/* Against its own stick, on the inboard side.
+/* Outboard of its own stick, hard against the screen edge.
  *
- * Inboard is not a preference: outboard of either stick is the screen edge.
- * Anchored off the stick's own variables rather than a number that happens to
- * match today, so on a small screen — where the base shrinks to 88px and moves
- * in to 16 — these follow it instead of drifting onto it.
+ * The sticks are inset far enough to leave the room — that is what
+ * --stick-inset is for now, and why it is so much larger than it looks like it
+ * needs to be. Outboard keeps the middle of the picture clear and puts these
+ * two under the outer edge of a thumb that is already down there.
  *
- * Vertically centred on the base, so the reach from the stick is sideways
- * only. A 54px button rather than the column's 62: the middle of a 360px
- * screen is only 120px wide once both sticks have had theirs. */
+ * Vertically centred on the base, so the reach is sideways only. */
 .stick-side {
   position: absolute;
   bottom: calc(var(--stick-zone) + var(--stick-bottom) + (var(--stick-size) - 54px) / 2
@@ -392,8 +417,8 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   display: flex; flex-direction: column; gap: 8px;
   pointer-events: auto; z-index: 3;
 }
-#side-left { left: calc(var(--stick-inset) + var(--stick-size)); }
-#side-right { right: calc(var(--stick-inset) + var(--stick-size)); }
+#side-left { left: 12px; }
+#side-right { right: 12px; }
 .touch-btn.small { width: 54px; height: 54px; border-radius: 15px; }
 
 /* More opens a sheet across the bottom rather than stacking buttons up the
@@ -519,6 +544,17 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .roof-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .roof-name { font-weight: 600; font-size: 14px; }
 .roof-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.4; }
+
+/* The switch that folds the workshop end of the menu away. Quieter than a
+   card, because it is not a place you go — it is a thing you turn on. */
+.menu-dev-toggle {
+  width: 100%; margin-top: 4px; padding: 9px 12px;
+  background: transparent; border: 1px dashed var(--panel-border);
+  border-radius: 9px; color: var(--text-dim); font: inherit; font-size: 12px;
+  cursor: pointer; text-align: left;
+}
+.menu-dev-toggle:hover { color: var(--text); border-color: var(--panel-border-strong); }
+.menu-dev-toggle.open { border-style: solid; color: var(--accent); border-color: rgba(77,219,196,0.4); }
 
 .export-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.45; margin-top: 8px; }
 
@@ -680,7 +716,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   /* A hint, not an announcement — it sat in the middle of the thumb zone. */
   .hotbar-empty { padding: 8px 12px; font-size: 11px; }
   /* Big enough to find without looking, small enough to see past. */
-  :root { --stick-inset: 16px; --stick-size: 88px; --stick-bottom: 18px;
+  :root { --stick-inset: 72px; --stick-size: 84px; --stick-bottom: 18px;
           --stick-zone: 78px; --stick-gap: 24px; }
   .stick-knob { width: 40px; height: 40px; top: 24px; left: 24px; }
 }
@@ -989,7 +1025,7 @@ body.touch #goals { top: calc(84px + env(safe-area-inset-top)); left: 12px; widt
  */
 @media (max-height: 560px) and (pointer: coarse) {
   body.touch {
-    --stick-inset: 14px; --stick-size: 68px; --stick-bottom: 8px;
+    --stick-inset: 62px; --stick-size: 68px; --stick-bottom: 8px;
     --stick-zone: 52px; --stick-gap: 8px;
   }
   body.touch .stick-zone { height: 66%; }

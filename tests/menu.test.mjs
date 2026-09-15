@@ -52,11 +52,22 @@ ok('and achievements are not one of them — one such screen is enough',
 // --- what the build actually offers -----------------------------------------
 
 {
-  const withCloud = menuFor({ cloud: true });
-  const without = menuFor({ cloud: false });
+  const withCloud = menuFor({ cloud: true, dev: true });
+  const without = menuFor({ cloud: false, dev: true });
   ok('a cloud build shows the profile', withCloud.some((m) => m.id === 'menu-profile'));
   ok('a local-only build does not', !without.some((m) => m.id === 'menu-profile'));
   ok('and everything else shows either way', without.length === MENU.length - 1);
+
+  // The workshop end — the render settings and the file import — is folded
+  // away, so the menu is the things somebody opens the menu to do.
+  const plain = menuFor({ cloud: true });
+  ok('the graphics and files sections are behind the switch',
+    !plain.some((m) => m.id === 'menu-graphics') && !plain.some((m) => m.id === 'menu-files'));
+  ok('and the switch brings them back', withCloud.length === plain.length + 2);
+  ok('what is left is what you came for',
+    plain.map((m) => m.id).join() === 'menu-world,menu-achievements,menu-profile');
+  ok('the UI knows there is something to unfold', /HAS_DEV_SECTIONS/.test(ui));
+  ok('and remembers whether it is unfolded', /this\.devOpen/.test(ui));
 }
 
 // --- the UI draws it from the declaration -----------------------------------
@@ -88,9 +99,11 @@ ok('and the way back is too', css.includes('.menu-back'));
 
 // --- the mobile screen gets its space back ----------------------------------
 
-ok('the touch tray no longer carries a Stats button', !ui.includes('id="t-stats"'));
-ok('and nothing is left wired to it', !ui.includes("'#t-stats'"));
-// Removing the button must not remove the way in.
+// It went back into the tray: the goals are what teaches the game now that the
+// How to play panel is gone, so they are not something to bury a level deep.
+ok('the goals have a button in the tray', ui.includes('id="t-stats"'));
+ok('and it is wired to the panel', ui.includes("'#t-stats'"));
+// And still reachable the other way, for whoever went looking in the menu.
 ok('achievements are still reachable from the menu',
   MENU.some((m) => m.opens === 'panel-stats'));
 ok('and still have their own button on a desktop toolbar', ui.includes('id="btn-stats"'));

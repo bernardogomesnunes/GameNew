@@ -27,7 +27,7 @@
 export const PANELS = [
   {
     id: 'panel-stats',
-    title: 'Progress',
+    title: 'Goals',
     subId: 'stats-sub',
     layer: 'main',
     mode: 'any',
@@ -74,14 +74,6 @@ export const PANELS = [
     layer: 'main',
     mode: 'any',
     label: 'Clear',
-  },
-  {
-    id: 'panel-guide',
-    title: 'How to play',
-    sub: 'What the game is, what the buttons do, and what to build next.',
-    layer: 'main',
-    mode: 'any',
-    label: 'Guide',
   },
   {
     id: 'panel-score',
