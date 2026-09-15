@@ -99,13 +99,25 @@ ok('and the way back is too', css.includes('.menu-back'));
 
 // --- the mobile screen gets its space back ----------------------------------
 
-// It went back into the tray: the goals are what teaches the game now that the
-// How to play panel is gone, so they are not something to bury a level deep.
-ok('the goals have a button in the tray', ui.includes('id="t-stats"'));
-ok('and it is wired to the panel', ui.includes("'#t-stats'"));
+// The goals are what teaches the game now that the How to play panel is gone,
+// so they are not something to bury a level deep — they sit next to Settings,
+// on every screen, and the XP bar gave up the width for it.
+ok('the goals button stays on a phone', /id="btn-stats"/.test(ui)
+  && !/class="icon-btn touch-moved" id="btn-stats"/.test(ui));
+ok('and it opens the panel', ui.includes("this.q('#btn-stats')"));
+// One way in, not two: it was in the tray while it was hidden up top.
+ok('so it is not also buried in the tray', !ui.includes('id="t-stats"'));
 // And still reachable the other way, for whoever went looking in the menu.
 ok('achievements are still reachable from the menu',
   MENU.some((m) => m.opens === 'panel-stats'));
-ok('and still have their own button on a desktop toolbar', ui.includes('id="btn-stats"'));
+
+// The bar has to leave room for the two buttons beside it.
+{
+  const phone = css.slice(css.indexOf('@media (max-width: 640px), (pointer: coarse)'));
+  const bar = phone.match(/#hud-top \{[^}]*width: (\d+)%/)?.[1];
+  const btns = phone.match(/#top-buttons \{[^}]*max-width: (\d+)%/)?.[1];
+  ok(`the xp bar takes ${bar}% of the width`, Number(bar) <= 45);
+  ok(`and the buttons ${btns}%, which fits alongside`, Number(bar) + Number(btns) <= 100);
+}
 
 process.exit(f ? 1 : 0);

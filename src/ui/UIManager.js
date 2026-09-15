@@ -106,7 +106,13 @@ export class UIManager {
         <button class="icon-btn duilt-only touch-moved" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
         <button class="icon-btn touch-moved" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
-        <button class="icon-btn touch-moved" id="btn-stats" title="Your goals, and what to do next">${icon('stats')}<span>Goals</span></button>
+        <!--
+          Goals keeps its place on a phone, next to Settings. It is the only
+          thing up here you open mid-build rather than between builds, and the
+          one that teaches the game now that the how-to panel is gone — two
+          corner buttons is a price the XP bar can pay out of its own width.
+        -->
+        <button class="icon-btn" id="btn-stats" title="Your goals, and what to do next">${icon('stats')}<span>Goals</span></button>
         <button class="icon-btn" id="btn-menu" title="Settings, saves and your account">${icon('settings')}<span>Settings</span></button>
       </div>
 
@@ -286,7 +292,6 @@ export class UIManager {
           <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
           <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
           <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
-          <button class="touch-btn" id="t-stats">${icon('stats')}<span>Goals</span></button>
           <!-- Made, not given: these appear once you have the tool in your bag. -->
           <button class="touch-btn needs-tool" id="t-clear" data-tool="clear" hidden>${icon('clear')}<span>Clear</span></button>
           <button class="touch-btn needs-tool" id="t-symmetry" data-tool="mirror" hidden>${icon('symmetry')}<span>Mirror</span></button>
@@ -515,7 +520,6 @@ export class UIManager {
       // Skills had no way in at all before this — the panel existed, was
       // drawn, and nothing anywhere opened it.
       ['#t-skills', () => this.openPanel('panel-skills')],
-      ['#t-stats', () => this.openPanel('panel-stats')],
       ['#t-clear', () => this.toolButton('clear', 'panel-clear')],
       ['#t-designs', () => this.toolButton('design', 'panel-templates')],
       ['#t-roof', () => this.toolButton('roof', 'panel-roof')],
@@ -1346,6 +1350,19 @@ export class UIManager {
     if (!tray || tray.hidden) return;
     tray.hidden = true;
     this.q('#t-more')?.classList.remove('active');
+  }
+
+  /**
+   * Lights the fullscreen buttons while fullscreen is on.
+   *
+   * The game has called this on every fullscreen change for a while and it did
+   * not exist, so going fullscreen threw — silently, in a listener, which is
+   * why it survived. Both buttons do the same thing, so both show the state.
+   */
+  setFullscreenIndicator(on) {
+    for (const sel of ['#btn-fullscreen', '#t-screen']) {
+      this.q(sel)?.classList.toggle('active', !!on);
+    }
   }
 
   /** Shows or hides everything that only exists in Duilt. */

@@ -492,12 +492,15 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
    52px buttons across the top of a 390px-tall picture. */
 @media (max-width: 640px), (pointer: coarse) {
   .panel { padding: 14px; }
-  #hud-top { right: auto; width: 55%; }
+  /* Short enough to leave the other half of the line to Goals and Settings.
+     The bar ran to 55% and read as the whole top of the screen; it is a
+     progress bar, and a progress bar says as much at half the length. */
+  #hud-top { right: auto; width: 42%; }
   /* Labels are worth their space on a desktop toolbar but eat a phone screen;
      the Help panel names every control instead. */
-  /* Five buttons at 36px plus gaps. 46% wrapped Menu onto a line of its own
-     the moment the guide moved up here. */
-  #top-buttons { top: 12px; flex-wrap: wrap; justify-content: flex-end; max-width: 58%; gap: 5px; }
+  /* Two buttons at 36px plus a gap. Nothing to wrap, but the cap stays in
+     case a third ever earns a place up here. */
+  #top-buttons { top: 12px; flex-wrap: wrap; justify-content: flex-end; max-width: 50%; gap: 5px; }
   .icon-btn { min-width: 0; width: 36px; height: 36px; padding: 0; border-radius: 9px; }
   .icon-btn span { display: none; }
   .icon-btn.panel-close { width: 30px; height: 30px; }

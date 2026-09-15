@@ -137,7 +137,7 @@ ok('nothing is laid out in a row', !/class="row"/.test(ui));
 
 // --- everything occasional is behind More -------------------------------------
 
-for (const id of ['t-bag', 't-bench', 't-build', 't-skills', 't-designs', 't-roof', 't-stats', 't-screen']) {
+for (const id of ['t-bag', 't-bench', 't-build', 't-skills', 't-designs', 't-roof', 't-screen']) {
   ok(`${id} is behind More`, tray.includes(`id="${id}"`));
 }
 // Fly changes what every other control does. Behind More it was a mode you
@@ -159,7 +159,11 @@ ok('it sits clear of the hotbar', /\.touch-tray \{[\s\S]{0,300}bottom: calc\(84p
 // right is the one button that is not a game control at all.
 ok('there is no guide button any more', !/id="btn-guide"/.test(ui));
 ok('and the menu reads as settings', /id="btn-menu"[^>]*>\$\{icon\('settings'\)\}<span>Settings<\/span>/.test(ui));
-ok('the goals moved into the tray with everything else you open', tray.includes('id="t-stats"'));
+// Goals is the exception: it teaches the game, so it stays out on the glass
+// beside Settings rather than going behind More with the rest.
+ok('the goals sit next to Settings on a phone too',
+  /id="btn-stats"/.test(ui) && !/touch-moved" id="btn-stats"/.test(ui));
+ok('and are not also in the tray', !tray.includes('id="t-stats"'));
 // Made, not given.
 ok('Clear and Mirror are there only once you have made the tool',
   /id="t-clear" data-tool="clear" hidden/.test(ui) && /id="t-symmetry" data-tool="mirror" hidden/.test(ui));
@@ -294,6 +298,20 @@ ok('the look stick is curved harder than the walking one',
     esc.indexOf('this.clearPending(); return;') < esc.indexOf("openPanel('panel-menu')"));
 }
 
-ok('the top toolbar still has room without wrapping', /#top-buttons \{[^}]*max-width: 58%/.test(css));
+// Two 36px buttons and a gap is 77px, which is under half of even a 320px
+// screen — so the corner never wraps, and the bar keeps the rest of the line.
+{
+  const phone = css.slice(css.indexOf('@media (max-width: 640px), (pointer: coarse)'));
+  const cap = Number(phone.match(/#top-buttons \{[^}]*max-width: (\d+)%/)[1]);
+  const bar = Number(phone.match(/#hud-top \{[^}]*width: (\d+)%/)[1]);
+  ok(`the toolbar is capped at ${cap}% and the bar takes ${bar}%`, cap + bar <= 100);
+  for (const w of [320, 360, 393, 430]) {
+    const need = 36 * 2 + 5 + 12;          // two buttons, the gap, the right inset
+    ok(`at ${w}px both buttons fit in ${Math.round(w * cap / 100)}px without wrapping`,
+      w * cap / 100 >= need);
+    ok(`  and clear the xp bar by ${Math.round(w - need - (12 + w * bar / 100))}px`,
+      w - need > 12 + w * bar / 100);
+  }
+}
 
 process.exit(f ? 1 : 0);
