@@ -45,7 +45,26 @@ ok('and the camera keeps its finer control near centre',
 // walks, Place with the thumb that aims.
 ok('Break is outboard of the stick that walks', sideLeft.includes('id="t-break"'));
 ok('Jump is outboard of the stick that aims', sideRight.includes('id="t-jump"'));
-ok('with Down above it, once you are flying', sideRight.includes('id="t-down"'));
+ok('with Down under it, once you are flying', sideRight.includes('id="t-down"'));
+{
+  // One button on the ground, two in the air. Up has to be the upper one —
+  // it was the lower one, which is a control arguing with its own arrow.
+  const order = [...sideRight.matchAll(/id="(t-[a-z]+)"/g)].map((m) => m[1]);
+  ok(`the flying pair reads ${order.join(', ')}`,
+    JSON.stringify(order) === JSON.stringify(['t-jump', 't-down']));
+  ok('and Jump is the one that becomes Up', /label\.textContent = flying \? 'Up' : 'Jump'/.test(ui));
+  // Dropping Down into the slot the single button had means a thumb reaching
+  // for Up by reflex sinks instead.
+  ok('the pair moves off the slot the single button had',
+    /this\.q\('#side-right'\)\?\.classList\.toggle\('paired'/.test(ui)
+    && /\.stick-side\.paired \{ transform: translateY\(calc\(var\(--side-btn\) \/ 2\)\)/.test(css));
+  // Straddling needs room underneath, and sideways the hotbar is right there.
+  ok('and lifts instead of straddling where there is no room below',
+    /body\.touch \.stick-side\.paired \{ transform: translateY\(calc\(var\(--side-btn\) \/ -2\)\)/.test(css));
+  ok('the button size is one name, so the maths cannot drift from it',
+    /--side-btn: 54px/.test(css) && /--side-btn: 50px/.test(css) && /--side-btn: 40px/.test(css)
+    && /\.touch-btn\.small \{ width: var\(--side-btn\)/.test(css));
+}
 ok('and neither is left up in the column',
   !column.includes('id="t-jump"') && !column.includes('id="t-break"'));
 // Outboard means hard against the screen edge, with the sticks moved in far
@@ -54,10 +73,14 @@ ok('they sit at the edge', /#side-left \{ left: 12px; \}/.test(css) && /#side-ri
 ok('and the stick is inset far enough to leave them the room',
   /--stick-inset: 78px;/.test(css) && /:root \{ --stick-inset: 72px;/.test(css));
 ok('and they are centred on the base, so the reach is sideways only',
-  /\.stick-side \{[\s\S]{0,200}\(var\(--stick-size\) - 54px\) \/ 2/.test(css));
-// The middle of a 320px screen is only 112px wide once both sticks have theirs.
-ok('a stick-side button is smaller than a column one',
-  /\.touch-btn\.small \{ width: 54px/.test(css) && /\.touch-btn\.small \{ width: 50px/.test(css));
+  /\.stick-side \{[\s\S]{0,200}\(var\(--stick-size\) - var\(--side-btn\)\) \/ 2/.test(css));
+// Smaller than a column button: the edge strip they sit in is narrow, and the
+// stick has to be inset past them without crowding the middle.
+{
+  const col = Number(css.match(/\.touch-btn \{\n  width: (\d+)px/)[1]);
+  const side = Number(css.match(/--side-btn: (\d+)px/)[1]);
+  ok(`a stick-side button is ${side}px against the column's ${col}px`, side < col);
+}
 
 // --- what is left in the column ----------------------------------------------
 

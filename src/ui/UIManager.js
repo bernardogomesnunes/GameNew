@@ -301,12 +301,15 @@ export class UIManager {
         </div>
         <div class="stick-side" id="side-right">
           <!--
-            Down appears only while flying, and above Jump — which is Up while
-            you are up there — so the pair reads the way it points, with the
-            one you press constantly staying put underneath it.
+            One button on the ground, two in the air: Jump becomes Up, and Down
+            appears under it. Up on top because that is the way they point —
+            it was the other way round, which is a control that argues with its
+            own arrow. The pair is shifted down half a button by CSS so it
+            straddles where the single one was, rather than dropping Down into
+            the slot your thumb was resting on.
           -->
-          <button class="touch-btn small" id="t-down" hidden>${icon('down')}<span>Down</span></button>
           <button class="touch-btn small" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
+          <button class="touch-btn small" id="t-down" hidden>${icon('down')}<span>Down</span></button>
         </div>
 
         <!-- Left edge, above Break: the rest of what you press. -->
@@ -1257,6 +1260,9 @@ export class UIManager {
   setFlyIndicator(flying) {
     this.q('#t-fly').classList.toggle('active', flying);
     this.q('#t-down').hidden = !flying; // descend only means anything while flying
+    // Two buttons where there was one, so the pair re-centres on the slot the
+    // single one had rather than shunting it up the screen.
+    this.q('#side-right')?.classList.toggle('paired', !!flying);
     // The same button jumps on the ground and climbs in the air. Once Down is
     // showing beneath it, "Jump" is the odd one out of a pair.
     const label = this.q('#t-jump-label');

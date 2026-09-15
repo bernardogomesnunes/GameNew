@@ -23,6 +23,7 @@
   --stick-size: 104px;
   --stick-bottom: 24px;
   --stick-zone: 78px;      /* how far up the screen the stick's area starts */
+  --side-btn: 54px;        /* the outboard buttons, which are their own size */
   --stick-gap: 24px;       /* clear air between the base and the column above it */
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-feature-settings: 'tnum' 1;
@@ -412,14 +413,18 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
  * Vertically centred on the base, so the reach is sideways only. */
 .stick-side {
   position: absolute;
-  bottom: calc(var(--stick-zone) + var(--stick-bottom) + (var(--stick-size) - 54px) / 2
+  bottom: calc(var(--stick-zone) + var(--stick-bottom) + (var(--stick-size) - var(--side-btn)) / 2
                + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 8px;
   pointer-events: auto; z-index: 3;
 }
 #side-left { left: 12px; }
 #side-right { right: 12px; }
-.touch-btn.small { width: 54px; height: 54px; border-radius: 15px; }
+.touch-btn.small { width: var(--side-btn); height: var(--side-btn); border-radius: 15px; }
+/* In the air one button becomes two. Shifting the pair down half a button
+   centres it on the slot the single one had, so neither Up nor Down lands
+   exactly where your thumb was and gets pressed by reflex. */
+.stick-side.paired { transform: translateY(calc(var(--side-btn) / 2)); }
 
 /* More opens a sheet across the bottom rather than stacking buttons up the
  * edge. The stack had a ceiling, and on hitting it folded into a second column
@@ -484,7 +489,8 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   .icon-btn span { display: none; }
   .icon-btn.panel-close { width: 30px; height: 30px; }
   .touch-btn { width: 56px; height: 56px; border-radius: 16px; }
-  .touch-btn.small { width: 50px; height: 50px; border-radius: 14px; }
+  :root { --side-btn: 50px; }
+  .touch-btn.small { border-radius: 14px; }
   .touch-btn span { font-size: 8.5px; }
   .ach-grid { grid-template-columns: 1fr; }
 }
@@ -1026,19 +1032,19 @@ body.touch #goals { top: calc(84px + env(safe-area-inset-top)); left: 12px; widt
 @media (max-height: 560px) and (pointer: coarse) {
   body.touch {
     --stick-inset: 62px; --stick-size: 68px; --stick-bottom: 8px;
-    --stick-zone: 52px; --stick-gap: 8px;
+    --stick-zone: 52px; --stick-gap: 8px; --side-btn: 40px;
   }
   body.touch .stick-zone { height: 66%; }
   body.touch .stick-knob { width: 30px; height: 30px; top: 19px; left: 19px; }
   body.touch .touch-btn { width: 42px; height: 42px; border-radius: 11px; }
-  body.touch .touch-btn.small { width: 40px; height: 40px; border-radius: 11px; }
+  body.touch .touch-btn.small { border-radius: 11px; }
   body.touch .touch-btn span { font-size: 7px; }
   body.touch .touch-buttons { gap: 5px; }
-  body.touch .stick-side {
-    bottom: calc(var(--stick-zone) + var(--stick-bottom) + (var(--stick-size) - 40px) / 2
-                 + env(safe-area-inset-bottom));
-    gap: 5px;
-  }
+  body.touch .stick-side { gap: 5px; }
+  /* Sideways there is no room under the pair — the hotbar is right there — so
+     it grows upward off the old slot instead of straddling it. Same rule
+     either way: neither button lands where the single one was. */
+  body.touch .stick-side.paired { transform: translateY(calc(var(--side-btn) / -2)); }
 
   /* The top-left corner goes back to being sky.
    *
