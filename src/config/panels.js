@@ -68,6 +68,14 @@ export const PANELS = [
     label: 'Roof',
   },
   {
+    id: 'panel-clear',
+    title: 'Clear',
+    sub: 'Take a lot of blocks away at once. All of it goes in your bag.',
+    layer: 'main',
+    mode: 'any',
+    label: 'Clear',
+  },
+  {
     id: 'panel-guide',
     title: 'How to play',
     sub: 'What the game is, what the buttons do, and what to build next.',

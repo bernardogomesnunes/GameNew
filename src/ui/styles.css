@@ -345,36 +345,37 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 .stick-base.active .stick-knob { border-color: var(--accent); background: var(--accent-dim); }
 
-/* Each thumb keeps its own cluster, sitting above its own stick.
+/* One column an edge, and never over a stick.
 
-   Lower than it used to be: with Bag, Bench and the Duilt row folded into
-   More, the tallest either side ever gets before you open something is two
-   rows, so the cluster does not need to start a third of the way up. */
+   The stick bases are drawn from 102px up to 206px off the bottom, so a column
+   starting at 150 sat squarely on top of one — which is what made the left
+   thumb hit Fly when it meant to walk. 230 clears the base with room to spare.
+
+   A column rather than a cluster, on purpose: two buttons side by side is two
+   buttons you can hit by mistake, and a column takes one narrow strip of a
+   picture you are trying to look at rather than a corner of it. */
 .touch-buttons {
-  position: absolute; bottom: calc(150px + env(safe-area-inset-bottom));
+  position: absolute; bottom: calc(230px + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 10px; pointer-events: auto;
 }
-#touch-buttons-left { left: 14px; align-items: flex-start; }
-#touch-buttons-right { right: 14px; align-items: flex-end; }
-.touch-buttons .row { display: flex; gap: 10px; }
-/* The tray stacks upward from the More button. Left to grow it walks straight
- * into the toolbar at the top of the screen — which is what happened the first
- * time a sixth button appeared. So it is given a ceiling and folds into a
- * second column beside the first instead, which holds however many panels the
- * game ends up with. It grows rightward now, being on the left of the screen. */
+#touch-buttons-left { left: 12px; align-items: flex-start; }
+#touch-buttons-right { right: 12px; align-items: flex-end; }
+
+/* More opens a sheet across the bottom rather than stacking buttons up the
+ * edge. The stack had a ceiling, and on hitting it folded into a second column
+ * — two columns of controls, which is the thing one column was for avoiding.
+ * A sheet holds however many tools the game grows, each with its name on it. */
 .touch-tray {
-  flex-direction: column-reverse; flex-wrap: wrap-reverse;
-  align-items: flex-start; align-content: flex-start;
-  gap: 8px; margin-bottom: 2px;
-  /* Budget: the 150px the cluster sits above the bottom, the two rows that can
-     be under the tray (More/Jump, and Down once you are flying) at 66px each,
-     and — the part the first attempt missed — the goal list, which lives at the
-     top left and is exactly where a tall tray on this side ends up. Measured
-     on a 390x800 screen: the goals run down to about 300, so the tray has to
-     stop above that and fold into a second column instead. */
-  max-height: calc(100vh - 530px);
-  max-height: calc(100dvh - 530px);
+  position: fixed; left: 8px; right: 8px;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+  gap: 8px; padding: 10px;
+  background: var(--panel-solid); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--panel-border-strong); border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+  pointer-events: auto; z-index: 7;
 }
+.touch-tray .touch-btn { width: 100%; height: 58px; border-radius: 12px; }
 .touch-btn {
   width: 62px; height: 62px; border-radius: 18px;
   background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
@@ -703,7 +704,14 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
  * selector, and the way out. Everything you touch once in a while is behind
  * More, where there is room to label it. */
 body.touch #top-buttons .touch-moved { display: none !important; }
-body.touch #touch-buttons-left { max-height: 62vh; }
+
+/* The goal list goes to the top and starts folded on a phone.
+ *
+ * It lived down the left side, which is now a column of controls, and it is a
+ * reminder rather than a readout you watch — one line saying which age you are
+ * in is the part worth permanent space. The header is still a tap away from
+ * the whole list. */
+body.touch #goals { top: calc(84px + env(safe-area-inset-top)); left: 12px; width: min(74%, 280px); }
 
 
 /* --- the worlds screen ---------------------------------------------------

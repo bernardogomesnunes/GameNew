@@ -243,8 +243,8 @@ ok('there is a button for it', /id="btn-roof"/.test(ui) && /id="t-roof"/.test(ui
 ok('and it opens the panel', /#btn-roof.*openPanel\('panel-roof'\)/.test(ui));
 ok('picking a shape queues it rather than placing it blind', /onPickRoof\(btn\.dataset\.roof\)/.test(ui));
 
-ok('it goes through the one place blocks change, so it undoes and is paid for',
-  /roofPlan\(this\.world[\s\S]{0,900}this\.applyChanges\(changes, \{ tool: label \}\)/.test(game));
+ok('it goes through the one place blocks change, so it is bounded and paid for',
+  /roofPlan\(this\.world[\s\S]{0,900}this\.applyChanges\(changes\)/.test(game));
 ok('it is made of what you are holding',
   /stampRoof\(\)[\s\S]{0,600}const type = this\.selectedBlockId;[\s\S]{0,500}roofPlan/.test(game));
 ok('a block you have not unlocked is refused before anything is built',

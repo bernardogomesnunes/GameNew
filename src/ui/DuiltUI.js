@@ -20,8 +20,20 @@ import { renderPanels } from './Panel.js';
 const HOLD_MS = 420;
 const GOALS_KEY = 'voxelgame:goals-open';
 
+/**
+ * Whether the goal list starts open.
+ *
+ * Folded on a phone unless you have said otherwise. It is a reminder, not a
+ * readout you watch, and on a small screen a permanent card of three tasks is
+ * a third of the view you are trying to build in — the one line naming the age
+ * is the part worth the space, and the header opens the rest.
+ */
 function loadGoalsOpen() {
-  try { return localStorage.getItem(GOALS_KEY) !== '0'; } catch { return true; }
+  try {
+    const saved = localStorage.getItem(GOALS_KEY);
+    if (saved !== null) return saved !== '0';
+  } catch { /* private browsing; fall through to the default */ }
+  return !document.body.classList.contains('touch');
 }
 
 export class DuiltUI {

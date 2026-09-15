@@ -74,8 +74,8 @@ export const GUIDE = [
       {
         kind: 'keys',
         rows: [
-          ['Look around', touch ? 'Left stick' : 'Move the mouse'],
-          ['Move', touch ? 'Right stick' : 'W A S D'],
+          ['Look around', touch ? 'Right stick' : 'Move the mouse'],
+          ['Move', touch ? 'Left stick' : 'W A S D'],
           ['Break a block', touch ? 'Break button' : 'Left click'],
           ['Keep breaking', touch ? 'Hold Break' : 'Hold left click'],
           ['Place a block', touch ? 'Place button' : 'Right click'],
@@ -85,7 +85,7 @@ export const GUIDE = [
           ['Everything else', touch ? 'The More button' : 'The toolbar, top right'],
           ['Pick a block', touch ? 'Tap the palette' : 'Keys 1-9, or click the palette'],
           ['Take a block back', 'Break it — it goes in your bag'],
-          ['Take a tool\u2019s work back', touch ? 'The button on the message it leaves' : 'Ctrl+Z, or the message it leaves'],
+          ['Take a lot back', 'The Clear tool'],
           ['Open the menu', touch ? 'Menu button' : 'Esc'],
         ],
       },
@@ -95,7 +95,7 @@ export const GUIDE = [
       },
       ...(touch ? [{
         kind: 'note',
-        text: 'The sticks are the other way round from most games on purpose: this is a game where you stand still and mine, so the steadier hand gets the camera and the busier one gets Break and Place.',
+        text: 'Everything you press is one column down the left edge, with Break and Place at the bottom where your thumb already is. Nothing sits over a stick, so what is under your thumb is always what you meant.',
       }] : []),
     ],
   },
@@ -114,8 +114,9 @@ export const GUIDE = [
         rows: [
           ['Roof', 'Pitches a roof over the building you point at — gable, hipped, lean-to or flat. It works out the slope so you do not have to place it a course at a time.'],
           ['Designs', 'Saves the build you are pointing at under a name, then stamps it anywhere. Press R to turn it before you put it down.'],
+          ['Clear', 'Takes a lot of blocks away at once — the whole build you point at, or a 3, 5 or 9 block cube of ground. All of it goes in your bag.'],
           ['Mirror', 'Every block you place is echoed across the middle of the world. Press again for X, Z, both, off.'],
-          ['Taking it back', 'A tool lays a lot of blocks at once, so it leaves a message with a way back on it. One block is different: you break it, and it goes in your bag. There is no undo button, because breaking is the undo.'],
+          ['Taking it back', 'There is no undo. Breaking is the undo — the block goes in your bag when you break it — and when a tool has laid more than you want to break by hand, Clear takes it away the same way.'],
         ],
       },
       {

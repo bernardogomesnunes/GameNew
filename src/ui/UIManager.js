@@ -12,6 +12,7 @@ import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { guideFor } from '../config/guide.js';
 import { menuFor, MENU_BY_ID } from '../config/menu.js';
 import { ROOFS, roofProfileSvg } from '../config/roofs.js';
+import { CLEARS, clearArtSvg } from '../config/clears.js';
 
 function el(html) {
   const t = document.createElement('template');
@@ -34,6 +35,11 @@ export class UIManager {
     this.symmetryMode = 'off';
     this.selectionActive = false;
 
+    // Before the markup, because what it decides — a phone or not — is read
+    // while the rest of this constructor builds. The goal list asks it, and
+    // used to be built two lines too early to get an answer.
+    this.detectTouch();
+
     root.innerHTML = this.markup();
     this.root = root;
     this.q = (sel) => root.querySelector(sel);
@@ -49,7 +55,6 @@ export class UIManager {
     this.wireEvents();
     this.wireBus();
     this.updateXp();
-    this.detectTouch();
   }
 
   // Read live off the game: both engines are replaced wholesale on New World,
@@ -91,6 +96,7 @@ export class UIManager {
       <div id="top-buttons">
         <button class="icon-btn touch-moved" id="btn-templates" title="Save a build, and stamp it anywhere">${icon('paste')}<span>Designs</span></button>
         <button class="icon-btn touch-moved" id="btn-roof" title="Pitch a roof over the building you point at">${icon('roof')}<span>Roof</span></button>
+        <button class="icon-btn touch-moved" id="btn-clear" title="Take a lot of blocks away at once">${icon('clear')}<span>Clear</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
@@ -235,6 +241,9 @@ export class UIManager {
         'panel-roof': `
           <div id="roof-list"></div>
           <div class="export-note" id="roof-note"></div>`,
+        'panel-clear': `
+          <div id="clear-list"></div>
+          <div class="export-note" id="clear-note"></div>`,
         'panel-guide': `
           <div class="tab-row" id="guide-tabs"></div>
           <div id="guide-body"></div>`,
@@ -246,16 +255,20 @@ export class UIManager {
       <!--
         Two thumbs, and as little else on the glass as the game can manage.
 
-        Camera on the left and movement on the right is the opposite of the
-        console convention, and deliberate: this is a game where you stand
-        still and mine, so the hand that never lets go of its stick is the one
-        aiming. Everything you do *to* the world goes with the moving hand —
-        Break, Place and Jump — and the left keeps the two switches: More, and
-        Fly.
+        Movement on the left, camera on the right — the convention, which is
+        what a thumb already expects. Everything you press is a single column
+        hugging the left edge: Break and Place lowest, where the thumb is, then
+        Fly, then More above it. A column rather than a cluster because two
+        buttons side by side is two buttons you can hit by mistake, and because
+        a column takes one narrow strip of a picture you are trying to look at.
 
-        Fly earns its place on the screen rather than a slot behind More: it
+        Nothing sits over a stick. The columns start above where the bases are
+        drawn, so the thing under your thumb is always the thing you meant.
+
+        Fly earns a place on the glass rather than a slot behind More: it
         changes how every other control behaves, and a mode switch you have to
-        go looking for is one you forget the game has.
+        go looking for is one you forget the game has. Jump stays on the right
+        because it belongs with the hand that is looking where you are going.
       -->
       <div id="touch-controls">
         <div class="stick-zone" id="stick-left">
@@ -265,33 +278,36 @@ export class UIManager {
           <div class="stick-base"><div class="stick-knob"></div></div>
         </div>
 
-        <!-- Left thumb: the camera, the way into everything else, and Fly. -->
-        <div class="touch-buttons" id="touch-buttons-left">
-          <div class="row touch-tray" id="touch-tray" hidden>
-            <button class="touch-btn duilt-only" id="t-bag" hidden>${icon('bag')}<span>Bag</span></button>
-            <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
-            <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
-            <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
-            <button class="touch-btn" id="t-designs">${icon('paste')}<span>Designs</span></button>
-            <button class="touch-btn" id="t-roof">${icon('roof')}<span>Roof</span></button>
-            <button class="touch-btn" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
-            <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
-          </div>
-          <div class="row">
-            <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
-            <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
-          </div>
+        <!--
+          More opens a sheet rather than stacking buttons up the edge. A stack
+          ran out of screen the moment a sixth tool existed and had to fold
+          into a second column, which is the thing a column was for avoiding.
+          A sheet holds however many the game ends up with, labelled, and is
+          not a control you can hit by accident while building.
+        -->
+        <div class="touch-tray" id="touch-tray" hidden>
+          <button class="touch-btn duilt-only" id="t-bag" hidden>${icon('bag')}<span>Bag</span></button>
+          <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
+          <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
+          <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
+          <button class="touch-btn" id="t-designs">${icon('paste')}<span>Designs</span></button>
+          <button class="touch-btn" id="t-roof">${icon('roof')}<span>Roof</span></button>
+          <button class="touch-btn" id="t-clear">${icon('clear')}<span>Clear</span></button>
+          <button class="touch-btn" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
+          <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
         </div>
 
-        <!-- Right thumb: walking, and everything you do to the world. -->
+        <!-- Left edge, one column: everything you press. -->
+        <div class="touch-buttons" id="touch-buttons-left">
+          <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
+          <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
+          <button class="touch-btn" id="t-break">${icon('mine')}<span>Break</span></button>
+          <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
+        </div>
+
+        <!-- Right edge: the camera, and the one button that goes with it. -->
         <div class="touch-buttons" id="touch-buttons-right">
-          <div class="row">
-            <button class="touch-btn" id="t-break">${icon('mine')}<span>Break</span></button>
-            <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
-          </div>
-          <div class="row">
-            <button class="touch-btn" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
-          </div>
+          <button class="touch-btn" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
           <!--
             Down appears only while flying, and below Jump — which is Up while
             you are up there — because that is the way the two of them point.
@@ -475,6 +491,7 @@ export class UIManager {
     this.q('#btn-guide').addEventListener('click', () => this.openPanel('panel-guide'));
     this.q('#btn-templates').addEventListener('click', () => this.openPanel('panel-templates'));
     this.q('#btn-roof').addEventListener('click', () => this.openPanel('panel-roof'));
+    this.q('#btn-clear').addEventListener('click', () => this.openPanel('panel-clear'));
     this.q('#btn-bag').addEventListener('click', () => this.cb.onOpenBag());
     this.q('#btn-buildings').addEventListener('click', () => this.cb.onOpenBuildings());
     this.q('#btn-bench').addEventListener('click', () => this.cb.onOpenBench());
@@ -491,6 +508,7 @@ export class UIManager {
       ['#t-skills', () => this.openPanel('panel-skills')],
       ['#t-designs', () => this.openPanel('panel-templates')],
       ['#t-roof', () => this.openPanel('panel-roof')],
+      ['#t-clear', () => this.openPanel('panel-clear')],
     ];
     for (const [sel, fn] of openers) {
       const btn = this.q(sel);
@@ -645,8 +663,8 @@ export class UIManager {
     // rate and the camera felt like it was lagging behind the thumb. 1.25
     // keeps the fine control near centre and gives back the middle of the
     // range. Movement just wants to reach full speed readily.
-    this.bindStick('#stick-left', (x, y) => this.cb.onLookStick(x, y), { deadZone: 0.09, curve: 1.25 });
-    this.bindStick('#stick-right', (x, y) => this.cb.onMove(x, y), { deadZone: 0.10, curve: 1.1 });
+    this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y), { deadZone: 0.10, curve: 1.1 });
+    this.bindStick('#stick-right', (x, y) => this.cb.onLookStick(x, y), { deadZone: 0.09, curve: 1.25 });
 
     const bindHold = (sel, onChange) => {
       const el = this.q(sel);
@@ -833,6 +851,7 @@ export class UIManager {
     if (id === 'panel-guide') this.populateGuide();
     if (id === 'panel-templates') this.refreshTemplateList();
     if (id === 'panel-roof') this.refreshRoofList();
+    if (id === 'panel-clear') this.refreshClearList();
     // The Duilt panels draw their own contents.
     this.duiltUI?.populate(id);
   }
@@ -1222,12 +1241,13 @@ export class UIManager {
 
   /** Lights the button whose tool is queued, so the HUD says what is in hand. */
   setArmedTool(id) {
-    for (const sel of ['#btn-roof', '#t-roof', '#btn-templates', '#t-designs']) {
-      this.q(sel)?.classList.remove('active');
-    }
-    if (!id) return;
-    const which = id === 'roof' ? ['#btn-roof', '#t-roof'] : ['#btn-templates', '#t-designs'];
-    for (const sel of which) this.q(sel)?.classList.add('active');
+    const where = {
+      roof: ['#btn-roof', '#t-roof'],
+      clear: ['#btn-clear', '#t-clear'],
+      design: ['#btn-templates', '#t-designs'],
+    };
+    for (const sels of Object.values(where)) for (const sel of sels) this.q(sel)?.classList.remove('active');
+    for (const sel of where[id] ?? []) this.q(sel)?.classList.add('active');
   }
 
   /**
@@ -1341,22 +1361,28 @@ export class UIManager {
       return;
     }
     el.hidden = false;
-    this.setArmedTool(state.roof ? 'roof' : 'design');
+    this.setArmedTool(state.roof ? 'roof' : state.clear ? 'clear' : 'design');
 
     const touch = document.body.classList.contains('touch');
-    const primary = state.roof ? `${state.roof} roof` : `Stamp ${state.template}`;
+    const n = state.blocks;
+    const primary = state.roof ? `${state.roof} roof`
+      : state.clear ? `Clear: ${state.clear}`
+      : `Stamp ${state.template}`;
     this.q('#tool-name').textContent = primary;
     this.q('#tool-target').textContent = state.roof
-      ? (state.onBuild ? `over ${state.blocks} block${state.blocks === 1 ? '' : 's'}` : 'not on a building')
+      ? (state.onBuild ? `over ${n} block${n === 1 ? '' : 's'}` : 'not on a building')
+      : state.clear
+      ? (state.onBuild ? `takes ${n} block${n === 1 ? '' : 's'}` : 'nothing there')
       : (state.onBuild ? 'here' : 'aim at the ground');
 
     // A roof that can turn takes the second button, because a phone has no R
     // and which way the slope falls is the thing you need to change.
     const second = state.facing ? 'Turn' : 'Cancel';
     const facing = state.facing ? ` \u00b7 ${state.facing}` : '';
+    const verb = state.clear ? 'clear' : 'place';
     this.q('#tool-hint').textContent = (touch
       ? `${primary} \u00b7 ${second}`
-      : `Left click: place \u00b7 right click: ${second.toLowerCase()}`) + facing;
+      : `Left click: ${verb} \u00b7 right click: ${second.toLowerCase()}`) + facing;
     // On touch the two action buttons are the only way to reach either, so they
     // say what they do while a tool is queued.
     this.setActionLabels(primary, second);
@@ -1435,6 +1461,29 @@ export class UIManager {
       note.innerHTML = 'It sits on the highest block inside the box, and is made of whatever you are '
         + 'holding. R turns it. Place it again over the same box to change the shape, the way it '
         + 'faces or the material — it replaces the roof rather than stacking one on it.';
+    }
+  }
+
+  /** The ways of taking a lot of blocks away, each with a drawing of its reach. */
+  refreshClearList() {
+    const list = this.q('#clear-list');
+    if (!list) return;
+    list.innerHTML = CLEARS.map((c) => `
+      <button class="roof-row" data-clear="${c.id}">
+        <span class="roof-art">${clearArtSvg(c)}</span>
+        <span class="roof-meta">
+          <span class="roof-name">${escapeHtml(c.name)}</span>
+          <span class="roof-note">${escapeHtml(c.note)}</span>
+        </span>
+      </button>
+    `).join('');
+    list.querySelectorAll('[data-clear]').forEach((btn) => btn.addEventListener('click', () => {
+      if (this.cb.onPickClear(btn.dataset.clear)) this.closePanel('panel-clear');
+    }));
+    const note = this.q('#clear-note');
+    if (note) {
+      note.textContent = 'What it would take is outlined before you take it. Your border and your '
+        + 'claimed buildings refuse it exactly as breaking one block by hand would.';
     }
   }
 

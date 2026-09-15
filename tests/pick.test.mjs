@@ -170,8 +170,8 @@ ok('Place cancels rather than placing while something is queued',
   const tool = Number(game.match(/const TOOL_REACH = (\d+);/)[1]);
   ok(`you reach ${reach} blocks but a tool points ${tool}`, tool > reach * 2);
   ok('and the tools use it', /toolAim\(\) \{[\s\S]{0,120}this\.raycast\(TOOL_REACH\)/.test(game));
-  ok('both the roof and a design go through it',
-    (game.match(/const hit = this\.toolAim\(\);/g) ?? []).length === 2);
+  ok('the roof, a design and a clear all go through it',
+    (game.match(/this\.toolAim\(\)/g) ?? []).length >= 3);
   ok('while breaking a block still only reaches as far as you do',
     /castVoxelRay\(this\.world, origin, dir, reach\)/.test(game)
     && /raycast\(reach = REACH\)/.test(game));

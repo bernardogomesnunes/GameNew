@@ -4,11 +4,12 @@ import { generateTerrain } from './world/TerrainGenerator.js';
 import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
-import { ToolHistory } from './tools/ToolHistory.js';
 import { buildTemplatePlacement, rotateTemplate, captureBlocks } from './tools/Templates.js';
 import { roofPlan, roofBlocks, roofPeak, roofPick } from './tools/RoofTool.js';
 import { pickBuild } from './tools/PointerPick.js';
 import { ROOFS_BY_ID, facingLabel } from './config/roofs.js';
+import { clearPlan, clearCells, cellBounds } from './tools/ClearTool.js';
+import { CLEARS_BY_ID } from './config/clears.js';
 import { SelectionHighlight } from './tools/SelectionHighlight.js';
 import { BuildGhost } from './tools/BuildGhost.js';
 import { SettlerView } from './render/SettlerView.js';
@@ -154,7 +155,6 @@ export class Game {
     this.farTerrain = new FarTerrain(this.scene);
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
-    this.toolHistory = new ToolHistory();
     // Duilt is the game. Creative is the sandbox this grew out of and is
     // still there on purpose, but arriving in it meant a
     // first-time player landed in a world with no bag, no land and no goals,
@@ -227,6 +227,7 @@ export class Game {
     this.pendingTemplate = null; // the template queued for stamping
     this.templateRotation = 0;
     this.pendingRoof = null;     // the roof shape queued, if any
+    this.pendingClear = null;    // the clear shape queued, if any
     this.roofTurn = 0;
     this.roofKey = null;         // what the preview was last built for
     this.lastRoof = null;        // the roof this tool put up, while it is untouched
@@ -428,6 +429,20 @@ export class Game {
       },
       onRotateRoof: () => this.turnRoof(),
       onPlaceRoof: () => this.stampRoof(),
+      onPickClear: (id) => {
+        this.clearPending({ quiet: true });
+        this.pendingClear = CLEARS_BY_ID.get(id) ?? null;
+        if (this.pendingClear) {
+          this.ui.toast({
+            kind: 'challenge',
+            title: `Ready: ${this.pendingClear.name}`,
+            body: this.pendingClear.kind === 'build'
+              ? 'Point at what you want gone'
+              : 'Point at the middle of what you want gone',
+          });
+        }
+        return !!this.pendingClear;
+      },
       onDeleteTemplate: (id) => this.templates.delete(id),
       onRotateTemplate: () => { this.templateRotation = (this.templateRotation + 1) % 4; return this.templateRotation; },
       onPlaceTemplate: () => this.stampTemplate(),
@@ -552,7 +567,6 @@ export class Game {
     this.applyTerritoryBounds();
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
-    this.toolHistory = new ToolHistory();
     if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
     this.rebuildAllChunks();
     this.bus.emit('economy:change', {});
@@ -619,7 +633,6 @@ export class Game {
     this.gamification.loadJSON(data.gamification);
     this.economy = new EconomyEngine(this.bus);
     this.economy.loadJSON(data.economy);
-    this.toolHistory = new ToolHistory();
     if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
     if (this.mode === DUILT) {
       this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus });
@@ -787,9 +800,6 @@ export class Game {
         const mode = this.symmetryTool.cycle();
         this.ui.toast({ kind: 'xp', title: `Symmetry: ${mode.toUpperCase()}` });
       }
-      // Ctrl+Z takes back the last thing a *tool* did, not the last block you
-      // placed. Breaking is how you take a block back.
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); this.undoTool(); }
     });
   }
 
@@ -838,15 +848,16 @@ export class Game {
     this.breakBlock();
   }
 
-  /** Whether a tool is queued and waiting to be put down where you are pointing. */
+  /** Whether a tool is queued and waiting to be used where you are pointing. */
   get armed() {
-    return !!(this.pendingRoof || this.pendingTemplate);
+    return !!(this.pendingRoof || this.pendingTemplate || this.pendingClear);
   }
 
   primaryAction() {
     if (this.moving) return void this.cancelMove();
     // A queued tool takes the button it needs and nothing else does. There is
     // no mode to be in any more: if nothing is queued, Break breaks.
+    if (this.pendingClear) return void this.runClear();
     if (this.pendingRoof) return void this.stampRoof();
     if (this.pendingTemplate) return void this.stampTemplate();
     this.breakBlock();
@@ -901,17 +912,9 @@ export class Game {
       return false;
     }
     const name = this.pendingTemplate.name;
-    if (!this.applyChanges(changes, { viaSymmetry: false, tool: name })) return false;
+    if (!this.applyChanges(changes, { viaSymmetry: false })) return false;
     this.gamification.onTemplatePlaced(this.pendingTemplate);
-    // The way back is offered on the thing you just did rather than parked in
-    // the corner of the screen forever — and it works under a thumb, which a
-    // Ctrl+Z never did.
-    this.ui.toast({
-      kind: 'challenge',
-      title: `Placed ${name}`,
-      body: `${changes.length} blocks`,
-      action: { label: 'Take it back', onClick: () => this.undoTool() },
-    });
+    this.ui.toast({ kind: 'challenge', title: `Placed ${name}`, body: `${changes.length} blocks` });
     return true;
   }
 
@@ -926,6 +929,7 @@ export class Game {
     const had = this.armed && !quiet;
     this.pendingTemplate = null;
     this.pendingRoof = null;
+    this.pendingClear = null;
     this.roofTurn = 0;
     this.roofGhost.hide();
     this.roofKey = null;
@@ -961,6 +965,72 @@ export class Game {
     this.roofTurn = (this.roofTurn + 1) % this.pendingRoof.turns;
     this.ui.toast({ kind: 'xp', title: `Turned · ${facingLabel(this.pendingRoof, this.roofTurn)}` });
     return this.roofTurn;
+  }
+
+  /**
+   * What the queued clear would take, worked out once per aim.
+   *
+   * Cached the same way the roof's pick is, because "this build" is a flood
+   * fill and the crosshair moves every frame.
+   */
+  clearTarget() {
+    if (!this.pendingClear) return null;
+    const hit = this.toolAim();
+    if (!hit) return null;
+    const key = `clear:${this.pendingClear.id}:${hit.x},${hit.y},${hit.z}`;
+    if (key !== this.clearPickKey) {
+      this.clearPickKey = key;
+      this.clearPickValue = clearCells(this.world, hit, this.pendingClear);
+    }
+    return this.clearPickValue;
+  }
+
+  /**
+   * Takes the queued clear's blocks away, into your bag, as one action.
+   *
+   * Straight through applyChanges, so a claimed building refuses it, the border
+   * refuses it, bedrock is filtered out of it, and every block that does go
+   * lands in your bag exactly as if you had broken it by hand — because as far
+   * as the rest of the game is concerned, that is what happened.
+   */
+  runClear() {
+    if (!this.pendingClear) return false;
+    const hit = this.toolAim();
+    if (!hit) {
+      this.ui.toast({ kind: 'xp', title: 'Point at something first' });
+      return false;
+    }
+    const changes = clearPlan(this.world, hit, this.pendingClear);
+    if (!changes.length) {
+      this.ui.toast({
+        kind: 'xp',
+        title: 'Nothing there to take',
+        body: this.pendingClear.kind === 'build' ? 'That is the ground, not something you built' : '',
+      });
+      return false;
+    }
+    if (!this.applyChanges(changes, { chargeResources: false })) return false;
+    this.clearPickKey = null;
+    this.roofPickKey = null;
+    this.pickKey = null;
+    this.ui.toast({
+      kind: 'challenge',
+      title: `${changes.length} blocks cleared`,
+      body: this.duilt ? 'All of it is in your bag' : '',
+    });
+    return true;
+  }
+
+  /**
+   * What the clear would take, outlined before you take it.
+   *
+   * A tool that removes sixty blocks at once and gives you no warning of which
+   * sixty is a tool nobody will press twice.
+   */
+  updateClearPreview(cells) {
+    if (!cells?.length) return this.selection.hide();
+    this.selection.update(cellBounds(cells), cells, this.world, { force: this.selectionDirty });
+    this.selectionDirty = false;
   }
 
   /** The shape of the building the crosshair is on. Null when you are aiming at scenery. */
@@ -1045,7 +1115,7 @@ export class Game {
       return false;
     }
     const label = `${shape.name} roof`;
-    if (!this.applyChanges(changes, { tool: label })) return false;
+    if (!this.applyChanges(changes)) return false;
     this.lastRoof = { base, cells: laid };
     // The building is a different shape now, so the next aim has to look again.
     this.roofPickKey = null;
@@ -1055,7 +1125,6 @@ export class Game {
       kind: 'challenge',
       title: `${label} up`,
       body: `${changes.length} blocks of ${made.toLowerCase()}`,
-      action: { label: 'Take it off', onClick: () => this.undoTool() },
     });
     return true;
   }
@@ -1561,19 +1630,16 @@ export class Game {
   }
 
   /**
-   * The one place blocks change. Break, place, stamp, symmetry and taking a
-   * tool's work back off all route through here, so the rules only have to hook
-   * in once: the border says where you may build and the bag says whether you
-   * can afford it. A batch is atomic — if you can't pay for all of it, none of
-   * it lands.
+   * The one place blocks change. Break, place, stamp and symmetry all route
+   * through here, so the rules only have to hook in once: the border says where
+   * you may build and the bag says whether you can afford it. A batch is atomic
+   * — if you can't pay for all of it, none of it lands.
    *
-   * `tool` names the tool that did this, and only a named batch is remembered
-   * for taking back. That is why the building actions — stamping a starter,
-   * moving one, taking one down — do not pass it: each of them also adds or
-   * removes a claim, and putting the blocks back without touching the register
-   * would leave a building claimed over empty air.
+   * Nothing is remembered for undoing. Breaking a block is how you take a block
+   * back — it goes in your bag when you do — and a tool that lays a lot at once
+   * has a tool that takes a lot away again.
    */
-  applyChanges(changes, { viaSymmetry = false, chargeResources = true, tool = null } = {}) {
+  applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
     changes = changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z));
     if (!changes.length) return false;
 
@@ -1614,7 +1680,6 @@ export class Game {
 
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
-    if (tool) this.toolHistory.push(tool, changes);
     this.remeshDirty();
 
     if (this.duilt) {
@@ -1708,44 +1773,6 @@ export class Game {
       this.mesher.rebuild(this.world, chunk);
       if (performance.now() >= deadline) break;
     }
-  }
-
-  /**
-   * Takes the last tool's work back off.
-   *
-   * Through applyChanges rather than writing blocks back directly, which is how
-   * the old undo did it — and why undoing a roof in a Duilt world used to cost
-   * you sixty-seven planks and give you nothing back. Going the normal way
-   * means the bag is credited exactly as if you had broken it all by hand,
-   * because as far as the rest of the game is concerned that is what happened.
-   *
-   * Only blocks the tool still owns are touched. Put a roof up, knock a hole in
-   * it and build a chimney through it, and taking the roof off should not also
-   * take the chimney — so anything that has changed since is left alone.
-   */
-  undoTool() {
-    const action = this.toolHistory.pop();
-    if (!action) {
-      this.ui?.toast({ kind: 'xp', title: 'Nothing to take back', body: 'Break blocks to undo them by hand' });
-      return false;
-    }
-    const inverse = action.changes
-      .filter((c) => this.world.getBlock(c.x, c.y, c.z) === c.next)
-      .map((c) => ({ x: c.x, y: c.y, z: c.z, prev: c.next, next: c.prev }));
-    if (!inverse.length) {
-      this.ui?.toast({ kind: 'xp', title: `The ${action.label.toLowerCase()} is not there any more` });
-      return false;
-    }
-    if (!this.applyChanges(inverse, { chargeResources: false })) return false;
-    // The building is a different shape now, so the next aim has to look again.
-    this.roofPickKey = null;
-    this.pickKey = null;
-    this.ui?.toast({
-      kind: 'xp',
-      title: `Took the ${action.label.toLowerCase()} back off`,
-      body: `${inverse.length} blocks`,
-    });
-    return true;
   }
 
   // ---- loop ----
@@ -1905,7 +1932,7 @@ export class Game {
     // The single block under the crosshair, except while a roof is queued —
     // there the whole building is highlighted and one more box on top of it is
     // just noise.
-    if (hit && !this.pendingRoof) {
+    if (hit && !this.pendingRoof && !this.pendingClear) {
       this.hoverBox.visible = true;
       this.hoverBox.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
     } else {
@@ -1914,7 +1941,16 @@ export class Game {
 
     // Working out which build you mean is a flood fill, so it only happens when
     // something is going to use the answer.
-    if (this.pendingRoof) {
+    if (this.pendingClear) {
+      const cells = this.clearTarget();
+      this.updateRoofPreview(null);
+      this.updateClearPreview(cells);
+      this.ui.setToolReadout({
+        clear: this.pendingClear.name,
+        onBuild: !!cells?.length,
+        blocks: cells?.length ?? 0,
+      });
+    } else if (this.pendingRoof) {
       const pick = this.roofTarget();
       this.updateRoofPreview(pick);
       // The ghost shows the roof; this shows the building it decided on, which

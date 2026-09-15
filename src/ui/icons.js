@@ -24,6 +24,8 @@ const PATHS = {
   // A pitch with two stubs of wall under it. Home has a door in it and would
   // be the same picture otherwise.
   roof: 'M2.5 14.5 12 7l9.5 7.5M5.5 12.5V18M18.5 12.5V18',
+  // A block with a bite out of it: what a clear leaves behind.
+  clear: 'M4 8.5 12 4l8 4.5v7L12 20l-8-4.5zM12 20v-7M4 8.5 12 13l8-4.5M14.5 6.2 9 9.4v5',
   help: 'M12 17h.01M9.2 9a2.8 2.8 0 1 1 3.8 2.6c-.7.3-1 .9-1 1.6v.3',
   // Skills: a step up, not the bar chart Stats already uses — side by side in
   // the tray the two were the same picture.
