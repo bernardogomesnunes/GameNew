@@ -35,11 +35,12 @@ export const PANELS = [
   },
   {
     id: 'panel-menu',
-    title: 'Menu',
+    // The button that opens it says Settings, so the heading does too.
+    title: 'Settings',
     subId: 'menu-world-kind',
     layer: 'main',
     mode: 'any',
-    label: 'Menu',
+    label: 'Settings',
   },
   {
     id: 'panel-account',

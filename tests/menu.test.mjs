@@ -58,15 +58,14 @@ ok('and achievements are not one of them — one such screen is enough',
   ok('a local-only build does not', !without.some((m) => m.id === 'menu-profile'));
   ok('and everything else shows either way', without.length === MENU.length - 1);
 
-  // The workshop end — the render settings and the file import — is folded
-  // away, so the menu is the things somebody opens the menu to do.
+  // Graphics and Files were folded behind a switch, which put two of the three
+  // things people open settings for behind a button labelled "workshop tools".
   const plain = menuFor({ cloud: true });
-  ok('the graphics and files sections are behind the switch',
-    !plain.some((m) => m.id === 'menu-graphics') && !plain.some((m) => m.id === 'menu-files'));
-  ok('and the switch brings them back', withCloud.length === plain.length + 2);
-  ok('what is left is what you came for',
-    plain.map((m) => m.id).join() === 'menu-world,menu-achievements,menu-profile');
-  ok('the UI knows there is something to unfold', /HAS_DEV_SECTIONS/.test(ui));
+  ok('settings holds the world, the graphics and the files',
+    plain.map((m) => m.id).join() === 'menu-world,menu-graphics,menu-files,menu-achievements,menu-profile');
+  ok('and none of it is behind a switch any more', plain.length === withCloud.length);
+  // The switch itself stays, with nothing on it, for whatever earns it next.
+  ok('the UI still knows how to unfold something', /HAS_DEV_SECTIONS/.test(ui));
   ok('and remembers whether it is unfolded', /this\.devOpen/.test(ui));
 }
 
@@ -84,40 +83,39 @@ ok('and the way back is too', css.includes('.menu-back'));
 
 // --- the things you came to do are on the first screen -----------------------
 
-// Save and Leave were inside World details, which made leaving a world two
-// taps down a page named after something else.
+// Three ways out, and only three. "Save a copy" made a second world out of the
+// one you were in, which is not what Save means in a pause menu.
 {
   const index = ui.slice(ui.indexOf('menu-actions menu-resume'), ui.indexOf('panel-account'));
   ok('Back to the world is on the index', index.includes('id="btn-resume"'));
-  ok('and so is Save', index.includes('id="btn-save"'));
-  ok('and Leave', index.includes('id="btn-leave"'));
-  const worldSection = ui.slice(ui.indexOf('id="menu-world"'), ui.indexOf('id="menu-graphics"'));
-  ok('World details holds the name and nothing you act with',
-    worldSection.includes('id="save-name"')
-    && !worldSection.includes('id="btn-save"') && !worldSection.includes('id="btn-leave"'));
+  ok('and Save and leave', index.includes('id="btn-leave"'));
+  ok('and Leave without saving', index.includes('id="btn-leave-nosave"'));
+  ok('and nothing else', (index.match(/<button/g) ?? []).length === 3);
+  ok('saving a copy is gone', !ui.includes('id="btn-save"'));
+  // Which leaves renaming to the field itself.
+  ok('the name is still editable', ui.includes('id="save-name"'));
+  ok('and renaming happens when you leave the field',
+    /this\.q\('#save-name'\)\.addEventListener\('change'/.test(ui));
+  ok('and still tells the world its new name', /onRenameWorld\?\.\(name\)/.test(ui));
 }
 
 // --- the mobile screen gets its space back ----------------------------------
 
-// The goals are what teaches the game now that the How to play panel is gone,
-// so they are not something to bury a level deep — they sit next to Settings,
-// on every screen, and the XP bar gave up the width for it.
-ok('the goals button stays on a phone', /id="btn-stats"/.test(ui)
-  && !/class="icon-btn touch-moved" id="btn-stats"/.test(ui));
-ok('and it opens the panel', ui.includes("this.q('#btn-stats')"));
-// One way in, not two: it was in the tray while it was hidden up top.
-ok('so it is not also buried in the tray', !ui.includes('id="t-stats"'));
-// And still reachable the other way, for whoever went looking in the menu.
-ok('achievements are still reachable from the menu',
-  MENU.some((m) => m.opens === 'panel-stats'));
+// Achievements belong in the menu, and nowhere else. They had a button in the
+// top corner and a card on the HUD as well, which is three of one thing on the
+// screen with the least room for any of it.
+ok('achievements are reached from the menu', MENU.some((m) => m.opens === 'panel-stats'));
+ok('and have no button in the top corner', !ui.includes('id="btn-stats"'));
+ok('nor one in the tray', !ui.includes('id="t-stats"'));
+ok('and the goal card is off the HUD entirely', !ui.includes('id="goals"'));
 
-// The bar has to leave room for the two buttons beside it.
+// Which leaves one button up there, so the XP bar can have its width back.
 {
   const phone = css.slice(css.indexOf('@media (max-width: 640px), (pointer: coarse)'));
-  const bar = phone.match(/#hud-top \{[^}]*width: (\d+)%/)?.[1];
-  const btns = phone.match(/#top-buttons \{[^}]*max-width: (\d+)%/)?.[1];
-  ok(`the xp bar takes ${bar}% of the width`, Number(bar) <= 45);
-  ok(`and the buttons ${btns}%, which fits alongside`, Number(bar) + Number(btns) <= 100);
+  const bar = Number(phone.match(/#hud-top \{[^}]*width: (\d+)%/)[1]);
+  const btns = Number(phone.match(/#top-buttons \{[^}]*max-width: (\d+)%/)[1]);
+  ok(`the xp bar takes ${bar}% of the width`, bar >= 50);
+  ok(`and the one button ${btns}%, which still fits alongside`, bar + btns <= 100);
 }
 
 process.exit(f ? 1 : 0);

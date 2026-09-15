@@ -106,13 +106,6 @@ export class UIManager {
         <button class="icon-btn duilt-only touch-moved" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
         <button class="icon-btn touch-moved" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
-        <!--
-          Goals keeps its place on a phone, next to Settings. It is the only
-          thing up here you open mid-build rather than between builds, and the
-          one that teaches the game now that the how-to panel is gone — two
-          corner buttons is a price the XP bar can pay out of its own width.
-        -->
-        <button class="icon-btn" id="btn-stats" title="Your goals, and what to do next">${icon('stats')}<span>Goals</span></button>
         <button class="icon-btn" id="btn-menu" title="Settings, saves and your account">${icon('settings')}<span>Settings</span></button>
       </div>
 
@@ -192,14 +185,13 @@ export class UIManager {
           </div>
 
           <!--
-            The three things you open the menu *to do*, rather than to go and
-            look at, so they sit on the first screen. Save and Leave were
-            inside World details, which made leaving a world two taps down a
-            page named after something else.
+            The three ways out, on every screen of the menu. They were mixed in
+            with a "Save a copy" that made a second world out of the one you
+            were in — which is not what anybody pressing Save in a pause menu
+            means. Saving happens when you leave.
           -->
           <div class="menu-actions menu-resume">
             <button class="primary" id="btn-resume">Back to the world</button>
-            <button class="secondary" id="btn-save">Save a copy</button>
             <button class="secondary" id="btn-leave">Save and leave</button>
             <!--
               Leaving without saving is the undo for a whole session, so it is
@@ -498,7 +490,6 @@ export class UIManager {
       } else fsBtn.remove();
     }
 
-    this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
     this.q('#btn-templates').addEventListener('click', () => this.toolButton('design', 'panel-templates'));
     this.q('#btn-roof').addEventListener('click', () => this.toolButton('roof', 'panel-roof'));
     this.q('#tool-cancel').addEventListener('click', () => this.cb.onCancelTool?.());
@@ -570,18 +561,17 @@ export class UIManager {
     this.q('#btn-export-world').addEventListener('click', () => this.cb.onExportWorld(this.q('#save-name').value));
     this.q('#btn-export-vox').addEventListener('click', () => this.cb.onExportVox(this.q('#save-name').value));
     this.q('#btn-import-world').addEventListener('click', () => this.cb.onImportWorld());
-    this.q('#btn-save').addEventListener('click', () => {
-      // The field holds the world's name, not a separate "save as" box, so
-      // saving and renaming are the same gesture — which is what you mean when
-      // you edit the name and press Save.
+    // Renaming is the field, not a button beside it: type a name, leave the
+    // field, that is its name. It used to need Save pressed, and Save made a
+    // copy, so renaming quietly gave you two worlds.
+    this.q('#save-name').addEventListener('change', () => {
       const input = this.q('#save-name');
       const name = input.value.trim() || this.game.worldName || `World ${new Date().toLocaleDateString()}`;
       input.value = name;
       this.cb.onRenameWorld?.(name);
-      this.cb.onSave(name);
       const hint = this.q('#save-hint');
       hint.hidden = false;
-      hint.textContent = `Saved. You will find "${name}" on the worlds screen.`;
+      hint.textContent = `This world is called "${name}" now. It is kept when you leave.`;
     });
 
     this.wireTouchControls();

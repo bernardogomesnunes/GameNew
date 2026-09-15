@@ -362,8 +362,7 @@ body.touch #touch-controls { display: block; }
 #blocker:not([hidden]) ~ #hotbar-wrap,
 #blocker:not([hidden]) ~ #toast-stack,
 #blocker:not([hidden]) ~ #tool-readout,
-#blocker:not([hidden]) ~ #duilt-layer #vitals,
-#blocker:not([hidden]) ~ #duilt-layer #goals { display: none !important; }
+#blocker:not([hidden]) ~ #duilt-layer #vitals { display: none !important; }
 body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 
 /* Twin thumbsticks. Each claims its own half of the lower screen; interactive
@@ -492,15 +491,12 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
    52px buttons across the top of a 390px-tall picture. */
 @media (max-width: 640px), (pointer: coarse) {
   .panel { padding: 14px; }
-  /* Short enough to leave the other half of the line to Goals and Settings.
-     The bar ran to 55% and read as the whole top of the screen; it is a
-     progress bar, and a progress bar says as much at half the length. */
-  #hud-top { right: auto; width: 42%; }
+  #hud-top { right: auto; width: 55%; }
   /* Labels are worth their space on a desktop toolbar but eat a phone screen;
      the Help panel names every control instead. */
-  /* Two buttons at 36px plus a gap. Nothing to wrap, but the cap stays in
-     case a third ever earns a place up here. */
-  #top-buttons { top: 12px; flex-wrap: wrap; justify-content: flex-end; max-width: 50%; gap: 5px; }
+  /* One button — Settings — so there is nothing left up here to wrap, and the
+     XP bar gets the rest of the line back. */
+  #top-buttons { top: 12px; flex-wrap: wrap; justify-content: flex-end; max-width: 30%; gap: 5px; }
   .icon-btn { min-width: 0; width: 36px; height: 36px; padding: 0; border-radius: 9px; }
   .icon-btn span { display: none; }
   .icon-btn.panel-close { width: 30px; height: 30px; }
@@ -614,44 +610,6 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 .vital-eat[hidden] { display: none; }
 
-/* --- goals: the age checklist --- */
-#goals {
-  position: absolute; top: 94px; left: 12px; width: 228px;
-  background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--panel-border); border-radius: 10px; padding: 11px 13px;
-  pointer-events: none; z-index: 4; font-size: 12px;
-}
-#goals[hidden] { display: none; }
-.goals-head {
-  display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
-  color: var(--text-dim); margin-bottom: 8px;
-  width: 100%; background: transparent; border: 0; padding: 0; font-family: inherit;
-  cursor: pointer; pointer-events: auto; text-align: left;
-}
-.goals-caret {
-  flex: 0 0 auto; width: 0; height: 0; margin-left: 2px;
-  border-left: 4px solid transparent; border-right: 4px solid transparent;
-  border-top: 5px solid var(--text-dim);
-  transition: transform .16s ease;
-}
-#goals.collapsed .goals-caret { transform: rotate(-90deg); }
-#goals.collapsed .goals-head { margin-bottom: 0; }
-#goals.collapsed #goals-list { display: none; }
-/* The panel itself ignores taps so it never eats a look-drag; only the header
- * takes them. */
-#goals { pointer-events: none; }
-#goals-land { font-variant-numeric: tabular-nums; }
-#goals-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-#goals-list li { display: flex; align-items: flex-start; gap: 8px; line-height: 1.35; color: var(--text); }
-#goals-list li.done { color: var(--text-dim); text-decoration: line-through; }
-.tick {
-  flex: 0 0 15px; height: 15px; border-radius: 4px; margin-top: 1px;
-  border: 1.5px solid var(--panel-border-strong);
-  display: flex; align-items: center; justify-content: center; font-size: 10px;
-}
-#goals-list li.done .tick { border-color: var(--accent); color: var(--accent); }
-
 /* --- the bag --- */
 .panel-wide { max-width: 560px; }
 #bag-grid {
@@ -722,14 +680,6 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
  * which on a 390px screen is not a heads-up display, it is a wall.
  */
 @media (max-width: 720px), (pointer: coarse) {
-  #goals {
-    width: 150px; top: 84px; left: 10px; font-size: 10.5px; padding: 7px 9px;
-    max-width: 42vw; opacity: 0.92;
-  }
-  .goals-head { font-size: 9px; margin-bottom: 6px; gap: 6px; }
-  #goals-list { gap: 4px; }
-  #goals-list li { line-height: 1.25; }
-  .tick { flex-basis: 12px; height: 12px; font-size: 8px; border-radius: 3px; }
   #vitals { top: 48px; left: 10px; }
   .vital-track { width: 62px; }
   #bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 42vh; }
@@ -820,15 +770,6 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
  * selector, and the way out. Everything you touch once in a while is behind
  * More, where there is room to label it. */
 body.touch #top-buttons .touch-moved { display: none !important; }
-
-/* The goal list goes to the top and starts folded on a phone.
- *
- * It lived down the left side, which is now a column of controls, and it is a
- * reminder rather than a readout you watch — one line saying which age you are
- * in is the part worth permanent space. The header is still a tap away from
- * the whole list. */
-body.touch #goals { top: calc(84px + env(safe-area-inset-top)); left: 12px; width: min(74%, 280px); }
-
 
 /* --- the worlds screen ---------------------------------------------------
  *
@@ -1022,15 +963,12 @@ body.touch #goals { top: calc(84px + env(safe-area-inset-top)); left: 12px; widt
  * neither could be read. On a phone there is not room for them side by side,
  * so they stack — the toast takes a band of its own under the bars, capped so
  * a long one cannot grow into the list, and the list starts below it.
- *
- * After #goals so it wins on order rather than by piling on selectors.
  */
 @media (max-width: 640px), (pointer: coarse) {
   #toast-stack {
     top: 94px; left: 12px; right: 12px; max-width: none;
     align-items: stretch; max-height: 86px; overflow: hidden;
   }
-  #goals { top: 188px; }
 }
 
 /* --- a phone on its side --------------------------------------------------
@@ -1076,8 +1014,6 @@ body.touch #goals { top: calc(84px + env(safe-area-inset-top)); left: 12px; widt
      the column to itself rather than sharing it with the hunger bar. */
   body.touch #vitals { top: 8px; left: 64px; }
   body.touch #top-buttons { top: 8px; }
-  /* A reminder card, at a height with no room for reminders. */
-  body.touch #goals { display: none; }
   body.touch #hotbar-wrap { bottom: calc(4px + env(safe-area-inset-bottom)); }
   /* The sheet would be most of the screen at this height, so it scrolls. */
   body.touch .touch-tray {
@@ -1121,13 +1057,6 @@ body.touch #building-hint { pointer-events: auto; }
 #building-hint.bad { border-color: var(--danger); }
 #building-hint.bad span { color: var(--danger); }
 #building-hint span { color: var(--text-dim); margin-left: 7px; font-size: 11px; }
-
-/* A goal that asks for several of something says how many you have. */
-.goal-count {
-  margin-left: auto; padding-left: 8px;
-  font-variant-numeric: tabular-nums; color: var(--text-dim); font-size: 11px;
-}
-#goals-list li { display: flex; align-items: baseline; }
 
 /* A recipe made at a workshop says so, and stops saying it once you are there. */
 .recipe-station {

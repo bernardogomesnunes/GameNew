@@ -1,4 +1,5 @@
 import { PANELS, PANELS_BY_ID, panelsOn, panelForKey } from '../src/config/panels.js';
+import { MENU } from '../src/config/menu.js';
 import { panelMarkup, renderPanels, panelDef } from '../src/ui/Panel.js';
 import { readFileSync } from 'node:fs';
 
@@ -106,6 +107,8 @@ for (const p of PANELS) {
     // A tool's button opens its panel or puts the tool away, depending on
     // whether that tool is the one in hand.
     || sources.includes(`, '${p.id}')`)
+    // Or a menu card names it, and the index opens whatever its card names.
+    || MENU.some((m) => m.opens === p.id)
     || !!p.key;
   ok(`${p.id} has a way in`, opened);
 }

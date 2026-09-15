@@ -18,24 +18,6 @@ import { renderPanels } from './Panel.js';
  */
 
 const HOLD_MS = 420;
-const GOALS_KEY = 'voxelgame:goals-open';
-
-/**
- * Whether the goal list starts open.
- *
- * Folded on a phone unless you have said otherwise. It is a reminder, not a
- * readout you watch, and on a small screen a permanent card of three tasks is
- * a third of the view you are trying to build in — the one line naming the age
- * is the part worth the space, and the header opens the rest.
- */
-function loadGoalsOpen() {
-  try {
-    const saved = localStorage.getItem(GOALS_KEY);
-    if (saved !== null) return saved !== '0';
-  } catch { /* private browsing; fall through to the default */ }
-  return !document.body.classList.contains('touch');
-}
-
 export class DuiltUI {
   constructor(root, { game, bus, panels }) {
     this.root = root;
@@ -79,15 +61,6 @@ export class DuiltUI {
         </button>
       </div>
 
-      <div id="goals" hidden>
-        <button class="goals-head" id="goals-toggle" aria-expanded="true">
-          <span id="goals-age">Age 1 · Settlement</span>
-          <span id="goals-land">32 × 32</span>
-          <span class="goals-caret" aria-hidden="true"></span>
-        </button>
-        <ul id="goals-list"></ul>
-      </div>
-
       ${renderPanels('duilt', {
         'panel-bag': `
           <div id="bag-grid"></div>
@@ -116,19 +89,12 @@ export class DuiltUI {
     this.q('#btn-eat').addEventListener('click', () => this.eat());
     this.q('#vital-people').addEventListener('click', () => this.sayPeople());
 
-    // The task list is a reminder, not a readout you stare at, and on a phone
-    // it was taking a corner of the screen permanently. Collapsed it keeps the
-    // one line that says where you are; the choice is remembered.
-    const toggle = this.q('#goals-toggle');
-    toggle.addEventListener('click', () => this.setGoalsOpen(!this.goalsOpen));
-    this.setGoalsOpen(loadGoalsOpen());
-
     this.bus.on('inventory:change', () => { this.renderBag(); this.renderVitals(); this.onBagChanged?.(); });
     this.bus.on('hunger:change', () => this.renderVitals());
-    this.bus.on('structure:claimed', () => this.renderGoals());
-    this.bus.on('structure:broken', () => this.renderGoals());
-    this.bus.on('territory:expanded', () => this.renderGoals());
+    // Claiming and losing a building both change how many houses there are,
+    // which is the number the people pill is counting against.
     this.bus.on('structure:claimed', () => this.renderVitals());
+    this.bus.on('structure:broken', () => this.renderVitals());
     this.bus.on('settler:left', () => this.renderVitals());
     this.bus.on('settler:hungry', ({ count }) => {
       this.renderVitals();
@@ -156,8 +122,7 @@ export class DuiltUI {
 
   setActive(on) {
     this.q('#vitals').hidden = !on;
-    this.q('#goals').hidden = !on;
-    if (on) { this.renderVitals(); this.renderGoals(); }
+    if (on) this.renderVitals();
     else this.panels.closeAll();
   }
 
@@ -311,32 +276,6 @@ export class DuiltUI {
       ? { kind: 'challenge', title: 'That helps', body: `+${r.restored} hunger` }
       : { kind: 'xp', title: r.reason });
     this.renderVitals();
-  }
-
-  setGoalsOpen(open) {
-    this.goalsOpen = open;
-    const el = this.q('#goals');
-    el.classList.toggle('collapsed', !open);
-    this.q('#goals-toggle').setAttribute('aria-expanded', String(open));
-    try { localStorage.setItem(GOALS_KEY, open ? '1' : '0'); } catch { /* private window */ }
-  }
-
-  // ---- goals ----
-
-  renderGoals() {
-    const d = this.duilt;
-    if (!d) return;
-    const ring = d.territory.ring;
-    this.q('#goals-age').textContent = `Age ${ring.age} · ${ring.name}`;
-    this.q('#goals-land').textContent = `${ring.size} × ${ring.size}`;
-    const goals = d.ageGoals();
-    this.q('#goals-list').innerHTML = d.won
-      ? `<li class="done"><span class="tick">✓</span>Finished. The whole map is yours.</li>`
-      : goals.length
-        ? goals.map((g) => `<li class="${g.done ? 'done' : ''}">`
-            + `<span class="tick">${g.done ? '✓' : ''}</span>${g.label}`
-            + `${g.progress ? `<span class="goal-count">${g.progress}</span>` : ''}</li>`).join('')
-        : `<li class="done"><span class="tick">✓</span>This age is yours</li>`;
   }
 
   /**

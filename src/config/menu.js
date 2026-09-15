@@ -9,9 +9,10 @@
  * taking up space on a screen that has very little to spare.
  *
  * So the menu is an index. Cards, one per thing you might have come to do,
- * and tapping one takes you there. Some open in place because they are small
- * (the world's name, the graphics, the files); the two that already have a
- * panel of their own open that, because one achievements screen is enough.
+ * and tapping one takes you there. Three of them open in place because they
+ * are small — the world's name, the graphics, the files; the two that already
+ * have a panel of their own open that, because one achievements screen is
+ * enough, and the goal list is that screen now rather than a card on the HUD.
  *
  * How to read one:
  *
@@ -22,9 +23,9 @@
  *   opens  an existing panel id, for sections that already have somewhere
  *          to live. Without it, the section renders inside the menu.
  *   needs  'cloud' — only shown when cloud sync is configured for this build
- *   dev    a workshop tool rather than something a player came here to do.
- *          Folded away behind one switch, so the menu is the four things
- *          somebody actually opens it for and these stay one tap from hand.
+ *   dev    folded away behind one switch. Nothing is marked this way now —
+ *          Graphics and Files were, and they are things people go to the
+ *          settings for. The switch stays for whatever earns it next.
  */
 
 export const MENU = [
@@ -36,14 +37,12 @@ export const MENU = [
   },
   {
     id: 'menu-graphics',
-    dev: true,
     name: 'Graphics',
     icon: 'sliders',
     blurb: 'Resolution, view distance and smooth edges — turn these down if it stutters.',
   },
   {
     id: 'menu-files',
-    dev: true,
     name: 'Files',
     icon: 'file',
     blurb: 'Export this world or a .vox model, or import a world from a file.',

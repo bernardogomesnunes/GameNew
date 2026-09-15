@@ -155,29 +155,30 @@ ok('it sits clear of the hotbar', /\.touch-tray \{[\s\S]{0,300}bottom: calc\(84p
 
 // --- what is left at the top --------------------------------------------------
 
-// The How to play panel is gone — the goals teach the game now — so the top
-// right is the one button that is not a game control at all.
+// One button up here, and it is not a game control at all: everything else
+// went to the tray, and the goals went to the menu where the rest of the
+// between-builds things live.
 ok('there is no guide button any more', !/id="btn-guide"/.test(ui));
 ok('and the menu reads as settings', /id="btn-menu"[^>]*>\$\{icon\('settings'\)\}<span>Settings<\/span>/.test(ui));
-// Goals is the exception: it teaches the game, so it stays out on the glass
-// beside Settings rather than going behind More with the rest.
-ok('the goals sit next to Settings on a phone too',
-  /id="btn-stats"/.test(ui) && !/touch-moved" id="btn-stats"/.test(ui));
-ok('and are not also in the tray', !tray.includes('id="t-stats"'));
+ok('Settings is all that is left in the corner',
+  (ui.slice(ui.indexOf('<div id="top-buttons">'), ui.indexOf('</div>', ui.indexOf('<div id="top-buttons">')))
+    .match(/class="icon-btn(?![^"]*touch-moved)/g) ?? []).length === 1);
+ok('the goals are not up there', !ui.includes('id="btn-stats"'));
+ok('nor in the tray', !tray.includes('id="t-stats"'));
 // Made, not given.
 ok('Clear and Mirror are there only once you have made the tool',
   /id="t-clear" data-tool="clear" hidden/.test(ui) && /id="t-symmetry" data-tool="mirror" hidden/.test(ui));
 ok('and the game says which ones you hold', /heldTools:/.test(readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8')));
 
-// --- the goal list is out of the way ------------------------------------------
+// --- the goal list is gone from the screen ------------------------------------
 
-// It lived down the left side, which is now a column of controls.
-// Under the XP bar and the hunger bar, which own the top-left corner.
-ok('the goals go to the top on a phone', /body\.touch #goals \{[^}]*top: calc\(84px/.test(css));
-ok('and start folded there, being a reminder rather than a readout',
-  /return !document\.body\.classList\.contains\('touch'\);/.test(duiltUi));
-ok('but a tap still opens the whole list', /toggle\.addEventListener\('click', \(\) => this\.setGoalsOpen\(!this\.goalsOpen\)\)/.test(duiltUi));
-ok('and the choice is remembered either way', /if \(saved !== null\) return saved !== '0';/.test(duiltUi));
+// It was a card of three tasks parked on the one screen that has no room for
+// a card of three tasks. It lives in the achievements panel now, banded by
+// age, which is the same list with somewhere to put it.
+ok('there is no goal card on the HUD', !duiltUi.includes('id="goals"'));
+ok('nothing draws one', !/renderGoals/.test(duiltUi));
+ok('and none of its styling is left behind', !/#goals|\.goals-head|\.goal-count/.test(css));
+ok('the achievements panel carries the goals instead', /goalBands\(\)/.test(ui));
 
 // --- you can see through them -------------------------------------------------
 
@@ -241,9 +242,8 @@ ok('the look stick is curved harder than the walking one',
   // stopped applying and it got the desktop's chrome.
   ok('and a phone gets phone chrome by its pointer, not just its width',
     /@media \(max-width: 640px\), \(pointer: coarse\) \{/.test(css));
-  ok('the goal list and the XP bar go, being what you can most afford to lose',
-    /body\.touch #goals \{ display: none; \}/.test(short)
-    && /body\.touch #hud-top \{ display: none; \}/.test(short));
+  ok('the XP bar goes, being what you can most afford to lose',
+    /body\.touch #hud-top \{ display: none; \}/.test(short));
   ok('the hunger bar stays, since running out of it stops you working',
     /body\.touch #vitals \{ top: 8px; left: 64px; \}/.test(short));
 
