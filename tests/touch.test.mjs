@@ -103,6 +103,29 @@ ok('and start folded there, being a reminder rather than a readout',
 ok('but a tap still opens the whole list', /toggle\.addEventListener\('click', \(\) => this\.setGoalsOpen\(!this\.goalsOpen\)\)/.test(duiltUi));
 ok('and the choice is remembered either way', /if \(saved !== null\) return saved !== '0';/.test(duiltUi));
 
+// --- you can see through them -------------------------------------------------
+
+// They sit on top of the one thing you are trying to look at, so they are
+// glass rather than slabs. The blur is what makes that readable: it settles
+// whatever is behind a button into a wash instead of a busy hillside.
+{
+  const btn = css.slice(css.indexOf('.touch-btn {'), css.indexOf('.touch-btn .icon'));
+  const alpha = Number(btn.match(/background: rgba\(13, 17, 23, ([\d.]+)\)/)[1]);
+  ok(`a button is ${Math.round((1 - alpha) * 100)}% see-through`, alpha > 0.15 && alpha < 0.5);
+  ok('with the blur kept, which is what keeps it readable', /backdrop-filter: var\(--blur\)/.test(btn));
+  const stick = Number(css.match(/\.stick-base \{[\s\S]*?opacity: ([\d.]+);/)[1]);
+  ok(`and a stick you are not holding is fainter still, at ${stick}`, stick < 0.45);
+}
+// A white glyph on glass over a bright sky is a white glyph on a bright sky.
+ok('the icon carries its own shadow', /\.touch-btn \.icon \{[^}]*drop-shadow/.test(css));
+ok('and so does the label', /\.touch-btn span \{[^}]*text-shadow/.test(css));
+// No hover on a phone, so the press is the only feedback there is.
+ok('pressing one brings it forward', /\.touch-btn:active \{[^}]*rgba\(13, 17, 23, 0\.68\)/.test(css));
+ok('and a queued tool still reads as lit', /\.touch-btn\.active \{[^}]*border-color: var\(--accent\)/.test(css));
+// Inside the sheet there is nothing to see through — it is on a solid panel —
+// and hiding would only make them harder to read.
+ok('the ones in the sheet stay solid', /\.touch-tray \.touch-btn \{ background: rgba\(255, 255, 255/.test(css));
+
 ok('the top toolbar still has room without wrapping', /#top-buttons \{[^}]*max-width: 58%/.test(css));
 
 process.exit(f ? 1 : 0);

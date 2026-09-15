@@ -330,9 +330,11 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 
 .stick-base {
   position: absolute; bottom: 24px; width: 104px; height: 104px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.05) 55%, rgba(255,255,255,0.10) 100%);
+  background: radial-gradient(circle, rgba(255,255,255,0.04) 55%, rgba(255,255,255,0.08) 100%);
   border: 1px solid var(--panel-border-strong);
-  opacity: 0.5; transition: opacity 0.15s ease, border-color 0.15s ease;
+  /* Fainter at rest than under a thumb: a stick you are not holding is a hint
+     about where to put your thumb, not something to look at. */
+  opacity: 0.38; transition: opacity 0.15s ease, border-color 0.15s ease;
 }
 #stick-left .stick-base { left: 24px; }
 #stick-right .stick-base { right: 24px; }
@@ -340,7 +342,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .stick-knob {
   position: absolute; width: 46px; height: 46px; border-radius: 50%; top: 29px; left: 29px;
   will-change: transform;
-  background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  background: rgba(13, 17, 23, 0.34); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--panel-border-strong); box-shadow: 0 2px 10px rgba(0,0,0,0.35);
 }
 .stick-base.active .stick-knob { border-color: var(--accent); background: var(--accent-dim); }
@@ -376,15 +378,35 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   pointer-events: auto; z-index: 7;
 }
 .touch-tray .touch-btn { width: 100%; height: 58px; border-radius: 12px; }
+/* See-through, because they sit on top of the one thing you are trying to look
+   at. The blur stays and does the work a solid slab used to: it settles
+   whatever is behind the button into a wash, so an icon stays readable over a
+   bright sky or a busy hillside without a panel behind it. The shadows on the
+   icon and the label are the rest of that — they are what stops a white glyph
+   disappearing into cloud. */
 .touch-btn {
   width: 62px; height: 62px; border-radius: 18px;
-  background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--panel-border); color: var(--text);
+  background: rgba(13, 17, 23, 0.30);
+  backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid rgba(255, 255, 255, 0.16); color: var(--text);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  transition: background .12s ease, border-color .12s ease;
 }
-.touch-btn span { font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; color: var(--text-dim); line-height: 1; }
-.touch-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.touch-btn .icon { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)); }
+.touch-btn span {
+  font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600;
+  color: rgba(238, 242, 246, 0.82); line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+}
+/* Pressed, it comes forward — with no hover on a phone this is the only
+   feedback there is that the tap landed. */
+.touch-btn:active { background: rgba(13, 17, 23, 0.68); border-color: rgba(255, 255, 255, 0.3); }
+.touch-btn.active { background: rgba(77, 219, 196, 0.22); border-color: var(--accent); color: var(--accent); }
 .touch-btn.active span { color: var(--accent); }
+/* Inside the sheet they are on a solid panel already, so there is nothing to
+   see through and hiding would only make them harder to read. */
+.touch-tray .touch-btn { background: rgba(255, 255, 255, 0.05); }
+.touch-tray .touch-btn:active { background: rgba(255, 255, 255, 0.14); }
 .touch-btn[hidden] { display: none; }
 .touch-btn.wide { width: auto; padding: 0 16px; border-radius: 28px; font-size: 13px; }
 
