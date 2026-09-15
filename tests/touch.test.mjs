@@ -81,23 +81,24 @@ ok('nothing is laid out in a row', !/class="row"/.test(ui));
 // a thumb reaching to walk hit Fly. The stick-side buttons are beside a base,
 // never on it, which the browser check on two phone sizes confirms.
 {
-  const zone = Number(css.match(/\.stick-zone \{[^}]*bottom: calc\((\d+)px/)[1]);
   const vars = (from) => ({
     inset: Number(from.match(/--stick-inset: (\d+)px/)[1]),
     size: Number(from.match(/--stick-size: (\d+)px/)[1]),
     bottom: Number(from.match(/--stick-bottom: (\d+)px/)[1]),
+    zone: Number(from.match(/--stick-zone: (\d+)px/)[1]),
+    gap: Number(from.match(/--stick-gap: (\d+)px/)[1]),
   });
   const big = vars(css.slice(css.indexOf(':root {'), css.indexOf('.icon {')));
   const small = vars(css.slice(css.indexOf(':root { --stick-inset: 16px')));
-  const buttons = Number(css.match(/\.touch-buttons \{[^}]*bottom: calc\((\d+)px/)[1]);
-  ok(`the stick base reaches ${zone + big.bottom + big.size}px up`, zone + big.bottom + big.size === 206);
-  ok(`and the column starts at ${buttons}px, above it`, buttons > zone + big.bottom + big.size);
+  const top = (v) => v.zone + v.bottom + v.size;
+  ok(`the stick base reaches ${top(big)}px up`, top(big) === 206);
+  ok(`and the column starts ${big.gap}px above it`, big.gap > 0);
   ok('a smaller screen shrinks the base and pulls it in', small.size < big.size && small.inset < big.inset);
   // 320px is the narrowest phone worth caring about; both sticks and both
   // stick-side buttons have to fit across it.
   for (const w of [320, 360, 393, 430]) {
-    const gap = w - 2 * (small.inset + small.size) - 2 * 50;
-    ok(`at ${w}px there is still ${gap}px between Jump and Place`, gap > 0);
+    const clear = w - 2 * (small.inset + small.size) - 2 * 50;
+    ok(`at ${w}px there is still ${clear}px between Jump and Place`, clear > 0);
   }
 }
 
@@ -182,6 +183,51 @@ ok('the ones in the sheet stay solid', /\.touch-tray \.touch-btn \{ background: 
 // travel on speeds too fast to aim with.
 ok('the look stick is curved harder than the walking one',
   /onLookStick[^\n]*curve: 1\.7/.test(ui) && /onMove[^\n]*curve: 1\.1/.test(ui));
+
+// --- a phone on its side ------------------------------------------------------
+
+// Turned sideways a phone keeps its width and loses two thirds of its height.
+// Both things this broke were the same mistake in different places: a number
+// that assumed portrait.
+{
+  const short = css.slice(css.indexOf('@media (max-height: 560px) and (pointer: coarse)'));
+  const v = (name) => Number(short.match(new RegExp(`--${name}: (\\d+)px`))[1]);
+  const num = (re) => Number(short.match(re)[1]);
+
+  ok('there is a block for a short screen at all', short.startsWith('@media (max-height'));
+  // 890px wide, so every "this is a phone" rule keyed to a narrow viewport
+  // stopped applying and it got the desktop's chrome.
+  ok('and a phone gets phone chrome by its pointer, not just its width',
+    /@media \(max-width: 640px\), \(pointer: coarse\) \{/.test(css));
+  ok('the goal list and the XP bar go, being what you can most afford to lose',
+    /body\.touch #goals \{ display: none; \}/.test(short)
+    && /body\.touch #hud-top \{ display: none; \}/.test(short));
+  ok('the hunger bar stays, since running out of it stops you working',
+    /body\.touch #vitals \{ top: 8px; left: 64px; \}/.test(short));
+
+  // The column used to be anchored 230px up: three 62px buttons on it need
+  // 436, and a landscape phone has about 390. It ran off the top of the screen.
+  ok('the column is anchored above the stick rather than at a number',
+    /bottom: calc\(var\(--stick-zone\) \+ var\(--stick-bottom\) \+ var\(--stick-size\) \+ var\(--stick-gap\)/.test(css));
+  ok('so shrinking the stick brings the column down with it',
+    v('stick-zone') < 78 && v('stick-size') < 104 && v('stick-gap') < 24);
+
+  // Does it actually fit? The column has to start below the chrome and end
+  // above the stick base, on every height a phone on its side can be.
+  const btn = num(/body\.touch \.touch-btn \{ width: (\d+)px/);
+  const gap = num(/body\.touch \.touch-buttons \{ gap: (\d+)px/);
+  const baseTop = v('stick-zone') + v('stick-bottom') + v('stick-size');
+  const colBottom = baseTop + v('stick-gap');
+  const colTop = colBottom + 3 * btn + 2 * gap;
+  ok(`the column clears the stick base by ${v('stick-gap')}px`, colBottom > baseTop);
+  for (const h of [320, 340, 390, 430]) {
+    ok(`at ${h}px tall the column sits ${h - colTop}px from the top`, h - colTop > 8 && colTop < h);
+  }
+  ok('a button is still big enough to hit', btn >= 40);
+  // The sheet is most of the screen at this height, so it has to scroll rather
+  // than run off the top with half the tools past the edge.
+  ok('the More sheet scrolls instead of overflowing', /body\.touch \.touch-tray \{[\s\S]{0,200}overflow-y: auto/.test(short));
+}
 
 ok('the top toolbar still has room without wrapping', /#top-buttons \{[^}]*max-width: 58%/.test(css));
 

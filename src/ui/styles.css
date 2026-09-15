@@ -20,6 +20,8 @@
   --stick-inset: 24px;
   --stick-size: 104px;
   --stick-bottom: 24px;
+  --stick-zone: 78px;      /* how far up the screen the stick's area starts */
+  --stick-gap: 24px;       /* clear air between the base and the column above it */
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-feature-settings: 'tnum' 1;
 }
@@ -326,7 +328,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 /* Twin thumbsticks. Each claims its own half of the lower screen; interactive
    HUD layers sit above them so taps on the hotbar and menus still land. */
 .stick-zone { position: absolute; width: 50%; z-index: 2; pointer-events: auto;
-  bottom: calc(78px + env(safe-area-inset-bottom)); height: 40%; }
+  bottom: calc(var(--stick-zone) + env(safe-area-inset-bottom)); height: 40%; }
 #stick-left { left: 0; }
 #stick-right { right: 0; }
 .touch-buttons { z-index: 3; }
@@ -364,7 +366,10 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
    buttons you can hit by mistake, and a column takes one narrow strip of a
    picture you are trying to look at rather than a corner of it. */
 .touch-buttons {
-  position: absolute; bottom: calc(230px + env(safe-area-inset-bottom));
+  position: absolute;
+  /* Above the base, not at a number that happens to clear it today. */
+  bottom: calc(var(--stick-zone) + var(--stick-bottom) + var(--stick-size) + var(--stick-gap)
+               + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 10px; pointer-events: auto;
 }
 #touch-buttons-left { left: 12px; align-items: flex-start; }
@@ -382,7 +387,8 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
  * screen is only 120px wide once both sticks have had theirs. */
 .stick-side {
   position: absolute;
-  bottom: calc(78px + var(--stick-bottom) + (var(--stick-size) - 54px) / 2 + env(safe-area-inset-bottom));
+  bottom: calc(var(--stick-zone) + var(--stick-bottom) + (var(--stick-size) - 54px) / 2
+               + env(safe-area-inset-bottom));
   display: flex; flex-direction: column; gap: 8px;
   pointer-events: auto; z-index: 3;
 }
@@ -438,7 +444,10 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .touch-btn.wide { width: auto; padding: 0 16px; border-radius: 28px; font-size: 13px; }
 
 
-@media (max-width: 640px) {
+/* "This is a phone" — by width, or by the pointer, because a phone on its side
+   is 890px wide and was getting the desktop's chrome: a toolbar of labelled
+   52px buttons across the top of a 390px-tall picture. */
+@media (max-width: 640px), (pointer: coarse) {
   .panel { padding: 14px; }
   #hud-top { right: auto; width: 55%; }
   /* Labels are worth their space on a desktop toolbar but eat a phone screen;
@@ -654,7 +663,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
  * the goal list had been taking half the width and a quarter of the height,
  * which on a 390px screen is not a heads-up display, it is a wall.
  */
-@media (max-width: 720px) {
+@media (max-width: 720px), (pointer: coarse) {
   #goals {
     width: 150px; top: 84px; left: 10px; font-size: 10.5px; padding: 7px 9px;
     max-width: 42vw; opacity: 0.92;
@@ -671,7 +680,8 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   /* A hint, not an announcement — it sat in the middle of the thumb zone. */
   .hotbar-empty { padding: 8px 12px; font-size: 11px; }
   /* Big enough to find without looking, small enough to see past. */
-  :root { --stick-inset: 16px; --stick-size: 88px; --stick-bottom: 18px; }
+  :root { --stick-inset: 16px; --stick-size: 88px; --stick-bottom: 18px;
+          --stick-zone: 78px; --stick-gap: 24px; }
   .stick-knob { width: 40px; height: 40px; top: 24px; left: 24px; }
 }
 @media (min-width: 721px) {
@@ -957,12 +967,69 @@ body.touch #goals { top: calc(84px + env(safe-area-inset-top)); left: 12px; widt
  *
  * After #goals so it wins on order rather than by piling on selectors.
  */
-@media (max-width: 640px) {
+@media (max-width: 640px), (pointer: coarse) {
   #toast-stack {
     top: 94px; left: 12px; right: 12px; max-width: none;
     align-items: stretch; max-height: 86px; overflow: hidden;
   }
   #goals { top: 188px; }
+}
+
+/* --- a phone on its side --------------------------------------------------
+ *
+ * Every number in the touch layout was a portrait number. Turned sideways a
+ * phone keeps its width and loses two thirds of its height — about 390px once
+ * the browser's own bar is off — and a column anchored 230px up with three
+ * 62px buttons on it needs 436. It ran clean off the top of the screen and
+ * left its last button sitting in the toolbar.
+ *
+ * So: keyed off height, because height is the thing that ran out. Everything
+ * shrinks and comes down, and the goal list goes entirely — it is a reminder,
+ * and there is no room for a reminder beside the controls at this height.
+ */
+@media (max-height: 560px) and (pointer: coarse) {
+  body.touch {
+    --stick-inset: 14px; --stick-size: 68px; --stick-bottom: 8px;
+    --stick-zone: 52px; --stick-gap: 8px;
+  }
+  body.touch .stick-zone { height: 66%; }
+  body.touch .stick-knob { width: 30px; height: 30px; top: 19px; left: 19px; }
+  body.touch .touch-btn { width: 42px; height: 42px; border-radius: 11px; }
+  body.touch .touch-btn.small { width: 40px; height: 40px; border-radius: 11px; }
+  body.touch .touch-btn span { font-size: 7px; }
+  body.touch .touch-buttons { gap: 5px; }
+  body.touch .stick-side {
+    bottom: calc(var(--stick-zone) + var(--stick-bottom) + (var(--stick-size) - 40px) / 2
+                 + env(safe-area-inset-bottom));
+    gap: 5px;
+  }
+
+  /* The top-left corner goes back to being sky.
+   *
+   * The column has to start above the stick and end below the chrome, and at
+   * this height that leaves about 130px — so the chrome has to give some back.
+   * The XP bar is the readout you can most afford to lose: it says nothing you
+   * need mid-build and the Progress panel has all of it. The hunger bar stays,
+   * because running out of it stops you working, and it moves up into the
+   * space the XP bar left. */
+  body.touch #hud-top { display: none; }
+  /* Clear of the column's 12..54, so the shortest screen there is — an SE
+     sideways with the browser bar showing, about 276px — still has the top of
+     the column to itself rather than sharing it with the hunger bar. */
+  body.touch #vitals { top: 8px; left: 64px; }
+  body.touch #top-buttons { top: 8px; }
+  /* A reminder card, at a height with no room for reminders. */
+  body.touch #goals { display: none; }
+  body.touch #hotbar-wrap { bottom: calc(4px + env(safe-area-inset-bottom)); }
+  /* The sheet would be most of the screen at this height, so it scrolls. */
+  body.touch .touch-tray {
+    bottom: calc(54px + env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 104px); overflow-y: auto;
+  }
+  body.touch .touch-tray .touch-btn { height: 44px; }
+  /* The toast band comes down with everything else, and stays narrow: it is
+     across the top of a picture that is now mostly sky. */
+  body.touch #toast-stack { top: 40px; max-height: 48px; }
 }
 
 /* --- the building you are pointing at ------------------------------------ */
