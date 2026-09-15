@@ -4,7 +4,7 @@ import { generateTerrain } from './world/TerrainGenerator.js';
 import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
-import { UndoRedo } from './tools/UndoRedo.js';
+import { ToolHistory } from './tools/ToolHistory.js';
 import { buildTemplatePlacement, rotateTemplate, captureBlocks } from './tools/Templates.js';
 import { roofPlan, roofBlocks, roofPeak, roofPick } from './tools/RoofTool.js';
 import { pickBuild } from './tools/PointerPick.js';
@@ -154,7 +154,7 @@ export class Game {
     this.farTerrain = new FarTerrain(this.scene);
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
-    this.undoRedo = new UndoRedo();
+    this.toolHistory = new ToolHistory();
     // Duilt is the game. Creative is the sandbox this grew out of and is
     // still there on purpose, but arriving in it meant a
     // first-time player landed in a world with no bag, no land and no goals,
@@ -401,11 +401,9 @@ export class Game {
       },
       onOpenMenu: () => { this.ui.refreshSaveList(); this.ui.openPanel('panel-menu'); document.exitPointerLock?.(); },
       onToggleFly: () => { this.player.toggleFly(); this.ui.setFlyIndicator(this.player.flying); return this.player.flying; },
-      onUndo: () => this.doUndo(),
-      onRedo: () => this.doRedo(),
       onSaveTemplate: (name) => this.saveTemplate(name),
       onPickTemplate: (id) => {
-        this.clearPending();
+        this.clearPending({ quiet: true });
         this.pendingTemplate = this.templates.get(id);
         this.templateRotation = 0;
         if (this.pendingTemplate) {
@@ -414,7 +412,7 @@ export class Game {
         return !!this.pendingTemplate;
       },
       onPickRoof: (id) => {
-        this.clearPending();
+        this.clearPending({ quiet: true });
         this.pendingRoof = ROOFS_BY_ID.get(id) ?? null;
         this.roofTurn = 0;
         if (this.pendingRoof) {
@@ -554,7 +552,7 @@ export class Game {
     this.applyTerritoryBounds();
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
-    this.undoRedo = new UndoRedo();
+    this.toolHistory = new ToolHistory();
     if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
     this.rebuildAllChunks();
     this.bus.emit('economy:change', {});
@@ -621,7 +619,7 @@ export class Game {
     this.gamification.loadJSON(data.gamification);
     this.economy = new EconomyEngine(this.bus);
     this.economy.loadJSON(data.economy);
-    this.undoRedo = new UndoRedo();
+    this.toolHistory = new ToolHistory();
     if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
     if (this.mode === DUILT) {
       this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus });
@@ -789,8 +787,9 @@ export class Game {
         const mode = this.symmetryTool.cycle();
         this.ui.toast({ kind: 'xp', title: `Symmetry: ${mode.toUpperCase()}` });
       }
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) { e.preventDefault(); this.doUndo(); }
-      if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) { e.preventDefault(); this.doRedo(); }
+      // Ctrl+Z takes back the last thing a *tool* did, not the last block you
+      // placed. Breaking is how you take a block back.
+      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ') { e.preventDefault(); this.undoTool(); }
     });
   }
 
@@ -901,15 +900,30 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: 'Nothing to place', body: 'It already matches what is there' });
       return false;
     }
-    if (!this.applyChanges(changes, { viaSymmetry: false })) return false;
+    const name = this.pendingTemplate.name;
+    if (!this.applyChanges(changes, { viaSymmetry: false, tool: name })) return false;
     this.gamification.onTemplatePlaced(this.pendingTemplate);
-    this.ui.toast({ kind: 'challenge', title: `Placed ${this.pendingTemplate.name}`, body: `${changes.length} blocks` });
+    // The way back is offered on the thing you just did rather than parked in
+    // the corner of the screen forever — and it works under a thumb, which a
+    // Ctrl+Z never did.
+    this.ui.toast({
+      kind: 'challenge',
+      title: `Placed ${name}`,
+      body: `${changes.length} blocks`,
+      action: { label: 'Take it back', onClick: () => this.undoTool() },
+    });
     return true;
   }
 
-  /** Nothing queued. Back to breaking and placing. */
-  clearPending() {
-    const had = this.armed;
+  /**
+   * Nothing queued. Back to breaking and placing.
+   *
+   * Quiet when one tool is making way for another: picking a roof said "Put it
+   * away" and then "Ready: Gable roof" in the same breath, which reads as the
+   * game arguing with itself.
+   */
+  clearPending({ quiet = false } = {}) {
+    const had = this.armed && !quiet;
     this.pendingTemplate = null;
     this.pendingRoof = null;
     this.roofTurn = 0;
@@ -1030,7 +1044,8 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: 'Nothing to roof', body: 'That roof is already there' });
       return false;
     }
-    if (!this.applyChanges(changes)) return false;
+    const label = `${shape.name} roof`;
+    if (!this.applyChanges(changes, { tool: label })) return false;
     this.lastRoof = { base, cells: laid };
     // The building is a different shape now, so the next aim has to look again.
     this.roofPickKey = null;
@@ -1038,8 +1053,9 @@ export class Game {
     const made = BLOCKS_BY_ID.get(type)?.name ?? 'blocks';
     this.ui.toast({
       kind: 'challenge',
-      title: `${this.pendingRoof.name} roof up`,
+      title: `${label} up`,
       body: `${changes.length} blocks of ${made.toLowerCase()}`,
+      action: { label: 'Take it off', onClick: () => this.undoTool() },
     });
     return true;
   }
@@ -1545,12 +1561,19 @@ export class Game {
   }
 
   /**
-   * The one place blocks change. Break, place, paste, symmetry and undo all
-   * route through here, so the rules only have to hook in once: the border
-   * says where you may build and the bag says whether you can afford it.
-   * A batch is atomic — if you can't pay for all of it, none of it lands.
+   * The one place blocks change. Break, place, stamp, symmetry and taking a
+   * tool's work back off all route through here, so the rules only have to hook
+   * in once: the border says where you may build and the bag says whether you
+   * can afford it. A batch is atomic — if you can't pay for all of it, none of
+   * it lands.
+   *
+   * `tool` names the tool that did this, and only a named batch is remembered
+   * for taking back. That is why the building actions — stamping a starter,
+   * moving one, taking one down — do not pass it: each of them also adds or
+   * removes a claim, and putting the blocks back without touching the register
+   * would leave a building claimed over empty air.
    */
-  applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
+  applyChanges(changes, { viaSymmetry = false, chargeResources = true, tool = null } = {}) {
     changes = changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z));
     if (!changes.length) return false;
 
@@ -1591,7 +1614,7 @@ export class Game {
 
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
-    this.undoRedo.push(changes);
+    if (tool) this.toolHistory.push(tool, changes);
     this.remeshDirty();
 
     if (this.duilt) {
@@ -1687,18 +1710,42 @@ export class Game {
     }
   }
 
-  doUndo() {
-    const action = this.undoRedo.undo();
-    if (!action) return;
-    for (const c of action) this.world.setBlock(c.x, c.y, c.z, c.prev);
-    this.remeshDirty();
-  }
-
-  doRedo() {
-    const action = this.undoRedo.redo();
-    if (!action) return;
-    for (const c of action) this.world.setBlock(c.x, c.y, c.z, c.next);
-    this.remeshDirty();
+  /**
+   * Takes the last tool's work back off.
+   *
+   * Through applyChanges rather than writing blocks back directly, which is how
+   * the old undo did it — and why undoing a roof in a Duilt world used to cost
+   * you sixty-seven planks and give you nothing back. Going the normal way
+   * means the bag is credited exactly as if you had broken it all by hand,
+   * because as far as the rest of the game is concerned that is what happened.
+   *
+   * Only blocks the tool still owns are touched. Put a roof up, knock a hole in
+   * it and build a chimney through it, and taking the roof off should not also
+   * take the chimney — so anything that has changed since is left alone.
+   */
+  undoTool() {
+    const action = this.toolHistory.pop();
+    if (!action) {
+      this.ui?.toast({ kind: 'xp', title: 'Nothing to take back', body: 'Break blocks to undo them by hand' });
+      return false;
+    }
+    const inverse = action.changes
+      .filter((c) => this.world.getBlock(c.x, c.y, c.z) === c.next)
+      .map((c) => ({ x: c.x, y: c.y, z: c.z, prev: c.next, next: c.prev }));
+    if (!inverse.length) {
+      this.ui?.toast({ kind: 'xp', title: `The ${action.label.toLowerCase()} is not there any more` });
+      return false;
+    }
+    if (!this.applyChanges(inverse, { chargeResources: false })) return false;
+    // The building is a different shape now, so the next aim has to look again.
+    this.roofPickKey = null;
+    this.pickKey = null;
+    this.ui?.toast({
+      kind: 'xp',
+      title: `Took the ${action.label.toLowerCase()} back off`,
+      body: `${inverse.length} blocks`,
+    });
+    return true;
   }
 
   // ---- loop ----

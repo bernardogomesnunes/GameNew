@@ -221,6 +221,17 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 .toast.challenge { border-left-color: var(--good); }
 .toast .title { font-weight: 700; margin-bottom: 2px; }
 .toast .body { color: var(--text-dim); }
+/* The only part of a toast you can touch. The stack is pointer-events: none so
+   it never eats a tap meant for the world behind it; a descendant can opt back
+   in, so the way-back button does and the rest of the toast still does not. */
+.toast-action {
+  pointer-events: auto; margin-top: 7px; width: 100%;
+  background: rgba(255,255,255,0.08); color: var(--text);
+  border: 1px solid var(--panel-border-strong); border-radius: 7px;
+  padding: 7px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.toast-action:hover { background: rgba(255,255,255,0.15); }
+.toast-action:active { background: rgba(255,255,255,0.22); }
 @keyframes toast-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
 .toast.fade-out { animation: toast-out 0.3s ease forwards; }
 @keyframes toast-out { to { opacity: 0; transform: translateX(16px); } }

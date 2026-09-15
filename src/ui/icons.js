@@ -1,8 +1,6 @@
 // Stroke icons drawn on a 24x24 grid at a single weight, so the HUD reads as
 // one instrument panel rather than a pile of emoji.
 const PATHS = {
-  undo: 'M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
-  redo: 'M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3',
   select: 'M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5',
   copy: 'M9 9h10v11H9zM5 15H4V4h11v1',
   paste: 'M10 4h4v3h-4zM8 5.5H5V20h14V5.5h-3',

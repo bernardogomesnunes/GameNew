@@ -89,8 +89,6 @@ export class UIManager {
       <button id="building-hint" hidden></button>
 
       <div id="top-buttons">
-        <button class="icon-btn" id="btn-undo" title="Undo the last change">${icon('undo')}<span>Undo</span></button>
-        <button class="icon-btn" id="btn-redo" title="Redo the change you undid">${icon('redo')}<span>Redo</span></button>
         <button class="icon-btn touch-moved" id="btn-templates" title="Save a build, and stamp it anywhere">${icon('paste')}<span>Designs</span></button>
         <button class="icon-btn touch-moved" id="btn-roof" title="Pitch a roof over the building you point at">${icon('roof')}<span>Roof</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
@@ -460,8 +458,6 @@ export class UIManager {
 
     // On a phone there is no C key, so the hint is what you press.
     this.q('#building-hint').addEventListener('click', () => this.cb.onOpenClaim());
-    this.q('#btn-undo').addEventListener('click', () => this.cb.onUndo());
-    this.q('#btn-redo').addEventListener('click', () => this.cb.onRedo());
     this.q('#btn-symmetry').addEventListener('click', () => {
       this.symmetryMode = this.cb.onCycleSymmetry();
       this.setSymmetryLabel();
@@ -780,14 +776,41 @@ export class UIManager {
     this.q('#xp-bar-track').title = `${xp} / ${required} XP`;
   }
 
-  toast({ kind, title, body }) {
+  /**
+   * A line about something that just happened, and sometimes a way to undo it.
+   *
+   * The way back belongs on the thing you just did. There is no Undo button in
+   * the corner any more — breaking a block is how you take a block back — so
+   * the one case that needs it, a tool that laid two hundred blocks in a press,
+   * offers it here, where it is next to the sentence saying what it laid. It
+   * leaves with the toast, and it works under a thumb, which Ctrl+Z never did.
+   */
+  toast({ kind, title, body, action = null }) {
     const stack = this.q('#toast-stack');
-    const node = el(`<div class="toast ${kind}"><div class="title">${title}</div>${body ? `<div class="body">${body}</div>` : ''}</div>`);
+    const node = el(`<div class="toast ${kind}">
+      <div class="title">${title}</div>
+      ${body ? `<div class="body">${body}</div>` : ''}
+      ${action ? `<button class="toast-action">${escapeHtml(action.label)}</button>` : ''}
+    </div>`);
+    if (action) {
+      const btn = node.querySelector('.toast-action');
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        action.onClick();
+        node.remove();
+      });
+      // A toast is not a button on a phone unless it says so.
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        action.onClick();
+        node.remove();
+      }, { passive: false });
+    }
     stack.appendChild(node);
     setTimeout(() => {
       node.classList.add('fade-out');
       setTimeout(() => node.remove(), 320);
-    }, 3400);
+    }, action ? 7000 : 3400);
     while (stack.children.length > 5) stack.removeChild(stack.firstChild);
   }
 

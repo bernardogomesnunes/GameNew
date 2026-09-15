@@ -64,17 +64,25 @@ export function wallCourse(world, x, y, z, cap = PICK_CAP) {
   return seen;
 }
 
-/** The smallest box round a set of `x,z` keys. */
+/**
+ * The smallest box round a set of `x,z` keys, or null if there is nothing.
+ *
+ * Null rather than a box of infinities. `enclose` sizes an array from whatever
+ * this returns, and infinite bounds meant a `new Uint8Array(Infinity)` and a
+ * dead frame — a long way from the mistake that caused it, which is the kind of
+ * crash that takes an afternoon to find.
+ */
 export function boundsOf(cells) {
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (const k of cells) {
     const [x, z] = unkey(k);
+    if (!Number.isFinite(x) || !Number.isFinite(z)) continue;
     if (x < minX) minX = x;
     if (x > maxX) maxX = x;
     if (z < minZ) minZ = z;
     if (z > maxZ) maxZ = z;
   }
-  return { minX, maxX, minZ, maxZ };
+  return Number.isFinite(minX) ? { minX, maxX, minZ, maxZ } : null;
 }
 
 /**
@@ -166,13 +174,19 @@ export function spans(foot) {
  * pointing at the ground.
  */
 export function pickFootprint(world, hit, { cap = PICK_CAP } = {}) {
-  if (!hit) return null;
+  if (!solidSpot(hit)) return null;
   const y = columnTop(world, hit.x, hit.y, hit.z);
   const walls = wallCourse(world, hit.x, y, hit.z, cap);
   if (!walls) return null;
   const bounds = boundsOf(walls);
+  if (!bounds) return null;
   const foot = enclose(walls, bounds);
   return { y, walls, foot, bounds, spans: spans(foot) };
+}
+
+/** A hit worth asking about: three real numbers, not a near-miss or a NaN. */
+function solidSpot(hit) {
+  return !!hit && Number.isFinite(hit.x) && Number.isFinite(hit.y) && Number.isFinite(hit.z);
 }
 
 /**
@@ -186,7 +200,7 @@ export function pickFootprint(world, hit, { cap = PICK_CAP } = {}) {
  * time anyone built a house out of dirt.
  */
 export function pickBuild(world, hit, { cap = PICK_CAP } = {}) {
-  if (!hit) return null;
+  if (!solidSpot(hit)) return null;
   const above = (x, y, z) => y > world.surfaceHeight(x, z);
   if (world.getBlock(hit.x, hit.y, hit.z) === AIR || !above(hit.x, hit.y, hit.z)) return null;
 
@@ -214,5 +228,6 @@ export function pickBuild(world, hit, { cap = PICK_CAP } = {}) {
     if (b.y > maxY) maxY = b.y;
   }
   const flat = boundsOf(blocks.map((b) => key(b.x, b.z)));
+  if (!flat) return null;
   return { blocks, bounds: { ...flat, minY, maxY } };
 }

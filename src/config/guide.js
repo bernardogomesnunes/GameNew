@@ -84,7 +84,8 @@ export const GUIDE = [
           ['Up and down while flying', touch ? 'Jump and Down buttons' : 'Space / Shift'],
           ['Everything else', touch ? 'The More button' : 'The toolbar, top right'],
           ['Pick a block', touch ? 'Tap the palette' : 'Keys 1-9, or click the palette'],
-          ['Undo / Redo', touch ? 'Undo and Redo buttons' : 'Ctrl+Z / Ctrl+Y'],
+          ['Take a block back', 'Break it — it goes in your bag'],
+          ['Take a tool\u2019s work back', touch ? 'The button on the message it leaves' : 'Ctrl+Z, or the message it leaves'],
           ['Open the menu', touch ? 'Menu button' : 'Esc'],
         ],
       },
@@ -114,7 +115,7 @@ export const GUIDE = [
           ['Roof', 'Pitches a roof over the building you point at — gable, hipped, lean-to or flat. It works out the slope so you do not have to place it a course at a time.'],
           ['Designs', 'Saves the build you are pointing at under a name, then stamps it anywhere. Press R to turn it before you put it down.'],
           ['Mirror', 'Every block you place is echoed across the middle of the world. Press again for X, Z, both, off.'],
-          ['Undo', 'Takes back the last thing you did, however many blocks it was. Ctrl+Z, or the button.'],
+          ['Taking it back', 'A tool lays a lot of blocks at once, so it leaves a message with a way back on it. One block is different: you break it, and it goes in your bag. There is no undo button, because breaking is the undo.'],
         ],
       },
       {

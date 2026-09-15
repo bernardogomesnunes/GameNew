@@ -244,7 +244,7 @@ ok('and it opens the panel', /#btn-roof.*openPanel\('panel-roof'\)/.test(ui));
 ok('picking a shape queues it rather than placing it blind', /onPickRoof\(btn\.dataset\.roof\)/.test(ui));
 
 ok('it goes through the one place blocks change, so it undoes and is paid for',
-  /roofPlan\(this\.world[\s\S]{0,900}this\.applyChanges\(changes\)/.test(game));
+  /roofPlan\(this\.world[\s\S]{0,900}this\.applyChanges\(changes, \{ tool: label \}\)/.test(game));
 ok('it is made of what you are holding',
   /stampRoof\(\)[\s\S]{0,600}const type = this\.selectedBlockId;[\s\S]{0,500}roofPlan/.test(game));
 ok('a block you have not unlocked is refused before anything is built',
@@ -267,7 +267,7 @@ ok('rebuilt only when it would look different, not every frame',
 ok('and the turn is part of what makes it different', /this\.pendingRoof\.id, this\.roofTurn/.test(game));
 // The other half of the question: did it find the whole house, or one wing?
 ok('the building it decided on is outlined too', /this\.selection\.update\([\s\S]{0,140}course, this\.world/.test(game));
-ok('putting the tool away clears both', /clearPending\(\)[\s\S]{0,260}this\.roofGhost\.hide\(\)/.test(game));
+ok('putting the tool away clears both', /clearPending\(\{ quiet = false \} = \{\}\)[\s\S]{0,300}this\.roofGhost\.hide\(\)/.test(game));
 
 // Placing, seeing it face the wrong way, turning it and placing again is how
 // this tool actually gets used. Without a relay that leaves a cross on the roof.
