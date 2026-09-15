@@ -10,17 +10,34 @@ const WALK_SPEED = 4.6;
 const SPRINT_SPEED = 7.2;
 const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
-// Camera-on-a-stick tuning. A stick can only ask for a turn *rate*, so unlike a
-// mouse it trades top speed against fine aim. The earlier numbers bought
-// precision at the cost of both: half a thumb of travel turned about 30 deg/s,
-// which reads as the camera ignoring you.
-const LOOK_YAW_SPEED = 3.6;   // rad/s at full deflection (~206 deg/s)
-const LOOK_PITCH_SPEED = 2.3; // rad/s; pitch only spans 180 degrees in total
-const LOOK_SMOOTHING = 34;    // ~30ms to settle: filters thumb jitter, not felt as lag
+/*
+ * Camera-on-a-stick tuning.
+ *
+ * A stick can only ask for a turn *rate*, so unlike a mouse it trades top speed
+ * against fine aim, and the numbers here had been pushed too far the fast way:
+ * 206 deg/s at full stick and 330 with the ramp charged, which is most of a
+ * full turn in a second. On a phone that reads as the camera running away from
+ * your thumb — you overshoot what you were aiming at, correct, overshoot back.
+ *
+ * Halved, roughly, and the ramp softened with it. This is a game about placing
+ * one block on top of another, not about whipping round behind you.
+ */
+const LOOK_YAW_SPEED = 2.2;   // rad/s at full deflection (~126 deg/s)
+const LOOK_PITCH_SPEED = 1.5; // rad/s; pitch only spans 180 degrees in total
+/*
+ * How fast the camera catches up with the thumb, as a time constant: 1/18 is
+ * about 55ms to settle, 170ms to arrive.
+ *
+ * This was 34 — 30ms — which is enough to filter jitter and nothing else, so a
+ * stick shoved from rest turned into an instant full-speed swing. Most of what
+ * reads as "abrupt" is that first frame. Slower than this and it stops feeling
+ * like the camera is attached to your thumb.
+ */
+const LOOK_SMOOTHING = 18;
 // Holding the stick out ramps the turn up, so small pushes stay precise while a
 // held push still swings you around. Standard console-shooter behaviour.
-const LOOK_ACCEL_MAX = 1.6;   // multiplier reached at full ramp (~330 deg/s peak)
-const LOOK_ACCEL_TIME = 0.5;  // seconds of sustained deflection to get there
+const LOOK_ACCEL_MAX = 1.35;  // multiplier reached at full ramp (~170 deg/s peak)
+const LOOK_ACCEL_TIME = 0.75; // seconds of sustained deflection to get there
 const LOOK_ACCEL_GATE = 0.7;  // deflection above which the ramp charges
 
 export class PlayerController {

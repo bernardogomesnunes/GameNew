@@ -297,22 +297,32 @@ export class UIManager {
           <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
         </div>
 
-        <!-- Left edge, one column: everything you press. -->
+        <!--
+          Jump and Place sit against their own stick, inboard, where the thumb
+          already is: Jump beside the one that walks, Place beside the one that
+          aims. Reaching up the edge for the thing you press between every
+          other thing you press is the reach that was costing time.
+
+          Inboard is not a preference — outboard is the screen edge.
+        -->
+        <div class="stick-side" id="side-left">
+          <!--
+            Down appears only while flying, and above Jump — which is Up while
+            you are up there — so the pair reads the way it points, with the
+            one you press constantly staying put underneath it.
+          -->
+          <button class="touch-btn small" id="t-down" hidden>${icon('down')}<span>Down</span></button>
+          <button class="touch-btn small" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
+        </div>
+        <div class="stick-side" id="side-right">
+          <button class="touch-btn small" id="t-place">${icon('place')}<span>Place</span></button>
+        </div>
+
+        <!-- Left edge, one column: the rest of what you press. -->
         <div class="touch-buttons" id="touch-buttons-left">
           <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
           <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
           <button class="touch-btn" id="t-break">${icon('mine')}<span>Break</span></button>
-          <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
-        </div>
-
-        <!-- Right edge: the camera, and the one button that goes with it. -->
-        <div class="touch-buttons" id="touch-buttons-right">
-          <button class="touch-btn" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
-          <!--
-            Down appears only while flying, and below Jump — which is Up while
-            you are up there — because that is the way the two of them point.
-          -->
-          <button class="touch-btn" id="t-down" hidden>${icon('down')}<span>Down</span></button>
         </div>
       </div>
     `;
@@ -664,7 +674,11 @@ export class UIManager {
     // keeps the fine control near centre and gives back the middle of the
     // range. Movement just wants to reach full speed readily.
     this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y), { deadZone: 0.10, curve: 1.1 });
-    this.bindStick('#stick-right', (x, y) => this.cb.onLookStick(x, y), { deadZone: 0.09, curve: 1.25 });
+    // A steeper curve than the walking stick: most of a look is a small
+    // correction, and a linear stick spends nearly all its travel on speeds
+    // too fast to aim with. At half a thumb this now turns about a fifth of
+    // full speed rather than a third.
+    this.bindStick('#stick-right', (x, y) => this.cb.onLookStick(x, y), { deadZone: 0.09, curve: 1.7 });
 
     const bindHold = (sel, onChange) => {
       const el = this.q(sel);

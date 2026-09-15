@@ -14,6 +14,12 @@
   --good: #4ddbc4;
   --blur: blur(14px) saturate(1.2);
   --radius: 10px;
+  /* The thumbstick's resting geometry, as variables rather than numbers, so a
+     button placed beside a stick stays beside it when the stick changes size
+     on a smaller screen. */
+  --stick-inset: 24px;
+  --stick-size: 104px;
+  --stick-bottom: 24px;
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-feature-settings: 'tnum' 1;
 }
@@ -329,15 +335,16 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .overlay { z-index: 10; }
 
 .stick-base {
-  position: absolute; bottom: 24px; width: 104px; height: 104px; border-radius: 50%;
+  position: absolute; bottom: var(--stick-bottom);
+  width: var(--stick-size); height: var(--stick-size); border-radius: 50%;
   background: radial-gradient(circle, rgba(255,255,255,0.04) 55%, rgba(255,255,255,0.08) 100%);
   border: 1px solid var(--panel-border-strong);
   /* Fainter at rest than under a thumb: a stick you are not holding is a hint
      about where to put your thumb, not something to look at. */
   opacity: 0.38; transition: opacity 0.15s ease, border-color 0.15s ease;
 }
-#stick-left .stick-base { left: 24px; }
-#stick-right .stick-base { right: 24px; }
+#stick-left .stick-base { left: var(--stick-inset); }
+#stick-right .stick-base { right: var(--stick-inset); }
 .stick-base.active { opacity: 1; border-color: var(--accent); }
 .stick-knob {
   position: absolute; width: 46px; height: 46px; border-radius: 50%; top: 29px; left: 29px;
@@ -362,6 +369,26 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 #touch-buttons-left { left: 12px; align-items: flex-start; }
 #touch-buttons-right { right: 12px; align-items: flex-end; }
+
+/* Against its own stick, on the inboard side.
+ *
+ * Inboard is not a preference: outboard of either stick is the screen edge.
+ * Anchored off the stick's own variables rather than a number that happens to
+ * match today, so on a small screen — where the base shrinks to 88px and moves
+ * in to 16 — these follow it instead of drifting onto it.
+ *
+ * Vertically centred on the base, so the reach from the stick is sideways
+ * only. A 54px button rather than the column's 62: the middle of a 360px
+ * screen is only 120px wide once both sticks have had theirs. */
+.stick-side {
+  position: absolute;
+  bottom: calc(78px + var(--stick-bottom) + (var(--stick-size) - 54px) / 2 + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: auto; z-index: 3;
+}
+#side-left { left: calc(var(--stick-inset) + var(--stick-size)); }
+#side-right { right: calc(var(--stick-inset) + var(--stick-size)); }
+.touch-btn.small { width: 54px; height: 54px; border-radius: 15px; }
 
 /* More opens a sheet across the bottom rather than stacking buttons up the
  * edge. The stack had a ceiling, and on hitting it folded into a second column
@@ -423,6 +450,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   .icon-btn span { display: none; }
   .icon-btn.panel-close { width: 30px; height: 30px; }
   .touch-btn { width: 56px; height: 56px; border-radius: 16px; }
+  .touch-btn.small { width: 50px; height: 50px; border-radius: 14px; }
   .touch-btn span { font-size: 8.5px; }
   .ach-grid { grid-template-columns: 1fr; }
 }
@@ -643,9 +671,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   /* A hint, not an announcement — it sat in the middle of the thumb zone. */
   .hotbar-empty { padding: 8px 12px; font-size: 11px; }
   /* Big enough to find without looking, small enough to see past. */
-  .stick-base { width: 88px; height: 88px; bottom: 18px; }
-  #stick-left .stick-base { left: 16px; }
-  #stick-right .stick-base { right: 16px; }
+  :root { --stick-inset: 16px; --stick-size: 88px; --stick-bottom: 18px; }
   .stick-knob { width: 40px; height: 40px; top: 24px; left: 24px; }
 }
 @media (min-width: 721px) {

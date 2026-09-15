@@ -95,7 +95,7 @@ export const GUIDE = [
       },
       ...(touch ? [{
         kind: 'note',
-        text: 'Everything you press is one column down the left edge, with Break and Place at the bottom where your thumb already is. Nothing sits over a stick, so what is under your thumb is always what you meant.',
+        text: 'Jump and Place sit right against their own stick — Jump by the one that walks, Place by the one that aims — so the two you press most are a thumb-width away. Everything else is one column down the left edge, and nothing sits over a stick, so what is under your thumb is always what you meant.',
       }] : []),
     ],
   },
