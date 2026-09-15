@@ -5,8 +5,9 @@ import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { UndoRedo } from './tools/UndoRedo.js';
-import { SelectorTool, buildTemplatePlacement, rotateTemplate } from './tools/SelectorTool.js';
-import { roofPlan, roofBlocks, roofBase, roofPeak } from './tools/RoofTool.js';
+import { buildTemplatePlacement, rotateTemplate, captureBlocks } from './tools/Templates.js';
+import { roofPlan, roofBlocks, roofPeak, roofPick } from './tools/RoofTool.js';
+import { pickBuild } from './tools/PointerPick.js';
 import { ROOFS_BY_ID, facingLabel } from './config/roofs.js';
 import { SelectionHighlight } from './tools/SelectionHighlight.js';
 import { BuildGhost } from './tools/BuildGhost.js';
@@ -34,6 +35,13 @@ import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, BLOCKS_BY_ID } from './config/blocks.js';
 
 const REACH = 7;
+/**
+ * How far a tool can point, as opposed to how far you can reach.
+ *
+ * Far enough to stand back and see a whole house, which is the distance you
+ * actually want to be at when deciding what its roof should look like.
+ */
+const TOOL_REACH = 28;
 /**
  * How far the real blocks reach before the coarse distance takes over.
  *
@@ -209,7 +217,6 @@ export class Game {
     }
 
     this.symmetryTool = new SymmetryTool(this.world);
-    this.selectorTool = new SelectorTool();
     // A stable id per world, so incremental sync can tell "the world I already
     // uploaded, edited" from "a different world with the same name".
     this.worldId = this.worldId || newWorldId();
@@ -224,6 +231,10 @@ export class Game {
     this.roofKey = null;         // what the preview was last built for
     this.lastRoof = null;        // the roof this tool put up, while it is untouched
     this.roofGhost = new BuildGhost(this.scene);
+    // What the crosshair is on, worked out once a frame and shared by every
+    // tool that needs to know which build you mean.
+    this.pick = null;
+    this.pickKey = null;
 
     this.ui = new UIManager(this.uiRoot, {
       bus: this.bus,
@@ -392,19 +403,12 @@ export class Game {
       onToggleFly: () => { this.player.toggleFly(); this.ui.setFlyIndicator(this.player.flying); return this.player.flying; },
       onUndo: () => this.doUndo(),
       onRedo: () => this.doRedo(),
-      onToggleSelection: () => {
-        const active = this.selectorTool.toggle();
-        if (!active) this.clearPending();
-        return active;
-      },
-      onCycleSelectorSize: () => this.selectorTool.cycleSize(),
       onSaveTemplate: (name) => this.saveTemplate(name),
       onPickTemplate: (id) => {
         this.clearPending();
         this.pendingTemplate = this.templates.get(id);
         this.templateRotation = 0;
         if (this.pendingTemplate) {
-          this.selectorTool.active = true;
           this.ui.toast({ kind: 'challenge', title: `Ready: ${this.pendingTemplate.name}`, body: 'Aim and place it' });
         }
         return !!this.pendingTemplate;
@@ -414,13 +418,12 @@ export class Game {
         this.pendingRoof = ROOFS_BY_ID.get(id) ?? null;
         this.roofTurn = 0;
         if (this.pendingRoof) {
-          this.selectorTool.active = true;
           this.ui.toast({
             kind: 'challenge',
             title: `Ready: ${this.pendingRoof.name} roof`,
             body: this.pendingRoof.turns > 1
-              ? 'Frame the top of your walls · R turns it'
-              : 'Frame the top of your walls',
+              ? 'Point at the house · R turns it'
+              : 'Point at the house',
           });
         }
         return !!this.pendingRoof;
@@ -431,7 +434,6 @@ export class Game {
       onRotateTemplate: () => { this.templateRotation = (this.templateRotation + 1) % 4; return this.templateRotation; },
       onPlaceTemplate: () => this.stampTemplate(),
       getTemplates: () => this.templates.list(),
-      getSelectorSize: () => this.selectorTool.size,
       onCycleSymmetry: () => this.symmetryTool.cycle(),
       onMove: (x, z) => {
         this.player.externalMove.x = x;
@@ -446,8 +448,8 @@ export class Game {
         this.downHeld = held;
         this.recomputeVertical();
       },
-      // Touch goes through the same two verbs as mouse buttons, so the
-      // selector behaves identically on a phone.
+      // Touch goes through the same two verbs as mouse buttons, so a queued
+      // tool behaves identically on a phone.
       isCloudConfigured: () => !!this.cloud,
       getCloudUser: () => this.cloudAuth.summary(),
       onCloudRestoreSession: () => this.cloudAuth.restore(),
@@ -776,8 +778,6 @@ export class Game {
       // it. Escape, above, is the way out and always works.
       if (!this.isPlaying) return;
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
-      // B is the selector in a sandbox world, where there are no buildings.
-      if (e.code === 'KeyB' && !this.duilt) this.ui.toggleSelector();
       // R turns whatever is queued. One key for both, because "turn the thing
       // before you put it down" is one idea however it got queued.
       if (e.code === 'KeyR' && this.pendingRoof) this.turnRoof();
@@ -817,11 +817,11 @@ export class Game {
   /**
    * Starts or stops breaking on repeat.
    *
-   * Only plain breaking repeats. With the selector on, the same button saves or
-   * stamps a design, and holding it should not stamp forty copies.
+   * Only plain breaking repeats. With something queued the same button puts it
+   * down, and holding it should not stamp forty copies.
    */
   setBreaking(on) {
-    const want = on && !this.selectorTool.active && !this.moving;
+    const want = on && !this.armed && !this.moving;
     if (want === this.breaking) return;
     this.breaking = want;
     if (want) {
@@ -839,14 +839,17 @@ export class Game {
     this.breakBlock();
   }
 
+  /** Whether a tool is queued and waiting to be put down where you are pointing. */
+  get armed() {
+    return !!(this.pendingRoof || this.pendingTemplate);
+  }
+
   primaryAction() {
     if (this.moving) return void this.cancelMove();
-    if (this.selectorTool.active) {
-      if (this.pendingRoof) this.stampRoof();
-      else if (this.pendingTemplate) this.stampTemplate();
-      else this.ui.openTemplateSavePrompt();
-      return;
-    }
+    // A queued tool takes the button it needs and nothing else does. There is
+    // no mode to be in any more: if nothing is queued, Break breaks.
+    if (this.pendingRoof) return void this.stampRoof();
+    if (this.pendingTemplate) return void this.stampTemplate();
     this.breakBlock();
   }
 
@@ -855,43 +858,45 @@ export class Game {
     // alike. Cancelling is Escape, or the Break button — which says "Cancel"
     // while you are carrying something, so there is nothing to guess.
     if (this.moving) return void this.dropMove();
-    if (this.selectorTool.active) {
-      // A roof with more than one way round takes this button, so a phone has
-      // a way to turn it. See setSelectorReadout, which labels it to match.
-      if (this.pendingRoof?.turns > 1) { this.turnRoof(); return; }
-      this.selectorTool.cycleSize();
-      this.ui.setSelectorSize(this.selectorTool.size);
-      return;
-    }
+    // A roof with more than one way round takes this button, so a phone has a
+    // way to turn it. See setToolReadout, which labels it to match.
+    if (this.pendingRoof?.turns > 1) return void this.turnRoof();
+    if (this.armed) return void this.clearPending();
     this.placeBlock();
   }
 
-  /** Captures whatever sits inside the selector box and stores it by name. */
+  /** Captures the build you are pointing at and stores it by name. */
   saveTemplate(name) {
-    const captured = this.selectorTool.capture(this.world);
-    if (!captured) {
-      this.ui.toast({ kind: 'xp', title: 'Nothing to save', body: 'The selector is empty — aim it at your build' });
+    const build = this.buildUnderCrosshair();
+    if (!build) {
+      this.ui.toast({
+        kind: 'xp',
+        title: 'Point at what you built',
+        body: 'Look at the build you want to keep, then save it',
+      });
       return null;
     }
+    const captured = captureBlocks(build.blocks, build.bounds);
+    if (!captured?.blocks.length) return null;
     const record = this.templates.save(name, captured);
     if (record) {
       this.gamification.onTemplateSaved(record);
       this.ui.toast({
         kind: 'challenge',
         title: `Saved "${record.name}"`,
-        body: `${record.blockCount} blocks · ${record.size}x${record.size}x${record.size}`,
+        body: `${record.blockCount} blocks`,
       });
     }
     return record;
   }
 
-  /** Stamps the queued template at the selector, charged and undoable as one action. */
+  /** Stamps the queued template where you are pointing, charged and undoable as one action. */
   stampTemplate() {
     if (!this.pendingTemplate) return false;
-    const bounds = this.selectorTool.bounds();
-    if (!bounds) return false;
     const oriented = rotateTemplate(this.pendingTemplate, this.templateRotation);
-    const changes = buildTemplatePlacement(this.world, oriented, { x: bounds.minX, y: bounds.minY, z: bounds.minZ });
+    const size = this.pendingTemplate.size;
+    const anchor = this.stampAnchor({ x: size - 1, y: 0, z: size - 1 });
+    const changes = buildTemplatePlacement(this.world, oriented, anchor);
     if (!changes.length) {
       this.ui.toast({ kind: 'xp', title: 'Nothing to place', body: 'It already matches what is there' });
       return false;
@@ -902,13 +907,34 @@ export class Game {
     return true;
   }
 
-  /** Nothing queued for the selector to put down. */
+  /** Nothing queued. Back to breaking and placing. */
   clearPending() {
+    const had = this.armed;
     this.pendingTemplate = null;
     this.pendingRoof = null;
     this.roofTurn = 0;
     this.roofGhost.hide();
     this.roofKey = null;
+    if (had) this.ui?.toast({ kind: 'xp', title: 'Put it away' });
+  }
+
+  /**
+   * The build the crosshair is on, worked out once a frame and shared.
+   *
+   * Every tool that used to need the selector needs the same thing: which
+   * building do you mean. Asking the world that is a flood fill, so it happens
+   * once per aim rather than once per caller, and not at all unless something
+   * is going to use the answer.
+   */
+  buildUnderCrosshair() {
+    const hit = this.toolAim();
+    if (!hit) return null;
+    const key = `${hit.x},${hit.y},${hit.z}`;
+    if (key !== this.pickKey) {
+      this.pickKey = key;
+      this.pick = pickBuild(this.world, hit);
+    }
+    return this.pick;
   }
 
   /** Next orientation of the queued roof. A hip roof has only one, and says so. */
@@ -923,22 +949,33 @@ export class Game {
     return this.roofTurn;
   }
 
+  /** The shape of the building the crosshair is on. Null when you are aiming at scenery. */
+  roofTarget() {
+    const hit = this.toolAim();
+    if (!hit) return null;
+    const key = `roof:${hit.x},${hit.y},${hit.z}`;
+    if (key !== this.roofPickKey) {
+      this.roofPickKey = key;
+      this.roofPickValue = roofPick(this.world, hit);
+    }
+    return this.roofPickValue;
+  }
+
   /**
-   * The roof this box already has, if the tool is the one that put it there.
+   * The roof this building already has, if this tool is the one that put it up.
    *
    * Placing a roof, seeing it face the wrong way, turning it and placing again
    * is the normal way this tool gets used, and without this it would leave two
    * roofs crossed over each other — the second sitting on the first, because
-   * the first is now the highest thing in the box. So the last roof is
-   * remembered, and only while every block of it is still where it was put: as
-   * soon as you break into it, or undo it, or move the box, it is a different
-   * question and the plain rule answers it.
+   * the first is now the top of the building. So the last roof is remembered,
+   * and only while every block of it is still where it was put: break into it,
+   * undo it, or point at a different building and it is a different question,
+   * which the plain rule answers.
    */
-  roofRelay(bounds) {
+  roofRelay(pick) {
     const last = this.lastRoof;
-    if (!last) return null;
-    if (last.minX !== bounds.minX || last.minZ !== bounds.minZ) return null;
-    if (last.size !== this.selectorTool.size) return null;
+    if (!last || !pick) return null;
+    if (last.base !== pick.y) return null;   // the old roof is now the top course
     for (const c of last.cells) {
       if (this.world.getBlock(c.x, c.y, c.z) !== c.type) return null;
     }
@@ -946,32 +983,38 @@ export class Game {
   }
 
   /** The height the eaves land on, relay included, so the preview matches. */
-  roofEave(bounds) {
-    return this.roofRelay(bounds)?.base ?? roofBase(this.world, bounds);
+  roofEave(pick) {
+    return this.roofRelay(pick)?.base ?? (pick ? pick.y + 1 : 0);
   }
 
   /**
-   * Pitches the queued roof over the selector, out of the block you are
-   * holding, as one undoable action paid for in one go.
+   * Pitches the queued roof over the building you are pointing at, out of the
+   * block you are holding, as one undoable action paid for in one go.
    */
   stampRoof() {
     if (!this.pendingRoof) return false;
-    const bounds = this.selectorTool.bounds();
-    if (!bounds) return false;
+    const pick = this.roofTarget();
+    if (!pick) {
+      this.ui.toast({
+        kind: 'xp',
+        title: 'Point at a building',
+        body: 'Look at a wall of it — that is where the eaves go',
+      });
+      return false;
+    }
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
       this.ui.toast({ kind: 'xp', title: 'Locked block', body: availability.reason });
       return false;
     }
-    const relay = this.roofRelay(bounds);
-    const base = relay?.base ?? roofBase(this.world, bounds);
+    const relay = this.roofRelay(pick);
+    const base = relay?.base ?? pick.y + 1;
     const shape = this.pendingRoof, turn = this.roofTurn;
-    const changes = roofPlan(this.world, bounds, { shape, turn, type, base });
+    const changes = roofPlan(this.world, pick, { shape, turn, type, base });
 
-    const laid = roofBlocks(bounds, { shape, turn }).map((b) => ({
-      x: bounds.minX + b.dx, y: base + b.dy, z: bounds.minZ + b.dz, type,
-    }));
+    const laid = roofBlocks(pick, { shape, turn })
+      .map((b) => ({ x: b.x, y: base + b.dy, z: b.z, type }));
     // Re-laying a roof has to take the old one's corners down as well as put
     // the new one up, or turning a gable leaves a cross on the roof.
     if (relay) {
@@ -984,11 +1027,14 @@ export class Game {
     }
 
     if (!changes.length) {
-      this.ui.toast({ kind: 'xp', title: 'Nothing to roof', body: 'The box is empty, or that roof is already there' });
+      this.ui.toast({ kind: 'xp', title: 'Nothing to roof', body: 'That roof is already there' });
       return false;
     }
     if (!this.applyChanges(changes)) return false;
-    this.lastRoof = { minX: bounds.minX, minZ: bounds.minZ, size: this.selectorTool.size, base, cells: laid };
+    this.lastRoof = { base, cells: laid };
+    // The building is a different shape now, so the next aim has to look again.
+    this.roofPickKey = null;
+    this.pickKey = null;
     const made = BLOCKS_BY_ID.get(type)?.name ?? 'blocks';
     this.ui.toast({
       kind: 'challenge',
@@ -1001,32 +1047,33 @@ export class Game {
   /**
    * The roof you are about to place, in the air, before you place it.
    *
-   * Orientation is the part a shape cannot get right on its own — the box is
-   * square and gives it nothing to read the front of the building from. Seeing
-   * the slope turn as you press R is the difference between that being a
-   * guess and being a choice.
+   * Orientation is the part a shape cannot get right on its own — nothing about
+   * a building says which way it fronts. Seeing the slope turn as you press R
+   * is the difference between that being a guess and being a choice.
    *
    * Rebuilt only when it would look different, since the preview is a mesh and
-   * the selector re-aims every frame.
+   * the crosshair moves every frame.
    */
-  updateRoofPreview(bounds) {
-    if (!this.pendingRoof || !bounds) {
+  updateRoofPreview(pick) {
+    if (!this.pendingRoof || !pick) {
       if (this.roofKey !== null) { this.roofGhost.hide(); this.roofKey = null; }
       return;
     }
-    const base = this.roofEave(bounds);
+    const base = this.roofEave(pick);
     const key = [this.pendingRoof.id, this.roofTurn, this.selectedBlockId,
-      bounds.minX, bounds.minZ, base, this.selectorTool.size].join(':');
+      pick.bounds.minX, pick.bounds.minZ, pick.bounds.maxX, pick.bounds.maxZ, base].join(':');
     if (key === this.roofKey) return;
     this.roofKey = key;
-    const blocks = roofBlocks(bounds, { shape: this.pendingRoof, turn: this.roofTurn })
-      .map((b) => ({ ...b, type: this.selectedBlockId }));
+    const cells = roofBlocks(pick, { shape: this.pendingRoof, turn: this.roofTurn });
+    const blocks = cells.map((b) => ({
+      dx: b.x - pick.bounds.minX, dy: b.dy, dz: b.z - pick.bounds.minZ, type: this.selectedBlockId,
+    }));
     this.roofGhost.show(blocks, {
-      x: bounds.maxX - bounds.minX,
-      y: roofPeak(blocks),
-      z: bounds.maxZ - bounds.minZ,
+      x: pick.bounds.maxX - pick.bounds.minX,
+      y: roofPeak(cells),
+      z: pick.bounds.maxZ - pick.bounds.minZ,
     });
-    this.roofGhost.moveTo({ x: bounds.minX, y: base, z: bounds.minZ });
+    this.roofGhost.moveTo({ x: pick.bounds.minX, y: base, z: pick.bounds.minZ });
   }
 
   /** Offers the framed region to the claim menu. */
@@ -1241,25 +1288,21 @@ export class Game {
     if (!this.duilt) return;
 
     // Pointing at something you already claimed asks a different question —
-    // not "what is this?" but "what do I want to do with it?". No selector
-    // needed: you are already pointing at the whole building.
+    // not "what is this?" but "what do I want to do with it?".
     const aimed = this.hoverHit && this.duilt.structures.at(this.hoverHit.x, this.hoverHit.y, this.hoverHit.z);
     if (aimed) {
       this.ui.openBuilding(aimed, this.buildingActions(aimed));
       return;
     }
 
-    if (!this.selectorTool.active) {
-      this.ui.toast({ kind: 'xp', title: 'Frame it first', body: 'Turn on Select and aim at what you built' });
+    // Otherwise the question is "what is this thing I am pointing at?", and the
+    // thing is however far the build goes — which the game can see for itself.
+    const build = this.buildUnderCrosshair();
+    if (!build) {
+      this.ui.toast({ kind: 'xp', title: 'Point at what you built', body: 'Look at a wall of it and ask again' });
       return;
     }
-    const bounds = this.selectorTool.bounds();
-    if (!bounds) return;
-    const region = {
-      minX: bounds.minX, maxX: bounds.maxX,
-      minY: bounds.minY, maxY: bounds.maxY,
-      minZ: bounds.minZ, maxZ: bounds.maxZ,
-    };
+    const region = { ...build.bounds };
     this.ui.openClaim(region, (typeId) => {
       const r = this.duilt.claim(region, typeId);
       this.ui.toast(r.ok
@@ -1268,38 +1311,29 @@ export class Game {
     });
   }
 
-  /** Claims the framed region as a named building type. */
+  /** Claims the build you are pointing at as a named building type. */
   claimAs(typeId) {
-    if (!this.duilt || !this.selectorTool.active) {
-      this.ui.toast({ kind: 'xp', title: 'Frame it first', body: 'Turn on Select and aim at what you built' });
+    const build = this.duilt && this.buildUnderCrosshair();
+    if (!build) {
+      this.ui.toast({ kind: 'xp', title: 'Point at what you built', body: 'Look at a wall of it and try again' });
       return;
     }
-    const bounds = this.selectorTool.bounds();
-    if (!bounds) return;
-    const r = this.duilt.claim({ ...bounds }, typeId);
+    const r = this.duilt.claim({ ...build.bounds }, typeId);
     this.ui.toast(r.ok
       ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
       : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
   }
 
   /**
-   * Where a stamped building goes: the selector if you are using it, otherwise
-   * the ground you are looking at.
+   * Where a stamped building goes: the ground you are looking at.
    *
-   * Requiring the selector was a dead end. The button in the buildings panel
-   * says "place a starter", you press it, and it refuses and tells you to go
-   * and turn on a different tool first — so the one-click route into the game
-   * needed three clicks and some guesswork. Aiming is the normal way to put
-   * something down, so that is the default now, and the selector is honoured
-   * when it happens to be on.
+   * This used to prefer a selector box when one was up, which meant the same
+   * button put a building in two different places depending on a mode you may
+   * have forgotten was on. Aiming is the normal way to put something down, and
+   * now it is the only way.
    */
   stampAnchor(extent) {
-    if (this.selectorTool.active) {
-      const b = this.selectorTool.bounds();
-      // The selector box is the frame you drew, so its corner is the corner.
-      if (b) return { x: b.minX, y: b.minY, z: b.minZ };
-    }
-    const hit = this.raycast();
+    const hit = this.raycast(TOOL_REACH);
     const spot = hit
       ? { x: hit.x, y: hit.y + 1, z: hit.z }          // on the block, not inside it
       : (() => { const a = this.pointInFront(6); return { ...a, y: this.world.surfaceHeight(a.x, a.z) }; })();
@@ -1417,10 +1451,24 @@ export class Game {
 
   // ---- raycasting / block edits ----
 
-  raycast() {
+  raycast(reach = REACH) {
     const origin = this.player.eyePosition();
     const dir = this.player.lookDirection();
-    return castVoxelRay(this.world, origin, dir, REACH);
+    return castVoxelRay(this.world, origin, dir, reach);
+  }
+
+  /**
+   * What a tool is pointing at, which is further than what your arm reaches.
+   *
+   * Seven blocks is right for breaking one: it is roughly arm's length, and it
+   * is what stops you mining a hillside from the far side of a valley. It is
+   * wrong for a tool that works on a whole building, because to see a whole
+   * building you have to stand back from it — at arm's length you are looking
+   * at one wall and cannot tell what the roof would do. So tools aim further.
+   * They are not reaching in and touching a block; they are pointing at a thing.
+   */
+  toolAim() {
+    return this.hoverHit ?? this.raycast(TOOL_REACH);
   }
 
   /** Block coordinate a given distance along the view direction. */
@@ -1807,33 +1855,49 @@ export class Game {
       ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
         + (onBuilding.locked === false ? ' · unlocked' : '')
       : null);
-    if (hit && !this.selectorTool.active) {
+    // The single block under the crosshair, except while a roof is queued —
+    // there the whole building is highlighted and one more box on top of it is
+    // just noise.
+    if (hit && !this.pendingRoof) {
       this.hoverBox.visible = true;
       this.hoverBox.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
     } else {
       this.hoverBox.visible = false;
     }
 
-    if (this.selectorTool.active) {
-      // Aiming past everything (common while flying over a build) would otherwise
-      // leave the selector with no position at all, so fall back to a spot just
-      // ahead of the player.
-      this.selectorTool.aimAt(hit ? { x: hit.x, y: hit.y, z: hit.z } : this.pointInFront(6));
-      const bounds = this.selectorTool.bounds();
-      this.selection.update(bounds, this.selectorTool.size, this.world, { force: this.selectionDirty });
-      this.selectionDirty = false;
-      this.updateRoofPreview(bounds);
-      this.ui.setSelectorReadout(bounds ? {
-        size: this.selectorTool.size,
-        blocks: this.selection.blockCount,
-        template: this.pendingTemplate?.name || null,
-        roof: this.pendingRoof?.name || null,
+    // Working out which build you mean is a flood fill, so it only happens when
+    // something is going to use the answer.
+    if (this.pendingRoof) {
+      const pick = this.roofTarget();
+      this.updateRoofPreview(pick);
+      // The ghost shows the roof; this shows the building it decided on, which
+      // is the other half of the question — did it find the whole house, or
+      // just the wing you happened to be pointing at?
+      if (pick) {
+        const course = [...pick.walls].map((k) => {
+          const c = k.indexOf(',');
+          return { x: Number(k.slice(0, c)), y: pick.y, z: Number(k.slice(c + 1)) };
+        });
+        this.selection.update(
+          { ...pick.bounds, minY: pick.y, maxY: pick.y },
+          course, this.world, { force: this.selectionDirty },
+        );
+        this.selectionDirty = false;
+      } else this.selection.hide();
+      this.ui.setToolReadout({
+        roof: this.pendingRoof.name,
         facing: facingLabel(this.pendingRoof, this.roofTurn),
-      } : null);
-    } else {
-      this.selection.hide();
+        onBuild: !!pick,
+        blocks: pick ? pick.foot.size : 0,
+      });
+    } else if (this.pendingTemplate) {
       this.updateRoofPreview(null);
-      this.ui.setSelectorReadout(null);
+      this.selection.hide();
+      this.ui.setToolReadout({ template: this.pendingTemplate.name, onBuild: !!hit });
+    } else {
+      this.updateRoofPreview(null);
+      this.selection.hide();
+      this.ui.setToolReadout(null);
     }
   }
 

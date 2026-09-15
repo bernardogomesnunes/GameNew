@@ -108,9 +108,9 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 }
 #resume-hint[hidden] { display: none; }
 
-/* Selector readout — sits under the crosshair so the selector always says
-   what it is holding and what a tap will do. */
-#selector-readout {
+/* Tool readout — sits under the crosshair, so a queued tool always says what
+   it is and what a tap would do with it. */
+#tool-readout {
   position: absolute; top: calc(50% + 34px); left: 50%; transform: translateX(-50%);
   pointer-events: none; z-index: 6; text-align: center;
   background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
@@ -118,14 +118,14 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
   padding: 7px 12px; min-width: 180px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.35);
 }
-#selector-readout[hidden] { display: none; }
-#selector-readout .sel-head {
+#tool-readout[hidden] { display: none; }
+#tool-readout .sel-head {
   display: flex; align-items: baseline; justify-content: center; gap: 8px;
   font-size: 13px; font-variant-numeric: tabular-nums;
 }
-#selector-readout #sel-dims { font-weight: 700; color: var(--accent); }
-#selector-readout #sel-count { color: var(--text-dim); }
-#selector-readout .sel-hint { margin-top: 3px; font-size: 11px; color: var(--text-dim); }
+#tool-readout #tool-name { font-weight: 700; color: var(--accent); }
+#tool-readout #tool-target { color: var(--text-dim); }
+#tool-readout .sel-hint { margin-top: 3px; font-size: 11px; color: var(--text-dim); }
 
 #top-buttons { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; pointer-events: auto; }
 .icon-btn {
@@ -301,7 +301,7 @@ body.touch #touch-controls { display: block; }
 #blocker:not([hidden]) ~ #top-buttons,
 #blocker:not([hidden]) ~ #hotbar-wrap,
 #blocker:not([hidden]) ~ #toast-stack,
-#blocker:not([hidden]) ~ #selector-readout,
+#blocker:not([hidden]) ~ #tool-readout,
 #blocker:not([hidden]) ~ #duilt-layer #vitals,
 #blocker:not([hidden]) ~ #duilt-layer #goals { display: none !important; }
 body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }

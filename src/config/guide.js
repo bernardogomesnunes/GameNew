@@ -55,7 +55,7 @@ export const GUIDE = [
         kind: 'defs',
         rows: [
           ['Break and place', 'Everything is made of blocks, including what you pick up. Break a tree and you are holding wood.'],
-          ['Claim', 'A pile of blocks is scenery. Draw the selector around it and claim it, and it becomes a building that produces something on its own.'],
+          ['Claim', 'A pile of blocks is scenery. Point at it and claim it, and it becomes a building that produces something on its own.'],
           ['Grow', `Each age asks for a few buildings. Raise them and the border moves out. There are ${AGES.length} of them, ending at Age ${FINAL_AGE}.`],
         ],
       },
@@ -106,26 +106,29 @@ export const GUIDE = [
     blocks: () => [
       {
         kind: 'lead',
-        text: 'The selector is a box you aim at the world. Everything that works on more than one block at a time works on whatever is inside it — claiming a building, saving a design, stamping it back down.',
+        text: 'Everything that works on more than one block at a time works on whatever you are pointing at. There is no box to draw and no tool to switch on first — look at the thing, and the game follows it as far as it goes.',
       },
       {
         kind: 'defs',
         rows: [
-          ['Select', 'Turns the box on. It snaps to a grid, so two things built with it line up.'],
-          ['Size', 'Cycles the box between 2, 4, 8 and 16 blocks a side. Sixteen is one chunk.'],
-          ['Designs', 'Saves whatever is in the box under a name, then stamps it anywhere. Press R to turn it before you put it down.'],
-          ['Roof', 'Pitches a roof over the box — gable, hipped, lean-to or flat. It works out the slope so you do not have to place it a course at a time.'],
+          ['Roof', 'Pitches a roof over the building you point at — gable, hipped, lean-to or flat. It works out the slope so you do not have to place it a course at a time.'],
+          ['Designs', 'Saves the build you are pointing at under a name, then stamps it anywhere. Press R to turn it before you put it down.'],
           ['Mirror', 'Every block you place is echoed across the middle of the world. Press again for X, Z, both, off.'],
+          ['Undo', 'Takes back the last thing you did, however many blocks it was. Ctrl+Z, or the button.'],
         ],
       },
       {
         kind: 'steps',
         rows: [
           'Build four walls.',
-          'Aim the box at the top of them — the roof sits on the highest block inside it.',
-          'Open Roof and pick a shape. It hangs in the air so you can see it.',
+          'Open Roof and pick a shape.',
+          'Point at a wall. It follows the building round and hangs the roof in the air so you can see it.',
           'R turns it, or the second button on a phone. Then place it, out of whatever you are holding.',
         ],
+      },
+      {
+        kind: 'note',
+        text: 'Every one of these works in any world. A roof is a thing you do to blocks, and blocks are the same whichever kind of world you started.',
       },
       {
         kind: 'note',
@@ -141,13 +144,13 @@ export const GUIDE = [
     blocks: () => [
       {
         kind: 'lead',
-        text: 'A building is a claim over blocks you already placed. Put the selector around what you built, pick what it is meant to be, and the game checks it: a farm wants tilled soil and water nearby, a house wants walls and a roof over a room you could actually stand in. It tells you what is missing rather than just refusing.',
+        text: 'A building is a claim over blocks you already placed. Point at what you built, pick what it is meant to be, and the game checks it: a farm wants tilled soil and water nearby, a house wants walls and a roof over a room you could actually stand in. It tells you what is missing rather than just refusing.',
       },
       {
         kind: 'steps',
         rows: [
           'Build the thing out of blocks.',
-          'Aim the selector at it and open Buildings.',
+          'Point at it and open Buildings.',
           'Pick what it is. Anything unmet is listed in plain words.',
           'Claim it. From then on it produces on its own and cannot be broken by accident.',
         ],

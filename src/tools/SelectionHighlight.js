@@ -2,21 +2,21 @@ import * as THREE from 'three';
 import { AIR } from '../config/blocks.js';
 
 /**
- * The selector's visuals.
+ * Showing which build you are pointing at.
  *
- * A thin wireframe cube was the wrong answer: WebGL ignores line widths, the
- * lines sat behind the terrain, and the box could enclose nothing but sky, so
- * turning the selector on looked like nothing happening at all.
+ * This drew the selector box when there was one. There is not: you point at a
+ * building and the game works out where it ends, so what has to be drawn is the
+ * answer it came to — otherwise "save this design" is a promise about an
+ * invisible set of blocks.
  *
- * This draws three things instead:
- *   - a translucent shell, so the volume reads as a volume;
- *   - its edges, drawn over everything, so the box is findable even from inside
- *     a build or through a wall;
- *   - a skin over the solid blocks the selection actually contains, which is
- *     what tells you what a save would capture.
+ * Three things:
+ *   - a translucent shell round the extent, so the volume reads as a volume;
+ *   - its edges, drawn over everything, so it is findable from inside a build
+ *     or through a wall;
+ *   - a skin over the blocks themselves, which is what actually says *these*.
  *
- * The skin is the expensive part, so it is rebuilt only when the anchor, size
- * or world contents change — not per frame.
+ * The skin is the expensive part, so it is rebuilt only when the extent or the
+ * world inside it changes — not per frame.
  */
 
 const ACCENT = 0x4ddbc4;
@@ -82,50 +82,50 @@ export class SelectionHighlight {
   }
 
   /**
-   * Positions the cage and, when the selection has moved or the world under it
-   * changed, re-skins the blocks inside.
+   * Draws a picked build: its extent, and the blocks it actually contains.
+   *
+   * `blocks` is the pick's own list rather than everything in the box, so an
+   * L-shaped house is skinned as an L rather than as the rectangle round it.
    */
-  update(bounds, size, world, { force = false } = {}) {
-    if (!bounds) return this.hide();
+  update(bounds, blocks, world, { force = false } = {}) {
+    if (!bounds || !blocks?.length) return this.hide();
 
-    this.shell.scale.set(size, size, size);
-    this.edges.scale.set(size, size, size);
-    const cx = bounds.minX + size / 2, cy = bounds.minY + size / 2, cz = bounds.minZ + size / 2;
+    const w = bounds.maxX - bounds.minX + 1;
+    const h = bounds.maxY - bounds.minY + 1;
+    const d = bounds.maxZ - bounds.minZ + 1;
+    this.shell.scale.set(w, h, d);
+    this.edges.scale.set(w, h, d);
+    const cx = bounds.minX + w / 2, cy = bounds.minY + h / 2, cz = bounds.minZ + d / 2;
     this.shell.position.set(cx, cy, cz);
     this.edges.position.set(cx, cy, cz);
     this.group.visible = true;
 
-    const key = `${bounds.minX},${bounds.minY},${bounds.minZ},${size}`;
+    const key = `${bounds.minX},${bounds.minY},${bounds.minZ},${w}x${h}x${d},${blocks.length}`;
     if (key !== this.key || force) {
       this.key = key;
-      this.rebuildSkin(bounds, world);
+      this.rebuildSkin(blocks, world);
     }
   }
 
-  /** Emits the exposed faces of the contained blocks — the surface you can see. */
-  rebuildSkin(bounds, world) {
+  /** Emits the exposed faces of the picked blocks — the surface you can see. */
+  rebuildSkin(blocks, world) {
     const positions = [];
-    let count = 0;
 
-    for (let x = bounds.minX; x <= bounds.maxX; x++) {
-      for (let y = bounds.minY; y <= bounds.maxY; y++) {
-        for (let z = bounds.minZ; z <= bounds.maxZ; z++) {
-          if (world.getBlock(x, y, z) === AIR) continue;
-          count++;
-          for (const face of FACES) {
-            const nx = x + face.n[0], ny = y + face.n[1], nz = z + face.n[2];
-            // Only faces open to air. Skinning the selection's cut planes too
-            // turns a buried selection into a solid cyan wall across the screen.
-            if (world.getBlock(nx, ny, nz) !== AIR) continue;
-            const [a, b, c, d] = face.v;
-            for (const [ox, oy, oz] of [a, b, c, a, c, d]) {
-              positions.push(x + ox, y + oy, z + oz);
-            }
-          }
+    for (const { x, y, z } of blocks) {
+      if (world.getBlock(x, y, z) === AIR) continue;
+      for (const face of FACES) {
+        const nx = x + face.n[0], ny = y + face.n[1], nz = z + face.n[2];
+        // Only faces open to air. Skinning the inside too turns a build into a
+        // solid cyan lump the moment you look at it from a doorway.
+        if (world.getBlock(nx, ny, nz) !== AIR) continue;
+        const [a, b, c, d] = face.v;
+        for (const [ox, oy, oz] of [a, b, c, a, c, d]) {
+          positions.push(x + ox, y + oy, z + oz);
         }
       }
     }
 
+    const count = blocks.length;
     this.blockCount = count;
     const geo = this.skin.geometry;
     geo.dispose();

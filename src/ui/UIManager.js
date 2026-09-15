@@ -70,9 +70,15 @@ export class UIManager {
 
       <div id="resume-hint" hidden>Click the world to look around again</div>
 
-      <div id="selector-readout" hidden>
-        <div class="sel-head"><span id="sel-dims">8&sup3;</span><span id="sel-count">0 blocks</span></div>
-        <div class="sel-hint" id="sel-hint"></div>
+      <!--
+        What a queued tool is about to do, by the crosshair. There is no tool
+        mode any more — you pick a roof or a design and it waits to be put
+        somewhere — so this is the only thing that says the game is holding
+        something on your behalf.
+      -->
+      <div id="tool-readout" hidden>
+        <div class="sel-head"><span id="tool-name"></span><span id="tool-target"></span></div>
+        <div class="sel-hint" id="tool-hint"></div>
       </div>
 
       <!--
@@ -85,10 +91,8 @@ export class UIManager {
       <div id="top-buttons">
         <button class="icon-btn" id="btn-undo" title="Undo the last change">${icon('undo')}<span>Undo</span></button>
         <button class="icon-btn" id="btn-redo" title="Redo the change you undid">${icon('redo')}<span>Redo</span></button>
-        <button class="icon-btn" id="btn-select" title="Selector: aim a grid-snapped box at your build">${icon('select')}<span>Select</span></button>
-        <button class="icon-btn" id="btn-size" title="Change the selector size" hidden>${icon('copy')}<span id="size-label">8&sup3;</span></button>
-        <button class="icon-btn sandbox-only touch-moved" id="btn-templates" title="Your saved building templates">${icon('paste')}<span>Designs</span></button>
-        <button class="icon-btn touch-moved" id="btn-roof" title="Pitch a roof over the selector">${icon('roof')}<span>Roof</span></button>
+        <button class="icon-btn touch-moved" id="btn-templates" title="Save a build, and stamp it anywhere">${icon('paste')}<span>Designs</span></button>
+        <button class="icon-btn touch-moved" id="btn-roof" title="Pitch a roof over the building you point at">${icon('roof')}<span>Roof</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
@@ -227,7 +231,7 @@ export class UIManager {
         'panel-templates': `
           <div class="field-row">
             <input type="text" id="template-name" placeholder="Name this design" maxlength="40" />
-            <button class="secondary" id="btn-save-template">Save selection</button>
+            <button class="secondary" id="btn-save-template">Save what I'm pointing at</button>
           </div>
           <div id="template-list"></div>`,
         'panel-roof': `
@@ -270,9 +274,9 @@ export class UIManager {
             <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
             <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
             <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
-            <button class="touch-btn sandbox-only" id="t-designs">${icon('paste')}<span>Designs</span></button>
+            <button class="touch-btn" id="t-designs">${icon('paste')}<span>Designs</span></button>
             <button class="touch-btn" id="t-roof">${icon('roof')}<span>Roof</span></button>
-            <button class="touch-btn sandbox-only" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
+            <button class="touch-btn" id="t-symmetry">${icon('symmetry')}<span>Mirror</span></button>
             <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
           </div>
           <div class="row">
@@ -458,7 +462,6 @@ export class UIManager {
     this.q('#building-hint').addEventListener('click', () => this.cb.onOpenClaim());
     this.q('#btn-undo').addEventListener('click', () => this.cb.onUndo());
     this.q('#btn-redo').addEventListener('click', () => this.cb.onRedo());
-    this.q('#btn-select').addEventListener('click', () => this.toggleSelector());
     this.q('#btn-symmetry').addEventListener('click', () => {
       this.symmetryMode = this.cb.onCycleSymmetry();
       this.setSymmetryLabel();
@@ -474,7 +477,6 @@ export class UIManager {
 
     this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
     this.q('#btn-guide').addEventListener('click', () => this.openPanel('panel-guide'));
-    this.q('#btn-size').addEventListener('click', () => this.setSelectorSize(this.cb.onCycleSelectorSize()));
     this.q('#btn-templates').addEventListener('click', () => this.openPanel('panel-templates'));
     this.q('#btn-roof').addEventListener('click', () => this.openPanel('panel-roof'));
     this.q('#btn-bag').addEventListener('click', () => this.cb.onOpenBag());
@@ -1195,27 +1197,14 @@ export class UIManager {
     if (label) label.textContent = flying ? 'Up' : 'Jump';
   }
 
-  /** Turns the selector on and opens the designs panel — the whole flow in one place. */
-  /**
-   * The selector size reads "8³" and does nothing at all unless the selector is
-   * on, which on a phone made it one more unlabelled square in a toolbar that
-   * had too many. It now comes and goes with the tool it belongs to.
-   */
-  setSelectorActive(active) {
-    this.q('#btn-select').classList.toggle('active', active);
-    const size = this.q('#btn-size');
-    if (size) size.hidden = !active;
-  }
-
-  toggleSelector() {
-    const active = this.cb.onToggleSelection();
-    this.setSelectorActive(active);
-    this.toast({
-      kind: 'xp',
-      title: active ? 'Selector on' : 'Selector off',
-      body: active ? 'Aim it, then use Designs to save or stamp' : '',
-    });
-    return active;
+  /** Lights the button whose tool is queued, so the HUD says what is in hand. */
+  setArmedTool(id) {
+    for (const sel of ['#btn-roof', '#t-roof', '#btn-templates', '#t-designs']) {
+      this.q(sel)?.classList.remove('active');
+    }
+    if (!id) return;
+    const which = id === 'roof' ? ['#btn-roof', '#t-roof'] : ['#btn-templates', '#t-designs'];
+    for (const sel of which) this.q(sel)?.classList.add('active');
   }
 
   /**
@@ -1281,10 +1270,18 @@ export class UIManager {
     }, 500);
   }
 
+  /**
+   * Shows the parts of the HUD that belong to a Duilt world.
+   *
+   * Only *systems* are hidden here — the bag, the workbench, the settlement.
+   * The building tools are not: a roof, a design and a mirror are things you do
+   * to blocks, and blocks work the same in every world. Tying them to a world
+   * type meant a Creative player could not roof a house and a Duilt player
+   * could not save a design, for no reason either of them could have guessed.
+   */
   refreshForDuilt() {
     const on = !!this.cb.isDuilt?.();
     this.root.querySelectorAll('.duilt-only').forEach((el) => { el.hidden = !on; });
-    this.root.querySelectorAll('.sandbox-only').forEach((el) => { el.hidden = on; });
     this.duiltUI?.setActive(on);
   }
 
@@ -1303,40 +1300,46 @@ export class UIManager {
     this.duiltUI?.showBuilding(structure, actions);
   }
 
-  setSelectorSize(size) {
-    this.q('#size-label').innerHTML = `${size}&sup3;`;
-  }
-
   /**
-   * Live state of the selector, next to the crosshair. Without it the selector
-   * gives no feedback at all until you open a panel.
+   * What the queued tool is about to do, next to the crosshair.
+   *
+   * A tool is not a mode you are in, it is a thing the game is holding for you,
+   * so this only appears while something is held and it says the two things
+   * that are actually in doubt: whether the crosshair is on something it can
+   * use, and which way round it would go.
    */
-  setSelectorReadout(state) {
-    const el = this.q('#selector-readout');
-    if (!state) { el.hidden = true; this.setActionLabels('Break', 'Place'); return; }
+  setToolReadout(state) {
+    const el = this.q('#tool-readout');
+    if (!el) return;
+    if (!state) {
+      el.hidden = true;
+      this.setArmedTool(null);
+      this.setActionLabels('Break', 'Place');
+      return;
+    }
     el.hidden = false;
-    this.q('#sel-dims').innerHTML = `${state.size}&sup3;`;
-    this.q('#sel-count').textContent = `${state.blocks} block${state.blocks === 1 ? '' : 's'} inside`;
+    this.setArmedTool(state.roof ? 'roof' : 'design');
+
     const touch = document.body.classList.contains('touch');
-    const primary = state.roof ? `${state.roof} roof`
-      : state.template ? `Stamp ${state.template}`
-      : 'Save design';
-    // A roof that can turn takes over the second button, because a phone has no
-    // R and which way the slope falls matters more, once you have picked a
-    // shape, than the size of a box you have already aimed.
-    const second = state.facing ? 'Turn' : 'Size';
-    // Which way it faces is the one thing a square box cannot tell you, so it
-    // is in words by the crosshair as well as in the preview hanging in the air.
+    const primary = state.roof ? `${state.roof} roof` : `Stamp ${state.template}`;
+    this.q('#tool-name').textContent = primary;
+    this.q('#tool-target').textContent = state.roof
+      ? (state.onBuild ? `over ${state.blocks} block${state.blocks === 1 ? '' : 's'}` : 'not on a building')
+      : (state.onBuild ? 'here' : 'aim at the ground');
+
+    // A roof that can turn takes the second button, because a phone has no R
+    // and which way the slope falls is the thing you need to change.
+    const second = state.facing ? 'Turn' : 'Cancel';
     const facing = state.facing ? ` \u00b7 ${state.facing}` : '';
-    this.q('#sel-hint').textContent = (touch
+    this.q('#tool-hint').textContent = (touch
       ? `${primary} \u00b7 ${second}`
-      : `Left click: ${primary.toLowerCase()} \u00b7 right click: ${second === 'Turn' ? 'turn it' : 'change size'}`) + facing;
+      : `Left click: place \u00b7 right click: ${second.toLowerCase()}`) + facing;
     // On touch the two action buttons are the only way to reach either, so they
-    // say what they do while the selector is on.
+    // say what they do while a tool is queued.
     this.setActionLabels(primary, second);
   }
 
-  /** Retitles the touch Break/Place buttons, which change meaning with the selector. */
+  /** Retitles the touch Break/Place buttons, which change meaning with a queued tool. */
   setActionLabels(breakLabel, placeLabel) {
     const b = this.q('#t-break'), p = this.q('#t-place');
     if (!b || !p) return;
@@ -1355,16 +1358,11 @@ export class UIManager {
     this.q('#t-place')?.classList.toggle('active', !!on);
   }
 
-  openTemplateSavePrompt() {
-    this.openPanel('panel-templates');
-    this.q('#template-name').focus();
-  }
-
   refreshTemplateList() {
     const list = this.q('#template-list');
     const templates = this.cb.getTemplates();
     if (!templates.length) {
-      list.innerHTML = `<div class="sub" style="margin:0;">No designs yet. Turn on the selector, frame part of your build, then save it.</div>`;
+      list.innerHTML = `<div class="sub" style="margin:0;">No designs yet. Point at something you built and save it.</div>`;
       return;
     }
     list.innerHTML = templates.map((t) => `
@@ -1380,10 +1378,7 @@ export class UIManager {
       </div>
     `).join('');
     list.querySelectorAll('[data-place]').forEach((btn) => btn.addEventListener('click', () => {
-      if (this.cb.onPickTemplate(btn.dataset.place)) {
-        this.setSelectorActive(true);
-        this.closePanel('panel-templates');
-      }
+      if (this.cb.onPickTemplate(btn.dataset.place)) this.closePanel('panel-templates');
     }));
     list.querySelectorAll('[data-drop]').forEach((btn) => btn.addEventListener('click', () => {
       if (confirm('Delete this design?')) { this.cb.onDeleteTemplate(btn.dataset.drop); this.refreshTemplateList(); }
@@ -1410,10 +1405,7 @@ export class UIManager {
       </button>
     `).join('');
     list.querySelectorAll('[data-roof]').forEach((btn) => btn.addEventListener('click', () => {
-      if (this.cb.onPickRoof(btn.dataset.roof)) {
-        this.setSelectorActive(true);
-        this.closePanel('panel-roof');
-      }
+      if (this.cb.onPickRoof(btn.dataset.roof)) this.closePanel('panel-roof');
     }));
     const note = this.q('#roof-note');
     if (note) {

@@ -1,6 +1,7 @@
 import { World } from '../src/world/World.js';
 import { ROOFS, ROOFS_BY_ID, facingLabel, roofProfileSvg } from '../src/config/roofs.js';
-import { roofPlan, roofBlocks, roofBase, roofPeak } from '../src/tools/RoofTool.js';
+import { roofPlan, roofBlocks, roofPeak, roofPick } from '../src/tools/RoofTool.js';
+import { pickFootprint } from '../src/tools/PointerPick.js';
 import { PANELS_BY_ID } from '../src/config/panels.js';
 import { readFileSync } from 'node:fs';
 
@@ -12,40 +13,59 @@ import { readFileSync } from 'node:fs';
  * and a block higher than the one under it, and getting that wrong in the
  * middle is twenty blocks of undo. So the roof is a tool.
  *
+ * You point at the house. A shape is asked, for each column, how far it is to
+ * the edge the four ways out, and answers with heights — which is why the same
+ * gable fits a 4-wide shed, a 17-wide hall and an L-shaped cottage.
+ *
  * What is actually hard about it is not the slope, it is which way the slope
- * faces. The selector box is square and tells the shape nothing about which
- * way the building fronts, so it guesses, and the guess has to be turnable —
- * which is what most of this file is about.
+ * faces. Nothing about a building says which way it fronts, so the shape
+ * guesses, and the guess has to be turnable — which is most of this file.
  */
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
-const PLANKS = 7, STONE = 3;
+const PLANKS = 7, STONE = 3, DIRT = 2, GRASS = 1;
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const guide = readFileSync(new URL('../src/config/guide.js', import.meta.url), 'utf8');
 
-/** A box of the given footprint, as the selector would hand one over. */
-const box = (x, y, z, s) => ({
-  minX: x, maxX: x + s - 1,
-  minY: y, maxY: y + s - 1,
-  minZ: z, maxZ: z + s - 1,
-});
-
-/** Four walls of planks, and the box framing their top course. */
-function hut(world, { x = 20, y = 30, z = 20, s = 8, h = 4 } = {}) {
-  for (let ix = 0; ix < s; ix++) {
-    for (let iz = 0; iz < s; iz++) {
-      const edge = ix === 0 || iz === 0 || ix === s - 1 || iz === s - 1;
-      if (!edge) continue;
-      for (let iy = 0; iy < h; iy++) world.setBlock(x + ix, y + iy, z + iz, PLANKS);
+/** A square building of side `n`, described the way a real pick describes one. */
+function square(n) {
+  const foot = new Set();
+  for (let x = 0; x < n; x++) for (let z = 0; z < n; z++) foot.add(`${x},${z}`);
+  const spans = new Map();
+  for (let x = 0; x < n; x++) {
+    for (let z = 0; z < n; z++) {
+      spans.set(`${x},${z}`, { xm: x + 1, xp: n - x, zm: z + 1, zp: n - z });
     }
   }
-  return box(x, y, z, s);
+  return { y: 0, foot, spans, walls: foot, bounds: { minX: 0, maxX: n - 1, minZ: 0, maxZ: n - 1 } };
 }
 
-const world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
+/** Flat ground at y=20, recorded as ground, with four walls standing on it. */
+function world(at = 20, size = 64) {
+  const w = new World({ sizeX: size, sizeZ: size, height: 64 });
+  for (let x = 0; x < size; x++) {
+    for (let z = 0; z < size; z++) {
+      for (let y = 0; y < at; y++) w.setBlock(x, y, z, y === at - 1 ? GRASS : DIRT);
+      w.setSurfaceHeight(x, z, at - 1);
+    }
+  }
+  return w;
+}
+
+function hut(w, { x = 20, z = 20, n = 8, h = 4, at = 20 } = {}) {
+  for (let ix = 0; ix < n; ix++) {
+    for (let iz = 0; iz < n; iz++) {
+      if (!(ix === 0 || iz === 0 || ix === n - 1 || iz === n - 1)) continue;
+      for (let iy = 0; iy < h; iy++) w.setBlock(x + ix, at + iy, z + iz, PLANKS);
+    }
+  }
+  return { x, z, n, top: at + h - 1 };
+}
+
+const high = (blocks, x, z) => Math.max(...blocks.filter((b) => b.x === x && b.z === z).map((b) => b.dy));
 
 // --- the shapes themselves ----------------------------------------------------
 
@@ -55,16 +75,15 @@ ok('each has an id, a name and a line saying what it is for',
 ok('no two share an id', new Set(ROOFS.map((r) => r.id)).size === ROOFS.length);
 ok('each says how many ways round it goes', ROOFS.every((r) => r.turns >= 1 && r.turns <= 4));
 
-// A shape answers "how high here", so one shape fits every box. That is the
-// whole reason this is a shape and not four saved designs.
+// One shape, any building. A box could only ever be 2, 4, 8 or 16 a side.
 for (const shape of ROOFS) {
-  for (const span of [2, 4, 8, 16]) {
-    const blocks = roofBlocks(box(0, 0, 0, span), { shape });
-    const covered = new Set(blocks.map((b) => `${b.dx},${b.dz}`));
-    ok(`${shape.name} covers every column of a ${span}-wide box`, covered.size === span * span);
-    ok(`${shape.name} at ${span} never goes below the eave`, blocks.every((b) => b.dy >= 0));
+  for (const n of [2, 3, 5, 8, 17]) {
+    const blocks = roofBlocks(square(n), { shape });
+    const covered = new Set(blocks.map((b) => `${b.x},${b.z}`));
+    ok(`${shape.name} covers every column of a ${n}-wide building`, covered.size === n * n);
+    ok(`${shape.name} at ${n} never goes below the eave`, blocks.every((b) => b.dy >= 0));
     // A roof taller than it is wide is a spike, not a roof.
-    ok(`${shape.name} at ${span} stays lower than it is wide`, roofPeak(blocks) < span);
+    ok(`${shape.name} at ${n} stays lower than it is wide`, roofPeak(blocks) < n);
   }
 }
 
@@ -72,41 +91,39 @@ for (const shape of ROOFS) {
 
 {
   const gable = ROOFS_BY_ID.get('gable');
-  const at = (blocks, dx, dz) => Math.max(...blocks.filter((b) => b.dx === dx && b.dz === dz).map((b) => b.dy));
-  const b0 = roofBlocks(box(0, 0, 0, 8), { shape: gable, turn: 0 });
-  ok('a gable is low at the eave and high in the middle', at(b0, 0, 4) === 0 && at(b0, 3, 4) === 3);
-  ok('and symmetrical across the ridge', at(b0, 0, 4) === at(b0, 7, 4) && at(b0, 2, 4) === at(b0, 5, 4));
-  ok('while nothing changes along the ridge', at(b0, 3, 2) === at(b0, 3, 5));
+  const b0 = roofBlocks(square(8), { shape: gable, turn: 0 });
+  ok('a gable is low at the eave and high in the middle', high(b0, 0, 4) === 0 && high(b0, 3, 4) === 3);
+  ok('and symmetrical across the ridge', high(b0, 0, 4) === high(b0, 7, 4) && high(b0, 2, 4) === high(b0, 5, 4));
+  ok('while nothing changes along the ridge', high(b0, 3, 2) === high(b0, 3, 5));
 
-  // The turn is the point. If it did nothing the tool would be unusable on
-  // half the houses anyone builds.
-  const b1 = roofBlocks(box(0, 0, 0, 8), { shape: gable, turn: 1 });
-  ok('turning a gable moves the ridge to the other axis', at(b1, 4, 0) === 0 && at(b1, 4, 3) === 3);
-  ok('and the two are genuinely different roofs',
-    JSON.stringify(b0) !== JSON.stringify(b1));
+  const b1 = roofBlocks(square(8), { shape: gable, turn: 1 });
+  ok('turning a gable moves the ridge to the other axis', high(b1, 4, 0) === 0 && high(b1, 4, 3) === 3);
+  ok('and the two are genuinely different roofs', JSON.stringify(b0) !== JSON.stringify(b1));
 
   // A gable open at the ends is a tunnel you can see daylight through.
-  const endColumn = b0.filter((b) => b.dz === 0 && b.dx === 3).map((b) => b.dy).sort((p, q) => p - q);
-  ok('the gable ends are filled in rather than left open',
-    JSON.stringify(endColumn) === JSON.stringify([0, 1, 2, 3]));
-  const middleColumn = b0.filter((b) => b.dz === 4 && b.dx === 3);
-  ok('but the middle is a shell, not a solid block of wood', middleColumn.length === 1);
+  const end = b0.filter((b) => b.z === 0 && b.x === 3).map((b) => b.dy).sort((p, q) => p - q);
+  ok('the gable ends are filled in rather than left open', JSON.stringify(end) === JSON.stringify([0, 1, 2, 3]));
+  ok('but the middle is a shell, not a solid block of wood',
+    b0.filter((b) => b.z === 4 && b.x === 3).length === 1);
+
+  // An odd width has one ridge line rather than two. The selector could not
+  // frame an odd building at all.
+  const odd = roofBlocks(square(7), { shape: gable, turn: 0 });
+  ok('an odd-width gable peaks on a single line', high(odd, 3, 3) === 3 && high(odd, 2, 3) === 2);
 }
 
 {
   const hip = ROOFS_BY_ID.get('hip');
-  const blocks = roofBlocks(box(0, 0, 0, 8), { shape: hip });
-  const at = (dx, dz) => Math.max(...blocks.filter((b) => b.dx === dx && b.dz === dz).map((b) => b.dy));
+  const b = roofBlocks(square(8), { shape: hip });
   ok('a hipped roof falls away on all four sides',
-    at(0, 4) === 0 && at(4, 0) === 0 && at(7, 4) === 0 && at(4, 7) === 0);
-  ok('and peaks in the middle', at(3, 3) === 3 && at(3, 4) === 3);
+    high(b, 0, 4) === 0 && high(b, 4, 0) === 0 && high(b, 7, 4) === 0 && high(b, 4, 7) === 0);
+  ok('and peaks in the middle', high(b, 3, 3) === 3 && high(b, 3, 4) === 3);
   ok('it has one orientation, because it looks the same every way round', hip.turns === 1);
 }
 
 {
   const lean = ROOFS_BY_ID.get('lean');
-  const high = (blocks, dx, dz) => Math.max(...blocks.filter((b) => b.dx === dx && b.dz === dz).map((b) => b.dy));
-  const b = [0, 1, 2, 3].map((t) => roofBlocks(box(0, 0, 0, 8), { shape: lean, turn: t }));
+  const b = [0, 1, 2, 3].map((t) => roofBlocks(square(8), { shape: lean, turn: t }));
   ok('a lean-to falls one way only', high(b[0], 0, 4) === 0 && high(b[0], 7, 4) === 3);
   ok('and all four turns are different', new Set(b.map((x) => JSON.stringify(x))).size === 4);
   ok('each turn puts the low edge on a different side',
@@ -117,57 +134,85 @@ for (const shape of ROOFS) {
 
 {
   const flat = ROOFS_BY_ID.get('flat');
-  const blocks = roofBlocks(box(0, 0, 0, 8), { shape: flat });
-  ok('a flat top is one course', blocks.filter((b) => b.dx === 4 && b.dz === 4).length === 1);
-  ok('with a low wall round the edge', blocks.filter((b) => b.dx === 0 && b.dz === 4).length === 2);
+  const b = roofBlocks(square(8), { shape: flat });
+  ok('a flat top is one course', b.filter((c) => c.x === 4 && c.z === 4).length === 1);
+  ok('with a low wall round the edge', b.filter((c) => c.x === 0 && c.z === 4).length === 2);
+}
+
+// A building that is not a rectangle gets a roof that is not a rectangle. This
+// is the thing the old grid-snapped box could not do at any size.
+{
+  const foot = new Set(), spans = new Map();
+  const inL = (x, z) => x >= 0 && z >= 0 && x < 8 && z < 8 && !(x >= 4 && z >= 4);
+  for (let x = 0; x < 8; x++) for (let z = 0; z < 8; z++) if (inL(x, z)) foot.add(`${x},${z}`);
+  const run = (x, z, dx, dz) => { let n = 0; while (inL(x, z)) { n++; x += dx; z += dz; } return n; };
+  for (const k of foot) {
+    const [x, z] = k.split(',').map(Number);
+    spans.set(k, { xm: run(x, z, -1, 0), xp: run(x, z, 1, 0), zm: run(x, z, 0, -1), zp: run(x, z, 0, 1) });
+  }
+  const pick = { y: 0, foot, spans, walls: foot, bounds: { minX: 0, maxX: 7, minZ: 0, maxZ: 7 } };
+  const b = roofBlocks(pick, { shape: ROOFS_BY_ID.get('hip') });
+  const covered = new Set(b.map((c) => `${c.x},${c.z}`));
+  ok('an L-shaped house gets an L-shaped roof', covered.size === 48 && !covered.has('6,6'));
+  // It falls away from the inside corner as well as from the outside walls,
+  // which is the whole reason for measuring distance rather than box position.
+  ok('and it slopes away from the inside corner too',
+    high(b, 3, 3) === 3 && high(b, 3, 5) === 0 && high(b, 2, 5) === 1);
 }
 
 // --- where it lands -----------------------------------------------------------
 
-// Not the bottom of the box: the box snaps to a grid of its own size, so its
-// floor is wherever the grid fell and almost never on top of your walls.
 {
-  const b = hut(world, { x: 20, y: 30, z: 20, s: 8, h: 4 });
-  ok('the eave sits one above the wall top, not on the box floor', roofBase(world, b) === 34);
-  const empty = box(40, 30, 40, 8);
-  ok('and an empty box roofs from its own floor', roofBase(world, empty) === 30);
-}
+  const w = world();
+  const b = hut(w);
+  const pick = roofPick(w, { x: 20, y: 21, z: 20 });
+  ok('pointing halfway up a wall finds the top course', pick && pick.y === b.top);
+  ok('and the footprint is the whole building', pick && pick.foot.size === 64);
 
-{
-  const b = hut(world, { x: 20, y: 30, z: 20, s: 8, h: 4 });
-  const changes = roofPlan(world, b, { shape: ROOFS_BY_ID.get('gable'), turn: 0, type: PLANKS });
+  const changes = roofPlan(w, pick, { shape: ROOFS_BY_ID.get('gable'), turn: 0, type: PLANKS });
   ok(`roofing the hut is ${changes.length} blocks`, changes.length > 60);
-  ok('all of it above the walls', changes.every((c) => c.y >= 34));
+  ok('all of it above the walls', changes.every((c) => c.y > b.top));
   ok('and inside the footprint',
     changes.every((c) => c.x >= 20 && c.x <= 27 && c.z >= 20 && c.z <= 27));
   ok('it is made of the block you asked for', changes.every((c) => c.next === PLANKS));
   ok('and it knows what was there, so it can be undone', changes.every((c) => 'prev' in c));
 
-  for (const c of changes) world.setBlock(c.x, c.y, c.z, c.next);
-  // The plain rule sits on whatever is highest, so once a roof is there it
-  // would sit on that — which is why the caller remembers the eave it used and
-  // hands it back. Given it, the same roof is already right.
-  ok('the plain rule would stack a second roof on the first', roofBase(world, b) === 38);
+  for (const c of changes) w.setBlock(c.x, c.y, c.z, c.next);
+  // The plain rule sits on whatever is on top, so once a roof is there it
+  // would sit on that — which is why the caller remembers the eave it used.
+  const after = roofPick(w, { x: 20, y: 21, z: 20 });
+  ok('the plain rule now reads the roof as the top of the building', after.y === b.top + 1);
   ok('but re-laid at the eave it used, nothing needs doing',
-    roofPlan(world, b, { shape: ROOFS_BY_ID.get('gable'), turn: 0, type: PLANKS, base: 34 }).length === 0);
-  // Changing your mind about the material re-lays the same roof.
-  const stone = roofPlan(world, b, { shape: ROOFS_BY_ID.get('gable'), turn: 0, type: STONE, base: 34 });
+    roofPlan(w, pick, { shape: ROOFS_BY_ID.get('gable'), turn: 0, type: PLANKS, base: b.top + 1 }).length === 0);
+  const stone = roofPlan(w, pick, { shape: ROOFS_BY_ID.get('gable'), turn: 0, type: STONE, base: b.top + 1 });
   ok('and asking for a different material relays the same shape',
     stone.length === changes.length && stone.every((c) => c.next === STONE));
-  // Turning it puts blocks somewhere else; the old ones have to come down too,
-  // or the house ends up with a cross on it. Game does that half.
-  const turned = roofPlan(world, b, { shape: ROOFS_BY_ID.get('gable'), turn: 1, type: PLANKS, base: 34 });
-  ok('and turning it lays a different roof at the same height',
-    turned.length > 0 && turned.every((c) => c.y >= 34 && c.y <= 37));
 }
 
-// The world has a ceiling, and a 16-box on a hilltop can reach it.
+// A 5-wide house gets a 5-wide roof. The box only came in 2, 4, 8 and 16.
 {
-  const high = box(40, 60, 40, 8);   // world height is 64
-  const changes = roofPlan(world, high, { shape: ROOFS_BY_ID.get('gable'), type: PLANKS });
+  const w = world();
+  hut(w, { x: 40, z: 40, n: 5, h: 3 });
+  const pick = roofPick(w, { x: 40, y: 21, z: 40 });
+  const changes = roofPlan(w, pick, { shape: ROOFS_BY_ID.get('gable'), type: PLANKS });
+  ok('an odd-sized house gets an exactly-sized roof',
+    changes.every((c) => c.x >= 40 && c.x <= 44 && c.z >= 40 && c.z <= 44));
+  ok('and no part of it hangs over the edge',
+    new Set(changes.map((c) => `${c.x},${c.z}`)).size === 25);
+}
+
+// The world has a ceiling, and a big building on a hilltop can reach it.
+{
+  const w = world(58);
+  hut(w, { x: 40, z: 40, n: 8, h: 3, at: 58 });
+  const pick = roofPick(w, { x: 40, y: 59, z: 40 });
+  const changes = roofPlan(w, pick, { shape: ROOFS_BY_ID.get('gable'), type: PLANKS });
   ok('a roof that would poke through the sky is trimmed rather than lost',
     changes.length > 0 && changes.every((c) => c.y < 64));
 }
+
+ok('and pointing at open ground is no building at all',
+  roofPick(world(), { x: 5, y: 19, z: 5 }) === null);
 
 // --- saying which way it faces ------------------------------------------------
 
@@ -182,8 +227,6 @@ ok('and every turn of every shape has words for it',
 // shape no longer does.
 ok('every shape draws its own profile', ROOFS.every((r) => roofProfileSvg(r).includes('<rect')));
 {
-  // The drawing is the cross-section, so a pitched shape has to be drawn
-  // taller than a flat one or the panel is four pictures of the same thing.
   const height = (id) => Number(roofProfileSvg(ROOFS_BY_ID.get(id)).match(/height="(\d+)"/)[1]);
   ok('a gable is drawn taller than a flat top', height('gable') > height('flat'));
   ok('and no two shapes are drawn as the same picture',
@@ -194,49 +237,49 @@ ok('and nothing draws for no shape', roofProfileSvg(null) === '');
 // --- how you reach it ---------------------------------------------------------
 
 ok('the roof panel is declared with the rest', PANELS_BY_ID.has('panel-roof'));
-// Designs is sandbox-only; a Duilt house with a hole in the sky is exactly
-// what this is for, and it pays from the bag like anything else.
-ok('and exists in a Duilt world too', PANELS_BY_ID.get('panel-roof').mode === 'any');
+ok('and exists in every kind of world', PANELS_BY_ID.get('panel-roof').mode === 'any');
+ok('so does Designs, which used to be creative-only', PANELS_BY_ID.get('panel-templates').mode === 'any');
 ok('there is a button for it', /id="btn-roof"/.test(ui) && /id="t-roof"/.test(ui));
 ok('and it opens the panel', /#btn-roof.*openPanel\('panel-roof'\)/.test(ui));
 ok('picking a shape queues it rather than placing it blind', /onPickRoof\(btn\.dataset\.roof\)/.test(ui));
-ok('and turns the selector on, since that is where it goes',
-  /onPickRoof[\s\S]{0,120}setSelectorActive\(true\)/.test(ui));
 
 ok('it goes through the one place blocks change, so it undoes and is paid for',
   /roofPlan\(this\.world[\s\S]{0,900}this\.applyChanges\(changes\)/.test(game));
 ok('it is made of what you are holding',
-  /stampRoof\(\)[\s\S]{0,300}const type = this\.selectedBlockId;[\s\S]{0,500}roofPlan/.test(game));
-// Placing, seeing it face the wrong way, turning it and placing again is how
-// this tool actually gets used. Without a relay that leaves a cross on the roof.
-ok('re-laying over the same box replaces the roof rather than stacking on it',
-  /roofRelay\(bounds\)/.test(game) && /relay\?\.base \?\? roofBase/.test(game));
-ok('and takes down what the new shape no longer covers',
-  /for \(const c of relay\.cells\)[\s\S]{0,260}next: AIR/.test(game));
-ok('but only while the roof it remembers is untouched',
-  /if \(this\.world\.getBlock\(c\.x, c\.y, c\.z\) !== c\.type\) return null;/.test(game));
-ok('and the preview shows the same height it will land at', /this\.roofEave\(bounds\)/.test(game));
+  /stampRoof\(\)[\s\S]{0,600}const type = this\.selectedBlockId;[\s\S]{0,500}roofPlan/.test(game));
 ok('a block you have not unlocked is refused before anything is built',
-  /stampRoof\(\)[\s\S]{0,400}blockAvailability\(type\)/.test(game));
+  /stampRoof\(\)[\s\S]{0,700}blockAvailability\(type\)/.test(game));
+ok('and pointing at nothing says so rather than doing nothing',
+  /title: 'Point at a building'/.test(game));
 
 // R turns a design already. Two keys for "turn the thing before you put it
 // down" would be one too many.
 ok('R turns it', /e\.code === 'KeyR' && this\.pendingRoof/.test(game));
 // And a phone has no R, so the second thumb button takes over while a roof
 // that can turn is queued.
-ok('and on a phone the second button does', /this\.pendingRoof\?\.turns > 1[\s\S]{0,60}this\.turnRoof\(\)/.test(game));
-ok('which is labelled to match', /const second = state\.facing \? 'Turn' : 'Size'/.test(ui));
+ok('and on a phone the second button does', /this\.pendingRoof\?\.turns > 1\) return void this\.turnRoof\(\)/.test(game));
+ok('which is labelled to match', /const second = state\.facing \? 'Turn' : 'Cancel'/.test(ui));
 
 // Seeing the slope before you commit is the answer to "which way does it face".
-ok('the roof hangs in the air before you place it', /updateRoofPreview\(bounds\)/.test(game));
+ok('the roof hangs in the air before you place it', /updateRoofPreview\(pick\)/.test(game));
 ok('rebuilt only when it would look different, not every frame',
   /if \(key === this\.roofKey\) return;/.test(game));
-ok('and the turn is part of what makes it different', /this\.roofId|this\.roofTurn, this\.selectedBlockId/.test(game));
-ok('turning the selector off puts it away', /clearPending\(\)[\s\S]{0,200}this\.roofGhost\.hide\(\)/.test(game));
-// Two things queued at once is two things fighting over one click.
-ok('and picking one thing unqueues the other',
-  (game.match(/this\.clearPending\(\);/g) ?? []).length >= 2);
+ok('and the turn is part of what makes it different', /this\.pendingRoof\.id, this\.roofTurn/.test(game));
+// The other half of the question: did it find the whole house, or one wing?
+ok('the building it decided on is outlined too', /this\.selection\.update\([\s\S]{0,140}course, this\.world/.test(game));
+ok('putting the tool away clears both', /clearPending\(\)[\s\S]{0,260}this\.roofGhost\.hide\(\)/.test(game));
 
-ok('the guide says how to use it', /Pitches a roof over the box/.test(guide));
+// Placing, seeing it face the wrong way, turning it and placing again is how
+// this tool actually gets used. Without a relay that leaves a cross on the roof.
+ok('re-laying on the same house replaces the roof rather than stacking on it',
+  /roofRelay\(pick\)/.test(game) && /relay\?\.base \?\? pick\.y \+ 1/.test(game));
+ok('and takes down what the new shape no longer covers',
+  /for \(const c of relay\.cells\)[\s\S]{0,260}next: AIR/.test(game));
+ok('but only while the roof it remembers is untouched',
+  /if \(this\.world\.getBlock\(c\.x, c\.y, c\.z\) !== c\.type\) return null;/.test(game));
+ok('and the preview shows the same height it will land at', /this\.roofEave\(pick\)/.test(game));
+
+ok('the guide says how to use it', /Pitches a roof over the building you point at/.test(guide));
+ok('and that it works everywhere', /works in any world/.test(guide));
 
 process.exit(f ? 1 : 0);

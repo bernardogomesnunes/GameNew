@@ -54,18 +54,16 @@ export const PANELS = [
   {
     id: 'panel-templates',
     title: 'Designs',
-    sub: 'Aim the selector at a build, save it, then stamp it anywhere.',
+    sub: 'Point at something you built, save it, then stamp it anywhere.',
     layer: 'main',
-    mode: 'sandbox',
+    mode: 'any',
     label: 'Designs',
   },
   {
     id: 'panel-roof',
     title: 'Roofs',
-    sub: 'Frame the top of your walls with the selector, pick a shape, and place it.',
+    sub: 'Pick a shape, point at your house, and it works out the slope.',
     layer: 'main',
-    // Not sandbox-only like Designs: a Duilt house with a hole in the sky is
-    // the exact thing this is for, and the blocks come out of your bag.
     mode: 'any',
     label: 'Roof',
   },

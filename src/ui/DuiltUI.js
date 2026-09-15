@@ -506,8 +506,10 @@ export class DuiltUI {
   renderBuildings() {
     const d = this.duilt;
     if (!d) return this.noWorld('#buildings-list');
-    const framed = this.game.selectorTool?.active ? this.game.selectorTool.bounds() : null;
-    const region = framed ? { ...framed } : null;
+    // What you are pointing at, if it is a build — so the list can say which of
+    // these you could claim right now rather than listing them all blankly.
+    const build = this.game.buildUnderCrosshair?.();
+    const region = build ? { ...build.bounds } : null;
     const options = region ? d.claimOptionsFor(region) : null;
 
     this.q('#buildings-list').innerHTML = structuresForAge(d.age).map((spec) => {
@@ -544,7 +546,7 @@ export class DuiltUI {
           ${design && canStamp ? '<div class="building-note"><span>Aim where you want it and press Place.</span></div>' : ''}
           <div class="building-note">
             ${opt && !opt.ok ? `<span class="warn">${opt.reason}</span>` : ''}
-            ${!region ? '<span>Turn on Select and frame a build to claim it.</span>' : ''}
+            ${!region ? '<span>Point at something you built to claim it.</span>' : ''}
             ${design && !canStamp ? this.shortfallNote(shortfall) : ''}
             ${design?.note && canStamp ? `<span>${design.note}</span>` : ''}
           </div>
