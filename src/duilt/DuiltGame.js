@@ -250,6 +250,20 @@ export class DuiltGame {
     return [...found];
   }
 
+  /**
+   * What a storehouse is holding, as a line you can read.
+   *
+   * Used by the panel and by anything that wants to say how full one is
+   * without walking its slots itself.
+   */
+  storeSummary(structure) {
+    const store = this.structures.storeFor(structure);
+    if (!store) return null;
+    const used = store.slots.filter(Boolean).length;
+    const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
+    return { store, used, free: store.size - used, size: store.size, items };
+  }
+
   ageComplete() {
     const goals = this.ageGoals();
     return goals.length > 0 && goals.every((g) => g.done);

@@ -150,6 +150,40 @@ export const STRUCTURES = [
     skill: 'building',
   },
 
+  {
+    id: 'storehouse',
+    name: 'Storehouse',
+    icon: '📦',
+    age: 2,
+    blurb: 'Shelves that are not your back. Your buildings deliver here when your bag is full.',
+    minSize: 3,
+    maxSize: 12,
+    cost: {},
+    requires: [
+      {
+        id: 'shell',
+        test: (ctx) => count(ctx, [PLANKS, WOOD]) >= 20,
+        say: (ctx) => `Needs ${20 - count(ctx, [PLANKS, WOOD])} more planks or wood — it has to keep the rain off`,
+      },
+      {
+        id: 'room',
+        test: (ctx) => ctx.shelteredVolume() >= 6,
+        say: (ctx) => ctx.shelteredVolume() === 0
+          ? 'Needs a room inside — walls all round and a roof over the top'
+          : 'The room is too small to put anything in',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    // The only building that holds things. `holds` is how many slots it has,
+    // and it is what makes a storehouse a storehouse everywhere else in the
+    // game: the registry gives one a container, production delivers into it,
+    // and the panel opens it. Give another building a `holds` and it becomes
+    // one too, without a line of code anywhere else.
+    holds: 24,
+    skill: 'building',
+  },
+
   // ---- Age 3: fire --------------------------------------------------------
 
   {

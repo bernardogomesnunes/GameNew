@@ -40,9 +40,13 @@ export const AGES = [
     age: 2,
     name: 'Industry',
     size: 64,
-    intro: 'Wood only gets you so far. Open a quarry, and put a second roof up while you are at it.',
+    intro: 'Wood only gets you so far. Open a quarry, raise somewhere to put things, and put a second roof up while you are at it.',
     goals: [
       { structure: 'quarry', count: 1, label: 'Open a quarry' },
+      // Age 2 is where forty slots stop being enough — a quarry alone fills
+      // them. Asking for the shed here is the age teaching the lesson at the
+      // moment you are learning it anyway.
+      { structure: 'storehouse', count: 1, label: 'Raise a storehouse — your bag is not big enough' },
       // Named for what it does rather than what it counts: the first house is
       // yours, so this is the one that puts a person in the world, and a goal
       // that only says "two houses" leaves that a surprise.

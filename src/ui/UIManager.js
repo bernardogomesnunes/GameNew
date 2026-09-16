@@ -1408,6 +1408,12 @@ export class UIManager {
     this.duiltUI?.showBuilding(structure, actions);
   }
 
+  /** Opens a storehouse's shelves alongside the bag. */
+  openStore(structure) {
+    this.openPanel('panel-store');
+    this.duiltUI?.showStore(structure);
+  }
+
   /**
    * What the queued tool is about to do, next to the crosshair.
    *

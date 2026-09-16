@@ -652,6 +652,21 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .bag-detail-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .bag-detail-row span { font-variant-numeric: tabular-nums; color: var(--text-dim); }
 
+/* --- the storehouse ---
+   Two grids on one screen, each one shorter than the bag screen's so both
+   halves of the move are visible at once. A stack you have to scroll away from
+   to find its destination is a stack you put down in the wrong place. */
+.store-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--text-dim);
+}
+.store-head:first-child { margin-top: 0; }
+.store-head button { flex: 0 0 auto; padding: 6px 12px; font-size: 12.5px; }
+#store-grid, #store-bag-grid {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px;
+  margin: 10px 0 0; max-height: 26vh; overflow-y: auto; padding: 2px;
+}
+
 /* --- claiming --- */
 #claim-list { display: flex; flex-direction: column; gap: 9px; margin-top: 6px; }
 .claim-row {
@@ -690,6 +705,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   #vitals { top: 48px; left: 10px; }
   .vital-track { width: 62px; }
   #bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 42vh; }
+  #store-grid, #store-bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 24vh; }
   .bag-slot { min-height: 52px; }
   .panel-wide { max-width: 100%; }
   /* A hint, not an announcement — it sat in the middle of the thumb zone. */
@@ -701,6 +717,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 @media (min-width: 721px) {
   #bag-grid { grid-template-columns: repeat(8, 1fr); }
+  #store-grid, #store-bag-grid { grid-template-columns: repeat(8, 1fr); }
 }
 
 /* Duilt hotbar: one slot per kind of thing held, with the running total. */

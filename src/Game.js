@@ -1437,6 +1437,7 @@ export class Game {
       },
       onMove: () => this.beginMove(structure),
       onDelete: () => this.deleteBuilding(structure),
+      onOpenStore: () => this.ui.openStore(structure),
     };
   }
 
@@ -1449,6 +1450,20 @@ export class Game {
    */
   deleteBuilding(structure) {
     const spec = STRUCTURES_BY_ID.get(structure.type);
+
+    // Taking down a storehouse with things in it would take the things down
+    // with it. Nothing else in the game destroys items, and this is not going
+    // to be the first: empty it and then knock it down.
+    const store = this.duilt.structures.storeFor(structure);
+    if (store && store.slots.some(Boolean)) {
+      this.ui.toast({
+        kind: 'xp',
+        title: 'There is still something in it',
+        body: 'Empty the storehouse first — nothing gets thrown away here',
+      });
+      return;
+    }
+
     const changes = this.cellsOf(structure.region)
       .map(({ x, y, z }) => ({ x, y, z, prev: this.world.getBlock(x, y, z), next: AIR }))
       .filter((c) => c.prev !== AIR && !this.world.isIndestructible(c.x, c.y, c.z));

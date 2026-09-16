@@ -99,6 +99,19 @@ export const PANELS = [
     label: 'Bag',
   },
   {
+    id: 'panel-store',
+    title: 'Storehouse',
+    sub: 'Tap anything to move it between your bag and the shelves.',
+    subId: 'store-sub',
+    wide: true,
+    layer: 'duilt',
+    mode: 'duilt',
+    label: 'Store',
+    // No key: a storehouse is somewhere you walk to, so it opens by pointing
+    // at it. A shortcut would mean reaching your shelves from the far side of
+    // the map, which is the bag again under a different name.
+  },
+  {
     id: 'panel-claim',
     title: 'What is this?',
     sub: "The game will check what you've built and tell you if anything's missing.",

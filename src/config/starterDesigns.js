@@ -190,6 +190,15 @@ export const STARTER_DESIGNS = [
     blocks: quarryBlocks(),
   },
   {
+    id: 'starter_storehouse',
+    structure: 'storehouse',
+    name: 'Starter shed',
+    size: 5,
+    footprint: '5 × 5',
+    note: 'Put it where you walk past it — your buildings deliver here when your bag is full.',
+    blocks: room({ w: 5, h: 2, wall: WOOD, floor: PLANKS }),
+  },
+  {
     id: 'starter_workshop',
     structure: 'workshop',
     name: 'Starter workshop',

@@ -1,4 +1,5 @@
 import { STRUCTURES_BY_ID } from '../config/structures.js';
+import { Inventory } from '../items/Inventory.js';
 import { validateStructure } from './validate.js';
 
 /**
@@ -30,6 +31,71 @@ export class StructureRegistry {
 
   countOf(typeId) {
     return this.structures.filter((s) => s.type === typeId && s.valid).length;
+  }
+
+  // ---- storehouses ----
+
+  /**
+   * The container a building keeps, made the first time it is asked for.
+   *
+   * A storehouse is a place in the world, not a bigger bag. That distinction is
+   * the whole point of it: the bag is what you are carrying and it goes where
+   * you go, while this stays in the building and anyone can see where it is.
+   * So it gets its own Inventory rather than growing the player's.
+   */
+  storeFor(structure) {
+    const holds = STRUCTURES_BY_ID.get(structure?.type)?.holds;
+    if (!holds) return null;
+    if (!structure.store) structure.store = new Inventory({ slots: holds, bus: this.bus });
+    return structure.store;
+  }
+
+  /** Every standing storehouse, with what it is holding. */
+  stores() {
+    return this.structures
+      .filter((s) => s.valid && STRUCTURES_BY_ID.get(s.type)?.holds)
+      .map((s) => ({ structure: s, store: this.storeFor(s) }));
+  }
+
+  /**
+   * How many things are sitting in storehouses.
+   *
+   * Counts broken ones too, unlike `stores()`. Knocking a wall out of a shed
+   * stops it taking deliveries; it does not make what is already inside it
+   * disappear, and a total that said otherwise would be lying about goods the
+   * player can still walk over and collect.
+   */
+  storedCount() {
+    return this.structures.reduce((n, s) =>
+      n + (s.store?.slots.reduce((m, q) => m + (q?.count ?? 0), 0) ?? 0), 0);
+  }
+
+  /**
+   * Puts a building's output somewhere: the bag first, then the storehouses.
+   *
+   * All of it or none of it. Partly delivering means the rest is destroyed,
+   * and destroyed is precisely what a storehouse exists to prevent — so if any
+   * of it has nowhere to go, everything already placed comes back out and the
+   * caller leaves the time owed. Empty a storehouse an hour later and the
+   * payout arrives then instead of having quietly evaporated.
+   */
+  deliver(payload) {
+    const placed = [];
+    const into = () => [this.inventory, ...this.stores().map((s) => s.store)];
+    for (const [id, amount] of Object.entries(payload)) {
+      let left = amount;
+      for (const where of into()) {
+        if (left <= 0) break;
+        const before = left;
+        left = where.add(id, left);
+        if (before > left) placed.push({ where, id, amount: before - left });
+      }
+      if (left > 0) {
+        for (const p of placed) p.where.remove(p.id, p.amount);
+        return false;
+      }
+    }
+    return true;
   }
 
   /** Households your standing houses have room for — one roof, one family. */
@@ -197,6 +263,7 @@ export class StructureRegistry {
    */
   collect({ now = Date.now(), yieldMultiplier = 1, bonusFor = null } = {}) {
     const gained = {};
+    const stalled = [];
     const capMs = MAX_OFFLINE_HOURS * 3600_000;
 
     for (const s of this.structures) {
@@ -212,18 +279,30 @@ export class StructureRegistry {
       // Somebody working a building is the only thing that changes what one
       // building gives against another of the same kind.
       const staffing = bonusFor ? bonusFor(s.id) : 1;
+      const payload = {};
       for (const [item, per] of Object.entries(spec.produces)) {
         // Foraging pays out here rather than at the pickaxe — see DuiltGame.yieldFor.
         const amount = Math.round(per * cycles * yieldMultiplier * staffing);
-        // A full bag stops production rather than destroying the overflow.
-        const leftover = this.inventory.add(item, amount);
-        const stored = amount - leftover;
-        if (stored > 0) gained[item] = (gained[item] ?? 0) + stored;
+        if (amount > 0) payload[item] = amount;
+      }
+
+      // Nowhere to put it is not the same as made-and-thrown-away, which is
+      // what this used to do: it credited whatever fit, dropped the rest on
+      // the floor and moved the clock on anyway, so a full bag ate a night's
+      // production without a word. Now the payout stays owed until there is
+      // room for it, in the bag or in a storehouse.
+      if (Object.keys(payload).length && !this.deliver(payload)) {
+        stalled.push(s);
+        continue;
+      }
+      for (const [item, amount] of Object.entries(payload)) {
+        gained[item] = (gained[item] ?? 0) + amount;
       }
       s.lastPaidAt += cycles * periodMs;
     }
 
     if (Object.keys(gained).length) this.bus?.emit('structure:produced', { gained });
+    if (stalled.length) this.bus?.emit('structure:stalled', { structures: stalled });
     return gained;
   }
 
@@ -247,6 +326,9 @@ export class StructureRegistry {
         id: s.id, type: s.type, region: s.region, valid: s.valid,
         locked: s.locked !== false,
         claimedAt: s.claimedAt, lastPaidAt: s.lastPaidAt,
+        // Only storehouses have one, and an empty one is worth writing: it is
+        // the difference between "nothing in it" and "never had one".
+        store: s.store ? s.store.toJSON() : null,
       })),
     };
   }
@@ -257,7 +339,14 @@ export class StructureRegistry {
       .filter((s) => STRUCTURES_BY_ID.has(s.type))
       // Saves from before buildings could be locked have no flag; locked is the
       // safe reading of a building someone claimed on purpose.
-      .map((s) => ({ locked: true, ...s, brokenReason: null }));
+      .map((s) => {
+        const structure = { locked: true, ...s, store: null, brokenReason: null };
+        // Built here rather than in a second pass over `data.structures`: a
+        // filtered-out type shifts every index after it, and a storehouse
+        // would come back holding the building next door's goods.
+        if (s.store) this.storeFor(structure)?.loadJSON(s.store);
+        return structure;
+      });
     this.nextId = data.nextId ?? (this.structures.reduce((m, s) => Math.max(m, s.id), 0) + 1);
     // The world may have changed while we were away — trust the blocks, not the save.
     for (const s of this.structures) this.recheck(s);

@@ -65,6 +65,19 @@ export class DuiltUI {
         'panel-bag': `
           <div id="bag-grid"></div>
           <div id="bag-detail"></div>`,
+        'panel-store': `
+          <!--
+            Both containers on one screen, because moving a thing between them
+            is the only reason to be here. Two panels would mean remembering
+            what was in the other one.
+          -->
+          <div class="store-head">
+            <span id="store-where">On the shelves</span>
+            <button class="secondary" id="btn-store-all">Put it all in</button>
+          </div>
+          <div id="store-grid"></div>
+          <div class="store-head"><span>In your bag</span></div>
+          <div id="store-bag-grid"></div>`,
         'panel-claim': `
           <div id="claim-list"></div>`,
         'panel-buildings': `
@@ -97,13 +110,34 @@ export class DuiltUI {
     this.q('#btn-eat').addEventListener('click', () => this.eat());
     this.q('#vital-people').addEventListener('click', () => this.sayPeople());
     this.q('#btn-claim-area').addEventListener('click', () => this.game.beginClaimSelection());
+    this.q('#btn-store-all').addEventListener('click', () => this.storeEverything());
 
-    this.bus.on('inventory:change', () => { this.renderBag(); this.renderVitals(); this.onBagChanged?.(); });
+    this.bus.on('inventory:change', () => {
+      this.renderBag();
+      this.renderVitals();
+      // A storehouse is an Inventory too, so its own changes come through
+      // here — and so does the bag half of the store screen.
+      if (this.panels.isOpen('panel-store')) this.renderStore();
+      this.onBagChanged?.();
+    });
     this.bus.on('hunger:change', () => this.renderVitals());
     // Claiming and losing a building both change how many houses there are,
     // which is the number the people pill is counting against.
     this.bus.on('structure:claimed', () => this.renderVitals());
     this.bus.on('structure:broken', () => this.renderVitals());
+    this.bus.on('structure:stalled', ({ structures }) => {
+      // Said once, then not again until something changes: this fires every
+      // five seconds while the shelves are full, and the fix takes a walk.
+      if (this.saidStalled) return;
+      this.saidStalled = true;
+      this.bus.emit('toast', {
+        kind: 'xp',
+        title: structures.length === 1 ? 'A building has nowhere to put what it made'
+          : `${structures.length} buildings have nowhere to put what they made`,
+        body: 'Nothing is lost — it waits until your bag or a storehouse has room',
+      });
+    });
+    this.bus.on('structure:produced', () => { this.saidStalled = false; });
     this.bus.on('settler:left', () => this.renderVitals());
     this.bus.on('settler:hungry', ({ count }) => {
       this.renderVitals();
@@ -142,6 +176,7 @@ export class DuiltUI {
    */
   populate(id) {
     if (id === 'panel-bag') this.renderBag();
+    if (id === 'panel-store') this.renderStore();
     if (id === 'panel-skills') this.renderSkills();
     if (id === 'panel-buildings') this.renderBuildings();
     if (id === 'panel-bench') this.renderBench();
@@ -151,6 +186,9 @@ export class DuiltUI {
   onPanelClosed(id) {
     if (id === 'panel-bag') this.held = null;
     if (id === 'panel-building') this.building = null;
+    // The open storehouse is forgotten on the way out, so the next one you
+    // walk up to cannot be answered with the last one's shelves.
+    if (id === 'panel-store') this.store = null;
   }
 
   /**
@@ -172,12 +210,20 @@ export class DuiltUI {
     const locked = structure.locked !== false;
     if (sub) sub.textContent = spec?.name ?? 'A building you claimed';
 
+    // A storehouse is worth answering before you open it: how full it is is
+    // the question you walked over here to ask.
+    const summary = spec?.holds ? this.duilt?.storeSummary(structure) : null;
+    const held = summary
+      ? (summary.items ? `${summary.items} things on ${summary.used} shelves` : 'Empty')
+      : null;
+
     body.innerHTML = `
       <div class="building-state ${structure.valid ? 'good' : 'bad'}">
         ${structure.valid ? 'Standing and producing' : (structure.brokenReason ?? 'Something is missing')}
       </div>
       <div class="building-facts">
         <span>${size} blocks</span>
+        ${held ? `<span>${held}</span>` : ''}
         <span>${locked ? 'Locked' : 'Unlocked — edits allowed'}</span>
       </div>
       <p class="building-note">
@@ -188,11 +234,13 @@ export class DuiltUI {
             + 'if it no longer qualifies. Press Done when you have finished.'}
       </p>
       <div class="building-actions">
-        <button class="primary" data-move>Move it</button>
+        ${spec?.holds ? '<button class="primary" data-store>Open it</button>' : ''}
+        <button class="${spec?.holds ? 'secondary' : 'primary'}" data-move>Move it</button>
         <button class="secondary" data-change>${locked ? 'Change it' : 'Done changing'}</button>
         <button class="danger secondary" data-delete>Delete it</button>
       </div>`;
 
+    body.querySelector('[data-store]')?.addEventListener('click', () => actions.onOpenStore?.());
     body.querySelector('[data-move]').addEventListener('click', () => actions.onMove?.());
     body.querySelector('[data-change]').addEventListener('click', () => actions.onChange?.());
     body.querySelector('[data-delete]').addEventListener('click', () => {
@@ -348,6 +396,28 @@ export class DuiltUI {
     return null;
   }
 
+  /**
+   * One slot, drawn the same wherever it is.
+   *
+   * The bag and a storehouse are two containers of the same kind, and a slot
+   * that looked different in one of them would read as a different sort of
+   * thing. `attr` is what the click handler keys off, so each grid can tell
+   * its own slots apart from the other's.
+   */
+  slotHtml(s, i, { attr = 'data-slot', held = false, empty = 'Empty slot' } = {}) {
+    if (!s) return `<button class="bag-slot empty" ${attr}="${i}" aria-label="${empty} ${i + 1}"></button>`;
+    const spec = ITEMS_BY_ID.get(s.id);
+    const worn = spec?.durability ? Math.round((1 - s.wear / spec.durability) * 100) : null;
+    const colour = `#${(spec?.color ?? 0x888888).toString(16).padStart(6, '0')}`;
+    return `
+      <button class="bag-slot ${held ? 'held' : ''}" ${attr}="${i}" aria-label="${itemName(s.id)}, ${s.count}">
+        <span class="swatch${itemIcon(spec) ? ' swatch-cube' : ''}"${itemIcon(spec) ? '' : ` style="background:${colour}"`}>${
+          itemIcon(spec, { size: 34 }) ?? glyphSvg(spec?.glyph, { size: 20, color: spec?.color ?? 0x888888 })}</span>
+        ${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}
+        ${worn != null ? `<span class="wear"><i style="width:${worn}%"></i></span>` : ''}
+      </button>`;
+  }
+
   renderBag() {
     const d = this.duilt;
     if (!d) {
@@ -359,19 +429,9 @@ export class DuiltUI {
     if (!grid) return;
     const slots = d.inventory.slots;
 
-    grid.innerHTML = slots.map((s, i) => {
-      if (!s) return `<button class="bag-slot empty" data-slot="${i}" aria-label="Empty slot ${i + 1}"></button>`;
-      const spec = ITEMS_BY_ID.get(s.id);
-      const worn = spec?.durability ? Math.round((1 - s.wear / spec.durability) * 100) : null;
-      const colour = `#${(spec?.color ?? 0x888888).toString(16).padStart(6, '0')}`;
-      return `
-        <button class="bag-slot ${this.held === i ? 'held' : ''}" data-slot="${i}" aria-label="${itemName(s.id)}, ${s.count}">
-          <span class="swatch${itemIcon(spec) ? ' swatch-cube' : ''}"${itemIcon(spec) ? '' : ` style="background:${colour}"`}>${
-            itemIcon(spec, { size: 34 }) ?? glyphSvg(spec?.glyph, { size: 20, color: spec?.color ?? 0x888888 })}</span>
-          ${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}
-          ${worn != null ? `<span class="wear"><i style="width:${worn}%"></i></span>` : ''}
-        </button>`;
-    }).join('');
+    grid.innerHTML = slots
+      .map((s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i }))
+      .join('');
 
     grid.querySelectorAll('[data-slot]').forEach((btn) => this.bindSlot(btn));
     this.q('#bag-sub').textContent = this.held != null
@@ -441,6 +501,106 @@ export class DuiltUI {
         <span>${slot.count}</span>
       </div>
       <div class="sub" style="margin:4px 0 0">${bits.join(' · ')}</div>`;
+  }
+
+  // ---- storehouses ----
+
+  /**
+   * Opens a storehouse's shelves.
+   *
+   * Held is deliberately not shared with the bag screen: lifting a stack in
+   * one container and putting it down in another is a different gesture from
+   * rearranging one, and one tap doing both is how things end up somewhere
+   * you did not mean. Here a tap moves the stack across, full stop.
+   */
+  showStore(structure) {
+    this.store = structure ?? null;
+    this.renderStore();
+  }
+
+  renderStore() {
+    const d = this.duilt;
+    const grid = this.q('#store-grid');
+    const bagGrid = this.q('#store-bag-grid');
+    if (!grid || !bagGrid) return;
+    if (!d) { grid.innerHTML = ''; bagGrid.innerHTML = ''; return this.noWorld('#store-grid'); }
+
+    const summary = this.store ? d.storeSummary(this.store) : null;
+    if (!summary) {
+      grid.innerHTML = `<div class="sub" style="margin:0">Point at a storehouse to open it.</div>`;
+      bagGrid.innerHTML = '';
+      return;
+    }
+
+    grid.innerHTML = summary.store.slots
+      .map((s, i) => this.slotHtml(s, i, { attr: 'data-store-slot', empty: 'Empty shelf' }))
+      .join('');
+    bagGrid.innerHTML = d.inventory.slots
+      .map((s, i) => this.slotHtml(s, i, { attr: 'data-bag-slot' }))
+      .join('');
+
+    grid.querySelectorAll('[data-store-slot]').forEach((btn) =>
+      btn.addEventListener('click', () => this.takeFromStore(Number(btn.dataset.storeSlot))));
+    bagGrid.querySelectorAll('[data-bag-slot]').forEach((btn) =>
+      btn.addEventListener('click', () => this.putInStore(Number(btn.dataset.bagSlot))));
+
+    this.q('#store-where').textContent = summary.free
+      ? `On the shelves — ${summary.free} of ${summary.size} free`
+      : `On the shelves — full`;
+    const sub = this.q('#store-sub');
+    if (sub) {
+      sub.textContent = summary.items
+        ? 'Tap anything to move it between your bag and the shelves.'
+        : 'Nothing in here yet. Tap something in your bag to put it away.';
+    }
+  }
+
+  putInStore(i) {
+    const d = this.duilt;
+    const store = this.store && d?.structures.storeFor(this.store);
+    if (!store) return;
+    const item = d.inventory.slots[i]?.id;
+    if (!item) return;
+    const moved = d.inventory.moveTo(store, i);
+    if (!moved) {
+      this.bus.emit('toast', { kind: 'xp', title: 'No room on the shelves', body: 'Take something out first' });
+      return;
+    }
+    this.renderStore();
+  }
+
+  takeFromStore(i) {
+    const d = this.duilt;
+    const store = this.store && d?.structures.storeFor(this.store);
+    if (!store?.slots[i]) return;
+    const moved = store.moveTo(d.inventory, i);
+    if (!moved) {
+      this.bus.emit('toast', { kind: 'xp', title: 'Your bag is full', body: 'Put something on the shelves first' });
+      return;
+    }
+    this.renderStore();
+  }
+
+  /**
+   * Everything but your tools, onto the shelves.
+   *
+   * Tools stay because walking away from your own axe is never what you meant,
+   * and it is the one thing you would have to notice and undo by hand.
+   */
+  storeEverything() {
+    const d = this.duilt;
+    const store = this.store && d?.structures.storeFor(this.store);
+    if (!store) return;
+    let moved = 0, stuck = 0;
+    d.inventory.slots.forEach((s, i) => {
+      if (!s || isTool(s.id)) return;
+      const n = d.inventory.moveTo(store, i);
+      if (n) moved += n; else stuck++;
+    });
+    this.renderStore();
+    this.bus.emit('toast', moved
+      ? { kind: 'xp', title: `Put ${moved} away`, body: stuck ? 'The shelves filled up before the rest' : 'Your tools stayed with you' }
+      : { kind: 'xp', title: 'Nothing moved', body: stuck ? 'The shelves are full' : 'Only your tools are left' });
   }
 
   // ---- claiming ----

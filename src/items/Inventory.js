@@ -196,6 +196,30 @@ export class Inventory {
     return true;
   }
 
+  /**
+   * Hands one slot's contents to a different container, as far as it will take
+   * them, and returns how many moved.
+   *
+   * `move` above shuffles slots inside one bag; this is the other thing, and
+   * they are not the same operation however similar they read. A storehouse is
+   * its own Inventory standing in the world, so putting a stack into it is a
+   * transfer between two containers — and the one rule that matters is that an
+   * item is never in both at once, nor in neither. So the count comes off this
+   * slot only for as much as the other side actually accepted.
+   */
+  moveTo(other, index) {
+    if (!other || other === this || !this.inRange(index)) return 0;
+    const slot = this.slots[index];
+    if (!slot) return 0;
+    const leftover = other.add(slot.id, slot.count, { wear: slot.wear });
+    const moved = slot.count - leftover;
+    if (moved <= 0) return 0;
+    slot.count -= moved;
+    if (slot.count <= 0) this.slots[index] = null;
+    this.changed();
+    return moved;
+  }
+
   swap(from, to) {
     const t = this.slots[to];
     this.slots[to] = this.slots[from];
