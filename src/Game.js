@@ -24,7 +24,7 @@ import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SaveManager } from './storage/SaveManager.js';
-import { SyncState, decide, mergeWorldList, PUSH, PULL, CONFLICT } from './storage/WorldSync.js';
+import { SyncState, decide, mergeWorldList, PUSH, PULL, CONFLICT, CLOUD_ONLY } from './storage/WorldSync.js';
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
 import { panelForKey } from './config/panels.js';
@@ -407,7 +407,7 @@ export class Game {
     if (!this.cloud?.signedIn) return 0;
     let moved = 0;
     try {
-      const up = new Map((await this.cloud.list()).map((w) => [w.id, w]));
+      const up = new Map((await this.cloudList({ maxAgeMs: 0 })).map((w) => [w.id, w]));
       for (const row of this.saveManager.list()) {
         if (up.has(row.id)) continue;         // already theirs
         const data = this.saveManager.read(row.id);
@@ -424,6 +424,7 @@ export class Game {
             revision: 1,
           });
           this.syncState.agree(row.id, res.revision, row.at);
+          this.forgetCloudList();
           moved++;
         } catch { /* stays here, goes up on the next save */ }
       }
@@ -431,18 +432,115 @@ export class Game {
     return moved;
   }
 
+  /**
+   * Opens a world from whichever copy is the real one.
+   *
+   * It used to read the device's copy and nothing else, which is how the same
+   * world showed a different afternoon on a phone and a desktop: the phone
+   * played and pushed, the desktop opened its own stale copy, and the sync —
+   * which had correctly worked out the account was ahead — did nothing with
+   * that answer.
+   *
+   * So the account is asked first, on a short deadline. Offline, or slow, or
+   * signed out, the copy on this device is what opens: waiting on a network to
+   * start playing is worse than starting a few minutes behind, and the next
+   * save settles it either way.
+   */
+  async openWorld(id, { silent = false } = {}) {
+    if (!id) return false;
+    // What you were in is written down before you leave it, or opening a
+    // second world would throw away the first one's afternoon.
+    if (!silent) this.saveNow();
+
+    const { action } = await this.decideFor(id);
+    if (action === PULL || action === CLOUD_ONLY) {
+      try {
+        await this.restoreFromCloud(id, { silent });
+        return true;
+      } catch { /* the copy here will do */ }
+    }
+
+    const data = this.saveManager.read(id);
+    if (!data) return false;
+    this.loadFromData(data, { silent });
+    this.saveManager.markOpened(id);
+    if (!silent) this.ui.closePanel('panel-menu');
+    return true;
+  }
+
+  /**
+   * What to do about one world, asked of the account with a deadline.
+   *
+   * A null action means "we could not find out" — signed out, offline, or the
+   * account taking too long — and every caller treats that as "use what is
+   * here", which is the only answer that lets you play on a train.
+   */
+  /**
+   * What the account is holding, from a moment ago if we asked a moment ago.
+   *
+   * The worlds screen asks on the way in, and then opening a world asks again
+   * one tap later. Without this that is two round trips, and the second one is
+   * in front of the player while they wait to start playing.
+   */
+  async cloudList({ maxAgeMs = 15_000 } = {}) {
+    if (!this.cloud?.signedIn) return [];
+    const now = Date.now();
+    if (this.cloudListCache && now - this.cloudListCache.at < maxAgeMs) return this.cloudListCache.rows;
+    const rows = await this.cloud.list();
+    this.cloudListCache = { at: now, rows };
+    return rows;
+  }
+
+  /** Anything that changes what is up there makes the cached answer a lie. */
+  forgetCloudList() {
+    this.cloudListCache = null;
+  }
+
+  async decideFor(id, { timeoutMs = 4000 } = {}) {
+    if (!id || !this.cloud?.signedIn) return { action: null };
+    try {
+      const list = await Promise.race([
+        this.cloudList(),
+        new Promise((_, no) => setTimeout(() => no(new Error('slow')), timeoutMs)),
+      ]);
+      const here = this.saveManager.has(id);
+      return decide({
+        local: here ? { changedAt: this.saveManager.editedAt(id) } : null,
+        cloud: list.find((w) => w.id === id) ?? null,
+        agreed: this.syncState.agreedFor(id),
+      });
+    } catch {
+      return { action: null };
+    }
+  }
+
   async syncNow() {
     const id = this.worldId;
-    const cloudList = await this.cloud.list();
+    const cloudList = await this.cloudList({ maxAgeMs: 0 });
     const mine = cloudList.find((w) => w.id === id) ?? null;
     const { action, why } = decide({
-      local: { changedAt: this.saveManager.changedAt(id) },
+      local: { changedAt: this.saveManager.editedAt(id) },
       cloud: mine,
       agreed: this.syncState.agreedFor(id),
     });
 
     if (action === PUSH) {
       await this.saveToCloud(this.worldName, { quiet: true, revision: (mine?.revision ?? 0) + 1 });
+      return action;
+    }
+    if (action === PULL) {
+      // Somebody else played this world while we were sitting in it, and we
+      // have changed nothing — so there is a newer copy and nothing of ours to
+      // lose by taking it. Offered rather than swapped: having the world
+      // replaced under you mid-build is alarming even when it is correct.
+      if (this.offeredPull === id) return action;
+      this.offeredPull = id;
+      this.bus.emit('toast', {
+        kind: 'xp',
+        title: 'Newer copy on your account',
+        body: 'This world was played on another device since you opened it.',
+        action: { label: 'Load it', onClick: () => this.restoreFromCloud(id).catch(() => {}) },
+      });
       return action;
     }
     if (action === CONFLICT) {
@@ -472,17 +570,7 @@ export class Game {
       onSelectSlot: (id) => { this.selectedBlockId = id; },
       // Opening a world by its id. There is no "open by name" any more,
       // because there is no second copy of anything to tell apart by name.
-      onOpenWorld: (id) => {
-        const data = this.saveManager.read(id);
-        if (!data) return false;
-        // What you were in is written down before you leave it, or opening a
-        // second world would throw away the first one's afternoon.
-        this.saveNow();
-        this.loadFromData(data);
-        this.saveManager.markOpened(id);
-        this.ui.closePanel('panel-menu');
-        return true;
-      },
+      onOpenWorld: (id) => this.openWorld(id),
       onDeleteWorld: (id) => {
         this.saveManager.remove(id);
         if (this.cloud?.signedIn) this.cloud.delete(id).catch(() => {});
@@ -518,10 +606,7 @@ export class Game {
       },
       onNewWorld: (mode, name) => { this.newWorld({ mode, name }); this.ui.closePanel('panel-menu'); },
       onRenameWorld: (name) => { this.worldName = name; this.saveNow(); },
-      onLoadAutosave: () => {
-        const data = this.saveManager.read(this.saveManager.lastOpened());
-        if (data) this.loadFromData(data, { silent: true });
-      },
+      onLoadAutosave: () => this.openWorld(this.saveManager.lastOpened(), { silent: true }),
       onResume: () => {
         this.ui.closePanel('panel-menu');
         if (document.body.classList.contains('touch')) this.ui.hideBlocker();
@@ -632,7 +717,7 @@ export class Game {
         await this.cloudAuth.signOut();
         this.ui.toast({ kind: 'xp', title: 'Signed out', body: 'Local saves are untouched' });
       },
-      getCloudWorlds: () => this.cloud.list(),
+      getCloudWorlds: () => this.cloudList(),
       // The worlds screen needs it to say which copy is which; it is the same
       // record the sync decision runs on.
       agreedFor: (id) => this.syncState.agreedFor(id),
@@ -657,8 +742,22 @@ export class Game {
     };
   }
 
+  /**
+   * When this world was last *played*, as opposed to last written down.
+   *
+   * These are not the same thing and treating them as one is what made a world
+   * show a different afternoon on two devices. Leaving a world writes it, so a
+   * device that only opened it and closed it again looked exactly like a device
+   * that had built something — and from then on every difference with the
+   * account read as "we both played", which is a conflict, which is deliberately
+   * never resolved automatically. So the stale copy stayed stale forever.
+   *
+   * Only a block changing counts. A world producing wood while you stand in it
+   * is not you playing it.
+   */
   saveState() {
     return {
+      editedAt: this.editedAt ?? 0,
       world: this.world,
       player: this.player,
       gamification: this.gamification,
@@ -693,6 +792,9 @@ export class Game {
     // Deliberately making a world un-discards: saving is on again.
     this.discarded = false;
     this.worldId = newWorldId();
+    // A brand new world has never been anywhere, so it counts as played: it
+    // has to go up the first time, and nothing has agreed anything about it.
+    this.editedAt = Date.now();
     this.worldName = name || (mode === DUILT ? 'My settlement' : 'Creative world');
 
     this.disposeDuilt();
@@ -768,6 +870,9 @@ export class Game {
 
   loadFromData(data, { silent } = {}) {
     this.world = data.world;
+    // Carried with the world, not reset to now: whether it has been played
+    // since the account last saw it is a fact about the world.
+    this.editedAt = data.editedAt ?? 0;
     this.disposeDuilt();
     // Deliberately opening a world un-discards: saving is on again.
     this.discarded = false;
@@ -1657,6 +1762,7 @@ export class Game {
       revision,
     });
     this.syncState.agree(this.worldId, result.revision);
+    this.forgetCloudList();
     // Quiet when it is the autosave doing it. Saving is supposed to be the
     // thing you stop thinking about, and a toast every few minutes saying so
     // is the opposite of that.
@@ -1672,7 +1778,7 @@ export class Game {
     return result;
   }
 
-  async restoreFromCloud(id) {
+  async restoreFromCloud(id, { silent = false } = {}) {
     if (!this.cloud) throw new Error('This build has no cloud configured.');
     const data = await this.cloud.restore(id);
     this.loadFromData({
@@ -1684,7 +1790,10 @@ export class Game {
       duilt: data.duilt,
       worldId: id,
       worldName: data.name,
-    });
+    }, { silent });
+    this.saveManager.markOpened(id);
+    // Nothing further to offer: this is the newer copy.
+    this.offeredPull = null;
     // Write it down locally, so the world is on this device rather than only up
     // there — then record the handshake, after the save, so the agreement is
     // not older than the copy it is vouching for.
@@ -1699,8 +1808,10 @@ export class Game {
         this.ui.updateXp();
       }
     } catch { /* the world is what matters; progression can wait for the next sign-in */ }
-    this.ui.closePanel('panel-menu');
-    this.ui.toast({ kind: 'challenge', title: `Opened "${data.name}"`, body: 'The copy from your account' });
+    if (!silent) {
+      this.ui.closePanel('panel-menu');
+      this.ui.toast({ kind: 'challenge', title: `Opened "${data.name}"`, body: 'The copy from your account' });
+    }
   }
 
   // ---- raycasting / block edits ----
@@ -1865,6 +1976,9 @@ export class Game {
       if (c.next !== AIR) this.gamification.onBlockPlaced({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.next, viaSymmetry, now });
       else this.gamification.onBlockBroken({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.prev, now });
     }
+    // This is the one place blocks change, so it is the one place that decides
+    // the world has been played. See editedAt.
+    this.editedAt = Date.now();
     return true;
   }
 

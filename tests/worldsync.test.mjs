@@ -130,6 +130,34 @@ ok('but one that was never up there still goes up',
   ok('a world played here since the last sync is due to go up', rows[0].action === PUSH);
 }
 
+// --- opening a world is not playing it ----------------------------------------
+
+/**
+ * The bug behind "the same world looks different on my two devices".
+ *
+ * Leaving a world writes it down. So a device that only opened a world and
+ * closed it again had a local save newer than the last handshake, which is
+ * indistinguishable from a device that built something — and from then on every
+ * difference with the account read as "we both played". That is a conflict, and
+ * a conflict is deliberately never resolved on its own, so the stale copy
+ * stayed stale forever and no amount of reopening fixed it.
+ *
+ * The decision asks when the world was last *played*, which only a block
+ * changing advances.
+ */
+{
+  const agreed = { revision: 4, at: 1000 };
+  // Opened and closed: written at 2000, but nothing was built.
+  ok('a world only opened and closed is not ahead of the account',
+    act({ local: { changedAt: 0 }, cloud: { revision: 4 }, agreed }) === IN_SYNC);
+  ok('and when the account moves on, it simply comes down',
+    act({ local: { changedAt: 0 }, cloud: { revision: 5 }, agreed }) === PULL);
+  ok('a world actually built in does go up',
+    act({ local: { changedAt: 2000 }, cloud: { revision: 4 }, agreed }) === PUSH);
+  ok('and built in on both sides is still a conflict',
+    act({ local: { changedAt: 2000 }, cloud: { revision: 5 }, agreed }) === CONFLICT);
+}
+
 // --- what a device remembers ---------------------------------------------------
 
 {

@@ -63,6 +63,36 @@ ok('and a push that fails never breaks the save that worked',
 ok('it is retried rather than lost, because a failed push agrees to nothing',
   /agree\(this\.worldId, result\.revision\)/.test(game));
 
+// --- opening the newer copy --------------------------------------------------
+
+// The sync worked out that the account was ahead and then did nothing with
+// that answer, so the device that was behind opened its own stale copy for
+// ever. Opening asks the account first now.
+ok('opening a world asks which copy is the real one', /const \{ action \} = await this\.decideFor\(id\);/.test(game));
+ok('and fetches the account\'s when it is ahead',
+  /action === PULL \|\| action === CLOUD_ONLY[\s\S]{0,160}restoreFromCloud\(id/.test(game));
+ok('Continue goes the same way rather than straight to the local copy',
+  /onLoadAutosave: \(\) => this\.openWorld\(this\.saveManager\.lastOpened\(\)/.test(game));
+ok('offline or signed out, what is here opens', /return \{ action: null \};/.test(game));
+ok('and it does not wait for ever to find out', /timeoutMs = 4000/.test(game));
+ok('the answer is cached, so opening does not repeat the worlds screen\'s round trip',
+  /async cloudList\(\{ maxAgeMs = 15_000 \}/.test(game));
+ok('and anything that changes what is up there drops the cache',
+  (game.match(/forgetCloudList\(\)/g) ?? []).length >= 3);
+
+// Played, as opposed to written. This is what stopped every difference from
+// reading as "we both played", which is a conflict nothing resolves on its own.
+ok('the one place blocks change is the one place that counts as playing',
+  /this\.editedAt = Date\.now\(\);[\s\S]{0,40}return true;\n  \}/.test(game));
+ok('it is saved with the world', /editedAt: this\.editedAt \?\? 0,/.test(game));
+ok('and carried back when it loads, not reset to now',
+  /this\.editedAt = data\.editedAt \?\? 0;/.test(game));
+ok('a brand new world counts as played, so it goes up', /this\.editedAt = Date\.now\(\);[\s\S]{0,200}disposeDuilt/.test(game));
+ok('the decision asks for it rather than for the write time',
+  /this\.saveManager\.editedAt\(id\)/.test(game) && /editedAt\(worldId\) \{/.test(saves));
+ok('and a record from before the distinction is read as played, which asks rather than assumes',
+  /row\.editedAt \?\? row\.at \?\? 0/.test(saves));
+
 // --- what the player is told when the token call fails -----------------------
 
 // The SDK's own message is "HTTP 404 Not Found", which names nothing and reads

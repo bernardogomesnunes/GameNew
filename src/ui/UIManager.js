@@ -421,8 +421,11 @@ export class UIManager {
     this.home = new HomeScreen(this.q('#blocker'), {
       listWorlds: () => this.saveManager.list(),
       lastOpened: () => this.saveManager.lastOpened(),
-      onContinue: () => { this.cb.onLoadAutosave(); this.enterWorld(); },
-      onOpen: (id) => { if (this.cb.onOpenWorld(id)) this.enterWorld(); },
+      // The world goes in first and the loading follows, because entering has
+      // to happen inside the tap that asked for it — pointer lock is only
+      // granted to a gesture, and opening now checks the account first.
+      onContinue: () => { this.enterWorld(); this.cb.onLoadAutosave(); },
+      onOpen: (id) => { this.enterWorld(); this.cb.onOpenWorld(id); },
       // One delete, because there is one of each world. It takes the account
       // copy with it: a world you binned turning up on your next device is
       // worse than not syncing at all.

@@ -81,6 +81,22 @@ export class SaveManager {
     return this.readIndex().find((r) => r.id === worldId)?.at ?? 0;
   }
 
+  /**
+   * When a world was last played on this device, by its id.
+   *
+   * The sync asks this rather than `changedAt`, because a device that opened a
+   * world and closed it again has written it without having played it, and
+   * telling the two apart is what stops "we both played" — a conflict nothing
+   * resolves on its own — from being the answer every single time.
+   */
+  editedAt(worldId) {
+    if (!worldId) return 0;
+    const row = this.readIndex().find((r) => r.id === worldId);
+    // A record written before this distinction existed has no editedAt; the
+    // safe reading of an unknown is "played", which asks rather than assumes.
+    return row ? (row.editedAt ?? row.at ?? 0) : 0;
+  }
+
   has(worldId) {
     return !!worldId && !!localStorage.getItem(worldKey(worldId));
   }
@@ -125,6 +141,9 @@ export class SaveManager {
     rows.push({
       id,
       at,
+      // When it was last *played*, which is not when it was last written: see
+      // Game.saveState. Leaving a world writes it whether or not you touched it.
+      editedAt: state.editedAt ?? 0,
       name: state.worldName ?? 'World',
       mode: state.mode ?? 'creative',
       age: state.duilt?.territory?.age ?? null,
@@ -284,10 +303,11 @@ export class SaveManager {
  * unpack it, so an earlier version can never be a different shape from the
  * current one — which is the way a restore quietly loses your bag.
  */
-function payloadOf({ world, player, gamification, economy, mode, worldId, worldName, duilt }, at) {
+function payloadOf({ world, player, gamification, economy, mode, worldId, worldName, duilt, editedAt }, at) {
   return {
     version: SAVE_VERSION,
     timestamp: at,
+    editedAt: editedAt ?? 0,
     mode,
     // The handle. Everything — the record, the history, the account copy — is
     // keyed on it, so one world is one world wherever you look at it from.
@@ -314,6 +334,7 @@ function unpack(payload, name) {
     economy: payload.economy ?? null,
     worldId: payload.worldId ?? null,
     worldName: payload.worldName ?? name ?? 'World',
+    editedAt: payload.editedAt ?? payload.timestamp ?? 0,
     // Absent in version 2 and earlier, which is exactly what a world with no
     // Duilt state looks like, so old saves need no migration.
     duilt: payload.duilt ?? null,
