@@ -11,7 +11,8 @@ import { CLOUD, isCloudConfigured, deriveUrls } from './cloudConfig.js';
  * entirely local.
  *
  * Built on Neon's Managed Better Auth. The JWT that authorises Data API calls
- * comes from `getToken()`; the session behind it is a cookie the SDK manages.
+ * comes from `getJWTToken()`; the session behind it is a cookie the SDK
+ * manages. See accessToken for why the name matters more than it looks.
  *
  * The SDK is loaded lazily, on first sight of the menu. A player who never
  * signs in never downloads it, which matters more here than in a typical app
@@ -86,16 +87,25 @@ export class CloudAuth {
   /**
    * Short-lived JWT for the Data API. The SDK refreshes it as needed.
    *
-   * The SDK reports a failure here as a bare "HTTP 404 Not Found", which is
-   * the least useful sentence a signed-in player could be shown: it names
-   * nothing, suggests nothing, and reads like the game is broken rather than
-   * the sync being off. So it is translated, and the host is named — that is
-   * the one fact anybody debugging this from a screenshot actually needs.
+   * It must be `getJWTToken`. Better Auth turns any method you name into a
+   * call on the matching route, so `getToken()` compiles, runs, and asks for
+   * `/auth/get-token` — a route Neon's managed Better Auth does not serve. It
+   * answered 404 on every single request, which meant cloud sync had never
+   * once worked for a signed-in player: signing in succeeded, and then every
+   * world upload failed on the token. The route that exists is
+   * `/auth/get-jwt-token`, and it is what the SDK's own Data API client calls.
+   *
+   * The fallback is for SDK drift, not for that bug — if a later version
+   * renames this, a working sync should not turn into a 404 again.
    */
   async accessToken() {
     if (!this.client || !this.user) return null;
+    const auth = this.client.auth;
+    const get = typeof auth.getJWTToken === 'function'
+      ? auth.getJWTToken.bind(auth)
+      : auth.getToken.bind(auth);
     try {
-      const result = await this.client.auth.getToken();
+      const result = await get();
       return result?.data?.token ?? result?.token ?? null;
     } catch (err) {
       throw new Error(readableTokenError(err));
@@ -137,7 +147,7 @@ function readableTokenError(err) {
   const status = err?.status ?? err?.body?.status;
   const host = authHost();
   if (status === 404) {
-    return `The sign-in service at ${host} did not recognise the token request.`
+    return `The sign-in service at ${host} does not know that token route.`
       + ' Cloud sync is off for now — your worlds are safe on this device.';
   }
   if (status === 401 || status === 403) return 'Your session expired — sign in again.';

@@ -10,9 +10,12 @@
  *
  * So the menu is an index. Cards, one per thing you might have come to do,
  * and tapping one takes you there. Three of them open in place because they
- * are small — the world's name, the graphics, the files; the two that already
- * have a panel of their own open that, because one achievements screen is
- * enough, and the goal list is that screen now rather than a card on the HUD.
+ * are small — the world's name, the graphics, the files; Profile has a panel
+ * of its own and opens that.
+ *
+ * The goals are not in here. They are what teaches the game, so they belong
+ * with the controls — beside Roof in the tray — rather than behind Settings,
+ * which is where you go between builds rather than during one.
  *
  * How to read one:
  *
@@ -46,13 +49,6 @@ export const MENU = [
     name: 'Files',
     icon: 'file',
     blurb: 'Export this world or a .vox model, or import a world from a file.',
-  },
-  {
-    id: 'menu-achievements',
-    name: 'Achievements',
-    icon: 'stats',
-    blurb: 'Your level, what you have unlocked, and today’s challenges.',
-    opens: 'panel-stats',
   },
   {
     id: 'menu-profile',

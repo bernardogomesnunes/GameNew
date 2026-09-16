@@ -46,8 +46,9 @@ for (const m of MENU) {
 }
 ok('the sections that render in place are the ones without a panel',
   inlineSections().every((m) => !m.opens));
-ok('and achievements are not one of them — one such screen is enough',
-  MENU_BY_ID.get('menu-achievements')?.opens === 'panel-stats');
+// The goals left Settings for the controls tray: they teach the game, and
+// Settings is where you go between builds rather than during one.
+ok('the goals are not a settings card', !MENU_BY_ID.has('menu-achievements'));
 
 // --- what the build actually offers -----------------------------------------
 
@@ -62,7 +63,7 @@ ok('and achievements are not one of them — one such screen is enough',
   // things people open settings for behind a button labelled "workshop tools".
   const plain = menuFor({ cloud: true });
   ok('settings holds the world, the graphics and the files',
-    plain.map((m) => m.id).join() === 'menu-world,menu-graphics,menu-files,menu-achievements,menu-profile');
+    plain.map((m) => m.id).join() === 'menu-world,menu-graphics,menu-files,menu-profile');
   ok('and none of it is behind a switch any more', plain.length === withCloud.length);
   // The switch itself stays, with nothing on it, for whatever earns it next.
   ok('the UI still knows how to unfold something', /HAS_DEV_SECTIONS/.test(ui));
@@ -101,12 +102,13 @@ ok('and the way back is too', css.includes('.menu-back'));
 
 // --- the mobile screen gets its space back ----------------------------------
 
-// Achievements belong in the menu, and nowhere else. They had a button in the
-// top corner and a card on the HUD as well, which is three of one thing on the
-// screen with the least room for any of it.
-ok('achievements are reached from the menu', MENU.some((m) => m.opens === 'panel-stats'));
-ok('and have no button in the top corner', !ui.includes('id="btn-stats"'));
-ok('nor one in the tray', !ui.includes('id="t-stats"'));
+// The goals live with the controls, beside Roof. Not in the top corner, where
+// they cost the screen its scarcest space, and not on the HUD as a standing
+// card of three tasks — one way in, where your thumb already is.
+ok('the goals are in the controls tray', ui.includes('id="t-stats"'));
+ok('and open the panel', ui.includes("['#t-stats'"));
+ok('they have no button in the top corner', !ui.includes('id="btn-stats"'));
+ok('no card in settings', !MENU.some((m) => m.opens === 'panel-stats'));
 ok('and the goal card is off the HUD entirely', !ui.includes('id="goals"'));
 
 // Which leaves one button up there, so the XP bar can have its width back.

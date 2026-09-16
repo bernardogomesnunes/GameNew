@@ -217,13 +217,27 @@ export class UIManager {
             </div>
           </div>
 
+          <!--
+            Who you are, and the way out. It used to be a world-management
+            screen — "Save this world to the cloud", a Refresh, and a list of
+            cloud worlds with Restore and Delete on each — which is two
+            different subjects in one panel, and on the worlds screen, where
+            there is no world loaded, the save button had nothing to save.
+            Worlds sync on their own now and the worlds screen lists them, so
+            what is left here is the account.
+          -->
           <div id="cloud-signed-in" hidden>
-            <div class="field-row" style="flex-wrap:wrap;">
-              <button class="secondary" id="btn-cloud-save">Save this world to the cloud</button>
-              <button class="secondary" id="btn-cloud-refresh">Refresh</button>
+            <div class="account-who">
+              <div class="account-avatar" id="account-initial">?</div>
+              <div class="account-lines">
+                <strong id="account-email">Signed in</strong>
+                <span id="account-holds">Your worlds are kept here.</span>
+              </div>
+            </div>
+            <div class="field-row">
               <button class="secondary" id="btn-cloud-signout">Sign out</button>
             </div>
-            <div id="cloud-list"></div>
+            <div class="export-note">Signing out leaves every world on this device exactly where it is.</div>
           </div>
           <div class="export-note" id="cloud-error" hidden></div>
           <div id="cloud-status" hidden></div>
@@ -289,6 +303,9 @@ export class UIManager {
           <button class="touch-btn needs-tool" id="t-symmetry" data-tool="mirror" hidden>${icon('symmetry')}<span>Mirror</span></button>
           <button class="touch-btn" id="t-designs">${icon('paste')}<span>Designs</span></button>
           <button class="touch-btn" id="t-roof">${icon('roof')}<span>Roof</span></button>
+          <!-- Beside Roof, not a level down in Settings: the goals are what
+               teaches the game, and Settings is where you go between builds. -->
+          <button class="touch-btn" id="t-stats">${icon('stats')}<span>Goals</span></button>
           <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
         </div>
 
@@ -434,6 +451,7 @@ export class UIManager {
       // are up there and offer the ones that are not down here.
       listCloudWorlds: () => this.cb.getCloudWorlds(),
       agreedFor: (id) => this.cb.agreedFor?.(id) ?? null,
+      onDropCloud: (id) => this.cb.onCloudDelete(id),
       onOpenCloud: async (id) => {
         try {
           await this.cb.onCloudRestore(id);
@@ -505,6 +523,7 @@ export class UIManager {
       // Skills had no way in at all before this — the panel existed, was
       // drawn, and nothing anywhere opened it.
       ['#t-skills', () => this.openPanel('panel-skills')],
+      ['#t-stats', () => this.openPanel('panel-stats')],
       ['#t-clear', () => this.toolButton('clear', 'panel-clear')],
       ['#t-designs', () => this.toolButton('design', 'panel-templates')],
       ['#t-roof', () => this.toolButton('roof', 'panel-roof')],
@@ -1182,11 +1201,6 @@ export class UIManager {
       });
     }));
     this.q('#btn-cloud-signout').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignOut()));
-    this.q('#btn-cloud-refresh').addEventListener('click', (e) => busy(e.currentTarget, () => this.refreshCloudList()));
-    this.q('#btn-cloud-save').addEventListener('click', (e) => busy(e.currentTarget, async () => {
-      await this.cb.onCloudSave(this.q('#save-name').value.trim() || undefined);
-      await this.refreshCloudList();
-    }));
   }
 
   /** Switches the panel between signed-out and signed-in, and hides it entirely when unconfigured. */
@@ -1207,49 +1221,43 @@ export class UIManager {
     this.q('#cloud-status').textContent = user ? `\u00b7 ${user.email || user.name || 'signed in'}` : '';
     this.q('#cloud-signed-out').hidden = !!user;
     this.q('#cloud-signed-in').hidden = !user;
-    if (user) this.refreshCloudList();
+    // The panel is two different things and only one of them is "Sign in".
+    // Signed in it was still headed "Sign in", under a line offering to keep
+    // worlds off this device — advice for somebody who has already taken it.
+    const title = this.q('#account-title');
+    const sub = this.q('#account-sub');
+    if (user) {
+      const who = user.email || user.name || 'Signed in';
+      this.q('#account-email').textContent = who;
+      this.q('#account-initial').textContent = (who[0] || '?').toUpperCase();
+      if (title) title.textContent = 'Your account';
+      if (sub) sub.textContent = 'Your worlds are kept here, not in this browser.';
+      this.refreshAccountSummary();
+    } else {
+      if (title) title.textContent = this.accountMode === 'create' ? 'Create an account' : 'Sign in';
+      if (sub) sub.textContent = 'Keep your worlds off this device, so they survive a cleared browser.';
+    }
     this.refreshAccountLabel();
   }
 
-  async refreshCloudList() {
-    const list = this.q('#cloud-list');
-    if (!list || !this.cb.getCloudUser()) return;
-    let worlds = [];
+  /**
+   * What the account is holding, in one line.
+   *
+   * Not a list of worlds with buttons on them: the worlds screen is where you
+   * open and remove a world, and having a second list here was how a panel
+   * called "Sign in" ended up offering to save something.
+   */
+  async refreshAccountSummary() {
+    const holds = this.q('#account-holds');
+    if (!holds || !this.cb.getCloudUser()) return;
     try {
-      worlds = await this.cb.getCloudWorlds();
+      const worlds = await this.cb.getCloudWorlds();
+      holds.textContent = worlds.length
+        ? `${worlds.length} ${worlds.length === 1 ? 'world' : 'worlds'} on your account, on every device you sign in on.`
+        : 'No worlds on your account yet. The next one you play goes up on its own.';
     } catch (err) {
-      list.innerHTML = `<div class="sub" style="margin:0;">${err.message}</div>`;
-      return;
+      holds.textContent = err.message;
     }
-    if (!worlds.length) {
-      list.innerHTML = `<div class="sub" style="margin:0;">Nothing up there yet. Save this world to put it in the cloud.</div>`;
-      return;
-    }
-    list.innerHTML = worlds.map((w) => `
-      <div class="template-row">
-        <div class="template-meta">
-          <div class="template-name">${escapeHtml(w.name)}</div>
-          <div class="template-dims">${w.mode} &middot; ${w.blockCount.toLocaleString()} blocks &middot; ${timeAgo(w.updatedAt)}</div>
-        </div>
-        <div class="actions">
-          <button class="secondary" data-restore="${w.id}">Restore</button>
-          <button class="danger secondary" data-cloud-drop="${w.id}">Delete</button>
-        </div>
-      </div>
-    `).join('');
-    list.querySelectorAll('[data-restore]').forEach((btn) => btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      try { await this.cb.onCloudRestore(btn.dataset.restore); }
-      catch (err) { const box = this.q('#cloud-error'); box.textContent = err.message; box.hidden = false; }
-      finally { btn.disabled = false; }
-    }));
-    list.querySelectorAll('[data-cloud-drop]').forEach((btn) => btn.addEventListener('click', async () => {
-      if (!confirm('Delete this world from the cloud? Your local copy stays.')) return;
-      btn.disabled = true;
-      try { await this.cb.onCloudDelete(btn.dataset.cloudDrop); await this.refreshCloudList(); }
-      catch (err) { const box = this.q('#cloud-error'); box.textContent = err.message; box.hidden = false; }
-      finally { btn.disabled = false; }
-    }));
   }
 
   /** Shown while the mouse is free, so the toolbar is usable without a panel in the way. */

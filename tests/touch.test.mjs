@@ -164,7 +164,13 @@ ok('Settings is all that is left in the corner',
   (ui.slice(ui.indexOf('<div id="top-buttons">'), ui.indexOf('</div>', ui.indexOf('<div id="top-buttons">')))
     .match(/class="icon-btn(?![^"]*touch-moved)/g) ?? []).length === 1);
 ok('the goals are not up there', !ui.includes('id="btn-stats"'));
-ok('nor in the tray', !tray.includes('id="t-stats"'));
+// They are in the tray, beside Roof — with the controls, not behind Settings.
+ok('they are in the tray instead', tray.includes('id="t-stats"'));
+{
+  const order = [...tray.matchAll(/id="(t-[a-z]+)"/g)].map((m) => m[1]);
+  ok(`and next to Roof (${order.join(', ')})`,
+    Math.abs(order.indexOf('t-stats') - order.indexOf('t-roof')) === 1);
+}
 // Made, not given.
 ok('Clear and Mirror are there only once you have made the tool',
   /id="t-clear" data-tool="clear" hidden/.test(ui) && /id="t-symmetry" data-tool="mirror" hidden/.test(ui));

@@ -68,7 +68,7 @@ ok('it is retried rather than lost, because a failed push agrees to nothing',
 // The SDK's own message is "HTTP 404 Not Found", which names nothing and reads
 // like the game is broken rather than the sync being off.
 ok('a token failure is translated', /readableTokenError/.test(auth));
-ok('404 is explained rather than printed', /did not recognise the token request/.test(auth));
+ok('404 is explained rather than printed', /does not know that token route/.test(auth));
 ok('the host is named, since that is what a screenshot needs to show',
   /authHost\(\)/.test(auth) && /deriveUrls\(\)\.auth/.test(auth));
 ok('and every branch says the worlds are safe',

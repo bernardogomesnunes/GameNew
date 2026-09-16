@@ -167,7 +167,8 @@ export class HomeScreen {
               </span>
               ${r.here
                 ? `<button class="world-remove" data-remove="${escapeAttr(r.saveName ?? r.name)}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>`
-                : `<span class="world-go">Get it</span>`}
+                : `<span class="world-go">Get it</span>
+                   <button class="world-remove" data-drop-cloud="${escapeAttr(r.id)}" title="Remove from your account" aria-label="Remove from your account">${icon('close', 15)}</button>`}
             </div>`).join('')}
         </div>` : ''}
     `;
@@ -192,7 +193,24 @@ export class HomeScreen {
       });
     });
     this.body.querySelectorAll('[data-cloud]').forEach((el) => {
-      el.addEventListener('click', () => this.cb.onOpenCloud?.(el.dataset.cloud));
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-drop-cloud]')) return;   // the ✕ is its own button
+        this.cb.onOpenCloud?.(el.dataset.cloud);
+      });
+    });
+    // Removing a world you have not downloaded. It used to live in the account
+    // panel, alongside a list of worlds that had no business being there; the
+    // worlds screen is where you remove a world.
+    this.body.querySelectorAll('[data-drop-cloud]').forEach((el) => {
+      el.addEventListener('click', async () => {
+        if (!confirm('Remove this world from your account? It is not on this device, so this deletes it.')) return;
+        el.disabled = true;
+        try {
+          await this.cb.onDropCloud?.(el.dataset.dropCloud);
+          this.cloudWorlds = (this.cloudWorlds ?? []).filter((w) => w.id !== el.dataset.dropCloud);
+          this.render();
+        } finally { el.disabled = false; }
+      });
     });
     this.refreshCloudWorlds();
   }
