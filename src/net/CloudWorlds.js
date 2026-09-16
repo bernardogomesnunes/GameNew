@@ -1,4 +1,5 @@
 import { World, CHUNK_SIZE } from '../world/World.js';
+import { ChunkGen } from '../world/ChunkGen.js';
 import { SyncEngine, unpackRle } from '../storage/SyncEngine.js';
 import { NeonTransport } from './NeonTransport.js';
 import { AIR } from '../config/blocks.js';
@@ -42,6 +43,14 @@ export class CloudWorlds {
       sizeX: world.sizeX,
       sizeZ: world.sizeZ,
       height: world.height,
+      // An endless world has no size to save — it has a seed, and the
+      // handful of chunks somebody actually reshaped. Everything else is
+      // remade from this on the way back in; see restore() and
+      // World.serialize(), which the local save path already does the same
+      // thing for.
+      worldGen: world.endless
+        ? { seed: world.gen.seed, homeX: world.gen.biomes.centreX, homeZ: world.gen.biomes.centreZ }
+        : null,
       spawn: player ? { x: player.position.x, y: player.position.y, z: player.position.z, yaw: player.yaw, pitch: player.pitch } : null,
       economy: economy?.toJSON?.() ?? {},
       // Small enough to ride along in the metadata, and useless apart from it:
@@ -77,14 +86,40 @@ export class CloudWorlds {
     if (!payload) throw new Error('That world is no longer in the cloud.');
     const { meta, chunks } = payload;
 
-    const world = new World({ sizeX: meta.sizeX, sizeZ: meta.sizeZ, height: meta.height });
+    // A world with a seed is remade from it, not laid out on a grid — the
+    // same distinction save() draws, in reverse. Getting this wrong is not
+    // loud: `new World({ sizeX: null, ... })` still builds a small, empty,
+    // technically-valid 64×64 world, so a Duilt world restored the fixed
+    // way looks fine for a second and then drops almost everything outside
+    // that box, silently, which is worse than the error this replaces.
+    const world = meta.worldGen
+      ? new World({
+        height: meta.height,
+        gen: new ChunkGen({
+          seed: meta.worldGen.seed, height: meta.height,
+          homeX: meta.worldGen.homeX, homeZ: meta.worldGen.homeZ,
+        }),
+      })
+      : new World({ sizeX: meta.sizeX, sizeZ: meta.sizeZ, height: meta.height });
+
     for (const c of chunks) {
       const chunk = world.getChunk(c.cx, c.cz);
       if (!chunk) continue; // a chunk outside this world's bounds is not ours to place
       writeRle(chunk.data, unpackRle(c.bytes));
+      if (world.endless) {
+        chunk.touched = true;
+        chunk.dirty = true;
+        // What went up is blocks only, not the ground-height array — see
+        // SyncEngine's encodeChunk — so a reshaped chunk works its surface
+        // out again from what actually got placed, the same fallback a
+        // local save from before heights rode along already uses.
+        world.gen.resurface(chunk);
+      }
     }
 
-    const spawn = meta.spawn || { x: meta.sizeX / 2, y: meta.height - 4, z: meta.sizeZ / 2 };
+    const spawn = meta.spawn || (meta.worldGen
+      ? { x: meta.worldGen.homeX, y: meta.height - 4, z: meta.worldGen.homeZ }
+      : { x: meta.sizeX / 2, y: meta.height - 4, z: meta.sizeZ / 2 });
     return {
       world,
       mode: meta.mode,

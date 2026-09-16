@@ -82,10 +82,19 @@ export class SyncEngine {
     } catch { /* a full quota must not break the game loop */ }
   }
 
-  /** Current content hash of every chunk in the world. */
+  /** Current content hash of every chunk worth uploading. */
   snapshot(world) {
     const entries = [];
     for (const chunk of world.allChunks()) {
+      // An endless world can regenerate any untouched chunk from its seed —
+      // that is the entire point of carrying a seed instead of a grid, and
+      // it is what `keep` chunks of pure, walked-past terrain sitting in
+      // memory around the player actually are. Uploading it anyway means
+      // every save grows with how far someone has *walked*, not with what
+      // they *built*, forever. A fixed world has no seed to regenerate
+      // anything from at all — see World's own notes on why — so every one
+      // of its chunks is real, unrecoverable data and still goes up.
+      if (world.endless && !chunk.touched) continue;
       const bytes = encodeChunk(chunk);
       entries.push({ cx: chunk.cx, cz: chunk.cz, bytes, hash: hashBytes(bytes) });
     }

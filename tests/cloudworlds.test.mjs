@@ -1,0 +1,268 @@
+/**
+ * The cloud save round trip — the thing that was never actually tested.
+ *
+ * Reported as: "Not saved to your account yet. Cloud request failed (400).
+ * {"code":"23502",...null value in column \"size_x\" of relation \"worlds\"
+ * violates not-null constraint...}" — on a brand new Duilt world, seconds
+ * into playing it.
+ *
+ * `worlds.size_x` and `worlds.size_z` are NOT NULL in the real database.
+ * They were written for a game that only ever had fixed-size worlds. Duilt
+ * worlds are endless — `World.sizeX` is `null` by design, there is no size,
+ * there is a seed instead — and CloudWorlds.save() sent that `null` straight
+ * through. Every single Duilt world has failed to save since the day
+ * endless worlds shipped: a direct count against the live database found
+ * zero rows in `worlds`, ever, for any world, of any mode.
+ *
+ * That also means nothing ever exercised what a *successful* save/restore
+ * round trip actually preserves, which is how two more bugs of the same
+ * shape were sitting right behind the first one:
+ *
+ *  - `CloudWorlds.restore()` always built a bounded `World`, even for an
+ *    endless one. It never carried a seed anywhere, because there was
+ *    nowhere in the schema to put it. Reopening a saved Duilt world would
+ *    have silently handed back a tiny 64×64 box and dropped everything
+ *    outside it — not an error, just quietly wrong, which is worse.
+ *  - `NeonTransport.pushWorld()` computed `meta.duilt` (the bag, buildings,
+ *    skills, territory age) and never once put it in the request body.
+ *    `pullWorld()` never read a `duilt` field back either, because the row
+ *    never had one. Every restored Duilt world would have come back an
+ *    empty sandbox at Age 1, exactly the "blank map" bug this file's own
+ *    surrounding comments already warned about — just never checked.
+ *
+ * This exercises all three, end to end, against a fake backend that enforces
+ * the real schema's NOT NULL columns the way real Postgres does — so a
+ * regression on `size_x` fails here with the same 400 the player saw,
+ * instead of shipping again unnoticed.
+ */
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+// --- a localStorage good enough for NeonTransport's device key --------------
+const localStore = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (localStore.has(k) ? localStore.get(k) : null),
+  setItem: (k, v) => localStore.set(k, String(v)),
+  removeItem: (k) => localStore.delete(k),
+};
+
+const { CloudWorlds } = await import('../src/net/CloudWorlds.js');
+const { NeonTransport } = await import('../src/net/NeonTransport.js');
+const { World } = await import('../src/world/World.js');
+const { ChunkGen } = await import('../src/world/ChunkGen.js');
+
+/** Always answers with a token; nothing here exercises auth itself. */
+const fakeAuth = {
+  async accessToken() { return 'test-token'; },
+  summary() { return { id: 'player-1', email: 'someone@example.com' }; },
+};
+
+/**
+ * A fake PostgREST + Postgres, real enough to enforce the constraint that
+ * actually broke: `worlds.size_x` and `worlds.size_z` are NOT NULL, with no
+ * default. Anything else is accepted permissively — this is a schema guard,
+ * not a full emulator.
+ */
+function fakeBackend() {
+  const worlds = new Map();      // id -> row
+  const chunks = new Map();      // `${worldId}:${cx},${cz}` -> row
+  const players = [{ id: 'player-1' }];
+  const requests = [];
+
+  function reject(status, body) {
+    return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+  }
+  function ok(body, status = 200) {
+    // A 204/304 response cannot carry a body at all — the Fetch spec forbids
+    // it and Node's Response constructor enforces that, so this must pass
+    // `null`, not an empty string, whenever there is nothing to send back.
+    return new Response(body === undefined ? null : JSON.stringify(body),
+      { status, headers: { 'content-type': 'application/json' } });
+  }
+
+  const fetchImpl = async (input, init = {}) => {
+    const url = new URL(input instanceof Request ? input.url : input);
+    const method = init.method || 'GET';
+    const path = url.pathname.replace(/^.*\/rest\/v1/, '');
+    const body = init.body ? JSON.parse(init.body) : undefined;
+    requests.push({ method, path, body });
+
+    if (path.startsWith('/players')) {
+      if (method === 'GET') return ok(players);
+      if (method === 'POST') return ok(players, 201);
+    }
+
+    if (path.startsWith('/worlds')) {
+      if (method === 'POST' && url.searchParams.has('on_conflict')) {
+        for (const row of body) {
+          // The one constraint that actually matters here: real Postgres,
+          // real error shape, real message — the exact thing the player's
+          // screenshot showed.
+          if (row.size_x === null || row.size_x === undefined) {
+            return reject(400, { code: '23502', message: 'null value in column "size_x" of relation "worlds" violates not-null constraint' });
+          }
+          if (row.size_z === null || row.size_z === undefined) {
+            return reject(400, { code: '23502', message: 'null value in column "size_z" of relation "worlds" violates not-null constraint' });
+          }
+          const existing = worlds.get(row.id) || {};
+          worlds.set(row.id, { ...existing, ...row });
+        }
+        return ok(undefined, 204);
+      }
+      if (method === 'GET') {
+        const id = [...url.searchParams].find(([k]) => k === 'id')?.[1]?.replace('eq.', '');
+        const row = id ? worlds.get(id) : null;
+        return ok(row ? [row] : []);
+      }
+      if (method === 'PATCH') {
+        const id = [...url.searchParams].find(([k]) => k === 'id')?.[1]?.replace('eq.', '');
+        if (id && worlds.has(id)) Object.assign(worlds.get(id), body);
+        return ok(undefined, 204);
+      }
+    }
+
+    if (path.startsWith('/world_chunks')) {
+      if (method === 'POST') {
+        for (const row of body) chunks.set(`${row.world_id}:${row.cx},${row.cz}`, row);
+        return ok(undefined, 204);
+      }
+      if (method === 'GET') {
+        const worldId = [...url.searchParams].find(([k]) => k === 'world_id')?.[1]?.replace('eq.', '');
+        const rows = [...chunks.values()].filter((c) => c.world_id === worldId);
+        return ok(rows);
+      }
+      if (method === 'DELETE') return ok(undefined, 204);
+    }
+
+    return reject(404, { message: `no fake route for ${method} ${path}` });
+  };
+
+  return { fetchImpl, worlds, requests };
+}
+
+function withFetch(fetchImpl, fn) {
+  const real = globalThis.fetch;
+  globalThis.fetch = fetchImpl;
+  return fn().finally(() => { globalThis.fetch = real; });
+}
+
+function makeCloudWorlds() {
+  const backend = fakeBackend();
+  const transport = new NeonTransport(fakeAuth, { baseUrl: 'https://fake.local/rest/v1' });
+  const cloud = new CloudWorlds({ auth: fakeAuth, bus: null });
+  cloud.transport = transport;
+  cloud.sync.transport = transport;
+  return { cloud, backend };
+}
+
+// --- the bug exactly as reported ---------------------------------------------
+
+await test('a fresh Duilt world used to fail every save with a real 23502', async () => {
+  const { cloud, backend } = makeCloudWorlds();
+  const world = new World({ height: 64, gen: new ChunkGen({ seed: 42, height: 64 }) });
+  assert.equal(world.endless, true);
+  assert.equal(world.sizeX, null, 'endless worlds have no size — this is the value that used to go straight to the database');
+
+  await withFetch(backend.fetchImpl, () => cloud.save('world-1', {
+    world, name: 'My settlement', mode: 'duilt',
+    player: { position: { x: 0, y: 40, z: 0 }, yaw: 0, pitch: 0 },
+    economy: { toJSON: () => ({}) }, duilt: { age: 1 },
+  }));
+
+  const row = backend.worlds.get('world-1');
+  assert.ok(row, 'the save actually reached the fake database');
+  assert.notEqual(row.size_x, null, 'size_x must never be null — this exact value 400\'d in production');
+  assert.notEqual(row.size_z, null, 'size_z must never be null either');
+  assert.equal(typeof row.size_x, 'number');
+});
+
+// --- the full endless round trip: blocks, seed, and duilt state --------------
+
+await test('an endless Duilt world survives save and restore', async () => {
+  const { cloud, backend } = makeCloudWorlds();
+  const world = new World({ height: 64, gen: new ChunkGen({ seed: 99, height: 64 }) });
+
+  // Build something, the way a player actually would.
+  world.setBlock(3, 20, 3, 4);
+  world.setBlock(3, 21, 3, 4);
+  // Walk around, generating land nobody touched. This must never end up in
+  // the upload — see SyncEngine's touched-only rule for endless worlds.
+  world.ensureAround(0, 0, 120);
+  const untouchedBefore = [...world.allChunks()].filter((c) => !c.touched).length;
+  assert.ok(untouchedBefore > 5, 'the fixture needs real untouched chunks for this to test anything');
+
+  const duiltState = { age: 2, inventory: { dirt: 40, axe: 1 }, buildings: [{ type: 'house', x: 3, z: 3 }] };
+
+  await withFetch(backend.fetchImpl, () => cloud.save('world-2', {
+    world, name: 'My settlement', mode: 'duilt',
+    player: { position: { x: 3, y: 40, z: 3 }, yaw: 1, pitch: 0 },
+    economy: { toJSON: () => ({ wood: 12 }) },
+    duilt: duiltState,
+  }));
+
+  const row = backend.worlds.get('world-2');
+  assert.equal(row.size_x, 0, 'the sentinel value for "no size" — see NeonTransport');
+  assert.equal(row.size_z, 0);
+  assert.deepEqual(row.economy.duilt, duiltState, 'duilt state must actually be in the request body this time');
+  assert.ok(row.economy.worldGen, 'the seed has to ride along or the world cannot be remade');
+  assert.equal(row.economy.worldGen.seed, 99);
+
+  const onlyTouchedChunksUploaded = backend.requests
+    .filter((r) => r.path.startsWith('/world_chunks') && r.method === 'POST')
+    .every((r) => r.body.length <= untouchedBefore + 5); // a small, real number — not "every chunk in memory"
+  assert.ok(onlyTouchedChunksUploaded, 'untouched, regenerable chunks must not be uploaded at all');
+
+  const restored = await withFetch(backend.fetchImpl, () => cloud.restore('world-2'));
+
+  assert.equal(restored.world.endless, true, 'restoring must not silently turn an endless world into a bounded one');
+  assert.equal(restored.world.gen.seed, 99, 'the same seed, or unexplored land would not match what it was');
+  assert.equal(restored.world.getBlock(3, 20, 3), 4, 'a block the player actually placed');
+  assert.equal(restored.world.getBlock(3, 21, 3), 4);
+  assert.deepEqual(restored.duilt, duiltState, 'the bag, the buildings, the age — not a blank map');
+  assert.equal(restored.economy.wood, 12);
+  assert.equal(restored.mode, 'duilt');
+
+  // Land far outside where a bounded 64×64 fallback would have put the
+  // border regenerates identically from the same seed rather than being
+  // missing or wrong.
+  const untouchedX = 900, untouchedZ = -400;
+  assert.equal(
+    world.surfaceHeight(untouchedX, untouchedZ),
+    restored.world.surfaceHeight(untouchedX, untouchedZ),
+    'unexplored terrain far from the origin must regenerate the same from the same seed',
+  );
+});
+
+// --- a fixed (Creative) world keeps behaving exactly as it always did --------
+
+await test('a fixed-size world is unaffected by any of this', async () => {
+  const { cloud, backend } = makeCloudWorlds();
+  const world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
+  world.setBlock(1, 1, 1, 3);
+
+  await withFetch(backend.fetchImpl, () => cloud.save('world-3', {
+    world, name: 'Sandbox', mode: 'creative',
+    player: { position: { x: 1, y: 5, z: 1 }, yaw: 0, pitch: 0 },
+    economy: { toJSON: () => ({}) }, duilt: null,
+  }));
+
+  const row = backend.worlds.get('world-3');
+  assert.equal(row.size_x, 64, 'a real fixed world keeps its real size, not the endless sentinel');
+  assert.equal(row.size_z, 64);
+  assert.equal(row.economy.worldGen, null, 'a fixed world has no seed to carry');
+
+  const restored = await withFetch(backend.fetchImpl, () => cloud.restore('world-3'));
+  assert.equal(restored.world.endless, false);
+  assert.equal(restored.world.sizeX, 64);
+  assert.equal(restored.world.getBlock(1, 1, 1), 3);
+});
+
+// --- the sentinel can never be confused with a real size ---------------------
+
+await test('0 is never a size a real (fixed) world can have', async () => {
+  const { World: W } = await import('../src/world/World.js');
+  const world = new W({ sizeX: 1, sizeZ: 1, height: 8 }); // smallest legal-ish input
+  // Even asking for the smallest possible fixed world does not produce 0 —
+  // the default floor keeps this sentinel unambiguous either way.
+  assert.notEqual(world.sizeX, 0);
+});

@@ -144,11 +144,23 @@ export class NeonTransport {
         player_id: playerId,
         name: meta.name,
         mode: meta.mode,
-        size_x: meta.sizeX,
-        size_z: meta.sizeZ,
+        // Both NOT NULL, written for a game that only ever had fixed-size
+        // worlds. An endless one has no size at all — see World's own
+        // notes on why — so it sends 0. Nothing else ever produces that
+        // value: even the smallest Creative world is 64×64. pullWorld reads
+        // it back as the mark of an endless row.
+        size_x: meta.sizeX ?? 0,
+        size_z: meta.sizeZ ?? 0,
         height: meta.height,
         spawn: meta.spawn ?? null,
-        economy: meta.economy ?? {},
+        // The one JSON column this table has room for, carrying three
+        // things that all needed somewhere to ride and none of which have a
+        // column of their own: the real economy data, an endless world's
+        // seed, and the Duilt state (bag, buildings, skills) a Duilt world
+        // cannot be reopened without. Real columns would be the cleaner
+        // shape; that needs a migration on the live database, and this does
+        // not. See pullWorld for the other half of the unwrap.
+        economy: { economy: meta.economy ?? {}, duilt: meta.duilt ?? null, worldGen: meta.worldGen ?? null },
         block_count: meta.blockCount ?? 0,
         revision: meta.revision ?? 1,
         updated_at: now,
@@ -179,16 +191,25 @@ export class NeonTransport {
     if (!worlds?.length) return null;
     const w = worlds[0];
     const rows = await this.request(`/world_chunks?select=cx,cz,rle&world_id=eq.${worldId}`);
+    // The other half of pushWorld's unwrap. Every row this table has ever
+    // held was written this shape — {economy, duilt, worldGen} — so there is
+    // no older row shape to stay compatible with here.
+    const carried = w.economy ?? {};
     return {
       meta: {
         id: w.id,
         name: w.name,
         mode: w.mode,
-        sizeX: w.size_x,
-        sizeZ: w.size_z,
+        // The sentinel pushWorld writes for an endless world; nothing else
+        // can produce a real 0, since even the smallest fixed world is
+        // 64×64, so it reads back as "no size" rather than as a real one.
+        sizeX: w.size_x || null,
+        sizeZ: w.size_z || null,
         height: w.height,
         spawn: w.spawn,
-        economy: w.economy,
+        economy: carried.economy ?? {},
+        duilt: carried.duilt ?? null,
+        worldGen: carried.worldGen ?? null,
         blockCount: w.block_count,
         revision: Number(w.revision),
       },
