@@ -373,8 +373,15 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #stick-right { right: 0; }
 .touch-buttons { z-index: 3; }
 #hud-top, #top-buttons, #hotbar-wrap { z-index: 5; }
-#toast-stack { z-index: 8; }
 .overlay { z-index: 10; }
+/* Above the panels, not under them. A great many of the game's messages answer
+   a button you just pressed inside a panel — "Made 1 turned soil" when you tap
+   Make at the bench — and at z-index 8 every one of those rendered behind the
+   panel that raised it. You saw a banner slide in somewhere behind the thing
+   you were looking at and could not read a word of it, which reads exactly
+   like the game did nothing. The stack ignores taps anyway, so nothing below
+   it becomes harder to press. */
+#toast-stack { z-index: 12; }
 
 .stick-base {
   position: absolute; bottom: var(--stick-bottom);

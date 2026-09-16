@@ -34,20 +34,23 @@ export class Crafting {
       const missing = this.inventory.missing(r.inputs);
       const placeOk = !r.needs || this.conditionMet(r.needs, near);
       const stationOk = r.station === 'hand' || atStations.includes(r.station);
-      const ok = Object.keys(missing).length === 0 && placeOk && stationOk;
+      const roomOk = this.inventory.roomFor(r.output.id, r.output.count) >= r.output.count;
+      const ok = Object.keys(missing).length === 0 && placeOk && stationOk && roomOk;
       let reason = null;
       if (!stationOk) reason = 'Stand at your workshop to make this';
       else if (!placeOk) reason = r.needs === 'water' ? 'Stand closer to the river' : `Needs ${r.needs} nearby`;
-      else if (!ok) {
+      else if (Object.keys(missing).length) {
         reason = 'Needs ' + Object.entries(missing)
           .map(([id, n]) => `${n} more ${itemName(id).toLowerCase()}`).join(' and ');
-      }
+      } else if (!roomOk) reason = 'Your bag is full — nowhere to put it';
       return {
         ...r,
         ok,
         reason,
         atStation: stationOk,
-        maxBatch: this.maxBatch(r),
+        // Capped by room as well as by materials, so "Make 4" never offers
+        // four of something only two of which could go anywhere.
+        maxBatch: this.batchThatFits(r, this.maxBatch(r)),
       };
     });
   }
@@ -75,6 +78,13 @@ export class Crafting {
     return Math.max(0, runs);
   }
 
+  /** How many of `runs` would have somewhere to go in the bag. */
+  batchThatFits(recipe, runs) {
+    if (runs <= 0) return 0;
+    const fits = this.inventory.roomFor(recipe.output.id, recipe.output.count * runs);
+    return Math.min(runs, Math.floor(fits / recipe.output.count));
+  }
+
   /**
    * Runs a recipe `times` over. All or nothing: a half-paid craft that produced
    * nothing would be the worst possible outcome.
@@ -94,12 +104,18 @@ export class Crafting {
       return { ok: false, reason: recipe.needs === 'water' ? 'Stand closer to the river.' : `Needs ${recipe.needs} nearby.` };
     }
 
-    const runs = Math.min(times, this.maxBatch(recipe));
-    if (runs <= 0) {
+    const wanted = Math.min(times, this.maxBatch(recipe));
+    if (wanted <= 0) {
       const missing = this.inventory.missing(recipe.inputs);
       const parts = Object.entries(missing).map(([id, n]) => `${n} more ${itemName(id).toLowerCase()}`);
       return { ok: false, reason: parts.length ? `Needs ${parts.join(' and ')}.` : 'Not enough materials.' };
     }
+
+    // Room is checked before the bill is paid, not after. Paying and refunding
+    // works, but it turns "your bag is full" into a thing you only find out by
+    // pressing a button that looked perfectly happy.
+    const runs = this.batchThatFits(recipe, wanted);
+    if (runs <= 0) return { ok: false, reason: 'Your bag is full — empty a slot first.' };
 
     const bill = {};
     for (const [id, n] of Object.entries(recipe.inputs)) bill[id] = n * runs;

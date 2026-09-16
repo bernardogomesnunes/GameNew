@@ -67,6 +67,29 @@ export class Inventory {
     return this.slots.indexOf(null);
   }
 
+  /**
+   * How many of an item would actually fit right now, without putting any in.
+   *
+   * `add` already reports what would not fit — but only after the fact, which
+   * is no use to a button that has to say whether it can do the thing *before*
+   * you press it. A full bag with dirt still in it made the bench offer "Turn
+   * soil" as if it were fine: you pressed Make, the craft paid, found nowhere
+   * to put the soil, handed your dirt back, and all you got was a message. So
+   * anything that produces an item asks here first.
+   */
+  roomFor(id, count = 1) {
+    if (!ITEMS_BY_ID.has(id) || count <= 0) return 0;
+    const limit = stackLimit(id);
+    let room = 0;
+    for (const slot of this.slots) {
+      if (!slot) room += limit;
+      // Tools never merge into an existing stack — see `add`.
+      else if (!isTool(id) && slot.id === id) room += Math.max(0, limit - slot.count);
+      if (room >= count) return count;
+    }
+    return room;
+  }
+
   /** Distinct item ids held, in slot order — what the hotbar draws from. */
   heldIds() {
     const seen = [];
