@@ -857,6 +857,18 @@ body.touch #top-buttons .touch-moved { display: none !important; }
 /* Two copies that have diverged is the one badge you should not skim past. */
 .world-tag.warn { color: var(--accent-2); border-color: var(--accent-2); }
 
+/* The door when you are signed out, and the "we could not ask" card that
+   replaces the list when the account does not answer. */
+.home-gate {
+  background: var(--panel); border: 1px solid var(--panel-border); border-radius: var(--radius);
+  padding: 18px; display: flex; flex-direction: column; gap: 10px;
+}
+.home-gate strong { font-size: 17px; }
+.home-gate p { margin: 0; color: var(--text-dim); font-size: 13.5px; line-height: 1.5; }
+.home-gate .home-actions { margin-top: 4px; }
+.home-gate.warn { border-color: var(--accent-2); }
+.home-gate.warn strong { color: var(--accent-2); }
+
 /* The account panel: who you are, and the way out. */
 .account-who { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .account-avatar {

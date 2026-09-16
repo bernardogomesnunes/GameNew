@@ -1,5 +1,4 @@
 import { icon } from './icons.js';
-import { mergeWorldList, CONFLICT, PULL } from '../storage/WorldSync.js';
 
 /**
  * The front door: where you land before you are in a world.
@@ -89,11 +88,39 @@ export class HomeScreen {
     this.root.querySelector('#home-account').addEventListener('click', () => this.cb.onAccount?.());
   }
 
-  /** Re-reads the saves and draws whichever step we are on. */
+  /** Re-reads the worlds and draws whichever step we are on. */
   render() {
+    // Nothing to show anybody who is not signed in: worlds live on accounts
+    // now, so without one there is no list and nowhere to put a new world.
+    if (this.cb.needsAccount?.()) return this.renderSignedOut();
     if (this.step === 'kind') return this.renderKind();
     if (this.step === 'name') return this.renderName();
     return this.renderHome();
+  }
+
+  /**
+   * The door, when you have not signed in.
+   *
+   * Worlds used to be kept in whichever browser made them, which is how one
+   * account showed two different sets of worlds on two devices and no amount
+   * of syncing could reconcile them. They live on the account now, and only
+   * there — so an account is the price of admission rather than something you
+   * turn on later and hope the two halves meet.
+   */
+  renderSignedOut() {
+    this.body.innerHTML = `
+      <div class="home-gate">
+        <strong>Sign in to play</strong>
+        <p>Your worlds are kept on your account, so they are the same on every
+           device you sign in on — your phone and your desktop, the same
+           settlement.</p>
+        <div class="home-actions">
+          <button class="primary" data-signin="1">Sign in</button>
+          <button class="secondary" data-signup="1">Create an account</button>
+        </div>
+      </div>`;
+    this.body.querySelector('[data-signin]').addEventListener('click', () => this.cb.onAccount?.('signin'));
+    this.body.querySelector('[data-signup]').addEventListener('click', () => this.cb.onAccount?.('create'));
   }
 
   setAccount(label) {
@@ -104,49 +131,17 @@ export class HomeScreen {
   // ---- the list ----
 
   renderHome() {
-    const saves = this.cb.listWorlds();
-    // One row per world, however many places it lives in. It used to draw the
-    // local saves and then, underneath, a separate "On your account" list of
-    // the ones it could not find locally — so a world you had in both places
-    // looked like two worlds. See storage/WorldSync.js.
-    const rows = mergeWorldList({
-      local: saves,
-      cloud: this.cloudWorlds ?? [],
-      agreedFor: (id) => this.cb.agreedFor?.(id) ?? null,
-      lastOpened: this.cb.lastOpened?.() ?? null,
-    });
-    const current = rows.find((r) => r.isLast) ?? null;
-    const rest = rows.filter((r) => !r.isLast);
-    // Inside the description line rather than a column of its own: as a
-    // separate flex item it squeezed the world's name down to "Home settle…"
-    // on a phone, which is the one thing on the card that has to be readable.
-    const tag = (r) => {
-      if (r.action === CONFLICT) return ' <span class="world-tag warn">Two copies</span>';
-      if (!r.onAccount) return r.id ? ' <span class="world-tag">This device only</span>' : '';
-      if (!r.here) return ' <span class="world-tag">Not on this device</span>';
-      // Played somewhere else since this device last saw it, and untouched
-      // here — so opening it should fetch that copy, not the stale one.
-      if (r.action === PULL) return ' <span class="world-tag">Newer on your account</span>';
-      return ' <span class="world-tag">On your account</span>';
-    };
-    const when = (r) => Math.max(r.changedAt ?? 0, r.cloudAt ?? 0);
-    const line = (r) => `${describe({ mode: r.mode, timestamp: when(r), age: r.age })}${tag(r)}`;
-    // A world only on the account opens by its account id; one that is here
-    // opens by the save that holds it.
-    const openAttr = (r) => (r.here && r.action !== PULL
-      ? `data-open="${escapeAttr(r.id)}"`
-      : `data-cloud="${escapeAttr(r.id)}"`);
+    const rows = this.cloudWorlds ?? [];
+    const failed = this.cloudError;
+    const when = (r) => r.updatedAt ?? 0;
+    const line = (r) => describe({ mode: r.mode, timestamp: when(r), age: r.age });
 
     this.body.innerHTML = `
-      ${current ? `
-        <div class="home-label">Where you left off</div>
-        <div class="world-card world-card-primary" data-continue="1" role="button" tabindex="0">
-          <span class="world-text">
-            <strong>${escapeHtml(current.name || 'Your world')}</strong>
-            <em>${line(current)}</em>
-          </span>
-          <span class="world-go">Continue</span>
-          <button class="world-remove" data-remove-current="1" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
+      ${failed ? `
+        <div class="home-gate warn">
+          <strong>Could not reach your account</strong>
+          <p>${escapeHtml(failed)}</p>
+          <div class="home-actions"><button class="secondary" data-retry="1">Try again</button></div>
         </div>` : ''}
 
       <button class="world-card world-card-new" data-new="1">
@@ -157,31 +152,28 @@ export class HomeScreen {
         <span class="world-go">${icon('plus', 18)}</span>
       </button>
 
-      ${rest.length ? `
+      ${rows.length ? `
         <div class="home-label">Your worlds</div>
         <div class="world-list">
-          ${rest.map((r) => `
-            <div class="world-card" ${openAttr(r)} role="button" tabindex="0">
+          ${rows.map((r) => `
+            <div class="world-card" data-open="${escapeAttr(r.id)}" role="button" tabindex="0">
               <span class="world-text">
                 <strong>${escapeHtml(r.name || 'Untitled world')}</strong>
                 <em>${line(r)}</em>
               </span>
-              ${r.here
-                ? `<button class="world-remove" data-remove="${escapeAttr(r.id)}" data-remove-name="${escapeAttr(r.name)}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>`
-                : `<span class="world-go">Get it</span>
-                   <button class="world-remove" data-drop-cloud="${escapeAttr(r.id)}" title="Remove from your account" aria-label="Remove from your account">${icon('close', 15)}</button>`}
+              <button class="world-remove" data-remove="${escapeAttr(r.id)}" data-remove-name="${escapeAttr(r.name || 'this world')}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
             </div>`).join('')}
-        </div>` : ''}
+        </div>`
+      : (failed ? '' : `<p class="home-note">No worlds yet. The first one you make is kept on your account.</p>`)}
     `;
 
-    this.body.querySelector('[data-continue]')?.addEventListener('click', (e) => {
-      if (e.target.closest('[data-remove-current]')) return;   // the ✕ is its own button
-      this.cb.onContinue();
-    });
-    this.body.querySelector('[data-remove-current]')?.addEventListener('click', () => {
-      if (this.cb.onRemove(current?.id, current?.name || 'Your world')) this.render();
-    });
     this.body.querySelector('[data-new]')?.addEventListener('click', () => { this.step = 'kind'; this.render(); });
+    this.body.querySelector('[data-retry]')?.addEventListener('click', () => {
+      this.cloudError = null;
+      this.cloudWorlds = null;
+      this.render();
+      this.refreshCloudWorlds({ force: true });
+    });
     this.body.querySelectorAll('[data-open]').forEach((el) => {
       el.addEventListener('click', (e) => {
         if (e.target.closest('[data-remove]')) return;   // the ✕ is its own button
@@ -189,28 +181,10 @@ export class HomeScreen {
       });
     });
     this.body.querySelectorAll('[data-remove]').forEach((el) => {
-      el.addEventListener('click', () => {
-        if (this.cb.onRemove(el.dataset.remove, el.dataset.removeName || 'this world')) this.render();
-      });
-    });
-    this.body.querySelectorAll('[data-cloud]').forEach((el) => {
-      el.addEventListener('click', (e) => {
-        if (e.target.closest('[data-drop-cloud]')) return;   // the ✕ is its own button
-        this.cb.onOpenCloud?.(el.dataset.cloud);
-      });
-    });
-    // Removing a world you have not downloaded. It used to live in the account
-    // panel, alongside a list of worlds that had no business being there; the
-    // worlds screen is where you remove a world.
-    this.body.querySelectorAll('[data-drop-cloud]').forEach((el) => {
       el.addEventListener('click', async () => {
-        if (!confirm('Remove this world from your account? It is not on this device, so this deletes it.')) return;
-        el.disabled = true;
-        try {
-          await this.cb.onDropCloud?.(el.dataset.dropCloud);
-          this.cloudWorlds = (this.cloudWorlds ?? []).filter((w) => w.id !== el.dataset.dropCloud);
-          this.render();
-        } finally { el.disabled = false; }
+        if (!this.cb.onRemove(el.dataset.remove, el.dataset.removeName)) return;
+        this.cloudWorlds = (this.cloudWorlds ?? []).filter((w) => w.id !== el.dataset.remove);
+        this.render();
       });
     });
     this.refreshCloudWorlds();
@@ -225,23 +199,29 @@ export class HomeScreen {
    * cloud having a bad day all come to the same thing — the list you can see
    * is the list you had, unbadged.
    */
-  async refreshCloudWorlds() {
+  async refreshCloudWorlds({ force = false } = {}) {
     if (this.cloudPending || !this.cb.getCloudUser?.()) return;
+    if (this.cloudWorlds && !force) return;   // already answered; the game re-asks after a save
     this.cloudPending = true;
     try {
-      const worlds = await this.cb.listCloudWorlds?.();
-      if (!worlds) return;
-      const changed = JSON.stringify(worlds.map((w) => w.id).sort())
-        !== JSON.stringify((this.cloudWorlds ?? []).map((w) => w.id).sort());
-      this.cloudWorlds = worlds;
-      // Only redraw when the answer is new, and only if the list is still what
-      // is on screen — you may have walked into the new-world journey by now.
-      if (changed && this.step === 'home') this.renderHome();
-    } catch {
-      // Nothing to say. The local list is already correct.
+      this.cloudWorlds = (await this.cb.listCloudWorlds?.()) ?? [];
+      this.cloudError = null;
+    } catch (err) {
+      // Said out loud, not swallowed. There is no local list to fall back to
+      // any more, so an empty screen with no explanation is the worst thing
+      // this could do — "I have no worlds" and "I could not ask" are very
+      // different sentences and the player has to be able to tell them apart.
+      this.cloudError = err?.message || 'The account did not answer.';
+      this.cloudWorlds = this.cloudWorlds ?? [];
     } finally {
       this.cloudPending = false;
+      if (this.step === 'home' && !this.cb.needsAccount?.()) this.renderHome();
     }
+  }
+
+  /** After a save or a delete, the list this screen is holding is out of date. */
+  forgetWorlds() {
+    this.cloudWorlds = null;
   }
 
   // ---- the journey ----

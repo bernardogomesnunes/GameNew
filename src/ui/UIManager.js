@@ -25,10 +25,9 @@ function fmtTime(ts) {
 }
 
 export class UIManager {
-  constructor(root, { bus, game, saveManager, callbacks }) {
+  constructor(root, { bus, game, callbacks }) {
     this.bus = bus;
     this.game = game;
-    this.saveManager = saveManager;
     this.cb = callbacks;
     this.selectedBlockId = 1;
     this.selectionActive = false;
@@ -141,8 +140,6 @@ export class UIManager {
               <input type="text" id="save-name" maxlength="40" placeholder="Unnamed world" />
             </label>
             <div id="save-hint" class="export-note" hidden></div>
-            <div class="mode-label">Earlier versions</div>
-            <div id="version-list"></div>
           </div>
 
           <div class="menu-section" id="menu-graphics" hidden>
@@ -419,51 +416,29 @@ export class UIManager {
 
   wireEvents() {
     this.home = new HomeScreen(this.q('#blocker'), {
-      listWorlds: () => this.saveManager.list(),
-      lastOpened: () => this.saveManager.lastOpened(),
-      // The world goes in first and the loading follows, because entering has
-      // to happen inside the tap that asked for it — pointer lock is only
-      // granted to a gesture, and opening now checks the account first.
-      onContinue: () => { this.enterWorld(); this.cb.onLoadAutosave(); },
+      // The worlds screen has nothing to draw without an account, because a
+      // world without an account has nowhere to live.
+      needsAccount: () => !this.cb.getCloudUser?.(),
+      listCloudWorlds: () => this.cb.getCloudWorlds(),
+      getCloudUser: () => this.cb.getCloudUser?.() ?? null,
+      isCloudConfigured: () => this.cb.isCloudConfigured?.() ?? false,
+
+      // Entering happens inside the tap that asked for it — pointer lock is
+      // only granted to a gesture — and the world arrives from the account a
+      // moment later.
       onOpen: (id) => { this.enterWorld(); this.cb.onOpenWorld(id); },
-      // One delete, because there is one of each world. It takes the account
-      // copy with it: a world you binned turning up on your next device is
-      // worse than not syncing at all.
+      onCreate: (mode, name) => { this.cb.onNewWorld(mode, name); this.enterWorld(); },
       onRemove: (id, label) => {
         if (!confirm(`Delete "${label}"? Everything built in it goes with it, and this cannot be undone.`)) return false;
         this.cb.onDeleteWorld(id);
         return true;
       },
-      // Creating and entering happen in the same gesture: pointer lock has to
-      // be claimed inside the tap that asked for it.
-      onCreate: (mode, name) => {
-        this.cb.onNewWorld(mode, name);
-        this.enterWorld();
-        // No upload from here any more. Making a world autosaves it, and an
-        // autosave is what sends it to the account — this was a second push of
-        // the same brand new world, a moment after the first.
-      },
-      // Needed by the naming step, to say where the world will live.
-      isCloudConfigured: () => this.cb.isCloudConfigured?.() ?? false,
-      getCloudUser: () => this.cb.getCloudUser?.() ?? null,
-      // What the account is holding, so the list can mark which of your worlds
-      // are up there and offer the ones that are not down here.
-      listCloudWorlds: () => this.cb.getCloudWorlds(),
-      agreedFor: (id) => this.cb.agreedFor?.(id) ?? null,
-      onDropCloud: (id) => this.cb.onCloudDelete(id),
-      onOpenCloud: async (id) => {
-        try {
-          await this.cb.onCloudRestore(id);
-          this.enterWorld();
-        } catch (err) {
-          this.toast({ kind: 'xp', title: 'Could not fetch that world', body: err.message });
-        }
-      },
+
       // These open *over* the worlds screen rather than replacing it. They used
       // to hide it first, so closing one left you standing in whichever world
       // was last loaded — one you never chose, already falling.
       onSettings: () => this.openPanel('panel-menu'),
-      onAccount: () => this.openPanel('panel-account'),
+      onAccount: (mode) => { if (mode) this.setAccountMode(mode); this.openPanel('panel-account'); },
     });
     // The screen is already on when the page loads, so draw it now rather than
     // waiting for something to re-open it.
@@ -881,7 +856,6 @@ export class UIManager {
       // Always back at the index: reopening the menu and landing in whatever
       // section you left is a small mystery every time.
       this.showMenuSection(null);
-      this.renderVersions();
     }
     if (id === 'panel-stats') this.populateStats();
     if (id === 'panel-templates') this.refreshTemplateList();
@@ -1154,6 +1128,7 @@ export class UIManager {
         ? 'I already have an account' : 'Create an account instead';
       this.q('#cloud-password').setAttribute('autocomplete', creating ? 'new-password' : 'current-password');
     };
+    this.applyAccountMode = applyAccountMode;
     applyAccountMode();
     this.q('#btn-account-switch').addEventListener('click', () => {
       this.accountMode = this.accountMode === 'create' ? 'signin' : 'create';
@@ -1177,6 +1152,12 @@ export class UIManager {
       });
     }));
     this.q('#btn-cloud-signout').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignOut()));
+  }
+
+  /** The worlds screen's two doors open the same panel on the right side of it. */
+  setAccountMode(mode) {
+    this.accountMode = mode === 'create' ? 'create' : 'signin';
+    this.applyAccountMode?.();
   }
 
   /** Switches the panel between signed-out and signed-in, and hides it entirely when unconfigured. */
@@ -1572,44 +1553,10 @@ export class UIManager {
   }
 
 
-  /**
-   * The earlier versions of this world, newest first.
-   *
-   * A list rather than a single undo, because the thing you want back is
-   * rarely the state one minute ago — it is the state before you started
-   * whatever it was that went wrong.
-   */
-  renderVersions() {
-    const box = this.q('#version-list');
-    if (!box) return;
-    const versions = this.cb.listVersions?.() ?? [];
-    if (!versions.length) {
-      box.innerHTML = '<div class="export-note">Nothing yet. A version is kept every few minutes while you play, and whenever you leave.</div>';
-      return;
-    }
-    box.innerHTML = versions.map((v) => `
-      <div class="version-row">
-        <span class="version-when">${timeAgo(v.at)}</span>
-        <span class="version-at">${fmtTime(v.at)}</span>
-        <button class="secondary" data-version="${v.index}">Go back to this</button>
-      </div>`).join('');
-    box.querySelectorAll('[data-version]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const when = versions.find((v) => String(v.index) === btn.dataset.version);
-        if (!confirm(`Go back to the world as it was ${timeAgo(when?.at)}? What you have done since is kept as a version too.`)) return;
-        if (this.cb.onRestoreVersion?.(Number(btn.dataset.version))) {
-          this.closePanel('panel-menu');
-          this.toast({ kind: 'challenge', title: 'Went back', body: `The world as it was ${timeAgo(when?.at)}` });
-        }
-      });
-    });
-  }
-
-  /** When this world was last written down, in words. */
+  /** When this world last reached your account, in words. */
   lastSavedLabel() {
-    const saves = this.saveManager.listSaves();
-    const current = saves.find((s) => s.isAutosave);
-    return current ? timeAgo(current.timestamp) : 'the world was made';
+    const at = this.cb.lastSavedAt?.();
+    return at ? timeAgo(at) : 'the world was made';
   }
 
   /**

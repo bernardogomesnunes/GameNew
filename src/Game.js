@@ -23,8 +23,19 @@ import { FarTerrain } from './render/FarTerrain.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
-import { SaveManager } from './storage/SaveManager.js';
-import { SyncState, decide, mergeWorldList, PUSH, PULL, CONFLICT, CLOUD_ONLY } from './storage/WorldSync.js';
+import { SyncState } from './storage/WorldSync.js';
+
+/**
+ * The one world whose upload has not landed yet. Not a library — see keepSafe.
+ */
+const UNSENT_KEY = 'voxelgame:unsent';
+
+const makeChunkGen = (o) => new ChunkGen(o);
+
+/** Everything about a world that has to survive, as plain JSON. */
+function serialiseWorldState({ world, mode, economy, duilt }) {
+  return { world: world.serialize(), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null };
+}
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
 import { panelForKey } from './config/panels.js';
@@ -93,7 +104,6 @@ export class Game {
   constructor(container) {
     this.container = container;
     this.bus = new EventBus();
-    this.saveManager = new SaveManager();
 
     this.canvasRoot = document.createElement('div');
     this.canvasRoot.id = 'game-canvas-root';
@@ -221,12 +231,9 @@ export class Game {
     // A world is built either way so there is something behind the worlds
     // screen rather than a blank canvas, and so "Continue" has something to
     // continue. Which one is decided by the screen, not here.
-    const last = this.saveManager.read(this.saveManager.lastOpened());
-    if (last) {
-      this.loadFromData(last, { silent: true });
-    } else {
-      this.newWorld({ silent: true });
-    }
+    // Something behind the worlds screen rather than a blank canvas. It is
+    // scenery, not a save: a world only becomes real once it is on the account.
+    this.newWorld({ silent: true, scenery: true });
 
     this.symmetryTool = new SymmetryTool(this.world);
     // A stable id per world, so incremental sync can tell "the world I already
@@ -259,7 +266,6 @@ export class Game {
     this.ui = new UIManager(this.uiRoot, {
       bus: this.bus,
       game: this,
-      saveManager: this.saveManager,
       callbacks: this.buildCallbacks(),
     });
     this.ui.refreshForMode();
@@ -303,8 +309,8 @@ export class Game {
    * is deliberately made or opened.
    */
   discardCurrentWorld() {
-    this.saveManager.remove(this.worldId);
     this.discarded = true;
+    this.dropSafeCopy();
     // If it was synced, take it off the server too — a world you deleted
     // coming back on your next device is worse than not syncing at all.
     // Best effort: signed out or offline, the local delete still stands.
@@ -337,172 +343,181 @@ export class Game {
    * is an ordinary load, so everything downstream — the border, the bag, the
    * settlers — comes back exactly as a load would bring it.
    */
-  restoreVersion(index) {
-    const data = this.saveManager.loadSnapshot(this.worldId, index);
-    if (!data) return false;
-    this.loadFromData(data);
-    // The state you were in when you went back is itself worth keeping, so
-    // the next autosave records it rather than the version you restored.
-    this.saveNow();
+  /**
+   * Writes this world to the account.
+   *
+   * There is no copy on this device to write to. Worlds used to be saved to
+   * whichever browser made them and then reconciled with the account
+   * afterwards, and reconciling two libraries is a problem with no good
+   * answers — one of them is always wrong and the game has to guess which.
+   * So there is one copy, it is on the account, and this is how it gets there.
+   *
+   * Returns immediately. The upload is queued, because a save must never be
+   * something the player waits for mid-build.
+   */
+  saveNow() {
+    if (this.discarded || !this.worldId || !this.cloud?.signedIn) return false;
+    this.pendingSave = true;
+    this.keepSafe();
+    this.flush().catch(() => { /* reported by flush; retried by the next save */ });
     return true;
   }
 
-  /** Writes the autosave straight away, and resets the interval clock with it. */
-  saveNow({ sync = true } = {}) {
-    if (this.discarded) return false;
+  /**
+   * Sends whatever is outstanding, and can be waited on.
+   *
+   * One at a time: two uploads of the same world racing each other is how a
+   * revision counter stops meaning anything. A second save while one is in
+   * flight simply leaves the flag up, and the next pass takes the newer state.
+   */
+  async flush() {
+    if (!this.pendingSave || this.discarded || !this.cloud?.signedIn) return false;
+    if (this.saving) return this.saving;
+
+    this.saving = (async () => {
+      try {
+        const list = await this.cloudList({ maxAgeMs: 0 });
+        const mine = list.find((w) => w.id === this.worldId) ?? null;
+        const agreed = this.syncState.agreedFor(this.worldId);
+        // Somebody else saved this world since we opened it. Refusing would
+        // strand the afternoon in hand, so it goes up — but it is said out
+        // loud, because quietly writing over another device is the one thing
+        // this must never do without telling you.
+        if (mine && agreed && mine.revision > agreed.revision) {
+          this.bus.emit('toast', {
+            kind: 'xp',
+            title: 'This world was open somewhere else',
+            body: 'Your changes are the ones kept. Close it on the other device.',
+          });
+        }
+        await this.saveToCloud(this.worldName, { quiet: true, revision: (mine?.revision ?? 0) + 1 });
+        this.pendingSave = false;
+        this.saveError = null;
+        this.dropSafeCopy();
+        this.ui?.home?.forgetWorlds?.();
+        return true;
+      } catch (err) {
+        // Left pending on purpose: the next save tries again, and the copy put
+        // aside by keepSafe outlives a closed tab.
+        this.saveError = err?.message ?? 'The account did not answer.';
+        this.bus.emit('toast', {
+          kind: 'xp',
+          title: 'Not saved to your account yet',
+          body: `${this.saveError} Still trying — keep the tab open.`,
+        });
+        return false;
+      } finally {
+        this.saving = null;
+      }
+    })();
+    return this.saving;
+  }
+
+  /**
+   * One copy of the world that has not reached the account yet.
+   *
+   * Not a library and not something you can open: it is a single slot holding
+   * the world whose upload is outstanding, and it is thrown away the moment
+   * that upload lands. Cloud-only is the right shape, but losing an afternoon
+   * to a dropped connection is not a design decision anybody made on purpose,
+   * and this is the difference between "not saved yet" and "gone".
+   */
+  keepSafe() {
     try {
-      this.saveManager.write(this.saveState());
-      this.lastAutosave = performance.now();
-      // And on to the account, if there is one. Signed in, a world belongs to
-      // the player rather than to the browser it was made in — leaving the
-      // upload to a button in a panel is what gave one account two separate
-      // piles of worlds, one per device.
-      //
-      // Not when the write *is* the copy we just pulled down: the sync would
-      // look at a local save newer than the agreement it has not recorded yet
-      // and call its own download a conflict.
-      if (sync) this.syncSoon();
+      localStorage.setItem(UNSENT_KEY, JSON.stringify({
+        worldId: this.worldId,
+        name: this.worldName,
+        at: Date.now(),
+        state: serialiseWorldState(this.saveState()),
+      }));
+    } catch { /* out of room; the upload is still the real save */ }
+  }
+
+  dropSafeCopy() {
+    try { localStorage.removeItem(UNSENT_KEY); } catch { /* private window */ }
+  }
+
+  /** Anything that never made it up last time goes up now. */
+  async sendUnsent() {
+    if (!this.cloud?.signedIn) return false;
+    let held = null;
+    try { held = JSON.parse(localStorage.getItem(UNSENT_KEY) || 'null'); } catch { held = null; }
+    if (!held?.worldId || !held.state) return false;
+    try {
+      const world = World.deserialize(held.state.world, { makeGen: makeChunkGen });
+      const list = await this.cloudList({ maxAgeMs: 0 });
+      const mine = list.find((w) => w.id === held.worldId) ?? null;
+      const res = await this.cloud.save(held.worldId, {
+        world,
+        name: held.name,
+        mode: held.state.mode,
+        player: null,
+        gamification: null,
+        economy: { toJSON: () => held.state.economy ?? {} },
+        duilt: held.state.duilt,
+        revision: (mine?.revision ?? 0) + 1,
+      });
+      this.syncState.agree(held.worldId, res.revision);
+      this.dropSafeCopy();
+      this.forgetCloudList();
+      this.bus.emit('toast', {
+        kind: 'challenge',
+        title: 'Saved to your account',
+        body: `"${held.name}" made it up after all`,
+      });
       return true;
     } catch {
+      return false;   // still no; it keeps until there is a connection
+    }
+  }
+
+  /**
+   * Opens a world from the account.
+   *
+   * There is nowhere else to open one from. It used to read this device's copy
+   * and consult the account afterwards, which is how a desktop could sit on a
+   * stale afternoon for ever while the phone had moved on.
+   */
+  async openWorld(id) {
+    if (!id || !this.cloud?.signedIn) return false;
+    // What you were in goes up before you leave it, or opening a second world
+    // throws away the first one's afternoon.
+    await this.flush();
+    try {
+      await this.restoreFromCloud(id);
+      return true;
+    } catch (err) {
+      this.ui.toast({ kind: 'xp', title: 'Could not open that world', body: err.message });
       return false;
     }
   }
 
-  // ---- keeping the account's copy up to date ----
-
-  /**
-   * Sends this world up, when it is ours to send.
-   *
-   * Never blocks saving and never throws at the caller: a save that worked
-   * locally worked, whatever the network did. A push that fails is retried by
-   * the next autosave, because the agreement it would have recorded is what
-   * decides, and a failed push records nothing.
-   *
-   * The one thing it will not do is overwrite a copy it has not seen. If the
-   * account moved on while this device was playing, that is two afternoons and
-   * no safe automatic answer, so it stops and says so.
-   */
-  syncSoon() {
-    if (!this.cloud?.signedIn || this.discarded || !this.worldId) return;
-    if (this.syncing) { this.syncAgain = true; return; }
-    this.syncing = true;
-    this.syncNow()
-      .catch(() => { /* said once by syncNow itself, or simply offline */ })
-      .finally(() => {
-        this.syncing = false;
-        if (this.syncAgain) { this.syncAgain = false; this.syncSoon(); }
-      });
-  }
-
-  /**
-   * Signing in takes what is on this device with you.
-   *
-   * Playing signed out is playing for real — the worlds are yours and they are
-   * here. So signing in is not a fresh start, it is those worlds finding their
-   * home: each one goes up under the id it already has, which is what makes it
-   * the same world afterwards rather than a copy beside it.
-   *
-   * Never blocks the sign-in and never throws: being signed in is the thing
-   * that just succeeded, and a world that did not make it up stays exactly
-   * where it is and goes on the next save.
-   */
-  async adoptLocalWorlds() {
-    if (!this.cloud?.signedIn) return 0;
-    let moved = 0;
-    try {
-      const up = new Map((await this.cloudList({ maxAgeMs: 0 })).map((w) => [w.id, w]));
-      for (const row of this.saveManager.list()) {
-        if (up.has(row.id)) continue;         // already theirs
-        const data = this.saveManager.read(row.id);
-        if (!data) continue;
-        try {
-          const res = await this.cloud.save(row.id, {
-            world: data.world,
-            name: data.worldName,
-            mode: data.mode,
-            player: null,
-            gamification: null,
-            economy: { toJSON: () => data.economy ?? {} },
-            duilt: data.duilt,
-            revision: 1,
-          });
-          this.syncState.agree(row.id, res.revision, row.at);
-          this.forgetCloudList();
-          moved++;
-        } catch { /* stays here, goes up on the next save */ }
-      }
-    } catch { /* offline: nothing moves, nothing is lost */ }
-    return moved;
-  }
-
-  /**
-   * Opens a world from whichever copy is the real one.
-   *
-   * It used to read the device's copy and nothing else, which is how the same
-   * world showed a different afternoon on a phone and a desktop: the phone
-   * played and pushed, the desktop opened its own stale copy, and the sync —
-   * which had correctly worked out the account was ahead — did nothing with
-   * that answer.
-   *
-   * So the account is asked first, on a short deadline. Offline, or slow, or
-   * signed out, the copy on this device is what opens: waiting on a network to
-   * start playing is worse than starting a few minutes behind, and the next
-   * save settles it either way.
-   */
-  async openWorld(id, { silent = false } = {}) {
-    if (!id) return false;
-    // What you were in is written down before you leave it, or opening a
-    // second world would throw away the first one's afternoon.
-    if (!silent) this.saveNow();
-
-    const { action } = await this.decideFor(id);
-    if (action === PULL || action === CLOUD_ONLY) {
-      try {
-        await this.restoreFromCloud(id, { silent });
-        return true;
-      } catch { /* the copy here will do */ }
-    }
-
-    const data = this.saveManager.read(id);
-    if (!data) return false;
-    this.loadFromData(data, { silent });
-    this.saveManager.markOpened(id);
-    if (!silent) this.ui.closePanel('panel-menu');
-    return true;
-  }
-
-  /**
-   * What to do about one world, asked of the account with a deadline.
-   *
-   * A null action means "we could not find out" — signed out, offline, or the
-   * account taking too long — and every caller treats that as "use what is
-   * here", which is the only answer that lets you play on a train.
-   */
   /**
    * Picks up the signed-in session at startup.
    *
-   * It used to happen the first time the in-game menu was opened, and nowhere
-   * else. Which meant that on the worlds screen — the screen whose entire job
-   * is listing your worlds — the game did not yet know it was signed in. So it
-   * never asked the account what it had, every world was labelled "this device
-   * only", and nothing synced, on every device, until you happened to open the
-   * menu. Two devices, both signed in, both convinced they were alone.
+   * It used to happen the first time somebody opened the in-game menu, and
+   * nowhere else — so on the worlds screen, whose whole job is listing your
+   * worlds, the game did not yet know it was signed in. Now that a world only
+   * exists on an account, this is also what decides whether there is anything
+   * to show at all.
    *
-   * Never throws and never blocks: being offline at startup is not an error,
-   * and the worlds on this device are already on screen by the time this lands.
+   * Never throws: being offline at startup is not an error, and the screen has
+   * to be drawn either way.
    */
   resumeSession() {
     if (!this.cloud) return;
     this.cloudAuth.restore()
       .then((user) => {
+        this.ui?.refreshCloudPanel?.();
+        this.ui?.home?.render?.();
         if (!user) return;
         this.forgetCloudList();
-        this.ui?.refreshCloudPanel?.();
-        this.ui?.home?.refreshCloudWorlds?.();
-        // And catch the world we already have open up with the account.
-        this.syncSoon();
+        this.ui?.home?.forgetWorlds?.();
+        this.ui?.home?.refreshCloudWorlds?.({ force: true });
+        // Anything a dropped connection stranded last time goes up now.
+        this.sendUnsent();
       })
-      .catch(() => { /* offline; the local worlds are already listed */ });
+      .catch(() => { this.ui?.home?.render?.(); });
   }
 
   /**
@@ -526,67 +541,6 @@ export class Game {
     this.cloudListCache = null;
   }
 
-  async decideFor(id, { timeoutMs = 4000 } = {}) {
-    if (!id || !this.cloud?.signedIn) return { action: null };
-    try {
-      const list = await Promise.race([
-        this.cloudList(),
-        new Promise((_, no) => setTimeout(() => no(new Error('slow')), timeoutMs)),
-      ]);
-      const here = this.saveManager.has(id);
-      return decide({
-        local: here ? { changedAt: this.saveManager.editedAt(id) } : null,
-        cloud: list.find((w) => w.id === id) ?? null,
-        agreed: this.syncState.agreedFor(id),
-      });
-    } catch {
-      return { action: null };
-    }
-  }
-
-  async syncNow() {
-    const id = this.worldId;
-    const cloudList = await this.cloudList({ maxAgeMs: 0 });
-    const mine = cloudList.find((w) => w.id === id) ?? null;
-    const { action, why } = decide({
-      local: { changedAt: this.saveManager.editedAt(id) },
-      cloud: mine,
-      agreed: this.syncState.agreedFor(id),
-    });
-
-    if (action === PUSH) {
-      await this.saveToCloud(this.worldName, { quiet: true, revision: (mine?.revision ?? 0) + 1 });
-      return action;
-    }
-    if (action === PULL) {
-      // Somebody else played this world while we were sitting in it, and we
-      // have changed nothing — so there is a newer copy and nothing of ours to
-      // lose by taking it. Offered rather than swapped: having the world
-      // replaced under you mid-build is alarming even when it is correct.
-      if (this.offeredPull === id) return action;
-      this.offeredPull = id;
-      this.bus.emit('toast', {
-        kind: 'xp',
-        title: 'Newer copy on your account',
-        body: 'This world was played on another device since you opened it.',
-        action: { label: 'Load it', onClick: () => this.restoreFromCloud(id).catch(() => {}) },
-      });
-      return action;
-    }
-    if (action === CONFLICT) {
-      // Nothing is chosen here on purpose. Both copies stay where they are and
-      // the player decides, on the worlds screen, with both dates in front of
-      // them. See storage/WorldSync.js.
-      this.pendingConflict = { id, why, cloud: mine };
-      this.bus.emit('toast', {
-        kind: 'xp',
-        title: 'This world was played somewhere else',
-        body: 'Both copies are safe. Leave the world to pick which one to keep.',
-      });
-    }
-    return action;
-  }
-
   buildCallbacks() {
     return {
       onRequestStart: () => {
@@ -602,14 +556,14 @@ export class Game {
       // because there is no second copy of anything to tell apart by name.
       onOpenWorld: (id) => this.openWorld(id),
       onDeleteWorld: (id) => {
-        this.saveManager.remove(id);
-        if (this.cloud?.signedIn) this.cloud.delete(id).catch(() => {});
         if (id === this.worldId) this.discarded = true;
+        this.syncState.forget(id);
+        this.cloud?.delete(id)
+          .then(() => { this.forgetCloudList(); this.ui.home?.forgetWorlds?.(); })
+          .catch((err) => this.ui.toast({ kind: 'xp', title: 'Could not delete that world', body: err.message }));
         return true;
       },
       onLeaveWorld: (save) => this.leaveWorld(save),
-      listVersions: () => this.saveManager.history(this.worldId),
-      onRestoreVersion: (index) => this.restoreVersion(index),
       onExportWorld: (name) => {
         const payload = exportWorldFile({ ...this.saveState(), templates: this.templates.list(), name: name || 'My world' });
         this.ui.toast({ kind: 'challenge', title: 'World exported', body: `${payload.templates.length} designs included` });
@@ -623,7 +577,10 @@ export class Game {
         if (!file) return;
         try {
           const data = parseWorldPayload(file.text);
-          this.loadFromData(data);
+          // An imported file is a new world on your account, not a local one:
+          // it gets a fresh id and goes up with the next save like any other.
+          this.loadFromData({ ...data, worldId: newWorldId() });
+          this.saveNow();
           for (const t of data.templates) {
             if (!this.templates.get(t.id)) this.templates.templates.push(t);
           }
@@ -636,7 +593,7 @@ export class Game {
       },
       onNewWorld: (mode, name) => { this.newWorld({ mode, name }); this.ui.closePanel('panel-menu'); },
       onRenameWorld: (name) => { this.worldName = name; this.saveNow(); },
-      onLoadAutosave: () => this.openWorld(this.saveManager.lastOpened(), { silent: true }),
+      lastSavedAt: () => this.syncState.agreedFor(this.worldId)?.at ?? 0,
       onResume: () => {
         this.ui.closePanel('panel-menu');
         if (document.body.classList.contains('touch')) this.ui.hideBlocker();
@@ -723,24 +680,21 @@ export class Game {
       onCloudRestoreSession: () => this.cloudAuth.restore(),
       onCloudSignIn: async (email, password) => {
         await this.cloudAuth.signIn(email, password);
-        const moved = await this.adoptLocalWorlds();
-        this.ui.toast({
-          kind: 'challenge',
-          title: 'Signed in',
-          body: moved
-            ? `${moved} ${moved === 1 ? 'world is' : 'worlds are'} on your account now`
-            : 'Your worlds are on your account now',
-        });
+        await this.sendUnsent();
+        this.forgetCloudList();
+        this.ui.home?.forgetWorlds?.();
+        this.ui.home?.render();
+        this.ui.toast({ kind: 'challenge', title: 'Signed in', body: 'Your worlds are here' });
       },
       onCloudSignUp: async (email, password) => {
         await this.cloudAuth.signUp(email, password);
-        const moved = await this.adoptLocalWorlds();
+        this.forgetCloudList();
+        this.ui.home?.forgetWorlds?.();
+        this.ui.home?.render();
         this.ui.toast({
           kind: 'challenge',
           title: 'Account created',
-          body: moved
-            ? `${moved} ${moved === 1 ? 'world' : 'worlds'} moved up to it`
-            : 'Anything you build from here is kept on it',
+          body: 'Every world you build is kept on it',
         });
       },
       onCloudSignOut: async () => {
@@ -817,10 +771,12 @@ export class Game {
     this.duilt = null;
   }
 
-  newWorld({ silent, mode = this.mode, name } = {}) {
+  newWorld({ silent, mode = this.mode, name, scenery = false } = {}) {
     this.mode = mode;
-    // Deliberately making a world un-discards: saving is on again.
-    this.discarded = false;
+    // Scenery is the world drawn behind the worlds screen so the canvas is not
+    // blank. It is nobody's world and it is never saved; anything else you make
+    // un-discards, which is to say saving is on again.
+    this.discarded = !!scenery;
     this.worldId = newWorldId();
     // A brand new world has never been anywhere, so it counts as played: it
     // has to go up the first time, and nothing has agreed anything about it.
@@ -1821,7 +1777,6 @@ export class Game {
       worldId: id,
       worldName: data.name,
     }, { silent });
-    this.saveManager.markOpened(id);
     // Nothing further to offer: this is the newer copy.
     this.offeredPull = null;
     // Write it down locally, so the world is on this device rather than only up
