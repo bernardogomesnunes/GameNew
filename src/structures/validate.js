@@ -257,6 +257,45 @@ export function validateStructure(world, region, structureId) {
 }
 
 /**
+ * What a storehouse has been built into, and what the next rung would need.
+ *
+ * Read off the blocks the same way everything else here is, so a storehouse
+ * upgrades by being built up rather than by a button. Returns null for a
+ * building that holds nothing.
+ *
+ * The tiers are a ladder, not a menu: failing one stops the climb instead of
+ * skipping past it, so a shed lined with brick but still the size of a shed
+ * does not land on the top rung by accident.
+ */
+export function tierStatus(world, region, structureId) {
+  const spec = STRUCTURES_BY_ID.get(structureId);
+  if (!spec?.tiers?.length) return null;
+
+  const ctx = inspect(world, region);
+  let tier = 0;
+  for (let i = 1; i < spec.tiers.length; i++) {
+    if (!(spec.tiers[i].needs ?? []).every((n) => n.test(ctx))) break;
+    tier = i;
+  }
+
+  const here = spec.tiers[tier];
+  const next = spec.tiers[tier + 1] ?? null;
+  return {
+    tier,
+    id: here.id,
+    name: here.name,
+    slots: here.slots,
+    blurb: here.blurb,
+    next: next && {
+      name: next.name,
+      slots: next.slots,
+      // Only what is actually missing, in the order the rules are written.
+      missing: (next.needs ?? []).filter((n) => !n.test(ctx)).map((n) => n.say(ctx)),
+    },
+  };
+}
+
+/**
  * Every structure type this region would satisfy — so the claim menu can grey
  * out what won't work and say why, rather than letting the player guess.
  */

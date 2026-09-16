@@ -75,6 +75,12 @@ export class DuiltUI {
             <span id="store-where">On the shelves</span>
             <button class="secondary" id="btn-store-all">Put it all in</button>
           </div>
+          <!--
+            What it would take to make it bigger, said where you are standing
+            when you notice it is too small. An upgrade you have to go and read
+            about somewhere else is an upgrade nobody finds.
+          -->
+          <div id="store-next" class="store-next" hidden></div>
           <div id="store-grid"></div>
           <div class="store-head"><span>In your bag</span></div>
           <div id="store-bag-grid"></div>`,
@@ -138,6 +144,14 @@ export class DuiltUI {
       });
     });
     this.bus.on('structure:produced', () => { this.saidStalled = false; });
+    this.bus.on('structure:upgraded', ({ name, slots, blurb }) => {
+      if (this.panels.isOpen('panel-store')) this.renderStore();
+      this.bus.emit('toast', {
+        kind: 'achievement',
+        title: `Your storehouse is now a ${name.toLowerCase()}`,
+        body: `${blurb} ${slots} slots.`,
+      });
+    });
     this.bus.on('settler:left', () => this.renderVitals());
     this.bus.on('settler:hungry', ({ count }) => {
       this.renderVitals();
@@ -212,9 +226,9 @@ export class DuiltUI {
 
     // A storehouse is worth answering before you open it: how full it is is
     // the question you walked over here to ask.
-    const summary = spec?.holds ? this.duilt?.storeSummary(structure) : null;
+    const summary = this.duilt?.storeSummary(structure) ?? null;
     const held = summary
-      ? (summary.items ? `${summary.items} things on ${summary.used} shelves` : 'Empty')
+      ? `${summary.tier?.name ?? 'Shelves'} · ${summary.items ? `${summary.items} things in ${summary.used} of ${summary.size}` : `empty, ${summary.size} slots`}`
       : null;
 
     body.innerHTML = `
@@ -234,8 +248,8 @@ export class DuiltUI {
             + 'if it no longer qualifies. Press Done when you have finished.'}
       </p>
       <div class="building-actions">
-        ${spec?.holds ? '<button class="primary" data-store>Open it</button>' : ''}
-        <button class="${spec?.holds ? 'secondary' : 'primary'}" data-move>Move it</button>
+        ${summary ? '<button class="primary" data-store>Open it</button>' : ''}
+        <button class="${summary ? 'secondary' : 'primary'}" data-move>Move it</button>
         <button class="secondary" data-change>${locked ? 'Change it' : 'Done changing'}</button>
         <button class="danger secondary" data-delete>Delete it</button>
       </div>`;
@@ -544,9 +558,26 @@ export class DuiltUI {
     bagGrid.querySelectorAll('[data-bag-slot]').forEach((btn) =>
       btn.addEventListener('click', () => this.putInStore(Number(btn.dataset.bagSlot))));
 
+    const kind = summary.tier?.name ?? 'On the shelves';
     this.q('#store-where').textContent = summary.free
-      ? `On the shelves — ${summary.free} of ${summary.size} free`
-      : `On the shelves — full`;
+      ? `${kind} — ${summary.free} of ${summary.size} free`
+      : `${kind} — full`;
+
+    const next = this.q('#store-next');
+    if (next) {
+      const up = summary.tier?.next;
+      next.hidden = !up;
+      if (up) {
+        // A list rather than a sentence: three things joined by commas reads
+        // as one long clause on a phone, and these are a shopping list.
+        next.innerHTML = up.missing.length
+          ? `<strong>Build it up to a ${up.name.toLowerCase()} — ${up.slots} slots</strong>
+             <ul>${up.missing.map((m) => `<li>${m}</li>`).join('')}</ul>`
+          : `<strong>Build it up to a ${up.name.toLowerCase()} — ${up.slots} slots</strong>
+             <span>It already qualifies — it will settle there on your next change to it.</span>`;
+      }
+    }
+
     const sub = this.q('#store-sub');
     if (sub) {
       sub.textContent = summary.items

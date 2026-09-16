@@ -1,7 +1,7 @@
 import { Inventory } from '../items/Inventory.js';
 import { Territory } from '../world/Territory.js';
 import { StructureRegistry } from '../structures/StructureRegistry.js';
-import { validateStructure } from '../structures/validate.js';
+import { tierStatus, validateStructure } from '../structures/validate.js';
 import { Hunger } from '../survival/Hunger.js';
 import { Skills } from '../progression/Skills.js';
 import { Crafting } from './Crafting.js';
@@ -261,7 +261,8 @@ export class DuiltGame {
     if (!store) return null;
     const used = store.slots.filter(Boolean).length;
     const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
-    return { store, used, free: store.size - used, size: store.size, items };
+    const tier = tierStatus(this.world, structure.region, structure.type);
+    return { store, used, free: store.size - used, size: store.size, items, tier };
   }
 
   ageComplete() {

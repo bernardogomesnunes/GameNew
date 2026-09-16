@@ -25,10 +25,49 @@ export class Inventory {
     return this.slots.length;
   }
 
-  /** Storage buildings widen the bag; nothing ever narrows it while items are in it. */
   grow(to) {
+    if (to <= this.slots.length) return;
     while (this.slots.length < to) this.slots.push(null);
     this.changed();
+  }
+
+  /**
+   * Sets how many slots there are, and returns how many there turned out to be.
+   *
+   * Growing is free. Shrinking is not allowed to throw anything away — a
+   * storehouse stripped back to a shed while it still holds sixty things would
+   * otherwise eat them — so what is in it packs forward first and the shelves
+   * only come off the end once they are empty. That means a downgraded
+   * storehouse stays large until you take things out of it, which is the only
+   * honest answer and also closes the obvious cheat: build a warehouse, strip
+   * it back to a shed, keep the space. You keep it exactly as long as it has
+   * your goods on it.
+   */
+  resize(to) {
+    if (!Number.isInteger(to) || to < 1) return this.slots.length;
+    if (to > this.slots.length) { this.grow(to); return this.slots.length; }
+    if (to === this.slots.length) return this.slots.length;
+
+    this.compact();
+    const used = this.slots.reduce((n, s, i) => (s ? i + 1 : n), 0);
+    const size = Math.max(to, used);
+    if (size < this.slots.length) {
+      this.slots.length = size;
+      this.changed();
+    }
+    return this.slots.length;
+  }
+
+  /** Packs everything to the front, keeping the order it was in. */
+  compact() {
+    const filled = this.slots.filter(Boolean);
+    if (filled.length === this.slots.length) return;
+    const next = new Array(this.slots.length).fill(null);
+    filled.forEach((s, i) => { next[i] = s; });
+    if (next.some((s, i) => s !== this.slots[i])) {
+      this.slots = next;
+      this.changed();
+    }
   }
 
   changed() {

@@ -1,6 +1,6 @@
-import { STRUCTURES_BY_ID } from '../config/structures.js';
+import { STRUCTURES_BY_ID, holdsAt, isStore } from '../config/structures.js';
 import { Inventory } from '../items/Inventory.js';
-import { validateStructure } from './validate.js';
+import { tierStatus, validateStructure } from './validate.js';
 
 /**
  * Every building the player has claimed, and the clock that pays them out.
@@ -44,16 +44,39 @@ export class StructureRegistry {
    * So it gets its own Inventory rather than growing the player's.
    */
   storeFor(structure) {
-    const holds = STRUCTURES_BY_ID.get(structure?.type)?.holds;
-    if (!holds) return null;
-    if (!structure.store) structure.store = new Inventory({ slots: holds, bus: this.bus });
+    const spec = STRUCTURES_BY_ID.get(structure?.type);
+    if (!isStore(spec)) return null;
+    if (!structure.store) {
+      structure.tier = structure.tier ?? 0;
+      structure.store = new Inventory({ slots: holdsAt(spec, structure.tier), bus: this.bus });
+    }
     return structure.store;
+  }
+
+  /**
+   * Re-reads what a storehouse has been built into, and resizes its shelves.
+   *
+   * Called wherever the blocks might have moved under it, which is the same
+   * places `recheck` is called from — upgrading is not a separate action you
+   * take, it is the game noticing you built the thing bigger.
+   */
+  retier(structure) {
+    const spec = STRUCTURES_BY_ID.get(structure?.type);
+    if (!isStore(spec)) return null;
+    const status = tierStatus(this.world, structure.region, structure.type);
+    const was = structure.tier ?? 0;
+    structure.tier = status.tier;
+    const slots = this.storeFor(structure).resize(status.slots);
+    if (status.tier > was) {
+      this.bus?.emit('structure:upgraded', { structure, name: status.name, slots, blurb: status.blurb });
+    }
+    return status;
   }
 
   /** Every standing storehouse, with what it is holding. */
   stores() {
     return this.structures
-      .filter((s) => s.valid && STRUCTURES_BY_ID.get(s.type)?.holds)
+      .filter((s) => s.valid && isStore(STRUCTURES_BY_ID.get(s.type)))
       .map((s) => ({ structure: s, store: this.storeFor(s) }));
   }
 
@@ -210,6 +233,9 @@ export class StructureRegistry {
       for (const s of dead) this.bus?.emit('structure:removed', { structure: s });
     }
     this.structures.push(structure);
+    // A storehouse claimed as a finished warehouse starts as one, rather than
+    // as a shed that upgrades itself the first time anything changes near it.
+    this.retier(structure);
     this.bus?.emit('structure:claimed', { structure, spec });
     return { ok: true, reason: check.reason, structure, replaced };
   }
@@ -247,6 +273,9 @@ export class StructureRegistry {
     const wasValid = structure.valid;
     structure.valid = check.ok;
     structure.brokenReason = check.ok ? null : check.reason;
+    // Whatever else changed, the shelves are re-measured: this is the only
+    // place a storehouse finds out it has grown or been cut back.
+    this.retier(structure);
 
     if (wasValid && !check.ok) {
       this.bus?.emit('structure:broken', { structure, reason: check.reason });
@@ -329,6 +358,7 @@ export class StructureRegistry {
         // Only storehouses have one, and an empty one is worth writing: it is
         // the difference between "nothing in it" and "never had one".
         store: s.store ? s.store.toJSON() : null,
+        tier: s.tier ?? 0,
       })),
     };
   }

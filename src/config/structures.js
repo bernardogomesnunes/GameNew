@@ -155,9 +155,9 @@ export const STRUCTURES = [
     name: 'Storehouse',
     icon: '📦',
     age: 2,
-    blurb: 'Shelves that are not your back. Your buildings deliver here when your bag is full.',
+    blurb: 'Shelves that are not your back. Build it bigger and it holds more.',
     minSize: 3,
-    maxSize: 12,
+    maxSize: 16,
     cost: {},
     requires: [
       {
@@ -175,12 +175,70 @@ export const STRUCTURES = [
     ],
     produces: {},
     everySeconds: 0,
-    // The only building that holds things. `holds` is how many slots it has,
-    // and it is what makes a storehouse a storehouse everywhere else in the
-    // game: the registry gives one a container, production delivers into it,
-    // and the panel opens it. Give another building a `holds` and it becomes
-    // one too, without a line of code anywhere else.
-    holds: 24,
+    /**
+     * How a storehouse grows.
+     *
+     * `tiers` is what makes a building hold things at all: the registry gives
+     * anything with tiers a container, production delivers into it, and the
+     * panel opens it. Give another building a `tiers` and it becomes a
+     * storehouse too, without a line of code anywhere else.
+     *
+     * The rungs are climbed by building, not by pressing an upgrade button.
+     * That is the whole point in a game where you place blocks: you want more
+     * room, so you go and make the shed bigger, and the game notices. It is
+     * re-read whenever the blocks change, which also means it cannot be
+     * cheated by building a warehouse and then stripping it back to a shed —
+     * the shelves come off again as soon as they are empty enough to.
+     *
+     * Tier 0 is the building as claimed and asks for nothing beyond the
+     * `requires` above. Each rung after it adds its own tests, and they are a
+     * ladder: failing one stops the climb rather than skipping it.
+     */
+    tiers: [
+      {
+        id: 'shelves',
+        name: 'Shelves',
+        slots: 24,
+        blurb: 'A shed with a few shelves in it.',
+        needs: [],
+      },
+      {
+        id: 'loft',
+        name: 'Loft',
+        slots: 48,
+        blurb: 'Room overhead as well as around, so twice as much goes in.',
+        needs: [
+          {
+            test: (ctx) => count(ctx, [PLANKS, WOOD]) >= 60,
+            say: (ctx) => `${60 - count(ctx, [PLANKS, WOOD])} more planks or wood`,
+          },
+          {
+            test: (ctx) => ctx.shelteredVolume() >= 18,
+            say: (ctx) => `a bigger room inside — ${18 - ctx.shelteredVolume()} more cells of it`,
+          },
+        ],
+      },
+      {
+        id: 'warehouse',
+        name: 'Warehouse',
+        slots: 96,
+        blurb: 'A hard floor and a proper span. Everything you own fits in here.',
+        needs: [
+          {
+            test: (ctx) => count(ctx, [PLANKS, WOOD, BRICK]) >= 140,
+            say: (ctx) => `${140 - count(ctx, [PLANKS, WOOD, BRICK])} more planks, wood or brick`,
+          },
+          {
+            test: (ctx) => count(ctx, [STONE, COBBLE, BRICK]) >= 25,
+            say: (ctx) => `${25 - count(ctx, [STONE, COBBLE, BRICK])} more stone or brick, for a floor that will take the weight`,
+          },
+          {
+            test: (ctx) => ctx.shelteredVolume() >= 40,
+            say: (ctx) => `a much bigger room — ${40 - ctx.shelteredVolume()} more cells of it`,
+          },
+        ],
+      },
+    ],
     skill: 'building',
   },
 
@@ -399,4 +457,15 @@ export function structuresForAge(age) {
 
 export function structureName(id) {
   return STRUCTURES_BY_ID.get(id)?.name ?? id;
+}
+
+/** True for a building that holds things — see the storehouse's `tiers`. */
+export function isStore(spec) {
+  return !!spec?.tiers?.length;
+}
+
+/** How many slots a building has at a tier, clamped to the tiers it actually has. */
+export function holdsAt(spec, tier = 0) {
+  if (!isStore(spec)) return 0;
+  return spec.tiers[Math.max(0, Math.min(tier, spec.tiers.length - 1))].slots;
 }
