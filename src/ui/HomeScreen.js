@@ -141,6 +141,12 @@ export class HomeScreen {
         <div class="home-gate warn">
           <strong>Could not reach your account</strong>
           <p>${escapeHtml(failed)}</p>
+          ${this.cloudDetail ? `
+            <details class="home-detail">
+              <summary>What went wrong</summary>
+              <code id="home-detail-text">${escapeHtml(this.cloudDetail)}</code>
+              <button class="secondary" data-copy-detail="1">Copy</button>
+            </details>` : ''}
           <div class="home-actions"><button class="secondary" data-retry="1">Try again</button></div>
         </div>` : ''}
 
@@ -174,8 +180,19 @@ export class HomeScreen {
     `;
 
     this.body.querySelector('[data-new]')?.addEventListener('click', () => { this.step = 'kind'; this.render(); });
+    // Selecting a line of text inside a folded panel on a phone is a fight;
+    // a button is not.
+    this.body.querySelector('[data-copy-detail]')?.addEventListener('click', async (e) => {
+      try {
+        await navigator.clipboard.writeText(this.cloudDetail ?? '');
+        e.target.textContent = 'Copied';
+      } catch {
+        e.target.textContent = 'Select it by hand — copying is blocked here';
+      }
+    });
     this.body.querySelector('[data-retry]')?.addEventListener('click', () => {
       this.cloudError = null;
+      this.cloudDetail = null;
       this.cloudWorlds = null;
       this.render();
       this.refreshCloudWorlds({ force: true });
@@ -218,6 +235,11 @@ export class HomeScreen {
       // this could do — "I have no worlds" and "I could not ask" are very
       // different sentences and the player has to be able to tell them apart.
       this.cloudError = err?.message || 'The account did not answer.';
+      // And the technical version, folded away under it. Nobody can debug a
+      // photograph of the readable sentence — it says the same thing whether
+      // the database is asleep, a route is answering 500, or the browser threw
+      // the reply away, and those are three different repairs.
+      this.cloudDetail = err?.detail ?? null;
       this.cloudWorlds = this.cloudWorlds ?? [];
     } finally {
       this.cloudPending = false;

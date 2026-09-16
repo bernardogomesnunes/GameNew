@@ -111,7 +111,10 @@ export class CloudAuth {
       const result = await keepTrying(get);
       return result?.data?.token ?? result?.token ?? null;
     } catch (err) {
-      throw new Error(readableTokenError(err));
+      // Logged as well as shown: on a desktop the console has the stack, and
+      // on a phone the folded Details line is the only way this ever gets out.
+      console.error('[duilt] token request failed', err);
+      throw failure(err, '/auth/get-jwt-token');
     }
   }
 
@@ -154,6 +157,58 @@ function userFrom(result) {
  * nobody can do anything about, and the raw error is still in the console for
  * whoever can.
  */
+/**
+ * The technical version, kept alongside the readable one.
+ *
+ * A player does not want this and should never have to read it. But when the
+ * only report anybody can make is a photograph of a phone, "could not reach
+ * your account" is the end of the investigation: it is the same sentence for a
+ * sleeping database, a route that answers 500, and a reply the browser threw
+ * away. Those need completely different fixes, and one line on the screen is
+ * the difference between knowing which and guessing.
+ *
+ * Folded away behind a tap, so it costs nothing to anybody who is not chasing
+ * a bug.
+ */
+export function describeFailure(err, route = null) {
+  const status = err?.status ?? err?.body?.status;
+  const name = err?.name || 'Error';
+  const message = redact(String(err?.message ?? '')).slice(0, 200);
+  const where = route ? ` ${route}` : '';
+  // No status at all is the interesting case, and the one that reads as
+  // nothing at all in a screenshot: the browser never got a usable reply —
+  // refused, cut off, or a CORS answer it would not let the page see.
+  if (status == null) return `${name}${where} — no reply (${message || 'request did not complete'})`;
+  return `${name} ${status}${where} — ${message}`;
+}
+
+/**
+ * Takes anything token-shaped out of a message before it goes on the screen.
+ *
+ * The whole point of this line is that somebody photographs it and sends it to
+ * somebody else. A JWT that wandered into an error message would ride along,
+ * and a JWT is a key to the account — so the one place it must never appear is
+ * the one place this text is designed to end up.
+ */
+function redact(text) {
+  return text
+    // A JWT, which is what the failing call is asking for in the first place.
+    .replace(/\beyJ[A-Za-z0-9_-]{4,}(?:\.[A-Za-z0-9_-]+){1,2}/g, '[token]')
+    // A password is never diagnostic, so the value goes whatever it looks like.
+    .replace(/\b(password)\b\s*[=:]?\s*\S+/gi, '$1 [hidden]')
+    // Anything else long and opaque — a session id, a key. No English word runs
+    // to 24 characters, so this leaves real sentences alone.
+    .replace(/\b[A-Za-z0-9_-]{24,}\b/g, '[redacted]');
+}
+
+/** Ties the technical line to the readable one, so both travel together. */
+export function failure(err, route) {
+  const readable = new Error(readableTokenError(err));
+  readable.detail = describeFailure(err, route);
+  readable.cause = err;
+  return readable;
+}
+
 export function readableTokenError(err) {
   const status = err?.status ?? err?.body?.status;
   if (status === 401 || status === 403) return 'Your session has expired — sign in again.';

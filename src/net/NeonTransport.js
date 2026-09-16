@@ -1,4 +1,5 @@
 import { deriveUrls } from './cloudConfig.js';
+import { describeFailure } from './CloudAuth.js';
 import { keepTrying } from './retry.js';
 
 /**
@@ -48,7 +49,15 @@ export class NeonTransport {
   async request(path, { method = 'GET', body, prefer } = {}) {
     const token = await this.auth.accessToken();
     if (!token) throw new Error('Sign in to sync worlds to the cloud.');
-    return keepTrying(() => this.send(path, { method, body, prefer, token }));
+    try {
+      return await keepTrying(() => this.send(path, { method, body, prefer, token }));
+    } catch (err) {
+      // Same reasoning as the token call: the readable sentence goes on the
+      // card, the technical one folds up underneath it.
+      console.error('[duilt] data request failed', method, path, err);
+      if (!err.detail) err.detail = describeFailure(err, `${method} ${path.split('?')[0]}`);
+      throw err;
+    }
   }
 
   async send(path, { method, body, prefer, token }) {
