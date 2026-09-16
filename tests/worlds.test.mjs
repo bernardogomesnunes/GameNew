@@ -34,11 +34,29 @@ ok('and does not leave your password sitting in the box',
 // The SDK's own message is "HTTP 404 Not Found", which names nothing and reads
 // like the game is broken rather than the sync being off.
 ok('a token failure is translated', /readableTokenError/.test(auth));
-ok('404 is explained rather than printed', /does not know that token route/.test(auth));
-ok('the host is named, since that is what a screenshot needs to show',
-  /authHost\(\)/.test(auth) && /deriveUrls\(\)\.auth/.test(auth));
-ok('and every branch says the worlds are safe',
-  (auth.match(/safe on this device/g) ?? []).length >= 3);
-ok('an expired session still reads as one', /session expired/.test(auth));
+
+// It is also asked more than once before it gives up. A Neon compute suspends
+// after a few idle minutes and takes up to a second and a half to wake; asking
+// once meant a sleeping database and a broken account looked the same.
+ok('the token call retries while the database wakes', /keepTrying\(get\)/.test(auth));
+ok('and so does a Data API call', /keepTrying\(\(\) => this\.send/.test(
+  readFileSync(new URL('../src/net/NeonTransport.js', import.meta.url), 'utf8')));
+
+// What it says is checked where the strings are — tests/token.test.mjs.
+
+// --- and what it offers you while it cannot reach the account ----------------
+//
+// Nothing that would be thrown away. Worlds are kept on the account and
+// nowhere else, so "New world" while the account is unreachable is an offer to
+// spend an evening on something that has nowhere to be saved.
+ok('no New world card while the account cannot be reached',
+  /\$\{failed \? '' : `\s*<button class="world-card world-card-new"/.test(home));
+ok('but the retry is still there', /data-retry="1"/.test(home));
+
+// Signing out is the other place a stale promise was dangerous.
+ok('signing out no longer promises a copy stays on the device',
+  !/Signing out leaves every world on this device/.test(ui));
+ok('and says you will need to sign back in',
+  /sign back in/i.test(ui));
 
 process.exit(f ? 1 : 0);

@@ -1,4 +1,5 @@
-import { CLOUD, isCloudConfigured, deriveUrls } from './cloudConfig.js';
+import { CLOUD, isCloudConfigured } from './cloudConfig.js';
+import { keepTrying } from './retry.js';
 
 /**
  * Sign-in, and nothing else.
@@ -105,7 +106,9 @@ export class CloudAuth {
       ? auth.getJWTToken.bind(auth)
       : auth.getToken.bind(auth);
     try {
-      const result = await get();
+      // Through `keepTrying` because this is the call that lands on a sleeping
+      // database — it is the first thing the worlds screen asks for. See net/retry.js.
+      const result = await keepTrying(get);
       return result?.data?.token ?? result?.token ?? null;
     } catch (err) {
       throw new Error(readableTokenError(err));
@@ -140,27 +143,29 @@ function userFrom(result) {
 /**
  * What to say when the sign-in service will not hand out a token.
  *
- * Nothing here is the player's fault and nothing here is fixable by them, so
- * every branch ends the same way: your world is safe, it just is not synced.
+ * Every line here used to end "your worlds are safe on this device", which was
+ * true when the game kept a local copy and became a lie the day worlds moved
+ * to the account and local saving was deleted. Telling somebody their work is
+ * somewhere it is not is worse than telling them nothing.
+ *
+ * The truth is the other way round and is still reassuring: what you made is
+ * on your account, which is the one place it cannot be lost by this device
+ * failing to reach it. The hostname is gone too — it named an internal machine
+ * nobody can do anything about, and the raw error is still in the console for
+ * whoever can.
  */
-function readableTokenError(err) {
+export function readableTokenError(err) {
   const status = err?.status ?? err?.body?.status;
-  const host = authHost();
+  if (status === 401 || status === 403) return 'Your session has expired — sign in again.';
   if (status === 404) {
-    return `The sign-in service at ${host} does not know that token route.`
-      + ' Cloud sync is off for now — your worlds are safe on this device.';
+    return 'The sign-in service does not recognise this app. Nothing you have made is lost,'
+      + ' but it cannot be opened until this is fixed.';
   }
-  if (status === 401 || status === 403) return 'Your session expired — sign in again.';
-  if (status >= 500) return 'The sign-in service is having a moment. Your worlds are safe on this device.';
-  return `Could not reach the sign-in service at ${host}. Your worlds are safe on this device.`;
-}
-
-function authHost() {
-  try {
-    return new URL(deriveUrls().auth).host;
-  } catch {
-    return 'the cloud';
+  if (status >= 500) {
+    return 'The sign-in service is having a moment. Nothing is lost — give it a minute and try again.';
   }
+  return 'Could not reach your account just now. Nothing is lost: your worlds are kept on the'
+    + ' account, so they are waiting whenever it answers.';
 }
 
 function readableAuthError(error) {

@@ -144,13 +144,19 @@ export class HomeScreen {
           <div class="home-actions"><button class="secondary" data-retry="1">Try again</button></div>
         </div>` : ''}
 
-      <button class="world-card world-card-new" data-new="1">
-        <span class="world-text">
-          <strong>New world</strong>
-          <em>Start somewhere fresh</em>
-        </span>
-        <span class="world-go">${icon('plus', 18)}</span>
-      </button>
+      <!--
+        No New world while the account is out of reach. Worlds are kept on the
+        account and nowhere else, so one started now would have nowhere to go
+        the moment you left it — offering it is offering to waste an evening.
+      -->
+      ${failed ? '' : `
+        <button class="world-card world-card-new" data-new="1">
+          <span class="world-text">
+            <strong>New world</strong>
+            <em>Start somewhere fresh</em>
+          </span>
+          <span class="world-go">${icon('plus', 18)}</span>
+        </button>`}
 
       ${rows.length ? `
         <div class="home-label">Your worlds</div>

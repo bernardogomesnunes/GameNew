@@ -72,10 +72,26 @@ ok('and does not call the one that 404s as its first choice',
 }
 
 // --- what a signed-in player is told when it still fails ----------------------
-
-ok('a 404 names the host, which is what a screenshot needs to show',
-  /does not know that token route/.test(auth) && /authHost\(\)/.test(auth));
-ok('and every branch says the worlds are safe',
-  (auth.match(/safe on this device/g) ?? []).length >= 3);
+//
+// These used to assert that every line ended "your worlds are safe on this
+// device" and that the internal hostname was printed. Both were right when the
+// game kept a local copy; both became wrong the day worlds moved onto the
+// account, and the suite went on enforcing them — which is how a promise that
+// nothing had been lost locally survived the deletion of everything local.
+// Read the real strings now rather than the shape of the source.
+{
+  const { readableTokenError } = await import('../src/net/CloudAuth.js');
+  const lines = [undefined, 401, 403, 404, 500, 503].map((s) => readableTokenError({ status: s }));
+  ok('nothing tells a player their worlds are on this device',
+    lines.every((l) => !/on this device/i.test(l)));
+  ok('no line shows them a machine name they cannot act on',
+    lines.every((l) => !/neon\.tech|neonauth|\bep-/i.test(l)));
+  ok('a 404 says the service does not recognise the app',
+    /does not recognise/i.test(readableTokenError({ status: 404 })));
+  ok('an expired session says to sign in again',
+    /sign in again/i.test(readableTokenError({ status: 401 })));
+  ok('and the unreachable case says where the worlds actually are',
+    /on the account/i.test(readableTokenError({})));
+}
 
 process.exit(f ? 1 : 0);

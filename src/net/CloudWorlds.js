@@ -10,9 +10,10 @@ import { AIR } from '../config/blocks.js';
  * the round trip the game needs — turning a pile of stored chunks back into a
  * playable World, and listing and deleting what is up there.
  *
- * Local saving does not depend on any of this. A player who never signs in
- * loses nothing except sync; that is the deliberate trade for not inventing an
- * identity the database cannot verify.
+ * This is the only place worlds are kept. There is no local copy to fall back
+ * on — that went when worlds moved onto the account — which is why everything
+ * here fails loudly rather than quietly, and why the transport underneath it
+ * asks twice before deciding the account cannot be reached.
  */
 export class CloudWorlds {
   constructor({ auth, bus }) {

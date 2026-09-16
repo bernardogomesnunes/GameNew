@@ -234,7 +234,15 @@ export class UIManager {
             <div class="field-row">
               <button class="secondary" id="btn-cloud-signout">Sign out</button>
             </div>
-            <div class="export-note">Signing out leaves every world on this device exactly where it is.</div>
+            <!--
+              This used to promise that signing out "leaves every world on this
+              device exactly where it is", which was true right up until worlds
+              moved onto the account and the local copy was deleted. Saying it
+              beside a Sign out button is the worst possible place to be wrong:
+              it reads as "nothing happens", when what happens is you can no
+              longer reach any of them.
+            -->
+            <div class="export-note">Your worlds stay on your account. You will not be able to open them again until you sign back in.</div>
           </div>
           <div class="export-note" id="cloud-error" hidden></div>
           <div id="cloud-status" hidden></div>

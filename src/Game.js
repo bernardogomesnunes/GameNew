@@ -1858,10 +1858,11 @@ export class Game {
     }, { silent });
     // Nothing further to offer: this is the newer copy.
     this.offeredPull = null;
-    // Write it down locally, so the world is on this device rather than only up
-    // there — then record the handshake, after the save, so the agreement is
-    // not older than the copy it is vouching for.
-    this.saveNow({ sync: false });
+    // Write it back, then record the handshake — after the save, so the
+    // agreement is never older than the copy it is vouching for. (This used to
+    // say "write it down locally"; there has been no local copy since worlds
+    // moved onto the account, and `saveNow` stopped taking options with it.)
+    this.saveNow();
     this.syncState.agree(id, data.revision ?? 0);
     // Progression belongs to the account, not the world, so it is merged in
     // separately — and only if the cloud copy is further along than this device.

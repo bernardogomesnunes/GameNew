@@ -1,4 +1,5 @@
 import { deriveUrls } from './cloudConfig.js';
+import { keepTrying } from './retry.js';
 
 /**
  * SyncEngine transport over the Neon Data API (PostgREST).
@@ -37,9 +38,20 @@ export class NeonTransport {
     this.playerId = null;
   }
 
+  /**
+   * One Data API call, asked again while the database is waking.
+   *
+   * The token is fetched once, outside the retry: `accessToken` does its own
+   * waiting, and nesting the two would turn a genuinely dead service into
+   * sixteen attempts and a quarter of a minute of a spinner.
+   */
   async request(path, { method = 'GET', body, prefer } = {}) {
     const token = await this.auth.accessToken();
     if (!token) throw new Error('Sign in to sync worlds to the cloud.');
+    return keepTrying(() => this.send(path, { method, body, prefer, token }));
+  }
+
+  async send(path, { method, body, prefer, token }) {
     const headers = { Authorization: `Bearer ${token}` };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (prefer) headers.Prefer = prefer;
@@ -51,7 +63,11 @@ export class NeonTransport {
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => '');
-      throw new Error(describeError(res.status, detail));
+      // The status rides along on the error: without it the retry cannot tell
+      // "not ready yet" from "no, and it will still be no in a second".
+      const err = new Error(describeError(res.status, detail));
+      err.status = res.status;
+      throw err;
     }
     if (res.status === 204) return null;
     const text = await res.text();
