@@ -127,7 +127,9 @@ export class Settlers {
     const home = this.pickHome();
     if (!home) return null;
     const n = this.nextId++;
-    const at = centreOf(home.region);
+    // On the doorstep rather than in the middle of the house: somebody
+    // arriving is worth seeing, and the middle of a claimed house is indoors.
+    const at = this.outdoorSpot(home.id) ?? centreOf(home.region);
     const person = {
       id: n,
       name: settlerName(n),
@@ -290,6 +292,53 @@ export class Settlers {
     return s ? centreOf(s.region) : null;
   }
 
+  regionOf(id) {
+    return this.structures.list().find((v) => v.id === id)?.region ?? null;
+  }
+
+  /**
+   * Somewhere to stand about that is not indoors.
+   *
+   * A settler with no work wandered to a point within three blocks of the
+   * centre of their house — which, for a house five across, is the inside of
+   * it. So somebody moved in and from the outside nothing had happened: they
+   * spent three quarters of their day behind their own walls, under their own
+   * roof, and the player standing in the street saw an empty village.
+   *
+   * They go out the front now. A ring starting clear of the building, and a
+   * spot in it with ground underfoot, room to stand, and nothing overhead —
+   * that last test being the whole point, because it is what tells a doorstep
+   * from a back room.
+   */
+  outdoorSpot(homeId) {
+    const region = this.regionOf(homeId);
+    if (!region) return null;
+    const c = centreOf(region);
+    const clear = Math.max(region.maxX - region.minX, region.maxZ - region.minZ) / 2 + 1.5;
+    for (let tries = 0; tries < 12; tries++) {
+      const angle = this.rand() * Math.PI * 2;
+      const away = clear + this.rand() * 5;
+      const x = c.x + Math.cos(angle) * away;
+      const z = c.z + Math.sin(angle) * away;
+      if (this.standable(x, z)) return { x, z };
+    }
+    return null;
+  }
+
+  /** Ground underfoot, room to stand, and open sky — somewhere to be seen. */
+  standable(x, z) {
+    const w = this.world;
+    const ix = Math.floor(x), iz = Math.floor(z);
+    if (!w.inBounds(ix, 0, iz)) return false;
+    const y = this.groundAt(x, z);
+    if (w.isSolid(ix, y, iz) || w.isSolid(ix, y + 1, iz)) return false;
+    // Anything solid overhead means this is a room, a porch or a tunnel.
+    for (let above = y + 2; above < Math.min(w.height, y + 10); above++) {
+      if (w.isSolid(ix, above, iz)) return false;
+    }
+    return true;
+  }
+
   /**
    * One step of a settler's day: stand a while, then walk to the other end.
    *
@@ -314,13 +363,11 @@ export class Settlers {
       // Hungry means not at work: they mill about near home instead, which is
       // what an empty larder looks like from across the settlement.
       const work = p.hungry ? null : this.placeOf(p.workId);
-      // Nowhere to go: wander a few blocks from home rather than stand still.
       p.atWork = !p.atWork && !!work;
       p.target = p.atWork ? work : (home ?? { x: p.x, z: p.z });
       if (!p.target) p.target = { x: p.x, z: p.z };
-      if (!work && home) {
-        p.target = { x: home.x + (this.rand() - 0.5) * 6, z: home.z + (this.rand() - 0.5) * 6 };
-      }
+      // Nowhere to be: stand about outside, not inside. See outdoorSpot.
+      if (!work) p.target = this.outdoorSpot(p.homeId) ?? p.target;
       return;
     }
     if (!p.target) { p.wait = 1; return; }

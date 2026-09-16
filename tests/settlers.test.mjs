@@ -377,6 +377,81 @@ ok('and they walk slower than the player', SETTLERS.walkSpeed < 5);
   ok('and it settles them even while they are standing about', p.y === 12);
 }
 
+// --- somewhere you can actually see them --------------------------------------
+
+/**
+ * A settler with no work walked to a point within three blocks of the centre
+ * of their house. For a house five across, that is the inside of it — so
+ * somebody moved in and, from the street, nothing had happened. Measured over
+ * ten minutes, they were behind their own walls three quarters of the time.
+ *
+ * "Build a second house and nobody appears" was that, not the rule about the
+ * first house being yours.
+ */
+{
+  const WOOD = 4;
+  const w = new World({ sizeX: 96, sizeZ: 96, height: 64 });
+  for (let x = 0; x < 96; x++) for (let z = 0; z < 96; z++) {
+    for (let y = 0; y < 20; y++) w.setBlock(x, y, z, y === 19 ? 1 : 2);
+    w.surfaceHeightMap[x * 96 + z] = 20;
+  }
+  /** A 5x5 hut with a roof and a doorway, the shape a house claim asks for. */
+  const hut = (x0, z0) => {
+    for (let dx = 0; dx < 5; dx++) for (let dz = 0; dz < 5; dz++) {
+      const edge = dx === 0 || dz === 0 || dx === 4 || dz === 4;
+      for (let dy = 0; dy < 4; dy++) if (edge) w.setBlock(x0 + dx, 20 + dy, z0 + dz, WOOD);
+      w.setBlock(x0 + dx, 24, z0 + dz, WOOD);
+    }
+    w.setBlock(x0 + 2, 20, z0, 0);
+    w.setBlock(x0 + 2, 21, z0, 0);
+    return { minX: x0, maxX: x0 + 4, minY: 20, maxY: 24, minZ: z0, maxZ: z0 + 4 };
+  };
+
+  const inventory = new Inventory();
+  const structures = new StructureRegistry({ world: w, bus: null, inventory });
+  const a = structures.claim(hut(30, 30), 'house');
+  const b = structures.claim(hut(40, 30), 'house');
+  ok('two real huts claim as houses', a.ok && b.ok);
+
+  let r = 3;
+  const rand = () => { r = (r * 1103515245 + 12345) % 2147483648; return r / 2147483648; };
+  const settlers = new Settlers({
+    world: w, structures, inventory, skills: { settlerAllowance: () => 0 }, bus: null, rand,
+  });
+
+  for (let t = 0; t < 40; t += 0.1) settlers.tick(0.1);
+  ok('somebody moves in', settlers.population === 1);
+
+  const p = settlers.people[0];
+  const indoors = (q) => q.x >= 30 && q.x <= 35 && q.z >= 30 && q.z <= 35;
+  ok('and arrives outside, where you can see them turn up', !indoors(p));
+
+  let inside = 0, n = 0;
+  for (let t = 0; t < 600; t += 0.1) {
+    settlers.tick(0.1);
+    if (t % 5 < 0.1) { n++; if (indoors(settlers.people[0])) inside++; }
+  }
+  const pct = Math.round((inside / n) * 100);
+  ok(`over ten minutes they are indoors ${pct}% of the time, not most of it`, pct < 25);
+  ok('and always on the ground rather than under it',
+    settlers.people.every((q) => w.isSolid(Math.floor(q.x), q.y - 1, Math.floor(q.z))));
+}
+
+// What "outside" means: ground underfoot, room to stand, and nothing overhead.
+{
+  const { settlers, world: w } = setup({ beds: 2 });
+  ok('open ground is somewhere to stand', settlers.standable(40, 40));
+  w.setBlock(41, 15, 41, 8);            // a roof four blocks up
+  ok('under a roof is not', !settlers.standable(41, 41));
+  // A slab at head height over open ground: standable underfoot, not standable.
+  w.setBlock(42, 12, 42, 8);
+  ok('and neither is a gap too low to stand up in', !settlers.standable(42, 42));
+  // Two blocks laid on the ground is a step, not an obstacle.
+  w.setBlock(43, 11, 43, 8);
+  w.setBlock(43, 12, 43, 8);
+  ok('but a low step is somewhere to stand, on top of it', settlers.standable(43, 43));
+}
+
 ok('loading nothing is safe', (() => {
   const { settlers } = setup();
   settlers.loadJSON(undefined);
