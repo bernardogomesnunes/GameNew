@@ -57,7 +57,7 @@ ok('and does not leave your password sitting in the box',
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 ok('making a world no longer pushes it twice', !/if \(cloud\) \{[\s\S]{0,200}onCloudSave/.test(ui));
 ok('the local write is what sends it',
-  /autosaveNow\(\{ sync = true \} = \{\}\) \{[\s\S]{0,800}if \(sync\) this\.syncSoon\(\);/.test(game));
+  /saveNow\(\{ sync = true \} = \{\}\) \{[\s\S]{0,800}if \(sync\) this\.syncSoon\(\);/.test(game));
 ok('and a push that fails never breaks the save that worked',
   /this\.syncNow\(\)\s*\n\s*\.catch\(/.test(game));
 ok('it is retried rather than lost, because a failed push agrees to nothing',
@@ -81,8 +81,21 @@ ok('an expired session still reads as one', /session expired/.test(auth));
 // would never appear. That was the wrong call: the list is where you go to
 // find a world, and "is this one safe if I lose this phone" is the question it
 // exists to answer.
-ok('the local list carries the id the cloud knows a world by',
-  /worldId: data\.worldId \?\? null/.test(saves));
+// One record per world, kept under the id the account knows it by — there is
+// no name-keyed store and no second copy of anything to tell apart.
+ok('a world is stored under its own id', /const worldKey = \(id\) => WORLD_PREFIX \+ id;/.test(saves));
+ok('and there is no way to save a copy', !/\bsave\(name/.test(saves) && !/listSaves/.test(saves));
+ok('worlds from the old name-keyed store are brought across',
+  /migrateOldSaves\(\)/.test(saves) && /OLD_AUTOSAVE_NAME/.test(saves));
+ok('and two names for one world collapse into one record',
+  /if \(existing && \(existing\.at \?\? 0\) >= at\) continue;/.test(saves));
+// Signing in is those worlds finding their home, not a fresh start.
+ok('signing in takes this device\'s worlds up to the account',
+  /adoptLocalWorlds\(\)/.test(game));
+ok('each one keeps the id it already had, so it is the same world',
+  /await this\.cloud\.save\(row\.id,/.test(game));
+ok('and a world already on the account is left alone', /if \(up\.has\(row\.id\)\) continue;/.test(game));
+ok('a failure there never breaks the sign-in', /catch \{ \/\* offline: nothing moves, nothing is lost \*\/ \}/.test(game));
 ok('worlds on the account say so', /world-tag">On your account/.test(home));
 ok('and ones only in this browser say that instead', /world-tag">This device only/.test(home));
 ok('and ones not yet downloaded say that', /world-tag">Not on this device/.test(home));

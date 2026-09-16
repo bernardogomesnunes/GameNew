@@ -89,29 +89,32 @@ ok('but one that was never up there still goes up',
 // list of the ones it could not find locally. A world you have in both places
 // is one world, and it looked like two.
 {
+  // Local rows are what SaveManager.list() hands over: one record per world,
+  // under the id the world was born with.
   const local = [
-    { name: '__autosave__', worldId: 'a', worldName: 'Riverbend', timestamp: 500, isAutosave: true, mode: 'duilt' },
-    { name: 'copy', worldId: 'b', worldName: 'Old town', timestamp: 300, mode: 'duilt' },
-    { name: 'ancient', worldId: null, worldName: 'Before all this', timestamp: 200, mode: 'creative' },
+    { id: 'a', name: 'Riverbend', at: 500, mode: 'duilt', age: 2 },
+    { id: 'b', name: 'Old town', at: 300, mode: 'duilt' },
   ];
   const cloud = [
     { id: 'a', name: 'Riverbend', revision: 4, updatedAt: 450, mode: 'duilt' },
     { id: 'c', name: 'Phone world', revision: 2, updatedAt: 900, mode: 'duilt' },
   ];
   const agreed = { a: { revision: 4, at: 500 }, b: { revision: 1, at: 300 } };
-  const rows = mergeWorldList({ local, cloud, agreedFor: (id) => agreed[id] ?? null });
+  const rows = mergeWorldList({
+    local, cloud, lastOpened: 'a', agreedFor: (id) => agreed[id] ?? null,
+  });
 
-  ok(`four worlds across both places, not five (${rows.length})`, rows.length === 4);
-  const by = Object.fromEntries(rows.map((r) => [r.id ?? r.name, r]));
+  ok(`three worlds across both places, not four (${rows.length})`, rows.length === 3);
+  const by = Object.fromEntries(rows.map((r) => [r.id, r]));
   ok('the one in both places appears once', by.a.here && by.a.onAccount);
   ok('and is settled, having moved nowhere', by.a.action === IN_SYNC);
   ok('the one only here says so', by.b.here && !by.b.onAccount);
   ok('the one only on the account says so', !by.c.here && by.c.onAccount);
   ok('and offers to come down', by.c.action === CLOUD_ONLY);
-  ok('a save from before any of this still shows up', by.ancient.here);
-  ok('and is not mistaken for something to upload', by.ancient.action === LOCAL_ONLY);
+  ok('every row can be opened, because every row has an id', rows.every((r) => !!r.id));
 
-  ok('where you left off is first', rows[0].id === 'a');
+  ok('the world you were last in comes first', rows[0].id === 'a' && rows[0].isLast);
+  ok('and only that one is marked as such', rows.filter((r) => r.isLast).length === 1);
   const rest = rows.slice(1).map((r) => Math.max(r.changedAt ?? 0, r.cloudAt ?? 0));
   ok('and the rest are newest first, wherever they were touched',
     rest.every((v, i) => i === 0 || rest[i - 1] >= v));
@@ -120,7 +123,7 @@ ok('but one that was never up there still goes up',
 // A world on the account and edited here since the handshake wants sending.
 {
   const rows = mergeWorldList({
-    local: [{ name: 'w', worldId: 'a', worldName: 'W', timestamp: 900 }],
+    local: [{ id: 'a', name: 'W', at: 900 }],
     cloud: [{ id: 'a', name: 'W', revision: 3, updatedAt: 400 }],
     agreedFor: () => ({ revision: 3, at: 500 }),
   });

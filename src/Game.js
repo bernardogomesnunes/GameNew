@@ -23,7 +23,7 @@ import { FarTerrain } from './render/FarTerrain.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
-import { SaveManager, AUTOSAVE_NAME } from './storage/SaveManager.js';
+import { SaveManager } from './storage/SaveManager.js';
 import { SyncState, decide, mergeWorldList, PUSH, PULL, CONFLICT } from './storage/WorldSync.js';
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
@@ -211,9 +211,9 @@ export class Game {
     // A world is built either way so there is something behind the worlds
     // screen rather than a blank canvas, and so "Continue" has something to
     // continue. Which one is decided by the screen, not here.
-    const autosave = this.saveManager.load(AUTOSAVE_NAME);
-    if (autosave) {
-      this.loadFromData(autosave, { silent: true });
+    const last = this.saveManager.read(this.saveManager.lastOpened());
+    if (last) {
+      this.loadFromData(last, { silent: true });
     } else {
       this.newWorld({ silent: true });
     }
@@ -273,7 +273,7 @@ export class Game {
    * `pagehide` catches the desktop close. Both are cheap and idempotent.
    */
   wireSaveOnLeave() {
-    const save = () => this.autosaveNow();
+    const save = () => this.saveNow();
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') save();
     });
@@ -290,7 +290,7 @@ export class Game {
    * is deliberately made or opened.
    */
   discardCurrentWorld() {
-    this.saveManager.delete(AUTOSAVE_NAME);
+    this.saveManager.remove(this.worldId);
     this.discarded = true;
     // If it was synced, take it off the server too — a world you deleted
     // coming back on your next device is worse than not syncing at all.
@@ -312,7 +312,7 @@ export class Game {
    * the very state you just refused.
    */
   leaveWorld(save = true) {
-    if (save) this.autosaveNow();
+    if (save) this.saveNow();
     else this.discarded = true;
     return save;
   }
@@ -330,15 +330,15 @@ export class Game {
     this.loadFromData(data);
     // The state you were in when you went back is itself worth keeping, so
     // the next autosave records it rather than the version you restored.
-    this.autosaveNow();
+    this.saveNow();
     return true;
   }
 
   /** Writes the autosave straight away, and resets the interval clock with it. */
-  autosaveNow({ sync = true } = {}) {
+  saveNow({ sync = true } = {}) {
     if (this.discarded) return false;
     try {
-      this.saveManager.autosave(this.saveState());
+      this.saveManager.write(this.saveState());
       this.lastAutosave = performance.now();
       // And on to the account, if there is one. Signed in, a world belongs to
       // the player rather than to the browser it was made in — leaving the
@@ -381,6 +381,46 @@ export class Game {
       });
   }
 
+  /**
+   * Signing in takes what is on this device with you.
+   *
+   * Playing signed out is playing for real — the worlds are yours and they are
+   * here. So signing in is not a fresh start, it is those worlds finding their
+   * home: each one goes up under the id it already has, which is what makes it
+   * the same world afterwards rather than a copy beside it.
+   *
+   * Never blocks the sign-in and never throws: being signed in is the thing
+   * that just succeeded, and a world that did not make it up stays exactly
+   * where it is and goes on the next save.
+   */
+  async adoptLocalWorlds() {
+    if (!this.cloud?.signedIn) return 0;
+    let moved = 0;
+    try {
+      const up = new Map((await this.cloud.list()).map((w) => [w.id, w]));
+      for (const row of this.saveManager.list()) {
+        if (up.has(row.id)) continue;         // already theirs
+        const data = this.saveManager.read(row.id);
+        if (!data) continue;
+        try {
+          const res = await this.cloud.save(row.id, {
+            world: data.world,
+            name: data.worldName,
+            mode: data.mode,
+            player: null,
+            gamification: null,
+            economy: { toJSON: () => data.economy ?? {} },
+            duilt: data.duilt,
+            revision: 1,
+          });
+          this.syncState.agree(row.id, res.revision, row.at);
+          moved++;
+        } catch { /* stays here, goes up on the next save */ }
+      }
+    } catch { /* offline: nothing moves, nothing is lost */ }
+    return moved;
+  }
+
   async syncNow() {
     const id = this.worldId;
     const cloudList = await this.cloud.list();
@@ -420,17 +460,25 @@ export class Game {
       },
       onToggleFullscreen: () => this.toggleFullscreen(),
       onSelectSlot: (id) => { this.selectedBlockId = id; },
-      onSave: (name) => {
-        this.saveManager.save(name, this.saveState());
-        this.ui.toast({ kind: 'challenge', title: 'World saved', body: name });
-      },
-      onLoad: (name) => {
-        const data = this.saveManager.load(name);
-        if (data) this.loadFromData(data);
+      // Opening a world by its id. There is no "open by name" any more,
+      // because there is no second copy of anything to tell apart by name.
+      onOpenWorld: (id) => {
+        const data = this.saveManager.read(id);
+        if (!data) return false;
+        // What you were in is written down before you leave it, or opening a
+        // second world would throw away the first one's afternoon.
+        this.saveNow();
+        this.loadFromData(data);
+        this.saveManager.markOpened(id);
         this.ui.closePanel('panel-menu');
+        return true;
       },
-      onDeleteSave: (name) => this.saveManager.delete(name),
-      onDeleteCurrent: () => this.discardCurrentWorld(),
+      onDeleteWorld: (id) => {
+        this.saveManager.remove(id);
+        if (this.cloud?.signedIn) this.cloud.delete(id).catch(() => {});
+        if (id === this.worldId) this.discarded = true;
+        return true;
+      },
       onLeaveWorld: (save) => this.leaveWorld(save),
       listVersions: () => this.saveManager.history(this.worldId),
       onRestoreVersion: (index) => this.restoreVersion(index),
@@ -459,9 +507,9 @@ export class Game {
         }
       },
       onNewWorld: (mode, name) => { this.newWorld({ mode, name }); this.ui.closePanel('panel-menu'); },
-      onRenameWorld: (name) => { this.worldName = name; this.autosaveNow(); },
+      onRenameWorld: (name) => { this.worldName = name; this.saveNow(); },
       onLoadAutosave: () => {
-        const data = this.saveManager.load(AUTOSAVE_NAME);
+        const data = this.saveManager.read(this.saveManager.lastOpened());
         if (data) this.loadFromData(data, { silent: true });
       },
       onResume: () => {
@@ -469,7 +517,7 @@ export class Game {
         if (document.body.classList.contains('touch')) this.ui.hideBlocker();
         else this.requestPointerLock();
       },
-      onOpenMenu: () => { this.ui.refreshSaveList(); this.ui.openPanel('panel-menu'); document.exitPointerLock?.(); },
+      onOpenMenu: () => { this.ui.refreshCloudPanel(); this.ui.openPanel('panel-menu'); document.exitPointerLock?.(); },
       onToggleFly: () => { this.player.toggleFly(); this.ui.setFlyIndicator(this.player.flying); return this.player.flying; },
       onSaveTemplate: (name) => this.saveTemplate(name),
       onPickTemplate: (id) => {
@@ -550,11 +598,25 @@ export class Game {
       onCloudRestoreSession: () => this.cloudAuth.restore(),
       onCloudSignIn: async (email, password) => {
         await this.cloudAuth.signIn(email, password);
-        this.ui.toast({ kind: 'challenge', title: 'Signed in', body: 'Your worlds can now sync' });
+        const moved = await this.adoptLocalWorlds();
+        this.ui.toast({
+          kind: 'challenge',
+          title: 'Signed in',
+          body: moved
+            ? `${moved} ${moved === 1 ? 'world is' : 'worlds are'} on your account now`
+            : 'Your worlds are on your account now',
+        });
       },
       onCloudSignUp: async (email, password) => {
         await this.cloudAuth.signUp(email, password);
-        this.ui.toast({ kind: 'challenge', title: 'Account created', body: 'Save a world to start syncing' });
+        const moved = await this.adoptLocalWorlds();
+        this.ui.toast({
+          kind: 'challenge',
+          title: 'Account created',
+          body: moved
+            ? `${moved} ${moved === 1 ? 'world' : 'worlds'} moved up to it`
+            : 'Anything you build from here is kept on it',
+        });
       },
       onCloudSignOut: async () => {
         await this.cloudAuth.signOut();
@@ -564,7 +626,6 @@ export class Game {
       // The worlds screen needs it to say which copy is which; it is the same
       // record the sync decision runs on.
       agreedFor: (id) => this.syncState.agreedFor(id),
-      onCloudSave: (name) => this.saveToCloud(name),
       onCloudRestore: (id) => this.restoreFromCloud(id),
       onCloudDelete: async (id) => {
         await this.cloud.delete(id);
@@ -660,7 +721,7 @@ export class Game {
       // Write it out now: a brand new world is 60 seconds from its first
       // interval autosave, and a phone that gets put away in that window used
       // to lose the whole thing.
-      this.autosaveNow();
+      this.saveNow();
       this.ui.toast({
         kind: 'xp',
         title: mode === DUILT ? 'Welcome to Duilt' : 'New world generated',
@@ -1617,7 +1678,7 @@ export class Game {
     // Write it down locally, so the world is on this device rather than only up
     // there — then record the handshake, after the save, so the agreement is
     // not older than the copy it is vouching for.
-    this.autosaveNow({ sync: false });
+    this.saveNow({ sync: false });
     this.syncState.agree(id, data.revision ?? 0);
     // Progression belongs to the account, not the world, so it is merged in
     // separately — and only if the cloud copy is further along than this device.
@@ -1975,7 +2036,7 @@ export class Game {
       this.settlerView.update(this.duilt?.settlers.people ?? []);
       this.tickBreaking(performance.now());
       this.gamification.tick(performance.now());
-      if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.autosaveNow();
+      if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.saveNow();
     }
 
     if (!playing) this.player.releaseKeys();

@@ -113,9 +113,10 @@ export class HomeScreen {
       local: saves,
       cloud: this.cloudWorlds ?? [],
       agreedFor: (id) => this.cb.agreedFor?.(id) ?? null,
+      lastOpened: this.cb.lastOpened?.() ?? null,
     });
-    const current = rows.find((r) => r.isAutosave) ?? null;
-    const rest = rows.filter((r) => !r.isAutosave);
+    const current = rows.find((r) => r.isLast) ?? null;
+    const rest = rows.filter((r) => !r.isLast);
     // Inside the description line rather than a column of its own: as a
     // separate flex item it squeezed the world's name down to "Home settle…"
     // on a phone, which is the one thing on the card that has to be readable.
@@ -133,7 +134,7 @@ export class HomeScreen {
     // A world only on the account opens by its account id; one that is here
     // opens by the save that holds it.
     const openAttr = (r) => (r.here && r.action !== PULL
-      ? `data-open="${escapeAttr(r.saveName ?? r.name)}"`
+      ? `data-open="${escapeAttr(r.id)}"`
       : `data-cloud="${escapeAttr(r.id)}"`);
 
     this.body.innerHTML = `
@@ -166,7 +167,7 @@ export class HomeScreen {
                 <em>${line(r)}</em>
               </span>
               ${r.here
-                ? `<button class="world-remove" data-remove="${escapeAttr(r.saveName ?? r.name)}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>`
+                ? `<button class="world-remove" data-remove="${escapeAttr(r.id)}" data-remove-name="${escapeAttr(r.name)}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>`
                 : `<span class="world-go">Get it</span>
                    <button class="world-remove" data-drop-cloud="${escapeAttr(r.id)}" title="Remove from your account" aria-label="Remove from your account">${icon('close', 15)}</button>`}
             </div>`).join('')}
@@ -178,7 +179,7 @@ export class HomeScreen {
       this.cb.onContinue();
     });
     this.body.querySelector('[data-remove-current]')?.addEventListener('click', () => {
-      if (this.cb.onRemoveCurrent(current?.worldName || 'Your world')) this.render();
+      if (this.cb.onRemove(current?.id, current?.name || 'Your world')) this.render();
     });
     this.body.querySelector('[data-new]')?.addEventListener('click', () => { this.step = 'kind'; this.render(); });
     this.body.querySelectorAll('[data-open]').forEach((el) => {
@@ -189,7 +190,7 @@ export class HomeScreen {
     });
     this.body.querySelectorAll('[data-remove]').forEach((el) => {
       el.addEventListener('click', () => {
-        if (this.cb.onRemove(el.dataset.remove)) this.render();
+        if (this.cb.onRemove(el.dataset.remove, el.dataset.removeName || 'this world')) this.render();
       });
     });
     this.body.querySelectorAll('[data-cloud]').forEach((el) => {

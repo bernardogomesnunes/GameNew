@@ -102,24 +102,20 @@ export function decide({ local = null, cloud = null, agreed = null } = {}) {
  * separate "On your account" list of the ones it could not find locally. Two
  * lists is how a world you have on both ends up looking like two worlds.
  */
-export function mergeWorldList({ local = [], cloud = [], agreedFor = () => null } = {}) {
+export function mergeWorldList({ local = [], cloud = [], agreedFor = () => null, lastOpened = null } = {}) {
   const rows = new Map();
 
+  // Local rows come from SaveManager.list(): one record per world, under the
+  // id the world was born with. There is no second local shape to handle any
+  // more — no autosave slot, no named copies.
   for (const s of local) {
-    if (!s.worldId) {
-      // A save made before any of this, or by somebody signed out. It is still
-      // a world; it simply has no account identity yet.
-      rows.set(`local:${s.name}`, { ...s, id: null, here: true, onAccount: false, action: LOCAL_ONLY });
-      continue;
-    }
-    rows.set(s.worldId, {
-      id: s.worldId,
-      name: s.worldName || s.name,
-      saveName: s.name,
+    if (!s.id) continue;
+    rows.set(s.id, {
+      id: s.id,
+      name: s.name || 'Untitled world',
       mode: s.mode,
       age: s.age,
-      isAutosave: !!s.isAutosave,
-      changedAt: s.timestamp ?? 0,
+      changedAt: s.at ?? 0,
       here: true,
       onAccount: false,
     });
@@ -157,8 +153,9 @@ export function mergeWorldList({ local = [], cloud = [], agreedFor = () => null 
 
   // Most recently touched first, wherever that happened, with the world you
   // were last in kept at the top of the pile.
+  for (const row of rows.values()) row.isLast = !!lastOpened && row.id === lastOpened;
   return [...rows.values()].sort((a, b) =>
-    (b.isAutosave ? 1 : 0) - (a.isAutosave ? 1 : 0)
+    (b.isLast ? 1 : 0) - (a.isLast ? 1 : 0)
     || Math.max(b.changedAt ?? 0, b.cloudAt ?? 0) - Math.max(a.changedAt ?? 0, a.cloudAt ?? 0));
 }
 

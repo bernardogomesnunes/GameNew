@@ -242,7 +242,7 @@ export class UIManager {
           <div class="export-note" id="cloud-error" hidden></div>
           <div id="cloud-status" hidden></div>
           <div id="cloud-block" hidden></div>
-          <div id="save-list" hidden></div>`,
+`,
         'panel-templates': `
           <div class="field-row">
             <input type="text" id="template-name" placeholder="Name this design" maxlength="40" />
@@ -419,20 +419,16 @@ export class UIManager {
 
   wireEvents() {
     this.home = new HomeScreen(this.q('#blocker'), {
-      listWorlds: () => this.saveManager.listSaves(),
+      listWorlds: () => this.saveManager.list(),
+      lastOpened: () => this.saveManager.lastOpened(),
       onContinue: () => { this.cb.onLoadAutosave(); this.enterWorld(); },
-      onOpen: (name) => { this.cb.onLoad(name); this.enterWorld(); },
-      onRemove: (name) => {
-        if (!confirm(`Delete "${name}"? This cannot be undone.`)) return false;
-        this.cb.onDeleteSave(name);
-        return true;
-      },
-      // The world you were last in, rather than a named copy of one. It is
-      // the one people actually want rid of and the only one you could not
-      // delete, so "I have no way to start over" meant starting over by hand.
-      onRemoveCurrent: (label) => {
+      onOpen: (id) => { if (this.cb.onOpenWorld(id)) this.enterWorld(); },
+      // One delete, because there is one of each world. It takes the account
+      // copy with it: a world you binned turning up on your next device is
+      // worse than not syncing at all.
+      onRemove: (id, label) => {
         if (!confirm(`Delete "${label}"? Everything built in it goes with it, and this cannot be undone.`)) return false;
-        this.cb.onDeleteCurrent();
+        this.cb.onDeleteWorld(id);
         return true;
       },
       // Creating and entering happen in the same gesture: pointer lock has to
@@ -1068,29 +1064,6 @@ export class UIManager {
         <div class="reward">${done ? 'Completed' : `Reward: +${c.xpReward} XP${c.unlockBlock ? ' + early block unlock' : ''}`}</div>
       </div>`;
     }).join('');
-  }
-
-  refreshSaveList() {
-    this.refreshCloudPanel();
-    const saves = this.saveManager.listSaves().filter((s) => !s.isAutosave);
-    const list = this.q('#save-list');
-    if (!saves.length) {
-      list.innerHTML = `<div class="sub">No saves yet.</div>`;
-      return;
-    }
-    list.innerHTML = saves.map((s) => `
-      <div class="save-row" data-name="${s.name}">
-        <div><div>${s.name}</div><div class="meta">${fmtTime(s.timestamp)}</div></div>
-        <div class="actions">
-          <button class="secondary" data-load="${s.name}">Load</button>
-          <button class="danger secondary" data-delete="${s.name}">Delete</button>
-        </div>
-      </div>
-    `).join('');
-    list.querySelectorAll('[data-load]').forEach((btn) => btn.addEventListener('click', () => this.cb.onLoad(btn.dataset.load)));
-    list.querySelectorAll('[data-delete]').forEach((btn) => btn.addEventListener('click', () => {
-      if (confirm('Delete this save?')) { this.cb.onDeleteSave(btn.dataset.delete); this.refreshSaveList(); }
-    }));
   }
 
   showBuildScore(score) {

@@ -42,15 +42,15 @@ ok('running out of room drops old versions rather than failing the save',
 // restore quietly loses your bag.
 ok('the live save and a version share one payload builder', /function payloadOf\(/.test(sm));
 ok('and one unpacker', /function unpack\(/.test(sm));
-ok('save writes through it', /const payload = payloadOf\(state, Date\.now\(\), name\)/.test(sm));
+ok('save writes through it', /const payload = payloadOf\(state, at\);/.test(sm));
 ok('a snapshot writes through it too', /JSON\.stringify\(payloadOf\(state, at\)\)/.test(sm));
-ok('load reads through it', /return unpack\(JSON\.parse\(raw\), name\)/.test(sm));
+ok('load reads through it', /return unpack\(JSON\.parse\(raw\)\);/.test(sm));
 ok('and so does a restore', /return unpack\(JSON\.parse\(entry\.json\), entry\.name\)/.test(sm));
 
 // --- leaving ------------------------------------------------------------------
 
 ok('leaving can save', /leaveWorld\(save = true\)/.test(game));
-ok('and saving is what it does by default', /if \(save\) this\.autosaveNow\(\)/.test(game));
+ok('and saving is what it does by default', /if \(save\) this\.saveNow\(\)/.test(game));
 // Not saving has to mean not saving. The autosave that fires when the page is
 // put away would otherwise write the very state you just refused.
 ok('leaving without saving holds against the page being put away',
@@ -74,7 +74,7 @@ ok('each says how long ago it was', /timeAgo\(v\.at\)/.test(ui));
 ok('going back asks first', /Go back to the world as it was/.test(ui));
 // Restoring must not be a trapdoor: where you were is worth keeping too.
 ok('and what you had is kept as a version of its own',
-  /restoreVersion\(index\)[\s\S]{0,700}this\.autosaveNow\(\)/.test(game));
+  /restoreVersion\(index\)[\s\S]{0,700}this\.saveNow\(\)/.test(game));
 ok('an empty history says so rather than showing nothing',
   /Nothing yet\. A version is kept every few minutes/.test(ui));
 ok('restoring a version that is gone fails quietly', /if \(!data\) return false/.test(game));
