@@ -15,6 +15,15 @@ import { icon } from './icons.js';
  * kinds of world actually are.
  */
 
+/**
+ * How long to wait before the error card quietly asks again, and how many
+ * times. Growing gaps, four goes, then it leaves you the button.
+ *
+ * Bounded on purpose: this is a screen that has failed, not a heartbeat. See
+ * startHealing for why a real keep-alive would be much worse than the problem.
+ */
+const HEAL_GAPS = [4000, 10_000, 25_000, 60_000];
+
 const KINDS = [
   {
     id: 'duilt',
@@ -65,6 +74,9 @@ export class HomeScreen {
     this.kind = 'duilt';
     // Derived from whether you are signed in, not chosen — see whereToLive.
     this.where = null;
+    // How many times the error card has quietly re-asked — see startHealing.
+    this.healAttempt = 0;
+    this.healTimer = null;
     this.mount();
   }
 
@@ -148,6 +160,9 @@ export class HomeScreen {
               <button class="secondary" data-copy-detail="1">Copy</button>
             </details>` : ''}
           <div class="home-actions"><button class="secondary" data-retry="1">Try again</button></div>
+          ${this.healAttempt < HEAL_GAPS.length
+            ? '<p class="home-quiet">Still trying on its own — you do not have to wait here.</p>'
+            : '<p class="home-quiet">It has stopped trying on its own.</p>'}
         </div>` : ''}
 
       <!--
@@ -191,6 +206,9 @@ export class HomeScreen {
       }
     });
     this.body.querySelector('[data-retry]')?.addEventListener('click', () => {
+      // A deliberate tap starts the patience over: you have told it you are
+      // here and waiting, which is different from a screen left open.
+      this.stopHealing();
       this.cloudError = null;
       this.cloudDetail = null;
       this.cloudWorlds = null;
@@ -229,6 +247,8 @@ export class HomeScreen {
     try {
       this.cloudWorlds = (await this.cb.listCloudWorlds?.()) ?? [];
       this.cloudError = null;
+      this.cloudDetail = null;
+      this.stopHealing();
     } catch (err) {
       // Said out loud, not swallowed. There is no local list to fall back to
       // any more, so an empty screen with no explanation is the worst thing
@@ -241,10 +261,46 @@ export class HomeScreen {
       // the reply away, and those are three different repairs.
       this.cloudDetail = err?.detail ?? null;
       this.cloudWorlds = this.cloudWorlds ?? [];
+      this.startHealing();
     } finally {
       this.cloudPending = false;
       if (this.step === 'home' && !this.cb.needsAccount?.()) this.renderHome();
     }
+  }
+
+  /**
+   * While the card is up, quietly ask again. A few times, further apart each
+   * time, and then stop.
+   *
+   * Not a keep-alive, and deliberately not one. Pinging the database on a
+   * timer to stop it sleeping would cost the whole monthly compute allowance
+   * in about a fortnight and then the database suspends itself until the next
+   * billing period — the game would die for two weeks in every four to avoid a
+   * one-second wait. This runs only while somebody is looking at an error, on
+   * a screen that has nothing else to offer them, and stops the moment it
+   * works or the tab goes to the background.
+   *
+   * What it buys: whatever this turns out to be, if it is the kind of thing
+   * that passes, the screen mends itself instead of sitting there dead until
+   * somebody thinks to tap a button.
+   */
+  startHealing() {
+    if (this.healTimer || this.healAttempt >= HEAL_GAPS.length) return;
+    const gap = HEAL_GAPS[this.healAttempt];
+    this.healTimer = setTimeout(() => {
+      this.healTimer = null;
+      // A backgrounded tab is nobody looking at anything.
+      if (document.visibilityState === 'hidden') { this.startHealing(); return; }
+      if (!this.cloudError || this.step !== 'home') return;
+      this.healAttempt++;
+      this.refreshCloudWorlds({ force: true });
+    }, gap);
+  }
+
+  stopHealing() {
+    clearTimeout(this.healTimer);
+    this.healTimer = null;
+    this.healAttempt = 0;
   }
 
   /** After a save or a delete, the list this screen is holding is out of date. */

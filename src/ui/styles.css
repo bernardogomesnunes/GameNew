@@ -907,6 +907,8 @@ body.touch #top-buttons .touch-moved { display: none !important; }
 .home-gate p { margin: 0; color: var(--text-dim); font-size: 13.5px; line-height: 1.5; }
 .home-gate .home-actions { margin-top: 4px; }
 
+.home-quiet { margin: 2px 0 0; font-size: 12px; color: var(--text-dim); opacity: 0.75; }
+
 /* The technical line, folded away. Quiet by default — it is for the one person
    trying to work out what broke, not for whoever just wanted to play. */
 .home-detail { text-align: left; font-size: 12px; }
