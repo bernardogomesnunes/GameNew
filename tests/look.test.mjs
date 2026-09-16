@@ -24,6 +24,7 @@ const mesher = readFileSync(new URL('../src/world/ChunkMesher.js', import.meta.u
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const duilt = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 
 // --- a cube for every block --------------------------------------------------
 
@@ -135,5 +136,31 @@ ok('and the UVs are sized to the quad', /buf\.uv\.push\(0, 0, w, 0, w, h, 0, h\)
 // Shading after the vertex colour, so it shades the colour the block ended up.
 ok('the tile shades the varied colour, not the flat registry one',
   /#include <color_fragment>[\s\S]{0,200}diffuseColor\.rgb \*= texture/.test(mesher));
+
+
+// --- the crosshair and the camera are the same point --------------------------
+
+/**
+ * The crosshair was positioned at 50% of the UI layer, which is a *sibling* of
+ * the canvas. That is only the middle of the picture while the two elements
+ * have identical boxes. They do on a desktop. On a phone browser, whose
+ * address bar and toolbar grow and shrink the page under you, they can differ
+ * by the height of a toolbar — and then the mark you are aiming with is not
+ * where the camera is pointing, so you break the block below the one you meant.
+ *
+ * Measuring the canvas removes the assumption rather than tuning it.
+ */
+ok('the crosshair is placed from the canvas, not from a percentage',
+  /placeCrosshair\(canvas\)/.test(ui) && /canvas\.getBoundingClientRect\(\)/.test(ui));
+ok('and it is put wherever the middle of that rectangle is',
+  /c\.left - root\.left \+ c\.width \/ 2/.test(ui) && /c\.top - root\.top \+ c\.height \/ 2/.test(ui));
+ok('resizing moves it', /this\.ui\?\.placeCrosshair\(this\.renderer\.domElement\)/.test(game));
+ok('a canvas with no size yet is left alone', /if \(!c\.width \|\| !c\.height\) return;/.test(ui));
+
+// A phone browser sliding its bars in and out does not always fire `resize`.
+ok('the visual viewport is watched too', /window\.visualViewport\?\.addEventListener/.test(game));
+ok('for both the ways it changes', /for \(const event of \['resize', 'scroll'\]\)/.test(game));
+ok('and an orientation change is re-measured once it has settled',
+  /orientationchange[\s\S]{0,120}setTimeout\(\(\) => this\.onResize\(\), 250\)/.test(game));
 
 process.exit(f ? 1 : 0);

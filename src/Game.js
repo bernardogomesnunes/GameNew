@@ -194,6 +194,16 @@ export class Game {
 
     this.boot();
     window.addEventListener('resize', () => this.onResize());
+    // A phone browser sliding its toolbars in and out resizes the page without
+    // always firing `resize`. visualViewport is the event that does fire, and
+    // missing it leaves the renderer sized to a viewport that no longer exists.
+    for (const event of ['resize', 'scroll']) {
+      window.visualViewport?.addEventListener(event, () => this.onResize());
+    }
+    // Safari settles its bars a moment after an orientation change or a tap on
+    // the page, and the size it reports during the transition is not the one it
+    // ends up at.
+    window.addEventListener('orientationchange', () => setTimeout(() => this.onResize(), 250));
     document.addEventListener('fullscreenchange', () => {
       this.onResize();
       this.ui.setFullscreenIndicator(!!document.fullscreenElement);
@@ -2148,6 +2158,12 @@ export class Game {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+    // And move the crosshair to wherever the canvas's middle now is. It used
+    // to sit at 50% of a sibling element and simply assume the two boxes were
+    // the same; on a phone browser whose toolbars grow and shrink the page
+    // under you, that assumption is how you end up aiming at one block and
+    // hitting the one below it.
+    this.ui?.placeCrosshair(this.renderer.domElement);
   }
 }
 

@@ -1233,6 +1233,29 @@ export class UIManager {
     }
   }
 
+  /**
+   * Puts the crosshair on the middle of the canvas, measured rather than assumed.
+   *
+   * It was `top: 50%; left: 50%` of the UI layer, which is a *sibling* of the
+   * canvas — correct only while the two elements have exactly the same box.
+   * They do on a desktop. On a phone browser, where the address bar and the
+   * toolbar grow and shrink the page under you, they can differ by a strip the
+   * height of a toolbar, and then the crosshair is drawn somewhere the camera
+   * is not pointing. You aim at one block and break the one below it.
+   *
+   * Reading the canvas's own rectangle makes the two agree by construction, on
+   * any browser, whatever it is doing with its chrome.
+   */
+  placeCrosshair(canvas) {
+    const el = this.q('#crosshair');
+    if (!el || !canvas) return;
+    const c = canvas.getBoundingClientRect();
+    if (!c.width || !c.height) return;
+    const root = this.root.getBoundingClientRect();
+    el.style.left = `${Math.round(c.left - root.left + c.width / 2)}px`;
+    el.style.top = `${Math.round(c.top - root.top + c.height / 2)}px`;
+  }
+
   /** Shown while the mouse is free, so the toolbar is usable without a panel in the way. */
   setResumeHint(on) {
     this.q('#resume-hint').hidden = !on;
