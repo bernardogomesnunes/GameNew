@@ -23,16 +23,16 @@ const err = (name, message, status) => Object.assign(new Error(message), { name,
 
 // --- the three failures that look the same on screen --------------------------
 {
-  const noReply = describeFailure(new TypeError('Load failed'), '/auth/get-jwt-token');
-  const serverErr = describeFailure(err('AuthError', 'Service Unavailable', 503), '/auth/get-jwt-token');
-  const missing = describeFailure(err('AuthApiError', 'Not Found', 404), '/auth/get-jwt-token');
+  const noReply = describeFailure(new TypeError('Load failed'), '/auth/token');
+  const serverErr = describeFailure(err('AuthError', 'Service Unavailable', 503), '/auth/token');
+  const missing = describeFailure(err('AuthApiError', 'Not Found', 404), '/auth/token');
 
   ok(`a reply that never came says so: ${noReply}`, /no reply/i.test(noReply));
   ok('and names the kind of error', /TypeError/.test(noReply));
   ok(`a 503 shows its status: ${serverErr}`, /\b503\b/.test(serverErr));
   ok(`so does a 404: ${missing}`, /\b404\b/.test(missing));
   ok('all three name the call that failed',
-    [noReply, serverErr, missing].every((d) => d.includes('/auth/get-jwt-token')));
+    [noReply, serverErr, missing].every((d) => d.includes('/auth/token')));
   ok('and they are genuinely different lines',
     new Set([noReply, serverErr, missing]).size === 3);
 }
@@ -40,7 +40,7 @@ const err = (name, message, status) => Object.assign(new Error(message), { name,
 // --- the readable sentence is unchanged, the detail rides alongside -----------
 {
   const original = new TypeError('Load failed');
-  const wrapped = failure(original, '/auth/get-jwt-token');
+  const wrapped = failure(original, '/auth/token');
   ok('the player still gets the readable sentence',
     wrapped.message === readableTokenError(original));
   ok('the technical line is attached, not substituted', /no reply/.test(wrapped.detail));
@@ -49,14 +49,14 @@ const err = (name, message, status) => Object.assign(new Error(message), { name,
 
 // --- it must not become a place to leak something ----------------------------
 {
-  const long = describeFailure(err('AuthError', 'x'.repeat(5000), 500), '/auth/get-jwt-token');
+  const long = describeFailure(err('AuthError', 'x'.repeat(5000), 500), '/auth/token');
   ok(`a runaway message is cut short (${long.length} chars)`, long.length < 300);
 
   // The whole point of this line is that it gets photographed and sent to
   // somebody. A JWT is a key to the account, so it is the one thing that must
   // never appear in the one place designed to be shared.
   const withToken = describeFailure(
-    err('AuthError', 'failed for Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig', 500), '/auth/get-jwt-token');
+    err('AuthError', 'failed for Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig', 500), '/auth/token');
   ok(`a JWT is taken out: ${withToken}`, !/eyJ[A-Za-z0-9_-]+\./.test(withToken) && /\[token\]/.test(withToken));
 
   const withPassword = describeFailure(err('AuthError', 'password: hunter2 rejected', 500));

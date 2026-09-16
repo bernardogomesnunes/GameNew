@@ -12,19 +12,32 @@ import { isOurBug, keepTrying } from './retry.js';
  * entirely local.
  *
  * Built on Neon's Managed Better Auth. The JWT that authorises Data API calls
- * comes from `getJWTToken()`; the session behind it is a cookie the SDK
- * manages. See accessToken for why the name matters more than it looks.
+ * is read off the `set-auth-jwt` header Managed Better Auth attaches to every
+ * successful session check, not fetched by calling a dedicated method — see
+ * accessToken for why the method the SDK documents for that
+ * (`auth.token()`) turned out not to be safe to call in this app's own flow,
+ * after two earlier, wrong method names were tried and fixed in turn.
  *
  * The SDK is loaded lazily, on first sight of the menu. A player who never
  * signs in never downloads it, which matters more here than in a typical app
  * because the first thing this page has to do is render a world.
  */
+// Tokens expire in 15 minutes (docs/auth/guides/plugins/jwt.md). Refreshed a
+// couple of minutes early rather than exactly at the deadline, so a request
+// that starts just before expiry does not lose the race against the clock.
+const JWT_LIFETIME_MS = 15 * 60_000;
+const JWT_REFRESH_MARGIN_MS = 2 * 60_000;
+
 export class CloudAuth {
   constructor(bus) {
     this.bus = bus;
     this.client = null;
     this.user = null;
     this.ready = false;
+    // The Data API JWT, captured off a session response header — see
+    // accessToken for why it is not simply fetched fresh each time.
+    this.jwt = null;
+    this.jwtAt = 0;
   }
 
   get configured() {
@@ -49,7 +62,7 @@ export class CloudAuth {
     if (!this.configured) return null;
     try {
       const client = await this.load();
-      this.user = userFrom(await client.auth.getSession());
+      this.user = userFrom(await this.checkSession(client));
     } catch {
       this.user = null;
     }
@@ -58,9 +71,28 @@ export class CloudAuth {
     return this.user;
   }
 
+  /**
+   * A session check that also catches the JWT riding along on it.
+   *
+   * See accessToken for why this is the only place the JWT is captured from.
+   * `onSuccess` fires whenever `getSession` actually resolves, which includes
+   * a response this SDK version serves from its own local cache rather than
+   * the network — that fabricated response carries no headers at all, so the
+   * capture here is a no-op on a cache hit rather than wrong; this.jwt just
+   * keeps whatever it already had.
+   */
+  async checkSession(client) {
+    return client.auth.getSession({ fetchOptions: { onSuccess: this.captureJwt } });
+  }
+
   async signIn(email, password) {
     const client = await this.load();
-    const result = await client.auth.signIn.email({ email, password });
+    // Caught here too, not only on getSession: signing in is itself a fresh
+    // trip to the server, and Managed Better Auth attaches the same header
+    // to it — capturing it now means the very first accessToken() call after
+    // signing in already has a token, rather than needing a round trip of
+    // its own to go and ask for one.
+    const result = await client.auth.signIn.email({ email, password }, { onSuccess: this.captureJwt });
     this.user = unwrapUser(result);
     this.ready = true;
     this.bus?.emit('cloud:auth', { user: this.summary() });
@@ -72,7 +104,7 @@ export class CloudAuth {
     // Better Auth wants a display name; the local part of the email is a
     // reasonable default and keeps the form to two fields.
     const name = email.split('@')[0] || 'Builder';
-    const result = await client.auth.signUp.email({ email, password, name });
+    const result = await client.auth.signUp.email({ email, password, name }, { onSuccess: this.captureJwt });
     this.user = unwrapUser(result);
     this.ready = true;
     this.bus?.emit('cloud:auth', { user: this.summary() });
@@ -82,62 +114,81 @@ export class CloudAuth {
   async signOut() {
     if (this.client) await this.client.auth.signOut().catch(() => {});
     this.user = null;
+    // A JWT left over from whoever was signed in before must never answer
+    // for whoever signs in next.
+    this.jwt = null;
+    this.jwtAt = 0;
     this.bus?.emit('cloud:auth', { user: null });
   }
 
+  /** Bound once so it can be handed to the SDK as a plain callback. */
+  captureJwt = (ctx) => {
+    const jwt = ctx.response.headers.get('set-auth-jwt');
+    if (jwt) { this.jwt = jwt; this.jwtAt = Date.now(); }
+  };
+
   /**
-   * Short-lived JWT for the Data API. The SDK refreshes it as needed.
+   * Short-lived JWT for the Data API.
    *
-   * It must be `getJWTToken`. Better Auth turns any method you name into a
-   * call on the matching route, so `getToken()` compiles, runs, and asks for
-   * `/auth/get-token` — a route Neon's managed Better Auth does not serve. It
-   * answered 404 on every single request, which meant cloud sync had never
-   * once worked for a signed-in player: signing in succeeded, and then every
-   * world upload failed on the token. The route that exists is
-   * `/auth/get-jwt-token`, and it is what the SDK's own Data API client calls.
+   * Three names have lived on this method, and the first two were both wrong
+   * in the same way: `auth` is a Proxy that turns *any* property you touch
+   * into an HTTP call on the matching route, so `auth.getJWTToken()` — a name
+   * that does not appear anywhere in Neon's SDK, its source, or its docs —
+   * still "worked" in the sense that it compiled, ran, and asked the server
+   * for `/auth/get-jwt-token`. That route does not exist. It 404s, on every
+   * request, on every device, which is the entire reason one account ever
+   * showed different worlds on a phone and a desktop: signing in succeeded,
+   * and every world upload failed on the very next line. Nothing about
+   * calling it looked wrong — `typeof` reports "function" whether or not the
+   * name means anything to the server, because the proxy manufactures a
+   * callable for *any* name — and every test written against this file's own
+   * invented stub passed the whole time, because the stub answered to the
+   * made-up name too.
    *
-   * The fallback is for SDK drift, not for that bug — if a later version
-   * renames this, a working sync should not turn into a 404 again.
+   * The documented fix is `auth.token()` (docs/auth/guides/plugins/jwt.md;
+   * confirmed against the SDK's own source too — `jwtClient()` is a real
+   * entry in the adapter's plugin list, wired to a real route). That part is
+   * true and stays true. What is not safe is calling it the way this method
+   * needs to: once `getSession()` has run even once — which it always has,
+   * `restore()` runs it at boot — this SDK version's own client-side session
+   * cache intercepts `auth.token()` before it reaches the network and hands
+   * back the *cached session response* instead, silently, with no error and
+   * no request. A session response has no `.token` field at the position a
+   * JWT would be — only `.session.token`, Better Auth's own opaque session
+   * identifier, a completely different and unrelated value that the Data
+   * API's JWKS check would simply reject — so reading it back as if it were
+   * the JWT resolves to nothing, over and over, for as long as the app stays
+   * open. Confirmed by calling `getSession()` then `token()` back to back,
+   * against a controlled stand-in server, with nothing else running: the
+   * second call never touches the network at all.
+   *
+   * So the JWT is not fetched by calling a dedicated method here. It is read
+   * off the `set-auth-jwt` response header Managed Better Auth attaches to
+   * every session check that reaches the network — see checkSession — which
+   * is the alternative the same docs page describes for exactly this
+   * situation, cached here for its known ~15-minute lifetime, and only
+   * refreshed by asking for the session again, never by calling `auth.token()`.
    */
   async accessToken() {
     if (!this.client || !this.user) return null;
-    const auth = this.client.auth;
-    try {
-      // Called as a method and never detached, which matters more than it
-      // looks. `auth` is a Proxy that turns *every* property access into a
-      // route, `.bind` included — so `auth.getJWTToken.bind(auth)` is not
-      // Function.prototype.bind. It asks the server for
-      // /auth/get-jwt-token/bind, fires that request immediately, and hands
-      // back a Promise. `typeof` says "function" both before and after,
-      // because a callable proxy is a function and so is the thing it returns
-      // for `.bind`, so nothing about it reads as wrong.
-      //
-      // Then calling that Promise threw "e is not a function", which has no
-      // HTTP status, which this file classified as "could not reach your
-      // account". Every signed-in player got that, on every device, from the
-      // day the method name was fixed — which is exactly why one account
-      // showed different worlds on a phone and a desktop: the token never
-      // arrived, so nothing ever synced.
-      const result = await keepTrying(() => auth.getJWTToken());
-      return result?.data?.token ?? result?.token ?? null;
-    } catch (err) {
-      // SDK drift, not the bug above: if a later version renames this, a
-      // working sync should not turn into a 404. Only a missing route is
-      // worth a second name — anything else means the route is there and
-      // something else is wrong with it.
-      if (err?.status === 404) {
-        try {
-          const result = await keepTrying(() => auth.getToken());
-          return result?.data?.token ?? result?.token ?? null;
-        } catch (drift) {
-          err = drift;
-        }
-      }
-      // Logged as well as shown: on a desktop the console has the stack, and
-      // on a phone the folded Details line is the only way this ever gets out.
-      console.error('[duilt] token request failed', err);
-      throw failure(err, '/auth/get-jwt-token');
+    if (this.jwt && Date.now() - this.jwtAt < JWT_LIFETIME_MS - JWT_REFRESH_MARGIN_MS) {
+      return this.jwt;
     }
+    try {
+      // A fresh session check, not `restore()`'s cached one — this only runs
+      // when the captured JWT is missing or old enough to need replacing, so
+      // it is rare, and the whole point is to reach the network and see the
+      // header again.
+      await keepTrying(() => this.checkSession(this.client));
+    } catch (err) {
+      console.error('[duilt] session refresh failed', err);
+      throw failure(err, '/auth/get-session');
+    }
+    if (this.jwt) return this.jwt;
+    // The session check succeeded but no header came with it — signed out
+    // server-side, most likely, since that is the one case Managed Better
+    // Auth would answer 200 to a session check without a token attached.
+    throw failure(Object.assign(new Error('No token in the session response'), { status: 401 }), '/auth/get-session');
   }
 
   summary() {

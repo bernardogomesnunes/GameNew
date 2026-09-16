@@ -38,16 +38,24 @@ ok('a token failure is translated', /readableTokenError/.test(auth));
 // It is also asked more than once before it gives up. A Neon compute suspends
 // after a few idle minutes and takes up to a second and a half to wake; asking
 // once meant a sleeping database and a broken account looked the same.
-// Retried, and — the part that matters far more — called as a method rather
-// than bound off the proxy. See tests/accesstoken.test.mjs for what `.bind`
-// does to a Better Auth client and what it cost.
-ok('the token call retries while the database wakes',
-  /keepTrying\(\(\) => auth\.getJWTToken\(\)\)/.test(auth));
-// Comments stripped first — this file explains the bind trap at length, and
-// the explanation must not read as the mistake.
-ok('and is never detached from the client it belongs to',
-  !/getJWTToken\.bind|getToken\.bind/.test(
-    auth.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')));
+// Retried, and — the part that matters far more — the JWT is not fetched by
+// calling a dedicated method at all any more. Three names were tried in turn
+// (`getToken`, `getJWTToken`, then the real, documented `auth.token()`) and
+// each hid the next failure; the last one silently returns a cached session
+// response instead of a token once `getSession()` has run even once, which
+// it always has. See tests/accesstoken.test.mjs and tests/token.test.mjs for
+// each of those confirmed directly, not assumed. The JWT is read off the
+// `set-auth-jwt` header a session check already carries.
+ok('the session check retries while the database wakes',
+  /keepTrying\(\(\) => this\.checkSession/.test(auth));
+// Comments stripped first — this file explains the retired names and the
+// bind trap at length, and none of that explanation must read as live code.
+{
+  const code = auth.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  ok('the JWT is never fetched by calling a dedicated method',
+    !/auth\.token\(\)|auth\.getJWTToken\(\)|auth\.getToken\(\)/.test(code));
+  ok('it comes off the session-check header instead', /set-auth-jwt/.test(code));
+}
 ok('and so does a Data API call', /keepTrying\(\(\) => this\.send/.test(
   readFileSync(new URL('../src/net/NeonTransport.js', import.meta.url), 'utf8')));
 
