@@ -24,6 +24,7 @@ import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SyncState } from './storage/WorldSync.js';
+import { claimRegion, blocksIn, claimHint } from './tools/ClaimArea.js';
 
 /**
  * The one world whose upload has not landed yet. Not a library — see keepSafe.
@@ -1098,13 +1099,14 @@ export class Game {
 
   /** Whether a tool is queued and waiting to be used where you are pointing. */
   get armed() {
-    return !!(this.pendingRoof || this.pendingTemplate || this.pendingClear);
+    return !!(this.pendingRoof || this.pendingTemplate || this.pendingClear || this.pendingClaim);
   }
 
   primaryAction() {
     if (this.moving) return void this.cancelMove();
     // A queued tool takes the button it needs and nothing else does. There is
     // no mode to be in any more: if nothing is queued, Break breaks.
+    if (this.pendingClaim) return void this.markClaimCorner();
     if (this.pendingClear) return void this.runClear();
     if (this.pendingRoof) return void this.stampRoof();
     if (this.pendingTemplate) return void this.stampTemplate();
@@ -1178,9 +1180,11 @@ export class Game {
     this.pendingTemplate = null;
     this.pendingRoof = null;
     this.pendingClear = null;
+    this.pendingClaim = null;
     this.roofTurn = 0;
     this.roofGhost.hide();
     this.roofKey = null;
+    this.selection.hide();
     if (had) this.ui?.toast({ kind: 'xp', title: 'Put it away' });
   }
 
@@ -1642,6 +1646,66 @@ export class Game {
         ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
         : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
     });
+  }
+
+  /**
+   * Draws the area you want to claim, one corner at a time.
+   *
+   * Pointing at a build and letting the game follow the blocks is fine for a
+   * house and impossible for a quarry: a quarry is a hole, and the flood fill
+   * will not leave the original ground level, so "point at what you built"
+   * was the only answer it could ever give for anything you dug. See
+   * tools/ClaimArea.js.
+   */
+  beginClaimSelection() {
+    if (!this.duilt) return false;
+    this.clearPending({ quiet: true });
+    this.pendingClaim = { a: null };
+    this.ui.closePanel('panel-buildings');
+    this.ui.toast({
+      kind: 'challenge',
+      title: 'Claim an area',
+      body: 'Tap one corner of it, then the opposite corner',
+    });
+    return true;
+  }
+
+  /** One tap: the first corner, or the second and the claim panel. */
+  markClaimCorner() {
+    const hit = this.toolAim();
+    if (!hit) {
+      this.ui.toast({ kind: 'xp', title: 'Point at the ground', body: 'The corner goes on a block you can see' });
+      return;
+    }
+    if (!this.pendingClaim.a) {
+      this.pendingClaim.a = { x: hit.x, y: hit.y, z: hit.z };
+      return;
+    }
+    const region = claimRegion(this.world, this.pendingClaim.a, hit);
+    this.pendingClaim = null;
+    this.selection.hide();
+    this.ui.setToolReadout(null);
+    if (!region) return;
+    this.ui.openClaim(region, (typeId) => {
+      const r = this.duilt.claim(region, typeId);
+      this.ui.toast(r.ok
+        ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
+        : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
+    });
+  }
+
+  /** The box being drawn, outlined in the world while you draw it. */
+  updateClaimPreview() {
+    const hit = this.toolAim();
+    const a = this.pendingClaim.a;
+    const hint = claimHint(a, hit);
+    this.ui.setToolReadout({ claim: hint.name, target: hint.target, hint: hint.hint });
+    if (!a || !hit) { this.selection.hide(); return; }
+    const region = claimRegion(this.world, a, hit);
+    const key = `claim:${a.x},${a.y},${a.z}:${hit.x},${hit.y},${hit.z}`;
+    if (key === this.claimKey) return;
+    this.claimKey = key;
+    this.selection.update(region, blocksIn(this.world, region), this.world, { force: true });
   }
 
   /** Claims the build you are pointing at as a named building type. */
@@ -2209,6 +2273,10 @@ export class Game {
 
     // Working out which build you mean is a flood fill, so it only happens when
     // something is going to use the answer.
+    if (this.pendingClaim) {
+      this.updateClaimPreview();
+      return;
+    }
     if (this.pendingClear) {
       const cells = this.clearTarget();
       this.updateRoofPreview(null);

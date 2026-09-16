@@ -68,6 +68,14 @@ export class DuiltUI {
         'panel-claim': `
           <div id="claim-list"></div>`,
         'panel-buildings': `
+          <!--
+            Claiming by pointing works for something you stacked up and cannot
+            work for something you dug — the flood fill will not go below the
+            original ground, so a quarry answered "point at what you built"
+            wherever you stood. Drawing the area is the way in for both.
+          -->
+          <button class="secondary claim-area" id="btn-claim-area">Claim an area</button>
+          <div class="export-note">Tap one corner of it and then the opposite corner. Use this for anything you dug out — a quarry, a mine, a farm.</div>
           <div id="buildings-list"></div>`,
         'panel-bench': `
           <div id="bench-list"></div>`,
@@ -88,6 +96,7 @@ export class DuiltUI {
       b.addEventListener('click', () => this.closePanel(b.dataset.close)));
     this.q('#btn-eat').addEventListener('click', () => this.eat());
     this.q('#vital-people').addEventListener('click', () => this.sayPeople());
+    this.q('#btn-claim-area').addEventListener('click', () => this.game.beginClaimSelection());
 
     this.bus.on('inventory:change', () => { this.renderBag(); this.renderVitals(); this.onBagChanged?.(); });
     this.bus.on('hunger:change', () => this.renderVitals());

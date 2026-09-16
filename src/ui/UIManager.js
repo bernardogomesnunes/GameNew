@@ -1426,19 +1426,30 @@ export class UIManager {
       return;
     }
     el.hidden = false;
-    this.setArmedTool(state.roof ? 'roof' : state.clear ? 'clear' : 'design');
+    this.setArmedTool(state.roof ? 'roof' : state.clear ? 'clear' : state.claim ? 'claim' : 'design');
 
     const touch = document.body.classList.contains('touch');
     const n = state.blocks;
-    const primary = state.roof ? `${state.roof} roof`
+    // The claim selector says its own two lines: which corner it is waiting
+    // for, and then how big the area you have drawn is. Nothing else in here
+    // fits a tool that takes two presses to say one thing.
+    const primary = state.claim ? state.claim
+      : state.roof ? `${state.roof} roof`
       : state.clear ? `Clear: ${state.clear}`
       : `Stamp ${state.template}`;
     this.q('#tool-name').textContent = primary;
-    this.q('#tool-target').textContent = state.roof
+    this.q('#tool-target').textContent = state.claim ? state.target
+      : state.roof
       ? (state.onBuild ? `over ${n} block${n === 1 ? '' : 's'}` : 'not on a building')
       : state.clear
       ? (state.onBuild ? `takes ${n} block${n === 1 ? '' : 's'}` : 'nothing there')
       : (state.onBuild ? 'here' : 'aim at the ground');
+
+    if (state.claim) {
+      this.q('#tool-hint').textContent = state.hint ?? '';
+      this.setActionLabels('Corner', 'Cancel');
+      return;
+    }
 
     // A roof that can turn takes the second button, because a phone has no R
     // and which way the slope falls is the thing you need to change.
