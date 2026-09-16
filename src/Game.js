@@ -239,6 +239,9 @@ export class Game {
     // stops a desktop that has been offline from flattening what you built on
     // your phone — see storage/WorldSync.js.
     this.syncState = new SyncState();
+    // And find out whether we are signed in, now, rather than the first time
+    // somebody opens the menu — see resumeSession.
+    this.resumeSession();
     this.templates = new TemplateLibrary(this.bus);
     this.pendingTemplate = null; // the template queued for stamping
     this.templateRotation = 0;
@@ -475,6 +478,33 @@ export class Game {
    * account taking too long — and every caller treats that as "use what is
    * here", which is the only answer that lets you play on a train.
    */
+  /**
+   * Picks up the signed-in session at startup.
+   *
+   * It used to happen the first time the in-game menu was opened, and nowhere
+   * else. Which meant that on the worlds screen — the screen whose entire job
+   * is listing your worlds — the game did not yet know it was signed in. So it
+   * never asked the account what it had, every world was labelled "this device
+   * only", and nothing synced, on every device, until you happened to open the
+   * menu. Two devices, both signed in, both convinced they were alone.
+   *
+   * Never throws and never blocks: being offline at startup is not an error,
+   * and the worlds on this device are already on screen by the time this lands.
+   */
+  resumeSession() {
+    if (!this.cloud) return;
+    this.cloudAuth.restore()
+      .then((user) => {
+        if (!user) return;
+        this.forgetCloudList();
+        this.ui?.refreshCloudPanel?.();
+        this.ui?.home?.refreshCloudWorlds?.();
+        // And catch the world we already have open up with the account.
+        this.syncSoon();
+      })
+      .catch(() => { /* offline; the local worlds are already listed */ });
+  }
+
   /**
    * What the account is holding, from a moment ago if we asked a moment ago.
    *

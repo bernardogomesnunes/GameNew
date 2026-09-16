@@ -63,6 +63,24 @@ ok('and a push that fails never breaks the save that worked',
 ok('it is retried rather than lost, because a failed push agrees to nothing',
   /agree\(this\.worldId, result\.revision\)/.test(game));
 
+// --- the game knows you are signed in before you ask it ----------------------
+
+/**
+ * The session was picked up the first time somebody opened the in-game menu,
+ * and nowhere else. So on the worlds screen — the screen whose whole job is
+ * listing your worlds — the game did not yet know it was signed in: it never
+ * asked the account what it held, every world was labelled "this device only",
+ * and nothing synced. On both devices at once, each convinced it was alone.
+ */
+ok('the session is picked up at startup', /this\.resumeSession\(\);/.test(game));
+ok('and not only when a panel is opened', !/cloudRestoreStarted/.test(ui));
+ok('finding one refreshes the worlds screen',
+  /resumeSession\(\) \{[\s\S]{0,700}home\?\.refreshCloudWorlds\?\.\(\)/.test(game));
+ok('and syncs whatever world is already open',
+  /resumeSession\(\) \{[\s\S]{0,800}this\.syncSoon\(\);/.test(game));
+ok('being offline at startup is not an error',
+  /resumeSession\(\)[\s\S]{0,900}catch\(\(\) => \{ \/\* offline/.test(game));
+
 // --- opening the newer copy --------------------------------------------------
 
 // The sync worked out that the account was ahead and then did nothing with

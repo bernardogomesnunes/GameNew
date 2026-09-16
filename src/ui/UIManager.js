@@ -1186,13 +1186,6 @@ export class UIManager {
     if (!this.cb.isCloudConfigured?.()) { block.hidden = true; return; }
     block.hidden = false;
 
-    // First time the panel is seen, go and look for an existing session. Until
-    // that resolves the signed-out form is the honest thing to show.
-    if (!this.cloudRestoreStarted) {
-      this.cloudRestoreStarted = true;
-      this.cb.onCloudRestoreSession?.().then(() => this.refreshCloudPanel());
-    }
-
     const user = this.cb.getCloudUser();
     this.q('#cloud-status').textContent = user ? `\u00b7 ${user.email || user.name || 'signed in'}` : '';
     this.q('#cloud-signed-out').hidden = !!user;

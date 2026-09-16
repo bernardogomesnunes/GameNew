@@ -310,8 +310,8 @@ export class Settlers {
    * that last test being the whole point, because it is what tells a doorstep
    * from a back room.
    */
-  outdoorSpot(homeId) {
-    const region = this.regionOf(homeId);
+  outdoorSpot(structureId) {
+    const region = this.regionOf(structureId);
     if (!region) return null;
     const c = centreOf(region);
     const clear = Math.max(region.maxX - region.minX, region.maxZ - region.minZ) / 2 + 1.5;
@@ -325,18 +325,54 @@ export class Settlers {
     return null;
   }
 
-  /** Ground underfoot, room to stand, and open sky — somewhere to be seen. */
-  standable(x, z) {
+  /** Ground underfoot and room for a person: not inside a wall or a trunk. */
+  roomToStand(x, z) {
     const w = this.world;
     const ix = Math.floor(x), iz = Math.floor(z);
     if (!w.inBounds(ix, 0, iz)) return false;
     const y = this.groundAt(x, z);
-    if (w.isSolid(ix, y, iz) || w.isSolid(ix, y + 1, iz)) return false;
+    return !w.isSolid(ix, y, iz) && !w.isSolid(ix, y + 1, iz);
+  }
+
+  /** Room to stand, and open sky over it — somewhere you can be seen standing. */
+  standable(x, z) {
+    if (!this.roomToStand(x, z)) return false;
+    const w = this.world;
+    const ix = Math.floor(x), iz = Math.floor(z);
+    const y = this.groundAt(x, z);
     // Anything solid overhead means this is a room, a porch or a tunnel.
     for (let above = y + 2; above < Math.min(w.height, y + 10); above++) {
       if (w.isSolid(ix, above, iz)) return false;
     }
     return true;
+  }
+
+  /**
+   * Where a settler stands while working a building.
+   *
+   * Not its centre. The centre of a claimed forest is under the canopy and
+   * quite often inside a trunk, so walking to work meant walking out of sight
+   * — she would cross the field, reach the trees, and vanish. Same shape of
+   * mistake as sending her to the middle of her house.
+   *
+   * A clearing is looked for first, and any spot with room for a person will
+   * do if the wood is thick enough that there is no clearing. Failing both,
+   * the edge of the claim, which is at least somewhere you can watch her from.
+   */
+  workSpot(structureId) {
+    const region = this.regionOf(structureId);
+    if (!region) return null;
+    const pick = () => ({
+      x: region.minX + this.rand() * (region.maxX - region.minX + 1),
+      z: region.minZ + this.rand() * (region.maxZ - region.minZ + 1),
+    });
+    let sheltered = null;
+    for (let tries = 0; tries < 16; tries++) {
+      const at = pick();
+      if (this.standable(at.x, at.z)) return at;
+      if (!sheltered && this.roomToStand(at.x, at.z)) sheltered = at;
+    }
+    return sheltered ?? this.outdoorSpot(structureId) ?? centreOf(region);
   }
 
   /**
@@ -358,16 +394,19 @@ export class Settlers {
     if (p.wait > 0) {
       p.wait -= dt;
       if (p.wait > 0) return;
-      const home = this.placeOf(p.homeId);
       if (p.workId == null) this.assignWork(p);
-      // Hungry means not at work: they mill about near home instead, which is
-      // what an empty larder looks like from across the settlement.
-      const work = p.hungry ? null : this.placeOf(p.workId);
+      // Both ends of the day are a place a person can be seen standing, not the
+      // middle of a claim: the middle of a house is indoors and the middle of a
+      // forest is under the canopy, so a settler walking between the two spent
+      // the whole day out of sight at one end or the other.
+      //
+      // Hungry means not at work: they stay around home instead, which is what
+      // an empty larder looks like from across the settlement.
+      const work = p.hungry || p.workId == null ? null : this.workSpot(p.workId);
       p.atWork = !p.atWork && !!work;
-      p.target = p.atWork ? work : (home ?? { x: p.x, z: p.z });
-      if (!p.target) p.target = { x: p.x, z: p.z };
-      // Nowhere to be: stand about outside, not inside. See outdoorSpot.
-      if (!work) p.target = this.outdoorSpot(p.homeId) ?? p.target;
+      p.target = p.atWork
+        ? work
+        : (this.outdoorSpot(p.homeId) ?? this.placeOf(p.homeId) ?? { x: p.x, z: p.z });
       return;
     }
     if (!p.target) { p.wait = 1; return; }
