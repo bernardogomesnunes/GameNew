@@ -76,7 +76,12 @@ export class StructureRegistry {
 
   /** True when a new region would overlap something already claimed. */
   overlaps(region, ignoreId = null) {
-    return this.structures.some((s) => {
+    return this.overlapping(region, ignoreId).length > 0;
+  }
+
+  /** Every claim whose box meets this region. */
+  overlapping(region, ignoreId = null) {
+    return this.structures.filter((s) => {
       if (s.id === ignoreId) return false;
       const r = s.region;
       return !(region.maxX < r.minX || region.minX > r.maxX
@@ -93,9 +98,18 @@ export class StructureRegistry {
     const spec = STRUCTURES_BY_ID.get(typeId);
     if (!spec) return { ok: false, reason: 'Unknown building type.' };
 
-    if (this.overlaps(region)) {
+    // A claim you can no longer stand in front of must not hold the ground for
+    // ever. A building whose blocks are gone is a dead claim: it is invalid, it
+    // produces nothing, and there is nothing left to point at to release it —
+    // so "I destroyed my farm and cannot build a farm there again" had no way
+    // out at all. Claiming over one clears it. A *standing* building still
+    // refuses, because that is somebody's house.
+    const inTheWay = this.overlapping(region);
+    const standing = inTheWay.filter((s) => s.valid);
+    if (standing.length) {
       return { ok: false, reason: 'That overlaps a building you already have.' };
     }
+    const replaced = inTheWay.length;
 
     const check = validateStructure(this.world, region, typeId);
     if (!check.ok) return { ok: false, reason: check.reason };
@@ -124,9 +138,14 @@ export class StructureRegistry {
       lastPaidAt: now,
       brokenReason: null,
     };
+    if (replaced) {
+      const dead = new Set(inTheWay);
+      this.structures = this.structures.filter((s) => !dead.has(s));
+      for (const s of dead) this.bus?.emit('structure:removed', { structure: s });
+    }
     this.structures.push(structure);
     this.bus?.emit('structure:claimed', { structure, spec });
-    return { ok: true, reason: check.reason, structure };
+    return { ok: true, reason: check.reason, structure, replaced };
   }
 
   remove(id) {

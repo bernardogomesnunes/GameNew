@@ -857,6 +857,11 @@ body.touch #top-buttons .touch-moved { display: none !important; }
 /* Two copies that have diverged is the one badge you should not skim past. */
 .world-tag.warn { color: var(--accent-2); border-color: var(--accent-2); }
 
+/* A recipe you cannot afford yet. Dimmed rather than disabled: it still takes
+   the press, and answers it. */
+.recipe-actions .cannot { opacity: 0.55; }
+.recipe-actions .cannot:active { opacity: 0.8; }
+
 /* The door when you are signed out, and the "we could not ask" card that
    replaces the list when the account does not answer. */
 .home-gate {

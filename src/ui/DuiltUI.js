@@ -587,7 +587,13 @@ export class DuiltUI {
             <span class="recipe-cost">${inputs} → ${r.output.count} ${itemName(r.output.id).toLowerCase()}</span>
           </div>
           <div class="recipe-actions">
-            <button class="secondary" data-craft="${r.id}" data-times="1" ${r.ok ? '' : 'disabled'}>Make</button>
+            <!--
+              Never disabled. A dead button eats the tap and says nothing, so
+              pressing one you cannot afford felt like the game was broken —
+              the reason was on screen the whole time, in small grey type under
+              a row you had already given up on. Press it and it tells you.
+            -->
+            <button class="secondary${r.ok ? '' : ' cannot'}" data-craft="${r.id}" data-times="1">Make</button>
             ${r.batch && r.maxBatch > 1 ? `<button class="secondary" data-craft="${r.id}" data-times="${r.maxBatch}">×${r.maxBatch}</button>` : ''}
           </div>
           ${r.reason ? `<div class="recipe-why warn">${r.reason}</div>` : ''}
