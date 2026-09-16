@@ -842,18 +842,9 @@ body.touch #top-buttons .touch-moved { display: none !important; }
 
 /* On this device, or in the cloud — chosen with the name. Two side by side on
    a desktop, stacked on a phone, because a 180px card cannot hold a sentence. */
-.where-list { display: flex; gap: 8px; }
-.where-card {
-  flex: 1; display: flex; flex-direction: column; gap: 4px; text-align: left;
-  background: var(--panel); border: 1px solid var(--panel-border); border-radius: 12px;
-  padding: 12px 14px; color: var(--text); font: inherit; cursor: pointer;
-  transition: border-color .14s ease, background .14s ease;
-}
-.where-card strong { font-size: 14px; }
-.where-card span { font-size: 12px; color: var(--text-dim); line-height: 1.45; }
-.where-card.chosen { border-color: var(--accent); background: var(--accent-dim); }
-.where-card[disabled] { opacity: 0.55; cursor: default; }
-@media (max-width: 520px) { .where-list { flex-direction: column; } }
+/* Where a world lives is no longer a choice to style — signed in it is your
+   account, signed out it is this browser. What is left is the line saying so. */
+.home-where { margin: 4px 0 0; }
 
 /* Which worlds are on the account. It rides inside the description line, so
    it costs no width the world's own name could have used. */
@@ -863,6 +854,8 @@ body.touch #top-buttons .touch-moved { display: none !important; }
   color: var(--accent); border: 1px solid var(--accent); border-radius: 999px;
   padding: 1px 6px; vertical-align: 1px;
 }
+/* Two copies that have diverged is the one badge you should not skim past. */
+.world-tag.warn { color: var(--accent-2); border-color: var(--accent-2); }
 
 #home-world-name {
   width: 100%; background: var(--panel-solid); color: var(--text); font: inherit; font-size: 15px;

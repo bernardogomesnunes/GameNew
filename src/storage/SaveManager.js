@@ -50,6 +50,20 @@ export class SaveManager {
       .sort((a, b) => b.timestamp - a.timestamp);
   }
 
+  /**
+   * When this device last wrote a copy of a world, by its cloud id.
+   *
+   * The sync decision needs "has this device touched it since the last time it
+   * agreed with the server", and this is the local half of that. Newest wins
+   * when a world has both an autosave and named copies.
+   */
+  changedAt(worldId) {
+    if (!worldId) return 0;
+    return this.listSaves()
+      .filter((s) => s.worldId === worldId)
+      .reduce((n, s) => Math.max(n, s.timestamp ?? 0), 0);
+  }
+
   save(name, state) {
     const payload = payloadOf(state, Date.now(), name);
     const json = JSON.stringify(payload);

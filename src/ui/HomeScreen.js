@@ -1,4 +1,5 @@
 import { icon } from './icons.js';
+import { mergeWorldList, CONFLICT, PULL } from '../storage/WorldSync.js';
 
 /**
  * The front door: where you land before you are in a world.
@@ -63,8 +64,7 @@ export class HomeScreen {
     this.cb = callbacks;
     this.step = 'home';       // 'home' | 'kind' | 'name'
     this.kind = 'duilt';
-    // 'local' | 'cloud', or null for "whatever suits": signed in, the cloud is
-    // the reason you signed in, so it leads.
+    // Derived from whether you are signed in, not chosen — see whereToLive.
     this.where = null;
     this.mount();
   }
@@ -82,12 +82,10 @@ export class HomeScreen {
         <div class="home-body" id="home-body"></div>
         <footer class="home-foot">
           <button class="home-link" id="home-settings">Settings</button>
-          <button class="home-link" id="home-guide">How to play</button>
         </footer>
       </div>`;
     this.body = this.root.querySelector('#home-body');
     this.root.querySelector('#home-settings').addEventListener('click', () => this.cb.onSettings?.());
-    this.root.querySelector('#home-guide').addEventListener('click', () => this.cb.onGuide?.());
     this.root.querySelector('#home-account').addEventListener('click', () => this.cb.onAccount?.());
   }
 
@@ -107,27 +105,44 @@ export class HomeScreen {
 
   renderHome() {
     const saves = this.cb.listWorlds();
-    const current = saves.find((s) => s.isAutosave);
-    const named = saves.filter((s) => !s.isAutosave);
-    // What is on the account, from the last time we asked. Drawn from a cache
-    // so the list appears instantly; the fetch below refreshes it in place.
-    const onAccount = this.cloudWorlds ?? [];
-    const upThere = new Set(onAccount.map((w) => w.id));
-    const here = new Set(saves.map((s) => s.worldId).filter(Boolean));
-    const onlyUpThere = onAccount.filter((w) => !here.has(w.id));
+    // One row per world, however many places it lives in. It used to draw the
+    // local saves and then, underneath, a separate "On your account" list of
+    // the ones it could not find locally — so a world you had in both places
+    // looked like two worlds. See storage/WorldSync.js.
+    const rows = mergeWorldList({
+      local: saves,
+      cloud: this.cloudWorlds ?? [],
+      agreedFor: (id) => this.cb.agreedFor?.(id) ?? null,
+    });
+    const current = rows.find((r) => r.isAutosave) ?? null;
+    const rest = rows.filter((r) => !r.isAutosave);
     // Inside the description line rather than a column of its own: as a
     // separate flex item it squeezed the world's name down to "Home settle…"
     // on a phone, which is the one thing on the card that has to be readable.
-    const tag = (s) => (s.worldId && upThere.has(s.worldId)
-      ? ' <span class="world-tag">Cloud</span>' : '');
+    const tag = (r) => {
+      if (r.action === CONFLICT) return ' <span class="world-tag warn">Two copies</span>';
+      if (!r.onAccount) return r.id ? ' <span class="world-tag">This device only</span>' : '';
+      if (!r.here) return ' <span class="world-tag">Not on this device</span>';
+      // Played somewhere else since this device last saw it, and untouched
+      // here — so opening it should fetch that copy, not the stale one.
+      if (r.action === PULL) return ' <span class="world-tag">Newer on your account</span>';
+      return ' <span class="world-tag">On your account</span>';
+    };
+    const when = (r) => Math.max(r.changedAt ?? 0, r.cloudAt ?? 0);
+    const line = (r) => `${describe({ mode: r.mode, timestamp: when(r), age: r.age })}${tag(r)}`;
+    // A world only on the account opens by its account id; one that is here
+    // opens by the save that holds it.
+    const openAttr = (r) => (r.here && r.action !== PULL
+      ? `data-open="${escapeAttr(r.saveName ?? r.name)}"`
+      : `data-cloud="${escapeAttr(r.id)}"`);
 
     this.body.innerHTML = `
       ${current ? `
         <div class="home-label">Where you left off</div>
         <div class="world-card world-card-primary" data-continue="1" role="button" tabindex="0">
           <span class="world-text">
-            <strong>${escapeHtml(current.worldName || 'Your world')}</strong>
-            <em>${describe(current)}${tag(current)}</em>
+            <strong>${escapeHtml(current.name || 'Your world')}</strong>
+            <em>${line(current)}</em>
           </span>
           <span class="world-go">Continue</span>
           <button class="world-remove" data-remove-current="1" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
@@ -141,29 +156,18 @@ export class HomeScreen {
         <span class="world-go">${icon('plus', 18)}</span>
       </button>
 
-      ${named.length ? `
-        <div class="home-label">Saved copies</div>
+      ${rest.length ? `
+        <div class="home-label">Your worlds</div>
         <div class="world-list">
-          ${named.map((s) => `
-            <div class="world-card" data-open="${escapeAttr(s.name)}">
+          ${rest.map((r) => `
+            <div class="world-card" ${openAttr(r)} role="button" tabindex="0">
               <span class="world-text">
-                <strong>${escapeHtml(s.worldName || s.name)}</strong>
-                <em>${describe(s)}${tag(s)}</em>
+                <strong>${escapeHtml(r.name || 'Untitled world')}</strong>
+                <em>${line(r)}</em>
               </span>
-              <button class="world-remove" data-remove="${escapeAttr(s.name)}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
-            </div>`).join('')}
-        </div>` : ''}
-
-      ${onlyUpThere.length ? `
-        <div class="home-label">On your account</div>
-        <div class="world-list">
-          ${onlyUpThere.map((w) => `
-            <div class="world-card" data-cloud="${escapeAttr(w.id)}" role="button" tabindex="0">
-              <span class="world-text">
-                <strong>${escapeHtml(w.name || 'Untitled world')}</strong>
-                <em>${describe({ mode: w.mode, timestamp: w.updatedAt })} · not on this device</em>
-              </span>
-              <span class="world-go">Get it</span>
+              ${r.here
+                ? `<button class="world-remove" data-remove="${escapeAttr(r.saveName ?? r.name)}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>`
+                : `<span class="world-go">Get it</span>`}
             </div>`).join('')}
         </div>` : ''}
     `;
@@ -262,22 +266,19 @@ export class HomeScreen {
       <p class="home-note">${kind.name} · ${kind.tagline}</p>
       <input type="text" id="home-world-name" maxlength="40" placeholder="${defaultName(kind)}" />
 
-      ${cloudable ? `
-        <div class="home-label">Where does it live?</div>
-        <div class="where-list">
-          <button class="where-card ${where === 'local' ? 'chosen' : ''}" data-where="local">
-            <strong>On this device</strong>
-            <span>Saved in this browser. Fast, private, and gone if you clear it.</span>
-          </button>
-          <button class="where-card ${where === 'cloud' ? 'chosen' : ''}" data-where="cloud"
-                  ${signedIn ? '' : 'disabled'}>
-            <strong>In the cloud</strong>
-            <span>${signedIn
-              ? 'Saved to your account, so a new phone or a cleared browser keeps it.'
-              : 'Sign in to keep worlds on your account.'}</span>
-          </button>
-        </div>
-        ${signedIn ? '' : `<button class="home-link" data-signin="1">Sign in or create an account</button>`}` : ''}
+      ${cloudable ? (signedIn ? `
+        <!--
+          Not a question any more. It used to ask where the world should live,
+          which meant a signed-in player answering "on this device" by accident
+          once, on their phone, ended up with an account holding two unrelated
+          piles of worlds. Signed in, a world is yours rather than the browser's.
+        -->
+        <p class="home-note home-where">Kept on your account, so it is here on every device you sign in on.</p>
+      ` : `
+        <p class="home-note home-where">Kept in this browser, and gone if you clear it.
+          <button class="home-link" data-signin="1">Sign in</button> and your worlds follow you
+          to any device.</p>
+      `) : ''}
 
       <div class="home-actions">
         <button class="secondary" data-back="1">Back</button>
@@ -288,10 +289,6 @@ export class HomeScreen {
     const create = () => this.cb.onCreate(this.kind, input.value.trim() || defaultName(kind), {
       cloud: where === 'cloud',
     });
-    this.body.querySelectorAll('[data-where]').forEach((el) => el.addEventListener('click', () => {
-      this.where = el.dataset.where;
-      this.render();
-    }));
     this.body.querySelector('[data-signin]')?.addEventListener('click', () => this.cb.onAccount?.());
     this.body.querySelector('[data-back]').addEventListener('click', () => { this.step = 'kind'; this.render(); });
     this.body.querySelector('[data-create]').addEventListener('click', create);
@@ -311,13 +308,13 @@ export class HomeScreen {
  * Where a new world should live, given what was picked and who is signed in.
  *
  * Nobody signed in can only mean this device — there is no account to put it
- * on. Signed in and no preference yet means the cloud, because keeping worlds
- * off the device is the only reason to have signed in at all. An explicit
- * choice always wins.
+ * on. Signed in means the account, with no way to say otherwise: a world that
+ * lives in one browser is not something anybody signs in to get, and offering
+ * it as a choice is how one account ended up with a separate pile of worlds
+ * per device.
  */
 export function whereToLive(chosen, signedIn) {
-  if (!signedIn) return 'local';
-  return chosen ?? 'cloud';
+  return signedIn ? 'cloud' : 'local';
 }
 
 function defaultName(kind) {

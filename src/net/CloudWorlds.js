@@ -34,7 +34,7 @@ export class CloudWorlds {
    * Uploads the world and its progression. Returns how much actually moved, so
    * the UI can say "3 of 16 chunks" rather than a meaningless spinner.
    */
-  async save(worldId, { world, name, mode, player, gamification, economy, duilt }) {
+  async save(worldId, { world, name, mode, player, gamification, economy, duilt, revision }) {
     const meta = {
       name: name || 'Untitled world',
       mode,
@@ -47,7 +47,11 @@ export class CloudWorlds {
       // restoring a Duilt world without its bag and buildings is a blank map.
       duilt: duilt ?? null,
       blockCount: countBlocks(world),
-      revision: Date.now(),
+      // A counter, not a clock. It used to be Date.now(), which makes the
+      // "whose copy is newer" question depend on two devices' clocks agreeing —
+      // and when they do not, the answer is somebody's afternoon. The caller
+      // passes one past whatever the account currently holds.
+      revision: revision ?? Date.now(),
     };
     const result = await this.sync.push(worldId, { world, meta });
 
@@ -63,7 +67,7 @@ export class CloudWorlds {
         });
       } catch { /* reported by the next save */ }
     }
-    return result;
+    return { ...result, revision: meta.revision };
   }
 
   /** Pulls a world back into the shape loadFromData expects. */
@@ -87,6 +91,7 @@ export class CloudWorlds {
       player: spawn,
       economy: meta.economy || {},
       duilt: meta.duilt ?? null,
+      revision: meta.revision,
       gamification: null, // progression is per account, fetched separately
     };
   }

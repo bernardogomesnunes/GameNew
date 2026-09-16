@@ -27,21 +27,20 @@ const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8
 
 ok('signed out, a world can only live on this device', whereToLive(null, false) === 'local');
 ok('and asking for the cloud anyway does not make it so', whereToLive('cloud', false) === 'local');
-ok('signed in, the cloud leads — it is why you signed in', whereToLive(null, true) === 'cloud');
-ok('but choosing this device sticks', whereToLive('local', true) === 'local');
-ok('and so does choosing the cloud', whereToLive('cloud', true) === 'cloud');
+ok('signed in, it lives on the account', whereToLive(null, true) === 'cloud');
+// It used to be a choice, and a signed-in player answering "on this device"
+// once, on their phone, got an account holding two unrelated piles of worlds.
+ok('and there is no way to ask for this device instead', whereToLive('local', true) === 'cloud');
 
-// --- the choice is on the naming step, not buried in a panel -----------------
+// --- and it is said rather than asked ----------------------------------------
 
-ok('the naming step asks where it lives', /Where does it live/i.test(home));
-ok('it offers this device', /On this device/.test(home));
-ok('and the cloud', /In the cloud/.test(home));
-ok('the cloud option is off when signed out', /data-where="cloud"[\s\S]{0,120}disabled/.test(home));
-ok('and says how to turn it on', /Sign in to keep worlds on your account/.test(home));
-ok('with a way in from right there', /data-signin/.test(home));
+ok('there is no question about it any more', !/Where does it live/i.test(home));
+ok('signed in, it says the world is on the account',
+  /Kept on your account, so it is here on every device/.test(home));
+ok('signed out, it says it is only this browser', /Kept in this browser/.test(home));
+ok('with a way to change that from right there', /data-signin/.test(home));
 ok('the choice reaches the world that gets made', /cloud: where === 'cloud'/.test(home));
-ok('and the cards are styled', css.includes('.where-card') && css.includes('.where-card.chosen'));
-ok('stacking on a narrow screen', /max-width: 520px[\s\S]{0,80}where-list/.test(css));
+ok('and the cards it used to need are gone from the styling', !css.includes('.where-card'));
 
 // --- signing in goes somewhere -----------------------------------------------
 
@@ -52,10 +51,17 @@ ok('and does not leave your password sitting in the box',
 
 // --- a cloud failure never costs you the world -------------------------------
 
-ok('the upload is fired after the world exists', /onNewWorld\(mode, name\);[\s\S]{0,400}if \(cloud\)/.test(ui));
-ok('and a failure is caught', /onCloudSave\(name\)[\s\S]{0,300}\.catch\(/.test(ui));
-ok('and says the world is safe where it is',
-  /the world is safe on this device/.test(ui));
+// Making a world writes it locally and that write is what sends it up, so
+// there is no separate upload to fail on its own any more. Creating one used
+// to push it a second time, a moment after the autosave already had.
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+ok('making a world no longer pushes it twice', !/if \(cloud\) \{[\s\S]{0,200}onCloudSave/.test(ui));
+ok('the local write is what sends it',
+  /autosaveNow\(\{ sync = true \} = \{\}\) \{[\s\S]{0,800}if \(sync\) this\.syncSoon\(\);/.test(game));
+ok('and a push that fails never breaks the save that worked',
+  /this\.syncNow\(\)\s*\n\s*\.catch\(/.test(game));
+ok('it is retried rather than lost, because a failed push agrees to nothing',
+  /agree\(this\.worldId, result\.revision\)/.test(game));
 
 // --- what the player is told when the token call fails -----------------------
 
@@ -77,11 +83,19 @@ ok('an expired session still reads as one', /session expired/.test(auth));
 // exists to answer.
 ok('the local list carries the id the cloud knows a world by',
   /worldId: data\.worldId \?\? null/.test(saves));
-ok('worlds also on the account are marked', /class="world-tag">Cloud/.test(home));
+ok('worlds on the account say so', /world-tag">On your account/.test(home));
+ok('and ones only in this browser say that instead', /world-tag">This device only/.test(home));
+ok('and ones not yet downloaded say that', /world-tag">Not on this device/.test(home));
 ok('and the mark rides in the description, not beside the name',
-  /\$\{describe\(current\)\}\$\{tag\(current\)\}/.test(home));
-ok('worlds only on the account get their own group', /On your account/.test(home));
-ok('and say they are not on this device', /not on this device/.test(home));
+  /\$\{describe\(\{ mode: r\.mode[\s\S]{0,60}\}\)\}\$\{tag\(r\)\}/.test(home));
+
+// One list, not two. A world you have on this device *and* on your account is
+// one world; drawn as a local save plus a separate "On your account" row it
+// looked like two, which is the shape of the bug this fixes.
+ok('the list is merged rather than stacked', /mergeWorldList\(\{/.test(home));
+ok('so there is no second account-only group', !/On your account<\/div>/.test(home));
+ok('and a world played in two places is flagged rather than picked',
+  /world-tag warn">Two copies/.test(home));
 ok('with a way to fetch one', /data-cloud=/.test(home) && /onOpenCloud/.test(home));
 ok('fetching one is wired to the restore path', /onCloudRestore\(id\)/.test(ui));
 

@@ -21,10 +21,15 @@ for (const f of files) {
   const r = spawnSync(process.execPath, args, { encoding: 'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');
   const p = (out.match(/^PASS /gm) || []).length + (out.match(/^ok \d+ /gm) || []).length;
-  const q = (out.match(/^FAIL /gm) || []).length + (out.match(/^not ok \d+ /gm) || []).length;
+  let q = (out.match(/^FAIL /gm) || []).length + (out.match(/^not ok \d+ /gm) || []).length;
+  // A file that never ran — a syntax error, a bad import, a crash before the
+  // first assertion — reported zero of each and the suite exited 0 saying
+  // everything passed. Nothing passed. It did not run.
+  const crashed = r.status !== 0 && q === 0;
+  if (crashed) q = 1;
   pass += p; fail += q;
   if (q || r.status !== 0) {
-    console.log(`\n--- ${f} (${p} passed, ${q} failed)`);
+    console.log(`\n--- ${f} (${p} passed, ${crashed ? 'did not run' : `${q} failed`})`);
     console.log(out.split('\n').filter((l) => /^(FAIL|not ok)/.test(l)).join('\n') || out.slice(-1500));
   } else {
     console.log(`ok  ${f.padEnd(26)} ${p} passed`);

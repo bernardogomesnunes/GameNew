@@ -24,6 +24,7 @@ import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SaveManager, AUTOSAVE_NAME } from './storage/SaveManager.js';
+import { SyncState, decide, mergeWorldList, PUSH, PULL, CONFLICT } from './storage/WorldSync.js';
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
 import { panelForKey } from './config/panels.js';
@@ -224,6 +225,10 @@ export class Game {
     this.worldName = this.worldName || 'My world';
     this.cloudAuth = new CloudAuth(this.bus);
     this.cloud = isCloudConfigured() ? new CloudWorlds({ auth: this.cloudAuth, bus: this.bus }) : null;
+    // What this device and the server last agreed about each world. It is what
+    // stops a desktop that has been offline from flattening what you built on
+    // your phone — see storage/WorldSync.js.
+    this.syncState = new SyncState();
     this.templates = new TemplateLibrary(this.bus);
     this.pendingTemplate = null; // the template queued for stamping
     this.templateRotation = 0;
@@ -330,15 +335,78 @@ export class Game {
   }
 
   /** Writes the autosave straight away, and resets the interval clock with it. */
-  autosaveNow() {
+  autosaveNow({ sync = true } = {}) {
     if (this.discarded) return false;
     try {
       this.saveManager.autosave(this.saveState());
       this.lastAutosave = performance.now();
+      // And on to the account, if there is one. Signed in, a world belongs to
+      // the player rather than to the browser it was made in — leaving the
+      // upload to a button in a panel is what gave one account two separate
+      // piles of worlds, one per device.
+      //
+      // Not when the write *is* the copy we just pulled down: the sync would
+      // look at a local save newer than the agreement it has not recorded yet
+      // and call its own download a conflict.
+      if (sync) this.syncSoon();
       return true;
     } catch {
       return false;
     }
+  }
+
+  // ---- keeping the account's copy up to date ----
+
+  /**
+   * Sends this world up, when it is ours to send.
+   *
+   * Never blocks saving and never throws at the caller: a save that worked
+   * locally worked, whatever the network did. A push that fails is retried by
+   * the next autosave, because the agreement it would have recorded is what
+   * decides, and a failed push records nothing.
+   *
+   * The one thing it will not do is overwrite a copy it has not seen. If the
+   * account moved on while this device was playing, that is two afternoons and
+   * no safe automatic answer, so it stops and says so.
+   */
+  syncSoon() {
+    if (!this.cloud?.signedIn || this.discarded || !this.worldId) return;
+    if (this.syncing) { this.syncAgain = true; return; }
+    this.syncing = true;
+    this.syncNow()
+      .catch(() => { /* said once by syncNow itself, or simply offline */ })
+      .finally(() => {
+        this.syncing = false;
+        if (this.syncAgain) { this.syncAgain = false; this.syncSoon(); }
+      });
+  }
+
+  async syncNow() {
+    const id = this.worldId;
+    const cloudList = await this.cloud.list();
+    const mine = cloudList.find((w) => w.id === id) ?? null;
+    const { action, why } = decide({
+      local: { changedAt: this.saveManager.changedAt(id) },
+      cloud: mine,
+      agreed: this.syncState.agreedFor(id),
+    });
+
+    if (action === PUSH) {
+      await this.saveToCloud(this.worldName, { quiet: true, revision: (mine?.revision ?? 0) + 1 });
+      return action;
+    }
+    if (action === CONFLICT) {
+      // Nothing is chosen here on purpose. Both copies stay where they are and
+      // the player decides, on the worlds screen, with both dates in front of
+      // them. See storage/WorldSync.js.
+      this.pendingConflict = { id, why, cloud: mine };
+      this.bus.emit('toast', {
+        kind: 'xp',
+        title: 'This world was played somewhere else',
+        body: 'Both copies are safe. Leave the world to pick which one to keep.',
+      });
+    }
+    return action;
   }
 
   buildCallbacks() {
@@ -493,6 +561,9 @@ export class Game {
         this.ui.toast({ kind: 'xp', title: 'Signed out', body: 'Local saves are untouched' });
       },
       getCloudWorlds: () => this.cloud.list(),
+      // The worlds screen needs it to say which copy is which; it is the same
+      // record the sync decision runs on.
+      agreedFor: (id) => this.syncState.agreedFor(id),
       onCloudSave: (name) => this.saveToCloud(name),
       onCloudRestore: (id) => this.restoreFromCloud(id),
       onCloudDelete: async (id) => {
@@ -1501,7 +1572,7 @@ export class Game {
    * Pushes the current world under its own id, so repeated saves overwrite the
    * same cloud world instead of littering it with copies.
    */
-  async saveToCloud(name) {
+  async saveToCloud(name, { quiet = false, revision } = {}) {
     if (!this.cloud) throw new Error('This build has no cloud configured.');
     if (name) this.worldName = name;
     const result = await this.cloud.save(this.worldId, {
@@ -1512,14 +1583,21 @@ export class Game {
       gamification: this.gamification,
       economy: this.economy,
       duilt: this.duilt ? this.duilt.toJSON() : null,
+      revision,
     });
-    this.ui.toast({
-      kind: 'challenge',
-      title: 'Saved to the cloud',
-      body: result.pushedChunks
-        ? `${result.pushedChunks} of ${result.totalChunks} chunks changed`
-        : 'Nothing had changed since the last save',
-    });
+    this.syncState.agree(this.worldId, result.revision);
+    // Quiet when it is the autosave doing it. Saving is supposed to be the
+    // thing you stop thinking about, and a toast every few minutes saying so
+    // is the opposite of that.
+    if (!quiet) {
+      this.ui.toast({
+        kind: 'challenge',
+        title: 'Saved to your account',
+        body: result.pushedChunks
+          ? `${result.pushedChunks} of ${result.totalChunks} chunks changed`
+          : 'Nothing had changed since the last save',
+      });
+    }
     return result;
   }
 
@@ -1536,6 +1614,11 @@ export class Game {
       worldId: id,
       worldName: data.name,
     });
+    // Write it down locally, so the world is on this device rather than only up
+    // there — then record the handshake, after the save, so the agreement is
+    // not older than the copy it is vouching for.
+    this.autosaveNow({ sync: false });
+    this.syncState.agree(id, data.revision ?? 0);
     // Progression belongs to the account, not the world, so it is merged in
     // separately — and only if the cloud copy is further along than this device.
     try {
@@ -1546,7 +1629,7 @@ export class Game {
       }
     } catch { /* the world is what matters; progression can wait for the next sign-in */ }
     this.ui.closePanel('panel-menu');
-    this.ui.toast({ kind: 'challenge', title: `Restored "${data.name}"`, body: 'Pulled from the cloud' });
+    this.ui.toast({ kind: 'challenge', title: `Opened "${data.name}"`, body: 'The copy from your account' });
   }
 
   // ---- raycasting / block edits ----

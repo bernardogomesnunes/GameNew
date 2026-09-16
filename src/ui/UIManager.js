@@ -420,26 +420,20 @@ export class UIManager {
       },
       // Creating and entering happen in the same gesture: pointer lock has to
       // be claimed inside the tap that asked for it.
-      onCreate: (mode, name, { cloud = false } = {}) => {
+      onCreate: (mode, name) => {
         this.cb.onNewWorld(mode, name);
         this.enterWorld();
-        // The upload is deliberately after you are in the world: it takes a
-        // moment and there is nothing to look at while it happens. A failure
-        // says so and leaves the world exactly where it is, on this device.
-        if (cloud) {
-          this.cb.onCloudSave(name)
-            .then(() => this.toast({ kind: 'challenge', title: 'Saved to your account', body: name }))
-            .catch((err) => this.toast({
-              kind: 'xp', title: 'Could not reach the cloud', body: `${err.message} — the world is safe on this device.`,
-            }));
-        }
+        // No upload from here any more. Making a world autosaves it, and an
+        // autosave is what sends it to the account — this was a second push of
+        // the same brand new world, a moment after the first.
       },
-      // Needed by the naming step, to know whether "in the cloud" is on offer.
+      // Needed by the naming step, to say where the world will live.
       isCloudConfigured: () => this.cb.isCloudConfigured?.() ?? false,
       getCloudUser: () => this.cb.getCloudUser?.() ?? null,
       // What the account is holding, so the list can mark which of your worlds
       // are up there and offer the ones that are not down here.
       listCloudWorlds: () => this.cb.getCloudWorlds(),
+      agreedFor: (id) => this.cb.agreedFor?.(id) ?? null,
       onOpenCloud: async (id) => {
         try {
           await this.cb.onCloudRestore(id);
