@@ -1,5 +1,5 @@
 import { CLOUD, isCloudConfigured } from './cloudConfig.js';
-import { keepTrying } from './retry.js';
+import { isOurBug, keepTrying } from './retry.js';
 
 /**
  * Sign-in, and nothing else.
@@ -102,15 +102,37 @@ export class CloudAuth {
   async accessToken() {
     if (!this.client || !this.user) return null;
     const auth = this.client.auth;
-    const get = typeof auth.getJWTToken === 'function'
-      ? auth.getJWTToken.bind(auth)
-      : auth.getToken.bind(auth);
     try {
-      // Through `keepTrying` because this is the call that lands on a sleeping
-      // database — it is the first thing the worlds screen asks for. See net/retry.js.
-      const result = await keepTrying(get);
+      // Called as a method and never detached, which matters more than it
+      // looks. `auth` is a Proxy that turns *every* property access into a
+      // route, `.bind` included — so `auth.getJWTToken.bind(auth)` is not
+      // Function.prototype.bind. It asks the server for
+      // /auth/get-jwt-token/bind, fires that request immediately, and hands
+      // back a Promise. `typeof` says "function" both before and after,
+      // because a callable proxy is a function and so is the thing it returns
+      // for `.bind`, so nothing about it reads as wrong.
+      //
+      // Then calling that Promise threw "e is not a function", which has no
+      // HTTP status, which this file classified as "could not reach your
+      // account". Every signed-in player got that, on every device, from the
+      // day the method name was fixed — which is exactly why one account
+      // showed different worlds on a phone and a desktop: the token never
+      // arrived, so nothing ever synced.
+      const result = await keepTrying(() => auth.getJWTToken());
       return result?.data?.token ?? result?.token ?? null;
     } catch (err) {
+      // SDK drift, not the bug above: if a later version renames this, a
+      // working sync should not turn into a 404. Only a missing route is
+      // worth a second name — anything else means the route is there and
+      // something else is wrong with it.
+      if (err?.status === 404) {
+        try {
+          const result = await keepTrying(() => auth.getToken());
+          return result?.data?.token ?? result?.token ?? null;
+        } catch (drift) {
+          err = drift;
+        }
+      }
       // Logged as well as shown: on a desktop the console has the stack, and
       // on a phone the folded Details line is the only way this ever gets out.
       console.error('[duilt] token request failed', err);
@@ -175,9 +197,12 @@ export function describeFailure(err, route = null) {
   const name = err?.name || 'Error';
   const message = redact(String(err?.message ?? '')).slice(0, 200);
   const where = route ? ` ${route}` : '';
-  // No status at all is the interesting case, and the one that reads as
-  // nothing at all in a screenshot: the browser never got a usable reply —
-  // refused, cut off, or a CORS answer it would not let the page see.
+  // Our own bug reads exactly like a dead network — no status, a TypeError —
+  // and saying "no reply" about it cost days of looking at the wrong end of
+  // the wire. Name it for what it is.
+  if (isOurBug(err)) return `${name}${where} — a bug in the game (${message})`;
+  // Otherwise no status means the browser never got a usable reply: refused,
+  // cut off, or an answer it would not let the page see.
   if (status == null) return `${name}${where} — no reply (${message || 'request did not complete'})`;
   return `${name} ${status}${where} — ${message}`;
 }
@@ -211,6 +236,13 @@ export function failure(err, route) {
 
 export function readableTokenError(err) {
   const status = err?.status ?? err?.body?.status;
+  // Ours, not the network's. Saying "could not reach your account" for a bug
+  // in this code sends the player to check their wifi over and over while the
+  // account sits there answering perfectly — which is what happened, for days.
+  if (isOurBug(err)) {
+    return 'Something in the game itself went wrong, not your connection.'
+      + ' Nothing is lost — this one is ours to fix.';
+  }
   if (status === 401 || status === 403) return 'Your session has expired — sign in again.';
   if (status === 404) {
     return 'The sign-in service does not recognise this app. Nothing you have made is lost,'

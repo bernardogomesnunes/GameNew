@@ -33,10 +33,32 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * exceptions that mean "not now": timed out, and too many.
  */
 export function worthRetrying(err) {
+  // A mistake in our own code is not a blip, and asking it again four times
+  // only makes it slower to find. This is not hypothetical: calling a Promise
+  // as a function threw "e is not a function", which has no status, so it was
+  // treated as a network failure — retried, and then reported as "could not
+  // reach your account". It was reached fine. We were broken.
+  if (isOurBug(err)) return false;
+
   const status = err?.status ?? err?.body?.status ?? err?.statusCode;
   if (status == null) return true;
   if (status === 408 || status === 425 || status === 429) return true;
   return status >= 500;
+}
+
+/**
+ * A programming error rather than a network one.
+ *
+ * Both arrive as a TypeError with no status, which is the whole trap. The
+ * difference is what they say: a browser refusing a request has a small, known
+ * vocabulary, and anything else is us.
+ */
+const NETWORK_WORDS = /load failed|failed to fetch|networkerror|network request failed|connection|timed? ?out|aborted/i;
+
+export function isOurBug(err) {
+  if (!(err instanceof TypeError)) return false;
+  if (err.status != null) return false;
+  return !NETWORK_WORDS.test(String(err.message ?? ''));
 }
 
 /**

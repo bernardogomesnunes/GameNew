@@ -38,7 +38,16 @@ ok('a token failure is translated', /readableTokenError/.test(auth));
 // It is also asked more than once before it gives up. A Neon compute suspends
 // after a few idle minutes and takes up to a second and a half to wake; asking
 // once meant a sleeping database and a broken account looked the same.
-ok('the token call retries while the database wakes', /keepTrying\(get\)/.test(auth));
+// Retried, and — the part that matters far more — called as a method rather
+// than bound off the proxy. See tests/accesstoken.test.mjs for what `.bind`
+// does to a Better Auth client and what it cost.
+ok('the token call retries while the database wakes',
+  /keepTrying\(\(\) => auth\.getJWTToken\(\)\)/.test(auth));
+// Comments stripped first — this file explains the bind trap at length, and
+// the explanation must not read as the mistake.
+ok('and is never detached from the client it belongs to',
+  !/getJWTToken\.bind|getToken\.bind/.test(
+    auth.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')));
 ok('and so does a Data API call', /keepTrying\(\(\) => this\.send/.test(
   readFileSync(new URL('../src/net/NeonTransport.js', import.meta.url), 'utf8')));
 
