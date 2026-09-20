@@ -149,6 +149,22 @@ export class CloudWorlds {
   forget(worldId) {
     this.sync.forget(worldId);
   }
+
+  /**
+   * Records that a save gave up, after retries — best effort, never thrown
+   * from. The alternative to calling this is a broken save staying invisible
+   * until somebody notices their world is gone and sends a screenshot; this
+   * makes it a query instead.
+   */
+  async reportFailure(worldId, err) {
+    try {
+      await this.transport.logSaveFailure({
+        worldId,
+        code: err?.status ?? null,
+        message: err?.message ?? String(err),
+      });
+    } catch { /* the failure that mattered already happened; this is a courtesy */ }
+  }
 }
 
 function writeRle(data, pairs) {

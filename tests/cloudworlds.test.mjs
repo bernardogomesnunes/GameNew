@@ -38,6 +38,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { WORLDS_MODE_VALUES } from '../db/schema.mjs';
+
 // --- a localStorage good enough for NeonTransport's device key --------------
 const localStore = new Map();
 globalThis.localStorage = {
@@ -67,6 +69,7 @@ function fakeBackend() {
   const worlds = new Map();      // id -> row
   const chunks = new Map();      // `${worldId}:${cx},${cz}` -> row
   const players = [{ id: 'player-1' }];
+  const saveFailures = [];
   const requests = [];
 
   function reject(status, body) {
@@ -104,6 +107,12 @@ function fakeBackend() {
           if (row.size_z === null || row.size_z === undefined) {
             return reject(400, { code: '23502', message: 'null value in column "size_z" of relation "worlds" violates not-null constraint' });
           }
+          // The real constraint, enforced against the same list of allowed
+          // values db/schema.mjs and NeonTransport both read — see
+          // migrations/0002_worlds_allow_duilt_mode.sql.
+          if (!WORLDS_MODE_VALUES.includes(row.mode)) {
+            return reject(400, { code: '23514', message: `new row for relation "worlds" violates check constraint "worlds_mode_check"` });
+          }
           const existing = worlds.get(row.id) || {};
           worlds.set(row.id, { ...existing, ...row });
         }
@@ -134,10 +143,17 @@ function fakeBackend() {
       if (method === 'DELETE') return ok(undefined, 204);
     }
 
+    if (path.startsWith('/save_failures')) {
+      if (method === 'POST') {
+        saveFailures.push(...body);
+        return ok(undefined, 204);
+      }
+    }
+
     return reject(404, { message: `no fake route for ${method} ${path}` });
   };
 
-  return { fetchImpl, worlds, requests };
+  return { fetchImpl, worlds, saveFailures, requests };
 }
 
 function withFetch(fetchImpl, fn) {
@@ -203,9 +219,9 @@ await test('an endless Duilt world survives save and restore', async () => {
   const row = backend.worlds.get('world-2');
   assert.equal(row.size_x, 0, 'the sentinel value for "no size" — see NeonTransport');
   assert.equal(row.size_z, 0);
-  assert.deepEqual(row.economy.duilt, duiltState, 'duilt state must actually be in the request body this time');
-  assert.ok(row.economy.worldGen, 'the seed has to ride along or the world cannot be remade');
-  assert.equal(row.economy.worldGen.seed, 99);
+  assert.deepEqual(row.duilt, duiltState, 'duilt state must actually be in the request body this time');
+  assert.ok(row.world_gen, 'the seed has to ride along or the world cannot be remade');
+  assert.equal(row.world_gen.seed, 99);
 
   const onlyTouchedChunksUploaded = backend.requests
     .filter((r) => r.path.startsWith('/world_chunks') && r.method === 'POST')
@@ -249,7 +265,7 @@ await test('a fixed-size world is unaffected by any of this', async () => {
   const row = backend.worlds.get('world-3');
   assert.equal(row.size_x, 64, 'a real fixed world keeps its real size, not the endless sentinel');
   assert.equal(row.size_z, 64);
-  assert.equal(row.economy.worldGen, null, 'a fixed world has no seed to carry');
+  assert.equal(row.world_gen, null, 'a fixed world has no seed to carry');
 
   const restored = await withFetch(backend.fetchImpl, () => cloud.restore('world-3'));
   assert.equal(restored.world.endless, false);
@@ -265,4 +281,56 @@ await test('0 is never a size a real (fixed) world can have', async () => {
   // Even asking for the smallest possible fixed world does not produce 0 —
   // the default floor keeps this sentinel unambiguous either way.
   assert.notEqual(world.sizeX, 0);
+});
+
+// --- the second bug: worlds_mode_check never allowed 'duilt' either ----------
+
+await test('a mode the database check does not allow fails loudly, the way duilt once did', async () => {
+  const { cloud, backend } = makeCloudWorlds();
+  const world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
+
+  await assert.rejects(
+    () => withFetch(backend.fetchImpl, () => cloud.save('world-4', {
+      world, name: 'Bad mode', mode: 'sandbox', // not in WORLDS_MODE_VALUES
+      player: { position: { x: 0, y: 5, z: 0 }, yaw: 0, pitch: 0 },
+      economy: { toJSON: () => ({}) }, duilt: null,
+    })),
+    /worlds_mode_check/,
+  );
+  assert.ok(!backend.worlds.has('world-4'), 'a rejected row must not end up half-saved');
+});
+
+await test('every mode this game actually writes is one the database check allows', async () => {
+  const { cloud, backend } = makeCloudWorlds();
+  for (const mode of ['creative', 'campaign', 'duilt']) {
+    const world = mode === 'duilt'
+      ? new World({ height: 64, gen: new ChunkGen({ seed: 1, height: 64 }) })
+      : new World({ sizeX: 64, sizeZ: 64, height: 64 });
+    await withFetch(backend.fetchImpl, () => cloud.save(`world-mode-${mode}`, {
+      world, name: mode, mode,
+      player: { position: { x: 0, y: 5, z: 0 }, yaw: 0, pitch: 0 },
+      economy: { toJSON: () => ({}) }, duilt: null,
+    }));
+    assert.ok(backend.worlds.has(`world-mode-${mode}`), `mode "${mode}" must be accepted`);
+  }
+});
+
+// --- a save that never makes it up is at least visible somewhere ------------
+
+await test('a failed save is logged best-effort, and never throws on top of the original failure', async () => {
+  const { cloud, backend } = makeCloudWorlds();
+  const err = Object.assign(new Error('boom'), { status: 500 });
+
+  await withFetch(backend.fetchImpl, () => cloud.reportFailure('world-5', err)); // must not throw
+
+  assert.equal(backend.saveFailures.length, 1);
+  assert.equal(backend.saveFailures[0].world_id, 'world-5');
+  assert.equal(backend.saveFailures[0].code, '500');
+  assert.match(backend.saveFailures[0].message, /boom/);
+});
+
+await test('reportFailure swallows its own transport errors', async () => {
+  const { cloud } = makeCloudWorlds();
+  cloud.transport.logSaveFailure = async () => { throw new Error('log write failed too'); };
+  await assert.doesNotReject(() => cloud.reportFailure('world-6', new Error('original failure')));
 });

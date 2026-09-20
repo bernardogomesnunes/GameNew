@@ -401,6 +401,9 @@ export class Game {
         // Left pending on purpose: the next save tries again, and the copy put
         // aside by keepSafe outlives a closed tab.
         this.saveError = err?.message ?? 'The account did not answer.';
+        // Best effort, and never awaited: a broken save_failures write must
+        // never be the reason a retry gets delayed.
+        this.cloud?.reportFailure(this.worldId, err).catch(() => {});
         this.bus.emit('toast', {
           kind: 'xp',
           title: 'Not saved to your account yet',

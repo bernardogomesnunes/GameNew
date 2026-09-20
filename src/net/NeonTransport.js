@@ -153,14 +153,16 @@ export class NeonTransport {
         size_z: meta.sizeZ ?? 0,
         height: meta.height,
         spawn: meta.spawn ?? null,
-        // The one JSON column this table has room for, carrying three
-        // things that all needed somewhere to ride and none of which have a
-        // column of their own: the real economy data, an endless world's
-        // seed, and the Duilt state (bag, buildings, skills) a Duilt world
-        // cannot be reopened without. Real columns would be the cleaner
-        // shape; that needs a migration on the live database, and this does
-        // not. See pullWorld for the other half of the unwrap.
-        economy: { economy: meta.economy ?? {}, duilt: meta.duilt ?? null, worldGen: meta.worldGen ?? null },
+        economy: meta.economy ?? {},
+        // Small enough to ride along in the metadata, and useless apart from
+        // it: restoring a Duilt world without its bag and buildings is a
+        // blank map. See migrations/0003 — this used to be nested inside
+        // `economy` for lack of a column, which is how it once went missing
+        // from the request body entirely without anything noticing.
+        duilt: meta.duilt ?? null,
+        // An endless world has no size — see World's own notes on why — so
+        // it carries the seed it regenerates from instead. See migrations/0003.
+        world_gen: meta.worldGen ?? null,
         block_count: meta.blockCount ?? 0,
         revision: meta.revision ?? 1,
         updated_at: now,
@@ -191,10 +193,6 @@ export class NeonTransport {
     if (!worlds?.length) return null;
     const w = worlds[0];
     const rows = await this.request(`/world_chunks?select=cx,cz,rle&world_id=eq.${worldId}`);
-    // The other half of pushWorld's unwrap. Every row this table has ever
-    // held was written this shape — {economy, duilt, worldGen} — so there is
-    // no older row shape to stay compatible with here.
-    const carried = w.economy ?? {};
     return {
       meta: {
         id: w.id,
@@ -207,9 +205,9 @@ export class NeonTransport {
         sizeZ: w.size_z || null,
         height: w.height,
         spawn: w.spawn,
-        economy: carried.economy ?? {},
-        duilt: carried.duilt ?? null,
-        worldGen: carried.worldGen ?? null,
+        economy: w.economy ?? {},
+        duilt: w.duilt ?? null,
+        worldGen: w.world_gen ?? null,
         blockCount: w.block_count,
         revision: Number(w.revision),
       },
@@ -254,6 +252,28 @@ export class NeonTransport {
     await this.ensurePlayer();
     const rows = await this.request('/progression?select=*&limit=1');
     return rows?.length ? rows[0] : null;
+  }
+
+  /**
+   * Best-effort record of a save that didn't make it, after retries gave up.
+   * Never thrown from — see CloudWorlds.reportFailure, which is the only
+   * caller and swallows whatever this throws. The retry that already
+   * happened is the thing that matters; this is only so the failure is
+   * visible to a `select * from save_failures` instead of only to whoever
+   * is holding the phone it happened on.
+   */
+  async logSaveFailure({ worldId, code, message }) {
+    const playerId = await this.ensurePlayer();
+    await this.request('/save_failures', {
+      method: 'POST',
+      prefer: 'return=minimal',
+      body: [{
+        player_id: playerId,
+        world_id: worldId ?? null,
+        code: code != null ? String(code) : null,
+        message: message ? String(message).slice(0, 500) : null,
+      }],
+    });
   }
 }
 
