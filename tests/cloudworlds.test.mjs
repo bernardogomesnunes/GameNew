@@ -70,6 +70,7 @@ function fakeBackend() {
   const chunks = new Map();      // `${worldId}:${cx},${cz}` -> row
   const players = [{ id: 'player-1' }];
   const saveFailures = [];
+  let progression = null;        // one row, like the real table's PK on player_id
   const requests = [];
 
   function reject(status, body) {
@@ -150,10 +151,18 @@ function fakeBackend() {
       }
     }
 
+    if (path.startsWith('/progression')) {
+      if (method === 'POST' && url.searchParams.has('on_conflict')) {
+        progression = { ...progression, ...body[0] };
+        return ok(undefined, 204);
+      }
+      if (method === 'GET') return ok(progression ? [progression] : []);
+    }
+
     return reject(404, { message: `no fake route for ${method} ${path}` });
   };
 
-  return { fetchImpl, worlds, saveFailures, requests };
+  return { fetchImpl, worlds, saveFailures, get progression() { return progression; }, requests };
 }
 
 function withFetch(fetchImpl, fn) {
@@ -333,4 +342,73 @@ await test('reportFailure swallows its own transport errors', async () => {
   const { cloud } = makeCloudWorlds();
   cloud.transport.logSaveFailure = async () => { throw new Error('log write failed too'); };
   await assert.doesNotReject(() => cloud.reportFailure('world-6', new Error('original failure')));
+});
+
+// --- achievements surviving a restore ----------------------------------------
+//
+// Reported as: opening an old world and breaking a block re-awards the
+// achievement for breaking your first block ever. pushProgression sent
+// `g.achievements` and `g.stats` — fields GamificationEngine.toJSON() has
+// never produced, since the real names are `achievementsUnlocked` and there
+// is no `stats` field at all — so every push wrote an empty achievements
+// array no matter what was actually unlocked, and the restore-side merge
+// read the response back under the wrong keys too. The account-wide
+// progression a cloud restore is supposed to bring back never actually
+// arrived.
+
+await test('achievements and stats survive a push/pull round trip', async () => {
+  const { GamificationEngine } = await import('../src/gamification/GamificationEngine.js');
+  const { EventBus } = await import('../src/core/EventBus.js');
+  const { cloud, backend } = makeCloudWorlds();
+
+  const gam = new GamificationEngine(new EventBus());
+  const world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
+  gam.onBlockBroken({ world, x: 1, y: 1, z: 1, type: 3, now: 1000 }); // unlocks "first_break"
+  assert.ok(gam.state.achievementsUnlocked.has('first_break'));
+
+  await withFetch(backend.fetchImpl, () => cloud.save('world-7', {
+    world, name: 'Progress test', mode: 'creative',
+    player: { position: { x: 0, y: 5, z: 0 }, yaw: 0, pitch: 0 },
+    gamification: gam, economy: { toJSON: () => ({}) }, duilt: null,
+  }));
+
+  // The row a real player already has: written before this fix, so
+  // `stats` is still the column's empty default and `achievements` []
+  // regardless of what was unlocked — the fallback path must not choke on it.
+  assert.deepEqual(backend.progression.achievements, ['first_break']);
+  assert.ok(Object.keys(backend.progression.stats).length > 0, 'the full snapshot must ride along, not just the picked columns');
+
+  const remote = await withFetch(backend.fetchImpl, () => cloud.progression());
+  assert.ok(remote.achievementsUnlocked.includes('first_break'), 'the achievement must actually come back');
+  assert.equal(remote.totalBlocksBroken, 1);
+
+  // What Game.js's restoreFromCloud does with it.
+  const fresh = new GamificationEngine(new EventBus());
+  fresh.loadJSON(remote);
+  assert.ok(fresh.state.achievementsUnlocked.has('first_break'), 'a restored device must not have lost the achievement');
+
+  // The regression exactly as reported: breaking a block on the "restored"
+  // engine must not re-fire an achievement it already has.
+  let refired = false;
+  fresh.bus.on('achievement:unlock', (a) => { if (a.id === 'first_break') refired = true; });
+  fresh.onBlockBroken({ world, x: 2, y: 1, z: 1, type: 3, now: 2000 });
+  assert.equal(refired, false, 'first_break must not unlock a second time after a restore');
+});
+
+await test('a pre-fix progression row (empty stats) still restores what it can', async () => {
+  const { GamificationEngine } = await import('../src/gamification/GamificationEngine.js');
+  const { EventBus } = await import('../src/core/EventBus.js');
+  const { cloud, backend } = makeCloudWorlds();
+
+  // Simulate a row exactly as the old buggy pushProgression wrote it.
+  await backend.fetchImpl('https://fake.local/rest/v1/progression?on_conflict=player_id', {
+    method: 'POST',
+    body: JSON.stringify([{ player_id: 'player-1', xp: 500, level: 3, streak_count: 2, achievements: [], stats: {} }]),
+  });
+
+  const remote = await withFetch(backend.fetchImpl, () => cloud.progression());
+  assert.equal(remote.xp, 500, 'the headline numbers still come back even without a full snapshot');
+  const fresh = new GamificationEngine(new EventBus());
+  fresh.loadJSON(remote);
+  assert.equal(fresh.state.xp, 500);
 });

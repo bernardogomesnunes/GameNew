@@ -63,6 +63,7 @@ export function isSoil(id) {
 }
 export const AIR = 0;
 export const GROUND = 19;
+export const WATER = 11;
 
 /** Blocks a player can hold and place — everything except world furniture. */
 export const PLACEABLE_BLOCKS = BLOCKS.filter((b) => !b.system);

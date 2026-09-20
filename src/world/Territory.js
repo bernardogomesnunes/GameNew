@@ -124,32 +124,40 @@ export class Territory {
      * with nothing on screen to say so. A solid one would box you in visually,
      * so the opacity is carried on the vertices — strongest at the ground where
      * you meet it, gone by the top so it never blocks the view.
+     *
+     * All four faces are baked into one buffer rather than four separate
+     * meshes. They used to each be their own THREE.Mesh, and being separate,
+     * transparent, depth-write-off objects meant Three had to guess which of
+     * two walls sharing a corner drew on top — a guess it re-makes every
+     * frame from camera distance, so which one flickers to the front flipped
+     * as you moved past the corner. One mesh has one fixed draw order, so the
+     * corner stops popping.
      */
+    const positions = [];
+    const colors = [];
+    const indices = [];
+    const base = new THREE.Color(EDGE);
+    const obj = new THREE.Object3D();
+
     const wall = (px, pz, rotY) => {
       const geo = new THREE.PlaneGeometry(w, h, 1, 12);
-      const pos = geo.attributes.position;
-      const rgba = new Float32Array(pos.count * 4);
-      const base = new THREE.Color(EDGE);
-      for (let i = 0; i < pos.count; i++) {
-        // 0 at the foot of the wall, 1 at the top.
-        const t = (pos.getY(i) + h / 2) / h;
-        rgba[i * 4 + 0] = base.r;
-        rgba[i * 4 + 1] = base.g;
-        rgba[i * 4 + 2] = base.b;
-        rgba[i * 4 + 3] = 0.34 * Math.pow(1 - t, 2.2);
-      }
-      geo.setAttribute('color', new THREE.BufferAttribute(rgba, 4));
+      obj.position.set(px, baseY + h / 2, pz);
+      obj.rotation.y = rotY;
+      obj.updateMatrixWorld(true);
 
-      const mat = new THREE.MeshBasicMaterial({
-        vertexColors: true,
-        transparent: true,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(px, baseY + h / 2, pz);
-      mesh.rotation.y = rotY;
-      this.fence.add(mesh);
+      const pos = geo.attributes.position;
+      const vertexOffset = positions.length / 3;
+      const v = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(obj.matrixWorld);
+        positions.push(v.x, v.y, v.z);
+        // 0 at the foot of the wall, 1 at the top — local Y, before the
+        // world-space transform above.
+        const t = (pos.getY(i) + h / 2) / h;
+        colors.push(base.r, base.g, base.b, 0.34 * Math.pow(1 - t, 2.2));
+      }
+      for (const idx of geo.index.array) indices.push(idx + vertexOffset);
+      geo.dispose();
     };
 
     const midX = (b.minX + b.maxX + 1) / 2;
@@ -158,6 +166,20 @@ export class Territory {
     wall(midX, b.maxZ + 1, 0);
     wall(b.minX, midZ, Math.PI / 2);
     wall(b.maxX + 1, midZ, Math.PI / 2);
+
+    if (positions.length) {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 4));
+      geo.setIndex(indices);
+      const mat = new THREE.MeshBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      this.fence.add(new THREE.Mesh(geo, mat));
+    }
 
     this.buildEdgeStroke(b);
   }

@@ -66,15 +66,17 @@ export class CloudWorlds {
     const result = await this.sync.push(worldId, { world, meta });
 
     if (gamification) {
-      const g = gamification.toJSON();
       // Best effort: a world that uploaded is the thing worth keeping, and a
       // failed progression write should not read as a failed save.
+      //
+      // The whole snapshot goes up, not a hand-picked subset of it — that
+      // subset used to read fields (`g.achievements`, `g.stats`) that
+      // GamificationEngine.toJSON() has never produced (the real names are
+      // `achievementsUnlocked` and no `stats` field exists at all), so every
+      // push silently wrote an empty achievements array regardless of what
+      // was actually unlocked. See NeonTransport.pushProgression.
       try {
-        await this.transport.pushProgression({
-          xp: g.xp, level: g.level, streak: g.streak ?? g.streakCount,
-          lastPlayDate: g.lastPlayDate ?? null,
-          achievements: g.achievements ?? [], stats: g.stats ?? {},
-        });
+        await this.transport.pushProgression(gamification.toJSON());
       } catch { /* reported by the next save */ }
     }
     return { ...result, revision: meta.revision };
@@ -135,9 +137,15 @@ export class CloudWorlds {
   async progression() {
     const row = await this.transport.pullProgression();
     if (!row) return null;
+    // `stats` carries the full GamificationEngine snapshot pushProgression
+    // wrote — see there — so this is a real toJSON()-shaped object that
+    // Game.js can hand straight to gamification.loadJSON(). The individual
+    // columns are read only as a fallback, for a row a pre-fix build wrote,
+    // where `stats` is still the table's empty default.
+    if (row.stats && Object.keys(row.stats).length) return row.stats;
     return {
-      xp: row.xp, level: row.level, streak: row.streak_count,
-      lastPlayDate: row.last_play_date, achievements: row.achievements, stats: row.stats,
+      xp: row.xp, level: row.level, streakCount: row.streak_count,
+      lastPlayDate: row.last_play_date, achievementsUnlocked: row.achievements ?? [],
     };
   }
 

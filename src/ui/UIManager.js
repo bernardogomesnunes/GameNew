@@ -13,6 +13,13 @@ import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
 import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 import { CLEARS, clearArtSvg } from '../config/clears.js';
 
+/**
+ * Items that act on the world directly through Break/Place while selected,
+ * rather than being placed as a block or spent as a crafting ingredient.
+ * Only the bucket does this today — see Game.js's fillBucket/emptyBucket.
+ */
+const TOOL_HOTBAR_IDS = ['bucket', 'bucket_water'];
+
 function el(html) {
   const t = document.createElement('template');
   t.innerHTML = html.trim();
@@ -30,6 +37,10 @@ export class UIManager {
     this.game = game;
     this.cb = callbacks;
     this.selectedBlockId = 1;
+    // The bucket, and nothing else yet — see TOOL_HOTBAR_IDS. Selecting a
+    // tool and selecting a block are mutually exclusive: exactly one hotbar
+    // slot is ever highlighted.
+    this.selectedItemId = null;
     this.selectionActive = false;
 
     // Before the markup, because what it decides — a phone or not — is read
@@ -367,8 +378,14 @@ export class UIManager {
       const placeable = inv.heldIds()
         .map((id) => ({ id, spec: ITEMS_BY_ID.get(id) }))
         .filter((e) => e.spec?.block != null);
+      // The bucket, when you're holding one — it doesn't place, so it isn't
+      // in `placeable`, but it still needs a slot to be selected from. See
+      // TOOL_HOTBAR_IDS and Game.js's fillBucket/emptyBucket.
+      const tools = TOOL_HOTBAR_IDS
+        .filter((id) => inv.countOf(id) > 0)
+        .map((id) => ({ id, spec: ITEMS_BY_ID.get(id) }));
 
-      if (!placeable.length) {
+      if (!placeable.length && !tools.length) {
         hotbar.appendChild(el(`<div class="hotbar-empty">Nothing to build with yet — break something</div>`));
         this.showHotbarLabel();
         return;
@@ -376,7 +393,7 @@ export class UIManager {
       placeable.forEach((e, i) => {
         const total = inv.countOf(e.id);
         hotbar.appendChild(el(`
-          <div class="hotbar-slot ${e.spec.block === this.selectedBlockId ? 'selected' : ''}"
+          <div class="hotbar-slot ${!this.selectedItemId && e.spec.block === this.selectedBlockId ? 'selected' : ''}"
                data-id="${e.spec.block}" data-item="${e.id}"
                data-name="${itemName(e.id)}" data-note=""
                title="${itemName(e.id)} — ${total} in your bag">
@@ -386,9 +403,28 @@ export class UIManager {
           </div>
         `));
       });
-      // If what was selected has run out, fall to the first thing you do have.
-      if (!placeable.some((e) => e.spec.block === this.selectedBlockId)) {
-        this.selectBlock(placeable[0].spec.block);
+      tools.forEach((e) => {
+        const total = inv.countOf(e.id);
+        const note = e.id === 'bucket' ? 'Break to scoop water' : 'Place to pour it out';
+        hotbar.appendChild(el(`
+          <div class="hotbar-slot ${this.selectedItemId === e.id ? 'selected' : ''}"
+               data-tool="1" data-item="${e.id}"
+               data-name="${itemName(e.id)}" data-note="${note}"
+               title="${itemName(e.id)} — ${note}">
+            <div class="swatch swatch-cube">${itemIcon(e.spec, { size: 30 }) ?? glyphSvg(e.spec.glyph, { size: 18, color: e.spec.color })}</div>
+            <span class="held">${total}</span>
+          </div>
+        `));
+      });
+      // If what was selected has run out — a block spent, or the bucket you
+      // had selected just swapped for its filled/emptied counterpart — fall
+      // to the first thing you do have.
+      const stillValid = this.selectedItemId
+        ? tools.some((e) => e.id === this.selectedItemId)
+        : placeable.some((e) => e.spec.block === this.selectedBlockId);
+      if (!stillValid) {
+        if (placeable.length) this.selectBlock(placeable[0].spec.block);
+        else this.selectItem(tools[0].id);
       } else this.showHotbarLabel();
       return;
     }
@@ -464,6 +500,7 @@ export class UIManager {
     this.q('#hotbar').addEventListener('click', (e) => {
       const slot = e.target.closest('.hotbar-slot');
       if (!slot) return;
+      if (slot.dataset.tool) { this.selectItem(slot.dataset.item); return; }
       const id = Number(slot.dataset.id);
       const availability = this.game.blockAvailability(id);
       if (!availability.ok) {
@@ -756,9 +793,20 @@ export class UIManager {
 
   selectBlock(id) {
     this.selectedBlockId = id;
-    this.root.querySelectorAll('.hotbar-slot').forEach((s) => s.classList.toggle('selected', Number(s.dataset.id) === id));
+    this.selectedItemId = null;
+    this.root.querySelectorAll('.hotbar-slot').forEach((s) =>
+      s.classList.toggle('selected', !s.dataset.tool && Number(s.dataset.id) === id));
     this.showHotbarLabel();
     this.cb.onSelectSlot(id);
+  }
+
+  /** Selects a tool slot — the bucket, today — instead of a placeable block. */
+  selectItem(id) {
+    this.selectedItemId = id;
+    this.root.querySelectorAll('.hotbar-slot').forEach((s) =>
+      s.classList.toggle('selected', s.dataset.tool ? s.dataset.item === id : false));
+    this.showHotbarLabel();
+    this.cb.onSelectItem?.(id);
   }
 
   /**
@@ -786,7 +834,9 @@ export class UIManager {
   cycleHotbarByKey(n) {
     if (this.cb.isDuilt?.()) {
       const slot = this.root.querySelectorAll('#hotbar .hotbar-slot')[n - 1];
-      if (slot) this.selectBlock(Number(slot.dataset.id));
+      if (!slot) return;
+      if (slot.dataset.tool) this.selectItem(slot.dataset.item);
+      else this.selectBlock(Number(slot.dataset.id));
       return;
     }
     const b = PLACEABLE_BLOCKS[n - 1];

@@ -46,7 +46,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, BLOCKS_BY_ID } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID } from './config/blocks.js';
 import { TOOL_FOR } from './config/items.js';
 
 const REACH = 7;
@@ -177,6 +177,9 @@ export class Game {
     this.mode = DUILT;
 
     this.selectedBlockId = 1;
+    // The hotbar slot for a held tool (the bucket, today) rather than a
+    // placeable block — see UIManager.selectItem and fillBucket/emptyBucket.
+    this.selectedItemId = null;
     this.pointerLocked = false;
     // Held-to-break: when it started and when it last fired. Driven from the
     // frame loop rather than a timer, so it stops on its own the moment the
@@ -555,7 +558,8 @@ export class Game {
         this.enterFullscreen();
       },
       onToggleFullscreen: () => this.toggleFullscreen(),
-      onSelectSlot: (id) => { this.selectedBlockId = id; },
+      onSelectSlot: (id) => { this.selectedBlockId = id; this.selectedItemId = null; },
+      onSelectItem: (id) => { this.selectedItemId = id; },
       // Opening a world by its id. There is no "open by name" any more,
       // because there is no second copy of anything to tell apart by name.
       onOpenWorld: (id) => this.openWorld(id),
@@ -1113,6 +1117,9 @@ export class Game {
     if (this.pendingClear) return void this.runClear();
     if (this.pendingRoof) return void this.stampRoof();
     if (this.pendingTemplate) return void this.stampTemplate();
+    // The bucket takes the button too, while it's the one selected — it has
+    // nothing to dig with.
+    if (this.selectedItemId === 'bucket') return void this.fillBucket();
     this.breakBlock();
   }
 
@@ -1125,6 +1132,8 @@ export class Game {
     // way to turn it. See setToolReadout, which labels it to match.
     if (this.pendingRoof?.turns > 1) return void this.turnRoof();
     if (this.armed) return void this.clearPending();
+    // A full bucket takes the button too, instead of placing a block.
+    if (this.selectedItemId === 'bucket_water') return void this.emptyBucket();
     this.placeBlock();
   }
 
@@ -1868,11 +1877,18 @@ export class Game {
     this.saveNow();
     this.syncState.agree(id, data.revision ?? 0);
     // Progression belongs to the account, not the world, so it is merged in
-    // separately — and only if the cloud copy is further along than this device.
+    // separately — and only if the cloud copy is further along than this
+    // device. `remote` is a full GamificationEngine.toJSON() snapshot (see
+    // CloudWorlds.progression()), so loadJSON takes it directly — this used
+    // to spread it onto the current state instead, which silently kept
+    // whatever `achievementsUnlocked` this device already had (fresh and
+    // empty, on a new session) because `remote`'s field was never named
+    // that. Reopening an old world lost every unlocked achievement, and
+    // breaking one more block re-triggered "first break" as if it were new.
     try {
       const remote = await this.cloud.progression();
       if (remote && (remote.xp ?? 0) > (this.gamification.toJSON().xp ?? 0)) {
-        this.gamification.loadJSON({ ...this.gamification.toJSON(), ...remote });
+        this.gamification.loadJSON(remote);
         this.ui.updateXp();
       }
     } catch { /* the world is what matters; progression can wait for the next sign-in */ }
@@ -1933,6 +1949,32 @@ export class Game {
   computeTargets(x, y, z) {
     if (this.symmetryTool.mode === 'off') return [{ x, y, z }];
     return this.symmetryTool.reflect(x, y, z);
+  }
+
+  /**
+   * What Break does with an empty bucket selected: scoop from the water
+   * you're pointing at, rather than dig it up. Water is a source, not
+   * inventory — filling the bucket doesn't remove the block.
+   */
+  fillBucket() {
+    if (!this.duilt) return;
+    const hit = this.raycast();
+    const atWater = hit && this.world.getBlock(hit.x, hit.y, hit.z) === WATER;
+    if (!atWater) {
+      this.ui.toast({ kind: 'xp', title: 'Nothing to scoop', body: 'Point at water and press Break' });
+      return;
+    }
+    if (!this.duilt.inventory.remove('bucket', 1)) return;
+    this.duilt.inventory.add('bucket_water', 1);
+    this.ui.toast({ kind: 'xp', title: 'Bucket filled', body: 'Scooped up' });
+  }
+
+  /** What Place does with a full bucket selected: pour it out instead of building. */
+  emptyBucket() {
+    if (!this.duilt) return;
+    if (!this.duilt.inventory.remove('bucket_water', 1)) return;
+    this.duilt.inventory.add('bucket', 1);
+    this.ui.toast({ kind: 'xp', title: 'Bucket emptied', body: 'Poured out' });
   }
 
   breakBlock() {

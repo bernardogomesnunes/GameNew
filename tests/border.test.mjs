@@ -156,4 +156,23 @@ ok(`movement inside the border is unaffected (${stuckInside} stuck)`, stuckInsid
     x === wide.minX || x === wide.maxX + 1 || z === wide.minZ || z === wide.maxZ + 1));
 }
 
+// --- the wall does not flicker as you walk past a corner ---------------------
+//
+// The four faces used to be four separate THREE.Mesh objects: transparent,
+// depth-write-off, sharing a corner. Three sorts transparent objects by
+// camera distance every frame, and two large planes meeting at a corner
+// swap which is nearer as you walk past it — so the corner popped between
+// "wall A in front" and "wall B in front" as you moved. One merged mesh has
+// nothing left to sort against itself.
+
+{
+  const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed: 3 });
+  const g = new DuiltGame({ world, scene, bus: null });
+  const wallMeshes = g.territory.fence.children.filter((c) => c.isMesh);
+  ok('the border wall is one mesh, not one per side', wallMeshes.length === 1);
+  const geo = wallMeshes[0].geometry;
+  ok('and it actually carries all four sides\' worth of geometry',
+    geo.attributes.position.count === 4 * 2 * 13); // 4 walls × PlaneGeometry(w,h,1,12)'s (1+1)×(12+1) grid
+}
+
 process.exit(f ? 1 : 0);

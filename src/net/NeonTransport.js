@@ -229,20 +229,30 @@ export class NeonTransport {
     await this.request(`/world_chunks?world_id=eq.${worldId}`, { method: 'DELETE', prefer: 'return=minimal' });
   }
 
-  /** Progression is per account, not per world, so it is written on its own. */
-  async pushProgression(progression) {
+  /**
+   * Progression is per account, not per world, so it is written on its own.
+   *
+   * `snapshot` is GamificationEngine.toJSON() — the same shape loadJSON()
+   * reads back. `xp`/`level`/`streak_count`/`last_play_date`/`achievements`
+   * are pulled out into their own columns too, so the row stays directly
+   * queryable, but `stats` carries the whole thing: that's what pullProgression
+   * hands back verbatim, so a restore gets everything an achievement check
+   * depends on (totalBlocksBroken, distinct types placed, template counts —
+   * not only the headline xp/level/achievements numbers).
+   */
+  async pushProgression(snapshot) {
     const playerId = await this.ensurePlayer();
     await this.request('/progression?on_conflict=player_id', {
       method: 'POST',
       prefer: 'resolution=merge-duplicates,return=minimal',
       body: [{
         player_id: playerId,
-        xp: progression.xp ?? 0,
-        level: progression.level ?? 1,
-        streak_count: progression.streak ?? 0,
-        last_play_date: progression.lastPlayDate ?? null,
-        achievements: progression.achievements ?? [],
-        stats: progression.stats ?? {},
+        xp: snapshot.xp ?? 0,
+        level: snapshot.level ?? 1,
+        streak_count: snapshot.streakCount ?? 0,
+        last_play_date: snapshot.lastPlayDate ?? null,
+        achievements: snapshot.achievementsUnlocked ?? [],
+        stats: snapshot,
         updated_at: new Date().toISOString(),
       }],
     });
