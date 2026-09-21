@@ -193,6 +193,16 @@ export class NeonTransport {
     if (!worlds?.length) return null;
     const w = worlds[0];
     const rows = await this.request(`/world_chunks?select=cx,cz,rle&world_id=eq.${worldId}`);
+    // migrations/0003 gave duilt and an endless world's seed their own
+    // columns. A row saved before that migration ran has them nested inside
+    // `economy` instead — the shape pushWorld used to write, and the only
+    // shape some real, already-played rows will ever have, since nothing
+    // rewrites a row that is never re-saved. Reading only the new columns
+    // for such a row silently came back empty: not "this world has no bag,"
+    // but "the two-year settlement in it does, and this doesn't know where
+    // to look." Falling back here is what pullWorld should have done from
+    // the day the columns were added.
+    const legacy = w.economy && typeof w.economy === 'object' ? w.economy : {};
     return {
       meta: {
         id: w.id,
@@ -205,9 +215,9 @@ export class NeonTransport {
         sizeZ: w.size_z || null,
         height: w.height,
         spawn: w.spawn,
-        economy: w.economy ?? {},
-        duilt: w.duilt ?? null,
-        worldGen: w.world_gen ?? null,
+        economy: legacy.economy ?? w.economy ?? {},
+        duilt: w.duilt ?? legacy.duilt ?? null,
+        worldGen: w.world_gen ?? legacy.worldGen ?? null,
         blockCount: w.block_count,
         revision: Number(w.revision),
       },

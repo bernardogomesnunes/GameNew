@@ -412,3 +412,38 @@ await test('a pre-fix progression row (empty stats) still restores what it can',
   fresh.loadJSON(remote);
   assert.equal(fresh.state.xp, 500);
 });
+
+// --- a world saved before migrations/0003 still restores, not empty ---------
+//
+// Reported directly from production: a settlement played for hours, saved
+// many times under the pre-0003 shape (duilt and worldGen nested inside
+// `economy`), came back with an empty bag and a bounded fallback world the
+// moment it was opened under the new columns — because pullWorld only ever
+// read the new `duilt`/`world_gen` columns, which are null for a row nothing
+// has re-saved since. The bag was still sitting right there, one level of
+// nesting away, and nothing looked. That row's real data is gone for good —
+// Neon's undo window had already closed by the time this was caught — so
+// this is the regression test for the fix, not a recovery for it.
+
+await test('a world saved before migrations/0003 (data nested in economy) still restores', async () => {
+  const { cloud, backend } = makeCloudWorlds();
+  const duiltState = { age: 2, inventory: { slots: [{ id: 'axe', count: 1, wear: 0 }] }, hunger: { value: 80 } };
+
+  // Exactly the row shape pushWorld wrote before migrations/0003: duilt and
+  // worldGen nested inside economy, the new columns never populated because
+  // they did not exist yet.
+  backend.worlds.set('legacy-world', {
+    id: 'legacy-world', player_id: 'player-1', name: 'Old settlement', mode: 'duilt',
+    size_x: 0, size_z: 0, height: 64, spawn: null,
+    economy: { economy: { balances: { wood: 40 } }, duilt: duiltState, worldGen: { seed: 4242, homeX: 0, homeZ: 0 } },
+    duilt: null, world_gen: null,
+    block_count: 500, revision: 12,
+  });
+
+  const restored = await withFetch(backend.fetchImpl, () => cloud.restore('legacy-world'));
+
+  assert.equal(restored.world.endless, true, 'a legacy row must not silently fall back to a bounded world');
+  assert.equal(restored.world.gen.seed, 4242, 'the seed has to come from wherever it is actually stored');
+  assert.deepEqual(restored.duilt, duiltState, 'the bag must come back, not read as empty because nothing new-shaped was there');
+  assert.equal(restored.economy.balances.wood, 40);
+});

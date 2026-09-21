@@ -30,6 +30,28 @@ A migration file is a historical record once it has run — never edit one
 after it has been applied to the live database. If a change was wrong, write
 a new migration that corrects it.
 
+## Changing where existing data lives
+
+`0003_worlds_duilt_worldgen_columns.sql` moved data (a Duilt world's bag,
+an endless world's seed) out of the `economy` JSONB column into columns of
+their own. The migration itself was safe — it only added columns. What
+wasn't safe: the code that *reads* the new columns stopped falling back to
+the old nested location, so a world saved before the migration — real,
+already-played, sitting untouched in the database because nothing had
+re-saved it yet — came back as if its bag had always been empty. Nothing
+errored. It just quietly lost hours of somebody's play the first time that
+row was opened, and by the time it was noticed, Neon's undo window had
+already closed over it.
+
+So: **a migration that changes where something is read from must ship
+with a read-side fallback to the old location**, kept until nothing could
+plausibly still be stored the old way — for this project, that means
+every row, indefinitely, since there is no migration-runner sweep that
+rewrites existing rows to the new shape. `NeonTransport.pullWorld()` is
+the pattern to copy: try the new column, fall back to the JSONB key it
+used to live under. A schema change is safe to ship the moment it stops
+being possible for a real row to be read as emptier than it actually is.
+
 ## Files
 
 - `0001_baseline.sql` — documents the schema as it already existed before
