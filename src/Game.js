@@ -94,10 +94,13 @@ const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream 
  * is the most you can lose and only by a crash.
  */
 const AUTOSAVE_INTERVAL_MS = 5 * 60_000;
-// Holding down to keep breaking. The first pause is longer than the rest so a
-// normal click stays a single block — hold past it and it becomes a stream.
+// Holding down to keep breaking, and the same for placing. The first pause is
+// longer than the rest so a normal click stays a single block — hold past it
+// and it becomes a stream.
 const HOLD_BREAK_DELAY_MS = 320;
 const HOLD_BREAK_INTERVAL_MS = 170;
+const HOLD_PLACE_DELAY_MS = 320;
+const HOLD_PLACE_INTERVAL_MS = 170;
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -188,6 +191,10 @@ export class Game {
     this.breaking = false;
     this.breakHeldSince = 0;
     this.lastBreakAt = 0;
+    // Same idea, for Place — see setPlacing/tickPlacing.
+    this.placing = false;
+    this.placeHeldSince = 0;
+    this.lastPlaceAt = 0;
     this.hoverHit = null;
     this.upHeld = false;
     this.downHeld = false;
@@ -722,6 +729,7 @@ export class Game {
       onBreakTap: () => this.primaryAction(),
       onBreakHold: (held) => this.setBreaking(held),
       onPlaceTap: () => this.secondaryAction(),
+      onPlaceHold: (held) => this.setPlacing(held),
 
       // ---- duilt ----
       isDuilt: () => !!this.duilt,
@@ -997,13 +1005,13 @@ export class Game {
         return;
       }
       if (e.button === 0) { this.primaryAction(); this.setBreaking(true); }
-      else if (e.button === 2) this.secondaryAction();
+      else if (e.button === 2) { this.secondaryAction(); this.setPlacing(true); }
     });
     // Every way the button can stop being down, including the ones that are not
     // a mouseup: releasing outside the canvas, tabbing away mid-hold, or the
     // browser taking the pointer back.
     for (const [target, event] of [[window, 'mouseup'], [window, 'blur'], [document, 'visibilitychange']]) {
-      target.addEventListener(event, () => this.setBreaking(false));
+      target.addEventListener(event, () => { this.setBreaking(false); this.setPlacing(false); });
     }
 
     window.addEventListener('keydown', (e) => {
@@ -1102,6 +1110,26 @@ export class Game {
     if (now - this.lastBreakAt < HOLD_BREAK_INTERVAL_MS) return;
     this.lastBreakAt = now;
     this.breakBlock();
+  }
+
+  /** Starts or stops placing on repeat — the same idea as setBreaking, for Place. */
+  setPlacing(on) {
+    const want = on && !this.armed && !this.moving;
+    if (want === this.placing) return;
+    this.placing = want;
+    if (want) {
+      this.placeHeldSince = performance.now();
+      this.lastPlaceAt = this.placeHeldSince;
+    }
+  }
+
+  /** One frame of a held place. Re-aims every time, so it follows where you point. */
+  tickPlacing(now) {
+    if (!this.placing) return;
+    if (now - this.placeHeldSince < HOLD_PLACE_DELAY_MS) return;
+    if (now - this.lastPlaceAt < HOLD_PLACE_INTERVAL_MS) return;
+    this.lastPlaceAt = now;
+    this.placeBlock();
   }
 
   /** Whether a tool is queued and waiting to be used where you are pointing. */
@@ -2244,6 +2272,7 @@ export class Game {
       document.exitPointerLock?.();
       this.player.releaseKeys();
       this.setBreaking(false);
+      this.setPlacing(false);
       this.ui?.setBuildingHint(null);
       if (this.moving) this.endMove();
     }
@@ -2269,6 +2298,7 @@ export class Game {
       this.updateHover();
       this.settlerView.update(this.duilt?.settlers.people ?? []);
       this.tickBreaking(performance.now());
+      this.tickPlacing(performance.now());
       this.gamification.tick(performance.now());
       if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.saveNow();
     }

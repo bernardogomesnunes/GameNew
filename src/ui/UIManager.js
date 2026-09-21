@@ -745,7 +745,21 @@ export class UIManager {
       this.closeTray();
       this.setSymmetryLabel(this.cb.onCycleSymmetry());
     });
-    this.q('#t-place').addEventListener('touchstart', (e) => { e.preventDefault(); this.cb.onPlaceTap(); });
+    // Place is a hold too, the same reason Break is: one block per tap meant
+    // tapping forty times to wall something in.
+    {
+      const btn = this.q('#t-place');
+      const down = (e) => {
+        e.preventDefault();
+        btn.classList.add('active');
+        this.cb.onPlaceTap();
+        this.cb.onPlaceHold?.(true);
+      };
+      const up = () => { btn.classList.remove('active'); this.cb.onPlaceHold?.(false); };
+      btn.addEventListener('touchstart', down, { passive: false });
+      btn.addEventListener('touchend', up);
+      btn.addEventListener('touchcancel', up);
+    }
   }
 
   wireBus() {
