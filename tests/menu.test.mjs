@@ -102,12 +102,17 @@ ok('and the way back is too', css.includes('.menu-back'));
 
 // --- the mobile screen gets its space back ----------------------------------
 
-// The goals live with the controls, beside Roof. Not in the top corner, where
-// they cost the screen its scarcest space, and not on the HUD as a standing
-// card of three tasks — one way in, where your thumb already is.
+// The goals live with the controls, beside Roof — not on the HUD as a
+// standing card of three tasks. On touch that means the tray, where your
+// thumb already is; the corner button that goes with it is `touch-moved`
+// (CSS: `body.touch #top-buttons .touch-moved { display: none }`), the same
+// as Roof's and Designs's, so it costs the phone's scarce screen space
+// nothing — it only shows on desktop, which had no way into Goals at all
+// before this, not even a keyboard shortcut.
 ok('the goals are in the controls tray', ui.includes('id="t-stats"'));
 ok('and open the panel', ui.includes("['#t-stats'"));
-ok('they have no button in the top corner', !ui.includes('id="btn-stats"'));
+ok('their corner button is touch-moved, so it costs the tray nothing on a phone',
+  /class="icon-btn touch-moved" id="btn-stats"/.test(ui));
 ok('no card in settings', !MENU.some((m) => m.opens === 'panel-stats'));
 ok('and the goal card is off the HUD entirely', !ui.includes('id="goals"'));
 

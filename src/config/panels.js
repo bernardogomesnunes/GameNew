@@ -32,6 +32,7 @@ export const PANELS = [
     layer: 'main',
     mode: 'any',
     label: 'Stats',
+    key: 'KeyG',
   },
   {
     id: 'panel-menu',

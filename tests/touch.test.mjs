@@ -155,17 +155,23 @@ ok('it sits clear of the hotbar', /\.touch-tray \{[\s\S]{0,300}bottom: calc\(84p
 
 // --- what is left at the top --------------------------------------------------
 
-// One button up here, and it is not a game control at all: everything else
-// went to the tray, and the goals went to the menu where the rest of the
-// between-builds things live.
+// Everything that is a game control moved to the tray on touch, keeping a
+// matching button in the corner for desktop — Settings is the one thing
+// that stayed corner-only, because it has nowhere else to be.
 ok('there is no guide button any more', !/id="btn-guide"/.test(ui));
 ok('and the menu reads as settings', /id="btn-menu"[^>]*>\$\{icon\('settings'\)\}<span>Settings<\/span>/.test(ui));
 ok('Settings is all that is left in the corner',
   (ui.slice(ui.indexOf('<div id="top-buttons">'), ui.indexOf('</div>', ui.indexOf('<div id="top-buttons">')))
     .match(/class="icon-btn(?![^"]*touch-moved)/g) ?? []).length === 1);
-ok('the goals are not up there', !ui.includes('id="btn-stats"'));
-// They are in the tray, beside Roof — with the controls, not behind Settings.
-ok('they are in the tray instead', tray.includes('id="t-stats"'));
+// Reported directly: a desktop player had no way to open Goals at all — no
+// button, no shortcut. Roof and Designs, its neighbours in the tray, each
+// already had a desktop-corner button alongside their tray one; Goals never
+// got its own, which was the actual gap, not a deliberate "desktop doesn't
+// get this." It now has both, the same as they do.
+ok('and now also a way in from the corner, the same as Roof and Designs have',
+  ui.includes('id="btn-stats"'));
+// They are in the tray too, beside Roof — with the controls, not behind Settings.
+ok('and still in the tray', tray.includes('id="t-stats"'));
 {
   const order = [...tray.matchAll(/id="(t-[a-z]+)"/g)].map((m) => m[1]);
   ok(`and next to Roof (${order.join(', ')})`,

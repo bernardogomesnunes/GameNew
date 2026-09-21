@@ -110,6 +110,7 @@ export class UIManager {
       <button id="building-hint" hidden></button>
 
       <div id="top-buttons">
+        <button class="icon-btn touch-moved" id="btn-stats" title="Goals (G)">${icon('stats')}<span>Goals</span></button>
         <button class="icon-btn touch-moved" id="btn-templates" title="Save a build, and stamp it anywhere">${icon('paste')}<span>Designs</span></button>
         <button class="icon-btn touch-moved" id="btn-roof" title="Pitch a roof over the building you point at">${icon('roof')}<span>Roof</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
@@ -518,6 +519,10 @@ export class UIManager {
       } else fsBtn.remove();
     }
 
+    // The only way into Goals used to be a touch-only button in the mobile
+    // overlay (#t-stats) — nothing on desktop opened it at all, keyboard
+    // shortcut included, until this one and panel-stats's `key` above existed.
+    this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
     this.q('#btn-templates').addEventListener('click', () => this.toolButton('design', 'panel-templates'));
     this.q('#btn-roof').addEventListener('click', () => this.toolButton('roof', 'panel-roof'));
     this.q('#tool-cancel').addEventListener('click', () => this.cb.onCancelTool?.());
