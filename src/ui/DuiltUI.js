@@ -696,6 +696,13 @@ export class DuiltUI {
       const makes = Object.entries(spec.produces ?? {}).map(([k, v]) => `${v} ${itemName(k).toLowerCase()}`).join(', ');
       const canStamp = design && d.inventory.hasAll(design.cost);
       const shortfall = design ? d.inventory.missing(design.cost) : {};
+      // The full bill, not just what you're short — a shortfall note only ever
+      // said "4 more turned soil" and never the 16 it actually takes, so the
+      // only way to know the real cost was to try, fail, and do the subtraction
+      // yourself.
+      const costLine = design
+        ? Object.entries(design.cost).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(', ')
+        : null;
 
       return `
         <div class="building-card">
@@ -710,6 +717,7 @@ export class DuiltUI {
           <div class="building-meta">
             <span>${this.whatItGivesYou(spec, makes)}</span>
             <span>Needs: ${needs}</span>
+            ${costLine ? `<span>Costs: ${costLine}</span>` : ''}
           </div>
           <div class="building-actions">
             <button class="secondary" data-claim-here="${spec.id}" ${opt?.ok ? '' : 'disabled'}>

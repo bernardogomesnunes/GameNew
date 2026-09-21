@@ -271,9 +271,6 @@ export class UIManager {
         'panel-clear': `
           <div id="clear-list"></div>
           <div class="export-note" id="clear-note"></div>`,
-        'panel-score': `
-          <div class="score-total" id="score-total">0</div>
-          <div class="score-breakdown" id="score-breakdown"></div>`,
       })}
 
       <!--
@@ -802,7 +799,10 @@ export class UIManager {
     this.bus.on('streak:update', ({ count }) => {
       if (count > 1) this.toast({ kind: 'xp', title: `${count}-day streak`, body: 'Back again — nice consistency.' });
     });
-    this.bus.on('session:end', ({ score }) => this.showBuildScore(score));
+    // Used to pop a "Session Complete" panel over the game every time two
+    // minutes passed without an edit — not a milestone, just an interruption
+    // while you're standing there deciding what to build next. Requested
+    // directly: dropped, along with the panel it opened.
   }
 
   selectBlock(id) {
@@ -857,6 +857,23 @@ export class UIManager {
     if (!b) return;
     if (!this.game.blockAvailability(b.id).ok) return;
     this.selectBlock(b.id);
+  }
+
+  /**
+   * Moves the selection one slot left or right — the scroll wheel, so picking
+   * something isn't only the number keys or clicking a slot by hand. Reads
+   * the DOM the hotbar just drew rather than a separate list, so it works the
+   * same way in Duilt and Creative without knowing which one it is; a locked
+   * Creative slot is skipped rather than landed on, the same as a number key
+   * already refuses one.
+   */
+  cycleHotbarByDelta(delta) {
+    const slots = [...this.root.querySelectorAll('#hotbar .hotbar-slot')].filter((s) => !s.classList.contains('locked'));
+    if (!slots.length) return;
+    const current = slots.findIndex((s) => s.classList.contains('selected'));
+    const next = slots[(current + delta + slots.length) % slots.length];
+    if (next.dataset.tool) this.selectItem(next.dataset.item);
+    else this.selectBlock(Number(next.dataset.id));
   }
 
   updateXp() {
@@ -1113,21 +1130,6 @@ export class UIManager {
         <div class="reward">${done ? 'Completed' : `Reward: +${c.xpReward} XP${c.unlockBlock ? ' + early block unlock' : ''}`}</div>
       </div>`;
     }).join('');
-  }
-
-  showBuildScore(score) {
-    if (!score) return;
-    this.q('#score-total').textContent = score.totalScore;
-    this.q('#score-breakdown').innerHTML = `
-      ${row('Size', score.sizeScore)}
-      ${row('Variety', score.varietyScore)}
-      ${row('Height', score.heightScore)}
-      <div class="sub" style="margin-top:6px;">${score.blocksPlaced} blocks · ${score.distinctTypes} types · ${score.heightRange} block height range</div>
-    `;
-    this.openPanel('panel-score');
-    function row(label, value) {
-      return `<div class="score-bar-row"><span style="width:56px;">${label}</span><div class="score-bar-track"><div class="score-bar-fill" style="width:${value}%"></div></div><span>${value}</span></div>`;
-    }
   }
 
   /**

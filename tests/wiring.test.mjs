@@ -83,7 +83,7 @@ ok('a toast reaches the screen', heard.has('toast'));
  */
 const NOBODY_HEARS = [
   'cloud:auth', 'duilt:bagfull', 'duilt:gathered', 'economy:change', 'economy:tier',
-  'game:phase', 'hunger:low', 'session:start', 'skill:levelup', 'structure:locked',
+  'game:phase', 'hunger:low', 'session:end', 'session:start', 'skill:levelup', 'structure:locked',
   'structure:removed', 'structure:repaired', 'sync:pulled',
   'sync:pushed', 'template:saved', 'templates:change', 'templates:error',
 ];

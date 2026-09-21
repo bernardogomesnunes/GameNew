@@ -1007,6 +1007,14 @@ export class Game {
       if (e.button === 0) { this.primaryAction(); this.setBreaking(true); }
       else if (e.button === 2) { this.secondaryAction(); this.setPlacing(true); }
     });
+
+    // The wheel moves the hotbar selection, so picking something is not only
+    // the number keys or clicking a slot by hand.
+    canvas.addEventListener('wheel', (e) => {
+      if (!this.pointerLocked || this.moving) return;
+      e.preventDefault();
+      this.ui.cycleHotbarByDelta(Math.sign(e.deltaY));
+    }, { passive: false });
     // Every way the button can stop being down, including the ones that are not
     // a mouseup: releasing outside the canvas, tabbing away mid-hold, or the
     // browser taking the pointer back.

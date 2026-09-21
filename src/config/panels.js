@@ -76,15 +76,6 @@ export const PANELS = [
     mode: 'any',
     label: 'Clear',
   },
-  {
-    id: 'panel-score',
-    title: 'Session Complete',
-    sub: 'A lightweight read on how this build session went — just for you.',
-    layer: 'main',
-    mode: 'any',
-    label: 'Score',
-  },
-
   // ---- Duilt ----
 
   {
