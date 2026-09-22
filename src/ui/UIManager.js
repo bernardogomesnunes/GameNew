@@ -15,10 +15,17 @@ import { CLEARS, clearArtSvg } from '../config/clears.js';
 
 /**
  * Items that act on the world directly through Break/Place while selected,
- * rather than being placed as a block or spent as a crafting ingredient.
- * Only the bucket does this today — see Game.js's fillBucket/emptyBucket.
+ * rather than being placed as a block or spent as a crafting ingredient —
+ * and what to tell you Break/Place will do with each one selected. See
+ * Game.js's BREAK_OVERRIDE/PLACE_OVERRIDE for what actually runs.
  */
-const TOOL_HOTBAR_IDS = ['bucket', 'bucket_water'];
+const TOOL_HOTBAR_NOTES = {
+  bucket: 'Break to scoop water',
+  bucket_water: 'Place to pour it out',
+  fruit: 'Break to eat',
+  vegetables: 'Break to eat',
+};
+const TOOL_HOTBAR_IDS = Object.keys(TOOL_HOTBAR_NOTES);
 
 function el(html) {
   const t = document.createElement('template');
@@ -37,9 +44,10 @@ export class UIManager {
     this.game = game;
     this.cb = callbacks;
     this.selectedBlockId = 1;
-    // The bucket, and nothing else yet — see TOOL_HOTBAR_IDS. Selecting a
-    // tool and selecting a block are mutually exclusive: exactly one hotbar
-    // slot is ever highlighted.
+    // The bucket, food, and the mining tools — see TOOL_HOTBAR_NOTES and
+    // Game.js's BREAK_OVERRIDE/PLACE_OVERRIDE. Selecting a tool and
+    // selecting a block are mutually exclusive: exactly one hotbar slot is
+    // ever highlighted.
     this.selectedItemId = null;
     this.selectionActive = false;
 
@@ -403,7 +411,7 @@ export class UIManager {
       });
       tools.forEach((e) => {
         const total = inv.countOf(e.id);
-        const note = e.id === 'bucket' ? 'Break to scoop water' : 'Place to pour it out';
+        const note = TOOL_HOTBAR_NOTES[e.id] ?? '';
         hotbar.appendChild(el(`
           <div class="hotbar-slot ${this.selectedItemId === e.id ? 'selected' : ''}"
                data-tool="1" data-item="${e.id}"
@@ -613,7 +621,6 @@ export class UIManager {
     this.duiltUI = new DuiltUI(this.root, { game: this.game, bus: this.bus, panels: this.panels });
     // The hotbar is a view of the bag in Duilt, so it re-renders with it.
     this.duiltUI.onBagChanged = () => { if (this.cb.isDuilt?.()) this.buildHotbar(); };
-    this.duiltUI.onClaimType = (id) => this.cb.onClaimType(id);
     this.duiltUI.onStampStarter = (id) => this.cb.onStampStarter(id);
     this.duiltUI.onLeave = () => { this.closeAllPanels(); this.openHome(); };
     this.refreshForDuilt();
@@ -1116,7 +1123,7 @@ export class UIManager {
             <span class="goal-band-count">${met} / ${band.goals.length}</span>
           </div>
           ${band.goals.map((g) => `
-            <div class="ach-card ${done.has(g.id) ? '' : 'locked'} ${g.border ? 'is-border' : ''}">
+            <div class="ach-card ${done.has(g.id) ? '' : 'locked'}">
               <div class="ach-icon">${g.icon}</div>
               <div><div class="ach-name">${escapeHtml(g.name)}</div>
                    <div class="ach-desc">${escapeHtml(g.description)}</div></div>

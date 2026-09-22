@@ -307,7 +307,6 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 .goal-band.ahead { opacity: 0.6; }
 .goal-band .ach-card { margin-bottom: 6px; }
 /* The one that moves the border closes the band, so it reads as the door out. */
-.ach-card.is-border { border-color: rgba(77, 219, 196, 0.4); background: var(--accent-dim); }
 .ach-card { display: flex; gap: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; }
 .ach-card.locked { opacity: 0.4; }
 .ach-icon { font-size: 22px; }
@@ -638,6 +637,17 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 .bag-slot .wear { position: absolute; left: 5px; right: 5px; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.45); }
 .bag-slot .wear i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+.bag-slot-wrap { position: relative; }
+.slot-discard {
+  position: absolute; top: -5px; right: -5px; z-index: 1;
+  width: 18px; height: 18px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--panel-border); background: rgba(20,16,16,0.9);
+  color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0.55; transition: opacity 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.slot-discard svg { width: 10px; height: 10px; }
+.slot-discard:hover, .slot-discard:focus-visible { opacity: 1; color: #ff8a7a; border-color: #ff8a7a; }
 #bag-detail {
   border-top: 1px solid var(--panel-border); padding-top: 12px;
   font-size: 13px;

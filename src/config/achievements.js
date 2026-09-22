@@ -11,11 +11,13 @@ import { AGES } from './ages.js';
  *
  * So the prose is gone and this is the teaching. The shape is the world's own
  * shape: one band per age, each naming the handful of things that age is
- * about, ending with the border moving out. Read top to bottom it is what to
- * do next, in order, for as long as there is a next thing.
+ * about. Read top to bottom it is what to do next, in order, for as long as
+ * there is a next thing.
  *
- * The age bands come from ages.js rather than being written out, so adding an
- * age adds a band and the list cannot describe a game that no longer exists.
+ * Reaching the next age isn't itself listed here — the border growing is
+ * something you watch happen, not a card that congratulates you for it after
+ * the fact. The bands still come from ages.js, so a new age with real goals
+ * gets its own band without a line of this file changing.
  *
  * How to read one:
  *
@@ -144,26 +146,7 @@ const LATER = [
   },
 ];
 
-/**
- * One goal per age for the border moving out.
- *
- * Written from ages.js, so the numbers on the card are the numbers the border
- * actually uses. Age 1 is where you start rather than something you reach, so
- * it is not in here.
- */
-const BORDERS = AGES.filter((a) => a.age > 1).map((a) => ({
-  id: `age_${a.age}`,
-  age: a.age,
-  name: `Age ${a.age} · ${a.name}`,
-  description: `Finish Age ${a.age - 1} and your land grows to ${a.size} by ${a.size}.`,
-  icon: '🗺️',
-  xpReward: 100 * a.age,
-  border: true,
-  check: (c) => c.stats.age >= a.age,
-}));
-
-export const ACHIEVEMENTS = [...OPENING, ...LATER, ...BORDERS]
-  .sort((x, y) => x.age - y.age || (x.border ? 1 : 0) - (y.border ? 1 : 0));
+export const ACHIEVEMENTS = [...OPENING, ...LATER].sort((x, y) => x.age - y.age);
 
 export const ACHIEVEMENTS_BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
 

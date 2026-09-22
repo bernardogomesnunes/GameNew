@@ -97,8 +97,8 @@ export class GamificationEngine {
       if (size) this.state.landSize = Math.max(this.state.landSize, size);
       this.checkAchievements(null);
     });
-    this.bus.on('structure:claimed', ({ type } = {}) => {
-      if (type) this.state.claimed.add(type);
+    this.bus.on('structure:claimed', ({ structure } = {}) => {
+      if (structure?.type) this.state.claimed.add(structure.type);
       this.state.claimedCount += 1;
       this.checkAchievements(null);
     });
