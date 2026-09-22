@@ -56,17 +56,29 @@ export const ITEMS = [
   { id: 'vegetables', name: 'Vegetables', kind: 'food', stackTo: STACK_FOOD, color: 0xe08c3c, glyph: 'vegetable', feeds: 22, madeBy: 'Harvested from a farm' },
 
   // --- tools. One per slot, and they wear ---------------------------------
+  //
+  // `effectiveness` is what a tool is actually for: keyed by the material a
+  // block declares in config/blocks.js, each entry is 'fast', 'slow' or
+  // 'impossible'. A material a tool doesn't mention is 'normal' — the same
+  // pace as bare hands, neither helped nor hurt. Bare hands themselves are
+  // never in this table at all, because they're never gated: hold nothing
+  // and everything breaks at the one baseline pace, an axe or a pickaxe only
+  // ever making some of it faster, never anything impossible. See
+  // TOOL_EFFECTIVENESS and Game.js's breakDelayFor.
   {
     id: 'axe', name: 'Axe', kind: 'tool', stackTo: STACK_TOOL, color: 0xa07850, glyph: 'axe',
     durability: 120, madeBy: 'Crafted from wood', unlocks: 'Cutting trees quickly',
+    effectiveness: { wood: 'fast', plant: 'fast', dirt: 'slow', stone: 'impossible' },
   },
   {
     id: 'pickaxe', name: 'Pickaxe', kind: 'tool', stackTo: STACK_TOOL, color: 0x8c8c90, glyph: 'pickaxe',
     durability: 120, madeBy: 'Crafted from wood and stone', unlocks: 'Mining stone quickly',
+    effectiveness: { stone: 'fast', wood: 'slow', plant: 'slow', dirt: 'slow' },
   },
   {
     id: 'shovel', name: 'Shovel', kind: 'tool', stackTo: STACK_TOOL, color: 0x9a9aa0, glyph: 'shovel',
     durability: 120, madeBy: 'Crafted from wood', unlocks: 'Digging dirt and sand quickly',
+    effectiveness: { dirt: 'fast', wood: 'slow', plant: 'slow', stone: 'slow' },
   },
   {
     id: 'bucket', name: 'Bucket', kind: 'tool', stackTo: STACK_TOOL, color: 0x9aa7ad, glyph: 'bucket',
@@ -122,6 +134,16 @@ export function isTool(id) {
 
 export function isFood(id) {
   return ITEMS_BY_ID.get(id)?.kind === 'food';
+}
+
+/**
+ * How well a tool works on a material: 'fast', 'slow' or 'impossible', and
+ * 'normal' — bare-hand pace — for a tool that has nothing to say about it,
+ * or for no tool at all. See the effectiveness tables above.
+ */
+export function toolEffectiveness(toolId, material) {
+  if (!material) return 'normal';
+  return ITEMS_BY_ID.get(toolId)?.effectiveness?.[material] ?? 'normal';
 }
 
 /** How much hunger one unit of this item restores, or 0 if it isn't food. */

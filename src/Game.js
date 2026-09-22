@@ -46,8 +46,8 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID } from './config/blocks.js';
-import { TOOL_FOR } from './config/items.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf } from './config/blocks.js';
+import { TOOL_FOR, toolEffectiveness, itemName } from './config/items.js';
 
 const REACH = 7;
 /**
@@ -108,6 +108,15 @@ const HOLD_PLACE_INTERVAL_MS = 170;
 const CLAIM_COLUMN_MIN_HEIGHT = 1;
 const CLAIM_COLUMN_MAX_HEIGHT = 24;
 const CLAIM_COLUMN_DEFAULT_HEIGHT = 4;
+
+// How long a block takes to actually come free — see breakDelayFor. Bare
+// hands (or a tool with nothing to say about this material) sit at
+// NORMAL_BREAK_MS; the one thing a mining tool changes is knocking a
+// material it's suited to down near enough to instant, or a wrong one up to
+// SLOW_BREAK_MS. Only applies in Duilt — Creative has no bag to fill and no
+// reason to make you wait for anything.
+const NORMAL_BREAK_MS = 260;
+const SLOW_BREAK_MS = 900;
 
 /**
  * Items that fully replace Break/Place while selected, rather than digging
@@ -207,6 +216,11 @@ export class Game {
     this.breaking = false;
     this.breakHeldSince = 0;
     this.lastBreakAt = 0;
+    // Which block is currently being dug and since when — see breakDelayFor.
+    // Persists across separate taps on the same block, not just a hold, so
+    // digging progress is the same whether you hold the button or tap it
+    // repeatedly.
+    this.digTarget = null;
     // Same idea, for Place — see setPlacing/tickPlacing.
     this.placing = false;
     this.placeHeldSince = 0;
@@ -2123,9 +2137,52 @@ export class Game {
       : { kind: 'xp', title: r.reason });
   }
 
+  /**
+   * How long the block under the crosshair takes to come free, and whether
+   * the selected tool refuses it outright.
+   *
+   * Bare hands (nothing selected, or a non-mining item) are never in the
+   * effectiveness table at all, so they always land on the NORMAL/`false`
+   * fallback — every material, always breakable, just not the fast way.
+   * `blocked` only fires when a tool is actively wrong for the job.
+   */
+  breakDelayFor(blockId) {
+    const tier = toolEffectiveness(this.selectedItemId, materialOf(blockId));
+    if (tier === 'impossible') return { ms: 0, blocked: true, tier };
+    if (tier === 'fast') return { ms: 0, blocked: false, tier };
+    if (tier === 'slow') return { ms: SLOW_BREAK_MS, blocked: false, tier };
+    return { ms: NORMAL_BREAK_MS, blocked: false, tier };
+  }
+
   breakBlock() {
     const hit = this.raycast();
-    if (!hit) return;
+    if (!hit) { this.digTarget = null; return; }
+
+    let wornBy = null;
+    if (this.duilt) {
+      const key = `${hit.x},${hit.y},${hit.z}`;
+      const isNewTarget = !this.digTarget || this.digTarget.key !== key;
+      const { ms, blocked, tier } = this.breakDelayFor(this.world.getBlock(hit.x, hit.y, hit.z));
+      if (blocked) {
+        if (isNewTarget) {
+          this.digTarget = { key, startedAt: performance.now() };
+          this.ui.toast({
+            kind: 'xp',
+            title: "Can't break that",
+            body: `${itemName(this.selectedItemId)} won't touch it — try bare hands`,
+          });
+        }
+        return;
+      }
+      if (isNewTarget) this.digTarget = { key, startedAt: performance.now() };
+      if (ms > 0 && performance.now() - this.digTarget.startedAt < ms) return;
+      this.digTarget = null;
+      // A tool only wears doing the job it's actually suited for — the speed
+      // bonus has a cost, digging around with the wrong tool (or bare hands,
+      // which was never in the effectiveness table to begin with) does not.
+      if (tier === 'fast') wornBy = this.selectedItemId;
+    }
+
     const targets = this.computeTargets(hit.x, hit.y, hit.z);
     const changes = [];
     for (const t of targets) {
@@ -2133,7 +2190,13 @@ export class Game {
       if (prev === AIR) continue;
       changes.push({ x: t.x, y: t.y, z: t.z, prev, next: AIR });
     }
-    this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
+    const broke = this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
+    if (broke && wornBy) {
+      const result = this.duilt.inventory.useTool(wornBy);
+      if (result === 'worn') {
+        this.ui.toast({ kind: 'xp', title: `${itemName(wornBy)} broke`, body: 'Worn out — craft another' });
+      }
+    }
   }
 
   placeBlock() {
@@ -2391,6 +2454,7 @@ export class Game {
       this.player.releaseKeys();
       this.setBreaking(false);
       this.setPlacing(false);
+      this.digTarget = null;
       this.ui?.setBuildingHint(null);
       if (this.moving) this.endMove();
     }
