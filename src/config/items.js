@@ -61,6 +61,14 @@ export const ITEMS = [
     durability: 120, madeBy: 'Crafted from wood', unlocks: 'Cutting trees quickly',
   },
   {
+    id: 'pickaxe', name: 'Pickaxe', kind: 'tool', stackTo: STACK_TOOL, color: 0x8c8c90, glyph: 'pickaxe',
+    durability: 120, madeBy: 'Crafted from wood and stone', unlocks: 'Mining stone quickly',
+  },
+  {
+    id: 'shovel', name: 'Shovel', kind: 'tool', stackTo: STACK_TOOL, color: 0x9a9aa0, glyph: 'shovel',
+    durability: 120, madeBy: 'Crafted from wood', unlocks: 'Digging dirt and sand quickly',
+  },
+  {
     id: 'bucket', name: 'Bucket', kind: 'tool', stackTo: STACK_TOOL, color: 0x9aa7ad, glyph: 'bucket',
     durability: null, madeBy: 'Crafted from wood', unlocks: 'Carrying water',
     holds: 'water',

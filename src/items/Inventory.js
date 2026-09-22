@@ -284,6 +284,22 @@ export class Inventory {
     return Number.isInteger(i) && i >= 0 && i < this.slots.length;
   }
 
+  /**
+   * Empties one slot completely and throws away what was in it — the trash
+   * icon in the bag. Unlike `remove`, which takes an item by id from wherever
+   * it happens to be stacked, this is by slot, because "get rid of the stack
+   * I am pointing at" and "get rid of one of these, somewhere" are different
+   * requests. Returns what was thrown out, or null if the slot was empty.
+   */
+  discard(index) {
+    if (!this.inRange(index)) return null;
+    const slot = this.slots[index];
+    if (!slot) return null;
+    this.slots[index] = null;
+    this.changed();
+    return { id: slot.id, count: slot.count };
+  }
+
   // ---- tools ----
 
   /** First usable tool of a kind, or null. */

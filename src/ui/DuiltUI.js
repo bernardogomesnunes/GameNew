@@ -6,6 +6,7 @@ import { MAX_HUNGER } from '../survival/Hunger.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { itemIcon } from '../config/cubes.js';
 import { renderPanels } from './Panel.js';
+import { icon } from './icons.js';
 
 /**
  * The Duilt interface: the bag, the stomach, the claim menu and the goal list.
@@ -88,11 +89,17 @@ export class DuiltUI {
           <div id="claim-list"></div>`,
         'panel-buildings': `
           <!--
-            Claiming by pointing works for something you stacked up and cannot
-            work for something you dug — the flood fill will not go below the
-            original ground, so a quarry answered "point at what you built"
-            wherever you stood. Drawing the area is the way in for both.
+            Two ways in, because a claim is either something you stacked up or
+            something you dug. "Claim what I framed" follows the wall you are
+            pointing at for its footprint and lets you set the height yourself,
+            growing up from the block you're on — the one you actually stand at
+            while building. "Claim an area" draws a footprint from two corners
+            instead and reads its own height off whatever is there, which is
+            the only thing that works for a hole: a quarry has no wall to point
+            at, and the fill will not go below the ground it started at.
           -->
+          <button class="secondary claim-column" id="btn-claim-column">Claim what I framed</button>
+          <div class="export-note">Point at a wall you built. Scroll to set how tall, then press Break.</div>
           <button class="secondary claim-area" id="btn-claim-area">Claim an area</button>
           <div class="export-note">Tap one corner of it and then the opposite corner. Use this for anything you dug out — a quarry, a mine, a farm.</div>
           <div id="buildings-list"></div>`,
@@ -115,6 +122,7 @@ export class DuiltUI {
       b.addEventListener('click', () => this.closePanel(b.dataset.close)));
     this.q('#btn-eat').addEventListener('click', () => this.eat());
     this.q('#vital-people').addEventListener('click', () => this.sayPeople());
+    this.q('#btn-claim-column').addEventListener('click', () => this.game.beginClaimColumn());
     this.q('#btn-claim-area').addEventListener('click', () => this.game.beginClaimSelection());
     this.q('#btn-store-all').addEventListener('click', () => this.storeEverything());
 
@@ -418,18 +426,27 @@ export class DuiltUI {
    * thing. `attr` is what the click handler keys off, so each grid can tell
    * its own slots apart from the other's.
    */
-  slotHtml(s, i, { attr = 'data-slot', held = false, empty = 'Empty slot' } = {}) {
+  slotHtml(s, i, { attr = 'data-slot', held = false, empty = 'Empty slot', discardAttr = null } = {}) {
     if (!s) return `<button class="bag-slot empty" ${attr}="${i}" aria-label="${empty} ${i + 1}"></button>`;
     const spec = ITEMS_BY_ID.get(s.id);
     const worn = spec?.durability ? Math.round((1 - s.wear / spec.durability) * 100) : null;
     const colour = `#${(spec?.color ?? 0x888888).toString(16).padStart(6, '0')}`;
-    return `
+    const button = `
       <button class="bag-slot ${held ? 'held' : ''}" ${attr}="${i}" aria-label="${itemName(s.id)}, ${s.count}">
         <span class="swatch${itemIcon(spec) ? ' swatch-cube' : ''}"${itemIcon(spec) ? '' : ` style="background:${colour}"`}>${
           itemIcon(spec, { size: 34 }) ?? glyphSvg(spec?.glyph, { size: 20, color: spec?.color ?? 0x888888 })}</span>
         ${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}
         ${worn != null ? `<span class="wear"><i style="width:${worn}%"></i></span>` : ''}
       </button>`;
+    // A sibling button, not nested inside the slot — a button inside a button
+    // is invalid markup, and this one needs its own click that the slot's
+    // lift/drop never sees.
+    if (!discardAttr) return button;
+    return `
+      <div class="bag-slot-wrap">
+        ${button}
+        <button class="slot-discard" ${discardAttr}="${i}" title="Throw away" aria-label="Throw away ${itemName(s.id)}">${icon('close')}</button>
+      </div>`;
   }
 
   renderBag() {
@@ -444,10 +461,12 @@ export class DuiltUI {
     const slots = d.inventory.slots;
 
     grid.innerHTML = slots
-      .map((s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i }))
+      .map((s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i, discardAttr: 'data-discard' }))
       .join('');
 
     grid.querySelectorAll('[data-slot]').forEach((btn) => this.bindSlot(btn));
+    grid.querySelectorAll('[data-discard]').forEach((btn) =>
+      btn.addEventListener('click', (e) => { e.stopPropagation(); this.discardSlot(Number(btn.dataset.discard)); }));
     this.q('#bag-sub').textContent = this.held != null
       ? `Holding ${itemName(slots[this.held]?.id ?? '')} — tap a slot to put it down.`
       : 'Tap an item to lift it, tap a slot to put it down. Hold to split a stack.';
@@ -493,6 +512,22 @@ export class DuiltUI {
       inv.move(this.held, i);
       this.held = null;
     }
+    this.renderBag();
+  }
+
+  /**
+   * The trash icon on a slot — thrown out on the spot, no lift-and-drop
+   * needed. Reported directly: with how fast the bag fills up, every slot
+   * eventually has *something* in it, and there was no way to clear space
+   * except crafting it away or handing it to a storehouse that is also full.
+   */
+  discardSlot(i) {
+    const inv = this.duilt?.inventory;
+    if (!inv) return;
+    const gone = inv.discard(i);
+    if (!gone) return;
+    if (this.held === i) this.held = null;
+    this.bus.emit('toast', { kind: 'xp', title: `Threw away ${gone.count > 1 ? `${gone.count} ` : ''}${itemName(gone.id).toLowerCase()}` });
     this.renderBag();
   }
 
@@ -682,16 +717,10 @@ export class DuiltUI {
   renderBuildings() {
     const d = this.duilt;
     if (!d) return this.noWorld('#buildings-list');
-    // What you are pointing at, if it is a build — so the list can say which of
-    // these you could claim right now rather than listing them all blankly.
-    const build = this.game.buildUnderCrosshair?.();
-    const region = build ? { ...build.bounds } : null;
-    const options = region ? d.claimOptionsFor(region) : null;
 
     this.q('#buildings-list').innerHTML = structuresForAge(d.age).map((spec) => {
       const built = d.structures.countOf(spec.id);
       const design = DESIGN_FOR_STRUCTURE.get(spec.id);
-      const opt = options?.find((o) => o.id === spec.id);
       const needs = spec.requires.map((r) => r.id).join(' · ');
       const makes = Object.entries(spec.produces ?? {}).map(([k, v]) => `${v} ${itemName(k).toLowerCase()}`).join(', ');
       const canStamp = design && d.inventory.hasAll(design.cost);
@@ -720,28 +749,18 @@ export class DuiltUI {
             ${costLine ? `<span>Costs: ${costLine}</span>` : ''}
           </div>
           <div class="building-actions">
-            <button class="secondary" data-claim-here="${spec.id}" ${opt?.ok ? '' : 'disabled'}>
-              Claim what I framed
-            </button>
             ${design ? `<button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
               Place a ${design.footprint} starter
             </button>` : ''}
           </div>
           ${design && canStamp ? '<div class="building-note"><span>Aim where you want it and press Place.</span></div>' : ''}
           <div class="building-note">
-            ${opt && !opt.ok ? `<span class="warn">${opt.reason}</span>` : ''}
-            ${!region ? '<span>Point at something you built to claim it.</span>' : ''}
             ${design && !canStamp ? this.shortfallNote(shortfall) : ''}
             ${design?.note && canStamp ? `<span>${design.note}</span>` : ''}
           </div>
         </div>`;
     }).join('');
 
-    this.q('#buildings-list').querySelectorAll('[data-claim-here]').forEach((b) =>
-      b.addEventListener('click', () => {
-        this.closePanel('panel-buildings');
-        this.onClaimType?.(b.dataset.claimHere);
-      }));
     this.q('#buildings-list').querySelectorAll('[data-stamp]').forEach((b) =>
       b.addEventListener('click', () => {
         this.closePanel('panel-buildings');

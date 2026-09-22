@@ -20,7 +20,13 @@ import { AIR } from '../config/blocks.js';
  *
  *   pickBuild — "which blocks are this thing?" Everything connected to what you
  *   are pointing at that somebody put there rather than the world growing it.
- *   What a design saves and what a claim measures.
+ *   What a design saves.
+ *
+ *   wallFootprintAt — "how far does this go, sideways?" The same connected
+ *   walk as pickBuild, minus the requirement that every block sit above the
+ *   world's own recorded terrain height — a requirement that made sense for
+ *   telling a wall apart from a hillside, and made "point at the bottom
+ *   course of your own wall" fail outright. What a claim measures.
  *
  * Both are capped. A fill that runs away has found a hillside, not a building,
  * and the honest answer to that is to say so rather than to roof a valley.
@@ -187,6 +193,55 @@ export function pickFootprint(world, hit, { cap = PICK_CAP } = {}) {
 /** A hit worth asking about: three real numbers, not a near-miss or a NaN. */
 function solidSpot(hit) {
   return !!hit && Number.isFinite(hit.x) && Number.isFinite(hit.y) && Number.isFinite(hit.z);
+}
+
+/**
+ * The footprint of the build you are pointing at, as a bounding box.
+ *
+ * This is what pickBuild got wrong for claiming. It double-checked *every*
+ * block against `world.surfaceHeight`, including the one you clicked — so a
+ * wall whose lowest course sits exactly at the ground's recorded height
+ * failed on the spot, with nothing to say why. That happens more than it
+ * sounds like it should: breaking a block never lowers the world's recorded
+ * surface height for that column (only things like river-carving do), so
+ * clearing a patch of grass before building and then placing your first
+ * course flush with it leaves that course sitting at the *original* recorded
+ * height rather than above it.
+ *
+ * The fix keeps the surface-height check everywhere it matters — dropping it
+ * entirely would let the fill walk sideways through untouched ground and
+ * swallow an entire hillside — but not on the one block you actually clicked.
+ * Every other block still has to be strictly above its own column's recorded
+ * height to be pulled in, exactly as before; the search just no longer
+ * insists that the block you started from meet that bar too. One flush
+ * course at the very bottom stops mattering once the search finds the rest
+ * of the wall sitting properly above it, which it does the moment it climbs
+ * one block up from wherever you clicked.
+ */
+export function wallFootprintAt(world, hit, { cap = PICK_CAP } = {}) {
+  if (!solidSpot(hit)) return null;
+  if (world.getBlock(hit.x, hit.y, hit.z) === AIR) return null;
+
+  const above = (x, y, z) => y > world.surfaceHeight(x, z);
+  const seen = new Set([`${hit.x},${hit.y},${hit.z}`]);
+  const cellsXZ = new Set([key(hit.x, hit.z)]);
+  const queue = [[hit.x, hit.y, hit.z]];
+  const steps = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+  while (queue.length) {
+    const [x, y, z] = queue.pop();
+    for (const [dx, dy, dz] of steps) {
+      const nx = x + dx, ny = y + dy, nz = z + dz, k = `${nx},${ny},${nz}`;
+      if (seen.has(k)) continue;
+      if (!world.inBounds(nx, ny, nz)) continue;
+      if (world.getBlock(nx, ny, nz) === AIR) continue;
+      if (!above(nx, ny, nz)) continue; // only the block you clicked is exempt
+      seen.add(k);
+      if (seen.size > cap) return null;
+      cellsXZ.add(key(nx, nz));
+      queue.push([nx, ny, nz]);
+    }
+  }
+  return boundsOf(cellsXZ);
 }
 
 /**

@@ -51,9 +51,9 @@ const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf
 // --- wired into Break/Place, not a menu ------------------------------------
 
 ok('an empty bucket takes the Break button before it digs',
-  /selectedItemId === 'bucket'\)\s*return void this\.fillBucket\(\);/.test(game));
+  /BREAK_OVERRIDE = \{ bucket: 'fillBucket'/.test(game));
 ok('a full bucket takes the Place button before it builds',
-  /selectedItemId === 'bucket_water'\)\s*return void this\.emptyBucket\(\);/.test(game));
+  /PLACE_OVERRIDE = \{ bucket_water: 'emptyBucket' \}/.test(game));
 ok('filling checks what you are actually pointing at',
   /fillBucket\(\)[\s\S]{0,400}getBlock\(hit\.x, hit\.y, hit\.z\) === WATER/.test(game));
 ok('and says so when you are not pointing at water',
@@ -66,7 +66,7 @@ ok('emptying is the same swap in reverse',
 // --- selectable from the hotbar, like any other held thing ------------------
 
 ok('the bucket and a full one are selectable hotbar slots',
-  /TOOL_HOTBAR_IDS = \['bucket', 'bucket_water'\]/.test(ui));
+  /bucket: 'Break to scoop water'/.test(ui) && /bucket_water: 'Place to pour it out'/.test(ui));
 ok('selecting one is its own thing, not a block choice',
   /selectItem\(id\) \{/.test(ui) && /this\.selectedItemId = id;/.test(ui));
 ok('and picking a block cancels it, so only one slot is ever active',

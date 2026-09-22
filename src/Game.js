@@ -6,7 +6,7 @@ import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { buildTemplatePlacement, rotateTemplate, captureBlocks } from './tools/Templates.js';
 import { roofPlan, roofBlocks, roofPeak, roofPick } from './tools/RoofTool.js';
-import { pickBuild } from './tools/PointerPick.js';
+import { pickBuild, wallFootprintAt } from './tools/PointerPick.js';
 import { ROOFS_BY_ID, facingLabel } from './config/roofs.js';
 import { clearPlan, clearCells, cellBounds } from './tools/ClearTool.js';
 import { CLEARS_BY_ID } from './config/clears.js';
@@ -101,6 +101,22 @@ const HOLD_BREAK_DELAY_MS = 320;
 const HOLD_BREAK_INTERVAL_MS = 170;
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
+
+// The column claim tool — see beginClaimColumn. The height always grows up
+// from the block you're pointing at, never down, so a claim never reaches
+// into the ground you're standing on.
+const CLAIM_COLUMN_MIN_HEIGHT = 1;
+const CLAIM_COLUMN_MAX_HEIGHT = 24;
+const CLAIM_COLUMN_DEFAULT_HEIGHT = 4;
+
+/**
+ * Items that fully replace Break/Place while selected, rather than digging
+ * or building — the bucket, and now food. The value is a method on Game.
+ * Mining tools (axe, pickaxe, shovel) are not in here: they don't replace
+ * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
+ */
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -265,6 +281,7 @@ export class Game {
     this.templateRotation = 0;
     this.pendingRoof = null;     // the roof shape queued, if any
     this.pendingClear = null;    // the clear shape queued, if any
+    this.pendingClaimColumn = null; // { height } — see beginClaimColumn
     this.roofTurn = 0;
     this.roofKey = null;         // what the preview was last built for
     this.lastRoof = null;        // the roof this tool put up, while it is untouched
@@ -735,7 +752,6 @@ export class Game {
       isDuilt: () => !!this.duilt,
       onOpenBag: () => this.ui.toggleBag(),
       onOpenClaim: () => this.openClaim(),
-      onClaimType: (id) => this.claimAs(id),
       onStampStarter: (id) => this.stampStarter(id),
       onOpenBuildings: () => this.ui.openPanel('panel-buildings'),
       onOpenBench: () => this.ui.openPanel('panel-bench'),
@@ -1013,6 +1029,9 @@ export class Game {
     canvas.addEventListener('wheel', (e) => {
       if (!this.pointerLocked || this.moving) return;
       e.preventDefault();
+      // While the column claim tool is armed, the wheel sets its height
+      // instead — see beginClaimColumn.
+      if (this.pendingClaimColumn) return void this.adjustClaimColumnHeight(-Math.sign(e.deltaY));
       this.ui.cycleHotbarByDelta(Math.sign(e.deltaY));
     }, { passive: false });
     // Every way the button can stop being down, including the ones that are not
@@ -1142,7 +1161,7 @@ export class Game {
 
   /** Whether a tool is queued and waiting to be used where you are pointing. */
   get armed() {
-    return !!(this.pendingRoof || this.pendingTemplate || this.pendingClear || this.pendingClaim);
+    return !!(this.pendingRoof || this.pendingTemplate || this.pendingClear || this.pendingClaim || this.pendingClaimColumn);
   }
 
   primaryAction() {
@@ -1150,12 +1169,14 @@ export class Game {
     // A queued tool takes the button it needs and nothing else does. There is
     // no mode to be in any more: if nothing is queued, Break breaks.
     if (this.pendingClaim) return void this.markClaimCorner();
+    if (this.pendingClaimColumn) return void this.confirmClaimColumn();
     if (this.pendingClear) return void this.runClear();
     if (this.pendingRoof) return void this.stampRoof();
     if (this.pendingTemplate) return void this.stampTemplate();
-    // The bucket takes the button too, while it's the one selected — it has
-    // nothing to dig with.
-    if (this.selectedItemId === 'bucket') return void this.fillBucket();
+    // The selected item can take the button instead of digging — the
+    // bucket, or something to eat. Nothing to dig with, or nothing to dig.
+    const override = BREAK_OVERRIDE[this.selectedItemId];
+    if (override) return void this[override]();
     this.breakBlock();
   }
 
@@ -1169,7 +1190,8 @@ export class Game {
     if (this.pendingRoof?.turns > 1) return void this.turnRoof();
     if (this.armed) return void this.clearPending();
     // A full bucket takes the button too, instead of placing a block.
-    if (this.selectedItemId === 'bucket_water') return void this.emptyBucket();
+    const override = PLACE_OVERRIDE[this.selectedItemId];
+    if (override) return void this[override]();
     this.placeBlock();
   }
 
@@ -1229,6 +1251,7 @@ export class Game {
     this.pendingRoof = null;
     this.pendingClear = null;
     this.pendingClaim = null;
+    this.pendingClaimColumn = null;
     this.roofTurn = 0;
     this.roofGhost.hide();
     this.roofKey = null;
@@ -1696,13 +1719,16 @@ export class Game {
     }
 
     // Otherwise the question is "what is this thing I am pointing at?", and the
-    // thing is however far the build goes — which the game can see for itself.
-    const build = this.buildUnderCrosshair();
-    if (!build) {
+    // thing is the wall course you're on — see wallFootprintAt, and
+    // beginClaimColumn for why this reads the wall rather than flood-filling
+    // outward from wherever the crosshair happens to land.
+    const hit = this.toolAim();
+    const footprint = hit && wallFootprintAt(this.world, hit);
+    if (!footprint) {
       this.ui.toast({ kind: 'xp', title: 'Point at what you built', body: 'Look at a wall of it and ask again' });
       return;
     }
-    const region = { ...build.bounds };
+    const region = { ...footprint, minY: hit.y, maxY: hit.y + CLAIM_COLUMN_DEFAULT_HEIGHT - 1 };
     this.ui.openClaim(region, (typeId) => {
       const r = this.duilt.claim(region, typeId);
       this.ui.toast(r.ok
@@ -1771,17 +1797,87 @@ export class Game {
     this.selection.update(region, blocksIn(this.world, region), this.world, { force: true });
   }
 
-  /** Claims the build you are pointing at as a named building type. */
-  claimAs(typeId) {
-    const build = this.duilt && this.buildUnderCrosshair();
-    if (!build) {
-      this.ui.toast({ kind: 'xp', title: 'Point at what you built', body: 'Look at a wall of it and try again' });
+  /**
+   * Draws a claim by pointing at one wall instead of tracing the whole build.
+   *
+   * "Claim what I framed" used to be buildUnderCrosshair's flood fill, which
+   * double-checked every block against the terrain's recorded surface height
+   * — a wall built starting at ground level (the only way anyone actually
+   * builds one) failed that check on its own lowest course, so pointing at
+   * your own house did nothing more often than it worked, with no error to
+   * say why. wallFootprintAt only follows blocks connected to the one you're
+   * pointing at, so it can't make that mistake. The height is no longer
+   * guessed at all — you set it yourself, growing up from the block you're
+   * on, because up is the direction you actually build in.
+   */
+  beginClaimColumn() {
+    if (!this.duilt) return false;
+    this.clearPending({ quiet: true });
+    this.pendingClaimColumn = { height: CLAIM_COLUMN_DEFAULT_HEIGHT };
+    this.claimColumnKey = null;
+    this.ui.closePanel('panel-buildings');
+    this.ui.toast({
+      kind: 'challenge',
+      title: 'Claim what I framed',
+      body: 'Point at a wall — scroll to set how tall, then Break to claim',
+    });
+    return true;
+  }
+
+  /** Scroll while the column tool is armed changes height instead of the hotbar. */
+  adjustClaimColumnHeight(delta) {
+    if (!this.pendingClaimColumn) return;
+    const h = this.pendingClaimColumn.height + delta;
+    this.pendingClaimColumn.height = Math.max(CLAIM_COLUMN_MIN_HEIGHT, Math.min(CLAIM_COLUMN_MAX_HEIGHT, h));
+    this.claimColumnKey = null;
+  }
+
+  /** The column being drawn, outlined in the world while you aim and scroll. */
+  updateClaimColumnPreview() {
+    const hit = this.toolAim();
+    const height = this.pendingClaimColumn.height;
+    if (!hit) {
+      this.ui.setToolReadout({ claim: 'Claim what I framed', target: 'Point at a wall', hint: 'Scroll to set how tall' });
+      this.selection.hide();
       return;
     }
-    const r = this.duilt.claim({ ...build.bounds }, typeId);
-    this.ui.toast(r.ok
-      ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
-      : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
+    const footprint = wallFootprintAt(this.world, hit);
+    if (!footprint) {
+      this.ui.setToolReadout({ claim: 'Claim what I framed', target: "That's not a wall", hint: 'Point at something you built' });
+      this.selection.hide();
+      return;
+    }
+    const region = { ...footprint, minY: hit.y, maxY: hit.y + height - 1 };
+    const w = footprint.maxX - footprint.minX + 1, d = footprint.maxZ - footprint.minZ + 1;
+    this.ui.setToolReadout({
+      claim: 'Claim what I framed',
+      target: `${w} × ${d} · ${height} tall`,
+      hint: 'Scroll to change height · Break to claim',
+    });
+    const key = `col:${hit.x},${hit.y},${hit.z}:${height}`;
+    if (key === this.claimColumnKey) return;
+    this.claimColumnKey = key;
+    this.selection.update(region, blocksIn(this.world, region), this.world, { force: true });
+  }
+
+  /** Break, while the column tool is armed: locks the region and hands off to the type picker. */
+  confirmClaimColumn() {
+    const hit = this.toolAim();
+    const footprint = hit && wallFootprintAt(this.world, hit);
+    if (!footprint) {
+      this.ui.toast({ kind: 'xp', title: "That's not a wall", body: 'Point at something you built' });
+      return;
+    }
+    const region = { ...footprint, minY: hit.y, maxY: hit.y + this.pendingClaimColumn.height - 1 };
+    this.pendingClaimColumn = null;
+    this.selection.hide();
+    this.ui.setToolReadout(null);
+    this.ui.openClaim(region, (typeId) => {
+      const r = this.duilt.claim(region, typeId);
+      this.ui.toast(r.ok
+        ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
+        : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
+    });
   }
 
   /**
@@ -2011,6 +2107,20 @@ export class Game {
     if (!this.duilt.inventory.remove('bucket_water', 1)) return;
     this.duilt.inventory.add('bucket', 1);
     this.ui.toast({ kind: 'xp', title: 'Bucket emptied', body: 'Poured out' });
+  }
+
+  /**
+   * What Break does with food selected: eat it instead of digging.
+   * DuiltGame.eat() already does the real work (which slot, hunger, the
+   * result) — this is only the wiring from "the hotbar slot you have
+   * selected" to it, the same job fillBucket/emptyBucket do for the bucket.
+   */
+  eatSelected() {
+    if (!this.duilt) return;
+    const r = this.duilt.eat(this.selectedItemId);
+    this.ui.toast(r.ok
+      ? { kind: 'challenge', title: 'That helps', body: `+${r.restored} hunger` }
+      : { kind: 'xp', title: r.reason });
   }
 
   breakBlock() {
@@ -2374,6 +2484,10 @@ export class Game {
     // something is going to use the answer.
     if (this.pendingClaim) {
       this.updateClaimPreview();
+      return;
+    }
+    if (this.pendingClaimColumn) {
+      this.updateClaimColumnPreview();
       return;
     }
     if (this.pendingClear) {

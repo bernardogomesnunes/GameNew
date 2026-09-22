@@ -177,8 +177,13 @@ ok('Place cancels rather than placing while something is queued',
     && /raycast\(reach = REACH\)/.test(game));
 }
 
-ok('claiming asks what you are pointing at', /openClaim\(\)[\s\S]{0,700}this\.buildUnderCrosshair\(\)/.test(game));
-ok('saving a design does too', /saveTemplate\(name\) \{[\s\S]{0,80}this\.buildUnderCrosshair\(\)/.test(game));
+// openClaim() reads the wall you're pointing at with wallFootprintAt rather
+// than buildUnderCrosshair's pickBuild — see PointerPick.js and
+// tests/claimcolumn.test.mjs for why: pickBuild required the exact block you
+// clicked to sit above the terrain's recorded surface height, which failed
+// on a wall's own lowest course more often than it worked.
+ok('claiming asks what wall you are pointing at', /openClaim\(\)[\s\S]{0,900}wallFootprintAt\(this\.world, hit\)/.test(game));
+ok('saving a design asks what build you are pointing at', /saveTemplate\(name\) \{[\s\S]{0,80}this\.buildUnderCrosshair\(\)/.test(game));
 ok('and the answer is worked out once per aim, not once per caller',
   /if \(key !== this\.pickKey\)/.test(game));
 
