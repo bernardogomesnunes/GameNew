@@ -145,8 +145,13 @@ export const STRUCTURES = [
         say: () => 'It needs to be open to the sky — you are underground here',
       },
     ],
-    produces: { stone: 5, cobblestone: 2 },
-    everySeconds: 70,
+    // Stone has fewer sinks than wood or food — you don't eat it, and most
+    // recipes want a handful, not a steady stream — so it piled up faster
+    // than anything else and, once storehouses filled, started eating bag
+    // slots by the stack. Cut hard rather than trimmed: a third of the old
+    // rate, on a longer cycle too.
+    produces: { stone: 2, cobblestone: 1 },
+    everySeconds: 90,
     skill: 'building',
   },
 

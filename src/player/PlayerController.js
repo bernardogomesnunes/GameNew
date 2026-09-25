@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { isTyping } from '../ui/Panels.js';
+import { WATER } from '../config/blocks.js';
 
 const HALF_WIDTH = 0.3;
 const HEIGHT = 1.8;
@@ -10,6 +11,19 @@ const WALK_SPEED = 4.6;
 const SPRINT_SPEED = 7.2;
 const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
+/*
+ * Water was never collidable (see World's NON_COLLIDABLE set), which is
+ * correct — you should be able to swim into it — but nothing filled in what
+ * happens once you're in it, so it acted exactly like air and you sank or
+ * walked through a river like it wasn't there. This is what actually holds
+ * you: gentler gravity, a soft cap on how fast you sink, and a small upward
+ * pull when you're not actively paddling, so letting go of every key drifts
+ * you back toward the surface instead of straight to the bottom.
+ */
+const SWIM_SPEED = 3.0;      // walking speed underwater; water resists you
+const SWIM_VERTICAL_SPEED = 3.2; // paddling up (Space) or diving down (Ctrl)
+const SWIM_FLOAT_SPEED = 0.8; // passive buoyancy — no input at all still drifts up
+const SWIM_EASE = 6;         // how fast vertical speed catches up to the target above
 /*
  * Camera-on-a-stick tuning.
  *
@@ -52,6 +66,7 @@ export class PlayerController {
     this.pitch = 0;
     this.flying = false;
     this.grounded = false;
+    this.swimming = false;
     this.bounds = null;   // set by Duilt to the land you have claimed
 
     this.keys = new Set();
@@ -125,6 +140,9 @@ export class PlayerController {
     // reads as input lag. 0.1s still can't tunnel through a block at this speed.
     dt = Math.min(dt, 0.1);
     this.resolveStuck();
+    // Checked at chest height, not the feet: wading through ankle-deep water
+    // should still walk and jump normally, not float.
+    this.swimming = !this.flying && this.isWaterAt(this.position.x, this.position.y + HEIGHT * 0.5, this.position.z);
 
     const k = 1 - Math.exp(-LOOK_SMOOTHING * dt); // frame-rate independent ease
     this.lookSmoothed.x += (this.lookInput.x - this.lookSmoothed.x) * k;
@@ -170,6 +188,22 @@ export class PlayerController {
       if (this.keys.has('Space')) up += 1;
       if (this.keys.has('ControlLeft') || this.keys.has('ShiftLeft')) up -= 1;
       this.velocity.y = up * speed;
+    } else if (this.swimming) {
+      const speed = SWIM_SPEED * this.speedScale;
+      this.velocity.x = wish.x * speed;
+      this.velocity.z = wish.z * speed;
+      let up = this.externalUp;
+      if (this.keys.has('Space')) up += 1;
+      if (this.keys.has('ControlLeft') || this.keys.has('ControlRight')) up -= 1;
+      up = Math.max(-1, Math.min(1, up));
+      const targetVy = up !== 0 ? up * SWIM_VERTICAL_SPEED : SWIM_FLOAT_SPEED;
+      // Eased toward rather than snapped to, same idea as the look smoothing
+      // above — water resists a change of direction, it doesn't obey it
+      // instantly, and jumping straight to full speed read as bobbing like a
+      // cork rather than swimming through something.
+      const k = 1 - Math.exp(-SWIM_EASE * dt);
+      this.velocity.y += (targetVy - this.velocity.y) * k;
+      this.grounded = false;
     } else {
       const speed = (sprinting ? SPRINT_SPEED : WALK_SPEED) * this.speedScale;
       this.velocity.x = wish.x * speed;
@@ -281,6 +315,11 @@ export class PlayerController {
       }
     }
     return false;
+  }
+
+  /** Whether a single point sits inside a water block — see `swimming`. */
+  isWaterAt(x, y, z) {
+    return this.world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z)) === WATER;
   }
 
   syncCamera() {
