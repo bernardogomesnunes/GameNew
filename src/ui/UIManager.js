@@ -66,6 +66,7 @@ export class UIManager {
     // Escape must not dismiss it into a world nobody chose.
     this.panels = new Panels(root, { screens: ['blocker'] });
     this.panels.onOpen((id) => this.populatePanel(id));
+    this.panels.onOpen(() => this.collapseToasts());
     this.panels.onClose((id) => this.duiltUI?.onPanelClosed(id));
 
     this.buildHotbar();
@@ -929,7 +930,15 @@ export class UIManager {
     // the right. A stack of five was a column of text down a screen that is
     // mostly the thing you are trying to look at, and by the third one you were
     // reading the oldest — the one you had already stopped caring about.
-    if (this.isTouch) for (const old of [...stack.children]) this.dismissToast(old);
+    //
+    // The same is true with a panel open, on any device: the stack sits above
+    // panels on purpose, so a message answering something you just pressed
+    // inside one is never hidden behind it — but five of them at once, each
+    // alive for over three seconds, is a wall over whatever the panel actually
+    // holds. Reported directly: opening the bag with a few toasts still up
+    // left the slots themselves covered and impossible to work with. One at a
+    // time keeps that promise without also blocking the thing the panel is for.
+    if (this.isTouch || this.isAnyPanelOpen()) this.collapseToasts();
 
     stack.appendChild(node);
     setTimeout(() => this.dismissToast(node), action ? 7000 : 3400);
@@ -942,6 +951,19 @@ export class UIManager {
     node.classList.add('going');
     node.classList.add(this.isTouch ? 'push-out' : 'fade-out');
     setTimeout(() => node.remove(), this.isTouch ? 280 : 320);
+  }
+
+  /**
+   * Clears whatever is already in the stack — called whenever a panel opens
+   * (see the Panels.onOpen hook below) and before a new toast joins a stack
+   * that was already up. A panel you just opened is the thing on screen you
+   * are meant to be looking at; a pile of toasts left over from before you
+   * opened it is not.
+   */
+  collapseToasts() {
+    const stack = this.q('#toast-stack');
+    if (!stack) return;
+    for (const old of [...stack.children]) this.dismissToast(old);
   }
 
   /** Fills a panel in just before it is shown, if it has anything to fill. */
