@@ -34,8 +34,8 @@ const UNSENT_KEY = 'voxelgame:unsent';
 const makeChunkGen = (o) => new ChunkGen(o);
 
 /** Everything about a world that has to survive, as plain JSON. */
-function serialiseWorldState({ world, mode, economy, duilt }) {
-  return { world: world.serialize(), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null };
+function serialiseWorldState({ world, mode, economy, duilt, territoryBounds }) {
+  return { world: world.serialize({ keepBounds: territoryBounds }), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null };
 }
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
@@ -796,6 +796,11 @@ export class Game {
       worldId: this.worldId,
       worldName: this.worldName,
       duilt: this.duilt ? this.duilt.toJSON() : null,
+      // Claimed land is saved in full, not just the chunks you've actually
+      // dug into — see World.serialize's keepBounds. this.duilt.toJSON()
+      // above is already plain data by the time serialiseWorldState runs,
+      // so the live bounds have to ride along separately.
+      territoryBounds: this.duilt ? this.duilt.territory.bounds() : null,
     };
   }
 
@@ -1982,6 +1987,7 @@ export class Game {
       gamification: this.gamification,
       economy: this.economy,
       duilt: this.duilt ? this.duilt.toJSON() : null,
+      territoryBounds: this.duilt ? this.duilt.territory.bounds() : null,
       revision,
     });
     this.syncState.agree(this.worldId, result.revision);
