@@ -375,19 +375,32 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 /* Mobile touch controls */
 #touch-controls { position: absolute; inset: 0; pointer-events: none; display: none; }
 body.touch #touch-controls { display: block; }
-#blocker:not([hidden]) ~ #touch-controls,
-#panel-stats:not([hidden]) ~ #touch-controls,
-#panel-menu:not([hidden]) ~ #touch-controls { display: none !important; }
 
-/* While the worlds screen is up you are between worlds, so the world's own
- * readouts have nothing to say. Leaving the goal list, the hunger bar and the
- * toolbar showing through put two interfaces on screen at once. */
-#blocker:not([hidden]) ~ #hud-top,
-#blocker:not([hidden]) ~ #top-buttons,
-#blocker:not([hidden]) ~ #hotbar-wrap,
-#blocker:not([hidden]) ~ #toast-stack,
-#blocker:not([hidden]) ~ #tool-readout,
-#blocker:not([hidden]) ~ #duilt-layer #vitals { display: none !important; }
+/*
+ * Whatever is behind an open panel or screen has nothing to answer a tap
+ * with, so it hides rather than sit there fully visible and fully dead —
+ * that used to be a handful of CSS sibling selectors keyed to specific
+ * panel ids (#blocker, panel-stats, panel-menu), which only works for a
+ * panel that happens to be a direct sibling of the HUD in the DOM. The
+ * Duilt layer's own panels — the bag, a storehouse, buildings, the bench,
+ * claiming, roofs — live a level deeper inside #duilt-layer, so no sibling
+ * selector could ever reach them: the hotbar and the touch Fill/Jump
+ * buttons stayed on screen, looked tappable, and answered nothing while
+ * the bag was open over them. See UIManager.updateHudVisibility, which
+ * sets this from the one shared Panels registry instead — every panel
+ * there is, or ever will be, with no list of ids to keep in sync by hand.
+ */
+body.panel-open #touch-controls,
+body.panel-open #hud-top,
+body.panel-open #top-buttons,
+body.panel-open #hotbar-wrap,
+body.panel-open #tool-readout,
+body.panel-open #duilt-layer #vitals { display: none !important; }
+/* The toast stack is the one exception: a toast can still land while an
+   ordinary panel is open (see UIManager.collapseToasts) and is meant to be
+   seen when it does. Only the worlds screen — between worlds, nothing to
+   report — silences it, so this stays its own narrower, sibling-based rule. */
+#blocker:not([hidden]) ~ #toast-stack { display: none !important; }
 body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 
 /* Twin thumbsticks. Each claims its own half of the lower screen; interactive

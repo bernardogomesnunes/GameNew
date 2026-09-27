@@ -81,7 +81,9 @@ export class UIManager {
     this.panels = new Panels(root, { screens: ['blocker'] });
     this.panels.onOpen((id) => this.populatePanel(id));
     this.panels.onOpen(() => this.collapseToasts());
+    this.panels.onOpen(() => this.updateHudVisibility());
     this.panels.onClose((id) => this.duiltUI?.onPanelClosed(id));
+    this.panels.onClose(() => this.updateHudVisibility());
 
     this.buildHotbar();
     this.wireEvents();
@@ -978,6 +980,28 @@ export class UIManager {
     const stack = this.q('#toast-stack');
     if (!stack) return;
     for (const old of [...stack.children]) this.dismissToast(old);
+  }
+
+  /**
+   * Hides the HUD and touch controls behind whatever overlay is on top —
+   * called on every panel and screen open/close (see the Panels hooks
+   * above), so it covers the Duilt layer's panels too.
+   *
+   * This used to be a CSS sibling selector keyed off specific panel ids
+   * (`#blocker:not([hidden]) ~ #hotbar-wrap`, and separately for
+   * panel-stats and panel-menu) — which only ever worked for panels that
+   * happen to be direct siblings of the HUD in the DOM. The Duilt layer's
+   * own panels (the bag, a storehouse, buildings, the bench…) live inside
+   * `#duilt-layer`, a level deeper, so no sibling selector could ever reach
+   * them: the hotbar and the touch Fill/Jump buttons sat there fully
+   * visible and fully dead under the bag screen, answering no tap at all.
+   * A class on the body has no DOM-depth problem to have, and one registry
+   * (Panels, see Panels.js's own doc comment) means this covers every
+   * panel there is without a list of ids to keep in sync by hand.
+   */
+  updateHudVisibility() {
+    const hidden = this.panels.all().some((el) => !el.hidden);
+    document.body.classList.toggle('panel-open', hidden);
   }
 
   /** Fills a panel in just before it is shown, if it has anything to fill. */
