@@ -169,13 +169,16 @@ export class Game {
     this.canvasRoot.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x8fd0ff);
+    // A softer, paler sky than the original saturated blue — the block
+    // palette went pastel too (config/blocks.js), and a bright sky over
+    // pale blocks would have fought them for whichever read as "the color".
+    this.scene.background = new THREE.Color(0xadd7f5);
     const chosen = DISTANCES[this.graphics.distance];
     const blocksTo = chosen ? chosen.fogFar : (coarse ? BLOCKS_TO_COARSE : BLOCKS_TO);
     this.horizon = coarse ? HORIZON_COARSE : HORIZON;
     // Fog starts well out and finishes at the horizon, so the coarse ground is
     // hazed rather than hidden — it is what sells the distance as distance.
-    this.scene.fog = new THREE.Fog(0x8fd0ff, this.horizon * 0.35, this.horizon);
+    this.scene.fog = new THREE.Fog(0xadd7f5, this.horizon * 0.35, this.horizon);
     this.renderDistance = blocksTo + CULL_MARGIN;
 
     // The near plane sets how much depth precision the whole scene gets, and
@@ -190,7 +193,10 @@ export class Game {
     const sun = new THREE.DirectionalLight(0xfff3d6, 0.85);
     sun.position.set(60, 90, 30);
     this.scene.add(sun);
-    this.scene.add(new THREE.HemisphereLight(0xbfe3f0, 0x3a2f22, 0.4));
+    // Ground bounce-light lightened to match: 0x3a2f22 was dark enough that
+    // every underside and shadowed face read muddy no matter how pale the
+    // blocks above them were.
+    this.scene.add(new THREE.HemisphereLight(0xadd7f5, 0x7f6445, 0.4));
 
     this.mesher = new ChunkMesher(this.scene);
     this.farTerrain = new FarTerrain(this.scene);

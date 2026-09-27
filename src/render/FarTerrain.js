@@ -12,10 +12,12 @@ import { BLOCKS_BY_ID } from '../config/blocks.js';
  *
  * This is what stands in beyond it — one coarse mesh of the ground surface,
  * sampled straight from the generator rather than from any blocks, stretching
- * out to the horizon. It is a lie in exactly one respect: it has no blocks in
- * it, so it is smooth where the real world is stepped, and holds no trees.
- * From a quarter of a mile away, under fog, that difference is invisible and
- * the horizon is a long way off.
+ * out to the horizon. It has no blocks in it and holds no trees, but it no
+ * longer pretends to be smooth: heights are quantised to a step and each grid
+ * cell keeps its own corners instead of sharing them with its neighbours, so
+ * shading breaks at the same edges the steps do rather than blending across
+ * them — rolling hills read as terraces, the way the real, blocky ground
+ * they are standing in for actually looks from a distance.
  *
  * Two rings, coarser as they go out, because detail you cannot resolve is
  * detail you are paying for and not seeing. The inner ring starts where the
@@ -23,10 +25,14 @@ import { BLOCKS_BY_ID } from '../config/blocks.js';
  * under everything else — a real chunk always wins where the two overlap.
  */
 
-/** Sampling step and outer edge of each ring, in blocks. */
+/**
+ * Sampling step, outer edge and height quantisation of each ring, in blocks.
+ * `heightStep` grows with `step`: a ring already sampling every 24 blocks
+ * gains nothing from a 1-block-fine terrace and pays for it in extra risers.
+ */
 const RINGS = [
-  { step: 8, to: 420 },
-  { step: 24, to: 1400 },
+  { step: 8, to: 420, heightStep: 2 },
+  { step: 24, to: 1400, heightStep: 4 },
 ];
 
 /** How far the player moves before the whole thing is rebuilt around them. */
@@ -66,7 +72,7 @@ export class FarTerrain {
     let from = innerFrom;
     for (const ring of RINGS) {
       if (ring.to <= from) continue;
-      const mesh = this.buildRing(gen, x, z, from, ring.to, ring.step);
+      const mesh = this.buildRing(gen, x, z, from, ring.to, ring.step, ring.heightStep);
       if (mesh) { this.group.add(mesh); this.meshes.push(mesh); }
       from = ring.to;
     }
@@ -80,7 +86,7 @@ export class FarTerrain {
    * leave a ragged edge of half-quads, and the fog has long since taken the
    * corners anyway.
    */
-  buildRing(gen, cx, cz, from, to, step) {
+  buildRing(gen, cx, cz, from, to, step, heightStep) {
     const n = Math.ceil((to * 2) / step) + 1;
     const half = to;
     // Snap the grid to the world rather than the player, so walking does not
@@ -91,7 +97,6 @@ export class FarTerrain {
     const positions = [];
     const colours = [];
     const indices = [];
-    const at = new Map();          // grid index -> vertex number
 
     const heightCache = new Map();
     const sample = (gx, gz) => {
@@ -99,23 +104,14 @@ export class FarTerrain {
       let v = heightCache.get(key);
       if (v === undefined) {
         const wx = ox + gx * step, wz = oz + gz * step;
-        v = { h: gen.heightAt(wx, wz), b: gen.biomeIndexAt(wx, wz), wx, wz };
+        // Quantised, so a hillside comes in terraces rather than a ramp —
+        // the shading break below is what makes each one read as a step
+        // rather than a crease, but it needs an actual step to break at.
+        const h = Math.round(gen.heightAt(wx, wz) / heightStep) * heightStep;
+        v = { h, b: gen.biomeIndexAt(wx, wz), wx, wz };
         heightCache.set(key, v);
       }
       return v;
-    };
-
-    const vertex = (gx, gz) => {
-      const key = gx * 100003 + gz;
-      let i = at.get(key);
-      if (i !== undefined) return i;
-      const s = sample(gx, gz);
-      i = positions.length / 3;
-      positions.push(s.wx, s.h, s.wz);
-      const c = this.colours[s.b] ?? this.colours[0];
-      colours.push(c.r, c.g, c.b);
-      at.set(key, i);
-      return i;
     };
 
     const inner = from;
@@ -124,9 +120,20 @@ export class FarTerrain {
         // The middle is left to the real blocks.
         const mx = ox + (gx + 0.5) * step, mz = oz + (gz + 0.5) * step;
         if (Math.abs(mx - cx) < inner && Math.abs(mz - cz) < inner) continue;
-        const a = vertex(gx, gz), b = vertex(gx + 1, gz);
-        const c = vertex(gx + 1, gz + 1), d = vertex(gx, gz + 1);
-        indices.push(a, d, b, b, d, c);
+
+        const sa = sample(gx, gz), sb = sample(gx + 1, gz);
+        const sc = sample(gx + 1, gz + 1), sd = sample(gx, gz + 1);
+        // Each cell owns four corners of its own rather than sharing them
+        // with its neighbours. The positions still line up exactly — same
+        // sampled corners, same coordinates — so nothing pulls apart, but
+        // the *shading* no longer blends across the seam: computeVertexNormals
+        // below only ever sees this one flat quad at each of these vertices,
+        // never the differently-tilted quad next door.
+        const base = positions.length / 3;
+        positions.push(sa.wx, sa.h, sa.wz, sb.wx, sb.h, sb.wz, sc.wx, sc.h, sc.wz, sd.wx, sd.h, sd.wz);
+        const c = this.colours[sa.b] ?? this.colours[0];
+        for (let i = 0; i < 4; i++) colours.push(c.r, c.g, c.b);
+        indices.push(base, base + 3, base + 1, base + 1, base + 3, base + 2);
       }
     }
     if (!indices.length) return null;
@@ -177,9 +184,9 @@ function biomeColours() {
   return BIOMES.map((b) => {
     const block = BLOCKS_BY_ID.get(b.surface.top);
     const c = new THREE.Color(block?.color ?? 0x5b9c3f);
-    // A shade flatter than the real blocks: at this distance every face is lit
-    // the same and the unshaded colour reads brighter than the stepped ground
-    // it is continuing.
+    // A touch darker as a base: the real lighting now varies this per face
+    // (see buildRing), but the base swatch alone still reads a shade
+    // brighter than the stepped ground it's continuing without it.
     c.multiplyScalar(0.92);
     return c;
   });
