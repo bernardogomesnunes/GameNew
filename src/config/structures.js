@@ -351,6 +351,86 @@ export const STRUCTURES = [
     skill: 'politics',
   },
 
+  // Two buildings a town grows into rather than needs — nothing in Age 4's
+  // goals asks for either of them, the way nothing ever asked for a second
+  // kiln. They exist for what they give back once you want it.
+
+  {
+    id: 'townhouse',
+    name: 'Townhouse',
+    icon: '🏘️',
+    age: 4,
+    blurb: 'More roof than one family needs, so more than one family lives under it.',
+    minSize: 6,
+    maxSize: 16,
+    cost: { planks: 16 },
+    requires: [
+      {
+        id: 'walls',
+        // Finished material rather than a house's raw wood — three households
+        // expect better than the first roof you ever put up.
+        test: (ctx) => count(ctx, [PLANKS, BRICK]) >= 44,
+        say: (ctx) => `Needs ${44 - count(ctx, [PLANKS, BRICK])} more planks or brick in the walls`,
+      },
+      {
+        id: 'floor',
+        test: (ctx) => count(ctx, [STONE, COBBLE, BRICK]) >= 14,
+        say: (ctx) => `Needs ${14 - count(ctx, [STONE, COBBLE, BRICK])} more stone, cobble or brick — more feet than one family's worth`,
+      },
+      {
+        id: 'shelter',
+        test: (ctx) => ctx.shelteredVolume() >= 20,
+        say: (ctx) => ctx.shelteredVolume() === 0
+          ? 'Needs rooms inside — walls all round and a roof over the top'
+          : 'The rooms are too small — this has to hold three households, not one',
+      },
+    ],
+    produces: {},
+    // Three roofs folded into one building, so a townhouse is what you raise
+    // once "build another house" stops being the interesting problem.
+    grantsCapacity: 3,
+    everySeconds: 0,
+    skill: 'politics',
+  },
+
+  {
+    id: 'tavern',
+    name: 'Tavern',
+    icon: '🍻',
+    age: 4,
+    blurb: 'Somewhere to eat, drink and hear the news. Small coin changes hands too.',
+    minSize: 5,
+    maxSize: 14,
+    cost: { planks: 8, brick: 4 },
+    requires: [
+      {
+        id: 'walls',
+        test: (ctx) => count(ctx, [PLANKS, WOOD, BRICK]) >= 30,
+        say: (ctx) => `Needs ${30 - count(ctx, [PLANKS, WOOD, BRICK])} more planks, wood or brick in it`,
+      },
+      {
+        id: 'hearth',
+        test: (ctx) => count(ctx, [BRICK, STONE, COBBLE]) >= 10,
+        say: (ctx) => `Needs ${10 - count(ctx, [BRICK, STONE, COBBLE])} more stone, cobble or brick for a hearth`,
+      },
+      {
+        id: 'shelter',
+        test: (ctx) => ctx.shelteredVolume() >= 12,
+        say: () => 'Needs a proper room — walls all round and a roof over it',
+      },
+      {
+        id: 'town',
+        test: (ctx) => ctx.hasNeighbour([PLANKS, BRICK, GLASS, WOOD], 12),
+        say: () => 'Build it among your town, not out in a field',
+      },
+    ],
+    // A trickle, not an income — a mine works a claim for it, this just keeps
+    // a jar behind the counter.
+    produces: { gold: 1 },
+    everySeconds: 150,
+    skill: 'politics',
+  },
+
   // ---- Age 5: depth -------------------------------------------------------
 
   {
@@ -420,7 +500,106 @@ export const STRUCTURES = [
     skill: 'foraging',
   },
 
+  {
+    id: 'military',
+    name: 'Garrison',
+    icon: '🛡️',
+    age: 5,
+    blurb: 'Walls with people behind them. Nothing has tested them yet, and that is rather the point.',
+    minSize: 6,
+    maxSize: 18,
+    cost: { stone: 20, planks: 10 },
+    requires: [
+      {
+        id: 'walls',
+        test: (ctx) => count(ctx, [STONE, COBBLE, BRICK]) >= 50,
+        say: (ctx) => `Needs ${50 - count(ctx, [STONE, COBBLE, BRICK])} more stone, cobble or brick in the walls — this has to hold`,
+      },
+      {
+        id: 'watch',
+        test: (ctx) => ctx.region.maxY - ctx.region.minY + 1 >= 5,
+        say: (ctx) => `Needs to stand at least 5 blocks tall to see anything coming — yours is ${ctx.region.maxY - ctx.region.minY + 1}`,
+      },
+      {
+        id: 'barracks',
+        test: (ctx) => ctx.shelteredVolume() >= 14,
+        say: () => 'Needs a barracks inside — walls all round and a roof over it',
+      },
+      {
+        id: 'sky',
+        test: (ctx) => ctx.openSkyColumns() >= 4,
+        say: () => 'The watch needs open sky above it — nothing built over the top',
+      },
+    ],
+    // What a standing garrison brings back with nothing yet to defend
+    // against: patrols that forage and salvage as they go. The building is
+    // deliberately plain — a normal producer, on the same footing as
+    // everything else here — so that whatever it should do once there is
+    // something to defend *against* can be added to this one entry later
+    // without moving anything that depends on it.
+    produces: { stone: 3, planks: 2 },
+    everySeconds: 130,
+    skill: 'politics',
+  },
+
   // ---- Age 6: the last thing ---------------------------------------------
+
+  {
+    id: 'village',
+    name: 'Village',
+    icon: '🏡',
+    age: 6,
+    blurb: 'A forest, a farm, housing and a shed, folded into one claim — everything a start needs, raised at once.',
+    minSize: 14,
+    maxSize: 28,
+    cost: { wood: 20, seeds: 8 },
+    requires: [
+      {
+        id: 'trunks',
+        test: (ctx) => count(ctx, [WOOD]) >= 24,
+        say: (ctx) => `Needs ${24 - count(ctx, [WOOD])} more wood — a village needs a woodlot, not a tree`,
+      },
+      {
+        id: 'canopy',
+        test: (ctx) => count(ctx, [LEAVES]) >= 30,
+        say: (ctx) => `Needs ${30 - count(ctx, [LEAVES])} more leaves in the canopy`,
+      },
+      {
+        id: 'tilled',
+        test: (ctx) => count(ctx, [FARMLAND]) >= 8,
+        say: (ctx) => `Needs ${8 - count(ctx, [FARMLAND])} more tilled soil — the fields are too small`,
+      },
+      {
+        id: 'water',
+        test: (ctx) => ctx.hasWithin([WATER], 8),
+        say: () => 'Needs fresh water within 8 blocks — build nearer the river',
+      },
+      {
+        id: 'walls',
+        test: (ctx) => count(ctx, [WOOD, PLANKS]) >= 60,
+        say: (ctx) => `Needs ${60 - count(ctx, [WOOD, PLANKS])} more wood or planks — three households' worth of walls`,
+      },
+      {
+        id: 'housing',
+        test: (ctx) => ctx.shelteredVolume() >= 40,
+        say: (ctx) => ctx.shelteredVolume() === 0
+          ? 'Needs real rooms inside — walls all round and roofs over them'
+          : 'Not enough room under roof yet — housing for three households and a shed, not one',
+      },
+      {
+        id: 'soil',
+        test: (ctx) => count(ctx, [DIRT, GRASS, SAPLING]) >= 12,
+        say: () => 'Needs more open soil between the trees and the fields',
+      },
+    ],
+    // The forest and the farm folded in, at a fraction of what either gives
+    // alone — the point of a village is the housing, not out-earning the
+    // buildings it is standing in for.
+    produces: { wood: 3, leaves: 2, vegetables: 3, seeds: 2 },
+    grantsCapacity: 3,
+    everySeconds: 100,
+    skill: 'building',
+  },
 
   {
     id: 'monument',

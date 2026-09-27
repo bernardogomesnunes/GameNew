@@ -67,29 +67,33 @@ export const AGES = [
     age: 4,
     name: 'Town',
     size: 128,
-    intro: 'Enough buildings to be a place. Raise a market among them, and house the people who will use it.',
+    intro: 'Enough buildings to be a place. Raise a market among them, house the people who will use it, and give them somewhere to gather.',
     goals: [
       { structure: 'market', count: 1, label: 'Raise a market' },
       { structure: 'house', count: 4, label: 'Have four houses standing' },
+      { structure: 'townhouse', count: 1, label: 'Raise a townhouse — three households under one roof' },
+      { structure: 'tavern', count: 1, label: 'Raise a tavern' },
     ],
   },
   {
     age: 5,
     name: 'Domain',
     size: 192,
-    intro: 'Everything easy is above ground. Drive a mine into the rock, and feed the town that lives off it.',
+    intro: 'Everything easy is above ground. Drive a mine into the rock, feed the town that lives off it, and give it walls that could hold if they ever had to.',
     goals: [
       { structure: 'mine', count: 1, label: 'Drive a mine underground' },
       { structure: 'granary', count: 1, label: 'Fill a granary' },
       { structure: 'house', count: 6, label: 'Have six houses standing' },
+      { structure: 'military', count: 1, label: 'Raise a garrison' },
     ],
   },
   {
     age: 6,
     name: 'Frontier',
     size: 256,
-    intro: 'The whole map is yours. One thing left: build something that outlasts you.',
+    intro: 'The whole map is yours. Raise a village to hold it, then build something that outlasts you.',
     goals: [
+      { structure: 'village', count: 1, label: 'Raise a village' },
       { structure: 'monument', count: 1, label: 'Raise a monument' },
     ],
     // Nothing comes after this one. Finishing it finishes the game.

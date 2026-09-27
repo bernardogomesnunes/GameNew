@@ -154,6 +154,11 @@ const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed:
     region: { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: 1 },
     claimedAt: 0, lastPaidAt: 0, brokenReason: null,
   });
+  g.structures.structures.push({
+    id: 2, type: 'village', valid: true, locked: true,
+    region: { minX: 2, maxX: 3, minY: 0, maxY: 1, minZ: 0, maxZ: 1 },
+    claimedAt: 0, lastPaidAt: 0, brokenReason: null,
+  });
   g.checkAgeAdvance();
   g.checkAgeAdvance();
   g.checkAgeAdvance();
