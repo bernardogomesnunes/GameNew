@@ -8,7 +8,7 @@ import { Crafting } from './Crafting.js';
 import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, itemName } from '../config/items.js';
-import { STRUCTURES_BY_ID, structuresForAge } from '../config/structures.js';
+import { STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
 
@@ -263,6 +263,27 @@ export class DuiltGame {
     const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
     const tier = tierStatus(this.world, structure.region, structure.type);
     return { structure, store, used, free: store.size - used, size: store.size, items, tier };
+  }
+
+  /**
+   * How a leveled building's ladder reads — a storehouse's shelves growing
+   * or a quarry's face deepening are the same question here, with what each
+   * level actually produces folded in for the ones that make something.
+   * Null for a building with no `tiers` at all.
+   */
+  levelSummary(structure) {
+    const spec = STRUCTURES_BY_ID.get(structure?.type);
+    if (!hasLevels(spec)) return null;
+    const status = tierStatus(this.world, structure.region, structure.type);
+    const rateOf = (tier) => {
+      const produces = producesAt(spec, tier);
+      return Object.keys(produces).length ? { produces, everySeconds: intervalAt(spec, tier) } : null;
+    };
+    return {
+      ...status,
+      rate: rateOf(status.tier),
+      next: status.next && { ...status.next, rate: rateOf(status.tier + 1) },
+    };
   }
 
   ageComplete() {

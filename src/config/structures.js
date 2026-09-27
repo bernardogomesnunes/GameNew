@@ -148,11 +148,59 @@ export const STRUCTURES = [
     // Stone has fewer sinks than wood or food — you don't eat it, and most
     // recipes want a handful, not a steady stream — so it piled up faster
     // than anything else and, once storehouses filled, started eating bag
-    // slots by the stack. Cut hard rather than trimmed: a third of the old
-    // rate, on a longer cycle too.
-    produces: { stone: 2, cobblestone: 1 },
-    everySeconds: 90,
+    // slots by the stack. A fresh scrape at the rock is worth barely
+    // anything — ten stone a day — and it is the levels below, not the
+    // building itself, that turn it into something worth having staffed.
+    produces: { stone: 1 },
+    everySeconds: 8640,
     skill: 'building',
+    /**
+     * How a quarry grows — the first building to use the same ladder a
+     * storehouse already climbs. `tiers` gives any building levels; a tier
+     * with `slots` makes it a storehouse, a tier with `produces` and/or
+     * `everySeconds` makes it a faster, richer producer instead. Nothing
+     * else about the mechanism changes — see isStore/producesAt/intervalAt
+     * in this file and StructureRegistry.retier/collect.
+     *
+     * Climbed by building, exactly like a storehouse: cut the face back
+     * further and the level follows, with nothing to press and nothing to
+     * strip back down to once it has.
+     */
+    tiers: [
+      { id: 'seam', name: 'A Seam Cut', blurb: 'A scrape at the rock. Barely worth the walk.', needs: [] },
+      {
+        id: 'face', name: 'A Working Face', blurb: 'Wide enough to work properly.',
+        produces: { stone: 1, cobblestone: 1 }, everySeconds: 4320,
+        needs: [
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 40, say: (ctx) => `${40 - count(ctx, [STONE, COBBLE])} more stone showing` },
+          { test: (ctx) => ctx.countOf(0) >= 16, say: (ctx) => `${16 - ctx.countOf(0)} more cut out of it` },
+        ],
+      },
+      {
+        id: 'deepcut', name: 'A Deep Cut', blurb: 'Cut back far enough to keep two haulers busy.',
+        produces: { stone: 2, cobblestone: 1 }, everySeconds: 2160,
+        needs: [
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 60, say: (ctx) => `${60 - count(ctx, [STONE, COBBLE])} more stone showing` },
+          { test: (ctx) => ctx.countOf(0) >= 28, say: (ctx) => `${28 - ctx.countOf(0)} more cut out of it` },
+        ],
+      },
+      {
+        id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, opened right up.',
+        produces: { stone: 2, cobblestone: 2 }, everySeconds: 1080,
+        needs: [
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 90, say: (ctx) => `${90 - count(ctx, [STONE, COBBLE])} more stone showing` },
+          { test: (ctx) => ctx.countOf(0) >= 44, say: (ctx) => `${44 - ctx.countOf(0)} more cut out of it` },
+        ],
+      },
+      {
+        id: 'openpit', name: 'An Open Pit', blurb: 'As much rock as a claim this size can show.',
+        produces: { stone: 3, cobblestone: 2 }, everySeconds: 540,
+        needs: [
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 130, say: (ctx) => `${130 - count(ctx, [STONE, COBBLE])} more stone showing` },
+          { test: (ctx) => ctx.countOf(0) >= 64, say: (ctx) => `${64 - ctx.countOf(0)} more cut out of it` },
+        ],
+      },
+    ],
   },
 
   {
@@ -643,23 +691,60 @@ export function structureName(id) {
   return STRUCTURES_BY_ID.get(id)?.name ?? id;
 }
 
-/** True for a building that holds things — see the storehouse's `tiers`. */
-export function isStore(spec) {
+/**
+ * True for any building with a ladder of rungs to climb — a storehouse
+ * growing its shelves, a quarry cutting a bigger face. `tiers` is the one
+ * mechanism behind both; which kind a building is comes down to what its
+ * rungs actually change, not to having rungs at all. See isStore below for
+ * the narrower "does it hold things" question.
+ */
+export function hasLevels(spec) {
   return !!spec?.tiers?.length;
+}
+
+/** A tier index, clamped to the tiers a building actually has. */
+function clampTier(spec, tier) {
+  return Math.max(0, Math.min(tier, spec.tiers.length - 1));
+}
+
+/** True for a building that holds things — a tiers entry with `slots` on it. */
+export function isStore(spec) {
+  return hasLevels(spec) && spec.tiers.some((t) => t.slots != null);
 }
 
 /** How many slots a building has at a tier, clamped to the tiers it actually has. */
 export function holdsAt(spec, tier = 0) {
   if (!isStore(spec)) return 0;
-  return spec.tiers[Math.max(0, Math.min(tier, spec.tiers.length - 1))].slots;
+  return spec.tiers[clampTier(spec, tier)].slots;
 }
 
 /**
- * Every item id any building ever hands over, in the order a building that
- * makes it first appears.
+ * What a building actually hands over at a given tier.
+ *
+ * A tier with no `produces` of its own falls back to the building's base
+ * rate — tier 0 never needs to repeat it, the same way a storehouse's first
+ * tier repeats no `needs` because the claim already asked for them.
+ */
+export function producesAt(spec, tier = 0) {
+  if (!hasLevels(spec)) return spec?.produces ?? {};
+  return spec.tiers[clampTier(spec, tier)].produces ?? spec.produces ?? {};
+}
+
+/** How long a cycle takes at a given tier — see producesAt, same fallback. */
+export function intervalAt(spec, tier = 0) {
+  if (!hasLevels(spec)) return spec?.everySeconds ?? 0;
+  return spec.tiers[clampTier(spec, tier)].everySeconds ?? spec.everySeconds ?? 0;
+}
+
+/**
+ * Every item id any building ever hands over, at any tier, in the order a
+ * building that makes it first appears.
  *
  * This is what a storehouse's "won't take" list is built from — read off the
  * registry rather than written out a second time, so a new building's output
  * is routable the moment it is added here, with nothing else to remember.
  */
-export const PRODUCIBLE_ITEMS = [...new Set(STRUCTURES.flatMap((s) => Object.keys(s.produces ?? {})))];
+export const PRODUCIBLE_ITEMS = [...new Set(STRUCTURES.flatMap((s) => [
+  ...Object.keys(s.produces ?? {}),
+  ...(s.tiers ?? []).flatMap((t) => Object.keys(t.produces ?? {})),
+]))];

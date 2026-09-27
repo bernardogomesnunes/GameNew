@@ -1,5 +1,5 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
-import { STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS } from '../config/structures.js';
+import { STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
@@ -19,6 +19,25 @@ import { icon } from './icons.js';
  */
 
 const HOLD_MS = 420;
+
+/**
+ * A production rate as a line you can read, or null for nothing produced.
+ *
+ * Most cycles are a minute or two, where restating the raw per-cycle number
+ * under "a minute" is close enough to be honest; a cycle longer than that —
+ * a quarry's first level, cut back to barely anything on purpose — reads by
+ * the day instead, converted for real rather than relabelled, so "10 a day"
+ * actually means ten a day.
+ */
+function rateText(produces, everySeconds) {
+  if (!produces || !Object.keys(produces).length || !everySeconds) return null;
+  const daily = everySeconds > 300;
+  const makes = Object.entries(produces)
+    .map(([k, v]) => `${daily ? Math.round(v * 86400 / everySeconds) : v} ${itemName(k).toLowerCase()}`)
+    .join(', ');
+  return `Makes ${makes} a ${daily ? 'day' : 'minute'}`;
+}
+
 export class DuiltUI {
   constructor(root, { game, bus, panels }) {
     this.root = root;
@@ -244,9 +263,26 @@ export class DuiltUI {
     // A storehouse is worth answering before you open it: how full it is is
     // the question you walked over here to ask.
     const summary = this.duilt?.storeSummary(structure) ?? null;
+    // A producer with no shelves to open still has a level worth knowing —
+    // levelSummary covers both, so a store just prefers its own richer line.
+    const level = this.duilt?.levelSummary(structure) ?? null;
     const held = summary
       ? `${summary.tier?.name ?? 'Shelves'} · ${summary.items ? `${summary.items} things in ${summary.used} of ${summary.size}` : `empty, ${summary.size} slots`}`
+      : level ? `${level.name} · ${rateText(level.rate?.produces, level.rate?.everySeconds) ?? 'nothing yet'}`
       : null;
+
+    // What the next rung of the ladder needs — the same question a
+    // storehouse answers once you open it, asked here too so a producer
+    // with no screen of its own to open still gets an answer.
+    const next = level?.next;
+    const nextBlock = next ? `
+      <div class="store-next">
+        <strong>Next level: ${next.name}</strong>
+        ${next.rate ? `<span>${rateText(next.rate.produces, next.rate.everySeconds)}</span>` : ''}
+        ${next.missing?.length
+          ? `<ul>${next.missing.map((m) => `<li>${m}</li>`).join('')}</ul>`
+          : '<span>It already qualifies — it will settle there on your next change to it.</span>'}
+      </div>` : '';
 
     body.innerHTML = `
       <div class="building-state ${structure.valid ? 'good' : 'bad'}">
@@ -257,6 +293,7 @@ export class DuiltUI {
         ${held ? `<span>${held}</span>` : ''}
         <span>${locked ? 'Locked' : 'Unlocked — edits allowed'}</span>
       </div>
+      ${nextBlock}
       <p class="building-note">
         ${locked
           ? 'Protected, so you cannot take a wall out of it by accident while clearing the ground beside it. '
@@ -768,7 +805,6 @@ export class DuiltUI {
       const built = d.structures.countOf(spec.id);
       const design = DESIGN_FOR_STRUCTURE.get(spec.id);
       const needs = spec.requires.map((r) => r.id).join(' · ');
-      const makes = Object.entries(spec.produces ?? {}).map(([k, v]) => `${v} ${itemName(k).toLowerCase()}`).join(', ');
       const canStamp = design && d.inventory.hasAll(design.cost);
       const shortfall = design ? d.inventory.missing(design.cost) : {};
       // The full bill, not just what you're short — a shortfall note only ever
@@ -790,7 +826,7 @@ export class DuiltUI {
             ${built ? `<span class="building-count">${built} built</span>` : ''}
           </div>
           <div class="building-meta">
-            <span>${this.whatItGivesYou(spec, makes)}</span>
+            <span>${this.whatItGivesYou(spec)}</span>
             <span>Needs: ${needs}</span>
             ${costLine ? `<span>Costs: ${costLine}</span>` : ''}
           </div>
@@ -817,12 +853,16 @@ export class DuiltUI {
   /**
    * The one line saying why you would want this building.
    *
-   * Most of them produce something on a timer and that is the answer. The ones
-   * that do not each have their own reason, and "Houses settlers, later on" —
-   * which is what every non-producer used to say — is true of exactly one.
+   * Most of them produce something on a timer and that is the answer, read
+   * off its first level (see config/structures.js's producesAt/intervalAt —
+   * a level beyond the first is something the catalogue card doesn't know
+   * about yet). The ones that produce nothing each have their own reason,
+   * and "Houses settlers, later on" — what every non-producer used to say —
+   * is true of exactly one.
    */
-  whatItGivesYou(spec, makes) {
-    if (makes) return `Makes ${makes} a minute`;
+  whatItGivesYou(spec) {
+    const rate = rateText(producesAt(spec, 0), intervalAt(spec, 0));
+    if (rate) return rate;
     if (spec.station === 'workshop') return 'Lets you make things here that your hands cannot';
     if (spec.grantsCapacity) return 'Somebody moves in — the first one is yours';
     return 'Builds nothing and makes nothing. It is the point of the game';

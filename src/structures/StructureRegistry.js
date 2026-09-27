@@ -1,4 +1,4 @@
-import { STRUCTURES_BY_ID, holdsAt, isStore } from '../config/structures.js';
+import { STRUCTURES_BY_ID, holdsAt, isStore, hasLevels, producesAt, intervalAt } from '../config/structures.js';
 import { Inventory } from '../items/Inventory.js';
 import { tierStatus, validateStructure } from './validate.js';
 
@@ -54,19 +54,21 @@ export class StructureRegistry {
   }
 
   /**
-   * Re-reads what a storehouse has been built into, and resizes its shelves.
+   * Re-reads what a leveled building has been built into — resizing a
+   * storehouse's shelves, or just noting a quarry's new level for `collect`
+   * to read next cycle.
    *
    * Called wherever the blocks might have moved under it, which is the same
-   * places `recheck` is called from — upgrading is not a separate action you
-   * take, it is the game noticing you built the thing bigger.
+   * places `recheck` is called from — leveling up is not a separate action
+   * you take, it is the game noticing you built the thing bigger.
    */
   retier(structure) {
     const spec = STRUCTURES_BY_ID.get(structure?.type);
-    if (!isStore(spec)) return null;
+    if (!hasLevels(spec)) return null;
     const status = tierStatus(this.world, structure.region, structure.type);
     const was = structure.tier ?? 0;
     structure.tier = status.tier;
-    const slots = this.storeFor(structure).resize(status.slots);
+    const slots = isStore(spec) ? this.storeFor(structure).resize(status.slots) : null;
     if (status.tier > was) {
       this.bus?.emit('structure:upgraded', { structure, name: status.name, slots, blurb: status.blurb });
     }
@@ -323,9 +325,15 @@ export class StructureRegistry {
     for (const s of this.structures) {
       if (!s.valid) continue;
       const spec = STRUCTURES_BY_ID.get(s.type);
-      if (!spec?.everySeconds || !spec.produces) continue;
+      // A leveled building reads its current tier's own rate and cadence —
+      // producesAt/intervalAt fall back to the plain spec fields for
+      // everything that has no tiers at all, so this covers both.
+      const tier = s.tier ?? 0;
+      const everySeconds = intervalAt(spec, tier);
+      const produces = producesAt(spec, tier);
+      if (!everySeconds || !Object.keys(produces).length) continue;
 
-      const periodMs = spec.everySeconds * 1000;
+      const periodMs = everySeconds * 1000;
       const elapsed = Math.min(now - s.lastPaidAt, capMs);
       const cycles = Math.floor(elapsed / periodMs);
       if (cycles <= 0) continue;
@@ -334,7 +342,7 @@ export class StructureRegistry {
       // building gives against another of the same kind.
       const staffing = bonusFor ? bonusFor(s.id) : 1;
       const payload = {};
-      for (const [item, per] of Object.entries(spec.produces)) {
+      for (const [item, per] of Object.entries(produces)) {
         // Foraging pays out here rather than at the pickaxe — see DuiltGame.yieldFor.
         const amount = Math.round(per * cycles * yieldMultiplier * staffing);
         if (amount > 0) payload[item] = amount;
@@ -366,8 +374,9 @@ export class StructureRegistry {
     for (const s of this.structures) {
       if (!s.valid) continue;
       const spec = STRUCTURES_BY_ID.get(s.type);
-      if (!spec?.everySeconds) continue;
-      const due = s.lastPaidAt + spec.everySeconds * 1000;
+      const everySeconds = intervalAt(spec, s.tier ?? 0);
+      if (!everySeconds) continue;
+      const due = s.lastPaidAt + everySeconds * 1000;
       soonest = Math.min(soonest, Math.max(0, due - now));
     }
     return soonest === Infinity ? null : Math.round(soonest / 1000);

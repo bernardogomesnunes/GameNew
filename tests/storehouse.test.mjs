@@ -101,7 +101,7 @@ function stuff(inv) {
 {
   const now = Date.now();
   const { reg, inventory, put } = settlement({ now });
-  put('quarry', box(0), now - 200_000); // long enough for several payouts
+  put('quarry', box(0), now - 27_000_000); // long enough for several payouts
   stuff(inventory);
   ok('the bag is full before anything is produced', inventory.firstEmpty() === -1);
 
@@ -121,7 +121,7 @@ function stuff(inv) {
 {
   const now = Date.now();
   const { reg, inventory, put } = settlement({ now });
-  const quarry = put('quarry', box(0), now - 200_000);
+  const quarry = put('quarry', box(0), now - 27_000_000);
   stuff(inventory);
 
   const owed = quarry.lastPaidAt;
@@ -140,7 +140,7 @@ function stuff(inv) {
   // All of it or none of it: a partly-delivered payout is the rest destroyed.
   const now = Date.now();
   const { reg, inventory, put } = settlement({ now });
-  put('quarry', box(0), now - 200_000);
+  put('quarry', box(0), now - 27_000_000);
   stuff(inventory);
   inventory.slots[3] = null; // room for one kind of thing, not both
   const before = inventory.slots.filter(Boolean).length;
@@ -342,7 +342,7 @@ ok('every building the game calls a store has tiers',
   // and still use it for everything else.
   const now = Date.now();
   const { reg, inventory, put } = settlement({ now });
-  put('quarry', box(0), now - 200_000);
+  put('quarry', box(0), now - 27_000_000);
   stuff(inventory);
 
   const picky = put('storehouse', box(4));
@@ -359,7 +359,7 @@ ok('every building the game calls a store has tiers',
   // storehouse existing at all — it never destroys anything.
   const now = Date.now();
   const { reg, inventory, put } = settlement({ now });
-  put('quarry', box(0), now - 200_000);
+  put('quarry', box(0), now - 27_000_000);
   stuff(inventory);
   const shed = put('storehouse', box(4));
   reg.toggleExclude(shed.id, 'stone');
