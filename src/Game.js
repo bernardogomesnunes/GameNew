@@ -125,7 +125,7 @@ const SLOW_BREAK_MS = 900;
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -2147,6 +2147,18 @@ export class Game {
     this.ui.toast(r.ok
       ? { kind: 'challenge', title: 'That helps', body: `+${r.restored} hunger` }
       : { kind: 'xp', title: r.reason });
+  }
+
+  /**
+   * What Place does with food selected: throw one away instead of building.
+   * One unit a press, the same grain as eatSelected — not the bag's discard
+   * button, which clears a whole stack at once.
+   */
+  throwSelected() {
+    if (!this.duilt) return;
+    const id = this.selectedItemId;
+    if (!this.duilt.inventory.remove(id, 1)) return;
+    this.ui.toast({ kind: 'xp', title: `Threw away ${itemName(id)}`, body: 'One less to carry' });
   }
 
   /**

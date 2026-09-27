@@ -19,9 +19,11 @@ export function panelMarkup(def, body = '') {
   return `
       <div class="overlay" id="${def.id}" hidden>
         <div class="panel${def.wide ? ' panel-wide' : ''}">
-          <button class="icon-btn panel-close" data-close="${def.id}" aria-label="Close">${icon('close', 16)}</button>
-          ${title}
-          ${sub}
+          <div class="panel-head">
+            <button class="icon-btn panel-close" data-close="${def.id}" aria-label="Close">${icon('close', 16)}</button>
+            ${title}
+            ${sub}
+          </div>
           ${body}
         </div>
       </div>`;

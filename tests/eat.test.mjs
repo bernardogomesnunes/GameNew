@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { generateDuiltWorld } from '../src/world/StarterWorld.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
+import { Inventory } from '../src/items/Inventory.js';
 
 /**
  * Requested directly, as part of the same pass that added mining tools:
@@ -42,7 +43,16 @@ globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
     !result.ok && /can't eat/.test(result.reason));
 }
 
-// --- wired into Break, the same way the bucket is ---------------------------
+// --- throwing it away, the other button --------------------------------------
+
+{
+  const inv = new Inventory();
+  inv.add('fruit', 3);
+  ok('throwing takes one from the bag', inv.remove('fruit', 1) === 1 && inv.countOf('fruit') === 2);
+  ok('with none left, throwing takes nothing', new Inventory().remove('fruit', 1) === 0);
+}
+
+// --- wired into Break/Place, the same way the bucket is ----------------------
 
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
@@ -51,7 +61,13 @@ ok('fruit and vegetables take over Break, like the bucket does',
   /BREAK_OVERRIDE = \{ bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected' \}/.test(game));
 ok('eatSelected calls DuiltGame\'s own eat() with whatever is selected',
   /eatSelected\(\)[\s\S]{0,200}this\.duilt\.eat\(this\.selectedItemId\)/.test(game));
+ok('and food takes over Place too, throwing it away instead of building',
+  /PLACE_OVERRIDE = \{[\s\S]{0,100}fruit: 'throwSelected', vegetables: 'throwSelected' \}/.test(game));
+ok('throwSelected removes one unit of whatever is selected',
+  /throwSelected\(\)[\s\S]{0,200}this\.duilt\.inventory\.remove\(id, 1\)/.test(game));
 ok('and food is a selectable hotbar slot, with its own hint',
   /fruit: 'Break to eat'/.test(ui) && /vegetables: 'Break to eat'/.test(ui));
+ok('the two buttons say Eat and Throw while food is selected, not Break and Place',
+  /fruit: \['Eat', 'Throw'\]/.test(ui) && /vegetables: \['Eat', 'Throw'\]/.test(ui));
 
 process.exit(f ? 1 : 0);

@@ -35,6 +35,12 @@
   --stick-zone: 78px;      /* how far up the screen the stick's area starts */
   --side-btn: 54px;        /* the outboard buttons, which are their own size */
   --stick-gap: 24px;       /* clear air between the base and the column above it */
+  /* A panel's own padding, as variables rather than numbers so .panel-head
+     can cancel exactly this much of it to bleed to the edges — see .panel
+     and .panel-head below — and the two never drift apart on a phone. */
+  --panel-pad-t: 18px;
+  --panel-pad-x: 20px;
+  --panel-pad-b: 22px;
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-feature-settings: 'tnum' 1;
 }
@@ -285,10 +291,24 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 .panel {
   background: var(--panel-solid); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--panel-border); border-radius: 16px; width: 100%; max-width: 560px;
-  max-height: 86vh; overflow-y: auto; padding: 18px 20px 22px;
+  max-height: 86vh; overflow-y: auto; padding: var(--panel-pad-t) var(--panel-pad-x) var(--panel-pad-b);
+}
+/* Cancels exactly the panel's own top/side padding via negative margin, so it
+   bleeds flush to the edges (the panel's own rounded corners and overflow:auto
+   clip it back into shape) and then re-applies that padding to itself. Sticky
+   rather than fixed, so it only pins once you have actually scrolled past it —
+   a short panel never notices this is here at all. On a phone especially, a
+   long panel — the goal list, achievements, Settings — used to scroll its own
+   name away with the first swipe, so "what is this" only had one answer: pull
+   the header back up to look. */
+.panel-head {
+  position: sticky; top: 0; z-index: 2;
+  margin: calc(-1 * var(--panel-pad-t)) calc(-1 * var(--panel-pad-x)) 14px;
+  padding: var(--panel-pad-t) var(--panel-pad-x) 10px;
+  background: var(--panel-solid);
 }
 .panel h2 { margin: 0 0 4px; font-size: 20px; }
-.panel .sub { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
+.panel .sub { color: var(--text-dim); font-size: 13px; margin-bottom: 0; }
 .panel-close { float: right; }
 .tab-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
 .tab-btn { background: rgba(35,42,45,0.06); border: 1px solid var(--panel-border); color: var(--text-dim); border-radius: 7px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
@@ -496,7 +516,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
    is 890px wide and was getting the desktop's chrome: a toolbar of labelled
    52px buttons across the top of a 390px-tall picture. */
 @media (max-width: 640px), (pointer: coarse) {
-  .panel { padding: 14px; }
+  :root { --side-btn: 50px; --panel-pad-t: 14px; --panel-pad-x: 14px; --panel-pad-b: 14px; }
   #hud-top { right: auto; width: 55%; }
   /* Labels are worth their space on a desktop toolbar but eat a phone screen;
      the Help panel names every control instead. */
@@ -507,7 +527,6 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   .icon-btn span { display: none; }
   .icon-btn.panel-close { width: 30px; height: 30px; }
   .touch-btn { width: 56px; height: 56px; border-radius: 16px; }
-  :root { --side-btn: 50px; }
   .touch-btn.small { border-radius: 14px; }
   .touch-btn span { font-size: 8.5px; }
   .ach-grid { grid-template-columns: 1fr; }

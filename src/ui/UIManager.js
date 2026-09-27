@@ -27,6 +27,20 @@ const TOOL_HOTBAR_NOTES = {
 };
 const TOOL_HOTBAR_IDS = Object.keys(TOOL_HOTBAR_NOTES);
 
+/**
+ * What the two touch buttons say while one of these is selected and no tool
+ * is queued — Break/Place is the default everywhere else. Guessing that
+ * "Break" scoops water or "Place" throws food away is the same puzzle
+ * TOOL_HOTBAR_NOTES exists to avoid; this is the same fix for the buttons
+ * themselves. See Game.js's BREAK_OVERRIDE/PLACE_OVERRIDE for what each runs.
+ */
+const TOOL_ACTION_LABELS = {
+  bucket: ['Fill', 'Place'],
+  bucket_water: ['Break', 'Empty'],
+  fruit: ['Eat', 'Throw'],
+  vegetables: ['Eat', 'Throw'],
+};
+
 function el(html) {
   const t = document.createElement('template');
   t.innerHTML = html.trim();
@@ -1536,7 +1550,7 @@ export class UIManager {
     if (!state) {
       el.hidden = true;
       this.setArmedTool(null);
-      this.setActionLabels('Break', 'Place');
+      this.setActionLabels(...this.defaultActionLabels());
       return;
     }
     el.hidden = false;
@@ -1586,6 +1600,11 @@ export class UIManager {
     p.querySelector('span').textContent = placeLabel;
   }
 
+  /** The two button labels for whatever is selected right now, with no tool queued. */
+  defaultActionLabels() {
+    return TOOL_ACTION_LABELS[this.selectedItemId] ?? ['Break', 'Place'];
+  }
+
   /**
    * Carrying a building changes what the two thumb buttons mean, so they say
    * so. Guessing which of Break and Place puts down the thing in your hands is
@@ -1593,7 +1612,8 @@ export class UIManager {
    */
   setCarrying(on) {
     this.carrying = on;
-    this.setActionLabels(on ? 'Cancel' : 'Break', on ? 'Drop' : 'Place');
+    const [b, p] = this.defaultActionLabels();
+    this.setActionLabels(on ? 'Cancel' : b, on ? 'Drop' : p);
     this.q('#t-place')?.classList.toggle('active', !!on);
   }
 
