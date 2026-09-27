@@ -1,5 +1,5 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
-import { STRUCTURES_BY_ID, structuresForAge } from '../config/structures.js';
+import { STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS } from '../config/structures.js';
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
@@ -83,6 +83,15 @@ export class DuiltUI {
           -->
           <div id="store-next" class="store-next" hidden></div>
           <div id="store-grid"></div>
+          <!--
+            What this shed refuses to take from a building's own payout, so one
+            fast producer stops crowding the rest out of it. Manual moves are
+            never blocked — this only steers deliver(), see StructureRegistry.
+          -->
+          <div id="store-routing" class="store-routing" hidden>
+            <span class="store-routing-label">Won't take from deliveries:</span>
+            <div id="store-routing-chips" class="store-routing-chips"></div>
+          </div>
           <div class="store-head"><span>In your bag</span></div>
           <div id="store-bag-grid"></div>`,
         'panel-claim': `
@@ -619,6 +628,43 @@ export class DuiltUI {
         ? 'Tap anything to move it between your bag and the shelves.'
         : 'Nothing in here yet. Tap something in your bag to put it away.';
     }
+
+    this.renderStoreRouting(summary);
+  }
+
+  /**
+   * The chip row that decides what a shed's own deliveries skip.
+   *
+   * One chip per item any building anywhere can produce — see
+   * config/structures.js's PRODUCIBLE_ITEMS — so a new building's output is
+   * routable the moment it exists, with nothing to add here. Hidden when
+   * nothing is produced yet, which today is never, but costs nothing to guard.
+   */
+  renderStoreRouting(summary) {
+    const box = this.q('#store-routing');
+    const chips = this.q('#store-routing-chips');
+    if (!box || !chips) return;
+    if (!PRODUCIBLE_ITEMS.length) { box.hidden = true; return; }
+    box.hidden = false;
+
+    const excludes = new Set(summary.structure.excludes ?? []);
+    chips.innerHTML = PRODUCIBLE_ITEMS.map((id) => {
+      const spec = ITEMS_BY_ID.get(id);
+      const off = excludes.has(id);
+      return `
+        <button class="routing-chip ${off ? 'off' : ''}" data-route="${id}"
+          aria-pressed="${off}" title="${off ? `Won't take ${itemName(id)}` : `Takes ${itemName(id)}`}">
+          ${glyphSvg(spec?.glyph, { size: 15, color: spec?.color ?? 0x888888 })}
+          <span>${itemName(id)}</span>
+        </button>`;
+    }).join('');
+
+    chips.querySelectorAll('[data-route]').forEach((btn) => btn.addEventListener('click', () => {
+      const d = this.duilt;
+      if (!d || !this.store) return;
+      d.structures.toggleExclude(this.store.id, btn.dataset.route);
+      this.renderStore();
+    }));
   }
 
   putInStore(i) {

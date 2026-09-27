@@ -688,6 +688,21 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   margin: 10px 0 0; max-height: 26vh; overflow-y: auto; padding: 2px;
 }
 
+/* What a shed's own deliveries skip — a manual move can still put any of
+   these on the shelf, this only keeps a fast producer from filling it. */
+.store-routing { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--panel-border); }
+.store-routing-label { font-size: 11.5px; color: var(--text-dim); }
+.store-routing-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.routing-chip {
+  display: flex; align-items: center; gap: 5px; padding: 5px 10px 5px 8px;
+  border-radius: 999px; border: 1px solid var(--panel-border);
+  background: rgba(35,42,45,0.04); color: var(--text); font: inherit; font-size: 12px; cursor: pointer;
+}
+.routing-chip.off {
+  border-color: var(--danger); background: rgba(200,91,83,0.1); color: var(--text-dim);
+  text-decoration: line-through;
+}
+
 /* --- claiming --- */
 #claim-list { display: flex; flex-direction: column; gap: 9px; margin-top: 6px; }
 .claim-row {

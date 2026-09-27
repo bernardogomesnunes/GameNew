@@ -474,3 +474,13 @@ export function holdsAt(spec, tier = 0) {
   if (!isStore(spec)) return 0;
   return spec.tiers[Math.max(0, Math.min(tier, spec.tiers.length - 1))].slots;
 }
+
+/**
+ * Every item id any building ever hands over, in the order a building that
+ * makes it first appears.
+ *
+ * This is what a storehouse's "won't take" list is built from — read off the
+ * registry rather than written out a second time, so a new building's output
+ * is routable the moment it is added here, with nothing else to remember.
+ */
+export const PRODUCIBLE_ITEMS = [...new Set(STRUCTURES.flatMap((s) => Object.keys(s.produces ?? {})))];

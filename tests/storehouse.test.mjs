@@ -327,4 +327,84 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
 ok('every building the game calls a store has tiers',
   [...STRUCTURES_BY_ID.values()].every((s) => !isStore(s) || s.tiers.every((t) => t.slots > 0)));
 
+// --- routing: what a shed's own deliveries skip -------------------------------
+{
+  const { reg, put } = settlement();
+  const shed = put('storehouse', box(0));
+  ok('a fresh shed excludes nothing', (shed.excludes ?? []).length === 0);
+  ok('toggling it on turns an item away', reg.toggleExclude(shed.id, 'stone') && shed.excludes.includes('stone'));
+  ok('toggling it again lets it back in', reg.toggleExclude(shed.id, 'stone') && !shed.excludes.includes('stone'));
+  ok('an unknown structure id is refused', reg.toggleExclude(999, 'stone') === false);
+}
+
+{
+  // Two sheds, one refusing stone: production must skip past it for that item
+  // and still use it for everything else.
+  const now = Date.now();
+  const { reg, inventory, put } = settlement({ now });
+  put('quarry', box(0), now - 200_000);
+  stuff(inventory);
+
+  const picky = put('storehouse', box(4));
+  reg.toggleExclude(picky.id, 'stone');
+  const open = put('storehouse', box(8));
+
+  reg.collect({ now });
+  ok('the shed that excluded stone got none', reg.storeFor(picky).countOf('stone') === 0);
+  ok('the other shed got it instead', reg.storeFor(open).countOf('stone') > 0);
+}
+
+{
+  // Excluding an item from every shed just stalls that payout, same as no
+  // storehouse existing at all — it never destroys anything.
+  const now = Date.now();
+  const { reg, inventory, put } = settlement({ now });
+  put('quarry', box(0), now - 200_000);
+  stuff(inventory);
+  const shed = put('storehouse', box(4));
+  reg.toggleExclude(shed.id, 'stone');
+  reg.toggleExclude(shed.id, 'cobblestone');
+
+  const owed = reg.list().find((s) => s.type === 'quarry').lastPaidAt;
+  reg.collect({ now });
+  ok('production stalls rather than losing the goods',
+    reg.list().find((s) => s.type === 'quarry').lastPaidAt === owed);
+}
+
+{
+  // A manual move is the player's own choice, not deliver() routing — it must
+  // still work even into a shed that excludes the item.
+  const { reg, inventory, put } = settlement();
+  const shed = put('storehouse', box(0));
+  reg.toggleExclude(shed.id, 'stone');
+  inventory.add('stone', 10);
+  const moved = inventory.moveTo(reg.storeFor(shed), inventory.slots.findIndex((s) => s?.id === 'stone'));
+  ok('carrying an excluded item in by hand still works', moved === 10);
+}
+
+{
+  // Excludes are per-building state, so they have to survive a save.
+  const { reg, put } = settlement();
+  const shed = put('storehouse', box(0));
+  reg.toggleExclude(shed.id, 'wood');
+  const saved = JSON.parse(JSON.stringify(reg.toJSON()));
+
+  const back = new StructureRegistry({
+    world: new World({ sizeX: 8, sizeZ: 8, height: 8 }), bus: null, inventory: new Inventory(),
+  });
+  back.loadJSON(saved);
+  const reopened = back.list().find((s) => s.type === 'storehouse');
+  ok('what was excluded is still excluded after loading', reopened.excludes.includes('wood'));
+
+  // And a save from before routing existed — no `excludes` field at all —
+  // has to come back accepting everything, not throwing on a missing array.
+  delete saved.structures[0].excludes;
+  const older = new StructureRegistry({
+    world: new World({ sizeX: 8, sizeZ: 8, height: 8 }), bus: null, inventory: new Inventory(),
+  });
+  older.loadJSON(saved);
+  ok('an old save with no excludes field loads as accepting everything',
+    (older.list()[0].excludes ?? []).length === 0);
+}
+
 process.exit(f ? 1 : 0);

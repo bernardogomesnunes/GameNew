@@ -81,6 +81,25 @@ export class StructureRegistry {
   }
 
   /**
+   * Turns one item on or off for a storehouse's automatic deliveries.
+   *
+   * Off by default for everything: a shed accepts whatever a building hands
+   * it until the player says otherwise. Excluding an item here only steers
+   * `deliver()` — the player can still carry the thing in by hand, the same
+   * way `putInStore` always could, because that is a choice they made on
+   * purpose rather than a building doing it to them.
+   */
+  toggleExclude(id, itemId) {
+    const s = this.structures.find((x) => x.id === id);
+    if (!s) return false;
+    s.excludes = s.excludes ?? [];
+    const i = s.excludes.indexOf(itemId);
+    if (i === -1) s.excludes.push(itemId); else s.excludes.splice(i, 1);
+    this.bus?.emit('structure:excludes', { structure: s });
+    return true;
+  }
+
+  /**
    * How many things are sitting in storehouses.
    *
    * Counts broken ones too, unlike `stores()`. Knocking a wall out of a shed
@@ -104,10 +123,15 @@ export class StructureRegistry {
    */
   deliver(payload) {
     const placed = [];
-    const into = () => [this.inventory, ...this.stores().map((s) => s.store)];
+    const storeList = this.stores();
     for (const [id, amount] of Object.entries(payload)) {
       let left = amount;
-      for (const where of into()) {
+      // A shed that has excluded this item is skipped for it and only it —
+      // everything else it still takes normally.
+      const into = [this.inventory, ...storeList
+        .filter((s) => !s.structure.excludes?.includes(id))
+        .map((s) => s.store)];
+      for (const where of into) {
         if (left <= 0) break;
         const before = left;
         left = where.add(id, left);
@@ -226,6 +250,7 @@ export class StructureRegistry {
       claimedAt: now,
       lastPaidAt: now,
       brokenReason: null,
+      excludes: [],
     };
     if (replaced) {
       const dead = new Set(inTheWay);
@@ -359,6 +384,7 @@ export class StructureRegistry {
         // the difference between "nothing in it" and "never had one".
         store: s.store ? s.store.toJSON() : null,
         tier: s.tier ?? 0,
+        excludes: s.excludes ?? [],
       })),
     };
   }
@@ -368,9 +394,11 @@ export class StructureRegistry {
     this.structures = data.structures
       .filter((s) => STRUCTURES_BY_ID.has(s.type))
       // Saves from before buildings could be locked have no flag; locked is the
-      // safe reading of a building someone claimed on purpose.
+      // safe reading of a building someone claimed on purpose. Saves from
+      // before routing existed have no excludes; nothing excluded is the same
+      // shed they built, taking everything the way it always did.
       .map((s) => {
-        const structure = { locked: true, ...s, store: null, brokenReason: null };
+        const structure = { locked: true, excludes: [], ...s, store: null, brokenReason: null };
         // Built here rather than in a second pass over `data.structures`: a
         // filtered-out type shifts every index after it, and a storehouse
         // would come back holding the building next door's goods.
