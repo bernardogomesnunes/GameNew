@@ -1149,6 +1149,7 @@ export class UIManager {
     // in — this list is the only thing teaching the game now, and a flat grid
     // of twenty cards answers "what have I done" but never "what next".
     const done = s.achievementsUnlocked;
+    const ctx = this.gamification.ctx();
     this.q('#ach-grid').innerHTML = goalBands().map((band) => {
       const met = band.goals.filter((g) => done.has(g.id)).length;
       const reached = s.age >= band.age;
@@ -1158,12 +1159,21 @@ export class UIManager {
             <span>Age ${band.age} \u00b7 ${escapeHtml(band.name)}</span>
             <span class="goal-band-count">${met} / ${band.goals.length}</span>
           </div>
-          ${band.goals.map((g) => `
-            <div class="ach-card ${done.has(g.id) ? '' : 'locked'}">
+          ${band.goals.map((g, i) => {
+            const isDone = done.has(g.id);
+            const progress = !isDone ? g.progress?.(ctx) : null;
+            return `
+            <div class="ach-card ${isDone ? '' : 'locked'} ${g.required ? 'required' : ''}">
               <div class="ach-icon">${g.icon}</div>
-              <div><div class="ach-name">${escapeHtml(g.name)}</div>
-                   <div class="ach-desc">${escapeHtml(g.description)}</div></div>
-            </div>`).join('')}
+              <div>
+                <div class="ach-name">
+                  <span class="ach-num">${i + 1}.</span> ${escapeHtml(g.name)}
+                  ${progress ? `<span class="ach-progress">${progress}</span>` : ''}
+                </div>
+                <div class="ach-desc">${escapeHtml(g.description)}</div>
+              </div>
+            </div>`;
+          }).join('')}
         </div>`;
     }).join('');
 

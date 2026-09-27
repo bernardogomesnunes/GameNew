@@ -336,8 +336,14 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 /* The one that moves the border closes the band, so it reads as the door out. */
 .ach-card { display: flex; gap: 10px; background: rgba(35,42,45,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; }
 .ach-card.locked { opacity: 0.4; }
+/* The goals that actually move the border, picked out from the teaching
+   ones sitting beside them in the same numbered list — a thicker left edge
+   in the same accent the border itself uses, not a separate badge to read. */
+.ach-card.required { border-left: 3px solid var(--accent); }
 .ach-icon { font-size: 22px; }
 .ach-name { font-weight: 600; font-size: 13px; }
+.ach-num { color: var(--text-dim); font-weight: 500; font-variant-numeric: tabular-nums; }
+.ach-progress { margin-left: 5px; color: var(--accent); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .ach-desc { color: var(--text-dim); font-size: 11px; }
 
 .challenge-card { background: rgba(35,42,45,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }

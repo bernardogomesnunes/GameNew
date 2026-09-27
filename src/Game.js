@@ -867,6 +867,7 @@ export class Game {
     // and called a line earlier it only ever saw the world that came before.
     this.applyTerritoryBounds();
     this.gamification = new GamificationEngine(this.bus);
+    this.gamification.setDuilt(this.duilt);
     this.economy = new EconomyEngine(this.bus);
     if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
     this.rebuildAllChunks();
@@ -948,6 +949,7 @@ export class Game {
         }), 600);
       }
     }
+    this.gamification.setDuilt(this.duilt);
     this.applyTerritoryBounds();
     this.rebuildAllChunks();
     if (this.ui) {
