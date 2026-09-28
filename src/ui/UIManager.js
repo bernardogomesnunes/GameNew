@@ -70,6 +70,7 @@ export class UIManager {
     // used to be built two lines too early to get an answer.
     this.detectTouch();
     this.devOpen = false;   // the workshop end of the menu, folded away
+    this.editingBanner = false;   // a building open for changes pins the crosshair strip — see setEditingBanner
 
     root.innerHTML = this.markup();
     this.root = root;
@@ -533,8 +534,13 @@ export class UIManager {
       this.selectBlock(id);
     });
 
-    // On a phone there is no C key, so the hint is what you press.
-    this.q('#building-hint').addEventListener('click', () => this.cb.onOpenClaim());
+    // On a phone there is no C key, so the hint is what you press. While a
+    // building is open for changes, the same strip and the same tap mean
+    // something else — see setEditingBanner.
+    this.q('#building-hint').addEventListener('click', () => {
+      if (this.editingBanner) this.cb.onFinishEditing?.();
+      else this.cb.onOpenClaim();
+    });
 
     for (const sel of ['#btn-fullscreen', '#t-screen']) {
       const fsBtn = this.q(sel);
@@ -1102,8 +1108,14 @@ export class UIManager {
   /**
    * Names the claimed building under the crosshair, or hides the hint.
    * Called every frame, so it only touches the DOM when something changed.
+   *
+   * Skipped outright while setEditingBanner has the strip: that message
+   * doesn't depend on where you're looking, and the per-frame aim check
+   * would otherwise overwrite or hide it the instant you looked away from
+   * whatever you'd just broken or placed.
    */
   setBuildingHint(text) {
+    if (this.editingBanner) return;
     const el = this.q('#building-hint');
     if (!el) return;
     if (!text) { if (!el.hidden) el.hidden = true; return; }
@@ -1119,6 +1131,7 @@ export class UIManager {
    * holding something the only question is where it is going.
    */
   setMoveHint(name, reason) {
+    if (this.editingBanner) return;
     const el = this.q('#building-hint');
     if (!el) return;
     if (!name) { el.hidden = true; el.classList.remove('bad'); return; }
@@ -1129,6 +1142,34 @@ export class UIManager {
   }
 
   /**
+   * Pins the crosshair strip to "editing this building" for as long as a
+   * building is unlocked for changes, regardless of where you're looking —
+   * that used to be the one way to finish, so the moment you looked away
+   * from the last block you touched (or broke it clean off, with nothing
+   * left there to aim at), the only way back was to walk to wherever a wall
+   * of it still stood and aim precisely enough to reopen the claim panel.
+   * A tap here does the same thing setEditingBanner made this strip into a
+   * button for: finish, without needing to find that spot again.
+   */
+  setEditingBanner(name) {
+    this.editingBanner = true;
+    document.body.classList.add('editing-building');
+    const el = this.q('#building-hint');
+    if (!el) return;
+    el.innerHTML = `<b>Editing the ${name.toLowerCase()}</b>`
+      + `<span>${this.isTouch ? 'Tap' : 'Click'} here when you're done</span>`;
+    el.classList.remove('bad');
+    el.hidden = false;
+  }
+
+  clearEditingBanner() {
+    this.editingBanner = false;
+    document.body.classList.remove('editing-building');
+    const el = this.q('#building-hint');
+    if (el) el.hidden = true;
+  }
+
+  /**
    * Names the settler under the crosshair.
    *
    * Same strip as the building hint, because it answers the same question —
@@ -1136,6 +1177,7 @@ export class UIManager {
    * worse than either.
    */
   setPersonHint(name, doing) {
+    if (this.editingBanner) return;
     const el = this.q('#building-hint');
     if (!el) return;
     el.innerHTML = `<b>${name}</b><span>${doing}</span>`;

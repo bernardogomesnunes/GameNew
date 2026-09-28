@@ -297,9 +297,10 @@ export class DuiltUI {
       <p class="building-note">
         ${locked
           ? 'Protected, so you cannot take a wall out of it by accident while clearing the ground beside it. '
-            + 'Move it to pick it up and put it down somewhere else, or change it to edit the blocks.'
+            + 'Move it to pick it up and put it down somewhere else, or change it to edit the blocks — this '
+            + "closes so you can, and you'll get a Done button on screen until you tap it, wherever you are."
           : 'Open for changes: break and place inside it. It is re-checked as you go, and stops producing '
-            + 'if it no longer qualifies. Press Done when you have finished.'}
+            + "if it no longer qualifies. There's a Done button on screen — tap it when you've finished."}
       </p>
       <div class="building-actions">
         ${summary ? '<button class="primary" data-store>Open it</button>' : ''}
@@ -804,7 +805,6 @@ export class DuiltUI {
     this.q('#buildings-list').innerHTML = structuresForAge(d.age).map((spec) => {
       const built = d.structures.countOf(spec.id);
       const design = DESIGN_FOR_STRUCTURE.get(spec.id);
-      const needs = spec.requires.map((r) => r.id).join(' · ');
       const canStamp = design && d.inventory.hasAll(design.cost);
       const shortfall = design ? d.inventory.missing(design.cost) : {};
       // The full bill, not just what you're short — a shortfall note only ever
@@ -815,6 +815,12 @@ export class DuiltUI {
         ? Object.entries(design.cost).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(', ')
         : null;
 
+      // The requirement ids used to get their own "Needs: trunks · canopy ·
+      // soil" line here — internal names nothing else in the game ever
+      // explains, on every card whether or not you were about to build by
+      // hand. Building by hand still gets the real, readable version of
+      // each one ("Needs 2 more dirt") the moment you try — see openClaim —
+      // so this was noise repeated on every card rather than information.
       return `
         <div class="building-card">
           <div class="building-head">
@@ -827,19 +833,20 @@ export class DuiltUI {
           </div>
           <div class="building-meta">
             <span>${this.whatItGivesYou(spec)}</span>
-            <span>Needs: ${needs}</span>
             ${costLine ? `<span>Costs: ${costLine}</span>` : ''}
           </div>
+          ${design ? `
           <div class="building-actions">
-            ${design ? `<button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
+            <button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
               Place a ${design.footprint} starter
-            </button>` : ''}
+            </button>
           </div>
-          ${design && canStamp ? '<div class="building-note"><span>Aim where you want it and press Place.</span></div>' : ''}
           <div class="building-note">
-            ${design && !canStamp ? this.shortfallNote(shortfall) : ''}
-            ${design?.note && canStamp ? `<span>${design.note}</span>` : ''}
-          </div>
+            ${!canStamp ? this.shortfallNote(shortfall) : `
+              ${design.note ? `<span>${design.note}</span>` : ''}
+              <span>Aim where you want it and press Place.</span>
+            `}
+          </div>` : ''}
         </div>`;
     }).join('');
 

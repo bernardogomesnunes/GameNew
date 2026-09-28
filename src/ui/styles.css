@@ -1211,6 +1211,16 @@ body.touch #building-hint { pointer-events: auto; }
 #building-hint.bad { border-color: var(--danger); }
 #building-hint.bad span { color: var(--danger); }
 #building-hint span { color: var(--text-dim); margin-left: 7px; font-size: 11px; }
+/*
+ * While a building is open for changes (setEditingBanner), the strip stops
+ * being a label a key does the work for and becomes the one way to finish —
+ * there is no key for that. It takes clicks on every input, not just touch,
+ * and looks like the button it now is rather than a passive readout.
+ */
+body.editing-building #building-hint {
+  pointer-events: auto; cursor: pointer;
+  border-color: var(--accent); background: var(--accent-dim);
+}
 
 /* A recipe made at a workshop says so, and stops saying it once you are there. */
 .recipe-station {

@@ -248,6 +248,7 @@ export class Game {
     this.ghost = new BuildGhost(this.scene);
     this.settlerView = new SettlerView(this.scene);
     this.moving = null;   // the building currently in the air
+    this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
     this.boot();
     window.addEventListener('resize', () => this.onResize());
@@ -772,6 +773,7 @@ export class Game {
       isDuilt: () => !!this.duilt,
       onOpenBag: () => this.ui.toggleBag(),
       onOpenClaim: () => this.openClaim(),
+      onFinishEditing: () => this.finishEditing(),
       onStampStarter: (id) => this.stampStarter(id),
       onOpenBuildings: () => this.ui.openPanel('panel-buildings'),
       onOpenBench: () => this.ui.openPanel('panel-bench'),
@@ -1522,21 +1524,51 @@ export class Game {
   buildingActions(structure) {
     return {
       onChange: () => {
-        this.duilt.structures.setLocked(structure.id, structure.locked === false);
-        this.ui.toast({
-          kind: 'xp',
-          title: structure.locked ? 'Finished changing' : 'Open for changes',
-          body: structure.locked
-            ? 'Protected again'
-            : 'Break and place inside it — it is re-checked as you go',
-        });
-        // Redraw with the state it is in now, rather than the state it was in.
-        this.ui.openBuilding(structure, this.buildingActions(structure));
+        if (structure.locked === false) this.finishEditing();
+        else this.startEditing(structure);
       },
       onMove: () => this.beginMove(structure),
       onDelete: () => this.deleteBuilding(structure),
       onOpenStore: () => this.ui.openStore(structure),
     };
+  }
+
+  /**
+   * Unlocks a building for changes and closes the panel so there is
+   * something to actually change — a claimed building's blocks are
+   * unbreakable while any panel is open (see the phase check this reads
+   * from), so the panel used to stay up, showing "Done changing" over a
+   * world you had no way to touch.
+   *
+   * Reported directly: finishing meant walking back to wherever a wall of
+   * it still stood and aiming precisely enough to reopen this same panel —
+   * worse once you'd broken the wall you were aiming at. The crosshair
+   * strip is pinned to this building instead (setEditingBanner), so
+   * finishing is one tap from wherever you are, not one tap from a spot you
+   * have to go back and find.
+   */
+  startEditing(structure) {
+    this.duilt.structures.setLocked(structure.id, false);
+    this.editingStructure = structure;
+    this.ui.closePanel('panel-building');
+    this.ui.setEditingBanner(STRUCTURES_BY_ID.get(structure.type)?.name ?? 'Building');
+    this.ui.toast({
+      kind: 'xp', title: 'Open for changes',
+      body: 'Break and place inside it — it is re-checked as you go',
+    });
+  }
+
+  /** The other half of startEditing — locks the building back up and hands the strip back to the crosshair. */
+  finishEditing() {
+    const structure = this.editingStructure;
+    if (!structure) return;
+    this.editingStructure = null;
+    this.duilt.structures.setLocked(structure.id, true);
+    this.ui.clearEditingBanner();
+    this.ui.toast({ kind: 'xp', title: 'Finished changing', body: 'Protected again' });
+    // Only actually open if it already was — reopening the panel here would
+    // undo the point of finishing from wherever you happen to be standing.
+    if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(structure, this.buildingActions(structure));
   }
 
   /**
@@ -1548,6 +1580,12 @@ export class Game {
    */
   deleteBuilding(structure) {
     const spec = STRUCTURES_BY_ID.get(structure.type);
+    // The building this would otherwise still be pinning the crosshair strip
+    // to no longer exists to finish editing.
+    if (this.editingStructure?.id === structure.id) {
+      this.editingStructure = null;
+      this.ui.clearEditingBanner();
+    }
 
     // Taking down a storehouse with things in it would take the things down
     // with it. Nothing else in the game destroys items, and this is not going
@@ -1595,6 +1633,12 @@ export class Game {
    * followed by a rebuild you might not be able to afford.
    */
   beginMove(structure) {
+    // Moving takes over the crosshair strip for its own hint (setMoveHint) —
+    // an edit in progress on the same building is done, one way or another.
+    if (this.editingStructure?.id === structure.id) {
+      this.editingStructure = null;
+      this.ui.clearEditingBanner();
+    }
     const r = structure.region;
     const blocks = [];
     for (const { x, y, z } of this.cellsOf(r)) {

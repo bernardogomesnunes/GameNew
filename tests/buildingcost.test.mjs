@@ -25,7 +25,7 @@ ok('a card computes its full cost from the design, not the shortfall',
 ok('and shows it unconditionally, not only when something is missing',
   /\$\{costLine \? `<span>Costs: \$\{costLine\}<\/span>` : ''\}/.test(ui));
 ok('the shortfall note still exists alongside it, for what is actually missing',
-  /design && !canStamp \? this\.shortfallNote\(shortfall\)/.test(ui));
+  /\$\{!canStamp \? this\.shortfallNote\(shortfall\)/.test(ui));
 
 // The real number this session's farm confusion was actually about.
 const farm = DESIGN_FOR_STRUCTURE.get('farm');
