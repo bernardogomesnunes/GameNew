@@ -1,4 +1,5 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
+import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
@@ -95,6 +96,16 @@ export class DuiltUI {
 
       ${renderPanels('duilt', {
         'panel-bag': `
+          <!--
+            Two zones of the one bag, not two containers — moving between
+            them is the same lift/tap gesture as rearranging either one on
+            its own (renderBag/tapSlot), just able to land on either side.
+            Equipped is what the hotbar actually shows; see
+            Inventory.PLAYABLE_SLOTS and UIManager.buildHotbar.
+          -->
+          <div class="bag-section-head">Equipped <span class="sub">— what the hotbar shows, in order</span></div>
+          <div id="bag-hotbar-grid" class="bag-hotbar-grid"></div>
+          <div class="bag-section-head">Your bag</div>
           <div id="bag-grid"></div>
           <div id="bag-detail"></div>`,
         'panel-store': `
@@ -123,6 +134,8 @@ export class DuiltUI {
             <span class="store-routing-label">Won't take from deliveries:</span>
             <div id="store-routing-chips" class="store-routing-chips"></div>
           </div>
+          <div class="store-head"><span>Equipped</span></div>
+          <div id="store-hotbar-grid"></div>
           <div class="store-head"><span>In your bag</span></div>
           <div id="store-bag-grid"></div>`,
         'panel-claim': `
@@ -540,24 +553,42 @@ export class DuiltUI {
       </div>`;
   }
 
+  /**
+   * Two grids over one inventory, not two containers — the split is purely
+   * where PLAYABLE_SLOTS falls in `d.inventory.slots`, so lifting from one
+   * grid and dropping in the other is the exact same `inv.move(from, to)`
+   * that already reorders either grid on its own. `data-slot` always carries
+   * the real, absolute index into the one array, whichever grid drew it.
+   *
+   * Reported directly: the hotbar used to fill itself from the bag with
+   * nothing to press and nothing to arrange. This is that arranging —
+   * Equipped is read straight off by UIManager.buildHotbar, so dragging an
+   * item up here is what puts it in the hotbar, and dragging it back down is
+   * what takes it out.
+   */
   renderBag() {
     const d = this.duilt;
     if (!d) {
+      const hg = this.q('#bag-hotbar-grid');
       const g = this.q('#bag-grid');
+      if (hg) hg.innerHTML = '';
       if (g) g.innerHTML = '';
       return this.noWorld('#bag-detail');
     }
+    const hotbarGrid = this.q('#bag-hotbar-grid');
     const grid = this.q('#bag-grid');
-    if (!grid) return;
+    if (!grid || !hotbarGrid) return;
     const slots = d.inventory.slots;
+    const slotHtml = (s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i, discardAttr: 'data-discard' });
 
-    grid.innerHTML = slots
-      .map((s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i, discardAttr: 'data-discard' }))
-      .join('');
+    hotbarGrid.innerHTML = slots.slice(0, PLAYABLE_SLOTS).map(slotHtml).join('');
+    grid.innerHTML = slots.slice(PLAYABLE_SLOTS).map((s, j) => slotHtml(s, j + PLAYABLE_SLOTS)).join('');
 
-    grid.querySelectorAll('[data-slot]').forEach((btn) => this.bindSlot(btn));
-    grid.querySelectorAll('[data-discard]').forEach((btn) =>
-      btn.addEventListener('click', (e) => { e.stopPropagation(); this.discardSlot(Number(btn.dataset.discard)); }));
+    for (const g of [hotbarGrid, grid]) {
+      g.querySelectorAll('[data-slot]').forEach((btn) => this.bindSlot(btn));
+      g.querySelectorAll('[data-discard]').forEach((btn) =>
+        btn.addEventListener('click', (e) => { e.stopPropagation(); this.discardSlot(Number(btn.dataset.discard)); }));
+    }
     this.q('#bag-sub').textContent = this.held != null
       ? `Holding ${itemName(slots[this.held]?.id ?? '')} — tap a slot to put it down.`
       : 'Tap an item to lift it, tap a slot to put it down. Hold to split a stack.';
@@ -661,13 +692,15 @@ export class DuiltUI {
   renderStore() {
     const d = this.duilt;
     const grid = this.q('#store-grid');
+    const hotbarGrid = this.q('#store-hotbar-grid');
     const bagGrid = this.q('#store-bag-grid');
-    if (!grid || !bagGrid) return;
-    if (!d) { grid.innerHTML = ''; bagGrid.innerHTML = ''; return this.noWorld('#store-grid'); }
+    if (!grid || !hotbarGrid || !bagGrid) return;
+    if (!d) { grid.innerHTML = ''; hotbarGrid.innerHTML = ''; bagGrid.innerHTML = ''; return this.noWorld('#store-grid'); }
 
     const summary = this.store ? d.storeSummary(this.store) : null;
     if (!summary) {
       grid.innerHTML = `<div class="sub" style="margin:0">Point at a storehouse to open it.</div>`;
+      hotbarGrid.innerHTML = '';
       bagGrid.innerHTML = '';
       return;
     }
@@ -675,14 +708,22 @@ export class DuiltUI {
     grid.innerHTML = summary.store.slots
       .map((s, i) => this.slotHtml(s, i, { attr: 'data-store-slot', empty: 'Empty shelf' }))
       .join('');
-    bagGrid.innerHTML = d.inventory.slots
+    // Equipped and bag, same split as the bag panel's own two grids — see
+    // renderBag. Both tap straight into the store, same as any bag slot
+    // always could; reordering equipped-vs-bag stays the bag panel's job.
+    hotbarGrid.innerHTML = d.inventory.slots.slice(0, PLAYABLE_SLOTS)
       .map((s, i) => this.slotHtml(s, i, { attr: 'data-bag-slot' }))
+      .join('');
+    bagGrid.innerHTML = d.inventory.slots.slice(PLAYABLE_SLOTS)
+      .map((s, i) => this.slotHtml(s, i + PLAYABLE_SLOTS, { attr: 'data-bag-slot' }))
       .join('');
 
     grid.querySelectorAll('[data-store-slot]').forEach((btn) =>
       btn.addEventListener('click', () => this.takeFromStore(Number(btn.dataset.storeSlot))));
-    bagGrid.querySelectorAll('[data-bag-slot]').forEach((btn) =>
-      btn.addEventListener('click', () => this.putInStore(Number(btn.dataset.bagSlot))));
+    for (const g of [hotbarGrid, bagGrid]) {
+      g.querySelectorAll('[data-bag-slot]').forEach((btn) =>
+        btn.addEventListener('click', () => this.putInStore(Number(btn.dataset.bagSlot))));
+    }
 
     const kind = summary.tier?.name ?? 'On the shelves';
     this.q('#store-where').textContent = summary.free

@@ -5,6 +5,7 @@ import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
 import { ITEMS_BY_ID, itemName } from '../config/items.js';
+import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { cubeSvg, itemIcon } from '../config/cubes.js';
 import { ACHIEVEMENTS, goalBands } from '../config/achievements.js';
@@ -25,7 +26,6 @@ const TOOL_HOTBAR_NOTES = {
   fruit: 'Break to eat',
   vegetables: 'Break to eat',
 };
-const TOOL_HOTBAR_IDS = Object.keys(TOOL_HOTBAR_NOTES);
 
 /**
  * What the two touch buttons say while one of these is selected and no tool
@@ -394,61 +394,64 @@ export class UIManager {
     const hotbar = this.q('#hotbar');
     hotbar.innerHTML = '';
 
-    // In Duilt the hotbar is your bag: one slot per kind of thing you actually
-    // hold, carrying the total across every stack of it. A wall of blocks you
-    // don't own is a menu, not a hand.
+    // In Duilt the hotbar is the first PLAYABLE_SLOTS slots of the bag
+    // itself, real inventory slots at fixed positions — not a summary
+    // rebuilt from whatever the bag happened to hold. Reported directly:
+    // that auto-built list meant there was nothing to press to get
+    // something into the hotbar, no way to choose what sat where, and no
+    // way to select a mining tool at all, since it only ever listed
+    // block-shaped items plus a hardcoded handful of specials (bucket,
+    // food). Getting an item into one of these slots is done by hand, from
+    // the bag panel — see ui/DuiltUI.js's renderBag, which splits the same
+    // slots into an "Equipped" section up top and "Bag" below.
     if (this.cb.isDuilt?.()) {
       const inv = this.game.duilt.inventory;
-      const placeable = inv.heldIds()
-        .map((id) => ({ id, spec: ITEMS_BY_ID.get(id) }))
-        .filter((e) => e.spec?.block != null);
-      // The bucket, when you're holding one — it doesn't place, so it isn't
-      // in `placeable`, but it still needs a slot to be selected from. See
-      // TOOL_HOTBAR_IDS and Game.js's fillBucket/emptyBucket.
-      const tools = TOOL_HOTBAR_IDS
-        .filter((id) => inv.countOf(id) > 0)
-        .map((id) => ({ id, spec: ITEMS_BY_ID.get(id) }));
+      const playable = inv.slots.slice(0, PLAYABLE_SLOTS);
 
-      if (!placeable.length && !tools.length) {
-        hotbar.appendChild(el(`<div class="hotbar-empty">Nothing to build with yet — break something</div>`));
+      if (playable.every((s) => !s)) {
+        hotbar.appendChild(el(`<div class="hotbar-empty">Nothing equipped — open your bag and drag something up</div>`));
         this.showHotbarLabel();
         return;
       }
-      placeable.forEach((e, i) => {
-        const total = inv.countOf(e.id);
+      playable.forEach((s, i) => {
+        if (!s) {
+          hotbar.appendChild(el(`
+            <div class="hotbar-slot empty" data-slot="${i}">
+              <span class="key">${i + 1}</span>
+            </div>
+          `));
+          return;
+        }
+        const spec = ITEMS_BY_ID.get(s.id);
+        const isBlock = spec?.block != null;
+        const selected = isBlock
+          ? (!this.selectedItemId && spec.block === this.selectedBlockId)
+          : this.selectedItemId === s.id;
+        const note = isBlock ? '' : (TOOL_HOTBAR_NOTES[s.id] ?? '');
         hotbar.appendChild(el(`
-          <div class="hotbar-slot ${!this.selectedItemId && e.spec.block === this.selectedBlockId ? 'selected' : ''}"
-               data-id="${e.spec.block}" data-item="${e.id}"
-               data-name="${itemName(e.id)}" data-note=""
-               title="${itemName(e.id)} — ${total} in your bag">
-            ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
-            <div class="swatch swatch-cube">${itemIcon(e.spec, { size: 30 }) ?? glyphSvg(e.spec.glyph, { size: 18, color: e.spec.color })}</div>
-            <span class="held">${total}</span>
+          <div class="hotbar-slot ${selected ? 'selected' : ''}"
+               data-slot="${i}" ${isBlock ? `data-id="${spec.block}"` : 'data-tool="1"'} data-item="${s.id}"
+               data-name="${itemName(s.id)}" data-note="${note}"
+               title="${itemName(s.id)}${note ? ` — ${note}` : ''} — ${s.count} here">
+            <span class="key">${i + 1}</span>
+            <div class="swatch swatch-cube">${itemIcon(spec, { size: 30 }) ?? glyphSvg(spec?.glyph, { size: 18, color: spec?.color })}</div>
+            <span class="held">${s.count}</span>
           </div>
         `));
       });
-      tools.forEach((e) => {
-        const total = inv.countOf(e.id);
-        const note = TOOL_HOTBAR_NOTES[e.id] ?? '';
-        hotbar.appendChild(el(`
-          <div class="hotbar-slot ${this.selectedItemId === e.id ? 'selected' : ''}"
-               data-tool="1" data-item="${e.id}"
-               data-name="${itemName(e.id)}" data-note="${note}"
-               title="${itemName(e.id)} — ${note}">
-            <div class="swatch swatch-cube">${itemIcon(e.spec, { size: 30 }) ?? glyphSvg(e.spec.glyph, { size: 18, color: e.spec.color })}</div>
-            <span class="held">${total}</span>
-          </div>
-        `));
-      });
-      // If what was selected has run out — a block spent, or the bucket you
-      // had selected just swapped for its filled/emptied counterpart — fall
-      // to the first thing you do have.
-      const stillValid = this.selectedItemId
-        ? tools.some((e) => e.id === this.selectedItemId)
-        : placeable.some((e) => e.spec.block === this.selectedBlockId);
+      // What was selected can stop being true of any playable slot — spent
+      // down to nothing, moved back to the bag by hand, a bucket swapped
+      // for its filled counterpart — same as before, just read off real
+      // slots now instead of a list rebuilt from the bag's contents.
+      const stillValid = playable.some((s) => s && (this.selectedItemId
+        ? s.id === this.selectedItemId
+        : ITEMS_BY_ID.get(s.id)?.block === this.selectedBlockId));
       if (!stillValid) {
-        if (placeable.length) this.selectBlock(placeable[0].spec.block);
-        else this.selectItem(tools[0].id);
+        const first = playable.find(Boolean);
+        if (first) {
+          const spec = ITEMS_BY_ID.get(first.id);
+          if (spec?.block != null) this.selectBlock(spec.block); else this.selectItem(first.id);
+        }
       } else this.showHotbarLabel();
       return;
     }
@@ -523,7 +526,9 @@ export class UIManager {
     });
     this.q('#hotbar').addEventListener('click', (e) => {
       const slot = e.target.closest('.hotbar-slot');
-      if (!slot) return;
+      // An empty Duilt playable slot has nothing to select — see it filled
+      // from the bag panel instead.
+      if (!slot || slot.classList.contains('empty')) return;
       if (slot.dataset.tool) { this.selectItem(slot.dataset.item); return; }
       const id = Number(slot.dataset.id);
       const availability = this.game.blockAvailability(id);
@@ -882,8 +887,11 @@ export class UIManager {
 
   cycleHotbarByKey(n) {
     if (this.cb.isDuilt?.()) {
+      // In Duilt this is now literally slot n-1, the same classic hotbar
+      // number keys always meant — nothing to look up, since the slot's
+      // position in the bag *is* the number now.
       const slot = this.root.querySelectorAll('#hotbar .hotbar-slot')[n - 1];
-      if (!slot) return;
+      if (!slot || slot.classList.contains('empty')) return;
       if (slot.dataset.tool) this.selectItem(slot.dataset.item);
       else this.selectBlock(Number(slot.dataset.id));
       return;
@@ -900,10 +908,11 @@ export class UIManager {
    * the DOM the hotbar just drew rather than a separate list, so it works the
    * same way in Duilt and Creative without knowing which one it is; a locked
    * Creative slot is skipped rather than landed on, the same as a number key
-   * already refuses one.
+   * already refuses one — an empty Duilt playable slot the same way now.
    */
   cycleHotbarByDelta(delta) {
-    const slots = [...this.root.querySelectorAll('#hotbar .hotbar-slot')].filter((s) => !s.classList.contains('locked'));
+    const slots = [...this.root.querySelectorAll('#hotbar .hotbar-slot')]
+      .filter((s) => !s.classList.contains('locked') && !s.classList.contains('empty'));
     if (!slots.length) return;
     const current = slots.findIndex((s) => s.classList.contains('selected'));
     const next = slots[(current + delta + slots.length) % slots.length];
