@@ -243,7 +243,11 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
 }
 
 {
-  // Building it up upgrades it where the game notices — on the next recheck.
+  // Building it up used to upgrade it the moment the game noticed, on the
+  // next recheck. Reported directly: that meant leveling had nothing to
+  // press and nothing marking the moment it happened. Recheck alone now
+  // only ever takes a rung away (see the next block); reaching one the
+  // blocks newly support is StructureRegistry.evolve's job.
   const world = ground();
   const region = raise(world, 2, 2, 8, { w: 5, h: 2 });
   const inventory = new Inventory();
@@ -258,8 +262,12 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
   const taller = raise(world, 2, 2, 8, { w: 5, h: 3 });
   shed.region = taller;
   reg.recheck(shed);
-  ok(`built up, it has ${reg.storeFor(shed).size}`, reg.storeFor(shed).size === holdsAt(SPEC, 1));
-  ok('and the building knows which rung it is on', shed.tier === 1);
+  ok('built up, recheck alone does not hand it the rung on its own',
+    shed.tier === 0 && reg.storeFor(shed).size === HOLDS);
+
+  const evolved = reg.evolve(shed.id);
+  ok('but pressing Evolve does, once it qualifies', evolved.ok && shed.tier === 1);
+  ok(`and it has ${holdsAt(SPEC, 1)} shelves now`, reg.storeFor(shed).size === holdsAt(SPEC, 1));
 }
 
 {
@@ -271,7 +279,11 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
   const ware = { id: 1, type: 'storehouse', region: big, valid: true, locked: true,
                  claimedAt: Date.now(), lastPaidAt: Date.now(), brokenReason: null };
   reg.structures.push(ware);
-  reg.retier(ware);
+  // Pushed straight in already built up, the way claim() puts a structure in
+  // and immediately retiers it `{ initial: true }` — a warehouse claimed
+  // as a finished warehouse starts as one, no Evolve press needed for a
+  // rung it was already built to.
+  reg.retier(ware, { initial: true });
   const store = reg.storeFor(ware);
   ok(`a warehouse has ${store.size} shelves`, store.size === holdsAt(SPEC, 2));
 
@@ -299,7 +311,7 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
   const reg = new StructureRegistry({ world, bus: null, inventory: new Inventory() });
   reg.structures.push({ id: 1, type: 'storehouse', region, valid: true, locked: true,
                         claimedAt: Date.now(), lastPaidAt: Date.now(), brokenReason: null });
-  reg.retier(reg.list()[0]);
+  reg.retier(reg.list()[0], { initial: true });
   reg.storeFor(reg.list()[0]).add('stone', 60);
   const saved = JSON.parse(JSON.stringify(reg.toJSON()));
   ok('the rung is written down', saved.structures[0].tier === 2);

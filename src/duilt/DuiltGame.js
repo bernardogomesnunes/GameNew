@@ -261,7 +261,7 @@ export class DuiltGame {
     if (!store) return null;
     const used = store.slots.filter(Boolean).length;
     const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
-    const tier = tierStatus(this.world, structure.region, structure.type);
+    const tier = tierStatus(this.world, structure.region, structure.type, structure.tier ?? 0);
     return { structure, store, used, free: store.size - used, size: store.size, items, tier };
   }
 
@@ -274,7 +274,7 @@ export class DuiltGame {
   levelSummary(structure) {
     const spec = STRUCTURES_BY_ID.get(structure?.type);
     if (!hasLevels(spec)) return null;
-    const status = tierStatus(this.world, structure.region, structure.type);
+    const status = tierStatus(this.world, structure.region, structure.type, structure.tier ?? 0);
     const rateOf = (tier) => {
       const produces = producesAt(spec, tier);
       return Object.keys(produces).length ? { produces, everySeconds: intervalAt(spec, tier) } : null;

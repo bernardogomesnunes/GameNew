@@ -99,8 +99,16 @@ function stoneBlock({ w = 10, d = 10, h = 6, x0 = 4, z0 = 4, y0 = 8 } = {}) {
     status.tier === 2);
 }
 
-// --- retier() sets the level, the way it already resizes a storehouse -------
+// --- reaching a level is a button, losing one is still automatic -----------
 
+/**
+ * Reported directly: leveling used to happen the instant the blocks
+ * qualified, with nothing to press and nothing on screen marking the
+ * moment. recheck() (called after every edit) now only ever takes a level
+ * away, the way it always could — see the next block — and StructureRegistry
+ * .evolve is the only thing that moves a building up, one rung at a time
+ * even when the blocks already qualify for several.
+ */
 {
   const { world, region, cutTo } = stoneBlock();
   cutTo(8);
@@ -111,14 +119,25 @@ function stoneBlock({ w = 10, d = 10, h = 6, x0 = 4, z0 = 4, y0 = 8 } = {}) {
     claimedAt: Date.now(), lastPaidAt: Date.now(), brokenReason: null,
   };
   reg.structures.push(quarry);
-  reg.retier(quarry);
+  // Pushed in already built up, the way claim() retiers a fresh structure
+  // `{ initial: true }` — the starting size, not a level reached.
+  reg.retier(quarry, { initial: true });
   ok('claimed at level 1', quarry.tier === 0);
   ok('and retiering a producer does not go looking for a container',
     quarry.store === undefined);
 
-  cutTo(28); // level 3's cut threshold
+  cutTo(28); // level 3's cut threshold — two rungs past where it stands
   reg.recheck(quarry);
-  ok(`built up, it reads as level ${quarry.tier + 1}`, quarry.tier === 2);
+  ok('built up, recheck alone leaves it right where it was',
+    quarry.tier === 0);
+
+  const first = reg.evolve(quarry.id);
+  ok('evolving climbs exactly one rung', first.ok && quarry.tier === 1);
+  const second = reg.evolve(quarry.id);
+  ok(`evolving again reaches level ${quarry.tier + 1}, as far as it currently qualifies`,
+    second.ok && quarry.tier === 2);
+  const third = reg.evolve(quarry.id);
+  ok("a third press has nothing further to give it yet", !third.ok && quarry.tier === 2);
 }
 
 // --- collect() pays out at whatever level it is actually standing at --------
@@ -134,7 +153,7 @@ function stoneBlock({ w = 10, d = 10, h = 6, x0 = 4, z0 = 4, y0 = 8 } = {}) {
     claimedAt: now, lastPaidAt: now, brokenReason: null,
   };
   reg.structures.push(quarry);
-  reg.retier(quarry);
+  reg.retier(quarry, { initial: true });
   ok('it is standing at level 3 before anything is collected', quarry.tier === 2);
 
   const rate = producesAt(QUARRY, 2);
@@ -159,7 +178,7 @@ function stoneBlock({ w = 10, d = 10, h = 6, x0 = 4, z0 = 4, y0 = 8 } = {}) {
     claimedAt: Date.now(), lastPaidAt: Date.now(), brokenReason: null,
   };
   reg.structures.push(quarry);
-  reg.retier(quarry);
+  reg.retier(quarry, { initial: true });
   ok('reached level 4 before saving', quarry.tier === 3);
 
   const saved = JSON.parse(JSON.stringify(reg.toJSON()));

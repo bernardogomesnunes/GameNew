@@ -55,24 +55,53 @@ export class StructureRegistry {
 
   /**
    * Re-reads what a leveled building has been built into — resizing a
-   * storehouse's shelves, or just noting a quarry's new level for `collect`
-   * to read next cycle.
+   * storehouse's shelves, or just noting a quarry's rock for `collect` to
+   * read next cycle.
    *
-   * Called wherever the blocks might have moved under it, which is the same
-   * places `recheck` is called from — leveling up is not a separate action
-   * you take, it is the game noticing you built the thing bigger.
+   * `initial` is only true from claim(), for a building claimed already
+   * built up past the first rung — a warehouse claimed as a finished
+   * warehouse starts as one, which is reading the floor with nothing yet to
+   * respect (see tierStatus's own doc comment). Every other call is a
+   * recheck after an edit might have moved the blocks, and only ever
+   * lowers the tier: reaching a rung the blocks now support again is
+   * `evolve`'s job, not something a broken wall's repair hands back for
+   * free. Reported directly: leveling used to happen the instant the last
+   * block went down, with no button and no say in when — this is the half
+   * of that which still has to be automatic, because losing a rung you no
+   * longer have the blocks for isn't a choice either.
    */
-  retier(structure) {
+  retier(structure, { initial = false } = {}) {
     const spec = STRUCTURES_BY_ID.get(structure?.type);
     if (!hasLevels(spec)) return null;
-    const status = tierStatus(this.world, structure.region, structure.type);
+    const status = tierStatus(this.world, structure.region, structure.type, initial ? null : (structure.tier ?? 0));
     const was = structure.tier ?? 0;
     structure.tier = status.tier;
-    const slots = isStore(spec) ? this.storeFor(structure).resize(status.slots) : null;
-    if (status.tier > was) {
-      this.bus?.emit('structure:upgraded', { structure, name: status.name, slots, blurb: status.blurb });
+    if (isStore(spec)) this.storeFor(structure).resize(status.slots);
+    if (!initial && status.tier < was) {
+      this.bus?.emit('structure:downgraded', { structure, name: status.name, blurb: status.blurb });
     }
     return status;
+  }
+
+  /**
+   * The other half of leveling — the button in the building panel. Only
+   * moves one rung at a time, even if the blocks already qualify for
+   * several: reaching level 4 unlocks level 5's requirements, not levels 4
+   * through 7 all at once because the whole ladder happened to already be
+   * standing.
+   */
+  evolve(id) {
+    const s = this.structures.find((x) => x.id === id);
+    if (!s) return { ok: false, reason: 'That building no longer exists.' };
+    const spec = STRUCTURES_BY_ID.get(s.type);
+    if (!hasLevels(spec)) return { ok: false, reason: 'Nothing here has a level to reach.' };
+    const status = tierStatus(this.world, s.region, s.type, s.tier ?? 0);
+    if (!status.canEvolve) return { ok: false, reason: "It doesn't qualify for the next level yet." };
+    const tierDef = spec.tiers[status.tier + 1];
+    s.tier = status.tier + 1;
+    const slots = isStore(spec) ? this.storeFor(s).resize(tierDef.slots) : null;
+    this.bus?.emit('structure:upgraded', { structure: s, name: tierDef.name, slots, blurb: tierDef.blurb });
+    return { ok: true, name: tierDef.name, slots, blurb: tierDef.blurb };
   }
 
   /** Every standing storehouse, with what it is holding. */
@@ -261,8 +290,8 @@ export class StructureRegistry {
     }
     this.structures.push(structure);
     // A storehouse claimed as a finished warehouse starts as one, rather than
-    // as a shed that upgrades itself the first time anything changes near it.
-    this.retier(structure);
+    // needing an Evolve press for a rung it was already built to.
+    this.retier(structure, { initial: true });
     this.bus?.emit('structure:claimed', { structure, spec });
     return { ok: true, reason: check.reason, structure, replaced };
   }

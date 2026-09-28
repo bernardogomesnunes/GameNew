@@ -21,6 +21,18 @@ import { icon } from './icons.js';
 const HOLD_MS = 420;
 
 /**
+ * "a" or "an" in front of a tier name, without doubling one it already
+ * carries. A quarry's tier names spell out their own article ("A Working
+ * Face") so "Next level: A Working Face" reads as a phrase; a storehouse's
+ * don't ("Loft"), so the same sentence needs one supplied. Lowercased first
+ * since every place this is used is mid-sentence.
+ */
+function withArticle(name) {
+  const lower = name.toLowerCase();
+  return /^an? /.test(lower) ? lower : `a ${lower}`;
+}
+
+/**
  * A production rate as a line you can read, or null for nothing produced.
  *
  * Most cycles are a minute or two, where restating the raw per-cycle number
@@ -180,12 +192,30 @@ export class DuiltUI {
       });
     });
     this.bus.on('structure:produced', () => { this.saidStalled = false; });
-    this.bus.on('structure:upgraded', ({ name, slots, blurb }) => {
+    // Fired by StructureRegistry.evolve (a level reached by pressing the
+    // button, not the instant the blocks qualified) and by retier's own
+    // automatic drop the other way, if an edit costs a building the rung it
+    // was standing on. `name`/`slots` used to always mean a storehouse's own
+    // words — evolve fires for a producer's level too now, so this reads
+    // the actual building's name instead of assuming one.
+    this.bus.on('structure:upgraded', ({ structure, name, slots, blurb }) => {
       if (this.panels.isOpen('panel-store')) this.renderStore();
+      if (this.building?.id === structure?.id) this.showBuilding(structure, this.buildingActionsCache);
+      const kind = STRUCTURES_BY_ID.get(structure?.type)?.name?.toLowerCase() ?? 'building';
       this.bus.emit('toast', {
         kind: 'achievement',
-        title: `Your storehouse is now a ${name.toLowerCase()}`,
-        body: `${blurb} ${slots} slots.`,
+        title: `Your ${kind} is now ${withArticle(name)}`,
+        body: slots ? `${blurb} ${slots} slots.` : blurb,
+      });
+    });
+    this.bus.on('structure:downgraded', ({ structure, name, blurb }) => {
+      if (this.panels.isOpen('panel-store')) this.renderStore();
+      if (this.building?.id === structure?.id) this.showBuilding(structure, this.buildingActionsCache);
+      const kind = STRUCTURES_BY_ID.get(structure?.type)?.name?.toLowerCase() ?? 'building';
+      this.bus.emit('toast', {
+        kind: 'xp',
+        title: `Your ${kind} dropped back to ${withArticle(name)}`,
+        body: `${blurb} Build it back up to reach the next level again.`,
       });
     });
     this.bus.on('settler:left', () => this.renderVitals());
@@ -250,6 +280,10 @@ export class DuiltUI {
    */
   showBuilding(structure, actions = {}) {
     this.building = structure;
+    // Kept so an event that changes this exact building (evolving it,
+    // losing a level) can redraw the open panel with the same handlers
+    // rather than needing Game.js's action factory reached from here.
+    this.buildingActionsCache = actions;
     const spec = STRUCTURES_BY_ID.get(structure.type);
     const body = this.q('#building-body');
     const sub = this.q('#building-sub');
@@ -274,14 +308,22 @@ export class DuiltUI {
     // What the next rung of the ladder needs — the same question a
     // storehouse answers once you open it, asked here too so a producer
     // with no screen of its own to open still gets an answer.
+    //
+    // Reported directly: leveling used to happen the instant the blocks
+    // qualified, with nothing to press and nothing on screen marking the
+    // moment. Qualifying (level.canEvolve, from tierStatus) now surfaces an
+    // Evolve button instead — see StructureRegistry.evolve, the only thing
+    // that actually moves the tier forward.
     const next = level?.next;
     const nextBlock = next ? `
       <div class="store-next">
         <strong>Next level: ${next.name}</strong>
         ${next.rate ? `<span>${rateText(next.rate.produces, next.rate.everySeconds)}</span>` : ''}
-        ${next.missing?.length
-          ? `<ul>${next.missing.map((m) => `<li>${m}</li>`).join('')}</ul>`
-          : '<span>It already qualifies — it will settle there on your next change to it.</span>'}
+        ${level.canEvolve
+          ? '<span>It qualifies — press Evolve below to reach it.</span>'
+          : next.missing?.length
+            ? `<ul>${next.missing.map((m) => `<li>${m}</li>`).join('')}</ul>`
+            : ''}
       </div>` : '';
 
     body.innerHTML = `
@@ -303,12 +345,14 @@ export class DuiltUI {
             + "if it no longer qualifies. There's a Done button on screen — tap it when you've finished."}
       </p>
       <div class="building-actions">
-        ${summary ? '<button class="primary" data-store>Open it</button>' : ''}
-        <button class="${summary ? 'secondary' : 'primary'}" data-move>Move it</button>
+        ${level?.canEvolve ? `<button class="primary" data-evolve>Evolve to ${withArticle(next.name)}</button>` : ''}
+        ${summary ? `<button class="${level?.canEvolve ? 'secondary' : 'primary'}" data-store>Open it</button>` : ''}
+        <button class="${summary || level?.canEvolve ? 'secondary' : 'primary'}" data-move>Move it</button>
         <button class="secondary" data-change>${locked ? 'Change it' : 'Done changing'}</button>
         <button class="danger secondary" data-delete>Delete it</button>
       </div>`;
 
+    body.querySelector('[data-evolve]')?.addEventListener('click', () => actions.onEvolve?.());
     body.querySelector('[data-store]')?.addEventListener('click', () => actions.onOpenStore?.());
     body.querySelector('[data-move]').addEventListener('click', () => actions.onMove?.());
     body.querySelector('[data-change]').addEventListener('click', () => actions.onChange?.());

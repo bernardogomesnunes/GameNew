@@ -257,26 +257,39 @@ export function validateStructure(world, region, structureId) {
 }
 
 /**
- * What a storehouse has been built into, and what the next rung would need.
+ * What a building has been built into, and what the next rung would need.
  *
- * Read off the blocks the same way everything else here is, so a storehouse
- * upgrades by being built up rather than by a button. Returns null for a
- * building that holds nothing.
+ * Read off the blocks the same way everything else here is. Returns null for
+ * a building that holds nothing.
  *
  * The tiers are a ladder, not a menu: failing one stops the climb instead of
  * skipping past it, so a shed lined with brick but still the size of a shed
  * does not land on the top rung by accident.
+ *
+ * `currentTier` is what the building is actually standing at right now —
+ * omit it (as claiming a structure does, in StructureRegistry.claim) to read
+ * the floor the blocks alone would support, for a building that starts
+ * already built up. Pass it everywhere after that and the floor becomes a
+ * ceiling on what `tier` reports, not a value it jumps to on its own:
+ * qualifying for a rung further up sets `canEvolve` rather than the tier
+ * itself, so reaching it is StructureRegistry.evolve's job, one rung at a
+ * time, not something that happens the instant the last block goes down.
+ * Falling back below the current rung's own requirements is not something
+ * a button gates, though — that is lost the moment the blocks are, the same
+ * as any other requirement, so `tier` still drops on its own when the floor
+ * does.
  */
-export function tierStatus(world, region, structureId) {
+export function tierStatus(world, region, structureId, currentTier = null) {
   const spec = STRUCTURES_BY_ID.get(structureId);
   if (!spec?.tiers?.length) return null;
 
   const ctx = inspect(world, region);
-  let tier = 0;
+  let floor = 0;
   for (let i = 1; i < spec.tiers.length; i++) {
     if (!(spec.tiers[i].needs ?? []).every((n) => n.test(ctx))) break;
-    tier = i;
+    floor = i;
   }
+  const tier = currentTier == null ? floor : Math.min(currentTier, floor);
 
   const here = spec.tiers[tier];
   const next = spec.tiers[tier + 1] ?? null;
@@ -286,6 +299,9 @@ export function tierStatus(world, region, structureId) {
     name: here.name,
     slots: here.slots,
     blurb: here.blurb,
+    // Only meaningful once there is a current rung to climb past — reading
+    // the floor alone (currentTier omitted) has nothing to compare it to.
+    canEvolve: currentTier != null && tier < floor,
     next: next && {
       name: next.name,
       slots: next.slots,

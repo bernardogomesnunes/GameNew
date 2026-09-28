@@ -1530,7 +1530,21 @@ export class Game {
       onMove: () => this.beginMove(structure),
       onDelete: () => this.deleteBuilding(structure),
       onOpenStore: () => this.ui.openStore(structure),
+      onEvolve: () => this.evolveBuilding(structure),
     };
+  }
+
+  /**
+   * The button in the building panel that actually moves a leveled building
+   * up its ladder — see StructureRegistry.evolve. Qualifying used to be the
+   * whole story; this is what makes reaching the level something you did
+   * rather than something that happened to the last block you placed. The
+   * panel redraws itself off the bus (DuiltUI's structure:upgraded
+   * listener), so there is nothing more to do here than ask and say why not.
+   */
+  evolveBuilding(structure) {
+    const r = this.duilt.structures.evolve(structure.id);
+    if (!r.ok) this.ui.toast({ kind: 'xp', title: "Can't evolve it yet", body: r.reason });
   }
 
   /**
