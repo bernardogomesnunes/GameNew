@@ -86,10 +86,14 @@ ok('it stays inside 0..1', [...Array(500)].every((_, i) => {
       const lx = ((x % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
       if (lx > 2 && lx < CHUNK_SIZE - 3) continue;
       found++;
-      // Leaves should exist on both sides of the line.
+      // Leaves should exist on both sides of the line, out to however far
+      // this tree's own canopy actually reaches — a fixed 2 assumed every
+      // biome's trees were as wide as a meadow's, which stopped holding
+      // once narrower ones (highlands, snowfield, peaks) could land here.
       const top = tree.ground + tree.trunk;
-      const left = world.getBlock(x - 2, top, z);
-      const right = world.getBlock(x + 2, top, z);
+      const r = tree.style.canopy ?? 2;
+      const left = world.getBlock(x - r, top, z);
+      const right = world.getBlock(x + r, top, z);
       if (left !== 0 || right !== 0) whole++;
     }
   }

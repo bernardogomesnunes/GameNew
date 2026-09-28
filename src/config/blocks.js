@@ -64,6 +64,12 @@ export const BLOCKS = [
   { id: 22, name: 'Moss', glyph: 'moss', color: 0x81c271, soil: true, material: 'dirt', unlock: null },
   { id: 23, name: 'Gravel', glyph: 'gravel', color: 0xbbb6ae, material: 'stone', unlock: null },
   { id: 24, name: 'Clay', glyph: 'clay', color: 0xa3beca, soil: true, material: 'dirt', unlock: null },
+  // The ocean's own floor — everything else underwater already borrowed Sand
+  // (see ChunkGen's RIVERBED), which is fine for a riverbed but wrong once a
+  // whole biome is the seabed: Sand is the Sands biome's own top block, and
+  // sharing it would be the exact "two biomes read as one" problem the rest
+  // of this file exists to avoid.
+  { id: 25, name: 'Silt', glyph: 'clay', color: 0x8b9a8a, material: 'dirt', unlock: null },
 ];
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));

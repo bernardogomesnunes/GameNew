@@ -6,19 +6,22 @@ import { buildSites } from './features.js';
 import { SITES } from '../config/sites.js';
 
 /**
- * The world Duilt starts in: generated, not flattened — but with a river.
+ * The world Duilt starts in: generated, not flattened, and no longer with a
+ * river carved to order.
  *
- * Natural terrain is what makes the place worth looking at, so the land is
- * rolled as usual. What is *not* left to chance is water: a river is routed
- * across the whole map and pinned to pass close to where you begin. It needn't
- * run through your first 32 blocks — near enough to farm from the edge is
- * enough — and because it spans the map, every ring you unlock later has water
- * in it too, without any further arrangement.
+ * Water used to be pinned — a river routed across the whole map and forced
+ * to pass close to wherever you began, because a farm needs water within six
+ * blocks and noise makes no promises about where a river runs. Asked
+ * directly to stop guaranteeing it and let rivers and the sea (see
+ * config/biomes.js's ocean) be genuinely random instead: the settlement now
+ * moves to meet real water rather than water being carved to meet the
+ * settlement. See settleOrigin/findNearbyWater below for how, and
+ * World.js's own note on why the border and the biome bias that keeps the
+ * plot buildable both have to move with it rather than staying pinned to
+ * the world's raw origin.
  *
  * Everything else the plot needs — somewhere to land, a grove, outcrops, the
  * riverside scrub — is declared in config/sites.js and found by siteFinder.js.
- * This file's job is the water, because a river has to be cut across the whole
- * map in one pass and cannot be expressed as "a spot that satisfies X".
  */
 
 const DIRT = 2, WOOD = 4, SAND = 6, WATER = 11;
@@ -38,18 +41,20 @@ function rng(seed) {
 }
 
 /**
- * A world with no edges, and a settlement at the origin of it.
+ * A world with no edges, and a settlement wherever real water turned out to
+ * be nearby.
  *
- * The land itself comes from the seed as you walk into it — rivers included,
- * since those are noise now rather than paths drawn across a fixed map. What
- * still has to be arranged by hand is the first thirty-two blocks: Age 1 asks
- * you to claim a forest and break ground on a farm, and a farm needs water
- * within six blocks. Noise cannot promise that, so the plot gets one river
- * pinned through it and its grove planted, exactly as it always did.
+ * The land itself comes from the seed as you walk into it — rivers and the
+ * sea both, entirely noise, nothing painted on. What still has to be
+ * arranged is the first thirty-two blocks: Age 1 asks you to claim a forest
+ * and break ground on a farm, and a farm needs water within six blocks. That
+ * used to be guaranteed by carving a river through the plot; asked directly
+ * to stop, the plot instead moves to wherever the nearest real water is —
+ * see findNearbyWater and settleOrigin.
  *
  * Those chunks are marked as changed so they are written down. They are the
- * one part of an endless world the seed cannot make again, and there are nine
- * of them.
+ * one part of an endless world the seed cannot make again, and there are
+ * roughly nine of them.
  */
 export function generateEndlessWorld({ height = 64, seed = Date.now() % 1000000 } = {}) {
   const gen = new ChunkGen({ seed, height, homeX: 0, homeZ: 0 });
@@ -58,23 +63,75 @@ export function generateEndlessWorld({ height = 64, seed = Date.now() % 1000000 
   return { world, origin };
 }
 
-/** How far around the origin to have real land before the plot is arranged. */
+/** How far around the settlement to have real land before the plot is arranged. */
 const PLOT_MARGIN = 48;
+
+// How far outward to search for real water before giving up on finding any
+// nearby, and how coarse the search is — fine enough to catch a river a few
+// blocks wide without checking every single column across a wide radius.
+const WATER_SEARCH_RADIUS = 160;
+const WATER_SEARCH_STEP = 4;
+
+/**
+ * The nearest column with real water — a river or the sea, whichever the
+ * terrain actually made — searching outward in rings from (cx, cz). Null if
+ * nothing turns up within WATER_SEARCH_RADIUS.
+ *
+ * `gen.waterLevelAt` is pure noise math with no chunk state behind it, so
+ * this costs nothing in generation: it can run, and settleOrigin can act on
+ * it, before a single chunk of the world exists.
+ */
+function findNearbyWater(gen, cx, cz) {
+  if (gen.waterLevelAt(cx, cz) > 0) return { x: cx, z: cz };
+  for (let r = WATER_SEARCH_STEP; r <= WATER_SEARCH_RADIUS; r += WATER_SEARCH_STEP) {
+    for (let dx = -r; dx <= r; dx += WATER_SEARCH_STEP) {
+      for (let dz = -r; dz <= r; dz += WATER_SEARCH_STEP) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+        const x = cx + dx, z = cz + dz;
+        if (gen.waterLevelAt(x, z) > 0) return { x, z };
+      }
+    }
+  }
+  return null;
+}
 
 export function settleOrigin(world, seed = 1) {
   const rand = rng(seed);
   const half = STARTER_SIZE / 2;
-  const minX = -half, minZ = -half;
+
+  // Water is no longer carved to order — see this file's own top note. The
+  // settlement is centred on wherever the nearest real water actually is,
+  // found by searching outward from the world's raw origin. The biome bias
+  // that keeps the plot on buildable ground, and the border that encloses
+  // it, both move to match rather than staying pinned to (0, 0) — see
+  // World.js's own note on why that has to happen before a single chunk is
+  // generated, not after.
+  const found = findNearbyWater(world.gen, 0, 0);
+  let centreX = 0, centreZ = 0;
+  if (found) {
+    // Set back from the water rather than centred on it — the same way the
+    // old pinned river was routed to pass within RIVER_NEAR of the
+    // settlement rather than straight through the middle of it, so most of
+    // the plot is still clear ground to build on.
+    const angle = rand() * Math.PI * 2;
+    const setback = half - RIVER_NEAR;
+    centreX = Math.round(found.x + Math.cos(angle) * setback);
+    centreZ = Math.round(found.z + Math.sin(angle) * setback);
+    world.gen.biomes.centreX = centreX;
+    world.gen.biomes.centreZ = centreZ;
+    world.centreX = centreX;
+    world.centreZ = centreZ;
+  }
+  // No real water turned up within WATER_SEARCH_RADIUS — rare, but with no
+  // guarantee left to fall back on the plot simply stays at the origin,
+  // dry. A bucket can still carry water in by hand; nothing here pretends
+  // otherwise by conjuring a river that isn't part of the world's own noise.
+
+  const minX = centreX - half, minZ = centreZ - half;
   const region = { minX, minZ, maxX: minX + STARTER_SIZE - 1, maxZ: minZ + STARTER_SIZE - 1 };
 
   // The plot is arranged against real ground, so the ground has to exist.
-  world.ensureAround(0, 0, PLOT_MARGIN + STARTER_SIZE);
-
-  // One river through the settlement, because the farm rule needs water within
-  // six blocks and a noise river makes no promises about where it runs. The
-  // rest of the world's water is the noise, which goes on forever.
-  const rivers = [localRiver(world, rand)];
-  for (const r of rivers) carveRiver(world, r);
+  world.ensureAround(centreX, centreZ, PLOT_MARGIN + STARTER_SIZE);
 
   const plan = planSites(world, SITES, { region, rand });
   const sites = buildSites(world, plan, rand);
@@ -90,47 +147,16 @@ export function settleOrigin(world, seed = 1) {
     if (moved) spawn.relaxed = Math.max(spawn.relaxed ?? 0, 1);
   }
 
-  // Nothing to mark by hand: carving the river and building the sites went
-  // through setBlock, which marks exactly the chunks they wrote to. A blanket
-  // region would have kept fifty chunks of untouched meadow along with them.
+  // Nothing to mark by hand: building the sites went through setBlock, which
+  // marks exactly the chunks it wrote to. A blanket region would have kept
+  // fifty chunks of untouched meadow along with them.
 
   return {
     minX, minZ, size: STARTER_SIZE,
-    rivers,
     sites,
     trees: countTrees(world, region),
     spawn: standing,
   };
-}
-
-/** How far past the plot the pinned river is carved, and kept. */
-const RIVER_KEEP = 40;
-
-/**
- * A river that crosses the settlement and stops.
- *
- * Bounded, unlike the old map-long one: past the plot the noise rivers take
- * over, and two kinds of river meeting in the middle distance looks like a
- * confluence rather than a mistake.
- */
-function localRiver(world, rand) {
-  const amp = 8 + rand() * 10;
-  const wavelength = 50 + rand() * 60;
-  const phase = rand() * Math.PI * 2;
-  const span = STARTER_SIZE + RIVER_KEEP * 2;
-  const from = -span / 2;
-
-  const atCentre = Math.sin((0 / wavelength) + phase) * amp;
-  const side = rand() < 0.5 ? -1 : 1;
-  const target = side * (3 + rand() * (RIVER_NEAR - 3));
-  const offset = target - atCentre;
-
-  const xs = new Int32Array(span);
-  for (let i = 0; i < span; i++) {
-    const z = from + i;
-    xs[i] = Math.round(Math.sin((z / wavelength) + phase) * amp + offset);
-  }
-  return { axis: 'z', coords: xs, width: 2 + Math.round(rand() * 2), from };
 }
 
 export function generateDuiltWorld({ sizeX = 256, sizeZ = 256, height = 64, seed = Date.now() % 1000000 } = {}) {
@@ -227,6 +253,9 @@ function countTrees(world, region) {
  * clear spot if it has to be.
  */
 const SPAWN_HEADROOM = 3;
+// How open the view has to be to count as clear — the same bar
+// standingSpawn already holds a measured yaw to before trusting it.
+const MIN_SPAWN_VIEW = 4;
 
 function standable(world, x, z) {
   if (!world.inBounds(x, 0, z)) return false;
@@ -239,25 +268,45 @@ function standable(world, x, z) {
   return true;
 }
 
-/** The nearest spot to (x, z) that is still fit to stand on. */
+/**
+ * The nearest spot to (x, z) that is still fit to stand on.
+ *
+ * The exact point is only taken as-is if it's also got a clear view — sites
+ * are scored against bare ground and the grove is planted afterwards (see
+ * this function's own doc comment above), so a spot that was open when it
+ * was chosen can end up facing straight into a trunk that grew there since.
+ * Reported directly as landing nose-first in a tree on arrival: the same
+ * ring search that already runs when the point isn't standable at all now
+ * also runs when it's standable but blind, so a facing check away is one
+ * more thing this doesn't have to hope never happens.
+ */
 function nearestStandable(world, x, z, region) {
-  if (standable(world, x, z)) return { x, z };
+  if (standable(world, x, z) && outlook(world, x, z, { at: 2, range: 16 }).open >= MIN_SPAWN_VIEW) {
+    return { x, z };
+  }
+  // The first ring out with *any* standable candidate isn't necessarily a
+  // clear one — a lone flat spot with a trunk right behind it used to win by
+  // default over an equally near ring with real sightlines one step further
+  // out, because the old version stopped at the first radius that had
+  // anything at all. This keeps the best candidate seen so far and keeps
+  // searching outward — still bounded by the same STARTER_SIZE cap either
+  // way — until the view actually clears MIN_SPAWN_VIEW, only settling for
+  // whatever it found if nothing in the whole plot does.
+  let best = null;
   for (let r = 1; r <= STARTER_SIZE; r++) {
-    let best = null;
     for (let dx = -r; dx <= r; dx++) {
       for (let dz = -r; dz <= r; dz++) {
         if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
         const px = x + dx, pz = z + dz;
         if (px < region.minX || px > region.maxX || pz < region.minZ || pz > region.maxZ) continue;
         if (!standable(world, px, pz)) continue;
-        // Among equals at this radius, take the one that can see furthest.
         const view = outlook(world, px, pz, { at: 2, range: 16 }).open;
         if (!best || view > best.view) best = { x: px, z: pz, view };
       }
     }
-    if (best) return best;
+    if (best && best.view >= MIN_SPAWN_VIEW) return best;
   }
-  return { x, z };
+  return best ?? { x, z };
 }
 
 function standingSpawn(world, site, region) {
