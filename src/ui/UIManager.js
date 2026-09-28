@@ -998,10 +998,21 @@ export class UIManager {
    * A class on the body has no DOM-depth problem to have, and one registry
    * (Panels, see Panels.js's own doc comment) means this covers every
    * panel there is without a list of ids to keep in sync by hand.
+   *
+   * One exception: the bag. Reported directly, twice — first that the
+   * hotbar sat there fully visible and fully dead under the bag screen
+   * (fixed above by hiding it), then that hiding it left nothing to
+   * organize into: the bag *is* the inventory (one set of slots, see
+   * DuiltUI.renderBag), and the hotbar is the one on-screen way to see
+   * and change what's selected to build with while you're in there sorting
+   * it. So the bag alone gets it back — see the `body.bag-open` rule in
+   * styles.css, which also lifts it above the bag's own dimmed backdrop so
+   * taps land on it rather than falling through to the overlay behind.
    */
   updateHudVisibility() {
     const hidden = this.panels.all().some((el) => !el.hidden);
     document.body.classList.toggle('panel-open', hidden);
+    document.body.classList.toggle('bag-open', this.panels.isOpen('panel-bag'));
   }
 
   /** Fills a panel in just before it is shown, if it has anything to fill. */

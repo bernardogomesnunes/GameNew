@@ -21,6 +21,15 @@ import { readFileSync } from 'node:fs';
  * reached by a sibling selector at all, however many ids got added to the
  * list. See UIManager.updateHudVisibility, which reads the one shared
  * Panels registry instead of a hand-kept list of ids.
+ *
+ * That fix over-corrected for the bag specifically. Reported again right
+ * after: "now it's actually missing from the ui when opening the bag" —
+ * hiding the hotbar unconditionally with everything else meant the one
+ * on-screen way to see or change what you're building with disappeared
+ * the moment you opened the bag to sort it, which is exactly when you're
+ * most likely to want it. The bag is the one panel that gets it back, and
+ * lifted above the bag's own dimmed backdrop so taps actually land on it —
+ * see the `body.bag-open` rule in styles.css.
  */
 
 let f = 0;
@@ -35,6 +44,11 @@ ok('opening any panel updates HUD visibility',
   /this\.panels\.onOpen\(\(\) => this\.updateHudVisibility\(\)\);/.test(ui));
 ok('so does closing one — the HUD has to come back, not just go away',
   /this\.panels\.onClose\(\(\) => this\.updateHudVisibility\(\)\);/.test(ui));
+
+// --- the bag is tracked as its own state, not folded into panel-open --------
+
+ok('a dedicated class tracks whether the bag specifically is open',
+  /document\.body\.classList\.toggle\('bag-open', this\.panels\.isOpen\('panel-bag'\)\);/.test(ui));
 
 // --- reads every overlay there is, not a hand-kept list of panel ids --------
 
@@ -58,6 +72,13 @@ ok('no leftover sibling selector for touch-controls tied to specific panel ids',
   && !/#panel-menu:not\(\[hidden\]\) ~ #touch-controls/.test(css));
 ok('no leftover sibling selector hiding the hotbar only for #blocker',
   !/#blocker:not\(\[hidden\]\) ~ #hotbar-wrap/.test(css));
+
+// --- but the bag itself gets the hotbar back, above its own backdrop --------
+
+ok('the bag class brings the hotbar back rather than leaving it hidden',
+  /body\.bag-open #hotbar-wrap \{ display: flex !important; z-index: 11; \}/.test(css));
+ok('lifted high enough to clear the bag\'s own dimmed overlay (z-index 10)',
+  /body\.bag-open #hotbar-wrap \{[^}]*z-index: 11/.test(css) && /\.overlay \{[^}]*z-index: 10/.test(css));
 
 // --- the one deliberate exception: toasts still show over an ordinary panel -
 
