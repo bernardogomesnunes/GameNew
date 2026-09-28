@@ -49,7 +49,15 @@ export const STRUCTURES = [
         say: () => 'Needs more open soil between the trees',
       },
     ],
-    produces: { wood: 4, leaves: 3, seeds: 2, fruit: 1 },
+    // Reported directly: leaving the game for a day filled everything up.
+    // Wood keeps its own rate and cadence — it's the one thing this pass
+    // doesn't touch — but the rest of a standing forest was paying out at
+    // the same clip, which is far more foraged goods than wood needs
+    // beside it. Cut to the floor a per-cycle amount can go without
+    // rounding away to nothing on a live 60-second tick (see
+    // StructureRegistry.collect — anything below 1 here would pay out
+    // zero on every ordinary tick, not just a smaller amount).
+    produces: { wood: 4, leaves: 1, seeds: 1, fruit: 1 },
     everySeconds: 60,
     skill: 'foraging',
   },
@@ -77,8 +85,14 @@ export const STRUCTURES = [
         say: () => 'Needs fresh water within 6 blocks — build nearer the river',
       },
     ],
-    produces: { vegetables: 3, seeds: 2, fruit: 1 },
-    everySeconds: 75,
+    // Called out by name: "farm does produce a lot too much too". At the
+    // old 75-second cycle a farm left running for the 8-hour offline cap
+    // (see MAX_OFFLINE_HOURS) turned out well over ten full stacks of
+    // vegetables — every trip back started with a bag already choking on
+    // one item. A 12-minute cycle at one of each keeps that same 8-hour
+    // walk-away under a single stack (40 of 50) instead of past a dozen.
+    produces: { vegetables: 1, seeds: 1, fruit: 1 },
+    everySeconds: 720,
     skill: 'building',
   },
 
@@ -357,8 +371,9 @@ export const STRUCTURES = [
         say: () => 'Needs sand or earth within 6 blocks to feed it',
       },
     ],
-    produces: { brick: 2, glass: 2 },
-    everySeconds: 95,
+    // Part of the same pass as the farm above — see the note there.
+    produces: { brick: 1, glass: 1 },
+    everySeconds: 300,
     skill: 'building',
   },
 
@@ -394,8 +409,9 @@ export const STRUCTURES = [
         say: () => 'Build it among your town, not out in a field',
       },
     ],
-    produces: { vegetables: 3, fruit: 2, planks: 4 },
-    everySeconds: 85,
+    // Part of the same pass as the farm above — see the note there.
+    produces: { vegetables: 1, fruit: 1, planks: 1 },
+    everySeconds: 720,
     skill: 'politics',
   },
 
@@ -473,9 +489,10 @@ export const STRUCTURES = [
       },
     ],
     // A trickle, not an income — a mine works a claim for it, this just keeps
-    // a jar behind the counter.
+    // a jar behind the counter. Slowed with the rest of this pass so the
+    // jar doesn't reach its own 100-gold cap over a single 8-hour walk-away.
     produces: { gold: 1 },
-    everySeconds: 150,
+    everySeconds: 360,
     skill: 'politics',
   },
 
@@ -512,8 +529,13 @@ export const STRUCTURES = [
         say: (ctx) => `Needs ${8 - count(ctx, [PLANKS, WOOD])} more timber to hold the roof up`,
       },
     ],
-    produces: { stone: 8, gold: 1 },
-    everySeconds: 120,
+    // Part of the same pass as the farm above — see the note there. This one
+    // also fixes a second thing: at the old flat 8 stone/120s a single mine
+    // out-produced a maxed, fully-leveled Quarry (480 stone/day at its top
+    // tier — see quarry's own produces note) without any of the digging that
+    // rate is supposed to be earned by. Slowed to sit under it instead.
+    produces: { stone: 1, gold: 1 },
+    everySeconds: 360,
     skill: 'building',
   },
 
@@ -543,8 +565,9 @@ export const STRUCTURES = [
         say: () => 'Build it near the fields it is meant to serve',
       },
     ],
-    produces: { vegetables: 6, seeds: 3 },
-    everySeconds: 90,
+    // Part of the same pass as the farm above — see the note there.
+    produces: { vegetables: 1, seeds: 1 },
+    everySeconds: 720,
     skill: 'foraging',
   },
 
@@ -585,8 +608,9 @@ export const STRUCTURES = [
     // everything else here — so that whatever it should do once there is
     // something to defend *against* can be added to this one entry later
     // without moving anything that depends on it.
-    produces: { stone: 3, planks: 2 },
-    everySeconds: 130,
+    // Part of the same pass as the farm above — see the note there.
+    produces: { stone: 1, planks: 1 },
+    everySeconds: 300,
     skill: 'politics',
   },
 
@@ -642,8 +666,11 @@ export const STRUCTURES = [
     ],
     // The forest and the farm folded in, at a fraction of what either gives
     // alone — the point of a village is the housing, not out-earning the
-    // buildings it is standing in for.
-    produces: { wood: 3, leaves: 2, vegetables: 3, seeds: 2 },
+    // buildings it is standing in for. Wood keeps its own rate and cadence,
+    // same as the forest it's folded in from; the rest is cut to the floor
+    // a 100-second cycle can pay out without rounding away to nothing (see
+    // the forest's own note, above).
+    produces: { wood: 3, leaves: 1, vegetables: 1, seeds: 1 },
     grantsCapacity: 3,
     everySeconds: 100,
     skill: 'building',
