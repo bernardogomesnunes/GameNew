@@ -101,7 +101,7 @@ function stuff(inv) {
 {
   const now = Date.now();
   const { reg, inventory, put } = settlement({ now });
-  put('quarry', box(0), now - 200_000); // long enough for several payouts
+  put('quarry', box(0), now - 27_000_000); // long enough for several payouts
   stuff(inventory);
   ok('the bag is full before anything is produced', inventory.firstEmpty() === -1);
 
@@ -121,7 +121,7 @@ function stuff(inv) {
 {
   const now = Date.now();
   const { reg, inventory, put } = settlement({ now });
-  const quarry = put('quarry', box(0), now - 200_000);
+  const quarry = put('quarry', box(0), now - 27_000_000);
   stuff(inventory);
 
   const owed = quarry.lastPaidAt;
@@ -140,7 +140,7 @@ function stuff(inv) {
   // All of it or none of it: a partly-delivered payout is the rest destroyed.
   const now = Date.now();
   const { reg, inventory, put } = settlement({ now });
-  put('quarry', box(0), now - 200_000);
+  put('quarry', box(0), now - 27_000_000);
   stuff(inventory);
   inventory.slots[3] = null; // room for one kind of thing, not both
   const before = inventory.slots.filter(Boolean).length;
@@ -243,7 +243,11 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
 }
 
 {
-  // Building it up upgrades it where the game notices — on the next recheck.
+  // Building it up used to upgrade it the moment the game noticed, on the
+  // next recheck. Reported directly: that meant leveling had nothing to
+  // press and nothing marking the moment it happened. Recheck alone now
+  // only ever takes a rung away (see the next block); reaching one the
+  // blocks newly support is StructureRegistry.evolve's job.
   const world = ground();
   const region = raise(world, 2, 2, 8, { w: 5, h: 2 });
   const inventory = new Inventory();
@@ -258,8 +262,12 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
   const taller = raise(world, 2, 2, 8, { w: 5, h: 3 });
   shed.region = taller;
   reg.recheck(shed);
-  ok(`built up, it has ${reg.storeFor(shed).size}`, reg.storeFor(shed).size === holdsAt(SPEC, 1));
-  ok('and the building knows which rung it is on', shed.tier === 1);
+  ok('built up, recheck alone does not hand it the rung on its own',
+    shed.tier === 0 && reg.storeFor(shed).size === HOLDS);
+
+  const evolved = reg.evolve(shed.id);
+  ok('but pressing Evolve does, once it qualifies', evolved.ok && shed.tier === 1);
+  ok(`and it has ${holdsAt(SPEC, 1)} shelves now`, reg.storeFor(shed).size === holdsAt(SPEC, 1));
 }
 
 {
@@ -271,7 +279,11 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
   const ware = { id: 1, type: 'storehouse', region: big, valid: true, locked: true,
                  claimedAt: Date.now(), lastPaidAt: Date.now(), brokenReason: null };
   reg.structures.push(ware);
-  reg.retier(ware);
+  // Pushed straight in already built up, the way claim() puts a structure in
+  // and immediately retiers it `{ initial: true }` — a warehouse claimed
+  // as a finished warehouse starts as one, no Evolve press needed for a
+  // rung it was already built to.
+  reg.retier(ware, { initial: true });
   const store = reg.storeFor(ware);
   ok(`a warehouse has ${store.size} shelves`, store.size === holdsAt(SPEC, 2));
 
@@ -299,7 +311,7 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
   const reg = new StructureRegistry({ world, bus: null, inventory: new Inventory() });
   reg.structures.push({ id: 1, type: 'storehouse', region, valid: true, locked: true,
                         claimedAt: Date.now(), lastPaidAt: Date.now(), brokenReason: null });
-  reg.retier(reg.list()[0]);
+  reg.retier(reg.list()[0], { initial: true });
   reg.storeFor(reg.list()[0]).add('stone', 60);
   const saved = JSON.parse(JSON.stringify(reg.toJSON()));
   ok('the rung is written down', saved.structures[0].tier === 2);
@@ -326,5 +338,85 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
 
 ok('every building the game calls a store has tiers',
   [...STRUCTURES_BY_ID.values()].every((s) => !isStore(s) || s.tiers.every((t) => t.slots > 0)));
+
+// --- routing: what a shed's own deliveries skip -------------------------------
+{
+  const { reg, put } = settlement();
+  const shed = put('storehouse', box(0));
+  ok('a fresh shed excludes nothing', (shed.excludes ?? []).length === 0);
+  ok('toggling it on turns an item away', reg.toggleExclude(shed.id, 'stone') && shed.excludes.includes('stone'));
+  ok('toggling it again lets it back in', reg.toggleExclude(shed.id, 'stone') && !shed.excludes.includes('stone'));
+  ok('an unknown structure id is refused', reg.toggleExclude(999, 'stone') === false);
+}
+
+{
+  // Two sheds, one refusing stone: production must skip past it for that item
+  // and still use it for everything else.
+  const now = Date.now();
+  const { reg, inventory, put } = settlement({ now });
+  put('quarry', box(0), now - 27_000_000);
+  stuff(inventory);
+
+  const picky = put('storehouse', box(4));
+  reg.toggleExclude(picky.id, 'stone');
+  const open = put('storehouse', box(8));
+
+  reg.collect({ now });
+  ok('the shed that excluded stone got none', reg.storeFor(picky).countOf('stone') === 0);
+  ok('the other shed got it instead', reg.storeFor(open).countOf('stone') > 0);
+}
+
+{
+  // Excluding an item from every shed just stalls that payout, same as no
+  // storehouse existing at all — it never destroys anything.
+  const now = Date.now();
+  const { reg, inventory, put } = settlement({ now });
+  put('quarry', box(0), now - 27_000_000);
+  stuff(inventory);
+  const shed = put('storehouse', box(4));
+  reg.toggleExclude(shed.id, 'stone');
+  reg.toggleExclude(shed.id, 'cobblestone');
+
+  const owed = reg.list().find((s) => s.type === 'quarry').lastPaidAt;
+  reg.collect({ now });
+  ok('production stalls rather than losing the goods',
+    reg.list().find((s) => s.type === 'quarry').lastPaidAt === owed);
+}
+
+{
+  // A manual move is the player's own choice, not deliver() routing — it must
+  // still work even into a shed that excludes the item.
+  const { reg, inventory, put } = settlement();
+  const shed = put('storehouse', box(0));
+  reg.toggleExclude(shed.id, 'stone');
+  inventory.add('stone', 10);
+  const moved = inventory.moveTo(reg.storeFor(shed), inventory.slots.findIndex((s) => s?.id === 'stone'));
+  ok('carrying an excluded item in by hand still works', moved === 10);
+}
+
+{
+  // Excludes are per-building state, so they have to survive a save.
+  const { reg, put } = settlement();
+  const shed = put('storehouse', box(0));
+  reg.toggleExclude(shed.id, 'wood');
+  const saved = JSON.parse(JSON.stringify(reg.toJSON()));
+
+  const back = new StructureRegistry({
+    world: new World({ sizeX: 8, sizeZ: 8, height: 8 }), bus: null, inventory: new Inventory(),
+  });
+  back.loadJSON(saved);
+  const reopened = back.list().find((s) => s.type === 'storehouse');
+  ok('what was excluded is still excluded after loading', reopened.excludes.includes('wood'));
+
+  // And a save from before routing existed — no `excludes` field at all —
+  // has to come back accepting everything, not throwing on a missing array.
+  delete saved.structures[0].excludes;
+  const older = new StructureRegistry({
+    world: new World({ sizeX: 8, sizeZ: 8, height: 8 }), bus: null, inventory: new Inventory(),
+  });
+  older.loadJSON(saved);
+  ok('an old save with no excludes field loads as accepting everything',
+    (older.list()[0].excludes ?? []).length === 0);
+}
 
 process.exit(f ? 1 : 0);

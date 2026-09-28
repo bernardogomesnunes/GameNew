@@ -5,6 +5,7 @@ import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
 import { ITEMS_BY_ID, itemName } from '../config/items.js';
+import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { cubeSvg, itemIcon } from '../config/cubes.js';
 import { ACHIEVEMENTS, goalBands } from '../config/achievements.js';
@@ -15,10 +16,30 @@ import { CLEARS, clearArtSvg } from '../config/clears.js';
 
 /**
  * Items that act on the world directly through Break/Place while selected,
- * rather than being placed as a block or spent as a crafting ingredient.
- * Only the bucket does this today — see Game.js's fillBucket/emptyBucket.
+ * rather than being placed as a block or spent as a crafting ingredient —
+ * and what to tell you Break/Place will do with each one selected. See
+ * Game.js's BREAK_OVERRIDE/PLACE_OVERRIDE for what actually runs.
  */
-const TOOL_HOTBAR_IDS = ['bucket', 'bucket_water'];
+const TOOL_HOTBAR_NOTES = {
+  bucket: 'Break to scoop water',
+  bucket_water: 'Place to pour it out',
+  fruit: 'Break to eat',
+  vegetables: 'Break to eat',
+};
+
+/**
+ * What the two touch buttons say while one of these is selected and no tool
+ * is queued — Break/Place is the default everywhere else. Guessing that
+ * "Break" scoops water or "Place" throws food away is the same puzzle
+ * TOOL_HOTBAR_NOTES exists to avoid; this is the same fix for the buttons
+ * themselves. See Game.js's BREAK_OVERRIDE/PLACE_OVERRIDE for what each runs.
+ */
+const TOOL_ACTION_LABELS = {
+  bucket: ['Fill', 'Place'],
+  bucket_water: ['Break', 'Empty'],
+  fruit: ['Eat', 'Throw'],
+  vegetables: ['Eat', 'Throw'],
+};
 
 function el(html) {
   const t = document.createElement('template');
@@ -37,9 +58,10 @@ export class UIManager {
     this.game = game;
     this.cb = callbacks;
     this.selectedBlockId = 1;
-    // The bucket, and nothing else yet — see TOOL_HOTBAR_IDS. Selecting a
-    // tool and selecting a block are mutually exclusive: exactly one hotbar
-    // slot is ever highlighted.
+    // The bucket, food, and the mining tools — see TOOL_HOTBAR_NOTES and
+    // Game.js's BREAK_OVERRIDE/PLACE_OVERRIDE. Selecting a tool and
+    // selecting a block are mutually exclusive: exactly one hotbar slot is
+    // ever highlighted.
     this.selectedItemId = null;
     this.selectionActive = false;
 
@@ -48,6 +70,7 @@ export class UIManager {
     // used to be built two lines too early to get an answer.
     this.detectTouch();
     this.devOpen = false;   // the workshop end of the menu, folded away
+    this.editingBanner = false;   // a building open for changes pins the crosshair strip — see setEditingBanner
 
     root.innerHTML = this.markup();
     this.root = root;
@@ -58,7 +81,10 @@ export class UIManager {
     // Escape must not dismiss it into a world nobody chose.
     this.panels = new Panels(root, { screens: ['blocker'] });
     this.panels.onOpen((id) => this.populatePanel(id));
+    this.panels.onOpen(() => this.collapseToasts());
+    this.panels.onOpen(() => this.updateHudVisibility());
     this.panels.onClose((id) => this.duiltUI?.onPanelClosed(id));
+    this.panels.onClose(() => this.updateHudVisibility());
 
     this.buildHotbar();
     this.wireEvents();
@@ -368,61 +394,64 @@ export class UIManager {
     const hotbar = this.q('#hotbar');
     hotbar.innerHTML = '';
 
-    // In Duilt the hotbar is your bag: one slot per kind of thing you actually
-    // hold, carrying the total across every stack of it. A wall of blocks you
-    // don't own is a menu, not a hand.
+    // In Duilt the hotbar is the first PLAYABLE_SLOTS slots of the bag
+    // itself, real inventory slots at fixed positions — not a summary
+    // rebuilt from whatever the bag happened to hold. Reported directly:
+    // that auto-built list meant there was nothing to press to get
+    // something into the hotbar, no way to choose what sat where, and no
+    // way to select a mining tool at all, since it only ever listed
+    // block-shaped items plus a hardcoded handful of specials (bucket,
+    // food). Getting an item into one of these slots is done by hand, from
+    // the bag panel — see ui/DuiltUI.js's renderBag, which splits the same
+    // slots into an "Equipped" section up top and "Bag" below.
     if (this.cb.isDuilt?.()) {
       const inv = this.game.duilt.inventory;
-      const placeable = inv.heldIds()
-        .map((id) => ({ id, spec: ITEMS_BY_ID.get(id) }))
-        .filter((e) => e.spec?.block != null);
-      // The bucket, when you're holding one — it doesn't place, so it isn't
-      // in `placeable`, but it still needs a slot to be selected from. See
-      // TOOL_HOTBAR_IDS and Game.js's fillBucket/emptyBucket.
-      const tools = TOOL_HOTBAR_IDS
-        .filter((id) => inv.countOf(id) > 0)
-        .map((id) => ({ id, spec: ITEMS_BY_ID.get(id) }));
+      const playable = inv.slots.slice(0, PLAYABLE_SLOTS);
 
-      if (!placeable.length && !tools.length) {
-        hotbar.appendChild(el(`<div class="hotbar-empty">Nothing to build with yet — break something</div>`));
+      if (playable.every((s) => !s)) {
+        hotbar.appendChild(el(`<div class="hotbar-empty">Nothing equipped — open your bag and drag something up</div>`));
         this.showHotbarLabel();
         return;
       }
-      placeable.forEach((e, i) => {
-        const total = inv.countOf(e.id);
+      playable.forEach((s, i) => {
+        if (!s) {
+          hotbar.appendChild(el(`
+            <div class="hotbar-slot empty" data-slot="${i}">
+              <span class="key">${i + 1}</span>
+            </div>
+          `));
+          return;
+        }
+        const spec = ITEMS_BY_ID.get(s.id);
+        const isBlock = spec?.block != null;
+        const selected = isBlock
+          ? (!this.selectedItemId && spec.block === this.selectedBlockId)
+          : this.selectedItemId === s.id;
+        const note = isBlock ? '' : (TOOL_HOTBAR_NOTES[s.id] ?? '');
         hotbar.appendChild(el(`
-          <div class="hotbar-slot ${!this.selectedItemId && e.spec.block === this.selectedBlockId ? 'selected' : ''}"
-               data-id="${e.spec.block}" data-item="${e.id}"
-               data-name="${itemName(e.id)}" data-note=""
-               title="${itemName(e.id)} — ${total} in your bag">
-            ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
-            <div class="swatch swatch-cube">${itemIcon(e.spec, { size: 30 }) ?? glyphSvg(e.spec.glyph, { size: 18, color: e.spec.color })}</div>
-            <span class="held">${total}</span>
+          <div class="hotbar-slot ${selected ? 'selected' : ''}"
+               data-slot="${i}" ${isBlock ? `data-id="${spec.block}"` : 'data-tool="1"'} data-item="${s.id}"
+               data-name="${itemName(s.id)}" data-note="${note}"
+               title="${itemName(s.id)}${note ? ` — ${note}` : ''} — ${s.count} here">
+            <span class="key">${i + 1}</span>
+            <div class="swatch swatch-cube">${itemIcon(spec, { size: 30 }) ?? glyphSvg(spec?.glyph, { size: 18, color: spec?.color })}</div>
+            <span class="held">${s.count}</span>
           </div>
         `));
       });
-      tools.forEach((e) => {
-        const total = inv.countOf(e.id);
-        const note = e.id === 'bucket' ? 'Break to scoop water' : 'Place to pour it out';
-        hotbar.appendChild(el(`
-          <div class="hotbar-slot ${this.selectedItemId === e.id ? 'selected' : ''}"
-               data-tool="1" data-item="${e.id}"
-               data-name="${itemName(e.id)}" data-note="${note}"
-               title="${itemName(e.id)} — ${note}">
-            <div class="swatch swatch-cube">${itemIcon(e.spec, { size: 30 }) ?? glyphSvg(e.spec.glyph, { size: 18, color: e.spec.color })}</div>
-            <span class="held">${total}</span>
-          </div>
-        `));
-      });
-      // If what was selected has run out — a block spent, or the bucket you
-      // had selected just swapped for its filled/emptied counterpart — fall
-      // to the first thing you do have.
-      const stillValid = this.selectedItemId
-        ? tools.some((e) => e.id === this.selectedItemId)
-        : placeable.some((e) => e.spec.block === this.selectedBlockId);
+      // What was selected can stop being true of any playable slot — spent
+      // down to nothing, moved back to the bag by hand, a bucket swapped
+      // for its filled counterpart — same as before, just read off real
+      // slots now instead of a list rebuilt from the bag's contents.
+      const stillValid = playable.some((s) => s && (this.selectedItemId
+        ? s.id === this.selectedItemId
+        : ITEMS_BY_ID.get(s.id)?.block === this.selectedBlockId));
       if (!stillValid) {
-        if (placeable.length) this.selectBlock(placeable[0].spec.block);
-        else this.selectItem(tools[0].id);
+        const first = playable.find(Boolean);
+        if (first) {
+          const spec = ITEMS_BY_ID.get(first.id);
+          if (spec?.block != null) this.selectBlock(spec.block); else this.selectItem(first.id);
+        }
       } else this.showHotbarLabel();
       return;
     }
@@ -497,7 +526,9 @@ export class UIManager {
     });
     this.q('#hotbar').addEventListener('click', (e) => {
       const slot = e.target.closest('.hotbar-slot');
-      if (!slot) return;
+      // An empty Duilt playable slot has nothing to select — see it filled
+      // from the bag panel instead.
+      if (!slot || slot.classList.contains('empty')) return;
       if (slot.dataset.tool) { this.selectItem(slot.dataset.item); return; }
       const id = Number(slot.dataset.id);
       const availability = this.game.blockAvailability(id);
@@ -508,8 +539,13 @@ export class UIManager {
       this.selectBlock(id);
     });
 
-    // On a phone there is no C key, so the hint is what you press.
-    this.q('#building-hint').addEventListener('click', () => this.cb.onOpenClaim());
+    // On a phone there is no C key, so the hint is what you press. While a
+    // building is open for changes, the same strip and the same tap mean
+    // something else — see setEditingBanner.
+    this.q('#building-hint').addEventListener('click', () => {
+      if (this.editingBanner) this.cb.onFinishEditing?.();
+      else this.cb.onOpenClaim();
+    });
 
     for (const sel of ['#btn-fullscreen', '#t-screen']) {
       const fsBtn = this.q(sel);
@@ -613,7 +649,6 @@ export class UIManager {
     this.duiltUI = new DuiltUI(this.root, { game: this.game, bus: this.bus, panels: this.panels });
     // The hotbar is a view of the bag in Duilt, so it re-renders with it.
     this.duiltUI.onBagChanged = () => { if (this.cb.isDuilt?.()) this.buildHotbar(); };
-    this.duiltUI.onClaimType = (id) => this.cb.onClaimType(id);
     this.duiltUI.onStampStarter = (id) => this.cb.onStampStarter(id);
     this.duiltUI.onLeave = () => { this.closeAllPanels(); this.openHome(); };
     this.refreshForDuilt();
@@ -852,8 +887,11 @@ export class UIManager {
 
   cycleHotbarByKey(n) {
     if (this.cb.isDuilt?.()) {
+      // In Duilt this is now literally slot n-1, the same classic hotbar
+      // number keys always meant — nothing to look up, since the slot's
+      // position in the bag *is* the number now.
       const slot = this.root.querySelectorAll('#hotbar .hotbar-slot')[n - 1];
-      if (!slot) return;
+      if (!slot || slot.classList.contains('empty')) return;
       if (slot.dataset.tool) this.selectItem(slot.dataset.item);
       else this.selectBlock(Number(slot.dataset.id));
       return;
@@ -870,10 +908,11 @@ export class UIManager {
    * the DOM the hotbar just drew rather than a separate list, so it works the
    * same way in Duilt and Creative without knowing which one it is; a locked
    * Creative slot is skipped rather than landed on, the same as a number key
-   * already refuses one.
+   * already refuses one — an empty Duilt playable slot the same way now.
    */
   cycleHotbarByDelta(delta) {
-    const slots = [...this.root.querySelectorAll('#hotbar .hotbar-slot')].filter((s) => !s.classList.contains('locked'));
+    const slots = [...this.root.querySelectorAll('#hotbar .hotbar-slot')]
+      .filter((s) => !s.classList.contains('locked') && !s.classList.contains('empty'));
     if (!slots.length) return;
     const current = slots.findIndex((s) => s.classList.contains('selected'));
     const next = slots[(current + delta + slots.length) % slots.length];
@@ -922,7 +961,15 @@ export class UIManager {
     // the right. A stack of five was a column of text down a screen that is
     // mostly the thing you are trying to look at, and by the third one you were
     // reading the oldest — the one you had already stopped caring about.
-    if (this.isTouch) for (const old of [...stack.children]) this.dismissToast(old);
+    //
+    // The same is true with a panel open, on any device: the stack sits above
+    // panels on purpose, so a message answering something you just pressed
+    // inside one is never hidden behind it — but five of them at once, each
+    // alive for over three seconds, is a wall over whatever the panel actually
+    // holds. Reported directly: opening the bag with a few toasts still up
+    // left the slots themselves covered and impossible to work with. One at a
+    // time keeps that promise without also blocking the thing the panel is for.
+    if (this.isTouch || this.isAnyPanelOpen()) this.collapseToasts();
 
     stack.appendChild(node);
     setTimeout(() => this.dismissToast(node), action ? 7000 : 3400);
@@ -935,6 +982,52 @@ export class UIManager {
     node.classList.add('going');
     node.classList.add(this.isTouch ? 'push-out' : 'fade-out');
     setTimeout(() => node.remove(), this.isTouch ? 280 : 320);
+  }
+
+  /**
+   * Clears whatever is already in the stack — called whenever a panel opens
+   * (see the Panels.onOpen hook below) and before a new toast joins a stack
+   * that was already up. A panel you just opened is the thing on screen you
+   * are meant to be looking at; a pile of toasts left over from before you
+   * opened it is not.
+   */
+  collapseToasts() {
+    const stack = this.q('#toast-stack');
+    if (!stack) return;
+    for (const old of [...stack.children]) this.dismissToast(old);
+  }
+
+  /**
+   * Hides the HUD and touch controls behind whatever overlay is on top —
+   * called on every panel and screen open/close (see the Panels hooks
+   * above), so it covers the Duilt layer's panels too.
+   *
+   * This used to be a CSS sibling selector keyed off specific panel ids
+   * (`#blocker:not([hidden]) ~ #hotbar-wrap`, and separately for
+   * panel-stats and panel-menu) — which only ever worked for panels that
+   * happen to be direct siblings of the HUD in the DOM. The Duilt layer's
+   * own panels (the bag, a storehouse, buildings, the bench…) live inside
+   * `#duilt-layer`, a level deeper, so no sibling selector could ever reach
+   * them: the hotbar and the touch Fill/Jump buttons sat there fully
+   * visible and fully dead under the bag screen, answering no tap at all.
+   * A class on the body has no DOM-depth problem to have, and one registry
+   * (Panels, see Panels.js's own doc comment) means this covers every
+   * panel there is without a list of ids to keep in sync by hand.
+   *
+   * One exception: the bag. Reported directly, twice — first that the
+   * hotbar sat there fully visible and fully dead under the bag screen
+   * (fixed above by hiding it), then that hiding it left nothing to
+   * organize into: the bag *is* the inventory (one set of slots, see
+   * DuiltUI.renderBag), and the hotbar is the one on-screen way to see
+   * and change what's selected to build with while you're in there sorting
+   * it. So the bag alone gets it back — see the `body.bag-open` rule in
+   * styles.css, which also lifts it above the bag's own dimmed backdrop so
+   * taps land on it rather than falling through to the overlay behind.
+   */
+  updateHudVisibility() {
+    const hidden = this.panels.all().some((el) => !el.hidden);
+    document.body.classList.toggle('panel-open', hidden);
+    document.body.classList.toggle('bag-open', this.panels.isOpen('panel-bag'));
   }
 
   /** Fills a panel in just before it is shown, if it has anything to fill. */
@@ -1024,8 +1117,14 @@ export class UIManager {
   /**
    * Names the claimed building under the crosshair, or hides the hint.
    * Called every frame, so it only touches the DOM when something changed.
+   *
+   * Skipped outright while setEditingBanner has the strip: that message
+   * doesn't depend on where you're looking, and the per-frame aim check
+   * would otherwise overwrite or hide it the instant you looked away from
+   * whatever you'd just broken or placed.
    */
   setBuildingHint(text) {
+    if (this.editingBanner) return;
     const el = this.q('#building-hint');
     if (!el) return;
     if (!text) { if (!el.hidden) el.hidden = true; return; }
@@ -1041,6 +1140,7 @@ export class UIManager {
    * holding something the only question is where it is going.
    */
   setMoveHint(name, reason) {
+    if (this.editingBanner) return;
     const el = this.q('#building-hint');
     if (!el) return;
     if (!name) { el.hidden = true; el.classList.remove('bad'); return; }
@@ -1051,6 +1151,34 @@ export class UIManager {
   }
 
   /**
+   * Pins the crosshair strip to "editing this building" for as long as a
+   * building is unlocked for changes, regardless of where you're looking —
+   * that used to be the one way to finish, so the moment you looked away
+   * from the last block you touched (or broke it clean off, with nothing
+   * left there to aim at), the only way back was to walk to wherever a wall
+   * of it still stood and aim precisely enough to reopen the claim panel.
+   * A tap here does the same thing setEditingBanner made this strip into a
+   * button for: finish, without needing to find that spot again.
+   */
+  setEditingBanner(name) {
+    this.editingBanner = true;
+    document.body.classList.add('editing-building');
+    const el = this.q('#building-hint');
+    if (!el) return;
+    el.innerHTML = `<b>Editing the ${name.toLowerCase()}</b>`
+      + `<span>${this.isTouch ? 'Tap' : 'Click'} here when you're done</span>`;
+    el.classList.remove('bad');
+    el.hidden = false;
+  }
+
+  clearEditingBanner() {
+    this.editingBanner = false;
+    document.body.classList.remove('editing-building');
+    const el = this.q('#building-hint');
+    if (el) el.hidden = true;
+  }
+
+  /**
    * Names the settler under the crosshair.
    *
    * Same strip as the building hint, because it answers the same question —
@@ -1058,6 +1186,7 @@ export class UIManager {
    * worse than either.
    */
   setPersonHint(name, doing) {
+    if (this.editingBanner) return;
     const el = this.q('#building-hint');
     if (!el) return;
     el.innerHTML = `<b>${name}</b><span>${doing}</span>`;
@@ -1106,6 +1235,7 @@ export class UIManager {
     // in — this list is the only thing teaching the game now, and a flat grid
     // of twenty cards answers "what have I done" but never "what next".
     const done = s.achievementsUnlocked;
+    const ctx = this.gamification.ctx();
     this.q('#ach-grid').innerHTML = goalBands().map((band) => {
       const met = band.goals.filter((g) => done.has(g.id)).length;
       const reached = s.age >= band.age;
@@ -1115,12 +1245,21 @@ export class UIManager {
             <span>Age ${band.age} \u00b7 ${escapeHtml(band.name)}</span>
             <span class="goal-band-count">${met} / ${band.goals.length}</span>
           </div>
-          ${band.goals.map((g) => `
-            <div class="ach-card ${done.has(g.id) ? '' : 'locked'} ${g.border ? 'is-border' : ''}">
+          ${band.goals.map((g, i) => {
+            const isDone = done.has(g.id);
+            const progress = !isDone ? g.progress?.(ctx) : null;
+            return `
+            <div class="ach-card ${isDone ? '' : 'locked'} ${g.required ? 'required' : ''}">
               <div class="ach-icon">${g.icon}</div>
-              <div><div class="ach-name">${escapeHtml(g.name)}</div>
-                   <div class="ach-desc">${escapeHtml(g.description)}</div></div>
-            </div>`).join('')}
+              <div>
+                <div class="ach-name">
+                  <span class="ach-num">${i + 1}.</span> ${escapeHtml(g.name)}
+                  ${progress ? `<span class="ach-progress">${progress}</span>` : ''}
+                </div>
+                <div class="ach-desc">${escapeHtml(g.description)}</div>
+              </div>
+            </div>`;
+          }).join('')}
         </div>`;
     }).join('');
 
@@ -1507,7 +1646,7 @@ export class UIManager {
     if (!state) {
       el.hidden = true;
       this.setArmedTool(null);
-      this.setActionLabels('Break', 'Place');
+      this.setActionLabels(...this.defaultActionLabels());
       return;
     }
     el.hidden = false;
@@ -1557,6 +1696,11 @@ export class UIManager {
     p.querySelector('span').textContent = placeLabel;
   }
 
+  /** The two button labels for whatever is selected right now, with no tool queued. */
+  defaultActionLabels() {
+    return TOOL_ACTION_LABELS[this.selectedItemId] ?? ['Break', 'Place'];
+  }
+
   /**
    * Carrying a building changes what the two thumb buttons mean, so they say
    * so. Guessing which of Break and Place puts down the thing in your hands is
@@ -1564,7 +1708,8 @@ export class UIManager {
    */
   setCarrying(on) {
     this.carrying = on;
-    this.setActionLabels(on ? 'Cancel' : 'Break', on ? 'Drop' : 'Place');
+    const [b, p] = this.defaultActionLabels();
+    this.setActionLabels(on ? 'Cancel' : b, on ? 'Drop' : p);
     this.q('#t-place')?.classList.toggle('active', !!on);
   }
 

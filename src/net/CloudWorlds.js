@@ -36,7 +36,7 @@ export class CloudWorlds {
    * Uploads the world and its progression. Returns how much actually moved, so
    * the UI can say "3 of 16 chunks" rather than a meaningless spinner.
    */
-  async save(worldId, { world, name, mode, player, gamification, economy, duilt, revision }) {
+  async save(worldId, { world, name, mode, player, gamification, economy, duilt, revision, territoryBounds }) {
     const meta = {
       name: name || 'Untitled world',
       mode,
@@ -63,7 +63,11 @@ export class CloudWorlds {
       // passes one past whatever the account currently holds.
       revision: revision ?? Date.now(),
     };
-    const result = await this.sync.push(worldId, { world, meta });
+    // Claimed land goes up in full, touched or not — see SyncEngine.snapshot
+    // and World.serialize's matching note — so the one part of an endless
+    // world somebody has a stake in can never shift under them because the
+    // generator changed between sessions.
+    const result = await this.sync.push(worldId, { world, meta, keepBounds: territoryBounds });
 
     if (gamification) {
       // Best effort: a world that uploaded is the thing worth keeping, and a

@@ -29,6 +29,11 @@ function ring(x0, z0, w, d, dy, type) {
     .filter((b) => b.dx === x0 || b.dx === x0 + w - 1 || b.dz === z0 || b.dz === z0 + d - 1);
 }
 
+/** Moves a block list to a corner other than its own — how a compound design is built from smaller pieces. */
+function shifted(blocks, dx0, dz0) {
+  return blocks.map((b) => ({ ...b, dx: b.dx + dx0, dz: b.dz + dz0 }));
+}
+
 /**
  * A walled room with a doorway, which is what most of these are.
  *
@@ -154,6 +159,39 @@ function monumentBlocks() {
   return blocks;
 }
 
+/** A bigger, better-finished room than a house's — three households' worth. */
+function townhouseBlocks() {
+  return room({ w: 8, h: 3, wall: PLANKS, floor: STONE });
+}
+
+/** A room with a brick hearth for a floor — the brick is the hearth the rule asks for. */
+function tavernBlocks() {
+  return room({ w: 6, h: 2, wall: PLANKS, floor: BRICK });
+}
+
+/** A stone shell tall enough to watch from, sealed and open to the sky. */
+function militaryBlocks() {
+  return room({ w: 6, h: 5, wall: STONE });
+}
+
+/**
+ * A forest, a farm, three houses and a shed, laid out side by side rather
+ * than stacked — big enough that the pieces read as their own buildings
+ * rather than one room wearing four labels.
+ */
+function villageBlocks() {
+  const house = () => room({ w: 5, h: 2, wall: WOOD, floor: PLANKS });
+  const shed = () => room({ w: 5, h: 2, wall: PLANKS, floor: PLANKS });
+  return [
+    ...shifted(farmBlocks(), 0, 0),
+    ...shifted(forestBlocks(), 0, 5),
+    ...shifted(house(), 9, 3),
+    ...shifted(house(), 9, 9),
+    ...shifted(house(), 15, 3),
+    ...shifted(shed(), 15, 9),
+  ];
+}
+
 export const STARTER_DESIGNS = [
   {
     id: 'starter_forest',
@@ -226,6 +264,23 @@ export const STARTER_DESIGNS = [
     blocks: marketBlocks(),
   },
   {
+    id: 'starter_townhouse',
+    structure: 'townhouse',
+    name: 'Starter townhouse',
+    size: 8,
+    footprint: '8 × 8',
+    blocks: townhouseBlocks(),
+  },
+  {
+    id: 'starter_tavern',
+    structure: 'tavern',
+    name: 'Starter tavern',
+    size: 6,
+    footprint: '6 × 6',
+    note: 'Put it among your buildings — it will not count on its own in a field.',
+    blocks: tavernBlocks(),
+  },
+  {
     id: 'starter_mine',
     structure: 'mine',
     name: 'Starter working',
@@ -242,6 +297,24 @@ export const STARTER_DESIGNS = [
     footprint: '6 × 6',
     note: 'Build it within 16 blocks of your fields.',
     blocks: room({ w: 6, h: 3, wall: PLANKS }),
+  },
+  {
+    id: 'starter_military',
+    structure: 'military',
+    name: 'Starter garrison',
+    size: 6,
+    footprint: '6 × 6',
+    note: 'Nothing may stand over the watch.',
+    blocks: militaryBlocks(),
+  },
+  {
+    id: 'starter_village',
+    structure: 'village',
+    name: 'Starter village',
+    size: 20,
+    footprint: '20 × 14',
+    note: 'Needs fresh water within 8 blocks — build nearer the river.',
+    blocks: villageBlocks(),
   },
   {
     id: 'starter_monument',

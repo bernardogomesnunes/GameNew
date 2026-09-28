@@ -43,6 +43,11 @@ function freshSession() {
 export class GamificationEngine {
   constructor(bus) {
     this.bus = bus;
+    // The live settlement, when there is one — set by Game.js whenever it
+    // changes. A required goal (see config/achievements.js's requiredGoals)
+    // reads the settlement directly rather than through `stats`, so it needs
+    // the real thing, not the shadow copy everything else here checks against.
+    this.duilt = null;
     this.state = {
       xp: 0,
       level: 1,
@@ -97,8 +102,8 @@ export class GamificationEngine {
       if (size) this.state.landSize = Math.max(this.state.landSize, size);
       this.checkAchievements(null);
     });
-    this.bus.on('structure:claimed', ({ type } = {}) => {
-      if (type) this.state.claimed.add(type);
+    this.bus.on('structure:claimed', ({ structure } = {}) => {
+      if (structure?.type) this.state.claimed.add(structure.type);
       this.state.claimedCount += 1;
       this.checkAchievements(null);
     });
@@ -106,6 +111,19 @@ export class GamificationEngine {
       this.state.settlersEver += 1;
       this.checkAchievements(null);
     });
+  }
+
+  /** Called by Game.js whenever the live settlement changes — a new world, a
+   *  loaded one, or leaving Duilt for Creative, where it goes back to null. */
+  setDuilt(duilt) {
+    this.duilt = duilt ?? null;
+    this.checkAchievements(null);
+  }
+
+  /** What a goal's check/progress function reads — see requiredGoals in
+   *  config/achievements.js for the one kind that needs `duilt` itself. */
+  ctx(event = null) {
+    return { stats: this.snapshot(), event, duilt: this.duilt };
   }
 
   // ---- daily challenge / streak bookkeeping ----
@@ -355,7 +373,7 @@ export class GamificationEngine {
   }
 
   checkAchievements(event) {
-    const ctx = { stats: this.snapshot(), event };
+    const ctx = this.ctx(event);
     for (const ach of ACHIEVEMENTS) {
       if (this.state.achievementsUnlocked.has(ach.id)) continue;
       if (ach.check(ctx)) {

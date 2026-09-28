@@ -82,9 +82,28 @@ export class SyncEngine {
     } catch { /* a full quota must not break the game loop */ }
   }
 
-  /** Current content hash of every chunk worth uploading. */
-  snapshot(world) {
+  /**
+   * Current content hash of every chunk worth uploading.
+   *
+   * `keepBounds` — claimed land, in block coordinates — asks for every chunk
+   * touching it to be treated as worth uploading too, touched or not. An
+   * untouched chunk can regenerate from the seed right up until the
+   * generator itself changes between sessions, at which point whatever
+   * regenerates is built by whatever code is running *then* — which can
+   * reshape the ground next to something the player actually built. That
+   * only threatens land somebody has a stake in, so this bounds the fix to
+   * their claim rather than to every chunk anyone has ever walked past. See
+   * the matching note on World.serialize.
+   */
+  snapshot(world, keepBounds = null) {
     const entries = [];
+    const seen = new Set();
+    const consider = (chunk) => {
+      if (seen.has(chunk)) return;
+      seen.add(chunk);
+      const bytes = encodeChunk(chunk);
+      entries.push({ cx: chunk.cx, cz: chunk.cz, bytes, hash: hashBytes(bytes) });
+    };
     for (const chunk of world.allChunks()) {
       // An endless world can regenerate any untouched chunk from its seed —
       // that is the entire point of carrying a seed instead of a grid, and
@@ -95,26 +114,32 @@ export class SyncEngine {
       // anything from at all — see World's own notes on why — so every one
       // of its chunks is real, unrecoverable data and still goes up.
       if (world.endless && !chunk.touched) continue;
-      const bytes = encodeChunk(chunk);
-      entries.push({ cx: chunk.cx, cz: chunk.cz, bytes, hash: hashBytes(bytes) });
+      consider(chunk);
+    }
+    if (world.endless && keepBounds) {
+      for (let cx = keepBounds.minX >> 4; cx <= keepBounds.maxX >> 4; cx++) {
+        for (let cz = keepBounds.minZ >> 4; cz <= keepBounds.maxZ >> 4; cz++) {
+          consider(world.getChunk(cx, cz));
+        }
+      }
     }
     return entries;
   }
 
   /** Chunks whose contents differ from what the server last confirmed. */
-  diff(worldId, world) {
+  diff(worldId, world, keepBounds = null) {
     const known = this.manifests[worldId] || {};
     const changed = [];
-    for (const entry of this.snapshot(world)) {
+    for (const entry of this.snapshot(world, keepBounds)) {
       const key = `${entry.cx},${entry.cz}`;
       if (known[key] !== entry.hash) changed.push(entry);
     }
     return changed;
   }
 
-  async push(worldId, { world, meta }) {
+  async push(worldId, { world, meta, keepBounds = null }) {
     if (!this.transport) throw new Error('No sync transport configured.');
-    const changed = this.diff(worldId, world);
+    const changed = this.diff(worldId, world, keepBounds);
     const result = await this.transport.pushWorld({
       worldId,
       meta,

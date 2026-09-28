@@ -58,6 +58,16 @@ inv5.add('bucket', 1);
 for (let i = 0; i < 500; i++) inv5.useTool('bucket');
 ok('bucket never wears out', inv5.countOf('bucket') === 1);
 
+// discarding — the trash icon on a slot, not "remove some of this item"
+const inv6 = new Inventory();
+inv6.add('dirt', 41); // one stack, in slot 0
+inv6.slots[5] = { id: 'dirt', count: 12, wear: 0 }; // a second, separate stack of the same item
+const thrown = inv6.discard(0);
+ok('discard empties the exact slot', inv6.slots[0] === null && thrown.id === 'dirt' && thrown.count === 41);
+ok('a same-item stack elsewhere is untouched', inv6.countOf('dirt') === 12);
+ok('discarding an empty slot does nothing', inv6.discard(1) === null);
+ok('and an out-of-range slot is refused, not a crash', inv6.discard(999) === null);
+
 // full bag refuses rather than eats items
 const small = new Inventory({ slots: 2 });
 small.add('dirt', 500); small.add('stone', 500);

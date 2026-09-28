@@ -23,12 +23,12 @@ ok('the canvas listens for wheel', /canvas\.addEventListener\('wheel', \(e\) => 
 ok('only while actually playing, not mid-panel or mid-move',
   /canvas\.addEventListener\('wheel'[\s\S]{0,80}if \(!this\.pointerLocked \|\| this\.moving\) return;/.test(game));
 ok('it drives the same cycle the hotbar already has', /this\.ui\.cycleHotbarByDelta\(Math\.sign\(e\.deltaY\)\);/.test(game));
-ok('and stops the page itself from scrolling', /canvas\.addEventListener\('wheel'[\s\S]{0,300}\{ passive: false \}\);/.test(game));
+ok('and stops the page itself from scrolling', /canvas\.addEventListener\('wheel'[\s\S]{0,500}\{ passive: false \}\);/.test(game));
 
 ok('cycleHotbarByDelta reads the same DOM the click handler and number keys do',
   /cycleHotbarByDelta\(delta\) \{\s*const slots = \[\.\.\.this\.root\.querySelectorAll\('#hotbar \.hotbar-slot'\)\]/.test(ui));
-ok('a locked Creative slot is skipped, not landed on',
-  /cycleHotbarByDelta\(delta\)[\s\S]{0,200}filter\(\(s\) => !s\.classList\.contains\('locked'\)\)/.test(ui));
+ok('a locked Creative slot is skipped, not landed on — an empty Duilt one too',
+  /cycleHotbarByDelta\(delta\)[\s\S]{0,200}filter\(\(s\) => !s\.classList\.contains\('locked'\) && !s\.classList\.contains\('empty'\)\)/.test(ui));
 ok('it wraps around both ends', /\(current \+ delta \+ slots\.length\) % slots\.length/.test(ui));
 ok('and dispatches through the same selectItem\\/selectBlock split every other entry point uses',
   /cycleHotbarByDelta\(delta\)[\s\S]{0,400}if \(next\.dataset\.tool\) this\.selectItem\(next\.dataset\.item\);\s*else this\.selectBlock\(Number\(next\.dataset\.id\)\);/.test(ui));

@@ -71,9 +71,12 @@ for (const design of STARTER_DESIGNS) {
   if (design.structure === 'granary') {
     for (let dx = 0; dx < 4; dx++) for (let dz = 0; dz < 4; dz++) world.setBlock(10 + dx, groundY, 10 + dz, FARMLAND);
   }
-  if (design.structure === 'market') {
-    // A neighbour, since a market has to stand among your town.
+  if (design.structure === 'market' || design.structure === 'tavern') {
+    // A neighbour, since a market or a tavern has to stand among your town.
     for (let dy = 0; dy < 3; dy++) world.setBlock(15, groundY + dy, 15, PLANKS);
+  }
+  if (design.structure === 'village') {
+    for (let y = groundY; y < groundY + 2; y++) world.setBlock(18, y, 21, WATER);
   }
 
   const region = stamp(world, design, { x: 20, y: groundY, z: 20 });

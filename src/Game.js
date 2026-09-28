@@ -6,7 +6,7 @@ import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { buildTemplatePlacement, rotateTemplate, captureBlocks } from './tools/Templates.js';
 import { roofPlan, roofBlocks, roofPeak, roofPick } from './tools/RoofTool.js';
-import { pickBuild } from './tools/PointerPick.js';
+import { pickBuild, wallFootprintAt } from './tools/PointerPick.js';
 import { ROOFS_BY_ID, facingLabel } from './config/roofs.js';
 import { clearPlan, clearCells, cellBounds } from './tools/ClearTool.js';
 import { CLEARS_BY_ID } from './config/clears.js';
@@ -34,8 +34,8 @@ const UNSENT_KEY = 'voxelgame:unsent';
 const makeChunkGen = (o) => new ChunkGen(o);
 
 /** Everything about a world that has to survive, as plain JSON. */
-function serialiseWorldState({ world, mode, economy, duilt }) {
-  return { world: world.serialize(), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null };
+function serialiseWorldState({ world, mode, economy, duilt, territoryBounds }) {
+  return { world: world.serialize({ keepBounds: territoryBounds }), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null };
 }
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
@@ -46,8 +46,8 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID } from './config/blocks.js';
-import { TOOL_FOR } from './config/items.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf } from './config/blocks.js';
+import { TOOL_FOR, toolEffectiveness, itemName } from './config/items.js';
 
 const REACH = 7;
 /**
@@ -101,6 +101,31 @@ const HOLD_BREAK_DELAY_MS = 320;
 const HOLD_BREAK_INTERVAL_MS = 170;
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
+
+// The column claim tool — see beginClaimColumn. The height always grows up
+// from the block you're pointing at, never down, so a claim never reaches
+// into the ground you're standing on.
+const CLAIM_COLUMN_MIN_HEIGHT = 1;
+const CLAIM_COLUMN_MAX_HEIGHT = 24;
+const CLAIM_COLUMN_DEFAULT_HEIGHT = 4;
+
+// How long a block takes to actually come free — see breakDelayFor. Bare
+// hands (or a tool with nothing to say about this material) sit at
+// NORMAL_BREAK_MS; the one thing a mining tool changes is knocking a
+// material it's suited to down near enough to instant, or a wrong one up to
+// SLOW_BREAK_MS. Only applies in Duilt — Creative has no bag to fill and no
+// reason to make you wait for anything.
+const NORMAL_BREAK_MS = 260;
+const SLOW_BREAK_MS = 900;
+
+/**
+ * Items that fully replace Break/Place while selected, rather than digging
+ * or building — the bucket, and now food. The value is a method on Game.
+ * Mining tools (axe, pickaxe, shovel) are not in here: they don't replace
+ * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
+ */
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -144,13 +169,16 @@ export class Game {
     this.canvasRoot.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x8fd0ff);
+    // A softer, paler sky than the original saturated blue — the block
+    // palette went pastel too (config/blocks.js), and a bright sky over
+    // pale blocks would have fought them for whichever read as "the color".
+    this.scene.background = new THREE.Color(0xadd7f5);
     const chosen = DISTANCES[this.graphics.distance];
     const blocksTo = chosen ? chosen.fogFar : (coarse ? BLOCKS_TO_COARSE : BLOCKS_TO);
     this.horizon = coarse ? HORIZON_COARSE : HORIZON;
     // Fog starts well out and finishes at the horizon, so the coarse ground is
     // hazed rather than hidden — it is what sells the distance as distance.
-    this.scene.fog = new THREE.Fog(0x8fd0ff, this.horizon * 0.35, this.horizon);
+    this.scene.fog = new THREE.Fog(0xadd7f5, this.horizon * 0.35, this.horizon);
     this.renderDistance = blocksTo + CULL_MARGIN;
 
     // The near plane sets how much depth precision the whole scene gets, and
@@ -165,7 +193,10 @@ export class Game {
     const sun = new THREE.DirectionalLight(0xfff3d6, 0.85);
     sun.position.set(60, 90, 30);
     this.scene.add(sun);
-    this.scene.add(new THREE.HemisphereLight(0xbfe3f0, 0x3a2f22, 0.4));
+    // Ground bounce-light lightened to match: 0x3a2f22 was dark enough that
+    // every underside and shadowed face read muddy no matter how pale the
+    // blocks above them were.
+    this.scene.add(new THREE.HemisphereLight(0xadd7f5, 0x7f6445, 0.4));
 
     this.mesher = new ChunkMesher(this.scene);
     this.farTerrain = new FarTerrain(this.scene);
@@ -191,6 +222,11 @@ export class Game {
     this.breaking = false;
     this.breakHeldSince = 0;
     this.lastBreakAt = 0;
+    // Which block is currently being dug and since when — see breakDelayFor.
+    // Persists across separate taps on the same block, not just a hold, so
+    // digging progress is the same whether you hold the button or tap it
+    // repeatedly.
+    this.digTarget = null;
     // Same idea, for Place — see setPlacing/tickPlacing.
     this.placing = false;
     this.placeHeldSince = 0;
@@ -212,6 +248,7 @@ export class Game {
     this.ghost = new BuildGhost(this.scene);
     this.settlerView = new SettlerView(this.scene);
     this.moving = null;   // the building currently in the air
+    this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
     this.boot();
     window.addEventListener('resize', () => this.onResize());
@@ -265,6 +302,7 @@ export class Game {
     this.templateRotation = 0;
     this.pendingRoof = null;     // the roof shape queued, if any
     this.pendingClear = null;    // the clear shape queued, if any
+    this.pendingClaimColumn = null; // { height } — see beginClaimColumn
     this.roofTurn = 0;
     this.roofKey = null;         // what the preview was last built for
     this.lastRoof = null;        // the roof this tool put up, while it is untouched
@@ -735,7 +773,7 @@ export class Game {
       isDuilt: () => !!this.duilt,
       onOpenBag: () => this.ui.toggleBag(),
       onOpenClaim: () => this.openClaim(),
-      onClaimType: (id) => this.claimAs(id),
+      onFinishEditing: () => this.finishEditing(),
       onStampStarter: (id) => this.stampStarter(id),
       onOpenBuildings: () => this.ui.openPanel('panel-buildings'),
       onOpenBench: () => this.ui.openPanel('panel-bench'),
@@ -766,6 +804,11 @@ export class Game {
       worldId: this.worldId,
       worldName: this.worldName,
       duilt: this.duilt ? this.duilt.toJSON() : null,
+      // Claimed land is saved in full, not just the chunks you've actually
+      // dug into — see World.serialize's keepBounds. this.duilt.toJSON()
+      // above is already plain data by the time serialiseWorldState runs,
+      // so the live bounds have to ride along separately.
+      territoryBounds: this.duilt ? this.duilt.territory.bounds() : null,
     };
   }
 
@@ -826,6 +869,7 @@ export class Game {
     // and called a line earlier it only ever saw the world that came before.
     this.applyTerritoryBounds();
     this.gamification = new GamificationEngine(this.bus);
+    this.gamification.setDuilt(this.duilt);
     this.economy = new EconomyEngine(this.bus);
     if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
     this.rebuildAllChunks();
@@ -907,6 +951,7 @@ export class Game {
         }), 600);
       }
     }
+    this.gamification.setDuilt(this.duilt);
     this.applyTerritoryBounds();
     this.rebuildAllChunks();
     if (this.ui) {
@@ -1013,6 +1058,9 @@ export class Game {
     canvas.addEventListener('wheel', (e) => {
       if (!this.pointerLocked || this.moving) return;
       e.preventDefault();
+      // While the column claim tool is armed, the wheel sets its height
+      // instead — see beginClaimColumn.
+      if (this.pendingClaimColumn) return void this.adjustClaimColumnHeight(-Math.sign(e.deltaY));
       this.ui.cycleHotbarByDelta(Math.sign(e.deltaY));
     }, { passive: false });
     // Every way the button can stop being down, including the ones that are not
@@ -1142,7 +1190,7 @@ export class Game {
 
   /** Whether a tool is queued and waiting to be used where you are pointing. */
   get armed() {
-    return !!(this.pendingRoof || this.pendingTemplate || this.pendingClear || this.pendingClaim);
+    return !!(this.pendingRoof || this.pendingTemplate || this.pendingClear || this.pendingClaim || this.pendingClaimColumn);
   }
 
   primaryAction() {
@@ -1150,12 +1198,14 @@ export class Game {
     // A queued tool takes the button it needs and nothing else does. There is
     // no mode to be in any more: if nothing is queued, Break breaks.
     if (this.pendingClaim) return void this.markClaimCorner();
+    if (this.pendingClaimColumn) return void this.confirmClaimColumn();
     if (this.pendingClear) return void this.runClear();
     if (this.pendingRoof) return void this.stampRoof();
     if (this.pendingTemplate) return void this.stampTemplate();
-    // The bucket takes the button too, while it's the one selected — it has
-    // nothing to dig with.
-    if (this.selectedItemId === 'bucket') return void this.fillBucket();
+    // The selected item can take the button instead of digging — the
+    // bucket, or something to eat. Nothing to dig with, or nothing to dig.
+    const override = BREAK_OVERRIDE[this.selectedItemId];
+    if (override) return void this[override]();
     this.breakBlock();
   }
 
@@ -1169,7 +1219,8 @@ export class Game {
     if (this.pendingRoof?.turns > 1) return void this.turnRoof();
     if (this.armed) return void this.clearPending();
     // A full bucket takes the button too, instead of placing a block.
-    if (this.selectedItemId === 'bucket_water') return void this.emptyBucket();
+    const override = PLACE_OVERRIDE[this.selectedItemId];
+    if (override) return void this[override]();
     this.placeBlock();
   }
 
@@ -1229,6 +1280,7 @@ export class Game {
     this.pendingRoof = null;
     this.pendingClear = null;
     this.pendingClaim = null;
+    this.pendingClaimColumn = null;
     this.roofTurn = 0;
     this.roofGhost.hide();
     this.roofKey = null;
@@ -1472,21 +1524,65 @@ export class Game {
   buildingActions(structure) {
     return {
       onChange: () => {
-        this.duilt.structures.setLocked(structure.id, structure.locked === false);
-        this.ui.toast({
-          kind: 'xp',
-          title: structure.locked ? 'Finished changing' : 'Open for changes',
-          body: structure.locked
-            ? 'Protected again'
-            : 'Break and place inside it — it is re-checked as you go',
-        });
-        // Redraw with the state it is in now, rather than the state it was in.
-        this.ui.openBuilding(structure, this.buildingActions(structure));
+        if (structure.locked === false) this.finishEditing();
+        else this.startEditing(structure);
       },
       onMove: () => this.beginMove(structure),
       onDelete: () => this.deleteBuilding(structure),
       onOpenStore: () => this.ui.openStore(structure),
+      onEvolve: () => this.evolveBuilding(structure),
     };
+  }
+
+  /**
+   * The button in the building panel that actually moves a leveled building
+   * up its ladder — see StructureRegistry.evolve. Qualifying used to be the
+   * whole story; this is what makes reaching the level something you did
+   * rather than something that happened to the last block you placed. The
+   * panel redraws itself off the bus (DuiltUI's structure:upgraded
+   * listener), so there is nothing more to do here than ask and say why not.
+   */
+  evolveBuilding(structure) {
+    const r = this.duilt.structures.evolve(structure.id);
+    if (!r.ok) this.ui.toast({ kind: 'xp', title: "Can't evolve it yet", body: r.reason });
+  }
+
+  /**
+   * Unlocks a building for changes and closes the panel so there is
+   * something to actually change — a claimed building's blocks are
+   * unbreakable while any panel is open (see the phase check this reads
+   * from), so the panel used to stay up, showing "Done changing" over a
+   * world you had no way to touch.
+   *
+   * Reported directly: finishing meant walking back to wherever a wall of
+   * it still stood and aiming precisely enough to reopen this same panel —
+   * worse once you'd broken the wall you were aiming at. The crosshair
+   * strip is pinned to this building instead (setEditingBanner), so
+   * finishing is one tap from wherever you are, not one tap from a spot you
+   * have to go back and find.
+   */
+  startEditing(structure) {
+    this.duilt.structures.setLocked(structure.id, false);
+    this.editingStructure = structure;
+    this.ui.closePanel('panel-building');
+    this.ui.setEditingBanner(STRUCTURES_BY_ID.get(structure.type)?.name ?? 'Building');
+    this.ui.toast({
+      kind: 'xp', title: 'Open for changes',
+      body: 'Break and place inside it — it is re-checked as you go',
+    });
+  }
+
+  /** The other half of startEditing — locks the building back up and hands the strip back to the crosshair. */
+  finishEditing() {
+    const structure = this.editingStructure;
+    if (!structure) return;
+    this.editingStructure = null;
+    this.duilt.structures.setLocked(structure.id, true);
+    this.ui.clearEditingBanner();
+    this.ui.toast({ kind: 'xp', title: 'Finished changing', body: 'Protected again' });
+    // Only actually open if it already was — reopening the panel here would
+    // undo the point of finishing from wherever you happen to be standing.
+    if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(structure, this.buildingActions(structure));
   }
 
   /**
@@ -1498,6 +1594,12 @@ export class Game {
    */
   deleteBuilding(structure) {
     const spec = STRUCTURES_BY_ID.get(structure.type);
+    // The building this would otherwise still be pinning the crosshair strip
+    // to no longer exists to finish editing.
+    if (this.editingStructure?.id === structure.id) {
+      this.editingStructure = null;
+      this.ui.clearEditingBanner();
+    }
 
     // Taking down a storehouse with things in it would take the things down
     // with it. Nothing else in the game destroys items, and this is not going
@@ -1545,6 +1647,12 @@ export class Game {
    * followed by a rebuild you might not be able to afford.
    */
   beginMove(structure) {
+    // Moving takes over the crosshair strip for its own hint (setMoveHint) —
+    // an edit in progress on the same building is done, one way or another.
+    if (this.editingStructure?.id === structure.id) {
+      this.editingStructure = null;
+      this.ui.clearEditingBanner();
+    }
     const r = structure.region;
     const blocks = [];
     for (const { x, y, z } of this.cellsOf(r)) {
@@ -1696,13 +1804,16 @@ export class Game {
     }
 
     // Otherwise the question is "what is this thing I am pointing at?", and the
-    // thing is however far the build goes — which the game can see for itself.
-    const build = this.buildUnderCrosshair();
-    if (!build) {
+    // thing is the wall course you're on — see wallFootprintAt, and
+    // beginClaimColumn for why this reads the wall rather than flood-filling
+    // outward from wherever the crosshair happens to land.
+    const hit = this.toolAim();
+    const footprint = hit && wallFootprintAt(this.world, hit);
+    if (!footprint) {
       this.ui.toast({ kind: 'xp', title: 'Point at what you built', body: 'Look at a wall of it and ask again' });
       return;
     }
-    const region = { ...build.bounds };
+    const region = { ...footprint, minY: hit.y, maxY: hit.y + CLAIM_COLUMN_DEFAULT_HEIGHT - 1 };
     this.ui.openClaim(region, (typeId) => {
       const r = this.duilt.claim(region, typeId);
       this.ui.toast(r.ok
@@ -1771,17 +1882,87 @@ export class Game {
     this.selection.update(region, blocksIn(this.world, region), this.world, { force: true });
   }
 
-  /** Claims the build you are pointing at as a named building type. */
-  claimAs(typeId) {
-    const build = this.duilt && this.buildUnderCrosshair();
-    if (!build) {
-      this.ui.toast({ kind: 'xp', title: 'Point at what you built', body: 'Look at a wall of it and try again' });
+  /**
+   * Draws a claim by pointing at one wall instead of tracing the whole build.
+   *
+   * "Claim what I framed" used to be buildUnderCrosshair's flood fill, which
+   * double-checked every block against the terrain's recorded surface height
+   * — a wall built starting at ground level (the only way anyone actually
+   * builds one) failed that check on its own lowest course, so pointing at
+   * your own house did nothing more often than it worked, with no error to
+   * say why. wallFootprintAt only follows blocks connected to the one you're
+   * pointing at, so it can't make that mistake. The height is no longer
+   * guessed at all — you set it yourself, growing up from the block you're
+   * on, because up is the direction you actually build in.
+   */
+  beginClaimColumn() {
+    if (!this.duilt) return false;
+    this.clearPending({ quiet: true });
+    this.pendingClaimColumn = { height: CLAIM_COLUMN_DEFAULT_HEIGHT };
+    this.claimColumnKey = null;
+    this.ui.closePanel('panel-buildings');
+    this.ui.toast({
+      kind: 'challenge',
+      title: 'Claim what I framed',
+      body: 'Point at a wall — scroll to set how tall, then Break to claim',
+    });
+    return true;
+  }
+
+  /** Scroll while the column tool is armed changes height instead of the hotbar. */
+  adjustClaimColumnHeight(delta) {
+    if (!this.pendingClaimColumn) return;
+    const h = this.pendingClaimColumn.height + delta;
+    this.pendingClaimColumn.height = Math.max(CLAIM_COLUMN_MIN_HEIGHT, Math.min(CLAIM_COLUMN_MAX_HEIGHT, h));
+    this.claimColumnKey = null;
+  }
+
+  /** The column being drawn, outlined in the world while you aim and scroll. */
+  updateClaimColumnPreview() {
+    const hit = this.toolAim();
+    const height = this.pendingClaimColumn.height;
+    if (!hit) {
+      this.ui.setToolReadout({ claim: 'Claim what I framed', target: 'Point at a wall', hint: 'Scroll to set how tall' });
+      this.selection.hide();
       return;
     }
-    const r = this.duilt.claim({ ...build.bounds }, typeId);
-    this.ui.toast(r.ok
-      ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
-      : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
+    const footprint = wallFootprintAt(this.world, hit);
+    if (!footprint) {
+      this.ui.setToolReadout({ claim: 'Claim what I framed', target: "That's not a wall", hint: 'Point at something you built' });
+      this.selection.hide();
+      return;
+    }
+    const region = { ...footprint, minY: hit.y, maxY: hit.y + height - 1 };
+    const w = footprint.maxX - footprint.minX + 1, d = footprint.maxZ - footprint.minZ + 1;
+    this.ui.setToolReadout({
+      claim: 'Claim what I framed',
+      target: `${w} × ${d} · ${height} tall`,
+      hint: 'Scroll to change height · Break to claim',
+    });
+    const key = `col:${hit.x},${hit.y},${hit.z}:${height}`;
+    if (key === this.claimColumnKey) return;
+    this.claimColumnKey = key;
+    this.selection.update(region, blocksIn(this.world, region), this.world, { force: true });
+  }
+
+  /** Break, while the column tool is armed: locks the region and hands off to the type picker. */
+  confirmClaimColumn() {
+    const hit = this.toolAim();
+    const footprint = hit && wallFootprintAt(this.world, hit);
+    if (!footprint) {
+      this.ui.toast({ kind: 'xp', title: "That's not a wall", body: 'Point at something you built' });
+      return;
+    }
+    const region = { ...footprint, minY: hit.y, maxY: hit.y + this.pendingClaimColumn.height - 1 };
+    this.pendingClaimColumn = null;
+    this.selection.hide();
+    this.ui.setToolReadout(null);
+    this.ui.openClaim(region, (typeId) => {
+      const r = this.duilt.claim(region, typeId);
+      this.ui.toast(r.ok
+        ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
+        : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
+    });
   }
 
   /**
@@ -1872,6 +2053,7 @@ export class Game {
       gamification: this.gamification,
       economy: this.economy,
       duilt: this.duilt ? this.duilt.toJSON() : null,
+      territoryBounds: this.duilt ? this.duilt.territory.bounds() : null,
       revision,
     });
     this.syncState.agree(this.worldId, result.revision);
@@ -2013,9 +2195,78 @@ export class Game {
     this.ui.toast({ kind: 'xp', title: 'Bucket emptied', body: 'Poured out' });
   }
 
+  /**
+   * What Break does with food selected: eat it instead of digging.
+   * DuiltGame.eat() already does the real work (which slot, hunger, the
+   * result) — this is only the wiring from "the hotbar slot you have
+   * selected" to it, the same job fillBucket/emptyBucket do for the bucket.
+   */
+  eatSelected() {
+    if (!this.duilt) return;
+    const r = this.duilt.eat(this.selectedItemId);
+    this.ui.toast(r.ok
+      ? { kind: 'challenge', title: 'That helps', body: `+${r.restored} hunger` }
+      : { kind: 'xp', title: r.reason });
+  }
+
+  /**
+   * What Place does with food selected: throw one away instead of building.
+   * One unit a press, the same grain as eatSelected — not the bag's discard
+   * button, which clears a whole stack at once.
+   */
+  throwSelected() {
+    if (!this.duilt) return;
+    const id = this.selectedItemId;
+    if (!this.duilt.inventory.remove(id, 1)) return;
+    this.ui.toast({ kind: 'xp', title: `Threw away ${itemName(id)}`, body: 'One less to carry' });
+  }
+
+  /**
+   * How long the block under the crosshair takes to come free, and whether
+   * the selected tool refuses it outright.
+   *
+   * Bare hands (nothing selected, or a non-mining item) are never in the
+   * effectiveness table at all, so they always land on the NORMAL/`false`
+   * fallback — every material, always breakable, just not the fast way.
+   * `blocked` only fires when a tool is actively wrong for the job.
+   */
+  breakDelayFor(blockId) {
+    const tier = toolEffectiveness(this.selectedItemId, materialOf(blockId));
+    if (tier === 'impossible') return { ms: 0, blocked: true, tier };
+    if (tier === 'fast') return { ms: 0, blocked: false, tier };
+    if (tier === 'slow') return { ms: SLOW_BREAK_MS, blocked: false, tier };
+    return { ms: NORMAL_BREAK_MS, blocked: false, tier };
+  }
+
   breakBlock() {
     const hit = this.raycast();
-    if (!hit) return;
+    if (!hit) { this.digTarget = null; return; }
+
+    let wornBy = null;
+    if (this.duilt) {
+      const key = `${hit.x},${hit.y},${hit.z}`;
+      const isNewTarget = !this.digTarget || this.digTarget.key !== key;
+      const { ms, blocked, tier } = this.breakDelayFor(this.world.getBlock(hit.x, hit.y, hit.z));
+      if (blocked) {
+        if (isNewTarget) {
+          this.digTarget = { key, startedAt: performance.now() };
+          this.ui.toast({
+            kind: 'xp',
+            title: "Can't break that",
+            body: `${itemName(this.selectedItemId)} won't touch it — try bare hands`,
+          });
+        }
+        return;
+      }
+      if (isNewTarget) this.digTarget = { key, startedAt: performance.now() };
+      if (ms > 0 && performance.now() - this.digTarget.startedAt < ms) return;
+      this.digTarget = null;
+      // A tool only wears doing the job it's actually suited for — the speed
+      // bonus has a cost, digging around with the wrong tool (or bare hands,
+      // which was never in the effectiveness table to begin with) does not.
+      if (tier === 'fast') wornBy = this.selectedItemId;
+    }
+
     const targets = this.computeTargets(hit.x, hit.y, hit.z);
     const changes = [];
     for (const t of targets) {
@@ -2023,7 +2274,13 @@ export class Game {
       if (prev === AIR) continue;
       changes.push({ x: t.x, y: t.y, z: t.z, prev, next: AIR });
     }
-    this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
+    const broke = this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
+    if (broke && wornBy) {
+      const result = this.duilt.inventory.useTool(wornBy);
+      if (result === 'worn') {
+        this.ui.toast({ kind: 'xp', title: `${itemName(wornBy)} broke`, body: 'Worn out — craft another' });
+      }
+    }
   }
 
   placeBlock() {
@@ -2281,6 +2538,7 @@ export class Game {
       this.player.releaseKeys();
       this.setBreaking(false);
       this.setPlacing(false);
+      this.digTarget = null;
       this.ui?.setBuildingHint(null);
       if (this.moving) this.endMove();
     }
@@ -2374,6 +2632,10 @@ export class Game {
     // something is going to use the answer.
     if (this.pendingClaim) {
       this.updateClaimPreview();
+      return;
+    }
+    if (this.pendingClaimColumn) {
+      this.updateClaimColumnPreview();
       return;
     }
     if (this.pendingClear) {

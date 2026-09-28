@@ -3,6 +3,21 @@ import { ITEMS_BY_ID, stackLimit, isTool } from '../config/items.js';
 export const DEFAULT_SLOTS = 40;
 
 /**
+ * How many of the player's own slots are the hotbar — real inventory slots,
+ * not a summary of them. Reported directly: the hotbar used to auto-build
+ * itself from whatever the bag held, one entry per kind — nothing to press,
+ * nothing to arrange, and nothing selectable that wasn't a block or one of
+ * a handful of hardcoded special items (a bucket, food), so a pickaxe could
+ * never actually be selected at all. The first PLAYABLE_SLOTS indices of
+ * the player's own Inventory are that hotbar now: what's sitting in slot 0
+ * is what number-key 1 selects, same as any classic hotbar, and getting an
+ * item there at all is done by hand, from the bag panel, the same lift/tap
+ * gesture that already rearranges the rest of the bag — see
+ * ui/DuiltUI.js's renderBag and ui/UIManager.js's buildHotbar.
+ */
+export const PLAYABLE_SLOTS = 9;
+
+/**
  * The player's bag: a fixed run of slots, each holding one kind of item.
  *
  * This replaces the old resource wallet. The wallet knew you had 340 wood and
@@ -282,6 +297,22 @@ export class Inventory {
 
   inRange(i) {
     return Number.isInteger(i) && i >= 0 && i < this.slots.length;
+  }
+
+  /**
+   * Empties one slot completely and throws away what was in it — the trash
+   * icon in the bag. Unlike `remove`, which takes an item by id from wherever
+   * it happens to be stacked, this is by slot, because "get rid of the stack
+   * I am pointing at" and "get rid of one of these, somewhere" are different
+   * requests. Returns what was thrown out, or null if the slot was empty.
+   */
+  discard(index) {
+    if (!this.inRange(index)) return null;
+    const slot = this.slots[index];
+    if (!slot) return null;
+    this.slots[index] = null;
+    this.changed();
+    return { id: slot.id, count: slot.count };
   }
 
   // ---- tools ----

@@ -1,17 +1,24 @@
 :root {
-  color-scheme: dark;
-  --bg: #070a0f;
-  --panel: rgba(13, 17, 23, 0.72);
-  --panel-solid: rgba(13, 17, 23, 0.96);
-  --panel-border: rgba(255, 255, 255, 0.10);
-  --panel-border-strong: rgba(255, 255, 255, 0.18);
-  --accent: #4ddbc4;
-  --accent-dim: rgba(77, 219, 196, 0.16);
-  --accent-2: #f2b134;
-  --text: #eef2f6;
-  --text-dim: #8b97a6;
-  --danger: #ef5f5f;
-  --good: #4ddbc4;
+  /* A light, pastel theme rather than the dark glass panel the game shipped
+     with — see config/blocks.js for the matching 3D-world palette. Two
+     surfaces stay deliberately dark regardless: the touch controls and the
+     idle "click to resume" backdrop, both of which float over the 3D world
+     itself (sky, ground, whatever you're looking at) rather than over a UI
+     panel, and need their own fixed contrast against that instead of
+     following the theme — search this file for "kept dark on purpose". */
+  color-scheme: light;
+  --bg: #eef5f4;
+  --panel: rgba(255, 252, 246, 0.74);
+  --panel-solid: rgba(255, 252, 246, 0.97);
+  --panel-border: rgba(35, 42, 45, 0.12);
+  --panel-border-strong: rgba(35, 42, 45, 0.24);
+  --accent: #299e8a;
+  --accent-dim: rgba(41, 158, 138, 0.14);
+  --accent-2: #c98a1f;
+  --text: #2b3330;
+  --text-dim: #667169;
+  --danger: #c85b53;
+  --good: #299e8a;
   --blur: blur(14px) saturate(1.2);
   --radius: 10px;
   /* The thumbstick's resting geometry, as variables rather than numbers, so a
@@ -28,6 +35,12 @@
   --stick-zone: 78px;      /* how far up the screen the stick's area starts */
   --side-btn: 54px;        /* the outboard buttons, which are their own size */
   --stick-gap: 24px;       /* clear air between the base and the column above it */
+  /* A panel's own padding, as variables rather than numbers so .panel-head
+     can cancel exactly this much of it to bleed to the edges — see .panel
+     and .panel-head below — and the two never drift apart on a phone. */
+  --panel-pad-t: 18px;
+  --panel-pad-x: 20px;
+  --panel-pad-b: 22px;
   font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-feature-settings: 'tnum' 1;
 }
@@ -84,7 +97,7 @@ html, body { margin: 0; height: 100%; background: var(--bg); overscroll-behavior
    which — the row being a stretch flexbox — made it 16px shorter than the
    Back button beside it. */
 #blocker .card button.primary { margin-top: 16px; }
-.hint-key { display: inline-block; background: rgba(255,255,255,0.1); border: 1px solid var(--panel-border); border-radius: 4px; padding: 1px 7px; font-size: 12px; }
+.hint-key { display: inline-block; background: rgba(35,42,45,0.1); border: 1px solid var(--panel-border); border-radius: 4px; padding: 1px 7px; font-size: 12px; }
 
 button.primary {
   background: linear-gradient(180deg, #6fd0e6, #3fa9c2); color: #04202a; border-radius: 8px;
@@ -95,7 +108,7 @@ button.primary {
   padding: 12px 22px; font-size: 16px; font-weight: 600; cursor: pointer;
 }
 button.secondary {
-  background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid var(--panel-border); border-radius: 8px;
+  background: rgba(35,42,45,0.08); color: var(--text); border: 1px solid var(--panel-border); border-radius: 8px;
   padding: 8px 14px; font-size: 14px; cursor: pointer;
 }
 button.secondary:hover, button.primary:hover { filter: brightness(1.1); }
@@ -110,7 +123,7 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
   width: 34px; height: 34px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent);
   display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0;
 }
-#xp-bar-track { flex: 1; height: 10px; background: rgba(255,255,255,0.1); border-radius: 6px; overflow: hidden; border: 1px solid var(--panel-border); }
+#xp-bar-track { flex: 1; height: 10px; background: rgba(35,42,45,0.1); border-radius: 6px; overflow: hidden; border: 1px solid var(--panel-border); }
 #xp-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.3s ease; }
 
 #resume-hint {
@@ -128,7 +141,7 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
   position: absolute; top: calc(50% + 34px); left: 50%; transform: translateX(-50%);
   pointer-events: none; z-index: 6; text-align: center;
   background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border: 1px solid rgba(77, 219, 196, 0.45); border-radius: 10px;
+  border: 1px solid rgba(41, 158, 138, 0.45); border-radius: 10px;
   padding: 7px 12px; min-width: 180px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.35);
 }
@@ -144,12 +157,12 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
    the one part of it you can touch. */
 #tool-cancel {
   pointer-events: auto; margin-top: 7px; width: 100%;
-  background: rgba(255,255,255,0.08); color: var(--text);
+  background: rgba(35,42,45,0.08); color: var(--text);
   border: 1px solid var(--panel-border-strong); border-radius: 7px;
   padding: 7px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
 }
-#tool-cancel:hover { background: rgba(255,255,255,0.15); }
-#tool-cancel:active { background: rgba(255,255,255,0.22); }
+#tool-cancel:hover { background: rgba(35,42,45,0.15); }
+#tool-cancel:active { background: rgba(35,42,45,0.22); }
 
 #top-buttons { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; pointer-events: auto; }
 .icon-btn {
@@ -198,7 +211,7 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 #hotbar::-webkit-scrollbar { display: none; }
 .hotbar-slot {
   position: relative; width: 44px; height: 44px; border-radius: 9px; border: 1px solid transparent; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(255,255,255,0.03);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; background: rgba(35,42,45,0.03);
   transition: border-color .14s ease, transform .14s ease;
 }
 .hotbar-slot .swatch {
@@ -223,6 +236,10 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 .swatch-cube .cube { display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45)); }
 .hotbar-slot.selected { border-color: var(--accent); background: var(--accent-dim); transform: translateY(-3px); }
 .hotbar-slot.locked { opacity: 0.45; }
+/* An empty playable slot — nothing to select yet, filled from the bag
+   panel's Equipped grid. Dashed rather than solid so it doesn't compete
+   with a slot that actually holds something. */
+.hotbar-slot.empty { border: 1px dashed var(--panel-border); background: none; cursor: default; }
 .hotbar-slot .lock { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-dim); }
 .hotbar-slot .key { position: absolute; top: 1px; left: 3px; font-size: 9px; color: var(--text-dim); }
 .hotbar-slot .cost {
@@ -251,12 +268,12 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
    in, so the way-back button does and the rest of the toast still does not. */
 .toast-action {
   pointer-events: auto; margin-top: 7px; width: 100%;
-  background: rgba(255,255,255,0.08); color: var(--text);
+  background: rgba(35,42,45,0.08); color: var(--text);
   border: 1px solid var(--panel-border-strong); border-radius: 7px;
   padding: 7px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer;
 }
-.toast-action:hover { background: rgba(255,255,255,0.15); }
-.toast-action:active { background: rgba(255,255,255,0.22); }
+.toast-action:hover { background: rgba(35,42,45,0.15); }
+.toast-action:active { background: rgba(35,42,45,0.22); }
 @keyframes toast-in { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
 .toast.fade-out { animation: toast-out 0.3s ease forwards; }
 @keyframes toast-out { to { opacity: 0; transform: translateX(16px); } }
@@ -278,17 +295,31 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 .panel {
   background: var(--panel-solid); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--panel-border); border-radius: 16px; width: 100%; max-width: 560px;
-  max-height: 86vh; overflow-y: auto; padding: 18px 20px 22px;
+  max-height: 86vh; overflow-y: auto; padding: var(--panel-pad-t) var(--panel-pad-x) var(--panel-pad-b);
+}
+/* Cancels exactly the panel's own top/side padding via negative margin, so it
+   bleeds flush to the edges (the panel's own rounded corners and overflow:auto
+   clip it back into shape) and then re-applies that padding to itself. Sticky
+   rather than fixed, so it only pins once you have actually scrolled past it —
+   a short panel never notices this is here at all. On a phone especially, a
+   long panel — the goal list, achievements, Settings — used to scroll its own
+   name away with the first swipe, so "what is this" only had one answer: pull
+   the header back up to look. */
+.panel-head {
+  position: sticky; top: 0; z-index: 2;
+  margin: calc(-1 * var(--panel-pad-t)) calc(-1 * var(--panel-pad-x)) 14px;
+  padding: var(--panel-pad-t) var(--panel-pad-x) 10px;
+  background: var(--panel-solid);
 }
 .panel h2 { margin: 0 0 4px; font-size: 20px; }
-.panel .sub { color: var(--text-dim); font-size: 13px; margin-bottom: 14px; }
+.panel .sub { color: var(--text-dim); font-size: 13px; margin-bottom: 0; }
 .panel-close { float: right; }
 .tab-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-.tab-btn { background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border); color: var(--text-dim); border-radius: 7px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
-.tab-btn.active { background: rgba(88,196,220,0.18); color: var(--text); border-color: var(--accent); }
+.tab-btn { background: rgba(35,42,45,0.06); border: 1px solid var(--panel-border); color: var(--text-dim); border-radius: 7px; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.tab-btn.active { background: rgba(41,158,138,0.18); color: var(--text); border-color: var(--accent); }
 .tab-panel[hidden] { display: none; }
 
-.stat-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
+.stat-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid rgba(35,42,45,0.06); font-size: 13px; }
 .stat-row span:first-child { color: var(--text-dim); }
 
 .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
@@ -307,22 +338,27 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 .goal-band.ahead { opacity: 0.6; }
 .goal-band .ach-card { margin-bottom: 6px; }
 /* The one that moves the border closes the band, so it reads as the door out. */
-.ach-card.is-border { border-color: rgba(77, 219, 196, 0.4); background: var(--accent-dim); }
-.ach-card { display: flex; gap: 10px; background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; }
+.ach-card { display: flex; gap: 10px; background: rgba(35,42,45,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; }
 .ach-card.locked { opacity: 0.4; }
+/* The goals that actually move the border, picked out from the teaching
+   ones sitting beside them in the same numbered list — a thicker left edge
+   in the same accent the border itself uses, not a separate badge to read. */
+.ach-card.required { border-left: 3px solid var(--accent); }
 .ach-icon { font-size: 22px; }
 .ach-name { font-weight: 600; font-size: 13px; }
+.ach-num { color: var(--text-dim); font-weight: 500; font-variant-numeric: tabular-nums; }
+.ach-progress { margin-left: 5px; color: var(--accent); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .ach-desc { color: var(--text-dim); font-size: 11px; }
 
-.challenge-card { background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
+.challenge-card { background: rgba(35,42,45,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; }
 .challenge-card.done { border-color: var(--good); }
 .challenge-card .reward { color: var(--accent-2); font-size: 12px; margin-top: 4px; }
 
-.save-row { display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+.save-row { display: flex; align-items: center; justify-content: space-between; background: rgba(35,42,45,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
 .save-row .meta { font-size: 12px; color: var(--text-dim); }
 .save-row .actions { display: flex; gap: 6px; }
 .field-row { display: flex; gap: 8px; margin-bottom: 12px; }
-.field-row input[type=text] { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border); border-radius: 7px; color: var(--text); padding: 9px 10px; font-size: 14px; }
+.field-row input[type=text] { flex: 1; background: rgba(35,42,45,0.06); border: 1px solid var(--panel-border); border-radius: 7px; color: var(--text); padding: 9px 10px; font-size: 14px; }
 
 .mode-block { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--panel-border); }
 .gfx-grid { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-end; }
@@ -343,19 +379,41 @@ button.danger { background: rgba(224,85,79,0.18); color: #ff8b85; border: 1px so
 /* Mobile touch controls */
 #touch-controls { position: absolute; inset: 0; pointer-events: none; display: none; }
 body.touch #touch-controls { display: block; }
-#blocker:not([hidden]) ~ #touch-controls,
-#panel-stats:not([hidden]) ~ #touch-controls,
-#panel-menu:not([hidden]) ~ #touch-controls { display: none !important; }
 
-/* While the worlds screen is up you are between worlds, so the world's own
- * readouts have nothing to say. Leaving the goal list, the hunger bar and the
- * toolbar showing through put two interfaces on screen at once. */
-#blocker:not([hidden]) ~ #hud-top,
-#blocker:not([hidden]) ~ #top-buttons,
-#blocker:not([hidden]) ~ #hotbar-wrap,
-#blocker:not([hidden]) ~ #toast-stack,
-#blocker:not([hidden]) ~ #tool-readout,
-#blocker:not([hidden]) ~ #duilt-layer #vitals { display: none !important; }
+/*
+ * Whatever is behind an open panel or screen has nothing to answer a tap
+ * with, so it hides rather than sit there fully visible and fully dead —
+ * that used to be a handful of CSS sibling selectors keyed to specific
+ * panel ids (#blocker, panel-stats, panel-menu), which only works for a
+ * panel that happens to be a direct sibling of the HUD in the DOM. The
+ * Duilt layer's own panels — the bag, a storehouse, buildings, the bench,
+ * claiming, roofs — live a level deeper inside #duilt-layer, so no sibling
+ * selector could ever reach them: the hotbar and the touch Fill/Jump
+ * buttons stayed on screen, looked tappable, and answered nothing while
+ * the bag was open over them. See UIManager.updateHudVisibility, which
+ * sets this from the one shared Panels registry instead — every panel
+ * there is, or ever will be, with no list of ids to keep in sync by hand.
+ */
+body.panel-open #touch-controls,
+body.panel-open #hud-top,
+body.panel-open #top-buttons,
+body.panel-open #hotbar-wrap,
+body.panel-open #tool-readout,
+body.panel-open #duilt-layer #vitals { display: none !important; }
+/* The bag is the one panel this doesn't apply to for the hotbar. Reported
+   directly, twice over: first that the hotbar sat there fully visible and
+   dead under the bag (fixed by the blanket rule above), then that hiding it
+   left nothing to see or change what you're building with while you're in
+   there sorting the bag it mirrors — the bag *is* the inventory, there is
+   no second grid to reveal. The higher z-index is load-bearing: the bag's
+   own dimmed backdrop (.overlay, z-index 10) sits above the hotbar's normal
+   z-index 5 and would otherwise swallow every tap before it got there. */
+body.bag-open #hotbar-wrap { display: flex !important; z-index: 11; }
+/* The toast stack is the one exception: a toast can still land while an
+   ordinary panel is open (see UIManager.collapseToasts) and is meant to be
+   seen when it does. Only the worlds screen — between worlds, nothing to
+   report — silences it, so this stays its own narrower, sibling-based rule. */
+#blocker:not([hidden]) ~ #toast-stack { display: none !important; }
 body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 
 /* Twin thumbsticks. Each claims its own half of the lower screen; interactive
@@ -380,7 +438,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   position: absolute; bottom: var(--stick-bottom);
   width: var(--stick-size); height: var(--stick-size); border-radius: 50%;
   background: radial-gradient(circle, rgba(255,255,255,0.04) 55%, rgba(255,255,255,0.08) 100%);
-  border: 1px solid var(--panel-border-strong);
+  border: 1px solid rgba(255,255,255,0.18); /* kept dark on purpose */
   /* Fainter at rest than under a thumb: a stick you are not holding is a hint
      about where to put your thumb, not something to look at. */
   opacity: 0.38; transition: opacity 0.15s ease, border-color 0.15s ease;
@@ -392,7 +450,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   position: absolute; width: 46px; height: 46px; border-radius: 50%; top: 29px; left: 29px;
   will-change: transform;
   background: rgba(13, 17, 23, 0.34); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--panel-border-strong); box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 2px 10px rgba(0,0,0,0.35); /* kept dark on purpose */
 }
 .stick-base.active .stick-knob { border-color: var(--accent); background: var(--accent-dim); }
 
@@ -447,8 +505,8 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   bottom: calc(84px + env(safe-area-inset-bottom));
   display: grid; grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
   gap: 8px; padding: 10px;
-  background: var(--panel-solid); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border: 1px solid var(--panel-border-strong); border-radius: 16px;
+  background: rgba(13, 17, 23, 0.96); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur); /* kept dark on purpose */
+  border: 1px solid rgba(255,255,255,0.18); border-radius: 16px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.45);
   pointer-events: auto; z-index: 7;
 }
@@ -463,7 +521,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   width: 62px; height: 62px; border-radius: 18px;
   background: rgba(13, 17, 23, 0.30);
   backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
-  border: 1px solid rgba(255, 255, 255, 0.16); color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.16); color: #eef2f6; /* kept dark on purpose, so an explicit light colour rather than following --text */
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   transition: background .12s ease, border-color .12s ease;
 }
@@ -476,7 +534,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 /* Pressed, it comes forward — with no hover on a phone this is the only
    feedback there is that the tap landed. */
 .touch-btn:active { background: rgba(13, 17, 23, 0.68); border-color: rgba(255, 255, 255, 0.3); }
-.touch-btn.active { background: rgba(77, 219, 196, 0.22); border-color: var(--accent); color: var(--accent); }
+.touch-btn.active { background: rgba(41, 158, 138, 0.22); border-color: var(--accent); color: var(--accent); }
 .touch-btn.active span { color: var(--accent); }
 /* Inside the sheet they are on a solid panel already, so there is nothing to
    see through and hiding would only make them harder to read. */
@@ -490,7 +548,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
    is 890px wide and was getting the desktop's chrome: a toolbar of labelled
    52px buttons across the top of a 390px-tall picture. */
 @media (max-width: 640px), (pointer: coarse) {
-  .panel { padding: 14px; }
+  :root { --side-btn: 50px; --panel-pad-t: 14px; --panel-pad-x: 14px; --panel-pad-b: 14px; }
   #hud-top { right: auto; width: 55%; }
   /* Labels are worth their space on a desktop toolbar but eat a phone screen;
      the Help panel names every control instead. */
@@ -501,7 +559,6 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   .icon-btn span { display: none; }
   .icon-btn.panel-close { width: 30px; height: 30px; }
   .touch-btn { width: 56px; height: 56px; border-radius: 16px; }
-  :root { --side-btn: 50px; }
   .touch-btn.small { border-radius: 14px; }
   .touch-btn span { font-size: 8.5px; }
   .ach-grid { grid-template-columns: 1fr; }
@@ -519,10 +576,10 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 .guide-key {
   display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
-  padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13.5px;
+  padding: 6px 0; border-bottom: 1px solid rgba(35,42,45,0.05); font-size: 13.5px;
 }
 .help-key { color: var(--text-dim); font-size: 12.5px; text-align: right; }
-.guide-def { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.guide-def { padding: 8px 0; border-bottom: 1px solid rgba(35,42,45,0.05); }
 .guide-def strong { display: block; margin-bottom: 3px; font-size: 13px; }
 .guide-def span { color: var(--text-dim); font-size: 12.5px; line-height: 1.5; }
 .guide-icon { margin-right: 7px; }
@@ -531,14 +588,14 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 /* The thing people miss, set apart so it is not another line of body text. */
 .guide-note {
   margin: 14px 0 0; padding: 9px 11px; border-radius: 8px;
-  background: var(--accent-dim); border: 1px solid rgba(77,219,196,0.22);
+  background: var(--accent-dim); border: 1px solid rgba(41,158,138,0.22);
   color: var(--text); font-size: 12.5px; line-height: 1.5;
 }
 
 /* Saved designs */
 .template-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  background: rgba(255,255,255,0.035); border: 1px solid var(--panel-border);
+  background: rgba(35,42,45,0.035); border: 1px solid var(--panel-border);
   border-radius: 10px; padding: 10px 12px; margin-bottom: 6px;
 }
 .template-name { font-weight: 600; font-size: 14px; }
@@ -549,11 +606,11 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
    smaller target for the same one thing the row does. */
 .roof-row {
   display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
-  background: rgba(255,255,255,0.035); border: 1px solid var(--panel-border);
+  background: rgba(35,42,45,0.035); border: 1px solid var(--panel-border);
   border-radius: 10px; padding: 10px 12px; margin-bottom: 6px;
   color: var(--text); cursor: pointer; font: inherit;
 }
-.roof-row:hover { background: rgba(255,255,255,0.07); border-color: rgba(77,219,196,0.35); }
+.roof-row:hover { background: rgba(35,42,45,0.07); border-color: rgba(41,158,138,0.35); }
 .roof-art {
   flex-shrink: 0; width: 60px; display: flex; align-items: flex-end; justify-content: center;
   color: var(--accent);
@@ -572,7 +629,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   cursor: pointer; text-align: left;
 }
 .menu-dev-toggle:hover { color: var(--text); border-color: var(--panel-border-strong); }
-.menu-dev-toggle.open { border-style: solid; color: var(--accent); border-color: rgba(77,219,196,0.4); }
+.menu-dev-toggle.open { border-style: solid; color: var(--accent); border-color: rgba(41,158,138,0.4); }
 
 .export-note { font-size: 11.5px; color: var(--text-dim); line-height: 1.45; margin-top: 8px; }
 
@@ -599,7 +656,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   border: 1px solid var(--panel-border); border-radius: 999px; padding: 5px 12px 5px 9px;
 }
 .vital-icon { font-size: 14px; line-height: 1; }
-.vital-track { width: 92px; height: 7px; border-radius: 4px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.vital-track { width: 92px; height: 7px; border-radius: 4px; background: rgba(35,42,45,0.12); overflow: hidden; }
 .vital-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #e2a33c, #f0c674); transition: width 0.4s linear; }
 .vital-fill.low { background: linear-gradient(90deg, #c9483a, #e0714f); }
 .vital-eat {
@@ -610,20 +667,32 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 .vital-eat[hidden] { display: none; }
 
-/* --- the bag --- */
+/* --- the bag ---
+   Equipped and bag are two grids over the one inventory (see DuiltUI's
+   renderBag), not two containers, so they share every rule the slots
+   themselves need. */
 .panel-wide { max-width: 560px; }
-#bag-grid {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px;
-  margin: 14px 0; max-height: 46vh; overflow-y: auto; padding: 2px;
+.bag-section-head {
+  font-size: 13px; font-weight: 600; color: var(--text-dim);
+  margin: 14px 0 0;
 }
+.bag-section-head:first-child { margin-top: 0; }
+.bag-section-head .sub { font-weight: 400; }
+#bag-hotbar-grid, #bag-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; padding: 2px;
+}
+#bag-grid { margin: 8px 0 14px; max-height: 46vh; overflow-y: auto; }
+/* Equipped is always exactly PLAYABLE_SLOTS, never more — nothing to
+   scroll away from, so it gets no height cap to need scrolling under. */
+#bag-hotbar-grid { margin: 8px 0 14px; }
 .bag-slot {
   position: relative; aspect-ratio: 1; min-height: 48px;
   border: 1px solid var(--panel-border); border-radius: 8px;
-  background: rgba(255,255,255,0.04); cursor: pointer; padding: 0;
+  background: rgba(35,42,45,0.04); cursor: pointer; padding: 0;
   display: flex; align-items: center; justify-content: center;
   transition: border-color 0.12s ease, transform 0.12s ease;
 }
-.bag-slot.empty { background: rgba(255,255,255,0.015); }
+.bag-slot.empty { background: rgba(35,42,45,0.015); }
 .bag-slot:hover:not(.empty) { border-color: var(--panel-border-strong); }
 .bag-slot.held { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.35); }
 .bag-slot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -638,6 +707,17 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 .bag-slot .wear { position: absolute; left: 5px; right: 5px; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.45); }
 .bag-slot .wear i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+.bag-slot-wrap { position: relative; }
+.slot-discard {
+  position: absolute; top: -5px; right: -5px; z-index: 1;
+  width: 18px; height: 18px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--panel-border); background: rgba(255, 252, 246, 0.92);
+  color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0.55; transition: opacity 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.slot-discard svg { width: 10px; height: 10px; }
+.slot-discard:hover, .slot-discard:focus-visible { opacity: 1; color: #ff8a7a; border-color: #ff8a7a; }
 #bag-detail {
   border-top: 1px solid var(--panel-border); padding-top: 12px;
   font-size: 13px;
@@ -658,7 +738,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 /* What it would take to make it bigger, right under how full it is. */
 .store-next {
   margin-top: 10px; padding: 9px 12px; border-radius: 10px;
-  background: rgba(255,255,255,0.045); border: 1px solid var(--panel-border);
+  background: rgba(35,42,45,0.045); border: 1px solid var(--panel-border);
   display: flex; flex-direction: column; gap: 3px; font-size: 12.5px;
 }
 .store-next[hidden] { display: none; }
@@ -666,19 +746,35 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .store-next span { color: var(--text-dim); }
 .store-next ul { margin: 2px 0 0; padding-left: 17px; color: var(--text-dim); }
 .store-next li { margin: 2px 0; }
-#store-grid, #store-bag-grid {
+#store-grid, #store-hotbar-grid, #store-bag-grid {
   display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px;
   margin: 10px 0 0; max-height: 26vh; overflow-y: auto; padding: 2px;
+}
+#store-hotbar-grid { max-height: none; }
+
+/* What a shed's own deliveries skip — a manual move can still put any of
+   these on the shelf, this only keeps a fast producer from filling it. */
+.store-routing { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--panel-border); }
+.store-routing-label { font-size: 11.5px; color: var(--text-dim); }
+.store-routing-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.routing-chip {
+  display: flex; align-items: center; gap: 5px; padding: 5px 10px 5px 8px;
+  border-radius: 999px; border: 1px solid var(--panel-border);
+  background: rgba(35,42,45,0.04); color: var(--text); font: inherit; font-size: 12px; cursor: pointer;
+}
+.routing-chip.off {
+  border-color: var(--danger); background: rgba(200,91,83,0.1); color: var(--text-dim);
+  text-decoration: line-through;
 }
 
 /* --- claiming --- */
 #claim-list { display: flex; flex-direction: column; gap: 9px; margin-top: 6px; }
 .claim-row {
   display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
-  background: rgba(255,255,255,0.04); border: 1px solid var(--panel-border);
+  background: rgba(35,42,45,0.04); border: 1px solid var(--panel-border);
   border-radius: 10px; padding: 13px; color: var(--text); cursor: pointer; min-height: 60px;
 }
-.claim-row.ok { border-color: rgba(77,219,196,0.4); }
+.claim-row.ok { border-color: rgba(41,158,138,0.4); }
 .claim-row.ok:hover { border-color: var(--accent); background: var(--accent-dim); }
 .claim-row.blocked { opacity: 0.62; cursor: not-allowed; }
 .claim-icon { font-size: 22px; flex-shrink: 0; }
@@ -694,7 +790,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .skill-icon { font-size: 15px; }
 .skill-level { margin-left: auto; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .skill-governs { font-size: 12px; color: var(--text-dim); }
-.skill-track { height: 5px; border-radius: 3px; background: rgba(255,255,255,0.1); overflow: hidden; }
+.skill-track { height: 5px; border-radius: 3px; background: rgba(35,42,45,0.1); overflow: hidden; }
 .skill-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 0.3s ease; }
 .skill-effect { font-size: 11.5px; color: var(--text-dim); }
 
@@ -708,8 +804,10 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 @media (max-width: 720px), (pointer: coarse) {
   #vitals { top: 48px; left: 10px; }
   .vital-track { width: 62px; }
-  #bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 42vh; }
-  #store-grid, #store-bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 24vh; }
+  #bag-hotbar-grid, #bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  #bag-grid { max-height: 42vh; }
+  #store-grid, #store-hotbar-grid, #store-bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  #store-grid, #store-bag-grid { max-height: 24vh; }
   .bag-slot { min-height: 52px; }
   .panel-wide { max-width: 100%; }
   /* A hint, not an announcement — it sat in the middle of the thumb zone. */
@@ -720,11 +818,11 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   .stick-knob { width: 40px; height: 40px; top: 24px; left: 24px; }
 }
 @media (min-width: 721px) {
-  #bag-grid { grid-template-columns: repeat(8, 1fr); }
-  #store-grid, #store-bag-grid { grid-template-columns: repeat(8, 1fr); }
+  #bag-hotbar-grid, #bag-grid { grid-template-columns: repeat(8, 1fr); }
+  #store-grid, #store-hotbar-grid, #store-bag-grid { grid-template-columns: repeat(8, 1fr); }
 }
 
-/* Duilt hotbar: one slot per kind of thing held, with the running total. */
+/* Duilt hotbar: real equipped slots now, each showing what's actually stacked there. */
 .hotbar-slot .held {
   position: absolute; right: 3px; bottom: 2px;
   font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
@@ -740,7 +838,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #buildings-list { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
 .building-card {
   border: 1px solid var(--panel-border); border-radius: 10px;
-  background: rgba(255,255,255,0.035); padding: 14px;
+  background: rgba(35,42,45,0.035); padding: 14px;
   display: flex; flex-direction: column; gap: 9px;
 }
 .building-head { display: flex; align-items: flex-start; gap: 11px; }
@@ -766,7 +864,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .recipe-row {
   display: grid; grid-template-columns: 1fr auto; gap: 10px 12px; align-items: center;
   border: 1px solid var(--panel-border); border-radius: 10px;
-  background: rgba(255,255,255,0.035); padding: 13px;
+  background: rgba(35,42,45,0.035); padding: 13px;
 }
 .recipe-row.blocked { opacity: 0.66; }
 .recipe-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -804,6 +902,13 @@ body.touch #top-buttons .touch-moved { display: none !important; }
  * The front door. It has to work at 390px without scrolling past the first
  * world, so everything here is one column with generous touch targets rather
  * than the dense panel layout used inside the game.
+ *
+ * Its own solid card, like .panel gets elsewhere: #blocker's dark scrim
+ * behind it is kept dark on purpose (it can be sitting over the live 3D
+ * world when you back out to it mid-game), so the screen's own light text
+ * needs a light surface of its own under it rather than sitting directly on
+ * that scrim the way it did in the old dark theme, where the two happened
+ * to already agree.
  */
 .home {
   width: min(520px, 100%);
@@ -811,6 +916,8 @@ body.touch #top-buttons .touch-moved { display: none !important; }
   display: flex; flex-direction: column; gap: 16px;
   padding: 22px 18px calc(18px + env(safe-area-inset-bottom));
   pointer-events: auto;
+  background: var(--panel-solid); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--panel-border); border-radius: 16px;
 }
 .home-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .home-head h1 { margin: 0; font-size: 30px; letter-spacing: -0.01em; }
@@ -849,7 +956,7 @@ body.touch #top-buttons .touch-moved { display: none !important; }
   flex: 0 0 auto; background: transparent; border: 0; color: var(--text-dim);
   font-size: 15px; cursor: pointer; padding: 8px; border-radius: 8px; line-height: 1;
 }
-.world-remove:hover { color: var(--danger); background: rgba(255,255,255,0.06); }
+.world-remove:hover { color: var(--danger); background: rgba(35,42,45,0.06); }
 
 .kind-list { display: flex; flex-direction: column; gap: 8px; }
 .kind-card {
@@ -911,7 +1018,7 @@ body.touch #top-buttons .touch-moved { display: none !important; }
 }
 .home-detail code {
   display: block; margin: 6px 0; padding: 8px 10px;
-  background: rgba(0,0,0,0.35); border: 1px solid var(--panel-border); border-radius: 8px;
+  background: rgba(35, 42, 45, 0.08); border: 1px solid var(--panel-border); border-radius: 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
   color: var(--text); word-break: break-word; user-select: text; -webkit-user-select: text;
 }
@@ -987,7 +1094,7 @@ body.touch #top-buttons .touch-moved { display: none !important; }
   padding: 13px 14px; color: var(--text); font: inherit; cursor: pointer;
   transition: border-color .14s ease, background .14s ease;
 }
-.menu-card:hover { border-color: var(--panel-border-strong); background: rgba(255,255,255,0.04); }
+.menu-card:hover { border-color: var(--panel-border-strong); background: rgba(35,42,45,0.04); }
 .menu-card-icon {
   flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
@@ -1016,7 +1123,7 @@ body.touch #top-buttons .touch-moved { display: none !important; }
 /* Earlier versions. */
 .version-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding: 8px 0; border-bottom: 1px solid rgba(35,42,45,0.05);
 }
 .version-when { font-size: 13px; }
 .version-at { font-size: 11.5px; color: var(--text-dim); margin-left: auto; }
@@ -1123,12 +1230,22 @@ body.touch #building-hint { pointer-events: auto; }
 #building-hint.bad { border-color: var(--danger); }
 #building-hint.bad span { color: var(--danger); }
 #building-hint span { color: var(--text-dim); margin-left: 7px; font-size: 11px; }
+/*
+ * While a building is open for changes (setEditingBanner), the strip stops
+ * being a label a key does the work for and becomes the one way to finish —
+ * there is no key for that. It takes clicks on every input, not just touch,
+ * and looks like the button it now is rather than a passive readout.
+ */
+body.editing-building #building-hint {
+  pointer-events: auto; cursor: pointer;
+  border-color: var(--accent); background: var(--accent-dim);
+}
 
 /* A recipe made at a workshop says so, and stops saying it once you are there. */
 .recipe-station {
   margin-left: 7px; padding: 1px 6px; border-radius: 5px;
   font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600;
-  color: var(--text-dim); background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border);
+  color: var(--text-dim); background: rgba(35,42,45,0.06); border: 1px solid var(--panel-border);
 }
 .recipe-station.at { color: var(--accent); background: var(--accent-dim); border-color: var(--accent); }
 
@@ -1138,7 +1255,7 @@ body.touch #building-hint { pointer-events: auto; }
 .finish-list { list-style: none; margin: 0 0 16px; padding: 0; }
 .finish-list li {
   display: flex; align-items: center; gap: 9px; padding: 7px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13.5px;
+  border-bottom: 1px solid rgba(35,42,45,0.05); font-size: 13.5px;
 }
 .finish-icon { font-size: 16px; width: 22px; text-align: center; }
 .finish-n { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--accent); font-weight: 700; }
@@ -1146,7 +1263,7 @@ body.touch #building-hint { pointer-events: auto; }
 /* Population, beside hunger. A button, because the count alone does not say
    why it is the number it is — see DuiltUI.sayPeople. */
 #vital-people { gap: 6px; font: inherit; color: var(--text); cursor: pointer; min-height: 30px; }
-#vital-people:active { background: rgba(255,255,255,0.14); }
+#vital-people:active { background: rgba(35,42,45,0.14); }
 .vital-count {
   font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text);
 }

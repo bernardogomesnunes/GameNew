@@ -49,7 +49,15 @@ export const STRUCTURES = [
         say: () => 'Needs more open soil between the trees',
       },
     ],
-    produces: { wood: 4, leaves: 3, seeds: 2, fruit: 1 },
+    // Reported directly: leaving the game for a day filled everything up.
+    // Wood keeps its own rate and cadence — it's the one thing this pass
+    // doesn't touch — but the rest of a standing forest was paying out at
+    // the same clip, which is far more foraged goods than wood needs
+    // beside it. Cut to the floor a per-cycle amount can go without
+    // rounding away to nothing on a live 60-second tick (see
+    // StructureRegistry.collect — anything below 1 here would pay out
+    // zero on every ordinary tick, not just a smaller amount).
+    produces: { wood: 4, leaves: 1, seeds: 1, fruit: 1 },
     everySeconds: 60,
     skill: 'foraging',
   },
@@ -77,8 +85,14 @@ export const STRUCTURES = [
         say: () => 'Needs fresh water within 6 blocks — build nearer the river',
       },
     ],
-    produces: { vegetables: 3, seeds: 2, fruit: 1 },
-    everySeconds: 75,
+    // Called out by name: "farm does produce a lot too much too". At the
+    // old 75-second cycle a farm left running for the 8-hour offline cap
+    // (see MAX_OFFLINE_HOURS) turned out well over ten full stacks of
+    // vegetables — every trip back started with a bag already choking on
+    // one item. A 12-minute cycle at one of each keeps that same 8-hour
+    // walk-away under a single stack (40 of 50) instead of past a dozen.
+    produces: { vegetables: 1, seeds: 1, fruit: 1 },
+    everySeconds: 720,
     skill: 'building',
   },
 
@@ -145,9 +159,62 @@ export const STRUCTURES = [
         say: () => 'It needs to be open to the sky — you are underground here',
       },
     ],
-    produces: { stone: 5, cobblestone: 2 },
-    everySeconds: 70,
+    // Stone has fewer sinks than wood or food — you don't eat it, and most
+    // recipes want a handful, not a steady stream — so it piled up faster
+    // than anything else and, once storehouses filled, started eating bag
+    // slots by the stack. A fresh scrape at the rock is worth barely
+    // anything — ten stone a day — and it is the levels below, not the
+    // building itself, that turn it into something worth having staffed.
+    produces: { stone: 1 },
+    everySeconds: 8640,
     skill: 'building',
+    /**
+     * How a quarry grows — the first building to use the same ladder a
+     * storehouse already climbs. `tiers` gives any building levels; a tier
+     * with `slots` makes it a storehouse, a tier with `produces` and/or
+     * `everySeconds` makes it a faster, richer producer instead. Nothing
+     * else about the mechanism changes — see isStore/producesAt/intervalAt
+     * in this file and StructureRegistry.retier/collect.
+     *
+     * Climbed by building, exactly like a storehouse: cut the face back
+     * further and the level follows, with nothing to press and nothing to
+     * strip back down to once it has.
+     */
+    tiers: [
+      { id: 'seam', name: 'A Seam Cut', blurb: 'A scrape at the rock. Barely worth the walk.', needs: [] },
+      {
+        id: 'face', name: 'A Working Face', blurb: 'Wide enough to work properly.',
+        produces: { stone: 1, cobblestone: 1 }, everySeconds: 4320,
+        needs: [
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 40, say: (ctx) => `${40 - count(ctx, [STONE, COBBLE])} more stone showing` },
+          { test: (ctx) => ctx.countOf(0) >= 16, say: (ctx) => `${16 - ctx.countOf(0)} more cut out of it` },
+        ],
+      },
+      {
+        id: 'deepcut', name: 'A Deep Cut', blurb: 'Cut back far enough to keep two haulers busy.',
+        produces: { stone: 2, cobblestone: 1 }, everySeconds: 2160,
+        needs: [
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 60, say: (ctx) => `${60 - count(ctx, [STONE, COBBLE])} more stone showing` },
+          { test: (ctx) => ctx.countOf(0) >= 28, say: (ctx) => `${28 - ctx.countOf(0)} more cut out of it` },
+        ],
+      },
+      {
+        id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, opened right up.',
+        produces: { stone: 2, cobblestone: 2 }, everySeconds: 1080,
+        needs: [
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 90, say: (ctx) => `${90 - count(ctx, [STONE, COBBLE])} more stone showing` },
+          { test: (ctx) => ctx.countOf(0) >= 44, say: (ctx) => `${44 - ctx.countOf(0)} more cut out of it` },
+        ],
+      },
+      {
+        id: 'openpit', name: 'An Open Pit', blurb: 'As much rock as a claim this size can show.',
+        produces: { stone: 3, cobblestone: 2 }, everySeconds: 540,
+        needs: [
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 130, say: (ctx) => `${130 - count(ctx, [STONE, COBBLE])} more stone showing` },
+          { test: (ctx) => ctx.countOf(0) >= 64, say: (ctx) => `${64 - ctx.countOf(0)} more cut out of it` },
+        ],
+      },
+    ],
   },
 
   {
@@ -304,8 +371,9 @@ export const STRUCTURES = [
         say: () => 'Needs sand or earth within 6 blocks to feed it',
       },
     ],
-    produces: { brick: 2, glass: 2 },
-    everySeconds: 95,
+    // Part of the same pass as the farm above — see the note there.
+    produces: { brick: 1, glass: 1 },
+    everySeconds: 300,
     skill: 'building',
   },
 
@@ -341,8 +409,90 @@ export const STRUCTURES = [
         say: () => 'Build it among your town, not out in a field',
       },
     ],
-    produces: { vegetables: 3, fruit: 2, planks: 4 },
-    everySeconds: 85,
+    // Part of the same pass as the farm above — see the note there.
+    produces: { vegetables: 1, fruit: 1, planks: 1 },
+    everySeconds: 720,
+    skill: 'politics',
+  },
+
+  // Two buildings a town grows into rather than needs — nothing in Age 4's
+  // goals asks for either of them, the way nothing ever asked for a second
+  // kiln. They exist for what they give back once you want it.
+
+  {
+    id: 'townhouse',
+    name: 'Townhouse',
+    icon: '🏘️',
+    age: 4,
+    blurb: 'More roof than one family needs, so more than one family lives under it.',
+    minSize: 6,
+    maxSize: 16,
+    cost: { planks: 16 },
+    requires: [
+      {
+        id: 'walls',
+        // Finished material rather than a house's raw wood — three households
+        // expect better than the first roof you ever put up.
+        test: (ctx) => count(ctx, [PLANKS, BRICK]) >= 44,
+        say: (ctx) => `Needs ${44 - count(ctx, [PLANKS, BRICK])} more planks or brick in the walls`,
+      },
+      {
+        id: 'floor',
+        test: (ctx) => count(ctx, [STONE, COBBLE, BRICK]) >= 14,
+        say: (ctx) => `Needs ${14 - count(ctx, [STONE, COBBLE, BRICK])} more stone, cobble or brick — more feet than one family's worth`,
+      },
+      {
+        id: 'shelter',
+        test: (ctx) => ctx.shelteredVolume() >= 20,
+        say: (ctx) => ctx.shelteredVolume() === 0
+          ? 'Needs rooms inside — walls all round and a roof over the top'
+          : 'The rooms are too small — this has to hold three households, not one',
+      },
+    ],
+    produces: {},
+    // Three roofs folded into one building, so a townhouse is what you raise
+    // once "build another house" stops being the interesting problem.
+    grantsCapacity: 3,
+    everySeconds: 0,
+    skill: 'politics',
+  },
+
+  {
+    id: 'tavern',
+    name: 'Tavern',
+    icon: '🍻',
+    age: 4,
+    blurb: 'Somewhere to eat, drink and hear the news. Small coin changes hands too.',
+    minSize: 5,
+    maxSize: 14,
+    cost: { planks: 8, brick: 4 },
+    requires: [
+      {
+        id: 'walls',
+        test: (ctx) => count(ctx, [PLANKS, WOOD, BRICK]) >= 30,
+        say: (ctx) => `Needs ${30 - count(ctx, [PLANKS, WOOD, BRICK])} more planks, wood or brick in it`,
+      },
+      {
+        id: 'hearth',
+        test: (ctx) => count(ctx, [BRICK, STONE, COBBLE]) >= 10,
+        say: (ctx) => `Needs ${10 - count(ctx, [BRICK, STONE, COBBLE])} more stone, cobble or brick for a hearth`,
+      },
+      {
+        id: 'shelter',
+        test: (ctx) => ctx.shelteredVolume() >= 12,
+        say: () => 'Needs a proper room — walls all round and a roof over it',
+      },
+      {
+        id: 'town',
+        test: (ctx) => ctx.hasNeighbour([PLANKS, BRICK, GLASS, WOOD], 12),
+        say: () => 'Build it among your town, not out in a field',
+      },
+    ],
+    // A trickle, not an income — a mine works a claim for it, this just keeps
+    // a jar behind the counter. Slowed with the rest of this pass so the
+    // jar doesn't reach its own 100-gold cap over a single 8-hour walk-away.
+    produces: { gold: 1 },
+    everySeconds: 360,
     skill: 'politics',
   },
 
@@ -379,8 +529,13 @@ export const STRUCTURES = [
         say: (ctx) => `Needs ${8 - count(ctx, [PLANKS, WOOD])} more timber to hold the roof up`,
       },
     ],
-    produces: { stone: 8, gold: 1 },
-    everySeconds: 120,
+    // Part of the same pass as the farm above — see the note there. This one
+    // also fixes a second thing: at the old flat 8 stone/120s a single mine
+    // out-produced a maxed, fully-leveled Quarry (480 stone/day at its top
+    // tier — see quarry's own produces note) without any of the digging that
+    // rate is supposed to be earned by. Slowed to sit under it instead.
+    produces: { stone: 1, gold: 1 },
+    everySeconds: 360,
     skill: 'building',
   },
 
@@ -410,12 +565,116 @@ export const STRUCTURES = [
         say: () => 'Build it near the fields it is meant to serve',
       },
     ],
-    produces: { vegetables: 6, seeds: 3 },
-    everySeconds: 90,
+    // Part of the same pass as the farm above — see the note there.
+    produces: { vegetables: 1, seeds: 1 },
+    everySeconds: 720,
     skill: 'foraging',
   },
 
+  {
+    id: 'military',
+    name: 'Garrison',
+    icon: '🛡️',
+    age: 5,
+    blurb: 'Walls with people behind them. Nothing has tested them yet, and that is rather the point.',
+    minSize: 6,
+    maxSize: 18,
+    cost: { stone: 20, planks: 10 },
+    requires: [
+      {
+        id: 'walls',
+        test: (ctx) => count(ctx, [STONE, COBBLE, BRICK]) >= 50,
+        say: (ctx) => `Needs ${50 - count(ctx, [STONE, COBBLE, BRICK])} more stone, cobble or brick in the walls — this has to hold`,
+      },
+      {
+        id: 'watch',
+        test: (ctx) => ctx.region.maxY - ctx.region.minY + 1 >= 5,
+        say: (ctx) => `Needs to stand at least 5 blocks tall to see anything coming — yours is ${ctx.region.maxY - ctx.region.minY + 1}`,
+      },
+      {
+        id: 'barracks',
+        test: (ctx) => ctx.shelteredVolume() >= 14,
+        say: () => 'Needs a barracks inside — walls all round and a roof over it',
+      },
+      {
+        id: 'sky',
+        test: (ctx) => ctx.openSkyColumns() >= 4,
+        say: () => 'The watch needs open sky above it — nothing built over the top',
+      },
+    ],
+    // What a standing garrison brings back with nothing yet to defend
+    // against: patrols that forage and salvage as they go. The building is
+    // deliberately plain — a normal producer, on the same footing as
+    // everything else here — so that whatever it should do once there is
+    // something to defend *against* can be added to this one entry later
+    // without moving anything that depends on it.
+    // Part of the same pass as the farm above — see the note there.
+    produces: { stone: 1, planks: 1 },
+    everySeconds: 300,
+    skill: 'politics',
+  },
+
   // ---- Age 6: the last thing ---------------------------------------------
+
+  {
+    id: 'village',
+    name: 'Village',
+    icon: '🏡',
+    age: 6,
+    blurb: 'A forest, a farm, housing and a shed, folded into one claim — everything a start needs, raised at once.',
+    minSize: 14,
+    maxSize: 28,
+    cost: { wood: 20, seeds: 8 },
+    requires: [
+      {
+        id: 'trunks',
+        test: (ctx) => count(ctx, [WOOD]) >= 24,
+        say: (ctx) => `Needs ${24 - count(ctx, [WOOD])} more wood — a village needs a woodlot, not a tree`,
+      },
+      {
+        id: 'canopy',
+        test: (ctx) => count(ctx, [LEAVES]) >= 30,
+        say: (ctx) => `Needs ${30 - count(ctx, [LEAVES])} more leaves in the canopy`,
+      },
+      {
+        id: 'tilled',
+        test: (ctx) => count(ctx, [FARMLAND]) >= 8,
+        say: (ctx) => `Needs ${8 - count(ctx, [FARMLAND])} more tilled soil — the fields are too small`,
+      },
+      {
+        id: 'water',
+        test: (ctx) => ctx.hasWithin([WATER], 8),
+        say: () => 'Needs fresh water within 8 blocks — build nearer the river',
+      },
+      {
+        id: 'walls',
+        test: (ctx) => count(ctx, [WOOD, PLANKS]) >= 60,
+        say: (ctx) => `Needs ${60 - count(ctx, [WOOD, PLANKS])} more wood or planks — three households' worth of walls`,
+      },
+      {
+        id: 'housing',
+        test: (ctx) => ctx.shelteredVolume() >= 40,
+        say: (ctx) => ctx.shelteredVolume() === 0
+          ? 'Needs real rooms inside — walls all round and roofs over them'
+          : 'Not enough room under roof yet — housing for three households and a shed, not one',
+      },
+      {
+        id: 'soil',
+        test: (ctx) => count(ctx, [DIRT, GRASS, SAPLING]) >= 12,
+        say: () => 'Needs more open soil between the trees and the fields',
+      },
+    ],
+    // The forest and the farm folded in, at a fraction of what either gives
+    // alone — the point of a village is the housing, not out-earning the
+    // buildings it is standing in for. Wood keeps its own rate and cadence,
+    // same as the forest it's folded in from; the rest is cut to the floor
+    // a 100-second cycle can pay out without rounding away to nothing (see
+    // the forest's own note, above).
+    produces: { wood: 3, leaves: 1, vegetables: 1, seeds: 1 },
+    grantsCapacity: 3,
+    everySeconds: 100,
+    skill: 'building',
+  },
 
   {
     id: 'monument',
@@ -459,13 +718,60 @@ export function structureName(id) {
   return STRUCTURES_BY_ID.get(id)?.name ?? id;
 }
 
-/** True for a building that holds things — see the storehouse's `tiers`. */
-export function isStore(spec) {
+/**
+ * True for any building with a ladder of rungs to climb — a storehouse
+ * growing its shelves, a quarry cutting a bigger face. `tiers` is the one
+ * mechanism behind both; which kind a building is comes down to what its
+ * rungs actually change, not to having rungs at all. See isStore below for
+ * the narrower "does it hold things" question.
+ */
+export function hasLevels(spec) {
   return !!spec?.tiers?.length;
+}
+
+/** A tier index, clamped to the tiers a building actually has. */
+function clampTier(spec, tier) {
+  return Math.max(0, Math.min(tier, spec.tiers.length - 1));
+}
+
+/** True for a building that holds things — a tiers entry with `slots` on it. */
+export function isStore(spec) {
+  return hasLevels(spec) && spec.tiers.some((t) => t.slots != null);
 }
 
 /** How many slots a building has at a tier, clamped to the tiers it actually has. */
 export function holdsAt(spec, tier = 0) {
   if (!isStore(spec)) return 0;
-  return spec.tiers[Math.max(0, Math.min(tier, spec.tiers.length - 1))].slots;
+  return spec.tiers[clampTier(spec, tier)].slots;
 }
+
+/**
+ * What a building actually hands over at a given tier.
+ *
+ * A tier with no `produces` of its own falls back to the building's base
+ * rate — tier 0 never needs to repeat it, the same way a storehouse's first
+ * tier repeats no `needs` because the claim already asked for them.
+ */
+export function producesAt(spec, tier = 0) {
+  if (!hasLevels(spec)) return spec?.produces ?? {};
+  return spec.tiers[clampTier(spec, tier)].produces ?? spec.produces ?? {};
+}
+
+/** How long a cycle takes at a given tier — see producesAt, same fallback. */
+export function intervalAt(spec, tier = 0) {
+  if (!hasLevels(spec)) return spec?.everySeconds ?? 0;
+  return spec.tiers[clampTier(spec, tier)].everySeconds ?? spec.everySeconds ?? 0;
+}
+
+/**
+ * Every item id any building ever hands over, at any tier, in the order a
+ * building that makes it first appears.
+ *
+ * This is what a storehouse's "won't take" list is built from — read off the
+ * registry rather than written out a second time, so a new building's output
+ * is routable the moment it is added here, with nothing else to remember.
+ */
+export const PRODUCIBLE_ITEMS = [...new Set(STRUCTURES.flatMap((s) => [
+  ...Object.keys(s.produces ?? {}),
+  ...(s.tiers ?? []).flatMap((t) => Object.keys(t.produces ?? {})),
+]))];

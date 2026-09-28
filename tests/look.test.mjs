@@ -70,7 +70,12 @@ ok('shading stays inside a byte', shade(0xffffff, 2) === 'rgb(255,255,255)' && s
 }
 
 ok('the hotbar draws cubes', /cubeSvg\(b\.id/.test(ui));
-ok('the Duilt hotbar draws whatever the item places', /itemIcon\(e\.spec/.test(ui));
+// The Duilt hotbar is real equipped slots now (see items/Inventory.js's
+// PLAYABLE_SLOTS), drawn with the same itemIcon(spec, ...) call the bag
+// panel already used — one drawing rule for "what does this item look
+// like", not two separate ones for "in the hotbar" vs "in the bag".
+ok('the Duilt hotbar draws whatever the item places, the same way the bag does',
+  (ui.match(/itemIcon\(spec, \{ size: 30 \}\)/g) ?? []).length > 0);
 ok('and so does the bag', /itemIcon\(spec/.test(duilt));
 ok('a cube is its own swatch, with no coloured tile behind it',
   /\.swatch-cube[\s\S]{0,200}background: none/.test(css));

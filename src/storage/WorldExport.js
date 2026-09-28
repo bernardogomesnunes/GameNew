@@ -33,14 +33,17 @@ function safeName(name) {
  * Full-fidelity snapshot: everything needed to restore the world exactly,
  * including progression and the player's saved designs.
  */
-export function buildWorldPayload({ world, player, gamification, economy, mode, templates, name, duilt }) {
+export function buildWorldPayload({ world, player, gamification, economy, mode, templates, name, duilt, territoryBounds }) {
   return {
     format: EXPORT_FORMAT,
     version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     name: name || 'Untitled world',
     mode,
-    world: world.serialize(),
+    // Claimed land rides along in full — see World.serialize's keepBounds —
+    // so "everything needed to restore the world exactly" is actually true
+    // for the one part of it somebody has a stake in staying put.
+    world: world.serialize({ keepBounds: territoryBounds }),
     player: { x: player.position.x, y: player.position.y, z: player.position.z, yaw: player.yaw, pitch: player.pitch },
     gamification: gamification.toJSON(),
     economy: economy.toJSON(),

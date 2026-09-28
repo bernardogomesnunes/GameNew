@@ -286,12 +286,28 @@ export class World {
     return dropped;
   }
 
-  serialize() {
+  /**
+   * `keepBounds` — a claimed-land rectangle, in block coordinates — asks for
+   * every chunk touching it to come along too, touched or not.
+   *
+   * Untouched land regenerating from the seed is fine right up until the
+   * generator itself changes between sessions: the code that reshapes a
+   * chunk on demand is whatever is running *now*, not whatever was running
+   * when the player last saw it, so ground they built next to could be
+   * gone or a different height entirely the next time it comes back into
+   * memory. That only matters where somebody has something at stake in the
+   * ground staying put — their own claimed land — so this keeps the save
+   * bounded to that rather than to everywhere anyone has ever walked.
+   */
+  serialize({ keepBounds = null } = {}) {
     if (this.endless) {
-      // The seed is the world. Only what somebody changed has to come with it.
+      // The seed is the world. Only what somebody changed has to come with it
+      // — plus their own claimed land, in full, so it can never shift under them.
       const chunks = [];
-      for (const chunk of this.chunks.values()) {
-        if (!chunk.touched) continue;
+      const included = new Set();
+      const push = (chunk) => {
+        if (included.has(chunk)) return;
+        included.add(chunk);
         // The ground heights come along rather than being worked out again
         // from the blocks. Guessing got 96% of them right, and the 4% it
         // missed are the ones somebody had reshaped — which is the only
@@ -303,6 +319,16 @@ export class World {
           rle: rleEncode(chunk.data),
           surface: Array.from(chunk.surface),
         });
+      };
+      for (const chunk of this.chunks.values()) {
+        if (chunk.touched) push(chunk);
+      }
+      if (keepBounds) {
+        for (let cx = keepBounds.minX >> 4; cx <= keepBounds.maxX >> 4; cx++) {
+          for (let cz = keepBounds.minZ >> 4; cz <= keepBounds.maxZ >> 4; cz++) {
+            push(this.getChunk(cx, cz));
+          }
+        }
       }
       return {
         endless: true,

@@ -51,9 +51,9 @@ const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf
 // --- wired into Break/Place, not a menu ------------------------------------
 
 ok('an empty bucket takes the Break button before it digs',
-  /selectedItemId === 'bucket'\)\s*return void this\.fillBucket\(\);/.test(game));
+  /BREAK_OVERRIDE = \{ bucket: 'fillBucket'/.test(game));
 ok('a full bucket takes the Place button before it builds',
-  /selectedItemId === 'bucket_water'\)\s*return void this\.emptyBucket\(\);/.test(game));
+  /PLACE_OVERRIDE = \{ bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected' \}/.test(game));
 ok('filling checks what you are actually pointing at',
   /fillBucket\(\)[\s\S]{0,400}getBlock\(hit\.x, hit\.y, hit\.z\) === WATER/.test(game));
 ok('and says so when you are not pointing at water',
@@ -66,14 +66,22 @@ ok('emptying is the same swap in reverse',
 // --- selectable from the hotbar, like any other held thing ------------------
 
 ok('the bucket and a full one are selectable hotbar slots',
-  /TOOL_HOTBAR_IDS = \['bucket', 'bucket_water'\]/.test(ui));
+  /bucket: 'Break to scoop water'/.test(ui) && /bucket_water: 'Place to pour it out'/.test(ui));
+ok('the two buttons say Fill and Empty while a bucket is selected, not Break and Place',
+  /bucket: \['Fill', 'Place'\]/.test(ui) && /bucket_water: \['Break', 'Empty'\]/.test(ui));
 ok('selecting one is its own thing, not a block choice',
   /selectItem\(id\) \{/.test(ui) && /this\.selectedItemId = id;/.test(ui));
 ok('and picking a block cancels it, so only one slot is ever active',
   /selectBlock\(id\) \{\s*this\.selectedBlockId = id;\s*this\.selectedItemId = null;/.test(ui));
 ok('a click on a tool slot selects the item, not a block id',
   /dataset\.tool\) \{ this\.selectItem\(slot\.dataset\.item\); return; \}/.test(ui));
+// The hotbar is real equipped slots now (items/Inventory.js's
+// PLAYABLE_SLOTS), not a list rebuilt from the bag each render, so the
+// fallback reads off those slots directly instead of a `placeable`/`tools`
+// pair — same idea, real positions now: what was selected can stop
+// matching anything equipped (spent down, a filled bucket swapped in), and
+// it falls to whatever the first equipped slot actually holds.
 ok('running out of the held tool falls back sensibly',
-  /stillValid[\s\S]{0,300}selectBlock\(placeable\[0\]\.spec\.block\)[\s\S]{0,60}selectItem\(tools\[0\]\.id\)/.test(ui));
+  /stillValid[\s\S]{0,300}const first = playable\.find\(Boolean\);[\s\S]{0,200}selectBlock\(spec\.block\); else this\.selectItem\(first\.id\)/.test(ui));
 
 process.exit(f ? 1 : 0);

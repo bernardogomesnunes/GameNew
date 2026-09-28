@@ -1,11 +1,13 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
-import { STRUCTURES_BY_ID, structuresForAge } from '../config/structures.js';
+import { PLAYABLE_SLOTS } from '../items/Inventory.js';
+import { STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { itemIcon } from '../config/cubes.js';
 import { renderPanels } from './Panel.js';
+import { icon } from './icons.js';
 
 /**
  * The Duilt interface: the bag, the stomach, the claim menu and the goal list.
@@ -18,6 +20,37 @@ import { renderPanels } from './Panel.js';
  */
 
 const HOLD_MS = 420;
+
+/**
+ * "a" or "an" in front of a tier name, without doubling one it already
+ * carries. A quarry's tier names spell out their own article ("A Working
+ * Face") so "Next level: A Working Face" reads as a phrase; a storehouse's
+ * don't ("Loft"), so the same sentence needs one supplied. Lowercased first
+ * since every place this is used is mid-sentence.
+ */
+function withArticle(name) {
+  const lower = name.toLowerCase();
+  return /^an? /.test(lower) ? lower : `a ${lower}`;
+}
+
+/**
+ * A production rate as a line you can read, or null for nothing produced.
+ *
+ * Most cycles are a minute or two, where restating the raw per-cycle number
+ * under "a minute" is close enough to be honest; a cycle longer than that —
+ * a quarry's first level, cut back to barely anything on purpose — reads by
+ * the day instead, converted for real rather than relabelled, so "10 a day"
+ * actually means ten a day.
+ */
+function rateText(produces, everySeconds) {
+  if (!produces || !Object.keys(produces).length || !everySeconds) return null;
+  const daily = everySeconds > 300;
+  const makes = Object.entries(produces)
+    .map(([k, v]) => `${daily ? Math.round(v * 86400 / everySeconds) : v} ${itemName(k).toLowerCase()}`)
+    .join(', ');
+  return `Makes ${makes} a ${daily ? 'day' : 'minute'}`;
+}
+
 export class DuiltUI {
   constructor(root, { game, bus, panels }) {
     this.root = root;
@@ -63,6 +96,16 @@ export class DuiltUI {
 
       ${renderPanels('duilt', {
         'panel-bag': `
+          <!--
+            Two zones of the one bag, not two containers — moving between
+            them is the same lift/tap gesture as rearranging either one on
+            its own (renderBag/tapSlot), just able to land on either side.
+            Equipped is what the hotbar actually shows; see
+            Inventory.PLAYABLE_SLOTS and UIManager.buildHotbar.
+          -->
+          <div class="bag-section-head">Equipped <span class="sub">— what the hotbar shows, in order</span></div>
+          <div id="bag-hotbar-grid" class="bag-hotbar-grid"></div>
+          <div class="bag-section-head">Your bag</div>
           <div id="bag-grid"></div>
           <div id="bag-detail"></div>`,
         'panel-store': `
@@ -82,17 +125,34 @@ export class DuiltUI {
           -->
           <div id="store-next" class="store-next" hidden></div>
           <div id="store-grid"></div>
+          <!--
+            What this shed refuses to take from a building's own payout, so one
+            fast producer stops crowding the rest out of it. Manual moves are
+            never blocked — this only steers deliver(), see StructureRegistry.
+          -->
+          <div id="store-routing" class="store-routing" hidden>
+            <span class="store-routing-label">Won't take from deliveries:</span>
+            <div id="store-routing-chips" class="store-routing-chips"></div>
+          </div>
+          <div class="store-head"><span>Equipped</span></div>
+          <div id="store-hotbar-grid"></div>
           <div class="store-head"><span>In your bag</span></div>
           <div id="store-bag-grid"></div>`,
         'panel-claim': `
           <div id="claim-list"></div>`,
         'panel-buildings': `
           <!--
-            Claiming by pointing works for something you stacked up and cannot
-            work for something you dug — the flood fill will not go below the
-            original ground, so a quarry answered "point at what you built"
-            wherever you stood. Drawing the area is the way in for both.
+            Two ways in, because a claim is either something you stacked up or
+            something you dug. "Claim what I framed" follows the wall you are
+            pointing at for its footprint and lets you set the height yourself,
+            growing up from the block you're on — the one you actually stand at
+            while building. "Claim an area" draws a footprint from two corners
+            instead and reads its own height off whatever is there, which is
+            the only thing that works for a hole: a quarry has no wall to point
+            at, and the fill will not go below the ground it started at.
           -->
+          <button class="secondary claim-column" id="btn-claim-column">Claim what I framed</button>
+          <div class="export-note">Point at a wall you built. Scroll to set how tall, then press Break.</div>
           <button class="secondary claim-area" id="btn-claim-area">Claim an area</button>
           <div class="export-note">Tap one corner of it and then the opposite corner. Use this for anything you dug out — a quarry, a mine, a farm.</div>
           <div id="buildings-list"></div>`,
@@ -115,6 +175,7 @@ export class DuiltUI {
       b.addEventListener('click', () => this.closePanel(b.dataset.close)));
     this.q('#btn-eat').addEventListener('click', () => this.eat());
     this.q('#vital-people').addEventListener('click', () => this.sayPeople());
+    this.q('#btn-claim-column').addEventListener('click', () => this.game.beginClaimColumn());
     this.q('#btn-claim-area').addEventListener('click', () => this.game.beginClaimSelection());
     this.q('#btn-store-all').addEventListener('click', () => this.storeEverything());
 
@@ -144,12 +205,30 @@ export class DuiltUI {
       });
     });
     this.bus.on('structure:produced', () => { this.saidStalled = false; });
-    this.bus.on('structure:upgraded', ({ name, slots, blurb }) => {
+    // Fired by StructureRegistry.evolve (a level reached by pressing the
+    // button, not the instant the blocks qualified) and by retier's own
+    // automatic drop the other way, if an edit costs a building the rung it
+    // was standing on. `name`/`slots` used to always mean a storehouse's own
+    // words — evolve fires for a producer's level too now, so this reads
+    // the actual building's name instead of assuming one.
+    this.bus.on('structure:upgraded', ({ structure, name, slots, blurb }) => {
       if (this.panels.isOpen('panel-store')) this.renderStore();
+      if (this.building?.id === structure?.id) this.showBuilding(structure, this.buildingActionsCache);
+      const kind = STRUCTURES_BY_ID.get(structure?.type)?.name?.toLowerCase() ?? 'building';
       this.bus.emit('toast', {
         kind: 'achievement',
-        title: `Your storehouse is now a ${name.toLowerCase()}`,
-        body: `${blurb} ${slots} slots.`,
+        title: `Your ${kind} is now ${withArticle(name)}`,
+        body: slots ? `${blurb} ${slots} slots.` : blurb,
+      });
+    });
+    this.bus.on('structure:downgraded', ({ structure, name, blurb }) => {
+      if (this.panels.isOpen('panel-store')) this.renderStore();
+      if (this.building?.id === structure?.id) this.showBuilding(structure, this.buildingActionsCache);
+      const kind = STRUCTURES_BY_ID.get(structure?.type)?.name?.toLowerCase() ?? 'building';
+      this.bus.emit('toast', {
+        kind: 'xp',
+        title: `Your ${kind} dropped back to ${withArticle(name)}`,
+        body: `${blurb} Build it back up to reach the next level again.`,
       });
     });
     this.bus.on('settler:left', () => this.renderVitals());
@@ -214,6 +293,10 @@ export class DuiltUI {
    */
   showBuilding(structure, actions = {}) {
     this.building = structure;
+    // Kept so an event that changes this exact building (evolving it,
+    // losing a level) can redraw the open panel with the same handlers
+    // rather than needing Game.js's action factory reached from here.
+    this.buildingActionsCache = actions;
     const spec = STRUCTURES_BY_ID.get(structure.type);
     const body = this.q('#building-body');
     const sub = this.q('#building-sub');
@@ -227,9 +310,34 @@ export class DuiltUI {
     // A storehouse is worth answering before you open it: how full it is is
     // the question you walked over here to ask.
     const summary = this.duilt?.storeSummary(structure) ?? null;
+    // A producer with no shelves to open still has a level worth knowing —
+    // levelSummary covers both, so a store just prefers its own richer line.
+    const level = this.duilt?.levelSummary(structure) ?? null;
     const held = summary
       ? `${summary.tier?.name ?? 'Shelves'} · ${summary.items ? `${summary.items} things in ${summary.used} of ${summary.size}` : `empty, ${summary.size} slots`}`
+      : level ? `${level.name} · ${rateText(level.rate?.produces, level.rate?.everySeconds) ?? 'nothing yet'}`
       : null;
+
+    // What the next rung of the ladder needs — the same question a
+    // storehouse answers once you open it, asked here too so a producer
+    // with no screen of its own to open still gets an answer.
+    //
+    // Reported directly: leveling used to happen the instant the blocks
+    // qualified, with nothing to press and nothing on screen marking the
+    // moment. Qualifying (level.canEvolve, from tierStatus) now surfaces an
+    // Evolve button instead — see StructureRegistry.evolve, the only thing
+    // that actually moves the tier forward.
+    const next = level?.next;
+    const nextBlock = next ? `
+      <div class="store-next">
+        <strong>Next level: ${next.name}</strong>
+        ${next.rate ? `<span>${rateText(next.rate.produces, next.rate.everySeconds)}</span>` : ''}
+        ${level.canEvolve
+          ? '<span>It qualifies — press Evolve below to reach it.</span>'
+          : next.missing?.length
+            ? `<ul>${next.missing.map((m) => `<li>${m}</li>`).join('')}</ul>`
+            : ''}
+      </div>` : '';
 
     body.innerHTML = `
       <div class="building-state ${structure.valid ? 'good' : 'bad'}">
@@ -240,20 +348,24 @@ export class DuiltUI {
         ${held ? `<span>${held}</span>` : ''}
         <span>${locked ? 'Locked' : 'Unlocked — edits allowed'}</span>
       </div>
+      ${nextBlock}
       <p class="building-note">
         ${locked
           ? 'Protected, so you cannot take a wall out of it by accident while clearing the ground beside it. '
-            + 'Move it to pick it up and put it down somewhere else, or change it to edit the blocks.'
+            + 'Move it to pick it up and put it down somewhere else, or change it to edit the blocks — this '
+            + "closes so you can, and you'll get a Done button on screen until you tap it, wherever you are."
           : 'Open for changes: break and place inside it. It is re-checked as you go, and stops producing '
-            + 'if it no longer qualifies. Press Done when you have finished.'}
+            + "if it no longer qualifies. There's a Done button on screen — tap it when you've finished."}
       </p>
       <div class="building-actions">
-        ${summary ? '<button class="primary" data-store>Open it</button>' : ''}
-        <button class="${summary ? 'secondary' : 'primary'}" data-move>Move it</button>
+        ${level?.canEvolve ? `<button class="primary" data-evolve>Evolve to ${withArticle(next.name)}</button>` : ''}
+        ${summary ? `<button class="${level?.canEvolve ? 'secondary' : 'primary'}" data-store>Open it</button>` : ''}
+        <button class="${summary || level?.canEvolve ? 'secondary' : 'primary'}" data-move>Move it</button>
         <button class="secondary" data-change>${locked ? 'Change it' : 'Done changing'}</button>
         <button class="danger secondary" data-delete>Delete it</button>
       </div>`;
 
+    body.querySelector('[data-evolve]')?.addEventListener('click', () => actions.onEvolve?.());
     body.querySelector('[data-store]')?.addEventListener('click', () => actions.onOpenStore?.());
     body.querySelector('[data-move]').addEventListener('click', () => actions.onMove?.());
     body.querySelector('[data-change]').addEventListener('click', () => actions.onChange?.());
@@ -418,36 +530,65 @@ export class DuiltUI {
    * thing. `attr` is what the click handler keys off, so each grid can tell
    * its own slots apart from the other's.
    */
-  slotHtml(s, i, { attr = 'data-slot', held = false, empty = 'Empty slot' } = {}) {
+  slotHtml(s, i, { attr = 'data-slot', held = false, empty = 'Empty slot', discardAttr = null } = {}) {
     if (!s) return `<button class="bag-slot empty" ${attr}="${i}" aria-label="${empty} ${i + 1}"></button>`;
     const spec = ITEMS_BY_ID.get(s.id);
     const worn = spec?.durability ? Math.round((1 - s.wear / spec.durability) * 100) : null;
     const colour = `#${(spec?.color ?? 0x888888).toString(16).padStart(6, '0')}`;
-    return `
+    const button = `
       <button class="bag-slot ${held ? 'held' : ''}" ${attr}="${i}" aria-label="${itemName(s.id)}, ${s.count}">
         <span class="swatch${itemIcon(spec) ? ' swatch-cube' : ''}"${itemIcon(spec) ? '' : ` style="background:${colour}"`}>${
           itemIcon(spec, { size: 34 }) ?? glyphSvg(spec?.glyph, { size: 20, color: spec?.color ?? 0x888888 })}</span>
         ${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}
         ${worn != null ? `<span class="wear"><i style="width:${worn}%"></i></span>` : ''}
       </button>`;
+    // A sibling button, not nested inside the slot — a button inside a button
+    // is invalid markup, and this one needs its own click that the slot's
+    // lift/drop never sees.
+    if (!discardAttr) return button;
+    return `
+      <div class="bag-slot-wrap">
+        ${button}
+        <button class="slot-discard" ${discardAttr}="${i}" title="Throw away" aria-label="Throw away ${itemName(s.id)}">${icon('close')}</button>
+      </div>`;
   }
 
+  /**
+   * Two grids over one inventory, not two containers — the split is purely
+   * where PLAYABLE_SLOTS falls in `d.inventory.slots`, so lifting from one
+   * grid and dropping in the other is the exact same `inv.move(from, to)`
+   * that already reorders either grid on its own. `data-slot` always carries
+   * the real, absolute index into the one array, whichever grid drew it.
+   *
+   * Reported directly: the hotbar used to fill itself from the bag with
+   * nothing to press and nothing to arrange. This is that arranging —
+   * Equipped is read straight off by UIManager.buildHotbar, so dragging an
+   * item up here is what puts it in the hotbar, and dragging it back down is
+   * what takes it out.
+   */
   renderBag() {
     const d = this.duilt;
     if (!d) {
+      const hg = this.q('#bag-hotbar-grid');
       const g = this.q('#bag-grid');
+      if (hg) hg.innerHTML = '';
       if (g) g.innerHTML = '';
       return this.noWorld('#bag-detail');
     }
+    const hotbarGrid = this.q('#bag-hotbar-grid');
     const grid = this.q('#bag-grid');
-    if (!grid) return;
+    if (!grid || !hotbarGrid) return;
     const slots = d.inventory.slots;
+    const slotHtml = (s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i, discardAttr: 'data-discard' });
 
-    grid.innerHTML = slots
-      .map((s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i }))
-      .join('');
+    hotbarGrid.innerHTML = slots.slice(0, PLAYABLE_SLOTS).map(slotHtml).join('');
+    grid.innerHTML = slots.slice(PLAYABLE_SLOTS).map((s, j) => slotHtml(s, j + PLAYABLE_SLOTS)).join('');
 
-    grid.querySelectorAll('[data-slot]').forEach((btn) => this.bindSlot(btn));
+    for (const g of [hotbarGrid, grid]) {
+      g.querySelectorAll('[data-slot]').forEach((btn) => this.bindSlot(btn));
+      g.querySelectorAll('[data-discard]').forEach((btn) =>
+        btn.addEventListener('click', (e) => { e.stopPropagation(); this.discardSlot(Number(btn.dataset.discard)); }));
+    }
     this.q('#bag-sub').textContent = this.held != null
       ? `Holding ${itemName(slots[this.held]?.id ?? '')} — tap a slot to put it down.`
       : 'Tap an item to lift it, tap a slot to put it down. Hold to split a stack.';
@@ -496,6 +637,22 @@ export class DuiltUI {
     this.renderBag();
   }
 
+  /**
+   * The trash icon on a slot — thrown out on the spot, no lift-and-drop
+   * needed. Reported directly: with how fast the bag fills up, every slot
+   * eventually has *something* in it, and there was no way to clear space
+   * except crafting it away or handing it to a storehouse that is also full.
+   */
+  discardSlot(i) {
+    const inv = this.duilt?.inventory;
+    if (!inv) return;
+    const gone = inv.discard(i);
+    if (!gone) return;
+    if (this.held === i) this.held = null;
+    this.bus.emit('toast', { kind: 'xp', title: `Threw away ${gone.count > 1 ? `${gone.count} ` : ''}${itemName(gone.id).toLowerCase()}` });
+    this.renderBag();
+  }
+
   /** What the lifted or first item actually is — the bag shouldn't be a colour puzzle. */
   renderDetail() {
     const inv = this.duilt?.inventory;
@@ -535,13 +692,15 @@ export class DuiltUI {
   renderStore() {
     const d = this.duilt;
     const grid = this.q('#store-grid');
+    const hotbarGrid = this.q('#store-hotbar-grid');
     const bagGrid = this.q('#store-bag-grid');
-    if (!grid || !bagGrid) return;
-    if (!d) { grid.innerHTML = ''; bagGrid.innerHTML = ''; return this.noWorld('#store-grid'); }
+    if (!grid || !hotbarGrid || !bagGrid) return;
+    if (!d) { grid.innerHTML = ''; hotbarGrid.innerHTML = ''; bagGrid.innerHTML = ''; return this.noWorld('#store-grid'); }
 
     const summary = this.store ? d.storeSummary(this.store) : null;
     if (!summary) {
       grid.innerHTML = `<div class="sub" style="margin:0">Point at a storehouse to open it.</div>`;
+      hotbarGrid.innerHTML = '';
       bagGrid.innerHTML = '';
       return;
     }
@@ -549,14 +708,22 @@ export class DuiltUI {
     grid.innerHTML = summary.store.slots
       .map((s, i) => this.slotHtml(s, i, { attr: 'data-store-slot', empty: 'Empty shelf' }))
       .join('');
-    bagGrid.innerHTML = d.inventory.slots
+    // Equipped and bag, same split as the bag panel's own two grids — see
+    // renderBag. Both tap straight into the store, same as any bag slot
+    // always could; reordering equipped-vs-bag stays the bag panel's job.
+    hotbarGrid.innerHTML = d.inventory.slots.slice(0, PLAYABLE_SLOTS)
       .map((s, i) => this.slotHtml(s, i, { attr: 'data-bag-slot' }))
+      .join('');
+    bagGrid.innerHTML = d.inventory.slots.slice(PLAYABLE_SLOTS)
+      .map((s, i) => this.slotHtml(s, i + PLAYABLE_SLOTS, { attr: 'data-bag-slot' }))
       .join('');
 
     grid.querySelectorAll('[data-store-slot]').forEach((btn) =>
       btn.addEventListener('click', () => this.takeFromStore(Number(btn.dataset.storeSlot))));
-    bagGrid.querySelectorAll('[data-bag-slot]').forEach((btn) =>
-      btn.addEventListener('click', () => this.putInStore(Number(btn.dataset.bagSlot))));
+    for (const g of [hotbarGrid, bagGrid]) {
+      g.querySelectorAll('[data-bag-slot]').forEach((btn) =>
+        btn.addEventListener('click', () => this.putInStore(Number(btn.dataset.bagSlot))));
+    }
 
     const kind = summary.tier?.name ?? 'On the shelves';
     this.q('#store-where').textContent = summary.free
@@ -584,6 +751,43 @@ export class DuiltUI {
         ? 'Tap anything to move it between your bag and the shelves.'
         : 'Nothing in here yet. Tap something in your bag to put it away.';
     }
+
+    this.renderStoreRouting(summary);
+  }
+
+  /**
+   * The chip row that decides what a shed's own deliveries skip.
+   *
+   * One chip per item any building anywhere can produce — see
+   * config/structures.js's PRODUCIBLE_ITEMS — so a new building's output is
+   * routable the moment it exists, with nothing to add here. Hidden when
+   * nothing is produced yet, which today is never, but costs nothing to guard.
+   */
+  renderStoreRouting(summary) {
+    const box = this.q('#store-routing');
+    const chips = this.q('#store-routing-chips');
+    if (!box || !chips) return;
+    if (!PRODUCIBLE_ITEMS.length) { box.hidden = true; return; }
+    box.hidden = false;
+
+    const excludes = new Set(summary.structure.excludes ?? []);
+    chips.innerHTML = PRODUCIBLE_ITEMS.map((id) => {
+      const spec = ITEMS_BY_ID.get(id);
+      const off = excludes.has(id);
+      return `
+        <button class="routing-chip ${off ? 'off' : ''}" data-route="${id}"
+          aria-pressed="${off}" title="${off ? `Won't take ${itemName(id)}` : `Takes ${itemName(id)}`}">
+          ${glyphSvg(spec?.glyph, { size: 15, color: spec?.color ?? 0x888888 })}
+          <span>${itemName(id)}</span>
+        </button>`;
+    }).join('');
+
+    chips.querySelectorAll('[data-route]').forEach((btn) => btn.addEventListener('click', () => {
+      const d = this.duilt;
+      if (!d || !this.store) return;
+      d.structures.toggleExclude(this.store.id, btn.dataset.route);
+      this.renderStore();
+    }));
   }
 
   putInStore(i) {
@@ -682,18 +886,10 @@ export class DuiltUI {
   renderBuildings() {
     const d = this.duilt;
     if (!d) return this.noWorld('#buildings-list');
-    // What you are pointing at, if it is a build — so the list can say which of
-    // these you could claim right now rather than listing them all blankly.
-    const build = this.game.buildUnderCrosshair?.();
-    const region = build ? { ...build.bounds } : null;
-    const options = region ? d.claimOptionsFor(region) : null;
 
     this.q('#buildings-list').innerHTML = structuresForAge(d.age).map((spec) => {
       const built = d.structures.countOf(spec.id);
       const design = DESIGN_FOR_STRUCTURE.get(spec.id);
-      const opt = options?.find((o) => o.id === spec.id);
-      const needs = spec.requires.map((r) => r.id).join(' · ');
-      const makes = Object.entries(spec.produces ?? {}).map(([k, v]) => `${v} ${itemName(k).toLowerCase()}`).join(', ');
       const canStamp = design && d.inventory.hasAll(design.cost);
       const shortfall = design ? d.inventory.missing(design.cost) : {};
       // The full bill, not just what you're short — a shortfall note only ever
@@ -704,6 +900,12 @@ export class DuiltUI {
         ? Object.entries(design.cost).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(', ')
         : null;
 
+      // The requirement ids used to get their own "Needs: trunks · canopy ·
+      // soil" line here — internal names nothing else in the game ever
+      // explains, on every card whether or not you were about to build by
+      // hand. Building by hand still gets the real, readable version of
+      // each one ("Needs 2 more dirt") the moment you try — see openClaim —
+      // so this was noise repeated on every card rather than information.
       return `
         <div class="building-card">
           <div class="building-head">
@@ -715,33 +917,24 @@ export class DuiltUI {
             ${built ? `<span class="building-count">${built} built</span>` : ''}
           </div>
           <div class="building-meta">
-            <span>${this.whatItGivesYou(spec, makes)}</span>
-            <span>Needs: ${needs}</span>
+            <span>${this.whatItGivesYou(spec)}</span>
             ${costLine ? `<span>Costs: ${costLine}</span>` : ''}
           </div>
+          ${design ? `
           <div class="building-actions">
-            <button class="secondary" data-claim-here="${spec.id}" ${opt?.ok ? '' : 'disabled'}>
-              Claim what I framed
-            </button>
-            ${design ? `<button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
+            <button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
               Place a ${design.footprint} starter
-            </button>` : ''}
+            </button>
           </div>
-          ${design && canStamp ? '<div class="building-note"><span>Aim where you want it and press Place.</span></div>' : ''}
           <div class="building-note">
-            ${opt && !opt.ok ? `<span class="warn">${opt.reason}</span>` : ''}
-            ${!region ? '<span>Point at something you built to claim it.</span>' : ''}
-            ${design && !canStamp ? this.shortfallNote(shortfall) : ''}
-            ${design?.note && canStamp ? `<span>${design.note}</span>` : ''}
-          </div>
+            ${!canStamp ? this.shortfallNote(shortfall) : `
+              ${design.note ? `<span>${design.note}</span>` : ''}
+              <span>Aim where you want it and press Place.</span>
+            `}
+          </div>` : ''}
         </div>`;
     }).join('');
 
-    this.q('#buildings-list').querySelectorAll('[data-claim-here]').forEach((b) =>
-      b.addEventListener('click', () => {
-        this.closePanel('panel-buildings');
-        this.onClaimType?.(b.dataset.claimHere);
-      }));
     this.q('#buildings-list').querySelectorAll('[data-stamp]').forEach((b) =>
       b.addEventListener('click', () => {
         this.closePanel('panel-buildings');
@@ -752,12 +945,16 @@ export class DuiltUI {
   /**
    * The one line saying why you would want this building.
    *
-   * Most of them produce something on a timer and that is the answer. The ones
-   * that do not each have their own reason, and "Houses settlers, later on" —
-   * which is what every non-producer used to say — is true of exactly one.
+   * Most of them produce something on a timer and that is the answer, read
+   * off its first level (see config/structures.js's producesAt/intervalAt —
+   * a level beyond the first is something the catalogue card doesn't know
+   * about yet). The ones that produce nothing each have their own reason,
+   * and "Houses settlers, later on" — what every non-producer used to say —
+   * is true of exactly one.
    */
-  whatItGivesYou(spec, makes) {
-    if (makes) return `Makes ${makes} a minute`;
+  whatItGivesYou(spec) {
+    const rate = rateText(producesAt(spec, 0), intervalAt(spec, 0));
+    if (rate) return rate;
     if (spec.station === 'workshop') return 'Lets you make things here that your hands cannot';
     if (spec.grantsCapacity) return 'Somebody moves in — the first one is yours';
     return 'Builds nothing and makes nothing. It is the point of the game';

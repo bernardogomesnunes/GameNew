@@ -1,4 +1,4 @@
-import { STRUCTURES_BY_ID, holdsAt, isStore } from '../config/structures.js';
+import { STRUCTURES_BY_ID, holdsAt, isStore, hasLevels, producesAt, intervalAt } from '../config/structures.js';
 import { Inventory } from '../items/Inventory.js';
 import { tierStatus, validateStructure } from './validate.js';
 
@@ -54,23 +54,54 @@ export class StructureRegistry {
   }
 
   /**
-   * Re-reads what a storehouse has been built into, and resizes its shelves.
+   * Re-reads what a leveled building has been built into — resizing a
+   * storehouse's shelves, or just noting a quarry's rock for `collect` to
+   * read next cycle.
    *
-   * Called wherever the blocks might have moved under it, which is the same
-   * places `recheck` is called from — upgrading is not a separate action you
-   * take, it is the game noticing you built the thing bigger.
+   * `initial` is only true from claim(), for a building claimed already
+   * built up past the first rung — a warehouse claimed as a finished
+   * warehouse starts as one, which is reading the floor with nothing yet to
+   * respect (see tierStatus's own doc comment). Every other call is a
+   * recheck after an edit might have moved the blocks, and only ever
+   * lowers the tier: reaching a rung the blocks now support again is
+   * `evolve`'s job, not something a broken wall's repair hands back for
+   * free. Reported directly: leveling used to happen the instant the last
+   * block went down, with no button and no say in when — this is the half
+   * of that which still has to be automatic, because losing a rung you no
+   * longer have the blocks for isn't a choice either.
    */
-  retier(structure) {
+  retier(structure, { initial = false } = {}) {
     const spec = STRUCTURES_BY_ID.get(structure?.type);
-    if (!isStore(spec)) return null;
-    const status = tierStatus(this.world, structure.region, structure.type);
+    if (!hasLevels(spec)) return null;
+    const status = tierStatus(this.world, structure.region, structure.type, initial ? null : (structure.tier ?? 0));
     const was = structure.tier ?? 0;
     structure.tier = status.tier;
-    const slots = this.storeFor(structure).resize(status.slots);
-    if (status.tier > was) {
-      this.bus?.emit('structure:upgraded', { structure, name: status.name, slots, blurb: status.blurb });
+    if (isStore(spec)) this.storeFor(structure).resize(status.slots);
+    if (!initial && status.tier < was) {
+      this.bus?.emit('structure:downgraded', { structure, name: status.name, blurb: status.blurb });
     }
     return status;
+  }
+
+  /**
+   * The other half of leveling — the button in the building panel. Only
+   * moves one rung at a time, even if the blocks already qualify for
+   * several: reaching level 4 unlocks level 5's requirements, not levels 4
+   * through 7 all at once because the whole ladder happened to already be
+   * standing.
+   */
+  evolve(id) {
+    const s = this.structures.find((x) => x.id === id);
+    if (!s) return { ok: false, reason: 'That building no longer exists.' };
+    const spec = STRUCTURES_BY_ID.get(s.type);
+    if (!hasLevels(spec)) return { ok: false, reason: 'Nothing here has a level to reach.' };
+    const status = tierStatus(this.world, s.region, s.type, s.tier ?? 0);
+    if (!status.canEvolve) return { ok: false, reason: "It doesn't qualify for the next level yet." };
+    const tierDef = spec.tiers[status.tier + 1];
+    s.tier = status.tier + 1;
+    const slots = isStore(spec) ? this.storeFor(s).resize(tierDef.slots) : null;
+    this.bus?.emit('structure:upgraded', { structure: s, name: tierDef.name, slots, blurb: tierDef.blurb });
+    return { ok: true, name: tierDef.name, slots, blurb: tierDef.blurb };
   }
 
   /** Every standing storehouse, with what it is holding. */
@@ -78,6 +109,25 @@ export class StructureRegistry {
     return this.structures
       .filter((s) => s.valid && isStore(STRUCTURES_BY_ID.get(s.type)))
       .map((s) => ({ structure: s, store: this.storeFor(s) }));
+  }
+
+  /**
+   * Turns one item on or off for a storehouse's automatic deliveries.
+   *
+   * Off by default for everything: a shed accepts whatever a building hands
+   * it until the player says otherwise. Excluding an item here only steers
+   * `deliver()` — the player can still carry the thing in by hand, the same
+   * way `putInStore` always could, because that is a choice they made on
+   * purpose rather than a building doing it to them.
+   */
+  toggleExclude(id, itemId) {
+    const s = this.structures.find((x) => x.id === id);
+    if (!s) return false;
+    s.excludes = s.excludes ?? [];
+    const i = s.excludes.indexOf(itemId);
+    if (i === -1) s.excludes.push(itemId); else s.excludes.splice(i, 1);
+    this.bus?.emit('structure:excludes', { structure: s });
+    return true;
   }
 
   /**
@@ -104,10 +154,15 @@ export class StructureRegistry {
    */
   deliver(payload) {
     const placed = [];
-    const into = () => [this.inventory, ...this.stores().map((s) => s.store)];
+    const storeList = this.stores();
     for (const [id, amount] of Object.entries(payload)) {
       let left = amount;
-      for (const where of into()) {
+      // A shed that has excluded this item is skipped for it and only it —
+      // everything else it still takes normally.
+      const into = [this.inventory, ...storeList
+        .filter((s) => !s.structure.excludes?.includes(id))
+        .map((s) => s.store)];
+      for (const where of into) {
         if (left <= 0) break;
         const before = left;
         left = where.add(id, left);
@@ -226,6 +281,7 @@ export class StructureRegistry {
       claimedAt: now,
       lastPaidAt: now,
       brokenReason: null,
+      excludes: [],
     };
     if (replaced) {
       const dead = new Set(inTheWay);
@@ -234,8 +290,8 @@ export class StructureRegistry {
     }
     this.structures.push(structure);
     // A storehouse claimed as a finished warehouse starts as one, rather than
-    // as a shed that upgrades itself the first time anything changes near it.
-    this.retier(structure);
+    // needing an Evolve press for a rung it was already built to.
+    this.retier(structure, { initial: true });
     this.bus?.emit('structure:claimed', { structure, spec });
     return { ok: true, reason: check.reason, structure, replaced };
   }
@@ -298,9 +354,15 @@ export class StructureRegistry {
     for (const s of this.structures) {
       if (!s.valid) continue;
       const spec = STRUCTURES_BY_ID.get(s.type);
-      if (!spec?.everySeconds || !spec.produces) continue;
+      // A leveled building reads its current tier's own rate and cadence —
+      // producesAt/intervalAt fall back to the plain spec fields for
+      // everything that has no tiers at all, so this covers both.
+      const tier = s.tier ?? 0;
+      const everySeconds = intervalAt(spec, tier);
+      const produces = producesAt(spec, tier);
+      if (!everySeconds || !Object.keys(produces).length) continue;
 
-      const periodMs = spec.everySeconds * 1000;
+      const periodMs = everySeconds * 1000;
       const elapsed = Math.min(now - s.lastPaidAt, capMs);
       const cycles = Math.floor(elapsed / periodMs);
       if (cycles <= 0) continue;
@@ -309,7 +371,7 @@ export class StructureRegistry {
       // building gives against another of the same kind.
       const staffing = bonusFor ? bonusFor(s.id) : 1;
       const payload = {};
-      for (const [item, per] of Object.entries(spec.produces)) {
+      for (const [item, per] of Object.entries(produces)) {
         // Foraging pays out here rather than at the pickaxe — see DuiltGame.yieldFor.
         const amount = Math.round(per * cycles * yieldMultiplier * staffing);
         if (amount > 0) payload[item] = amount;
@@ -341,8 +403,9 @@ export class StructureRegistry {
     for (const s of this.structures) {
       if (!s.valid) continue;
       const spec = STRUCTURES_BY_ID.get(s.type);
-      if (!spec?.everySeconds) continue;
-      const due = s.lastPaidAt + spec.everySeconds * 1000;
+      const everySeconds = intervalAt(spec, s.tier ?? 0);
+      if (!everySeconds) continue;
+      const due = s.lastPaidAt + everySeconds * 1000;
       soonest = Math.min(soonest, Math.max(0, due - now));
     }
     return soonest === Infinity ? null : Math.round(soonest / 1000);
@@ -359,6 +422,7 @@ export class StructureRegistry {
         // the difference between "nothing in it" and "never had one".
         store: s.store ? s.store.toJSON() : null,
         tier: s.tier ?? 0,
+        excludes: s.excludes ?? [],
       })),
     };
   }
@@ -368,9 +432,11 @@ export class StructureRegistry {
     this.structures = data.structures
       .filter((s) => STRUCTURES_BY_ID.has(s.type))
       // Saves from before buildings could be locked have no flag; locked is the
-      // safe reading of a building someone claimed on purpose.
+      // safe reading of a building someone claimed on purpose. Saves from
+      // before routing existed have no excludes; nothing excluded is the same
+      // shed they built, taking everything the way it always did.
       .map((s) => {
-        const structure = { locked: true, ...s, store: null, brokenReason: null };
+        const structure = { locked: true, excludes: [], ...s, store: null, brokenReason: null };
         // Built here rather than in a second pass over `data.structures`: a
         // filtered-out type shifts every index after it, and a storehouse
         // would come back holding the building next door's goods.

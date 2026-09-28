@@ -56,6 +56,11 @@ export const GLYPHS = {
   vegetable: 'M11 20 7.5 9.5c3-2 6.5-2 9.5 0L11 20M14.5 6.5 17.5 4M14.5 6.5 13.5 3.5',
   // Handle and a wedge of a head. The curved blade read as a tick.
   axe: 'M6 19.5 13.5 12M13.2 11.6 12.3 7.2l5.9-2.4 1.6 5.7Z',
+  // A handle up into an arched head with a point on each side — the arch is
+  // what says pickaxe rather than axe.
+  pickaxe: 'M12 20 12.5 12.5M8 8c1.5-3 6-3 7.5 0M8 8 5 11.5M15.5 8 18.5 11.5',
+  // Straight shaft into a blade that tapers to a rounded point.
+  shovel: 'M12 4v10M8.5 14h7L15 18.5a3 3 0 0 1-6 0Z',
   // Tapered, with a handle over the rim. Straight sides made it a waste bin.
   bucket: 'M5 8.5h14l-2.4 11h-9.2L5 8.5ZM8 8.5a4 4.5 0 0 1 8 0',
   bucketFull: 'M5 8.5h14l-2.4 11h-9.2L5 8.5ZM8 13.5c2-1.6 4.8 1.6 6.8 0',
