@@ -43,11 +43,18 @@ const LANTERN = 26, SLAB_STONE = 27, STAIRS_STONE = 29, CHAIR_OAK = 33, RUG_GREE
 // --- items and recipes agree with the blocks they place -------------------
 
 {
+  // Ore (38-40): natural ground the same way Moss or Clay are — mined, not
+  // made. Every id before them in this range happens to be something the
+  // workshop crafts, which is what this loop originally checked; ore breaks
+  // that coincidence on purpose, the same way it isn't in PLACEABLE recipe
+  // land at all — see biomes.js's own note on why it only ever turns up on
+  // the Summit.
+  const NATURAL = new Set([38, 39, 40]);
   const newBlockIds = BLOCKS.filter((b) => b.id >= 26).map((b) => b.id);
   for (const id of newBlockIds) {
     const item = [...ITEMS_BY_ID.values()].find((i) => i.block === id);
     ok(`block ${BLOCKS_BY_ID.get(id).name} has an item that places it`, !!item);
-    if (item) {
+    if (item && !NATURAL.has(id)) {
       const recipe = RECIPES.find((r) => r.output.id === item.id);
       ok(`${item.name} is craftable`, !!recipe);
     }

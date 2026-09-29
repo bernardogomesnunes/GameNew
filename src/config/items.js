@@ -138,6 +138,19 @@ export const ITEMS = [
   { id: 'glass_blue', name: 'Blue Glass', kind: 'refined', stackTo: STACK_BULK, color: 0x90aade, glyph: 'pane', block: 16, madeBy: 'Fired from sand, tinted blue' },
   { id: 'amethyst', name: 'Amethyst', kind: 'raw', stackTo: STACK_GOODS, color: 0xb895dc, glyph: 'crystal', block: 18, madeBy: 'Found deep underground' },
   { id: 'silt', name: 'Silt', kind: 'raw', stackTo: STACK_BULK, color: 0x8b9a8a, glyph: 'clay', block: 25, madeBy: 'Dug from the ocean floor' },
+
+  // --- ore, from the one mountain that has any --------------------------
+  //
+  // Raw ore mines the same way anything else does — break it, it's in your
+  // bag — but it is only ever found on the Summit biome, and even there at
+  // under 5% of the rock (see biomes.js's `ores` and ChunkGen.oreAt). A
+  // foundry (config/structures.js) is what turns the raw ore into something
+  // a recipe actually asks for.
+  { id: 'iron_ore', name: 'Iron Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xa9948d, glyph: 'gravel', block: 38, madeBy: 'Mined from the Summit' },
+  { id: 'copper_ore', name: 'Copper Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xbb8a67, glyph: 'gravel', block: 39, madeBy: 'Mined from the Summit' },
+  { id: 'gold_ore', name: 'Gold Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8b686, glyph: 'gold', block: 40, madeBy: 'Mined from the Summit' },
+  { id: 'iron_ingot', name: 'Iron Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xc7c7cd, glyph: 'gold', madeBy: 'Smelted at a foundry' },
+  { id: 'copper_ingot', name: 'Copper Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xd69264, glyph: 'gold', madeBy: 'Smelted at a foundry' },
 ];
 
 /** What a tool lets you do, if it lets you do anything: 'clear' -> 'pry_bar'. */

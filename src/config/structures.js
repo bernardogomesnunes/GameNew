@@ -496,6 +496,44 @@ export const STRUCTURES = [
     skill: 'politics',
   },
 
+  {
+    id: 'foundry',
+    name: 'Foundry',
+    icon: '🔥',
+    age: 4,
+    blurb: 'A hotter fire than the kiln keeps — hot enough to run ore.',
+    minSize: 4,
+    maxSize: 12,
+    cost: { cobblestone: 8 },
+    requires: [
+      {
+        id: 'shell',
+        test: (ctx) => count(ctx, [STONE, COBBLE, BRICK]) >= 26,
+        say: (ctx) => `Needs ${26 - count(ctx, [STONE, COBBLE, BRICK])} more stone or brick in the shell — the fire has to hold`,
+      },
+      {
+        // A bigger, hotter chamber than the kiln's own two cells — this is
+        // meant to be the building you raise once the kiln, not the one
+        // you raise instead of it.
+        id: 'chamber',
+        test: (ctx) => ctx.enclosedVolume() >= 3,
+        say: () => 'Needs a bigger sealed chamber than the kiln\'s — this fire runs hotter',
+      },
+      {
+        id: 'town',
+        test: (ctx) => ctx.hasNeighbour([PLANKS, BRICK, GLASS, WOOD], 12),
+        say: () => 'Build it among your town, not out at the ore face',
+      },
+    ],
+    // Nothing on a timer: what a foundry gives back is standing near it with
+    // ore in your bag, at the workbench — see config/recipes.js's smelt_iron
+    // and its neighbours. The same shape Workshop already is.
+    produces: {},
+    everySeconds: 0,
+    station: 'foundry',
+    skill: 'building',
+  },
+
   // ---- Age 5: depth -------------------------------------------------------
 
   {

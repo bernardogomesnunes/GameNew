@@ -73,6 +73,7 @@ export const AGES = [
       { structure: 'house', count: 4, label: 'Have four houses standing' },
       { structure: 'townhouse', count: 1, label: 'Raise a townhouse — three households under one roof' },
       { structure: 'tavern', count: 1, label: 'Raise a tavern' },
+      { structure: 'foundry', count: 1, label: 'Raise a foundry' },
     ],
   },
   {

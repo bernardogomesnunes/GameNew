@@ -962,6 +962,7 @@ export class DuiltUI {
     const rate = rateText(producesAt(spec, 0), intervalAt(spec, 0));
     if (rate) return rate;
     if (spec.station === 'workshop') return 'Lets you make things here that your hands cannot';
+    if (spec.station === 'foundry') return 'Lets you smelt ore into something a recipe wants';
     if (spec.grantsCapacity) return 'Somebody moves in — the first one is yours';
     return 'Builds nothing and makes nothing. It is the point of the game';
   }

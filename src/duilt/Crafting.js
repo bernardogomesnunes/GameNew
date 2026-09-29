@@ -37,7 +37,11 @@ export class Crafting {
       const roomOk = this.inventory.roomFor(r.output.id, r.output.count) >= r.output.count;
       const ok = Object.keys(missing).length === 0 && placeOk && stationOk && roomOk;
       let reason = null;
-      if (!stationOk) reason = 'Stand at your workshop to make this';
+      // Generic rather than hardcoded to "workshop" now that a second
+      // station (foundry) exists — the recipe already knows which one it
+      // needs, so there is nothing left to remember here when a third one
+      // shows up.
+      if (!stationOk) reason = `Stand at your ${r.station} to make this`;
       else if (!placeOk) reason = r.needs === 'water' ? 'Stand closer to the river' : `Needs ${r.needs} nearby`;
       else if (Object.keys(missing).length) {
         reason = 'Needs ' + Object.entries(missing)
@@ -97,7 +101,7 @@ export class Crafting {
     // only way in — a stale panel left open while you walked away would
     // otherwise still craft.
     if (recipe.station !== 'hand' && !atStations.includes(recipe.station)) {
-      return { ok: false, reason: 'Stand at your workshop to make this.' };
+      return { ok: false, reason: `Stand at your ${recipe.station} to make this.` };
     }
 
     if (recipe.needs && !this.conditionMet(recipe.needs, near)) {

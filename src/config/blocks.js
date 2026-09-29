@@ -111,6 +111,16 @@ export const BLOCKS = [
   { id: 35, name: 'Red Rug', glyph: 'rug', color: 0xd1887a, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
   { id: 36, name: 'Blue Rug', glyph: 'rug', color: 0x90aade, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
   { id: 37, name: 'Green Rug', glyph: 'rug', color: 0x82c675, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
+
+  // Ore. Embedded in the rock of the Summit biome only (see ChunkGen.oreAt) —
+  // a vein you find, not a block anyone places, the same way Moss or Clay are
+  // natural ground with an item behind them but no cost to place. `gravel`'s
+  // speckled mark already reads as flecks in rock; gold ore borrows the
+  // existing gold mark instead, so it reads as kin to Gold Block without
+  // being the same colour — ore is duller, unrefined, still in the stone.
+  { id: 38, name: 'Iron Ore', glyph: 'gravel', color: 0xa9948d, material: 'stone', unlock: null },
+  { id: 39, name: 'Copper Ore', glyph: 'gravel', color: 0xbb8a67, material: 'stone', unlock: null },
+  { id: 40, name: 'Gold Ore', glyph: 'gold', color: 0xc8b686, material: 'stone', unlock: null },
 ];
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));

@@ -152,6 +152,16 @@ const LATER = [
     check: (c) => c.stats.claimed.size >= 6,
   },
   {
+    id: 'first_ore',
+    age: 4,
+    name: 'Something in the rock',
+    description: 'Climb the one mountain tall enough to have it, and bring back iron, copper or gold ore.',
+    icon: '⛏️',
+    xpReward: 220,
+    check: (c) => !!c.duilt
+      && ['iron_ore', 'copper_ore', 'gold_ore'].some((id) => c.duilt.inventory?.countOf(id) >= 1),
+  },
+  {
     id: 'a_town',
     age: 5,
     name: 'Fifteen buildings',
