@@ -236,9 +236,11 @@ export class StructureRegistry {
 
   /**
    * Claims a region as a building. Returns { ok, reason, structure }.
-   * Charges the type's cost from the bag, all or nothing.
+   * Charges the type's cost from the bag, all or nothing — unless `free`,
+   * which a sandbox world passes so a house works the moment you build it,
+   * with nothing to pay and nothing to be short of.
    */
-  claim(region, typeId, { now = Date.now(), discount = 0 } = {}) {
+  claim(region, typeId, { now = Date.now(), discount = 0, free = false } = {}) {
     const spec = STRUCTURES_BY_ID.get(typeId);
     if (!spec) return { ok: false, reason: 'Unknown building type.' };
 
@@ -261,16 +263,18 @@ export class StructureRegistry {
     // The Building skill makes raising things cheaper. Safe here because a
     // claim cannot be reversed for a refund.
     const cost = {};
-    for (const [id, n] of Object.entries(spec.cost ?? {})) {
-      const reduced = Math.max(1, Math.ceil(n * (1 - discount)));
-      cost[id] = reduced;
+    if (!free) {
+      for (const [id, n] of Object.entries(spec.cost ?? {})) {
+        const reduced = Math.max(1, Math.ceil(n * (1 - discount)));
+        cost[id] = reduced;
+      }
+      if (Object.keys(cost).length && !this.inventory.hasAll(cost)) {
+        const missing = this.inventory.missing(cost);
+        const parts = Object.entries(missing).map(([id, n]) => `${n} ${id}`);
+        return { ok: false, reason: `Needs ${parts.join(' and ')} in your bag` };
+      }
+      this.inventory.spend(cost);
     }
-    if (Object.keys(cost).length && !this.inventory.hasAll(cost)) {
-      const missing = this.inventory.missing(cost);
-      const parts = Object.entries(missing).map(([id, n]) => `${n} ${id}`);
-      return { ok: false, reason: `Needs ${parts.join(' and ')} in your bag` };
-    }
-    this.inventory.spend(cost);
 
     const structure = {
       id: this.nextId++,

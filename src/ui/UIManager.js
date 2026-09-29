@@ -141,7 +141,7 @@ export class UIManager {
         <button class="icon-btn touch-moved" id="btn-roof" title="Pitch a roof over the building you point at">${icon('roof')}<span>Roof</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
-        <button class="icon-btn duilt-only touch-moved" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
+        <button class="icon-btn duilt-only survival-only touch-moved" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
         <button class="icon-btn touch-moved" id="btn-fullscreen" title="Toggle fullscreen">${icon('fullscreen')}<span>Screen</span></button>
         <button class="icon-btn" id="btn-menu" title="Settings, saves and your account">${icon('settings')}<span>Settings</span></button>
       </div>
@@ -204,6 +204,9 @@ export class UIManager {
               </label>
               <label class="gfx-check">
                 <input type="checkbox" id="gfx-antialias" /> Smooth edges
+              </label>
+              <label class="gfx-check">
+                <input type="checkbox" id="gfx-lights" /> Dynamic lights
               </label>
             </div>
             <div class="export-note" id="gfx-note" hidden></div>
@@ -336,8 +339,8 @@ export class UIManager {
         <div class="touch-tray" id="touch-tray" hidden>
           <button class="touch-btn duilt-only" id="t-bag" hidden>${icon('bag')}<span>Bag</span></button>
           <button class="touch-btn duilt-only" id="t-build" hidden>${icon('home')}<span>Build</span></button>
-          <button class="touch-btn duilt-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
-          <button class="touch-btn duilt-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
+          <button class="touch-btn duilt-only survival-only" id="t-bench" hidden>${icon('hammer')}<span>Bench</span></button>
+          <button class="touch-btn duilt-only survival-only" id="t-skills" hidden>${icon('skills')}<span>Skills</span></button>
           <!-- Made, not given: these appear once you have the tool in your bag. -->
           <button class="touch-btn needs-tool" id="t-clear" data-tool="clear" hidden>${icon('clear')}<span>Clear</span></button>
           <button class="touch-btn needs-tool" id="t-symmetry" data-tool="mirror" hidden>${icon('symmetry')}<span>Mirror</span></button>
@@ -1033,7 +1036,7 @@ export class UIManager {
   /** Fills a panel in just before it is shown, if it has anything to fill. */
   populatePanel(id) {
     if (id === 'panel-menu') {
-      const kind = this.cb.isDuilt?.() ? 'Duilt' : 'Creative';
+      const kind = this.cb.getModeLabel?.() ?? 'Duilt';
       const label = this.q('#menu-world-kind');
       if (label) label.textContent = `A ${kind} world`;
       const name = this.q('#save-name');
@@ -1474,11 +1477,9 @@ export class UIManager {
   }
 
   /**
-   * Shows the tools you have actually made.
-   *
-   * A creative world has no bag to make anything with, so there everything is
-   * simply there — the same split as the rest of it: a *system* is a kind of
-   * world, a tool is not.
+   * Shows the tools you actually have — real ones in the bag, both in real
+   * Duilt and in a sandbox, which starts with one of everything (see
+   * DuiltGame.grantCreativeKit) rather than nothing to make them with.
    */
   refreshTools() {
     const held = this.cb.heldTools?.() ?? null;
@@ -1565,9 +1566,11 @@ export class UIManager {
   wireGraphics() {
     const g = this.game.graphics ?? {};
     const res = this.q('#gfx-resolution'), dist = this.q('#gfx-distance'), aa = this.q('#gfx-antialias');
+    const lights = this.q('#gfx-lights');
     res.value = String(g.resolution ?? 'auto');
     dist.value = String(g.distance ?? 'auto');
     aa.checked = g.antialias !== false;
+    lights.checked = g.lights !== false;
 
     const apply = () => {
       const resolution = res.value === 'auto' ? 'auto' : Number(res.value);
@@ -1576,6 +1579,7 @@ export class UIManager {
         distance: dist.value,
         antialias: aa.checked,
         smoothing: resolution === 'auto',
+        lights: lights.checked,
       });
       const note = this.q('#gfx-note');
       note.hidden = !result?.needsReload;
@@ -1584,6 +1588,7 @@ export class UIManager {
     res.addEventListener('change', apply);
     dist.addEventListener('change', apply);
     aa.addEventListener('change', apply);
+    lights.addEventListener('change', apply);
 
     // A live frame rate, so a change can be judged on more than a feeling.
     setInterval(() => {
@@ -1603,10 +1608,20 @@ export class UIManager {
    * to blocks, and blocks work the same in every world. Tying them to a world
    * type meant a Creative player could not roof a house and a Duilt player
    * could not save a design, for no reason either of them could have guessed.
+   *
+   * Creative is a sandbox built on the same engine now — the bag, buildings
+   * and settlers all work there too, so `.duilt-only` (which really means
+   * "needs the Duilt engine under it") shows for both. `.survival-only` is
+   * the narrower set that only makes sense with real scarcity behind it —
+   * the workbench (there's nothing left to craft when you already hold one
+   * of everything) and skill levels (there's nothing to grind XP into) —
+   * so it shows only in real Duilt, never in a sandbox world.
    */
   refreshForDuilt() {
     const on = !!this.cb.isDuilt?.();
+    const survival = on && !this.cb.isSandbox?.();
     this.root.querySelectorAll('.duilt-only').forEach((el) => { el.hidden = !on; });
+    this.root.querySelectorAll('.survival-only').forEach((el) => { el.hidden = !survival; });
     this.duiltUI?.setActive(on);
     this.refreshTools();
   }

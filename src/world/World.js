@@ -1,8 +1,15 @@
-import { AIR, isSystemBlock } from '../config/blocks.js';
+import { AIR, WATER, isSystemBlock, shapeOf, lightOf } from '../config/blocks.js';
 
 export const CHUNK_SIZE = 16;
 
-const NON_COLLIDABLE = new Set([AIR, 11]); // air, water
+/**
+ * How much of a block's cell is actually solid, in world-space Y — a full
+ * cube everywhere, a slab or stair only up to its own half-height hitbox.
+ * Stairs share the slab's flat hitbox rather than a stepped one; see
+ * blocks.js's own note on why.
+ */
+const HALF_SHAPES = new Set(['slab', 'stair', 'chair']);
+const NO_COLLISION_SHAPES = new Set(['rug']);
 
 export class Chunk {
   constructor(cx, cz, height) {
@@ -88,6 +95,13 @@ export class World {
     this.sizeX = this.endless ? null : sizeX ?? 64;
     this.sizeZ = this.endless ? null : sizeZ ?? 64;
     this.chunks = new Map();
+    // Where every placed light-emitting block is, keyed by position — kept
+    // up to date by setBlock and scanned in from any chunk that arrives with
+    // land already in it (generation never places one itself, so a freshly
+    // made chunk needs no scan; a loaded save might already have one). See
+    // LightManager, which reads this to light only whichever lanterns are
+    // actually nearest the player rather than all of them at once.
+    this.lights = new Map();
 
     if (this.endless) {
       // Wherever the settlement actually is — the same point the biome map's
@@ -161,9 +175,29 @@ export class World {
   }
 
   isCollidable(x, y, z) {
-    if (y < 0) return true; // treat below-world as solid floor
-    if (!this.inBounds(x, y, z)) return false;
-    return !NON_COLLIDABLE.has(this.getBlock(x, y, z));
+    return this.collisionBoxAt(x, y, z) != null;
+  }
+
+  /**
+   * The solid hitbox at a block cell, in world-space Y, or null for nothing
+   * there to stand on or walk into. Every ordinary block returns its own
+   * full cell; a slab, stair or chair returns only its bottom half (see
+   * HALF_SHAPES); a rug returns nothing at all, so it's just floor you walk
+   * straight over. X/Z stay the full cell for every shape — only the height
+   * is ever partial — which is what PlayerController's vertical collision
+   * actually snaps to, rather than assuming every solid cell is a full block
+   * tall the way the old binary isCollidable did.
+   */
+  collisionBoxAt(x, y, z) {
+    x |= 0; y |= 0; z |= 0;
+    if (y < 0) return { minY: y, maxY: y + 1 }; // treat below-world as solid floor
+    if (!this.inBounds(x, y, z)) return null;
+    const id = this.getBlock(x, y, z);
+    if (id === AIR || id === WATER) return null;
+    const shape = shapeOf(id);
+    if (NO_COLLISION_SHAPES.has(shape)) return null;
+    if (HALF_SHAPES.has(shape)) return { minY: y, maxY: y + 0.5 };
+    return { minY: y, maxY: y + 1 };
   }
 
   isSolid(x, y, z) {
@@ -241,7 +275,31 @@ export class World {
     if (lx === CHUNK_SIZE - 1) edge(1, 0);
     if (lz === 0) edge(0, -1);
     if (lz === CHUNK_SIZE - 1) edge(0, 1);
+    if (prev !== value) this.trackLight(x, y, z, value);
     return prev;
+  }
+
+  /** Keeps `lights` in step with a single block change. */
+  trackLight(x, y, z, value) {
+    const key = `${x},${y},${z}`;
+    const light = lightOf(value);
+    if (light) this.lights.set(key, { x, y, z, light });
+    else this.lights.delete(key);
+  }
+
+  /** Finds every light-emitting block already in a chunk's data — see `lights`. */
+  scanLights(chunk) {
+    const baseX = chunk.cx * CHUNK_SIZE, baseZ = chunk.cz * CHUNK_SIZE;
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      for (let ly = 0; ly < chunk.height; ly++) {
+        for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+          const id = chunk.get(lx, ly, lz);
+          if (id === AIR) continue;
+          const light = lightOf(id);
+          if (light) this.lights.set(`${baseX + lx},${ly},${baseZ + lz}`, { x: baseX + lx, y: ly, z: baseZ + lz, light });
+        }
+      }
+    }
   }
 
   dirtyChunks() {
@@ -377,6 +435,7 @@ export class World {
         chunk.dirty = true;
         if (c.surface) chunk.surface.set(c.surface);
         else world.gen.resurface(chunk);   // saves from before the heights rode along
+        world.scanLights(chunk);
       }
       return world;
     }
@@ -390,6 +449,7 @@ export class World {
       if (!chunk) continue;
       chunk.data = rleDecode(c.rle, chunk.data.length);
       chunk.dirty = true;
+      world.scanLights(chunk);
     }
     return world;
   }

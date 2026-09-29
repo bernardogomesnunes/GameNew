@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { blockTextureArray, layerFor } from '../render/BlockTextures.js';
-import { BLOCKS_BY_ID, AIR, isTransparent } from '../config/blocks.js';
+import { BLOCKS_BY_ID, AIR, isTransparent, shapeOf } from '../config/blocks.js';
+import { boxesFor } from './propShapes.js';
 import { CHUNK_SIZE } from './World.js';
 
 const SOLID_SENTINEL = -1; // below the world: never draw a face against it
@@ -17,6 +18,14 @@ const colorCache = new Map();
 // out as a single draw call instead of one per block type.
 const OPAQUE_KEY = 'opaque';
 const opaqueMaterial = withBlockTextures(new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }));
+
+/**
+ * What a non-cube block (slab, stair, table, chair, rug) actually draws with
+ * — untextured, unlike the terrain material above, since a handful of small
+ * boxes per chunk doesn't carry the same "a whole floor is one draw call"
+ * pressure that made baking texture tiles into the block material worth it.
+ */
+const propMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 
 function bufferKeyFor(blockId) {
   return isTransparent(blockId) ? blockId : OPAQUE_KEY;
@@ -182,21 +191,22 @@ export class ChunkMesher {
    * or the memory grows for as long as you keep walking.
    */
   remove(chunk) {
-    if (!chunk?.mesh) return;
-    for (const mesh of chunk.mesh.values()) {
-      this.disposeMesh(mesh);
-      this.activeMeshes.delete(mesh);
-    }
-    chunk.mesh = null;
-  }
-
-  rebuild(world, chunk) {
-    if (chunk.mesh) {
+    if (chunk?.mesh) {
       for (const mesh of chunk.mesh.values()) {
         this.disposeMesh(mesh);
         this.activeMeshes.delete(mesh);
       }
+      chunk.mesh = null;
     }
+    if (chunk?.propMesh) {
+      this.disposeMesh(chunk.propMesh);
+      this.activeMeshes.delete(chunk.propMesh);
+      chunk.propMesh = null;
+    }
+  }
+
+  rebuild(world, chunk) {
+    if (chunk.mesh || chunk.propMesh) this.remove(chunk);
 
     const baseX = chunk.cx * CHUNK_SIZE;
     const baseZ = chunk.cz * CHUNK_SIZE;
@@ -229,7 +239,12 @@ export class ChunkMesher {
               neighbor[d] = slice + sign; neighbor[u] = i; neighbor[v] = j;
               const self = blockAt(pos[0], pos[1], pos[2]);
               const other = blockAt(neighbor[0], neighbor[1], neighbor[2]);
-              mask[n] = faceVisible(self, other) ? self : 0;
+              // A shaped block (slab, stair, furniture) never emits its own
+              // cube face — its real geometry comes from buildProps below —
+              // but it still occludes a neighbour's face exactly like a
+              // solid cube would, since `other` here is unaffected. See
+              // propShapes.js's own note on why that's the right tradeoff.
+              mask[n] = faceVisible(self, other) && shapeOf(self) === 'cube' ? self : 0;
             }
           }
 
@@ -292,6 +307,88 @@ export class ChunkMesher {
 
     chunk.mesh = meshes;
     chunk.dirty = false;
+    this.buildProps(chunk);
+  }
+
+  /**
+   * The non-cube half of a chunk's geometry: every slab, stair and piece of
+   * furniture, as a handful of small boxes each rather than the greedy cube
+   * pass above — there's no run of ten identical chairs to merge the way a
+   * floor of stone merges, so plain per-block boxes cost nothing extra.
+   */
+  buildProps(chunk) {
+    const baseX = chunk.cx * CHUNK_SIZE;
+    const baseZ = chunk.cz * CHUNK_SIZE;
+    const buf = { position: [], normal: [], color: [], index: [] };
+    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+      for (let ly = 0; ly < chunk.height; ly++) {
+        for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+          const id = chunk.get(lx, ly, lz);
+          if (id === AIR) continue;
+          const shape = shapeOf(id);
+          if (shape === 'cube') continue;
+          const col = baseColor(id);
+          for (const b of boxesFor(shape)) {
+            this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col);
+          }
+        }
+      }
+    }
+    if (!buf.position.length) return;
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(buf.position, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(buf.normal, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(buf.color, 3));
+    geo.setIndex(buf.index);
+    geo.computeBoundingSphere();
+
+    const mesh = new THREE.Mesh(geo, propMaterial);
+    mesh.position.set(baseX, 0, baseZ);
+    mesh.frustumCulled = true;
+    mesh.userData.chunk = chunk;
+    this.scene.add(mesh);
+    this.activeMeshes.add(mesh);
+    chunk.propMesh = mesh;
+  }
+
+  /**
+   * One axis-aligned box, all six faces, in chunk-local space — the same
+   * origin/du/dv-and-winding math emitQuad above uses for a full block face,
+   * just run over continuous bounds instead of a grid slice, so the winding
+   * is proven correct rather than hand-guessed per face.
+   */
+  emitPropBox(buf, x0, y0, z0, x1, y1, z1, col) {
+    const min = [x0, y0, z0], max = [x1, y1, z1];
+    for (let d = 0; d < 3; d++) {
+      const u = (d + 1) % 3, v = (d + 2) % 3;
+      for (const sign of [1, -1]) {
+        const origin = [0, 0, 0];
+        origin[d] = sign > 0 ? max[d] : min[d];
+        origin[u] = min[u];
+        origin[v] = min[v];
+        const du = [0, 0, 0]; du[u] = max[u] - min[u];
+        const dv = [0, 0, 0]; dv[v] = max[v] - min[v];
+
+        const nx = d === 0 ? sign : 0, ny = d === 1 ? sign : 0, nz = d === 2 ? sign : 0;
+        const shade = d === 1 ? (sign > 0 ? SHADE.py : SHADE.ny) : d === 0 ? SHADE.px : SHADE.pz;
+        const r = col.r * shade, g = col.g * shade, b = col.b * shade;
+
+        const base = buf.position.length / 3;
+        buf.position.push(
+          origin[0], origin[1], origin[2],
+          origin[0] + du[0], origin[1] + du[1], origin[2] + du[2],
+          origin[0] + du[0] + dv[0], origin[1] + du[1] + dv[1], origin[2] + du[2] + dv[2],
+          origin[0] + dv[0], origin[1] + dv[1], origin[2] + dv[2],
+        );
+        for (let k = 0; k < 4; k++) {
+          buf.normal.push(nx, ny, nz);
+          buf.color.push(r, g, b);
+        }
+        if (sign > 0) buf.index.push(base, base + 1, base + 2, base, base + 2, base + 3);
+        else buf.index.push(base, base + 3, base + 2, base, base + 2, base + 1);
+      }
+    }
   }
 
   emitQuad(byType, id, d, u, v, sign, slice, i, j, w, h) {

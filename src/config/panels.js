@@ -19,7 +19,11 @@
  *   sub      the line under it; subId when something rewrites it at runtime
  *   wide     for panels showing a grid rather than a column
  *   layer    which surface draws its body — 'main' or the Duilt overlay
- *   mode     where it exists: 'any', 'duilt', or 'sandbox'
+ *   mode     where it exists: 'any' (everywhere), 'duilt' (needs the Duilt
+ *            engine under it — both real Duilt and a free-build sandbox run
+ *            on that now, see DuiltGame's own note on why), or 'survival'
+ *            (Duilt's own survival loop specifically, which a sandbox has
+ *            turned off — nothing left to craft or level up)
  *   key      the keyboard shortcut, as a KeyboardEvent.code
  *   label    what to call it on a button
  */
@@ -133,7 +137,7 @@ export const PANELS = [
     subId: 'bench-sub',
     wide: true,
     layer: 'duilt',
-    mode: 'duilt',
+    mode: 'survival',
     key: 'KeyE',
     label: 'Bench',
   },
@@ -160,7 +164,7 @@ export const PANELS = [
     title: 'Skills',
     sub: 'You get better by doing — and credit lands on milestones, not repetition.',
     layer: 'duilt',
-    mode: 'duilt',
+    mode: 'survival',
     label: 'Skills',
   },
 ];

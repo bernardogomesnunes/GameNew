@@ -23,6 +23,7 @@ export const DEFAULTS = {
   antialias: true,
   distance: 'auto',       // 'auto' | 'near' | 'far'
   smoothing: true,        // the adaptive controller; off pins the resolution
+  lights: true,           // real point lights from lanterns; off on the weakest devices
 };
 
 export const DISTANCES = {

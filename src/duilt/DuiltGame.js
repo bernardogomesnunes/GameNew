@@ -7,8 +7,8 @@ import { Skills } from '../progression/Skills.js';
 import { Crafting } from './Crafting.js';
 import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
-import { ITEM_FOR_BLOCK, ITEMS_BY_ID, itemName } from '../config/items.js';
-import { STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt } from '../config/structures.js';
+import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName } from '../config/items.js';
+import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
 
@@ -19,18 +19,26 @@ import { ageOf, FINAL_AGE } from '../config/ages.js';
  * fills a bag instead of a wallet, placing spends from it, the border says no,
  * buildings get claimed and pay out, and hunger keeps the whole chain urgent.
  *
- * Kept separate so the original sandbox keeps working untouched — old worlds
- * predate all of this and shouldn't be dragged into it.
+ * `sandbox` is what Creative actually is now: the same engine, the same bag,
+ * the same buildings and settlers — reported directly as wanting "basically
+ * all items available… only need one of each… add it to the equipable panel
+ * and use it," and structures that "just work" rather than needing claimed
+ * and paid for — with the parts that make it Duilt rather than a sandbox
+ * turned off one at a time: no cost to place or claim, no hunger, no border,
+ * no age to advance through, no achievement/level gate on any block. Every
+ * place that behaviour lives stays the single source of truth for it; this
+ * only ever adds `if (this.sandbox)` at the front of it, never a second copy.
  */
 
 const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds: 6 };
 
 export class DuiltGame {
-  constructor({ world, scene, bus, age = 1 }) {
+  constructor({ world, scene, bus, age = 1, sandbox = false }) {
     this.world = world;
     this.bus = bus;
+    this.sandbox = sandbox;
     this.inventory = new Inventory({ bus });
-    this.territory = new Territory({ world, scene, bus, age });
+    this.territory = new Territory({ world, scene, bus, age, sandbox });
     this.structures = new StructureRegistry({ world, bus, inventory: this.inventory });
     this.hunger = new Hunger(bus);
     this.skills = new Skills(bus);
@@ -44,6 +52,17 @@ export class DuiltGame {
   /** A first axe, a bucket, enough fruit to not starve while you learn. */
   grantStartingKit() {
     for (const [id, n] of Object.entries(STARTING_KIT)) this.inventory.add(id, n);
+  }
+
+  /**
+   * One of everything — every block and every tool the game has, so there is
+   * nothing left to craft or unlock. Placing never spends it (see
+   * payForPlacement) and breaking never adds more (see onBlocksBroken), so a
+   * single copy is genuinely all a slot ever needs to hold.
+   */
+  grantCreativeKit() {
+    this.inventory.grow(ITEMS.length);
+    for (const item of ITEMS) this.inventory.add(item.id, 1);
   }
 
   get age() {
@@ -83,6 +102,10 @@ export class DuiltGame {
    * Returns { itemId: amount } actually collected.
    */
   onBlocksBroken(changes) {
+    // A sandbox bag already holds one of everything and never runs out —
+    // see grantCreativeKit — so there is nothing to collect and no Foraging
+    // to record either.
+    if (this.sandbox) return {};
     const gained = {};
     for (const c of changes) {
       if (c.prev === AIR) continue;
@@ -117,8 +140,9 @@ export class DuiltGame {
     return bill;
   }
 
-  /** Charges for a placement, all or nothing. */
+  /** Charges for a placement, all or nothing — free, and always all, in a sandbox. */
   payForPlacement(changes) {
+    if (this.sandbox) return { ok: true, bill: {} };
     const bill = this.costOf(changes);
     if (!Object.keys(bill).length) return { ok: true, bill };
     if (!this.inventory.hasAll(bill)) {
@@ -140,9 +164,10 @@ export class DuiltGame {
 
   // ---- claiming ----
 
-  /** Every structure the current age offers, each with whether this region qualifies. */
+  /** Every structure the current age offers, each with whether this region qualifies — every structure there is, in a sandbox, which has no ages to gate them behind. */
   claimOptionsFor(region) {
-    return structuresForAge(this.age).map((spec) => {
+    const offered = this.sandbox ? STRUCTURES : structuresForAge(this.age);
+    return offered.map((spec) => {
       const check = validateStructure(this.world, region, spec.id);
       const overlapping = this.structures.overlaps(region);
       const inside = this.territory.containsRegion(region);
@@ -158,8 +183,10 @@ export class DuiltGame {
     if (!this.territory.containsRegion(region)) {
       return { ok: false, reason: 'That reaches outside your land' };
     }
-    const result = this.structures.claim(region, typeId, { discount: this.skills.claimDiscount() });
-    if (result.ok) {
+    const result = this.structures.claim(region, typeId, {
+      discount: this.skills.claimDiscount(), free: this.sandbox,
+    });
+    if (result.ok && !this.sandbox) {
       const spec = STRUCTURES_BY_ID.get(typeId);
       if (spec?.skill) this.skills.record(spec.skill, 5);
       this.checkAgeAdvance();
@@ -175,7 +202,7 @@ export class DuiltGame {
   starterPlacement(structureId, anchor) {
     const design = DESIGN_FOR_STRUCTURE.get(structureId);
     if (!design) return { ok: false, reason: 'No starter design for that.' };
-    if (!this.inventory.hasAll(design.cost)) {
+    if (!this.sandbox && !this.inventory.hasAll(design.cost)) {
       const parts = Object.entries(this.inventory.missing(design.cost))
         .map(([id, n]) => `${n} more ${itemName(id).toLowerCase()}`);
       return { ok: false, reason: `Needs ${parts.join(' and ')}` };
@@ -297,6 +324,10 @@ export class DuiltGame {
   }
 
   checkAgeAdvance() {
+    // No ages to advance through in a sandbox — everything is already
+    // available (see claimOptionsFor/blockAvailability), so there is nothing
+    // for a goal list to be gating.
+    if (this.sandbox) return null;
     if (!this.ageComplete()) return null;
 
     // The last age has no next ring. Finishing it finishes the game, which is
@@ -321,8 +352,13 @@ export class DuiltGame {
   // ---- the clock ----
 
   tick(dtSeconds) {
-    this.hunger.tick(dtSeconds * this.skills.hungerRelief());
-    this.hunger.exertion = Math.max(0, this.hunger.exertion - dtSeconds); // decays back to resting
+    // A sandbox never gets hungry — hunger simply never ticks down from its
+    // starting full value, which is also what keeps the HUD bar honest
+    // without needing its own sandbox check: full is full.
+    if (!this.sandbox) {
+      this.hunger.tick(dtSeconds * this.skills.hungerRelief());
+      this.hunger.exertion = Math.max(0, this.hunger.exertion - dtSeconds); // decays back to resting
+    }
 
     // Production is checked on a slow cadence; it's wall-clock based, so the
     // interval only decides how promptly you're told, not how much you get.

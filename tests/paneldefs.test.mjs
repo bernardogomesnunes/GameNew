@@ -24,7 +24,7 @@ ok('every panel has an id, a title and a layer',
 ok('every id is unique', new Set(PANELS.map((p) => p.id)).size === PANELS.length);
 ok('every id is addressable', PANELS.every((p) => PANELS_BY_ID.get(p.id) === p));
 ok('every mode is one the UI knows',
-  PANELS.every((p) => ['any', 'duilt', 'sandbox'].includes(p.mode)));
+  PANELS.every((p) => ['any', 'duilt', 'survival'].includes(p.mode)));
 
 // Two panels on one key is the bug that made a shortcut unpredictable.
 const keys = PANELS.map((p) => p.key).filter(Boolean);
