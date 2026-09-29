@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { World, CHUNK_SIZE } from './world/World.js';
-import { generateTerrain } from './world/TerrainGenerator.js';
 import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
@@ -845,17 +844,16 @@ export class Game {
     this.worldName = name || (mode === DUILT ? 'My settlement' : 'Creative world');
 
     this.disposeDuilt();
-    let spawn = null;
-    if (mode === DUILT) {
-      // No size: the land is made as you walk into it, and the settlement sits
-      // at the origin. The border is what limits you, not the edge of a map.
-      const built = generateEndlessWorld({ height: 64 });
-      this.world = built.world;
-      spawn = built.origin.spawn;
-    } else {
-      this.world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
-      generateTerrain(this.world);
-    }
+    // No size: the land is made as you walk into it. Creative used to get a
+    // separate, smaller generator — a flat 64x64 patch with none of Duilt's
+    // biomes, rivers, mountains or ocean — for no reason tied to what
+    // Creative actually is; it has no territory to fence in, so there was
+    // nothing stopping it from being just as endless. Both modes start in
+    // exactly the same generated world now; only what you're allowed to do
+    // in it differs.
+    const built = generateEndlessWorld({ height: 64 });
+    this.world = built.world;
+    let spawn = built.origin.spawn;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, spawn ?? this.findSafeSpawn());
     // Face the way the spawn picked: the open direction. Arriving on a good
