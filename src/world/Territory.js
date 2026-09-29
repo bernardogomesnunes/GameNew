@@ -25,11 +25,19 @@ const EDGE = 0xf0c674;
 const LIFT = 0.03;
 
 export class Territory {
-  constructor({ world, scene, bus, age = 1 }) {
+  /**
+   * @param sandbox  a free-build world has no border at all — see DuiltGame's
+   *   own note on what "sandbox" turns off. `contains`/`containsRegion` say
+   *   yes to everywhere, `bounds()` is never asked to draw a fence around
+   *   that, and nothing here ever advances a ring, since there are no ages
+   *   to advance through.
+   */
+  constructor({ world, scene, bus, age = 1, sandbox = false }) {
     this.world = world;
     this.scene = scene;
     this.bus = bus;
     this.age = age;
+    this.sandbox = sandbox;
     // Where the settlement is. A fixed world puts it in the middle of the
     // map; an endless one has no middle, so it is the origin.
     this.centreX = world.centreX;
@@ -38,7 +46,7 @@ export class Territory {
     this.fence = new THREE.Group();
     this.fence.renderOrder = 9;
     scene.add(this.fence);
-    this.rebuildFence();
+    if (!sandbox) this.rebuildFence();
   }
 
   get ring() {
@@ -59,25 +67,29 @@ export class Territory {
   }
 
   contains(x, z) {
+    if (this.sandbox) return true;
     const b = this.bounds();
     return x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ;
   }
 
   /** True when the whole region is claimed — a structure may not straddle the border. */
   containsRegion(region) {
+    if (this.sandbox) return true;
     return this.contains(region.minX, region.minZ) && this.contains(region.maxX, region.maxZ);
   }
 
   /** How far outside the border a point is, in blocks. 0 when inside. */
   distanceOutside(x, z) {
+    if (this.sandbox) return 0;
     const b = this.bounds();
     const dx = Math.max(b.minX - x, 0, x - b.maxX);
     const dz = Math.max(b.minZ - z, 0, z - b.maxZ);
     return Math.max(dx, dz);
   }
 
-  /** Moves to the next ring. Returns the new ring, or null if already at the frontier. */
+  /** Moves to the next ring. Returns the new ring, or null if already at the frontier — or always null in a sandbox, which has no rings to advance through. */
   advance() {
+    if (this.sandbox) return null;
     const next = RINGS.find((r) => r.age === this.age + 1);
     if (!next) return null;
     this.age = next.age;
@@ -88,7 +100,7 @@ export class Territory {
 
   setAge(age) {
     this.age = RINGS.some((r) => r.age === age) ? age : 1;
-    this.rebuildFence();
+    if (!this.sandbox) this.rebuildFence();
   }
 
   /**
@@ -265,6 +277,7 @@ export class Territory {
    * comparison per change and nothing else.
    */
   onBlocksChanged(changes) {
+    if (this.sandbox) return;
     const b = this.bounds();
     const touches = changes.some(({ x, z }) =>
       (x === b.minX || x === b.maxX || z === b.minZ || z === b.maxZ) && this.contains(x, z));

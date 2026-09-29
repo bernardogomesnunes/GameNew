@@ -1,6 +1,6 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
-import { STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
+import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
@@ -887,11 +887,17 @@ export class DuiltUI {
     const d = this.duilt;
     if (!d) return this.noWorld('#buildings-list');
 
-    this.q('#buildings-list').innerHTML = structuresForAge(d.age).map((spec) => {
+    // Every structure there is, in a sandbox — no age to gate them behind,
+    // same as claimOptionsFor. And nothing to ever be short of: a sandbox
+    // bag holds one of everything and a starter design's cost never actually
+    // gets charged (see DuiltGame.starterPlacement), so the button that
+    // offers to stamp one has nothing to disable.
+    const offered = d.sandbox ? STRUCTURES : structuresForAge(d.age);
+    this.q('#buildings-list').innerHTML = offered.map((spec) => {
       const built = d.structures.countOf(spec.id);
       const design = DESIGN_FOR_STRUCTURE.get(spec.id);
-      const canStamp = design && d.inventory.hasAll(design.cost);
-      const shortfall = design ? d.inventory.missing(design.cost) : {};
+      const canStamp = design && (d.sandbox || d.inventory.hasAll(design.cost));
+      const shortfall = design && !d.sandbox ? d.inventory.missing(design.cost) : {};
       // The full bill, not just what you're short — a shortfall note only ever
       // said "4 more turned soil" and never the 16 it actually takes, so the
       // only way to know the real cost was to try, fail, and do the subtraction

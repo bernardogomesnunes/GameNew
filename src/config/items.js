@@ -124,6 +124,20 @@ export const ITEMS = [
   { id: 'rug_red', name: 'Red Rug', kind: 'refined', stackTo: STACK_GOODS, color: 0xd1887a, glyph: 'rug', block: 35, madeBy: 'Woven at the workshop, dyed with brick' },
   { id: 'rug_blue', name: 'Blue Rug', kind: 'refined', stackTo: STACK_GOODS, color: 0x90aade, glyph: 'rug', block: 36, madeBy: 'Woven at the workshop, dyed with glass' },
   { id: 'rug_green', name: 'Green Rug', kind: 'refined', stackTo: STACK_GOODS, color: 0x82c675, glyph: 'rug', block: 37, madeBy: 'Woven at the workshop, left undyed' },
+
+  // --- blocks that only ever had a place() unlock, never an item ----------
+  //
+  // Creative used to hand these out by iterating the block registry directly
+  // rather than going through an item at all, so nobody had ever given them
+  // one. A real Inventory can only hold items, so a sandbox kit needs every
+  // placeable block to have one — see Game.js's grantCreativeKit.
+  { id: 'water', name: 'Water', kind: 'raw', stackTo: STACK_BULK, color: 0x83add7, glyph: 'water', block: 11, madeBy: 'Scooped from a river' },
+  { id: 'snow', name: 'Snow', kind: 'raw', stackTo: STACK_BULK, color: 0xceddec, glyph: 'snow', block: 12, madeBy: 'Gathered from a snowfield' },
+  { id: 'obsidian', name: 'Obsidian', kind: 'raw', stackTo: STACK_BULK, color: 0x372648, glyph: 'obsidian', block: 14, madeBy: 'Found deep underground' },
+  { id: 'glass_red', name: 'Red Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xde9390, glyph: 'pane', block: 15, madeBy: 'Fired from sand, tinted red' },
+  { id: 'glass_blue', name: 'Blue Glass', kind: 'refined', stackTo: STACK_BULK, color: 0x90aade, glyph: 'pane', block: 16, madeBy: 'Fired from sand, tinted blue' },
+  { id: 'amethyst', name: 'Amethyst', kind: 'raw', stackTo: STACK_GOODS, color: 0xb895dc, glyph: 'crystal', block: 18, madeBy: 'Found deep underground' },
+  { id: 'silt', name: 'Silt', kind: 'raw', stackTo: STACK_BULK, color: 0x8b9a8a, glyph: 'clay', block: 25, madeBy: 'Dug from the ocean floor' },
 ];
 
 /** What a tool lets you do, if it lets you do anything: 'clear' -> 'pry_bar'. */

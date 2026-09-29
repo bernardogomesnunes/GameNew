@@ -373,6 +373,16 @@ export class GamificationEngine {
   }
 
   checkAchievements(event) {
+    // A sandbox world has no progression at all — reported directly as
+    // wanting Creative "without achievements progression" once it got the
+    // rest of Duilt's engine. Every path that could unlock something (XP
+    // level-ups, a claimed structure, a settler arriving, an age advancing)
+    // runs through here, so one guard covers all of them rather than
+    // scattering a `duilt.sandbox` check into each listener in
+    // watchSettlement below. isBlockUnlocked stays reachable on its own —
+    // Game.js's blockAvailability bypasses it for a sandbox world directly,
+    // since nothing should ever be gated there in the first place.
+    if (this.duilt?.sandbox) return;
     const ctx = this.ctx(event);
     for (const ach of ACHIEVEMENTS) {
       if (this.state.achievementsUnlocked.has(ach.id)) continue;

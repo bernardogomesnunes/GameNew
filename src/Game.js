@@ -701,10 +701,7 @@ export class Game {
       onRotateTemplate: () => { this.templateRotation = (this.templateRotation + 1) % 4; return this.templateRotation; },
       onPlaceTemplate: () => this.stampTemplate(),
       getTemplates: () => this.templates.list(),
-      /**
-       * Which building tools you have made, or null where the question does not
-       * apply — a creative world has no bag, so nothing there is made.
-       */
+      /** Which building tools you actually have — see UIManager.refreshTools. */
       heldTools: () => {
         if (!this.duilt) return null;
         const held = new Set();
@@ -771,7 +768,14 @@ export class Game {
       onPlaceHold: (held) => this.setPlacing(held),
 
       // ---- duilt ----
+      // Both modes run on DuiltGame now — Creative is that same engine with
+      // sandbox: true (see DuiltGame's own note) — so isDuilt means "has the
+      // building/bag UI under it" and is true for both. isSandbox is the
+      // narrower question, for the handful of things that only make sense
+      // with real scarcity behind them (the workbench, skill levels).
       isDuilt: () => !!this.duilt,
+      isSandbox: () => !!this.duilt?.sandbox,
+      getModeLabel: () => this.mode === DUILT ? 'Duilt' : 'Creative',
       onOpenBag: () => this.ui.toggleBag(),
       onOpenClaim: () => this.openClaim(),
       onFinishEditing: () => this.finishEditing(),
@@ -816,12 +820,16 @@ export class Game {
   /**
    * Fences the player into the land they have claimed.
    *
-   * Only Duilt has a border; the sandbox modes get the whole world, so the
-   * bounds are cleared rather than left over from a previous world.
+   * Only real Duilt has a border; a sandbox world gets the whole map, so the
+   * bounds are cleared rather than left over from a previous world. Territory
+   * itself already answers every border *question* (contains, containsRegion)
+   * with "yes, everywhere" for a sandbox — this is only what physically stops
+   * the player walking somewhere, which is a separate thing Territory has no
+   * say over.
    */
   applyTerritoryBounds() {
     if (!this.player) return;
-    this.player.setBounds(this.duilt ? this.duilt.territory.bounds() : null);
+    this.player.setBounds(this.duilt && !this.duilt.sandbox ? this.duilt.territory.bounds() : null);
   }
 
   /** Duilt owns scene objects (the border), so swapping worlds must clean up. */
@@ -861,10 +869,16 @@ export class Game {
     // impression as arriving inside the hill.
     if (spawn?.yaw != null) this.player.yaw = spawn.yaw;
     if (spawn?.pitch != null) this.player.pitch = spawn.pitch;
-    if (mode === DUILT) {
-      this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus });
-      this.duilt.grantStartingKit();
-    }
+    // Creative runs the same DuiltGame Duilt does now — reported directly:
+    // "the same as Duilt without achievements progression," a free-build
+    // sandbox that still lets you put up a house and have settlers move in
+    // rather than a second, thinner copy of the bag/building/settler systems.
+    // `sandbox: true` is what turns Duilt's rules into that — see DuiltGame's
+    // own note on exactly what it switches off.
+    const sandbox = mode !== DUILT;
+    this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus, sandbox });
+    if (sandbox) this.duilt.grantCreativeKit();
+    else this.duilt.grantStartingKit();
     // After the rules exist, not before: this reads the border off `duilt`,
     // and called a line earlier it only ever saw the world that came before.
     this.applyTerritoryBounds();
@@ -941,8 +955,13 @@ export class Game {
     this.economy = new EconomyEngine(this.bus);
     this.economy.loadJSON(data.economy);
     if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
-    if (this.mode === DUILT) {
-      this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus });
+    // Both modes carry a DuiltGame now — see newWorld's own note. A save
+    // from before that change never wrote one out for a Creative world, so
+    // there's nothing to load back in; it gets a fresh creative kit instead,
+    // same as a brand new sandbox world would.
+    const sandbox = this.mode !== DUILT;
+    this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus, sandbox });
+    if (data.duilt) {
       const earned = this.duilt.loadJSON(data.duilt);
       if (earned && Object.keys(earned).length && this.ui) {
         const parts = Object.entries(earned).map(([id, n]) => `${n} ${id}`);
@@ -950,6 +969,8 @@ export class Game {
           kind: 'challenge', title: 'Your buildings kept working', body: parts.join(', '),
         }), 600);
       }
+    } else if (sandbox) {
+      this.duilt.grantCreativeKit();
     }
     this.gamification.setDuilt(this.duilt);
     this.applyTerritoryBounds();
@@ -1101,8 +1122,15 @@ export class Game {
       // then you are not playing — but not on the worlds screen, where there is
       // no world for them to act on. No exitPointerLock either: opening a panel
       // changes the phase, and the phase releases the lock. See syncPhase.
+      // The workbench's shortcut is the one panel key that still has to
+      // check sandbox specifically: everything else marked mode: 'duilt'
+      // now runs in a sandbox world too (see DuiltGame's own note on why),
+      // but there's nothing to craft when the bag already holds one of
+      // everything — see UIManager's matching `.survival-only` gate on the
+      // button itself.
       const shortcut = this.phase === 'home' ? null : panelForKey(e.code);
-      if (shortcut && (shortcut.mode !== 'duilt' || this.duilt)) {
+      const survivalOnly = shortcut?.id === 'panel-bench';
+      if (shortcut && (shortcut.mode !== 'duilt' || this.duilt) && !(survivalOnly && this.duilt?.sandbox)) {
         if (this.ui.isPanelOpen(shortcut.id)) this.ui.closePanel(shortcut.id);
         else if (shortcut.prepare === 'claim') this.openClaim();
         else this.ui.openPanel(shortcut.id);
@@ -1239,7 +1267,7 @@ export class Game {
     if (!captured?.blocks.length) return null;
     const record = this.templates.save(name, captured);
     if (record) {
-      this.gamification.onTemplateSaved(record);
+      if (!this.duilt?.sandbox) this.gamification.onTemplateSaved(record);
       this.ui.toast({
         kind: 'challenge',
         title: `Saved "${record.name}"`,
@@ -1262,7 +1290,7 @@ export class Game {
     }
     const name = this.pendingTemplate.name;
     if (!this.applyChanges(changes, { viaSymmetry: false })) return false;
-    this.gamification.onTemplatePlaced(this.pendingTemplate);
+    if (!this.duilt?.sandbox) this.gamification.onTemplatePlaced(this.pendingTemplate);
     this.ui.toast({ kind: 'challenge', title: `Placed ${name}`, body: `${changes.length} blocks` });
     return true;
   }
@@ -1999,6 +2027,11 @@ export class Game {
    * says something the player can act on.
    */
   fitInsideLand(anchor, extent) {
+    // A sandbox has no land to keep it inside of — see Territory's own note
+    // on why bounds() still returns a real (if meaningless) box for one
+    // rather than null, and why nothing that actually enforces a border
+    // reads it for a sandbox world.
+    if (this.duilt.sandbox) return anchor;
     const b = this.duilt.territory.bounds();
     const span = { x: extent?.x ?? 0, z: extent?.z ?? 0 };
     return {
@@ -2153,6 +2186,9 @@ export class Game {
   blockAvailability(id) {
     const cfg = BLOCKS_BY_ID.get(id);
     if (!cfg || cfg.system) return { ok: false, reason: 'Not placeable' };
+    // "Basically all items available" — a sandbox has no achievement/level
+    // gate on anything, the same way it has no age gate on a structure.
+    if (this.duilt?.sandbox) return { ok: true };
     if (this.gamification.isBlockUnlocked(id)) return { ok: true };
     return {
       ok: false,
@@ -2375,9 +2411,16 @@ export class Game {
       this.duilt.territory.onBlocksChanged(changes);
       this.duilt.checkAgeAdvance();
     }
-    for (const c of changes) {
-      if (c.next !== AIR) this.gamification.onBlockPlaced({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.next, viaSymmetry, now });
-      else this.gamification.onBlockBroken({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.prev, now });
+    // No XP, no achievements, no level-ups in a sandbox — see DuiltGame's own
+    // note on what "sandbox" turns off. GamificationEngine's checkAchievements
+    // already refuses to unlock anything for one on its own, but there's no
+    // reason to spend the bookkeeping (session tracking, build-score, spatial
+    // heuristics) feeding it events nothing downstream will ever act on.
+    if (!this.duilt?.sandbox) {
+      for (const c of changes) {
+        if (c.next !== AIR) this.gamification.onBlockPlaced({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.next, viaSymmetry, now });
+        else this.gamification.onBlockBroken({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.prev, now });
+      }
     }
     // This is the one place blocks change, so it is the one place that decides
     // the world has been played. See editedAt.
