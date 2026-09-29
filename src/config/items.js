@@ -110,6 +110,20 @@ export const ITEMS = [
     durability: null, madeBy: 'Crafted at the bench', unlocks: 'Mirroring what you place',
     grants: 'mirror',
   },
+
+  // --- Phase 4: light, half-height shapes, furniture -----------------------
+  { id: 'lantern', name: 'Lantern', kind: 'refined', stackTo: STACK_GOODS, color: 0xffd27a, glyph: 'lantern', block: 26, madeBy: 'Crafted from planks and glass' },
+  { id: 'slab_stone', name: 'Stone Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'slab', block: 27, madeBy: 'Split from cut stone' },
+  { id: 'slab_plank', name: 'Plank Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'slab', block: 28, madeBy: 'Sawn thin from planks' },
+  { id: 'stairs_stone', name: 'Stone Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stair', block: 29, madeBy: 'Cut into steps from stone' },
+  { id: 'stairs_plank', name: 'Plank Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'stair', block: 30, madeBy: 'Cut into steps from planks' },
+  { id: 'table_oak', name: 'Oak Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xd1b38c, glyph: 'table', block: 31, madeBy: 'Built at the workshop' },
+  { id: 'table_marble', name: 'Marble Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xe3dbc8, glyph: 'table', block: 32, madeBy: 'Cut and dressed at the workshop' },
+  { id: 'chair_oak', name: 'Oak Chair', kind: 'refined', stackTo: STACK_GOODS, color: 0xd1b38c, glyph: 'chair', block: 33, madeBy: 'Built at the workshop' },
+  { id: 'chair_red', name: 'Red Chair', kind: 'refined', stackTo: STACK_GOODS, color: 0xd1887a, glyph: 'chair', block: 34, madeBy: 'Built at the workshop, finished in brick red' },
+  { id: 'rug_red', name: 'Red Rug', kind: 'refined', stackTo: STACK_GOODS, color: 0xd1887a, glyph: 'rug', block: 35, madeBy: 'Woven at the workshop, dyed with brick' },
+  { id: 'rug_blue', name: 'Blue Rug', kind: 'refined', stackTo: STACK_GOODS, color: 0x90aade, glyph: 'rug', block: 36, madeBy: 'Woven at the workshop, dyed with glass' },
+  { id: 'rug_green', name: 'Green Rug', kind: 'refined', stackTo: STACK_GOODS, color: 0x82c675, glyph: 'rug', block: 37, madeBy: 'Woven at the workshop, left undyed' },
 ];
 
 /** What a tool lets you do, if it lets you do anything: 'clear' -> 'pry_bar'. */

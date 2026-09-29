@@ -205,6 +205,9 @@ export class UIManager {
               <label class="gfx-check">
                 <input type="checkbox" id="gfx-antialias" /> Smooth edges
               </label>
+              <label class="gfx-check">
+                <input type="checkbox" id="gfx-lights" /> Dynamic lights
+              </label>
             </div>
             <div class="export-note" id="gfx-note" hidden></div>
           </div>
@@ -1565,9 +1568,11 @@ export class UIManager {
   wireGraphics() {
     const g = this.game.graphics ?? {};
     const res = this.q('#gfx-resolution'), dist = this.q('#gfx-distance'), aa = this.q('#gfx-antialias');
+    const lights = this.q('#gfx-lights');
     res.value = String(g.resolution ?? 'auto');
     dist.value = String(g.distance ?? 'auto');
     aa.checked = g.antialias !== false;
+    lights.checked = g.lights !== false;
 
     const apply = () => {
       const resolution = res.value === 'auto' ? 'auto' : Number(res.value);
@@ -1576,6 +1581,7 @@ export class UIManager {
         distance: dist.value,
         antialias: aa.checked,
         smoothing: resolution === 'auto',
+        lights: lights.checked,
       });
       const note = this.q('#gfx-note');
       note.hidden = !result?.needsReload;
@@ -1584,6 +1590,7 @@ export class UIManager {
     res.addEventListener('change', apply);
     dist.addEventListener('change', apply);
     aa.addEventListener('change', apply);
+    lights.addEventListener('change', apply);
 
     // A live frame rate, so a change can be judged on more than a feeling.
     setInterval(() => {

@@ -70,6 +70,47 @@ export const BLOCKS = [
   // sharing it would be the exact "two biomes read as one" problem the rest
   // of this file exists to avoid.
   { id: 25, name: 'Silt', glyph: 'clay', color: 0x8b9a8a, material: 'dirt', unlock: null },
+
+  // Phase 4: real dynamic light, real half-height shapes, and furniture.
+  //
+  // `light` names a block that actually casts light — see LightManager, which
+  // keeps a small pool of real THREE.PointLights on whichever placed lights
+  // are nearest the player, rather than trying to light every one at once.
+  //
+  // `shape` marks a block that is not a full cube, for two systems at once:
+  // ChunkMesher stops emitting the block's own cube face (its real geometry
+  // comes from PropRenderer instead, as a small separate mesh) while the
+  // block still occludes its neighbours' faces exactly like a solid cube —
+  // a deliberate simplification, see ChunkMesher's own note — and World's
+  // collisionBoxAt gives it a matching hitbox instead of the full cell.
+  // Stairs share the slab's flat half-height hitbox rather than a stepped
+  // one, and always render facing the same way — there is no facing/rotation
+  // concept anywhere else in this block registry either.
+  {
+    id: 26, name: 'Lantern', glyph: 'lantern', color: 0xffd27a, material: 'wood',
+    // Three's PointLight intensity is physically-based (candela): against the
+    // scene's fixed daylight (Ambient 0.6 + Directional 0.85 + Hemisphere
+    // 0.4, none of which use that scale), 1-2 was invisible and 40+ started
+    // blowing out anything within a block of it. 24 read as a real warm
+    // glow — visible, not garish — across several calibration renders.
+    light: { color: 0xffcf8c, intensity: 24, distance: 14 },
+    cost: { wood: 2 }, unlock: null,
+  },
+  { id: 27, name: 'Stone Slab', glyph: 'slab', color: 0xafafb6, shape: 'slab', material: 'stone', cost: { stone: 1 }, unlock: null },
+  { id: 28, name: 'Plank Slab', glyph: 'slab', color: 0xd1b38c, shape: 'slab', material: 'wood', cost: { wood: 1 }, unlock: null },
+  { id: 29, name: 'Stone Stairs', glyph: 'stair', color: 0xafafb6, shape: 'stair', material: 'stone', cost: { stone: 1 }, unlock: null },
+  { id: 30, name: 'Plank Stairs', glyph: 'stair', color: 0xd1b38c, shape: 'stair', material: 'wood', cost: { wood: 1 }, unlock: null },
+
+  // Furniture: a shape shared across recoloured variants, the same pattern
+  // Glass/Red Glass/Blue Glass above already uses — a distinct 3D prop shape
+  // (see PropRenderer) that comes in more than one finish.
+  { id: 31, name: 'Oak Table', glyph: 'table', color: 0xd1b38c, shape: 'table', material: 'wood', cost: { wood: 4 }, unlock: null },
+  { id: 32, name: 'Marble Table', glyph: 'table', color: 0xe3dbc8, shape: 'table', material: 'stone', cost: { stone: 3 }, unlock: null },
+  { id: 33, name: 'Oak Chair', glyph: 'chair', color: 0xd1b38c, shape: 'chair', material: 'wood', cost: { wood: 3 }, unlock: null },
+  { id: 34, name: 'Red Chair', glyph: 'chair', color: 0xd1887a, shape: 'chair', material: 'wood', cost: { wood: 3 }, unlock: null },
+  { id: 35, name: 'Red Rug', glyph: 'rug', color: 0xd1887a, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 36, name: 'Blue Rug', glyph: 'rug', color: 0x90aade, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 37, name: 'Green Rug', glyph: 'rug', color: 0x82c675, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
 ];
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
@@ -94,6 +135,16 @@ export function isTransparent(id) {
 
 export function isSystemBlock(id) {
   return !!BLOCKS_BY_ID.get(id)?.system;
+}
+
+/** 'cube' unless the block registered a real shape (slab, stair, table, chair, rug). */
+export function shapeOf(id) {
+  return BLOCKS_BY_ID.get(id)?.shape ?? 'cube';
+}
+
+/** { color, intensity, distance } for a block that casts real light, or null. */
+export function lightOf(id) {
+  return BLOCKS_BY_ID.get(id)?.light ?? null;
 }
 
 export function blockName(id) {

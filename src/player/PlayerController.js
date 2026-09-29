@@ -258,14 +258,19 @@ export class PlayerController {
     }
     if (dy !== 0) {
       const ny = p.y + dy;
-      if (this.collidesAt(p.x, ny, p.z)) {
+      const hits = this.collisionBoxesAt(p.x, ny, p.z);
+      if (hits.length) {
         // Snap flush against the surface instead of stopping short of it, so
         // the ground probe below stays reliable and jumping always works.
+        // The surface itself might not be a whole block up — a slab or a
+        // stair only fills the bottom half of its cell (see World's own
+        // note on collisionBoxAt) — so this snaps to whichever real box was
+        // hit rather than assuming every solid cell is a full block tall.
         if (dy < 0) {
-          p.y = Math.floor(ny) + 1;
+          p.y = Math.max(...hits.map((h) => h.maxY));
           this.grounded = true;
         } else {
-          p.y = Math.floor(ny + HEIGHT) - HEIGHT - 0.001;
+          p.y = Math.min(...hits.map((h) => h.minY)) - HEIGHT - 0.001;
         }
         this.velocity.y = 0;
       } else {
@@ -304,17 +309,29 @@ export class PlayerController {
   }
 
   collidesAt(x, y, z) {
+    return this.collisionBoxesAt(x, y, z).length > 0;
+  }
+
+  /**
+   * Every real solid box (world-space Y) the player's AABB at (x, y, z)
+   * actually overlaps — not just which cells have something solid in them,
+   * since a slab or stair's box only reaches halfway up its cell. See
+   * World.collisionBoxAt.
+   */
+  collisionBoxesAt(x, y, z) {
     const minX = Math.floor(x - HALF_WIDTH), maxX = Math.floor(x + HALF_WIDTH);
     const minY = Math.floor(y), maxY = Math.floor(y + HEIGHT);
     const minZ = Math.floor(z - HALF_WIDTH), maxZ = Math.floor(z + HALF_WIDTH);
+    const hits = [];
     for (let bx = minX; bx <= maxX; bx++) {
       for (let by = minY; by <= maxY; by++) {
         for (let bz = minZ; bz <= maxZ; bz++) {
-          if (this.world.isCollidable(bx, by, bz)) return true;
+          const box = this.world.collisionBoxAt(bx, by, bz);
+          if (box && y + HEIGHT > box.minY && y < box.maxY) hits.push(box);
         }
       }
     }
-    return false;
+    return hits;
   }
 
   /** Whether a single point sits inside a water block — see `swimming`. */

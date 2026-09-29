@@ -64,6 +64,24 @@ export const GLYPHS = {
   // Tapered, with a handle over the rim. Straight sides made it a waste bin.
   bucket: 'M5 8.5h14l-2.4 11h-9.2L5 8.5ZM8 8.5a4 4.5 0 0 1 8 0',
   bucketFull: 'M5 8.5h14l-2.4 11h-9.2L5 8.5ZM8 13.5c2-1.6 4.8 1.6 6.8 0',
+
+  // Phase 4: shapes and light.
+  // A body with a ring handle and a flame inside — the ring is what keeps it
+  // from reading as a plain box.
+  lantern: 'M9.5 8.5h5v9h-5zM10.5 5c0-1.3.7-2 1.5-2s1.5.7 1.5 2M12 11.5c-1 1-1 2 0 3 1-1 1-2 0-3Z',
+  // A low bar, most of the swatch left empty above it — a slab only fills
+  // the bottom half of the block it comes from.
+  slab: 'M4 14.5h16v5H4Z',
+  // Two risers, ascending — the silhouette a stair actually casts, at one
+  // fixed orientation the same way nothing else in this registry rotates.
+  stair: 'M4 19.5h5v-5h5v-5h6v10Z',
+  // A tabletop over two legs — enough to read as furniture rather than a
+  // plain block at swatch size.
+  table: 'M4 8.5h16M6.5 8.5v10M17.5 8.5v10',
+  // A seat with a back, over two front legs.
+  chair: 'M6 12.5h10v3H6zM7 20v-4.5M17 20v-4.5M9 12.5V6h6v6.5',
+  // A bordered rectangle, laid flat.
+  rug: 'M4 7.5h16v9H4ZM7 10.5h10v3H7Z',
 };
 
 /**

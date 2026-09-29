@@ -20,6 +20,7 @@ import { DuiltGame } from './duilt/DuiltGame.js';
 import { generateEndlessWorld } from './world/StarterWorld.js';
 import { ChunkGen } from './world/ChunkGen.js';
 import { FarTerrain } from './render/FarTerrain.js';
+import { LightManager } from './render/LightManager.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
@@ -200,6 +201,7 @@ export class Game {
 
     this.mesher = new ChunkMesher(this.scene);
     this.farTerrain = new FarTerrain(this.scene);
+    this.lights = new LightManager(this.scene);
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
     // Duilt is the game. Creative is the sandbox this grew out of and is
@@ -2562,6 +2564,7 @@ export class Game {
         this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
       }
       this.updateHover();
+      this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false });
       this.settlerView.update(this.duilt?.settlers.people ?? []);
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
