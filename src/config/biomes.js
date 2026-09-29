@@ -27,6 +27,7 @@
 
 const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, COBBLE = 8;
 const SNOW = 12, SAPLING = 20, MOSS = 22, GRAVEL = 23, CLAY = 24, SILT = 25;
+const IRON_ORE = 38, COPPER_ORE = 39, GOLD_ORE = 40;
 
 export const BIOMES = [
   {
@@ -120,6 +121,35 @@ export const BIOMES = [
     surface: { top: STONE, under: STONE, depth: 2, rock: STONE, bareAbove: 22 },
     trees: { chance: 0.002, trunk: [3, 5], canopy: 1, wood: WOOD, leaves: LEAVES },
     scatter: [{ block: COBBLE, chance: 0.02 }],
+  },
+  {
+    // Requested directly: "a very high mountain which should have ores."
+    // Gated the same depth as the buff-step peaks — both multiply straight
+    // into `range`, never into each other (see biomeMap.js's summitFactor)
+    // — so a summit shares the same mountain ranges the ordinary peaks
+    // already stand in rather than needing a rarer range of its own
+    // somewhere territory will never reach. Broken rock throughout, bared
+    // to solid stone right at the peak — and it's the one biome with
+    // `ores`: real veins embedded in its rock layer, well under 5% of it
+    // (see ChunkGen.oreAt).
+    id: 'summit',
+    name: 'Summit',
+    niche: { temp: 0.28, wet: 0.3 },
+    range: true,
+    summitOnly: true,
+    base: 42, amplitude: 8, rough: 3,
+    surface: { top: COBBLE, under: STONE, depth: 3, rock: STONE, bareAbove: 36 },
+    trees: { chance: 0 },
+    scatter: [],
+    // Each entry rolls independently against the rock layer only (not the
+    // soil above it) — see ChunkGen.oreAt. Combined, under a quarter of the
+    // 5% ceiling that was asked for: rare enough that finding a seam still
+    // means something.
+    ores: [
+      { block: IRON_ORE, chance: 0.010, salt: 0x4f11 },
+      { block: COPPER_ORE, chance: 0.008, salt: 0x4f22 },
+      { block: GOLD_ORE, chance: 0.005, salt: 0x4f33 },
+    ],
   },
   {
     // Requested alongside the mountains: an ocean, appearing "anywhere but

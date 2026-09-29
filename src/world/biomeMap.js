@@ -51,6 +51,20 @@ const PEAKS_FREQ = 0.012;
 const PEAKS_BASE = 0.48;
 const PEAKS_POWER = 2;
 
+/**
+ * The summit, nested one gate deeper still — see biomes.js's own note on
+ * `summitOnly`. Only ever asked where peaksFactor is already positive, so a
+ * summit is the tallest sliver of an already-eligible peaks patch rather
+ * than an independent placement: it shares a mountain range with the
+ * ordinary buff-step peaks around it instead of appearing somewhere on its
+ * own. The base cutoff is stricter than the peaks gate's own — a smaller
+ * fraction of a smaller fraction — so it reads as the one true summit of a
+ * range rather than a whole second tier of mountains.
+ */
+const SUMMIT_FREQ = 0.02;
+const SUMMIT_BASE = 0.48;
+const SUMMIT_POWER = 1.4;
+
 /** Same generator the terrain uses, so one seed decides a whole world. */
 function mulberry32(seed) {
   return function () {
@@ -78,6 +92,7 @@ export class BiomeMap {
     this.warp = createNoise2D(mulberry32(seed + 5501));
     this.range = createNoise2D(mulberry32(seed + 8887));
     this.peaks = createNoise2D(mulberry32(seed + 13001));
+    this.summit = createNoise2D(mulberry32(seed + 19301));
     this.homePull = homePull;
     this.home = BIOMES[BIOME_INDEX.get(HOME_BIOME) ?? 0];
     this.centreX = sizeX / 2;
@@ -154,6 +169,18 @@ export class BiomeMap {
   }
 
   /**
+   * 0..1: within an eligible range, how much of it is a true summit — the
+   * same depth of gate `peaksFactor` is (both only ever multiply straight
+   * into `range`, not into each other), just a stricter cutoff, so a summit
+   * is rarer within a range than the buff-step peaks are without being
+   * rarer *again* on top of them. See biomes.js's `summitOnly`.
+   */
+  summitFactor(x, z) {
+    const n = (this.summit(x * SUMMIT_FREQ, z * SUMMIT_FREQ) + 1) / 2;
+    return Math.pow(Math.max(0, n - SUMMIT_BASE) / (1 - SUMMIT_BASE), SUMMIT_POWER);
+  }
+
+  /**
    * Every biome's share of a column, plus the winner.
    *
    * Weight falls off with the square of the distance in climate space, which
@@ -169,6 +196,7 @@ export class BiomeMap {
     const { temp, wet } = this.climate(x, z);
     const range = this.rangeFactor(x, z);
     const peaks = range > 0 ? this.peaksFactor(x, z) : 0;
+    const summit = range > 0 ? this.summitFactor(x, z) : 0;
     const weights = new Array(BIOMES.length);
     let total = 0;
     let best = 0, bestW = -1;
@@ -181,7 +209,7 @@ export class BiomeMap {
       // The epsilon keeps a column sitting exactly on a niche from going
       // infinite; 1/d^4 is sharp enough that biomes stay recognisable.
       let w = 1 / ((d2 + 0.0016) * (d2 + 0.0016));
-      if (b.range) w *= b.peaksOnly ? range * peaks : range;
+      if (b.range) w *= b.summitOnly ? range * summit : (b.peaksOnly ? range * peaks : range);
       weights[i] = w;
       total += w;
       if (w > bestW) { bestW = w; best = i; }

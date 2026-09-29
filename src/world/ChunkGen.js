@@ -56,6 +56,7 @@ export class ChunkGen {
     this.shape = createNoise2D(seeded(seed));
     this.detail = createNoise2D(seeded(seed + 1337));
     this.river = createNoise2D(seeded(seed + 4201));
+    this.flat = createNoise2D(seeded(seed + 7331));
     // The biome map is already stateless — it answers per column from noise —
     // so it needs nothing but a centre to bias towards.
     this.biomes = new BiomeMap({ sizeX: 1, sizeZ: 1, seed, homePull });
@@ -83,6 +84,17 @@ export class ChunkGen {
       const stepped = Math.round(h / PEAK_STEP) * PEAK_STEP;
       h += (stepped - h) * peaksW;
     }
+    // Requested directly: "every biome has some more flat areas, even
+    // mountains on top could have a flat area." A patch of ground somewhere
+    // in every biome — this runs after the terracing above, not instead of
+    // it, so a flat patch landing on a mountain reads as a plateau cut into
+    // the steps rather than replacing them. Blending toward `base` (this
+    // column's own blended biome floor, whatever biome that is) rather than
+    // toward a fixed height is what keeps a flattened patch of highlands
+    // sitting up at highlands' own elevation instead of every flat patch in
+    // the world settling to the same height regardless of what it's in.
+    const flat = this.flatFactor(x, z);
+    if (flat > 0) h += (base - h) * flat;
     h = Math.round(h);
     // A river cuts the ground down towards its bed rather than being painted
     // on afterwards, so the banks slope into it like the rest of the terrain.
@@ -94,6 +106,36 @@ export class ChunkGen {
   /** Which biome a column belongs to. */
   biomeIndexAt(x, z) {
     return this.biomes.weigh(x, z).index;
+  }
+
+  /**
+   * 0..1: how much this column is pulled toward a local flat patch —
+   * ordinary noise, cut off and sharpened the same shape rangeFactor uses,
+   * but tuned far less rare: this is meant to turn up reasonably often in
+   * every biome, not to gate a whole feature the way a mountain range does.
+   * See heightAt for what it actually does to the ground.
+   */
+  flatFactor(x, z) {
+    const n = (this.flat(x * FREQ_FLAT, z * FREQ_FLAT) + 1) / 2;
+    return Math.pow(Math.max(0, n - FLAT_BASE) / (1 - FLAT_BASE), FLAT_POWER);
+  }
+
+  /**
+   * The ore embedded at one block of rock, or 0 for none.
+   *
+   * Only ever asked for a column already in the rock layer (see fill's own
+   * call site) and only ever finds anything on a biome that declared `ores`
+   * — the Summit, currently. `y` rides along in the salt so the same column
+   * doesn't return one verdict for its entire depth; a pure hash rather than
+   * a seeded generator for the same reason every other placement here is —
+   * ask twice, from any chunk, get the same answer.
+   */
+  oreAt(x, y, z, biomeIndex) {
+    const biome = BIOMES[biomeIndex];
+    for (const o of biome.ores ?? []) {
+      if (hash01(x, z, this.seed ^ (o.salt + y * 0x9e37)) < o.chance) return o.block;
+    }
+    return 0;
   }
 
   /**
@@ -192,10 +234,14 @@ export class ChunkGen {
         // channel (RIVERBED, sand — a bank), the sea just floods low ground
         // (SILT — see config/blocks.js's own note on why it isn't Sand too).
         const bed = seaLevel > riverLevel ? SILT : RIVERBED;
+        const hasOres = biome.ores?.length > 0;
         for (let y = 0; y < h; y++) {
           let block;
-          if (y < h - 1 - s.depth) block = s.rock;
-          else if (y < h - 1) block = s.under;
+          if (y < h - 1 - s.depth) {
+            // Deep rock only — the vein is in the mountain, not the soil
+            // sitting on top of it.
+            block = hasOres ? (this.oreAt(x, y, z, index) || s.rock) : s.rock;
+          } else if (y < h - 1) block = s.under;
           else block = water ? bed : top;
           chunk.set(lx, y, lz, block);
         }
@@ -311,6 +357,13 @@ const SEA_LEVEL = 11;
 // The stair height the "buff step" peaks terrace to — see heightAt's own
 // note on how it fades in with the biome's blend weight.
 const PEAK_STEP = 4;
+// A finer, more common field than the mountain ranges' own — see
+// flatFactor's own note on why this is tuned to turn up often rather than
+// to gate a rare feature. A flat patch is meant to be an ordinary thing to
+// walk into, in any biome, not a destination.
+const FREQ_FLAT = 0.017;
+const FLAT_BASE = 0.32;
+const FLAT_POWER = 1.6;
 /** Wood, leaves and saplings: standing on the ground rather than part of it. */
 const GROWS_ON_TOP = new Set([4, 5, 20]);
 

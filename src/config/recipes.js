@@ -164,6 +164,43 @@ export const RECIPES = [
     blurb: 'The same log, cut properly. Twice what you get by hand.',
   },
 
+  // --- Age 4: the foundry ---------------------------------------------------
+  //
+  // Raw ore is not the same thing as what a recipe wants — see the foundry's
+  // own note in structures.js. Gold ore smelts straight into the same `gold`
+  // item the tavern's jar already fills, rather than a separate currency
+  // nothing else in the game would ever ask for.
+  {
+    id: 'smelt_iron',
+    name: 'Smelt iron',
+    station: 'foundry',
+    age: 4,
+    inputs: { iron_ore: 2 },
+    output: { id: 'iron_ingot', count: 1 },
+    batch: 8,
+    blurb: 'Ore, taken hot enough to run clean.',
+  },
+  {
+    id: 'smelt_copper',
+    name: 'Smelt copper',
+    station: 'foundry',
+    age: 4,
+    inputs: { copper_ore: 2 },
+    output: { id: 'copper_ingot', count: 1 },
+    batch: 8,
+    blurb: 'The same fire, a softer metal.',
+  },
+  {
+    id: 'smelt_gold',
+    name: 'Smelt gold',
+    station: 'foundry',
+    age: 4,
+    inputs: { gold_ore: 3 },
+    output: { id: 'gold', count: 1 },
+    batch: 6,
+    blurb: 'What the tavern jar has always meant by "brought up from a mine."',
+  },
+
   // --- Age 5: the expensive end -------------------------------------------
   {
     id: 'marble',

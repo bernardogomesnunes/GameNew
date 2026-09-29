@@ -125,6 +125,17 @@ function kilnBlocks() {
   return blocks;   // the two cells left at (2,2,2) and (2,2,3) are the chamber
 }
 
+/** A taller, thicker-walled kiln — the chamber holds three cells instead of two. */
+function foundryBlocks() {
+  const blocks = [...slab(0, 0, 5, 5, 0, STONE)];
+  blocks.push(...slab(1, 1, 3, 3, 1, STONE));
+  blocks.push(...ring(1, 1, 3, 3, 2, STONE));
+  blocks.push(...ring(1, 1, 3, 3, 3, STONE));
+  blocks.push(...ring(1, 1, 3, 3, 4, STONE));
+  blocks.push(...slab(1, 1, 3, 3, 5, STONE));
+  return blocks;   // three cells left, at (2,2,2), (2,2,3) and (2,2,4)
+}
+
 /** A roofed stall on a laid floor, with the rest of the square left open. */
 function marketBlocks() {
   const blocks = [...slab(0, 0, 7, 7, 0, PLANKS)];
@@ -279,6 +290,15 @@ export const STARTER_DESIGNS = [
     footprint: '6 × 6',
     note: 'Put it among your buildings — it will not count on its own in a field.',
     blocks: tavernBlocks(),
+  },
+  {
+    id: 'starter_foundry',
+    structure: 'foundry',
+    name: 'Starter foundry',
+    size: 5,
+    footprint: '5 × 5',
+    note: 'Put it among your buildings, near the workbench you already visit.',
+    blocks: foundryBlocks(),
   },
   {
     id: 'starter_mine',
