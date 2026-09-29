@@ -335,11 +335,16 @@ export class HomeScreen {
           once, on their phone, ended up with an account holding two unrelated
           piles of worlds. Signed in, a world is yours rather than the browser's.
         -->
-        <p class="home-note home-where">Kept on your account, so it is here on every device you sign in on.</p>
+        <p class="home-note home-where">Saved to your account — open it from anywhere.</p>
       ` : `
-        <p class="home-note home-where">Kept in this browser, and gone if you clear it.
-          <button class="home-link" data-signin="1">Sign in</button> and your worlds follow you
-          to any device.</p>
+        <!--
+          Says what signing in buys, not how saving currently works underneath.
+          The player never has to learn "local" or "cloud" as concepts; the
+          mechanics are ours to change without this sentence going stale.
+        -->
+        <p class="home-note home-where">Saved right here for now.
+          <button class="home-link" data-signin="1">Sign in</button> to keep it safe and
+          pick up where you left off on any device.</p>
       `) : ''}
 
       <div class="home-actions">

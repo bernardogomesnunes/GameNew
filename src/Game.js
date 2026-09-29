@@ -813,25 +813,32 @@ export class Game {
       onCloudSignIn: async (email, password) => {
         await this.cloudAuth.signIn(email, password);
         await this.sendUnsent();
+        const moved = await this.migrateLocalWorlds();
         this.forgetCloudList();
         this.ui.home?.forgetWorlds?.();
         this.ui.home?.render();
-        this.ui.toast({ kind: 'challenge', title: 'Signed in', body: 'Your worlds are here' });
+        this.ui.toast({
+          kind: 'challenge', title: 'Signed in',
+          body: moved ? 'Your worlds are here' : 'Welcome back',
+        });
       },
       onCloudSignUp: async (email, password) => {
         await this.cloudAuth.signUp(email, password);
+        const moved = await this.migrateLocalWorlds();
         this.forgetCloudList();
         this.ui.home?.forgetWorlds?.();
         this.ui.home?.render();
         this.ui.toast({
           kind: 'challenge',
           title: 'Account created',
-          body: 'Every world you build is kept on it',
+          body: moved
+            ? `Every world you build is kept on it${moved > 1 ? ` — including the ${moved} you already had` : ' — including the one you already had'}`
+            : 'Every world you build is kept on it',
         });
       },
       onCloudSignOut: async () => {
         await this.cloudAuth.signOut();
-        this.ui.toast({ kind: 'xp', title: 'Signed out', body: 'Local saves are untouched' });
+        this.ui.toast({ kind: 'xp', title: 'Signed out', body: 'Anything saved here stays right where it is' });
       },
       getCloudWorlds: () => this.listAllWorlds(),
       // The worlds screen needs it to say which copy is which; it is the same
@@ -2265,6 +2272,41 @@ export class Game {
       this.ui.closePanel('panel-menu');
       this.ui.toast({ kind: 'challenge', title: `Opened "${data.name}"`, body: 'The copy in this browser' });
     }
+  }
+
+  /**
+   * Moves every world sitting in this browser onto the account you just
+   * signed into or created.
+   *
+   * Where a world lives is not a choice the player makes — it is a
+   * consequence of signing in. Without this, a world built before an
+   * account existed would stay stuck in that one browser forever, and
+   * "create an account, play anywhere" would only ever be true from that
+   * point on, not for what you already built. Signing into an *existing*
+   * account from a second, previously-signed-out browser goes through the
+   * same path, so it folds in there too rather than sitting beside it.
+   *
+   * Best effort, per world: one that fails to upload (closed the tab
+   * mid-migration, a dropped connection) is simply left in the local
+   * library rather than lost, and picked up again on the next sign-in.
+   */
+  async migrateLocalWorlds() {
+    if (!this.cloud?.signedIn) return 0;
+    let moved = 0;
+    for (const row of this.local.list()) {
+      try {
+        const data = this.local.restore(row.id);
+        const world = World.deserialize(data.world, { makeGen: makeChunkGen });
+        await this.cloud.save(row.id, {
+          world, name: data.name, mode: data.mode, player: data.player,
+          gamification: this.gamification, economy: data.economy, duilt: data.duilt,
+        });
+        this.local.delete(row.id);
+        if (this.worldId === row.id) this.worldIsLocal = false;
+        moved++;
+      } catch { /* stays local; retried on the next sign-in */ }
+    }
+    return moved;
   }
 
   // ---- raycasting / block edits ----

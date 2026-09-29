@@ -44,6 +44,19 @@ ok('deleting checks the same way before ever reaching the cloud',
 ok('the worlds screen lists both libraries, not just the account',
   /const local = this\.local\.list\(\);/.test(game) && /async listAllWorlds/.test(game));
 
+// --- signing in is where a world moves, not a wall it has to already be behind ---
+
+// A world built before an account existed must not be stranded the moment
+// one is created — "create an account, play anywhere" has to be true for
+// what you already built, not only from that point on.
+ok('signing in sweeps up whatever was only ever saved in this browser',
+  /async migrateLocalWorlds\(\)/.test(game));
+ok('one world failing to move does not sink the rest, or lose it',
+  /async migrateLocalWorlds\(\)[\s\S]{0,600}for \(const row of this\.local\.list\(\)\)[\s\S]{0,600}catch \{/.test(game));
+ok('sign-in runs the sweep', /await this\.cloudAuth\.signIn\(email, password\);[\s\S]{0,200}await this\.migrateLocalWorlds\(\);/.test(game));
+ok('so does sign-up — an existing local world is not only for people who already had an account',
+  /await this\.cloudAuth\.signUp\(email, password\);\s*\n\s*const moved = await this\.migrateLocalWorlds\(\);/.test(game));
+
 // --- no account is required to play -------------------------------------------
 
 ok('there is no sign-in gate on the worlds screen any more', !/needsAccount/.test(home) && !/needsAccount/.test(ui));
@@ -51,7 +64,7 @@ ok('and no dead-end screen behind one', !/renderSignedOut/.test(home));
 ok('the front door draws the list on its own step, unconditionally',
   /render\(\) \{\s*if \(this\.step === 'kind'\)/.test(home));
 ok('signing in is still offered, just not forced',
-  /data-signin/.test(home) && /Kept in this browser/.test(home));
+  /data-signin/.test(home) && /Saved right here for now/.test(home));
 ok('and hidden entirely in a build with no cloud to sign in to',
   /accountBtn\.hidden = !this\.cb\.isCloudConfigured\?\.\(\);/.test(home));
 
