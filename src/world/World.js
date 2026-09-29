@@ -90,10 +90,19 @@ export class World {
     this.chunks = new Map();
 
     if (this.endless) {
-      // The settlement sits at the origin. Everything that used to ask "where
-      // is the middle of the map" asks for this instead.
-      this.centreX = 0;
-      this.centreZ = 0;
+      // Wherever the settlement actually is — the same point the biome map's
+      // own home bias is centred on (gen.biomes.centreX/centreZ), so this is
+      // never a second copy that can drift from it. Used to be hardcoded to
+      // the origin, on the reasoning that an endless world has no natural
+      // middle so the origin may as well be it; StarterWorld.settleOrigin
+      // now moves the settlement to wherever real water actually turned up
+      // (see its own note — water is no longer carved to order), so this has
+      // to follow rather than assume. A fresh world starts both at (0, 0)
+      // until settleOrigin runs and updates both together; a reloaded one
+      // picks the real spot straight back up, because gen is always built
+      // with the persisted homeX/homeZ before World's own constructor runs.
+      this.centreX = gen.biomes.centreX;
+      this.centreZ = gen.biomes.centreZ;
     } else {
       this.chunksX = Math.ceil(this.sizeX / CHUNK_SIZE);
       this.chunksZ = Math.ceil(this.sizeZ / CHUNK_SIZE);

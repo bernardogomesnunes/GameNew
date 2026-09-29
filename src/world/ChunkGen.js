@@ -1,7 +1,10 @@
 import { createNoise2D } from 'simplex-noise';
-import { BIOMES, surfaceFor } from '../config/biomes.js';
+import { BIOMES, BIOME_INDEX, surfaceFor } from '../config/biomes.js';
 import { BiomeMap } from './biomeMap.js';
 import { CHUNK_SIZE } from './World.js';
+
+/** Which BIOMES entry is the "buff step" peaks variant, worked out once. */
+const PEAKS_INDEX = BIOME_INDEX.get('peaks');
 
 /**
  * One chunk of land, made from nothing but its coordinates and the seed.
@@ -69,7 +72,18 @@ export class ChunkGen {
     const rough = this.biomes.blend(weights, 'rough');
     const n = this.shape(x * FREQ, z * FREQ);
     const d = this.detail(x * FREQ_DETAIL, z * FREQ_DETAIL);
-    let h = Math.round(base + n * amplitude + d * rough);
+    let h = base + n * amplitude + d * rough;
+    // The "buff step" mountains — requested alongside "fewer bigger ranges":
+    // quantised to a stair-step rather than smooth noise, faded in by how
+    // much of the peaks biome is actually blended here (see biomeMap's
+    // peaksOnly weighting) so the terracing itself has a soft edge rather
+    // than snapping on where the biome border falls.
+    const peaksW = weights[PEAKS_INDEX] ?? 0;
+    if (peaksW > 0) {
+      const stepped = Math.round(h / PEAK_STEP) * PEAK_STEP;
+      h += (stepped - h) * peaksW;
+    }
+    h = Math.round(h);
     // A river cuts the ground down towards its bed rather than being painted
     // on afterwards, so the banks slope into it like the rest of the terrain.
     const cut = this.riverCut(x, z);
@@ -97,9 +111,29 @@ export class ChunkGen {
     return t * t * RIVER_DEPTH;
   }
 
-  /** Whether a column is river bed, and the water level over it. */
-  waterLevelAt(x, z) {
+  /** A river's own water level over this column, or 0 away from one. */
+  riverLevelAt(x, z) {
     return this.riverCut(x, z) > RIVER_DEPTH * 0.35 ? this.heightAt(x, z) + 1 : 0;
+  }
+
+  /**
+   * The sea's water level over this column, or 0 on dry land.
+   *
+   * Not a drawn coastline — anywhere the blended terrain dips below sea
+   * level floods, the same way a river cuts its own bed rather than being
+   * painted on afterwards. The ocean biome (config/biomes.js) exists to
+   * pull the blend low enough, over a real stretch of country, that this
+   * actually happens there rather than nowhere — but any other biome's own
+   * noise dipping this low floods too, the same way a real coastline
+   * doesn't ask what county it's in.
+   */
+  seaLevelAt(x, z) {
+    return this.heightAt(x, z) < SEA_LEVEL ? SEA_LEVEL : 0;
+  }
+
+  /** Whichever of a river or the sea is deeper over this column, or 0 on dry land. */
+  waterLevelAt(x, z) {
+    return Math.max(this.riverLevelAt(x, z), this.seaLevelAt(x, z));
   }
 
   /**
@@ -151,12 +185,18 @@ export class ChunkGen {
 
         const s = biome.surface;
         const top = surfaceFor(biome, h);
-        const water = this.waterLevelAt(x, z);
+        const riverLevel = this.riverLevelAt(x, z);
+        const seaLevel = this.seaLevelAt(x, z);
+        const water = Math.max(riverLevel, seaLevel);
+        // Two different beds for two different kinds of wet: a river cuts a
+        // channel (RIVERBED, sand — a bank), the sea just floods low ground
+        // (SILT — see config/blocks.js's own note on why it isn't Sand too).
+        const bed = seaLevel > riverLevel ? SILT : RIVERBED;
         for (let y = 0; y < h; y++) {
           let block;
           if (y < h - 1 - s.depth) block = s.rock;
           else if (y < h - 1) block = s.under;
-          else block = water ? RIVERBED : top;
+          else block = water ? bed : top;
           chunk.set(lx, y, lz, block);
         }
         // A river fills the trough it cut. The level is the bed plus one, so
@@ -262,6 +302,15 @@ const RIVER_DEPTH = 6;
 const HOME_RADIUS = 51;
 const WATER = 11;
 const RIVERBED = 6;   // sand under the water, the way a bank looks
+const SILT = 25;      // the sea's own bed, so it doesn't borrow Sand from the Sands biome
+// Anywhere the blended terrain dips below this floods — see seaLevelAt. Kept
+// under every biome's own floor except highlands/peaks (10-11), so ordinary
+// country never floods on its own noise; a mountain valley occasionally
+// pooling into a tarn at that height is a feature, not a leak.
+const SEA_LEVEL = 11;
+// The stair height the "buff step" peaks terrace to — see heightAt's own
+// note on how it fades in with the biome's blend weight.
+const PEAK_STEP = 4;
 /** Wood, leaves and saplings: standing on the ground rather than part of it. */
 const GROWS_ON_TOP = new Set([4, 5, 20]);
 

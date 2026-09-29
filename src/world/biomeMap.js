@@ -19,6 +19,38 @@ import { BIOMES, BIOME_INDEX, HOME_BIOME } from '../config/biomes.js';
 const FREQ = 0.0055;        // how big a region of one climate is
 const FREQ_DETAIL = 0.02;   // wobble, so borders are not smooth ovals
 
+/**
+ * The mountains' own placement, independent of climate.
+ *
+ * Requested directly: "fewer bigger ranges, and mountains wider too." Every
+ * biome's region size otherwise comes from FREQ above, shared by all of
+ * them — there's no way to make just the mountains bigger by moving a niche
+ * around, since niche placement only decides *which* biome wins a column,
+ * never how large the climate region it's competing over is. RANGE_FREQ is
+ * a second, much lower-frequency noise field that multiplies straight into
+ * a biome's ordinary niche weight (see weigh()) rather than replacing the
+ * pick outright — so the two still blend at a range's edge the same smooth
+ * way any other biome border does, just gated to occur much more rarely and
+ * across a much wider footprint. RANGE_BASE cuts off the bottom of that
+ * noise entirely (most of the map is simply not eligible); RANGE_POWER then
+ * sharpens what's left, so a range reads as a real feature rather than a
+ * gradient with no edge.
+ */
+const RANGE_FREQ = 0.0016;
+const RANGE_BASE = 0.55;
+const RANGE_POWER = 2;
+
+/**
+ * The "buff step" peaks, as a minority within an eligible range rather than
+ * half of it — see biomes.js's own note on `peaksOnly`. A finer, separately
+ * seeded noise on top of the range gate: eligible everywhere a range is
+ * eligible, but only across patches of it, the same base/cutoff/power shape
+ * as the range gate itself, just at a higher frequency and a stricter cutoff.
+ */
+const PEAKS_FREQ = 0.012;
+const PEAKS_BASE = 0.48;
+const PEAKS_POWER = 2;
+
 /** Same generator the terrain uses, so one seed decides a whole world. */
 function mulberry32(seed) {
   return function () {
@@ -44,6 +76,8 @@ export class BiomeMap {
     this.temp = createNoise2D(mulberry32(seed + 101));
     this.wet = createNoise2D(mulberry32(seed + 977));
     this.warp = createNoise2D(mulberry32(seed + 5501));
+    this.range = createNoise2D(mulberry32(seed + 8887));
+    this.peaks = createNoise2D(mulberry32(seed + 13001));
     this.homePull = homePull;
     this.home = BIOMES[BIOME_INDEX.get(HOME_BIOME) ?? 0];
     this.centreX = sizeX / 2;
@@ -90,25 +124,64 @@ export class BiomeMap {
   }
 
   /**
+   * 0..1: how eligible this column is for a mountain range at all — low
+   * frequency and cut off/sharpened so most of the map is simply 0 (see
+   * RANGE_FREQ's own note above). Suppressed near the settlement the same
+   * way ordinary climate already is, and for the same reason: arriving to a
+   * wall of stone four blocks from spawn is exactly what homePull exists to
+   * prevent for every other biome too.
+   */
+  rangeFactor(x, z) {
+    const n = (this.range(x * RANGE_FREQ, z * RANGE_FREQ) + 1) / 2;
+    let factor = Math.pow(Math.max(0, n - RANGE_BASE) / (1 - RANGE_BASE), RANGE_POWER);
+    if (this.homePull > 0 && factor > 0) {
+      const dx = x - this.centreX, dz = z - this.centreZ;
+      const d = Math.sqrt(dx * dx + dz * dz) / this.homeRadius;
+      const pull = d >= 1 ? 0 : (1 - d) * (1 - d) * this.homePull;
+      factor *= 1 - pull;
+    }
+    return factor;
+  }
+
+  /**
+   * 0..1: within an eligible range, how much of it is the "buff step" peaks
+   * variant rather than ordinary highlands — see PEAKS_FREQ's own note
+   * above and biomes.js's `peaksOnly`.
+   */
+  peaksFactor(x, z) {
+    const n = (this.peaks(x * PEAKS_FREQ, z * PEAKS_FREQ) + 1) / 2;
+    return Math.pow(Math.max(0, n - PEAKS_BASE) / (1 - PEAKS_BASE), PEAKS_POWER);
+  }
+
+  /**
    * Every biome's share of a column, plus the winner.
    *
    * Weight falls off with the square of the distance in climate space, which
    * makes the winner dominate near the middle of its patch and the two
-   * neighbours share evenly right at a border.
+   * neighbours share evenly right at a border. A `range` biome's weight is
+   * also multiplied by how eligible the column is for a range at all — see
+   * rangeFactor — which is what keeps the mountains fewer, bigger and wider
+   * than every other biome's climate-only placement, while still blending
+   * the same smooth way at the edges since it's a multiplier on the same
+   * weight rather than a separate switch.
    */
   weigh(x, z) {
     const { temp, wet } = this.climate(x, z);
+    const range = this.rangeFactor(x, z);
+    const peaks = range > 0 ? this.peaksFactor(x, z) : 0;
     const weights = new Array(BIOMES.length);
     let total = 0;
     let best = 0, bestW = -1;
 
     for (let i = 0; i < BIOMES.length; i++) {
-      const n = BIOMES[i].niche;
+      const b = BIOMES[i];
+      const n = b.niche;
       const dt = temp - n.temp, dw = wet - n.wet;
       const d2 = dt * dt + dw * dw;
       // The epsilon keeps a column sitting exactly on a niche from going
       // infinite; 1/d^4 is sharp enough that biomes stay recognisable.
-      const w = 1 / ((d2 + 0.0016) * (d2 + 0.0016));
+      let w = 1 / ((d2 + 0.0016) * (d2 + 0.0016));
+      if (b.range) w *= b.peaksOnly ? range * peaks : range;
       weights[i] = w;
       total += w;
       if (w > bestW) { bestW = w; best = i; }

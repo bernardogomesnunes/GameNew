@@ -26,7 +26,7 @@
  */
 
 const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, COBBLE = 8;
-const SNOW = 12, SAPLING = 20, MOSS = 22, GRAVEL = 23, CLAY = 24;
+const SNOW = 12, SAPLING = 20, MOSS = 22, GRAVEL = 23, CLAY = 24, SILT = 25;
 
 export const BIOMES = [
   {
@@ -50,17 +50,6 @@ export const BIOMES = [
     // Dense enough to read as woodland from a distance without being a wall.
     trees: { chance: 0.11, trunk: [5, 8], canopy: 2, wood: WOOD, leaves: LEAVES },
     scatter: [{ block: SAPLING, chance: 0.006 }],
-  },
-  {
-    id: 'highlands',
-    name: 'Highlands',
-    niche: { temp: 0.35, wet: 0.35 },
-    base: 27, amplitude: 13, rough: 4,
-    // Bare rock above the soil line is what makes a hill read as a hill, so
-    // the top block is chosen by height rather than fixed. See `surfaceFor`.
-    surface: { top: GRAVEL, under: STONE, depth: 2, rock: COBBLE, bareAbove: 32 },
-    trees: { chance: 0.008, trunk: [4, 6], canopy: 1, wood: WOOD, leaves: LEAVES },
-    scatter: [{ block: STONE, chance: 0.01 }],
   },
   {
     id: 'sands',
@@ -90,6 +79,64 @@ export const BIOMES = [
     surface: { top: SNOW, under: DIRT, depth: 3, rock: STONE },
     // Tall and narrow: a pine, as much as this block set allows.
     trees: { chance: 0.02, trunk: [6, 9], canopy: 1, wood: WOOD, leaves: LEAVES },
+    scatter: [],
+  },
+  {
+    // Requested directly: "fewer bigger ranges, and mountains wider too,
+    // with some buff step mountains too." Region *size* for every biome
+    // here comes from one shared climate frequency (biomeMap.js's FREQ),
+    // so there is no way to make just the mountains bigger by moving a
+    // niche around — `range: true` is a second, independent gate biomeMap
+    // multiplies into highlands' and peaks' weight on top of the ordinary
+    // climate pick, at its own much lower frequency. See BiomeMap.weigh
+    // and rangeFactor for the mechanism; the niche below still decides
+    // which of the two wins *inside* an eligible range, and still governs
+    // how far each blends into ordinary climate country at the edges.
+    id: 'highlands',
+    name: 'Highlands',
+    niche: { temp: 0.35, wet: 0.35 },
+    range: true,
+    base: 27, amplitude: 13, rough: 4,
+    // Bare rock above the soil line is what makes a hill read as a hill, so
+    // the top block is chosen by height rather than fixed. See `surfaceFor`.
+    surface: { top: GRAVEL, under: STONE, depth: 2, rock: COBBLE, bareAbove: 32 },
+    trees: { chance: 0.008, trunk: [4, 6], canopy: 1, wood: WOOD, leaves: LEAVES },
+    scatter: [{ block: STONE, chance: 0.01 }],
+  },
+  {
+    // The "buff step" variant — a second, narrower gate (`peaksOnly` in
+    // biomeMap.js) picks out a minority of an eligible range for this
+    // instead of ordinary highlands, so a range reads as mostly rolling
+    // hills with real terraced buffs standing out of some of it rather
+    // than either everywhere or nowhere. The terracing itself is a height
+    // post-process in ChunkGen.heightAt, faded in by this biome's own
+    // blend weight rather than a hard line.
+    id: 'peaks',
+    name: 'Buff Peaks',
+    niche: { temp: 0.3, wet: 0.3 },
+    range: true,
+    peaksOnly: true,
+    base: 31, amplitude: 15, rough: 5,
+    surface: { top: STONE, under: STONE, depth: 2, rock: STONE, bareAbove: 22 },
+    trees: { chance: 0.002, trunk: [3, 5], canopy: 1, wood: WOOD, leaves: LEAVES },
+    scatter: [{ block: COBBLE, chance: 0.02 }],
+  },
+  {
+    // Requested alongside the mountains: an ocean, appearing "anywhere but
+    // rarer, like a plains biome" — an ordinary niche like any other, not a
+    // separate system, so how much of the map it covers is tuned the same
+    // way every other biome's frequency already is (see biomes.test.mjs's
+    // coverage check). What makes it read as sea rather than a low field is
+    // ChunkGen.seaLevelAt: anywhere the blended height dips below sea level
+    // floods, the same way a river cuts its own bed instead of being
+    // painted on — this biome's job is only to pull the blend low enough,
+    // over real country, that it actually happens.
+    id: 'ocean',
+    name: 'Ocean',
+    niche: { temp: 0.5, wet: 1 },
+    base: 8, amplitude: 3, rough: 1,
+    surface: { top: SILT, under: SILT, depth: 4, rock: STONE },
+    trees: { chance: 0 },
     scatter: [],
   },
 ];
