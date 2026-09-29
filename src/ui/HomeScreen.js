@@ -97,42 +97,19 @@ export class HomeScreen {
       </div>`;
     this.body = this.root.querySelector('#home-body');
     this.root.querySelector('#home-settings').addEventListener('click', () => this.cb.onSettings?.());
-    this.root.querySelector('#home-account').addEventListener('click', () => this.cb.onAccount?.());
+    // A build with no cloud configured at all has nothing this button could
+    // do — there is no account to sign in to, only an error to show for
+    // trying. Hidden rather than left to fail on tap.
+    const accountBtn = this.root.querySelector('#home-account');
+    accountBtn.hidden = !this.cb.isCloudConfigured?.();
+    accountBtn.addEventListener('click', () => this.cb.onAccount?.());
   }
 
   /** Re-reads the worlds and draws whichever step we are on. */
   render() {
-    // Nothing to show anybody who is not signed in: worlds live on accounts
-    // now, so without one there is no list and nowhere to put a new world.
-    if (this.cb.needsAccount?.()) return this.renderSignedOut();
     if (this.step === 'kind') return this.renderKind();
     if (this.step === 'name') return this.renderName();
     return this.renderHome();
-  }
-
-  /**
-   * The door, when you have not signed in.
-   *
-   * Worlds used to be kept in whichever browser made them, which is how one
-   * account showed two different sets of worlds on two devices and no amount
-   * of syncing could reconcile them. They live on the account now, and only
-   * there — so an account is the price of admission rather than something you
-   * turn on later and hope the two halves meet.
-   */
-  renderSignedOut() {
-    this.body.innerHTML = `
-      <div class="home-gate">
-        <strong>Sign in to play</strong>
-        <p>Your worlds are kept on your account, so they are the same on every
-           device you sign in on — your phone and your desktop, the same
-           settlement.</p>
-        <div class="home-actions">
-          <button class="primary" data-signin="1">Sign in</button>
-          <button class="secondary" data-signup="1">Create an account</button>
-        </div>
-      </div>`;
-    this.body.querySelector('[data-signin]').addEventListener('click', () => this.cb.onAccount?.('signin'));
-    this.body.querySelector('[data-signup]').addEventListener('click', () => this.cb.onAccount?.('create'));
   }
 
   setAccount(label) {
@@ -191,7 +168,7 @@ export class HomeScreen {
               <button class="world-remove" data-remove="${escapeAttr(r.id)}" data-remove-name="${escapeAttr(r.name || 'this world')}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
             </div>`).join('')}
         </div>`
-      : (failed ? '' : `<p class="home-note">No worlds yet. The first one you make is kept on your account.</p>`)}
+      : (failed ? '' : `<p class="home-note">No worlds yet. Start one below.</p>`)}
     `;
 
     this.body.querySelector('[data-new]')?.addEventListener('click', () => { this.step = 'kind'; this.render(); });
@@ -241,7 +218,7 @@ export class HomeScreen {
    * is the list you had, unbadged.
    */
   async refreshCloudWorlds({ force = false } = {}) {
-    if (this.cloudPending || !this.cb.getCloudUser?.()) return;
+    if (this.cloudPending) return;
     if (this.cloudWorlds && !force) return;   // already answered; the game re-asks after a save
     this.cloudPending = true;
     try {
@@ -250,21 +227,23 @@ export class HomeScreen {
       this.cloudDetail = null;
       this.stopHealing();
     } catch (err) {
-      // Said out loud, not swallowed. There is no local list to fall back to
-      // any more, so an empty screen with no explanation is the worst thing
-      // this could do — "I have no worlds" and "I could not ask" are very
-      // different sentences and the player has to be able to tell them apart.
+      // Said out loud, not swallowed — but the local list rides along on the
+      // error (see Game.js's listAllWorlds), so losing the account never
+      // also means losing sight of the world sitting right here in this
+      // browser. "I have no worlds" and "I could not reach the account" are
+      // very different sentences and the player has to be able to tell them
+      // apart, but neither has to mean an empty screen.
       this.cloudError = err?.message || 'The account did not answer.';
       // And the technical version, folded away under it. Nobody can debug a
       // photograph of the readable sentence — it says the same thing whether
       // the database is asleep, a route is answering 500, or the browser threw
       // the reply away, and those are three different repairs.
       this.cloudDetail = err?.detail ?? null;
-      this.cloudWorlds = this.cloudWorlds ?? [];
+      this.cloudWorlds = err?.partial ?? this.cloudWorlds ?? [];
       this.startHealing();
     } finally {
       this.cloudPending = false;
-      if (this.step === 'home' && !this.cb.needsAccount?.()) this.renderHome();
+      if (this.step === 'home') this.renderHome();
     }
   }
 
@@ -356,11 +335,16 @@ export class HomeScreen {
           once, on their phone, ended up with an account holding two unrelated
           piles of worlds. Signed in, a world is yours rather than the browser's.
         -->
-        <p class="home-note home-where">Kept on your account, so it is here on every device you sign in on.</p>
+        <p class="home-note home-where">Saved to your account — open it from anywhere.</p>
       ` : `
-        <p class="home-note home-where">Kept in this browser, and gone if you clear it.
-          <button class="home-link" data-signin="1">Sign in</button> and your worlds follow you
-          to any device.</p>
+        <!--
+          Says what signing in buys, not how saving currently works underneath.
+          The player never has to learn "local" or "cloud" as concepts; the
+          mechanics are ours to change without this sentence going stale.
+        -->
+        <p class="home-note home-where">Saved right here for now.
+          <button class="home-link" data-signin="1">Sign in</button> to keep it safe and
+          pick up where you left off on any device.</p>
       `) : ''}
 
       <div class="home-actions">
