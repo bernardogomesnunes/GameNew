@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BIOMES } from '../config/biomes.js';
-import { BLOCKS_BY_ID } from '../config/blocks.js';
+import { BLOCKS_BY_ID, WATER } from '../config/blocks.js';
 
 /**
  * The country past where the blocks stop.
@@ -49,6 +49,7 @@ export class FarTerrain {
     this.meshes = [];
     this.builtAt = null;
     this.colours = biomeColours();
+    this.waterColour = waterColour();
   }
 
   /**
@@ -104,11 +105,20 @@ export class FarTerrain {
       let v = heightCache.get(key);
       if (v === undefined) {
         const wx = ox + gx * step, wz = oz + gz * step;
+        // A lake or the sea isn't a colour the biome carries — it's ground
+        // that dipped below water level, the same way the real chunks flood
+        // it (see ChunkGen.waterLevelAt). Skipping this was the bug: past
+        // render distance, every body of water quietly turned back into dry,
+        // wrongly-coloured land, so the shoreline you could actually see
+        // water in just stopped at a border with nothing standing in for it.
+        const water = gen.waterLevelAt(wx, wz);
         // Quantised, so a hillside comes in terraces rather than a ramp —
         // the shading break below is what makes each one read as a step
         // rather than a crease, but it needs an actual step to break at.
-        const h = Math.round(gen.heightAt(wx, wz) / heightStep) * heightStep;
-        v = { h, b: gen.biomeIndexAt(wx, wz), wx, wz };
+        // Water is already flat, so it skips the quantising rather than
+        // being rounded down into the ground it is floating on.
+        const h = water || Math.round(gen.heightAt(wx, wz) / heightStep) * heightStep;
+        v = { h, b: gen.biomeIndexAt(wx, wz), wx, wz, water: !!water };
         heightCache.set(key, v);
       }
       return v;
@@ -131,7 +141,10 @@ export class FarTerrain {
         // never the differently-tilted quad next door.
         const base = positions.length / 3;
         positions.push(sa.wx, sa.h, sa.wz, sb.wx, sb.h, sb.wz, sc.wx, sc.h, sc.wz, sd.wx, sd.h, sd.wz);
-        const c = this.colours[sa.b] ?? this.colours[0];
+        // One colour for the whole quad, same approximation the land already
+        // makes from its own corner (sa) — a cell is either standing in for
+        // water or for ground, not blended between the two.
+        const c = sa.water ? this.waterColour : (this.colours[sa.b] ?? this.colours[0]);
         for (let i = 0; i < 4; i++) colours.push(c.r, c.g, c.b);
         indices.push(base, base + 3, base + 1, base + 1, base + 3, base + 2);
       }
@@ -190,4 +203,9 @@ function biomeColours() {
     c.multiplyScalar(0.92);
     return c;
   });
+}
+
+/** The same blue the real water blocks are, so the coastline doesn't shift colour at the horizon. */
+function waterColour() {
+  return new THREE.Color(BLOCKS_BY_ID.get(WATER)?.color ?? 0x83add7);
 }
