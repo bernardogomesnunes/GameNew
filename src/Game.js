@@ -2617,6 +2617,19 @@ export class Game {
 
     const made = this.world.ensureAround(x, z, this.renderDistance);
     for (const chunk of made) this.remeshQueue.add(chunk);
+    // A chunk can also come into being as a side effect of a neighbour's own
+    // meshing pass reaching across the chunk boundary to check whether a face
+    // is visible (ChunkMesher.rebuild's blockAt calls world.getBlock, which
+    // generates whatever chunk it lands in). That chunk is real from the
+    // moment it exists — solid, selectable, breakable — but `made` above only
+    // ever reports what *this* walk had to create, so one born that way was
+    // never queued for its own mesh. It sat there invisible, sky showing
+    // through exactly where a block plainly still was, until an unrelated
+    // edit anywhere else swept every dirty chunk (see remeshDirty/applyChanges)
+    // and happened to catch it too. Sweeping dirty chunks here as well means
+    // it gets a mesh the moment it exists, not the next time something
+    // unrelated gets edited.
+    for (const chunk of this.world.dirtyChunks()) this.remeshQueue.add(chunk);
     // A generous margin past what is drawn, so walking back and forth over a
     // boundary does not throw away chunks it is about to want again.
     const dropped = this.world.forgetBeyond(x, z, this.renderDistance * 1.6);
