@@ -24,6 +24,7 @@ import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SyncState } from './storage/WorldSync.js';
+import { LocalWorlds } from './storage/LocalWorlds.js';
 import { claimRegion, blocksIn, claimHint } from './tools/ClaimArea.js';
 
 /**
@@ -291,6 +292,12 @@ export class Game {
     this.worldName = this.worldName || 'My world';
     this.cloudAuth = new CloudAuth(this.bus);
     this.cloud = isCloudConfigured() ? new CloudWorlds({ auth: this.cloudAuth, bus: this.bus }) : null;
+    // The other half: a world signed out, or a build with no cloud
+    // configured at all, lives here instead — see LocalWorlds' own note on
+    // why that never re-creates the reconciliation problem the cloud-only
+    // design was built to avoid. Always constructed, cloud or not: it costs
+    // nothing until something is actually saved to it.
+    this.local = new LocalWorlds();
     // What this device and the server last agreed about each world. It is what
     // stops a desktop that has been offline from flattening what you built on
     // your phone — see storage/WorldSync.js.
@@ -394,23 +401,51 @@ export class Game {
    * settlers — comes back exactly as a load would bring it.
    */
   /**
-   * Writes this world to the account.
+   * Writes this world down — to the account if it lives there, or to this
+   * browser if it doesn't.
    *
-   * There is no copy on this device to write to. Worlds used to be saved to
-   * whichever browser made them and then reconciled with the account
-   * afterwards, and reconciling two libraries is a problem with no good
-   * answers — one of them is always wrong and the game has to guess which.
-   * So there is one copy, it is on the account, and this is how it gets there.
+   * `worldIsLocal` is decided once, at creation or on the way in (see
+   * newWorld/openWorld), never guessed from whether you happen to be signed
+   * in right now: a local world stays local even if you sign in mid-session,
+   * because a save flipping where a world lives out from under itself is
+   * exactly the "which copy is real" question local and cloud were kept
+   * apart to avoid — see LocalWorlds' own note.
    *
-   * Returns immediately. The upload is queued, because a save must never be
-   * something the player waits for mid-build.
+   * A local save is synchronous, so it returns whether it actually happened.
+   * A cloud save is queued instead, because a save must never be something
+   * the player waits for mid-build.
    */
   saveNow() {
-    if (this.discarded || !this.worldId || !this.cloud?.signedIn) return false;
+    if (this.discarded || !this.worldId) return false;
+    if (this.worldIsLocal) return this.saveLocally();
+    if (!this.cloud?.signedIn) return false;
     this.pendingSave = true;
     this.keepSafe();
     this.flush().catch(() => { /* reported by flush; retried by the next save */ });
     return true;
+  }
+
+  /** The local half of saveNow — see its own note on why the two never mix. */
+  saveLocally() {
+    try {
+      const result = this.local.save(this.worldId, {
+        world: this.world,
+        name: this.worldName,
+        mode: this.mode,
+        player: this.player,
+        duilt: this.duilt ? this.duilt.toJSON() : null,
+        economy: this.economy,
+        territoryBounds: this.duilt ? this.duilt.territory.bounds() : null,
+      });
+      this.local.saveProgression(this.gamification.toJSON());
+      this.saveError = null;
+      this.ui?.home?.forgetWorlds?.();
+      return !!result;
+    } catch (err) {
+      this.saveError = err?.message ?? 'Could not save in this browser.';
+      this.bus.emit('toast', { kind: 'xp', title: 'Not saved', body: this.saveError });
+      return false;
+    }
   }
 
   /**
@@ -525,17 +560,30 @@ export class Game {
   }
 
   /**
-   * Opens a world from the account.
+   * Opens a world, from wherever it actually lives.
    *
-   * There is nowhere else to open one from. It used to read this device's copy
-   * and consult the account afterwards, which is how a desktop could sit on a
-   * stale afternoon for ever while the phone had moved on.
+   * A local id and a cloud id are drawn from the same generator with no way
+   * to tell them apart by looking, so this asks the local library first —
+   * synchronous and free — before ever reaching for the network. Signed in
+   * or not doesn't decide it; where the world itself was saved does, which
+   * is what lets a local world stay open-able after you sign in mid-session.
    */
   async openWorld(id) {
-    if (!id || !this.cloud?.signedIn) return false;
-    // What you were in goes up before you leave it, or opening a second world
-    // throws away the first one's afternoon.
-    await this.flush();
+    if (!id) return false;
+    // What you were in goes up (or gets written down) before you leave it,
+    // or opening a second world throws away the first one's afternoon.
+    if (this.worldIsLocal) this.saveLocally(); else await this.flush();
+
+    if (this.local.has(id)) {
+      try {
+        this.restoreFromLocal(id);
+        return true;
+      } catch (err) {
+        this.ui.toast({ kind: 'xp', title: 'Could not open that world', body: err.message });
+        return false;
+      }
+    }
+    if (!this.cloud?.signedIn) return false;
     try {
       await this.restoreFromCloud(id);
       return true;
@@ -594,6 +642,32 @@ export class Game {
     this.cloudListCache = null;
   }
 
+  /**
+   * Every world the worlds screen has to offer — this browser's own library
+   * plus whatever the account holds, if there is one to ask. Two disjoint
+   * lists shown as one rather than merged into one: nothing here is ever
+   * the same world twice (see LocalWorlds' own note), so there is nothing
+   * to reconcile, only sort together by how recently each was touched.
+   *
+   * A cloud failure must never take the local list down with it — reading
+   * this browser's own storage cannot fail the way a network call can, and
+   * "your account is unreachable" should never also mean "and now you can't
+   * even see the world sitting right here." So a cloud error still throws,
+   * for the account-specific messaging HomeScreen shows, but carries the
+   * local rows along on it rather than losing them.
+   */
+  async listAllWorlds() {
+    const local = this.local.list();
+    if (!this.cloud?.signedIn) return local;
+    try {
+      const cloud = await this.cloudList();
+      return [...local, ...cloud].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+    } catch (err) {
+      err.partial = local;
+      throw err;
+    }
+  }
+
   buildCallbacks() {
     return {
       onRequestStart: () => {
@@ -612,6 +686,11 @@ export class Game {
       onDeleteWorld: (id) => {
         if (id === this.worldId) this.discarded = true;
         this.syncState.forget(id);
+        if (this.local.has(id)) {
+          this.local.delete(id);
+          this.ui.home?.forgetWorlds?.();
+          return true;
+        }
         this.cloud?.delete(id)
           .then(() => { this.forgetCloudList(); this.ui.home?.forgetWorlds?.(); })
           .catch((err) => this.ui.toast({ kind: 'xp', title: 'Could not delete that world', body: err.message }));
@@ -631,8 +710,10 @@ export class Game {
         if (!file) return;
         try {
           const data = parseWorldPayload(file.text);
-          // An imported file is a new world on your account, not a local one:
-          // it gets a fresh id and goes up with the next save like any other.
+          // An imported file is a new world, not a second copy of wherever it
+          // came from: it gets a fresh id and follows the same rule any new
+          // world does for where it lives — see newWorld's own note.
+          this.worldIsLocal = !this.cloud?.signedIn;
           this.loadFromData({ ...data, worldId: newWorldId() });
           this.saveNow();
           for (const t of data.templates) {
@@ -752,7 +833,7 @@ export class Game {
         await this.cloudAuth.signOut();
         this.ui.toast({ kind: 'xp', title: 'Signed out', body: 'Local saves are untouched' });
       },
-      getCloudWorlds: () => this.cloudList(),
+      getCloudWorlds: () => this.listAllWorlds(),
       // The worlds screen needs it to say which copy is which; it is the same
       // record the sync decision runs on.
       agreedFor: (id) => this.syncState.agreedFor(id),
@@ -846,6 +927,10 @@ export class Game {
     // un-discards, which is to say saving is on again.
     this.discarded = !!scenery;
     this.worldId = newWorldId();
+    // Signed in means the account; anyone else means this browser — see
+    // HomeScreen's whereToLive, which already tells the player this before
+    // they press Create. Decided once, here, not re-asked on every save.
+    this.worldIsLocal = !this.cloud?.signedIn;
     // A brand new world has never been anywhere, so it counts as played: it
     // has to go up the first time, and nothing has agreed anything about it.
     this.editedAt = Date.now();
@@ -2109,6 +2194,7 @@ export class Game {
   async restoreFromCloud(id, { silent = false } = {}) {
     if (!this.cloud) throw new Error('This build has no cloud configured.');
     const data = await this.cloud.restore(id);
+    this.worldIsLocal = false;
     this.loadFromData({
       world: data.world,
       mode: data.mode,
@@ -2146,6 +2232,38 @@ export class Game {
     if (!silent) {
       this.ui.closePanel('panel-menu');
       this.ui.toast({ kind: 'challenge', title: `Opened "${data.name}"`, body: 'The copy from your account' });
+    }
+  }
+
+  // ---- local ----
+
+  /** The local half of restoreFromCloud — see openWorld for how the two get told apart. */
+  restoreFromLocal(id, { silent = false } = {}) {
+    const data = this.local.restore(id);
+    const world = World.deserialize(data.world, { makeGen: makeChunkGen });
+    this.worldIsLocal = true;
+    this.loadFromData({
+      world,
+      mode: data.mode,
+      player: data.player,
+      gamification: this.gamification.toJSON(),
+      economy: data.economy,
+      duilt: data.duilt,
+      worldId: id,
+      worldName: data.name,
+    }, { silent });
+    // Progression is shared across every local world in this browser, the
+    // same split CloudWorlds keeps between an account's worlds and its one
+    // progression row — so it only loads in when it is actually ahead,
+    // exactly like restoreFromCloud's own merge.
+    const local = this.local.loadProgression();
+    if (local && (local.xp ?? 0) > (this.gamification.toJSON().xp ?? 0)) {
+      this.gamification.loadJSON(local);
+      this.ui?.updateXp();
+    }
+    if (!silent) {
+      this.ui.closePanel('panel-menu');
+      this.ui.toast({ kind: 'challenge', title: `Opened "${data.name}"`, body: 'The copy in this browser' });
     }
   }
 

@@ -490,9 +490,6 @@ export class UIManager {
 
   wireEvents() {
     this.home = new HomeScreen(this.q('#blocker'), {
-      // The worlds screen has nothing to draw without an account, because a
-      // world without an account has nowhere to live.
-      needsAccount: () => !this.cb.getCloudUser?.(),
       listCloudWorlds: () => this.cb.getCloudWorlds(),
       getCloudUser: () => this.cb.getCloudUser?.() ?? null,
       isCloudConfigured: () => this.cb.isCloudConfigured?.() ?? false,
