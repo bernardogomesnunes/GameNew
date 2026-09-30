@@ -1,4 +1,4 @@
-import { AIR } from '../config/blocks.js';
+import { AIR, isFlowing } from '../config/blocks.js';
 
 /**
  * 3D DDA voxel traversal (Amanatides & Woo). Returns the first solid block
@@ -32,7 +32,9 @@ export function castVoxelRay(world, origin, direction, maxDistance = 7) {
   while (traveled <= maxDistance && iterations < 256) {
     iterations++;
     const block = world.getBlock(x, y, z);
-    if (block !== AIR) {
+    // Flowing water is looked straight through, to whatever it's running
+    // over — you break the ground under a spill, not the spill.
+    if (block !== AIR && !isFlowing(block)) {
       return {
         x, y, z,
         block,

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { blockTextureArray, layerFor } from '../render/BlockTextures.js';
-import { BLOCKS_BY_ID, AIR, isTransparent, shapeOf } from '../config/blocks.js';
+import { BLOCKS_BY_ID, AIR, isTransparent, shapeOf, isWater, isFlowing, waterLevel } from '../config/blocks.js';
 import { boxesFor, fenceBoxes } from './propShapes.js';
 import { CHUNK_SIZE } from './World.js';
 
@@ -33,6 +33,17 @@ for (let id = 1; id < 256; id++) {
   const shape = shapeOf(id);
   JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || shape === 'gate_open' || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
 }
+// Water of any kind, flowing water, and the still water flowing water is
+// drawn with — see emitFlowingWater.
+const IS_WATER = new Uint8Array(256);
+const IS_FLOWING = new Uint8Array(256);
+for (let id = 1; id < 256; id++) {
+  IS_WATER[id] = isWater(id) ? 1 : 0;
+  IS_FLOWING[id] = isFlowing(id) ? 1 : 0;
+}
+const STILL_WATER = 11;
+/** How high flowing water stands in its cell, by level 1..7. */
+const flowHeight = (level) => 0.1 + level * 0.11;
 // A mask bit marking a face that looks into a sealed cave.
 const DEEP = 0x100;
 const PAD_STRIDE = [1, PAD * PAD, PAD];
@@ -367,6 +378,8 @@ export class ChunkMesher {
       }
     }
 
+    this.emitFlowingWater(byType, lo, top);
+
     const meshes = new Map();
     for (const [deep, types] of [[false, byType], [true, deepByType]]) {
       for (const [key, buf] of types) {
@@ -504,6 +517,63 @@ export class ChunkMesher {
       stack[at] = n;
       return at + 1;
     }
+  }
+
+  /**
+   * Flowing water, drawn as low as it is weak and full height where it's
+   * falling, into the same mesh and material as the still water it runs
+   * from. Only the faces that show: none against solid ground or against
+   * water standing at least as high.
+   */
+  emitFlowingWater(byType, lo, top) {
+    const vol = this.padded, P2 = PAD * PAD;
+    const heightOf = (i) => {
+      const id = vol[i];
+      if (!IS_WATER[id]) return 0;
+      if (!IS_FLOWING[id] || IS_WATER[vol[i + P2]]) return 1;
+      return flowHeight(waterLevel(id));
+    };
+    const solid = (id) => id > 0 && IS_CUBE[id] && !IS_TRANSPARENT[id];
+    const col = baseColor(STILL_WATER);
+    const layer = layerTable()[STILL_WATER];
+    let buf = null;
+    for (let y = lo; y <= top; y++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+          const idx = (y + 1) * P2 + (lz + 1) * PAD + lx + 1;
+          if (!IS_FLOWING[vol[idx]]) continue;
+          if (!buf) {
+            buf = byType.get(STILL_WATER);
+            if (!buf) { buf = this.takeBuffer(); byType.set(STILL_WATER, buf); }
+          }
+          const h = heightOf(idx);
+          const x0 = lx, x1 = lx + 1, y0 = y, y1 = y + h, z0 = lz, z1 = lz + 1;
+          const face = (pts, n, shade, w, hh) => this.pushQuad(buf, pts, n, col, shade, layer, w, hh);
+          if (!IS_WATER[vol[idx + P2]]) face([x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0], [0, 1, 0], SHADE.py, 1, 1);
+          if (vol[idx - P2] === AIR) face([x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1], [0, -1, 0], SHADE.ny, 1, 1);
+          const side = (off) => !solid(vol[idx + off]) && heightOf(idx + off) < h;
+          if (side(1)) face([x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1], [1, 0, 0], SHADE.px, 1, h);
+          if (side(-1)) face([x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0], [-1, 0, 0], SHADE.nx, 1, h);
+          if (side(PAD)) face([x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1], [0, 0, 1], SHADE.pz, 1, h);
+          if (side(-PAD)) face([x0, y0, z0, x0, y1, z0, x1, y1, z0, x1, y0, z0], [0, 0, -1], SHADE.nz, 1, h);
+        }
+      }
+    }
+  }
+
+  /** One quad, its corners already in outward-facing order, into a buffer. */
+  pushQuad(buf, pts, [nx, ny, nz], col, shade, layer, w, h) {
+    if (buf.quads === buf.cap) buf.grow(buf.cap * 2);
+    const q = buf.quads, p = q * 12;
+    buf.position.set(pts, p);
+    const r = col.r * shade, g = col.g * shade, b = col.b * shade;
+    for (let k = 0; k < 12; k += 3) {
+      buf.normal[p + k] = nx; buf.normal[p + k + 1] = ny; buf.normal[p + k + 2] = nz;
+      buf.color[p + k] = r; buf.color[p + k + 1] = g; buf.color[p + k + 2] = b;
+    }
+    buf.uv.set([0, 0, w, 0, w, h, 0, h], q * 8);
+    buf.layer.fill(layer, q * 4, q * 4 + 4);
+    buf.quads = q + 1;
   }
 
   /**

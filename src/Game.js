@@ -48,12 +48,13 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing } from './config/blocks.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { Mobs, rayBox } from './world/Mobs.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
+import { WaterFlow } from './world/WaterFlow.js';
 import { WANDERERS } from './config/wanderers.js';
 import { MobView } from './render/MobView.js';
 
@@ -124,6 +125,8 @@ const LURES = new Set(['vegetables', 'seeds', 'fruit']);
 const TAME_EVERY_MS = 1000; // how often pens take in animals led into them
 // A gate, shut and open: Place on one swings it to the other. See toggleGate.
 const GATE_SHUT = 48, GATE_OPEN = 49;
+// How often running water advances a block. See world/WaterFlow.js.
+const WATER_STEP_SECONDS = 0.25;
 const GATE_SWING = { [GATE_SHUT]: GATE_OPEN, [GATE_OPEN]: GATE_SHUT };
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
@@ -2426,12 +2429,26 @@ export class Game {
     this.ui.toast({ kind: 'xp', title: 'Bucket filled', body: 'Scooped up' });
   }
 
-  /** What Place does with a full bucket selected: pour it out instead of building. */
+  /**
+   * What Place does with a full bucket selected: pour it where you're
+   * pointing. It lands as still water, and runs from there — down a slope,
+   * off a ledge, into a hole (see world/WaterFlow.js). Break it again to be
+   * rid of it and the spill dries up behind it.
+   */
   emptyBucket() {
     if (!this.duilt) return;
+    const hit = this.raycast();
+    if (!hit) {
+      this.ui.toast({ kind: 'xp', title: 'Nowhere to pour it', body: 'Point at the ground and press Place' });
+      return;
+    }
+    const at = { x: hit.placeX, y: hit.placeY, z: hit.placeZ };
+    const prev = this.world.getBlock(at.x, at.y, at.z);
+    if (prev !== AIR && !isFlowing(prev)) return;
+    if (!this.applyChanges([{ ...at, prev, next: WATER }], { chargeResources: false })) return;
     if (!this.duilt.inventory.remove('bucket_water', 1)) return;
     this.duilt.inventory.add('bucket', 1);
-    this.ui.toast({ kind: 'xp', title: 'Bucket emptied', body: 'Poured out' });
+    this.ui.toast({ kind: 'xp', title: 'Bucket emptied', body: 'Poured out — watch where it runs' });
   }
 
   /**
@@ -2585,6 +2602,7 @@ export class Game {
       return;
     }
     this.world.setBlock(hit.x, hit.y, hit.z, next);
+    this.water?.touch(hit.x, hit.y, hit.z);
     this.remeshDirty();
     this.editedAt = Date.now();
   }
@@ -2672,6 +2690,8 @@ export class Game {
 
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
+    // Anything that opens a way for water, or blocks one, sets it running.
+    for (const c of changes) this.water?.touch(c.x, c.y, c.z);
     this.remeshDirty();
 
     if (this.duilt) {
@@ -2959,6 +2979,7 @@ export class Game {
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
+      this.runWater(dt);
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
       this.gamification.tick(performance.now());
@@ -2987,8 +3008,21 @@ export class Game {
    * your own land in Duilt, so a herd never appears in the middle of the
    * settlement; they're free to wander in on their own.
    */
+  /** Advances running water a step at a time, and redraws what it reached. */
+  runWater(dt) {
+    if (!this.water?.busy) return;
+    this.waterClock = (this.waterClock ?? 0) + dt;
+    if (this.waterClock < WATER_STEP_SECONDS) return;
+    this.waterClock = 0;
+    if (this.water.step()) {
+      this.remeshDirty();
+      this.editedAt = Date.now();
+    }
+  }
+
   syncMobs() {
     if (!this.world) return;
+    if (this.water?.world !== this.world) this.water = new WaterFlow(this.world);
     if (this.mobs?.world !== this.world) {
       this.mobs = new Mobs({
         world: this.world,

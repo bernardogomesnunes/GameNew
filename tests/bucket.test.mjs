@@ -61,7 +61,9 @@ ok('and says so when you are not pointing at water',
 ok('filling takes the bucket and gives back a full one, in the bag',
   /fillBucket\(\)[\s\S]{0,600}inventory\.remove\('bucket', 1\)[\s\S]{0,100}inventory\.add\('bucket_water', 1\)/.test(game));
 ok('emptying is the same swap in reverse',
-  /emptyBucket\(\)[\s\S]{0,300}inventory\.remove\('bucket_water', 1\)[\s\S]{0,100}inventory\.add\('bucket', 1\)/.test(game));
+  /emptyBucket\(\)[\s\S]{0,900}inventory\.remove\('bucket_water', 1\)[\s\S]{0,100}inventory\.add\('bucket', 1\)/.test(game));
+ok('and pours real water where you point, which then runs (see waterflow.test.mjs)',
+  /emptyBucket\(\)[\s\S]{0,900}applyChanges\(\[\{ \.\.\.at, prev, next: WATER \}\]/.test(game));
 
 // --- selectable from the hotbar, like any other held thing ------------------
 
