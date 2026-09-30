@@ -142,8 +142,12 @@ const STAIR = SLOPE_KIND.stair;
   const world = new World({ sizeX: 16, sizeZ: 16, height: 16 });
   world.setBlock(2, 1, 2, 26);
   world.setBlock(4, 3, 4, 85);
-  ok('a lantern is lit from its glass, low in its cell', lightOf(26).y < 0.5);
-  ok('a chandelier from its candles, high in its cell', lightOf(85).y > 0.6);
+  // Reported directly: the light was "such a circle in the centre", and
+  // should be "blurred", reach further, and "go from more light to less".
+  ok('a lantern shines from just above itself, not from the floor under it', lightOf(26).y > 1);
+  ok('a chandelier from under its candles, not against the ceiling', lightOf(85).y < 0.5);
+  ok('both fade gently with distance, not with its square, and reach well past five blocks',
+    [26, 85].every((id) => lightOf(id).decay === 1 && lightOf(id).distance >= 18));
   ok('a lantern is small enough to step over', world.collisionBoxAt(2, 1, 2).maxY === 1.5);
   ok('you walk under a chandelier', world.collisionBoxAt(4, 3, 4) === null);
   ok('both are things you can hold', ITEMS_BY_ID.get('lantern')?.block === 26 && ITEMS_BY_ID.get('chandelier')?.block === 85);

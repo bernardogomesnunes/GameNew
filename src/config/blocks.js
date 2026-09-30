@@ -107,7 +107,14 @@ export const BLOCKS = [
     // the bottom of the block." It was a plain glowing cube with its light
     // buried inside it; now it's a real lantern (see propShapes), lit from
     // its glass. `y` is where in the cell the light sits.
-    light: { color: 0xffcf8c, intensity: 24, distance: 14, y: 0.3 },
+    // Reported directly: the light "should not be such a circle in the
+    // centre, it should be blurred and luminosity should reach a bit further
+    // ... and should go from more light to less light." So it falls off with
+    // distance rather than distance squared (`decay` 1), gently, over some
+    // twenty blocks, and shines from just above the lantern (`y` over 1)
+    // rather than from inside it on the floor — right under a light an inch
+    // off the ground is where the white disc came from.
+    light: { color: 0xffcf8c, intensity: 5, distance: 20, decay: 1, y: 1.1 },
     shape: 'lantern',
     cost: { wood: 2 }, unlock: null,
   },
@@ -152,7 +159,7 @@ export const BLOCKS = [
   // needing its own render special-case.
   {
     id: 45, name: 'Lava', glyph: 'water', color: 0xe8672c,
-    light: { color: 0xff8040, intensity: 20, distance: 10 },
+    light: { color: 0xff8040, intensity: 5, distance: 14, decay: 1 },
     material: 'stone', unlock: null,
   },
 
@@ -199,7 +206,7 @@ export const BLOCKS = [
   // world/WaterFlow.js). Level 3 beside the source or falling, 1 at the end.
   ...[1, 2, 3].map((level) => ({
     id: LAVA_FLOW_BASE + level, name: 'Flowing Lava', glyph: 'water', color: 0xe8672c,
-    light: { color: 0xff8040, intensity: 12, distance: 7 },
+    light: { color: 0xff8040, intensity: 3, distance: 9, decay: 1 },
     shape: 'lava_flow', stateOf: 45, level, material: 'stone', unlock: null,
   })),
 
@@ -207,7 +214,9 @@ export const BLOCKS = [
   // candles on a chain, lighting the room from above.
   {
     id: 85, name: 'Chandelier', glyph: 'chandelier', color: 0x5d5552, shape: 'chandelier', material: 'stone',
-    light: { color: 0xffd79a, intensity: 30, distance: 16, y: 0.72 }, cost: { wood: 2 }, unlock: null,
+    // Below its candles, not above them — a light just under the ceiling
+    // burns a white patch into it.
+    light: { color: 0xffd79a, intensity: 6, distance: 22, decay: 1, y: 0.3 }, cost: { wood: 2 }, unlock: null,
   },
 
   { id: 69, name: 'Door', glyph: 'door', color: 0xb08a60, shape: 'door', material: 'wood', cost: { wood: 3 }, facing: 0, unlock: null },
