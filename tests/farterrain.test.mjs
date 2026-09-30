@@ -1,4 +1,4 @@
-import { FarTerrain } from '../src/render/FarTerrain.js';
+import { FarTerrain, SINK, SPLIT, REACH } from '../src/render/FarTerrain.js';
 import { BLOCKS_BY_ID } from '../src/config/blocks.js';
 
 /**
@@ -25,9 +25,9 @@ const gen = {
 };
 
 const far = new FarTerrain(fakeScene);
-far.build(gen, 0, 0, 0);
+far.update(gen, 0, 0);
 
-ok('a ring gets built', far.meshes.length > 0);
+ok('tiles get built', far.meshes.length > 0);
 
 const waterHex = BLOCKS_BY_ID.get(11)?.color;
 const waterRgb = far.waterColour;
@@ -44,11 +44,11 @@ for (const mesh of far.meshes) {
     if (z < 0) {
       if (isWaterColoured) {
         sawWaterVertex = true;
-        if (y !== 40) waterVertexIsFlat = false;
+        if (y !== 40 - SINK) waterVertexIsFlat = false;
       }
     } else if (!isWaterColoured) {
       sawLandVertex = true;
-      if (y === 40) anyLandAtWaterHeight = true;
+      if (y === 40 - SINK) anyLandAtWaterHeight = true;
     }
   }
 }
@@ -57,5 +57,62 @@ ok('cells over the lake are coloured like water, not the land biome', sawWaterVe
 ok('cells on dry land keep their land colour', sawLandVertex);
 ok('a water cell sits flat at the water surface, not the ground it is floating on', waterVertexIsFlat);
 ok('dry land never gets pulled down to the water height it is not under', !anyLandAtWaterHeight);
+
+// --- reported directly: "the terrain moves with me... blocks flicker" --------
+//
+// It was one ring rebuilt around you, with its inner edge jumping between two
+// sizes as the chunk queue rose and fell, drawn over the real chunks. Now it
+// is world-fixed tiles, made a few at a time, masked off wherever a real
+// chunk is drawn.
+
+{
+  const t = new FarTerrain(fakeScene);
+  t.update(gen, 0, 0);
+  const firstTiles = new Map(t.layers.map((l, i) => [i, new Map(l.tiles)]));
+  ok('the first update makes everything within reach at once', t.layers[0].tiles.size > 20 && t.layers[1].tiles.size > 20);
+
+  // Walk 40 blocks: every tile that was there is the very same mesh, untouched.
+  t.update(gen, 40, 0, { budgetMs: 1000 });
+  let kept = 0, same = 0;
+  for (const [i, before] of firstTiles) {
+    for (const [key, mesh] of before) {
+      if (!t.layers[i].tiles.has(key)) continue;
+      kept++;
+      if (t.layers[i].tiles.get(key) === mesh) same++;
+    }
+  }
+  ok(`walking doesn't remake the ground you can already see (${same}/${kept} tiles untouched)`, kept > 0 && same === kept);
+
+  let anyMoved = false;
+  for (const mesh of t.meshes) {
+    const p = mesh.geometry.attributes.position.array;
+    for (let i = 0; i < p.length; i += 3) {
+      if (p[i] % 8 !== 0 || p[i + 2] % 8 !== 0) { anyMoved = true; break; }
+    }
+  }
+  ok('every vertex sits on the world grid, not offset to wherever you stood', !anyMoved);
+
+  // Fly a long way: new tiles come a few at a time, not all in one frame.
+  const before = t.meshes.length;
+  t.update(gen, 3000, 0, { budgetMs: 0 });
+  ok('far away, a frame with no time to spare makes at most one tile', t.meshes.length <= before + 1);
+  for (let i = 0; i < 400; i++) t.update(gen, 3000, 0, { budgetMs: 1000 });
+  const reach = t.meshes.every((m) => {
+    m.geometry.computeBoundingBox();
+    const b = m.geometry.boundingBox;
+    const dx = Math.max(b.min.x - 3000, 0, 3000 - b.max.x), dz = Math.max(b.min.z, 0, -b.max.z);
+    return Math.hypot(dx, dz) < REACH + 384;
+  });
+  ok('and the tiles left behind are let go', reach);
+
+  // The mask: drawn chunks are marked, and an unchanged mask isn't re-sent.
+  t.setChunkMask(-2, -2, 4, (cx, cz) => cx === 0 && cz === 0, 16);
+  ok('a drawn chunk is marked in the mask', t.maskData[2 * 4 + 2] === 255 && t.maskData.reduce((a, b) => a + b, 0) === 255);
+  t.maskTexture.needsUpdate = false;
+  const version = t.maskTexture.version;
+  t.setChunkMask(-2, -2, 4, (cx, cz) => cx === 0 && cz === 0, 16);
+  ok('the same mask twice uploads nothing', t.maskTexture.version === version);
+  ok('the split between fine and coarse sits past where real chunks reach', SPLIT > 300);
+}
 
 process.exit(f ? 1 : 0);

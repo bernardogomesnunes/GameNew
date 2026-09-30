@@ -288,10 +288,14 @@ export class ChunkMesher {
     // chunk's, and with the world 200 tall that's routinely half the column
     // — so the sweep stops there.
     const top = this.fillPadded(world, chunk);
-    const dims = [CHUNK_SIZE, top + 1, CHUNK_SIZE];
+    const lo = this.bottom;
+    const dims = [CHUNK_SIZE, top - lo + 1, CHUNK_SIZE];
     const vol = this.padded;
     const S = PAD_STRIDE;
     const sky = this.skyFill(top);
+    const yBase = lo * S[1];
+    this.yOffset = lo;
+    this.releaseBuffers();
 
     for (let d = 0; d < 3; d++) {
       const u = (d + 1) % 3;
@@ -305,7 +309,7 @@ export class ChunkMesher {
           // --- build the visible-face mask for this slice ---
           let n = 0;
           for (let j = 0; j < dv; j++) {
-            let idx = (slice + 1) * S[d] + (j + 1) * S[v] + S[u];
+            let idx = yBase + (slice + 1) * S[d] + (j + 1) * S[v] + S[u];
             for (let i = 0; i < du; i++, n++, idx += S[u]) {
               const self = vol[idx];
               // A shaped block (slab, stair, furniture) never emits its own
@@ -406,12 +410,13 @@ export class ChunkMesher {
     const north = world.getChunk(chunk.cx, chunk.cz - 1)?.data;
     const south = world.getChunk(chunk.cx, chunk.cz + 1)?.data;
     let top = -1;
+    let lowestOpen = -1;
     vol.fill(SOLID_SENTINEL, 0, P2);
     for (let y = 0; y < H; y++) {
       const row = (y + 1) * P2;
       const src = y * C * C;
       vol.fill(AIR, row, row + P2);
-      let any = false;
+      let any = false, open = false;
       for (let lz = 0; lz < C; lz++) {
         const at = row + (lz + 1) * PAD + 1;
         const from = src + lz * C;
@@ -419,16 +424,26 @@ export class ChunkMesher {
           const id = data[from + lx];
           vol[at + lx] = id;
           if (id) any = true;
+          if (OPEN[id]) open = true;
         }
-        vol[at - 1] = west ? west[from + last] : AIR;
-        vol[at + C] = east ? east[from] : AIR;
+        const w = west ? west[from + last] : AIR, e = east ? east[from] : AIR;
+        vol[at - 1] = w;
+        vol[at + C] = e;
+        if (OPEN[w] || OPEN[e]) open = true;
       }
       for (let lx = 0; lx < C; lx++) {
-        vol[row + lx + 1] = north ? north[src + last * C + lx] : AIR;
-        vol[row + (C + 1) * PAD + lx + 1] = south ? south[src + lx] : AIR;
+        const n = north ? north[src + last * C + lx] : AIR, so = south ? south[src + lx] : AIR;
+        vol[row + lx + 1] = n;
+        vol[row + (C + 1) * PAD + lx + 1] = so;
+        if (OPEN[n] || OPEN[so]) open = true;
       }
       if (any) top = y;
+      if (open && lowestOpen < 0) lowestOpen = y;
     }
+    // Below the lowest open cell (this chunk's or the neighbours' edge) is
+    // solid rock through and through, with no face in it — the sweep starts
+    // just under it rather than at bedrock.
+    this.bottom = Math.max(0, Math.min(lowestOpen < 0 ? top : lowestOpen, top) - 1);
     // The row just above the top is read as the neighbour of the topmost
     // faces; when the top is the world's ceiling that row is past the data.
     if (top + 1 >= H) vol.fill(AIR, (H + 1) * P2, (H + 2) * P2);
@@ -482,6 +497,24 @@ export class ChunkMesher {
       stack[at] = n;
       return at + 1;
     }
+  }
+
+  /**
+   * Quad buffers are kept between rebuilds rather than grown from nothing
+   * every time: toGeometry copies out exactly what it needs, so the same
+   * big arrays serve every chunk.
+   */
+  takeBuffer() {
+    const buf = this.spare?.pop() ?? new QuadBuffer();
+    buf.quads = 0;
+    (this.inUse ??= []).push(buf);
+    return buf;
+  }
+
+  releaseBuffers() {
+    if (!this.inUse?.length) return;
+    (this.spare ??= []).push(...this.inUse);
+    this.inUse.length = 0;
   }
 
   maskFor(n) {
@@ -574,7 +607,7 @@ export class ChunkMesher {
     const key = bufferKeyFor(id);
     let buf = byType.get(key);
     if (!buf) {
-      buf = new QuadBuffer();
+      buf = this.takeBuffer();
       byType.set(key, buf);
     }
     if (buf.quads === buf.cap) buf.grow(buf.cap * 2);
@@ -583,6 +616,7 @@ export class ChunkMesher {
     o[d] = slice + (sign > 0 ? 1 : 0); // the face sits on the far side for +d
     o[u] = i;
     o[v] = j;
+    o[1] += this.yOffset;
     const ox = o[0], oy = o[1], oz = o[2];
     const ux = u === 0 ? w : 0, uy = u === 1 ? w : 0, uz = u === 2 ? w : 0;
     const vx = v === 0 ? h : 0, vy = v === 1 ? h : 0, vz = v === 2 ? h : 0;

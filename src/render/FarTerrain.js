@@ -5,195 +5,289 @@ import { biomeCssColours, waterCssColour } from './biomePalette.js';
  * The country past where the blocks stop.
  *
  * Real chunks cost memory and meshing time, so only a few hundred blocks of
- * them can be alive at once. That used to be the end of the world, literally:
- * the land stopped and the sky began, and no amount of fog hid the fact that
- * you were standing on a plate.
+ * them can be alive at once. Past them stands this: a coarse, terraced
+ * heightfield of the ground, sampled straight from the generator, out to the
+ * horizon.
  *
- * This is what stands in beyond it — one coarse mesh of the ground surface,
- * sampled straight from the generator rather than from any blocks, stretching
- * out to the horizon. It has no blocks in it and holds no trees, but it no
- * longer pretends to be smooth: heights are quantised to a step and each grid
- * cell keeps its own corners instead of sharing them with its neighbours, so
- * shading breaks at the same edges the steps do rather than blending across
- * them — rolling hills read as terraces, the way the real, blocky ground
- * they are standing in for actually looks from a distance.
+ * It used to be one big ring rebuilt around you every 96 blocks, with a hole
+ * in the middle whose size depended on how many chunks were still waiting to
+ * be meshed. Reported directly: "the terrain moves with me... blocks
+ * flicker", worst when flying. Three things were wrong with that. The hole
+ * flipped between two sizes as the queue crossed a threshold, so a whole
+ * band of fake ground popped in and out on top of the real one. Where the
+ * two overlapped they fought over the same pixels. And each rebuild sampled
+ * tens of thousands of points in one frame.
  *
- * Two rings, coarser as they go out, because detail you cannot resolve is
- * detail you are paying for and not seeing. The inner ring starts where the
- * real chunks end so there is no gap to fall through, and both are drawn
- * under everything else — a real chunk always wins where the two overlap.
+ * Now it's tiles fixed in the world, made a few at a time as you travel and
+ * never moved or remade once they exist — the ground stays where it is and
+ * only your view of it changes. It never overlaps a real chunk, either: the
+ * shader discards itself over any chunk that is drawn, from a small mask
+ * Game keeps up to date (see setChunkMask), so it only ever fills in where
+ * the blocks aren't — past render distance, or a chunk not meshed yet.
+ *
+ * Two layers, coarser further out. They split along a circle round the
+ * player: the fine one draws inside it, the coarse one outside.
  */
 
-/**
- * Sampling step, outer edge and height quantisation of each ring, in blocks.
- * `heightStep` grows with `step`: a ring already sampling every 24 blocks
- * gains nothing from a 1-block-fine terrace and pays for it in extra risers.
- */
-const RINGS = [
-  { step: 8, to: 420, heightStep: 2 },
-  { step: 24, to: 1400, heightStep: 4 },
+const LAYERS = [
+  { step: 8, tile: 128, heightStep: 2 },
+  { step: 24, tile: 384, heightStep: 4 },
 ];
-
-/** How far the player moves before the whole thing is rebuilt around them. */
-export const REBUILD_AFTER = 96;
+/** Where the fine layer hands over to the coarse one, in blocks from you. */
+export const SPLIT = 448;
+/** How far out the coarse layer reaches — past the fog's far end. */
+export const REACH = 1536;
+/**
+ * How far below the sampled height the fake ground sits. Its terraces are
+ * interpolated between samples 8 blocks apart, so right at the edge of the
+ * real chunks it can come out a little above the real ground — which would
+ * leave a sliver of sky under its edge. Sinking it keeps that edge below.
+ */
+export const SINK = 3;
+/** Milliseconds a frame may spend making tiles, once the first lot exist. */
+const BUDGET_MS = 3;
 
 export class FarTerrain {
   constructor(scene) {
     this.scene = scene;
     this.group = new THREE.Group();
-    // Drawn first and never into the depth buffer's favour: where a real chunk
-    // exists it must win, and it will, because it is nearer.
-    this.group.renderOrder = -1;
     scene.add(this.group);
-    this.meshes = [];
-    this.builtAt = null;
-    this.colours = biomeColours();
-    this.waterColour = waterColour();
-  }
+    this.colours = biomeCssColours().map((css) => new THREE.Color(css));
+    this.waterColour = new THREE.Color(waterCssColour());
+    this.gen = null;
 
-  /**
-   * Rebuilds the rings around a point, if the player has moved far enough.
-   *
-   * @param innerFrom how far out the real chunks reach, so the near ring can
-   *   start beyond them rather than fighting for the same ground.
-   */
-  update(gen, x, z, innerFrom) {
-    if (!gen) return false;
-    if (this.builtAt
-      && Math.abs(this.builtAt.x - x) < REBUILD_AFTER
-      && Math.abs(this.builtAt.z - z) < REBUILD_AFTER
-      && this.builtAt.innerFrom === innerFrom) return false;
-    this.build(gen, x, z, innerFrom);
-    return true;
-  }
-
-  build(gen, x, z, innerFrom) {
-    this.dispose(false);
-    let from = innerFrom;
-    for (const ring of RINGS) {
-      if (ring.to <= from) continue;
-      const mesh = this.buildRing(gen, x, z, from, ring.to, ring.step, ring.heightStep);
-      if (mesh) { this.group.add(mesh); this.meshes.push(mesh); }
-      from = ring.to;
-    }
-    this.builtAt = { x, z, innerFrom };
-  }
-
-  /**
-   * One square annulus of ground, sampled on a grid.
-   *
-   * Square rather than round because the grid is square: a circular cut would
-   * leave a ragged edge of half-quads, and the fog has long since taken the
-   * corners anyway.
-   */
-  buildRing(gen, cx, cz, from, to, step, heightStep) {
-    const n = Math.ceil((to * 2) / step) + 1;
-    const half = to;
-    // Snap the grid to the world rather than the player, so walking does not
-    // make the whole surface shimmer as every vertex slides to a new height.
-    const ox = Math.round((cx - half) / step) * step;
-    const oz = Math.round((cz - half) / step) * step;
-
-    const positions = [];
-    const colours = [];
-    const indices = [];
-
-    const heightCache = new Map();
-    const sample = (gx, gz) => {
-      const key = gx * 100003 + gz;
-      let v = heightCache.get(key);
-      if (v === undefined) {
-        const wx = ox + gx * step, wz = oz + gz * step;
-        // A lake or the sea isn't a colour the biome carries — it's ground
-        // that dipped below water level, the same way the real chunks flood
-        // it (see ChunkGen.waterLevelAt). Skipping this was the bug: past
-        // render distance, every body of water quietly turned back into dry,
-        // wrongly-coloured land, so the shoreline you could actually see
-        // water in just stopped at a border with nothing standing in for it.
-        const water = gen.waterLevelAt(wx, wz);
-        // Quantised, so a hillside comes in terraces rather than a ramp —
-        // the shading break below is what makes each one read as a step
-        // rather than a crease, but it needs an actual step to break at.
-        // Water is already flat, so it skips the quantising rather than
-        // being rounded down into the ground it is floating on.
-        const h = water || Math.round(gen.heightAt(wx, wz) / heightStep) * heightStep;
-        v = { h, b: gen.biomeIndexAt(wx, wz), wx, wz, water: !!water };
-        heightCache.set(key, v);
-      }
-      return v;
+    // One mask texel per chunk: 255 where a real chunk is drawn.
+    this.maskSize = 0;
+    this.maskData = null;
+    this.maskTexture = null;
+    this.uniforms = {
+      uCentre: { value: new THREE.Vector2() },
+      uSplit: { value: SPLIT },
+      uMask: { value: null },
+      uMaskOrigin: { value: new THREE.Vector2() },
+      uMaskBlocks: { value: 1 },
     };
+    this.ensureMask(40);
+    this.layers = LAYERS.map((spec, i) => ({
+      ...spec,
+      tiles: new Map(),
+      material: this.material(i === 0),
+    }));
+  }
 
-    const inner = from;
-    for (let gx = 0; gx < n - 1; gx++) {
-      for (let gz = 0; gz < n - 1; gz++) {
-        // The middle is left to the real blocks.
-        const mx = ox + (gx + 0.5) * step, mz = oz + (gz + 0.5) * step;
-        if (Math.abs(mx - cx) < inner && Math.abs(mz - cz) < inner) continue;
+  /** The two materials: Lambert, plus the split and the chunk mask. */
+  material(inner) {
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, fog: true });
+    mat.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, this.uniforms);
+      shader.vertexShader = `varying vec2 vFarXZ;\n${shader.vertexShader}`
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vFarXZ = position.xz;');
+      shader.fragmentShader = `
+        varying vec2 vFarXZ;
+        uniform vec2 uCentre;
+        uniform float uSplit;
+        uniform sampler2D uMask;
+        uniform vec2 uMaskOrigin;
+        uniform float uMaskBlocks;
+        ${shader.fragmentShader}`
+        .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+        {
+          vec2 d = vFarXZ - uCentre;
+          if (${inner ? 'dot(d, d) > uSplit * uSplit' : 'dot(d, d) <= uSplit * uSplit'}) discard;
+          vec2 m = (vFarXZ - uMaskOrigin) / uMaskBlocks;
+          if (m.x >= 0.0 && m.x < 1.0 && m.y >= 0.0 && m.y < 1.0 && texture2D(uMask, m).r > 0.5) discard;
+        }`);
+    };
+    mat.customProgramCacheKey = () => (inner ? 'far-inner-v2' : 'far-outer-v2');
+    return mat;
+  }
 
-        const sa = sample(gx, gz), sb = sample(gx + 1, gz);
-        const sc = sample(gx + 1, gz + 1), sd = sample(gx, gz + 1);
-        // Each cell owns four corners of its own rather than sharing them
-        // with its neighbours. The positions still line up exactly — same
-        // sampled corners, same coordinates — so nothing pulls apart, but
-        // the *shading* no longer blends across the seam: computeVertexNormals
-        // below only ever sees this one flat quad at each of these vertices,
-        // never the differently-tilted quad next door.
-        const base = positions.length / 3;
-        positions.push(sa.wx, sa.h, sa.wz, sb.wx, sb.h, sb.wz, sc.wx, sc.h, sc.wz, sd.wx, sd.h, sd.wz);
-        // One colour for the whole quad, same approximation the land already
-        // makes from its own corner (sa) — a cell is either standing in for
-        // water or for ground, not blended between the two.
-        const c = sa.water ? this.waterColour : (this.colours[sa.b] ?? this.colours[0]);
-        for (let i = 0; i < 4; i++) colours.push(c.r, c.g, c.b);
-        indices.push(base, base + 3, base + 1, base + 1, base + 3, base + 2);
+  /**
+   * Keeps the tiles around (x, z): makes the missing ones nearest first,
+   * forgets the ones left far behind. Everything within reach is made at
+   * once the first time; after that only a few milliseconds' worth a frame.
+   */
+  update(gen, x, z, { budgetMs = BUDGET_MS } = {}) {
+    if (!gen) return;
+    if (gen !== this.gen) {
+      this.clear();
+      this.gen = gen;
+    }
+    this.uniforms.uCentre.value.set(x, z);
+    const first = this.layers.every((l) => !l.tiles.size);
+    const deadline = first ? Infinity : performance.now() + budgetMs;
+    this.layers.forEach((layer, i) => {
+      const from = i === 0 ? 0 : SPLIT;
+      const to = i === 0 ? SPLIT : REACH;
+      this.forgetFar(layer, x, z, from, to);
+      for (const [tx, tz] of this.wanted(layer, x, z, from, to)) {
+        if (performance.now() > deadline) return;
+        const key = `${tx},${tz}`;
+        if (!layer.tiles.has(key)) this.makeTile(layer, tx, tz);
+      }
+    });
+  }
+
+  /** Tiles overlapping the band between `from` and `to` around (x, z), nearest first. */
+  wanted(layer, x, z, from, to) {
+    const t = layer.tile;
+    const out = [];
+    for (let tx = Math.floor((x - to) / t); tx <= Math.floor((x + to) / t); tx++) {
+      for (let tz = Math.floor((z - to) / t); tz <= Math.floor((z + to) / t); tz++) {
+        const near = distToTile(x, z, tx * t, tz * t, t);
+        const far = farToTile(x, z, tx * t, tz * t, t);
+        if (near < to && far > from) out.push([tx, tz, near]);
       }
     }
-    if (!indices.length) return null;
+    return out.sort((a, b) => a[2] - b[2]);
+  }
 
+  forgetFar(layer, x, z, from, to) {
+    const t = layer.tile;
+    for (const [key, mesh] of layer.tiles) {
+      const [tx, tz] = key.split(',').map(Number);
+      // A tile's worth of slack either way, so wandering back and forth
+      // over a line doesn't make and forget the same tile over and over.
+      if (distToTile(x, z, tx * t, tz * t, t) > to + t || farToTile(x, z, tx * t, tz * t, t) < from - t) {
+        this.group.remove(mesh);
+        mesh.geometry.dispose();
+        layer.tiles.delete(key);
+      }
+    }
+  }
+
+  /**
+   * One square of terraced ground on a world-fixed grid. Each cell owns its
+   * four corners rather than sharing them, so shading breaks at the terrace
+   * edges instead of blending across them — hills read as steps, the way the
+   * blocky ground they stand in for does.
+   */
+  makeTile(layer, tx, tz) {
+    const { step, tile, heightStep } = layer;
+    const cells = tile / step;
+    const x0 = tx * tile, z0 = tz * tile;
+    const gen = this.gen;
+
+    const n = cells + 1;
+    const samples = new Array(n * n);
+    for (let gz = 0; gz < n; gz++) {
+      for (let gx = 0; gx < n; gx++) {
+        const wx = x0 + gx * step, wz = z0 + gz * step;
+        // A lake or the sea is ground below water level, the same way the
+        // real chunks flood it (see ChunkGen.waterLevelAt): flat at the
+        // water's surface, and water-coloured, not dry land.
+        const water = gen.waterLevelAt(wx, wz);
+        const h = water || Math.round(gen.heightAt(wx, wz) / heightStep) * heightStep;
+        samples[gz * n + gx] = { h: h - SINK, b: gen.biomeIndexAt(wx, wz), wx, wz, water: !!water };
+      }
+    }
+
+    const quads = cells * cells;
+    const positions = new Float32Array(quads * 12);
+    const colours = new Float32Array(quads * 12);
+    const index = new Uint16Array(quads * 6);
+    let q = 0;
+    for (let gz = 0; gz < cells; gz++) {
+      for (let gx = 0; gx < cells; gx++, q++) {
+        const sa = samples[gz * n + gx], sb = samples[gz * n + gx + 1];
+        const sc = samples[(gz + 1) * n + gx + 1], sd = samples[(gz + 1) * n + gx];
+        positions.set([sa.wx, sa.h, sa.wz, sb.wx, sb.h, sb.wz, sc.wx, sc.h, sc.wz, sd.wx, sd.h, sd.wz], q * 12);
+        const c = sa.water ? this.waterColour : (this.colours[sa.b] ?? this.colours[0]);
+        for (let k = 0; k < 4; k++) colours.set([c.r, c.g, c.b], q * 12 + k * 3);
+        const b = q * 4;
+        index.set([b, b + 3, b + 1, b + 1, b + 3, b + 2], q * 6);
+      }
+    }
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
-    geo.setIndex(indices);
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colours, 3));
+    geo.setIndex(new THREE.BufferAttribute(index, 1));
     geo.computeVertexNormals();
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, fog: true });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.frustumCulled = false;
-    mesh.renderOrder = -1;
+    geo.computeBoundingSphere();
+    const mesh = new THREE.Mesh(geo, layer.material);
+    mesh.userData.far = true;
+    this.group.add(mesh);
+    layer.tiles.set(`${tx},${tz}`, mesh);
     return mesh;
+  }
+
+  /** A square mask of `size` chunks a side; remade only if the size changes. */
+  ensureMask(size) {
+    if (this.maskSize === size) return;
+    this.maskTexture?.dispose();
+    this.maskSize = size;
+    this.maskData = new Uint8Array(size * size);
+    this.maskTexture = new THREE.DataTexture(this.maskData, size, size, THREE.RedFormat, THREE.UnsignedByteType);
+    this.maskTexture.magFilter = THREE.NearestFilter;
+    this.maskTexture.minFilter = THREE.NearestFilter;
+    this.maskTexture.needsUpdate = true;
+    this.uniforms.uMask.value = this.maskTexture;
+  }
+
+  /**
+   * Which chunks are drawn for real, so nothing is drawn over them: a square
+   * of `size` chunks starting at chunk (cx0, cz0), and `drawn(cx, cz)`.
+   * Only uploads when something actually changed.
+   */
+  setChunkMask(cx0, cz0, size, drawn, chunkSize) {
+    this.ensureMask(size);
+    const data = this.maskData;
+    let changed = this.uniforms.uMaskOrigin.value.x !== cx0 * chunkSize
+      || this.uniforms.uMaskOrigin.value.y !== cz0 * chunkSize;
+    for (let j = 0; j < size; j++) {
+      for (let i = 0; i < size; i++) {
+        const v = drawn(cx0 + i, cz0 + j) ? 255 : 0;
+        if (data[j * size + i] !== v) { data[j * size + i] = v; changed = true; }
+      }
+    }
+    if (!changed) return;
+    this.uniforms.uMaskOrigin.value.set(cx0 * chunkSize, cz0 * chunkSize);
+    this.uniforms.uMaskBlocks.value = size * chunkSize;
+    this.maskTexture.needsUpdate = true;
+  }
+
+  /** Every tile mesh standing, across both layers. */
+  get meshes() {
+    return this.layers.flatMap((l) => [...l.tiles.values()]);
   }
 
   /** How many triangles are standing in for the distance. */
   get triangles() {
-    return this.meshes.reduce((n, m) => n + (m.geometry.index?.count ?? 0) / 3, 0);
+    return this.meshes.reduce((n, m) => n + m.geometry.index.count / 3, 0);
   }
 
   setVisible(on) {
     this.group.visible = on;
   }
 
-  dispose(removeGroup = true) {
-    for (const m of this.meshes) {
-      this.group.remove(m);
-      m.geometry.dispose();
-      m.material.dispose();
+  clear() {
+    for (const layer of this.layers) {
+      for (const mesh of layer.tiles.values()) {
+        this.group.remove(mesh);
+        mesh.geometry.dispose();
+      }
+      layer.tiles.clear();
     }
-    this.meshes = [];
-    if (removeGroup) {
-      this.scene.remove(this.group);
-      this.builtAt = null;
-    }
+  }
+
+  dispose() {
+    this.clear();
+    this.scene.remove(this.group);
+    for (const layer of this.layers) layer.material.dispose();
+    this.maskTexture?.dispose();
   }
 }
 
-/**
- * The shared land/water palette (see biomePalette.js), as THREE.Color —
- * this is the one consumer that needs it in that form, for vertex colours
- * rather than canvas fill styles.
- */
-function biomeColours() {
-  return biomeCssColours().map((css) => new THREE.Color(css));
+/** Distance from (x, z) to the nearest point of a square tile. */
+function distToTile(x, z, tx, tz, size) {
+  const dx = Math.max(tx - x, 0, x - (tx + size));
+  const dz = Math.max(tz - z, 0, z - (tz + size));
+  return Math.hypot(dx, dz);
 }
 
-function waterColour() {
-  return new THREE.Color(waterCssColour());
+/** Distance from (x, z) to the furthest corner of a square tile. */
+function farToTile(x, z, tx, tz, size) {
+  const dx = Math.max(Math.abs(tx - x), Math.abs(tx + size - x));
+  const dz = Math.max(Math.abs(tz - z), Math.abs(tz + size - z));
+  return Math.hypot(dx, dz);
 }

@@ -41,6 +41,8 @@ const TOOL_ACTION_LABELS = {
   bucket_water: ['Break', 'Empty'],
   fruit: ['Eat', 'Throw'],
   vegetables: ['Eat', 'Throw'],
+  raw_meat: ['Eat', 'Throw'],
+  cooked_meat: ['Eat', 'Throw'],
 };
 
 function el(html) {

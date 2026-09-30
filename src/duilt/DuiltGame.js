@@ -123,6 +123,23 @@ export class DuiltGame {
   }
 
   /**
+   * What a hunted animal left, into the bag. Same rules as a broken block:
+   * nothing in a sandbox, and anything the bag can't hold is said, not
+   * silently dropped. Returns { itemId: amount } actually collected.
+   */
+  collect(drops) {
+    if (this.sandbox) return {};
+    const gained = {};
+    for (const [id, n] of Object.entries(drops)) {
+      const leftover = this.inventory.add(id, n);
+      if (n - leftover > 0) gained[id] = n - leftover;
+      if (leftover > 0) this.bus?.emit('duilt:bagfull', { itemId: id, lost: leftover });
+    }
+    this.hunger.exertion = 1;
+    return gained;
+  }
+
+  /**
    * What placing this batch would cost: one item per block, flat.
    *
    * No skill discount here either. Placing and breaking are exact inverses, so

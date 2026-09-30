@@ -61,7 +61,7 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 
 // --- the fix: streamChunks sweeps dirty chunks too, not just what it made ---
 
-ok('streamChunks queues everything ensureAround made', /const made = this\.world\.ensureAround\(x, z, this\.renderDistance\);\s*\n\s*for \(const chunk of made\) this\.remeshQueue\.add\(chunk\);/.test(game));
+ok('every chunk streaming makes is queued for its mesh (generateQueued)', /generateQueued\([\s\S]{0,1200}this\.remeshQueue\.add\(this\.world\.getChunk\(cx, cz\)\);/.test(game));
 ok('streamChunks also sweeps every dirty chunk, not just the ones it made',
   /streamChunks\(\)[\s\S]{0,2500}for \(const chunk of this\.world\.dirtyChunks\(\)\) this\.remeshQueue\.add\(chunk\);/.test(game));
 
