@@ -1180,12 +1180,14 @@ export class UIManager {
    * would otherwise overwrite or hide it the instant you looked away from
    * whatever you'd just broken or placed.
    */
-  setBuildingHint(text) {
+  setBuildingHint(text, { manage = true } = {}) {
     if (this.editingBanner) return;
     const el = this.q('#building-hint');
     if (!el) return;
     if (!text) { if (!el.hidden) el.hidden = true; return; }
-    const wanted = `<b>${text}</b><span>${this.isTouch ? 'Tap to manage' : 'C to manage'}</span>`;
+    // A door or a gate on its own isn't a building: nothing to manage.
+    const extra = manage ? `<span>${this.isTouch ? 'Tap to manage' : 'C to manage'}</span>` : '';
+    const wanted = `<b>${text}</b>${extra}`;
     if (el.innerHTML !== wanted) el.innerHTML = wanted;
     el.hidden = false;
   }
@@ -1820,7 +1822,23 @@ export class UIManager {
 
   /** The two button labels for whatever is selected right now, with no tool queued. */
   defaultActionLabels() {
-    return TOOL_ACTION_LABELS[this.selectedItemId] ?? (isFood(this.selectedItemId) ? ['Eat', 'Throw'] : ['Break', 'Place']);
+    const [b, p] = TOOL_ACTION_LABELS[this.selectedItemId] ?? (isFood(this.selectedItemId) ? ['Eat', 'Throw'] : ['Break', 'Place']);
+    // Pointed at a door or a gate, Place opens or closes it whatever you hold.
+    return [b, this.aimedSwing ?? p];
+  }
+
+  /**
+   * What Place would do to the door or gate under the crosshair — "Open" or
+   * "Close" — or null when it's aimed at anything else. Only touches the
+   * buttons when it changes, and never while a tool or a building is held,
+   * which have labels of their own.
+   */
+  setAimedSwing(label) {
+    if (this.aimedSwing === label) return;
+    this.aimedSwing = label;
+    if (this.carrying || this.armedTool) return;
+    this.setActionLabels(...this.defaultActionLabels());
+    this.q('#t-place')?.classList.toggle('swing', !!label);
   }
 
   /**

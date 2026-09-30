@@ -135,6 +135,12 @@ const LAVA_STEP_SECONDS = 1;
 const GATE_SWING = { [GATE_SHUT]: GATE_OPEN, [GATE_OPEN]: GATE_SHUT };
 /** A gate or either half of a door: something Place swings rather than builds on. */
 const swings = (id) => !!GATE_SWING[id] || !!doorPart(id);
+/** What Place does to a door or gate — "Open" or "Close" — or null for anything else. */
+export function swingLabel(id) {
+  if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
+  const door = doorPart(id);
+  return door ? (door.open ? 'Close' : 'Open') : null;
+}
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
 
@@ -3236,6 +3242,11 @@ export class Game {
   updateHover() {
     const hit = this.raycast();
     this.hoverHit = hit;
+    // Requested directly: "when looking at the door the controls should
+    // adapt so place should be open or close depending on the door stage."
+    // Pointed at a door or a gate with nothing queued, Place says which it
+    // will do.
+    this.ui?.setAimedSwing(!this.armed && !this.moving && hit ? swingLabel(hit.block) : null);
 
     // A building in the air follows where you look. Done here rather than on
     // a timer so it tracks the camera exactly, with no lag behind the view.
@@ -3288,14 +3299,18 @@ export class Game {
       : null;
     const gate = hit && GATE_SWING[hit.block];
     const door = hit && doorPart(hit.block);
+    // Says the button you'd actually press: the Open/Close thumb button, or
+    // right click at a desk.
+    const swing = (gate || door) && swingLabel(hit.block);
+    const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     this.ui?.setBuildingHint(gate
-      ? (hit.block === GATE_SHUT ? 'Gate · shut — Place opens it' : 'Gate · open — Place shuts it')
+      ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
       : door
-        ? (door.open ? 'Door · open — Place shuts it' : 'Door · shut — Place opens it')
+        ? `Door · ${door.open ? 'open' : 'shut'} — ${how}`
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')
-        : null);
+        : null, { manage: !swing || !!onBuilding });
     // The single block under the crosshair, except while a roof is queued —
     // there the whole building is highlighted and one more box on top of it is
     // just noise.

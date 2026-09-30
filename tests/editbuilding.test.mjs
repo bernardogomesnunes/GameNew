@@ -70,7 +70,7 @@ ok('clearEditingBanner hands the strip back',
 ok('a tap on the strip finishes editing instead of opening the claim menu, while editing',
   /if \(this\.editingBanner\) this\.cb\.onFinishEditing\?\.\(\);\s*else this\.cb\.onOpenClaim\(\);/.test(ui));
 ok('the ordinary per-frame aim hint does not clobber it',
-  /setBuildingHint\(text\) \{\s*if \(this\.editingBanner\) return;/.test(ui));
+  /setBuildingHint\(text(, \{ manage = true \} = \{\})?\) \{\s*if \(this\.editingBanner\) return;/.test(ui));
 
 // It only reads as clickable on desktop where the CSS turns pointer-events
 // back on for it — the label without that would promise a click that never
