@@ -1,5 +1,6 @@
-import { BLOCKS_BY_ID } from './blocks.js';
+import { BLOCKS_BY_ID, shapeOf } from './blocks.js';
 import { GLYPHS, inkOn } from './glyphs.js';
+import { boxesFor, fenceBoxes } from '../world/propShapes.js';
 
 /**
  * Blocks drawn as blocks: a little isometric cube, three faces, one colour.
@@ -92,6 +93,47 @@ export function cubeSvg(blockId, { size = 22 } = {}) {
     + `</svg>`;
 }
 
+/**
+ * A shaped block — a slab, stairs, a table or chair, a rug, a fence or gate —
+ * drawn as the thing it actually is, in the same projection and light as the
+ * cube above. Reported directly: they all showed as plain cubes in the bag,
+ * so a chair and a stone slab were two same-looking boxes in different
+ * colours.
+ *
+ * Built from the very boxes the world draws them with (world/propShapes.js),
+ * so the icon can't drift from the real thing. A fence is shown with its
+ * rails running through, and a gate shut, the way you'd place them.
+ */
+export function shapeSvg(blockId, { size = 22 } = {}) {
+  const spec = BLOCKS_BY_ID.get(blockId);
+  if (!spec) return '';
+  const shape = shapeOf(blockId);
+  const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
+    ? fenceBoxes(shape, { px: 1, nx: 1 })
+    : boxesFor(shape);
+  const c = spec.color ?? 0x888888;
+  // Unit cell to the cube icon's own frame: x runs down-right, z down-left,
+  // y up — the same diamond cubeSvg draws, so a slab sits where half a cube
+  // would.
+  const p = (x, y, z) => `${(12 + (x - z) * 9.4).toFixed(2)} ${(2.6 + (x + z) * 5.3 + (1 - y) * 8.2).toFixed(2)}`;
+  const poly = (pts, fill) => `<path d="M${pts.join(' L')} Z" fill="${fill}" stroke="rgba(0,0,0,0.14)" stroke-width="0.3" stroke-linejoin="round"/>`;
+  // Far boxes first, so nearer ones paint over them.
+  const order = [...boxes].sort((a, b) =>
+    (a.minX + a.maxX + a.minZ + a.maxZ + a.minY + a.maxY) - (b.minX + b.maxX + b.minZ + b.maxZ + b.minY + b.maxY));
+  let body = '';
+  for (const b of order) {
+    body += poly([p(b.minX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.minX, b.maxY, b.maxZ)], shade(c, FACE.top));
+    body += poly([p(b.minX, b.maxY, b.maxZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.minX, b.minY, b.maxZ)], shade(c, FACE.left));
+    body += poly([p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.maxX, b.minY, b.minZ)], shade(c, FACE.right));
+  }
+  return `<svg class="cube" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
+}
+
+/** A block's icon: a cube, or its real shape if it isn't one. */
+export function blockIcon(blockId, { size = 22 } = {}) {
+  return shapeOf(blockId) === 'cube' ? cubeSvg(blockId, { size }) : shapeSvg(blockId, { size });
+}
+
 /** Whether this block should be drawn as a cube rather than a line glyph. */
 export function hasCube(blockId) {
   return BLOCKS_BY_ID.has(blockId) && !BLOCKS_BY_ID.get(blockId)?.system;
@@ -109,6 +151,9 @@ export function hasCube(blockId) {
 export function itemIcon(spec, { size = 22 } = {}) {
   if (!spec) return null;
   // An item that places a block shows that block.
-  if (spec.block != null) return hasCube(spec.block) ? cubeSvg(spec.block, { size }) : null;
+  if (spec.block != null) {
+    if (!hasCube(spec.block)) return null;
+    return blockIcon(spec.block, { size });
+  }
   return null;
 }

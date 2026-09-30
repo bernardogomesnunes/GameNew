@@ -16,7 +16,7 @@
 
 const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, PLANKS = 7,
       COBBLE = 8, BRICK = 9, GLASS = 10, WATER = 11, GOLD = 13, MARBLE = 17,
-      SAPLING = 20, FARMLAND = 21, FENCE = 47, GATE = 48;
+      SAPLING = 20, FARMLAND = 21, FENCE = 47, GATE = 48, GATE_OPEN = 49;
 
 /** Counts matching blocks in the region. */
 const count = (ctx, ids) => ctx.countOf(ids);
@@ -224,20 +224,20 @@ export const STRUCTURES = [
     name: 'Pen',
     icon: '🐑',
     age: 2,
-    blurb: 'A fence with a gate, and animals inside it. Lead them in with food in your hand.',
+    blurb: 'A fence with a gate, and animals inside it. Lead them in with food in your hand, then shut the gate.',
     minSize: 3,
     maxSize: 16,
     cost: {},
     requires: [
       {
         id: 'fenced',
-        test: (ctx) => count(ctx, [FENCE, GATE]) >= 8,
-        say: (ctx) => `Needs ${8 - count(ctx, [FENCE, GATE])} more fence round it — it has to hold them`,
+        test: (ctx) => count(ctx, [FENCE, GATE, GATE_OPEN]) >= 8,
+        say: (ctx) => `Needs ${8 - count(ctx, [FENCE, GATE, GATE_OPEN])} more fence round it — it has to hold them`,
       },
       {
         id: 'gate',
-        test: (ctx) => count(ctx, [GATE]) >= 1,
-        say: () => 'Needs a gate — a way in for you that the animals can\'t use',
+        test: (ctx) => count(ctx, [GATE, GATE_OPEN]) >= 1,
+        say: () => 'Needs a gate — a way in that you can shut behind them',
       },
     ],
     // What it gives is decided by what lives in it, not by a list here: see

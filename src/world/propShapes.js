@@ -42,6 +42,9 @@ export const PROP_SHAPES = {
     { minX: 0, maxX: 1, minY: 0.5, maxY: 0.625, minZ: 0.4375, maxZ: 0.5625 },
     { minX: 0, maxX: 1, minY: 0.75, maxY: 0.875, minZ: 0.4375, maxZ: 0.5625 },
   ],
+  gate_open: [
+    { minX: 0.0625, maxX: 0.1875, minY: 0.25, maxY: 0.875, minZ: 0, maxZ: 1 },
+  ],
   rug: [
     { minX: 0.03, maxX: 0.97, minY: 0, maxY: 0.04, minZ: 0.03, maxZ: 0.97 },
   ],
@@ -68,6 +71,20 @@ export function fenceBoxes(shape, joins) {
   }
   // A gate runs along z only when it joins that way and not along x.
   const alongZ = (joins.pz || joins.nz) && !(joins.px || joins.nx);
+  if (shape === 'gate_open') {
+    // Swung open on its hinge at one end: the same three rails, turned to
+    // lie against the side of the gap rather than across it.
+    const out = [];
+    for (const [lo, hi] of [[0.25, 0.375], [0.5, 0.625], [0.75, 0.875]]) {
+      out.push(alongZ
+        ? { minX: 0, maxX: 1, minY: lo, maxY: hi, minZ: 0.0625, maxZ: 0.1875 }
+        : { minX: 0.0625, maxX: 0.1875, minY: lo, maxY: hi, minZ: 0, maxZ: 1 });
+    }
+    out.push(alongZ
+      ? { minX: 0.45, maxX: 0.55, minY: 0.2, maxY: 0.9, minZ: 0.0625, maxZ: 0.1875 }
+      : { minX: 0.0625, maxX: 0.1875, minY: 0.2, maxY: 0.9, minZ: 0.45, maxZ: 0.55 });
+    return out;
+  }
   for (const [lo, hi] of [[0.25, 0.375], [0.5, 0.625], [0.75, 0.875]]) {
     boxes.push(alongZ
       ? { minX: 0.4375, maxX: 0.5625, minY: lo, maxY: hi, minZ: 0, maxZ: 1 }

@@ -53,6 +53,8 @@ import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './co
 import { MOBS_BY_ID } from './config/mobs.js';
 import { Mobs, rayBox } from './world/Mobs.js';
 import { tameInto } from './duilt/Ranch.js';
+import { Wanderers } from './world/Wanderers.js';
+import { WANDERERS } from './config/wanderers.js';
 import { MobView } from './render/MobView.js';
 
 const REACH = 7;
@@ -120,6 +122,9 @@ const STRIKE_COOLDOWN_MS = 350;
 // What a farm animal will follow you for. See Mobs.think.
 const LURES = new Set(['vegetables', 'seeds', 'fruit']);
 const TAME_EVERY_MS = 1000; // how often pens take in animals led into them
+// A gate, shut and open: Place on one swings it to the other. See toggleGate.
+const GATE_SHUT = 48, GATE_OPEN = 49;
+const GATE_SWING = { [GATE_SHUT]: GATE_OPEN, [GATE_OPEN]: GATE_SHUT };
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
 
@@ -272,6 +277,8 @@ export class Game {
     this.ghost = new BuildGhost(this.scene);
     this.settlerView = new SettlerView(this.scene);
     this.mobView = new MobView(this.scene);
+    // Hermit, bandits, explorers, messengers — drawn like settlers.
+    this.wanderView = new SettlerView(this.scene);
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -1370,6 +1377,10 @@ export class Game {
     // way to turn it. See setToolReadout, which labels it to match.
     if (this.pendingRoof?.turns > 1) return void this.turnRoof();
     if (this.armed) return void this.clearPending();
+    // Pointing at a gate, Place opens or shuts it — before anything you're
+    // holding gets a say, the same way you'd reach for a latch.
+    const aimed = this.raycast();
+    if (aimed && GATE_SWING[aimed.block]) return void this.toggleGate(aimed);
     // A full bucket takes the button too, instead of placing a block.
     const override = PLACE_OVERRIDE[this.selectedItemId] ?? (isFood(this.selectedItemId) ? 'throwSelected' : null);
     if (override) return void this[override]();
@@ -2558,9 +2569,32 @@ export class Game {
     }
   }
 
+  /**
+   * Swings a gate open or shut. Reported directly: a gate that looked shut
+   * but let animals through, with no way to lock the sheep in. Shut, it's
+   * fence to everyone; open, anyone walks through — you included.
+   *
+   * Not an edit through applyChanges: nothing is spent or gathered, it
+   * isn't something to undo, and a claimed pen's gate has to open without
+   * unlocking the pen first.
+   */
+  toggleGate(hit) {
+    const next = GATE_SWING[hit.block];
+    if (next === GATE_SHUT && this.blockOverlapsPlayerAABB(hit)) {
+      this.ui.toast({ kind: 'xp', title: 'Step out of the gateway first' });
+      return;
+    }
+    this.world.setBlock(hit.x, hit.y, hit.z, next);
+    this.remeshDirty();
+    this.editedAt = Date.now();
+  }
+
   placeBlock() {
     const hit = this.raycast();
     if (!hit) return;
+    // Place on a gate swings it (secondaryAction); a held Place repeating
+    // shouldn't go on to build against it.
+    if (GATE_SWING[hit.block]) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
@@ -2924,6 +2958,7 @@ export class Game {
       this.settlerView.update(this.duilt?.settlers.people ?? []);
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
+      this.wanderers.tick(dt, this.player.position);
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
       this.gamification.tick(performance.now());
@@ -2942,6 +2977,7 @@ export class Game {
     this.updateClouds(dt);
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
+    this.wanderView.update(this.wanderers?.list ?? []);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -2959,6 +2995,14 @@ export class Game {
         avoid: (x, z) => !!(this.duilt && !this.duilt.sandbox && this.duilt.territory.contains(x, z)),
       });
       this.mobsHerdOf = null;
+    }
+    if (this.wanderers?.world !== this.world) {
+      this.wanderers = new Wanderers({
+        world: this.world,
+        // A messenger comes to your settlement, so only where you have one.
+        home: () => (this.duilt && !this.duilt.sandbox ? { x: this.world.centreX, z: this.world.centreZ } : null),
+        onNews: (p, line) => this.ui.toast({ kind: 'challenge', title: `${p.name}, a messenger`, body: line }),
+      });
     }
     // Your penned animals come back with the save, and join the wild ones.
     if (this.duilt && this.mobsHerdOf !== this.duilt) {
@@ -3033,6 +3077,14 @@ export class Game {
       this.ui?.setPersonHint(person.name, job ? `works the ${job}` : 'looking for work');
       return;
     }
+    // Somebody from out in the world — the hermit, a bandit, a traveller.
+    const stranger = this.wanderers
+      ? this.wanderView.pick(this.wanderers.list, this.player.eyePosition(), this.player.lookDirection())
+      : null;
+    if (stranger) {
+      this.ui?.setPersonHint(stranger.name, WANDERERS[stranger.kind].about);
+      return;
+    }
     // Same for an animal — named before you swing, and no block outline
     // behind it saying the swing will land on the ground.
     const mob = this.armed ? null : this.mobTarget(hit);
@@ -3048,10 +3100,13 @@ export class Game {
     const onBuilding = hit && this.duilt
       ? this.duilt.structures.at(hit.x, hit.y, hit.z)
       : null;
-    this.ui?.setBuildingHint(onBuilding
-      ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
-        + (onBuilding.locked === false ? ' · unlocked' : '')
-      : null);
+    const gate = hit && GATE_SWING[hit.block];
+    this.ui?.setBuildingHint(gate
+      ? (hit.block === GATE_SHUT ? 'Gate · shut — Place opens it' : 'Gate · open — Place shuts it')
+      : onBuilding
+        ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
+          + (onBuilding.locked === false ? ' · unlocked' : '')
+        : null);
     // The single block under the crosshair, except while a roof is queued —
     // there the whole building is highlighted and one more box on top of it is
     // just noise.
