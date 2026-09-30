@@ -14,7 +14,7 @@
 import { ITEM_FOR_BLOCK } from './items.js';
 
 const DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, PLANKS = 7, COBBLE = 8,
-      BRICK = 9, GOLD = 13, MARBLE = 17, SAPLING = 20, FARMLAND = 21;
+      BRICK = 9, GOLD = 13, MARBLE = 17, SAPLING = 20, FARMLAND = 21, FENCE = 47, GATE = 48;
 
 /** A solid rectangle of one block, at one height. */
 function slab(x0, z0, w, d, dy, type) {
@@ -220,6 +220,16 @@ export const STARTER_DESIGNS = [
     footprint: '4 × 4',
     note: 'Place it within 6 blocks of the river.',
     blocks: farmBlocks(),
+  },
+  {
+    id: 'starter_pen',
+    structure: 'pen',
+    name: 'Paddock',
+    size: 6,
+    footprint: '6 × 6',
+    note: 'Then lead animals in through the gate with vegetables or seeds in your hand.',
+    // A ring of fence with a gate in the middle of one side.
+    blocks: ring(0, 0, 6, 6, 0, FENCE).map((b) => (b.dx === 2 && b.dz === 0 ? { ...b, type: GATE } : b)),
   },
   {
     id: 'starter_house',

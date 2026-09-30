@@ -9,7 +9,10 @@ export const CHUNK_SIZE = 16;
  * blocks.js's own note on why.
  */
 const HALF_SHAPES = new Set(['slab', 'stair', 'chair']);
-const NO_COLLISION_SHAPES = new Set(['rug']);
+// A gate is open to you and shut to animals — see Mobs.groundAt for their side.
+const NO_COLLISION_SHAPES = new Set(['rug', 'gate']);
+// Taller than its cell: a fence stops you at a block and a half, past jumping.
+const FENCE_HEIGHT = 1.5;
 
 export class Chunk {
   constructor(cx, cz, height) {
@@ -197,6 +200,7 @@ export class World {
     const shape = shapeOf(id);
     if (NO_COLLISION_SHAPES.has(shape)) return null;
     if (HALF_SHAPES.has(shape)) return { minY: y, maxY: y + 0.5, stair: shape === 'stair' };
+    if (shape === 'fence') return { minY: y, maxY: y + FENCE_HEIGHT };
     return { minY: y, maxY: y + 1 };
   }
 

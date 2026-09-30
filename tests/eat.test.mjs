@@ -59,8 +59,10 @@ const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf
 
 ok('fruit and vegetables take over Break, like the bucket does',
   /BREAK_OVERRIDE = \{ bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected'[, }]/.test(game));
-ok('and so does meat, raw or cooked',
-  /BREAK_OVERRIDE = \{[^}]*raw_meat: 'eatSelected', cooked_meat: 'eatSelected' \}/.test(game));
+ok('and so does any other food — meat, eggs, milk — without listing each one',
+  /BREAK_OVERRIDE\[this\.selectedItemId\] \?\? \(isFood\(this\.selectedItemId\) \? 'eatSelected' : null\)/.test(game)
+  && /PLACE_OVERRIDE\[this\.selectedItemId\] \?\? \(isFood\(this\.selectedItemId\) \? 'throwSelected' : null\)/.test(game)
+  && /isFood\(this\.selectedItemId\) \? \['Eat', 'Throw'\]/.test(ui));
 ok('eatSelected calls DuiltGame\'s own eat() with whatever is selected',
   /eatSelected\(\)[\s\S]{0,200}this\.duilt\.eat\(this\.selectedItemId\)/.test(game));
 ok('and food takes over Place too, throwing it away instead of building',

@@ -1,3 +1,4 @@
+import { penProduce, herdToJSON } from './Ranch.js';
 import { Inventory } from '../items/Inventory.js';
 import { Territory } from '../world/Territory.js';
 import { StructureRegistry } from '../structures/StructureRegistry.js';
@@ -37,6 +38,8 @@ export class DuiltGame {
     this.world = world;
     this.bus = bus;
     this.sandbox = sandbox;
+    // Animals kept in pens — see duilt/Ranch.js. Wild ones aren't here.
+    this.herd = [];
     this.inventory = new Inventory({ bus });
     this.territory = new Territory({ world, scene, bus, age, sandbox });
     this.structures = new StructureRegistry({ world, bus, inventory: this.inventory });
@@ -120,6 +123,11 @@ export class DuiltGame {
     if (picked > 0) this.skills.record('foraging', picked);
     this.hunger.exertion = 1;
     return gained;
+  }
+
+  /** An animal of yours that's gone — hunted, most likely. */
+  forgetAnimal(m) {
+    this.herd = this.herd.filter((a) => a !== m);
   }
 
   /**
@@ -388,6 +396,7 @@ export class DuiltGame {
         now,
         yieldMultiplier: this.skills.gatherYield(),
         bonusFor: (id) => this.settlers.bonusFor(id),
+        producesFor: (s) => penProduce(s, this.herd),
       });
     }
   }
@@ -408,6 +417,7 @@ export class DuiltGame {
       hunger: this.hunger.toJSON(),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
+      herd: herdToJSON(this.herd),
       savedAt: Date.now(),
     };
   }
@@ -420,9 +430,16 @@ export class DuiltGame {
     this.hunger.loadJSON(data.hunger);
     this.skills.loadJSON(data.skills);
     this.settlers.loadJSON(data.settlers);
+    // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
+    // them legs again. A save from before ranching simply has none.
+    this.herd = (data.herd ?? []).map((r) => ({ ...r }));
     // Pay out everything earned while the tab was shut.
     this.lastCollect = Date.now();
-    return this.structures.collect({ now: Date.now(), yieldMultiplier: this.skills.gatherYield() });
+    return this.structures.collect({
+      now: Date.now(),
+      yieldMultiplier: this.skills.gatherYield(),
+      producesFor: (s) => penProduce(s, this.herd),
+    });
   }
 }
 

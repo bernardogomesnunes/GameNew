@@ -49,9 +49,10 @@ import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, materialOf } from './config/blocks.js';
-import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID } from './config/items.js';
+import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { Mobs, rayBox } from './world/Mobs.js';
+import { tameInto } from './duilt/Ranch.js';
 import { MobView } from './render/MobView.js';
 
 const REACH = 7;
@@ -116,6 +117,9 @@ const HOLD_BREAK_INTERVAL_MS = 170;
 // Between blows on an animal. Held Break repeats faster than this for
 // blocks; a swing at something alive shouldn't land six times a second.
 const STRIKE_COOLDOWN_MS = 350;
+// What a farm animal will follow you for. See Mobs.think.
+const LURES = new Set(['vegetables', 'seeds', 'fruit']);
+const TAME_EVERY_MS = 1000; // how often pens take in animals led into them
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
 
@@ -141,8 +145,9 @@ const SLOW_BREAK_MS = 900;
  * Mining tools (axe, pickaxe, shovel) are not in here: they don't replace
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', raw_meat: 'eatSelected', cooked_meat: 'eatSelected' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', raw_meat: 'throwSelected', cooked_meat: 'throwSelected' };
+// Any food not listed eats on Break and throws on Place — see foodOverride.
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -1351,7 +1356,7 @@ export class Game {
     if (this.pendingTemplate) return void this.stampTemplate();
     // The selected item can take the button instead of digging — the
     // bucket, or something to eat. Nothing to dig with, or nothing to dig.
-    const override = BREAK_OVERRIDE[this.selectedItemId];
+    const override = BREAK_OVERRIDE[this.selectedItemId] ?? (isFood(this.selectedItemId) ? 'eatSelected' : null);
     if (override) return void this[override]();
     this.breakBlock();
   }
@@ -1366,7 +1371,7 @@ export class Game {
     if (this.pendingRoof?.turns > 1) return void this.turnRoof();
     if (this.armed) return void this.clearPending();
     // A full bucket takes the button too, instead of placing a block.
-    const override = PLACE_OVERRIDE[this.selectedItemId];
+    const override = PLACE_OVERRIDE[this.selectedItemId] ?? (isFood(this.selectedItemId) ? 'throwSelected' : null);
     if (override) return void this[override]();
     this.placeBlock();
   }
@@ -2502,6 +2507,7 @@ export class Game {
       const gained = this.duilt?.collect(drops) ?? {};
       const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
       this.ui.toast({ kind: 'xp', title: `Hunted a ${spec.name.toLowerCase()}`, body: got || undefined });
+      if (mob.penId) this.duilt?.forgetAnimal(mob);
     }
     return true;
   }
@@ -2916,7 +2922,8 @@ export class Game {
       this.updateHover();
       this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false });
       this.settlerView.update(this.duilt?.settlers.people ?? []);
-      this.mobs.tick(dt, this.player.position);
+      this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
+      this.tamePens();
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
       this.gamification.tick(performance.now());
@@ -2945,11 +2952,41 @@ export class Game {
    * settlement; they're free to wander in on their own.
    */
   syncMobs() {
-    if (!this.world || this.mobs?.world === this.world) return;
-    this.mobs = new Mobs({
-      world: this.world,
-      avoid: (x, z) => !!(this.duilt && !this.duilt.sandbox && this.duilt.territory.contains(x, z)),
+    if (!this.world) return;
+    if (this.mobs?.world !== this.world) {
+      this.mobs = new Mobs({
+        world: this.world,
+        avoid: (x, z) => !!(this.duilt && !this.duilt.sandbox && this.duilt.territory.contains(x, z)),
+      });
+      this.mobsHerdOf = null;
+    }
+    // Your penned animals come back with the save, and join the wild ones.
+    if (this.duilt && this.mobsHerdOf !== this.duilt) {
+      this.mobs.adopt(this.duilt.herd);
+      this.mobsHerdOf = this.duilt;
+    }
+  }
+
+  /**
+   * Any farm animal standing inside a claimed pen becomes yours — whether
+   * you led it in or it was there when you claimed the fence round it.
+   */
+  tamePens() {
+    if (!this.duilt || !this.mobs) return;
+    const now = performance.now();
+    if (now - (this.lastTameAt ?? 0) < TAME_EVERY_MS) return;
+    this.lastTameAt = now;
+    const pens = this.duilt.structures.list().filter((s) => s.type === 'pen' && s.valid);
+    if (!pens.length) return;
+    const taken = tameInto(pens, this.mobs.list, this.duilt.herd);
+    if (!taken.length) return;
+    const kinds = [...new Set(taken.map((m) => MOBS_BY_ID.get(m.type).name.toLowerCase()))];
+    this.ui.toast({
+      kind: 'challenge',
+      title: taken.length === 1 ? `The ${kinds[0]} is yours now` : `${taken.length} animals are yours now`,
+      body: 'Kept in the pen — it makes something for every one of them',
     });
+    this.editedAt = Date.now();
   }
 
   updateClouds(dt) {
@@ -3002,7 +3039,9 @@ export class Game {
     if (mob) {
       const spec = MOBS_BY_ID.get(mob.type);
       this.hoverBox.visible = false;
-      this.ui?.setPersonHint(spec.name, mob.hp < spec.hp ? 'hurt — keep at it' : 'hit to hunt');
+      this.ui?.setPersonHint(spec.name, mob.hp < spec.hp ? 'hurt — keep at it'
+        : mob.penId ? 'yours — kept in the pen'
+          : spec.farm && this.duilt ? 'hold vegetables or seeds to lead it' : 'hit to hunt');
       return;
     }
 
