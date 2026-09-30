@@ -8,7 +8,7 @@ import { ITEMS_BY_ID, itemName } from '../config/items.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { cubeSvg, itemIcon } from '../config/cubes.js';
-import { ACHIEVEMENTS, goalBands } from '../config/achievements.js';
+import { goalBands } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
 import { ROOFS, roofProfileSvg } from '../config/roofs.js';
@@ -1265,18 +1265,26 @@ export class UIManager {
 
   populateStats() {
     const s = this.gamification.snapshot();
-    this.q('#stats-sub').textContent = `Age ${s.age} · ${s.achievementsUnlocked.size} of ${ACHIEVEMENTS.length} done · level ${s.level}`;
+    const done = s.achievementsUnlocked;
+    // Only the ages you've reached. Reported directly: the whole list, every
+    // age at once, read as a wall of things not done before you'd done any.
+    // The next age's band appears when this one is finished, with one line
+    // below saying so, so it's clear there is more without showing it.
+    const bands = goalBands();
+    const shown = bands.filter((band) => band.age <= s.age);
+    const next = bands.find((band) => band.age > s.age);
+    const shownGoals = shown.flatMap((band) => band.goals);
+    const shownDone = shownGoals.filter((g) => done.has(g.id)).length;
+    this.q('#stats-sub').textContent = `Age ${s.age} · ${shownDone} of ${shownGoals.length} done · level ${s.level}`;
 
     // Banded by age, because the bands are the order you are meant to do them
     // in — this list is the only thing teaching the game now, and a flat grid
     // of twenty cards answers "what have I done" but never "what next".
-    const done = s.achievementsUnlocked;
     const ctx = this.gamification.ctx();
-    this.q('#ach-grid').innerHTML = goalBands().map((band) => {
+    this.q('#ach-grid').innerHTML = shown.map((band) => {
       const met = band.goals.filter((g) => done.has(g.id)).length;
-      const reached = s.age >= band.age;
       return `
-        <div class="goal-band ${reached ? '' : 'ahead'}">
+        <div class="goal-band">
           <div class="goal-band-head">
             <span>Age ${band.age} \u00b7 ${escapeHtml(band.name)}</span>
             <span class="goal-band-count">${met} / ${band.goals.length}</span>
@@ -1297,7 +1305,9 @@ export class UIManager {
             </div>`;
           }).join('')}
         </div>`;
-    }).join('');
+    }).join('') + (next
+      ? `<div class="goal-next">Age ${next.age} appears here once you finish Age ${s.age}.</div>`
+      : '');
 
     const dc = s.dailyChallenge;
     const list = this.q('#challenge-list');
