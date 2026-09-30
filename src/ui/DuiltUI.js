@@ -922,11 +922,14 @@ export class DuiltUI {
 
   // ---- claiming ----
 
-  openClaim(region, onClaim) {
+  openClaim(region, onClaim, { first = null } = {}) {
     const d = this.duilt;
     if (!d || !region) return;
     const list = this.q('#claim-list');
-    const options = d.claimOptionsFor(region);
+    // A placed design that's still waiting: what it's meant to be comes
+    // first, with what it's waiting for, rather than halfway down the list.
+    const options = d.claimOptionsFor(region)
+      .sort((a, b) => (b.id === first) - (a.id === first));
     list.innerHTML = options.map((o) => `
       <button class="claim-row ${o.ok ? 'ok' : 'blocked'}" data-claim="${o.id}" ${o.ok ? '' : 'disabled'}>
         <span class="claim-icon">${o.icon}</span>

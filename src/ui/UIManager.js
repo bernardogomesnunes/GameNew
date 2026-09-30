@@ -1186,7 +1186,8 @@ export class UIManager {
     if (!el) return;
     if (!text) { if (!el.hidden) el.hidden = true; return; }
     // A door or a gate on its own isn't a building: nothing to manage.
-    const extra = manage ? `<span>${this.isTouch ? 'Tap to manage' : 'C to manage'}</span>` : '';
+    const verb = typeof manage === 'string' ? manage : 'manage';
+    const extra = manage ? `<span>${this.isTouch ? 'Tap' : 'C'} to ${verb}</span>` : '';
     const wanted = `<b>${text}</b>${extra}`;
     if (el.innerHTML !== wanted) el.innerHTML = wanted;
     el.hidden = false;
@@ -1736,7 +1737,7 @@ export class UIManager {
   }
 
   toggleBag() { return this.duiltUI?.toggleBag(); }
-  openClaim(region, onClaim) { this.duiltUI?.openClaim(region, onClaim); }
+  openClaim(region, onClaim, opts) { this.duiltUI?.openClaim(region, onClaim, opts); }
   /**
    * Kept as an alias only because callers outside still use the name. Both the
    * main panels and the Duilt ones live in the same registry now, so there is

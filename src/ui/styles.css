@@ -1268,7 +1268,10 @@ body.touch #top-buttons .touch-moved { display: none !important; }
 /* A building under the crosshair says so before you swing at it. */
 #building-hint {
   position: absolute; top: calc(50% + 30px); left: 50%; transform: translateX(-50%);
-  pointer-events: none; z-index: 6; text-align: center; white-space: nowrap;
+  pointer-events: none; z-index: 6; text-align: center;
+  /* One line when it fits, wrapped inside the screen when it doesn't — a
+     reason why a building isn't working yet can be a sentence. */
+  width: max-content; max-width: min(88vw, 520px); line-height: 1.35;
   background: var(--panel); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--panel-border); border-radius: 9px;
   padding: 5px 11px; font-size: 12px;

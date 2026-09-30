@@ -20,6 +20,8 @@ import * as THREE from 'three';
 export const DAYLIGHT_SECONDS = 600;
 /** How much faster the clock runs while the sun is down. */
 const NIGHT_SPEED = 2;
+/** How fast the stars turn, as a fraction of the sun and moon's speed. */
+export const STAR_DRIFT = 0.12;
 /** Where a brand new world's clock starts: mid-morning. */
 export const MORNING = 0.32;
 
@@ -60,7 +62,10 @@ export function daylightAt(time) {
     sun: 0.85 * smooth(-0.04, 0.18, e),
     moon: 0.2 * (1 - day),
     hemi: 0.07 + 0.33 * day,
-    stars: 1 - smooth(-0.22, 0.02, e),
+    // Out as soon as the sky starts going dark, not once it's black.
+    // Reported directly: "Stars should start appearing in the sky as soon
+    // as the sky goes dark."
+    stars: 1 - smooth(0.25, 0.8, day),
   };
 }
 
@@ -103,7 +108,8 @@ export class DayCycle {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     this.stars = new THREE.Points(geo, new THREE.PointsMaterial({
-      color: 0xffffff, size: 2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false,
+      // Small: a pinprick, not a dot.
+      color: 0xffffff, size: 1.25, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false,
     }));
     this.stars.renderOrder = -3;
     this.stars.frustumCulled = false;
@@ -157,7 +163,9 @@ export class DayCycle {
     this.stars.scale.setScalar(r * 0.98);
     this.stars.material.opacity = 0.9 * l.stars;
     this.stars.visible = l.stars > 0.01;
-    // The stars turn with the sky.
-    this.stars.rotation.z = a;
+    // The stars wheel slowly, far behind the moon — reported directly: they
+    // "move with the moon, it does not make sense, they should move in some
+    // kind of parallax, slower than the moon."
+    this.stars.rotation.z = a * STAR_DRIFT;
   }
 }

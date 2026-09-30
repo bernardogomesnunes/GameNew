@@ -2002,6 +2002,20 @@ export class Game {
       this.ui.openBuilding(aimed, this.buildingActions(aimed));
       return;
     }
+    // A design you placed that's still waiting: the claim panel for exactly
+    // what it was placed as, which says what's missing.
+    const waiting = this.hoverHit && this.duilt.waitingAt(this.hoverHit.x, this.hoverHit.y, this.hoverHit.z);
+    if (waiting) {
+      const region = waiting.region;
+      this.ui.openClaim(region, (typeId) => {
+        const r = this.duilt.claim(region, typeId);
+        if (r.ok) this.duilt.waiting = this.duilt.waiting.filter((w) => w !== waiting);
+        this.ui.toast(r.ok
+          ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
+          : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
+      }, { first: waiting.type });
+      return;
+    }
 
     // Otherwise the question is "what is this thing I am pointing at?", and the
     // thing is the wall course you're on — see wallFootprintAt, and
@@ -2236,9 +2250,12 @@ export class Game {
       minZ: b.z, maxZ: b.z + e.z,
     };
     const claim = this.duilt.claim(region, typeId);
+    // Refused, it's remembered rather than forgotten: it says what it's
+    // waiting for when you look at it, and counts the moment it can.
+    if (!claim.ok) this.duilt.waitFor(region, typeId, claim.reason);
     this.ui.toast(claim.ok
       ? { kind: 'challenge', title: `${plan.design.name} placed`, body: claim.reason }
-      : { kind: 'xp', title: 'Placed, but not claimed', body: claim.reason });
+      : { kind: 'xp', title: `${plan.design.name} placed — not working yet`, body: `${claim.reason}. It will start as soon as it can.` });
   }
 
   // ---- cloud ----
@@ -2813,6 +2830,12 @@ export class Game {
       const gained = this.duilt.onBlocksBroken(changes);
       if (Object.keys(gained).length) this.bus.emit('duilt:gathered', { gained });
       this.duilt.structures.revalidateAround(changes);
+      // A design that was waiting for something — fields, a neighbour — may
+      // have just got it.
+      for (const w of this.duilt.retryWaiting(changes)) {
+        const name = STRUCTURES_BY_ID.get(w.type)?.name ?? 'Building';
+        this.ui?.toast({ kind: 'challenge', title: `${name} is working now`, body: w.reason });
+      }
       this.duilt.settlers.revalidate();
       // The border line is drawn on the blocks that touch it, so digging one
       // out moves the ground under it.
@@ -3297,6 +3320,7 @@ export class Game {
     const onBuilding = hit && this.duilt
       ? this.duilt.structures.at(hit.x, hit.y, hit.z)
       : null;
+    const waiting = hit && !onBuilding && this.duilt ? this.duilt.waitingAt(hit.x, hit.y, hit.z) : null;
     const gate = hit && GATE_SWING[hit.block];
     const door = hit && doorPart(hit.block);
     // Says the button you'd actually press: the Open/Close thumb button, or
@@ -3310,7 +3334,9 @@ export class Game {
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')
-        : null, { manage: !swing || !!onBuilding });
+      : waiting
+        ? `${STRUCTURES_BY_ID.get(waiting.type)?.name ?? 'Building'} · not working yet — ${waiting.reason}`
+        : null, { manage: waiting ? 'see why' : (!swing || !!onBuilding) });
     // The single block under the crosshair, except while a roof is queued —
     // there the whole building is highlighted and one more box on top of it is
     // just noise.
