@@ -74,6 +74,16 @@ export const PANELS = [
     label: 'Roof',
   },
   {
+    id: 'panel-map',
+    title: 'Map',
+    subId: 'map-sub',
+    wide: true,
+    layer: 'main',
+    mode: 'any',
+    key: 'KeyM',
+    label: 'Map',
+  },
+  {
     id: 'panel-clear',
     title: 'Clear',
     sub: 'Take a lot of blocks away at once. All of it goes in your bag.',

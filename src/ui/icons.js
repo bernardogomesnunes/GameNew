@@ -30,6 +30,8 @@ const PATHS = {
   // Skills: a step up, not the bar chart Stats already uses — side by side in
   // the tray the two were the same picture.
   skills: 'M12 3.5 17 10h-3v4h-4v-4H7l5-6.5ZM6 19h12',
+  // A folded paper map: three panels, creased where they fold.
+  map: 'M3 6.5 9 4l6 2.5 6-2.5v14l-6 2.5-6-2.5-6 2.5ZM9 4v14M15 6.5v14',
 
   // Menu sections.
   person: 'M12 11.5a3.6 3.6 0 1 0 0-7.2 3.6 3.6 0 0 0 0 7.2ZM4.8 20.2c0-3.4 3.2-5.4 7.2-5.4s7.2 2 7.2 5.4',

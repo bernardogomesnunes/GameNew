@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { BIOMES } from '../config/biomes.js';
-import { BLOCKS_BY_ID, WATER } from '../config/blocks.js';
+import { biomeCssColours, waterCssColour } from './biomePalette.js';
 
 /**
  * The country past where the blocks stop.
@@ -187,25 +186,14 @@ export class FarTerrain {
 }
 
 /**
- * A colour per biome, taken from whatever that biome puts on top.
- *
- * Read from the block registry rather than written out again here, so the
- * distance is made of the same greens and greys as the ground under your feet
- * and cannot drift away from it.
+ * The shared land/water palette (see biomePalette.js), as THREE.Color —
+ * this is the one consumer that needs it in that form, for vertex colours
+ * rather than canvas fill styles.
  */
 function biomeColours() {
-  return BIOMES.map((b) => {
-    const block = BLOCKS_BY_ID.get(b.surface.top);
-    const c = new THREE.Color(block?.color ?? 0x5b9c3f);
-    // A touch darker as a base: the real lighting now varies this per face
-    // (see buildRing), but the base swatch alone still reads a shade
-    // brighter than the stepped ground it's continuing without it.
-    c.multiplyScalar(0.92);
-    return c;
-  });
+  return biomeCssColours().map((css) => new THREE.Color(css));
 }
 
-/** The same blue the real water blocks are, so the coastline doesn't shift colour at the horizon. */
 function waterColour() {
-  return new THREE.Color(BLOCKS_BY_ID.get(WATER)?.color ?? 0x83add7);
+  return new THREE.Color(waterCssColour());
 }

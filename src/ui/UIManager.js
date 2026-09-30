@@ -13,6 +13,8 @@ import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
 import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 import { CLEARS, clearArtSvg } from '../config/clears.js';
+import { Minimap } from '../render/Minimap.js';
+import { drawWorldMap, MAP_ZOOMS } from '../render/WorldMap.js';
 
 /**
  * Items that act on the world directly through Break/Place while selected,
@@ -76,6 +78,9 @@ export class UIManager {
     this.root = root;
     this.q = (sel) => root.querySelector(sel);
 
+    // Desktop only — see Minimap.js's own note.
+    this.minimap = this.isTouch ? null : new Minimap(this.q('#minimap'));
+
     // Every `.overlay` with an id is a panel, including the ones the Duilt
     // layer adds later. The worlds screen is an overlay too but is not a panel:
     // Escape must not dismiss it into a world nobody chose.
@@ -108,6 +113,12 @@ export class UIManager {
         <div id="xp-bar-track"><div id="xp-bar-fill"></div></div>
       </div>
 
+      <!--
+        Desktop only — see Minimap.js's own note on why a phone reaches for
+        the Map panel instead rather than getting a second, smaller one.
+      -->
+      <canvas id="minimap" width="120" height="120" title="M for the full map"></canvas>
+
       <div id="resume-hint" hidden>Click the world to look around again</div>
 
       <!--
@@ -139,6 +150,7 @@ export class UIManager {
         <button class="icon-btn touch-moved" id="btn-stats" title="Goals (G)">${icon('stats')}<span>Goals</span></button>
         <button class="icon-btn touch-moved" id="btn-templates" title="Save a build, and stamp it anywhere">${icon('paste')}<span>Designs</span></button>
         <button class="icon-btn touch-moved" id="btn-roof" title="Pitch a roof over the building you point at">${icon('roof')}<span>Roof</span></button>
+        <button class="icon-btn touch-moved" id="btn-map" title="Map (M)">${icon('map')}<span>Map</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
         <button class="icon-btn duilt-only survival-only touch-moved" id="btn-bench" title="Workbench — make things (E)" hidden>${icon('hammer')}<span>Bench</span></button>
@@ -298,6 +310,16 @@ export class UIManager {
         'panel-roof': `
           <div id="roof-list"></div>
           <div class="export-note" id="roof-note"></div>`,
+        'panel-map': `
+          <div id="map-wrap">
+            <canvas id="map-canvas" width="640" height="640"></canvas>
+          </div>
+          <div id="map-controls">
+            <button class="secondary" id="map-zoom-out">Zoom out</button>
+            <span id="map-scale"></span>
+            <button class="secondary" id="map-zoom-in">Zoom in</button>
+          </div>
+          <div class="export-note">A snapshot from where you were standing when you opened it — reopen to recentre.</div>`,
         'panel-clear': `
           <div id="clear-list"></div>
           <div class="export-note" id="clear-note"></div>`,
@@ -349,6 +371,7 @@ export class UIManager {
           <!-- Beside Roof, not a level down in Settings: the goals are what
                teaches the game, and Settings is where you go between builds. -->
           <button class="touch-btn" id="t-stats">${icon('stats')}<span>Goals</span></button>
+          <button class="touch-btn" id="t-map">${icon('map')}<span>Map</span></button>
           <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
         </div>
 
@@ -559,6 +582,7 @@ export class UIManager {
     // overlay (#t-stats) — nothing on desktop opened it at all, keyboard
     // shortcut included, until this one and panel-stats's `key` above existed.
     this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
+    this.q('#btn-map').addEventListener('click', () => this.openPanel('panel-map'));
     this.q('#btn-templates').addEventListener('click', () => this.toolButton('design', 'panel-templates'));
     this.q('#btn-roof').addEventListener('click', () => this.toolButton('roof', 'panel-roof'));
     this.q('#tool-cancel').addEventListener('click', () => this.cb.onCancelTool?.());
@@ -581,6 +605,7 @@ export class UIManager {
       // drawn, and nothing anywhere opened it.
       ['#t-skills', () => this.openPanel('panel-skills')],
       ['#t-stats', () => this.openPanel('panel-stats')],
+      ['#t-map', () => this.openPanel('panel-map')],
       ['#t-clear', () => this.toolButton('clear', 'panel-clear')],
       ['#t-designs', () => this.toolButton('design', 'panel-templates')],
       ['#t-roof', () => this.toolButton('roof', 'panel-roof')],
@@ -1048,6 +1073,7 @@ export class UIManager {
     if (id === 'panel-templates') this.refreshTemplateList();
     if (id === 'panel-roof') this.refreshRoofList();
     if (id === 'panel-clear') this.refreshClearList();
+    if (id === 'panel-map') this.renderMap();
     // The Duilt panels draw their own contents.
     this.duiltUI?.populate(id);
   }
@@ -1805,6 +1831,65 @@ export class UIManager {
     }
   }
 
+
+  /**
+   * The full map — every device gets this one (see Minimap.js's own note on
+   * why the corner HUD instrument doesn't). A snapshot of wherever you were
+   * standing when the panel opened: Zoom in/out redraw the same snapshot at
+   * a different scale, but only reopening the panel recentres it on where
+   * you are now, which is what the note under the canvas says outright
+   * rather than leaving you to notice it drifted.
+   */
+  renderMap() {
+    const canvas = this.q('#map-canvas');
+    const gen = this.game.world?.gen;
+    if (!canvas || !gen) return;
+    const p = this.game.player.position;
+    // Recentred every open, but the zoom level you left it at carries over —
+    // picking "far out" once should not mean picking it again every time.
+    const zoomIndex = this.mapView?.zoomIndex ?? 1;
+    this.mapView = { x: p.x, z: p.z, yaw: this.game.player.yaw, zoomIndex };
+    this.drawMap();
+
+    const zoomOut = this.q('#map-zoom-out');
+    const zoomIn = this.q('#map-zoom-in');
+    if (zoomOut && !zoomOut.dataset.wired) {
+      zoomOut.dataset.wired = '1';
+      zoomOut.addEventListener('click', () => this.stepMapZoom(1));
+      zoomIn.dataset.wired = '1';
+      zoomIn.addEventListener('click', () => this.stepMapZoom(-1));
+    }
+  }
+
+  stepMapZoom(delta) {
+    if (!this.mapView) return;
+    this.mapView.zoomIndex = Math.max(0, Math.min(MAP_ZOOMS.length - 1, this.mapView.zoomIndex + delta));
+    this.drawMap();
+  }
+
+  /** Repaints the map canvas from whatever this.mapView currently holds. */
+  drawMap() {
+    const canvas = this.q('#map-canvas');
+    const gen = this.game.world?.gen;
+    if (!canvas || !gen || !this.mapView) return;
+    const { x, z, yaw, zoomIndex } = this.mapView;
+    const radius = MAP_ZOOMS[zoomIndex];
+    const duilt = this.game.duilt;
+    const territory = duilt && !duilt.sandbox ? duilt.territory.bounds() : null;
+    const home = gen.biomes ? { x: gen.biomes.centreX, z: gen.biomes.centreZ } : null;
+    drawWorldMap(canvas, gen, x, z, yaw, { radius, home, territory });
+    const scale = this.q('#map-scale');
+    if (scale) scale.textContent = `± ${radius} blocks`;
+    const zoomOut = this.q('#map-zoom-out');
+    const zoomIn = this.q('#map-zoom-in');
+    if (zoomOut) zoomOut.disabled = zoomIndex === MAP_ZOOMS.length - 1;
+    if (zoomIn) zoomIn.disabled = zoomIndex === 0;
+  }
+
+  /** Redrawn on a timer, not every frame — see Game.js's own throttle. Desktop only. */
+  updateMinimap(gen, x, z, yaw) {
+    this.minimap?.update(gen, x, z, yaw);
+  }
 
   /** When this world last reached your account, in words. */
   lastSavedLabel() {

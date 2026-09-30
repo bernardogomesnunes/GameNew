@@ -95,6 +95,10 @@ const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream 
  * is the most you can lose and only by a crash.
  */
 const AUTOSAVE_INTERVAL_MS = 5 * 60_000;
+// The corner instrument doesn't need to track every step — a couple of
+// blocks of walking is never a new biome. Desktop only anyway (see
+// Minimap.js's own note), so this is dead weight on a phone regardless.
+const MINIMAP_INTERVAL_MS = 500;
 // Holding down to keep breaking, and the same for placing. The first pause is
 // longer than the rest so a normal click stays a single block — hold past it
 // and it becomes a stream.
@@ -2794,7 +2798,16 @@ export class Game {
     this.drainRemeshQueue();
     this.updateChunkVisibility();
     this.updateFarTerrain();
+    this.updateMinimap();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  updateMinimap() {
+    if (!this.ui?.minimap || !this.world?.gen) return;
+    const now = performance.now();
+    if (this.lastMinimapAt && now - this.lastMinimapAt < MINIMAP_INTERVAL_MS) return;
+    this.lastMinimapAt = now;
+    this.ui.updateMinimap(this.world.gen, this.player.position.x, this.player.position.z, this.player.yaw);
   }
 
   updateHover() {
