@@ -149,6 +149,15 @@ export const BLOCKS = [
   // check). A deeper, shadier green than ordinary Moss, the way a canopy
   // thick enough to earn "dark" in its name would actually shade its floor.
   { id: 46, name: 'Dark Moss', glyph: 'moss', color: 0x4a6045, soil: true, material: 'dirt', unlock: null },
+
+  // Ranching. A fence stands a block and a half tall to anything walking
+  // into it (see World.collisionBoxAt) — too high for you to jump or an
+  // animal to step — and joins up with the fences and walls beside it. A
+  // gate is the way through: you walk it like air, an animal treats it as a
+  // wall (see Mobs.groundAt). That's what makes a pen hold its animals
+  // without shutting you in with them.
+  { id: 47, name: 'Fence', glyph: 'fence', color: 0xc9a67c, shape: 'fence', material: 'wood', cost: { wood: 1 }, unlock: null },
+  { id: 48, name: 'Gate', glyph: 'gate', color: 0xa9825a, shape: 'gate', material: 'wood', cost: { wood: 2 }, unlock: null },
 ];
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));

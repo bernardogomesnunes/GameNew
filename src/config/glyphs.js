@@ -83,6 +83,12 @@ export const GLYPHS = {
   // A bordered rectangle, laid flat.
   rug: 'M4 7.5h16v9H4ZM7 10.5h10v3H7Z',
 
+  // ranching
+  fence: 'M6.5 5v15M17.5 5v15M4 9.5h16M4 14.5h16',
+  gate: 'M5 5v15M19 5v15M5 9h14M5 15h14M5 15l14-6',
+  egg: 'M12 4c3.6 0 6 5.2 6 9a6 6 0 0 1-12 0c0-3.8 2.4-9 6-9Z',
+  milk: 'M9 4h6M9.5 4v3L7 10.5V20h10v-9.5L14.5 7V4M7 13.5h10',
+
   // from animals
   meat: 'M9 14.5c-3-3-2-8.5 2.5-9.5s8 3 6.5 7.5-6 5-9 2ZM9 14.5 5.5 18M4.5 16.5l2.5 2.5',
   hide: 'M7 5h10l-1.5 3.5L18 12l-2.5 3.5L17 19H7l1.5-3.5L6 12l2.5-3.5Z',

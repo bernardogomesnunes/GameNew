@@ -116,6 +116,16 @@ const LATER = [
     check: (c) => c.stats.claimed.size >= 3,
   },
   {
+    id: 'a_pen',
+    age: 2,
+    structure: 'pen', // the goal that sends you to it — see ages.test.mjs
+    name: 'Keep animals',
+    description: 'Fence a pen with a gate, lead farm animals in with food in your hand, and claim it.',
+    icon: '🐑',
+    xpReward: 80,
+    check: (c) => c.stats.claimed.has('pen'),
+  },
+  {
     id: 'a_street',
     age: 2,
     name: 'A street of them',

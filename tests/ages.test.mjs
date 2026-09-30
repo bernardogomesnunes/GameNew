@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { AGES, RINGS, FINAL_AGE, ageOf } from '../src/config/ages.js';
+import { ACHIEVEMENTS } from '../src/config/achievements.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge } from '../src/config/structures.js';
 import { RECIPES, recipesFor } from '../src/config/recipes.js';
 import { ITEMS_BY_ID } from '../src/config/items.js';
@@ -57,8 +58,10 @@ for (const age of AGES) {
 }
 
 // Every building belongs to some age's goals, or it is content nobody is sent to.
+// An optional one (the pen) is sent to by a teaching goal naming it instead.
 for (const spec of STRUCTURES) {
-  const wanted = AGES.some((a) => a.goals.some((g) => g.structure === spec.id));
+  const wanted = AGES.some((a) => a.goals.some((g) => g.structure === spec.id))
+    || ACHIEVEMENTS.some((g) => g.structure === spec.id && g.age >= spec.age);
   ok(`the ${spec.id} is something some age asks for`, wanted);
 }
 

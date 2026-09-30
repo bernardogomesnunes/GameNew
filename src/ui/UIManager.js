@@ -4,7 +4,7 @@ import { renderPanels, panelDef } from './Panel.js';
 import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
-import { ITEMS_BY_ID, itemName } from '../config/items.js';
+import { ITEMS_BY_ID, itemName, isFood } from '../config/items.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { cubeSvg, itemIcon } from '../config/cubes.js';
@@ -41,8 +41,6 @@ const TOOL_ACTION_LABELS = {
   bucket_water: ['Break', 'Empty'],
   fruit: ['Eat', 'Throw'],
   vegetables: ['Eat', 'Throw'],
-  raw_meat: ['Eat', 'Throw'],
-  cooked_meat: ['Eat', 'Throw'],
 };
 
 function el(html) {
@@ -1758,7 +1756,7 @@ export class UIManager {
 
   /** The two button labels for whatever is selected right now, with no tool queued. */
   defaultActionLabels() {
-    return TOOL_ACTION_LABELS[this.selectedItemId] ?? ['Break', 'Place'];
+    return TOOL_ACTION_LABELS[this.selectedItemId] ?? (isFood(this.selectedItemId) ? ['Eat', 'Throw'] : ['Break', 'Place']);
   }
 
   /**

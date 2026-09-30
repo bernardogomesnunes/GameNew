@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { blockTextureArray, layerFor } from '../render/BlockTextures.js';
 import { BLOCKS_BY_ID, AIR, isTransparent, shapeOf } from '../config/blocks.js';
-import { boxesFor } from './propShapes.js';
+import { boxesFor, fenceBoxes } from './propShapes.js';
 import { CHUNK_SIZE } from './World.js';
 
 const SOLID_SENTINEL = -1; // below the world: never draw a face against it
@@ -27,6 +27,12 @@ const PAD = CHUNK_SIZE + 2;
 // Cells light passes through, for skyFill: anything but a solid opaque cube.
 const OPEN = new Uint8Array(256);
 for (let id = 0; id < 256; id++) OPEN[id] = !IS_CUBE[id] || IS_TRANSPARENT[id] || id === AIR ? 1 : 0;
+// What a fence or gate joins up with: another fence or gate, or a solid wall.
+const JOINS_FENCE = new Uint8Array(256);
+for (let id = 1; id < 256; id++) {
+  const shape = shapeOf(id);
+  JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
+}
 // A mask bit marking a face that looks into a sealed cave.
 const DEEP = 0x100;
 const PAD_STRIDE = [1, PAD * PAD, PAD];
@@ -288,6 +294,7 @@ export class ChunkMesher {
     // chunk's, and with the world 200 tall that's routinely half the column
     // — so the sweep stops there.
     const top = this.fillPadded(world, chunk);
+    this.top = top;
     const lo = this.bottom;
     const dims = [CHUNK_SIZE, top - lo + 1, CHUNK_SIZE];
     const vol = this.padded;
@@ -532,15 +539,24 @@ export class ChunkMesher {
     const baseX = chunk.cx * CHUNK_SIZE;
     const baseZ = chunk.cz * CHUNK_SIZE;
     const buf = { position: [], normal: [], color: [], index: [] };
-    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-      for (let ly = 0; ly < chunk.height; ly++) {
-        for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-          const id = chunk.get(lx, ly, lz);
-          if (id === AIR) continue;
+    // Reads the padded copy rebuild just made, so a fence at a chunk's edge
+    // sees the fence in the next chunk and joins up with it.
+    const vol = this.padded, P2 = PAD * PAD;
+    for (let ly = this.bottom; ly <= this.top; ly++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+          const idx = (ly + 1) * P2 + (lz + 1) * PAD + lx + 1;
+          const id = vol[idx];
+          if (id <= 0 || IS_CUBE[id]) continue;
           const shape = shapeOf(id);
-          if (shape === 'cube') continue;
+          const boxes = shape === 'fence' || shape === 'gate'
+            ? fenceBoxes(shape, {
+              px: JOINS_FENCE[vol[idx + 1]], nx: JOINS_FENCE[vol[idx - 1]],
+              pz: JOINS_FENCE[vol[idx + PAD]], nz: JOINS_FENCE[vol[idx - PAD]],
+            })
+            : boxesFor(shape);
           const col = baseColor(id);
-          for (const b of boxesFor(shape)) {
+          for (const b of boxes) {
             this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col);
           }
         }

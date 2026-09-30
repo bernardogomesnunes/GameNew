@@ -25,10 +25,15 @@ const FLEE_TIME = 4;        // seconds of running after a scare or a hit
 const HURT_FLASH = 0.25;    // seconds an animal shows red after a hit
 const DYING_TIME = 0.6;     // seconds it takes to topple before it's gone
 const GRAVITY = 22;
+const LURE = 10;            // how far a farm animal notices food in your hand
+const HEEL = 2;             // and how close it comes before it stops
 const STEP = 1;             // the highest ledge an animal walks up
 const DROP = 3;             // the furthest drop it will walk off
 
 const LEAVES = new Set([5, 42, 44]);
+// A gate is air to the player and a wall to an animal — unless it's
+// following food in your hand, which is how one gets into a pen at all.
+const GATE = 48;
 
 export class Mobs {
   /**
@@ -45,16 +50,43 @@ export class Mobs {
     this.sinceSpawn = SPAWN_EVERY;
   }
 
-  tick(dt, player) {
-    this.list = this.list.filter((m) => !m.dead && Math.hypot(m.x - player.x, m.z - player.z) < DESPAWN);
+  /**
+   * @param lure  whether you're holding something a farm animal will follow
+   */
+  tick(dt, player, { lure = false } = {}) {
+    // Your own animals (penId) are never forgotten, however far you go.
+    this.list = this.list.filter((m) => !m.dead && (m.penId || Math.hypot(m.x - player.x, m.z - player.z) < DESPAWN));
     this.sinceSpawn += dt;
-    if (this.sinceSpawn >= SPAWN_EVERY && this.list.length < this.cap) {
+    if (this.sinceSpawn >= SPAWN_EVERY && this.wild() < this.cap) {
       this.sinceSpawn = 0;
       this.trySpawn(player);
     }
     for (const m of this.list) {
-      this.think(m, dt, player);
+      this.think(m, dt, player, lure);
       this.move(m, dt);
+    }
+  }
+
+  /** How many wild animals are about — the cap doesn't count yours. */
+  wild() {
+    let n = 0;
+    for (const m of this.list) if (!m.penId) n++;
+    return n;
+  }
+
+  /**
+   * Takes in the herd a save came back with: plain records get the rest of
+   * what a live animal needs, and join the list as the very same objects
+   * DuiltGame.herd holds — so saving reads where they've actually got to.
+   */
+  adopt(herd) {
+    for (const r of herd ?? []) {
+      if (this.list.includes(r)) continue;
+      const spec = MOBS_BY_ID.get(r.type);
+      if (!spec) continue;
+      const fresh = this.make(spec, r.x, r.y, r.z);
+      for (const [k, v] of Object.entries(fresh)) if (!(k in r) || k === 'id') r[k] = v;
+      this.list.push(r);
     }
   }
 
@@ -74,7 +106,7 @@ export class Mobs {
     if (ground == null) return 0;
 
     const [lo, hi] = spec.herd;
-    const want = Math.min(lo + Math.floor(this.rand() * (hi - lo + 1)), this.cap - this.list.length);
+    const want = Math.min(lo + Math.floor(this.rand() * (hi - lo + 1)), this.cap - this.wild());
     let made = 0;
     for (let i = 0; i < want * 3 && made < want; i++) {
       const hx = x + 0.5 + (i ? (this.rand() - 0.5) * 6 : 0);
@@ -93,7 +125,7 @@ export class Mobs {
       id: this.nextId++, type: spec.id, x, y, z, vy: 0,
       facing: this.rand() * Math.PI * 2, hp: spec.hp,
       target: null, speed: 0, timer: this.rand() * 2,
-      grazing: false, fleeFor: 0, hurt: 0, dying: 0, dead: false, stride: 0,
+      grazing: false, following: false, fleeFor: 0, hurt: 0, dying: 0, dead: false, stride: 0,
     };
   }
 
@@ -139,9 +171,10 @@ export class Mobs {
   /**
    * Where an animal would stand at (x, z) coming from height `fromY`: a
    * step up of one at most, a drop of three at most, headroom for its body,
-   * and never into water. Null means it can't go there.
+   * and never into water. Null means it can't go there. A gate is a wall
+   * unless `throughGates` — an animal being led.
    */
-  groundAt(x, z, fromY, spec) {
+  groundAt(x, z, fromY, spec, throughGates = false) {
     if (!this.loaded(x, z)) return null;
     const w = this.world;
     const bx = Math.floor(x), bz = Math.floor(z);
@@ -156,7 +189,7 @@ export class Mobs {
       if (LEAVES.has(w.getBlock(bx, y, bz))) return null;
       if (box.maxY > fromY + STEP + 0.01) return null;
       for (let h = y + 1; h <= y + tall; h++) {
-        if (w.collisionBoxAt(bx, h, bz)) return null;
+        if (w.collisionBoxAt(bx, h, bz) || (!throughGates && w.getBlock(bx, h, bz) === GATE)) return null;
       }
       return box.maxY;
     }
@@ -165,7 +198,7 @@ export class Mobs {
 
   // ---- behaving -----------------------------------------------------------
 
-  think(m, dt, player) {
+  think(m, dt, player, lure = false) {
     const spec = MOBS_BY_ID.get(m.type);
     m.hurt = Math.max(0, m.hurt - dt);
     if (m.dying > 0) {
@@ -189,6 +222,24 @@ export class Mobs {
       }
       m.speed = spec.run;
       m.timer -= dt;
+      return;
+    }
+
+    // Food in your hand: a farm animal comes to heel and follows you — this
+    // is how you get one into a pen.
+    m.following = false;
+    if (lure && spec.farm && d < LURE) {
+      m.following = true;
+      m.grazing = false;
+      if (d > HEEL) {
+        m.target = { x: player.x + (dx / d) * (HEEL - 0.4), z: player.z + (dz / d) * (HEEL - 0.4) };
+        m.speed = spec.walk * 1.6;
+      } else {
+        m.target = null;
+        m.speed = 0;
+        m.facing = Math.atan2(-dx, -dz);
+      }
+      m.timer = 0;
       return;
     }
 
@@ -219,8 +270,19 @@ export class Mobs {
         m.speed = 0;
       } else {
         const step = Math.min(dist, m.speed * dt);
-        const nx = m.x + (dx / dist) * step, nz = m.z + (dz / dist) * step;
-        const ground = this.groundAt(nx, nz, m.y, spec);
+        let nx = m.x + (dx / dist) * step, nz = m.z + (dz / dist) * step;
+        let ground = this.groundAt(nx, nz, m.y, spec, m.following);
+        // Blocked head-on: slide along whatever's in the way, one axis at a
+        // time, rather than stopping dead against it. It's what lets an
+        // animal being led work its way along a fence to the gate.
+        if (ground == null && Math.abs(dx) > 0.05) {
+          const g = this.groundAt(m.x + Math.sign(dx) * step, m.z, m.y, spec, m.following);
+          if (g != null) { nx = m.x + Math.sign(dx) * step; nz = m.z; ground = g; }
+        }
+        if (ground == null && Math.abs(dz) > 0.05) {
+          const g = this.groundAt(m.x, m.z + Math.sign(dz) * step, m.y, spec, m.following);
+          if (g != null) { nx = m.x; nz = m.z + Math.sign(dz) * step; ground = g; }
+        }
         m.facing = Math.atan2(dx, dz);
         if (ground == null) {
           // A wall, a cliff, water, or unmade land: give up on that way and
@@ -241,7 +303,7 @@ export class Mobs {
 
   /** Settles onto whatever is under it — a block dug away drops it down. */
   fall(m, dt, spec) {
-    const ground = this.groundAt(m.x, m.z, m.y, spec);
+    const ground = this.groundAt(m.x, m.z, m.y, spec, true);
     if (ground == null) { m.vy = 0; return; }
     if (m.vy <= 0 && m.y <= ground) { m.y = ground; m.vy = 0; return; }
     m.vy -= GRAVITY * dt;

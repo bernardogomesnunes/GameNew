@@ -370,7 +370,10 @@ export class PlayerController {
    */
   collisionBoxesAt(x, y, z) {
     const minX = Math.floor(x - HALF_WIDTH), maxX = Math.floor(x + HALF_WIDTH);
-    const minY = Math.floor(y), maxY = Math.floor(y + HEIGHT);
+    // One cell lower than the feet: a fence's box reaches half a block above
+    // its own cell (see World.collisionBoxAt), so it can be in the way of a
+    // player whose feet are already in the cell over it.
+    const minY = Math.floor(y) - 1, maxY = Math.floor(y + HEIGHT);
     const minZ = Math.floor(z - HALF_WIDTH), maxZ = Math.floor(z + HALF_WIDTH);
     const hits = [];
     for (let bx = minX; bx <= maxX; bx++) {

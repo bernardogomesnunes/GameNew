@@ -350,7 +350,7 @@ export class StructureRegistry {
    * Pays out everything owed since each building was last paid. Returns a
    * { itemId: amount } summary so the UI can say what arrived.
    */
-  collect({ now = Date.now(), yieldMultiplier = 1, bonusFor = null } = {}) {
+  collect({ now = Date.now(), yieldMultiplier = 1, bonusFor = null, producesFor = null } = {}) {
     const gained = {};
     const stalled = [];
     const capMs = MAX_OFFLINE_HOURS * 3600_000;
@@ -363,13 +363,21 @@ export class StructureRegistry {
       // everything that has no tiers at all, so this covers both.
       const tier = s.tier ?? 0;
       const everySeconds = intervalAt(spec, tier);
-      const produces = producesAt(spec, tier);
-      if (!everySeconds || !Object.keys(produces).length) continue;
+      // A pen's output is whatever lives in it (see duilt/Ranch.js), asked
+      // for here rather than read off the spec.
+      const produces = spec.fromAnimals ? (producesFor?.(s) ?? {}) : producesAt(spec, tier);
+      if (!everySeconds) continue;
 
       const periodMs = everySeconds * 1000;
       const elapsed = Math.min(now - s.lastPaidAt, capMs);
       const cycles = Math.floor(elapsed / periodMs);
       if (cycles <= 0) continue;
+      // An empty pen still lets the clock run: animals led in tomorrow are
+      // owed from tomorrow, not from the day the fence went up.
+      if (!Object.keys(produces).length) {
+        s.lastPaidAt = now - ((now - s.lastPaidAt) % periodMs);
+        continue;
+      }
 
       // Somebody working a building is the only thing that changes what one
       // building gives against another of the same kind.

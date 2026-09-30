@@ -76,6 +76,8 @@ export const ITEMS = [
   // --- what animals leave behind -------------------------------------------
   { id: 'hide', name: 'Hide', kind: 'raw', stackTo: STACK_GOODS, color: 0xb99372, glyph: 'hide', madeBy: 'Hunted from deer, boar, goats and cows' },
   { id: 'wool', name: 'Wool', kind: 'raw', stackTo: STACK_GOODS, color: 0xefebe2, glyph: 'wool', madeBy: 'Hunted from sheep' },
+  { id: 'egg', name: 'Egg', kind: 'food', stackTo: STACK_FOOD, color: 0xf2e6cf, glyph: 'egg', feeds: 10, madeBy: 'Laid by hens in a pen' },
+  { id: 'milk', name: 'Milk', kind: 'food', stackTo: STACK_FOOD, color: 0xf4f1ea, glyph: 'milk', feeds: 14, madeBy: 'From cows in a pen' },
   { id: 'feather', name: 'Feather', kind: 'raw', stackTo: STACK_GOODS, color: 0xe9e4da, glyph: 'feather', madeBy: 'Hunted from chickens' },
 
   // --- tools. One per slot, and they wear ---------------------------------
@@ -138,6 +140,8 @@ export const ITEMS = [
   { id: 'slab_stone', name: 'Stone Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'slab', block: 27, madeBy: 'Split from cut stone' },
   { id: 'slab_plank', name: 'Plank Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'slab', block: 28, madeBy: 'Sawn thin from planks' },
   { id: 'stairs_stone', name: 'Stone Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stair', block: 29, madeBy: 'Cut into steps from stone' },
+  { id: 'fence', name: 'Fence', kind: 'refined', stackTo: STACK_BULK, color: 0xc9a67c, glyph: 'fence', block: 47, madeBy: 'Knocked together from planks' },
+  { id: 'gate', name: 'Gate', kind: 'refined', stackTo: STACK_GOODS, color: 0xa9825a, glyph: 'gate', block: 48, madeBy: 'Hung from planks — you pass, animals don\'t' },
   { id: 'stairs_plank', name: 'Plank Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'stair', block: 30, madeBy: 'Cut into steps from planks' },
   { id: 'table_oak', name: 'Oak Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xd1b38c, glyph: 'table', block: 31, madeBy: 'Built at the workshop' },
   { id: 'table_marble', name: 'Marble Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xe3dbc8, glyph: 'table', block: 32, madeBy: 'Cut and dressed at the workshop' },
