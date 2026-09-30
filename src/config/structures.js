@@ -49,16 +49,14 @@ export const STRUCTURES = [
         say: () => 'Needs more open soil between the trees',
       },
     ],
-    // Reported directly: leaving the game for a day filled everything up.
-    // Wood keeps its own rate and cadence — it's the one thing this pass
-    // doesn't touch — but the rest of a standing forest was paying out at
-    // the same clip, which is far more foraged goods than wood needs
-    // beside it. Cut to the floor a per-cycle amount can go without
-    // rounding away to nothing on a live 60-second tick (see
-    // StructureRegistry.collect — anything below 1 here would pay out
-    // zero on every ordinary tick, not just a smaller amount).
+    // Requested directly: no building should hand over more than 10-15 of
+    // anything in a day. An 8-hour cycle keeps wood — the one item here
+    // worth staying near the ceiling, since building genuinely eats it —
+    // at 12 a day; the foraged extras riding the same cycle fall out at a
+    // real trickle instead, which is what a standing forest should feel
+    // like next to a claimed farm.
     produces: { wood: 4, leaves: 1, seeds: 1, fruit: 1 },
-    everySeconds: 60,
+    everySeconds: 28800,
     skill: 'foraging',
   },
 
@@ -85,14 +83,11 @@ export const STRUCTURES = [
         say: () => 'Needs fresh water within 6 blocks — build nearer the river',
       },
     ],
-    // Called out by name: "farm does produce a lot too much too". At the
-    // old 75-second cycle a farm left running for the 8-hour offline cap
-    // (see MAX_OFFLINE_HOURS) turned out well over ten full stacks of
-    // vegetables — every trip back started with a bag already choking on
-    // one item. A 12-minute cycle at one of each keeps that same 8-hour
-    // walk-away under a single stack (40 of 50) instead of past a dozen.
+    // Requested directly: no building should hand over more than 10-15 of
+    // anything in a day. A 2-hour cycle at one of each keeps a farm at a
+    // dozen a day, not the twelve dozen a 12-minute cycle worked out to.
     produces: { vegetables: 1, seeds: 1, fruit: 1 },
-    everySeconds: 720,
+    everySeconds: 7200,
     skill: 'building',
   },
 
@@ -163,8 +158,10 @@ export const STRUCTURES = [
     // recipes want a handful, not a steady stream — so it piled up faster
     // than anything else and, once storehouses filled, started eating bag
     // slots by the stack. A fresh scrape at the rock is worth barely
-    // anything — ten stone a day — and it is the levels below, not the
-    // building itself, that turn it into something worth having staffed.
+    // anything — ten stone a day, already under the 10-15/day ceiling
+    // asked for across every building — and it is the levels below, not
+    // the building itself, that turn it into something worth having
+    // staffed, climbing toward that same ceiling rather than past it.
     produces: { stone: 1 },
     everySeconds: 8640,
     skill: 'building',
@@ -180,11 +177,16 @@ export const STRUCTURES = [
      * further and the level follows, with nothing to press and nothing to
      * strip back down to once it has.
      */
+    // Requested directly: no building should hand over more than 10-15 of
+    // anything in a day. Each rung still climbs — both in what a cycle
+    // pays and in how often one runs — but stone tops out at fifteen a
+    // day even at the last rung, not the 480 the old flat 8-per-120s rate
+    // worked out to.
     tiers: [
       { id: 'seam', name: 'A Seam Cut', blurb: 'A scrape at the rock. Barely worth the walk.', needs: [] },
       {
         id: 'face', name: 'A Working Face', blurb: 'Wide enough to work properly.',
-        produces: { stone: 1, cobblestone: 1 }, everySeconds: 4320,
+        produces: { stone: 1, cobblestone: 1 }, everySeconds: 10800,
         needs: [
           { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 40, say: (ctx) => `${40 - count(ctx, [STONE, COBBLE])} more stone showing` },
           { test: (ctx) => ctx.countOf(0) >= 16, say: (ctx) => `${16 - ctx.countOf(0)} more cut out of it` },
@@ -192,7 +194,7 @@ export const STRUCTURES = [
       },
       {
         id: 'deepcut', name: 'A Deep Cut', blurb: 'Cut back far enough to keep two haulers busy.',
-        produces: { stone: 2, cobblestone: 1 }, everySeconds: 2160,
+        produces: { stone: 2, cobblestone: 1 }, everySeconds: 14400,
         needs: [
           { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 60, say: (ctx) => `${60 - count(ctx, [STONE, COBBLE])} more stone showing` },
           { test: (ctx) => ctx.countOf(0) >= 28, say: (ctx) => `${28 - ctx.countOf(0)} more cut out of it` },
@@ -200,7 +202,7 @@ export const STRUCTURES = [
       },
       {
         id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, opened right up.',
-        produces: { stone: 2, cobblestone: 2 }, everySeconds: 1080,
+        produces: { stone: 2, cobblestone: 2 }, everySeconds: 14400,
         needs: [
           { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 90, say: (ctx) => `${90 - count(ctx, [STONE, COBBLE])} more stone showing` },
           { test: (ctx) => ctx.countOf(0) >= 44, say: (ctx) => `${44 - ctx.countOf(0)} more cut out of it` },
@@ -208,7 +210,7 @@ export const STRUCTURES = [
       },
       {
         id: 'openpit', name: 'An Open Pit', blurb: 'As much rock as a claim this size can show.',
-        produces: { stone: 3, cobblestone: 2 }, everySeconds: 540,
+        produces: { stone: 3, cobblestone: 2 }, everySeconds: 17280,
         needs: [
           { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 130, say: (ctx) => `${130 - count(ctx, [STONE, COBBLE])} more stone showing` },
           { test: (ctx) => ctx.countOf(0) >= 64, say: (ctx) => `${64 - ctx.countOf(0)} more cut out of it` },
@@ -265,15 +267,20 @@ export const STRUCTURES = [
       {
         id: 'shelves',
         name: 'Shelves',
-        slots: 24,
+        // Requested directly: room for around 200 in the storehouse. Kept
+        // as a ladder rather than the same number at every rung — the
+        // point of building it bigger is still that it holds more — just
+        // all three rungs now sit in that neighbourhood instead of a shed
+        // that outgrew everything a building could actually pay out.
+        slots: 200,
         blurb: 'A shed with a few shelves in it.',
         needs: [],
       },
       {
         id: 'loft',
         name: 'Loft',
-        slots: 48,
-        blurb: 'Room overhead as well as around, so twice as much goes in.',
+        slots: 240,
+        blurb: 'Room overhead as well as around, so more goes in.',
         needs: [
           {
             test: (ctx) => count(ctx, [PLANKS, WOOD]) >= 60,
@@ -288,7 +295,7 @@ export const STRUCTURES = [
       {
         id: 'warehouse',
         name: 'Warehouse',
-        slots: 96,
+        slots: 280,
         blurb: 'A hard floor and a proper span. Everything you own fits in here.',
         needs: [
           {
@@ -371,9 +378,11 @@ export const STRUCTURES = [
         say: () => 'Needs sand or earth within 6 blocks to feed it',
       },
     ],
-    // Part of the same pass as the farm above — see the note there.
+    // Requested directly: no building should hand over more than 10-15 of
+    // anything in a day. A 2-hour cycle keeps both at a dozen, not the
+    // near-300 a 300-second cycle worked out to.
     produces: { brick: 1, glass: 1 },
-    everySeconds: 300,
+    everySeconds: 7200,
     skill: 'building',
   },
 
@@ -409,9 +418,10 @@ export const STRUCTURES = [
         say: () => 'Build it among your town, not out in a field',
       },
     ],
-    // Part of the same pass as the farm above — see the note there.
+    // Requested directly: no building should hand over more than 10-15 of
+    // anything in a day — see the farm's own note above for the same fix.
     produces: { vegetables: 1, fruit: 1, planks: 1 },
-    everySeconds: 720,
+    everySeconds: 7200,
     skill: 'politics',
   },
 
@@ -488,11 +498,13 @@ export const STRUCTURES = [
         say: () => 'Build it among your town, not out in a field',
       },
     ],
-    // A trickle, not an income — a mine works a claim for it, this just keeps
-    // a jar behind the counter. Slowed with the rest of this pass so the
-    // jar doesn't reach its own 100-gold cap over a single 8-hour walk-away.
+    // A trickle, not an income — a mine works a claim for it, this just
+    // keeps a jar behind the counter. Requested directly: no building
+    // should hand over more than 10-15 of anything in a day, gold
+    // included — a 2h24m cycle keeps the jar at ten a day rather than the
+    // 240 a 360-second cycle worked out to.
     produces: { gold: 1 },
-    everySeconds: 360,
+    everySeconds: 8640,
     skill: 'politics',
   },
 
@@ -567,13 +579,13 @@ export const STRUCTURES = [
         say: (ctx) => `Needs ${8 - count(ctx, [PLANKS, WOOD])} more timber to hold the roof up`,
       },
     ],
-    // Part of the same pass as the farm above — see the note there. This one
-    // also fixes a second thing: at the old flat 8 stone/120s a single mine
-    // out-produced a maxed, fully-leveled Quarry (480 stone/day at its top
-    // tier — see quarry's own produces note) without any of the digging that
-    // rate is supposed to be earned by. Slowed to sit under it instead.
+    // Requested directly: no building should hand over more than 10-15 of
+    // anything in a day. At ten stone a day this also still sits under a
+    // maxed quarry's own fifteen (see quarry's produces note) — a mine
+    // going straight down was never meant to out-produce a quarry that
+    // actually worked its way up to it.
     produces: { stone: 1, gold: 1 },
-    everySeconds: 360,
+    everySeconds: 8640,
     skill: 'building',
   },
 
@@ -603,9 +615,10 @@ export const STRUCTURES = [
         say: () => 'Build it near the fields it is meant to serve',
       },
     ],
-    // Part of the same pass as the farm above — see the note there.
+    // Requested directly: no building should hand over more than 10-15 of
+    // anything in a day — see the farm's own note above for the same fix.
     produces: { vegetables: 1, seeds: 1 },
-    everySeconds: 720,
+    everySeconds: 7200,
     skill: 'foraging',
   },
 
@@ -645,10 +658,10 @@ export const STRUCTURES = [
     // deliberately plain — a normal producer, on the same footing as
     // everything else here — so that whatever it should do once there is
     // something to defend *against* can be added to this one entry later
-    // without moving anything that depends on it.
-    // Part of the same pass as the farm above — see the note there.
+    // without moving anything that depends on it. Requested directly: no
+    // building should hand over more than 10-15 of anything in a day.
     produces: { stone: 1, planks: 1 },
-    everySeconds: 300,
+    everySeconds: 7200,
     skill: 'politics',
   },
 
@@ -704,13 +717,13 @@ export const STRUCTURES = [
     ],
     // The forest and the farm folded in, at a fraction of what either gives
     // alone — the point of a village is the housing, not out-earning the
-    // buildings it is standing in for. Wood keeps its own rate and cadence,
-    // same as the forest it's folded in from; the rest is cut to the floor
-    // a 100-second cycle can pay out without rounding away to nothing (see
-    // the forest's own note, above).
+    // buildings it is standing in for. Requested directly: no building
+    // should hand over more than 10-15 of anything in a day, so wood — the
+    // one item here worth staying near that ceiling — tops out at fifteen,
+    // with the rest a real trickle alongside it.
     produces: { wood: 3, leaves: 1, vegetables: 1, seeds: 1 },
     grantsCapacity: 3,
-    everySeconds: 100,
+    everySeconds: 17280,
     skill: 'building',
   },
 

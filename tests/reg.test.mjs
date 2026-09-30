@@ -31,11 +31,11 @@ ok('overlapping claim refused', !r.ok && /overlap/i.test(r.reason));
 // production over time, paid in whole cycles only
 const t0 = reg.list()[0].lastPaidAt;
 ok('nothing owed immediately', Object.keys(reg.collect({ now: t0 + 1000 })).length === 0);
-let got = reg.collect({ now: t0 + 720_000 });   // farm: every 720s
+let got = reg.collect({ now: t0 + 7_200_000 });   // farm: every 7200s
 ok('one cycle pays out', got.vegetables === 1 && got.seeds === 1 && got.fruit === 1);
-got = reg.collect({ now: t0 + 720_000 + 719_000 });
+got = reg.collect({ now: t0 + 7_200_000 + 7_199_000 });
 ok('a partial second cycle pays nothing', Object.keys(got).length === 0);
-got = reg.collect({ now: t0 + 2_880_000 });
+got = reg.collect({ now: t0 + 28_800_000 });
 ok('the remaining three cycles pay together', got.vegetables === 3);
 
 // offline accrual is capped so eight hours away isn't a windfall of a week
@@ -44,8 +44,8 @@ inventory.add('seeds', 10);
 reg.claim(FARM, 'farm');
 const t1 = reg.list()[0].lastPaidAt;
 got = reg.collect({ now: t1 + 72 * 3600_000 });  // three days away
-const capCycles = Math.floor((8 * 3600) / 720);
-ok(`offline capped at 8h (${capCycles} cycles, not 360)`, got.vegetables === capCycles);
+const capCycles = Math.floor((8 * 3600) / 7200);
+ok(`offline capped at 8h (${capCycles} cycles, not 36)`, got.vegetables === capCycles);
 
 // breaking a building stops it, with a reason
 ({ inventory, reg, world } = setup());
