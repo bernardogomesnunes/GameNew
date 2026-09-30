@@ -170,6 +170,8 @@ function kilnBlocks() {
   blocks.push(...ring(1, 1, 3, 3, 2, COBBLE));
   blocks.push(...ring(1, 1, 3, 3, 3, COBBLE));
   blocks.push(...slab(1, 1, 3, 3, 4, COBBLE));
+  // A tiled roof, with the chimney coming up through it.
+  blocks.push(...withChimney(gable(1, 1, 3, 3, 5, TILE, COBBLE), 3, 3, 5, 2, BRICK));
   return blocks;   // the two cells left at (2,2,2) and (2,2,3) are the chamber
 }
 
@@ -181,7 +183,19 @@ function foundryBlocks() {
   blocks.push(...ring(1, 1, 3, 3, 3, STONE));
   blocks.push(...ring(1, 1, 3, 3, 4, STONE));
   blocks.push(...slab(1, 1, 3, 3, 5, STONE));
+  // Slate over it, and a taller chimney than the kiln's — it runs hotter.
+  blocks.push(...withChimney(gable(1, 1, 3, 3, 6, SLATE, STONE), 3, 3, 6, 3, BRICK));
   return blocks;   // three cells left, at (2,2,2), (2,2,3) and (2,2,4)
+}
+
+/**
+ * A chimney `h` blocks tall standing at (dx, dz) from `dy` up, through
+ * whatever roof is there.
+ */
+function withChimney(roof, dx, dz, dy, h, type) {
+  const chimney = [];
+  for (let y = dy; y < dy + h; y++) chimney.push({ dx, dy: y, dz, type });
+  return [...roof.filter((b) => !(b.dx === dx && b.dz === dz)), ...chimney];
 }
 
 /** A roofed stall on a laid floor, with the rest of the square left open. */
@@ -232,9 +246,13 @@ function tavernBlocks() {
   return room({ w: 6, h: 2, wall: PLANKS, floor: BRICK, tiles: TILE });
 }
 
-/** A stone shell tall enough to watch from, sealed and open to the sky. */
+/**
+ * A stone shell tall enough to watch from, under a slate roof. The rules'
+ * "open sky" asks that nothing is built over the building — its own roof is
+ * part of it.
+ */
 function militaryBlocks() {
-  return room({ w: 6, h: 5, wall: STONE });
+  return room({ w: 6, h: 5, wall: STONE, tiles: SLATE });
 }
 
 /**

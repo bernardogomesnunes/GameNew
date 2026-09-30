@@ -181,4 +181,22 @@ ok('and an orientation change is re-measured once it has settled',
   ok(`every item in the game has a picture (${blank.join(', ') || 'none missing'})`, blank.length === 0);
 }
 
+{
+  // Reported directly, with a photo of a cobbled street: the cobblestone
+  // "looks awful". It is round stones bedded in earth now.
+  const { tileFor } = await import('../src/render/BlockTextures.js');
+  const t = tileFor(8);
+  const px = t.length / 4;
+  let earth = 0, lit = 0, warm = 0;
+  for (let i = 0; i < px; i++) {
+    const r = t[i * 4], g = t[i * 4 + 1], b = t[i * 4 + 2];
+    if (r < 200) earth++;
+    if (r >= 245) lit++;
+    if (r > b + 6) warm++;
+  }
+  ok(`cobblestone is stones with earth between them (${Math.round(earth / px * 100)}% earth)`, earth / px > 0.12 && earth / px < 0.6);
+  ok('lit along the tops of the stones', lit > 10);
+  ok('and not all one grey: the earth and the odd stone are warm', warm > 20);
+}
+
 process.exit(f ? 1 : 0);

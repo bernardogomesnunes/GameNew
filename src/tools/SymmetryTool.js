@@ -27,14 +27,19 @@ export class SymmetryTool {
     return this.originZ * 2 - 1 - z;
   }
 
-  /** Returns an array of world positions symmetric to (x,y,z) under the active mode, including the original. */
+  /**
+   * Returns an array of world positions symmetric to (x,y,z) under the
+   * active mode, including the original. Each says which way it was flipped
+   * (`flipX`, `flipZ`), so a stair or a door can be turned to match — see
+   * blocks.js's mirrored.
+   */
   reflect(x, y, z) {
-    const points = [{ x, y, z }];
+    const points = [{ x, y, z, flipX: false, flipZ: false }];
     const mode = this.mode;
     if (mode === 'off') return points;
-    if (mode === 'x' || mode === 'both') points.push({ x: this.mirrorX(x), y, z });
-    if (mode === 'z' || mode === 'both') points.push({ x, y, z: this.mirrorZ(z) });
-    if (mode === 'both') points.push({ x: this.mirrorX(x), y, z: this.mirrorZ(z) });
+    if (mode === 'x' || mode === 'both') points.push({ x: this.mirrorX(x), y, z, flipX: true, flipZ: false });
+    if (mode === 'z' || mode === 'both') points.push({ x, y, z: this.mirrorZ(z), flipX: false, flipZ: true });
+    if (mode === 'both') points.push({ x: this.mirrorX(x), y, z: this.mirrorZ(z), flipX: true, flipZ: true });
     const seen = new Set();
     return points.filter((p) => {
       const key = `${p.x},${p.y},${p.z}`;

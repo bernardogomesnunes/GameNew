@@ -97,6 +97,9 @@ function paint(recipe, salt) {
   };
 
   const depth = recipe.depth ?? 0.15;
+  // A tint per pixel, for the few recipes that want colour in their stones
+  // (cobbles): 1,1,1 everywhere else, so every other tile stays grey.
+  const tint = new Float32Array(n * n * 3).fill(1);
 
   // Lines: planks and trunks run one way, brick courses stagger, a grid is
   // mortar. Drawn first so marks can break them up.
@@ -125,6 +128,58 @@ function paint(recipe, salt) {
         const r = y % every;
         if (r === 0) darken(x, y, depth * (0.55 + 0.45 * hash01(x, y, salt)));
         else if (r === 1 && hash01(x, y + 97, salt) < 0.5) darken(x, y, depth * 0.5);
+      }
+    }
+  }
+
+  // Cobbles: rounded stones of mixed sizes and shades bedded in dirt.
+  // Requested directly, with a photo of a cobbled street: the old blotches
+  // "look awful". Stones are thrown onto the tile one at a time and kept
+  // only where they don't crowd a neighbour — big ones first, then small
+  // ones into the holes — wrapping round the edges so walls tile without a
+  // seam. Each is a rounded oval of its own tone, lit along the top and
+  // shadowed along the bottom (tile rows run up the world, so a larger y is
+  // higher); now and then one is warm or cool the way river stones are; and
+  // what's left between them is dirt with grit in it.
+  if (recipe.cobbles) {
+    const wrap = (d) => (d > n / 2 ? d - n : d < -n / 2 ? d + n : d);
+    const stones = [];
+    let k = 0;
+    for (const [tries, rlo, rhi] of [[recipe.cobbles * 40, 2.8, 4.4], [200, 1.6, 2.6], [200, 1, 1.5]]) {
+      for (let t = 0; t < tries; t++, k++) {
+        const st = {
+          x: hash01(k, 107, salt) * n, y: hash01(k, 109, salt) * n,
+          r: rlo + hash01(k, 113, salt) * (rhi - rlo),
+          sx: 0.85 + hash01(k, 127, salt) * 0.3, sy: 0.85 + hash01(k, 131, salt) * 0.3,
+        };
+        const fits = stones.every((o) => Math.hypot(wrap(st.x - o.x), wrap(st.y - o.y)) >= st.r + o.r + 0.1);
+        if (!fits) continue;
+        const w = hash01(k, 101, salt);
+        st.tone = 0.02 + hash01(k, 137, salt) * 0.1;
+        st.tint = w < 0.1 ? [1, 0.93, 0.84] : w < 0.25 ? [0.95, 0.97, 1] : [1, 1, 1];
+        stones.push(st);
+      }
+    }
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        let best = null, bestT = Infinity, bdy = 0;
+        for (const st of stones) {
+          const dx = wrap(x + 0.5 - st.x), dy = wrap(y + 0.5 - st.y);
+          const t = Math.hypot(dx / st.sx, dy / st.sy) / st.r;
+          if (t < bestT) { bestT = t; best = st; bdy = dy / st.sy / st.r; }
+        }
+        if (bestT > 1) {
+          // Earth between the stones: darker, and a little brown.
+          darken(x, y, depth * (0.8 + 0.2 * hash01(x, y, salt + 17)));
+          tint.set([1, 0.95, 0.86], (y * n + x) * 3);
+          continue;
+        }
+        let shade = best.tone;
+        if (bestT > 0.5 && bdy > 0.25) shade = 0;                         // lit top
+        else if (bestT > 0.5 && bdy < -0.2) shade += depth * 0.35;        // shadowed foot
+        if (hash01(x, y, salt + 29) < 0.1) shade += depth * 0.15;
+        darken(x, y, shade);
+        tint.set(best.tint, (y * n + x) * 3);
       }
     }
   }
@@ -269,8 +324,11 @@ function paint(recipe, salt) {
 
   const out = new Uint8Array(n * n * 4);
   for (let i = 0; i < n * n; i++) {
-    const g = Math.round(Math.max(0, Math.min(1, level[i])) * 255);
-    out[i * 4] = g; out[i * 4 + 1] = g; out[i * 4 + 2] = g; out[i * 4 + 3] = alpha[i];
+    const l = Math.max(0, Math.min(1, level[i]));
+    out[i * 4] = Math.round(l * tint[i * 3] * 255);
+    out[i * 4 + 1] = Math.round(l * tint[i * 3 + 1] * 255);
+    out[i * 4 + 2] = Math.round(l * tint[i * 3 + 2] * 255);
+    out[i * 4 + 3] = alpha[i];
   }
   return out;
 }

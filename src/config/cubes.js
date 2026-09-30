@@ -81,9 +81,12 @@ function tileImage(blockId, color, top = false) {
     const r = (color >> 16) & 255, g = (color >> 8) & 255, b = color & 255;
     for (let y = 0; y < n; y++) {
       for (let x = 0; x < n; x++) {
-        const level = tile[(y * n + x) * 4] / 255;
-        const o = 54 + (n - 1 - y) * row + x * 3; // BMP rows run bottom up
-        bytes[o] = Math.round(b * level); bytes[o + 1] = Math.round(g * level); bytes[o + 2] = Math.round(r * level);
+        const t = (y * n + x) * 4;
+        // BMP rows run bottom up, and so do the tile's on a wall in the
+        // world (a larger y is higher) — row 0 goes at the bottom here too,
+        // so a stone lit from above in the world is lit from above here.
+        const o = 54 + y * row + x * 3;
+        bytes[o] = Math.round(b * tile[t + 2] / 255); bytes[o + 1] = Math.round(g * tile[t + 1] / 255); bytes[o + 2] = Math.round(r * tile[t] / 255);
       }
     }
     let bin = '';

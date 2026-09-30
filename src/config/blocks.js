@@ -396,6 +396,22 @@ export function turned(id, facing) {
   return facing === 0 ? baseId : TURN_BASE + 3 * k + facing;
 }
 
+/**
+ * A block as it looks in a mirror. Requested directly: the symmetry tool
+ * copied stairs, doors and roofs without turning them, so the mirrored half
+ * of a building had its stairs climbing and its roofs sloping the wrong way.
+ * Facing counts quarter-turns from -z (0, +x 1, +z 2, -x 3): a mirror
+ * across x swaps +x and -x, one across z swaps -z and +z. Anything that
+ * doesn't face a way is its own reflection.
+ */
+export function mirrored(id, { flipX = false, flipZ = false } = {}) {
+  if (!turns(id) || (!flipX && !flipZ)) return id;
+  let f = facingOf(id);
+  if (flipX && (f & 1)) f ^= 2;
+  if (flipZ && !(f & 1)) f ^= 2;
+  return turned(id, f);
+}
+
 /** { mat, kind, facing } for any roof tile, or null. `kind` is steep, lo, hi, ridge_x, ridge_z or peak. */
 export function roofPart(id) {
   const r = BLOCKS_BY_ID.get(id)?.roof;
