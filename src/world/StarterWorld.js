@@ -95,6 +95,35 @@ function findNearbyWater(gen, cx, cz) {
   return null;
 }
 
+/**
+ * The nearest dry column to (x, z) — the same expanding-ring search
+ * findNearbyWater uses, inverted. settleOrigin's own setback below assumes
+ * the water it just found is a river a few blocks wide, and steps back a
+ * fixed, fairly short distance from it in a random direction; that was
+ * enough to clear a river, but not the ocean biome, whose footprint (like
+ * every non-mountain biome's) roughly tripled in area in the terrain
+ * overhaul. A random short step from a point on a much bigger body of water
+ * can easily still be wet, and the settlement had nothing left to fall back
+ * on — reported directly as a settlement, spawn included, generated
+ * entirely underwater, on the seabed, with nothing standable anywhere in
+ * the whole plot. Run only when that first guess is still wet, so an
+ * ordinary river settlement (the overwhelming majority) costs nothing extra
+ * at all.
+ */
+function findNearbyDryLand(gen, cx, cz) {
+  if (gen.waterLevelAt(cx, cz) === 0) return { x: cx, z: cz };
+  for (let r = WATER_SEARCH_STEP; r <= WATER_SEARCH_RADIUS; r += WATER_SEARCH_STEP) {
+    for (let dx = -r; dx <= r; dx += WATER_SEARCH_STEP) {
+      for (let dz = -r; dz <= r; dz += WATER_SEARCH_STEP) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+        const x = cx + dx, z = cz + dz;
+        if (gen.waterLevelAt(x, z) === 0) return { x, z };
+      }
+    }
+  }
+  return null;
+}
+
 export function settleOrigin(world, seed = 1) {
   const rand = rng(seed);
   const half = STARTER_SIZE / 2;
@@ -115,8 +144,14 @@ export function settleOrigin(world, seed = 1) {
     // the plot is still clear ground to build on.
     const angle = rand() * Math.PI * 2;
     const setback = half - RIVER_NEAR;
-    centreX = Math.round(found.x + Math.cos(angle) * setback);
-    centreZ = Math.round(found.z + Math.sin(angle) * setback);
+    const candidateX = Math.round(found.x + Math.cos(angle) * setback);
+    const candidateZ = Math.round(found.z + Math.sin(angle) * setback);
+    // That single fixed step is enough to clear a river; see
+    // findNearbyDryLand's own note for why it isn't always enough for the
+    // ocean, and what this does about it.
+    const dry = findNearbyDryLand(world.gen, candidateX, candidateZ) ?? { x: candidateX, z: candidateZ };
+    centreX = dry.x;
+    centreZ = dry.z;
     world.gen.biomes.centreX = centreX;
     world.gen.biomes.centreZ = centreZ;
     world.centreX = centreX;
