@@ -40,7 +40,8 @@ export class DuiltGame {
     this.sandbox = sandbox;
     // Animals kept in pens — see duilt/Ranch.js. Wild ones aren't here.
     this.herd = [];
-    this.inventory = new Inventory({ bus });
+    this.dayTime = null; // see toJSON
+    this.inventory = new Inventory({ bus, endless: sandbox });
     this.territory = new Territory({ world, scene, bus, age, sandbox });
     this.structures = new StructureRegistry({ world, bus, inventory: this.inventory });
     this.hunger = new Hunger(bus);
@@ -64,8 +65,18 @@ export class DuiltGame {
    * single copy is genuinely all a slot ever needs to hold.
    */
   grantCreativeKit() {
-    this.inventory.grow(ITEMS.length);
-    for (const item of ITEMS) this.inventory.add(item.id, 1);
+    const inv = this.inventory;
+    inv.grow(ITEMS.length);
+    // A creative bag saved before it was endless may have lost things (eaten,
+    // thrown away, worn out) or doubled some up: back to exactly one of each.
+    const seen = new Set();
+    inv.slots = inv.slots.map((s) => {
+      if (!s || seen.has(s.id)) return null;
+      seen.add(s.id);
+      return { id: s.id, count: 1, wear: 0 };
+    });
+    for (const item of ITEMS) inv.add(item.id, 1);
+    inv.changed();
   }
 
   get age() {
@@ -418,6 +429,9 @@ export class DuiltGame {
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
       herd: herdToJSON(this.herd),
+      // The time of day, 0..1 — see render/DayCycle.js. Kept with the world
+      // so night is still night when you come back to it.
+      dayTime: this.dayTime,
       savedAt: Date.now(),
     };
   }
@@ -433,6 +447,7 @@ export class DuiltGame {
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
+    this.dayTime = typeof data.dayTime === 'number' ? data.dayTime : null;
     // Pay out everything earned while the tab was shut.
     this.lastCollect = Date.now();
     return this.structures.collect({

@@ -4,7 +4,7 @@ import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { buildTemplatePlacement, rotateTemplate, captureBlocks } from './tools/Templates.js';
-import { roofPlan, roofBlocks, roofPeak, roofPick } from './tools/RoofTool.js';
+import { roofPlan, roofBlocks, roofPeak, roofPick, roofTypeFor } from './tools/RoofTool.js';
 import { pickBuild, wallFootprintAt } from './tools/PointerPick.js';
 import { ROOFS_BY_ID, facingLabel } from './config/roofs.js';
 import { clearPlan, clearCells, cellBounds } from './tools/ClearTool.js';
@@ -20,6 +20,7 @@ import { generateEndlessWorld } from './world/StarterWorld.js';
 import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
 import { FarTerrain } from './render/FarTerrain.js';
 import { SkyClouds } from './render/SkyClouds.js';
+import { DayCycle, MORNING } from './render/DayCycle.js';
 import { LightManager } from './render/LightManager.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
@@ -221,18 +222,22 @@ export class Game {
     // nothing to look at and doubles the precision everywhere.
     this.camera = new THREE.PerspectiveCamera(75, 1, 0.2, this.horizon + 200);
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    this.scene.add(ambient);
     const sun = new THREE.DirectionalLight(0xfff3d6, 0.85);
     sun.position.set(60, 90, 30);
     this.scene.add(sun);
     // Ground bounce-light lightened to match: 0x3a2f22 was dark enough that
     // every underside and shadowed face read muddy no matter how pale the
     // blocks above them were.
-    this.scene.add(new THREE.HemisphereLight(0xadd7f5, 0x7f6445, 0.4));
+    const hemi = new THREE.HemisphereLight(0xadd7f5, 0x7f6445, 0.4);
+    this.scene.add(hemi);
 
     this.mesher = new ChunkMesher(this.scene);
     this.farTerrain = new FarTerrain(this.scene);
     this.clouds = new SkyClouds(this.scene);
+    // Those three lights, the sky and the clouds all follow the time of day.
+    this.dayCycle = new DayCycle(this.scene, { ambient, sun, hemi, clouds: this.clouds });
     this.lights = new LightManager(this.scene);
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
@@ -1006,6 +1011,8 @@ export class Game {
     this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus, sandbox });
     if (sandbox) this.duilt.grantCreativeKit();
     else this.duilt.grantStartingKit();
+    // Every new world starts in the morning.
+    if (this.dayCycle) this.dayCycle.time = MORNING;
     // After the rules exist, not before: this reads the border off `duilt`,
     // and called a line earlier it only ever saw the world that came before.
     this.applyTerritoryBounds();
@@ -1096,9 +1103,10 @@ export class Game {
           kind: 'challenge', title: 'Your buildings kept working', body: parts.join(', '),
         }), 600);
       }
-    } else if (sandbox) {
-      this.duilt.grantCreativeKit();
     }
+    if (sandbox) this.duilt.grantCreativeKit();
+    // The world's clock picks up where it was left.
+    if (this.dayCycle) this.dayCycle.time = this.duilt.dayTime ?? MORNING;
     this.gamification.setDuilt(this.duilt);
     this.applyTerritoryBounds();
     this.rebuildAllChunks();
@@ -1618,7 +1626,7 @@ export class Game {
     const changes = roofPlan(this.world, pick, { shape, turn, type, base });
 
     const laid = roofBlocks(pick, { shape, turn })
-      .map((b) => ({ x: b.x, y: base + b.dy, z: b.z, type }));
+      .map((b) => ({ x: b.x, y: base + b.dy, z: b.z, type: roofTypeFor(type, b) }));
     // Re-laying a roof has to take the old one's corners down as well as put
     // the new one up, or turning a gable leaves a cross on the roof.
     if (relay) {
@@ -1671,7 +1679,7 @@ export class Game {
     this.roofKey = key;
     const cells = roofBlocks(pick, { shape: this.pendingRoof, turn: this.roofTurn });
     const blocks = cells.map((b) => ({
-      dx: b.x - pick.bounds.minX, dy: b.dy, dz: b.z - pick.bounds.minZ, type: this.selectedBlockId,
+      dx: b.x - pick.bounds.minX, dy: b.dy, dz: b.z - pick.bounds.minZ, type: roofTypeFor(this.selectedBlockId, b),
     }));
     this.roofGhost.show(blocks, {
       x: pick.bounds.maxX - pick.bounds.minX,
@@ -2475,6 +2483,8 @@ export class Game {
   throwSelected() {
     if (!this.duilt) return;
     const id = this.selectedItemId;
+    // A creative bag keeps everything — see Inventory's `endless`.
+    if (this.duilt.inventory.endless) return;
     if (!this.duilt.inventory.remove(id, 1)) return;
     this.ui.toast({ kind: 'xp', title: `Threw away ${itemName(id)}`, body: 'One less to carry' });
   }
@@ -3070,6 +3080,10 @@ export class Game {
     this.updateChunkVisibility();
     this.updateFarTerrain();
     this.updateClouds(dt);
+    // The clock only runs while you're playing; a menu is a pause.
+    if (playing) this.dayCycle.advance(dt);
+    if (this.duilt) this.duilt.dayTime = this.dayCycle.time;
+    this.dayCycle.apply(this.camera, this.horizon);
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
     this.wanderView.update(this.wanderers?.list ?? []);

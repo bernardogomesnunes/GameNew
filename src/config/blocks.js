@@ -99,7 +99,13 @@ export const BLOCKS = [
     // 0.4, none of which use that scale), 1-2 was invisible and 40+ started
     // blowing out anything within a block of it. 24 read as a real warm
     // glow — visible, not garish — across several calibration renders.
-    light: { color: 0xffcf8c, intensity: 24, distance: 14 },
+    // Reported directly: "the lantern is super weird, we should follow the
+    // same modelation that we have for other items, and light is coming from
+    // the bottom of the block." It was a plain glowing cube with its light
+    // buried inside it; now it's a real lantern (see propShapes), lit from
+    // its glass. `y` is where in the cell the light sits.
+    light: { color: 0xffcf8c, intensity: 24, distance: 14, y: 0.3 },
+    shape: 'lantern',
     cost: { wood: 2 }, unlock: null,
   },
   { id: 27, name: 'Stone Slab', glyph: 'slab', color: 0xafafb6, shape: 'slab', material: 'stone', cost: { stone: 1 }, unlock: null },
@@ -184,6 +190,13 @@ export const BLOCKS = [
   // when the bottom does. Place, pointed at either half, swings both open or
   // shut (Game.toggleGate) — shut is solid, open anyone walks through. Every
   // part comes in four facings, generated below.
+  // Hung from the ceiling, not stood on the floor: an iron ring of four
+  // candles on a chain, lighting the room from above.
+  {
+    id: 85, name: 'Chandelier', glyph: 'chandelier', color: 0x5d5552, shape: 'chandelier', material: 'stone',
+    light: { color: 0xffd79a, intensity: 30, distance: 16, y: 0.72 }, cost: { wood: 2 }, unlock: null,
+  },
+
   { id: 69, name: 'Door', glyph: 'door', color: 0xb08a60, shape: 'door', material: 'wood', cost: { wood: 3 }, facing: 0, unlock: null },
 ];
 
@@ -219,6 +232,38 @@ const DOOR_BASE = 69;
     });
   }
 }
+
+// Roof tiles — telhas. Requested directly: "we should have something
+// similar [to stairs] but with telhas. roofing can be done with bricks and
+// stone." A real slope rather than steps, laid in rows of tiles, in fired
+// brick or in slate. Placed by hand it faces the way you look, like a stair
+// (and makes corners with its neighbours the same way — see world/slopes.js);
+// laid by the Roof tool it also comes as the half-pitch pieces a shallow
+// roof needs and the caps that go along a ridge and on a peak. Only the
+// first is ever held: the rest are states of it.
+//
+// `wall` is what fills in under the slope where a roof needs solid courses —
+// the ends of a gable — so a brick roof has brick gable ends.
+export const ROOF_MATERIALS = [
+  { key: 'brick', name: 'Brick Roof Tiles', color: 0xc9765c, wall: 9 },
+  { key: 'stone', name: 'Stone Roof Tiles', color: 0x8e93a0, wall: 8 },
+];
+/** The pieces of one roof material, in the order their ids run. */
+const ROOF_KINDS = ['steep', 'steep', 'steep', 'steep', 'lo', 'lo', 'lo', 'lo', 'hi', 'hi', 'hi', 'hi', 'ridge_x', 'ridge_z', 'peak'];
+const ROOF_SHAPE = { steep: 'roof', lo: 'roof_lo', hi: 'roof_hi', ridge_x: 'roof_ridge_x', ridge_z: 'roof_ridge_z', peak: 'roof_peak' };
+/** Piece i of roof material m is block ROOF_BASE + 15m + i. */
+const ROOF_BASE = 86;
+ROOF_MATERIALS.forEach((mat, m) => {
+  const base = ROOF_BASE + 15 * m;
+  ROOF_KINDS.forEach((kind, i) => {
+    const turnsWay = i < 12;
+    BLOCKS.push({
+      id: base + i, name: mat.name, glyph: 'rooftile', color: mat.color, shape: ROOF_SHAPE[kind], material: 'stone',
+      roof: { mat: m, kind }, ...(turnsWay ? { facing: i % 4 } : {}),
+      ...(i === 0 ? { cost: { stone: 1 } } : { stateOf: base }), unlock: null,
+    });
+  });
+});
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
@@ -273,11 +318,28 @@ export function turned(id, facing) {
   const b = BLOCKS_BY_ID.get(id);
   if (!b || b.facing == null) return id;
   facing &= 3;
+  const roof = roofPart(id);
+  if (roof) return roofBlock({ ...roof, facing });
   const door = doorPart(id);
   if (door) return doorBlock({ ...door, facing });
   const baseId = b.stateOf ?? id;
   const k = TURNS.indexOf(baseId);
   return facing === 0 ? baseId : TURN_BASE + 3 * k + facing;
+}
+
+/** { mat, kind, facing } for any roof tile, or null. `kind` is steep, lo, hi, ridge_x, ridge_z or peak. */
+export function roofPart(id) {
+  const r = BLOCKS_BY_ID.get(id)?.roof;
+  return r ? { mat: r.mat, kind: r.kind, facing: BLOCKS_BY_ID.get(id).facing ?? 0 } : null;
+}
+
+/** The block for a roof piece. */
+export function roofBlock({ mat = 0, kind = 'steep', facing = 0 }) {
+  const base = ROOF_BASE + 15 * mat;
+  if (kind === 'ridge_x') return base + 12;
+  if (kind === 'ridge_z') return base + 13;
+  if (kind === 'peak') return base + 14;
+  return base + { steep: 0, lo: 4, hi: 8 }[kind] + (facing & 3);
 }
 
 /** { open, top, facing } for any half of a door, or null. */

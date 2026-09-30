@@ -31,9 +31,18 @@ export const PLAYABLE_SLOTS = 9;
  * tools and counts uses spent, so a fresh tool is 0.
  */
 export class Inventory {
-  constructor({ slots = DEFAULT_SLOTS, bus = null } = {}) {
+  constructor({ slots = DEFAULT_SLOTS, bus = null, endless = false } = {}) {
     this.slots = new Array(slots).fill(null);
     this.bus = bus;
+    /**
+     * A creative bag: one of everything, forever. Reported directly: "in
+     * creative mode I can delete items, and food if eaten disappears ... All
+     * items should be one, not able to delete, just move." Nothing taken out
+     * of an endless bag ever leaves it — eating, placing, a tool wearing out,
+     * the bin — and nothing already in it ever piles up a second copy. Moving
+     * things round the grid works as always.
+     */
+    this.endless = endless;
   }
 
   get size() {
@@ -99,18 +108,25 @@ export class Inventory {
   }
 
   has(id, amount = 1) {
-    return this.countOf(id) >= amount;
+    return this.covers(id, amount);
   }
 
   /** True when every { id: amount } pair in the bill is covered. */
   hasAll(bill) {
-    return Object.entries(bill).every(([id, amount]) => this.countOf(id) >= amount);
+    return Object.entries(bill).every(([id, amount]) => this.covers(id, amount));
+  }
+
+  /** Whether there's enough of one item — any at all, in an endless bag. */
+  covers(id, amount) {
+    const n = this.countOf(id);
+    return this.endless ? n > 0 || amount <= 0 : n >= amount;
   }
 
   /** What's missing from a bill, as { id: shortfall }. Empty when it's affordable. */
   missing(bill) {
     const out = {};
     for (const [id, amount] of Object.entries(bill)) {
+      if (this.covers(id, amount)) continue;
       const short = amount - this.countOf(id);
       if (short > 0) out[id] = short;
     }
@@ -160,6 +176,14 @@ export class Inventory {
    */
   add(id, count = 1, { wear = 0 } = {}) {
     if (!ITEMS_BY_ID.has(id) || count <= 0) return count;
+    if (this.endless) {
+      if (this.countOf(id)) return 0;
+      const i = this.firstEmpty();
+      if (i === -1) return count;
+      this.slots[i] = { id, count: 1, wear: 0 };
+      this.changed();
+      return 0;
+    }
     const limit = stackLimit(id);
     let left = count;
 
@@ -192,6 +216,7 @@ export class Inventory {
    * before full ones. Returns how many were actually taken.
    */
   remove(id, count = 1) {
+    if (this.endless) return this.has(id) ? count : 0;
     let left = count;
     for (let i = this.slots.length - 1; i >= 0 && left > 0; i--) {
       const slot = this.slots[i];
@@ -268,6 +293,7 @@ export class Inventory {
     const leftover = other.add(slot.id, slot.count, { wear: slot.wear });
     const moved = slot.count - leftover;
     if (moved <= 0) return 0;
+    if (this.endless) return moved; // handed over, and still here
     slot.count -= moved;
     if (slot.count <= 0) this.slots[index] = null;
     this.changed();
@@ -285,7 +311,7 @@ export class Inventory {
   split(from) {
     if (!this.inRange(from)) return false;
     const slot = this.slots[from];
-    if (!slot || slot.count < 2 || isTool(slot.id)) return false;
+    if (this.endless || !slot || slot.count < 2 || isTool(slot.id)) return false;
     const target = this.firstEmpty();
     if (target === -1) return false;
     const half = Math.floor(slot.count / 2);
@@ -307,7 +333,7 @@ export class Inventory {
    * requests. Returns what was thrown out, or null if the slot was empty.
    */
   discard(index) {
-    if (!this.inRange(index)) return null;
+    if (this.endless || !this.inRange(index)) return null;
     const slot = this.slots[index];
     if (!slot) return null;
     this.slots[index] = null;
@@ -334,7 +360,7 @@ export class Inventory {
     const found = this.findTool(id);
     if (!found) return 'missing';
     const max = ITEMS_BY_ID.get(id)?.durability;
-    if (max == null) return 'ok'; // tools without durability never wear
+    if (max == null || this.endless) return 'ok'; // tools without durability never wear
     found.slot.wear += amount;
     if (found.slot.wear >= max) {
       this.slots[found.index] = null;

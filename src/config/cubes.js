@@ -1,6 +1,7 @@
 import { BLOCKS_BY_ID, shapeOf } from './blocks.js';
 import { GLYPHS, inkOn } from './glyphs.js';
 import { boxesFor, fenceBoxes } from '../world/propShapes.js';
+import { slopeGeometry, orient } from '../world/slopes.js';
 
 /**
  * Blocks drawn as blocks: a little isometric cube, three faces, one colour.
@@ -108,6 +109,7 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
   const spec = BLOCKS_BY_ID.get(blockId);
   if (!spec) return '';
   const shape = shapeOf(blockId);
+  if (shape.startsWith('roof')) return facesSvg(slopeGeometry(shape, 0).faces, spec.color ?? 0x888888, size);
   const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
     ? fenceBoxes(shape, { px: 1, nx: 1 })
     : shape === 'door'
@@ -125,9 +127,30 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
     (a.minX + a.maxX + a.minZ + a.maxZ + a.minY + a.maxY) - (b.minX + b.maxX + b.minZ + b.maxZ + b.minY + b.maxY));
   let body = '';
   for (const b of order) {
-    body += poly([p(b.minX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.minX, b.maxY, b.maxZ)], shade(c, FACE.top));
-    body += poly([p(b.minX, b.maxY, b.maxZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.minX, b.minY, b.maxZ)], shade(c, FACE.left));
-    body += poly([p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.maxX, b.minY, b.minZ)], shade(c, FACE.right));
+    // A box can carry its own colour (a lantern's iron frame), and a lit one
+    // (its glass) isn't shaded.
+    const bc = b.color ?? c;
+    const f = b.glow ? { top: 1, left: 1, right: 1 } : FACE;
+    body += poly([p(b.minX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.minX, b.maxY, b.maxZ)], shade(bc, f.top));
+    body += poly([p(b.minX, b.maxY, b.maxZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.minX, b.minY, b.maxZ)], shade(bc, f.left));
+    body += poly([p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.maxX, b.minY, b.minZ)], shade(bc, f.right));
+  }
+  return `<svg class="cube" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
+}
+
+/** A sloped piece drawn from its polygons: far ones first, backs left out. */
+function facesSvg(faces, c, size) {
+  const p = (x, y, z) => `${(12 + (x - z) * 9.4).toFixed(2)} ${(2.6 + (x + z) * 5.3 + (1 - y) * 8.2).toFixed(2)}`;
+  const drawn = faces
+    .map((f) => orient(f.pts, f.out).n && { ...f, ...orient(f.pts, f.out) })
+    .filter((f) => f.n[0] + f.n[1] + f.n[2] > 1e-3)
+    .map((f) => ({ ...f, depth: f.pts.reduce((s, [x, y, z]) => s + x + y + z, 0) / f.pts.length }))
+    .sort((a, b) => a.depth - b.depth);
+  let body = '';
+  for (const f of drawn) {
+    const [nx, ny, nz] = f.n;
+    const light = (FACE.top * ny * ny + FACE.left * nz * nz + FACE.right * nx * nx) * (f.tone ?? 1);
+    body += `<path d="M${f.pts.map(([x, y, z]) => p(x, y, z)).join(' L')} Z" fill="${shade(c, light)}" stroke="rgba(0,0,0,0.12)" stroke-width="0.2" stroke-linejoin="round"/>`;
   }
   return `<svg class="cube" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
 }

@@ -586,7 +586,9 @@ export class DuiltUI {
     const grid = this.q('#bag-grid');
     if (!grid || !hotbarGrid) return;
     const slots = d.inventory.slots;
-    const slotHtml = (s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i, discardAttr: 'data-discard' });
+    // Nothing is thrown away from a creative bag — see Inventory's `endless`.
+    const bin = d.inventory.endless ? null : 'data-discard';
+    const slotHtml = (s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i, discardAttr: bin });
 
     hotbarGrid.innerHTML = slots.slice(0, PLAYABLE_SLOTS).map(slotHtml).join('');
     grid.innerHTML = slots.slice(PLAYABLE_SLOTS).map((s, j) => slotHtml(s, j + PLAYABLE_SLOTS)).join('');

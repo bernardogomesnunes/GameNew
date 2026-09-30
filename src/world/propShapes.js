@@ -69,6 +69,39 @@ export const PROP_SHAPES = {
   ],
 };
 
+/** Dark iron, for the metal of a lantern or a chandelier. */
+const IRON = 0x4a4340;
+/** Glass with a flame behind it, and candle wax: drawn lit, whatever the time of day. */
+const FLAME = 0xffd98f, WAX = 0xf6eedc, WICK = 0xffb347;
+
+// A lantern standing on the floor: an iron base and cap, four corner posts,
+// lit glass between them, and a handle on top.
+PROP_SHAPES.lantern = [
+  { minX: 0.3, maxX: 0.7, minY: 0, maxY: 0.06, minZ: 0.3, maxZ: 0.7, color: IRON },
+  { minX: 0.35, maxX: 0.65, minY: 0.06, maxY: 0.5, minZ: 0.35, maxZ: 0.65, color: FLAME, glow: true },
+  ...[[0.3, 0.3], [0.64, 0.3], [0.3, 0.64], [0.64, 0.64]].map(([x, z]) =>
+    ({ minX: x, maxX: x + 0.06, minY: 0.06, maxY: 0.5, minZ: z, maxZ: z + 0.06, color: IRON })),
+  { minX: 0.28, maxX: 0.72, minY: 0.5, maxY: 0.57, minZ: 0.28, maxZ: 0.72, color: IRON },
+  { minX: 0.4, maxX: 0.6, minY: 0.57, maxY: 0.64, minZ: 0.4, maxZ: 0.6, color: IRON },
+  { minX: 0.42, maxX: 0.46, minY: 0.64, maxY: 0.78, minZ: 0.48, maxZ: 0.52, color: IRON },
+  { minX: 0.54, maxX: 0.58, minY: 0.64, maxY: 0.78, minZ: 0.48, maxZ: 0.52, color: IRON },
+  { minX: 0.42, maxX: 0.58, minY: 0.74, maxY: 0.78, minZ: 0.48, maxZ: 0.52, color: IRON },
+];
+
+// A chandelier hanging from the top of its cell: a chain, a hub, a cross of
+// arms, and a candle burning at the end of each.
+PROP_SHAPES.chandelier = [
+  { minX: 0.47, maxX: 0.53, minY: 0.7, maxY: 1, minZ: 0.47, maxZ: 0.53, color: IRON },
+  { minX: 0.4, maxX: 0.6, minY: 0.6, maxY: 0.7, minZ: 0.4, maxZ: 0.6, color: IRON },
+  { minX: 0.1, maxX: 0.9, minY: 0.6, maxY: 0.64, minZ: 0.47, maxZ: 0.53, color: IRON },
+  { minX: 0.47, maxX: 0.53, minY: 0.6, maxY: 0.64, minZ: 0.1, maxZ: 0.9, color: IRON },
+  ...[[0.1, 0.44], [0.78, 0.44], [0.44, 0.1], [0.44, 0.78]].flatMap(([x, z]) => [
+    { minX: x, maxX: x + 0.12, minY: 0.64, maxY: 0.67, minZ: z, maxZ: z + 0.12, color: IRON },
+    { minX: x + 0.03, maxX: x + 0.09, minY: 0.67, maxY: 0.79, minZ: z + 0.03, maxZ: z + 0.09, color: WAX, glow: true },
+    { minX: x + 0.045, maxX: x + 0.075, minY: 0.79, maxY: 0.85, minZ: z + 0.045, maxZ: z + 0.075, color: WICK, glow: true },
+  ]),
+];
+
 // Swung open on its hinge: the same door, lying flat against the side of
 // the doorway rather than across it.
 PROP_SHAPES.door_open = PROP_SHAPES.door.map(swing);
@@ -95,7 +128,7 @@ export function turn(boxes, facing) {
     for (let i = 0; i < facing; i++) {
       [minX, maxX, minZ, maxZ] = [1 - maxZ, 1 - minZ, minX, maxX];
     }
-    return { minX, maxX, minY: b.minY, maxY: b.maxY, minZ, maxZ };
+    return { ...b, minX, maxX, minZ, maxZ };
   });
 }
 

@@ -138,6 +138,9 @@ export const ITEMS = [
   },
 
   // --- Phase 4: light, half-height shapes, furniture -----------------------
+  { id: 'roof_brick', name: 'Brick Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0xc9765c, glyph: 'rooftile', block: 86, madeBy: 'Fired from brick into curved tiles' },
+  { id: 'roof_stone', name: 'Stone Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x8e93a0, glyph: 'rooftile', block: 101, madeBy: 'Split from stone into slates' },
+  { id: 'chandelier', name: 'Chandelier', kind: 'refined', stackTo: STACK_GOODS, color: 0x5d5552, glyph: 'chandelier', block: 85, madeBy: 'Wrought from iron and hung with candles' },
   { id: 'lantern', name: 'Lantern', kind: 'refined', stackTo: STACK_GOODS, color: 0xffd27a, glyph: 'lantern', block: 26, madeBy: 'Crafted from planks and glass' },
   { id: 'slab_stone', name: 'Stone Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'slab', block: 27, madeBy: 'Split from cut stone' },
   { id: 'slab_plank', name: 'Plank Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'slab', block: 28, madeBy: 'Sawn thin from planks' },
