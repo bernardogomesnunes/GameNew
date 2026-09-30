@@ -110,7 +110,10 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
   const shape = shapeOf(blockId);
   const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
     ? fenceBoxes(shape, { px: 1, nx: 1 })
-    : boxesFor(shape);
+    : shape === 'door'
+      // Both halves, squeezed into the one cell the icon has room for.
+      ? [...boxesFor('door').map((b) => squeeze(b, 0)), ...boxesFor('door_top').map((b) => squeeze(b, 1))]
+      : boxesFor(shape);
   const c = spec.color ?? 0x888888;
   // Unit cell to the cube icon's own frame: x runs down-right, z down-left,
   // y up — the same diamond cubeSvg draws, so a slab sits where half a cube
@@ -127,6 +130,15 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
     body += poly([p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.maxX, b.minY, b.minZ)], shade(c, FACE.right));
   }
   return `<svg class="cube" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
+}
+
+/** A door box, half `half` of two, fitted into one cell a little narrower than it's tall. */
+function squeeze(b, half) {
+  return {
+    minX: 0.2 + b.minX * 0.6, maxX: 0.2 + b.maxX * 0.6,
+    minY: (half + b.minY) / 2, maxY: (half + b.maxY) / 2,
+    minZ: b.minZ, maxZ: b.maxZ,
+  };
 }
 
 /** A block's icon: a cube, or its real shape if it isn't one. */

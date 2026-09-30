@@ -269,6 +269,15 @@ export const RECIPES = [
     blurb: 'The way into a pen. You walk through it; the animals can\'t.',
   },
   {
+    id: 'door',
+    name: 'Door',
+    station: 'hand',
+    age: 2,
+    inputs: { planks: 4 },
+    output: { id: 'door', count: 1 },
+    blurb: 'Two blocks tall and hung the way you face. Place opens and shuts it.',
+  },
+  {
     id: 'slab_stone',
     name: 'Stone Slab',
     station: 'hand',

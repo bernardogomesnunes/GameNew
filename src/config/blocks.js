@@ -88,9 +88,10 @@ export const BLOCKS = [
   // block still occludes its neighbours' faces exactly like a solid cube —
   // a deliberate simplification, see ChunkMesher's own note — and World's
   // collisionBoxAt gives it a matching hitbox instead of the full cell.
-  // Stairs share the slab's flat half-height hitbox rather than a stepped
-  // one, and always render facing the same way — there is no facing/rotation
-  // concept anywhere else in this block registry either.
+  // Stairs are three steps with the back filled to the top, so a flight of
+  // them has no gap between one block and the next; their hitbox is the
+  // whole cell, flagged as a stair so you walk straight up it. They face the
+  // way you placed them — see TURNS below.
   {
     id: 26, name: 'Lantern', glyph: 'lantern', color: 0xffd27a, material: 'wood',
     // Three's PointLight intensity is physically-based (candela): against the
@@ -177,7 +178,47 @@ export const BLOCKS = [
     id: FLOW_BASE + level, name: 'Flowing Water', glyph: 'water', color: 0x83add7, transparent: true, opacity: 0.78,
     shape: 'water_flow', stateOf: 11, level, unlock: null,
   })),
+
+  // A door: two blocks tall, placed as one. The bottom half is the item; the
+  // top half comes with it, has no item of its own (`part: 'top'`), and goes
+  // when the bottom does. Place, pointed at either half, swings both open or
+  // shut (Game.toggleGate) — shut is solid, open anyone walks through. Every
+  // part comes in four facings, generated below.
+  { id: 69, name: 'Door', glyph: 'door', color: 0xb08a60, shape: 'door', material: 'wood', cost: { wood: 3 }, facing: 0, unlock: null },
 ];
+
+// Stairs, chairs and doors face a way: the way you were looking when you put
+// them down (see Game.placeBlock). Requested directly: "chairs are only
+// placed on one direction, would be nice to have them placed in multiple
+// directions, same for stairs and doors." The block a player holds is facing
+// 0; the other three facings are states of it, each its own block id so the
+// chunk data stays one byte a cell. `facing` counts quarter-turns — see
+// propShapes' `turn`.
+const TURNS = [29, 30, 33, 34];
+/** Facing f (1..3) of TURNS[k] is block TURN_BASE + 3k + f. */
+const TURN_BASE = 56;
+for (const [k, baseId] of TURNS.entries()) {
+  const base = BLOCKS.find((b) => b.id === baseId);
+  base.facing = 0;
+  for (let f = 1; f <= 3; f++) {
+    BLOCKS.push({ ...base, id: TURN_BASE + 3 * k + f, stateOf: baseId, facing: f, cost: undefined });
+  }
+}
+
+/** Door part (open?, top?, facing) is block DOOR_BASE + 8·open + 4·top + facing. */
+const DOOR_BASE = 69;
+{
+  const door = BLOCKS.find((b) => b.id === DOOR_BASE);
+  for (let i = 1; i < 16; i++) {
+    const open = i >= 8, top = (i & 4) !== 0, facing = i & 3;
+    BLOCKS.push({
+      ...door, id: DOOR_BASE + i, stateOf: DOOR_BASE, facing, cost: undefined,
+      name: open ? 'Open Door' : 'Door',
+      shape: `door${open ? '_open' : ''}${top ? '_top' : ''}`,
+      ...(top ? { part: 'top' } : {}),
+    });
+  }
+}
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
@@ -217,6 +258,40 @@ export function flowingWater(level) {
   return FLOW_BASE + level;
 }
 
+/** Quarter-turns a block is placed at: 0..3, 0 for anything that doesn't turn. */
+export function facingOf(id) {
+  return BLOCKS_BY_ID.get(id)?.facing ?? 0;
+}
+
+/** Whether a block is put down facing the way you look. */
+export function turns(id) {
+  return BLOCKS_BY_ID.get(id)?.facing != null;
+}
+
+/** A turning block at another facing: the same block (or door part), turned. */
+export function turned(id, facing) {
+  const b = BLOCKS_BY_ID.get(id);
+  if (!b || b.facing == null) return id;
+  facing &= 3;
+  const door = doorPart(id);
+  if (door) return doorBlock({ ...door, facing });
+  const baseId = b.stateOf ?? id;
+  const k = TURNS.indexOf(baseId);
+  return facing === 0 ? baseId : TURN_BASE + 3 * k + facing;
+}
+
+/** { open, top, facing } for any half of a door, or null. */
+export function doorPart(id) {
+  if (id < DOOR_BASE || id > DOOR_BASE + 15) return null;
+  const i = id - DOOR_BASE;
+  return { open: i >= 8, top: (i & 4) !== 0, facing: i & 3 };
+}
+
+/** The block for a door part. */
+export function doorBlock({ open = false, top = false, facing = 0 }) {
+  return DOOR_BASE + (open ? 8 : 0) + (top ? 4 : 0) + (facing & 3);
+}
+
 export function isTransparent(id) {
   const b = BLOCKS_BY_ID.get(id);
   return !!(b && b.transparent);
@@ -226,7 +301,7 @@ export function isSystemBlock(id) {
   return !!BLOCKS_BY_ID.get(id)?.system;
 }
 
-/** 'cube' unless the block registered a real shape (slab, stair, table, chair, rug). */
+/** 'cube' unless the block registered a real shape (slab, stair, table, chair, rug, door...). */
 export function shapeOf(id) {
   return BLOCKS_BY_ID.get(id)?.shape ?? 'cube';
 }

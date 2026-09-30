@@ -48,7 +48,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock } from './config/blocks.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { Mobs, rayBox } from './world/Mobs.js';
@@ -128,6 +128,8 @@ const GATE_SHUT = 48, GATE_OPEN = 49;
 // How often running water advances a block. See world/WaterFlow.js.
 const WATER_STEP_SECONDS = 0.25;
 const GATE_SWING = { [GATE_SHUT]: GATE_OPEN, [GATE_OPEN]: GATE_SHUT };
+/** A gate or either half of a door: something Place swings rather than builds on. */
+const swings = (id) => !!GATE_SWING[id] || !!doorPart(id);
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
 
@@ -1383,7 +1385,7 @@ export class Game {
     // Pointing at a gate, Place opens or shuts it — before anything you're
     // holding gets a say, the same way you'd reach for a latch.
     const aimed = this.raycast();
-    if (aimed && GATE_SWING[aimed.block]) return void this.toggleGate(aimed);
+    if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
     // A full bucket takes the button too, instead of placing a block.
     const override = PLACE_OVERRIDE[this.selectedItemId] ?? (isFood(this.selectedItemId) ? 'throwSelected' : null);
     if (override) return void this[override]();
@@ -2596,15 +2598,55 @@ export class Game {
    * unlocking the pen first.
    */
   toggleGate(hit) {
-    const next = GATE_SWING[hit.block];
-    if (next === GATE_SHUT && this.blockOverlapsPlayerAABB(hit)) {
-      this.ui.toast({ kind: 'xp', title: 'Step out of the gateway first' });
+    // A door swings both its halves together.
+    const door = doorPart(hit.block);
+    const cells = door ? this.doorCells(hit) : [{ x: hit.x, y: hit.y, z: hit.z, block: hit.block }];
+    const shutting = door ? door.open : GATE_SWING[hit.block] === GATE_SHUT;
+    if (shutting && cells.some((c) => this.blockOverlapsPlayerAABB(c))) {
+      this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : 'Step out of the gateway first' });
       return;
     }
-    this.world.setBlock(hit.x, hit.y, hit.z, next);
-    this.water?.touch(hit.x, hit.y, hit.z);
+    for (const c of cells) {
+      const part = doorPart(c.block);
+      const next = part ? doorBlock({ ...part, open: !part.open }) : GATE_SWING[c.block];
+      this.world.setBlock(c.x, c.y, c.z, next);
+      this.water?.touch(c.x, c.y, c.z);
+    }
     this.remeshDirty();
     this.editedAt = Date.now();
+  }
+
+  /** Both halves of the door at a cell — or just the one, if its other half is missing. */
+  doorCells(at) {
+    const part = doorPart(at.block ?? this.world.getBlock(at.x, at.y, at.z));
+    const self = { x: at.x, y: at.y, z: at.z, block: at.block ?? this.world.getBlock(at.x, at.y, at.z) };
+    const oy = part.top ? at.y - 1 : at.y + 1;
+    const other = this.world.inBounds(at.x, oy, at.z) ? this.world.getBlock(at.x, oy, at.z) : AIR;
+    const op = doorPart(other);
+    return op && op.top !== part.top ? [self, { x: at.x, y: oy, z: at.z, block: other }] : [self];
+  }
+
+  /**
+   * Which way you're facing, as quarter-turns from looking along -z: 0
+   * north (-z), 1 east (+x), 2 south (+z), 3 west (-x). What a stair,
+   * chair or door is put down at — see blocks.js's TURNS.
+   */
+  lookFacing() {
+    const yaw = this.player.yaw;
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    if (Math.abs(fx) > Math.abs(fz)) return fx > 0 ? 1 : 3;
+    return fz < 0 ? 0 : 2;
+  }
+
+  /**
+   * The block to actually put down for what's held: turned to face the
+   * right way. A stair climbs away from you; a chair and a door face you.
+   */
+  placedBlock(type) {
+    if (!turns(type)) return type;
+    const look = this.lookFacing();
+    const shape = BLOCKS_BY_ID.get(type)?.shape;
+    return turned(type, shape === 'chair' ? look + 2 : look);
   }
 
   placeBlock() {
@@ -2612,23 +2654,55 @@ export class Game {
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
     // shouldn't go on to build against it.
-    if (GATE_SWING[hit.block]) return;
+    if (swings(hit.block)) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
       this.ui.toast({ kind: 'xp', title: 'Locked block', body: availability.reason });
       return;
     }
+    const next = this.placedBlock(type);
+    const door = doorPart(next);
     const targets = this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
     const changes = [];
     for (const t of targets) {
       if (!this.world.inBounds(t.x, t.y, t.z)) continue;
       if (this.blockOverlapsPlayerAABB(t)) continue;
       const prev = this.world.getBlock(t.x, t.y, t.z);
-      if (prev === type) continue;
-      changes.push({ x: t.x, y: t.y, z: t.z, prev, next: type });
+      if (prev === next) continue;
+      if (door) {
+        // A door needs the cell above it clear for its top half.
+        const up = { x: t.x, y: t.y + 1, z: t.z };
+        if (!this.world.inBounds(up.x, up.y, up.z) || this.blockOverlapsPlayerAABB(up)) continue;
+        const above = this.world.getBlock(up.x, up.y, up.z);
+        if (above !== AIR && !isFlowing(above)) continue;
+        changes.push({ ...up, prev: above, next: doorBlock({ ...door, top: true }) });
+      }
+      changes.push({ x: t.x, y: t.y, z: t.z, prev, next });
+    }
+    if (door && !changes.length) {
+      this.ui.toast({ kind: 'xp', title: 'No room for a door', body: 'It needs two blocks of clear space' });
+      return;
     }
     this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
+  }
+
+  /**
+   * A door is one thing in two blocks: whatever takes away one half takes
+   * the other with it, so there's never half a door left standing.
+   */
+  withDoorHalves(changes) {
+    let out = changes;
+    for (const c of changes) {
+      if (!doorPart(c.prev) || doorPart(c.next)) continue;
+      for (const other of this.doorCells({ x: c.x, y: c.y, z: c.z, block: c.prev })) {
+        if (other.y === c.y) continue;
+        if (out.some((o) => o.x === other.x && o.y === other.y && o.z === other.z)) continue;
+        if (out === changes) out = [...changes];
+        out.push({ x: other.x, y: other.y, z: other.z, prev: other.block, next: AIR });
+      }
+    }
+    return out;
   }
 
   blockOverlapsPlayerAABB(t) {
@@ -2650,7 +2724,7 @@ export class Game {
    * has a tool that takes a lot away again.
    */
   applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
-    changes = changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z));
+    changes = this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z)));
     if (!changes.length) return false;
 
     // Duilt has its own economy: the border says where, the bag says whether.
@@ -3135,8 +3209,11 @@ export class Game {
       ? this.duilt.structures.at(hit.x, hit.y, hit.z)
       : null;
     const gate = hit && GATE_SWING[hit.block];
+    const door = hit && doorPart(hit.block);
     this.ui?.setBuildingHint(gate
       ? (hit.block === GATE_SHUT ? 'Gate · shut — Place opens it' : 'Gate · open — Place shuts it')
+      : door
+        ? (door.open ? 'Door · open — Place shuts it' : 'Door · shut — Place opens it')
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')

@@ -3,20 +3,26 @@
  * space (0..1 on every axis), assembled by PropRenderer into real geometry
  * instead of the plain cube ChunkMesher draws for everything else.
  *
- * Every shape here has a fixed orientation — there is no facing/rotation
- * concept anywhere else in this block registry either, so a stair always
- * steps the same way regardless of which side you placed it from. Stairs
- * only differ from a slab visually; their collision box is the same flat
- * half-height slab (see World.collisionBoxAt) rather than a stepped one —
- * a deliberate simplification, not an oversight.
+ * Every shape here is drawn at facing 0; a block placed facing another way
+ * (a stair, a chair, a door — see blocks.js's TURNS) has its boxes put
+ * through `turn` first.
  */
+/** Where a shut door stands across its cell: 3/16 thick, in the middle. */
+const DOOR_Z0 = 0.40625, DOOR_Z1 = 0.59375;
+
 export const PROP_SHAPES = {
   slab: [
     { minX: 0, maxX: 1, minY: 0, maxY: 0.5, minZ: 0, maxZ: 1 },
   ],
+  // Requested directly: "stairs need three steps, and to have stair until
+  // the end of the block, filling the back until the top, or else there
+  // will be a hole when doing stairs." Three steps of a third, climbing
+  // towards -z, the back one reaching the top of the cell — so the next
+  // stair up a flight starts level with where this one ends.
   stair: [
-    { minX: 0, maxX: 1, minY: 0, maxY: 0.5, minZ: 0, maxZ: 1 },
-    { minX: 0, maxX: 1, minY: 0.5, maxY: 0.75, minZ: 0, maxZ: 0.5 },
+    { minX: 0, maxX: 1, minY: 0, maxY: 1 / 3, minZ: 0, maxZ: 1 },
+    { minX: 0, maxX: 1, minY: 1 / 3, maxY: 2 / 3, minZ: 0, maxZ: 2 / 3 },
+    { minX: 0, maxX: 1, minY: 2 / 3, maxY: 1, minZ: 0, maxZ: 1 / 3 },
   ],
   table: [
     { minX: 0.06, maxX: 0.94, minY: 0.52, maxY: 0.62, minZ: 0.06, maxZ: 0.94 }, // top
@@ -48,7 +54,64 @@ export const PROP_SHAPES = {
   rug: [
     { minX: 0.03, maxX: 0.97, minY: 0, maxY: 0.04, minZ: 0.03, maxZ: 0.97 },
   ],
+  // A door, shut, across the middle of its cell, hinged at x = 0. The
+  // bottom half has a handle on both faces; the top half a window.
+  door: [
+    { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
+    { minX: 0.78, maxX: 0.9, minY: 0.86, maxY: 0.96, minZ: DOOR_Z0 - 0.06, maxZ: DOOR_Z1 + 0.06 },
+  ],
+  door_top: [
+    { minX: 0, maxX: 0.2, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
+    { minX: 0.8, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
+    { minX: 0.2, maxX: 0.8, minY: 0, maxY: 0.3, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
+    { minX: 0.2, maxX: 0.8, minY: 0.8, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
+    { minX: 0.47, maxX: 0.53, minY: 0.3, maxY: 0.8, minZ: DOOR_Z0 + 0.06, maxZ: DOOR_Z1 - 0.06 },
+  ],
 };
+
+// Swung open on its hinge: the same door, lying flat against the side of
+// the doorway rather than across it.
+PROP_SHAPES.door_open = PROP_SHAPES.door.map(swing);
+PROP_SHAPES.door_open_top = PROP_SHAPES.door_top.map(swing);
+
+function swing(b) {
+  return {
+    minX: Math.max(0, b.minZ - DOOR_Z0), maxX: b.maxZ - DOOR_Z0,
+    minY: b.minY, maxY: b.maxY,
+    minZ: b.minX, maxZ: b.maxX,
+  };
+}
+
+/**
+ * Boxes turned by `facing` quarter-turns about the middle of the cell —
+ * each turn takes a point at (x, z) to (1 - z, x), so what faces -z at
+ * facing 0 faces +x at 1, +z at 2 and -x at 3.
+ */
+export function turn(boxes, facing) {
+  facing &= 3;
+  if (!facing) return boxes;
+  return boxes.map((b) => {
+    let { minX, maxX, minZ, maxZ } = b;
+    for (let i = 0; i < facing; i++) {
+      [minX, maxX, minZ, maxZ] = [1 - maxZ, 1 - minZ, minX, maxX];
+    }
+    return { minX, maxX, minY: b.minY, maxY: b.maxY, minZ, maxZ };
+  });
+}
+
+/**
+ * A rug, run out to the edge of its cell on each side with another rug
+ * beside it — requested directly: "rugs should connect to each other when
+ * they are placed next side by side." A floor of them reads as one carpet
+ * instead of a grid of mats.
+ */
+export function rugBoxes(joins) {
+  return [{
+    minX: joins.nx ? 0 : 0.03, maxX: joins.px ? 1 : 0.97,
+    minY: 0, maxY: 0.04,
+    minZ: joins.nz ? 0 : 0.03, maxZ: joins.pz ? 1 : 0.97,
+  }];
+}
 
 /**
  * A fence or gate, joined to whichever of its four sides has another fence,

@@ -13,11 +13,12 @@ const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
 /*
  * Walking into something low lifts you onto it instead of stopping you dead.
- * A slab or a stair's hitbox is only the bottom half of its cell (see
- * World.collisionBoxAt), so half a block is enough to walk onto either from
- * the ground. Stairs get a whole block: their hitbox is flat, so each stair
- * in a flight sits a full block above the one before it, and without this a
- * staircase still needed a jump per step. A full cube is still a jump.
+ * A slab's hitbox is only the bottom half of its cell (see
+ * World.collisionBoxAt), so half a block is enough to walk onto one from
+ * the ground. Stairs get a whole block: their hitbox is the whole cell (its
+ * three steps are drawn, not collided), so each stair in a flight sits a
+ * full block above the one before it, and without this a staircase would
+ * need a jump per step. A full cube is still a jump.
  */
 const STEP_HEIGHT = 0.5;
 const STAIR_STEP_HEIGHT = 1;

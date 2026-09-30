@@ -45,11 +45,11 @@ function walk(world, frames, at = { x: 16.5, y: 1, z: 20.5 }) {
 
 // --- a single stair or slab is walked onto -------------------------------------
 
-for (const [name, id] of [['stair', STAIR], ['slab', SLAB]]) {
+for (const [name, id, top] of [['stair', STAIR, 2], ['slab', SLAB, 1.5]]) {
   const world = flatWorld();
   world.setBlock(16, 1, 18, id);
   const p = walk(world, 50);
-  ok(`walking into a ${name} lifts you onto it (peak y ${p.peak.toFixed(2)})`, Math.abs(p.peak - 1.5) < 1e-6);
+  ok(`walking into a ${name} lifts you onto it (peak y ${p.peak.toFixed(2)})`, Math.abs(p.peak - top) < 1e-6);
   ok(`and carries you on past it (z ${p.position.z.toFixed(2)})`, p.position.z < 17);
 }
 
@@ -81,7 +81,7 @@ for (const [name, id] of [['stair', STAIR], ['slab', SLAB]]) {
   world.setBlock(16, 1, 18, STONE);
   world.setBlock(16, 2, 18, STAIR);
   const p = walk(world, 60);
-  ok('a stair sitting on a block is a block and a half up — still a jump', p.position.y === 1 && p.position.z > 18.5);
+  ok('a stair sitting on a block is two blocks up — still a jump', p.position.y === 1 && p.position.z > 18.5);
 }
 
 {

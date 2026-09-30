@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { blockTextureArray, layerFor } from '../render/BlockTextures.js';
-import { BLOCKS_BY_ID, AIR, isTransparent, shapeOf, isWater, isFlowing, waterLevel } from '../config/blocks.js';
-import { boxesFor, fenceBoxes } from './propShapes.js';
+import { BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel } from '../config/blocks.js';
+import { boxesFor, fenceBoxes, rugBoxes, turn } from './propShapes.js';
 import { CHUNK_SIZE } from './World.js';
 
 const SOLID_SENTINEL = -1; // below the world: never draw a face against it
@@ -33,6 +33,12 @@ for (let id = 1; id < 256; id++) {
   const shape = shapeOf(id);
   JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || shape === 'gate_open' || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
 }
+/** Rugs, which run into each other (see propShapes' rugBoxes). */
+const IS_RUG = new Uint8Array(256);
+for (const id of BLOCKS_BY_ID.keys()) IS_RUG[id] = shapeOf(id) === 'rug' ? 1 : 0;
+/** Quarter-turns a stair, chair or door is drawn at. */
+const FACING = new Uint8Array(256);
+for (const id of BLOCKS_BY_ID.keys()) FACING[id] = facingOf(id);
 // Water of any kind, flowing water, and the still water flowing water is
 // drawn with — see emitFlowingWater.
 const IS_WATER = new Uint8Array(256);
@@ -624,7 +630,12 @@ export class ChunkMesher {
               px: JOINS_FENCE[vol[idx + 1]], nx: JOINS_FENCE[vol[idx - 1]],
               pz: JOINS_FENCE[vol[idx + PAD]], nz: JOINS_FENCE[vol[idx - PAD]],
             })
-            : boxesFor(shape);
+            : IS_RUG[id]
+              ? rugBoxes({
+                px: IS_RUG[vol[idx + 1]], nx: IS_RUG[vol[idx - 1]],
+                pz: IS_RUG[vol[idx + PAD]], nz: IS_RUG[vol[idx - PAD]],
+              })
+              : turn(boxesFor(shape), FACING[id]);
           const col = baseColor(id);
           for (const b of boxes) {
             this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col);
