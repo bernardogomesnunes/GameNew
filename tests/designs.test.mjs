@@ -1,4 +1,4 @@
-import { doorPart } from '../src/config/blocks.js';
+import { doorPart, roofPart } from '../src/config/blocks.js';
 import { World } from '../src/world/World.js';
 import { STARTER_DESIGNS, DESIGN_FOR_STRUCTURE } from '../src/config/starterDesigns.js';
 import { STRUCTURES, STRUCTURES_BY_ID } from '../src/config/structures.js';
@@ -142,6 +142,21 @@ for (const design of STARTER_DESIGNS) {
   // The top half of a door comes with its bottom half, which is billed.
   const unbilled = [...new Set(cells.values())].filter((t) => !ITEM_FOR_BLOCK.has(t) && !doorPart(t)?.top);
   ok(`  and every block in it is something you can hold`, unbilled.length === 0);
+}
+
+// Every building you'd walk into has a roof on it. The kiln, the foundry
+// and the garrison were the last three without one. What's left open is
+// open on purpose: a wood, a field, a pen, a quarry, a mine, a monument.
+{
+  const OPEN = new Set(['forest', 'farm', 'pen', 'quarry', 'mine', 'monument']);
+  const bare = STARTER_DESIGNS.filter((d) => !OPEN.has(d.structure) && !d.blocks.some((b) => roofPart(b.type))).map((d) => d.structure);
+  ok(`every building design has a tiled roof (${bare.join(', ') || 'none missing'})`, bare.length === 0);
+  const chimney = (id) => {
+    const d = DESIGN_FOR_STRUCTURE.get(id);
+    const top = Math.max(...d.blocks.map((b) => b.dy));
+    return d.blocks.some((b) => b.dy === top && b.type === 9);
+  };
+  ok('and the kiln and the foundry have a chimney through it', chimney('kiln') && chimney('foundry'));
 }
 
 process.exit(f ? 1 : 0);

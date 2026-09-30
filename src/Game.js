@@ -51,7 +51,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored } from './config/blocks.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
@@ -2720,12 +2720,15 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: 'Locked block', body: availability.reason });
       return;
     }
-    const next = this.placedBlock(type);
-    const door = doorPart(next);
-    const crop = cropOf(next);
+    const held = this.placedBlock(type);
+    const door = doorPart(held);
+    const crop = cropOf(held);
     const targets = this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
     const changes = [];
     for (const t of targets) {
+      // A mirrored copy is turned to match, so a stair on the far side
+      // climbs the mirrored way too.
+      const next = mirrored(held, t);
       if (!this.world.inBounds(t.x, t.y, t.z)) continue;
       // A seed goes in farmland and nowhere else.
       if (crop && this.world.getBlock(t.x, t.y - 1, t.z) !== FARMLAND) continue;
@@ -2738,7 +2741,7 @@ export class Game {
         if (!this.world.inBounds(up.x, up.y, up.z) || this.blockOverlapsPlayerAABB(up)) continue;
         const above = this.world.getBlock(up.x, up.y, up.z);
         if (above !== AIR && !isFlowing(above)) continue;
-        changes.push({ ...up, prev: above, next: doorBlock({ ...door, top: true }) });
+        changes.push({ ...up, prev: above, next: doorBlock({ ...doorPart(next), top: true }) });
       }
       changes.push({ x: t.x, y: t.y, z: t.z, prev, next });
     }
