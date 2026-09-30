@@ -314,9 +314,16 @@ body.touch #minimap { display: none; }
    a short panel never notices this is here at all. On a phone especially, a
    long panel — the goal list, achievements, Settings — used to scroll its own
    name away with the first swipe, so "what is this" only had one answer: pull
-   the header back up to look. */
+   the header back up to look.
+   `top` matches the negative margin rather than sitting at 0: sticky's `top`
+   is measured from the *panel's own padding edge*, not its border edge, so a
+   plain `top: 0` let the header rest flush before you scrolled (thanks to the
+   margin above) and then snap down by a whole `--panel-pad-t` once it
+   actually stuck — reported directly as a strip of the scrolled-past content
+   left showing above the header. Negating the same padding here is what
+   keeps it at the one position throughout. */
 .panel-head {
-  position: sticky; top: 0; z-index: 2;
+  position: sticky; top: calc(-1 * var(--panel-pad-t)); z-index: 2;
   margin: calc(-1 * var(--panel-pad-t)) calc(-1 * var(--panel-pad-x)) 14px;
   padding: var(--panel-pad-t) var(--panel-pad-x) 10px;
   background: var(--panel-solid);
