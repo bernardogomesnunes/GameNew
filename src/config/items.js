@@ -52,6 +52,7 @@ export const ITEMS = [
   { id: 'dark_leaves', name: 'Dark Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x4a7a52, glyph: 'leaf', block: 44, madeBy: 'Stripped from the dark forest' },
   { id: 'lava', name: 'Lava', kind: 'raw', stackTo: STACK_GOODS, color: 0xe8672c, glyph: 'water', block: 45, madeBy: 'Scooped from a cavern' },
   { id: 'dark_moss', name: 'Dark Moss', kind: 'raw', stackTo: STACK_BULK, color: 0x4a6045, glyph: 'moss', block: 46, madeBy: 'Lifted from the dark forest floor' },
+  { id: 'forest_floor', name: 'Forest Floor', kind: 'raw', stackTo: STACK_BULK, color: 0x8a7a48, glyph: 'moss', block: 147, madeBy: 'Raked up in a giant grove' },
 
   // --- worked materials ----------------------------------------------------
   { id: 'planks', name: 'Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'planks', block: 7, madeBy: 'Sawn from wood' },

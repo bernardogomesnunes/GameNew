@@ -112,7 +112,8 @@ ok(`movement inside the border is unaffected (${stuckInside} stuck)`, stuckInsid
 
   // And must rest on the block under it, not float or sink.
   const topOf = (x, z) => {
-    for (let y = world.height - 1; y >= 0; y--) if (world.isSolid(x, y, z)) return y + 1;
+    // Trees don't count: the line runs on the ground under them.
+    for (let y = world.height - 1; y >= 0; y--) if (![4, 5, 41, 42, 43, 44].includes(world.getBlock(x, y, z)) && world.isSolid(x, y, z)) return y + 1;
     return null;
   };
   let wrong = 0;

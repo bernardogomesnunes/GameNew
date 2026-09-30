@@ -173,6 +173,10 @@ export const BLOCKS = [
   // check). A deeper, shadier green than ordinary Moss, the way a canopy
   // thick enough to earn "dark" in its name would actually shade its floor.
   { id: 46, name: 'Dark Moss', glyph: 'moss', color: 0x4a6045, soil: true, material: 'dirt', unlock: null },
+  // The Giant Grove's floor: a deep bed of fallen leaves under trees too big
+  // to let much grass grow. Its own ground so the grove reads as somewhere
+  // else underfoot and on the map (every biome has its own top block).
+  { id: 147, name: 'Forest Floor', glyph: 'litter', color: 0x8a7a48, soil: true, material: 'dirt', unlock: null },
 
   // Ranching. A fence stands a block and a half tall to anything walking
   // into it (see World.collisionBoxAt) — too high for you to jump or an

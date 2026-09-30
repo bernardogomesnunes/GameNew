@@ -30,8 +30,31 @@ const MOUNTAINS2_INDEX = BIOME_INDEX.get('mountains2');
  * of columns around itself and keeps only what falls inside its own walls.
  */
 
-/** How far a tree's leaves can reach. The margin a chunk has to look past. */
-export const FEATURE_MARGIN = 4;
+/**
+ * How far a tree's leaves can reach. The margin a chunk has to look past —
+ * as wide as a giant's crown and the branches under it.
+ */
+export const FEATURE_MARGIN = 12;
+
+/**
+ * Trees come in sizes. Requested directly: trees "definitely need more range
+ * of sizes in height, cause look they are smaller than a house." So a biome's
+ * trunk range is only the middle of it: some come up short, a good share
+ * tall, a few towering — and "1 in 50 trees to be a gigantic tree, 4 blocks
+ * for the trunk": a 2×2 trunk standing well over everything round it.
+ */
+export const TREE_SIZES = [
+  { upTo: 0.18, size: 'small' },
+  { upTo: 0.68, size: 'normal' },
+  { upTo: 0.92, size: 'tall' },
+  { upTo: 1, size: 'towering' },
+];
+/** One tree in this many is a giant (unless its biome says otherwise). */
+export const GIANT_ONE_IN = 50;
+/** No giants this close to the settlement: the starting plot is for building. */
+const GIANT_CLEAR_OF_HOME = 56;
+/** The most any biome plants — a quick no before asking which biome it is. */
+const MAX_TREE_CHANCE = 0.2;
 
 /**
  * A number in 0..1 from a position and a salt, with no state.
@@ -256,10 +279,12 @@ export class ChunkGen {
    * exactly the same tree without asking this one.
    */
   treeAt(x, z) {
+    const roll = hash01(x, z, this.seed ^ 0x5f3a);
+    if (roll >= MAX_TREE_CHANCE) return null;
     const biome = BIOMES[this.biomeIndexAt(x, z)];
     const t = biome.trees;
     if (!t?.chance) return null;
-    if (hash01(x, z, this.seed ^ 0x5f3a) >= t.chance) return null;
+    if (roll >= t.chance) return null;
     const ground = this.heightAt(x, z);
     // Both mountain tiers only take root near their own foot — see
     // biomes.js's own note on why, requested directly for both.
@@ -267,8 +292,38 @@ export class ChunkGen {
     // Not in the water, and not on ground that is about to be water.
     if (this.waterLevelAt(x, z)) return null;
     const [lo, hi] = t.trunk ?? [4, 6];
-    const trunk = lo + Math.floor(hash01(x, z, this.seed ^ 0x1b9d) * (hi - lo + 1));
-    return { style: t, trunk, ground };
+    const base = lo + Math.floor(hash01(x, z, this.seed ^ 0x1b9d) * (hi - lo + 1));
+    const canopy = t.canopy ?? 2;
+
+    // A giant: one in GIANT_ONE_IN, or most of them in a giant grove.
+    const giantOdds = t.giants ?? 1 / GIANT_ONE_IN;
+    if (giantOdds > 0 && hash01(x, z, this.seed ^ 0x61a7) < giantOdds && this.giantFits(x, z, ground)) {
+      const trunk = 18 + Math.floor(hash01(x, z, this.seed ^ 0x2d4f) * 9); // 18..26
+      return { style: t, trunk, ground, giant: true, crown: 7 + Math.floor(hash01(x, z, this.seed ^ 0x77c1) * 3) };
+    }
+
+    const roll2 = hash01(x, z, this.seed ^ 0x4e2b);
+    const size = TREE_SIZES.find((c) => roll2 < c.upTo).size;
+    if (size === 'small') return { style: t, trunk: Math.max(3, base - 2), ground, size, canopy: Math.max(1, canopy - (canopy > 1 ? 1 : 0)) };
+    if (size === 'normal') return { style: t, trunk: base, ground, size, canopy };
+    // Tall and towering trees grow a bigger, taller crown to match — a pole
+    // with a normal head on it would just look stretched.
+    const stretch = size === 'tall' ? 1.5 : 2;
+    return { style: t, trunk: Math.round(base * stretch), ground, size, canopy: canopy + (size === 'tall' ? 1 : 2) };
+  }
+
+  /**
+   * Whether a giant can stand here: its 2×2 trunk needs four dry columns at
+   * about the same height, and it stays clear of the starting plot.
+   */
+  giantFits(x, z, ground) {
+    const home = this.biomes;
+    if (Math.hypot(x - home.centreX, z - home.centreZ) < GIANT_CLEAR_OF_HOME) return false;
+    for (const [dx, dz] of [[1, 0], [0, 1], [1, 1]]) {
+      if (this.waterLevelAt(x + dx, z + dz)) return false;
+      if (Math.abs(this.heightAt(x + dx, z + dz) - ground) > 2) return false;
+    }
+    return true;
   }
 
   /** What is scattered on a column — a boulder, a sapling — or 0. */
@@ -367,7 +422,8 @@ export class ChunkGen {
   }
 
   /** Writes one tree, keeping only what falls inside the given chunk. */
-  plant(chunk, x, z, { style, trunk, ground }) {
+  plant(chunk, x, z, tree) {
+    const { style, trunk, ground } = tree;
     const ox = chunk.cx * CHUNK_SIZE, oz = chunk.cz * CHUNK_SIZE;
     const put = (bx, by, bz, block, fillAirOnly) => {
       const lx = bx - ox, lz = bz - oz;
@@ -376,16 +432,26 @@ export class ChunkGen {
       if (fillAirOnly && chunk.get(lx, by, lz) !== 0) return;
       chunk.set(lx, by, lz, block);
     };
+    if (tree.giant) return this.plantGiant(put, x, z, tree);
 
     for (let i = 0; i < trunk; i++) put(x, ground + i, z, style.wood, false);
+    const topY = ground + trunk;
+
+    if (tree.size === 'tall' || tree.size === 'towering') {
+      // A crown in proportion: an egg of leaves, deeper below the top of
+      // the trunk the bigger the tree, and a trunk that carries on up into it.
+      const r = (tree.canopy ?? 3) + 0.6;
+      for (let i = 0; i < 2; i++) put(x, topY + i, z, style.wood, false);
+      this.crown(put, x + 0.5, topY + 1, z + 0.5, { r, below: Math.round(r), above: Math.round(r * 0.8), leaves: style.leaves, salt: x * 31 + z });
+      return;
+    }
 
     // A rounded crown rather than a box. Requested directly: leaves "be
     // somehow more rounded instead of sharp cubes." Each layer is a disc, the
     // widest in the middle; the top is a small dome, not one block on a flat
     // lid; and the rim is ragged, a few of its leaves missing, so no two
     // trees are the same square.
-    const canopy = style.canopy ?? 2;
-    const topY = ground + trunk;
+    const canopy = tree.canopy ?? style.canopy ?? 2;
     const layers = [[-1, canopy + 0.25], [0, canopy + 0.55], [1, Math.max(1, canopy - 0.35)], [2, canopy > 1 ? 1 : 0]];
     for (const [dy, radius] of layers) {
       const r = Math.floor(radius + 0.5);
@@ -400,6 +466,83 @@ export class ChunkGen {
       }
     }
     put(x, topY + 2, z, style.leaves, true);
+  }
+
+  /**
+   * A mass of leaves round (cx, cy, cz): a squashed ball, `below` layers deep
+   * under the middle and `above` over it, ragged at the rim. cx and cz are in
+   * block-edge units, so a 2×2 trunk's crown can sit centred between its four
+   * columns.
+   */
+  crown(put, cx, cy, cz, { r, below, above, leaves, salt }) {
+    const R = Math.ceil(r);
+    for (let dy = -below; dy <= above; dy++) {
+      const t = dy < 0 ? dy / (below + 0.7) : dy / (above + 0.7);
+      const layer = r * Math.sqrt(Math.max(0, 1 - t * t));
+      if (layer < 0.5) continue;
+      for (let bx = Math.floor(cx - R); bx <= Math.ceil(cx + R); bx++) {
+        for (let bz = Math.floor(cz - R); bz <= Math.ceil(cz + R); bz++) {
+          const ddx = bx + 0.5 - cx, ddz = bz + 0.5 - cz;
+          const d2 = ddx * ddx + ddz * ddz;
+          if (d2 > layer * layer) continue;
+          const rim = d2 > (layer - 1.1) * (layer - 1.1);
+          if (rim && hash01(bx * 13 + salt, bz * 7 + dy * 101, this.seed ^ 0x3ea7) < 0.22) continue;
+          put(bx, cy + dy, bz, leaves, true);
+        }
+      }
+    }
+  }
+
+  /**
+   * A giant: a 2×2 trunk, roots flaring out at its foot, a few boughs
+   * reaching out partway up with leaves on their ends, and a crown twice the
+   * width of anything else in the wood.
+   */
+  plantGiant(put, x, z, { style, trunk, ground, crown }) {
+    const wood = style.wood, leaves = style.leaves;
+    const salt = x * 131 + z * 7;
+    const h = (a, b) => hash01(x * 17 + a, z * 29 + b, this.seed ^ 0x6b1d);
+    // The trunk goes down to each column's own ground, so a giant on a
+    // slight slope doesn't stand on stilts.
+    for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+      const g = Math.min(ground, this.heightAt(x + dx, z + dz));
+      for (let y = g; y < ground + trunk; y++) put(x + dx, y, z + dz, wood, false);
+    }
+    // Roots: a ring round the foot, some a block high, some two.
+    const ring = [[-1, 0], [-1, 1], [2, 0], [2, 1], [0, -1], [1, -1], [0, 2], [1, 2]];
+    ring.forEach(([dx, dz], i) => {
+      const r = h(i, 1);
+      if (r < 0.25) return;
+      const g = this.heightAt(x + dx, z + dz);
+      put(x + dx, g, z + dz, wood, true);
+      if (r > 0.7) put(x + dx, g + 1, z + dz, wood, true);
+    });
+    const cx = x + 1, cz = z + 1;
+    const topY = ground + trunk;
+    // Boughs, three storeys of them, each running out and rising as it goes,
+    // ending in a ball of leaves — so the crown spreads wide and low rather
+    // than sitting on a bare pole like a lollipop.
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (const [storey, at] of [[0, topY - 11], [1, topY - 7], [2, topY - 3]]) {
+      dirs.forEach(([ux, uz], i) => {
+        if (h(storey * 4 + i, 7) < 0.3) return;
+        const len = 4 + Math.floor(h(storey * 4 + i, 9) * 4) - storey;
+        // Start from the trunk face on that side.
+        const sx = ux > 0 ? x + 1 : ux < 0 ? x : x + (i % 2);
+        const sz = uz > 0 ? z + 1 : uz < 0 ? z : z + (i % 2);
+        let bx = sx, bz = sz;
+        for (let k = 1; k <= len; k++) {
+          bx = sx + ux * k; bz = sz + uz * k;
+          put(bx, at + Math.floor(k / 2), bz, wood, true);
+        }
+        this.crown(put, bx + 0.5, at + Math.floor(len / 2) + 1, bz + 0.5, { r: 3.2, below: 1, above: 2, leaves, salt: salt + i + storey * 9 });
+      });
+    }
+    // The trunk runs on up into the crown.
+    for (let y = topY; y < topY + 3; y++) {
+      for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) put(x + dx, y, z + dz, wood, false);
+    }
+    this.crown(put, cx, topY + 2, cz, { r: crown + 0.5, below: 4, above: 5, leaves, salt });
   }
 
   /**

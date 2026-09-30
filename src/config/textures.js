@@ -25,6 +25,7 @@
 export const TEXTURES = {
   grass:     { marks: 26, depth: 0.16, speck: 0.06, scale: 16 },
   moss:      { marks: 34, depth: 0.20, speck: 0.07, scale: 16 },
+  litter:    { marks: 40, blobs: 4, depth: 0.24, speck: 0.1, scale: 16 },
   dirt:      { marks: 22, depth: 0.18, scale: 16 },
   farmland:  { furrows: 4, marks: 34, blobs: 2, depth: 0.28, speck: 0.08, scale: 16 },
   sand:      { marks: 30, depth: 0.09, scale: 16 },

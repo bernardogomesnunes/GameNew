@@ -16,7 +16,7 @@
  */
 export const MOBS = [
   {
-    id: 'deer', name: 'Deer', biomes: ['forestOak', 'forestBirch', 'plains'], weight: 3,
+    id: 'deer', name: 'Deer', biomes: ['forestOak', 'forestBirch', 'plains', 'giantGrove'], weight: 3,
     herd: [2, 4], hp: 6, walk: 1.5, run: 6.8, skittish: true,
     body: { w: 0.5, h: 0.55, l: 1.1 }, head: 0.34, leg: 0.6,
     colour: 0xb88a62, headColour: 0xc79c73, legColour: 0x8d6a4d,
@@ -30,7 +30,7 @@ export const MOBS = [
     drops: { raw_meat: [1, 1], hide: [0, 1] },
   },
   {
-    id: 'boar', name: 'Boar', biomes: ['forestDark', 'forestOak'], weight: 2,
+    id: 'boar', name: 'Boar', biomes: ['forestDark', 'forestOak', 'giantGrove'], weight: 2,
     herd: [1, 3], hp: 9, walk: 1.2, run: 5.2, skittish: false,
     body: { w: 0.55, h: 0.55, l: 1.0 }, head: 0.4, leg: 0.3,
     colour: 0x6f5646, headColour: 0x5f4a3c, legColour: 0x4d3c31,

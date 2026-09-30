@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+/** Logs and leaves of every kind of tree — see buildEdgeStroke. */
+const TREE_BLOCKS = new Set([4, 5, 41, 42, 43, 44]);
+
 /**
  * How much of the world you're allowed to touch.
  *
@@ -218,7 +221,13 @@ export class Territory {
     const topOf = (x, z) => {
       if (!this.world.inBounds(x, 0, z)) return null;
       const from = Math.min(this.world.height - 1, this.world.surfaceHeight(x, z) + 12);
-      for (let y = from; y >= 0; y--) if (this.world.isSolid(x, y, z)) return y + 1;
+      for (let y = from; y >= 0; y--) {
+        // Through a tree, not over it: the line is on the ground, and a tall
+        // crown overhanging the border would lift it into the leaves.
+        const id = this.world.getBlock(x, y, z);
+        if (TREE_BLOCKS.has(id)) continue;
+        if (this.world.isSolid(x, y, z)) return y + 1;
+      }
       return null;
     };
 

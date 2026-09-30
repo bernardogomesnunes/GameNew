@@ -30,7 +30,10 @@
  *   flat      how much more (or less) than usual this biome favours a local
  *             flat patch — see ChunkGen.flatFactor. 1 is ordinary.
  *   surface   the block on top, then what is under it
- *   trees     how often a column gets one, and what it looks like
+ *   trees     how often a column gets one, and what it looks like — `giants`
+ *             is the share of them that are giants (1 in 50 if not given)
+ *   rare      a gate that only lets this biome in where a patchy noise of its
+ *             own is high — see biomeMap.js's rareFactor
  *   treeMaxHeight  if set, a tree only takes root below this ground height —
  *             the "only near the foot of the mountain" rule for both tiers.
  *   scatter   the odd boulder or patch, as { block, chance }
@@ -41,6 +44,7 @@
 const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, COBBLE = 8;
 const SAPLING = 20, MOSS = 22, GRAVEL = 23, CLAY = 24, SILT = 25;
 const WHITE_WOOD = 41, WHITE_LEAVES = 42, DARK_WOOD = 43, DARK_LEAVES = 44, DARK_MOSS = 46;
+const FOREST_FLOOR = 147;
 const IRON_ORE = 38, COPPER_ORE = 39, GOLD_ORE = 40;
 
 export const BIOMES = [
@@ -100,6 +104,28 @@ export const BIOMES = [
     surface: { top: DARK_MOSS, under: DIRT, depth: 3, rock: STONE },
     trees: { chance: 0.13, trunk: [6, 9], canopy: 2, wood: DARK_WOOD, leaves: DARK_LEAVES },
     scatter: [{ block: SAPLING, chance: 0.008 }],
+  },
+  {
+    // Requested directly: "we can have a biome full of gigantic trees that
+    // is rare." It doesn't have a climate of its own to win: where a rare,
+    // patchy noise is high (`rare`, see biomeMap.js) it takes over whatever
+    // wooded, grassy or wet country is there — never the sea, the desert or
+    // the mountains. Most of its trees are giants; the rest are tall.
+    // Gently rolling, open under the canopy, on a floor of fallen leaves.
+    id: 'giantGrove',
+    name: 'Giant Grove',
+    // Unused for placement (see above); kept so the biome has a climate
+    // like every other, for anything that reads one.
+    niche: { temp: 0.52, wet: 0.76 },
+    rare: {
+      freq: 0.0013, base: 0.82, power: 1.3, boost: 3, salt: 40411,
+      in: ['plains', 'forestOak', 'forestBirch', 'forestDark', 'wetland'],
+    },
+    base: 106, amplitude: 4, rough: 2,
+    flat: 1.1,
+    surface: { top: FOREST_FLOOR, under: DIRT, depth: 3, rock: STONE },
+    trees: { chance: 0.018, trunk: [7, 10], canopy: 3, wood: WOOD, leaves: LEAVES, giants: 0.7 },
+    scatter: [{ block: SAPLING, chance: 0.004 }],
   },
   {
     // Requested directly: "bigger flat areas even, and some steeper between
