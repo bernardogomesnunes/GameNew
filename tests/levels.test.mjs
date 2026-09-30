@@ -158,13 +158,17 @@ function stoneBlock({ w = 10, d = 10, h = 6, x0 = 4, z0 = 4, y0 = 8 } = {}) {
 
   const rate = producesAt(QUARRY, 2);
   const cycle = intervalAt(QUARRY, 2);
-  quarry.lastPaidAt = now - cycle * 1000 * 3; // three whole cycles at this level
+  // Two whole cycles rather than three — level 3's own cycle is long enough
+  // now (see structures.js's 10-15/day pass) that three of them would run
+  // past the 8-hour offline cap this same collect() enforces, which is a
+  // different mechanism than the one this checks.
+  quarry.lastPaidAt = now - cycle * 1000 * 2;
   const gained = reg.collect({ now });
-  const expectedStone = rate.stone * 3;
-  ok(`three cycles at level 3 pays ${expectedStone} stone, not level 1's rate: ${JSON.stringify(gained)}`,
+  const expectedStone = rate.stone * 2;
+  ok(`two cycles at level 3 pays ${expectedStone} stone, not level 1's rate: ${JSON.stringify(gained)}`,
     gained.stone === expectedStone);
   ok('the clock only advances by whole cycles, same as any producer',
-    quarry.lastPaidAt === now - cycle * 1000 * 3 + cycle * 1000 * 3);
+    quarry.lastPaidAt === now - cycle * 1000 * 2 + cycle * 1000 * 2);
 }
 
 // --- and it survives being saved, like the storehouse's tier already does ---
