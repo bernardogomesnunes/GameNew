@@ -53,7 +53,7 @@ const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf
 ok('an empty bucket takes the Break button before it digs',
   /BREAK_OVERRIDE = \{ bucket: 'fillBucket'/.test(game));
 ok('a full bucket takes the Place button before it builds',
-  /PLACE_OVERRIDE = \{ bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected' \}/.test(game));
+  /PLACE_OVERRIDE = \{ bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected'[, }]/.test(game));
 ok('filling checks what you are actually pointing at',
   /fillBucket\(\)[\s\S]{0,400}getBlock\(hit\.x, hit\.y, hit\.z\) === WATER/.test(game));
 ok('and says so when you are not pointing at water',

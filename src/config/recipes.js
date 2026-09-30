@@ -115,6 +115,16 @@ export const RECIPES = [
     batch: 8,
     blurb: 'Two planks from one log — more wall for the same tree.',
   },
+  {
+    id: 'cook_meat',
+    name: 'Cook meat',
+    station: 'hand',
+    age: 1,
+    inputs: { raw_meat: 2, wood: 1 },
+    output: { id: 'cooked_meat', count: 2 },
+    batch: 4,
+    blurb: 'A log on a fire. Six times the meal raw meat is.',
+  },
 
   // --- Age 2: what stone is good for --------------------------------------
   {

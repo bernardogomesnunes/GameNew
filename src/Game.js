@@ -49,7 +49,10 @@ import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, materialOf } from './config/blocks.js';
-import { TOOL_FOR, toolEffectiveness, itemName } from './config/items.js';
+import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID } from './config/items.js';
+import { MOBS_BY_ID } from './config/mobs.js';
+import { Mobs, rayBox } from './world/Mobs.js';
+import { MobView } from './render/MobView.js';
 
 const REACH = 7;
 /**
@@ -110,6 +113,9 @@ const MINIMAP_INTERVAL_MS = 500;
 // and it becomes a stream.
 const HOLD_BREAK_DELAY_MS = 320;
 const HOLD_BREAK_INTERVAL_MS = 170;
+// Between blows on an animal. Held Break repeats faster than this for
+// blocks; a swing at something alive shouldn't land six times a second.
+const STRIKE_COOLDOWN_MS = 350;
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
 
@@ -135,8 +141,8 @@ const SLOW_BREAK_MS = 900;
  * Mining tools (axe, pickaxe, shovel) are not in here: they don't replace
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', raw_meat: 'eatSelected', cooked_meat: 'eatSelected' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', raw_meat: 'throwSelected', cooked_meat: 'throwSelected' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -260,6 +266,7 @@ export class Game {
     this.selection = new SelectionHighlight(this.scene);
     this.ghost = new BuildGhost(this.scene);
     this.settlerView = new SettlerView(this.scene);
+    this.mobView = new MobView(this.scene);
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -1128,6 +1135,7 @@ export class Game {
     const px = this.player.position.x, pz = this.player.position.z;
     const maxSq = this.renderDistance * this.renderDistance;
     const deepSq = Math.min(DEEP_RANGE * DEEP_RANGE, maxSq);
+    const drawn = new Set();
     for (const mesh of this.mesher.activeMeshes) {
       const chunk = mesh.userData.chunk;
       if (!chunk) continue;
@@ -1135,6 +1143,13 @@ export class Game {
       const dx = Math.max(minX - px, 0, px - (minX + CHUNK_SIZE));
       const dz = Math.max(minZ - pz, 0, pz - (minZ + CHUNK_SIZE));
       mesh.visible = dx * dx + dz * dz <= (mesh.userData.deep ? deepSq : maxSq);
+      if (mesh.visible && !mesh.userData.deep) drawn.add(chunkId(chunk.cx, chunk.cz));
+    }
+    // Wherever a real chunk is drawn, the far terrain isn't — see FarTerrain.
+    if (this.farTerrain) {
+      const size = Math.ceil((this.renderDistance * 2) / CHUNK_SIZE) + 4;
+      const cx0 = (Math.floor(px) >> 4) - (size >> 1), cz0 = (Math.floor(pz) >> 4) - (size >> 1);
+      this.farTerrain.setChunkMask(cx0, cz0, size, (cx, cz) => drawn.has(chunkId(cx, cz)), CHUNK_SIZE);
     }
   }
 
@@ -2446,8 +2461,54 @@ export class Game {
     return { ms: NORMAL_BREAK_MS, blocked: false, tier };
   }
 
+  /**
+   * The animal under the crosshair, if one is nearer than the block behind
+   * it and within arm's reach. Wild animals, see world/Mobs.js.
+   */
+  mobTarget(hit = this.raycast()) {
+    if (!this.mobs) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const found = this.mobs.pick(eye, dir, REACH);
+    if (!found) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < found.t) return null;
+    }
+    return found.mob;
+  }
+
+  /**
+   * Break, aimed at an animal: one blow. Hunting is the same button as
+   * digging — the thing under the crosshair decides which it is, the same
+   * way a settler in front of a wall is what you're looking at. A tool hits
+   * harder than a fist (its `damage`, bare hands 1) and wears for it.
+   * Returns whether the press was spent on an animal.
+   */
+  hitMob(hit) {
+    const mob = this.mobTarget(hit);
+    if (!mob) return false;
+    const now = performance.now();
+    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    this.lastStrikeAt = now;
+    this.digTarget = null;
+    const tool = ITEMS_BY_ID.get(this.selectedItemId);
+    const { x, z } = this.player.position;
+    const { killed, drops } = this.mobs.hit(mob, tool?.damage ?? 1, x, z);
+    if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
+      this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
+    }
+    if (killed) {
+      const spec = MOBS_BY_ID.get(mob.type);
+      const gained = this.duilt?.collect(drops) ?? {};
+      const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+      this.ui.toast({ kind: 'xp', title: `Hunted a ${spec.name.toLowerCase()}`, body: got || undefined });
+    }
+    return true;
+  }
+
   breakBlock() {
     const hit = this.raycast();
+    if (this.hitMob(hit)) return;
     if (!hit) { this.digTarget = null; return; }
 
     let wornBy = null;
@@ -2634,14 +2695,20 @@ export class Game {
     this.selectionDirty = true; // blocks moved, so the selection skin is stale
   }
 
-  /** Spends a slice of the frame on pending rebuilds, then stops. */
   /**
-   * Makes the land you are walking towards, and forgets what is behind you.
+   * Works out the land you are walking towards, and forgets what is behind
+   * you.
    *
-   * Only ever a ring's worth per frame: generating a chunk is a few
-   * milliseconds and doing forty in one frame is a visible stall. The far
-   * terrain covers whatever has not arrived yet, so there is nothing to see
-   * while it catches up.
+   * Only the list, not the land itself. This used to generate every missing
+   * chunk in the ring you'd just stepped into, in one frame — thirty-odd at a
+   * few milliseconds each, a stall every time you crossed a chunk line, and
+   * flying crosses one about every second. Reported directly as terrain that
+   * felt like it was loading all the time. The list is worked through a few
+   * milliseconds a frame instead (generateQueued), nearest first, and the far
+   * terrain stands in for anything not made yet.
+   *
+   * One ring further than is drawn, so the chunks at the edge of what you see
+   * have their neighbours to mesh against — see drainRemeshQueue.
    */
   streamChunks() {
     if (!this.world?.endless || !this.player) return;
@@ -2651,20 +2718,22 @@ export class Game {
     if (this.streamedAt && this.streamedAt.cx === cx && this.streamedAt.cz === cz) return;
     this.streamedAt = { cx, cz };
 
-    const made = this.world.ensureAround(x, z, this.renderDistance);
-    for (const chunk of made) this.remeshQueue.add(chunk);
-    // A chunk can also come into being as a side effect of a neighbour's own
-    // meshing pass reaching across the chunk boundary to check whether a face
-    // is visible (ChunkMesher.rebuild's blockAt calls world.getBlock, which
+    const c = Math.ceil(this.renderDistance / CHUNK_SIZE) + 1;
+    const wanted = [];
+    for (let dx = -c; dx <= c; dx++) {
+      for (let dz = -c; dz <= c; dz++) {
+        const d2 = dx * dx + dz * dz;
+        if (d2 > c * c || this.world.hasChunk(cx + dx, cz + dz)) continue;
+        wanted.push({ cx: cx + dx, cz: cz + dz, d2 });
+      }
+    }
+    this.genQueue = wanted.sort((a, b) => a.d2 - b.d2);
+    // A chunk can also come into being as a side effect of something else
+    // reaching into it (the world.getBlock a raycast or a settler does
     // generates whatever chunk it lands in). That chunk is real from the
-    // moment it exists — solid, selectable, breakable — but `made` above only
-    // ever reports what *this* walk had to create, so one born that way was
-    // never queued for its own mesh. It sat there invisible, sky showing
-    // through exactly where a block plainly still was, until an unrelated
-    // edit anywhere else swept every dirty chunk (see remeshDirty/applyChanges)
-    // and happened to catch it too. Sweeping dirty chunks here as well means
-    // it gets a mesh the moment it exists, not the next time something
-    // unrelated gets edited.
+    // moment it exists but was never queued for its own mesh, and sat there
+    // invisible until an unrelated edit swept every dirty chunk. Sweeping
+    // dirty chunks here as well means it gets a mesh as soon as possible.
     for (const chunk of this.world.dirtyChunks()) this.remeshQueue.add(chunk);
     // A generous margin past what is drawn, so walking back and forth over a
     // boundary does not throw away chunks it is about to want again.
@@ -2675,41 +2744,71 @@ export class Game {
     }
   }
 
+  /** Makes queued chunks, nearest first, for a few milliseconds a frame. */
+  generateQueued(budgetMs = 4) {
+    if (!this.genQueue?.length || !this.world?.endless) return;
+    const start = performance.now();
+    let i = 0, made = 0;
+    while (i < this.genQueue.length) {
+      // Only start one that should finish inside the budget — always at
+      // least one a frame, so the queue can't stall.
+      if (made && performance.now() - start + (this.genCostMs ?? 3) > budgetMs) break;
+      const { cx, cz } = this.genQueue[i++];
+      if (this.world.hasChunk(cx, cz)) continue;
+      const t = performance.now();
+      this.remeshQueue.add(this.world.getChunk(cx, cz));
+      this.genCostMs = ease(this.genCostMs, performance.now() - t);
+      made++;
+    }
+    this.genQueue.splice(0, i);
+  }
+
   /**
    * Keeps the horizon a long way off.
    *
-   * Real chunks stop at the render distance; past that this is a coarse mesh
-   * of the same ground, sampled from the generator. Rebuilt only when you have
-   * walked a good way, because it is thousands of samples and the difference a
-   * few steps make at that distance is nothing.
+   * Real chunks stop at the render distance; past that stands FarTerrain, a
+   * coarse terraced copy of the same ground sampled from the generator. It's
+   * world-fixed tiles made a few at a time as you travel, and it only draws
+   * where no real chunk is drawn (see updateChunkVisibility, which hands it
+   * the mask) — so the two never overlap and nothing jumps as you move.
    */
   updateFarTerrain() {
     if (!this.farTerrain) return;
     if (!this.world?.endless) { this.farTerrain.setVisible(false); return; }
     this.farTerrain.setVisible(true);
     const { x, z } = this.player.position;
-    // Start it a little inside where the chunks end, so there is never a
-    // sliver of sky between the two.
-    // Start it where the *meshed* blocks reliably reach rather than where the
-    // generated ones do. Chunks arrive faster than they can be meshed when you
-    // are moving, and a hole in the near ground with sky behind it is exactly
-    // what this exists to prevent.
-    const covered = this.remeshQueue.size > 20
-      ? Math.max(64, this.renderDistance * 0.45)
-      : Math.max(64, this.renderDistance - 40);
-    this.farTerrain.update(this.world.gen, x, z, covered);
+    this.farTerrain.update(this.world.gen, x, z);
   }
 
+  /**
+   * Spends a slice of the frame on pending rebuilds, then stops.
+   *
+   * In an endless world a chunk waits until its four neighbours exist:
+   * meshing reads across its edges, and a missing neighbour would be
+   * generated on the spot, inside the mesh budget, as a stall nobody
+   * scheduled. generateQueued always makes one ring past what is drawn, so
+   * the wait is a frame or two.
+   */
   drainRemeshQueue(budgetMs = 6) {
     if (!this.remeshQueue.size) return;
     // A long queue means you are walking into new country, and the ground
     // ahead matters more than a couple of frames of headroom.
-    if (this.remeshQueue.size > 60) budgetMs = 11;
-    const deadline = performance.now() + budgetMs;
+    if (this.remeshQueue.size > 60) budgetMs = 9;
+    const start = performance.now();
+    const w = this.world;
+    let built = 0;
     for (const chunk of this.remeshQueue) {
+      // Stop before one that would run past the budget, not after it has:
+      // a rebuild is several milliseconds, and starting one at 5.9 of 6 is a
+      // dropped frame. Always at least one a frame, so the queue can't stall.
+      if (built && performance.now() - start + (this.meshCostMs ?? 6) > budgetMs) break;
+      if (w.endless && !(w.hasChunk(chunk.cx - 1, chunk.cz) && w.hasChunk(chunk.cx + 1, chunk.cz)
+        && w.hasChunk(chunk.cx, chunk.cz - 1) && w.hasChunk(chunk.cx, chunk.cz + 1))) continue;
       this.remeshQueue.delete(chunk);
-      this.mesher.rebuild(this.world, chunk);
-      if (performance.now() >= deadline) break;
+      const t = performance.now();
+      this.mesher.rebuild(w, chunk);
+      this.meshCostMs = ease(this.meshCostMs, performance.now() - t);
+      built++;
     }
   }
 
@@ -2805,6 +2904,7 @@ export class Game {
     const dt = Math.min(this.clock.getDelta(), 0.1);
     this.syncPhase();
     const playing = this.isPlaying;
+    this.syncMobs();
 
     if (playing) {
       this.quality.tick(dt);
@@ -2816,6 +2916,7 @@ export class Game {
       this.updateHover();
       this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false });
       this.settlerView.update(this.duilt?.settlers.people ?? []);
+      this.mobs.tick(dt, this.player.position);
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
       this.gamification.tick(performance.now());
@@ -2827,12 +2928,28 @@ export class Game {
     // These run regardless: the world should finish drawing itself behind the
     // worlds screen rather than streaming in after you arrive.
     this.streamChunks();
+    this.generateQueued();
     this.drainRemeshQueue();
     this.updateChunkVisibility();
     this.updateFarTerrain();
     this.updateClouds(dt);
     this.updateMinimap();
+    this.mobView.update(this.mobs?.list ?? []);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /**
+   * The wild animals belong to whichever world is loaded, and start over with
+   * each new one — they aren't saved (see world/Mobs.js). None spawn inside
+   * your own land in Duilt, so a herd never appears in the middle of the
+   * settlement; they're free to wander in on their own.
+   */
+  syncMobs() {
+    if (!this.world || this.mobs?.world === this.world) return;
+    this.mobs = new Mobs({
+      world: this.world,
+      avoid: (x, z) => !!(this.duilt && !this.duilt.sandbox && this.duilt.territory.contains(x, z)),
+    });
   }
 
   updateClouds(dt) {
@@ -2877,6 +2994,15 @@ export class Game {
       const work = this.duilt.structures.list().find((s) => s.id === person.workId);
       const job = work ? STRUCTURES_BY_ID.get(work.type)?.name?.toLowerCase() : null;
       this.ui?.setPersonHint(person.name, job ? `works the ${job}` : 'looking for work');
+      return;
+    }
+    // Same for an animal — named before you swing, and no block outline
+    // behind it saying the swing will land on the ground.
+    const mob = this.armed ? null : this.mobTarget(hit);
+    if (mob) {
+      const spec = MOBS_BY_ID.get(mob.type);
+      this.hoverBox.visible = false;
+      this.ui?.setPersonHint(spec.name, mob.hp < spec.hp ? 'hurt — keep at it' : 'hit to hunt');
       return;
     }
 
@@ -2962,6 +3088,16 @@ export class Game {
     // hitting the one below it.
     this.ui?.placeCrosshair(this.renderer.domElement);
   }
+}
+
+/** A running average of how long something takes, leaning on the recent. */
+function ease(avg, sample) {
+  return avg == null ? sample : avg * 0.8 + sample * 0.2;
+}
+
+/** A chunk's coordinates as one number, for a Set. */
+function chunkId(cx, cz) {
+  return (cx + 32768) * 65536 + (cz + 32768);
 }
 
 function distSq(chunk, px, pz) {

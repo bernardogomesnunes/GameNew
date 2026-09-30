@@ -68,6 +68,15 @@ export const ITEMS = [
   // --- food. Fruit spoils, preserves do not -------------------------------
   { id: 'fruit', name: 'Fruit', kind: 'food', stackTo: STACK_FOOD, color: 0xdc928f, glyph: 'fruit', feeds: 12, madeBy: 'Picked from a forest' },
   { id: 'vegetables', name: 'Vegetables', kind: 'food', stackTo: STACK_FOOD, color: 0xddb289, glyph: 'vegetable', feeds: 22, madeBy: 'Harvested from a farm' },
+  // Hunted. Raw is barely worth eating on purpose: the fire is what makes
+  // meat worth the chase — see the cook_meat recipe.
+  { id: 'raw_meat', name: 'Raw Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xd98b85, glyph: 'meat', feeds: 5, madeBy: 'Hunted' },
+  { id: 'cooked_meat', name: 'Cooked Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xb7825c, glyph: 'meat', feeds: 32, madeBy: 'Roasted over a fire' },
+
+  // --- what animals leave behind -------------------------------------------
+  { id: 'hide', name: 'Hide', kind: 'raw', stackTo: STACK_GOODS, color: 0xb99372, glyph: 'hide', madeBy: 'Hunted from deer, boar, goats and cows' },
+  { id: 'wool', name: 'Wool', kind: 'raw', stackTo: STACK_GOODS, color: 0xefebe2, glyph: 'wool', madeBy: 'Hunted from sheep' },
+  { id: 'feather', name: 'Feather', kind: 'raw', stackTo: STACK_GOODS, color: 0xe9e4da, glyph: 'feather', madeBy: 'Hunted from chickens' },
 
   // --- tools. One per slot, and they wear ---------------------------------
   //
@@ -82,16 +91,19 @@ export const ITEMS = [
   {
     id: 'axe', name: 'Axe', kind: 'tool', stackTo: STACK_TOOL, color: 0xcbaa8a, glyph: 'axe',
     durability: 120, madeBy: 'Crafted from wood', unlocks: 'Cutting trees quickly',
+    damage: 3, // how hard it hits an animal; bare hands are 1 — see Game.hitMob
     effectiveness: { wood: 'fast', plant: 'fast', dirt: 'slow', stone: 'impossible' },
   },
   {
     id: 'pickaxe', name: 'Pickaxe', kind: 'tool', stackTo: STACK_TOOL, color: 0xafafb7, glyph: 'pickaxe',
     durability: 120, madeBy: 'Crafted from wood and stone', unlocks: 'Mining stone quickly',
+    damage: 2,
     effectiveness: { stone: 'fast', wood: 'slow', plant: 'slow', dirt: 'slow' },
   },
   {
     id: 'shovel', name: 'Shovel', kind: 'tool', stackTo: STACK_TOOL, color: 0xb5b5bd, glyph: 'shovel',
     durability: 120, madeBy: 'Crafted from wood', unlocks: 'Digging dirt and sand quickly',
+    damage: 2,
     effectiveness: { dirt: 'fast', wood: 'slow', plant: 'slow', stone: 'slow' },
   },
   {

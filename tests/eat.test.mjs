@@ -58,11 +58,13 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 
 ok('fruit and vegetables take over Break, like the bucket does',
-  /BREAK_OVERRIDE = \{ bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected' \}/.test(game));
+  /BREAK_OVERRIDE = \{ bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected'[, }]/.test(game));
+ok('and so does meat, raw or cooked',
+  /BREAK_OVERRIDE = \{[^}]*raw_meat: 'eatSelected', cooked_meat: 'eatSelected' \}/.test(game));
 ok('eatSelected calls DuiltGame\'s own eat() with whatever is selected',
   /eatSelected\(\)[\s\S]{0,200}this\.duilt\.eat\(this\.selectedItemId\)/.test(game));
 ok('and food takes over Place too, throwing it away instead of building',
-  /PLACE_OVERRIDE = \{[\s\S]{0,100}fruit: 'throwSelected', vegetables: 'throwSelected' \}/.test(game));
+  /PLACE_OVERRIDE = \{[\s\S]{0,100}fruit: 'throwSelected', vegetables: 'throwSelected'[, }]/.test(game));
 ok('throwSelected removes one unit of whatever is selected',
   /throwSelected\(\)[\s\S]{0,200}this\.duilt\.inventory\.remove\(id, 1\)/.test(game));
 ok('and food is a selectable hotbar slot, with its own hint',
