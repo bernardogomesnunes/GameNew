@@ -197,6 +197,16 @@ ok('and an orientation change is re-measured once it has settled',
   ok(`cobblestone is stones with earth between them (${Math.round(earth / px * 100)}% earth)`, earth / px > 0.12 && earth / px < 0.6);
   ok('lit along the tops of the stones', lit > 10);
   ok('and not all one grey: the earth and the odd stone are warm', warm > 20);
+
+  // Requested directly: "can you give it some depth or 3d texture like the
+  // tiles?" Each texel has a height, and the shader tilts the light by it.
+  const h = t.height;
+  ok('cobblestone has depth: stones stand up out of the earth', !!h && Math.max(...h) > 0.5 && [...h].filter((v) => v === 0).length > 20);
+  ok('brick has depth too, its mortar sunk', !!tileFor(9).height);
+  ok('and a flat block has none', !tileFor(2).height);
+  ok('the depth is lit per texel in the block shader',
+    /#include <normal_fragment_maps>[\s\S]{0,2000}blockBumps[\s\S]{0,1200}normal = normalize\(N - \(T \* hx \+ B \* hy\)/.test(mesher));
+  ok('and a layer with no depth costs one lookup, not five', /if \(here\.a > 0\.5\)/.test(mesher));
 }
 
 process.exit(f ? 1 : 0);
