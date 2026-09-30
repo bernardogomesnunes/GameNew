@@ -33,12 +33,22 @@ export const ITEMS = [
   { id: 'leaves', name: 'Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x82c675, glyph: 'leaf', block: 5, madeBy: 'Stripped from trees' },
   { id: 'stone', name: 'Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stone', block: 3, madeBy: 'Mined from rock' },
   { id: 'sand', name: 'Sand', kind: 'raw', stackTo: STACK_BULK, color: 0xded09f, glyph: 'sand', block: 6, madeBy: 'Dug from the riverbank' },
-  { id: 'grass', name: 'Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x97cc81, glyph: 'grass', block: 1, madeBy: 'Cut from meadow' },
+  { id: 'grass', name: 'Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x97cc81, glyph: 'grass', block: 1, madeBy: 'Cut from the plains' },
   // What the other kinds of country are made of. Without these, digging up a
   // forest floor or a river bank would hand you nothing at all.
   { id: 'moss', name: 'Moss', kind: 'raw', stackTo: STACK_BULK, color: 0x81c271, glyph: 'moss', block: 22, madeBy: 'Lifted from a forest floor' },
-  { id: 'gravel', name: 'Gravel', kind: 'raw', stackTo: STACK_BULK, color: 0xbbb6ae, glyph: 'gravel', block: 23, madeBy: 'Scraped off the highlands' },
+  { id: 'gravel', name: 'Gravel', kind: 'raw', stackTo: STACK_BULK, color: 0xbbb6ae, glyph: 'gravel', block: 23, madeBy: 'Scraped off the mountainside' },
   { id: 'clay', name: 'Clay', kind: 'raw', stackTo: STACK_BULK, color: 0xa3beca, glyph: 'clay', block: 24, madeBy: 'Dug from wet ground' },
+  // The two extra forests' own wood, and the tall mountain's own hazards —
+  // added alongside the terrain overhaul. Same shape as Wood/Leaves above:
+  // gathered, not crafted, which is why they carry no recipe (see
+  // shapes.test.mjs's NATURAL set).
+  { id: 'white_wood', name: 'White Wood', kind: 'raw', stackTo: STACK_BULK, color: 0xe8e0d0, glyph: 'log', block: 41, madeBy: 'Cut from birch trees' },
+  { id: 'white_leaves', name: 'White Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0xd7e3ab, glyph: 'leaf', block: 42, madeBy: 'Stripped from birch trees' },
+  { id: 'dark_wood', name: 'Dark Wood', kind: 'raw', stackTo: STACK_BULK, color: 0x6b4a3a, glyph: 'log', block: 43, madeBy: 'Cut from the dark forest' },
+  { id: 'dark_leaves', name: 'Dark Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x4a7a52, glyph: 'leaf', block: 44, madeBy: 'Stripped from the dark forest' },
+  { id: 'lava', name: 'Lava', kind: 'raw', stackTo: STACK_GOODS, color: 0xe8672c, glyph: 'water', block: 45, madeBy: 'Scooped from a cavern' },
+  { id: 'dark_moss', name: 'Dark Moss', kind: 'raw', stackTo: STACK_BULK, color: 0x4a6045, glyph: 'moss', block: 46, madeBy: 'Lifted from the dark forest floor' },
 
   // --- worked materials ----------------------------------------------------
   { id: 'planks', name: 'Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'planks', block: 7, madeBy: 'Sawn from wood' },

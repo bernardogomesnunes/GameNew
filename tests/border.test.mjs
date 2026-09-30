@@ -24,7 +24,7 @@ const cam = new THREE.PerspectiveCamera();
 
 let escapes = 0, stuckInside = 0;
 for (let seed = 1; seed <= 12; seed++) {
-  const { world, origin } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed });
+  const { world, origin } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, seed });
   const g = new DuiltGame({ world, scene, bus: null });
   const b = g.territory.bounds();
   const p = new PlayerController(world, cam, origin.spawn);
@@ -53,7 +53,7 @@ ok(`movement inside the border is unaffected (${stuckInside} stuck)`, stuckInsid
 // --- the sandbox keeps the whole world --------------------------------------
 
 {
-  const { world, origin } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed: 3 });
+  const { world, origin } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, seed: 3 });
   const p = new PlayerController(world, cam, origin.spawn);
   p.setBounds(null);
   p.flying = true;
@@ -66,7 +66,7 @@ ok(`movement inside the border is unaffected (${stuckInside} stuck)`, stuckInsid
 // --- editing beyond it is still refused -------------------------------------
 
 {
-  const { world, origin } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed: 5 });
+  const { world, origin } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, seed: 5 });
   const g = new DuiltGame({ world, scene, bus: null });
   const b = g.territory.bounds();
   ok('inside your land is editable', g.canEditAt(b.minX + 3, b.minZ + 3).ok);
@@ -77,7 +77,7 @@ ok(`movement inside the border is unaffected (${stuckInside} stuck)`, stuckInsid
 // --- the wall moves with the land -------------------------------------------
 
 {
-  const { world } = generateDuiltWorld({ sizeX: 256, sizeZ: 256, height: 64, seed: 9 });
+  const { world } = generateDuiltWorld({ sizeX: 256, sizeZ: 256, seed: 9 });
   const g = new DuiltGame({ world, scene, bus: null });
   const before = g.territory.bounds();
   g.territory.advance();
@@ -89,7 +89,7 @@ ok(`movement inside the border is unaffected (${stuckInside} stuck)`, stuckInsid
 // --- the stroke sits on the blocks that touch the border ---------------------
 
 {
-  const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed: 3 });
+  const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, seed: 3 });
   const g = new DuiltGame({ world, scene, bus: null });
   const t = g.territory;
   const b = t.bounds();
@@ -166,7 +166,7 @@ ok(`movement inside the border is unaffected (${stuckInside} stuck)`, stuckInsid
 // nothing left to sort against itself.
 
 {
-  const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed: 3 });
+  const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, seed: 3 });
   const g = new DuiltGame({ world, scene, bus: null });
   const wallMeshes = g.territory.fence.children.filter((c) => c.isMesh);
   ok('the border wall is one mesh, not one per side', wallMeshes.length === 1);

@@ -16,7 +16,7 @@ for (let seed=1; seed<=25; seed++) {
       let hit=false;
       for (let dx=-r; dx<=r && !hit; dx++) for (let dz=-r; dz<=r; dz++) {
         if (Math.max(Math.abs(dx),Math.abs(dz))!==r) continue;
-        for (let y=0; y<48; y++) if (world.getBlock(x+dx,y,z+dz)===11) { hit=true; break; }
+        for (let y=0; y<world.height; y++) if (world.getBlock(x+dx,y,z+dz)===11) { hit=true; break; }
         if (hit) break;
       }
       if (hit) { nearest=Math.min(nearest,r); break; }
@@ -29,7 +29,7 @@ for (let seed=1; seed<=25; seed++) {
   for (const [qx,qz] of [[0,0],[1,0],[0,1],[1,1]]) {
     let found=false;
     for (let x=qx*64; x<qx*64+64 && !found; x+=2) for (let z=qz*64; z<qz*64+64; z+=2) {
-      for (let y=0;y<48;y++) if (world.getBlock(x,y,z)===11) { found=true; break; }
+      for (let y=0;y<world.height;y++) if (world.getBlock(x,y,z)===11) { found=true; break; }
       if (found) break;
     }
     if (found) quadrants++;

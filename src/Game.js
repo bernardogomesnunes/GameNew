@@ -17,8 +17,9 @@ import { CloudWorlds } from './net/CloudWorlds.js';
 import { isCloudConfigured } from './net/cloudConfig.js';
 import { DuiltGame } from './duilt/DuiltGame.js';
 import { generateEndlessWorld } from './world/StarterWorld.js';
-import { ChunkGen } from './world/ChunkGen.js';
+import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
 import { FarTerrain } from './render/FarTerrain.js';
+import { SkyClouds } from './render/SkyClouds.js';
 import { LightManager } from './render/LightManager.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
@@ -205,6 +206,7 @@ export class Game {
 
     this.mesher = new ChunkMesher(this.scene);
     this.farTerrain = new FarTerrain(this.scene);
+    this.clouds = new SkyClouds(this.scene);
     this.lights = new LightManager(this.scene);
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
@@ -955,7 +957,7 @@ export class Game {
     // nothing stopping it from being just as endless. Both modes start in
     // exactly the same generated world now; only what you're allowed to do
     // in it differs.
-    const built = generateEndlessWorld({ height: 64 });
+    const built = generateEndlessWorld({ height: WORLD_HEIGHT });
     this.world = built.world;
     let spawn = built.origin.spawn;
     if (this.player) this.player.dispose();
@@ -2798,8 +2800,15 @@ export class Game {
     this.drainRemeshQueue();
     this.updateChunkVisibility();
     this.updateFarTerrain();
+    this.updateClouds(dt);
     this.updateMinimap();
     this.renderer.render(this.scene, this.camera);
+  }
+
+  updateClouds(dt) {
+    if (!this.clouds || !this.player) return;
+    const { x, z } = this.player.position;
+    this.clouds.update(dt, x, z);
   }
 
   updateMinimap() {

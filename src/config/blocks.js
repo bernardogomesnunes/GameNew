@@ -121,6 +121,32 @@ export const BLOCKS = [
   { id: 38, name: 'Iron Ore', glyph: 'gravel', color: 0xa9948d, material: 'stone', unlock: null },
   { id: 39, name: 'Copper Ore', glyph: 'gravel', color: 0xbb8a67, material: 'stone', unlock: null },
   { id: 40, name: 'Gold Ore', glyph: 'gold', color: 0xc8b686, material: 'stone', unlock: null },
+
+  // Two more trees, requested directly so the forest reads as more than one
+  // kind of wood: a pale trunk and canopy for a birch-like grove, and a
+  // deep, dark pairing for a denser one. Same `cost`/`unlock` shape as the
+  // original Wood/Leaves so they behave identically once cut and carried.
+  { id: 41, name: 'White Wood', glyph: 'log', color: 0xe8e0d0, material: 'wood', cost: { wood: 2 }, unlock: null },
+  { id: 42, name: 'White Leaves', glyph: 'leaf', color: 0xd7e3ab, material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 43, name: 'Dark Wood', glyph: 'log', color: 0x6b4a3a, material: 'wood', cost: { wood: 2 }, unlock: null },
+  { id: 44, name: 'Dark Leaves', glyph: 'leaf', color: 0x4a7a52, material: 'plant', cost: { wood: 1 }, unlock: null },
+
+  // Found in the deep caverns under the tall mountains, never placed from a
+  // recipe — the same natural-only shape the three ores above already use.
+  // Lights itself the way a Lantern does (see LightManager) rather than
+  // needing its own render special-case.
+  {
+    id: 45, name: 'Lava', glyph: 'water', color: 0xe8672c,
+    light: { color: 0xff8040, intensity: 20, distance: 10 },
+    material: 'stone', unlock: null,
+  },
+
+  // The Dark Forest's own floor — reusing Moss would leave two of the three
+  // new forests reading as the exact same ground, in world and on the map
+  // alike (caught by mapdraw.test.mjs's own "no two biomes share a colour"
+  // check). A deeper, shadier green than ordinary Moss, the way a canopy
+  // thick enough to earn "dark" in its name would actually shade its floor.
+  { id: 46, name: 'Dark Moss', glyph: 'moss', color: 0x4a6045, soil: true, material: 'dirt', unlock: null },
 ];
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));

@@ -26,7 +26,14 @@ import { pickBuild, wallFootprintAt } from '../src/tools/PointerPick.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
-const { world, origin } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, seed: 7 });
+// Seed 7 used to sit on gentle ground here; the terrain overhaul's much
+// taller Mountains 2 (amplitude 36, up from the old summit's 8) means a
+// range's noise being merely *eligible* near the world's fixed centre can
+// now put a 40-block cliff across this same handful of columns, which is a
+// real cliff a player genuinely could not wall across either — not a bug in
+// wallFootprintAt. Seed 2 keeps this test on the kind of ground it was
+// written to exercise.
+const { world, origin } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, seed: 2 });
 const d = new DuiltGame({ world, scene: new THREE.Scene(), bus: null });
 d.inventory.add('wood', 200);
 
