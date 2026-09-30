@@ -31,9 +31,6 @@ const STEP = 1;             // the highest ledge an animal walks up
 const DROP = 3;             // the furthest drop it will walk off
 
 const LEAVES = new Set([5, 42, 44]);
-// A gate is air to the player and a wall to an animal — unless it's
-// following food in your hand, which is how one gets into a pen at all.
-const GATE = 48;
 
 export class Mobs {
   /**
@@ -125,7 +122,7 @@ export class Mobs {
       id: this.nextId++, type: spec.id, x, y, z, vy: 0,
       facing: this.rand() * Math.PI * 2, hp: spec.hp,
       target: null, speed: 0, timer: this.rand() * 2,
-      grazing: false, following: false, fleeFor: 0, hurt: 0, dying: 0, dead: false, stride: 0,
+      grazing: false, fleeFor: 0, hurt: 0, dying: 0, dead: false, stride: 0,
     };
   }
 
@@ -146,54 +143,17 @@ export class Mobs {
 
   /** Whether a column's chunk already exists — never generate one by looking. */
   loaded(x, z) {
-    return this.world.hasChunk(Math.floor(x) >> 4, Math.floor(z) >> 4);
+    return isLoaded(this.world, x, z);
   }
 
-  /**
-   * The ground at the top of a column, or null for water, treetops, or a
-   * column not generated yet. Where a herd first lands.
-   */
+  /** Where a herd first lands at a column — see surfaceAt below. */
   surfaceAt(x, z) {
-    if (!this.loaded(x, z)) return null;
-    const w = this.world;
-    const start = Math.min(w.height - 1, (w.surfaceHeight(x, z) | 0) + 8);
-    for (let y = start; y >= 0; y--) {
-      const id = w.getBlock(x, y, z);
-      if (id === 0) continue;
-      if (id === WATER || LEAVES.has(id)) return null;
-      const box = w.collisionBoxAt(x, y, z);
-      if (!box) continue;
-      return box.maxY;
-    }
-    return null;
+    return surfaceAt(this.world, x, z);
   }
 
-  /**
-   * Where an animal would stand at (x, z) coming from height `fromY`: a
-   * step up of one at most, a drop of three at most, headroom for its body,
-   * and never into water. Null means it can't go there. A gate is a wall
-   * unless `throughGates` — an animal being led.
-   */
-  groundAt(x, z, fromY, spec, throughGates = false) {
-    if (!this.loaded(x, z)) return null;
-    const w = this.world;
-    const bx = Math.floor(x), bz = Math.floor(z);
-    const base = Math.floor(fromY);
-    const tall = Math.max(1, Math.ceil(spec.leg + spec.body.h));
-    for (let y = base + STEP; y >= base - DROP; y--) {
-      const box = w.collisionBoxAt(bx, y, bz);
-      if (!box) {
-        if (w.getBlock(bx, y, bz) === WATER) return null;
-        continue;
-      }
-      if (LEAVES.has(w.getBlock(bx, y, bz))) return null;
-      if (box.maxY > fromY + STEP + 0.01) return null;
-      for (let h = y + 1; h <= y + tall; h++) {
-        if (w.collisionBoxAt(bx, h, bz) || (!throughGates && w.getBlock(bx, h, bz) === GATE)) return null;
-      }
-      return box.maxY;
-    }
-    return null;
+  /** Where an animal of this species would stand — see groundAt below. */
+  groundAt(x, z, fromY, spec) {
+    return groundAt(this.world, x, z, fromY, Math.max(1, Math.ceil(spec.leg + spec.body.h)));
   }
 
   // ---- behaving -----------------------------------------------------------
@@ -227,9 +187,7 @@ export class Mobs {
 
     // Food in your hand: a farm animal comes to heel and follows you — this
     // is how you get one into a pen.
-    m.following = false;
     if (lure && spec.farm && d < LURE) {
-      m.following = true;
       m.grazing = false;
       if (d > HEEL) {
         m.target = { x: player.x + (dx / d) * (HEEL - 0.4), z: player.z + (dz / d) * (HEEL - 0.4) };
@@ -271,16 +229,16 @@ export class Mobs {
       } else {
         const step = Math.min(dist, m.speed * dt);
         let nx = m.x + (dx / dist) * step, nz = m.z + (dz / dist) * step;
-        let ground = this.groundAt(nx, nz, m.y, spec, m.following);
+        let ground = this.groundAt(nx, nz, m.y, spec);
         // Blocked head-on: slide along whatever's in the way, one axis at a
         // time, rather than stopping dead against it. It's what lets an
         // animal being led work its way along a fence to the gate.
         if (ground == null && Math.abs(dx) > 0.05) {
-          const g = this.groundAt(m.x + Math.sign(dx) * step, m.z, m.y, spec, m.following);
+          const g = this.groundAt(m.x + Math.sign(dx) * step, m.z, m.y, spec);
           if (g != null) { nx = m.x + Math.sign(dx) * step; nz = m.z; ground = g; }
         }
         if (ground == null && Math.abs(dz) > 0.05) {
-          const g = this.groundAt(m.x, m.z + Math.sign(dz) * step, m.y, spec, m.following);
+          const g = this.groundAt(m.x, m.z + Math.sign(dz) * step, m.y, spec);
           if (g != null) { nx = m.x; nz = m.z + Math.sign(dz) * step; ground = g; }
         }
         m.facing = Math.atan2(dx, dz);
@@ -303,7 +261,7 @@ export class Mobs {
 
   /** Settles onto whatever is under it — a block dug away drops it down. */
   fall(m, dt, spec) {
-    const ground = this.groundAt(m.x, m.z, m.y, spec, true);
+    const ground = this.groundAt(m.x, m.z, m.y, spec);
     if (ground == null) { m.vy = 0; return; }
     if (m.vy <= 0 && m.y <= ground) { m.y = ground; m.vy = 0; return; }
     m.vy -= GRAVITY * dt;
@@ -367,6 +325,56 @@ export class Mobs {
     }
     return out;
   }
+}
+
+/** Whether a column's chunk already exists — never generate one by looking. */
+export function isLoaded(world, x, z) {
+  return world.hasChunk(Math.floor(x) >> 4, Math.floor(z) >> 4);
+}
+
+/**
+ * The ground at the top of a column, or null for water, treetops, or a
+ * column not generated yet. Where something walking first lands.
+ */
+export function surfaceAt(world, x, z) {
+  if (!isLoaded(world, x, z)) return null;
+  const start = Math.min(world.height - 1, (world.surfaceHeight(x, z) | 0) + 8);
+  for (let y = start; y >= 0; y--) {
+    const id = world.getBlock(x, y, z);
+    if (id === 0) continue;
+    if (id === WATER || LEAVES.has(id)) return null;
+    const box = world.collisionBoxAt(x, y, z);
+    if (!box) continue;
+    return box.maxY;
+  }
+  return null;
+}
+
+/**
+ * Where something `tall` blocks high would stand at (x, z) coming from
+ * height `fromY`: a step up of one at most, a drop of three at most,
+ * headroom for its body, and never into water. Null means it can't go
+ * there. A fence or a shut gate is too tall to step (World.collisionBoxAt);
+ * an open gate has nothing in the way at all.
+ */
+export function groundAt(world, x, z, fromY, tall) {
+  if (!isLoaded(world, x, z)) return null;
+  const bx = Math.floor(x), bz = Math.floor(z);
+  const base = Math.floor(fromY);
+  for (let y = base + STEP; y >= base - DROP; y--) {
+    const box = world.collisionBoxAt(bx, y, bz);
+    if (!box) {
+      if (world.getBlock(bx, y, bz) === WATER) return null;
+      continue;
+    }
+    if (LEAVES.has(world.getBlock(bx, y, bz))) return null;
+    if (box.maxY > fromY + STEP + 0.01) return null;
+    for (let h = y + 1; h <= y + tall; h++) {
+      if (world.collisionBoxAt(bx, h, bz)) return null;
+    }
+    return box.maxY;
+  }
+  return null;
 }
 
 /** Distance along a ray to where it enters a box, or null if it misses. */

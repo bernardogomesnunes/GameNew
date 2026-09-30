@@ -69,7 +69,7 @@ ok('shading stays inside a byte', shade(0xffffff, 2) === 'rgb(255,255,255)' && s
   ok('and so does food', ITEMS.filter((i) => i.kind === 'food').every((i) => itemIcon(i) === null));
 }
 
-ok('the hotbar draws cubes', /cubeSvg\(b\.id/.test(ui));
+ok('the hotbar draws each block as it is — a cube, or its real shape', /blockIcon\(b\.id/.test(ui));
 // The Duilt hotbar is real equipped slots now (see items/Inventory.js's
 // PLAYABLE_SLOTS), drawn with the same itemIcon(spec, ...) call the bag
 // panel already used — one drawing rule for "what does this item look

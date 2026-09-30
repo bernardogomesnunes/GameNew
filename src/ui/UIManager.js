@@ -7,7 +7,7 @@ import { Panels } from './Panels.js';
 import { ITEMS_BY_ID, itemName, isFood } from '../config/items.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
-import { cubeSvg, itemIcon } from '../config/cubes.js';
+import { blockIcon, itemIcon } from '../config/cubes.js';
 import { goalBands } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
@@ -492,7 +492,7 @@ export class UIManager {
         <div class="hotbar-slot ${available ? '' : 'locked'} ${b.id === this.selectedBlockId ? 'selected' : ''}"
              data-id="${b.id}" data-name="${b.name}" data-note="${note}" title="${note ? `${b.name} — ${note}` : b.name}">
           ${i < 9 ? `<span class="key">${i + 1}</span>` : ''}
-          <div class="swatch swatch-cube">${cubeSvg(b.id, { size: 30 })}</div>
+          <div class="swatch swatch-cube">${blockIcon(b.id, { size: 30 })}</div>
           ${available ? '' : `<div class="lock">${icon('lock', 15)}</div>`}
         </div>
       `);

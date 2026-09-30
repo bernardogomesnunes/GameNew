@@ -2,6 +2,7 @@ import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { BIOMES, BIOME_INDEX, surfaceFor } from '../config/biomes.js';
 import { BiomeMap } from './biomeMap.js';
 import { CHUNK_SIZE } from './World.js';
+import { stampLandmarks } from './landmarks.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
@@ -359,6 +360,8 @@ export class ChunkGen {
         if (tree) this.plant(chunk, x, z, tree);
       }
     }
+    // The hermit's hut and the bandits' camps, where they fall in this chunk.
+    stampLandmarks(this, chunk, CHUNK_SIZE);
 
     chunk.dirty = true;
   }

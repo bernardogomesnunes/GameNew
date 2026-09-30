@@ -153,11 +153,16 @@ export const BLOCKS = [
   // Ranching. A fence stands a block and a half tall to anything walking
   // into it (see World.collisionBoxAt) — too high for you to jump or an
   // animal to step — and joins up with the fences and walls beside it. A
-  // gate is the way through: you walk it like air, an animal treats it as a
-  // wall (see Mobs.groundAt). That's what makes a pen hold its animals
-  // without shutting you in with them.
+  // gate is a piece of fence you can open: pointed at, Place swings it open
+  // (block 49, which anyone walks through) or shut again (see
+  // Game.toggleGate). Shut is how a pen keeps its animals in.
+  //
+  // `stateOf` marks a block that is another block in a different state: it
+  // has no item or recipe of its own, and breaking it gives back the item of
+  // the block it's a state of.
   { id: 47, name: 'Fence', glyph: 'fence', color: 0xc9a67c, shape: 'fence', material: 'wood', cost: { wood: 1 }, unlock: null },
   { id: 48, name: 'Gate', glyph: 'gate', color: 0xa9825a, shape: 'gate', material: 'wood', cost: { wood: 2 }, unlock: null },
+  { id: 49, name: 'Open Gate', glyph: 'gate', color: 0xa9825a, shape: 'gate_open', material: 'wood', stateOf: 48, unlock: null },
 ];
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
@@ -173,7 +178,9 @@ export const GROUND = 19;
 export const WATER = 11;
 
 /** Blocks a player can hold and place — everything except world furniture. */
-export const PLACEABLE_BLOCKS = BLOCKS.filter((b) => !b.system);
+// A state of another block (an open gate) isn't placed on its own: you place
+// the gate, then open it.
+export const PLACEABLE_BLOCKS = BLOCKS.filter((b) => !b.system && b.stateOf == null);
 
 export function isTransparent(id) {
   const b = BLOCKS_BY_ID.get(id);

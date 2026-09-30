@@ -31,7 +31,7 @@ for (let id = 0; id < 256; id++) OPEN[id] = !IS_CUBE[id] || IS_TRANSPARENT[id] |
 const JOINS_FENCE = new Uint8Array(256);
 for (let id = 1; id < 256; id++) {
   const shape = shapeOf(id);
-  JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
+  JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || shape === 'gate_open' || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
 }
 // A mask bit marking a face that looks into a sealed cave.
 const DEEP = 0x100;
@@ -549,7 +549,7 @@ export class ChunkMesher {
           const id = vol[idx];
           if (id <= 0 || IS_CUBE[id]) continue;
           const shape = shapeOf(id);
-          const boxes = shape === 'fence' || shape === 'gate'
+          const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
             ? fenceBoxes(shape, {
               px: JOINS_FENCE[vol[idx + 1]], nx: JOINS_FENCE[vol[idx - 1]],
               pz: JOINS_FENCE[vol[idx + PAD]], nz: JOINS_FENCE[vol[idx - PAD]],

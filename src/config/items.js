@@ -1,3 +1,5 @@
+import { BLOCKS } from './blocks.js';
+
 /**
  * Item registry for Duilt.
  *
@@ -194,6 +196,11 @@ export const ITEMS_BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
 export const ITEM_FOR_BLOCK = new Map(
   ITEMS.filter((i) => i.block != null).map((i) => [i.block, i.id]),
 );
+// A block that's another block in a different state (an open gate) gives
+// back that block's item. See blocks.js's `stateOf`.
+for (const b of BLOCKS) {
+  if (b.stateOf != null && ITEM_FOR_BLOCK.has(b.stateOf)) ITEM_FOR_BLOCK.set(b.id, ITEM_FOR_BLOCK.get(b.stateOf));
+}
 
 export function itemName(id) {
   return ITEMS_BY_ID.get(id)?.name ?? id;

@@ -48,7 +48,9 @@ const LANTERN = 26, SLAB_STONE = 27, STAIRS_STONE = 29, CHAIR_OAK = 33, RUG_GREE
   // Wood and Leaves themselves carry no recipe either, just below this
   // loop's own id >= 26 cutoff so they were never in it to begin with.
   const NATURAL = new Set([38, 39, 40, 41, 42, 43, 44, 45, 46]);
-  const newBlockIds = BLOCKS.filter((b) => b.id >= 26).map((b) => b.id);
+  // A block that's only another one in a different state (an open gate) has
+  // no item of its own — see blocks.js's `stateOf`.
+  const newBlockIds = BLOCKS.filter((b) => b.id >= 26 && b.stateOf == null).map((b) => b.id);
   for (const id of newBlockIds) {
     const item = [...ITEMS_BY_ID.values()].find((i) => i.block === id);
     ok(`block ${BLOCKS_BY_ID.get(id).name} has an item that places it`, !!item);

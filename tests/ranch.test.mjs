@@ -7,6 +7,9 @@ import { tameInto, penProduce, penAnimals, herdToJSON } from '../src/duilt/Ranch
 import { fenceBoxes } from '../src/world/propShapes.js';
 import { STRUCTURES_BY_ID } from '../src/config/structures.js';
 import { StructureRegistry } from '../src/structures/StructureRegistry.js';
+import { ITEM_FOR_BLOCK, ITEMS_BY_ID } from '../src/config/items.js';
+import { PLACEABLE_BLOCKS } from '../src/config/blocks.js';
+import { itemIcon, cubeSvg } from '../src/config/cubes.js';
 
 /**
  * Phase 5b: ranching. Farm animals follow food in your hand, a fence holds
@@ -20,7 +23,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
 globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
 
-const STONE = 3, FENCE = 47, GATE = 48;
+const STONE = 3, FENCE = 47, GATE = 48, GATE_OPEN = 49;
 const rng = (seed) => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
 
 function field() {
@@ -29,12 +32,17 @@ function field() {
   return world;
 }
 
-// --- a fence stops you; a gate doesn't ------------------------------------------
+// --- a fence stops you, and so does a shut gate; an open one doesn't ------------------
+//
+// Reported directly: the gate looked shut but let animals through, with no
+// way to lock the sheep in. Now Place swings it: shut it's fence to
+// everyone, open anyone walks through.
 
 {
   const world = field();
   for (let x = 10; x < 30; x++) world.setBlock(x, 1, 20, FENCE);
   world.setBlock(20, 1, 20, GATE);
+  world.setBlock(24, 1, 20, GATE_OPEN);
   const walk = (x) => {
     const p = new PlayerController(world, new THREE.Object3D(), { x, y: 1, z: 24.5 });
     p.update(1 / 60);
@@ -45,8 +53,10 @@ function field() {
   const atFence = walk(14.5);
   ok(`a fence stops you, even jumping at it (z ${atFence.position.z.toFixed(2)})`, atFence.position.z > 21);
   ok('and you never end up standing on top of it', atFence.position.y < 2);
-  const atGate = walk(20.5);
-  ok(`a gate lets you straight through (z ${atGate.position.z.toFixed(2)})`, atGate.position.z < 19);
+  const atShut = walk(20.5);
+  ok(`a shut gate stops you like fence (z ${atShut.position.z.toFixed(2)})`, atShut.position.z > 21);
+  const atOpen = walk(24.5);
+  ok(`an open gate lets you straight through (z ${atOpen.position.z.toFixed(2)})`, atOpen.position.z < 19);
 }
 
 // --- ...and holds an animal either way ---------------------------------------------
@@ -54,13 +64,15 @@ function field() {
 {
   const world = field();
   for (let x = 0; x < 48; x++) world.setBlock(x, 1, 20, x === 24 ? GATE : FENCE);
+  const gate = () => world.getBlock(24, 1, 20);
   const mobs = new Mobs({ world, rand: rng(1), cap: 0 });
   for (let i = 0; i < 8; i++) mobs.list.push(mobs.make(MOBS_BY_ID.get(i % 2 ? 'sheep' : 'cow'), 20 + i + 0.5, 1, 22.5));
-  // Left to wander for a good while, with you stood on the far side.
+  // Left to wander for a good while, and led with food at the shut gate.
   for (let i = 0; i < 4000; i++) mobs.tick(0.05, { x: 24.5, y: 1, z: 12.5 });
-  ok('no animal wanders past a fence or a gate', mobs.list.every((m) => m.z > 21));
-  // Now with food: the ones near enough follow you through the gate, and
-  // only through the gate.
+  for (let i = 0; i < 1200; i++) mobs.tick(0.05, { x: 24.5, y: 1, z: 16.5 }, { lure: true });
+  ok('with the gate shut, nothing gets past the fence — not even following food', gate() === GATE && mobs.list.every((m) => m.z > 21));
+  // Open it, and the ones near enough follow you through — and only through the gate.
+  world.setBlock(24, 1, 20, GATE_OPEN);
   for (let i = 0; i < 1200; i++) mobs.tick(0.05, { x: 24.5, y: 1, z: 16.5 }, { lure: true });
   const through = mobs.list.filter((m) => m.z < 20);
   ok(`led with food, an animal comes through the gate (${through.length} did)`, through.length >= 1);
@@ -146,6 +158,23 @@ function field() {
   ok('between two others it runs rails both ways', run.length === 5 && run.filter((b) => b.maxX === 1).length === 2 && run.filter((b) => b.minX === 0).length === 2);
   const gateZ = fenceBoxes('gate', { pz: 1, nz: 1 });
   ok('a gate turns to run the way its fence does', gateZ.every((b) => b.minX >= 0.4));
+}
+
+// --- an open gate is still a gate ---------------------------------------------------------
+
+ok('breaking an open gate gives you a gate back', ITEM_FOR_BLOCK.get(GATE_OPEN) === 'gate');
+ok('and an open gate is never something you place on its own', !PLACEABLE_BLOCKS.some((b) => b.id === GATE_OPEN));
+
+// --- reported directly: furniture and fences need a real preview in the bag -------------------
+
+{
+  const shaped = ['slab_stone', 'stairs_plank', 'fence', 'gate'];
+  const icons = shaped.map((id) => itemIcon(ITEMS_BY_ID.get(id)));
+  ok('shaped items draw their real shape, not a cube', icons.every((svg, i) => svg && svg !== cubeSvg(ITEMS_BY_ID.get(shaped[i]).block)));
+  const faces = (svg) => (svg.match(/<path/g) ?? []).length;
+  ok('each drawn from its own boxes: a slab is one box, stairs two, a fence a post and four rails',
+    faces(icons[0]) === 3 && faces(icons[1]) === 6 && faces(icons[2]) === 15);
+  ok('a plain block is still a cube', itemIcon(ITEMS_BY_ID.get('stone')) === cubeSvg(3));
 }
 
 process.exit(f ? 1 : 0);
