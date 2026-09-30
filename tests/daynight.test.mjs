@@ -41,4 +41,26 @@ ok('and the stars are out, and the moon up', cycle.stars.visible && cycle.moonDi
 cycle.time = 0.5; cycle.apply();
 ok('by day the sky is blue again and the sun is up', scene.background.b > 0.9 && cycle.sunDisc.visible && !cycle.stars.visible && sun.intensity > 0.8);
 
+{
+  // Stars come out as the sky darkens, not only once it's black.
+  const { STAR_DRIFT } = await import('../src/render/DayCycle.js');
+  let firstStars = null;
+  for (let t = 0.7; t < 0.85; t += 0.002) {
+    if (daylightAt(t).stars > 0.05) { firstStars = t; break; }
+  }
+  const at = daylightAt(firstStars);
+  ok(`the first stars show while the sky is still going dark (sky ${Math.round(at.day * 100)}% day, sun ${at.sunHeight.toFixed(2)})`,
+    firstStars != null && at.day > 0.3 && at.sunHeight > 0);
+  ok('and they are all out by the time it is night', daylightAt(0.82).stars > 0.95);
+
+  // They drift far slower than the moon.
+  const c = new DayCycle(new THREE.Scene(), { ambient: new THREE.AmbientLight(), sun: new THREE.DirectionalLight(), hemi: new THREE.HemisphereLight() });
+  c.time = 0.9; c.apply();
+  const s0 = c.stars.rotation.z, m0 = c.moonDisc.position.clone();
+  c.time = 0.95; c.apply();
+  const starTurn = Math.abs(c.stars.rotation.z - s0), moonTurn = (0.05) * Math.PI * 2;
+  ok(`the stars turn at a fraction of the moon's pace (${(starTurn / moonTurn).toFixed(2)}×)`, starTurn > 0 && starTurn / moonTurn < 0.2 && Math.abs(STAR_DRIFT - starTurn / moonTurn) < 1e-9);
+  ok('and they are small', c.stars.material.size <= 1.5);
+}
+
 process.exit(f ? 1 : 0);

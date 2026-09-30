@@ -1,4 +1,5 @@
-import { cubeSvg, itemIcon, hasCube, shade } from '../src/config/cubes.js';
+import { cubeSvg, itemIcon, hasCube, shade, blockIcon } from '../src/config/cubes.js';
+const blockIconOf = (i) => (i.block != null ? blockIcon(i.block) : null);
 import { BLOCKS, BLOCKS_BY_ID, PLACEABLE_BLOCKS } from '../src/config/blocks.js';
 import { ITEMS } from '../src/config/items.js';
 import { TEXTURES, textureFor, TILE_BASE } from '../src/config/textures.js';
@@ -61,7 +62,11 @@ ok('shading stays inside a byte', shade(0xffffff, 2) === 'rgb(255,255,255)' && s
   const tools = ITEMS.filter((i) => i.kind === 'tool');
   ok('tools keep their drawing — a cube would be a lie about what you hold',
     tools.length > 0 && tools.every((i) => itemIcon(i) === null));
-  ok('and so does food', ITEMS.filter((i) => i.kind === 'food').every((i) => itemIcon(i) === null));
+  // Reported directly: food "are cards, weird, not matching the rest" —
+  // so food is a little model of itself now, in the same light as the cubes.
+  ok('food is drawn as a model of itself', ITEMS.filter((i) => i.kind === 'food').every((i) => /<svg class="cube"/.test(itemIcon(i) ?? '')));
+  ok('and so are seeds, as a packet rather than the sprout they place',
+    ITEMS.filter((i) => i.id.startsWith('seeds')).every((i) => (itemIcon(i) ?? '') !== '' && itemIcon(i) !== blockIconOf(i)));
 }
 
 ok('the hotbar draws each block as it is — a cube, or its real shape', /blockIcon\(b\.id/.test(ui));
@@ -132,10 +137,16 @@ ok('hooked where they always exist', /#include <begin_vertex>/.test(mesher) && /
 ok('a block with no recipe is left alone', /if \(vLayer > -0\.5\)/.test(mesher));
 // A greedy quad can span ten blocks; its tile has to repeat, not stretch.
 ok('the tile repeats across a merged quad', /fract\(vTileUv\)/.test(mesher));
-ok('and the UVs are sized to the quad', /U\[t \+ 2\] = w;[\s\S]{0,80}U\[t \+ 4\] = w; U\[t \+ 5\] = h;/.test(mesher));
+ok('and the UVs are sized to the quad', /put\(2, w, 0\); put\(4, w, h\)/.test(mesher));
+// Reported directly: "the wood trunk has similar texture as the planks." The
+// tile ran sideways on every east and west face, so bark read as planks and
+// brick courses stood on end there.
+ok('a wall facing east or west has its tile the right way up', /const swap = d === 0;/.test(mesher));
+ok('and the ends of a log have rings, not more bark', /d === 1 \? topLayerTable\(\) : layerTable\(\)/.test(mesher));
 // Shading after the vertex colour, so it shades the colour the block ended up.
 ok('the tile shades the varied colour, not the flat registry one',
-  /#include <color_fragment>[\s\S]{0,200}diffuseColor\.rgb \*= texture/.test(mesher));
+  /#include <color_fragment>[\s\S]{0,300}diffuseColor\.rgb \*= tile\.rgb/.test(mesher));
+ok('and a tile with holes in it (leaves) is see-through there', /if \(tile\.a < 0\.5\) discard;/.test(mesher));
 
 
 // --- the crosshair and the camera are the same point --------------------------

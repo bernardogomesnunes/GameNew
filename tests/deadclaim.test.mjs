@@ -10,6 +10,8 @@ for (let x = 0; x < 64; x++) for (let z = 0; z < 64; z++) {
 }
 for (let x = 4; x <= 12; x++) for (let z = 4; z <= 12; z++) world.setBlock(x, 10, z, FARMLAND);
 for (let z = 4; z <= 12; z++) world.setBlock(14, 10, z, WATER);
+// And something growing in it: a farm is soil with crops in.
+for (let x = 4; x <= 7; x++) world.setBlock(x, 11, 4, 119);
 
 /**
  * A claim you can no longer reach must not hold the ground for ever.

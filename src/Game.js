@@ -54,6 +54,7 @@ import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock } from './config/blocks.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
+import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox } from './world/Mobs.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
@@ -124,7 +125,10 @@ const HOLD_BREAK_INTERVAL_MS = 170;
 // blocks; a swing at something alive shouldn't land six times a second.
 const STRIKE_COOLDOWN_MS = 350;
 // What a farm animal will follow you for. See Mobs.think.
-const LURES = new Set(['vegetables', 'seeds', 'fruit']);
+const LURES = new Set(['vegetables', 'seeds', 'fruit', ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
+const FARMLAND = 21;
+/** How often planted crops are brought up to the stage their age says. */
+const CROP_TICK_SECONDS = 2;
 const TAME_EVERY_MS = 1000; // how often pens take in animals led into them
 // A gate, shut and open: Place on one swings it to the other. See toggleGate.
 const GATE_SHUT = 48, GATE_OPEN = 49;
@@ -135,6 +139,12 @@ const LAVA_STEP_SECONDS = 1;
 const GATE_SWING = { [GATE_SHUT]: GATE_OPEN, [GATE_OPEN]: GATE_SHUT };
 /** A gate or either half of a door: something Place swings rather than builds on. */
 const swings = (id) => !!GATE_SWING[id] || !!doorPart(id);
+/** What Place does to a door or gate — "Open" or "Close" — or null for anything else. */
+export function swingLabel(id) {
+  if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
+  const door = doorPart(id);
+  return door ? (door.open ? 'Close' : 'Open') : null;
+}
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
 
@@ -162,7 +172,7 @@ const SLOW_BREAK_MS = 900;
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
 const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', seeds: 'plantMixed' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -376,6 +386,7 @@ export class Game {
       game: this,
       callbacks: this.buildCallbacks(),
     });
+    this.ui.applyTouchLayout(this.controls);
     this.ui.refreshForMode();
 
     // The land grows when an age is finished, and the wall has to grow with it.
@@ -1996,6 +2007,20 @@ export class Game {
       this.ui.openBuilding(aimed, this.buildingActions(aimed));
       return;
     }
+    // A design you placed that's still waiting: the claim panel for exactly
+    // what it was placed as, which says what's missing.
+    const waiting = this.hoverHit && this.duilt.waitingAt(this.hoverHit.x, this.hoverHit.y, this.hoverHit.z);
+    if (waiting) {
+      const region = waiting.region;
+      this.ui.openClaim(region, (typeId) => {
+        const r = this.duilt.claim(region, typeId);
+        if (r.ok) this.duilt.waiting = this.duilt.waiting.filter((w) => w !== waiting);
+        this.ui.toast(r.ok
+          ? { kind: 'challenge', title: r.reason, body: 'It will start producing shortly' }
+          : { kind: 'xp', title: "That doesn't qualify yet", body: r.reason });
+      }, { first: waiting.type });
+      return;
+    }
 
     // Otherwise the question is "what is this thing I am pointing at?", and the
     // thing is the wall course you're on — see wallFootprintAt, and
@@ -2230,9 +2255,12 @@ export class Game {
       minZ: b.z, maxZ: b.z + e.z,
     };
     const claim = this.duilt.claim(region, typeId);
+    // Refused, it's remembered rather than forgotten: it says what it's
+    // waiting for when you look at it, and counts the moment it can.
+    if (!claim.ok) this.duilt.waitFor(region, typeId, claim.reason);
     this.ui.toast(claim.ok
       ? { kind: 'challenge', title: `${plan.design.name} placed`, body: claim.reason }
-      : { kind: 'xp', title: 'Placed, but not claimed', body: claim.reason });
+      : { kind: 'xp', title: `${plan.design.name} placed — not working yet`, body: `${claim.reason}. It will start as soon as it can.` });
   }
 
   // ---- cloud ----
@@ -2694,11 +2722,14 @@ export class Game {
     }
     const next = this.placedBlock(type);
     const door = doorPart(next);
+    const crop = cropOf(next);
     const targets = this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
     const changes = [];
     for (const t of targets) {
       if (!this.world.inBounds(t.x, t.y, t.z)) continue;
-      if (this.blockOverlapsPlayerAABB(t)) continue;
+      // A seed goes in farmland and nowhere else.
+      if (crop && this.world.getBlock(t.x, t.y - 1, t.z) !== FARMLAND) continue;
+      if (this.blockOverlapsPlayerAABB(t) && !crop) continue;
       const prev = this.world.getBlock(t.x, t.y, t.z);
       if (prev === next) continue;
       if (door) {
@@ -2715,7 +2746,57 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: 'No room for a door', body: 'It needs two blocks of clear space' });
       return;
     }
+    if (crop && !changes.length) {
+      this.ui.toast({ kind: 'xp', title: 'Seeds go in farmland', body: 'Put down farmland and plant on top of it' });
+      return;
+    }
     this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
+  }
+
+  /**
+   * Place with a handful of mixed seeds: whatever comes up. Which crop is
+   * picked by where it lands, so the same patch doesn't reroll if you plant
+   * it twice — and a row comes up as a mix.
+   */
+  plantMixed() {
+    const hit = this.raycast();
+    if (!hit) return;
+    const { placeX: x, placeY: y, placeZ: z } = hit;
+    if (this.world.getBlock(x, y - 1, z) !== FARMLAND || this.world.getBlock(x, y, z) !== AIR) {
+      this.ui.toast({ kind: 'xp', title: 'Seeds go in farmland', body: 'Put down farmland and plant on top of it' });
+      return;
+    }
+    const inv = this.duilt?.inventory;
+    if (inv && !inv.endless && !inv.has('seeds', 1)) return;
+    const h = Math.abs((x * 73856093) ^ (z * 19349663) ^ (y * 83492791));
+    const next = cropBlock(CROPS[h % CROPS.length].kind, 0);
+    if (!this.applyChanges([{ x, y, z, prev: AIR, next }], { chargeResources: false })) return;
+    if (inv && !inv.endless) inv.remove('seeds', 1);
+  }
+
+  /** Brings every planted crop up to the stage its time in the ground says. */
+  growCrops(dt) {
+    this.cropClock = (this.cropClock ?? 0) + dt;
+    if (this.cropClock < CROP_TICK_SECONDS || !this.duilt) return;
+    this.cropClock = 0;
+    if (this.duilt.crops.grow(this.world).length) this.remeshDirty();
+  }
+
+  /**
+   * A crop stands on its farmland: take the soil out from under one and
+   * the plant comes up with it (and goes in your bag, like any harvest).
+   */
+  withUprooted(changes) {
+    let out = changes;
+    for (const c of changes) {
+      if (c.prev !== FARMLAND || c.next === FARMLAND) continue;
+      const above = this.world.getBlock(c.x, c.y + 1, c.z);
+      if (!cropOf(above)) continue;
+      if (out.some((o) => o.x === c.x && o.y === c.y + 1 && o.z === c.z)) continue;
+      if (out === changes) out = [...changes];
+      out.push({ x: c.x, y: c.y + 1, z: c.z, prev: above, next: AIR });
+    }
+    return out;
   }
 
   /**
@@ -2755,7 +2836,7 @@ export class Game {
    * has a tool that takes a lot away again.
    */
   applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
-    changes = this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z)));
+    changes = this.withUprooted(this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z))));
     if (!changes.length) return false;
 
     // Duilt has its own economy: the border says where, the bag says whether.
@@ -2795,6 +2876,14 @@ export class Game {
 
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
+    // What's planted is kept track of, so it can grow while you're away.
+    if (this.duilt) {
+      for (const c of changes) {
+        const was = cropOf(c.prev), is = cropOf(c.next);
+        if (is && is.stage === 0 && !(was && was.kind === is.kind)) this.duilt.crops.plant(c.x, c.y, c.z, is.kind);
+        else if (was && !is) this.duilt.crops.remove(c.x, c.y, c.z);
+      }
+    }
     // One sound for the edit, however many blocks it was: what it was made of.
     const first = changes[0];
     if (first.next !== AIR) this.sound?.place(soundOf(BLOCKS_BY_ID.get(first.next)));
@@ -2807,6 +2896,12 @@ export class Game {
       const gained = this.duilt.onBlocksBroken(changes);
       if (Object.keys(gained).length) this.bus.emit('duilt:gathered', { gained });
       this.duilt.structures.revalidateAround(changes);
+      // A design that was waiting for something — fields, a neighbour — may
+      // have just got it.
+      for (const w of this.duilt.retryWaiting(changes)) {
+        const name = STRUCTURES_BY_ID.get(w.type)?.name ?? 'Building';
+        this.ui?.toast({ kind: 'challenge', title: `${name} is working now`, body: w.reason });
+      }
       this.duilt.settlers.revalidate();
       // The border line is drawn on the blocks that touch it, so digging one
       // out moves the ground under it.
@@ -3092,6 +3187,7 @@ export class Game {
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
       this.runWater(dt);
+      this.growCrops(dt);
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
       this.gamification.tick(performance.now());
@@ -3140,6 +3236,7 @@ export class Game {
     this.camera.fov = this.controls.fov;
     this.camera.updateProjectionMatrix();
     this.sound.setVolume(this.controls.volume);
+    this.ui?.applyTouchLayout(this.controls);
     return this.controls;
   }
 
@@ -3236,6 +3333,11 @@ export class Game {
   updateHover() {
     const hit = this.raycast();
     this.hoverHit = hit;
+    // Requested directly: "when looking at the door the controls should
+    // adapt so place should be open or close depending on the door stage."
+    // Pointed at a door or a gate with nothing queued, Place says which it
+    // will do.
+    this.ui?.setAimedSwing(!this.armed && !this.moving && hit ? swingLabel(hit.block) : null);
 
     // A building in the air follows where you look. Done here rather than on
     // a timer so it tracks the camera exactly, with no lag behind the view.
@@ -3286,16 +3388,23 @@ export class Game {
     const onBuilding = hit && this.duilt
       ? this.duilt.structures.at(hit.x, hit.y, hit.z)
       : null;
+    const waiting = hit && !onBuilding && this.duilt ? this.duilt.waitingAt(hit.x, hit.y, hit.z) : null;
     const gate = hit && GATE_SWING[hit.block];
     const door = hit && doorPart(hit.block);
+    // Says the button you'd actually press: the Open/Close thumb button, or
+    // right click at a desk.
+    const swing = (gate || door) && swingLabel(hit.block);
+    const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     this.ui?.setBuildingHint(gate
-      ? (hit.block === GATE_SHUT ? 'Gate · shut — Place opens it' : 'Gate · open — Place shuts it')
+      ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
       : door
-        ? (door.open ? 'Door · open — Place shuts it' : 'Door · shut — Place opens it')
+        ? `Door · ${door.open ? 'open' : 'shut'} — ${how}`
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')
-        : null);
+      : waiting
+        ? `${STRUCTURES_BY_ID.get(waiting.type)?.name ?? 'Building'} · not working yet — ${waiting.reason}`
+        : null, { manage: waiting ? 'see why' : (!swing || !!onBuilding) });
     // The single block under the crosshair, except while a roof is queued —
     // there the whole building is highlighted and one more box on top of it is
     // just noise.

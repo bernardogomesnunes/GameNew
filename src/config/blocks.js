@@ -26,6 +26,8 @@
 // tint, not a soft grey), and Obsidian keeps most of its depth so the
 // palette still has one dark anchor rather than every block converging on
 // the same pale middle.
+import { CROPS, CROP_BASE, RIPE } from './crops.js';
+
 /** Flowing water of level L is block FLOW_BASE + L, for L in 1..7. */
 const FLOW_BASE = 49;
 /** Flowing lava of level L is block LAVA_FLOW_BASE + L, for L in 1..3. */
@@ -63,7 +65,9 @@ export const BLOCKS = [
   // Duilt blocks. Saplings grow into forests; farmland is soil that has been
   // turned, which is what a farm is actually made of.
   { id: 20, name: 'Sapling', glyph: 'sprout', color: 0x9fcd8b, material: 'plant', cost: { wood: 1 }, unlock: null },
-  { id: 21, name: 'Farmland', glyph: 'farmland', color: 0xc4986c, material: 'dirt', cost: { wood: 1 }, unlock: null },
+  // Dark, turned earth in furrows — requested directly: "Farm should be
+  // dirt." It used to be a pale tan you could take for sand.
+  { id: 21, name: 'Farmland', glyph: 'farmland', color: 0x8d6645, material: 'dirt', cost: { wood: 1 }, unlock: null },
   // Ground the biomes are made of. Six kinds of country used to share four
   // top blocks between them, so a meadow, a forest, the highlands and a
   // wetland were all the same green: you could walk from one to another and
@@ -107,7 +111,14 @@ export const BLOCKS = [
     // the bottom of the block." It was a plain glowing cube with its light
     // buried inside it; now it's a real lantern (see propShapes), lit from
     // its glass. `y` is where in the cell the light sits.
-    light: { color: 0xffcf8c, intensity: 24, distance: 14, y: 0.3 },
+    // Reported directly: the light "should not be such a circle in the
+    // centre, it should be blurred and luminosity should reach a bit further
+    // ... and should go from more light to less light." So it falls off with
+    // distance rather than distance squared (`decay` 1), gently, over some
+    // twenty blocks, and shines from just above the lantern (`y` over 1)
+    // rather than from inside it on the floor — right under a light an inch
+    // off the ground is where the white disc came from.
+    light: { color: 0xffcf8c, intensity: 5, distance: 20, decay: 1, y: 1.1 },
     shape: 'lantern',
     cost: { wood: 2 }, unlock: null,
   },
@@ -152,7 +163,7 @@ export const BLOCKS = [
   // needing its own render special-case.
   {
     id: 45, name: 'Lava', glyph: 'water', color: 0xe8672c,
-    light: { color: 0xff8040, intensity: 20, distance: 10 },
+    light: { color: 0xff8040, intensity: 5, distance: 14, decay: 1 },
     material: 'stone', unlock: null,
   },
 
@@ -162,6 +173,10 @@ export const BLOCKS = [
   // check). A deeper, shadier green than ordinary Moss, the way a canopy
   // thick enough to earn "dark" in its name would actually shade its floor.
   { id: 46, name: 'Dark Moss', glyph: 'moss', color: 0x4a6045, soil: true, material: 'dirt', unlock: null },
+  // The Giant Grove's floor: a deep bed of fallen leaves under trees too big
+  // to let much grass grow. Its own ground so the grove reads as somewhere
+  // else underfoot and on the map (every biome has its own top block).
+  { id: 147, name: 'Forest Floor', glyph: 'litter', color: 0x8a7a48, soil: true, material: 'dirt', unlock: null },
 
   // Ranching. A fence stands a block and a half tall to anything walking
   // into it (see World.collisionBoxAt) — too high for you to jump or an
@@ -199,7 +214,7 @@ export const BLOCKS = [
   // world/WaterFlow.js). Level 3 beside the source or falling, 1 at the end.
   ...[1, 2, 3].map((level) => ({
     id: LAVA_FLOW_BASE + level, name: 'Flowing Lava', glyph: 'water', color: 0xe8672c,
-    light: { color: 0xff8040, intensity: 12, distance: 7 },
+    light: { color: 0xff8040, intensity: 3, distance: 9, decay: 1 },
     shape: 'lava_flow', stateOf: 45, level, material: 'stone', unlock: null,
   })),
 
@@ -207,7 +222,9 @@ export const BLOCKS = [
   // candles on a chain, lighting the room from above.
   {
     id: 85, name: 'Chandelier', glyph: 'chandelier', color: 0x5d5552, shape: 'chandelier', material: 'stone',
-    light: { color: 0xffd79a, intensity: 30, distance: 16, y: 0.72 }, cost: { wood: 2 }, unlock: null,
+    // Below its candles, not above them — a light just under the ceiling
+    // burns a white patch into it.
+    light: { color: 0xffd79a, intensity: 6, distance: 22, decay: 1, y: 0.3 }, cost: { wood: 2 }, unlock: null,
   },
 
   { id: 69, name: 'Door', glyph: 'door', color: 0xb08a60, shape: 'door', material: 'wood', cost: { wood: 3 }, facing: 0, unlock: null },
@@ -278,6 +295,18 @@ ROOF_MATERIALS.forEach((mat, m) => {
   });
 });
 
+// Crops on farmland, a block per stage of growth — see config/crops.js. The
+// seed is what you hold; the plant is never placed by hand any other way.
+CROPS.forEach((c, k) => {
+  for (let stage = 0; stage <= RIPE; stage++) {
+    BLOCKS.push({
+      id: CROP_BASE + 4 * k + stage, name: stage === RIPE ? `Ripe ${c.name}` : `${c.name} Plant`,
+      glyph: 'sprout', color: c.leaf, shape: `crop_${c.kind}_${stage}`, material: 'plant',
+      crop: { kind: c.kind, stage }, ...(stage ? { stateOf: CROP_BASE + 4 * k } : {}), unlock: null,
+    });
+  }
+});
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /** Ground a tree will take root in. */
@@ -293,7 +322,8 @@ export const WATER = 11;
 /** Blocks a player can hold and place — everything except world furniture. */
 // A state of another block (an open gate) isn't placed on its own: you place
 // the gate, then open it.
-export const PLACEABLE_BLOCKS = BLOCKS.filter((b) => !b.system && b.stateOf == null);
+// A crop is planted from its seeds, not picked from the blocks.
+export const PLACEABLE_BLOCKS = BLOCKS.filter((b) => !b.system && b.stateOf == null && !b.crop);
 
 /** Any water at all: a still source, or flowing. */
 export function isWater(id) {

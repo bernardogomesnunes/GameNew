@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import { blockTextureArray, layerFor } from '../render/BlockTextures.js';
+import { blockTextureArray, layerFor, topLayerFor } from '../render/BlockTextures.js';
 import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
+  roofPart,
 } from '../config/blocks.js';
 import { boxesFor, fenceBoxes, rugBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
+import { textureFor } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
 
 const SOLID_SENTINEL = -1; // below the world: never draw a face against it
@@ -35,6 +37,16 @@ const JOINS_FENCE = new Uint8Array(256);
 for (let id = 1; id < 256; id++) {
   const shape = shapeOf(id);
   JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || shape === 'gate_open' || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
+}
+/**
+ * Leaves, and anything else with holes in its texture: a face beside one is
+ * drawn even though a solid block stands there, because you can see it
+ * through the holes — the next leaf in, or the trunk inside the canopy.
+ */
+const CUTOUT = new Uint8Array(256);
+for (const [id, b] of BLOCKS_BY_ID) {
+  const t = textureFor(b.glyph);
+  CUTOUT[id] = IS_CUBE[id] && t && (t.gaps || t.bite) ? 1 : 0;
 }
 /** Rugs, which run into each other (see propShapes' rugBoxes). */
 const IS_RUG = new Uint8Array(256);
@@ -157,12 +169,15 @@ function withBlockTextures(mat) {
     `.replace('#include <color_fragment>', `
       #include <color_fragment>
       if (vLayer > -0.5) {
-        diffuseColor.rgb *= texture(blockTiles, vec3(fract(vTileUv), vLayer)).rgb;
+        vec4 tile = texture(blockTiles, vec3(fract(vTileUv), vLayer));
+        // A leaf's holes: nothing drawn there, so you see through.
+        if (tile.a < 0.5) discard;
+        diffuseColor.rgb *= tile.rgb;
       }
     `);
   };
   // Changing the shader invalidates anything already compiled for it.
-  mat.customProgramCacheKey = () => 'block-tiles-v1';
+  mat.customProgramCacheKey = () => 'block-tiles-v2';
   mat.needsUpdate = true;
   return mat;
 }
@@ -286,6 +301,13 @@ function layerTable() {
   for (let id = 0; id < 256; id++) LAYER[id] = layerFor(id);
   return LAYER;
 }
+let TOP_LAYER = null; // the same for top and bottom faces (a log's rings)
+function topLayerTable() {
+  if (TOP_LAYER) return TOP_LAYER;
+  TOP_LAYER = new Float32Array(256);
+  for (let id = 0; id < 256; id++) TOP_LAYER[id] = topLayerFor(id);
+  return TOP_LAYER;
+}
 
 export class ChunkMesher {
   constructor(scene) {
@@ -384,7 +406,7 @@ export class ChunkMesher {
               if (other === AIR) face = self;
               else if (other === SOLID_SENTINEL) face = 0;
               else if (IS_TRANSPARENT[self]) face = other !== self ? self : 0;
-              else face = IS_TRANSPARENT[other] || !IS_CUBE[other] ? self : 0;
+              else face = IS_TRANSPARENT[other] || !IS_CUBE[other] || CUTOUT[other] ? self : 0;
               // A face is only ever seen from the cell it faces. If that cell
               // can't be reached from open sky, the face belongs to a sealed
               // cave and goes in the deep mesh — see skyFill.
@@ -672,12 +694,20 @@ export class ChunkMesher {
               return n > 0 && SLOPE[n] ? { kind: SLOPE[n], facing: FACING[n] } : null;
             };
             const corner = SLOPE[id] ? cornerOf(SLOPE[id], FACING[id], at) : null;
-            const g = slopeGeometry(shape, FACING[id], corner);
-            const col = baseColor(id);
+            // A roof piece over a solid wall fills in down to it, in the
+            // wall's colour; anywhere else it's a shell with timber under it.
+            const below = vol[idx - P2];
+            const filled = below > 0 && IS_CUBE[below] && !IS_TRANSPARENT[below];
+            const style = roofPart(id)?.mat === 1 ? 'slate' : 'clay';
+            const g = slopeGeometry(shape, FACING[id], corner, { filled, style });
+            const col = baseColor(id), belowCol = filled ? baseColor(below) : col;
             for (const b of g.boxes) {
               this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col);
             }
-            for (const f of g.faces) this.emitFace(buf, lx, ly, lz, f, col);
+            for (const f of g.faces) {
+              const c = f.color === 'below' ? belowCol : f.color != null ? colorOfHex(f.color) : col;
+              this.emitFace(buf, lx, ly, lz, f, c);
+            }
             continue;
           }
           const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
@@ -842,20 +872,26 @@ export class ChunkMesher {
       N[p + k] = nx; N[p + k + 1] = ny; N[p + k + 2] = nz;
       C[p + k] = r; C[p + k + 1] = g; C[p + k + 2] = b;
     }
-    const layer = layerTable()[id];
+    const layer = (d === 1 ? topLayerTable() : layerTable())[id];
     const L = buf.layer, l = q * 4;
     L[l] = layer; L[l + 1] = layer; L[l + 2] = layer; L[l + 3] = layer;
     // Corners of the quad in tile space: 0,0 to w,h along u and v, so one
     // tile covers one block however many blocks the quad ended up spanning.
     // They follow the vertex order above, which swaps u and v for a
     // negative face.
+    //
+    // A face across x has u running up the world (y) and v along it, so
+    // there the tile is laid the other way round: its across always runs
+    // across the wall and its up always up. Without the swap, bark ran
+    // sideways and brick courses stood on end on every east and west face
+    // — a log looked like planks.
     const U = buf.uv, t = q * 8;
+    const swap = d === 0;
+    const put = (k, a, b) => { U[t + k] = swap ? b : a; U[t + k + 1] = swap ? a : b; };
     if (sign > 0) {
-      U[t] = 0; U[t + 1] = 0; U[t + 2] = w; U[t + 3] = 0;
-      U[t + 4] = w; U[t + 5] = h; U[t + 6] = 0; U[t + 7] = h;
+      put(0, 0, 0); put(2, w, 0); put(4, w, h); put(6, 0, h);
     } else {
-      U[t] = 0; U[t + 1] = 0; U[t + 2] = 0; U[t + 3] = h;
-      U[t + 4] = w; U[t + 5] = h; U[t + 6] = w; U[t + 7] = 0;
+      put(0, 0, 0); put(2, 0, h); put(4, w, h); put(6, w, 0);
     }
     buf.quads = q + 1;
   }

@@ -201,7 +201,8 @@ export class World {
     // Water and lava are waded and swum through, not stood on.
     if (id === AIR || isFluid(id)) return null;
     const shape = shapeOf(id);
-    if (NO_COLLISION_SHAPES.has(shape)) return null;
+    // Nor crops: you walk through a field.
+    if (NO_COLLISION_SHAPES.has(shape) || shape.startsWith('crop')) return null;
     if (HALF_SHAPES.has(shape)) return { minY: y, maxY: y + 0.5 };
     if (shape === 'stair' || shape === 'roof' || shape === 'roof_hi') return { minY: y, maxY: y + 1, stair: true };
     // Half-pitch pieces and the caps on a ridge or a peak come up half way.

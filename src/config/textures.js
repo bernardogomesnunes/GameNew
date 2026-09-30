@@ -16,6 +16,10 @@
  *
  *   marks     scattered pixels — dots of dirt, chips of stone, blades of grass
  *   lines     'h', 'v' or 'grid', for planks, trunks and masonry
+ *   furrows   rows of tilled soil, every N pixels
+ *   bark      N furrows wandering up a trunk (with `knots`)
+ *   rings     growth rings round the middle, every N pixels — a log's end
+ *   top       a recipe of its own for the top and bottom faces
  *   band      a darker strip along one edge, for a block with a lip
  *   depth     how dark the darkest mark goes, 0..1 off white
  *   scale     how many tile-pixels across; 16 unless the pattern needs room
@@ -24,8 +28,9 @@
 export const TEXTURES = {
   grass:     { marks: 26, depth: 0.16, speck: 0.06, scale: 16 },
   moss:      { marks: 34, depth: 0.20, speck: 0.07, scale: 16 },
+  litter:    { marks: 40, blobs: 4, depth: 0.24, speck: 0.1, scale: 16 },
   dirt:      { marks: 22, depth: 0.18, scale: 16 },
-  farmland:  { lines: 'h', every: 4, marks: 10, depth: 0.16, scale: 16 },
+  farmland:  { furrows: 4, marks: 34, blobs: 2, depth: 0.28, speck: 0.08, scale: 16 },
   sand:      { marks: 30, depth: 0.09, scale: 16 },
   gravel:    { marks: 38, depth: 0.22, blobs: 5, scale: 16 },
   clay:      { marks: 12, depth: 0.10, scale: 16 },
@@ -35,8 +40,16 @@ export const TEXTURES = {
   marble:    { veins: 2, depth: 0.08, scale: 16 },
   snow:      { marks: 8, depth: 0.05, scale: 16 },
   planks:    { lines: 'h', every: 4, marks: 8, depth: 0.15, scale: 16 },
-  log:       { lines: 'v', every: 3, marks: 6, depth: 0.17, scale: 16 },
-  leaf:      { marks: 44, depth: 0.22, speck: 0.10, holes: 3, scale: 16 },
+  // Requested directly: "the wood trunk has similar texture as the planks,
+  // we should change it to wooden logs texture." Bark up the sides —
+  // wandering furrows, a crack or two, a knot — and growth rings on the cut
+  // ends (`top`, painted as a layer of its own).
+  log:       { bark: 4, knots: 1, marks: 6, depth: 0.24, scale: 16, top: { rings: 2.2, depth: 0.2 } },
+  // Requested directly: "Leaves block could have small holes in it like
+  // trees have and be somehow more rounded instead of sharp cubes." `gaps`
+  // are real holes you see through, and `bite` takes the corners off each
+  // face so a canopy's edge reads soft instead of as a row of squares.
+  leaf:      { marks: 44, depth: 0.22, speck: 0.10, holes: 3, gaps: 7, bite: 3, scale: 16 },
   water:     { lines: 'h', every: 6, depth: 0.06, scale: 16 },
   pane:      { band: 1, depth: 0.10, scale: 16 },
   crystal:   { veins: 3, depth: 0.12, scale: 16 },

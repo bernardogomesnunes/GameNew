@@ -365,7 +365,8 @@ export class StructureRegistry {
       const everySeconds = intervalAt(spec, tier);
       // A pen's output is whatever lives in it (see duilt/Ranch.js), asked
       // for here rather than read off the spec.
-      const produces = spec.fromAnimals ? (producesFor?.(s) ?? {}) : producesAt(spec, tier);
+      // A farm's, whatever grows in it.
+      const produces = spec.fromAnimals || spec.fromCrops ? (producesFor?.(s) ?? {}) : producesAt(spec, tier);
       if (!everySeconds) continue;
 
       const periodMs = everySeconds * 1000;

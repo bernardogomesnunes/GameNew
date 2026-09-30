@@ -44,17 +44,18 @@ const LANTERN = 26, SLAB_STONE = 27, STAIRS_STONE = 29, CHAIR_OAK = 33, RUG_GREE
 
 {
   // Ore (38-40), the two extra forests' wood (41-44), Lava (45) and Dark
-  // Moss (46): all gathered or mined, not made at a workshop — the same way
+  // Moss (46), and the giant grove's Forest Floor (147): all gathered or mined, not made at a workshop — the same way
   // Wood and Leaves themselves carry no recipe either, just below this
   // loop's own id >= 26 cutoff so they were never in it to begin with.
-  const NATURAL = new Set([38, 39, 40, 41, 42, 43, 44, 45, 46]);
+  const NATURAL = new Set([38, 39, 40, 41, 42, 43, 44, 45, 46, 147]);
   // A block that's only another one in a different state (an open gate) has
   // no item of its own — see blocks.js's `stateOf`.
   const newBlockIds = BLOCKS.filter((b) => b.id >= 26 && b.stateOf == null).map((b) => b.id);
   for (const id of newBlockIds) {
     const item = [...ITEMS_BY_ID.values()].find((i) => i.block === id);
     ok(`block ${BLOCKS_BY_ID.get(id).name} has an item that places it`, !!item);
-    if (item && !NATURAL.has(id)) {
+    // Crops are grown from seeds saved from a harvest, not made either.
+    if (item && !NATURAL.has(id) && !BLOCKS_BY_ID.get(id).crop) {
       const recipe = RECIPES.find((r) => r.output.id === item.id);
       ok(`${item.name} is craftable`, !!recipe);
     }

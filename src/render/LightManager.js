@@ -54,6 +54,9 @@ export class LightManager {
         light.color.setHex(entry.light.color);
         light.intensity = entry.light.intensity;
         light.distance = entry.light.distance;
+        // How fast it fades: 2 is the physical inverse square, which gives a
+        // hard bright disc and then nothing; the blocks' lights use 1.
+        light.decay = entry.light.decay ?? 2;
         light.visible = true;
       } else {
         light.visible = false;

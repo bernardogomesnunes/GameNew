@@ -89,6 +89,13 @@ export class BiomeMap {
     this.warp = createNoise2D(mulberry32(seed + 5501));
     this.range = createNoise2D(mulberry32(seed + 8887));
     this.summit = createNoise2D(mulberry32(seed + 19301));
+    // One patchy noise field per rare biome, each from its own salt, and the
+    // biomes it can take over as indexes.
+    this.rareNoise = BIOMES.map((b) => (b.rare ? createNoise2D(mulberry32(seed + b.rare.salt)) : null));
+    this.rareIndexes = BIOMES.flatMap((b, i) => (b.rare ? [i] : []));
+    for (const b of BIOMES) {
+      if (b.rare) b.rare.within = (b.rare.in ?? []).map((id) => BIOME_INDEX.get(id)).filter((j) => j != null);
+    }
     this.homePull = homePull;
     this.home = BIOMES[BIOME_INDEX.get(HOME_BIOME) ?? 0];
     this.centreX = sizeX / 2;
@@ -164,6 +171,26 @@ export class BiomeMap {
   }
 
   /**
+   * 0..1: how far a rare biome is let in at a column — the same cut-off and
+   * sharpen as rangeFactor, on its own noise, and kept away from the
+   * settlement the same way. See weigh for what it does with it.
+   */
+  rareFactor(i, x, z) {
+    const r = BIOMES[i].rare;
+    const n = (this.rareNoise[i](x * r.freq, z * r.freq) + 1) / 2;
+    let factor = Math.pow(Math.max(0, n - r.base) / (1 - r.base), r.power);
+    // None at all round the settlement, fading in past it: the starting
+    // plot is for building, not for felling giants.
+    if (this.homePull > 0 && factor > 0) {
+      const dx = x - this.centreX, dz = z - this.centreZ;
+      const d = Math.sqrt(dx * dx + dz * dz) / this.homeRadius;
+      if (d < 1) return 0;
+      if (d < 1.5) factor *= (d - 1) / 0.5;
+    }
+    return factor;
+  }
+
+  /**
    * Every biome's share of a column, plus the winner.
    *
    * Weight falls off with the square of the distance in climate space, which
@@ -192,9 +219,38 @@ export class BiomeMap {
       // infinite; 1/d^4 is sharp enough that biomes stay recognisable.
       let w = 1 / ((d2 + 0.0016) * (d2 + 0.0016));
       if (b.range) w *= b.summitOnly ? range * summit : range;
+      // A rare biome doesn't compete on climate: it takes over land
+      // afterwards, below.
+      if (b.rare) w = 0;
       weights[i] = w;
       total += w;
       if (w > bestW) { bestW = w; best = i; }
+    }
+    // A rare biome takes over part of the country it grows in (its
+    // `within` list) wherever its own patchy noise is high — a share of
+    // those biomes' weight handed to it, so its edge blends like any other
+    // border and the land never jumps. Only that country, so a giant grove
+    // is always somewhere wooded or grassy, never out on the sea or a peak.
+    for (const i of this.rareIndexes) {
+      const f = this.rareFactor(i, x, z);
+      if (f <= 0) continue;
+      const within = BIOMES[i].rare.within;
+      let mass = 0, top = 0, other = 0;
+      for (let j = 0; j < weights.length; j++) {
+        if (within.includes(j)) { mass += weights[j]; if (weights[j] > top) top = weights[j]; }
+        else if (j !== i && weights[j] > other) other = weights[j];
+      }
+      // How clearly this is its kind of country: nothing unless one of its
+      // biomes is winning here anyway, fading to nothing as the sea or a
+      // mountain catches up — so the edge of a grove by the shore is a
+      // slope, not a step, and a grove never stands where the sea would.
+      const lead = top > 0 ? (top - other) / top : 0;
+      if (lead <= 0) continue;
+      const share = Math.min(1, f * BIOMES[i].rare.boost) * Math.min(1, lead * 3);
+      for (const j of within) weights[j] *= 1 - share;
+      weights[i] = mass * share;
+      best = 0;
+      for (let j = 1; j < weights.length; j++) if (weights[j] > weights[best]) best = j;
     }
     for (let i = 0; i < weights.length; i++) weights[i] /= total;
     return { weights, index: best, temp, wet };

@@ -1,3 +1,4 @@
+import { Crops, harvestOf, cropProduce } from './Crops.js';
 import { penProduce, herdToJSON } from './Ranch.js';
 import { Inventory } from '../items/Inventory.js';
 import { Territory } from '../world/Territory.js';
@@ -31,7 +32,7 @@ import { ageOf, FINAL_AGE } from '../config/ages.js';
  * only ever adds `if (this.sandbox)` at the front of it, never a second copy.
  */
 
-const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds: 6 };
+const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds: 6, seeds_carrot: 4, seeds_potato: 4 };
 
 export class DuiltGame {
   constructor({ world, scene, bus, age = 1, sandbox = false }) {
@@ -41,6 +42,10 @@ export class DuiltGame {
     // Animals kept in pens — see duilt/Ranch.js. Wild ones aren't here.
     this.herd = [];
     this.dayTime = null; // see toJSON
+    // Designs you placed that didn't count yet — see waitFor.
+    this.waiting = [];
+    // What's planted where, and when — see duilt/Crops.js.
+    this.crops = new Crops();
     this.inventory = new Inventory({ bus, endless: sandbox });
     this.territory = new Territory({ world, scene, bus, age, sandbox });
     this.structures = new StructureRegistry({ world, bus, inventory: this.inventory });
@@ -123,6 +128,16 @@ export class DuiltGame {
     const gained = {};
     for (const c of changes) {
       if (c.prev === AIR) continue;
+      // A crop gives its harvest, not just itself back.
+      const harvest = harvestOf(c.prev);
+      if (harvest) {
+        for (const [id, n] of Object.entries(harvest)) {
+          const left = this.inventory.add(id, n);
+          if (n - left > 0) gained[id] = (gained[id] ?? 0) + n - left;
+          if (left > 0) this.bus?.emit('duilt:bagfull', { itemId: id, lost: left });
+        }
+        continue;
+      }
       const drop = this.yieldFor(c.prev);
       if (!drop) continue;
       const leftover = this.inventory.add(drop.itemId, drop.amount);
@@ -228,6 +243,53 @@ export class DuiltGame {
       this.checkAgeAdvance();
     }
     return result;
+  }
+
+  // ---- designs waiting to count ----
+
+  /**
+   * A design you put down that wasn't a building yet — a granary with no
+   * fields near it, a market out on its own. Reported directly: some
+   * buildings "do not have a tap to see the pop up". They'd been refused
+   * with one toast, lost among the achievements, and were loose blocks from
+   * then on with nothing to say why. Now the game remembers what each one is
+   * meant to be, says what it's waiting for when you look at it, and claims
+   * it by itself the moment it qualifies (see retryWaiting).
+   */
+  waitFor(region, type, reason) {
+    this.waiting = this.waiting.filter((w) => !overlaps(w.region, region));
+    this.waiting.push({ region: { ...region }, type, reason });
+  }
+
+  /** The waiting design at a block, or null. */
+  waitingAt(x, y, z) {
+    return this.waiting.find((w) => inRegion(w.region, x, y, z)) ?? null;
+  }
+
+  /**
+   * Tries again every waiting design an edit came near — the fields dug next
+   * to a granary, the house put up beside a market. Returns the ones that
+   * count now.
+   */
+  retryWaiting(changes = null) {
+    const claimed = [];
+    for (const w of [...this.waiting]) {
+      const near = !changes || changes.some((c) => inRegion(grow(w.region, 18), c.x, c.y, c.z));
+      if (!near) continue;
+      // Claimed some other way in the meantime — by hand, say.
+      if (this.structures.list().some((s) => overlaps(s.region, w.region))) {
+        this.waiting = this.waiting.filter((x) => x !== w);
+        continue;
+      }
+      const r = this.claim(w.region, w.type);
+      if (r.ok) {
+        this.waiting = this.waiting.filter((x) => x !== w);
+        claimed.push({ ...w, reason: r.reason });
+      } else {
+        w.reason = r.reason;
+      }
+    }
+    return claimed;
   }
 
   /**
@@ -407,9 +469,16 @@ export class DuiltGame {
         now,
         yieldMultiplier: this.skills.gatherYield(),
         bonusFor: (id) => this.settlers.bonusFor(id),
-        producesFor: (s) => penProduce(s, this.herd),
+        producesFor: (s) => this.producesFor(s),
       });
     }
+  }
+
+  /** What a building makes that depends on what's in it: a pen's animals, a farm's crops. */
+  producesFor(s) {
+    const spec = STRUCTURES_BY_ID.get(s.type);
+    if (spec?.fromCrops) return cropProduce(s, this.world);
+    return penProduce(s, this.herd);
   }
 
   eat(itemId = null) {
@@ -432,6 +501,8 @@ export class DuiltGame {
       // The time of day, 0..1 — see render/DayCycle.js. Kept with the world
       // so night is still night when you come back to it.
       dayTime: this.dayTime,
+      waiting: this.waiting,
+      crops: this.crops.toJSON(),
       savedAt: Date.now(),
     };
   }
@@ -448,14 +519,28 @@ export class DuiltGame {
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
     this.dayTime = typeof data.dayTime === 'number' ? data.dayTime : null;
+    this.waiting = Array.isArray(data.waiting) ? data.waiting.filter((w) => w?.region && w.type) : [];
+    this.crops.loadJSON(data.crops);
     // Pay out everything earned while the tab was shut.
     this.lastCollect = Date.now();
     return this.structures.collect({
       now: Date.now(),
       yieldMultiplier: this.skills.gatherYield(),
-      producesFor: (s) => penProduce(s, this.herd),
+      producesFor: (s) => this.producesFor(s),
     });
   }
 }
 
 export { ITEMS_BY_ID };
+
+function inRegion(r, x, y, z) {
+  return x >= r.minX && x <= r.maxX && y >= r.minY && y <= r.maxY && z >= r.minZ && z <= r.maxZ;
+}
+
+function overlaps(a, b) {
+  return a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY && a.minZ <= b.maxZ && a.maxZ >= b.minZ;
+}
+
+function grow(r, by) {
+  return { minX: r.minX - by, maxX: r.maxX + by, minY: r.minY - by, maxY: r.maxY + by, minZ: r.minZ - by, maxZ: r.maxZ + by };
+}

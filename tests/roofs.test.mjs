@@ -58,9 +58,38 @@ const STAIR = SLOPE_KIND.stair;
   const top = g.faces.filter((fc) => fc.out[1] > 0);
   const slanted = top.some((fc) => new Set(fc.pts.map((p) => p[1].toFixed(3))).size > 1);
   ok('a roof tile is a real slope, not steps', g.boxes.length === 0 && slanted);
-  ok(`laid in rows of tiles (${top.length - 1} tiles on the slope)`, top.length - 1 === 8);
+  // Reported directly: "The roofs look weird ... it fills the space in a
+  // triangle form, they need texture and details like the tiles."
+  ok(`laid in rows of curved tiles (${top.length - 1} tile facets on the slope)`, top.length - 1 === 24);
   const ys = g.faces.flatMap((fc) => fc.pts.map((p) => p[1]));
-  ok('from the bottom of its cell to the top', Math.min(...ys) === 0 && Math.max(...ys) > 1 && Math.max(...ys) < 1.1);
+  const upright = g.faces.filter((fc) => fc.out[1] === 0).map((fc) => {
+    // How tall a side is at any one point along it: its top less its bottom there.
+    const xs = fc.pts.map((p) => p[0] + p[2]);
+    const at = (v) => fc.pts.filter((p) => Math.abs(p[0] + p[2] - v) < 1e-9).map((p) => p[1]);
+    return Math.max(...xs.map((v) => { const h = at(v); return Math.max(...h) - Math.min(...h); }));
+  });
+  ok(`a thin shell, not a solid wedge: no side stands taller than the shell's edge (${Math.max(...upright).toFixed(2)})`,
+    Math.max(...upright) < 0.3 && Math.max(...ys) < 1.1);
+  ok('with timber under it', g.faces.some((fc) => fc.out[1] < 0 && typeof fc.color === 'number'));
+  const filled = slopeGeometry('roof', 0, null, { filled: true });
+  ok('over a wall it fills down to the wall, in the wall\'s own colour', filled.faces.some((fc) => fc.color === 'below')
+    && !filled.faces.some((fc) => typeof fc.color === 'number'));
+  // Found in play: every roof facing east or west came out bare — its tiles
+  // were thrown away as if they had no size.
+  const tiled = (sh, f, c, st) => slopeGeometry(sh, f, c, { style: st }).faces.filter((fc) => fc.out[1] > 0 && !fc.bed).length;
+  const bare = [];
+  for (const st of ['clay', 'slate']) {
+    for (let f = 0; f < 4; f++) {
+      for (const c of [null, { type: 'outer', second: (f + 1) & 3 }, { type: 'inner', second: (f + 3) & 3 }]) {
+        if (tiled('roof', f, c, st) < 6) bare.push(`${st} ${f} ${c?.type ?? 'straight'}`);
+      }
+    }
+    for (const sh of ['roof_lo', 'roof_hi', 'roof_ridge_x', 'roof_ridge_z', 'roof_peak']) if (tiled(sh, 1, null, st) < 6) bare.push(`${st} ${sh}`);
+  }
+  ok(`every piece, every way round, in both materials, is tiled (${bare.join('; ') || 'none bare'})`, bare.length === 0);
+  const slate = slopeGeometry('roof', 0, null, { style: 'slate' });
+  const flat = (fc) => fc.out[1] > 0 && fc.tone !== undefined;
+  ok('slate is laid differently: flat slates, three courses, staggered', slate.faces.filter(flat).length !== g.faces.filter(flat).length);
 
   const world = new World({ sizeX: 16, sizeZ: 16, height: 16 });
   world.setBlock(4, 1, 4, brick.id);
@@ -113,8 +142,12 @@ const STAIR = SLOPE_KIND.stair;
   const world = new World({ sizeX: 16, sizeZ: 16, height: 16 });
   world.setBlock(2, 1, 2, 26);
   world.setBlock(4, 3, 4, 85);
-  ok('a lantern is lit from its glass, low in its cell', lightOf(26).y < 0.5);
-  ok('a chandelier from its candles, high in its cell', lightOf(85).y > 0.6);
+  // Reported directly: the light was "such a circle in the centre", and
+  // should be "blurred", reach further, and "go from more light to less".
+  ok('a lantern shines from just above itself, not from the floor under it', lightOf(26).y > 1);
+  ok('a chandelier from under its candles, not against the ceiling', lightOf(85).y < 0.5);
+  ok('both fade gently with distance, not with its square, and reach well past five blocks',
+    [26, 85].every((id) => lightOf(id).decay === 1 && lightOf(id).distance >= 18));
   ok('a lantern is small enough to step over', world.collisionBoxAt(2, 1, 2).maxY === 1.5);
   ok('you walk under a chandelier', world.collisionBoxAt(4, 3, 4) === null);
   ok('both are things you can hold', ITEMS_BY_ID.get('lantern')?.block === 26 && ITEMS_BY_ID.get('chandelier')?.block === 85);

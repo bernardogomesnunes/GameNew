@@ -42,12 +42,24 @@ import { hash01 } from '../world/ChunkGen.js';
  * it reads as the same world, only bigger blocks.
  */
 
+/**
+ * Three bands, finer nearer you. Reported directly, of the blocky version:
+ * "too blocky, maybe we can make it a little bit flatter to give the sense
+ * of infinite." So the first band just past the real chunks is in 4-block
+ * steps, close enough to real blocks that the hand-over doesn't jump; the
+ * woods stand lower the further out they are (`canopy`, in blocks); and in
+ * the last band they're only a colour on the ground — open country out to
+ * the horizon rather than a field of giant cubes.
+ */
 const LAYERS = [
-  { step: 8, tile: 128, heightStep: 2 },
-  { step: 24, tile: 384, heightStep: 4 },
+  // Right from under your feet: it's hidden under every real chunk that's
+  // drawn, and it's what fills in for one that hasn't been yet.
+  { step: 4, tile: 64, from: 0, to: 256, canopy: 3 },
+  { step: 12, tile: 192, from: 256, to: 640, canopy: 2 },
+  { step: 24, tile: 384, from: 640, to: 1536, canopy: 0 },
 ];
-/** Where the fine layer hands over to the coarse one, in blocks from you. */
-export const SPLIT = 448;
+/** Where the fine bands hand over to the coarse one, in blocks from you. */
+export const SPLIT = 640;
 /** How far out the coarse layer reaches — past the fog's far end. */
 export const REACH = 1536;
 /**
@@ -75,7 +87,6 @@ export class FarTerrain {
     this.maskTexture = null;
     this.uniforms = {
       uCentre: { value: new THREE.Vector2() },
-      uSplit: { value: SPLIT },
       uMask: { value: null },
       uMaskOrigin: { value: new THREE.Vector2() },
       uMaskBlocks: { value: 1 },
@@ -84,21 +95,24 @@ export class FarTerrain {
     this.layers = LAYERS.map((spec, i) => ({
       ...spec,
       tiles: new Map(),
-      material: this.material(i === 0),
+      material: this.material(spec, i),
     }));
   }
 
-  /** The two materials: Lambert, plus the split and the chunk mask. */
-  material(inner) {
+  /** A band's material: Lambert, drawn only inside its own ring, and never over a real chunk. */
+  material(band, i) {
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true, fog: true });
     mat.onBeforeCompile = (shader) => {
-      Object.assign(shader.uniforms, this.uniforms);
+      Object.assign(shader.uniforms, this.uniforms, {
+        uFrom: { value: band.from }, uTo: { value: band.to },
+      });
       shader.vertexShader = `varying vec2 vFarXZ;\n${shader.vertexShader}`
         .replace('#include <begin_vertex>', '#include <begin_vertex>\n  vFarXZ = position.xz;');
       shader.fragmentShader = `
         varying vec2 vFarXZ;
         uniform vec2 uCentre;
-        uniform float uSplit;
+        uniform float uFrom;
+        uniform float uTo;
         uniform sampler2D uMask;
         uniform vec2 uMaskOrigin;
         uniform float uMaskBlocks;
@@ -106,12 +120,13 @@ export class FarTerrain {
         .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
         {
           vec2 d = vFarXZ - uCentre;
-          if (${inner ? 'dot(d, d) > uSplit * uSplit' : 'dot(d, d) <= uSplit * uSplit'}) discard;
+          float r2 = dot(d, d);
+          if (r2 < uFrom * uFrom || r2 >= uTo * uTo) discard;
           vec2 m = (vFarXZ - uMaskOrigin) / uMaskBlocks;
           if (m.x >= 0.0 && m.x < 1.0 && m.y >= 0.0 && m.y < 1.0 && texture2D(uMask, m).r > 0.5) discard;
         }`);
     };
-    mat.customProgramCacheKey = () => (inner ? 'far-inner-v2' : 'far-outer-v2');
+    mat.customProgramCacheKey = () => `far-band-${i}-v3`;
     return mat;
   }
 
@@ -129,9 +144,8 @@ export class FarTerrain {
     this.uniforms.uCentre.value.set(x, z);
     const first = this.layers.every((l) => !l.tiles.size);
     const deadline = first ? Infinity : performance.now() + budgetMs;
-    this.layers.forEach((layer, i) => {
-      const from = i === 0 ? 0 : SPLIT;
-      const to = i === 0 ? SPLIT : REACH;
+    this.layers.forEach((layer) => {
+      const { from, to } = layer;
       this.forgetFar(layer, x, z, from, to);
       for (const [tx, tz] of this.wanted(layer, x, z, from, to)) {
         if (performance.now() > deadline) return;
@@ -186,17 +200,28 @@ export class FarTerrain {
     const cols = new Array(n * n);
     for (let gz = 0; gz < n; gz++) {
       for (let gx = 0; gx < n; gx++) {
-        cols[gz * n + gx] = this.column(x0 + (gx - 1) * step, z0 + (gz - 1) * step, step);
+        cols[gz * n + gx] = this.column(x0 + (gx - 1) * step, z0 + (gz - 1) * step, step, layer.canopy);
       }
     }
     const at = (gx, gz) => cols[(gz + 1) * n + gx + 1];
 
     const out = { position: [], normal: [], color: [], index: [] };
+    // Tops first, a run of level ground in one colour as one face — most of
+    // the country is flat, and this is most of the saving.
+    for (let gz = 0; gz < cells; gz++) {
+      for (let gx = 0; gx < cells;) {
+        const c = at(gx, gz);
+        let run = 1;
+        while (gx + run < cells && at(gx + run, gz).top === c.top && at(gx + run, gz).colour.equals(c.colour)) run++;
+        const xa = x0 + gx * step, xb = xa + run * step, za = z0 + gz * step, zb = za + step;
+        quad(out, [xa, c.top, za], [xa, c.top, zb], [xb, c.top, zb], [xb, c.top, za], [0, 1, 0], c.colour);
+        gx += run;
+      }
+    }
     for (let gz = 0; gz < cells; gz++) {
       for (let gx = 0; gx < cells; gx++) {
         const c = at(gx, gz);
         const xa = x0 + gx * step, xb = xa + step, za = z0 + gz * step, zb = za + step;
-        quad(out, [xa, c.top, za], [xa, c.top, zb], [xb, c.top, zb], [xb, c.top, za], [0, 1, 0], c.colour);
         // Water is a flat sheet: the ground under it shows through nowhere.
         if (c.water) continue;
         for (const [dx, dz, nx, nz] of [[1, 0, 1, 0], [-1, 0, -1, 0], [0, 1, 0, 1], [0, -1, 0, -1]]) {
@@ -229,7 +254,7 @@ export class FarTerrain {
    * it's under water, the block on top and the one showing down its sides,
    * and how wooded it is.
    */
-  column(x, z, step) {
+  column(x, z, step, canopyHeight = 3) {
     const gen = this.gen;
     const cx = x + (step >> 1), cz = z + (step >> 1);
     const water = gen.waterLevelAt(cx, cz);
@@ -248,8 +273,13 @@ export class FarTerrain {
     const trees = biome?.trees;
     if (gen.treeAt && trees?.chance && !beach && (biome.treeMaxHeight == null || h <= biome.treeMaxHeight)) {
       const density = Math.min(1, trees.chance * 28);
-      const [lo, hi] = trees.trunk ?? [4, 6];
-      col.canopy = { density, height: Math.round((lo + hi) / 2) + 2, colour: colourOf(trees.leaves), seed: gen.seed ?? 0 };
+      const leaves = colourOf(trees.leaves);
+      if (canopyHeight > 0) {
+        col.canopy = { density, height: canopyHeight, colour: leaves, seed: gen.seed ?? 0 };
+      } else {
+        // Out at the horizon the woods are only the colour of the ground.
+        col.colour = col.colour.clone().lerp(leaves, density * 0.85);
+      }
     }
     return col;
   }
