@@ -102,6 +102,19 @@ function paint(recipe, salt) {
     }
   }
 
+  // Furrows: tilled soil, ridges with a ragged trough between them — dug,
+  // not sawn, so no two pixels of a trough are quite as dark.
+  if (recipe.furrows) {
+    const every = recipe.furrows;
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const r = y % every;
+        if (r === 0) darken(x, y, depth * (0.55 + 0.45 * hash01(x, y, salt)));
+        else if (r === 1 && hash01(x, y + 97, salt) < 0.5) darken(x, y, depth * 0.5);
+      }
+    }
+  }
+
   // A darker lip along the edges, for a block that reads as having a rim.
   if (recipe.band) {
     const w = recipe.band;

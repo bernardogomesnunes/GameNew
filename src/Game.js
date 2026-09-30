@@ -54,6 +54,7 @@ import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock } from './config/blocks.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
+import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox } from './world/Mobs.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
@@ -124,7 +125,10 @@ const HOLD_BREAK_INTERVAL_MS = 170;
 // blocks; a swing at something alive shouldn't land six times a second.
 const STRIKE_COOLDOWN_MS = 350;
 // What a farm animal will follow you for. See Mobs.think.
-const LURES = new Set(['vegetables', 'seeds', 'fruit']);
+const LURES = new Set(['vegetables', 'seeds', 'fruit', ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
+const FARMLAND = 21;
+/** How often planted crops are brought up to the stage their age says. */
+const CROP_TICK_SECONDS = 2;
 const TAME_EVERY_MS = 1000; // how often pens take in animals led into them
 // A gate, shut and open: Place on one swings it to the other. See toggleGate.
 const GATE_SHUT = 48, GATE_OPEN = 49;
@@ -168,7 +172,7 @@ const SLOW_BREAK_MS = 900;
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
 const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', seeds: 'plantMixed' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -2717,11 +2721,14 @@ export class Game {
     }
     const next = this.placedBlock(type);
     const door = doorPart(next);
+    const crop = cropOf(next);
     const targets = this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
     const changes = [];
     for (const t of targets) {
       if (!this.world.inBounds(t.x, t.y, t.z)) continue;
-      if (this.blockOverlapsPlayerAABB(t)) continue;
+      // A seed goes in farmland and nowhere else.
+      if (crop && this.world.getBlock(t.x, t.y - 1, t.z) !== FARMLAND) continue;
+      if (this.blockOverlapsPlayerAABB(t) && !crop) continue;
       const prev = this.world.getBlock(t.x, t.y, t.z);
       if (prev === next) continue;
       if (door) {
@@ -2738,7 +2745,57 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: 'No room for a door', body: 'It needs two blocks of clear space' });
       return;
     }
+    if (crop && !changes.length) {
+      this.ui.toast({ kind: 'xp', title: 'Seeds go in farmland', body: 'Put down farmland and plant on top of it' });
+      return;
+    }
     this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
+  }
+
+  /**
+   * Place with a handful of mixed seeds: whatever comes up. Which crop is
+   * picked by where it lands, so the same patch doesn't reroll if you plant
+   * it twice — and a row comes up as a mix.
+   */
+  plantMixed() {
+    const hit = this.raycast();
+    if (!hit) return;
+    const { placeX: x, placeY: y, placeZ: z } = hit;
+    if (this.world.getBlock(x, y - 1, z) !== FARMLAND || this.world.getBlock(x, y, z) !== AIR) {
+      this.ui.toast({ kind: 'xp', title: 'Seeds go in farmland', body: 'Put down farmland and plant on top of it' });
+      return;
+    }
+    const inv = this.duilt?.inventory;
+    if (inv && !inv.endless && !inv.has('seeds', 1)) return;
+    const h = Math.abs((x * 73856093) ^ (z * 19349663) ^ (y * 83492791));
+    const next = cropBlock(CROPS[h % CROPS.length].kind, 0);
+    if (!this.applyChanges([{ x, y, z, prev: AIR, next }], { chargeResources: false })) return;
+    if (inv && !inv.endless) inv.remove('seeds', 1);
+  }
+
+  /** Brings every planted crop up to the stage its time in the ground says. */
+  growCrops(dt) {
+    this.cropClock = (this.cropClock ?? 0) + dt;
+    if (this.cropClock < CROP_TICK_SECONDS || !this.duilt) return;
+    this.cropClock = 0;
+    if (this.duilt.crops.grow(this.world).length) this.remeshDirty();
+  }
+
+  /**
+   * A crop stands on its farmland: take the soil out from under one and
+   * the plant comes up with it (and goes in your bag, like any harvest).
+   */
+  withUprooted(changes) {
+    let out = changes;
+    for (const c of changes) {
+      if (c.prev !== FARMLAND || c.next === FARMLAND) continue;
+      const above = this.world.getBlock(c.x, c.y + 1, c.z);
+      if (!cropOf(above)) continue;
+      if (out.some((o) => o.x === c.x && o.y === c.y + 1 && o.z === c.z)) continue;
+      if (out === changes) out = [...changes];
+      out.push({ x: c.x, y: c.y + 1, z: c.z, prev: above, next: AIR });
+    }
+    return out;
   }
 
   /**
@@ -2778,7 +2835,7 @@ export class Game {
    * has a tool that takes a lot away again.
    */
   applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
-    changes = this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z)));
+    changes = this.withUprooted(this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z))));
     if (!changes.length) return false;
 
     // Duilt has its own economy: the border says where, the bag says whether.
@@ -2818,6 +2875,14 @@ export class Game {
 
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
+    // What's planted is kept track of, so it can grow while you're away.
+    if (this.duilt) {
+      for (const c of changes) {
+        const was = cropOf(c.prev), is = cropOf(c.next);
+        if (is && is.stage === 0 && !(was && was.kind === is.kind)) this.duilt.crops.plant(c.x, c.y, c.z, is.kind);
+        else if (was && !is) this.duilt.crops.remove(c.x, c.y, c.z);
+      }
+    }
     // One sound for the edit, however many blocks it was: what it was made of.
     const first = changes[0];
     if (first.next !== AIR) this.sound?.place(soundOf(BLOCKS_BY_ID.get(first.next)));
@@ -3121,6 +3186,7 @@ export class Game {
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
       this.runWater(dt);
+      this.growCrops(dt);
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
       this.gamification.tick(performance.now());

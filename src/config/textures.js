@@ -16,6 +16,7 @@
  *
  *   marks     scattered pixels — dots of dirt, chips of stone, blades of grass
  *   lines     'h', 'v' or 'grid', for planks, trunks and masonry
+ *   furrows   rows of tilled soil, every N pixels
  *   band      a darker strip along one edge, for a block with a lip
  *   depth     how dark the darkest mark goes, 0..1 off white
  *   scale     how many tile-pixels across; 16 unless the pattern needs room
@@ -25,7 +26,7 @@ export const TEXTURES = {
   grass:     { marks: 26, depth: 0.16, speck: 0.06, scale: 16 },
   moss:      { marks: 34, depth: 0.20, speck: 0.07, scale: 16 },
   dirt:      { marks: 22, depth: 0.18, scale: 16 },
-  farmland:  { lines: 'h', every: 4, marks: 10, depth: 0.16, scale: 16 },
+  farmland:  { furrows: 4, marks: 34, blobs: 2, depth: 0.28, speck: 0.08, scale: 16 },
   sand:      { marks: 30, depth: 0.09, scale: 16 },
   gravel:    { marks: 38, depth: 0.22, blobs: 5, scale: 16 },
   clay:      { marks: 12, depth: 0.10, scale: 16 },

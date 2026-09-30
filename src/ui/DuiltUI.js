@@ -365,10 +365,14 @@ export class DuiltUI {
   /** What a building gives you, one plain line per thing. */
   buildingDoes(structure, spec, level, summary) {
     const out = [];
-    const rate = level?.rate ?? (spec && Object.keys(spec.produces ?? {}).length
+    const rate = spec?.fromCrops ? null : level?.rate ?? (spec && Object.keys(spec.produces ?? {}).length
       ? { produces: spec.produces, everySeconds: spec.everySeconds } : null);
     const made = rate && rateText(rate.produces, rate.everySeconds);
     if (made) out.push(made);
+    if (spec?.fromCrops) {
+      const grown = this.duilt?.producesFor(structure) ?? {};
+      out.push(rateText(grown, spec.everySeconds) ?? 'Makes whatever is planted in it — nothing planted yet');
+    }
     if (spec?.fromAnimals) {
       const kept = penProduce(structure, this.duilt?.herd ?? []);
       const pen = rateText(kept, spec.everySeconds);

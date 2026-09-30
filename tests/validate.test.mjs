@@ -14,6 +14,9 @@ ok('farm without water is refused', !r.ok && r.failed === 'water');
 ok('and the reason names water', /water/i.test(r.reason));
 w.setBlock(10,10,6,WATER);
 r = validateStructure(w, R(4,10,4,4,2), 'farm');
+ok('farm beside the river with nothing planted is refused', !r.ok && r.failed === 'crops');
+for (let x=4;x<8;x++) w.setBlock(x,11,4,119);
+r = validateStructure(w, R(4,10,4,4,2), 'farm');
 ok('farm beside the river passes', r.ok);
 
 // too little tilled soil, and the message counts what's missing

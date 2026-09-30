@@ -3,6 +3,7 @@ import { GLYPHS, inkOn } from './glyphs.js';
 import { boxesFor, fenceBoxes } from '../world/propShapes.js';
 import { slopeGeometry, orient } from '../world/slopes.js';
 import { tileFor, TILE_SIZE } from '../render/BlockTextures.js';
+import { ITEM_MODELS } from './itemModels.js';
 
 /**
  * Blocks drawn as blocks: a little isometric cube, three faces, one colour.
@@ -186,7 +187,15 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
       // Both halves, squeezed into the one cell the icon has room for.
       ? [...boxesFor('door').map((b) => squeeze(b, 0)), ...boxesFor('door_top').map((b) => squeeze(b, 1))]
       : boxesFor(shape);
-  const c = spec.color ?? 0x888888;
+  return boxesSvg(boxes, spec.color ?? 0x888888, size);
+}
+
+/**
+ * Boxes in a unit cell, drawn in the cube's projection and light. With `fit`,
+ * the picture is zoomed to fill the slot the way a cube does — an egg is
+ * smaller than a block, but its icon shouldn't be a speck beside one.
+ */
+function boxesSvg(boxes, c, size, { fit = false } = {}) {
   // Unit cell to the cube icon's own frame: x runs down-right, z down-left,
   // y up — the same diamond cubeSvg draws, so a slab sits where half a cube
   // would.
@@ -205,7 +214,21 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
     body += poly([p(b.minX, b.maxY, b.maxZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.minX, b.minY, b.maxZ)], shade(bc, f.left));
     body += poly([p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.maxX, b.minY, b.minZ)], shade(bc, f.right));
   }
-  return `<svg class="cube" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
+  let view = '0 0 24 24';
+  if (fit) {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const b of boxes) {
+      for (const x of [b.minX, b.maxX]) for (const y of [b.minY, b.maxY]) for (const z of [b.minZ, b.maxZ]) {
+        const [px, py] = p(x, y, z).split(' ').map(Number);
+        x0 = Math.min(x0, px); x1 = Math.max(x1, px); y0 = Math.min(y0, py); y1 = Math.max(y1, py);
+      }
+    }
+    // The span a whole cube takes up in its 24-unit box.
+    const span = Math.max((x1 - x0) / 18.8, (y1 - y0) / 20.4);
+    const w = 24 * span, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    view = `${(cx - w / 2).toFixed(2)} ${(cy - w / 2).toFixed(2)} ${w.toFixed(2)} ${w.toFixed(2)}`;
+  }
+  return `<svg class="cube" viewBox="${view}" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
 }
 
 /** A sloped piece drawn from its polygons: far ones first, backs left out. */
@@ -258,6 +281,9 @@ export function hasCube(blockId) {
  */
 export function itemIcon(spec, { size = 22 } = {}) {
   if (!spec) return null;
+  // Food and seeds are little models of themselves, not their plant.
+  const model = ITEM_MODELS[spec.id];
+  if (model) return boxesSvg(model, spec.color ?? 0x888888, size, { fit: true });
   // An item that places a block shows that block.
   if (spec.block != null) {
     if (!hasCube(spec.block)) return null;

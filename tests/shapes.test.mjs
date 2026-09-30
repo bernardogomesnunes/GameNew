@@ -54,7 +54,8 @@ const LANTERN = 26, SLAB_STONE = 27, STAIRS_STONE = 29, CHAIR_OAK = 33, RUG_GREE
   for (const id of newBlockIds) {
     const item = [...ITEMS_BY_ID.values()].find((i) => i.block === id);
     ok(`block ${BLOCKS_BY_ID.get(id).name} has an item that places it`, !!item);
-    if (item && !NATURAL.has(id)) {
+    // Crops are grown from seeds saved from a harvest, not made either.
+    if (item && !NATURAL.has(id) && !BLOCKS_BY_ID.get(id).crop) {
       const recipe = RECIPES.find((r) => r.output.id === item.id);
       ok(`${item.name} is craftable`, !!recipe);
     }

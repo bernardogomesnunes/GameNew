@@ -1,3 +1,5 @@
+import { CROPS, RIPE, cropBoxes } from '../config/crops.js';
+
 /**
  * What a non-cube block actually looks like: a handful of boxes in unit-cell
  * space (0..1 on every axis), assembled by PropRenderer into real geometry
@@ -101,6 +103,9 @@ PROP_SHAPES.chandelier = [
     { minX: x + 0.045, maxX: x + 0.075, minY: 0.79, maxY: 0.85, minZ: z + 0.045, maxZ: z + 0.075, color: WICK, glow: true },
   ]),
 ];
+
+// Crops: every stage of every one — see config/crops.js.
+for (const c of CROPS) for (let s = 0; s <= RIPE; s++) PROP_SHAPES[`crop_${c.kind}_${s}`] = cropBoxes(c.kind, s);
 
 // Swung open on its hinge: the same door, lying flat against the side of
 // the doorway rather than across it.

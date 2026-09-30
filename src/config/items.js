@@ -1,4 +1,5 @@
 import { BLOCKS } from './blocks.js';
+import { CROPS, CROP_BASE } from './crops.js';
 
 /**
  * Item registry for Duilt.
@@ -64,12 +65,27 @@ export const ITEMS = [
   { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xe5cd8c, glyph: 'gold', block: 13, madeBy: 'Brought up from a mine' },
 
   // --- growing things ------------------------------------------------------
-  { id: 'seeds', name: 'Seeds', kind: 'raw', stackTo: STACK_GOODS, color: 0xd7cb95, glyph: 'seeds', madeBy: 'Shaken from a forest, or saved from a harvest' },
+  // Mixed seeds come up as whichever crop they turn out to be (see
+  // Game.plantMixed); each crop's own seeds come up as that crop — see
+  // config/crops.js.
+  { id: 'seeds', name: 'Mixed Seeds', kind: 'raw', stackTo: STACK_GOODS, color: 0xd7cb95, glyph: 'seeds', madeBy: 'Shaken from a forest, or saved from a harvest' },
+  ...CROPS.map((c, k) => ({
+    id: `seeds_${c.kind}`, name: `${c.name} Seeds`, kind: 'raw', stackTo: STACK_GOODS, color: c.crop, glyph: 'seeds',
+    block: CROP_BASE + 4 * k, madeBy: `Saved from a ripe ${c.name.toLowerCase()}`,
+  })),
   { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fcd8b, glyph: 'sprout', block: 20, madeBy: 'Grown from seed' },
 
   // --- food. Fruit spoils, preserves do not -------------------------------
   { id: 'fruit', name: 'Fruit', kind: 'food', stackTo: STACK_FOOD, color: 0xdc928f, glyph: 'fruit', feeds: 12, madeBy: 'Picked from a forest' },
-  { id: 'vegetables', name: 'Vegetables', kind: 'food', stackTo: STACK_FOOD, color: 0xddb289, glyph: 'vegetable', feeds: 22, madeBy: 'Harvested from a farm' },
+  // The farm's crops. Carrots are the vegetables the game always had — the
+  // id stays so everything that already made or used them still does.
+  { id: 'vegetables', name: 'Carrots', kind: 'food', stackTo: STACK_FOOD, color: 0xe8873a, glyph: 'vegetable', feeds: 22, madeBy: 'Harvested from a farm' },
+  { id: 'potato', name: 'Potatoes', kind: 'food', stackTo: STACK_FOOD, color: 0xc9a46c, glyph: 'vegetable', feeds: 20, madeBy: 'Dug from a farm' },
+  { id: 'cabbage', name: 'Cabbage', kind: 'food', stackTo: STACK_FOOD, color: 0xa9cf86, glyph: 'vegetable', feeds: 18, madeBy: 'Cut from a farm' },
+  { id: 'lettuce', name: 'Lettuce', kind: 'food', stackTo: STACK_FOOD, color: 0xb6de86, glyph: 'vegetable', feeds: 12, madeBy: 'Picked from a farm' },
+  { id: 'pepper', name: 'Peppers', kind: 'food', stackTo: STACK_FOOD, color: 0xd84a3c, glyph: 'vegetable', feeds: 14, madeBy: 'Picked from a farm' },
+  { id: 'zucchini', name: 'Zucchini', kind: 'food', stackTo: STACK_FOOD, color: 0x3f7a35, glyph: 'vegetable', feeds: 16, madeBy: 'Cut from a farm' },
+  { id: 'broccoli', name: 'Broccoli', kind: 'food', stackTo: STACK_FOOD, color: 0x3e7b3c, glyph: 'vegetable', feeds: 18, madeBy: 'Cut from a farm' },
   // Hunted. Raw is barely worth eating on purpose: the fire is what makes
   // meat worth the chase — see the cook_meat recipe.
   { id: 'raw_meat', name: 'Raw Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xd98b85, glyph: 'meat', feeds: 5, madeBy: 'Hunted' },

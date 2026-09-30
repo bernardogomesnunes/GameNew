@@ -1,4 +1,5 @@
-import { cubeSvg, itemIcon, hasCube, shade } from '../src/config/cubes.js';
+import { cubeSvg, itemIcon, hasCube, shade, blockIcon } from '../src/config/cubes.js';
+const blockIconOf = (i) => (i.block != null ? blockIcon(i.block) : null);
 import { BLOCKS, BLOCKS_BY_ID, PLACEABLE_BLOCKS } from '../src/config/blocks.js';
 import { ITEMS } from '../src/config/items.js';
 import { TEXTURES, textureFor, TILE_BASE } from '../src/config/textures.js';
@@ -61,7 +62,11 @@ ok('shading stays inside a byte', shade(0xffffff, 2) === 'rgb(255,255,255)' && s
   const tools = ITEMS.filter((i) => i.kind === 'tool');
   ok('tools keep their drawing — a cube would be a lie about what you hold',
     tools.length > 0 && tools.every((i) => itemIcon(i) === null));
-  ok('and so does food', ITEMS.filter((i) => i.kind === 'food').every((i) => itemIcon(i) === null));
+  // Reported directly: food "are cards, weird, not matching the rest" —
+  // so food is a little model of itself now, in the same light as the cubes.
+  ok('food is drawn as a model of itself', ITEMS.filter((i) => i.kind === 'food').every((i) => /<svg class="cube"/.test(itemIcon(i) ?? '')));
+  ok('and so are seeds, as a packet rather than the sprout they place',
+    ITEMS.filter((i) => i.id.startsWith('seeds')).every((i) => (itemIcon(i) ?? '') !== '' && itemIcon(i) !== blockIconOf(i)));
 }
 
 ok('the hotbar draws each block as it is — a cube, or its real shape', /blockIcon\(b\.id/.test(ui));

@@ -1,3 +1,4 @@
+import { CROPS, CROP_BASE } from './crops.js';
 /**
  * Building definitions for Duilt.
  *
@@ -17,6 +18,9 @@
 const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, PLANKS = 7,
       COBBLE = 8, BRICK = 9, GLASS = 10, WATER = 11, GOLD = 13, MARBLE = 17,
       SAPLING = 20, FARMLAND = 21, FENCE = 47, GATE = 48, GATE_OPEN = 49;
+
+/** Every crop block, at every stage — see config/crops.js. */
+const CROP_IDS = Array.from({ length: CROPS.length * 4 }, (_, i) => CROP_BASE + i);
 
 /** Counts matching blocks in the region. */
 const count = (ctx, ids) => ctx.countOf(ids);
@@ -65,10 +69,10 @@ export const STRUCTURES = [
     name: 'Farm',
     icon: '🌾',
     age: 1,
-    blurb: 'Turned soil beside fresh water. Four by four is enough to start.',
+    blurb: 'Turned soil beside fresh water, with crops growing in it. It makes whatever you planted.',
     minSize: 2,
     maxSize: 16,
-    cost: { seeds: 4 },
+    cost: { seeds: 2 },
     requires: [
       {
         id: 'tilled',
@@ -82,7 +86,16 @@ export const STRUCTURES = [
         test: (ctx) => ctx.hasWithin([WATER], 6),
         say: () => 'Needs fresh water within 6 blocks — build nearer the river',
       },
+      {
+        // Requested directly: a farm "should have crops to plant there".
+        id: 'crops',
+        test: (ctx) => count(ctx, CROP_IDS) >= 4,
+        say: (ctx) => `Needs ${4 - count(ctx, CROP_IDS)} more crops planted — put seeds in the farmland`,
+      },
     ],
+    // What it makes is what's growing in it — see duilt/Crops.js's
+    // cropProduce. `produces` below is only what it's known for.
+    fromCrops: true,
     // Requested directly: no building should hand over more than 10-15 of
     // anything in a day. A 2-hour cycle at one of each keeps a farm at a
     // dozen a day, not the twelve dozen a 12-minute cycle worked out to.

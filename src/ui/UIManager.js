@@ -1,4 +1,5 @@
 import { PLACEABLE_BLOCKS } from '../config/blocks.js';
+import { cropOf } from '../config/crops.js';
 import { icon } from './icons.js';
 import { renderPanels, panelDef } from './Panel.js';
 import { DuiltUI } from './DuiltUI.js';
@@ -42,6 +43,7 @@ const TOOL_ACTION_LABELS = {
   bucket_water: ['Break', 'Empty'],
   fruit: ['Eat', 'Throw'],
   vegetables: ['Eat', 'Throw'],
+  seeds: ['Break', 'Plant'],
 };
 
 function el(html) {
@@ -1823,7 +1825,8 @@ export class UIManager {
 
   /** The two button labels for whatever is selected right now, with no tool queued. */
   defaultActionLabels() {
-    const [b, p] = TOOL_ACTION_LABELS[this.selectedItemId] ?? (isFood(this.selectedItemId) ? ['Eat', 'Throw'] : ['Break', 'Place']);
+    const [b, p] = TOOL_ACTION_LABELS[this.selectedItemId] ?? (isFood(this.selectedItemId) ? ['Eat', 'Throw']
+      : !this.selectedItemId && cropOf(this.selectedBlockId) ? ['Break', 'Plant'] : ['Break', 'Place']);
     // Pointed at a door or a gate, Place opens or closes it whatever you hold.
     return [b, this.aimedSwing ?? p];
   }

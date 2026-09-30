@@ -41,6 +41,7 @@ const fx = origin.minX + 2, fz = origin.minZ + 2;
 const GY = world.surfaceHeight(fx, fz) - 1;          // whatever the land is here
 for (let x=fx;x<fx+4;x++) for (let z=fz;z<fz+4;z++) world.setBlock(x, GY, z, FARMLAND);
 world.setBlock(fx+1, GY, fz+5, 11); // water within 6
+for (let x=fx;x<fx+4;x++) world.setBlock(x, GY+1, fz, 119); // carrots sown in it
 const region = {minX:fx,maxX:fx+3,minY:GY,maxY:GY+1,minZ:fz,maxZ:fz+3};
 const opts = g.claimOptionsFor(region);
 ok('claim menu offers every Age 1 building', opts.length === 3);
@@ -48,7 +49,7 @@ ok('the farm qualifies', opts.find(o=>o.id==='farm').ok);
 ok('the house does not, and says so', !opts.find(o=>o.id==='house').ok);
 const claim = g.claim(region, 'farm');
 ok('claiming the farm works', claim.ok);
-ok('seeds were charged', g.inventory.countOf('seeds') === 2);
+ok('seeds were charged', g.inventory.countOf('seeds') === 4);
 
 // outside the border is refused even if the blocks are right
 const far = {minX:b.maxX+2,maxX:b.maxX+5,minY:GY,maxY:GY+1,minZ:fz,maxZ:fz+3};

@@ -14,6 +14,7 @@
 import { ITEM_FOR_BLOCK } from './items.js';
 import { doorBlock, roofBlock } from './blocks.js';
 import { ROOFS_BY_ID } from './roofs.js';
+import { cropBlock } from './crops.js';
 import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
 
 const DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, PLANKS = 7, COBBLE = 8,
@@ -107,8 +108,14 @@ function tree(ox, oz, h = 4) {
 }
 
 function farmBlocks() {
+  // Four rows of soil, a row of carrots and a row of potatoes sown in it —
+  // the seeds you start with. The other two rows are left for you to plant.
   const blocks = [];
   for (let dx = 0; dx < 4; dx++) for (let dz = 0; dz < 4; dz++) blocks.push({ dx, dy: 0, dz, type: FARMLAND });
+  for (let dx = 0; dx < 4; dx++) {
+    blocks.push({ dx, dy: 1, dz: 0, type: cropBlock('carrot') });
+    blocks.push({ dx, dy: 1, dz: 2, type: cropBlock('potato') });
+  }
   return blocks;
 }
 

@@ -1,3 +1,4 @@
+import { Crops, harvestOf, cropProduce } from './Crops.js';
 import { penProduce, herdToJSON } from './Ranch.js';
 import { Inventory } from '../items/Inventory.js';
 import { Territory } from '../world/Territory.js';
@@ -31,7 +32,7 @@ import { ageOf, FINAL_AGE } from '../config/ages.js';
  * only ever adds `if (this.sandbox)` at the front of it, never a second copy.
  */
 
-const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds: 6 };
+const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds: 6, seeds_carrot: 4, seeds_potato: 4 };
 
 export class DuiltGame {
   constructor({ world, scene, bus, age = 1, sandbox = false }) {
@@ -43,6 +44,8 @@ export class DuiltGame {
     this.dayTime = null; // see toJSON
     // Designs you placed that didn't count yet — see waitFor.
     this.waiting = [];
+    // What's planted where, and when — see duilt/Crops.js.
+    this.crops = new Crops();
     this.inventory = new Inventory({ bus, endless: sandbox });
     this.territory = new Territory({ world, scene, bus, age, sandbox });
     this.structures = new StructureRegistry({ world, bus, inventory: this.inventory });
@@ -125,6 +128,16 @@ export class DuiltGame {
     const gained = {};
     for (const c of changes) {
       if (c.prev === AIR) continue;
+      // A crop gives its harvest, not just itself back.
+      const harvest = harvestOf(c.prev);
+      if (harvest) {
+        for (const [id, n] of Object.entries(harvest)) {
+          const left = this.inventory.add(id, n);
+          if (n - left > 0) gained[id] = (gained[id] ?? 0) + n - left;
+          if (left > 0) this.bus?.emit('duilt:bagfull', { itemId: id, lost: left });
+        }
+        continue;
+      }
       const drop = this.yieldFor(c.prev);
       if (!drop) continue;
       const leftover = this.inventory.add(drop.itemId, drop.amount);
@@ -456,9 +469,16 @@ export class DuiltGame {
         now,
         yieldMultiplier: this.skills.gatherYield(),
         bonusFor: (id) => this.settlers.bonusFor(id),
-        producesFor: (s) => penProduce(s, this.herd),
+        producesFor: (s) => this.producesFor(s),
       });
     }
+  }
+
+  /** What a building makes that depends on what's in it: a pen's animals, a farm's crops. */
+  producesFor(s) {
+    const spec = STRUCTURES_BY_ID.get(s.type);
+    if (spec?.fromCrops) return cropProduce(s, this.world);
+    return penProduce(s, this.herd);
   }
 
   eat(itemId = null) {
@@ -482,6 +502,7 @@ export class DuiltGame {
       // so night is still night when you come back to it.
       dayTime: this.dayTime,
       waiting: this.waiting,
+      crops: this.crops.toJSON(),
       savedAt: Date.now(),
     };
   }
@@ -499,12 +520,13 @@ export class DuiltGame {
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
     this.dayTime = typeof data.dayTime === 'number' ? data.dayTime : null;
     this.waiting = Array.isArray(data.waiting) ? data.waiting.filter((w) => w?.region && w.type) : [];
+    this.crops.loadJSON(data.crops);
     // Pay out everything earned while the tab was shut.
     this.lastCollect = Date.now();
     return this.structures.collect({
       now: Date.now(),
       yieldMultiplier: this.skills.gatherYield(),
-      producesFor: (s) => penProduce(s, this.herd),
+      producesFor: (s) => this.producesFor(s),
     });
   }
 }
