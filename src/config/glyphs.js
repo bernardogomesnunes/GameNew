@@ -62,6 +62,10 @@ export const GLYPHS = {
   // Straight shaft into a blade that tapers to a rounded point.
   shovel: 'M12 4v10M8.5 14h7L15 18.5a3 3 0 0 1-6 0Z',
   // Tapered, with a handle over the rim. Straight sides made it a waste bin.
+  // A pry bar (the Clear tool) and a chalk line (the Symmetry tool) had no
+  // mark of their own and showed as blank squares in the bag.
+  clear: 'M6 20 17 6.5M17 6.5c1-1.2 2.6-1.2 3 0M6 20l-2-1.2',
+  symmetry: 'M12 3.5v17M6.5 8 3.5 12l3 4M17.5 8l3 4-3 4M8 12h8',
   bucket: 'M5 8.5h14l-2.4 11h-9.2L5 8.5ZM8 8.5a4 4.5 0 0 1 8 0',
   bucketFull: 'M5 8.5h14l-2.4 11h-9.2L5 8.5ZM8 13.5c2-1.6 4.8 1.6 6.8 0',
 
@@ -86,6 +90,9 @@ export const GLYPHS = {
   // ranching
   fence: 'M6.5 5v15M17.5 5v15M4 9.5h16M4 14.5h16',
   gate: 'M5 5v15M19 5v15M5 9h14M5 15h14M5 15l14-6',
+  chandelier: 'M12 3v5M5 12h14M5 12v-2.5M19 12v-2.5M12 12V9.5M8.5 12l-.5 4h8l-.5-4M12 16v3',
+  rooftile: 'M3 17 12 7l9 10M6 13.6l9 3.4M9 10.2l9 3.4M3 17h18',
+  door: 'M7 3.5h10v17H7ZM9.5 6h5v5h-5ZM14.5 13.5h.01',
   egg: 'M12 4c3.6 0 6 5.2 6 9a6 6 0 0 1-12 0c0-3.8 2.4-9 6-9Z',
   milk: 'M9 4h6M9.5 4v3L7 10.5V20h10v-9.5L14.5 7V4M7 13.5h10',
 

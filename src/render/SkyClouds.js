@@ -66,6 +66,11 @@ export class SkyClouds {
     }
   }
 
+  /** Tints the clouds — grey-blue at night, warm at dusk. See render/DayCycle.js. */
+  setColor(color) {
+    this.mesh.material.color.copy(color);
+  }
+
   update(dt, playerX, playerZ) {
     this.offset = (this.offset + dt * DRIFT_SPEED) % CELL;
     const baseX = Math.round(playerX / CELL) * CELL;

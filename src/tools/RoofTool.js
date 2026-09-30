@@ -1,4 +1,5 @@
 import { pickFootprint } from './PointerPick.js';
+import { roofPart, roofBlock, ROOF_MATERIALS } from '../config/blocks.js';
 
 /**
  * Turning a roof shape into blocks over the building you are pointing at.
@@ -25,7 +26,12 @@ export function roofPick(world, hit, opts) {
   return pickFootprint(world, hit, opts);
 }
 
-/** The shape's blocks over a pick, as `{ x, dy, z }` — dy above the eave. */
+/**
+ * The shape's blocks over a pick, as `{ x, dy, z, slope }` — dy above the
+ * eave. `slope` is set on the top block of each column: which way the roof
+ * climbs there and what piece it is (see slopeAt), for when it's laid in
+ * roof tiles rather than in plain blocks.
+ */
 export function roofBlocks(pick, { shape, turn = 0 }) {
   if (!pick || !shape) return [];
   const run = shape.run ?? 1;
@@ -34,9 +40,59 @@ export function roofBlocks(pick, { shape, turn = 0 }) {
   for (const [cell, d] of pick.spans) {
     const comma = cell.indexOf(',');
     const x = Number(cell.slice(0, comma)), z = Number(cell.slice(comma + 1));
-    for (const dy of shape.rises({ ...d, turn: t, run })) out.push({ x, dy, z });
+    const rises = shape.rises({ ...d, turn: t, run });
+    const top = Math.max(...rises);
+    for (const dy of rises) out.push({ x, dy, z, slope: dy === top ? slopeAt(shape, d, t) : null });
   }
   return out;
+}
+
+/**
+ * What a roof tile should be at the top of a column: { kind, facing }, or
+ * null where a slope doesn't belong (a flat roof). Worked out from the same
+ * distances to the edges the shape reads its heights from — a slope climbs
+ * away from the nearest eave, and where two eaves are equally near it's the
+ * top: a ridge, or the peak of a hipped roof. Corners where two slopes meet
+ * are left to the tiles themselves, which turn them (see world/slopes.js).
+ */
+export function slopeAt(shape, { xm, xp, zm, zp }, turn) {
+  // Facing climbs: 0 towards -z, 1 +x, 2 +z, 3 -x — so away from the -x
+  // eave is facing 1, and so on.
+  if (shape.id === 'gable') {
+    const alongX = turn % 2 === 1;
+    const [lo, hi, up, down] = alongX ? [zm, zp, 2, 0] : [xm, xp, 1, 3];
+    if (lo === hi) return { kind: alongX ? 'ridge_x' : 'ridge_z' };
+    return { kind: 'steep', facing: lo < hi ? up : down };
+  }
+  if (shape.id === 'hip') {
+    const near = Math.min(xm, xp, zm, zp);
+    const onX = xm === near && xp === near, onZ = zm === near && zp === near;
+    if (onX && onZ) return { kind: 'peak' };
+    if (onX) return (zm === near || zp === near) ? { kind: 'peak' } : { kind: 'ridge_z' };
+    if (onZ) return (xm === near || xp === near) ? { kind: 'peak' } : { kind: 'ridge_x' };
+    const facing = xm === near ? 1 : xp === near ? 3 : zm === near ? 2 : 0;
+    return { kind: 'steep', facing };
+  }
+  if (shape.id === 'lean') {
+    // A shallow pitch rises half a block a column: the low half, then the high.
+    const away = [xm, zm, xp, zp][turn % 4];
+    const facing = [1, 2, 3, 0][turn % 4];
+    return { kind: (away - 1) % 2 === 0 ? 'lo' : 'hi', facing };
+  }
+  return null;
+}
+
+/**
+ * The block to lay for one of roofBlocks' blocks, holding `type`. Anything
+ * but roof tiles is laid as it is. Roof tiles go on top as the right piece
+ * turned the right way, with the matching brick or stone under them where a
+ * roof needs solid courses — the ends of a gable — and on a flat roof.
+ */
+export function roofTypeFor(type, block) {
+  const part = roofPart(type);
+  if (!part) return type;
+  if (!block.slope) return ROOF_MATERIALS[part.mat].wall;
+  return roofBlock({ mat: part.mat, ...block.slope });
 }
 
 /** The `{ x, y, z, prev, next }` changes for roofing a pick at a given eave. */
@@ -48,8 +104,9 @@ export function roofPlan(world, pick, { shape, turn = 0, type, base = null }) {
     const y = eave + b.dy;
     if (!world.inBounds(b.x, y, b.z)) continue;
     const prev = world.getBlock(b.x, y, b.z);
-    if (prev === type) continue;
-    changes.push({ x: b.x, y, z: b.z, prev, next: type });
+    const next = roofTypeFor(type, b);
+    if (prev === next) continue;
+    changes.push({ x: b.x, y, z: b.z, prev, next });
   }
   return changes;
 }

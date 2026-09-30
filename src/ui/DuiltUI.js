@@ -1,5 +1,6 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
+import { penProduce } from '../duilt/Ranch.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
@@ -314,56 +315,35 @@ export class DuiltUI {
     const locked = structure.locked !== false;
     if (sub) sub.textContent = spec?.name ?? 'A building you claimed';
 
-    // A storehouse is worth answering before you open it: how full it is is
-    // the question you walked over here to ask.
+    // Reported directly: "on the buildings manage pop ups, we should not be
+    // throwing [filler] text there, we should say what it produces, and
+    // what's needed to evolve the building." So: what it does, what the next
+    // level needs, and the buttons. Nothing else.
     const summary = this.duilt?.storeSummary(structure) ?? null;
-    // A producer with no shelves to open still has a level worth knowing —
-    // levelSummary covers both, so a store just prefers its own richer line.
     const level = this.duilt?.levelSummary(structure) ?? null;
-    const held = summary
-      ? `${summary.tier?.name ?? 'Shelves'} · ${summary.items ? `${summary.items} things in ${summary.used} of ${summary.size}` : `empty, ${summary.size} slots`}`
-      : level ? `${level.name} · ${rateText(level.rate?.produces, level.rate?.everySeconds) ?? 'nothing yet'}`
-      : null;
-
-    // What the next rung of the ladder needs — the same question a
-    // storehouse answers once you open it, asked here too so a producer
-    // with no screen of its own to open still gets an answer.
-    //
-    // Reported directly: leveling used to happen the instant the blocks
-    // qualified, with nothing to press and nothing on screen marking the
-    // moment. Qualifying (level.canEvolve, from tierStatus) now surfaces an
-    // Evolve button instead — see StructureRegistry.evolve, the only thing
-    // that actually moves the tier forward.
+    const does = this.buildingDoes(structure, spec, level, summary);
     const next = level?.next;
-    const nextBlock = next ? `
-      <div class="store-next">
-        <strong>Next level: ${next.name}</strong>
-        ${next.rate ? `<span>${rateText(next.rate.produces, next.rate.everySeconds)}</span>` : ''}
-        ${level.canEvolve
-          ? '<span>It qualifies — press Evolve below to reach it.</span>'
-          : next.missing?.length
-            ? `<ul>${next.missing.map((m) => `<li>${m}</li>`).join('')}</ul>`
-            : ''}
-      </div>` : '';
+    const evolve = !level ? ''
+      : !next
+        ? `<p>${level.name} is its top level.</p>`
+        : `
+        <p><strong>${level.canEvolve ? `Ready to evolve to ${next.name}` : `To evolve to ${next.name}`}</strong></p>
+        ${level.canEvolve ? '' : next.missing?.length ? `<ul>${next.missing.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}
+        ${next.rate ? `<p class="dim">Then: ${rateText(next.rate.produces, next.rate.everySeconds)}</p>` : ''}`;
 
     body.innerHTML = `
       <div class="building-state ${structure.valid ? 'good' : 'bad'}">
-        ${structure.valid ? 'Standing and producing' : (structure.brokenReason ?? 'Something is missing')}
+        ${structure.valid ? 'Working' : `Stopped: ${structure.brokenReason ?? 'something it needs is missing'}`}
       </div>
+      <div class="building-sec">
+        <h4>What it does</h4>
+        <ul>${does.map((d) => `<li>${d}</li>`).join('')}</ul>
+      </div>
+      ${level ? `<div class="building-sec"><h4>Level: ${level.name}</h4>${evolve}</div>` : ''}
       <div class="building-facts">
         <span>${size} blocks</span>
-        ${held ? `<span>${held}</span>` : ''}
-        <span>${locked ? 'Locked' : 'Unlocked — edits allowed'}</span>
+        <span>${locked ? 'Locked' : 'Open for changes'}</span>
       </div>
-      ${nextBlock}
-      <p class="building-note">
-        ${locked
-          ? 'Protected, so you cannot take a wall out of it by accident while clearing the ground beside it. '
-            + 'Move it to pick it up and put it down somewhere else, or change it to edit the blocks — this '
-            + "closes so you can, and you'll get a Done button on screen until you tap it, wherever you are."
-          : 'Open for changes: break and place inside it. It is re-checked as you go, and stops producing '
-            + "if it no longer qualifies. There's a Done button on screen — tap it when you've finished."}
-      </p>
       <div class="building-actions">
         ${level?.canEvolve ? `<button class="primary" data-evolve>Evolve to ${withArticle(next.name)}</button>` : ''}
         ${summary ? `<button class="${level?.canEvolve ? 'secondary' : 'primary'}" data-store>Open it</button>` : ''}
@@ -380,6 +360,27 @@ export class DuiltUI {
       if (confirm(`Delete this ${spec?.name?.toLowerCase() ?? 'building'}? `
         + 'The blocks come back to your bag.')) actions.onDelete?.();
     });
+  }
+
+  /** What a building gives you, one plain line per thing. */
+  buildingDoes(structure, spec, level, summary) {
+    const out = [];
+    const rate = level?.rate ?? (spec && Object.keys(spec.produces ?? {}).length
+      ? { produces: spec.produces, everySeconds: spec.everySeconds } : null);
+    const made = rate && rateText(rate.produces, rate.everySeconds);
+    if (made) out.push(made);
+    if (spec?.fromAnimals) {
+      const kept = penProduce(structure, this.duilt?.herd ?? []);
+      const pen = rateText(kept, spec.everySeconds);
+      out.push(pen ?? 'Makes wool, milk or eggs from the animals kept in it — none in it yet');
+    }
+    if (spec?.grantsCapacity) out.push(`Room for ${spec.grantsCapacity} settler household${spec.grantsCapacity > 1 ? 's' : ''}`);
+    if (spec?.station) out.push(`Lets you craft ${spec.station} recipes while you're near it`);
+    if (summary) {
+      out.push(`Stores your things: ${summary.items ? `${summary.items} in ${summary.used} of ${summary.size} slots` : `empty, ${summary.size} slots`}`);
+    }
+    if (!out.length) out.push('Nothing to collect — it counts towards your age goals');
+    return out;
   }
 
   openPanel(id) {
@@ -586,7 +587,9 @@ export class DuiltUI {
     const grid = this.q('#bag-grid');
     if (!grid || !hotbarGrid) return;
     const slots = d.inventory.slots;
-    const slotHtml = (s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i, discardAttr: 'data-discard' });
+    // Nothing is thrown away from a creative bag — see Inventory's `endless`.
+    const bin = d.inventory.endless ? null : 'data-discard';
+    const slotHtml = (s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i, discardAttr: bin });
 
     hotbarGrid.innerHTML = slots.slice(0, PLAYABLE_SLOTS).map(slotHtml).join('');
     grid.innerHTML = slots.slice(PLAYABLE_SLOTS).map((s, j) => slotHtml(s, j + PLAYABLE_SLOTS)).join('');

@@ -256,7 +256,7 @@ ok('and pointing at nothing says so rather than doing nothing',
 
 // R turns a design already. Two keys for "turn the thing before you put it
 // down" would be one too many.
-ok('R turns it', /e\.code === 'KeyR' && this\.pendingRoof/.test(game));
+ok('R turns it (or whichever key you gave "turn")', /const turnKey = this\.controls\.keys\.turn;/.test(game) && /e\.code === turnKey && this\.pendingRoof/.test(game));
 // And a phone has no R, so the second thumb button takes over while a roof
 // that can turn is queued.
 ok('and on a phone the second button does', /this\.pendingRoof\?\.turns > 1\) return void this\.turnRoof\(\)/.test(game));

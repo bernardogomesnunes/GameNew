@@ -1,6 +1,8 @@
 import { BLOCKS_BY_ID, shapeOf } from './blocks.js';
 import { GLYPHS, inkOn } from './glyphs.js';
 import { boxesFor, fenceBoxes } from '../world/propShapes.js';
+import { slopeGeometry, orient } from '../world/slopes.js';
+import { tileFor, TILE_SIZE } from '../render/BlockTextures.js';
 
 /**
  * Blocks drawn as blocks: a little isometric cube, three faces, one colour.
@@ -55,6 +57,63 @@ export function shade(color, amount) {
   return `rgb(${clamp(r * amount)},${clamp(g * amount)},${clamp(b * amount)})`;
 }
 
+const faceImages = new Map();
+
+/**
+ * A block's world texture as a tiny image, tinted its colour — a 16×16 BMP,
+ * because a BMP is a header and the pixels, nothing to compress, and every
+ * browser draws one.
+ */
+function tileImage(blockId, color) {
+  if (faceImages.has(blockId)) return faceImages.get(blockId);
+  const tile = tileFor(blockId);
+  let url = null;
+  if (tile) {
+    const n = TILE_SIZE, row = n * 3, size = 54 + row * n;
+    const bytes = new Uint8Array(size);
+    const dv = new DataView(bytes.buffer);
+    bytes[0] = 0x42; bytes[1] = 0x4d;
+    dv.setUint32(2, size, true); dv.setUint32(10, 54, true); dv.setUint32(14, 40, true);
+    dv.setInt32(18, n, true); dv.setInt32(22, n, true);
+    dv.setUint16(26, 1, true); dv.setUint16(28, 24, true); dv.setUint32(34, row * n, true);
+    const r = (color >> 16) & 255, g = (color >> 8) & 255, b = color & 255;
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const level = tile[(y * n + x) * 4] / 255;
+        const o = 54 + (n - 1 - y) * row + x * 3; // BMP rows run bottom up
+        bytes[o] = Math.round(b * level); bytes[o + 1] = Math.round(g * level); bytes[o + 2] = Math.round(r * level);
+      }
+    }
+    let bin = '';
+    for (const byte of bytes) bin += String.fromCharCode(byte);
+    url = `data:image/bmp;base64,${btoa(bin)}`;
+  }
+  faceImages.set(blockId, url);
+  return url;
+}
+
+/**
+ * The three faces of a textured cube: the tile laid onto each face of the
+ * diamond, and a shadow over the two sides so it reads as lit from above.
+ */
+function texturedFaces(blockId, color) {
+  const url = tileImage(blockId, color);
+  if (!url) return null;
+  // Each face as the unit square carried onto it: matrix(U, V, origin).
+  const faces = [
+    { m: [9.4, 5.3, -9.4, 5.3, 12, 2.6], path: 'M12 2.6 L21.4 7.9 L12 13.2 L2.6 7.9 Z', light: FACE.top },
+    { m: [9.4, 5.3, 0, 8.2, 2.6, 7.9], path: 'M2.6 7.9 L12 13.2 L12 21.4 L2.6 16.1 Z', light: FACE.left },
+    { m: [9.4, -5.3, 0, 8.2, 12, 13.2], path: 'M21.4 7.9 L21.4 16.1 L12 21.4 L12 13.2 Z', light: FACE.right },
+  ];
+  // The image once, and the three faces use it.
+  // The same id for the same block everywhere: whichever copy a face finds,
+  // it's the same picture.
+  const id = `tile-${blockId}`;
+  return `<defs><image id="${id}" href="${url}" width="1" height="1" preserveAspectRatio="none" style="image-rendering:pixelated"/></defs>`
+    + faces.map((f) => `<use href="#${id}" transform="matrix(${f.m.join(' ')})"/>`
+      + (f.light < 1 ? `<path d="${f.path}" fill="#000" opacity="${(1 - f.light).toFixed(2)}"/>` : '')).join('');
+}
+
 /**
  * An isometric cube for a block, as inline SVG.
  *
@@ -73,6 +132,15 @@ export function cubeSvg(blockId, { size = 22 } = {}) {
   const top = `M12 2.6 L21.4 7.9 L12 13.2 L2.6 7.9 Z`;
   const left = `M2.6 7.9 L12 13.2 L12 21.4 L2.6 16.1 Z`;
   const right = `M21.4 7.9 L21.4 16.1 L12 21.4 L12 13.2 Z`;
+
+  // Reported directly: "bricks icon is different from the brick itself, I
+  // think it is worth it to review all of them." A block with a texture in
+  // the world is drawn with that same texture here, on all three faces.
+  const texture = texturedFaces(blockId, c);
+  if (texture) {
+    return `<svg class="cube" viewBox="0 0 24 24" width="${size}" height="${size}"`
+      + ` aria-hidden="true" opacity="${alpha}">${texture}</svg>`;
+  }
 
   const ink = inkOn(c);
   const grain = GRAIN[spec.glyph] ?? null;
@@ -108,9 +176,13 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
   const spec = BLOCKS_BY_ID.get(blockId);
   if (!spec) return '';
   const shape = shapeOf(blockId);
+  if (shape.startsWith('roof')) return facesSvg(slopeGeometry(shape, 0).faces, spec.color ?? 0x888888, size);
   const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
     ? fenceBoxes(shape, { px: 1, nx: 1 })
-    : boxesFor(shape);
+    : shape === 'door'
+      // Both halves, squeezed into the one cell the icon has room for.
+      ? [...boxesFor('door').map((b) => squeeze(b, 0)), ...boxesFor('door_top').map((b) => squeeze(b, 1))]
+      : boxesFor(shape);
   const c = spec.color ?? 0x888888;
   // Unit cell to the cube icon's own frame: x runs down-right, z down-left,
   // y up — the same diamond cubeSvg draws, so a slab sits where half a cube
@@ -122,11 +194,41 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
     (a.minX + a.maxX + a.minZ + a.maxZ + a.minY + a.maxY) - (b.minX + b.maxX + b.minZ + b.maxZ + b.minY + b.maxY));
   let body = '';
   for (const b of order) {
-    body += poly([p(b.minX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.minX, b.maxY, b.maxZ)], shade(c, FACE.top));
-    body += poly([p(b.minX, b.maxY, b.maxZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.minX, b.minY, b.maxZ)], shade(c, FACE.left));
-    body += poly([p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.maxX, b.minY, b.minZ)], shade(c, FACE.right));
+    // A box can carry its own colour (a lantern's iron frame), and a lit one
+    // (its glass) isn't shaded.
+    const bc = b.color ?? c;
+    const f = b.glow ? { top: 1, left: 1, right: 1 } : FACE;
+    body += poly([p(b.minX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.minX, b.maxY, b.maxZ)], shade(bc, f.top));
+    body += poly([p(b.minX, b.maxY, b.maxZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.minX, b.minY, b.maxZ)], shade(bc, f.left));
+    body += poly([p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.maxX, b.minY, b.minZ)], shade(bc, f.right));
   }
   return `<svg class="cube" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
+}
+
+/** A sloped piece drawn from its polygons: far ones first, backs left out. */
+function facesSvg(faces, c, size) {
+  const p = (x, y, z) => `${(12 + (x - z) * 9.4).toFixed(2)} ${(2.6 + (x + z) * 5.3 + (1 - y) * 8.2).toFixed(2)}`;
+  const drawn = faces
+    .map((f) => orient(f.pts, f.out).n && { ...f, ...orient(f.pts, f.out) })
+    .filter((f) => f.n[0] + f.n[1] + f.n[2] > 1e-3)
+    .map((f) => ({ ...f, depth: f.pts.reduce((s, [x, y, z]) => s + x + y + z, 0) / f.pts.length }))
+    .sort((a, b) => a.depth - b.depth);
+  let body = '';
+  for (const f of drawn) {
+    const [nx, ny, nz] = f.n;
+    const light = (FACE.top * ny * ny + FACE.left * nz * nz + FACE.right * nx * nx) * (f.tone ?? 1);
+    body += `<path d="M${f.pts.map(([x, y, z]) => p(x, y, z)).join(' L')} Z" fill="${shade(c, light)}" stroke="rgba(0,0,0,0.12)" stroke-width="0.2" stroke-linejoin="round"/>`;
+  }
+  return `<svg class="cube" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
+}
+
+/** A door box, half `half` of two, fitted into one cell a little narrower than it's tall. */
+function squeeze(b, half) {
+  return {
+    minX: 0.2 + b.minX * 0.6, maxX: 0.2 + b.maxX * 0.6,
+    minY: (half + b.minY) / 2, maxY: (half + b.maxY) / 2,
+    minZ: b.minZ, maxZ: b.maxZ,
+  };
 }
 
 /** A block's icon: a cube, or its real shape if it isn't one. */

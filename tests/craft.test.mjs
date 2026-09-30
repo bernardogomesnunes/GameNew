@@ -35,6 +35,9 @@ ok('each says whether it can be made', list.every(x => typeof x.ok === 'boolean'
 
 // starter designs
 g.inventory.add('wood', 200);
+// The cabin has a door and a slate roof now.
+g.inventory.add('door', 1);
+g.inventory.add('roof_stone', 30);
 const b = g.territory.bounds();
 const anchor = { x: b.minX + 4, y: 30, z: b.minZ + 4 };
 const plan = g.starterPlacement('house', anchor);

@@ -1,6 +1,6 @@
 import { MOBS_BY_ID, mobsForBiome } from '../config/mobs.js';
 import { BIOMES } from '../config/biomes.js';
-import { isWater } from '../config/blocks.js';
+import { isFluid } from '../config/blocks.js';
 
 /**
  * The animals living around you: where they turn up, how they get about,
@@ -342,7 +342,7 @@ export function surfaceAt(world, x, z) {
   for (let y = start; y >= 0; y--) {
     const id = world.getBlock(x, y, z);
     if (id === 0) continue;
-    if (isWater(id) || LEAVES.has(id)) return null;
+    if (isFluid(id) || LEAVES.has(id)) return null;
     const box = world.collisionBoxAt(x, y, z);
     if (!box) continue;
     return box.maxY;
@@ -364,7 +364,7 @@ export function groundAt(world, x, z, fromY, tall) {
   for (let y = base + STEP; y >= base - DROP; y--) {
     const box = world.collisionBoxAt(bx, y, bz);
     if (!box) {
-      if (isWater(world.getBlock(bx, y, bz))) return null;
+      if (isFluid(world.getBlock(bx, y, bz))) return null;
       continue;
     }
     if (LEAVES.has(world.getBlock(bx, y, bz))) return null;

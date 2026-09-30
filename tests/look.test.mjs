@@ -33,27 +33,22 @@ ok('and nothing throws drawing them', PLACEABLE_BLOCKS.every((b) => cubeSvg(b.id
 ok('an unknown block draws nothing rather than breaking', cubeSvg(9999) === '');
 
 {
-  const svg = cubeSvg(1, { size: 40 });
-  ok('a cube has three faces', (svg.match(/<path/g) ?? []).length === 3);
-  ok('and they are three different shades',
-    new Set(svg.match(/fill="rgb\([^)]*\)"/g) ?? []).size === 3);
+  // Reported directly: "bricks icon is different from the brick itself, I
+  // think it is worth it to review all of them." A cube's icon is drawn
+  // with the same tile the world draws the block with.
+  const svg = cubeSvg(9, { size: 40 });
+  ok('a brick is drawn with its own world texture', /<image id="tile-9" href="data:image\/bmp;base64,/.test(svg));
+  ok('on all three faces', (svg.match(/<use href="#tile-9"/g) ?? []).length === 3);
+  ok('with the two sides shaded darker than the top', (svg.match(/fill="#000" opacity="/g) ?? []).length === 2);
   ok('the size asked for is the size drawn', svg.includes('width="40"') && svg.includes('height="40"'));
-  // The top face is the lit one; a cube lit from below reads as a hole.
-  const fills = [...svg.matchAll(/fill="rgb\((\d+),(\d+),(\d+)\)"/g)]
-    .map((m) => Number(m[1]) + Number(m[2]) + Number(m[3]));
-  ok('with the top face brightest', fills[0] > fills[1] && fills[1] > fills[2]);
+  ok('every full block in the game has its texture on its icon',
+    PLACEABLE_BLOCKS.filter((b) => (b.shape ?? 'cube') === 'cube').every((b) => cubeSvg(b.id).includes('<image')));
+  ok('and the same block draws the same icon every time', cubeSvg(9) === cubeSvg(9));
+  ok('different blocks, different tiles', cubeSvg(9).match(/base64,([^"]+)/)[1] !== cubeSvg(7).match(/base64,([^"]+)/)[1]);
 }
 
 ok('see-through blocks are drawn see-through', cubeSvg(10).includes('opacity="0.62"'));
 ok('and solid ones are not', cubeSvg(3).includes('opacity="1"'));
-
-// A hint of texture, not a texture. The palette is meant to stay flat.
-{
-  const grass = cubeSvg(1), glass = cubeSvg(10);
-  ok('ground materials carry a few grain marks', (grass.match(/<circle/g) ?? []).length >= 3);
-  ok('but never many', BLOCKS.every((b) => (cubeSvg(b.id).match(/<circle/g) ?? []).length <= 6));
-  ok('and worked materials like glass carry none', (glass.match(/<circle/g) ?? []).length === 0);
-}
 
 ok('shading stays inside a byte', shade(0xffffff, 2) === 'rgb(255,255,255)' && shade(0x000000, 1) === 'rgb(0,0,0)');
 
@@ -167,5 +162,12 @@ ok('the visual viewport is watched too', /window\.visualViewport\?\.addEventList
 ok('for both the ways it changes', /for \(const event of \['resize', 'scroll'\]\)/.test(game));
 ok('and an orientation change is re-measured once it has settled',
   /orientationchange[\s\S]{0,120}setTimeout\(\(\) => this\.onResize\(\), 250\)/.test(game));
+
+{
+  // The bag showed two tools as blank squares: nothing drawn for them at all.
+  const { GLYPHS } = await import('../src/config/glyphs.js');
+  const blank = ITEMS.filter((i) => !itemIcon(i) && !GLYPHS[i.glyph]).map((i) => i.id);
+  ok(`every item in the game has a picture (${blank.join(', ') || 'none missing'})`, blank.length === 0);
+}
 
 process.exit(f ? 1 : 0);

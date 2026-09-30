@@ -28,6 +28,9 @@
 // the same pale middle.
 /** Flowing water of level L is block FLOW_BASE + L, for L in 1..7. */
 const FLOW_BASE = 49;
+/** Flowing lava of level L is block LAVA_FLOW_BASE + L, for L in 1..3. */
+const LAVA_FLOW_BASE = 115;
+export const LAVA = 45;
 
 export const BLOCKS = [
   { id: 1, name: 'Grass', glyph: 'grass', color: 0x97cc81, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
@@ -88,9 +91,10 @@ export const BLOCKS = [
   // block still occludes its neighbours' faces exactly like a solid cube —
   // a deliberate simplification, see ChunkMesher's own note — and World's
   // collisionBoxAt gives it a matching hitbox instead of the full cell.
-  // Stairs share the slab's flat half-height hitbox rather than a stepped
-  // one, and always render facing the same way — there is no facing/rotation
-  // concept anywhere else in this block registry either.
+  // Stairs are three steps with the back filled to the top, so a flight of
+  // them has no gap between one block and the next; their hitbox is the
+  // whole cell, flagged as a stair so you walk straight up it. They face the
+  // way you placed them — see TURNS below.
   {
     id: 26, name: 'Lantern', glyph: 'lantern', color: 0xffd27a, material: 'wood',
     // Three's PointLight intensity is physically-based (candela): against the
@@ -98,7 +102,13 @@ export const BLOCKS = [
     // 0.4, none of which use that scale), 1-2 was invisible and 40+ started
     // blowing out anything within a block of it. 24 read as a real warm
     // glow — visible, not garish — across several calibration renders.
-    light: { color: 0xffcf8c, intensity: 24, distance: 14 },
+    // Reported directly: "the lantern is super weird, we should follow the
+    // same modelation that we have for other items, and light is coming from
+    // the bottom of the block." It was a plain glowing cube with its light
+    // buried inside it; now it's a real lantern (see propShapes), lit from
+    // its glass. `y` is where in the cell the light sits.
+    light: { color: 0xffcf8c, intensity: 24, distance: 14, y: 0.3 },
+    shape: 'lantern',
     cost: { wood: 2 }, unlock: null,
   },
   { id: 27, name: 'Stone Slab', glyph: 'slab', color: 0xafafb6, shape: 'slab', material: 'stone', cost: { stone: 1 }, unlock: null },
@@ -177,7 +187,96 @@ export const BLOCKS = [
     id: FLOW_BASE + level, name: 'Flowing Water', glyph: 'water', color: 0x83add7, transparent: true, opacity: 0.78,
     shape: 'water_flow', stateOf: 11, level, unlock: null,
   })),
+
+  // A door: two blocks tall, placed as one. The bottom half is the item; the
+  // top half comes with it, has no item of its own (`part: 'top'`), and goes
+  // when the bottom does. Place, pointed at either half, swings both open or
+  // shut (Game.toggleGate) — shut is solid, open anyone walks through. Every
+  // part comes in four facings, generated below.
+  // Flowing lava, the way flowing water runs off a pool — requested
+  // directly: "lava is not fluid like water, it should." Thicker than water:
+  // it only runs three blocks from its source, and slowly (see
+  // world/WaterFlow.js). Level 3 beside the source or falling, 1 at the end.
+  ...[1, 2, 3].map((level) => ({
+    id: LAVA_FLOW_BASE + level, name: 'Flowing Lava', glyph: 'water', color: 0xe8672c,
+    light: { color: 0xff8040, intensity: 12, distance: 7 },
+    shape: 'lava_flow', stateOf: 45, level, material: 'stone', unlock: null,
+  })),
+
+  // Hung from the ceiling, not stood on the floor: an iron ring of four
+  // candles on a chain, lighting the room from above.
+  {
+    id: 85, name: 'Chandelier', glyph: 'chandelier', color: 0x5d5552, shape: 'chandelier', material: 'stone',
+    light: { color: 0xffd79a, intensity: 30, distance: 16, y: 0.72 }, cost: { wood: 2 }, unlock: null,
+  },
+
+  { id: 69, name: 'Door', glyph: 'door', color: 0xb08a60, shape: 'door', material: 'wood', cost: { wood: 3 }, facing: 0, unlock: null },
 ];
+
+// Stairs, chairs and doors face a way: the way you were looking when you put
+// them down (see Game.placeBlock). Requested directly: "chairs are only
+// placed on one direction, would be nice to have them placed in multiple
+// directions, same for stairs and doors." The block a player holds is facing
+// 0; the other three facings are states of it, each its own block id so the
+// chunk data stays one byte a cell. `facing` counts quarter-turns — see
+// propShapes' `turn`.
+const TURNS = [29, 30, 33, 34];
+/** Facing f (1..3) of TURNS[k] is block TURN_BASE + 3k + f. */
+const TURN_BASE = 56;
+for (const [k, baseId] of TURNS.entries()) {
+  const base = BLOCKS.find((b) => b.id === baseId);
+  base.facing = 0;
+  for (let f = 1; f <= 3; f++) {
+    BLOCKS.push({ ...base, id: TURN_BASE + 3 * k + f, stateOf: baseId, facing: f, cost: undefined });
+  }
+}
+
+/** Door part (open?, top?, facing) is block DOOR_BASE + 8·open + 4·top + facing. */
+const DOOR_BASE = 69;
+{
+  const door = BLOCKS.find((b) => b.id === DOOR_BASE);
+  for (let i = 1; i < 16; i++) {
+    const open = i >= 8, top = (i & 4) !== 0, facing = i & 3;
+    BLOCKS.push({
+      ...door, id: DOOR_BASE + i, stateOf: DOOR_BASE, facing, cost: undefined,
+      name: open ? 'Open Door' : 'Door',
+      shape: `door${open ? '_open' : ''}${top ? '_top' : ''}`,
+      ...(top ? { part: 'top' } : {}),
+    });
+  }
+}
+
+// Roof tiles — telhas. Requested directly: "we should have something
+// similar [to stairs] but with telhas. roofing can be done with bricks and
+// stone." A real slope rather than steps, laid in rows of tiles, in fired
+// brick or in slate. Placed by hand it faces the way you look, like a stair
+// (and makes corners with its neighbours the same way — see world/slopes.js);
+// laid by the Roof tool it also comes as the half-pitch pieces a shallow
+// roof needs and the caps that go along a ridge and on a peak. Only the
+// first is ever held: the rest are states of it.
+//
+// `wall` is what fills in under the slope where a roof needs solid courses —
+// the ends of a gable — so a brick roof has brick gable ends.
+export const ROOF_MATERIALS = [
+  { key: 'brick', name: 'Brick Roof Tiles', color: 0xc9765c, wall: 9 },
+  { key: 'stone', name: 'Stone Roof Tiles', color: 0x8e93a0, wall: 8 },
+];
+/** The pieces of one roof material, in the order their ids run. */
+const ROOF_KINDS = ['steep', 'steep', 'steep', 'steep', 'lo', 'lo', 'lo', 'lo', 'hi', 'hi', 'hi', 'hi', 'ridge_x', 'ridge_z', 'peak'];
+const ROOF_SHAPE = { steep: 'roof', lo: 'roof_lo', hi: 'roof_hi', ridge_x: 'roof_ridge_x', ridge_z: 'roof_ridge_z', peak: 'roof_peak' };
+/** Piece i of roof material m is block ROOF_BASE + 15m + i. */
+const ROOF_BASE = 86;
+ROOF_MATERIALS.forEach((mat, m) => {
+  const base = ROOF_BASE + 15 * m;
+  ROOF_KINDS.forEach((kind, i) => {
+    const turnsWay = i < 12;
+    BLOCKS.push({
+      id: base + i, name: mat.name, glyph: 'rooftile', color: mat.color, shape: ROOF_SHAPE[kind], material: 'stone',
+      roof: { mat: m, kind }, ...(turnsWay ? { facing: i % 4 } : {}),
+      ...(i === 0 ? { cost: { stone: 1 } } : { stateOf: base }), unlock: null,
+    });
+  });
+});
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
@@ -217,6 +316,83 @@ export function flowingWater(level) {
   return FLOW_BASE + level;
 }
 
+/** Any lava: a source, or flowing. */
+export function isLava(id) {
+  return id === LAVA || (id > LAVA_FLOW_BASE && id <= LAVA_FLOW_BASE + 3);
+}
+
+/** Flowing lava only. */
+export function isLavaFlow(id) {
+  return id > LAVA_FLOW_BASE && id <= LAVA_FLOW_BASE + 3;
+}
+
+/** How strong a cell of lava is: 4 for a source, 1..3 flowing, 0 if it isn't lava. */
+export function lavaLevel(id) {
+  if (id === LAVA) return 4;
+  return isLavaFlow(id) ? id - LAVA_FLOW_BASE : 0;
+}
+
+/** The block for flowing lava of a level, 1..3. */
+export function flowingLava(level) {
+  return LAVA_FLOW_BASE + level;
+}
+
+/** Anything you wade or swim through rather than stand on: water or lava. */
+export function isFluid(id) {
+  return isWater(id) || isLava(id);
+}
+
+/** Quarter-turns a block is placed at: 0..3, 0 for anything that doesn't turn. */
+export function facingOf(id) {
+  return BLOCKS_BY_ID.get(id)?.facing ?? 0;
+}
+
+/** Whether a block is put down facing the way you look. */
+export function turns(id) {
+  return BLOCKS_BY_ID.get(id)?.facing != null;
+}
+
+/** A turning block at another facing: the same block (or door part), turned. */
+export function turned(id, facing) {
+  const b = BLOCKS_BY_ID.get(id);
+  if (!b || b.facing == null) return id;
+  facing &= 3;
+  const roof = roofPart(id);
+  if (roof) return roofBlock({ ...roof, facing });
+  const door = doorPart(id);
+  if (door) return doorBlock({ ...door, facing });
+  const baseId = b.stateOf ?? id;
+  const k = TURNS.indexOf(baseId);
+  return facing === 0 ? baseId : TURN_BASE + 3 * k + facing;
+}
+
+/** { mat, kind, facing } for any roof tile, or null. `kind` is steep, lo, hi, ridge_x, ridge_z or peak. */
+export function roofPart(id) {
+  const r = BLOCKS_BY_ID.get(id)?.roof;
+  return r ? { mat: r.mat, kind: r.kind, facing: BLOCKS_BY_ID.get(id).facing ?? 0 } : null;
+}
+
+/** The block for a roof piece. */
+export function roofBlock({ mat = 0, kind = 'steep', facing = 0 }) {
+  const base = ROOF_BASE + 15 * mat;
+  if (kind === 'ridge_x') return base + 12;
+  if (kind === 'ridge_z') return base + 13;
+  if (kind === 'peak') return base + 14;
+  return base + { steep: 0, lo: 4, hi: 8 }[kind] + (facing & 3);
+}
+
+/** { open, top, facing } for any half of a door, or null. */
+export function doorPart(id) {
+  if (id < DOOR_BASE || id > DOOR_BASE + 15) return null;
+  const i = id - DOOR_BASE;
+  return { open: i >= 8, top: (i & 4) !== 0, facing: i & 3 };
+}
+
+/** The block for a door part. */
+export function doorBlock({ open = false, top = false, facing = 0 }) {
+  return DOOR_BASE + (open ? 8 : 0) + (top ? 4 : 0) + (facing & 3);
+}
+
 export function isTransparent(id) {
   const b = BLOCKS_BY_ID.get(id);
   return !!(b && b.transparent);
@@ -226,7 +402,7 @@ export function isSystemBlock(id) {
   return !!BLOCKS_BY_ID.get(id)?.system;
 }
 
-/** 'cube' unless the block registered a real shape (slab, stair, table, chair, rug). */
+/** 'cube' unless the block registered a real shape (slab, stair, table, chair, rug, door...). */
 export function shapeOf(id) {
   return BLOCKS_BY_ID.get(id)?.shape ?? 'cube';
 }

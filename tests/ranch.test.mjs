@@ -172,8 +172,8 @@ ok('and an open gate is never something you place on its own', !PLACEABLE_BLOCKS
   const icons = shaped.map((id) => itemIcon(ITEMS_BY_ID.get(id)));
   ok('shaped items draw their real shape, not a cube', icons.every((svg, i) => svg && svg !== cubeSvg(ITEMS_BY_ID.get(shaped[i]).block)));
   const faces = (svg) => (svg.match(/<path/g) ?? []).length;
-  ok('each drawn from its own boxes: a slab is one box, stairs two, a fence a post and four rails',
-    faces(icons[0]) === 3 && faces(icons[1]) === 6 && faces(icons[2]) === 15);
+  ok('each drawn from its own boxes: a slab is one box, stairs three steps, a fence a post and four rails',
+    faces(icons[0]) === 3 && faces(icons[1]) === 9 && faces(icons[2]) === 15);
   ok('a plain block is still a cube', itemIcon(ITEMS_BY_ID.get('stone')) === cubeSvg(3));
 }
 

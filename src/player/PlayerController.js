@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { isTyping } from '../ui/Panels.js';
-import { AIR, isWater } from '../config/blocks.js';
+import { AIR, isFluid } from '../config/blocks.js';
+import { DEFAULT_CONTROLS } from '../config/controls.js';
 
 const HALF_WIDTH = 0.3;
 const HEIGHT = 1.8;
@@ -13,11 +14,12 @@ const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
 /*
  * Walking into something low lifts you onto it instead of stopping you dead.
- * A slab or a stair's hitbox is only the bottom half of its cell (see
- * World.collisionBoxAt), so half a block is enough to walk onto either from
- * the ground. Stairs get a whole block: their hitbox is flat, so each stair
- * in a flight sits a full block above the one before it, and without this a
- * staircase still needed a jump per step. A full cube is still a jump.
+ * A slab's hitbox is only the bottom half of its cell (see
+ * World.collisionBoxAt), so half a block is enough to walk onto one from
+ * the ground. Stairs get a whole block: their hitbox is the whole cell (its
+ * three steps are drawn, not collided), so each stair in a flight sits a
+ * full block above the one before it, and without this a staircase would
+ * need a jump per step. A full cube is still a jump.
  */
 const STEP_HEIGHT = 0.5;
 const STAIR_STEP_HEIGHT = 1;
@@ -103,19 +105,23 @@ export class PlayerController {
     this.sprint = false;
     this.jumpQueued = false;
     this.stepLag = 0; // how far the camera still trails a step up, in blocks
+    // Which key does what — see config/controls.js. Game hands over the
+    // player's own choices; these are the defaults until it does.
+    this.binds = { ...DEFAULT_CONTROLS.keys };
 
     this._onKeyDown = (e) => {
       // A space in a password field must not make the player jump, and an "f"
       // in an email address must not start them flying.
       if (isTyping(e)) return;
       this.keys.add(e.code);
-      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.sprint = true;
-      if (e.code === 'Space') this.jumpQueued = true;
-      if (e.code === 'KeyF') this.toggleFly();
+      const b = this.binds;
+      if (e.code === b.sprint) this.sprint = true;
+      if (e.code === b.jump) this.jumpQueued = true;
+      if (e.code === b.fly && !e.repeat) this.toggleFly();
     };
     this._onKeyUp = (e) => {
       this.keys.delete(e.code);
-      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.sprint = false;
+      if (e.code === this.binds.sprint) this.sprint = false;
     };
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('keyup', this._onKeyUp);
@@ -185,10 +191,11 @@ export class PlayerController {
     }
     let moveX = this.externalMove.x;
     let moveZ = this.externalMove.z;
-    if (this.keys.has('KeyW')) moveZ += 1;
-    if (this.keys.has('KeyS')) moveZ -= 1;
-    if (this.keys.has('KeyD')) moveX += 1;
-    if (this.keys.has('KeyA')) moveX -= 1;
+    const b = this.binds;
+    if (this.keys.has(b.forward)) moveZ += 1;
+    if (this.keys.has(b.back)) moveZ -= 1;
+    if (this.keys.has(b.right)) moveX += 1;
+    if (this.keys.has(b.left)) moveX -= 1;
     moveX = Math.max(-1, Math.min(1, moveX));
     moveZ = Math.max(-1, Math.min(1, moveZ));
 
@@ -199,23 +206,23 @@ export class PlayerController {
       .addScaledVector(right, moveX);
     if (wish.lengthSq() > 1) wish.normalize();
 
-    const sprinting = this.sprint || this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    const sprinting = this.sprint || this.keys.has(b.sprint);
 
     if (this.flying) {
       const speed = (sprinting ? FLY_SPRINT_SPEED : FLY_SPEED) * this.speedScale;
       this.velocity.x = wish.x * speed;
       this.velocity.z = wish.z * speed;
       let up = this.externalUp;
-      if (this.keys.has('Space')) up += 1;
-      if (this.keys.has('ControlLeft') || this.keys.has('ShiftLeft')) up -= 1;
+      if (this.keys.has(b.jump)) up += 1;
+      if (this.keys.has(b.down)) up -= 1;
       this.velocity.y = up * speed;
     } else if (this.swimming) {
       const speed = SWIM_SPEED * this.speedScale;
       this.velocity.x = wish.x * speed;
       this.velocity.z = wish.z * speed;
       let up = this.externalUp;
-      if (this.keys.has('Space')) up += 1;
-      if (this.keys.has('ControlLeft') || this.keys.has('ControlRight')) up -= 1;
+      if (this.keys.has(b.jump)) up += 1;
+      if (this.keys.has(b.down)) up -= 1;
       up = Math.max(-1, Math.min(1, up));
       const targetVy = up !== 0 ? up * SWIM_VERTICAL_SPEED : SWIM_FLOAT_SPEED;
       // Eased toward rather than snapped to, same idea as the look smoothing
@@ -389,7 +396,7 @@ export class PlayerController {
 
   /** Whether a single point sits inside a water block — see `swimming`. */
   isWaterAt(x, y, z) {
-    return isWater(this.world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z)));
+    return isFluid(this.world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z)));
   }
 
   syncCamera() {

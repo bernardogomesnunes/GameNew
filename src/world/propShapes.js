@@ -3,20 +3,26 @@
  * space (0..1 on every axis), assembled by PropRenderer into real geometry
  * instead of the plain cube ChunkMesher draws for everything else.
  *
- * Every shape here has a fixed orientation — there is no facing/rotation
- * concept anywhere else in this block registry either, so a stair always
- * steps the same way regardless of which side you placed it from. Stairs
- * only differ from a slab visually; their collision box is the same flat
- * half-height slab (see World.collisionBoxAt) rather than a stepped one —
- * a deliberate simplification, not an oversight.
+ * Every shape here is drawn at facing 0; a block placed facing another way
+ * (a stair, a chair, a door — see blocks.js's TURNS) has its boxes put
+ * through `turn` first.
  */
+/** Where a shut door stands across its cell: 3/16 thick, in the middle. */
+const DOOR_Z0 = 0.40625, DOOR_Z1 = 0.59375;
+
 export const PROP_SHAPES = {
   slab: [
     { minX: 0, maxX: 1, minY: 0, maxY: 0.5, minZ: 0, maxZ: 1 },
   ],
+  // Requested directly: "stairs need three steps, and to have stair until
+  // the end of the block, filling the back until the top, or else there
+  // will be a hole when doing stairs." Three steps of a third, climbing
+  // towards -z, the back one reaching the top of the cell — so the next
+  // stair up a flight starts level with where this one ends.
   stair: [
-    { minX: 0, maxX: 1, minY: 0, maxY: 0.5, minZ: 0, maxZ: 1 },
-    { minX: 0, maxX: 1, minY: 0.5, maxY: 0.75, minZ: 0, maxZ: 0.5 },
+    { minX: 0, maxX: 1, minY: 0, maxY: 1 / 3, minZ: 0, maxZ: 1 },
+    { minX: 0, maxX: 1, minY: 1 / 3, maxY: 2 / 3, minZ: 0, maxZ: 2 / 3 },
+    { minX: 0, maxX: 1, minY: 2 / 3, maxY: 1, minZ: 0, maxZ: 1 / 3 },
   ],
   table: [
     { minX: 0.06, maxX: 0.94, minY: 0.52, maxY: 0.62, minZ: 0.06, maxZ: 0.94 }, // top
@@ -48,7 +54,97 @@ export const PROP_SHAPES = {
   rug: [
     { minX: 0.03, maxX: 0.97, minY: 0, maxY: 0.04, minZ: 0.03, maxZ: 0.97 },
   ],
+  // A door, shut, across the middle of its cell, hinged at x = 0. The
+  // bottom half has a handle on both faces; the top half a window.
+  door: [
+    { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
+    { minX: 0.78, maxX: 0.9, minY: 0.86, maxY: 0.96, minZ: DOOR_Z0 - 0.06, maxZ: DOOR_Z1 + 0.06 },
+  ],
+  door_top: [
+    { minX: 0, maxX: 0.2, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
+    { minX: 0.8, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
+    { minX: 0.2, maxX: 0.8, minY: 0, maxY: 0.3, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
+    { minX: 0.2, maxX: 0.8, minY: 0.8, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
+    { minX: 0.47, maxX: 0.53, minY: 0.3, maxY: 0.8, minZ: DOOR_Z0 + 0.06, maxZ: DOOR_Z1 - 0.06 },
+  ],
 };
+
+/** Dark iron, for the metal of a lantern or a chandelier. */
+const IRON = 0x4a4340;
+/** Glass with a flame behind it, and candle wax: drawn lit, whatever the time of day. */
+const FLAME = 0xffd98f, WAX = 0xf6eedc, WICK = 0xffb347;
+
+// A lantern standing on the floor: an iron base and cap, four corner posts,
+// lit glass between them, and a handle on top.
+PROP_SHAPES.lantern = [
+  { minX: 0.3, maxX: 0.7, minY: 0, maxY: 0.06, minZ: 0.3, maxZ: 0.7, color: IRON },
+  { minX: 0.35, maxX: 0.65, minY: 0.06, maxY: 0.5, minZ: 0.35, maxZ: 0.65, color: FLAME, glow: true },
+  ...[[0.3, 0.3], [0.64, 0.3], [0.3, 0.64], [0.64, 0.64]].map(([x, z]) =>
+    ({ minX: x, maxX: x + 0.06, minY: 0.06, maxY: 0.5, minZ: z, maxZ: z + 0.06, color: IRON })),
+  { minX: 0.28, maxX: 0.72, minY: 0.5, maxY: 0.57, minZ: 0.28, maxZ: 0.72, color: IRON },
+  { minX: 0.4, maxX: 0.6, minY: 0.57, maxY: 0.64, minZ: 0.4, maxZ: 0.6, color: IRON },
+  { minX: 0.42, maxX: 0.46, minY: 0.64, maxY: 0.78, minZ: 0.48, maxZ: 0.52, color: IRON },
+  { minX: 0.54, maxX: 0.58, minY: 0.64, maxY: 0.78, minZ: 0.48, maxZ: 0.52, color: IRON },
+  { minX: 0.42, maxX: 0.58, minY: 0.74, maxY: 0.78, minZ: 0.48, maxZ: 0.52, color: IRON },
+];
+
+// A chandelier hanging from the top of its cell: a chain, a hub, a cross of
+// arms, and a candle burning at the end of each.
+PROP_SHAPES.chandelier = [
+  { minX: 0.47, maxX: 0.53, minY: 0.7, maxY: 1, minZ: 0.47, maxZ: 0.53, color: IRON },
+  { minX: 0.4, maxX: 0.6, minY: 0.6, maxY: 0.7, minZ: 0.4, maxZ: 0.6, color: IRON },
+  { minX: 0.1, maxX: 0.9, minY: 0.6, maxY: 0.64, minZ: 0.47, maxZ: 0.53, color: IRON },
+  { minX: 0.47, maxX: 0.53, minY: 0.6, maxY: 0.64, minZ: 0.1, maxZ: 0.9, color: IRON },
+  ...[[0.1, 0.44], [0.78, 0.44], [0.44, 0.1], [0.44, 0.78]].flatMap(([x, z]) => [
+    { minX: x, maxX: x + 0.12, minY: 0.64, maxY: 0.67, minZ: z, maxZ: z + 0.12, color: IRON },
+    { minX: x + 0.03, maxX: x + 0.09, minY: 0.67, maxY: 0.79, minZ: z + 0.03, maxZ: z + 0.09, color: WAX, glow: true },
+    { minX: x + 0.045, maxX: x + 0.075, minY: 0.79, maxY: 0.85, minZ: z + 0.045, maxZ: z + 0.075, color: WICK, glow: true },
+  ]),
+];
+
+// Swung open on its hinge: the same door, lying flat against the side of
+// the doorway rather than across it.
+PROP_SHAPES.door_open = PROP_SHAPES.door.map(swing);
+PROP_SHAPES.door_open_top = PROP_SHAPES.door_top.map(swing);
+
+function swing(b) {
+  return {
+    minX: Math.max(0, b.minZ - DOOR_Z0), maxX: b.maxZ - DOOR_Z0,
+    minY: b.minY, maxY: b.maxY,
+    minZ: b.minX, maxZ: b.maxX,
+  };
+}
+
+/**
+ * Boxes turned by `facing` quarter-turns about the middle of the cell —
+ * each turn takes a point at (x, z) to (1 - z, x), so what faces -z at
+ * facing 0 faces +x at 1, +z at 2 and -x at 3.
+ */
+export function turn(boxes, facing) {
+  facing &= 3;
+  if (!facing) return boxes;
+  return boxes.map((b) => {
+    let { minX, maxX, minZ, maxZ } = b;
+    for (let i = 0; i < facing; i++) {
+      [minX, maxX, minZ, maxZ] = [1 - maxZ, 1 - minZ, minX, maxX];
+    }
+    return { ...b, minX, maxX, minZ, maxZ };
+  });
+}
+
+/**
+ * A rug, run out to the edge of its cell on each side with another rug
+ * beside it — requested directly: "rugs should connect to each other when
+ * they are placed next side by side." A floor of them reads as one carpet
+ * instead of a grid of mats.
+ */
+export function rugBoxes(joins) {
+  return [{
+    minX: joins.nx ? 0 : 0.03, maxX: joins.px ? 1 : 0.97,
+    minY: 0, maxY: 0.04,
+    minZ: joins.nz ? 0 : 0.03, maxZ: joins.pz ? 1 : 0.97,
+  }];
+}
 
 /**
  * A fence or gate, joined to whichever of its four sides has another fence,

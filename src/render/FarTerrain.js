@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { biomeCssColours, waterCssColour } from './biomePalette.js';
+import { BIOMES, surfaceFor } from '../config/biomes.js';
+import { BLOCKS_BY_ID } from '../config/blocks.js';
+import { hash01 } from '../world/ChunkGen.js';
 
 /**
  * The country past where the blocks stop.
@@ -27,6 +30,16 @@ import { biomeCssColours, waterCssColour } from './biomePalette.js';
  *
  * Two layers, coarser further out. They split along a circle round the
  * player: the fine one draws inside it, the coarse one outside.
+ *
+ * And it's made of blocks. Reported directly: "I still dont like the render
+ * distance fake shapes. They should be blocky. Cant we like check for whats
+ * rendered, and make a fake image out of it" — the way Minecraft's distant-
+ * terrain mods do. It used to be a smooth sheet sloping between samples,
+ * coloured by biome. Now every cell is a column: flat on top at the real
+ * ground height, square-sided down to its lower neighbours, the colour of
+ * the block that's really on top there (grass, sand, snow, the sea), and
+ * forests stand up as blocky masses of their own leaves. From a distance
+ * it reads as the same world, only bigger blocks.
  */
 
 const LAYERS = [
@@ -43,7 +56,7 @@ export const REACH = 1536;
  * real chunks it can come out a little above the real ground — which would
  * leave a sliver of sky under its edge. Sinking it keeps that edge below.
  */
-export const SINK = 3;
+export const SINK = 1;
 /** Milliseconds a frame may spend making tiles, once the first lot exist. */
 const BUDGET_MS = 3;
 
@@ -157,58 +170,103 @@ export class FarTerrain {
   }
 
   /**
-   * One square of terraced ground on a world-fixed grid. Each cell owns its
-   * four corners rather than sharing them, so shading breaks at the terrace
-   * edges instead of blending across them — hills read as steps, the way the
-   * blocky ground they stand in for does.
+   * One square of the world on a fixed grid, in columns of `step` blocks: a
+   * flat top at each column's ground, walls down to any lower neighbour
+   * (including across the tile's edge, so tiles meet without a crack), and
+   * a canopy block wherever the ground is wooded.
    */
   makeTile(layer, tx, tz) {
-    const { step, tile, heightStep } = layer;
+    const { step, tile } = layer;
     const cells = tile / step;
     const x0 = tx * tile, z0 = tz * tile;
     const gen = this.gen;
 
-    const n = cells + 1;
-    const samples = new Array(n * n);
+    // One ring beyond the tile, so a wall on its edge knows what's next door.
+    const n = cells + 2;
+    const cols = new Array(n * n);
     for (let gz = 0; gz < n; gz++) {
       for (let gx = 0; gx < n; gx++) {
-        const wx = x0 + gx * step, wz = z0 + gz * step;
-        // A lake or the sea is ground below water level, the same way the
-        // real chunks flood it (see ChunkGen.waterLevelAt): flat at the
-        // water's surface, and water-coloured, not dry land.
-        const water = gen.waterLevelAt(wx, wz);
-        const h = water || Math.round(gen.heightAt(wx, wz) / heightStep) * heightStep;
-        samples[gz * n + gx] = { h: h - SINK, b: gen.biomeIndexAt(wx, wz), wx, wz, water: !!water };
+        cols[gz * n + gx] = this.column(x0 + (gx - 1) * step, z0 + (gz - 1) * step, step);
       }
     }
+    const at = (gx, gz) => cols[(gz + 1) * n + gx + 1];
 
-    const quads = cells * cells;
-    const positions = new Float32Array(quads * 12);
-    const colours = new Float32Array(quads * 12);
-    const index = new Uint16Array(quads * 6);
-    let q = 0;
+    const out = { position: [], normal: [], color: [], index: [] };
     for (let gz = 0; gz < cells; gz++) {
-      for (let gx = 0; gx < cells; gx++, q++) {
-        const sa = samples[gz * n + gx], sb = samples[gz * n + gx + 1];
-        const sc = samples[(gz + 1) * n + gx + 1], sd = samples[(gz + 1) * n + gx];
-        positions.set([sa.wx, sa.h, sa.wz, sb.wx, sb.h, sb.wz, sc.wx, sc.h, sc.wz, sd.wx, sd.h, sd.wz], q * 12);
-        const c = sa.water ? this.waterColour : (this.colours[sa.b] ?? this.colours[0]);
-        for (let k = 0; k < 4; k++) colours.set([c.r, c.g, c.b], q * 12 + k * 3);
-        const b = q * 4;
-        index.set([b, b + 3, b + 1, b + 1, b + 3, b + 2], q * 6);
+      for (let gx = 0; gx < cells; gx++) {
+        const c = at(gx, gz);
+        const xa = x0 + gx * step, xb = xa + step, za = z0 + gz * step, zb = za + step;
+        quad(out, [xa, c.top, za], [xa, c.top, zb], [xb, c.top, zb], [xb, c.top, za], [0, 1, 0], c.colour);
+        // Water is a flat sheet: the ground under it shows through nowhere.
+        if (c.water) continue;
+        for (const [dx, dz, nx, nz] of [[1, 0, 1, 0], [-1, 0, -1, 0], [0, 1, 0, 1], [0, -1, 0, -1]]) {
+          const o = at(gx + dx, gz + dz);
+          const low = o.top;
+          if (low >= c.top) continue;
+          const x = dx > 0 ? xb : xa, z = dz > 0 ? zb : za;
+          if (dx) quad(out, [x, low, za], [x, c.top, za], [x, c.top, zb], [x, low, zb], [nx, 0, nz], c.side);
+          else quad(out, [xa, low, z], [xb, low, z], [xb, c.top, z], [xa, c.top, z], [nx, 0, nz], c.side);
+        }
+        if (c.canopy) this.canopy(out, xa, za, step, c);
       }
     }
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    geo.setAttribute('color', new THREE.BufferAttribute(colours, 3));
-    geo.setIndex(new THREE.BufferAttribute(index, 1));
-    geo.computeVertexNormals();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(out.position, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(out.normal, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(out.color, 3));
+    geo.setIndex(out.index);
     geo.computeBoundingSphere();
     const mesh = new THREE.Mesh(geo, layer.material);
     mesh.userData.far = true;
     this.group.add(mesh);
     layer.tiles.set(`${tx},${tz}`, mesh);
     return mesh;
+  }
+
+  /**
+   * What stands on one column of the world, asked of the generator the same
+   * way ChunkGen.fill builds the real thing: how high the ground is, whether
+   * it's under water, the block on top and the one showing down its sides,
+   * and how wooded it is.
+   */
+  column(x, z, step) {
+    const gen = this.gen;
+    const cx = x + (step >> 1), cz = z + (step >> 1);
+    const water = gen.waterLevelAt(cx, cz);
+    const h = gen.heightAt(cx, cz);
+    const index = gen.biomeIndexAt(cx, cz);
+    const biome = BIOMES[index];
+    if (water) return { top: water - SINK, water: true, colour: this.waterColour, side: this.waterColour };
+    const beach = h <= SEA_LEVEL + BEACH_BAND;
+    const topId = biome ? (beach ? SAND : surfaceFor(biome, h)) : null;
+    const colour = topId != null ? colourOf(topId) : (this.colours[index] ?? this.colours[0]);
+    const side = biome ? colourOf(beach ? SAND : biome.surface.under) : colour;
+    const col = { top: h - SINK, water: false, colour, side, canopy: null };
+    // Woods: each column is wooded as often as its biome grows trees, so a
+    // forest is a solid roof of leaves and a meadow has a lone clump here
+    // and there — seen from far off, which is all this is for.
+    const trees = biome?.trees;
+    if (gen.treeAt && trees?.chance && !beach && (biome.treeMaxHeight == null || h <= biome.treeMaxHeight)) {
+      const density = Math.min(1, trees.chance * 28);
+      const [lo, hi] = trees.trunk ?? [4, 6];
+      col.canopy = { density, height: Math.round((lo + hi) / 2) + 2, colour: colourOf(trees.leaves), seed: gen.seed ?? 0 };
+    }
+    return col;
+  }
+
+  /** A column's woods, as leaf blocks over whichever quarters of it are wooded. */
+  canopy(out, x0, z0, step, c) {
+    const half = step / 2, top = c.top + c.canopy.height, bottom = c.top + 1, col = c.canopy.colour;
+    const wooded = [];
+    for (let qx = 0; qx < 2; qx++) {
+      for (let qz = 0; qz < 2; qz++) {
+        const xa = x0 + qx * half, za = z0 + qz * half;
+        if (hash01(xa, za, c.canopy.seed ^ 0x7ee5) < c.canopy.density) wooded.push([xa, za]);
+      }
+    }
+    // Deep in a forest every quarter is wooded: one block of leaves, not four.
+    if (wooded.length === 4) return leafBox(out, x0, z0, x0 + step, z0 + step, bottom, top, col);
+    for (const [xa, za] of wooded) leafBox(out, xa, za, xa + half, za + half, bottom, top, col);
   }
 
   /** A square mask of `size` chunks a side; remade only if the size changes. */
@@ -290,4 +348,44 @@ function farToTile(x, z, tx, tz, size) {
   const dx = Math.max(Math.abs(tx - x), Math.abs(tx + size - x));
   const dz = Math.max(Math.abs(tz - z), Math.abs(tz + size - z));
   return Math.hypot(dx, dz);
+}
+
+const SAND = 6;
+/** The same shoreline ChunkGen draws: dry ground this close to the sea is sand. */
+const SEA_LEVEL = 100, BEACH_BAND = 4;
+const blockColours = new Map();
+function colourOf(id) {
+  let c = blockColours.get(id);
+  if (!c) {
+    c = new THREE.Color(BLOCKS_BY_ID.get(id)?.color ?? 0x888888);
+    blockColours.set(id, c);
+  }
+  return c;
+}
+
+/**
+ * One flat face, its corners in any order round it; wound to face `n`.
+ */
+function quad(out, a, b, c, d, n, colour) {
+  const base = out.position.length / 3;
+  for (const p of [a, b, c, d]) {
+    out.position.push(p[0], p[1], p[2]);
+    out.normal.push(n[0], n[1], n[2]);
+    out.color.push(colour.r, colour.g, colour.b);
+  }
+  // Which way round the corners go decides which side is the front.
+  const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+  const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+  const dot = (uy * vz - uz * vy) * n[0] + (uz * vx - ux * vz) * n[1] + (ux * vy - uy * vx) * n[2];
+  if (dot >= 0) out.index.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  else out.index.push(base, base + 2, base + 1, base, base + 3, base + 2);
+}
+
+/** A box of leaves: its top and four sides (never seen from below). */
+function leafBox(out, xa, za, xb, zb, bottom, top, col) {
+  quad(out, [xa, top, za], [xa, top, zb], [xb, top, zb], [xb, top, za], [0, 1, 0], col);
+  quad(out, [xb, bottom, za], [xb, top, za], [xb, top, zb], [xb, bottom, zb], [1, 0, 0], col);
+  quad(out, [xa, bottom, zb], [xa, top, zb], [xa, top, za], [xa, bottom, za], [-1, 0, 0], col);
+  quad(out, [xa, bottom, zb], [xb, bottom, zb], [xb, top, zb], [xa, top, zb], [0, 0, 1], col);
+  quad(out, [xb, bottom, za], [xa, bottom, za], [xa, top, za], [xb, top, za], [0, 0, -1], col);
 }

@@ -1,3 +1,4 @@
+import { doorPart } from '../src/config/blocks.js';
 import { World } from '../src/world/World.js';
 import { STARTER_DESIGNS, DESIGN_FOR_STRUCTURE } from '../src/config/starterDesigns.js';
 import { STRUCTURES, STRUCTURES_BY_ID } from '../src/config/structures.js';
@@ -138,7 +139,8 @@ for (const design of STARTER_DESIGNS) {
   // player would be charged nothing for part of the build.
   const cells = new Map();
   for (const b of design.blocks) cells.set(`${b.dx},${b.dy},${b.dz}`, b.type);
-  const unbilled = [...new Set(cells.values())].filter((t) => !ITEM_FOR_BLOCK.has(t));
+  // The top half of a door comes with its bottom half, which is billed.
+  const unbilled = [...new Set(cells.values())].filter((t) => !ITEM_FOR_BLOCK.has(t) && !doorPart(t)?.top);
   ok(`  and every block in it is something you can hold`, unbilled.length === 0);
 }
 

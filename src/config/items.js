@@ -138,12 +138,16 @@ export const ITEMS = [
   },
 
   // --- Phase 4: light, half-height shapes, furniture -----------------------
+  { id: 'roof_brick', name: 'Brick Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0xc9765c, glyph: 'rooftile', block: 86, madeBy: 'Fired from brick into curved tiles' },
+  { id: 'roof_stone', name: 'Stone Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x8e93a0, glyph: 'rooftile', block: 101, madeBy: 'Split from stone into slates' },
+  { id: 'chandelier', name: 'Chandelier', kind: 'refined', stackTo: STACK_GOODS, color: 0x5d5552, glyph: 'chandelier', block: 85, madeBy: 'Wrought from iron and hung with candles' },
   { id: 'lantern', name: 'Lantern', kind: 'refined', stackTo: STACK_GOODS, color: 0xffd27a, glyph: 'lantern', block: 26, madeBy: 'Crafted from planks and glass' },
   { id: 'slab_stone', name: 'Stone Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'slab', block: 27, madeBy: 'Split from cut stone' },
   { id: 'slab_plank', name: 'Plank Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'slab', block: 28, madeBy: 'Sawn thin from planks' },
   { id: 'stairs_stone', name: 'Stone Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stair', block: 29, madeBy: 'Cut into steps from stone' },
   { id: 'fence', name: 'Fence', kind: 'refined', stackTo: STACK_BULK, color: 0xc9a67c, glyph: 'fence', block: 47, madeBy: 'Knocked together from planks' },
   { id: 'gate', name: 'Gate', kind: 'refined', stackTo: STACK_GOODS, color: 0xa9825a, glyph: 'gate', block: 48, madeBy: 'Hung from planks — you pass, animals don\'t' },
+  { id: 'door', name: 'Door', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08a60, glyph: 'door', block: 69, madeBy: 'Hung from planks — Place opens and shuts it' },
   { id: 'stairs_plank', name: 'Plank Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'stair', block: 30, madeBy: 'Cut into steps from planks' },
   { id: 'table_oak', name: 'Oak Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xd1b38c, glyph: 'table', block: 31, madeBy: 'Built at the workshop' },
   { id: 'table_marble', name: 'Marble Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xe3dbc8, glyph: 'table', block: 32, madeBy: 'Cut and dressed at the workshop' },
@@ -197,9 +201,10 @@ export const ITEM_FOR_BLOCK = new Map(
   ITEMS.filter((i) => i.block != null).map((i) => [i.block, i.id]),
 );
 // A block that's another block in a different state (an open gate) gives
-// back that block's item. See blocks.js's `stateOf`.
+// back that block's item. See blocks.js's `stateOf`. The top half of a door
+// gives nothing: the door is its bottom half, and the two go together.
 for (const b of BLOCKS) {
-  if (b.stateOf != null && ITEM_FOR_BLOCK.has(b.stateOf)) ITEM_FOR_BLOCK.set(b.id, ITEM_FOR_BLOCK.get(b.stateOf));
+  if (b.stateOf != null && b.part !== 'top' && ITEM_FOR_BLOCK.has(b.stateOf)) ITEM_FOR_BLOCK.set(b.id, ITEM_FOR_BLOCK.get(b.stateOf));
 }
 
 export function itemName(id) {

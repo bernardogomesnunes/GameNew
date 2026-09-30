@@ -39,7 +39,7 @@ export class LightManager {
     const nearest = [];
     for (const entry of world.lights.values()) {
       const dx = entry.x + 0.5 - playerPos.x;
-      const dy = entry.y + 0.5 - playerPos.y;
+      const dy = entry.y + (entry.light.y ?? 0.5) - playerPos.y;
       const dz = entry.z + 0.5 - playerPos.z;
       nearest.push({ entry, d2: dx * dx + dy * dy + dz * dz });
     }
@@ -49,7 +49,8 @@ export class LightManager {
       const light = this.pool[i];
       if (i < nearest.length) {
         const { entry } = nearest[i];
-        light.position.set(entry.x + 0.5, entry.y + 0.5, entry.z + 0.5);
+        // From where the flame is: a lantern's glass, a chandelier's candles.
+        light.position.set(entry.x + 0.5, entry.y + (entry.light.y ?? 0.5), entry.z + 0.5);
         light.color.setHex(entry.light.color);
         light.intensity = entry.light.intensity;
         light.distance = entry.light.distance;

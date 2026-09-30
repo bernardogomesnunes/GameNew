@@ -1,16 +1,17 @@
-import { AIR, isWater, isSystemBlock, shapeOf, lightOf } from '../config/blocks.js';
+import { AIR, isFluid, isSystemBlock, shapeOf, lightOf } from '../config/blocks.js';
 
 export const CHUNK_SIZE = 16;
 
 /**
  * How much of a block's cell is actually solid, in world-space Y — a full
- * cube everywhere, a slab or stair only up to its own half-height hitbox.
- * Stairs share the slab's flat hitbox rather than a stepped one; see
- * blocks.js's own note on why.
+ * cube everywhere, a slab or chair only up to its own half-height hitbox.
+ * A stair fills its cell like a cube, but says it's a stair, so you walk
+ * straight up a flight of them (see PlayerController.stepUp).
  */
-const HALF_SHAPES = new Set(['slab', 'stair', 'chair']);
-// An open gate is a gap in the fence anyone walks through.
-const NO_COLLISION_SHAPES = new Set(['rug', 'gate_open']);
+const HALF_SHAPES = new Set(['slab', 'chair', 'lantern']);
+// An open gate is a gap in the fence anyone walks through; so is an open door.
+// A chandelier hangs overhead; you walk under it.
+const NO_COLLISION_SHAPES = new Set(['rug', 'gate_open', 'door_open', 'door_open_top', 'chandelier']);
 // Taller than its cell: a fence, or a shut gate, stops you at a block and a
 // half — past jumping, and past anything an animal can step.
 const FENCE_HEIGHT = 1.5;
@@ -197,10 +198,14 @@ export class World {
     if (y < 0) return { minY: y, maxY: y + 1 }; // treat below-world as solid floor
     if (!this.inBounds(x, y, z)) return null;
     const id = this.getBlock(x, y, z);
-    if (id === AIR || isWater(id)) return null;
+    // Water and lava are waded and swum through, not stood on.
+    if (id === AIR || isFluid(id)) return null;
     const shape = shapeOf(id);
     if (NO_COLLISION_SHAPES.has(shape)) return null;
-    if (HALF_SHAPES.has(shape)) return { minY: y, maxY: y + 0.5, stair: shape === 'stair' };
+    if (HALF_SHAPES.has(shape)) return { minY: y, maxY: y + 0.5 };
+    if (shape === 'stair' || shape === 'roof' || shape === 'roof_hi') return { minY: y, maxY: y + 1, stair: true };
+    // Half-pitch pieces and the caps on a ridge or a peak come up half way.
+    if (shape.startsWith('roof')) return { minY: y, maxY: y + 0.5, stair: true };
     if (shape === 'fence' || shape === 'gate') return { minY: y, maxY: y + FENCE_HEIGHT };
     return { minY: y, maxY: y + 1 };
   }

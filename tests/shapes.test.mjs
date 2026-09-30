@@ -85,7 +85,7 @@ const LANTERN = 26, SLAB_STONE = 27, STAIRS_STONE = 29, CHAIR_OAK = 33, RUG_GREE
   ok('and World.isCollidable agrees it is not collidable', !world.isCollidable(3, 0, 0));
 
   const stair = world.collisionBoxAt(4, 0, 0);
-  ok('stairs share the slab hitbox rather than a stepped one', stair.minY === 0 && stair.maxY === 0.5);
+  ok('stairs fill their whole cell, and say they are stairs so you walk up them', stair.minY === 0 && stair.maxY === 1 && stair.stair === true);
 
   ok('below the world is still always solid', world.isCollidable(0, -1, 0));
   ok('air still has no box', world.collisionBoxAt(5, 0, 0) === null);

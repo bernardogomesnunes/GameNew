@@ -50,6 +50,23 @@ export function blockTextureArray() {
   return built;
 }
 
+const tiles = new Map();
+/**
+ * One block's tile on its own — 16×16 greyscale RGBA bytes, the same one the
+ * world draws it with — or null for a block that stays flat. For the bag's
+ * icons (config/cubes.js), so a brick in your hand looks like the brick in
+ * your wall.
+ */
+export function tileFor(blockId) {
+  if (tiles.has(blockId)) return tiles.get(blockId);
+  const spec = BLOCKS.find((b) => b.id === blockId);
+  const recipe = spec && textureFor(spec.glyph);
+  const tile = recipe ? paint(recipe, spec.id) : null;
+  tiles.set(blockId, tile);
+  return tile;
+}
+export const TILE_SIZE = TILE;
+
 /** Which layer a block samples, or -1 for one that stays flat. */
 export function layerFor(blockId) {
   const found = blockTextureArray().layerOf.get(blockId);

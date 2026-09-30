@@ -25,8 +25,8 @@ ok('the panel shows an Evolve button exactly when level.canEvolve says so',
   /\$\{level\?\.canEvolve \? `<button class="primary" data-evolve>Evolve to \$\{withArticle\(next\.name\)\}<\/button>` : ''\}/.test(ui));
 ok('withArticle does not double up on a tier name that already carries its own',
   /function withArticle\(name\) \{\s*const lower = name\.toLowerCase\(\);\s*return \/\^an\? \/\.test\(lower\) \? lower : `a \$\{lower\}`;/.test(ui));
-ok('and the note explains why, instead of the old "settles on your next change to it" line',
-  /It qualifies — press Evolve below to reach it\./.test(ui)
+ok('and the panel says it is ready, instead of the old "settles on your next change to it" line',
+  /Ready to evolve to \$\{next\.name\}/.test(ui)
   && !/settles there on your next change to it/.test(ui));
 ok('the click wires to the same onEvolve callback Game.js supplies',
   /data-evolve.*addEventListener\('click', \(\) => actions\.onEvolve\?\.\(\)\)/.test(ui));

@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { blockTextureArray, layerFor } from '../render/BlockTextures.js';
-import { BLOCKS_BY_ID, AIR, isTransparent, shapeOf, isWater, isFlowing, waterLevel } from '../config/blocks.js';
-import { boxesFor, fenceBoxes } from './propShapes.js';
+import {
+  BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
+} from '../config/blocks.js';
+import { boxesFor, fenceBoxes, rugBoxes, turn } from './propShapes.js';
+import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
 import { CHUNK_SIZE } from './World.js';
 
 const SOLID_SENTINEL = -1; // below the world: never draw a face against it
@@ -33,6 +36,20 @@ for (let id = 1; id < 256; id++) {
   const shape = shapeOf(id);
   JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || shape === 'gate_open' || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
 }
+/** Rugs, which run into each other (see propShapes' rugBoxes). */
+const IS_RUG = new Uint8Array(256);
+for (const id of BLOCKS_BY_ID.keys()) IS_RUG[id] = shapeOf(id) === 'rug' ? 1 : 0;
+/** Stairs and roof tiles, which turn corners with each other (see world/slopes.js). */
+const SLOPE = new Uint8Array(256);
+const SLOPED = new Uint8Array(256);
+for (const id of BLOCKS_BY_ID.keys()) {
+  const shape = shapeOf(id);
+  SLOPE[id] = SLOPE_KIND[shape] ?? 0;
+  SLOPED[id] = shape === 'stair' || shape.startsWith('roof') ? 1 : 0;
+}
+/** Quarter-turns a stair, chair or door is drawn at. */
+const FACING = new Uint8Array(256);
+for (const id of BLOCKS_BY_ID.keys()) FACING[id] = facingOf(id);
 // Water of any kind, flowing water, and the still water flowing water is
 // drawn with — see emitFlowingWater.
 const IS_WATER = new Uint8Array(256);
@@ -44,6 +61,18 @@ for (let id = 1; id < 256; id++) {
 const STILL_WATER = 11;
 /** How high flowing water stands in its cell, by level 1..7. */
 const flowHeight = (level) => 0.1 + level * 0.11;
+/** The same for lava, which runs thicker and shorter: level 1..3. */
+const IS_LAVA = new Uint8Array(256);
+const IS_LAVA_FLOW = new Uint8Array(256);
+for (let id = 1; id < 256; id++) {
+  IS_LAVA[id] = isLava(id) ? 1 : 0;
+  IS_LAVA_FLOW[id] = isLavaFlow(id) ? 1 : 0;
+}
+/** Each fluid's cells, running cells, how high a running cell stands, and the source it's drawn as. */
+const FLUIDS = [
+  { any: IS_WATER, flow: IS_FLOWING, height: (id) => flowHeight(waterLevel(id)), still: STILL_WATER },
+  { any: IS_LAVA, flow: IS_LAVA_FLOW, height: (id) => 0.25 + lavaLevel(id) * 0.2, still: LAVA },
+];
 // A mask bit marking a face that looks into a sealed cave.
 const DEEP = 0x100;
 const PAD_STRIDE = [1, PAD * PAD, PAD];
@@ -64,6 +93,21 @@ const opaqueMaterial = withBlockTextures(new THREE.MeshLambertMaterial({ color: 
  * pressure that made baking texture tiles into the block material worth it.
  */
 const propMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
+// The lit parts of a prop — a lantern's glass, a chandelier's candles — are
+// drawn at their own colour whatever light is on them, so they still glow in
+// the dark of night.
+const glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
+/** A box's own colour (an iron frame on a lantern), or the block's. */
+const hexColor = new Map();
+function colorOfHex(hex) {
+  let c = hexColor.get(hex);
+  if (!c) {
+    const t = new THREE.Color(hex);
+    c = { r: t.r, g: t.g, b: t.b };
+    hexColor.set(hex, c);
+  }
+  return c;
+}
 
 function bufferKeyFor(blockId) {
   return isTransparent(blockId) ? blockId : OPAQUE_KEY;
@@ -378,7 +422,7 @@ export class ChunkMesher {
       }
     }
 
-    this.emitFlowingWater(byType, lo, top);
+    for (const fluid of FLUIDS) this.emitFlowing(byType, lo, top, fluid);
 
     const meshes = new Map();
     for (const [deep, types] of [[false, byType], [true, deepByType]]) {
@@ -520,36 +564,37 @@ export class ChunkMesher {
   }
 
   /**
-   * Flowing water, drawn as low as it is weak and full height where it's
-   * falling, into the same mesh and material as the still water it runs
-   * from. Only the faces that show: none against solid ground or against
-   * water standing at least as high.
+   * Flowing water (and lava), drawn as low as it is weak and full height
+   * where it's falling, into the same mesh and material as the still source
+   * it runs from. Only the faces that show: none against solid ground or
+   * against the same fluid standing at least as high.
    */
-  emitFlowingWater(byType, lo, top) {
+  emitFlowing(byType, lo, top, { any, flow, height, still }) {
     const vol = this.padded, P2 = PAD * PAD;
     const heightOf = (i) => {
       const id = vol[i];
-      if (!IS_WATER[id]) return 0;
-      if (!IS_FLOWING[id] || IS_WATER[vol[i + P2]]) return 1;
-      return flowHeight(waterLevel(id));
+      if (!any[id]) return 0;
+      if (!flow[id] || any[vol[i + P2]]) return 1;
+      return height(id);
     };
     const solid = (id) => id > 0 && IS_CUBE[id] && !IS_TRANSPARENT[id];
-    const col = baseColor(STILL_WATER);
-    const layer = layerTable()[STILL_WATER];
+    const col = baseColor(still);
+    const layer = layerTable()[still];
+    const key = bufferKeyFor(still);
     let buf = null;
     for (let y = lo; y <= top; y++) {
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
         for (let lx = 0; lx < CHUNK_SIZE; lx++) {
           const idx = (y + 1) * P2 + (lz + 1) * PAD + lx + 1;
-          if (!IS_FLOWING[vol[idx]]) continue;
+          if (!flow[vol[idx]]) continue;
           if (!buf) {
-            buf = byType.get(STILL_WATER);
-            if (!buf) { buf = this.takeBuffer(); byType.set(STILL_WATER, buf); }
+            buf = byType.get(key);
+            if (!buf) { buf = this.takeBuffer(); byType.set(key, buf); }
           }
           const h = heightOf(idx);
           const x0 = lx, x1 = lx + 1, y0 = y, y1 = y + h, z0 = lz, z1 = lz + 1;
           const face = (pts, n, shade, w, hh) => this.pushQuad(buf, pts, n, col, shade, layer, w, hh);
-          if (!IS_WATER[vol[idx + P2]]) face([x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0], [0, 1, 0], SHADE.py, 1, 1);
+          if (!any[vol[idx + P2]]) face([x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0], [0, 1, 0], SHADE.py, 1, 1);
           if (vol[idx - P2] === AIR) face([x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1], [0, -1, 0], SHADE.ny, 1, 1);
           const side = (off) => !solid(vol[idx + off]) && heightOf(idx + off) < h;
           if (side(1)) face([x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1], [1, 0, 0], SHADE.px, 1, h);
@@ -609,6 +654,7 @@ export class ChunkMesher {
     const baseX = chunk.cx * CHUNK_SIZE;
     const baseZ = chunk.cz * CHUNK_SIZE;
     const buf = { position: [], normal: [], color: [], index: [] };
+    const glow = { position: [], normal: [], color: [], index: [] };
     // Reads the padded copy rebuild just made, so a fence at a chunk's edge
     // sees the fence in the next chunk and joins up with it.
     const vol = this.padded, P2 = PAD * PAD;
@@ -617,31 +663,58 @@ export class ChunkMesher {
         for (let lx = 0; lx < CHUNK_SIZE; lx++) {
           const idx = (ly + 1) * P2 + (lz + 1) * PAD + lx + 1;
           const id = vol[idx];
-          if (id <= 0 || IS_CUBE[id]) continue;
+          // Running water and lava are drawn with their sources (emitFlowing).
+          if (id <= 0 || IS_CUBE[id] || IS_FLOWING[id] || IS_LAVA_FLOW[id]) continue;
           const shape = shapeOf(id);
+          if (SLOPED[id]) {
+            const at = (dx, dz) => {
+              const n = vol[idx + dx + dz * PAD];
+              return n > 0 && SLOPE[n] ? { kind: SLOPE[n], facing: FACING[n] } : null;
+            };
+            const corner = SLOPE[id] ? cornerOf(SLOPE[id], FACING[id], at) : null;
+            const g = slopeGeometry(shape, FACING[id], corner);
+            const col = baseColor(id);
+            for (const b of g.boxes) {
+              this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col);
+            }
+            for (const f of g.faces) this.emitFace(buf, lx, ly, lz, f, col);
+            continue;
+          }
           const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
             ? fenceBoxes(shape, {
               px: JOINS_FENCE[vol[idx + 1]], nx: JOINS_FENCE[vol[idx - 1]],
               pz: JOINS_FENCE[vol[idx + PAD]], nz: JOINS_FENCE[vol[idx - PAD]],
             })
-            : boxesFor(shape);
+            : IS_RUG[id]
+              ? rugBoxes({
+                px: IS_RUG[vol[idx + 1]], nx: IS_RUG[vol[idx - 1]],
+                pz: IS_RUG[vol[idx + PAD]], nz: IS_RUG[vol[idx - PAD]],
+              })
+              : turn(boxesFor(shape), FACING[id]);
           const col = baseColor(id);
           for (const b of boxes) {
-            this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col);
+            this.emitPropBox(b.glow ? glow : buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ,
+              b.color != null ? colorOfHex(b.color) : col, b.glow);
           }
         }
       }
     }
-    if (!buf.position.length) return;
+    if (!buf.position.length && !glow.position.length) return;
 
+    // One mesh, two materials: the ordinary lit props, then the glowing parts.
+    const litIndices = buf.index.length, offset = buf.position.length / 3;
+    for (const k of ['position', 'normal', 'color']) for (const v of glow[k]) buf[k].push(v);
+    for (const i of glow.index) buf.index.push(i + offset);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(buf.position, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(buf.normal, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(buf.color, 3));
     geo.setIndex(buf.index);
+    geo.addGroup(0, litIndices, 0);
+    geo.addGroup(litIndices, glow.index.length, 1);
     geo.computeBoundingSphere();
 
-    const mesh = new THREE.Mesh(geo, propMaterial);
+    const mesh = new THREE.Mesh(geo, [propMaterial, glowMaterial]);
     mesh.position.set(baseX, 0, baseZ);
     mesh.frustumCulled = true;
     mesh.userData.chunk = chunk;
@@ -651,12 +724,30 @@ export class ChunkMesher {
   }
 
   /**
+   * One flat polygon of a sloped piece (see world/slopes.js), shaded by which
+   * way it faces the same way a box's faces are.
+   */
+  emitFace(buf, ox, oy, oz, face, col) {
+    const { pts, n } = orient(face.pts, face.out);
+    const [nx, ny, nz] = n;
+    const shade = (nx * nx * SHADE.px + ny * ny * (ny > 0 ? SHADE.py : SHADE.ny) + nz * nz * SHADE.pz) * (face.tone ?? 1);
+    const r = col.r * shade, g = col.g * shade, b = col.b * shade;
+    const base = buf.position.length / 3;
+    for (const [x, y, z] of pts) {
+      buf.position.push(ox + x, oy + y, oz + z);
+      buf.normal.push(nx, ny, nz);
+      buf.color.push(r, g, b);
+    }
+    for (let i = 1; i < pts.length - 1; i++) buf.index.push(base, base + i, base + i + 1);
+  }
+
+  /**
    * One axis-aligned box, all six faces, in chunk-local space — the same
    * origin/du/dv-and-winding math emitQuad above uses for a full block face,
    * just run over continuous bounds instead of a grid slice, so the winding
    * is proven correct rather than hand-guessed per face.
    */
-  emitPropBox(buf, x0, y0, z0, x1, y1, z1, col) {
+  emitPropBox(buf, x0, y0, z0, x1, y1, z1, col, flat = false) {
     const min = [x0, y0, z0], max = [x1, y1, z1];
     for (let d = 0; d < 3; d++) {
       const u = (d + 1) % 3, v = (d + 2) % 3;
@@ -669,7 +760,9 @@ export class ChunkMesher {
         const dv = [0, 0, 0]; dv[v] = max[v] - min[v];
 
         const nx = d === 0 ? sign : 0, ny = d === 1 ? sign : 0, nz = d === 2 ? sign : 0;
-        const shade = d === 1 ? (sign > 0 ? SHADE.py : SHADE.ny) : d === 0 ? SHADE.px : SHADE.pz;
+        // Something glowing is lit from inside: barely shaded at all.
+        const shade = flat ? (d === 1 && sign < 0 ? 0.9 : 1)
+          : d === 1 ? (sign > 0 ? SHADE.py : SHADE.ny) : d === 0 ? SHADE.px : SHADE.pz;
         const r = col.r * shade, g = col.g * shade, b = col.b * shade;
 
         const base = buf.position.length / 3;

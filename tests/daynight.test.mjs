@@ -1,0 +1,44 @@
+import * as THREE from 'three';
+import { DayCycle, daylightAt, sunHeight, MORNING, DAYLIGHT_SECONDS } from '../src/render/DayCycle.js';
+
+/** Requested directly: "night and day is pretty standard, and should be done." */
+
+let f = 0;
+const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
+
+const noon = daylightAt(0.5), midnight = daylightAt(0), dusk = daylightAt(0.75);
+ok('noon is full day', noon.day > 0.99 && noon.sun > 0.8 && noon.stars === 0);
+ok('midnight is dark, lit by the moon, with stars', midnight.day < 0.01 && midnight.sun === 0 && midnight.moon > 0.1 && midnight.stars > 0.99);
+ok('night is dark but not black — you can still see where you are', midnight.ambient > 0.1 && midnight.ambient < noon.ambient / 3);
+ok('sunset is its own colour', dusk.dusk > 0.9 && noon.dusk === 0 && midnight.dusk === 0);
+ok('a new world starts in the morning, sun up', sunHeight(MORNING) > 0.3);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color();
+scene.fog = new THREE.Fog(0xffffff, 1, 2);
+const ambient = new THREE.AmbientLight(), sun = new THREE.DirectionalLight(), hemi = new THREE.HemisphereLight();
+let tint = null;
+const cycle = new DayCycle(scene, { ambient, sun, hemi, clouds: { setColor: (c) => { tint = c; } } });
+
+// A whole day, a frame at a time.
+let t = 0, frames = 0, sawNight = false, sawDay = false, dayFrames = 0, nightFrames = 0;
+cycle.time = 0.5;
+while (t < 1 && frames < 1e6) {
+  const before = cycle.time;
+  cycle.advance(1 / 20);
+  t += ((cycle.time - before) + 1) % 1;
+  frames++;
+  if (sunHeight(cycle.time) > 0) { sawDay = true; dayFrames++; } else { sawNight = true; nightFrames++; }
+}
+const seconds = frames / 20;
+ok(`a whole day takes ${Math.round(seconds / 60)} minutes`, Math.abs(seconds - DAYLIGHT_SECONDS * 1.5) < 5);
+ok(`night passes twice as fast as day (${(dayFrames / nightFrames).toFixed(2)}×)`, sawDay && sawNight && Math.abs(dayFrames / nightFrames - 2) < 0.05);
+
+cycle.time = 0; cycle.apply();
+const dark = scene.background.clone();
+ok('at night the sky, the fog and the clouds go dark', dark.r + dark.g + dark.b < 0.5 && scene.fog.color.equals(dark) && tint.r < 0.4);
+ok('and the stars are out, and the moon up', cycle.stars.visible && cycle.moonDisc.visible && !cycle.sunDisc.visible);
+cycle.time = 0.5; cycle.apply();
+ok('by day the sky is blue again and the sun is up', scene.background.b > 0.9 && cycle.sunDisc.visible && !cycle.stars.visible && sun.intensity > 0.8);
+
+process.exit(f ? 1 : 0);

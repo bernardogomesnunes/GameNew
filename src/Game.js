@@ -4,7 +4,7 @@ import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { buildTemplatePlacement, rotateTemplate, captureBlocks } from './tools/Templates.js';
-import { roofPlan, roofBlocks, roofPeak, roofPick } from './tools/RoofTool.js';
+import { roofPlan, roofBlocks, roofPeak, roofPick, roofTypeFor } from './tools/RoofTool.js';
 import { pickBuild, wallFootprintAt } from './tools/PointerPick.js';
 import { ROOFS_BY_ID, facingLabel } from './config/roofs.js';
 import { clearPlan, clearCells, cellBounds } from './tools/ClearTool.js';
@@ -20,6 +20,9 @@ import { generateEndlessWorld } from './world/StarterWorld.js';
 import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
 import { FarTerrain } from './render/FarTerrain.js';
 import { SkyClouds } from './render/SkyClouds.js';
+import { DayCycle, MORNING } from './render/DayCycle.js';
+import { Sound, soundOf } from './audio/Sound.js';
+import { loadControls, saveControls } from './config/controls.js';
 import { LightManager } from './render/LightManager.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
@@ -48,13 +51,13 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock } from './config/blocks.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { Mobs, rayBox } from './world/Mobs.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
-import { WaterFlow } from './world/WaterFlow.js';
+import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
 import { WANDERERS } from './config/wanderers.js';
 import { MobView } from './render/MobView.js';
 
@@ -127,7 +130,11 @@ const TAME_EVERY_MS = 1000; // how often pens take in animals led into them
 const GATE_SHUT = 48, GATE_OPEN = 49;
 // How often running water advances a block. See world/WaterFlow.js.
 const WATER_STEP_SECONDS = 0.25;
+// Lava is thicker: a block a second.
+const LAVA_STEP_SECONDS = 1;
 const GATE_SWING = { [GATE_SHUT]: GATE_OPEN, [GATE_OPEN]: GATE_SHUT };
+/** A gate or either half of a door: something Place swings rather than builds on. */
+const swings = (id) => !!GATE_SWING[id] || !!doorPart(id);
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
 
@@ -217,20 +224,31 @@ export class Game {
     // on which is in front, so they traded places as the camera moved. Nothing
     // in a voxel world is ever closer than a fraction of a block, so 0.2 costs
     // nothing to look at and doubles the precision everywhere.
-    this.camera = new THREE.PerspectiveCamera(75, 1, 0.2, this.horizon + 200);
+    // The player's own controls: keys, field of view, mouse speed, volume.
+    this.controls = loadControls();
+    this.camera = new THREE.PerspectiveCamera(this.controls.fov, 1, 0.2, this.horizon + 200);
+    this.sound = new Sound({ volume: this.controls.volume });
+    // Browsers only allow audio once you've clicked or pressed something.
+    const unlock = () => this.sound.unlock();
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
 
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    this.scene.add(ambient);
     const sun = new THREE.DirectionalLight(0xfff3d6, 0.85);
     sun.position.set(60, 90, 30);
     this.scene.add(sun);
     // Ground bounce-light lightened to match: 0x3a2f22 was dark enough that
     // every underside and shadowed face read muddy no matter how pale the
     // blocks above them were.
-    this.scene.add(new THREE.HemisphereLight(0xadd7f5, 0x7f6445, 0.4));
+    const hemi = new THREE.HemisphereLight(0xadd7f5, 0x7f6445, 0.4);
+    this.scene.add(hemi);
 
     this.mesher = new ChunkMesher(this.scene);
     this.farTerrain = new FarTerrain(this.scene);
     this.clouds = new SkyClouds(this.scene);
+    // Those three lights, the sky and the clouds all follow the time of day.
+    this.dayCycle = new DayCycle(this.scene, { ambient, sun, hemi, clouds: this.clouds });
     this.lights = new LightManager(this.scene);
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
@@ -989,6 +1007,7 @@ export class Game {
     let spawn = built.origin.spawn;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, spawn ?? this.findSafeSpawn());
+    this.player.binds = { ...this.controls.keys };
     // Face the way the spawn picked: the open direction. Arriving on a good
     // open spot while looking at the one wall behind you is the same bad first
     // impression as arriving inside the hill.
@@ -1004,6 +1023,8 @@ export class Game {
     this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus, sandbox });
     if (sandbox) this.duilt.grantCreativeKit();
     else this.duilt.grantStartingKit();
+    // Every new world starts in the morning.
+    if (this.dayCycle) this.dayCycle.time = MORNING;
     // After the rules exist, not before: this reads the border off `duilt`,
     // and called a line earlier it only ever saw the world that came before.
     this.applyTerritoryBounds();
@@ -1073,6 +1094,7 @@ export class Game {
     this.mode = data.mode === DUILT ? DUILT : CREATIVE;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, data.player);
+    this.player.binds = { ...this.controls.keys };
     this.player.yaw = data.player.yaw || 0;
     this.player.pitch = data.player.pitch || 0;
     if (!this.gamification) this.gamification = new GamificationEngine(this.bus);
@@ -1094,9 +1116,10 @@ export class Game {
           kind: 'challenge', title: 'Your buildings kept working', body: parts.join(', '),
         }), 600);
       }
-    } else if (sandbox) {
-      this.duilt.grantCreativeKit();
     }
+    if (sandbox) this.duilt.grantCreativeKit();
+    // The world's clock picks up where it was left.
+    if (this.dayCycle) this.dayCycle.time = this.duilt.dayTime ?? MORNING;
     this.gamification.setDuilt(this.duilt);
     this.applyTerritoryBounds();
     this.rebuildAllChunks();
@@ -1194,7 +1217,8 @@ export class Game {
 
     document.addEventListener('mousemove', (e) => {
       if (!this.pointerLocked) return;
-      this.player.look(e.movementX * 0.0022, e.movementY * 0.0022);
+      const k = 0.0022 * (this.controls.sensitivity ?? 1);
+      this.player.look(e.movementX * k, e.movementY * k);
     });
 
     canvas.addEventListener('mousedown', (e) => {
@@ -1262,7 +1286,10 @@ export class Game {
       // but there's nothing to craft when the bag already holds one of
       // everything — see UIManager's matching `.survival-only` gate on the
       // button itself.
-      const shortcut = this.phase === 'home' ? null : panelForKey(e.code);
+      // A key you've bound to moving (see config/controls.js) moves you;
+      // it doesn't also open whichever panel had it.
+      const bound = Object.values(this.controls.keys).includes(e.code);
+      const shortcut = this.phase === 'home' || bound ? null : panelForKey(e.code);
       const survivalOnly = shortcut?.id === 'panel-bench';
       if (shortcut && (shortcut.mode !== 'duilt' || this.duilt) && !(survivalOnly && this.duilt?.sandbox)) {
         if (this.ui.isPanelOpen(shortcut.id)) this.ui.closePanel(shortcut.id);
@@ -1277,8 +1304,9 @@ export class Game {
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
       // R turns whatever is queued. One key for both, because "turn the thing
       // before you put it down" is one idea however it got queued.
-      if (e.code === 'KeyR' && this.pendingRoof) this.turnRoof();
-      else if (e.code === 'KeyR' && this.pendingTemplate) {
+      const turnKey = this.controls.keys.turn;
+      if (e.code === turnKey && this.pendingRoof) this.turnRoof();
+      else if (e.code === turnKey && this.pendingTemplate) {
         this.templateRotation = (this.templateRotation + 1) % 4;
         this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });
       }
@@ -1383,7 +1411,7 @@ export class Game {
     // Pointing at a gate, Place opens or shuts it — before anything you're
     // holding gets a say, the same way you'd reach for a latch.
     const aimed = this.raycast();
-    if (aimed && GATE_SWING[aimed.block]) return void this.toggleGate(aimed);
+    if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
     // A full bucket takes the button too, instead of placing a block.
     const override = PLACE_OVERRIDE[this.selectedItemId] ?? (isFood(this.selectedItemId) ? 'throwSelected' : null);
     if (override) return void this[override]();
@@ -1616,7 +1644,7 @@ export class Game {
     const changes = roofPlan(this.world, pick, { shape, turn, type, base });
 
     const laid = roofBlocks(pick, { shape, turn })
-      .map((b) => ({ x: b.x, y: base + b.dy, z: b.z, type }));
+      .map((b) => ({ x: b.x, y: base + b.dy, z: b.z, type: roofTypeFor(type, b) }));
     // Re-laying a roof has to take the old one's corners down as well as put
     // the new one up, or turning a gable leaves a cross on the roof.
     if (relay) {
@@ -1669,7 +1697,7 @@ export class Game {
     this.roofKey = key;
     const cells = roofBlocks(pick, { shape: this.pendingRoof, turn: this.roofTurn });
     const blocks = cells.map((b) => ({
-      dx: b.x - pick.bounds.minX, dy: b.dy, dz: b.z - pick.bounds.minZ, type: this.selectedBlockId,
+      dx: b.x - pick.bounds.minX, dy: b.dy, dz: b.z - pick.bounds.minZ, type: roofTypeFor(this.selectedBlockId, b),
     }));
     this.roofGhost.show(blocks, {
       x: pick.bounds.maxX - pick.bounds.minX,
@@ -2460,6 +2488,7 @@ export class Game {
   eatSelected() {
     if (!this.duilt) return;
     const r = this.duilt.eat(this.selectedItemId);
+    if (r.ok) this.sound?.eat();
     this.ui.toast(r.ok
       ? { kind: 'challenge', title: 'That helps', body: `+${r.restored} hunger` }
       : { kind: 'xp', title: r.reason });
@@ -2473,6 +2502,8 @@ export class Game {
   throwSelected() {
     if (!this.duilt) return;
     const id = this.selectedItemId;
+    // A creative bag keeps everything — see Inventory's `endless`.
+    if (this.duilt.inventory.endless) return;
     if (!this.duilt.inventory.remove(id, 1)) return;
     this.ui.toast({ kind: 'xp', title: `Threw away ${itemName(id)}`, body: 'One less to carry' });
   }
@@ -2596,15 +2627,57 @@ export class Game {
    * unlocking the pen first.
    */
   toggleGate(hit) {
-    const next = GATE_SWING[hit.block];
-    if (next === GATE_SHUT && this.blockOverlapsPlayerAABB(hit)) {
-      this.ui.toast({ kind: 'xp', title: 'Step out of the gateway first' });
+    // A door swings both its halves together.
+    const door = doorPart(hit.block);
+    const cells = door ? this.doorCells(hit) : [{ x: hit.x, y: hit.y, z: hit.z, block: hit.block }];
+    const shutting = door ? door.open : GATE_SWING[hit.block] === GATE_SHUT;
+    if (shutting && cells.some((c) => this.blockOverlapsPlayerAABB(c))) {
+      this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : 'Step out of the gateway first' });
       return;
     }
-    this.world.setBlock(hit.x, hit.y, hit.z, next);
-    this.water?.touch(hit.x, hit.y, hit.z);
+    this.sound?.creak(!shutting);
+    for (const c of cells) {
+      const part = doorPart(c.block);
+      const next = part ? doorBlock({ ...part, open: !part.open }) : GATE_SWING[c.block];
+      this.world.setBlock(c.x, c.y, c.z, next);
+      this.water?.touch(c.x, c.y, c.z);
+      this.lava?.touch(c.x, c.y, c.z);
+    }
     this.remeshDirty();
     this.editedAt = Date.now();
+  }
+
+  /** Both halves of the door at a cell — or just the one, if its other half is missing. */
+  doorCells(at) {
+    const part = doorPart(at.block ?? this.world.getBlock(at.x, at.y, at.z));
+    const self = { x: at.x, y: at.y, z: at.z, block: at.block ?? this.world.getBlock(at.x, at.y, at.z) };
+    const oy = part.top ? at.y - 1 : at.y + 1;
+    const other = this.world.inBounds(at.x, oy, at.z) ? this.world.getBlock(at.x, oy, at.z) : AIR;
+    const op = doorPart(other);
+    return op && op.top !== part.top ? [self, { x: at.x, y: oy, z: at.z, block: other }] : [self];
+  }
+
+  /**
+   * Which way you're facing, as quarter-turns from looking along -z: 0
+   * north (-z), 1 east (+x), 2 south (+z), 3 west (-x). What a stair,
+   * chair or door is put down at — see blocks.js's TURNS.
+   */
+  lookFacing() {
+    const yaw = this.player.yaw;
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    if (Math.abs(fx) > Math.abs(fz)) return fx > 0 ? 1 : 3;
+    return fz < 0 ? 0 : 2;
+  }
+
+  /**
+   * The block to actually put down for what's held: turned to face the
+   * right way. A stair climbs away from you; a chair and a door face you.
+   */
+  placedBlock(type) {
+    if (!turns(type)) return type;
+    const look = this.lookFacing();
+    const shape = BLOCKS_BY_ID.get(type)?.shape;
+    return turned(type, shape === 'chair' ? look + 2 : look);
   }
 
   placeBlock() {
@@ -2612,23 +2685,55 @@ export class Game {
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
     // shouldn't go on to build against it.
-    if (GATE_SWING[hit.block]) return;
+    if (swings(hit.block)) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
       this.ui.toast({ kind: 'xp', title: 'Locked block', body: availability.reason });
       return;
     }
+    const next = this.placedBlock(type);
+    const door = doorPart(next);
     const targets = this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
     const changes = [];
     for (const t of targets) {
       if (!this.world.inBounds(t.x, t.y, t.z)) continue;
       if (this.blockOverlapsPlayerAABB(t)) continue;
       const prev = this.world.getBlock(t.x, t.y, t.z);
-      if (prev === type) continue;
-      changes.push({ x: t.x, y: t.y, z: t.z, prev, next: type });
+      if (prev === next) continue;
+      if (door) {
+        // A door needs the cell above it clear for its top half.
+        const up = { x: t.x, y: t.y + 1, z: t.z };
+        if (!this.world.inBounds(up.x, up.y, up.z) || this.blockOverlapsPlayerAABB(up)) continue;
+        const above = this.world.getBlock(up.x, up.y, up.z);
+        if (above !== AIR && !isFlowing(above)) continue;
+        changes.push({ ...up, prev: above, next: doorBlock({ ...door, top: true }) });
+      }
+      changes.push({ x: t.x, y: t.y, z: t.z, prev, next });
+    }
+    if (door && !changes.length) {
+      this.ui.toast({ kind: 'xp', title: 'No room for a door', body: 'It needs two blocks of clear space' });
+      return;
     }
     this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
+  }
+
+  /**
+   * A door is one thing in two blocks: whatever takes away one half takes
+   * the other with it, so there's never half a door left standing.
+   */
+  withDoorHalves(changes) {
+    let out = changes;
+    for (const c of changes) {
+      if (!doorPart(c.prev) || doorPart(c.next)) continue;
+      for (const other of this.doorCells({ x: c.x, y: c.y, z: c.z, block: c.prev })) {
+        if (other.y === c.y) continue;
+        if (out.some((o) => o.x === other.x && o.y === other.y && o.z === other.z)) continue;
+        if (out === changes) out = [...changes];
+        out.push({ x: other.x, y: other.y, z: other.z, prev: other.block, next: AIR });
+      }
+    }
+    return out;
   }
 
   blockOverlapsPlayerAABB(t) {
@@ -2650,7 +2755,7 @@ export class Game {
    * has a tool that takes a lot away again.
    */
   applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
-    changes = changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z));
+    changes = this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z)));
     if (!changes.length) return false;
 
     // Duilt has its own economy: the border says where, the bag says whether.
@@ -2690,8 +2795,12 @@ export class Game {
 
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
+    // One sound for the edit, however many blocks it was: what it was made of.
+    const first = changes[0];
+    if (first.next !== AIR) this.sound?.place(soundOf(BLOCKS_BY_ID.get(first.next)));
+    else this.sound?.break(soundOf(BLOCKS_BY_ID.get(first.prev)));
     // Anything that opens a way for water, or blocks one, sets it running.
-    for (const c of changes) this.water?.touch(c.x, c.y, c.z);
+    for (const c of changes) { this.water?.touch(c.x, c.y, c.z); this.lava?.touch(c.x, c.y, c.z); }
     this.remeshDirty();
 
     if (this.duilt) {
@@ -2968,7 +3077,10 @@ export class Game {
 
     if (playing) {
       this.quality.tick(dt);
+      const wasAt = { x: this.player.position.x, z: this.player.position.z };
+      const wasSwimming = this.player.swimming;
       this.player.update(dt);
+      this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
         this.duilt.tick(dt);
         this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
@@ -2996,10 +3108,39 @@ export class Game {
     this.updateChunkVisibility();
     this.updateFarTerrain();
     this.updateClouds(dt);
+    // The clock only runs while you're playing; a menu is a pause.
+    if (playing) this.dayCycle.advance(dt);
+    if (this.duilt) this.duilt.dayTime = this.dayCycle.time;
+    this.dayCycle.apply(this.camera, this.horizon);
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
     this.wanderView.update(this.wanderers?.list ?? []);
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Footsteps on whatever is underfoot, and a splash on going into water. */
+  stepSounds(wasAt, wasSwimming) {
+    const p = this.player;
+    if (p.swimming && !wasSwimming) this.sound.splash();
+    if (p.flying || !p.grounded || p.swimming) return;
+    const moved = Math.hypot(p.position.x - wasAt.x, p.position.z - wasAt.z);
+    if (moved < 1e-4) return;
+    const under = this.world.getBlock(Math.floor(p.position.x), Math.floor(p.position.y - 0.05), Math.floor(p.position.z));
+    this.sound.walk(moved, soundOf(BLOCKS_BY_ID.get(under)));
+  }
+
+  /**
+   * Applies a change from the controls settings: keys, field of view, mouse
+   * speed and volume, remembered in this browser (config/controls.js).
+   */
+  applyControls(next) {
+    this.controls = { ...this.controls, ...next };
+    saveControls(this.controls);
+    if (this.player) this.player.binds = { ...this.controls.keys };
+    this.camera.fov = this.controls.fov;
+    this.camera.updateProjectionMatrix();
+    this.sound.setVolume(this.controls.volume);
+    return this.controls;
   }
 
   /**
@@ -3010,11 +3151,15 @@ export class Game {
    */
   /** Advances running water a step at a time, and redraws what it reached. */
   runWater(dt) {
-    if (!this.water?.busy) return;
-    this.waterClock = (this.waterClock ?? 0) + dt;
-    if (this.waterClock < WATER_STEP_SECONDS) return;
-    this.waterClock = 0;
-    if (this.water.step()) {
+    let changed = false;
+    for (const [flow, clock, every] of [[this.water, 'waterClock', WATER_STEP_SECONDS], [this.lava, 'lavaClock', LAVA_STEP_SECONDS]]) {
+      if (!flow?.busy) continue;
+      this[clock] = (this[clock] ?? 0) + dt;
+      if (this[clock] < every) continue;
+      this[clock] = 0;
+      if (flow.step()) changed = true;
+    }
+    if (changed) {
       this.remeshDirty();
       this.editedAt = Date.now();
     }
@@ -3022,7 +3167,14 @@ export class Game {
 
   syncMobs() {
     if (!this.world) return;
-    if (this.water?.world !== this.world) this.water = new WaterFlow(this.world);
+    if (this.water?.world !== this.world) {
+      this.water = new WaterFlow(this.world);
+      this.lava = new LavaFlow(this.world);
+      // Each wakes the other where it changes, so running lava meeting
+      // water sets hard whichever of them arrived second.
+      this.water.onChange = (x, y, z) => this.lava.touch(x, y, z);
+      this.lava.onChange = (x, y, z) => this.water.touch(x, y, z);
+    }
     if (this.mobs?.world !== this.world) {
       this.mobs = new Mobs({
         world: this.world,
@@ -3135,8 +3287,11 @@ export class Game {
       ? this.duilt.structures.at(hit.x, hit.y, hit.z)
       : null;
     const gate = hit && GATE_SWING[hit.block];
+    const door = hit && doorPart(hit.block);
     this.ui?.setBuildingHint(gate
       ? (hit.block === GATE_SHUT ? 'Gate · shut — Place opens it' : 'Gate · open — Place shuts it')
+      : door
+        ? (door.open ? 'Door · open — Place shuts it' : 'Door · shut — Place opens it')
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')

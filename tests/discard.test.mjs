@@ -19,7 +19,9 @@ ok('a discard button is drawn beside a filled slot, not inside it',
   /A sibling button, not nested inside the slot/.test(ui) && /class="slot-discard"/.test(ui));
 ok('an empty slot gets no discard button', /if \(!s\) return `<button class="bag-slot empty"/.test(ui));
 ok('only the bag opts into it, not the storehouse grids',
-  /discardAttr: 'data-discard'/.test(ui) && (ui.match(/discardAttr: 'data-discard'/g) ?? []).length === 1);
+  /const bin = d\.inventory\.endless \? null : 'data-discard'/.test(ui) && (ui.match(/discardAttr: bin/g) ?? []).length === 1
+    && !/discardAttr: 'data-discard'/.test(ui));
+ok('and never in a creative bag, where nothing is thrown away', /d\.inventory\.endless \? null/.test(ui));
 ok('clicking it never reaches the slot\'s own lift/drop handler',
   /data-discard\]'\)\.forEach\(\(btn\) =>\s*btn\.addEventListener\('click', \(e\) => \{ e\.stopPropagation\(\)/.test(ui));
 ok('it calls Inventory.discard by slot, not remove by item id',
