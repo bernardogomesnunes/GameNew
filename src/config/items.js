@@ -142,7 +142,11 @@ export const ITEMS = [
   // one. A real Inventory can only hold items, so a sandbox kit needs every
   // placeable block to have one — see Game.js's grantCreativeKit.
   { id: 'water', name: 'Water', kind: 'raw', stackTo: STACK_BULK, color: 0x83add7, glyph: 'water', block: 11, madeBy: 'Scooped from a river' },
-  { id: 'snow', name: 'Snow', kind: 'raw', stackTo: STACK_BULK, color: 0xceddec, glyph: 'snow', block: 12, madeBy: 'Gathered from a snowfield' },
+  // "Gathered from a snowfield" dated back to a Snowfield biome the terrain
+  // overhaul retired — nothing generates this block in the world any more,
+  // only the level unlock does, so the flavour text no longer claims a place
+  // to find it that doesn't exist.
+  { id: 'snow', name: 'Snow', kind: 'raw', stackTo: STACK_BULK, color: 0xf5f7f8, glyph: 'snow', block: 12, madeBy: 'Found on the highest peaks' },
   { id: 'obsidian', name: 'Obsidian', kind: 'raw', stackTo: STACK_BULK, color: 0x372648, glyph: 'obsidian', block: 14, madeBy: 'Found deep underground' },
   { id: 'glass_red', name: 'Red Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xde9390, glyph: 'pane', block: 15, madeBy: 'Fired from sand, tinted red' },
   { id: 'glass_blue', name: 'Blue Glass', kind: 'refined', stackTo: STACK_BULK, color: 0x90aade, glyph: 'pane', block: 16, madeBy: 'Fired from sand, tinted blue' },
