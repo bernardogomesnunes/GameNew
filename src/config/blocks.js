@@ -28,6 +28,9 @@
 // the same pale middle.
 /** Flowing water of level L is block FLOW_BASE + L, for L in 1..7. */
 const FLOW_BASE = 49;
+/** Flowing lava of level L is block LAVA_FLOW_BASE + L, for L in 1..3. */
+const LAVA_FLOW_BASE = 115;
+export const LAVA = 45;
 
 export const BLOCKS = [
   { id: 1, name: 'Grass', glyph: 'grass', color: 0x97cc81, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
@@ -190,6 +193,16 @@ export const BLOCKS = [
   // when the bottom does. Place, pointed at either half, swings both open or
   // shut (Game.toggleGate) — shut is solid, open anyone walks through. Every
   // part comes in four facings, generated below.
+  // Flowing lava, the way flowing water runs off a pool — requested
+  // directly: "lava is not fluid like water, it should." Thicker than water:
+  // it only runs three blocks from its source, and slowly (see
+  // world/WaterFlow.js). Level 3 beside the source or falling, 1 at the end.
+  ...[1, 2, 3].map((level) => ({
+    id: LAVA_FLOW_BASE + level, name: 'Flowing Lava', glyph: 'water', color: 0xe8672c,
+    light: { color: 0xff8040, intensity: 12, distance: 7 },
+    shape: 'lava_flow', stateOf: 45, level, material: 'stone', unlock: null,
+  })),
+
   // Hung from the ceiling, not stood on the floor: an iron ring of four
   // candles on a chain, lighting the room from above.
   {
@@ -301,6 +314,32 @@ export function waterLevel(id) {
 /** The block for flowing water of a level, 1..7. */
 export function flowingWater(level) {
   return FLOW_BASE + level;
+}
+
+/** Any lava: a source, or flowing. */
+export function isLava(id) {
+  return id === LAVA || (id > LAVA_FLOW_BASE && id <= LAVA_FLOW_BASE + 3);
+}
+
+/** Flowing lava only. */
+export function isLavaFlow(id) {
+  return id > LAVA_FLOW_BASE && id <= LAVA_FLOW_BASE + 3;
+}
+
+/** How strong a cell of lava is: 4 for a source, 1..3 flowing, 0 if it isn't lava. */
+export function lavaLevel(id) {
+  if (id === LAVA) return 4;
+  return isLavaFlow(id) ? id - LAVA_FLOW_BASE : 0;
+}
+
+/** The block for flowing lava of a level, 1..3. */
+export function flowingLava(level) {
+  return LAVA_FLOW_BASE + level;
+}
+
+/** Anything you wade or swim through rather than stand on: water or lava. */
+export function isFluid(id) {
+  return isWater(id) || isLava(id);
 }
 
 /** Quarter-turns a block is placed at: 0..3, 0 for anything that doesn't turn. */

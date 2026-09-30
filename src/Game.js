@@ -21,6 +21,8 @@ import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
 import { FarTerrain } from './render/FarTerrain.js';
 import { SkyClouds } from './render/SkyClouds.js';
 import { DayCycle, MORNING } from './render/DayCycle.js';
+import { Sound, soundOf } from './audio/Sound.js';
+import { loadControls, saveControls } from './config/controls.js';
 import { LightManager } from './render/LightManager.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
 import { SymmetryTool } from './tools/SymmetryTool.js';
@@ -55,7 +57,7 @@ import { MOBS_BY_ID } from './config/mobs.js';
 import { Mobs, rayBox } from './world/Mobs.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
-import { WaterFlow } from './world/WaterFlow.js';
+import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
 import { WANDERERS } from './config/wanderers.js';
 import { MobView } from './render/MobView.js';
 
@@ -128,6 +130,8 @@ const TAME_EVERY_MS = 1000; // how often pens take in animals led into them
 const GATE_SHUT = 48, GATE_OPEN = 49;
 // How often running water advances a block. See world/WaterFlow.js.
 const WATER_STEP_SECONDS = 0.25;
+// Lava is thicker: a block a second.
+const LAVA_STEP_SECONDS = 1;
 const GATE_SWING = { [GATE_SHUT]: GATE_OPEN, [GATE_OPEN]: GATE_SHUT };
 /** A gate or either half of a door: something Place swings rather than builds on. */
 const swings = (id) => !!GATE_SWING[id] || !!doorPart(id);
@@ -220,7 +224,14 @@ export class Game {
     // on which is in front, so they traded places as the camera moved. Nothing
     // in a voxel world is ever closer than a fraction of a block, so 0.2 costs
     // nothing to look at and doubles the precision everywhere.
-    this.camera = new THREE.PerspectiveCamera(75, 1, 0.2, this.horizon + 200);
+    // The player's own controls: keys, field of view, mouse speed, volume.
+    this.controls = loadControls();
+    this.camera = new THREE.PerspectiveCamera(this.controls.fov, 1, 0.2, this.horizon + 200);
+    this.sound = new Sound({ volume: this.controls.volume });
+    // Browsers only allow audio once you've clicked or pressed something.
+    const unlock = () => this.sound.unlock();
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.6);
     this.scene.add(ambient);
@@ -996,6 +1007,7 @@ export class Game {
     let spawn = built.origin.spawn;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, spawn ?? this.findSafeSpawn());
+    this.player.binds = { ...this.controls.keys };
     // Face the way the spawn picked: the open direction. Arriving on a good
     // open spot while looking at the one wall behind you is the same bad first
     // impression as arriving inside the hill.
@@ -1082,6 +1094,7 @@ export class Game {
     this.mode = data.mode === DUILT ? DUILT : CREATIVE;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, data.player);
+    this.player.binds = { ...this.controls.keys };
     this.player.yaw = data.player.yaw || 0;
     this.player.pitch = data.player.pitch || 0;
     if (!this.gamification) this.gamification = new GamificationEngine(this.bus);
@@ -1204,7 +1217,8 @@ export class Game {
 
     document.addEventListener('mousemove', (e) => {
       if (!this.pointerLocked) return;
-      this.player.look(e.movementX * 0.0022, e.movementY * 0.0022);
+      const k = 0.0022 * (this.controls.sensitivity ?? 1);
+      this.player.look(e.movementX * k, e.movementY * k);
     });
 
     canvas.addEventListener('mousedown', (e) => {
@@ -1272,7 +1286,10 @@ export class Game {
       // but there's nothing to craft when the bag already holds one of
       // everything — see UIManager's matching `.survival-only` gate on the
       // button itself.
-      const shortcut = this.phase === 'home' ? null : panelForKey(e.code);
+      // A key you've bound to moving (see config/controls.js) moves you;
+      // it doesn't also open whichever panel had it.
+      const bound = Object.values(this.controls.keys).includes(e.code);
+      const shortcut = this.phase === 'home' || bound ? null : panelForKey(e.code);
       const survivalOnly = shortcut?.id === 'panel-bench';
       if (shortcut && (shortcut.mode !== 'duilt' || this.duilt) && !(survivalOnly && this.duilt?.sandbox)) {
         if (this.ui.isPanelOpen(shortcut.id)) this.ui.closePanel(shortcut.id);
@@ -1287,8 +1304,9 @@ export class Game {
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
       // R turns whatever is queued. One key for both, because "turn the thing
       // before you put it down" is one idea however it got queued.
-      if (e.code === 'KeyR' && this.pendingRoof) this.turnRoof();
-      else if (e.code === 'KeyR' && this.pendingTemplate) {
+      const turnKey = this.controls.keys.turn;
+      if (e.code === turnKey && this.pendingRoof) this.turnRoof();
+      else if (e.code === turnKey && this.pendingTemplate) {
         this.templateRotation = (this.templateRotation + 1) % 4;
         this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });
       }
@@ -2470,6 +2488,7 @@ export class Game {
   eatSelected() {
     if (!this.duilt) return;
     const r = this.duilt.eat(this.selectedItemId);
+    if (r.ok) this.sound?.eat();
     this.ui.toast(r.ok
       ? { kind: 'challenge', title: 'That helps', body: `+${r.restored} hunger` }
       : { kind: 'xp', title: r.reason });
@@ -2616,11 +2635,13 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : 'Step out of the gateway first' });
       return;
     }
+    this.sound?.creak(!shutting);
     for (const c of cells) {
       const part = doorPart(c.block);
       const next = part ? doorBlock({ ...part, open: !part.open }) : GATE_SWING[c.block];
       this.world.setBlock(c.x, c.y, c.z, next);
       this.water?.touch(c.x, c.y, c.z);
+      this.lava?.touch(c.x, c.y, c.z);
     }
     this.remeshDirty();
     this.editedAt = Date.now();
@@ -2774,8 +2795,12 @@ export class Game {
 
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
+    // One sound for the edit, however many blocks it was: what it was made of.
+    const first = changes[0];
+    if (first.next !== AIR) this.sound?.place(soundOf(BLOCKS_BY_ID.get(first.next)));
+    else this.sound?.break(soundOf(BLOCKS_BY_ID.get(first.prev)));
     // Anything that opens a way for water, or blocks one, sets it running.
-    for (const c of changes) this.water?.touch(c.x, c.y, c.z);
+    for (const c of changes) { this.water?.touch(c.x, c.y, c.z); this.lava?.touch(c.x, c.y, c.z); }
     this.remeshDirty();
 
     if (this.duilt) {
@@ -3052,7 +3077,10 @@ export class Game {
 
     if (playing) {
       this.quality.tick(dt);
+      const wasAt = { x: this.player.position.x, z: this.player.position.z };
+      const wasSwimming = this.player.swimming;
       this.player.update(dt);
+      this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
         this.duilt.tick(dt);
         this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
@@ -3090,6 +3118,31 @@ export class Game {
     this.renderer.render(this.scene, this.camera);
   }
 
+  /** Footsteps on whatever is underfoot, and a splash on going into water. */
+  stepSounds(wasAt, wasSwimming) {
+    const p = this.player;
+    if (p.swimming && !wasSwimming) this.sound.splash();
+    if (p.flying || !p.grounded || p.swimming) return;
+    const moved = Math.hypot(p.position.x - wasAt.x, p.position.z - wasAt.z);
+    if (moved < 1e-4) return;
+    const under = this.world.getBlock(Math.floor(p.position.x), Math.floor(p.position.y - 0.05), Math.floor(p.position.z));
+    this.sound.walk(moved, soundOf(BLOCKS_BY_ID.get(under)));
+  }
+
+  /**
+   * Applies a change from the controls settings: keys, field of view, mouse
+   * speed and volume, remembered in this browser (config/controls.js).
+   */
+  applyControls(next) {
+    this.controls = { ...this.controls, ...next };
+    saveControls(this.controls);
+    if (this.player) this.player.binds = { ...this.controls.keys };
+    this.camera.fov = this.controls.fov;
+    this.camera.updateProjectionMatrix();
+    this.sound.setVolume(this.controls.volume);
+    return this.controls;
+  }
+
   /**
    * The wild animals belong to whichever world is loaded, and start over with
    * each new one — they aren't saved (see world/Mobs.js). None spawn inside
@@ -3098,11 +3151,15 @@ export class Game {
    */
   /** Advances running water a step at a time, and redraws what it reached. */
   runWater(dt) {
-    if (!this.water?.busy) return;
-    this.waterClock = (this.waterClock ?? 0) + dt;
-    if (this.waterClock < WATER_STEP_SECONDS) return;
-    this.waterClock = 0;
-    if (this.water.step()) {
+    let changed = false;
+    for (const [flow, clock, every] of [[this.water, 'waterClock', WATER_STEP_SECONDS], [this.lava, 'lavaClock', LAVA_STEP_SECONDS]]) {
+      if (!flow?.busy) continue;
+      this[clock] = (this[clock] ?? 0) + dt;
+      if (this[clock] < every) continue;
+      this[clock] = 0;
+      if (flow.step()) changed = true;
+    }
+    if (changed) {
       this.remeshDirty();
       this.editedAt = Date.now();
     }
@@ -3110,7 +3167,14 @@ export class Game {
 
   syncMobs() {
     if (!this.world) return;
-    if (this.water?.world !== this.world) this.water = new WaterFlow(this.world);
+    if (this.water?.world !== this.world) {
+      this.water = new WaterFlow(this.world);
+      this.lava = new LavaFlow(this.world);
+      // Each wakes the other where it changes, so running lava meeting
+      // water sets hard whichever of them arrived second.
+      this.water.onChange = (x, y, z) => this.lava.touch(x, y, z);
+      this.lava.onChange = (x, y, z) => this.water.touch(x, y, z);
+    }
     if (this.mobs?.world !== this.world) {
       this.mobs = new Mobs({
         world: this.world,

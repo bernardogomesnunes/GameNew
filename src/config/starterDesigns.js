@@ -12,9 +12,42 @@
  */
 
 import { ITEM_FOR_BLOCK } from './items.js';
+import { doorBlock, roofBlock } from './blocks.js';
+import { ROOFS_BY_ID } from './roofs.js';
+import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
 
 const DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, PLANKS = 7, COBBLE = 8,
       BRICK = 9, GOLD = 13, MARBLE = 17, SAPLING = 20, FARMLAND = 21, FENCE = 47, GATE = 48;
+
+// Requested directly: "we should revisit improving the templates of the
+// buildings, adding a roof and door to every building is minimum." Every
+// building you walk into has a door hung in its doorway and a pitched roof
+// of tiles over its ceiling — slate on the early ones, since brick doesn't
+// exist until the workshop, brick from then on.
+const SLATE = roofBlock({ mat: 1 }), TILE = roofBlock({ mat: 0 });
+
+/** A door in a doorway at (dx, dy, dz) — both halves, facing in from -z. */
+function door(dx, dy, dz) {
+  return [
+    { dx, dy, dz, type: doorBlock({ facing: 2 }) },
+    { dx, dy: dy + 1, dz, type: doorBlock({ facing: 2, top: true }) },
+  ];
+}
+
+/**
+ * A gable of roof tiles over a w × d footprint whose top is at dy — laid by
+ * the Roof tool's own rules (tools/RoofTool.js), so a design's roof is the
+ * roof you'd get pointing the tool at it. The ridge runs the long way; the
+ * gable ends are filled in the building's own walling.
+ */
+function gable(x0, z0, w, d, dy, tile, wall) {
+  const spans = new Map();
+  for (let x = 0; x < w; x++) {
+    for (let z = 0; z < d; z++) spans.set(`${x0 + x},${z0 + z}`, { xm: x + 1, xp: w - x, zm: z + 1, zp: d - z });
+  }
+  return roofBlocks({ spans }, { shape: ROOFS_BY_ID.get('gable'), turn: w > d ? 1 : 0 })
+    .map((b) => ({ dx: b.x, dy: dy + b.dy, dz: b.z, type: b.slope ? roofTypeFor(tile, b) : wall }));
+}
 
 /** A solid rectangle of one block, at one height. */
 function slab(x0, z0, w, d, dy, type) {
@@ -43,15 +76,19 @@ function shifted(blocks, dx0, dz0) {
  * the limit, so these are all a size up from where they look like they should
  * be.
  */
-function room({ w, h, wall, floor = null, roof = wall, door = true }) {
+function room({ w, h, wall, floor = null, roof = wall, door: hasDoor = true, tiles = null }) {
   const blocks = [];
   if (floor != null) blocks.push(...slab(0, 0, w, w, 0, floor));
   const base = floor != null ? 1 : 0;
   for (let dy = base; dy < base + h; dy++) blocks.push(...ring(0, 0, w, w, dy, wall));
   blocks.push(...slab(0, 0, w, w, base + h, roof));
-  if (!door) return blocks;
+  if (tiles != null) blocks.push(...gable(0, 0, w, w, base + h + 1, tiles, wall));
+  if (!hasDoor) return blocks;
   const mid = Math.floor(w / 2);
-  return blocks.filter((b) => !(b.dz === 0 && b.dx === mid && b.dy >= base && b.dy < base + Math.min(2, h)));
+  return [
+    ...blocks.filter((b) => !(b.dz === 0 && b.dx === mid && b.dy >= base && b.dy < base + Math.min(2, h))),
+    ...(h >= 2 ? door(mid, base, 0) : []),
+  ];
 }
 
 /** A trunk with a leafy crown, at a local offset. */
@@ -97,9 +134,13 @@ function houseBlocks() {
       }
     }
   }
-  // The doorway. A house needs a way in, and the rules only ask that the room
-  // above it stays sealed.
-  return blocks.filter((b) => !(b.dz === 0 && b.dx === 2 && (b.dy === 1 || b.dy === 2)));
+  // The doorway, with its door. A house needs a way in, and the rules only
+  // ask that the room above it stays sealed.
+  return [
+    ...blocks.filter((b) => !(b.dz === 0 && b.dx === 2 && (b.dy === 1 || b.dy === 2))),
+    ...door(2, 1, 0),
+    ...gable(0, 0, 5, 5, 4, SLATE, WOOD),
+  ];
 }
 
 /**
@@ -142,7 +183,11 @@ function marketBlocks() {
   blocks.push(...ring(1, 1, 5, 5, 1, PLANKS));
   blocks.push(...ring(1, 1, 5, 5, 2, PLANKS));
   blocks.push(...slab(1, 1, 5, 5, 3, PLANKS));
-  return blocks.filter((b) => !(b.dz === 1 && b.dx === 3 && (b.dy === 1 || b.dy === 2)));
+  return [
+    ...blocks.filter((b) => !(b.dz === 1 && b.dx === 3 && (b.dy === 1 || b.dy === 2))),
+    ...door(3, 1, 1),
+    ...gable(1, 1, 5, 5, 4, TILE, PLANKS),
+  ];
 }
 
 /** A working with timber holding the roof up. Aim it deep — the rules check. */
@@ -172,12 +217,12 @@ function monumentBlocks() {
 
 /** A bigger, better-finished room than a house's — three households' worth. */
 function townhouseBlocks() {
-  return room({ w: 8, h: 3, wall: PLANKS, floor: STONE });
+  return room({ w: 8, h: 3, wall: PLANKS, floor: STONE, tiles: TILE });
 }
 
 /** A room with a brick hearth for a floor — the brick is the hearth the rule asks for. */
 function tavernBlocks() {
-  return room({ w: 6, h: 2, wall: PLANKS, floor: BRICK });
+  return room({ w: 6, h: 2, wall: PLANKS, floor: BRICK, tiles: TILE });
 }
 
 /** A stone shell tall enough to watch from, sealed and open to the sky. */
@@ -191,8 +236,8 @@ function militaryBlocks() {
  * rather than one room wearing four labels.
  */
 function villageBlocks() {
-  const house = () => room({ w: 5, h: 2, wall: WOOD, floor: PLANKS });
-  const shed = () => room({ w: 5, h: 2, wall: PLANKS, floor: PLANKS });
+  const house = () => room({ w: 5, h: 2, wall: WOOD, floor: PLANKS, tiles: TILE });
+  const shed = () => room({ w: 5, h: 2, wall: PLANKS, floor: PLANKS, tiles: TILE });
   return [
     ...shifted(farmBlocks(), 0, 0),
     ...shifted(forestBlocks(), 0, 5),
@@ -255,7 +300,7 @@ export const STARTER_DESIGNS = [
     size: 5,
     footprint: '5 × 5',
     note: 'Put it where you walk past it — your buildings deliver here when your bag is full.',
-    blocks: room({ w: 5, h: 2, wall: WOOD, floor: PLANKS }),
+    blocks: room({ w: 5, h: 2, wall: WOOD, floor: PLANKS, tiles: SLATE }),
   },
   {
     id: 'starter_workshop',
@@ -264,7 +309,7 @@ export const STARTER_DESIGNS = [
     size: 6,
     footprint: '6 × 6',
     note: 'Stand inside it to use the recipes it unlocks.',
-    blocks: room({ w: 6, h: 2, wall: PLANKS, floor: STONE }),
+    blocks: room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: TILE }),
   },
   {
     id: 'starter_kiln',
@@ -326,7 +371,7 @@ export const STARTER_DESIGNS = [
     size: 6,
     footprint: '6 × 6',
     note: 'Build it within 16 blocks of your fields.',
-    blocks: room({ w: 6, h: 3, wall: PLANKS }),
+    blocks: room({ w: 6, h: 3, wall: PLANKS, tiles: TILE }),
   },
   {
     id: 'starter_military',

@@ -45,6 +45,12 @@ export const MENU = [
     blurb: 'Resolution, view distance and smooth edges — turn these down if it stutters.',
   },
   {
+    id: 'menu-controls',
+    name: 'Controls & sound',
+    icon: 'sliders',
+    blurb: 'Change the keys, field of view, mouse speed and volume.',
+  },
+  {
     id: 'menu-files',
     name: 'Files',
     icon: 'file',

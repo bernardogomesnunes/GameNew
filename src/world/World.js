@@ -1,4 +1,4 @@
-import { AIR, isWater, isSystemBlock, shapeOf, lightOf } from '../config/blocks.js';
+import { AIR, isFluid, isSystemBlock, shapeOf, lightOf } from '../config/blocks.js';
 
 export const CHUNK_SIZE = 16;
 
@@ -198,7 +198,8 @@ export class World {
     if (y < 0) return { minY: y, maxY: y + 1 }; // treat below-world as solid floor
     if (!this.inBounds(x, y, z)) return null;
     const id = this.getBlock(x, y, z);
-    if (id === AIR || isWater(id)) return null;
+    // Water and lava are waded and swum through, not stood on.
+    if (id === AIR || isFluid(id)) return null;
     const shape = shapeOf(id);
     if (NO_COLLISION_SHAPES.has(shape)) return null;
     if (HALF_SHAPES.has(shape)) return { minY: y, maxY: y + 0.5 };

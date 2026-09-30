@@ -11,6 +11,7 @@ import { blockIcon, itemIcon } from '../config/cubes.js';
 import { goalBands } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
+import { ACTIONS, DEFAULT_CONTROLS, FOV_RANGE, SENSITIVITY_RANGE, rebind, keyLabel } from '../config/controls.js';
 import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 import { CLEARS, clearArtSvg } from '../config/clears.js';
 import { Minimap } from '../render/Minimap.js';
@@ -222,6 +223,25 @@ export class UIManager {
               </label>
             </div>
             <div class="export-note" id="gfx-note" hidden></div>
+          </div>
+
+          <div class="menu-section" id="menu-controls" hidden>
+            <button class="menu-back" data-menu-back="1">${icon('chevron', 14)}<span>Menu</span></button>
+            <div class="ctl-sliders">
+              <label>Field of view <b id="ctl-fov-val"></b>
+                <input type="range" id="ctl-fov" min="${FOV_RANGE[0]}" max="${FOV_RANGE[1]}" step="1" />
+              </label>
+              <label>Mouse speed <b id="ctl-sens-val"></b>
+                <input type="range" id="ctl-sens" min="${SENSITIVITY_RANGE[0]}" max="${SENSITIVITY_RANGE[1]}" step="0.05" />
+              </label>
+              <label>Volume <b id="ctl-vol-val"></b>
+                <input type="range" id="ctl-vol" min="0" max="1" step="0.05" />
+              </label>
+            </div>
+            <div class="ctl-keys" id="ctl-keys"></div>
+            <div class="field-row" style="margin-top:10px">
+              <button class="secondary" id="ctl-reset">Back to the defaults</button>
+            </div>
           </div>
 
           <div class="menu-section" id="menu-files" hidden>
@@ -636,6 +656,7 @@ export class UIManager {
     this.wireTabs(this.q('#panel-stats'));
 
     this.wireGraphics();
+    this.wireControls();
     this.renderMenuIndex();
     this.root.querySelectorAll('[data-menu-back]').forEach((btn) =>
       btn.addEventListener('click', () => this.showMenuSection(null)));
@@ -1641,6 +1662,49 @@ export class UIManager {
       const at = this.game.quality?.resolution;
       el.textContent = fps ? `${fps} fps at ${at}\u00d7` : '';
     }, 500);
+  }
+
+  /**
+   * The controls settings — requested directly: "in settings we should add
+   * controls to change keyboards, sound, FOV." Sliders apply as you drag;
+   * a key is changed by pressing its button, then the new key.
+   */
+  wireControls() {
+    const fov = this.q('#ctl-fov'), sens = this.q('#ctl-sens'), vol = this.q('#ctl-vol');
+    if (!fov) return;
+    const show = () => {
+      const c = this.game.controls ?? DEFAULT_CONTROLS;
+      fov.value = c.fov; sens.value = c.sensitivity; vol.value = c.volume;
+      this.q('#ctl-fov-val').textContent = `${c.fov}°`;
+      this.q('#ctl-sens-val').textContent = `${Number(c.sensitivity).toFixed(2)}×`;
+      this.q('#ctl-vol-val').textContent = c.volume > 0 ? `${Math.round(c.volume * 100)}%` : 'Off';
+      this.q('#ctl-keys').innerHTML = ACTIONS.map((a) => `
+        <div class="ctl-key">
+          <span>${a.name}</span>
+          <button class="secondary" data-bind="${a.id}">${this.waitingFor === a.id ? 'Press a key…' : keyLabel(c.keys[a.id])}</button>
+        </div>`).join('');
+      this.q('#ctl-keys').querySelectorAll('[data-bind]').forEach((btn) => btn.addEventListener('click', () => {
+        this.waitingFor = btn.dataset.bind;
+        show();
+      }));
+    };
+    const apply = (next) => { this.game.applyControls?.(next); show(); };
+    fov.addEventListener('input', () => apply({ fov: Number(fov.value) }));
+    sens.addEventListener('input', () => apply({ sensitivity: Number(sens.value) }));
+    vol.addEventListener('input', () => apply({ volume: Number(vol.value) }));
+    vol.addEventListener('change', () => this.game.sound?.click());
+    this.q('#ctl-reset').addEventListener('click', () => { this.waitingFor = null; apply(structuredClone(DEFAULT_CONTROLS)); });
+    // Waiting for a key: the next one pressed is the new binding. Escape
+    // cancels, and is never itself bound — it's how you get out of things.
+    window.addEventListener('keydown', (e) => {
+      if (!this.waitingFor) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.code !== 'Escape') apply(rebind(this.game.controls ?? DEFAULT_CONTROLS, this.waitingFor, e.code));
+      this.waitingFor = null;
+      show();
+    }, true);
+    show();
   }
 
   /**

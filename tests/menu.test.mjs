@@ -62,8 +62,8 @@ ok('the goals are not a settings card', !MENU_BY_ID.has('menu-achievements'));
   // Graphics and Files were folded behind a switch, which put two of the three
   // things people open settings for behind a button labelled "workshop tools".
   const plain = menuFor({ cloud: true });
-  ok('settings holds the world, the graphics and the files',
-    plain.map((m) => m.id).join() === 'menu-world,menu-graphics,menu-files,menu-profile');
+  ok('settings holds the world, the graphics, the controls and the files',
+    plain.map((m) => m.id).join() === 'menu-world,menu-graphics,menu-controls,menu-files,menu-profile');
   ok('and none of it is behind a switch any more', plain.length === withCloud.length);
   // The switch itself stays, with nothing on it, for whatever earns it next.
   ok('the UI still knows how to unfold something', /HAS_DEV_SECTIONS/.test(ui));

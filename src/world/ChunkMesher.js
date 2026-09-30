@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { blockTextureArray, layerFor } from '../render/BlockTextures.js';
-import { BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel } from '../config/blocks.js';
+import {
+  BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
+} from '../config/blocks.js';
 import { boxesFor, fenceBoxes, rugBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
 import { CHUNK_SIZE } from './World.js';
@@ -59,6 +61,18 @@ for (let id = 1; id < 256; id++) {
 const STILL_WATER = 11;
 /** How high flowing water stands in its cell, by level 1..7. */
 const flowHeight = (level) => 0.1 + level * 0.11;
+/** The same for lava, which runs thicker and shorter: level 1..3. */
+const IS_LAVA = new Uint8Array(256);
+const IS_LAVA_FLOW = new Uint8Array(256);
+for (let id = 1; id < 256; id++) {
+  IS_LAVA[id] = isLava(id) ? 1 : 0;
+  IS_LAVA_FLOW[id] = isLavaFlow(id) ? 1 : 0;
+}
+/** Each fluid's cells, running cells, how high a running cell stands, and the source it's drawn as. */
+const FLUIDS = [
+  { any: IS_WATER, flow: IS_FLOWING, height: (id) => flowHeight(waterLevel(id)), still: STILL_WATER },
+  { any: IS_LAVA, flow: IS_LAVA_FLOW, height: (id) => 0.25 + lavaLevel(id) * 0.2, still: LAVA },
+];
 // A mask bit marking a face that looks into a sealed cave.
 const DEEP = 0x100;
 const PAD_STRIDE = [1, PAD * PAD, PAD];
@@ -408,7 +422,7 @@ export class ChunkMesher {
       }
     }
 
-    this.emitFlowingWater(byType, lo, top);
+    for (const fluid of FLUIDS) this.emitFlowing(byType, lo, top, fluid);
 
     const meshes = new Map();
     for (const [deep, types] of [[false, byType], [true, deepByType]]) {
@@ -550,36 +564,37 @@ export class ChunkMesher {
   }
 
   /**
-   * Flowing water, drawn as low as it is weak and full height where it's
-   * falling, into the same mesh and material as the still water it runs
-   * from. Only the faces that show: none against solid ground or against
-   * water standing at least as high.
+   * Flowing water (and lava), drawn as low as it is weak and full height
+   * where it's falling, into the same mesh and material as the still source
+   * it runs from. Only the faces that show: none against solid ground or
+   * against the same fluid standing at least as high.
    */
-  emitFlowingWater(byType, lo, top) {
+  emitFlowing(byType, lo, top, { any, flow, height, still }) {
     const vol = this.padded, P2 = PAD * PAD;
     const heightOf = (i) => {
       const id = vol[i];
-      if (!IS_WATER[id]) return 0;
-      if (!IS_FLOWING[id] || IS_WATER[vol[i + P2]]) return 1;
-      return flowHeight(waterLevel(id));
+      if (!any[id]) return 0;
+      if (!flow[id] || any[vol[i + P2]]) return 1;
+      return height(id);
     };
     const solid = (id) => id > 0 && IS_CUBE[id] && !IS_TRANSPARENT[id];
-    const col = baseColor(STILL_WATER);
-    const layer = layerTable()[STILL_WATER];
+    const col = baseColor(still);
+    const layer = layerTable()[still];
+    const key = bufferKeyFor(still);
     let buf = null;
     for (let y = lo; y <= top; y++) {
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
         for (let lx = 0; lx < CHUNK_SIZE; lx++) {
           const idx = (y + 1) * P2 + (lz + 1) * PAD + lx + 1;
-          if (!IS_FLOWING[vol[idx]]) continue;
+          if (!flow[vol[idx]]) continue;
           if (!buf) {
-            buf = byType.get(STILL_WATER);
-            if (!buf) { buf = this.takeBuffer(); byType.set(STILL_WATER, buf); }
+            buf = byType.get(key);
+            if (!buf) { buf = this.takeBuffer(); byType.set(key, buf); }
           }
           const h = heightOf(idx);
           const x0 = lx, x1 = lx + 1, y0 = y, y1 = y + h, z0 = lz, z1 = lz + 1;
           const face = (pts, n, shade, w, hh) => this.pushQuad(buf, pts, n, col, shade, layer, w, hh);
-          if (!IS_WATER[vol[idx + P2]]) face([x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0], [0, 1, 0], SHADE.py, 1, 1);
+          if (!any[vol[idx + P2]]) face([x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0], [0, 1, 0], SHADE.py, 1, 1);
           if (vol[idx - P2] === AIR) face([x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1], [0, -1, 0], SHADE.ny, 1, 1);
           const side = (off) => !solid(vol[idx + off]) && heightOf(idx + off) < h;
           if (side(1)) face([x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1], [1, 0, 0], SHADE.px, 1, h);
@@ -648,7 +663,8 @@ export class ChunkMesher {
         for (let lx = 0; lx < CHUNK_SIZE; lx++) {
           const idx = (ly + 1) * P2 + (lz + 1) * PAD + lx + 1;
           const id = vol[idx];
-          if (id <= 0 || IS_CUBE[id]) continue;
+          // Running water and lava are drawn with their sources (emitFlowing).
+          if (id <= 0 || IS_CUBE[id] || IS_FLOWING[id] || IS_LAVA_FLOW[id]) continue;
           const shape = shapeOf(id);
           if (SLOPED[id]) {
             const at = (dx, dz) => {
