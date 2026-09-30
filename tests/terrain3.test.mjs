@@ -1,6 +1,6 @@
 import { generateEndlessWorld, settleOrigin } from '../src/world/StarterWorld.js';
 import { World } from '../src/world/World.js';
-import { ChunkGen } from '../src/world/ChunkGen.js';
+import { ChunkGen, WORLD_HEIGHT } from '../src/world/ChunkGen.js';
 import { BIOMES, BIOME_INDEX } from '../src/config/biomes.js';
 
 /**
@@ -13,9 +13,17 @@ import { BIOMES, BIOME_INDEX } from '../src/config/biomes.js';
  * 2. An ocean biome, "rare, like a plains biome" — an ordinary niche like
  *    every other biome, tuned the same way (see biomes.test.mjs's coverage
  *    check, which this doesn't repeat).
- * 3. Mountains as fewer, bigger, wider ranges, with a "buff step" variant —
- *    biomeMap's rangeFactor/peaksFactor gate, and ChunkGen's stepped height
- *    blend.
+ * 3. Mountains as fewer, bigger, wider ranges — biomeMap's rangeFactor gate.
+ *
+ * Rewritten for the terrain overhaul (world height tripled, biomes renamed
+ * and rebuilt — see config/biomes.js and ChunkGen.js): the water scan window
+ * below has to reach the new, much higher SEA_LEVEL, and every `height: 64`
+ * override here is gone — a 64-tall world can no longer fit the new biomes'
+ * own numbers, so the point of most of these checks is to run at the real
+ * default. The "buff step" terracing test is dropped outright: that
+ * mechanic (and the `peaks` biome it belonged to) doesn't exist any more —
+ * the mountain range now has exactly two tiers, tested below as "Mountains 2
+ * is a minority of the mountain terrain."
  */
 
 let f = 0;
@@ -23,15 +31,15 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
 const WATER = 11;
 const OCEAN_INDEX = BIOME_INDEX.get('ocean');
-const PEAKS_INDEX = BIOME_INDEX.get('peaks');
-const HIGHLANDS_INDEX = BIOME_INDEX.get('highlands');
+const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
+const MOUNTAINS2_INDEX = BIOME_INDEX.get('mountains2');
 
 // --- no more pinned river, but water is still always reachable --------------
 
 {
   let worstNear = 0, dry = 0, farthestCentre = 0, centreMismatch = 0;
   for (let seed = 1; seed <= 30; seed++) {
-    const { world, origin } = generateEndlessWorld({ height: 64, seed });
+    const { world, origin } = generateEndlessWorld({ seed });
     const { minX, minZ } = origin;
     let nearest = Infinity;
     for (let lx = 0; lx < 32 && nearest > 0; lx++) {
@@ -42,7 +50,7 @@ const HIGHLANDS_INDEX = BIOME_INDEX.get('highlands');
           for (let dx = -r; dx <= r && !hit; dx++) {
             for (let dz = -r; dz <= r; dz++) {
               if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
-              for (let y = 0; y < 48; y++) if (world.getBlock(x + dx, y, z + dz) === WATER) { hit = true; break; }
+              for (let y = 0; y < world.height; y++) if (world.getBlock(x + dx, y, z + dz) === WATER) { hit = true; break; }
               if (hit) break;
             }
           }
@@ -68,7 +76,7 @@ const HIGHLANDS_INDEX = BIOME_INDEX.get('highlands');
 // --- moving the settlement moves the border and the biome bias with it -----
 
 {
-  const { world, origin } = generateEndlessWorld({ height: 64, seed: 777 });
+  const { world, origin } = generateEndlessWorld({ seed: 777 });
   ok('the biome home-bias followed the settlement, not the raw origin',
     world.gen.biomes.centreX === world.centreX && world.gen.biomes.centreZ === world.centreZ);
 
@@ -86,7 +94,7 @@ const HIGHLANDS_INDEX = BIOME_INDEX.get('highlands');
 {
   // A world with no water anywhere findNearbyWater would ever reach — fake
   // it by handing settleOrigin a ChunkGen whose waterLevelAt never says yes.
-  const fakeWorld = new World({ height: 64, gen: new ChunkGen({ seed: 1, height: 64 }) });
+  const fakeWorld = new World({ height: WORLD_HEIGHT, gen: new ChunkGen({ seed: 1 }) });
   fakeWorld.gen.waterLevelAt = () => 0;
   const origin = settleOrigin(fakeWorld, 1);
   ok('with nothing findable, the plot simply stays at the origin rather than carving one',
@@ -98,7 +106,7 @@ const HIGHLANDS_INDEX = BIOME_INDEX.get('highlands');
 // --- the ocean actually floods, with its own bed material -------------------
 
 {
-  const gen = new ChunkGen({ seed: 9, height: 64, homePull: 0 });
+  const gen = new ChunkGen({ seed: 9, homePull: 0 });
   let floodedOcean = 0, sampled = 0;
   for (let x = -400; x < 400; x += 5) {
     for (let z = -400; z < 400; z += 5) {
@@ -111,28 +119,29 @@ const HIGHLANDS_INDEX = BIOME_INDEX.get('highlands');
 }
 
 {
-  // seaLevelAt/riverLevelAt/waterLevelAt agree with each other.
-  const gen = new ChunkGen({ seed: 9, height: 64 });
+  // seaLevelAt/riverLevelAt/streamLevelAt/waterLevelAt agree with each other.
+  const gen = new ChunkGen({ seed: 9 });
   let mismatches = 0;
   for (let x = -200; x < 200; x += 7) {
     for (let z = -200; z < 200; z += 7) {
       const river = gen.riverLevelAt(x, z);
+      const stream = gen.streamLevelAt(x, z);
       const sea = gen.seaLevelAt(x, z);
       const water = gen.waterLevelAt(x, z);
-      if (water !== Math.max(river, sea)) mismatches++;
+      if (water !== Math.max(river, stream, sea)) mismatches++;
     }
   }
-  ok('waterLevelAt is always the deeper of a river or the sea, never its own third answer', mismatches === 0);
+  ok('waterLevelAt is always the deepest of a river, a mountain stream or the sea, never its own third answer', mismatches === 0);
 }
 
-// --- mountains: fewer, bigger, wider, with a stepped minority ---------------
+// --- mountains: fewer, bigger, wider, with a rarer tall tier ----------------
 
 {
-  const gen = new ChunkGen({ seed: 13, height: 64, homePull: 0 });
+  const gen = new ChunkGen({ seed: 13, homePull: 0 });
   const biomeMap = gen.biomes;
-  ok('highlands is gated by the range mechanism', BIOMES[HIGHLANDS_INDEX].range === true);
-  ok('so is peaks, plus the narrower peaksOnly gate',
-    BIOMES[PEAKS_INDEX].range === true && BIOMES[PEAKS_INDEX].peaksOnly === true);
+  ok('Mountains 1 is gated by the range mechanism', BIOMES[MOUNTAINS1_INDEX].range === true);
+  ok('so is Mountains 2, plus the narrower summitOnly gate',
+    BIOMES[MOUNTAINS2_INDEX].range === true && BIOMES[MOUNTAINS2_INDEX].summitOnly === true);
 
   // Most of the map should be firmly outside any range at all.
   let eligible = 0, sampled = 0;
@@ -145,37 +154,18 @@ const HIGHLANDS_INDEX = BIOME_INDEX.get('highlands');
   ok(`most of the map is not eligible for a range at all (${(eligible / sampled * 100).toFixed(0)}% is)`,
     eligible / sampled < 0.3);
 
-  // Peaks is a minority of what mountain terrain there is, not half of it —
-  // "some buff step mountains too", not "mountains are all stepped now".
-  let peaksCols = 0, highlandsCols = 0;
+  // Mountains 2 is a minority of what mountain terrain there is, not half of
+  // it — "a very high mountain," not "mountains are all that tall now."
+  let m2Cols = 0, m1Cols = 0;
   for (let x = -400; x < 400; x += 4) {
     for (let z = -400; z < 400; z += 4) {
       const idx = gen.biomeIndexAt(x, z);
-      if (idx === PEAKS_INDEX) peaksCols++;
-      else if (idx === HIGHLANDS_INDEX) highlandsCols++;
+      if (idx === MOUNTAINS2_INDEX) m2Cols++;
+      else if (idx === MOUNTAINS1_INDEX) m1Cols++;
     }
   }
-  ok(`peaks is a minority of the mountains (${peaksCols} peaks vs ${highlandsCols} highlands)`,
-    peaksCols > 0 && peaksCols < highlandsCols);
-}
-
-{
-  // The stepped-terrace blend actually changes the height, and only where
-  // peaks carries real weight.
-  const gen = new ChunkGen({ seed: 13, height: 64, homePull: 0 });
-  let peakSamples = 0, stepAligned = 0;
-  for (let x = -400; x < 400; x += 4) {
-    for (let z = -400; z < 400; z += 4) {
-      const { weights } = gen.biomes.weigh(x, z);
-      if ((weights[PEAKS_INDEX] ?? 0) < 0.6) continue;
-      peakSamples++;
-      if (gen.heightAt(x, z) % 4 === 0) stepAligned++;
-    }
-  }
-  // A quarter of heights would land on a multiple of 4 by chance alone;
-  // the terracing should push that well above it wherever peaks dominates.
-  ok(`heights inside a peaks patch cluster on the step (${peakSamples ? (stepAligned / peakSamples * 100).toFixed(0) : 0}% of ${peakSamples} on a multiple of 4, vs ~25% by chance)`,
-    peakSamples > 5 && stepAligned / peakSamples > 0.4);
+  ok(`Mountains 2 is a minority of the mountains (${m2Cols} Mountains 2 vs ${m1Cols} Mountains 1)`,
+    m2Cols > 0 && m2Cols < m1Cols);
 }
 
 process.exit(f ? 1 : 0);

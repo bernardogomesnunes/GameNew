@@ -2,6 +2,7 @@ import { BIOMES, BIOMES_BY_ID, HOME_BIOME, surfaceFor, biomeAt } from '../src/co
 import { BiomeMap } from '../src/world/biomeMap.js';
 import { generateTerrain, biomeOf } from '../src/world/TerrainGenerator.js';
 import { World } from '../src/world/World.js';
+import { WORLD_HEIGHT } from '../src/world/ChunkGen.js';
 import { BLOCKS_BY_ID, SOIL_IDS, SOIL_NAMES, isSoil } from '../src/config/blocks.js';
 
 /**
@@ -11,8 +12,15 @@ import { BLOCKS_BY_ID, SOIL_IDS, SOIL_NAMES, isSoil } from '../src/config/blocks
  * 1.2%, so every direction looked the same and walking anywhere told you
  * nothing. These check the two things that make biomes worth having: that they
  * are all actually reachable, and that where two of them meet is a slope
- * rather than a cliff — a hard pick would step a meadow at 20 straight into
- * highlands at 27 in one column.
+ * rather than a cliff — a hard pick would step Plains at 104 straight into
+ * Mountains 1 at 112 in one column.
+ *
+ * Rewritten for the terrain overhaul: world height tripled (see WORLD_HEIGHT)
+ * so every `World`/`generateTerrain` call below now asks for it explicitly
+ * rather than the old, now-too-short 48/64 — the legacy generator this file
+ * exercises clamps height to `world.height - 10`, so a short world silently
+ * crushed every biome's real shape flat rather than exercising it. Biome ids
+ * follow the new names (plains, forestOak/Birch/Dark, mountains1/2).
  */
 
 let f = 0;
@@ -35,7 +43,7 @@ for (const b of BIOMES) {
     [s.top, s.under, s.rock].every((id) => BLOCKS_BY_ID.has(id)));
   ok(`  its ground is thick enough to dig (${s.depth} of soil)`, s.depth >= 1);
   ok(`  it sits at a sane height (${b.base} ± ${b.amplitude})`,
-    b.base - b.amplitude - b.rough > 2 && b.base + b.amplitude + b.rough < 54);
+    b.base - b.amplitude - b.rough > 2 && b.base + b.amplitude + b.rough < WORLD_HEIGHT - 10);
   if (b.trees?.chance) {
     ok(`  its trees are made of real blocks`,
       BLOCKS_BY_ID.has(b.trees.wood) && BLOCKS_BY_ID.has(b.trees.leaves));
@@ -49,26 +57,26 @@ for (const b of BIOMES) {
 
 // The whole point of a biome is that you can tell you are in one. Four of the
 // six used to share grass as their top block and stone as their rock, so
-// walking from a meadow into the highlands changed the height of the ground
-// and nothing else — six biomes that looked like two.
+// walking from one to the next changed the height of the ground and nothing
+// else — six biomes that looked like two.
 {
   const tops = BIOMES.map((b) => b.surface.top);
   ok(`every biome has its own ground (${tops.join(', ')})`, new Set(tops).size === BIOMES.length);
   // Trees are the other half of how a biome reads. A forest has to be
   // obviously more wooded than the open country beside it.
-  const forest = BIOMES_BY_ID.get('forest');
-  const meadow = BIOMES_BY_ID.get('meadow');
-  ok('a forest is properly wooded next to a meadow',
-    forest.trees.chance >= meadow.trees.chance * 8);
+  const forest = BIOMES_BY_ID.get('forestOak');
+  const plains = BIOMES_BY_ID.get('plains');
+  ok('a forest is properly wooded next to the plains',
+    forest.trees.chance >= plains.trees.chance * 8);
 }
 
-// Highlands go bare above the soil line; nothing else changes with height.
+// Mountains go bare above the tree line; nothing else changes with height.
 {
-  const hi = BIOMES_BY_ID.get('highlands');
-  ok('highlands are grassy low down', surfaceFor(hi, 25) === hi.surface.top);
-  ok('and bare rock up high', surfaceFor(hi, 40) === hi.surface.rock);
-  const meadow = BIOMES_BY_ID.get('meadow');
-  ok('a meadow is grass at any height', surfaceFor(meadow, 40) === meadow.surface.top);
+  const m1 = BIOMES_BY_ID.get('mountains1');
+  ok('Mountains 1 is grassy low down', surfaceFor(m1, 105) === m1.surface.top);
+  ok('and bare rock up high', surfaceFor(m1, 130) === m1.surface.rock);
+  const plains = BIOMES_BY_ID.get('plains');
+  ok('the plains are grass at any height', surfaceFor(plains, 150) === plains.surface.top);
 }
 ok('an out-of-range biome index falls back rather than throwing', biomeAt(999) === BIOMES[0]);
 
@@ -130,7 +138,7 @@ ok('an out-of-range biome index falls back rather than throwing', biomeAt(999) =
 // --- and the land it makes has no walls in it --------------------------------
 
 {
-  const world = new World({ sizeX: 192, sizeZ: 192, height: 64 });
+  const world = new World({ sizeX: 192, sizeZ: 192, height: WORLD_HEIGHT });
   generateTerrain(world, 11);
 
   let worst = 0, steep = 0, n = 0;
@@ -147,8 +155,8 @@ ok('an out-of-range biome index falls back rather than throwing', biomeAt(999) =
     }
   }
   // A biome border drawn as a hard pick would step the full difference between
-  // two bases — seven blocks between meadow and highlands — along a whole line
-  // of columns. Terrain noise alone never does that.
+  // two bases — eight blocks between Plains and Mountains 1 — along a whole
+  // line of columns. Terrain noise alone never does that.
   ok(`no column steps more than 6 blocks (worst was ${worst})`, worst <= 6);
   ok(`and steep columns are rare (${(steep / n * 100).toFixed(2)}%)`, steep / n < 0.01);
 
@@ -191,10 +199,10 @@ ok('an out-of-range biome index falls back rather than throwing', biomeAt(999) =
 // --- same seed, same world ---------------------------------------------------
 
 {
-  const a = new World({ sizeX: 64, sizeZ: 64, height: 48 });
-  const b = new World({ sizeX: 64, sizeZ: 48 + 16, height: 48 });
+  const a = new World({ sizeX: 64, sizeZ: 64, height: WORLD_HEIGHT });
+  const b = new World({ sizeX: 64, sizeZ: 48 + 16, height: WORLD_HEIGHT });
   generateTerrain(a, 42);
-  const c = new World({ sizeX: 64, sizeZ: 64, height: 48 });
+  const c = new World({ sizeX: 64, sizeZ: 64, height: WORLD_HEIGHT });
   generateTerrain(c, 42);
   let same = true;
   for (let i = 0; i < a.biomeMap.length; i++) {
@@ -202,7 +210,7 @@ ok('an out-of-range biome index falls back rather than throwing', biomeAt(999) =
   }
   ok('the same seed makes the same world twice', same);
 
-  const d = new World({ sizeX: 64, sizeZ: 64, height: 48 });
+  const d = new World({ sizeX: 64, sizeZ: 64, height: WORLD_HEIGHT });
   generateTerrain(d, 43);
   let differs = false;
   for (let i = 0; i < a.biomeMap.length; i++) if (a.biomeMap[i] !== d.biomeMap[i]) { differs = true; break; }
@@ -212,7 +220,7 @@ ok('an out-of-range biome index falls back rather than throwing', biomeAt(999) =
 // --- the map survives a save -------------------------------------------------
 
 {
-  const world = new World({ sizeX: 64, sizeZ: 64, height: 48 });
+  const world = new World({ sizeX: 64, sizeZ: 64, height: WORLD_HEIGHT });
   generateTerrain(world, 9);
   const back = World.deserialize(JSON.parse(JSON.stringify(world.serialize())));
   let same = true;
@@ -238,10 +246,11 @@ ok('asking outside the world is safe', biomeOf(new World({ sizeX: 16, sizeZ: 16,
 // --- the variety has to be where you can see it ------------------------------
 
 // The bias that keeps the starting plot buildable used to reach a third of the
-// way across the map — 87 blocks — so the near field was 93% meadow out to 20
-// and still 67% at 40, while the fog starts eating the view at 72 on a phone.
-// Every biome in the game sat in the band that was already fading into sky,
-// and a new world looked like one green field however many biomes it had.
+// way across the map — 87 blocks — so the near field was over 90% Plains out
+// to 20 and still most of it at 40, while the fog starts eating the view at
+// 72 on a phone. Every biome in the game sat in the band that was already
+// fading into sky, and a new world looked like one green field however many
+// biomes it had.
 {
   const rings = [[0, 20], [20, 40], [40, 60]];
   const counts = rings.map(() => new Map());
@@ -261,16 +270,16 @@ ok('asking outside the world is safe', biomeOf(new World({ sizeX: 16, sizeZ: 16,
     const total = [...counts[i].values()].reduce((a, b) => a + b, 0);
     return (counts[i].get(id) ?? 0) / total;
   };
-  // Right where you land it should still mostly be meadow — that is the point
+  // Right where you land it should still mostly be Plains — that is the point
   // of the bias, and the starting plot has to be buildable.
-  ok(`the ground you land on is mostly meadow (${(share(0, 'meadow') * 100).toFixed(0)}%)`,
-    share(0, 'meadow') > 0.5);
+  ok(`the ground you land on is mostly plains (${(share(0, 'plains') * 100).toFixed(0)}%)`,
+    share(0, 'plains') > 0.5);
   // But it must let go quickly enough that the country you can see clearly is
   // not all one colour. 72 blocks is where a phone's fog begins.
-  ok(`by 40 blocks it is no longer a single field (${(share(1, 'meadow') * 100).toFixed(0)}% meadow)`,
-    share(1, 'meadow') < 0.55);
-  ok(`and by 60 there is real variety (${(share(2, 'meadow') * 100).toFixed(0)}% meadow)`,
-    share(2, 'meadow') < 0.5);
+  ok(`by 40 blocks it is no longer a single field (${(share(1, 'plains') * 100).toFixed(0)}% plains)`,
+    share(1, 'plains') < 0.55);
+  ok(`and by 60 there is real variety (${(share(2, 'plains') * 100).toFixed(0)}% plains)`,
+    share(2, 'plains') < 0.5);
   for (const ring of [1, 2]) {
     const kinds = [...counts[ring].entries()].filter(([, n]) => n / [...counts[ring].values()].reduce((a, b) => a + b, 0) > 0.03);
     ok(`  ring ${rings[ring][0]}-${rings[ring][1]} holds ${kinds.length} kinds of country`, kinds.length >= 3);

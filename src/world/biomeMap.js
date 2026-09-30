@@ -9,15 +9,25 @@ import { BIOMES, BIOME_INDEX, HOME_BIOME } from '../config/biomes.js';
  * claim wins the column.
  *
  * The part that matters is that it does not *only* return a winner. A hard
- * pick gives you a cliff wherever two biomes meet, because a meadow sitting at
- * 20 and highlands at 27 would step seven blocks in one column. So the height
- * is blended across every biome by how close its claim is, and only the
- * surface block comes from the winner. Borders end up as slopes, which is what
- * they look like from the ground.
+ * pick gives you a cliff wherever two biomes meet, because Plains sitting at
+ * 104 and Mountains 1 at 112 would step eight blocks in one column. So the
+ * height is blended across every biome by how close its claim is, and only
+ * the surface block comes from the winner. Borders end up as slopes, which is
+ * what they look like from the ground.
  */
 
-const FREQ = 0.0055;        // how big a region of one climate is
-const FREQ_DETAIL = 0.02;   // wobble, so borders are not smooth ovals
+// Requested directly: "increase the distances of each biome... they can get
+// bigger in footprint. All of them except the mountains." Lower frequency
+// means a bigger region of one climate — this is the one shared knob every
+// non-mountain biome's size comes from, so turning it down grows all of
+// them together. Roughly 1.7x the region radius of the previous 0.0055 (and
+// so about 3x the area) — mountains are untouched because their own size
+// comes from RANGE_FREQ below instead, on a separate, already-tuned-rare
+// gate that this multiplies into rather than replaces.
+const FREQ = 0.0032;
+// Kept in the same ratio to FREQ as before, so the border wobble scales with
+// the bigger regions instead of looking proportionally smoother or jaggier.
+const FREQ_DETAIL = 0.0116;
 
 /**
  * The mountains' own placement, independent of climate.
@@ -41,25 +51,12 @@ const RANGE_BASE = 0.55;
 const RANGE_POWER = 2;
 
 /**
- * The "buff step" peaks, as a minority within an eligible range rather than
- * half of it — see biomes.js's own note on `peaksOnly`. A finer, separately
- * seeded noise on top of the range gate: eligible everywhere a range is
- * eligible, but only across patches of it, the same base/cutoff/power shape
- * as the range gate itself, just at a higher frequency and a stricter cutoff.
- */
-const PEAKS_FREQ = 0.012;
-const PEAKS_BASE = 0.48;
-const PEAKS_POWER = 2;
-
-/**
- * The summit, nested one gate deeper still — see biomes.js's own note on
- * `summitOnly`. Only ever asked where peaksFactor is already positive, so a
- * summit is the tallest sliver of an already-eligible peaks patch rather
- * than an independent placement: it shares a mountain range with the
- * ordinary buff-step peaks around it instead of appearing somewhere on its
- * own. The base cutoff is stricter than the peaks gate's own — a smaller
- * fraction of a smaller fraction — so it reads as the one true summit of a
- * range rather than a whole second tier of mountains.
+ * Mountains 2, nested inside an eligible Mountains 1 range rather than
+ * placed on its own — see biomes.js's own note on `summitOnly`. The same
+ * base/cutoff/power shape the range gate itself uses, just at a higher
+ * frequency and a stricter cutoff, so it reads as the rare, tall heart of a
+ * range rather than a whole separate tier of mountains with its own
+ * footprint.
  */
 const SUMMIT_FREQ = 0.02;
 const SUMMIT_BASE = 0.48;
@@ -91,7 +88,6 @@ export class BiomeMap {
     this.wet = createNoise2D(mulberry32(seed + 977));
     this.warp = createNoise2D(mulberry32(seed + 5501));
     this.range = createNoise2D(mulberry32(seed + 8887));
-    this.peaks = createNoise2D(mulberry32(seed + 13001));
     this.summit = createNoise2D(mulberry32(seed + 19301));
     this.homePull = homePull;
     this.home = BIOMES[BIOME_INDEX.get(HOME_BIOME) ?? 0];
@@ -102,19 +98,19 @@ export class BiomeMap {
     // This was a third of the map — 87 blocks on a 256 world — on the reasoning
     // that the whole claimable map should be buildable country. That was wrong,
     // and it is why a new world looked like one green field: the near field was
-    // 93% meadow out to 20 blocks and still 67% at 40, while the fog starts
-    // eating the view at 72 on a phone. Every biome in the game sat in the band
-    // that was already fading into sky.
+    // over 90% Plains out to 20 blocks and still most of it at 40, while the
+    // fog starts eating the view at 72 on a phone. Every biome in the game sat
+    // in the band that was already fading into sky.
     //
     // Only the *starting plot* has to be buildable, and that is 32 blocks
     // across. So the thumb covers the first ring with margin to spare and then
     // lets go, which puts the rest of the country where you can see it — and
     // makes the border moving out mean arriving somewhere that looks different.
     //
-    // Swept rather than guessed, because both ends are bad. At 0.13 the
-    // highlands come right up to the settlement and you arrive facing a wall
+    // Swept rather than guessed, because both ends are bad. Too small and the
+    // mountains come right up to the settlement and you arrive facing a wall
     // of gravel four blocks from your nose. At 0.20 the ring you land in is
-    // 88% meadow — open ground to build on — and the country is properly
+    // mostly Plains — open ground to build on — and the country is properly
     // mixed by 32 to 48 blocks, which is inside the clear band on a phone.
     this.homeRadius = Math.min(sizeX, sizeZ) * 0.20;
   }
@@ -159,21 +155,8 @@ export class BiomeMap {
   }
 
   /**
-   * 0..1: within an eligible range, how much of it is the "buff step" peaks
-   * variant rather than ordinary highlands — see PEAKS_FREQ's own note
-   * above and biomes.js's `peaksOnly`.
-   */
-  peaksFactor(x, z) {
-    const n = (this.peaks(x * PEAKS_FREQ, z * PEAKS_FREQ) + 1) / 2;
-    return Math.pow(Math.max(0, n - PEAKS_BASE) / (1 - PEAKS_BASE), PEAKS_POWER);
-  }
-
-  /**
-   * 0..1: within an eligible range, how much of it is a true summit — the
-   * same depth of gate `peaksFactor` is (both only ever multiply straight
-   * into `range`, not into each other), just a stricter cutoff, so a summit
-   * is rarer within a range than the buff-step peaks are without being
-   * rarer *again* on top of them. See biomes.js's `summitOnly`.
+   * 0..1: within an eligible range, how much of it is Mountains 2 rather
+   * than ordinary Mountains 1 — see biomes.js's `summitOnly`.
    */
   summitFactor(x, z) {
     const n = (this.summit(x * SUMMIT_FREQ, z * SUMMIT_FREQ) + 1) / 2;
@@ -195,7 +178,6 @@ export class BiomeMap {
   weigh(x, z) {
     const { temp, wet } = this.climate(x, z);
     const range = this.rangeFactor(x, z);
-    const peaks = range > 0 ? this.peaksFactor(x, z) : 0;
     const summit = range > 0 ? this.summitFactor(x, z) : 0;
     const weights = new Array(BIOMES.length);
     let total = 0;
@@ -209,7 +191,7 @@ export class BiomeMap {
       // The epsilon keeps a column sitting exactly on a niche from going
       // infinite; 1/d^4 is sharp enough that biomes stay recognisable.
       let w = 1 / ((d2 + 0.0016) * (d2 + 0.0016));
-      if (b.range) w *= b.summitOnly ? range * summit : (b.peaksOnly ? range * peaks : range);
+      if (b.range) w *= b.summitOnly ? range * summit : range;
       weights[i] = w;
       total += w;
       if (w > bestW) { bestW = w; best = i; }

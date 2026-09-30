@@ -1,5 +1,5 @@
 import { World } from './World.js';
-import { ChunkGen } from './ChunkGen.js';
+import { ChunkGen, WORLD_HEIGHT } from './ChunkGen.js';
 import { generateTerrain } from './TerrainGenerator.js';
 import { planSites, outlook } from './siteFinder.js';
 import { buildSites } from './features.js';
@@ -56,7 +56,7 @@ function rng(seed) {
  * one part of an endless world the seed cannot make again, and there are
  * roughly nine of them.
  */
-export function generateEndlessWorld({ height = 64, seed = Date.now() % 1000000 } = {}) {
+export function generateEndlessWorld({ height = WORLD_HEIGHT, seed = Date.now() % 1000000 } = {}) {
   const gen = new ChunkGen({ seed, height, homeX: 0, homeZ: 0 });
   const world = new World({ height, gen });
   const origin = settleOrigin(world, seed);
@@ -159,7 +159,7 @@ export function settleOrigin(world, seed = 1) {
   };
 }
 
-export function generateDuiltWorld({ sizeX = 256, sizeZ = 256, height = 64, seed = Date.now() % 1000000 } = {}) {
+export function generateDuiltWorld({ sizeX = 256, sizeZ = 256, height = WORLD_HEIGHT, seed = Date.now() % 1000000 } = {}) {
   const world = new World({ sizeX, sizeZ, height });
   generateTerrain(world, seed);
   const origin = carveRiverAndSettle(world, seed);

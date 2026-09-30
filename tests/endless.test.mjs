@@ -1,5 +1,5 @@
 import { World, CHUNK_SIZE } from '../src/world/World.js';
-import { ChunkGen, hash01 } from '../src/world/ChunkGen.js';
+import { ChunkGen, hash01, WORLD_HEIGHT } from '../src/world/ChunkGen.js';
 import { BIOMES } from '../src/config/biomes.js';
 
 /**
@@ -43,8 +43,8 @@ ok('it stays inside 0..1', [...Array(500)].every((_, i) => {
 // --- the same chunk, whatever order you ask in -------------------------------
 
 {
-  const forwards = new World({ height: 64, gen: makeGen({ seed: 7 }) });
-  const backwards = new World({ height: 64, gen: makeGen({ seed: 7 }) });
+  const forwards = new World({ height: WORLD_HEIGHT, gen: makeGen({ seed: 7 }) });
+  const backwards = new World({ height: WORLD_HEIGHT, gen: makeGen({ seed: 7 }) });
   const coords = [];
   for (let cx = -2; cx <= 2; cx++) for (let cz = -2; cz <= 2; cz++) coords.push([cx, cz]);
   for (const [cx, cz] of coords) forwards.getChunk(cx, cz);
@@ -62,7 +62,7 @@ ok('it stays inside 0..1', [...Array(500)].every((_, i) => {
   // The real test: one chunk made entirely on its own, with no neighbours ever
   // asked for, must match the same chunk made in company. This is what fails
   // if anything about generation is sequential.
-  const alone = new World({ height: 64, gen: makeGen({ seed: 7 }) });
+  const alone = new World({ height: WORLD_HEIGHT, gen: makeGen({ seed: 7 }) });
   const solo = alone.getChunk(1, 1).data;
   const inCompany = forwards.getChunk(1, 1).data;
   let matches = true;
@@ -75,7 +75,7 @@ ok('it stays inside 0..1', [...Array(500)].every((_, i) => {
 {
   // A canopy that straddles a border has to be written by both chunks, or the
   // half over the line goes missing and every wood is full of sliced trees.
-  const world = new World({ height: 64, gen: makeGen({ seed: 3 }) });
+  const world = new World({ height: WORLD_HEIGHT, gen: makeGen({ seed: 3 }) });
   const gen = world.gen;
   let found = 0, whole = 0;
   for (let x = -40; x < 40 && found < 12; x++) {
@@ -103,7 +103,7 @@ ok('it stays inside 0..1', [...Array(500)].every((_, i) => {
 // --- nothing is written down that the seed can make again --------------------
 
 {
-  const world = new World({ height: 64, gen: makeGen({ seed: 11 }) });
+  const world = new World({ height: WORLD_HEIGHT, gen: makeGen({ seed: 11 }) });
   world.ensureAround(0, 0, 80);
   const made = [...world.allChunks()].length;
   ok(`walking about makes chunks (${made} of them)`, made > 40);
@@ -127,7 +127,7 @@ ok('it stays inside 0..1', [...Array(500)].every((_, i) => {
 // --- it forgets what nobody is looking at ------------------------------------
 
 {
-  const world = new World({ height: 48, gen: makeGen({ seed: 5 }) });
+  const world = new World({ height: WORLD_HEIGHT, gen: makeGen({ seed: 5 }) });
   world.ensureAround(0, 0, 200);
   const before = [...world.allChunks()].length;
   world.setBlock(0, 10, 0, 1);            // one chunk that must never be dropped
@@ -159,7 +159,7 @@ ok('it stays inside 0..1', [...Array(500)].every((_, i) => {
 // --- the land it makes is still land -----------------------------------------
 
 {
-  const world = new World({ height: 64, gen: makeGen({ seed: 21 }) });
+  const world = new World({ height: WORLD_HEIGHT, gen: makeGen({ seed: 21 }) });
   let holes = 0, sampled = 0, biomes = new Set();
   for (let x = -300; x <= 300; x += 17) {
     for (let z = -300; z <= 300; z += 17) {
@@ -177,11 +177,11 @@ ok('it stays inside 0..1', [...Array(500)].every((_, i) => {
 // --- and it goes on ----------------------------------------------------------
 
 {
-  const world = new World({ height: 64, gen: makeGen({ seed: 2 }) });
+  const world = new World({ height: WORLD_HEIGHT, gen: makeGen({ seed: 2 }) });
   // Far enough out that a fixed 256 map would have ended long ago.
   for (const d of [1000, 10000, 100000]) {
     const h = world.surfaceHeight(d, d);
-    ok(`there is still ground at ${d} blocks out (height ${h})`, h > 2 && h < 64);
+    ok(`there is still ground at ${d} blocks out (height ${h})`, h > 2 && h < WORLD_HEIGHT - 10);
   }
   ok('and negative coordinates work the same', world.surfaceHeight(-5000, -5000) > 2);
 }

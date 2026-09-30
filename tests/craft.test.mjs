@@ -24,7 +24,7 @@ const dry = { x: origin.minX, y: 40, z: origin.minZ };
 r = g.crafting.craft('fill_bucket', 1, { near: dry });
 ok('cannot fill a bucket away from water', !r.ok && /river/i.test(r.reason));
 let wet=null;
-for (let x=0;x<128&&!wet;x++) for (let z=0;z<128;z++) for (let y=0;y<48;y++) if (world.getBlock(x,y,z)===11){wet={x,y,z};break;}
+for (let x=0;x<128&&!wet;x++) for (let z=0;z<128;z++) for (let y=0;y<world.height;y++) if (world.getBlock(x,y,z)===11){wet={x,y,z};break;}
 r = g.crafting.craft('fill_bucket', 1, { near: wet });
 ok('can fill it at the river', r.ok && g.inventory.countOf('bucket_water') === 1);
 
