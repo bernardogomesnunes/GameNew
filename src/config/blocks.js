@@ -44,7 +44,9 @@ export const BLOCKS = [
   // Thin enough to read as water over a sandy bed, but not so thin that the
   // sand shows through and turns the rivers grey, which is what 0.6 did.
   { id: 11, name: 'Water', glyph: 'water', color: 0x83add7, transparent: true, opacity: 0.78, cost: { wood: 3 }, unlock: null },
-  { id: 12, name: 'Snow', glyph: 'snow', color: 0xceddec, cost: { wood: 1 }, unlock: { type: 'level', value: 3 } },
+  // Requested directly: "Snow should be white." The old 0xceddec read as a
+  // pale lavender-blue next to Glass and Water rather than snow.
+  { id: 12, name: 'Snow', glyph: 'snow', color: 0xf5f7f8, cost: { wood: 1 }, unlock: { type: 'level', value: 3 } },
   { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xe5cd8c, material: 'stone', cost: { gold: 1 }, unlock: { type: 'level', value: 6 } },
   { id: 14, name: 'Obsidian', glyph: 'obsidian', color: 0x372648, material: 'stone', cost: { stone: 4 }, unlock: { type: 'achievement', value: 'underground' } },
   { id: 15, name: 'Red Glass', glyph: 'pane', color: 0xde9390, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: { type: 'level', value: 4 } },
