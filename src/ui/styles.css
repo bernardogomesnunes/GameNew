@@ -351,8 +351,7 @@ body.touch #minimap { display: none; }
 }
 .goal-band-count { color: var(--text-dim); font-variant-numeric: tabular-nums; letter-spacing: 0; }
 /* An age you have not reached is legible but plainly not yet yours. */
-.goal-band.ahead .goal-band-head { color: var(--text-dim); }
-.goal-band.ahead { opacity: 0.6; }
+.goal-next { font-size: 12.5px; color: var(--text-dim); text-align: center; margin: 4px 0 14px; }
 .goal-band .ach-card { margin-bottom: 6px; }
 /* The one that moves the border closes the band, so it reads as the door out. */
 .ach-card { display: flex; gap: 10px; background: rgba(35,42,45,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; }
@@ -424,8 +423,11 @@ body.panel-open #duilt-layer #vitals { display: none !important; }
    there sorting the bag it mirrors — the bag *is* the inventory, there is
    no second grid to reveal. The higher z-index is load-bearing: the bag's
    own dimmed backdrop (.overlay, z-index 10) sits above the hotbar's normal
-   z-index 5 and would otherwise swallow every tap before it got there. */
-body.bag-open #hotbar-wrap { display: flex !important; z-index: 11; }
+   z-index 5 and would otherwise swallow every tap before it got there.
+   Desktop only. On a phone the bag's own Equipped row already shows the
+   same slots, and the HUD copy — name pill and all — just sat under the
+   bag doubling it up; there, the bag's detail box names the selected item. */
+body.bag-open:not(.touch) #hotbar-wrap { display: flex !important; z-index: 11; }
 /* The toast stack is the one exception: a toast can still land while an
    ordinary panel is open (see UIManager.collapseToasts) and is meant to be
    seen when it does. Only the worlds screen — between worlds, nothing to
@@ -706,8 +708,12 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 }
 .bag-section-head:first-child { margin-top: 0; }
 .bag-section-head .sub { font-weight: 400; }
+/* align-items: start because a scrolling grid (#bag-grid caps its height)
+   sized its rows from the slots' min-height, not their square height, and
+   stretched rows came out short — the slots overlapped the gap between them. */
 #bag-hotbar-grid, #bag-grid {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; padding: 2px;
+  align-items: start;
 }
 #bag-grid { margin: 8px 0 14px; max-height: 46vh; overflow-y: auto; }
 /* Equipped is always exactly PLAYABLE_SLOTS, never more — nothing to
@@ -736,6 +742,10 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .bag-slot .wear { position: absolute; left: 5px; right: 5px; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.45); }
 .bag-slot .wear i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
 .bag-slot-wrap { position: relative; }
+/* A filled slot sits in a wrap (for its discard button) and a button doesn't
+   stretch to its container on its own — it came out narrower than an empty
+   slot beside it. */
+.bag-slot-wrap > .bag-slot { width: 100%; }
 /* The hover card over a bag or storehouse slot — see DuiltUI.wireSlotTip.
    Fixed to the viewport so a scrolling grid or a panel's overflow can't clip
    it, and above the bag's own backdrop and the toasts. */
@@ -790,6 +800,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #store-grid, #store-hotbar-grid, #store-bag-grid {
   display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px;
   margin: 10px 0 0; max-height: 26vh; overflow-y: auto; padding: 2px;
+  align-items: start; /* same short-row overlap as the bag's; see #bag-grid */
 }
 #store-hotbar-grid { max-height: none; }
 

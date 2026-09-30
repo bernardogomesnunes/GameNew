@@ -75,10 +75,14 @@ ok('no leftover sibling selector hiding the hotbar only for #blocker',
 
 // --- but the bag itself gets the hotbar back, above its own backdrop --------
 
-ok('the bag class brings the hotbar back rather than leaving it hidden',
-  /body\.bag-open #hotbar-wrap \{ display: flex !important; z-index: 11; \}/.test(css));
+ok('on desktop the bag class brings the hotbar back rather than leaving it hidden',
+  /body\.bag-open:not\(\.touch\) #hotbar-wrap \{ display: flex !important; z-index: 11; \}/.test(css));
 ok('lifted high enough to clear the bag\'s own dimmed overlay (z-index 10)',
-  /body\.bag-open #hotbar-wrap \{[^}]*z-index: 11/.test(css) && /\.overlay \{[^}]*z-index: 10/.test(css));
+  /body\.bag-open:not\(\.touch\) #hotbar-wrap \{[^}]*z-index: 11/.test(css) && /\.overlay \{[^}]*z-index: 10/.test(css));
+// Reported directly: on a phone the HUD hotbar under the bag just doubled the
+// bag's own Equipped row. There the blanket panel-open rule keeps it hidden.
+ok('on a phone the bag leaves the HUD hotbar hidden — its Equipped row already shows it',
+  !/body\.bag-open #hotbar-wrap/.test(css) && /body\.panel-open #hotbar-wrap/.test(css));
 
 // --- the one deliberate exception: toasts still show over an ordinary panel -
 
