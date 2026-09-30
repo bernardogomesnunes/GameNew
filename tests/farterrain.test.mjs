@@ -115,4 +115,52 @@ ok('dry land never gets pulled down to the water height it is not under', !anyLa
   ok('the split between fine and coarse sits past where real chunks reach', SPLIT > 300);
 }
 
+// --- blocky, from the real world ---------------------------------------------------------
+// Reported directly: "I still dont like the render distance fake shapes. They
+// should be blocky. Cant we like check for whats rendered, and make a fake
+// image out of it?"
+{
+  const { ChunkGen } = await import('../src/world/ChunkGen.js');
+  const { BIOMES, surfaceFor } = await import('../src/config/biomes.js');
+  const gen = new ChunkGen({ seed: 4242 });
+  const t = new FarTerrain(fakeScene);
+  t.gen = gen;
+  const mesh = t.makeTile(t.layers[0], 6, 6);
+  const P = mesh.geometry.attributes.position.array, N = mesh.geometry.attributes.normal.array;
+  let slanted = 0, faces = 0;
+  for (let i = 0; i < N.length; i += 3) {
+    const ny = Math.abs(N[i + 1]);
+    if (ny !== 0 && ny !== 1) slanted++;
+  }
+  // Every face is either flat or upright — no slopes anywhere.
+  for (let q = 0; q < P.length; q += 12) {
+    faces++;
+    const ys = [P[q + 1], P[q + 4], P[q + 7], P[q + 10]];
+    const flat = ys.every((y) => y === ys[0]);
+    const upright = (P[q] === P[q + 3] && P[q + 3] === P[q + 6]) || (P[q + 2] === P[q + 5] && P[q + 5] === P[q + 8]);
+    if (!flat && !upright) slanted++;
+  }
+  ok(`far ground is made of flat tops and upright sides, nothing sloping (${faces} faces)`, slanted === 0);
+}
+{
+  const { ChunkGen } = await import('../src/world/ChunkGen.js');
+  const { BIOMES, surfaceFor } = await import('../src/config/biomes.js');
+  const gen = new ChunkGen({ seed: 4242 });
+  const t = new FarTerrain(fakeScene);
+  t.gen = gen;
+  // A column far out is the height and the colour of the real one.
+  let checked = 0, right = 0, wooded = 0;
+  for (let x = 900; x < 2900 && checked < 60; x += 97) {
+    const col = t.column(x, 700, 8);
+    if (col.water) continue;
+    checked++;
+    const h = gen.heightAt(x + 4, 704), b = BIOMES[gen.biomeIndexAt(x + 4, 704)];
+    const top = h <= 104 ? 6 : surfaceFor(b, h);
+    if (col.top === h - SINK && col.colour.getHex() === BLOCKS_BY_ID.get(top).color) right++;
+    if (col.canopy) wooded++;
+  }
+  ok(`each far column stands at the real ground height, in the colour of the real top block (${right}/${checked})`, checked > 10 && right === checked);
+  ok(`and the woods stand up as leaves (${wooded} wooded columns)`, wooded > 0);
+}
+
 process.exit(f ? 1 : 0);
