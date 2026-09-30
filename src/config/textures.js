@@ -36,7 +36,11 @@ export const TEXTURES = {
   snow:      { marks: 8, depth: 0.05, scale: 16 },
   planks:    { lines: 'h', every: 4, marks: 8, depth: 0.15, scale: 16 },
   log:       { lines: 'v', every: 3, marks: 6, depth: 0.17, scale: 16 },
-  leaf:      { marks: 44, depth: 0.22, speck: 0.10, holes: 3, scale: 16 },
+  // Requested directly: "Leaves block could have small holes in it like
+  // trees have and be somehow more rounded instead of sharp cubes." `gaps`
+  // are real holes you see through, and `bite` takes the corners off each
+  // face so a canopy's edge reads soft instead of as a row of squares.
+  leaf:      { marks: 44, depth: 0.22, speck: 0.10, holes: 3, gaps: 7, bite: 3, scale: 16 },
   water:     { lines: 'h', every: 6, depth: 0.06, scale: 16 },
   pane:      { band: 1, depth: 0.10, scale: 16 },
   crystal:   { veins: 3, depth: 0.12, scale: 16 },

@@ -61,10 +61,37 @@ function from(facing, x, z) {
 /** Heights at the low and high side of each pitch. */
 const PITCH = { roof: [0, 1], roof_lo: [0, 0.5], roof_hi: [0.5, 1] };
 
-/** The tiles' own look: four rows across a block, two courses down it. */
-const TILE_ROWS = 4, TILE_COURSES = 2, TILE_RISE = 0.05, TILE_GAP = 0.028, COURSE_GAP = 0.02;
+/**
+ * How a roof is laid. Reported directly: "The roofs look weird ... it fills
+ * the space in a triangle form, they need texture and details like the
+ * tiles." So a roof piece is a thin shell of tiles now, not a solid wedge:
+ *
+ *   clay   telhas — rows of curved tiles, each an arch, with the dark channel
+ *          between them showing, two courses to a block
+ *   slate  flat slates in three courses, every other one set half a slate
+ *          over, the way they're really hung
+ *
+ * Under the shell is timber (you see it from inside the roof space). Only
+ * where a solid wall stands right under a piece — the end of a gable — is
+ * the triangle under the slope filled, in that wall's own colour, so the
+ * wall runs up into the roof instead of stopping in steps.
+ */
+const STYLES = {
+  clay: { rows: 4, courses: 2, gap: 0.055, courseGap: 0.045, arch: 0.09 },
+  slate: { rows: 4, courses: 3, gap: 0.035, courseGap: 0.04, rise: 0.04, stagger: true },
+};
+/** How thick the shell is, measured straight down. */
+const SHELL = 0.16;
+/** The timber seen under a roof. */
+const RAFTER = 0x7a5a40;
 /** How much darker the bed between the tiles is. */
-const BED = 0.72;
+const BED = 0.45;
+/**
+ * Each tile's arch drawn lit on one side and shadowed on the other, on top
+ * of whatever the sun does — a half-round tile a few pixels wide needs the
+ * help to read as round from any distance at all.
+ */
+const ARCH_TONES = [1.12, 1, 0.74];
 
 const cache = new Map();
 
@@ -74,11 +101,11 @@ const cache = new Map();
  * tone }` with `out` a rough outward direction and `tone` a shade to multiply
  * the colour by.
  */
-export function slopeGeometry(shape, facing = 0, corner = null) {
-  const key = `${shape}|${facing}|${corner?.type ?? ''}|${corner?.second ?? ''}`;
+export function slopeGeometry(shape, facing = 0, corner = null, { filled = false, style = 'clay' } = {}) {
+  const key = `${shape}|${facing}|${corner?.type ?? ''}|${corner?.second ?? ''}|${filled ? 1 : 0}|${style}`;
   let g = cache.get(key);
   if (!g) {
-    g = shape === 'stair' ? stairGeometry(facing, corner) : roofGeometry(shape, facing, corner);
+    g = shape === 'stair' ? stairGeometry(facing, corner) : roofGeometry(shape, facing, corner, filled, STYLES[style] ?? STYLES.clay);
     cache.set(key, g);
   }
   return g;
@@ -117,7 +144,7 @@ function stairGeometry(facing, corner) {
  * outline, the height of the plane over it, and which axis the slope runs
  * down, which is the way the tiles' rows run.
  */
-function roofGeometry(shape, facing, corner) {
+function roofGeometry(shape, facing, corner, filled, style) {
   const regions = [];
   let heightAt;
 
@@ -163,14 +190,116 @@ function roofGeometry(shape, facing, corner) {
   }
 
   const faces = [];
+  const salt = facing * 7 + shape.length;
   for (const r of regions) {
     // The bed the tiles sit on, darker, showing in the gaps between them.
-    faces.push({ pts: r.poly.map(([x, z]) => [x, r.height(x, z), z]), out: [0, 1, 0], tone: BED });
-    for (const tile of tilesIn(r)) faces.push(...prism(tile, r.height));
+    faces.push({ pts: r.poly.map(([x, z]) => [x, r.height(x, z), z]), out: [0, 1, 0], tone: BED, bed: true });
+    faces.push(...(style.arch ? clayTiles(r, style, salt) : slates(r, style, salt)));
+    if (!filled) {
+      faces.push({ pts: r.poly.map(([x, z]) => [x, r.height(x, z) - SHELL, z]), out: [0, -1, 0], tone: 1, color: RAFTER });
+    }
   }
-  faces.push(...sides(heightAt));
-  faces.push({ pts: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]], out: [0, -1, 0], tone: 1 });
+  if (filled) {
+    faces.push(...sides(heightAt).map((f) => ({ ...f, color: 'below' })));
+  } else {
+    faces.push(...shellEdges(heightAt));
+  }
   return { boxes: [], faces };
+}
+
+/** A repeatable 0..1 per tile, so the clay varies from tile to tile but never flickers. */
+function jitter(i, j, k) {
+  const v = Math.sin(i * 12.9898 + j * 78.233 + k * 37.719) * 43758.5453;
+  return v - Math.floor(v);
+}
+
+/** Which of (x, z) runs across a region's slope, and a point from (across, along). */
+function axes(r) {
+  const across = r.down === 'z' ? 0 : 1;
+  return { across, at: (c, s) => (across === 0 ? [c, s] : [s, c]) };
+}
+
+/**
+ * Telhas: each tile an arch across its row — up, along, down — so the rows
+ * stand proud of the dark channel between them and catch the light on one
+ * side. A tile that isn't cut by a corner gets its open ends closed too.
+ */
+function clayTiles(r, st, salt) {
+  const faces = [];
+  const { across, at } = axes(r);
+  const acrossOf = (x, z) => (across === 0 ? x : z);
+  for (let i = 0; i < st.rows; i++) {
+    for (let j = 0; j < st.courses; j++) {
+      const c0 = i / st.rows + st.gap / 2, c1 = (i + 1) / st.rows - st.gap / 2;
+      const s0 = j / st.courses + st.courseGap / 2, s1 = (j + 1) / st.courses - st.courseGap / 2;
+      const cb = c0 + (c1 - c0) * 0.3, cc = c1 - (c1 - c0) * 0.3, R = st.arch;
+      const tone = 0.84 + jitter(i, j, salt) * 0.26;
+      const lift = [
+        [c0, cb, (c) => R * (c - c0) / (cb - c0)],
+        [cb, cc, () => R],
+        [cc, c1, (c) => R * (c1 - c) / (c1 - cc)],
+      ];
+      let whole = true;
+      for (const [k, [a, b, off]] of lift.entries()) {
+        const rect = [[a, s0], [b, s0], [b, s1], [a, s1]].map(([c, s]) => at(c, s));
+        const cut = clip(rect, r.poly);
+        // Size, not orientation: a slope running along x lays its tiles
+        // mirrored, which made every one of them come out "negative" and
+        // vanish — the roofs facing east and west had no tiles at all.
+        if (cut.length < 3 || Math.abs(area(cut)) < 1e-5) { whole = false; continue; }
+        if (Math.abs(Math.abs(area(cut)) - (b - a) * (s1 - s0)) > 1e-6) whole = false;
+        faces.push({ pts: cut.map(([x, z]) => [x, r.height(x, z) + off(acrossOf(x, z)), z]), out: [0, 1, 0], tone: tone * ARCH_TONES[k] });
+      }
+      if (!whole) continue;
+      // The open ends of the arch, top and bottom of the course.
+      for (const [s, sign] of [[s0, -1], [s1, 1]]) {
+        const pts = [[c0, 0], [cb, R], [cc, R], [c1, 0]].map(([c, h]) => {
+          const [x, z] = at(c, s);
+          return [x, r.height(x, z) + h, z];
+        });
+        const out = across === 0 ? [0, 0, sign] : [sign, 0, 0];
+        faces.push({ pts, out, tone: tone * 0.7 });
+      }
+    }
+  }
+  return faces;
+}
+
+/** Slates: flat and thin, every other course set half a slate over. */
+function slates(r, st, salt) {
+  const faces = [];
+  const { at } = axes(r);
+  const w = 1 / st.rows;
+  for (let j = 0; j < st.courses; j++) {
+    const shift = st.stagger && j % 2 ? w / 2 : 0;
+    for (let i = -1; i <= st.rows; i++) {
+      const c0 = Math.max(0, i * w + shift + st.gap / 2), c1 = Math.min(1, (i + 1) * w + shift - st.gap / 2);
+      if (c1 - c0 < 0.02) continue;
+      const s0 = j / st.courses + st.courseGap / 2, s1 = (j + 1) / st.courses - st.courseGap / 2;
+      const cut = clip([[c0, s0], [c1, s0], [c1, s1], [c0, s1]].map(([c, s]) => at(c, s)), r.poly);
+      if (cut.length < 3 || Math.abs(area(cut)) < 1e-4) continue;
+      faces.push(...prism(cut, r.height, st.rise, 0.8 + jitter(i + 2, j, salt) * 0.32));
+    }
+  }
+  return faces;
+}
+
+/** The thin edge of the shell round a piece's sides: the roof seen end-on. */
+function shellEdges(heightAt) {
+  const faces = [];
+  const edges = [[[0, 0], [1, 0], [0, -1]], [[1, 0], [1, 1], [1, 0]], [[1, 1], [0, 1], [0, 1]], [[0, 1], [0, 0], [-1, 0]]];
+  for (const [[x0, z0], [x1, z1], [ox, oz]] of edges) {
+    const xm = (x0 + x1) / 2, zm = (z0 + z1) / 2;
+    const h0 = heightAt(x0, z0), h1 = heightAt(x1, z1), hm = heightAt(xm, zm);
+    // Split at a ridge's kink, so each band is a flat four-sided strip.
+    const runs = Math.abs(hm - (h0 + h1) / 2) > 1e-6
+      ? [[[x0, h0, z0], [xm, hm, zm]], [[xm, hm, zm], [x1, h1, z1]]]
+      : [[[x0, h0, z0], [x1, h1, z1]]];
+    for (const [[ax, ah, az], [bx, bh, bz]] of runs) {
+      faces.push({ pts: [[ax, ah - SHELL, az], [bx, bh - SHELL, bz], [bx, bh, bz], [ax, ah, az]], out: [ox, 0, oz], tone: 0.8 });
+    }
+  }
+  return faces;
 }
 
 /** The (x, z) in a cell `a` from the edge facing f climbs to and `b` from g's. */
@@ -181,32 +310,16 @@ function cellPoint(f, g, a, b) {
   return [onX(f, a), onZ(g, b)];
 }
 
-/** The tiles over one region: a grid of little rectangles, cut to its outline. */
-function tilesIn(r) {
-  const out = [];
-  const across = r.down === 'z' ? 0 : 1; // which of (x, z) runs across the slope
-  for (let i = 0; i < TILE_ROWS; i++) {
-    for (let j = 0; j < TILE_COURSES; j++) {
-      const c0 = i / TILE_ROWS + TILE_GAP / 2, c1 = (i + 1) / TILE_ROWS - TILE_GAP / 2;
-      const s0 = j / TILE_COURSES + COURSE_GAP / 2, s1 = (j + 1) / TILE_COURSES - COURSE_GAP / 2;
-      const rect = [[c0, s0], [c1, s0], [c1, s1], [c0, s1]].map(([c, s]) => (across === 0 ? [c, s] : [s, c]));
-      const cut = clip(rect, r.poly);
-      if (cut.length >= 3 && area(cut) > 1e-4) out.push(cut);
-    }
-  }
-  return out;
-}
-
 /** A tile: its outline raised off the slope, with little walls round it. */
-function prism(poly, height) {
-  const faces = [{ pts: poly.map(([x, z]) => [x, height(x, z) + TILE_RISE, z]), out: [0, 1, 0], tone: 1 }];
+function prism(poly, height, rise, tone = 1) {
+  const faces = [{ pts: poly.map(([x, z]) => [x, height(x, z) + rise, z]), out: [0, 1, 0], tone }];
   const [cx, cz] = centroid(poly);
   for (let i = 0; i < poly.length; i++) {
     const [x0, z0] = poly[i], [x1, z1] = poly[(i + 1) % poly.length];
     const mx = (x0 + x1) / 2 - cx, mz = (z0 + z1) / 2 - cz;
     faces.push({
-      pts: [[x0, height(x0, z0), z0], [x1, height(x1, z1), z1], [x1, height(x1, z1) + TILE_RISE, z1], [x0, height(x0, z0) + TILE_RISE, z0]],
-      out: [mx, 0, mz], tone: 1,
+      pts: [[x0, height(x0, z0), z0], [x1, height(x1, z1), z1], [x1, height(x1, z1) + rise, z1], [x0, height(x0, z0) + rise, z0]],
+      out: [mx, 0, mz], tone: tone * 0.85,
     });
   }
   return faces;

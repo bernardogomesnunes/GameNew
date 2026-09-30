@@ -135,7 +135,8 @@ ok('the tile repeats across a merged quad', /fract\(vTileUv\)/.test(mesher));
 ok('and the UVs are sized to the quad', /U\[t \+ 2\] = w;[\s\S]{0,80}U\[t \+ 4\] = w; U\[t \+ 5\] = h;/.test(mesher));
 // Shading after the vertex colour, so it shades the colour the block ended up.
 ok('the tile shades the varied colour, not the flat registry one',
-  /#include <color_fragment>[\s\S]{0,200}diffuseColor\.rgb \*= texture/.test(mesher));
+  /#include <color_fragment>[\s\S]{0,300}diffuseColor\.rgb \*= tile\.rgb/.test(mesher));
+ok('and a tile with holes in it (leaves) is see-through there', /if \(tile\.a < 0\.5\) discard;/.test(mesher));
 
 
 // --- the crosshair and the camera are the same point --------------------------

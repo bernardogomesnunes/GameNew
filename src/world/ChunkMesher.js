@@ -2,9 +2,11 @@ import * as THREE from 'three';
 import { blockTextureArray, layerFor } from '../render/BlockTextures.js';
 import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
+  roofPart,
 } from '../config/blocks.js';
 import { boxesFor, fenceBoxes, rugBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
+import { textureFor } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
 
 const SOLID_SENTINEL = -1; // below the world: never draw a face against it
@@ -35,6 +37,16 @@ const JOINS_FENCE = new Uint8Array(256);
 for (let id = 1; id < 256; id++) {
   const shape = shapeOf(id);
   JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || shape === 'gate_open' || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
+}
+/**
+ * Leaves, and anything else with holes in its texture: a face beside one is
+ * drawn even though a solid block stands there, because you can see it
+ * through the holes — the next leaf in, or the trunk inside the canopy.
+ */
+const CUTOUT = new Uint8Array(256);
+for (const [id, b] of BLOCKS_BY_ID) {
+  const t = textureFor(b.glyph);
+  CUTOUT[id] = IS_CUBE[id] && t && (t.gaps || t.bite) ? 1 : 0;
 }
 /** Rugs, which run into each other (see propShapes' rugBoxes). */
 const IS_RUG = new Uint8Array(256);
@@ -157,12 +169,15 @@ function withBlockTextures(mat) {
     `.replace('#include <color_fragment>', `
       #include <color_fragment>
       if (vLayer > -0.5) {
-        diffuseColor.rgb *= texture(blockTiles, vec3(fract(vTileUv), vLayer)).rgb;
+        vec4 tile = texture(blockTiles, vec3(fract(vTileUv), vLayer));
+        // A leaf's holes: nothing drawn there, so you see through.
+        if (tile.a < 0.5) discard;
+        diffuseColor.rgb *= tile.rgb;
       }
     `);
   };
   // Changing the shader invalidates anything already compiled for it.
-  mat.customProgramCacheKey = () => 'block-tiles-v1';
+  mat.customProgramCacheKey = () => 'block-tiles-v2';
   mat.needsUpdate = true;
   return mat;
 }
@@ -384,7 +399,7 @@ export class ChunkMesher {
               if (other === AIR) face = self;
               else if (other === SOLID_SENTINEL) face = 0;
               else if (IS_TRANSPARENT[self]) face = other !== self ? self : 0;
-              else face = IS_TRANSPARENT[other] || !IS_CUBE[other] ? self : 0;
+              else face = IS_TRANSPARENT[other] || !IS_CUBE[other] || CUTOUT[other] ? self : 0;
               // A face is only ever seen from the cell it faces. If that cell
               // can't be reached from open sky, the face belongs to a sealed
               // cave and goes in the deep mesh — see skyFill.
@@ -672,12 +687,20 @@ export class ChunkMesher {
               return n > 0 && SLOPE[n] ? { kind: SLOPE[n], facing: FACING[n] } : null;
             };
             const corner = SLOPE[id] ? cornerOf(SLOPE[id], FACING[id], at) : null;
-            const g = slopeGeometry(shape, FACING[id], corner);
-            const col = baseColor(id);
+            // A roof piece over a solid wall fills in down to it, in the
+            // wall's colour; anywhere else it's a shell with timber under it.
+            const below = vol[idx - P2];
+            const filled = below > 0 && IS_CUBE[below] && !IS_TRANSPARENT[below];
+            const style = roofPart(id)?.mat === 1 ? 'slate' : 'clay';
+            const g = slopeGeometry(shape, FACING[id], corner, { filled, style });
+            const col = baseColor(id), belowCol = filled ? baseColor(below) : col;
             for (const b of g.boxes) {
               this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col);
             }
-            for (const f of g.faces) this.emitFace(buf, lx, ly, lz, f, col);
+            for (const f of g.faces) {
+              const c = f.color === 'below' ? belowCol : f.color != null ? colorOfHex(f.color) : col;
+              this.emitFace(buf, lx, ly, lz, f, c);
+            }
             continue;
           }
           const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'

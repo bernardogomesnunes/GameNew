@@ -176,10 +176,29 @@ function paint(recipe, salt) {
     }
   }
 
+  // Cut-outs: pixels with nothing there at all, which the block shader
+  // discards (see ChunkMesher's withBlockTextures). Small gaps of one or two
+  // pixels, and the corners bitten off in a curve.
+  const alpha = new Uint8Array(n * n).fill(255);
+  for (let g = 0; g < (recipe.gaps ?? 0); g++) {
+    const x = 2 + Math.floor(hash01(g, 43, salt) * (n - 4));
+    const y = 2 + Math.floor(hash01(g, 47, salt) * (n - 4));
+    alpha[y * n + x] = 0;
+    if (hash01(g, 53, salt) < 0.5) alpha[y * n + ((x + 1) % n)] = 0;
+    else alpha[((y + 1) % n) * n + x] = 0;
+  }
+  const bite = recipe.bite ?? 0;
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const cx = Math.min(x, n - 1 - x), cy = Math.min(y, n - 1 - y);
+      if (cx + cy < bite) alpha[y * n + x] = 0;
+    }
+  }
+
   const out = new Uint8Array(n * n * 4);
   for (let i = 0; i < n * n; i++) {
     const g = Math.round(Math.max(0, Math.min(1, level[i])) * 255);
-    out[i * 4] = g; out[i * 4 + 1] = g; out[i * 4 + 2] = g; out[i * 4 + 3] = 255;
+    out[i * 4] = g; out[i * 4 + 1] = g; out[i * 4 + 2] = g; out[i * 4 + 3] = alpha[i];
   }
   return out;
 }

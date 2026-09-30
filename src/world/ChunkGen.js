@@ -379,13 +379,22 @@ export class ChunkGen {
 
     for (let i = 0; i < trunk; i++) put(x, ground + i, z, style.wood, false);
 
+    // A rounded crown rather than a box. Requested directly: leaves "be
+    // somehow more rounded instead of sharp cubes." Each layer is a disc, the
+    // widest in the middle; the top is a small dome, not one block on a flat
+    // lid; and the rim is ragged, a few of its leaves missing, so no two
+    // trees are the same square.
     const canopy = style.canopy ?? 2;
     const topY = ground + trunk;
-    for (let dy = -1; dy <= 1; dy++) {
-      const r = dy === 1 ? Math.max(1, canopy - 1) : canopy;
+    const layers = [[-1, canopy + 0.25], [0, canopy + 0.55], [1, Math.max(1, canopy - 0.35)], [2, canopy > 1 ? 1 : 0]];
+    for (const [dy, radius] of layers) {
+      const r = Math.floor(radius + 0.5);
       for (let dx = -r; dx <= r; dx++) {
         for (let dz = -r; dz <= r; dz++) {
-          if (r > 1 && Math.abs(dx) === r && Math.abs(dz) === r) continue;
+          const d2 = dx * dx + dz * dz;
+          if (d2 > radius * radius + 0.6) continue;
+          const rim = d2 > (radius - 1) * (radius - 1) + 0.6;
+          if (rim && (dx || dz) && hash01(x * 31 + dx, z * 17 + dz * 7 + dy * 131, this.seed ^ 0x3ea7) < 0.18) continue;
           put(x + dx, topY + dy, z + dz, style.leaves, true);
         }
       }

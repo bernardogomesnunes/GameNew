@@ -176,7 +176,10 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
   const spec = BLOCKS_BY_ID.get(blockId);
   if (!spec) return '';
   const shape = shapeOf(blockId);
-  if (shape.startsWith('roof')) return facesSvg(slopeGeometry(shape, 0).faces, spec.color ?? 0x888888, size);
+  if (shape.startsWith('roof')) {
+    const style = spec.roof?.mat === 1 ? 'slate' : 'clay';
+    return facesSvg(slopeGeometry(shape, 0, null, { style }).faces, spec.color ?? 0x888888, size);
+  }
   const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
     ? fenceBoxes(shape, { px: 1, nx: 1 })
     : shape === 'door'
@@ -211,13 +214,16 @@ function facesSvg(faces, c, size) {
   const drawn = faces
     .map((f) => orient(f.pts, f.out).n && { ...f, ...orient(f.pts, f.out) })
     .filter((f) => f.n[0] + f.n[1] + f.n[2] > 1e-3)
-    .map((f) => ({ ...f, depth: f.pts.reduce((s, [x, y, z]) => s + x + y + z, 0) / f.pts.length }))
+    // The bed under the tiles goes first, whatever its middle says: it's one
+    // big face under all of them.
+    .map((f) => ({ ...f, depth: f.bed ? -Infinity : f.pts.reduce((s, [x, y, z]) => s + x + y + z, 0) / f.pts.length }))
     .sort((a, b) => a.depth - b.depth);
   let body = '';
   for (const f of drawn) {
     const [nx, ny, nz] = f.n;
     const light = (FACE.top * ny * ny + FACE.left * nz * nz + FACE.right * nx * nx) * (f.tone ?? 1);
-    body += `<path d="M${f.pts.map(([x, y, z]) => p(x, y, z)).join(' L')} Z" fill="${shade(c, light)}" stroke="rgba(0,0,0,0.12)" stroke-width="0.2" stroke-linejoin="round"/>`;
+    const fc = typeof f.color === 'number' ? f.color : c;
+    body += `<path d="M${f.pts.map(([x, y, z]) => p(x, y, z)).join(' L')} Z" fill="${shade(fc, light)}" stroke="rgba(0,0,0,0.12)" stroke-width="0.2" stroke-linejoin="round"/>`;
   }
   return `<svg class="cube" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
 }
