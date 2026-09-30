@@ -2,6 +2,7 @@ import { BLOCKS_BY_ID, shapeOf } from './blocks.js';
 import { GLYPHS, inkOn } from './glyphs.js';
 import { boxesFor, fenceBoxes } from '../world/propShapes.js';
 import { slopeGeometry, orient } from '../world/slopes.js';
+import { tileFor, TILE_SIZE } from '../render/BlockTextures.js';
 
 /**
  * Blocks drawn as blocks: a little isometric cube, three faces, one colour.
@@ -56,6 +57,63 @@ export function shade(color, amount) {
   return `rgb(${clamp(r * amount)},${clamp(g * amount)},${clamp(b * amount)})`;
 }
 
+const faceImages = new Map();
+
+/**
+ * A block's world texture as a tiny image, tinted its colour — a 16×16 BMP,
+ * because a BMP is a header and the pixels, nothing to compress, and every
+ * browser draws one.
+ */
+function tileImage(blockId, color) {
+  if (faceImages.has(blockId)) return faceImages.get(blockId);
+  const tile = tileFor(blockId);
+  let url = null;
+  if (tile) {
+    const n = TILE_SIZE, row = n * 3, size = 54 + row * n;
+    const bytes = new Uint8Array(size);
+    const dv = new DataView(bytes.buffer);
+    bytes[0] = 0x42; bytes[1] = 0x4d;
+    dv.setUint32(2, size, true); dv.setUint32(10, 54, true); dv.setUint32(14, 40, true);
+    dv.setInt32(18, n, true); dv.setInt32(22, n, true);
+    dv.setUint16(26, 1, true); dv.setUint16(28, 24, true); dv.setUint32(34, row * n, true);
+    const r = (color >> 16) & 255, g = (color >> 8) & 255, b = color & 255;
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const level = tile[(y * n + x) * 4] / 255;
+        const o = 54 + (n - 1 - y) * row + x * 3; // BMP rows run bottom up
+        bytes[o] = Math.round(b * level); bytes[o + 1] = Math.round(g * level); bytes[o + 2] = Math.round(r * level);
+      }
+    }
+    let bin = '';
+    for (const byte of bytes) bin += String.fromCharCode(byte);
+    url = `data:image/bmp;base64,${btoa(bin)}`;
+  }
+  faceImages.set(blockId, url);
+  return url;
+}
+
+/**
+ * The three faces of a textured cube: the tile laid onto each face of the
+ * diamond, and a shadow over the two sides so it reads as lit from above.
+ */
+function texturedFaces(blockId, color) {
+  const url = tileImage(blockId, color);
+  if (!url) return null;
+  // Each face as the unit square carried onto it: matrix(U, V, origin).
+  const faces = [
+    { m: [9.4, 5.3, -9.4, 5.3, 12, 2.6], path: 'M12 2.6 L21.4 7.9 L12 13.2 L2.6 7.9 Z', light: FACE.top },
+    { m: [9.4, 5.3, 0, 8.2, 2.6, 7.9], path: 'M2.6 7.9 L12 13.2 L12 21.4 L2.6 16.1 Z', light: FACE.left },
+    { m: [9.4, -5.3, 0, 8.2, 12, 13.2], path: 'M21.4 7.9 L21.4 16.1 L12 21.4 L12 13.2 Z', light: FACE.right },
+  ];
+  // The image once, and the three faces use it.
+  // The same id for the same block everywhere: whichever copy a face finds,
+  // it's the same picture.
+  const id = `tile-${blockId}`;
+  return `<defs><image id="${id}" href="${url}" width="1" height="1" preserveAspectRatio="none" style="image-rendering:pixelated"/></defs>`
+    + faces.map((f) => `<use href="#${id}" transform="matrix(${f.m.join(' ')})"/>`
+      + (f.light < 1 ? `<path d="${f.path}" fill="#000" opacity="${(1 - f.light).toFixed(2)}"/>` : '')).join('');
+}
+
 /**
  * An isometric cube for a block, as inline SVG.
  *
@@ -74,6 +132,15 @@ export function cubeSvg(blockId, { size = 22 } = {}) {
   const top = `M12 2.6 L21.4 7.9 L12 13.2 L2.6 7.9 Z`;
   const left = `M2.6 7.9 L12 13.2 L12 21.4 L2.6 16.1 Z`;
   const right = `M21.4 7.9 L21.4 16.1 L12 21.4 L12 13.2 Z`;
+
+  // Reported directly: "bricks icon is different from the brick itself, I
+  // think it is worth it to review all of them." A block with a texture in
+  // the world is drawn with that same texture here, on all three faces.
+  const texture = texturedFaces(blockId, c);
+  if (texture) {
+    return `<svg class="cube" viewBox="0 0 24 24" width="${size}" height="${size}"`
+      + ` aria-hidden="true" opacity="${alpha}">${texture}</svg>`;
+  }
 
   const ink = inkOn(c);
   const grain = GRAIN[spec.glyph] ?? null;
