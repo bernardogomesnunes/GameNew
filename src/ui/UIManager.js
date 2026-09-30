@@ -963,11 +963,21 @@ export class UIManager {
    */
   toast({ kind, title, body, action = null }) {
     const stack = this.q('#toast-stack');
+    // A retry that keeps failing the same way — a save that cannot reach the
+    // account, say — fires this exact toast again every few minutes. Piling
+    // up five identical copies (reported directly: a wall of "Not saved to
+    // your account yet") never told the player anything the first one
+    // didn't; swap it out instead, so the stack only ever grows for actually
+    // different news.
+    const key = `${kind}|${title}|${body ?? ''}`;
+    const dupe = [...stack.children].find((n) => n.dataset.toastKey === key);
+    if (dupe) this.dismissToast(dupe);
     const node = el(`<div class="toast ${kind}">
       <div class="title">${title}</div>
       ${body ? `<div class="body">${body}</div>` : ''}
       ${action ? `<button class="toast-action">${escapeHtml(action.label)}</button>` : ''}
     </div>`);
+    node.dataset.toastKey = key;
     if (action) {
       const btn = node.querySelector('.toast-action');
       btn.addEventListener('click', (e) => {

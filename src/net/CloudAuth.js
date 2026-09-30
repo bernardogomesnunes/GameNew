@@ -80,9 +80,21 @@ export class CloudAuth {
    * the network — that fabricated response carries no headers at all, so the
    * capture here is a no-op on a cache hit rather than wrong; this.jwt just
    * keeps whatever it already had.
+   *
+   * `fresh` is how a caller says that a cache hit is exactly the failure
+   * mode it cannot afford — accessToken's deliberate refresh, once the
+   * captured JWT is old enough to replace. `disableCookieCache` is Better
+   * Auth's own documented escape hatch past that same cache (both the
+   * client's and, per its server route, a cookie-backed one), so this is a
+   * real round trip that comes back with a genuinely new header rather than
+   * risking another silent no-op that leaves this.jwt exactly as stale as
+   * it was.
    */
-  async checkSession(client) {
-    return client.auth.getSession({ fetchOptions: { onSuccess: this.captureJwt } });
+  async checkSession(client, { fresh = false } = {}) {
+    return client.auth.getSession({
+      query: fresh ? { disableCookieCache: true } : undefined,
+      fetchOptions: { onSuccess: this.captureJwt },
+    });
   }
 
   async signIn(email, password) {
@@ -178,8 +190,9 @@ export class CloudAuth {
       // A fresh session check, not `restore()`'s cached one — this only runs
       // when the captured JWT is missing or old enough to need replacing, so
       // it is rare, and the whole point is to reach the network and see the
-      // header again.
-      await keepTrying(() => this.checkSession(this.client));
+      // header again. `fresh: true` is what makes that true rather than
+      // merely intended — see checkSession.
+      await keepTrying(() => this.checkSession(this.client, { fresh: true }));
     } catch (err) {
       console.error('[duilt] session refresh failed', err);
       throw failure(err, '/auth/get-session');
@@ -189,6 +202,21 @@ export class CloudAuth {
     // server-side, most likely, since that is the one case Managed Better
     // Auth would answer 200 to a session check without a token attached.
     throw failure(Object.assign(new Error('No token in the session response'), { status: 401 }), '/auth/get-session');
+  }
+
+  /**
+   * Throws away the cached JWT so the next accessToken() call is forced past
+   * whatever handed out the one that just got rejected — a device clock that
+   * disagrees with the server about whether 13 minutes have passed, or a
+   * session check that resolved from cache instead of the network (see
+   * checkSession). Called by NeonTransport when the Data API turns down a
+   * token this client still thought had time left on it, so one bad
+   * response gets exactly one clean retry instead of being handed back
+   * unchanged on every save until the tab reloads.
+   */
+  invalidateToken() {
+    this.jwt = null;
+    this.jwtAt = 0;
   }
 
   summary() {
