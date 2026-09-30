@@ -52,7 +52,11 @@ export function blockTextureArray() {
       tiles.push(paint(recipe.top, spec.id));
     }
   }
-  built = { texture: tiles.length ? pack(tiles) : null, layerOf, topOf, layers: tiles.length };
+  built = {
+    texture: tiles.length ? pack(tiles) : null,
+    bumps: tiles.length ? packBumps(tiles) : null,
+    layerOf, topOf, layers: tiles.length,
+  };
   return built;
 }
 
@@ -100,6 +104,9 @@ function paint(recipe, salt) {
   // A tint per pixel, for the few recipes that want colour in their stones
   // (cobbles): 1,1,1 everywhere else, so every other tile stays grey.
   const tint = new Float32Array(n * n * 3).fill(1);
+  // How high each pixel stands, 0..1, for the recipes that have depth
+  // (`bump`) — see packBumps and ChunkMesher's shader. Null for flat ones.
+  let height = null;
 
   // Lines: planks and trunks run one way, brick courses stagger, a grid is
   // mortar. Drawn first so marks can break them up.
@@ -167,6 +174,11 @@ function paint(recipe, salt) {
           const dx = wrap(x + 0.5 - st.x), dy = wrap(y + 0.5 - st.y);
           const t = Math.hypot(dx / st.sx, dy / st.sy) / st.r;
           if (t < bestT) { bestT = t; best = st; bdy = dy / st.sy / st.r; }
+        }
+        if (recipe.bump) {
+          height ??= new Float32Array(n * n);
+          // A dome per stone, the big ones standing a little prouder.
+          height[y * n + x] = bestT > 1 ? 0 : Math.sqrt(1 - bestT * bestT) * (0.55 + 0.45 * Math.min(1, best.r / 4));
         }
         if (bestT > 1) {
           // Earth between the stones: darker, and a little brown.
@@ -322,6 +334,16 @@ function paint(recipe, salt) {
     }
   }
 
+  // Any other recipe with depth takes it from its own shading: the dark
+  // lines (mortar, furrows, grain) are the low parts.
+  if (recipe.bump && !height) {
+    height = new Float32Array(n * n);
+    let lo = Infinity, hi = -Infinity;
+    for (const v of level) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    for (let i = 0; i < n * n; i++) height[i] = hi > lo ? (level[i] - lo) / (hi - lo) : 0;
+  }
+  if (height) for (let i = 0; i < n * n; i++) height[i] *= recipe.bump;
+
   const out = new Uint8Array(n * n * 4);
   for (let i = 0; i < n * n; i++) {
     const l = Math.max(0, Math.min(1, level[i]));
@@ -330,7 +352,37 @@ function paint(recipe, salt) {
     out[i * 4 + 2] = Math.round(l * tint[i * 3 + 2] * 255);
     out[i * 4 + 3] = alpha[i];
   }
+  out.height = height;
   return out;
+}
+
+/**
+ * The tiles' heights, as a second layered texture laid out like the first:
+ * red is how high a pixel stands, alpha says whether the layer has any depth
+ * at all (so a flat one costs the shader one lookup, not five).
+ */
+function packBumps(tiles) {
+  const n = TILE;
+  const data = new Uint8Array(n * n * 4 * tiles.length);
+  tiles.forEach((tile, i) => {
+    const h = tile.height;
+    if (!h) return;
+    for (let p = 0; p < n * n; p++) {
+      const o = (i * n * n + p) * 4;
+      data[o] = Math.round(Math.max(0, Math.min(1, h[p])) * 255);
+      data[o + 3] = 255;
+    }
+  });
+  const tex = new THREE.DataArrayTexture(data, n, n, tiles.length);
+  tex.format = THREE.RGBAFormat;
+  tex.type = THREE.UnsignedByteType;
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestFilter;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.needsUpdate = true;
+  return tex;
 }
 
 /** Stacks the tiles into one layered texture. */
@@ -353,5 +405,6 @@ function pack(tiles) {
 /** Throws the tiles away. For a hard reset of the renderer. */
 export function disposeTextures() {
   built?.texture?.dispose();
+  built?.bumps?.dispose();
   built = null;
 }

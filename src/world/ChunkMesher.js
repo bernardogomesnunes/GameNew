@@ -137,11 +137,15 @@ function bufferKeyFor(blockId) {
  * does — the lighting, the fog that sells the distance — is wanted exactly as
  * it is. A layer of -1 means a material with no recipe, and it is left alone.
  */
+/** How far a texel's slope tilts the surface — how deep the depth looks. */
+const BUMP_STRENGTH = 1.6;
+
 function withBlockTextures(mat) {
-  const { texture } = blockTextureArray();
+  const { texture, bumps } = blockTextureArray();
   if (!texture) return mat;
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.blockTiles = { value: texture };
+    shader.uniforms.blockBumps = { value: bumps };
     // Our own attribute names and our own varyings. Three only declares `uv`
     // and `vMapUv` for a material that has a `map`, and this one deliberately
     // does not have one — the tiles are an array, which `map` cannot hold. The
@@ -163,10 +167,45 @@ function withBlockTextures(mat) {
     shader.fragmentShader = `
       precision highp sampler2DArray;
       uniform sampler2DArray blockTiles;
+      uniform sampler2DArray blockBumps;
       varying vec2 vTileUv;
       varying float vLayer;
       ${shader.fragmentShader}
-    `.replace('#include <color_fragment>', `
+    `.replace('#include <normal_fragment_maps>', `
+      #include <normal_fragment_maps>
+      // Depth. Requested directly: cobblestone "can you give it some depth
+      // or 3d texture like the tiles?" Real stones in the mesh would be
+      // thousands of triangles on every cobbled wall and mountainside, so
+      // the depth is in the light instead: each texel has a height (see
+      // BlockTextures.packBumps) and the surface is tilted by its slope, so
+      // a stone catches the sun on one side and falls into shade on the
+      // other, and moves with the sun through the day. The slope is taken
+      // texel to texel, not per screen pixel, so it is blocky like
+      // everything else and doesn't crawl as you move.
+      {
+        // The face's own directions for the tile's across and up, from how
+        // the position and the tile coordinates change over the screen.
+        vec3 dp1 = dFdx(-vViewPosition), dp2 = dFdy(-vViewPosition);
+        vec2 duv1 = dFdx(vTileUv), duv2 = dFdy(vTileUv);
+        if (vLayer > -0.5) {
+          vec2 uvT = fract(vTileUv);
+          vec4 here = textureLod(blockBumps, vec3(uvT, vLayer), 0.0);
+          if (here.a > 0.5) {
+            const float TEXEL = 1.0 / 16.0;
+            float hx = textureLod(blockBumps, vec3(uvT + vec2(TEXEL, 0.0), vLayer), 0.0).r
+                     - textureLod(blockBumps, vec3(uvT - vec2(TEXEL, 0.0), vLayer), 0.0).r;
+            float hy = textureLod(blockBumps, vec3(uvT + vec2(0.0, TEXEL), vLayer), 0.0).r
+                     - textureLod(blockBumps, vec3(uvT - vec2(0.0, TEXEL), vLayer), 0.0).r;
+            vec3 N = normal;
+            vec3 dp2perp = cross(dp2, N), dp1perp = cross(N, dp1);
+            vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+            vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+            float invmax = inversesqrt(max(max(dot(T, T), dot(B, B)), 1e-12));
+            normal = normalize(N - (T * hx + B * hy) * invmax * ${BUMP_STRENGTH.toFixed(2)});
+          }
+        }
+      }
+    `).replace('#include <color_fragment>', `
       #include <color_fragment>
       if (vLayer > -0.5) {
         vec4 tile = texture(blockTiles, vec3(fract(vTileUv), vLayer));
@@ -177,7 +216,7 @@ function withBlockTextures(mat) {
     `);
   };
   // Changing the shader invalidates anything already compiled for it.
-  mat.customProgramCacheKey = () => 'block-tiles-v2';
+  mat.customProgramCacheKey = () => 'block-tiles-v3';
   mat.needsUpdate = true;
   return mat;
 }
