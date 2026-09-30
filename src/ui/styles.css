@@ -736,6 +736,19 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 .bag-slot .wear { position: absolute; left: 5px; right: 5px; bottom: 4px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.45); }
 .bag-slot .wear i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
 .bag-slot-wrap { position: relative; }
+/* The hover card over a bag or storehouse slot — see DuiltUI.wireSlotTip.
+   Fixed to the viewport so a scrolling grid or a panel's overflow can't clip
+   it, and above the bag's own backdrop and the toasts. */
+.slot-tip {
+  position: fixed; z-index: 13; pointer-events: none;
+  max-width: 240px; padding: 7px 10px; border-radius: 8px;
+  background: var(--panel-solid); border: 1px solid var(--panel-border-strong);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18); color: var(--text);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.slot-tip[hidden] { display: none; }
+.slot-tip strong { font-size: 13.5px; font-weight: 600; }
+.slot-tip span { font-size: 12px; color: var(--text-dim); line-height: 1.35; }
 .slot-discard {
   position: absolute; top: -5px; right: -5px; z-index: 1;
   width: 18px; height: 18px; padding: 0; border-radius: 50%;
