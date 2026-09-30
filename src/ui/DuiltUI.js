@@ -536,7 +536,7 @@ export class DuiltUI {
     const worn = spec?.durability ? Math.round((1 - s.wear / spec.durability) * 100) : null;
     const colour = `#${(spec?.color ?? 0x888888).toString(16).padStart(6, '0')}`;
     const button = `
-      <button class="bag-slot ${held ? 'held' : ''}" ${attr}="${i}" aria-label="${itemName(s.id)}, ${s.count}">
+      <button class="bag-slot ${held ? 'held' : ''}" ${attr}="${i}" aria-label="${itemName(s.id)}, ${s.count}" title="${this.slotTooltip(s, spec)}">
         <span class="swatch${itemIcon(spec) ? ' swatch-cube' : ''}"${itemIcon(spec) ? '' : ` style="background:${colour}"`}>${
           itemIcon(spec, { size: 34 }) ?? glyphSvg(spec?.glyph, { size: 20, color: spec?.color ?? 0x888888 })}</span>
         ${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}
@@ -653,6 +653,34 @@ export class DuiltUI {
     this.renderBag();
   }
 
+  /**
+   * The same handful of facts about a slot — what it stacks to, where it
+   * comes from, what's left of it — wherever they're read: the bag's own
+   * detail box below the grid, and slotTooltip's hover card on the slot
+   * itself.
+   */
+  itemBits(s, spec) {
+    const bits = [`Stacks to ${stackLimit(s.id)}`];
+    if (spec?.madeBy) bits.push(spec.madeBy);
+    if (isTool(s.id) && spec?.durability) bits.push(`${spec.durability - s.wear} uses left`);
+    if (isFood(s.id)) bits.push(`Restores ${spec.feeds} hunger`);
+    return bits;
+  }
+
+  /**
+   * The name-and-what-it-does hover card for a slot — requested directly:
+   * finding out what an item is used to mean lifting it first, which is
+   * also the gesture that moves it, so learning what something was cost a
+   * misplaced item as often as not. A native `title` rather than a built
+   * card: the same lightweight approach the block hotbar's own locked-slot
+   * tooltip already uses (see UIManager.buildHotbar), so hover means the
+   * same thing everywhere in the game rather than two different tooltip
+   * systems for two different kinds of slot.
+   */
+  slotTooltip(s, spec) {
+    return [itemName(s.id), ...this.itemBits(s, spec)].join(' — ');
+  }
+
   /** What the lifted or first item actually is — the bag shouldn't be a colour puzzle. */
   renderDetail() {
     const inv = this.duilt?.inventory;
@@ -662,16 +690,12 @@ export class DuiltUI {
     const slot = idx >= 0 ? inv.slots[idx] : null;
     if (!slot) { box.innerHTML = `<div class="sub" style="margin:0">Your bag is empty. Go and break something.</div>`; return; }
     const spec = ITEMS_BY_ID.get(slot.id);
-    const bits = [`Stacks to ${stackLimit(slot.id)}`];
-    if (spec?.madeBy) bits.push(spec.madeBy);
-    if (isTool(slot.id) && spec?.durability) bits.push(`${spec.durability - slot.wear} uses left`);
-    if (isFood(slot.id)) bits.push(`Restores ${spec.feeds} hunger`);
     box.innerHTML = `
       <div class="bag-detail-row">
         <strong>${itemName(slot.id)}</strong>
         <span>${slot.count}</span>
       </div>
-      <div class="sub" style="margin:4px 0 0">${bits.join(' · ')}</div>`;
+      <div class="sub" style="margin:4px 0 0">${this.itemBits(slot, spec).join(' · ')}</div>`;
   }
 
   // ---- storehouses ----
