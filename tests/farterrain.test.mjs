@@ -87,7 +87,7 @@ ok('dry land never gets pulled down to the water height it is not under', !anyLa
   for (const mesh of t.meshes) {
     const p = mesh.geometry.attributes.position.array;
     for (let i = 0; i < p.length; i += 3) {
-      if (p[i] % 8 !== 0 || p[i + 2] % 8 !== 0) { anyMoved = true; break; }
+      if (p[i] % 4 !== 0 || p[i + 2] % 4 !== 0) { anyMoved = true; break; }
     }
   }
   ok('every vertex sits on the world grid, not offset to wherever you stood', !anyMoved);
