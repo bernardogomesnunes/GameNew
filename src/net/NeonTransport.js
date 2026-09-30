@@ -52,6 +52,26 @@ export class NeonTransport {
     try {
       return await keepTrying(() => this.send(path, { method, body, prefer, token }));
     } catch (err) {
+      // The Data API can turn down a token our own clock still trusted — see
+      // CloudAuth.invalidateToken for why that happens even though
+      // accessToken() refreshes ahead of its own known expiry. That is worth
+      // exactly one clean retry, forced past whatever handed out the dead
+      // token, before this becomes a "your session expired" the player has
+      // to act on: the difference between an autosave that quietly recovers
+      // and one that stops syncing until the tab reloads.
+      if (err.expiredToken && this.auth.invalidateToken) {
+        this.auth.invalidateToken();
+        const freshToken = await this.auth.accessToken().catch(() => null);
+        if (freshToken && freshToken !== token) {
+          try {
+            return await keepTrying(() => this.send(path, { method, body, prefer, token: freshToken }));
+          } catch (err2) {
+            console.error('[duilt] data request failed after token refresh', method, path, err2);
+            if (!err2.detail) err2.detail = describeFailure(err2, `${method} ${path.split('?')[0]}`);
+            throw err2;
+          }
+        }
+      }
       // Same reasoning as the token call: the readable sentence goes on the
       // card, the technical one folds up underneath it.
       console.error('[duilt] data request failed', method, path, err);
@@ -76,6 +96,10 @@ export class NeonTransport {
       // "not ready yet" from "no, and it will still be no in a second".
       const err = new Error(describeError(res.status, detail));
       err.status = res.status;
+      // PostgREST's own JWT plugin answers an expired token with a 400, not
+      // a 401 — this is the one shape worth a token refresh and a retry
+      // rather than being taken as the database simply saying no.
+      err.expiredToken = isExpiredJwtResponse(res.status, detail);
       throw err;
     }
     if (res.status === 204) return null;
@@ -297,8 +321,20 @@ export class NeonTransport {
   }
 }
 
+/**
+ * The Data API's own signature for "this token's exp has passed" — a 400
+ * with a PostgREST JWT-plugin message, not the 401/403 an auth failure
+ * usually means here. Matched on text rather than a code because PostgREST
+ * sends none for this one (`"code":null` alongside it), only the message.
+ */
+function isExpiredJwtResponse(status, detail) {
+  return status === 400 && /\bjwt\b/i.test(detail) && /expired/i.test(detail);
+}
+
 function describeError(status, detail) {
-  if (status === 401 || status === 403) return 'Your session expired — sign in again.';
+  if (status === 401 || status === 403 || isExpiredJwtResponse(status, detail)) {
+    return 'Your session expired — sign in again.';
+  }
   if (status === 409) return 'That world changed elsewhere. Reload it before saving again.';
   if (status >= 500) return 'The cloud is unreachable right now. Your local save is untouched.';
   return `Cloud request failed (${status}). ${detail.slice(0, 160)}`;

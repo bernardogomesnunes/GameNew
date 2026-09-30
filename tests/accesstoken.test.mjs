@@ -98,7 +98,10 @@ const { auth, calls, restore } = signedIn();
 
   ok(`asking for a token returns the one from the header: ${token}`, token === 'header.payload.sig');
   ok('and it did not throw', threw === null);
-  ok(`it asked for the session, not a dedicated token route: ${calls[0]}`, calls[0] === '/get-session');
+  // Carries `?disableCookieCache=true` — see checkSession's `fresh` option —
+  // so this deliberate refresh is a real round trip rather than risking
+  // another silent cache hit, hence startsWith rather than an exact match.
+  ok(`it asked for the session, not a dedicated token route: ${calls[0]}`, calls[0].startsWith('/get-session'));
   ok('never touching /token at all', !calls.some((c) => c.startsWith('/token')));
 }
 
