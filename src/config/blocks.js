@@ -26,6 +26,9 @@
 // tint, not a soft grey), and Obsidian keeps most of its depth so the
 // palette still has one dark anchor rather than every block converging on
 // the same pale middle.
+/** Flowing water of level L is block FLOW_BASE + L, for L in 1..7. */
+const FLOW_BASE = 49;
+
 export const BLOCKS = [
   { id: 1, name: 'Grass', glyph: 'grass', color: 0x97cc81, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
   { id: 2, name: 'Dirt', glyph: 'dirt', color: 0xc69972, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
@@ -163,6 +166,17 @@ export const BLOCKS = [
   { id: 47, name: 'Fence', glyph: 'fence', color: 0xc9a67c, shape: 'fence', material: 'wood', cost: { wood: 1 }, unlock: null },
   { id: 48, name: 'Gate', glyph: 'gate', color: 0xa9825a, shape: 'gate', material: 'wood', cost: { wood: 2 }, unlock: null },
   { id: 49, name: 'Open Gate', glyph: 'gate', color: 0xa9825a, shape: 'gate_open', material: 'wood', stateOf: 48, unlock: null },
+
+  // Flowing water, one block per level: 7 right beside a source (or falling
+  // straight down), 1 at the thin end of a spill. Water (11) is the still
+  // source every river, lake and sea is made of; these are what runs off it
+  // once something opens a way — see world/WaterFlow.js. Drawn lower the
+  // weaker they are (ChunkMesher.emitFlowingWater), walked and swum through
+  // like any water, and never placed or carried on their own.
+  ...[1, 2, 3, 4, 5, 6, 7].map((level) => ({
+    id: FLOW_BASE + level, name: 'Flowing Water', glyph: 'water', color: 0x83add7, transparent: true, opacity: 0.78,
+    shape: 'water_flow', stateOf: 11, level, unlock: null,
+  })),
 ];
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
@@ -181,6 +195,27 @@ export const WATER = 11;
 // A state of another block (an open gate) isn't placed on its own: you place
 // the gate, then open it.
 export const PLACEABLE_BLOCKS = BLOCKS.filter((b) => !b.system && b.stateOf == null);
+
+/** Any water at all: a still source, or flowing. */
+export function isWater(id) {
+  return id === 11 || (id > FLOW_BASE && id <= FLOW_BASE + 7);
+}
+
+/** Flowing water only — not the still source it runs from. */
+export function isFlowing(id) {
+  return id > FLOW_BASE && id <= FLOW_BASE + 7;
+}
+
+/** How strong a cell of water is: 8 for a source, 1..7 flowing, 0 if it isn't water. */
+export function waterLevel(id) {
+  if (id === 11) return 8;
+  return isFlowing(id) ? id - FLOW_BASE : 0;
+}
+
+/** The block for flowing water of a level, 1..7. */
+export function flowingWater(level) {
+  return FLOW_BASE + level;
+}
 
 export function isTransparent(id) {
   const b = BLOCKS_BY_ID.get(id);

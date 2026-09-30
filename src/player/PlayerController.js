@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { isTyping } from '../ui/Panels.js';
-import { AIR, WATER } from '../config/blocks.js';
+import { AIR, isWater } from '../config/blocks.js';
 
 const HALF_WIDTH = 0.3;
 const HEIGHT = 1.8;
@@ -389,7 +389,7 @@ export class PlayerController {
 
   /** Whether a single point sits inside a water block — see `swimming`. */
   isWaterAt(x, y, z) {
-    return this.world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z)) === WATER;
+    return isWater(this.world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z)));
   }
 
   syncCamera() {
