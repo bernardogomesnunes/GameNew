@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { blockTextureArray, layerFor } from '../render/BlockTextures.js';
+import { blockTextureArray, layerFor, topLayerFor } from '../render/BlockTextures.js';
 import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
   roofPart,
@@ -300,6 +300,13 @@ function layerTable() {
   LAYER = new Float32Array(256);
   for (let id = 0; id < 256; id++) LAYER[id] = layerFor(id);
   return LAYER;
+}
+let TOP_LAYER = null; // the same for top and bottom faces (a log's rings)
+function topLayerTable() {
+  if (TOP_LAYER) return TOP_LAYER;
+  TOP_LAYER = new Float32Array(256);
+  for (let id = 0; id < 256; id++) TOP_LAYER[id] = topLayerFor(id);
+  return TOP_LAYER;
 }
 
 export class ChunkMesher {
@@ -865,20 +872,26 @@ export class ChunkMesher {
       N[p + k] = nx; N[p + k + 1] = ny; N[p + k + 2] = nz;
       C[p + k] = r; C[p + k + 1] = g; C[p + k + 2] = b;
     }
-    const layer = layerTable()[id];
+    const layer = (d === 1 ? topLayerTable() : layerTable())[id];
     const L = buf.layer, l = q * 4;
     L[l] = layer; L[l + 1] = layer; L[l + 2] = layer; L[l + 3] = layer;
     // Corners of the quad in tile space: 0,0 to w,h along u and v, so one
     // tile covers one block however many blocks the quad ended up spanning.
     // They follow the vertex order above, which swaps u and v for a
     // negative face.
+    //
+    // A face across x has u running up the world (y) and v along it, so
+    // there the tile is laid the other way round: its across always runs
+    // across the wall and its up always up. Without the swap, bark ran
+    // sideways and brick courses stood on end on every east and west face
+    // — a log looked like planks.
     const U = buf.uv, t = q * 8;
+    const swap = d === 0;
+    const put = (k, a, b) => { U[t + k] = swap ? b : a; U[t + k + 1] = swap ? a : b; };
     if (sign > 0) {
-      U[t] = 0; U[t + 1] = 0; U[t + 2] = w; U[t + 3] = 0;
-      U[t + 4] = w; U[t + 5] = h; U[t + 6] = 0; U[t + 7] = h;
+      put(0, 0, 0); put(2, w, 0); put(4, w, h); put(6, 0, h);
     } else {
-      U[t] = 0; U[t + 1] = 0; U[t + 2] = 0; U[t + 3] = h;
-      U[t + 4] = w; U[t + 5] = h; U[t + 6] = w; U[t + 7] = 0;
+      put(0, 0, 0); put(2, 0, h); put(4, w, h); put(6, w, 0);
     }
     buf.quads = q + 1;
   }

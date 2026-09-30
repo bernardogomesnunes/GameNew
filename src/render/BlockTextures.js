@@ -40,13 +40,19 @@ export function blockTextureArray() {
   if (built) return built;
   const tiles = [];
   const layerOf = new Map();
+  const topOf = new Map();
   for (const spec of BLOCKS) {
     const recipe = textureFor(spec.glyph);
     if (!recipe) continue;
     layerOf.set(spec.id, tiles.length);
     tiles.push(paint(recipe, spec.id));
+    // A block whose top and bottom aren't its sides — a log's cut ends.
+    if (recipe.top) {
+      topOf.set(spec.id, tiles.length);
+      tiles.push(paint(recipe.top, spec.id));
+    }
   }
-  built = { texture: tiles.length ? pack(tiles) : null, layerOf, layers: tiles.length };
+  built = { texture: tiles.length ? pack(tiles) : null, layerOf, topOf, layers: tiles.length };
   return built;
 }
 
@@ -57,12 +63,14 @@ const tiles = new Map();
  * icons (config/cubes.js), so a brick in your hand looks like the brick in
  * your wall.
  */
-export function tileFor(blockId) {
-  if (tiles.has(blockId)) return tiles.get(blockId);
+export function tileFor(blockId, { top = false } = {}) {
+  const key = top ? `${blockId}:top` : blockId;
+  if (tiles.has(key)) return tiles.get(key);
   const spec = BLOCKS.find((b) => b.id === blockId);
-  const recipe = spec && textureFor(spec.glyph);
+  let recipe = spec && textureFor(spec.glyph);
+  if (top && recipe) recipe = recipe.top ?? recipe;
   const tile = recipe ? paint(recipe, spec.id) : null;
-  tiles.set(blockId, tile);
+  tiles.set(key, tile);
   return tile;
 }
 export const TILE_SIZE = TILE;
@@ -71,6 +79,12 @@ export const TILE_SIZE = TILE;
 export function layerFor(blockId) {
   const found = blockTextureArray().layerOf.get(blockId);
   return found === undefined ? -1 : found;
+}
+
+/** The layer for a block's top and bottom faces — its own, or its sides' if it has none. */
+export function topLayerFor(blockId) {
+  const found = blockTextureArray().topOf.get(blockId);
+  return found === undefined ? layerFor(blockId) : found;
 }
 
 /** One tile, as greyscale bytes. Data, not a picture — no canvas involved. */
@@ -111,6 +125,51 @@ function paint(recipe, salt) {
         const r = y % every;
         if (r === 0) darken(x, y, depth * (0.55 + 0.45 * hash01(x, y, salt)));
         else if (r === 1 && hash01(x, y + 97, salt) < 0.5) darken(x, y, depth * 0.5);
+      }
+    }
+  }
+
+  // Bark: furrows running up the trunk, each wandering a pixel or two side
+  // to side (with a period that divides the tile, so it stacks seamlessly
+  // up a trunk), a softer shadow beside each, the odd crack across a ridge
+  // and a knot.
+  if (recipe.bark) {
+    const furrows = recipe.bark;
+    for (let f = 0; f < furrows; f++) {
+      const x0 = Math.floor((f + hash01(f, 61, salt) * 0.6) * n / furrows);
+      const amp = 0.6 + hash01(f, 67, salt) * 0.9;
+      const phase = hash01(f, 71, salt) * Math.PI * 2;
+      const turns = 1 + Math.floor(hash01(f, 73, salt) * 2);
+      for (let y = 0; y < n; y++) {
+        const x = x0 + Math.round(Math.sin((y / n) * Math.PI * 2 * turns + phase) * amp);
+        darken(x, y, depth);
+        darken(x + 1, y, depth * 0.45);
+        if (hash01(x, y, salt + 5) < 0.3) darken(x - 1, y, depth * 0.3);
+      }
+    }
+    for (let c = 0; c < (recipe.cracks ?? 0) + 2; c++) {
+      const x = Math.floor(hash01(c, 79, salt) * n), y = Math.floor(hash01(c, 83, salt) * n);
+      darken(x, y, depth * 0.7); darken(x + 1, y, depth * 0.7);
+    }
+    for (let k = 0; k < (recipe.knots ?? 0); k++) {
+      const cx = Math.floor(hash01(k, 89, salt) * n), cy = Math.floor(hash01(k, 97, salt) * n);
+      for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) darken(cx + dx, cy + dy, depth * 0.8);
+      darken(cx, cy, depth * 0.35);
+    }
+  }
+
+  // Rings: a log's cut end — growth rings round the pith, and the bark
+  // round the rim.
+  if (recipe.rings) {
+    const c = (n - 1) / 2;
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const d = Math.hypot(x - c, y - c);
+        const edge = Math.min(x, y, n - 1 - x, n - 1 - y);
+        if (edge === 0) darken(x, y, depth);
+        else if (edge === 1 && hash01(x, y, salt + 11) < 0.5) darken(x, y, depth * 0.6);
+        else if (d < 0.8) darken(x, y, depth * 0.9);
+        else if ((d / recipe.rings) % 1 < 0.34) darken(x, y, depth * 0.5);
       }
     }
   }

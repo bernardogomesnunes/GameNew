@@ -65,9 +65,10 @@ const faceImages = new Map();
  * because a BMP is a header and the pixels, nothing to compress, and every
  * browser draws one.
  */
-function tileImage(blockId, color) {
-  if (faceImages.has(blockId)) return faceImages.get(blockId);
-  const tile = tileFor(blockId);
+function tileImage(blockId, color, top = false) {
+  const key = top ? `${blockId}:top` : blockId;
+  if (faceImages.has(key)) return faceImages.get(key);
+  const tile = tileFor(blockId, { top });
   let url = null;
   if (tile) {
     const n = TILE_SIZE, row = n * 3, size = 54 + row * n;
@@ -89,7 +90,7 @@ function tileImage(blockId, color) {
     for (const byte of bytes) bin += String.fromCharCode(byte);
     url = `data:image/bmp;base64,${btoa(bin)}`;
   }
-  faceImages.set(blockId, url);
+  faceImages.set(key, url);
   return url;
 }
 
@@ -100,6 +101,8 @@ function tileImage(blockId, color) {
 function texturedFaces(blockId, color) {
   const url = tileImage(blockId, color);
   if (!url) return null;
+  // A log's top is its cut end, not more bark.
+  const topUrl = tileImage(blockId, color, true);
   // Each face as the unit square carried onto it: matrix(U, V, origin).
   const faces = [
     { m: [9.4, 5.3, -9.4, 5.3, 12, 2.6], path: 'M12 2.6 L21.4 7.9 L12 13.2 L2.6 7.9 Z', light: FACE.top },
@@ -110,8 +113,10 @@ function texturedFaces(blockId, color) {
   // The same id for the same block everywhere: whichever copy a face finds,
   // it's the same picture.
   const id = `tile-${blockId}`;
-  return `<defs><image id="${id}" href="${url}" width="1" height="1" preserveAspectRatio="none" style="image-rendering:pixelated"/></defs>`
-    + faces.map((f) => `<use href="#${id}" transform="matrix(${f.m.join(' ')})"/>`
+  const topId = topUrl !== url ? `tile-${blockId}-top` : id;
+  const img = (i, u) => `<image id="${i}" href="${u}" width="1" height="1" preserveAspectRatio="none" style="image-rendering:pixelated"/>`;
+  return `<defs>${img(id, url)}${topId !== id ? img(topId, topUrl) : ''}</defs>`
+    + faces.map((f, k) => `<use href="#${k === 0 ? topId : id}" transform="matrix(${f.m.join(' ')})"/>`
       + (f.light < 1 ? `<path d="${f.path}" fill="#000" opacity="${(1 - f.light).toFixed(2)}"/>` : '')).join('');
 }
 

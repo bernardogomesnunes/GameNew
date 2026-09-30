@@ -17,6 +17,9 @@
  *   marks     scattered pixels — dots of dirt, chips of stone, blades of grass
  *   lines     'h', 'v' or 'grid', for planks, trunks and masonry
  *   furrows   rows of tilled soil, every N pixels
+ *   bark      N furrows wandering up a trunk (with `knots`)
+ *   rings     growth rings round the middle, every N pixels — a log's end
+ *   top       a recipe of its own for the top and bottom faces
  *   band      a darker strip along one edge, for a block with a lip
  *   depth     how dark the darkest mark goes, 0..1 off white
  *   scale     how many tile-pixels across; 16 unless the pattern needs room
@@ -37,7 +40,11 @@ export const TEXTURES = {
   marble:    { veins: 2, depth: 0.08, scale: 16 },
   snow:      { marks: 8, depth: 0.05, scale: 16 },
   planks:    { lines: 'h', every: 4, marks: 8, depth: 0.15, scale: 16 },
-  log:       { lines: 'v', every: 3, marks: 6, depth: 0.17, scale: 16 },
+  // Requested directly: "the wood trunk has similar texture as the planks,
+  // we should change it to wooden logs texture." Bark up the sides —
+  // wandering furrows, a crack or two, a knot — and growth rings on the cut
+  // ends (`top`, painted as a layer of its own).
+  log:       { bark: 4, knots: 1, marks: 6, depth: 0.24, scale: 16, top: { rings: 2.2, depth: 0.2 } },
   // Requested directly: "Leaves block could have small holes in it like
   // trees have and be somehow more rounded instead of sharp cubes." `gaps`
   // are real holes you see through, and `bite` takes the corners off each
