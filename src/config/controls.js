@@ -33,7 +33,19 @@ export const DEFAULT_CONTROLS = {
   fov: 75,            // degrees, vertical
   sensitivity: 1,     // times the default mouse speed
   volume: 0.7,        // 0..1
+  // Phones and tablets: which side walks, and which thumb Break, Place, Fly
+  // and More sit beside. See UIManager.applyTouchLayout.
+  walkSide: 'left',   // 'left' | 'right'
+  actionSide: 'walk', // 'walk' | 'look'
 };
+
+/** The body classes a touch layout comes down to (styles.css does the rest). */
+export function touchLayoutClasses(controls) {
+  return {
+    'touch-walk-right': controls?.walkSide === 'right',
+    'touch-act-look': controls?.actionSide === 'look',
+  };
+}
 
 export const FOV_RANGE = [55, 110];
 export const SENSITIVITY_RANGE = [0.3, 3];

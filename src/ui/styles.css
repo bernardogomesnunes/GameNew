@@ -510,6 +510,34 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #side-left { left: calc(var(--stick-edge) + var(--stick-size) + 10px); }
 #side-right { right: var(--stick-edge); }
 .touch-btn.small { width: var(--side-btn); height: var(--side-btn); border-radius: 15px; }
+
+/* Which side is which is yours to choose — requested directly: "controls in
+ * mobile can be different, like allowing to change sides of the buttons."
+ * Settings › Controls sets two classes on the body (see
+ * UIManager.applyTouchLayout):
+ *
+ *   touch-walk-right    the walking stick on the right, the aiming one on
+ *                       the left — everything mirrored with them.
+ *   touch-act-look      Break, Place, Fly and More move over to the aiming
+ *                       thumb, beside Jump.
+ *
+ * Only positions change; the sticks keep their own ids and their own jobs.
+ * The rules above are the default layout, and these only undo and redo the
+ * left/right of each piece. */
+body.touch-walk-right #stick-left { left: auto; right: 0; }
+body.touch-walk-right #stick-right { right: auto; left: 0; }
+body.touch-walk-right #stick-left .stick-base { left: auto; right: var(--stick-edge); }
+body.touch-walk-right #stick-right .stick-base { right: auto; left: var(--stick-inset); }
+body.touch-walk-right #side-right { right: auto; left: var(--stick-edge); }
+body.touch-walk-right #side-left { left: auto; right: calc(var(--stick-edge) + var(--stick-size) + 10px); }
+body.touch-walk-right #touch-buttons-left { left: auto; right: 12px; align-items: flex-end; }
+
+/* With the aiming thumb: Break goes inboard of the aiming stick (Jump is
+   already outboard of it), and the column above it. */
+body.touch-act-look #side-left { left: auto; right: calc(var(--stick-inset) + var(--stick-size) + 10px); }
+body.touch-act-look #touch-buttons-left { left: auto; right: 12px; align-items: flex-end; }
+body.touch-act-look.touch-walk-right #side-left { right: auto; left: calc(var(--stick-inset) + var(--stick-size) + 10px); }
+body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12px; align-items: flex-start; }
 /* In the air one button becomes two. Shifting the pair down half a button
    centres it on the slot the single one had, so neither Up nor Down lands
    exactly where your thumb was and gets pressed by reflex. */
@@ -1344,3 +1372,19 @@ body.editing-building #building-hint {
 .ctl-keys { display: flex; flex-direction: column; gap: 4px; }
 .ctl-key { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
 .ctl-key button { min-width: 110px; padding: 5px 10px; font-size: 12px; }
+/* Touch layout: only on a touch screen — and there, the keyboard list goes. */
+.ctl-touch { display: none; }
+body.touch .ctl-touch { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+body.touch .ctl-keys { display: none; }
+.ctl-touch-rows { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.ctl-seg-row { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-dim); }
+.ctl-seg { display: flex; border: 1px solid var(--panel-border); border-radius: 9px; overflow: hidden; }
+.ctl-seg button { flex: 1; border: 0; border-radius: 0; background: transparent; color: var(--text-dim); padding: 7px 6px; font-size: 12px; }
+.ctl-seg button + button { border-left: 1px solid var(--panel-border); }
+.ctl-seg button.on { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+.ctl-touch-preview svg { display: block; }
+.ctl-touch-preview .pv-phone { fill: none; stroke: var(--panel-border); stroke-width: 1.5; }
+.ctl-touch-preview .pv-stick { fill: none; stroke: var(--text-dim); stroke-width: 1.2; }
+.ctl-touch-preview .pv-label { fill: var(--text-dim); font-size: 10px; font-weight: 700; text-anchor: middle; }
+.ctl-touch-preview .pv-btn { fill: var(--text-dim); opacity: 0.55; }
+.ctl-touch-preview .pv-act { fill: var(--accent); opacity: 1; }

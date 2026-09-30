@@ -386,6 +386,7 @@ export class Game {
       game: this,
       callbacks: this.buildCallbacks(),
     });
+    this.ui.applyTouchLayout(this.controls);
     this.ui.refreshForMode();
 
     // The land grows when an age is finished, and the wall has to grow with it.
@@ -3235,6 +3236,7 @@ export class Game {
     this.camera.fov = this.controls.fov;
     this.camera.updateProjectionMatrix();
     this.sound.setVolume(this.controls.volume);
+    this.ui?.applyTouchLayout(this.controls);
     return this.controls;
   }
 

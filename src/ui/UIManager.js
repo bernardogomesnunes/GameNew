@@ -12,7 +12,7 @@ import { blockIcon, itemIcon } from '../config/cubes.js';
 import { goalBands } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
-import { ACTIONS, DEFAULT_CONTROLS, FOV_RANGE, SENSITIVITY_RANGE, rebind, keyLabel } from '../config/controls.js';
+import { ACTIONS, DEFAULT_CONTROLS, FOV_RANGE, SENSITIVITY_RANGE, rebind, keyLabel, touchLayoutClasses } from '../config/controls.js';
 import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 import { CLEARS, clearArtSvg } from '../config/clears.js';
 import { Minimap } from '../render/Minimap.js';
@@ -55,6 +55,29 @@ function el(html) {
 function fmtTime(ts) {
   const d = new Date(ts);
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * A little phone, sideways, showing where the sticks and buttons will be:
+ * W for walking, A for aiming, and the button column beside whichever
+ * thumb it goes with.
+ */
+function touchLayoutPreview(c) {
+  const walkLeft = c.walkSide !== 'right';
+  const withWalk = c.actionSide !== 'look';
+  const buttonsLeft = walkLeft === withWalk;
+  const stick = (x, label) => `<circle cx="${x}" cy="44" r="11" class="pv-stick"/><text x="${x}" y="48" class="pv-label">${label}</text>`;
+  const column = (x) => [14, 22, 30].map((y) => `<rect x="${x - 4}" y="${y - 4}" width="8" height="7" rx="2" class="pv-btn"/>`).join('');
+  const aimX = walkLeft ? 96 : 24, walkX = walkLeft ? 22 : 98;
+  const jumpX = walkLeft ? 112 : 8;
+  const breakX = withWalk ? (walkLeft ? walkX + 18 : walkX - 18) : (walkLeft ? aimX - 18 : aimX + 18);
+  return `<svg viewBox="0 0 120 64" width="120" height="64">
+    <rect x="1" y="1" width="118" height="62" rx="8" class="pv-phone"/>
+    ${stick(walkX, 'W')}${stick(aimX, 'A')}
+    <rect x="${jumpX - 4}" y="40" width="8" height="8" rx="2" class="pv-btn"/>
+    <rect x="${breakX - 4}" y="40" width="8" height="8" rx="2" class="pv-btn pv-act"/>
+    ${column(buttonsLeft ? 10 : 110)}
+  </svg>`;
 }
 
 export class UIManager {
@@ -229,6 +252,24 @@ export class UIManager {
 
           <div class="menu-section" id="menu-controls" hidden>
             <button class="menu-back" data-menu-back="1">${icon('chevron', 14)}<span>Menu</span></button>
+            <!-- Phones and tablets only: which side your thumbs do what. -->
+            <div class="ctl-touch" id="ctl-touch">
+              <div class="ctl-touch-rows">
+                <div class="ctl-seg-row">
+                  <span>Walking stick</span>
+                  <div class="ctl-seg" data-seg="walkSide">
+                    <button data-val="left">Left</button><button data-val="right">Right</button>
+                  </div>
+                </div>
+                <div class="ctl-seg-row">
+                  <span>Break, Place, Fly &amp; More</span>
+                  <div class="ctl-seg" data-seg="actionSide">
+                    <button data-val="walk">By walking</button><button data-val="look">By aiming</button>
+                  </div>
+                </div>
+              </div>
+              <div class="ctl-touch-preview" id="ctl-touch-preview" aria-hidden="true"></div>
+            </div>
             <div class="ctl-sliders">
               <label>Field of view <b id="ctl-fov-val"></b>
                 <input type="range" id="ctl-fov" min="${FOV_RANGE[0]}" max="${FOV_RANGE[1]}" step="1" />
@@ -1692,12 +1733,23 @@ export class UIManager {
         this.waitingFor = btn.dataset.bind;
         show();
       }));
+      for (const seg of this.root.querySelectorAll('.ctl-seg')) {
+        for (const b of seg.querySelectorAll('button')) b.classList.toggle('on', c[seg.dataset.seg] === b.dataset.val);
+      }
+      const preview = this.q('#ctl-touch-preview');
+      if (preview) preview.innerHTML = touchLayoutPreview(c);
     };
     const apply = (next) => { this.game.applyControls?.(next); show(); };
     fov.addEventListener('input', () => apply({ fov: Number(fov.value) }));
     sens.addEventListener('input', () => apply({ sensitivity: Number(sens.value) }));
     vol.addEventListener('input', () => apply({ volume: Number(vol.value) }));
     vol.addEventListener('change', () => this.game.sound?.click());
+    for (const seg of this.root.querySelectorAll('.ctl-seg')) {
+      seg.addEventListener('click', (e) => {
+        const b = e.target.closest('button[data-val]');
+        if (b) apply({ [seg.dataset.seg]: b.dataset.val });
+      });
+    }
     this.q('#ctl-reset').addEventListener('click', () => { this.waitingFor = null; apply(structuredClone(DEFAULT_CONTROLS)); });
     // Waiting for a key: the next one pressed is the new binding. Escape
     // cancels, and is never itself bound — it's how you get out of things.
@@ -1710,6 +1762,14 @@ export class UIManager {
       show();
     }, true);
     show();
+  }
+
+  /**
+   * Puts the thumbsticks and buttons on the sides the controls settings say
+   * — only classes on the body; styles.css moves everything.
+   */
+  applyTouchLayout(controls) {
+    for (const [cls, on] of Object.entries(touchLayoutClasses(controls))) document.body.classList.toggle(cls, on);
   }
 
   /**
