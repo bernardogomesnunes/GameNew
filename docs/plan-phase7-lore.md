@@ -27,7 +27,7 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
 
 ---
 
-## Assumptions to confirm
+## Decisions (confirmed)
 
 1. **Losing a round (white path):**
    - the raiders loot your storehouses: a share of what's in them;
@@ -133,7 +133,7 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
   - **Catapults:** from Phase 6.
   - **The white guardian** fights beside you.
 - **Winning a round:** every raider in that round is down or fled.
-- **Losing a round:** the raiders loot a share of your storehouses and the round comes again (Assumption 1).
+- **Losing a round:** the raiders loot a share of your storehouses and the round comes again (Decision 1).
 - **Victory after round 10:**
   - the dark army is broken and the raids end for good;
   - the white god's light settles on your land, with fireflies across your settlement at night;
@@ -147,12 +147,12 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
 - **The alliance:**
   - after you forge the Black Ring the Stone Kingdom becomes your ally;
   - its people are friendly, its gates open, and you can trade there;
-  - swear in its temple and the Stone King gives you **1,000 warriors** (Assumption 3).
+  - swear in its temple and the Stone King gives you **1,000 warriors** (Decision 3).
 - **The Sky Kingdom** only exists on this path.
   - It's a **floating island** 5,000 blocks away.
   - Its underside is rock, with waterfalls pouring off its edge.
   - On top are white marble halls and gold roofs, with **fireflies** drifting over it and lighting it all night.
-  - Its great chains run down to anchor towers on the ground (Assumption 4).
+  - Its great chains run down to anchor towers on the ground (Decision 4).
   - Seen from afar, it's a light in the sky on the horizon, which pulls you towards it.
 - **The march:**
   - 5,000 blocks is about 15–20 minutes of walking;
@@ -176,7 +176,7 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
   - the Sky Kingdom falls and its island joins your land;
   - the Stone King honours you;
   - the victory screen tells the end of the story.
-- **Losing:** you're driven back to your castle and the Sky Kingdom **taxes you** until you conquer it (Assumption 2).
+- **Losing:** you're driven back to your castle and the Sky Kingdom **taxes you** until you conquer it (Decision 2).
   - A "Taxes" line shows on each building's panel.
   - Rally again whenever you're ready.
   - Warriors lost are replaced by the Stone King, in fewer numbers each time.
