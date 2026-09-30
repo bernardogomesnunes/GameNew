@@ -17,6 +17,7 @@
  *   marks     scattered pixels — dots of dirt, chips of stone, blades of grass
  *   lines     'h', 'v' or 'grid', for planks, trunks and masonry
  *   furrows   rows of tilled soil, every N pixels
+ *   cobbles   rounded stones of mixed sizes bedded in dirt (N sets how many big ones it tries)
  *   bark      N furrows wandering up a trunk (with `knots`)
  *   rings     growth rings round the middle, every N pixels — a log's end
  *   top       a recipe of its own for the top and bottom faces
@@ -35,7 +36,7 @@ export const TEXTURES = {
   gravel:    { marks: 38, depth: 0.22, blobs: 5, scale: 16 },
   clay:      { marks: 12, depth: 0.10, scale: 16 },
   stone:     { marks: 14, depth: 0.15, cracks: 2, scale: 16 },
-  cobble:    { blobs: 7, depth: 0.24, scale: 16 },
+  cobble:    { cobbles: 6, speck: 0.03, depth: 0.28, scale: 16 },
   brick:     { lines: 'brick', every: 4, depth: 0.22, scale: 16 },
   marble:    { veins: 2, depth: 0.08, scale: 16 },
   snow:      { marks: 8, depth: 0.05, scale: 16 },
