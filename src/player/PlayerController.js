@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { isTyping } from '../ui/Panels.js';
-import { WATER } from '../config/blocks.js';
+import { AIR, WATER } from '../config/blocks.js';
 
 const HALF_WIDTH = 0.3;
 const HEIGHT = 1.8;
@@ -11,6 +11,26 @@ const WALK_SPEED = 4.6;
 const SPRINT_SPEED = 7.2;
 const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
+/*
+ * Walking into something low lifts you onto it instead of stopping you dead.
+ * A slab or a stair's hitbox is only the bottom half of its cell (see
+ * World.collisionBoxAt), so half a block is enough to walk onto either from
+ * the ground. Stairs get a whole block: their hitbox is flat, so each stair
+ * in a flight sits a full block above the one before it, and without this a
+ * staircase still needed a jump per step. A full cube is still a jump.
+ */
+const STEP_HEIGHT = 0.5;
+const STAIR_STEP_HEIGHT = 1;
+const STEP_EASE = 14; // how fast the camera catches up after a step, per second
+/*
+ * The near clip plane, in two settings. 0.2 out in the open for depth
+ * precision (see Game's own note where the camera is made), but its corners
+ * reach further from the eye than the player's 0.3 half-width, so pressed
+ * against a wall at an angle — down a one-wide shaft, say — it sliced into
+ * the rock and you saw through it. Close to a block it drops to 0.05.
+ */
+const NEAR_OPEN = 0.2;
+const NEAR_CLOSE = 0.05;
 /*
  * Water was never collidable (see World's NON_COLLIDABLE set), which is
  * correct — you should be able to swim into it — but nothing filled in what
@@ -82,6 +102,7 @@ export class PlayerController {
     this.speedScale = 1;
     this.sprint = false;
     this.jumpQueued = false;
+    this.stepLag = 0; // how far the camera still trails a step up, in blocks
 
     this._onKeyDown = (e) => {
       // A space in a password field must not make the player jump, and an "f"
@@ -218,6 +239,8 @@ export class PlayerController {
     this.jumpQueued = false;
 
     this.moveAndCollide(this.velocity.x * dt, this.velocity.y * dt, this.velocity.z * dt);
+    this.stepLag *= Math.exp(-STEP_EASE * dt);
+    if (this.stepLag < 1e-3) this.stepLag = 0;
     this.syncCamera();
   }
 
@@ -248,13 +271,15 @@ export class PlayerController {
 
     if (dx !== 0) {
       const nx = p.x + dx;
-      if (this.collidesAt(nx, p.y, p.z) || this.outsideBounds(nx, p.z)) this.velocity.x = 0;
-      else p.x = nx;
+      if (this.outsideBounds(nx, p.z)) this.velocity.x = 0;
+      else if (!this.collidesAt(nx, p.y, p.z)) p.x = nx;
+      else if (!this.stepUp(nx, p.z)) this.velocity.x = 0;
     }
     if (dz !== 0) {
       const nz = p.z + dz;
-      if (this.collidesAt(p.x, p.y, nz) || this.outsideBounds(p.x, nz)) this.velocity.z = 0;
-      else p.z = nz;
+      if (this.outsideBounds(p.x, nz)) this.velocity.z = 0;
+      else if (!this.collidesAt(p.x, p.y, nz)) p.z = nz;
+      else if (!this.stepUp(p.x, nz)) this.velocity.z = 0;
     }
     if (dy !== 0) {
       const ny = p.y + dy;
@@ -280,6 +305,31 @@ export class PlayerController {
     } else {
       this.grounded = this.collidesAt(p.x, p.y - 0.05, p.z);
     }
+  }
+
+  /**
+   * Moves onto (x, z) lifted to the top of whatever blocked it, if that is
+   * low enough to step onto and there is headroom there — see STEP_HEIGHT.
+   * The limit comes from the highest box in the way, so a stair standing on
+   * a full block steps like a stair, not like the block under it.
+   */
+  stepUp(x, z) {
+    if (this.flying || !(this.grounded || this.swimming)) return false;
+    const p = this.position;
+    let highest = null;
+    for (const h of this.collisionBoxesAt(x, p.y, z)) {
+      if (!highest || h.maxY > highest.maxY) highest = h;
+    }
+    if (!highest) return false;
+    const rise = highest.maxY - p.y;
+    const limit = highest.stair ? STAIR_STEP_HEIGHT : STEP_HEIGHT;
+    if (rise <= 0 || rise > limit + 1e-6) return false;
+    if (this.collidesAt(x, highest.maxY, z) || this.collidesAt(p.x, highest.maxY, p.z)) return false;
+    p.x = x;
+    p.z = z;
+    p.y = highest.maxY;
+    this.stepLag += rise;
+    return true;
   }
 
   /**
@@ -340,8 +390,28 @@ export class PlayerController {
   }
 
   syncCamera() {
-    this.camera.position.set(this.position.x, this.position.y + EYE_HEIGHT, this.position.z);
+    const eyeY = this.position.y + EYE_HEIGHT - this.stepLag;
+    this.camera.position.set(this.position.x, eyeY, this.position.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0);
+    if (!this.camera.isPerspectiveCamera) return;
+    const near = this.blockNear(this.position.x, eyeY, this.position.z) ? NEAR_CLOSE : NEAR_OPEN;
+    if (this.camera.near !== near) {
+      this.camera.near = near;
+      this.camera.updateProjectionMatrix();
+    }
+  }
+
+  /** Whether any block sits within reach of the near plane's corners around (x, y, z). */
+  blockNear(x, y, z) {
+    const r = 0.6;
+    for (let bx = Math.floor(x - r); bx <= Math.floor(x + r); bx++) {
+      for (let by = Math.floor(y - r); by <= Math.floor(y + r); by++) {
+        for (let bz = Math.floor(z - r); bz <= Math.floor(z + r); bz++) {
+          if (this.world.getBlock(bx, by, bz) !== AIR) return true;
+        }
+      }
+    }
+    return false;
   }
 
   eyePosition() {

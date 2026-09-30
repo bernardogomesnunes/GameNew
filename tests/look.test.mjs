@@ -82,15 +82,15 @@ ok('a cube is its own swatch, with no coloured tile behind it',
 
 // --- the ground is not one colour --------------------------------------------
 
-ok('the mesher varies a block colour by where it is', /patchNoise\(origin\[0\], origin\[2\]\)/.test(mesher));
+ok('the mesher varies a block colour by where it is', /patchNoise\(ox, oz\)/.test(mesher));
 ok('and the wobble is fixed to the position, so nothing shimmers as you walk',
   /function hashInt/.test(mesher) && !/Math\.random/.test(mesher));
 // Brightness alone reads as cloud shadow over one colour; the channels have to
 // come apart for it to read as a different green.
 ok('the channels move apart, not just up and down', /const skew = /.test(mesher));
 ok('each channel takes the skew differently',
-  /col\.r \* shade \* \(light - skew\)/.test(mesher)
-  && /col\.g \* shade \* \(light \+ skew/.test(mesher));
+  /r \*= light - skew;/.test(mesher)
+  && /g \*= light \+ skew \* 0\.7;/.test(mesher));
 
 {
   const table = mesher.slice(mesher.indexOf('const VARIATION'), mesher.indexOf('}, { get:'));
@@ -137,7 +137,7 @@ ok('hooked where they always exist', /#include <begin_vertex>/.test(mesher) && /
 ok('a block with no recipe is left alone', /if \(vLayer > -0\.5\)/.test(mesher));
 // A greedy quad can span ten blocks; its tile has to repeat, not stretch.
 ok('the tile repeats across a merged quad', /fract\(vTileUv\)/.test(mesher));
-ok('and the UVs are sized to the quad', /buf\.uv\.push\(0, 0, w, 0, w, h, 0, h\)/.test(mesher));
+ok('and the UVs are sized to the quad', /U\[t \+ 2\] = w;[\s\S]{0,80}U\[t \+ 4\] = w; U\[t \+ 5\] = h;/.test(mesher));
 // Shading after the vertex colour, so it shades the colour the block ended up.
 ok('the tile shades the varied colour, not the flat registry one',
   /#include <color_fragment>[\s\S]{0,200}diffuseColor\.rgb \*= texture/.test(mesher));

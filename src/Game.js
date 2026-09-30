@@ -85,6 +85,11 @@ const HORIZON_COARSE = 950;
 // a chunk whose centre is beyond the line while its near corner is not.
 const CULL_MARGIN = 24;
 const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream in
+// How far a chunk's sealed-cave geometry is drawn (ChunkMesher.skyFill). No
+// one on the surface can see it, and it was most of every chunk's triangles;
+// this is enough to cover the biggest caverns once you're down in one.
+const DEEP_RANGE = 80;
+const EDIT_REBUILD_NOW = 4; // chunks an edit rebuilds on the spot; see remeshDirty
 /**
  * How often a world writes itself down while you play.
  *
@@ -1122,13 +1127,14 @@ export class Game {
   updateChunkVisibility() {
     const px = this.player.position.x, pz = this.player.position.z;
     const maxSq = this.renderDistance * this.renderDistance;
+    const deepSq = Math.min(DEEP_RANGE * DEEP_RANGE, maxSq);
     for (const mesh of this.mesher.activeMeshes) {
       const chunk = mesh.userData.chunk;
       if (!chunk) continue;
       const minX = chunk.cx * CHUNK_SIZE, minZ = chunk.cz * CHUNK_SIZE;
       const dx = Math.max(minX - px, 0, px - (minX + CHUNK_SIZE));
       const dz = Math.max(minZ - pz, 0, pz - (minZ + CHUNK_SIZE));
-      mesh.visible = dx * dx + dz * dz <= maxSq;
+      mesh.visible = dx * dx + dz * dz <= (mesh.userData.deep ? deepSq : maxSq);
     }
   }
 
@@ -2595,12 +2601,36 @@ export class Game {
   }
 
   /**
-   * Queues dirty chunks rather than rebuilding them inline. One edit can dirty
-   * several chunks at a border, and a paste can dirty many — rebuilding them
-   * all in one frame is a visible hitch.
+   * Rebuilds the chunks an edit just changed, nearest first, and queues the
+   * rest.
+   *
+   * Everything used to be queued, and the queue is first come first served
+   * — behind however many chunks were streaming in at the time. So a block
+   * you broke stayed drawn as solid for a while after it was gone. Digging
+   * straight down, you fell into that stale block and saw out through the
+   * back of it: every cave below, which is exactly how it was reported. A
+   * single edit touches at most three chunks and a rebuild is a few ms, so
+   * those go now; a paste that touches more puts the rest at the front of
+   * the queue rather than the back.
    */
   remeshDirty() {
-    for (const chunk of this.world.dirtyChunks()) this.remeshQueue.add(chunk);
+    const edited = [];
+    for (const chunk of this.world.dirtyChunks()) {
+      // A chunk with no mesh yet is newly generated, not edited.
+      if (chunk.mesh) edited.push(chunk);
+      else this.remeshQueue.add(chunk);
+    }
+    if (edited.length) {
+      const px = (this.player?.position.x ?? 0) / CHUNK_SIZE;
+      const pz = (this.player?.position.z ?? 0) / CHUNK_SIZE;
+      edited.sort((a, b) => distSq(a, px, pz) - distSq(b, px, pz));
+      for (const chunk of edited.slice(0, EDIT_REBUILD_NOW)) {
+        this.remeshQueue.delete(chunk);
+        this.mesher.rebuild(this.world, chunk);
+      }
+      const later = edited.slice(EDIT_REBUILD_NOW);
+      if (later.length) this.remeshQueue = new Set([...later, ...this.remeshQueue]);
+    }
     this.selectionDirty = true; // blocks moved, so the selection skin is stale
   }
 

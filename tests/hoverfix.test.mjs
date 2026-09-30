@@ -16,9 +16,13 @@ import { readFileSync } from 'node:fs';
  * what it does. O want that info on a tooltip when hovering on this
  * elements." Finding out what an item was meant lifting it first — the same
  * gesture that moves it — so learning what something did cost a misplaced
- * item as often as not. A native `title` now carries the same text a slot's
- * click-to-lift detail box already assembled, the same lightweight approach
- * the block hotbar's own locked-slot tooltip already uses.
+ * item as often as not.
+ *
+ * The first fix was a native `title`, and it was reported still broken: the
+ * browser waits a second or more of stillness before showing one, and the
+ * bag re-renders its whole grid on every inventory change, which throws the
+ * hovered button away and restarts the wait. It's a real card now
+ * (DuiltUI.wireSlotTip), shown at once and re-pointed after a re-render.
  */
 
 let f = 0;
@@ -39,12 +43,17 @@ ok('the fix is not a second, copied rule — there is still exactly one panel-he
 
 // --- a slot's tooltip carries what its click-to-lift detail box already did --
 
-ok('slotHtml puts a title on the button, not just an aria-label',
-  /class="bag-slot \$\{held[\s\S]{0,40}aria-label="[\s\S]{0,60}title="\$\{this\.slotTooltip\(s, spec\)\}"/.test(duiltUi));
-ok('the tooltip and the detail box share one source of the actual facts, not two copies',
-  /itemBits\(s, spec\)/.test(duiltUi)
-  && (duiltUi.match(/itemBits\(/g) ?? []).length >= 3); // the method + both call sites
-ok('the tooltip leads with the item\'s name — the detail box already shows it separately, this doesn\'t',
-  /slotTooltip\(s, spec\)\s*\{\s*return \[itemName\(s\.id\)/.test(duiltUi));
+ok('a slot carries its name and facts for the hover card, not a native title',
+  /class="bag-slot \$\{held[\s\S]{0,40}aria-label="[\s\S]{0,60}data-tip="\$\{escapeAttr\(itemName\(s\.id\)\)\}" data-tip-info=/.test(duiltUi)
+  && !/class="bag-slot \$\{held[^>]*title=/.test(duiltUi));
+ok('the card and the detail box share one source of the actual facts, not two copies',
+  (duiltUi.match(/this\.itemBits\(/g) ?? []).length >= 2);
+ok('the card is delegated from the panel root, so re-rendered buttons need no wiring',
+  /this\.el\.addEventListener\('pointerover'/.test(duiltUi) && /closest\?\.\('\.bag-slot\[data-tip\]'\)/.test(duiltUi));
+ok('and re-found after the bag and the storehouse redraw their grids',
+  (duiltUi.match(/this\.refreshSlotTip\(\);/g) ?? []).length >= 2);
+ok('and hidden when a panel closes', /onPanelClosed\(id\) \{\s*this\.hideSlotTip\(\);/.test(duiltUi));
+ok('the card is fixed to the viewport, above the bag backdrop, and never eats the click',
+  /\.slot-tip \{[^}]*position: fixed;[^}]*z-index: 13;[^}]*pointer-events: none;/.test(css));
 
 process.exit(f ? 1 : 0);

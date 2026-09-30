@@ -10,6 +10,27 @@ const SOLID_SENTINEL = -1; // below the world: never draw a face against it
 // without it, and it costs nothing at runtime.
 const SHADE = { px: 0.86, nx: 0.86, py: 1.0, ny: 0.6, pz: 0.94, nz: 0.94 };
 
+/*
+ * Per-id lookups for the mesher's inner loop, which runs a few hundred
+ * thousand times a chunk — a Map lookup per cell there was most of the cost
+ * of building one. Ids are bytes (Chunk stores a Uint8Array).
+ */
+const IS_CUBE = new Uint8Array(256);
+const IS_TRANSPARENT = new Uint8Array(256);
+for (let id = 0; id < 256; id++) {
+  IS_CUBE[id] = shapeOf(id) === 'cube' ? 1 : 0;
+  IS_TRANSPARENT[id] = isTransparent(id) ? 1 : 0;
+}
+// The padded copy of a chunk the sweep reads: CHUNK_SIZE plus a one-block
+// border each side, laid out x fastest, then z, then y.
+const PAD = CHUNK_SIZE + 2;
+// Cells light passes through, for skyFill: anything but a solid opaque cube.
+const OPEN = new Uint8Array(256);
+for (let id = 0; id < 256; id++) OPEN[id] = !IS_CUBE[id] || IS_TRANSPARENT[id] || id === AIR ? 1 : 0;
+// A mask bit marking a face that looks into a sealed cave.
+const DEEP = 0x100;
+const PAD_STRIDE = [1, PAD * PAD, PAD];
+
 const materialCache = new Map();
 const colorCache = new Map();
 
@@ -108,14 +129,15 @@ function getMaterial(key) {
  * printed. Worked stone and glass get none — a brick wall with mottled bricks
  * looks damaged rather than natural.
  */
-const VARIATION = new Proxy({
+const VARIATION = new Float32Array(256);
+for (const [id, amount] of Object.entries({
   1: 0.26, 22: 0.26,           // grass, moss — the big open surfaces
   2: 0.18, 21: 0.15,           // dirt, farmland
   6: 0.16, 23: 0.20, 24: 0.15, // sand, gravel, clay
   3: 0.17, 8: 0.19,            // stone, cobblestone
   5: 0.28, 4: 0.13,            // leaves vary most of all; wood a little
   12: 0.07,                    // snow, barely — it is meant to read as clean
-}, { get: (t, k) => t[k] ?? 0 });
+})) VARIATION[id] = amount;
 
 /**
  * A repeatable wobble from a block's position, in 0..1.
@@ -147,19 +169,68 @@ function baseColor(blockId) {
   return c;
 }
 
-/** Whether `selfId` shows a face toward `neighborId`. */
-function faceVisible(selfId, neighborId) {
-  if (selfId === AIR || selfId === SOLID_SENTINEL) return false;
-  if (neighborId === SOLID_SENTINEL) return false;
-  if (neighborId === AIR) return true;
-  if (isTransparent(selfId)) return neighborId !== selfId;
-  return isTransparent(neighborId);
+/**
+ * One material's worth of quads for a chunk, in typed arrays that double when
+ * full — pushing into plain JS arrays and converting at the end was a third
+ * of the time it took to build a chunk, most of it in the conversion and the
+ * garbage it left.
+ */
+class QuadBuffer {
+  constructor() {
+    this.quads = 0;
+    this.cap = 0;
+    this.grow(64);
+  }
+
+  grow(cap) {
+    const copy = (Type, old, per) => {
+      const next = new Type(cap * per);
+      if (old) next.set(old.subarray(0, this.quads * per));
+      return next;
+    };
+    this.position = copy(Float32Array, this.position, 12);
+    this.normal = copy(Float32Array, this.normal, 12);
+    this.color = copy(Float32Array, this.color, 12);
+    this.uv = copy(Float32Array, this.uv, 8);
+    this.layer = copy(Float32Array, this.layer, 4);
+    this.cap = cap;
+  }
+
+  /** The quads as geometry: four vertices each, two triangles each. */
+  toGeometry() {
+    const q = this.quads;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(this.position.slice(0, q * 12), 3));
+    geo.setAttribute('normal', new THREE.BufferAttribute(this.normal.slice(0, q * 12), 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(this.color.slice(0, q * 12), 3));
+    geo.setAttribute('tileUv', new THREE.BufferAttribute(this.uv.slice(0, q * 8), 2));
+    geo.setAttribute('layer', new THREE.BufferAttribute(this.layer.slice(0, q * 4), 1));
+    // Winding is already baked into the vertex order (see emitQuad), so the
+    // index is the same 0-1-2 0-2-3 pattern for every quad.
+    const index = q * 4 > 65535 ? new Uint32Array(q * 6) : new Uint16Array(q * 6);
+    for (let k = 0, b = 0, o = 0; k < q; k++, b += 4, o += 6) {
+      index[o] = b; index[o + 1] = b + 1; index[o + 2] = b + 2;
+      index[o + 3] = b; index[o + 4] = b + 2; index[o + 5] = b + 3;
+    }
+    geo.setIndex(new THREE.BufferAttribute(index, 1));
+    geo.computeBoundingSphere();
+    return geo;
+  }
+}
+
+let LAYER = null; // block id -> texture layer, filled on first use
+function layerTable() {
+  if (LAYER) return LAYER;
+  LAYER = new Float32Array(256);
+  for (let id = 0; id < 256; id++) LAYER[id] = layerFor(id);
+  return LAYER;
 }
 
 export class ChunkMesher {
   constructor(scene) {
     this.scene = scene;
     this.activeMeshes = new Set();
+    this.origin = [0, 0, 0];
   }
 
   /**
@@ -210,66 +281,73 @@ export class ChunkMesher {
 
     const baseX = chunk.cx * CHUNK_SIZE;
     const baseZ = chunk.cz * CHUNK_SIZE;
-    const dims = [CHUNK_SIZE, chunk.height, CHUNK_SIZE];
     const byType = new Map();
+    const deepByType = new Map();
 
-    const blockAt = (lx, ly, lz) => {
-      if (ly < 0) return SOLID_SENTINEL;
-      if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE && ly < chunk.height) {
-        return chunk.get(lx, ly, lz);
-      }
-      return world.getBlock(baseX + lx, ly, baseZ + lz);
-    };
-
-    const pos = [0, 0, 0];
-    const neighbor = [0, 0, 0];
+    // Nothing above the chunk's own highest block can have a face of this
+    // chunk's, and with the world 200 tall that's routinely half the column
+    // — so the sweep stops there.
+    const top = this.fillPadded(world, chunk);
+    const dims = [CHUNK_SIZE, top + 1, CHUNK_SIZE];
+    const vol = this.padded;
+    const S = PAD_STRIDE;
+    const sky = this.skyFill(top);
 
     for (let d = 0; d < 3; d++) {
       const u = (d + 1) % 3;
       const v = (d + 2) % 3;
-      const mask = new Int32Array(dims[u] * dims[v]);
+      const du = dims[u], dv = dims[v];
+      const mask = this.maskFor(du * dv);
 
       for (const sign of [1, -1]) {
+        const step = sign * S[d];
         for (let slice = 0; slice < dims[d]; slice++) {
           // --- build the visible-face mask for this slice ---
           let n = 0;
-          for (let j = 0; j < dims[v]; j++) {
-            for (let i = 0; i < dims[u]; i++, n++) {
-              pos[d] = slice; pos[u] = i; pos[v] = j;
-              neighbor[d] = slice + sign; neighbor[u] = i; neighbor[v] = j;
-              const self = blockAt(pos[0], pos[1], pos[2]);
-              const other = blockAt(neighbor[0], neighbor[1], neighbor[2]);
+          for (let j = 0; j < dv; j++) {
+            let idx = (slice + 1) * S[d] + (j + 1) * S[v] + S[u];
+            for (let i = 0; i < du; i++, n++, idx += S[u]) {
+              const self = vol[idx];
               // A shaped block (slab, stair, furniture) never emits its own
               // cube face — its real geometry comes from buildProps below —
-              // but it still occludes a neighbour's face exactly like a
-              // solid cube would, since `other` here is unaffected. See
-              // propShapes.js's own note on why that's the right tradeoff.
-              mask[n] = faceVisible(self, other) && shapeOf(self) === 'cube' ? self : 0;
+              // and it doesn't hide a neighbour's face either: it only fills
+              // part of its cell, so the rest of that face is on show.
+              if (self <= 0 || !IS_CUBE[self]) { mask[n] = 0; continue; }
+              const other = vol[idx + step];
+              let face;
+              if (other === AIR) face = self;
+              else if (other === SOLID_SENTINEL) face = 0;
+              else if (IS_TRANSPARENT[self]) face = other !== self ? self : 0;
+              else face = IS_TRANSPARENT[other] || !IS_CUBE[other] ? self : 0;
+              // A face is only ever seen from the cell it faces. If that cell
+              // can't be reached from open sky, the face belongs to a sealed
+              // cave and goes in the deep mesh — see skyFill.
+              mask[n] = face && !sky[idx + step] ? face | DEEP : face;
             }
           }
 
           // --- merge the mask into maximal rectangles ---
           n = 0;
-          for (let j = 0; j < dims[v]; j++) {
-            for (let i = 0; i < dims[u];) {
+          for (let j = 0; j < dv; j++) {
+            for (let i = 0; i < du;) {
               const id = mask[n];
               if (id === 0) { i++; n++; continue; }
 
               let w = 1;
-              while (i + w < dims[u] && mask[n + w] === id) w++;
+              while (i + w < du && mask[n + w] === id) w++;
 
               let h = 1;
-              grow: while (j + h < dims[v]) {
+              grow: while (j + h < dv) {
                 for (let k = 0; k < w; k++) {
-                  if (mask[n + k + h * dims[u]] !== id) break grow;
+                  if (mask[n + k + h * du] !== id) break grow;
                 }
                 h++;
               }
 
-              this.emitQuad(byType, id, d, u, v, sign, slice, i, j, w, h);
+              this.emitQuad(id & DEEP ? deepByType : byType, id & 0xff, d, u, v, sign, slice, i, j, w, h);
 
               for (let l = 0; l < h; l++) {
-                for (let k = 0; k < w; k++) mask[n + k + l * dims[u]] = 0;
+                for (let k = 0; k < w; k++) mask[n + k + l * du] = 0;
               }
               i += w; n += w;
             }
@@ -279,35 +357,136 @@ export class ChunkMesher {
     }
 
     const meshes = new Map();
-    for (const [key, buf] of byType) {
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(buf.position, 3));
-      geo.setAttribute('normal', new THREE.Float32BufferAttribute(buf.normal, 3));
-      geo.setAttribute('color', new THREE.Float32BufferAttribute(buf.color, 3));
-      // The surface detail: where on its tile each corner sits, and which
-      // material's tile that is. A quad that greedy meshing merged across ten
-      // blocks gets a UV running 0..10, so the tile repeats rather than being
-      // stretched over the whole floor.
-      geo.setAttribute('tileUv', new THREE.Float32BufferAttribute(buf.uv, 2));
-      geo.setAttribute('layer', new THREE.Float32BufferAttribute(buf.layer, 1));
-      geo.setIndex(buf.index);
-      geo.computeBoundingSphere();
-
-      const mesh = new THREE.Mesh(geo, getMaterial(key));
-      // Greedy quads are emitted in chunk-local space, so the mesh carries the
-      // chunk's world offset. Without this every chunk draws at the origin and
-      // the whole map piles up in one column.
-      mesh.position.set(baseX, 0, baseZ);
-      mesh.frustumCulled = true;
-      mesh.userData.chunk = chunk;
-      this.scene.add(mesh);
-      this.activeMeshes.add(mesh);
-      meshes.set(key, mesh);
+    for (const [deep, types] of [[false, byType], [true, deepByType]]) {
+      for (const [key, buf] of types) {
+        // The surface detail rides along as tileUv (where on its tile each
+        // corner sits) and layer (which material's tile). A quad that greedy
+        // meshing merged across ten blocks gets a UV running 0..10, so the
+        // tile repeats rather than being stretched over the whole floor.
+        const geo = buf.toGeometry();
+        const mesh = new THREE.Mesh(geo, getMaterial(key));
+        // Greedy quads are emitted in chunk-local space, so the mesh carries
+        // the chunk's world offset. Without this every chunk draws at the
+        // origin and the whole map piles up in one column.
+        mesh.position.set(baseX, 0, baseZ);
+        mesh.frustumCulled = true;
+        mesh.userData.chunk = chunk;
+        mesh.userData.deep = deep;
+        this.scene.add(mesh);
+        this.activeMeshes.add(mesh);
+        meshes.set(deep ? `deep:${key}` : key, mesh);
+      }
     }
 
     chunk.mesh = meshes;
     chunk.dirty = false;
     this.buildProps(chunk);
+  }
+
+  /**
+   * Copies the chunk plus a one-block border from its neighbours into one
+   * flat array, so the sweep reads plain indexed memory instead of calling
+   * through chunk.get / world.getBlock twice per cell. Row y = -1 is the
+   * below-the-world sentinel. Returns the highest y with anything in it.
+   */
+  fillPadded(world, chunk) {
+    const H = chunk.height;
+    const P2 = PAD * PAD;
+    const size = P2 * (H + 2);
+    if (!this.padded || this.padded.length < size) this.padded = new Int16Array(size);
+    const vol = this.padded;
+    const data = chunk.data;
+    const C = CHUNK_SIZE, last = C - 1;
+    // The four neighbours whose edge columns border this chunk. getChunk
+    // makes one that doesn't exist yet in an endless world, same as the
+    // world.getBlock this replaced; a fixed world's edge has none, and reads
+    // as air there, also the same.
+    const west = world.getChunk(chunk.cx - 1, chunk.cz)?.data;
+    const east = world.getChunk(chunk.cx + 1, chunk.cz)?.data;
+    const north = world.getChunk(chunk.cx, chunk.cz - 1)?.data;
+    const south = world.getChunk(chunk.cx, chunk.cz + 1)?.data;
+    let top = -1;
+    vol.fill(SOLID_SENTINEL, 0, P2);
+    for (let y = 0; y < H; y++) {
+      const row = (y + 1) * P2;
+      const src = y * C * C;
+      vol.fill(AIR, row, row + P2);
+      let any = false;
+      for (let lz = 0; lz < C; lz++) {
+        const at = row + (lz + 1) * PAD + 1;
+        const from = src + lz * C;
+        for (let lx = 0; lx < C; lx++) {
+          const id = data[from + lx];
+          vol[at + lx] = id;
+          if (id) any = true;
+        }
+        vol[at - 1] = west ? west[from + last] : AIR;
+        vol[at + C] = east ? east[from] : AIR;
+      }
+      for (let lx = 0; lx < C; lx++) {
+        vol[row + lx + 1] = north ? north[src + last * C + lx] : AIR;
+        vol[row + (C + 1) * PAD + lx + 1] = south ? south[src + lx] : AIR;
+      }
+      if (any) top = y;
+    }
+    // The row just above the top is read as the neighbour of the topmost
+    // faces; when the top is the world's ceiling that row is past the data.
+    if (top + 1 >= H) vol.fill(AIR, (H + 1) * P2, (H + 2) * P2);
+    return Math.max(top, 0);
+  }
+
+  /**
+   * Which cells of the padded copy can be reached from open sky, moving
+   * through anything that isn't a solid opaque cube.
+   *
+   * Nearly nine in ten of a chunk's faces are the walls of caves sealed
+   * inside the rock, which nobody on the surface can ever see — and they
+   * were drawn for every chunk out to the horizon. Faces that look into air
+   * this can't reach go in a separate deep mesh, which Game only draws
+   * near the player (see DEEP_RANGE there). A cave that opens to the
+   * surface is reached, so its walls stay in the ordinary mesh.
+   */
+  skyFill(top) {
+    const P2 = PAD * PAD;
+    if (!this.sky || this.sky.length < this.padded.length) {
+      this.sky = new Uint8Array(this.padded.length);
+      this.stack = new Int32Array(this.padded.length);
+    }
+    const sky = this.sky, stack = this.stack, vol = this.padded;
+    sky.fill(0, 0, P2 * (top + 3)); // rows y = -1 .. top + 1
+    let sp = 0;
+    const seedRow = (top + 2) * P2;
+    for (let idx = seedRow; idx < seedRow + P2; idx++) {
+      const id = vol[idx];
+      if (id >= 0 && OPEN[id]) { sky[idx] = 1; stack[sp++] = idx; }
+    }
+    while (sp) {
+      const idx = stack[--sp];
+      const px = idx % PAD;
+      const pz = ((idx / PAD) | 0) % PAD;
+      const row = (idx / P2) | 0;
+      if (px > 0) sp = visit(idx - 1, sp);
+      if (px < PAD - 1) sp = visit(idx + 1, sp);
+      if (pz > 0) sp = visit(idx - PAD, sp);
+      if (pz < PAD - 1) sp = visit(idx + PAD, sp);
+      if (row > 1) sp = visit(idx - P2, sp);
+      if (row < top + 2) sp = visit(idx + P2, sp);
+    }
+    return sky;
+
+    function visit(n, at) {
+      if (sky[n]) return at;
+      const id = vol[n];
+      if (id < 0 || !OPEN[id]) return at;
+      sky[n] = 1;
+      stack[at] = n;
+      return at + 1;
+    }
+  }
+
+  maskFor(n) {
+    if (!this.mask || this.mask.length < n) this.mask = new Int32Array(n);
+    return this.mask;
   }
 
   /**
@@ -395,24 +574,34 @@ export class ChunkMesher {
     const key = bufferKeyFor(id);
     let buf = byType.get(key);
     if (!buf) {
-      buf = { position: [], normal: [], color: [], uv: [], layer: [], index: [] };
+      buf = new QuadBuffer();
       byType.set(key, buf);
     }
+    if (buf.quads === buf.cap) buf.grow(buf.cap * 2);
 
-    const origin = [0, 0, 0];
-    origin[d] = slice + (sign > 0 ? 1 : 0); // the face sits on the far side for +d
-    origin[u] = i;
-    origin[v] = j;
-    const du = [0, 0, 0]; du[u] = w;
-    const dv = [0, 0, 0]; dv[v] = h;
+    const o = this.origin;
+    o[d] = slice + (sign > 0 ? 1 : 0); // the face sits on the far side for +d
+    o[u] = i;
+    o[v] = j;
+    const ox = o[0], oy = o[1], oz = o[2];
+    const ux = u === 0 ? w : 0, uy = u === 1 ? w : 0, uz = u === 2 ? w : 0;
+    const vx = v === 0 ? h : 0, vy = v === 1 ? h : 0, vz = v === 2 ? h : 0;
 
-    const base = buf.position.length / 3;
-    buf.position.push(
-      origin[0], origin[1], origin[2],
-      origin[0] + du[0], origin[1] + du[1], origin[2] + du[2],
-      origin[0] + du[0] + dv[0], origin[1] + du[1] + dv[1], origin[2] + du[2] + dv[2],
-      origin[0] + dv[0], origin[1] + dv[1], origin[2] + dv[2],
-    );
+    // Reverse the winding for negative faces so both stay counter-clockwise
+    // seen from outside and back-face culling keeps working. Baked into the
+    // vertex order rather than the index, so every quad shares one index
+    // pattern: a positive face runs origin, +u, +u+v, +v; a negative one
+    // runs origin, +v, +u+v, +u.
+    let ax, ay, az, bx, by, bz;
+    if (sign > 0) { ax = ux; ay = uy; az = uz; bx = vx; by = vy; bz = vz; }
+    else { ax = vx; ay = vy; az = vz; bx = ux; by = uy; bz = uz; }
+
+    const q = buf.quads;
+    const P = buf.position, p = q * 12;
+    P[p] = ox; P[p + 1] = oy; P[p + 2] = oz;
+    P[p + 3] = ox + ax; P[p + 4] = oy + ay; P[p + 5] = oz + az;
+    P[p + 6] = ox + ux + vx; P[p + 7] = oy + uy + vy; P[p + 8] = oz + uz + vz;
+    P[p + 9] = ox + bx; P[p + 10] = oy + by; P[p + 11] = oz + bz;
 
     const nx = d === 0 ? sign : 0, ny = d === 1 ? sign : 0, nz = d === 2 ? sign : 0;
     const shade = d === 1 ? (sign > 0 ? SHADE.py : SHADE.ny) : d === 0 ? SHADE.px : SHADE.pz;
@@ -426,25 +615,35 @@ export class ChunkMesher {
     // green". Brightness alone left a field looking like one colour under
     // patchy cloud — the hue has to move as well, or it is still one colour.
     const vary = VARIATION[id];
-    const light = 1 + vary * (patchNoise(origin[0], origin[2]) - 0.5);
-    const skew = vary * 0.55 * (patchNoise(origin[2] + 8191, origin[0] - 3137) - 0.5);
-    const r = col.r * shade * (light - skew);
-    const g = col.g * shade * (light + skew * 0.7);
-    const b = col.b * shade * (light - skew * 0.35);
-
-    const layer = layerFor(id);
-    for (let k = 0; k < 4; k++) {
-      buf.normal.push(nx, ny, nz);
-      buf.color.push(r, g, b);
-      buf.layer.push(layer);
+    let r = col.r * shade, g = col.g * shade, b = col.b * shade;
+    if (vary) {
+      const light = 1 + vary * (patchNoise(ox, oz) - 0.5);
+      const skew = vary * 0.55 * (patchNoise(oz + 8191, ox - 3137) - 0.5);
+      r *= light - skew;
+      g *= light + skew * 0.7;
+      b *= light - skew * 0.35;
     }
-    // Corners of the quad in tile space: 0,0 to w,h, so one tile covers one
-    // block however many blocks the quad ended up spanning.
-    buf.uv.push(0, 0, w, 0, w, h, 0, h);
 
-    // Reverse the winding for negative faces so both stay counter-clockwise
-    // seen from outside and back-face culling keeps working.
-    if (sign > 0) buf.index.push(base, base + 1, base + 2, base, base + 2, base + 3);
-    else buf.index.push(base, base + 3, base + 2, base, base + 2, base + 1);
+    const N = buf.normal, C = buf.color;
+    for (let k = 0; k < 12; k += 3) {
+      N[p + k] = nx; N[p + k + 1] = ny; N[p + k + 2] = nz;
+      C[p + k] = r; C[p + k + 1] = g; C[p + k + 2] = b;
+    }
+    const layer = layerTable()[id];
+    const L = buf.layer, l = q * 4;
+    L[l] = layer; L[l + 1] = layer; L[l + 2] = layer; L[l + 3] = layer;
+    // Corners of the quad in tile space: 0,0 to w,h along u and v, so one
+    // tile covers one block however many blocks the quad ended up spanning.
+    // They follow the vertex order above, which swaps u and v for a
+    // negative face.
+    const U = buf.uv, t = q * 8;
+    if (sign > 0) {
+      U[t] = 0; U[t + 1] = 0; U[t + 2] = w; U[t + 3] = 0;
+      U[t + 4] = w; U[t + 5] = h; U[t + 6] = 0; U[t + 7] = h;
+    } else {
+      U[t] = 0; U[t + 1] = 0; U[t + 2] = 0; U[t + 3] = h;
+      U[t + 4] = w; U[t + 5] = h; U[t + 6] = w; U[t + 7] = 0;
+    }
+    buf.quads = q + 1;
   }
 }

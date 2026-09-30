@@ -51,6 +51,11 @@ function rateText(produces, everySeconds) {
   return `Makes ${makes} a ${daily ? 'day' : 'minute'}`;
 }
 
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+const escapeAttr = escapeHtml;
+
 export class DuiltUI {
   constructor(root, { game, bus, panels }) {
     this.root = root;
@@ -178,6 +183,7 @@ export class DuiltUI {
     this.q('#btn-claim-column').addEventListener('click', () => this.game.beginClaimColumn());
     this.q('#btn-claim-area').addEventListener('click', () => this.game.beginClaimSelection());
     this.q('#btn-store-all').addEventListener('click', () => this.storeEverything());
+    this.wireSlotTip();
 
     this.bus.on('inventory:change', () => {
       this.renderBag();
@@ -277,6 +283,7 @@ export class DuiltUI {
   }
 
   onPanelClosed(id) {
+    this.hideSlotTip();
     if (id === 'panel-bag') this.held = null;
     if (id === 'panel-building') this.building = null;
     // The open storehouse is forgotten on the way out, so the next one you
@@ -536,7 +543,7 @@ export class DuiltUI {
     const worn = spec?.durability ? Math.round((1 - s.wear / spec.durability) * 100) : null;
     const colour = `#${(spec?.color ?? 0x888888).toString(16).padStart(6, '0')}`;
     const button = `
-      <button class="bag-slot ${held ? 'held' : ''}" ${attr}="${i}" aria-label="${itemName(s.id)}, ${s.count}" title="${this.slotTooltip(s, spec)}">
+      <button class="bag-slot ${held ? 'held' : ''}" ${attr}="${i}" aria-label="${itemName(s.id)}, ${s.count}" data-tip="${escapeAttr(itemName(s.id))}" data-tip-info="${escapeAttr(this.itemBits(s, spec).join(' · '))}">
         <span class="swatch${itemIcon(spec) ? ' swatch-cube' : ''}"${itemIcon(spec) ? '' : ` style="background:${colour}"`}>${
           itemIcon(spec, { size: 34 }) ?? glyphSvg(spec?.glyph, { size: 20, color: spec?.color ?? 0x888888 })}</span>
         ${s.count > 1 ? `<span class="count">${s.count}</span>` : ''}
@@ -593,6 +600,7 @@ export class DuiltUI {
       ? `Holding ${itemName(slots[this.held]?.id ?? '')} — tap a slot to put it down.`
       : 'Tap an item to lift it, tap a slot to put it down. Hold to split a stack.';
     this.renderDetail();
+    this.refreshSlotTip();
   }
 
   /** Tap lifts and drops; a long hold splits. Identical on mouse and finger. */
@@ -668,17 +676,63 @@ export class DuiltUI {
   }
 
   /**
-   * The name-and-what-it-does hover card for a slot — requested directly:
-   * finding out what an item is used to mean lifting it first, which is
-   * also the gesture that moves it, so learning what something was cost a
-   * misplaced item as often as not. A native `title` rather than a built
-   * card: the same lightweight approach the block hotbar's own locked-slot
-   * tooltip already uses (see UIManager.buildHotbar), so hover means the
-   * same thing everywhere in the game rather than two different tooltip
-   * systems for two different kinds of slot.
+   * The name-and-what-it-does card over whichever slot the mouse is on.
+   *
+   * This was a native `title` first, and it didn't work in play: the browser
+   * waits a second or more of perfect stillness before showing one, and the
+   * bag re-renders its whole grid on every inventory change (a building
+   * producing, a stack landing), which throws the hovered button away and
+   * resets that wait — so in a live world it effectively never appeared.
+   * This card shows at once, is delegated from the panel root so it needs no
+   * per-button wiring, and re-finds its slot by index after a re-render.
    */
-  slotTooltip(s, spec) {
-    return [itemName(s.id), ...this.itemBits(s, spec)].join(' — ');
+  wireSlotTip() {
+    const tip = document.createElement('div');
+    tip.className = 'slot-tip';
+    tip.hidden = true;
+    tip.setAttribute('role', 'tooltip');
+    this.root.appendChild(tip);
+    this.tip = tip;
+    this.tipAt = null; // { attr, index } of the hovered slot
+
+    this.el.addEventListener('pointerover', (e) => {
+      if (e.pointerType === 'touch') return;
+      const btn = e.target.closest?.('.bag-slot[data-tip]');
+      if (btn) this.showSlotTip(btn);
+    });
+    this.el.addEventListener('pointerout', (e) => {
+      const btn = e.target.closest?.('.bag-slot[data-tip]');
+      if (btn && !btn.contains(e.relatedTarget)) this.hideSlotTip();
+    });
+    this.el.addEventListener('scroll', () => this.hideSlotTip(), true);
+  }
+
+  showSlotTip(btn) {
+    const attr = ['data-slot', 'data-store-slot', 'data-bag-slot'].find((a) => btn.hasAttribute(a));
+    this.tipAt = { attr, index: btn.getAttribute(attr) };
+    const info = btn.dataset.tipInfo;
+    this.tip.innerHTML = `<strong>${escapeHtml(btn.dataset.tip)}</strong>${info ? `<span>${escapeHtml(info)}</span>` : ''}`;
+    this.tip.hidden = false;
+    const r = btn.getBoundingClientRect();
+    const t = this.tip.getBoundingClientRect();
+    const left = Math.max(8, Math.min(window.innerWidth - t.width - 8, r.left + r.width / 2 - t.width / 2));
+    const top = r.top - t.height - 8 >= 8 ? r.top - t.height - 8 : r.bottom + 8;
+    this.tip.style.left = `${left}px`;
+    this.tip.style.top = `${top}px`;
+  }
+
+  hideSlotTip() {
+    this.tipAt = null;
+    if (this.tip) this.tip.hidden = true;
+  }
+
+  /** After a grid re-render, points the card at the new button for the same slot. */
+  refreshSlotTip() {
+    if (!this.tipAt) return;
+    const { attr, index } = this.tipAt;
+    const btn = this.el.querySelector(`.bag-slot[${attr}="${index}"]`);
+    if (btn?.dataset.tip && btn.offsetParent) this.showSlotTip(btn);
+    else this.hideSlotTip();
   }
 
   /** What the lifted or first item actually is — the bag shouldn't be a colour puzzle. */
@@ -748,6 +802,7 @@ export class DuiltUI {
       g.querySelectorAll('[data-bag-slot]').forEach((btn) =>
         btn.addEventListener('click', () => this.putInStore(Number(btn.dataset.bagSlot))));
     }
+    this.refreshSlotTip();
 
     const kind = summary.tier?.name ?? 'On the shelves';
     this.q('#store-where').textContent = summary.free

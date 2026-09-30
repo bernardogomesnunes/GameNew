@@ -196,7 +196,7 @@ export class World {
     if (id === AIR || id === WATER) return null;
     const shape = shapeOf(id);
     if (NO_COLLISION_SHAPES.has(shape)) return null;
-    if (HALF_SHAPES.has(shape)) return { minY: y, maxY: y + 0.5 };
+    if (HALF_SHAPES.has(shape)) return { minY: y, maxY: y + 0.5, stair: shape === 'stair' };
     return { minY: y, maxY: y + 1 };
   }
 
