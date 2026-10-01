@@ -428,6 +428,29 @@ BLOCKS.push(
   },
 );
 
+// A bed (playtest, P1): two blocks long, put down the way you face — the
+// foot where you aimed, the head beyond it. Like a door's two halves, the
+// head is a state of the foot and goes with it (Game.withBedHalves).
+export const BED = 193;
+export const BED_HEAD = 197;
+quad(BED, { name: 'Bed', glyph: 'bed', color: 0xb84a3e, shape: 'bed_foot', material: 'wood', unlock: null });
+quad(BED_HEAD, { name: 'Bed', glyph: 'bed', color: 0xb84a3e, shape: 'bed_head', material: 'wood', stateOf: BED, part: 'head', unlock: null });
+/** { head, facing } for either half of a bed, or null. */
+export function bedPart(id) {
+  if (id < BED || id > BED_HEAD + 3) return null;
+  return { head: id >= BED_HEAD, facing: (id - BED) & 3 };
+}
+/** Quarter-turn facing to a step: 0 is -z, 1 +x, 2 +z, 3 -x. */
+export const FACING_STEP = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+
+// A painting (playtest, P1): hung flat on the wall you face. Place on it
+// sets where you wake after you fall (Game.setSpawn).
+export const PAINTING = 201;
+quad(PAINTING, { name: 'Painting', glyph: 'painting', color: 0x8a6440, shape: 'painting', material: 'wood', unlock: null });
+export function isPainting(id) {
+  return id >= PAINTING && id <= PAINTING + 3;
+}
+
 /** Whether a block is a trapdoor, open or shut, whichever way it faces. */
 export function isTrapdoor(id) {
   return id >= TRAPDOOR && id <= TRAPDOOR_OPEN + 3;

@@ -69,6 +69,8 @@ export class DuiltGame {
     this.ring = null;
     // What your Sanctuary called to you, once it's raised (Phase 7d).
     this.guardian = null;
+    // The painting you wake by after a fall, if you chose one (playtest, P1).
+    this.spawn = null;
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you` : null),
@@ -745,6 +747,7 @@ export class DuiltGame {
       worn: this.worn,
       ring: this.ring,
       guardian: this.guardian?.toJSON() ?? null,
+      spawn: this.spawn,
       chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, found: c.found, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
@@ -766,6 +769,8 @@ export class DuiltGame {
     this.hunger.loadJSON(data.hunger);
     this.health.loadJSON(data.health);
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
+    const sp = data.spawn;
+    this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
     const gd = data.guardian;
     this.guardian = gd && (gd.ring === 'white' || gd.ring === 'black') && gd.home
       ? new Guardian({ world: this.world, ring: gd.ring, home: gd.home, state: gd })

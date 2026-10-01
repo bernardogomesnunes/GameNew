@@ -191,6 +191,10 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
   }
   const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
     ? fenceBoxes(shape, { px: 1, nx: 1 })
+    : shape === 'bed_foot'
+      // Both halves, foot nearer, squeezed into the one cell.
+      ? [...boxesFor('bed_head').map((b) => ({ ...b, minZ: b.minZ / 2, maxZ: b.maxZ / 2 })),
+        ...boxesFor('bed_foot').map((b) => ({ ...b, minZ: 0.5 + b.minZ / 2, maxZ: 0.5 + b.maxZ / 2 }))]
     : shape === 'wall'
       // A post with the wall running off one side, so it reads as a wall.
       ? wallBoxes({ px: 1 })

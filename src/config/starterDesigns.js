@@ -12,13 +12,16 @@
  */
 
 import { ITEM_FOR_BLOCK } from './items.js';
-import { doorBlock, roofBlock } from './blocks.js';
+import { doorBlock, roofBlock, BED, BED_HEAD, FACING_STEP, PAINTING } from './blocks.js';
 import { ROOFS_BY_ID } from './roofs.js';
 import { cropBlock } from './crops.js';
 import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
 
 const DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, PLANKS = 7, COBBLE = 8,
       BRICK = 9, GOLD = 13, MARBLE = 17, SAPLING = 20, FARMLAND = 21, FENCE = 47, GATE = 48;
+
+// Furniture for the houses (playtest, P1) — see blocks.js.
+const WINDOW = 176, OAK_TABLE = 31, OAK_CHAIR = 33, RED_RUG = 35, LANTERN_BLOCK = 26;
 
 // Requested directly: "we should revisit improving the templates of the
 // buildings, adding a roof and door to every building is minimum." Every
@@ -147,6 +150,11 @@ function houseBlocks() {
     ...blocks.filter((b) => !(b.dz === 0 && b.dx === 2 && (b.dy === 1 || b.dy === 2))),
     ...door(2, 1, 0),
     ...gable(0, 0, 5, 5, 4, SLATE, WOOD),
+    // Somewhere to sleep, and a painting over it — where you wake after a
+    // fall, once you've chosen it (playtest, P1). Both are first-age things;
+    // windows and the rest come with the townhouse.
+    ...bed(1, 1, 2, 2),
+    { dx: 3, dy: 2, dz: 3, type: PAINTING + 2 },
   ];
 }
 
@@ -292,7 +300,33 @@ function monumentBlocks() {
 
 /** A bigger, better-finished room than a house's — three households' worth. */
 function townhouseBlocks() {
-  return room({ w: 8, h: 3, wall: PLANKS, floor: STONE, tiles: TILE });
+  // Furnished (playtest, P1): framed windows front, back and sides, two
+  // beds, a table with chairs, a rug, a lantern and a painting.
+  const shell = room({ w: 8, h: 3, wall: PLANKS, floor: STONE, tiles: TILE });
+  const windows = [[2, 2, 7, 0], [5, 2, 7, 0], [0, 2, 3, 1], [0, 2, 5, 1], [7, 2, 3, 1], [7, 2, 5, 1]];
+  const at = new Set(windows.map(([x, y, z]) => `${x},${y},${z}`));
+  return [
+    ...shell.filter((b) => !at.has(`${b.dx},${b.dy},${b.dz}`)),
+    ...windows.map(([dx, dy, dz, f]) => ({ dx, dy, dz, type: WINDOW + f })),
+    ...bed(2, 1, 5, 2),
+    ...bed(5, 1, 5, 2),
+    { dx: 5, dy: 1, dz: 2, type: OAK_TABLE },
+    { dx: 6, dy: 1, dz: 2, type: OAK_CHAIR },
+    { dx: 4, dy: 1, dz: 2, type: OAK_CHAIR },
+    { dx: 3, dy: 1, dz: 3, type: RED_RUG },
+    { dx: 4, dy: 1, dz: 3, type: RED_RUG },
+    { dx: 1, dy: 1, dz: 1, type: LANTERN_BLOCK },
+    { dx: 3, dy: 2, dz: 6, type: PAINTING + 2 },
+  ];
+}
+
+/** A bed with its foot at (dx, dy, dz), facing `f` — both halves (playtest, P1). */
+function bed(dx, dy, dz, f) {
+  const [sx, sz] = FACING_STEP[f];
+  return [
+    { dx, dy, dz, type: BED + f },
+    { dx: dx + sx, dy, dz: dz + sz, type: BED_HEAD + f },
+  ];
 }
 
 /** A room with a brick hearth for a floor — the brick is the hearth the rule asks for. */

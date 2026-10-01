@@ -38,6 +38,9 @@ g.inventory.add('wood', 200);
 // The cabin has a door and a slate roof now.
 g.inventory.add('door', 1);
 g.inventory.add('roof_stone', 30);
+// And a bed and a painting in it (playtest, P1).
+g.inventory.add('bed', 1);
+g.inventory.add('painting', 1);
 const b = g.territory.bounds();
 const anchor = { x: b.minX + 4, y: 30, z: b.minZ + 4 };
 const plan = g.starterPlacement('house', anchor);

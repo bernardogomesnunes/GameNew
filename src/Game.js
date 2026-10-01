@@ -51,7 +51,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, bedPart, BED_HEAD, FACING_STEP, isPainting } from './config/blocks.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
@@ -153,6 +153,7 @@ export function swingLabel(id) {
   if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
   if (isChest(id)) return 'Open';
   if (isCatapult(id)) return 'Man';
+  if (isPainting(id)) return 'Home';
   if (isTrapdoor(id)) return id >= TRAPDOOR_OPEN ? 'Close' : 'Open';
   const door = doorPart(id);
   return door ? (door.open ? 'Close' : 'Open') : null;
@@ -1471,6 +1472,8 @@ export class Game {
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
     // And at a chest, Place opens it.
     if (aimed && isChest(aimed.block)) return void this.openChest(aimed);
+    // And at a painting, Place makes it where you wake (playtest, P1).
+    if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
     // And at a catapult, Place takes hold of it.
     if (aimed && isCatapult(aimed.block)) return void this.manCatapult(aimed);
     // A full bucket takes the button too, instead of placing a block.
@@ -3179,7 +3182,7 @@ export class Game {
     const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you', catapult: 'Your own stone came down on you' }[cause] ?? 'You died';
     this.ui?.toast({
       kind: 'xp',
-      title: `${how} — you woke at home`,
+      title: `${how} — you woke ${this.duilt.spawn ? 'by your painting' : 'at home'}`,
       body: left
         ? `What you were carrying is in a chest where you fell, at ${x}, ${z}`
         : 'You had nothing with you to leave behind',
@@ -3196,8 +3199,57 @@ export class Game {
     this.ui?.toast({ kind: 'challenge', title: 'Got everything back', body: 'The chest is gone' });
   }
 
-  /** Where you wake after dying: a safe spot near the middle of your land. */
+  /** Place on a painting: that's where you wake after you fall (playtest, P1). */
+  setSpawn({ x, y, z }) {
+    if (!this.duilt) return;
+    this.duilt.spawn = { x, y, z };
+    this.ui.toast({ kind: 'challenge', title: 'You\'ll wake here', body: 'When you fall, this is where you come to — by your painting' });
+  }
+
+  isSpawnAt({ x, y, z }) {
+    const s = this.duilt?.spawn;
+    return !!s && s.x === x && s.y === y && s.z === z;
+  }
+
+  /**
+   * Where you wake after dying: beside the painting you chose, if it still
+   * hangs (playtest, P1); otherwise a safe spot near the middle of your land.
+   */
   respawnPoint() {
+    const s = this.duilt?.spawn;
+    if (s) {
+      if (isPainting(this.world.getBlock(s.x, s.y, s.z))) {
+        const near = this.standingNear(s.x, s.y, s.z);
+        if (near) return near;
+      } else {
+        this.duilt.spawn = null; // the painting's gone; so is the promise
+      }
+    }
+    return this.homeSpawn();
+  }
+
+  /** A cell to stand in within a few blocks of (x, y, z): solid under it, two clear above. */
+  standingNear(x, y, z) {
+    const w = this.world;
+    for (let r = 0; r <= 3; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dz = -r; dz <= r; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          for (let dy = -2; dy <= 1; dy++) {
+            const cx = x + dx, cy = y + dy, cz = z + dz;
+            const under = w.getBlock(cx, cy - 1, cz);
+            if (w.isCollidable(cx, cy - 1, cz) && !isLava(under) && !w.isCollidable(cx, cy, cz) && !w.isCollidable(cx, cy + 1, cz)) {
+              return { x: cx + 0.5, y: cy, z: cz + 0.5 };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  /** The middle of your land: where you wake with no painting. */
+  homeSpawn() {
     const b = this.duilt?.territory.bounds?.();
     const cx = b ? Math.floor((b.minX + b.maxX + 1) / 2) : Math.floor(this.player.position.x);
     const cz = b ? Math.floor((b.minZ + b.maxZ + 1) / 2) : Math.floor(this.player.position.z);
@@ -3224,7 +3276,7 @@ export class Game {
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
     // shouldn't go on to build against it.
-    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block)) return;
+    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block) || isPainting(hit.block)) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
@@ -3233,6 +3285,7 @@ export class Game {
     }
     const held = this.placedBlock(type);
     const door = doorPart(held);
+    const bed = bedPart(held);
     const crop = cropOf(held);
     const targets = this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
     const changes = [];
@@ -3254,7 +3307,20 @@ export class Game {
         if (above !== AIR && !isFlowing(above)) continue;
         changes.push({ ...up, prev: above, next: doorBlock({ ...doorPart(next), top: true }) });
       }
+      if (bed) {
+        // A bed's head goes in the next cell along, the way it faces.
+        const [sx, sz] = FACING_STEP[bedPart(next).facing];
+        const head = { x: t.x + sx, y: t.y, z: t.z + sz };
+        if (!this.world.inBounds(head.x, head.y, head.z) || this.blockOverlapsPlayerAABB(head)) continue;
+        const there = this.world.getBlock(head.x, head.y, head.z);
+        if (there !== AIR && !isFlowing(there)) continue;
+        changes.push({ ...head, prev: there, next: BED_HEAD + bedPart(next).facing });
+      }
       changes.push({ x: t.x, y: t.y, z: t.z, prev, next });
+    }
+    if (bed && !changes.length) {
+      this.ui.toast({ kind: 'xp', title: 'No room for a bed', body: 'It needs two blocks of clear floor, the way you face' });
+      return;
     }
     if (door && !changes.length) {
       this.ui.toast({ kind: 'xp', title: 'No room for a door', body: 'It needs two blocks of clear space' });
@@ -3331,6 +3397,27 @@ export class Game {
     return out;
   }
 
+  /**
+   * A bed is one thing in two blocks, the same as a door: whatever takes
+   * one half away takes the other with it (playtest, P1).
+   */
+  withBedHalves(changes) {
+    let out = changes;
+    for (const c of changes) {
+      const part = bedPart(c.prev);
+      if (!part || bedPart(c.next)) continue;
+      const [sx, sz] = FACING_STEP[part.facing];
+      const ox = part.head ? c.x - sx : c.x + sx, oz = part.head ? c.z - sz : c.z + sz;
+      const other = this.world.getBlock(ox, c.y, oz);
+      const op = bedPart(other);
+      if (!op || op.head === part.head || op.facing !== part.facing) continue;
+      if (out.some((o) => o.x === ox && o.y === c.y && o.z === oz)) continue;
+      if (out === changes) out = [...changes];
+      out.push({ x: ox, y: c.y, z: oz, prev: other, next: AIR });
+    }
+    return out;
+  }
+
   blockOverlapsPlayerAABB(t) {
     const p = this.player.position;
     const withinX = Math.abs((t.x + 0.5) - p.x) < 0.8; // block half-extent + player half-width
@@ -3350,7 +3437,7 @@ export class Game {
    * has a tool that takes a lot away again.
    */
   applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
-    changes = this.withUprooted(this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z))));
+    changes = this.withUprooted(this.withBedHalves(this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z)))));
     if (!changes.length) return false;
 
     // Duilt has its own economy: the border says where, the bag says whether.
@@ -3976,9 +4063,10 @@ export class Game {
     const chest = hit && isChest(hit.block);
     const catapult = hit && isCatapult(hit.block);
     const trapdoor = hit && isTrapdoor(hit.block);
+    const painting = hit && isPainting(hit.block);
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door || chest || catapult || trapdoor) && swingLabel(hit.block);
+    const swing = (gate || door || chest || catapult || trapdoor || painting) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     this.ui?.setBuildingHint(gate
       ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
@@ -3990,6 +4078,8 @@ export class Game {
         ? `Catapult — ${how}`
       : trapdoor
         ? `Trapdoor · ${hit.block >= TRAPDOOR_OPEN ? 'open' : 'shut'} — ${how}`
+      : painting
+        ? (this.isSpawnAt(hit) ? 'Painting · you wake here after a fall' : `Painting — ${how} to wake here after a fall`)
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')

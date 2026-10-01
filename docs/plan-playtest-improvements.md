@@ -14,6 +14,8 @@ What's already there to build on:
 ## P1. Homes worth living in
 *"Houses should have windows and furniture. We should have a bed too. Windows and bed should be an item of course. We should have a painting in each house and as an item, that can set the spawn point for when we die."*
 
+**Done.** The bed and painting are made by hand at Age 1 (bed: 4 planks + 3 leaves; painting: 2 planks, dirt, leaves). Tap Place on a painting to wake there. The cabin gets a bed and a painting; the townhouse gets six framed windows, two beds, a table, chairs, rugs, a lantern and a painting. House rules are unchanged.
+
 - **Bed:** a new block, two cells long, placed the way you face, with a wooden frame, mattress and pillow. Made at the bench from planks and wool.
   - Lying in it at night could skip to morning. That's an idea, not something the user asked for.
 - **Painting:** a new block hung flat on a wall, with a few framed scenes that cycle as you place it. Made at the bench.

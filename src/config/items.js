@@ -210,6 +210,9 @@ export const ITEMS = [
   { id: 'banner_black', name: 'Black Banner', kind: 'refined', stackTo: STACK_GOODS, color: 0x2e2a33, glyph: 'banner', block: 186, madeBy: 'Woven black, with the red tower of the stone' },
   { id: 'firefly_lantern', name: 'Firefly Lantern', kind: 'refined', stackTo: STACK_GOODS, color: 0xd9ec9a, glyph: 'lantern', block: 190, madeBy: 'Glass, with fireflies you caught in it' },
   { id: 'fireflies', name: 'Fireflies', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8ff5a, glyph: 'firefly', madeBy: 'Caught at night — Break on a swarm' },
+  // Homes (playtest, P1).
+  { id: 'bed', name: 'Bed', kind: 'refined', stackTo: STACK_GOODS, color: 0xb84a3e, glyph: 'bed', block: 193, madeBy: 'Planks, stuffed with leaves — two blocks long, put down the way you face' },
+  { id: 'painting', name: 'Painting', kind: 'refined', stackTo: STACK_GOODS, color: 0x8a6440, glyph: 'painting', block: 201, madeBy: 'A little landscape in a frame — Place on it to wake there when you fall' },
   { id: 'catapult', name: 'Catapult', kind: 'refined', stackTo: STACK_GOODS, color: 0x8a6440, glyph: 'catapult', block: 152, madeBy: 'Built at the bench — Place mans it, Break throws a stone' },
   { id: 'chest', name: 'Chest', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a6b3f, glyph: 'chest', block: 148, madeBy: 'Knocked together from planks — Place opens it' },
   { id: 'door', name: 'Door', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08a60, glyph: 'door', block: 69, madeBy: 'Hung from planks — Place opens and shuts it' },
@@ -305,7 +308,7 @@ export const ITEM_FOR_BLOCK = new Map(
 // back that block's item. See blocks.js's `stateOf`. The top half of a door
 // gives nothing: the door is its bottom half, and the two go together.
 for (const b of BLOCKS) {
-  if (b.stateOf != null && b.part !== 'top' && ITEM_FOR_BLOCK.has(b.stateOf)) ITEM_FOR_BLOCK.set(b.id, ITEM_FOR_BLOCK.get(b.stateOf));
+  if (b.stateOf != null && b.part == null && ITEM_FOR_BLOCK.has(b.stateOf)) ITEM_FOR_BLOCK.set(b.id, ITEM_FOR_BLOCK.get(b.stateOf));
 }
 
 export function itemName(id) {

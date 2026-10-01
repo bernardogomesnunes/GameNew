@@ -290,6 +290,15 @@ export const RECIPES = [
     output: { id: 'sword_iron', count: 1 },
     blurb: 'Foundry iron. Hits hardest and lasts longest.',
   },
+  // Homes (playtest, P1): a bed and a painting, both from the first age.
+  {
+    id: 'bed', name: 'Bed', station: 'hand', age: 1, inputs: { planks: 4, leaves: 3 }, output: { id: 'bed', count: 1 },
+    blurb: 'A frame, a mattress stuffed with leaves, a blanket. Two blocks long.',
+  },
+  {
+    id: 'painting', name: 'Painting', station: 'hand', age: 1, inputs: { planks: 2, dirt: 1, leaves: 1 }, output: { id: 'painting', count: 1 },
+    blurb: 'Earth and leaves for paint. Hang it in your house — Place on it, and that is where you wake after a fall.',
+  },
   // The catapult (Phase 6c): put it down, man it, throw stones that break
   // whatever they land on. Ammunition is stone from your bag.
   {

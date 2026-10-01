@@ -60,6 +60,9 @@ export const GLYPHS = {
   // what says pickaxe rather than axe.
   pickaxe: 'M12 20 12.5 12.5M8 8c1.5-3 6-3 7.5 0M8 8 5 11.5M15.5 8 18.5 11.5',
   // Straight shaft into a blade that tapers to a rounded point.
+  // Homes (playtest, P1).
+  bed: 'M3.5 18.5v-7h17v7M3.5 15.5h17M3.5 11.5V7.5M6 11.5c0-1.6 1.3-2.5 3-2.5h2v2.5M20.5 11.5h-9',
+  painting: 'M4.5 5.5h15v13h-15ZM6.5 15.5l4-4.5 3 3 2-2 2.5 3.5M15 9a1.2 1.2 0 1 0 .01 0',
   // Phase 7c: the Temple.
   devotion: 'M12 3.5c2.5 3.2 4.5 5.6 4.5 9a4.5 4.5 0 0 1-9 0c0-3.4 2-5.8 4.5-9ZM12 14a1.6 1.6 0 1 0 .01 0M12 18.5V21',
   flask: 'M10 3.5h4M10.5 3.5V8L6.5 15.5A3 3 0 0 0 9.2 20h5.6a3 3 0 0 0 2.7-4.5L13.5 8V3.5M8 14h8',
