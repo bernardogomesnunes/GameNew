@@ -105,6 +105,7 @@ export class Wanderers {
 
     for (const p of this.list) {
       if (p.hurt > 0) p.hurt = Math.max(0, p.hurt - dt);
+      if (p.fear > 0) p.fear = Math.max(0, p.fear - dt);
       this.think(p, dt, player);
       this.move(p, dt);
     }
@@ -198,6 +199,12 @@ export class Wanderers {
     if (ground != null && ground <= p.y + 1) { p.x = kx; p.z = kz; }
     p.vy = 3;
     return { killed: false, drops: {} };
+  }
+
+  /** A bandit losing its nerve for `seconds` — it breaks and runs (Phase 7d). */
+  scare(p, seconds) {
+    if (!WANDERERS[p.kind]?.hp) return;
+    p.fear = Math.max(p.fear ?? 0, seconds);
   }
 
   rollDrops(drops = {}) {
@@ -348,7 +355,8 @@ export class Wanderers {
     const d = Math.hypot(dx, dz) || 1;
     const hostile = p.angry || this.hostile();
 
-    if (p.hp <= spec.fleeBelow) {
+    // Badly hurt, or frightened (the black guardian — scare()): it runs.
+    if (p.hp <= spec.fleeBelow || p.fear > 0) {
       if (d > spec.aggro * 2) {
         // Got away. A camp bandit licks its wounds; a raider goes home.
         if (p.raider) { p.done = true; return true; }

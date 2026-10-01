@@ -43,8 +43,28 @@ The Temple, devotion and the rings (`tests/temple.test.mjs`).
   - the White Ring (Sunstone and gold) gives 1.2× speed and 1.3× jump;
   - the Black Ring (Nightstone and obsidian) sparks back at a bandit that hits you.
 
+## Phase 7d is done too
+The Sanctuary and the guardian (`tests/sanctuary.test.mjs`).
+- **The Sanctuaries:**
+  - White: marble, lights, open sky. Black: obsidian or dark stone round a pit.
+  - Each can only be raised by the bearer of its ring (`DuiltGame.ringRefuses`), and has a starter design and an achievement.
+- **The guardian** comes when your Sanctuary is claimed (`world/Guardian.js`, `render/GuardianView.js`):
+  - Aurelion, the white stag: fast, and heals you while you're near it;
+  - Umbra, the shadow beast: bandits near it lose their nerve and run (`Wanderers.scare`);
+  - both fight bandits and take blows back.
+- **Orders:** tap it to cycle follow → stay → hunt. This stands in for the soldiers' command wheel, which comes later.
+- **Downed:** it goes back to its Sanctuary and returns after a day of play (900 s). It's saved with the world.
+
 ## Next
-- **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7d: your god's Sanctuary and its guardian.
+- **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7e, the Stone Kingdom, or the white path.
+- **Playtest improvements:** from the user's own play session, in `docs/plan-playtest-improvements.md`:
+  - P1: bed, painting spawn point, furnished houses;
+  - P2: forest lighting;
+  - P3: mob models, third-person avatar;
+  - P4: ruins, temples, mines and monuments with chests;
+  - P5: beer, kombucha and coffee;
+  - P6: enchanted armour and elemental swords.
+  - These can go in between lore steps; the user picks the order.
 - Still open:
   - far terrain should show what the player built (#130);
   - sound: music, ambience and separate volume sliders (#133).

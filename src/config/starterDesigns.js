@@ -247,6 +247,39 @@ function templeBlocks() {
   return blocks;
 }
 
+/**
+ * The White Sanctuary (Phase 7d): a sky-marble floor open to the sky,
+ * marble pillars at its corners each crowned with a firefly lantern, and
+ * a gold altar in the middle.
+ */
+function whiteSanctuaryBlocks() {
+  const SKY_MARBLE = 158, GOLD_TRIM = 159, MARBLE_PILLAR = 166, FIREFLY = 190;
+  const blocks = [...slab(0, 0, 7, 7, 0, SKY_MARBLE)];
+  blocks.push(...ring(0, 0, 7, 7, 0, GOLD_TRIM));
+  for (const [dx, dz] of [[1, 1], [5, 1], [1, 5], [5, 5]]) {
+    for (const dy of [1, 2, 3]) blocks.push({ dx, dy, dz, type: MARBLE_PILLAR });
+    blocks.push({ dx, dy: 4, dz, type: FIREFLY });
+  }
+  blocks.push({ dx: 3, dy: 1, dz: 3, type: GOLD });
+  return blocks;
+}
+
+/**
+ * The Black Sanctuary (Phase 7d): an obsidian ring round an open pit, with
+ * dark pillars at its corners and black banners on them.
+ */
+function blackSanctuaryBlocks() {
+  const OBSIDIAN = 14, DARK_STONE = 156, DARK_PILLAR = 167;
+  const blocks = [...ring(0, 0, 7, 7, 0, DARK_STONE), ...ring(1, 1, 5, 5, 0, OBSIDIAN)];
+  blocks.push(...ring(0, 0, 7, 7, 1, OBSIDIAN).filter((b) => !(b.dz === 0 && b.dx === 3)));
+  for (const [dx, dz] of [[0, 0], [6, 0], [0, 6], [6, 6]]) {
+    for (const dy of [2, 3]) blocks.push({ dx, dy, dz, type: DARK_PILLAR });
+  }
+  // The pit: the middle three by three is left open, and the region runs
+  // up over it — that open middle is the pit the rules ask for.
+  return blocks;
+}
+
 function monumentBlocks() {
   const blocks = [...ring(0, 0, 7, 7, 0, BRICK)];
   blocks.push(...ring(1, 1, 5, 5, 1, BRICK));
@@ -445,6 +478,24 @@ export const STARTER_DESIGNS = [
     footprint: '9 × 9',
     note: 'A shrine on a platform with room to grow — build it up into a temple where it stands.',
     blocks: templeBlocks(),
+  },
+  {
+    id: 'starter_sanctuary_white',
+    structure: 'sanctuary_white',
+    name: 'White Sanctuary',
+    size: 7,
+    footprint: '7 × 7',
+    note: 'Open to the sky. Only the bearer of the White Ring can raise it.',
+    blocks: whiteSanctuaryBlocks(),
+  },
+  {
+    id: 'starter_sanctuary_black',
+    structure: 'sanctuary_black',
+    name: 'Black Sanctuary',
+    size: 7,
+    footprint: '7 × 7',
+    note: 'A pit ringed in obsidian. Only the bearer of the Black Ring can raise it.',
+    blocks: blackSanctuaryBlocks(),
   },
   {
     id: 'starter_monument',

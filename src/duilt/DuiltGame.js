@@ -15,6 +15,7 @@ import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, 
 import { AIR } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
+import { Guardian } from '../world/Guardian.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
 
 /**
@@ -66,6 +67,8 @@ export class DuiltGame {
     this.skills = new Skills(bus);
     // Which ring you forged, if any: 'white' or 'black' — for good (Phase 7c).
     this.ring = null;
+    // What your Sanctuary called to you, once it's raised (Phase 7d).
+    this.guardian = null;
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you` : null),
@@ -246,21 +249,50 @@ export class DuiltGame {
       const check = validateStructure(this.world, region, spec.id);
       const overlapping = this.structures.overlaps(region);
       const inside = this.territory.containsRegion(region);
-      let ok = check.ok && !overlapping && inside;
+      const wrongGod = this.ringRefuses(spec);
+      let ok = check.ok && !overlapping && inside && !wrongGod;
       let reason = check.reason;
-      if (!inside) reason = 'That reaches outside your land';
+      if (wrongGod) reason = wrongGod;
+      else if (!inside) reason = 'That reaches outside your land';
       else if (overlapping) reason = 'That overlaps a building you already have';
       return { id: spec.id, name: spec.name, icon: spec.icon, blurb: spec.blurb, ok, reason };
     });
   }
 
+  /** The guardian of `ring`, standing in the middle of its Sanctuary. */
+  summonGuardian(ring, region) {
+    const home = {
+      x: (region.minX + region.maxX + 1) / 2, y: region.minY + 1, z: (region.minZ + region.maxZ + 1) / 2,
+    };
+    this.guardian = new Guardian({ world: this.world, ring, home });
+    this.bus?.emit('guardian:summoned', { guardian: this.guardian });
+    return this.guardian;
+  }
+
+  /**
+   * Why a building can't be yours because of the ring you forged — a
+   * Sanctuary only rises for its own god's bearer (Phase 7d) — or null.
+   */
+  ringRefuses(spec) {
+    if (!spec?.ring || this.sandbox) return null;
+    const god = spec.ring === 'white' ? 'White' : 'Black';
+    if (!this.ring) return `Only the bearer of the ${god} Ring can raise this — forge one at the High Temple`;
+    if (this.ring !== spec.ring) return `You bear the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the ${god} Sanctuary is not for you`;
+    return null;
+  }
+
   claim(region, typeId) {
+    const wrongGod = this.ringRefuses(STRUCTURES_BY_ID.get(typeId));
+    if (wrongGod) return { ok: false, reason: wrongGod };
     if (!this.territory.containsRegion(region)) {
       return { ok: false, reason: 'That reaches outside your land' };
     }
     const result = this.structures.claim(region, typeId, {
       discount: this.skills.claimDiscount(), free: this.sandbox,
     });
+    // Raising your god's Sanctuary calls its guardian to you (Phase 7d).
+    const raised = STRUCTURES_BY_ID.get(typeId);
+    if (result.ok && raised?.ring && !this.guardian) this.summonGuardian(raised.ring, region);
     if (result.ok && !this.sandbox) {
       const spec = STRUCTURES_BY_ID.get(typeId);
       if (spec?.skill) this.skills.record(spec.skill, 5);
@@ -712,6 +744,7 @@ export class DuiltGame {
       health: this.health.toJSON(),
       worn: this.worn,
       ring: this.ring,
+      guardian: this.guardian?.toJSON() ?? null,
       chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, found: c.found, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
@@ -733,6 +766,10 @@ export class DuiltGame {
     this.hunger.loadJSON(data.hunger);
     this.health.loadJSON(data.health);
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
+    const gd = data.guardian;
+    this.guardian = gd && (gd.ring === 'white' || gd.ring === 'black') && gd.home
+      ? new Guardian({ world: this.world, ring: gd.ring, home: gd.home, state: gd })
+      : null;
     for (const k of WEAR_SLOTS) {
       const w = data.worn?.[k];
       this.worn[k] = w && ITEMS_BY_ID.get(w.id)?.wears === k ? { id: w.id, wear: Number(w.wear) || 0 } : null;
