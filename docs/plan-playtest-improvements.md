@@ -48,6 +48,19 @@ What's already there to build on:
 ## P3. Better mobs, and you
 *"All mobs need remodelling for more detailed visuals. And user needs an avatar that can be seen in 3rd person, which can be changed in settings, especially for mobile; in desktop there should be a key."*
 
+**Done.**
+- **Animals:** every species has eyes and its own details on top of the walking legs it already had:
+  - antlers on the deer, long ears on the rabbit, tusks on the boar;
+  - horns and a beard on the goat, horns and an udder on the cow, a snout on the pig;
+  - a beak, comb, wattle and tail on the chicken; a tail on each.
+- **People:** settlers, bandits, the hermit, explorers and messengers have legs, arms that swing as they walk, a face in a skin tone and hair of their own.
+- **Your avatar:**
+  - face, hair and clothes are chosen in Settings;
+  - your armour shows on it;
+  - its limbs swing as you walk, and it holds what you hold.
+- **Views:** three in turn (your eyes, behind, in front), via F5 (rebindable), a View button in the More sheet on phones, or Settings. The choice is remembered. The camera pulls in short of walls, and you always aim from your eyes.
+- **In your hand (P7):** first person draws what you hold in 3D (swords, tools, bucket, food, blocks), bobbing as you walk and swinging when you strike or place.
+
 - **Mob models:** more detailed models for every animal (legs that walk, heads, tails, ears) and for people (settlers, bandits, wanderers), with arms and legs that swing as they walk.
 - **Your avatar:**
   - a player model you see in third person;
