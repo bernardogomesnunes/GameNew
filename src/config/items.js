@@ -164,6 +164,7 @@ export const ITEMS = [
   { id: 'stairs_stone', name: 'Stone Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stair', block: 29, madeBy: 'Cut into steps from stone' },
   { id: 'fence', name: 'Fence', kind: 'refined', stackTo: STACK_BULK, color: 0xc9a67c, glyph: 'fence', block: 47, madeBy: 'Knocked together from planks' },
   { id: 'gate', name: 'Gate', kind: 'refined', stackTo: STACK_GOODS, color: 0xa9825a, glyph: 'gate', block: 48, madeBy: 'Hung from planks — you pass, animals don\'t' },
+  { id: 'chest', name: 'Chest', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a6b3f, glyph: 'chest', block: 148, madeBy: 'Knocked together from planks — Place opens it' },
   { id: 'door', name: 'Door', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08a60, glyph: 'door', block: 69, madeBy: 'Hung from planks — Place opens and shuts it' },
   { id: 'stairs_plank', name: 'Plank Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'stair', block: 30, madeBy: 'Cut into steps from planks' },
   { id: 'table_oak', name: 'Oak Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xd1b38c, glyph: 'table', block: 31, madeBy: 'Built at the workshop' },

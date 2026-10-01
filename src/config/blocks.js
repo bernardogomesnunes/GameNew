@@ -307,6 +307,22 @@ CROPS.forEach((c, k) => {
   }
 });
 
+// A chest: slots you can open, in a wooden box with iron bands. Phase 6 —
+// chosen directly: when you die, "we need to have a chest item, 3d
+// modelled, that has slots; when we die the chest appears in place with my
+// items". It's also something you make and put down yourself, for storage
+// that isn't a whole storehouse. Like a chair it faces you when you put it
+// down; its three other facings are states of it.
+export const CHEST = 148;
+BLOCKS.push({ id: CHEST, name: 'Chest', glyph: 'chest', color: 0x9a6b3f, shape: 'chest', material: 'wood', cost: { planks: 6 }, facing: 0, chest: true, unlock: null });
+for (let f = 1; f <= 3; f++) {
+  BLOCKS.push({ ...BLOCKS.find((b) => b.id === CHEST), id: CHEST + f, stateOf: CHEST, facing: f, cost: undefined });
+}
+/** Whether a block is a chest, whichever way it faces. */
+export function isChest(id) {
+  return id >= CHEST && id <= CHEST + 3;
+}
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /** Ground a tree will take root in. */
@@ -391,6 +407,7 @@ export function turned(id, facing) {
   if (roof) return roofBlock({ ...roof, facing });
   const door = doorPart(id);
   if (door) return doorBlock({ ...door, facing });
+  if (isChest(id)) return CHEST + facing;
   const baseId = b.stateOf ?? id;
   const k = TURNS.indexOf(baseId);
   return facing === 0 ? baseId : TURN_BASE + 3 * k + facing;

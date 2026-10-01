@@ -250,6 +250,17 @@ export const RECIPES = [
     blurb: 'Cut into a step instead of a slab.',
   },
   {
+    // Somewhere to keep things that isn't a whole storehouse — and the
+    // same box you'll find your things in where you fell.
+    id: 'chest',
+    name: 'Chest',
+    station: 'hand',
+    age: 1,
+    inputs: { planks: 6 },
+    output: { id: 'chest', count: 1 },
+    blurb: 'Twenty-seven slots in a box you can put anywhere. Place opens it.',
+  },
+  {
     id: 'fence',
     name: 'Fence',
     station: 'hand',

@@ -93,6 +93,7 @@ export const GLYPHS = {
   chandelier: 'M12 3v5M5 12h14M5 12v-2.5M19 12v-2.5M12 12V9.5M8.5 12l-.5 4h8l-.5-4M12 16v3',
   rooftile: 'M3 17 12 7l9 10M6 13.6l9 3.4M9 10.2l9 3.4M3 17h18',
   door: 'M7 3.5h10v17H7ZM9.5 6h5v5h-5ZM14.5 13.5h.01',
+  chest: 'M4 9.5h16v10H4ZM4.5 9.5c0-2.5 2-4 4-4h7c2 0 4 1.5 4 4M4 12.5h16M11 11h2v3h-2Z',
   egg: 'M12 4c3.6 0 6 5.2 6 9a6 6 0 0 1-12 0c0-3.8 2.4-9 6-9Z',
   milk: 'M9 4h6M9.5 4v3L7 10.5V20h10v-9.5L14.5 7V4M7 13.5h10',
 

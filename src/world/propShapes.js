@@ -104,6 +104,25 @@ PROP_SHAPES.chandelier = [
   ]),
 ];
 
+// A chest: a wooden body and a slightly wider lid, iron bands over both, iron
+// corners, and a latch on the front (-z, so it faces you the way a chair
+// does — see Game.placedBlock).
+const OAK = 0x9a6b3f, LID = 0xa87a4a;
+PROP_SHAPES.chest = [
+  { minX: 0.07, maxX: 0.93, minY: 0, maxY: 0.58, minZ: 0.12, maxZ: 0.88, color: OAK },
+  { minX: 0.05, maxX: 0.95, minY: 0.58, maxY: 0.8, minZ: 0.1, maxZ: 0.9, color: LID },
+  // Bands, front to back over the lid and down both faces.
+  ...[0.22, 0.72].flatMap((x) => [
+    { minX: x, maxX: x + 0.06, minY: 0.8, maxY: 0.83, minZ: 0.09, maxZ: 0.91, color: IRON },
+    { minX: x, maxX: x + 0.06, minY: 0, maxY: 0.8, minZ: 0.09, maxZ: 0.11, color: IRON },
+    { minX: x, maxX: x + 0.06, minY: 0, maxY: 0.8, minZ: 0.89, maxZ: 0.91, color: IRON },
+  ]),
+  // The rim where the lid meets the body.
+  { minX: 0.06, maxX: 0.94, minY: 0.56, maxY: 0.6, minZ: 0.105, maxZ: 0.895, color: IRON },
+  // The latch.
+  { minX: 0.44, maxX: 0.56, minY: 0.48, maxY: 0.68, minZ: 0.06, maxZ: 0.1, color: 0xc9a44c },
+];
+
 // Crops: every stage of every one — see config/crops.js.
 for (const c of CROPS) for (let s = 0; s <= RIPE; s++) PROP_SHAPES[`crop_${c.kind}_${s}`] = cropBoxes(c.kind, s);
 
