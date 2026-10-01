@@ -4156,6 +4156,8 @@ export class Game {
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
       this.tickWar();
+      // The border, drawn again where its ground has loaded since.
+      this.duilt?.territory.refreshIfStale();
       this.collectFallen();
       this.tickCatapult(dt);
       this.fireflies.tick(dt, this.player.position, 1 - daylightAt(this.dayCycle.time).day, {

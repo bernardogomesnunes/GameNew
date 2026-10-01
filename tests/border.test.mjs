@@ -172,8 +172,10 @@ ok(`movement inside the border is unaffected (${stuckInside} stuck)`, stuckInsid
   const wallMeshes = g.territory.fence.children.filter((c) => c.isMesh);
   ok('the border wall is one mesh, not one per side', wallMeshes.length === 1);
   const geo = wallMeshes[0].geometry;
+  // One quad per block of edge, standing on the ground there (see
+  // bordercurtain.test.mjs) — four sides of `size` columns each.
   ok('and it actually carries all four sides\' worth of geometry',
-    geo.attributes.position.count === 4 * 2 * 13); // 4 walls × PlaneGeometry(w,h,1,12)'s (1+1)×(12+1) grid
+    geo.attributes.position.count === 4 * 4 * g.territory.size);
 }
 
 process.exit(f ? 1 : 0);
