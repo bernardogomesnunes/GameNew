@@ -51,12 +51,14 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid } from './config/blocks.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox } from './world/Mobs.js';
+import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './world/Projectiles.js';
+import { ProjectileView } from './render/ProjectileView.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
@@ -144,9 +146,16 @@ const swings = (id) => !!GATE_SWING[id] || !!doorPart(id);
 export function swingLabel(id) {
   if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
   if (isChest(id)) return 'Open';
+  if (isCatapult(id)) return 'Man';
   const door = doorPart(id);
   return door ? (door.open ? 'Close' : 'Open') : null;
 }
+// The catapult (Phase 6c) — see manCatapult.
+const CATAPULT_RELOAD = 2;      // seconds between throws
+const CATAPULT_REACH = 4;       // walk further than this from it and you let go
+const CATAPULT_MIN_THROW = 6;   // it won't drop a stone closer than this
+const CATAPULT_AMMO = ['stone', 'cobblestone'];
+const STONE_HITS = 14;          // what a stone does to anyone it lands on
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
 
@@ -312,6 +321,7 @@ export class Game {
     this.mobView = new MobView(this.scene);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
+    this.projectileView = new ProjectileView(this.scene);
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -1399,6 +1409,8 @@ export class Game {
 
   primaryAction() {
     if (this.moving) return void this.cancelMove();
+    // Manning a catapult, Break throws.
+    if (this.manning) return void this.throwStone();
     // A queued tool takes the button it needs and nothing else does. There is
     // no mode to be in any more: if nothing is queued, Break breaks.
     if (this.pendingClaim) return void this.markClaimCorner();
@@ -1422,12 +1434,15 @@ export class Game {
     // way to turn it. See setToolReadout, which labels it to match.
     if (this.pendingRoof?.turns > 1) return void this.turnRoof();
     if (this.armed) return void this.clearPending();
+    if (this.manning) return void this.letGo();
     // Pointing at a gate, Place opens or shuts it — before anything you're
     // holding gets a say, the same way you'd reach for a latch.
     const aimed = this.raycast();
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
     // And at a chest, Place opens it.
     if (aimed && isChest(aimed.block)) return void this.openChest(aimed);
+    // And at a catapult, Place takes hold of it.
+    if (aimed && isCatapult(aimed.block)) return void this.manCatapult(aimed);
     // A full bucket takes the button too, instead of placing a block.
     const override = PLACE_OVERRIDE[this.selectedItemId] ?? (isFood(this.selectedItemId) ? 'throwSelected' : null);
     if (override) return void this[override]();
@@ -2684,7 +2699,158 @@ export class Game {
     return loot;
   }
 
+  // ---- the catapult (Phase 6c) ------------------------------------------------
+  //
+  // Chosen directly: "a buildable siege engine you aim and fire. Stones fly
+  // on real arcs and break blocks where they land." Place takes hold of it;
+  // you aim by looking where you want the stone to come down — the arc and
+  // a ring show where it will — and Break throws. Place again, or walking
+  // off, lets go.
+
+  manCatapult(hit) {
+    this.manning = { x: hit.x, y: hit.y, z: hit.z, reload: 0, v: null };
+    this.digTarget = null;
+    this.ui.setActionLabels('Throw', 'Let go');
+    this.ui.toast({
+      kind: 'challenge',
+      title: 'Manning the catapult',
+      body: this.ui.isTouch
+        ? 'Look where you want the stone to land, then Throw. Let go when you\'re done.'
+        : 'Look where you want the stone to land. Left click throws, right click lets go.',
+    });
+  }
+
+  letGo() {
+    this.manning = null;
+    this.projectileView.setAim(null);
+    this.ui?.setBuildingHint(null);
+    this.ui?.setActionLabels(...this.ui.defaultActionLabels());
+  }
+
+  /** Where a stone leaves the catapult: its cup. */
+  cupOf({ x, y, z }) {
+    return { x: x + 0.5, y: y + 1.35, z: z + 0.5 };
+  }
+
+  /**
+   * Where you're aiming: the first solid thing along your look, as far as
+   * the catapult can throw — or, looking at open sky, its longest throw
+   * that way. Never nearer than CATAPULT_MIN_THROW, so it can't be made to
+   * drop a stone on your own head.
+   */
+  catapultTarget(from) {
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    // Looked for from just past the catapult: you stand behind it, and
+    // looking out over it shouldn't count as aiming at it.
+    const skip = Math.hypot(from.x - eye.x, from.z - eye.z) + 1;
+    const start = { x: eye.x + dir.x * skip, y: eye.y + dir.y * skip, z: eye.z + dir.z * skip };
+    const hit = castVoxelRay(this.world, start, dir, MAX_RANGE * 1.5);
+    const flat = Math.hypot(dir.x, dir.z) || 1;
+    const fx = dir.x / flat, fz = dir.z / flat;
+    let t = hit
+      ? { x: hit.placeX + 0.5, y: hit.placeY, z: hit.placeZ + 0.5 }
+      : { x: from.x + fx * MAX_RANGE, y: from.y, z: from.z + fz * MAX_RANGE };
+    const d = Math.hypot(t.x - from.x, t.z - from.z);
+    if (d < CATAPULT_MIN_THROW) {
+      const x = from.x + fx * CATAPULT_MIN_THROW, z = from.z + fz * CATAPULT_MIN_THROW;
+      t = { x, y: this.world.surfaceHeight(Math.floor(x), Math.floor(z)) + 1, z };
+    }
+    return t;
+  }
+
+  /** Stones in flight, and the aim while you're manning one. Every frame. */
+  tickCatapult(dt) {
+    this.projectiles?.tick(dt);
+    const m = this.manning;
+    if (!m) return;
+    const p = this.player.position;
+    if (!isCatapult(this.world.getBlock(m.x, m.y, m.z))
+      || Math.hypot(p.x - m.x - 0.5, p.z - m.z - 0.5) > CATAPULT_REACH) {
+      this.letGo();
+      return;
+    }
+    m.reload = Math.max(0, m.reload - dt);
+    const from = this.cupOf(m);
+    const target = this.catapultTarget(from);
+    m.v = bestAim(this.world, from, target);
+    const arc = predictArc(this.world, from, m.v);
+    this.projectileView.setAim({ points: arc.points, landed: arc.landed, inRange: m.v.inRange });
+    const land = arc.landed ?? target;
+    const dist = Math.round(Math.hypot(land.x - from.x, land.z - from.z));
+    const stones = this.catapultAmmo();
+    m.hint = `Catapult · ${dist} blocks${m.v.inRange ? '' : ' — as far as it throws'}`
+      + (m.reload > 0 ? ' · winding back' : stones ? ` · ${stones.count} ${stones.name}` : ' · no stone');
+  }
+
+  /** What there is to throw: stone first, then cobblestone. Free in Creative. */
+  catapultAmmo() {
+    if (!this.duilt || this.duilt.sandbox) return { id: 'stone', count: '∞', name: 'stone' };
+    for (const id of CATAPULT_AMMO) {
+      const count = this.duilt.inventory.countOf(id);
+      if (count > 0) return { id, count, name: itemName(id).toLowerCase() };
+    }
+    return null;
+  }
+
+  throwStone() {
+    const m = this.manning;
+    if (!m?.v || m.reload > 0) return;
+    const ammo = this.catapultAmmo();
+    if (!ammo) {
+      this.ui.toast({ kind: 'xp', title: 'Nothing to throw', body: 'Carry stone or cobblestone in your bag' });
+      return;
+    }
+    if (this.duilt && !this.duilt.sandbox) this.duilt.inventory.remove(ammo.id, 1);
+    this.projectiles.fire(this.cupOf(m), m.v);
+    m.reload = CATAPULT_RELOAD;
+    // It swings round to face the throw.
+    const facing = Math.abs(m.v.vx) > Math.abs(m.v.vz) ? (m.v.vx > 0 ? 1 : 3) : (m.v.vz < 0 ? 0 : 2);
+    const id = turned(CATAPULT, facing);
+    if (this.world.getBlock(m.x, m.y, m.z) !== id) {
+      this.world.setBlock(m.x, m.y, m.z, id);
+      this.remeshDirty();
+    }
+    this.sound?.hit?.('wood', { gain: 0.7, pitch: 0.45, length: 2 });
+  }
+
+  /**
+   * A stone coming down: a crater of blocks knocked out, and a heavy blow
+   * to anyone standing there. Your own claimed buildings, chests and
+   * bedrock are spared — a stone thrown at a camp shouldn't cost you the
+   * storehouse it happened to clip on the way.
+   */
+  stoneLands(landed) {
+    const c = { x: landed.cell.x + 0.5, y: landed.cell.y + 0.5, z: landed.cell.z + 0.5 };
+    let broke = 0;
+    for (const { x, y, z, id } of craterCells(this.world, c)) {
+      if (this.world.isIndestructible(x, y, z) || isChest(id) || isFluid(id)) continue;
+      if (this.duilt?.structures.at(x, y, z)) continue;
+      this.world.setBlock(x, y, z, AIR);
+      broke++;
+    }
+    if (broke) this.remeshDirty();
+    this.sound?.break?.('stone');
+
+    const near = (o, r) => Math.hypot(o.x - c.x, o.z - c.z) < r && Math.abs(o.y - c.y) < 3;
+    for (const p of this.wanderers?.list ?? []) {
+      if (!WANDERERS[p.kind].hp || !near(p, 2.5)) continue;
+      const res = this.wanderers.hit(p, STONE_HITS, c.x, c.z);
+      if (res?.killed) {
+        const gained = this.duilt?.collect(res.drops) ?? {};
+        const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+        this.ui.toast({ kind: 'xp', title: `The stone got ${p.name}, a bandit`, body: got || undefined });
+      }
+    }
+    for (const mob of this.mobs?.list ?? []) {
+      if (mob.dying || !near(mob, 2.5)) continue;
+      const res = this.mobs.hit(mob, STONE_HITS, c.x, c.z);
+      if (res.killed) this.duilt?.collect(res.drops);
+    }
+    if (near(this.player.position, 2)) this.duilt?.hurt(8, 'catapult');
+  }
+
   breakBlock() {
+    if (this.manning) return;
     const hit = this.raycast();
     if (this.hitBandit(hit)) return;
     if (this.hitMob(hit)) return;
@@ -2862,7 +3028,7 @@ export class Game {
     this.duilt.health.restore();
     this.sound?.break?.('wood');
     this.ui?.duiltUI?.flashHurt(true);
-    const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you' }[cause] ?? 'You died';
+    const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you', catapult: 'Your own stone came down on you' }[cause] ?? 'You died';
     this.ui?.toast({
       kind: 'xp',
       title: `${how} — you woke at home`,
@@ -2910,7 +3076,7 @@ export class Game {
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
     // shouldn't go on to build against it.
-    if (swings(hit.block) || isChest(hit.block)) return;
+    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block)) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
@@ -3398,6 +3564,7 @@ export class Game {
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
+      this.tickCatapult(dt);
       this.runWater(dt);
       this.growCrops(dt);
       this.tickBreaking(performance.now());
@@ -3423,6 +3590,7 @@ export class Game {
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
     this.wanderView.update(this.wanderers?.list ?? []);
+    this.projectileView.update(this.projectiles?.list ?? []);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -3490,6 +3658,11 @@ export class Game {
         avoid: (x, z) => !!(this.duilt && !this.duilt.sandbox && this.duilt.territory.contains(x, z)),
       });
       this.mobsHerdOf = null;
+    }
+    if (this.projectiles?.world !== this.world) {
+      this.projectiles = new Projectiles({ world: this.world, onImpact: (s, landed) => this.stoneLands(landed) });
+      this.manning = null;
+      this.projectileView.setAim(null);
     }
     if (this.wanderers?.world !== this.world) {
       this.wanderers = new Wanderers({
@@ -3562,6 +3735,13 @@ export class Game {
     // adapt so place should be open or close depending on the door stage."
     // Pointed at a door or a gate with nothing queued, Place says which it
     // will do.
+    // Manning a catapult the crosshair is for aiming, and the line under it
+    // says how the throw is set — see tickCatapult.
+    if (this.manning) {
+      this.hoverBox.visible = false;
+      this.ui?.setBuildingHint(this.manning.hint ?? 'Catapult', { manage: false });
+      return;
+    }
     this.ui?.setAimedSwing(!this.armed && !this.moving && hit ? swingLabel(hit.block) : null);
 
     // A building in the air follows where you look. Done here rather than on
@@ -3622,9 +3802,10 @@ export class Game {
     const gate = hit && GATE_SWING[hit.block];
     const door = hit && doorPart(hit.block);
     const chest = hit && isChest(hit.block);
+    const catapult = hit && isCatapult(hit.block);
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door || chest) && swingLabel(hit.block);
+    const swing = (gate || door || chest || catapult) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     this.ui?.setBuildingHint(gate
       ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
@@ -3632,6 +3813,8 @@ export class Game {
         ? `Door · ${door.open ? 'open' : 'shut'} — ${how}`
       : chest
         ? `${this.duilt?.chestAt(hit.x, hit.y, hit.z, { create: false })?.grave ? 'What you were carrying' : 'Chest'} — ${how}`
+      : catapult
+        ? `Catapult — ${how}`
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')

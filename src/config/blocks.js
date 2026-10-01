@@ -323,6 +323,19 @@ export function isChest(id) {
   return id >= CHEST && id <= CHEST + 3;
 }
 
+// A catapult (Phase 6c): a small siege engine on wheels. Place mans it; you
+// aim by looking where you want the stone to come down, and Break throws.
+// It turns to face the way it's thrown; its other facings are states of it.
+export const CATAPULT = 152;
+BLOCKS.push({ id: CATAPULT, name: 'Catapult', glyph: 'catapult', color: 0x8a6440, shape: 'catapult', material: 'wood', cost: { planks: 10 }, facing: 0, catapult: true, unlock: null });
+for (let f = 1; f <= 3; f++) {
+  BLOCKS.push({ ...BLOCKS.find((b) => b.id === CATAPULT), id: CATAPULT + f, stateOf: CATAPULT, facing: f, cost: undefined });
+}
+/** Whether a block is a catapult, whichever way it faces. */
+export function isCatapult(id) {
+  return id >= CATAPULT && id <= CATAPULT + 3;
+}
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /** Ground a tree will take root in. */
@@ -408,6 +421,7 @@ export function turned(id, facing) {
   const door = doorPart(id);
   if (door) return doorBlock({ ...door, facing });
   if (isChest(id)) return CHEST + facing;
+  if (isCatapult(id)) return CATAPULT + facing;
   const baseId = b.stateOf ?? id;
   const k = TURNS.indexOf(baseId);
   return facing === 0 ? baseId : TURN_BASE + 3 * k + facing;

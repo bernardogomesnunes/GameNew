@@ -60,6 +60,7 @@ export const GLYPHS = {
   // what says pickaxe rather than axe.
   pickaxe: 'M12 20 12.5 12.5M8 8c1.5-3 6-3 7.5 0M8 8 5 11.5M15.5 8 18.5 11.5',
   // Straight shaft into a blade that tapers to a rounded point.
+  catapult: 'M3.5 16.5h17M7 19a2 2 0 1 0 .01 0M17 19a2 2 0 1 0 .01 0M12 16.5l5-10M14.5 6.5h5M16.5 4.5a1.6 1.6 0 1 0 .01 0M8.5 16.5v-6h7',
   sword: 'M19 5 10 14M19 5h-3.5M19 5v3.5M7.5 11.5l5 5M10 14l-4.5 4.5',
   shovel: 'M12 4v10M8.5 14h7L15 18.5a3 3 0 0 1-6 0Z',
   // Tapered, with a handle over the rim. Straight sides made it a waste bin.

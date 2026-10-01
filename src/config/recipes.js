@@ -288,6 +288,17 @@ export const RECIPES = [
     output: { id: 'sword_iron', count: 1 },
     blurb: 'Foundry iron. Hits hardest and lasts longest.',
   },
+  // The catapult (Phase 6c): put it down, man it, throw stones that break
+  // whatever they land on. Ammunition is stone from your bag.
+  {
+    id: 'catapult',
+    name: 'Catapult',
+    station: 'hand',
+    age: 3,
+    inputs: { planks: 10, wood: 4, stone: 6 },
+    output: { id: 'catapult', count: 1 },
+    blurb: 'A stone-thrower on wheels. Look where you want it to land; it does the rest.',
+  },
   {
     id: 'fence',
     name: 'Fence',
