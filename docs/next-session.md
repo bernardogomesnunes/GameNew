@@ -13,8 +13,11 @@ Phase 6 (combat) is finished:
   - Break throws a stone from your bag. It lobs at 50°, or 70° to clear a wall, with the force set to the distance;
   - where a stone lands it knocks out a crater and hurts bandits and animals under it. Your claimed buildings, chests and bedrock are spared.
 
+## Phase 7a is done too
+The decorative pack: dark stone and dark brick; sky-marble, gold trim and firefly lanterns; timber framing; walls that join like fences; pillars that stack into one column; trapdoors that open with Place; framed windows with see-through glass; vases, urns and both banners. All are made at the bench (`tests/decor.test.mjs`).
+
 ## Next
-- **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Start with 7a, the decorative block pack.
+- **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7b: armour and ring slots.
 - Still open:
   - far terrain should show what the player built (#130);
   - sound: music, ambience and separate volume sliders (#133).

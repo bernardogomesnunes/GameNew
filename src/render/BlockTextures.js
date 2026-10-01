@@ -241,6 +241,24 @@ function paint(recipe, salt) {
     }
   }
 
+  // Timber framing (Phase 7a): dark oak beams round the edge and a brace
+  // corner to corner, tinted brown over the plaster the block is coloured.
+  if (recipe.beams) {
+    const w = recipe.beams;
+    const [tr, tg, tb] = recipe.beamTint ?? [0.5, 0.36, 0.24];
+    const beam = (x, y) => {
+      const i = y * n + x;
+      tint[i * 3] = tr; tint[i * 3 + 1] = tg; tint[i * 3 + 2] = tb;
+      darken(x, y, 0.1 + ((x * 7 + y * 3) % 5) * 0.02);
+    };
+    for (let i = 0; i < n; i++) {
+      for (let k = 0; k < w; k++) {
+        beam(i, k); beam(i, n - 1 - k); beam(k, i); beam(n - 1 - k, i);
+        beam(i, Math.min(n - 1, i + k));
+      }
+    }
+  }
+
   // A darker lip along the edges, for a block that reads as having a rim.
   if (recipe.band) {
     const w = recipe.band;

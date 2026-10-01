@@ -1,6 +1,6 @@
 import { BLOCKS_BY_ID, shapeOf } from './blocks.js';
 import { GLYPHS, inkOn } from './glyphs.js';
-import { boxesFor, fenceBoxes } from '../world/propShapes.js';
+import { boxesFor, fenceBoxes, wallBoxes } from '../world/propShapes.js';
 import { slopeGeometry, orient } from '../world/slopes.js';
 import { tileFor, TILE_SIZE } from '../render/BlockTextures.js';
 import { ITEM_MODELS } from './itemModels.js';
@@ -191,11 +191,15 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
   }
   const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
     ? fenceBoxes(shape, { px: 1, nx: 1 })
+    : shape === 'wall'
+      // A post with the wall running off one side, so it reads as a wall.
+      ? wallBoxes({ px: 1 })
     : shape === 'door'
       // Both halves, squeezed into the one cell the icon has room for.
       ? [...boxesFor('door').map((b) => squeeze(b, 0)), ...boxesFor('door_top').map((b) => squeeze(b, 1))]
       : boxesFor(shape);
-  return boxesSvg(boxes, spec.color ?? 0x888888, size);
+  // Anything taller than its cell (a banner on its pole) is zoomed to fit.
+  return boxesSvg(boxes, spec.color ?? 0x888888, size, { fit: boxes.some((b) => b.maxY > 1.05) });
 }
 
 /**

@@ -51,7 +51,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN } from './config/blocks.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
@@ -141,12 +141,13 @@ const WATER_STEP_SECONDS = 0.25;
 const LAVA_STEP_SECONDS = 1;
 const GATE_SWING = { [GATE_SHUT]: GATE_OPEN, [GATE_OPEN]: GATE_SHUT };
 /** A gate or either half of a door: something Place swings rather than builds on. */
-const swings = (id) => !!GATE_SWING[id] || !!doorPart(id);
+const swings = (id) => !!GATE_SWING[id] || !!doorPart(id) || isTrapdoor(id);
 /** What Place does to a door or gate — "Open" or "Close" — or null for anything else. */
 export function swingLabel(id) {
   if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
   if (isChest(id)) return 'Open';
   if (isCatapult(id)) return 'Man';
+  if (isTrapdoor(id)) return id >= TRAPDOOR_OPEN ? 'Close' : 'Open';
   const door = doorPart(id);
   return door ? (door.open ? 'Close' : 'Open') : null;
 }
@@ -2909,16 +2910,17 @@ export class Game {
   toggleGate(hit) {
     // A door swings both its halves together.
     const door = doorPart(hit.block);
+    const trap = isTrapdoor(hit.block);
     const cells = door ? this.doorCells(hit) : [{ x: hit.x, y: hit.y, z: hit.z, block: hit.block }];
-    const shutting = door ? door.open : GATE_SWING[hit.block] === GATE_SHUT;
+    const shutting = door ? door.open : trap ? hit.block >= TRAPDOOR_OPEN : GATE_SWING[hit.block] === GATE_SHUT;
     if (shutting && cells.some((c) => this.blockOverlapsPlayerAABB(c))) {
-      this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : 'Step out of the gateway first' });
+      this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : trap ? 'Step out from under it first' : 'Step out of the gateway first' });
       return;
     }
     this.sound?.creak(!shutting);
     for (const c of cells) {
       const part = doorPart(c.block);
-      const next = part ? doorBlock({ ...part, open: !part.open }) : GATE_SWING[c.block];
+      const next = part ? doorBlock({ ...part, open: !part.open }) : trap ? swungTrapdoor(c.block) : GATE_SWING[c.block];
       this.world.setBlock(c.x, c.y, c.z, next);
       this.water?.touch(c.x, c.y, c.z);
       this.lava?.touch(c.x, c.y, c.z);
@@ -3803,9 +3805,10 @@ export class Game {
     const door = hit && doorPart(hit.block);
     const chest = hit && isChest(hit.block);
     const catapult = hit && isCatapult(hit.block);
+    const trapdoor = hit && isTrapdoor(hit.block);
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door || chest || catapult) && swingLabel(hit.block);
+    const swing = (gate || door || chest || catapult || trapdoor) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     this.ui?.setBuildingHint(gate
       ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
@@ -3815,6 +3818,8 @@ export class Game {
         ? `${this.duilt?.chestAt(hit.x, hit.y, hit.z, { create: false })?.grave ? 'What you were carrying' : 'Chest'} — ${how}`
       : catapult
         ? `Catapult — ${how}`
+      : trapdoor
+        ? `Trapdoor · ${hit.block >= TRAPDOOR_OPEN ? 'open' : 'shut'} — ${how}`
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')
