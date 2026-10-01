@@ -20,11 +20,15 @@ const box = (x0, y0, z0, x1, y1, z1, color) => ({ minX: x0, minY: y0, minZ: z0, 
 const HAFT = 0x8a6440, IRON = 0xb9bec6, DARK = 0x5a5f66;
 
 /** Models for the hand only — the bag keeps its drawings of these. */
+/*
+ * A head or a blade always faces -x — the way the hand swings it: towards
+ * the middle of the screen in first person, forward from the avatar's hand.
+ */
 export const HELD_MODELS = {
-  axe: [box(0.45, 0, 0.45, 0.55, 0.9, 0.55, HAFT), box(0.55, 0.62, 0.42, 0.8, 0.9, 0.58, IRON), box(0.78, 0.6, 0.43, 0.84, 0.92, 0.57, DARK)],
+  axe: [box(0.45, 0, 0.45, 0.55, 0.9, 0.55, HAFT), box(0.22, 0.6, 0.43, 0.45, 0.88, 0.57, IRON), box(0.16, 0.56, 0.44, 0.24, 0.92, 0.56, DARK)],
   pickaxe: [box(0.45, 0, 0.45, 0.55, 0.88, 0.55, HAFT), box(0.12, 0.8, 0.44, 0.88, 0.92, 0.56, IRON), box(0.08, 0.72, 0.45, 0.16, 0.84, 0.55, IRON), box(0.84, 0.72, 0.45, 0.92, 0.84, 0.55, IRON)],
-  shovel: [box(0.46, 0.25, 0.46, 0.54, 1, 0.54, HAFT), box(0.36, 0, 0.47, 0.64, 0.3, 0.53, IRON)],
-  pry_bar: [box(0.46, 0, 0.46, 0.54, 0.86, 0.54, DARK), box(0.46, 0.8, 0.46, 0.7, 0.88, 0.54, DARK)],
+  shovel: [box(0.46, 0.3, 0.46, 0.54, 1, 0.54, HAFT), box(0.36, 0, 0.47, 0.64, 0.34, 0.53, IRON)],
+  pry_bar: [box(0.46, 0, 0.46, 0.54, 0.86, 0.54, DARK), box(0.3, 0.8, 0.46, 0.54, 0.88, 0.54, DARK)],
   chalk_line: [box(0.3, 0.2, 0.4, 0.7, 0.6, 0.6, 0xc94a3e), box(0.46, 0.6, 0.48, 0.54, 0.95, 0.52, 0xf2ede2)],
   bucket: [box(0.28, 0, 0.28, 0.72, 0.5, 0.72, IRON), box(0.3, 0.5, 0.48, 0.34, 0.66, 0.52, DARK), box(0.66, 0.5, 0.48, 0.7, 0.66, 0.52, DARK), box(0.3, 0.64, 0.48, 0.7, 0.68, 0.52, DARK)],
   bucket_water: [box(0.28, 0, 0.28, 0.72, 0.5, 0.72, IRON), box(0.31, 0.44, 0.31, 0.69, 0.48, 0.69, 0x5f8fc4), box(0.3, 0.5, 0.48, 0.34, 0.66, 0.52, DARK), box(0.66, 0.5, 0.48, 0.7, 0.66, 0.52, DARK), box(0.3, 0.64, 0.48, 0.7, 0.68, 0.52, DARK)],

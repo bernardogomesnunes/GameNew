@@ -6,7 +6,7 @@ Everything in `docs/plan-playtest-improvements.md` (P1–P9) is in, each with it
 - **P8 Saplings:** a 3D sapling that grows into a tree in 10 game days. None are generated; leaves drop them (`saplings.test`).
 - **P5 Drinks:** beer, kombucha and coffee, each a timed boost with a countdown chip. Coffee is a new crop (`drinks.test`).
 - **P4 Places to find:** ruins, forgotten temples, abandoned mines and monuments, each with a chest. They're found on the map (`places.test`).
-- **P6 Enchantments:** a boots slot; Swift, Warded and Night Sight armour; thunder, fire and ice swords; swords are 3D (`enchantments.test`).
+- **P6 Upgrades:** a boots slot; Swift, Warded and Night Sight armour; thunder, fire and ice swords; swords are 3D (`upgrades.test`).
 - **P9 Roads:** calçada blocks, and old roads joining every landmark to home (`roads.test`).
 - **P2 Forests:** leaves with their own tones, light and shade (`forests.test`).
 - **P3 + P7:** a third-person view with your own avatar, what you hold drawn in 3D, and detailed animals and people (`avatar.test`).
@@ -78,7 +78,7 @@ The Sanctuary and the guardian (`tests/sanctuary.test.mjs`).
   - P3: mob models, third-person avatar;
   - P4: ruins, temples, mines and monuments with chests;
   - P5: beer, kombucha and coffee;
-  - P6: enchanted armour and elemental swords.
+  - P6: upgraded armour and elemental swords.
   - These can go in between lore steps; the user picks the order.
 - Still open:
   - far terrain should show what the player built (#130);

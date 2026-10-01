@@ -152,7 +152,7 @@ export class SettlerView {
     c.setHex(p.colour);
     // Struck: a flash of red, the same as a hunted animal.
     if (p.hurt > 0) c.lerp(HURT_RED, 0.7);
-    // Struck by an enchanted sword (playtest, P6): frost blue, a burning
+    // Struck by an upgraded sword (playtest, P6): frost blue, a burning
     // flicker, or the crackle of a stun.
     if (p.frozen > 0) c.lerp(FROST, 0.65);
     if (p.burning > 0) c.lerp(EMBER, 0.35 + 0.3 * Math.abs(Math.sin(performance.now() / 90)));

@@ -1,5 +1,5 @@
 import { ARMOUR_PIECES } from './armour.js';
-import { ENCHANTMENTS, ENCHANTABLE_SWORDS, enchantedId } from './enchantments.js';
+import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
 /**
  * What you can make, and where you can make it.
@@ -693,14 +693,14 @@ for (const p of ARMOUR_PIECES) {
   });
 }
 
-// Enchantments (playtest, P6): laid on at a chapel or better — the piece,
-// devotion and one thing that suits it. See config/enchantments.js.
-for (const [key, e] of Object.entries(ENCHANTMENTS)) {
-  const bases = e.weapon ? ENCHANTABLE_SWORDS : ARMOUR_PIECES.filter((p) => e.slots.includes(p.slot)).map((p) => p.id);
+// Upgrades (playtest, P6): laid on at a chapel or better — the piece,
+// devotion and one thing that suits it. See config/upgrades.js.
+for (const [key, e] of Object.entries(UPGRADES)) {
+  const bases = e.weapon ? UPGRADABLE_SWORDS : ARMOUR_PIECES.filter((p) => e.slots.includes(p.slot)).map((p) => p.id);
   for (const base of bases) {
-    const id = enchantedId(base, key);
+    const id = upgradedId(base, key);
     RECIPES.push({
-      id, name: `Enchant: ${e.name}`, station: 'temple', tier: 2, age: 3,
+      id, name: `Upgrade: ${e.name}`, station: 'temple', tier: 2, age: 3,
       inputs: { [base]: 1, devotion: e.devotion, ...e.inputs }, output: { id, count: 1 },
       blurb: `Lays ${e.name} on it — ${e.says}.`,
     });

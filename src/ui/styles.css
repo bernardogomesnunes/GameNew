@@ -1427,7 +1427,7 @@ body.touch .ctl-keys { display: none; }
 .ctl-touch-preview .pv-btn { fill: var(--text-dim); opacity: 0.55; }
 .ctl-touch-preview .pv-act { fill: var(--accent); opacity: 1; }
 
-/* An enchanted item's glints (playtest, P6) — see cubes.js itemIcon. */
+/* An upgraded item's glints (playtest, P6) — see cubes.js itemIcon. */
 .glint { transform-box: fill-box; transform-origin: center; animation: glint 1.6s ease-in-out infinite; }
 @keyframes glint { 0%, 100% { opacity: 0.15; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1); } }
 

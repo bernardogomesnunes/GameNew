@@ -22,7 +22,9 @@ export class HandView {
     camera.add(this.group);
     this.item = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
     this.item.scale.setScalar(0.3);
-    this.item.rotation.set(0.15, -0.6, 0.2);
+    // Side on, top leaning in towards the middle of the screen, so a head
+    // or blade (always -x, see heldModel.js) faces where you swing.
+    this.item.rotation.set(0.1, 0.35, 0.4);
     this.group.add(this.item);
     this.fistMat = new THREE.MeshLambertMaterial({ color: 0xe0b48e });
     this.fist = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.34), this.fistMat);

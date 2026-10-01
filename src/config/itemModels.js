@@ -1,6 +1,6 @@
 import { CROPS } from './crops.js';
 import { ARMOUR_PIECES } from './armour.js';
-import { ENCHANTMENTS, ENCHANTABLE_SWORDS, enchantedId } from './enchantments.js';
+import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
 /**
  * Little voxel models for the things you carry that aren't blocks — the
@@ -172,11 +172,11 @@ ITEM_MODELS.sword_wood = swordModel(0xcbaa8a, 0xdcc0a0, 0x8a6440, 0x5e4128);
 ITEM_MODELS.sword_stone = swordModel(0x9a9aa2, 0xb9b9c1, 0x6b6b72, 0x5e4128);
 ITEM_MODELS.sword_iron = swordModel(0xc9ced6, 0xeef1f5, 0xe2c26a, 0x3a2a20);
 
-// An enchanted piece looks like its plain self — the glint is drawn over
+// An upgraded piece looks like its plain self — the glint is drawn over
 // it (see cubes.js itemIcon).
-for (const [key, e] of Object.entries(ENCHANTMENTS)) {
-  const bases = e.weapon ? ENCHANTABLE_SWORDS : ARMOUR_PIECES.filter((p) => e.slots.includes(p.slot)).map((p) => p.id);
-  for (const id of bases) ITEM_MODELS[enchantedId(id, key)] = ITEM_MODELS[id];
+for (const [key, e] of Object.entries(UPGRADES)) {
+  const bases = e.weapon ? UPGRADABLE_SWORDS : ARMOUR_PIECES.filter((p) => e.slots.includes(p.slot)).map((p) => p.id);
+  for (const id of bases) ITEM_MODELS[upgradedId(id, key)] = ITEM_MODELS[id];
 }
 
 // The Temple's things (Phase 7c): a flask of holy water, and the two rings

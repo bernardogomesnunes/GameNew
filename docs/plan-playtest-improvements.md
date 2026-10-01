@@ -102,12 +102,12 @@ What's already there to build on:
   - also found in chests (P4).
 - **Stacking:** one of each can be active at a time, so all three together is the strongest combination.
 
-## P6. Enchanted armour and weapons
+## P6. Armour and weapon upgrades
 *"Special effects on armour that do simple stuff: speed on boots, extra defence on chest plate and pants, and night vision on the helmet; and special attacks on the sword, like thunder, fire and ice: paralysing, burning and freezing."*
 
 **Done.**
 - **Boots:** a feet slot, and boots in all three sets.
-- **Laying an enchantment:** done at the Temple, chapel tier or higher, from the piece itself, devotion and one ingredient that suits it.
+- **Laying an upgrade:** done at the Temple, chapel tier or higher, from the piece itself, devotion and one ingredient that suits it.
   - Swift boots: coffee beans, 1.2× speed.
   - Warded cuirass and greaves: iron, +2 armour each.
   - Night Sight helm: fireflies; the light never drops below about half of daylight.
@@ -115,12 +115,12 @@ What's already there to build on:
   - Fire sword: lanterns. It burns for 4 s at 1 a second, and a bandit burnt down still leaves its drops.
   - Ice sword: glass. It freezes for 4 s; everything the bandit does runs at 30%.
   - Swords that take an element: stone and iron.
-- **Visuals:** enchanted items glint in their colour in the bag, and bandits flash frost, embers or sparks.
+- **Visuals:** upgraded items glint in their colour in the bag, and bandits flash frost, embers or sparks.
 - **Swords:** now 3D models.
-- **Loot:** a few enchanted pieces are in the forgotten temple, monument and mine chests.
+- **Loot:** a few upgraded pieces are in the forgotten temple, monument and mine chests.
 
 - **A boots slot:** a fourth armour slot for feet, with boots in each set.
-- **Enchantments**, put on at the Temple (devotion plus an ingredient) or found on chest loot:
+- **Upgrades**, put on at the Temple (devotion plus an ingredient) or found on chest loot:
   - **Boots of Swiftness:** faster movement.
   - **Warded chest plate and leggings:** extra armour points.
   - **Helm of Night Sight:** nights and caves look lit, so you can see in the dark.
@@ -179,7 +179,7 @@ Requested next (second list): do the whole playtest list, with P7, P8 and P9 add
 1b. **P8 Saplings:** a 3D sapling that grows in 10 game days, none generated, dropped by leaves.
 2. **P5 Drinks:** the timed-effect system, which P6 builds on.
 3. **P4 Places to find:** ruins, temples, mines and monuments with chests, using loot from P5.
-4. **P6 Enchantments:** the boots slot, armour effects, elemental swords.
+4. **P6 Upgrades:** the boots slot, armour effects, elemental swords.
 3b. **P9 Roads:** the calçada block, and old roads joining the landmarks.
 5. **P2 Forests:** the leaf lighting pass.
 6. **P3 + P7, the avatar and what you hold:** third-person view with an avatar, held items in 3D in first and third person, and better mob models. This is the biggest visual job.

@@ -4,7 +4,7 @@ import { boxesFor, fenceBoxes, wallBoxes } from '../world/propShapes.js';
 import { slopeGeometry, orient } from '../world/slopes.js';
 import { tileFor, TILE_SIZE } from '../render/BlockTextures.js';
 import { ITEM_MODELS } from './itemModels.js';
-import { ENCHANTMENTS } from './enchantments.js';
+import { UPGRADES } from './upgrades.js';
 
 /**
  * Blocks drawn as blocks: a little isometric cube, three faces, one colour.
@@ -297,7 +297,7 @@ export function hasCube(blockId) {
  * drawing one would be a lie about what you are holding.
  */
 /**
- * Four-pointed sparkles at three spots over an icon, for an enchanted one —
+ * Four-pointed sparkles at three spots over an icon, for an upgraded one —
  * placed in the icon's own viewBox, which differs model to model.
  */
 function glints(svg, colour) {
@@ -316,9 +316,9 @@ export function itemIcon(spec, { size = 22 } = {}) {
   const model = ITEM_MODELS[spec.id];
   if (model) {
     const svg = boxesSvg(model, spec.color ?? 0x888888, size, { fit: true });
-    // Enchanted (playtest, P6): a few glints in its enchantment's colour,
+    // Upgraded (playtest, P6): a few glints in its upgrade's colour,
     // twinkling over it — see .glint in styles.css.
-    const e = spec.enchant && ENCHANTMENTS[spec.enchant];
+    const e = spec.upgrade && UPGRADES[spec.upgrade];
     return e ? svg.replace(/<\/svg>$/, `${glints(svg, e.colour)}</svg>`) : svg;
   }
   // An item that places a block shows that block.

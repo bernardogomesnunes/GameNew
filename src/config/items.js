@@ -1,7 +1,7 @@
 import { BLOCKS } from './blocks.js';
 import { CROPS, cropBaseOf } from './crops.js';
 import { ARMOUR_PIECES } from './armour.js';
-import { ENCHANTMENTS, ENCHANTABLE_SWORDS, enchantedId } from './enchantments.js';
+import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
 /**
  * Item registry for Duilt.
@@ -299,17 +299,17 @@ export const ITEMS = [
   })),
 ];
 
-// Enchanted pieces (playtest, P6) — see config/enchantments.js. Each is its
-// piece with the enchantment's name in front and its power added.
-for (const [key, e] of Object.entries(ENCHANTMENTS)) {
-  const bases = e.weapon ? ENCHANTABLE_SWORDS.map((id) => ITEMS.find((i) => i.id === id))
+// Upgraded pieces (playtest, P6) — see config/upgrades.js. Each is its
+// piece with the upgrade's name in front and its power added.
+for (const [key, e] of Object.entries(UPGRADES)) {
+  const bases = e.weapon ? UPGRADABLE_SWORDS.map((id) => ITEMS.find((i) => i.id === id))
     : ITEMS.filter((i) => i.kind === 'armour' && e.slots.includes(i.wears));
   for (const base of bases) {
     ITEMS.push({
-      ...base, id: enchantedId(base.id, key), name: `${e.name} ${base.name}`, enchant: key,
+      ...base, id: upgradedId(base.id, key), name: `${e.name} ${base.name}`, upgrade: key,
       ...(e.armour ? { armour: base.armour + e.armour } : {}),
       ...(e.element ? { element: e.element } : {}),
-      madeBy: `${base.name} enchanted at a temple — ${e.says}`,
+      madeBy: `${base.name} upgraded at a temple — ${e.says}`,
     });
   }
 }

@@ -786,9 +786,9 @@ export class DuiltGame {
     });
   }
 
-  /** Whether something you're wearing carries enchantment `key` (playtest, P6). */
+  /** Whether something you're wearing carries upgrade `key` (playtest, P6). */
   wearing(key) {
-    return Object.values(this.worn).some((w) => w && ITEMS_BY_ID.get(w.id)?.enchant === key);
+    return Object.values(this.worn).some((w) => w && ITEMS_BY_ID.get(w.id)?.upgrade === key);
   }
 
   /** Whether a drink's boost is going: 'haste', 'strength' or 'speed'. */

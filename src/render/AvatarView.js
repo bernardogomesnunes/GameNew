@@ -52,10 +52,13 @@ export class AvatarView {
     });
     this.hand = new THREE.Group();
     this.hand.position.set(0, -0.6, -0.1);
-    this.hand.rotation.set(-Math.PI / 2, 0, 0);
+    // Held upright, tipped forward; turned so a blade (-x in the model, see
+    // heldModel.js) faces ahead of you.
+    this.hand.rotation.set(-0.7, 0, 0);
     this.arms[1].add(this.hand);
     this.held = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
     this.held.scale.setScalar(0.42);
+    this.held.rotation.y = -Math.PI / 2;
     this.hand.add(this.held);
     // Head: face forward is -z, the way the camera looks at yaw 0.
     this.head = new THREE.Group();

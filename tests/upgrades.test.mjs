@@ -4,7 +4,7 @@ import { World } from '../src/world/World.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
 import { Wanderers } from '../src/world/Wanderers.js';
 import { WANDERERS } from '../src/config/wanderers.js';
-import { ENCHANTMENTS, SWIFT_SPEED, STUN_SECONDS, BURN_SECONDS, FREEZE_SECONDS, enchantedId } from '../src/config/enchantments.js';
+import { UPGRADES, SWIFT_SPEED, STUN_SECONDS, BURN_SECONDS, FREEZE_SECONDS, upgradedId } from '../src/config/upgrades.js';
 import { WEAR_SLOTS, ARMOUR_PIECES } from '../src/config/armour.js';
 import { ITEMS_BY_ID } from '../src/config/items.js';
 import { RECIPES } from '../src/config/recipes.js';
@@ -37,27 +37,28 @@ ok('a slot for your feet', WEAR_SLOTS.includes('feet'));
 ok('and boots in every set', ['leather', 'sky', 'stone'].every((set) => ARMOUR_PIECES.some((p) => p.set === set && p.slot === 'feet')));
 ok('worn on the feet', ITEMS_BY_ID.get('armour_leather_feet')?.wears === 'feet' && (itemIcon(ITEMS_BY_ID.get('armour_leather_feet')) ?? '').includes('<svg'));
 
-// --- the enchantments ------------------------------------------------------------------------------
+// --- the upgrades ------------------------------------------------------------------------------
 
 ok('Swift goes on boots, Warded on the cuirass and greaves, Night Sight on the helm',
-  ENCHANTMENTS.swift.slots.join() === 'feet' && ENCHANTMENTS.warded.slots.join() === 'body,legs' && ENCHANTMENTS.night.slots.join() === 'head');
-ok('thunder, fire and ice go on swords', ['thunder', 'fire', 'ice'].every((k) => ENCHANTMENTS[k].weapon && ENCHANTMENTS[k].element === k));
+  UPGRADES.swift.slots.join() === 'feet' && UPGRADES.warded.slots.join() === 'body,legs' && UPGRADES.night.slots.join() === 'head');
+ok('thunder, fire and ice go on swords', ['thunder', 'fire', 'ice'].every((k) => UPGRADES[k].weapon && UPGRADES[k].element === k));
 {
-  const swift = ITEMS_BY_ID.get(enchantedId('armour_sky_feet', 'swift'));
-  ok(`an enchanted piece is a thing of its own: "${swift?.name}"`, swift?.wears === 'feet' && swift.enchant === 'swift');
-  const warded = ITEMS_BY_ID.get(enchantedId('armour_stone_body', 'warded'));
+  const swift = ITEMS_BY_ID.get(upgradedId('armour_sky_feet', 'swift'));
+  ok(`an upgraded piece is a thing of its own: "${swift?.name}"`, swift?.wears === 'feet' && swift.upgrade === 'swift');
+  const warded = ITEMS_BY_ID.get(upgradedId('armour_stone_body', 'warded'));
   ok(`Warded adds two armour (${warded?.armour})`, warded?.armour === ITEMS_BY_ID.get('armour_stone_body').armour + 2);
-  const fire = ITEMS_BY_ID.get(enchantedId('sword_iron', 'fire'));
+  const fire = ITEMS_BY_ID.get(upgradedId('sword_iron', 'fire'));
   ok(`"${fire?.name}" hits as hard as the plain one, and burns`, fire?.damage === 9 && fire.element === 'fire' && fire.weapon);
-  ok('it glints in its colour in the bag', (itemIcon(fire) ?? '').includes('class="glint"') && (itemIcon(fire) ?? '').includes(ENCHANTMENTS.fire.colour)
+  ok('it glints in its colour in the bag', (itemIcon(fire) ?? '').includes('class="glint"') && (itemIcon(fire) ?? '').includes(UPGRADES.fire.colour)
     && /\.glint \{/.test(css) && !(itemIcon(ITEMS_BY_ID.get('sword_iron')) ?? '').includes('glint'));
 }
 {
-  const enchanting = RECIPES.filter((r) => r.name.startsWith('Enchant'));
-  ok(`laid on at the Temple, chapel or better (${enchanting.length} recipes)`, enchanting.length >= 15
-    && enchanting.every((r) => r.station === 'temple' && r.tier === 2 && r.inputs.devotion > 0));
-  ok('the piece itself goes in, with something that suits it', enchanting.every((r) => Object.keys(r.inputs).length >= 3));
-  ok('and the richer chests can hold one', Object.values(LOOT).some((t) => t.items.some(([id]) => ITEMS_BY_ID.get(id)?.enchant)));
+  const upgrading = RECIPES.filter((r) => r.name.startsWith('Upgrade'));
+  ok('called upgrades, not enchantments', upgrading.every((r) => r.name.startsWith('Upgrade: ')) && !/[Ee]nchant/.test(JSON.stringify(ITEMS_BY_ID.get('sword_iron_fire'))));
+  ok(`laid on at the Temple, chapel or better (${upgrading.length} recipes)`, upgrading.length >= 15
+    && upgrading.every((r) => r.station === 'temple' && r.tier === 2 && r.inputs.devotion > 0));
+  ok('the piece itself goes in, with something that suits it', upgrading.every((r) => Object.keys(r.inputs).length >= 3));
+  ok('and the richer chests can hold one', Object.values(LOOT).some((t) => t.items.some(([id]) => ITEMS_BY_ID.get(id)?.upgrade)));
 }
 
 // --- armour effects -----------------------------------------------------------------------------

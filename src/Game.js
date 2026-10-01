@@ -54,7 +54,7 @@ import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, bedPart, BED_HEAD, FACING_STEP, isPainting, isSoil } from './config/blocks.js';
 import { SAPLING } from './duilt/Saplings.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
-import { SWIFT_SPEED } from './config/enchantments.js';
+import { SWIFT_SPEED } from './config/upgrades.js';
 import { nextView, VIEW_NAMES } from './config/avatar.js';
 import { AvatarView } from './render/AvatarView.js';
 import { HandView } from './render/HandView.js';
@@ -2750,7 +2750,7 @@ export class Game {
     const { x, z } = this.player.position;
     const res = this.wanderers.hit(p, this.blowDamage(tool), x, z);
     if (!res) return false;
-    // An enchanted sword (playtest, P6): stuns, burns or freezes as it lands.
+    // An upgraded sword (playtest, P6): stuns, burns or freezes as it lands.
     if (tool?.element && !res.killed) this.wanderers.afflict(p, tool.element);
     this.sound?.hit?.('wood', { gain: 0.5, pitch: 0.7 });
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {

@@ -1,5 +1,5 @@
 import { WANDERERS, WANDERER_NAMES, NEWS } from '../config/wanderers.js';
-import { STUN_SECONDS, BURN_SECONDS, BURN_DAMAGE, FREEZE_SECONDS, FREEZE_SLOW } from '../config/enchantments.js';
+import { STUN_SECONDS, BURN_SECONDS, BURN_DAMAGE, FREEZE_SECONDS, FREEZE_SLOW } from '../config/upgrades.js';
 import { landmarksFor } from './landmarks.js';
 import { groundAt, surfaceAt, isLoaded } from './Mobs.js';
 
@@ -120,7 +120,7 @@ export class Wanderers {
     }
   }
 
-  // ---- struck by an enchanted sword (playtest, P6) -------------------------
+  // ---- struck by an upgraded sword (playtest, P6) -------------------------
 
   /**
    * Thunder stuns, fire sets burning, ice freezes. A fresh strike starts its
