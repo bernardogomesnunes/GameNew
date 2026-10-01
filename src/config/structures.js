@@ -1,4 +1,4 @@
-import { CROPS, CROP_BASE } from './crops.js';
+import { CROP_IDS } from './crops.js';
 /**
  * Building definitions for Duilt.
  *
@@ -34,8 +34,6 @@ const BLACK_STONE = [14, 156, 157, 167];
 /** "1 more window", "3 more windows". */
 const plural = (n, word) => `${n} more ${word}${n === 1 ? '' : 's'}`;
 
-/** Every crop block, at every stage — see config/crops.js. */
-const CROP_IDS = Array.from({ length: CROPS.length * 4 }, (_, i) => CROP_BASE + i);
 
 /** Counts matching blocks in the region. */
 const count = (ctx, ids) => ctx.countOf(ids);

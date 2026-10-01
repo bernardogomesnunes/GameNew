@@ -45,6 +45,10 @@ const TOOL_ACTION_LABELS = {
   vegetables: ['Eat', 'Throw'],
   seeds: ['Break', 'Plant'],
   holy_water: ['Drink', 'Place'],
+  beer: ['Drink', 'Place'],
+  kombucha: ['Drink', 'Place'],
+  coffee: ['Drink', 'Place'],
+  coffee_beans: ['Eat', 'Throw'],
 };
 
 function el(html) {

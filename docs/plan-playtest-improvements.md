@@ -65,6 +65,8 @@ What's already there to build on:
 ## P5. Drinks that make you better for a while
 *"Stats improvement items, found here too and craftable: beer, kombucha and coffee. Beer gives you energy and lets you throw more hits per second; kombucha gives you 2 more points when hitting; coffee gives you speed."*
 
+**Done.** All three are brewed at the workshop (Age 3) and last 3 minutes. Beer (2 potatoes + mixed seeds) cuts the wait between blows to 55%. Kombucha (2 fruit + leaves) adds +2 to every blow. Coffee (3 coffee beans) makes you 1.3× faster. Coffee is a new crop: its seeds come up from mixed seeds and are in the hermit's chest. Drinks are also in chests: beer in camps, coffee in caves, kombucha with the hermit. A chip by the hearts counts each one down, and a toast says when it wears off. There's no separate brewery building.
+
 - **The drinks:** each is drunk like holy water and lasts a few minutes. While it lasts, a small icon by the hearts counts down.
   - **Beer:** strikes come faster, for more hits a second (shorter strike cooldown).
   - **Kombucha:** +2 damage on every hit.

@@ -15,17 +15,17 @@ import { hash01 } from '../world/ChunkGen.js';
 export const LOOT = {
   cave: {
     name: 'An old chest',
-    items: [['gold', 0.7, 2, 5], ['iron_ingot', 0.5, 1, 3], ['copper_ingot', 0.4, 1, 3], ['cooked_meat', 0.3, 1, 3], ['lantern', 0.25, 1, 1]],
+    items: [['gold', 0.7, 2, 5], ['iron_ingot', 0.5, 1, 3], ['copper_ingot', 0.4, 1, 3], ['cooked_meat', 0.3, 1, 3], ['lantern', 0.25, 1, 1], ['coffee', 0.2, 1, 2]],
     ring: 0.3,
   },
   camp: {
     name: 'The bandits\' takings',
-    items: [['gold', 0.85, 1, 4], ['cooked_meat', 0.6, 2, 4], ['iron_ingot', 0.35, 1, 2], ['wool', 0.3, 1, 3], ['sword_stone', 0.12, 1, 1]],
+    items: [['gold', 0.85, 1, 4], ['cooked_meat', 0.6, 2, 4], ['iron_ingot', 0.35, 1, 2], ['wool', 0.3, 1, 3], ['sword_stone', 0.12, 1, 1], ['beer', 0.5, 1, 3], ['kombucha', 0.2, 1, 2]],
     ring: 0.12,
   },
   hermit: {
     name: 'The hermit\'s chest',
-    items: [['fruit', 0.8, 2, 5], ['seeds', 0.7, 2, 4], ['egg', 0.3, 1, 3], ['lantern', 0.4, 1, 1], ['gold', 0.4, 1, 2]],
+    items: [['fruit', 0.8, 2, 5], ['seeds', 0.7, 2, 4], ['egg', 0.3, 1, 3], ['lantern', 0.4, 1, 1], ['gold', 0.4, 1, 2], ['kombucha', 0.4, 1, 2], ['seeds_coffee', 0.5, 2, 4], ['coffee_beans', 0.4, 2, 5]],
     ring: 0.2,
   },
 };

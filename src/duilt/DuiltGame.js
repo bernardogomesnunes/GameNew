@@ -16,6 +16,7 @@ import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, 
 import { AIR } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
+import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
 
@@ -84,6 +85,8 @@ export class DuiltGame {
     this.guardian = null;
     // The painting you wake by after a fall, if you chose one (playtest, P1).
     this.spawn = null;
+    // Drinks going (playtest, P5): { haste | strength | speed: seconds left }.
+    this.boosts = {};
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you` : null),
@@ -555,6 +558,15 @@ export class DuiltGame {
       this.health.tick(dtSeconds, { hungerRatio: this.hunger.ratio, resting });
     }
 
+    // Drinks wear off.
+    for (const name of Object.keys(this.boosts)) {
+      this.boosts[name] -= dtSeconds;
+      if (this.boosts[name] <= 0) {
+        delete this.boosts[name];
+        this.bus?.emit('duilt:boostEnded', { boost: name });
+      }
+    }
+
     // Production is checked on a slow cadence; it's wall-clock based, so the
     // interval only decides how promptly you're told, not how much you get.
     this.settlers.tick(dtSeconds);
@@ -736,14 +748,28 @@ export class DuiltGame {
     return this.structures.storeFor(target);
   }
 
-  /** Drinks holy water (or anything that `heals`): hearts back, now. */
+  /**
+   * Drinks holy water (anything that `heals`: hearts back, now), or a beer,
+   * a kombucha or a coffee (anything with a `boost`: better at something
+   * for a few minutes — drinking another tops its time up, not doubles it).
+   */
   drink(itemId) {
     const spec = ITEMS_BY_ID.get(itemId);
-    if (!spec?.heals) return { ok: false, reason: `You can't drink ${spec?.name?.toLowerCase() ?? 'that'}.` };
+    if (!spec?.heals && !spec?.boost) return { ok: false, reason: `You can't drink ${spec?.name?.toLowerCase() ?? 'that'}.` };
     if (!this.inventory.has(itemId, 1)) return { ok: false, reason: 'You have none of that.' };
+    if (spec.boost) {
+      this.inventory.remove(itemId, 1);
+      this.boosts[spec.boost] = BOOST_SECONDS;
+      return { ok: true, boost: spec.boost, seconds: BOOST_SECONDS };
+    }
     if (this.health.value >= 20) return { ok: false, reason: 'You are not hurt.' };
     this.inventory.remove(itemId, 1);
     return { ok: true, healed: this.health.heal(spec.heals) };
+  }
+
+  /** Whether a drink's boost is going: 'haste', 'strength' or 'speed'. */
+  boosted(name) {
+    return (this.boosts[name] ?? 0) > 0;
   }
 
   /** The ring you're wearing, if any: 'white' or 'black' — its effects only count while it's on. */
@@ -770,6 +796,7 @@ export class DuiltGame {
       ring: this.ring,
       guardian: this.guardian?.toJSON() ?? null,
       spawn: this.spawn,
+      boosts: { ...this.boosts },
       chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, found: c.found, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
@@ -795,6 +822,8 @@ export class DuiltGame {
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
     const sp = data.spawn;
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
+    this.boosts = {};
+    for (const [name, left] of Object.entries(data.boosts ?? {})) if (BOOSTS[name] && Number.isFinite(left) && left > 0) this.boosts[name] = left;
     const gd = data.guardian;
     this.guardian = gd && (gd.ring === 'white' || gd.ring === 'black') && gd.home
       ? new Guardian({ world: this.world, ring: gd.ring, home: gd.home, state: gd })

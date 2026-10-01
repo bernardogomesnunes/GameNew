@@ -1,4 +1,5 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
+import { BOOSTS, clockOf } from '../config/drinks.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
@@ -90,6 +91,8 @@ export class DuiltUI {
           <span class="vital-icon">🍖</span>
           <div class="vital-track"><div class="vital-fill" id="hunger-fill"></div></div>
         </div>
+        <!-- Drinks going (playtest, P5): one chip each, counting down. -->
+        <div class="vital vital-boosts" id="vital-boosts" hidden></div>
         <button class="vital-eat" id="btn-eat" hidden>Eat</button>
         <!--
           Population sits beside hunger because it is the same kind of fact:
@@ -440,6 +443,24 @@ export class DuiltUI {
       + (armour ? `<span class="armour-badge"><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6Z"/></svg><b>${armour}</b></span>` : '');
     box.classList.toggle('low', v <= 6);
     box.title = `Health: ${v / 2} of 10 hearts${armour ? ` · ${armour} armour` : ''}`;
+  }
+
+  /**
+   * A chip for each drink going, beside the hearts: a flask in the drink's
+   * colour and the time it has left. Called every frame; only touches the
+   * page when what it says has changed.
+   */
+  renderBoosts() {
+    const box = this.q('#vital-boosts');
+    const boosts = this.duilt?.boosts ?? {};
+    const names = Object.keys(BOOSTS).filter((n) => boosts[n] > 0);
+    const key = names.map((n) => `${n}${clockOf(boosts[n])}`).join();
+    if (!box || key === this.boostKey) return;
+    this.boostKey = key;
+    box.hidden = !names.length;
+    box.innerHTML = names.map((n) => `<span class="boost" title="${BOOSTS[n].name}: ${BOOSTS[n].says}">`
+      + `<svg viewBox="0 0 24 24" style="fill:${BOOSTS[n].color}"><path d="M9 3h6v2h-1v3.2l4.6 7.6A3 3 0 0 1 16 20H8a3 3 0 0 1-2.6-4.2L10 8.2V5H9Z"/></svg>`
+      + `<b>${clockOf(boosts[n])}</b></span>`).join('');
   }
 
   /** A red flash at the edges of the screen when you're hurt — stronger when you die. */

@@ -662,6 +662,10 @@ RECIPES.push(
   { id: 'offer_meat', name: 'Offer a meal', station: 'temple', age: 3, inputs: { cooked_meat: 2 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'A feast for the god, eaten by the priests.' },
   { id: 'offer_gold', name: 'Offer gold', station: 'temple', age: 3, inputs: { gold: 1 }, output: { id: 'devotion', count: 2 }, batch: 8, blurb: 'Gold buys devotion faster than anything.' },
   { id: 'offer_candle', name: 'Light a candle', station: 'temple', age: 3, inputs: { lantern: 1 }, output: { id: 'devotion', count: 1 }, batch: 4, blurb: 'A light left burning at the altar.' },
+  // Drinks (playtest, P5): a few minutes better at something — see config/drinks.js.
+  { id: 'beer', name: 'Beer', station: 'workshop', age: 3, inputs: { potato: 2, seeds: 1 }, output: { id: 'beer', count: 2 }, batch: 4, blurb: 'Potatoes and grain, left to work. Quicker blows for three minutes.' },
+  { id: 'kombucha', name: 'Kombucha', station: 'workshop', age: 3, inputs: { fruit: 2, leaves: 1 }, output: { id: 'kombucha', count: 2 }, batch: 4, blurb: 'Fruit and leaf tea, soured. +2 on every hit for three minutes.' },
+  { id: 'coffee', name: 'Coffee', station: 'workshop', age: 3, inputs: { coffee_beans: 3 }, output: { id: 'coffee', count: 2 }, batch: 4, blurb: 'Roasted, ground and brewed. Faster on your feet for three minutes.' },
   { id: 'holy_water', name: 'Holy Water', station: 'temple', tier: 1, age: 3, inputs: { glass: 1, devotion: 1 }, output: { id: 'holy_water', count: 2 }, batch: 4, blurb: 'Blessed at a chapel or better. Drink it to heal four hearts.' },
   {
     id: 'ring_white', name: 'Forge the White Ring', station: 'temple', tier: 4, age: 3, ring: 'white',

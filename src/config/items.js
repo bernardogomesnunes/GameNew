@@ -1,5 +1,5 @@
 import { BLOCKS } from './blocks.js';
-import { CROPS, CROP_BASE } from './crops.js';
+import { CROPS, cropBaseOf } from './crops.js';
 import { ARMOUR_PIECES } from './armour.js';
 
 /**
@@ -71,9 +71,9 @@ export const ITEMS = [
   // Game.plantMixed); each crop's own seeds come up as that crop — see
   // config/crops.js.
   { id: 'seeds', name: 'Mixed Seeds', kind: 'raw', stackTo: STACK_GOODS, color: 0xd7cb95, glyph: 'seeds', madeBy: 'Shaken from a forest, or saved from a harvest' },
-  ...CROPS.map((c, k) => ({
+  ...CROPS.map((c) => ({
     id: `seeds_${c.kind}`, name: `${c.name} Seeds`, kind: 'raw', stackTo: STACK_GOODS, color: c.crop, glyph: 'seeds',
-    block: CROP_BASE + 4 * k, madeBy: `Saved from a ripe ${c.name.toLowerCase()}`,
+    block: cropBaseOf(c), madeBy: `Saved from a ripe ${c.name.toLowerCase()}`,
   })),
   { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fcd8b, glyph: 'sprout', block: 20, madeBy: 'Grown from seed' },
 
@@ -82,6 +82,7 @@ export const ITEMS = [
   // The farm's crops. Carrots are the vegetables the game always had — the
   // id stays so everything that already made or used them still does.
   { id: 'vegetables', name: 'Carrots', kind: 'food', stackTo: STACK_FOOD, color: 0xe8873a, glyph: 'vegetable', feeds: 22, madeBy: 'Harvested from a farm' },
+  { id: 'coffee_beans', name: 'Coffee Beans', kind: 'food', stackTo: STACK_FOOD, color: 0xb8362e, glyph: 'seeds', feeds: 4, madeBy: 'Picked from a coffee plant — brew them, or chew them' },
   { id: 'potato', name: 'Potatoes', kind: 'food', stackTo: STACK_FOOD, color: 0xc9a46c, glyph: 'vegetable', feeds: 20, madeBy: 'Dug from a farm' },
   { id: 'cabbage', name: 'Cabbage', kind: 'food', stackTo: STACK_FOOD, color: 0xa9cf86, glyph: 'vegetable', feeds: 18, madeBy: 'Cut from a farm' },
   { id: 'lettuce', name: 'Lettuce', kind: 'food', stackTo: STACK_FOOD, color: 0xb6de86, glyph: 'vegetable', feeds: 12, madeBy: 'Picked from a farm' },
@@ -266,6 +267,11 @@ export const ITEMS = [
   // heals when you drink it. The rings are worn in the ring slot; you can
   // only ever forge one of the two.
   { id: 'devotion', name: 'Devotion', kind: 'raw', stackTo: STACK_GOODS, color: 0xffe3a0, glyph: 'devotion', madeBy: 'Gathered at a temple — from worshippers and offerings' },
+  // Drinks that make you better for a while (playtest, P5) — see
+  // config/drinks.js. Each gives its `boost` for a few minutes.
+  { id: 'beer', name: 'Beer', kind: 'drink', stackTo: 10, color: 0xe0a83a, glyph: 'flask', boost: 'haste', madeBy: 'Brewed at a workshop from potatoes — quicker blows for three minutes' },
+  { id: 'kombucha', name: 'Kombucha', kind: 'drink', stackTo: 10, color: 0xd0705a, glyph: 'flask', boost: 'strength', madeBy: 'Brewed at a workshop from fruit and leaves — +2 on every hit for three minutes' },
+  { id: 'coffee', name: 'Coffee', kind: 'drink', stackTo: 10, color: 0x6b4630, glyph: 'flask', boost: 'speed', madeBy: 'Brewed at a workshop from coffee beans — faster on your feet for three minutes' },
   { id: 'holy_water', name: 'Holy Water', kind: 'drink', stackTo: 10, color: 0xbfe3f5, glyph: 'flask', heals: 8, madeBy: 'Blessed at a chapel — drink it to heal four hearts' },
   {
     id: 'ring_white', name: 'White Ring', kind: 'ring', stackTo: STACK_TOOL, color: 0xf2e2a4, glyph: 'ring', wears: 'ring', ring: 'white',

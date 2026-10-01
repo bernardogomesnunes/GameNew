@@ -53,6 +53,7 @@ import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, bedPart, BED_HEAD, FACING_STEP, isPainting, isSoil } from './config/blocks.js';
 import { SAPLING } from './duilt/Saplings.js';
+import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
@@ -196,8 +197,8 @@ const SLOW_BREAK_MS = 900;
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', holy_water: 'drinkSelected' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', seeds: 'plantMixed' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', seeds: 'plantMixed' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -420,6 +421,9 @@ export class Game {
     // The land grows when an age is finished, and the wall has to grow with it.
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
     this.bus.on('health:died', ({ cause }) => this.die(cause));
+    this.bus.on('duilt:boostEnded', ({ boost }) => this.ui?.toast({
+      kind: 'xp', title: `Your ${BOOSTS[boost].name.toLowerCase()} has worn off`, body: BOOSTS[boost].says,
+    }));
     this.bus.on('guardian:summoned', ({ guardian }) => this.ui?.toast({
       kind: 'achievement',
       title: `${guardian.name}, ${guardian.spec.about}, has come to you`,
@@ -2567,14 +2571,29 @@ export class Game {
    * result) — this is only the wiring from "the hotbar slot you have
    * selected" to it, the same job fillBucket/emptyBucket do for the bucket.
    */
-  /** Drinks the holy water you're holding: hearts back at once. */
+  /**
+   * Drinks what you're holding: holy water, hearts back at once; a beer, a
+   * kombucha or a coffee, better at something for three minutes.
+   */
   drinkSelected() {
     if (!this.duilt) return;
     const r = this.duilt.drink(this.selectedItemId);
     if (r.ok) this.sound?.eat();
-    this.ui.toast(r.ok
-      ? { kind: 'challenge', title: 'Blessed', body: `+${r.healed / 2} hearts` }
-      : { kind: 'xp', title: r.reason });
+    this.ui.toast(!r.ok
+      ? { kind: 'xp', title: r.reason }
+      : r.boost
+        ? { kind: 'challenge', title: `${BOOSTS[r.boost].name}: ${BOOSTS[r.boost].says.toLowerCase()}`, body: 'For three minutes' }
+        : { kind: 'challenge', title: 'Blessed', body: `+${r.healed / 2} hearts` });
+  }
+
+  /** Between blows, in ms: a beer makes it shorter. */
+  strikeCooldown() {
+    return STRIKE_COOLDOWN_MS * (this.duilt?.boosted('haste') ? BEER_COOLDOWN : 1);
+  }
+
+  /** How hard a blow lands: the tool's damage (a fist 1), plus kombucha's. */
+  blowDamage(tool) {
+    return (tool?.damage ?? 1) + (this.duilt?.boosted('strength') ? KOMBUCHA_DAMAGE : 0);
   }
 
   eatSelected() {
@@ -2644,12 +2663,12 @@ export class Game {
     const mob = this.mobTarget(hit);
     if (!mob) return false;
     const now = performance.now();
-    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    if (now - (this.lastStrikeAt ?? 0) < this.strikeCooldown()) return true;
     this.lastStrikeAt = now;
     this.digTarget = null;
     const tool = ITEMS_BY_ID.get(this.selectedItemId);
     const { x, z } = this.player.position;
-    const { killed, drops } = this.mobs.hit(mob, tool?.damage ?? 1, x, z);
+    const { killed, drops } = this.mobs.hit(mob, this.blowDamage(tool), x, z);
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
@@ -2689,12 +2708,12 @@ export class Game {
     const p = this.banditTarget(hit);
     if (!p) return false;
     const now = performance.now();
-    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    if (now - (this.lastStrikeAt ?? 0) < this.strikeCooldown()) return true;
     this.lastStrikeAt = now;
     this.digTarget = null;
     const tool = ITEMS_BY_ID.get(this.selectedItemId);
     const { x, z } = this.player.position;
-    const res = this.wanderers.hit(p, tool?.damage ?? 1, x, z);
+    const res = this.wanderers.hit(p, this.blowDamage(tool), x, z);
     if (!res) return false;
     this.sound?.hit?.('wood', { gain: 0.5, pitch: 0.7 });
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
@@ -2730,7 +2749,7 @@ export class Game {
     const swarm = this.fireflyTarget(hit);
     if (!swarm) return false;
     const now = performance.now();
-    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    if (now - (this.lastStrikeAt ?? 0) < this.strikeCooldown()) return true;
     this.lastStrikeAt = now;
     this.digTarget = null;
     this.fireflies.catchFrom(swarm);
@@ -3819,7 +3838,9 @@ export class Game {
         this.feelHurt(dt);
         // The White Ring (Phase 7c): faster on your feet, and a higher jump.
         const white = this.duilt.ringWorn() === 'white';
-        this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed() * (white ? WHITE_RING_SPEED : 1);
+        this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed() * (white ? WHITE_RING_SPEED : 1)
+          * (this.duilt.boosted('speed') ? COFFEE_SPEED : 1);
+        this.ui?.duiltUI?.renderBoosts();
         this.player.jumpScale = white ? WHITE_RING_JUMP : 1;
       }
       this.updateHover();

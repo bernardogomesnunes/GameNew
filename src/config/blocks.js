@@ -26,7 +26,7 @@
 // tint, not a soft grey), and Obsidian keeps most of its depth so the
 // palette still has one dark anchor rather than every block converging on
 // the same pale middle.
-import { CROPS, CROP_BASE, RIPE } from './crops.js';
+import { CROPS, RIPE, cropBaseOf } from './crops.js';
 
 /** Flowing water of level L is block FLOW_BASE + L, for L in 1..7. */
 const FLOW_BASE = 49;
@@ -297,12 +297,13 @@ ROOF_MATERIALS.forEach((mat, m) => {
 
 // Crops on farmland, a block per stage of growth — see config/crops.js. The
 // seed is what you hold; the plant is never placed by hand any other way.
-CROPS.forEach((c, k) => {
+CROPS.forEach((c) => {
+  const base = cropBaseOf(c);
   for (let stage = 0; stage <= RIPE; stage++) {
     BLOCKS.push({
-      id: CROP_BASE + 4 * k + stage, name: stage === RIPE ? `Ripe ${c.name}` : `${c.name} Plant`,
+      id: base + stage, name: stage === RIPE ? `Ripe ${c.name}` : `${c.name} Plant`,
       glyph: 'sprout', color: c.leaf, shape: `crop_${c.kind}_${stage}`, material: 'plant',
-      crop: { kind: c.kind, stage }, ...(stage ? { stateOf: CROP_BASE + 4 * k } : {}), unlock: null,
+      crop: { kind: c.kind, stage }, ...(stage ? { stateOf: base } : {}), unlock: null,
     });
   }
 });
