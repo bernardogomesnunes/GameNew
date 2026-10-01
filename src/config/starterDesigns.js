@@ -12,7 +12,7 @@
  */
 
 import { ITEM_FOR_BLOCK } from './items.js';
-import { doorBlock, roofBlock, BED, BED_HEAD, FACING_STEP, PAINTING } from './blocks.js';
+import { doorBlock, roofBlock, turned, BED, BED_HEAD, FACING_STEP, PAINTING, WEAPON_RACK, TRAINING_DUMMY, ARCHERY_TARGET } from './blocks.js';
 import { ROOFS_BY_ID } from './roofs.js';
 import { cropBlock } from './crops.js';
 import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
@@ -361,6 +361,226 @@ function villageBlocks() {
   ];
 }
 
+// ---- Defence (White path) ------------------------------------------------------
+//
+// Asked for directly: "use this opportunity to make them detailed." So these
+// are drawn the way a mason would: a plinth course and a string course, quoins
+// at the corners, arrow slits, battlements, a walk along the top and a stair
+// to reach it. Each is laid on a grid, later cells over earlier ones, so a
+// stair or a slit is just a cell written again.
+
+const DARK_STONE = 156, DARK_BRICK = 157, STONE_WALL_POST = 162, STONE_PILLAR = 165;
+const STONE_STAIRS = 29, LANTERN = 26, CHANDELIER = 85, WHITE_BANNER = 182;
+const CALCADA = 209, GRAVEL = 23, TIMBER = 160, DARK_WOOD = 43, OAK_TABLE_ = 31;
+
+/** A grid of cells, later writes over earlier — the way these are drawn. */
+function grid() {
+  const cells = new Map();
+  const put = (dx, dy, dz, type) => {
+    if (type == null) cells.delete(`${dx},${dy},${dz}`);
+    else cells.set(`${dx},${dy},${dz}`, { dx, dy, dz, type });
+  };
+  return {
+    put,
+    box(x0, y0, z0, x1, y1, z1, type) {
+      for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) put(x, y, z, type);
+    },
+    add(blocks) { for (const b of blocks) put(b.dx, b.dy, b.dz, b.type); },
+    blocks: () => [...cells.values()],
+  };
+}
+
+/** A stair you climb going `facing` (0 -z, 1 +x, 2 +z, 3 -x). */
+const stair = (facing) => turned(STONE_STAIRS, facing);
+
+/**
+ * A length of wall, 16 long and 3 thick: a cobble plinth, dressed stone
+ * faces with a dark string course and dark quoins at the ends, a rubble
+ * core, and on top a walk behind a parapet with merlons and arrow slits.
+ * A stair climbs to the walk at one end; a lantern and a banner on it.
+ * The outside is -z.
+ */
+function wallBlocks() {
+  const g = grid(), L = 16;
+  g.box(0, 0, 0, L - 1, 0, 2, COBBLE);                          // footing
+  g.box(0, 1, 0, L - 1, 3, 2, STONE);                           // the body
+  g.box(0, 1, 0, L - 1, 1, 0, COBBLE);                          // plinth course, outside
+  g.box(0, 1, 1, L - 1, 3, 1, COBBLE);                          // rubble core
+  g.box(0, 3, 0, L - 1, 3, 0, DARK_STONE);                      // string course
+  for (const x of [0, L - 1]) g.box(x, 1, 0, x, 3, 2, DARK_BRICK); // quoins at the ends
+  g.box(0, 4, 0, L - 1, 4, 0, STONE);                           // the parapet
+  for (let x = 0; x < L; x += 2) g.put(x, 5, 0, STONE);         // merlons
+  for (let x = 3; x < L; x += 4) g.put(x, 4, 0, STONE_WALL_POST); // arrow slits
+  // The stair up, along the inside face at the near end: you climb +x.
+  for (let i = 0; i < 3; i++) { g.put(i, 1 + i, 2, stair(1)); g.box(i, 2 + i, 2, i, 3, 2, null); }
+  g.put(8, 4, 2, LANTERN);
+  g.put(12, 4, 2, turned(WHITE_BANNER, 0));
+  return g.blocks();
+}
+
+/**
+ * A gatehouse, 13 wide: two towers with guardrooms over a vaulted passage,
+ * a gate of three doors in a dressed frame, the walk across the top from
+ * tower to tower behind battlements, a stair in the left tower to reach
+ * it, arrow slits, lanterns at the gate and banners above. Outside is -z.
+ */
+function gatehouseBlocks() {
+  const g = grid();
+  const TOWERS = [0, 9];                                         // each 4 wide, 6 deep
+  g.box(0, 0, 0, 12, 0, 5, COBBLE);                             // footing
+  g.box(4, 0, 0, 8, 0, 5, CALCADA);                             // the road through
+  for (const x0 of TOWERS) {
+    const x1 = x0 + 3;
+    g.box(x0, 1, 0, x1, 8, 5, STONE);
+    g.box(x0 + 1, 1, 1, x1 - 1, 3, 4, null);                    // guardroom
+    g.box(x0 + 1, 4, 1, x1 - 1, 4, 4, PLANKS);                  // its ceiling, the upper room's floor
+    g.box(x0 + 1, 5, 1, x1 - 1, 7, 4, null);                    // the upper room
+    g.box(x0, 1, 0, x1, 1, 5, COBBLE);                          // plinth course
+    g.box(x0, 1, 1, x1, 1, 4, null);                            // (not inside)
+    g.box(x0 + 1, 1, 1, x1 - 1, 1, 4, null);
+    g.box(x0, 4, 0, x1, 4, 0, DARK_STONE);                      // string course, front
+    g.box(x0, 4, 5, x1, 4, 5, DARK_STONE);                      // and back
+    for (const [x, z] of [[x0, 0], [x1, 0], [x0, 5], [x1, 5]]) g.box(x, 1, z, x, 8, z, DARK_BRICK); // quoins
+    for (const y of [2, 6]) g.put(x0 + 1, y, 0, STONE_WALL_POST); // arrow slits, front
+    g.put(x0 + 2, 6, 5, STONE_WALL_POST);                       // and one at the back
+    // The tower top: battlements all round, and a taller merlon at each corner.
+    for (let x = x0; x <= x1; x++) for (const z of [0, 5]) if ((x - x0) % 2 === 0 || x === x1) g.put(x, 9, z, STONE);
+    for (let z = 1; z < 5; z++) for (const x of [x0, x1]) if (z % 2 === 0) g.put(x, 9, z, STONE);
+    for (const [x, z] of [[x0, 0], [x1, 0], [x0, 5], [x1, 5]]) g.put(x, 10, z, DARK_BRICK);
+  }
+  g.put(1, 1, 1, null);
+  // Guardroom doors, off the passage.
+  g.add([{ dx: 3, dy: 1, dz: 3, type: doorBlock({ facing: 1 }) }, { dx: 3, dy: 2, dz: 3, type: doorBlock({ facing: 1, top: true }) }]);
+  g.add([{ dx: 9, dy: 1, dz: 3, type: doorBlock({ facing: 3 }) }, { dx: 9, dy: 2, dz: 3, type: doorBlock({ facing: 3, top: true }) }]);
+  // The passage's vault and the walk over it, joining the tower tops.
+  g.box(4, 5, 0, 8, 8, 5, STONE);
+  g.box(4, 5, 0, 8, 5, 5, DARK_STONE);                          // the vault's soffit
+  g.box(4, 8, 0, 8, 8, 5, COBBLE);                              // the walk
+  for (let x = 4; x <= 8; x++) if (x % 2 === 0) { g.put(x, 9, 0, STONE); g.put(x, 9, 5, STONE); }
+  // The gate: a dressed frame of dark brick, three doors, a lintel over them.
+  g.box(4, 1, 1, 4, 4, 1, DARK_BRICK);
+  g.box(8, 1, 1, 8, 4, 1, DARK_BRICK);
+  g.box(5, 3, 1, 7, 4, 1, DARK_BRICK);
+  g.add([5, 6, 7].flatMap((x) => door(x, 1, 1)));
+  // Lanterns either side of the gate, outside; banners over the walk.
+  g.put(4, 1, 0, LANTERN);
+  g.put(8, 1, 0, LANTERN);
+  g.put(5, 9, 3, turned(WHITE_BANNER, 0));
+  g.put(7, 9, 3, turned(WHITE_BANNER, 0));
+  // The stair up, in the left tower: three steps to the upper room...
+  for (let i = 0; i < 3; i++) g.put(1, 1 + i, 1 + i, stair(2));
+  for (let i = 0; i < 3; i++) g.put(1, 4, 1 + i, null);
+  // ...and three more, the other way, out onto the top.
+  for (let i = 0; i < 3; i++) g.put(2, 5 + i, 4 - i, stair(0));
+  for (let i = 0; i < 3; i++) g.put(2, 8, 3 - i, null);
+  g.put(2, 8, 1, null);
+  return g.blocks();
+}
+
+/**
+ * A watchtower: a five-square stone shaft on a wide plinth, dark quoins
+ * and a string course, a door, a stair winding up round a central pillar
+ * inside to a lookout that overhangs the shaft on every side, with
+ * battlements, a merlon raised at each corner, a signal lantern, a banner,
+ * and a slate roof on four posts over it all.
+ */
+function watchtowerBlocks() {
+  const g = grid();
+  g.box(0, 0, 0, 6, 0, 6, COBBLE);                              // the plinth
+  g.box(1, 1, 1, 5, 10, 5, STONE);                              // the shaft
+  g.box(2, 1, 2, 4, 10, 4, null);                               // hollow
+  for (const [x, z] of [[1, 1], [5, 1], [1, 5], [5, 5]]) g.box(x, 1, z, x, 10, z, DARK_BRICK); // quoins
+  g.box(1, 1, 1, 5, 1, 5, COBBLE);                              // plinth course
+  g.box(2, 1, 2, 4, 1, 4, null);
+  for (const [x, z] of [[1, 1], [5, 1], [1, 5], [5, 5]]) g.put(x, 1, z, DARK_BRICK);
+  g.box(1, 6, 1, 5, 6, 1, DARK_STONE); g.box(1, 6, 5, 5, 6, 5, DARK_STONE);  // string course
+  g.box(1, 6, 1, 1, 6, 5, DARK_STONE); g.box(5, 6, 1, 5, 6, 5, DARK_STONE);
+  for (const [x, z] of [[1, 1], [5, 1], [1, 5], [5, 5]]) g.put(x, 6, z, DARK_BRICK);
+  // Arrow slits, two up each face.
+  for (const y of [4, 8]) {
+    g.put(3, y, 1, STONE_WALL_POST); g.put(3, y, 5, STONE_WALL_POST);
+    g.put(1, y, 3, STONE_WALL_POST); g.put(5, y, 3, STONE_WALL_POST);
+  }
+  g.add(door(3, 1, 1));
+  // The stair, winding up round a pillar: eight cells round it, a step a
+  // cell, climbing the way it turns. In by the door at (3, 2).
+  g.box(3, 1, 3, 3, 10, 3, STONE_PILLAR);
+  const RING = [[2, 2], [3, 2], [4, 2], [4, 3], [4, 4], [3, 4], [2, 4], [2, 3]];
+  const towards = (a, b) => (b[0] > a[0] ? 1 : b[0] < a[0] ? 3 : b[1] > a[1] ? 2 : 0);
+  for (let k = 0; k < 11; k++) {
+    const i = (2 + k) % 8, prev = RING[(i + 7) % 8], at = RING[i];
+    g.put(at[0], 1 + k, at[1], stair(towards(prev, at)));
+  }
+  // The lookout floor, overhanging the shaft, open over the top of the stair.
+  g.box(0, 11, 0, 6, 11, 6, STONE);
+  for (const [x, z] of [[4, 2], [4, 3]]) g.put(x, 11, z, null);
+  g.put(4, 11, 4, stair(2));
+  // Corbels under the overhang.
+  for (const i of [1, 3, 5]) { g.put(i, 10, 0, COBBLE); g.put(i, 10, 6, COBBLE); g.put(0, 10, i, COBBLE); g.put(6, 10, i, COBBLE); }
+  // Battlements round it, and a raised merlon at each corner.
+  for (let i = 0; i <= 6; i += 2) { g.put(i, 12, 0, STONE); g.put(i, 12, 6, STONE); g.put(0, 12, i, STONE); g.put(6, 12, i, STONE); }
+  for (const [x, z] of [[0, 0], [6, 0], [0, 6], [6, 6]]) g.put(x, 13, z, DARK_BRICK);
+  // A slate roof on four posts, the signal lantern under it, a banner.
+  for (const [x, z] of [[1, 1], [5, 1], [1, 5], [5, 5]]) g.box(x, 12, z, x, 14, z, STONE_PILLAR);
+  g.add(gable(1, 1, 5, 5, 15, SLATE, STONE));
+  g.put(3, 12, 3, LANTERN);
+  g.put(2, 12, 4, turned(WHITE_BANNER, 2));
+  return g.blocks();
+}
+
+/**
+ * A barracks: a timber-framed hall on a cobble plinth under a slate roof,
+ * with six bunks along the back, racks of arms on the walls, a mess table
+ * with benches under a chandelier, framed windows, and in front a fenced
+ * yard with a gate, training dummies, archery targets and banners.
+ * Outside is -z, through the yard.
+ */
+function barracksBlocks() {
+  const g = grid();
+  const W = 13, Z0 = 6, Z1 = 13;                                // the hall, z 6..13
+  // The yard.
+  g.box(0, 0, 0, W - 1, 0, Z0 - 1, GRAVEL);
+  for (let x = 0; x < W; x++) g.put(x, 1, 0, FENCE);
+  for (let z = 0; z < Z0; z++) { g.put(0, 1, z, FENCE); g.put(W - 1, 1, z, FENCE); }
+  g.put(6, 1, 0, GATE);
+  g.put(5, 2, 0, LANTERN); g.put(7, 2, 0, LANTERN);              // on the gateposts
+  g.put(2, 1, 3, turned(TRAINING_DUMMY, 0));
+  g.put(4, 1, 3, turned(TRAINING_DUMMY, 0));
+  g.put(9, 1, 1, turned(ARCHERY_TARGET, 2));
+  g.put(11, 1, 1, turned(ARCHERY_TARGET, 2));
+  g.put(5, 1, 1, turned(WHITE_BANNER, 0));
+  g.put(7, 1, 1, turned(WHITE_BANNER, 0));
+  // The hall: floor, plinth, timber-framed walls with dark posts, a wall
+  // plate, a ceiling and a slate roof.
+  g.box(0, 0, Z0, W - 1, 0, Z1, PLANKS);
+  for (let y = 1; y <= 4; y++) {
+    for (let x = 0; x < W; x++) { g.put(x, y, Z0, TIMBER); g.put(x, y, Z1, TIMBER); }
+    for (let z = Z0; z <= Z1; z++) { g.put(0, y, z, TIMBER); g.put(W - 1, y, z, TIMBER); }
+  }
+  for (let x = 0; x < W; x++) { g.put(x, 1, Z0, COBBLE); g.put(x, 1, Z1, COBBLE); g.put(x, 4, Z0, DARK_WOOD); g.put(x, 4, Z1, DARK_WOOD); }
+  for (let z = Z0; z <= Z1; z++) { g.put(0, 1, z, COBBLE); g.put(W - 1, 1, z, COBBLE); g.put(0, 4, z, DARK_WOOD); g.put(W - 1, 4, z, DARK_WOOD); }
+  for (const x of [0, 4, 8, 12]) for (const z of [Z0, Z1]) g.box(x, 2, z, x, 3, z, DARK_WOOD);
+  for (const z of [Z0, 9, Z1]) for (const x of [0, W - 1]) g.box(x, 2, z, x, 3, z, DARK_WOOD);
+  g.box(0, 5, Z0, W - 1, 5, Z1, PLANKS);
+  g.add(gable(0, Z0, W, Z1 - Z0 + 1, 6, SLATE, TIMBER));
+  // Windows: three each long side, two each end.
+  for (const x of [2, 10]) g.put(x, 2, Z0, WINDOW);
+  for (const x of [2, 6, 10]) g.put(x, 2, Z1, WINDOW);
+  for (const z of [8, 11]) { g.put(0, 2, z, WINDOW + 1); g.put(W - 1, 2, z, WINDOW + 1); }
+  g.add(door(6, 1, Z0));
+  // Six bunks along the back, heads to the wall.
+  for (const x of [1, 3, 5, 7, 9, 11]) g.add(bed(x, 1, Z1 - 2, 2));
+  // Racks of arms on the side walls.
+  for (const z of [8, 9]) { g.put(1, 1, z, turned(WEAPON_RACK, 1)); g.put(W - 2, 1, z, turned(WEAPON_RACK, 3)); }
+  // The mess: a long table, benches either side, a chandelier over it.
+  for (const x of [4, 5, 7, 8]) g.put(x, 1, 9, OAK_TABLE_);
+  for (const x of [4, 5, 7, 8]) { g.put(x, 1, 8, turned(OAK_CHAIR, 2)); }
+  g.put(6, 4, 9, CHANDELIER);
+  g.put(1, 1, 7, LANTERN); g.put(W - 2, 1, 7, LANTERN);
+  g.put(6, 3, Z1 - 1, PAINTING + 2);
+  return g.blocks();
+}
+
 export const STARTER_DESIGNS = [
   {
     id: 'starter_forest',
@@ -494,6 +714,42 @@ export const STARTER_DESIGNS = [
     footprint: '6 × 6',
     note: 'Nothing may stand over the watch.',
     blocks: militaryBlocks(),
+  },
+  {
+    id: 'starter_wall',
+    structure: 'wall',
+    name: 'Curtain wall',
+    size: 16,
+    footprint: '16 × 3',
+    note: 'The outside is the side with the battlements. Lay several end to end round your land.',
+    blocks: wallBlocks(),
+  },
+  {
+    id: 'starter_gatehouse',
+    structure: 'gatehouse',
+    name: 'Gatehouse',
+    size: 13,
+    footprint: '13 × 6',
+    note: 'Put it in your wall where the road comes in — the gate shuts itself when a round is coming.',
+    blocks: gatehouseBlocks(),
+  },
+  {
+    id: 'starter_watchtower',
+    structure: 'watchtower',
+    name: 'Watchtower',
+    size: 7,
+    footprint: '7 × 7',
+    note: 'Two archers keep the lookout. Put it where it can see the side the Stone Kingdom comes from.',
+    blocks: watchtowerBlocks(),
+  },
+  {
+    id: 'starter_barracks',
+    structure: 'barracks',
+    name: 'Barracks',
+    size: 13,
+    footprint: '13 × 14',
+    note: 'A soldier for every bunk. They train while you play, and march out to meet the army.',
+    blocks: barracksBlocks(),
   },
   {
     id: 'starter_village',

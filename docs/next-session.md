@@ -16,7 +16,9 @@ A walled city of dark stone, about 1000–1400 blocks from home: a keep with the
 
 **Done:** the war — borders 32 → 320, locked until Age 6; reaching Age 6 opens the wall and the Stone Kingdom declares war (ring or not); ten rounds with archers, rams, siege catapults and the Warlord on his beast; war horn; Black Ring calls it off; victory blesses your land with fireflies.
 
-**Next:** the defence buildings for the war — walls and gatehouse, watchtower with archers, barracks training soldiers.
+**Done:** the defence buildings — stone wall, gatehouse, watchtower, barracks, each detailed, from Age 5. Walls take three blows a block; the gate shuts for a round; two archers on every tower; a soldier for every bunk.
+
+**Next:** the Black Ring path — the alliance, the 1,000 warriors, the march to the Sky Kingdom.
 
 # Before that — Phase 6
 

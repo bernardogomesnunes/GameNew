@@ -74,6 +74,8 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView } from './render/ArmyView.js';
+import { BED } from './config/blocks.js';
+import { SOLDIER } from './world/Defenders.js';
 import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
 import { WANDERERS, NEWS } from './config/wanderers.js';
@@ -82,6 +84,10 @@ import { MobView } from './render/MobView.js';
 const REACH = 7;
 /** The war only comes on while you're this near home — it's your settlement they want. */
 const WAR_HOME_RANGE = 220;
+/** Blows a block of a claimed wall, gatehouse or watchtower takes before it breaks. */
+const REINFORCED = 3;
+/** How often the defence buildings' posts are brought in line with what's standing. */
+const DEFENCE_SYNC_MS = 1000;
 /**
  * How far a tool can point, as opposed to how far you can reach.
  *
@@ -357,6 +363,8 @@ export class Game {
     this.guardianView = new GuardianView(this.scene);
     // The Stone Kingdom's rams, catapults and beast, and its arrows.
     this.armyView = new ArmyView(this.scene);
+    // Your soldiers and tower archers (the defence buildings).
+    this.defenderView = new SettlerView(this.scene);
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -2955,6 +2963,8 @@ export class Game {
     if (Math.hypot(p.x - home.x, p.z - home.z) > WAR_HOME_RANGE) return;
     const what = war.tick(d.days);
     if (what === 'warn') {
+      const shut = this.shutGates();
+      if (shut) this.ui?.toast({ kind: 'challenge', title: 'The gates are shut', body: `${shut === 1 ? 'Your gatehouse has' : `${shut} gatehouses have`} closed for the round` });
       const dir = this.kingdomDirection() ?? 'north';
       this.sound?.hit?.('stone', { gain: 0.9, pitch: 0.35 });
       this.ui?.toast({
@@ -3030,8 +3040,18 @@ export class Game {
   siegeBreak(cells) {
     if (!this.duilt) return 0;
     const changes = [];
+    this.siegeDamage ??= new Map();
     for (const { x, y, z, id = this.world.getBlock(x, y, z) } of cells) {
       if (id === AIR || this.world.isIndestructible(x, y, z) || isChest(id) || isFluid(id)) continue;
+      // A claimed wall, gatehouse or watchtower is built to take it: a block
+      // of one stands REINFORCED blows before it goes.
+      const s = this.duilt.structures.at(x, y, z);
+      if (s?.valid && STRUCTURES_BY_ID.get(s.type)?.defence) {
+        const key = `${x},${y},${z}`;
+        const blows = (this.siegeDamage.get(key) ?? 0) + 1;
+        if (blows < REINFORCED) { this.siegeDamage.set(key, blows); continue; }
+        this.siegeDamage.delete(key);
+      }
       changes.push({ x, y, z, prev: id, next: AIR });
     }
     if (!changes.length) return 0;
@@ -3060,6 +3080,73 @@ export class Game {
     const stone = this.projectiles.fire(from, bestAim(this.world, from, { x: x + 0.5, y: y + 1, z: z + 0.5 }));
     stone.enemy = true;
     this.sound?.hit?.('wood', { gain: 0.5, pitch: 0.5 });
+  }
+
+  /** Every open door in a claimed gatehouse, shut. Returns how many gatehouses had any. */
+  shutGates() {
+    let gatehouses = 0;
+    for (const s of this.duilt?.structures.list() ?? []) {
+      if (s.type !== 'gatehouse' || !s.valid) continue;
+      const r = s.region;
+      let any = false;
+      for (let x = r.minX; x <= r.maxX; x++) for (let y = r.minY; y <= r.maxY; y++) for (let z = r.minZ; z <= r.maxZ; z++) {
+        const part = doorPart(this.world.getBlock(x, y, z));
+        if (!part?.open) continue;
+        this.world.setBlock(x, y, z, doorBlock({ ...part, open: false }));
+        any = true;
+      }
+      if (any) gatehouses++;
+    }
+    if (gatehouses) this.remeshDirty();
+    return gatehouses;
+  }
+
+  /**
+   * Your soldiers and tower archers (the defence buildings — world/
+   * Defenders.js): their posts brought in line with what's standing every
+   * second, and each frame, anything of the enemy's in your land fought.
+   */
+  tickDefence(dt) {
+    const d = this.duilt;
+    if (!d || d.sandbox || !this.wanderers) return;
+    const now = performance.now();
+    if (now - (this.defenceSyncedAt ?? 0) > DEFENCE_SYNC_MS) {
+      this.defenceSyncedAt = now;
+      const posts = d.structures.list()
+        .filter((s) => s.type === 'barracks' || s.type === 'watchtower')
+        .map((s) => ({ id: s.id, type: s.type, region: s.region, valid: s.valid, beds: s.type === 'barracks' ? this.bedsIn(s.region) : 0 }));
+      d.defenders.sync(posts, d.days);
+    }
+    const enemies = this.wanderers.list.filter((p) => WANDERERS[p.kind].hp && !p.dead && !p.done && (p.war || p.raider || p.angry));
+    d.defenders.tick(dt, enemies, {
+      strike: (e, damage, by) => this.defenderHits(e, damage, by),
+      shot: (e, damage, by) => this.defenderHits(e, damage, by),
+    });
+  }
+
+  /** How many bunks a barracks has: the foot of every bed in it. */
+  bedsIn(r) {
+    let n = 0;
+    for (let x = r.minX; x <= r.maxX; x++) for (let y = r.minY; y <= r.maxY; y++) for (let z = r.minZ; z <= r.maxZ; z++) {
+      const id = this.world.getBlock(x, y, z);
+      if (id >= BED && id <= BED + 3) n++;
+    }
+    return n;
+  }
+
+  /** One of your soldiers' blows, or an archer's arrow, landing. */
+  defenderHits(e, damage, by) {
+    const res = this.wanderers.hit(e, damage, by.x, by.z);
+    if (!res?.killed) return;
+    const gained = this.duilt.collect(res.drops) ?? {};
+    const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+    this.ui?.toast({ kind: 'xp', title: `Your ${by.kind === 'archer' ? 'archers' : 'soldiers'} brought down ${e.name}`, body: got || undefined });
+  }
+
+  /** A raider's blow on one of your soldiers. */
+  soldierHit(p, soldier, hits) {
+    if (!this.duilt.defenders.hurt(soldier, hits)) return;
+    this.ui?.toast({ kind: 'xp', title: 'One of your soldiers has fallen', body: 'The barracks will train another' });
   }
 
   /** The war horn: call the next round now, when you're ready for it. */
@@ -4156,6 +4243,7 @@ export class Game {
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
       this.tickWar();
+      this.tickDefence(dt);
       // The border, drawn again where its ground has loaded since.
       this.duilt?.territory.refreshIfStale();
       this.collectFallen();
@@ -4198,7 +4286,9 @@ export class Game {
     if (this.player) this.updateYou(dt, playing);
     const strangers = this.wanderers?.list ?? [];
     this.wanderView.update(strangers.filter((p) => !WANDERERS[p.kind].siege && !WANDERERS[p.kind].beast));
-    this.armyView.update(strangers, this.wanderers?.arrows ?? [], dt);
+    const ours = this.duilt?.defenders;
+    this.defenderView.update(ours?.people ?? []);
+    this.armyView.update(strangers, [...(this.wanderers?.arrows ?? []), ...(ours?.arrows ?? [])], dt);
     this.projectileView.update(this.projectiles?.list ?? []);
     this.fireflyView.update(this.fireflies);
     this.guardianView.update(this.duilt?.guardian, dt);
@@ -4304,6 +4394,9 @@ export class Game {
         inLand: (x, z) => !!(this.duilt && !this.duilt.sandbox && this.duilt.territory.contains(x, z)),
         onBatter: (p, cells) => this.siegeBreak(cells.map((c) => ({ ...c, id: this.world.getBlock(c.x, c.y, c.z) }))),
         onThrow: (p, at) => this.enemyThrows(p, at),
+        // Your soldiers stand between them and you.
+        foes: () => this.duilt?.defenders.soldiers ?? [],
+        onFoe: (p, soldier, hits) => this.soldierHit(p, soldier, hits),
       });
     }
     // Your penned animals come back with the save, and join the wild ones.
@@ -4389,6 +4482,16 @@ export class Game {
       const work = this.duilt.structures.list().find((s) => s.id === person.workId);
       const job = work ? STRUCTURES_BY_ID.get(work.type)?.name?.toLowerCase() : null;
       this.ui?.setPersonHint(person.name, job ? `works the ${job}` : 'looking for work');
+      return;
+    }
+    // One of your soldiers or tower archers.
+    const mine = this.duilt?.defenders
+      ? this.defenderView.pick(this.duilt.defenders.people, this.player.eyePosition(), this.player.lookDirection())
+      : null;
+    if (mine) {
+      this.ui?.setPersonHint(mine.name, mine.kind === 'archer'
+        ? 'keeping watch from the tower'
+        : mine.foe ? `fighting ${mine.foe.name}` : `on guard at the barracks — ${Math.ceil(mine.hp)} of ${SOLDIER.hp} strength`);
       return;
     }
     // Somebody from out in the world — the hermit, a bandit, a traveller.

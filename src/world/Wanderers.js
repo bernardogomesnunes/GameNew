@@ -68,6 +68,7 @@ export class Wanderers {
     hostile = () => false, night = () => false, stores = () => [],
     onAttack = null, onSteal = null, onRaid = null, kingdomHostile = () => false,
     buildings = () => [], inLand = () => false, onBatter = null, onThrow = null,
+    foes = () => [], onFoe = null,
   }) {
     this.world = world;
     this.rand = rand;
@@ -87,6 +88,10 @@ export class Wanderers {
     this.inLand = inLand;
     this.onBatter = onBatter;
     this.onThrow = onThrow;
+    // Your soldiers (the barracks — world/Defenders.js): whoever's nearer
+    // than you is who a raider fights.
+    this.foes = foes;
+    this.onFoe = onFoe;
     // Archers' arrows in flight — { x, y, z, vx, vy, vz, from, age, stuck }.
     this.arrows = [];
     this.raidedTonight = false;
@@ -660,6 +665,25 @@ export class Wanderers {
       p.speed = spec.speed;
       if (!p.target) p.facing = Math.atan2(dx, dz);
       if (p.cooldown <= 0) { p.cooldown = spec.every; this.loose(p, player); }
+      return true;
+    }
+    // One of your soldiers nearer than you is who it fights.
+    let foe = null, fd = d;
+    if (hostile && (p.war || p.raider)) {
+      for (const f of this.foes()) {
+        if (f.hp <= 0) continue;
+        const e = Math.hypot(f.x - p.x, f.z - p.z);
+        if (e < fd && Math.abs(f.y - p.y) < 4) { fd = e; foe = f; }
+      }
+    }
+    if (foe && fd < aggro) {
+      const fx = foe.x - p.x, fz = foe.z - p.z, stand = spec.reach * 0.75;
+      p.target = fd > stand ? { x: foe.x - (fx / fd) * stand, z: foe.z - (fz / fd) * stand } : null;
+      p.speed = spec.run;
+      if (fd <= spec.reach && p.cooldown <= 0) {
+        p.cooldown = spec.every;
+        this.onFoe?.(p, foe, spec.hits);
+      }
       return true;
     }
     if (hostile && !leashed && d < aggro && Math.abs(player.y - p.y) < 4) {
