@@ -51,7 +51,8 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST } from './config/blocks.js';
+import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
@@ -142,6 +143,7 @@ const swings = (id) => !!GATE_SWING[id] || !!doorPart(id);
 /** What Place does to a door or gate — "Open" or "Close" — or null for anything else. */
 export function swingLabel(id) {
   if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
+  if (isChest(id)) return 'Open';
   const door = doorPart(id);
   return door ? (door.open ? 'Close' : 'Open') : null;
 }
@@ -391,6 +393,7 @@ export class Game {
 
     // The land grows when an age is finished, and the wall has to grow with it.
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
+    this.bus.on('health:died', ({ cause }) => this.die(cause));
 
     this.wireInput();
     this.wireSaveOnLeave();
@@ -1423,6 +1426,8 @@ export class Game {
     // holding gets a say, the same way you'd reach for a latch.
     const aimed = this.raycast();
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
+    // And at a chest, Place opens it.
+    if (aimed && isChest(aimed.block)) return void this.openChest(aimed);
     // A full bucket takes the button too, instead of placing a block.
     const override = PLACE_OVERRIDE[this.selectedItemId] ?? (isFood(this.selectedItemId) ? 'throwSelected' : null);
     if (override) return void this[override]();
@@ -2705,7 +2710,118 @@ export class Game {
     if (!turns(type)) return type;
     const look = this.lookFacing();
     const shape = BLOCKS_BY_ID.get(type)?.shape;
-    return turned(type, shape === 'chair' ? look + 2 : look);
+    // A chair and a chest face you; a stair climbs away from you.
+    return turned(type, shape === 'chair' || shape === 'chest' ? look + 2 : look);
+  }
+
+  /** Opens the chest you're pointing at, on the store screen. */
+  openChest(hit) {
+    if (!this.duilt || !isChest(this.world.getBlock(hit.x, hit.y, hit.z))) return;
+    this.duilt.chestAt(hit.x, hit.y, hit.z);
+    this.ui.openStore({ chest: { x: hit.x, y: hit.y, z: hit.z } });
+  }
+
+  /**
+   * Whether you're resting at home: standing still inside a claimed house
+   * (or townhouse), which heals twice as fast — see survival/Health.js.
+   */
+  restingAtHome(wasAt) {
+    const p = this.player.position;
+    if (Math.hypot(p.x - wasAt.x, p.z - wasAt.z) > 1e-3) return false;
+    const x = Math.floor(p.x), y = Math.floor(p.y), z = Math.floor(p.z);
+    return this.duilt.structures.list().some((s) => (s.type === 'house' || s.type === 'townhouse') && s.valid !== false
+      && x >= s.region.minX && x <= s.region.maxX && z >= s.region.minZ && z <= s.region.maxZ
+      && y >= s.region.minY && y <= s.region.maxY + 1);
+  }
+
+  /**
+   * What hurts this frame: a fall just landed, and lava you're standing in.
+   * Phase 6 — chosen directly: falls past three blocks and lava hurt. Lava
+   * stings in beats (Health's cooldown) rather than draining silently.
+   */
+  feelHurt() {
+    const fall = this.player.takeLanding();
+    if (fall > 0) this.duilt.hurt(fallDamage(fall), 'fall');
+    const p = this.player.position;
+    const x = Math.floor(p.x), z = Math.floor(p.z);
+    for (const y of [Math.floor(p.y + 0.1), Math.floor(p.y + 1.2)]) {
+      const id = this.world.getBlock(x, y, z);
+      if (isLava(id) || isLavaFlow(id)) {
+        this.duilt.hurt(LAVA_PER_SECOND / 2, 'lava', { steady: true });
+        break;
+      }
+    }
+  }
+
+  /**
+   * Dying. Chosen directly: you wake back at your settlement, and what you
+   * were carrying waits in a chest where you fell — "when we die the chest
+   * appears in place with my items". What's equipped stays with you.
+   */
+  die(cause) {
+    if (!this.duilt || this.dying) return;
+    this.dying = true;
+    const p = this.player.position;
+    const x = Math.floor(p.x), z = Math.floor(p.z);
+    // The first open cell at or above your feet. Written straight into the
+    // world rather than through applyChanges: it goes where you fell,
+    // border or no border, and nothing pays for it.
+    let y = Math.max(1, Math.floor(p.y));
+    for (let up = 0; up < 6; up++, y++) {
+      const id = this.world.getBlock(x, y, z);
+      if (id === AIR || isFlowing(id) || id === WATER || isLava(id) || isLavaFlow(id)) break;
+    }
+    const left = this.duilt.leaveGrave(x, y, z);
+    if (left) {
+      this.world.setBlock(x, y, z, CHEST);
+      this.remeshDirty();
+    }
+    const home = this.respawnPoint();
+    this.player.teleport(home.x, home.y, home.z);
+    this.duilt.health.restore();
+    this.sound?.break?.('wood');
+    this.ui?.duiltUI?.flashHurt(true);
+    const how = { fall: 'You fell too far', lava: 'The lava took you' }[cause] ?? 'You died';
+    this.ui?.toast({
+      kind: 'xp',
+      title: `${how} — you woke at home`,
+      body: left
+        ? `What you were carrying is in a chest where you fell, at ${x}, ${z}`
+        : 'You had nothing with you to leave behind',
+    });
+    this.dying = false;
+  }
+
+  /** The chest you fell by, emptied: it's gone. */
+  clearGrave({ x, y, z }) {
+    if (!this.duilt || !isChest(this.world.getBlock(x, y, z))) return;
+    this.world.setBlock(x, y, z, AIR);
+    this.duilt.removeChest(x, y, z);
+    this.remeshDirty();
+    this.ui?.toast({ kind: 'challenge', title: 'Got everything back', body: 'The chest is gone' });
+  }
+
+  /** Where you wake after dying: a safe spot near the middle of your land. */
+  respawnPoint() {
+    const b = this.duilt?.territory.bounds?.();
+    const cx = b ? Math.floor((b.minX + b.maxX + 1) / 2) : Math.floor(this.player.position.x);
+    const cz = b ? Math.floor((b.minZ + b.maxZ + 1) / 2) : Math.floor(this.player.position.z);
+    const world = this.world;
+    for (let r = 0; r < 24; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dz = -r; dz <= r; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          const x = cx + dx, z = cz + dz;
+          for (let y = Math.max(1, world.surfaceHeight(x, z) - 2); y < world.surfaceHeight(x, z) + 12 && y < world.height - 3; y++) {
+            const under = world.getBlock(x, y - 1, z);
+            if (world.isCollidable(x, y - 1, z) && !isLava(under) && !world.isCollidable(x, y, z) && !world.isCollidable(x, y + 1, z)) {
+              return { x: x + 0.5, y, z: z + 0.5 };
+            }
+          }
+        }
+      }
+    }
+    return { x: cx + 0.5, y: world.surfaceHeight(cx, cz) + 1, z: cz + 0.5 };
   }
 
   placeBlock() {
@@ -2713,7 +2829,7 @@ export class Game {
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
     // shouldn't go on to build against it.
-    if (swings(hit.block)) return;
+    if (swings(hit.block) || isChest(hit.block)) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
@@ -2867,6 +2983,13 @@ export class Game {
         });
         return false;
       }
+      // A chest with things in it stays put — empty it first, the same as a
+      // storehouse. Nothing in it is ever thrown away by a stray swing.
+      const full = changes.find((c) => isChest(c.prev) && !isChest(c.next) && !this.duilt.chestEmpty(c.x, c.y, c.z));
+      if (full) {
+        this.ui?.toast({ kind: 'xp', title: 'Empty the chest first', body: 'Take everything out, then break it' });
+        return false;
+      }
       if (chargeResources) {
         const paid = this.duilt.payForPlacement(changes);
         if (!paid.ok) {
@@ -2880,8 +3003,12 @@ export class Game {
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
     // What's planted is kept track of, so it can grow while you're away.
+    // And a chest gets its slots when it's put down, and loses them when
+    // it's taken away (only ever empty — see above).
     if (this.duilt) {
       for (const c of changes) {
+        if (isChest(c.next) && !isChest(c.prev)) this.duilt.chestAt(c.x, c.y, c.z);
+        else if (isChest(c.prev) && !isChest(c.next)) this.duilt.removeChest(c.x, c.y, c.z);
         const was = cropOf(c.prev), is = cropOf(c.next);
         if (is && is.stage === 0 && !(was && was.kind === is.kind)) this.duilt.crops.plant(c.x, c.y, c.z, is.kind);
         else if (was && !is) this.duilt.crops.remove(c.x, c.y, c.z);
@@ -3180,7 +3307,8 @@ export class Game {
       this.player.update(dt);
       this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
-        this.duilt.tick(dt);
+        this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
+        this.feelHurt(dt);
         this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
       }
       this.updateHover();
@@ -3394,14 +3522,17 @@ export class Game {
     const waiting = hit && !onBuilding && this.duilt ? this.duilt.waitingAt(hit.x, hit.y, hit.z) : null;
     const gate = hit && GATE_SWING[hit.block];
     const door = hit && doorPart(hit.block);
+    const chest = hit && isChest(hit.block);
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door) && swingLabel(hit.block);
+    const swing = (gate || door || chest) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     this.ui?.setBuildingHint(gate
       ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
       : door
         ? `Door · ${door.open ? 'open' : 'shut'} — ${how}`
+      : chest
+        ? `${this.duilt?.chestAt(hit.x, hit.y, hit.z, { create: false })?.grave ? 'What you were carrying' : 'Chest'} — ${how}`
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')

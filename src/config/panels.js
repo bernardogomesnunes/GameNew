@@ -107,6 +107,8 @@ export const PANELS = [
   {
     id: 'panel-store',
     title: 'Storehouse',
+    // A chest opens the same screen — see DuiltUI.renderStore.
+    titleId: 'store-title',
     sub: 'Tap anything to move it between your bag and the shelves.',
     subId: 'store-sub',
     wide: true,

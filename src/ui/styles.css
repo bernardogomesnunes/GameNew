@@ -705,6 +705,8 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 #vitals {
   position: absolute; top: 52px; left: 12px;
   display: flex; align-items: center; gap: 8px;
+  /* The hearts take a row of their own on a narrow screen. */
+  flex-wrap: wrap; max-width: calc(100vw - 24px);
   pointer-events: auto; z-index: 5;
 }
 #vitals[hidden] { display: none; }
@@ -724,6 +726,29 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
   min-height: 34px;
 }
 .vital-eat[hidden] { display: none; }
+
+/* Ten hearts, in halves — see DuiltUI.renderHealth. A grey heart with the red
+   one over it, cut to half its width for a half heart. */
+.vital-hearts { gap: 1px; padding: 4px 7px; }
+.vital-hearts[hidden] { display: none; }
+.heart { position: relative; width: 13px; height: 13px; display: inline-block; }
+.heart svg { width: 13px; height: 13px; display: block; fill: rgba(35, 42, 45, 0.22); }
+.heart .heart-red { position: absolute; inset: 0; overflow: hidden; width: 0; }
+.heart .heart-red svg { fill: #d9473b; filter: drop-shadow(0 1px 0 rgba(0,0,0,0.25)); }
+.heart.full .heart-red { width: 100%; }
+.heart.half .heart-red { width: 50%; }
+/* Low on hearts, they beat. */
+.vital-hearts.low .heart.full, .vital-hearts.low .heart.half { animation: heart-beat 0.9s ease-in-out infinite; }
+@keyframes heart-beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+
+/* Hurt: a red flash round the edges of the screen, gone in a moment. */
+#hurt-flash {
+  position: fixed; inset: 0; pointer-events: none; z-index: 9; opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(200, 30, 20, 0) 55%, rgba(200, 30, 20, 0.45) 100%);
+}
+#hurt-flash.on { animation: hurt-flash 0.5s ease-out; }
+#hurt-flash.on.strong { animation: hurt-flash 1.6s ease-out; background: radial-gradient(ellipse at center, rgba(160, 20, 15, 0.35) 30%, rgba(160, 20, 15, 0.75) 100%); }
+@keyframes hurt-flash { 0% { opacity: 1; } 100% { opacity: 0; } }
 
 /* --- the bag ---
    Equipped and bag are two grids over the one inventory (see DuiltUI's

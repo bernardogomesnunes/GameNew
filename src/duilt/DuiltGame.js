@@ -1,6 +1,6 @@
 import { Crops, harvestOf, cropProduce } from './Crops.js';
 import { penProduce, herdToJSON } from './Ranch.js';
-import { Inventory, PLAYABLE_SLOTS } from '../items/Inventory.js';
+import { Inventory } from '../items/Inventory.js';
 import { Territory } from '../world/Territory.js';
 import { StructureRegistry } from '../structures/StructureRegistry.js';
 import { tierStatus, validateStructure } from '../structures/validate.js';
@@ -10,7 +10,7 @@ import { Skills } from '../progression/Skills.js';
 import { Crafting } from './Crafting.js';
 import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
-import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName } from '../config/items.js';
+import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool } from '../config/items.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
@@ -399,7 +399,7 @@ export class DuiltGame {
       const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
       return {
         structure: null, chest: true, grave: chest.grave, store, used, free: store.size - used, size: store.size, items,
-        tier: { name: chest.grave ? 'What you were carrying' : 'Chest' },
+        tier: { name: chest.grave ? 'In the chest' : 'Chest' },
       };
     }
     const store = this.structures.storeFor(structure);
@@ -544,14 +544,16 @@ export class DuiltGame {
   }
 
   /**
-   * Death: everything in your bag (not what's equipped — that stays with
-   * you) goes into a new chest at (x, y, z). Returns how many things went
-   * in, or 0 when there was nothing to leave (and no chest is made).
+   * Death: everything you carry goes into a new chest at (x, y, z) —
+   * requested directly, "when we die the chest appears in place with my
+   * items" — except your tools, which stay with you so you can walk back
+   * and dig for it. Returns how many things went in, or 0 when there was
+   * nothing to leave (and no chest is made).
    */
   leaveGrave(x, y, z) {
     const bag = this.inventory.slots;
     const kept = [];
-    for (let i = PLAYABLE_SLOTS; i < bag.length; i++) if (bag[i]) kept.push(i);
+    for (let i = 0; i < bag.length; i++) if (bag[i] && !isTool(bag[i].id)) kept.push(i);
     if (!kept.length || this.inventory.endless) return 0;
     const grave = new Inventory({ slots: Math.max(CHEST_SLOTS, kept.length), bus: this.bus });
     let n = 0;
