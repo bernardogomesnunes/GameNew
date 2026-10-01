@@ -1,3 +1,5 @@
+import { ARMOUR_PIECES } from './armour.js';
+
 /**
  * What you can make, and where you can make it.
  *
@@ -640,6 +642,14 @@ export const RECIPES = [
     blurb: 'Fireflies you caught, in glass. A soft green light, the way the Sky Kingdom lights its paths.',
   },
 ];
+
+// Armour (Phase 7b): each piece at the bench, from config/armour.js.
+for (const p of ARMOUR_PIECES) {
+  RECIPES.push({
+    id: p.id, name: p.name, station: 'hand', age: p.age, inputs: p.inputs, output: { id: p.id, count: 1 },
+    blurb: `${p.points} armour, worn on the ${p.slot === 'body' ? 'body' : p.slot}. ${p.madeBy}.`,
+  });
+}
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 

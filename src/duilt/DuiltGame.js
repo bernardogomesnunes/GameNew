@@ -13,6 +13,7 @@ import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool } from '../config/items.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
+import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
 
 /**
@@ -59,6 +60,8 @@ export class DuiltGame {
     this.health = new Health(bus);
     // What's in each chest in the world, by where it stands — see chestAt.
     this.chests = new Map(); // "x,y,z" -> { inventory, grave }
+    // What you're wearing — see wear(). Each slot { id, wear } or null.
+    this.worn = Object.fromEntries(WEAR_SLOTS.map((k) => [k, null]));
     this.skills = new Skills(bus);
     this.crafting = new Crafting({ inventory: this.inventory, world, skills: this.skills });
     this.settlers = new Settlers({
@@ -511,7 +514,73 @@ export class DuiltGame {
    */
   hurt(amount, cause, opts) {
     if (this.sandbox) return 0;
+    if (HIT_CAUSES.has(cause)) amount = this.absorb(amount);
     return this.health.hurt(amount, cause, opts);
+  }
+
+  // ---- armour (Phase 7b) ----
+
+  /** How many points of armour you have on. */
+  armour() {
+    let n = 0;
+    for (const k of WEAR_SLOTS) n += ITEMS_BY_ID.get(this.worn[k]?.id)?.armour ?? 0;
+    return n;
+  }
+
+  /**
+   * A blow, through what you're wearing: smaller by your armour, and every
+   * piece that took it a little more worn. A piece worn through falls apart.
+   */
+  absorb(amount) {
+    const points = this.armour();
+    if (!points) return amount;
+    for (const k of WEAR_SLOTS) {
+      const piece = this.worn[k];
+      const spec = ITEMS_BY_ID.get(piece?.id);
+      if (!spec?.armour) continue;
+      piece.wear += 1;
+      if (piece.wear >= spec.durability) {
+        this.worn[k] = null;
+        this.bus?.emit('toast', { kind: 'xp', title: `${spec.name} fell apart`, body: 'Worn through — make another' });
+      }
+    }
+    this.inventory.changed();
+    return throughArmour(amount, points);
+  }
+
+  /**
+   * Puts on what's in bag slot `index`, if it's something you wear. What was
+   * already in that place comes off into the same slot, so it's a swap.
+   */
+  wear(index) {
+    const inv = this.inventory;
+    const s = inv.slots[index];
+    const spec = ITEMS_BY_ID.get(s?.id);
+    if (!spec?.wears) return { ok: false, reason: s ? `You can't wear ${spec?.name?.toLowerCase() ?? 'that'}.` : 'Nothing there.' };
+    const was = this.worn[spec.wears];
+    this.worn[spec.wears] = { id: s.id, wear: s.wear ?? 0 };
+    inv.slots[index] = was ? { id: was.id, count: 1, wear: was.wear } : null;
+    inv.changed();
+    return { ok: true, slot: spec.wears, swapped: was?.id ?? null };
+  }
+
+  /** Takes off what's worn in `slot`, into the bag — if there's room for it. */
+  takeOff(slot) {
+    const piece = this.worn[slot];
+    if (!piece) return { ok: false, reason: 'Nothing on there.' };
+    if (this.inventory.add(piece.id, 1, { wear: piece.wear }) > 0) return { ok: false, reason: 'No room in your bag.' };
+    this.worn[slot] = null;
+    this.inventory.changed();
+    return { ok: true, id: piece.id };
+  }
+
+  /**
+   * Who you'd pass for: a full set of one realm's armour (head, body and
+   * legs) lets you walk among its people — see config/armour.js.
+   */
+  disguisedAs() {
+    const realms = ['head', 'body', 'legs'].map((k) => ITEMS_BY_ID.get(this.worn[k]?.id)?.disguise ?? null);
+    return realms[0] && realms.every((r) => r === realms[0]) ? realms[0] : null;
   }
 
   // ---- chests ----
@@ -595,6 +664,7 @@ export class DuiltGame {
       structures: this.structures.toJSON(),
       hunger: this.hunger.toJSON(),
       health: this.health.toJSON(),
+      worn: this.worn,
       chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
@@ -615,6 +685,10 @@ export class DuiltGame {
     this.structures.loadJSON(data.structures);
     this.hunger.loadJSON(data.hunger);
     this.health.loadJSON(data.health);
+    for (const k of WEAR_SLOTS) {
+      const w = data.worn?.[k];
+      this.worn[k] = w && ITEMS_BY_ID.get(w.id)?.wears === k ? { id: w.id, wear: Number(w.wear) || 0 } : null;
+    }
     this.chests.clear();
     for (const c of Array.isArray(data.chests) ? data.chests : []) {
       if (typeof c?.key !== 'string') continue;

@@ -769,6 +769,15 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
   align-items: start;
 }
 #bag-grid { margin: 8px 0 14px; max-height: 46vh; overflow-y: auto; }
+/* What you're wearing (Phase 7b): four slots in a row, each named under it. */
+.bag-wear-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 64px)); gap: 10px; margin: 8px 0 4px; padding: 2px; }
+.wear-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.wear-cell .bag-slot { width: 100%; }
+.wear-label { font-size: 11px; color: var(--text-dim); }
+.wear-ghost { opacity: 0.55; display: flex; }
+.wear-slot.fits { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,190,90,0.35); }
+.armour-badge { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; font-size: 11px; font-weight: 700; color: #3c4650; }
+.armour-badge svg { width: 13px; height: 13px; fill: #8e9aa6; filter: drop-shadow(0 1px 0 rgba(0,0,0,0.25)); }
 /* Equipped is always exactly PLAYABLE_SLOTS, never more — nothing to
    scroll away from, so it gets no height cap to need scrolling under. */
 #bag-hotbar-grid { margin: 8px 0 14px; }

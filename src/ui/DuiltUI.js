@@ -5,6 +5,7 @@ import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, produ
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
+import { WEAR_SLOTS, SLOT_NAMES, ARMOUR_PER_POINT } from '../config/armour.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { itemIcon } from '../config/cubes.js';
 import { renderPanels } from './Panel.js';
@@ -112,6 +113,13 @@ export class DuiltUI {
             Equipped is what the hotbar actually shows; see
             Inventory.PLAYABLE_SLOTS and UIManager.buildHotbar.
           -->
+          <!--
+            What you're wearing (Phase 7b): head, body, legs and a ring.
+            The same lift-and-drop as the bag — lift a piece, tap its place
+            to put it on; tap something you're wearing to take it off.
+          -->
+          <div class="bag-section-head">Wearing <span class="sub" id="armour-sum"></span></div>
+          <div id="bag-wear-grid" class="bag-wear-grid"></div>
           <div class="bag-section-head">Equipped <span class="sub">— what the hotbar shows, in order</span></div>
           <div id="bag-hotbar-grid" class="bag-hotbar-grid"></div>
           <div class="bag-section-head">Your bag</div>
@@ -191,6 +199,7 @@ export class DuiltUI {
 
     this.bus.on('inventory:change', () => {
       this.renderBag();
+      this.renderHealth();
       this.renderVitals();
       // A storehouse is an Inventory too, so its own changes come through
       // here — and so does the bag half of the store screen.
@@ -424,9 +433,12 @@ export class DuiltUI {
     const v = d.health.value;
     const heart = (fill) => `<span class="heart ${fill}"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.4-4.5-9.4-9C1.1 8.2 3.1 4.5 6.7 4.5c2.2 0 3.7 1.2 5.3 3.1 1.6-1.9 3.1-3.1 5.3-3.1 3.6 0 5.6 3.7 4.1 7-2 4.5-9.4 9-9.4 9Z"/></svg>`
       + `<span class="heart-red"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.4-4.5-9.4-9C1.1 8.2 3.1 4.5 6.7 4.5c2.2 0 3.7 1.2 5.3 3.1 1.6-1.9 3.1-3.1 5.3-3.1 3.6 0 5.6 3.7 4.1 7-2 4.5-9.4 9-9.4 9Z"/></svg></span></span>`;
-    box.innerHTML = Array.from({ length: 10 }, (_, i) => heart(v >= 2 * (i + 1) ? 'full' : v === 2 * i + 1 ? 'half' : 'empty')).join('');
+    const armour = d.armour();
+    box.innerHTML = Array.from({ length: 10 }, (_, i) => heart(v >= 2 * (i + 1) ? 'full' : v === 2 * i + 1 ? 'half' : 'empty')).join('')
+      // What you're wearing, beside the hearts: a shield and its points.
+      + (armour ? `<span class="armour-badge"><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6Z"/></svg><b>${armour}</b></span>` : '');
     box.classList.toggle('low', v <= 6);
-    box.title = `Health: ${v / 2} of 10 hearts`;
+    box.title = `Health: ${v / 2} of 10 hearts${armour ? ` · ${armour} armour` : ''}`;
   }
 
   /** A red flash at the edges of the screen when you're hurt — stronger when you die. */
@@ -628,6 +640,7 @@ export class DuiltUI {
     const bin = d.inventory.endless ? null : 'data-discard';
     const slotHtml = (s, i) => this.slotHtml(s, i, { attr: 'data-slot', held: this.held === i, discardAttr: bin });
 
+    this.renderWear();
     hotbarGrid.innerHTML = slots.slice(0, PLAYABLE_SLOTS).map(slotHtml).join('');
     grid.innerHTML = slots.slice(PLAYABLE_SLOTS).map((s, j) => slotHtml(s, j + PLAYABLE_SLOTS)).join('');
 
@@ -641,6 +654,54 @@ export class DuiltUI {
       : 'Tap an item to lift it, tap a slot to put it down. Hold to split a stack.';
     this.renderDetail();
     this.refreshSlotTip();
+  }
+
+  /** The four things you wear, each its own slot with its name under it. */
+  renderWear() {
+    const d = this.duilt, grid = this.q('#bag-wear-grid');
+    if (!d || !grid) return;
+    const heldId = this.held != null ? d.inventory.slots[this.held]?.id : null;
+    const fits = ITEMS_BY_ID.get(heldId)?.wears ?? null;
+    grid.innerHTML = WEAR_SLOTS.map((k) => {
+      const piece = d.worn[k];
+      const spec = ITEMS_BY_ID.get(piece?.id);
+      const inner = spec
+        ? `<span class="swatch swatch-cube">${itemIcon(spec, { size: 34 }) ?? glyphSvg(spec.glyph, { size: 20, color: spec.color })}</span>`
+          + `<span class="wear"><i style="width:${Math.round((1 - piece.wear / spec.durability) * 100)}%"></i></span>`
+        : `<span class="wear-ghost">${glyphSvg({ head: 'helm', body: 'cuirass', legs: 'greaves', ring: 'ring' }[k], { size: 22, color: 0x9aa0a6 })}</span>`;
+      const tip = spec ? `${spec.name}${spec.armour ? ` · ${spec.armour} armour` : ''} — tap to take off` : `${SLOT_NAMES[k]} — nothing on`;
+      return `<div class="wear-cell"><button class="bag-slot wear-slot${spec ? '' : ' empty'}${fits === k ? ' fits' : ''}" data-wear="${k}"
+        aria-label="${escapeAttr(tip)}" data-tip="${escapeAttr(spec ? spec.name : SLOT_NAMES[k])}" data-tip-info="${escapeAttr(spec ? `${spec.armour ? `${spec.armour} armour · ` : ''}tap to take off` : k === 'ring' ? 'Forged at the Temple' : 'Lift a piece from your bag, then tap here')}">${inner}</button>
+        <span class="wear-label">${SLOT_NAMES[k]}</span></div>`;
+    }).join('');
+    grid.querySelectorAll('[data-wear]').forEach((btn) => btn.addEventListener('click', () => this.tapWear(btn.dataset.wear)));
+    const points = d.armour();
+    this.q('#armour-sum').textContent = points
+      ? `— ${points} armour, a blow ${Math.round(points * ARMOUR_PER_POINT * 100)}% softer`
+      : '— nothing on';
+  }
+
+  /** A wear slot tapped: put on what's lifted, or take off what's there. */
+  tapWear(k) {
+    const d = this.duilt;
+    if (!d) return;
+    if (this.held != null) {
+      const spec = ITEMS_BY_ID.get(d.inventory.slots[this.held]?.id);
+      if (spec?.wears !== k) {
+        this.bus.emit('toast', { kind: 'xp', title: spec?.wears ? `That goes on your ${SLOT_NAMES[spec.wears].toLowerCase()}` : `You can't wear ${itemName(spec?.id ?? '').toLowerCase()}` });
+        return;
+      }
+      const r = d.wear(this.held);
+      this.held = null;
+      if (r.ok) this.bus.emit('toast', { kind: 'xp', title: `Wearing the ${spec.name.toLowerCase()}` });
+    } else if (d.worn[k]) {
+      const r = d.takeOff(k);
+      this.bus.emit('toast', { kind: 'xp', title: r.ok ? `Took off the ${itemName(r.id).toLowerCase()}` : r.reason });
+    } else {
+      this.bus.emit('toast', { kind: 'xp', title: k === 'ring' ? 'Your ring is forged at the Temple' : `Lift a piece of armour from your bag, then tap ${SLOT_NAMES[k]}` });
+    }
+    this.renderBag();
+    this.renderHealth();
   }
 
   /** Tap lifts and drops; a long hold splits. Identical on mouse and finger. */
@@ -711,6 +772,7 @@ export class DuiltUI {
     const bits = [`Stacks to ${stackLimit(s.id)}`];
     if (spec?.madeBy) bits.push(spec.madeBy);
     if (isTool(s.id) && spec?.durability) bits.push(`${spec.durability - s.wear} uses left`);
+    if (spec?.wears) bits.push(`${spec.armour} armour, worn on the ${spec.wears} — lift it, then tap ${SLOT_NAMES[spec.wears]}`);
     if (isFood(s.id)) bits.push(`Restores ${spec.feeds} hunger`);
     return bits;
   }
@@ -748,7 +810,7 @@ export class DuiltUI {
   }
 
   showSlotTip(btn) {
-    const attr = ['data-slot', 'data-store-slot', 'data-bag-slot'].find((a) => btn.hasAttribute(a));
+    const attr = ['data-slot', 'data-store-slot', 'data-bag-slot', 'data-wear'].find((a) => btn.hasAttribute(a));
     this.tipAt = { attr, index: btn.getAttribute(attr) };
     const info = btn.dataset.tipInfo;
     this.tip.innerHTML = `<strong>${escapeHtml(btn.dataset.tip)}</strong>${info ? `<span>${escapeHtml(info)}</span>` : ''}`;
