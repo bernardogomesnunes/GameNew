@@ -1,4 +1,4 @@
-import { groundAt } from './Mobs.js';
+import { groundAt, bodyFits } from './Mobs.js';
 import { roofPart } from '../config/blocks.js';
 
 /**
@@ -41,7 +41,7 @@ export function stepAround(world, s, tx, tz, dt, speed) {
   for (const turn of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]) {
     const nx = s.x + Math.sin(a + turn) * len, nz = s.z + Math.cos(a + turn) * len;
     const g = groundAt(world, nx, nz, s.y, TALL);
-    if (g == null) continue;
+    if (g == null || !bodyFits(world, nx, nz, g)) continue;
     s.x = nx; s.z = nz; s.y = g;
     return true;
   }

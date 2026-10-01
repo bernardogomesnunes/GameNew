@@ -100,6 +100,9 @@ export class PlayerController {
 
     this.keys = new Set();
     this.externalMove = { x: 0, z: 0 };
+    // The touch stick pushed all the way out runs — a phone has no Shift
+    // (asked for directly: "can't run in mobile").
+    this.stickSprint = false;
     this.externalUp = 0;
     // Held right-stick deflection: turns the camera at a rate, unlike the
     // mouse and drag paths which apply one-off deltas. `lookSmoothed` trails it
@@ -217,7 +220,8 @@ export class PlayerController {
     // One key, two jobs — asked for directly: fly down "on shift" as well as
     // sprint. On your feet Shift sprints; flying or swimming it takes you
     // down, and in the air the down key (Ctrl) is the one that goes faster.
-    const sprinting = this.flying ? this.keys.has(b.down) : shift;
+    // The stick pushed right out only ever means faster, never down.
+    const sprinting = this.flying ? this.keys.has(b.down) || this.stickSprint : shift || this.stickSprint;
     const goingDown = this.keys.has(b.down) && !this.flying || shift;
 
     if (this.flying) {

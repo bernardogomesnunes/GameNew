@@ -377,6 +377,31 @@ export function groundAt(world, x, z, fromY, tall) {
   return null;
 }
 
+/** Half a person's width — see bodyFits. */
+export const BODY_HALF = 0.28;
+
+/**
+ * Whether a whole body fits standing at (x, z) with its feet at `footY`:
+ * every corner of it clear of anything solid from its feet to the top of
+ * its head. groundAt only asks about the middle of someone, so on its own
+ * it let half a person walk into a wall or round a corner through the
+ * stone (reported: they "cross some blocks").
+ */
+export function bodyFits(world, x, z, footY, tall = 1.8, half = BODY_HALF) {
+  // From the knee up: anything lower is a step their feet go up, the way
+  // the middle of them does (groundAt), and a corner over the next step up
+  // must not stop them climbing it.
+  const from = footY + STEP + 0.01;
+  for (const [ox, oz] of [[-half, -half], [half, -half], [-half, half], [half, half]]) {
+    const bx = Math.floor(x + ox), bz = Math.floor(z + oz);
+    for (let y = Math.floor(from); y <= Math.floor(footY + tall - 0.01); y++) {
+      const box = world.collisionBoxAt(bx, y, bz);
+      if (box && box.maxY > from && box.minY < footY + tall) return false;
+    }
+  }
+  return true;
+}
+
 /** Distance along a ray to where it enters a box, or null if it misses. */
 export function rayBox(o, d, minX, minY, minZ, maxX, maxY, maxZ) {
   let tmin = 0, tmax = Infinity;

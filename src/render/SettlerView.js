@@ -55,7 +55,12 @@ export class SettlerView {
     this.hair = new THREE.InstancedMesh(box(width * 0.76, headH * 0.32, width * 0.76), mat(), MAX);
     // A limb is a unit box, scaled and swung per instance: two legs, two arms.
     this.limbs = new THREE.InstancedMesh(box(1, 1, 1), mat(), MAX * 4);
-    this.meshes = [this.bodies, this.heads, this.hair, this.limbs];
+    // A soft shadow on the ground under each of them: what makes a figure
+    // read as standing in the world rather than pasted over it.
+    const shadowGeo = new THREE.CircleGeometry(width * 0.62, 14).rotateX(-Math.PI / 2);
+    this.shadows = new THREE.InstancedMesh(shadowGeo, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }), MAX);
+    this.shadows.renderOrder = 1;
+    this.meshes = [this.bodies, this.heads, this.hair, this.limbs, this.shadows];
     for (const m of this.meshes) {
       m.frustumCulled = false;
       m.castShadow = false;
@@ -106,6 +111,7 @@ export class SettlerView {
         mesh.setMatrixAt(i, base);
       };
       place(this.bodies, 0, legH + bodyH / 2, 0);
+      place(this.shadows, 0, 0.03, 0);
       place(this.heads, 0, legH + bodyH + headH / 2, 0);
       place(this.hair, 0, legH + bodyH + headH * 0.86, -width * 0.02);
 

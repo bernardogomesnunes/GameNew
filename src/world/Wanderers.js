@@ -1,7 +1,7 @@
 import { WANDERERS, WANDERER_NAMES, NEWS } from '../config/wanderers.js';
 import { STUN_SECONDS, BURN_SECONDS, BURN_DAMAGE, FREEZE_SECONDS, FREEZE_SLOW } from '../config/upgrades.js';
 import { landmarksFor } from './landmarks.js';
-import { groundAt, surfaceAt, isLoaded } from './Mobs.js';
+import { groundAt, surfaceAt, isLoaded, bodyFits } from './Mobs.js';
 
 /**
  * The people out in the world who aren't yours.
@@ -431,13 +431,16 @@ export class Wanderers {
       return { killed: true, drops };
     }
     // Knocked back half a block, if there's ground there — not a siege
-    // engine or a beast that size.
+    // engine or a beast that size. Only ever along the ground or down off
+    // it, never up a step: a blow used to lift a bandit you'd trapped in a
+    // hole straight out over its edge (reported: "locked one in a hole and
+    // when I beat them they go out of the hole").
     if (spec.siege || spec.beast) return { killed: false, drops: {} };
     const away = Math.atan2(p.x - fromX, p.z - fromZ);
     const kx = p.x + Math.sin(away) * 0.6, kz = p.z + Math.cos(away) * 0.6;
     const ground = groundAt(this.world, kx, kz, p.y, TALL);
-    if (ground != null && ground <= p.y + 1) { p.x = kx; p.z = kz; }
-    p.vy = 3;
+    if (ground != null && ground <= p.y + 0.05 && this.fits(p, kx, kz, ground)) { p.x = kx; p.z = kz; }
+    p.vy = 1.5;
     return { killed: false, drops: {} };
   }
 
@@ -749,6 +752,13 @@ export class Wanderers {
     return best;
   }
 
+  /** Whether all of `p` fits standing at (x, z) on ground at footY (Mobs.bodyFits). */
+  fits(p, x, z, footY) {
+    // A siege engine goes by its middle, through the one-block breach its
+    // own ram knocked in a wall.
+    return bodyFits(this.world, x, z, footY, 1.8, WANDERERS[p.kind]?.siege ? 0.05 : undefined);
+  }
+
   /** A point pulled back inside a landmark's roaming circle. */
   withinRoam(p, x, z) {
     const r = WANDERERS[p.kind].roam;
@@ -765,13 +775,19 @@ export class Wanderers {
       } else {
         const step = Math.min(dist, p.speed * dt);
         let nx = p.x + (dx / dist) * step, nz = p.z + (dz / dist) * step;
-        let ground = groundAt(this.world, nx, nz, p.y, TALL);
+        // Somewhere to stand, and room for the whole of them there — not
+        // just their middle — so nobody walks through the side of a wall.
+        const footing = (x, z) => {
+          const g = groundAt(this.world, x, z, p.y, TALL);
+          return g != null && this.fits(p, x, z, g) ? g : null;
+        };
+        let ground = footing(nx, nz);
         if (ground == null && Math.abs(dx) > 0.05) {
-          const g = groundAt(this.world, p.x + Math.sign(dx) * step, p.z, p.y, TALL);
+          const g = footing(p.x + Math.sign(dx) * step, p.z);
           if (g != null) { nx = p.x + Math.sign(dx) * step; nz = p.z; ground = g; }
         }
         if (ground == null && Math.abs(dz) > 0.05) {
-          const g = groundAt(this.world, p.x, p.z + Math.sign(dz) * step, p.y, TALL);
+          const g = footing(p.x, p.z + Math.sign(dz) * step);
           if (g != null) { nx = p.x; nz = p.z + Math.sign(dz) * step; ground = g; }
         }
         if (ground == null) {
