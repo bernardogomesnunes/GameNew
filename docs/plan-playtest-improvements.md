@@ -87,15 +87,44 @@ What's already there to build on:
   - **Ice:** freezes it, which slows it a lot for a few seconds.
 - **Visuals:** a coloured shimmer on the item icon, and a visible effect on the target (sparks, flames, frost).
 
+## P7. Held items, in 3D, in your hands
+*"Weapons need 3D versions of them and they need to be shown on the UI when the avatar is moving, in their hands, plus fruit, buckets and all holding items."* Goes with P3: *"we need an avatar and third person view."*
+
+- **In first person:** whatever is selected is drawn in your hand in the bottom-right of the screen, as a 3D model. That covers swords, tools, the bucket, fruit and food, blocks, and anything else you hold.
+  - It sways as you walk, and swings when you strike or place.
+- **In third person:** the same model sits in your avatar's hand.
+- **The models:** built from the same box models the bag icons use where there's one (food, armour, rings, flasks), and new ones for swords, tools and the bucket.
+
+## P8. Saplings that grow, and woods that seed themselves
+*"Sapling should be a 3D model, and should grow into a tree in 10 game days. Let's remove the sapling from the world generation and it needs to be planted. Leaves should drop saplings from time to time, as fruit."*
+
+- **The sapling** is a small 3D plant (a thin stem and a few leaves), not a cube.
+- **It grows into a tree after 10 game days**, using the same tree shapes the world generates, sized as world trees are.
+- **None in the generated world** any more: a sapling is only ever one somebody planted.
+- **Leaves sometimes drop a sapling when broken**, the way they already sometimes drop fruit.
+
+## P9. Roads: calçada portuguesa, and old roads across the country
+*"Would be nice to have a road block looking like calçada portuguesa, and have old roads generating in terrain connected to the structures that we already added."*
+
+- **The Calçada block:** a road block patterned like Portuguese pavement, small white and black stones laid in waves. It's made at the bench from stone, and comes in white and dark versions so you can lay patterns.
+- **Old roads in the world:**
+  - worn paths of cobble and calçada that link the landmarks (the hermit's hut, the bandit camps, and later the ruins, temples, mines and monuments from P4), and run back towards where you start;
+  - generated from the seed so they're the same in every chunk, following the land without cutting through mountains, with a bridge where a road meets water;
+  - partly overgrown, with gaps, so they read as old.
+
 ---
 
 ## Suggested order
 
+Requested next (second list): do the whole playtest list, with P7, P8 and P9 added.
+
 1. **P1 Homes:** bed, painting spawn point, furnished house designs. Small, and you'll feel it at once.
+1b. **P8 Saplings:** a 3D sapling that grows in 10 game days, none generated, dropped by leaves.
 2. **P5 Drinks:** the timed-effect system, which P6 builds on.
 3. **P4 Places to find:** ruins, temples, mines and monuments with chests, using loot from P5.
 4. **P6 Enchantments:** the boots slot, armour effects, elemental swords.
+3b. **P9 Roads:** the calçada block, and old roads joining the landmarks.
 5. **P2 Forests:** the leaf lighting pass.
-6. **P3 Mobs and the avatar:** the biggest visual job — new models, third-person view and the settings.
+6. **P3 + P7, the avatar and what you hold:** third-person view with an avatar, held items in 3D in first and third person, and better mob models. This is the biggest visual job.
 
 The lore (7d onwards) can carry on in between. Which comes first is the user's call.
