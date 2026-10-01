@@ -61,6 +61,7 @@ export const GLYPHS = {
   pickaxe: 'M12 20 12.5 12.5M8 8c1.5-3 6-3 7.5 0M8 8 5 11.5M15.5 8 18.5 11.5',
   // Straight shaft into a blade that tapers to a rounded point.
   // Phase 7a.
+  firefly: 'M12 9.5a2 2.6 0 1 0 .01 0M12 15v3.5M9 9.5 5.5 7M15 9.5 18.5 7M9.5 12.5 6 14M14.5 12.5 18 14M5 19h.01M19 4h.01M4 11h.01',
   wall: 'M4 19.5h16M4 19.5V11h4v8.5M16 19.5V11h4v8.5M8 13h8M8 16.5h8',
   pillar: 'M6 5h12M7.5 7h9M6 19.5h12M7.5 17.5h9M9 7v10.5M12 7v10.5M15 7v10.5',
   trapdoor: 'M4 11h16v4H4ZM7 11v4M11 11v4M15 11v4M5.5 9.5h3',

@@ -634,10 +634,10 @@ export const RECIPES = [
     name: 'Firefly Lantern',
     station: 'hand',
     age: 3,
-    inputs: { glass: 1, planks: 1, leaves: 2 },
+    inputs: { glass: 1, planks: 1, fireflies: 2 },
     output: { id: 'firefly_lantern', count: 1 },
     batch: 4,
-    blurb: 'A soft green light, the way the Sky Kingdom lights its paths.',
+    blurb: 'Fireflies you caught, in glass. A soft green light, the way the Sky Kingdom lights its paths.',
   },
 ];
 

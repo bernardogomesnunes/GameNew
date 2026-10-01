@@ -59,6 +59,8 @@ import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox } from './world/Mobs.js';
 import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './world/Projectiles.js';
 import { ProjectileView } from './render/ProjectileView.js';
+import { Fireflies } from './world/Fireflies.js';
+import { FireflyView } from './render/FireflyView.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
@@ -323,6 +325,7 @@ export class Game {
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
     this.projectileView = new ProjectileView(this.scene);
+    this.fireflyView = new FireflyView(this.scene);
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -2665,6 +2668,37 @@ export class Game {
     return true;
   }
 
+  /** The swarm of fireflies under the crosshair, if no block is in front of it. */
+  fireflyTarget(hit = this.raycast()) {
+    if (!this.fireflies) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const found = this.fireflies.pick(eye, dir, REACH);
+    if (!found) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < found.t) return null;
+    }
+    return found.swarm;
+  }
+
+  /**
+   * Break, aimed at a swarm of fireflies: a handful caught, into the bag —
+   * what a Firefly Lantern is made with. Returns whether the press was spent
+   * on them.
+   */
+  catchFireflies(hit) {
+    const swarm = this.fireflyTarget(hit);
+    if (!swarm) return false;
+    const now = performance.now();
+    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    this.lastStrikeAt = now;
+    this.digTarget = null;
+    this.fireflies.catchFrom(swarm);
+    const got = this.duilt?.collect({ fireflies: 1 }) ?? {};
+    this.ui.toast({ kind: 'xp', title: 'Caught some fireflies', body: got.fireflies ? '+1 fireflies' : undefined });
+    return true;
+  }
+
   /** A bandit's blow landing on you. */
   banditHits(p, hits) {
     if (!this.duilt || this.duilt.sandbox) return;
@@ -2854,6 +2888,7 @@ export class Game {
     if (this.manning) return;
     const hit = this.raycast();
     if (this.hitBandit(hit)) return;
+    if (this.catchFireflies(hit)) return;
     if (this.hitMob(hit)) return;
     if (!hit) { this.digTarget = null; return; }
 
@@ -3567,6 +3602,7 @@ export class Game {
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
       this.tickCatapult(dt);
+      this.fireflies.tick(dt, this.player.position, 1 - daylightAt(this.dayCycle.time).day);
       this.runWater(dt);
       this.growCrops(dt);
       this.tickBreaking(performance.now());
@@ -3593,6 +3629,7 @@ export class Game {
     this.mobView.update(this.mobs?.list ?? []);
     this.wanderView.update(this.wanderers?.list ?? []);
     this.projectileView.update(this.projectiles?.list ?? []);
+    this.fireflyView.update(this.fireflies);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -3661,6 +3698,7 @@ export class Game {
       });
       this.mobsHerdOf = null;
     }
+    if (this.fireflies?.world !== this.world) this.fireflies = new Fireflies({ world: this.world });
     if (this.projectiles?.world !== this.world) {
       this.projectiles = new Projectiles({ world: this.world, onImpact: (s, landed) => this.stoneLands(landed) });
       this.manning = null;
@@ -3783,6 +3821,12 @@ export class Game {
         : stranger.hp <= spec.fleeBelow ? 'a bandit — running for it'
           : stranger.hp < spec.hp ? 'a bandit — hurt, keep at it'
             : stranger.raider ? 'a bandit, raiding — hit to fight' : spec.aboutHostile);
+      return;
+    }
+    // A swarm of fireflies, at night.
+    if (!this.armed && this.fireflyTarget(hit)) {
+      this.hoverBox.visible = false;
+      this.ui?.setPersonHint('Fireflies', 'hit to catch a few');
       return;
     }
     // Same for an animal — named before you swing, and no block outline
