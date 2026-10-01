@@ -3,6 +3,7 @@ import { biomeCssColours, waterCssColour } from './biomePalette.js';
 import { BIOMES, surfaceFor } from '../config/biomes.js';
 import { BLOCKS_BY_ID } from '../config/blocks.js';
 import { hash01 } from '../world/ChunkGen.js';
+import { skylineAt, kingdomFor } from '../world/kingdom.js';
 
 /**
  * The country past where the blocks stop.
@@ -69,6 +70,9 @@ export const REACH = 1536;
  * leave a sliver of sky under its edge. Sinking it keeps that edge below.
  */
 export const SINK = 1;
+/** How far above or below the land's own height a changed chunk is searched for what's on top. */
+const BUILT_REACH = 40;
+const DARK_STONE = 156, DARK_BRICK = 157, COBBLE = 8, WATER_ID = 11;
 /** Milliseconds a frame may spend making tiles, once the first lot exist. */
 const BUDGET_MS = 3;
 
@@ -135,8 +139,9 @@ export class FarTerrain {
    * forgets the ones left far behind. Everything within reach is made at
    * once the first time; after that only a few milliseconds' worth a frame.
    */
-  update(gen, x, z, { budgetMs = BUDGET_MS } = {}) {
+  update(gen, x, z, { budgetMs = BUDGET_MS, world = null } = {}) {
     if (!gen) return;
+    this.world = world;
     if (gen !== this.gen) {
       this.clear();
       this.gen = gen;
@@ -257,6 +262,11 @@ export class FarTerrain {
   column(x, z, step, canopyHeight = 3) {
     const gen = this.gen;
     const cx = x + (step >> 1), cz = z + (step >> 1);
+    // What's been built (#130): the Stone Kingdom's walls and towers stand
+    // up on the horizon (Phase 7e), and anything you've built or dug in a
+    // chunk you've changed shows as it really is.
+    const built = this.builtAt(x, z, step);
+    if (built) return built;
     const water = gen.waterLevelAt(cx, cz);
     const h = gen.heightAt(cx, cz);
     const index = gen.biomeIndexAt(cx, cz);
@@ -282,6 +292,54 @@ export class FarTerrain {
       }
     }
     return col;
+  }
+
+  /**
+   * A column that something has been built on, or null: the city's
+   * skyline where it stands, or the real top of a chunk you've changed —
+   * a few points across the column, the tallest of them.
+   */
+  builtAt(x, z, step) {
+    const city = skylineAt(this.gen, x, z, step);
+    if (city != null) {
+      const k = kingdomFor(this.gen);
+      const raised = city > k.y + 1;
+      return { top: city, water: false, colour: colourOf(raised ? DARK_STONE : COBBLE), side: colourOf(DARK_BRICK), canopy: null };
+    }
+    const world = this.world;
+    if (!world?.hasChunk) return null;
+    let best = null;
+    const quarter = Math.max(1, step >> 2);
+    for (const [sx, sz] of [[1, 1], [3, 1], [1, 3], [3, 3]]) {
+      const px = x + sx * quarter, pz = z + sz * quarter;
+      if (!world.hasChunk(px >> 4, pz >> 4)) continue;
+      const chunk = world.getChunk(px >> 4, pz >> 4);
+      if (!chunk?.touched) continue;
+      const ground = this.gen.heightAt(px, pz);
+      for (let y = Math.min(world.height - 1, ground + BUILT_REACH); y >= Math.max(0, ground - BUILT_REACH); y--) {
+        const id = world.getBlock(px, y, pz);
+        if (id === 0) continue;
+        if (!best || y + 1 > best.top) best = { top: y + 1, id };
+        break;
+      }
+    }
+    if (!best) return null;
+    return { top: best.top - SINK, water: best.id === WATER_ID, colour: colourOf(best.id), side: colourOf(best.id), canopy: null };
+  }
+
+  /**
+   * Forgets the tiles over (x, z) in every band, so they're made again from
+   * how the world is now — called when you change a chunk (#130).
+   */
+  invalidateAt(x, z) {
+    for (const layer of this.layers) {
+      const key = `${Math.floor(x / layer.tile)},${Math.floor(z / layer.tile)}`;
+      const mesh = layer.tiles.get(key);
+      if (!mesh) continue;
+      this.group.remove(mesh);
+      mesh.geometry.dispose();
+      layer.tiles.delete(key);
+    }
   }
 
   /** A column's woods, as leaf blocks over whichever quarters of it are wooded. */

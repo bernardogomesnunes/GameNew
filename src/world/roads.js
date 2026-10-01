@@ -1,6 +1,7 @@
 import { hash01 } from './ChunkGen.js';
 import { BIOMES } from '../config/biomes.js';
 import { landmarksFor } from './landmarks.js';
+import { CITY_HALF } from './kingdom.js';
 
 /**
  * Old roads across the country (playtest, P9). Asked for directly: "have
@@ -26,6 +27,8 @@ const NO_ROADS = new Set(['mountains1', 'mountains2', 'ocean']);
 const TOO_ROUGH = 0.25;
 /** A road stops this far short of the middle of your land — that's yours to pave. */
 export const HOME_CLEAR = 44;
+/** How far the Stone Kingdom's own road runs straight out from its gate. */
+const APPROACH = 26;
 
 /**
  * Every road cell in this world: a Map of "x,z" to 'crown' (the middle of
@@ -37,8 +40,19 @@ export function roadsFor(gen) {
   gen.roadCache = cells;
 
   const home = { kind: 'home', x: gen.biomes?.centreX ?? 0, z: gen.biomes?.centreZ ?? 0, half: HOME_CLEAR - 2 };
-  const nodes = [home, ...landmarksFor(gen)];
-  for (const [a, b] of spanningTree(nodes)) lay(gen, cells, a, b);
+  // The Stone Kingdom's road comes to its gate, in the south wall: a
+  // straight approach out from the gate, which the rest of the network
+  // joins at its far end.
+  const nodes = [home, ...landmarksFor(gen).map((l) => (l.kind === 'kingdom'
+    ? { kind: 'gate', x: l.x, z: l.z + CITY_HALF + APPROACH, half: 1, city: l } : l))];
+  const gate = nodes.find((n) => n.kind === 'gate');
+  if (gate) {
+    for (let z = gate.city.z + CITY_HALF + 2; z <= gate.z + 2; z++) {
+      for (let w = -1; w <= 1; w++) cells.set(`${gate.x + w},${z}`, w === 0 ? 'crown' : 'verge');
+    }
+  }
+  const city = nodes.find((n) => n.city)?.city;
+  for (const [a, b] of spanningTree(nodes)) lay(gen, cells, a, b, city);
   return cells;
 }
 
@@ -72,7 +86,7 @@ function spanningTree(nodes) {
  * edge to just outside the other's, wandering either side of the straight
  * line by a few blocks.
  */
-function lay(gen, cells, a, b) {
+function lay(gen, cells, a, b, city = null) {
   const dx = b.x - a.x, dz = b.z - a.z;
   const length = Math.hypot(dx, dz);
   const ux = dx / length, uz = dz / length;   // along
@@ -92,10 +106,14 @@ function lay(gen, cells, a, b) {
     path.push([cx, cz]);
     if (NO_ROADS.has(BIOMES[gen.biomeIndexAt(Math.round(cx), Math.round(cz))]?.id) && !gen.waterLevelAt(Math.round(cx), Math.round(cz))) rough++;
   }
-  if (rough / path.length > TOO_ROUGH) return;
+  // The road to the Stone Kingdom's gate is always laid, rough or not:
+  // there's always a way to the King.
+  if (rough / path.length > TOO_ROUGH && a.kind !== 'gate' && b.kind !== 'gate') return;
   for (const [cx, cz] of path) {
     for (let w = -1; w <= 1; w++) {
       const x = Math.round(cx + px * w), z = Math.round(cz + pz * w);
+      // Never through the city's walls: round them, or not at all.
+      if (city && Math.max(Math.abs(x - city.x), Math.abs(z - city.z)) <= CITY_HALF + 1) continue;
       const key = `${x},${z}`;
       if (w === 0 || !cells.has(key)) cells.set(key, w === 0 ? 'crown' : 'verge');
     }

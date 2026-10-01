@@ -30,6 +30,14 @@ export const LOOT = {
   },
   // Places to find (playtest, P4): "all with a chest with goodies: armour,
   // weapons, food, and a super rare ring-crafting item."
+  // The Stone Kingdom (Phase 7e): its armoury and market stalls.
+  kingdom: {
+    name: 'A chest of the Stone Kingdom',
+    items: [['iron_ingot', 0.7, 2, 5], ['dark_stone', 0.6, 4, 10], ['gold', 0.6, 2, 6], ['sword_iron', 0.25, 1, 1],
+      ['armour_stone_head', 0.2, 1, 1], ['armour_stone_body', 0.15, 1, 1], ['armour_stone_legs', 0.15, 1, 1], ['armour_stone_feet', 0.2, 1, 1],
+      ['beer', 0.4, 1, 3], ['cooked_meat', 0.5, 1, 3]],
+    ring: 0.06,
+  },
   ruin: {
     name: 'A chest in the rubble',
     items: [['cooked_meat', 0.6, 1, 3], ['fruit', 0.5, 2, 4], ['sword_stone', 0.3, 1, 1], ['armour_leather_head', 0.2, 1, 1],

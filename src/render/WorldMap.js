@@ -58,5 +58,5 @@ export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], st
 
 /** The colour each kind of place is marked in on the map. */
 export const PLACE_COLOURS = {
-  hermit: '#9be38a', camp: '#e0574a', ruin: '#c9c2b0', ruined_temple: '#f2f0ea', mine: '#9a7350', monument: '#3a3440',
+  kingdom: '#1e1a24', hermit: '#9be38a', camp: '#e0574a', ruin: '#c9c2b0', ruined_temple: '#f2f0ea', mine: '#9a7350', monument: '#3a3440',
 };

@@ -85,6 +85,8 @@ export class PlayerController {
 
     this.position = new THREE.Vector3(spawn.x, spawn.y, spawn.z);
     this.velocity = new THREE.Vector3();
+    // Just arrived: the first landing doesn't hurt — see trackFall.
+    this.arriving = true;
     // Which way you see the world: 'first', 'behind' or 'front' — see config/avatar.js.
     this.view = 'first';
     this._eye = new THREE.Vector3();
@@ -211,7 +213,12 @@ export class PlayerController {
       .addScaledVector(right, moveX);
     if (wish.lengthSq() > 1) wish.normalize();
 
-    const sprinting = this.sprint || this.keys.has(b.sprint);
+    const shift = this.sprint || this.keys.has(b.sprint);
+    // One key, two jobs — asked for directly: fly down "on shift" as well as
+    // sprint. On your feet Shift sprints; flying or swimming it takes you
+    // down, and in the air the down key (Ctrl) is the one that goes faster.
+    const sprinting = this.flying ? this.keys.has(b.down) : shift;
+    const goingDown = this.keys.has(b.down) && !this.flying || shift;
 
     if (this.flying) {
       const speed = (sprinting ? FLY_SPRINT_SPEED : FLY_SPEED) * this.speedScale;
@@ -219,7 +226,7 @@ export class PlayerController {
       this.velocity.z = wish.z * speed;
       let up = this.externalUp;
       if (this.keys.has(b.jump)) up += 1;
-      if (this.keys.has(b.down)) up -= 1;
+      if (goingDown) up -= 1;
       this.velocity.y = up * speed;
     } else if (this.swimming) {
       const speed = SWIM_SPEED * this.speedScale;
@@ -227,7 +234,7 @@ export class PlayerController {
       this.velocity.z = wish.z * speed;
       let up = this.externalUp;
       if (this.keys.has(b.jump)) up += 1;
-      if (this.keys.has(b.down)) up -= 1;
+      if (goingDown) up -= 1;
       up = Math.max(-1, Math.min(1, up));
       const targetVy = up !== 0 ? up * SWIM_VERTICAL_SPEED : SWIM_FLOAT_SPEED;
       // Eased toward rather than snapped to, same idea as the look smoothing
@@ -271,9 +278,15 @@ export class PlayerController {
     }
     if (this.fallPeak != null) {
       const drop = this.fallPeak - this.position.y;
-      if (drop > 0) this.landing = (this.landing ?? 0) + drop;
+      // Coming into a world (or back after a fall), you drop in before the
+      // ground under you is there — reported directly: "when I log into a
+      // world, I fall from the sky, and it hurts. It should not hurt." That
+      // first landing is free.
+      if (drop > 0 && !this.arriving) this.landing = (this.landing ?? 0) + drop;
       this.fallPeak = null;
     }
+    // On the ground, you've arrived: from here on a fall is a fall.
+    this.arriving = false;
   }
 
   /** The drop of the last landing, once — 0 when there hasn't been one. */
@@ -289,6 +302,7 @@ export class PlayerController {
     this.velocity.set(0, 0, 0);
     this.fallPeak = null;
     this.landing = 0;
+    this.arriving = true;
     this.syncCamera();
   }
 

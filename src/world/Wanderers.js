@@ -56,13 +56,15 @@ export class Wanderers {
   constructor({
     world, rand = Math.random, home = null, onNews = null,
     hostile = () => false, night = () => false, stores = () => [],
-    onAttack = null, onSteal = null, onRaid = null,
+    onAttack = null, onSteal = null, onRaid = null, kingdomHostile = () => false,
   }) {
     this.world = world;
     this.rand = rand;
     this.home = home;
     this.onNews = onNews;
     this.hostile = hostile;
+    // Whether the Stone Kingdom's guards fight you on sight (Phase 7e).
+    this.kingdomHostile = kingdomHostile;
     this.night = night;
     this.stores = stores;
     this.onAttack = onAttack;
@@ -87,8 +89,8 @@ export class Wanderers {
   tick(dt, player) {
     this.list = this.list.filter((p) => !p.dead && !this.gone(p, player));
     for (const lm of this.landmarks) {
-      // Only the hut and the camps have anyone living in them.
-      if (lm.kind !== 'hermit' && lm.kind !== 'camp') continue;
+      // Only the hut, the camps and the Stone Kingdom have anyone living in them.
+      if (lm.kind !== 'hermit' && lm.kind !== 'camp' && lm.kind !== 'kingdom') continue;
       if (!this.present.has(lm) && Math.hypot(lm.x - player.x, lm.z - player.z) < VISIT) this.populate(lm);
     }
 
@@ -293,6 +295,15 @@ export class Wanderers {
     if (!isLoaded(this.world, lm.x, lm.z)) return;
     this.present.add(lm);
     const home = { x: lm.x + 0.5, z: lm.z + 0.5 };
+    if (lm.kind === 'kingdom') {
+      // The King on his throne, a guard at every post (Phase 7e). The city's
+      // floor is level, so they stand on it wherever they are.
+      this.list.push(this.person('king', lm.king.x, lm.y + (lm.king.dy ?? 0), lm.king.z, { landmark: lm, home: { x: lm.king.x, z: lm.king.z }, name: 'the Stone King', facing: lm.king.facing }));
+      for (const post of lm.posts) {
+        this.list.push(this.person('guard', post.x, lm.y, post.z, { landmark: lm, home: { x: post.x, z: post.z }, post: post.role }));
+      }
+      return;
+    }
     if (lm.kind === 'hermit') {
       this.list.push(this.person('hermit', lm.x + 0.5, lm.y, lm.z + 3.5, { landmark: lm, home }));
       return;
@@ -344,11 +355,13 @@ export class Wanderers {
 
   think(p, dt, player) {
     const spec = WANDERERS[p.kind];
-    if (p.kind === 'bandit') p.cooldown = Math.max(0, p.cooldown - dt);
+    if (p.kind === 'bandit' || p.kind === 'guard') p.cooldown = Math.max(0, p.cooldown - dt);
     if (p.detour > 0) { p.detour -= dt; return; }
-    if (p.kind === 'bandit' && this.fight(p, dt, player, spec)) return;
+    if ((p.kind === 'bandit' || p.kind === 'guard') && this.fight(p, dt, player, spec)) return;
+    // The King doesn't leave his throne.
+    if (p.kind === 'king') { p.target = null; p.speed = 0; return; }
 
-    if (p.kind === 'hermit' || p.kind === 'bandit') {
+    if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard') {
       const dx = p.x - player.x, dz = p.z - player.z;
       const d = Math.hypot(dx, dz) || 1;
       // Bandits don't come to you — not yet. They back off and watch.
@@ -398,7 +411,7 @@ export class Wanderers {
   fight(p, dt, player, spec) {
     const dx = player.x - p.x, dz = player.z - p.z;
     const d = Math.hypot(dx, dz) || 1;
-    const hostile = p.angry || this.hostile();
+    const hostile = p.angry || (p.kind === 'guard' ? this.kingdomHostile() : this.hostile());
 
     // Badly hurt, or frightened (the black guardian — scare()): it runs.
     if (p.hp <= spec.fleeBelow || p.fear > 0) {
