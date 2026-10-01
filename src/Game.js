@@ -20,7 +20,7 @@ import { generateEndlessWorld } from './world/StarterWorld.js';
 import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
 import { FarTerrain } from './render/FarTerrain.js';
 import { SkyClouds } from './render/SkyClouds.js';
-import { DayCycle, MORNING } from './render/DayCycle.js';
+import { DayCycle, MORNING, daylightAt } from './render/DayCycle.js';
 import { Sound, soundOf } from './audio/Sound.js';
 import { loadControls, saveControls } from './config/controls.js';
 import { LightManager } from './render/LightManager.js';
@@ -51,11 +51,14 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid } from './config/blocks.js';
+import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox } from './world/Mobs.js';
+import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './world/Projectiles.js';
+import { ProjectileView } from './render/ProjectileView.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
@@ -142,9 +145,17 @@ const swings = (id) => !!GATE_SWING[id] || !!doorPart(id);
 /** What Place does to a door or gate — "Open" or "Close" — or null for anything else. */
 export function swingLabel(id) {
   if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
+  if (isChest(id)) return 'Open';
+  if (isCatapult(id)) return 'Man';
   const door = doorPart(id);
   return door ? (door.open ? 'Close' : 'Open') : null;
 }
+// The catapult (Phase 6c) — see manCatapult.
+const CATAPULT_RELOAD = 2;      // seconds between throws
+const CATAPULT_REACH = 4;       // walk further than this from it and you let go
+const CATAPULT_MIN_THROW = 6;   // it won't drop a stone closer than this
+const CATAPULT_AMMO = ['stone', 'cobblestone'];
+const STONE_HITS = 14;          // what a stone does to anyone it lands on
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
 
@@ -310,6 +321,7 @@ export class Game {
     this.mobView = new MobView(this.scene);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
+    this.projectileView = new ProjectileView(this.scene);
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -391,6 +403,7 @@ export class Game {
 
     // The land grows when an age is finished, and the wall has to grow with it.
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
+    this.bus.on('health:died', ({ cause }) => this.die(cause));
 
     this.wireInput();
     this.wireSaveOnLeave();
@@ -1396,6 +1409,8 @@ export class Game {
 
   primaryAction() {
     if (this.moving) return void this.cancelMove();
+    // Manning a catapult, Break throws.
+    if (this.manning) return void this.throwStone();
     // A queued tool takes the button it needs and nothing else does. There is
     // no mode to be in any more: if nothing is queued, Break breaks.
     if (this.pendingClaim) return void this.markClaimCorner();
@@ -1419,10 +1434,15 @@ export class Game {
     // way to turn it. See setToolReadout, which labels it to match.
     if (this.pendingRoof?.turns > 1) return void this.turnRoof();
     if (this.armed) return void this.clearPending();
+    if (this.manning) return void this.letGo();
     // Pointing at a gate, Place opens or shuts it — before anything you're
     // holding gets a say, the same way you'd reach for a latch.
     const aimed = this.raycast();
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
+    // And at a chest, Place opens it.
+    if (aimed && isChest(aimed.block)) return void this.openChest(aimed);
+    // And at a catapult, Place takes hold of it.
+    if (aimed && isCatapult(aimed.block)) return void this.manCatapult(aimed);
     // A full bucket takes the button too, instead of placing a block.
     const override = PLACE_OVERRIDE[this.selectedItemId] ?? (isFood(this.selectedItemId) ? 'throwSelected' : null);
     if (override) return void this[override]();
@@ -2599,8 +2619,240 @@ export class Game {
     return true;
   }
 
+  /**
+   * The bandit under the crosshair, if one is nearer than the block behind
+   * it and within reach. Only bandits can be fought — a messenger or the
+   * hermit just stands there being named.
+   */
+  banditTarget(hit = this.raycast()) {
+    if (!this.wanderers) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const found = this.wanderView.pickAt(this.wanderers.list.filter((p) => WANDERERS[p.kind].hp), eye, dir, REACH);
+    if (!found) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < found.t) return null;
+    }
+    return found.person;
+  }
+
+  /**
+   * Break, aimed at a bandit: one blow, the same button as hunting. A sword
+   * hits hardest (its `damage`); any tool wears for it. Returns whether the
+   * press was spent on a bandit.
+   */
+  hitBandit(hit) {
+    const p = this.banditTarget(hit);
+    if (!p) return false;
+    const now = performance.now();
+    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    this.lastStrikeAt = now;
+    this.digTarget = null;
+    const tool = ITEMS_BY_ID.get(this.selectedItemId);
+    const { x, z } = this.player.position;
+    const res = this.wanderers.hit(p, tool?.damage ?? 1, x, z);
+    if (!res) return false;
+    this.sound?.hit?.('wood', { gain: 0.5, pitch: 0.7 });
+    if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
+      this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
+    }
+    if (res.killed) {
+      const gained = this.duilt?.collect(res.drops) ?? {};
+      const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+      this.ui.toast({ kind: 'xp', title: `Beat ${p.name}, a bandit`, body: got || undefined });
+    }
+    return true;
+  }
+
+  /** A bandit's blow landing on you. */
+  banditHits(p, hits) {
+    if (!this.duilt || this.duilt.sandbox) return;
+    const taken = this.duilt.hurt(hits, 'bandit');
+    if (!taken) return;
+    // Knocked up off your feet a little, so a blow is felt and not just seen.
+    if (this.player.grounded) this.player.velocity.y = 4.5;
+    this.sound?.hit?.('wood', { gain: 0.6, pitch: 0.55 });
+  }
+
+  /**
+   * A raider at a storehouse: carries off up to a dozen of whatever's in it,
+   * two kinds at most. Beat them before they get away and it's yours again.
+   */
+  banditSteals(p, structure) {
+    const store = this.duilt?.structures.storeFor(structure);
+    if (!store) return {};
+    const kinds = store.heldIds().sort(() => Math.random() - 0.5).slice(0, 2);
+    const loot = {};
+    let room = 12;
+    for (const id of kinds) {
+      const n = Math.min(room, store.countOf(id), 2 + Math.floor(Math.random() * 8));
+      if (n <= 0) continue;
+      store.remove(id, n);
+      loot[id] = n;
+      room -= n;
+    }
+    const what = Object.entries(loot).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' and ');
+    const name = STRUCTURES_BY_ID.get(structure.type)?.name?.toLowerCase() ?? 'storehouse';
+    if (what) {
+      this.ui.toast({ kind: 'xp', title: `${p.name} robbed your ${name}`, body: `Took ${what} — catch them before they get away` });
+    }
+    return loot;
+  }
+
+  // ---- the catapult (Phase 6c) ------------------------------------------------
+  //
+  // Chosen directly: "a buildable siege engine you aim and fire. Stones fly
+  // on real arcs and break blocks where they land." Place takes hold of it;
+  // you aim by looking where you want the stone to come down — the arc and
+  // a ring show where it will — and Break throws. Place again, or walking
+  // off, lets go.
+
+  manCatapult(hit) {
+    this.manning = { x: hit.x, y: hit.y, z: hit.z, reload: 0, v: null };
+    this.digTarget = null;
+    this.ui.setActionLabels('Throw', 'Let go');
+    this.ui.toast({
+      kind: 'challenge',
+      title: 'Manning the catapult',
+      body: this.ui.isTouch
+        ? 'Look where you want the stone to land, then Throw. Let go when you\'re done.'
+        : 'Look where you want the stone to land. Left click throws, right click lets go.',
+    });
+  }
+
+  letGo() {
+    this.manning = null;
+    this.projectileView.setAim(null);
+    this.ui?.setBuildingHint(null);
+    this.ui?.setActionLabels(...this.ui.defaultActionLabels());
+  }
+
+  /** Where a stone leaves the catapult: its cup. */
+  cupOf({ x, y, z }) {
+    return { x: x + 0.5, y: y + 1.35, z: z + 0.5 };
+  }
+
+  /**
+   * Where you're aiming: the first solid thing along your look, as far as
+   * the catapult can throw — or, looking at open sky, its longest throw
+   * that way. Never nearer than CATAPULT_MIN_THROW, so it can't be made to
+   * drop a stone on your own head.
+   */
+  catapultTarget(from) {
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    // Looked for from just past the catapult: you stand behind it, and
+    // looking out over it shouldn't count as aiming at it.
+    const skip = Math.hypot(from.x - eye.x, from.z - eye.z) + 1;
+    const start = { x: eye.x + dir.x * skip, y: eye.y + dir.y * skip, z: eye.z + dir.z * skip };
+    const hit = castVoxelRay(this.world, start, dir, MAX_RANGE * 1.5);
+    const flat = Math.hypot(dir.x, dir.z) || 1;
+    const fx = dir.x / flat, fz = dir.z / flat;
+    let t = hit
+      ? { x: hit.placeX + 0.5, y: hit.placeY, z: hit.placeZ + 0.5 }
+      : { x: from.x + fx * MAX_RANGE, y: from.y, z: from.z + fz * MAX_RANGE };
+    const d = Math.hypot(t.x - from.x, t.z - from.z);
+    if (d < CATAPULT_MIN_THROW) {
+      const x = from.x + fx * CATAPULT_MIN_THROW, z = from.z + fz * CATAPULT_MIN_THROW;
+      t = { x, y: this.world.surfaceHeight(Math.floor(x), Math.floor(z)) + 1, z };
+    }
+    return t;
+  }
+
+  /** Stones in flight, and the aim while you're manning one. Every frame. */
+  tickCatapult(dt) {
+    this.projectiles?.tick(dt);
+    const m = this.manning;
+    if (!m) return;
+    const p = this.player.position;
+    if (!isCatapult(this.world.getBlock(m.x, m.y, m.z))
+      || Math.hypot(p.x - m.x - 0.5, p.z - m.z - 0.5) > CATAPULT_REACH) {
+      this.letGo();
+      return;
+    }
+    m.reload = Math.max(0, m.reload - dt);
+    const from = this.cupOf(m);
+    const target = this.catapultTarget(from);
+    m.v = bestAim(this.world, from, target);
+    const arc = predictArc(this.world, from, m.v);
+    this.projectileView.setAim({ points: arc.points, landed: arc.landed, inRange: m.v.inRange });
+    const land = arc.landed ?? target;
+    const dist = Math.round(Math.hypot(land.x - from.x, land.z - from.z));
+    const stones = this.catapultAmmo();
+    m.hint = `Catapult · ${dist} blocks${m.v.inRange ? '' : ' — as far as it throws'}`
+      + (m.reload > 0 ? ' · winding back' : stones ? ` · ${stones.count} ${stones.name}` : ' · no stone');
+  }
+
+  /** What there is to throw: stone first, then cobblestone. Free in Creative. */
+  catapultAmmo() {
+    if (!this.duilt || this.duilt.sandbox) return { id: 'stone', count: '∞', name: 'stone' };
+    for (const id of CATAPULT_AMMO) {
+      const count = this.duilt.inventory.countOf(id);
+      if (count > 0) return { id, count, name: itemName(id).toLowerCase() };
+    }
+    return null;
+  }
+
+  throwStone() {
+    const m = this.manning;
+    if (!m?.v || m.reload > 0) return;
+    const ammo = this.catapultAmmo();
+    if (!ammo) {
+      this.ui.toast({ kind: 'xp', title: 'Nothing to throw', body: 'Carry stone or cobblestone in your bag' });
+      return;
+    }
+    if (this.duilt && !this.duilt.sandbox) this.duilt.inventory.remove(ammo.id, 1);
+    this.projectiles.fire(this.cupOf(m), m.v);
+    m.reload = CATAPULT_RELOAD;
+    // It swings round to face the throw.
+    const facing = Math.abs(m.v.vx) > Math.abs(m.v.vz) ? (m.v.vx > 0 ? 1 : 3) : (m.v.vz < 0 ? 0 : 2);
+    const id = turned(CATAPULT, facing);
+    if (this.world.getBlock(m.x, m.y, m.z) !== id) {
+      this.world.setBlock(m.x, m.y, m.z, id);
+      this.remeshDirty();
+    }
+    this.sound?.hit?.('wood', { gain: 0.7, pitch: 0.45, length: 2 });
+  }
+
+  /**
+   * A stone coming down: a crater of blocks knocked out, and a heavy blow
+   * to anyone standing there. Your own claimed buildings, chests and
+   * bedrock are spared — a stone thrown at a camp shouldn't cost you the
+   * storehouse it happened to clip on the way.
+   */
+  stoneLands(landed) {
+    const c = { x: landed.cell.x + 0.5, y: landed.cell.y + 0.5, z: landed.cell.z + 0.5 };
+    let broke = 0;
+    for (const { x, y, z, id } of craterCells(this.world, c)) {
+      if (this.world.isIndestructible(x, y, z) || isChest(id) || isFluid(id)) continue;
+      if (this.duilt?.structures.at(x, y, z)) continue;
+      this.world.setBlock(x, y, z, AIR);
+      broke++;
+    }
+    if (broke) this.remeshDirty();
+    this.sound?.break?.('stone');
+
+    const near = (o, r) => Math.hypot(o.x - c.x, o.z - c.z) < r && Math.abs(o.y - c.y) < 3;
+    for (const p of this.wanderers?.list ?? []) {
+      if (!WANDERERS[p.kind].hp || !near(p, 2.5)) continue;
+      const res = this.wanderers.hit(p, STONE_HITS, c.x, c.z);
+      if (res?.killed) {
+        const gained = this.duilt?.collect(res.drops) ?? {};
+        const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+        this.ui.toast({ kind: 'xp', title: `The stone got ${p.name}, a bandit`, body: got || undefined });
+      }
+    }
+    for (const mob of this.mobs?.list ?? []) {
+      if (mob.dying || !near(mob, 2.5)) continue;
+      const res = this.mobs.hit(mob, STONE_HITS, c.x, c.z);
+      if (res.killed) this.duilt?.collect(res.drops);
+    }
+    if (near(this.player.position, 2)) this.duilt?.hurt(8, 'catapult');
+  }
+
   breakBlock() {
+    if (this.manning) return;
     const hit = this.raycast();
+    if (this.hitBandit(hit)) return;
     if (this.hitMob(hit)) return;
     if (!hit) { this.digTarget = null; return; }
 
@@ -2705,7 +2957,118 @@ export class Game {
     if (!turns(type)) return type;
     const look = this.lookFacing();
     const shape = BLOCKS_BY_ID.get(type)?.shape;
-    return turned(type, shape === 'chair' ? look + 2 : look);
+    // A chair and a chest face you; a stair climbs away from you.
+    return turned(type, shape === 'chair' || shape === 'chest' ? look + 2 : look);
+  }
+
+  /** Opens the chest you're pointing at, on the store screen. */
+  openChest(hit) {
+    if (!this.duilt || !isChest(this.world.getBlock(hit.x, hit.y, hit.z))) return;
+    this.duilt.chestAt(hit.x, hit.y, hit.z);
+    this.ui.openStore({ chest: { x: hit.x, y: hit.y, z: hit.z } });
+  }
+
+  /**
+   * Whether you're resting at home: standing still inside a claimed house
+   * (or townhouse), which heals twice as fast — see survival/Health.js.
+   */
+  restingAtHome(wasAt) {
+    const p = this.player.position;
+    if (Math.hypot(p.x - wasAt.x, p.z - wasAt.z) > 1e-3) return false;
+    const x = Math.floor(p.x), y = Math.floor(p.y), z = Math.floor(p.z);
+    return this.duilt.structures.list().some((s) => (s.type === 'house' || s.type === 'townhouse') && s.valid !== false
+      && x >= s.region.minX && x <= s.region.maxX && z >= s.region.minZ && z <= s.region.maxZ
+      && y >= s.region.minY && y <= s.region.maxY + 1);
+  }
+
+  /**
+   * What hurts this frame: a fall just landed, and lava you're standing in.
+   * Phase 6 — chosen directly: falls past three blocks and lava hurt. Lava
+   * stings in beats (Health's cooldown) rather than draining silently.
+   */
+  feelHurt() {
+    const fall = this.player.takeLanding();
+    if (fall > 0) this.duilt.hurt(fallDamage(fall), 'fall');
+    const p = this.player.position;
+    const x = Math.floor(p.x), z = Math.floor(p.z);
+    for (const y of [Math.floor(p.y + 0.1), Math.floor(p.y + 1.2)]) {
+      const id = this.world.getBlock(x, y, z);
+      if (isLava(id) || isLavaFlow(id)) {
+        this.duilt.hurt(LAVA_PER_SECOND / 2, 'lava', { steady: true });
+        break;
+      }
+    }
+  }
+
+  /**
+   * Dying. Chosen directly: you wake back at your settlement, and what you
+   * were carrying waits in a chest where you fell — "when we die the chest
+   * appears in place with my items". What's equipped stays with you.
+   */
+  die(cause) {
+    if (!this.duilt || this.dying) return;
+    this.dying = true;
+    const p = this.player.position;
+    const x = Math.floor(p.x), z = Math.floor(p.z);
+    // The first open cell at or above your feet. Written straight into the
+    // world rather than through applyChanges: it goes where you fell,
+    // border or no border, and nothing pays for it.
+    let y = Math.max(1, Math.floor(p.y));
+    for (let up = 0; up < 6; up++, y++) {
+      const id = this.world.getBlock(x, y, z);
+      if (id === AIR || isFlowing(id) || id === WATER || isLava(id) || isLavaFlow(id)) break;
+    }
+    const left = this.duilt.leaveGrave(x, y, z);
+    if (left) {
+      this.world.setBlock(x, y, z, CHEST);
+      this.remeshDirty();
+    }
+    const home = this.respawnPoint();
+    this.player.teleport(home.x, home.y, home.z);
+    this.duilt.health.restore();
+    this.sound?.break?.('wood');
+    this.ui?.duiltUI?.flashHurt(true);
+    const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you', catapult: 'Your own stone came down on you' }[cause] ?? 'You died';
+    this.ui?.toast({
+      kind: 'xp',
+      title: `${how} — you woke at home`,
+      body: left
+        ? `What you were carrying is in a chest where you fell, at ${x}, ${z}`
+        : 'You had nothing with you to leave behind',
+    });
+    this.dying = false;
+  }
+
+  /** The chest you fell by, emptied: it's gone. */
+  clearGrave({ x, y, z }) {
+    if (!this.duilt || !isChest(this.world.getBlock(x, y, z))) return;
+    this.world.setBlock(x, y, z, AIR);
+    this.duilt.removeChest(x, y, z);
+    this.remeshDirty();
+    this.ui?.toast({ kind: 'challenge', title: 'Got everything back', body: 'The chest is gone' });
+  }
+
+  /** Where you wake after dying: a safe spot near the middle of your land. */
+  respawnPoint() {
+    const b = this.duilt?.territory.bounds?.();
+    const cx = b ? Math.floor((b.minX + b.maxX + 1) / 2) : Math.floor(this.player.position.x);
+    const cz = b ? Math.floor((b.minZ + b.maxZ + 1) / 2) : Math.floor(this.player.position.z);
+    const world = this.world;
+    for (let r = 0; r < 24; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dz = -r; dz <= r; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          const x = cx + dx, z = cz + dz;
+          for (let y = Math.max(1, world.surfaceHeight(x, z) - 2); y < world.surfaceHeight(x, z) + 12 && y < world.height - 3; y++) {
+            const under = world.getBlock(x, y - 1, z);
+            if (world.isCollidable(x, y - 1, z) && !isLava(under) && !world.isCollidable(x, y, z) && !world.isCollidable(x, y + 1, z)) {
+              return { x: x + 0.5, y, z: z + 0.5 };
+            }
+          }
+        }
+      }
+    }
+    return { x: cx + 0.5, y: world.surfaceHeight(cx, cz) + 1, z: cz + 0.5 };
   }
 
   placeBlock() {
@@ -2713,7 +3076,7 @@ export class Game {
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
     // shouldn't go on to build against it.
-    if (swings(hit.block)) return;
+    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block)) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
@@ -2867,6 +3230,13 @@ export class Game {
         });
         return false;
       }
+      // A chest with things in it stays put — empty it first, the same as a
+      // storehouse. Nothing in it is ever thrown away by a stray swing.
+      const full = changes.find((c) => isChest(c.prev) && !isChest(c.next) && !this.duilt.chestEmpty(c.x, c.y, c.z));
+      if (full) {
+        this.ui?.toast({ kind: 'xp', title: 'Empty the chest first', body: 'Take everything out, then break it' });
+        return false;
+      }
       if (chargeResources) {
         const paid = this.duilt.payForPlacement(changes);
         if (!paid.ok) {
@@ -2880,8 +3250,12 @@ export class Game {
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
     // What's planted is kept track of, so it can grow while you're away.
+    // And a chest gets its slots when it's put down, and loses them when
+    // it's taken away (only ever empty — see above).
     if (this.duilt) {
       for (const c of changes) {
+        if (isChest(c.next) && !isChest(c.prev)) this.duilt.chestAt(c.x, c.y, c.z);
+        else if (isChest(c.prev) && !isChest(c.next)) this.duilt.removeChest(c.x, c.y, c.z);
         const was = cropOf(c.prev), is = cropOf(c.next);
         if (is && is.stage === 0 && !(was && was.kind === is.kind)) this.duilt.crops.plant(c.x, c.y, c.z, is.kind);
         else if (was && !is) this.duilt.crops.remove(c.x, c.y, c.z);
@@ -3180,7 +3554,8 @@ export class Game {
       this.player.update(dt);
       this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
-        this.duilt.tick(dt);
+        this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
+        this.feelHurt(dt);
         this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
       }
       this.updateHover();
@@ -3189,6 +3564,7 @@ export class Game {
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
+      this.tickCatapult(dt);
       this.runWater(dt);
       this.growCrops(dt);
       this.tickBreaking(performance.now());
@@ -3214,6 +3590,7 @@ export class Game {
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
     this.wanderView.update(this.wanderers?.list ?? []);
+    this.projectileView.update(this.projectiles?.list ?? []);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -3282,12 +3659,30 @@ export class Game {
       });
       this.mobsHerdOf = null;
     }
+    if (this.projectiles?.world !== this.world) {
+      this.projectiles = new Projectiles({ world: this.world, onImpact: (s, landed) => this.stoneLands(landed) });
+      this.manning = null;
+      this.projectileView.setAim(null);
+    }
     if (this.wanderers?.world !== this.world) {
       this.wanderers = new Wanderers({
         world: this.world,
         // A messenger comes to your settlement, so only where you have one.
         home: () => (this.duilt && !this.duilt.sandbox ? { x: this.world.centreX, z: this.world.centreZ } : null),
         onNews: (p, line) => this.ui.toast({ kind: 'challenge', title: `${p.name}, a messenger`, body: line }),
+        // Bandits (Phase 6b): hostile from Age 2, never in Creative.
+        hostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.age >= 2),
+        night: () => daylightAt(this.dayCycle.time).day < 0.3,
+        stores: () => (this.duilt && !this.duilt.sandbox ? this.duilt.structures.stores() : [])
+          .filter(({ store }) => store.heldIds().length)
+          .map(({ structure }) => ({ structure, region: structure.region })),
+        onAttack: (p, hits) => this.banditHits(p, hits),
+        onSteal: (p, structure) => this.banditSteals(p, structure),
+        onRaid: (dir, raiders) => this.ui.toast({
+          kind: 'challenge',
+          title: 'Bandits on the road',
+          body: `${raiders.length} of them, coming in from the ${dir}. Guard your storehouses.`,
+        }),
       });
     }
     // Your penned animals come back with the save, and join the wild ones.
@@ -3340,6 +3735,13 @@ export class Game {
     // adapt so place should be open or close depending on the door stage."
     // Pointed at a door or a gate with nothing queued, Place says which it
     // will do.
+    // Manning a catapult the crosshair is for aiming, and the line under it
+    // says how the throw is set — see tickCatapult.
+    if (this.manning) {
+      this.hoverBox.visible = false;
+      this.ui?.setBuildingHint(this.manning.hint ?? 'Catapult', { manage: false });
+      return;
+    }
     this.ui?.setAimedSwing(!this.armed && !this.moving && hit ? swingLabel(hit.block) : null);
 
     // A building in the air follows where you look. Done here rather than on
@@ -3373,7 +3775,12 @@ export class Game {
       ? this.wanderView.pick(this.wanderers.list, this.player.eyePosition(), this.player.lookDirection())
       : null;
     if (stranger) {
-      this.ui?.setPersonHint(stranger.name, WANDERERS[stranger.kind].about);
+      const spec = WANDERERS[stranger.kind];
+      const fights = spec.hp && (stranger.angry || this.wanderers.hostile());
+      this.ui?.setPersonHint(stranger.name, !fights ? spec.about
+        : stranger.hp <= spec.fleeBelow ? 'a bandit — running for it'
+          : stranger.hp < spec.hp ? 'a bandit — hurt, keep at it'
+            : stranger.raider ? 'a bandit, raiding — hit to fight' : spec.aboutHostile);
       return;
     }
     // Same for an animal — named before you swing, and no block outline
@@ -3394,14 +3801,20 @@ export class Game {
     const waiting = hit && !onBuilding && this.duilt ? this.duilt.waitingAt(hit.x, hit.y, hit.z) : null;
     const gate = hit && GATE_SWING[hit.block];
     const door = hit && doorPart(hit.block);
+    const chest = hit && isChest(hit.block);
+    const catapult = hit && isCatapult(hit.block);
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door) && swingLabel(hit.block);
+    const swing = (gate || door || chest || catapult) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     this.ui?.setBuildingHint(gate
       ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
       : door
         ? `Door · ${door.open ? 'open' : 'shut'} — ${how}`
+      : chest
+        ? `${this.duilt?.chestAt(hit.x, hit.y, hit.z, { create: false })?.grave ? 'What you were carrying' : 'Chest'} — ${how}`
+      : catapult
+        ? `Catapult — ${how}`
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')

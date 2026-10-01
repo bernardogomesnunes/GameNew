@@ -246,8 +246,44 @@ export class PlayerController {
     this.jumpQueued = false;
 
     this.moveAndCollide(this.velocity.x * dt, this.velocity.y * dt, this.velocity.z * dt);
+    this.trackFall();
     this.stepLag *= Math.exp(-STEP_EASE * dt);
     if (this.stepLag < 1e-3) this.stepLag = 0;
+    this.syncCamera();
+  }
+
+  /**
+   * How far you fell, for the game to turn into damage (survival/Health.js's
+   * fallDamage). The highest point of a fall is kept while you're in the
+   * air; landing hands over the drop. Flying and water reset it — landing in
+   * a lake is how you survive a cliff.
+   */
+  trackFall() {
+    if (this.flying || this.swimming) { this.fallPeak = null; return; }
+    if (!this.grounded) {
+      this.fallPeak = Math.max(this.fallPeak ?? this.position.y, this.position.y);
+      return;
+    }
+    if (this.fallPeak != null) {
+      const drop = this.fallPeak - this.position.y;
+      if (drop > 0) this.landing = (this.landing ?? 0) + drop;
+      this.fallPeak = null;
+    }
+  }
+
+  /** The drop of the last landing, once — 0 when there hasn't been one. */
+  takeLanding() {
+    const d = this.landing ?? 0;
+    this.landing = 0;
+    return d;
+  }
+
+  /** Puts the player somewhere at once — a respawn — with no fall to account for. */
+  teleport(x, y, z) {
+    this.position.set(x, y, z);
+    this.velocity.set(0, 0, 0);
+    this.fallPeak = null;
+    this.landing = 0;
     this.syncCamera();
   }
 

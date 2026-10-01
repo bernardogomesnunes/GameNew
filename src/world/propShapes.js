@@ -104,6 +104,58 @@ PROP_SHAPES.chandelier = [
   ]),
 ];
 
+// A chest: a wooden body and a slightly wider lid, iron bands over both, iron
+// corners, and a latch on the front (-z, so it faces you the way a chair
+// does — see Game.placedBlock).
+const OAK = 0x9a6b3f, LID = 0xa87a4a;
+PROP_SHAPES.chest = [
+  { minX: 0.07, maxX: 0.93, minY: 0, maxY: 0.58, minZ: 0.12, maxZ: 0.88, color: OAK },
+  { minX: 0.05, maxX: 0.95, minY: 0.58, maxY: 0.8, minZ: 0.1, maxZ: 0.9, color: LID },
+  // Bands, front to back over the lid and down both faces.
+  ...[0.22, 0.72].flatMap((x) => [
+    { minX: x, maxX: x + 0.06, minY: 0.8, maxY: 0.83, minZ: 0.09, maxZ: 0.91, color: IRON },
+    { minX: x, maxX: x + 0.06, minY: 0, maxY: 0.8, minZ: 0.09, maxZ: 0.11, color: IRON },
+    { minX: x, maxX: x + 0.06, minY: 0, maxY: 0.8, minZ: 0.89, maxZ: 0.91, color: IRON },
+  ]),
+  // The rim where the lid meets the body.
+  { minX: 0.06, maxX: 0.94, minY: 0.56, maxY: 0.6, minZ: 0.105, maxZ: 0.895, color: IRON },
+  // The latch.
+  { minX: 0.44, maxX: 0.56, minY: 0.48, maxY: 0.68, minZ: 0.06, maxZ: 0.1, color: 0xc9a44c },
+];
+
+// A catapult, drawn just after a throw: the arm up against its stop with
+// the cup at the top and a stone ready in it. A frame on four wheels, two
+// uprights and a crossbar, the arm on an iron axle. It throws towards -z,
+// its front; the cup rises a little over the cell, so it reads from afar.
+const FRAME = 0x8a6440, DARK_WOOD = 0x5e4128, SHOT = 0x9a9aa2;
+PROP_SHAPES.catapult = [
+  // Rails and cross-beams.
+  { minX: 0.08, maxX: 0.2, minY: 0.12, maxY: 0.26, minZ: 0.04, maxZ: 0.96, color: FRAME },
+  { minX: 0.8, maxX: 0.92, minY: 0.12, maxY: 0.26, minZ: 0.04, maxZ: 0.96, color: FRAME },
+  { minX: 0.2, maxX: 0.8, minY: 0.14, maxY: 0.24, minZ: 0.08, maxZ: 0.18, color: FRAME },
+  { minX: 0.2, maxX: 0.8, minY: 0.14, maxY: 0.24, minZ: 0.82, maxZ: 0.92, color: FRAME },
+  // Wheels, with iron hubs.
+  ...[[0, 0.08], [0.92, 1]].flatMap(([x0, x1]) => [0.1, 0.64].flatMap((z) => [
+    { minX: x0, maxX: x1, minY: 0, maxY: 0.28, minZ: z, maxZ: z + 0.26, color: DARK_WOOD },
+    { minX: x0 === 0 ? -0.02 : 1, maxX: x0 === 0 ? 0 : 1.02, minY: 0.1, maxY: 0.18, minZ: z + 0.09, maxZ: z + 0.17, color: IRON },
+  ])),
+  // Uprights and the crossbar the arm stops against.
+  { minX: 0.2, maxX: 0.28, minY: 0.24, maxY: 0.92, minZ: 0.4, maxZ: 0.5, color: FRAME },
+  { minX: 0.72, maxX: 0.8, minY: 0.24, maxY: 0.92, minZ: 0.4, maxZ: 0.5, color: FRAME },
+  { minX: 0.2, maxX: 0.8, minY: 0.84, maxY: 0.94, minZ: 0.4, maxZ: 0.5, color: DARK_WOOD },
+  // The axle, and the arm rising forward from it in steps.
+  { minX: 0.2, maxX: 0.8, minY: 0.3, maxY: 0.38, minZ: 0.52, maxZ: 0.6, color: IRON },
+  { minX: 0.44, maxX: 0.56, minY: 0.3, maxY: 0.52, minZ: 0.5, maxZ: 0.62, color: DARK_WOOD },
+  { minX: 0.44, maxX: 0.56, minY: 0.52, maxY: 0.74, minZ: 0.44, maxZ: 0.56, color: DARK_WOOD },
+  { minX: 0.44, maxX: 0.56, minY: 0.74, maxY: 0.96, minZ: 0.37, maxZ: 0.49, color: DARK_WOOD },
+  { minX: 0.44, maxX: 0.56, minY: 0.96, maxY: 1.12, minZ: 0.3, maxZ: 0.42, color: DARK_WOOD },
+  // The cup, and a stone in it.
+  { minX: 0.34, maxX: 0.66, minY: 1.1, maxY: 1.16, minZ: 0.18, maxZ: 0.46, color: FRAME },
+  { minX: 0.34, maxX: 0.66, minY: 1.16, maxY: 1.24, minZ: 0.16, maxZ: 0.2, color: FRAME },
+  { minX: 0.34, maxX: 0.66, minY: 1.16, maxY: 1.24, minZ: 0.44, maxZ: 0.48, color: FRAME },
+  { minX: 0.4, maxX: 0.6, minY: 1.16, maxY: 1.32, minZ: 0.22, maxZ: 0.42, color: SHOT },
+];
+
 // Crops: every stage of every one — see config/crops.js.
 for (const c of CROPS) for (let s = 0; s <= RIPE; s++) PROP_SHAPES[`crop_${c.kind}_${s}`] = cropBoxes(c.kind, s);
 

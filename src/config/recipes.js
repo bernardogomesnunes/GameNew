@@ -250,6 +250,56 @@ export const RECIPES = [
     blurb: 'Cut into a step instead of a slab.',
   },
   {
+    // Somewhere to keep things that isn't a whole storehouse — and the
+    // same box you'll find your things in where you fell.
+    id: 'chest',
+    name: 'Chest',
+    station: 'hand',
+    age: 1,
+    inputs: { planks: 6 },
+    output: { id: 'chest', count: 1 },
+    blurb: 'Twenty-seven slots in a box you can put anywhere. Place opens it.',
+  },
+  // Swords (Phase 6b): at the bench, each a step harder than the last.
+  {
+    id: 'sword_wood',
+    name: 'Wooden Sword',
+    station: 'hand',
+    age: 1,
+    inputs: { wood: 2, planks: 3 },
+    output: { id: 'sword_wood', count: 1 },
+    blurb: 'Better than fists. Not by as much as you would like.',
+  },
+  {
+    id: 'sword_stone',
+    name: 'Stone Sword',
+    station: 'hand',
+    age: 2,
+    inputs: { wood: 2, stone: 5 },
+    output: { id: 'sword_stone', count: 1 },
+    blurb: 'A stone edge on a wooden grip. Two good blows see off a bandit.',
+  },
+  {
+    id: 'sword_iron',
+    name: 'Iron Sword',
+    station: 'hand',
+    age: 4,
+    inputs: { wood: 2, iron_ingot: 3 },
+    output: { id: 'sword_iron', count: 1 },
+    blurb: 'Foundry iron. Hits hardest and lasts longest.',
+  },
+  // The catapult (Phase 6c): put it down, man it, throw stones that break
+  // whatever they land on. Ammunition is stone from your bag.
+  {
+    id: 'catapult',
+    name: 'Catapult',
+    station: 'hand',
+    age: 3,
+    inputs: { planks: 10, wood: 4, stone: 6 },
+    output: { id: 'catapult', count: 1 },
+    blurb: 'A stone-thrower on wheels. Look where you want it to land; it does the rest.',
+  },
+  {
     id: 'fence',
     name: 'Fence',
     station: 'hand',

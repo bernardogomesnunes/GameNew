@@ -137,6 +137,30 @@ export const ITEMS = [
     durability: null, madeBy: 'Filled at a river', unlocks: 'Pouring water where you need it',
   },
 
+  // --- swords (Phase 6b) -----------------------------------------------------
+  //
+  // Chosen directly: wood, stone and iron, made at the bench, each hitting
+  // harder than the last. Any tool hits; these are the ones made for it.
+  // A bandit has 12 points: four blows of wood, two of stone or iron.
+  {
+    id: 'sword_wood', name: 'Wooden Sword', kind: 'tool', stackTo: STACK_TOOL, color: 0xcbaa8a, glyph: 'sword',
+    durability: 100, madeBy: 'Crafted at the bench', unlocks: 'Fighting bandits',
+    damage: 4, weapon: true,
+    effectiveness: { plant: 'fast' },
+  },
+  {
+    id: 'sword_stone', name: 'Stone Sword', kind: 'tool', stackTo: STACK_TOOL, color: 0xafafb7, glyph: 'sword',
+    durability: 160, madeBy: 'Crafted at the bench', unlocks: 'Fighting bandits',
+    damage: 6, weapon: true,
+    effectiveness: { plant: 'fast' },
+  },
+  {
+    id: 'sword_iron', name: 'Iron Sword', kind: 'tool', stackTo: STACK_TOOL, color: 0xc9ced6, glyph: 'sword',
+    durability: 300, madeBy: 'Crafted at the bench from iron', unlocks: 'Fighting bandits',
+    damage: 9, weapon: true,
+    effectiveness: { plant: 'fast' },
+  },
+
   // --- building tools -------------------------------------------------------
   //
   // Clearing a hillside and mirroring a wall were buttons that were simply
@@ -164,6 +188,8 @@ export const ITEMS = [
   { id: 'stairs_stone', name: 'Stone Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stair', block: 29, madeBy: 'Cut into steps from stone' },
   { id: 'fence', name: 'Fence', kind: 'refined', stackTo: STACK_BULK, color: 0xc9a67c, glyph: 'fence', block: 47, madeBy: 'Knocked together from planks' },
   { id: 'gate', name: 'Gate', kind: 'refined', stackTo: STACK_GOODS, color: 0xa9825a, glyph: 'gate', block: 48, madeBy: 'Hung from planks — you pass, animals don\'t' },
+  { id: 'catapult', name: 'Catapult', kind: 'refined', stackTo: STACK_GOODS, color: 0x8a6440, glyph: 'catapult', block: 152, madeBy: 'Built at the bench — Place mans it, Break throws a stone' },
+  { id: 'chest', name: 'Chest', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a6b3f, glyph: 'chest', block: 148, madeBy: 'Knocked together from planks — Place opens it' },
   { id: 'door', name: 'Door', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08a60, glyph: 'door', block: 69, madeBy: 'Hung from planks — Place opens and shuts it' },
   { id: 'stairs_plank', name: 'Plank Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'stair', block: 30, madeBy: 'Cut into steps from planks' },
   { id: 'table_oak', name: 'Oak Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xd1b38c, glyph: 'table', block: 31, madeBy: 'Built at the workshop' },

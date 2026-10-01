@@ -81,7 +81,10 @@ export class DuiltUI {
     const el = document.createElement('div');
     el.id = 'duilt-layer';
     el.innerHTML = `
+      <div id="hurt-flash" aria-hidden="true"></div>
       <div id="vitals" hidden>
+        <!-- Ten hearts, in halves — see survival/Health.js. Not in Creative. -->
+        <div class="vital vital-hearts" id="vital-health" title="Health"></div>
         <div class="vital" id="vital-hunger" title="Hunger">
           <span class="vital-icon">🍖</span>
           <div class="vital-track"><div class="vital-fill" id="hunger-fill"></div></div>
@@ -195,6 +198,10 @@ export class DuiltUI {
       this.onBagChanged?.();
     });
     this.bus.on('hunger:change', () => this.renderVitals());
+    this.bus.on('health:change', ({ hurt }) => {
+      this.renderHealth();
+      if (hurt) this.flashHurt(false);
+    });
     // Claiming and losing a building both change how many houses there are,
     // which is the number the people pill is counting against.
     this.bus.on('structure:claimed', () => this.renderVitals());
@@ -407,9 +414,35 @@ export class DuiltUI {
 
   // ---- vitals ----
 
+  /** Ten hearts: full, half or empty. Hidden in Creative, where nothing hurts. */
+  renderHealth() {
+    const d = this.duilt;
+    const box = this.q('#vital-health');
+    if (!d || !box) return;
+    box.hidden = !!d.sandbox;
+    if (box.hidden) return;
+    const v = d.health.value;
+    const heart = (fill) => `<span class="heart ${fill}"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.4-4.5-9.4-9C1.1 8.2 3.1 4.5 6.7 4.5c2.2 0 3.7 1.2 5.3 3.1 1.6-1.9 3.1-3.1 5.3-3.1 3.6 0 5.6 3.7 4.1 7-2 4.5-9.4 9-9.4 9Z"/></svg>`
+      + `<span class="heart-red"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.4-4.5-9.4-9C1.1 8.2 3.1 4.5 6.7 4.5c2.2 0 3.7 1.2 5.3 3.1 1.6-1.9 3.1-3.1 5.3-3.1 3.6 0 5.6 3.7 4.1 7-2 4.5-9.4 9-9.4 9Z"/></svg></span></span>`;
+    box.innerHTML = Array.from({ length: 10 }, (_, i) => heart(v >= 2 * (i + 1) ? 'full' : v === 2 * i + 1 ? 'half' : 'empty')).join('');
+    box.classList.toggle('low', v <= 6);
+    box.title = `Health: ${v / 2} of 10 hearts`;
+  }
+
+  /** A red flash at the edges of the screen when you're hurt — stronger when you die. */
+  flashHurt(strong = false) {
+    const el = this.q('#hurt-flash');
+    if (!el) return;
+    el.classList.remove('on', 'strong');
+    void el.offsetWidth; // restart the fade
+    el.classList.add('on');
+    if (strong) el.classList.add('strong');
+  }
+
   renderVitals() {
     const d = this.duilt;
     if (!d) return;
+    this.renderHealth();
     const pct = Math.max(0, Math.min(100, (d.hunger.value / MAX_HUNGER) * 100));
     const fill = this.q('#hunger-fill');
     fill.style.width = `${pct}%`;
@@ -811,6 +844,11 @@ export class DuiltUI {
     }
     this.refreshSlotTip();
 
+    const all = this.q('#btn-store-all');
+    if (all) all.hidden = !!summary.grave;
+    const title = this.q('#store-title');
+    if (title) title.textContent = summary.chest ? (summary.grave ? 'What you were carrying' : 'Chest') : 'Storehouse';
+
     const kind = summary.tier?.name ?? 'On the shelves';
     this.q('#store-where').textContent = summary.free
       ? `${kind} — ${summary.free} of ${summary.size} free`
@@ -833,9 +871,11 @@ export class DuiltUI {
 
     const sub = this.q('#store-sub');
     if (sub) {
-      sub.textContent = summary.items
-        ? 'Tap anything to move it between your bag and the shelves.'
-        : 'Nothing in here yet. Tap something in your bag to put it away.';
+      sub.textContent = summary.grave
+        ? 'Tap anything to take it back. The chest goes once it is empty.'
+        : summary.items
+          ? `Tap anything to move it between your bag and the ${summary.chest ? 'chest' : 'shelves'}.`
+          : 'Nothing in here yet. Tap something in your bag to put it away.';
     }
 
     this.renderStoreRouting(summary);
@@ -853,6 +893,8 @@ export class DuiltUI {
     const box = this.q('#store-routing');
     const chips = this.q('#store-routing-chips');
     if (!box || !chips) return;
+    // A chest takes nothing from deliveries — only what you put in it.
+    if (summary.chest) { box.hidden = true; return; }
     if (!PRODUCIBLE_ITEMS.length) { box.hidden = true; return; }
     box.hidden = false;
 
@@ -878,13 +920,15 @@ export class DuiltUI {
 
   putInStore(i) {
     const d = this.duilt;
-    const store = this.store && d?.structures.storeFor(this.store);
+    const store = this.store && d?.containerFor(this.store);
     if (!store) return;
     const item = d.inventory.slots[i]?.id;
     if (!item) return;
+    // The chest you fell by only gives back — it isn't a place to keep things.
+    if (this.store.chest && d.chestAt(this.store.chest.x, this.store.chest.y, this.store.chest.z)?.grave) return;
     const moved = d.inventory.moveTo(store, i);
     if (!moved) {
-      this.bus.emit('toast', { kind: 'xp', title: 'No room on the shelves', body: 'Take something out first' });
+      this.bus.emit('toast', { kind: 'xp', title: this.store.chest ? 'The chest is full' : 'No room on the shelves', body: 'Take something out first' });
       return;
     }
     this.renderStore();
@@ -892,11 +936,18 @@ export class DuiltUI {
 
   takeFromStore(i) {
     const d = this.duilt;
-    const store = this.store && d?.structures.storeFor(this.store);
+    const store = this.store && d?.containerFor(this.store);
     if (!store?.slots[i]) return;
     const moved = store.moveTo(d.inventory, i);
     if (!moved) {
-      this.bus.emit('toast', { kind: 'xp', title: 'Your bag is full', body: 'Put something on the shelves first' });
+      this.bus.emit('toast', { kind: 'xp', title: 'Your bag is full', body: 'Put something away first' });
+      return;
+    }
+    // Emptied, the chest you fell by is gone.
+    const c = this.store.chest;
+    if (c && d.chestAt(c.x, c.y, c.z)?.grave && d.chestEmpty(c.x, c.y, c.z)) {
+      this.game.clearGrave?.(c);
+      this.closePanel('panel-store');
       return;
     }
     this.renderStore();
@@ -910,8 +961,9 @@ export class DuiltUI {
    */
   storeEverything() {
     const d = this.duilt;
-    const store = this.store && d?.structures.storeFor(this.store);
+    const store = this.store && d?.containerFor(this.store);
     if (!store) return;
+    if (this.store.chest && d.chestAt(this.store.chest.x, this.store.chest.y, this.store.chest.z)?.grave) return;
     let moved = 0, stuck = 0;
     d.inventory.slots.forEach((s, i) => {
       if (!s || isTool(s.id)) return;

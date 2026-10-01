@@ -5,11 +5,12 @@ import { Territory } from '../world/Territory.js';
 import { StructureRegistry } from '../structures/StructureRegistry.js';
 import { tierStatus, validateStructure } from '../structures/validate.js';
 import { Hunger } from '../survival/Hunger.js';
+import { Health } from '../survival/Health.js';
 import { Skills } from '../progression/Skills.js';
 import { Crafting } from './Crafting.js';
 import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
-import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName } from '../config/items.js';
+import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool } from '../config/items.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
@@ -32,6 +33,10 @@ import { ageOf, FINAL_AGE } from '../config/ages.js';
  * only ever adds `if (this.sandbox)` at the front of it, never a second copy.
  */
 
+/** How many slots a chest you make has. A chest left where you fell holds whatever you had. */
+export const CHEST_SLOTS = 27;
+const chestKey = (x, y, z) => `${x},${y},${z}`;
+
 const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds: 6, seeds_carrot: 4, seeds_potato: 4 };
 
 export class DuiltGame {
@@ -50,6 +55,10 @@ export class DuiltGame {
     this.territory = new Territory({ world, scene, bus, age, sandbox });
     this.structures = new StructureRegistry({ world, bus, inventory: this.inventory });
     this.hunger = new Hunger(bus);
+    // Ten hearts — see survival/Health.js. A sandbox never takes damage.
+    this.health = new Health(bus);
+    // What's in each chest in the world, by where it stands — see chestAt.
+    this.chests = new Map(); // "x,y,z" -> { inventory, grave }
     this.skills = new Skills(bus);
     this.crafting = new Crafting({ inventory: this.inventory, world, skills: this.skills });
     this.settlers = new Settlers({
@@ -382,6 +391,17 @@ export class DuiltGame {
    * without walking its slots itself.
    */
   storeSummary(structure) {
+    if (structure?.chest) {
+      const { x, y, z } = structure.chest;
+      const chest = this.chestAt(x, y, z);
+      const store = chest.inventory;
+      const used = store.slots.filter(Boolean).length;
+      const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
+      return {
+        structure: null, chest: true, grave: chest.grave, store, used, free: store.size - used, size: store.size, items,
+        tier: { name: chest.grave ? 'In the chest' : 'Chest' },
+      };
+    }
     const store = this.structures.storeFor(structure);
     if (!store) return null;
     const used = store.slots.filter(Boolean).length;
@@ -449,13 +469,15 @@ export class DuiltGame {
 
   // ---- the clock ----
 
-  tick(dtSeconds) {
+  tick(dtSeconds, { resting = false } = {}) {
     // A sandbox never gets hungry — hunger simply never ticks down from its
     // starting full value, which is also what keeps the HUD bar honest
     // without needing its own sandbox check: full is full.
     if (!this.sandbox) {
       this.hunger.tick(dtSeconds * this.skills.hungerRelief());
       this.hunger.exertion = Math.max(0, this.hunger.exertion - dtSeconds); // decays back to resting
+      // Heals while you're fed, faster resting in a house.
+      this.health.tick(dtSeconds, { hungerRatio: this.hunger.ratio, resting });
     }
 
     // Production is checked on a slow cadence; it's wall-clock based, so the
@@ -481,6 +503,83 @@ export class DuiltGame {
     return penProduce(s, this.herd);
   }
 
+  // ---- health ----
+
+  /**
+   * Hurts you, unless this is a sandbox — nothing hurts in Creative. Returns
+   * what was taken, in half-hearts.
+   */
+  hurt(amount, cause, opts) {
+    if (this.sandbox) return 0;
+    return this.health.hurt(amount, cause, opts);
+  }
+
+  // ---- chests ----
+
+  /**
+   * The chest standing at (x, y, z) — its slots and whether it's the one
+   * left where you fell — or null. A chest block with nothing recorded (put
+   * down before chests had slots, or brought in some other way) gets its
+   * slots on first asking, so every chest in the world opens.
+   */
+  chestAt(x, y, z, { create = true } = {}) {
+    const key = chestKey(x, y, z);
+    let chest = this.chests.get(key);
+    if (!chest && create) {
+      chest = { inventory: new Inventory({ slots: CHEST_SLOTS, bus: this.bus }), grave: false };
+      this.chests.set(key, chest);
+    }
+    return chest ?? null;
+  }
+
+  /** Whether the chest at (x, y, z) has nothing in it — the rule for breaking one. */
+  chestEmpty(x, y, z) {
+    const chest = this.chests.get(chestKey(x, y, z));
+    return !chest || chest.inventory.slots.every((s) => !s);
+  }
+
+  /** Forgets a chest that's been taken away. */
+  removeChest(x, y, z) {
+    this.chests.delete(chestKey(x, y, z));
+  }
+
+  /**
+   * Death: everything you carry goes into a new chest at (x, y, z) —
+   * requested directly, "when we die the chest appears in place with my
+   * items" — except your tools, which stay with you so you can walk back
+   * and dig for it. Returns how many things went in, or 0 when there was
+   * nothing to leave (and no chest is made).
+   */
+  leaveGrave(x, y, z) {
+    const bag = this.inventory.slots;
+    const kept = [];
+    for (let i = 0; i < bag.length; i++) if (bag[i] && !isTool(bag[i].id)) kept.push(i);
+    if (!kept.length || this.inventory.endless) return 0;
+    const grave = new Inventory({ slots: Math.max(CHEST_SLOTS, kept.length), bus: this.bus });
+    let n = 0;
+    kept.forEach((i, j) => {
+      grave.slots[j] = { ...bag[i] };
+      n += bag[i].count;
+      bag[i] = null;
+    });
+    this.chests.set(chestKey(x, y, z), { inventory: grave, grave: true });
+    this.inventory.changed();
+    grave.changed();
+    return n;
+  }
+
+  /**
+   * The slots behind whatever the store screen has open: a storehouse's
+   * shelves, or a chest (`{ chest: { x, y, z } }`).
+   */
+  containerFor(target) {
+    if (target?.chest) {
+      const { x, y, z } = target.chest;
+      return this.chestAt(x, y, z)?.inventory ?? null;
+    }
+    return this.structures.storeFor(target);
+  }
+
   eat(itemId = null) {
     const id = itemId ?? this.hunger.bestFoodIn(this.inventory);
     if (!id) return { ok: false, reason: 'You have nothing to eat.' };
@@ -495,6 +594,8 @@ export class DuiltGame {
       territory: this.territory.toJSON(),
       structures: this.structures.toJSON(),
       hunger: this.hunger.toJSON(),
+      health: this.health.toJSON(),
+      chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
       herd: herdToJSON(this.herd),
@@ -513,6 +614,14 @@ export class DuiltGame {
     this.territory.setAge(data.territory?.age ?? 1);
     this.structures.loadJSON(data.structures);
     this.hunger.loadJSON(data.hunger);
+    this.health.loadJSON(data.health);
+    this.chests.clear();
+    for (const c of Array.isArray(data.chests) ? data.chests : []) {
+      if (typeof c?.key !== 'string') continue;
+      const inventory = new Inventory({ slots: Math.max(CHEST_SLOTS, c.slots?.length ?? 0), bus: this.bus });
+      inventory.loadJSON(c);
+      this.chests.set(c.key, { inventory, grave: !!c.grave });
+    }
     this.skills.loadJSON(data.skills);
     this.settlers.loadJSON(data.settlers);
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
