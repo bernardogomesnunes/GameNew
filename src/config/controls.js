@@ -24,8 +24,8 @@ export const ACTIONS = [
   { id: 'left', name: 'Step left', key: 'KeyA' },
   { id: 'right', name: 'Step right', key: 'KeyD' },
   { id: 'jump', name: 'Jump / swim or fly up', key: 'Space' },
-  { id: 'sprint', name: 'Sprint', key: 'ShiftLeft' },
-  { id: 'down', name: 'Swim or fly down', key: 'ControlLeft' },
+  { id: 'sprint', name: 'Sprint — or down, flying or swimming', key: 'ShiftLeft' },
+  { id: 'down', name: 'Fly faster — or swim down', key: 'ControlLeft' },
   { id: 'fly', name: 'Fly on / off', key: 'KeyF' },
   { id: 'turn', name: 'Turn a roof or design', key: 'KeyR' },
   // Playtest, P3: "in desktop there should be a key".

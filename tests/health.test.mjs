@@ -69,7 +69,10 @@ ok('lava takes two hearts a second', LAVA_PER_SECOND === 4);
   const world = new World({ sizeX: 32, sizeZ: 32, height: 40 });
   for (let x = 0; x < 32; x++) for (let z = 0; z < 32; z++) world.setBlock(x, 0, z, 3);
   const p = new PlayerController(world, new THREE.Object3D(), { x: 16.5, y: 1, z: 16.5 });
-  p.teleport(16.5, 12, 16.5);
+  // Standing first — arriving in a world, the first landing is free (see
+  // tests/arrival.test.mjs) — then off a twelve-block ledge.
+  for (let i = 0; i < 10; i++) p.update(1 / 60);
+  p.position.y = 12; p.velocity.set(0, 0, 0);
   for (let i = 0; i < 200; i++) p.update(1 / 60);
   const drop = p.takeLanding();
   ok(`a fall is measured on landing (${drop.toFixed(1)} blocks)`, drop > 10.5 && drop < 11.5);
