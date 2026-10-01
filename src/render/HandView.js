@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { lookColours } from '../config/avatar.js';
 import { heldGeometryFor } from './heldModel.js';
+import { ITEMS_BY_ID } from '../config/items.js';
 
 /**
  * What you hold, in first person (playtest, P7): drawn in your right hand
@@ -22,9 +23,7 @@ export class HandView {
     camera.add(this.group);
     this.item = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
     this.item.scale.setScalar(0.3);
-    // Side on, top leaning in towards the middle of the screen, so a head
-    // or blade (always -x, see heldModel.js) faces where you swing.
-    this.item.rotation.set(0.1, 0.35, 0.4);
+    this.item.rotation.order = 'YXZ';
     this.group.add(this.item);
     this.fistMat = new THREE.MeshLambertMaterial({ color: 0xe0b48e });
     this.fist = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.34), this.fistMat);
@@ -51,8 +50,16 @@ export class HandView {
       this.item.visible = !!geo;
       this.fist.visible = !geo;
       if (geo) this.item.geometry = geo;
+      // A tool or a sword points ahead of you, into the screen: handle in
+      // your hand, head out in front, and its blade (always -x, see
+      // heldModel.js) to the left — asked for directly: "pointing to the
+      // front, the handle to the user's side, blade to the front, that's
+      // left". Anything else — a block, food, a bucket — sits upright.
+      const pointing = ITEMS_BY_ID.get(held.itemId)?.kind === 'tool' && held.itemId !== 'bucket' && held.itemId !== 'bucket_water';
+      if (pointing) this.item.rotation.set(-1.2, 0.22, 0);
+      else this.item.rotation.set(0.1, 0.35, 0.15);
       // A block sits smaller in the hand than a sword is long.
-      this.item.scale.setScalar(held.itemId ? 0.24 : 0.18);
+      this.item.scale.setScalar(pointing ? 0.34 : held.itemId ? 0.24 : 0.18);
     }
     this.fistMat.color.setHex(lookColours(look).skin);
 

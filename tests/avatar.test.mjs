@@ -78,6 +78,8 @@ ok('and a broken choice falls back to something real', lookColours({ skin: 99, h
 ok('a sword is held as its model', heldBoxes({ itemId: 'sword_iron' }).length >= 4);
 ok('an axe is held with its blade the way you swing it, not out to the side',
   HELD_MODELS.axe.filter((b) => b.minY > 0.5).every((b) => b.maxX <= 0.46));
+ok('in first person a tool points ahead: handle on your side, blade to the left',
+  /if \(pointing\) this\.item\.rotation\.set\(-1\.2, 0\.22, 0\)/.test(readFileSync(new URL('../src/render/HandView.js', import.meta.url), 'utf8')));
 ok('so are the tools and the bucket', ['axe', 'pickaxe', 'shovel', 'bucket', 'bucket_water'].every((id) => HELD_MODELS[id]?.length >= 2));
 ok('fruit too', heldBoxes({ itemId: 'fruit' }).length >= 2);
 ok('a block, as itself', heldBoxes({ blockId: 1 }).length === 1 && heldBoxes({ blockId: 33 }).length > 1);
