@@ -62,7 +62,7 @@ import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
-import { Mobs, rayBox } from './world/Mobs.js';
+import { Mobs, rayBox, bodyFits } from './world/Mobs.js';
 import { landmarksFor, PLACE_NAMES } from './world/landmarks.js';
 import { LOOT } from './duilt/Loot.js';
 import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './world/Projectiles.js';
@@ -85,6 +85,8 @@ import { MobView } from './render/MobView.js';
 const REACH = 7;
 /** The war only comes on while you're this near home — it's your settlement they want. */
 const WAR_HOME_RANGE = 220;
+/** How far out the touch stick has to be pushed to run rather than walk. */
+const STICK_RUN = 0.92;
 /** Blows a block of a claimed wall, gatehouse or watchtower takes before it breaks. */
 const REINFORCED = 3;
 /** How often the defence buildings' posts are brought in line with what's standing. */
@@ -949,6 +951,13 @@ export class Game {
       onMove: (x, z) => {
         this.player.externalMove.x = x;
         this.player.externalMove.z = z;
+        // Pushed right out to the edge of the stick: run.
+        const running = Math.hypot(x, z) >= STICK_RUN;
+        if (running && !this.player.stickSprint && !this.toldStickRun) {
+          this.toldStickRun = true;
+          this.ui?.toast({ kind: 'challenge', title: 'Running', body: 'Push the stick all the way out to run — ease off to walk' });
+        }
+        this.player.stickSprint = running;
       },
       onLookStick: (x, y) => { this.player.lookInput.x = x; this.player.lookInput.y = y; },
       onJumpOrFlyUp: (held) => {
@@ -3251,6 +3260,31 @@ export class Game {
     return got;
   }
 
+  /**
+   * Anyone you can fight is solid: you can't walk through a bandit, and one
+   * can't stand inside you. You're eased out of them (most of the way) and
+   * they out of you (the rest), so a fight is two bodies, not two ghosts
+   * — reported: "the NPCs don't look like entities".
+   */
+  keepApart() {
+    if (!this.wanderers || this.player.flying) return;
+    const p = this.player.position;
+    for (const q of this.wanderers.list) {
+      const spec = WANDERERS[q.kind];
+      if (!spec?.hp || q.dead || q.mount) continue;
+      if (Math.abs(q.y - p.y) > 1.7) continue;
+      const reach = spec.siege || spec.beast ? 1.0 : 0.6;
+      const dx = p.x - q.x, dz = p.z - q.z, d = Math.hypot(dx, dz);
+      if (d >= reach) continue;
+      const ux = d > 1e-4 ? dx / d : 1, uz = d > 1e-4 ? dz / d : 0;
+      const overlap = reach - d;
+      this.player.moveAndCollide(ux * overlap * 0.7, 0, uz * overlap * 0.7);
+      if (spec.siege || spec.beast) continue;
+      const nx = q.x - ux * overlap * 0.3, nz = q.z - uz * overlap * 0.3;
+      if (bodyFits(this.world, nx, nz, q.y)) { q.x = nx; q.z = nz; }
+    }
+  }
+
   /** The war horn: call the next round now, when you're ready for it. */
   blowHorn() {
     const d = this.duilt;
@@ -4327,6 +4361,7 @@ export class Game {
       const wasAt = { x: this.player.position.x, z: this.player.position.z };
       const wasSwimming = this.player.swimming;
       this.player.update(dt);
+      this.keepApart();
       this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
         this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
