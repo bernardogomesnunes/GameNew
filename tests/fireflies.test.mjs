@@ -76,7 +76,7 @@ ok('and what a Firefly Lantern is made with', RECIPES.find((r) => r.output.id ==
 
 // --- in the game ------------------------------------------------------------------------
 
-ok('they come out with the dark of the real sky', /this\.fireflies\.tick\(dt, this\.player\.position, 1 - daylightAt\(this\.dayCycle\.time\)\.day\)/.test(game));
+ok('they come out with the dark of the real sky', /this\.fireflies\.tick\(dt, this\.player\.position, 1 - daylightAt\(this\.dayCycle\.time\)\.day, \{/.test(game));
 ok('drawn every frame', /this\.fireflyView\.update\(this\.fireflies\)/.test(game));
 ok('Break on a swarm catches them, before anything behind', /if \(this\.catchFireflies\(hit\)\) return;\s*if \(this\.hitMob\(hit\)\) return;/.test(game) && /collect\(\{ fireflies: 1 \}\)/.test(game));
 ok('pointed at, they\'re named', /setPersonHint\('Fireflies', 'hit to catch a few'\)/.test(game));

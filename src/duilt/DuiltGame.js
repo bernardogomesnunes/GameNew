@@ -19,6 +19,7 @@ import { lootFor, LOOT } from './Loot.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
+import { War } from './War.js';
 
 /**
  * Everything that makes Duilt different from the sandbox, in one object.
@@ -96,6 +97,8 @@ export class DuiltGame {
     this.boosts = {};
     // Places you've found out in the world (playtest, P4), as "kind@x,z".
     this.found = new Set();
+    // The Stone Kingdom's war on you, from the last age on — see War.js.
+    this.war = new War();
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you` : null),
@@ -103,6 +106,8 @@ export class DuiltGame {
         if (r.ring && !this.ring) {
           this.ring = r.ring;
           this.bus?.emit('ring:forged', { ring: r.ring });
+          // The Black Ring makes you the Stone King's: he calls his army home.
+          if (r.ring === 'black' && this.war.truce()) this.bus?.emit('war:truce', { round: this.war.round });
         }
       },
     });
@@ -537,8 +542,10 @@ export class DuiltGame {
     if (!this.ageComplete()) return null;
 
     // The last age has no next ring. Finishing it finishes the game, which is
-    // the one thing the border cannot express.
+    // the one thing the border cannot express — once the war is over, too:
+    // won, or never yours to fight (the Black Ring).
     if (this.age >= FINAL_AGE) {
+      if (this.war.atWar) return null;
       if (!this.finished) {
         this.finished = true;
         this.bus?.emit('duilt:won', { age: this.age, structures: this.structures.list().length });
@@ -551,8 +558,21 @@ export class DuiltGame {
       this.bus?.emit('duilt:age', {
         age: next.age, name: next.name, size: next.size, intro: ageOf(next.age).intro,
       });
+      this.declareWar();
     }
     return next;
+  }
+
+  /**
+   * The last ring reached: the Stone Kingdom has seen you, and it's coming
+   * (asked for directly: attacked "even if we didn't craft the ring"). With
+   * the Black Ring already on your hand there's no war — you're the King's.
+   */
+  declareWar() {
+    if (this.sandbox || this.age < FINAL_AGE) return false;
+    if (!this.war.declare(this.days, { ring: this.ring })) return false;
+    this.bus?.emit('war:declared', { due: this.war.due });
+    return true;
   }
 
   // ---- the clock ----
@@ -830,6 +850,7 @@ export class DuiltGame {
       spawn: this.spawn,
       boosts: { ...this.boosts },
       found: [...this.found],
+      war: this.war.toJSON(),
       chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, found: c.found, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
@@ -883,6 +904,9 @@ export class DuiltGame {
     this.crops.loadJSON(data.crops);
     this.saplings.loadJSON(data.saplings);
     this.days = Number.isFinite(data.days) ? data.days : 0;
+    this.war.loadJSON(data.war);
+    // A world already at the last age from before there was a war: it starts now.
+    this.declareWar();
     // Pay out everything earned while the tab was shut.
     this.lastCollect = Date.now();
     return this.structures.collect({

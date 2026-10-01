@@ -47,7 +47,7 @@ function stag() {
   return { group: g, legs };
 }
 
-function beast() {
+export function beast() {
   const shadow = new THREE.MeshLambertMaterial({ color: 0x17131f, transparent: true, opacity: 0.88 });
   const eyes = new THREE.MeshBasicMaterial({ color: 0xb48cff });
   const g = new THREE.Group();

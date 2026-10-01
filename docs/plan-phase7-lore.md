@@ -136,10 +136,15 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
 
 ## White path — Defend: the Ten Rounds
 
-- **The rounds:** after you forge the White Ring, the dark army comes for your settlement in **10 rounds of raiders**.
-  - There's a warning before each round: horns, and a messenger saying how many are coming and from where.
-  - Rounds come every couple of in-game days.
-  - You can sound your own **war horn** to call the next round early when you're ready.
+- **When the war starts (changed in the playtest):** not when you forge the White Ring, but **when your land reaches the last age**. Asked for directly: "let's keep blocking leaving the area until age 6, and increase just a little bit the range, starting on 32 but going higher than 256, and when we hit it we get attacked, even if we didn't craft the ring — it will be harder to beat because you need to craft it while you are being attacked."
+  - The border is a wall until Age 6: 32 → 64 → 128 → 192 → 256 → **320**.
+  - At Age 6 the wall comes down (you can walk anywhere; building still stops at your border) and the Stone Kingdom **declares war**, whatever ring you bear.
+  - Forge the **Black Ring** — before or during the war — and the King calls his army home: you're his ally (the dark path).
+  - The game can't be finished while the war is on.
+- **The rounds:** the dark army comes for your settlement in **10 rounds of raiders**, from the Stone Kingdom's side of the map, gathering just past your border.
+  - There's a warning before each round: war horns, saying how many are coming and from where — about a minute of play before they arrive.
+  - The first comes half a game day after war is declared; then a day and a half between rounds. A round only comes while you're near home.
+  - You can sound your own **war horn** (made at the bench in Age 6) to call the next round early when you're ready.
 - **The rounds get harder:**
 
   | Rounds | Who comes |
@@ -149,15 +154,16 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
   | 7–9 | Stone soldiers in armour, and catapults against your walls |
   | 10 | The dark army's warlord, riding with a black beast of its own |
 
-- **Raiders break blocks for real:** rams on gates and catapults on walls, using Phase 6 projectile physics. Your claimed buildings take damage and can be repaired.
+- **Raiders break blocks for real:** rams batter whatever stands in their way inside your land, and siege catapults lob stones at your buildings from 26 blocks off, using Phase 6 projectile physics. A claimed building that loses blocks stops working until you put them back.
+- **Who's in each round** (config/war.js): 3, 4, 5 bandits; then bandits and archers with a ram; Stone soldiers with archers, catapults and a ram; and last the Warlord, Vorhak, on his black beast, with soldiers, archers and a catapult. Archers keep their distance and shoot; soldiers never run; the beast and the Warlord hunt *you*.
 - **Defence buildings:**
   - **Stone Walls and gatehouse:** a closed ring of wall round your land.
   - **Watchtower:** archers shoot from it.
   - **Barracks:** your Military building upgraded; it trains soldiers from settlers.
   - **Catapults:** from Phase 6.
   - **The white guardian** fights beside you.
-- **Winning a round:** every raider in that round is down or fled.
-- **Losing a round:** the raiders loot a share of your storehouses and the round comes again (Decision 1).
+- **Winning a round:** every raider in that round is down or fled empty-handed. Each round won pays gold.
+- **Losing a round:** a raider gets away with your things, or they beat you. They go home with it and the round comes again a day later (Decision 1).
 - **Victory after round 10:**
   - the dark army is broken and the raids end for good;
   - the white god's light settles on your land, with fireflies across your settlement at night;
@@ -243,7 +249,7 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
 3. **7c** Temple and the choice.
 4. **7d** Sanctuary and guardian.
 5. **7e** The Stone Kingdom.
-6. **White path:** defence buildings and the Ten Rounds. This makes the white path complete first: a whole game with an ending.
+6. **White path:** the Ten Rounds — **done** (war at Age 6, the rounds, siege, war horn, victory). Still to come: the defence buildings (walls and gatehouse, watchtower, barracks).
 7. **Dark path:**
    1. the alliance, the army and the march;
    2. the Sky Kingdom and its anchor towers;

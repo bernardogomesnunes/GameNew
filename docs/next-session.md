@@ -14,7 +14,9 @@ Everything in `docs/plan-playtest-improvements.md` (P1–P9) is in, each with it
 ## 7e, the Stone Kingdom, is done too
 A walled city of dark stone, about 1000–1400 blocks from home: a keep with the Stone King, guards, a dark temple, an armoury, barracks, a market, houses and an old road to its gate. It shows on the horizon, and so do your own builds (#130). See `docs/plan-phase7-lore.md`.
 
-**Next:** the White path — defence buildings and the Ten Rounds of the dark army marching from the Stone Kingdom.
+**Done:** the war — borders 32 → 320, locked until Age 6; reaching Age 6 opens the wall and the Stone Kingdom declares war (ring or not); ten rounds with archers, rams, siege catapults and the Warlord on his beast; war horn; Black Ring calls it off; victory blesses your land with fireflies.
+
+**Next:** the defence buildings for the war — walls and gatehouse, watchtower with archers, barracks training soldiers.
 
 # Before that — Phase 6
 

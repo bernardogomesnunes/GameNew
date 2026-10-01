@@ -72,12 +72,16 @@ import { FireflyView } from './render/FireflyView.js';
 import { GuardianView } from './render/GuardianView.js';
 import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
-import { Wanderers } from './world/Wanderers.js';
+import { Wanderers, compass } from './world/Wanderers.js';
+import { ArmyView } from './render/ArmyView.js';
+import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
 import { WANDERERS, NEWS } from './config/wanderers.js';
 import { MobView } from './render/MobView.js';
 
 const REACH = 7;
+/** The war only comes on while you're this near home — it's your settlement they want. */
+const WAR_HOME_RANGE = 220;
 /**
  * How far a tool can point, as opposed to how far you can reach.
  *
@@ -205,7 +209,7 @@ const SLOW_BREAK_MS = 900;
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn' };
 const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', seeds: 'plantMixed' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
@@ -351,6 +355,8 @@ export class Game {
     this.projectileView = new ProjectileView(this.scene);
     this.fireflyView = new FireflyView(this.scene);
     this.guardianView = new GuardianView(this.scene);
+    // The Stone Kingdom's rams, catapults and beast, and its arrows.
+    this.armyView = new ArmyView(this.scene);
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -443,6 +449,22 @@ export class Game {
         ? 'It follows you, fights for you and heals you while you\'re near. Tap it to tell it to stay or to hunt.'
         : 'It follows you and fights for you, and bandits that come near it lose their nerve. Tap it to tell it to stay or to hunt.',
     }));
+    this.bus.on('war:declared', () => {
+      const dir = this.kingdomDirection();
+      this.ui?.toast({
+        kind: 'achievement',
+        title: 'The Stone Kingdom has declared war on you',
+        body: `Your border is open — and their army is gathering${dir ? ` to the ${dir}` : ''}. Ten rounds are coming. Build walls, ready your swords, and forge your ring while you can.`,
+      });
+    });
+    this.bus.on('war:truce', () => {
+      for (const p of this.wanderers?.list ?? []) if (p.war) p.retreat = true;
+      this.ui?.toast({
+        kind: 'achievement',
+        title: 'The Stone King calls his army home',
+        body: 'The Black Ring is on your hand. You\'re his ally now — the war is over.',
+      });
+    });
     this.bus.on('ring:forged', ({ ring }) => this.ui?.toast({
       kind: 'achievement',
       title: ring === 'white' ? 'You forged the White Ring' : 'You forged the Black Ring',
@@ -1038,7 +1060,9 @@ export class Game {
    */
   applyTerritoryBounds() {
     if (!this.player) return;
-    this.player.setBounds(this.duilt && !this.duilt.sandbox ? this.duilt.territory.bounds() : null);
+    // From the last age the wall is down (config/ages.js): you walk where you like.
+    const t = this.duilt?.territory;
+    this.player.setBounds(this.duilt && !this.duilt.sandbox && !t.open ? t.bounds() : null);
   }
 
   /** Duilt owns scene objects (the border), so swapping worlds must clean up. */
@@ -2859,7 +2883,7 @@ export class Game {
     const g = this.duilt?.guardian;
     if (!g) return;
     const hostile = this.wanderers?.hostile();
-    const enemies = (this.wanderers?.list ?? []).filter((p) => WANDERERS[p.kind].hp && !p.dead && (hostile || p.angry || p.raider));
+    const enemies = (this.wanderers?.list ?? []).filter((p) => WANDERERS[p.kind].hp && !p.dead && (hostile || p.angry || p.raider || p.war));
     g.tick(dt, this.player.position, enemies, {
       strike: (e, damage) => {
         const res = this.wanderers.hit(e, damage, g.x, g.z);
@@ -2879,7 +2903,7 @@ export class Game {
   /** A bandit's blow landing on you. */
   banditHits(p, hits) {
     if (!this.duilt || this.duilt.sandbox) return;
-    const taken = this.duilt.hurt(hits, 'bandit');
+    const taken = this.duilt.hurt(hits, p.war ? 'army' : 'bandit');
     if (!taken) return;
     // The Black Ring (Phase 7c): a dark spark back at whoever struck you.
     if (this.duilt.ringWorn() === 'black' && this.wanderers) {
@@ -2893,6 +2917,170 @@ export class Game {
     // Knocked up off your feet a little, so a blow is felt and not just seen.
     if (this.player.grounded) this.player.velocity.y = 4.5;
     this.sound?.hit?.('wood', { gain: 0.6, pitch: 0.55 });
+  }
+
+  // ---- the war: the Stone Kingdom's Ten Rounds (config/war.js) ----
+
+  /** The middle of your settlement — where the war is aimed. */
+  settlementCentre() {
+    const t = this.duilt.territory;
+    return { x: t.centreX, z: t.centreZ };
+  }
+
+  /** Where the Stone Kingdom lies from home, as a word — or null if it's nowhere. */
+  kingdomDirection() {
+    const k = this.wanderers?.landmarks.find((l) => l.kind === 'kingdom');
+    if (!k || !this.duilt) return null;
+    const home = this.settlementCentre();
+    return compass(k.x - home.x, k.z - home.z);
+  }
+
+  /**
+   * Each frame: announce a round, send it, or watch the one at your walls
+   * and settle it when the last of them is down or gone. A round only comes
+   * on while you're near home — it's your settlement they want, and you
+   * they want to find there.
+   */
+  tickWar() {
+    const d = this.duilt;
+    if (!d || d.sandbox || !this.wanderers) return;
+    const war = d.war;
+    if (war.stage === 'fighting') {
+      if (this.wanderers.warParty) this.watchRound();
+      else this.sendRound();
+      return;
+    }
+    if (!war.atWar) return;
+    const home = this.settlementCentre(), p = this.player.position;
+    if (Math.hypot(p.x - home.x, p.z - home.z) > WAR_HOME_RANGE) return;
+    const what = war.tick(d.days);
+    if (what === 'warn') {
+      const dir = this.kingdomDirection() ?? 'north';
+      this.sound?.hit?.('stone', { gain: 0.9, pitch: 0.35 });
+      this.ui?.toast({
+        kind: 'challenge',
+        title: `War horns to the ${dir}`,
+        body: `Round ${war.round} of ${LAST_ROUND}: ${companyWords(war.round, WANDERERS)}. They'll be at your border in about a minute.`,
+      });
+    } else if (what === 'start') {
+      this.sendRound();
+    }
+  }
+
+  /** The round that's due, at the edge of your land on the Stone Kingdom's side. */
+  sendRound() {
+    const war = this.duilt.war;
+    const home = this.settlementCentre();
+    const k = this.wanderers.landmarks.find((l) => l.kind === 'kingdom');
+    const towards = k ? { x: k.x, z: k.z } : { x: home.x, z: home.z - 1000 };
+    const band = this.wanderers.sendWarband(home, towards, this.duilt.territory.size / 2, ROUNDS[war.round - 1].who, war.round);
+    if (!band) return; // nowhere loaded to gather yet — next frame
+    this.wanderers.warParty = { round: war.round, band, died: false };
+    const dir = compass(band[0].x - home.x, band[0].z - home.z);
+    this.ui?.toast({
+      kind: 'challenge',
+      title: `Round ${war.round} of ${LAST_ROUND} — they're here`,
+      body: `${companyWords(war.round, WANDERERS)}, coming in from the ${dir}. Beat them back.`,
+    });
+  }
+
+  /** Whether the round at your walls is over yet, and how it went. */
+  watchRound() {
+    const party = this.wanderers.warParty;
+    if (party.band.some((p) => !p.dead && !p.done)) return;
+    this.wanderers.warParty = null;
+    const d = this.duilt, war = d.war, n = party.round;
+    const won = !party.died && !party.band.some((p) => p.escaped);
+    const res = war.resolve(won, d.days);
+    if (res === 'lost') {
+      this.ui?.toast({
+        kind: 'xp',
+        title: `Round ${n} lost`,
+        body: party.died ? 'They beat you, and went home with what they came for. They\'ll be back.'
+          : 'Some of them got away with what they took. They\'ll be back — the round comes again.',
+      });
+      return;
+    }
+    const gold = ROUND_GOLD(n);
+    d.collect({ gold });
+    if (res === 'victory') {
+      this.ui?.toast({
+        kind: 'achievement',
+        title: 'The dark army is broken',
+        body: `All ten rounds beaten, the Warlord with them. The raids are over for good — the white god's light is on your land. +${gold} gold`,
+      });
+      d.checkAgeAdvance();
+      this.editedAt = Date.now();
+      return;
+    }
+    this.ui?.toast({
+      kind: 'achievement',
+      title: `Round ${n} of ${LAST_ROUND} won`,
+      body: `+${gold} gold. Round ${war.round} comes in a day or so — or sound a war horn when you're ready.`,
+    });
+    this.editedAt = Date.now();
+  }
+
+  /**
+   * A ram's blow or a siege stone: blocks out of your walls and buildings,
+   * claimed or not — that's what a siege is. Never a chest, a fluid, or the
+   * bottom of the world, and nothing comes to you for it. A claimed
+   * building that loses a block is broken until you put it back.
+   */
+  siegeBreak(cells) {
+    if (!this.duilt) return 0;
+    const changes = [];
+    for (const { x, y, z, id = this.world.getBlock(x, y, z) } of cells) {
+      if (id === AIR || this.world.isIndestructible(x, y, z) || isChest(id) || isFluid(id)) continue;
+      changes.push({ x, y, z, prev: id, next: AIR });
+    }
+    if (!changes.length) return 0;
+    for (const c of changes) {
+      this.world.setBlock(c.x, c.y, c.z, AIR);
+      this.farTerrain?.invalidateAt(c.x, c.z);
+      this.water?.touch(c.x, c.y, c.z);
+      this.lava?.touch(c.x, c.y, c.z);
+    }
+    this.remeshDirty();
+    this.sound?.break?.(soundOf(BLOCKS_BY_ID.get(changes[0].prev)));
+    this.duilt.structures.revalidateAround(changes);
+    this.duilt.settlers.revalidate();
+    this.duilt.territory.onBlocksChanged(changes);
+    this.editedAt = Date.now();
+    return changes.length;
+  }
+
+  /** A siege catapult's stone, lobbed at the top of whatever it's aiming at. */
+  enemyThrows(p, at) {
+    if (!this.projectiles) return;
+    const x = Math.floor(at.x), z = Math.floor(at.z);
+    let y = Math.min(this.world.height - 1, Math.floor(p.y) + 40);
+    while (y > 0 && !this.world.collisionBoxAt(x, y, z)) y--;
+    const from = { x: p.x, y: p.y + 2.2, z: p.z };
+    const stone = this.projectiles.fire(from, bestAim(this.world, from, { x: x + 0.5, y: y + 1, z: z + 0.5 }));
+    stone.enemy = true;
+    this.sound?.hit?.('wood', { gain: 0.5, pitch: 0.5 });
+  }
+
+  /** The war horn: call the next round now, when you're ready for it. */
+  blowHorn() {
+    const d = this.duilt;
+    if (!d || d.sandbox) return;
+    this.sound?.hit?.('stone', { gain: 0.9, pitch: 0.4 });
+    const war = d.war;
+    if (!war.atWar) {
+      this.ui?.toast({ kind: 'xp', title: 'Your horn sounds over the hills', body: war.stage === 'won' ? 'Nobody answers. The war is over.' : 'Nobody answers — the Stone Kingdom isn\'t at war with you.' });
+      return;
+    }
+    if (war.stage === 'fighting') {
+      this.ui?.toast({ kind: 'xp', title: 'They\'re already here', body: `Round ${war.round} is at your walls` });
+      return;
+    }
+    if (war.horn(d.days)) {
+      this.ui?.toast({ kind: 'challenge', title: 'You sounded the war horn', body: `Round ${war.round} of ${LAST_ROUND} answers. They'll come in about a minute.` });
+    } else {
+      this.ui?.toast({ kind: 'xp', title: 'They\'re already coming', body: `Round ${war.round} is on its way` });
+    }
   }
 
   /**
@@ -3040,8 +3228,15 @@ export class Game {
    * bedrock are spared — a stone thrown at a camp shouldn't cost you the
    * storehouse it happened to clip on the way.
    */
-  stoneLands(landed) {
+  stoneLands(landed, stone = {}) {
     const c = { x: landed.cell.x + 0.5, y: landed.cell.y + 0.5, z: landed.cell.z + 0.5 };
+    // The enemy's stones are thrown at your buildings, and break them.
+    if (stone.enemy) {
+      this.siegeBreak(craterCells(this.world, c));
+      if (Math.hypot(this.player.position.x - c.x, this.player.position.z - c.z) < 2.2
+        && Math.abs(this.player.position.y - c.y) < 3) this.duilt?.hurt(6, 'army');
+      return;
+    }
     let broke = 0;
     for (const { x, y, z, id } of craterCells(this.world, c)) {
       if (this.world.isIndestructible(x, y, z) || isChest(id) || isFluid(id)) continue;
@@ -3253,6 +3448,12 @@ export class Game {
   die(cause) {
     if (!this.duilt || this.dying) return;
     this.dying = true;
+    // Beaten in a round of the war: it's lost, and they go home with it.
+    const party = this.wanderers?.warParty;
+    if (party) {
+      party.died = true;
+      for (const q of party.band) q.retreat = true;
+    }
     const p = this.player.position;
     const x = Math.floor(p.x), z = Math.floor(p.z);
     // The first open cell at or above your feet. Written straight into the
@@ -3273,7 +3474,7 @@ export class Game {
     this.duilt.health.restore();
     this.sound?.break?.('wood');
     this.ui?.duiltUI?.flashHurt(true);
-    const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you', catapult: 'Your own stone came down on you' }[cause] ?? 'You died';
+    const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you', catapult: 'Your own stone came down on you', army: 'The Stone Kingdom\'s army beat you' }[cause] ?? 'You died';
     this.ui?.toast({
       kind: 'xp',
       title: `${how} — you woke ${this.duilt.spawn ? 'by your painting' : 'at home'}`,
@@ -3954,9 +4155,15 @@ export class Game {
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
+      this.tickWar();
+      // The border, drawn again where its ground has loaded since.
+      this.duilt?.territory.refreshIfStale();
       this.collectFallen();
       this.tickCatapult(dt);
-      this.fireflies.tick(dt, this.player.position, 1 - daylightAt(this.dayCycle.time).day);
+      this.fireflies.tick(dt, this.player.position, 1 - daylightAt(this.dayCycle.time).day, {
+        // The war won: the white god's light, across your settlement at night.
+        blessed: !!(this.duilt?.war.stage === 'won' && this.duilt.territory.contains(this.player.position.x, this.player.position.z)),
+      });
       this.tickGuardian(dt);
       this.runWater(dt);
       this.growCrops(dt);
@@ -3989,7 +4196,9 @@ export class Game {
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
     if (this.player) this.updateYou(dt, playing);
-    this.wanderView.update(this.wanderers?.list ?? []);
+    const strangers = this.wanderers?.list ?? [];
+    this.wanderView.update(strangers.filter((p) => !WANDERERS[p.kind].siege && !WANDERERS[p.kind].beast));
+    this.armyView.update(strangers, this.wanderers?.arrows ?? [], dt);
     this.projectileView.update(this.projectiles?.list ?? []);
     this.fireflyView.update(this.fireflies);
     this.guardianView.update(this.duilt?.guardian, dt);
@@ -4064,7 +4273,7 @@ export class Game {
     }
     if (this.fireflies?.world !== this.world) this.fireflies = new Fireflies({ world: this.world });
     if (this.projectiles?.world !== this.world) {
-      this.projectiles = new Projectiles({ world: this.world, onImpact: (s, landed) => this.stoneLands(landed) });
+      this.projectiles = new Projectiles({ world: this.world, onImpact: (s, landed) => this.stoneLands(landed, s) });
       this.manning = null;
       this.projectileView.setAim(null);
     }
@@ -4089,6 +4298,12 @@ export class Game {
           title: 'Bandits on the road',
           body: `${raiders.length} of them, coming in from the ${dir}. Guard your storehouses.`,
         }),
+        // The war's siege engines (config/war.js): your buildings are what
+        // they're after, and what's in the way inside your land they break.
+        buildings: () => (this.duilt && !this.duilt.sandbox ? this.duilt.structures.list() : []),
+        inLand: (x, z) => !!(this.duilt && !this.duilt.sandbox && this.duilt.territory.contains(x, z)),
+        onBatter: (p, cells) => this.siegeBreak(cells.map((c) => ({ ...c, id: this.world.getBlock(c.x, c.y, c.z) }))),
+        onThrow: (p, at) => this.enemyThrows(p, at),
       });
     }
     // Your penned animals come back with the save, and join the wild ones.
@@ -4182,12 +4397,13 @@ export class Game {
       : null;
     if (stranger) {
       const spec = WANDERERS[stranger.kind];
-      const fights = spec.hp && !spec.flees && (stranger.angry || (stranger.kind === 'guard' ? this.wanderers.kingdomHostile() : this.wanderers.hostile()));
+      const fights = spec.hp && !spec.flees && (stranger.war || stranger.angry || (stranger.kind === 'guard' ? this.wanderers.kingdomHostile() : this.wanderers.hostile()));
       this.ui?.setPersonHint(stranger.name, spec.flees && stranger.fear > 0 ? `${spec.noun} — running from you`
         : !fights ? spec.about
         : stranger.hp <= spec.fleeBelow ? `${spec.noun} — running for it`
           : stranger.hp < spec.hp ? `${spec.noun} — hurt, keep at it`
-            : stranger.raider ? 'a bandit, raiding — hit to fight' : spec.aboutHostile);
+            : stranger.war ? `${spec.about} — round ${stranger.round} of ${LAST_ROUND}, hit to fight`
+              : stranger.raider ? 'a bandit, raiding — hit to fight' : spec.aboutHostile);
       return;
     }
     // Your guardian.

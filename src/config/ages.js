@@ -6,19 +6,22 @@
  * else — which buildings exist, what you can make, what the border looks like —
  * hangs off the age you are in.
  *
- * Sizes stop at the width of the world. The map being the reward only works
- * while there is map left to give, and a Duilt world is generated at 256
- * because that is what fits in a browser's storage: a 512 world serialises to
- * 4.2MB, which does not reliably survive localStorage, let alone several saves
- * of it. So the land grows every single age and the last ring is the whole
- * world — and the last two ages ask for something other than more ground,
- * because by then there is none left to want.
+ * The land is a wall, not a suggestion: until the last age you can't walk
+ * past your border, only grow it. That's the game — a place to make your
+ * own, and an edge for an army to come over (asked for directly: "the main
+ * goal of the game is to be locked in an area, or else it would be hard
+ * for the army to appear"). So it grows every age, a little past the old
+ * 256, and reaching the last ring does two things at once: the wall comes
+ * down, so the world past it is yours to walk, and the Stone Kingdom
+ * declares war on you (config/war.js) — whatever ring you bear.
  *
  * How to read one:
  *
  *   age     what the player is told they are in
  *   name    the ring's name, shown on the goal list and the border
  *   size    the claimed square, in blocks
+ *   open    the border no longer stops you walking (it still bounds what
+ *           you can build)
  *   intro   one line when the age begins
  *   goals   what has to be true to move on — `structure` and `count`, or a
  *           `test` for anything that is not a building
@@ -56,7 +59,7 @@ export const AGES = [
   {
     age: 3,
     name: 'Craft',
-    size: 96,
+    size: 128,
     intro: 'Stone and fire. A workshop lets you make what your hands cannot, and a kiln turns earth and sand into brick and glass.',
     goals: [
       { structure: 'workshop', count: 1, label: 'Build a workshop' },
@@ -66,7 +69,7 @@ export const AGES = [
   {
     age: 4,
     name: 'Town',
-    size: 128,
+    size: 192,
     intro: 'Enough buildings to be a place. Raise a market among them, house the people who will use it, and give them somewhere to gather.',
     goals: [
       { structure: 'market', count: 1, label: 'Raise a market' },
@@ -79,7 +82,7 @@ export const AGES = [
   {
     age: 5,
     name: 'Domain',
-    size: 192,
+    size: 256,
     intro: 'Everything easy is above ground. Drive a mine into the rock, feed the town that lives off it, and give it walls that could hold if they ever had to.',
     goals: [
       { structure: 'mine', count: 1, label: 'Drive a mine underground' },
@@ -91,8 +94,9 @@ export const AGES = [
   {
     age: 6,
     name: 'Frontier',
-    size: 256,
-    intro: 'The whole map is yours. Raise a village to hold it, then build something that outlasts you.',
+    size: 320,
+    open: true,
+    intro: 'Your border is open and the world past it is yours to walk — but the Stone Kingdom has seen you grow, and it is coming. Hold your land through ten rounds, raise a village to hold it, then build something that outlasts you.',
     goals: [
       { structure: 'village', count: 1, label: 'Raise a village' },
       { structure: 'monument', count: 1, label: 'Raise a monument' },
@@ -111,4 +115,4 @@ export function ageOf(n) {
 }
 
 /** The land each age holds — what Territory draws and enforces. */
-export const RINGS = AGES.map(({ age, size, name }) => ({ age, size, name }));
+export const RINGS = AGES.map(({ age, size, name, open = false }) => ({ age, size, name, open }));

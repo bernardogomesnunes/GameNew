@@ -277,6 +277,8 @@ export const ITEMS = [
   { id: 'beer', name: 'Beer', kind: 'drink', stackTo: 10, color: 0xe0a83a, glyph: 'flask', boost: 'haste', madeBy: 'Brewed at a workshop from potatoes — quicker blows for three minutes' },
   { id: 'kombucha', name: 'Kombucha', kind: 'drink', stackTo: 10, color: 0xd0705a, glyph: 'flask', boost: 'strength', madeBy: 'Brewed at a workshop from fruit and leaves — +2 on every hit for three minutes' },
   { id: 'coffee', name: 'Coffee', kind: 'drink', stackTo: 10, color: 0x6b4630, glyph: 'flask', boost: 'speed', madeBy: 'Brewed at a workshop from coffee beans — faster on your feet for three minutes' },
+  // The war horn (the Ten Rounds): Break with it in hand calls the next round now.
+  { id: 'war_horn', name: 'War Horn', kind: 'refined', stackTo: 1, color: 0xc9a46a, glyph: 'horn', madeBy: 'Made at the bench — Break with it in hand calls the Stone Kingdom\'s next round now' },
   { id: 'holy_water', name: 'Holy Water', kind: 'drink', stackTo: 10, color: 0xbfe3f5, glyph: 'flask', heals: 8, madeBy: 'Blessed at a chapel — drink it to heal four hearts' },
   {
     id: 'ring_white', name: 'White Ring', kind: 'ring', stackTo: STACK_TOOL, color: 0xf2e2a4, glyph: 'ring', wears: 'ring', ring: 'white',

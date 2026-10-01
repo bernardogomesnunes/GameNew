@@ -26,6 +26,11 @@ const EDGE = 0xf0c674;
 
 /** How far above a block's top face the edge stroke floats, to avoid z-fighting. */
 const LIFT = 0.03;
+/** How high the border's curtain stands over the ground, and how strong it is at its foot. */
+const CURTAIN = 7;
+const CURTAIN_ALPHA = 0.5;
+/** How often a border with gaps in it looks again for the ground. */
+const REFRESH_MS = 2000;
 
 export class Territory {
   /**
@@ -58,6 +63,11 @@ export class Territory {
 
   get size() {
     return this.ring.size;
+  }
+
+  /** Whether the border still stops you walking — not from the last age (config/ages.js). */
+  get open() {
+    return !!this.ring.open;
   }
 
   /** The claimed square, in world block coordinates. */
@@ -118,69 +128,56 @@ export class Territory {
     }
 
     const b = this.bounds();
-    // Sit the fence on the ground, not at bedrock: an outline drawn twenty
-    // blocks below the surface reads as offset from the land it encloses.
-    const baseY = Math.max(0, this.groundLevel() - 1);
-    const top = Math.min(this.world.height, baseY + 34);
-    const h = top - baseY;
-    const w = this.size;
+    // Columns along the edge whose ground wasn't there yet (an endless world
+    // makes it as you go): drawn again once it is — see refreshIfStale.
+    this.gaps = 0;
 
     /**
-     * One face of the border, fading out with height.
+     * A curtain along the border that stands on the ground, column by
+     * column, fading out a few blocks up.
      *
-     * This is the only thing marking the edge. There were lines along the top
-     * and bottom of it too, which had to be drawn over the world to be seen
-     * from a distance — and a bright stripe across a hillside reads as
-     * something stuck to the screen rather than a thing standing in the world.
-     * The wall says it on its own, and says it just as well when the border is
-     * a thousand blocks out and you only ever see it from far away.
+     * It used to be four flat sheets hung at one height for the whole
+     * border — the middle of the heights at the centre and the corners. At
+     * 32 blocks that's close enough; at 320 the edge runs over hills and
+     * into mountains, so the sheet sat buried under one stretch and floated
+     * over the next, and from the ground you saw nothing at all (reported:
+     * "Age 6 borders disappear completely, no visual cue"). Following the
+     * ground, it's there wherever you meet it.
      *
-     * At a flat 9% it was invisible: you could walk into the edge of your land
-     * with nothing on screen to say so. A solid one would box you in visually,
-     * so the opacity is carried on the vertices — strongest at the ground where
-     * you meet it, gone by the top so it never blocks the view.
+     * Each column's foot goes down to the lower of its neighbours, so a
+     * step in the ground doesn't leave a slot of sky in the curtain.
      *
-     * All four faces are baked into one buffer rather than four separate
-     * meshes. They used to each be their own THREE.Mesh, and being separate,
-     * transparent, depth-write-off objects meant Three had to guess which of
-     * two walls sharing a corner drew on top — a guess it re-makes every
-     * frame from camera distance, so which one flickers to the front flipped
-     * as you moved past the corner. One mesh has one fixed draw order, so the
-     * corner stops popping.
+     * All of it is one mesh, for the reason the four sheets became one
+     * before: separate transparent pieces swap which draws on top as you
+     * move, and the corners flicker.
      */
     const positions = [];
     const colors = [];
     const indices = [];
-    const base = new THREE.Color(EDGE);
-    const obj = new THREE.Object3D();
-
-    const wall = (px, pz, rotY) => {
-      const geo = new THREE.PlaneGeometry(w, h, 1, 12);
-      obj.position.set(px, baseY + h / 2, pz);
-      obj.rotation.y = rotY;
-      obj.updateMatrixWorld(true);
-
-      const pos = geo.attributes.position;
-      const vertexOffset = positions.length / 3;
-      const v = new THREE.Vector3();
-      for (let i = 0; i < pos.count; i++) {
-        v.fromBufferAttribute(pos, i).applyMatrix4(obj.matrixWorld);
-        positions.push(v.x, v.y, v.z);
-        // 0 at the foot of the wall, 1 at the top — local Y, before the
-        // world-space transform above.
-        const t = (pos.getY(i) + h / 2) / h;
-        colors.push(base.r, base.g, base.b, 0.34 * Math.pow(1 - t, 2.2));
-      }
-      for (const idx of geo.index.array) indices.push(idx + vertexOffset);
-      geo.dispose();
+    const col = new THREE.Color(EDGE);
+    const curtain = (cells, face) => {
+      const tops = cells.map(([x, z]) => this.edgeTop(x, z));
+      tops.forEach((y, i) => {
+        if (y == null) { this.gaps++; return; }
+        const foot = Math.min(y, tops[i - 1] ?? y, tops[i + 1] ?? y) - 0.4;
+        const head = y + CURTAIN;
+        const [[ax, az], [cx, cz]] = face(...cells[i]);
+        const at = positions.length / 3;
+        positions.push(ax, foot, az, cx, foot, cz, cx, head, cz, ax, head, az);
+        // Strongest at the ground, where you meet it; gone by the top. The
+        // fade is measured from this column's ground, so every column reads
+        // the same however far down its foot reaches.
+        const alphaAt = (yy) => CURTAIN_ALPHA * Math.pow(Math.max(0, Math.min(1, 1 - (yy - y) / CURTAIN)), 1.6);
+        for (const yy of [foot, foot, head, head]) colors.push(col.r, col.g, col.b, Math.min(CURTAIN_ALPHA, alphaAt(yy)));
+        indices.push(at, at + 1, at + 2, at, at + 2, at + 3);
+      });
     };
-
-    const midX = (b.minX + b.maxX + 1) / 2;
-    const midZ = (b.minZ + b.maxZ + 1) / 2;
-    wall(midX, b.minZ, 0);
-    wall(midX, b.maxZ + 1, 0);
-    wall(b.minX, midZ, Math.PI / 2);
-    wall(b.maxX + 1, midZ, Math.PI / 2);
+    const n = this.size;
+    const run = (f) => Array.from({ length: n }, (_, i) => f(i));
+    curtain(run((i) => [b.minX + i, b.minZ]), (x, z) => [[x, z], [x + 1, z]]);
+    curtain(run((i) => [b.minX + i, b.maxZ]), (x, z) => [[x, z + 1], [x + 1, z + 1]]);
+    curtain(run((i) => [b.minX, b.minZ + i]), (x, z) => [[x, z], [x, z + 1]]);
+    curtain(run((i) => [b.maxX, b.minZ + i]), (x, z) => [[x + 1, z], [x + 1, z + 1]]);
 
     if (positions.length) {
       const geo = new THREE.BufferGeometry();
@@ -215,21 +212,7 @@ export class Territory {
   buildEdgeStroke(b) {
     const pts = [];
 
-    // The generator's height map is written once and never updated, so a block
-    // broken on the edge would leave the stroke hanging over a hole. Find the
-    // real top, starting the search a little above the recorded one.
-    const topOf = (x, z) => {
-      if (!this.world.inBounds(x, 0, z)) return null;
-      const from = Math.min(this.world.height - 1, this.world.surfaceHeight(x, z) + 12);
-      for (let y = from; y >= 0; y--) {
-        // Through a tree, not over it: the line is on the ground, and a tall
-        // crown overhanging the border would lift it into the leaves.
-        const id = this.world.getBlock(x, y, z);
-        if (TREE_BLOCKS.has(id)) continue;
-        if (this.world.isSolid(x, y, z)) return y + 1;
-      }
-      return null;
-    };
+    const topOf = (x, z) => this.edgeTop(x, z);
 
     /**
      * Walks one side, block by block, drawing the top of each block's outward
@@ -293,20 +276,38 @@ export class Territory {
     if (touches) this.rebuildFence();
   }
 
-  /** Representative surface height inside the border, for placing the fence. */
-  groundLevel() {
-    const b = this.bounds();
-    const pts = [
-      [this.centreX, this.centreZ],
-      [b.minX + 2, b.minZ + 2], [b.maxX - 2, b.minZ + 2],
-      [b.minX + 2, b.maxZ - 2], [b.maxX - 2, b.maxZ - 2],
-    ];
-    const heights = pts
-      .filter(([x, z]) => this.world.inBounds(x, 0, z))
-      .map(([x, z]) => this.world.surfaceHeight(x, z));
-    if (!heights.length) return 0;
-    heights.sort((a, c) => a - c);
-    return heights[Math.floor(heights.length / 2)]; // median shrugs off one odd corner
+  /**
+   * The top of the ground in a column on the border, or null where it isn't
+   * there yet. The generator's height map is written once and never updated,
+   * so a block broken on the edge would leave the border hanging over a hole:
+   * this finds the real top, starting a little above the recorded one.
+   */
+  edgeTop(x, z) {
+    if (!this.world.inBounds(x, 0, z)) return null;
+    if (this.world.endless && !this.world.hasChunk(Math.floor(x) >> 4, Math.floor(z) >> 4)) return null;
+    const from = Math.min(this.world.height - 1, this.world.surfaceHeight(x, z) + 12);
+    for (let y = from; y >= 0; y--) {
+      // Through a tree, not over it: the border is on the ground, and a tall
+      // crown overhanging it would lift it into the leaves.
+      const id = this.world.getBlock(x, y, z);
+      if (TREE_BLOCKS.has(id)) continue;
+      if (this.world.isSolid(x, y, z)) return y + 1;
+    }
+    return null;
+  }
+
+  /**
+   * Draws the border again if some of it was missing ground — called every
+   * frame, it does nothing unless there are gaps, and then at most every
+   * couple of seconds, so the border fills in as the land round it loads.
+   */
+  refreshIfStale(now = Date.now()) {
+    if (this.sandbox || !this.gaps) return false;
+    if (now - (this.refreshedAt ?? 0) < REFRESH_MS) return false;
+    this.refreshedAt = now;
+    const was = this.gaps;
+    this.rebuildFence();
+    return this.gaps !== was;
   }
 
   setVisible(on) {

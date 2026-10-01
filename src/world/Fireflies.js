@@ -40,7 +40,7 @@ export class Fireflies {
    * @param dark how dark it is, 0 (day) .. 1 (night). They're out above a
    *             third of the way.
    */
-  tick(dt, player, dark) {
+  tick(dt, player, dark, { blessed = false } = {}) {
     this.clock += dt;
     const want = dark > 0.35 ? 1 : 0;
     this.level += Math.sign(want - this.level) * Math.min(Math.abs(want - this.level), dt / FADE);
@@ -50,9 +50,11 @@ export class Fireflies {
       && Math.hypot(s.x - player.x, s.z - player.z) < LEAVE);
     if (want) {
       this.untilSpawn -= dt;
-      if (this.untilSpawn <= 0 && this.swarms.length < MAX_SWARMS) {
-        this.untilSpawn = SPAWN_EVERY;
-        this.spawnNear(player);
+      // The white god's light (the war won): twice as many, over any ground
+      // at all — your streets and roofs too.
+      if (this.untilSpawn <= 0 && this.swarms.length < MAX_SWARMS * (blessed ? 2 : 1)) {
+        this.untilSpawn = SPAWN_EVERY / (blessed ? 2 : 1);
+        this.spawnNear(player, { blessed });
       }
     }
     // The middle of each swarm wanders slowly over the ground it's on.
@@ -63,13 +65,13 @@ export class Fireflies {
   }
 
   /** The ground a swarm hovers over at a column: grass, moss or forest floor, under trees or not. */
-  groundAt(x, z) {
+  groundAt(x, z, { anyGround = false } = {}) {
     if (!isLoaded(this.world, x, z)) return null;
     const w = this.world;
     for (let y = Math.min(w.height - 2, (w.surfaceHeight(x, z) | 0) + 10); y > 0; y--) {
       const id = w.getBlock(x, y, z);
       if (id === 0 || LEAVES.has(id) || id === 4 || id === 41 || id === 43) continue;
-      if (isFluid(id) || !isSoil(id)) return null;
+      if (isFluid(id) || (!anyGround && !isSoil(id))) return null;
       return w.getBlock(x, y + 1, z) === 0 ? y + 1 : null;
     }
     return null;
@@ -80,13 +82,13 @@ export class Fireflies {
    * has grass or forest floor — so a patch of green in the desert still
    * gets its fireflies, and open sand doesn't.
    */
-  spawnNear(player) {
+  spawnNear(player, { blessed = false } = {}) {
     let x, z, y = null;
     for (let tries = 0; tries < 8 && y == null; tries++) {
       const a = this.rand() * Math.PI * 2, r = NEAR + this.rand() * (RANGE - NEAR);
       x = Math.floor(player.x + Math.cos(a) * r);
       z = Math.floor(player.z + Math.sin(a) * r);
-      y = this.groundAt(x, z);
+      y = this.groundAt(x, z, { anyGround: blessed });
     }
     if (y == null) return null;
     const dots = [];

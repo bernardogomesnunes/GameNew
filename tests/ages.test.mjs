@@ -35,11 +35,12 @@ ok(`FINAL_AGE is the last one (${FINAL_AGE})`, FINAL_AGE === AGES[AGES.length - 
 // The map being the reward only works if it keeps growing.
 ok('the land grows every age', AGES.every((a, i) => i === 0 || a.size > AGES[i - 1].size));
 
-// The rings used to reach 512 and 1024 in a world generated at 256, so from
-// Age 5 the border stood outside the terrain it was meant to enclose.
-const WORLD = 256;
-ok(`no ring is wider than the world (${WORLD})`, AGES.every((a) => a.size <= WORLD));
-ok('the last ring is the whole world', AGES[AGES.length - 1].size === WORLD);
+// The land is a wall until the last age (asked for directly: "keep blocking
+// leaving the area until age 6, and increase just a little the range,
+// starting on 32 but going higher than 256"). Worlds are endless now, so
+// the old cap at the width of a 256 world is gone.
+ok('it starts at 32 and ends past 256', AGES[0].size === 32 && AGES[AGES.length - 1].size > 256 && AGES[AGES.length - 1].size <= 400);
+ok('only the last ring opens the wall', AGES.filter((a) => a.open).length === 1 && AGES[AGES.length - 1].open === true);
 ok('Territory reads the same list', RINGS.length === AGES.length
   && RINGS.every((r, i) => r.size === AGES[i].size && r.name === AGES[i].name));
 
