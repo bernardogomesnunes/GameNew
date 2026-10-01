@@ -3,6 +3,7 @@ import { BIOMES, BIOME_INDEX, surfaceFor } from '../config/biomes.js';
 import { BiomeMap } from './biomeMap.js';
 import { CHUNK_SIZE } from './World.js';
 import { stampLandmarks, landmarksFor } from './landmarks.js';
+import { roadAt, roadBlock } from './roads.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
@@ -307,6 +308,8 @@ export class ChunkGen {
     if (biome.treeMaxHeight != null && ground > biome.treeMaxHeight) return null;
     // Not in the water, and not on ground that is about to be water.
     if (this.waterLevelAt(x, z)) return null;
+    // Nor in the middle of an old road.
+    if (roadAt(this, x, z)) return null;
     // Nor over somebody's ruin or camp: a clearing round every landmark,
     // wide enough that no canopy reaches in over it.
     if (landmarksFor(this).some((l) => Math.max(Math.abs(l.x - x), Math.abs(l.z - z)) <= l.half + LANDMARK_CLEARING)) return null;
@@ -415,12 +418,20 @@ export class ChunkGen {
           chunk.set(lx, y, lz, block);
           below = block;
         }
+        // An old road (playtest, P9): laid into the top of the ground, worn
+        // in places, and planked over where it crosses water.
+        const road = roadAt(this, x, z);
+        if (road && !water && h > 0) {
+          const laid = roadBlock(road, x, z, this.seed, ROAD_STONES);
+          if (laid) chunk.set(lx, h - 1, lz, laid);
+        }
         // A river or stream fills the trough it cut. The level is the bed
         // plus one, so the water sits in the channel rather than flooding
         // the banks.
         if (water) {
           for (let y = h; y < Math.min(water, this.height); y++) chunk.set(lx, y, lz, WATER);
-        } else {
+          if (road && water <= this.height) chunk.set(lx, water - 1, lz, BRIDGE);
+        } else if (!road) {
           const sc = this.scatterAt(x, z);
           if (sc && h < this.height) chunk.set(lx, h, lz, sc);
         }
@@ -623,6 +634,9 @@ const SUNSTONE_ORE = 191;
 const LOOT_TOP = 60;
 const LOOT_CHANCE = 0.00007;
 const CHEST = 148;
+/** What an old road is laid with (playtest, P9), and what bridges water. */
+const ROAD_STONES = { calcada: 209, cobble: 8, gravel: 23 };
+const BRIDGE = 7;
 const NIGHTSTONE_ORE = 192;
 // Mountains 2's own enormous caverns: the same field, a much wider band, and
 // only down in a deep zone well under its peak — see caveAt.

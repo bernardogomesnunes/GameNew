@@ -24,6 +24,8 @@
  *   top       a recipe of its own for the top and bottom faces
  *   band      a darker strip along one edge, for a block with a lip
  *   beams     timber framing: brown beams N pixels wide round the edge and across
+ *   setts     calçada: little square stones N pixels across, joints between, each a shade its own
+ *   wave      a band of dark setts swinging across the tile, the calçada's wave
  *   depth     how dark the darkest mark goes, 0..1 off white
  *   scale     how many tile-pixels across; 16 unless the pattern needs room
  */
@@ -45,6 +47,10 @@ export const TEXTURES = {
   // plaster between dark beams (`beams` wide), the beams tinted brown.
   trim:      { band: 2, lines: 'h', every: 8, depth: 0.24, bump: 0.6, scale: 16 },
   timber:    { beams: 2, marks: 10, depth: 0.08, bump: 0.5, scale: 16 },
+  // Playtest, P9: calçada portuguesa — setts of limestone in mortar, and
+  // the wave of dark basalt through it.
+  calcada:      { setts: 3, depth: 0.26, bump: 0.6, scale: 16 },
+  calcada_wave: { setts: 3, wave: true, depth: 0.26, bump: 0.6, scale: 16 },
   snow:      { marks: 8, depth: 0.05, scale: 16 },
   planks:    { lines: 'h', every: 4, marks: 8, depth: 0.15, scale: 16 },
   // Requested directly: "the wood trunk has similar texture as the planks,

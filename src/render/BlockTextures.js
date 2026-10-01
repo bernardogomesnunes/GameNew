@@ -259,6 +259,31 @@ function paint(recipe, salt) {
     }
   }
 
+  // Calçada (playtest, P9): little square setts, a joint of mortar between
+  // them, rows staggered, every stone a shade of its own.
+  if (recipe.setts) {
+    const s = recipe.setts + 1;
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const row = Math.floor(y / s), sx = x + (row % 2 ? Math.floor(s / 2) : 0);
+        if (y % s === 0 || sx % s === 0) darken(x, y, depth);
+        else darken(x, y, depth * 0.35 * hash01(Math.floor(sx / s), row, salt));
+      }
+    }
+    // The wave: a band of dark stone swinging once across the tile and
+    // meeting itself at the edges, so a pavement of them runs on unbroken.
+    if (recipe.wave) {
+      for (let y = 0; y < n; y++) {
+        for (let x = 0; x < n; x++) {
+          const mid = n / 2 + Math.sin((x / n) * Math.PI * 2) * n * 0.22;
+          if (Math.abs(y - mid) > n * 0.2) continue;
+          const i = y * n + x;
+          tint[i * 3] = 0.3; tint[i * 3 + 1] = 0.3; tint[i * 3 + 2] = 0.33;
+        }
+      }
+    }
+  }
+
   // A darker lip along the edges, for a block that reads as having a rim.
   if (recipe.band) {
     const w = recipe.band;

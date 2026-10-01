@@ -121,7 +121,7 @@ ok('each channel takes the skew differently',
   ok('and none of them so much that the colour is lost',
     Object.values(TEXTURES).every((r) => (r.depth ?? 0) <= 0.3));
   ok('every recipe names something to draw', Object.values(TEXTURES).every((r) =>
-    r.marks || r.lines || r.blobs || r.veins || r.cracks || r.band || r.speck));
+    r.marks || r.lines || r.blobs || r.veins || r.cracks || r.band || r.speck || r.setts));
   ok('the glyphs they key off are real',
     names.every((n) => BLOCKS.some((b) => b.glyph === n) || ITEMS.some((i) => i.glyph === n)));
   ok('a material with no recipe is simply flat', textureFor('nonesuch') === null);

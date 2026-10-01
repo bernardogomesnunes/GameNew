@@ -448,6 +448,16 @@ export const FACING_STEP = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 // sets where you wake after you fall (Game.setSpawn).
 export const PAINTING = 201;
 quad(PAINTING, { name: 'Painting', glyph: 'painting', color: 0x8a6440, shape: 'painting', material: 'wood', unlock: null });
+// Calçada portuguesa (playtest, P9): small setts of white and black stone,
+// laid in waves. White, dark, and the classic wave of dark through white.
+// Asked for directly: "a road block looking like calçada portuguesa".
+export const CALCADA = 209, CALCADA_DARK = 210, CALCADA_WAVE = 211;
+BLOCKS.push(
+  { id: CALCADA, name: 'Calçada', glyph: 'calcada', color: 0xf1ede2, material: 'stone', unlock: null },
+  { id: CALCADA_DARK, name: 'Dark Calçada', glyph: 'calcada', color: 0x45434a, material: 'stone', unlock: null },
+  { id: CALCADA_WAVE, name: 'Calçada Wave', glyph: 'calcada_wave', color: 0xf1ede2, material: 'stone', unlock: null },
+);
+
 export function isPainting(id) {
   return id >= PAINTING && id <= PAINTING + 3;
 }

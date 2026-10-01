@@ -128,6 +128,18 @@ What's already there to build on:
 ## P9. Roads: calçada portuguesa, and old roads across the country
 *"Would be nice to have a road block looking like calçada portuguesa, and have old roads generating in terrain connected to the structures that we already added."*
 
+**Done.**
+- **The blocks:** three calçada blocks, all made by hand at Age 2.
+  - Calçada: white, from stone.
+  - Dark Calçada: from stone plus dark stone.
+  - Calçada Wave: from both.
+  - The texture is little square setts in mortar, and the wave block has a band of dark stone swinging through it that joins up tile to tile.
+- **The roads:** generated as a minimum spanning tree over every landmark plus home, so everything is reachable with no duplicate roads.
+  - Each road is three wide and wanders a little: a calçada crown down the middle, cobble verges, and gravel and grass gaps where it's worn.
+  - Water crossings are planked over.
+  - A road whose route is more than a quarter mountain or ocean isn't laid.
+  - Roads stop 44 blocks short of home, and no tree grows in one.
+
 - **The Calçada block:** a road block patterned like Portuguese pavement, small white and black stones laid in waves. It's made at the bench from stone, and comes in white and dark versions so you can lay patterns.
 - **Old roads in the world:**
   - worn paths of cobble and calçada that link the landmarks (the hermit's hut, the bandit camps, and later the ruins, temples, mines and monuments from P4), and run back towards where you start;

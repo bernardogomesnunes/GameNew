@@ -663,6 +663,11 @@ RECIPES.push(
   { id: 'offer_meat', name: 'Offer a meal', station: 'temple', age: 3, inputs: { cooked_meat: 2 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'A feast for the god, eaten by the priests.' },
   { id: 'offer_gold', name: 'Offer gold', station: 'temple', age: 3, inputs: { gold: 1 }, output: { id: 'devotion', count: 2 }, batch: 8, blurb: 'Gold buys devotion faster than anything.' },
   { id: 'offer_candle', name: 'Light a candle', station: 'temple', age: 3, inputs: { lantern: 1 }, output: { id: 'devotion', count: 1 }, batch: 4, blurb: 'A light left burning at the altar.' },
+  // Calçada portuguesa (playtest, P9): knapped at the bench, white from
+  // stone, dark from dark stone, and the wave from both.
+  { id: 'calcada', name: 'Calçada', station: 'hand', age: 2, inputs: { stone: 2 }, output: { id: 'calcada', count: 4 }, batch: 8, blurb: 'Little white setts, for a road or a square.' },
+  { id: 'calcada_dark', name: 'Dark Calçada', station: 'hand', age: 2, inputs: { stone: 1, dark_stone: 1 }, output: { id: 'calcada_dark', count: 4 }, batch: 8, blurb: 'Little dark setts, for a pattern in the white.' },
+  { id: 'calcada_wave', name: 'Calçada Wave', station: 'hand', age: 2, inputs: { calcada: 2, calcada_dark: 1 }, output: { id: 'calcada_wave', count: 3 }, batch: 6, blurb: 'The wave of dark through white, as on a Lisbon square.' },
   // Drinks (playtest, P5): a few minutes better at something — see config/drinks.js.
   { id: 'beer', name: 'Beer', station: 'workshop', age: 3, inputs: { potato: 2, seeds: 1 }, output: { id: 'beer', count: 2 }, batch: 4, blurb: 'Potatoes and grain, left to work. Quicker blows for three minutes.' },
   { id: 'kombucha', name: 'Kombucha', station: 'workshop', age: 3, inputs: { fruit: 2, leaves: 1 }, output: { id: 'kombucha', count: 2 }, batch: 4, blurb: 'Fruit and leaf tea, soured. +2 on every hit for three minutes.' },
