@@ -114,6 +114,9 @@ ok('starter refuses without materials', !broke.starterPlacement('house', anchor)
   const { STARTER_DESIGNS } = await import('../src/config/starterDesigns.js');
   const rich = new DuiltGame({ world, scene: new THREE.Scene(), bus: null });
   const bounds = rich.territory.bounds();
+  // Room for every design's materials at once — there are more kinds of
+  // them than a 40-slot bag holds.
+  rich.inventory.grow(200);
   for (const d of STARTER_DESIGNS) for (const [id, n] of Object.entries(d.cost)) rich.inventory.add(id, n * 4);
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(v, hi));

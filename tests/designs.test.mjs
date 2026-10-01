@@ -146,9 +146,10 @@ for (const design of STARTER_DESIGNS) {
 
 // Every building you'd walk into has a roof on it. The kiln, the foundry
 // and the garrison were the last three without one. What's left open is
-// open on purpose: a wood, a field, a pen, a quarry, a mine, a monument.
+// open on purpose: a wood, a field, a pen, a quarry, a mine, a monument,
+// and the two Sanctuaries, which stand under the sky.
 {
-  const OPEN = new Set(['forest', 'farm', 'pen', 'quarry', 'mine', 'monument']);
+  const OPEN = new Set(['forest', 'farm', 'pen', 'quarry', 'mine', 'monument', 'sanctuary_white', 'sanctuary_black']);
   const bare = STARTER_DESIGNS.filter((d) => !OPEN.has(d.structure) && !d.blocks.some((b) => roofPart(b.type))).map((d) => d.structure);
   ok(`every building design has a tiled roof (${bare.join(', ') || 'none missing'})`, bare.length === 0);
   const chimney = (id) => {

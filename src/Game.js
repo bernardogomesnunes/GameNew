@@ -63,6 +63,8 @@ import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './worl
 import { ProjectileView } from './render/ProjectileView.js';
 import { Fireflies } from './world/Fireflies.js';
 import { FireflyView } from './render/FireflyView.js';
+import { GuardianView } from './render/GuardianView.js';
+import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
@@ -333,6 +335,7 @@ export class Game {
     this.wanderView = new SettlerView(this.scene);
     this.projectileView = new ProjectileView(this.scene);
     this.fireflyView = new FireflyView(this.scene);
+    this.guardianView = new GuardianView(this.scene);
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -415,6 +418,13 @@ export class Game {
     // The land grows when an age is finished, and the wall has to grow with it.
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
     this.bus.on('health:died', ({ cause }) => this.die(cause));
+    this.bus.on('guardian:summoned', ({ guardian }) => this.ui?.toast({
+      kind: 'achievement',
+      title: `${guardian.name}, ${guardian.spec.about}, has come to you`,
+      body: guardian.ring === 'white'
+        ? 'It follows you, fights for you and heals you while you\'re near. Tap it to tell it to stay or to hunt.'
+        : 'It follows you and fights for you, and bandits that come near it lose their nerve. Tap it to tell it to stay or to hunt.',
+    }));
     this.bus.on('ring:forged', ({ ring }) => this.ui?.toast({
       kind: 'achievement',
       title: ring === 'white' ? 'You forged the White Ring' : 'You forged the Black Ring',
@@ -1456,6 +1466,8 @@ export class Game {
     // Pointing at a gate, Place opens or shuts it — before anything you're
     // holding gets a say, the same way you'd reach for a latch.
     const aimed = this.raycast();
+    // At your guardian, Place gives it its next order.
+    if (this.guardianTarget(aimed)) return void this.commandGuardian();
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
     // And at a chest, Place opens it.
     if (aimed && isChest(aimed.block)) return void this.openChest(aimed);
@@ -2723,6 +2735,51 @@ export class Game {
     return true;
   }
 
+  // ---- the guardian (Phase 7d) ----------------------------------------------
+
+  /** Your guardian, if the crosshair is on it and no block is in front of it. */
+  guardianTarget(hit = this.raycast()) {
+    const g = this.duilt?.guardian;
+    if (!g) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const t = g.pick(eye, dir, REACH + 4);
+    if (t == null) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < t) return null;
+    }
+    return g;
+  }
+
+  /** Tapped: follow → stay → hunt. Stands in for the soldiers' command wheel until there is one. */
+  commandGuardian() {
+    const g = this.duilt.guardian;
+    const mode = g.command();
+    this.ui.toast({ kind: 'challenge', title: `${g.name} — ${MODE_WORDS[mode]}` });
+  }
+
+  /** What the guardian does this frame, and what that does to the world. */
+  tickGuardian(dt) {
+    const g = this.duilt?.guardian;
+    if (!g) return;
+    const hostile = this.wanderers?.hostile();
+    const enemies = (this.wanderers?.list ?? []).filter((p) => WANDERERS[p.kind].hp && !p.dead && (hostile || p.angry || p.raider));
+    g.tick(dt, this.player.position, enemies, {
+      strike: (e, damage) => {
+        const res = this.wanderers.hit(e, damage, g.x, g.z);
+        if (res?.killed) {
+          const gained = this.duilt.collect(res.drops) ?? {};
+          const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+          this.ui.toast({ kind: 'xp', title: `${g.name} brought down ${e.name}`, body: got || undefined });
+        }
+      },
+      heal: () => this.duilt.health.heal(1),
+      scare: (e, seconds) => this.wanderers.scare(e, seconds),
+      downed: () => this.ui.toast({ kind: 'xp', title: `${g.name} is down`, body: 'It has gone back to its Sanctuary — it will return after a day' }),
+      back: () => this.ui.toast({ kind: 'challenge', title: `${g.name} is back`, body: 'Waiting at its Sanctuary' }),
+    });
+  }
+
   /** A bandit's blow landing on you. */
   banditHits(p, hits) {
     if (!this.duilt || this.duilt.sandbox) return;
@@ -3662,6 +3719,7 @@ export class Game {
       this.wanderers.tick(dt, this.player.position);
       this.tickCatapult(dt);
       this.fireflies.tick(dt, this.player.position, 1 - daylightAt(this.dayCycle.time).day);
+      this.tickGuardian(dt);
       this.runWater(dt);
       this.growCrops(dt);
       this.tickBreaking(performance.now());
@@ -3689,6 +3747,7 @@ export class Game {
     this.wanderView.update(this.wanderers?.list ?? []);
     this.projectileView.update(this.projectiles?.list ?? []);
     this.fireflyView.update(this.fireflies);
+    this.guardianView.update(this.duilt?.guardian, dt);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -3880,6 +3939,14 @@ export class Game {
         : stranger.hp <= spec.fleeBelow ? 'a bandit — running for it'
           : stranger.hp < spec.hp ? 'a bandit — hurt, keep at it'
             : stranger.raider ? 'a bandit, raiding — hit to fight' : spec.aboutHostile);
+      return;
+    }
+    // Your guardian.
+    const guardian = !this.armed && this.guardianTarget(hit);
+    if (guardian) {
+      this.hoverBox.visible = false;
+      const how = this.ui?.isTouch ? 'tap Place' : 'right click';
+      this.ui?.setPersonHint(guardian.name, `${guardian.spec.about} — ${MODE_WORDS[guardian.mode]} · ${how} to change`);
       return;
     }
     // A swarm of fireflies, at night.

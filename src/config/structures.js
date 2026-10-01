@@ -27,6 +27,9 @@ const LIGHTS = [26, 85, 190];
 const WINDOWS = [GLASS, 15, 16, 176, 177, 178, 179];
 const GILDING = [159, GOLD];
 const BANNERS = [182, 183, 184, 185, 186, 187, 188, 189];
+// The Sanctuaries' (Phase 7d).
+const WHITE_STONE = [MARBLE, 158, 159, 166];
+const BLACK_STONE = [14, 156, 157, 167];
 
 /** "1 more window", "3 more windows". */
 const plural = (n, word) => `${n} more ${word}${n === 1 ? '' : 's'}`;
@@ -897,6 +900,69 @@ export const STRUCTURES = [
         ],
       },
     ],
+  },
+
+  // ---- Phase 7d: the Sanctuaries -------------------------------------------
+  //
+  // Only your god's can be raised — the one for the ring you forged at the
+  // High Temple (`ring`; see DuiltGame.claim). Raising it summons the
+  // guardian, tamed to you (world/Guardian.js).
+  {
+    id: 'sanctuary_white',
+    name: 'White Sanctuary',
+    icon: '🕊️',
+    age: 3,
+    ring: 'white',
+    blurb: 'Open marble and light, under the sky. Raising it calls the white guardian — a great stag of light.',
+    minSize: 5,
+    maxSize: 16,
+    cost: { devotion: 10 },
+    requires: [
+      {
+        id: 'marble',
+        test: (ctx) => count(ctx, WHITE_STONE) >= 30,
+        say: (ctx) => `Needs ${30 - count(ctx, WHITE_STONE)} more marble, sky marble or gold trim`,
+      },
+      {
+        id: 'light',
+        test: (ctx) => count(ctx, LIGHTS) >= 4,
+        say: (ctx) => `Needs ${plural(4 - count(ctx, LIGHTS), 'light')} — it is a place of light`,
+      },
+      {
+        id: 'sky',
+        test: (ctx) => ctx.openSkyColumns() >= 9,
+        say: () => 'It has to stand open to the sky — nothing built over it',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    skill: 'building',
+  },
+  {
+    id: 'sanctuary_black',
+    name: 'Black Sanctuary',
+    icon: '🕳️',
+    age: 3,
+    ring: 'black',
+    blurb: 'Obsidian round a pit. Raising it calls the black guardian — a beast of shadow.',
+    minSize: 5,
+    maxSize: 16,
+    cost: { devotion: 10 },
+    requires: [
+      {
+        id: 'obsidian',
+        test: (ctx) => count(ctx, BLACK_STONE) >= 30,
+        say: (ctx) => `Needs ${30 - count(ctx, BLACK_STONE)} more obsidian, dark stone or dark brick`,
+      },
+      {
+        id: 'pit',
+        test: (ctx) => ctx.countOf(0) >= 9,
+        say: () => 'Needs a pit at its heart — dig out at least nine blocks of it',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    skill: 'building',
   },
 ];
 
