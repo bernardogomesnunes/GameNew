@@ -176,6 +176,13 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
 
 ## Dark path — Conquer: the Sky Kingdom
 
+- **Built so far (part 1):**
+  - **The oath:** Place on the Nightstone heart of the altar in the Stone Kingdom's dark temple, with the Black Ring on your hand, and the King grants you **1,000 warriors**. The King speaks to you as his sworn after.
+  - **The army is a count** (Decision 3): up to **30 on the ground** at once; when one falls the count drops and a fresh one marches in from behind.
+  - **The ⚔ banner** in the HUD shows how many you have and what they're doing; tap it for the **command wheel**: follow (ranks behind you), hold here, attack (anything hostile near you), form a line (abreast, ahead of you). Whatever the order, they fight what comes close, and raiders fight them back.
+  - **Rations:** every game day, a meal for every hundred warriors, from your bag then your storehouses. Short of food, 3% desert each day.
+  - **The camp:** a **War Tent** (Place on it: you wake there, and the army holds round it) and a **Campfire** that burns with a light of its own.
+  - Still to come: the expedition on the map, the Sky Kingdom, the ways to take it, and taxes.
 - **The alliance:**
   - after you forge the Black Ring the Stone Kingdom becomes your ally;
   - its people are friendly, its gates open, and you can trade there;
@@ -253,7 +260,7 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
 5. **7e** The Stone Kingdom.
 6. **White path:** the Ten Rounds — **done** (war at Age 6, the rounds, siege, war horn, victory). The defence buildings — **done** too.
 7. **Dark path:**
-   1. the alliance, the army and the march;
+   1. the alliance, the army and the march — **done** (oath, army, command wheel, rations, camp; the map expedition still to come);
    2. the Sky Kingdom and its anchor towers;
    3. the three ways to take it;
    4. taxes if you lose.

@@ -21,6 +21,7 @@ import { Guardian } from '../world/Guardian.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
 import { War } from './War.js';
 import { Defenders } from '../world/Defenders.js';
+import { Army } from '../world/Army.js';
 
 /**
  * Everything that makes Duilt different from the sandbox, in one object.
@@ -102,6 +103,8 @@ export class DuiltGame {
     this.war = new War();
     // Your soldiers and tower archers — see world/Defenders.js.
     this.defenders = new Defenders({ world });
+    // The dark path's thousand, once sworn for — see world/Army.js.
+    this.army = new Army({ world });
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you` : null),
@@ -855,6 +858,7 @@ export class DuiltGame {
       found: [...this.found],
       war: this.war.toJSON(),
       defenders: this.defenders.toJSON(),
+      army: this.army.toJSON(),
       chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, found: c.found, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
@@ -910,6 +914,7 @@ export class DuiltGame {
     this.days = Number.isFinite(data.days) ? data.days : 0;
     this.war.loadJSON(data.war);
     this.defenders.loadJSON(data.defenders);
+    this.army.loadJSON(data.army);
     // A world already at the last age from before there was a war: it starts now.
     this.declareWar();
     // Pay out everything earned while the tab was shut.

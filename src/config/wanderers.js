@@ -194,6 +194,7 @@ export const NEWS = {
     none: ['Who are you, to walk into my city unbidden? Go home, little builder.', 'Bear no ring and you are nothing to me. Come back when a god has looked at you.'],
     white: ['The White Ring. I know that light — my army will come for it, round after round.', 'You wear the sky\'s gold in my hall? Leave, while my guards let you.'],
     black: ['The Black Ring... so the dark god looked at you too. Swear to him in my temple and my warriors are yours.', 'Kneel at the altar of Nightstone, ring-bearer. Then we will talk of armies.'],
+    sworn: ['A thousand of my warriors march under your banner. Feed them, and they will follow you to the sky itself.', 'The Sky Kingdom hangs on its chains, far from here. Bring it down, and I will honour you above every lord I have.'],
   },
   quiet: [
     'The roads are quiet. That\'s all the news there is.',

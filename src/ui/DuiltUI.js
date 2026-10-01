@@ -101,6 +101,19 @@ export class DuiltUI {
           not an answer — the answer used to be a title attribute, which is a
           hover on a desktop and nothing whatsoever on a phone.
         -->
+        <!-- Your army, on the dark path: how many, what they're doing, and
+             a tap for the command wheel — follow, hold, attack, a line. -->
+        <button type="button" class="vital" id="vital-army" title="Your army" hidden>
+          <span class="vital-icon">⚔</span>
+          <span class="vital-count" id="army-count">0</span>
+          <span class="army-mode" id="army-mode"></span>
+        </button>
+        <div id="army-wheel" hidden>
+          <button type="button" data-army="follow">Follow</button>
+          <button type="button" data-army="hold">Hold here</button>
+          <button type="button" data-army="attack">Attack</button>
+          <button type="button" data-army="line">Form a line</button>
+        </div>
         <button type="button" class="vital" id="vital-people" title="Settlers" hidden>
           <span class="vital-icon">👤</span>
           <span class="vital-count" id="people-count">0</span>
@@ -195,6 +208,11 @@ export class DuiltUI {
       b.addEventListener('click', () => this.closePanel(b.dataset.close)));
     this.q('#btn-eat').addEventListener('click', () => this.eat());
     this.q('#vital-people').addEventListener('click', () => this.sayPeople());
+    this.q('#vital-army').addEventListener('click', () => { const w = this.q('#army-wheel'); w.hidden = !w.hidden; });
+    this.el.querySelectorAll('[data-army]').forEach((b) => b.addEventListener('click', () => {
+      this.q('#army-wheel').hidden = true;
+      this.game.commandArmy(b.dataset.army);
+    }));
     this.q('#btn-claim-column').addEventListener('click', () => this.game.beginClaimColumn());
     this.q('#btn-claim-area').addEventListener('click', () => this.game.beginClaimSelection());
     this.q('#btn-store-all').addEventListener('click', () => this.storeEverything());
@@ -461,6 +479,22 @@ export class DuiltUI {
     box.innerHTML = names.map((n) => `<span class="boost" title="${BOOSTS[n].name}: ${BOOSTS[n].says}">`
       + `<svg viewBox="0 0 24 24" style="fill:${BOOSTS[n].color}"><path d="M9 3h6v2h-1v3.2l4.6 7.6A3 3 0 0 1 16 20H8a3 3 0 0 1-2.6-4.2L10 8.2V5H9Z"/></svg>`
       + `<b>${clockOf(boosts[n])}</b></span>`).join('');
+  }
+
+  /** The army's banner: how many are left, and what they're doing. Hidden until you have one. */
+  renderArmy() {
+    const army = this.duilt?.army;
+    const box = this.q('#vital-army');
+    if (!box) return;
+    const on = !!army?.active && !this.duilt.sandbox;
+    const key = on ? `${army.total}:${army.mode}` : '';
+    if (key === this.armyKey) return;
+    this.armyKey = key;
+    box.hidden = !on;
+    if (!on) { this.q('#army-wheel').hidden = true; return; }
+    this.q('#army-count').textContent = army.total;
+    this.q('#army-mode').textContent = { follow: 'following', hold: 'holding', attack: 'attacking', line: 'in line' }[army.mode];
+    this.el.querySelectorAll('[data-army]').forEach((b) => b.classList.toggle('on', b.dataset.army === army.mode));
   }
 
   /** A red flash at the edges of the screen when you're hurt — stronger when you die. */

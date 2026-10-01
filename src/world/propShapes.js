@@ -458,6 +458,30 @@ PROP_SHAPES.archery_target = [
   { minX: 0.55, maxX: 0.6, minY: 0.85, maxY: 0.9, minZ: TARGET_Z - 0.34, maxZ: TARGET_Z - 0.26, color: 0xf2ede2 },
 ];
 
+// The dark path's camp. A war tent: canvas over a ridge pole in steps, the
+// flap tied back on the side towards you (-z), a pennant on the pole, and
+// guy ropes pegged out at the corners. A campfire: a ring of stones, logs
+// crossed in it, and the flames, glowing.
+const CANVAS = 0x6b5a48, CANVAS_DARK = 0x52443a, ROPE = 0xc9b88f, FLAME_LOW = 0xff8a3a;
+PROP_SHAPES.war_tent = [
+  ...[0, 1, 2, 3, 4].map((k) => ({ minX: 0.04 + k * 0.09, maxX: 0.96 - k * 0.09, minY: k * 0.2, maxY: (k + 1) * 0.2, minZ: 0.06, maxZ: 0.98, color: k % 2 ? CANVAS_DARK : CANVAS })),
+  { minX: 0.47, maxX: 0.53, minY: 0, maxY: 1.35, minZ: 0.02, maxZ: 0.08, color: HILT },
+  { minX: 0.53, maxX: 0.78, minY: 1.18, maxY: 1.32, minZ: 0.04, maxZ: 0.06, color: 0x2a2430 },
+  { minX: 0.3, maxX: 0.7, minY: 0, maxY: 0.62, minZ: 0.04, maxZ: 0.07, color: 0x1e1a18 },
+  { minX: 0.18, maxX: 0.32, minY: 0, maxY: 0.6, minZ: 0.02, maxZ: 0.06, color: CANVAS_DARK },
+  ...[[-0.06, 0.04], [1.0, 0.04], [-0.06, 0.92], [1.0, 0.92]].map(([x, z]) => ({ minX: x, maxX: x + 0.06, minY: 0, maxY: 0.1, minZ: z, maxZ: z + 0.06, color: HILT })),
+  ...[[0.0, 0.07], [0.94, 0.07]].map(([x, z]) => ({ minX: x, maxX: x + 0.06, minY: 0.08, maxY: 0.4, minZ: z, maxZ: z + 0.03, color: ROPE })),
+];
+PROP_SHAPES.campfire = [
+  ...[[0.1, 0.4], [0.8, 0.4], [0.4, 0.1], [0.4, 0.8], [0.18, 0.18], [0.7, 0.18], [0.18, 0.7], [0.7, 0.7]].map(([x, z]) => (
+    { minX: x, maxX: x + 0.14, minY: 0, maxY: 0.12, minZ: z, maxZ: z + 0.14, color: 0x77736c })),
+  { minX: 0.22, maxX: 0.78, minY: 0.04, maxY: 0.14, minZ: 0.44, maxZ: 0.56 },
+  { minX: 0.44, maxX: 0.56, minY: 0.1, maxY: 0.2, minZ: 0.22, maxZ: 0.78 },
+  { minX: 0.36, maxX: 0.64, minY: 0.14, maxY: 0.34, minZ: 0.36, maxZ: 0.64, color: FLAME_LOW, glow: true },
+  { minX: 0.42, maxX: 0.58, minY: 0.34, maxY: 0.52, minZ: 0.42, maxZ: 0.58, color: 0xffb347, glow: true },
+  { minX: 0.46, maxX: 0.54, minY: 0.52, maxY: 0.64, minZ: 0.46, maxZ: 0.54, color: 0xffe08a, glow: true },
+];
+
 // The ring ores: crystals breaking out of every face of a block of rock,
 // glowing — drawn over the ordinary cube the rock is (blocks.js `overlay`).
 function oreBoxes(crystal) {

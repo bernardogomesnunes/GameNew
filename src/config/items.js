@@ -281,6 +281,9 @@ export const ITEMS = [
   { id: 'weapon_rack', name: 'Weapon Rack', kind: 'refined', stackTo: STACK_GOODS, color: 0x7a5636, glyph: 'rack', block: 212, madeBy: 'A sword, a spear, an axe and a shield on a rack — a barracks needs one' },
   { id: 'training_dummy', name: 'Training Dummy', kind: 'refined', stackTo: STACK_GOODS, color: 0xd9b866, glyph: 'dummy', block: 216, madeBy: 'Straw on a post, for soldiers to practise on' },
   { id: 'archery_target', name: 'Archery Target', kind: 'refined', stackTo: STACK_GOODS, color: 0xe9e2cf, glyph: 'target', block: 220, madeBy: 'Painted rings on a straw boss, for archers to practise on' },
+  // The dark path's camp.
+  { id: 'war_tent', name: 'War Tent', kind: 'refined', stackTo: STACK_GOODS, color: 0x6b5a48, glyph: 'tent', block: 224, madeBy: 'Canvas on a pole — pitch it on the march, and Place on it to make camp' },
+  { id: 'campfire', name: 'Campfire', kind: 'refined', stackTo: STACK_GOODS, color: 0x6b4a2e, glyph: 'campfire', block: 228, madeBy: 'Stones and crossed logs, burning — light for a camp' },
   // The war horn (the Ten Rounds): Break with it in hand calls the next round now.
   { id: 'war_horn', name: 'War Horn', kind: 'refined', stackTo: 1, color: 0xc9a46a, glyph: 'horn', madeBy: 'Made at the bench — Break with it in hand calls the Stone Kingdom\'s next round now' },
   { id: 'holy_water', name: 'Holy Water', kind: 'drink', stackTo: 10, color: 0xbfe3f5, glyph: 'flask', heals: 8, madeBy: 'Blessed at a chapel — drink it to heal four hearts' },
