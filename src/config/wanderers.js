@@ -9,11 +9,17 @@
  * Point at any of them and they're named, the same way a settler is.
  */
 export const WANDERERS = {
+  // Anyone can be struck (asked for directly: "when pointing to a player,
+  // break should beat them"). The ones who don't fight run from you, and
+  // drop what they carry if you beat them.
   hermit: {
+    noun: 'the hermit',
     about: 'the hermit — keeps to themself',
     colours: [0x8b8f84],
     speed: 1.1,
     roam: 5,
+    hp: 10, flees: true, run: 3,
+    drops: { fruit: [1, 3], seeds: [1, 2] },
   },
   // The Stone Kingdom's people (Phase 7e): guards at their posts, and the
   // King on his throne. Guards stand their ground — they never run — and
@@ -59,14 +65,20 @@ export const WANDERERS = {
     drops: { gold: [1, 2] },
   },
   explorer: {
+    noun: 'an explorer',
     about: 'an explorer, passing through',
     colours: [0x6f8f5a, 0x8a7a55, 0x5f7f86],
     speed: 2.3,
+    hp: 10, flees: true, run: 3.6,
+    drops: { gold: [0, 1], cooked_meat: [0, 1] },
   },
   messenger: {
+    noun: 'a messenger',
     about: 'a messenger, with news for your settlement',
     colours: [0x5a7fa8],
     speed: 2.8,
+    hp: 8, flees: true, run: 4,
+    drops: { gold: [0, 1] },
   },
 };
 

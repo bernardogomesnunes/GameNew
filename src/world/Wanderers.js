@@ -32,7 +32,9 @@ const MESSENGER_EVERY = [150, 300];
 const LINGER = 6;             // seconds a messenger stays to say their piece
 
 // Fighting (Phase 6b).
-const LEASH = 32;             // a camp bandit won't chase you further than this from its fire
+const LEASH = 32;
+/** How long someone who doesn't fight runs from you once struck. */
+const FLEE_SECONDS = 6;             // a camp bandit won't chase you further than this from its fire
 const HURT_FLASH = 0.3;       // seconds a struck figure shows red
 const RECOVER_EVERY = 6;      // a bandit that got away heals a point this often
 const RAID_CHANCE = 0.7;      // most nights, not every night
@@ -231,6 +233,8 @@ export class Wanderers {
     p.hp -= damage;
     p.hurt = HURT_FLASH;
     p.angry = true;
+    // Someone who doesn't fight runs for it.
+    if (spec.flees) p.fear = Math.max(p.fear ?? 0, FLEE_SECONDS);
     p.detour = 0;
     if (p.landmark) for (const q of this.list) if (q.landmark === p.landmark) q.angry = true;
     if (p.hp <= 0) {
@@ -360,6 +364,14 @@ export class Wanderers {
     if ((p.kind === 'bandit' || p.kind === 'guard') && this.fight(p, dt, player, spec)) return;
     // The King doesn't leave his throne.
     if (p.kind === 'king') { p.target = null; p.speed = 0; return; }
+    // Struck, someone who doesn't fight runs from you.
+    if (spec.flees && p.fear > 0) {
+      const dx = p.x - player.x, dz = p.z - player.z;
+      const d = Math.hypot(dx, dz) || 1;
+      p.target = { x: p.x + (dx / d) * 6, z: p.z + (dz / d) * 6 };
+      p.speed = spec.run;
+      return;
+    }
 
     if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard') {
       const dx = p.x - player.x, dz = p.z - player.z;

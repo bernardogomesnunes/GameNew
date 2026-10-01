@@ -130,7 +130,7 @@ ok('nor does the starting grove or the riverbank scrub', !/SAPLING/.test(feature
 
 // --- in the game -----------------------------------------------------------------------------
 
-ok('a sapling only goes in the ground', /held === SAPLING && !isSoil\(this\.world\.getBlock\(t\.x, t\.y - 1, t\.z\)\)/.test(game) && /Saplings go in the ground/.test(game));
+ok('a sapling only goes in the ground', /held === SAPLING && !SAPLING_GROUND\.has\(this\.world\.getBlock\(t\.x, t\.y - 1, t\.z\)\)/.test(game) && /Saplings go in the ground/.test(game));
 ok('planted, it counts from that day', /this\.duilt\.saplings\.plant\(c\.x, c\.y, c\.z, this\.duilt\.days\)/.test(game));
 ok('and broken, it is forgotten', /this\.duilt\.saplings\.remove\(c\.x, c\.y, c\.z\)/.test(game));
 ok('the world counts its days as the clock turns', /this\.duilt\.days \+= \(this\.dayCycle\.time - clockWas \+ 1\) % 1/.test(game));

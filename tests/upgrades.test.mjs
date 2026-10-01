@@ -117,7 +117,7 @@ ok('night sight: the dark never gets dark', /this\.dayCycle\.nightSight = this\.
   w.move(c, c.frozen > 0 ? 0.1 * 0.3 : 0.1); w.move(d, 0.1);
   ok(`ice: frozen for ${FREEZE_SECONDS}s, it moves at a crawl`, c.frozen === FREEZE_SECONDS && (c.x - c0) < (d.x - d0) * 0.5
     && /const t = p\.frozen > 0 \? dt \* FREEZE_SLOW : dt;/.test(readFileSync(new URL('../src/world/Wanderers.js', import.meta.url), 'utf8')));
-  ok('only on those that can be hurt — not a messenger', (() => { const m = w.person('messenger', 5, 1, 5, {}); w.afflict(m, 'thunder'); return !m.stunned; })());
+  ok('only on those that can be hurt — not the Stone King', (() => { const m = w.person('king', 5, 1, 5, {}); w.afflict(m, 'thunder'); return !m.stunned; })());
   ok('the strike lays it on', /if \(tool\?\.element && !res\.killed\) this\.wanderers\.afflict\(p, tool\.element\)/.test(game));
   ok('and you can see it: frost, embers, sparks', /p\.frozen > 0/.test(view) && /p\.burning > 0/.test(view) && /p\.stunned > 0/.test(view));
   ok('a bandit has hp to lose', WANDERERS.bandit.hp > 0);
