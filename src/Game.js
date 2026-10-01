@@ -55,6 +55,9 @@ import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPar
 import { SAPLING } from './duilt/Saplings.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/enchantments.js';
+import { nextView, VIEW_NAMES } from './config/avatar.js';
+import { AvatarView } from './render/AvatarView.js';
+import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
@@ -337,6 +340,10 @@ export class Game {
     this.ghost = new BuildGhost(this.scene);
     this.settlerView = new SettlerView(this.scene);
     this.mobView = new MobView(this.scene);
+    // You (playtest, P3 and P7): your figure, seen out of first person, and
+    // what's in your hand in first person.
+    this.avatarView = new AvatarView(this.scene);
+    this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
     this.projectileView = new ProjectileView(this.scene);
@@ -1069,6 +1076,7 @@ export class Game {
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, spawn ?? this.findSafeSpawn());
     this.player.binds = { ...this.controls.keys };
+    this.player.view = this.controls.view ?? 'first';
     // Face the way the spawn picked: the open direction. Arriving on a good
     // open spot while looking at the one wall behind you is the same bad first
     // impression as arriving inside the hill.
@@ -1156,6 +1164,7 @@ export class Game {
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, data.player);
     this.player.binds = { ...this.controls.keys };
+    this.player.view = this.controls.view ?? 'first';
     this.player.yaw = data.player.yaw || 0;
     this.player.pitch = data.player.pitch || 0;
     if (!this.gamification) this.gamification = new GamificationEngine(this.bus);
@@ -1365,6 +1374,8 @@ export class Game {
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
       // R turns whatever is queued. One key for both, because "turn the thing
       // before you put it down" is one idea however it got queued.
+      // Change view (playtest, P3) — F5 unless rebound, and not a reload.
+      if (e.code === this.controls.keys.view) { e.preventDefault(); this.cycleView(); return; }
       const turnKey = this.controls.keys.turn;
       if (e.code === turnKey && this.pendingRoof) this.turnRoof();
       else if (e.code === turnKey && this.pendingTemplate) {
@@ -1376,6 +1387,23 @@ export class Game {
 
   closeAllPanels() {
     this.ui.closeAllPanels();
+  }
+
+  /** Your eyes → from behind → from in front → your eyes, remembered. */
+  cycleView() {
+    if (!this.player) return;
+    const view = nextView(this.player.view);
+    this.player.view = view;
+    this.applyControls({ view });
+    this.ui?.toast({ kind: 'xp', title: VIEW_NAMES[view] });
+  }
+
+  /** You, and what's in your hand, brought up to date with the frame. */
+  updateYou(dt, playing) {
+    const held = this.selectedItemId ? { itemId: this.selectedItemId } : { blockId: this.selectedBlockId };
+    const third = this.player.view !== 'first';
+    this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third });
+    this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning });
   }
 
   requestPointerLock() {
@@ -1445,6 +1473,8 @@ export class Game {
   }
 
   primaryAction() {
+    this.avatarView?.strike();
+    this.handView?.strike();
     if (this.moving) return void this.cancelMove();
     // Manning a catapult, Break throws.
     if (this.manning) return void this.throwStone();
@@ -1463,6 +1493,8 @@ export class Game {
   }
 
   secondaryAction() {
+    this.avatarView?.strike();
+    this.handView?.strike();
     // Place puts down what you are holding, on a mouse and under a thumb
     // alike. Cancelling is Escape, or the Break button — which says "Cancel"
     // while you are carrying something, so there is nothing to guess.
@@ -3916,6 +3948,7 @@ export class Game {
     this.dayCycle.apply(this.camera, this.horizon);
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
+    if (this.player) this.updateYou(dt, playing);
     this.wanderView.update(this.wanderers?.list ?? []);
     this.projectileView.update(this.projectiles?.list ?? []);
     this.fireflyView.update(this.fireflies);
@@ -3942,6 +3975,7 @@ export class Game {
     this.controls = { ...this.controls, ...next };
     saveControls(this.controls);
     if (this.player) this.player.binds = { ...this.controls.keys };
+    if (this.player && next.view) this.player.view = next.view;
     this.camera.fov = this.controls.fov;
     this.camera.updateProjectionMatrix();
     this.sound.setVolume(this.controls.volume);

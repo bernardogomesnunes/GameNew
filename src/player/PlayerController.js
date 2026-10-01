@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { VIEW_DISTANCE } from '../config/avatar.js';
 import { isTyping } from '../ui/Panels.js';
 import { AIR, isFluid } from '../config/blocks.js';
 import { DEFAULT_CONTROLS } from '../config/controls.js';
@@ -84,6 +85,10 @@ export class PlayerController {
 
     this.position = new THREE.Vector3(spawn.x, spawn.y, spawn.z);
     this.velocity = new THREE.Vector3();
+    // Which way you see the world: 'first', 'behind' or 'front' — see config/avatar.js.
+    this.view = 'first';
+    this._eye = new THREE.Vector3();
+    this._look = new THREE.Euler();
     this.yaw = 0;
     this.pitch = 0;
     this.flying = false;
@@ -439,8 +444,20 @@ export class PlayerController {
     const eyeY = this.position.y + EYE_HEIGHT - this.stepLag;
     this.camera.position.set(this.position.x, eyeY, this.position.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0);
+    // Out of your own eyes (playtest, P3): behind your shoulder, or in front
+    // looking back — pulled in short of anything solid in between, so a wall
+    // behind you never ends up between you and the camera.
+    if (this.view === 'behind' || this.view === 'front') {
+      const dir = this.lookDirection();
+      const away = this.view === 'behind' ? -1 : 1;
+      const eye = this._eye.set(this.position.x, eyeY, this.position.z);
+      const reach = this.clearDistance(eye, dir.x * away, dir.y * away + (away < 0 ? 0.12 : 0), dir.z * away, VIEW_DISTANCE);
+      this.camera.position.set(eye.x + dir.x * away * reach, eye.y + (dir.y * away + (away < 0 ? 0.12 : 0)) * reach, eye.z + dir.z * away * reach);
+      this.camera.lookAt(eye);
+    }
     if (!this.camera.isPerspectiveCamera) return;
-    const near = this.blockNear(this.position.x, eyeY, this.position.z) ? NEAR_CLOSE : NEAR_OPEN;
+    const cam = this.camera.position;
+    const near = this.blockNear(cam.x, cam.y, cam.z) ? NEAR_CLOSE : NEAR_OPEN;
     if (this.camera.near !== near) {
       this.camera.near = near;
       this.camera.updateProjectionMatrix();
@@ -464,10 +481,24 @@ export class PlayerController {
     return new THREE.Vector3(this.position.x, this.position.y + EYE_HEIGHT, this.position.z);
   }
 
+  /**
+   * Where your eyes point — from your own yaw and pitch, not the camera's,
+   * which out of first person is somewhere else looking back at you.
+   */
   lookDirection() {
-    const dir = new THREE.Vector3();
-    this.camera.getWorldDirection(dir);
-    return dir;
+    this._look.set(this.pitch, this.yaw, 0, 'YXZ');
+    return new THREE.Vector3(0, 0, -1).applyEuler(this._look);
+  }
+
+  /** How far from `from` along (dx, dy, dz) the camera can go before it meets something solid. */
+  clearDistance(from, dx, dy, dz, max) {
+    const len = Math.hypot(dx, dy, dz) || 1;
+    for (let t = 0.3; t <= max; t += 0.1) {
+      const x = from.x + (dx / len) * t, y = from.y + (dy / len) * t, z = from.z + (dz / len) * t;
+      const id = this.world.getBlock(Math.floor(x), Math.floor(y), Math.floor(z));
+      if (id !== AIR && !isFluid(id)) return Math.max(0.3, t - 0.35);
+    }
+    return max;
   }
 
   dispose() {

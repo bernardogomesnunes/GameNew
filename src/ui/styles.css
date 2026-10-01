@@ -1430,3 +1430,10 @@ body.touch .ctl-keys { display: none; }
 /* An enchanted item's glints (playtest, P6) — see cubes.js itemIcon. */
 .glint { transform-box: fill-box; transform-origin: center; animation: glint 1.6s ease-in-out infinite; }
 @keyframes glint { 0%, 100% { opacity: 0.15; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1); } }
+
+/* How you see the world and how you look (playtest, P3). */
+.ctl-look { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 4px; }
+.look-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
+.look-row > div { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.look-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.15); padding: 0; cursor: pointer; }
+.look-swatch.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,190,90,0.45); }

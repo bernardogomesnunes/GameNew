@@ -13,6 +13,8 @@
  * spot on an AZERTY keyboard.
  */
 
+import { DEFAULT_LOOK } from './avatar.js';
+
 const KEY = 'voxelgame:controls';
 
 /** Everything you can rebind, in the order the settings list them. */
@@ -26,6 +28,8 @@ export const ACTIONS = [
   { id: 'down', name: 'Swim or fly down', key: 'ControlLeft' },
   { id: 'fly', name: 'Fly on / off', key: 'KeyF' },
   { id: 'turn', name: 'Turn a roof or design', key: 'KeyR' },
+  // Playtest, P3: "in desktop there should be a key".
+  { id: 'view', name: 'Change view (your eyes, behind, in front)', key: 'F5' },
 ];
 
 export const DEFAULT_CONTROLS = {
@@ -37,6 +41,10 @@ export const DEFAULT_CONTROLS = {
   // and More sit beside. See UIManager.applyTouchLayout.
   walkSide: 'left',   // 'left' | 'right'
   actionSide: 'walk', // 'walk' | 'look'
+  // How you see the world, and how you look in it (playtest, P3) — see
+  // config/avatar.js.
+  view: 'first',      // 'first' | 'behind' | 'front'
+  look: { ...DEFAULT_LOOK },
 };
 
 /** The body classes a touch layout comes down to (styles.css does the rest). */
@@ -54,7 +62,7 @@ export function loadControls() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null');
     if (!raw) return structuredClone(DEFAULT_CONTROLS);
-    return { ...DEFAULT_CONTROLS, ...raw, keys: { ...DEFAULT_CONTROLS.keys, ...(raw.keys ?? {}) } };
+    return { ...DEFAULT_CONTROLS, ...raw, keys: { ...DEFAULT_CONTROLS.keys, ...(raw.keys ?? {}) }, look: { ...DEFAULT_LOOK, ...(raw.look ?? {}) } };
   } catch {
     return structuredClone(DEFAULT_CONTROLS);
   }

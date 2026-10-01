@@ -13,6 +13,7 @@ import { goalBands } from '../config/achievements.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
 import { ACTIONS, DEFAULT_CONTROLS, FOV_RANGE, SENSITIVITY_RANGE, rebind, keyLabel, touchLayoutClasses } from '../config/controls.js';
+import { VIEWS, SKINS, HAIRS, CLOTHES, DEFAULT_LOOK } from '../config/avatar.js';
 import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 import { CLEARS, clearArtSvg } from '../config/clears.js';
 import { Minimap } from '../render/Minimap.js';
@@ -286,6 +287,8 @@ export class UIManager {
                 <input type="range" id="ctl-vol" min="0" max="1" step="0.05" />
               </label>
             </div>
+            <!-- Playtest, P3: how you see the world, and how you look in it. -->
+            <div class="ctl-look" id="ctl-look"></div>
             <div class="ctl-keys" id="ctl-keys"></div>
             <div class="field-row" style="margin-top:10px">
               <button class="secondary" id="ctl-reset">Back to the defaults</button>
@@ -440,6 +443,8 @@ export class UIManager {
                teaches the game, and Settings is where you go between builds. -->
           <button class="touch-btn" id="t-stats">${icon('stats')}<span>Goals</span></button>
           <button class="touch-btn" id="t-map">${icon('map')}<span>Map</span></button>
+          <!-- Playtest, P3: your eyes, behind you, in front of you. -->
+          <button class="touch-btn" id="t-view">${icon('person')}<span>View</span></button>
           <button class="touch-btn" id="t-screen">${icon('fullscreen')}<span>Screen</span></button>
         </div>
 
@@ -674,6 +679,7 @@ export class UIManager {
       ['#t-skills', () => this.openPanel('panel-skills')],
       ['#t-stats', () => this.openPanel('panel-stats')],
       ['#t-map', () => this.openPanel('panel-map')],
+      ['#t-view', () => this.game.cycleView?.()],
       ['#t-clear', () => this.toolButton('clear', 'panel-clear')],
       ['#t-designs', () => this.toolButton('design', 'panel-templates')],
       ['#t-roof', () => this.toolButton('roof', 'panel-roof')],
@@ -1743,6 +1749,21 @@ export class UIManager {
       }
       const preview = this.q('#ctl-touch-preview');
       if (preview) preview.innerHTML = touchLayoutPreview(c);
+      const lookBox = this.q('#ctl-look');
+      if (lookBox) {
+        const look = c.look ?? DEFAULT_LOOK;
+        const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
+        const swatches = (key, colours) => colours.map((col, i) => `<button class="look-swatch${(look[key] ?? 0) === i ? ' on' : ''}" data-look="${key}" data-i="${i}" style="background:${hex(col)}" aria-label="${key} ${i + 1}"></button>`).join('');
+        lookBox.innerHTML = `
+          <div class="ctl-seg-row"><span>View</span>
+            <div class="ctl-seg" data-view-seg="1">${VIEWS.map((v) => `<button data-view="${v}" class="${(c.view ?? 'first') === v ? 'on' : ''}">${{ first: 'Eyes', behind: 'Behind', front: 'Front' }[v]}</button>`).join('')}</div>
+          </div>
+          <div class="look-row"><span>Skin</span><div>${swatches('skin', SKINS)}</div></div>
+          <div class="look-row"><span>Hair</span><div>${swatches('hair', HAIRS)}</div></div>
+          <div class="look-row"><span>Clothes</span><div>${swatches('clothes', CLOTHES.map((x) => x.shirt))}</div></div>`;
+        lookBox.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => apply({ view: b.dataset.view })));
+        lookBox.querySelectorAll('[data-look]').forEach((b) => b.addEventListener('click', () => apply({ look: { ...look, [b.dataset.look]: Number(b.dataset.i) } })));
+      }
     };
     const apply = (next) => { this.game.applyControls?.(next); show(); };
     fov.addEventListener('input', () => apply({ fov: Number(fov.value) }));
