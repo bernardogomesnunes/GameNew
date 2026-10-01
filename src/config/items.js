@@ -1,6 +1,7 @@
 import { BLOCKS } from './blocks.js';
-import { CROPS, CROP_BASE } from './crops.js';
+import { CROPS, cropBaseOf } from './crops.js';
 import { ARMOUR_PIECES } from './armour.js';
+import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
 /**
  * Item registry for Duilt.
@@ -71,9 +72,9 @@ export const ITEMS = [
   // Game.plantMixed); each crop's own seeds come up as that crop — see
   // config/crops.js.
   { id: 'seeds', name: 'Mixed Seeds', kind: 'raw', stackTo: STACK_GOODS, color: 0xd7cb95, glyph: 'seeds', madeBy: 'Shaken from a forest, or saved from a harvest' },
-  ...CROPS.map((c, k) => ({
+  ...CROPS.map((c) => ({
     id: `seeds_${c.kind}`, name: `${c.name} Seeds`, kind: 'raw', stackTo: STACK_GOODS, color: c.crop, glyph: 'seeds',
-    block: CROP_BASE + 4 * k, madeBy: `Saved from a ripe ${c.name.toLowerCase()}`,
+    block: cropBaseOf(c), madeBy: `Saved from a ripe ${c.name.toLowerCase()}`,
   })),
   { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fcd8b, glyph: 'sprout', block: 20, madeBy: 'Grown from seed' },
 
@@ -82,6 +83,7 @@ export const ITEMS = [
   // The farm's crops. Carrots are the vegetables the game always had — the
   // id stays so everything that already made or used them still does.
   { id: 'vegetables', name: 'Carrots', kind: 'food', stackTo: STACK_FOOD, color: 0xe8873a, glyph: 'vegetable', feeds: 22, madeBy: 'Harvested from a farm' },
+  { id: 'coffee_beans', name: 'Coffee Beans', kind: 'food', stackTo: STACK_FOOD, color: 0xb8362e, glyph: 'seeds', feeds: 4, madeBy: 'Picked from a coffee plant — brew them, or chew them' },
   { id: 'potato', name: 'Potatoes', kind: 'food', stackTo: STACK_FOOD, color: 0xc9a46c, glyph: 'vegetable', feeds: 20, madeBy: 'Dug from a farm' },
   { id: 'cabbage', name: 'Cabbage', kind: 'food', stackTo: STACK_FOOD, color: 0xa9cf86, glyph: 'vegetable', feeds: 18, madeBy: 'Cut from a farm' },
   { id: 'lettuce', name: 'Lettuce', kind: 'food', stackTo: STACK_FOOD, color: 0xb6de86, glyph: 'vegetable', feeds: 12, madeBy: 'Picked from a farm' },
@@ -194,6 +196,10 @@ export const ITEMS = [
   { id: 'dark_brick', name: 'Dark Brick', kind: 'refined', stackTo: STACK_BULK, color: 0x5c4b52, glyph: 'brick', block: 157, madeBy: 'Brick darkened over a dark-wood fire' },
   { id: 'sky_marble', name: 'Sky Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe8eef8, glyph: 'marble', block: 158, madeBy: 'Marble polished with powdered glass' },
   { id: 'gold_trim', name: 'Gold Trim', kind: 'refined', stackTo: STACK_BULK, color: 0xe2c26a, glyph: 'trim', block: 159, madeBy: 'Stone banded with gold' },
+  // Calçada portuguesa (playtest, P9).
+  { id: 'calcada', name: 'Calçada', kind: 'refined', stackTo: STACK_BULK, color: 0xf1ede2, glyph: 'calcada', block: 209, madeBy: 'Limestone knapped into little setts' },
+  { id: 'calcada_dark', name: 'Dark Calçada', kind: 'refined', stackTo: STACK_BULK, color: 0x45434a, glyph: 'calcada', block: 210, madeBy: 'Dark stone knapped into little setts' },
+  { id: 'calcada_wave', name: 'Calçada Wave', kind: 'refined', stackTo: STACK_BULK, color: 0xf1ede2, glyph: 'calcada_wave', block: 211, madeBy: 'White and dark setts, laid in a wave' },
   { id: 'timber_frame', name: 'Timber Frame', kind: 'refined', stackTo: STACK_BULK, color: 0xf0e6cf, glyph: 'timber', block: 160, madeBy: 'Clay plaster set between planks' },
   { id: 'wall_cobble', name: 'Cobblestone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xa1a1aa, glyph: 'wall', block: 161, madeBy: 'Laid from cobblestone — joins up like a fence' },
   { id: 'wall_stone', name: 'Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'wall', block: 162, madeBy: 'Laid from stone — joins up like a fence' },
@@ -210,6 +216,9 @@ export const ITEMS = [
   { id: 'banner_black', name: 'Black Banner', kind: 'refined', stackTo: STACK_GOODS, color: 0x2e2a33, glyph: 'banner', block: 186, madeBy: 'Woven black, with the red tower of the stone' },
   { id: 'firefly_lantern', name: 'Firefly Lantern', kind: 'refined', stackTo: STACK_GOODS, color: 0xd9ec9a, glyph: 'lantern', block: 190, madeBy: 'Glass, with fireflies you caught in it' },
   { id: 'fireflies', name: 'Fireflies', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8ff5a, glyph: 'firefly', madeBy: 'Caught at night — Break on a swarm' },
+  // Homes (playtest, P1).
+  { id: 'bed', name: 'Bed', kind: 'refined', stackTo: STACK_GOODS, color: 0xb84a3e, glyph: 'bed', block: 193, madeBy: 'Planks, stuffed with leaves — two blocks long, put down the way you face' },
+  { id: 'painting', name: 'Painting', kind: 'refined', stackTo: STACK_GOODS, color: 0x8a6440, glyph: 'painting', block: 201, madeBy: 'A little landscape in a frame — Place on it to wake there when you fall' },
   { id: 'catapult', name: 'Catapult', kind: 'refined', stackTo: STACK_GOODS, color: 0x8a6440, glyph: 'catapult', block: 152, madeBy: 'Built at the bench — Place mans it, Break throws a stone' },
   { id: 'chest', name: 'Chest', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a6b3f, glyph: 'chest', block: 148, madeBy: 'Knocked together from planks — Place opens it' },
   { id: 'door', name: 'Door', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08a60, glyph: 'door', block: 69, madeBy: 'Hung from planks — Place opens and shuts it' },
@@ -263,6 +272,11 @@ export const ITEMS = [
   // heals when you drink it. The rings are worn in the ring slot; you can
   // only ever forge one of the two.
   { id: 'devotion', name: 'Devotion', kind: 'raw', stackTo: STACK_GOODS, color: 0xffe3a0, glyph: 'devotion', madeBy: 'Gathered at a temple — from worshippers and offerings' },
+  // Drinks that make you better for a while (playtest, P5) — see
+  // config/drinks.js. Each gives its `boost` for a few minutes.
+  { id: 'beer', name: 'Beer', kind: 'drink', stackTo: 10, color: 0xe0a83a, glyph: 'flask', boost: 'haste', madeBy: 'Brewed at a workshop from potatoes — quicker blows for three minutes' },
+  { id: 'kombucha', name: 'Kombucha', kind: 'drink', stackTo: 10, color: 0xd0705a, glyph: 'flask', boost: 'strength', madeBy: 'Brewed at a workshop from fruit and leaves — +2 on every hit for three minutes' },
+  { id: 'coffee', name: 'Coffee', kind: 'drink', stackTo: 10, color: 0x6b4630, glyph: 'flask', boost: 'speed', madeBy: 'Brewed at a workshop from coffee beans — faster on your feet for three minutes' },
   { id: 'holy_water', name: 'Holy Water', kind: 'drink', stackTo: 10, color: 0xbfe3f5, glyph: 'flask', heals: 8, madeBy: 'Blessed at a chapel — drink it to heal four hearts' },
   {
     id: 'ring_white', name: 'White Ring', kind: 'ring', stackTo: STACK_TOOL, color: 0xf2e2a4, glyph: 'ring', wears: 'ring', ring: 'white',
@@ -279,11 +293,26 @@ export const ITEMS = [
   // points it adds. It wears with every blow it takes, like a tool with use.
   ...ARMOUR_PIECES.map((p) => ({
     id: p.id, name: p.name, kind: 'armour', stackTo: STACK_TOOL, color: p.main,
-    glyph: { head: 'helm', body: 'cuirass', legs: 'greaves' }[p.slot],
+    glyph: { head: 'helm', body: 'cuirass', legs: 'greaves', feet: 'boots' }[p.slot],
     wears: p.slot, armour: p.points, set: p.set, durability: p.durability, madeBy: p.madeBy,
     ...(p.disguise ? { disguise: p.disguise } : {}),
   })),
 ];
+
+// Upgraded pieces (playtest, P6) — see config/upgrades.js. Each is its
+// piece with the upgrade's name in front and its power added.
+for (const [key, e] of Object.entries(UPGRADES)) {
+  const bases = e.weapon ? UPGRADABLE_SWORDS.map((id) => ITEMS.find((i) => i.id === id))
+    : ITEMS.filter((i) => i.kind === 'armour' && e.slots.includes(i.wears));
+  for (const base of bases) {
+    ITEMS.push({
+      ...base, id: upgradedId(base.id, key), name: `${e.name} ${base.name}`, upgrade: key,
+      ...(e.armour ? { armour: base.armour + e.armour } : {}),
+      ...(e.element ? { element: e.element } : {}),
+      madeBy: `${base.name} upgraded at a temple — ${e.says}`,
+    });
+  }
+}
 
 /** Whether an item is something you wear, and where: 'head', 'body', 'legs' or 'ring', or null. */
 export function wornOn(id) {
@@ -305,7 +334,7 @@ export const ITEM_FOR_BLOCK = new Map(
 // back that block's item. See blocks.js's `stateOf`. The top half of a door
 // gives nothing: the door is its bottom half, and the two go together.
 for (const b of BLOCKS) {
-  if (b.stateOf != null && b.part !== 'top' && ITEM_FOR_BLOCK.has(b.stateOf)) ITEM_FOR_BLOCK.set(b.id, ITEM_FOR_BLOCK.get(b.stateOf));
+  if (b.stateOf != null && b.part == null && ITEM_FOR_BLOCK.has(b.stateOf)) ITEM_FOR_BLOCK.set(b.id, ITEM_FOR_BLOCK.get(b.stateOf));
 }
 
 export function itemName(id) {

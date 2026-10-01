@@ -10,7 +10,7 @@ export const MAP_ZOOMS = [300, 600, 1200];
  * this wide is real work, and nothing about the ground moves while a panel
  * is open over it the way you do.
  */
-export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], step = null, home = null, territory = null } = {}) {
+export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], step = null, home = null, territory = null, places = [] } = {}) {
   const ctx = canvas.getContext('2d');
   const { width, height } = canvas;
   // Coarser sampling the wider the view — a 1200-block view sampled every
@@ -39,5 +39,24 @@ export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], st
     ctx.stroke();
   }
 
+  // Places you've found (playtest, P4): a diamond in each kind's colour.
+  for (const p of places) {
+    if (Math.abs(p.x - x) >= radius || Math.abs(p.z - z) >= radius) continue;
+    const [px, py] = worldToCanvas(p.x, p.z, x, z, radius, width, height);
+    ctx.fillStyle = PLACE_COLOURS[p.kind] ?? '#ffffff';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, py - 8); ctx.lineTo(px + 8, py); ctx.lineTo(px, py + 8); ctx.lineTo(px - 8, py);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
   drawHeadingArrow(ctx, width / 2, height / 2, yaw, 10);
 }
+
+/** The colour each kind of place is marked in on the map. */
+export const PLACE_COLOURS = {
+  hermit: '#9be38a', camp: '#e0574a', ruin: '#c9c2b0', ruined_temple: '#f2f0ea', mine: '#9a7350', monument: '#3a3440',
+};

@@ -94,6 +94,8 @@ const FLUIDS = [
 ];
 // A mask bit marking a face that looks into a sealed cave.
 const DEEP = 0x100;
+/** Mask flag: a leaf face open to the air — drawn on its own (playtest, P2). */
+const EXPOSED = 0x200;
 const PAD_STRIDE = [1, PAD * PAD, PAD];
 
 const materialCache = new Map();
@@ -246,6 +248,27 @@ function getMaterial(key) {
   return mat;
 }
 
+/*
+ * Leaves (playtest, P2). Reported directly: "When looking at a forest, I
+ * think the leaves lack shadows and light because they look like a mesh of
+ * green. Maybe some different tones of green and more contrast between
+ * surfaces." So a leaf block is never merged with its neighbours into one
+ * big flat quad — each is drawn on its own, with a tone of its own (lighter,
+ * darker, warmer, cooler), a lean of hue shared by the leaves of one tree,
+ * harder shade on its undersides and sides, and darker the deeper it sits
+ * in the canopy.
+ */
+const LEAFY = new Uint8Array(256);
+for (const id of [5, 42, 44]) LEAFY[id] = 1;
+/** Face shade for leaves: the same light, more contrast than stone. */
+const LEAF_SHADE = { side: 0.78, under: 0.42 };
+/** How much each solid neighbour darkens a leaf, and leaves two above it. */
+const LEAF_BURIED = 0.065, LEAF_UNDER_CANOPY = 0.08;
+/** The faces inside a canopy, between leaf and leaf. */
+const LEAF_INNER = 0.62;
+/** The six cells round one, as steps through the padded volume. */
+const NEIGHBOURS = [1, -1, PAD * PAD, -(PAD * PAD), PAD, -PAD];
+
 /**
  * How much each material's colour is allowed to wander, as a fraction.
  *
@@ -260,9 +283,11 @@ for (const [id, amount] of Object.entries({
   2: 0.18, 21: 0.15,           // dirt, farmland
   6: 0.16, 23: 0.20, 24: 0.15, // sand, gravel, clay
   3: 0.17, 8: 0.19,            // stone, cobblestone
-  5: 0.28, 4: 0.13,            // leaves vary most of all; wood a little
+  5: 0.28, 42: 0.28, 44: 0.28, // leaves vary most of all — every kind of them
+  4: 0.13, 41: 0.13, 43: 0.13, // wood a little
   12: 0.07,                    // snow, barely — it is meant to read as clean
 })) VARIATION[id] = amount;
+
 
 /**
  * A repeatable wobble from a block's position, in 0..1.
@@ -276,6 +301,10 @@ function patchNoise(x, z) {
   const fine = hashInt(x, z);
   const broad = hashInt(x >> 3, z >> 3);
   return fine * 0.4 + broad * 0.6;
+}
+
+function hash3(x, y, z) {
+  return hashInt(x * 3 + Math.imul(y | 0, 0x2f), z - Math.imul(y | 0, 0x61));
 }
 
 function hashInt(x, z) {
@@ -361,6 +390,7 @@ function topLayerTable() {
 export class ChunkMesher {
   constructor(scene) {
     this.scene = scene;
+    this.tone = [0, 0, 0]; // leafTone's answer, reused rather than allocated per face
     this.activeMeshes = new Set();
     this.origin = [0, 0, 0];
   }
@@ -427,6 +457,9 @@ export class ChunkMesher {
     const S = PAD_STRIDE;
     const sky = this.skyFill(top);
     const yBase = lo * S[1];
+    this.yBase = yBase;
+    this.baseX = baseX;
+    this.baseZ = baseZ;
     this.yOffset = lo;
     this.releaseBuffers();
 
@@ -459,6 +492,10 @@ export class ChunkMesher {
               // A face is only ever seen from the cell it faces. If that cell
               // can't be reached from open sky, the face belongs to a sealed
               // cave and goes in the deep mesh — see skyFill.
+              // A leaf's outside face — open air beyond it — is drawn on its
+              // own, with its own tone (see leafTone); one facing another
+              // leaf, seen only through the gaps, still merges.
+              if (face && LEAFY[self] && other === AIR) face |= EXPOSED;
               mask[n] = face && !sky[idx + step] ? face | DEEP : face;
             }
           }
@@ -471,17 +508,18 @@ export class ChunkMesher {
               if (id === 0) { i++; n++; continue; }
 
               let w = 1;
-              while (i + w < du && mask[n + w] === id) w++;
+              const single = id & EXPOSED;
+              while (!single && i + w < du && mask[n + w] === id) w++;
 
               let h = 1;
-              grow: while (j + h < dv) {
+              grow: while (!single && j + h < dv) {
                 for (let k = 0; k < w; k++) {
                   if (mask[n + k + h * du] !== id) break grow;
                 }
                 h++;
               }
 
-              this.emitQuad(id & DEEP ? deepByType : byType, id & 0xff, d, u, v, sign, slice, i, j, w, h);
+              this.emitQuad(id & DEEP ? deepByType : byType, id & 0xff, d, u, v, sign, slice, i, j, w, h, id & EXPOSED);
 
               for (let l = 0; l < h; l++) {
                 for (let k = 0; k < w; k++) mask[n + k + l * du] = 0;
@@ -874,7 +912,31 @@ export class ChunkMesher {
     }
   }
 
-  emitQuad(byType, id, d, u, v, sign, slice, i, j, w, h) {
+  /**
+   * The colour of one leaf face: its block's own tone, its tree's lean of
+   * hue, harder face shade than stone gets, and darker the more of it is
+   * buried — leaves or wood packed round it, and canopy over its head.
+   */
+  leafTone(col, d, u, v, sign, slice, i, j) {
+    const S = PAD_STRIDE, vol = this.padded;
+    const idx = this.yBase + (slice + 1) * S[d] + (j + 1) * S[v] + (i + 1) * S[u];
+    const at = (axis) => (axis === d ? slice : axis === u ? i : j);
+    const x = this.baseX + at(0), y = at(1) + this.yOffset, z = this.baseZ + at(2);
+
+    const face = d === 1 ? (sign > 0 ? 1 : LEAF_SHADE.under) : LEAF_SHADE.side;
+    let buried = 0;
+    for (let k = 0; k < 6; k++) if (vol[idx + NEIGHBOURS[k]] > 0) buried++;
+    const canopy = vol[idx + 2 * S[1]] > 0 ? LEAF_UNDER_CANOPY : 0;
+    const light = face * (1 - LEAF_BURIED * buried - canopy) * (0.8 + 0.4 * hash3(x, y, z));
+    // A lean of hue per tree (near enough: per few blocks), and a little
+    // per leaf — warmer here, cooler there.
+    const lean = (hashInt(x >> 2, z >> 2) - 0.5) * 0.2 + (hash3(z, x, y) - 0.5) * 0.1;
+    const t = this.tone;
+    t[0] = col.r * light * (1 + lean); t[1] = col.g * light * (1 + lean * 0.25); t[2] = col.b * light * (1 - lean);
+    return t;
+  }
+
+  emitQuad(byType, id, d, u, v, sign, slice, i, j, w, h, exposed = 0) {
     const key = bufferKeyFor(id);
     let buf = byType.get(key);
     if (!buf) {
@@ -921,7 +983,12 @@ export class ChunkMesher {
     // patchy cloud — the hue has to move as well, or it is still one colour.
     const vary = VARIATION[id];
     let r = col.r * shade, g = col.g * shade, b = col.b * shade;
-    if (vary) {
+    if (LEAFY[id] && exposed) {
+      [r, g, b] = this.leafTone(col, d, u, v, sign, slice, i, j);
+    } else if (LEAFY[id]) {
+      // Inside the canopy, glimpsed through its gaps: in its shade.
+      r *= LEAF_INNER; g *= LEAF_INNER; b *= LEAF_INNER;
+    } else if (vary) {
       const light = 1 + vary * (patchNoise(ox, oz) - 0.5);
       const skew = vary * 0.55 * (patchNoise(oz + 8191, ox - 3137) - 0.5);
       r *= light - skew;

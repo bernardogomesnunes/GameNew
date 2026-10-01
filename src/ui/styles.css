@@ -730,6 +730,10 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 /* Ten hearts, in halves — see DuiltUI.renderHealth. A grey heart with the red
    one over it, cut to half its width for a half heart. */
 .vital-hearts { gap: 1px; padding: 4px 7px; }
+.vital-boosts { gap: 6px; padding: 4px 8px; }
+.vital-boosts[hidden] { display: none; }
+.boost { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; color: #3c4650; font-variant-numeric: tabular-nums; }
+.boost svg { width: 14px; height: 14px; filter: drop-shadow(0 1px 0 rgba(0,0,0,0.25)); }
 .vital-hearts[hidden] { display: none; }
 .heart { position: relative; width: 13px; height: 13px; display: inline-block; }
 .heart svg { width: 13px; height: 13px; display: block; fill: rgba(35, 42, 45, 0.22); }
@@ -770,7 +774,7 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 }
 #bag-grid { margin: 8px 0 14px; max-height: 46vh; overflow-y: auto; }
 /* What you're wearing (Phase 7b): four slots in a row, each named under it. */
-.bag-wear-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 64px)); gap: 10px; margin: 8px 0 4px; padding: 2px; }
+.bag-wear-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 60px)); gap: 8px; margin: 8px 0 4px; padding: 2px; }
 .wear-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .wear-cell .bag-slot { width: 100%; }
 .wear-label { font-size: 11px; color: var(--text-dim); }
@@ -1422,3 +1426,14 @@ body.touch .ctl-keys { display: none; }
 .ctl-touch-preview .pv-label { fill: var(--text-dim); font-size: 10px; font-weight: 700; text-anchor: middle; }
 .ctl-touch-preview .pv-btn { fill: var(--text-dim); opacity: 0.55; }
 .ctl-touch-preview .pv-act { fill: var(--accent); opacity: 1; }
+
+/* An upgraded item's glints (playtest, P6) — see cubes.js itemIcon. */
+.glint { transform-box: fill-box; transform-origin: center; animation: glint 1.6s ease-in-out infinite; }
+@keyframes glint { 0%, 100% { opacity: 0.15; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1); } }
+
+/* How you see the world and how you look (playtest, P3). */
+.ctl-look { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 4px; }
+.look-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
+.look-row > div { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.look-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.15); padding: 0; cursor: pointer; }
+.look-swatch.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,190,90,0.45); }

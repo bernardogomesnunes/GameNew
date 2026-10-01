@@ -26,17 +26,26 @@ export const CROPS = [
   { kind: 'pepper', name: 'Pepper', produce: 'pepper', leaf: 0x5c9a48, crop: 0xd84a3c },
   { kind: 'zucchini', name: 'Zucchini', produce: 'zucchini', leaf: 0x5f9a4c, crop: 0x3f7a35 },
   { kind: 'broccoli', name: 'Broccoli', produce: 'broccoli', leaf: 0x5a8f4a, crop: 0x3e7b3c },
+  // Coffee (playtest, P5): beans for the coffee that makes you quick. Its
+  // blocks sit apart from the first seven's — the ids after those were
+  // already taken — hence its own `base`.
+  { kind: 'coffee', name: 'Coffee', produce: 'coffee_beans', leaf: 0x3f7f45, crop: 0xb8362e, base: 205 },
 ];
 export const CROPS_BY_KIND = new Map(CROPS.map((c) => [c.kind, c]));
 
-/** Block ids: stage s of crop k is CROP_BASE + 4k + s. */
+/**
+ * Block ids: stage s of the k-th crop is CROP_BASE + 4k + s — unless it has
+ * a `base` of its own, when it's base + s.
+ */
 export const CROP_BASE = 119;
-export const cropBlock = (kind, stage = 0) => CROP_BASE + 4 * CROPS.findIndex((c) => c.kind === kind) + stage;
+export const cropBaseOf = (c) => c.base ?? CROP_BASE + 4 * CROPS.indexOf(c);
+export const cropBlock = (kind, stage = 0) => cropBaseOf(CROPS_BY_KIND.get(kind)) + stage;
+/** Every crop block, every stage. */
+export const CROP_IDS = CROPS.flatMap((c) => [0, 1, 2, 3].map((s) => cropBaseOf(c) + s));
+const CROP_AT = new Map(CROPS.flatMap((c) => [0, 1, 2, 3].map((stage) => [cropBaseOf(c) + stage, { kind: c.kind, stage }])));
 /** { kind, stage } for a crop block, or null. */
 export function cropOf(id) {
-  const i = id - CROP_BASE;
-  if (!Number.isInteger(i) || i < 0 || i >= CROPS.length * 4) return null;
-  return { kind: CROPS[i >> 2].kind, stage: i & 3 };
+  return CROP_AT.get(id) ?? null;
 }
 
 // ---- how they look -------------------------------------------------------------
@@ -91,6 +100,14 @@ export function cropBoxes(kind, stage) {
       box(0.44, 0, 0.44, 0.56, 0.42, 0.56, 0xa6c98a),
       box(0.26, 0.36, 0.26, 0.74, 0.62, 0.74, c.crop),
       box(0.34, 0.62, 0.34, 0.66, 0.7, 0.66, c.crop),
+    ];
+    case 'coffee': return [
+      // A little shrub, glossy leaves and red cherries along its stems.
+      box(0.45, 0, 0.45, 0.55, 0.5, 0.55, 0x6b4a32),
+      box(0.18, 0.3, 0.18, 0.82, 0.62, 0.82, c.leaf),
+      box(0.3, 0.62, 0.3, 0.7, 0.78, 0.7, c.leaf),
+      box(0.12, 0.38, 0.44, 0.2, 0.46, 0.52, c.crop), box(0.8, 0.44, 0.3, 0.88, 0.52, 0.38, c.crop),
+      box(0.4, 0.5, 0.8, 0.48, 0.58, 0.88, c.crop), box(0.56, 0.36, 0.12, 0.64, 0.44, 0.2, c.crop),
     ];
     default: return tuft(0.5, 0.5, c.leaf);
   }

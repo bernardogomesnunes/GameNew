@@ -51,13 +51,19 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, bedPart, BED_HEAD, FACING_STEP, isPainting, isSoil } from './config/blocks.js';
+import { SAPLING } from './duilt/Saplings.js';
+import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
+import { SWIFT_SPEED } from './config/upgrades.js';
+import { nextView, VIEW_NAMES } from './config/avatar.js';
+import { AvatarView } from './render/AvatarView.js';
+import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox } from './world/Mobs.js';
-import { landmarksFor } from './world/landmarks.js';
+import { landmarksFor, PLACE_NAMES } from './world/landmarks.js';
 import { LOOT } from './duilt/Loot.js';
 import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './world/Projectiles.js';
 import { ProjectileView } from './render/ProjectileView.js';
@@ -138,6 +144,8 @@ const LURES = new Set(['vegetables', 'seeds', 'fruit', ...CROPS.flatMap((c) => [
 const FARMLAND = 21;
 /** How often planted crops are brought up to the stage their age says. */
 const CROP_TICK_SECONDS = 2;
+/** How near you come to a place, past its edge, to have found it. */
+const FOUND_REACH = 24;
 const TAME_EVERY_MS = 1000; // how often pens take in animals led into them
 // A gate, shut and open: Place on one swings it to the other. See toggleGate.
 const GATE_SHUT = 48, GATE_OPEN = 49;
@@ -153,6 +161,7 @@ export function swingLabel(id) {
   if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
   if (isChest(id)) return 'Open';
   if (isCatapult(id)) return 'Man';
+  if (isPainting(id)) return 'Home';
   if (isTrapdoor(id)) return id >= TRAPDOOR_OPEN ? 'Close' : 'Open';
   const door = doorPart(id);
   return door ? (door.open ? 'Close' : 'Open') : null;
@@ -194,8 +203,8 @@ const SLOW_BREAK_MS = 900;
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', holy_water: 'drinkSelected' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', seeds: 'plantMixed' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', seeds: 'plantMixed' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -331,6 +340,10 @@ export class Game {
     this.ghost = new BuildGhost(this.scene);
     this.settlerView = new SettlerView(this.scene);
     this.mobView = new MobView(this.scene);
+    // You (playtest, P3 and P7): your figure, seen out of first person, and
+    // what's in your hand in first person.
+    this.avatarView = new AvatarView(this.scene);
+    this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
     this.projectileView = new ProjectileView(this.scene);
@@ -418,6 +431,9 @@ export class Game {
     // The land grows when an age is finished, and the wall has to grow with it.
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
     this.bus.on('health:died', ({ cause }) => this.die(cause));
+    this.bus.on('duilt:boostEnded', ({ boost }) => this.ui?.toast({
+      kind: 'xp', title: `Your ${BOOSTS[boost].name.toLowerCase()} has worn off`, body: BOOSTS[boost].says,
+    }));
     this.bus.on('guardian:summoned', ({ guardian }) => this.ui?.toast({
       kind: 'achievement',
       title: `${guardian.name}, ${guardian.spec.about}, has come to you`,
@@ -1060,6 +1076,7 @@ export class Game {
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, spawn ?? this.findSafeSpawn());
     this.player.binds = { ...this.controls.keys };
+    this.player.view = this.controls.view ?? 'first';
     // Face the way the spawn picked: the open direction. Arriving on a good
     // open spot while looking at the one wall behind you is the same bad first
     // impression as arriving inside the hill.
@@ -1147,6 +1164,7 @@ export class Game {
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, data.player);
     this.player.binds = { ...this.controls.keys };
+    this.player.view = this.controls.view ?? 'first';
     this.player.yaw = data.player.yaw || 0;
     this.player.pitch = data.player.pitch || 0;
     if (!this.gamification) this.gamification = new GamificationEngine(this.bus);
@@ -1356,6 +1374,8 @@ export class Game {
       if (/^Digit[1-9]$/.test(e.code)) this.ui.cycleHotbarByKey(Number(e.code.slice(5)));
       // R turns whatever is queued. One key for both, because "turn the thing
       // before you put it down" is one idea however it got queued.
+      // Change view (playtest, P3) — F5 unless rebound, and not a reload.
+      if (e.code === this.controls.keys.view) { e.preventDefault(); this.cycleView(); return; }
       const turnKey = this.controls.keys.turn;
       if (e.code === turnKey && this.pendingRoof) this.turnRoof();
       else if (e.code === turnKey && this.pendingTemplate) {
@@ -1367,6 +1387,23 @@ export class Game {
 
   closeAllPanels() {
     this.ui.closeAllPanels();
+  }
+
+  /** Your eyes → from behind → from in front → your eyes, remembered. */
+  cycleView() {
+    if (!this.player) return;
+    const view = nextView(this.player.view);
+    this.player.view = view;
+    this.applyControls({ view });
+    this.ui?.toast({ kind: 'xp', title: VIEW_NAMES[view] });
+  }
+
+  /** You, and what's in your hand, brought up to date with the frame. */
+  updateYou(dt, playing) {
+    const held = this.selectedItemId ? { itemId: this.selectedItemId } : { blockId: this.selectedBlockId };
+    const third = this.player.view !== 'first';
+    this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third });
+    this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning });
   }
 
   requestPointerLock() {
@@ -1436,6 +1473,8 @@ export class Game {
   }
 
   primaryAction() {
+    this.avatarView?.strike();
+    this.handView?.strike();
     if (this.moving) return void this.cancelMove();
     // Manning a catapult, Break throws.
     if (this.manning) return void this.throwStone();
@@ -1454,6 +1493,8 @@ export class Game {
   }
 
   secondaryAction() {
+    this.avatarView?.strike();
+    this.handView?.strike();
     // Place puts down what you are holding, on a mouse and under a thumb
     // alike. Cancelling is Escape, or the Break button — which says "Cancel"
     // while you are carrying something, so there is nothing to guess.
@@ -1471,6 +1512,8 @@ export class Game {
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
     // And at a chest, Place opens it.
     if (aimed && isChest(aimed.block)) return void this.openChest(aimed);
+    // And at a painting, Place makes it where you wake (playtest, P1).
+    if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
     // And at a catapult, Place takes hold of it.
     if (aimed && isCatapult(aimed.block)) return void this.manCatapult(aimed);
     // A full bucket takes the button too, instead of placing a block.
@@ -2563,14 +2606,29 @@ export class Game {
    * result) — this is only the wiring from "the hotbar slot you have
    * selected" to it, the same job fillBucket/emptyBucket do for the bucket.
    */
-  /** Drinks the holy water you're holding: hearts back at once. */
+  /**
+   * Drinks what you're holding: holy water, hearts back at once; a beer, a
+   * kombucha or a coffee, better at something for three minutes.
+   */
   drinkSelected() {
     if (!this.duilt) return;
     const r = this.duilt.drink(this.selectedItemId);
     if (r.ok) this.sound?.eat();
-    this.ui.toast(r.ok
-      ? { kind: 'challenge', title: 'Blessed', body: `+${r.healed / 2} hearts` }
-      : { kind: 'xp', title: r.reason });
+    this.ui.toast(!r.ok
+      ? { kind: 'xp', title: r.reason }
+      : r.boost
+        ? { kind: 'challenge', title: `${BOOSTS[r.boost].name}: ${BOOSTS[r.boost].says.toLowerCase()}`, body: 'For three minutes' }
+        : { kind: 'challenge', title: 'Blessed', body: `+${r.healed / 2} hearts` });
+  }
+
+  /** Between blows, in ms: a beer makes it shorter. */
+  strikeCooldown() {
+    return STRIKE_COOLDOWN_MS * (this.duilt?.boosted('haste') ? BEER_COOLDOWN : 1);
+  }
+
+  /** How hard a blow lands: the tool's damage (a fist 1), plus kombucha's. */
+  blowDamage(tool) {
+    return (tool?.damage ?? 1) + (this.duilt?.boosted('strength') ? KOMBUCHA_DAMAGE : 0);
   }
 
   eatSelected() {
@@ -2640,12 +2698,12 @@ export class Game {
     const mob = this.mobTarget(hit);
     if (!mob) return false;
     const now = performance.now();
-    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    if (now - (this.lastStrikeAt ?? 0) < this.strikeCooldown()) return true;
     this.lastStrikeAt = now;
     this.digTarget = null;
     const tool = ITEMS_BY_ID.get(this.selectedItemId);
     const { x, z } = this.player.position;
-    const { killed, drops } = this.mobs.hit(mob, tool?.damage ?? 1, x, z);
+    const { killed, drops } = this.mobs.hit(mob, this.blowDamage(tool), x, z);
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
@@ -2685,13 +2743,15 @@ export class Game {
     const p = this.banditTarget(hit);
     if (!p) return false;
     const now = performance.now();
-    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    if (now - (this.lastStrikeAt ?? 0) < this.strikeCooldown()) return true;
     this.lastStrikeAt = now;
     this.digTarget = null;
     const tool = ITEMS_BY_ID.get(this.selectedItemId);
     const { x, z } = this.player.position;
-    const res = this.wanderers.hit(p, tool?.damage ?? 1, x, z);
+    const res = this.wanderers.hit(p, this.blowDamage(tool), x, z);
     if (!res) return false;
+    // An upgraded sword (playtest, P6): stuns, burns or freezes as it lands.
+    if (tool?.element && !res.killed) this.wanderers.afflict(p, tool.element);
     this.sound?.hit?.('wood', { gain: 0.5, pitch: 0.7 });
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
@@ -2702,6 +2762,15 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: `Beat ${p.name}, a bandit`, body: got || undefined });
     }
     return true;
+  }
+
+  /** Whatever a bandit burnt down by a fire sword dropped, into the bag. */
+  collectFallen() {
+    for (const { p, drops } of this.wanderers.fallen.splice(0)) {
+      const gained = this.duilt?.collect(drops) ?? {};
+      const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+      this.ui?.toast({ kind: 'xp', title: `${p.name} burnt down`, body: got || undefined });
+    }
   }
 
   /** The swarm of fireflies under the crosshair, if no block is in front of it. */
@@ -2726,7 +2795,7 @@ export class Game {
     const swarm = this.fireflyTarget(hit);
     if (!swarm) return false;
     const now = performance.now();
-    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    if (now - (this.lastStrikeAt ?? 0) < this.strikeCooldown()) return true;
     this.lastStrikeAt = now;
     this.digTarget = null;
     this.fireflies.catchFrom(swarm);
@@ -3099,12 +3168,13 @@ export class Game {
   /**
    * A chest you found (Phase 7c): the first time it's opened or broken,
    * what's in it is rolled — a bandit's takings at a camp, the hermit's
-   * things at the hut, and anything else is an old chest in the caves.
+   * things at the hut, each place to find its own (playtest, P4), and
+   * anything else is an old chest in the caves.
    * Says so once, and names a ring ore if there's one in it.
    */
   unpackFound(x, y, z) {
     const near = this.world.gen ? landmarksFor(this.world.gen).find((l) => Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1) : null;
-    const kind = near ? (near.kind === 'hermit' ? 'hermit' : 'camp') : 'cave';
+    const kind = near ? (LOOT[near.kind] ? near.kind : 'camp') : 'cave';
     const loot = this.duilt.unpackFound(x, y, z, kind, this.world.gen?.seed ?? 0);
     if (!loot) return null;
     const rare = loot.sunstone ? 'Sunstone' : loot.nightstone ? 'Nightstone' : null;
@@ -3179,7 +3249,7 @@ export class Game {
     const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you', catapult: 'Your own stone came down on you' }[cause] ?? 'You died';
     this.ui?.toast({
       kind: 'xp',
-      title: `${how} — you woke at home`,
+      title: `${how} — you woke ${this.duilt.spawn ? 'by your painting' : 'at home'}`,
       body: left
         ? `What you were carrying is in a chest where you fell, at ${x}, ${z}`
         : 'You had nothing with you to leave behind',
@@ -3196,8 +3266,57 @@ export class Game {
     this.ui?.toast({ kind: 'challenge', title: 'Got everything back', body: 'The chest is gone' });
   }
 
-  /** Where you wake after dying: a safe spot near the middle of your land. */
+  /** Place on a painting: that's where you wake after you fall (playtest, P1). */
+  setSpawn({ x, y, z }) {
+    if (!this.duilt) return;
+    this.duilt.spawn = { x, y, z };
+    this.ui.toast({ kind: 'challenge', title: 'You\'ll wake here', body: 'When you fall, this is where you come to — by your painting' });
+  }
+
+  isSpawnAt({ x, y, z }) {
+    const s = this.duilt?.spawn;
+    return !!s && s.x === x && s.y === y && s.z === z;
+  }
+
+  /**
+   * Where you wake after dying: beside the painting you chose, if it still
+   * hangs (playtest, P1); otherwise a safe spot near the middle of your land.
+   */
   respawnPoint() {
+    const s = this.duilt?.spawn;
+    if (s) {
+      if (isPainting(this.world.getBlock(s.x, s.y, s.z))) {
+        const near = this.standingNear(s.x, s.y, s.z);
+        if (near) return near;
+      } else {
+        this.duilt.spawn = null; // the painting's gone; so is the promise
+      }
+    }
+    return this.homeSpawn();
+  }
+
+  /** A cell to stand in within a few blocks of (x, y, z): solid under it, two clear above. */
+  standingNear(x, y, z) {
+    const w = this.world;
+    for (let r = 0; r <= 3; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dz = -r; dz <= r; dz++) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+          for (let dy = -2; dy <= 1; dy++) {
+            const cx = x + dx, cy = y + dy, cz = z + dz;
+            const under = w.getBlock(cx, cy - 1, cz);
+            if (w.isCollidable(cx, cy - 1, cz) && !isLava(under) && !w.isCollidable(cx, cy, cz) && !w.isCollidable(cx, cy + 1, cz)) {
+              return { x: cx + 0.5, y: cy, z: cz + 0.5 };
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  /** The middle of your land: where you wake with no painting. */
+  homeSpawn() {
     const b = this.duilt?.territory.bounds?.();
     const cx = b ? Math.floor((b.minX + b.maxX + 1) / 2) : Math.floor(this.player.position.x);
     const cz = b ? Math.floor((b.minZ + b.maxZ + 1) / 2) : Math.floor(this.player.position.z);
@@ -3224,7 +3343,7 @@ export class Game {
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
     // shouldn't go on to build against it.
-    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block)) return;
+    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block) || isPainting(hit.block)) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
@@ -3233,6 +3352,7 @@ export class Game {
     }
     const held = this.placedBlock(type);
     const door = doorPart(held);
+    const bed = bedPart(held);
     const crop = cropOf(held);
     const targets = this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
     const changes = [];
@@ -3241,8 +3361,9 @@ export class Game {
       // climbs the mirrored way too.
       const next = mirrored(held, t);
       if (!this.world.inBounds(t.x, t.y, t.z)) continue;
-      // A seed goes in farmland and nowhere else.
+      // A seed goes in farmland and nowhere else; a sapling in the ground.
       if (crop && this.world.getBlock(t.x, t.y - 1, t.z) !== FARMLAND) continue;
+      if (held === SAPLING && !isSoil(this.world.getBlock(t.x, t.y - 1, t.z))) continue;
       if (this.blockOverlapsPlayerAABB(t) && !crop) continue;
       const prev = this.world.getBlock(t.x, t.y, t.z);
       if (prev === next) continue;
@@ -3254,10 +3375,27 @@ export class Game {
         if (above !== AIR && !isFlowing(above)) continue;
         changes.push({ ...up, prev: above, next: doorBlock({ ...doorPart(next), top: true }) });
       }
+      if (bed) {
+        // A bed's head goes in the next cell along, the way it faces.
+        const [sx, sz] = FACING_STEP[bedPart(next).facing];
+        const head = { x: t.x + sx, y: t.y, z: t.z + sz };
+        if (!this.world.inBounds(head.x, head.y, head.z) || this.blockOverlapsPlayerAABB(head)) continue;
+        const there = this.world.getBlock(head.x, head.y, head.z);
+        if (there !== AIR && !isFlowing(there)) continue;
+        changes.push({ ...head, prev: there, next: BED_HEAD + bedPart(next).facing });
+      }
       changes.push({ x: t.x, y: t.y, z: t.z, prev, next });
+    }
+    if (bed && !changes.length) {
+      this.ui.toast({ kind: 'xp', title: 'No room for a bed', body: 'It needs two blocks of clear floor, the way you face' });
+      return;
     }
     if (door && !changes.length) {
       this.ui.toast({ kind: 'xp', title: 'No room for a door', body: 'It needs two blocks of clear space' });
+      return;
+    }
+    if (held === SAPLING && !changes.length) {
+      this.ui.toast({ kind: 'xp', title: 'Saplings go in the ground', body: 'Plant it on grass, dirt or moss' });
       return;
     }
     if (crop && !changes.length) {
@@ -3289,11 +3427,43 @@ export class Game {
   }
 
   /** Brings every planted crop up to the stage its time in the ground says. */
+  /**
+   * Places out in the world, found by walking up to them (playtest, P4):
+   * the first time you come within FOUND_REACH of one, it's told and it goes
+   * on your map.
+   */
+  lookForPlaces(dt) {
+    this.placeClock = (this.placeClock ?? 0) + dt;
+    if (this.placeClock < 1 || !this.duilt || !this.world.gen) return;
+    this.placeClock = 0;
+    const { x, z } = this.player.position;
+    for (const lm of landmarksFor(this.world.gen)) {
+      if (Math.hypot(lm.x - x, lm.z - z) > FOUND_REACH + lm.half) continue;
+      if (!this.duilt.discover(lm)) continue;
+      this.ui?.toast({ kind: 'achievement', title: `You found ${PLACE_NAMES[lm.kind].replace(/^(A|An|The) /, (a) => a.toLowerCase())}`, body: 'It\'s on your map now' });
+    }
+  }
+
   growCrops(dt) {
     this.cropClock = (this.cropClock ?? 0) + dt;
     if (this.cropClock < CROP_TICK_SECONDS || !this.duilt) return;
     this.cropClock = 0;
     if (this.duilt.crops.grow(this.world).length) this.remeshDirty();
+    const grown = this.duilt.saplings.grow(this.world, this.duilt.days);
+    if (grown.length) {
+      this.remeshDirty();
+      const trees = grown.filter((c) => c.prev === SAPLING).length;
+      this.ui?.toast({ kind: 'xp', title: trees > 1 ? `${trees} saplings have grown into trees` : 'A sapling has grown into a tree', body: 'Ten days in the ground' });
+    }
+  }
+
+  /** What a sapling under the crosshair says: how long until it's a tree. */
+  saplingHint(hit) {
+    const s = this.duilt.saplings.get(hit.x, hit.y, hit.z);
+    if (!s) return 'Sapling · wild — break it and plant it again to grow it';
+    if (s.blocked) return 'Sapling · ready, but it needs room to grow';
+    const left = this.duilt.saplings.daysLeft(hit.x, hit.y, hit.z, this.duilt.days);
+    return left > 1 ? `Sapling · a tree in ${left} days` : 'Sapling · a tree by tomorrow';
   }
 
   /**
@@ -3331,6 +3501,27 @@ export class Game {
     return out;
   }
 
+  /**
+   * A bed is one thing in two blocks, the same as a door: whatever takes
+   * one half away takes the other with it (playtest, P1).
+   */
+  withBedHalves(changes) {
+    let out = changes;
+    for (const c of changes) {
+      const part = bedPart(c.prev);
+      if (!part || bedPart(c.next)) continue;
+      const [sx, sz] = FACING_STEP[part.facing];
+      const ox = part.head ? c.x - sx : c.x + sx, oz = part.head ? c.z - sz : c.z + sz;
+      const other = this.world.getBlock(ox, c.y, oz);
+      const op = bedPart(other);
+      if (!op || op.head === part.head || op.facing !== part.facing) continue;
+      if (out.some((o) => o.x === ox && o.y === c.y && o.z === oz)) continue;
+      if (out === changes) out = [...changes];
+      out.push({ x: ox, y: c.y, z: oz, prev: other, next: AIR });
+    }
+    return out;
+  }
+
   blockOverlapsPlayerAABB(t) {
     const p = this.player.position;
     const withinX = Math.abs((t.x + 0.5) - p.x) < 0.8; // block half-extent + player half-width
@@ -3350,7 +3541,7 @@ export class Game {
    * has a tool that takes a lot away again.
    */
   applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
-    changes = this.withUprooted(this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z))));
+    changes = this.withUprooted(this.withBedHalves(this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z)))));
     if (!changes.length) return false;
 
     // Duilt has its own economy: the border says where, the bag says whether.
@@ -3409,6 +3600,9 @@ export class Game {
         const was = cropOf(c.prev), is = cropOf(c.next);
         if (is && is.stage === 0 && !(was && was.kind === is.kind)) this.duilt.crops.plant(c.x, c.y, c.z, is.kind);
         else if (was && !is) this.duilt.crops.remove(c.x, c.y, c.z);
+        // A sapling counts its ten days from the day it went in.
+        if (c.next === SAPLING && c.prev !== SAPLING) this.duilt.saplings.plant(c.x, c.y, c.z, this.duilt.days);
+        else if (c.prev === SAPLING && c.next !== SAPLING) this.duilt.saplings.remove(c.x, c.y, c.z);
       }
     }
     // One sound for the edit, however many blocks it was: what it was made of.
@@ -3708,7 +3902,10 @@ export class Game {
         this.feelHurt(dt);
         // The White Ring (Phase 7c): faster on your feet, and a higher jump.
         const white = this.duilt.ringWorn() === 'white';
-        this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed() * (white ? WHITE_RING_SPEED : 1);
+        this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed() * (white ? WHITE_RING_SPEED : 1)
+          * (this.duilt.boosted('speed') ? COFFEE_SPEED : 1) * (this.duilt.wearing('swift') ? SWIFT_SPEED : 1);
+        this.dayCycle.nightSight = this.duilt.wearing('night');
+        this.ui?.duiltUI?.renderBoosts();
         this.player.jumpScale = white ? WHITE_RING_JUMP : 1;
       }
       this.updateHover();
@@ -3717,11 +3914,13 @@ export class Game {
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
+      this.collectFallen();
       this.tickCatapult(dt);
       this.fireflies.tick(dt, this.player.position, 1 - daylightAt(this.dayCycle.time).day);
       this.tickGuardian(dt);
       this.runWater(dt);
       this.growCrops(dt);
+      this.lookForPlaces(dt);
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
       this.gamification.tick(performance.now());
@@ -3739,11 +3938,17 @@ export class Game {
     this.updateFarTerrain();
     this.updateClouds(dt);
     // The clock only runs while you're playing; a menu is a pause.
+    const clockWas = this.dayCycle.time;
     if (playing) this.dayCycle.advance(dt);
-    if (this.duilt) this.duilt.dayTime = this.dayCycle.time;
+    if (this.duilt) {
+      this.duilt.dayTime = this.dayCycle.time;
+      // The world's own count of days, for saplings to grow by.
+      this.duilt.days += (this.dayCycle.time - clockWas + 1) % 1;
+    }
     this.dayCycle.apply(this.camera, this.horizon);
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
+    if (this.player) this.updateYou(dt, playing);
     this.wanderView.update(this.wanderers?.list ?? []);
     this.projectileView.update(this.projectiles?.list ?? []);
     this.fireflyView.update(this.fireflies);
@@ -3770,6 +3975,7 @@ export class Game {
     this.controls = { ...this.controls, ...next };
     saveControls(this.controls);
     if (this.player) this.player.binds = { ...this.controls.keys };
+    if (this.player && next.view) this.player.view = next.view;
     this.camera.fov = this.controls.fov;
     this.camera.updateProjectionMatrix();
     this.sound.setVolume(this.controls.volume);
@@ -3976,9 +4182,11 @@ export class Game {
     const chest = hit && isChest(hit.block);
     const catapult = hit && isCatapult(hit.block);
     const trapdoor = hit && isTrapdoor(hit.block);
+    const painting = hit && isPainting(hit.block);
+    const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door || chest || catapult || trapdoor) && swingLabel(hit.block);
+    const swing = (gate || door || chest || catapult || trapdoor || painting) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     this.ui?.setBuildingHint(gate
       ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
@@ -3990,12 +4198,16 @@ export class Game {
         ? `Catapult — ${how}`
       : trapdoor
         ? `Trapdoor · ${hit.block >= TRAPDOOR_OPEN ? 'open' : 'shut'} — ${how}`
+      : painting
+        ? (this.isSpawnAt(hit) ? 'Painting · you wake here after a fall' : `Painting — ${how} to wake here after a fall`)
+      : sapling && !onBuilding
+        ? sapling
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')
       : waiting
         ? `${STRUCTURES_BY_ID.get(waiting.type)?.name ?? 'Building'} · not working yet — ${waiting.reason}`
-        : null, { manage: waiting ? 'see why' : (!swing || !!onBuilding) });
+        : null, { manage: waiting ? 'see why' : ((!swing && !sapling) || !!onBuilding) });
     // The single block under the crosshair, except while a roof is queued —
     // there the whole building is highlighted and one more box on top of it is
     // just noise.

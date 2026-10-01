@@ -411,6 +411,57 @@ function oreBoxes(crystal) {
 PROP_SHAPES.sunstone_ore = oreBoxes(0xffe08a);
 PROP_SHAPES.nightstone_ore = oreBoxes(0xb48cff);
 
+// A bed (playtest, P1), facing 0: the head towards -z. The foot half has
+// the footboard and the blanket's end; the head half the headboard and the
+// pillow. The blanket is the block's own colour.
+const BED_WOOD = 0x8a6440, SHEET = 0xf2ede2, PILLOW = 0xfbfaf6;
+PROP_SHAPES.bed_foot = [
+  { minX: 0.04, maxX: 0.96, minY: 0.12, maxY: 0.3, minZ: 0, maxZ: 0.96, color: BED_WOOD },
+  { minX: 0.04, maxX: 0.14, minY: 0, maxY: 0.12, minZ: 0.86, maxZ: 0.96, color: BED_WOOD },
+  { minX: 0.86, maxX: 0.96, minY: 0, maxY: 0.12, minZ: 0.86, maxZ: 0.96, color: BED_WOOD },
+  { minX: 0.04, maxX: 0.96, minY: 0.12, maxY: 0.52, minZ: 0.88, maxZ: 0.98, color: BED_WOOD },
+  { minX: 0.07, maxX: 0.93, minY: 0.3, maxY: 0.48, minZ: 0, maxZ: 0.88, color: SHEET },
+  { minX: 0.05, maxX: 0.95, minY: 0.48, maxY: 0.54, minZ: 0, maxZ: 0.86 },
+];
+PROP_SHAPES.bed_head = [
+  { minX: 0.04, maxX: 0.96, minY: 0.12, maxY: 0.3, minZ: 0.04, maxZ: 1, color: BED_WOOD },
+  { minX: 0.04, maxX: 0.14, minY: 0, maxY: 0.12, minZ: 0.04, maxZ: 0.14, color: BED_WOOD },
+  { minX: 0.86, maxX: 0.96, minY: 0, maxY: 0.12, minZ: 0.04, maxZ: 0.14, color: BED_WOOD },
+  { minX: 0.04, maxX: 0.96, minY: 0.12, maxY: 0.86, minZ: 0.02, maxZ: 0.13, color: BED_WOOD },
+  { minX: 0.07, maxX: 0.93, minY: 0.3, maxY: 0.48, minZ: 0.13, maxZ: 1, color: SHEET },
+  { minX: 0.18, maxX: 0.82, minY: 0.48, maxY: 0.62, minZ: 0.18, maxZ: 0.46, color: PILLOW },
+  { minX: 0.05, maxX: 0.95, minY: 0.48, maxY: 0.54, minZ: 0.56, maxZ: 1 },
+];
+
+// A painting (playtest, P1), facing 0: flat against the wall on its -z
+// side. A gilt-and-wood frame round a little landscape — sky, sun, hills
+// and the sea.
+PROP_SHAPES.painting = [
+  { minX: 0.08, maxX: 0.92, minY: 0.14, maxY: 0.2, minZ: 0, maxZ: 0.07, color: 0x8a6440 },
+  { minX: 0.08, maxX: 0.92, minY: 0.8, maxY: 0.86, minZ: 0, maxZ: 0.07, color: 0x8a6440 },
+  { minX: 0.08, maxX: 0.14, minY: 0.2, maxY: 0.8, minZ: 0, maxZ: 0.07, color: 0x8a6440 },
+  { minX: 0.86, maxX: 0.92, minY: 0.2, maxY: 0.8, minZ: 0, maxZ: 0.07, color: 0x8a6440 },
+  { minX: 0.14, maxX: 0.86, minY: 0.2, maxY: 0.8, minZ: 0, maxZ: 0.04, color: 0x9ec9e8 },   // sky
+  { minX: 0.14, maxX: 0.86, minY: 0.2, maxY: 0.34, minZ: 0.04, maxZ: 0.045, color: 0x5f8fc4 }, // sea
+  { minX: 0.14, maxX: 0.6, minY: 0.3, maxY: 0.48, minZ: 0.045, maxZ: 0.05, color: 0x6fa857 },  // hills
+  { minX: 0.4, maxX: 0.86, minY: 0.3, maxY: 0.42, minZ: 0.05, maxZ: 0.055, color: 0x82b86a },
+  { minX: 0.64, maxX: 0.74, minY: 0.6, maxY: 0.7, minZ: 0.045, maxZ: 0.05, color: 0xffd76a },  // sun
+];
+
+// A sapling (playtest, P8): a thin stem with leaves coming off it in tiers,
+// a small tuft at the top, in a little ring of turned earth.
+const STEM = 0x7a5a3a, LEAF = 0x7fbf68, LEAF_DARK = 0x5fa052, EARTH = 0x7a5c42;
+PROP_SHAPES.sapling = [
+  { minX: 0.34, maxX: 0.66, minY: 0, maxY: 0.04, minZ: 0.34, maxZ: 0.66, color: EARTH },
+  { minX: 0.46, maxX: 0.54, minY: 0, maxY: 0.78, minZ: 0.46, maxZ: 0.54, color: STEM },
+  { minX: 0.2, maxX: 0.46, minY: 0.26, maxY: 0.32, minZ: 0.42, maxZ: 0.58, color: LEAF_DARK },
+  { minX: 0.54, maxX: 0.8, minY: 0.36, maxY: 0.42, minZ: 0.42, maxZ: 0.58, color: LEAF_DARK },
+  { minX: 0.42, maxX: 0.58, minY: 0.48, maxY: 0.54, minZ: 0.2, maxZ: 0.46, color: LEAF },
+  { minX: 0.42, maxX: 0.58, minY: 0.56, maxY: 0.62, minZ: 0.54, maxZ: 0.8, color: LEAF },
+  { minX: 0.32, maxX: 0.68, minY: 0.72, maxY: 0.9, minZ: 0.32, maxZ: 0.68, color: LEAF },
+  { minX: 0.4, maxX: 0.6, minY: 0.9, maxY: 0.98, minZ: 0.4, maxZ: 0.6, color: LEAF },
+];
+
 /** The boxes for a shape, or the slab's if a new shape id has none registered yet. */
 export function boxesFor(shape) {
   return PROP_SHAPES[shape] ?? PROP_SHAPES.slab;

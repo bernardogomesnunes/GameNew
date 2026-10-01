@@ -125,7 +125,7 @@ ok('what is planted is tracked as it is placed', /this\.duilt\.crops\.plant\(c\.
 ok('and forgotten when broken', /this\.duilt\.crops\.remove\(c\.x, c\.y, c\.z\)/.test(game));
 ok('the game grows its crops as it runs', /this\.growCrops\(dt\)/.test(game) && /this\.duilt\.crops\.grow\(this\.world\)/.test(game));
 ok('mixed seeds come up as something', /seeds: 'plantMixed'/.test(game));
-ok('taking the soil away takes the crop with it', /withUprooted\(this\.withDoorHalves/.test(game));
+ok('taking the soil away takes the crop with it', /withUprooted\(this\.with(Bed|Door)Halves/.test(game));
 ok('animals follow you holding any of it', CROPS.every((c) => game.includes('c.produce, `seeds_${c.kind}`')));
 
 // --- the icons -------------------------------------------------------------------

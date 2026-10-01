@@ -1,4 +1,5 @@
 import { Crops, harvestOf, cropProduce } from './Crops.js';
+import { Saplings } from './Saplings.js';
 import { penProduce, herdToJSON } from './Ranch.js';
 import { Inventory } from '../items/Inventory.js';
 import { Territory } from '../world/Territory.js';
@@ -15,6 +16,7 @@ import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, 
 import { AIR } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
+import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
 
@@ -40,6 +42,11 @@ import { ageOf, FINAL_AGE } from '../config/ages.js';
 export const CHEST_SLOTS = 27;
 const chestKey = (x, y, z) => `${x},${y},${z}`;
 
+/** The leaves of every kind of tree. */
+const LEAF_BLOCKS = new Set([5, 42, 44]);
+/** What a broken leaf might drop besides itself, and how often. */
+export const LEAF_DROPS = [['sapling', 0.1], ['fruit', 0.06]];
+
 const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds: 6, seeds_carrot: 4, seeds_potato: 4 };
 
 export class DuiltGame {
@@ -54,6 +61,13 @@ export class DuiltGame {
     this.waiting = [];
     // What's planted where, and when — see duilt/Crops.js.
     this.crops = new Crops();
+    // Saplings, and the world's own count of days for them to grow by: it
+    // only runs while you play (Game adds each day as the clock turns).
+    this.saplings = new Saplings();
+    this.days = 0;
+    // What a broken leaf drops besides itself: Math.random, unless a test
+    // wants it to be sure.
+    this.rand = Math.random;
     this.inventory = new Inventory({ bus, endless: sandbox });
     this.territory = new Territory({ world, scene, bus, age, sandbox });
     this.structures = new StructureRegistry({ world, bus, inventory: this.inventory });
@@ -69,6 +83,12 @@ export class DuiltGame {
     this.ring = null;
     // What your Sanctuary called to you, once it's raised (Phase 7d).
     this.guardian = null;
+    // The painting you wake by after a fall, if you chose one (playtest, P1).
+    this.spawn = null;
+    // Drinks going (playtest, P5): { haste | strength | speed: seconds left }.
+    this.boosts = {};
+    // Places you've found out in the world (playtest, P4), as "kind@x,z".
+    this.found = new Set();
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you` : null),
@@ -164,6 +184,15 @@ export class DuiltGame {
           if (left > 0) this.bus?.emit('duilt:bagfull', { itemId: id, lost: left });
         }
         continue;
+      }
+      // Leaves, now and then, drop a sapling or a fruit as well as
+      // themselves — the only way to new saplings out in the wild, now none
+      // grow there by themselves (playtest, P8).
+      if (LEAF_BLOCKS.has(c.prev)) {
+        for (const [id, chance] of LEAF_DROPS) {
+          if (this.rand() >= chance) continue;
+          if (this.inventory.add(id, 1) === 0) gained[id] = (gained[id] ?? 0) + 1;
+        }
       }
       const drop = this.yieldFor(c.prev);
       if (!drop) continue;
@@ -531,6 +560,15 @@ export class DuiltGame {
       this.health.tick(dtSeconds, { hungerRatio: this.hunger.ratio, resting });
     }
 
+    // Drinks wear off.
+    for (const name of Object.keys(this.boosts)) {
+      this.boosts[name] -= dtSeconds;
+      if (this.boosts[name] <= 0) {
+        delete this.boosts[name];
+        this.bus?.emit('duilt:boostEnded', { boost: name });
+      }
+    }
+
     // Production is checked on a slow cadence; it's wall-clock based, so the
     // interval only decides how promptly you're told, not how much you get.
     this.settlers.tick(dtSeconds);
@@ -712,14 +750,50 @@ export class DuiltGame {
     return this.structures.storeFor(target);
   }
 
-  /** Drinks holy water (or anything that `heals`): hearts back, now. */
+  /**
+   * Drinks holy water (anything that `heals`: hearts back, now), or a beer,
+   * a kombucha or a coffee (anything with a `boost`: better at something
+   * for a few minutes — drinking another tops its time up, not doubles it).
+   */
   drink(itemId) {
     const spec = ITEMS_BY_ID.get(itemId);
-    if (!spec?.heals) return { ok: false, reason: `You can't drink ${spec?.name?.toLowerCase() ?? 'that'}.` };
+    if (!spec?.heals && !spec?.boost) return { ok: false, reason: `You can't drink ${spec?.name?.toLowerCase() ?? 'that'}.` };
     if (!this.inventory.has(itemId, 1)) return { ok: false, reason: 'You have none of that.' };
+    if (spec.boost) {
+      this.inventory.remove(itemId, 1);
+      this.boosts[spec.boost] = BOOST_SECONDS;
+      return { ok: true, boost: spec.boost, seconds: BOOST_SECONDS };
+    }
     if (this.health.value >= 20) return { ok: false, reason: 'You are not hurt.' };
     this.inventory.remove(itemId, 1);
     return { ok: true, healed: this.health.heal(spec.heals) };
+  }
+
+  /** Marks a place as found. Returns whether it was new. */
+  discover(lm) {
+    const key = `${lm.kind}@${lm.x},${lm.z}`;
+    if (this.found.has(key)) return false;
+    this.found.add(key);
+    return true;
+  }
+
+  /** The places you've found, as { kind, x, z } — for the map. */
+  foundPlaces() {
+    return [...this.found].map((k) => {
+      const [kind, at] = k.split('@');
+      const [x, z] = at.split(',').map(Number);
+      return { kind, x, z };
+    });
+  }
+
+  /** Whether something you're wearing carries upgrade `key` (playtest, P6). */
+  wearing(key) {
+    return Object.values(this.worn).some((w) => w && ITEMS_BY_ID.get(w.id)?.upgrade === key);
+  }
+
+  /** Whether a drink's boost is going: 'haste', 'strength' or 'speed'. */
+  boosted(name) {
+    return (this.boosts[name] ?? 0) > 0;
   }
 
   /** The ring you're wearing, if any: 'white' or 'black' — its effects only count while it's on. */
@@ -745,6 +819,9 @@ export class DuiltGame {
       worn: this.worn,
       ring: this.ring,
       guardian: this.guardian?.toJSON() ?? null,
+      spawn: this.spawn,
+      boosts: { ...this.boosts },
+      found: [...this.found],
       chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, found: c.found, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
@@ -754,6 +831,8 @@ export class DuiltGame {
       dayTime: this.dayTime,
       waiting: this.waiting,
       crops: this.crops.toJSON(),
+      saplings: this.saplings.toJSON(),
+      days: this.days,
       savedAt: Date.now(),
     };
   }
@@ -766,6 +845,11 @@ export class DuiltGame {
     this.hunger.loadJSON(data.hunger);
     this.health.loadJSON(data.health);
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
+    const sp = data.spawn;
+    this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
+    this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);
+    this.boosts = {};
+    for (const [name, left] of Object.entries(data.boosts ?? {})) if (BOOSTS[name] && Number.isFinite(left) && left > 0) this.boosts[name] = left;
     const gd = data.guardian;
     this.guardian = gd && (gd.ring === 'white' || gd.ring === 'black') && gd.home
       ? new Guardian({ world: this.world, ring: gd.ring, home: gd.home, state: gd })
@@ -789,6 +873,8 @@ export class DuiltGame {
     this.dayTime = typeof data.dayTime === 'number' ? data.dayTime : null;
     this.waiting = Array.isArray(data.waiting) ? data.waiting.filter((w) => w?.region && w.type) : [];
     this.crops.loadJSON(data.crops);
+    this.saplings.loadJSON(data.saplings);
+    this.days = Number.isFinite(data.days) ? data.days : 0;
     // Pay out everything earned while the tab was shut.
     this.lastCollect = Date.now();
     return this.structures.collect({

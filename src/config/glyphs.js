@@ -60,6 +60,9 @@ export const GLYPHS = {
   // what says pickaxe rather than axe.
   pickaxe: 'M12 20 12.5 12.5M8 8c1.5-3 6-3 7.5 0M8 8 5 11.5M15.5 8 18.5 11.5',
   // Straight shaft into a blade that tapers to a rounded point.
+  // Homes (playtest, P1).
+  bed: 'M3.5 18.5v-7h17v7M3.5 15.5h17M3.5 11.5V7.5M6 11.5c0-1.6 1.3-2.5 3-2.5h2v2.5M20.5 11.5h-9',
+  painting: 'M4.5 5.5h15v13h-15ZM6.5 15.5l4-4.5 3 3 2-2 2.5 3.5M15 9a1.2 1.2 0 1 0 .01 0',
   // Phase 7c: the Temple.
   devotion: 'M12 3.5c2.5 3.2 4.5 5.6 4.5 9a4.5 4.5 0 0 1-9 0c0-3.4 2-5.8 4.5-9ZM12 14a1.6 1.6 0 1 0 .01 0M12 18.5V21',
   flask: 'M10 3.5h4M10.5 3.5V8L6.5 15.5A3 3 0 0 0 9.2 20h5.6a3 3 0 0 0 2.7-4.5L13.5 8V3.5M8 14h8',
@@ -67,6 +70,7 @@ export const GLYPHS = {
   helm: 'M6 15.5V12a6 6 0 0 1 12 0v3.5ZM6 15.5h12M9 12.5h6M12 6V4',
   cuirass: 'M8 5h8l3 3-2 2v9H7v-9L5 8ZM9.5 5c0 1.5 1 2.5 2.5 2.5S14.5 6.5 14.5 5M7 12h10',
   greaves: 'M6 5h12v3H6ZM7 8h4v11H7ZM13 8h4v11h-4ZM7 13h4M13 13h4',
+  boots: 'M6 5h5v9h4l4 3v2H6ZM6 17h13M8 5v9',
   ring: 'M12 9a5.5 5.5 0 1 0 .01 0M12 9 10 6h4ZM10 6l2-2 2 2',
   // Phase 7a.
   firefly: 'M12 9.5a2 2.6 0 1 0 .01 0M12 15v3.5M9 9.5 5.5 7M15 9.5 18.5 7M9.5 12.5 6 14M14.5 12.5 18 14M5 19h.01M19 4h.01M4 11h.01',
@@ -79,6 +83,8 @@ export const GLYPHS = {
   banner: 'M6 3.5v17M5 4h14M7 4.5h10v11l-2.5-2-2.5 2-2.5-2L7 15.5ZM12 8a1.6 1.6 0 1 0 .01 0',
   trim: 'M4 5h16v14H4ZM4 9h16M4 15h16',
   timber: 'M4 4h16v16H4ZM4 4l16 16M12 4v16',
+  calcada: 'M4 4h16v16H4ZM4 9h16M4 14h16M9 4v5M15 4v5M7 9v5M12 9v5M17 9v5M9 14v6M15 14v6',
+  calcada_wave: 'M4 4h16v16H4ZM4 12c3-4 5-4 8 0s5 4 8 0M4 16c3-4 5-4 8 0s5 4 8 0',
   catapult: 'M3.5 16.5h17M7 19a2 2 0 1 0 .01 0M17 19a2 2 0 1 0 .01 0M12 16.5l5-10M14.5 6.5h5M16.5 4.5a1.6 1.6 0 1 0 .01 0M8.5 16.5v-6h7',
   sword: 'M19 5 10 14M19 5h-3.5M19 5v3.5M7.5 11.5l5 5M10 14l-4.5 4.5',
   shovel: 'M12 4v10M8.5 14h7L15 18.5a3 3 0 0 1-6 0Z',

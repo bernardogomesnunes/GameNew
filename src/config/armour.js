@@ -1,7 +1,8 @@
 /**
  * Armour and the ring (Phase 7b, docs/plan-phase7-lore.md).
  *
- * Four things you wear, apart from the bag: head, body, legs, and one ring.
+ * Five things you wear, apart from the bag: head, body, legs, feet (the
+ * boots came with the playtest list, P6), and one ring.
  * Armour takes some of every blow — a bandit's, a stone off a catapult —
  * though not a fall or lava, which no helmet helps with. Each point of it
  * is ARMOUR_PER_POINT off the hit, and each blow it takes wears it a
@@ -16,8 +17,8 @@
  * The ring slot is for the ring you forge at the top of the Temple (7c).
  */
 
-export const WEAR_SLOTS = ['head', 'body', 'legs', 'ring'];
-export const SLOT_NAMES = { head: 'Head', body: 'Body', legs: 'Legs', ring: 'Ring' };
+export const WEAR_SLOTS = ['head', 'body', 'legs', 'feet', 'ring'];
+export const SLOT_NAMES = { head: 'Head', body: 'Body', legs: 'Legs', feet: 'Feet', ring: 'Ring' };
 
 /** How much each point of armour takes off a blow — nine points, a full metal set, is just over a third. */
 export const ARMOUR_PER_POINT = 0.04;
@@ -33,6 +34,7 @@ export const ARMOUR_SETS = [
       head: { name: 'Leather Cap', points: 1, inputs: { hide: 3 } },
       body: { name: 'Leather Tunic', points: 2, inputs: { hide: 5 } },
       legs: { name: 'Leather Leggings', points: 1, inputs: { hide: 4 } },
+      feet: { name: 'Leather Boots', points: 1, inputs: { hide: 2 } },
     },
     madeBy: 'Stitched from hides',
   },
@@ -43,6 +45,7 @@ export const ARMOUR_SETS = [
       head: { name: 'Sky Helm', points: 2, inputs: { iron_ingot: 2, gold: 1 } },
       body: { name: 'Sky Cuirass', points: 4, inputs: { iron_ingot: 4, gold: 2 } },
       legs: { name: 'Sky Greaves', points: 3, inputs: { iron_ingot: 3, gold: 1 } },
+      feet: { name: 'Sky Boots', points: 1, inputs: { iron_ingot: 2, gold: 1 } },
     },
     madeBy: 'White steel and gold, as the Sky Kingdom wears it',
     disguise: 'sky',
@@ -54,6 +57,7 @@ export const ARMOUR_SETS = [
       head: { name: 'Stone Helm', points: 2, inputs: { iron_ingot: 2, dark_stone: 1 } },
       body: { name: 'Stone Cuirass', points: 4, inputs: { iron_ingot: 4, dark_stone: 2 } },
       legs: { name: 'Stone Greaves', points: 3, inputs: { iron_ingot: 3, dark_stone: 1 } },
+      feet: { name: 'Stone Boots', points: 1, inputs: { iron_ingot: 2, dark_stone: 1 } },
     },
     madeBy: 'Blackened iron, as the Stone Kingdom wears it',
   },
@@ -61,7 +65,7 @@ export const ARMOUR_SETS = [
 
 /** Every piece, flat: { id, set, slot, name, points, inputs, durability, ... }. */
 export const ARMOUR_PIECES = ARMOUR_SETS.flatMap((set) =>
-  ['head', 'body', 'legs'].map((slot) => ({
+  ['head', 'body', 'legs', 'feet'].map((slot) => ({
     id: `armour_${set.key}_${slot}`, set: set.key, slot, age: set.age, durability: set.durability,
     main: set.main, trim: set.trim, madeBy: set.madeBy, disguise: set.disguise, ...set.pieces[slot],
   })));

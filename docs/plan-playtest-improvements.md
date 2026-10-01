@@ -14,6 +14,8 @@ What's already there to build on:
 ## P1. Homes worth living in
 *"Houses should have windows and furniture. We should have a bed too. Windows and bed should be an item of course. We should have a painting in each house and as an item, that can set the spawn point for when we die."*
 
+**Done.** The bed and painting are made by hand at Age 1 (bed: 4 planks + 3 leaves; painting: 2 planks, dirt, leaves). Tap Place on a painting to wake there. The cabin gets a bed and a painting; the townhouse gets six framed windows, two beds, a table, chairs, rugs, a lantern and a painting. House rules are unchanged.
+
 - **Bed:** a new block, two cells long, placed the way you face, with a wooden frame, mattress and pillow. Made at the bench from planks and wool.
   - Lying in it at night could skip to morning. That's an idea, not something the user asked for.
 - **Painting:** a new block hung flat on a wall, with a few framed scenes that cycle as you place it. Made at the bench.
@@ -26,6 +28,16 @@ What's already there to build on:
 ## P2. Forests that read as forests
 *"When looking at a forest, I think the leaves lack shadows and light because they look like a mesh of green. Maybe some different tones of green and more contrast between surfaces."*
 
+**Done.**
+- **Why it looked flat:** leaf faces were greedy-merged, so a whole canopy side was one quad in one colour.
+- **The fix:** a leaf face open to the air is now drawn on its own, with:
+  - its own tone, 0.8–1.2 brightness;
+  - a hue lean shared by each tree, plus a little per leaf;
+  - undersides at 0.42 and sides at 0.78;
+  - darker the more neighbours it has, and darker again with canopy two above it.
+- **Inside the canopy:** faces between leaves still merge, shaded at 0.62, so a dense forest chunk costs about 10% more vertices, not double.
+- **Coverage:** applies to white and dark leaves too.
+
 - **Colour per block:** each leaf block varies in tone (lighter, darker, warmer, cooler) from a hash of its position, so a canopy is no longer one flat green.
 - **Light and shade:** stronger difference between lit and shaded faces on leaves.
   - Undersides and faces that point down are noticeably darker.
@@ -35,6 +47,19 @@ What's already there to build on:
 
 ## P3. Better mobs, and you
 *"All mobs need remodelling for more detailed visuals. And user needs an avatar that can be seen in 3rd person, which can be changed in settings, especially for mobile; in desktop there should be a key."*
+
+**Done.**
+- **Animals:** every species has eyes and its own details on top of the walking legs it already had:
+  - antlers on the deer, long ears on the rabbit, tusks on the boar;
+  - horns and a beard on the goat, horns and an udder on the cow, a snout on the pig;
+  - a beak, comb, wattle and tail on the chicken; a tail on each.
+- **People:** settlers, bandits, the hermit, explorers and messengers have legs, arms that swing as they walk, a face in a skin tone and hair of their own.
+- **Your avatar:**
+  - face, hair and clothes are chosen in Settings;
+  - your armour shows on it;
+  - its limbs swing as you walk, and it holds what you hold.
+- **Views:** three in turn (your eyes, behind, in front), via F5 (rebindable), a View button in the More sheet on phones, or Settings. The choice is remembered. The camera pulls in short of walls, and you always aim from your eyes.
+- **In your hand (P7):** first person draws what you hold in 3D (swords, tools, bucket, food, blocks), bobbing as you walk and swinging when you strike or place.
 
 - **Mob models:** more detailed models for every animal (legs that walk, heads, tails, ears) and for people (settlers, bandits, wanderers), with arms and legs that swing as they walk.
 - **Your avatar:**
@@ -48,6 +73,8 @@ What's already there to build on:
 
 ## P4. Places to find: ruins, temples, mines, monuments
 *"We need structures. Random temples and ruins. Abandoned mines. And monuments. And all with a chest with goodies: armour, weapons, food, and a super rare ring-crafting item."*
+
+**Done.** Each world gets four ruins, two forgotten temples, two abandoned mines and two monuments, placed from the seed 300–950 blocks out. None overlap, and no wild tree grows over any of them, the hut and camps included. Each has a chest with its own loot table: armour, swords, food, the new drinks, and a ring ore 5–12% of the time. Messengers bring news of each with a direction. Coming within about 24 blocks of one finds it: a toast, and a coloured diamond on the map. Nobody lives in them.
 
 - **New landmarks**, scattered from the seed like the hermit's hut and the camps:
   - **Ruins:** broken walls and pillars, half buried, with moss.
@@ -63,6 +90,8 @@ What's already there to build on:
 ## P5. Drinks that make you better for a while
 *"Stats improvement items, found here too and craftable: beer, kombucha and coffee. Beer gives you energy and lets you throw more hits per second; kombucha gives you 2 more points when hitting; coffee gives you speed."*
 
+**Done.** All three are brewed at the workshop (Age 3) and last 3 minutes. Beer (2 potatoes + mixed seeds) cuts the wait between blows to 55%. Kombucha (2 fruit + leaves) adds +2 to every blow. Coffee (3 coffee beans) makes you 1.3× faster. Coffee is a new crop: its seeds come up from mixed seeds and are in the hermit's chest. Drinks are also in chests: beer in camps, coffee in caves, kombucha with the hermit. A chip by the hearts counts each one down, and a toast says when it wears off. There's no separate brewery building.
+
 - **The drinks:** each is drunk like holy water and lasts a few minutes. While it lasts, a small icon by the hearts counts down.
   - **Beer:** strikes come faster, for more hits a second (shorter strike cooldown).
   - **Kombucha:** +2 damage on every hit.
@@ -73,11 +102,25 @@ What's already there to build on:
   - also found in chests (P4).
 - **Stacking:** one of each can be active at a time, so all three together is the strongest combination.
 
-## P6. Enchanted armour and weapons
+## P6. Armour and weapon upgrades
 *"Special effects on armour that do simple stuff: speed on boots, extra defence on chest plate and pants, and night vision on the helmet; and special attacks on the sword, like thunder, fire and ice: paralysing, burning and freezing."*
 
+**Done.**
+- **Boots:** a feet slot, and boots in all three sets.
+- **Laying an upgrade:** done at the Temple, chapel tier or higher, from the piece itself, devotion and one ingredient that suits it.
+  - Swift boots: coffee beans, 1.2× speed.
+  - Warded cuirass and greaves: iron, +2 armour each.
+  - Night Sight helm: fireflies; the light never drops below about half of daylight.
+  - Thunder sword: copper. It stuns for 2 s, so the bandit can't move or strike.
+  - Fire sword: lanterns. It burns for 4 s at 1 a second, and a bandit burnt down still leaves its drops.
+  - Ice sword: glass. It freezes for 4 s; everything the bandit does runs at 30%.
+  - Swords that take an element: stone and iron.
+- **Visuals:** upgraded items glint in their colour in the bag, and bandits flash frost, embers or sparks.
+- **Swords:** now 3D models.
+- **Loot:** a few upgraded pieces are in the forgotten temple, monument and mine chests.
+
 - **A boots slot:** a fourth armour slot for feet, with boots in each set.
-- **Enchantments**, put on at the Temple (devotion plus an ingredient) or found on chest loot:
+- **Upgrades**, put on at the Temple (devotion plus an ingredient) or found on chest loot:
   - **Boots of Swiftness:** faster movement.
   - **Warded chest plate and leggings:** extra armour points.
   - **Helm of Night Sight:** nights and caves look lit, so you can see in the dark.
@@ -87,15 +130,58 @@ What's already there to build on:
   - **Ice:** freezes it, which slows it a lot for a few seconds.
 - **Visuals:** a coloured shimmer on the item icon, and a visible effect on the target (sparks, flames, frost).
 
+## P7. Held items, in 3D, in your hands
+*"Weapons need 3D versions of them and they need to be shown on the UI when the avatar is moving, in their hands, plus fruit, buckets and all holding items."* Goes with P3: *"we need an avatar and third person view."*
+
+- **In first person:** whatever is selected is drawn in your hand in the bottom-right of the screen, as a 3D model. That covers swords, tools, the bucket, fruit and food, blocks, and anything else you hold.
+  - It sways as you walk, and swings when you strike or place.
+- **In third person:** the same model sits in your avatar's hand.
+- **The models:** built from the same box models the bag icons use where there's one (food, armour, rings, flasks), and new ones for swords, tools and the bucket.
+
+## P8. Saplings that grow, and woods that seed themselves
+*"Sapling should be a 3D model, and should grow into a tree in 10 game days. Let's remove the sapling from the world generation and it needs to be planted. Leaves should drop saplings from time to time, as fruit."*
+
+**Done.** Saplings only go in the ground (grass, dirt or moss). Each one counts game days from when it was planted; the world keeps its own day count, which only runs while you play. After 10 days it grows into the wild tree of the land it stands in: same shape code, same size spread, never a giant. With no room (a roof, a wall in its crown) it waits, and says so when you point at it. Pointing at one tells you how many days are left. Broken leaves drop a sapling 1 time in 10 and a fruit 1 in 16. The riverbank scrub is low leaf bushes now.
+
+- **The sapling** is a small 3D plant (a thin stem and a few leaves), not a cube.
+- **It grows into a tree after 10 game days**, using the same tree shapes the world generates, sized as world trees are.
+- **None in the generated world** any more: a sapling is only ever one somebody planted.
+- **Leaves sometimes drop a sapling when broken**, the way they already sometimes drop fruit.
+
+## P9. Roads: calçada portuguesa, and old roads across the country
+*"Would be nice to have a road block looking like calçada portuguesa, and have old roads generating in terrain connected to the structures that we already added."*
+
+**Done.**
+- **The blocks:** three calçada blocks, all made by hand at Age 2.
+  - Calçada: white, from stone.
+  - Dark Calçada: from stone plus dark stone.
+  - Calçada Wave: from both.
+  - The texture is little square setts in mortar, and the wave block has a band of dark stone swinging through it that joins up tile to tile.
+- **The roads:** generated as a minimum spanning tree over every landmark plus home, so everything is reachable with no duplicate roads.
+  - Each road is three wide and wanders a little: a calçada crown down the middle, cobble verges, and gravel and grass gaps where it's worn.
+  - Water crossings are planked over.
+  - A road whose route is more than a quarter mountain or ocean isn't laid.
+  - Roads stop 44 blocks short of home, and no tree grows in one.
+
+- **The Calçada block:** a road block patterned like Portuguese pavement, small white and black stones laid in waves. It's made at the bench from stone, and comes in white and dark versions so you can lay patterns.
+- **Old roads in the world:**
+  - worn paths of cobble and calçada that link the landmarks (the hermit's hut, the bandit camps, and later the ruins, temples, mines and monuments from P4), and run back towards where you start;
+  - generated from the seed so they're the same in every chunk, following the land without cutting through mountains, with a bridge where a road meets water;
+  - partly overgrown, with gaps, so they read as old.
+
 ---
 
 ## Suggested order
 
+Requested next (second list): do the whole playtest list, with P7, P8 and P9 added.
+
 1. **P1 Homes:** bed, painting spawn point, furnished house designs. Small, and you'll feel it at once.
+1b. **P8 Saplings:** a 3D sapling that grows in 10 game days, none generated, dropped by leaves.
 2. **P5 Drinks:** the timed-effect system, which P6 builds on.
 3. **P4 Places to find:** ruins, temples, mines and monuments with chests, using loot from P5.
-4. **P6 Enchantments:** the boots slot, armour effects, elemental swords.
+4. **P6 Upgrades:** the boots slot, armour effects, elemental swords.
+3b. **P9 Roads:** the calçada block, and old roads joining the landmarks.
 5. **P2 Forests:** the leaf lighting pass.
-6. **P3 Mobs and the avatar:** the biggest visual job — new models, third-person view and the settings.
+6. **P3 + P7, the avatar and what you hold:** third-person view with an avatar, held items in 3D in first and third person, and better mob models. This is the biggest visual job.
 
 The lore (7d onwards) can carry on in between. Which comes first is the user's call.

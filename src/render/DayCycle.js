@@ -22,6 +22,9 @@ export const DAYLIGHT_SECONDS = 600;
 const NIGHT_SPEED = 2;
 /** How fast the stars turn, as a fraction of the sun and moon's speed. */
 export const STAR_DRIFT = 0.12;
+/** How much light a Helm of Night Sight keeps, however dark it gets. */
+export const NIGHT_SIGHT_AMBIENT = 0.5;
+const NIGHT_SIGHT_HEMI = 0.28;
 /** Where a brand new world's clock starts: mid-morning. */
 export const MORNING = 0.32;
 
@@ -134,11 +137,12 @@ export class DayCycle {
     if (this.scene.background?.isColor) this.scene.background.copy(this.sky);
     this.scene.fog?.color.copy(this.sky);
 
-    this.ambient.intensity = l.ambient;
+    // A Helm of Night Sight (playtest, P6): the dark never gets dark.
+    this.ambient.intensity = this.nightSight ? Math.max(l.ambient, NIGHT_SIGHT_AMBIENT) : l.ambient;
     this.sunLight.intensity = l.sun;
     this.sunLight.color.copy(SUN_DAY).lerp(SUN_LOW, l.dusk);
     this.moonLight.intensity = l.moon;
-    this.hemi.intensity = l.hemi;
+    this.hemi.intensity = this.nightSight ? Math.max(l.hemi, NIGHT_SIGHT_HEMI) : l.hemi;
     this.hemi.color.copy(this.sky);
     this.hemi.groundColor.copy(GROUND_NIGHT).lerp(GROUND_DAY, l.day);
     this.clouds?.setColor?.(new THREE.Color().copy(CLOUD_NIGHT).lerp(CLOUD_DAY, l.day).lerp(CLOUD_DUSK, l.dusk * 0.6));

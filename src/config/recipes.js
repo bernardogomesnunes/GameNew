@@ -1,4 +1,5 @@
 import { ARMOUR_PIECES } from './armour.js';
+import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
 /**
  * What you can make, and where you can make it.
@@ -289,6 +290,15 @@ export const RECIPES = [
     inputs: { wood: 2, iron_ingot: 3 },
     output: { id: 'sword_iron', count: 1 },
     blurb: 'Foundry iron. Hits hardest and lasts longest.',
+  },
+  // Homes (playtest, P1): a bed and a painting, both from the first age.
+  {
+    id: 'bed', name: 'Bed', station: 'hand', age: 1, inputs: { planks: 4, leaves: 3 }, output: { id: 'bed', count: 1 },
+    blurb: 'A frame, a mattress stuffed with leaves, a blanket. Two blocks long.',
+  },
+  {
+    id: 'painting', name: 'Painting', station: 'hand', age: 1, inputs: { planks: 2, dirt: 1, leaves: 1 }, output: { id: 'painting', count: 1 },
+    blurb: 'Earth and leaves for paint. Hang it in your house — Place on it, and that is where you wake after a fall.',
   },
   // The catapult (Phase 6c): put it down, man it, throw stones that break
   // whatever they land on. Ammunition is stone from your bag.
@@ -653,6 +663,15 @@ RECIPES.push(
   { id: 'offer_meat', name: 'Offer a meal', station: 'temple', age: 3, inputs: { cooked_meat: 2 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'A feast for the god, eaten by the priests.' },
   { id: 'offer_gold', name: 'Offer gold', station: 'temple', age: 3, inputs: { gold: 1 }, output: { id: 'devotion', count: 2 }, batch: 8, blurb: 'Gold buys devotion faster than anything.' },
   { id: 'offer_candle', name: 'Light a candle', station: 'temple', age: 3, inputs: { lantern: 1 }, output: { id: 'devotion', count: 1 }, batch: 4, blurb: 'A light left burning at the altar.' },
+  // Calçada portuguesa (playtest, P9): knapped at the bench, white from
+  // stone, dark from dark stone, and the wave from both.
+  { id: 'calcada', name: 'Calçada', station: 'hand', age: 2, inputs: { stone: 2 }, output: { id: 'calcada', count: 4 }, batch: 8, blurb: 'Little white setts, for a road or a square.' },
+  { id: 'calcada_dark', name: 'Dark Calçada', station: 'hand', age: 2, inputs: { stone: 1, dark_stone: 1 }, output: { id: 'calcada_dark', count: 4 }, batch: 8, blurb: 'Little dark setts, for a pattern in the white.' },
+  { id: 'calcada_wave', name: 'Calçada Wave', station: 'hand', age: 2, inputs: { calcada: 2, calcada_dark: 1 }, output: { id: 'calcada_wave', count: 3 }, batch: 6, blurb: 'The wave of dark through white, as on a Lisbon square.' },
+  // Drinks (playtest, P5): a few minutes better at something — see config/drinks.js.
+  { id: 'beer', name: 'Beer', station: 'workshop', age: 3, inputs: { potato: 2, seeds: 1 }, output: { id: 'beer', count: 2 }, batch: 4, blurb: 'Potatoes and grain, left to work. Quicker blows for three minutes.' },
+  { id: 'kombucha', name: 'Kombucha', station: 'workshop', age: 3, inputs: { fruit: 2, leaves: 1 }, output: { id: 'kombucha', count: 2 }, batch: 4, blurb: 'Fruit and leaf tea, soured. +2 on every hit for three minutes.' },
+  { id: 'coffee', name: 'Coffee', station: 'workshop', age: 3, inputs: { coffee_beans: 3 }, output: { id: 'coffee', count: 2 }, batch: 4, blurb: 'Roasted, ground and brewed. Faster on your feet for three minutes.' },
   { id: 'holy_water', name: 'Holy Water', station: 'temple', tier: 1, age: 3, inputs: { glass: 1, devotion: 1 }, output: { id: 'holy_water', count: 2 }, batch: 4, blurb: 'Blessed at a chapel or better. Drink it to heal four hearts.' },
   {
     id: 'ring_white', name: 'Forge the White Ring', station: 'temple', tier: 4, age: 3, ring: 'white',
@@ -672,6 +691,20 @@ for (const p of ARMOUR_PIECES) {
     id: p.id, name: p.name, station: 'hand', age: p.age, inputs: p.inputs, output: { id: p.id, count: 1 },
     blurb: `${p.points} armour, worn on the ${p.slot === 'body' ? 'body' : p.slot}. ${p.madeBy}.`,
   });
+}
+
+// Upgrades (playtest, P6): laid on at a chapel or better — the piece,
+// devotion and one thing that suits it. See config/upgrades.js.
+for (const [key, e] of Object.entries(UPGRADES)) {
+  const bases = e.weapon ? UPGRADABLE_SWORDS : ARMOUR_PIECES.filter((p) => e.slots.includes(p.slot)).map((p) => p.id);
+  for (const base of bases) {
+    const id = upgradedId(base, key);
+    RECIPES.push({
+      id, name: `Upgrade: ${e.name}`, station: 'temple', tier: 2, age: 3,
+      inputs: { [base]: 1, devotion: e.devotion, ...e.inputs }, output: { id, count: 1 },
+      blurb: `Lays ${e.name} on it — ${e.says}.`,
+    });
+  }
 }
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));

@@ -26,7 +26,7 @@
 // tint, not a soft grey), and Obsidian keeps most of its depth so the
 // palette still has one dark anchor rather than every block converging on
 // the same pale middle.
-import { CROPS, CROP_BASE, RIPE } from './crops.js';
+import { CROPS, RIPE, cropBaseOf } from './crops.js';
 
 /** Flowing water of level L is block FLOW_BASE + L, for L in 1..7. */
 const FLOW_BASE = 49;
@@ -64,7 +64,7 @@ export const BLOCKS = [
   { id: 19, name: 'Ground', color: 0x89c47c, system: true },
   // Duilt blocks. Saplings grow into forests; farmland is soil that has been
   // turned, which is what a farm is actually made of.
-  { id: 20, name: 'Sapling', glyph: 'sprout', color: 0x9fcd8b, material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 20, name: 'Sapling', glyph: 'sprout', color: 0x9fcd8b, shape: 'sapling', material: 'plant', cost: { wood: 1 }, unlock: null },
   // Dark, turned earth in furrows — requested directly: "Farm should be
   // dirt." It used to be a pale tan you could take for sand.
   { id: 21, name: 'Farmland', glyph: 'farmland', color: 0x8d6645, material: 'dirt', cost: { wood: 1 }, unlock: null },
@@ -297,12 +297,13 @@ ROOF_MATERIALS.forEach((mat, m) => {
 
 // Crops on farmland, a block per stage of growth — see config/crops.js. The
 // seed is what you hold; the plant is never placed by hand any other way.
-CROPS.forEach((c, k) => {
+CROPS.forEach((c) => {
+  const base = cropBaseOf(c);
   for (let stage = 0; stage <= RIPE; stage++) {
     BLOCKS.push({
-      id: CROP_BASE + 4 * k + stage, name: stage === RIPE ? `Ripe ${c.name}` : `${c.name} Plant`,
+      id: base + stage, name: stage === RIPE ? `Ripe ${c.name}` : `${c.name} Plant`,
       glyph: 'sprout', color: c.leaf, shape: `crop_${c.kind}_${stage}`, material: 'plant',
-      crop: { kind: c.kind, stage }, ...(stage ? { stateOf: CROP_BASE + 4 * k } : {}), unlock: null,
+      crop: { kind: c.kind, stage }, ...(stage ? { stateOf: base } : {}), unlock: null,
     });
   }
 });
@@ -427,6 +428,39 @@ BLOCKS.push(
     light: { color: 0xa77bff, intensity: 2.5, distance: 9, decay: 1, y: 0.5 }, unlock: null,
   },
 );
+
+// A bed (playtest, P1): two blocks long, put down the way you face — the
+// foot where you aimed, the head beyond it. Like a door's two halves, the
+// head is a state of the foot and goes with it (Game.withBedHalves).
+export const BED = 193;
+export const BED_HEAD = 197;
+quad(BED, { name: 'Bed', glyph: 'bed', color: 0xb84a3e, shape: 'bed_foot', material: 'wood', unlock: null });
+quad(BED_HEAD, { name: 'Bed', glyph: 'bed', color: 0xb84a3e, shape: 'bed_head', material: 'wood', stateOf: BED, part: 'head', unlock: null });
+/** { head, facing } for either half of a bed, or null. */
+export function bedPart(id) {
+  if (id < BED || id > BED_HEAD + 3) return null;
+  return { head: id >= BED_HEAD, facing: (id - BED) & 3 };
+}
+/** Quarter-turn facing to a step: 0 is -z, 1 +x, 2 +z, 3 -x. */
+export const FACING_STEP = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+
+// A painting (playtest, P1): hung flat on the wall you face. Place on it
+// sets where you wake after you fall (Game.setSpawn).
+export const PAINTING = 201;
+quad(PAINTING, { name: 'Painting', glyph: 'painting', color: 0x8a6440, shape: 'painting', material: 'wood', unlock: null });
+// Calçada portuguesa (playtest, P9): small setts of white and black stone,
+// laid in waves. White, dark, and the classic wave of dark through white.
+// Asked for directly: "a road block looking like calçada portuguesa".
+export const CALCADA = 209, CALCADA_DARK = 210, CALCADA_WAVE = 211;
+BLOCKS.push(
+  { id: CALCADA, name: 'Calçada', glyph: 'calcada', color: 0xf1ede2, material: 'stone', unlock: null },
+  { id: CALCADA_DARK, name: 'Dark Calçada', glyph: 'calcada', color: 0x45434a, material: 'stone', unlock: null },
+  { id: CALCADA_WAVE, name: 'Calçada Wave', glyph: 'calcada_wave', color: 0xf1ede2, material: 'stone', unlock: null },
+);
+
+export function isPainting(id) {
+  return id >= PAINTING && id <= PAINTING + 3;
+}
 
 /** Whether a block is a trapdoor, open or shut, whichever way it faces. */
 export function isTrapdoor(id) {

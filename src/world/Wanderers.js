@@ -1,4 +1,5 @@
 import { WANDERERS, WANDERER_NAMES, NEWS } from '../config/wanderers.js';
+import { STUN_SECONDS, BURN_SECONDS, BURN_DAMAGE, FREEZE_SECONDS, FREEZE_SLOW } from '../config/upgrades.js';
 import { landmarksFor } from './landmarks.js';
 import { groundAt, surfaceAt, isLoaded } from './Mobs.js';
 
@@ -70,6 +71,8 @@ export class Wanderers {
     this.raidedTonight = false;
     this.untilRaid = null;
     this.landmarks = world.gen ? landmarksFor(world.gen) : [];
+    // Burnt down by a fire sword, waiting for Game to pick up what they dropped.
+    this.fallen = [];
     this.list = [];
     this.present = new Set();
     this.nextId = 1;
@@ -84,6 +87,8 @@ export class Wanderers {
   tick(dt, player) {
     this.list = this.list.filter((p) => !p.dead && !this.gone(p, player));
     for (const lm of this.landmarks) {
+      // Only the hut and the camps have anyone living in them.
+      if (lm.kind !== 'hermit' && lm.kind !== 'camp') continue;
       if (!this.present.has(lm) && Math.hypot(lm.x - player.x, lm.z - player.z) < VISIT) this.populate(lm);
     }
 
@@ -106,9 +111,49 @@ export class Wanderers {
     for (const p of this.list) {
       if (p.hurt > 0) p.hurt = Math.max(0, p.hurt - dt);
       if (p.fear > 0) p.fear = Math.max(0, p.fear - dt);
-      this.think(p, dt, player);
-      this.move(p, dt);
+      if (this.suffer(p, dt)) continue;
+      // Frozen, everything it does runs slow.
+      const t = p.frozen > 0 ? dt * FREEZE_SLOW : dt;
+      // Stunned, it stands where it was struck: no thinking, no striking.
+      if (!(p.stunned > 0)) this.think(p, t, player);
+      if (p.stunned > 0) { const was = p.speed; p.speed = 0; this.move(p, t); p.speed = was; } else this.move(p, t);
     }
+  }
+
+  // ---- struck by an upgraded sword (playtest, P6) -------------------------
+
+  /**
+   * Thunder stuns, fire sets burning, ice freezes. A fresh strike starts its
+   * time again; it doesn't stack.
+   */
+  afflict(p, element) {
+    if (!WANDERERS[p.kind]?.hp || p.dead) return;
+    if (element === 'thunder') p.stunned = STUN_SECONDS;
+    else if (element === 'fire') { p.burning = BURN_SECONDS; p.burnTick = 1; }
+    else if (element === 'ice') p.frozen = FREEZE_SECONDS;
+  }
+
+  /**
+   * The afflictions running down; a burn takes BURN_DAMAGE a second. One
+   * that burns to death leaves its drops in `fallen`, for Game to collect.
+   * Returns whether it died.
+   */
+  suffer(p, dt) {
+    if (p.stunned > 0) p.stunned = Math.max(0, p.stunned - dt);
+    if (p.frozen > 0) p.frozen = Math.max(0, p.frozen - dt);
+    if (!(p.burning > 0)) return false;
+    p.burning = Math.max(0, p.burning - dt);
+    p.burnTick -= dt;
+    if (p.burnTick > 0) return false;
+    p.burnTick += 1;
+    p.hp -= BURN_DAMAGE;
+    p.hurt = HURT_FLASH;
+    if (p.hp > 0) return false;
+    p.dead = true;
+    const drops = this.rollDrops(WANDERERS[p.kind].drops);
+    for (const [id, n] of Object.entries(p.loot ?? {})) drops[id] = (drops[id] ?? 0) + n;
+    this.fallen.push({ p, drops });
+    return true;
   }
 
   // ---- raids --------------------------------------------------------------
