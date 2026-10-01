@@ -1,5 +1,6 @@
 import { hash01 } from './ChunkGen.js';
 import { BIOMES } from '../config/biomes.js';
+import { kingdomFor } from './kingdom.js';
 
 /**
  * Places in the world that somebody else built: the hermit's hut, and the
@@ -47,17 +48,21 @@ export function landmarksFor(gen) {
   if (gen.landmarkCache) return gen.landmarkCache;
   const seed = gen.seed;
   const out = [];
+  // The Stone Kingdom first (Phase 7e, see kingdom.js): everything else
+  // keeps clear of it. Its blocks are its own to lay — stampKingdom.
+  const kingdom = kingdomFor(gen);
+  if (kingdom) out.push(kingdom);
 
   const hermitAngle = hash01(seed, 11, 7001) * Math.PI * 2;
   const hermitR = HERMIT_AT[0] + hash01(seed, 12, 7002) * (HERMIT_AT[1] - HERMIT_AT[0]);
-  const hut = siteNear(gen, Math.cos(hermitAngle) * hermitR, Math.sin(hermitAngle) * hermitR, HUT.half);
+  const hut = siteNear(gen, Math.cos(hermitAngle) * hermitR, Math.sin(hermitAngle) * hermitR, HUT.half, out);
   if (hut) out.push({ kind: 'hermit', ...hut, half: HUT.half, blocks: HUT.blocks });
 
   for (let i = 0; i < CAMPS; i++) {
     // Spread round the compass, starting well away from the hermit.
     const a = hermitAngle + Math.PI * 0.5 + (i * Math.PI * 2) / CAMPS + (hash01(seed, 20 + i, 7003) - 0.5) * 0.8;
     const r = CAMP_AT[0] + hash01(seed, 30 + i, 7004) * (CAMP_AT[1] - CAMP_AT[0]);
-    const camp = siteNear(gen, Math.cos(a) * r, Math.sin(a) * r, CAMP.half);
+    const camp = siteNear(gen, Math.cos(a) * r, Math.sin(a) * r, CAMP.half, out);
     if (camp) out.push({ kind: 'camp', ...camp, half: CAMP.half, blocks: CAMP.blocks });
   }
 
@@ -79,7 +84,7 @@ export function landmarksFor(gen) {
 
 /** What each kind of place is called, found. */
 export const PLACE_NAMES = {
-  hermit: 'The hermit\'s hut', camp: 'A bandit camp',
+  kingdom: 'The Stone Kingdom', hermit: 'The hermit\'s hut', camp: 'A bandit camp',
   ruin: 'An old ruin', ruined_temple: 'A forgotten temple', mine: 'An abandoned mine', monument: 'A monument',
 };
 
@@ -139,6 +144,7 @@ function levelAt(gen, x, z, half) {
 export function stampLandmarks(gen, chunk, chunkSize) {
   const ox = chunk.cx * chunkSize, oz = chunk.cz * chunkSize;
   for (const lm of landmarksFor(gen)) {
+    if (lm.kind === 'kingdom') continue;
     if (lm.x + lm.half < ox || lm.x - lm.half >= ox + chunkSize) continue;
     if (lm.z + lm.half < oz || lm.z - lm.half >= oz + chunkSize) continue;
     const put = (x, y, z, id) => {

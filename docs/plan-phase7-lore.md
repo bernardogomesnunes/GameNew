@@ -102,6 +102,23 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
   - it can be downed, and comes back to its Sanctuary after a day.
 
 ### 7e. The Stone Kingdom (a place in both paths)
+**Done.** `world/kingdom.js` (`tests/kingdom.test.mjs`).
+- **Where:** one city per world, 1000–1400 blocks from home. It goes on the flattest stretch found in a ring of 24 tries, never in the ocean or Mountains 2.
+- **How it's built:** the whole city (about 40,000 blocks) is planned once from the seed, bucketed by chunk. Each chunk levels its ground to the city floor, eases it back to the land outside the walls, and lays its share of the blocks.
+- **What's in it:**
+  - walls ten high with seven towers, and a gatehouse with black banners and a gold lintel;
+  - calçada streets with lamp posts;
+  - the keep, with pillars, a red carpet and the throne;
+  - the dark god's temple, with a Nightstone altar;
+  - the armoury, with chests and weapon racks; barracks with beds; a market of calçada waves with stalls;
+  - about 20 dark houses.
+- **Its people:**
+  - the Stone King stands on his dais and speaks by your ring when you tap him;
+  - guards at nine posts are hostile to the White Ring, or to anyone who strikes one, and never run;
+  - the dark path's oath will come with the dark path.
+- **Reaching it:** an old road always leads to its gate, and no road runs through its walls. Messengers talk of it, and it goes on the map when found.
+- **Seen from afar (#130):** its walls and towers stand up out of the far terrain. Anything you've built or dug in a changed chunk also shows there as it really is, and the far tiles over a chunk are remade when it changes.
+
 - **Generation:**
   - a walled city of dark stone, placed by the world seed away from home;
   - built chunk by chunk, so each chunk can be made on its own and it looks the same every time;

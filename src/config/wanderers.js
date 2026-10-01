@@ -15,7 +15,33 @@ export const WANDERERS = {
     speed: 1.1,
     roam: 5,
   },
+  // The Stone Kingdom's people (Phase 7e): guards at their posts, and the
+  // King on his throne. Guards stand their ground — they never run — and
+  // only fight the bearer of the White Ring, or anyone who strikes one.
+  guard: {
+    noun: 'a guard of the Stone Kingdom',
+    about: 'a guard of the Stone Kingdom — keeping watch',
+    aboutHostile: 'a guard of the Stone Kingdom — hit to fight',
+    colours: [0x3f3c45, 0x35323a, 0x4a4552],
+    speed: 1.3,
+    roam: 2,
+    hp: 20,
+    hits: 3,
+    reach: 1.8,
+    every: 1.2,
+    aggro: 14,
+    run: 3.6,
+    fleeBelow: -1,
+    drops: { gold: [1, 3], iron_ingot: [0, 1] },
+  },
+  king: {
+    about: 'the Stone King, on his throne — tap to speak',
+    colours: [0x2a2430],
+    speed: 0,
+    roam: 0,
+  },
   bandit: {
+    noun: 'a bandit',
     about: 'a bandit — watching you from the camp',
     // Once they're dangerous (Phase 6b): from Age 2 on.
     aboutHostile: 'a bandit — hit to fight',
@@ -64,6 +90,10 @@ export const NEWS = {
     'Bandits have made camp to the {dir}. Keep your storehouses shut at night.',
     'Saw a campfire to the {dir} last night — not travellers. Keep your eyes open.',
   ],
+  kingdom: [
+    'Far to the {dir} there\'s a city of black stone behind high walls. The Stone King rules it.',
+    'Soldiers in dark iron on the road from the {dir}. They say the Stone King is gathering an army.',
+  ],
   ruin: [
     'There are old walls standing in the grass to the {dir}. Nobody remembers whose.',
     'A shepherd found a ruin to the {dir} — says there\'s a chest under the rubble.',
@@ -80,6 +110,12 @@ export const NEWS = {
     'You can see a tall black stone from the hills to the {dir}. Gold at the top.',
     'Somebody raised a monument to the {dir}, long ago. Somebody left things at its foot.',
   ],
+  // What the Stone King says to you, by the ring you bear (Phase 7e).
+  king: {
+    none: ['Who are you, to walk into my city unbidden? Go home, little builder.', 'Bear no ring and you are nothing to me. Come back when a god has looked at you.'],
+    white: ['The White Ring. I know that light — my army will come for it, round after round.', 'You wear the sky\'s gold in my hall? Leave, while my guards let you.'],
+    black: ['The Black Ring... so the dark god looked at you too. Swear to him in my temple and my warriors are yours.', 'Kneel at the altar of Nightstone, ring-bearer. Then we will talk of armies.'],
+  },
   quiet: [
     'The roads are quiet. That\'s all the news there is.',
     'An explorer came through mapping the far country. Didn\'t stay.',

@@ -4,6 +4,7 @@ import { BiomeMap } from './biomeMap.js';
 import { CHUNK_SIZE } from './World.js';
 import { stampLandmarks, landmarksFor } from './landmarks.js';
 import { roadAt, roadBlock } from './roads.js';
+import { stampKingdom } from './kingdom.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
@@ -450,6 +451,12 @@ export class ChunkGen {
     }
     // The hermit's hut and the bandits' camps, where they fall in this chunk.
     stampLandmarks(this, chunk, CHUNK_SIZE);
+    // The Stone Kingdom (Phase 7e), where it reaches into this chunk — an
+    // old road keeps its stones up to the city's gate.
+    stampKingdom(this, chunk, CHUNK_SIZE, (x, z) => {
+      const road = roadAt(this, x, z);
+      return road ? roadBlock(road, x, z, this.seed, ROAD_STONES) : null;
+    });
 
     chunk.dirty = true;
   }

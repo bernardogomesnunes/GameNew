@@ -74,7 +74,7 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
-import { WANDERERS } from './config/wanderers.js';
+import { WANDERERS, NEWS } from './config/wanderers.js';
 import { MobView } from './render/MobView.js';
 
 const REACH = 7;
@@ -1495,6 +1495,8 @@ export class Game {
   secondaryAction() {
     this.avatarView?.strike();
     this.handView?.strike();
+    // Pointed at the Stone King, Place speaks to him (Phase 7e).
+    if (this.kingTarget()) return void this.speakToKing();
     // Place puts down what you are holding, on a mouse and under a thumb
     // alike. Cancelling is Escape, or the Break button — which says "Cancel"
     // while you are carrying something, so there is nothing to guess.
@@ -2759,7 +2761,7 @@ export class Game {
     if (res.killed) {
       const gained = this.duilt?.collect(res.drops) ?? {};
       const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
-      this.ui.toast({ kind: 'xp', title: `Beat ${p.name}, a bandit`, body: got || undefined });
+      this.ui.toast({ kind: 'xp', title: `Beat ${p.name}, ${WANDERERS[p.kind].noun ?? 'a bandit'}`, body: got || undefined });
     }
     return true;
   }
@@ -2771,6 +2773,27 @@ export class Game {
       const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
       this.ui?.toast({ kind: 'xp', title: `${p.name} burnt down`, body: got || undefined });
     }
+  }
+
+  /** The Stone King, if he's what you're pointing at (and no block is nearer). */
+  kingTarget(hit = this.raycast()) {
+    if (!this.wanderers) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const found = this.wanderView.pickAt(this.wanderers.list.filter((p) => p.kind === 'king'), eye, dir, REACH);
+    if (!found) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < found.t) return null;
+    }
+    return found.person;
+  }
+
+  /** What the Stone King has to say to you — by the ring you bear. */
+  speakToKing() {
+    const ring = this.duilt?.ring ?? 'none';
+    const lines = NEWS.king[ring] ?? NEWS.king.none;
+    this.kingLine = ((this.kingLine ?? -1) + 1) % lines.length;
+    this.ui?.toast({ kind: 'challenge', title: 'The Stone King', body: lines[this.kingLine] });
   }
 
   /** The swarm of fireflies under the crosshair, if no block is in front of it. */
@@ -3590,6 +3613,15 @@ export class Game {
 
     const now = performance.now();
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
+    // The far-off view of these chunks is remade, so walking away you still
+    // see what you built there (#130).
+    const remade = new Set();
+    for (const c of changes) {
+      const key = `${c.x >> 4},${c.z >> 4}`;
+      if (remade.has(key)) continue;
+      remade.add(key);
+      this.farTerrain?.invalidateAt(c.x, c.z);
+    }
     // What's planted is kept track of, so it can grow while you're away.
     // And a chest gets its slots when it's put down, and loses them when
     // it's taken away (only ever empty — see above).
@@ -3762,7 +3794,7 @@ export class Game {
     if (!this.world?.endless) { this.farTerrain.setVisible(false); return; }
     this.farTerrain.setVisible(true);
     const { x, z } = this.player.position;
-    this.farTerrain.update(this.world.gen, x, z);
+    this.farTerrain.update(this.world.gen, x, z, { world: this.world });
   }
 
   /**
@@ -4036,6 +4068,8 @@ export class Game {
         onNews: (p, line) => this.ui.toast({ kind: 'challenge', title: `${p.name}, a messenger`, body: line }),
         // Bandits (Phase 6b): hostile from Age 2, never in Creative.
         hostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.age >= 2),
+        // The Stone Kingdom's guards (Phase 7e): the White Ring is their enemy.
+        kingdomHostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.ring === 'white'),
         night: () => daylightAt(this.dayCycle.time).day < 0.3,
         stores: () => (this.duilt && !this.duilt.sandbox ? this.duilt.structures.stores() : [])
           .filter(({ store }) => store.heldIds().length)
@@ -4140,10 +4174,10 @@ export class Game {
       : null;
     if (stranger) {
       const spec = WANDERERS[stranger.kind];
-      const fights = spec.hp && (stranger.angry || this.wanderers.hostile());
+      const fights = spec.hp && (stranger.angry || (stranger.kind === 'guard' ? this.wanderers.kingdomHostile() : this.wanderers.hostile()));
       this.ui?.setPersonHint(stranger.name, !fights ? spec.about
-        : stranger.hp <= spec.fleeBelow ? 'a bandit — running for it'
-          : stranger.hp < spec.hp ? 'a bandit — hurt, keep at it'
+        : stranger.hp <= spec.fleeBelow ? `${spec.noun} — running for it`
+          : stranger.hp < spec.hp ? `${spec.noun} — hurt, keep at it`
             : stranger.raider ? 'a bandit, raiding — hit to fight' : spec.aboutHostile);
       return;
     }

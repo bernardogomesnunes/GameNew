@@ -11,7 +11,10 @@ Everything in `docs/plan-playtest-improvements.md` (P1–P9) is in, each with it
 - **P2 Forests:** leaves with their own tones, light and shade (`forests.test`).
 - **P3 + P7:** a third-person view with your own avatar, what you hold drawn in 3D, and detailed animals and people (`avatar.test`).
 
-**Next:** the lore picks up again at 7e, the Stone Kingdom (`docs/plan-phase7-lore.md`).
+## 7e, the Stone Kingdom, is done too
+A walled city of dark stone, about 1000–1400 blocks from home: a keep with the Stone King, guards, a dark temple, an armoury, barracks, a market, houses and an old road to its gate. It shows on the horizon, and so do your own builds (#130). See `docs/plan-phase7-lore.md`.
+
+**Next:** the White path — defence buildings and the Ten Rounds of the dark army marching from the Stone Kingdom.
 
 # Before that — Phase 6
 
