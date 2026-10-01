@@ -51,8 +51,8 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, bedPart, BED_HEAD, FACING_STEP, isPainting, isSoil } from './config/blocks.js';
-import { SAPLING } from './duilt/Saplings.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, bedPart, BED_HEAD, FACING_STEP, isPainting } from './config/blocks.js';
+import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/upgrades.js';
 import { nextView, VIEW_NAMES } from './config/avatar.js';
@@ -139,6 +139,8 @@ const HOLD_BREAK_INTERVAL_MS = 170;
 // Between blows on an animal. Held Break repeats faster than this for
 // blocks; a swing at something alive shouldn't land six times a second.
 const STRIKE_COOLDOWN_MS = 350;
+/** A blow with nothing in your hand: a heart (two half-hearts). */
+const FIST_DAMAGE = 2;
 // What a farm animal will follow you for. See Mobs.think.
 const LURES = new Set(['vegetables', 'seeds', 'fruit', ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
 const FARMLAND = 21;
@@ -2630,7 +2632,9 @@ export class Game {
 
   /** How hard a blow lands: the tool's damage (a fist 1), plus kombucha's. */
   blowDamage(tool) {
-    return (tool?.damage ?? 1) + (this.duilt?.boosted('strength') ? KOMBUCHA_DAMAGE : 0);
+    // Bare hands take a whole heart — asked for directly: "without weapons
+    // 1 heart should go".
+    return (tool?.damage ?? FIST_DAMAGE) + (this.duilt?.boosted('strength') ? KOMBUCHA_DAMAGE : 0);
   }
 
   eatSelected() {
@@ -2761,7 +2765,7 @@ export class Game {
     if (res.killed) {
       const gained = this.duilt?.collect(res.drops) ?? {};
       const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
-      this.ui.toast({ kind: 'xp', title: `Beat ${p.name}, ${WANDERERS[p.kind].noun ?? 'a bandit'}`, body: got || undefined });
+      this.ui.toast({ kind: 'xp', title: `Beat ${p.name === WANDERERS[p.kind].noun ? p.name : `${p.name}, ${WANDERERS[p.kind].noun ?? 'a bandit'}`}`, body: got || undefined });
     }
     return true;
   }
@@ -3386,7 +3390,7 @@ export class Game {
       if (!this.world.inBounds(t.x, t.y, t.z)) continue;
       // A seed goes in farmland and nowhere else; a sapling in the ground.
       if (crop && this.world.getBlock(t.x, t.y - 1, t.z) !== FARMLAND) continue;
-      if (held === SAPLING && !isSoil(this.world.getBlock(t.x, t.y - 1, t.z))) continue;
+      if (held === SAPLING && !SAPLING_GROUND.has(this.world.getBlock(t.x, t.y - 1, t.z))) continue;
       if (this.blockOverlapsPlayerAABB(t) && !crop) continue;
       const prev = this.world.getBlock(t.x, t.y, t.z);
       if (prev === next) continue;
@@ -3418,7 +3422,7 @@ export class Game {
       return;
     }
     if (held === SAPLING && !changes.length) {
-      this.ui.toast({ kind: 'xp', title: 'Saplings go in the ground', body: 'Plant it on grass, dirt or moss' });
+      this.ui.toast({ kind: 'xp', title: 'Saplings go in the ground', body: 'Plant it on grass or dirt' });
       return;
     }
     if (crop && !changes.length) {
@@ -3496,9 +3500,13 @@ export class Game {
   withUprooted(changes) {
     let out = changes;
     for (const c of changes) {
-      if (c.prev !== FARMLAND || c.next === FARMLAND) continue;
+      if (c.next === c.prev || c.next === FARMLAND) continue;
       const above = this.world.getBlock(c.x, c.y + 1, c.z);
-      if (!cropOf(above)) continue;
+      // A crop off its farmland, or a sapling off its ground (asked for
+      // directly: "saplings should drop if we break the bottom dirt") — it
+      // comes away into your bag with the block under it. Grass turning to
+      // dirt under one leaves it be; anything else takes it.
+      if (!(c.prev === FARMLAND && cropOf(above)) && !(above === SAPLING && !SAPLING_GROUND.has(c.next))) continue;
       if (out.some((o) => o.x === c.x && o.y === c.y + 1 && o.z === c.z)) continue;
       if (out === changes) out = [...changes];
       out.push({ x: c.x, y: c.y + 1, z: c.z, prev: above, next: AIR });
@@ -4174,8 +4182,9 @@ export class Game {
       : null;
     if (stranger) {
       const spec = WANDERERS[stranger.kind];
-      const fights = spec.hp && (stranger.angry || (stranger.kind === 'guard' ? this.wanderers.kingdomHostile() : this.wanderers.hostile()));
-      this.ui?.setPersonHint(stranger.name, !fights ? spec.about
+      const fights = spec.hp && !spec.flees && (stranger.angry || (stranger.kind === 'guard' ? this.wanderers.kingdomHostile() : this.wanderers.hostile()));
+      this.ui?.setPersonHint(stranger.name, spec.flees && stranger.fear > 0 ? `${spec.noun} — running from you`
+        : !fights ? spec.about
         : stranger.hp <= spec.fleeBelow ? `${spec.noun} — running for it`
           : stranger.hp < spec.hp ? `${spec.noun} — hurt, keep at it`
             : stranger.raider ? 'a bandit, raiding — hit to fight' : spec.aboutHostile);

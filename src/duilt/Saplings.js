@@ -16,6 +16,8 @@ import { TREE_SIZES, hash01, sizedTree, treeShape } from '../world/ChunkGen.js';
  */
 
 export const SAPLING = 20;
+/** What a sapling grows in: dirt or grass — asked for directly, "only grow in dirt and turf". */
+export const SAPLING_GROUND = new Set([1, 2]);
 /** Game days from planting to a tree. */
 export const GROW_DAYS = 10;
 /** Where there's no wild tree to copy (a desert, an old fixed world): an oak. */
@@ -59,6 +61,8 @@ export class Saplings {
     for (const [key, s] of this.planted) {
       if (!world.hasChunk(s.x >> 4, s.z >> 4)) continue;
       if (world.getBlock(s.x, s.y, s.z) !== SAPLING) { this.planted.delete(key); continue; }
+      // Out of its ground (somebody put stone under it), it waits.
+      if (!SAPLING_GROUND.has(world.getBlock(s.x, s.y - 1, s.z))) { s.blocked = true; continue; }
       if (today - s.at < GROW_DAYS) continue;
       const cells = treeFor(world, s.x, s.y, s.z);
       if (!cells) { s.blocked = true; continue; }

@@ -46,6 +46,13 @@ const chestKey = (x, y, z) => `${x},${y},${z}`;
 const LEAF_BLOCKS = new Set([5, 42, 44]);
 /** What a broken leaf might drop besides itself, and how often. */
 export const LEAF_DROPS = [['sapling', 0.1], ['fruit', 0.06]];
+/**
+ * Grass, broken, now and then gives up mixed seeds — so a farm can always be
+ * started. Asked for directly: "To build a farm I need seeds and there's no
+ * seeds ... maybe we should have grass that when broken we can drop seeds."
+ */
+export const GRASS_DROPS = [['seeds', 0.2]];
+const GRASS = 1;
 
 const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds: 6, seeds_carrot: 4, seeds_potato: 4 };
 
@@ -188,8 +195,9 @@ export class DuiltGame {
       // Leaves, now and then, drop a sapling or a fruit as well as
       // themselves — the only way to new saplings out in the wild, now none
       // grow there by themselves (playtest, P8).
-      if (LEAF_BLOCKS.has(c.prev)) {
-        for (const [id, chance] of LEAF_DROPS) {
+      const extras = LEAF_BLOCKS.has(c.prev) ? LEAF_DROPS : c.prev === GRASS ? GRASS_DROPS : null;
+      if (extras) {
+        for (const [id, chance] of extras) {
           if (this.rand() >= chance) continue;
           if (this.inventory.add(id, 1) === 0) gained[id] = (gained[id] ?? 0) + 1;
         }
