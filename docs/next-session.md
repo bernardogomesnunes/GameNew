@@ -1,23 +1,18 @@
-# Where to pick up — Phase 6b (swords and hostile bandits)
+# Where to pick up — Phase 6c (catapults)
 
-Phase 6a is finished:
-- ten hearts;
-- fall and lava damage;
-- healing, faster when resting in a house;
-- dying: you respawn at home, and a chest with everything except your tools is left where you fell;
-- the craftable 3D chest with 27 slots.
+Phase 6a and 6b are finished:
+- **6a:** ten hearts, fall and lava damage, healing (faster resting in a house), dying leaves a chest with everything but your tools, and the craftable 27-slot chest.
+- **6b:**
+  - wood, stone and iron swords made at the bench (damage 4 / 6 / 9);
+  - bandits hostile from Age 2: they come at you near their camp (further at night), hit for a heart, and run when badly hurt;
+  - most nights 2–3 raiders walk in from the nearest camp's side to rob a storehouse, or come for you if you have none;
+  - beat a raider and you get back what they took. Hitting a bandit before Age 2 turns its camp on you.
 
 ## Decided with the user
-- **Swords:** wood, stone and iron, crafted at the bench, each hitting harder than the last. Tools also hit, but weakly.
-- **Bandits:**
-  - they turn hostile from Age 2;
-  - they come out of their camps at night and go for you or your storehouses;
-  - they flee when badly hurt.
 - **Catapults (6c):** a buildable siege engine you aim and fire. Stones fly on real arcs and break blocks where they land.
 
 ## Where things are
 - **Health:** `src/survival/Health.js`. Damage goes through `DuiltGame.hurt(amount, cause, opts)`, which does nothing in Creative.
-- **Death:** `Game.die()` handles it, triggered by `health:died`.
-- **Mobs:** `src/world/Mobs.js`, already hunted with `rayBox`.
-- **Bandits:** wanderers in `src/world/Wanderers.js` and `src/config/wanderers.js`. Their camps come from `world/landmarks.js`.
-- **Breaking:** strikes go through `Game.breakBlock` / `tickBreaking`, with `STRIKE_COOLDOWN_MS`.
+- **Bandits:** `src/world/Wanderers.js` (`fight`, `raids`, `hit`) and `src/config/wanderers.js` (stats). Game wires them in `syncMobs` (hostile/night/stores/onAttack/onSteal/onRaid) and `hitBandit`.
+- **Swords:** `src/config/items.js` and `src/config/recipes.js`. Strikes go through `Game.breakBlock` → `hitBandit` → `hitMob`, with `STRIKE_COOLDOWN_MS`.
+- **Tests:** `tests/health.test.mjs`, `tests/combat.test.mjs`.

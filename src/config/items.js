@@ -137,6 +137,30 @@ export const ITEMS = [
     durability: null, madeBy: 'Filled at a river', unlocks: 'Pouring water where you need it',
   },
 
+  // --- swords (Phase 6b) -----------------------------------------------------
+  //
+  // Chosen directly: wood, stone and iron, made at the bench, each hitting
+  // harder than the last. Any tool hits; these are the ones made for it.
+  // A bandit has 12 points: four blows of wood, two of stone or iron.
+  {
+    id: 'sword_wood', name: 'Wooden Sword', kind: 'tool', stackTo: STACK_TOOL, color: 0xcbaa8a, glyph: 'sword',
+    durability: 100, madeBy: 'Crafted at the bench', unlocks: 'Fighting bandits',
+    damage: 4, weapon: true,
+    effectiveness: { plant: 'fast' },
+  },
+  {
+    id: 'sword_stone', name: 'Stone Sword', kind: 'tool', stackTo: STACK_TOOL, color: 0xafafb7, glyph: 'sword',
+    durability: 160, madeBy: 'Crafted at the bench', unlocks: 'Fighting bandits',
+    damage: 6, weapon: true,
+    effectiveness: { plant: 'fast' },
+  },
+  {
+    id: 'sword_iron', name: 'Iron Sword', kind: 'tool', stackTo: STACK_TOOL, color: 0xc9ced6, glyph: 'sword',
+    durability: 300, madeBy: 'Crafted at the bench from iron', unlocks: 'Fighting bandits',
+    damage: 9, weapon: true,
+    effectiveness: { plant: 'fast' },
+  },
+
   // --- building tools -------------------------------------------------------
   //
   // Clearing a hillside and mirroring a wall were buttons that were simply

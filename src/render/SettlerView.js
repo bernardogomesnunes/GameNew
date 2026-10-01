@@ -14,7 +14,8 @@ import { SETTLERS } from '../config/settlers.js';
  * on a phone.
  */
 
-const MAX = 64;   // beds run out long before this; the cap is just for the buffer
+const MAX = 64;
+const HURT_RED = new THREE.Color(0xd23a2a);   // beds run out long before this; the cap is just for the buffer
 
 export class SettlerView {
   constructor(scene) {
@@ -80,6 +81,8 @@ export class SettlerView {
       this.heads.setMatrixAt(i, this._m);
 
       this._colour.setHex(p.colour);
+      // Struck: a flash of red, the same as a hunted animal.
+      if (p.hurt > 0) this._colour.lerp(HURT_RED, 0.7);
       this.bodies.setColorAt(i, this._colour);
       // A head a shade lighter than the coat, so the figure has a top to it.
       this._colour.offsetHSL(0, -0.15, 0.22);
@@ -94,6 +97,11 @@ export class SettlerView {
 
   /** The settler nearest a look ray, for naming whoever you point at. */
   pick(people, origin, direction, maxDistance = 12) {
+    return this.pickAt(people, origin, direction, maxDistance)?.person ?? null;
+  }
+
+  /** The same, with how far along the ray they are — for hitting one. */
+  pickAt(people, origin, direction, maxDistance = 12) {
     // Aim at the chest rather than the feet, and allow a person's width of
     // slack: a figure you have to hit dead centre is one you never name.
     let best = null, bestT = Infinity;
@@ -105,7 +113,7 @@ export class SettlerView {
       const off = Math.hypot(dx - direction.x * t, dy - direction.y * t, dz - direction.z * t);
       if (off < 1.1 && t < bestT) { bestT = t; best = p; }
     }
-    return best;
+    return best ? { person: best, t: bestT } : null;
   }
 
   setVisible(on) {

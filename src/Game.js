@@ -20,7 +20,7 @@ import { generateEndlessWorld } from './world/StarterWorld.js';
 import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
 import { FarTerrain } from './render/FarTerrain.js';
 import { SkyClouds } from './render/SkyClouds.js';
-import { DayCycle, MORNING } from './render/DayCycle.js';
+import { DayCycle, MORNING, daylightAt } from './render/DayCycle.js';
 import { Sound, soundOf } from './audio/Sound.js';
 import { loadControls, saveControls } from './config/controls.js';
 import { LightManager } from './render/LightManager.js';
@@ -2604,8 +2604,89 @@ export class Game {
     return true;
   }
 
+  /**
+   * The bandit under the crosshair, if one is nearer than the block behind
+   * it and within reach. Only bandits can be fought — a messenger or the
+   * hermit just stands there being named.
+   */
+  banditTarget(hit = this.raycast()) {
+    if (!this.wanderers) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const found = this.wanderView.pickAt(this.wanderers.list.filter((p) => WANDERERS[p.kind].hp), eye, dir, REACH);
+    if (!found) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < found.t) return null;
+    }
+    return found.person;
+  }
+
+  /**
+   * Break, aimed at a bandit: one blow, the same button as hunting. A sword
+   * hits hardest (its `damage`); any tool wears for it. Returns whether the
+   * press was spent on a bandit.
+   */
+  hitBandit(hit) {
+    const p = this.banditTarget(hit);
+    if (!p) return false;
+    const now = performance.now();
+    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    this.lastStrikeAt = now;
+    this.digTarget = null;
+    const tool = ITEMS_BY_ID.get(this.selectedItemId);
+    const { x, z } = this.player.position;
+    const res = this.wanderers.hit(p, tool?.damage ?? 1, x, z);
+    if (!res) return false;
+    this.sound?.hit?.('wood', { gain: 0.5, pitch: 0.7 });
+    if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
+      this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
+    }
+    if (res.killed) {
+      const gained = this.duilt?.collect(res.drops) ?? {};
+      const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+      this.ui.toast({ kind: 'xp', title: `Beat ${p.name}, a bandit`, body: got || undefined });
+    }
+    return true;
+  }
+
+  /** A bandit's blow landing on you. */
+  banditHits(p, hits) {
+    if (!this.duilt || this.duilt.sandbox) return;
+    const taken = this.duilt.hurt(hits, 'bandit');
+    if (!taken) return;
+    // Knocked up off your feet a little, so a blow is felt and not just seen.
+    if (this.player.grounded) this.player.velocity.y = 4.5;
+    this.sound?.hit?.('wood', { gain: 0.6, pitch: 0.55 });
+  }
+
+  /**
+   * A raider at a storehouse: carries off up to a dozen of whatever's in it,
+   * two kinds at most. Beat them before they get away and it's yours again.
+   */
+  banditSteals(p, structure) {
+    const store = this.duilt?.structures.storeFor(structure);
+    if (!store) return {};
+    const kinds = store.heldIds().sort(() => Math.random() - 0.5).slice(0, 2);
+    const loot = {};
+    let room = 12;
+    for (const id of kinds) {
+      const n = Math.min(room, store.countOf(id), 2 + Math.floor(Math.random() * 8));
+      if (n <= 0) continue;
+      store.remove(id, n);
+      loot[id] = n;
+      room -= n;
+    }
+    const what = Object.entries(loot).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' and ');
+    const name = STRUCTURES_BY_ID.get(structure.type)?.name?.toLowerCase() ?? 'storehouse';
+    if (what) {
+      this.ui.toast({ kind: 'xp', title: `${p.name} robbed your ${name}`, body: `Took ${what} — catch them before they get away` });
+    }
+    return loot;
+  }
+
   breakBlock() {
     const hit = this.raycast();
+    if (this.hitBandit(hit)) return;
     if (this.hitMob(hit)) return;
     if (!hit) { this.digTarget = null; return; }
 
@@ -2781,7 +2862,7 @@ export class Game {
     this.duilt.health.restore();
     this.sound?.break?.('wood');
     this.ui?.duiltUI?.flashHurt(true);
-    const how = { fall: 'You fell too far', lava: 'The lava took you' }[cause] ?? 'You died';
+    const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you' }[cause] ?? 'You died';
     this.ui?.toast({
       kind: 'xp',
       title: `${how} — you woke at home`,
@@ -3416,6 +3497,19 @@ export class Game {
         // A messenger comes to your settlement, so only where you have one.
         home: () => (this.duilt && !this.duilt.sandbox ? { x: this.world.centreX, z: this.world.centreZ } : null),
         onNews: (p, line) => this.ui.toast({ kind: 'challenge', title: `${p.name}, a messenger`, body: line }),
+        // Bandits (Phase 6b): hostile from Age 2, never in Creative.
+        hostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.age >= 2),
+        night: () => daylightAt(this.dayCycle.time).day < 0.3,
+        stores: () => (this.duilt && !this.duilt.sandbox ? this.duilt.structures.stores() : [])
+          .filter(({ store }) => store.heldIds().length)
+          .map(({ structure }) => ({ structure, region: structure.region })),
+        onAttack: (p, hits) => this.banditHits(p, hits),
+        onSteal: (p, structure) => this.banditSteals(p, structure),
+        onRaid: (dir, raiders) => this.ui.toast({
+          kind: 'challenge',
+          title: 'Bandits on the road',
+          body: `${raiders.length} of them, coming in from the ${dir}. Guard your storehouses.`,
+        }),
       });
     }
     // Your penned animals come back with the save, and join the wild ones.
@@ -3501,7 +3595,12 @@ export class Game {
       ? this.wanderView.pick(this.wanderers.list, this.player.eyePosition(), this.player.lookDirection())
       : null;
     if (stranger) {
-      this.ui?.setPersonHint(stranger.name, WANDERERS[stranger.kind].about);
+      const spec = WANDERERS[stranger.kind];
+      const fights = spec.hp && (stranger.angry || this.wanderers.hostile());
+      this.ui?.setPersonHint(stranger.name, !fights ? spec.about
+        : stranger.hp <= spec.fleeBelow ? 'a bandit — running for it'
+          : stranger.hp < spec.hp ? 'a bandit — hurt, keep at it'
+            : stranger.raider ? 'a bandit, raiding — hit to fight' : spec.aboutHostile);
       return;
     }
     // Same for an animal — named before you swing, and no block outline
