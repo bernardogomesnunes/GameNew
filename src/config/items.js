@@ -1,5 +1,6 @@
 import { BLOCKS } from './blocks.js';
 import { CROPS, CROP_BASE } from './crops.js';
+import { ARMOUR_PIECES } from './armour.js';
 
 /**
  * Item registry for Duilt.
@@ -251,7 +252,23 @@ export const ITEMS = [
   { id: 'gold_ore', name: 'Gold Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8b686, glyph: 'gold', block: 40, madeBy: 'Mined from the Summit' },
   { id: 'iron_ingot', name: 'Iron Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xc7c7cd, glyph: 'gold', madeBy: 'Smelted at a foundry' },
   { id: 'copper_ingot', name: 'Copper Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xd69264, glyph: 'gold', madeBy: 'Smelted at a foundry' },
+
+  // --- armour (Phase 7b) — see config/armour.js ---------------------------
+  //
+  // Worn, not held: `wears` is the slot it goes in, `armour` how many
+  // points it adds. It wears with every blow it takes, like a tool with use.
+  ...ARMOUR_PIECES.map((p) => ({
+    id: p.id, name: p.name, kind: 'armour', stackTo: STACK_TOOL, color: p.main,
+    glyph: { head: 'helm', body: 'cuirass', legs: 'greaves' }[p.slot],
+    wears: p.slot, armour: p.points, set: p.set, durability: p.durability, madeBy: p.madeBy,
+    ...(p.disguise ? { disguise: p.disguise } : {}),
+  })),
 ];
+
+/** Whether an item is something you wear, and where: 'head', 'body', 'legs' or 'ring', or null. */
+export function wornOn(id) {
+  return ITEMS_BY_ID.get(id)?.wears ?? null;
+}
 
 /** What a tool lets you do, if it lets you do anything: 'clear' -> 'pry_bar'. */
 export const TOOL_FOR = new Map(

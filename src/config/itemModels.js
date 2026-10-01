@@ -1,4 +1,5 @@
 import { CROPS } from './crops.js';
+import { ARMOUR_PIECES } from './armour.js';
 
 /**
  * Little voxel models for the things you carry that aren't blocks — the
@@ -126,3 +127,27 @@ for (const c of CROPS) {
     [0.34, 0.2, 0.66, 0.5, c.crop],
   ]);
 }
+
+// Armour (Phase 7b): a helm, a cuirass and a pair of greaves, in each set's
+// metal (or leather) with its trim.
+const ARMOUR_MODEL = {
+  head: (m, t) => [
+    ...stack([[0.3, 0.3, 0.1, 0.42, m], [0.26, 0.26, 0.42, 0.6, m], [0.16, 0.16, 0.6, 0.7, m]]),
+    box(0.18, 0.1, 0.78, 0.82, 0.2, 0.82, t),          // the rim
+    box(0.3, 0.2, 0.79, 0.7, 0.34, 0.81, 0x2a2a2e),    // the eye slit
+    box(0.46, 0.7, 0.46, 0.54, 0.8, 0.54, t),          // the crest
+  ],
+  body: (m, t) => [
+    box(0.2, 0.06, 0.32, 0.8, 0.74, 0.68, m),
+    box(0.06, 0.52, 0.34, 0.2, 0.74, 0.66, m), box(0.8, 0.52, 0.34, 0.94, 0.74, 0.66, m), // shoulders
+    box(0.36, 0.74, 0.34, 0.64, 0.82, 0.66, t),        // the collar
+    box(0.2, 0.3, 0.68, 0.8, 0.36, 0.7, t),            // a band across the front
+    box(0.46, 0.36, 0.68, 0.54, 0.7, 0.7, t),
+  ],
+  legs: (m, t) => [
+    box(0.22, 0.72, 0.34, 0.78, 0.86, 0.66, t),        // the belt
+    box(0.22, 0.06, 0.36, 0.46, 0.72, 0.64, m), box(0.54, 0.06, 0.36, 0.78, 0.72, 0.64, m),
+    box(0.22, 0.34, 0.64, 0.46, 0.42, 0.66, t), box(0.54, 0.34, 0.64, 0.78, 0.42, 0.66, t), // knee plates
+  ],
+};
+for (const p of ARMOUR_PIECES) ITEM_MODELS[p.id] = ARMOUR_MODEL[p.slot](p.main, p.trim);

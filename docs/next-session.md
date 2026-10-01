@@ -16,8 +16,16 @@ Phase 6 (combat) is finished:
 ## Phase 7a is done too
 The decorative pack: dark stone and dark brick; sky-marble, gold trim and firefly lanterns; timber framing; walls that join like fences; pillars that stack into one column; trapdoors that open with Place; framed windows with see-through glass; vases, urns and both banners. All are made at the bench (`tests/decor.test.mjs`).
 
+## Phase 7b is done too
+Armour and the ring slot (`config/armour.js`, `tests/armour.test.mjs`):
+- **Wearing:** the bag has a Wearing row for head, body, legs and ring. Lift a piece and tap its place to put it on; tap what you're wearing to take it off.
+- **Sets:** leather (4 points), Sky (white steel and gold, 9) and Stone (blackened iron, 9).
+- **What it does:** each point takes 4% off a blow from a bandit or a catapult stone, never less than half a heart. It does nothing for falls or lava. Every blow wears it.
+- **Disguise:** a full Sky set makes `DuiltGame.disguisedAs()` return 'sky', for the dark path later.
+- **Ring:** the slot waits for the ring forged at the Temple (7c).
+
 ## Next
-- **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7b: armour and ring slots.
+- **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7c: the Temple and the choice of ring.
 - Still open:
   - far terrain should show what the player built (#130);
   - sound: music, ambience and separate volume sliders (#133).
