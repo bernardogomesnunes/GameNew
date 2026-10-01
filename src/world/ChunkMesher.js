@@ -4,7 +4,7 @@ import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
   roofPart,
 } from '../config/blocks.js';
-import { boxesFor, fenceBoxes, rugBoxes, turn } from './propShapes.js';
+import { boxesFor, fenceBoxes, rugBoxes, wallBoxes, pillarBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
 import { textureFor } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
@@ -36,8 +36,12 @@ for (let id = 0; id < 256; id++) OPEN[id] = !IS_CUBE[id] || IS_TRANSPARENT[id] |
 const JOINS_FENCE = new Uint8Array(256);
 for (let id = 1; id < 256; id++) {
   const shape = shapeOf(id);
-  JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || shape === 'gate_open' || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
+  JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || shape === 'gate_open' || shape === 'wall'
+    || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
 }
+/** Pillars, which stack into one column (see propShapes' pillarBoxes). */
+const IS_PILLAR = new Uint8Array(256);
+for (const id of BLOCKS_BY_ID.keys()) IS_PILLAR[id] = shapeOf(id) === 'pillar' ? 1 : 0;
 /**
  * Leaves, and anything else with holes in its texture: a face beside one is
  * drawn even though a solid block stands there, because you can see it
@@ -109,6 +113,9 @@ const propMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
 // drawn at their own colour whatever light is on them, so they still glow in
 // the dark of night.
 const glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
+// Glass in a prop — a framed window's pane, a firefly lantern's case: seen
+// through, drawn after everything solid.
+const paneMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.38, depthWrite: false });
 /** A box's own colour (an iron frame on a lantern), or the block's. */
 const hexColor = new Map();
 function colorOfHex(hex) {
@@ -716,6 +723,7 @@ export class ChunkMesher {
     const baseZ = chunk.cz * CHUNK_SIZE;
     const buf = { position: [], normal: [], color: [], index: [] };
     const glow = { position: [], normal: [], color: [], index: [] };
+    const pane = { position: [], normal: [], color: [], index: [] };
     // Reads the padded copy rebuild just made, so a fence at a chunk's edge
     // sees the fence in the next chunk and joins up with it.
     const vol = this.padded, P2 = PAD * PAD;
@@ -749,7 +757,14 @@ export class ChunkMesher {
             }
             continue;
           }
-          const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'
+          const boxes = shape === 'wall'
+            ? wallBoxes({
+              px: JOINS_FENCE[vol[idx + 1]], nx: JOINS_FENCE[vol[idx - 1]],
+              pz: JOINS_FENCE[vol[idx + PAD]], nz: JOINS_FENCE[vol[idx - PAD]],
+            })
+            : shape === 'pillar'
+              ? pillarBoxes({ base: !IS_PILLAR[vol[idx - P2]], capital: !IS_PILLAR[vol[idx + P2]] })
+            : shape === 'fence' || shape === 'gate' || shape === 'gate_open'
             ? fenceBoxes(shape, {
               px: JOINS_FENCE[vol[idx + 1]], nx: JOINS_FENCE[vol[idx - 1]],
               pz: JOINS_FENCE[vol[idx + PAD]], nz: JOINS_FENCE[vol[idx - PAD]],
@@ -762,18 +777,22 @@ export class ChunkMesher {
               : turn(boxesFor(shape), FACING[id]);
           const col = baseColor(id);
           for (const b of boxes) {
-            this.emitPropBox(b.glow ? glow : buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ,
+            this.emitPropBox(b.glow ? glow : b.pane ? pane : buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ,
               b.color != null ? colorOfHex(b.color) : col, b.glow);
           }
         }
       }
     }
-    if (!buf.position.length && !glow.position.length) return;
+    if (!buf.position.length && !glow.position.length && !pane.position.length) return;
 
-    // One mesh, two materials: the ordinary lit props, then the glowing parts.
-    const litIndices = buf.index.length, offset = buf.position.length / 3;
-    for (const k of ['position', 'normal', 'color']) for (const v of glow[k]) buf[k].push(v);
-    for (const i of glow.index) buf.index.push(i + offset);
+    // One mesh, three materials: the ordinary lit props, the glowing parts,
+    // then the glass.
+    const litIndices = buf.index.length;
+    for (const part of [glow, pane]) {
+      const offset = buf.position.length / 3;
+      for (const k of ['position', 'normal', 'color']) for (const v of part[k]) buf[k].push(v);
+      for (const i of part.index) buf.index.push(i + offset);
+    }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(buf.position, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(buf.normal, 3));
@@ -781,9 +800,10 @@ export class ChunkMesher {
     geo.setIndex(buf.index);
     geo.addGroup(0, litIndices, 0);
     geo.addGroup(litIndices, glow.index.length, 1);
+    if (pane.index.length) geo.addGroup(litIndices + glow.index.length, pane.index.length, 2);
     geo.computeBoundingSphere();
 
-    const mesh = new THREE.Mesh(geo, [propMaterial, glowMaterial]);
+    const mesh = new THREE.Mesh(geo, [propMaterial, glowMaterial, paneMaterial]);
     mesh.position.set(baseX, 0, baseZ);
     mesh.frustumCulled = true;
     mesh.userData.chunk = chunk;

@@ -336,6 +336,87 @@ export function isCatapult(id) {
   return id >= CATAPULT && id <= CATAPULT + 3;
 }
 
+// ---- Phase 7a: the decorative pack ------------------------------------------
+//
+// What the two kingdoms are built from, and what makes a house more than a
+// box: dark stone and dark brick for the Stone Kingdom; sky-marble, gold
+// trim and firefly lanterns for the Sky Kingdom; and, for anyone, walls that
+// join like fences, pillars that grow a base and a capital, trapdoors,
+// framed windows, timber framing, vases, urns and banners.
+export const DARK_STONE = 156;
+export const DARK_BRICK = 157;
+export const SKY_MARBLE = 158;
+BLOCKS.push(
+  { id: DARK_STONE, name: 'Dark Stone', glyph: 'stone', color: 0x4f4b57, material: 'stone', unlock: null },
+  { id: DARK_BRICK, name: 'Dark Brick', glyph: 'brick', color: 0x5c4b52, material: 'stone', unlock: null },
+  { id: SKY_MARBLE, name: 'Sky Marble', glyph: 'marble', color: 0xe8eef8, material: 'stone', unlock: null },
+  { id: 159, name: 'Gold Trim', glyph: 'trim', color: 0xe2c26a, material: 'stone', unlock: null },
+  // Plaster between dark oak beams — the beams are painted into the
+  // texture (see textures.js `timber`), so it lays like any block.
+  { id: 160, name: 'Timber Frame', glyph: 'timber', color: 0xf0e6cf, material: 'wood', unlock: null },
+);
+
+// Walls: a thick, low stone fence. They join each other, fences, gates and
+// solid blocks, with a post wherever the run turns, ends or meets another
+// (see propShapes' wallBoxes); like a fence, nothing climbs over one.
+export const WALLS = [
+  { id: 161, name: 'Cobblestone Wall', color: 0xa1a1aa },
+  { id: 162, name: 'Stone Wall', color: 0xafafb6 },
+  { id: 163, name: 'Brick Wall', color: 0xd1887a },
+  { id: 164, name: 'Dark Stone Wall', color: 0x4f4b57 },
+];
+for (const w of WALLS) BLOCKS.push({ ...w, glyph: 'wall', shape: 'wall', material: 'stone', unlock: null });
+
+// Pillars: stacked, they read as one column — a base at the bottom, a
+// capital at the top and plain shaft between (see ChunkMesher, which looks
+// above and below each one).
+export const PILLARS = [
+  { id: 165, name: 'Stone Pillar', color: 0xc4c4ca },
+  { id: 166, name: 'Marble Pillar', color: 0xe3dbc8 },
+  { id: 167, name: 'Dark Pillar', color: 0x4f4b57 },
+];
+for (const c of PILLARS) BLOCKS.push({ ...c, glyph: 'pillar', shape: 'pillar', material: 'stone', unlock: null });
+
+// The rest face a way, four ids each: the one you hold is facing 0, the
+// others are states of it. `quad` is the first of the four, which is all
+// `turned` needs.
+function quad(base, spec) {
+  BLOCKS.push({ ...spec, id: base, facing: 0, quad: base });
+  for (let f = 1; f <= 3; f++) BLOCKS.push({ ...spec, id: base + f, facing: f, quad: base, stateOf: spec.stateOf ?? base, cost: undefined });
+}
+// A trapdoor: shut it's a floor you stand on, high in its cell; Place
+// swings it up against the side its hinges are on (see Game.toggleGate).
+export const TRAPDOOR = 168;
+export const TRAPDOOR_OPEN = 172;
+quad(TRAPDOOR, { name: 'Trapdoor', glyph: 'trapdoor', color: 0xb08a60, shape: 'trapdoor', material: 'wood', unlock: null });
+quad(TRAPDOOR_OPEN, { name: 'Open Trapdoor', glyph: 'trapdoor', color: 0xb08a60, shape: 'trapdoor_open', material: 'wood', stateOf: TRAPDOOR, unlock: null });
+// A window in a wooden frame with crossbars, glazed — the glass is drawn
+// see-through (ChunkMesher's pane material).
+quad(176, { name: 'Framed Window', glyph: 'window', color: 0x9a7350, shape: 'window', unlock: null });
+BLOCKS.push(
+  { id: 180, name: 'Vase', glyph: 'vase', color: 0xc9825c, shape: 'vase', material: 'stone', unlock: null },
+  { id: 181, name: 'Urn', glyph: 'urn', color: 0xb08d57, shape: 'urn', material: 'stone', unlock: null },
+);
+// Banners on a pole: white with a gold sun for the sky, black with a red
+// tower for the stone.
+quad(182, { name: 'White Banner', glyph: 'banner', color: 0xf4f1ea, shape: 'banner_white', material: 'plant', unlock: null });
+quad(186, { name: 'Black Banner', glyph: 'banner', color: 0x2e2a33, shape: 'banner_black', material: 'plant', unlock: null });
+// A glass lantern with fireflies in it, for the Sky Kingdom: a cooler,
+// greener light than a candle's.
+BLOCKS.push({
+  id: 190, name: 'Firefly Lantern', glyph: 'lantern', color: 0xd9ec9a, shape: 'firefly', material: 'wood',
+  light: { color: 0xd8ff8a, intensity: 4, distance: 16, decay: 1, y: 0.8 }, unlock: null,
+});
+
+/** Whether a block is a trapdoor, open or shut, whichever way it faces. */
+export function isTrapdoor(id) {
+  return id >= TRAPDOOR && id <= TRAPDOOR_OPEN + 3;
+}
+/** The same trapdoor swung the other way. */
+export function swungTrapdoor(id) {
+  return id < TRAPDOOR_OPEN ? id + 4 : id - 4;
+}
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /** Ground a tree will take root in. */
@@ -422,6 +503,7 @@ export function turned(id, facing) {
   if (door) return doorBlock({ ...door, facing });
   if (isChest(id)) return CHEST + facing;
   if (isCatapult(id)) return CATAPULT + facing;
+  if (b.quad != null) return b.quad + facing;
   const baseId = b.stateOf ?? id;
   const k = TURNS.indexOf(baseId);
   return facing === 0 ? baseId : TURN_BASE + 3 * k + facing;

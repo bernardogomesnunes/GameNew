@@ -250,6 +250,147 @@ export function fenceBoxes(shape, joins) {
   return boxes;
 }
 
+// ---- Phase 7a: the decorative pack ------------------------------------------
+
+/**
+ * A stone wall: a post where the run turns, ends or meets another, and a
+ * thick low wall out to each side it joins — one straight piece when it
+ * just runs through. Like fenceBoxes, `joins` says which of the four sides
+ * have something to join.
+ */
+export function wallBoxes({ px = 0, nx = 0, pz = 0, nz = 0 } = {}) {
+  const lo = 0.3125, hi = 0.6875, top = 0.8125;
+  if (px && nx && !pz && !nz) return [{ minX: 0, maxX: 1, minY: 0, maxY: top, minZ: lo, maxZ: hi }];
+  if (pz && nz && !px && !nx) return [{ minX: lo, maxX: hi, minY: 0, maxY: top, minZ: 0, maxZ: 1 }];
+  const out = [{ minX: 0.25, maxX: 0.75, minY: 0, maxY: 1, minZ: 0.25, maxZ: 0.75 }];
+  if (px) out.push({ minX: 0.75, maxX: 1, minY: 0, maxY: top, minZ: lo, maxZ: hi });
+  if (nx) out.push({ minX: 0, maxX: 0.25, minY: 0, maxY: top, minZ: lo, maxZ: hi });
+  if (pz) out.push({ minX: lo, maxX: hi, minY: 0, maxY: top, minZ: 0.75, maxZ: 1 });
+  if (nz) out.push({ minX: lo, maxX: hi, minY: 0, maxY: top, minZ: 0, maxZ: 0.25 });
+  return out;
+}
+
+/**
+ * A pillar: a fluted-looking shaft (two boxes crossed, so it reads round),
+ * with a base when nothing pillar-like is under it and a capital when
+ * nothing is over it — so a stack of them is one column, not a pile.
+ */
+export function pillarBoxes({ base = true, capital = true } = {}) {
+  const y0 = base ? 0.22 : 0, y1 = capital ? 0.8 : 1;
+  const out = [
+    { minX: 0.22, maxX: 0.78, minY: y0, maxY: y1, minZ: 0.3, maxZ: 0.7 },
+    { minX: 0.3, maxX: 0.7, minY: y0, maxY: y1, minZ: 0.22, maxZ: 0.78 },
+  ];
+  if (base) {
+    out.push({ minX: 0.06, maxX: 0.94, minY: 0, maxY: 0.12, minZ: 0.06, maxZ: 0.94 });
+    out.push({ minX: 0.14, maxX: 0.86, minY: 0.12, maxY: 0.22, minZ: 0.14, maxZ: 0.86 });
+  }
+  if (capital) {
+    out.push({ minX: 0.14, maxX: 0.86, minY: 0.8, maxY: 0.88, minZ: 0.14, maxZ: 0.86 });
+    out.push({ minX: 0.06, maxX: 0.94, minY: 0.88, maxY: 1, minZ: 0.06, maxZ: 0.94 });
+  }
+  return out;
+}
+PROP_SHAPES.wall = wallBoxes();
+PROP_SHAPES.pillar = pillarBoxes();
+
+// A trapdoor, shut: boards high in the cell (you stand on it), battens
+// underneath, its hinges on the -z edge. Open, it stands up against that
+// edge — the same boards, swung a quarter turn about the hinge.
+const BATTEN = 0x8a6a48;
+PROP_SHAPES.trapdoor = [
+  { minX: 0, maxX: 1, minY: 0.8125, maxY: 1, minZ: 0, maxZ: 1 },
+  { minX: 0.06, maxX: 0.94, minY: 0.76, maxY: 0.8125, minZ: 0.14, maxZ: 0.26, color: BATTEN },
+  { minX: 0.06, maxX: 0.94, minY: 0.76, maxY: 0.8125, minZ: 0.74, maxZ: 0.86, color: BATTEN },
+  { minX: 0.16, maxX: 0.32, minY: 1, maxY: 1.025, minZ: 0, maxZ: 0.22, color: IRON },
+  { minX: 0.68, maxX: 0.84, minY: 1, maxY: 1.025, minZ: 0, maxZ: 0.22, color: IRON },
+];
+PROP_SHAPES.trapdoor_open = [
+  { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: 0.1875 },
+  { minX: 0.06, maxX: 0.94, minY: 0.74, maxY: 0.86, minZ: 0.1875, maxZ: 0.24, color: BATTEN },
+  { minX: 0.06, maxX: 0.94, minY: 0.14, maxY: 0.26, minZ: 0.1875, maxZ: 0.24, color: BATTEN },
+  { minX: 0.16, maxX: 0.32, minY: 0.78, maxY: 1, minZ: -0.025, maxZ: 0, color: IRON },
+  { minX: 0.68, maxX: 0.84, minY: 0.78, maxY: 1, minZ: -0.025, maxZ: 0, color: IRON },
+];
+
+// A framed window: a wooden frame with a cross of glazing bars across the
+// middle of its cell, and glass in it. `pane` boxes are drawn see-through
+// (ChunkMesher's pane material).
+const GLASS = 0xb9dce8;
+PROP_SHAPES.window = [
+  { minX: 0, maxX: 0.125, minY: 0, maxY: 1, minZ: 0.4, maxZ: 0.6 },
+  { minX: 0.875, maxX: 1, minY: 0, maxY: 1, minZ: 0.4, maxZ: 0.6 },
+  { minX: 0.125, maxX: 0.875, minY: 0, maxY: 0.125, minZ: 0.4, maxZ: 0.6 },
+  { minX: 0.125, maxX: 0.875, minY: 0.875, maxY: 1, minZ: 0.4, maxZ: 0.6 },
+  // A sill that stands out a little each side.
+  { minX: 0, maxX: 1, minY: 0, maxY: 0.06, minZ: 0.34, maxZ: 0.66 },
+  // The glazing bars.
+  { minX: 0.46875, maxX: 0.53125, minY: 0.125, maxY: 0.875, minZ: 0.46, maxZ: 0.54 },
+  { minX: 0.125, maxX: 0.875, minY: 0.46875, maxY: 0.53125, minZ: 0.46, maxZ: 0.54 },
+  { minX: 0.125, maxX: 0.875, minY: 0.125, maxY: 0.875, minZ: 0.49, maxZ: 0.51, color: GLASS, pane: true },
+];
+
+// A terracotta vase with a painted band, and a bronze urn with handles and
+// a lid.
+PROP_SHAPES.vase = [
+  { minX: 0.34, maxX: 0.66, minY: 0, maxY: 0.08, minZ: 0.34, maxZ: 0.66 },
+  { minX: 0.24, maxX: 0.76, minY: 0.08, maxY: 0.5, minZ: 0.24, maxZ: 0.76 },
+  { minX: 0.235, maxX: 0.765, minY: 0.28, maxY: 0.34, minZ: 0.235, maxZ: 0.765, color: 0x8a4f35 },
+  { minX: 0.3, maxX: 0.7, minY: 0.5, maxY: 0.58, minZ: 0.3, maxZ: 0.7 },
+  { minX: 0.38, maxX: 0.62, minY: 0.58, maxY: 0.74, minZ: 0.38, maxZ: 0.62 },
+  { minX: 0.33, maxX: 0.67, minY: 0.74, maxY: 0.8, minZ: 0.33, maxZ: 0.67 },
+];
+PROP_SHAPES.urn = [
+  { minX: 0.34, maxX: 0.66, minY: 0, maxY: 0.1, minZ: 0.34, maxZ: 0.66 },
+  { minX: 0.42, maxX: 0.58, minY: 0.1, maxY: 0.18, minZ: 0.42, maxZ: 0.58 },
+  { minX: 0.22, maxX: 0.78, minY: 0.18, maxY: 0.62, minZ: 0.22, maxZ: 0.78 },
+  { minX: 0.26, maxX: 0.74, minY: 0.62, maxY: 0.7, minZ: 0.26, maxZ: 0.74 },
+  { minX: 0.3, maxX: 0.7, minY: 0.7, maxY: 0.76, minZ: 0.3, maxZ: 0.7 },
+  { minX: 0.45, maxX: 0.55, minY: 0.76, maxY: 0.84, minZ: 0.45, maxZ: 0.55 },
+  { minX: 0.12, maxX: 0.22, minY: 0.36, maxY: 0.56, minZ: 0.45, maxZ: 0.55 },
+  { minX: 0.78, maxX: 0.88, minY: 0.36, maxY: 0.56, minZ: 0.45, maxZ: 0.55 },
+];
+
+// Banners on a pole, standing taller than a block: the cloth (the block's
+// own colour) hangs from a crossbar with a swallowtail foot and its emblem
+// on the face towards you — a gold sun on white, a red tower on black.
+const POLE = 0x6b4a3a, GILT = 0xe2c26a, BLOOD = 0x9a2c2c;
+const bannerFrame = (trim) => [
+  { minX: 0.46, maxX: 0.54, minY: 0, maxY: 1.92, minZ: 0.46, maxZ: 0.54, color: POLE },
+  { minX: 0.42, maxX: 0.58, minY: 1.92, maxY: 2, minZ: 0.42, maxZ: 0.58, color: GILT },
+  { minX: 0.08, maxX: 0.92, minY: 1.8, maxY: 1.86, minZ: 0.5, maxZ: 0.56, color: POLE },
+  { minX: 0.14, maxX: 0.86, minY: 0.62, maxY: 1.8, minZ: 0.56, maxZ: 0.6 },
+  { minX: 0.14, maxX: 0.4, minY: 0.46, maxY: 0.62, minZ: 0.56, maxZ: 0.6 },
+  { minX: 0.6, maxX: 0.86, minY: 0.46, maxY: 0.62, minZ: 0.56, maxZ: 0.6 },
+  { minX: 0.14, maxX: 0.86, minY: 1.68, maxY: 1.74, minZ: 0.6, maxZ: 0.615, color: trim },
+];
+PROP_SHAPES.banner_white = [
+  ...bannerFrame(GILT),
+  { minX: 0.4, maxX: 0.6, minY: 1.08, maxY: 1.28, minZ: 0.6, maxZ: 0.62, color: GILT },
+  { minX: 0.48, maxX: 0.52, minY: 0.96, maxY: 1.4, minZ: 0.6, maxZ: 0.615, color: GILT },
+  { minX: 0.28, maxX: 0.72, minY: 1.16, maxY: 1.2, minZ: 0.6, maxZ: 0.615, color: GILT },
+];
+PROP_SHAPES.banner_black = [
+  ...bannerFrame(BLOOD),
+  { minX: 0.42, maxX: 0.58, minY: 0.9, maxY: 1.34, minZ: 0.6, maxZ: 0.62, color: BLOOD },
+  { minX: 0.38, maxX: 0.44, minY: 1.34, maxY: 1.42, minZ: 0.6, maxZ: 0.62, color: BLOOD },
+  { minX: 0.47, maxX: 0.53, minY: 1.34, maxY: 1.42, minZ: 0.6, maxZ: 0.62, color: BLOOD },
+  { minX: 0.56, maxX: 0.62, minY: 1.34, maxY: 1.42, minZ: 0.6, maxZ: 0.62, color: BLOOD },
+];
+
+// A firefly lantern: a gilt frame round a glass case with fireflies in it.
+const FIREFLY = 0xe6ff7a;
+PROP_SHAPES.firefly = [
+  { minX: 0.28, maxX: 0.72, minY: 0, maxY: 0.06, minZ: 0.28, maxZ: 0.72, color: GILT },
+  ...[[0.3, 0.3], [0.64, 0.3], [0.3, 0.64], [0.64, 0.64]].map(([x, z]) => (
+    { minX: x, maxX: x + 0.06, minY: 0.06, maxY: 0.58, minZ: z, maxZ: z + 0.06, color: GILT })),
+  { minX: 0.26, maxX: 0.74, minY: 0.58, maxY: 0.64, minZ: 0.26, maxZ: 0.74, color: GILT },
+  { minX: 0.44, maxX: 0.56, minY: 0.64, maxY: 0.76, minZ: 0.44, maxZ: 0.56, color: GILT },
+  { minX: 0.33, maxX: 0.67, minY: 0.06, maxY: 0.58, minZ: 0.33, maxZ: 0.67, color: 0xdff2d0, pane: true },
+  ...[[0.4, 0.2, 0.45], [0.55, 0.32, 0.4], [0.45, 0.44, 0.56], [0.58, 0.16, 0.58], [0.38, 0.36, 0.38]].map(([x, y, z]) => (
+    { minX: x, maxX: x + 0.045, minY: y, maxY: y + 0.045, minZ: z, maxZ: z + 0.045, color: FIREFLY, glow: true })),
+];
+
 /** The boxes for a shape, or the slab's if a new shape id has none registered yet. */
 export function boxesFor(shape) {
   return PROP_SHAPES[shape] ?? PROP_SHAPES.slab;

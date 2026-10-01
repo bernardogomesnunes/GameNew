@@ -51,7 +51,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN } from './config/blocks.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
@@ -59,6 +59,8 @@ import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox } from './world/Mobs.js';
 import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './world/Projectiles.js';
 import { ProjectileView } from './render/ProjectileView.js';
+import { Fireflies } from './world/Fireflies.js';
+import { FireflyView } from './render/FireflyView.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers } from './world/Wanderers.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
@@ -141,12 +143,13 @@ const WATER_STEP_SECONDS = 0.25;
 const LAVA_STEP_SECONDS = 1;
 const GATE_SWING = { [GATE_SHUT]: GATE_OPEN, [GATE_OPEN]: GATE_SHUT };
 /** A gate or either half of a door: something Place swings rather than builds on. */
-const swings = (id) => !!GATE_SWING[id] || !!doorPart(id);
+const swings = (id) => !!GATE_SWING[id] || !!doorPart(id) || isTrapdoor(id);
 /** What Place does to a door or gate — "Open" or "Close" — or null for anything else. */
 export function swingLabel(id) {
   if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
   if (isChest(id)) return 'Open';
   if (isCatapult(id)) return 'Man';
+  if (isTrapdoor(id)) return id >= TRAPDOOR_OPEN ? 'Close' : 'Open';
   const door = doorPart(id);
   return door ? (door.open ? 'Close' : 'Open') : null;
 }
@@ -322,6 +325,7 @@ export class Game {
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
     this.projectileView = new ProjectileView(this.scene);
+    this.fireflyView = new FireflyView(this.scene);
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -2664,6 +2668,37 @@ export class Game {
     return true;
   }
 
+  /** The swarm of fireflies under the crosshair, if no block is in front of it. */
+  fireflyTarget(hit = this.raycast()) {
+    if (!this.fireflies) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const found = this.fireflies.pick(eye, dir, REACH);
+    if (!found) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < found.t) return null;
+    }
+    return found.swarm;
+  }
+
+  /**
+   * Break, aimed at a swarm of fireflies: a handful caught, into the bag —
+   * what a Firefly Lantern is made with. Returns whether the press was spent
+   * on them.
+   */
+  catchFireflies(hit) {
+    const swarm = this.fireflyTarget(hit);
+    if (!swarm) return false;
+    const now = performance.now();
+    if (now - (this.lastStrikeAt ?? 0) < STRIKE_COOLDOWN_MS) return true;
+    this.lastStrikeAt = now;
+    this.digTarget = null;
+    this.fireflies.catchFrom(swarm);
+    const got = this.duilt?.collect({ fireflies: 1 }) ?? {};
+    this.ui.toast({ kind: 'xp', title: 'Caught some fireflies', body: got.fireflies ? '+1 fireflies' : undefined });
+    return true;
+  }
+
   /** A bandit's blow landing on you. */
   banditHits(p, hits) {
     if (!this.duilt || this.duilt.sandbox) return;
@@ -2853,6 +2888,7 @@ export class Game {
     if (this.manning) return;
     const hit = this.raycast();
     if (this.hitBandit(hit)) return;
+    if (this.catchFireflies(hit)) return;
     if (this.hitMob(hit)) return;
     if (!hit) { this.digTarget = null; return; }
 
@@ -2909,16 +2945,17 @@ export class Game {
   toggleGate(hit) {
     // A door swings both its halves together.
     const door = doorPart(hit.block);
+    const trap = isTrapdoor(hit.block);
     const cells = door ? this.doorCells(hit) : [{ x: hit.x, y: hit.y, z: hit.z, block: hit.block }];
-    const shutting = door ? door.open : GATE_SWING[hit.block] === GATE_SHUT;
+    const shutting = door ? door.open : trap ? hit.block >= TRAPDOOR_OPEN : GATE_SWING[hit.block] === GATE_SHUT;
     if (shutting && cells.some((c) => this.blockOverlapsPlayerAABB(c))) {
-      this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : 'Step out of the gateway first' });
+      this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : trap ? 'Step out from under it first' : 'Step out of the gateway first' });
       return;
     }
     this.sound?.creak(!shutting);
     for (const c of cells) {
       const part = doorPart(c.block);
-      const next = part ? doorBlock({ ...part, open: !part.open }) : GATE_SWING[c.block];
+      const next = part ? doorBlock({ ...part, open: !part.open }) : trap ? swungTrapdoor(c.block) : GATE_SWING[c.block];
       this.world.setBlock(c.x, c.y, c.z, next);
       this.water?.touch(c.x, c.y, c.z);
       this.lava?.touch(c.x, c.y, c.z);
@@ -3565,6 +3602,7 @@ export class Game {
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
       this.tickCatapult(dt);
+      this.fireflies.tick(dt, this.player.position, 1 - daylightAt(this.dayCycle.time).day);
       this.runWater(dt);
       this.growCrops(dt);
       this.tickBreaking(performance.now());
@@ -3591,6 +3629,7 @@ export class Game {
     this.mobView.update(this.mobs?.list ?? []);
     this.wanderView.update(this.wanderers?.list ?? []);
     this.projectileView.update(this.projectiles?.list ?? []);
+    this.fireflyView.update(this.fireflies);
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -3659,6 +3698,7 @@ export class Game {
       });
       this.mobsHerdOf = null;
     }
+    if (this.fireflies?.world !== this.world) this.fireflies = new Fireflies({ world: this.world });
     if (this.projectiles?.world !== this.world) {
       this.projectiles = new Projectiles({ world: this.world, onImpact: (s, landed) => this.stoneLands(landed) });
       this.manning = null;
@@ -3783,6 +3823,12 @@ export class Game {
             : stranger.raider ? 'a bandit, raiding — hit to fight' : spec.aboutHostile);
       return;
     }
+    // A swarm of fireflies, at night.
+    if (!this.armed && this.fireflyTarget(hit)) {
+      this.hoverBox.visible = false;
+      this.ui?.setPersonHint('Fireflies', 'hit to catch a few');
+      return;
+    }
     // Same for an animal — named before you swing, and no block outline
     // behind it saying the swing will land on the ground.
     const mob = this.armed ? null : this.mobTarget(hit);
@@ -3803,9 +3849,10 @@ export class Game {
     const door = hit && doorPart(hit.block);
     const chest = hit && isChest(hit.block);
     const catapult = hit && isCatapult(hit.block);
+    const trapdoor = hit && isTrapdoor(hit.block);
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door || chest || catapult) && swingLabel(hit.block);
+    const swing = (gate || door || chest || catapult || trapdoor) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     this.ui?.setBuildingHint(gate
       ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
@@ -3815,6 +3862,8 @@ export class Game {
         ? `${this.duilt?.chestAt(hit.x, hit.y, hit.z, { create: false })?.grave ? 'What you were carrying' : 'Chest'} — ${how}`
       : catapult
         ? `Catapult — ${how}`
+      : trapdoor
+        ? `Trapdoor · ${hit.block >= TRAPDOOR_OPEN ? 'open' : 'shut'} — ${how}`
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')
