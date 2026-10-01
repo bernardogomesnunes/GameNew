@@ -81,9 +81,16 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
   - a short buff on crops or walls;
   - holy water, which heals.
 - **At the top level the Temple asks you to choose:**
-  - **White Ring:** gold and amethyst. Faster movement and a higher jump.
-  - **Black Ring:** obsidian. A dark spark hurts whoever strikes you.
+  - **White Ring:** gold and **Sunstone**. Faster movement and a higher jump.
+  - **Black Ring:** obsidian and **Nightstone**. A dark spark hurts whoever strikes you.
 - **You forge one ring.** The Temple takes on its colour and the other ring is closed to you.
+- **Ring ores** (decided with the user): each ring needs an ore of its own. Devotion alone isn't enough.
+  - **Sunstone:** a pale gold crystal with a faint glow. It's for the White Ring.
+  - **Nightstone:** black stone with violet glints. It's for the Black Ring.
+  - **Very rare.** Single blocks deep in the caves, near the bottom of the world (well below the ordinary ores), a handful per large area. They glow faintly, so you can spot one in the dark.
+  - **In chests too:** loot chests are a new thing in the world. They're buried in deep caves and found at bandit camps and the hermit's hut, and now and then one holds a piece.
+  - **Forging cost:** a ring needs a few pieces of its ore, gold or obsidian, and devotion. The ore is the hunt, and devotion is the faith.
+- **Devotion stays**, but it's open to change once it's been played (the user isn't sure about it yet).
 
 ### 7d. The Sanctuary and the guardian
 - **Only your god's Sanctuary can be built:** the White Sanctuary (open marble and light) or the Black Sanctuary (obsidian and a pit).
