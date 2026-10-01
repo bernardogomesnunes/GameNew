@@ -345,6 +345,7 @@ export class DuiltUI {
         : `
         <p><strong>${level.canEvolve ? `Ready to evolve to ${next.name}` : `To evolve to ${next.name}`}</strong></p>
         ${level.canEvolve ? '' : next.missing?.length ? `<ul>${next.missing.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}
+        ${next.cost ? `<p>Costs ${Object.entries(next.cost).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' and ')} from your bag when you evolve it.</p>` : ''}
         ${next.rate ? `<p class="dim">Then: ${rateText(next.rate.produces, next.rate.everySeconds)}</p>` : ''}`;
 
     body.innerHTML = `
@@ -909,7 +910,7 @@ export class DuiltUI {
     const all = this.q('#btn-store-all');
     if (all) all.hidden = !!summary.grave;
     const title = this.q('#store-title');
-    if (title) title.textContent = summary.chest ? (summary.grave ? 'What you were carrying' : 'Chest') : 'Storehouse';
+    if (title) title.textContent = summary.chest ? (summary.grave ? 'What you were carrying' : summary.found ?? 'Chest') : 'Storehouse';
 
     const kind = summary.tier?.name ?? 'On the shelves';
     this.q('#store-where').textContent = summary.free

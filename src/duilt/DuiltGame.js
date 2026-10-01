@@ -14,6 +14,7 @@ import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool } from '../config/
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
+import { lootFor, LOOT } from './Loot.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
 
 /**
@@ -63,7 +64,18 @@ export class DuiltGame {
     // What you're wearing — see wear(). Each slot { id, wear } or null.
     this.worn = Object.fromEntries(WEAR_SLOTS.map((k) => [k, null]));
     this.skills = new Skills(bus);
-    this.crafting = new Crafting({ inventory: this.inventory, world, skills: this.skills });
+    // Which ring you forged, if any: 'white' or 'black' — for good (Phase 7c).
+    this.ring = null;
+    this.crafting = new Crafting({
+      inventory: this.inventory, world, skills: this.skills,
+      locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you` : null),
+      onMade: (r) => {
+        if (r.ring && !this.ring) {
+          this.ring = r.ring;
+          this.bus?.emit('ring:forged', { ring: r.ring });
+        }
+      },
+    });
     this.settlers = new Settlers({
       world, structures: this.structures, inventory: this.inventory, skills: this.skills, bus,
     });
@@ -382,7 +394,11 @@ export class DuiltGame {
       const dx = Math.max(r.minX - position.x, 0, position.x - (r.maxX + 1));
       const dy = Math.max(r.minY - position.y, 0, position.y - (r.maxY + 1));
       const dz = Math.max(r.minZ - position.z, 0, position.z - (r.maxZ + 1));
-      if (Math.max(dx, dy, dz) <= range) found.add(spec.station);
+      if (Math.max(dx, dy, dz) <= range) {
+        found.add(spec.station);
+        // And how far it's built up, for recipes that ask a level of it.
+        for (let t = 0; t <= (s.tier ?? 0); t++) found.add(`${spec.station}@${t}`);
+      }
     }
     return [...found];
   }
@@ -401,7 +417,7 @@ export class DuiltGame {
       const used = store.slots.filter(Boolean).length;
       const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
       return {
-        structure: null, chest: true, grave: chest.grave, store, used, free: store.size - used, size: store.size, items,
+        structure: null, chest: true, grave: chest.grave, found: chest.found ? LOOT[chest.found]?.name : null, store, used, free: store.size - used, size: store.size, items,
         tier: { name: chest.grave ? 'In the chest' : 'Chest' },
       };
     }
@@ -586,6 +602,21 @@ export class DuiltGame {
   // ---- chests ----
 
   /**
+   * A chest you found — one the world put there, never opened, with no
+   * record of its own yet — filled with what it holds (see Loot.js). Does
+   * nothing for a chest already opened or one you made. Returns what was in
+   * it, or null.
+   */
+  unpackFound(x, y, z, kind, seed) {
+    if (this.chests.has(chestKey(x, y, z))) return null;
+    const chest = this.chestAt(x, y, z);
+    const loot = lootFor(kind, x, y, z, seed);
+    for (const [id, n] of Object.entries(loot)) chest.inventory.add(id, n);
+    chest.found = LOOT[kind] ? kind : 'cave';
+    return loot;
+  }
+
+  /**
    * The chest standing at (x, y, z) — its slots and whether it's the one
    * left where you fell — or null. A chest block with nothing recorded (put
    * down before chests had slots, or brought in some other way) gets its
@@ -649,6 +680,21 @@ export class DuiltGame {
     return this.structures.storeFor(target);
   }
 
+  /** Drinks holy water (or anything that `heals`): hearts back, now. */
+  drink(itemId) {
+    const spec = ITEMS_BY_ID.get(itemId);
+    if (!spec?.heals) return { ok: false, reason: `You can't drink ${spec?.name?.toLowerCase() ?? 'that'}.` };
+    if (!this.inventory.has(itemId, 1)) return { ok: false, reason: 'You have none of that.' };
+    if (this.health.value >= 20) return { ok: false, reason: 'You are not hurt.' };
+    this.inventory.remove(itemId, 1);
+    return { ok: true, healed: this.health.heal(spec.heals) };
+  }
+
+  /** The ring you're wearing, if any: 'white' or 'black' — its effects only count while it's on. */
+  ringWorn() {
+    return ITEMS_BY_ID.get(this.worn.ring?.id)?.ring ?? null;
+  }
+
   eat(itemId = null) {
     const id = itemId ?? this.hunger.bestFoodIn(this.inventory);
     if (!id) return { ok: false, reason: 'You have nothing to eat.' };
@@ -665,7 +711,8 @@ export class DuiltGame {
       hunger: this.hunger.toJSON(),
       health: this.health.toJSON(),
       worn: this.worn,
-      chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, ...c.inventory.toJSON() })),
+      ring: this.ring,
+      chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, found: c.found, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
       herd: herdToJSON(this.herd),
@@ -685,6 +732,7 @@ export class DuiltGame {
     this.structures.loadJSON(data.structures);
     this.hunger.loadJSON(data.hunger);
     this.health.loadJSON(data.health);
+    this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
     for (const k of WEAR_SLOTS) {
       const w = data.worn?.[k];
       this.worn[k] = w && ITEMS_BY_ID.get(w.id)?.wears === k ? { id: w.id, wear: Number(w.wear) || 0 } : null;
@@ -694,7 +742,7 @@ export class DuiltGame {
       if (typeof c?.key !== 'string') continue;
       const inventory = new Inventory({ slots: Math.max(CHEST_SLOTS, c.slots?.length ?? 0), bus: this.bus });
       inventory.loadJSON(c);
-      this.chests.set(c.key, { inventory, grave: !!c.grave });
+      this.chests.set(c.key, { inventory, grave: !!c.grave, ...(c.found ? { found: c.found } : {}) });
     }
     this.skills.loadJSON(data.skills);
     this.settlers.loadJSON(data.settlers);

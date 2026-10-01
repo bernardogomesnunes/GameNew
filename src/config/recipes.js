@@ -643,6 +643,29 @@ export const RECIPES = [
   },
 ];
 
+// The Temple (Phase 7c). Offerings turn what you have into devotion; a
+// chapel (tier 1) blesses water; the High Temple (tier 4) forges a ring —
+// the White or the Black, and once one is forged the other is closed to
+// you for good (`ring`, see Crafting's `locked`).
+RECIPES.push(
+  { id: 'offer_fruit', name: 'Offer fruit', station: 'temple', age: 3, inputs: { fruit: 6 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'Laid on the altar.' },
+  { id: 'offer_harvest', name: 'Offer a harvest', station: 'temple', age: 3, inputs: { vegetables: 4 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'The first of what the farm gave.' },
+  { id: 'offer_meat', name: 'Offer a meal', station: 'temple', age: 3, inputs: { cooked_meat: 2 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'A feast for the god, eaten by the priests.' },
+  { id: 'offer_gold', name: 'Offer gold', station: 'temple', age: 3, inputs: { gold: 1 }, output: { id: 'devotion', count: 2 }, batch: 8, blurb: 'Gold buys devotion faster than anything.' },
+  { id: 'offer_candle', name: 'Light a candle', station: 'temple', age: 3, inputs: { lantern: 1 }, output: { id: 'devotion', count: 1 }, batch: 4, blurb: 'A light left burning at the altar.' },
+  { id: 'holy_water', name: 'Holy Water', station: 'temple', tier: 1, age: 3, inputs: { glass: 1, devotion: 1 }, output: { id: 'holy_water', count: 2 }, batch: 4, blurb: 'Blessed at a chapel or better. Drink it to heal four hearts.' },
+  {
+    id: 'ring_white', name: 'Forge the White Ring', station: 'temple', tier: 4, age: 3, ring: 'white',
+    inputs: { sunstone: 3, gold: 4, devotion: 12 }, output: { id: 'ring_white', count: 1 },
+    blurb: 'Gold and Sunstone. You move faster and jump higher. Forge it, and the Black Ring is closed to you.',
+  },
+  {
+    id: 'ring_black', name: 'Forge the Black Ring', station: 'temple', tier: 4, age: 3, ring: 'black',
+    inputs: { nightstone: 3, obsidian: 4, devotion: 12 }, output: { id: 'ring_black', count: 1 },
+    blurb: 'Obsidian and Nightstone. A dark spark hurts whoever strikes you. Forge it, and the White Ring is closed to you.',
+  },
+);
+
 // Armour (Phase 7b): each piece at the bench, from config/armour.js.
 for (const p of ARMOUR_PIECES) {
   RECIPES.push({

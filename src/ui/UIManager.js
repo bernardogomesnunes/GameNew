@@ -44,6 +44,7 @@ const TOOL_ACTION_LABELS = {
   fruit: ['Eat', 'Throw'],
   vegetables: ['Eat', 'Throw'],
   seeds: ['Break', 'Plant'],
+  holy_water: ['Drink', 'Place'],
 };
 
 function el(html) {

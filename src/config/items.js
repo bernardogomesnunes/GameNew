@@ -250,8 +250,28 @@ export const ITEMS = [
   { id: 'iron_ore', name: 'Iron Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xa9948d, glyph: 'gravel', block: 38, madeBy: 'Mined from the Summit' },
   { id: 'copper_ore', name: 'Copper Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xbb8a67, glyph: 'gravel', block: 39, madeBy: 'Mined from the Summit' },
   { id: 'gold_ore', name: 'Gold Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8b686, glyph: 'gold', block: 40, madeBy: 'Mined from the Summit' },
+  // The ring ores (Phase 7c) — see blocks.js. Each ring needs its own.
+  { id: 'sunstone', name: 'Sunstone', kind: 'raw', stackTo: STACK_GOODS, color: 0xffd76a, glyph: 'crystal', block: 191, madeBy: 'Very rare — deep in the caves, or in a chest. For the White Ring' },
+  { id: 'nightstone', name: 'Nightstone', kind: 'raw', stackTo: STACK_GOODS, color: 0x5a4a7a, glyph: 'crystal', block: 192, madeBy: 'Very rare — deep in the caves, or in a chest. For the Black Ring' },
   { id: 'iron_ingot', name: 'Iron Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xc7c7cd, glyph: 'gold', madeBy: 'Smelted at a foundry' },
   { id: 'copper_ingot', name: 'Copper Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xd69264, glyph: 'gold', madeBy: 'Smelted at a foundry' },
+
+  // --- the Temple (Phase 7c) ------------------------------------------------
+  //
+  // Devotion is what a temple gathers — from worshippers and offerings —
+  // and spends: on its own levels, on holy water, on a ring. Holy water
+  // heals when you drink it. The rings are worn in the ring slot; you can
+  // only ever forge one of the two.
+  { id: 'devotion', name: 'Devotion', kind: 'raw', stackTo: STACK_GOODS, color: 0xffe3a0, glyph: 'devotion', madeBy: 'Gathered at a temple — from worshippers and offerings' },
+  { id: 'holy_water', name: 'Holy Water', kind: 'drink', stackTo: 10, color: 0xbfe3f5, glyph: 'flask', heals: 8, madeBy: 'Blessed at a chapel — drink it to heal four hearts' },
+  {
+    id: 'ring_white', name: 'White Ring', kind: 'ring', stackTo: STACK_TOOL, color: 0xf2e2a4, glyph: 'ring', wears: 'ring', ring: 'white',
+    madeBy: 'Gold and Sunstone, forged at the High Temple — you move faster and jump higher',
+  },
+  {
+    id: 'ring_black', name: 'Black Ring', kind: 'ring', stackTo: STACK_TOOL, color: 0x3a3045, glyph: 'ring', wears: 'ring', ring: 'black',
+    madeBy: 'Obsidian and Nightstone, forged at the High Temple — a dark spark hurts whoever strikes you',
+  },
 
   // --- armour (Phase 7b) — see config/armour.js ---------------------------
   //

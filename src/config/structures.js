@@ -19,6 +19,18 @@ const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, PLANKS = 7
       COBBLE = 8, BRICK = 9, GLASS = 10, WATER = 11, GOLD = 13, MARBLE = 17,
       SAPLING = 20, FARMLAND = 21, FENCE = 47, GATE = 48, GATE_OPEN = 49;
 
+// The Temple's materials (Phase 7c) — see blocks.js for the ids.
+const PILLARS = [165, 166, 167];
+const STONEWORK = [STONE, COBBLE, BRICK, MARBLE, 156, 157, 158, 159, ...PILLARS];
+const ALTARS = [32, GOLD, 180, 181];
+const LIGHTS = [26, 85, 190];
+const WINDOWS = [GLASS, 15, 16, 176, 177, 178, 179];
+const GILDING = [159, GOLD];
+const BANNERS = [182, 183, 184, 185, 186, 187, 188, 189];
+
+/** "1 more window", "3 more windows". */
+const plural = (n, word) => `${n} more ${word}${n === 1 ? '' : 's'}`;
+
 /** Every crop block, at every stage — see config/crops.js. */
 const CROP_IDS = Array.from({ length: CROPS.length * 4 }, (_, i) => CROP_BASE + i);
 
@@ -800,6 +812,91 @@ export const STRUCTURES = [
     produces: {},
     everySeconds: 0,
     skill: 'politics',
+  },
+
+  // ---- Phase 7c: the Temple ------------------------------------------------
+  //
+  // A place of worship, from Age 3 (docs/plan-phase7-lore.md). It makes
+  // devotion — slowly by itself, faster with settlers who worship there
+  // (the same staffing every building has), and from offerings you bring it
+  // (recipes at the temple: food, gold, a lantern). It climbs from a Shrine
+  // to a High Temple by building it up, and each rung asks devotion too.
+  // At the top it forges a ring: the White or the Black — one, for good.
+  {
+    id: 'temple',
+    name: 'Temple',
+    icon: '⛪',
+    age: 3,
+    blurb: 'Somewhere to pray. Offerings and worshippers turn into devotion, and devotion into blessings.',
+    minSize: 4,
+    maxSize: 20,
+    cost: { gold: 1 },
+    station: 'temple',
+    requires: [
+      {
+        id: 'stone',
+        test: (ctx) => count(ctx, STONEWORK) >= 16,
+        say: (ctx) => `Needs ${16 - count(ctx, STONEWORK)} more stone, marble or brick — a temple is built to last`,
+      },
+      {
+        id: 'altar',
+        test: (ctx) => count(ctx, ALTARS) >= 1,
+        say: () => 'Needs an altar — a marble table, a vase, an urn or a block of gold',
+      },
+      {
+        id: 'light',
+        test: (ctx) => count(ctx, LIGHTS) >= 1,
+        say: () => 'Needs a light to keep — a lantern or a chandelier',
+      },
+      {
+        id: 'roof',
+        test: (ctx) => ctx.shelteredVolume() >= 2,
+        say: () => 'Needs a covered room round the altar',
+      },
+    ],
+    produces: { devotion: 1 },
+    everySeconds: 21600,
+    skill: 'building',
+    // Each rung is built, then paid for in devotion (`cost`, spent from your
+    // bag when you evolve it — see StructureRegistry.evolve). The High
+    // Temple is where a ring is forged (recipes.js, `tier: 4`).
+    tiers: [
+      { id: 'shrine', name: 'A Shrine', blurb: 'An altar, a light, and a roof over them.', needs: [] },
+      {
+        id: 'chapel', name: 'A Chapel', blurb: 'Light comes in through its windows now.',
+        produces: { devotion: 1 }, everySeconds: 14400, cost: { devotion: 3 },
+        needs: [
+          { test: (ctx) => count(ctx, WINDOWS) >= 2, say: (ctx) => plural(2 - count(ctx, WINDOWS), 'window') },
+          { test: (ctx) => count(ctx, LIGHTS) >= 2, say: (ctx) => plural(2 - count(ctx, LIGHTS), 'light') },
+        ],
+      },
+      {
+        id: 'temple', name: 'A Temple', blurb: 'Columns now, and room for a congregation.',
+        produces: { devotion: 2 }, everySeconds: 21600, cost: { devotion: 8 },
+        needs: [
+          { test: (ctx) => count(ctx, PILLARS) >= 4, say: (ctx) => plural(4 - count(ctx, PILLARS), 'pillar') },
+          { test: (ctx) => count(ctx, STONEWORK) >= 60, say: (ctx) => `${60 - count(ctx, STONEWORK)} more stonework` },
+        ],
+      },
+      {
+        id: 'great', name: 'A Great Temple', blurb: 'Gold on the stone, and light enough to read by at night.',
+        produces: { devotion: 2 }, everySeconds: 14400, cost: { devotion: 15 },
+        needs: [
+          { test: (ctx) => count(ctx, PILLARS) >= 8, say: (ctx) => plural(8 - count(ctx, PILLARS), 'pillar') },
+          { test: (ctx) => count(ctx, GILDING) >= 4, say: (ctx) => `${4 - count(ctx, GILDING)} more gold trim or gold` },
+          { test: (ctx) => count(ctx, LIGHTS) >= 4, say: (ctx) => plural(4 - count(ctx, LIGHTS), 'light') },
+        ],
+      },
+      {
+        id: 'high', name: 'The High Temple', blurb: 'Banners hang in it. Here the rings are forged — the White, or the Black.',
+        produces: { devotion: 3 }, everySeconds: 21600, cost: { devotion: 25 },
+        needs: [
+          { test: (ctx) => count(ctx, BANNERS) >= 2, say: (ctx) => plural(2 - count(ctx, BANNERS), 'banner') },
+          { test: (ctx) => count(ctx, GILDING) >= 8, say: (ctx) => `${8 - count(ctx, GILDING)} more gold trim or gold` },
+          { test: (ctx) => count(ctx, PILLARS) >= 12, say: (ctx) => plural(12 - count(ctx, PILLARS), 'pillar') },
+        ],
+      },
+    ],
   },
 ];
 

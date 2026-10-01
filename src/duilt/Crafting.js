@@ -14,10 +14,28 @@ const WATER_BLOCK = 11;
 const WATER_RANGE = 4;
 
 export class Crafting {
-  constructor({ inventory, world, skills = null }) {
+  /**
+   * @param locked  (recipe) => a reason it can't be made, or null — the
+   *                rings: once one is forged the other is closed (Phase 7c).
+   * @param onMade  (recipe) — after a recipe runs.
+   */
+  constructor({ inventory, world, skills = null, locked = null, onMade = null }) {
     this.inventory = inventory;
     this.world = world;
     this.skills = skills;
+    this.locked = locked;
+    this.onMade = onMade;
+  }
+
+  /**
+   * Whether you're at the station a recipe needs — and, for one that asks
+   * a level of it (`tier`), a building that has reached it: `atStations`
+   * carries 'temple@2' for a temple at level 2 or higher.
+   */
+  atStation(r, atStations) {
+    if (r.station === 'hand') return true;
+    if (!atStations.includes(r.station)) return false;
+    return !r.tier || atStations.includes(`${r.station}@${r.tier}`);
   }
 
   /**
@@ -33,15 +51,19 @@ export class Crafting {
     return recipesFor(age, station).map((r) => {
       const missing = this.inventory.missing(r.inputs);
       const placeOk = !r.needs || this.conditionMet(r.needs, near);
-      const stationOk = r.station === 'hand' || atStations.includes(r.station);
+      const stationOk = this.atStation(r, atStations);
+      const lock = this.locked?.(r) ?? null;
       const roomOk = this.inventory.roomFor(r.output.id, r.output.count) >= r.output.count;
-      const ok = Object.keys(missing).length === 0 && placeOk && stationOk && roomOk;
+      const ok = Object.keys(missing).length === 0 && placeOk && stationOk && roomOk && !lock;
       let reason = null;
       // Generic rather than hardcoded to "workshop" now that a second
       // station (foundry) exists — the recipe already knows which one it
       // needs, so there is nothing left to remember here when a third one
       // shows up.
-      if (!stationOk) reason = `Stand at your ${r.station} to make this`;
+      if (lock) reason = lock;
+      else if (!stationOk) reason = r.tier && atStations.includes(r.station)
+        ? `Needs your ${r.station} built up further — level ${r.tier + 1}`
+        : `Stand at your ${r.station} to make this`;
       else if (!placeOk) reason = r.needs === 'water' ? 'Stand closer to the river' : `Needs ${r.needs} nearby`;
       else if (Object.keys(missing).length) {
         reason = 'Needs ' + Object.entries(missing)
@@ -100,8 +122,10 @@ export class Crafting {
     // Checked here as well as in `available`, because the button is not the
     // only way in — a stale panel left open while you walked away would
     // otherwise still craft.
-    if (recipe.station !== 'hand' && !atStations.includes(recipe.station)) {
-      return { ok: false, reason: `Stand at your ${recipe.station} to make this.` };
+    const lock = this.locked?.(recipe);
+    if (lock) return { ok: false, reason: `${lock}.` };
+    if (!this.atStation(recipe, atStations)) {
+      return { ok: false, reason: `Stand at your ${recipe.station}${recipe.tier ? ', built up to level ' + (recipe.tier + 1) : ''}, to make this.` };
     }
 
     if (recipe.needs && !this.conditionMet(recipe.needs, near)) {
@@ -136,6 +160,7 @@ export class Crafting {
     }
 
     this.skills?.record('building', runs);
+    this.onMade?.(recipe);
     return { ok: true, made, item: recipe.output.id, name: itemName(recipe.output.id) };
   }
 }

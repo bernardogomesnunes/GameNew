@@ -98,6 +98,14 @@ export class StructureRegistry {
     const status = tierStatus(this.world, s.region, s.type, s.tier ?? 0);
     if (!status.canEvolve) return { ok: false, reason: "It doesn't qualify for the next level yet." };
     const tierDef = spec.tiers[status.tier + 1];
+    // Some rungs are paid for as well as built — a temple's, in devotion.
+    if (tierDef.cost) {
+      const short = this.inventory?.missing(tierDef.cost) ?? {};
+      if (Object.keys(short).length) {
+        return { ok: false, reason: `Needs ${Object.entries(short).map(([id, n]) => `${n} more ${id.replace(/_/g, ' ')}`).join(' and ')} in your bag.` };
+      }
+      this.inventory.spend(tierDef.cost);
+    }
     s.tier = status.tier + 1;
     const slots = isStore(spec) ? this.storeFor(s).resize(tierDef.slots) : null;
     this.bus?.emit('structure:upgraded', { structure: s, name: tierDef.name, slots, blurb: tierDef.blurb });

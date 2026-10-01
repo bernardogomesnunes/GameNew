@@ -39,6 +39,9 @@ for (let id = 1; id < 256; id++) {
   JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || shape === 'gate_open' || shape === 'wall'
     || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
 }
+/** Cubes with something drawn over them — the ring ores' crystals (blocks.js `overlay`). */
+const OVERLAY = new Array(256).fill(null);
+for (const [id, b] of BLOCKS_BY_ID) if (b.overlay) OVERLAY[id] = b.overlay;
 /** Pillars, which stack into one column (see propShapes' pillarBoxes). */
 const IS_PILLAR = new Uint8Array(256);
 for (const id of BLOCKS_BY_ID.keys()) IS_PILLAR[id] = shapeOf(id) === 'pillar' ? 1 : 0;
@@ -733,8 +736,8 @@ export class ChunkMesher {
           const idx = (ly + 1) * P2 + (lz + 1) * PAD + lx + 1;
           const id = vol[idx];
           // Running water and lava are drawn with their sources (emitFlowing).
-          if (id <= 0 || IS_CUBE[id] || IS_FLOWING[id] || IS_LAVA_FLOW[id]) continue;
-          const shape = shapeOf(id);
+          if (id <= 0 || (IS_CUBE[id] && !OVERLAY[id]) || IS_FLOWING[id] || IS_LAVA_FLOW[id]) continue;
+          const shape = OVERLAY[id] ?? shapeOf(id);
           if (SLOPED[id]) {
             const at = (dx, dz) => {
               const n = vol[idx + dx + dz * PAD];

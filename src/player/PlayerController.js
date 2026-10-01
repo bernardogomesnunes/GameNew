@@ -239,7 +239,7 @@ export class PlayerController {
       this.velocity.y += GRAVITY * dt;
       if (this.velocity.y < -50) this.velocity.y = -50;
       if (this.jumpQueued && this.grounded) {
-        this.velocity.y = JUMP_SPEED;
+        this.velocity.y = JUMP_SPEED * (this.jumpScale ?? 1);
         this.grounded = false;
       }
     }

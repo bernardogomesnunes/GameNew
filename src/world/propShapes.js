@@ -391,6 +391,26 @@ PROP_SHAPES.firefly = [
     { minX: x, maxX: x + 0.045, minY: y, maxY: y + 0.045, minZ: z, maxZ: z + 0.045, color: FIREFLY, glow: true })),
 ];
 
+// The ring ores: crystals breaking out of every face of a block of rock,
+// glowing — drawn over the ordinary cube the rock is (blocks.js `overlay`).
+function oreBoxes(crystal) {
+  const out = [];
+  // Three crystals a face, each standing proud of it.
+  const spots = [[0.14, 0.2, 0.22], [0.58, 0.56, 0.24], [0.22, 0.66, 0.16]];
+  for (const [a, b, w] of spots) {
+    const d = 0.07;
+    out.push({ minX: a, maxX: a + w, minY: b, maxY: b + w, minZ: -d, maxZ: 0.02, color: crystal, glow: true });
+    out.push({ minX: b, maxX: b + w, minY: a, maxY: a + w, minZ: 0.98, maxZ: 1 + d, color: crystal, glow: true });
+    out.push({ minX: -d, maxX: 0.02, minY: a, maxY: a + w, minZ: b, maxZ: b + w, color: crystal, glow: true });
+    out.push({ minX: 0.98, maxX: 1 + d, minY: b, maxY: b + w, minZ: a, maxZ: a + w, color: crystal, glow: true });
+    out.push({ minX: a, maxX: a + w, minY: 0.98, maxY: 1 + d, minZ: b, maxZ: b + w, color: crystal, glow: true });
+    out.push({ minX: b, maxX: b + w, minY: -d, maxY: 0.02, minZ: a, maxZ: a + w, color: crystal, glow: true });
+  }
+  return out;
+}
+PROP_SHAPES.sunstone_ore = oreBoxes(0xffe08a);
+PROP_SHAPES.nightstone_ore = oreBoxes(0xb48cff);
+
 /** The boxes for a shape, or the slab's if a new shape id has none registered yet. */
 export function boxesFor(shape) {
   return PROP_SHAPES[shape] ?? PROP_SHAPES.slab;
