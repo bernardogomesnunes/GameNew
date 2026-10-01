@@ -39,19 +39,22 @@ export const LOOT = {
   ruined_temple: {
     name: 'An offering, long forgotten',
     items: [['gold', 0.8, 3, 7], ['holy_water', 0.5, 1, 2], ['devotion', 0.5, 2, 5], ['sword_iron', 0.2, 1, 1],
-      ['armour_sky_head', 0.15, 1, 1], ['armour_sky_legs', 0.12, 1, 1], ['kombucha', 0.35, 1, 2]],
+      ['armour_sky_head', 0.15, 1, 1], ['armour_sky_legs', 0.12, 1, 1], ['kombucha', 0.35, 1, 2],
+      ['armour_sky_head_night', 0.05, 1, 1], ['sword_iron_thunder', 0.04, 1, 1]],
     ring: 0.1,
   },
   mine: {
     name: 'The miners\' chest',
     items: [['iron_ingot', 0.7, 2, 4], ['copper_ingot', 0.6, 2, 4], ['gold', 0.5, 1, 4], ['coffee', 0.5, 1, 3],
-      ['armour_stone_head', 0.2, 1, 1], ['armour_stone_legs', 0.15, 1, 1], ['cooked_meat', 0.4, 1, 2]],
+      ['armour_stone_head', 0.2, 1, 1], ['armour_stone_legs', 0.15, 1, 1], ['cooked_meat', 0.4, 1, 2],
+      ['armour_leather_feet', 0.25, 1, 1], ['armour_stone_body_warded', 0.04, 1, 1]],
     ring: 0.08,
   },
   monument: {
     name: 'What was left at the monument',
     items: [['gold', 0.9, 4, 9], ['sword_iron', 0.3, 1, 1], ['armour_stone_body', 0.2, 1, 1], ['armour_sky_body', 0.15, 1, 1],
-      ['kombucha', 0.3, 1, 2], ['beer', 0.3, 1, 2], ['fruit', 0.4, 2, 4]],
+      ['kombucha', 0.3, 1, 2], ['beer', 0.3, 1, 2], ['fruit', 0.4, 2, 4],
+      ['armour_stone_feet_swift', 0.06, 1, 1], ['sword_iron_fire', 0.04, 1, 1], ['sword_stone_ice', 0.05, 1, 1]],
     ring: 0.12,
   },
 };

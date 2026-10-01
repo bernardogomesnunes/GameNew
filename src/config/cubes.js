@@ -4,6 +4,7 @@ import { boxesFor, fenceBoxes, wallBoxes } from '../world/propShapes.js';
 import { slopeGeometry, orient } from '../world/slopes.js';
 import { tileFor, TILE_SIZE } from '../render/BlockTextures.js';
 import { ITEM_MODELS } from './itemModels.js';
+import { ENCHANTMENTS } from './enchantments.js';
 
 /**
  * Blocks drawn as blocks: a little isometric cube, three faces, one colour.
@@ -295,11 +296,31 @@ export function hasCube(blockId) {
  * fall back to a line glyph — a tool or a handful of seeds is not a cube, and
  * drawing one would be a lie about what you are holding.
  */
+/**
+ * Four-pointed sparkles at three spots over an icon, for an enchanted one —
+ * placed in the icon's own viewBox, which differs model to model.
+ */
+function glints(svg, colour) {
+  const [vx, vy, vw, vh] = (svg.match(/viewBox="([^"]+)"/)?.[1] ?? '0 0 24 24').split(' ').map(Number);
+  const star = (fx, fy, fr, d) => {
+    const x = vx + vw * fx, y = vy + vh * fy, r = vw * fr, t = r * 0.3;
+    const pts = [[x, y - r], [x + t, y - t], [x + r, y], [x + t, y + t], [x, y + r], [x - t, y + t], [x - r, y], [x - t, y - t]];
+    return `<path class="glint" style="animation-delay:${d}s" d="M${pts.map((p) => p.map((n) => n.toFixed(2)).join(' ')).join('L')}Z"/>`;
+  };
+  return `<g fill="${colour}" stroke="#ffffff" stroke-width="${(vw * 0.012).toFixed(3)}">${star(0.2, 0.22, 0.11, 0)}${star(0.8, 0.4, 0.08, 0.5)}${star(0.38, 0.84, 0.09, 1)}</g>`;
+}
+
 export function itemIcon(spec, { size = 22 } = {}) {
   if (!spec) return null;
   // Food and seeds are little models of themselves, not their plant.
   const model = ITEM_MODELS[spec.id];
-  if (model) return boxesSvg(model, spec.color ?? 0x888888, size, { fit: true });
+  if (model) {
+    const svg = boxesSvg(model, spec.color ?? 0x888888, size, { fit: true });
+    // Enchanted (playtest, P6): a few glints in its enchantment's colour,
+    // twinkling over it — see .glint in styles.css.
+    const e = spec.enchant && ENCHANTMENTS[spec.enchant];
+    return e ? svg.replace(/<\/svg>$/, `${glints(svg, e.colour)}</svg>`) : svg;
+  }
   // An item that places a block shows that block.
   if (spec.block != null) {
     if (!hasCube(spec.block)) return null;

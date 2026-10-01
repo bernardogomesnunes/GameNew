@@ -22,9 +22,9 @@ const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8'
 
 // --- the sets ---------------------------------------------------------------------------
 
-ok('four places to wear things: head, body, legs and a ring', WEAR_SLOTS.join() === 'head,body,legs,ring');
-ok('three sets — leather, sky, stone — of three pieces each',
-  ARMOUR_SETS.map((s) => s.key).join() === 'leather,sky,stone' && ARMOUR_PIECES.length === 9);
+ok('five places to wear things: head, body, legs, feet (playtest, P6) and a ring', WEAR_SLOTS.join() === 'head,body,legs,feet,ring');
+ok('three sets — leather, sky, stone — of four pieces each, boots and all',
+  ARMOUR_SETS.map((s) => s.key).join() === 'leather,sky,stone' && ARMOUR_PIECES.length === 12);
 const total = (key) => ARMOUR_PIECES.filter((p) => p.set === key).reduce((n, p) => n + p.points, 0);
 ok(`leather is light (${total('leather')}), the two kingdoms' metal is heavier (${total('sky')}, ${total('stone')})`,
   total('leather') < total('sky') && total('sky') === total('stone'));

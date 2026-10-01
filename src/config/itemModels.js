@@ -1,5 +1,6 @@
 import { CROPS } from './crops.js';
 import { ARMOUR_PIECES } from './armour.js';
+import { ENCHANTMENTS, ENCHANTABLE_SWORDS, enchantedId } from './enchantments.js';
 
 /**
  * Little voxel models for the things you carry that aren't blocks — the
@@ -149,8 +150,34 @@ const ARMOUR_MODEL = {
     box(0.22, 0.06, 0.36, 0.46, 0.72, 0.64, m), box(0.54, 0.06, 0.36, 0.78, 0.72, 0.64, m),
     box(0.22, 0.34, 0.64, 0.46, 0.42, 0.66, t), box(0.54, 0.34, 0.64, 0.78, 0.42, 0.66, t), // knee plates
   ],
+  // A pair of boots (playtest, P6), side by side, toes towards you.
+  feet: (m, t) => [
+    box(0.16, 0, 0.3, 0.44, 0.12, 0.84, m), box(0.16, 0.12, 0.3, 0.44, 0.5, 0.56, m),
+    box(0.56, 0, 0.3, 0.84, 0.12, 0.84, m), box(0.56, 0.12, 0.3, 0.84, 0.5, 0.56, m),
+    box(0.16, 0.44, 0.3, 0.44, 0.52, 0.56, t), box(0.56, 0.44, 0.3, 0.84, 0.52, 0.56, t),
+  ],
 };
 for (const p of ARMOUR_PIECES) ITEM_MODELS[p.id] = ARMOUR_MODEL[p.slot](p.main, p.trim);
+
+// Swords (the playtest list, P6/P7): a blade standing on its point's end,
+// a crossguard and a wrapped grip with a pommel.
+const swordModel = (blade, edge, guard, grip) => [
+  box(0.44, 0, 0.44, 0.56, 0.2, 0.56, grip),
+  box(0.42, -0.04, 0.42, 0.58, 0.02, 0.58, guard),
+  box(0.26, 0.2, 0.42, 0.74, 0.27, 0.58, guard),
+  box(0.42, 0.27, 0.46, 0.58, 0.92, 0.54, blade),
+  box(0.47, 0.27, 0.45, 0.53, 0.98, 0.55, edge),
+];
+ITEM_MODELS.sword_wood = swordModel(0xcbaa8a, 0xdcc0a0, 0x8a6440, 0x5e4128);
+ITEM_MODELS.sword_stone = swordModel(0x9a9aa2, 0xb9b9c1, 0x6b6b72, 0x5e4128);
+ITEM_MODELS.sword_iron = swordModel(0xc9ced6, 0xeef1f5, 0xe2c26a, 0x3a2a20);
+
+// An enchanted piece looks like its plain self — the glint is drawn over
+// it (see cubes.js itemIcon).
+for (const [key, e] of Object.entries(ENCHANTMENTS)) {
+  const bases = e.weapon ? ENCHANTABLE_SWORDS : ARMOUR_PIECES.filter((p) => e.slots.includes(p.slot)).map((p) => p.id);
+  for (const id of bases) ITEM_MODELS[enchantedId(id, key)] = ITEM_MODELS[id];
+}
 
 // The Temple's things (Phase 7c): a flask of holy water, and the two rings
 // — a band with a stone set in it.

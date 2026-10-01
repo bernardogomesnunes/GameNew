@@ -54,6 +54,7 @@ import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, bedPart, BED_HEAD, FACING_STEP, isPainting, isSoil } from './config/blocks.js';
 import { SAPLING } from './duilt/Saplings.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
+import { SWIFT_SPEED } from './config/enchantments.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
@@ -2717,6 +2718,8 @@ export class Game {
     const { x, z } = this.player.position;
     const res = this.wanderers.hit(p, this.blowDamage(tool), x, z);
     if (!res) return false;
+    // An enchanted sword (playtest, P6): stuns, burns or freezes as it lands.
+    if (tool?.element && !res.killed) this.wanderers.afflict(p, tool.element);
     this.sound?.hit?.('wood', { gain: 0.5, pitch: 0.7 });
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
@@ -2727,6 +2730,15 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: `Beat ${p.name}, a bandit`, body: got || undefined });
     }
     return true;
+  }
+
+  /** Whatever a bandit burnt down by a fire sword dropped, into the bag. */
+  collectFallen() {
+    for (const { p, drops } of this.wanderers.fallen.splice(0)) {
+      const gained = this.duilt?.collect(drops) ?? {};
+      const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+      this.ui?.toast({ kind: 'xp', title: `${p.name} burnt down`, body: got || undefined });
+    }
   }
 
   /** The swarm of fireflies under the crosshair, if no block is in front of it. */
@@ -3859,7 +3871,8 @@ export class Game {
         // The White Ring (Phase 7c): faster on your feet, and a higher jump.
         const white = this.duilt.ringWorn() === 'white';
         this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed() * (white ? WHITE_RING_SPEED : 1)
-          * (this.duilt.boosted('speed') ? COFFEE_SPEED : 1);
+          * (this.duilt.boosted('speed') ? COFFEE_SPEED : 1) * (this.duilt.wearing('swift') ? SWIFT_SPEED : 1);
+        this.dayCycle.nightSight = this.duilt.wearing('night');
         this.ui?.duiltUI?.renderBoosts();
         this.player.jumpScale = white ? WHITE_RING_JUMP : 1;
       }
@@ -3869,6 +3882,7 @@ export class Game {
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
       this.wanderers.tick(dt, this.player.position);
+      this.collectFallen();
       this.tickCatapult(dt);
       this.fireflies.tick(dt, this.player.position, 1 - daylightAt(this.dayCycle.time).day);
       this.tickGuardian(dt);

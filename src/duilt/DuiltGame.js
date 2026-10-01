@@ -786,6 +786,11 @@ export class DuiltGame {
     });
   }
 
+  /** Whether something you're wearing carries enchantment `key` (playtest, P6). */
+  wearing(key) {
+    return Object.values(this.worn).some((w) => w && ITEMS_BY_ID.get(w.id)?.enchant === key);
+  }
+
   /** Whether a drink's boost is going: 'haste', 'strength' or 'speed'. */
   boosted(name) {
     return (this.boosts[name] ?? 0) > 0;

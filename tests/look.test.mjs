@@ -60,8 +60,11 @@ ok('shading stays inside a byte', shade(0xffffff, 2) === 'rgb(255,255,255)' && s
   ok(`${placers.length} items place a block, and all of them show it`,
     placers.length > 5 && placers.every((i) => !!itemIcon(i)));
   const tools = ITEMS.filter((i) => i.kind === 'tool');
+  // Swords are little 3D models now — asked for directly: "Weapons need 3D
+  // versions" (playtest, P6/P7). The rest keep their drawing.
   ok('tools keep their drawing — a cube would be a lie about what you hold',
-    tools.length > 0 && tools.every((i) => itemIcon(i) === null));
+    tools.length > 0 && tools.filter((i) => !i.weapon).every((i) => itemIcon(i) === null));
+  ok('and swords are models of themselves', tools.filter((i) => i.weapon).every((i) => /<svg class="cube"/.test(itemIcon(i) ?? '')));
   // Reported directly: food "are cards, weird, not matching the rest" —
   // so food is a little model of itself now, in the same light as the cubes.
   ok('food is drawn as a model of itself', ITEMS.filter((i) => i.kind === 'food').every((i) => /<svg class="cube"/.test(itemIcon(i) ?? '')));

@@ -82,6 +82,20 @@ What's already there to build on:
 ## P6. Enchanted armour and weapons
 *"Special effects on armour that do simple stuff: speed on boots, extra defence on chest plate and pants, and night vision on the helmet; and special attacks on the sword, like thunder, fire and ice: paralysing, burning and freezing."*
 
+**Done.**
+- **Boots:** a feet slot, and boots in all three sets.
+- **Laying an enchantment:** done at the Temple, chapel tier or higher, from the piece itself, devotion and one ingredient that suits it.
+  - Swift boots: coffee beans, 1.2× speed.
+  - Warded cuirass and greaves: iron, +2 armour each.
+  - Night Sight helm: fireflies; the light never drops below about half of daylight.
+  - Thunder sword: copper. It stuns for 2 s, so the bandit can't move or strike.
+  - Fire sword: lanterns. It burns for 4 s at 1 a second, and a bandit burnt down still leaves its drops.
+  - Ice sword: glass. It freezes for 4 s; everything the bandit does runs at 30%.
+  - Swords that take an element: stone and iron.
+- **Visuals:** enchanted items glint in their colour in the bag, and bandits flash frost, embers or sparks.
+- **Swords:** now 3D models.
+- **Loot:** a few enchanted pieces are in the forgotten temple, monument and mine chests.
+
 - **A boots slot:** a fourth armour slot for feet, with boots in each set.
 - **Enchantments**, put on at the Temple (devotion plus an ingredient) or found on chest loot:
   - **Boots of Swiftness:** faster movement.

@@ -1,6 +1,7 @@
 import { BLOCKS } from './blocks.js';
 import { CROPS, cropBaseOf } from './crops.js';
 import { ARMOUR_PIECES } from './armour.js';
+import { ENCHANTMENTS, ENCHANTABLE_SWORDS, enchantedId } from './enchantments.js';
 
 /**
  * Item registry for Duilt.
@@ -288,11 +289,26 @@ export const ITEMS = [
   // points it adds. It wears with every blow it takes, like a tool with use.
   ...ARMOUR_PIECES.map((p) => ({
     id: p.id, name: p.name, kind: 'armour', stackTo: STACK_TOOL, color: p.main,
-    glyph: { head: 'helm', body: 'cuirass', legs: 'greaves' }[p.slot],
+    glyph: { head: 'helm', body: 'cuirass', legs: 'greaves', feet: 'boots' }[p.slot],
     wears: p.slot, armour: p.points, set: p.set, durability: p.durability, madeBy: p.madeBy,
     ...(p.disguise ? { disguise: p.disguise } : {}),
   })),
 ];
+
+// Enchanted pieces (playtest, P6) — see config/enchantments.js. Each is its
+// piece with the enchantment's name in front and its power added.
+for (const [key, e] of Object.entries(ENCHANTMENTS)) {
+  const bases = e.weapon ? ENCHANTABLE_SWORDS.map((id) => ITEMS.find((i) => i.id === id))
+    : ITEMS.filter((i) => i.kind === 'armour' && e.slots.includes(i.wears));
+  for (const base of bases) {
+    ITEMS.push({
+      ...base, id: enchantedId(base.id, key), name: `${e.name} ${base.name}`, enchant: key,
+      ...(e.armour ? { armour: base.armour + e.armour } : {}),
+      ...(e.element ? { element: e.element } : {}),
+      madeBy: `${base.name} enchanted at a temple — ${e.says}`,
+    });
+  }
+}
 
 /** Whether an item is something you wear, and where: 'head', 'body', 'legs' or 'ring', or null. */
 export function wornOn(id) {

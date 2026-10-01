@@ -1,4 +1,5 @@
 import { ARMOUR_PIECES } from './armour.js';
+import { ENCHANTMENTS, ENCHANTABLE_SWORDS, enchantedId } from './enchantments.js';
 
 /**
  * What you can make, and where you can make it.
@@ -685,6 +686,20 @@ for (const p of ARMOUR_PIECES) {
     id: p.id, name: p.name, station: 'hand', age: p.age, inputs: p.inputs, output: { id: p.id, count: 1 },
     blurb: `${p.points} armour, worn on the ${p.slot === 'body' ? 'body' : p.slot}. ${p.madeBy}.`,
   });
+}
+
+// Enchantments (playtest, P6): laid on at a chapel or better — the piece,
+// devotion and one thing that suits it. See config/enchantments.js.
+for (const [key, e] of Object.entries(ENCHANTMENTS)) {
+  const bases = e.weapon ? ENCHANTABLE_SWORDS : ARMOUR_PIECES.filter((p) => e.slots.includes(p.slot)).map((p) => p.id);
+  for (const base of bases) {
+    const id = enchantedId(base, key);
+    RECIPES.push({
+      id, name: `Enchant: ${e.name}`, station: 'temple', tier: 2, age: 3,
+      inputs: { [base]: 1, devotion: e.devotion, ...e.inputs }, output: { id, count: 1 },
+      blurb: `Lays ${e.name} on it — ${e.says}.`,
+    });
+  }
 }
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));

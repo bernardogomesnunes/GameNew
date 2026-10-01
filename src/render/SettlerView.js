@@ -16,6 +16,7 @@ import { SETTLERS } from '../config/settlers.js';
 
 const MAX = 64;
 const HURT_RED = new THREE.Color(0xd23a2a);   // beds run out long before this; the cap is just for the buffer
+const FROST = new THREE.Color(0x9fe6ff), EMBER = new THREE.Color(0xff7a3a), SPARK = new THREE.Color(0xffe066);
 
 export class SettlerView {
   constructor(scene) {
@@ -83,6 +84,11 @@ export class SettlerView {
       this._colour.setHex(p.colour);
       // Struck: a flash of red, the same as a hunted animal.
       if (p.hurt > 0) this._colour.lerp(HURT_RED, 0.7);
+      // Struck by an enchanted sword (playtest, P6): frost blue, a burning
+      // flicker, or the crackle of a stun.
+      if (p.frozen > 0) this._colour.lerp(FROST, 0.65);
+      if (p.burning > 0) this._colour.lerp(EMBER, 0.35 + 0.3 * Math.abs(Math.sin(performance.now() / 90)));
+      if (p.stunned > 0 && Math.sin(performance.now() / 45) > 0.2) this._colour.lerp(SPARK, 0.75);
       this.bodies.setColorAt(i, this._colour);
       // A head a shade lighter than the coat, so the figure has a top to it.
       this._colour.offsetHSL(0, -0.15, 0.22);
