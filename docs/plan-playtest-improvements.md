@@ -28,6 +28,16 @@ What's already there to build on:
 ## P2. Forests that read as forests
 *"When looking at a forest, I think the leaves lack shadows and light because they look like a mesh of green. Maybe some different tones of green and more contrast between surfaces."*
 
+**Done.**
+- **Why it looked flat:** leaf faces were greedy-merged, so a whole canopy side was one quad in one colour.
+- **The fix:** a leaf face open to the air is now drawn on its own, with:
+  - its own tone, 0.8–1.2 brightness;
+  - a hue lean shared by each tree, plus a little per leaf;
+  - undersides at 0.42 and sides at 0.78;
+  - darker the more neighbours it has, and darker again with canopy two above it.
+- **Inside the canopy:** faces between leaves still merge, shaded at 0.62, so a dense forest chunk costs about 10% more vertices, not double.
+- **Coverage:** applies to white and dark leaves too.
+
 - **Colour per block:** each leaf block varies in tone (lighter, darker, warmer, cooler) from a hash of its position, so a canopy is no longer one flat green.
 - **Light and shade:** stronger difference between lit and shaded faces on leaves.
   - Undersides and faces that point down are noticeably darker.
