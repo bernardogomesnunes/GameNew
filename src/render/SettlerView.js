@@ -136,7 +136,8 @@ export class SettlerView {
       this._colour.setHex(SKINS[who % SKINS.length]);
       if (p.hurt > 0) this._colour.lerp(HURT_RED, 0.5);
       this.heads.setColorAt(i, this._colour);
-      this._colour.setHex(HAIRS[(who >> 3) % HAIRS.length]);
+      // A soldier's helm (or an archer's hood) where hair would be.
+      this._colour.setHex(p.helm ?? HAIRS[(who >> 3) % HAIRS.length]);
       this.hair.setColorAt(i, this._colour);
     }
 

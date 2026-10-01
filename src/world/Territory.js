@@ -60,6 +60,11 @@ export class Territory {
     return this.ring.size;
   }
 
+  /** Whether the border still stops you walking — not from the last age (config/ages.js). */
+  get open() {
+    return !!this.ring.open;
+  }
+
   /** The claimed square, in world block coordinates. */
   bounds() {
     const half = this.size / 2;

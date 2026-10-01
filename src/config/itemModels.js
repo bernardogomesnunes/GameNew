@@ -214,3 +214,16 @@ ITEM_MODELS.devotion = [
   ...stack([[0.2, 0.2, 0, 0.1, 0xc9a44c], [0.12, 0.12, 0.1, 0.5, 0xf6eedc]]),
   ...stack([[0.08, 0.08, 0.5, 0.66, 0xffd98f], [0.04, 0.04, 0.66, 0.78, 0xffb347]]),
 ];
+// The war horn (the Ten Rounds): a curved horn widening to its bell, bound in brass.
+{
+  const IVORY = 0xe8dcc0, BRASS = 0xc9a24a;
+  ITEM_MODELS.war_horn = [
+    box(0.08, 0.62, 0.46, 0.16, 0.7, 0.54, BRASS),
+    box(0.16, 0.56, 0.44, 0.32, 0.68, 0.56, IVORY),
+    box(0.3, 0.46, 0.42, 0.48, 0.62, 0.58, IVORY),
+    box(0.46, 0.42, 0.4, 0.52, 0.64, 0.6, BRASS),
+    box(0.5, 0.34, 0.38, 0.68, 0.6, 0.62, IVORY),
+    box(0.66, 0.24, 0.34, 0.86, 0.62, 0.66, IVORY),
+    box(0.86, 0.22, 0.32, 0.92, 0.64, 0.68, BRASS),
+  ];
+}

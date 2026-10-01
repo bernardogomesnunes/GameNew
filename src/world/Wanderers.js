@@ -43,6 +43,14 @@ const RAID_RANGE = 600;       // and only from a camp within this distance of it
 const RAID_DELAY = [8, 40];   // seconds after dark before they show
 const STEAL = 12;             // the most one raider carries off
 
+// The Stone Kingdom's army (the Ten Rounds — config/war.js).
+const ARMY_FROM = 30;         // they gather this far past your border...
+const ARMY_SPREAD = 7;        // ...spread across this much of the road
+const ARROW_SPEED = 22;
+const ARROW_GRAVITY = 9;
+const ARROW_LIFE = 4;         // seconds an arrow flies, or stays stuck in a wall
+const MOUNTED = 1.05;         // how high the Warlord sits on his beast
+
 export class Wanderers {
   /**
    * @param home    () => { x, z } of your settlement, or null when there's
@@ -59,6 +67,7 @@ export class Wanderers {
     world, rand = Math.random, home = null, onNews = null,
     hostile = () => false, night = () => false, stores = () => [],
     onAttack = null, onSteal = null, onRaid = null, kingdomHostile = () => false,
+    buildings = () => [], inLand = () => false, onBatter = null, onThrow = null,
   }) {
     this.world = world;
     this.rand = rand;
@@ -72,6 +81,14 @@ export class Wanderers {
     this.onAttack = onAttack;
     this.onSteal = onSteal;
     this.onRaid = onRaid;
+    // The army's siege engines (Phase 7, White path): what they aim at, and
+    // what they do to it — Game breaks the blocks.
+    this.buildings = buildings;
+    this.inLand = inLand;
+    this.onBatter = onBatter;
+    this.onThrow = onThrow;
+    // Archers' arrows in flight — { x, y, z, vx, vy, vz, from, age, stuck }.
+    this.arrows = [];
     this.raidedTonight = false;
     this.untilRaid = null;
     this.landmarks = world.gen ? landmarksFor(world.gen) : [];
@@ -120,8 +137,11 @@ export class Wanderers {
       const t = p.frozen > 0 ? dt * FREEZE_SLOW : dt;
       // Stunned, it stands where it was struck: no thinking, no striking.
       if (!(p.stunned > 0)) this.think(p, t, player);
+      // The Warlord rides: where his beast goes, he goes.
+      if (this.riding(p)) continue;
       if (p.stunned > 0) { const was = p.speed; p.speed = 0; this.move(p, t); p.speed = was; } else this.move(p, t);
     }
+    this.flyArrows(dt, player);
   }
 
   // ---- struck by an upgraded sword (playtest, P6) -------------------------
@@ -220,6 +240,168 @@ export class Wanderers {
     return raiders;
   }
 
+  // ---- the Stone Kingdom's army ------------------------------------------------
+
+  /**
+   * One round of the war (config/war.js): `who` is [kind, count], sent from
+   * `towards` — the Stone Kingdom's side — `edge` blocks out from your
+   * settlement plus a little. They gather on ground that's loaded, nearer in
+   * if they must. Returns them, or null when there's nowhere loaded to stand
+   * (it tries again next frame).
+   */
+  sendWarband(home, towards, edge, who, round) {
+    const d0 = Math.hypot(towards.x - home.x, towards.z - home.z) || 1;
+    const ux = (towards.x - home.x) / d0, uz = (towards.z - home.z) / d0;
+    let ox = null, oz = null, y = null;
+    for (let r = edge + ARMY_FROM; r >= 24; r -= 8) {
+      const x = home.x + ux * r, z = home.z + uz * r;
+      if (!isLoaded(this.world, x, z)) continue;
+      const top = surfaceAt(this.world, Math.floor(x), Math.floor(z));
+      if (top == null) continue;
+      ox = x; oz = z; y = top;
+      break;
+    }
+    if (ox == null) return null;
+    const band = [];
+    let beast = null;
+    for (const [kind, count] of who) {
+      for (let i = 0; i < count; i++) {
+        // Across the road, not down it: -uz, ux is sideways.
+        const side = (this.rand() - 0.5) * 2 * ARMY_SPREAD, back = this.rand() * 4;
+        const x = ox - uz * side - ux * back, z = oz + ux * side - uz * back;
+        const spec = WANDERERS[kind];
+        const p = this.person(kind, x, surfaceAt(this.world, Math.floor(x), Math.floor(z)) ?? y, z, {
+          war: true, round,
+          // Who comes for your storehouses; the beast and the Warlord come for you.
+          raider: !spec.siege && !spec.beast && kind !== 'warlord',
+          stage: 'coming', settlement: home, home: { x: ox, z: oz },
+          name: kind === 'warlord' ? 'Vorhak' : undefined,
+        });
+        // Engines and beasts are named for what they are, not like people.
+        if (spec.siege || spec.beast) p.name = spec.one.replace(/^an? /, '').replace(/^./, (c) => c.toUpperCase());
+        else if (!p.name) p.name = WANDERER_NAMES[Math.floor(this.rand() * WANDERER_NAMES.length)];
+        if (spec.beast) beast = p;
+        band.push(p);
+      }
+    }
+    // The Warlord on his beast's back.
+    const lord = band.find((p) => p.kind === 'warlord');
+    if (lord && beast) { lord.mount = beast; beast.rider = lord; lord.x = beast.x; lord.z = beast.z; lord.y = beast.y + MOUNTED; }
+    this.list.push(...band);
+    return band;
+  }
+
+  /** Whether `p` is up on a beast that's still standing — then it moves with it. */
+  riding(p) {
+    const m = p.mount;
+    if (!m) return false;
+    if (m.dead) { p.mount = null; return false; }
+    p.x = m.x; p.z = m.z; p.y = m.y + MOUNTED;
+    p.facing = m.facing;
+    return true;
+  }
+
+  /** An archer looses at you: aimed where you are, dropping a little on the way. */
+  loose(p, player) {
+    const from = { x: p.x, y: p.y + 1.45, z: p.z };
+    const dx = player.x - from.x, dy = player.y + 1.1 - from.y, dz = player.z - from.z;
+    const d = Math.hypot(dx, dz) || 1;
+    const t = d / ARROW_SPEED;
+    this.arrows.push({
+      x: from.x, y: from.y, z: from.z,
+      vx: dx / t, vz: dz / t, vy: dy / t + 0.5 * ARROW_GRAVITY * t,
+      from: p, age: 0, stuck: false,
+    });
+  }
+
+  /** Arrows on their way: into you, into a wall, or into the ground. */
+  flyArrows(dt, player) {
+    if (!this.arrows.length) return;
+    const STEPS = 4, h = dt / STEPS;
+    for (const a of this.arrows) {
+      a.age += dt;
+      if (a.stuck) continue;
+      for (let i = 0; i < STEPS && !a.stuck && !a.done; i++) {
+        a.vy -= ARROW_GRAVITY * h;
+        a.x += a.vx * h; a.y += a.vy * h; a.z += a.vz * h;
+        if (Math.hypot(a.x - player.x, a.z - player.z) < 0.55 && a.y > player.y - 0.1 && a.y < player.y + 1.9) {
+          a.done = true;
+          this.onAttack?.(a.from, WANDERERS[a.from.kind]?.hits ?? 2);
+        } else if (a.y < 0 || this.world.collisionBoxAt(Math.floor(a.x), Math.floor(a.y), Math.floor(a.z))) {
+          a.stuck = true;
+        }
+      }
+    }
+    this.arrows = this.arrows.filter((a) => !a.done && a.age < ARROW_LIFE);
+  }
+
+  /**
+   * What a siege engine goes for: the nearest point of the nearest of your
+   * buildings, or the middle of your settlement when there are none.
+   */
+  siegeGoal(p) {
+    let best = null;
+    for (const { region } of this.buildings()) {
+      const x = Math.max(region.minX, Math.min(region.maxX + 1, p.x));
+      const z = Math.max(region.minZ, Math.min(region.maxZ + 1, p.z));
+      const d = Math.hypot(x - p.x, z - p.z);
+      if (!best || d < best.d) best = { x, z, d, region };
+    }
+    if (best) return best;
+    const s = p.settlement;
+    return s ? { x: s.x, z: s.z, d: Math.hypot(s.x - p.x, s.z - p.z), region: null } : null;
+  }
+
+  /**
+   * A battering ram rolls for your nearest building, and whatever stands in
+   * its way inside your land — a wall, a gate, the building itself — it
+   * beats on until it gives.
+   */
+  ram(p, dt, spec) {
+    p.cooldown = Math.max(0, p.cooldown - dt);
+    const goal = this.siegeGoal(p);
+    if (!goal) { p.target = null; p.speed = 0; return; }
+    // At the building: on into the middle of it.
+    const r = goal.region;
+    const to = goal.d < 1.2 && r ? { x: (r.minX + r.maxX + 1) / 2, z: (r.minZ + r.maxZ + 1) / 2 } : goal;
+    const dx = to.x - p.x, dz = to.z - p.z, d = Math.hypot(dx, dz) || 1;
+    const ax = Math.floor(p.x + (dx / d) * 0.9), az = Math.floor(p.z + (dz / d) * 0.9);
+    const stuck = groundAt(this.world, ax + 0.5, az + 0.5, p.y, TALL) == null;
+    if (stuck && this.inLand(ax, az)) {
+      p.target = null; p.speed = 0;
+      p.facing = Math.atan2(dx, dz);
+      if (p.cooldown > 0) return;
+      p.cooldown = spec.every;
+      p.swing = 0.35;
+      const y0 = Math.floor(p.y);
+      const cells = [y0, y0 + 1, y0 + 2]
+        .filter((y) => this.world.collisionBoxAt(ax, y, az))
+        .map((y) => ({ x: ax, y, z: az }));
+      if (cells.length) this.onBatter?.(p, cells);
+      return;
+    }
+    p.target = d > 0.3 ? to : null;
+    p.speed = spec.speed;
+  }
+
+  /** A siege catapult: up to throwing distance of your buildings, then a stone every few seconds. */
+  catapult(p, dt, spec) {
+    p.cooldown = Math.max(0, p.cooldown - dt);
+    const goal = this.siegeGoal(p);
+    if (!goal) { p.target = null; p.speed = 0; return; }
+    if (goal.d > spec.range) {
+      p.target = { x: goal.x, z: goal.z };
+      p.speed = spec.speed;
+      return;
+    }
+    p.target = null; p.speed = 0;
+    p.facing = Math.atan2(goal.x - p.x, goal.z - p.z);
+    if (p.cooldown > 0) return;
+    p.cooldown = spec.every;
+    p.swing = 0.6;
+    this.onThrow?.(p, { x: goal.x, z: goal.z });
+  }
+
   // ---- fighting -----------------------------------------------------------
 
   /**
@@ -243,7 +425,9 @@ export class Wanderers {
       for (const [id, n] of Object.entries(p.loot ?? {})) drops[id] = (drops[id] ?? 0) + n;
       return { killed: true, drops };
     }
-    // Knocked back half a block, if there's ground there.
+    // Knocked back half a block, if there's ground there — not a siege
+    // engine or a beast that size.
+    if (spec.siege || spec.beast) return { killed: false, drops: {} };
     const away = Math.atan2(p.x - fromX, p.z - fromZ);
     const kx = p.x + Math.sin(away) * 0.6, kz = p.z + Math.cos(away) * 0.6;
     const ground = groundAt(this.world, kx, kz, p.y, TALL);
@@ -277,6 +461,8 @@ export class Wanderers {
       this.present.delete(p.landmark);
       return true;
     }
+    // The army doesn't melt away because you walked off: it's at your walls.
+    if (p.war) return !!p.done;
     return p.done || Math.hypot(p.x - player.x, p.z - player.z) > LEAVE + 40;
   }
 
@@ -288,6 +474,7 @@ export class Wanderers {
       colour: spec.colours[Math.floor(this.rand() * spec.colours.length)],
       target: null, speed: 0, timer: this.rand() * 3, detour: 0, vy: 0,
       hp: spec.hp ?? null, hurt: 0, cooldown: 0,
+      ...(spec.helm != null ? { helm: spec.helm } : {}),
       ...extra,
     };
   }
@@ -359,9 +546,31 @@ export class Wanderers {
 
   think(p, dt, player) {
     const spec = WANDERERS[p.kind];
-    if (p.kind === 'bandit' || p.kind === 'guard') p.cooldown = Math.max(0, p.cooldown - dt);
+    // Called off — the round lost, or the war over: home the way they came.
+    if (p.retreat) {
+      p.mount = null;
+      p.target = p.home;
+      p.speed = spec.run ?? spec.speed;
+      // Out of sight over the hills soon enough, whether they reach it or not.
+      p.retreating = (p.retreating ?? 0) + dt;
+      if (p.retreating > 25 || Math.hypot(p.home.x - p.x, p.home.z - p.z) < 3) p.done = true;
+      return;
+    }
+    if (spec.siege === 'ram') return this.ram(p, dt, spec);
+    if (spec.siege === 'catapult') return this.catapult(p, dt, spec);
+    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.war;
+    if (fights) p.cooldown = Math.max(0, p.cooldown - dt);
+    // Up on his beast, the Warlord only swings: the beast does the going.
+    if (p.mount && !p.mount.dead) {
+      const d = Math.hypot(player.x - p.x, player.z - p.z);
+      if (d <= spec.reach + 0.6 && Math.abs(player.y - (p.y - MOUNTED)) < 2.5 && p.cooldown <= 0) {
+        p.cooldown = spec.every;
+        this.onAttack?.(p, spec.hits);
+      }
+      return;
+    }
     if (p.detour > 0) { p.detour -= dt; return; }
-    if ((p.kind === 'bandit' || p.kind === 'guard') && this.fight(p, dt, player, spec)) return;
+    if (fights && this.fight(p, dt, player, spec)) return;
     // The King doesn't leave his throne.
     if (p.kind === 'king') { p.target = null; p.speed = 0; return; }
     // Struck, someone who doesn't fight runs from you.
@@ -423,13 +632,14 @@ export class Wanderers {
   fight(p, dt, player, spec) {
     const dx = player.x - p.x, dz = player.z - p.z;
     const d = Math.hypot(dx, dz) || 1;
-    const hostile = p.angry || (p.kind === 'guard' ? this.kingdomHostile() : this.hostile());
+    const hostile = p.war || p.angry || (p.kind === 'guard' ? this.kingdomHostile() : this.hostile());
 
     // Badly hurt, or frightened (the black guardian — scare()): it runs.
     if (p.hp <= spec.fleeBelow || p.fear > 0) {
       if (d > spec.aggro * 2) {
-        // Got away. A camp bandit licks its wounds; a raider goes home.
-        if (p.raider) { p.done = true; return true; }
+        // Got away. A camp bandit licks its wounds; a raider goes home —
+        // with whatever it took, if it took anything.
+        if (p.raider || p.war) { p.done = true; p.escaped = hasLoot(p); return true; }
         p.recover = (p.recover ?? 0) + dt;
         if (p.recover >= RECOVER_EVERY) { p.recover = 0; p.hp += 1; }
         return false;
@@ -442,6 +652,16 @@ export class Wanderers {
     const leashed = p.landmark && Math.hypot(player.x - p.home.x, player.z - p.home.z) > LEASH;
     // Bolder in the dark: they come from further off.
     const aggro = spec.aggro * (this.night() ? 1.6 : 1);
+    // An archer keeps its distance and shoots.
+    if (hostile && spec.shoots && d < spec.shoots && Math.abs(player.y - p.y) < 6) {
+      const keep = spec.standOff;
+      p.target = d < keep - 2 ? { x: p.x - (dx / d) * 4, z: p.z - (dz / d) * 4 }
+        : d > keep + 2 ? { x: player.x - (dx / d) * keep, z: player.z - (dz / d) * keep } : null;
+      p.speed = spec.speed;
+      if (!p.target) p.facing = Math.atan2(dx, dz);
+      if (p.cooldown <= 0) { p.cooldown = spec.every; this.loose(p, player); }
+      return true;
+    }
     if (hostile && !leashed && d < aggro && Math.abs(player.y - p.y) < 4) {
       // Up to just inside striking reach, not into your face.
       const stand = spec.reach * 0.75;
@@ -458,14 +678,22 @@ export class Wanderers {
       if (!this.night()) p.angry = false;
     }
 
+    // The beast, and the Warlord on foot: they've come for you, wherever you are.
+    if (p.war && !p.raider) {
+      p.target = { x: player.x, z: player.z };
+      p.speed = spec.speed;
+      return true;
+    }
     if (!p.raider) return false;
     // A raid: to a storehouse (or to you, if there isn't one), then away.
+    // The army doesn't wait for dark, or go home at dawn.
+    const daylight = !this.night() && !p.war;
     if (p.stage === 'coming') {
       const store = this.nearestStore(p);
       if (!store && !this.stores().length) {
         p.target = { x: player.x, z: player.z };
         p.speed = spec.speed;
-        if (!this.night()) p.stage = 'leaving';
+        if (daylight) p.stage = 'leaving';
         return true;
       }
       if (store && store.d < 2.5) {
@@ -475,13 +703,13 @@ export class Wanderers {
         p.target = store.at;
         p.speed = spec.speed;
       }
-      if (!this.night()) p.stage = 'leaving';
+      if (daylight) p.stage = 'leaving';
       return true;
     }
     // Leaving: back the way they came, and gone once they're out there.
     p.target = p.home;
     p.speed = spec.run;
-    if (Math.hypot(p.home.x - p.x, p.home.z - p.z) < 3) p.done = true;
+    if (Math.hypot(p.home.x - p.x, p.home.z - p.z) < 3) { p.done = true; p.escaped = hasLoot(p); }
     return true;
   }
 
@@ -541,6 +769,11 @@ export class Wanderers {
     p.vy -= 22 * dt;
     p.y = Math.max(ground, p.y + p.vy * dt);
   }
+}
+
+/** Whether a raider is carrying anything off. */
+function hasLoot(p) {
+  return !!p.loot && Object.values(p.loot).some((n) => n > 0);
 }
 
 /** Which way (dx, dz) points, as a word: north is -z, east is +x. */

@@ -47,7 +47,7 @@ export const WANDERERS = {
     roam: 0,
   },
   bandit: {
-    noun: 'a bandit',
+    noun: 'a bandit', one: 'a bandit', many: 'bandits',
     about: 'a bandit — watching you from the camp',
     // Once they're dangerous (Phase 6b): from Age 2 on.
     aboutHostile: 'a bandit — hit to fight',
@@ -63,6 +63,73 @@ export const WANDERERS = {
     run: 3.4,         // chasing, and running away
     fleeBelow: 4,     // runs for it at or below this many hit points
     drops: { gold: [1, 2] },
+  },
+  // The Stone Kingdom's army (the Ten Rounds — config/war.js). They come
+  // from the King's side of the map, for your storehouses and for you, and
+  // never wait for dark. `helm` colours the head where hair would be.
+  archer: {
+    noun: 'a Stone archer', one: 'an archer', many: 'archers',
+    about: 'an archer of the Stone Kingdom',
+    colours: [0x4a4636, 0x3d4a3a, 0x4f4234],
+    helm: 0x3b3328,
+    speed: 1.9,
+    hp: 10, hits: 2, reach: 1.6, every: 2.4,
+    shoots: 15,       // looses arrows at you from this far
+    standOff: 9,      // and keeps about this far back
+    aggro: 18, run: 3.6, fleeBelow: 3,
+    drops: { gold: [0, 2] },
+  },
+  soldier: {
+    noun: 'a Stone soldier', one: 'a Stone soldier', many: 'Stone soldiers',
+    about: 'a soldier of the Stone Kingdom, in armour',
+    colours: [0x3a3740, 0x45414d, 0x332f38],
+    helm: 0x6d6a73,
+    speed: 1.9,
+    hp: 28, hits: 3, reach: 1.8, every: 1.2,
+    aggro: 16, run: 3.4, fleeBelow: -1,
+    drops: { gold: [1, 2], iron_ingot: [0, 1] },
+  },
+  warlord: {
+    noun: 'the Warlord', one: 'the Warlord on his black beast', many: 'warlords',
+    about: 'the Warlord of the Stone Kingdom',
+    colours: [0x1d1a22],
+    helm: 0xb08a3a,
+    speed: 2.2,
+    hp: 80, hits: 5, reach: 2.2, every: 1.3,
+    aggro: 30, run: 3.8, fleeBelow: -1,
+    drops: { gold: [8, 12], nightstone: [1, 1] },
+  },
+  // Not people: drawn by ArmyView, not as figures.
+  warbeast: {
+    noun: 'the Warlord\'s beast', one: 'a black beast', many: 'black beasts',
+    about: 'the Warlord\'s black beast',
+    beast: true,
+    colours: [0x17131f],
+    speed: 3.2,
+    hp: 50, hits: 4, reach: 2.4, every: 1.1,
+    aggro: 30, run: 5, fleeBelow: -1,
+    drops: { hide: [1, 3] },
+  },
+  ram: {
+    noun: 'a battering ram', one: 'a battering ram', many: 'battering rams',
+    about: 'a battering ram — break it before it breaks your walls',
+    siege: 'ram',
+    colours: [0x6b4a2e],
+    speed: 1.3,
+    hp: 40, every: 2.5, // a blow on whatever's in its way, this often
+    fleeBelow: -1,
+    drops: { planks: [4, 8], iron_ingot: [0, 1] },
+  },
+  siege_catapult: {
+    noun: 'a siege catapult', one: 'a siege catapult', many: 'siege catapults',
+    about: 'a siege catapult — break it before it brings your walls down',
+    siege: 'catapult',
+    colours: [0x5a4030],
+    speed: 1.1,
+    hp: 30, every: 7, // a stone at your buildings, this often
+    range: 26,        // and it stands this far off them to throw
+    fleeBelow: -1,
+    drops: { planks: [4, 8], stone: [2, 5] },
   },
   explorer: {
     noun: 'an explorer',
