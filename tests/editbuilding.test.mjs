@@ -68,7 +68,7 @@ ok('setEditingBanner exists and takes over the strip regardless of aim',
 ok('clearEditingBanner hands the strip back',
   /clearEditingBanner\(\) \{\s*this\.editingBanner = false;/.test(ui));
 ok('a tap on the strip finishes editing instead of opening the claim menu, while editing',
-  /if \(this\.editingBanner\) this\.cb\.onFinishEditing\?\.\(\);\s*else this\.cb\.onOpenClaim\(\);/.test(ui));
+  /if \(this\.editingBanner\) this\.cb\.onFinishEditing\?\.\(\);[\s\S]{0,200}else if \(this\.cb\.onHintTap\) this\.cb\.onHintTap\(\);\s*else this\.cb\.onOpenClaim\(\);/.test(ui));
 ok('the ordinary per-frame aim hint does not clobber it',
   /setBuildingHint\(text(, \{ manage = true \} = \{\})?\) \{\s*if \(this\.editingBanner\) return;/.test(ui));
 

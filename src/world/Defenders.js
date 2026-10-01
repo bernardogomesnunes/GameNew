@@ -27,6 +27,27 @@ const ARROW_SPEED = 26;
 const TALL = 2;
 const TABARD = 0xdfe6f2, STEEL = 0xb9bec6, ARCHER_COAT = 0x5f7f4a, HOOD = 0x3f5a34;
 
+/**
+ * One step for someone on foot towards (tx, tz), round what's in the way
+ * rather than through it: straight on if it can, else a little to either
+ * side, wider each try. Shared by your soldiers and your army.
+ */
+export function stepAround(world, s, tx, tz, dt, speed) {
+  const dx = tx - s.x, dz = tz - s.z, d = Math.hypot(dx, dz);
+  if (d < 0.05) return false;
+  s.speed = speed;
+  const len = Math.min(d, speed * dt);
+  const a = Math.atan2(dx, dz);
+  for (const turn of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]) {
+    const nx = s.x + Math.sin(a + turn) * len, nz = s.z + Math.cos(a + turn) * len;
+    const g = groundAt(world, nx, nz, s.y, TALL);
+    if (g == null) continue;
+    s.x = nx; s.z = nz; s.y = g;
+    return true;
+  }
+  return false;
+}
+
 export class Defenders {
   constructor({ world, rand = Math.random }) {
     this.world = world;
@@ -174,18 +195,7 @@ export class Defenders {
 
   /** One step for a soldier, round what's in the way rather than through it. */
   step(s, tx, tz, dt, speed) {
-    const dx = tx - s.x, dz = tz - s.z, d = Math.hypot(dx, dz);
-    if (d < 0.05) return;
-    s.speed = speed;
-    const len = Math.min(d, speed * dt);
-    const a = Math.atan2(dx, dz);
-    for (const turn of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]) {
-      const nx = s.x + Math.sin(a + turn) * len, nz = s.z + Math.cos(a + turn) * len;
-      const g = groundAt(this.world, nx, nz, s.y, TALL);
-      if (g == null) continue;
-      s.x = nx; s.z = nz; s.y = g;
-      return;
-    }
+    stepAround(this.world, s, tx, tz, dt, speed);
   }
 
   archer(a, dt, enemies) {

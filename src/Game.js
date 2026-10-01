@@ -59,7 +59,7 @@ import { nextView, VIEW_NAMES } from './config/avatar.js';
 import { AvatarView } from './render/AvatarView.js';
 import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
-import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
+import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox } from './world/Mobs.js';
@@ -74,7 +74,8 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView } from './render/ArmyView.js';
-import { BED } from './config/blocks.js';
+import { BED, NIGHTSTONE_ORE, isTent } from './config/blocks.js';
+import { MODE_WORDS as ARMY_WORDS } from './world/Army.js';
 import { SOLDIER } from './world/Defenders.js';
 import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
@@ -365,6 +366,8 @@ export class Game {
     this.armyView = new ArmyView(this.scene);
     // Your soldiers and tower archers (the defence buildings).
     this.defenderView = new SettlerView(this.scene);
+    // Your army, on the dark path.
+    this.warriorView = new SettlerView(this.scene);
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -1017,6 +1020,7 @@ export class Game {
       getModeLabel: () => this.mode === DUILT ? 'Duilt' : 'Creative',
       onOpenBag: () => this.ui.toggleBag(),
       onOpenClaim: () => this.openClaim(),
+      onHintTap: () => (this.hintUses ? this.secondaryAction() : this.openClaim()),
       onFinishEditing: () => this.finishEditing(),
       onStampStarter: (id) => this.stampStarter(id),
       onOpenBuildings: () => this.ui.openPanel('panel-buildings'),
@@ -1550,6 +1554,9 @@ export class Game {
     if (aimed && isChest(aimed.block)) return void this.openChest(aimed);
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
+    // At a war tent, Place makes camp there; at the dark god's altar, the oath.
+    if (aimed && isTent(aimed.block)) return void this.makeCamp(aimed);
+    if (aimed && aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)) return void this.swearOath();
     // And at a catapult, Place takes hold of it.
     if (aimed && isCatapult(aimed.block)) return void this.manCatapult(aimed);
     // A full bucket takes the button too, instead of placing a block.
@@ -2826,7 +2833,7 @@ export class Game {
 
   /** What the Stone King has to say to you — by the ring you bear. */
   speakToKing() {
-    const ring = this.duilt?.ring ?? 'none';
+    const ring = this.duilt?.army.sworn ? 'sworn' : this.duilt?.ring ?? 'none';
     const lines = NEWS.king[ring] ?? NEWS.king.none;
     this.kingLine = ((this.kingLine ?? -1) + 1) % lines.length;
     this.ui?.toast({ kind: 'challenge', title: 'The Stone King', body: lines[this.kingLine] });
@@ -3143,10 +3150,105 @@ export class Game {
     this.ui?.toast({ kind: 'xp', title: `Your ${by.kind === 'archer' ? 'archers' : 'soldiers'} brought down ${e.name}`, body: got || undefined });
   }
 
-  /** A raider's blow on one of your soldiers. */
+  /** A raider's blow on one of your soldiers — or one of your army. */
   soldierHit(p, soldier, hits) {
+    if (soldier.kind === 'warrior') {
+      if (this.duilt.army.hurt(soldier, hits)) this.ui?.duiltUI?.renderArmy?.();
+      return;
+    }
     if (!this.duilt.defenders.hurt(soldier, hits)) return;
     this.ui?.toast({ kind: 'xp', title: 'One of your soldiers has fallen', body: 'The barracks will train another' });
+  }
+
+  // ---- the dark path: the oath, the army, the camp (world/Army.js) ----
+
+  /** Whether (x, y, z) is the heart of the dark god's altar in the Stone Kingdom. */
+  isAltar({ x, y, z }) {
+    const k = this.wanderers?.landmarks.find((l) => l.kind === 'kingdom');
+    return !!k?.altar && k.altar.x === x && k.altar.y === y && k.altar.z === z;
+  }
+
+  /** At the altar, with the Black Ring on your hand: the King's thousand are yours. */
+  swearOath() {
+    const d = this.duilt;
+    if (!d || d.sandbox) return;
+    if (d.army.sworn) return void this.ui?.toast({ kind: 'xp', title: 'You are sworn already', body: `${d.army.total} warriors answer to you` });
+    if (d.ringWorn() !== 'black') {
+      return void this.ui?.toast({
+        kind: 'xp', title: 'The altar is cold',
+        body: d.ring === 'white' ? 'The dark god turns from the White Ring' : d.ring === 'black' ? 'Put the Black Ring on, and kneel again' : 'Only the bearer of the Black Ring can swear here',
+      });
+    }
+    d.army.swear(d.days);
+    this.sound?.hit?.('stone', { gain: 0.9, pitch: 0.3 });
+    this.ui?.toast({
+      kind: 'achievement',
+      title: 'You swore to the dark god',
+      body: `The Stone King keeps his word: ${d.army.total} warriors march with you. Order them from the ⚔ banner — follow, hold, attack, or form a line.`,
+    });
+    this.ui?.duiltUI?.renderArmy?.();
+    this.editedAt = Date.now();
+  }
+
+  /** At a war tent: camp here. You wake here, and the army holds round it. */
+  makeCamp({ x, y, z }) {
+    const d = this.duilt;
+    if (!d) return;
+    d.spawn = { x, y, z };
+    if (d.army.active) d.army.command('hold', { x: x + 0.5, z: z + 2.5 }, this.player.yaw);
+    this.ui?.toast({
+      kind: 'challenge', title: 'You made camp',
+      body: d.army.active ? 'You\'ll wake here, and the army holds round it. Order them on from the ⚔ banner.' : 'You\'ll wake here when you fall.',
+    });
+    this.ui?.duiltUI?.renderArmy?.();
+  }
+
+  /** An order from the command wheel. */
+  commandArmy(mode) {
+    const army = this.duilt?.army;
+    if (!army?.active) return;
+    army.command(mode, this.player.position, this.player.yaw);
+    this.ui?.toast({ kind: 'challenge', title: `Your army — ${ARMY_WORDS[mode]}`, body: `${army.total} warriors` });
+    this.ui?.duiltUI?.renderArmy?.();
+  }
+
+  /** The army each frame: marching, fighting, and once a day, eating. */
+  tickArmy(dt) {
+    const d = this.duilt;
+    if (!d || d.sandbox || !d.army.active || !this.wanderers) { if (d?.army) d.army.field = d.army.active ? d.army.field : []; return; }
+    const p = this.player.position;
+    const hostile = this.wanderers.hostile();
+    const enemies = this.wanderers.list.filter((e) => WANDERERS[e.kind].hp && !e.dead && !e.done
+      && (e.war || e.raider || e.angry || (hostile && e.kind === 'bandit'))
+      && Math.hypot(e.x - p.x, e.z - p.z) < 60);
+    const before = d.army.total;
+    d.army.tick(dt, p, this.player.yaw, enemies, {
+      strike: (e, damage, w) => {
+        const res = this.wanderers.hit(e, damage, w.x, w.z);
+        if (res?.killed) d.collect(res.drops);
+      },
+    });
+    const meal = d.army.eat(d.days, (n) => this.takeRations(n));
+    if (meal?.deserted) {
+      this.ui?.toast({ kind: 'xp', title: `${meal.deserted} of your warriors deserted`, body: `There wasn't enough to eat — ${meal.got} of ${meal.need} rations. Keep food in your bag or storehouses.` });
+    }
+    if (d.army.total !== before || meal) this.ui?.duiltUI?.renderArmy?.();
+    if (!d.army.total && before) this.ui?.toast({ kind: 'xp', title: 'Your army is gone', body: 'Every last warrior has fallen or walked away' });
+  }
+
+  /** Up to n food for the army, cheapest first: from your bag, then your storehouses. */
+  takeRations(n) {
+    const d = this.duilt;
+    const foods = ITEMS.filter((i) => i.kind === 'food').sort((a, b) => (a.feeds ?? 0) - (b.feeds ?? 0));
+    let got = 0;
+    for (const inv of [d.inventory, ...d.structures.stores().map((s) => s.store)]) {
+      for (const f of foods) {
+        if (got >= n) return got;
+        const take = Math.min(n - got, inv.countOf(f.id));
+        if (take > 0) { inv.remove(f.id, take); got += take; }
+      }
+    }
+    return got;
   }
 
   /** The war horn: call the next round now, when you're ready for it. */
@@ -3600,7 +3702,8 @@ export class Game {
   respawnPoint() {
     const s = this.duilt?.spawn;
     if (s) {
-      if (isPainting(this.world.getBlock(s.x, s.y, s.z))) {
+      const at = this.world.getBlock(s.x, s.y, s.z);
+      if (isPainting(at) || isTent(at)) {
         const near = this.standingNear(s.x, s.y, s.z);
         if (near) return near;
       } else {
@@ -4234,6 +4337,7 @@ export class Game {
           * (this.duilt.boosted('speed') ? COFFEE_SPEED : 1) * (this.duilt.wearing('swift') ? SWIFT_SPEED : 1);
         this.dayCycle.nightSight = this.duilt.wearing('night');
         this.ui?.duiltUI?.renderBoosts();
+        this.ui?.duiltUI?.renderArmy();
         this.player.jumpScale = white ? WHITE_RING_JUMP : 1;
       }
       this.updateHover();
@@ -4244,6 +4348,7 @@ export class Game {
       this.wanderers.tick(dt, this.player.position);
       this.tickWar();
       this.tickDefence(dt);
+      this.tickArmy(dt);
       // The border, drawn again where its ground has loaded since.
       this.duilt?.territory.refreshIfStale();
       this.collectFallen();
@@ -4288,6 +4393,7 @@ export class Game {
     this.wanderView.update(strangers.filter((p) => !WANDERERS[p.kind].siege && !WANDERERS[p.kind].beast));
     const ours = this.duilt?.defenders;
     this.defenderView.update(ours?.people ?? []);
+    this.warriorView.update(this.duilt?.army.field ?? []);
     this.armyView.update(strangers, [...(this.wanderers?.arrows ?? []), ...(ours?.arrows ?? [])], dt);
     this.projectileView.update(this.projectiles?.list ?? []);
     this.fireflyView.update(this.fireflies);
@@ -4395,7 +4501,7 @@ export class Game {
         onBatter: (p, cells) => this.siegeBreak(cells.map((c) => ({ ...c, id: this.world.getBlock(c.x, c.y, c.z) }))),
         onThrow: (p, at) => this.enemyThrows(p, at),
         // Your soldiers stand between them and you.
-        foes: () => this.duilt?.defenders.soldiers ?? [],
+        foes: () => [...(this.duilt?.defenders.soldiers ?? []), ...(this.duilt?.army.field ?? [])],
         onFoe: (p, soldier, hits) => this.soldierHit(p, soldier, hits),
       });
     }
@@ -4445,6 +4551,7 @@ export class Game {
   updateHover() {
     const hit = this.raycast();
     this.hoverHit = hit;
+    this.hintUses = false; // set again below, if the hint names something Place uses
     // Requested directly: "when looking at the door the controls should
     // adapt so place should be open or close depending on the door stage."
     // Pointed at a door or a gate with nothing queued, Place says which it
@@ -4482,6 +4589,15 @@ export class Game {
       const work = this.duilt.structures.list().find((s) => s.id === person.workId);
       const job = work ? STRUCTURES_BY_ID.get(work.type)?.name?.toLowerCase() : null;
       this.ui?.setPersonHint(person.name, job ? `works the ${job}` : 'looking for work');
+      return;
+    }
+    // One of your army.
+    const warrior = this.duilt?.army.active
+      ? this.warriorView.pick(this.duilt.army.field, this.player.eyePosition(), this.player.lookDirection())
+      : null;
+    if (warrior) {
+      const army = this.duilt.army;
+      this.ui?.setPersonHint(warrior.name, warrior.foe ? `fighting ${warrior.foe.name}` : `one of ${army.total} — ${ARMY_WORDS[army.mode]}`);
       return;
     }
     // One of your soldiers or tower archers.
@@ -4550,6 +4666,10 @@ export class Game {
     // right click at a desk.
     const swing = (gate || door || chest || catapult || trapdoor || painting) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
+    // What tapping the hint itself does: the same thing, for a chest, a door
+    // or a gate — not the claim panel (reported: tapping "Chest — tap Open"
+    // on a phone opened "What is this?").
+    this.hintUses = !!swing && !onBuilding;
     this.ui?.setBuildingHint(gate
       ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
       : door

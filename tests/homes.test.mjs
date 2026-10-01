@@ -50,7 +50,7 @@ ok('flat on the wall, framed, with a landscape in it', boxesFor('painting').ever
   ok('you walk past it', w.collisionBoxAt(3, 2, 3) === null && isPainting(PAINTING + 3));
 }
 ok('Place on it makes it where you wake', /isPainting\(aimed\.block\)\) return void this\.setSpawn\(aimed\)/.test(game));
-ok('dying, you wake beside it while it still hangs', /respawnPoint\(\) \{[\s\S]{0,300}isPainting\(this\.world\.getBlock\(s\.x, s\.y, s\.z\)\)[\s\S]{0,200}standingNear/.test(game));
+ok('dying, you wake beside it while it still hangs', /respawnPoint\(\) \{[\s\S]{0,300}const at = this\.world\.getBlock\(s\.x, s\.y, s\.z\);\s*if \(isPainting\(at\) \|\| isTent\(at\)\)[\s\S]{0,200}standingNear/.test(game));
 ok('and at home if it\'s gone', /this\.duilt\.spawn = null;[\s\S]{0,200}return this\.homeSpawn\(\)/.test(game));
 {
   const world = new World({ sizeX: 32, sizeZ: 32, height: 32 });

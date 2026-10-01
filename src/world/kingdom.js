@@ -172,6 +172,9 @@ function plan(gen, site) {
     king: { x: site.x + 0.5, z: site.z + keep.throneZ + 1.5, dy: 1, facing: 0 },
     posts: posts.map((p) => ({ ...p, x: site.x + p.x + 0.5, z: site.z + p.z + 0.5 })),
     keep: { minX: site.x + keep.minX, maxX: site.x + keep.maxX, minZ: site.z + keep.minZ, maxZ: site.z + keep.maxZ },
+    // The dark god's altar, its heart of Nightstone: where the dark path's
+    // oath is sworn (see darkTemple, and Game.swearOath).
+    altar: { x: site.x + ALTAR.x, y: site.y + ALTAR.y, z: site.z + ALTAR.z },
   };
 }
 
@@ -279,6 +282,9 @@ function keepAt(put, fill, posts) {
   return { minX, maxX, minZ, maxZ, throneZ };
 }
 
+/** Where the altar's heart stands, from the city's middle. */
+const ALTAR = { x: -24, y: 1, z: -32 };
+
 /**
  * The dark god's temple, west of the keep: dark brick round a court of
  * pillars, an altar with a heart of Nightstone, lit low. The dark path's
@@ -297,7 +303,7 @@ function darkTemple(put, fill) {
   fill(maxX, maxX, 0, 3, -30, -28, AIR); // the door, onto the street side
   for (const [x, z] of [[-29, -33], [-19, -33], [-29, -25], [-19, -25]]) for (let y = 0; y < 9; y++) put(x, y, z, DARK_PILLAR);
   fill(-26, -22, 0, 0, -32, -31, DARK_BRICK);
-  put(-24, 1, -32, NIGHTSTONE_ORE);
+  put(ALTAR.x, ALTAR.y, ALTAR.z, NIGHTSTONE_ORE);
   put(-26, 1, -32, LANTERN); put(-22, 1, -32, LANTERN);
   put(-24, 4, -35, BANNER_BLACK);
 }

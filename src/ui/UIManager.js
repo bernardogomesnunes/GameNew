@@ -640,6 +640,9 @@ export class UIManager {
     // something else — see setEditingBanner.
     this.q('#building-hint').addEventListener('click', () => {
       if (this.editingBanner) this.cb.onFinishEditing?.();
+      // Pointing at a chest, a door or a gate, the strip says what Place
+      // does to it — and tapping it does that, rather than opening a claim.
+      else if (this.cb.onHintTap) this.cb.onHintTap();
       else this.cb.onOpenClaim();
     });
 

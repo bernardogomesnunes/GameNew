@@ -675,6 +675,8 @@ RECIPES.push(
   { id: 'weapon_rack', name: 'Weapon Rack', station: 'hand', age: 5, inputs: { planks: 3, iron_ingot: 2 }, output: { id: 'weapon_rack', count: 1 }, batch: 4, blurb: 'Arms on a rack, ready to hand. A barracks needs one.' },
   { id: 'training_dummy', name: 'Training Dummy', station: 'hand', age: 5, inputs: { planks: 2, wool: 1, seeds: 2 }, output: { id: 'training_dummy', count: 1 }, batch: 4, blurb: 'Something to hit that doesn\'t hit back.' },
   { id: 'archery_target', name: 'Archery Target', station: 'hand', age: 5, inputs: { planks: 2, wool: 1 }, output: { id: 'archery_target', count: 1 }, batch: 4, blurb: 'Rings to aim at, white to gold.' },
+  { id: 'war_tent', name: 'War Tent', station: 'hand', age: 5, inputs: { wool: 4, planks: 2 }, output: { id: 'war_tent', count: 1 }, batch: 2, blurb: 'Somewhere to sleep on the march. Place on it to make camp there.' },
+  { id: 'campfire', name: 'Campfire', station: 'hand', age: 2, inputs: { planks: 2, stone: 2 }, output: { id: 'campfire', count: 1 }, batch: 4, blurb: 'A ring of stones and a fire in it.' },
   { id: 'war_horn', name: 'War Horn', station: 'hand', age: 6, inputs: { hide: 2, gold: 1, planks: 1 }, output: { id: 'war_horn', count: 1 }, blurb: 'Sound it and the Stone Kingdom\'s next round comes now, not when it likes.' },
   { id: 'holy_water', name: 'Holy Water', station: 'temple', tier: 1, age: 3, inputs: { glass: 1, devotion: 1 }, output: { id: 'holy_water', count: 2 }, batch: 4, blurb: 'Blessed at a chapel or better. Drink it to heal four hearts.' },
   {

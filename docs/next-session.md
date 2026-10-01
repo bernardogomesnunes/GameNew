@@ -18,7 +18,9 @@ A walled city of dark stone, about 1000–1400 blocks from home: a keep with the
 
 **Done:** the defence buildings — stone wall, gatehouse, watchtower, barracks, each detailed, from Age 5. Walls take three blows a block; the gate shuts for a round; two archers on every tower; a soldier for every bunk.
 
-**Next:** the Black Ring path — the alliance, the 1,000 warriors, the march to the Sky Kingdom.
+**Done:** the dark path, part 1 — the oath at the dark altar, 1,000 warriors (30 on the ground at once), the ⚔ banner and command wheel, daily rations, the war tent and campfire.
+
+**Next:** the Sky Kingdom — the floating island 5,000 blocks out, its anchor towers and chains, and the ways to take it.
 
 # Before that — Phase 6
 

@@ -466,6 +466,18 @@ quad(WEAPON_RACK, { name: 'Weapon Rack', glyph: 'rack', color: 0x7a5636, shape: 
 quad(TRAINING_DUMMY, { name: 'Training Dummy', glyph: 'dummy', color: 0xd9b866, shape: 'training_dummy', material: 'plant', unlock: null });
 quad(ARCHERY_TARGET, { name: 'Archery Target', glyph: 'target', color: 0xe9e2cf, shape: 'archery_target', material: 'wood', unlock: null });
 
+// The dark path's camp: a war tent you pitch on the march — where you wake,
+// and where the army rallies — and a campfire to cook their rations on.
+export const WAR_TENT = 224, CAMPFIRE = 228;
+quad(WAR_TENT, { name: 'War Tent', glyph: 'tent', color: 0x6b5a48, shape: 'war_tent', material: 'plant', unlock: null });
+BLOCKS.push({
+  id: CAMPFIRE, name: 'Campfire', glyph: 'campfire', color: 0x6b4a2e, shape: 'campfire', material: 'wood',
+  light: { color: 0xffa04a, intensity: 4, distance: 14, decay: 1, y: 0.4 }, unlock: null,
+});
+export function isTent(id) {
+  return id >= WAR_TENT && id <= WAR_TENT + 3;
+}
+
 export function isPainting(id) {
   return id >= PAINTING && id <= PAINTING + 3;
 }
