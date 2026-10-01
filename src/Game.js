@@ -1020,6 +1020,7 @@ export class Game {
       getModeLabel: () => this.mode === DUILT ? 'Duilt' : 'Creative',
       onOpenBag: () => this.ui.toggleBag(),
       onOpenClaim: () => this.openClaim(),
+      onHintTap: () => (this.hintUses ? this.secondaryAction() : this.openClaim()),
       onFinishEditing: () => this.finishEditing(),
       onStampStarter: (id) => this.stampStarter(id),
       onOpenBuildings: () => this.ui.openPanel('panel-buildings'),
@@ -4550,6 +4551,7 @@ export class Game {
   updateHover() {
     const hit = this.raycast();
     this.hoverHit = hit;
+    this.hintUses = false; // set again below, if the hint names something Place uses
     // Requested directly: "when looking at the door the controls should
     // adapt so place should be open or close depending on the door stage."
     // Pointed at a door or a gate with nothing queued, Place says which it
@@ -4664,6 +4666,10 @@ export class Game {
     // right click at a desk.
     const swing = (gate || door || chest || catapult || trapdoor || painting) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
+    // What tapping the hint itself does: the same thing, for a chest, a door
+    // or a gate — not the claim panel (reported: tapping "Chest — tap Open"
+    // on a phone opened "What is this?").
+    this.hintUses = !!swing && !onBuilding;
     this.ui?.setBuildingHint(gate
       ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
       : door
