@@ -64,6 +64,22 @@ export const NEWS = {
     'Bandits have made camp to the {dir}. Keep your storehouses shut at night.',
     'Saw a campfire to the {dir} last night — not travellers. Keep your eyes open.',
   ],
+  ruin: [
+    'There are old walls standing in the grass to the {dir}. Nobody remembers whose.',
+    'A shepherd found a ruin to the {dir} — says there\'s a chest under the rubble.',
+  ],
+  ruined_temple: [
+    'Pillars to the {dir}, marble, half of them fallen. A temple to something, once.',
+    'They say there\'s an altar to the {dir} that still has gold on it.',
+  ],
+  mine: [
+    'There\'s an old mine to the {dir}. The miners left in a hurry and never came back.',
+    'Timber over a hole in the ground, to the {dir}. Ore still in the walls, they say.',
+  ],
+  monument: [
+    'You can see a tall black stone from the hills to the {dir}. Gold at the top.',
+    'Somebody raised a monument to the {dir}, long ago. Somebody left things at its foot.',
+  ],
   quiet: [
     'The roads are quiet. That\'s all the news there is.',
     'An explorer came through mapping the far country. Didn\'t stay.',

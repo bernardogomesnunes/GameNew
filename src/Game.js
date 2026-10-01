@@ -59,7 +59,7 @@ import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './co
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox } from './world/Mobs.js';
-import { landmarksFor } from './world/landmarks.js';
+import { landmarksFor, PLACE_NAMES } from './world/landmarks.js';
 import { LOOT } from './duilt/Loot.js';
 import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './world/Projectiles.js';
 import { ProjectileView } from './render/ProjectileView.js';
@@ -140,6 +140,8 @@ const LURES = new Set(['vegetables', 'seeds', 'fruit', ...CROPS.flatMap((c) => [
 const FARMLAND = 21;
 /** How often planted crops are brought up to the stage their age says. */
 const CROP_TICK_SECONDS = 2;
+/** How near you come to a place, past its edge, to have found it. */
+const FOUND_REACH = 24;
 const TAME_EVERY_MS = 1000; // how often pens take in animals led into them
 // A gate, shut and open: Place on one swings it to the other. See toggleGate.
 const GATE_SHUT = 48, GATE_OPEN = 49;
@@ -3122,12 +3124,13 @@ export class Game {
   /**
    * A chest you found (Phase 7c): the first time it's opened or broken,
    * what's in it is rolled — a bandit's takings at a camp, the hermit's
-   * things at the hut, and anything else is an old chest in the caves.
+   * things at the hut, each place to find its own (playtest, P4), and
+   * anything else is an old chest in the caves.
    * Says so once, and names a ring ore if there's one in it.
    */
   unpackFound(x, y, z) {
     const near = this.world.gen ? landmarksFor(this.world.gen).find((l) => Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1) : null;
-    const kind = near ? (near.kind === 'hermit' ? 'hermit' : 'camp') : 'cave';
+    const kind = near ? (LOOT[near.kind] ? near.kind : 'camp') : 'cave';
     const loot = this.duilt.unpackFound(x, y, z, kind, this.world.gen?.seed ?? 0);
     if (!loot) return null;
     const rare = loot.sunstone ? 'Sunstone' : loot.nightstone ? 'Nightstone' : null;
@@ -3380,6 +3383,23 @@ export class Game {
   }
 
   /** Brings every planted crop up to the stage its time in the ground says. */
+  /**
+   * Places out in the world, found by walking up to them (playtest, P4):
+   * the first time you come within FOUND_REACH of one, it's told and it goes
+   * on your map.
+   */
+  lookForPlaces(dt) {
+    this.placeClock = (this.placeClock ?? 0) + dt;
+    if (this.placeClock < 1 || !this.duilt || !this.world.gen) return;
+    this.placeClock = 0;
+    const { x, z } = this.player.position;
+    for (const lm of landmarksFor(this.world.gen)) {
+      if (Math.hypot(lm.x - x, lm.z - z) > FOUND_REACH + lm.half) continue;
+      if (!this.duilt.discover(lm)) continue;
+      this.ui?.toast({ kind: 'achievement', title: `You found ${PLACE_NAMES[lm.kind].replace(/^(A|An|The) /, (a) => a.toLowerCase())}`, body: 'It\'s on your map now' });
+    }
+  }
+
   growCrops(dt) {
     this.cropClock = (this.cropClock ?? 0) + dt;
     if (this.cropClock < CROP_TICK_SECONDS || !this.duilt) return;
@@ -3854,6 +3874,7 @@ export class Game {
       this.tickGuardian(dt);
       this.runWater(dt);
       this.growCrops(dt);
+      this.lookForPlaces(dt);
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
       this.gamification.tick(performance.now());

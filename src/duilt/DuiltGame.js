@@ -87,6 +87,8 @@ export class DuiltGame {
     this.spawn = null;
     // Drinks going (playtest, P5): { haste | strength | speed: seconds left }.
     this.boosts = {};
+    // Places you've found out in the world (playtest, P4), as "kind@x,z".
+    this.found = new Set();
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you` : null),
@@ -767,6 +769,23 @@ export class DuiltGame {
     return { ok: true, healed: this.health.heal(spec.heals) };
   }
 
+  /** Marks a place as found. Returns whether it was new. */
+  discover(lm) {
+    const key = `${lm.kind}@${lm.x},${lm.z}`;
+    if (this.found.has(key)) return false;
+    this.found.add(key);
+    return true;
+  }
+
+  /** The places you've found, as { kind, x, z } — for the map. */
+  foundPlaces() {
+    return [...this.found].map((k) => {
+      const [kind, at] = k.split('@');
+      const [x, z] = at.split(',').map(Number);
+      return { kind, x, z };
+    });
+  }
+
   /** Whether a drink's boost is going: 'haste', 'strength' or 'speed'. */
   boosted(name) {
     return (this.boosts[name] ?? 0) > 0;
@@ -797,6 +816,7 @@ export class DuiltGame {
       guardian: this.guardian?.toJSON() ?? null,
       spawn: this.spawn,
       boosts: { ...this.boosts },
+      found: [...this.found],
       chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, found: c.found, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
@@ -822,6 +842,7 @@ export class DuiltGame {
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
     const sp = data.spawn;
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
+    this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);
     this.boosts = {};
     for (const [name, left] of Object.entries(data.boosts ?? {})) if (BOOSTS[name] && Number.isFinite(left) && left > 0) this.boosts[name] = left;
     const gd = data.guardian;

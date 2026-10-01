@@ -51,6 +51,8 @@ What's already there to build on:
 ## P4. Places to find: ruins, temples, mines, monuments
 *"We need structures. Random temples and ruins. Abandoned mines. And monuments. And all with a chest with goodies: armour, weapons, food, and a super rare ring-crafting item."*
 
+**Done.** Each world gets four ruins, two forgotten temples, two abandoned mines and two monuments, placed from the seed 300–950 blocks out. None overlap, and no wild tree grows over any of them, the hut and camps included. Each has a chest with its own loot table: armour, swords, food, the new drinks, and a ring ore 5–12% of the time. Messengers bring news of each with a direction. Coming within about 24 blocks of one finds it: a toast, and a coloured diamond on the map. Nobody lives in them.
+
 - **New landmarks**, scattered from the seed like the hermit's hut and the camps:
   - **Ruins:** broken walls and pillars, half buried, with moss.
   - **Forgotten temples:** marble and dark stone, an altar, collapsed pillars.

@@ -84,6 +84,8 @@ export class Wanderers {
   tick(dt, player) {
     this.list = this.list.filter((p) => !p.dead && !this.gone(p, player));
     for (const lm of this.landmarks) {
+      // Only the hut and the camps have anyone living in them.
+      if (lm.kind !== 'hermit' && lm.kind !== 'camp') continue;
       if (!this.present.has(lm) && Math.hypot(lm.x - player.x, lm.z - player.z) < VISIT) this.populate(lm);
     }
 

@@ -2048,7 +2048,7 @@ export class UIManager {
     const duilt = this.game.duilt;
     const territory = duilt && !duilt.sandbox ? duilt.territory.bounds() : null;
     const home = gen.biomes ? { x: gen.biomes.centreX, z: gen.biomes.centreZ } : null;
-    drawWorldMap(canvas, gen, x, z, yaw, { radius, home, territory });
+    drawWorldMap(canvas, gen, x, z, yaw, { radius, home, territory, places: duilt?.foundPlaces() ?? [] });
     const scale = this.q('#map-scale');
     if (scale) scale.textContent = `± ${radius} blocks`;
     const zoomOut = this.q('#map-zoom-out');

@@ -2,7 +2,7 @@ import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { BIOMES, BIOME_INDEX, surfaceFor } from '../config/biomes.js';
 import { BiomeMap } from './biomeMap.js';
 import { CHUNK_SIZE } from './World.js';
-import { stampLandmarks } from './landmarks.js';
+import { stampLandmarks, landmarksFor } from './landmarks.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
@@ -49,6 +49,8 @@ export const TREE_SIZES = [
   { upTo: 0.92, size: 'tall' },
   { upTo: 1, size: 'towering' },
 ];
+/** How far round a landmark's footprint no tree grows. */
+const LANDMARK_CLEARING = 5;
 /** One tree in this many is a giant (unless its biome says otherwise). */
 export const GIANT_ONE_IN = 50;
 /** No giants this close to the settlement: the starting plot is for building. */
@@ -305,6 +307,9 @@ export class ChunkGen {
     if (biome.treeMaxHeight != null && ground > biome.treeMaxHeight) return null;
     // Not in the water, and not on ground that is about to be water.
     if (this.waterLevelAt(x, z)) return null;
+    // Nor over somebody's ruin or camp: a clearing round every landmark,
+    // wide enough that no canopy reaches in over it.
+    if (landmarksFor(this).some((l) => Math.max(Math.abs(l.x - x), Math.abs(l.z - z)) <= l.half + LANDMARK_CLEARING)) return null;
     const [lo, hi] = t.trunk ?? [4, 6];
     const base = lo + Math.floor(hash01(x, z, this.seed ^ 0x1b9d) * (hi - lo + 1));
     const canopy = t.canopy ?? 2;
