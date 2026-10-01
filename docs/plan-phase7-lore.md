@@ -156,10 +156,12 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
 
 - **Raiders break blocks for real:** rams batter whatever stands in their way inside your land, and siege catapults lob stones at your buildings from 26 blocks off, using Phase 6 projectile physics. A claimed building that loses blocks stops working until you put them back.
 - **Who's in each round** (config/war.js): 3, 4, 5 bandits; then bandits and archers with a ram; Stone soldiers with archers, catapults and a ram; and last the Warlord, Vorhak, on his black beast, with soldiers, archers and a catapult. Archers keep their distance and shoot; soldiers never run; the beast and the Warlord hunt *you*.
-- **Defence buildings:**
-  - **Stone Walls and gatehouse:** a closed ring of wall round your land.
-  - **Watchtower:** archers shoot from it.
-  - **Barracks:** your Military building upgraded; it trains soldiers from settlers.
+- **Defence buildings** (done — from Age 5, so they stand before the war; asked for "detailed"):
+  - **Stone Wall:** a 16-long section — cobble plinth, dressed faces, a dark string course and quoins, a rubble core, a walk along the top behind a parapet with merlons and arrow slits, a stair up. Claimed, each block takes **three blows** of a ram or a siege stone to break.
+  - **Gatehouse:** two towers with guardrooms and upper rooms, a vaulted passage with a calçada road, a gate of three doors in a dark-brick frame, the walk across the top behind battlements, a stair inside, lanterns and banners. Reinforced like the wall, and it **shuts its gate** when a round is warned.
+  - **Watchtower:** a stone shaft on a plinth with a stair winding round a central pillar to an overhanging lookout with battlements, corbels, a signal lantern and a slate roof on posts. **Two archers** keep the lookout and shoot at anything of the enemy's within 26 blocks.
+  - **Barracks:** a timber-framed hall with six bunks, racks of arms, a mess table under a chandelier, windows, and a fenced yard with training dummies, archery targets and banners. It **trains a soldier for every bunk** (up to six), who march out to fight raiders near it; raiders fight them back, and a fallen soldier is trained again.
+  - New furnishings for them: **weapon rack, training dummy, archery target**.
   - **Catapults:** from Phase 6.
   - **The white guardian** fights beside you.
 - **Winning a round:** every raider in that round is down or fled empty-handed. Each round won pays gold.
@@ -249,7 +251,7 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
 3. **7c** Temple and the choice.
 4. **7d** Sanctuary and guardian.
 5. **7e** The Stone Kingdom.
-6. **White path:** the Ten Rounds — **done** (war at Age 6, the rounds, siege, war horn, victory). Still to come: the defence buildings (walls and gatehouse, watchtower, barracks).
+6. **White path:** the Ten Rounds — **done** (war at Age 6, the rounds, siege, war horn, victory). The defence buildings — **done** too.
 7. **Dark path:**
    1. the alliance, the army and the march;
    2. the Sky Kingdom and its anchor towers;

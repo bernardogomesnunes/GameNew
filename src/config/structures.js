@@ -31,6 +31,46 @@ const BANNERS = [182, 183, 184, 185, 186, 187, 188, 189];
 const WHITE_STONE = [MARBLE, 158, 159, 166];
 const BLACK_STONE = [14, 156, 157, 167];
 
+// The defence buildings' (White path).
+const WALLING = [STONE, COBBLE, BRICK, 156, 157, 161, 162, 163, 164, 165, 167];
+const DOORS = Array.from({ length: 16 }, (_, i) => 69 + i);
+const STAIRS = [29, 30, 57, 58, 59, 60, 61, 62]; // stone and plank stairs, every facing
+const BEDS = [193, 194, 195, 196];
+const RACKS = [212, 213, 214, 215];
+const TRAINING = [216, 217, 218, 219, 220, 221, 222, 223];
+const tall = (ctx) => ctx.region.maxY - ctx.region.minY + 1;
+const longSide = (ctx) => Math.max(ctx.region.maxX - ctx.region.minX, ctx.region.maxZ - ctx.region.minZ) + 1;
+const shortSide = (ctx) => Math.min(ctx.region.maxX - ctx.region.minX, ctx.region.maxZ - ctx.region.minZ) + 1;
+/**
+ * Battlements: along the top of the thing, stones with gaps between them.
+ * Read along each edge of the region, in the top few layers that have
+ * anything at the edge: a merlon is a stone there, a crenel a gap with a
+ * stone either side of it along the edge and one under it. A plain
+ * parapet with a walk behind it has neither, so it isn't battlements.
+ */
+export function battlementsOf(ctx) {
+  const { region: r, world } = ctx;
+  const solid = (x, y, z) => world.getBlock(x, y, z) !== 0;
+  const rows = [];
+  for (const z of [r.minZ, r.maxZ]) rows.push(Array.from({ length: r.maxX - r.minX + 1 }, (_, i) => [r.minX + i, z]));
+  for (const x of [r.minX, r.maxX]) rows.push(Array.from({ length: r.maxZ - r.minZ + 1 }, (_, i) => [x, r.minZ + i]));
+  let looked = 0;
+  for (let y = r.maxY; y >= r.minY && looked < 3; y--) {
+    let merlons = 0, crenels = 0;
+    for (const row of rows) {
+      row.forEach(([x, z], i) => {
+        if (solid(x, y, z)) { merlons++; return; }
+        const a = row[i - 1], b = row[i + 1];
+        if (a && b && solid(a[0], y, a[1]) && solid(b[0], y, b[1]) && solid(x, y - 1, z)) crenels++;
+      });
+    }
+    if (!merlons) continue;
+    looked++;
+    if (merlons >= 3 && crenels >= 2) return { merlons, crenels, ok: true };
+  }
+  return { merlons: 0, crenels: 0, ok: false };
+}
+
 /** "1 more window", "3 more windows". */
 const plural = (n, word) => `${n} more ${word}${n === 1 ? '' : 's'}`;
 
@@ -719,6 +759,175 @@ export const STRUCTURES = [
     // building should hand over more than 10-15 of anything in a day.
     produces: { stone: 1, planks: 1 },
     everySeconds: 7200,
+    skill: 'politics',
+  },
+
+  // ---- Defence (White path): against the Stone Kingdom's Ten Rounds ----------
+  //
+  // From Age 5, so they can stand before the war comes at Age 6. Asked for
+  // directly: "use this opportunity to make them detailed" — so each one
+  // asks for the things that make it what it is (battlements on a wall, a
+  // gate in a gatehouse, bunks and arms in a barracks), not just a heap of
+  // stone. What they do is in Game/Defenders: claimed walls, gatehouses and
+  // towers take three blows a block to break; a gatehouse shuts its gate
+  // when a round is coming; a watchtower posts two archers on its top; a
+  // barracks trains a soldier for every bunk.
+  {
+    id: 'wall',
+    name: 'Stone Wall',
+    icon: '🧱',
+    age: 5,
+    blurb: 'A length of wall with a walk along the top and battlements to fight from. Claimed, it takes three blows a block to break.',
+    minSize: 2,
+    maxSize: 32,
+    cost: {},
+    defence: 'wall',
+    requires: [
+      {
+        id: 'long',
+        test: (ctx) => longSide(ctx) >= 8,
+        say: (ctx) => `A wall needs to run at least 8 blocks — this one is ${longSide(ctx)}`,
+      },
+      {
+        id: 'thin',
+        test: (ctx) => shortSide(ctx) <= 4,
+        say: () => 'A wall is long and narrow — no more than 4 blocks thick. Claim it along its length.',
+      },
+      {
+        id: 'height',
+        test: (ctx) => tall(ctx) >= 4,
+        say: (ctx) => `Needs to stand at least 4 blocks tall — yours is ${tall(ctx)}`,
+      },
+      {
+        id: 'stone',
+        test: (ctx) => count(ctx, WALLING) >= longSide(ctx) * 5,
+        say: (ctx) => `Needs ${longSide(ctx) * 5 - count(ctx, WALLING)} more stone, cobble, brick or dark stone — a wall has to be solid`,
+      },
+      {
+        id: 'battlements',
+        test: (ctx) => battlementsOf(ctx).ok,
+        say: () => 'Needs battlements along the top — stones with gaps between them, to fight from behind',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    skill: 'politics',
+  },
+  {
+    id: 'gatehouse',
+    name: 'Gatehouse',
+    icon: '🏰',
+    age: 5,
+    blurb: 'Two towers and a gate between them, with a walk across the top. It shuts its gate when a round of the war is coming.',
+    minSize: 7,
+    maxSize: 16,
+    cost: { iron_ingot: 2 },
+    defence: 'gatehouse',
+    requires: [
+      {
+        id: 'stone',
+        test: (ctx) => count(ctx, WALLING) >= 120,
+        say: (ctx) => `Needs ${120 - count(ctx, WALLING)} more stone, cobble, brick or dark stone — a gatehouse is the strongest part of a wall`,
+      },
+      {
+        id: 'height',
+        test: (ctx) => tall(ctx) >= 8,
+        say: (ctx) => `Its towers need to stand at least 8 blocks tall — yours is ${tall(ctx)}`,
+      },
+      {
+        id: 'gate',
+        test: (ctx) => count(ctx, DOORS) >= 4,
+        say: (ctx) => `Needs a gate — at least two doors side by side (${Math.floor(count(ctx, DOORS) / 2)} so far)`,
+      },
+      {
+        id: 'guardrooms',
+        test: (ctx) => ctx.shelteredVolume() >= 6,
+        say: () => 'Needs a guardroom in its towers — walls all round and a floor over it',
+      },
+      {
+        id: 'battlements',
+        test: (ctx) => battlementsOf(ctx).ok,
+        say: () => 'Needs battlements along the top, to fight from',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    skill: 'politics',
+  },
+  {
+    id: 'watchtower',
+    name: 'Watchtower',
+    icon: '🗼',
+    age: 5,
+    blurb: 'A tall tower with a lookout on top. Two archers keep watch from it and shoot at anything of the Stone Kingdom\'s that comes in range.',
+    minSize: 5,
+    maxSize: 9,
+    cost: { planks: 6 },
+    defence: 'watchtower',
+    requires: [
+      {
+        id: 'height',
+        test: (ctx) => tall(ctx) >= 11,
+        say: (ctx) => `Needs to stand at least 11 blocks tall to see over the land — yours is ${tall(ctx)}`,
+      },
+      {
+        id: 'stone',
+        test: (ctx) => count(ctx, WALLING) >= 70,
+        say: (ctx) => `Needs ${70 - count(ctx, WALLING)} more stone, cobble, brick or dark stone`,
+      },
+      {
+        id: 'stairs',
+        test: (ctx) => count(ctx, STAIRS) >= 6,
+        say: (ctx) => `Needs a stair up inside it — ${plural(6 - count(ctx, STAIRS), 'stair')}`,
+      },
+      {
+        id: 'signal',
+        test: (ctx) => count(ctx, LIGHTS) >= 1,
+        say: () => 'Needs a lantern on top — a signal light for the watch',
+      },
+      {
+        id: 'battlements',
+        test: (ctx) => battlementsOf(ctx).ok,
+        say: () => 'Needs battlements round the top, for the archers to shoot from behind',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    skill: 'politics',
+  },
+  {
+    id: 'barracks',
+    name: 'Barracks',
+    icon: '⚔️',
+    age: 5,
+    blurb: 'A hall of bunks with arms on the walls and a yard to train in. It trains a soldier for every bunk, and they march out to meet the Stone Kingdom\'s army.',
+    minSize: 7,
+    maxSize: 18,
+    cost: { iron_ingot: 4, planks: 10 },
+    requires: [
+      {
+        id: 'bunks',
+        test: (ctx) => count(ctx, BEDS) >= 4,
+        say: (ctx) => `Needs bunks for its soldiers — ${plural(4 - count(ctx, BEDS), 'bed')}`,
+      },
+      {
+        id: 'arms',
+        test: (ctx) => count(ctx, RACKS) >= 2,
+        say: (ctx) => `Needs arms on the walls — ${plural(2 - count(ctx, RACKS), 'weapon rack')}`,
+      },
+      {
+        id: 'training',
+        test: (ctx) => count(ctx, TRAINING) >= 2,
+        say: (ctx) => `Needs something to train on — ${plural(2 - count(ctx, TRAINING), 'training dummy or archery target')}`,
+      },
+      {
+        id: 'hall',
+        test: (ctx) => ctx.shelteredVolume() >= 30,
+        say: () => 'Needs a hall for them to sleep in — walls all round and a roof over it, bigger than a house',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
     skill: 'politics',
   },
 

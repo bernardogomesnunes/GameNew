@@ -458,6 +458,14 @@ BLOCKS.push(
   { id: CALCADA_WAVE, name: 'Calçada Wave', glyph: 'calcada_wave', color: 0xf1ede2, material: 'stone', unlock: null },
 );
 
+// The defence buildings' furnishings (White path): a rack of arms for a
+// barracks wall, a straw dummy to beat in the yard, and a target to shoot
+// at. Each faces you the way a chair does.
+export const WEAPON_RACK = 212, TRAINING_DUMMY = 216, ARCHERY_TARGET = 220;
+quad(WEAPON_RACK, { name: 'Weapon Rack', glyph: 'rack', color: 0x7a5636, shape: 'weapon_rack', material: 'wood', unlock: null });
+quad(TRAINING_DUMMY, { name: 'Training Dummy', glyph: 'dummy', color: 0xd9b866, shape: 'training_dummy', material: 'plant', unlock: null });
+quad(ARCHERY_TARGET, { name: 'Archery Target', glyph: 'target', color: 0xe9e2cf, shape: 'archery_target', material: 'wood', unlock: null });
+
 export function isPainting(id) {
   return id >= PAINTING && id <= PAINTING + 3;
 }

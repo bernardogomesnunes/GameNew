@@ -672,6 +672,9 @@ RECIPES.push(
   { id: 'beer', name: 'Beer', station: 'workshop', age: 3, inputs: { potato: 2, seeds: 1 }, output: { id: 'beer', count: 2 }, batch: 4, blurb: 'Potatoes and grain, left to work. Quicker blows for three minutes.' },
   { id: 'kombucha', name: 'Kombucha', station: 'workshop', age: 3, inputs: { fruit: 2, leaves: 1 }, output: { id: 'kombucha', count: 2 }, batch: 4, blurb: 'Fruit and leaf tea, soured. +2 on every hit for three minutes.' },
   { id: 'coffee', name: 'Coffee', station: 'workshop', age: 3, inputs: { coffee_beans: 3 }, output: { id: 'coffee', count: 2 }, batch: 4, blurb: 'Roasted, ground and brewed. Faster on your feet for three minutes.' },
+  { id: 'weapon_rack', name: 'Weapon Rack', station: 'hand', age: 5, inputs: { planks: 3, iron_ingot: 2 }, output: { id: 'weapon_rack', count: 1 }, batch: 4, blurb: 'Arms on a rack, ready to hand. A barracks needs one.' },
+  { id: 'training_dummy', name: 'Training Dummy', station: 'hand', age: 5, inputs: { planks: 2, wool: 1, seeds: 2 }, output: { id: 'training_dummy', count: 1 }, batch: 4, blurb: 'Something to hit that doesn\'t hit back.' },
+  { id: 'archery_target', name: 'Archery Target', station: 'hand', age: 5, inputs: { planks: 2, wool: 1 }, output: { id: 'archery_target', count: 1 }, batch: 4, blurb: 'Rings to aim at, white to gold.' },
   { id: 'war_horn', name: 'War Horn', station: 'hand', age: 6, inputs: { hide: 2, gold: 1, planks: 1 }, output: { id: 'war_horn', count: 1 }, blurb: 'Sound it and the Stone Kingdom\'s next round comes now, not when it likes.' },
   { id: 'holy_water', name: 'Holy Water', station: 'temple', tier: 1, age: 3, inputs: { glass: 1, devotion: 1 }, output: { id: 'holy_water', count: 2 }, batch: 4, blurb: 'Blessed at a chapel or better. Drink it to heal four hearts.' },
   {

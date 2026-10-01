@@ -155,6 +155,27 @@ const LATER = [
     xpReward: 200,
     check: (c) => c.stats.claimed.has('sanctuary_black'),
   },
+  // The defence buildings (White path): what to raise before the war comes.
+  {
+    id: 'a_wall', age: 5, structure: 'wall', name: 'Walls that could hold',
+    description: 'Raise a stretch of stone wall with battlements, and claim it. Claimed, each block takes three blows to break.',
+    icon: '🧱', xpReward: 150, check: (c) => c.stats.claimed.has('wall'),
+  },
+  {
+    id: 'a_gatehouse', age: 5, structure: 'gatehouse', name: 'A gate in the wall',
+    description: 'Raise a gatehouse — two towers and a gate between them. It shuts itself when a round of the war is coming.',
+    icon: '🏰', xpReward: 200, check: (c) => c.stats.claimed.has('gatehouse'),
+  },
+  {
+    id: 'a_watchtower', age: 5, structure: 'watchtower', name: 'Eyes on the road',
+    description: 'Raise a watchtower with a stair up to its lookout. Two archers keep watch from it.',
+    icon: '🗼', xpReward: 200, check: (c) => c.stats.claimed.has('watchtower'),
+  },
+  {
+    id: 'a_barracks', age: 5, structure: 'barracks', name: 'Soldiers of your own',
+    description: 'Raise a barracks with bunks, arms and a yard to train in. It trains a soldier for every bunk.',
+    icon: '⚔️', xpReward: 200, check: (c) => c.stats.claimed.has('barracks'),
+  },
   {
     id: 'a_street',
     age: 2,

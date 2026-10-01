@@ -391,6 +391,73 @@ PROP_SHAPES.firefly = [
     { minX: x, maxX: x + 0.045, minY: y, maxY: y + 0.045, minZ: z, maxZ: z + 0.045, color: FIREFLY, glow: true })),
 ];
 
+// The defence buildings' furnishings (White path). All face -z, the side
+// you see them from; the back of a rack is against the wall behind it.
+const STEEL = 0xb9bec6, HILT = 0x5a3b26, STRAW = 0xd9b866, SACK = 0xb59a6a, PAINT = 0xb33a2e;
+// A weapon rack: two posts and two rails against the back of the cell, a
+// sword, a spear and an axe stood in it, and a round shield hung beside.
+PROP_SHAPES.weapon_rack = [
+  { minX: 0.04, maxX: 0.12, minY: 0, maxY: 0.98, minZ: 0.8, maxZ: 0.9 },
+  { minX: 0.88, maxX: 0.96, minY: 0, maxY: 0.98, minZ: 0.8, maxZ: 0.9 },
+  { minX: 0.04, maxX: 0.96, minY: 0.12, maxY: 0.18, minZ: 0.76, maxZ: 0.84 },
+  { minX: 0.04, maxX: 0.96, minY: 0.72, maxY: 0.78, minZ: 0.76, maxZ: 0.84 },
+  // A sword: blade, crossguard, grip and pommel.
+  { minX: 0.2, maxX: 0.25, minY: 0.2, maxY: 0.82, minZ: 0.7, maxZ: 0.74, color: STEEL },
+  { minX: 0.15, maxX: 0.3, minY: 0.82, maxY: 0.85, minZ: 0.69, maxZ: 0.75, color: IRON },
+  { minX: 0.205, maxX: 0.245, minY: 0.85, maxY: 0.96, minZ: 0.7, maxZ: 0.74, color: HILT },
+  { minX: 0.195, maxX: 0.255, minY: 0.96, maxY: 0.99, minZ: 0.695, maxZ: 0.745, color: IRON },
+  // A spear, taller than the rack.
+  { minX: 0.4, maxX: 0.44, minY: 0.04, maxY: 1.18, minZ: 0.7, maxZ: 0.74, color: HILT },
+  { minX: 0.39, maxX: 0.45, minY: 1.18, maxY: 1.34, minZ: 0.705, maxZ: 0.735, color: STEEL },
+  // An axe: haft and head.
+  { minX: 0.58, maxX: 0.62, minY: 0.06, maxY: 0.94, minZ: 0.7, maxZ: 0.74, color: HILT },
+  { minX: 0.5, maxX: 0.6, minY: 0.74, maxY: 0.92, minZ: 0.705, maxZ: 0.735, color: STEEL },
+  // A round shield: boss, face and rim, hung on the rail.
+  { minX: 0.68, maxX: 0.94, minY: 0.24, maxY: 0.6, minZ: 0.7, maxZ: 0.76, color: 0x8a5a36 },
+  { minX: 0.72, maxX: 0.9, minY: 0.2, maxY: 0.64, minZ: 0.7, maxZ: 0.76, color: 0x8a5a36 },
+  { minX: 0.64, maxX: 0.98, minY: 0.3, maxY: 0.54, minZ: 0.7, maxZ: 0.76, color: 0x8a5a36 },
+  { minX: 0.76, maxX: 0.86, minY: 0.36, maxY: 0.48, minZ: 0.66, maxZ: 0.7, color: IRON },
+];
+// A training dummy: a post in a cross-foot, a straw-stuffed sack of a body
+// with arms out, a head with a red mark painted on it, and one on the chest.
+PROP_SHAPES.training_dummy = [
+  { minX: 0.2, maxX: 0.8, minY: 0, maxY: 0.06, minZ: 0.44, maxZ: 0.56, color: HILT },
+  { minX: 0.44, maxX: 0.56, minY: 0, maxY: 0.06, minZ: 0.2, maxZ: 0.8, color: HILT },
+  { minX: 0.45, maxX: 0.55, minY: 0.06, maxY: 0.5, minZ: 0.45, maxZ: 0.55, color: HILT },
+  { minX: 0.3, maxX: 0.7, minY: 0.5, maxY: 1.12, minZ: 0.38, maxZ: 0.62 },
+  { minX: 0.27, maxX: 0.73, minY: 0.52, maxY: 0.58, minZ: 0.36, maxZ: 0.64, color: SACK },
+  { minX: 0.27, maxX: 0.73, minY: 1.04, maxY: 1.1, minZ: 0.36, maxZ: 0.64, color: SACK },
+  { minX: 0.02, maxX: 0.98, minY: 0.92, maxY: 1.02, minZ: 0.45, maxZ: 0.55, color: HILT },
+  { minX: 0.0, maxX: 0.12, minY: 0.84, maxY: 1.04, minZ: 0.42, maxZ: 0.58, color: STRAW },
+  { minX: 0.88, maxX: 1.0, minY: 0.84, maxY: 1.04, minZ: 0.42, maxZ: 0.58, color: STRAW },
+  { minX: 0.36, maxX: 0.64, minY: 1.12, maxY: 1.4, minZ: 0.38, maxZ: 0.62, color: SACK },
+  { minX: 0.44, maxX: 0.56, minY: 1.22, maxY: 1.32, minZ: 0.36, maxZ: 0.38, color: PAINT },
+  { minX: 0.42, maxX: 0.58, minY: 0.72, maxY: 0.88, minZ: 0.36, maxZ: 0.38, color: PAINT },
+  { minX: 0.46, maxX: 0.54, minY: 0.76, maxY: 0.84, minZ: 0.35, maxZ: 0.36, color: 0xf2ede2 },
+];
+// An archery target: a straw boss painted in rings — white, black, blue,
+// red and gold at the centre — on a three-legged stand, leaning back a
+// little, with an arrow in it.
+const TARGET_Z = 0.42;
+const ring = (r, z, color) => ({ minX: 0.5 - r, maxX: 0.5 + r, minY: 0.82 - r, maxY: 0.82 + r, minZ: z, maxZ: z + 0.06, color });
+PROP_SHAPES.archery_target = [
+  { minX: 0.14, maxX: 0.2, minY: 0, maxY: 0.86, minZ: 0.5, maxZ: 0.56, color: HILT },
+  { minX: 0.8, maxX: 0.86, minY: 0, maxY: 0.86, minZ: 0.5, maxZ: 0.56, color: HILT },
+  { minX: 0.47, maxX: 0.53, minY: 0, maxY: 0.8, minZ: 0.82, maxZ: 0.88, color: HILT },
+  { minX: 0.47, maxX: 0.53, minY: 0.74, maxY: 0.8, minZ: 0.5, maxZ: 0.88, color: HILT },
+  // The boss, square-cut to a round: a cross of two boxes, then the rings.
+  { minX: 0.12, maxX: 0.88, minY: 0.5, maxY: 1.14, minZ: TARGET_Z + 0.04, maxZ: TARGET_Z + 0.12, color: STRAW },
+  { minX: 0.18, maxX: 0.82, minY: 0.44, maxY: 1.2, minZ: TARGET_Z + 0.04, maxZ: TARGET_Z + 0.12, color: STRAW },
+  ring(0.34, TARGET_Z, 0xf2ede2),
+  ring(0.27, TARGET_Z - 0.005, 0x2a2a2e),
+  ring(0.2, TARGET_Z - 0.01, 0x3a6ab0),
+  ring(0.13, TARGET_Z - 0.015, PAINT),
+  ring(0.06, TARGET_Z - 0.02, 0xe6c45a),
+  // An arrow, near the gold.
+  { minX: 0.56, maxX: 0.59, minY: 0.86, maxY: 0.89, minZ: TARGET_Z - 0.3, maxZ: TARGET_Z, color: HILT },
+  { minX: 0.55, maxX: 0.6, minY: 0.85, maxY: 0.9, minZ: TARGET_Z - 0.34, maxZ: TARGET_Z - 0.26, color: 0xf2ede2 },
+];
+
 // The ring ores: crystals breaking out of every face of a block of rock,
 // glowing — drawn over the ordinary cube the rock is (blocks.js `overlay`).
 function oreBoxes(crystal) {
