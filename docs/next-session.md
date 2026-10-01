@@ -1,4 +1,19 @@
-# Where to pick up — after Phase 6
+# Where to pick up — after the playtest list
+
+## The whole playtest list is done (PR #29)
+Everything in `docs/plan-playtest-improvements.md` (P1–P9) is in, each with its own test file:
+- **P1 Homes:** beds, and a painting that sets where you wake; furnished houses (`homes.test`).
+- **P8 Saplings:** a 3D sapling that grows into a tree in 10 game days. None are generated; leaves drop them (`saplings.test`).
+- **P5 Drinks:** beer, kombucha and coffee, each a timed boost with a countdown chip. Coffee is a new crop (`drinks.test`).
+- **P4 Places to find:** ruins, forgotten temples, abandoned mines and monuments, each with a chest. They're found on the map (`places.test`).
+- **P6 Enchantments:** a boots slot; Swift, Warded and Night Sight armour; thunder, fire and ice swords; swords are 3D (`enchantments.test`).
+- **P9 Roads:** calçada blocks, and old roads joining every landmark to home (`roads.test`).
+- **P2 Forests:** leaves with their own tones, light and shade (`forests.test`).
+- **P3 + P7:** a third-person view with your own avatar, what you hold drawn in 3D, and detailed animals and people (`avatar.test`).
+
+**Next:** the lore picks up again at 7e, the Stone Kingdom (`docs/plan-phase7-lore.md`).
+
+# Before that — Phase 6
 
 Phase 6 (combat) is finished:
 - **6a:** ten hearts, fall and lava damage, healing (faster resting in a house), dying leaves a chest with everything but your tools, and the craftable 27-slot chest.
