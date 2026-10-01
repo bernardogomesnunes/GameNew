@@ -45,6 +45,14 @@ The Temple, devotion and the rings (`tests/temple.test.mjs`).
 
 ## Next
 - **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7d: your god's Sanctuary and its guardian.
+- **Playtest improvements:** from the user's own play session, in `docs/plan-playtest-improvements.md`:
+  - P1: bed, painting spawn point, furnished houses;
+  - P2: forest lighting;
+  - P3: mob models, third-person avatar;
+  - P4: ruins, temples, mines and monuments with chests;
+  - P5: beer, kombucha and coffee;
+  - P6: enchanted armour and elemental swords.
+  - These can go in between lore steps; the user picks the order.
 - Still open:
   - far terrain should show what the player built (#130);
   - sound: music, ambience and separate volume sliders (#133).
