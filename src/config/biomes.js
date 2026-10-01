@@ -42,7 +42,9 @@
  */
 
 const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, COBBLE = 8;
-const SAPLING = 20, MOSS = 22, GRAVEL = 23, CLAY = 24, SILT = 25;
+// No saplings in the wild: a sapling is only ever one somebody planted
+// (playtest, P8 — see duilt/Saplings.js).
+const MOSS = 22, GRAVEL = 23, CLAY = 24, SILT = 25;
 const WHITE_WOOD = 41, WHITE_LEAVES = 42, DARK_WOOD = 43, DARK_LEAVES = 44, DARK_MOSS = 46;
 const FOREST_FLOOR = 147;
 const IRON_ORE = 38, COPPER_ORE = 39, GOLD_ORE = 40;
@@ -62,7 +64,6 @@ export const BIOMES = [
     // Fewer trees than before — requested directly, "green with fewer trees
     // just some."
     trees: { chance: 0.003, trunk: [4, 6], canopy: 2, wood: WOOD, leaves: LEAVES },
-    scatter: [{ block: SAPLING, chance: 0.002 }],
   },
   {
     // The everyday wood: same wood/leaves it always had, the middle of the
@@ -76,7 +77,6 @@ export const BIOMES = [
     // at your feet, not only by counting the trunks.
     surface: { top: MOSS, under: DIRT, depth: 3, rock: STONE },
     trees: { chance: 0.11, trunk: [5, 8], canopy: 2, wood: WOOD, leaves: LEAVES },
-    scatter: [{ block: SAPLING, chance: 0.006 }],
   },
   {
     // Cooler and drier than the oak wood, with a pale trunk and canopy —
@@ -91,7 +91,6 @@ export const BIOMES = [
     // (see mapdraw.test.mjs) instead of two of the three sharing Moss.
     surface: { top: DIRT, under: DIRT, depth: 3, rock: STONE },
     trees: { chance: 0.1, trunk: [4, 7], canopy: 2, wood: WHITE_WOOD, leaves: WHITE_LEAVES },
-    scatter: [{ block: SAPLING, chance: 0.006 }],
   },
   {
     // Warmer, wetter, denser: the darkest and thickest of the three.
@@ -103,7 +102,6 @@ export const BIOMES = [
     // Its own deeper, shadier moss — see config/blocks.js's Dark Moss.
     surface: { top: DARK_MOSS, under: DIRT, depth: 3, rock: STONE },
     trees: { chance: 0.13, trunk: [6, 9], canopy: 2, wood: DARK_WOOD, leaves: DARK_LEAVES },
-    scatter: [{ block: SAPLING, chance: 0.008 }],
   },
   {
     // Requested directly: "we can have a biome full of gigantic trees that
@@ -125,7 +123,6 @@ export const BIOMES = [
     flat: 1.1,
     surface: { top: FOREST_FLOOR, under: DIRT, depth: 3, rock: STONE },
     trees: { chance: 0.018, trunk: [7, 10], canopy: 3, wood: WOOD, leaves: LEAVES, giants: 0.7 },
-    scatter: [{ block: SAPLING, chance: 0.004 }],
   },
   {
     // Requested directly: "bigger flat areas even, and some steeper between
@@ -153,7 +150,6 @@ export const BIOMES = [
     flat: 1.3,
     surface: { top: CLAY, under: DIRT, depth: 4, rock: STONE },
     trees: { chance: 0.012, trunk: [3, 4], canopy: 2, wood: WOOD, leaves: LEAVES },
-    scatter: [{ block: SAPLING, chance: 0.012 }],
   },
   {
     // Mountains 1: the short range — requested at "20 blocks tall," a range

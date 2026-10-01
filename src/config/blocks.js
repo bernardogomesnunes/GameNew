@@ -64,7 +64,7 @@ export const BLOCKS = [
   { id: 19, name: 'Ground', color: 0x89c47c, system: true },
   // Duilt blocks. Saplings grow into forests; farmland is soil that has been
   // turned, which is what a farm is actually made of.
-  { id: 20, name: 'Sapling', glyph: 'sprout', color: 0x9fcd8b, material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 20, name: 'Sapling', glyph: 'sprout', color: 0x9fcd8b, shape: 'sapling', material: 'plant', cost: { wood: 1 }, unlock: null },
   // Dark, turned earth in furrows — requested directly: "Farm should be
   // dirt." It used to be a pale tan you could take for sand.
   { id: 21, name: 'Farmland', glyph: 'farmland', color: 0x8d6645, material: 'dirt', cost: { wood: 1 }, unlock: null },

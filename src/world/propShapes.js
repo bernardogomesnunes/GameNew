@@ -448,6 +448,20 @@ PROP_SHAPES.painting = [
   { minX: 0.64, maxX: 0.74, minY: 0.6, maxY: 0.7, minZ: 0.045, maxZ: 0.05, color: 0xffd76a },  // sun
 ];
 
+// A sapling (playtest, P8): a thin stem with leaves coming off it in tiers,
+// a small tuft at the top, in a little ring of turned earth.
+const STEM = 0x7a5a3a, LEAF = 0x7fbf68, LEAF_DARK = 0x5fa052, EARTH = 0x7a5c42;
+PROP_SHAPES.sapling = [
+  { minX: 0.34, maxX: 0.66, minY: 0, maxY: 0.04, minZ: 0.34, maxZ: 0.66, color: EARTH },
+  { minX: 0.46, maxX: 0.54, minY: 0, maxY: 0.78, minZ: 0.46, maxZ: 0.54, color: STEM },
+  { minX: 0.2, maxX: 0.46, minY: 0.26, maxY: 0.32, minZ: 0.42, maxZ: 0.58, color: LEAF_DARK },
+  { minX: 0.54, maxX: 0.8, minY: 0.36, maxY: 0.42, minZ: 0.42, maxZ: 0.58, color: LEAF_DARK },
+  { minX: 0.42, maxX: 0.58, minY: 0.48, maxY: 0.54, minZ: 0.2, maxZ: 0.46, color: LEAF },
+  { minX: 0.42, maxX: 0.58, minY: 0.56, maxY: 0.62, minZ: 0.54, maxZ: 0.8, color: LEAF },
+  { minX: 0.32, maxX: 0.68, minY: 0.72, maxY: 0.9, minZ: 0.32, maxZ: 0.68, color: LEAF },
+  { minX: 0.4, maxX: 0.6, minY: 0.9, maxY: 0.98, minZ: 0.4, maxZ: 0.6, color: LEAF },
+];
+
 /** The boxes for a shape, or the slab's if a new shape id has none registered yet. */
 export function boxesFor(shape) {
   return PROP_SHAPES[shape] ?? PROP_SHAPES.slab;

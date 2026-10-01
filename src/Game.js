@@ -51,7 +51,8 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, bedPart, BED_HEAD, FACING_STEP, isPainting } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, bedPart, BED_HEAD, FACING_STEP, isPainting, isSoil } from './config/blocks.js';
+import { SAPLING } from './duilt/Saplings.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
@@ -3294,8 +3295,9 @@ export class Game {
       // climbs the mirrored way too.
       const next = mirrored(held, t);
       if (!this.world.inBounds(t.x, t.y, t.z)) continue;
-      // A seed goes in farmland and nowhere else.
+      // A seed goes in farmland and nowhere else; a sapling in the ground.
       if (crop && this.world.getBlock(t.x, t.y - 1, t.z) !== FARMLAND) continue;
+      if (held === SAPLING && !isSoil(this.world.getBlock(t.x, t.y - 1, t.z))) continue;
       if (this.blockOverlapsPlayerAABB(t) && !crop) continue;
       const prev = this.world.getBlock(t.x, t.y, t.z);
       if (prev === next) continue;
@@ -3324,6 +3326,10 @@ export class Game {
     }
     if (door && !changes.length) {
       this.ui.toast({ kind: 'xp', title: 'No room for a door', body: 'It needs two blocks of clear space' });
+      return;
+    }
+    if (held === SAPLING && !changes.length) {
+      this.ui.toast({ kind: 'xp', title: 'Saplings go in the ground', body: 'Plant it on grass, dirt or moss' });
       return;
     }
     if (crop && !changes.length) {
@@ -3360,6 +3366,21 @@ export class Game {
     if (this.cropClock < CROP_TICK_SECONDS || !this.duilt) return;
     this.cropClock = 0;
     if (this.duilt.crops.grow(this.world).length) this.remeshDirty();
+    const grown = this.duilt.saplings.grow(this.world, this.duilt.days);
+    if (grown.length) {
+      this.remeshDirty();
+      const trees = grown.filter((c) => c.prev === SAPLING).length;
+      this.ui?.toast({ kind: 'xp', title: trees > 1 ? `${trees} saplings have grown into trees` : 'A sapling has grown into a tree', body: 'Ten days in the ground' });
+    }
+  }
+
+  /** What a sapling under the crosshair says: how long until it's a tree. */
+  saplingHint(hit) {
+    const s = this.duilt.saplings.get(hit.x, hit.y, hit.z);
+    if (!s) return 'Sapling · wild — break it and plant it again to grow it';
+    if (s.blocked) return 'Sapling · ready, but it needs room to grow';
+    const left = this.duilt.saplings.daysLeft(hit.x, hit.y, hit.z, this.duilt.days);
+    return left > 1 ? `Sapling · a tree in ${left} days` : 'Sapling · a tree by tomorrow';
   }
 
   /**
@@ -3496,6 +3517,9 @@ export class Game {
         const was = cropOf(c.prev), is = cropOf(c.next);
         if (is && is.stage === 0 && !(was && was.kind === is.kind)) this.duilt.crops.plant(c.x, c.y, c.z, is.kind);
         else if (was && !is) this.duilt.crops.remove(c.x, c.y, c.z);
+        // A sapling counts its ten days from the day it went in.
+        if (c.next === SAPLING && c.prev !== SAPLING) this.duilt.saplings.plant(c.x, c.y, c.z, this.duilt.days);
+        else if (c.prev === SAPLING && c.next !== SAPLING) this.duilt.saplings.remove(c.x, c.y, c.z);
       }
     }
     // One sound for the edit, however many blocks it was: what it was made of.
@@ -3826,8 +3850,13 @@ export class Game {
     this.updateFarTerrain();
     this.updateClouds(dt);
     // The clock only runs while you're playing; a menu is a pause.
+    const clockWas = this.dayCycle.time;
     if (playing) this.dayCycle.advance(dt);
-    if (this.duilt) this.duilt.dayTime = this.dayCycle.time;
+    if (this.duilt) {
+      this.duilt.dayTime = this.dayCycle.time;
+      // The world's own count of days, for saplings to grow by.
+      this.duilt.days += (this.dayCycle.time - clockWas + 1) % 1;
+    }
     this.dayCycle.apply(this.camera, this.horizon);
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
@@ -4064,6 +4093,7 @@ export class Game {
     const catapult = hit && isCatapult(hit.block);
     const trapdoor = hit && isTrapdoor(hit.block);
     const painting = hit && isPainting(hit.block);
+    const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
     const swing = (gate || door || chest || catapult || trapdoor || painting) && swingLabel(hit.block);
@@ -4080,12 +4110,14 @@ export class Game {
         ? `Trapdoor · ${hit.block >= TRAPDOOR_OPEN ? 'open' : 'shut'} — ${how}`
       : painting
         ? (this.isSpawnAt(hit) ? 'Painting · you wake here after a fall' : `Painting — ${how} to wake here after a fall`)
+      : sapling && !onBuilding
+        ? sapling
       : onBuilding
         ? (STRUCTURES_BY_ID.get(onBuilding.type)?.name ?? 'Building')
           + (onBuilding.locked === false ? ' · unlocked' : '')
       : waiting
         ? `${STRUCTURES_BY_ID.get(waiting.type)?.name ?? 'Building'} · not working yet — ${waiting.reason}`
-        : null, { manage: waiting ? 'see why' : (!swing || !!onBuilding) });
+        : null, { manage: waiting ? 'see why' : ((!swing && !sapling) || !!onBuilding) });
     // The single block under the crosshair, except while a roof is queued —
     // there the whole building is highlighted and one more box on top of it is
     // just noise.

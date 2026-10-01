@@ -1,4 +1,5 @@
 import { Crops, harvestOf, cropProduce } from './Crops.js';
+import { Saplings } from './Saplings.js';
 import { penProduce, herdToJSON } from './Ranch.js';
 import { Inventory } from '../items/Inventory.js';
 import { Territory } from '../world/Territory.js';
@@ -40,6 +41,11 @@ import { ageOf, FINAL_AGE } from '../config/ages.js';
 export const CHEST_SLOTS = 27;
 const chestKey = (x, y, z) => `${x},${y},${z}`;
 
+/** The leaves of every kind of tree. */
+const LEAF_BLOCKS = new Set([5, 42, 44]);
+/** What a broken leaf might drop besides itself, and how often. */
+export const LEAF_DROPS = [['sapling', 0.1], ['fruit', 0.06]];
+
 const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds: 6, seeds_carrot: 4, seeds_potato: 4 };
 
 export class DuiltGame {
@@ -54,6 +60,13 @@ export class DuiltGame {
     this.waiting = [];
     // What's planted where, and when — see duilt/Crops.js.
     this.crops = new Crops();
+    // Saplings, and the world's own count of days for them to grow by: it
+    // only runs while you play (Game adds each day as the clock turns).
+    this.saplings = new Saplings();
+    this.days = 0;
+    // What a broken leaf drops besides itself: Math.random, unless a test
+    // wants it to be sure.
+    this.rand = Math.random;
     this.inventory = new Inventory({ bus, endless: sandbox });
     this.territory = new Territory({ world, scene, bus, age, sandbox });
     this.structures = new StructureRegistry({ world, bus, inventory: this.inventory });
@@ -166,6 +179,15 @@ export class DuiltGame {
           if (left > 0) this.bus?.emit('duilt:bagfull', { itemId: id, lost: left });
         }
         continue;
+      }
+      // Leaves, now and then, drop a sapling or a fruit as well as
+      // themselves — the only way to new saplings out in the wild, now none
+      // grow there by themselves (playtest, P8).
+      if (LEAF_BLOCKS.has(c.prev)) {
+        for (const [id, chance] of LEAF_DROPS) {
+          if (this.rand() >= chance) continue;
+          if (this.inventory.add(id, 1) === 0) gained[id] = (gained[id] ?? 0) + 1;
+        }
       }
       const drop = this.yieldFor(c.prev);
       if (!drop) continue;
@@ -757,6 +779,8 @@ export class DuiltGame {
       dayTime: this.dayTime,
       waiting: this.waiting,
       crops: this.crops.toJSON(),
+      saplings: this.saplings.toJSON(),
+      days: this.days,
       savedAt: Date.now(),
     };
   }
@@ -794,6 +818,8 @@ export class DuiltGame {
     this.dayTime = typeof data.dayTime === 'number' ? data.dayTime : null;
     this.waiting = Array.isArray(data.waiting) ? data.waiting.filter((w) => w?.region && w.type) : [];
     this.crops.loadJSON(data.crops);
+    this.saplings.loadJSON(data.saplings);
+    this.days = Number.isFinite(data.days) ? data.days : 0;
     // Pay out everything earned while the tab was shut.
     this.lastCollect = Date.now();
     return this.structures.collect({

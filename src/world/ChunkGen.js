@@ -317,13 +317,7 @@ export class ChunkGen {
     }
 
     const roll2 = hash01(x, z, this.seed ^ 0x4e2b);
-    const size = TREE_SIZES.find((c) => roll2 < c.upTo).size;
-    if (size === 'small') return { style: t, trunk: Math.max(3, base - 2), ground, size, canopy: Math.max(1, canopy - (canopy > 1 ? 1 : 0)) };
-    if (size === 'normal') return { style: t, trunk: base, ground, size, canopy };
-    // Tall and towering trees grow a bigger, taller crown to match — a pole
-    // with a normal head on it would just look stretched.
-    const stretch = size === 'tall' ? 1.5 : 2;
-    return { style: t, trunk: Math.round(base * stretch), ground, size, canopy: canopy + (size === 'tall' ? 1 : 2) };
+    return sizedTree(t, ground, base, TREE_SIZES.find((c) => roll2 < c.upTo).size);
   }
 
   /**
@@ -446,7 +440,6 @@ export class ChunkGen {
 
   /** Writes one tree, keeping only what falls inside the given chunk. */
   plant(chunk, x, z, tree) {
-    const { style, trunk, ground } = tree;
     const ox = chunk.cx * CHUNK_SIZE, oz = chunk.cz * CHUNK_SIZE;
     const put = (bx, by, bz, block, fillAirOnly) => {
       const lx = bx - ox, lz = bz - oz;
@@ -456,64 +449,12 @@ export class ChunkGen {
       chunk.set(lx, by, lz, block);
     };
     if (tree.giant) return this.plantGiant(put, x, z, tree);
-
-    for (let i = 0; i < trunk; i++) put(x, ground + i, z, style.wood, false);
-    const topY = ground + trunk;
-
-    if (tree.size === 'tall' || tree.size === 'towering') {
-      // A crown in proportion: an egg of leaves, deeper below the top of
-      // the trunk the bigger the tree, and a trunk that carries on up into it.
-      const r = (tree.canopy ?? 3) + 0.6;
-      for (let i = 0; i < 2; i++) put(x, topY + i, z, style.wood, false);
-      this.crown(put, x + 0.5, topY + 1, z + 0.5, { r, below: Math.round(r), above: Math.round(r * 0.8), leaves: style.leaves, salt: x * 31 + z });
-      return;
-    }
-
-    // A rounded crown rather than a box. Requested directly: leaves "be
-    // somehow more rounded instead of sharp cubes." Each layer is a disc, the
-    // widest in the middle; the top is a small dome, not one block on a flat
-    // lid; and the rim is ragged, a few of its leaves missing, so no two
-    // trees are the same square.
-    const canopy = tree.canopy ?? style.canopy ?? 2;
-    const layers = [[-1, canopy + 0.25], [0, canopy + 0.55], [1, Math.max(1, canopy - 0.35)], [2, canopy > 1 ? 1 : 0]];
-    for (const [dy, radius] of layers) {
-      const r = Math.floor(radius + 0.5);
-      for (let dx = -r; dx <= r; dx++) {
-        for (let dz = -r; dz <= r; dz++) {
-          const d2 = dx * dx + dz * dz;
-          if (d2 > radius * radius + 0.6) continue;
-          const rim = d2 > (radius - 1) * (radius - 1) + 0.6;
-          if (rim && (dx || dz) && hash01(x * 31 + dx, z * 17 + dz * 7 + dy * 131, this.seed ^ 0x3ea7) < 0.18) continue;
-          put(x + dx, topY + dy, z + dz, style.leaves, true);
-        }
-      }
-    }
-    put(x, topY + 2, z, style.leaves, true);
+    treeShape(put, x, z, tree, this.seed);
   }
 
-  /**
-   * A mass of leaves round (cx, cy, cz): a squashed ball, `below` layers deep
-   * under the middle and `above` over it, ragged at the rim. cx and cz are in
-   * block-edge units, so a 2×2 trunk's crown can sit centred between its four
-   * columns.
-   */
-  crown(put, cx, cy, cz, { r, below, above, leaves, salt }) {
-    const R = Math.ceil(r);
-    for (let dy = -below; dy <= above; dy++) {
-      const t = dy < 0 ? dy / (below + 0.7) : dy / (above + 0.7);
-      const layer = r * Math.sqrt(Math.max(0, 1 - t * t));
-      if (layer < 0.5) continue;
-      for (let bx = Math.floor(cx - R); bx <= Math.ceil(cx + R); bx++) {
-        for (let bz = Math.floor(cz - R); bz <= Math.ceil(cz + R); bz++) {
-          const ddx = bx + 0.5 - cx, ddz = bz + 0.5 - cz;
-          const d2 = ddx * ddx + ddz * ddz;
-          if (d2 > layer * layer) continue;
-          const rim = d2 > (layer - 1.1) * (layer - 1.1);
-          if (rim && hash01(bx * 13 + salt, bz * 7 + dy * 101, this.seed ^ 0x3ea7) < 0.22) continue;
-          put(bx, cy + dy, bz, leaves, true);
-        }
-      }
-    }
+  /** See crownShape. */
+  crown(put, cx, cy, cz, opts) {
+    crownShape(put, cx, cy, cz, opts, this.seed);
   }
 
   /**
@@ -685,6 +626,88 @@ const CAVERN_Y_MAX = 95;
 const CAVERN_LAVA_TOP = 40;
 const CAVERN_LAVA_CHANCE = 0.15;
 const CAVERN_WATER_CHANCE = 0.2;
+
+/**
+ * A tree's size class turned into a trunk and a crown. Tall and towering
+ * trees grow a bigger, taller crown to match — a pole with a normal head on
+ * it would just look stretched. Shared with a sapling growing up (see
+ * duilt/Saplings.js), so a planted tree is the same as a wild one.
+ */
+export function sizedTree(style, ground, base, size) {
+  const canopy = style.canopy ?? 2;
+  if (size === 'small') return { style, trunk: Math.max(3, base - 2), ground, size, canopy: Math.max(1, canopy - (canopy > 1 ? 1 : 0)) };
+  if (size === 'normal') return { style, trunk: base, ground, size, canopy };
+  const stretch = size === 'tall' ? 1.5 : 2;
+  return { style, trunk: Math.round(base * stretch), ground, size, canopy: canopy + (size === 'tall' ? 1 : 2) };
+}
+
+/**
+ * Lays out one (not giant) tree through `put(x, y, z, block, fillAirOnly)`:
+ * the trunk, then the crown. Pure in its arguments, so world generation and
+ * a sapling growing up draw exactly the same tree.
+ */
+export function treeShape(put, x, z, tree, seed) {
+  const { style, trunk, ground } = tree;
+  for (let i = 0; i < trunk; i++) put(x, ground + i, z, style.wood, false);
+
+  const topY = ground + trunk;
+
+  if (tree.size === 'tall' || tree.size === 'towering') {
+    // A crown in proportion: an egg of leaves, deeper below the top of
+    // the trunk the bigger the tree, and a trunk that carries on up into it.
+    const r = (tree.canopy ?? 3) + 0.6;
+    for (let i = 0; i < 2; i++) put(x, topY + i, z, style.wood, false);
+    crownShape(put, x + 0.5, topY + 1, z + 0.5, { r, below: Math.round(r), above: Math.round(r * 0.8), leaves: style.leaves, salt: x * 31 + z }, seed);
+    return;
+  }
+
+  // A rounded crown rather than a box. Requested directly: leaves "be
+  // somehow more rounded instead of sharp cubes." Each layer is a disc, the
+  // widest in the middle; the top is a small dome, not one block on a flat
+  // lid; and the rim is ragged, a few of its leaves missing, so no two
+  // trees are the same square.
+  const canopy = tree.canopy ?? style.canopy ?? 2;
+  const layers = [[-1, canopy + 0.25], [0, canopy + 0.55], [1, Math.max(1, canopy - 0.35)], [2, canopy > 1 ? 1 : 0]];
+  for (const [dy, radius] of layers) {
+    const r = Math.floor(radius + 0.5);
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dz = -r; dz <= r; dz++) {
+        const d2 = dx * dx + dz * dz;
+        if (d2 > radius * radius + 0.6) continue;
+        const rim = d2 > (radius - 1) * (radius - 1) + 0.6;
+        if (rim && (dx || dz) && hash01(x * 31 + dx, z * 17 + dz * 7 + dy * 131, seed ^ 0x3ea7) < 0.18) continue;
+        put(x + dx, topY + dy, z + dz, style.leaves, true);
+      }
+    }
+  }
+  put(x, topY + 2, z, style.leaves, true);
+}
+
+/**
+ * A mass of leaves round (cx, cy, cz): a squashed ball, `below` layers deep
+ * under the middle and `above` over it, ragged at the rim. cx and cz are in
+ * block-edge units, so a 2×2 trunk's crown can sit centred between its four
+ * columns.
+ */
+export function crownShape(put, cx, cy, cz, { r, below, above, leaves, salt }, seed) {
+  const R = Math.ceil(r);
+  for (let dy = -below; dy <= above; dy++) {
+    const t = dy < 0 ? dy / (below + 0.7) : dy / (above + 0.7);
+    const layer = r * Math.sqrt(Math.max(0, 1 - t * t));
+    if (layer < 0.5) continue;
+    for (let bx = Math.floor(cx - R); bx <= Math.ceil(cx + R); bx++) {
+      for (let bz = Math.floor(cz - R); bz <= Math.ceil(cz + R); bz++) {
+        const ddx = bx + 0.5 - cx, ddz = bz + 0.5 - cz;
+        const d2 = ddx * ddx + ddz * ddz;
+        if (d2 > layer * layer) continue;
+        const rim = d2 > (layer - 1.1) * (layer - 1.1);
+        if (rim && hash01(bx * 13 + salt, bz * 7 + dy * 101, seed ^ 0x3ea7) < 0.22) continue;
+        put(bx, cy + dy, bz, leaves, true);
+      }
+    }
+  }
+}
+
 /** Wood, leaves and saplings: standing on the ground rather than part of it. */
 const GROWS_ON_TOP = new Set([4, 5, 20, 41, 42, 43, 44]);
 

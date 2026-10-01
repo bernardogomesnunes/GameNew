@@ -12,7 +12,7 @@ import { AIR, isSoil } from '../config/blocks.js';
  * is how you end up with a floating tree over a hole.
  */
 
-const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, COBBLE = 8, SAPLING = 20;
+const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, COBBLE = 8;
 
 /** A trunk with a leafy crown. Returns false if there was no room. */
 export function plantTree(world, x, groundY, z, rand) {
@@ -78,12 +78,6 @@ export const FEATURES = {
       if (!makePlantable(world, x, z)) continue;
       if (plantTree(world, x, world.surfaceHeight(x, z), z, rand)) planted.push({ x, z });
     }
-    // A couple of saplings, so the place reads as growing rather than placed.
-    for (let i = 0; i < 2; i++) {
-      const x = site.x + Math.round((rand() - 0.5) * SPAN);
-      const z = site.z + Math.round((rand() - 0.5) * SPAN);
-      if (plantable(world, x, z)) world.setBlock(x, world.surfaceHeight(x, z), z, SAPLING);
-    }
     return planted.length;
   },
 
@@ -116,9 +110,10 @@ export const FEATURES = {
   },
 
   /**
-   * A scrub of saplings by the water. Cheap to build and it does real work:
-   * it marks the riverbank from a distance, which is where the first farm has
-   * to go.
+   * A scrub of low bushes by the water. Cheap to build and it does real
+   * work: it marks the riverbank from a distance, which is where the first
+   * farm has to go. Bushes, not saplings: nothing in the wild is a sapling
+   * any more (playtest, P8), and these break for the odd one.
    */
   berries(world, site, rand) {
     let placed = 0;
@@ -126,7 +121,7 @@ export const FEATURES = {
       const x = site.x + Math.round((rand() - 0.5) * 5);
       const z = site.z + Math.round((rand() - 0.5) * 5);
       if (!plantable(world, x, z)) continue;
-      world.setBlock(x, world.surfaceHeight(x, z), z, SAPLING);
+      world.setBlock(x, world.surfaceHeight(x, z), z, LEAVES);
       placed++;
     }
     return placed;

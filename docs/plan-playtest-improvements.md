@@ -100,6 +100,8 @@ What's already there to build on:
 ## P8. Saplings that grow, and woods that seed themselves
 *"Sapling should be a 3D model, and should grow into a tree in 10 game days. Let's remove the sapling from the world generation and it needs to be planted. Leaves should drop saplings from time to time, as fruit."*
 
+**Done.** Saplings only go in the ground (grass, dirt or moss). Each one counts game days from when it was planted; the world keeps its own day count, which only runs while you play. After 10 days it grows into the wild tree of the land it stands in: same shape code, same size spread, never a giant. With no room (a roof, a wall in its crown) it waits, and says so when you point at it. Pointing at one tells you how many days are left. Broken leaves drop a sapling 1 time in 10 and a fruit 1 in 16. The riverbank scrub is low leaf bushes now.
+
 - **The sapling** is a small 3D plant (a thin stem and a few leaves), not a cube.
 - **It grows into a tree after 10 game days**, using the same tree shapes the world generates, sized as world trees are.
 - **None in the generated world** any more: a sapling is only ever one somebody planted.
