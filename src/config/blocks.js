@@ -408,6 +408,26 @@ BLOCKS.push({
   light: { color: 0xd8ff8a, intensity: 4, distance: 16, decay: 1, y: 0.8 }, unlock: null,
 });
 
+// The ring ores (Phase 7c), decided with the user: each ring needs an ore
+// of its own, "very rare", found "deep in the caves" or in a chest. Rock
+// studded with crystals that glow, so one is seen in the dark of a cave
+// before it's reached — only ever on a cave wall near the bottom of the
+// world (see ChunkGen.ringOreAt). The rock is an ordinary cube, lit like
+// the cave round it; `overlay` names the crystals drawn on top of it (see
+// ChunkMesher.buildProps), which glow whatever the light.
+export const SUNSTONE_ORE = 191;
+export const NIGHTSTONE_ORE = 192;
+BLOCKS.push(
+  {
+    id: SUNSTONE_ORE, name: 'Sunstone Ore', glyph: 'gravel', color: 0x9a948a, overlay: 'sunstone_ore', material: 'stone',
+    light: { color: 0xffd98a, intensity: 2.5, distance: 9, decay: 1, y: 0.5 }, unlock: null,
+  },
+  {
+    id: NIGHTSTONE_ORE, name: 'Nightstone Ore', glyph: 'gravel', color: 0x45404d, overlay: 'nightstone_ore', material: 'stone',
+    light: { color: 0xa77bff, intensity: 2.5, distance: 9, decay: 1, y: 0.5 }, unlock: null,
+  },
+);
+
 /** Whether a block is a trapdoor, open or shut, whichever way it faces. */
 export function isTrapdoor(id) {
   return id >= TRAPDOOR && id <= TRAPDOOR_OPEN + 3;

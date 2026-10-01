@@ -24,8 +24,27 @@ Armour and the ring slot (`config/armour.js`, `tests/armour.test.mjs`):
 - **Disguise:** a full Sky set makes `DuiltGame.disguisedAs()` return 'sky', for the dark path later.
 - **Ring:** the slot waits for the ring forged at the Temple (7c).
 
+## Phase 7c is done too
+The Temple, devotion and the rings (`tests/temple.test.mjs`).
+- **Ring ores:** Sunstone and Nightstone are rock with glowing crystals. They only form on cave walls below y 30, about 0.3 per chunk (`ChunkGen.ringOreAt`).
+- **Loot chests:**
+  - one in the hermit's hut, one in each bandit camp, and about one per 16 chunks on deep cave floors;
+  - contents are rolled from position the first time a chest is opened or broken (`duilt/Loot.js`, `Game.unpackFound`);
+  - a chest sometimes holds a ring ore.
+- **Temple:**
+  - Age 3; climbs Shrine → Chapel → Temple → Great Temple → High Temple;
+  - each level is built (windows, lights, pillars, gold trim, banners) and then paid for in devotion when you evolve it;
+  - it makes devotion, more with worshipping settlers, and offerings at the Temple add more;
+  - the starter design is a Shrine on a 9×9 platform, leaving room to grow.
+- **Temple recipes:**
+  - offerings turn food, gold or a lantern into devotion;
+  - holy water needs a Chapel and heals four hearts when you drink it;
+  - the rings need the High Temple, and forging one closes the other for good (`DuiltGame.ring`);
+  - the White Ring (Sunstone and gold) gives 1.2× speed and 1.3× jump;
+  - the Black Ring (Nightstone and obsidian) sparks back at a bandit that hits you.
+
 ## Next
-- **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7c: the Temple and the choice of ring.
+- **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7d: your god's Sanctuary and its guardian.
 - Still open:
   - far terrain should show what the player built (#130);
   - sound: music, ambience and separate volume sliders (#133).

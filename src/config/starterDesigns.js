@@ -226,6 +226,27 @@ function mineBlocks() {
  * gold at the cap — the rule counts all three, and doing it in marble alone
  * would cost four hundred stone.
  */
+/**
+ * A shrine (Phase 7c): a marble room with an altar and a lantern, on a
+ * stone platform wide enough to build the rest of a temple on — pillars at
+ * its corners, and room on every side for more.
+ */
+function templeBlocks() {
+  const MARBLE_TABLE = 32, LANTERN = 26, STONE_PILLAR = 165;
+  const blocks = [...slab(0, 0, 9, 9, 0, STONE)];
+  for (const dy of [1, 2, 3]) {
+    blocks.push(...ring(2, 2, 5, 5, dy, MARBLE).filter((b) => !(b.dz === 2 && b.dx === 4 && dy < 3)));
+  }
+  blocks.push(...slab(2, 2, 5, 5, 4, MARBLE));
+  blocks.push(...gable(2, 2, 5, 5, 5, SLATE, MARBLE));
+  blocks.push({ dx: 4, dy: 1, dz: 5, type: MARBLE_TABLE });
+  blocks.push({ dx: 5, dy: 1, dz: 5, type: LANTERN });
+  for (const [dx, dz] of [[0, 0], [8, 0], [0, 8], [8, 8]]) {
+    for (const dy of [1, 2, 3, 4]) blocks.push({ dx, dy, dz, type: STONE_PILLAR });
+  }
+  return blocks;
+}
+
 function monumentBlocks() {
   const blocks = [...ring(0, 0, 7, 7, 0, BRICK)];
   blocks.push(...ring(1, 1, 5, 5, 1, BRICK));
@@ -415,6 +436,15 @@ export const STARTER_DESIGNS = [
     footprint: '20 × 14',
     note: 'Needs fresh water within 8 blocks — build nearer the river.',
     blocks: villageBlocks(),
+  },
+  {
+    id: 'starter_temple',
+    structure: 'temple',
+    name: 'Shrine',
+    size: 9,
+    footprint: '9 × 9',
+    note: 'A shrine on a platform with room to grow — build it up into a temple where it stands.',
+    blocks: templeBlocks(),
   },
   {
     id: 'starter_monument',

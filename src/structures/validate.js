@@ -305,6 +305,7 @@ export function tierStatus(world, region, structureId, currentTier = null) {
     next: next && {
       name: next.name,
       slots: next.slots,
+      cost: next.cost ?? null,
       // Only what is actually missing, in the order the rules are written.
       missing: (next.needs ?? []).filter((n) => !n.test(ctx)).map((n) => n.say(ctx)),
     },

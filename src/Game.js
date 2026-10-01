@@ -57,6 +57,8 @@ import { TOOL_FOR, toolEffectiveness, itemName, ITEMS_BY_ID, isFood } from './co
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox } from './world/Mobs.js';
+import { landmarksFor } from './world/landmarks.js';
+import { LOOT } from './duilt/Loot.js';
 import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './world/Projectiles.js';
 import { ProjectileView } from './render/ProjectileView.js';
 import { Fireflies } from './world/Fireflies.js';
@@ -158,7 +160,12 @@ const CATAPULT_RELOAD = 2;      // seconds between throws
 const CATAPULT_REACH = 4;       // walk further than this from it and you let go
 const CATAPULT_MIN_THROW = 6;   // it won't drop a stone closer than this
 const CATAPULT_AMMO = ['stone', 'cobblestone'];
-const STONE_HITS = 14;          // what a stone does to anyone it lands on
+const STONE_HITS = 14;
+// The rings (Phase 7c): what the White Ring adds to your step and your
+// jump, and what the Black Ring's spark does to whoever hits you.
+const WHITE_RING_SPEED = 1.2;
+const WHITE_RING_JUMP = 1.3;
+const BLACK_RING_SPARK = 4;          // what a stone does to anyone it lands on
 const HOLD_PLACE_DELAY_MS = 320;
 const HOLD_PLACE_INTERVAL_MS = 170;
 
@@ -185,7 +192,7 @@ const SLOW_BREAK_MS = 900;
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', holy_water: 'drinkSelected' };
 const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', seeds: 'plantMixed' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
@@ -408,6 +415,13 @@ export class Game {
     // The land grows when an age is finished, and the wall has to grow with it.
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
     this.bus.on('health:died', ({ cause }) => this.die(cause));
+    this.bus.on('ring:forged', ({ ring }) => this.ui?.toast({
+      kind: 'achievement',
+      title: ring === 'white' ? 'You forged the White Ring' : 'You forged the Black Ring',
+      body: ring === 'white'
+        ? 'Put it on to move faster and jump higher. The Black Ring is closed to you now.'
+        : 'Put it on, and whoever strikes you feels it. The White Ring is closed to you now.',
+    }));
 
     this.wireInput();
     this.wireSaveOnLeave();
@@ -2537,6 +2551,16 @@ export class Game {
    * result) — this is only the wiring from "the hotbar slot you have
    * selected" to it, the same job fillBucket/emptyBucket do for the bucket.
    */
+  /** Drinks the holy water you're holding: hearts back at once. */
+  drinkSelected() {
+    if (!this.duilt) return;
+    const r = this.duilt.drink(this.selectedItemId);
+    if (r.ok) this.sound?.eat();
+    this.ui.toast(r.ok
+      ? { kind: 'challenge', title: 'Blessed', body: `+${r.healed / 2} hearts` }
+      : { kind: 'xp', title: r.reason });
+  }
+
   eatSelected() {
     if (!this.duilt) return;
     const r = this.duilt.eat(this.selectedItemId);
@@ -2704,6 +2728,15 @@ export class Game {
     if (!this.duilt || this.duilt.sandbox) return;
     const taken = this.duilt.hurt(hits, 'bandit');
     if (!taken) return;
+    // The Black Ring (Phase 7c): a dark spark back at whoever struck you.
+    if (this.duilt.ringWorn() === 'black' && this.wanderers) {
+      const res = this.wanderers.hit(p, BLACK_RING_SPARK, this.player.position.x, this.player.position.z);
+      if (res?.killed) {
+        const gained = this.duilt.collect(res.drops) ?? {};
+        const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+        this.ui.toast({ kind: 'xp', title: `The ring's spark felled ${p.name}`, body: got || undefined });
+      }
+    }
     // Knocked up off your feet a little, so a blow is felt and not just seen.
     if (this.player.grounded) this.player.velocity.y = 4.5;
     this.sound?.hit?.('wood', { gain: 0.6, pitch: 0.55 });
@@ -3001,8 +3034,29 @@ export class Game {
   /** Opens the chest you're pointing at, on the store screen. */
   openChest(hit) {
     if (!this.duilt || !isChest(this.world.getBlock(hit.x, hit.y, hit.z))) return;
+    this.unpackFound(hit.x, hit.y, hit.z);
     this.duilt.chestAt(hit.x, hit.y, hit.z);
     this.ui.openStore({ chest: { x: hit.x, y: hit.y, z: hit.z } });
+  }
+
+  /**
+   * A chest you found (Phase 7c): the first time it's opened or broken,
+   * what's in it is rolled — a bandit's takings at a camp, the hermit's
+   * things at the hut, and anything else is an old chest in the caves.
+   * Says so once, and names a ring ore if there's one in it.
+   */
+  unpackFound(x, y, z) {
+    const near = this.world.gen ? landmarksFor(this.world.gen).find((l) => Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1) : null;
+    const kind = near ? (near.kind === 'hermit' ? 'hermit' : 'camp') : 'cave';
+    const loot = this.duilt.unpackFound(x, y, z, kind, this.world.gen?.seed ?? 0);
+    if (!loot) return null;
+    const rare = loot.sunstone ? 'Sunstone' : loot.nightstone ? 'Nightstone' : null;
+    this.ui?.toast({
+      kind: rare ? 'achievement' : 'challenge',
+      title: rare ? `${LOOT[kind].name} — with ${rare} in it!` : LOOT[kind].name,
+      body: rare ? `${rare} is what a ${rare === 'Sunstone' ? 'White' : 'Black'} Ring is forged from` : 'Somebody left this here',
+    });
+    return loot;
   }
 
   /**
@@ -3269,6 +3323,8 @@ export class Game {
       }
       // A chest with things in it stays put — empty it first, the same as a
       // storehouse. Nothing in it is ever thrown away by a stray swing.
+      // A chest you found and never opened is full of whatever it holds.
+      for (const c of changes) if (isChest(c.prev) && !isChest(c.next)) this.unpackFound(c.x, c.y, c.z);
       const full = changes.find((c) => isChest(c.prev) && !isChest(c.next) && !this.duilt.chestEmpty(c.x, c.y, c.z));
       if (full) {
         this.ui?.toast({ kind: 'xp', title: 'Empty the chest first', body: 'Take everything out, then break it' });
@@ -3593,7 +3649,10 @@ export class Game {
       if (this.duilt) {
         this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
         this.feelHurt(dt);
-        this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed();
+        // The White Ring (Phase 7c): faster on your feet, and a higher jump.
+        const white = this.duilt.ringWorn() === 'white';
+        this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed() * (white ? WHITE_RING_SPEED : 1);
+        this.player.jumpScale = white ? WHITE_RING_JUMP : 1;
       }
       this.updateHover();
       this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false });

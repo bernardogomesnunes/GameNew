@@ -126,6 +126,16 @@ const LATER = [
     check: (c) => c.stats.claimed.has('pen'),
   },
   {
+    id: 'a_shrine',
+    age: 3,
+    structure: 'temple', // the goal that sends you to it — see ages.test.mjs
+    name: 'A place to pray',
+    description: 'Raise a shrine — an altar, a light and a roof over them. Build it up, and at the top it forges a ring.',
+    icon: '⛪',
+    xpReward: 100,
+    check: (c) => c.stats.claimed.has('temple'),
+  },
+  {
     id: 'a_street',
     age: 2,
     name: 'A street of them',

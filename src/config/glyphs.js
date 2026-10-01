@@ -60,6 +60,9 @@ export const GLYPHS = {
   // what says pickaxe rather than axe.
   pickaxe: 'M12 20 12.5 12.5M8 8c1.5-3 6-3 7.5 0M8 8 5 11.5M15.5 8 18.5 11.5',
   // Straight shaft into a blade that tapers to a rounded point.
+  // Phase 7c: the Temple.
+  devotion: 'M12 3.5c2.5 3.2 4.5 5.6 4.5 9a4.5 4.5 0 0 1-9 0c0-3.4 2-5.8 4.5-9ZM12 14a1.6 1.6 0 1 0 .01 0M12 18.5V21',
+  flask: 'M10 3.5h4M10.5 3.5V8L6.5 15.5A3 3 0 0 0 9.2 20h5.6a3 3 0 0 0 2.7-4.5L13.5 8V3.5M8 14h8',
   // Phase 7b: armour.
   helm: 'M6 15.5V12a6 6 0 0 1 12 0v3.5ZM6 15.5h12M9 12.5h6M12 6V4',
   cuirass: 'M8 5h8l3 3-2 2v9H7v-9L5 8ZM9.5 5c0 1.5 1 2.5 2.5 2.5S14.5 6.5 14.5 5M7 12h10',

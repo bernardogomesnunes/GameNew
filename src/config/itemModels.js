@@ -151,3 +151,21 @@ const ARMOUR_MODEL = {
   ],
 };
 for (const p of ARMOUR_PIECES) ITEM_MODELS[p.id] = ARMOUR_MODEL[p.slot](p.main, p.trim);
+
+// The Temple's things (Phase 7c): a flask of holy water, and the two rings
+// — a band with a stone set in it.
+ITEM_MODELS.holy_water = [
+  ...stack([[0.22, 0.22, 0, 0.42, 0xbfe3f5], [0.16, 0.16, 0.42, 0.52, 0xd6eef8], [0.08, 0.08, 0.52, 0.74, 0xd6eef8]]),
+  ...stack([[0.1, 0.1, 0.74, 0.86, 0xa8835a]]),
+];
+const ringModel = (band, gem) => [
+  box(0.2, 0.1, 0.44, 0.32, 0.6, 0.56, band), box(0.68, 0.1, 0.44, 0.8, 0.6, 0.56, band),
+  box(0.2, 0.04, 0.44, 0.8, 0.14, 0.56, band), box(0.2, 0.56, 0.44, 0.8, 0.66, 0.56, band),
+  box(0.38, 0.62, 0.38, 0.62, 0.84, 0.62, gem),
+];
+ITEM_MODELS.ring_white = ringModel(0xe6c45a, 0xffe08a);
+ITEM_MODELS.ring_black = ringModel(0x2a2430, 0xb48cff);
+ITEM_MODELS.devotion = [
+  ...stack([[0.2, 0.2, 0, 0.1, 0xc9a44c], [0.12, 0.12, 0.1, 0.5, 0xf6eedc]]),
+  ...stack([[0.08, 0.08, 0.5, 0.66, 0xffd98f], [0.04, 0.04, 0.66, 0.78, 0xffb347]]),
+];

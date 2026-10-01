@@ -17,7 +17,7 @@ import { BIOMES } from '../config/biomes.js';
  */
 
 const DARK_WOOD = 43, PLANKS = 7, COBBLE = 8, LANTERN = 26, SLAB_PLANK = 28, RED_RUG = 35,
-      FENCE = 47, DIRT = 2, FARMLAND = 21;
+      FENCE = 47, DIRT = 2, FARMLAND = 21, CHEST = 148;
 
 /** How far out each kind stands, from the middle of the world. */
 const HERMIT_AT = [320, 420];
@@ -158,6 +158,9 @@ const HUT = (() => {
     }
   }
   blocks.push([0, 0, -1, LANTERN]);
+  // A chest by the back wall — what's in it is rolled when it's first
+  // opened (see duilt/Loot.js). Facing the door.
+  blocks.push([1, 0, -1, CHEST + 2]);
   // garden, south-east of the door
   for (const [dx, dz] of [[2, 4], [3, 4], [2, 5], [3, 5]]) blocks.push([dx, -1, dz, FARMLAND]);
   for (const [dx, dz] of [[4, 3], [4, 4], [4, 5], [4, 6], [3, 6], [2, 6], [1, 6]]) blocks.push([dx, 0, dz, FENCE]);
@@ -193,6 +196,8 @@ const CAMP = (() => {
   };
   tent(-4, -4, 's');
   tent(4, 4, 'n');
+  // The bandits' takings, in the first tent, over its rug (see duilt/Loot.js).
+  blocks.push([-4, 0, -4, CHEST + 2]);
   for (let dx = -5; dx <= 1; dx++) blocks.push([dx, 0, 6, FENCE]);
   return { half: 7, blocks };
 })();

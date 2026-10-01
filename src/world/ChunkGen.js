@@ -170,6 +170,20 @@ export class ChunkGen {
   }
 
   /**
+   * A ring ore at one block of deep rock, or 0 (Phase 7c). Very rare: only
+   * near the bottom of the world, and only on a cave wall — a block with
+   * open cave beside it — so the glow can be seen and the ore found,
+   * rather than lost inside solid rock nobody will ever dig. The cheap hash
+   * goes first; the cave check only runs for the few that pass it.
+   */
+  ringOreAt(x, y, z, biomeIndex, rockFloor) {
+    if (y < CAVE_FLOOR || hash01(x, z, this.seed ^ (0x5a17 + y * 0x3c1)) >= RING_ORE_CHANCE) return 0;
+    const open = (nx, ny, nz) => ny < rockFloor - CAVE_SURFACE_BUFFER && this.caveAt(nx, ny, nz, biomeIndex) === AIR;
+    if (!(open(x + 1, y, z) || open(x - 1, y, z) || open(x, y + 1, z) || open(x, y - 1, z) || open(x, y, z + 1) || open(x, y, z - 1))) return 0;
+    return hash01(x, z, this.seed ^ (0x6b33 + y)) < 0.5 ? SUNSTONE_ORE : NIGHTSTONE_ORE;
+  }
+
+  /**
    * Whether one block of the rock layer is hollowed out, and with what —
    * open air, or, under Mountains 2 and only down in the deep band, flooded
    * with water or lava.
@@ -380,6 +394,7 @@ export class ChunkGen {
         const under = beach ? SAND : s.under;
         const hasOres = biome.ores?.length > 0;
         const rockFloor = h - 1 - s.depth;
+        let below = 0;
         for (let y = 0; y < h; y++) {
           let block;
           if (y < rockFloor) {
@@ -387,11 +402,19 @@ export class ChunkGen {
             // soil sitting on top of it, so there is always a solid roof
             // between a cave and the surface.
             const cave = y < rockFloor - CAVE_SURFACE_BUFFER ? this.caveAt(x, y, z, index) : NOT_CARVED;
-            if (cave !== NOT_CARVED) block = cave;
-            else block = hasOres ? (this.oreAt(x, y, z, index) || s.rock) : s.rock;
+            if (cave !== NOT_CARVED) {
+              block = cave;
+              // Now and then a chest left on a deep cave floor (Phase 7c) —
+              // see duilt/Loot.js for what's in it.
+              if (cave === AIR && y < LOOT_TOP && below && below !== WATER && below !== LAVA && below !== CHEST
+                && hash01(x, z, this.seed ^ (0x1c5e + y * 0x2f1)) < LOOT_CHANCE) {
+                block = CHEST + Math.floor(hash01(z, x, this.seed ^ 0x4d2) * 4);
+              }
+            } else block = (y < RING_ORE_TOP && this.ringOreAt(x, y, z, index, rockFloor)) || (hasOres ? (this.oreAt(x, y, z, index) || s.rock) : s.rock);
           } else if (y < h - 1) block = under;
           else block = water ? bed : top;
           chunk.set(lx, y, lz, block);
+          below = block;
         }
         // A river or stream fills the trough it cut. The level is the bed
         // plus one, so the water sits in the channel rather than flooding
@@ -644,6 +667,17 @@ const CAVE_SURFACE_BUFFER = 6;
 // Never carve within this many blocks of bedrock — a cave with no floor
 // underneath it is a hole, not a cave.
 const CAVE_FLOOR = 3;
+// The ring ores (Phase 7c): only below this height, and only this often a
+// block of rock — before the "is it on a cave wall" check, which most fail.
+const RING_ORE_TOP = 30;
+const RING_ORE_CHANCE = 0.0002;
+const SUNSTONE_ORE = 191;
+// Chests on deep cave floors (Phase 7c): below this height, this often a
+// cave floor.
+const LOOT_TOP = 60;
+const LOOT_CHANCE = 0.00007;
+const CHEST = 148;
+const NIGHTSTONE_ORE = 192;
 // Mountains 2's own enormous caverns: the same field, a much wider band, and
 // only down in a deep zone well under its peak — see caveAt.
 const CAVERN_WIDTH = 0.15;
