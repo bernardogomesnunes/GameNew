@@ -66,6 +66,29 @@ export const WANDERERS = {
     fleeBelow: -1,
     drops: { gold: [2, 4], sky_marble: [0, 2] },
   },
+  // Two at the King's side always, while he lives (asked for directly):
+  // tougher than the island's guards, and they don't leave the throne room.
+  royal_guard: {
+    noun: 'a royal guard of the Sky King', sky: true,
+    about: 'a royal guard, at the Sky King\'s side',
+    aboutHostile: 'a royal guard — they never leave the King\'s side',
+    colours: [0xf6f1df],
+    helm: 0xe8c04f,
+    speed: 1.3,
+    roam: 1,
+    // Tuned against a simulated fight: the best sword, full armour and the
+    // Black Ring should usually win alone, if not by much; less needs your
+    // army, or cleverer fighting.
+    hp: 28,
+    hits: 3,
+    reach: 1.9,
+    every: 1.3,
+    aggro: 11,
+    leash: 9,
+    run: 3.4,
+    fleeBelow: -1,
+    drops: { gold: [3, 6] },
+  },
   sky_king: {
     noun: 'the Sky King', sky: true,
     about: 'the Sky King, on his golden throne',
@@ -79,6 +102,8 @@ export const WANDERERS = {
     reach: 2,
     every: 1.4,
     aggro: 9,
+    leash: 12,    // stays in his throne room
+    windup: 0.75, // his heavy blows are raised first, where you can see them
     run: 2.6,
     fleeBelow: -1,
     drops: { gold: [12, 20], sunstone: [1, 2] },

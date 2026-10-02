@@ -63,7 +63,10 @@ world.ensureAround(atCamp.x, atCamp.z, 48);
   for (let i = 0; i < 300; i++) w.tick(0.05, atCamp);
   const nearest = Math.min(...bandits.map((b) => Math.hypot(b.x - atCamp.x, b.z - atCamp.z)));
   ok(`from Age 2 they come at you (nearest ${nearest.toFixed(1)})`, nearest < WANDERERS.bandit.reach + 0.5);
-  ok(`and land blows (${blows.length} in 15 s)`, blows.length >= 3 && blows.every((b) => b.hits === WANDERERS.bandit.hits));
+  // Never quite the same twice (Wanderers.blow): a blow is its weight give
+  // or take a quarter, now and then a heavy one twice that.
+  const most = (WANDERERS.bandit.hits + Math.max(1, Math.round(WANDERERS.bandit.hits * 0.25))) * 2;
+  ok(`and land blows (${blows.length} in 15 s, ${[...new Set(blows.map((b) => b.hits))].sort().join('/')} half-hearts)`, blows.length >= 3 && blows.every((b) => b.hits >= 1 && b.hits <= most));
   const perBandit = Math.max(...bandits.map((b) => blows.filter((x) => x.p === b).length));
   ok('each no faster than its cooldown', perBandit <= Math.ceil(15 / WANDERERS.bandit.every) + 1);
 

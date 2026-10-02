@@ -33,6 +33,16 @@ const LINGER = 6;             // seconds a messenger stays to say their piece
 
 // Fighting (Phase 6b).
 const LEASH = 32;
+// No two blows quite alike (asked for: "make their attacks more random"):
+// the time between them varies this much either way, a blow's weight by a
+// quarter of it, and now and then one lands heavy — twice as hard, and it
+// throws you back. The Sky King winds his up where you can see it.
+export const BLOW_JITTER = 0.4;
+export const HEAVY_CHANCE = 1 / 6;
+/** How long a struck blow shows: the arms come down. */
+export const STRIKE_SHOWS = 0.3;
+/** The royal guard: a fallen one's place is filled this long after, while the King lives. */
+export const ROYAL_EVERY = 18;
 /** How long someone who doesn't fight runs from you once struck. */
 const FLEE_SECONDS = 6;             // a camp bandit won't chase you further than this from its fire
 const HURT_FLASH = 0.3;       // seconds a struck figure shows red
@@ -69,7 +79,7 @@ export class Wanderers {
     onAttack = null, onSteal = null, onRaid = null, kingdomHostile = () => false,
     buildings = () => [], inLand = () => false, onBatter = null, onThrow = null,
     foes = () => [], onFoe = null,
-    sky = () => null, skyHostile = () => false, onSkyKing = null,
+    sky = () => null, skyHostile = () => false, onSkyKing = null, onRoyal = null,
   }) {
     this.world = world;
     this.rand = rand;
@@ -99,6 +109,9 @@ export class Wanderers {
     this.sky = sky;
     this.skyHostile = skyHostile;
     this.onSkyKing = onSkyKing;
+    this.onRoyal = onRoyal;
+    // When the next royal guard comes, by landmark (royalWatch).
+    this.royalDue = new Map();
     // Archers' arrows in flight — { x, y, z, vx, vy, vz, from, age, stuck }.
     this.arrows = [];
     this.raidedTonight = false;
@@ -126,6 +139,7 @@ export class Wanderers {
     }
     const sky = this.sky();
     if (sky && !this.present.has(sky) && Math.hypot(sky.x - player.x, sky.z - player.z) < (sky.visit ?? VISIT)) this.populate(sky);
+    this.royalWatch(dt);
 
     this.untilExplorer -= dt;
     if (this.untilExplorer <= 0) {
@@ -145,6 +159,7 @@ export class Wanderers {
 
     for (const p of this.list) {
       if (p.hurt > 0) p.hurt = Math.max(0, p.hurt - dt);
+      if (p.strike > 0) p.strike = Math.max(0, p.strike - dt);
       if (p.fear > 0) p.fear = Math.max(0, p.fear - dt);
       if (this.suffer(p, dt)) continue;
       // Frozen, everything it does runs slow.
@@ -520,6 +535,8 @@ export class Wanderers {
       for (const post of lm.posts) {
         this.list.push(this.person('sky_guard', post.x, lm.y, post.z, { landmark: lm, home: { x: post.x, z: post.z } }));
       }
+      (lm.royal ?? []).forEach((post, i) => this.list.push(this.royalGuard(lm, post, i, post)));
+      this.royalDue.delete(lm);
       return;
     }
     if (lm.kind === 'hermit') {
@@ -532,6 +549,33 @@ export class Wanderers {
       const x = lm.x + 0.5 + Math.cos(a) * 3, z = lm.z + 0.5 + Math.sin(a) * 3;
       const y = surfaceAt(this.world, Math.floor(x), Math.floor(z)) ?? lm.y;
       this.list.push(this.person('bandit', x, y, z, { landmark: lm, home }));
+    }
+  }
+
+  /** A royal guard for post `i` beside the King, standing at `at`. */
+  royalGuard(lm, post, i, at) {
+    return this.person('royal_guard', at.x, lm.y + (at.dy ?? 0), at.z, { landmark: lm, home: { x: post.x, z: post.z }, post: i, name: 'a royal guard' });
+  }
+
+  /**
+   * Two royal guards at the King's side, always, while he lives (asked
+   * for directly): a fallen one's place is filled ROYAL_EVERY seconds
+   * later by another, marching in from the palace door.
+   */
+  royalWatch(dt) {
+    for (const lm of this.present) {
+      if (lm.kind !== 'sky' || !lm.royal?.length) continue;
+      const king = this.list.find((p) => p.landmark === lm && p.kind === 'sky_king');
+      if (!king || king.dead) continue;
+      const guards = this.list.filter((p) => p.landmark === lm && p.kind === 'royal_guard' && !p.dead);
+      if (guards.length >= lm.royal.length) { this.royalDue.delete(lm); continue; }
+      const due = (this.royalDue.get(lm) ?? ROYAL_EVERY) - dt;
+      if (due > 0) { this.royalDue.set(lm, due); continue; }
+      this.royalDue.delete(lm);
+      const i = lm.royal.findIndex((_, k) => !guards.some((g) => g.post === k));
+      const p = this.royalGuard(lm, lm.royal[i], i, lm.palaceDoor ?? lm.royal[i]);
+      this.list.push(p);
+      this.onRoyal?.(p);
     }
   }
 
@@ -585,14 +629,16 @@ export class Wanderers {
     }
     if (spec.siege === 'ram') return this.ram(p, dt, spec);
     if (spec.siege === 'catapult') return this.catapult(p, dt, spec);
-    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard' || p.kind === 'sky_king' || p.war;
+    const fights = p.kind === 'bandit' || p.kind === 'guard' || spec.sky || p.war;
     if (fights) p.cooldown = Math.max(0, p.cooldown - dt);
     // Up on his beast, the Warlord only swings: the beast does the going.
     if (p.mount && !p.mount.dead) {
       const d = Math.hypot(player.x - p.x, player.z - p.z);
       if (d <= spec.reach + 0.6 && Math.abs(player.y - (p.y - MOUNTED)) < 2.5 && p.cooldown <= 0) {
-        p.cooldown = spec.every;
-        this.onAttack?.(p, spec.hits);
+        p.cooldown = this.nextBlow(spec);
+        p.strike = STRIKE_SHOWS;
+        const b = this.blow(spec);
+        this.onAttack?.(p, b.hits, b);
       }
       return;
     }
@@ -609,7 +655,7 @@ export class Wanderers {
       return;
     }
 
-    if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard') {
+    if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard' || p.kind === 'royal_guard') {
       const dx = p.x - player.x, dz = p.z - player.z;
       const d = Math.hypot(dx, dz) || 1;
       // Bandits don't come to you — not yet. They back off and watch.
@@ -676,7 +722,22 @@ export class Wanderers {
       return true;
     }
 
-    const leashed = p.landmark && Math.hypot(player.x - p.home.x, player.z - p.home.z) > LEASH;
+    // A heavy blow being wound up (the Sky King's): feet planted, arms
+    // raised — then it comes down, on you if you're still in reach.
+    if (p.winding) {
+      p.target = null; p.speed = 0;
+      p.facing = Math.atan2(dx, dz);
+      p.windup -= dt;
+      if (p.windup > 0) return true;
+      const b = p.winding;
+      p.winding = null;
+      p.cooldown = this.nextBlow(spec);
+      p.strike = STRIKE_SHOWS;
+      if (d <= spec.reach + 0.6 && Math.abs(player.y - p.y) < 2) this.onAttack?.(p, b.hits, b);
+      return true;
+    }
+
+    const leashed = p.landmark && Math.hypot(player.x - p.home.x, player.z - p.home.z) > (spec.leash ?? LEASH);
     // Bolder in the dark: they come from further off.
     const aggro = spec.aggro * (this.night() ? 1.6 : 1);
     // An archer keeps its distance and shoots.
@@ -691,7 +752,7 @@ export class Wanderers {
     }
     // One of your soldiers nearer than you is who it fights.
     let foe = null, fd = d;
-    if (hostile && (p.war || p.raider)) {
+    if (hostile && (p.war || p.raider || spec.sky)) {
       for (const f of this.foes()) {
         if (f.hp <= 0) continue;
         const e = Math.hypot(f.x - p.x, f.z - p.z);
@@ -703,8 +764,9 @@ export class Wanderers {
       p.target = fd > stand ? { x: foe.x - (fx / fd) * stand, z: foe.z - (fz / fd) * stand } : null;
       p.speed = spec.run;
       if (fd <= spec.reach && p.cooldown <= 0) {
-        p.cooldown = spec.every;
-        this.onFoe?.(p, foe, spec.hits);
+        p.cooldown = this.nextBlow(spec);
+        p.strike = STRIKE_SHOWS;
+        this.onFoe?.(p, foe, this.blow(spec).hits);
       }
       return true;
     }
@@ -714,8 +776,16 @@ export class Wanderers {
       p.target = d > stand ? { x: player.x - (dx / d) * stand, z: player.z - (dz / d) * stand } : null;
       p.speed = spec.run;
       if (d <= spec.reach && Math.abs(player.y - p.y) < 2 && p.cooldown <= 0) {
-        p.cooldown = spec.every;
-        this.onAttack?.(p, spec.hits);
+        const b = this.blow(spec);
+        if (b.heavy && spec.windup) {
+          // Telegraphed: you see it coming, and can step back.
+          p.winding = b;
+          p.windup = spec.windup;
+          return true;
+        }
+        p.cooldown = this.nextBlow(spec);
+        p.strike = STRIKE_SHOWS;
+        this.onAttack?.(p, b.hits, b);
       }
       return true;
     }
@@ -759,11 +829,24 @@ export class Wanderers {
     return true;
   }
 
+  /** One blow's weight, never quite the same twice: { hits, heavy }. */
+  blow(spec) {
+    const spread = Math.max(1, Math.round(spec.hits * 0.25));
+    const hits = Math.max(1, spec.hits + Math.round((this.rand() * 2 - 1) * spread));
+    const heavy = this.rand() < HEAVY_CHANCE;
+    return { hits: heavy ? hits * 2 : hits, heavy };
+  }
+
+  /** How long until the next blow: about `every`, give or take BLOW_JITTER. */
+  nextBlow(spec) {
+    return spec.every * (1 - BLOW_JITTER + this.rand() * 2 * BLOW_JITTER);
+  }
+
   /** Whether `p` fights you: its own side's say, or because you struck it. */
   hostileOf(p) {
     if (p.war || p.angry) return true;
     if (p.kind === 'guard') return this.kingdomHostile();
-    if (p.kind === 'sky_guard' || p.kind === 'sky_king') return this.skyHostile();
+    if (WANDERERS[p.kind]?.sky) return this.skyHostile();
     return this.hostile();
   }
 

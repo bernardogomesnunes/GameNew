@@ -119,7 +119,8 @@ ok('and from anything you\'ve built — a changed chunk shows as it really is', 
   ok('to anyone without the White Ring the guards keep watch', hits.length === 0);
   hostile = true;
   for (let i = 0; i < 120; i++) { w.think(guards[0], 1 / 30, player); w.move(guards[0], 1 / 30); }
-  ok(`to the White Ring they're enemies (${hits.length} blows)`, hits.length >= 1 && hits[0] === WANDERERS.guard.hits);
+  // A blow's weight varies (Wanderers.blow): its weight give or take a quarter, a heavy one twice that.
+  ok(`to the White Ring they're enemies (${hits.length} blows)`, hits.length >= 1 && hits.every((n) => n >= WANDERERS.guard.hits - 1 && n <= (WANDERERS.guard.hits + 1) * 2));
   guards[0].hp = 1;
   w.think(guards[0], 1 / 30, player);
   ok('and a guard never runs', guards[0].speed !== WANDERERS.guard.run || guards[0].target == null || Math.hypot(guards[0].target.x - player.x, guards[0].target.z - player.z) < 3);

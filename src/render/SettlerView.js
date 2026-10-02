@@ -17,6 +17,7 @@ import { SKINS, HAIRS } from '../config/avatar.js';
 
 const MAX = 64;
 const HURT_RED = new THREE.Color(0xd23a2a);   // beds run out long before this; the cap is just for the buffer
+const WINDUP_GLOW = new THREE.Color(0xfff6d8);
 const FROST = new THREE.Color(0x9fe6ff), EMBER = new THREE.Color(0xff7a3a), SPARK = new THREE.Color(0xffe066);
 
 /** A number that's the same for a person every frame — from their name, or where they began. */
@@ -127,8 +128,11 @@ export class SettlerView {
       const lw = width * 0.36, aw = width * 0.26;
       limb(0, -width * 0.24, legH, legH, lw, swing);
       limb(1, width * 0.24, legH, legH, lw, -swing);
-      limb(2, -width * 0.64, legH + bodyH * 0.95, bodyH * 0.95, aw, -swing * 0.8);
-      limb(3, width * 0.64, legH + bodyH * 0.95, bodyH * 0.95, aw, swing * 0.8);
+      // Arms: swinging as they walk; raised overhead winding up a heavy
+      // blow (the Sky King's — Wanderers.fight), and brought down striking.
+      const raised = p.windup > 0 && p.winding ? -2.7 : p.strike > 0 ? -1.6 * (p.strike / 0.3) : null;
+      limb(2, -width * 0.64, legH + bodyH * 0.95, bodyH * 0.95, aw, raised ?? -swing * 0.8);
+      limb(3, width * 0.64, legH + bodyH * 0.95, bodyH * 0.95, aw, raised ?? swing * 0.8);
 
       // Coat, trousers a shade darker, a face of their own, and hair.
       const coat = this.coatColour(p);
@@ -159,6 +163,8 @@ export class SettlerView {
     c.setHex(p.colour);
     // Struck: a flash of red, the same as a hunted animal.
     if (p.hurt > 0) c.lerp(HURT_RED, 0.7);
+    // Winding up a heavy blow: a white glow builds, so you see it coming.
+    if (p.windup > 0 && p.winding) c.lerp(WINDUP_GLOW, 0.5);
     // Struck by an upgraded sword (playtest, P6): frost blue, a burning
     // flicker, or the crackle of a stun.
     if (p.frozen > 0) c.lerp(FROST, 0.65);

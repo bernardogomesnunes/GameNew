@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { World, Chunk } from '../src/world/World.js';
 import { STAIR_SHADE, STAIR_STEP_TONE } from '../src/world/ChunkMesher.js';
+import { throughArmour } from '../src/config/armour.js';
 import { ChunkGen } from '../src/world/ChunkGen.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
-import { Wanderers } from '../src/world/Wanderers.js';
+import { Wanderers, ROYAL_EVERY, HEAVY_CHANCE } from '../src/world/Wanderers.js';
 import { skyFor, skyAt, stampSky, liftAt, skyColumn, rimAt, SKY_AT, FLOOR, SKY_REACH, ISLAND_R } from '../src/world/skyKingdom.js';
 import { placeBeacon, BEACON_FAR, BEACON_NEAR } from '../src/render/SkyBeacon.js';
 import { WANDERERS, NEWS } from '../src/config/wanderers.js';
@@ -252,6 +253,141 @@ ok('a lift anywhere else goes nowhere', liftAt(gen, at.x, 0, at.z) === null);
   ok('Game listens: the Sky Kingdom falls', /onSkyKing: \(\) => this\.skyKingDown\(\)/.test(game) && /if \(!d \|\| !d\.bringDownSky\(\)\) return;/.test(game));
   ok('fallen, nobody is put on it again', /if \(!this\.skyOpen\(\) \|\| this\.duilt\.skyFallen\) return null;/.test(game));
   ok('your army fights them too', /WANDERERS\[e\.kind\]\.sky && this\.wanderers\.skyHostile\(\)/.test(game));
+}
+
+// --- the fight: varied blows, the King's wind-up, his royal guard -----------------------------------------
+
+{
+  const world = new World({ sizeX: 96, sizeZ: 96, height: 32 });
+  for (let x = 0; x < 96; x++) for (let z = 0; z < 96; z++) for (let y = 0; y < 10; y++) world.setBlock(x, y, z, 3);
+  const isle = {
+    kind: 'sky', x: 48, z: 48, y: 10, king: { x: 48.5, z: 52.5, dy: 0, facing: Math.PI }, posts: [],
+    royal: [{ x: 46.5, z: 52.5 }, { x: 50.5, z: 52.5 }], palaceDoor: { x: 48.5, z: 36.5 },
+  };
+  const blows = [], royals = [];
+  let t = 0;
+  const w = new Wanderers({ world, rand: rng(11), sky: () => isle, skyHostile: () => true, onAttack: (p, hits, b) => blows.push({ kind: p.kind, hits, heavy: !!b?.heavy, t, wound: p._wound }), onRoyal: (p) => royals.push(p) });
+  w.untilMessenger = w.untilExplorer = 1e9;
+  const far = { x: 48.5, y: 10, z: 20.5 };
+  w.tick(0.05, far);
+  const royal = () => w.list.filter((p) => p.kind === 'royal_guard' && !p.dead);
+  const king = w.list.find((p) => p.kind === 'sky_king');
+  ok(`two royal guards beside the King (${royal().length}), tougher than the island's guards`, royal().length === 2 && WANDERERS.royal_guard.hp > WANDERERS.sky_guard.hp && royal().every((g) => Math.abs(g.z - king.z) < 1 && Math.abs(Math.abs(g.x - king.x) - 2) < 0.1));
+  for (let i = 0; i < 200; i++) { t += 0.05; w.tick(0.05, far); }
+  ok('they don\'t leave his side to chase you across the hall', royal().every((g) => Math.hypot(g.x - g.home.x, g.z - g.home.z) < 1.5));
+
+  // Stand in reach of the King and his guard for a minute.
+  const you = { x: 48.5, y: 10, z: 50.8 };
+  // Watch the King: a heavy blow must be wound up first.
+  let windups = 0, sawWinding = false;
+  for (let i = 0; i < 1200; i++) {
+    t += 0.05;
+    w.tick(0.05, you);
+    if (king.winding && !sawWinding) { windups++; king._wound = true; }
+    sawWinding = !!king.winding;
+    for (const g of royal()) g.hp = WANDERERS.royal_guard.hp; // keep them standing for now
+  }
+  const kings = blows.filter((b) => b.kind === 'sky_king'), guards = blows.filter((b) => b.kind === 'royal_guard');
+  const gaps = (list) => list.slice(1).map((b, i) => +(b.t - list[i].t).toFixed(2));
+  const kg = gaps(kings);
+  ok(`no two blows alike: the King's ${kings.length} came ${Math.min(...kg)}–${Math.max(...kg)} s apart, ${[...new Set(kings.map((b) => b.hits))].sort((a, b) => a - b).join('/')} half-hearts`,
+    kings.length > 20 && Math.max(...kg) - Math.min(...kg) > 0.5 && new Set(kings.map((b) => b.hits)).size >= 3);
+  const heavy = kings.filter((b) => b.heavy);
+  ok(`now and then a heavy one (${heavy.length} of ${kings.length}), twice as hard`, heavy.length > 0 && heavy.length < kings.length / 2 && Math.min(...heavy.map((b) => b.hits)) >= 2 * (WANDERERS.sky_king.hits - 1));
+  ok(`and the King winds each heavy blow up where you can see it (${windups} wind-ups)`, windups >= heavy.length && heavy.every((b) => b.wound));
+  ok(`his royal guard fights beside him (${guards.length} blows)`, guards.length > 10);
+
+  // Step back while he winds up, and it misses.
+  const w2 = new Wanderers({ world, rand: rng(5), sky: () => isle, skyHostile: () => true, onAttack: (p, hits, b) => blows.push({ kind: p.kind, heavy: !!b?.heavy, late: true }) });
+  w2.untilMessenger = w2.untilExplorer = 1e9;
+  w2.tick(0.05, far);
+  w2.list = w2.list.filter((p) => p.kind === 'sky_king');
+  const k2 = w2.list[0];
+  let dodged = false;
+  for (let i = 0; i < 2000 && !dodged; i++) {
+    w2.tick(0.05, you);
+    if (k2.winding) {
+      const back = { x: you.x, y: 10, z: you.z - 6 };
+      for (let j = 0; j < 20; j++) w2.tick(0.05, back);
+      dodged = !k2.winding && !blows.some((b) => b.late && b.heavy);
+    }
+  }
+  ok('step back while he winds up, and the heavy blow misses', dodged);
+
+  // Kill a royal guard: another comes from the palace door to take the place.
+  const [first] = royal();
+  w.hit(first, 999, you.x, you.z);
+  w.tick(0.05, far);
+  ok('one falls: one left, for now', royal().length === 1 && royals.length === 0);
+  for (let i = 0; i < (ROYAL_EVERY - 1) / 0.05; i++) w.tick(0.05, far);
+  ok('not straight away', royal().length === 1);
+  for (let i = 0; i < 2 / 0.05; i++) w.tick(0.05, far);
+  const fresh = royal().find((g) => g !== royal()[0] || g.post === first.post);
+  ok(`${ROYAL_EVERY} s later another marches in from the palace door, and you're told`, royal().length === 2 && royals.length === 1 && Math.hypot(royals[0].x - 48.5, royals[0].z - 36.5) < 12);
+  for (let i = 0; i < 400; i++) w.tick(0.05, far);
+  ok('to stand where the fallen one stood', royal().every((g) => Math.hypot(g.x - g.home.x, g.z - g.home.z) < 2) && !!fresh);
+  w.hit(king, 999, you.x, you.z);
+  w.hit(royal()[0], 999, you.x, you.z);
+  for (let i = 0; i < (ROYAL_EVERY + 2) / 0.05; i++) w.tick(0.05, far);
+  ok('the King fallen, nobody comes', royal().length === 1 && royals.length === 1);
+
+  // The island's people fight your warriors back.
+  const warrior = { x: 30.5, y: 10, z: 30.5, hp: 20, kind: 'warrior' };
+  const struck = [];
+  const w3 = new Wanderers({ world, rand: rng(8), skyHostile: () => true, foes: () => [warrior], onFoe: (p, f) => struck.push(f) });
+  w3.untilMessenger = w3.untilExplorer = 1e9;
+  const g3 = w3.person('sky_guard', 31.5, 10, 30.5, { landmark: isle, home: { x: 31.5, z: 30.5 } });
+  w3.list.push(g3);
+  for (let i = 0; i < 100; i++) w3.tick(0.05, { x: 80, y: 10, z: 80 });
+  ok(`Sky guards fight your warriors, not just you (${struck.length} blows)`, struck.length > 2);
+}
+
+// The throne room, balanced: you against the King and his two royal guards,
+// standing and swinging (no stepping back, no army, no food). The best
+// sword, full armour and the Black Ring should usually win, if not by much;
+// without armour, never.
+{
+  const world = new World({ sizeX: 96, sizeZ: 96, height: 32 });
+  for (let x = 0; x < 96; x++) for (let z = 0; z < 96; z++) for (let y = 0; y < 10; y++) world.setBlock(x, y, z, 3);
+  const isle = { kind: 'sky', x: 48, z: 48, y: 10, king: { x: 48.5, z: 52.5, dy: 0 }, posts: [], royal: [{ x: 46.5, z: 52.5 }, { x: 50.5, z: 52.5 }], palaceDoor: { x: 48.5, z: 36.5 } };
+  const fight = ({ sword, armour, ring, seed }) => {
+    let hp = 20;
+    const w = new Wanderers({ world, rand: rng(seed), sky: () => isle, skyHostile: () => true });
+    w.untilMessenger = w.untilExplorer = 1e9;
+    const you = { x: 48.5, y: 10, z: 48.5 };
+    w.onAttack = (p, hits) => { hp -= throughArmour(hits, armour); if (ring) w.hit(p, 4, you.x, you.z); };
+    let cool = 0;
+    for (let t = 0; t < 60 && hp > 0; t += 0.05) {
+      w.tick(0.05, you);
+      const foes = w.list.filter((p) => !p.dead && (p.kind === 'royal_guard' || p.kind === 'sky_king'));
+      if (!foes.some((p) => p.kind === 'sky_king')) return { won: true, hp };
+      const near = foes.sort((a, b) => Math.hypot(a.x - you.x, a.z - you.z) - Math.hypot(b.x - you.x, b.z - you.z))[0];
+      const d = Math.hypot(near.x - you.x, near.z - you.z);
+      if (d > 2.2) { you.x += ((near.x - you.x) / d) * 4.3 * 0.05; you.z += ((near.z - you.z) / d) * 4.3 * 0.05; }
+      cool -= 0.05;
+      if (d <= 3 && cool <= 0) { cool = 0.35; w.hit(near, sword, you.x, you.z); }
+    }
+    return { won: false, hp };
+  };
+  const odds = (cfg) => [...Array(30)].map((_, i) => fight({ ...cfg, seed: i + 1 })).filter((r) => r.won);
+  const best = odds({ sword: 9, armour: 10, ring: true }), bare = odds({ sword: 9, armour: 0, ring: false }), mid = odds({ sword: 6, armour: 10, ring: true });
+  const left = best.reduce((a, r) => a + r.hp, 0) / Math.max(1, best.length) / 2;
+  ok(`balanced: best sword, armour and the Black Ring win ${best.length}/30 (about ${left.toFixed(1)} hearts left); a lesser sword ${mid.length}/30; no armour ${bare.length}/30`,
+    best.length >= 20 && left < 5 && mid.length < best.length && bare.length <= 2);
+}
+
+// A heavy blow throws you back.
+{
+  globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
+  const { PlayerController } = await import('../src/player/PlayerController.js');
+  const world = new World({ sizeX: 32, sizeZ: 32, height: 16 });
+  for (let x = 0; x < 32; x++) for (let z = 0; z < 32; z++) world.setBlock(x, 0, z, 3);
+  const p = new PlayerController(world, new THREE.PerspectiveCamera(), { x: 16.5, y: 1, z: 16.5 });
+  for (let i = 0; i < 30; i++) p.update(1 / 60);
+  p.knockBack(1, 0);
+  for (let i = 0; i < 90; i++) p.update(1 / 60);
+  ok(`a heavy blow throws you back (${(p.position.x - 16.5).toFixed(1)} blocks) and you land on your feet`, p.position.x - 16.5 > 1 && p.position.x - 16.5 < 4 && p.grounded);
+  ok('Game throws you away from whoever struck', /if \(blow\.heavy\) this\.player\.knockBack\(this\.player\.position\.x - p\.x, this\.player\.position\.z - p\.z\)/.test(game));
 }
 
 // --- the end of the dark path ----------------------------------------------------------------------
