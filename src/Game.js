@@ -191,7 +191,7 @@ const CATAPULT_MIN_THROW = 6;   // it won't drop a stone closer than this
 const CATAPULT_AMMO = ['stone', 'cobblestone'];
 const STONE_HITS = 14;
 // The Sky Kingdom's people are planned and put on the island this close to it.
-const SKY_PEOPLE = 200;
+const SKY_PEOPLE = 240;
 // The rings (Phase 7c): what the White Ring adds to your step and your
 // jump, and what the Black Ring's spark does to whoever hits you.
 const WHITE_RING_SPEED = 1.2;

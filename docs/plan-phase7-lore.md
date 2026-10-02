@@ -183,11 +183,18 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
   - **Rations:** every game day, a meal for every hundred warriors, from your bag then your storehouses. Short of food, 3% desert each day.
   - **The camp:** a **War Tent** (Place on it: you wake there, and the army holds round it) and a **Campfire** that burns with a light of its own.
 - **Built so far (part 2 — the Sky Kingdom, `world/skyKingdom.js`, `sky.test`):**
-  - **The island** hangs 5,000 blocks from home, its floor at y 172: rock tapering underneath, three waterfalls off the rim, white trees, calçada paths with firefly lamps, a white marble palace on a gold-edged terrace with a stepped gold roof, and four marble halls with gold roofs.
+  - **The island** hangs 5,000 blocks from home, about 220 across, its floor at y 172: rock underneath (deepest in the middle), three waterfalls off the rim, white trees.
+  - **A walled city on it** (asked for: "way bigger — houses, military houses and walls too"):
+    - a white **city wall** with a gold band and battlements round the whole island, eight towers along it, and a **gatehouse** on each of the four avenues;
+    - four broad **calçada avenues** from the gates to the citadel, lamps down both sides, paved lanes between the plots;
+    - three **districts of houses**: cottages under slate gables, two-storey townhouses with a stair and gold roofs, villas with porticos; gardens and fountain squares among them;
+    - a **military quarter**: barracks (six bunks, racks of arms, a mess table), armouries, and fenced training yards with dummies and archery targets;
+    - the **citadel** in the middle: its own wall with gates and corner towers, a courtyard with trees and fountains, round the palace.
+  - **The palace:** pillars and two rows of windows, a portico, a stepped gold roof with a spire.
   - **The throne room:** a blue rug up the aisle, firefly lamps on marble pillars, the gold throne on its dais, and the **Sky King** in front of it.
   - **Four anchor towers** on the ground round it. Each is sky marble with gold corners, a door at its foot, a stair winding up round a pillar inside, a platform with a gold rail and lamps, and a **chain** up to the island's rim.
   - **Sky lifts:** Place on the lift on a tower's platform to ride up the chain to the island; the lift at that path's landing takes you back down. Warriors following you come too.
-  - **Its people:** ten guards in white and gold at the palace door, down the paths and at the landings, and the Sky King (70 strength). They fight the bearer of the Black Ring on sight; your army fights them back.
+  - **Its people:** about thirty guards in white and gold at every gate (the city's and the citadel's), on patrol down the avenues, at the palace door and in the training yards, and the Sky King (70 strength). They fight the bearer of the Black Ring on sight; your army fights them back.
   - **Its fall:** bring the Sky King down and the Sky Kingdom falls. That's saved with the world, and on the dark path it's the end: the game finishes once it has fallen and the last age is done.
   - **Its light:** from anywhere too far off to see the island itself, a small island with a gold glow hangs low in the sky the way it lies, brighter at night. The sworn Stone King tells you which way to go.
   - **Only on this path:** the generator lays it only when you bear the Black Ring, and in Creative to look at. On the white path there's no trace of it.

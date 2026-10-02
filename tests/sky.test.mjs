@@ -4,7 +4,7 @@ import { World, Chunk } from '../src/world/World.js';
 import { ChunkGen } from '../src/world/ChunkGen.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
 import { Wanderers } from '../src/world/Wanderers.js';
-import { skyFor, skyAt, stampSky, liftAt, SKY_AT, FLOOR, SKY_REACH } from '../src/world/skyKingdom.js';
+import { skyFor, skyAt, stampSky, liftAt, skyColumn, rimAt, SKY_AT, FLOOR, SKY_REACH, ISLAND_R } from '../src/world/skyKingdom.js';
 import { placeBeacon, BEACON_FAR, BEACON_NEAR } from '../src/render/SkyBeacon.js';
 import { WANDERERS, NEWS } from '../src/config/wanderers.js';
 import { BLOCKS_BY_ID, CHAIN, SKY_LIFT } from '../src/config/blocks.js';
@@ -43,7 +43,59 @@ const id = (x, y, z) => cell.get(`${Math.floor(x)},${y},${Math.floor(z)}`);
 const solid = (x, y, z) => { const b = id(x, y, z); return b != null && b !== 0 && b !== CHAIN; };
 const open = (x, y, z) => { const b = id(x, y, z); return b == null || b === 0; };
 
-ok('its floor is grass high in the sky, rock under it', id(at.x + 30, FLOOR - 1, at.z) === 1 || solid(at.x + 30, FLOOR - 1, at.z));
+{
+  const mid = skyColumn(3, at.x, at.z, at.x + 40, at.z + 40), edge = skyColumn(3, at.x, at.z, at.x + 100, at.z);
+  ok(`its floor is grass high in the sky, rock under it — deep in the middle (${FLOOR - mid.bottom}), thin at the edge`, mid.top === 1 && FLOOR - mid.bottom > 30 && (!edge || FLOOR - edge.bottom < 20));
+  ok(`it's big: ${ISLAND_R * 2} across`, ISLAND_R >= 100 && skyColumn(3, at.x, at.z, at.x + 95, at.z) && !skyColumn(3, at.x, at.z, at.x + ISLAND_R + 2, at.z));
+}
+
+// --- the city ---------------------------------------------------------------------------------------
+
+{
+  const kinds = {};
+  for (const p of sky.plots) kinds[p.kind] = (kinds[p.kind] ?? 0) + 1;
+  const homes = (kinds.cottage ?? 0) + (kinds.townhouse ?? 0) + (kinds.villa ?? 0);
+  ok(`houses: ${kinds.cottage} cottages, ${kinds.townhouse} townhouses, ${kinds.villa} villas`, homes >= 30 && kinds.cottage && kinds.townhouse && kinds.villa);
+  ok(`the military quarter: ${kinds.barracks} barracks, ${kinds.armoury} armouries, ${kinds.yard} training yards`, kinds.barracks >= 3 && kinds.armoury >= 2 && kinds.yard >= 3);
+  ok('gardens and fountain squares between them', (kinds.garden ?? 0) + (kinds.square ?? 0) >= 2);
+  const count = (want) => [...cell.values()].filter((b) => want(b)).length;
+  ok(`every home has a door and somewhere to sleep (${count((b) => b >= 69 && b <= 72)} doors, ${count((b) => b >= 193 && b <= 196)} beds)`,
+    count((b) => b >= 69 && b <= 72) >= homes + kinds.barracks + kinds.armoury && count((b) => b >= 193 && b <= 196) >= homes + kinds.barracks * 6);
+  ok('arms in the military quarter: racks, dummies, targets', count((b) => b >= 212 && b <= 215) >= 20 && count((b) => b >= 216 && b <= 219) >= 9 && count((b) => b >= 220 && b <= 223) >= 9);
+  // Every plot inside the city wall, none on the avenues or in the citadel.
+  ok('every plot inside the city wall, clear of the avenues and the citadel', sky.plots.every((p) => {
+    const corners = [[p.x0, p.z0], [p.x0 + 12, p.z0 + 12]].map(([x, z]) => [x - at.x, z - at.z]);
+    return corners.every(([x, z]) => Math.hypot(x, z) < rimAt(3, Math.atan2(z, x)) - 12)
+      && corners.every(([x, z]) => Math.abs(x) > 6 || Math.abs(z) > 6) && !(Math.abs(corners[0][0]) < 31 && Math.abs(corners[0][1]) < 31 && Math.abs(corners[1][0]) < 31 && Math.abs(corners[1][1]) < 31);
+  }));
+
+  // The city wall: all the way round, but open where each avenue goes through.
+  let walled = 0, around = 0;
+  for (let a = 0; a < 360; a += 3) {
+    const t = a * Math.PI / 180, r = rimAt(3, t);
+    if (Math.abs(Math.cos(t) * r) < 8 || Math.abs(Math.sin(t) * r) < 8) continue; // the gates
+    around++;
+    for (let k = -14; k <= -8; k++) {
+      const x = Math.round(at.x + Math.cos(t) * (r + k)), z = Math.round(at.z + Math.sin(t) * (r + k));
+      if (solid(x, FLOOR + 3, z)) { walled++; break; }
+    }
+  }
+  ok(`a wall round the city (${walled} of ${around} bearings)`, walled === around);
+  for (const l of sky.landings) {
+    // From where the lift sets you down to the citadel's gate, the avenue is clear to walk.
+    let blocked = 0;
+    for (let s = Math.hypot(l.arrive.x - 0.5 - at.x, l.arrive.z - 0.5 - at.z); s > 32; s--) {
+      const x = at.x + l.ux * Math.round(s), z = at.z + l.uz * Math.round(s);
+      if (!solid(x, FLOOR - 1, z) || solid(x, FLOOR, z) || solid(x, FLOOR + 1, z)) blocked++;
+    }
+    ok(`  the ${['east', 'south', 'west', 'north'][sky.landings.indexOf(l)]} gate: in through the wall and down the avenue to the citadel`, blocked === 0
+      && solid(at.x + l.ux * (Math.round(l.wall) + 1) - l.uz * 7, FLOOR + 10, at.z + l.uz * (Math.round(l.wall) + 1) + l.ux * 7));
+  }
+  ok('the citadel: walled, towers on its corners, the palace inside with a spire', solid(at.x + 10, FLOOR + 3, at.z - 28) && solid(at.x + 28, FLOOR + 12, at.z + 28)
+    && id(at.x, FLOOR + 26, at.z) === 13 && open(at.x, FLOOR + 1, at.z - 28));
+  ok(`${sky.posts.length} guards posted — gates, avenues, palace, yards — each on open ground`, sky.posts.length >= 25
+    && sky.posts.every((p) => solid(p.x, FLOOR - 1, p.z) || skyColumn(3, at.x, at.z, Math.floor(p.x), Math.floor(p.z))) && sky.posts.every((p) => open(p.x, FLOOR, p.z) && open(p.x, FLOOR + 1, p.z)));
+}
 ok('the palace: marble, a gold roof, a throne', id(at.x, FLOOR + 1, sky.palace.maxZ - 1) === 13 && [...cell.values()].filter((b) => b === 13).length > 100);
 ok('waterfalls pour off its rim', [...cell.entries()].filter(([k, b]) => b === 11 && Number(k.split(',')[1]) < FLOOR - 20).length >= 3);
 
