@@ -5,7 +5,8 @@ import { renderPanels, panelDef } from './Panel.js';
 import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
-import { StoryView, ENDINGS, endingFor } from './Story.js';
+import { StoryView, INTRO, ENDINGS, endingFor } from './Story.js';
+import { LORE, loreKnowledge } from '../config/lore.js';
 import { ITEMS_BY_ID, itemName, isFood } from '../config/items.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
@@ -213,9 +214,11 @@ export class UIManager {
           <div class="tab-row">
             <button class="tab-btn active" data-tab="tab-achievements">Goals</button>
             <button class="tab-btn" data-tab="tab-challenges">Today</button>
+            <button class="tab-btn" data-tab="tab-lore" id="lore-tab">Lore</button>
           </div>
           <div class="tab-panel" id="tab-achievements"><div id="ach-grid"></div></div>
-          <div class="tab-panel" id="tab-challenges" hidden><div id="challenge-list"></div></div>`,
+          <div class="tab-panel" id="tab-challenges" hidden><div id="challenge-list"></div></div>
+          <div class="tab-panel" id="tab-lore" hidden><div id="lore-list"></div></div>`,
         'panel-menu': `
           <div id="menu-index"></div>
 
@@ -1412,6 +1415,38 @@ export class UIManager {
         <div class="reward">${done ? 'Completed' : `Reward: +${c.xpReward} XP${c.unlockBlock ? ' + early block unlock' : ''}`}</div>
       </div>`;
     }).join('');
+    this.renderLore();
+  }
+
+  /**
+   * The lore book (config/lore.js): the pages you know, and locked ones
+   * saying where to look. Only in a Duilt world — Creative has no story.
+   */
+  renderLore() {
+    const d = this.game.duilt;
+    const tab = this.q('#lore-tab'), list = this.q('#lore-list');
+    if (!tab || !list) return;
+    tab.hidden = !d || d.sandbox;
+    if (tab.hidden) return;
+    const k = loreKnowledge(d);
+    const known = LORE.filter((page) => page.known(k));
+    list.innerHTML = `<div class="lore-count">${known.length} of ${LORE.length} pages</div>`
+      + LORE.map((page) => (page.known(k)
+        ? `<div class="lore-page">
+            <div class="lore-head"><span class="lore-icon">${page.icon}</span>${escapeHtml(page.title)}</div>
+            <p>${escapeHtml(page.text(k))}</p>
+            ${page.replay ? `<button class="secondary lore-replay" data-replay="${page.replay}">${page.replay === 'intro' ? 'Watch the opening again' : 'Watch the ending again'}</button>` : ''}
+          </div>`
+        : `<div class="lore-page locked">
+            <div class="lore-head"><span class="lore-icon">?</span>Unknown</div>
+            <p>${escapeHtml(page.hint ?? '')}</p>
+          </div>`)).join('');
+    for (const b of list.querySelectorAll('[data-replay]')) {
+      b.addEventListener('click', () => {
+        const scenes = b.dataset.replay === 'intro' ? INTRO : ENDINGS[k.ending];
+        this.story.play(scenes, { last: 'Close', onDone: () => this.openPanel('panel-stats') });
+      });
+    }
   }
 
   /**

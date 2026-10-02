@@ -1489,3 +1489,16 @@ body.touch .ctl-keys { display: none; }
 .story-dots { display: flex; gap: 6px; }
 .story-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(243, 238, 226, 0.25); }
 .story-dots i.on { background: #e8c24a; }
+
+/* The lore book, in the Goals panel (config/lore.js). */
+.lore-count { font-size: 12px; color: var(--text-dim); margin: 0 0 10px; }
+.lore-page {
+  background: rgba(255, 255, 255, 0.55); border: 1px solid var(--panel-border); border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 8px;
+}
+.lore-page p { margin: 4px 0 0; font-size: 13px; line-height: 1.55; font-family: Georgia, 'Times New Roman', serif; }
+.lore-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13.5px; }
+.lore-icon { width: 22px; text-align: center; color: var(--accent-2); font-size: 15px; }
+.lore-page.locked { opacity: 0.6; border-style: dashed; }
+.lore-page.locked p { font-family: inherit; font-style: italic; color: var(--text-dim); }
+.lore-replay { margin-top: 8px; font-size: 12.5px; padding: 6px 12px; }
