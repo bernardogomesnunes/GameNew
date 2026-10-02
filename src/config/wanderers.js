@@ -14,7 +14,7 @@ export const WANDERERS = {
   // drop what they carry if you beat them.
   hermit: {
     noun: 'the hermit',
-    about: 'the hermit — keeps to themself',
+    about: 'the hermit — keeps to themself, but will talk: tap to speak',
     colours: [0x8b8f84],
     speed: 1.1,
     roam: 5,

@@ -1576,8 +1576,9 @@ export class Game {
   secondaryAction() {
     this.avatarView?.strike();
     this.handView?.strike();
-    // Pointed at the Stone King, Place speaks to him (Phase 7e).
+    // Pointed at the Stone King, Place speaks to him (Phase 7e) — and the hermit, too (7j).
     if (this.kingTarget()) return void this.speakToKing();
+    if (this.hermitTarget()) return void this.speakToHermit();
     // Place puts down what you are holding, on a mouse and under a thumb
     // alike. Cancelling is Escape, or the Break button — which says "Cancel"
     // while you are carrying something, so there is nothing to guess.
@@ -2809,8 +2810,8 @@ export class Game {
 
   /**
    * The bandit under the crosshair, if one is nearer than the block behind
-   * it and within reach. Only bandits can be fought — a messenger or the
-   * hermit just stands there being named.
+   * it and within reach. Only bandits can be fought — a messenger just
+   * stands there being named, and the hermit talks (speakToHermit).
    */
   banditTarget(hit = this.raycast()) {
     if (!this.wanderers) return null;
@@ -2877,6 +2878,37 @@ export class Game {
       if (blockT != null && blockT < found.t) return null;
     }
     return found.person;
+  }
+
+  /** The hermit under the crosshair, if nearer than the block behind them. */
+  hermitTarget(hit = this.raycast()) {
+    if (!this.wanderers || !this.duilt) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const found = this.wanderView.pickAt(this.wanderers.list.filter((p) => p.kind === 'hermit' && !p.dead && !(p.fear > 0)), eye, dir, REACH);
+    if (!found) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < found.t) return null;
+    }
+    return found.person;
+  }
+
+  /** The hermit's tale: who fell from the sky before you did (config/tales.js). */
+  speakToHermit() {
+    this.hermitTold = (this.hermitTold ?? -1) + 1;
+    const t = this.duilt.tale('hermit', this.hermitTold);
+    if (!t) return;
+    this.ui?.toast({ kind: 'challenge', title: 'The hermit', body: t.line });
+    this.editedAt = Date.now();
+  }
+
+  /** Half the time, a messenger brings the story rather than news of a place — while there's a tale you haven't heard. */
+  messengerTale() {
+    const d = this.duilt;
+    if (!d || d.sandbox || Math.random() < 0.5) return null;
+    const t = d.tale('messenger');
+    if (t) this.editedAt = Date.now();
+    return t?.line ?? null;
   }
 
   /** What the Stone King has to say to you — by the ring you bear. */
@@ -4971,7 +5003,8 @@ export class Game {
         world: this.world,
         // A messenger comes to your settlement, so only where you have one.
         home: () => (this.duilt && !this.duilt.sandbox ? { x: this.world.centreX, z: this.world.centreZ } : null),
-        onNews: (p, line) => this.ui.toast({ kind: 'challenge', title: `${p.name}, a messenger`, body: line }),
+        // Now and then the story instead of a place: what the roads are saying (config/tales.js).
+        onNews: (p, line) => this.ui.toast({ kind: 'challenge', title: `${p.name}, a messenger`, body: this.messengerTale() ?? line }),
         // Bandits (Phase 6b): hostile from Age 2, never in Creative.
         hostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.age >= 2),
         // The Stone Kingdom's guards (Phase 7e): the White Ring is their enemy.
