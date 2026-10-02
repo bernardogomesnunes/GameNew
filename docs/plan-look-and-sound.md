@@ -18,7 +18,7 @@ is coloured, textured, lit and heard.
 - **Light** is a soft ambient (0.6) plus a sun (0.85) plus a sky/ground
   fill (0.4), with no tone mapping. Even, but flat and low in contrast.
 - **Fog** is one plain colour fading towards the horizon.
-- **Sounds** are tones made in code (`audio/Sound.js`), not recordings, and
+- **Sounds** were tones made in code (`audio/Sound.js`), not recordings, and
   pitched too high.
 - **People** are two boxes, a coat and a head. **Animals** are blocky and
   plain: a sheep has no wool and no eyes.
@@ -113,6 +113,75 @@ is coloured, textured, lit and heard.
 - **Music:** calm and sparse, a little darker on the dark path.
 - **Sliders:** master, effects, ambience and music separately.
 - All from free-licensed (CC0) libraries, small and compressed.
+
+### Done
+
+**Where the sounds come from.** The plan was CC0 recordings, but no CC0
+library could be reached from where this was built (Kenney, Freesound,
+OpenGameArt, Pixabay, Wikimedia and the CDNs were all blocked; only the npm
+registry answered, and nothing there had per-file CC0 material sounds).
+So every sound is made in code, the way a foley artist would build it
+rather than as tones: filtered noise bursts, damped resonant modes, showers
+of tiny grains, falling low thumps, plucked strings, a stick-slip creak.
+There are no audio files and no licences to track — nothing third-party is
+in the game's sound. Recordings can still replace any recipe later: Sound.js
+only plays buffers.
+
+- `audio/synth.js` — the pieces, pure (sample arrays, seeded, no Web Audio),
+  plus a spectral centroid to measure "too high" as a number.
+- `audio/recipes.js` — every sound: eleven materials (stone, wood, dirt,
+  grass, sand, gravel, snow, plants, cloth, glass, metal, plus water and
+  lava), each placed, broken, dug at, walked on and landed on; blows, a
+  sword's slash, a swing, being hurt, a bow, a war horn, a gong, a rumble,
+  a boom, a catapult, chains, the lift; doors, gates and trapdoors opening
+  and shutting, a chest; a splash, filling and pouring a bucket, lava's
+  sizzle; eating and drinking; a low, quiet UI tick and an achievement
+  chime. Then the ambience beds (wind, the island's gale, a stream, the sea,
+  lava, the Stone Kingdom's hum, a cave) as seamless loops, the creatures
+  (wood pigeon, cuckoo, blackbird, small birds, crickets, a tawny owl,
+  frogs, cave drips) and three instruments (pluck, pad, bell).
+- `audio/soundscape.js` — the decisions: what a block sounds like (by its
+  glyph first: sand hisses, grass rustles, gold clangs — `material` in
+  blocks.js is what a *tool* cuts, too coarse for hearing), which effect
+  each action plays, ambience by place and hour, the music's moods, and
+  bus gains from the sliders.
+- `audio/listen.js` — twice a second, describes where you are (daylight,
+  biome, water and lava nearby, the island, the Stone Kingdom, how deep
+  underground, the dark path) and hears archers loosing near you.
+- `audio/Sound.js` — plays it all: four takes of each effect rendered on
+  first use (at 24 kHz) and kept, one picked at random with a nudge of
+  speed; effects, ambience and music buses under a master with a soft
+  limiter; at most 12 effects and 3 creature calls at once, one sound for
+  a 40-block symmetry break; positional effects fade with distance and pan;
+  beds fade over 1.6 s, start one per frame, stop after 20 s silent. Still
+  starts only on the first tap or key, and in Node does nothing.
+
+**Lower.** Measured with the old graph rendered through a real
+OfflineAudioContext against the new buffers (spectral centroid):
+placing stone 5.3 kHz → 1.3 kHz, breaking stone 4.8 → 1.1, wood 3.7 →
+0.55, breaking dirt 3.2 → 0.45, a step on stone 5.2 → 1.1, on grass 3.6
+→ 1.1, on sand 3.7 → 0.5. Leaves and glass are still the brightest
+(2.5–2.9 kHz) because that is what they are, but half what they were.
+The click went from an 880 Hz beep to a 380–480 Hz tick, a third quieter.
+
+**Ambience.** By day: wind and birds, more birds in forests, more wind on
+mountains and desert, waves by the ocean. At night: crickets and owls,
+frogs in the wetland, the wind a little calmer. Near water a stream runs;
+near lava it bubbles. The Stone Kingdom hums low and thins the birds; the
+floating island has a high whistling gale instead of wind. Underground
+the outside fades and a cave rumbles and drips. A menu open drops it back.
+
+**Music.** A short phrase every 30–60 seconds, then silence: by day a
+plucked D major pentatonic over a soft pad; at night a lower minor
+pentatonic, slower; on the dark path (the Black Ring taken) lower still,
+a bell on a scale with a half step in it over a low drone.
+
+**Settings.** Controls & sound has Volume (the master; 0 is still Off)
+and under it Effects, Ambience and Music, each remembered with the rest of
+the controls. Sliders are squared on the way to a gain so their travel
+feels even.
+
+Tests: `tests/sound.test.mjs`.
 
 ## Suggested order
 

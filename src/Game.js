@@ -22,6 +22,7 @@ import { FarTerrain } from './render/FarTerrain.js';
 import { SkyClouds } from './render/SkyClouds.js';
 import { DayCycle, MORNING, daylightAt } from './render/DayCycle.js';
 import { Sound, soundOf } from './audio/Sound.js';
+import { hear } from './audio/listen.js';
 import { loadControls, saveControls } from './config/controls.js';
 import { LightManager } from './render/LightManager.js';
 import { TemplateLibrary } from './prefabs/TemplateLibrary.js';
@@ -305,7 +306,10 @@ export class Game {
     // The player's own controls: keys, field of view, mouse speed, volume.
     this.controls = loadControls();
     this.camera = new THREE.PerspectiveCamera(this.controls.fov, 1, 0.2, this.horizon + 200);
-    this.sound = new Sound({ volume: this.controls.volume });
+    // Effects, ambience and music, each with its own slider (audio/Sound.js).
+    this.sound = new Sound(this.controls);
+    // Hurt, by anything: a grunt — and lava's hiss with it.
+    this.bus.on('health:change', ({ hurt, cause }) => { if (hurt) this.sound.hurt(cause); });
     // Browsers only allow audio once you've clicked or pressed something.
     const unlock = () => this.sound.unlock();
     window.addEventListener('pointerdown', unlock);
@@ -2664,6 +2668,7 @@ export class Game {
     }
     if (!this.duilt.inventory.remove('bucket', 1)) return;
     this.duilt.inventory.add('bucket_water', 1);
+    this.sound?.bucket(true);
     this.ui.toast({ kind: 'xp', title: 'Bucket filled', body: 'Scooped up' });
   }
 
@@ -2686,6 +2691,7 @@ export class Game {
     if (!this.applyChanges([{ ...at, prev, next: WATER }], { chargeResources: false })) return;
     if (!this.duilt.inventory.remove('bucket_water', 1)) return;
     this.duilt.inventory.add('bucket', 1);
+    this.sound?.bucket(false);
     this.ui.toast({ kind: 'xp', title: 'Bucket emptied', body: 'Poured out — watch where it runs' });
   }
 
@@ -2702,7 +2708,7 @@ export class Game {
   drinkSelected() {
     if (!this.duilt) return;
     const r = this.duilt.drink(this.selectedItemId);
-    if (r.ok) this.sound?.eat();
+    if (r.ok) this.sound?.drink();
     this.ui.toast(!r.ok
       ? { kind: 'xp', title: r.reason }
       : r.boost
@@ -2795,6 +2801,7 @@ export class Game {
     const tool = ITEMS_BY_ID.get(this.selectedItemId);
     const { x, z } = this.player.position;
     const { killed, drops } = this.mobs.hit(mob, this.blowDamage(tool), x, z);
+    this.sound?.strike({ weapon: !!tool?.weapon });
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
@@ -2846,7 +2853,7 @@ export class Game {
     if (!res) return false;
     // An upgraded sword (playtest, P6): stuns, burns or freezes as it lands.
     if (tool?.element && !res.killed) this.wanderers.afflict(p, tool.element);
-    this.sound?.hit?.('wood', { gain: 0.5, pitch: 0.7 });
+    this.sound?.strike({ weapon: !!tool?.weapon });
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
@@ -3016,7 +3023,9 @@ export class Game {
     // a heavy one throws you back, away from whoever struck it.
     if (blow.heavy) this.player.knockBack(this.player.position.x - p.x, this.player.position.z - p.z);
     else if (this.player.grounded) this.player.velocity.y = 4.5;
-    this.sound?.hit?.('wood', { gain: blow.heavy ? 0.9 : 0.6, pitch: blow.heavy ? 0.4 : 0.55 });
+    // Their swing, and its weight; the hurt itself is heard from Health.
+    this.sound?.swing();
+    this.sound?.blow(!!blow.heavy, { x: p.x, z: p.z });
   }
 
   // ---- the war: the Stone Kingdom's Ten Rounds (config/war.js) ----
@@ -3058,7 +3067,7 @@ export class Game {
       const shut = this.shutGates();
       if (shut) this.ui?.toast({ kind: 'challenge', title: 'The gates are shut', body: `${shut === 1 ? 'Your gatehouse has' : `${shut} gatehouses have`} closed for the round` });
       const dir = this.kingdomDirection() ?? 'north';
-      this.sound?.hit?.('stone', { gain: 0.9, pitch: 0.35 });
+      this.sound?.horn();
       this.ui?.toast({
         kind: 'challenge',
         title: `War horns to the ${dir}`,
@@ -3155,7 +3164,7 @@ export class Game {
       this.lava?.touch(c.x, c.y, c.z);
     }
     this.remeshDirty();
-    this.sound?.break?.(soundOf(BLOCKS_BY_ID.get(changes[0].prev)));
+    this.sound?.break?.(soundOf(BLOCKS_BY_ID.get(changes[0].prev)), { x: changes[0].x, z: changes[0].z });
     this.duilt.structures.revalidateAround(changes);
     this.duilt.settlers.revalidate();
     this.duilt.territory.onBlocksChanged(changes);
@@ -3172,7 +3181,7 @@ export class Game {
     const from = { x: p.x, y: p.y + 2.2, z: p.z };
     const stone = this.projectiles.fire(from, bestAim(this.world, from, { x: x + 0.5, y: y + 1, z: z + 0.5 }));
     stone.enemy = true;
-    this.sound?.hit?.('wood', { gain: 0.5, pitch: 0.5 });
+    this.sound?.catapult({ x: p.x, z: p.z });
   }
 
   /** Every open door in a claimed gatehouse, shut. Returns how many gatehouses had any. */
@@ -3266,7 +3275,7 @@ export class Game {
       });
     }
     d.army.swear(d.days);
-    this.sound?.hit?.('stone', { gain: 0.9, pitch: 0.3 });
+    this.sound?.gong();
     this.ui?.toast({
       kind: 'achievement',
       title: 'You swore to the dark god',
@@ -3376,7 +3385,7 @@ export class Game {
         w.x = ride.to.x + (Math.random() - 0.5) * 3; w.z = ride.to.z + (Math.random() - 0.5) * 3; w.y = ride.to.y;
       }
     }
-    this.sound?.hit?.('stone', { gain: 0.5, pitch: 1.6 });
+    this.sound?.lift();
     this.ui?.toast(ride.up
       ? { kind: 'challenge', title: 'Up the chain to the Sky Kingdom', body: this.wanderers?.skyHostile() ? 'Its guards know the Black Ring. Bring down the Sky King in his palace.' : 'White marble and gold, a long way up' }
       : { kind: 'challenge', title: 'Down to the anchor tower' });
@@ -3453,7 +3462,7 @@ export class Game {
       if (!WANDERERS[p.kind]?.sky) continue;
       p.angry = false; p.target = null; p.speed = 0;
     }
-    this.sound?.hit?.('stone', { gain: 1, pitch: 0.25 });
+    this.sound?.rumble();
     this.ui?.toast({
       kind: 'achievement',
       title: yielded ? 'The Sky Kingdom yields' : 'The Sky Kingdom has fallen',
@@ -3489,7 +3498,7 @@ export class Game {
       if (this.world.getBlock(x, y, z) === CHAIN) this.world.setBlock(x, y, z, AIR);
     }
     this.remeshDirty();
-    this.sound?.break?.('stone');
+    this.sound?.chain?.();
     this.ui?.toast(r.sinking
       ? { kind: 'achievement', title: 'The last chain is cut', body: `Nothing holds the Sky Kingdom up now. It will sink lower day by day — in ${SINK_DAYS} days it must yield.` }
       : { kind: 'challenge', title: `An anchor chain is cut — ${CHAINS - r.left} of ${CHAINS}`, body: `Its lift goes nowhere now. Cut the other ${r.left} and the island will sink until it yields.` });
@@ -3763,7 +3772,7 @@ export class Game {
   blowHorn() {
     const d = this.duilt;
     if (!d || d.sandbox) return;
-    this.sound?.hit?.('stone', { gain: 0.9, pitch: 0.4 });
+    this.sound?.horn();
     const war = d.war;
     if (!war.atWar) {
       this.ui?.toast({ kind: 'xp', title: 'Your horn sounds over the hills', body: war.stage === 'won' ? 'Nobody answers. The war is over.' : 'Nobody answers — the Stone Kingdom isn\'t at war with you.' });
@@ -3916,7 +3925,7 @@ export class Game {
       this.world.setBlock(m.x, m.y, m.z, id);
       this.remeshDirty();
     }
-    this.sound?.hit?.('wood', { gain: 0.7, pitch: 0.45, length: 2 });
+    this.sound?.catapult();
   }
 
   /**
@@ -3942,7 +3951,7 @@ export class Game {
       broke++;
     }
     if (broke) this.remeshDirty();
-    this.sound?.break?.('stone');
+    this.sound?.boom?.({ x: c.x, z: c.z });
 
     const near = (o, r) => Math.hypot(o.x - c.x, o.z - c.z) < r && Math.abs(o.y - c.y) < 3;
     for (const p of this.wanderers?.list ?? []) {
@@ -3987,7 +3996,11 @@ export class Game {
         return;
       }
       if (isNewTarget) this.digTarget = { key, startedAt: performance.now() };
-      if (ms > 0 && performance.now() - this.digTarget.startedAt < ms) return;
+      if (ms > 0 && performance.now() - this.digTarget.startedAt < ms) {
+        // Not through yet: the pick going in, in whatever it is.
+        this.sound?.dig(soundOf(BLOCKS_BY_ID.get(this.world.getBlock(hit.x, hit.y, hit.z))));
+        return;
+      }
       this.digTarget = null;
       // A tool only wears doing the job it's actually suited for — the speed
       // bonus has a cost, digging around with the wrong tool (or bare hands,
@@ -4032,7 +4045,7 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : trap ? 'Step out from under it first' : 'Step out of the gateway first' });
       return;
     }
-    this.sound?.creak(!shutting);
+    this.sound?.creak(!shutting, door ? 'door' : trap ? 'trapdoor' : 'gate');
     for (const c of cells) {
       const part = doorPart(c.block);
       const next = part ? doorBlock({ ...part, open: !part.open }) : trap ? swungTrapdoor(c.block) : GATE_SWING[c.block];
@@ -4083,6 +4096,7 @@ export class Game {
     if (!this.duilt || !isChest(this.world.getBlock(hit.x, hit.y, hit.z))) return;
     this.unpackFound(hit.x, hit.y, hit.z);
     this.duilt.chestAt(hit.x, hit.y, hit.z);
+    this.sound?.chest();
     this.ui.openStore({ chest: { x: hit.x, y: hit.y, z: hit.z } });
   }
 
@@ -4174,7 +4188,7 @@ export class Game {
     const home = routed ? this.homeSpawn() : this.respawnPoint();
     this.player.teleport(home.x, home.y, home.z);
     this.duilt.health.restore();
-    this.sound?.break?.('wood');
+    this.sound?.die?.();
     this.ui?.duiltUI?.flashHurt(true);
     const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you', catapult: 'Your own stone came down on you', army: 'The Stone Kingdom\'s army beat you', sky: 'The Sky Kingdom\'s guards beat you' }[cause] ?? 'You died';
     this.ui?.toast({
@@ -4914,6 +4928,8 @@ export class Game {
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
     if (this.player) this.updateYou(dt, playing);
+    // What's heard here: the place and the hour, archers loosing, the music.
+    if (this.world) hear(this, dt, playing);
     const strangers = this.wanderers?.list ?? [];
     this.wanderView.update(strangers.filter((p) => !WANDERERS[p.kind].siege && !WANDERERS[p.kind].beast));
     const ours = this.duilt?.defenders;
@@ -4926,15 +4942,21 @@ export class Game {
     this.renderer.render(this.scene, this.camera);
   }
 
-  /** Footsteps on whatever is underfoot, and a splash on going into water. */
+  /**
+   * Footsteps on whatever is underfoot, a splash on going into water, and
+   * a landing — a jump comes down as a heavy step, a fall as a thud.
+   */
   stepSounds(wasAt, wasSwimming) {
     const p = this.player;
     if (p.swimming && !wasSwimming) this.sound.splash();
+    const underfoot = () => soundOf(BLOCKS_BY_ID.get(this.world.getBlock(Math.floor(p.position.x), Math.floor(p.position.y - 0.05), Math.floor(p.position.z))));
+    if (!p.grounded && !p.flying && !p.swimming) this.fallSpeed = Math.min(this.fallSpeed ?? 0, p.velocity.y);
+    else if (p.grounded && this.fallSpeed < -4) this.sound.land(underfoot(), -this.fallSpeed);
+    if (p.grounded || p.flying || p.swimming) this.fallSpeed = 0;
     if (p.flying || !p.grounded || p.swimming) return;
     const moved = Math.hypot(p.position.x - wasAt.x, p.position.z - wasAt.z);
     if (moved < 1e-4) return;
-    const under = this.world.getBlock(Math.floor(p.position.x), Math.floor(p.position.y - 0.05), Math.floor(p.position.z));
-    this.sound.walk(moved, soundOf(BLOCKS_BY_ID.get(under)));
+    this.sound.walk(moved, underfoot(), { sprint: p.sprint });
   }
 
   /**
@@ -4948,7 +4970,7 @@ export class Game {
     if (this.player && next.view) this.player.view = next.view;
     this.camera.fov = this.controls.fov;
     this.camera.updateProjectionMatrix();
-    this.sound.setVolume(this.controls.volume);
+    this.sound.setLevels(this.controls);
     this.ui?.applyTouchLayout(this.controls);
     return this.controls;
   }

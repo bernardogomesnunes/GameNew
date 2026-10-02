@@ -15,7 +15,7 @@ import { goalBands } from '../config/achievements.js';
 import { ageIntro } from '../config/ages.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
-import { ACTIONS, DEFAULT_CONTROLS, FOV_RANGE, SENSITIVITY_RANGE, rebind, keyLabel, touchLayoutClasses } from '../config/controls.js';
+import { ACTIONS, DEFAULT_CONTROLS, FOV_RANGE, SENSITIVITY_RANGE, rebind, keyLabel, touchLayoutClasses, SOUND_PARTS } from '../config/controls.js';
 import { VIEWS, SKINS, HAIRS, CLOTHES, DEFAULT_LOOK } from '../config/avatar.js';
 import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 import { CLEARS, clearArtSvg } from '../config/clears.js';
@@ -293,6 +293,10 @@ export class UIManager {
               <label>Volume <b id="ctl-vol-val"></b>
                 <input type="range" id="ctl-vol" min="0" max="1" step="0.05" />
               </label>
+              <!-- Each part of the sound under the master (audio/Sound.js). -->
+              ${SOUND_PARTS.map((s) => `<label class="ctl-sub">${s.name} <b id="ctl-${s.id}-val"></b>
+                <input type="range" id="ctl-${s.id}" data-part="${s.id}" min="0" max="1" step="0.05" />
+              </label>`).join('')}
             </div>
             <!-- Playtest, P3: how you see the world, and how you look in it. -->
             <div class="ctl-look" id="ctl-look"></div>
@@ -722,6 +726,9 @@ export class UIManager {
 
     this.wireGraphics();
     this.wireControls();
+    // Every button in the panels and menus answers with a soft, low tick —
+    // not the touch controls, which are pressed far too often for it.
+    this.root.addEventListener('click', (e) => { if (e.target.closest?.('[id^="panel-"] button')) this.game.sound?.click(); });
     this.renderMenuIndex();
     this.root.querySelectorAll('[data-menu-back]').forEach((btn) =>
       btn.addEventListener('click', () => this.showMenuSection(null)));
@@ -1063,6 +1070,7 @@ export class UIManager {
     const key = `${kind}|${title}|${body ?? ''}`;
     const dupe = [...stack.children].find((n) => n.dataset.toastKey === key);
     if (dupe) this.dismissToast(dupe);
+    if (kind === 'achievement') this.game?.sound?.chime();
     const node = el(`<div class="toast ${kind}">
       <div class="title">${title}</div>
       ${body ? `<div class="body">${body}</div>` : ''}
@@ -1784,6 +1792,15 @@ export class UIManager {
       this.q('#ctl-fov-val').textContent = `${c.fov}°`;
       this.q('#ctl-sens-val').textContent = `${Number(c.sensitivity).toFixed(2)}×`;
       this.q('#ctl-vol-val').textContent = c.volume > 0 ? `${Math.round(c.volume * 100)}%` : 'Off';
+      // The parts sit under the master: with the master off, so are they.
+      for (const s of SOUND_PARTS) {
+        const input = this.q(`#ctl-${s.id}`);
+        if (!input) continue;
+        const v = c[s.id] ?? DEFAULT_CONTROLS[s.id];
+        input.value = v;
+        input.disabled = !(c.volume > 0);
+        this.q(`#ctl-${s.id}-val`).textContent = v > 0 ? `${Math.round(v * 100)}%` : 'Off';
+      }
       this.q('#ctl-keys').innerHTML = ACTIONS.map((a) => `
         <div class="ctl-key">
           <span>${a.name}</span>
@@ -1819,6 +1836,12 @@ export class UIManager {
     sens.addEventListener('input', () => apply({ sensitivity: Number(sens.value) }));
     vol.addEventListener('input', () => apply({ volume: Number(vol.value) }));
     vol.addEventListener('change', () => this.game.sound?.click());
+    for (const s of SOUND_PARTS) {
+      const input = this.q(`#ctl-${s.id}`);
+      input?.addEventListener('input', () => apply({ [s.id]: Number(input.value) }));
+    }
+    // Something to hear at the level just chosen.
+    this.q('#ctl-sfx')?.addEventListener('change', () => this.game.sound?.place('wood'));
     for (const seg of this.root.querySelectorAll('.ctl-seg')) {
       seg.addEventListener('click', (e) => {
         const b = e.target.closest('button[data-val]');
