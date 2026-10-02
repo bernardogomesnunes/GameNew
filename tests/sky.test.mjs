@@ -96,7 +96,8 @@ const open = (x, y, z) => { const b = id(x, y, z); return b == null || b === 0; 
   ok('the citadel: walled, towers on its corners, the palace inside with a spire', solid(at.x + 10, FLOOR + 3, at.z - 28) && solid(at.x + 28, FLOOR + 12, at.z + 28)
     && id(at.x, FLOOR + 26, at.z) === 13 && open(at.x, FLOOR + 1, at.z - 28));
   ok(`${sky.posts.length} guards posted — gates, avenues, palace, yards — each on open ground`, sky.posts.length >= 25
-    && sky.posts.every((p) => solid(p.x, FLOOR - 1, p.z) || skyColumn(3, at.x, at.z, Math.floor(p.x), Math.floor(p.z))) && sky.posts.every((p) => open(p.x, FLOOR, p.z) && open(p.x, FLOOR + 1, p.z)));
+    && sky.posts.every((p) => solid(p.x, (p.y ?? FLOOR) - 1, p.z) || (p.y == null && skyColumn(3, at.x, at.z, Math.floor(p.x), Math.floor(p.z))))
+    && sky.posts.every((p) => open(p.x, p.y ?? FLOOR, p.z) && open(p.x, (p.y ?? FLOOR) + 1, p.z)));
 }
 ok('the palace: marble, a gold roof, a throne', id(at.x, FLOOR + 1, sky.palace.maxZ - 1) === 13 && [...cell.values()].filter((b) => b === 13).length > 100);
 ok('waterfalls pour off its rim', [...cell.entries()].filter(([k, b]) => b === 11 && Number(k.split(',')[1]) < FLOOR - 20).length >= 3);
@@ -219,7 +220,7 @@ ok('a lift anywhere else goes nowhere', liftAt(gen, at.x, 0, at.z) === null);
     && RECIPES.some((r) => r.output.id === chain?.id && r.inputs.iron_ingot) && (itemIcon(chain) ?? '').includes('<svg'));
   ok('a sky lift: gold, modelled, drawn in the bag', PROP_SHAPES.sky_lift?.length >= 4 && BLOCKS_BY_ID.get(SKY_LIFT) && (itemIcon(lift) ?? '').includes('<svg'));
   ok('Place on a lift rides it, and the button says Ride', /aimed\.block === SKY_LIFT\) return void this\.rideLift\(aimed\)/.test(game) && /if \(id === SKY_LIFT\) return 'Ride';/.test(game));
-  ok('the hint says where it goes, and tapping it rides', /up to the Sky Kingdom' : 'down to the ground'/.test(game) && /painting \|\| \(lift && lift !== 'nowhere'\)\) && swingLabel/.test(game));
+  ok('the hint says where it goes, and tapping it rides', /up to the Sky Kingdom' : 'down to the ground'/.test(game) && /painting \|\| \(lift && lift !== 'nowhere' && lift !== 'cut'\)\) && swingLabel/.test(game));
   ok('warriors following you ride up with you', /army\.mode === 'follow'\) \{\s*for \(const w of army\.field\)/.test(game));
 }
 

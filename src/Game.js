@@ -74,8 +74,9 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView } from './render/ArmyView.js';
-import { BED, NIGHTSTONE_ORE, SKY_LIFT, isTent } from './config/blocks.js';
-import { skyFor, skyAt, liftAt, SKY_REACH } from './world/skyKingdom.js';
+import { BED, NIGHTSTONE_ORE, SKY_LIFT, CHAIN, isTent } from './config/blocks.js';
+import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
+import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
 import { SkyBeacon } from './render/SkyBeacon.js';
 import { MODE_WORDS as ARMY_WORDS } from './world/Army.js';
 import { SOLDIER } from './world/Defenders.js';
@@ -3303,6 +3304,11 @@ export class Game {
   rideLift({ x, y, z }) {
     const ride = this.world.gen ? liftAt(this.world.gen, x, y, z) : null;
     if (!ride) return;
+    const i = skyFor(this.world.gen).towers.indexOf(ride.tower);
+    if (this.duilt && !this.duilt.sandbox && this.duilt.skyWar.chains[i]) {
+      this.ui?.toast({ kind: 'xp', title: 'Its chain is cut', body: 'This lift goes nowhere now — another tower\'s still might' });
+      return;
+    }
     const from = { x: this.player.position.x, z: this.player.position.z };
     this.player.teleport(ride.to.x, ride.to.y, ride.to.z);
     const army = this.duilt?.army;
@@ -3370,8 +3376,17 @@ export class Game {
 
   /** The Sky King is down: the Sky Kingdom falls. */
   skyKingDown() {
+    this.skyFalls(false);
+  }
+
+  /**
+   * The Sky Kingdom falls: its King brought down, or (`yielded`) its chains
+   * all cut and its island sunk until it had to give in.
+   */
+  skyFalls(yielded) {
     const d = this.duilt;
     const taxed = d?.skyWar.failures > 0;
+    if (d && yielded) d.skyWar.yielded = true;
     if (!d || !d.bringDownSky()) return;
     // Its guards lay down their arms: nobody on the island fights you now.
     for (const p of this.wanderers?.list ?? []) {
@@ -3381,8 +3396,8 @@ export class Game {
     this.sound?.hit?.('stone', { gain: 1, pitch: 0.25 });
     this.ui?.toast({
       kind: 'achievement',
-      title: 'The Sky Kingdom has fallen',
-      body: d.sandbox ? 'Its King is down.' : `Its King is down, and its guards lay down their arms.${taxed ? ' Its taxes end.' : ''} The island is your land now: build on it as you would at home.`,
+      title: yielded ? 'The Sky Kingdom yields' : 'The Sky Kingdom has fallen',
+      body: d.sandbox ? 'Its King is down.' : `${yielded ? 'Sunk low on its cut chains, it can hold out no longer: its King comes down from his throne' : 'Its King is down'}, and its guards lay down their arms.${taxed ? ' Its taxes end.' : ''} The island is your land now: build on it as you would at home.`,
     });
     if (d.sandbox) return;
     // The Stone King keeps his word: honour, and gold from his treasury.
@@ -3393,6 +3408,46 @@ export class Game {
       body: `He names you Lord of the Sky, above every lord he has${gained.gold ? `, and sends ${gained.gold} gold from his treasury` : ''}. Speak to him in his keep.`,
     });
     this.editedAt = Date.now();
+  }
+
+  /**
+   * Break, at a link of an anchor tower's chain, on the dark path: the
+   * whole chain is cut and falls away — outside your land, where no other
+   * block can be broken. Cut all four and the island sinks (tickSinking).
+   * Returns whether the press was spent on a chain.
+   */
+  cutChainAt(hit) {
+    const d = this.duilt, gen = this.world?.gen;
+    if (!d || d.sandbox || d.ring !== 'black' || d.skyFallen || !gen || !hit) return false;
+    if (this.world.getBlock(hit.x, hit.y, hit.z) !== CHAIN) return false;
+    const i = chainAt(gen, hit.x, hit.y, hit.z);
+    if (i < 0) return false;
+    const r = d.skyWar.cutChain(i, d.days);
+    if (!r) return false;
+    // Every link of it, gone.
+    for (const [x, y, z] of skyFor(gen).towers[i].chain) {
+      if (this.world.getBlock(x, y, z) === CHAIN) this.world.setBlock(x, y, z, AIR);
+    }
+    this.remeshDirty();
+    this.sound?.break?.('stone');
+    this.ui?.toast(r.sinking
+      ? { kind: 'achievement', title: 'The last chain is cut', body: `Nothing holds the Sky Kingdom up now. It will sink lower day by day — in ${SINK_DAYS} days it must yield.` }
+      : { kind: 'challenge', title: `An anchor chain is cut — ${CHAINS - r.left} of ${CHAINS}`, body: `Its lift goes nowhere now. Cut the other ${r.left} and the island will sink until it yields.` });
+    this.editedAt = Date.now();
+    return true;
+  }
+
+  /** Its chains all cut, the island sinks: a word each day, and in SINK_DAYS it yields. */
+  tickSinking() {
+    const d = this.duilt;
+    if (!d || d.sandbox || d.ring !== 'black' || d.skyFallen) return;
+    const s = d.skyWar.sinking(d.days);
+    if (!s) return;
+    if (s.left <= 0) return void this.skyFalls(true);
+    if (s.day > d.skyWar.toldDay) {
+      d.skyWar.toldDay = s.day;
+      this.ui?.toast({ kind: 'challenge', title: 'The Sky Kingdom sinks lower', body: `Its waterfalls run thin and its towers lean. ${Math.ceil(s.left)} more day${Math.ceil(s.left) === 1 ? '' : 's'} and it must yield.` });
+    }
   }
 
   /** An order from the command wheel. */
@@ -3704,6 +3759,8 @@ export class Game {
       if (tier === 'fast') wornBy = this.selectedItemId;
     }
 
+    // An anchor tower's chain: cut, outside your land or not (the dark path).
+    if (this.cutChainAt(hit)) return;
     const targets = this.computeTargets(hit.x, hit.y, hit.z);
     const changes = [];
     for (const t of targets) {
@@ -4567,7 +4624,11 @@ export class Game {
       this.settlerView.update(this.duilt?.settlers.people ?? []);
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
-      if (this.world.gen) this.world.gen.sky = this.skyOpen();
+      if (this.world.gen) {
+        this.world.gen.sky = this.skyOpen();
+        // The chains you've cut stay cut, chunk by chunk as they're made.
+        this.world.gen.skyCut = this.duilt && !this.duilt.sandbox ? this.duilt.skyWar.cut : null;
+      }
       // Its light, low in the sky that way, from anywhere you can't see the island itself.
       this.skyBeacon.update(this.skyOpen() ? skyAt(this.world.gen) : null, this.player.position, 1 - daylightAt(this.dayCycle.time).day);
       this.wanderers.tick(dt, this.player.position);
@@ -4575,6 +4636,7 @@ export class Game {
       this.tickDefence(dt);
       this.tickArmy(dt);
       this.tickSkyAttack();
+      this.tickSinking();
       // The border, drawn again where its ground has loaded since.
       this.duilt?.territory.refreshIfStale();
       this.collectFallen();
@@ -4893,11 +4955,15 @@ export class Game {
     const catapult = hit && isCatapult(hit.block);
     const trapdoor = hit && isTrapdoor(hit.block);
     const painting = hit && isPainting(hit.block);
-    const lift = hit && hit.block === SKY_LIFT ? (this.world.gen && liftAt(this.world.gen, hit.x, hit.y, hit.z)) || 'nowhere' : null;
+    let lift = hit && hit.block === SKY_LIFT ? (this.world.gen && liftAt(this.world.gen, hit.x, hit.y, hit.z)) || 'nowhere' : null;
+    const sw = this.duilt && !this.duilt.sandbox ? this.duilt.skyWar : null;
+    if (lift && lift !== 'nowhere' && sw?.chains[skyFor(this.world.gen).towers.indexOf(lift.tower)]) lift = 'cut';
+    // An anchor tower's chain, on the dark path: Break cuts it.
+    const chainLink = hit && hit.block === CHAIN && sw && this.duilt.ring === 'black' && !this.duilt.skyFallen && chainAt(this.world.gen, hit.x, hit.y, hit.z) >= 0;
     const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door || chest || catapult || trapdoor || painting || (lift && lift !== 'nowhere')) && swingLabel(hit.block);
+    const swing = (gate || door || chest || catapult || trapdoor || painting || (lift && lift !== 'nowhere' && lift !== 'cut')) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     // What tapping the hint itself does: the same thing, for a chest, a door
     // or a gate — not the claim panel (reported: tapping "Chest — tap Open"
@@ -4914,7 +4980,9 @@ export class Game {
       : trapdoor
         ? `Trapdoor · ${hit.block >= TRAPDOOR_OPEN ? 'open' : 'shut'} — ${how}`
       : lift
-        ? (lift === 'nowhere' ? 'Sky lift · only an anchor tower\'s goes anywhere' : `Sky lift — ${how} ${lift.up ? 'up to the Sky Kingdom' : 'down to the ground'}`)
+        ? (lift === 'nowhere' ? 'Sky lift · only an anchor tower\'s goes anywhere' : lift === 'cut' ? 'Sky lift · its chain is cut, it goes nowhere now' : `Sky lift — ${how} ${lift.up ? 'up to the Sky Kingdom' : 'down to the ground'}`)
+      : chainLink
+        ? `Anchor chain — break it to cut it (${sw.chainsCut} of ${CHAINS} cut)`
       : painting
         ? (this.isSpawnAt(hit) ? 'Painting · you wake here after a fall' : `Painting — ${how} to wake here after a fall`)
       : sapling && !onBuilding

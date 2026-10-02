@@ -589,7 +589,10 @@ export class DuiltUI {
    */
   /** How your path ended, told in a few lines: the dark path's conquest, or the white path's defence. */
   endingStory(d) {
-    const story = d.skyFallen && d.ring === 'black'
+    const story = d.skyFallen && d.ring === 'black' && d.skyWar?.yielded
+      ? ['The Sky Kingdom has yielded.', 'You cut its four great chains, and it sank lower day by day, until its King came down from his throne and gave up the island you fell from.',
+        'The Stone King has named you Lord of the Sky. The dark god has what he wanted — and so, for now, do you.']
+      : d.skyFallen && d.ring === 'black'
       ? ['The Sky King is fallen.', 'The island you fell from now hangs over land that answers to you. Its white halls are quiet; its chains run down to towers your warriors hold.',
         'The Stone King has named you Lord of the Sky. The dark god has what he wanted — and so, for now, do you.']
       : d.war?.stage === 'won'

@@ -4,10 +4,12 @@ import { World } from '../src/world/World.js';
 import { Inventory } from '../src/items/Inventory.js';
 import { StructureRegistry } from '../src/structures/StructureRegistry.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
-import { SkyWar, TAX_RATES, REPLACED } from '../src/duilt/SkyWar.js';
+import { SkyWar, TAX_RATES, REPLACED, CHAINS, SINK_DAYS } from '../src/duilt/SkyWar.js';
 import { HIT_CAUSES } from '../src/config/armour.js';
 import { ChunkGen } from '../src/world/ChunkGen.js';
-import { skyAt, ISLAND_R } from '../src/world/skyKingdom.js';
+import { skyAt, skyFor, stampSky, chainAt, ISLAND_R } from '../src/world/skyKingdom.js';
+import { Chunk } from '../src/world/World.js';
+import { CHAIN } from '../src/config/blocks.js';
 import { NEWS } from '../src/config/wanderers.js';
 
 /**
@@ -126,5 +128,52 @@ ok('the island\'s guards lay down their arms, and stop fighting', /p\.angry = fa
 ok('the Stone King honours you: a title and gold from his treasury', /The Stone King honours you/.test(game) && /d\.collect\(\{ gold: SKY_TRIBUTE \}\)/.test(game) && /Lord of the Sky/.test(game));
 ok(`and speaks to you as Lord of the Sky (${NEWS.king.victor?.length} lines)`, NEWS.king.victor?.length >= 2 && /this\.duilt\?\.skyFallen && this\.duilt\.ring === 'black' \? 'victor'/.test(game));
 ok('the ending tells your path\'s end: the dark conquest, or the white defence', /endingStory\(d\)/.test(ui) && /The Sky King is fallen\./.test(ui) && /The Ten Rounds are over\./.test(ui));
+
+// --- cutting the chains ----------------------------------------------------------------------------------
+
+{
+  const gen = new ChunkGen({ seed: 3 });
+  const sky = skyFor(gen);
+  ok(`every anchor tower has its chain (${sky.towers.map((t) => t.chain.length).join(', ')} links)`, sky.towers.length === CHAINS && sky.towers.every((t) => t.chain.length > 30));
+  const [lx, ly, lz] = sky.towers[2].chain[10];
+  ok('a link knows its tower; nothing else is a chain', chainAt(gen, lx, ly, lz) === 2 && chainAt(gen, sky.x, 172, sky.z) === -1);
+  ok(`each tower guarded: two at its door, one on its platform (${sky.posts.filter((p) => p.y != null).length} in all)`, sky.towers.every((t) => {
+    const near = sky.posts.filter((p) => p.y != null && Math.abs(p.x - t.x) <= 4 && Math.abs(p.z - t.z) <= 4);
+    return near.filter((p) => p.y === t.ground).length === 2 && near.filter((p) => p.y === t.y).length === 1;
+  }));
+  // A cut chain stays cut: the chunks it ran through are made without it.
+  const [cx, cz] = [lx >> 4, lz >> 4];
+  const count = (cut) => {
+    const g = new ChunkGen({ seed: 3 });
+    g.sky = true; g.skyCut = cut;
+    const c = new Chunk(cx, cz, 200);
+    stampSky(g, c, 16);
+    let n = 0;
+    for (let x = 0; x < 16; x++) for (let z = 0; z < 16; z++) for (let y = 0; y < 200; y++) if (c.get(x, y, z) === CHAIN) n++;
+    return n;
+  };
+  ok(`a cut chain is gone from the chunks it ran through, the others untouched (${count(null)} links → ${count(new Set([2]))})`, count(null) > 0 && count(new Set([2])) < count(null) && count(new Set([0])) === count(null));
+
+  const w = new SkyWar();
+  ok('one chain cut: three to go, no sinking yet', w.cutChain(1, 3).left === 3 && !w.sinking(4) && w.chainsCut === 1);
+  ok('the same chain twice counts once', w.cutChain(1, 3) === null && w.chainsCut === 1);
+  w.cutChain(0, 3.2); w.cutChain(3, 3.4);
+  const last = w.cutChain(2, 4.5);
+  ok('the fourth: the island begins to sink', last.left === 0 && last.sinking && w.sinking(4.5).day === 0);
+  ok(`a day on: one day sunk, ${SINK_DAYS - 1} to go`, w.sinking(5.5).day === 1 && Math.abs(w.sinking(5.5).left - (SINK_DAYS - 1)) < 1e-9);
+  ok(`${SINK_DAYS} days on: it must yield`, w.sinking(4.5 + SINK_DAYS).left <= 0);
+  const back = new SkyWar();
+  back.loadJSON(JSON.parse(JSON.stringify(w.toJSON())));
+  ok('cut chains and the sinking are saved with the world', back.chainsCut === CHAINS && back.cut.has(2) && back.sinking(5.5).day === 1);
+}
+
+ok('Break on a link cuts its whole chain — outside your land too — on the dark path only', /if \(this\.cutChainAt\(hit\)\) return;\s*const targets = this\.computeTargets/.test(game)
+  && /if \(!d \|\| d\.sandbox \|\| d\.ring !== 'black' \|\| d\.skyFallen \|\| !gen \|\| !hit\) return false;/.test(game)
+  && /for \(const \[x, y, z\] of skyFor\(gen\)\.towers\[i\]\.chain\)/.test(game));
+ok('a cut chain\'s lift goes nowhere, and says so', /this\.duilt\.skyWar\.chains\[i\]\) \{\s*this\.ui\?\.toast\(\{ kind: 'xp', title: 'Its chain is cut'/.test(game) && /its chain is cut, it goes nowhere now/.test(game));
+ok('a chain under the crosshair says what Break does to it', /Anchor chain — break it to cut it/.test(game));
+ok('cut chains stay cut as chunks are made again', /this\.world\.gen\.skyCut = this\.duilt && !this\.duilt\.sandbox \? this\.duilt\.skyWar\.cut : null;/.test(game));
+ok('sinking: a word each day, then it yields — the Sky Kingdom falls', /this\.tickSinking\(\);/.test(game) && /if \(s\.left <= 0\) return void this\.skyFalls\(true\);/.test(game) && /The Sky Kingdom yields/.test(game));
+ok('and the ending tells how it fell', /The Sky Kingdom has yielded\./.test(ui));
 
 process.exit(f ? 1 : 0);
