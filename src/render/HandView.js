@@ -12,6 +12,14 @@ import { ITEMS_BY_ID } from '../config/items.js';
  * It hangs off the camera, so it goes wherever you look.
  */
 
+/** How far a held tool leans away from you, in radians — as your avatar holds one. */
+const HOLD_TIP = -0.6;
+/**
+ * And how far it's turned in towards the middle of the screen: straight
+ * ahead, a blade seen from behind its own haft is edge on and all but
+ * hidden — a stick. A little turn shows its face and still points it ahead.
+ */
+const HOLD_TURN = 0.4;
 /** How far in front of the eye the hand is held. */
 const REACH = 0.62;
 
@@ -23,7 +31,9 @@ export class HandView {
     camera.add(this.group);
     this.item = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
     this.item.scale.setScalar(0.3);
-    this.item.rotation.order = 'YXZ';
+    // Turned first, then tipped: the quarter-turn about the haft puts the
+    // blade ahead of you, and the tip leans the whole thing away from you.
+    this.item.rotation.order = 'XYZ';
     this.group.add(this.item);
     this.fistMat = new THREE.MeshLambertMaterial({ color: 0xe0b48e });
     this.fist = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.34), this.fistMat);
@@ -50,13 +60,14 @@ export class HandView {
       this.item.visible = !!geo;
       this.fist.visible = !geo;
       if (geo) this.item.geometry = geo;
-      // A tool or a sword points ahead of you, into the screen: handle in
-      // your hand, head out in front, and its blade (always -x, see
-      // heldModel.js) to the left — asked for directly: "pointing to the
-      // front, the handle to the user's side, blade to the front, that's
-      // left". Anything else — a block, food, a bucket — sits upright.
+      // A tool or a sword is held the way your avatar holds it in third
+      // person (asked for directly: "the blade should be pointing front
+      // like in the third person, not facing right"): the handle in your
+      // fist, the head up and leaning away from you, and its blade (always
+      // -x, see heldModel.js) turned a quarter round to face ahead, into
+      // the screen. Anything else — a block, food, a bucket — sits upright.
       const pointing = ITEMS_BY_ID.get(held.itemId)?.kind === 'tool' && held.itemId !== 'bucket' && held.itemId !== 'bucket_water';
-      if (pointing) this.item.rotation.set(-1.2, 0.22, 0);
+      if (pointing) this.item.rotation.set(HOLD_TIP, -Math.PI / 2 + HOLD_TURN, 0);
       else this.item.rotation.set(0.1, 0.35, 0.15);
       // A block sits smaller in the hand than a sword is long.
       this.item.scale.setScalar(pointing ? 0.34 : held.itemId ? 0.24 : 0.18);
