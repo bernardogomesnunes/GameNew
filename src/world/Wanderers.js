@@ -125,7 +125,7 @@ export class Wanderers {
       if (!this.present.has(lm) && Math.hypot(lm.x - player.x, lm.z - player.z) < VISIT) this.populate(lm);
     }
     const sky = this.sky();
-    if (sky && !this.present.has(sky) && Math.hypot(sky.x - player.x, sky.z - player.z) < VISIT) this.populate(sky);
+    if (sky && !this.present.has(sky) && Math.hypot(sky.x - player.x, sky.z - player.z) < (sky.visit ?? VISIT)) this.populate(sky);
 
     this.untilExplorer -= dt;
     if (this.untilExplorer <= 0) {
@@ -475,7 +475,7 @@ export class Wanderers {
 
   gone(p, player) {
     if (p.landmark) {
-      if (Math.hypot(p.landmark.x - player.x, p.landmark.z - player.z) <= LEAVE) return false;
+      if (Math.hypot(p.landmark.x - player.x, p.landmark.z - player.z) <= (p.landmark.leave ?? LEAVE)) return false;
       this.present.delete(p.landmark);
       return true;
     }

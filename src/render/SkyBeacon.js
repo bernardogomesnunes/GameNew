@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ISLAND_R } from '../world/skyKingdom.js';
 
 /**
  * The Sky Kingdom seen from far off (world/skyKingdom.js): a small island
@@ -14,12 +15,11 @@ import * as THREE from 'three';
 /** Never drawn further than this — inside the fog's end and the camera's far plane. */
 export const BEACON_FAR = 1300;
 /** Nearer than this the island itself is in view, and the stand-in goes. */
-export const BEACON_NEAR = 230;
+export const BEACON_NEAR = 260;
 /** It always sits at least this high over the horizon (radians)... */
 const LIFT = 0.07;
 /** ...and is at least this wide, as a share of how far away it's drawn. */
 const WIDTH = 0.045;
-const ISLAND_R = 46;
 
 function glowTexture() {
   const c = document.createElement('canvas');
