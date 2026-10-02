@@ -224,7 +224,14 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
     - cut chains stay cut through saves and as chunks are regenerated;
     - with all four cut, the island sinks: you're told each day, and 2 game days later the Sky Kingdom yields. Its King comes down and it falls without a blow, and the ending says so;
     - the island doesn't move down in the world; the sinking is told, not shown.
-  - Still to come: the expedition on the map, and going home in disguise.
+  - **Going home in disguise** (`duilt/Suspicion.js`, `disguise.test`):
+    - in the full Sky armour on the island, its people take you for one of their own;
+    - a **suspicion meter** in the HUD (an eye and a bar, never a toast) fills while you run, show the Black Ring or Stone Kingdom gear, crowd a guard, linger in the throne room or bring more than three warriors. It drains while you behave, says what's giving you away, and goes white, then amber, then red, pulsing as it climbs;
+    - a **?** shows over guards looking you over and a **!** over those who've seen through you;
+    - when it's full, or you strike, you're discovered: every guard near comes, and it's open battle;
+    - your first blow while still unseen lands three times as hard;
+    - leave the island and suspicion is forgotten.
+  - Still to come: the expedition on the map.
 - **The alliance:**
   - after you forge the Black Ring the Stone Kingdom becomes your ally;
   - its people are friendly, its gates open, and you can trade there;

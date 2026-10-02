@@ -227,6 +227,8 @@ export class PlayerController {
     // The stick pushed right out only ever means faster, never down.
     const sprinting = this.flying ? this.keys.has(b.down) || this.stickSprint : shift || this.stickSprint;
     const goingDown = this.keys.has(b.down) && !this.flying || shift;
+    // Running on your feet, for whoever's watching (duilt/Suspicion.js).
+    this.running = !this.flying && sprinting && wish.lengthSq() > 0.01;
 
     if (this.flying) {
       const speed = (sprinting ? FLY_SPRINT_SPEED : FLY_SPEED) * this.speedScale;

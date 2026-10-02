@@ -109,6 +109,14 @@ export class DuiltUI {
           <span class="vital-count" id="army-count">0</span>
           <span class="army-mode" id="army-mode"></span>
         </button>
+        <!-- In disguise on the Sky Kingdom (duilt/Suspicion.js): how near you
+             are to being seen through, and what's giving you away. Its own
+             meter, never a toast (asked for directly). -->
+        <div class="vital" id="vital-suspicion" title="Suspicion" hidden>
+          <span class="vital-icon">👁</span>
+          <span class="sus-bar"><span class="sus-fill" id="sus-fill"></span></span>
+          <span class="sus-reason" id="sus-reason"></span>
+        </div>
         <div id="army-wheel" hidden>
           <button type="button" data-army="follow">Follow</button>
           <button type="button" data-army="hold">Hold here</button>
@@ -500,6 +508,28 @@ export class DuiltUI {
     this.q('#army-count').textContent = army.total;
     this.q('#army-mode').textContent = { follow: 'following', hold: 'holding', attack: 'attacking', line: 'in line' }[army.mode];
     this.el.querySelectorAll('[data-army]').forEach((b) => b.classList.toggle('on', b.dataset.army === army.mode));
+  }
+
+  /**
+   * The suspicion meter: { level 0..1, rising, reason, discovered }, or
+   * null to hide it. White while they've no reason to look at you, amber,
+   * then red; it pulses while it climbs, and says what's giving you away.
+   */
+  renderSuspicion(s) {
+    const box = this.q('#vital-suspicion');
+    if (!box) return;
+    const key = s ? `${Math.round(s.level * 50)}:${s.rising}:${s.reason}:${s.discovered}` : '';
+    if (key === this.susKey) return;
+    this.susKey = key;
+    box.hidden = !s;
+    if (!s) return;
+    const fill = this.q('#sus-fill');
+    fill.style.width = `${Math.round(s.level * 100)}%`;
+    box.classList.toggle('wary', s.level >= 0.4 && s.level < 0.75);
+    box.classList.toggle('high', s.level >= 0.75);
+    box.classList.toggle('rising', !!s.rising && !s.discovered);
+    box.classList.toggle('discovered', !!s.discovered);
+    this.q('#sus-reason').textContent = s.discovered ? 'Discovered' : s.reason ?? (s.level > 0.02 ? 'easing' : 'unseen');
   }
 
   /** A red flash at the edges of the screen when you're hurt — stronger when you die. */

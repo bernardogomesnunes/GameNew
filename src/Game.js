@@ -77,6 +77,8 @@ import { ArmyView } from './render/ArmyView.js';
 import { BED, NIGHTSTONE_ORE, SKY_LIFT, CHAIN, isTent } from './config/blocks.js';
 import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
+import { Suspicion, SUSPICION, AMBUSH } from './duilt/Suspicion.js';
+import { MarkerView } from './render/MarkerView.js';
 import { SkyBeacon } from './render/SkyBeacon.js';
 import { MODE_WORDS as ARMY_WORDS } from './world/Army.js';
 import { SOLDIER } from './world/Defenders.js';
@@ -195,6 +197,8 @@ const STONE_HITS = 14;
 const SKY_PEOPLE = 240;
 // What the Stone King sends you when the Sky Kingdom falls.
 const SKY_TRIBUTE = 64;
+// What gives a disguise away: the Stone Kingdom's armour, worn or in hand, and the Black Ring or Nightstone in hand.
+const DARK_GEAR = /^(armour_stone_|ring_black$|nightstone$|banner_black$)/;
 // An attack on it is on while you're this close to its middle — the
 // island and its anchor towers — and over once you're this far off again.
 const SKY_ATTACK_IN = SKY_REACH + 10, SKY_ATTACK_OUT = SKY_REACH + 120;
@@ -373,6 +377,10 @@ export class Game {
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
     this.skyBeacon = new SkyBeacon(this.scene);
+    // In disguise on the island: how near you are to being seen through,
+    // and the ? and ! over the guards' heads (duilt/Suspicion.js).
+    this.suspicion = new Suspicion();
+    this.markerView = new MarkerView(this.scene);
     this.projectileView = new ProjectileView(this.scene);
     this.fireflyView = new FireflyView(this.scene);
     this.guardianView = new GuardianView(this.scene);
@@ -2816,7 +2824,10 @@ export class Game {
     this.digTarget = null;
     const tool = ITEMS_BY_ID.get(this.selectedItemId);
     const { x, z } = this.player.position;
-    const res = this.wanderers.hit(p, this.blowDamage(tool), x, z);
+    // Struck in disguise: the first blow lands unseen, and hard — and then they know.
+    const ambush = WANDERERS[p.kind]?.sky && this.unseen();
+    const res = this.wanderers.hit(p, this.blowDamage(tool) * (ambush ? AMBUSH : 1), x, z);
+    if (ambush) this.revealDisguise();
     if (!res) return false;
     // An upgraded sword (playtest, P6): stuns, burns or freezes as it lands.
     if (tool?.element && !res.killed) this.wanderers.afflict(p, tool.element);
@@ -3341,7 +3352,9 @@ export class Game {
       war.begin(d.days, d.army.active ? d.army.total : 0);
       this.ui?.toast({
         kind: 'challenge', title: 'The attack on the Sky Kingdom has begun',
-        body: 'Bring down the Sky King in his palace. Fall here, or lose your army, and you\'re driven back home — and the Sky Kingdom will tax you for it.',
+        body: this.disguised()
+          ? 'In the Sky armour they take you for one of their own. Walk, keep your distance, don\'t linger — and keep the Black Ring out of sight. Watch the 👁 meter.'
+          : 'Bring down the Sky King in his palace. Fall here, or lose your army, and you\'re driven back home — and the Sky Kingdom will tax you for it.',
       });
       return;
     }
@@ -3435,6 +3448,70 @@ export class Game {
       : { kind: 'challenge', title: `An anchor chain is cut — ${CHAINS - r.left} of ${CHAINS}`, body: `Its lift goes nowhere now. Cut the other ${r.left} and the island will sink until it yields.` });
     this.editedAt = Date.now();
     return true;
+  }
+
+  // ---- going home in disguise (duilt/Suspicion.js) ----
+
+  /** In the full Sky armour, on the dark path, at the Sky Kingdom: disguised. */
+  disguised() {
+    const d = this.duilt, gen = this.world?.gen;
+    if (!d || d.sandbox || d.ring !== 'black' || d.skyFallen || !gen || d.disguisedAs() !== 'sky') return false;
+    const at = skyAt(gen), p = this.player.position;
+    return Math.hypot(at.x - p.x, at.z - p.z) < SKY_ATTACK_IN;
+  }
+
+  /** Disguised, and not yet seen through. */
+  unseen() {
+    return this.disguised() && !this.suspicion.discovered;
+  }
+
+  /**
+   * Each frame in disguise: what you're giving away fills the meter, and
+   * when it's full you're discovered — every guard near knows you, and it's
+   * open battle. Leave the island and it's forgotten.
+   */
+  tickDisguise(dt) {
+    const d = this.duilt;
+    const on = this.disguised();
+    if (!on) {
+      const gen = this.world?.gen, p = this.player.position;
+      const away = !gen || !this.skyOpen() || Math.hypot(skyAt(gen).x - p.x, skyAt(gen).z - p.z) > SKY_ATTACK_OUT;
+      if (away || d?.skyFallen) this.suspicion.reset();
+      this.markerView.update([]);
+      this.ui?.duiltUI?.renderSuspicion?.(null);
+      return;
+    }
+    const p = this.player.position;
+    const sky = this.wanderers.list.filter((q) => WANDERERS[q.kind]?.sky && !q.dead);
+    if (!this.suspicion.discovered) {
+      const palace = skyFor(this.world.gen).palace;
+      const worn = Object.values(d.worn).map((w) => w?.id ?? '');
+      this.suspicion.tick(dt, {
+        ring: d.ringWorn() === 'black',
+        running: !!this.player.running,
+        darkGear: worn.some((id) => DARK_GEAR.test(id)) || DARK_GEAR.test(this.selectedItemId ?? ''),
+        nearGuards: sky.filter((q) => q.kind !== 'sky_king' && Math.hypot(q.x - p.x, q.z - p.z) < SUSPICION.near && Math.abs(q.y - p.y) < 3).length,
+        inThrone: p.x >= palace.minX && p.x <= palace.maxX + 1 && p.z >= palace.minZ && p.z <= palace.maxZ + 1 && Math.abs(p.y - 172) < 4,
+        warriors: d.army.active ? d.army.field.filter((w) => Math.hypot(w.x - p.x, w.z - p.z) < 14).length : 0,
+      });
+      if (this.suspicion.discovered) this.revealDisguise();
+    }
+    // A ? over each guard near enough to be looking you over; a ! over those who know.
+    const s = this.suspicion;
+    this.markerView.update(sky.filter((q) => q.kind !== 'sky_king' || s.discovered)
+      .filter((q) => Math.hypot(q.x - p.x, q.z - p.z) < (s.discovered ? 24 : 10))
+      .filter(() => s.discovered || s.level > 25)
+      .map((q) => ({ x: q.x, y: q.y, z: q.z, mark: s.discovered ? '!' : '?' })));
+    this.ui?.duiltUI?.renderSuspicion?.({ level: s.level / SUSPICION.max, rising: s.rising, reason: s.reason, discovered: s.discovered });
+  }
+
+  /** Seen through: every guard near knows you now, and comes. */
+  revealDisguise() {
+    if (!this.suspicion.discovered) this.suspicion.reveal();
+    const p = this.player.position;
+    for (const q of this.wanderers?.list ?? []) {
+      if (WANDERERS[q.kind]?.sky && Math.hypot(q.x - p.x, q.z - p.z) < 30) q.angry = true;
+    }
   }
 
   /** Its chains all cut, the island sinks: a word each day, and in SINK_DAYS it yields. */
@@ -4637,6 +4714,7 @@ export class Game {
       this.tickArmy(dt);
       this.tickSkyAttack();
       this.tickSinking();
+      this.tickDisguise(dt);
       // The border, drawn again where its ground has loaded since.
       this.duilt?.territory.refreshIfStale();
       this.collectFallen();
@@ -4794,7 +4872,8 @@ export class Game {
         // The Sky Kingdom: there while it stands, on the dark path (and in
         // Creative, to look at); its people fight the Black Ring.
         sky: () => this.skyNear(),
-        skyHostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.ring === 'black' && !this.duilt.skyFallen),
+        // In the Sky armour they take you for one of their own — until they see through it.
+        skyHostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.ring === 'black' && !this.duilt.skyFallen && !this.unseen()),
         onSkyKing: () => this.skyKingDown(),
         onRoyal: () => this.ui?.toast({ kind: 'challenge', title: 'A royal guard runs to the King\'s side', body: 'There are always two beside him while he lives — be quick, or bring your army.' }),
       });

@@ -124,7 +124,7 @@ ok('and when it falls, its taxes end', /Its taxes end\./.test(game));
   ok('the island stays yours in the save', back.territory.contains(at.x, at.z));
 }
 
-ok('the island\'s guards lay down their arms, and stop fighting', /p\.angry = false; p\.target = null; p\.speed = 0;/.test(game) && /this\.duilt\.ring === 'black' && !this\.duilt\.skyFallen\)/.test(game));
+ok('the island\'s guards lay down their arms, and stop fighting', /p\.angry = false; p\.target = null; p\.speed = 0;/.test(game) && /this\.duilt\.ring === 'black' && !this\.duilt\.skyFallen && !this\.unseen\(\)\)/.test(game));
 ok('the Stone King honours you: a title and gold from his treasury', /The Stone King honours you/.test(game) && /d\.collect\(\{ gold: SKY_TRIBUTE \}\)/.test(game) && /Lord of the Sky/.test(game));
 ok(`and speaks to you as Lord of the Sky (${NEWS.king.victor?.length} lines)`, NEWS.king.victor?.length >= 2 && /this\.duilt\?\.skyFallen && this\.duilt\.ring === 'black' \? 'victor'/.test(game));
 ok('the ending tells your path\'s end: the dark conquest, or the white defence', /endingStory\(d\)/.test(ui) && /The Sky King is fallen\./.test(ui) && /The Ten Rounds are over\./.test(ui));
