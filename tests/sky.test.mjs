@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { World, Chunk } from '../src/world/World.js';
 import { STAIR_SHADE, STAIR_STEP_TONE } from '../src/world/ChunkMesher.js';
+import { throughArmour } from '../src/config/armour.js';
 import { ChunkGen } from '../src/world/ChunkGen.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
 import { Wanderers, ROYAL_EVERY, HEAVY_CHANCE } from '../src/world/Wanderers.js';
@@ -339,6 +340,40 @@ ok('a lift anywhere else goes nowhere', liftAt(gen, at.x, 0, at.z) === null);
   w3.list.push(g3);
   for (let i = 0; i < 100; i++) w3.tick(0.05, { x: 80, y: 10, z: 80 });
   ok(`Sky guards fight your warriors, not just you (${struck.length} blows)`, struck.length > 2);
+}
+
+// The throne room, balanced: you against the King and his two royal guards,
+// standing and swinging (no stepping back, no army, no food). The best
+// sword, full armour and the Black Ring should usually win, if not by much;
+// without armour, never.
+{
+  const world = new World({ sizeX: 96, sizeZ: 96, height: 32 });
+  for (let x = 0; x < 96; x++) for (let z = 0; z < 96; z++) for (let y = 0; y < 10; y++) world.setBlock(x, y, z, 3);
+  const isle = { kind: 'sky', x: 48, z: 48, y: 10, king: { x: 48.5, z: 52.5, dy: 0 }, posts: [], royal: [{ x: 46.5, z: 52.5 }, { x: 50.5, z: 52.5 }], palaceDoor: { x: 48.5, z: 36.5 } };
+  const fight = ({ sword, armour, ring, seed }) => {
+    let hp = 20;
+    const w = new Wanderers({ world, rand: rng(seed), sky: () => isle, skyHostile: () => true });
+    w.untilMessenger = w.untilExplorer = 1e9;
+    const you = { x: 48.5, y: 10, z: 48.5 };
+    w.onAttack = (p, hits) => { hp -= throughArmour(hits, armour); if (ring) w.hit(p, 4, you.x, you.z); };
+    let cool = 0;
+    for (let t = 0; t < 60 && hp > 0; t += 0.05) {
+      w.tick(0.05, you);
+      const foes = w.list.filter((p) => !p.dead && (p.kind === 'royal_guard' || p.kind === 'sky_king'));
+      if (!foes.some((p) => p.kind === 'sky_king')) return { won: true, hp };
+      const near = foes.sort((a, b) => Math.hypot(a.x - you.x, a.z - you.z) - Math.hypot(b.x - you.x, b.z - you.z))[0];
+      const d = Math.hypot(near.x - you.x, near.z - you.z);
+      if (d > 2.2) { you.x += ((near.x - you.x) / d) * 4.3 * 0.05; you.z += ((near.z - you.z) / d) * 4.3 * 0.05; }
+      cool -= 0.05;
+      if (d <= 3 && cool <= 0) { cool = 0.35; w.hit(near, sword, you.x, you.z); }
+    }
+    return { won: false, hp };
+  };
+  const odds = (cfg) => [...Array(30)].map((_, i) => fight({ ...cfg, seed: i + 1 })).filter((r) => r.won);
+  const best = odds({ sword: 9, armour: 10, ring: true }), bare = odds({ sword: 9, armour: 0, ring: false }), mid = odds({ sword: 6, armour: 10, ring: true });
+  const left = best.reduce((a, r) => a + r.hp, 0) / Math.max(1, best.length) / 2;
+  ok(`balanced: best sword, armour and the Black Ring win ${best.length}/30 (about ${left.toFixed(1)} hearts left); a lesser sword ${mid.length}/30; no armour ${bare.length}/30`,
+    best.length >= 20 && left < 5 && mid.length < best.length && bare.length <= 2);
 }
 
 // A heavy blow throws you back.

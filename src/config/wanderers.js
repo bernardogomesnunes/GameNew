@@ -76,10 +76,13 @@ export const WANDERERS = {
     helm: 0xe8c04f,
     speed: 1.3,
     roam: 1,
-    hp: 34,
-    hits: 4,
+    // Tuned against a simulated fight: the best sword, full armour and the
+    // Black Ring should usually win alone, if not by much; less needs your
+    // army, or cleverer fighting.
+    hp: 28,
+    hits: 3,
     reach: 1.9,
-    every: 1.1,
+    every: 1.3,
     aggro: 11,
     leash: 9,
     run: 3.4,
