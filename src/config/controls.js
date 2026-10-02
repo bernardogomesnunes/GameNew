@@ -36,7 +36,12 @@ export const DEFAULT_CONTROLS = {
   keys: Object.fromEntries(ACTIONS.map((a) => [a.id, a.key])),
   fov: 75,            // degrees, vertical
   sensitivity: 1,     // times the default mouse speed
-  volume: 0.7,        // 0..1
+  volume: 0.7,        // 0..1, the master — 0 is sound off
+  // Each part of the sound under the master (audio/Sound.js): what you do,
+  // the place around you, and the music.
+  sfx: 0.8,           // 0..1
+  ambience: 0.6,      // 0..1
+  music: 0.45,        // 0..1
   // Phones and tablets: which side walks, and which thumb Break, Place, Fly
   // and More sit beside. See UIManager.applyTouchLayout.
   walkSide: 'left',   // 'left' | 'right'
@@ -46,6 +51,17 @@ export const DEFAULT_CONTROLS = {
   view: 'first',      // 'first' | 'behind' | 'front'
   look: { ...DEFAULT_LOOK },
 };
+
+/**
+ * The sound's three parts, each with a slider under the master Volume —
+ * asked for with the new sounds: "master, effects, ambience and music
+ * separately". The master still turns everything off at zero.
+ */
+export const SOUND_PARTS = [
+  { id: 'sfx', name: 'Effects' },
+  { id: 'ambience', name: 'Ambience' },
+  { id: 'music', name: 'Music' },
+];
 
 /** The body classes a touch layout comes down to (styles.css does the rest). */
 export function touchLayoutClasses(controls) {

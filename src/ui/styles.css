@@ -1435,6 +1435,7 @@ body.editing-building #building-hint {
 .ctl-sliders label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-dim); }
 .ctl-sliders b { font-weight: 600; color: var(--text); margin-left: 4px; }
 .ctl-sliders input[type="range"] { width: 100%; accent-color: var(--accent); }
+.ctl-sliders .ctl-sub { padding-left: 12px; border-left: 2px solid var(--panel-border); }
 .ctl-keys { display: flex; flex-direction: column; gap: 4px; }
 .ctl-key { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
 .ctl-key button { min-width: 110px; padding: 5px 10px; font-size: 12px; }
