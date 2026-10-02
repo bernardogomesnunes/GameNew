@@ -33,7 +33,7 @@ for (const [id, boost] of [['beer', 'haste'], ['kombucha', 'strength'], ['coffee
 }
 ok('beer: blows come faster', BEER_COOLDOWN < 1 && /STRIKE_COOLDOWN_MS \* \(this\.duilt\?\.boosted\('haste'\) \? BEER_COOLDOWN : 1\)/.test(game));
 ok('kombucha: two more on every hit', KOMBUCHA_DAMAGE === 2 && /\(tool\?\.damage \?\? FIST_DAMAGE\) \+ \(this\.duilt\?\.boosted\('strength'\) \? KOMBUCHA_DAMAGE : 0\)/.test(game));
-ok('  on animals and bandits alike', (game.match(/this\.blowDamage\(tool\), x, z\)/g) ?? []).length === 2);
+ok('  on animals and bandits alike', (game.match(/this\.blowDamage\(tool\)( \* \(ambush \? AMBUSH : 1\))?, x, z\)/g) ?? []).length === 2);
 ok('  and every blow waits the shorter time', (game.match(/< this\.strikeCooldown\(\)/g) ?? []).length === 3);
 ok('coffee: faster on your feet', COFFEE_SPEED > 1 && /this\.duilt\.boosted\('speed'\) \? COFFEE_SPEED : 1/.test(game));
 ok('break with one selected drinks it', ['beer', 'kombucha', 'coffee'].every((id) => game.includes(`${id}: 'drinkSelected'`)));

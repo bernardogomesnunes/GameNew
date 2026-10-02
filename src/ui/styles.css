@@ -737,6 +737,19 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 #vital-army .vital-count { font-weight: 700; font-variant-numeric: tabular-nums; }
 .army-mode { font-size: 11px; color: #5a6168; }
 #army-wheel { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; }
+/* The suspicion meter (in disguise on the Sky Kingdom): white, amber, red. */
+#vital-suspicion { gap: 7px; min-height: 30px; }
+#vital-suspicion[hidden] { display: none; }
+.sus-bar { width: 64px; height: 7px; border-radius: 999px; background: rgba(0, 0, 0, 0.18); overflow: hidden; }
+.sus-fill { display: block; height: 100%; width: 0; background: #f4f1e8; transition: width 0.25s linear, background 0.3s; }
+#vital-suspicion.wary .sus-fill { background: #f2c14e; }
+#vital-suspicion.high .sus-fill, #vital-suspicion.discovered .sus-fill { background: #e5483a; }
+.sus-reason { font-size: 11px; color: #5a6168; white-space: nowrap; }
+#vital-suspicion.discovered .sus-reason { color: #c2352a; font-weight: 700; }
+#vital-suspicion.rising .vital-icon { animation: sus-pulse 0.9s ease-in-out infinite; }
+#vital-suspicion.discovered { animation: sus-flash 0.5s ease-in-out 3; }
+@keyframes sus-pulse { 50% { transform: scale(1.25); } }
+@keyframes sus-flash { 50% { background: rgba(229, 72, 58, 0.35); } }
 #army-wheel button {
   border: 1px solid var(--panel-border); background: var(--panel); color: var(--text);
   backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
