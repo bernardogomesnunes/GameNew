@@ -26,7 +26,9 @@ A walled city of dark stone, about 1000–1400 blocks from home: a keep with the
 
 **Done:** the story told in pictures — an illustrated intro on a new world, and an illustrated ending for each path (`ui/Story.js`).
 
-**Next:** the rest of the story (7j) — story age names, messengers' and the hermit's lines, and the lore book.
+**Done:** the ages renamed for the story — Exile, Roots, Forge, Hearth, Bastion, Reckoning.
+
+**Next:** the rest of the story (7j) — messengers' and the hermit's lines, and the lore book.
 
 # Before that — Phase 6
 
