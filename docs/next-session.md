@@ -81,7 +81,19 @@ The Sanctuary and the guardian (`tests/sanctuary.test.mjs`).
 - **Orders:** tap it to cycle follow → stay → hunt. This stands in for the soldiers' command wheel, which comes later.
 - **Downed:** it goes back to its Sanctuary and returns after a day of play (900 s). It's saved with the world.
 
-## Next
+## Next — what's on the plan now
+1. **Look, feel and sound** (`docs/plan-look-and-sound.md`), asked for after the Sky city:
+   - a showcase world to judge changes by;
+   - colour, light and shadow where blocks meet;
+   - 32×32 textures from real photos;
+   - atmosphere;
+   - animals and people remodelled (faces, bodies, outfits, wool);
+   - items reviewed;
+   - recorded sounds and music.
+2. **The rest of the dark path:** disguise, cutting the chains, the expedition on the map, the island joining your land, and taxes after a lost attack.
+3. **The story (7j):** the intro, messengers' lines, the lore book, age names, an ending for each path.
+
+## Earlier notes
 - **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7e, the Stone Kingdom, or the white path.
 - **Playtest improvements:** from the user's own play session, in `docs/plan-playtest-improvements.md`:
   - P1: bed, painting spawn point, furnished houses;
