@@ -112,6 +112,6 @@ ok('walking up to one finds it', /this\.lookForPlaces\(dt\)/.test(game) && /this
   back.loadJSON(JSON.parse(JSON.stringify(g.toJSON())));
   ok('and remembered with the world', back.foundPlaces().length === 1 && back.foundPlaces()[0].x === 400 && back.foundPlaces()[0].kind === 'mine');
 }
-ok('what you have found is marked on the map', /places: duilt\?\.foundPlaces\(\)/.test(ui) && /for \(const p of places\)/.test(map));
+ok('what you have found is marked on the map', /const places = \(duilt\?\.foundPlaces\(\) \?\? \[\]\)/.test(ui) && /\{ radius, home, territory, places, sites \}/.test(ui) && /for \(const p of places\)/.test(map));
 
 process.exit(f ? 1 : 0);
