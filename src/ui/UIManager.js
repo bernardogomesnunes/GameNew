@@ -2076,14 +2076,25 @@ export class UIManager {
     const sites = this.game.kingdomSites?.() ?? [];
     const places = (duilt?.foundPlaces() ?? []).filter((p) => !(p.kind === 'kingdom' && sites.some((s) => s.kind === 'kingdom')));
     drawWorldMap(canvas, gen, x, z, yaw, { radius, home, territory, places, sites });
-    // In Creative, a button to go and look at each kingdom.
+    // In Creative, a button to go and look at each kingdom. On the dark
+    // path, the expedition: send the army ahead, or join it at its camp.
     const travel = this.q('#map-travel');
     if (travel) {
       const go = duilt?.sandbox ? sites : [];
-      travel.innerHTML = go.map((s) => `<button class="primary" data-travel="${s.kind}">Travel to the ${s.name}</button>`).join('');
-      travel.hidden = !go.length;
+      const ex = this.game.expeditionState?.();
+      travel.innerHTML = go.map((s) => `<button class="primary" data-travel="${s.kind}">Travel to the ${s.name}</button>`).join('')
+        + (ex?.ready ? `<button class="primary" data-expedition="send">Send the army to the Sky Kingdom</button>` : '')
+        + (ex?.marching ? `<button class="secondary" disabled>Your army is on the march — at the Sky Kingdom in ${ex.left < 1 ? 'less than a day' : `${Math.ceil(ex.left)} days`}</button>` : '')
+        + (ex?.camped ? `<button class="primary" data-expedition="join">Join your army at its camp</button>` : '');
+      travel.hidden = !travel.innerHTML;
       for (const b of travel.querySelectorAll('[data-travel]')) {
         b.addEventListener('click', () => { if (this.game.travelTo(b.dataset.travel)) this.closePanel('panel-map'); });
+      }
+      for (const b of travel.querySelectorAll('[data-expedition]')) {
+        b.addEventListener('click', () => {
+          const done = b.dataset.expedition === 'send' ? this.game.sendExpedition() : this.game.joinExpedition();
+          if (done) this.closePanel('panel-map');
+        });
       }
     }
     const scale = this.q('#map-scale');

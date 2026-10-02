@@ -500,13 +500,13 @@ export class DuiltUI {
     const box = this.q('#vital-army');
     if (!box) return;
     const on = !!army?.active && !this.duilt.sandbox;
-    const key = on ? `${army.total}:${army.mode}` : '';
+    const key = on ? `${army.total}:${army.mode}:${army.marching}` : '';
     if (key === this.armyKey) return;
     this.armyKey = key;
     box.hidden = !on;
     if (!on) { this.q('#army-wheel').hidden = true; return; }
     this.q('#army-count').textContent = army.total;
-    this.q('#army-mode').textContent = { follow: 'following', hold: 'holding', attack: 'attacking', line: 'in line' }[army.mode];
+    this.q('#army-mode').textContent = army.marching ? 'on the march' : { follow: 'following', hold: 'holding', attack: 'attacking', line: 'in line' }[army.mode];
     this.el.querySelectorAll('[data-army]').forEach((b) => b.classList.toggle('on', b.dataset.army === army.mode));
   }
 

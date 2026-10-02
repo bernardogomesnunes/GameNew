@@ -22,7 +22,9 @@ A walled city of dark stone, about 1000–1400 blocks from home: a keep with the
 
 **Done:** the dark path, part 2 — the Sky Kingdom: the floating island 5,000 blocks out, a walled city of houses, barracks, armouries and training yards round a citadel (Black Ring and Creative only), its palace and throne room, four anchor towers with chains and lifts, its guards and King, its light low in the sky, and its fall as the dark path's end (`sky.test`).
 
-**Next:** the other ways to take it (disguise in Sky armour, cutting the chains), the island joining your land, the expedition on the map, and the Sky Kingdom's taxes when an attempt fails (#144).
+**Done:** the rest of the dark path — taxes after a lost attack, cutting the chains, the island joining your land, the disguise and its suspicion meter, and the expedition on the map (send the army ahead; join it at its camp).
+
+**Next:** the story (7j) — the illustrated intro, story age names, messengers' and the hermit's lines, the lore book, and an illustrated ending for each path.
 
 # Before that — Phase 6
 
@@ -90,7 +92,7 @@ The Sanctuary and the guardian (`tests/sanctuary.test.mjs`).
    - animals and people remodelled (faces, bodies, outfits, wool);
    - items reviewed;
    - recorded sounds and music.
-2. **The rest of the dark path:** disguise, cutting the chains, the expedition on the map, the island joining your land, and taxes after a lost attack.
+2. **The rest of the dark path:** done.
 3. **The story (7j):** the intro, messengers' lines, the lore book, age names, an ending for each path.
 
 ## Earlier notes
