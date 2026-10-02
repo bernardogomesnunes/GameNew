@@ -20,8 +20,9 @@ import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
 import { War } from './War.js';
+import { SkyWar } from './SkyWar.js';
 import { Defenders } from '../world/Defenders.js';
-import { Army } from '../world/Army.js';
+import { Army, ARMY_SIZE } from '../world/Army.js';
 
 /**
  * Everything that makes Duilt different from the sandbox, in one object.
@@ -103,6 +104,8 @@ export class DuiltGame {
     this.found = new Set();
     // The Stone Kingdom's war on you, from the last age on — see War.js.
     this.war = new War();
+    // The dark path's attacks on the Sky Kingdom, and its taxes (SkyWar.js).
+    this.skyWar = new SkyWar();
     // Your soldiers and tower archers — see world/Defenders.js.
     this.defenders = new Defenders({ world });
     // The dark path's thousand, once sworn for — see world/Army.js.
@@ -592,6 +595,7 @@ export class DuiltGame {
   bringDownSky() {
     if (this.skyFallen) return false;
     this.skyFallen = true;
+    this.skyWar.attack = null;
     this.checkAgeAdvance();
     return true;
   }
@@ -630,8 +634,33 @@ export class DuiltGame {
         yieldMultiplier: this.skills.gatherYield(),
         bonusFor: (id) => this.settlers.bonusFor(id),
         producesFor: (s) => this.producesFor(s),
+        taxRate: this.skyTaxRate(),
       });
+      this.countTaxes();
     }
+  }
+
+  /** What the Sky Kingdom takes of what your buildings make: on the dark path, after a lost attack, until it falls. */
+  skyTaxRate() {
+    if (this.sandbox || this.ring !== 'black') return 0;
+    return this.skyWar.taxRate(this.skyFallen);
+  }
+
+  /** Adds up what the last payout lost to the Sky Kingdom. */
+  countTaxes() {
+    for (const n of Object.values(this.structures.lastTaxed ?? {})) this.skyWar.taxed += n;
+  }
+
+  /**
+   * An attack on the Sky Kingdom lost: the tax goes up a step, and the
+   * Stone King makes up some of the warriors lost in it. Returns what
+   * SkyWar.lose says, or null if there was no attack on.
+   */
+  loseSkyAttack() {
+    const r = this.skyWar.lose(this.army.active ? this.army.total : 0);
+    if (!r) return null;
+    if (this.army.sworn && r.replaced) this.army.total = Math.min(ARMY_SIZE, this.army.total + r.replaced);
+    return r;
   }
 
   /** What a building makes that depends on what's in it: a pen's animals, a farm's crops. */
@@ -873,6 +902,7 @@ export class DuiltGame {
       boosts: { ...this.boosts },
       found: [...this.found],
       war: this.war.toJSON(),
+      skyWar: this.skyWar.toJSON(),
       defenders: this.defenders.toJSON(),
       army: this.army.toJSON(),
       chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, found: c.found, ...c.inventory.toJSON() })),
@@ -930,17 +960,21 @@ export class DuiltGame {
     this.saplings.loadJSON(data.saplings);
     this.days = Number.isFinite(data.days) ? data.days : 0;
     this.war.loadJSON(data.war);
+    this.skyWar.loadJSON(data.skyWar);
     this.defenders.loadJSON(data.defenders);
     this.army.loadJSON(data.army);
     // A world already at the last age from before there was a war: it starts now.
     this.declareWar();
     // Pay out everything earned while the tab was shut.
     this.lastCollect = Date.now();
-    return this.structures.collect({
+    const gained = this.structures.collect({
       now: Date.now(),
       yieldMultiplier: this.skills.gatherYield(),
       producesFor: (s) => this.producesFor(s),
+      taxRate: this.skyTaxRate(),
     });
+    this.countTaxes();
+    return gained;
   }
 }
 

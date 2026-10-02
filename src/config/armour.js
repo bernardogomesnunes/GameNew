@@ -24,7 +24,7 @@ export const SLOT_NAMES = { head: 'Head', body: 'Body', legs: 'Legs', feet: 'Fee
 export const ARMOUR_PER_POINT = 0.04;
 
 /** What armour helps with: being hit, not falling or burning. */
-export const HIT_CAUSES = new Set(['bandit', 'catapult', 'army']);
+export const HIT_CAUSES = new Set(['bandit', 'catapult', 'army', 'sky']);
 
 export const ARMOUR_SETS = [
   {

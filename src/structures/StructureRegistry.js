@@ -357,9 +357,15 @@ export class StructureRegistry {
   /**
    * Pays out everything owed since each building was last paid. Returns a
    * { itemId: amount } summary so the UI can say what arrived.
+   *
+   * `taxRate` is the share the Sky Kingdom takes (the dark path, after a
+   * lost attack — see duilt/SkyWar.js): taken off each building's payout,
+   * the fractions carried over so a building making one at a time still
+   * pays its share. What was taken is in `this.lastTaxed`.
    */
-  collect({ now = Date.now(), yieldMultiplier = 1, bonusFor = null, producesFor = null } = {}) {
+  collect({ now = Date.now(), yieldMultiplier = 1, bonusFor = null, producesFor = null, taxRate = 0 } = {}) {
     const gained = {};
+    const taxed = {};
     const stalled = [];
     const capMs = MAX_OFFLINE_HOURS * 3600_000;
 
@@ -392,9 +398,17 @@ export class StructureRegistry {
       // building gives against another of the same kind.
       const staffing = bonusFor ? bonusFor(s.id) : 1;
       const payload = {};
+      // The Sky Kingdom's share, settled only once the rest is delivered.
+      const carry = { ...(s.taxCarry ?? {}) }, took = {};
       for (const [item, per] of Object.entries(produces)) {
         // Foraging pays out here rather than at the pickaxe — see DuiltGame.yieldFor.
-        const amount = Math.round(per * cycles * yieldMultiplier * staffing);
+        let amount = Math.round(per * cycles * yieldMultiplier * staffing);
+        if (amount > 0 && taxRate > 0) {
+          const due = amount * taxRate + (carry[item] ?? 0);
+          const take = Math.min(amount, Math.floor(due));
+          carry[item] = due - take;
+          if (take > 0) { took[item] = take; amount -= take; }
+        }
         if (amount > 0) payload[item] = amount;
       }
 
@@ -410,9 +424,14 @@ export class StructureRegistry {
       for (const [item, amount] of Object.entries(payload)) {
         gained[item] = (gained[item] ?? 0) + amount;
       }
+      if (taxRate > 0) {
+        s.taxCarry = carry;
+        for (const [item, n] of Object.entries(took)) taxed[item] = (taxed[item] ?? 0) + n;
+      }
       s.lastPaidAt += cycles * periodMs;
     }
 
+    this.lastTaxed = taxed;
     if (Object.keys(gained).length) this.bus?.emit('structure:produced', { gained });
     if (stalled.length) this.bus?.emit('structure:stalled', { structures: stalled });
     return gained;
