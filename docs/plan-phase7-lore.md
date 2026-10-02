@@ -284,7 +284,10 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
   - The fall, and the flight down to the ground.
   - Arriving somewhere far from anywhere.
   - Four pages of pixel art painted in code (fireflies flicker, clouds rush past as you fall), a line of story under each. Tap for the next, or Skip; the welcome follows. Duilt only, not Creative.
-- **Messengers and the hermit** carry the story, with lines tied to your age, your Temple and your path.
+- **Messengers and the hermit** carry the story, with lines tied to your age, your Temple and your path — **done** (`config/tales.js`, `tales.test`).
+  - Half the time a messenger brings a line of the story instead of news of a place, until there's nothing new to tell: a light in the sky, the Stone Kingdom on the roads, the two gods, the two kings, then what your ring, your oath, your guardian, the war or the fall have set people talking about.
+  - The hermit talks (Place, as with the Stone King): an exile who fell from the sky long before you, who tells of the two gods, where Sunstone and Nightstone are, choosing one ring, the chains. Once you've heard everything, the hermit repeats what fits.
+  - What you've heard is saved, ready for the lore book.
 - **A lore book** in the Goals panel fills in as you learn: the two gods, the two kingdoms, and your guardian.
 - **The ages get new names** to fit the story — **done** (`agenames.test`): Exile, Roots, Forge, Hearth, Bastion, Reckoning.
   - Each age's opening line tells the story as well as what to build, short enough for a phone's toast, and stays in the Goals list under its age.

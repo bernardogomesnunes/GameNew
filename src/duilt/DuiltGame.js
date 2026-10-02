@@ -19,6 +19,7 @@ import { lootFor, LOOT } from './Loot.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { ageOf, ageIntro, FINAL_AGE } from '../config/ages.js';
+import { pickTale, TALES_BY_ID } from '../config/tales.js';
 import { War } from './War.js';
 import { SkyWar } from './SkyWar.js';
 import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
@@ -95,6 +96,7 @@ export class DuiltGame {
     this.ring = null;
     // What your Sanctuary called to you, once it's raised (Phase 7d).
     this.guardian = null;
+    this.heard = new Set(); // the tales you've been told (config/tales.js)
     // The dark path's end: the Sky King brought down (world/skyKingdom.js).
     this.skyFallen = false;
     // The painting you wake by after a fall, if you chose one (playtest, P1).
@@ -589,6 +591,27 @@ export class DuiltGame {
     return true;
   }
 
+  /** Where you are in the story — what the messengers and the hermit talk about (config/tales.js). */
+  storyState() {
+    const temples = this.structures.list().filter((s) => s.type === 'temple' && s.valid);
+    return {
+      age: this.age,
+      temple: temples.length ? Math.max(...temples.map((s) => s.tier ?? 0)) : -1,
+      ring: this.ring,
+      sworn: this.army.sworn,
+      skyFallen: this.skyFallen,
+      war: this.war.stage,
+      guardian: !!this.guardian,
+    };
+  }
+
+  /** A line of the story from `who` ('messenger' or 'hermit'), remembered as heard; null if a messenger has nothing new. */
+  tale(who, again = 0) {
+    const t = pickTale(who, this.storyState(), this.heard, again);
+    if (t) this.heard.add(t.id);
+    return t;
+  }
+
   /** The Ten Rounds won: the white path's end, told whatever age you're at (once). */
   endWhitePath() {
     if (this.sandbox || this.finished) return false;
@@ -924,6 +947,7 @@ export class DuiltGame {
       spawn: this.spawn,
       boosts: { ...this.boosts },
       found: [...this.found],
+      heard: [...this.heard],
       war: this.war.toJSON(),
       skyWar: this.skyWar.toJSON(),
       defenders: this.defenders.toJSON(),
@@ -956,6 +980,7 @@ export class DuiltGame {
     const sp = data.spawn;
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
     this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);
+    this.heard = new Set(Array.isArray(data.heard) ? data.heard.filter((k) => TALES_BY_ID.has(k)) : []);
     this.boosts = {};
     for (const [name, left] of Object.entries(data.boosts ?? {})) if (BOOSTS[name] && Number.isFinite(left) && left > 0) this.boosts[name] = left;
     const gd = data.guardian;
