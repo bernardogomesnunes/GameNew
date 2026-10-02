@@ -5,6 +5,7 @@ import { CHUNK_SIZE } from './World.js';
 import { stampLandmarks, landmarksFor } from './landmarks.js';
 import { roadAt, roadBlock } from './roads.js';
 import { stampKingdom } from './kingdom.js';
+import { stampSky } from './skyKingdom.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
@@ -457,6 +458,8 @@ export class ChunkGen {
       const road = roadAt(this, x, z);
       return road ? roadBlock(road, x, z, this.seed, ROAD_STONES) : null;
     });
+    // The Sky Kingdom and its anchor towers — only on the dark path (see skyKingdom.js).
+    stampSky(this, chunk, CHUNK_SIZE);
 
     chunk.dirty = true;
   }

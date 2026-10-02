@@ -111,7 +111,9 @@ ok('hurt by the army is its own cause, and armour takes it', HIT_CAUSES.has('arm
   g.crafting.onMade?.({ ring: 'black' });
   ok('forge the Black Ring mid-war, and it\'s called off', g.war.stage === 'truce' && events.some(([e]) => e === 'war:truce'));
   g.checkAgeAdvance();
-  ok('then the game can end', g.finished);
+  ok('but on the dark path the end is the Sky Kingdom\'s fall, not the truce', !g.finished);
+  g.bringDownSky();
+  ok('then the game can end', g.finished && g.skyFallen);
 
   const sand = new DuiltGame({ world, scene: new THREE.Scene(), bus, sandbox: true });
   sand.territory.setAge(FINAL_AGE);

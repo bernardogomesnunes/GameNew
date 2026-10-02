@@ -478,6 +478,15 @@ export function isTent(id) {
   return id >= WAR_TENT && id <= WAR_TENT + 3;
 }
 
+// The Sky Kingdom's (the dark path): the great chains it hangs on, running
+// down to its anchor towers, and the lift at the top of each tower that
+// winds you up a chain to the island — and back down.
+export const CHAIN = 229, SKY_LIFT = 230;
+BLOCKS.push(
+  { id: CHAIN, name: 'Chain', glyph: 'chain', color: 0x5a5f66, shape: 'chain', material: 'stone', unlock: null },
+  { id: SKY_LIFT, name: 'Sky Lift', glyph: 'lift', color: 0xe2c26a, shape: 'sky_lift', material: 'wood', unlock: null },
+);
+
 export function isPainting(id) {
   return id >= PAINTING && id <= PAINTING + 3;
 }

@@ -69,6 +69,7 @@ export class Wanderers {
     onAttack = null, onSteal = null, onRaid = null, kingdomHostile = () => false,
     buildings = () => [], inLand = () => false, onBatter = null, onThrow = null,
     foes = () => [], onFoe = null,
+    sky = () => null, skyHostile = () => false, onSkyKing = null,
   }) {
     this.world = world;
     this.rand = rand;
@@ -92,6 +93,12 @@ export class Wanderers {
     // than you is who a raider fights.
     this.foes = foes;
     this.onFoe = onFoe;
+    // The Sky Kingdom (world/skyKingdom.js): the island while it's there to
+    // be visited — the dark path, until it falls — whether its people fight
+    // you, and word that its King is down.
+    this.sky = sky;
+    this.skyHostile = skyHostile;
+    this.onSkyKing = onSkyKing;
     // Archers' arrows in flight — { x, y, z, vx, vy, vz, from, age, stuck }.
     this.arrows = [];
     this.raidedTonight = false;
@@ -117,6 +124,8 @@ export class Wanderers {
       if (lm.kind !== 'hermit' && lm.kind !== 'camp' && lm.kind !== 'kingdom') continue;
       if (!this.present.has(lm) && Math.hypot(lm.x - player.x, lm.z - player.z) < VISIT) this.populate(lm);
     }
+    const sky = this.sky();
+    if (sky && !this.present.has(sky) && Math.hypot(sky.x - player.x, sky.z - player.z) < VISIT) this.populate(sky);
 
     this.untilExplorer -= dt;
     if (this.untilExplorer <= 0) {
@@ -426,6 +435,7 @@ export class Wanderers {
     if (p.landmark) for (const q of this.list) if (q.landmark === p.landmark) q.angry = true;
     if (p.hp <= 0) {
       p.dead = true;
+      if (p.kind === 'sky_king') this.onSkyKing?.(p);
       const drops = this.rollDrops(spec.drops);
       for (const [id, n] of Object.entries(p.loot ?? {})) drops[id] = (drops[id] ?? 0) + n;
       return { killed: true, drops };
@@ -503,6 +513,15 @@ export class Wanderers {
       }
       return;
     }
+    if (lm.kind === 'sky') {
+      // The Sky King in his throne room, a guard at every post; all of
+      // them up on the island's floor.
+      this.list.push(this.person('sky_king', lm.king.x, lm.y + (lm.king.dy ?? 0), lm.king.z, { landmark: lm, home: { x: lm.king.x, z: lm.king.z }, name: 'the Sky King', facing: lm.king.facing }));
+      for (const post of lm.posts) {
+        this.list.push(this.person('sky_guard', post.x, lm.y, post.z, { landmark: lm, home: { x: post.x, z: post.z } }));
+      }
+      return;
+    }
     if (lm.kind === 'hermit') {
       this.list.push(this.person('hermit', lm.x + 0.5, lm.y, lm.z + 3.5, { landmark: lm, home }));
       return;
@@ -566,7 +585,7 @@ export class Wanderers {
     }
     if (spec.siege === 'ram') return this.ram(p, dt, spec);
     if (spec.siege === 'catapult') return this.catapult(p, dt, spec);
-    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.war;
+    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard' || p.kind === 'sky_king' || p.war;
     if (fights) p.cooldown = Math.max(0, p.cooldown - dt);
     // Up on his beast, the Warlord only swings: the beast does the going.
     if (p.mount && !p.mount.dead) {
@@ -580,7 +599,7 @@ export class Wanderers {
     if (p.detour > 0) { p.detour -= dt; return; }
     if (fights && this.fight(p, dt, player, spec)) return;
     // The King doesn't leave his throne.
-    if (p.kind === 'king') { p.target = null; p.speed = 0; return; }
+    if (p.kind === 'king' || p.kind === 'sky_king') { p.target = null; p.speed = 0; return; }
     // Struck, someone who doesn't fight runs from you.
     if (spec.flees && p.fear > 0) {
       const dx = p.x - player.x, dz = p.z - player.z;
@@ -590,7 +609,7 @@ export class Wanderers {
       return;
     }
 
-    if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard') {
+    if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard') {
       const dx = p.x - player.x, dz = p.z - player.z;
       const d = Math.hypot(dx, dz) || 1;
       // Bandits don't come to you — not yet. They back off and watch.
@@ -640,7 +659,7 @@ export class Wanderers {
   fight(p, dt, player, spec) {
     const dx = player.x - p.x, dz = player.z - p.z;
     const d = Math.hypot(dx, dz) || 1;
-    const hostile = p.war || p.angry || (p.kind === 'guard' ? this.kingdomHostile() : this.hostile());
+    const hostile = this.hostileOf(p);
 
     // Badly hurt, or frightened (the black guardian — scare()): it runs.
     if (p.hp <= spec.fleeBelow || p.fear > 0) {
@@ -738,6 +757,14 @@ export class Wanderers {
     p.speed = spec.run;
     if (Math.hypot(p.home.x - p.x, p.home.z - p.z) < 3) { p.done = true; p.escaped = hasLoot(p); }
     return true;
+  }
+
+  /** Whether `p` fights you: its own side's say, or because you struck it. */
+  hostileOf(p) {
+    if (p.war || p.angry) return true;
+    if (p.kind === 'guard') return this.kingdomHostile();
+    if (p.kind === 'sky_guard' || p.kind === 'sky_king') return this.skyHostile();
+    return this.hostile();
   }
 
   /** The storehouse nearest a raider: the closest point of it, and how far. */

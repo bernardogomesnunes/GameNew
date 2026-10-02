@@ -93,6 +93,8 @@ export class DuiltGame {
     this.ring = null;
     // What your Sanctuary called to you, once it's raised (Phase 7d).
     this.guardian = null;
+    // The dark path's end: the Sky King brought down (world/skyKingdom.js).
+    this.skyFallen = false;
     // The painting you wake by after a fall, if you chose one (playtest, P1).
     this.spawn = null;
     // Drinks going (playtest, P5): { haste | strength | speed: seconds left }.
@@ -552,6 +554,8 @@ export class DuiltGame {
     // won, or never yours to fight (the Black Ring).
     if (this.age >= FINAL_AGE) {
       if (this.war.atWar) return null;
+      // On the dark path the end is the Sky Kingdom's fall.
+      if (this.ring === 'black' && !this.skyFallen) return null;
       if (!this.finished) {
         this.finished = true;
         this.bus?.emit('duilt:won', { age: this.age, structures: this.structures.list().length });
@@ -578,6 +582,17 @@ export class DuiltGame {
     if (this.sandbox || this.age < FINAL_AGE) return false;
     if (!this.war.declare(this.days, { ring: this.ring })) return false;
     this.bus?.emit('war:declared', { due: this.war.due });
+    return true;
+  }
+
+  /**
+   * The Sky King is down: the Sky Kingdom falls, and on the dark path
+   * that's the war you were sworn to (once only). Returns whether it fell now.
+   */
+  bringDownSky() {
+    if (this.skyFallen) return false;
+    this.skyFallen = true;
+    this.checkAgeAdvance();
     return true;
   }
 
@@ -852,6 +867,7 @@ export class DuiltGame {
       health: this.health.toJSON(),
       worn: this.worn,
       ring: this.ring,
+      skyFallen: this.skyFallen || undefined,
       guardian: this.guardian?.toJSON() ?? null,
       spawn: this.spawn,
       boosts: { ...this.boosts },
@@ -882,6 +898,7 @@ export class DuiltGame {
     this.hunger.loadJSON(data.hunger);
     this.health.loadJSON(data.health);
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
+    this.skyFallen = data.skyFallen === true;
     const sp = data.spawn;
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
     this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);

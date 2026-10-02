@@ -482,6 +482,25 @@ PROP_SHAPES.campfire = [
   { minX: 0.46, maxX: 0.54, minY: 0.52, maxY: 0.64, minZ: 0.46, maxZ: 0.54, color: 0xffe08a, glow: true },
 ];
 
+// The Sky Kingdom's chain: links of dark iron, one across and one along,
+// stacked up the cell — a cell of it reads as chain from any side.
+const LINK = 0x4e535a;
+PROP_SHAPES.chain = [0, 0.25, 0.5, 0.75].flatMap((y, i) => i % 2
+  ? [{ minX: 0.44, maxX: 0.56, minY: y, maxY: y + 0.3, minZ: 0.3, maxZ: 0.38, color: LINK }, { minX: 0.44, maxX: 0.56, minY: y, maxY: y + 0.3, minZ: 0.62, maxZ: 0.7, color: LINK }]
+  : [{ minX: 0.3, maxX: 0.38, minY: y, maxY: y + 0.3, minZ: 0.44, maxZ: 0.56, color: LINK }, { minX: 0.62, maxX: 0.7, minY: y, maxY: y + 0.3, minZ: 0.44, maxZ: 0.56, color: LINK }]);
+// The sky lift: a gilt winch on a marble plinth — a drum wound with chain
+// between two posts, a crank on one side, a lamp of fireflies on top.
+PROP_SHAPES.sky_lift = [
+  { minX: 0.06, maxX: 0.94, minY: 0, maxY: 0.2, minZ: 0.06, maxZ: 0.94, color: 0xeef1f4 },
+  { minX: 0.12, maxX: 0.22, minY: 0.2, maxY: 0.86, minZ: 0.42, maxZ: 0.58, color: GILT },
+  { minX: 0.78, maxX: 0.88, minY: 0.2, maxY: 0.86, minZ: 0.42, maxZ: 0.58, color: GILT },
+  { minX: 0.22, maxX: 0.78, minY: 0.44, maxY: 0.72, minZ: 0.36, maxZ: 0.64, color: LINK },
+  { minX: 0.88, maxX: 0.96, minY: 0.54, maxY: 0.62, minZ: 0.46, maxZ: 0.54, color: GILT },
+  { minX: 0.94, maxX: 1.0, minY: 0.36, maxY: 0.62, minZ: 0.46, maxZ: 0.54, color: GILT },
+  { minX: 0.12, maxX: 0.88, minY: 0.86, maxY: 0.92, minZ: 0.4, maxZ: 0.6, color: GILT },
+  { minX: 0.42, maxX: 0.58, minY: 0.92, maxY: 1.1, minZ: 0.42, maxZ: 0.58, color: 0xe6ff7a, glow: true },
+];
+
 // The ring ores: crystals breaking out of every face of a block of rock,
 // glowing — drawn over the ordinary cube the rock is (blocks.js `overlay`).
 function oreBoxes(crystal) {
