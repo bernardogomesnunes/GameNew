@@ -11,6 +11,7 @@ import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { blockIcon, itemIcon } from '../config/cubes.js';
 import { goalBands } from '../config/achievements.js';
+import { ageIntro } from '../config/ages.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
 import { ACTIONS, DEFAULT_CONTROLS, FOV_RANGE, SENSITIVITY_RANGE, rebind, keyLabel, touchLayoutClasses } from '../config/controls.js';
@@ -1379,6 +1380,7 @@ export class UIManager {
             <span>Age ${band.age} \u00b7 ${escapeHtml(band.name)}</span>
             <span class="goal-band-count">${met} / ${band.goals.length}</span>
           </div>
+          <p class="goal-band-intro">${escapeHtml(ageIntro(band.age, this.game.duilt?.ring) ?? '')}</p>
           ${band.goals.map((g, i) => {
             const isDone = done.has(g.id);
             const progress = !isDone ? g.progress?.(ctx) : null;

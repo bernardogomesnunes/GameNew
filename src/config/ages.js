@@ -22,7 +22,9 @@
  *   size    the claimed square, in blocks
  *   open    the border no longer stops you walking (it still bounds what
  *           you can build)
- *   intro   one line when the age begins
+ *   intro   one line when the age begins — short enough for a phone's
+ *           toast (about 140 characters), and kept in the Goals list; introDark instead, for an age
+ *           that begins differently on the dark path (ageIntro)
  *   goals   what has to be true to move on — `structure` and `count`, or a
  *           `test` for anything that is not a building
  */
@@ -30,9 +32,9 @@
 export const AGES = [
   {
     age: 1,
-    name: 'Settlement',
+    name: 'Exile',
     size: 32,
-    intro: 'Thirty-two blocks, an axe and a bucket. Claim a forest, break ground on a farm, and build somewhere to sleep.',
+    intro: 'Thrown down from the sky with nothing. Claim a forest, break ground on a farm, and build somewhere to sleep.',
     goals: [
       { structure: 'forest', count: 1, label: 'Plant and claim a forest' },
       { structure: 'farm', count: 1, label: 'Break ground on a farm' },
@@ -41,9 +43,9 @@ export const AGES = [
   },
   {
     age: 2,
-    name: 'Industry',
+    name: 'Roots',
     size: 64,
-    intro: 'Wood only gets you so far. Open a quarry, raise somewhere to put things, and put a second roof up while you are at it.',
+    intro: 'There is no climbing back. Put roots down: open a quarry, raise a storehouse, and a second house — someone is coming.',
     goals: [
       { structure: 'quarry', count: 1, label: 'Open a quarry' },
       // Age 2 is where forty slots stop being enough — a quarry alone fills
@@ -58,9 +60,9 @@ export const AGES = [
   },
   {
     age: 3,
-    name: 'Craft',
+    name: 'Forge',
     size: 128,
-    intro: 'Stone and fire. A workshop lets you make what your hands cannot, and a kiln turns earth and sand into brick and glass.',
+    intro: 'Stone and fire: a workshop for what your hands cannot make, a kiln for brick and glass. Deep down, Sunstone and Nightstone wait.',
     goals: [
       { structure: 'workshop', count: 1, label: 'Build a workshop' },
       { structure: 'kiln', count: 1, label: 'Fire up a kiln' },
@@ -68,9 +70,9 @@ export const AGES = [
   },
   {
     age: 4,
-    name: 'Town',
+    name: 'Hearth',
     size: 192,
-    intro: 'Enough buildings to be a place. Raise a market among them, house the people who will use it, and give them somewhere to gather.',
+    intro: 'Enough people to be a place. Raise a market, a townhouse and a tavern, and hear travellers\' news of the two kingdoms.',
     goals: [
       { structure: 'market', count: 1, label: 'Raise a market' },
       { structure: 'house', count: 4, label: 'Have four houses standing' },
@@ -81,9 +83,9 @@ export const AGES = [
   },
   {
     age: 5,
-    name: 'Domain',
+    name: 'Bastion',
     size: 256,
-    intro: 'Everything easy is above ground. Drive a mine into the rock, feed the town that lives off it, and give it walls that could hold if they ever had to.',
+    intro: 'The Stone Kingdom has heard of you. Drive a mine, fill a granary, raise a garrison — and at your Temple\'s height, choose your god.',
     goals: [
       { structure: 'mine', count: 1, label: 'Drive a mine underground' },
       { structure: 'granary', count: 1, label: 'Fill a granary' },
@@ -93,10 +95,12 @@ export const AGES = [
   },
   {
     age: 6,
-    name: 'Frontier',
+    name: 'Reckoning',
     size: 320,
     open: true,
-    intro: 'Your border is open and the world past it is yours to walk — but the Stone Kingdom has seen you grow, and it is coming. Hold your land through ten rounds, raise a village to hold it, then build something that outlasts you.',
+    intro: 'The wall is down, and the Stone Kingdom is coming. Hold your land through ten rounds, then raise a village and a monument.',
+    // Sworn to the dark god, there's no war coming: the reckoning is the Sky Kingdom's.
+    introDark: 'The wall is down. The Stone King calls you his own, and the Sky Kingdom doesn\'t know you\'re coming. Raise a village — and take back the sky.',
     goals: [
       { structure: 'village', count: 1, label: 'Raise a village' },
       { structure: 'monument', count: 1, label: 'Raise a monument' },
@@ -112,6 +116,12 @@ export const FINAL_AGE = AGES[AGES.length - 1].age;
 
 export function ageOf(n) {
   return AGES_BY_NUMBER.get(n) ?? AGES[0];
+}
+
+/** The line an age begins with, for the ring you bear. */
+export function ageIntro(n, ring = null) {
+  const a = ageOf(n);
+  return (ring === 'black' && a?.introDark) || a?.intro;
 }
 
 /** The land each age holds — what Territory draws and enforces. */

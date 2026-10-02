@@ -18,7 +18,7 @@ import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
-import { ageOf, FINAL_AGE } from '../config/ages.js';
+import { ageOf, ageIntro, FINAL_AGE } from '../config/ages.js';
 import { War } from './War.js';
 import { SkyWar } from './SkyWar.js';
 import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
@@ -570,7 +570,7 @@ export class DuiltGame {
     const next = this.territory.advance();
     if (next) {
       this.bus?.emit('duilt:age', {
-        age: next.age, name: next.name, size: next.size, intro: ageOf(next.age).intro,
+        age: next.age, name: next.name, size: next.size, intro: ageIntro(next.age, this.ring),
       });
       this.declareWar();
     }

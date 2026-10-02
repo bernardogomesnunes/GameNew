@@ -286,7 +286,9 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
   - Four pages of pixel art painted in code (fireflies flicker, clouds rush past as you fall), a line of story under each. Tap for the next, or Skip; the welcome follows. Duilt only, not Creative.
 - **Messengers and the hermit** carry the story, with lines tied to your age, your Temple and your path.
 - **A lore book** in the Goals panel fills in as you learn: the two gods, the two kingdoms, and your guardian.
-- **The ages get new names** to fit the story, for example "Exile" … "Reckoning".
+- **The ages get new names** to fit the story — **done** (`agenames.test`): Exile, Roots, Forge, Hearth, Bastion, Reckoning.
+  - Each age's opening line tells the story as well as what to build, short enough for a phone's toast, and stays in the Goals list under its age.
+  - The Reckoning reads differently on the dark path, where no war is coming: "take back the sky".
 - **Each path has its own ending** — **done**, illustrated the same way, before the finish panel:
   - white (the Ten Rounds won — told there and then, whatever age you're at): the dark army in retreat from your walls, the fireflies' blessing on your village, your own kingdom at dawn;
   - dark (the Sky King struck down): his empty throne and fallen crown, the island under black banners, you as Lord of the Sky;
