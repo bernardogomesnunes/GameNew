@@ -30,7 +30,9 @@ A walled city of dark stone, about 1000–1400 blocks from home: a keep with the
 
 **Done:** messengers and the hermit tell the story, by your age, Temple and path (`config/tales.js`).
 
-**Next:** the lore book in the Goals panel — the last of the story (7j).
+**Done:** the lore book — a Lore tab in the Goals panel that fills in as you learn. That finishes the story (7j).
+
+**Next:** the look and sound revamp (`docs/plan-look-and-sound.md`).
 
 # Before that — Phase 6
 
@@ -99,7 +101,7 @@ The Sanctuary and the guardian (`tests/sanctuary.test.mjs`).
    - items reviewed;
    - recorded sounds and music.
 2. **The rest of the dark path:** done.
-3. **The story (7j):** the intro, messengers' lines, the lore book, age names, an ending for each path.
+3. **The story (7j):** done.
 
 ## Earlier notes
 - **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7e, the Stone Kingdom, or the white path.

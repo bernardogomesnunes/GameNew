@@ -46,13 +46,8 @@ export const ENDINGS = {
   ],
 };
 
-/** Which ending a world has earned: 'yielded', 'dark', 'white', or null. */
-export function endingFor(d) {
-  if (!d) return null;
-  if (d.skyFallen && d.ring === 'black') return d.skyWar?.yielded ? 'yielded' : 'dark';
-  if (d.war?.stage === 'won') return 'white';
-  return null;
-}
+// Which ending a world has earned lives with the lore book, which tells it too.
+export { endingFor } from '../config/lore.js';
 
 // ---- painting ----------------------------------------------------------------------------------
 

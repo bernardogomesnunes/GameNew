@@ -288,7 +288,10 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
   - Half the time a messenger brings a line of the story instead of news of a place, until there's nothing new to tell: a light in the sky, the Stone Kingdom on the roads, the two gods, the two kings, then what your ring, your oath, your guardian, the war or the fall have set people talking about.
   - The hermit talks (Place, as with the Stone King): an exile who fell from the sky long before you, who tells of the two gods, where Sunstone and Nightstone are, choosing one ring, the chains. Once you've heard everything, the hermit repeats what fits.
   - What you've heard is saved, ready for the lore book.
-- **A lore book** in the Goals panel fills in as you learn: the two gods, the two kingdoms, and your guardian.
+- **A lore book** in the Goals panel fills in as you learn: the two gods, the two kingdoms, and your guardian — **done** (`config/lore.js`, `lore.test`).
+  - A Lore tab beside Goals and Today, Duilt only: eleven pages — the fall, the Sky Kingdom, the Stone Kingdom, the two gods, the white god, the dark god, the two kings, the hermit, your guardian, the four chains, and how it ended.
+  - A page opens from what you've heard (each tale has a topic), the places you've found, or what you've done (temple, ring, oath, guardian, the end); until then it's locked, with a hint of where to look. Some pages read differently by path.
+  - The first and last pages can play the opening and the ending again.
 - **The ages get new names** to fit the story — **done** (`agenames.test`): Exile, Roots, Forge, Hearth, Bastion, Reckoning.
   - Each age's opening line tells the story as well as what to build, short enough for a phone's toast, and stays in the Goals list under its age.
   - The Reckoning reads differently on the dark path, where no war is coming: "take back the sky".
@@ -327,6 +330,6 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
    2. the Sky Kingdom and its anchor towers;
    3. the three ways to take it;
    4. taxes if you lose.
-8. **7j** Story, woven in along the way and finished last.
+8. **7j** Story — **done**: the illustrated intro and endings, the age names, messengers' and the hermit's tales, and the lore book.
 
 Each step ships the same way as before: tests, a check at phone size in the browser, a PR, merge.
