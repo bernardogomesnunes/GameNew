@@ -390,6 +390,7 @@ export class UIManager {
             <span id="map-scale"></span>
             <button class="secondary" id="map-zoom-in">Zoom in</button>
           </div>
+          <div id="map-travel" class="building-actions"></div>
           <div class="export-note">A snapshot from where you were standing when you opened it — reopen to recentre.</div>`,
         'panel-clear': `
           <div id="clear-list"></div>
@@ -2072,7 +2073,19 @@ export class UIManager {
     const duilt = this.game.duilt;
     const territory = duilt && !duilt.sandbox ? duilt.territory.bounds() : null;
     const home = gen.biomes ? { x: gen.biomes.centreX, z: gen.biomes.centreZ } : null;
-    drawWorldMap(canvas, gen, x, z, yaw, { radius, home, territory, places: duilt?.foundPlaces() ?? [] });
+    const sites = this.game.kingdomSites?.() ?? [];
+    const places = (duilt?.foundPlaces() ?? []).filter((p) => !(p.kind === 'kingdom' && sites.some((s) => s.kind === 'kingdom')));
+    drawWorldMap(canvas, gen, x, z, yaw, { radius, home, territory, places, sites });
+    // In Creative, a button to go and look at each kingdom.
+    const travel = this.q('#map-travel');
+    if (travel) {
+      const go = duilt?.sandbox ? sites : [];
+      travel.innerHTML = go.map((s) => `<button class="primary" data-travel="${s.kind}">Travel to the ${s.name}</button>`).join('');
+      travel.hidden = !go.length;
+      for (const b of travel.querySelectorAll('[data-travel]')) {
+        b.addEventListener('click', () => { if (this.game.travelTo(b.dataset.travel)) this.closePanel('panel-map'); });
+      }
+    }
     const scale = this.q('#map-scale');
     if (scale) scale.textContent = `± ${radius} blocks`;
     const zoomOut = this.q('#map-zoom-out');

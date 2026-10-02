@@ -3231,6 +3231,56 @@ export class Game {
     return !!(d && this.world?.gen && (d.sandbox || d.ring === 'black'));
   }
 
+  /**
+   * The two kingdoms, for the map: the Stone Kingdom once you've found it
+   * (from the start in Creative), the Sky Kingdom once the Stone King has
+   * told you of it (sworn to him — from the start in Creative).
+   */
+  kingdomSites() {
+    const d = this.duilt, gen = this.world?.gen;
+    if (!d || !gen) return [];
+    const out = [];
+    const stone = landmarksFor(gen).find((l) => l.kind === 'kingdom');
+    if (stone && (d.sandbox || d.foundPlaces().some((p) => p.kind === 'kingdom'))) out.push({ kind: 'kingdom', name: 'Stone Kingdom', x: stone.x, z: stone.z });
+    if (this.skyOpen() && (d.sandbox || d.army.sworn)) {
+      const s = skyAt(gen);
+      out.push({ kind: 'sky', name: 'Sky Kingdom', x: s.x, z: s.z });
+    }
+    return out;
+  }
+
+  /**
+   * Creative only: straight to a kingdom, to look round it — the Stone
+   * Kingdom from the air on the side towards home, the Sky Kingdom on its
+   * avenue outside the gate nearest home. Returns whether you went.
+   */
+  travelTo(kind) {
+    const d = this.duilt, gen = this.world?.gen;
+    if (!d?.sandbox || !gen) return false;
+    const home = { x: gen.biomes?.centreX ?? 0, z: gen.biomes?.centreZ ?? 0 };
+    const face = (tx, tz) => { const p = this.player.position; this.player.yaw = Math.atan2(-(tx - p.x), -(tz - p.z)); this.player.pitch = -0.15; };
+    if (kind === 'kingdom') {
+      const k = landmarksFor(gen).find((l) => l.kind === 'kingdom');
+      if (!k) return false;
+      const dx = home.x - k.x, dz = home.z - k.z, len = Math.hypot(dx, dz) || 1;
+      this.player.flying = true;
+      this.player.teleport(k.x + (dx / len) * (k.half + 14), k.y + 22, k.z + (dz / len) * (k.half + 14));
+      face(k.x, k.z);
+      this.ui?.toast({ kind: 'challenge', title: 'The Stone Kingdom', body: 'Flying, outside its walls. The King is in the keep; the dark temple is west of it.' });
+      return true;
+    }
+    if (kind === 'sky' && this.skyOpen()) {
+      const s = skyFor(gen);
+      const l = s.landings.reduce((best, l) => (Math.hypot(l.x - home.x, l.z - home.z) < Math.hypot(best.x - home.x, best.z - home.z) ? l : best));
+      this.player.flying = false;
+      this.player.teleport(l.arrive.x, l.arrive.y, l.arrive.z);
+      face(s.x, s.z);
+      this.ui?.toast({ kind: 'challenge', title: 'The Sky Kingdom', body: 'Outside its gate. The lift behind you goes down the chain to an anchor tower.' });
+      return true;
+    }
+    return false;
+  }
+
   /** The island, planned, when you're near enough to meet its people — and it hasn't fallen. */
   skyNear() {
     if (!this.skyOpen() || this.duilt.skyFallen) return null;

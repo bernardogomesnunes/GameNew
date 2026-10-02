@@ -214,4 +214,17 @@ ok('a lift anywhere else goes nowhere', liftAt(gen, at.x, 0, at.z) === null);
   ok('the sworn King points the way', NEWS.king.sworn.some((l) => l.includes('{dir}')) && /lines\[this\.kingLine\]\.replace\('\{dir\}'/.test(game));
 }
 
+// --- finding them: on the map, and in Creative a way straight there -----------------------------------
+
+{
+  const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
+  const map = readFileSync(new URL('../src/render/WorldMap.js', import.meta.url), 'utf8');
+  ok('the map marks both kingdoms: the Stone once found, the Sky once sworn — both from the start in Creative',
+    /d\.sandbox \|\| d\.foundPlaces\(\)\.some\(\(p\) => p\.kind === 'kingdom'\)/.test(game) && /this\.skyOpen\(\) && \(d\.sandbox \|\| d\.army\.sworn\)/.test(game));
+  ok('off the edge of the map, an arrow on the edge points the way, with how far', /for \(const s of sites\) drawSite\(/.test(map) && /`\$\{s\.name\} · \$\{far\.toLocaleString/.test(map));
+  ok('in Creative, a Travel button for each, closing the map', /const go = duilt\?\.sandbox \? sites : \[\];/.test(ui) && /Travel to the \$\{s\.name\}/.test(ui) && /this\.game\.travelTo\(b\.dataset\.travel\)\) this\.closePanel\('panel-map'\)/.test(ui));
+  ok('travel is Creative only: the Sky Kingdom at its gate nearest home, the Stone Kingdom from the air',
+    /travelTo\(kind\) \{\s*const d = this\.duilt, gen = this\.world\?\.gen;\s*if \(!d\?\.sandbox \|\| !gen\) return false;/.test(game) && /this\.player\.teleport\(l\.arrive\.x, l\.arrive\.y, l\.arrive\.z\)/.test(game));
+}
+
 process.exit(f ? 1 : 0);
