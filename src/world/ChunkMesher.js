@@ -14,6 +14,15 @@ const SOLID_SENTINEL = -1; // below the world: never draw a face against it
 // Directional shading baked into vertex colours. Flat-lit voxels read as mush
 // without it, and it costs nothing at runtime.
 const SHADE = { px: 0.86, nx: 0.86, py: 1.0, ny: 0.6, pz: 0.94, nz: 0.94 };
+/**
+ * Stairs' own, harder shade: reported directly, "the difference between
+ * faces is very minimal" — with the ordinary shade a run of stairs read as
+ * one smooth ramp. The treads catch the light, the risers fall into shade,
+ * and each step down is a little darker than the one above it, so every
+ * step stands out from the next.
+ */
+export const STAIR_SHADE = { py: 1.06, ny: 0.55, px: 0.66, pz: 0.74 };
+export const STAIR_STEP_TONE = [0.86, 0.93, 1];
 
 /*
  * Per-id lookups for the mesher's inner loop, which runs a few hundred
@@ -789,8 +798,11 @@ export class ChunkMesher {
             const style = roofPart(id)?.mat === 1 ? 'slate' : 'clay';
             const g = slopeGeometry(shape, FACING[id], corner, { filled, style });
             const col = baseColor(id), belowCol = filled ? baseColor(below) : col;
+            const stair = shape === 'stair';
             for (const b of g.boxes) {
-              this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col);
+              // A stair's step: its tone by how high it is, its faces by STAIR_SHADE.
+              const tone = stair ? STAIR_STEP_TONE[Math.max(0, Math.min(2, Math.round(b.maxY * 3) - 1))] : 1;
+              this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col, false, stair ? STAIR_SHADE : null, tone);
             }
             for (const f of g.faces) {
               const c = f.color === 'below' ? belowCol : f.color != null ? colorOfHex(f.color) : col;
@@ -877,7 +889,8 @@ export class ChunkMesher {
    * just run over continuous bounds instead of a grid slice, so the winding
    * is proven correct rather than hand-guessed per face.
    */
-  emitPropBox(buf, x0, y0, z0, x1, y1, z1, col, flat = false) {
+  emitPropBox(buf, x0, y0, z0, x1, y1, z1, col, flat = false, shades = null, tone = 1) {
+    const S = shades ?? SHADE;
     const min = [x0, y0, z0], max = [x1, y1, z1];
     for (let d = 0; d < 3; d++) {
       const u = (d + 1) % 3, v = (d + 2) % 3;
@@ -891,8 +904,8 @@ export class ChunkMesher {
 
         const nx = d === 0 ? sign : 0, ny = d === 1 ? sign : 0, nz = d === 2 ? sign : 0;
         // Something glowing is lit from inside: barely shaded at all.
-        const shade = flat ? (d === 1 && sign < 0 ? 0.9 : 1)
-          : d === 1 ? (sign > 0 ? SHADE.py : SHADE.ny) : d === 0 ? SHADE.px : SHADE.pz;
+        const shade = tone * (flat ? (d === 1 && sign < 0 ? 0.9 : 1)
+          : d === 1 ? (sign > 0 ? S.py : S.ny) : d === 0 ? S.px : S.pz);
         const r = col.r * shade, g = col.g * shade, b = col.b * shade;
 
         const base = buf.position.length / 3;

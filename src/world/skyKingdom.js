@@ -542,26 +542,31 @@ function plan(gen, cx, cz) {
         for (let y = gy; y < top; y++) put(x, y, z, edge ? ((Math.abs(x - tx) === 2 && Math.abs(z - tz) === 2) ? GOLD_TRIM : SKY_MARBLE) : AIR);
       }
     }
-    // The door, on the side away from the island.
-    fill(tx + ux * 2, tx + ux * 2, gy, gy + 1, tz + uz * 2, tz + uz * 2, AIR);
-    // The stair, round a pillar: up a step a cell, the eight cells round the middle.
+    // The door, on the side away from the island: three high, so you can
+    // step straight up onto the first stair from it.
+    fill(tx + ux * 2, tx + ux * 2, gy, gy + 2, tz + uz * 2, tz + uz * 2, AIR);
+    // The stair, round a pillar: up a step a cell, the eight cells round the
+    // middle, starting from the one just inside the door.
     const RING = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
+    const first = RING.findIndex(([i, j]) => i === ux && j === uz);
+    const ring = (k) => RING[(first + k) % 8];
     fill(tx, tx, gy, top - 1, tz, tz, MARBLE_PILLAR);
-    const steps = top - gy;
+    // The platform on top, and the way down through it (reported: "there's
+    // a block blocking the path in the first patch of stairs"): the last step
+    // sits in the platform, level with it, and the platform is open over the
+    // three below that, so there's headroom onto the stair and down it.
+    // A gold rail, lamps on the corners, and the lift off to the side —
+    // clear of the chain, which leaves the middle for the island — with
+    // where it sets you down two along from it, so nothing hangs between
+    // you and it.
+    fill(tx - 3, tx + 3, top, top, tz - 3, tz + 3, SKY_MARBLE);
+    const steps = top - gy + 1;
+    for (let k = steps - 4; k < steps - 1; k++) { const [i, j] = ring(k); put(tx + i, top, tz + j, AIR); }
     for (let k = 0; k < steps; k++) {
-      const i = k % 8, prev = RING[(i + 7) % 8], at = RING[i];
+      const prev = ring(k + 7), at = ring(k);
       const facing = at[0] > prev[0] ? 1 : at[0] < prev[0] ? 3 : at[1] > prev[1] ? 2 : 0;
       put(tx + at[0], gy + k, tz + at[1], turned(STONE_STAIRS, facing));
     }
-    // The platform on top, open over the last of the stair; a gold rail,
-    // lamps on the corners, and the lift off to the side — clear of the
-    // chain, which leaves the middle for the island — with where it sets you
-    // down two along from it, so nothing hangs between you and it.
-    fill(tx - 3, tx + 3, top, top, tz - 3, tz + 3, SKY_MARBLE);
-    const last = RING[(steps - 1) % 8];
-    put(tx + last[0], top, tz + last[1], AIR);
-    const prevLast = RING[(steps + 6) % 8];
-    put(tx + prevLast[0], top, tz + prevLast[1], AIR);
     for (let i = -3; i <= 3; i += 2) for (const e of [-3, 3]) { put(tx + i, top + 1, tz + e, GOLD_TRIM); put(tx + e, top + 1, tz + i, GOLD_TRIM); }
     for (const [i, j] of [[-3, -3], [3, -3], [-3, 3], [3, 3]]) put(tx + i, top + 2, tz + j, FIREFLY);
     const lift = { x: tx - uz * 2, y: top + 1, z: tz + ux * 2 };

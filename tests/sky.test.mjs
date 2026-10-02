@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { World, Chunk } from '../src/world/World.js';
+import { STAIR_SHADE, STAIR_STEP_TONE } from '../src/world/ChunkMesher.js';
 import { ChunkGen } from '../src/world/ChunkGen.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
 import { Wanderers } from '../src/world/Wanderers.js';
@@ -112,6 +113,79 @@ for (const [i, t] of sky.towers.entries()) {
   ok('  and a door at its foot, and a stair inside', open(t.x + Math.sign(Math.round(Math.cos(t.landing.theta) * 2)) * 2, t.ground, t.z + Math.sign(Math.round(Math.sin(t.landing.theta) * 2)) * 2)
     && [...cell.values()].filter((b) => [29, 57, 58, 59].includes(b)).length >= 4 * 20);
 }
+// Walk each tower: in at its door, up the stair to the lift, and back down —
+// a step at a time, never more than a block up or down, with room for your
+// head at every step and between steps (reported: "there's a block blocking
+// the path in the first patch of stairs").
+{
+  const STAIRS = new Set([29, 57, 58, 59]);
+  const blocks = (x, y, z) => { const b = cell.get(`${x},${y},${z}`); return b != null && b !== 0 && b !== CHAIN; };
+  for (const [n, t] of sky.towers.entries()) {
+    const { ux, uz } = t.landing;
+    const feetAt = (x, z, near) => {
+      // Where you'd stand in this column near height `near`: on something, with two clear above.
+      for (const y of [near, near + 1, near - 1]) if (blocks(x, y - 1, z) && !blocks(x, y, z) && !blocks(x, y + 1, z)) return y;
+      return null;
+    };
+    const start = { x: t.x + ux * 3, z: t.z + uz * 3, y: t.ground };
+    const seen = new Set([`${start.x},${start.y},${start.z}`]);
+    const queue = [start];
+    let reached = false;
+    while (queue.length && !reached) {
+      const p = queue.shift();
+      if (p.y === t.y && Math.abs(p.x - t.x) <= 3 && Math.abs(p.z - t.z) <= 3) { reached = true; break; }
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const x = p.x + dx, z = p.z + dz;
+        if (Math.abs(x - t.x) > 3 || Math.abs(z - t.z) > 3) { if (!(x === start.x && z === start.z)) continue; }
+        const y = feetAt(x, z, p.y);
+        if (y == null || Math.abs(y - p.y) > 1) continue;
+        // Going up takes a stair to step onto; and the head clears both cells at the higher height.
+        if (y > p.y && !STAIRS.has(cell.get(`${x},${y - 1},${z}`))) continue;
+        const hi = Math.max(y, p.y);
+        if (blocks(p.x, hi, p.z) || blocks(p.x, hi + 1, p.z) || blocks(x, hi, z) || blocks(x, hi + 1, z)) continue;
+        const k = `${x},${y},${z}`;
+        if (!seen.has(k)) { seen.add(k); queue.push({ x, y, z }); }
+      }
+    }
+    ok(`  tower ${n + 1}: in at the door, up the stair to the lift and down again, headroom all the way`, reached);
+  }
+}
+// And with the real thing: a player walked up each tower's stair and back
+// down by the game's own movement and collision.
+{
+  globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
+  const { PlayerController } = await import('../src/player/PlayerController.js');
+  const RING = [[-1, -1], [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0]];
+  for (const [n, t] of sky.towers.entries()) {
+    const ox = t.x - 8, oz = t.z - 8;
+    const world = new World({ sizeX: 16, sizeZ: 16, height: 160 });
+    for (let x = 0; x < 16; x++) for (let z = 0; z < 16; z++) for (let y = 0; y < t.ground; y++) world.setBlock(x, y, z, 3);
+    for (const list of sky.byChunk.values()) for (const [x, y, z, b] of list) {
+      if (Math.abs(x - t.x) <= 4 && Math.abs(z - t.z) <= 4 && y < 160 && y >= t.ground - 4) world.setBlock(x - ox, y, z - oz, b);
+    }
+    const { ux, uz } = t.landing;
+    const first = RING.findIndex(([i, j]) => i === ux && j === uz), steps = t.y - t.ground;
+    const route = [[ux * 3, uz * 3], [ux * 2, uz * 2]];
+    for (let k = 0; k <= steps; k++) route.push(RING[(first + k) % 8]);
+    const walk = (cells, y) => {
+      const p = new PlayerController(world, new THREE.PerspectiveCamera(), { x: 8.5 + cells[0][0], y, z: 8.5 + cells[0][1] });
+      for (let i = 0; i < 30; i++) p.update(1 / 60);
+      for (const [cx, cz] of cells.slice(1)) {
+        const tx = 8.5 + cx, tz = 8.5 + cz;
+        for (let i = 0; Math.hypot(p.position.x - tx, p.position.z - tz) > 0.25; i++) {
+          if (i > 240) return null;
+          p.yaw = Math.atan2(-(tx - p.position.x), -(tz - p.position.z)); p.externalMove.z = 1;
+          p.update(1 / 60);
+        }
+      }
+      p.externalMove.z = 0;
+      for (let i = 0; i < 30; i++) p.update(1 / 60);
+      return Math.round(p.position.y);
+    };
+    ok(`  tower ${n + 1}, walked for real: up to the lift (${steps + 1} steps) and back down to the door`, walk(route, t.ground) === t.y && walk([...route].reverse(), t.y) === t.ground);
+  }
+}
+ok('stairs show their steps: risers in shade, each step down a little darker', STAIR_SHADE.px <= 0.7 && STAIR_SHADE.pz <= 0.75 && STAIR_SHADE.py >= 1 && STAIR_STEP_TONE[0] < STAIR_STEP_TONE[2]);
 ok('a lift anywhere else goes nowhere', liftAt(gen, at.x, 0, at.z) === null);
 
 // --- only on the dark path -------------------------------------------------------------------------
