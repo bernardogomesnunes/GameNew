@@ -75,7 +75,7 @@ import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView } from './render/ArmyView.js';
 import { BED, NIGHTSTONE_ORE, SKY_LIFT, isTent } from './config/blocks.js';
-import { skyFor, skyAt, liftAt } from './world/skyKingdom.js';
+import { skyFor, skyAt, liftAt, SKY_REACH } from './world/skyKingdom.js';
 import { SkyBeacon } from './render/SkyBeacon.js';
 import { MODE_WORDS as ARMY_WORDS } from './world/Army.js';
 import { SOLDIER } from './world/Defenders.js';
@@ -192,6 +192,9 @@ const CATAPULT_AMMO = ['stone', 'cobblestone'];
 const STONE_HITS = 14;
 // The Sky Kingdom's people are planned and put on the island this close to it.
 const SKY_PEOPLE = 240;
+// An attack on it is on while you're this close to its middle — the
+// island and its anchor towers — and over once you're this far off again.
+const SKY_ATTACK_IN = SKY_REACH + 10, SKY_ATTACK_OUT = SKY_REACH + 120;
 // The rings (Phase 7c): what the White Ring adds to your step and your
 // jump, and what the Black Ring's spark does to whoever hits you.
 const WHITE_RING_SPEED = 1.2;
@@ -2938,7 +2941,7 @@ export class Game {
   /** A bandit's blow landing on you. */
   banditHits(p, hits) {
     if (!this.duilt || this.duilt.sandbox) return;
-    const taken = this.duilt.hurt(hits, p.war ? 'army' : 'bandit');
+    const taken = this.duilt.hurt(hits, p.war ? 'army' : WANDERERS[p.kind]?.sky ? 'sky' : 'bandit');
     if (!taken) return;
     // The Black Ring (Phase 7c): a dark spark back at whoever struck you.
     if (this.duilt.ringWorn() === 'black' && this.wanderers) {
@@ -3311,15 +3314,66 @@ export class Game {
       : { kind: 'challenge', title: 'Down to the anchor tower' });
   }
 
+  /**
+   * The dark path's attack on the Sky Kingdom (duilt/SkyWar.js): it begins
+   * when you reach the island or its towers with the Black Ring, is over if
+   * you leave again, and is lost if your army is wiped out there (falling
+   * there is seen to in die()).
+   */
+  tickSkyAttack() {
+    const d = this.duilt, gen = this.world?.gen;
+    if (!d || d.sandbox || d.ring !== 'black' || d.skyFallen || !gen) return;
+    const at = skyAt(gen), p = this.player.position;
+    const far = Math.hypot(at.x - p.x, at.z - p.z);
+    const war = d.skyWar;
+    if (!war.attack) {
+      if (far > SKY_ATTACK_IN) return;
+      war.begin(d.days, d.army.active ? d.army.total : 0);
+      this.ui?.toast({
+        kind: 'challenge', title: 'The attack on the Sky Kingdom has begun',
+        body: 'Bring down the Sky King in his palace. Fall here, or lose your army, and you\'re driven back home — and the Sky Kingdom will tax you for it.',
+      });
+      return;
+    }
+    if (far > SKY_ATTACK_OUT) { war.withdraw(); return; }
+    if (war.attack.army > 0 && d.army.total === 0) this.skyAttackLost('army');
+  }
+
+  /**
+   * The attack is lost: you're driven back home (from a fall, you wake
+   * there — see die()), the tax goes up, and the Stone King makes up some
+   * of your losses.
+   */
+  skyAttackLost(how) {
+    const d = this.duilt;
+    const r = d.loseSkyAttack();
+    if (!r) return;
+    if (how === 'army') {
+      const home = this.homeSpawn();
+      this.player.teleport(home.x, home.y, home.z);
+    }
+    const pct = Math.round(r.rate * 100);
+    this.ui?.toast({
+      kind: 'xp',
+      title: 'The attack on the Sky Kingdom failed',
+      body: `${how === 'army' ? 'Your army was wiped out' : 'You fell'}, and you were driven back home. `
+        + `The Sky Kingdom now takes ${pct}% of what your buildings make, until it falls. `
+        + (d.army.sworn ? (r.replaced ? `The Stone King sends ${r.replaced} warriors to make up your losses.` : r.lost ? 'The Stone King sends no more warriors.' : '') : ''),
+    });
+    this.ui?.duiltUI?.renderArmy?.();
+    this.editedAt = Date.now();
+  }
+
   /** The Sky King is down: the Sky Kingdom falls. */
   skyKingDown() {
     const d = this.duilt;
+    const taxed = d?.skyWar.failures > 0;
     if (!d || !d.bringDownSky()) return;
     this.sound?.hit?.('stone', { gain: 1, pitch: 0.25 });
     this.ui?.toast({
       kind: 'achievement',
       title: 'The Sky Kingdom has fallen',
-      body: d.sandbox ? 'Its King is down.' : 'Its King is down, and its guards lay down their arms. The Stone King will hear of it.',
+      body: d.sandbox ? 'Its King is down.' : `Its King is down, and its guards lay down their arms.${taxed ? ' Its taxes end.' : ''} The Stone King will hear of it.`,
     });
     this.editedAt = Date.now();
   }
@@ -3804,19 +3858,23 @@ export class Game {
       this.world.setBlock(x, y, z, CHEST);
       this.remeshDirty();
     }
-    const home = this.respawnPoint();
+    // Fallen in an attack on the Sky Kingdom: driven back home, whatever
+    // painting or camp you'd have woken by.
+    const routed = !!this.duilt.skyWar.attack && !this.duilt.sandbox;
+    const home = routed ? this.homeSpawn() : this.respawnPoint();
     this.player.teleport(home.x, home.y, home.z);
     this.duilt.health.restore();
     this.sound?.break?.('wood');
     this.ui?.duiltUI?.flashHurt(true);
-    const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you', catapult: 'Your own stone came down on you', army: 'The Stone Kingdom\'s army beat you' }[cause] ?? 'You died';
+    const how = { fall: 'You fell too far', lava: 'The lava took you', bandit: 'The bandits beat you', catapult: 'Your own stone came down on you', army: 'The Stone Kingdom\'s army beat you', sky: 'The Sky Kingdom\'s guards beat you' }[cause] ?? 'You died';
     this.ui?.toast({
       kind: 'xp',
-      title: `${how} — you woke ${this.duilt.spawn ? 'by your painting' : 'at home'}`,
+      title: `${how} — you woke ${this.duilt.spawn && !routed ? 'by your painting' : 'at home'}`,
       body: left
         ? `What you were carrying is in a chest where you fell, at ${x}, ${z}`
         : 'You had nothing with you to leave behind',
     });
+    if (routed) this.skyAttackLost('fell');
     this.dying = false;
   }
 
@@ -4499,6 +4557,7 @@ export class Game {
       this.tickWar();
       this.tickDefence(dt);
       this.tickArmy(dt);
+      this.tickSkyAttack();
       // The border, drawn again where its ground has loaded since.
       this.duilt?.territory.refreshIfStale();
       this.collectFallen();

@@ -162,7 +162,7 @@ world.ensureAround(atCamp.x, atCamp.z, 48);
 ok('break hits a bandit before an animal or a block', /if \(this\.hitBandit\(hit\)\) return;\s*(if \(this\.\w+\(hit\)\) return;\s*)*if \(this\.hitMob\(hit\)\) return;/.test(game));
 ok('swords hit with their damage, and wear', /this\.wanderers\.hit\(p, this\.blowDamage\(tool\), x, z\)/.test(game) && /return \(tool\?\.damage \?\? FIST_DAMAGE\)/.test(game) && /hitBandit[\s\S]{0,900}useTool\(tool\.id\)/.test(game));
 ok('bandits are hostile from Age 2, never in Creative', /hostile: \(\) => !!\(this\.duilt && !this\.duilt\.sandbox && this\.duilt\.age >= 2\)/.test(game));
-ok('a bandit\'s blow costs you hearts', /this\.duilt\.hurt\(hits, p\.war \? 'army' : 'bandit'\)/.test(game));
+ok('a bandit\'s blow costs you hearts', /this\.duilt\.hurt\(hits, p\.war \? 'army' : WANDERERS\[p\.kind\]\?\.sky \? 'sky' : 'bandit'\)/.test(game));
 ok('and dying to one says so', /bandit: 'The bandits beat you'/.test(game));
 ok('a raid is announced, a robbery too', /Bandits on the road/.test(game) && /robbed your/.test(game));
 

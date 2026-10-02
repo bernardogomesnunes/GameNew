@@ -416,6 +416,10 @@ export class DuiltUI {
       const pen = rateText(kept, spec.everySeconds);
       out.push(pen ?? 'Makes wool, milk or eggs from the animals kept in it — none in it yet');
     }
+    // The Sky Kingdom's share, after a lost attack on it (duilt/SkyWar.js).
+    const tax = this.duilt?.skyTaxRate?.() ?? 0;
+    const makes = made || spec?.fromCrops || spec?.fromAnimals;
+    if (tax > 0 && makes) out.push(`Taxes: the Sky Kingdom takes ${Math.round(tax * 100)}% of what it makes, until it falls`);
     if (spec?.grantsCapacity) out.push(`Room for ${spec.grantsCapacity} settler household${spec.grantsCapacity > 1 ? 's' : ''}`);
     if (spec?.station) out.push(`Lets you craft ${spec.station} recipes while you're near it`);
     if (summary) {

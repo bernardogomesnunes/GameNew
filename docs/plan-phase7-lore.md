@@ -199,7 +199,13 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
   - **Its light:** from anywhere too far off to see the island itself, a small island with a gold glow hangs low in the sky the way it lies, brighter at night. The sworn Stone King tells you which way to go.
   - **Only on this path:** the generator lays it only when you bear the Black Ring, and in Creative to look at. On the white path there's no trace of it.
   - **Blocks:** Chain (iron links, made from an iron ingot; walked through) and Sky Lift (gold winch; only the towers' lifts go anywhere).
-  - Still to come: the expedition on the map, going home in disguise, cutting the chains, the island joining your land, and taxes for a failed attempt.
+  - **Losing an attack** (`duilt/SkyWar.js`, `skywar.test`):
+    - an attack begins when you reach the island or its towers with the Black Ring, and ends if you leave alive;
+    - you lose it if you fall there, or your whole army does;
+    - you're driven back home, waking there rather than at a painting or camp, and what you carried is left in a chest where you fell;
+    - the Sky Kingdom then takes 25% of what your buildings make, then 35%, 45% and at most 50% after each lost attack, until it falls; every building that makes something shows a **Taxes** line;
+    - the Stone King makes up 75% of the warriors lost, then 50%, then 25%, then none.
+  - Still to come: the expedition on the map, going home in disguise, cutting the chains, and the island joining your land.
 - **The alliance:**
   - after you forge the Black Ring the Stone Kingdom becomes your ally;
   - its people are friendly, its gates open, and you can trade there;
