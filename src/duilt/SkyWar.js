@@ -12,6 +12,10 @@
  *               home, the tax goes up a step, and the Stone King makes up
  *               fewer of the warriors you lost each time
  *
+ *   the chains  break each anchor tower's chain (Game.cutChainAt); with
+ *               all four cut the island sinks, and SINK_DAYS later it has
+ *               to yield — the Sky Kingdom falls without a blow at its King
+ *
  * Pure logic like War.js; Game decides when an attack begins or is lost,
  * DuiltGame saves it and charges the tax on what your buildings make.
  */
@@ -20,12 +24,46 @@
 export const TAX_RATES = [0, 0.25, 0.35, 0.45, 0.5];
 /** The share of the warriors lost in an attack the Stone King replaces, after the first, second, third and every later loss. */
 export const REPLACED = [0.75, 0.5, 0.25, 0];
+/** Anchor towers, each with a chain to cut. */
+export const CHAINS = 4;
+/** Days the island sinks, its chains all cut, before it has to yield. */
+export const SINK_DAYS = 2;
 
 export class SkyWar {
   constructor() {
     this.failures = 0;
     this.attack = null;   // { since: days, army: warriors when it began }
     this.taxed = 0;       // everything the Sky Kingdom has taken, all told
+    this.chains = new Array(CHAINS).fill(false); // which towers' chains you've cut
+    this.cut = new Set();                        // the same, as a set of tower numbers
+    this.sinkingSince = null;                    // the day the last chain was cut
+    this.toldDay = 0;                            // the last sinking day you were told of
+    this.yielded = false;                        // it fell to the chains, not to a blow
+  }
+
+  /** How many chains are cut. */
+  get chainsCut() {
+    return this.cut.size;
+  }
+
+  /**
+   * Tower `i`'s chain cut. Returns { left, sinking } — how many are still
+   * whole, and whether that was the last — or null if it was cut already.
+   */
+  cutChain(i, days) {
+    if (i < 0 || i >= CHAINS || this.chains[i]) return null;
+    this.chains[i] = true;
+    this.cut.add(i);
+    const left = CHAINS - this.cut.size;
+    if (!left && this.sinkingSince == null) this.sinkingSince = days;
+    return { left, sinking: !left };
+  }
+
+  /** Sinking: { day, left } — whole days since the last chain went, and days until it yields — or null. */
+  sinking(days) {
+    if (this.sinkingSince == null) return null;
+    const gone = days - this.sinkingSince;
+    return { day: Math.floor(gone), left: SINK_DAYS - gone };
   }
 
   /** What the Sky Kingdom takes of what your buildings make — nothing once it has fallen. */
@@ -61,7 +99,10 @@ export class SkyWar {
   }
 
   toJSON() {
-    return { failures: this.failures, attack: this.attack, taxed: this.taxed };
+    return {
+      failures: this.failures, attack: this.attack, taxed: this.taxed,
+      chains: this.chains, sinkingSince: this.sinkingSince, toldDay: this.toldDay, yielded: this.yielded || undefined,
+    };
   }
 
   loadJSON(data) {
@@ -69,5 +110,10 @@ export class SkyWar {
     const a = data?.attack;
     this.attack = a && Number.isFinite(a.since) && Number.isFinite(a.army) ? { since: a.since, army: a.army } : null;
     this.taxed = Number.isFinite(data?.taxed) ? data.taxed : 0;
+    this.chains = new Array(CHAINS).fill(false).map((_, i) => data?.chains?.[i] === true);
+    this.cut = new Set(this.chains.flatMap((c, i) => (c ? [i] : [])));
+    this.sinkingSince = Number.isFinite(data?.sinkingSince) ? data.sinkingSince : null;
+    this.toldDay = Number.isInteger(data?.toldDay) ? data.toldDay : 0;
+    this.yielded = data?.yielded === true;
   }
 }

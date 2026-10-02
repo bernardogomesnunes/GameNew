@@ -528,6 +528,10 @@ function plan(gen, cx, cz) {
 
   // ---- the anchor towers, and their chains ------------------------------------------------------
   const towers = [];
+  // Which tower's chain each link is (so a cut chain can be left out), and
+  // the guards at the towers: two at the door, one on the platform.
+  const chainOf = new Map();
+  const towerPosts = [];
   for (const l of landings) {
     const { ux, uz } = l;
     const tx = cx + ux * TOWER_OUT, tz = cz + uz * TOWER_OUT;
@@ -576,11 +580,18 @@ function plan(gen, cx, cz) {
     const from = { x: tx, y: top + 2, z: tz };
     const to = { x: l.x, y: F - 6, z: l.z };
     const n = Math.ceil(Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z));
+    const chain = [];
     for (let s = 0; s <= n; s++) {
       const x = Math.round(from.x + (to.x - from.x) * s / n), y = Math.round(from.y + (to.y - from.y) * s / n), z = Math.round(from.z + (to.z - from.z) * s / n);
-      if (get(x, y, z) == null || get(x, y, z) === AIR) put(x, y, z, CHAIN);
+      if (get(x, y, z) == null || get(x, y, z) === AIR) {
+        put(x, y, z, CHAIN);
+        chain.push([x, y, z]);
+        chainOf.set(`${x},${y},${z}`, towers.length);
+      }
     }
-    towers.push({ x: tx, y: top + 1, z: tz, ground: gy, lift, landing: l, arrive });
+    for (const side of [-1, 1]) towerPosts.push({ x: tx + ux * 3 - uz * 2 * side, z: tz + uz * 3 + ux * 2 * side, y: gy });
+    towerPosts.push({ x: tx + uz * 2, z: tz - ux * 2, y: top + 1 });
+    towers.push({ x: tx, y: top + 1, z: tz, ground: gy, lift, landing: l, arrive, chain });
   }
 
   // Out by chunk.
@@ -590,7 +601,8 @@ function plan(gen, cx, cz) {
     const ck = `${x >> 4},${z >> 4}`;
     let list = byChunk.get(ck);
     if (!list) byChunk.set(ck, (list = []));
-    list.push([x, y, z, id]);
+    // A chain's links carry their tower's number, so a cut one can be left out.
+    list.push(chainOf.has(key) ? [x, y, z, id, chainOf.get(key)] : [x, y, z, id]);
   }
 
   // Who stands where: two at every gate, the city's and the citadel's;
@@ -603,6 +615,7 @@ function plan(gen, cx, cz) {
     for (const s of [52, 76]) if (s < l.wall - 6) posts.push(along(s, s === 52 ? 3 : -3));
   }
   for (const p of plots) if (p.kind === 'yard') posts.push(p.inside);
+  posts.push(...towerPosts);
 
   return {
     kind: 'sky', x: cx, z: cz, y: F, half: SKY_REACH,
@@ -614,7 +627,7 @@ function plan(gen, cx, cz) {
     king: { x: cx + 0.5, z: cz + PD - 2.5, dy: 1, facing: Math.PI },
     royal: [{ x: cx - 2 + 0.5, z: cz + PD - 3 + 0.5, dy: 1 }, { x: cx + 2 + 0.5, z: cz + PD - 3 + 0.5, dy: 1 }],
     palaceDoor: { x: cx + 0.5, z: cz - PD + 1.5 },
-    posts: posts.map((p) => ({ x: p.x + 0.5, z: p.z + 0.5 })),
+    posts: posts.map((p) => ({ x: p.x + 0.5, z: p.z + 0.5, ...(p.y != null ? { y: p.y } : {}) })),
     towers, landings,
     palace: { minX: cx - PW, maxX: cx + PW, minZ: cz - PD, maxZ: cz + PD },
   };
@@ -642,7 +655,20 @@ export function stampSky(gen, chunk, size) {
   }
   const list = skyFor(gen)?.byChunk.get(`${chunk.cx},${chunk.cz}`);
   if (!list) return;
-  for (const [x, y, z, id] of list) if (y >= 0 && y < chunk.height) chunk.set(x - ox, y, z - oz, id);
+  // The chains you've cut are gone (gen.skyCut — Game sets it from the save).
+  const cut = gen.skyCut;
+  for (const [x, y, z, id, chain] of list) {
+    if (chain != null && cut?.has(chain)) continue;
+    if (y >= 0 && y < chunk.height) chunk.set(x - ox, y, z - oz, id);
+  }
+}
+
+/** Which anchor tower's chain the link at (x, y, z) is part of, or -1. */
+export function chainAt(gen, x, y, z) {
+  const s = skyFor(gen);
+  if (!s) return -1;
+  const key = `${x},${y},${z}`;
+  return s.towers.findIndex((t) => (t.chainKeys ??= new Set(t.chain.map((c) => c.join(',')))).has(key));
 }
 
 /** The anchor tower or island landing whose lift is at (x, y, z), and where it takes you. */

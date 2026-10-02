@@ -218,7 +218,13 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
     - the island becomes your land: you can build anywhere on it, held beyond your border;
     - the Stone King names you Lord of the Sky, sends 64 gold, and speaks to you as such;
     - the ending screen tells the dark path's end, at whatever age you're at, and says if there are still ages to finish. The white path's ending tells its own.
-  - Still to come: the expedition on the map, going home in disguise, and cutting the chains.
+  - **Cutting the chains** (`skywar.test`):
+    - each anchor tower is guarded by two at its door and one on its platform;
+    - Break on any link of a tower's chain cuts the whole chain, even outside your land. It drops away, and that tower's lift stops working. Pointing at a link tells you what Break will do and how many are cut;
+    - cut chains stay cut through saves and as chunks are regenerated;
+    - with all four cut, the island sinks: you're told each day, and 2 game days later the Sky Kingdom yields. Its King comes down and it falls without a blow, and the ending says so;
+    - the island doesn't move down in the world; the sinking is told, not shown.
+  - Still to come: the expedition on the map, and going home in disguise.
 - **The alliance:**
   - after you forge the Black Ring the Stone Kingdom becomes your ally;
   - its people are friendly, its gates open, and you can trade there;

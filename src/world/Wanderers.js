@@ -533,7 +533,7 @@ export class Wanderers {
       // them up on the island's floor.
       this.list.push(this.person('sky_king', lm.king.x, lm.y + (lm.king.dy ?? 0), lm.king.z, { landmark: lm, home: { x: lm.king.x, z: lm.king.z }, name: 'the Sky King', facing: lm.king.facing }));
       for (const post of lm.posts) {
-        this.list.push(this.person('sky_guard', post.x, lm.y, post.z, { landmark: lm, home: { x: post.x, z: post.z } }));
+        this.list.push(this.person('sky_guard', post.x, post.y ?? lm.y, post.z, { landmark: lm, home: { x: post.x, z: post.z } }));
       }
       (lm.royal ?? []).forEach((post, i) => this.list.push(this.royalGuard(lm, post, i, post)));
       this.royalDue.delete(lm);
