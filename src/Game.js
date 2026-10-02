@@ -74,13 +74,13 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView } from './render/ArmyView.js';
-import { BED, NIGHTSTONE_ORE, SKY_LIFT, CHAIN, isTent } from './config/blocks.js';
+import { BED, NIGHTSTONE_ORE, SKY_LIFT, CHAIN, WAR_TENT, CAMPFIRE, isTent } from './config/blocks.js';
 import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
 import { Suspicion, SUSPICION, AMBUSH } from './duilt/Suspicion.js';
 import { MarkerView } from './render/MarkerView.js';
 import { SkyBeacon } from './render/SkyBeacon.js';
-import { MODE_WORDS as ARMY_WORDS } from './world/Army.js';
+import { MODE_WORDS as ARMY_WORDS, MARCH_DAYS } from './world/Army.js';
 import { SOLDIER } from './world/Defenders.js';
 import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
@@ -197,6 +197,11 @@ const STONE_HITS = 14;
 const SKY_PEOPLE = 240;
 // What the Stone King sends you when the Sky Kingdom falls.
 const SKY_TRIBUTE = 64;
+// The expedition's camp: this far out beyond the anchor tower, clear of its guards.
+const EXPEDITION_OUT = 24;
+// The ground it clears for its tents, and for you to arrive on.
+const CAMP_CLEAR = 10;
+const BLACK_BANNER = 186;
 // What gives a disguise away: the Stone Kingdom's armour, worn or in hand, and the Black Ring or Nightstone in hand.
 const DARK_GEAR = /^(armour_stone_|ring_black$|nightstone$|banner_black$)/;
 // An attack on it is on while you're this close to its middle — the
@@ -3527,10 +3532,120 @@ export class Game {
     }
   }
 
+  // ---- the expedition: the army sent ahead to the Sky Kingdom (world/Army.js) ----
+
+  /** Whether the map offers the expedition: sworn, the Sky Kingdom standing, the army here and not already there. */
+  expeditionState() {
+    const d = this.duilt;
+    if (!d || d.sandbox || !d.army.active || !this.skyOpen() || d.skyFallen) return null;
+    const a = d.army;
+    if (a.marching) return { marching: true, left: Math.max(0, a.march.arrives - d.days) };
+    if (a.camp) return { camped: true };
+    return { ready: true };
+  }
+
+  /**
+   * Where the army camps: on the ground out beyond the anchor tower
+   * nearest home, out of the tower guards' sight, facing the island.
+   */
+  expeditionCampSpot() {
+    const gen = this.world.gen, s = skyFor(gen);
+    const home = { x: gen.biomes?.centreX ?? 0, z: gen.biomes?.centreZ ?? 0 };
+    const t = s.towers.reduce((best, t) => (Math.hypot(t.x - home.x, t.z - home.z) < Math.hypot(best.x - home.x, best.z - home.z) ? t : best));
+    const { ux, uz } = t.landing;
+    // Dry and level ground (seen: a camp pitched in a lake): try further
+    // out and to either side until the tents, fire and banners all fit.
+    const camp = (x, z) => {
+      const y = gen.heightAt(x, z);
+      for (let dx = -6; dx <= 6; dx++) {
+        for (let dz = -3; dz <= 3; dz++) {
+          if (gen.waterLevelAt?.(x + dx, z + dz) || Math.abs(gen.heightAt(x + dx, z + dz) - y) > 1) return null;
+        }
+      }
+      return { x, y, z, facing: Math.atan2(ux, uz) };
+    };
+    for (let out = EXPEDITION_OUT; out <= EXPEDITION_OUT + 60; out += 6) {
+      for (const side of [0, 8, -8, 16, -16, 24, -24]) {
+        const at = camp(Math.round(t.x + ux * out + uz * side), Math.round(t.z + uz * out - ux * side));
+        if (at) return at;
+      }
+    }
+    const x = Math.round(t.x + ux * EXPEDITION_OUT), z = Math.round(t.z + uz * EXPEDITION_OUT);
+    return { x, y: Math.max(gen.heightAt(x, z), gen.waterLevelAt?.(x, z) ?? 0), z, facing: Math.atan2(ux, uz) };
+  }
+
+  /** From the map: the army marches for the Sky Kingdom, and you go on with your day. */
+  sendExpedition() {
+    const d = this.duilt, st = this.expeditionState();
+    if (!st?.ready) return false;
+    d.army.sendTo(this.expeditionCampSpot(), d.days, MARCH_DAYS);
+    this.ui?.toast({
+      kind: 'challenge', title: 'Your army marches for the Sky Kingdom',
+      body: `It will make camp below the island in ${MARCH_DAYS} days. They still eat every day on the road — keep your storehouses stocked.`,
+    });
+    this.ui?.duiltUI?.renderArmy?.();
+    this.editedAt = Date.now();
+    return true;
+  }
+
+  /** The march is over: tents and a fire on the ground below the Sky Kingdom, and that's where you wake now. */
+  makeExpeditionCamp() {
+    const d = this.duilt, c = d.army.camp;
+    if (!c) return;
+    const { x, z } = c;
+    const gen = this.world.gen;
+    // The ground cleared first (seen: a camp pitched in the canopy of a
+    // forest, and you joining it inside a tree): everything standing on it,
+    // round the fire and out to where you'll arrive, is cut down.
+    for (let dx = -CAMP_CLEAR; dx <= CAMP_CLEAR; dx++) {
+      for (let dz = -CAMP_CLEAR; dz <= CAMP_CLEAR; dz++) {
+        if (dx * dx + dz * dz > CAMP_CLEAR * CAMP_CLEAR) continue;
+        const g = gen.heightAt(x + dx, z + dz);
+        if (gen.waterLevelAt?.(x + dx, z + dz)) continue;
+        for (let by = g; by < g + 18; by++) {
+          if (this.world.getBlock(x + dx, by, z + dz) !== AIR) this.world.setBlock(x + dx, by, z + dz, AIR);
+        }
+      }
+    }
+    // Each piece on its own column's ground, however the land slopes.
+    const put = (bx, bz, id) => {
+      const by = gen.heightAt(bx, bz);
+      this.world.setBlock(bx, by, bz, id);
+      return { x: bx, y: by, z: bz };
+    };
+    // Three tents in a row, a fire in front of them, a black banner each end.
+    const tents = [-3, 0, 3].map((dx) => put(x + dx, z + 2, turned(WAR_TENT, 0)));
+    put(x, z - 1, CAMPFIRE);
+    put(x - 5, z + 2, BLACK_BANNER); put(x + 5, z + 2, BLACK_BANNER);
+    d.spawn = tents[1];
+    this.remeshDirty();
+    this.ui?.toast({ kind: 'challenge', title: 'Your army has made camp below the Sky Kingdom', body: 'Join it from the map. You\'ll wake at its tents now, too.' });
+    this.ui?.duiltUI?.renderArmy?.();
+    this.editedAt = Date.now();
+  }
+
+  /** From the map: to the army's camp, below the Sky Kingdom. */
+  joinExpedition() {
+    const c = this.duilt?.army.camp;
+    if (!c || !this.expeditionState()?.camped) return false;
+    this.player.flying = false;
+    // In front of the camp, on the island's side, clear of the ranks round the fire.
+    const f = this.duilt.army.anchor?.facing ?? 0;
+    const jx = Math.floor(c.x - Math.sin(f) * 8), jz = Math.floor(c.z - Math.cos(f) * 8);
+    this.player.teleport(jx + 0.5, this.world.gen.heightAt(jx, jz) + 0.5, jz + 0.5);
+    const at = skyAt(this.world.gen), p = this.player.position;
+    this.player.yaw = Math.atan2(-(at.x - p.x), -(at.z - p.z));
+    this.player.pitch = 0.35;
+    this.ui?.toast({ kind: 'challenge', title: 'You join your army at its camp', body: `${this.duilt.army.total} warriors, holding. Order them on from the ⚔ banner.` });
+    return true;
+  }
+
   /** An order from the command wheel. */
   commandArmy(mode) {
     const army = this.duilt?.army;
     if (!army?.active) return;
+    if (army.marching) return void this.ui?.toast({ kind: 'xp', title: 'Your army is on the march', body: 'It can\'t hear you from here — join it at its camp when it arrives' });
+    if (army.camp && army.away(this.player.position)) return void this.ui?.toast({ kind: 'xp', title: 'Your army is at its camp', body: 'It can\'t hear you from here — join it from the map' });
     army.command(mode, this.player.position, this.player.yaw);
     this.ui?.toast({ kind: 'challenge', title: `Your army — ${ARMY_WORDS[mode]}`, body: `${army.total} warriors` });
     this.ui?.duiltUI?.renderArmy?.();
@@ -3552,6 +3667,8 @@ export class Game {
         if (res?.killed) d.collect(res.drops);
       },
     });
+    // The expedition: the day it reaches the Sky Kingdom, it makes camp.
+    if (d.army.update(d.days) === 'arrived') this.makeExpeditionCamp();
     const meal = d.army.eat(d.days, (n) => this.takeRations(n));
     if (meal?.deserted) {
       this.ui?.toast({ kind: 'xp', title: `${meal.deserted} of your warriors deserted`, body: `There wasn't enough to eat — ${meal.got} of ${meal.need} rations. Keep food in your bag or storehouses.` });

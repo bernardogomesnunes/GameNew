@@ -22,6 +22,10 @@ import { stepAround } from './Defenders.js';
  * An army eats: rations every game day, a meal for every hundred warriors,
  * from your bag and your storehouses. Short of food, some of them desert.
  *
+ * The expedition: sent from the map, the army marches for the Sky Kingdom
+ * on its own (MARCH_DAYS — still eating every day), makes camp below it,
+ * and holds there for you to join it.
+ *
  * Pure logic like Defenders: Game draws `field`, hands in the enemies, and
  * does what a blow does.
  */
@@ -43,6 +47,10 @@ const FILE = 6, SPACING = 1.6;
 const STRAGGLE = 48;
 const TALL = 2;
 const ARMOUR = [0x3a3740, 0x45414d, 0x332f38], HELM = 0x6d6a73;
+/** Days the army takes to march to the Sky Kingdom on its own. */
+export const MARCH_DAYS = 2;
+/** Holding somewhere this far from you, they're out of sight: nobody's put on the ground. */
+const OUT_OF_SIGHT = 90;
 
 export class Army {
   constructor({ world, rand = Math.random }) {
@@ -56,6 +64,39 @@ export class Army {
     this.fedDay = null;   // the last game day they ate
     this.field = [];
     this.nextId = 1;
+    this.march = null;    // { since, arrives, to: { x, y, z, facing } } — on the way
+    this.camp = null;     // { x, y, z } — where it made camp at the end of the march
+  }
+
+  /** Away on the march: nobody here. */
+  get marching() {
+    return !!this.march;
+  }
+
+  /** Holding somewhere far from you — their camp, say: out of sight, and out of earshot. */
+  away(player) {
+    return (this.mode === 'hold' || this.mode === 'line') && !!this.anchor
+      && Math.hypot(this.anchor.x - player.x, this.anchor.z - player.z) > OUT_OF_SIGHT;
+  }
+
+  /** The expedition: off to make camp at `to`, arriving `days` from now. */
+  sendTo(to, days, marchDays = MARCH_DAYS) {
+    if (!this.active || this.march) return false;
+    this.march = { since: days, arrives: days + marchDays, to };
+    this.camp = null;
+    this.field = [];
+    return true;
+  }
+
+  /** The march, by the day: returns 'arrived' the day it makes camp. */
+  update(days) {
+    if (!this.march || days < this.march.arrives) return null;
+    const { to } = this.march;
+    this.march = null;
+    this.camp = { x: to.x, y: to.y, z: to.z };
+    this.mode = 'hold';
+    this.anchor = { x: to.x + 0.5, z: to.z + 0.5, facing: to.facing ?? 0 };
+    return 'arrived';
   }
 
   get active() {
@@ -74,6 +115,8 @@ export class Army {
   /** An order from the command wheel, given where you stand and the way you face. */
   command(mode, player, facing = 0) {
     if (!MODES.includes(mode)) return null;
+    // Your first order there breaks camp: from now on they're with you again.
+    this.camp = null;
     this.mode = mode;
     this.anchor = mode === 'hold' ? { x: player.x, z: player.z, facing }
       : mode === 'line' ? { x: player.x - Math.sin(facing) * 6, z: player.z - Math.cos(facing) * 6, facing }
@@ -106,7 +149,8 @@ export class Army {
    * @param on       { strike(enemy, damage, warrior) }
    */
   tick(dt, player, facing, enemies, on = {}) {
-    if (!this.active) { this.field = []; return; }
+    // On the march, or holding somewhere you're nowhere near (their camp, say): nobody here.
+    if (!this.active || this.march || this.away(player)) { this.field = []; return; }
     this.muster(player, facing);
     const live = enemies.filter((e) => !e.dead && !e.done);
     this.field.forEach((w, i) => this.warrior(w, i, dt, player, facing, live, on));
@@ -116,11 +160,13 @@ export class Army {
   /** Fresh warriors march in from behind you, up to ON_FIELD, while there are any to send. */
   muster(player, facing) {
     const want = Math.min(ON_FIELD, this.total);
+    // Holding: they're already there, round where you left them. Otherwise they march in from behind you.
+    const holding = (this.mode === 'hold' || this.mode === 'line') && this.anchor;
     while (this.field.length < want) {
       const i = this.field.length;
       const back = 10 + this.rand() * 4, side = (this.rand() - 0.5) * 8;
-      const x = player.x + Math.sin(facing) * back + Math.cos(facing) * side;
-      const z = player.z + Math.cos(facing) * back - Math.sin(facing) * side;
+      const x = holding ? this.anchor.x + (this.rand() - 0.5) * 8 : player.x + Math.sin(facing) * back + Math.cos(facing) * side;
+      const z = holding ? this.anchor.z + (this.rand() - 0.5) * 8 : player.z + Math.cos(facing) * back - Math.sin(facing) * side;
       const y = groundAt(this.world, x, z, player.y + 4, TALL) ?? player.y;
       this.field.push({
         id: `w${this.nextId++}`, kind: 'warrior', x, y, z, hp: WARRIOR.hp, cooldown: this.rand(), hurt: 0,
@@ -212,6 +258,7 @@ export class Army {
   toJSON() {
     return {
       sworn: this.sworn, total: this.total, lost: this.lost, mode: this.mode, anchor: this.anchor, fedDay: this.fedDay,
+      march: this.march, camp: this.camp,
     };
   }
 
@@ -224,6 +271,11 @@ export class Army {
     this.anchor = a && Number.isFinite(a.x) && Number.isFinite(a.z) ? { x: a.x, z: a.z, facing: Number(a.facing) || 0 } : null;
     if ((this.mode === 'hold' || this.mode === 'line') && !this.anchor) this.mode = 'follow';
     this.fedDay = Number.isFinite(data?.fedDay) ? data.fedDay : null;
+    const m = data?.march, to = m?.to;
+    this.march = m && Number.isFinite(m.since) && Number.isFinite(m.arrives) && to && [to.x, to.y, to.z].every(Number.isFinite)
+      ? { since: m.since, arrives: m.arrives, to: { x: to.x, y: to.y, z: to.z, facing: Number(to.facing) || 0 } } : null;
+    const c = data?.camp;
+    this.camp = c && [c.x, c.y, c.z].every(Number.isFinite) ? { x: c.x, y: c.y, z: c.z } : null;
     this.field = [];
   }
 }

@@ -231,7 +231,12 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
     - when it's full, or you strike, you're discovered: every guard near comes, and it's open battle;
     - your first blow while still unseen lands three times as hard;
     - leave the island and suspicion is forgotten.
-  - Still to come: the expedition on the map.
+  - **The expedition** — **done** (`expedition.test`):
+    - from the map, "Send the army to the Sky Kingdom": it marches on its own for 2 days, still eating every day (and deserting when there's no food);
+    - while it's away nobody is on the ground with you, and the command wheel can't reach it;
+    - it makes camp on dry, level ground beyond the anchor tower nearest home: a cleared patch, three war tents, a campfire and two black banners. You wake at its tents from then on;
+    - "Join your army at its camp" on the map takes you there, looking up at the island;
+    - your first order there breaks camp.
 - **The alliance:**
   - after you forge the Black Ring the Stone Kingdom becomes your ally;
   - its people are friendly, its gates open, and you can trade there;
@@ -309,7 +314,7 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
 5. **7e** The Stone Kingdom.
 6. **White path:** the Ten Rounds — **done** (war at Age 6, the rounds, siege, war horn, victory). The defence buildings — **done** too.
 7. **Dark path:**
-   1. the alliance, the army and the march — **done** (oath, army, command wheel, rations, camp; the map expedition still to come);
+   1. the alliance, the army and the march — **done** (oath, army, command wheel, rations, camp, and the expedition on the map);
    2. the Sky Kingdom and its anchor towers;
    3. the three ways to take it;
    4. taxes if you lose.
