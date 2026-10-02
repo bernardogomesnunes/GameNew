@@ -1464,3 +1464,27 @@ body.touch .ctl-keys { display: none; }
 .look-row > div { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .look-swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.15); padding: 0; cursor: pointer; }
 .look-swatch.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,190,90,0.45); }
+
+/* The story (ui/Story.js): an illustrated page at a time, over a dark
+   backdrop — the intro on a new world, and each path's ending. */
+.overlay.story { background: rgba(6, 8, 14, 0.92); z-index: 30; }
+.story-card {
+  width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 14px;
+  color: #f3eee2;
+}
+.story-art {
+  width: 100%; aspect-ratio: 4 / 3; image-rendering: pixelated; image-rendering: crisp-edges;
+  border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5); cursor: pointer; background: #000;
+}
+.story-text {
+  margin: 0; min-height: 5.2em; font-size: 15px; line-height: 1.6; font-family: Georgia, 'Times New Roman', serif;
+  cursor: pointer; opacity: 0;
+}
+.story-text.in { animation: story-in 0.8s ease forwards; }
+@keyframes story-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.story-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.story-foot button { min-width: 88px; }
+.story-foot .secondary { background: transparent; color: #cfc8b8; border-color: rgba(243, 238, 226, 0.25); }
+.story-dots { display: flex; gap: 6px; }
+.story-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(243, 238, 226, 0.25); }
+.story-dots i.on { background: #e8c24a; }

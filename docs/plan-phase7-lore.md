@@ -278,15 +278,19 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
 
 ## Telling the story (7j)
 
-- **Opening:** a short illustrated intro on a new world.
+- **Opening:** a short illustrated intro on a new world — **done** (`ui/Story.js`, `story.test`).
   - The Sky Kingdom glowing among its fireflies.
   - The Stone army at its chains.
   - The fall, and the flight down to the ground.
   - Arriving somewhere far from anywhere.
+  - Four pages of pixel art painted in code (fireflies flicker, clouds rush past as you fall), a line of story under each. Tap for the next, or Skip; the welcome follows. Duilt only, not Creative.
 - **Messengers and the hermit** carry the story, with lines tied to your age, your Temple and your path.
 - **A lore book** in the Goals panel fills in as you learn: the two gods, the two kingdoms, and your guardian.
 - **The ages get new names** to fit the story, for example "Exile" … "Reckoning".
-- **Each path has its own ending.**
+- **Each path has its own ending** — **done**, illustrated the same way, before the finish panel:
+  - white (the Ten Rounds won — told there and then, whatever age you're at): the dark army in retreat from your walls, the fireflies' blessing on your village, your own kingdom at dawn;
+  - dark (the Sky King struck down): his empty throne and fallen crown, the island under black banners, you as Lord of the Sky;
+  - dark by the chains: the island sinking, its King coming down, Lord of the Sky.
 
 ---
 
