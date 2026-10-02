@@ -205,6 +205,14 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
     - you're driven back home, waking there rather than at a painting or camp, and what you carried is left in a chest where you fell;
     - the Sky Kingdom then takes 25% of what your buildings make, then 35%, 45% and at most 50% after each lost attack, until it falls; every building that makes something shows a **Taxes** line;
     - the Stone King makes up 75% of the warriors lost, then 50%, then 25%, then none.
+  - **The throne room fight** (asked for: "make their attacks more random, and assure there are always two guards next to him"):
+    - **Varied blows:** every fighter's blows now vary.
+      - The time between blows changes by ±40%.
+      - The damage changes by about a quarter either way.
+      - About one blow in six is heavy: twice as hard, and it throws you back a block or two.
+    - **The King's wind-up:** before a heavy blow he raises his arms and glows white. Step back and it misses.
+    - **Two royal guards:** they're tougher than the island's guards and stand either side of the King without leaving the throne room. While he lives, a fallen one is replaced from the palace door 18 seconds later, and you're told.
+    - **Your army:** the island's people now fight your warriors as well as you.
   - **Winning:**
     - when the Sky King falls, its guards lay down their arms;
     - the island becomes your land: you can build anywhere on it, held beyond your border;

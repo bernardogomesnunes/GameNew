@@ -11,6 +11,8 @@ const GRAVITY = -26;
 const JUMP_SPEED = 8.2;
 const WALK_SPEED = 4.6;
 const SPRINT_SPEED = 7.2;
+// A heavy blow's shove: how fast it throws you back, how high, and how quickly it dies away.
+const KNOCK_SPEED = 9, KNOCK_LIFT = 5.5, KNOCK_FADE = 6;
 const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
 /*
@@ -85,6 +87,8 @@ export class PlayerController {
 
     this.position = new THREE.Vector3(spawn.x, spawn.y, spawn.z);
     this.velocity = new THREE.Vector3();
+    // A shove from a heavy blow (knockBack): added to your walking, fading fast.
+    this.knock = { x: 0, z: 0 };
     // Just arrived: the first landing doesn't hurt — see trackFall.
     this.arriving = true;
     // Which way you see the world: 'first', 'behind' or 'front' — see config/avatar.js.
@@ -250,8 +254,10 @@ export class PlayerController {
       this.grounded = false;
     } else {
       const speed = (sprinting ? SPRINT_SPEED : WALK_SPEED) * this.speedScale;
-      this.velocity.x = wish.x * speed;
-      this.velocity.z = wish.z * speed;
+      this.velocity.x = wish.x * speed + this.knock.x;
+      this.velocity.z = wish.z * speed + this.knock.z;
+      const fade = Math.exp(-KNOCK_FADE * dt);
+      this.knock.x *= fade; this.knock.z *= fade;
       this.velocity.y += GRAVITY * dt;
       if (this.velocity.y < -50) this.velocity.y = -50;
       if (this.jumpQueued && this.grounded) {
@@ -301,9 +307,19 @@ export class PlayerController {
   }
 
   /** Puts the player somewhere at once — a respawn — with no fall to account for. */
+  /** Shoved away along (dx, dz) — a heavy blow: off your feet, and back a few blocks. */
+  knockBack(dx, dz, strength = KNOCK_SPEED) {
+    if (this.flying) return;
+    const d = Math.hypot(dx, dz) || 1;
+    this.knock.x = (dx / d) * strength;
+    this.knock.z = (dz / d) * strength;
+    if (this.grounded) { this.velocity.y = KNOCK_LIFT; this.grounded = false; }
+  }
+
   teleport(x, y, z) {
     this.position.set(x, y, z);
     this.velocity.set(0, 0, 0);
+    this.knock.x = this.knock.z = 0;
     this.fallPeak = null;
     this.landing = 0;
     this.arriving = true;

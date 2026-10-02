@@ -2940,8 +2940,8 @@ export class Game {
     });
   }
 
-  /** A bandit's blow landing on you. */
-  banditHits(p, hits) {
+  /** A bandit's blow landing on you — a heavy one throws you back. */
+  banditHits(p, hits, blow = {}) {
     if (!this.duilt || this.duilt.sandbox) return;
     const taken = this.duilt.hurt(hits, p.war ? 'army' : WANDERERS[p.kind]?.sky ? 'sky' : 'bandit');
     if (!taken) return;
@@ -2954,9 +2954,11 @@ export class Game {
         this.ui.toast({ kind: 'xp', title: `The ring's spark felled ${p.name}`, body: got || undefined });
       }
     }
-    // Knocked up off your feet a little, so a blow is felt and not just seen.
-    if (this.player.grounded) this.player.velocity.y = 4.5;
-    this.sound?.hit?.('wood', { gain: 0.6, pitch: 0.55 });
+    // Knocked up off your feet a little, so a blow is felt and not just seen;
+    // a heavy one throws you back, away from whoever struck it.
+    if (blow.heavy) this.player.knockBack(this.player.position.x - p.x, this.player.position.z - p.z);
+    else if (this.player.grounded) this.player.velocity.y = 4.5;
+    this.sound?.hit?.('wood', { gain: blow.heavy ? 0.9 : 0.6, pitch: blow.heavy ? 0.4 : 0.55 });
   }
 
   // ---- the war: the Stone Kingdom's Ten Rounds (config/war.js) ----
@@ -4711,7 +4713,7 @@ export class Game {
         stores: () => (this.duilt && !this.duilt.sandbox ? this.duilt.structures.stores() : [])
           .filter(({ store }) => store.heldIds().length)
           .map(({ structure }) => ({ structure, region: structure.region })),
-        onAttack: (p, hits) => this.banditHits(p, hits),
+        onAttack: (p, hits, blow) => this.banditHits(p, hits, blow),
         onSteal: (p, structure) => this.banditSteals(p, structure),
         onRaid: (dir, raiders) => this.ui.toast({
           kind: 'challenge',
@@ -4732,6 +4734,7 @@ export class Game {
         sky: () => this.skyNear(),
         skyHostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.ring === 'black' && !this.duilt.skyFallen),
         onSkyKing: () => this.skyKingDown(),
+        onRoyal: () => this.ui?.toast({ kind: 'challenge', title: 'A royal guard runs to the King\'s side', body: 'There are always two beside him while he lives — be quick, or bring your army.' }),
       });
     }
     // Your penned animals come back with the save, and join the wild ones.

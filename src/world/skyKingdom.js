@@ -609,8 +609,11 @@ function plan(gen, cx, cz) {
     // Its people are about from further off than a camp's: it's a city.
     visit: 180, leave: 230,
     byChunk, count: cells.size, plots,
-    // On the dais, a step up, before his throne.
+    // On the dais, a step up, before his throne; his royal guard either
+    // side of him, and the door a fallen one's replacement comes in by.
     king: { x: cx + 0.5, z: cz + PD - 2.5, dy: 1, facing: Math.PI },
+    royal: [{ x: cx - 2 + 0.5, z: cz + PD - 3 + 0.5, dy: 1 }, { x: cx + 2 + 0.5, z: cz + PD - 3 + 0.5, dy: 1 }],
+    palaceDoor: { x: cx + 0.5, z: cz - PD + 1.5 },
     posts: posts.map((p) => ({ x: p.x + 0.5, z: p.z + 0.5 })),
     towers, landings,
     palace: { minX: cx - PW, maxX: cx + PW, minZ: cz - PD, maxZ: cz + PD },
