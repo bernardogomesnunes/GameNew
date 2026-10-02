@@ -231,6 +231,8 @@ export const NEWS = {
     none: ['Who are you, to walk into my city unbidden? Go home, little builder.', 'Bear no ring and you are nothing to me. Come back when a god has looked at you.'],
     white: ['The White Ring. I know that light — my army will come for it, round after round.', 'You wear the sky\'s gold in my hall? Leave, while my guards let you.'],
     black: ['The Black Ring... so the dark god looked at you too. Swear to him in my temple and my warriors are yours.', 'Kneel at the altar of Nightstone, ring-bearer. Then we will talk of armies.'],
+    // The Sky Kingdom fallen: you, Lord of the Sky.
+    victor: ['Lord of the Sky! The island that cast you down hangs at your feet. My halls are open to you, always.', 'They will sing of this in the deep halls for a thousand years: the exile who brought down the Sky King.', 'The white god is silent at last. Rule your island well, my lord — and remember who gave you the army that took it.'],
     sworn: ['A thousand of my warriors march under your banner. Feed them, and they will follow you to the sky itself.', 'The Sky Kingdom hangs on its chains, far to the {dir} — look for its light low in the sky. Bring it down, and I will honour you above every lord I have.', 'Its anchor towers stand on the ground under it, each with a lift up the chain. Its King sits in the palace in the middle. Go to the {dir}.'],
   },
   quiet: [

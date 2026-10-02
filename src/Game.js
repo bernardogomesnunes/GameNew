@@ -192,6 +192,8 @@ const CATAPULT_AMMO = ['stone', 'cobblestone'];
 const STONE_HITS = 14;
 // The Sky Kingdom's people are planned and put on the island this close to it.
 const SKY_PEOPLE = 240;
+// What the Stone King sends you when the Sky Kingdom falls.
+const SKY_TRIBUTE = 64;
 // An attack on it is on while you're this close to its middle — the
 // island and its anchor towers — and over once you're this far off again.
 const SKY_ATTACK_IN = SKY_REACH + 10, SKY_ATTACK_OUT = SKY_REACH + 120;
@@ -2853,7 +2855,7 @@ export class Game {
 
   /** What the Stone King has to say to you — by the ring you bear. */
   speakToKing() {
-    const ring = this.duilt?.army.sworn ? 'sworn' : this.duilt?.ring ?? 'none';
+    const ring = this.duilt?.skyFallen && this.duilt.ring === 'black' ? 'victor' : this.duilt?.army.sworn ? 'sworn' : this.duilt?.ring ?? 'none';
     const lines = NEWS.king[ring] ?? NEWS.king.none;
     this.kingLine = ((this.kingLine ?? -1) + 1) % lines.length;
     const sky = this.skyOpen() ? skyAt(this.world.gen) : null;
@@ -3369,11 +3371,24 @@ export class Game {
     const d = this.duilt;
     const taxed = d?.skyWar.failures > 0;
     if (!d || !d.bringDownSky()) return;
+    // Its guards lay down their arms: nobody on the island fights you now.
+    for (const p of this.wanderers?.list ?? []) {
+      if (!WANDERERS[p.kind]?.sky) continue;
+      p.angry = false; p.target = null; p.speed = 0;
+    }
     this.sound?.hit?.('stone', { gain: 1, pitch: 0.25 });
     this.ui?.toast({
       kind: 'achievement',
       title: 'The Sky Kingdom has fallen',
-      body: d.sandbox ? 'Its King is down.' : `Its King is down, and its guards lay down their arms.${taxed ? ' Its taxes end.' : ''} The Stone King will hear of it.`,
+      body: d.sandbox ? 'Its King is down.' : `Its King is down, and its guards lay down their arms.${taxed ? ' Its taxes end.' : ''} The island is your land now: build on it as you would at home.`,
+    });
+    if (d.sandbox) return;
+    // The Stone King keeps his word: honour, and gold from his treasury.
+    const gained = d.collect({ gold: SKY_TRIBUTE }) ?? {};
+    this.ui?.toast({
+      kind: 'achievement',
+      title: 'The Stone King honours you',
+      body: `He names you Lord of the Sky, above every lord he has${gained.gold ? `, and sends ${gained.gold} gold from his treasury` : ''}. Speak to him in his keep.`,
     });
     this.editedAt = Date.now();
   }
@@ -4715,7 +4730,7 @@ export class Game {
         // The Sky Kingdom: there while it stands, on the dark path (and in
         // Creative, to look at); its people fight the Black Ring.
         sky: () => this.skyNear(),
-        skyHostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.ring === 'black'),
+        skyHostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.ring === 'black' && !this.duilt.skyFallen),
         onSkyKing: () => this.skyKingDown(),
       });
     }
