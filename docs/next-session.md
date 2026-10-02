@@ -20,7 +20,9 @@ A walled city of dark stone, about 1000–1400 blocks from home: a keep with the
 
 **Done:** the dark path, part 1 — the oath at the dark altar, 1,000 warriors (30 on the ground at once), the ⚔ banner and command wheel, daily rations, the war tent and campfire.
 
-**Next:** the Sky Kingdom — the floating island 5,000 blocks out, its anchor towers and chains, and the ways to take it.
+**Done:** the dark path, part 2 — the Sky Kingdom: the floating island 5,000 blocks out (Black Ring and Creative only), its palace and throne room, four anchor towers with chains and lifts, its guards and King, its light low in the sky, and its fall as the dark path's end (`sky.test`).
+
+**Next:** the other ways to take it (disguise in Sky armour, cutting the chains), the island joining your land, the expedition on the map, and the Sky Kingdom's taxes when an attempt fails (#144).
 
 # Before that — Phase 6
 

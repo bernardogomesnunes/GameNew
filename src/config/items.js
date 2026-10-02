@@ -284,6 +284,8 @@ export const ITEMS = [
   // The dark path's camp.
   { id: 'war_tent', name: 'War Tent', kind: 'refined', stackTo: STACK_GOODS, color: 0x6b5a48, glyph: 'tent', block: 224, madeBy: 'Canvas on a pole — pitch it on the march, and Place on it to make camp' },
   { id: 'campfire', name: 'Campfire', kind: 'refined', stackTo: STACK_GOODS, color: 0x6b4a2e, glyph: 'campfire', block: 228, madeBy: 'Stones and crossed logs, burning — light for a camp' },
+  { id: 'chain', name: 'Chain', kind: 'refined', stackTo: STACK_GOODS, color: 0x5a5f66, glyph: 'chain', block: 229, madeBy: 'Iron links — hang a lamp from it, or a kingdom' },
+  { id: 'sky_lift', name: 'Sky Lift', kind: 'refined', stackTo: STACK_GOODS, color: 0xe2c26a, glyph: 'lift', block: 230, madeBy: 'The Sky Kingdom\'s own — at its anchor towers, Place on one to ride the chain' },
   // The war horn (the Ten Rounds): Break with it in hand calls the next round now.
   { id: 'war_horn', name: 'War Horn', kind: 'refined', stackTo: 1, color: 0xc9a46a, glyph: 'horn', madeBy: 'Made at the bench — Break with it in hand calls the Stone Kingdom\'s next round now' },
   { id: 'holy_water', name: 'Holy Water', kind: 'drink', stackTo: 10, color: 0xbfe3f5, glyph: 'flask', heals: 8, madeBy: 'Blessed at a chapel — drink it to heal four hearts' },

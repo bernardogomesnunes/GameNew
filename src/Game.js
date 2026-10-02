@@ -74,7 +74,9 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView } from './render/ArmyView.js';
-import { BED, NIGHTSTONE_ORE, isTent } from './config/blocks.js';
+import { BED, NIGHTSTONE_ORE, SKY_LIFT, isTent } from './config/blocks.js';
+import { skyFor, skyAt, liftAt } from './world/skyKingdom.js';
+import { SkyBeacon } from './render/SkyBeacon.js';
 import { MODE_WORDS as ARMY_WORDS } from './world/Army.js';
 import { SOLDIER } from './world/Defenders.js';
 import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
@@ -178,6 +180,7 @@ export function swingLabel(id) {
   if (isCatapult(id)) return 'Man';
   if (isPainting(id)) return 'Home';
   if (isTrapdoor(id)) return id >= TRAPDOOR_OPEN ? 'Close' : 'Open';
+  if (id === SKY_LIFT) return 'Ride';
   const door = doorPart(id);
   return door ? (door.open ? 'Close' : 'Open') : null;
 }
@@ -187,6 +190,8 @@ const CATAPULT_REACH = 4;       // walk further than this from it and you let go
 const CATAPULT_MIN_THROW = 6;   // it won't drop a stone closer than this
 const CATAPULT_AMMO = ['stone', 'cobblestone'];
 const STONE_HITS = 14;
+// The Sky Kingdom's people are planned and put on the island this close to it.
+const SKY_PEOPLE = 200;
 // The rings (Phase 7c): what the White Ring adds to your step and your
 // jump, and what the Black Ring's spark does to whoever hits you.
 const WHITE_RING_SPEED = 1.2;
@@ -361,6 +366,7 @@ export class Game {
     this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
+    this.skyBeacon = new SkyBeacon(this.scene);
     this.projectileView = new ProjectileView(this.scene);
     this.fireflyView = new FireflyView(this.scene);
     this.guardianView = new GuardianView(this.scene);
@@ -1566,6 +1572,8 @@ export class Game {
     // At a war tent, Place makes camp there; at the dark god's altar, the oath.
     if (aimed && isTent(aimed.block)) return void this.makeCamp(aimed);
     if (aimed && aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)) return void this.swearOath();
+    // At an anchor tower's lift (or one on the island), up or down it goes.
+    if (aimed && aimed.block === SKY_LIFT) return void this.rideLift(aimed);
     // And at a catapult, Place takes hold of it.
     if (aimed && isCatapult(aimed.block)) return void this.manCatapult(aimed);
     // A full bucket takes the button too, instead of placing a block.
@@ -2845,7 +2853,10 @@ export class Game {
     const ring = this.duilt?.army.sworn ? 'sworn' : this.duilt?.ring ?? 'none';
     const lines = NEWS.king[ring] ?? NEWS.king.none;
     this.kingLine = ((this.kingLine ?? -1) + 1) % lines.length;
-    this.ui?.toast({ kind: 'challenge', title: 'The Stone King', body: lines[this.kingLine] });
+    const sky = this.skyOpen() ? skyAt(this.world.gen) : null;
+    const p = this.player.position;
+    const body = lines[this.kingLine].replace('{dir}', sky ? compass(sky.x - p.x, sky.z - p.z) : 'east');
+    this.ui?.toast({ kind: 'challenge', title: 'The Stone King', body });
   }
 
   /** The swarm of fireflies under the crosshair, if no block is in front of it. */
@@ -3212,6 +3223,57 @@ export class Game {
     this.ui?.duiltUI?.renderArmy?.();
   }
 
+  // ---- the Sky Kingdom (world/skyKingdom.js) ----
+
+  /** Whether this world has the Sky Kingdom in it: the dark path — and Creative, to look at. */
+  skyOpen() {
+    const d = this.duilt;
+    return !!(d && this.world?.gen && (d.sandbox || d.ring === 'black'));
+  }
+
+  /** The island, planned, when you're near enough to meet its people — and it hasn't fallen. */
+  skyNear() {
+    if (!this.skyOpen() || this.duilt.skyFallen) return null;
+    const at = skyAt(this.world.gen), p = this.player.position;
+    return Math.hypot(at.x - p.x, at.z - p.z) < SKY_PEOPLE ? skyFor(this.world.gen) : null;
+  }
+
+  /**
+   * An anchor tower's lift takes you up to its landing on the island; a
+   * landing's takes you back down to the tower. Warriors following you come
+   * too.
+   */
+  rideLift({ x, y, z }) {
+    const ride = this.world.gen ? liftAt(this.world.gen, x, y, z) : null;
+    if (!ride) return;
+    const from = { x: this.player.position.x, z: this.player.position.z };
+    this.player.teleport(ride.to.x, ride.to.y, ride.to.z);
+    const army = this.duilt?.army;
+    if (army?.active && army.mode === 'follow') {
+      for (const w of army.field) {
+        if (Math.hypot(w.x - from.x, w.z - from.z) > 30) continue;
+        w.x = ride.to.x + (Math.random() - 0.5) * 3; w.z = ride.to.z + (Math.random() - 0.5) * 3; w.y = ride.to.y;
+      }
+    }
+    this.sound?.hit?.('stone', { gain: 0.5, pitch: 1.6 });
+    this.ui?.toast(ride.up
+      ? { kind: 'challenge', title: 'Up the chain to the Sky Kingdom', body: this.wanderers?.skyHostile() ? 'Its guards know the Black Ring. Bring down the Sky King in his palace.' : 'White marble and gold, a long way up' }
+      : { kind: 'challenge', title: 'Down to the anchor tower' });
+  }
+
+  /** The Sky King is down: the Sky Kingdom falls. */
+  skyKingDown() {
+    const d = this.duilt;
+    if (!d || !d.bringDownSky()) return;
+    this.sound?.hit?.('stone', { gain: 1, pitch: 0.25 });
+    this.ui?.toast({
+      kind: 'achievement',
+      title: 'The Sky Kingdom has fallen',
+      body: d.sandbox ? 'Its King is down.' : 'Its King is down, and its guards lay down their arms. The Stone King will hear of it.',
+    });
+    this.editedAt = Date.now();
+  }
+
   /** An order from the command wheel. */
   commandArmy(mode) {
     const army = this.duilt?.army;
@@ -3228,7 +3290,7 @@ export class Game {
     const p = this.player.position;
     const hostile = this.wanderers.hostile();
     const enemies = this.wanderers.list.filter((e) => WANDERERS[e.kind].hp && !e.dead && !e.done
-      && (e.war || e.raider || e.angry || (hostile && e.kind === 'bandit'))
+      && (e.war || e.raider || e.angry || (hostile && e.kind === 'bandit') || (WANDERERS[e.kind].sky && this.wanderers.skyHostile()))
       && Math.hypot(e.x - p.x, e.z - p.z) < 60);
     const before = d.army.total;
     d.army.tick(dt, p, this.player.yaw, enemies, {
@@ -4380,6 +4442,9 @@ export class Game {
       this.settlerView.update(this.duilt?.settlers.people ?? []);
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
+      if (this.world.gen) this.world.gen.sky = this.skyOpen();
+      // Its light, low in the sky that way, from anywhere you can't see the island itself.
+      this.skyBeacon.update(this.skyOpen() ? skyAt(this.world.gen) : null, this.player.position, 1 - daylightAt(this.dayCycle.time).day);
       this.wanderers.tick(dt, this.player.position);
       this.tickWar();
       this.tickDefence(dt);
@@ -4538,6 +4603,11 @@ export class Game {
         // Your soldiers stand between them and you.
         foes: () => [...(this.duilt?.defenders.soldiers ?? []), ...(this.duilt?.army.field ?? [])],
         onFoe: (p, soldier, hits) => this.soldierHit(p, soldier, hits),
+        // The Sky Kingdom: there while it stands, on the dark path (and in
+        // Creative, to look at); its people fight the Black Ring.
+        sky: () => this.skyNear(),
+        skyHostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.ring === 'black'),
+        onSkyKing: () => this.skyKingDown(),
       });
     }
     // Your penned animals come back with the save, and join the wild ones.
@@ -4651,7 +4721,7 @@ export class Game {
       : null;
     if (stranger) {
       const spec = WANDERERS[stranger.kind];
-      const fights = spec.hp && !spec.flees && (stranger.war || stranger.angry || (stranger.kind === 'guard' ? this.wanderers.kingdomHostile() : this.wanderers.hostile()));
+      const fights = spec.hp && !spec.flees && this.wanderers.hostileOf(stranger);
       this.ui?.setPersonHint(stranger.name, spec.flees && stranger.fear > 0 ? `${spec.noun} — running from you`
         : !fights ? spec.about
         : stranger.hp <= spec.fleeBelow ? `${spec.noun} — running for it`
@@ -4696,10 +4766,11 @@ export class Game {
     const catapult = hit && isCatapult(hit.block);
     const trapdoor = hit && isTrapdoor(hit.block);
     const painting = hit && isPainting(hit.block);
+    const lift = hit && hit.block === SKY_LIFT ? (this.world.gen && liftAt(this.world.gen, hit.x, hit.y, hit.z)) || 'nowhere' : null;
     const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door || chest || catapult || trapdoor || painting) && swingLabel(hit.block);
+    const swing = (gate || door || chest || catapult || trapdoor || painting || (lift && lift !== 'nowhere')) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     // What tapping the hint itself does: the same thing, for a chest, a door
     // or a gate — not the claim panel (reported: tapping "Chest — tap Open"
@@ -4715,6 +4786,8 @@ export class Game {
         ? `Catapult — ${how}`
       : trapdoor
         ? `Trapdoor · ${hit.block >= TRAPDOOR_OPEN ? 'open' : 'shut'} — ${how}`
+      : lift
+        ? (lift === 'nowhere' ? 'Sky lift · only an anchor tower\'s goes anywhere' : `Sky lift — ${how} ${lift.up ? 'up to the Sky Kingdom' : 'down to the ground'}`)
       : painting
         ? (this.isSpawnAt(hit) ? 'Painting · you wake here after a fall' : `Painting — ${how} to wake here after a fall`)
       : sapling && !onBuilding
