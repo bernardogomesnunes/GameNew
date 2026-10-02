@@ -41,6 +41,9 @@ export class Territory {
    *   to advance through.
    */
   constructor({ world, scene, bus, age = 1, sandbox = false }) {
+    // Land held beyond the border: the fallen Sky Kingdom's island, once
+    // it's yours (DuiltGame.holdSky) — circles, { x, z, r }.
+    this.held = [];
     this.world = world;
     this.scene = scene;
     this.bus = bus;
@@ -82,13 +85,19 @@ export class Territory {
   contains(x, z) {
     if (this.sandbox) return true;
     const b = this.bounds();
-    return x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ;
+    return (x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ) || this.holds(x, z);
+  }
+
+  /** Whether (x, z) is on land held beyond the border (the fallen Sky Kingdom). */
+  holds(x, z) {
+    return this.held.some((h) => Math.hypot(x - h.x, z - h.z) <= h.r);
   }
 
   /** True when the whole region is claimed — a structure may not straddle the border. */
   containsRegion(region) {
     if (this.sandbox) return true;
-    return this.contains(region.minX, region.minZ) && this.contains(region.maxX, region.maxZ);
+    return this.contains(region.minX, region.minZ) && this.contains(region.maxX, region.maxZ)
+      && this.contains(region.minX, region.maxZ) && this.contains(region.maxX, region.minZ);
   }
 
   /** How far outside the border a point is, in blocks. 0 when inside. */

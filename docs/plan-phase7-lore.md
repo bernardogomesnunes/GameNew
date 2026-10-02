@@ -205,7 +205,12 @@ Source: the lore note "Duild new idea for lore", and the follow-up that set the 
     - you're driven back home, waking there rather than at a painting or camp, and what you carried is left in a chest where you fell;
     - the Sky Kingdom then takes 25% of what your buildings make, then 35%, 45% and at most 50% after each lost attack, until it falls; every building that makes something shows a **Taxes** line;
     - the Stone King makes up 75% of the warriors lost, then 50%, then 25%, then none.
-  - Still to come: the expedition on the map, going home in disguise, cutting the chains, and the island joining your land.
+  - **Winning:**
+    - when the Sky King falls, its guards lay down their arms;
+    - the island becomes your land: you can build anywhere on it, held beyond your border;
+    - the Stone King names you Lord of the Sky, sends 64 gold, and speaks to you as such;
+    - the ending screen tells the dark path's end, at whatever age you're at, and says if there are still ages to finish. The white path's ending tells its own.
+  - Still to come: the expedition on the map, going home in disguise, and cutting the chains.
 - **The alliance:**
   - after you forge the Black Ring the Stone Kingdom becomes your ally;
   - its people are friendly, its gates open, and you can trade there;

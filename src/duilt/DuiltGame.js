@@ -21,6 +21,7 @@ import { Guardian } from '../world/Guardian.js';
 import { ageOf, FINAL_AGE } from '../config/ages.js';
 import { War } from './War.js';
 import { SkyWar } from './SkyWar.js';
+import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
 import { Defenders } from '../world/Defenders.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';
 
@@ -596,8 +597,22 @@ export class DuiltGame {
     if (this.skyFallen) return false;
     this.skyFallen = true;
     this.skyWar.attack = null;
+    this.holdSky();
+    // The dark path's end, whatever age you're at: the ending tells it.
+    if (!this.sandbox && !this.finished) {
+      this.finished = true;
+      this.bus?.emit('duilt:won', { path: 'dark' });
+    }
     this.checkAgeAdvance();
     return true;
+  }
+
+  /** The fallen island is yours: you can build on it, as on your own land. */
+  holdSky() {
+    const gen = this.world?.gen;
+    if (!this.skyFallen || !gen || this.sandbox) return;
+    const at = skyAt(gen);
+    this.territory.held = [{ x: at.x, z: at.z, r: ISLAND_R }];
   }
 
   // ---- the clock ----
@@ -929,6 +944,7 @@ export class DuiltGame {
     this.health.loadJSON(data.health);
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
     this.skyFallen = data.skyFallen === true;
+    this.holdSky();
     const sp = data.spawn;
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
     this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);

@@ -1,5 +1,6 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
 import { BOOSTS, clockOf } from '../config/drinks.js';
+import { FINAL_AGE } from '../config/ages.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
@@ -586,12 +587,29 @@ export class DuiltUI {
    * what is actually standing in the world rather than congratulating you in
    * the abstract: the buildings are the record of what you did.
    */
+  /** How your path ended, told in a few lines: the dark path's conquest, or the white path's defence. */
+  endingStory(d) {
+    const story = d.skyFallen && d.ring === 'black'
+      ? ['The Sky King is fallen.', 'The island you fell from now hangs over land that answers to you. Its white halls are quiet; its chains run down to towers your warriors hold.',
+        'The Stone King has named you Lord of the Sky. The dark god has what he wanted — and so, for now, do you.']
+      : d.war?.stage === 'won'
+        ? ['The Ten Rounds are over.', 'Ten times the Stone Kingdom came for you, and ten times it went home with nothing. Your walls stand; your people sleep easy.',
+          'Above your settlement at night, the white god\'s fireflies drift — his blessing on the land you held.']
+        : null;
+    if (!story) return '';
+    const [head, ...rest] = story;
+    return `<div class="finish-story"><p class="finish-line"><strong>${head}</strong></p>${rest.map((l) => `<p class="finish-line">${l}</p>`).join('')}</div>`;
+  }
+
   renderFinish() {
     const d = this.duilt;
     if (!d) return this.noWorld('#finish-body');
     const body = this.q('#finish-body');
     const sub = this.q('#finish-sub');
-    if (sub) sub.textContent = 'Six ages, from thirty-two blocks to the whole map.';
+    const dark = d.skyFallen && d.ring === 'black';
+    if (sub) sub.textContent = dark ? 'The dark path, to its end.' : d.war?.stage === 'won' ? 'The white path, to its end.' : 'Six ages, from thirty-two blocks to the whole map.';
+    // The dark path can end before the last age is done: then there's still that to do.
+    const allAges = d.age >= FINAL_AGE && d.ageComplete();
 
     const byType = new Map();
     for (const s of d.structures.list()) {
@@ -604,14 +622,16 @@ export class DuiltUI {
       .sort((a, b) => (a.spec.age - b.spec.age) || a.spec.name.localeCompare(b.spec.name));
 
     body.innerHTML = `
+      ${this.endingStory(d)}
       <p class="finish-line">You arrived on thirty-two blocks of land with an axe and a bucket.
          What is standing now:</p>
       <ul class="finish-list">
         ${rows.map((r) => `<li><span class="finish-icon">${r.spec.icon}</span>${r.spec.name}<span class="finish-n">${r.n}</span></li>`).join('')
           || '<li>Nothing, somehow.</li>'}
       </ul>
-      <p class="finish-line dim">The world stays as it is. You can keep building in it — nothing
-         is taken away, there is just nothing further to unlock.</p>
+      <p class="finish-line dim">${allAges ? `The world stays as it is. You can keep building in it — nothing
+         is taken away, there is just nothing further to unlock.` : `The world stays as it is. You can keep building in it, and the
+         ages you haven't finished are still there to finish.`}</p>
       <div class="building-actions">
         <button class="primary" data-keep>Keep building</button>
         <button class="secondary" data-leave>Back to the worlds</button>
