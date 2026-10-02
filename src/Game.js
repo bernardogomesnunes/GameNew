@@ -81,6 +81,7 @@ import { Suspicion, SUSPICION, AMBUSH } from './duilt/Suspicion.js';
 import { MarkerView } from './render/MarkerView.js';
 import { SkyBeacon } from './render/SkyBeacon.js';
 import { MODE_WORDS as ARMY_WORDS, MARCH_DAYS } from './world/Army.js';
+import { INTRO } from './ui/Story.js';
 import { SOLDIER } from './world/Defenders.js';
 import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
@@ -1181,13 +1182,19 @@ export class Game {
       // interval autosave, and a phone that gets put away in that window used
       // to lose the whole thing.
       this.saveNow();
-      this.ui.toast({
-        kind: 'xp',
-        title: mode === DUILT ? 'Welcome to Duilt' : 'New world generated',
-        body: mode === DUILT
-          ? 'You have 32 blocks of land, an axe and a bucket. Build a forest, a farm and a house.'
-          : 'Have fun building!',
-      });
+      const welcome = () => {
+        this.ui.toast({
+          kind: 'xp',
+          title: mode === DUILT ? 'Welcome to Duilt' : 'New world generated',
+          body: mode === DUILT
+            ? 'You have 32 blocks of land, an axe and a bucket. Build a forest, a farm and a house.'
+            : 'Have fun building!',
+        });
+        if (!this.pointerLocked && !document.body.classList.contains('touch')) this.ui.setResumeHint(true);
+      };
+      // A new Duilt world opens on the story so far (docs/plan-phase7-lore.md, 7j).
+      if (mode === DUILT) this.ui.story.play(INTRO, { onDone: welcome });
+      else welcome();
     }
   }
 
@@ -1479,6 +1486,8 @@ export class Game {
   }
 
   requestPointerLock() {
+    // Not over the story: it's read first, then the world.
+    if (this.ui.story?.open) return;
     if (this.ui.isAnyPanelOpen()) this.closeAllPanels();
     this.renderer.domElement.requestPointerLock?.();
   }
@@ -3070,6 +3079,7 @@ export class Game {
         title: 'The dark army is broken',
         body: `All ten rounds beaten, the Warlord with them. The raids are over for good — the white god's light is on your land. +${gold} gold`,
       });
+      d.endWhitePath();
       d.checkAgeAdvance();
       this.editedAt = Date.now();
       return;

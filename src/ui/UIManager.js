@@ -5,6 +5,7 @@ import { renderPanels, panelDef } from './Panel.js';
 import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
+import { StoryView, ENDINGS, endingFor } from './Story.js';
 import { ITEMS_BY_ID, itemName, isFood } from '../config/items.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
@@ -122,6 +123,8 @@ export class UIManager {
     this.panels.onOpen(() => this.updateHudVisibility());
     this.panels.onClose((id) => this.duiltUI?.onPanelClosed(id));
     this.panels.onClose(() => this.updateHudVisibility());
+    // The illustrated intro and endings: a panel of their own (ui/Story.js).
+    this.story = new StoryView(root, this.panels);
 
     this.buildHotbar();
     this.wireEvents();
@@ -919,7 +922,12 @@ export class UIManager {
         body: intro ?? `Your land is ${size} × ${size} now`,
       });
     });
-    this.bus.on('duilt:won', () => this.openPanel('panel-finish'));
+    // The end of a path: its illustrated ending first, then what you built.
+    this.bus.on('duilt:won', () => {
+      const which = endingFor(this.game.duilt);
+      if (!which) return void this.openPanel('panel-finish');
+      this.story.play(ENDINGS[which], { last: 'Continue', onDone: () => this.openPanel('panel-finish') });
+    });
 
     this.bus.on('xp:gain', ({ amount, reason }) => {
       this.updateXp();

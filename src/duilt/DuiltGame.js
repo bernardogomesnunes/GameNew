@@ -589,6 +589,14 @@ export class DuiltGame {
     return true;
   }
 
+  /** The Ten Rounds won: the white path's end, told whatever age you're at (once). */
+  endWhitePath() {
+    if (this.sandbox || this.finished) return false;
+    this.finished = true;
+    this.bus?.emit('duilt:won', { path: 'white' });
+    return true;
+  }
+
   /**
    * The Sky King is down: the Sky Kingdom falls, and on the dark path
    * that's the war you were sworn to (once only). Returns whether it fell now.

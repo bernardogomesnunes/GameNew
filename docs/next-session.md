@@ -24,7 +24,9 @@ A walled city of dark stone, about 1000–1400 blocks from home: a keep with the
 
 **Done:** the rest of the dark path — taxes after a lost attack, cutting the chains, the island joining your land, the disguise and its suspicion meter, and the expedition on the map (send the army ahead; join it at its camp).
 
-**Next:** the story (7j) — the illustrated intro, story age names, messengers' and the hermit's lines, the lore book, and an illustrated ending for each path.
+**Done:** the story told in pictures — an illustrated intro on a new world, and an illustrated ending for each path (`ui/Story.js`).
+
+**Next:** the rest of the story (7j) — story age names, messengers' and the hermit's lines, and the lore book.
 
 # Before that — Phase 6
 
