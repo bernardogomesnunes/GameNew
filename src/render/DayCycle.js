@@ -21,6 +21,8 @@ import { SkyDome, heightFog, mistAt } from './atmosphere.js';
 export const DAYLIGHT_SECONDS = 600;
 /** How much faster the clock runs while the sun is down. */
 const NIGHT_SPEED = 2;
+/** Real seconds in a whole game day, sunrise to sunrise: fifteen minutes. */
+export const GAME_DAY_SECONDS = DAYLIGHT_SECONDS * (1 + 1 / NIGHT_SPEED);
 /** How fast the stars turn, as a fraction of the sun and moon's speed. */
 export const STAR_DRIFT = 0.12;
 /** How much light a Helm of Night Sight keeps, however dark it gets. */

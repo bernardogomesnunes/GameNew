@@ -1,3 +1,4 @@
+import { GAME_DAY_SECONDS } from '../render/DayCycle.js';
 import { Crops, harvestOf, farmProduce, FARM_SEED_SLOTS } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
@@ -88,7 +89,8 @@ export class DuiltGame {
     this.rand = Math.random;
     this.inventory = new Inventory({ bus, endless: sandbox });
     this.territory = new Territory({ world, scene, bus, age, sandbox });
-    this.structures = new StructureRegistry({ world, bus, inventory: this.inventory });
+    // A building's day is a game day (see StructureRegistry's dayLengthSeconds).
+    this.structures = new StructureRegistry({ world, bus, inventory: this.inventory, dayLengthSeconds: GAME_DAY_SECONDS });
     this.hunger = new Hunger(bus);
     // Ten hearts — see survival/Health.js. A sandbox never takes damage.
     this.health = new Health(bus);
