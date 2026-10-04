@@ -384,3 +384,17 @@ const PLACES = [
   { kind: 'mine', count: 2, at: [300, 850], half: 9, build: mineBlocks },
   { kind: 'monument', count: 2, at: [380, 900], half: 5, build: monumentBlocks },
 ];
+
+/**
+ * One of every kind of place, as it would be built here — for the showcase
+ * (world/showcase.js), which stands them in a row beside the buildings you
+ * can put up yourself. The places' roll is fixed, so it's the same one of
+ * each every time.
+ */
+export function landmarkDesigns() {
+  return [
+    { kind: 'hermit', half: HUT.half, blocks: HUT.blocks },
+    { kind: 'camp', half: CAMP.half, blocks: CAMP.blocks },
+    ...PLACES.map((p) => ({ kind: p.kind, half: p.half, blocks: p.build(0.5) })),
+  ];
+}

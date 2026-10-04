@@ -21,6 +21,7 @@ import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 import { CLEARS, clearArtSvg } from '../config/clears.js';
 import { Minimap } from '../render/Minimap.js';
 import { drawWorldMap, MAP_ZOOMS } from '../render/WorldMap.js';
+import { SHOWCASE_SPOTS, SHOWCASE_TIMES } from '../world/showcase.js';
 
 /**
  * Items that act on the world directly through Break/Place while selected,
@@ -314,6 +315,21 @@ export class UIManager {
               <button class="secondary" id="btn-import-world">Import a file</button>
             </div>
             <div class="export-note">A world file restores everything, designs included. The .vox opens in MagicaVoxel and Blender.</div>
+          </div>
+
+          <!-- The showcase (world/showcase.js): a workshop tool, behind the switch. -->
+          <div class="menu-section" id="menu-showcase" hidden>
+            <button class="menu-back" data-menu-back="1">${icon('chevron', 14)}<span>Menu</span></button>
+            <div class="field-row" style="flex-wrap:wrap;">
+              <button class="secondary" id="btn-showcase-open">Open the showcase</button>
+            </div>
+            <label class="menu-name"><span>Look from</span>
+              <select id="showcase-spot">${SHOWCASE_SPOTS.map((sp) => `<option value="${sp.id}">${escapeHtml(sp.name)}</option>`).join('')}</select>
+            </label>
+            <div class="field-row" style="flex-wrap:wrap;">
+              ${Object.keys(SHOWCASE_TIMES).map((t) => `<button class="secondary" data-showcase-time="${t}">${t[0].toUpperCase()}${t.slice(1)}</button>`).join('')}
+            </div>
+            <div class="export-note">Not saved: it is built again from the same seed every time. tools/showcase-shots.mjs takes its pictures.</div>
           </div>
 
           <!--
@@ -749,6 +765,10 @@ export class UIManager {
     this.q('#btn-export-world').addEventListener('click', () => this.cb.onExportWorld(this.q('#save-name').value));
     this.q('#btn-export-vox').addEventListener('click', () => this.cb.onExportVox(this.q('#save-name').value));
     this.q('#btn-import-world').addEventListener('click', () => this.cb.onImportWorld());
+    // The showcase: open it, or move about it once it's open.
+    this.q('#btn-showcase-open').addEventListener('click', () => { this.cb.onOpenShowcase?.(this.q('#showcase-spot').value); this.closeAllPanels(); });
+    this.q('#showcase-spot').addEventListener('change', (e) => { if (this.cb.onShowcaseSpot?.(e.target.value)) this.closeAllPanels(); });
+    this.root.querySelectorAll('[data-showcase-time]').forEach((b) => b.addEventListener('click', () => this.cb.onShowcaseTime?.(b.dataset.showcaseTime)));
     // Renaming is the field, not a button beside it: type a name, leave the
     // field, that is its name. It used to need Save pressed, and Save made a
     // copy, so renaming quietly gave you two worlds.
