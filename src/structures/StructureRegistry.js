@@ -15,12 +15,26 @@ import { tierStatus, validateStructure } from './validate.js';
  */
 
 const MAX_OFFLINE_HOURS = 8; // beyond this, idle income stops being a reward
+/** And never more than this many of the buildings' own days, however short a day is. */
+const MAX_OFFLINE_DAYS = 2;
+/** A real day: what `everySeconds` in config/structures.js is written against. */
+const REAL_DAY_SECONDS = 86400;
 
 export class StructureRegistry {
-  constructor({ world, bus, inventory }) {
+  /**
+   * `dayLengthSeconds`: how many real seconds one of the buildings' days
+   * lasts. Every rate in config/structures.js is written as so much a day —
+   * `everySeconds` out of 86,400 — and by default a day is a real one. Duilt
+   * passes the game's own day (render/DayCycle.js, fifteen minutes), because
+   * played on: "the forest is not giving me the wood daily. After 3 days zero
+   * wood" — three game days was 45 minutes, and the forest paid every six
+   * real hours.
+   */
+  constructor({ world, bus, inventory, dayLengthSeconds = REAL_DAY_SECONDS }) {
     this.world = world;
     this.bus = bus;
     this.inventory = inventory;
+    this.dayScale = dayLengthSeconds / REAL_DAY_SECONDS;
     this.structures = [];
     this.nextId = 1;
   }
@@ -367,7 +381,7 @@ export class StructureRegistry {
     const gained = {};
     const taxed = {};
     const stalled = [];
-    const capMs = MAX_OFFLINE_HOURS * 3600_000;
+    const capMs = Math.min(MAX_OFFLINE_HOURS * 3600_000, MAX_OFFLINE_DAYS * REAL_DAY_SECONDS * this.dayScale * 1000);
 
     for (const s of this.structures) {
       if (!s.valid) continue;
@@ -383,7 +397,7 @@ export class StructureRegistry {
       const produces = spec.fromAnimals || spec.fromCrops ? (producesFor?.(s) ?? {}) : producesAt(spec, tier);
       if (!everySeconds) continue;
 
-      const periodMs = everySeconds * 1000;
+      const periodMs = everySeconds * 1000 * this.dayScale;
       const elapsed = Math.min(now - s.lastPaidAt, capMs);
       const cycles = Math.floor(elapsed / periodMs);
       if (cycles <= 0) continue;
@@ -445,7 +459,7 @@ export class StructureRegistry {
       const spec = STRUCTURES_BY_ID.get(s.type);
       const everySeconds = intervalAt(spec, s.tier ?? 0);
       if (!everySeconds) continue;
-      const due = s.lastPaidAt + everySeconds * 1000;
+      const due = s.lastPaidAt + everySeconds * 1000 * this.dayScale;
       soonest = Math.min(soonest, Math.max(0, due - now));
     }
     return soonest === Infinity ? null : Math.round(soonest / 1000);
