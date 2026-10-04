@@ -473,13 +473,21 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #stick-left .stick-base { left: var(--stick-edge); }
 #stick-right .stick-base { right: var(--stick-inset); }
 .stick-base.active { opacity: 1; border-color: var(--accent); }
+/* Centred on the base whatever size either is, so a screen that changes one
+   only has to change the variable. */
 .stick-knob {
-  position: absolute; width: 46px; height: 46px; border-radius: 50%; top: 29px; left: 29px;
+  --knob: 46px;
+  position: absolute; width: var(--knob); height: var(--knob); border-radius: 50%;
+  top: calc((var(--stick-size) - var(--knob)) / 2 - 1px); left: calc((var(--stick-size) - var(--knob)) / 2 - 1px);
   will-change: transform;
   background: rgba(13, 17, 23, 0.34); backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 2px 10px rgba(0,0,0,0.35); /* kept dark on purpose */
 }
 .stick-base.active .stick-knob { border-color: var(--accent); background: var(--accent-dim); }
+/* Running (UIManager.bindStick): the thumb has gone up past the rim. The rim
+   lights along its top so you can feel where walking ends without looking. */
+.stick-base.running { box-shadow: 0 -6px 0 -2px var(--accent); }
+.stick-base.running .stick-knob { background: var(--accent); }
 
 /* One column an edge, and never over a stick.
 
@@ -980,9 +988,14 @@ body.flying.touch-walk-right #side-right { left: auto; right: calc(var(--stick-e
   /* A hint, not an announcement — it sat in the middle of the thumb zone. */
   .hotbar-empty { padding: 8px 12px; font-size: 11px; }
   /* Big enough to find without looking, small enough to see past. */
-  :root { --stick-inset: 72px; --stick-edge: 12px; --stick-size: 84px; --stick-bottom: 18px;
-          --stick-zone: 78px; --stick-gap: 24px; }
-  .stick-knob { width: 40px; height: 40px; top: 24px; left: 24px; }
+  /* Played on: the walking stick was a little small to find without looking
+     ("the joystick on the left needs to be slightly bigger"), and the column
+     above it a little big ("the buttons on top can be slightly smaller"). */
+  :root { --stick-inset: 72px; --stick-edge: 12px; --stick-size: 108px; --stick-bottom: 18px;
+          --stick-zone: 78px; --stick-gap: 20px; }
+  .stick-knob { --knob: 48px; }
+  .touch-buttons .touch-btn { width: 48px; height: 48px; border-radius: 14px; }
+  .touch-buttons { gap: 8px; }
 }
 @media (min-width: 721px) {
   #bag-hotbar-grid, #bag-grid { grid-template-columns: repeat(8, 1fr); }
@@ -1326,7 +1339,7 @@ body.touch #top-buttons .touch-moved { display: none !important; }
     --stick-zone: 52px; --stick-gap: 8px; --side-btn: 40px;
   }
   body.touch .stick-zone { height: 66%; }
-  body.touch .stick-knob { width: 30px; height: 30px; top: 19px; left: 19px; }
+  body.touch .stick-knob { --knob: 30px; }
   body.touch .touch-btn { width: 42px; height: 42px; border-radius: 11px; }
   body.touch .touch-btn.small { border-radius: 11px; }
   body.touch .touch-btn span { font-size: 7px; }
@@ -1453,6 +1466,12 @@ body.editing-building #building-hint {
 .cost-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border-radius: 999px; border: 1px solid var(--panel-border); background: rgba(35,42,45,0.05); font-size: 13px; }
 .cost-chip b { font-weight: 700; }
 .cost-chip.short { border-color: #d27a6a; background: rgba(210,122,106,0.14); color: #b8513f; }
+/* A panel with a search in it keeps its height while you search. Played on a
+   phone: "when searching for an item in the bench pop up, the pop up reduces
+   a lot its size if it shows only one item — would be nice to have it fixed
+   height to keep the same view". Sized to the screen rather than to what's
+   left in the list, so the search box stays where your thumb left it. */
+#panel-bench > .panel, #panel-buildings > .panel { height: min(86vh, 760px); }
 /* A search over a long list (backlog batch 2): the bench, the buildings. */
 .panel-search {
   display: block; width: 100%; box-sizing: border-box; margin: 0 0 10px; padding: 10px 12px;

@@ -12,7 +12,7 @@ const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf
 const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
 
 // The walking stick stays put, and only a touch on it takes it.
-ok('the walking stick is fixed', /bindStick\('#stick-left', \(x, y\) => this\.cb\.onMove\(x, y\), \{ deadZone: 0\.10, curve: 1\.1, fixed: true \}\)/.test(ui));
+ok('the walking stick is fixed', /bindStick\('#stick-left', \(x, y, run\) => this\.cb\.onMove\(x, y, run\), \{ deadZone: 0\.10, curve: 1\.1, fixed: true \}\)/.test(ui));
 ok('a fixed stick listens on itself, not its half of the screen', /const grab = fixed \? base : zone;/.test(ui) && /grab\.addEventListener\('touchstart'/.test(ui));
 ok('and is pushed from its own middle, never moved under the thumb', /if \(fixed\) \{[\s\S]{0,200}origin = \{ x: b\.left \+ b\.width \/ 2, y: b\.top \+ b\.height \/ 2 \};/.test(ui));
 ok('the rest of its half lets touches through to the picture', /\.stick-zone\.stick-fixed \{ pointer-events: none; \}/.test(css)

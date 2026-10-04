@@ -103,8 +103,6 @@ import { settlerName, settlerColour } from './config/settlers.js';
 const REACH = 7;
 /** The war only comes on while you're this near home — it's your settlement they want. */
 const WAR_HOME_RANGE = 220;
-/** How far out the touch stick has to be pushed to run rather than walk. */
-const STICK_RUN = 0.92;
 /** Blows a block of a claimed wall, gatehouse or watchtower takes before it breaks. */
 const REINFORCED = 3;
 /** How often the defence buildings' posts are brought in line with what's standing. */
@@ -1052,14 +1050,15 @@ export class Game {
         return held;
       },
       onCycleSymmetry: () => this.symmetryTool.cycle(),
-      onMove: (x, z) => {
+      onMove: (x, z, run = false) => {
         this.player.externalMove.x = x;
         this.player.externalMove.z = z;
-        // Pushed right out to the edge of the stick: run.
-        const running = Math.hypot(x, z) >= STICK_RUN;
+        // Carried on up past the stick's rim, straight ahead: run. The stick
+        // decides (UIManager.bindStick) — the rim itself is full walking pace.
+        const running = !!run;
         if (running && !this.player.stickSprint && !this.toldStickRun) {
           this.toldStickRun = true;
-          this.ui?.toast({ kind: 'challenge', title: 'Running', body: 'Push the stick all the way out to run — ease off to walk' });
+          this.ui?.toast({ kind: 'challenge', title: 'Running', body: 'Push the stick up past its rim to run — come back inside it to walk' });
         }
         this.player.stickSprint = running;
       },

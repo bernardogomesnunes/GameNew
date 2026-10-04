@@ -92,6 +92,16 @@ function touchLayoutPreview(c) {
 }
 
 /** How far a touch on the picture moves, in px, before it's a look and not a tap. */
+/**
+ * Running on the walking stick (see bindStick): the thumb has to be carried
+ * up past the knob's full reach — this many reaches straight up from the
+ * middle, so a little way out beyond the base's rim — and within this much
+ * of straight ahead (the tangent of 30°). The knob is then drawn this far up,
+ * just over the rim, so you can see you've crossed it.
+ */
+const STICK_RUN_REACH = 1.5;
+const STICK_RUN_SPREAD = 0.58;
+const STICK_RUN_KNOB = 1.3;
 const LOOK_SLOP = 10;
 /** How long a still touch on the picture waits before it starts breaking. */
 const LOOK_HOLD_MS = 300;
@@ -832,8 +842,12 @@ export class UIManager {
     const zone = this.q(zoneSel);
     const base = zone.querySelector('.stick-base');
     const knob = zone.querySelector('.stick-knob');
-    const RADIUS = 42;
+    // How far the knob travels: to the rim of the base, whatever size the
+    // base is drawn (styles.css --stick-size), less the knob's own margin.
+    let RADIUS = 42;
+    const measure = () => { if (base.offsetWidth) RADIUS = Math.max(30, base.offsetWidth * 0.4); };
     let touchId = null;
+    let running = false;
     let origin = { x: 0, y: 0 };
     // A fixed stick (asked for directly: "block the moving left joystick to
     // be still or else I keep picking it up with my right finger") stays
@@ -863,6 +877,7 @@ export class UIManager {
       if (touchId !== null) return;
       const t = e.changedTouches[0];
       touchId = t.identifier;
+      measure();
       if (fixed) {
         // Pushed from its own middle, wherever on it the thumb came down.
         const b = base.getBoundingClientRect();
@@ -871,8 +886,9 @@ export class UIManager {
         origin = { x: t.clientX, y: t.clientY };
         // The base is positioned inside the zone, so offset by the zone's origin.
         const rect = zone.getBoundingClientRect();
-        base.style.left = `${t.clientX - rect.left - 52}px`;
-        base.style.top = `${t.clientY - rect.top - 52}px`;
+        const half = base.offsetWidth / 2 || 52;
+        base.style.left = `${t.clientX - rect.left - half}px`;
+        base.style.top = `${t.clientY - rect.top - half}px`;
         base.style.right = 'auto';
         base.style.bottom = 'auto';
       }
@@ -885,11 +901,20 @@ export class UIManager {
       for (const t of e.changedTouches) {
         if (t.identifier !== touchId) continue;
         let dx = t.clientX - origin.x, dy = t.clientY - origin.y;
+        // Running is its own place, not the end of walking: played on, "the
+        // difference between walking and running needs to be more pronounced
+        // or else I'll be sprinting all the time. Make sure it's only
+        // sprinting when reaching max front". The rim is full walking pace;
+        // only a thumb carried on up past it, straight ahead, runs — a thumb
+        // that overshoots sideways or back, or only reaches the rim, walks.
+        const wasRunning = running;
+        running = -dy >= RADIUS * STICK_RUN_REACH && Math.abs(dx) <= -dy * STICK_RUN_SPREAD;
+        if (running !== wasRunning) base.classList.toggle('running', running);
         const len = Math.hypot(dx, dy);
         if (len > RADIUS) { dx = (dx / len) * RADIUS; dy = (dy / len) * RADIUS; }
-        setKnob(dx, dy);
+        setKnob(dx, running ? -RADIUS * STICK_RUN_KNOB : dy);
         const out = shape(dx, dy);
-        onChange(out.x, -out.y);
+        onChange(out.x, -out.y, running);
       }
       e.preventDefault();
     }, { passive: false });
@@ -898,7 +923,8 @@ export class UIManager {
       for (const t of e.changedTouches) {
         if (t.identifier !== touchId) continue;
         touchId = null;
-        base.classList.remove('active');
+        running = false;
+        base.classList.remove('active', 'running');
         if (!fixed) for (const prop of ['left', 'top', 'right', 'bottom']) base.style.removeProperty(prop);
         setKnob();
         onChange(0, 0);
@@ -987,7 +1013,7 @@ export class UIManager {
     // rate and the camera felt like it was lagging behind the thumb. 1.25
     // keeps the fine control near centre and gives back the middle of the
     // range. Movement just wants to reach full speed readily.
-    this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y), { deadZone: 0.10, curve: 1.1, fixed: true });
+    this.bindStick('#stick-left', (x, y, run) => this.cb.onMove(x, y, run), { deadZone: 0.10, curve: 1.1, fixed: true });
     // A steeper curve than the walking stick: most of a look is a small
     // correction, and a linear stick spends nearly all its travel on speeds
     // too fast to aim with. At half a thumb this now turns about a fifth of
