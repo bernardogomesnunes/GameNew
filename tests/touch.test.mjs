@@ -31,19 +31,24 @@ const tray = ui.slice(ui.indexOf('id="touch-tray"'), ui.indexOf('</div>', ui.ind
 // --- which thumb does what ---------------------------------------------------
 
 ok('the left stick walks', /bindStick\('#stick-left', \(x, y\) => this\.cb\.onMove/.test(ui));
-ok('the right stick aims the camera', /bindStick\('#stick-right', \(x, y\) => this\.cb\.onLookStick/.test(ui));
+// Backlog batch 2, priority 0: no look stick — the picture is the camera.
+ok('no look stick: dragging the picture aims the camera', /this\.bindLookSurface\(\);/.test(ui) && !/bindStick\('#stick-right'/.test(ui)
+  && /id="look-zone"/.test(ui) && /#stick-right, #side-left \{ display: none !important; \}/.test(css));
 // The camera keeps the finer curve wherever it lives; it is a property of
 // aiming, not of a side of the screen. See the look-speed block below for what
 // the number is and why.
-ok('and the camera keeps its finer control near centre',
-  /onLookStick[^\n]*curve: 1\.7/.test(ui) && /onMove[^\n]*curve: 1\.1/.test(ui));
+ok('a tap on the picture is Break; holding still keeps breaking; a drag never taps',
+  /else if \(!moved && e\.type === 'touchend'\) tap\(\);/.test(ui)
+  && /this\.cb\.onBreakTap\(\);\s*if \(!this\.cb\.isDigging\?\.\(\)\) return;\s*this\.cb\.onBreakHold\?\.\(true\);\s*finishing = setTimeout\(stopFinishing, TAP_FINISH_MS\);/.test(ui)
+  && /holding = true;\s*this\.cb\.onBreakTap\(\);\s*this\.cb\.onBreakHold\?\.\(true\);/.test(ui)
+  && /if \(moved\) this\.cb\.onLookDrag\?\.\(/.test(ui));
 
 // --- the two you press constantly sit against their own stick ----------------
 
 // Reaching up the edge for the thing you press between every other thing you
 // press is the reach that was costing time. Jump goes with the thumb that
 // walks, Place with the thumb that aims.
-ok('Break is beside the stick that walks', sideLeft.includes('id="t-break"'));
+ok('Break keeps its element (labels still read from it), hidden', sideLeft.includes('id="t-break"'));
 ok('Jump is beside the stick that aims', sideRight.includes('id="t-jump"'));
 ok('with Down under it, once you are flying', sideRight.includes('id="t-down"'));
 {
@@ -51,7 +56,7 @@ ok('with Down under it, once you are flying', sideRight.includes('id="t-down"'))
   // it was the lower one, which is a control arguing with its own arrow.
   const order = [...sideRight.matchAll(/id="(t-[a-z]+)"/g)].map((m) => m[1]);
   ok(`the flying pair reads ${order.join(', ')}`,
-    JSON.stringify(order) === JSON.stringify(['t-jump', 't-down']));
+    JSON.stringify(order) === JSON.stringify(['t-place', 't-jump', 't-down']));
   ok('and Jump is the one that becomes Up', /label\.textContent = flying \? 'Up' : 'Jump'/.test(ui));
   // Dropping Down into the slot the single button had means a thumb reaching
   // for Up by reflex sinks instead.
@@ -90,7 +95,7 @@ ok('and they are centred on the base, so the reach is sideways only',
 
 // --- what is left in the column ----------------------------------------------
 
-ok('Place is in the column, where Break used to be', column.includes('id="t-place"'));
+ok('Place is on the right, above Jump — not in the column', sideRight.includes('id="t-place"') && !column.includes('id="t-place"'));
 ok('Fly too, being a mode rather than an action', column.includes('id="t-fly"'));
 ok('and More', column.includes('id="t-more"'));
 
@@ -99,7 +104,7 @@ ok('nothing is laid out in a row', !/class="row"/.test(ui));
 {
   const order = [...column.matchAll(/id="(t-[a-z]+)"/g)].map((m) => m[1]);
   ok(`the column reads ${order.join(', ')}`,
-    JSON.stringify(order) === JSON.stringify(['t-more', 't-fly', 't-place']));
+    JSON.stringify(order) === JSON.stringify(['t-more', 't-fly']));
 }
 
 // --- nothing on top of a stick ------------------------------------------------
@@ -236,8 +241,9 @@ ok('the ones in the sheet stay solid', /\.touch-tray \.touch-btn \{ background: 
 }
 // Most of a look is a small correction; a linear stick spends nearly all its
 // travel on speeds too fast to aim with.
-ok('the look stick is curved harder than the walking one',
-  /onLookStick[^\n]*curve: 1\.7/.test(ui) && /onMove[^\n]*curve: 1\.1/.test(ui));
+ok('a dragged pixel turns you a set amount, scaled by your sensitivity, like the mouse',
+  /onLookDrag: \(dx, dy\) => \{\s*const k = TOUCH_LOOK \* \(this\.controls\.sensitivity \?\? 1\);\s*this\.player\.look\(dx \* k, dy \* k\);/.test(readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8'))
+  && /onMove[^\n]*curve: 1\.1/.test(ui));
 
 // --- a phone on its side ------------------------------------------------------
 

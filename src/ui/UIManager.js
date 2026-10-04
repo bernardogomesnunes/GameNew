@@ -90,6 +90,13 @@ function touchLayoutPreview(c) {
   </svg>`;
 }
 
+/** How far a touch on the picture moves, in px, before it's a look and not a tap. */
+const LOOK_SLOP = 10;
+/** How long a still touch on the picture waits before it starts breaking. */
+const LOOK_HOLD_MS = 300;
+/** How long a tap keeps digging, to finish an ordinary block (Game's NORMAL_BREAK_MS and the hold's own delay). */
+const TAP_FINISH_MS = 450;
+
 export class UIManager {
   constructor(root, { bus, game, callbacks }) {
     this.bus = bus;
@@ -446,6 +453,13 @@ export class UIManager {
         because it belongs with the hand that is looking where you are going.
       -->
       <div id="touch-controls">
+        <!--
+          The picture itself is the camera (backlog batch 2, priority 0 — "the
+          controls are shit for pvp"): drag anywhere to look, tap to break or
+          strike, hold still to keep breaking. Under everything else, so the
+          walking stick and the buttons still get their own touches.
+        -->
+        <div id="look-zone"></div>
         <div class="stick-zone" id="stick-left">
           <div class="stick-base"><div class="stick-knob"></div></div>
         </div>
@@ -499,6 +513,7 @@ export class UIManager {
             straddles where the single one was, rather than dropping Down into
             the slot your thumb was resting on.
           -->
+          <button class="touch-btn small" id="t-place">${icon('place')}<span>Place</span></button>
           <button class="touch-btn small" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
           <button class="touch-btn small" id="t-down" hidden>${icon('down')}<span>Down</span></button>
         </div>
@@ -507,7 +522,6 @@ export class UIManager {
         <div class="touch-buttons" id="touch-buttons-left">
           <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
           <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
-          <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
         </div>
       </div>
     `;
@@ -868,6 +882,75 @@ export class UIManager {
     zone.addEventListener('touchcancel', release);
   }
 
+  /**
+   * The screen as the camera, the way phone shooters do it (backlog batch 2,
+   * priority 0). One finger anywhere that isn't a stick or a button:
+   *
+   *   drag        turns you, like a mouse — the picture follows the finger
+   *   tap         Break's job: break, strike, fill a bucket, cancel a carry
+   *   hold still  keeps breaking, as holding Break did; drag while holding
+   *               to sweep along a wall
+   *
+   * A touch only becomes a look once it has moved past LOOK_SLOP, so a tap
+   * doesn't nudge the view; past that it's a look and never a tap.
+   */
+  bindLookSurface() {
+    const zone = this.q('#look-zone');
+    let id = null, start = null, last = null, moved = false, holding = false, timer = null, finishing = null;
+    // A tap into an ordinary block finishes it: digging takes a quarter of a
+    // second by hand, longer than a tap lasts, so the tap carries on just
+    // long enough. Only when the tap started a dig — a tap that struck
+    // somebody isn't repeated.
+    const stopFinishing = () => {
+      if (!finishing) return;
+      clearTimeout(finishing);
+      finishing = null;
+      this.cb.onBreakHold?.(false);
+    };
+    const tap = () => {
+      this.cb.onBreakTap();
+      if (!this.cb.isDigging?.()) return;
+      this.cb.onBreakHold?.(true);
+      finishing = setTimeout(stopFinishing, TAP_FINISH_MS);
+    };
+    zone.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (id !== null) return;
+      stopFinishing();
+      const t = e.changedTouches[0];
+      id = t.identifier;
+      start = last = { x: t.clientX, y: t.clientY };
+      moved = false;
+      holding = false;
+      timer = setTimeout(() => {
+        if (id === null || moved) return;
+        holding = true;
+        this.cb.onBreakTap();
+        this.cb.onBreakHold?.(true);
+      }, LOOK_HOLD_MS);
+    }, { passive: false });
+    zone.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        if (t.identifier !== id) continue;
+        if (!moved && Math.hypot(t.clientX - start.x, t.clientY - start.y) > LOOK_SLOP) moved = true;
+        if (moved) this.cb.onLookDrag?.(t.clientX - last.x, t.clientY - last.y);
+        last = { x: t.clientX, y: t.clientY };
+      }
+    }, { passive: false });
+    const end = (e) => {
+      for (const t of e.changedTouches) {
+        if (t.identifier !== id) continue;
+        clearTimeout(timer);
+        if (holding) this.cb.onBreakHold?.(false);
+        else if (!moved && e.type === 'touchend') tap();
+        id = null;
+      }
+    };
+    zone.addEventListener('touchend', end);
+    zone.addEventListener('touchcancel', end);
+  }
+
   wireTouchControls() {
     // Camera left, movement right. Backwards against every console pad, and
     // right for this game: the thumb that never leaves its stick is the one
@@ -883,7 +966,8 @@ export class UIManager {
     // correction, and a linear stick spends nearly all its travel on speeds
     // too fast to aim with. At half a thumb this now turns about a fifth of
     // full speed rather than a third.
-    this.bindStick('#stick-right', (x, y) => this.cb.onLookStick(x, y), { deadZone: 0.09, curve: 1.7 });
+    // No look stick any more: the picture is the camera (bindLookSurface).
+    this.bindLookSurface();
 
     const bindHold = (sel, onChange) => {
       const el = this.q(sel);

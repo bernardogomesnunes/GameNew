@@ -46,7 +46,7 @@ ok('by the aiming thumb, Break and the column move over',
 ok('and both together put them back on the left, beside the aiming stick',
   css.includes('body.touch-act-look.touch-walk-right #side-left {') && css.includes('body.touch-act-look.touch-walk-right #touch-buttons-left {'));
 // The sticks keep their jobs: only where they are changes.
-ok('the walking stick still walks and the aiming one still aims — only the sides move',
-  /bindStick\('#stick-left', \(x, y\) => this\.cb\.onMove/.test(ui) && /bindStick\('#stick-right', \(x, y\) => this\.cb\.onLookStick/.test(ui));
+ok('the walking stick still walks, and the picture still aims — only the sides move',
+  /bindStick\('#stick-left', \(x, y\) => this\.cb\.onMove/.test(ui) && /this\.bindLookSurface\(\);/.test(ui));
 
 process.exit(f ? 1 : 0);
