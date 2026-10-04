@@ -25,7 +25,7 @@ export const LOOT = {
   },
   hermit: {
     name: 'The hermit\'s chest',
-    items: [['fruit', 0.8, 2, 5], ['seeds', 0.7, 2, 4], ['egg', 0.3, 1, 3], ['lantern', 0.4, 1, 1], ['gold', 0.4, 1, 2], ['kombucha', 0.4, 1, 2], ['seeds_coffee', 0.5, 2, 4], ['coffee_beans', 0.4, 2, 5]],
+    items: [['fruit', 0.8, 2, 5], ['seeds_cabbage', 0.7, 2, 4], ['egg', 0.3, 1, 3], ['lantern', 0.4, 1, 1], ['gold', 0.4, 1, 2], ['kombucha', 0.4, 1, 2], ['seeds_coffee', 0.5, 2, 4], ['coffee_beans', 0.4, 2, 5]],
     ring: 0.2,
   },
   // Places to find (playtest, P4): "all with a chest with goodies: armour,

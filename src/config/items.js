@@ -68,10 +68,9 @@ export const ITEMS = [
   { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xf0cf62, glyph: 'gold', block: 13, madeBy: 'Brought up from a mine' },
 
   // --- growing things ------------------------------------------------------
-  // Mixed seeds come up as whichever crop they turn out to be (see
-  // Game.plantMixed); each crop's own seeds come up as that crop — see
-  // config/crops.js.
-  { id: 'seeds', name: 'Mixed Seeds', kind: 'raw', stackTo: STACK_GOODS, color: 0xd7cb95, glyph: 'seeds', madeBy: 'Shaken from a forest, or saved from a harvest' },
+  // Each crop's own seeds come up as that crop — see config/crops.js. There
+  // were Mixed Seeds too, which came up as anything; backlog batch 2: no
+  // mixed seeds. Old bags' come back as carrot seeds (LEGACY_ITEMS).
   ...CROPS.map((c) => ({
     id: `seeds_${c.kind}`, name: `${c.name} Seeds`, kind: 'raw', stackTo: STACK_GOODS, color: c.crop, glyph: 'seeds',
     block: cropBaseOf(c), madeBy: `Saved from a ripe ${c.name.toLowerCase()}`,
@@ -373,6 +372,12 @@ export function toolEffectiveness(toolId, material) {
   if (!material) return 'normal';
   return ITEMS_BY_ID.get(toolId)?.effectiveness?.[material] ?? 'normal';
 }
+
+/**
+ * Items that are gone, and what a bag holding one gets instead when it is
+ * loaded (items/Inventory.loadJSON).
+ */
+export const LEGACY_ITEMS = { seeds: 'seeds_carrot' };
 
 /**
  * What an empty hotbar slot holds: nothing. Selecting one (backlog batch 2:

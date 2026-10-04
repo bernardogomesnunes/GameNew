@@ -69,24 +69,22 @@ export function harvestOf(blockId) {
   return { [CROPS_BY_KIND.get(c.kind).produce]: 2, [`seeds_${c.kind}`]: 2 };
 }
 
+/** How many crops one farm grows at once (backlog batch 2: "up to 4 crops"). */
+export const FARM_SEED_SLOTS = 4;
+
 /**
- * What a farm makes from what's planted in it, per cycle: some of each crop
- * growing there, more the more of it there is, and a few of its seeds.
+ * What a farm makes, per cycle (backlog batch 2). It grows whatever seeds
+ * were put into it — one seed a crop, up to FARM_SEED_SLOTS — and each
+ * gives its crop and its own seeds back: a carrot seed in, carrots and
+ * carrot seeds out. Nothing put in, nothing grows. The blocks planted in
+ * its soil are yours to pick by hand; they no longer decide this.
  */
-export function cropProduce(structure, world) {
-  const r = structure.region;
-  const byKind = {};
-  for (let x = r.minX; x <= r.maxX; x++) {
-    for (let y = r.minY; y <= r.maxY; y++) {
-      for (let z = r.minZ; z <= r.maxZ; z++) {
-        const c = cropOf(world.getBlock(x, y, z));
-        if (c) byKind[c.kind] = (byKind[c.kind] ?? 0) + 1;
-      }
-    }
-  }
+export function farmProduce(structure) {
   const out = {};
-  for (const [kind, n] of Object.entries(byKind)) {
-    out[CROPS_BY_KIND.get(kind).produce] = Math.min(3, Math.ceil(n / 3));
+  for (const kind of structure.seeds ?? []) {
+    const c = CROPS_BY_KIND.get(kind);
+    if (!c) continue;
+    out[c.produce] = (out[c.produce] ?? 0) + 1;
     out[`seeds_${kind}`] = 1;
   }
   return out;

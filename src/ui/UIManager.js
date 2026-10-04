@@ -49,7 +49,6 @@ const TOOL_ACTION_LABELS = {
   bucket_water: ['Break', 'Empty'],
   fruit: ['Eat', 'Throw'],
   vegetables: ['Eat', 'Throw'],
-  seeds: ['Break', 'Plant'],
   holy_water: ['Drink', 'Place'],
   beer: ['Drink', 'Place'],
   kombucha: ['Drink', 'Place'],

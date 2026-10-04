@@ -113,12 +113,6 @@ export const ITEM_MODELS = {
     ...stack([[0.24, 0.24, 0, 0.2, 0xf4f1ea], [0.24, 0.24, 0.2, 0.42, 0x7fa6d6], [0.24, 0.24, 0.42, 0.62, 0xf4f1ea]]),
     ...stack([[0.13, 0.13, 0.62, 0.8, 0xf4f1ea], [0.15, 0.15, 0.8, 0.88, 0x5b86c2]]),
   ],
-  // A packet of seeds that could come up as anything.
-  seeds: packet([
-    [0.28, 0.3, 0.4, 0.42, 0xe8873a],
-    [0.44, 0.44, 0.56, 0.56, 0xd84a3c],
-    [0.6, 0.3, 0.72, 0.42, 0x6ea653],
-  ]),
 };
 
 // A packet per crop, with the crop on the front and a leaf above it.

@@ -32,6 +32,8 @@ export const CROPS = [
   { kind: 'coffee', name: 'Coffee', produce: 'coffee_beans', leaf: 0x3f7f45, crop: 0xb8362e, base: 205 },
 ];
 export const CROPS_BY_KIND = new Map(CROPS.map((c) => [c.kind, c]));
+/** The field crops — everything but coffee, which comes from the hermit's chest, not out of the grass. */
+export const FIELD_CROPS = CROPS.filter((c) => c.kind !== 'coffee');
 
 /**
  * Block ids: stage s of the k-th crop is CROP_BASE + 4k + s — unless it has

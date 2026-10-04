@@ -1,4 +1,3 @@
-import { CROP_IDS } from './crops.js';
 /**
  * Building definitions for Duilt.
  *
@@ -113,8 +112,9 @@ export const STRUCTURES = [
     // real trickle instead, which is what a standing forest should feel
     // like next to a claimed farm.
     // Raised to 20 wood a day (backlog batch 2): every 6 hours, 5 wood. The
-    // foraged extras ride the same cycle, 4 a day each.
-    produces: { wood: 5, leaves: 1, seeds: 1, fruit: 1 },
+    // foraged extras ride the same cycle, 4 a day each. No seeds: those come
+    // from farms and grass now, a crop at a time.
+    produces: { wood: 5, leaves: 1, fruit: 1 },
     everySeconds: 21600,
     skill: 'foraging',
   },
@@ -124,10 +124,9 @@ export const STRUCTURES = [
     name: 'Farm',
     icon: '🌾',
     age: 1,
-    blurb: 'Turned soil beside fresh water, with crops growing in it. It makes whatever you planted.',
+    blurb: 'Turned soil beside fresh water. Put a seed in for each crop you want — up to four — and it grows them.',
     minSize: 2,
     maxSize: 16,
-    cost: { seeds: 2 },
     requires: [
       {
         id: 'tilled',
@@ -141,20 +140,16 @@ export const STRUCTURES = [
         test: (ctx) => ctx.hasWithin([WATER], 6),
         say: () => 'Needs fresh water within 6 blocks — build nearer the river',
       },
-      {
-        // Requested directly: a farm "should have crops to plant there".
-        id: 'crops',
-        test: (ctx) => count(ctx, CROP_IDS) >= 4,
-        say: (ctx) => `Needs ${4 - count(ctx, CROP_IDS)} more crops planted — put seeds in the farmland`,
-      },
     ],
-    // What it makes is what's growing in it — see duilt/Crops.js's
-    // cropProduce. `produces` below is only what it's known for.
+    // Backlog batch 2: a farm needs no seeds to build, and what it grows is
+    // the seeds put into it from its own pop-up, one a crop, up to four —
+    // see duilt/Crops.js's farmProduce. `produces` below is only what it's
+    // known for.
     fromCrops: true,
     // Requested directly: no building should hand over more than 10-15 of
     // anything in a day. A 2-hour cycle at one of each keeps a farm at a
     // dozen a day, not the twelve dozen a 12-minute cycle worked out to.
-    produces: { vegetables: 1, seeds: 1, fruit: 1 },
+    produces: { vegetables: 1, seeds_carrot: 1 },
     everySeconds: 7200,
     skill: 'building',
   },
@@ -716,7 +711,7 @@ export const STRUCTURES = [
     ],
     // Requested directly: no building should hand over more than 10-15 of
     // anything in a day — see the farm's own note above for the same fix.
-    produces: { vegetables: 1, seeds: 1 },
+    produces: { vegetables: 1, seeds_potato: 1 },
     everySeconds: 7200,
     skill: 'foraging',
   },
@@ -943,7 +938,7 @@ export const STRUCTURES = [
     blurb: 'A forest, a farm, housing and a shed, folded into one claim — everything a start needs, raised at once.',
     minSize: 14,
     maxSize: 28,
-    cost: { wood: 20, seeds: 8 },
+    cost: { wood: 20, seeds_carrot: 4, seeds_potato: 4 },
     requires: [
       {
         id: 'trunks',
@@ -989,7 +984,7 @@ export const STRUCTURES = [
     // should hand over more than 10-15 of anything in a day, so wood — the
     // one item here worth staying near that ceiling — tops out at fifteen,
     // with the rest a real trickle alongside it.
-    produces: { wood: 3, leaves: 1, vegetables: 1, seeds: 1 },
+    produces: { wood: 3, leaves: 1, vegetables: 1, seeds_carrot: 1 },
     grantsCapacity: 3,
     everySeconds: 17280,
     skill: 'building',

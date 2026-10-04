@@ -1,7 +1,7 @@
 import { World } from '../src/world/World.js';
 import { Inventory } from '../src/items/Inventory.js';
 import { StructureRegistry } from '../src/structures/StructureRegistry.js';
-import { cropProduce } from '../src/duilt/Crops.js';
+import { farmProduce } from '../src/duilt/Crops.js';
 let f=0; const ok=(n,c)=>{console.log((c?'PASS ':'FAIL ')+n); if(!c)f++;};
 const WATER=11, FARMLAND=21;
 
@@ -16,14 +16,10 @@ const setup = () => {
 };
 const FARM = {minX:4,maxX:7,minY:10,maxY:11,minZ:4,maxZ:7};
 
-// cost is charged, and refused when unaffordable
+// A farm costs no seeds to claim (backlog batch 2) — an empty bag will do.
 let { inventory, reg, world } = setup();
 let r = reg.claim(FARM, 'farm');
-ok('claim refused without seeds', !r.ok && /seeds/.test(r.reason));
-inventory.add('seeds', 10);
-r = reg.claim(FARM, 'farm');
-ok('claim succeeds with seeds', r.ok);
-ok('2 seeds were charged', inventory.countOf('seeds') === 8);
+ok('a farm is claimed with nothing in the bag', r.ok && inventory.heldIds().length === 0);
 ok('registry holds it', reg.list().length === 1 && reg.countOf('farm') === 1);
 
 // no double-claiming the same ground
@@ -31,29 +27,29 @@ r = reg.claim({minX:5,maxX:8,minY:10,maxY:11,minZ:5,maxZ:8}, 'farm');
 ok('overlapping claim refused', !r.ok && /overlap/i.test(r.reason));
 
 // production over time, paid in whole cycles only
-// A farm makes what's growing in it — four carrots here: two a cycle, and a seed.
-const growing = (s) => cropProduce(s, world);
+// A farm makes what was put into it — a carrot seed here: a carrot a cycle, and a seed.
+reg.list()[0].seeds = ['carrot'];
+const growing = (s) => farmProduce(s);
 const t0 = reg.list()[0].lastPaidAt;
 ok('nothing owed immediately', Object.keys(reg.collect({ now: t0 + 1000, producesFor: growing })).length === 0);
 let got = reg.collect({ now: t0 + 7_200_000, producesFor: growing });   // farm: every 7200s
-ok('one cycle pays out', got.vegetables === 2 && got.seeds_carrot === 1);
+ok('one cycle pays out', got.vegetables === 1 && got.seeds_carrot === 1);
 got = reg.collect({ now: t0 + 7_200_000 + 7_199_000, producesFor: growing });
 ok('a partial second cycle pays nothing', Object.keys(got).length === 0);
 got = reg.collect({ now: t0 + 28_800_000, producesFor: growing });
-ok('the remaining three cycles pay together', got.vegetables === 6);
+ok('the remaining three cycles pay together', got.vegetables === 3);
 
 // offline accrual is capped so eight hours away isn't a windfall of a week
 ({ inventory, reg, world } = setup());
-inventory.add('seeds', 10);
 reg.claim(FARM, 'farm');
+reg.list()[0].seeds = ['carrot'];
 const t1 = reg.list()[0].lastPaidAt;
-got = reg.collect({ now: t1 + 72 * 3600_000, producesFor: (s) => cropProduce(s, world) });  // three days away
+got = reg.collect({ now: t1 + 72 * 3600_000, producesFor: farmProduce });  // three days away
 const capCycles = Math.floor((8 * 3600) / 7200);
-ok(`offline capped at 8h (${capCycles} cycles, not 36)`, got.vegetables === capCycles * 2);
+ok(`offline capped at 8h (${capCycles} cycles, not 36)`, got.vegetables === capCycles);
 
 // breaking a building stops it, with a reason
 ({ inventory, reg, world } = setup());
-inventory.add('seeds', 10);
 reg.claim(FARM, 'farm');
 const cleared = [];
 for (let x=4;x<8;x++) for (let z=4;z<8;z++) { if (cleared.length>=13) continue; world.setBlock(x,10,z,0); cleared.push({x,y:10,z}); }
@@ -70,7 +66,6 @@ ok('restoring the blocks repairs it', reg.list()[0].valid === true);
 
 // a full bag stops production instead of destroying it
 ({ inventory, reg, world } = setup());
-inventory.add('seeds', 10);
 reg.claim(FARM, 'farm');
 for (let i = 0; i < 40; i++) inventory.add('dirt', 500);
 const t2 = reg.list()[0].lastPaidAt;
@@ -79,7 +74,6 @@ ok('full bag does not silently eat output', !got.vegetables);
 
 // save round trip re-checks against the world rather than trusting the file
 ({ inventory, reg, world } = setup());
-inventory.add('seeds', 10);
 reg.claim(FARM, 'farm');
 const saved = JSON.parse(JSON.stringify(reg.toJSON()));
 let n=0; for (let x=4;x<8;x++) for (let z=4;z<8;z++) { if (n++<13) world.setBlock(x,10,z,0); }

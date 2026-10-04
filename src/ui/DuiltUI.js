@@ -4,6 +4,8 @@ import { FINAL_AGE } from '../config/ages.js';
 import { askConfirm } from './Confirm.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { penProduce } from '../duilt/Ranch.js';
+import { FARM_SEED_SLOTS } from '../duilt/Crops.js';
+import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
@@ -277,6 +279,9 @@ export class DuiltUI {
         body: slots ? `${blurb} ${slots} slots.` : blurb,
       });
     });
+    this.bus.on('structure:sown', ({ structure }) => {
+      if (this.building?.id === structure?.id) this.showBuilding(structure, this.buildingActionsCache);
+    });
     this.bus.on('structure:downgraded', ({ structure, name, blurb }) => {
       if (this.panels.isOpen('panel-store')) this.renderStore();
       if (this.building?.id === structure?.id) this.showBuilding(structure, this.buildingActionsCache);
@@ -389,6 +394,7 @@ export class DuiltUI {
         <h4>What it does</h4>
         <ul>${does.map((d) => `<li>${d}</li>`).join('')}</ul>
       </div>
+      ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
       ${level ? `<div class="building-sec"><h4>Level: ${level.name}</h4>${evolve}</div>` : ''}
       <div class="building-facts">
         <span>${size} blocks</span>
@@ -403,6 +409,8 @@ export class DuiltUI {
       </div>`;
 
     body.querySelector('[data-evolve]')?.addEventListener('click', () => actions.onEvolve?.());
+    body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
+    body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
     body.querySelector('[data-store]')?.addEventListener('click', () => actions.onOpenStore?.());
     body.querySelector('[data-move]').addEventListener('click', () => actions.onMove?.());
     body.querySelector('[data-change]').addEventListener('click', () => actions.onChange?.());
@@ -410,6 +418,39 @@ export class DuiltUI {
       this.confirm({ title: `Delete this ${spec?.name?.toLowerCase() ?? 'building'}?`, body: 'The blocks come back to your bag.', ok: 'Delete', danger: true })
         .then((yes) => { if (yes) actions.onDelete?.(); });
     });
+  }
+
+  /**
+   * A farm's crops (backlog batch 2): FARM_SEED_SLOTS slots, one seed a
+   * crop. Tap a crop to take it out (its seed comes back); below, the seeds
+   * in your bag that aren't in yet, tap one to put it in.
+   */
+  farmSeedsHtml(structure) {
+    const sown = structure.seeds ?? [];
+    const inv = this.duilt?.inventory;
+    const seedIcon = (kind) => {
+      const spec = ITEMS_BY_ID.get(`seeds_${kind}`);
+      return itemIcon(spec, { size: 22 }) ?? glyphSvg('seeds', { size: 16, color: spec?.color });
+    };
+    const name = (kind) => CROPS.find((c) => c.kind === kind)?.name ?? kind;
+    const slots = Array.from({ length: FARM_SEED_SLOTS }, (_, i) => {
+      const kind = sown[i];
+      return kind
+        ? `<button class="farm-seed sown" data-unsow="${kind}" title="Take it out — the seed comes back">${seedIcon(kind)}<span>${name(kind)}</span><span class="x" aria-hidden="true">×</span></button>`
+        : '<div class="farm-seed empty">Empty</div>';
+    }).join('');
+    const room = sown.length < FARM_SEED_SLOTS;
+    const yours = CROPS.filter((c) => !sown.includes(c.kind) && (inv?.endless || inv?.has(`seeds_${c.kind}`, 1)));
+    const pick = !room ? '<p class="dim">Four crops is a full farm — tap one to take it out.</p>'
+      : yours.length
+        ? `<p class="dim">Put in a seed:</p><div class="farm-seed-pick">${yours.map((c) => `<button class="farm-seed" data-sow="${c.kind}">${seedIcon(c.kind)}<span>${c.name}</span>${inv?.endless ? '' : `<span class="n">${inv.countOf(`seeds_${c.kind}`)}</span>`}</button>`).join('')}</div>`
+        : '<p class="dim">No seeds in your bag that aren\'t in already — break grass, or pick a ripe crop.</p>';
+    return `
+      <div class="building-sec">
+        <h4>Crops · ${sown.length} of ${FARM_SEED_SLOTS}</h4>
+        <div class="farm-seeds">${slots}</div>
+        ${pick}
+      </div>`;
   }
 
   /** What a building gives you, one plain line per thing. */
@@ -421,7 +462,7 @@ export class DuiltUI {
     if (made) out.push(made);
     if (spec?.fromCrops) {
       const grown = this.duilt?.producesFor(structure) ?? {};
-      out.push(rateText(grown, spec.everySeconds) ?? 'Makes whatever is planted in it — nothing planted yet');
+      out.push(rateText(grown, spec.everySeconds) ?? 'Grows the crops you put a seed in for — none yet');
     }
     if (spec?.fromAnimals) {
       const kept = penProduce(structure, this.duilt?.herd ?? []);

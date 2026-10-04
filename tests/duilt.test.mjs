@@ -49,7 +49,7 @@ ok('the farm qualifies', opts.find(o=>o.id==='farm').ok);
 ok('the house does not, and says so', !opts.find(o=>o.id==='house').ok);
 const claim = g.claim(region, 'farm');
 ok('claiming the farm works', claim.ok);
-ok('seeds were charged', g.inventory.countOf('seeds') === 4);
+ok('and it took no seeds (backlog batch 2)', g.inventory.countOf('seeds_carrot') === 4 && g.inventory.countOf('seeds_potato') === 4);
 
 // outside the border is refused even if the blocks are right
 const far = {minX:b.maxX+2,maxX:b.maxX+5,minY:GY,maxY:GY+1,minZ:fz,maxZ:fz+3};
