@@ -494,34 +494,28 @@ export class UIManager {
         </div>
 
         <!--
-          Break sits to the right of the stick that walks and Jump to the
-          right of the one that aims — each of them a thumb-width from the
-          stick it belongs to, and each on the side that side has room for.
-          That asymmetry is the point: with nothing outboard of the left stick
-          it can sit out at the edge, which leaves the middle of a small screen
-          some air rather than four things elbowing each other.
+          Jump sits where Break was, beside the walking stick (backlog batch 2:
+          "Place stays where it is, and jump replaces break") — a tap on the
+          picture is Break now. Break keeps its element, hidden, because its
+          label is still where the action names are written.
+
+          One button on the ground, two in the air: Jump becomes Up, and Down
+          appears under it. Up on top because that is the way they point. The
+          pair is shifted down half a button by CSS so it straddles where the
+          single one was, rather than dropping Down into the slot your thumb
+          was resting on.
         -->
         <div class="stick-side" id="side-left">
           <button class="touch-btn small" id="t-break">${icon('mine')}<span>Break</span></button>
-        </div>
-        <div class="stick-side" id="side-right">
-          <!--
-            One button on the ground, two in the air: Jump becomes Up, and Down
-            appears under it. Up on top because that is the way they point —
-            it was the other way round, which is a control that argues with its
-            own arrow. The pair is shifted down half a button by CSS so it
-            straddles where the single one was, rather than dropping Down into
-            the slot your thumb was resting on.
-          -->
-          <button class="touch-btn small" id="t-place">${icon('place')}<span>Place</span></button>
           <button class="touch-btn small" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
           <button class="touch-btn small" id="t-down" hidden>${icon('down')}<span>Down</span></button>
         </div>
 
-        <!-- Left edge, above Break: the rest of what you press. -->
+        <!-- Left edge, above Jump: the rest of what you press. -->
         <div class="touch-buttons" id="touch-buttons-left">
           <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
           <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
+          <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
         </div>
       </div>
     `;
@@ -1755,7 +1749,7 @@ export class UIManager {
     this.q('#t-down').hidden = !flying; // descend only means anything while flying
     // Two buttons where there was one, so the pair re-centres on the slot the
     // single one had rather than shunting it up the screen.
-    this.q('#side-right')?.classList.toggle('paired', !!flying);
+    this.q('#side-left')?.classList.toggle('paired', !!flying);
     // The same button jumps on the ground and climbs in the air. Once Down is
     // showing beneath it, "Jump" is the odd one out of a pair.
     const label = this.q('#t-jump-label');
