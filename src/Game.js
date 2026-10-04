@@ -1131,6 +1131,7 @@ export class Game {
       onBreakHold: (held, opts) => this.setBreaking(held, opts),
       onPlaceTap: () => this.secondaryAction(),
       onPlaceHold: (held) => this.setPlacing(held),
+      onTap: () => this.tapAction(),
 
       // ---- duilt ----
       // Both modes run on DuiltGame now — Creative is that same engine with
@@ -1667,6 +1668,34 @@ export class Game {
     const override = BREAK_OVERRIDE[this.selectedItemId] ?? (isFood(this.selectedItemId) ? 'eatSelected' : null);
     if (override) return void this[override]();
     this.breakBlock();
+  }
+
+  /**
+   * A tap on the picture, on a phone. Played on: "place should be tap, break
+   * should be a hold" — holding the picture breaks (UIManager.bindLookSurface),
+   * and a tap does Place's job: puts down the block you hold, opens a gate or
+   * a chest, speaks to the King. It hands back to Break for what only Break
+   * does: striking whatever is in front of you (a tap to hit is what a fight
+   * wants), a queued tool's corner or stamp, a catapult's throw — and for
+   * whatever you hold that has nothing to put down: a tool, bare hands, food
+   * to eat, a bucket to fill. Returns 'place' or 'break'.
+   */
+  tapAction() {
+    if (this.moving) { this.secondaryAction(); return 'place'; }
+    const breaks = () => { this.primaryAction(); return 'break'; };
+    const places = () => { this.secondaryAction(); return 'place'; };
+    if (this.manning || this.pendingClaim || this.pendingClaimColumn || this.pendingClear
+      || this.pendingRoof || this.pendingTemplate) return breaks();
+    const aimed = this.raycast();
+    if (this.banditTarget(aimed) || this.mobTarget(aimed) || this.fireflyTarget(aimed)) return breaks();
+    if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.guardianTarget(aimed)) return places();
+    if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
+      || aimed.block === SKY_LIFT || isCatapult(aimed.block)
+      || (aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)))) return places();
+    const item = this.selectedItemId;
+    if (PLACE_OVERRIDE[item] && !BREAK_OVERRIDE[item]) return places();
+    if (item) return breaks();
+    return places();
   }
 
   secondaryAction() {
