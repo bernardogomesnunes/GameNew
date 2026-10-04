@@ -45,4 +45,10 @@ ok('holding the picture still breaks, and keeps breaking',
   /holding = true;\s*this\.cb\.onBreakTap\(\);\s*this\.cb\.onBreakHold\?\.\(true\);/.test(ui));
 ok('only a tap that dug carries on to finish the block', /if \(did !== 'break' \|\| !this\.cb\.isDigging\?\.\(\)\) return;/.test(ui));
 
+// Asked for directly, once a tap placed: "take the place button". It hides,
+// and comes back only for what a tap can't do.
+ok('the Place button starts hidden', /id="t-place" hidden>/.test(ui));
+ok('and shows only to turn a roof, let go of a catapult or throw food',
+  /const PLACE_ONLY = new Set\(\['Turn', 'Let go', 'Throw'\]\);/.test(ui) && /p\.hidden = !PLACE_ONLY\.has\(placeLabel\);/.test(ui));
+
 process.exit(f ? 1 : 0);

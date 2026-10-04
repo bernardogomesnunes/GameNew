@@ -45,6 +45,15 @@ const TOOL_HOTBAR_NOTES = {
  * TOOL_HOTBAR_NOTES exists to avoid; this is the same fix for the buttons
  * themselves. See Game.js's BREAK_OVERRIDE/PLACE_OVERRIDE for what each runs.
  */
+/**
+ * What Place does that a tap on the picture can't (Game.tapAction): turn a
+ * roof, let go of a catapult, throw food to lure an animal. The Place button
+ * only shows for these — asked for directly, once a tap placed: "take the
+ * place button". Everything else Place did, a tap does now, and a queued
+ * tool's Cancel is its own "Put it away" button.
+ */
+const PLACE_ONLY = new Set(['Turn', 'Let go', 'Throw']);
+
 const TOOL_ACTION_LABELS = {
   bucket: ['Fill', 'Place'],
   bucket_water: ['Break', 'Empty'],
@@ -535,7 +544,7 @@ export class UIManager {
         <div class="touch-buttons" id="touch-buttons-left">
           <button class="touch-btn" id="t-more">${icon('menu')}<span>More</span></button>
           <button class="touch-btn" id="t-fly">${icon('fly')}<span>Fly</span></button>
-          <button class="touch-btn" id="t-place">${icon('place')}<span>Place</span></button>
+          <button class="touch-btn" id="t-place" hidden>${icon('place')}<span>Place</span></button>
         </div>
       </div>
     `;
@@ -2177,6 +2186,7 @@ export class UIManager {
     if (!b || !p) return;
     b.querySelector('span').textContent = breakLabel;
     p.querySelector('span').textContent = placeLabel;
+    p.hidden = !PLACE_ONLY.has(placeLabel);
   }
 
   /** The two button labels for whatever is selected right now, with no tool queued. */
