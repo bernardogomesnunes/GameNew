@@ -28,6 +28,12 @@ export const DEFAULTS = {
   // vertices, so it costs nothing to draw, but it splits big flat quads where
   // they meet a wall: a few more vertices, and a little longer to build a chunk.
   ao: true,
+  // The air (render/atmosphere.js, SkyMist.js): mist lying low, the cloud bank
+  // round the Sky Kingdom, motes in the sunlight. Cheap by construction — the
+  // mist is a few instructions a pixel, the motes one draw call moved on the
+  // GPU — but the cloud bank is see-through and so drawn over itself, which a
+  // slow phone's fill rate notices.
+  atmosphere: true,
 };
 
 export const DISTANCES = {

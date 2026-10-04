@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SkyDome, heightFog, mistAt } from './atmosphere.js';
 
 /**
  * Day and night. Requested directly: "night and day is pretty standard, and
@@ -28,11 +29,30 @@ const NIGHT_SIGHT_HEMI = 0.28;
 /** Where a brand new world's clock starts: mid-morning. */
 export const MORNING = 0.32;
 
-const SKY_DAY = new THREE.Color(0xadd7f5);
+/*
+ * The sky's colours: the horizon (which the fog matches) and the top of the
+ * sky above it (see atmosphere.js's SkyDome) — a deeper blue overhead by day,
+ * a warm band and a violet-blue overhead at sunset, near black at night.
+ */
+const SKY_DAY = new THREE.Color(0xb3dbf5);
 const SKY_NIGHT = new THREE.Color(0x0f1834);
-const SKY_DUSK = new THREE.Color(0xf2a67e);
-const SUN_DAY = new THREE.Color(0xfff3d6);
-const SUN_LOW = new THREE.Color(0xffb27a);
+const SKY_DUSK = new THREE.Color(0xf7a46c);
+const ZENITH_DAY = new THREE.Color(0x4f93dc);
+const ZENITH_NIGHT = new THREE.Color(0x050a1c);
+const ZENITH_DUSK = new THREE.Color(0x5b6aae);
+/** The glow round the sun: faint by day, a wide orange wash as it sets. */
+const GLOW_DAY = new THREE.Color(0x4a4232);
+const GLOW_DUSK = new THREE.Color(0xff8a3c);
+/*
+ * Light with contrast (plan section 2): a warmer sun, and shade filled by a
+ * cooler sky, so a lit face and a shaded one differ in colour as well as in
+ * brightness. Low down the sun turns gold.
+ */
+const SUN_DAY = new THREE.Color(0xffe6bf);
+const SUN_LOW = new THREE.Color(0xffb46e);
+const AMBIENT_DAY = new THREE.Color(0xd9e4ff);
+const AMBIENT_DUSK = new THREE.Color(0xe6c7d6);
+const AMBIENT_NIGHT = new THREE.Color(0xaab4cf);
 const CLOUD_DAY = new THREE.Color(0xfbfaf4);
 const CLOUD_NIGHT = new THREE.Color(0x3b4563);
 const CLOUD_DUSK = new THREE.Color(0xf6c3a4);
@@ -61,10 +81,15 @@ export function daylightAt(time) {
     sunHeight: e,
     day,
     dusk,
-    ambient: 0.13 + 0.47 * day,
-    sun: 0.85 * smooth(-0.04, 0.18, e),
-    moon: 0.2 * (1 - day),
-    hemi: 0.07 + 0.33 * day,
+    // Less fill and more sun than before tone mapping came in (see
+    // atmosphere.js): the contrast between a lit face and a shaded one is
+    // most of what makes a wall read as solid.
+    ambient: 0.15 + 0.33 * day,
+    // Up quickly at sunrise and late to go at sunset, so the low gold light
+    // gets a real share of the day.
+    sun: 1.3 * smooth(-0.05, 0.12, e),
+    moon: 0.3 * (1 - day),
+    hemi: 0.08 + 0.42 * day,
     // Out as soon as the sky starts going dark, not once it's black.
     // Reported directly: "Stars should start appearing in the sky as soon
     // as the sky goes dark."
@@ -81,7 +106,7 @@ export class DayCycle {
     this.clouds = clouds;
     this.time = MORNING;
 
-    this.moonLight = new THREE.DirectionalLight(0xa9bcff, 0);
+    this.moonLight = new THREE.DirectionalLight(0xc4d0f0, 0);
     scene.add(this.moonLight);
 
     // A square sun and moon — this is a world of blocks.
@@ -118,7 +143,13 @@ export class DayCycle {
     this.stars.frustumCulled = false;
     scene.add(this.stars);
 
+    this.dome = new SkyDome(scene);
+    /** The mist that lies low (atmosphere.js) — the graphics setting turns it off. */
+    this.atmosphere = true;
+
     this.sky = new THREE.Color();
+    this.zenith = new THREE.Color();
+    this.cloudColor = new THREE.Color();
     this.apply();
   }
 
@@ -133,23 +164,41 @@ export class DayCycle {
     const l = daylightAt(this.time);
     this.light = l;
 
-    this.sky.copy(SKY_NIGHT).lerp(SKY_DAY, l.day).lerp(SKY_DUSK, l.dusk * 0.55);
+    this.sky.copy(SKY_NIGHT).lerp(SKY_DAY, l.day).lerp(SKY_DUSK, l.dusk * 0.6);
+    this.zenith.copy(ZENITH_NIGHT).lerp(ZENITH_DAY, l.day).lerp(ZENITH_DUSK, l.dusk * 0.5);
     if (this.scene.background?.isColor) this.scene.background.copy(this.sky);
     this.scene.fog?.color.copy(this.sky);
 
     // A Helm of Night Sight (playtest, P6): the dark never gets dark.
     this.ambient.intensity = this.nightSight ? Math.max(l.ambient, NIGHT_SIGHT_AMBIENT) : l.ambient;
+    this.ambient.color.copy(AMBIENT_NIGHT).lerp(AMBIENT_DAY, l.day).lerp(AMBIENT_DUSK, l.dusk * 0.7);
     this.sunLight.intensity = l.sun;
     this.sunLight.color.copy(SUN_DAY).lerp(SUN_LOW, l.dusk);
     this.moonLight.intensity = l.moon;
     this.hemi.intensity = this.nightSight ? Math.max(l.hemi, NIGHT_SIGHT_HEMI) : l.hemi;
-    this.hemi.color.copy(this.sky);
+    // The shade is lit by the sky overhead, not the pale horizon: cool.
+    this.hemi.color.copy(this.sky).lerp(this.zenith, 0.55);
     this.hemi.groundColor.copy(GROUND_NIGHT).lerp(GROUND_DAY, l.day);
-    this.clouds?.setColor?.(new THREE.Color().copy(CLOUD_NIGHT).lerp(CLOUD_DAY, l.day).lerp(CLOUD_DUSK, l.dusk * 0.6));
+    this.cloudColor.copy(CLOUD_NIGHT).lerp(CLOUD_DAY, l.day).lerp(CLOUD_DUSK, l.dusk * 0.7);
+    this.clouds?.setColor?.(this.cloudColor);
 
     // The sun rises in the east (+x), crosses the south, sets in the west.
     const a = (this.time - 0.25) * Math.PI * 2;
     const dir = new THREE.Vector3(Math.cos(a), Math.sin(a), 0.35).normalize();
+
+    const dome = this.dome.uniforms;
+    dome.horizon.value.copy(this.sky);
+    dome.zenith.value.copy(this.zenith);
+    dome.glow.value.copy(GLOW_DAY).lerp(GLOW_DUSK, l.dusk).multiplyScalar(Math.max(0, Math.min(1, (l.sunHeight + 0.25) * 4)));
+    dome.glowWidth.value = 10 - 6 * l.dusk;
+    dome.sunDir.value.copy(dir);
+
+    // Mist that lies low: thick at dawn, thin by day (atmosphere.js).
+    const mist = mistAt(this.time, l.day, l.dusk);
+    this.mist = mist;
+    heightFog.mistDensity.value = this.atmosphere ? mist.density : 0;
+    // Three adds fog after converting to the screen's colours; so does this.
+    mist.color.getRGB(heightFog.mistColor.value, THREE.SRGBColorSpace);
     this.sunLight.position.copy(dir).multiplyScalar(100);
     this.moonLight.position.copy(dir).multiplyScalar(-100);
 
@@ -163,6 +212,8 @@ export class DayCycle {
     this.moonDisc.visible = dir.y < 0.1;
     this.moonDisc.material.opacity = 0.35 + 0.65 * (1 - l.day);
 
+    // The sphere's flat faces sit a little inside its radius.
+    this.dome.follow(eye, camera ? camera.far * 0.93 : reach);
     this.stars.position.copy(eye);
     this.stars.scale.setScalar(r * 0.98);
     this.stars.material.opacity = 0.9 * l.stars;

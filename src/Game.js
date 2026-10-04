@@ -83,6 +83,8 @@ import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
 import { Suspicion, SUSPICION, AMBUSH } from './duilt/Suspicion.js';
 import { MarkerView } from './render/MarkerView.js';
 import { SkyBeacon } from './render/SkyBeacon.js';
+import { gradeRenderer, Motes } from './render/atmosphere.js';
+import { SkyMist } from './render/SkyMist.js';
 import { MODE_WORDS as ARMY_WORDS, MARCH_DAYS } from './world/Army.js';
 import { INTRO } from './ui/Story.js';
 import { SOLDIER } from './world/Defenders.js';
@@ -308,6 +310,8 @@ export class Game {
       this.quality.pin(this.graphics.resolution === 'auto' ? this.quality.resolution : this.graphics.resolution);
     }
     this.renderer.setPixelRatio(this.quality.resolution);
+    // Tone mapping and a small saturation lift (render/atmosphere.js).
+    gradeRenderer(this.renderer);
     this.canvasRoot.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
@@ -358,6 +362,10 @@ export class Game {
     this.clouds = new SkyClouds(this.scene);
     // Those three lights, the sky and the clouds all follow the time of day.
     this.dayCycle = new DayCycle(this.scene, { ambient, sun, hemi, clouds: this.clouds });
+    // The air: pollen in the sun, and mist and cloud round the Sky Kingdom.
+    this.motes = new Motes(this.scene);
+    this.skyMist = new SkyMist(this.scene);
+    this.setAtmosphere(this.graphics.atmosphere !== false);
     this.lights = new LightManager(this.scene);
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
@@ -5042,6 +5050,7 @@ export class Game {
     // Far enough to contain the coarse ground, not just the blocks.
     this.camera.far = this.horizon + 200;
     this.onResize();
+    this.setAtmosphere(this.graphics.atmosphere !== false);
     // Shadow where blocks meet is baked into the meshes, so it needs them rebuilt.
     const ao = this.graphics.ao !== false;
     if (ao !== this.mesher.ao) {
@@ -5049,6 +5058,21 @@ export class Game {
       if (this.world) this.rebuildAllChunks();
     }
     return { needsReload };
+  }
+
+  /** The graphics setting for the air: low mist, motes, the Sky Kingdom's cloud. */
+  setAtmosphere(on) {
+    this.dayCycle.atmosphere = on;
+    this.motes.enabled = on;
+    this.skyMist.enabled = on;
+  }
+
+  /** Motes round you, and the cloud round the Sky Kingdom, by the time of day. */
+  updateAir(dt) {
+    if (!this.player) return;
+    const l = this.dayCycle.light;
+    this.motes.update(dt, this.camera.position, l.day, l.dusk, this.renderer.domElement.height);
+    this.skyMist.update(this.skyOpen() ? skyAt(this.world.gen) : null, this.camera.position, this.dayCycle.cloudColor);
   }
 
   /**
@@ -5146,7 +5170,7 @@ export class Game {
         this.world.gen.skyCut = this.duilt && !this.duilt.sandbox ? this.duilt.skyWar.cut : null;
       }
       // Its light, low in the sky that way, from anywhere you can't see the island itself.
-      this.skyBeacon.update(this.skyOpen() ? skyAt(this.world.gen) : null, this.player.position, 1 - daylightAt(this.dayCycle.time).day);
+      this.skyBeacon.update(this.skyOpen() ? skyAt(this.world.gen) : null, this.player.position, 1 - daylightAt(this.dayCycle.time).day, this.dayCycle.cloudColor);
       this.wanderers.tick(dt, this.player.position);
       this.tickWar();
       this.tickDefence(dt);
@@ -5193,6 +5217,7 @@ export class Game {
       this.duilt.days += (this.dayCycle.time - clockWas + 1) % 1;
     }
     this.dayCycle.apply(this.camera, this.horizon);
+    this.updateAir(dt);
     this.updateMinimap();
     this.mobView.update(this.mobs?.list ?? []);
     if (this.player) this.updateYou(dt, playing);

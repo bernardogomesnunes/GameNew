@@ -40,6 +40,10 @@ export class SkyClouds {
     // in real daylight, and MeshLambertMaterial's directional shading was
     // turning every face but the sun-facing one a flat, un-cloud-like grey.
     const material = new THREE.MeshBasicMaterial({ color: CLOUD_COLOR });
+    // Nor tone mapped (render/atmosphere.js): the world is drawn brighter
+    // than it was, and a cloud already near white would burn out to a flat
+    // white card and lose its sunset colour.
+    material.toneMapped = false;
     this.mesh = new THREE.InstancedMesh(geometry, material, this.count);
     // Always somewhere near the camera by construction (re-centred every
     // frame in update) — its true bounds are meaningless to compute from

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { blockTextureArray, layerFor, topLayerFor } from '../render/BlockTextures.js';
+import { withHeightFog } from '../render/atmosphere.js';
 import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
   roofPart,
@@ -180,7 +181,8 @@ const colorCache = new Map();
 // already baked into its vertices. That lets a whole chunk's opaque geometry go
 // out as a single draw call instead of one per block type.
 const OPAQUE_KEY = 'opaque';
-const opaqueMaterial = withBlockTextures(new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }));
+// Every world material also takes the low mist (render/atmosphere.js).
+const opaqueMaterial = withHeightFog(withBlockTextures(new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true })));
 
 /**
  * What a non-cube block (slab, stair, table, chair, rug) actually draws with
@@ -188,14 +190,14 @@ const opaqueMaterial = withBlockTextures(new THREE.MeshLambertMaterial({ color: 
  * boxes per chunk doesn't carry the same "a whole floor is one draw call"
  * pressure that made baking texture tiles into the block material worth it.
  */
-const propMaterial = new THREE.MeshLambertMaterial({ vertexColors: true });
+const propMaterial = withHeightFog(new THREE.MeshLambertMaterial({ vertexColors: true }));
 // The lit parts of a prop — a lantern's glass, a chandelier's candles — are
 // drawn at their own colour whatever light is on them, so they still glow in
 // the dark of night.
 const glowMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
 // Glass in a prop — a framed window's pane, a firefly lantern's case: seen
 // through, drawn after everything solid.
-const paneMaterial = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.38, depthWrite: false });
+const paneMaterial = withHeightFog(new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.38, depthWrite: false }));
 /** A box's own colour (an iron frame on a lantern), or the block's. */
 const hexColor = new Map();
 function colorOfHex(hex) {
@@ -334,13 +336,13 @@ function getMaterial(key) {
   if (key === OPAQUE_KEY) return opaqueMaterial;
   if (materialCache.has(key)) return materialCache.get(key);
   const cfg = BLOCKS_BY_ID.get(key);
-  const mat = withBlockTextures(new THREE.MeshLambertMaterial({
+  const mat = withHeightFog(withBlockTextures(new THREE.MeshLambertMaterial({
     color: 0xffffff,
     vertexColors: true,
     transparent: true,
     opacity: cfg?.opacity ?? 1,
     depthWrite: false,
-  }));
+  })));
   materialCache.set(key, mat);
   return mat;
 }
