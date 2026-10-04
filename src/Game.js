@@ -206,6 +206,12 @@ const STONE_HITS = 14;
 const SKY_PEOPLE = 240;
 // What the Stone King sends you when the Sky Kingdom falls.
 const SKY_TRIBUTE = 64;
+// The account's worlds as last seen, kept on the device so the worlds
+// screen can show them the instant it opens (Game.knownWorlds).
+const WORLDS_SEEN = 'voxelgame:worlds-seen';
+/** Most recently touched first. */
+const sortWorlds = (rows) => rows.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+
 // The expedition's camp: this far out beyond the anchor tower, clear of its guards.
 const EXPEDITION_OUT = 24;
 // The ground it clears for its tents, and for you to arrive on.
@@ -854,15 +860,51 @@ export class Game {
    * local rows along on it rather than losing them.
    */
   async listAllWorlds() {
+    // Reported directly: the old saves showed first and the rest a few
+    // seconds later. The screen used to ask before the account's session had
+    // been picked back up, so the first answer was "signed out: only what's
+    // in this browser". Wait for the session, so the first answer is whole.
+    if (this.cloud && !this.cloudAuth.ready) await this.cloudAuth.restore();
     const local = this.local.list();
     if (!this.cloud?.signedIn) return local;
     try {
       const cloud = await this.cloudList();
-      return [...local, ...cloud].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+      this.rememberWorlds(cloud);
+      return sortWorlds([...local, ...cloud]);
     } catch (err) {
-      err.partial = local;
+      err.partial = sortWorlds([...local, ...this.rememberedWorlds()]);
       throw err;
     }
+  }
+
+  /**
+   * The worlds to show the moment the screen opens, before anyone has
+   * answered: this browser's own, and the account's as they were last time
+   * (kept on the device, see rememberWorlds). Then the real answer replaces
+   * it — usually with the very same list, so nothing moves.
+   */
+  knownWorlds() {
+    return sortWorlds([...this.local.list(), ...(this.cloud ? this.rememberedWorlds() : [])]);
+  }
+
+  /** The account's list, as last seen — only what a row on the screen needs. */
+  rememberWorlds(rows) {
+    try {
+      localStorage.setItem(WORLDS_SEEN, JSON.stringify(rows.map(({ id, name, mode, age, updatedAt }) => ({ id, name, mode, age, updatedAt }))));
+    } catch { /* a full or blocked storage just means no head start next time */ }
+  }
+
+  rememberedWorlds() {
+    try {
+      const rows = JSON.parse(localStorage.getItem(WORLDS_SEEN) ?? '[]');
+      return Array.isArray(rows) ? rows.filter((r) => r && typeof r.id === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+
+  forgetRememberedWorlds() {
+    try { localStorage.removeItem(WORLDS_SEEN); } catch { /* nothing to forget */ }
   }
 
   buildCallbacks() {
@@ -888,6 +930,7 @@ export class Game {
           this.ui.home?.forgetWorlds?.();
           return true;
         }
+        this.rememberWorlds(this.rememberedWorlds().filter((w) => w.id !== id));
         this.cloud?.delete(id)
           .then(() => { this.forgetCloudList(); this.ui.home?.forgetWorlds?.(); })
           .catch((err) => this.ui.toast({ kind: 'xp', title: 'Could not delete that world', body: err.message }));
@@ -1042,9 +1085,12 @@ export class Game {
       },
       onCloudSignOut: async () => {
         await this.cloudAuth.signOut();
+        // Somebody else may sign in on this device next: don't show them these.
+        this.forgetRememberedWorlds();
         this.ui.toast({ kind: 'xp', title: 'Signed out', body: 'Anything saved here stays right where it is' });
       },
       getCloudWorlds: () => this.listAllWorlds(),
+      knownWorlds: () => this.knownWorlds(),
       // The worlds screen needs it to say which copy is which; it is the same
       // record the sync decision runs on.
       agreedFor: (id) => this.syncState.agreedFor(id),

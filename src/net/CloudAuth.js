@@ -60,15 +60,20 @@ export class CloudAuth {
   async restore() {
     if (this.ready) return this.user;
     if (!this.configured) return null;
-    try {
-      const client = await this.load();
-      this.user = userFrom(await this.checkSession(client));
-    } catch {
-      this.user = null;
-    }
-    this.ready = true;
-    this.bus?.emit('cloud:auth', { user: this.summary() });
-    return this.user;
+    // Asked for by the worlds list and the start-up at the same moment: one
+    // session check, both waiting on it.
+    this.restoring ??= (async () => {
+      try {
+        const client = await this.load();
+        this.user = userFrom(await this.checkSession(client));
+      } catch {
+        this.user = null;
+      }
+      this.ready = true;
+      this.bus?.emit('cloud:auth', { user: this.summary() });
+      return this.user;
+    })();
+    return this.restoring;
   }
 
   /**

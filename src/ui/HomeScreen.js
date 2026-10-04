@@ -120,7 +120,9 @@ export class HomeScreen {
   // ---- the list ----
 
   renderHome() {
-    const rows = this.cloudWorlds ?? [];
+    // Until the account has answered, what we knew last time — never an empty
+    // list that fills in seconds later (reported directly).
+    const rows = this.cloudWorlds ?? this.cb.knownWorlds?.() ?? [];
     const failed = this.cloudError;
     const when = (r) => r.updatedAt ?? 0;
     const line = (r) => describe({ mode: r.mode, timestamp: when(r), age: r.age });
@@ -200,8 +202,12 @@ export class HomeScreen {
     });
     this.body.querySelectorAll('[data-remove]').forEach((el) => {
       el.addEventListener('click', async () => {
+        // The rows as they are on screen, taken before deleting: the delete
+        // itself marks the list out of date, and filtering that used to leave
+        // nothing at all — every world gone until a reload (reported directly).
+        const shown = rows;
         if (!this.cb.onRemove(el.dataset.remove, el.dataset.removeName)) return;
-        this.cloudWorlds = (this.cloudWorlds ?? []).filter((w) => w.id !== el.dataset.remove);
+        this.cloudWorlds = shown.filter((w) => w.id !== el.dataset.remove);
         this.render();
       });
     });
@@ -219,7 +225,10 @@ export class HomeScreen {
    */
   async refreshCloudWorlds({ force = false } = {}) {
     if (this.cloudPending) return;
-    if (this.cloudWorlds && !force) return;   // already answered; the game re-asks after a save
+    // Already answered, and nothing has changed since; the game marks it
+    // stale after a save or a delete (forgetWorlds).
+    if (this.cloudWorlds && !this.stale && !force) return;
+    this.stale = false;
     this.cloudPending = true;
     try {
       this.cloudWorlds = (await this.cb.listCloudWorlds?.()) ?? [];
@@ -284,7 +293,9 @@ export class HomeScreen {
 
   /** After a save or a delete, the list this screen is holding is out of date. */
   forgetWorlds() {
-    this.cloudWorlds = null;
+    // Kept on screen, just asked for again: dropping it showed an empty list
+    // until the answer came back, or for good after a delete.
+    this.stale = true;
   }
 
   // ---- the journey ----

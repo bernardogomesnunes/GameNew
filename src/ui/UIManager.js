@@ -618,6 +618,7 @@ export class UIManager {
   wireEvents() {
     this.home = new HomeScreen(this.q('#blocker'), {
       listCloudWorlds: () => this.cb.getCloudWorlds(),
+      knownWorlds: () => this.cb.knownWorlds?.() ?? [],
       getCloudUser: () => this.cb.getCloudUser?.() ?? null,
       isCloudConfigured: () => this.cb.isCloudConfigured?.() ?? false,
 
