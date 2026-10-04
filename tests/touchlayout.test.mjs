@@ -38,7 +38,7 @@ ok('the layout is applied when the game starts', /this\.ui\.applyTouchLayout\(th
 ok('and whenever the controls change', /applyControls\(next\) \{[\s\S]{0,400}this\.ui\?\.applyTouchLayout\(this\.controls\)/.test(game));
 
 // The layout itself: each piece moves, none is left where it was.
-for (const sel of ['#stick-left', '#stick-right', '#stick-left .stick-base', '#stick-right .stick-base', '#side-left', '#touch-buttons-left']) {
+for (const sel of ['#stick-left', '#stick-right', '#stick-left .stick-base', '#stick-right .stick-base', '#side-left', '#side-right', '#touch-buttons-left']) {
   ok(`mirrored, ${sel} moves`, css.includes(`body.touch-walk-right ${sel} {`));
 }
 ok('by the aiming thumb, Break and the column move over',

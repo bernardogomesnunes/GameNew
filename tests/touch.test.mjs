@@ -24,8 +24,9 @@ const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8
 const duiltUi = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 
 const column = ui.slice(ui.indexOf('id="touch-buttons-left"'), ui.indexOf('</div>\n    `;', ui.indexOf('id="touch-buttons-left"')));
-// Everything you press is on the left now: Jump beside the walking stick, the column above it.
-const sideLeft = ui.slice(ui.indexOf('id="side-left"'), ui.indexOf('id="touch-buttons-left"'));
+// Asked for directly: the left stick walks, the picture turns you, Place stays in the column, Jump goes on the right.
+const sideLeft = ui.slice(ui.indexOf('id="side-left"'), ui.indexOf('id="side-right"'));
+const sideRight = ui.slice(ui.indexOf('id="side-right"'), ui.indexOf('id="touch-buttons-left"'));
 const tray = ui.slice(ui.indexOf('id="touch-tray"'), ui.indexOf('</div>', ui.indexOf('id="touch-tray"')));
 
 // --- which thumb does what ---------------------------------------------------
@@ -33,7 +34,7 @@ const tray = ui.slice(ui.indexOf('id="touch-tray"'), ui.indexOf('</div>', ui.ind
 ok('the left stick walks', /bindStick\('#stick-left', \(x, y\) => this\.cb\.onMove/.test(ui));
 // Backlog batch 2, priority 0: no look stick — the picture is the camera.
 ok('no look stick: dragging the picture aims the camera', /this\.bindLookSurface\(\);/.test(ui) && !/bindStick\('#stick-right'/.test(ui)
-  && /id="look-zone"/.test(ui) && /#stick-right, #t-break \{ display: none !important; \}/.test(css) && !/id="side-right"/.test(ui));
+  && /id="look-zone"/.test(ui) && /#stick-right, #t-break \{ display: none !important; \}/.test(css));
 // The camera keeps the finer curve wherever it lives; it is a property of
 // aiming, not of a side of the screen. See the look-speed block below for what
 // the number is and why.
@@ -49,19 +50,19 @@ ok('a tap on the picture is Break; holding still keeps breaking; a drag never ta
 // press is the reach that was costing time. Jump goes with the thumb that
 // walks, Place with the thumb that aims.
 ok('Break keeps its element (labels still read from it), hidden', sideLeft.includes('id="t-break"'));
-ok('Jump is where Break was, beside the stick that walks', sideLeft.includes('id="t-jump"'));
-ok('with Down under it, once you are flying', sideLeft.includes('id="t-down"'));
+ok('Jump is on the right, under the thumb that looks', sideRight.includes('id="t-jump"') && !sideLeft.includes('id="t-jump"'));
+ok('with Down under it, once you are flying', sideRight.includes('id="t-down"'));
 {
   // One button on the ground, two in the air. Up has to be the upper one —
   // it was the lower one, which is a control arguing with its own arrow.
-  const order = [...sideLeft.matchAll(/id="(t-[a-z]+)"/g)].map((m) => m[1]);
+  const order = [...sideRight.matchAll(/id="(t-[a-z]+)"/g)].map((m) => m[1]);
   ok(`the flying pair reads ${order.join(', ')}`,
-    JSON.stringify(order) === JSON.stringify(['t-break', 't-jump', 't-down']));
+    JSON.stringify(order) === JSON.stringify(['t-jump', 't-down']));
   ok('and Jump is the one that becomes Up', /label\.textContent = flying \? 'Up' : 'Jump'/.test(ui));
   // Dropping Down into the slot the single button had means a thumb reaching
   // for Up by reflex sinks instead.
   ok('the pair moves off the slot the single button had',
-    /this\.q\('#side-left'\)\?\.classList\.toggle\('paired'/.test(ui)
+    /this\.q\('#side-right'\)\?\.classList\.toggle\('paired'/.test(ui)
     && /\.stick-side\.paired \{ transform: translateY\(calc\(var\(--side-btn\) \/ 2\)\)/.test(css));
   // Straddling needs room underneath, and sideways the hotbar is right there.
   ok('and lifts instead of straddling where there is no room below',
@@ -75,9 +76,7 @@ ok('and neither is left up in the column',
 // Break inboard and Jump outboard, which is why they anchor differently — and
 // why the two sticks are inset differently: each sits as far out as its own
 // side allows, which is what keeps air in the middle of a 320px screen.
-ok('Jump is anchored past the walking stick, where Break was',
-  /#side-left \{ left: calc\(var\(--stick-edge\) \+ var\(--stick-size\) \+ 10px\); \}/.test(css));
-ok('and nothing is left on the right but the picture', !/#side-right \{/.test(css));
+ok('Jump sits at the bottom right edge', /#side-right \{ right: var\(--stick-edge\); \}/.test(css));
 ok('so the stick with nothing outboard sits at the edge',
   /#stick-left \.stick-base \{ left: var\(--stick-edge\); \}/.test(css));
 ok('and the one with Jump beside it comes in past it',
