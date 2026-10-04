@@ -463,6 +463,8 @@ export class StructureRegistry {
         store: s.store ? s.store.toJSON() : null,
         tier: s.tier ?? 0,
         excludes: s.excludes ?? [],
+        // A farm's crops: one seed each, put in by hand (duilt/Crops.js).
+        ...(s.seeds?.length ? { seeds: s.seeds } : {}),
       })),
     };
   }

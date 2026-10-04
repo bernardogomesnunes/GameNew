@@ -1,4 +1,5 @@
-import { Crops, harvestOf, cropProduce } from './Crops.js';
+import { Crops, harvestOf, farmProduce, FARM_SEED_SLOTS } from './Crops.js';
+import { FIELD_CROPS, CROPS_BY_KIND } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
 import { penProduce, herdToJSON } from './Ranch.js';
 import { Inventory } from '../items/Inventory.js';
@@ -53,14 +54,17 @@ const LEAF_BLOCKS = new Set([5, 42, 44]);
 /** What a broken leaf might drop besides itself, and how often. */
 export const LEAF_DROPS = [['sapling', 0.1], ['fruit', 0.06]];
 /**
- * Grass, broken, now and then gives up mixed seeds — so a farm can always be
- * started. Asked for directly: "To build a farm I need seeds and there's no
+ * Grass, broken, now and then gives up seeds — so a farm can always be
+ * planted. Asked for directly: "To build a farm I need seeds and there's no
  * seeds ... maybe we should have grass that when broken we can drop seeds."
+ * One crop's seeds, whichever turns up (backlog batch 2: no mixed seeds);
+ * an entry with a list of ids gives one of them.
  */
-export const GRASS_DROPS = [['seeds', 0.2]];
+export const WILD_SEEDS = FIELD_CROPS.map((c) => `seeds_${c.kind}`);
+export const GRASS_DROPS = [[WILD_SEEDS, 0.2]];
 const GRASS = 1;
 
-const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds: 6, seeds_carrot: 4, seeds_potato: 4 };
+const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds_carrot: 4, seeds_potato: 4 };
 
 export class DuiltGame {
   constructor({ world, scene, bus, age = 1, sandbox = false }) {
@@ -216,8 +220,9 @@ export class DuiltGame {
       // grow there by themselves (playtest, P8).
       const extras = LEAF_BLOCKS.has(c.prev) ? LEAF_DROPS : c.prev === GRASS ? GRASS_DROPS : null;
       if (extras) {
-        for (const [id, chance] of extras) {
+        for (const [drop, chance] of extras) {
           if (this.rand() >= chance) continue;
+          const id = Array.isArray(drop) ? drop[Math.floor(this.rand() * drop.length)] : drop;
           if (this.inventory.add(id, 1) === 0) gained[id] = (gained[id] ?? 0) + 1;
         }
       }
@@ -712,8 +717,36 @@ export class DuiltGame {
   /** What a building makes that depends on what's in it: a pen's animals, a farm's crops. */
   producesFor(s) {
     const spec = STRUCTURES_BY_ID.get(s.type);
-    if (spec?.fromCrops) return cropProduce(s, this.world);
+    if (spec?.fromCrops) return farmProduce(s);
     return penProduce(s, this.herd);
+  }
+
+  /**
+   * Puts one seed into a farm (backlog batch 2): "put in one seed per crop
+   * you want, up to 4 crops". A carrot seed in means carrots — and carrot
+   * seeds — out. Takes the seed from your bag. Returns { ok, reason }.
+   */
+  sowFarm(s, kind) {
+    const seeds = s.seeds ?? (s.seeds = []);
+    if (!CROPS_BY_KIND.has(kind)) return { ok: false, reason: 'That isn\'t a crop' };
+    if (seeds.includes(kind)) return { ok: false, reason: `It's already growing ${CROPS_BY_KIND.get(kind).name.toLowerCase()}` };
+    if (seeds.length >= FARM_SEED_SLOTS) return { ok: false, reason: `A farm grows ${FARM_SEED_SLOTS} crops at most — take one out first` };
+    const id = `seeds_${kind}`;
+    if (!this.inventory.endless && !this.inventory.remove(id, 1)) return { ok: false, reason: `You have no ${itemName(id).toLowerCase()}` };
+    seeds.push(kind);
+    this.bus?.emit('structure:sown', { structure: s, kind });
+    return { ok: true };
+  }
+
+  /** Takes a crop back out of a farm: it stops growing there, and its seed comes back. */
+  unsowFarm(s, kind) {
+    const seeds = s.seeds ?? [];
+    const i = seeds.indexOf(kind);
+    if (i < 0) return { ok: false, reason: 'It isn\'t growing that' };
+    seeds.splice(i, 1);
+    if (!this.inventory.endless) this.inventory.add(`seeds_${kind}`, 1);
+    this.bus?.emit('structure:sown', { structure: s, kind });
+    return { ok: true };
   }
 
   // ---- health ----

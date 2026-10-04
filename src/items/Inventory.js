@@ -1,4 +1,4 @@
-import { ITEMS_BY_ID, stackLimit, isTool } from '../config/items.js';
+import { ITEMS_BY_ID, stackLimit, isTool, LEGACY_ITEMS } from '../config/items.js';
 
 export const DEFAULT_SLOTS = 40;
 
@@ -390,8 +390,10 @@ export class Inventory {
     if (!data?.slots) return;
     const next = new Array(Math.max(this.slots.length, data.slots.length)).fill(null);
     data.slots.forEach((s, i) => {
-      // Drop anything whose item no longer exists rather than carrying a ghost.
-      if (s && ITEMS_BY_ID.has(s.id)) next[i] = { id: s.id, count: s.count, wear: s.wear || 0 };
+      // An item that was replaced comes back as what replaced it; anything
+      // else that no longer exists is dropped rather than carried as a ghost.
+      const id = LEGACY_ITEMS[s?.id] ?? s?.id;
+      if (s && ITEMS_BY_ID.has(id)) next[i] = { id, count: s.count, wear: s.wear || 0 };
     });
     this.slots = next;
     this.changed();

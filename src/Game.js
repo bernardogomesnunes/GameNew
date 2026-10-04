@@ -171,7 +171,7 @@ const STRIKE_COOLDOWN_MS = 350;
 /** A blow with nothing in your hand: a heart (two half-hearts). */
 const FIST_DAMAGE = 2;
 // What a farm animal will follow you for. See Mobs.think.
-const LURES = new Set(['vegetables', 'seeds', 'fruit', ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
+const LURES = new Set(['vegetables', 'fruit', ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
 const FARMLAND = 21;
 /** How often planted crops are brought up to the stage their age says. */
 const CROP_TICK_SECONDS = 2;
@@ -267,7 +267,7 @@ const CRACK_LINGER_MS = 450;
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
 const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', seeds: 'plantMixed' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected' };
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -2007,7 +2007,15 @@ export class Game {
       onDelete: () => this.deleteBuilding(structure),
       onOpenStore: () => this.ui.openStore(structure),
       onEvolve: () => this.evolveBuilding(structure),
+      onSow: (kind) => this.sowFarm(structure, kind, true),
+      onUnsow: (kind) => this.sowFarm(structure, kind, false),
     };
+  }
+
+  /** Puts a seed into a farm, or takes one out (DuiltGame.sowFarm), saying why not when it can't. */
+  sowFarm(structure, kind, sow) {
+    const r = sow ? this.duilt.sowFarm(structure, kind) : this.duilt.unsowFarm(structure, kind);
+    if (!r.ok) this.ui.toast({ kind: 'xp', title: sow ? "Can't put that in" : "Can't take that out", body: r.reason });
   }
 
   /**
@@ -4581,27 +4589,6 @@ export class Game {
       return;
     }
     this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
-  }
-
-  /**
-   * Place with a handful of mixed seeds: whatever comes up. Which crop is
-   * picked by where it lands, so the same patch doesn't reroll if you plant
-   * it twice — and a row comes up as a mix.
-   */
-  plantMixed() {
-    const hit = this.raycast();
-    if (!hit) return;
-    const { placeX: x, placeY: y, placeZ: z } = hit;
-    if (this.world.getBlock(x, y - 1, z) !== FARMLAND || this.world.getBlock(x, y, z) !== AIR) {
-      this.ui.toast({ kind: 'xp', title: 'Seeds go in farmland', body: 'Put down farmland and plant on top of it' });
-      return;
-    }
-    const inv = this.duilt?.inventory;
-    if (inv && !inv.endless && !inv.has('seeds', 1)) return;
-    const h = Math.abs((x * 73856093) ^ (z * 19349663) ^ (y * 83492791));
-    const next = cropBlock(CROPS[h % CROPS.length].kind, 0);
-    if (!this.applyChanges([{ x, y, z, prev: AIR, next }], { chargeResources: false })) return;
-    if (inv && !inv.endless) inv.remove('seeds', 1);
   }
 
   /** Brings every planted crop up to the stage its time in the ground says. */

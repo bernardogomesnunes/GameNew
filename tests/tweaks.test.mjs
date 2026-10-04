@@ -42,15 +42,16 @@ ok('break the ground under one and it comes away into your bag',
 {
   const world = new World({ sizeX: 16, sizeZ: 16, height: 16 });
   const g = new DuiltGame({ world, scene: new THREE.Scene(), bus: null, sandbox: false });
-  const had = g.inventory.countOf('seeds');
+  const seedsHeld = () => GRASS_DROPS[0][0].reduce((n, id) => n + g.inventory.countOf(id), 0);
+  const had = seedsHeld();
   g.rand = () => 0;
   g.onBlocksBroken([{ x: 1, y: 0, z: 1, prev: 1, next: 0 }]);
-  ok('broken grass now and then gives up mixed seeds', g.inventory.countOf('seeds') === had + 1 && GRASS_DROPS[0][0] === 'seeds');
+  ok('broken grass now and then gives up one crop\'s seeds (no mixed seeds)', seedsHeld() === had + 1 && GRASS_DROPS[0][0].every((id) => id.startsWith('seeds_')));
   g.rand = () => 0.99;
   g.onBlocksBroken([{ x: 2, y: 0, z: 1, prev: 1, next: 0 }]);
-  ok('though not every time', g.inventory.countOf('seeds') === had + 1);
+  ok('though not every time', seedsHeld() === had + 1);
   ok(`one grass in five or so (${GRASS_DROPS[0][1]})`, GRASS_DROPS[0][1] >= 0.15 && GRASS_DROPS[0][1] <= 0.3);
-  ok('and seeds are what a farm needs planted', STRUCTURES_BY_ID.get('farm').requires.some((r) => r.id === 'crops'));
+  ok('and seeds are what a farm grows from', STRUCTURES_BY_ID.get('farm').fromCrops && !STRUCTURES_BY_ID.get('farm').cost);
 }
 
 // --- anyone can be struck; a fist takes a heart ---------------------------------------------------------

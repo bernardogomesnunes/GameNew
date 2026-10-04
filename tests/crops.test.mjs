@@ -2,7 +2,7 @@ import { World } from '../src/world/World.js';
 import { CROPS, CROP_BASE, RIPE, STAGE_SECONDS, cropBlock, cropOf } from '../src/config/crops.js';
 import { BLOCKS_BY_ID, PLACEABLE_BLOCKS } from '../src/config/blocks.js';
 import { ITEMS_BY_ID, ITEM_FOR_BLOCK, isFood } from '../src/config/items.js';
-import { Crops, harvestOf, cropProduce } from '../src/duilt/Crops.js';
+import { Crops, harvestOf, farmProduce, FARM_SEED_SLOTS } from '../src/duilt/Crops.js';
 import { DESIGN_FOR_STRUCTURE } from '../src/config/starterDesigns.js';
 import { STRUCTURES_BY_ID } from '../src/config/structures.js';
 import { itemIcon } from '../src/config/cubes.js';
@@ -95,21 +95,17 @@ ok('nor is nothing at all', cropOf(undefined) === null && cropOf(null) === null)
 
 {
   const farm = STRUCTURES_BY_ID.get('farm');
-  ok('a farm needs something planted', farm.requires.some((r) => r.id === 'crops'));
-  ok('and makes whatever is growing in it', farm.fromCrops === true);
+  // Backlog batch 2: nothing needs planting to build one, and it grows the
+  // seeds put into it — see farmseeds.test.mjs for putting them in.
+  ok('a farm needs nothing planted, and costs no seeds', !farm.requires.some((r) => r.id === 'crops') && !farm.cost);
+  ok('and makes whatever seeds were put in it', farm.fromCrops === true);
 
-  const world = new World({ sizeX: 32, sizeZ: 32, height: 32 });
-  for (let x = 0; x < 4; x++) {
-    for (let z = 0; z < 4; z++) world.setBlock(x, 10, z, FARMLAND);
-    world.setBlock(x, 11, 0, cropBlock('pepper', 0));
-    world.setBlock(x, 11, 2, cropBlock('broccoli', 3));
-  }
-  world.setBlock(0, 11, 3, cropBlock('broccoli', 1));
-  const made = cropProduce({ region: { minX: 0, maxX: 3, minY: 10, maxY: 11, minZ: 0, maxZ: 3 } }, world);
-  ok('a farm of peppers and broccoli makes peppers and broccoli', made.pepper > 0 && made.broccoli > 0);
-  ok('more of a crop makes more of it', made.broccoli >= made.pepper);
-  ok('and some seeds of each', made.seeds_pepper === 1 && made.seeds_broccoli === 1);
+  const made = farmProduce({ seeds: ['pepper', 'broccoli'] });
+  ok('a pepper seed and a broccoli seed in make peppers and broccoli', made.pepper === 1 && made.broccoli === 1);
+  ok('and a seed of each', made.seeds_pepper === 1 && made.seeds_broccoli === 1);
   ok('nothing it does not grow', !made.vegetables && !made.cabbage);
+  ok('nothing put in, nothing grows', Object.keys(farmProduce({})).length === 0 && Object.keys(farmProduce({ seeds: [] })).length === 0);
+  ok(`up to ${FARM_SEED_SLOTS} crops`, FARM_SEED_SLOTS === 4);
 
   const design = DESIGN_FOR_STRUCTURE.get('farm');
   const blocks = design?.blocks ?? [];
@@ -124,7 +120,7 @@ ok('seeds only go in farmland', /Seeds go in farmland/.test(game) && /getBlock\(
 ok('what is planted is tracked as it is placed', /this\.duilt\.crops\.plant\(c\.x, c\.y, c\.z, is\.kind\)/.test(game));
 ok('and forgotten when broken', /this\.duilt\.crops\.remove\(c\.x, c\.y, c\.z\)/.test(game));
 ok('the game grows its crops as it runs', /this\.growCrops\(dt\)/.test(game) && /this\.duilt\.crops\.grow\(this\.world\)/.test(game));
-ok('mixed seeds come up as something', /seeds: 'plantMixed'/.test(game));
+ok('no mixed seeds any more (backlog batch 2)', !/plantMixed/.test(game));
 ok('taking the soil away takes the crop with it', /withUprooted\(this\.with(Bed|Door)Halves/.test(game));
 ok('animals follow you holding any of it', CROPS.every((c) => game.includes('c.produce, `seeds_${c.kind}`')));
 
