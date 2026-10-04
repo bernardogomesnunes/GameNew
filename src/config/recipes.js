@@ -581,15 +581,19 @@ export const RECIPES = [
     batch: 4,
     blurb: 'A door in the floor. Place opens and shuts it.',
   },
+  // Played on: "can't craft a framed window ... to build a house". It came
+  // in at Age 3 and wanted glass, which only a workshop makes — so the whole
+  // time you were building houses it wasn't on the bench at all. A rough
+  // pane of fused sand in a plank frame, by hand, from the first age.
   {
     id: 'window',
     name: 'Framed Window',
     station: 'hand',
-    age: 3,
-    inputs: { planks: 2, glass: 1 },
+    age: 1,
+    inputs: { planks: 2, sand: 2 },
     output: { id: 'window', count: 1 },
     batch: 6,
-    blurb: 'Glass in a wooden frame, with a cross of glazing bars.',
+    blurb: 'A pane in a wooden frame, with a cross of glazing bars. For a house\'s walls.',
   },
   {
     id: 'vase',

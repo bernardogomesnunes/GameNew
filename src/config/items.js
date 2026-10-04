@@ -209,7 +209,7 @@ export const ITEMS = [
   { id: 'pillar_marble', name: 'Marble Pillar', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'pillar', block: 166, madeBy: 'Turned from marble — stack them into a column' },
   { id: 'pillar_dark', name: 'Dark Pillar', kind: 'refined', stackTo: STACK_BULK, color: 0x4f4b57, glyph: 'pillar', block: 167, madeBy: 'Turned from dark stone — stack them into a column' },
   { id: 'trapdoor', name: 'Trapdoor', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08a60, glyph: 'trapdoor', block: 168, madeBy: 'Knocked together from planks — Place opens and shuts it' },
-  { id: 'window', name: 'Framed Window', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a7350, glyph: 'window', block: 176, madeBy: 'Glass set in a wooden frame' },
+  { id: 'window', name: 'Framed Window', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a7350, glyph: 'window', block: 176, madeBy: 'Planks and sand, framed at the bench' },
   { id: 'vase', name: 'Vase', kind: 'refined', stackTo: STACK_GOODS, color: 0xc9825c, glyph: 'vase', block: 180, madeBy: 'Thrown from clay and painted' },
   { id: 'urn', name: 'Urn', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08d57, glyph: 'urn', block: 181, madeBy: 'Beaten from copper' },
   { id: 'banner_white', name: 'White Banner', kind: 'refined', stackTo: STACK_GOODS, color: 0xf4f1ea, glyph: 'banner', block: 182, madeBy: 'Woven white, with the gold sun of the sky' },
