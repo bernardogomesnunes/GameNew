@@ -75,10 +75,9 @@ ok('and neither is left up in the column',
 // Break inboard and Jump outboard, which is why they anchor differently — and
 // why the two sticks are inset differently: each sits as far out as its own
 // side allows, which is what keeps air in the middle of a 320px screen.
-ok('Break is anchored past the walking stick',
+ok('Jump is anchored past the walking stick, where Break was',
   /#side-left \{ left: calc\(var\(--stick-edge\) \+ var\(--stick-size\) \+ 10px\); \}/.test(css));
-ok('and Jump against the edge, outboard of the aiming one',
-  /#side-right \{ right: var\(--stick-edge\); \}/.test(css));
+ok('and nothing is left on the right but the picture', !/#side-right \{/.test(css));
 ok('so the stick with nothing outboard sits at the edge',
   /#stick-left \.stick-base \{ left: var\(--stick-edge\); \}/.test(css));
 ok('and the one with Jump beside it comes in past it',
