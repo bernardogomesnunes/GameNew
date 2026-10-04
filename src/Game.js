@@ -268,6 +268,16 @@ const CRACK_LINGER_MS = 450;
 // Any food not listed eats on Break and throws on Place — see foodOverride.
 const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn' };
 const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected' };
+/**
+ * Whether saved progression `a` is further along than `b`. By level first:
+ * `xp` is only what's been earned towards the next level, so comparing it
+ * alone called a level-1 player with 40 xp "ahead of" a level-9 one with 23,
+ * and the account's goals were swapped for a beginner's.
+ */
+export function progressionAhead(a, b) {
+  const la = a?.level ?? 1, lb = b?.level ?? 1;
+  return la !== lb ? la > lb : (a?.xp ?? 0) > (b?.xp ?? 0);
+}
 export const CREATIVE = 'creative';
 export const DUILT = 'duilt';
 
@@ -2651,7 +2661,7 @@ export class Game {
     // breaking one more block re-triggered "first break" as if it were new.
     try {
       const remote = await this.cloud.progression();
-      if (remote && (remote.xp ?? 0) > (this.gamification.toJSON().xp ?? 0)) {
+      if (remote && progressionAhead(remote, this.gamification.toJSON())) {
         this.gamification.loadJSON(remote);
         this.ui.updateXp();
       }
@@ -2683,7 +2693,7 @@ export class Game {
     // progression row — so it only loads in when it is actually ahead,
     // exactly like restoreFromCloud's own merge.
     const local = this.local.loadProgression();
-    if (local && (local.xp ?? 0) > (this.gamification.toJSON().xp ?? 0)) {
+    if (local && progressionAhead(local, this.gamification.toJSON())) {
       this.gamification.loadJSON(local);
       this.ui?.updateXp();
     }

@@ -1595,15 +1595,16 @@ export class UIManager {
             const isDone = done.has(g.id);
             const progress = !isDone ? g.progress?.(ctx) : null;
             return `
-            <div class="ach-card ${isDone ? '' : 'locked'} ${g.required ? 'required' : ''}">
+            <div class="ach-card ${isDone ? 'done' : 'locked'} ${g.required ? 'required' : ''}">
               <div class="ach-icon">${g.icon}</div>
-              <div>
+              <div class="ach-body">
                 <div class="ach-name">
                   <span class="ach-num">${i + 1}.</span> ${escapeHtml(g.name)}
                   ${progress ? `<span class="ach-progress">${progress}</span>` : ''}
                 </div>
                 <div class="ach-desc">${escapeHtml(g.description)}</div>
               </div>
+              ${isDone ? '<span class="ach-done" aria-label="Done">✓</span>' : ''}
             </div>`;
           }).join('')}
         </div>`;

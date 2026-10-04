@@ -358,7 +358,16 @@ body.touch #minimap { display: none; }
 .goal-band .ach-card { margin-bottom: 6px; }
 /* The one that moves the border closes the band, so it reads as the door out. */
 .ach-card { display: flex; gap: 10px; background: rgba(35,42,45,0.04); border: 1px solid var(--panel-border); border-radius: 8px; padding: 8px 10px; }
-.ach-card.locked { opacity: 0.4; }
+.ach-card.locked { opacity: 0.55; }
+/* Done is a tick and a tint, not just "not faded" — reported directly that
+   the first goals "do not count" when they had: a finished card looked the
+   same as an unstarted one. */
+.ach-card.done { background: rgba(41, 158, 138, 0.10); border-color: rgba(41, 158, 138, 0.35); }
+.ach-body { flex: 1; min-width: 0; }
+.ach-done {
+  flex: none; align-self: center; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--good); color: #fff; font-size: 14px; font-weight: 700;
+}
 /* The goals that actually move the border, picked out from the teaching
    ones sitting beside them in the same numbered list — a thicker left edge
    in the same accent the border itself uses, not a separate badge to read. */
