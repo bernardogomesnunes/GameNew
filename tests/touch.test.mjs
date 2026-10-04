@@ -31,7 +31,7 @@ const tray = ui.slice(ui.indexOf('id="touch-tray"'), ui.indexOf('</div>', ui.ind
 
 // --- which thumb does what ---------------------------------------------------
 
-ok('the left stick walks', /bindStick\('#stick-left', \(x, y\) => this\.cb\.onMove/.test(ui));
+ok('the left stick walks', /bindStick\('#stick-left', \(x, y, run\) => this\.cb\.onMove/.test(ui));
 // Backlog batch 2, priority 0: no look stick — the picture is the camera.
 ok('no look stick: dragging the picture aims the camera', /this\.bindLookSurface\(\);/.test(ui) && !/bindStick\('#stick-right'/.test(ui)
   && /id="look-zone"/.test(ui) && /#stick-right, #t-break \{ display: none !important; \}/.test(css));
@@ -123,7 +123,8 @@ ok('nothing is laid out in a row', !/class="row"/.test(ui));
   const top = (v) => v.zone + v.bottom + v.size;
   ok(`the stick base reaches ${top(big)}px up`, top(big) === 206);
   ok(`and the column starts ${big.gap}px above it`, big.gap > 0);
-  ok('a smaller screen shrinks the base and pulls it in', small.size < big.size && small.inset < big.inset);
+  // Played on: "the joystick on the left needs to be slightly bigger".
+  ok(`a phone's walking stick is big enough to find without looking (${small.size}px)`, small.size >= 104 && small.inset < big.inset);
   // Four things across the bottom: the left stick, Break, the right stick and
   // Jump. They have to clear each other on the narrowest phone worth caring
   // about, which is where this arrangement is actually tested.
@@ -131,10 +132,13 @@ ok('nothing is laid out in a row', !/class="row"/.test(ui));
   const side = 50;
   ok(`the aiming stick is inset ${small.inset}px, past Jump's ${edge + side}px`,
     small.inset >= edge + side + 4);
+  // The aiming stick is gone (the picture is the camera), so what has to
+  // clear across the bottom is the walking stick, the button beside it (Up
+  // and Down in the air) and Jump at the far edge.
   for (const w of [320, 360, 393, 430]) {
-    const breakEnds = edge + small.size + 10 + side;
-    const rightBase = w - small.inset - small.size;
-    ok(`at ${w}px Break clears the aiming stick by ${rightBase - breakEnds}px`, rightBase > breakEnds);
+    const besideEnds = edge + small.size + 10 + side;
+    const jumpStarts = w - edge - side;
+    ok(`at ${w}px the button beside the stick clears Jump by ${jumpStarts - besideEnds}px`, jumpStarts - besideEnds >= 40);
   }
 }
 
