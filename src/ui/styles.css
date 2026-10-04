@@ -803,7 +803,10 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; padding: 2px;
   align-items: start;
 }
-#bag-grid { margin: 8px 0 14px; max-height: 46vh; overflow-y: auto; }
+#bag-grid { margin: 8px 0 14px; max-height: 46vh; overflow-y: auto;
+  /* Reported directly: at the end of the bag the scroll carried on into the
+     panel and dragged Wearing and Equipped up off the top. It stops here. */
+  overscroll-behavior: contain; }
 /* What you're wearing (Phase 7b): four slots in a row, each named under it. */
 .bag-wear-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 60px)); gap: 8px; margin: 8px 0 4px; padding: 2px; }
 .wear-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
@@ -1508,3 +1511,18 @@ body.touch .ctl-keys { display: none; }
 .lore-page.locked { opacity: 0.6; border-style: dashed; }
 .lore-page.locked p { font-family: inherit; font-style: italic; color: var(--text-dim); }
 .lore-replay { margin-top: 8px; font-size: 12.5px; padding: 6px 12px; }
+
+/* The game's own yes/no (ui/Confirm.js): over everything, panels included. */
+.confirm-backdrop {
+  position: fixed; inset: 0; z-index: 50; background: rgba(6, 8, 14, 0.55);
+  pointer-events: auto; /* #ui-root lets taps through; this must catch them */
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.confirm-card {
+  width: 100%; max-width: 340px; background: var(--panel-solid); border-radius: 16px;
+  border: 1px solid var(--panel-border); padding: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.confirm-title { display: block; font-size: 16px; margin-bottom: 6px; }
+.confirm-body { margin: 0 0 14px; color: var(--text-dim); font-size: 13.5px; line-height: 1.5; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.confirm-actions .danger { background: var(--danger); border-color: var(--danger); color: #fff; }

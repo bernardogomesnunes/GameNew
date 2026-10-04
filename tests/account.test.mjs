@@ -136,8 +136,8 @@ ok('and the front door makes one so the canvas is not blank',
 ok('saving queues rather than blocking the build', /this\.pendingSave = true;/.test(game));
 ok('one upload at a time, so revisions keep meaning something',
   /if \(this\.saving\) return this\.saving;/.test(game));
-ok('a failure stays pending rather than being swallowed',
-  /this\.saveError = err\?\.message/.test(game) && /Not saved to your account yet/.test(game));
+ok('a failure stays pending — quietly, retried rather than announced every few minutes (backlog batch 2)',
+  /this\.saveError = err\?\.message/.test(game) && !/Not saved to your account yet/.test(game) && /the copy keepSafe put aside survives a closed tab/.test(game));
 ok('and the world is held somewhere it survives a closed tab',
   /keepSafe\(\)/.test(game) && /UNSENT_KEY/.test(game));
 ok('which is one slot, not a library', /const UNSENT_KEY = 'voxelgame:unsent';/.test(game));
