@@ -444,7 +444,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
 #stick-right { right: 0; }
 /* The picture is the camera now (UIManager.bindLookSurface): under the stick
    and the buttons, over the world. No look stick, and no Break button — a
-   tap on the picture is Break; Jump takes Break's place by the stick. */
+   tap on the picture is Break. */
 #look-zone { position: absolute; inset: 0; z-index: 1; pointer-events: auto; touch-action: none; }
 #stick-right, #t-break { display: none !important; }
 .touch-buttons { z-index: 3; }
@@ -514,6 +514,7 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   pointer-events: auto; z-index: 3;
 }
 #side-left { left: calc(var(--stick-edge) + var(--stick-size) + 10px); }
+#side-right { right: var(--stick-edge); }
 .touch-btn.small { width: var(--side-btn); height: var(--side-btn); border-radius: 15px; }
 
 /* Which side is which is yours to choose — requested directly: "controls in
@@ -533,6 +534,7 @@ body.touch-walk-right #stick-left { left: auto; right: 0; }
 body.touch-walk-right #stick-right { right: auto; left: 0; }
 body.touch-walk-right #stick-left .stick-base { left: auto; right: var(--stick-edge); }
 body.touch-walk-right #stick-right .stick-base { right: auto; left: var(--stick-inset); }
+body.touch-walk-right #side-right { right: auto; left: var(--stick-edge); }
 body.touch-walk-right #side-left { left: auto; right: calc(var(--stick-edge) + var(--stick-size) + 10px); }
 body.touch-walk-right #touch-buttons-left { left: auto; right: 12px; align-items: flex-end; }
 
