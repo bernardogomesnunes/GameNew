@@ -117,13 +117,16 @@ ok('each channel takes the skew differently',
 {
   const names = Object.keys(TEXTURES);
   ok(`${names.length} materials have a recipe`, names.length >= 15);
-  ok('every recipe darkens by something', Object.values(TEXTURES).every((r) => (r.depth ?? 0) > 0));
+  // The cobblestone is the one tile kept from before (render/legacyCobble.js),
+  // with its own depth and marks inside it.
+  const painted = Object.values(TEXTURES).filter((r) => !r.legacy);
+  ok('every recipe darkens by something', painted.every((r) => (r.depth ?? 0) > 0));
   // Tiles multiply the block's colour, so anything approaching black would
   // wipe the palette out rather than shade it. (Depth is in what you see,
   // not in light, since the 32×32 tiles: half as dark looks half as dark.)
   ok('and none of them so much that the colour is lost',
     Object.values(TEXTURES).every((r) => (r.depth ?? 0) <= 0.55));
-  ok('every recipe names something to draw', Object.values(TEXTURES).every((r) =>
+  ok('every recipe names something to draw', painted.every((r) =>
     r.marks || r.lines || r.veins || r.cracks || r.band || r.speck || r.setts));
   ok('the glyphs they key off are real',
     names.every((n) => BLOCKS.some((b) => (b.texture ?? b.glyph) === n) || ITEMS.some((i) => i.glyph === n)));
@@ -195,17 +198,22 @@ ok('and an orientation change is re-measured once it has settled',
   const { tileFor, tileValue } = await import('../src/render/BlockTextures.js');
   const t = tileFor(8);
   const px = t.length / 4;
-  // Earth: well below the tile's average (the tile is scaled to average 1).
-  let earth = 0, lit = 0, warm = 0, mossy = 0;
+  // Asked for twice: the first cobblestone, exactly (render/legacyCobble.js).
+  // Earth is where no stone stands, and it is darker than the stones.
+  const ht = t.height;
+  let earth = 0, earthSum = 0, stoneSum = 0, top = 0, warm = 0, mossy = 0;
   for (let i = 0; i < px; i++) {
     const [r, g, b] = [0, 1, 2].map((ch) => tileValue(t[i * 4 + ch]));
-    if (Math.max(r, g) < 0.8) earth++;
-    if (r >= 1.3) lit++;
+    const v = (r + g + b) / 3;
+    if (ht[i] === 0) { earth++; earthSum += v; } else stoneSum += v;
+    top = Math.max(top, v);
     if (r > b * 1.08) warm++;
     if (g > r * 1.15 && g > b * 1.3) mossy++;
   }
+  const earthMean = earthSum / earth, stoneMean = stoneSum / (px - earth);
   ok(`cobblestone is stones with earth between them (${Math.round(earth / px * 100)}% earth)`, earth / px > 0.12 && earth / px < 0.6);
-  ok('lit along the tops of the stones', lit > 10);
+  ok(`the earth sits darker than the stones (${earthMean.toFixed(2)} against ${stoneMean.toFixed(2)})`, earthMean < stoneMean * 0.85);
+  ok('lit along the tops of the stones', top > stoneMean * 1.08);
   ok('and not all one grey: the earth and the odd stone are warm', warm > 20);
   // Requested directly: "Cobble was fine as it was ... the only one I think
   // it got worse". Back to the first one: plain earth, no moss.
