@@ -332,13 +332,15 @@ export const SHOWCASE_SPOTS = [
     ['sky-gate', 'The Sky city: a gate, from the air', (s, l) => ({ eye: [l.ux * (l.wall + 34), FLOOR + 8, l.uz * (l.wall + 34)], look: [l.ux * l.wall, FLOOR + 6, l.uz * l.wall] })],
     ['sky-palace', 'The Sky city: the palace', (s, l) => ({ eye: [l.ux * 46 + l.uz * 6, FLOOR + 7, l.uz * 46 - l.ux * 6], look: [0, FLOOR + 9, 0] })],
     ['sky-below', 'The Sky city: the island from below', (s, l) => ({ eye: [l.ux * (ISLAND_R + 60), FLOOR - 34, l.uz * (ISLAND_R + 60)], look: [0, FLOOR - 16, 0] })],
+    // Backlog batch 2: the hole in the ground it was torn out of, from its rim.
+    ['sky-scar', 'The Sky city: the scar it left in the ground', (s, l, ground) => ({ eye: [l.ux * (ISLAND_R + 10), ground + 48, l.uz * (ISLAND_R + 10)], look: [0, ground - 16, 0] })],
   ].map(([id, name, pose]) => ({
     id, name, group: 'main', where: 'sky',
     resolve: ({ gen }) => {
       const s = skyFor(gen);
       const home = { x: gen.biomes?.centreX ?? 0, z: gen.biomes?.centreZ ?? 0 };
       const l = s.landings.reduce((best, c) => (Math.hypot(c.x - home.x, c.z - home.z) < Math.hypot(best.x - home.x, best.z - home.z) ? c : best));
-      const p = pose(s, l);
+      const p = pose(s, l, gen.heightAt(s.x, s.z));
       return { eye: { x: s.x + p.eye[0] + 0.5, y: p.eye[1], z: s.z + p.eye[2] + 0.5 }, look: { x: s.x + p.look[0] + 0.5, y: p.look[1], z: s.z + p.look[2] + 0.5 } };
     },
   })),
