@@ -256,18 +256,39 @@ export function fenceBoxes(shape, joins) {
  * A stone wall: a post where the run turns, ends or meets another, and a
  * thick low wall out to each side it joins — one straight piece when it
  * just runs through. Like fenceBoxes, `joins` says which of the four sides
- * have something to join.
+ * have another wall to join.
+ *
+ * Backlog batch 2: `up` — a wall stacked on this one — takes the arms to the
+ * top of the cell, so a wall two high is one wall with no gap along it; and
+ * `post` keeps the post even on a straight run, for where a fence comes in
+ * from the side (the fence's rails run into the post — see fenceStubs —
+ * rather than the wall reaching out to meet the fence).
  */
-export function wallBoxes({ px = 0, nx = 0, pz = 0, nz = 0 } = {}) {
-  const lo = 0.3125, hi = 0.6875, top = 0.8125;
-  if (px && nx && !pz && !nz) return [{ minX: 0, maxX: 1, minY: 0, maxY: top, minZ: lo, maxZ: hi }];
-  if (pz && nz && !px && !nx) return [{ minX: lo, maxX: hi, minY: 0, maxY: top, minZ: 0, maxZ: 1 }];
+export function wallBoxes({ px = 0, nx = 0, pz = 0, nz = 0, up = 0, post = 0 } = {}) {
+  const lo = 0.3125, hi = 0.6875, top = up ? 1 : 0.8125;
+  if (!post && px && nx && !pz && !nz) return [{ minX: 0, maxX: 1, minY: 0, maxY: top, minZ: lo, maxZ: hi }];
+  if (!post && pz && nz && !px && !nx) return [{ minX: lo, maxX: hi, minY: 0, maxY: top, minZ: 0, maxZ: 1 }];
   const out = [{ minX: 0.25, maxX: 0.75, minY: 0, maxY: 1, minZ: 0.25, maxZ: 0.75 }];
   if (px) out.push({ minX: 0.75, maxX: 1, minY: 0, maxY: top, minZ: lo, maxZ: hi });
   if (nx) out.push({ minX: 0, maxX: 0.25, minY: 0, maxY: top, minZ: lo, maxZ: hi });
   if (pz) out.push({ minX: lo, maxX: hi, minY: 0, maxY: top, minZ: 0.75, maxZ: 1 });
   if (nz) out.push({ minX: lo, maxX: hi, minY: 0, maxY: top, minZ: 0, maxZ: 0.25 });
   return out;
+}
+
+/**
+ * The ends of a fence's rails that reach into a wall's cell, from the edge
+ * on `side` ('px', 'nx', 'pz' or 'nz') to the wall's post — drawn in the
+ * fence's colour, so the fence runs into the post and stops there.
+ */
+export function fenceStubs(side, shape = 'fence') {
+  const rails = shape === 'fence' ? [[0.375, 0.5625], [0.75, 0.9375]] : [[0.25, 0.375], [0.5, 0.625], [0.75, 0.875]];
+  return rails.map(([minY, maxY]) => {
+    if (side === 'px') return { minX: 0.75, maxX: 1, minY, maxY, minZ: 0.4375, maxZ: 0.5625 };
+    if (side === 'nx') return { minX: 0, maxX: 0.25, minY, maxY, minZ: 0.4375, maxZ: 0.5625 };
+    if (side === 'pz') return { minX: 0.4375, maxX: 0.5625, minY, maxY, minZ: 0.75, maxZ: 1 };
+    return { minX: 0.4375, maxX: 0.5625, minY, maxY, minZ: 0, maxZ: 0.25 };
+  });
 }
 
 /**
@@ -317,18 +338,31 @@ PROP_SHAPES.trapdoor_open = [
 // middle of its cell, and glass in it. `pane` boxes are drawn see-through
 // (ChunkMesher's pane material).
 const GLASS = 0xb9dce8;
-PROP_SHAPES.window = [
-  { minX: 0, maxX: 0.125, minY: 0, maxY: 1, minZ: 0.4, maxZ: 0.6 },
-  { minX: 0.875, maxX: 1, minY: 0, maxY: 1, minZ: 0.4, maxZ: 0.6 },
-  { minX: 0.125, maxX: 0.875, minY: 0, maxY: 0.125, minZ: 0.4, maxZ: 0.6 },
-  { minX: 0.125, maxX: 0.875, minY: 0.875, maxY: 1, minZ: 0.4, maxZ: 0.6 },
-  // A sill that stands out a little each side.
-  { minX: 0, maxX: 1, minY: 0, maxY: 0.06, minZ: 0.34, maxZ: 0.66 },
+/**
+ * A framed window. Backlog batch 2: windows stacked one on another join into
+ * one tall window — `below` and `above` (the same window, facing the same
+ * way) drop the frame and sill between them, so the sides and the glass run
+ * straight through. Side by side they stay separate windows.
+ */
+export function windowBoxes({ below = false, above = false } = {}) {
+  const y0 = below ? 0 : 0.125, y1 = above ? 1 : 0.875;
+  const out = [
+    { minX: 0, maxX: 0.125, minY: 0, maxY: 1, minZ: 0.4, maxZ: 0.6 },
+    { minX: 0.875, maxX: 1, minY: 0, maxY: 1, minZ: 0.4, maxZ: 0.6 },
+  ];
+  if (!below) {
+    out.push({ minX: 0.125, maxX: 0.875, minY: 0, maxY: 0.125, minZ: 0.4, maxZ: 0.6 });
+    // A sill that stands out a little each side.
+    out.push({ minX: 0, maxX: 1, minY: 0, maxY: 0.06, minZ: 0.34, maxZ: 0.66 });
+  }
+  if (!above) out.push({ minX: 0.125, maxX: 0.875, minY: 0.875, maxY: 1, minZ: 0.4, maxZ: 0.6 });
   // The glazing bars.
-  { minX: 0.46875, maxX: 0.53125, minY: 0.125, maxY: 0.875, minZ: 0.46, maxZ: 0.54 },
-  { minX: 0.125, maxX: 0.875, minY: 0.46875, maxY: 0.53125, minZ: 0.46, maxZ: 0.54 },
-  { minX: 0.125, maxX: 0.875, minY: 0.125, maxY: 0.875, minZ: 0.49, maxZ: 0.51, color: GLASS, pane: true },
-];
+  out.push({ minX: 0.46875, maxX: 0.53125, minY: y0, maxY: y1, minZ: 0.46, maxZ: 0.54 });
+  out.push({ minX: 0.125, maxX: 0.875, minY: 0.46875, maxY: 0.53125, minZ: 0.46, maxZ: 0.54 });
+  out.push({ minX: 0.125, maxX: 0.875, minY: y0, maxY: y1, minZ: 0.49, maxZ: 0.51, color: GLASS, pane: true });
+  return out;
+}
+PROP_SHAPES.window = windowBoxes();
 
 // A terracotta vase with a painted band, and a bronze urn with handles and
 // a lid.
@@ -463,14 +497,24 @@ PROP_SHAPES.archery_target = [
 // guy ropes pegged out at the corners. A campfire: a ring of stones, logs
 // crossed in it, and the flames, glowing.
 const CANVAS = 0x6b5a48, CANVAS_DARK = 0x52443a, ROPE = 0xc9b88f, FLAME_LOW = 0xff8a3a;
+// Two blocks long (backlog batch 2): the front, with the flap and the
+// pole, runs on into the back, which closes the canvas and is pegged out.
 PROP_SHAPES.war_tent = [
-  ...[0, 1, 2, 3, 4].map((k) => ({ minX: 0.04 + k * 0.09, maxX: 0.96 - k * 0.09, minY: k * 0.2, maxY: (k + 1) * 0.2, minZ: 0.06, maxZ: 0.98, color: k % 2 ? CANVAS_DARK : CANVAS })),
+  ...[0, 1, 2, 3, 4].map((k) => ({ minX: 0.04 + k * 0.09, maxX: 0.96 - k * 0.09, minY: k * 0.2, maxY: (k + 1) * 0.2, minZ: 0.06, maxZ: 1, color: k % 2 ? CANVAS_DARK : CANVAS })),
   { minX: 0.47, maxX: 0.53, minY: 0, maxY: 1.35, minZ: 0.02, maxZ: 0.08, color: HILT },
   { minX: 0.53, maxX: 0.78, minY: 1.18, maxY: 1.32, minZ: 0.04, maxZ: 0.06, color: 0x2a2430 },
   { minX: 0.3, maxX: 0.7, minY: 0, maxY: 0.62, minZ: 0.04, maxZ: 0.07, color: 0x1e1a18 },
   { minX: 0.18, maxX: 0.32, minY: 0, maxY: 0.6, minZ: 0.02, maxZ: 0.06, color: CANVAS_DARK },
-  ...[[-0.06, 0.04], [1.0, 0.04], [-0.06, 0.92], [1.0, 0.92]].map(([x, z]) => ({ minX: x, maxX: x + 0.06, minY: 0, maxY: 0.1, minZ: z, maxZ: z + 0.06, color: HILT })),
+  ...[[-0.06, 0.04], [1.0, 0.04]].map(([x, z]) => ({ minX: x, maxX: x + 0.06, minY: 0, maxY: 0.1, minZ: z, maxZ: z + 0.06, color: HILT })),
   ...[[0.0, 0.07], [0.94, 0.07]].map(([x, z]) => ({ minX: x, maxX: x + 0.06, minY: 0.08, maxY: 0.4, minZ: z, maxZ: z + 0.03, color: ROPE })),
+];
+PROP_SHAPES.war_tent_back = [
+  ...[0, 1, 2, 3, 4].map((k) => ({ minX: 0.04 + k * 0.09, maxX: 0.96 - k * 0.09, minY: k * 0.2, maxY: (k + 1) * 0.2, minZ: 0, maxZ: 0.94, color: k % 2 ? CANVAS_DARK : CANVAS })),
+  // The back pole, and the canvas laced shut at the end.
+  { minX: 0.47, maxX: 0.53, minY: 0, maxY: 1.1, minZ: 0.9, maxZ: 0.96, color: HILT },
+  { minX: 0.42, maxX: 0.58, minY: 0.1, maxY: 0.9, minZ: 0.93, maxZ: 0.95, color: CANVAS_DARK },
+  ...[[-0.06, 0.9], [1.0, 0.9]].map(([x, z]) => ({ minX: x, maxX: x + 0.06, minY: 0, maxY: 0.1, minZ: z, maxZ: z + 0.06, color: HILT })),
+  ...[[0.0, 0.88], [0.94, 0.88]].map(([x, z]) => ({ minX: x, maxX: x + 0.06, minY: 0.08, maxY: 0.4, minZ: z, maxZ: z + 0.03, color: ROPE })),
 ];
 PROP_SHAPES.campfire = [
   ...[[0.1, 0.4], [0.8, 0.4], [0.4, 0.1], [0.4, 0.8], [0.18, 0.18], [0.7, 0.18], [0.18, 0.7], [0.7, 0.7]].map(([x, z]) => (

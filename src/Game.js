@@ -52,7 +52,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, bedPart, BED_HEAD, FACING_STEP, isPainting } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, pairPart, pairOther, isPainting } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/upgrades.js';
@@ -75,7 +75,7 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView } from './render/ArmyView.js';
-import { BED, NIGHTSTONE_ORE, SKY_LIFT, CHAIN, WAR_TENT, CAMPFIRE, isTent } from './config/blocks.js';
+import { BED, NIGHTSTONE_ORE, SKY_LIFT, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent } from './config/blocks.js';
 import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
 import { Suspicion, SUSPICION, AMBUSH } from './duilt/Suspicion.js';
@@ -3870,7 +3870,10 @@ export class Game {
       return { x: bx, y: by, z: bz };
     };
     // Three tents in a row, a fire in front of them, a black banner each end.
-    const tents = [-3, 0, 3].map((dx) => put(x + dx, z + 2, turned(WAR_TENT, 0)));
+    const tents = [-3, 0, 3].map((dx) => {
+      put(x + dx, z + 3, WAR_TENT_BACK); // two blocks long: the back behind the flap
+      return put(x + dx, z + 2, turned(WAR_TENT, 0));
+    });
     put(x, z - 1, CAMPFIRE);
     put(x - 5, z + 2, BLACK_BANNER); put(x + 5, z + 2, BLACK_BANNER);
     d.spawn = tents[1];
@@ -4503,7 +4506,8 @@ export class Game {
     }
     const held = this.placedBlock(type);
     const door = doorPart(held);
-    const bed = bedPart(held);
+    // A bed or a tent: one thing in two blocks (blocks.js PAIRS).
+    const pair = pairPart(held);
     const crop = cropOf(held);
     const targets = this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
     const changes = [];
@@ -4526,19 +4530,21 @@ export class Game {
         if (above !== AIR && !isFlowing(above)) continue;
         changes.push({ ...up, prev: above, next: doorBlock({ ...doorPart(next), top: true }) });
       }
-      if (bed) {
-        // A bed's head goes in the next cell along, the way it faces.
-        const [sx, sz] = FACING_STEP[bedPart(next).facing];
-        const head = { x: t.x + sx, y: t.y, z: t.z + sz };
-        if (!this.world.inBounds(head.x, head.y, head.z) || this.blockOverlapsPlayerAABB(head)) continue;
-        const there = this.world.getBlock(head.x, head.y, head.z);
+      if (pair) {
+        // The second half goes in the next cell along: a bed's head ahead of
+        // its foot, a tent's back behind its flap.
+        const part = pairPart(next);
+        const at = pairOther(part, t.x, t.z);
+        const second = { x: at.x, y: t.y, z: at.z };
+        if (!this.world.inBounds(second.x, second.y, second.z) || this.blockOverlapsPlayerAABB(second)) continue;
+        const there = this.world.getBlock(second.x, second.y, second.z);
         if (there !== AIR && !isFlowing(there)) continue;
-        changes.push({ ...head, prev: there, next: BED_HEAD + bedPart(next).facing });
+        changes.push({ ...second, prev: there, next: part.pair.second + part.facing });
       }
       changes.push({ x: t.x, y: t.y, z: t.z, prev, next });
     }
-    if (bed && !changes.length) {
-      this.ui.toast({ kind: 'xp', title: 'No room for a bed', body: 'It needs two blocks of clear floor, the way you face' });
+    if (pair && !changes.length) {
+      this.ui.toast({ kind: 'xp', title: `No room for a ${pair.pair.name}`, body: 'It needs two blocks of clear floor, the way you face' });
       return;
     }
     if (door && !changes.length) {
@@ -4663,13 +4669,13 @@ export class Game {
   withBedHalves(changes) {
     let out = changes;
     for (const c of changes) {
-      const part = bedPart(c.prev);
-      if (!part || bedPart(c.next)) continue;
-      const [sx, sz] = FACING_STEP[part.facing];
-      const ox = part.head ? c.x - sx : c.x + sx, oz = part.head ? c.z - sz : c.z + sz;
+      // A bed or a tent (blocks.js PAIRS): either half taken takes the other.
+      const part = pairPart(c.prev);
+      if (!part || pairPart(c.next)) continue;
+      const { x: ox, z: oz } = pairOther(part, c.x, c.z);
       const other = this.world.getBlock(ox, c.y, oz);
-      const op = bedPart(other);
-      if (!op || op.head === part.head || op.facing !== part.facing) continue;
+      const op = pairPart(other);
+      if (!op || op.pair !== part.pair || op.second === part.second || op.facing !== part.facing) continue;
       if (out.some((o) => o.x === ox && o.y === c.y && o.z === oz)) continue;
       if (out === changes) out = [...changes];
       out.push({ x: ox, y: c.y, z: oz, prev: other, next: AIR });

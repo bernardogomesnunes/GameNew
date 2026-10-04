@@ -112,8 +112,10 @@ export const STRUCTURES = [
     // at 12 a day; the foraged extras riding the same cycle fall out at a
     // real trickle instead, which is what a standing forest should feel
     // like next to a claimed farm.
-    produces: { wood: 4, leaves: 1, seeds: 1, fruit: 1 },
-    everySeconds: 28800,
+    // Raised to 20 wood a day (backlog batch 2): every 6 hours, 5 wood. The
+    // foraged extras ride the same cycle, 4 a day each.
+    produces: { wood: 5, leaves: 1, seeds: 1, fruit: 1 },
+    everySeconds: 21600,
     skill: 'foraging',
   },
 

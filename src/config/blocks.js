@@ -55,7 +55,7 @@ export const BLOCKS = [
   // Requested directly: "Snow should be white." The old 0xceddec read as a
   // pale lavender-blue next to Glass and Water rather than snow.
   { id: 12, name: 'Snow', glyph: 'snow', color: 0xf5f7f8, cost: { wood: 1 }, unlock: { type: 'level', value: 3 } },
-  { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xe5cd8c, material: 'stone', cost: { gold: 1 }, unlock: { type: 'level', value: 6 } },
+  { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xf0cf62, material: 'stone', cost: { gold: 1 }, unlock: { type: 'level', value: 6 } },
   { id: 14, name: 'Obsidian', glyph: 'obsidian', color: 0x372648, material: 'stone', cost: { stone: 4 }, unlock: { type: 'achievement', value: 'underground' } },
   { id: 15, name: 'Red Glass', glyph: 'pane', color: 0xde9390, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: { type: 'level', value: 4 } },
   { id: 16, name: 'Blue Glass', glyph: 'pane', color: 0x90aade, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: { type: 'level', value: 4 } },
@@ -144,9 +144,11 @@ export const BLOCKS = [
   // speckled mark already reads as flecks in rock; gold ore borrows the
   // existing gold mark instead, so it reads as kin to Gold Block without
   // being the same colour — ore is duller, unrefined, still in the stone.
+  // Backlog batch 2: it read as wood, so it is yellower now, and its own
+  // `texture` (cracked rock with flecks that glint; config/textures.js).
   { id: 38, name: 'Iron Ore', glyph: 'gravel', color: 0xa9948d, material: 'stone', unlock: null },
   { id: 39, name: 'Copper Ore', glyph: 'gravel', color: 0xbb8a67, material: 'stone', unlock: null },
-  { id: 40, name: 'Gold Ore', glyph: 'gold', color: 0xc8b686, material: 'stone', unlock: null },
+  { id: 40, name: 'Gold Ore', glyph: 'gold', texture: 'gold_ore', color: 0xd6bd5c, material: 'stone', unlock: null },
 
   // Two more trees, requested directly so the forest reads as more than one
   // kind of wood: a pale trunk and canopy for a birch-like grove, and a
@@ -351,7 +353,7 @@ BLOCKS.push(
   { id: DARK_STONE, name: 'Dark Stone', glyph: 'stone', color: 0x4f4b57, material: 'stone', unlock: null },
   { id: DARK_BRICK, name: 'Dark Brick', glyph: 'brick', color: 0x5c4b52, material: 'stone', unlock: null },
   { id: SKY_MARBLE, name: 'Sky Marble', glyph: 'marble', color: 0xe8eef8, material: 'stone', unlock: null },
-  { id: 159, name: 'Gold Trim', glyph: 'trim', color: 0xe2c26a, material: 'stone', unlock: null },
+  { id: 159, name: 'Gold Trim', glyph: 'trim', color: 0xf2c94c, material: 'stone', unlock: null },
   // Plaster between dark oak beams — the beams are painted into the
   // texture (see textures.js `timber`), so it lays like any block.
   { id: 160, name: 'Timber Frame', glyph: 'timber', color: 0xf0e6cf, material: 'wood', unlock: null },
@@ -474,8 +476,37 @@ BLOCKS.push({
   id: CAMPFIRE, name: 'Campfire', glyph: 'campfire', color: 0x6b4a2e, shape: 'campfire', material: 'wood',
   light: { color: 0xffa04a, intensity: 4, distance: 14, decay: 1, y: 0.4 }, unlock: null,
 });
+// Two blocks long (backlog batch 2): the front, with its flap, where you
+// aim, and the back behind it — a state of the front, like a bed's head.
+export const WAR_TENT_BACK = 231;
+quad(WAR_TENT_BACK, { name: 'War Tent', glyph: 'tent', color: 0x6b5a48, shape: 'war_tent_back', material: 'plant', stateOf: WAR_TENT, part: 'back', unlock: null });
 export function isTent(id) {
-  return id >= WAR_TENT && id <= WAR_TENT + 3;
+  return (id >= WAR_TENT && id <= WAR_TENT + 3) || (id >= WAR_TENT_BACK && id <= WAR_TENT_BACK + 3);
+}
+
+/**
+ * The things that are one thing in two blocks, side by side: a bed (its
+ * head the way it faces from the foot) and a war tent (its back the other
+ * way from the flap). `step` is which way the second half lies from the
+ * first along the facing: +1 ahead, -1 behind.
+ */
+export const PAIRS = [
+  { base: BED, second: BED_HEAD, step: 1, name: 'bed' },
+  { base: WAR_TENT, second: WAR_TENT_BACK, step: -1, name: 'tent' },
+];
+/** { pair, second, facing } for either half of a two-block thing, or null. */
+export function pairPart(id) {
+  for (const pair of PAIRS) {
+    if (id >= pair.base && id <= pair.base + 3) return { pair, second: false, facing: (id - pair.base) & 3 };
+    if (id >= pair.second && id <= pair.second + 3) return { pair, second: true, facing: (id - pair.second) & 3 };
+  }
+  return null;
+}
+/** Where the other half of a two-block thing is, from this half at (x, z). */
+export function pairOther(part, x, z) {
+  const [sx, sz] = FACING_STEP[part.facing];
+  const k = part.pair.step * (part.second ? -1 : 1);
+  return { x: x + sx * k, z: z + sz * k };
 }
 
 // The Sky Kingdom's (the dark path): the great chains it hangs on, running

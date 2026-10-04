@@ -4,7 +4,7 @@ import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
   roofPart,
 } from '../config/blocks.js';
-import { boxesFor, fenceBoxes, rugBoxes, wallBoxes, pillarBoxes, turn } from './propShapes.js';
+import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, windowBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
 import { textureFor } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
@@ -51,6 +51,20 @@ for (let id = 1; id < 256; id++) {
 /** Cubes with something drawn over them — the ring ores' crystals (blocks.js `overlay`). */
 const OVERLAY = new Array(256).fill(null);
 for (const [id, b] of BLOCKS_BY_ID) if (b.overlay) OVERLAY[id] = b.overlay;
+/**
+ * Walls join walls (and solid blocks); a fence or gate beside a wall runs its
+ * rails into the wall's post instead (backlog batch 2: the two reaching out
+ * to each other "and it's ugly"). FENCE_RAILS is the shape of those rails.
+ */
+const IS_WALL = new Uint8Array(256);
+const FENCE_RAILS = new Array(256).fill(null);
+for (let id = 1; id < 256; id++) {
+  const shape = shapeOf(id);
+  IS_WALL[id] = shape === 'wall' ? 1 : 0;
+  if (shape === 'fence' || shape === 'gate') FENCE_RAILS[id] = shape;
+}
+const JOINS_WALL = new Uint8Array(256);
+for (let id = 1; id < 256; id++) JOINS_WALL[id] = JOINS_FENCE[id] && !FENCE_RAILS[id] && shapeOf(id) !== 'gate_open' ? 1 : 0;
 /** Pillars, which stack into one column (see propShapes' pillarBoxes). */
 const IS_PILLAR = new Uint8Array(256);
 for (const id of BLOCKS_BY_ID.keys()) IS_PILLAR[id] = shapeOf(id) === 'pillar' ? 1 : 0;
@@ -61,7 +75,7 @@ for (const id of BLOCKS_BY_ID.keys()) IS_PILLAR[id] = shapeOf(id) === 'pillar' ?
  */
 const CUTOUT = new Uint8Array(256);
 for (const [id, b] of BLOCKS_BY_ID) {
-  const t = textureFor(b.glyph);
+  const t = textureFor(b.texture ?? b.glyph);
   CUTOUT[id] = IS_CUBE[id] && t && (t.gaps || t.bite) ? 1 : 0;
 }
 /** Rugs, which run into each other (see propShapes' rugBoxes). */
@@ -212,6 +226,8 @@ function bufferKeyFor(blockId) {
  */
 /** How far a texel's slope tilts the surface — how deep the depth looks. */
 const BUMP_STRENGTH = 1.6;
+/** Metal: how tight the highlight is, how bright, and the lift side-on. */
+const SHINE_POWER = 14, SHINE_SPEC = 1.2, SHINE_LIFT = 0.32;
 
 function withBlockTextures(mat) {
   const { texture, bumps } = blockTextureArray();
@@ -246,6 +262,7 @@ function withBlockTextures(mat) {
       ${shader.fragmentShader}
     `.replace('#include <normal_fragment_maps>', `
       #include <normal_fragment_maps>
+      float blockShine = 0.0;
       // Depth. Requested directly: cobblestone "can you give it some depth
       // or 3d texture like the tiles?" Real stones in the mesh would be
       // thousands of triangles on every cobbled wall and mountainside, so
@@ -263,6 +280,7 @@ function withBlockTextures(mat) {
         if (vLayer > -0.5) {
           vec2 uvT = fract(vTileUv);
           vec4 here = textureLod(blockBumps, vec3(uvT, vLayer), 0.0);
+          blockShine = here.g;
           if (here.a > 0.5) {
             const float TEXEL = 1.0 / 16.0;
             float hx = textureLod(blockBumps, vec3(uvT + vec2(TEXEL, 0.0), vLayer), 0.0).r
@@ -286,10 +304,28 @@ function withBlockTextures(mat) {
         if (tile.a < 0.5) discard;
         diffuseColor.rgb *= tile.rgb;
       }
+    `).replace('#include <opaque_fragment>', `
+      // Metal (gold): a highlight off each light — strongest where the
+      // light bounces straight into your eye, so it slides across a wall
+      // as you walk past — plus a little lift, so it reads bright even
+      // side-on. Scaled by the light's own colour, so it is gone at night.
+      #if NUM_DIR_LIGHTS > 0
+      if (blockShine > 0.0) {
+        vec3 V = normalize(vViewPosition);
+        for (int i = 0; i < NUM_DIR_LIGHTS; i++) {
+          vec3 L = directionalLights[i].direction;
+          float lit = max(dot(normal, L), 0.0);
+          float spec = pow(max(dot(normal, normalize(L + V)), 0.0), ${SHINE_POWER.toFixed(1)});
+          outgoingLight += directionalLights[i].color * blockShine
+            * (spec * ${SHINE_SPEC.toFixed(2)} * mix(vec3(1.0), diffuseColor.rgb, 0.5) + lit * ${SHINE_LIFT.toFixed(2)} * diffuseColor.rgb);
+        }
+      }
+      #endif
+      #include <opaque_fragment>
     `);
   };
   // Changing the shader invalidates anything already compiled for it.
-  mat.customProgramCacheKey = () => 'block-tiles-v3';
+  mat.customProgramCacheKey = () => 'block-tiles-v4';
   mat.needsUpdate = true;
   return mat;
 }
@@ -886,11 +922,26 @@ export class ChunkMesher {
             }
             continue;
           }
-          const boxes = shape === 'wall'
-            ? wallBoxes({
-              px: JOINS_FENCE[vol[idx + 1]], nx: JOINS_FENCE[vol[idx - 1]],
-              pz: JOINS_FENCE[vol[idx + PAD]], nz: JOINS_FENCE[vol[idx - PAD]],
-            })
+          if (shape === 'wall') {
+            const col = baseColor(id);
+            const sides = { px: vol[idx + 1], nx: vol[idx - 1], pz: vol[idx + PAD], nz: vol[idx - PAD] };
+            const fenced = Object.values(sides).some((n) => n > 0 && FENCE_RAILS[n]);
+            const boxes = wallBoxes({
+              px: JOINS_WALL[sides.px], nx: JOINS_WALL[sides.nx], pz: JOINS_WALL[sides.pz], nz: JOINS_WALL[sides.nz],
+              up: IS_WALL[vol[idx + P2]], post: fenced,
+            });
+            for (const b of boxes) this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col);
+            for (const [side, n] of Object.entries(sides)) {
+              if (!(n > 0) || !FENCE_RAILS[n]) continue;
+              const fc = baseColor(n);
+              for (const b of fenceStubs(side, FENCE_RAILS[n])) {
+                this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, fc);
+              }
+            }
+            continue;
+          }
+          const boxes = shape === 'window'
+            ? turn(windowBoxes({ below: vol[idx - P2] === id, above: vol[idx + P2] === id }), FACING[id])
             : shape === 'pillar'
               ? pillarBoxes({ base: !IS_PILLAR[vol[idx - P2]], capital: !IS_PILLAR[vol[idx + P2]] })
             : shape === 'fence' || shape === 'gate' || shape === 'gate_open'
