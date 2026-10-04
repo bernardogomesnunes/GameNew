@@ -19,9 +19,10 @@ ok('the rest of its half lets touches through to the picture', /\.stick-zone\.st
   && /\.stick-zone\.stick-fixed \.stick-base \{ pointer-events: auto;/.test(css));
 ok('with a little margin round it for a thumb that lands just off it', /\.stick-zone\.stick-fixed \.stick-base::before \{ content: ''; position: absolute; inset: -18px;/.test(css));
 
-// Up and Down beside the walking stick while flying.
+// Asked for afterwards: "on the right we should have two buttons, one with an
+// arrow top to jump, the other arrow down to sneak. This can then be used for
+// fly". Up and Down stay on the right in the air now.
 ok('flying marks the page', /document\.body\.classList\.toggle\('flying', !!flying\);/.test(ui));
-ok('and Up and Down move beside the walking stick', /body\.flying #side-right \{ right: auto; left: calc\(var\(--stick-edge\) \+ var\(--stick-size\) \+ 10px\); \}/.test(css));
-ok('mirrored when the stick is on the right', /body\.flying\.touch-walk-right #side-right \{ left: auto; right: calc\(var\(--stick-edge\) \+ var\(--stick-size\) \+ 10px\); \}/.test(css));
+ok('and Up and Down no longer move beside the walking stick', !/body\.flying #side-right \{/.test(css) && !/body\.flying\.touch-walk-right #side-right \{/.test(css));
 
 process.exit(f ? 1 : 0);
