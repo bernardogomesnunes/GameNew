@@ -33,6 +33,7 @@ const BLACK_STONE = [14, 156, 157, 167];
 // The defence buildings' (White path).
 const WALLING = [STONE, COBBLE, BRICK, 156, 157, 161, 162, 163, 164, 165, 167];
 const DOORS = Array.from({ length: 16 }, (_, i) => 69 + i);
+const DESKS = [31, 32]; // oak and marble tables
 const STAIRS = [29, 30, 57, 58, 59, 60, 61, 62]; // stone and plank stairs, every facing
 const BEDS = [193, 194, 195, 196];
 const RACKS = [212, 213, 214, 215];
@@ -443,6 +444,75 @@ export const STRUCTURES = [
     // The one building that is not a producer: it unlocks the recipes that
     // need somewhere to work, which you get by standing near it.
     station: 'workshop',
+    skill: 'building',
+  },
+
+  // Backlog batch 2: "the university and your stats — bring the skills back,
+  // university research raises them, and research also unlocks the
+  // engineering centre". Both are stations: standing at one is what lets you
+  // study there (config/recipes.js, `study`).
+  {
+    id: 'university',
+    name: 'University',
+    icon: '🎓',
+    age: 2,
+    blurb: 'Desks under a roof. Study here to get better at what you do — and to learn engineering.',
+    minSize: 4,
+    maxSize: 16,
+    cost: {},
+    requires: [
+      {
+        id: 'frame',
+        test: (ctx) => count(ctx, [PLANKS, WOOD]) >= 24,
+        say: (ctx) => `Needs ${24 - count(ctx, [PLANKS, WOOD])} more planks or wood in it`,
+      },
+      {
+        id: 'desks',
+        test: (ctx) => count(ctx, DESKS) >= 2,
+        say: (ctx) => `Needs ${2 - count(ctx, DESKS)} more table${2 - count(ctx, DESKS) === 1 ? '' : 's'} to study at`,
+      },
+      {
+        id: 'shelter',
+        test: (ctx) => ctx.shelteredVolume() >= 12,
+        say: () => 'Needs a proper room — walls all round and a roof over it',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    station: 'university',
+    skill: 'politics',
+  },
+  {
+    id: 'engineering',
+    name: 'Engineering Centre',
+    icon: '⚙️',
+    age: 2,
+    blurb: 'A long hall with a wide door. Where carts, flying machines and trains will be worked out.',
+    minSize: 5,
+    maxSize: 20,
+    cost: {},
+    // Not until engineering has been studied at a university (DuiltGame.researchRefuses).
+    research: 'engineering',
+    requires: [
+      {
+        id: 'frame',
+        test: (ctx) => count(ctx, [PLANKS, WOOD]) >= 20,
+        say: (ctx) => `Needs ${20 - count(ctx, [PLANKS, WOOD])} more planks or wood in it`,
+      },
+      {
+        id: 'floor',
+        test: (ctx) => count(ctx, [STONE, COBBLE]) >= 16,
+        say: (ctx) => `Needs ${16 - count(ctx, [STONE, COBBLE])} more stone for a floor that takes the weight`,
+      },
+      {
+        id: 'shelter',
+        test: (ctx) => ctx.shelteredVolume() >= 16,
+        say: () => 'Needs a hall — walls all round and a roof over it',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    station: 'engineering',
     skill: 'building',
   },
 

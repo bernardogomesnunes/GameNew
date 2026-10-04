@@ -13,6 +13,7 @@ import { Crafting } from './Crafting.js';
 import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool } from '../config/items.js';
+import { MILESTONES } from '../config/skills.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
@@ -117,9 +118,13 @@ export class DuiltGame {
     this.defenders = new Defenders({ world });
     // The dark path's thousand, once sworn for — see world/Army.js.
     this.army = new Army({ world });
+    // What's been studied at a university that isn't a skill (backlog batch 2).
+    this.research = {};
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you` : null),
+      hidden: (r) => this.studyHidden(r),
+      onStudy: (r) => this.study(r),
       onMade: (r) => {
         if (r.ring && !this.ring) {
           this.ring = r.ring;
@@ -133,6 +138,33 @@ export class DuiltGame {
       world, structures: this.structures, inventory: this.inventory, skills: this.skills, bus,
     });
     this.lastCollect = Date.now();
+  }
+
+  /**
+   * Studying at a university (backlog batch 2). Only the next level of each
+   * skill is offered, and engineering only until it's learnt.
+   */
+  studyHidden(r) {
+    if (!r.study) return false;
+    if (r.study === 'engineering') return !!this.research.engineering;
+    return this.skills.levelOf(r.study) !== r.level - 1;
+  }
+
+  /** What studying does: a skill up a level, or a piece of research learnt. */
+  study(r) {
+    if (r.study === 'engineering') {
+      this.research.engineering = true;
+      this.bus?.emit('research:done', { id: 'engineering', name: 'Engineering' });
+      return;
+    }
+    const need = MILESTONES[r.level - 1];
+    this.skills.record(r.study, Math.max(0, need - this.skills.countOf(r.study)));
+  }
+
+  /** Why a building needs research first — the Engineering Centre — or null. */
+  researchRefuses(spec) {
+    if (!spec?.research || this.sandbox || this.research[spec.research]) return null;
+    return 'Study engineering at a university first';
   }
 
   /** A first axe, a bucket, enough fruit to not starve while you learn. */
@@ -310,7 +342,7 @@ export class DuiltGame {
       const check = validateStructure(this.world, region, spec.id);
       const overlapping = this.structures.overlaps(region);
       const inside = this.territory.containsRegion(region);
-      const wrongGod = this.ringRefuses(spec);
+      const wrongGod = this.ringRefuses(spec) ?? this.researchRefuses(spec);
       let ok = check.ok && !overlapping && inside && !wrongGod;
       let reason = check.reason;
       if (wrongGod) reason = wrongGod;
@@ -343,7 +375,7 @@ export class DuiltGame {
   }
 
   claim(region, typeId) {
-    const wrongGod = this.ringRefuses(STRUCTURES_BY_ID.get(typeId));
+    const wrongGod = this.ringRefuses(STRUCTURES_BY_ID.get(typeId)) ?? this.researchRefuses(STRUCTURES_BY_ID.get(typeId));
     if (wrongGod) return { ok: false, reason: wrongGod };
     if (!this.territory.containsRegion(region)) {
       return { ok: false, reason: 'That reaches outside your land' };
@@ -975,6 +1007,7 @@ export class DuiltGame {
       health: this.health.toJSON(),
       worn: this.worn,
       ring: this.ring,
+      research: this.research,
       skyFallen: this.skyFallen || undefined,
       guardian: this.guardian?.toJSON() ?? null,
       spawn: this.spawn,
@@ -1008,6 +1041,7 @@ export class DuiltGame {
     this.hunger.loadJSON(data.hunger);
     this.health.loadJSON(data.health);
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
+    this.research = data.research && typeof data.research === 'object' ? { engineering: !!data.research.engineering } : {};
     this.skyFallen = data.skyFallen === true;
     this.holdSky();
     const sp = data.spawn;

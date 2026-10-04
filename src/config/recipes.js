@@ -1,5 +1,6 @@
 import { ARMOUR_PIECES } from './armour.js';
 import { tieredRecipes } from './tiers.js';
+import { SKILLS, MAX_LEVEL } from './skills.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
 /**
@@ -684,6 +685,32 @@ RECIPES.push(
 
 // Tools past stone (backlog batch 2), from config/tiers.js.
 RECIPES.push(...tieredRecipes());
+
+// Study at a university (backlog batch 2: "university research raises
+// [the skills]"). One recipe a skill a level; only the next one for where
+// you stand is ever offered (Crafting's `hidden`). It makes no item: the
+// skill goes up a level (DuiltGame.study). Planks and stone to begin with,
+// and gold as well past level 4, so the last levels wait on the mine.
+for (const s of SKILLS) {
+  for (let level = 1; level <= MAX_LEVEL; level++) {
+    RECIPES.push({
+      id: `study_${s.id}_${level}`, name: `Study ${s.name.toLowerCase()}`, station: 'university', age: 2,
+      study: s.id, level,
+      inputs: { planks: 3 * level, stone: 2 * level, ...(level > 4 ? { gold: level - 4 } : {}) },
+      output: { id: null, count: 1 },
+      result: `${s.name} level ${level}`,
+      blurb: `Raises your ${s.name.toLowerCase()} to level ${level}: ${s.describe(level).replace(/^./, (c) => c.toLowerCase())}.`,
+    });
+  }
+}
+// And engineering, once: what an Engineering Centre needs before it can be raised.
+RECIPES.push({
+  id: 'study_engineering', name: 'Research engineering', station: 'university', age: 2,
+  study: 'engineering', level: 1,
+  inputs: { planks: 16, stone: 16 }, output: { id: null, count: 1 },
+  result: 'Engineering',
+  blurb: 'Wheels, axles and frames. Lets you raise an Engineering Centre.',
+});
 
 // Armour (Phase 7b): each piece at the bench, from config/armour.js.
 for (const p of ARMOUR_PIECES) {

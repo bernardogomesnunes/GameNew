@@ -1526,8 +1526,8 @@ export class Game {
       // it doesn't also open whichever panel had it.
       const bound = Object.values(this.controls.keys).includes(e.code);
       const shortcut = this.phase === 'home' || bound ? null : panelForKey(e.code);
-      const survivalOnly = shortcut?.id === 'panel-bench';
-      if (shortcut && (shortcut.mode !== 'duilt' || this.duilt) && !(survivalOnly && this.duilt?.sandbox)) {
+      const survivalOnly = shortcut?.mode === 'survival';
+      if (shortcut && (shortcut.mode !== 'duilt' || this.duilt) && !(survivalOnly && (!this.duilt || this.duilt.sandbox))) {
         if (this.ui.isPanelOpen(shortcut.id)) this.ui.closePanel(shortcut.id);
         else if (shortcut.prepare === 'claim') this.openClaim();
         else this.ui.openPanel(shortcut.id);

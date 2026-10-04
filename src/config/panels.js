@@ -174,9 +174,11 @@ export const PANELS = [
   {
     id: 'panel-skills',
     title: 'Skills',
-    sub: 'You get better by doing — and credit lands on milestones, not repetition.',
+    sub: 'You get better by doing — and credit lands on milestones, not repetition. Or study at a University.',
     layer: 'duilt',
     mode: 'survival',
+    // A key of its own (backlog batch 2): on a computer there was no way in at all.
+    key: 'KeyK',
     label: 'Skills',
   },
 ];

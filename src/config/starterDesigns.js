@@ -640,6 +640,29 @@ export const STARTER_DESIGNS = [
     note: 'Stand inside it to use the recipes it unlocks.',
     blocks: room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: TILE }),
   },
+  // Backlog batch 2: the University and the Engineering Centre.
+  {
+    id: 'starter_university',
+    structure: 'university',
+    name: 'Starter university',
+    size: 6,
+    footprint: '6 × 6',
+    note: 'Stand inside it to study.',
+    blocks: [
+      ...room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: TILE }),
+      // Two desks to study at.
+      { dx: 2, dy: 1, dz: 3, type: 31 }, { dx: 3, dy: 1, dz: 3, type: 31 },
+    ],
+  },
+  {
+    id: 'starter_engineering',
+    structure: 'engineering',
+    name: 'Starter engineering centre',
+    size: 7,
+    footprint: '7 × 7',
+    note: 'Study engineering at a university first.',
+    blocks: room({ w: 7, h: 3, wall: PLANKS, floor: STONE, tiles: TILE }),
+  },
   {
     id: 'starter_kiln',
     structure: 'kiln',

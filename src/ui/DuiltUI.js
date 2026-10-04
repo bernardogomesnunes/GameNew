@@ -148,6 +148,12 @@ export class DuiltUI {
             The same lift-and-drop as the bag — lift a piece, tap its place
             to put it on; tap something you're wearing to take it off.
           -->
+          <!--
+            Your skills, always in sight (backlog batch 2: "bring the skills
+            back — foraging and the rest seem to have disappeared from view").
+            Tap the row for the whole of each.
+          -->
+          <button class="bag-skills" id="bag-skills" hidden></button>
           <div class="bag-section-head">Wearing <span class="sub" id="armour-sum"></span></div>
           <div id="bag-wear-grid" class="bag-wear-grid"></div>
           <div class="bag-section-head">Equipped <span class="sub">— what the hotbar shows, in order</span></div>
@@ -280,6 +286,9 @@ export class DuiltUI {
         title: `Your ${kind} is now ${withArticle(name)}`,
         body: slots ? `${blurb} ${slots} slots.` : blurb,
       });
+    });
+    this.bus.on('research:done', ({ name }) => {
+      this.bus.emit('toast', { kind: 'achievement', title: `${name} learnt`, body: 'You can raise an Engineering Centre now' });
     });
     this.bus.on('structure:sown', ({ structure }) => {
       if (this.building?.id === structure?.id) this.showBuilding(structure, this.buildingActionsCache);
@@ -794,6 +803,7 @@ export class DuiltUI {
     const hotbarGrid = this.q('#bag-hotbar-grid');
     const grid = this.q('#bag-grid');
     if (!grid || !hotbarGrid) return;
+    this.renderBagSkills();
     const slots = d.inventory.slots;
     // Nothing is thrown away from a creative bag — see Inventory's `endless`.
     const bin = d.inventory.endless ? null : 'data-discard';
@@ -1365,7 +1375,7 @@ export class DuiltUI {
           <div class="recipe-text">
             <strong>${r.name}${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${r.station}</span>` : ''}</strong>
             <em>${r.blurb}</em>
-            <span class="recipe-cost">${inputs} → ${r.output.count} ${itemName(r.output.id).toLowerCase()}</span>
+            <span class="recipe-cost">${inputs} → ${r.study ? r.result : `${r.output.count} ${itemName(r.output.id).toLowerCase()}`}</span>
           </div>
           <div class="recipe-actions">
             <!--
@@ -1387,7 +1397,7 @@ export class DuiltUI {
         const res = d.crafting.craft(b.dataset.craft, Number(b.dataset.times),
           { near: pos, atStations: d.stationsNear(pos) });
         this.bus.emit('toast', res.ok
-          ? { kind: 'challenge', title: `Made ${res.made} ${res.name.toLowerCase()}` }
+          ? { kind: 'challenge', title: res.studied ? `Studied: ${res.name}` : `Made ${res.made} ${res.name.toLowerCase()}` }
           : { kind: 'xp', title: 'Cannot make that', body: res.reason });
         this.renderBench();
       }));
@@ -1395,10 +1405,32 @@ export class DuiltUI {
 
   // ---- skills ----
 
+  /** The skills row at the top of the bag: each skill's icon and level. Not in a sandbox, which has none. */
+  renderBagSkills() {
+    const row = this.q('#bag-skills');
+    const d = this.duilt;
+    if (!row) return;
+    row.hidden = !d || d.sandbox;
+    if (row.hidden) return;
+    row.innerHTML = d.skills.summary().map((s) => `<span class="bag-skill" title="${escapeAttr(s.name)}">${s.icon}<b>${s.level}</b><em>${s.name}</em></span>`).join('');
+    if (!row.dataset.bound) {
+      row.dataset.bound = '1';
+      row.addEventListener('click', () => this.openPanel('panel-skills'));
+    }
+  }
+
   renderSkills() {
     const d = this.duilt;
     if (!d) return this.noWorld('#skills-list');
-    this.q('#skills-list').innerHTML = d.skills.summary().map((s) => `
+    // Research (backlog batch 2): what a university has taught you besides the skills.
+    const learnt = d.research?.engineering;
+    const research = `
+      <div class="skill-row research">
+        <div class="skill-head"><span class="skill-icon">🎓</span><strong>Studying</strong></div>
+        <div class="skill-governs">At a University you can study each skill up a level, and learn engineering.</div>
+        <div class="skill-effect">${learnt ? 'Engineering learnt — you can raise an Engineering Centre' : 'Engineering not learnt yet'}</div>
+      </div>`;
+    this.q('#skills-list').innerHTML = research + d.skills.summary().map((s) => `
       <div class="skill-row">
         <div class="skill-head">
           <span class="skill-icon">${s.icon}</span>
