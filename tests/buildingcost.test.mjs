@@ -22,10 +22,11 @@ const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8'
 
 ok('a card computes its full cost from the design, not the shortfall',
   /const costLine = design\s*\? Object\.entries\(design\.cost\)/.test(ui));
-ok('and shows it unconditionally, not only when something is missing',
-  /\$\{costLine \? `<span>Costs: \$\{costLine\}<\/span>` : ''\}/.test(ui));
-ok('the shortfall note still exists alongside it, for what is actually missing',
-  /\$\{!canStamp \? this\.shortfallNote\(shortfall\)/.test(ui));
+ok('and shows it unconditionally, as each item\'s icon and how many (backlog batch 2)',
+  /<div class="building-costs">\$\{costLine\}<\/div>/.test(ui) && /class="cost-chip\$\{short \? ' short' : ''\}"/.test(ui));
+ok('what you are short of is marked, with where more comes from', /howToGet\(id,/.test(ui) && /you have \$\{n - shortfall\[id\]\}/.test(ui));
+ok('and nothing written under the Place button', !/Aim where you want it and press Place/.test(ui) && !/shortfallNote/.test(ui));
+ok('the buildings list has a search', /<input id="buildings-search" class="panel-search" type="search"/.test(ui) && /No building matches/.test(ui));
 
 // The real number this session's farm confusion was actually about.
 const farm = DESIGN_FOR_STRUCTURE.get('farm');

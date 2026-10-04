@@ -109,9 +109,8 @@ ok('nor is nothing at all', cropOf(undefined) === null && cropOf(null) === null)
 
   const design = DESIGN_FOR_STRUCTURE.get('farm');
   const blocks = design?.blocks ?? [];
-  ok('the starter plot comes sown', blocks.filter((b) => cropOf(b.type)).length >= 4);
-  ok('with every crop standing on farmland', blocks.filter((b) => cropOf(b.type)).every((c) =>
-    blocks.some((b) => b.type === FARMLAND && b.dx === c.dx && b.dz === c.dz && b.dy === c.dy - 1)));
+  ok('the starter plot is bare soil, so it costs no seeds (backlog batch 2)',
+    blocks.length === 16 && blocks.every((b) => b.type === FARMLAND) && !Object.keys(design.cost).some((id) => id.startsWith('seeds')));
 }
 
 // --- in the game -----------------------------------------------------------------

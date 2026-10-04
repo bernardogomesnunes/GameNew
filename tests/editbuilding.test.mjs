@@ -92,8 +92,8 @@ ok('the CSS actually makes it clickable on desktop too, not just touch',
 const duiltUI = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 ok('the raw "Needs: ..." requirement-id line is gone from the building card',
   !/<span>Needs: \$\{needs\}<\/span>/.test(duiltUI));
-ok('down to one building-note block per card, not two stacked',
+ok('no note under the Place button at all now (backlog batch 2) — the cost chips say what is short',
   (duiltUI.match(/renderBuildings\(\) \{[\s\S]*?<\/div>`;\s*\}\)\.join/)[0]
-    .match(/class="building-note"/g) ?? []).length === 1);
+    .match(/class="building-note"/g) ?? []).length === 0);
 
 process.exit(f ? 1 : 0);
