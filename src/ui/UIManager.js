@@ -825,13 +825,20 @@ export class UIManager {
    * then jumps to wherever the thumb lands and tracks from there. Each stick
    * claims a single touch id, so both can be driven at once.
    */
-  bindStick(zoneSel, onChange, { deadZone = 0.14, curve = 1 } = {}) {
+  bindStick(zoneSel, onChange, { deadZone = 0.14, curve = 1, fixed = false } = {}) {
     const zone = this.q(zoneSel);
     const base = zone.querySelector('.stick-base');
     const knob = zone.querySelector('.stick-knob');
     const RADIUS = 42;
     let touchId = null;
     let origin = { x: 0, y: 0 };
+    // A fixed stick (asked for directly: "block the moving left joystick to
+    // be still or else I keep picking it up with my right finger") stays
+    // where it's drawn, and only a touch on it takes it — the rest of its
+    // half of the screen is the picture, so a look-drag with the other thumb
+    // that starts there turns you instead. See .stick-fixed in styles.css.
+    const grab = fixed ? base : zone;
+    if (fixed) zone.classList.add('stick-fixed');
 
     // A resting thumb never sits exactly at centre, so anything inside the dead
     // zone reads as zero. Past it the response is re-normalised from 0 so there
@@ -849,23 +856,29 @@ export class UIManager {
       knob.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
     };
 
-    zone.addEventListener('touchstart', (e) => {
+    grab.addEventListener('touchstart', (e) => {
       if (touchId !== null) return;
       const t = e.changedTouches[0];
       touchId = t.identifier;
-      origin = { x: t.clientX, y: t.clientY };
-      // The base is positioned inside the zone, so offset by the zone's origin.
-      const rect = zone.getBoundingClientRect();
-      base.style.left = `${t.clientX - rect.left - 52}px`;
-      base.style.top = `${t.clientY - rect.top - 52}px`;
-      base.style.right = 'auto';
-      base.style.bottom = 'auto';
+      if (fixed) {
+        // Pushed from its own middle, wherever on it the thumb came down.
+        const b = base.getBoundingClientRect();
+        origin = { x: b.left + b.width / 2, y: b.top + b.height / 2 };
+      } else {
+        origin = { x: t.clientX, y: t.clientY };
+        // The base is positioned inside the zone, so offset by the zone's origin.
+        const rect = zone.getBoundingClientRect();
+        base.style.left = `${t.clientX - rect.left - 52}px`;
+        base.style.top = `${t.clientY - rect.top - 52}px`;
+        base.style.right = 'auto';
+        base.style.bottom = 'auto';
+      }
       base.classList.add('active');
       setKnob();
       e.preventDefault();
     }, { passive: false });
 
-    zone.addEventListener('touchmove', (e) => {
+    grab.addEventListener('touchmove', (e) => {
       for (const t of e.changedTouches) {
         if (t.identifier !== touchId) continue;
         let dx = t.clientX - origin.x, dy = t.clientY - origin.y;
@@ -883,13 +896,13 @@ export class UIManager {
         if (t.identifier !== touchId) continue;
         touchId = null;
         base.classList.remove('active');
-        for (const prop of ['left', 'top', 'right', 'bottom']) base.style.removeProperty(prop);
+        if (!fixed) for (const prop of ['left', 'top', 'right', 'bottom']) base.style.removeProperty(prop);
         setKnob();
         onChange(0, 0);
       }
     };
-    zone.addEventListener('touchend', release);
-    zone.addEventListener('touchcancel', release);
+    grab.addEventListener('touchend', release);
+    grab.addEventListener('touchcancel', release);
   }
 
   /**
@@ -971,7 +984,7 @@ export class UIManager {
     // rate and the camera felt like it was lagging behind the thumb. 1.25
     // keeps the fine control near centre and gives back the middle of the
     // range. Movement just wants to reach full speed readily.
-    this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y), { deadZone: 0.10, curve: 1.1 });
+    this.bindStick('#stick-left', (x, y) => this.cb.onMove(x, y), { deadZone: 0.10, curve: 1.1, fixed: true });
     // A steeper curve than the walking stick: most of a look is a small
     // correction, and a linear stick spends nearly all its travel on speeds
     // too fast to aim with. At half a thumb this now turns about a fifth of
@@ -1790,8 +1803,12 @@ export class UIManager {
     this.q('#t-fly').classList.toggle('active', flying);
     this.q('#t-down').hidden = !flying; // descend only means anything while flying
     // Two buttons where there was one, so the pair re-centres on the slot the
-    // single one had rather than shunting it up the screen.
+    // single one had rather than shunting it up the screen. And in the air
+    // they move over beside the walking stick (asked for directly: "when
+    // flying it's good to have the up and down on the left") — the other
+    // thumb is busy turning you. See body.flying in styles.css.
     this.q('#side-right')?.classList.toggle('paired', !!flying);
+    document.body.classList.toggle('flying', !!flying);
     // The same button jumps on the ground and climbs in the air. Once Down is
     // showing beneath it, "Jump" is the odd one out of a pair.
     const label = this.q('#t-jump-label');
