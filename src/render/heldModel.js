@@ -1,4 +1,3 @@
-import { TOOL_TIERS, tieredId } from '../config/tiers.js';
 import * as THREE from 'three';
 import { ITEM_MODELS } from '../config/itemModels.js';
 import { ITEMS_BY_ID } from '../config/items.js';
@@ -34,13 +33,6 @@ export const HELD_MODELS = {
   bucket: [box(0.28, 0, 0.28, 0.72, 0.5, 0.72, IRON), box(0.3, 0.5, 0.48, 0.34, 0.66, 0.52, DARK), box(0.66, 0.5, 0.48, 0.7, 0.66, 0.52, DARK), box(0.3, 0.64, 0.48, 0.7, 0.68, 0.52, DARK)],
   bucket_water: [box(0.28, 0, 0.28, 0.72, 0.5, 0.72, IRON), box(0.31, 0.44, 0.31, 0.69, 0.48, 0.69, 0x5f8fc4), box(0.3, 0.5, 0.48, 0.34, 0.66, 0.52, DARK), box(0.66, 0.5, 0.48, 0.7, 0.66, 0.52, DARK), box(0.3, 0.64, 0.48, 0.7, 0.68, 0.52, DARK)],
 };
-
-// Tools past stone (config/tiers.js): the same shapes, the head in the tier's metal.
-for (const t of TOOL_TIERS) {
-  for (const kind of ['axe', 'pickaxe', 'shovel']) {
-    HELD_MODELS[tieredId(kind, t.key)] = HELD_MODELS[kind].map((b) => (b.color === IRON || b.color === DARK ? { ...b, color: b.color === DARK ? t.guard : t.color } : b));
-  }
-}
 
 /**
  * The boxes for what's held — an item id or a block id — in a unit cell,
