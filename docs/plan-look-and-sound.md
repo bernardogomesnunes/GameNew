@@ -85,6 +85,7 @@ What it was asked to be:
   The castle stays as it is; only its materials change.
 - **Shadow where blocks meet** (ambient occlusion): corners, under eaves,
   between a wall and the ground. This is the biggest single fix for "flat".
+  - **Done** (`softshadow.test`): baked into the chunk mesh's vertex colours, so it costs nothing to draw; a chunk still builds in about 7 ms. "Soft shadows" in the graphics settings turns it off.
 - **Light with contrast:** a warmer sun, cooler shade, tone mapping and a
   small saturation lift, and golden light at dawn and dusk.
 
