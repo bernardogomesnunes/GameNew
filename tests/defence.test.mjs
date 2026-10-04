@@ -156,7 +156,7 @@ ok('claimed defences are built to take it: three blows a block', /const REINFORC
   && /STRUCTURES_BY_ID\.get\(s\.type\)\?\.defence[\s\S]{0,300}blows < REINFORCED/.test(game));
 ok('  for the wall, the gatehouse and the watchtower', KINDS.slice(0, 3).every((k) => STRUCTURES_BY_ID.get(k).defence) && !STRUCTURES_BY_ID.get('barracks').defence);
 ok('a gatehouse shuts its gate when a round is coming', /if \(what === 'warn'\) \{\s*const shut = this\.shutGates\(\)/.test(game) && /doorBlock\(\{ \.\.\.part, open: false \}\)/.test(game));
-ok('the soldiers and archers run every frame, and are drawn', /this\.tickWar\(\);\s*this\.tickDefence\(dt\);/.test(game) && /this\.defenderView\.update\(ours\?\.people/.test(game));
+ok('the soldiers and archers run every frame, and are drawn', /this\.tickWar\(\);\s*this\.tickDefence\(dt\);/.test(game) && /this\.defenderView\.update\((this\.withShowcase\('defenders', )?ours\?\.people/.test(game));
 ok('a barracks is as big as its bunks', /beds: s\.type === 'barracks' \? this\.bedsIn\(s\.region\) : 0/.test(game));
 ok('raiders fight your soldiers, and a soldier can fall', /foes: \(\) => \[\.\.\.\(this\.duilt\?\.defenders\.soldiers/.test(game) && /One of your soldiers has fallen/.test(game));
 

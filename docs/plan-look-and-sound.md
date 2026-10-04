@@ -23,7 +23,42 @@ is coloured, textured, lit and heard.
 - **People** are two boxes, a coat and a head. **Animals** are blocky and
   plain: a sheep has no wool and no eyes.
 
-## 1. A showcase world, to judge every change by
+## 1. A showcase world, to judge every change by — done
+
+**Done.** `world/showcase.js` lays it out; `Game.openShowcase()` builds it
+(in the menu: *Show the workshop tools → Showcase*; in a dev build, from a
+script, `window.__game.openShowcase()`). It's a Creative world from one
+fixed seed (`SHOWCASE_SEED`), never saved, on a stretch of flattened grass:
+every starter design and every place out in the world (hermit's hut,
+bandit camp, ruin, forgotten temple, abandoned mine, monument) in labelled
+rows, doors to the north; in a yard to the west, every animal and every
+kind of person in groups of up to four, standing still (`still`: Mobs and
+Wanderers leave them be) and turned to their camera — settlers, your
+soldier, archer and warrior, the hermit, bandits, explorers, messengers,
+Stone guards, soldiers, archers and King, the Warlord on his beast, the ram
+and catapult, Sky guards, royal guard and Sky King, and both guardians.
+
+Camera spots (`SHOWCASE_SPOTS`, `--list` prints them): `overview`, `row-N`
+down each row, one per figure group (`animals-1`, `people-stone`, …),
+`kingdom-gate`, `kingdom-street`, `kingdom-keep`, `kingdom-air`,
+`sky-gate`, `sky-palace`, `sky-below`, `forest` — the `main` group — and
+`b-<design>` close up on each building (the `buildings` group).
+`game.showcaseSpot(id, { settle: true })` stands you there with everything
+in sight made; `game.showcaseTime('day' | 'dusk' | 'night')` sets the hour,
+and it holds.
+
+The pictures, before and after a change:
+
+    node tools/showcase-shots.mjs --out /tmp/shots/before            # every spot, day/dusk/night, 390×780
+    node tools/showcase-shots.mjs --out /tmp/shots/after --group main --times day,dusk
+    node tools/showcase-shots.mjs --out /tmp/shots/x --spots people-stone,b-starter_house
+
+It starts its own Vite dev server (or `--url` one that's running), writes
+`<spot>-<time>.png` and an `index.html` contact sheet. `--no-labels`,
+`--hud` and `--hand` change what's in the frame. On SwiftShader a shot is
+5–20 s, so the whole set is a while; `--group main` is the everyday one.
+
+What it was asked to be:
 
 - A Creative test world laid out for looking at:
   - the Stone Kingdom;

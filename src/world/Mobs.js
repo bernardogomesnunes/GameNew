@@ -51,14 +51,18 @@ export class Mobs {
    * @param lure  whether you're holding something a farm animal will follow
    */
   tick(dt, player, { lure = false } = {}) {
-    // Your own animals (penId) are never forgotten, however far you go.
-    this.list = this.list.filter((m) => !m.dead && (m.penId || Math.hypot(m.x - player.x, m.z - player.z) < DESPAWN));
+    // Your own animals (penId) are never forgotten, however far you go; nor
+    // are the showcase's (`still` — world/showcase.js), which stand where
+    // they were put and do nothing at all, so a picture of them is the same
+    // picture every time.
+    this.list = this.list.filter((m) => !m.dead && (m.penId || m.still || Math.hypot(m.x - player.x, m.z - player.z) < DESPAWN));
     this.sinceSpawn += dt;
     if (this.sinceSpawn >= SPAWN_EVERY && this.wild() < this.cap) {
       this.sinceSpawn = 0;
       this.trySpawn(player);
     }
     for (const m of this.list) {
+      if (m.still) continue;
       this.think(m, dt, player, lure);
       this.move(m, dt);
     }

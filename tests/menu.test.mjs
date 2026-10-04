@@ -64,8 +64,12 @@ ok('the goals are not a settings card', !MENU_BY_ID.has('menu-achievements'));
   const plain = menuFor({ cloud: true });
   ok('settings holds the world, the graphics, the controls and the files',
     plain.map((m) => m.id).join() === 'menu-world,menu-graphics,menu-controls,menu-files,menu-profile');
-  ok('and none of it is behind a switch any more', plain.length === withCloud.length);
-  // The switch itself stays, with nothing on it, for whatever earns it next.
+  // The switch has one thing behind it now: the showcase, a workshop tool
+  // for judging how the game looks (docs/plan-look-and-sound.md, section 1).
+  ok('and none of it is behind a switch any more', plain.every((m) => !m.dev));
+  ok('the only thing behind the switch is the showcase',
+    withCloud.filter((m) => !plain.includes(m)).map((m) => m.id).join() === 'menu-showcase');
+  // The switch itself stays, for whatever earns it next.
   ok('the UI still knows how to unfold something', /HAS_DEV_SECTIONS/.test(ui));
   ok('and remembers whether it is unfolded', /this\.devOpen/.test(ui));
 }

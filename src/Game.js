@@ -87,6 +87,13 @@ import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
 import { WANDERERS, NEWS } from './config/wanderers.js';
 import { MobView } from './render/MobView.js';
+// The showcase (docs/plan-look-and-sound.md, section 1): see openShowcase.
+import { ShowcaseView } from './render/ShowcaseView.js';
+import { SHOWCASE_SEED, SHOWCASE_TIMES, SHOWCASE_SPOTS_BY_ID, SHOWCASE_BUILDINGS, SHOWCASE_FIGURES, findShowcaseSite, flattenShowcase, placeBlocks, showcaseLabels, spotPose } from './world/showcase.js';
+import { Defenders } from './world/Defenders.js';
+import { Army } from './world/Army.js';
+import { Guardian } from './world/Guardian.js';
+import { settlerName, settlerColour } from './config/settlers.js';
 
 const REACH = 7;
 /** The war only comes on while you're this near home — it's your settlement they want. */
@@ -396,6 +403,9 @@ export class Game {
     this.defenderView = new SettlerView(this.scene);
     // Your army, on the dark path.
     this.warriorView = new SettlerView(this.scene);
+    // The showcase's labels and its two guardians — see openShowcase.
+    this.showcaseView = new ShowcaseView(this.scene);
+    this.showcase = null;
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -1058,6 +1068,10 @@ export class Game {
       onHintTap: () => (this.hintUses ? this.secondaryAction() : this.openClaim()),
       onFinishEditing: () => this.finishEditing(),
       onStampStarter: (id) => this.stampStarter(id),
+      // The showcase (docs/plan-look-and-sound.md, section 1) — see openShowcase.
+      onOpenShowcase: (spot) => this.openShowcase({ spot }),
+      onShowcaseSpot: (id) => this.showcaseSpot(id),
+      onShowcaseTime: (t) => this.showcaseTime(t),
       onOpenBuildings: () => this.ui.openPanel('panel-buildings'),
       onOpenBench: () => this.ui.openPanel('panel-bench'),
     };
@@ -1119,8 +1133,9 @@ export class Game {
     this.duilt = null;
   }
 
-  newWorld({ silent, mode = this.mode, name, scenery = false } = {}) {
+  newWorld({ silent, mode = this.mode, name, scenery = false, seed } = {}) {
     this.mode = mode;
+    this.showcase = null;
     // Scenery is the world drawn behind the worlds screen so the canvas is not
     // blank. It is nobody's world and it is never saved; anything else you make
     // un-discards, which is to say saving is on again.
@@ -1143,7 +1158,7 @@ export class Game {
     // nothing stopping it from being just as endless. Both modes start in
     // exactly the same generated world now; only what you're allowed to do
     // in it differs.
-    const built = generateEndlessWorld({ height: WORLD_HEIGHT });
+    const built = generateEndlessWorld({ height: WORLD_HEIGHT, ...(seed != null ? { seed } : {}) });
     this.world = built.world;
     let spawn = built.origin.spawn;
     if (this.player) this.player.dispose();
@@ -1224,6 +1239,7 @@ export class Game {
 
   loadFromData(data, { silent } = {}) {
     this.world = data.world;
+    this.showcase = null;
     // Carried with the world, not reset to now: whether it has been played
     // since the account last saw it is a fact about the world.
     this.editedAt = data.editedAt ?? 0;
@@ -3347,6 +3363,141 @@ export class Game {
     return false;
   }
 
+  // ---- the showcase (world/showcase.js) ----
+
+  /**
+   * Opens the showcase: a Creative world laid out for looking at
+   * (docs/plan-look-and-sound.md, section 1) — every building in labelled
+   * rows on flat grass, one of every animal and every kind of person
+   * standing still, and fixed camera spots including the two kingdoms. See
+   * world/showcase.js for the layout and tools/showcase-shots.mjs for the
+   * pictures.
+   *
+   * The world you were in is saved first, as leaving it would. The
+   * showcase is never saved — it's scenery: the same seed builds it again,
+   * so anything done in it is forgotten.
+   */
+  openShowcase({ spot = 'overview', time = 'day' } = {}) {
+    this.saveNow();
+    this.newWorld({ mode: CREATIVE, name: 'Showcase', scenery: true, silent: true, seed: SHOWCASE_SEED });
+    const gen = this.world.gen;
+    const site = findShowcaseSite(gen);
+    if (!site) return false;
+    flattenShowcase(this.world, site);
+    // The buildings through the same starterPlacement a tap on a design
+    // goes through; the places the way the world lays them.
+    for (const b of SHOWCASE_BUILDINGS) {
+      if (!b.structure) continue;
+      const plan = this.duilt.starterPlacement(b.structure, { x: site.x + b.anchor.x, y: site.y, z: site.z + b.anchor.z });
+      for (const c of plan.changes ?? []) this.world.setBlock(c.x, c.y, c.z, c.next);
+    }
+    for (const [x, y, z, id] of placeBlocks(site)) this.world.setBlock(x, y, z, id);
+    // The Sky city is laid only while this is set (Creative has it anyway — skyOpen).
+    gen.sky = true;
+    this.syncMobs();
+    // Nobody wanders through the pictures: no herds, no explorers.
+    this.mobs.cap = 0;
+    this.wanderers.untilExplorer = Infinity;
+    // Everyone in the same lists the game draws them from, made by the same
+    // code that makes them in play, then stood still (`still`: Mobs and
+    // Wanderers leave them be). Names and coats are fixed rather than rolled,
+    // so a face is the same face in every picture.
+    const figures = { settlers: [], defenders: [], warriors: [], guardians: [] };
+    const defenders = new Defenders({ world: this.world });
+    const army = new Army({ world: this.world });
+    for (const g of SHOWCASE_FIGURES) {
+      for (const f of g.figures) {
+        const x = site.x + f.x, y = site.y, z = site.z + f.z;
+        const still = { still: true, facing: f.facing, target: null, speed: 0 };
+        if (f.kind === 'mob') {
+          this.mobs.list.push(Object.assign(this.mobs.make(MOBS_BY_ID.get(f.type), x, y, z), still));
+        } else if (f.kind === 'wanderer') {
+          const make = (kind) => this.wanderers.person(kind, x, y, z, { ...still, name: f.label, colour: WANDERERS[kind].colours[0] });
+          const p = make(f.type);
+          this.wanderers.list.push(p);
+          if (f.rider) {
+            const r = make(f.rider);
+            r.mount = p;
+            p.rider = r;
+            this.wanderers.list.push(r);
+          }
+        } else if (f.kind === 'settler') {
+          figures.settlers.push({ id: `showcase-${f.n}`, name: settlerName(f.n), colour: settlerColour(f.n), x, y, z, ...still });
+        } else if (f.kind === 'defender') {
+          figures.defenders.push(Object.assign(defenders.person(f.type, { x: x - 0.5, y, z: z - 0.5 }, null), still));
+        } else if (f.kind === 'warrior') {
+          army.total = army.field.length + 1;
+          army.muster({ x, y, z }, 0);
+          figures.warriors.push(Object.assign(army.field.at(-1), { x, y, z }, still));
+        } else if (f.kind === 'guardian') {
+          figures.guardians.push(Object.assign(new Guardian({ world: this.world, ring: f.type, home: { x, y, z } }), still));
+        }
+      }
+    }
+    this.showcase = { site, figures, labelSpots: showcaseLabels(site), labels: true, spot: null };
+    this.rebuildAllChunks();
+    this.ui?.refreshForMode();
+    this.showcaseTime(time);
+    this.showcaseSpot(spot);
+    return true;
+  }
+
+  /**
+   * Stands you at one of the showcase's camera spots (SHOWCASE_SPOTS), flying,
+   * looking where it looks. `settle` makes everything in sight now rather
+   * than over the next few seconds of frames — what a script taking a
+   * picture wants. Returns whether there was such a spot.
+   */
+  showcaseSpot(id, { settle = false } = {}) {
+    const spot = SHOWCASE_SPOTS_BY_ID.get(id);
+    if (!this.showcase || !spot) return false;
+    const pose = spotPose(spot, { site: this.showcase.site, gen: this.world.gen, world: this.world });
+    if (!pose) return false;
+    const eye = this.player.eyePosition().y - this.player.position.y;
+    this.player.flying = true;
+    this.player.teleport(pose.eye.x, pose.eye.y - eye, pose.eye.z);
+    this.player.yaw = pose.yaw;
+    this.player.pitch = pose.pitch;
+    this.showcase.spot = id;
+    if (settle) this.finishLoading();
+    return true;
+  }
+
+  /** The showcase's hour: 'day', 'dusk', 'night' (SHOWCASE_TIMES), or a time 0..1. It holds there. */
+  showcaseTime(when) {
+    const t = typeof when === 'number' ? when : SHOWCASE_TIMES[when];
+    if (t == null) return false;
+    this.dayCycle.time = t;
+    if (this.duilt) this.duilt.dayTime = t;
+    return true;
+  }
+
+  /**
+   * Makes and meshes everything in sight now, instead of a few milliseconds
+   * a frame: the chunks round you, their meshes, and the far ground. A
+   * stall, so only for when one is wanted — a picture about to be taken.
+   */
+  finishLoading() {
+    if (!this.world || !this.player) return;
+    this.streamedAt = null;
+    this.streamChunks();
+    this.generateQueued(Infinity);
+    for (let i = 0; i < 10_000; i++) {
+      const before = this.remeshQueue.size;
+      this.drainRemeshQueue(Infinity);
+      if (this.remeshQueue.size === before) break;
+    }
+    const { x, z } = this.player.position;
+    this.farTerrain?.update(this.world.gen, x, z, { budgetMs: Infinity, world: this.world });
+    this.updateChunkVisibility();
+  }
+
+  /** A list the game draws, with the showcase's own people of that kind added — see openShowcase. */
+  withShowcase(kind, list) {
+    const extra = this.showcase?.figures[kind];
+    return extra?.length ? [...list, ...extra] : list;
+  }
+
   /** The island, planned, when you're near enough to meet its people — and it hasn't fallen. */
   skyNear() {
     if (!this.skyOpen() || this.duilt.skyFallen) return null;
@@ -4857,7 +5008,7 @@ export class Game {
       }
       this.updateHover();
       this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false });
-      this.settlerView.update(this.duilt?.settlers.people ?? []);
+      this.settlerView.update(this.withShowcase('settlers', this.duilt?.settlers.people ?? []));
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
       if (this.world.gen) {
@@ -4904,7 +5055,8 @@ export class Game {
     this.updateClouds(dt);
     // The clock only runs while you're playing; a menu is a pause.
     const clockWas = this.dayCycle.time;
-    if (playing) this.dayCycle.advance(dt);
+    // The showcase holds the hour it was set to, for its pictures.
+    if (playing && !this.showcase) this.dayCycle.advance(dt);
     if (this.duilt) {
       this.duilt.dayTime = this.dayCycle.time;
       // The world's own count of days, for saplings to grow by.
@@ -4917,8 +5069,9 @@ export class Game {
     const strangers = this.wanderers?.list ?? [];
     this.wanderView.update(strangers.filter((p) => !WANDERERS[p.kind].siege && !WANDERERS[p.kind].beast));
     const ours = this.duilt?.defenders;
-    this.defenderView.update(ours?.people ?? []);
-    this.warriorView.update(this.duilt?.army.field ?? []);
+    this.defenderView.update(this.withShowcase('defenders', ours?.people ?? []));
+    this.warriorView.update(this.withShowcase('warriors', this.duilt?.army.field ?? []));
+    this.showcaseView.update(this.showcase, dt);
     this.armyView.update(strangers, [...(this.wanderers?.arrows ?? []), ...(ours?.arrows ?? [])], dt);
     this.projectileView.update(this.projectiles?.list ?? []);
     this.fireflyView.update(this.fireflies);

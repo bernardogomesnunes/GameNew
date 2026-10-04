@@ -128,7 +128,7 @@ const behind = (w, p, yaw) => (w.x - p.x) * Math.sin(yaw) + (w.z - p.z) * Math.c
 
 // --- in the game ----------------------------------------------------------------------------------
 
-ok('the army marches and fights every frame, and is drawn', /this\.tickArmy\(dt\);/.test(game) && /this\.warriorView\.update\(this\.duilt\?\.army\.field/.test(game));
+ok('the army marches and fights every frame, and is drawn', /this\.tickArmy\(dt\);/.test(game) && /this\.warriorView\.update\((this\.withShowcase\('warriors', )?this\.duilt\?\.army\.field/.test(game));
 ok('raiders fight your warriors back', /foes: \(\) => \[\.\.\.\(this\.duilt\?\.defenders\.soldiers \?\? \[\]\), \.\.\.\(this\.duilt\?\.army\.field \?\? \[\]\)\]/.test(game));
 ok('rations come from your bag, then your storehouses', /for \(const inv of \[d\.inventory, \.\.\.d\.structures\.stores\(\)\.map\(\(s\) => s\.store\)\]\)/.test(game));
 ok('a ⚔ banner with the count, and the command wheel under it', /id="vital-army"/.test(ui) && ['follow', 'hold', 'attack', 'line'].every((m) => ui.includes(`data-army="${m}"`)) && /this\.game\.commandArmy\(b\.dataset\.army\)/.test(ui));
