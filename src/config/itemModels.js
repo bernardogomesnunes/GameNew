@@ -169,6 +169,83 @@ ITEM_MODELS.sword_iron = swordModel(0xc9ced6, 0xeef1f5, 0xe2c26a, 0x3a2a20);
 // The tiers past iron (config/tiers.js).
 for (const t of TOOL_TIERS) if (t.key !== 'iron') ITEM_MODELS[`sword_${t.key}`] = swordModel(t.color, t.edge, t.guard, 0x3a2a20);
 
+// Tools, and the rest of what was still a flat drawing on a tile (backlog
+// batch 2: "3D icons in the bag for weapons and other items — feathers,
+// bucket, chalk line"). The same models are what the hand holds (see
+// render/heldModel.js, which reads these first): a tool's head faces -x,
+// the way the hand swings it.
+const HAFT = 0x8a6440, GRIP = 0x5e4128;
+const axeModel = (metal, edge) => [
+  box(0.45, 0, 0.45, 0.55, 0.9, 0.55, HAFT),
+  box(0.22, 0.58, 0.42, 0.45, 0.88, 0.58, metal),
+  box(0.15, 0.54, 0.43, 0.23, 0.92, 0.57, edge),
+  box(0.44, 0, 0.44, 0.56, 0.1, 0.56, GRIP),
+];
+const pickaxeModel = (metal, edge) => [
+  box(0.45, 0, 0.45, 0.55, 0.86, 0.55, HAFT),
+  box(0.14, 0.78, 0.43, 0.86, 0.92, 0.57, metal),
+  box(0.07, 0.68, 0.44, 0.15, 0.84, 0.56, edge),
+  box(0.85, 0.68, 0.44, 0.93, 0.84, 0.56, edge),
+  box(0.44, 0, 0.44, 0.56, 0.1, 0.56, GRIP),
+];
+const shovelModel = (metal, edge) => [
+  box(0.46, 0.32, 0.46, 0.54, 0.94, 0.54, HAFT),
+  box(0.36, 0.92, 0.45, 0.64, 1, 0.55, GRIP),
+  box(0.34, 0.06, 0.45, 0.66, 0.36, 0.55, metal),
+  box(0.38, 0, 0.46, 0.62, 0.06, 0.54, edge),
+];
+const STONE_HEAD = 0x9a9aa2, STONE_EDGE = 0xc2c2c9;
+ITEM_MODELS.axe = axeModel(STONE_HEAD, STONE_EDGE);
+ITEM_MODELS.pickaxe = pickaxeModel(STONE_HEAD, STONE_EDGE);
+ITEM_MODELS.shovel = shovelModel(STONE_HEAD, STONE_EDGE);
+for (const t of TOOL_TIERS) {
+  ITEM_MODELS[`axe_${t.key}`] = axeModel(t.color, t.edge);
+  ITEM_MODELS[`pickaxe_${t.key}`] = pickaxeModel(t.color, t.edge);
+  ITEM_MODELS[`shovel_${t.key}`] = shovelModel(t.color, t.edge);
+}
+
+// A pail: staves of metal, a rim, a wire handle — and with water in it, water.
+const pail = (water) => [
+  ...stack([[0.2, 0.2, 0, 0.08, 0x9aa3a8], [0.24, 0.24, 0.08, 0.52, 0xb5bec3], [0.26, 0.26, 0.52, 0.58, 0x8b9398]]),
+  ...(water ? [box(0.26, 0.5, 0.26, 0.74, 0.56, 0.74, 0x5f8fc4)] : []),
+  box(0.24, 0.58, 0.48, 0.28, 0.82, 0.52, 0x6b7378), box(0.72, 0.58, 0.48, 0.76, 0.82, 0.52, 0x6b7378),
+  box(0.24, 0.8, 0.48, 0.76, 0.84, 0.52, 0x6b7378),
+];
+ITEM_MODELS.bucket = pail(false);
+ITEM_MODELS.bucket_water = pail(true);
+
+// A feather: a quill, and its vane — wider below, narrowing to the tip.
+ITEM_MODELS.feather = [
+  box(0.48, 0, 0.47, 0.52, 0.96, 0.53, 0xcfc6b4),
+  box(0.34, 0.22, 0.48, 0.48, 0.62, 0.52, 0xf4f0e8), box(0.52, 0.26, 0.48, 0.64, 0.66, 0.52, 0xe9e4da),
+  box(0.38, 0.62, 0.48, 0.48, 0.86, 0.52, 0xf4f0e8), box(0.52, 0.66, 0.48, 0.6, 0.88, 0.52, 0xe9e4da),
+];
+// A hide, laid flat: the skin and its four legs.
+ITEM_MODELS.hide = [
+  box(0.18, 0, 0.2, 0.82, 0.08, 0.8, 0xa07850),
+  box(0.26, 0.08, 0.28, 0.74, 0.1, 0.72, 0xb88a5e),
+  box(0.06, 0, 0.12, 0.2, 0.06, 0.26, 0xa07850), box(0.8, 0, 0.12, 0.94, 0.06, 0.26, 0xa07850),
+  box(0.06, 0, 0.74, 0.2, 0.06, 0.88, 0xa07850), box(0.8, 0, 0.74, 0.94, 0.06, 0.88, 0xa07850),
+];
+// A ball of wool, and a loose end.
+ITEM_MODELS.wool = [
+  ...stack([[0.2, 0.2, 0, 0.1, 0xe8e2d6], [0.3, 0.3, 0.1, 0.4, 0xf2ede4], [0.22, 0.22, 0.4, 0.56, 0xe8e2d6]]),
+  box(0.66, 0, 0.46, 0.86, 0.04, 0.52, 0xe8e2d6),
+];
+// A jar of fireflies: glass, a cork, and the lights inside.
+ITEM_MODELS.fireflies = [
+  ...stack([[0.22, 0.22, 0, 0.62, 0xcfe6d8]]),
+  ...stack([[0.14, 0.14, 0.62, 0.74, 0xa98058]]),
+  box(0.34, 0.2, 0.77, 0.4, 0.26, 0.79, 0xe8ff7a), box(0.56, 0.38, 0.77, 0.62, 0.44, 0.79, 0xe8ff7a), box(0.42, 0.48, 0.77, 0.48, 0.54, 0.79, 0xe8ff7a),
+];
+// Ingots: a bar with a narrower top.
+const ingot = (main, top) => [box(0.16, 0, 0.3, 0.84, 0.14, 0.7, main), box(0.22, 0.14, 0.35, 0.78, 0.24, 0.65, top)];
+ITEM_MODELS.iron_ingot = ingot(0xb3b8bf, 0xd6dae0);
+ITEM_MODELS.copper_ingot = ingot(0xc27a4e, 0xdd9a6c);
+// The pry bar and the chalk line, though nothing makes them any more.
+ITEM_MODELS.pry_bar = [box(0.46, 0, 0.46, 0.54, 0.86, 0.54, 0x5a5f66), box(0.28, 0.8, 0.46, 0.54, 0.88, 0.54, 0x5a5f66)];
+ITEM_MODELS.chalk_line = [box(0.3, 0.2, 0.4, 0.7, 0.6, 0.6, 0xc94a3e), box(0.46, 0.6, 0.48, 0.54, 0.95, 0.52, 0xf2ede2), box(0.36, 0.3, 0.6, 0.64, 0.5, 0.62, 0x8e2f27)];
+
 // An upgraded piece looks like its plain self — the glint is drawn over
 // it (see cubes.js itemIcon).
 for (const [key, e] of Object.entries(UPGRADES)) {
