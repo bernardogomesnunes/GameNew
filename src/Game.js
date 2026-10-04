@@ -649,7 +649,11 @@ export class Game {
       return !!result;
     } catch (err) {
       this.saveError = err?.message ?? 'Could not save in this browser.';
-      this.bus.emit('toast', { kind: 'xp', title: 'Not saved', body: this.saveError });
+      // Once a session: a browser that's out of room says so, but not on every autosave.
+      if (!this.toldSaveError) {
+        this.toldSaveError = true;
+        this.bus.emit('toast', { kind: 'xp', title: 'Not saved', body: this.saveError });
+      }
       return false;
     }
   }
@@ -694,11 +698,10 @@ export class Game {
         // Best effort, and never awaited: a broken save_failures write must
         // never be the reason a retry gets delayed.
         this.cloud?.reportFailure(this.worldId, err).catch(() => {});
-        this.bus.emit('toast', {
-          kind: 'xp',
-          title: 'Not saved to your account yet',
-          body: `${this.saveError} Still trying — keep the tab open.`,
-        });
+        // Quiet: it tries again on its own, and a "not saved" every few
+        // minutes was noise (backlog batch 2). Nothing is lost meanwhile —
+        // the copy keepSafe put aside survives a closed tab, and sendUnsent
+        // sends it the next time the game starts.
         return false;
       } finally {
         this.saving = null;
@@ -754,11 +757,6 @@ export class Game {
       this.syncState.agree(held.worldId, res.revision);
       this.dropSafeCopy();
       this.forgetCloudList();
-      this.bus.emit('toast', {
-        kind: 'challenge',
-        title: 'Saved to your account',
-        body: `"${held.name}" made it up after all`,
-      });
       return true;
     } catch {
       return false;   // still no; it keeps until there is a connection
@@ -2600,7 +2598,6 @@ export class Game {
     } catch { /* the world is what matters; progression can wait for the next sign-in */ }
     if (!silent) {
       this.ui.closePanel('panel-menu');
-      this.ui.toast({ kind: 'challenge', title: `Opened "${data.name}"`, body: 'The copy from your account' });
     }
   }
 
@@ -2632,7 +2629,6 @@ export class Game {
     }
     if (!silent) {
       this.ui.closePanel('panel-menu');
-      this.ui.toast({ kind: 'challenge', title: `Opened "${data.name}"`, body: 'The copy in this browser' });
     }
   }
 

@@ -1,6 +1,7 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
 import { BOOSTS, clockOf } from '../config/drinks.js';
 import { FINAL_AGE } from '../config/ages.js';
+import { askConfirm } from './Confirm.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
@@ -63,6 +64,8 @@ const escapeAttr = escapeHtml;
 export class DuiltUI {
   constructor(root, { game, bus, panels }) {
     this.root = root;
+    // The game's own yes/no, never the browser's (ui/Confirm.js).
+    this.confirm = (opts) => askConfirm(root, opts);
     this.panels = panels;
     this.game = game;
     this.bus = bus;
@@ -404,8 +407,8 @@ export class DuiltUI {
     body.querySelector('[data-move]').addEventListener('click', () => actions.onMove?.());
     body.querySelector('[data-change]').addEventListener('click', () => actions.onChange?.());
     body.querySelector('[data-delete]').addEventListener('click', () => {
-      if (confirm(`Delete this ${spec?.name?.toLowerCase() ?? 'building'}? `
-        + 'The blocks come back to your bag.')) actions.onDelete?.();
+      this.confirm({ title: `Delete this ${spec?.name?.toLowerCase() ?? 'building'}?`, body: 'The blocks come back to your bag.', ok: 'Delete', danger: true })
+        .then((yes) => { if (yes) actions.onDelete?.(); });
     });
   }
 

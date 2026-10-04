@@ -51,24 +51,9 @@ export const RECIPES = [
     output: { id: 'bucket', count: 1 },
     blurb: 'Carries water to wherever you need it.',
   },
-  {
-    id: 'pry_bar',
-    name: 'Pry bar',
-    station: 'hand',
-    age: 1,
-    inputs: { wood: 8, stone: 4 },
-    output: { id: 'pry_bar', count: 1 },
-    blurb: 'Takes a whole build, or a bite of hillside, away in one go.',
-  },
-  {
-    id: 'chalk_line',
-    name: 'Chalk line',
-    station: 'hand',
-    age: 1,
-    inputs: { wood: 4, stone: 2 },
-    output: { id: 'chalk_line', count: 1 },
-    blurb: 'Echoes everything you place across the middle of the world.',
-  },
+  // The pry bar (Clear) and chalk line (Mirror) aren't made any more: tools
+  // for building the game's own designs, not for playing it (backlog batch
+  // 2). A Creative world still has one of everything, them included.
   {
     id: 'fill_bucket',
     name: 'Fill the bucket',

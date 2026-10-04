@@ -29,7 +29,7 @@ ok('an account that can\'t be reached still shows what it last had', /err\.parti
 
 // --- a delete takes one world, not all of them ------------------------------------------------------
 
-ok('the rows on screen are taken before deleting, then filtered', /const shown = rows;\s*if \(!this\.cb\.onRemove\(el\.dataset\.remove, el\.dataset\.removeName\)\) return;\s*this\.cloudWorlds = shown\.filter\(\(w\) => w\.id !== el\.dataset\.remove\);/.test(home));
+ok('the rows on screen are taken before deleting, then filtered', /const shown = rows;\s*if \(!await this\.cb\.onRemove\(el\.dataset\.remove, el\.dataset\.removeName\)\) return;\s*this\.cloudWorlds = shown\.filter\(\(w\) => w\.id !== el\.dataset\.remove\);/.test(home));
 ok('an out-of-date list is kept on screen and asked for again, never dropped', /forgetWorlds\(\) \{[\s\S]{0,200}this\.stale = true;\s*\}/.test(home) && !/forgetWorlds\(\) \{\s*this\.cloudWorlds = null;/.test(home)
   && /if \(this\.cloudWorlds && !this\.stale && !force\) return;\s*this\.stale = false;/.test(home));
 ok('a deleted account world leaves the remembered list at once', /this\.rememberWorlds\(this\.rememberedWorlds\(\)\.filter\(\(w\) => w\.id !== id\)\);\s*this\.cloud\?\.delete\(id\)/.test(game));

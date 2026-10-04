@@ -6,6 +6,7 @@ import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
 import { StoryView, INTRO, ENDINGS, endingFor } from './Story.js';
+import { askConfirm } from './Confirm.js';
 import { LORE, loreKnowledge } from '../config/lore.js';
 import { ITEMS_BY_ID, itemName, isFood } from '../config/items.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
@@ -637,8 +638,9 @@ export class UIManager {
       // moment later.
       onOpen: (id) => { this.enterWorld(); this.cb.onOpenWorld(id); },
       onCreate: (mode, name) => { this.cb.onNewWorld(mode, name); this.enterWorld(); },
-      onRemove: (id, label) => {
-        if (!confirm(`Delete "${label}"? Everything built in it goes with it, and this cannot be undone.`)) return false;
+      onRemove: async (id, label) => {
+        const yes = await this.confirm({ title: `Delete "${label}"?`, body: 'Everything built in it goes with it, and this cannot be undone.', ok: 'Delete', danger: true });
+        if (!yes) return false;
         this.cb.onDeleteWorld(id);
         return true;
       },
@@ -763,15 +765,15 @@ export class UIManager {
     this.root.querySelectorAll('[data-menu-back]').forEach((btn) =>
       btn.addEventListener('click', () => this.showMenuSection(null)));
     this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
+    // No "Saved" toast: saving is something you stop thinking about (backlog batch 2).
     this.q('#btn-leave').addEventListener('click', () => {
       this.cb.onLeaveWorld?.(true);
       this.closePanel('panel-menu');
       this.openHome();
-      this.toast({ kind: 'challenge', title: 'Saved', body: this.game.worldName || 'Your world' });
     });
-    this.q('#btn-leave-nosave').addEventListener('click', () => {
+    this.q('#btn-leave-nosave').addEventListener('click', async () => {
       const since = this.lastSavedLabel();
-      if (!confirm(`Leave without saving? Everything since ${since} is lost.`)) return;
+      if (!await this.confirm({ title: 'Leave without saving?', body: `Everything since ${since} is lost.`, ok: 'Leave', danger: true })) return;
       this.cb.onLeaveWorld?.(false);
       this.closePanel('panel-menu');
       this.openHome();
@@ -1351,6 +1353,11 @@ export class UIManager {
 
   openPanel(id) {
     this.panels.open(id);
+  }
+
+  /** The game's own yes/no — never the browser's grey dialog (ui/Confirm.js). */
+  confirm(opts) {
+    return askConfirm(this.root, opts);
   }
 
   /**
@@ -2146,7 +2153,9 @@ export class UIManager {
       if (this.cb.onPickTemplate(btn.dataset.place)) this.closePanel('panel-templates');
     }));
     list.querySelectorAll('[data-drop]').forEach((btn) => btn.addEventListener('click', () => {
-      if (confirm('Delete this design?')) { this.cb.onDeleteTemplate(btn.dataset.drop); this.refreshTemplateList(); }
+      this.confirm({ title: 'Delete this design?', ok: 'Delete', danger: true }).then((yes) => {
+        if (yes) { this.cb.onDeleteTemplate(btn.dataset.drop); this.refreshTemplateList(); }
+      });
     }));
   }
 

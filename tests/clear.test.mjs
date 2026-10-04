@@ -116,8 +116,8 @@ ok('and works in every kind of world', PANELS_BY_ID.get('panel-clear').mode === 
 // Made, not given: the button is there once the pry bar is in your bag.
 ok('there is a button for it once you have made the tool',
   /id="t-clear" data-tool="clear" hidden/.test(ui));
-ok('and something to make it out of',
-  /id: 'pry_bar'/.test(readFileSync(new URL('../src/config/recipes.js', import.meta.url), 'utf8')));
+ok('not made at the bench any more — only Creative\'s bag of everything has it (backlog batch 2)',
+  !/id: 'pry_bar'/.test(readFileSync(new URL('../src/config/recipes.js', import.meta.url), 'utf8')));
 ok('picking one queues it rather than clearing blind', /onPickClear\(btn\.dataset\.clear\)/.test(ui));
 
 // Straight through the one place blocks change, so your border refuses it, a

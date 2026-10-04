@@ -210,7 +210,7 @@ export class HomeScreen {
         // itself marks the list out of date, and filtering that used to leave
         // nothing at all — every world gone until a reload (reported directly).
         const shown = rows;
-        if (!this.cb.onRemove(el.dataset.remove, el.dataset.removeName)) return;
+        if (!await this.cb.onRemove(el.dataset.remove, el.dataset.removeName)) return;
         this.cloudWorlds = shown.filter((w) => w.id !== el.dataset.remove);
         this.render();
       });

@@ -173,12 +173,11 @@ export class GamificationEngine {
     if (!this.session.active) return;
     const s = this.session;
     s.active = false;
+    // No "Session complete" bonus any more: it popped up after two idle
+    // minutes and was never kept or shown anywhere (backlog batch 2).
     if (s.blocksPlaced > 0) {
-      const bonus = Math.min(400, Math.round(10 + s.blocksPlaced * 0.5 + s.distinctTypes.size * 8));
-      this.addXp(bonus, 'Session complete');
-      const score = this.computeBuildScore();
-      this.state.lastBuildScore = score;
-      this.bus.emit('session:end', { bonus, score });
+      this.state.lastBuildScore = this.computeBuildScore();
+      this.bus.emit('session:end', { score: this.state.lastBuildScore });
     }
   }
 
