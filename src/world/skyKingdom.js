@@ -1,5 +1,5 @@
 import { hash01 } from './ChunkGen.js';
-import { doorBlock, turned, roofBlock, BED, BED_HEAD, FACING_STEP, PAINTING, WEAPON_RACK, TRAINING_DUMMY, ARCHERY_TARGET } from '../config/blocks.js';
+import { isWater, doorBlock, turned, roofBlock, BED, BED_HEAD, FACING_STEP, PAINTING, WEAPON_RACK, TRAINING_DUMMY, ARCHERY_TARGET } from '../config/blocks.js';
 import { ROOFS_BY_ID } from '../config/roofs.js';
 import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
 
@@ -36,6 +36,15 @@ import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
  * dark path (and in Creative, to look at): the generator lays it only while
  * `gen.sky` is set, which Game sets from your ring.
  */
+
+/**
+ * The scar it left (backlog batch 2: "a hole in the ground below it, as if it
+ * had been torn out of the land"): under every column of the island, the
+ * ground is dug out this fraction of the island's own rock there — so the
+ * hole is the island's underside in reverse, shallow at its rim and deepest
+ * under the middle, a mould the island could be lowered back into.
+ */
+export const SCAR_DEPTH = 0.5;
 
 /** How far out from home it hangs. */
 export const SKY_AT = 5000;
@@ -648,6 +657,7 @@ export function stampSky(gen, chunk, size) {
       const x = ox + lx, z = oz + lz;
       const col = skyColumn(seed, at.x, at.z, x, z);
       if (!col) continue;
+      scar(chunk, lx, lz, x, z, col, seed);
       for (let y = Math.max(0, col.bottom); y < FLOOR - 3; y++) chunk.set(lx, y, lz, hash01(x * 7 + y, z, seed ^ 0x5c15) < 0.07 ? MOSS : STONE);
       chunk.set(lx, FLOOR - 3, lz, DIRT); chunk.set(lx, FLOOR - 2, lz, DIRT);
       chunk.set(lx, FLOOR - 1, lz, col.top);
@@ -661,6 +671,25 @@ export function stampSky(gen, chunk, size) {
     if (chain != null && cut?.has(chain)) continue;
     if (y >= 0 && y < chunk.height) chunk.set(x - ox, y, z - oz, id);
   }
+}
+
+/**
+ * Digs the island's scar into the ground under one of its columns: down from
+ * the top of whatever stands there (trees go with it) by SCAR_DEPTH of the
+ * island's rock overhead, leaving a floor of loose dirt and gravel. Ground
+ * under water is left as it is — a lake over the hole would only be a
+ * deeper lake, and digging under it would leave air under the water.
+ */
+function scar(chunk, lx, lz, x, z, col, seed) {
+  const depth = Math.round((FLOOR - 1 - col.bottom) * SCAR_DEPTH);
+  let ground = -1;
+  for (let y = Math.min(col.bottom - 1, chunk.height - 1); y > 0; y--) {
+    if (chunk.get(lx, y, lz) !== AIR) { ground = y; break; }
+  }
+  if (ground < 4 || isWater(chunk.get(lx, ground, lz))) return;
+  const floor = Math.max(2, ground - depth);
+  for (let y = floor + 1; y <= ground; y++) chunk.set(lx, y, lz, AIR);
+  chunk.set(lx, floor, lz, hash01(x, z, seed ^ 0x5c21) < 0.35 ? GRAVEL : DIRT);
 }
 
 /** Which anchor tower's chain the link at (x, y, z) is part of, or -1. */
