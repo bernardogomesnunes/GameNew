@@ -8,9 +8,10 @@ g.grantStartingKit();
 
 // crafting
 g.inventory.add('wood', 20);
+g.inventory.add('stone', 3);
 let r = g.crafting.craft('axe', 1);
-ok('can craft an axe from wood', r.ok && g.inventory.countOf('axe') === 2);
-ok('wood was spent', g.inventory.countOf('wood') === 15);
+ok('can craft a stone axe from wood and stone', r.ok && g.inventory.countOf('axe') === 2);
+ok('wood and stone were spent', g.inventory.countOf('wood') === 18 && g.inventory.countOf('stone') === 0);
 r = g.crafting.craft('planks', 8);
 ok('batch crafting makes many at once', r.ok && r.made === 16);
 r = g.crafting.craft('axe', 1);

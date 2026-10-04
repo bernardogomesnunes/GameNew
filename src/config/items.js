@@ -112,20 +112,20 @@ export const ITEMS = [
   // ever making some of it faster, never anything impossible. See
   // TOOL_EFFECTIVENESS and Game.js's breakDelayFor.
   {
-    id: 'axe', name: 'Axe', kind: 'tool', stackTo: STACK_TOOL, color: 0xcbaa8a, glyph: 'axe',
-    durability: 120, madeBy: 'Crafted from wood', unlocks: 'Cutting trees quickly',
+    id: 'axe', name: 'Stone Axe', kind: 'tool', stackTo: STACK_TOOL, color: 0xafafb7, glyph: 'axe',
+    durability: 120, madeBy: 'Crafted from wood and stone', unlocks: 'Cutting trees quickly',
     damage: 3, // how hard it hits an animal; bare hands are 1 — see Game.hitMob
     effectiveness: { wood: 'fast', plant: 'fast', dirt: 'slow', stone: 'impossible' },
   },
   {
-    id: 'pickaxe', name: 'Pickaxe', kind: 'tool', stackTo: STACK_TOOL, color: 0xafafb7, glyph: 'pickaxe',
+    id: 'pickaxe', name: 'Stone Pickaxe', kind: 'tool', stackTo: STACK_TOOL, color: 0xafafb7, glyph: 'pickaxe',
     durability: 120, madeBy: 'Crafted from wood and stone', unlocks: 'Mining stone quickly',
     damage: 2,
     effectiveness: { stone: 'fast', wood: 'slow', plant: 'slow', dirt: 'slow' },
   },
   {
-    id: 'shovel', name: 'Shovel', kind: 'tool', stackTo: STACK_TOOL, color: 0xb5b5bd, glyph: 'shovel',
-    durability: 120, madeBy: 'Crafted from wood', unlocks: 'Digging dirt and sand quickly',
+    id: 'shovel', name: 'Stone Shovel', kind: 'tool', stackTo: STACK_TOOL, color: 0xb5b5bd, glyph: 'shovel',
+    durability: 120, madeBy: 'Crafted from wood and stone', unlocks: 'Digging dirt and sand quickly',
     damage: 2,
     effectiveness: { dirt: 'fast', wood: 'slow', plant: 'slow', stone: 'slow' },
   },

@@ -202,8 +202,10 @@ export class DuiltUI {
           <div class="export-note">Point at a wall you built. Scroll to set how tall, then press Break.</div>
           <button class="secondary claim-area" id="btn-claim-area">Claim an area</button>
           <div class="export-note">Tap one corner of it and then the opposite corner. Use this for anything you dug out — a quarry, a mine, a farm.</div>
+          <input id="buildings-search" class="panel-search" type="search" placeholder="Search — a farm, stone, settlers…" autocomplete="off" enterkeyhint="search">
           <div id="buildings-list"></div>`,
         'panel-bench': `
+          <input id="bench-search" class="panel-search" type="search" placeholder="Search — an axe, planks, stone…" autocomplete="off" enterkeyhint="search">
           <div id="bench-list"></div>`,
         'panel-building': `
           <div id="building-body"></div>`,
@@ -1227,22 +1229,6 @@ export class DuiltUI {
    * This replaces pointing people at a generic template list and hoping they
    * work out what a farm is supposed to contain.
    */
-  /**
-   * What is missing, and where each missing thing comes from.
-   *
-   * "Starter needs 2 saplings" is a dead end if nothing in the game ever says
-   * what a sapling is. Every line now carries its own answer, pulled from the
-   * recipe list so it cannot go stale.
-   */
-  shortfallNote(missing) {
-    const lines = Object.entries(missing).map(([id, n]) => {
-      const spec = ITEMS_BY_ID.get(id);
-      const from = howToGet(id, spec?.block != null ? itemName(id) : null);
-      return `<li>${n} more ${itemName(id).toLowerCase()}${from ? ` — ${from}` : ''}</li>`;
-    });
-    return `<div class="warn shortfall"><strong>Not enough materials</strong><ul>${lines.join('')}</ul></div>`;
-  }
-
   renderBuildings() {
     const d = this.duilt;
     if (!d) return this.noWorld('#buildings-list');
@@ -1252,7 +1238,20 @@ export class DuiltUI {
     // bag holds one of everything and a starter design's cost never actually
     // gets charged (see DuiltGame.starterPlacement), so the button that
     // offers to stamp one has nothing to disable.
-    const offered = d.sandbox ? STRUCTURES : structuresForAge(d.age);
+    const search = this.q('#buildings-search');
+    if (search && !search.dataset.bound) {
+      search.dataset.bound = '1';
+      search.addEventListener('input', () => this.renderBuildings());
+    }
+    const query = search?.value ?? '';
+    const offered = (d.sandbox ? STRUCTURES : structuresForAge(d.age)).filter((spec) => matchesSearch(query, [
+      spec.name, spec.blurb, this.whatItGivesYou(spec),
+      ...Object.keys(DESIGN_FOR_STRUCTURE.get(spec.id)?.cost ?? {}).map(itemName),
+    ]));
+    if (!offered.length) {
+      this.q('#buildings-list').innerHTML = `<div class="sub" style="margin:8px 0">No building matches “${escapeHtml(query.trim())}”.</div>`;
+      return;
+    }
     this.q('#buildings-list').innerHTML = offered.map((spec) => {
       const built = d.structures.countOf(spec.id);
       const design = DESIGN_FOR_STRUCTURE.get(spec.id);
@@ -1262,8 +1261,20 @@ export class DuiltUI {
       // said "4 more turned soil" and never the 16 it actually takes, so the
       // only way to know the real cost was to try, fail, and do the subtraction
       // yourself.
+      //
+      // Backlog batch 2: the cost as each item's icon and how many, not a line
+      // of words — and one you're short of says so in its own colour, with
+      // what you have against it and where more comes from (the recipe
+      // list's answer, so "2 saplings" is never a dead end).
       const costLine = design
-        ? Object.entries(design.cost).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(', ')
+        ? Object.entries(design.cost).map(([id, n]) => {
+          const spec = ITEMS_BY_ID.get(id);
+          const short = shortfall[id] > 0;
+          const icon = itemIcon(spec, { size: 22 }) ?? glyphSvg(spec?.glyph, { size: 16, color: spec?.color });
+          const from = short ? howToGet(id, spec?.block != null ? itemName(id) : null) : null;
+          const tip = `${itemName(id)}${short ? ` — you have ${n - shortfall[id]}${from ? `. ${from}` : ''}` : ''}`;
+          return `<span class="cost-chip${short ? ' short' : ''}" title="${escapeAttr(tip)}">${icon}<b>${n}</b></span>`;
+        }).join('')
         : null;
 
       // The requirement ids used to get their own "Needs: trunks · canopy ·
@@ -1284,19 +1295,13 @@ export class DuiltUI {
           </div>
           <div class="building-meta">
             <span>${this.whatItGivesYou(spec)}</span>
-            ${costLine ? `<span>Costs: ${costLine}</span>` : ''}
           </div>
           ${design ? `
+          <div class="building-costs">${costLine}</div>
           <div class="building-actions">
             <button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
               Place a ${design.footprint} starter
             </button>
-          </div>
-          <div class="building-note">
-            ${!canStamp ? this.shortfallNote(shortfall) : `
-              ${design.note ? `<span>${design.note}</span>` : ''}
-              <span>Aim where you want it and press Place.</span>
-            `}
           </div>` : ''}
         </div>`;
     }).join('');
@@ -1337,7 +1342,20 @@ export class DuiltUI {
     // Everything for the age, hand and workshop alike. A workshop recipe you
     // cannot see is a workshop you never learn you need, so they are listed
     // from the age they appear and greyed out until you are standing at one.
-    const recipes = d.crafting.available(d.age, { station: null, near, atStations });
+    const all = d.crafting.available(d.age, { station: null, near, atStations });
+    // Backlog batch 2: a search, for a list that is long by the later ages.
+    // Matches what it's called, what it makes and what goes into it.
+    const search = this.q('#bench-search');
+    if (search && !search.dataset.bound) {
+      search.dataset.bound = '1';
+      search.addEventListener('input', () => this.renderBench());
+    }
+    const query = search?.value ?? '';
+    const recipes = all.filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
+    if (!recipes.length) {
+      this.q('#bench-list').innerHTML = `<div class="sub" style="margin:8px 0">Nothing you can make matches “${escapeHtml(query.trim())}”.</div>`;
+      return;
+    }
 
     this.q('#bench-list').innerHTML = recipes.map((r) => {
       const inputs = Object.entries(r.inputs)
@@ -1393,4 +1411,16 @@ export class DuiltUI {
       </div>
     `).join('');
   }
+}
+
+/**
+ * Whether every word of a search turns up somewhere in `fields` — any order,
+ * any case, part of a word will do ("sto ax" finds the Stone Axe). An empty
+ * search matches everything.
+ */
+export function matchesSearch(query, fields) {
+  const words = String(query ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const hay = fields.filter(Boolean).join(' ').toLowerCase();
+  return words.every((w) => hay.includes(w));
 }

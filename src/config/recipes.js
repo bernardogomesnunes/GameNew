@@ -16,17 +16,20 @@ import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
 export const RECIPES = [
   {
+    // Backlog batch 2: tools are named for what they're made of, and there
+    // is no wooden axe — the first axe is stone. The ids stay, so the axe in
+    // an old bag is this one.
     id: 'axe',
-    name: 'Axe',
+    name: 'Stone Axe',
     station: 'hand',
     age: 1,
-    inputs: { wood: 5 },
+    inputs: { wood: 2, stone: 3 },
     output: { id: 'axe', count: 1 },
     blurb: 'Cuts trees far faster than bare hands. Wears out; make a spare.',
   },
   {
     id: 'pickaxe',
-    name: 'Pickaxe',
+    name: 'Stone Pickaxe',
     station: 'hand',
     age: 1,
     inputs: { wood: 3, stone: 4 },
@@ -35,10 +38,10 @@ export const RECIPES = [
   },
   {
     id: 'shovel',
-    name: 'Shovel',
+    name: 'Stone Shovel',
     station: 'hand',
     age: 1,
-    inputs: { wood: 4 },
+    inputs: { wood: 2, stone: 2 },
     output: { id: 'shovel', count: 1 },
     blurb: 'Digs dirt and sand far faster than bare hands. Wears out; make a spare.',
   },
