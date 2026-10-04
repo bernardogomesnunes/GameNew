@@ -34,4 +34,6 @@ ok('an out-of-date list is kept on screen and asked for again, never dropped', /
   && /if \(this\.cloudWorlds && !this\.stale && !force\) return;\s*this\.stale = false;/.test(home));
 ok('a deleted account world leaves the remembered list at once', /this\.rememberWorlds\(this\.rememberedWorlds\(\)\.filter\(\(w\) => w\.id !== id\)\);\s*this\.cloud\?\.delete\(id\)/.test(game));
 
+ok('before the first answer, with nothing remembered: "Loading your worlds", never "No worlds yet"', /this\.cloudWorlds == null && this\.cb\.isCloudConfigured\?\.\(\)[\s\S]{0,200}Loading your worlds…/.test(home));
+
 process.exit(f ? 1 : 0);
