@@ -74,6 +74,9 @@ const OPENING = [
     icon: '🏠',
     xpReward: 30,
     check: (c) => c.stats.totalBlocksPlaced >= 40,
+    // Counting where you are: reported directly that this "does not count",
+    // when it did — there was nothing on the card to show it moving.
+    progress: (c) => `${Math.min(c.stats.totalBlocksPlaced, 40)}/40`,
   },
   {
     id: 'first_roof',
@@ -83,6 +86,7 @@ const OPENING = [
     icon: '🏘️',
     xpReward: 40,
     check: (c) => c.stats.totalBlocksPlaced >= 100,
+    progress: (c) => `${Math.min(c.stats.totalBlocksPlaced, 100)}/100`,
   },
   {
     id: 'first_claim',
