@@ -51,6 +51,15 @@ export class SkyBeacon {
     roof.position.y = 0.42; roof.rotation.y = Math.PI / 4;
     this.island = new THREE.Group();
     this.island.add(rock, grass, hall, roof);
+    // Its collar of cloud, as the island itself has up close (SkyMist): a
+    // couple of flat puffs round the lower half of the rock.
+    this.cloud = mat(0xf4f3ee);
+    this.cloud.toneMapped = false;
+    for (const [x, z, w, d] of [[0.15, 0.1, 2.5, 1.7], [-0.3, -0.2, 1.7, 2.3], [0.5, -0.45, 1.2, 0.9]]) {
+      const puff = new THREE.Mesh(new THREE.BoxGeometry(w, 0.13, d), this.cloud);
+      puff.position.set(x, -0.62, z);
+      this.island.add(puff);
+    }
     this.glow = new THREE.Sprite(new THREE.SpriteMaterial({
       map: glowTexture(), color: 0xffe3a0, transparent: true, depthWrite: false,
       blending: THREE.AdditiveBlending, fog: false,
@@ -66,12 +75,13 @@ export class SkyBeacon {
    * @param eye    where you're looking from
    * @param night  0 by day .. 1 at midnight
    */
-  update(at, eye, night = 0) {
+  update(at, eye, night = 0, cloud = null) {
     const where = at && placeBeacon(at, eye);
     this.group.visible = !!where;
     if (!where) return;
     this.group.position.set(where.x, where.y, where.z);
     this.island.scale.setScalar(where.size);
+    if (cloud) this.cloud.color.copy(cloud);
     this.glow.position.y = where.size * 0.3;
     this.glow.scale.setScalar(where.size * (2.6 + night * 1.4));
     this.glow.material.opacity = 0.35 + night * 0.6;

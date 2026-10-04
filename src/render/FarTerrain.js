@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { withHeightFog } from './atmosphere.js';
 import { biomeCssColours, waterCssColour } from './biomePalette.js';
 import { BIOMES, surfaceFor } from '../config/biomes.js';
 import { BLOCKS_BY_ID } from '../config/blocks.js';
@@ -105,7 +106,7 @@ export class FarTerrain {
 
   /** A band's material: Lambert, drawn only inside its own ring, and never over a real chunk. */
   material(band, i) {
-    const mat = new THREE.MeshLambertMaterial({ vertexColors: true, fog: true });
+    const mat = withHeightFog(new THREE.MeshLambertMaterial({ vertexColors: true, fog: true }));
     mat.onBeforeCompile = (shader) => {
       Object.assign(shader.uniforms, this.uniforms, {
         uFrom: { value: band.from }, uTo: { value: band.to },

@@ -275,6 +275,9 @@ export class UIManager {
               <label class="gfx-check">
                 <input type="checkbox" id="gfx-ao" /> Soft shadows
               </label>
+              <label class="gfx-check">
+                <input type="checkbox" id="gfx-atmosphere" /> Mist and motes
+              </label>
             </div>
             <div class="export-note" id="gfx-note" hidden></div>
           </div>
@@ -1910,8 +1913,9 @@ export class UIManager {
     dist.value = String(g.distance ?? 'auto');
     aa.checked = g.antialias !== false;
     lights.checked = g.lights !== false;
-    const ao = this.q('#gfx-ao');
+    const ao = this.q('#gfx-ao'), air = this.q('#gfx-atmosphere');
     ao.checked = g.ao !== false;
+    air.checked = g.atmosphere !== false;
 
     const apply = () => {
       const resolution = res.value === 'auto' ? 'auto' : Number(res.value);
@@ -1922,6 +1926,7 @@ export class UIManager {
         smoothing: resolution === 'auto',
         lights: lights.checked,
         ao: ao.checked,
+        atmosphere: air.checked,
       });
       const note = this.q('#gfx-note');
       note.hidden = !result?.needsReload;
@@ -1932,6 +1937,7 @@ export class UIManager {
     aa.addEventListener('change', apply);
     lights.addEventListener('change', apply);
     ao.addEventListener('change', apply);
+    air.addEventListener('change', apply);
 
     // A live frame rate, so a change can be judged on more than a feeling.
     setInterval(() => {
