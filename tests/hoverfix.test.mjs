@@ -49,7 +49,7 @@ ok('a slot carries its name and facts for the hover card, not a native title',
 ok('the card and the detail box share one source of the actual facts, not two copies',
   (duiltUi.match(/this\.itemBits\(/g) ?? []).length >= 2);
 ok('the card is delegated from the panel root, so re-rendered buttons need no wiring',
-  /this\.el\.addEventListener\('pointerover'/.test(duiltUi) && /closest\?\.\('\.bag-slot\[data-tip\]'\)/.test(duiltUi));
+  /this\.el\.addEventListener\('pointerover'/.test(duiltUi) && /const TIPPED = '\.bag-slot\[data-tip\], \.cost-chip\[data-tip\]';/.test(duiltUi) && /closest\?\.\(TIPPED\)/.test(duiltUi));
 ok('and re-found after the bag and the storehouse redraw their grids',
   (duiltUi.match(/this\.refreshSlotTip\(\);/g) ?? []).length >= 2);
 ok('and hidden when a panel closes', /onPanelClosed\(id\) \{\s*this\.hideSlotTip\(\);/.test(duiltUi));

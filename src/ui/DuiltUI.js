@@ -49,6 +49,30 @@ function withArticle(name) {
  * the day instead, converted for real rather than relabelled, so "10 a day"
  * actually means ten a day.
  */
+/**
+ * One item and how many, as its icon and a number — a building's cost, a
+ * recipe's ingredients and what it makes. Asked for directly: "can we have a
+ * on click mobile and hover desktop for the recipes of buildings? Also bench
+ * should have the icons for the items". The name and what you have against
+ * it ride along as the same card the bag shows (wireSlotTip): hovered with a
+ * mouse, tapped on a phone.
+ *
+ *   have   how many you hold, or null to leave it unsaid (what a recipe makes)
+ */
+function itemChip(id, n, { have = null, short = false } = {}) {
+  const spec = ITEMS_BY_ID.get(id);
+  const icon = itemIcon(spec, { size: 22 }) ?? glyphSvg(spec?.glyph, { size: 16, color: spec?.color });
+  const name = itemName(id);
+  const bits = [];
+  if (have != null) bits.push(`You have ${have}`);
+  if (short) {
+    const from = howToGet(id, spec?.block != null ? name : null);
+    if (from) bits.push(from);
+  }
+  return `<span class="cost-chip${short ? ' short' : ''}" role="button" tabindex="0" aria-label="${escapeAttr(`${n} ${name}`)}"`
+    + ` data-tip="${escapeAttr(name)}" data-tip-info="${escapeAttr(bits.join('. '))}">${icon}<b>${n}</b></span>`;
+}
+
 function rateText(produces, everySeconds) {
   if (!produces || !Object.keys(produces).length || !everySeconds) return null;
   const daily = everySeconds > 300;
@@ -966,21 +990,34 @@ export class DuiltUI {
     this.tip = tip;
     this.tipAt = null; // { attr, index } of the hovered slot
 
+    const TIPPED = '.bag-slot[data-tip], .cost-chip[data-tip]';
     this.el.addEventListener('pointerover', (e) => {
       if (e.pointerType === 'touch') return;
-      const btn = e.target.closest?.('.bag-slot[data-tip]');
+      const btn = e.target.closest?.(TIPPED);
       if (btn) this.showSlotTip(btn);
     });
     this.el.addEventListener('pointerout', (e) => {
-      const btn = e.target.closest?.('.bag-slot[data-tip]');
+      if (e.pointerType === 'touch') return;
+      const btn = e.target.closest?.(TIPPED);
       if (btn && !btn.contains(e.relatedTarget)) this.hideSlotTip();
+    });
+    // A chip has nothing else to do when pressed, so a tap is how a phone
+    // asks what it is: tap shows the card, tap again (or anywhere) puts it away.
+    this.el.addEventListener('click', (e) => {
+      const chip = e.target.closest?.('.cost-chip[data-tip]');
+      if (!chip) { if (this.tipChip) this.hideSlotTip(); return; }
+      if (this.tipChip === chip && !this.tip.hidden) { this.hideSlotTip(); return; }
+      this.showSlotTip(chip);
+      this.tipChip = chip;
     });
     this.el.addEventListener('scroll', () => this.hideSlotTip(), true);
   }
 
   showSlotTip(btn) {
     const attr = ['data-slot', 'data-store-slot', 'data-bag-slot', 'data-wear'].find((a) => btn.hasAttribute(a));
-    this.tipAt = { attr, index: btn.getAttribute(attr) };
+    // A cost chip has no slot to find again after a re-render; it just closes.
+    this.tipAt = attr ? { attr, index: btn.getAttribute(attr) } : null;
+    this.tipChip = null;
     const info = btn.dataset.tipInfo;
     this.tip.innerHTML = `<strong>${escapeHtml(btn.dataset.tip)}</strong>${info ? `<span>${escapeHtml(info)}</span>` : ''}`;
     this.tip.hidden = false;
@@ -994,6 +1031,7 @@ export class DuiltUI {
 
   hideSlotTip() {
     this.tipAt = null;
+    this.tipChip = null;
     if (this.tip) this.tip.hidden = true;
   }
 
@@ -1277,14 +1315,10 @@ export class DuiltUI {
       // what you have against it and where more comes from (the recipe
       // list's answer, so "2 saplings" is never a dead end).
       const costLine = design
-        ? Object.entries(design.cost).map(([id, n]) => {
-          const spec = ITEMS_BY_ID.get(id);
-          const short = shortfall[id] > 0;
-          const icon = itemIcon(spec, { size: 22 }) ?? glyphSvg(spec?.glyph, { size: 16, color: spec?.color });
-          const from = short ? howToGet(id, spec?.block != null ? itemName(id) : null) : null;
-          const tip = `${itemName(id)}${short ? ` — you have ${n - shortfall[id]}${from ? `. ${from}` : ''}` : ''}`;
-          return `<span class="cost-chip${short ? ' short' : ''}" title="${escapeAttr(tip)}">${icon}<b>${n}</b></span>`;
-        }).join('')
+        ? Object.entries(design.cost).map(([id, n]) => itemChip(id, n, {
+          have: d.sandbox ? null : d.inventory.countOf(id),
+          short: shortfall[id] > 0,
+        })).join('')
         : null;
 
       // The requirement ids used to get their own "Needs: trunks · canopy ·
@@ -1368,14 +1402,19 @@ export class DuiltUI {
     }
 
     this.q('#bench-list').innerHTML = recipes.map((r) => {
-      const inputs = Object.entries(r.inputs)
-        .map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' + ');
+      const inputs = Object.entries(r.inputs).map(([id, n]) => {
+        const have = d.inventory.countOf(id);
+        return itemChip(id, n, { have, short: !d.sandbox && have < n });
+      }).join('<span class="recipe-op">+</span>');
+      const result = r.study
+        ? `<span class="recipe-result">${escapeHtml(r.result)}</span>`
+        : itemChip(r.output.id, r.output.count);
       return `
         <div class="recipe-row ${r.ok ? '' : 'blocked'}">
           <div class="recipe-text">
             <strong>${r.name}${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${r.station}</span>` : ''}</strong>
             <em>${r.blurb}</em>
-            <span class="recipe-cost">${inputs} → ${r.study ? r.result : `${r.output.count} ${itemName(r.output.id).toLowerCase()}`}</span>
+            <span class="recipe-cost">${inputs}<span class="recipe-op">→</span>${result}</span>
           </div>
           <div class="recipe-actions">
             <!--
