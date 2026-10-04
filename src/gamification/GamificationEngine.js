@@ -366,8 +366,33 @@ export class GamificationEngine {
   snapshot() {
     return {
       ...this.state,
+      ...this.settlementNow(),
       sessionBlocksPlaced: this.session.blocksPlaced,
       challengesCompleted: this.state.challengesCompletedTotal,
+    };
+  }
+
+  /**
+   * The settlement's facts as the world itself has them, merged over what the
+   * events above have counted. Those counts are never saved and only move on
+   * an event, so a world reopened in its second age — or with buildings
+   * claimed last time — read as "Age 1" with nothing claimed. Reported
+   * directly: every Age 1 goal ticked, and no Age 2 in the panel, though the
+   * world had moved on.
+   */
+  settlementNow() {
+    const d = this.duilt;
+    const st = this.state;
+    if (!d || d.sandbox) return {};
+    const standing = d.structures?.list?.().filter((s) => s.valid) ?? [];
+    const claimed = new Set(st.claimed);
+    for (const s of standing) claimed.add(s.type);
+    return {
+      age: Math.max(st.age, d.age ?? 1),
+      landSize: Math.max(st.landSize, d.territory?.size ?? 0),
+      claimed,
+      claimedCount: Math.max(st.claimedCount, standing.length),
+      settlersEver: Math.max(st.settlersEver, d.settlers?.people?.length ?? 0),
     };
   }
 
