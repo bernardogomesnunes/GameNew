@@ -170,7 +170,11 @@ export class HomeScreen {
               <button class="world-remove" data-remove="${escapeAttr(r.id)}" data-remove-name="${escapeAttr(r.name || 'this world')}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
             </div>`).join('')}
         </div>`
-      : (failed ? '' : `<p class="home-note">No worlds yet. Start one below.</p>`)}
+      : (failed ? '' : this.cloudWorlds == null && this.cb.isCloudConfigured?.()
+        // Not answered yet, and nothing remembered (the first visit on this
+        // device): "no worlds" would be a scare, not a fact.
+        ? `<p class="home-note">Loading your worlds…</p>`
+        : `<p class="home-note">No worlds yet. Start one below.</p>`)}
     `;
 
     this.body.querySelector('[data-new]')?.addEventListener('click', () => { this.step = 'kind'; this.render(); });

@@ -162,7 +162,7 @@ ok('while your changes are still the ones kept',
 ok('a list that fails says so', /this\.cloudError = err\?\.message/.test(home));
 ok('with a way to try again', /data-retry/.test(home));
 ok('and it is not mistaken for having no worlds',
-  /failed \? '' : `<p class="home-note">No worlds yet/.test(home));
+  /failed \? '' : [\s\S]{0,300}<p class="home-note">No worlds yet/.test(home));
 
 // --- the session is known before the screen draws -----------------------------
 
