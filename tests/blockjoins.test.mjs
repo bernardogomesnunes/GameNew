@@ -2,7 +2,7 @@ import { World } from '../src/world/World.js';
 import { ChunkMesher } from '../src/world/ChunkMesher.js';
 import { BLOCKS_BY_ID, WAR_TENT, WAR_TENT_BACK, isTent, pairPart, pairOther } from '../src/config/blocks.js';
 import { ITEMS_BY_ID } from '../src/config/items.js';
-import { textureFor } from '../src/config/textures.js';
+import { textureFor, blockTexture } from '../src/config/textures.js';
 import { tileFor } from '../src/render/BlockTextures.js';
 import { wallBoxes, fenceStubs, windowBoxes, boxesFor } from '../src/world/propShapes.js';
 import { STRUCTURES } from '../src/config/structures.js';
@@ -21,14 +21,16 @@ const hue = (hex) => { const r = hex >> 16 & 255, g = hex >> 8 & 255, b = hex & 
 // --- gold ------------------------------------------------------------------------
 
 {
-  for (const id of [13, 40, 159]) {
+  for (const id of [13, 159]) {
     const b = BLOCKS_BY_ID.get(id);
     const { r, g, b: bl } = hue(b.color);
     ok(`${b.name} is yellow, not wood-brown (blue well under red and green)`, bl < g * 0.7 && g > r * 0.8);
-    ok(`${b.name} shines`, (textureFor(b.texture ?? b.glyph).shine ?? 0) > 0 || (textureFor(b.texture ?? b.glyph).glints ?? 0) > 0);
+    ok(`${b.name} shines`, (blockTexture(b).shine ?? 0) > 0);
   }
-  ok('gold ore keeps the gold icon but has a rock surface of its own',
-    BLOCKS_BY_ID.get(40).glyph === 'gold' && BLOCKS_BY_ID.get(40).texture === 'gold_ore' && textureFor('gold_ore').glints > 0);
+  // Gold ore is rock with gold in it (the 32px textures): grey stone, yellow
+  // nuggets, and the nuggets glint.
+  const ore = blockTexture(BLOCKS_BY_ID.get(40));
+  ok('gold ore is stone with yellow nuggets in it, and they glint', ore.ore > 0 && ore.nugget[0] > 1 && ore.nugget[2] < 1 && ore.glints > 0);
   ok('its bag item matches its colour', ITEMS_BY_ID.get('gold_ore').color === BLOCKS_BY_ID.get(40).color
     && ITEMS_BY_ID.get('gold_trim').color === BLOCKS_BY_ID.get(159).color);
   ok('the shine mask is painted with the tile', tileFor(159)?.shine?.some((v) => v > 0.5) && tileFor(40)?.shine?.some((v) => v === 1));

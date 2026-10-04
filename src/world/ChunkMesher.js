@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { blockTextureArray, layerFor, topLayerFor } from '../render/BlockTextures.js';
+import { blockTextureArray, layerFor, topLayerFor, TILE_SIZE } from '../render/BlockTextures.js';
 import { withHeightFog } from '../render/atmosphere.js';
 import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
@@ -7,7 +7,7 @@ import {
 } from '../config/blocks.js';
 import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, windowBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
-import { textureFor } from '../config/textures.js';
+import { textureFor, TILE_SCALE } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
 
 const SOLID_SENTINEL = -1; // below the world: never draw a face against it
@@ -284,11 +284,14 @@ function withBlockTextures(mat) {
           vec4 here = textureLod(blockBumps, vec3(uvT, vLayer), 0.0);
           blockShine = here.g;
           if (here.a > 0.5) {
-            const float TEXEL = 1.0 / 16.0;
-            float hx = textureLod(blockBumps, vec3(uvT + vec2(TEXEL, 0.0), vLayer), 0.0).r
-                     - textureLod(blockBumps, vec3(uvT - vec2(TEXEL, 0.0), vLayer), 0.0).r;
-            float hy = textureLod(blockBumps, vec3(uvT + vec2(0.0, TEXEL), vLayer), 0.0).r
-                     - textureLod(blockBumps, vec3(uvT - vec2(0.0, TEXEL), vLayer), 0.0).r;
+            const float TEXEL = 1.0 / ${TILE_SIZE.toFixed(1)};
+            // Fades out once a texel is smaller than a pixel, where per-texel
+            // slopes would only sparkle.
+            float fade = clamp(2.0 - max(length(duv1), length(duv2)) * ${TILE_SIZE.toFixed(1)}, 0.0, 1.0);
+            float hx = (textureLod(blockBumps, vec3(uvT + vec2(TEXEL, 0.0), vLayer), 0.0).r
+                     - textureLod(blockBumps, vec3(uvT - vec2(TEXEL, 0.0), vLayer), 0.0).r) * fade;
+            float hy = (textureLod(blockBumps, vec3(uvT + vec2(0.0, TEXEL), vLayer), 0.0).r
+                     - textureLod(blockBumps, vec3(uvT - vec2(0.0, TEXEL), vLayer), 0.0).r) * fade;
             vec3 N = normal;
             vec3 dp2perp = cross(dp2, N), dp1perp = cross(N, dp1);
             vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
@@ -300,11 +303,13 @@ function withBlockTextures(mat) {
       }
     `).replace('#include <color_fragment>', `
       #include <color_fragment>
+      // The mip from the quad's own gradients: fract's jump would blur each seam.
+      vec2 tileDx = dFdx(vTileUv), tileDy = dFdy(vTileUv);
       if (vLayer > -0.5) {
-        vec4 tile = texture(blockTiles, vec3(fract(vTileUv), vLayer));
+        vec4 tile = textureGrad(blockTiles, vec3(fract(vTileUv), vLayer), tileDx, tileDy);
         // A leaf's holes: nothing drawn there, so you see through.
         if (tile.a < 0.5) discard;
-        diffuseColor.rgb *= tile.rgb;
+        diffuseColor.rgb *= tile.rgb * ${TILE_SCALE.toFixed(1)};
       }
     `).replace('#include <opaque_fragment>', `
       // Metal (gold): a highlight off each light — strongest where the
