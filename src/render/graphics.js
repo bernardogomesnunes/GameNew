@@ -24,6 +24,10 @@ export const DEFAULTS = {
   distance: 'auto',       // 'auto' | 'near' | 'far'
   smoothing: true,        // the adaptive controller; off pins the resolution
   lights: true,           // real point lights from lanterns; off on the weakest devices
+  // Shadow where blocks meet (ChunkMesher's AO_LIGHT). Baked into the
+  // vertices, so it costs nothing to draw, but it splits big flat quads where
+  // they meet a wall: a few more vertices, and a little longer to build a chunk.
+  ao: true,
 };
 
 export const DISTANCES = {

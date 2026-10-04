@@ -334,6 +334,7 @@ export class Game {
     this.scene.add(hemi);
 
     this.mesher = new ChunkMesher(this.scene);
+    this.mesher.ao = this.graphics.ao !== false;
     this.farTerrain = new FarTerrain(this.scene);
     this.clouds = new SkyClouds(this.scene);
     // Those three lights, the sky and the clouds all follow the time of day.
@@ -4934,6 +4935,12 @@ export class Game {
     // Far enough to contain the coarse ground, not just the blocks.
     this.camera.far = this.horizon + 200;
     this.onResize();
+    // Shadow where blocks meet is baked into the meshes, so it needs them rebuilt.
+    const ao = this.graphics.ao !== false;
+    if (ao !== this.mesher.ao) {
+      this.mesher.ao = ao;
+      if (this.world) this.rebuildAllChunks();
+    }
     return { needsReload };
   }
 

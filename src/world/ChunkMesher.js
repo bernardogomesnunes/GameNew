@@ -107,6 +107,58 @@ const DEEP = 0x100;
 const EXPOSED = 0x200;
 const PAD_STRIDE = [1, PAD * PAD, PAD];
 
+/*
+ * Shadow where blocks meet (ambient occlusion). Reported directly: the game
+ * "looks dull and old", and nothing darkened where blocks meet — no shadow in
+ * a corner, under the eaves, where a wall stands on the ground — so every
+ * wall read as a flat painted card. The classic voxel answer, baked into the
+ * vertex colours so it costs nothing to draw: each corner of a face looks at
+ * the three cells round it on the open side (the two beside it and the one
+ * diagonally between them) and darkens by how many are filled. Two sides
+ * filled is a full inner corner however the diagonal stands.
+ *
+ * Stored as how *occluded* a corner is, 0 (open) .. 3 (an inner corner), two
+ * bits a corner, so a face with nothing round it carries zeros and merges
+ * exactly as before. Greedy meshing only merges faces whose four corners
+ * match, so a field stays one quad and only the strip along a wall splits.
+ */
+const AO_SHIFT = 10;
+/** Brightness at a corner by how occluded it is: open, one, two, an inner corner. */
+export const AO_LIGHT = [1, 0.8, 0.66, 0.54];
+/**
+ * What casts that shadow: solid opaque cubes, and the shaped blocks that fill
+ * most of their cell — stairs, roof tiles (so a wall darkens under its
+ * eaves), slabs, pillars and walls. Furniture, fences and lanterns don't; a
+ * shadow pooled round a chair leg reads as dirt. Indexed by id + 1, so the
+ * below-the-world sentinel (-1) reads as nothing.
+ */
+const OCCLUDES = new Uint8Array(257);
+for (let id = 1; id < 256; id++) {
+  const shape = shapeOf(id);
+  OCCLUDES[id + 1] = !OPEN[id] || SLOPED[id] || shape === 'slab' || shape === 'pillar' || shape === 'wall' ? 1 : 0;
+}
+
+/**
+ * How occluded one corner is, from its two side cells and the diagonal
+ * between them (each 0 or 1): 0 open .. 3 an inner corner.
+ */
+export function cornerOcclusion(side1, side2, corner) {
+  return side1 && side2 ? 3 : side1 + side2 + corner;
+}
+
+/**
+ * Whether a quad should be split along its other diagonal. A quad is two
+ * triangles, and the colour is blended across each one, so the diagonal it is
+ * cut along decides which way a dark corner bleeds. Cut through the dark
+ * corner, its shadow runs as a streak to the middle; cut across it, the
+ * shadow stays a soft wedge in its own corner. So the cut joins whichever
+ * pair of opposite corners is *less* occluded. Corners in u/v order: c00, c10,
+ * c11, c01; the default cut runs c00 to c11.
+ */
+export function aoFlip(c00, c10, c11, c01) {
+  return c10 + c01 < c00 + c11;
+}
+
 const materialCache = new Map();
 const colorCache = new Map();
 
@@ -402,6 +454,9 @@ export class ChunkMesher {
     this.tone = [0, 0, 0]; // leafTone's answer, reused rather than allocated per face
     this.activeMeshes = new Set();
     this.origin = [0, 0, 0];
+    /** Shadow where blocks meet — the graphics setting; see AO_LIGHT. */
+    this.ao = true;
+    this.aoTone = new Float32Array(4);
   }
 
   /**
@@ -477,6 +532,8 @@ export class ChunkMesher {
       const v = (d + 2) % 3;
       const du = dims[u], dv = dims[v];
       const mask = this.maskFor(du * dv);
+      const Su = S[u], Sv = S[v];
+      const ao = this.ao;
 
       for (const sign of [1, -1]) {
         const step = sign * S[d];
@@ -505,7 +562,26 @@ export class ChunkMesher {
               // own, with its own tone (see leafTone); one facing another
               // leaf, seen only through the gaps, still merges.
               if (face && LEAFY[self] && other === AIR) face |= EXPOSED;
-              mask[n] = face && !sky[idx + step] ? face | DEEP : face;
+              if (!face) { mask[n] = 0; continue; }
+              const f = idx + step;
+              if (!sky[f]) face |= DEEP;
+              // Sealed caves go without: they are most of a chunk's faces,
+              // seen only from inside them, and splitting them for shadow
+              // would cost more than everything on the surface. So do faces
+              // seen only through something — leaves, glass, water — which
+              // are in their shade already and should go on merging.
+              else if (ao && (other === AIR || !IS_CUBE[other]) && !IS_TRANSPARENT[self]) {
+                const a = OCCLUDES[vol[f - Su] + 1], b = OCCLUDES[vol[f + Su] + 1];
+                const c = OCCLUDES[vol[f - Sv] + 1], e = OCCLUDES[vol[f + Sv] + 1];
+                if (a | b | c | e | OCCLUDES[vol[f - Su - Sv] + 1] | OCCLUDES[vol[f + Su - Sv] + 1]
+                  | OCCLUDES[vol[f + Su + Sv] + 1] | OCCLUDES[vol[f - Su + Sv] + 1]) {
+                  face |= (cornerOcclusion(a, c, OCCLUDES[vol[f - Su - Sv] + 1])
+                    | cornerOcclusion(b, c, OCCLUDES[vol[f + Su - Sv] + 1]) << 2
+                    | cornerOcclusion(b, e, OCCLUDES[vol[f + Su + Sv] + 1]) << 4
+                    | cornerOcclusion(a, e, OCCLUDES[vol[f - Su + Sv] + 1]) << 6) << AO_SHIFT;
+                }
+              }
+              mask[n] = face;
             }
           }
 
@@ -528,7 +604,7 @@ export class ChunkMesher {
                 h++;
               }
 
-              this.emitQuad(id & DEEP ? deepByType : byType, id & 0xff, d, u, v, sign, slice, i, j, w, h, id & EXPOSED);
+              this.emitQuad(id & DEEP ? deepByType : byType, id & 0xff, d, u, v, sign, slice, i, j, w, h, id & EXPOSED, (id >> AO_SHIFT) & 0xff);
 
               for (let l = 0; l < h; l++) {
                 for (let k = 0; k < w; k++) mask[n + k + l * du] = 0;
@@ -949,7 +1025,7 @@ export class ChunkMesher {
     return t;
   }
 
-  emitQuad(byType, id, d, u, v, sign, slice, i, j, w, h, exposed = 0) {
+  emitQuad(byType, id, d, u, v, sign, slice, i, j, w, h, exposed = 0, occl = 0) {
     const key = bufferKeyFor(id);
     let buf = byType.get(key);
     if (!buf) {
@@ -1014,6 +1090,21 @@ export class ChunkMesher {
       N[p + k] = nx; N[p + k + 1] = ny; N[p + k + 2] = nz;
       C[p + k] = r; C[p + k + 1] = g; C[p + k + 2] = b;
     }
+    let flip = false;
+    if (occl) {
+      // The corners in u/v order, then into vertex order, which runs
+      // c00 c10 c11 c01 for a positive face and c00 c01 c11 c10 for a
+      // negative one (see the winding note above).
+      const c00 = occl & 3, c10 = (occl >> 2) & 3, c11 = (occl >> 4) & 3, c01 = (occl >> 6) & 3;
+      const tone = this.aoTone;
+      tone[0] = AO_LIGHT[c00]; tone[2] = AO_LIGHT[c11];
+      if (sign > 0) { tone[1] = AO_LIGHT[c10]; tone[3] = AO_LIGHT[c01]; } else { tone[1] = AO_LIGHT[c01]; tone[3] = AO_LIGHT[c10]; }
+      for (let k = 0; k < 4; k++) {
+        const at = p + k * 3, m = tone[k];
+        C[at] *= m; C[at + 1] *= m; C[at + 2] *= m;
+      }
+      flip = aoFlip(c00, c10, c11, c01);
+    }
     const layer = (d === 1 ? topLayerTable() : layerTable())[id];
     const L = buf.layer, l = q * 4;
     L[l] = layer; L[l + 1] = layer; L[l + 2] = layer; L[l + 3] = layer;
@@ -1035,6 +1126,23 @@ export class ChunkMesher {
     } else {
       put(0, 0, 0); put(2, 0, h); put(4, w, h); put(6, w, 0);
     }
+    // Every quad shares one index pattern, cut from vertex 0 to vertex 2; to
+    // cut it the other way, start the quad one vertex round instead. Same
+    // corners, same winding, the other diagonal.
+    if (flip) {
+      rotateOne(P, p, 3); rotateOne(C, p, 3); rotateOne(U, t, 2);
+    }
     buf.quads = q + 1;
+  }
+}
+
+/** Moves a quad's four vertices one place round: 1 2 3 0. */
+function rotateOne(arr, at, per) {
+  for (let c = 0; c < per; c++) {
+    const first = arr[at + c];
+    arr[at + c] = arr[at + per + c];
+    arr[at + per + c] = arr[at + 2 * per + c];
+    arr[at + 2 * per + c] = arr[at + 3 * per + c];
+    arr[at + 3 * per + c] = first;
   }
 }
