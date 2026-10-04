@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { SETTLERS } from '../config/settlers.js';
 import { SKINS, HAIRS } from '../config/avatar.js';
+import { outfitOf } from '../config/outfits.js';
 
 /**
  * The settlers, drawn.
@@ -16,6 +17,17 @@ import { SKINS, HAIRS } from '../config/avatar.js';
  */
 
 const MAX = 64;
+/**
+ * The small parts of a person (docs/plan-look-and-sound.md, section 5: "faces:
+ * eyes and a mouth ... hands ... outfits that say who they are ... a weapon or
+ * tool in hand"), all one instanced mesh, this many slots a person. A part
+ * someone hasn't got is scaled to nothing.
+ */
+const SLOTS = 15;
+const EYE_L = 0, EYE_R = 1, MOUTH = 2, HAND_L = 3, HAND_R = 4, BOOT_L = 5, BOOT_R = 6, BELT = 7,
+  HAT = 8, HAT_EXTRA = 9, PLUME = 10, CAPE = 11, BEARD = 12, GEAR = 13, GEAR_2 = 14;
+const EYE = 0x231c22, BOOT = 0x3a2a20, BELT_LEATHER = 0x2e2620, STEEL = 0xc9ced6, WOOD = 0x6b4a2e, GOLD = 0xe8c04f;
+const NOTHING = new THREE.Matrix4().makeScale(0, 0, 0);
 const HURT_RED = new THREE.Color(0xd23a2a);   // beds run out long before this; the cap is just for the buffer
 const WINDUP_GLOW = new THREE.Color(0xfff6d8);
 const FROST = new THREE.Color(0x9fe6ff), EMBER = new THREE.Color(0xff7a3a), SPARK = new THREE.Color(0xffe066);
@@ -61,7 +73,8 @@ export class SettlerView {
     const shadowGeo = new THREE.CircleGeometry(width * 0.62, 14).rotateX(-Math.PI / 2);
     this.shadows = new THREE.InstancedMesh(shadowGeo, new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }), MAX);
     this.shadows.renderOrder = 1;
-    this.meshes = [this.bodies, this.heads, this.hair, this.limbs, this.shadows];
+    this.parts = new THREE.InstancedMesh(box(1, 1, 1), mat(), MAX * SLOTS);
+    this.meshes = [this.bodies, this.heads, this.hair, this.limbs, this.shadows, this.parts];
     for (const m of this.meshes) {
       m.frustumCulled = false;
       m.castShadow = false;
@@ -79,12 +92,13 @@ export class SettlerView {
     this._pos = new THREE.Vector3();
     this._scale = new THREE.Vector3(1, 1, 1);
     this._colour = new THREE.Color();
+    this._size = new THREE.Vector3();
   }
 
   /** Redraws every settler where they now are. Called each frame. */
   update(people) {
     const n = Math.min(people.length, MAX);
-    for (const m of this.meshes) m.count = m === this.limbs ? n * 4 : n;
+    for (const m of this.meshes) m.count = m === this.limbs ? n * 4 : m === this.parts ? n * SLOTS : n;
     if (!n) return;
     const { legH, bodyH, headH, width } = this;
 
@@ -147,14 +161,118 @@ export class SettlerView {
       if (p.hurt > 0) this._colour.lerp(HURT_RED, 0.5);
       this.heads.setColorAt(i, this._colour);
       // A soldier's helm (or an archer's hood) where hair would be.
-      this._colour.setHex(p.helm ?? HAIRS[(who >> 3) % HAIRS.length]);
+      const hairHex = HAIRS[(who >> 3) % HAIRS.length];
+      this._colour.setHex(p.helm ?? hairHex);
       this.hair.setColorAt(i, this._colour);
+
+      this.dressUp(i, p, who, hairHex, { limbArm: [-width * 0.64, width * 0.64], limbLeg: [-width * 0.24, width * 0.24], swing, raised });
     }
 
     for (const m of this.meshes) {
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
     }
+  }
+
+  /**
+   * The small parts: a face, hands and boots, a belt, and what they wear and
+   * carry for who they are (config/outfits.js). Everything is placed in the
+   * person's own frame — +z is the way they face — and the hands, boots and
+   * what's in the hand follow the swing of the limb they're on.
+   */
+  dressUp(i, p, who, hairHex, { limbArm, limbLeg, swing, raised }) {
+    const { legH, bodyH, headH, width } = this;
+    const o = outfitOf(p) ?? {};
+    const parts = this.parts, base = this._m, at = i * SLOTS;
+    const headW = width * 0.72, hc = legH + bodyH + headH / 2, front = headW / 2;
+    const skin = SKINS[who % SKINS.length];
+    const put = (slot, x, y, z, sx, sy, sz, hex) => {
+      this._pos.set(x, y, z).applyQuaternion(this._q);
+      base.compose(this._pos.set(p.x + this._pos.x, p.y + this._pos.y, p.z + this._pos.z), this._q, this._size.set(sx, sy, sz));
+      parts.setMatrixAt(at + slot, base);
+      parts.setColorAt(at + slot, this._colour.setHex(hex));
+    };
+    // On a limb: from its joint, swung, then down it by dy and out by dz.
+    const onLimb = (slot, x, top, angle, dy, dz, sx, sy, sz, hex) => {
+      this._pos.set(x, top, 0).applyQuaternion(this._q);
+      base.compose(this._pos.set(p.x + this._pos.x, p.y + this._pos.y, p.z + this._pos.z), this._q, this._scale);
+      base.multiply(this._t.makeRotationX(angle));
+      base.multiply(this._t.makeTranslation(0, dy, dz));
+      base.multiply(this._t.makeScale(sx, sy, sz));
+      parts.setMatrixAt(at + slot, base);
+      parts.setColorAt(at + slot, this._colour.setHex(hex));
+    };
+    const none = (slot) => parts.setMatrixAt(at + slot, NOTHING);
+
+    // The face: two eyes and a mouth on the front of the head.
+    const eyeY = hc + headH * 0.04;
+    put(EYE_L, -headW * 0.2, eyeY, front + 0.006, 0.07, 0.075, 0.02, EYE);
+    put(EYE_R, headW * 0.2, eyeY, front + 0.006, 0.07, 0.075, 0.02, EYE);
+    this._colour.setHex(skin).offsetHSL(0, 0.05, -0.22);
+    put(MOUTH, 0, hc - headH * 0.24, front + 0.006, 0.13, 0.03, 0.02, this._colour.getHex());
+
+    // Hands at the ends of the arms, boots at the ends of the legs.
+    const armTop = legH + bodyH * 0.95, armLen = bodyH * 0.95, aw = width * 0.26, lw = width * 0.36;
+    const armL = raised ?? -swing * 0.8, armR = raised ?? swing * 0.8;
+    onLimb(HAND_L, limbArm[0], armTop, armL, -armLen - 0.03, 0, aw * 1.15, 0.1, aw * 1.15, skin);
+    onLimb(HAND_R, limbArm[1], armTop, armR, -armLen - 0.03, 0, aw * 1.15, 0.1, aw * 1.15, skin);
+    onLimb(BOOT_L, limbLeg[0], legH, swing, -legH + 0.06, 0.03, lw * 1.12, 0.12, lw * 1.4, BOOT);
+    onLimb(BOOT_R, limbLeg[1], legH, -swing, -legH + 0.06, 0.03, lw * 1.12, 0.12, lw * 1.4, BOOT);
+    put(BELT, 0, legH + bodyH * 0.12, 0, width * 1.04, 0.06, width * 0.66, o.hat === 'crown' ? GOLD : BELT_LEATHER);
+
+    // What's on their head: a hat hides the hair under it.
+    const hatHex = o.hatColour ?? p.helm ?? 0x6d6a73;
+    const top = hc + headH / 2;
+    if (o.hat) this.hair.setMatrixAt(i, NOTHING);
+    if (o.hat === 'crown') {
+      // A band, and its points standing up from it (two crossed bars, so
+      // they show from every side).
+      put(HAT, 0, top + headH * 0.08, 0, headW * 1.08, headH * 0.24, headW * 1.08, o.hatColour ?? GOLD);
+      put(HAT_EXTRA, 0, top + headH * 0.3, 0, headW * 1.08, headH * 0.22, headW * 0.22, o.hatColour ?? GOLD);
+      put(PLUME, 0, top + headH * 0.3, 0, headW * 0.22, headH * 0.22, headW * 1.08, o.hatColour ?? GOLD);
+    } else if (o.hat === 'helm') {
+      // Down over the eyes behind a visor, or up above them.
+      const low = o.visor ? hc - headH * 0.22 : hc + headH * 0.14, high = top + headH * 0.1;
+      put(HAT, 0, (low + high) / 2, 0, headW * 1.12, high - low, headW * 1.12, hatHex);
+      if (o.visor) put(HAT_EXTRA, 0, eyeY, headW * 0.56 + 0.008, headW * 0.82, 0.05, 0.02, EYE);
+      else put(HAT_EXTRA, 0, low + 0.02, headW * 0.5, headW * 0.9, 0.04, headW * 0.14, hatHex);
+    } else if (o.hat === 'hood') {
+      // Over the head and behind it, the face showing in front.
+      put(HAT, 0, hc + headH * 0.1, -headW * 0.1, headW * 1.26, headH * 1.2, headW * 1.06, hatHex);
+      put(HAT_EXTRA, 0, legH + bodyH * 0.9, -width * 0.05, width * 1.1, bodyH * 0.22, width * 0.72, hatHex);
+    } else if (o.hat === 'cap') {
+      put(HAT, 0, top + headH * 0.02, 0, headW * 1.06, headH * 0.24, headW * 1.06, hatHex);
+      put(HAT_EXTRA, 0, top - headH * 0.06, front + headW * 0.12, headW * 0.9, 0.03, headW * 0.3, hatHex);
+    } else { none(HAT); none(HAT_EXTRA); }
+    if (o.plume) put(PLUME, 0, top + headH * 0.42, -headW * 0.05, 0.07, headH * 0.6, headW * 0.7, o.plume);
+    else if (o.hat !== 'crown') none(PLUME);
+
+    // A cape down the back.
+    if (o.cape) {
+      const capeH = bodyH + legH * 0.75;
+      put(CAPE, 0, legH + bodyH - capeH / 2, -width * 0.34 - 0.025, width * 0.96, capeH, 0.04, o.cape);
+    } else none(CAPE);
+
+    // A beard: theirs always, or one man in four among everybody else.
+    const beard = o.beard ?? (!o.hat && ((who >> 5) % 4 === 0) ? hairHex : null);
+    if (beard != null) put(BEARD, 0, hc - headH * 0.32, front + 0.015, headW * 0.82, headH * 0.4, 0.06, beard);
+    else none(BEARD);
+
+    // What's in the right hand, swinging with the arm.
+    const hand = -armLen - 0.03;
+    if (o.gear === 'sword') {
+      onLimb(GEAR, limbArm[1], armTop, armR, hand, 0.34, 0.045, 0.09, 0.62, o.gearColour ?? STEEL);
+      onLimb(GEAR_2, limbArm[1], armTop, armR, hand, 0.04, 0.2, 0.05, 0.05, o.gearColour ?? GOLD);
+    } else if (o.gear === 'spear') {
+      onLimb(GEAR, limbArm[1], armTop, armR, hand + 0.45, 0, 0.045, 1.7, 0.045, WOOD);
+      onLimb(GEAR_2, limbArm[1], armTop, armR, hand + 1.36, 0, 0.09, 0.2, 0.09, o.gearColour ?? STEEL);
+    } else if (o.gear === 'staff') {
+      onLimb(GEAR, limbArm[1], armTop, armR, hand + 0.4, 0, 0.06, 1.55, 0.06, WOOD);
+      onLimb(GEAR_2, limbArm[1], armTop, armR, hand + 1.2, 0, 0.11, 0.11, 0.11, 0x8a6a48);
+    } else if (o.gear === 'bow') {
+      onLimb(GEAR, limbArm[1], armTop, armR, hand, 0.06, 0.05, 0.95, 0.06, 0x7a5232);
+      onLimb(GEAR_2, limbArm[1], armTop, armR, hand, -0.05, 0.012, 0.88, 0.012, 0xe8e2d0);
+    } else { none(GEAR); none(GEAR_2); }
   }
 
   /** A person's coat colour this frame: their own, flashing when struck. */

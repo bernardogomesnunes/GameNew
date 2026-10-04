@@ -12,8 +12,9 @@ import { MOBS_BY_ID } from '../config/mobs.js';
 
 const MAX = 48;
 /** The most details any one animal has. */
-const DETAIL_CAP = 9;
-const EYE = 0x1e1a1c, HORN = 0xd8cdb4, PINK = 0xe79a96;
+const DETAIL_CAP = 22;
+const EYE = 0x1e1a1c, EYE_WHITE = 0xf4f1ea, HORN = 0xd8cdb4, PINK = 0xe79a96;
+const WOOL = 0xf7f4ee, WOOL_SHADE = 0xe6e0d2, PATCH = 0xf2ece4;
 
 /**
  * What each animal has besides a body, a head and legs: [x, y, z, sx, sy,
@@ -26,10 +27,21 @@ const FEATURES = {
   rabbit: (s) => [[-0.18, 0.6, -0.05, 0.14, 0.8, 0.1, s.headColour, -0.2, true], [0.18, 0.6, -0.05, 0.14, 0.8, 0.1, s.headColour, -0.2, true], tail(s, 0.3, 0.3, 0xffffff), snout(s, 0.4, 0.3, PINK)],
   boar: (s) => [ears(s, 0.25, 0.25), snout(s, 0.55, 0.45, 0x4a3a30), tusk(s, -1), tusk(s, 1), tail(s, 0.08, 0.35, s.colour)],
   goat: (s) => [horn(s, -1), horn(s, 1), [0, -0.55, 0.35, 0.18, 0.35, 0.12, 0xcfc8ba, 0, true], ears(s, 0.3, 0.2), tail(s, 0.1, 0.18, s.colour)],
-  sheep: (s) => [[-0.55, 0.15, 0, 0.3, 0.14, 0.18, s.headColour, 0, true], [0.55, 0.15, 0, 0.3, 0.14, 0.18, s.headColour, 0, true], tail(s, 0.14, 0.2, s.colour)],
-  cow: (s) => [horn(s, -1, 0.5), horn(s, 1, 0.5), ears(s, 0.25, 0.2), snout(s, 0.6, 0.4, PINK), tail(s, 0.06, 0.7, s.colour), [0, -0.25, -0.5, 0.12, 0.18, 0.12, 0x3a2a20, 0, false]],
-  pig: (s) => [ears(s, 0.3, 0.22), snout(s, 0.5, 0.4, 0xd88a84), tail(s, 0.1, 0.16, s.colour)],
-  chicken: (s) => [[0, -0.05, 0.6, 0.3, 0.2, 0.35, 0xe0a64a, 0, true], [0, 0.6, 0.05, 0.12, 0.3, 0.45, 0xd23a2a, 0, true], [0, -0.35, 0.45, 0.12, 0.25, 0.12, 0xd23a2a, 0, true], [0, 0.35, -0.55, 0.6, 0.7, 0.35, s.colour, -0.5, false]],
+  // Lumpy wool, in two whites, over a dark face (the look revamp, section 5).
+  sheep: (s) => [[-0.55, 0.15, 0, 0.3, 0.14, 0.18, s.headColour, 0, true], [0.55, 0.15, 0, 0.3, 0.14, 0.18, s.headColour, 0, true], tail(s, 0.14, 0.2, s.colour),
+    [-0.3, 0.42, 0.22, 0.42, 0.32, 0.36, WOOL, 0, false], [0.3, 0.42, -0.2, 0.42, 0.32, 0.36, WOOL_SHADE, 0, false],
+    [0.3, 0.38, 0.26, 0.36, 0.28, 0.3, WOOL_SHADE, 0, false], [-0.3, 0.38, -0.26, 0.36, 0.28, 0.3, WOOL, 0, false],
+    [0, 0.5, 0, 0.5, 0.26, 0.42, WOOL, 0, false], [0, 0.32, 0.46, 0.6, 0.4, 0.14, WOOL_SHADE, 0, false]],
+  // Patches on its sides and back, and an udder.
+  cow: (s) => [horn(s, -1, 0.5), horn(s, 1, 0.5), ears(s, 0.25, 0.2), snout(s, 0.6, 0.4, PINK), tail(s, 0.06, 0.7, s.colour), [0, -0.25, -0.5, 0.12, 0.18, 0.12, 0x3a2a20, 0, false],
+    [0.505, 0.08, 0.18, 0.03, 0.5, 0.32, PATCH, 0, false], [-0.505, -0.05, -0.22, 0.03, 0.44, 0.28, PATCH, 0, false],
+    [0.12, 0.505, -0.12, 0.4, 0.03, 0.3, PATCH, 0, false], [0, -0.56, -0.24, 0.32, 0.14, 0.2, PINK, 0, false]],
+  // A snout with nostrils.
+  pig: (s) => [ears(s, 0.3, 0.22), snout(s, 0.5, 0.4, 0xd88a84), tail(s, 0.1, 0.16, s.colour),
+    [-0.1, -0.15, 0.685, 0.08, 0.1, 0.03, 0x8a4a48, 0, true], [0.1, -0.15, 0.685, 0.08, 0.1, 0.03, 0x8a4a48, 0, true]],
+  // Comb and wattle, a beak, a tail, and wings.
+  chicken: (s) => [[0, -0.05, 0.6, 0.3, 0.2, 0.35, 0xe0a64a, 0, true], [0, 0.6, 0.05, 0.12, 0.3, 0.45, 0xd23a2a, 0, true], [0, -0.35, 0.45, 0.12, 0.25, 0.12, 0xd23a2a, 0, true], [0, 0.35, -0.55, 0.6, 0.7, 0.35, s.colour, -0.5, false],
+    [-0.53, 0.05, -0.05, 0.1, 0.62, 0.72, 0xe8e2d6, 0, false], [0.53, 0.05, -0.05, 0.1, 0.62, 0.72, 0xe8e2d6, 0, false]],
 };
 const ears = (s, size, up) => [[-0.42, up, -0.1, size, size, 0.1, s.headColour], [0.42, up, -0.1, size, size, 0.1, s.headColour]].map((e) => [...e, 0, true]);
 const antler = (s, side) => [side * 0.28, 0.85, -0.1, 0.08, 0.9, 0.08, 0x8a6a4a, -0.35, true];
@@ -43,8 +55,16 @@ function featuresOf(spec, m) {
   const list = (FEATURES[spec.id] ?? (() => []))(spec);
   const hd = spec.head, { w, h, l } = spec.body;
   const out = [];
-  // Eyes, on every one: either side of the head, towards the front.
-  for (const side of [-1, 1]) out.push([side * hd * 0.51, hd * 0.12, hd * 0.22, hd * 0.06, hd * 0.12, hd * 0.12, EYE, 0, true]);
+  // Rounder (the look revamp, section 5): a second box on the body and on the
+  // head, narrower and taller, takes the corners off the silhouette.
+  out.push([0, 0, 0, w * 0.86, h * 1.12, l * 0.9, spec.colour, 0, false]);
+  out.push([0, 0, 0, hd * 0.84, hd * 1.1, hd * 0.86, spec.headColour, 0, true]);
+  // Eyes, on every one: either side of the head, towards the front — a dark
+  // pupil on a white.
+  for (const side of [-1, 1]) {
+    out.push([side * hd * 0.5, hd * 0.12, hd * 0.2, hd * 0.06, hd * 0.18, hd * 0.2, EYE_WHITE, 0, true]);
+    out.push([side * hd * 0.52, hd * 0.11, hd * 0.24, hd * 0.06, hd * 0.12, hd * 0.11, EYE, 0, true]);
+  }
   for (const [x, y, z, sx, sy, sz, colour, tilt, onHead] of list) {
     out.push(onHead
       ? [x * hd, y * hd, z * hd, sx * hd, sy * hd, sz * hd, colour, tilt, true]
