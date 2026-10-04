@@ -374,6 +374,13 @@ export function toolEffectiveness(toolId, material) {
   return ITEMS_BY_ID.get(toolId)?.effectiveness?.[material] ?? 'normal';
 }
 
+/**
+ * What an empty hotbar slot holds: nothing. Selecting one (backlog batch 2:
+ * "an empty slot should be bare hands") puts this in `selectedItemId`, which
+ * no table knows — so it digs at bare-hand pace and Place builds nothing.
+ */
+export const BARE_HANDS = 'hands';
+
 /** How much hunger one unit of this item restores, or 0 if it isn't food. */
 export function feedValue(id) {
   return ITEMS_BY_ID.get(id)?.feeds ?? 0;

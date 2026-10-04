@@ -65,8 +65,8 @@ const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf
 
 ok('the Duilt hotbar reads PLAYABLE_SLOTS real slots off the inventory',
   /const playable = inv\.slots\.slice\(0, PLAYABLE_SLOTS\);/.test(ui));
-ok('an empty playable slot still draws — a gap to fill, not skipped over',
-  /if \(!s\) \{\s*hotbar\.appendChild\(el\(`\s*<div class="hotbar-slot empty" data-slot="\$\{i\}">/.test(ui));
+ok('an empty playable slot still draws — a gap to fill, not skipped over (and bare hands when picked)',
+  /if \(!s\) \{[\s\S]{0,300}hotbar\.appendChild\(el\(`\s*<div class="hotbar-slot empty \$\{selected \? 'selected' : ''\}" data-slot="\$\{i\}" data-hands="1"/.test(ui));
 ok('whatever is actually sitting in a slot decides block-select vs item-select, not a fixed list',
   /const isBlock = spec\?\.block != null;/.test(ui));
 ok('clicking an empty slot does nothing — there is nothing to select there',

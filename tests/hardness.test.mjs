@@ -59,7 +59,7 @@ ok('an unrecognised material is always normal, whatever is selected',
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 
 ok('breakDelayFor reads the tool actually selected against what the block is made of',
-  /breakDelayFor\(blockId\) \{[\s\S]{0,200}toolEffectiveness\(this\.selectedItemId, materialOf\(blockId\)\)/.test(game));
+  /breakDelayFor\(blockId\) \{\s*const material = materialOf\(blockId\);[\s\S]{0,250}toolEffectiveness\(this\.selectedItemId, material\)/.test(game));
 ok('an impossible pairing never costs time — it just refuses', /if \(tier === 'impossible'\) return \{ ms: 0, blocked: true, tier \};/.test(game));
 ok('this only applies in Duilt — Creative keeps breaking instantly', /breakBlock\(\) \{[\s\S]{0,300}if \(this\.duilt\) \{/.test(game));
 ok('digging progress is tracked by the block, not the click, so taps and holds both count',

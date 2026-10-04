@@ -45,7 +45,7 @@ ok('leaving the playing phase stops a held place, the same as a held break',
 // --- touch: the Place button holds, like the Break button already does --
 
 ok('Game wires a hold callback for Place, like it already does for Break',
-  /onBreakHold: \(held\) => this\.setBreaking\(held\),\s*onPlaceTap: \(\) => this\.secondaryAction\(\),\s*onPlaceHold: \(held\) => this\.setPlacing\(held\),/.test(game));
+  /onBreakHold: \(held, opts\) => this\.setBreaking\(held, opts\),\s*onPlaceTap: \(\) => this\.secondaryAction\(\),\s*onPlaceHold: \(held\) => this\.setPlacing\(held\),/.test(game));
 ok('the Place button listens for touchstart/touchend/touchcancel like Break does',
   /const btn = this\.q\('#t-place'\);[\s\S]{0,400}touchstart[\s\S]{0,150}touchend[\s\S]{0,150}touchcancel/.test(ui));
 ok('a touch on Place fires the hold callback the same way Break does',

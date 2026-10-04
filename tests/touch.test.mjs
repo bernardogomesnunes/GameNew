@@ -40,7 +40,7 @@ ok('no look stick: dragging the picture aims the camera', /this\.bindLookSurface
 // the number is and why.
 ok('a tap on the picture is Break; holding still keeps breaking; a drag never taps',
   /else if \(!moved && e\.type === 'touchend'\) tap\(\);/.test(ui)
-  && /this\.cb\.onBreakTap\(\);\s*if \(!this\.cb\.isDigging\?\.\(\)\) return;\s*this\.cb\.onBreakHold\?\.\(true\);\s*finishing = setTimeout\(stopFinishing, TAP_FINISH_MS\);/.test(ui)
+  && /this\.cb\.onBreakTap\(\);\s*if \(!this\.cb\.isDigging\?\.\(\)\) return;\s*this\.cb\.onBreakHold\?\.\(true, \{ once: true \}\);\s*finishing = setTimeout\(stopFinishing, TAP_FINISH_MS\);/.test(ui)
   && /holding = true;\s*this\.cb\.onBreakTap\(\);\s*this\.cb\.onBreakHold\?\.\(true\);/.test(ui)
   && /if \(moved\) this\.cb\.onLookDrag\?\.\(/.test(ui));
 

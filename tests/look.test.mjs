@@ -123,7 +123,7 @@ ok('each channel takes the skew differently',
   ok('every recipe names something to draw', Object.values(TEXTURES).every((r) =>
     r.marks || r.lines || r.blobs || r.veins || r.cracks || r.band || r.speck || r.setts));
   ok('the glyphs they key off are real',
-    names.every((n) => BLOCKS.some((b) => b.glyph === n) || ITEMS.some((i) => i.glyph === n)));
+    names.every((n) => BLOCKS.some((b) => (b.texture ?? b.glyph) === n) || ITEMS.some((i) => i.glyph === n)));
   ok('a material with no recipe is simply flat', textureFor('nonesuch') === null);
   ok('tiles start near white, so they only ever shade', TILE_BASE > 0.9 && TILE_BASE <= 1);
 }
