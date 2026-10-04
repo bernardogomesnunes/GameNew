@@ -1,4 +1,5 @@
 import { ARMOUR_PIECES } from './armour.js';
+import { tieredRecipes } from './tiers.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
 /**
@@ -680,6 +681,9 @@ RECIPES.push(
     blurb: 'Obsidian and Nightstone. A dark spark hurts whoever strikes you. Forge it, and the White Ring is closed to you.',
   },
 );
+
+// Tools past stone (backlog batch 2), from config/tiers.js.
+RECIPES.push(...tieredRecipes());
 
 // Armour (Phase 7b): each piece at the bench, from config/armour.js.
 for (const p of ARMOUR_PIECES) {

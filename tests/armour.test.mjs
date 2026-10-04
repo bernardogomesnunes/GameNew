@@ -23,8 +23,8 @@ const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8'
 // --- the sets ---------------------------------------------------------------------------
 
 ok('five places to wear things: head, body, legs, feet (playtest, P6) and a ring', WEAR_SLOTS.join() === 'head,body,legs,feet,ring');
-ok('three sets — leather, sky, stone — of four pieces each, boots and all',
-  ARMOUR_SETS.map((s) => s.key).join() === 'leather,sky,stone' && ARMOUR_PIECES.length === 12);
+ok('five sets in tiers — leather, iron, gold, sky, dark (key stone) — of four pieces each, boots and all (backlog batch 2)',
+  ARMOUR_SETS.map((s) => s.key).join() === 'leather,iron,gold,sky,stone' && ARMOUR_PIECES.length === 20);
 const total = (key) => ARMOUR_PIECES.filter((p) => p.set === key).reduce((n, p) => n + p.points, 0);
 ok(`leather is light (${total('leather')}), the two kingdoms' metal is heavier (${total('sky')}, ${total('stone')})`,
   total('leather') < total('sky') && total('sky') === total('stone'));
@@ -65,7 +65,7 @@ ok('armour helps with being hit, not with falling or lava', HIT_CAUSES.has('band
   ok('a stone isn\'t something you wear', !g.wear(at('stone')).ok);
   for (const k of ['head', 'body', 'legs']) g.wear(at(`armour_stone_${k}`));
   ok('put on, the pieces leave the bag', WEAR_SLOTS.slice(0, 3).every((k) => g.worn[k]?.id === `armour_stone_${k}`) && at('armour_stone_body') === -1);
-  ok(`and add up (${g.armour()} armour)`, g.armour() === 9);
+  ok(`and add up (${g.armour()} armour)`, g.armour() === 11);
   ok('a full set of stone isn\'t a disguise in the sky', g.disguisedAs() === null);
 
   // A blow, through it.
@@ -82,19 +82,19 @@ ok('armour helps with being hit, not with falling or lava', HIT_CAUSES.has('band
   const r = g.wear(skyAt);
   ok('putting on a helm takes the other one off, into the same slot', r.ok && r.swapped === 'armour_stone_head'
     && g.worn.head.id === 'armour_sky_head' && g.inventory.slots[skyAt]?.id === 'armour_stone_head' && g.inventory.slots[skyAt].wear === 1);
-  ok(`and the armour changes with it (${g.armour()})`, g.armour() === 9);
+  ok(`and the armour changes with it (${g.armour()})`, g.armour() === 11);
 
   // Saved with the world.
   const back = new DuiltGame({ world, scene: new THREE.Scene(), bus: null });
   back.loadJSON(JSON.parse(JSON.stringify(g.toJSON())));
-  ok('what you wear is saved, wear and all', back.worn.body?.id === 'armour_stone_body' && back.worn.body.wear === 1 && back.armour() === 9);
+  ok('what you wear is saved, wear and all', back.worn.body?.id === 'armour_stone_body' && back.worn.body.wear === 1 && back.armour() === 11);
   const old = new DuiltGame({ world, scene: new THREE.Scene(), bus: null });
   old.loadJSON({ ...JSON.parse(JSON.stringify(g.toJSON())), worn: undefined });
   ok('and a save from before armour loads wearing nothing', old.armour() === 0);
 
   // Take off.
   const t = g.takeOff('legs');
-  ok('taken off, it goes back in the bag', t.ok && at('armour_stone_legs') >= 0 && g.worn.legs === null && g.armour() === 6);
+  ok('taken off, it goes back in the bag', t.ok && at('armour_stone_legs') >= 0 && g.worn.legs === null && g.armour() === 8);
   ok('nothing to take off is nothing', !g.takeOff('ring').ok);
 
   // Worn through.

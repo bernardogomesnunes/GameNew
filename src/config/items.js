@@ -1,6 +1,7 @@
 import { BLOCKS } from './blocks.js';
 import { CROPS, cropBaseOf } from './crops.js';
 import { ARMOUR_PIECES } from './armour.js';
+import { tieredItems } from './tiers.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
 /**
@@ -308,6 +309,9 @@ export const ITEMS = [
     ...(p.disguise ? { disguise: p.disguise } : {}),
   })),
 ];
+
+// Tools past stone: iron, gold, sky and dark (backlog batch 2) — see config/tiers.js.
+ITEMS.push(...tieredItems(new Map(ITEMS.map((i) => [i.id, i]))));
 
 // Upgraded pieces (playtest, P6) — see config/upgrades.js. Each is its
 // piece with the upgrade's name in front and its power added.

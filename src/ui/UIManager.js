@@ -9,6 +9,7 @@ import { StoryView, INTRO, ENDINGS, endingFor } from './Story.js';
 import { askConfirm } from './Confirm.js';
 import { LORE, loreKnowledge } from '../config/lore.js';
 import { ITEMS_BY_ID, itemName, isFood, BARE_HANDS } from '../config/items.js';
+import { RECIPES } from '../config/recipes.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { blockIcon, itemIcon } from '../config/cubes.js';
@@ -1049,6 +1050,16 @@ export class UIManager {
         title: `Age ${age} · ${name}`,
         body: intro ?? `Your land is ${size} × ${size} now`,
       });
+      // Tools come in as you go, the way buildings do (backlog batch 2) —
+      // and say so when they do, rather than turning up unannounced at the bench.
+      const fresh = newGearAt(age);
+      if (fresh.length) {
+        this.toast({
+          kind: 'challenge',
+          title: 'New at the bench',
+          body: fresh.length > 4 ? `${fresh.slice(0, 4).join(', ')} and ${fresh.length - 4} more` : fresh.join(', '),
+        });
+      }
     });
     // The end of a path: its illustrated ending first, then what you built.
     this.bus.on('duilt:won', () => {
@@ -2360,4 +2371,14 @@ function timeAgo(ms) {
   const hours = Math.round(mins / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.round(hours / 24)}d ago`;
+}
+
+/**
+ * The tools, weapons and armour that first become makeable at the bench in
+ * `age` — what "New at the bench" names when you reach it.
+ */
+export function newGearAt(age) {
+  return RECIPES
+    .filter((r) => r.age === age && r.station === 'hand' && ['tool', 'armour'].includes(ITEMS_BY_ID.get(r.output.id)?.kind))
+    .map((r) => r.name);
 }
