@@ -95,7 +95,9 @@ function leanings(id) {
   const t = tileFor(8);
   let moss = 0;
   for (let i = 0; i < t.length / 4; i++) if (t[i * 4 + 1] > t[i * 4] * 1.15 && t[i * 4 + 1] > t[i * 4 + 2] * 1.3) moss++;
-  ok(`cobble has moss in its cracks (${moss} pixels)`, moss > 30);
+  // Requested directly: "Cobble was fine as it was ... the only one I think
+  // it got worse". It is the first cobblestone again: no moss.
+  ok(`cobble is plain stones again, no moss (${moss} pixels)`, moss === 0);
   const brick = tileFor(9);
   let mortar = 0;
   for (let i = 0; i < brick.length / 4; i++) if (brick[i * 4 + 2] > brick[i * 4] * 0.9 && tileValue(brick[i * 4 + 2]) > 2) mortar++;

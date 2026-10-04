@@ -73,6 +73,10 @@ function featuresOf(spec, m) {
   return out;
 }
 const HURT_COLOUR = new THREE.Color(0xd9534f);
+/** Where the legs stand, [x side, z side, which way it swings]: four at the corners, or a bird's two. */
+const CORNER_LEGS = [[-1, -1, 1], [1, 1, 1], [1, -1, -1], [-1, 1, -1]];
+const BIRD_LEGS = [[-1, 0, 1], [1, 0, -1], null, null];
+const NO_LEG = new THREE.Matrix4().makeScale(0, 0, 0);
 
 export class MobView {
   constructor(scene) {
@@ -151,13 +155,19 @@ export class MobView {
         d++;
       }
 
-      // legs: pivot at the hip, diagonal pairs swinging together
+      // legs: pivot at the hip, diagonal pairs swinging together. Birds
+      // stand on two, side by side under the middle, swinging in turn; the
+      // other two slots are drawn at zero size.
       const lw = Math.max(0.06, Math.min(w, l) * 0.2);
       const swing = m.speed > 0 ? Math.sin(m.stride * (5 / Math.max(0.3, leg + 0.2))) * 0.55 : 0;
-      const corners = [[-1, -1, 1], [1, 1, 1], [1, -1, -1], [-1, 1, -1]];
+      const corners = spec.legs === 2 ? BIRD_LEGS : CORNER_LEGS;
       for (let k = 0; k < 4; k++) {
+        if (!corners[k]) {
+          this.legs.setMatrixAt(i * 4 + k, NO_LEG);
+          continue;
+        }
         const [sx, sz, dir] = corners[k];
-        this._part.makeTranslation(sx * (w / 2 - lw / 2), leg, sz * (l / 2 - lw / 2));
+        this._part.makeTranslation(sx * (w / 2 - lw / 2) * (spec.legs === 2 ? 0.5 : 1), leg, sz * (l / 2 - lw / 2));
         this._part.multiply(this._tmp.makeRotationX(swing * dir));
         this._part.multiply(this._tmp.makeTranslation(0, -leg / 2, 0));
         this._part.multiply(this._tmp.makeScale(lw, leg, lw));

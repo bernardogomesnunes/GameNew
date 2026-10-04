@@ -78,7 +78,7 @@ export const TEXTURES = {
   gravel:    { pebbles: 6, marks: 10, flecks: [[1.06, 1.0, 0.9], [0.9, 0.95, 1.06], [1.14, 1.06, 0.94], [0.72, 0.72, 0.75], [1.12, 1.1, 1.08]], depth: 0.42, speck: 0.05 },
   clay:      { strata: 4, marks: 16, flecks: [[1.06, 1.0, 0.94], [0.9, 0.94, 1.0]], depth: 0.16, mottle: 0.08, speck: 0.03 },
   stone:     { mottle: 0.16, hue: 0.5, marks: 40, flecks: STONE_FLECKS, cracks: 2, depth: 0.3, speck: 0.05, bump: 0.25 },
-  cobble:    { cobbles: 6, moss: 0.4, speck: 0.04, depth: 0.42, bump: 1 },
+  cobble:    { cobbles: 6, plain: true, speck: 0.03, depth: 0.28, bump: 1 },
   brick:     { lines: 'brick', mortar: [1.5, 1.62, 1.7], depth: 0.3, speck: 0.05, marks: 18, bump: 0.7 },
   marble:    { veins: 3, vein: [0.78, 0.76, 0.74], mottle: 0.05, edge: 0.07, depth: 0.2, speck: 0.015 },
   // Phase 7a. Gold trim: a framed band with a groove through it. Timber:
