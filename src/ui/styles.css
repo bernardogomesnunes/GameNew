@@ -442,6 +442,11 @@ body.touch #hotbar-wrap { bottom: calc(14px + env(safe-area-inset-bottom)); }
   bottom: calc(var(--stick-zone) + env(safe-area-inset-bottom)); height: 40%; }
 #stick-left { left: 0; }
 #stick-right { right: 0; }
+/* The picture is the camera now (UIManager.bindLookSurface): under the stick
+   and the buttons, over the world. No look stick, and no Break button — a
+   tap on the picture is Break. */
+#look-zone { position: absolute; inset: 0; z-index: 1; pointer-events: auto; touch-action: none; }
+#stick-right, #side-left { display: none !important; }
 .touch-buttons { z-index: 3; }
 #hud-top, #top-buttons, #hotbar-wrap { z-index: 5; }
 .overlay { z-index: 10; }

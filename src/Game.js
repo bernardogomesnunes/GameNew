@@ -212,6 +212,9 @@ const WORLDS_SEEN = 'voxelgame:worlds-seen';
 /** Most recently touched first. */
 const sortWorlds = (rows) => rows.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
 
+// Radians a pixel of finger turns you when you drag the picture on a phone.
+const TOUCH_LOOK = 0.005;
+
 // The expedition's camp: this far out beyond the anchor tower, clear of its guards.
 const EXPEDITION_OUT = 24;
 // The ground it clears for its tents, and for you to arrive on.
@@ -1044,6 +1047,12 @@ export class Game {
         this.player.stickSprint = running;
       },
       onLookStick: (x, y) => { this.player.lookInput.x = x; this.player.lookInput.y = y; },
+      // Dragging the picture (UIManager.bindLookSurface): turns you as the
+      // mouse does, a touch pixel worth a little more than a mouse one.
+      onLookDrag: (dx, dy) => {
+        const k = TOUCH_LOOK * (this.controls.sensitivity ?? 1);
+        this.player.look(dx * k, dy * k);
+      },
       onJumpOrFlyUp: (held) => {
         if (this.player.flying) { this.upHeld = held; this.recomputeVertical(); }
         else if (held) this.player.requestJump();
@@ -1101,6 +1110,8 @@ export class Game {
       },
 
       onBreakTap: () => this.primaryAction(),
+      // Whether the last Break started digging into something not yet through.
+      isDigging: () => !!this.digTarget,
       onBreakHold: (held) => this.setBreaking(held),
       onPlaceTap: () => this.secondaryAction(),
       onPlaceHold: (held) => this.setPlacing(held),
