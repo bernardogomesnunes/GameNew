@@ -312,9 +312,15 @@ function pebbles(c, recipe, salt, depth) {
  * a rounded oval of its own tone, lit along the top and shadowed along the
  * bottom; one in three is warm or cool the way river stones are; and what's
  * left between them is earth, with moss growing in it.
+ *
+ * `plain`: the first cobblestone, as it was before the 32px textures — pale
+ * grey stones packed close, only the odd one warm or cool, plain earth
+ * between and no moss. Requested directly: "Cobble was fine as it was ...
+ * the only one I think it got worse".
  */
 function cobbles(c, recipe, salt, depth) {
-  const n = TILE, stones = [];
+  const n = TILE, stones = [], plain = !!recipe.plain;
+  const gap = plain ? 0.2 : 0.6;
   let k = 0;
   for (const [tries, rlo, rhi] of [[recipe.cobbles * 40, 5.4, 8.6], [220, 3.2, 5.2], [220, 2, 3]]) {
     for (let t = 0; t < tries; t++, k++) {
@@ -323,8 +329,14 @@ function cobbles(c, recipe, salt, depth) {
         r: rlo + hash01(k, 113, salt) * (rhi - rlo),
         sx: 0.85 + hash01(k, 127, salt) * 0.3, sy: 0.85 + hash01(k, 131, salt) * 0.3,
       };
-      if (!stones.every((o) => Math.hypot(wrapd(st.x - o.x), wrapd(st.y - o.y)) >= st.r + o.r + 0.6)) continue;
+      if (!stones.every((o) => Math.hypot(wrapd(st.x - o.x), wrapd(st.y - o.y)) >= st.r + o.r + gap)) continue;
       const w = hash01(k, 101, salt);
+      if (plain) {
+        st.tone = 0.88 + hash01(k, 137, salt) * 0.1;
+        st.tint = w < 0.1 ? [1, 0.93, 0.84] : w < 0.25 ? [0.95, 0.97, 1] : [1, 1, 1];
+        stones.push(st);
+        continue;
+      }
       st.tone = 0.88 + hash01(k, 137, salt) * 0.2;
       st.tint = w < 0.16 ? [1.1, 0.98, 0.84] : w < 0.32 ? [0.9, 0.96, 1.1] : w < 0.42 ? [1.08, 1.04, 0.9] : [1, 1, 1];
       stones.push(st);
@@ -342,12 +354,13 @@ function cobbles(c, recipe, salt, depth) {
     const mossy = moss && fbm(px, py, salt + 41, 4, 2) < moss * 0.95;
     if (bestT > 1) {
       // Earth between the stones, or moss where it is damp.
-      if (mossy) { shade(c, x, y, 1 - depth * (0.45 + 0.25 * hash01(x, y, salt + 17))); setTint(c, x, y, [0.74, 1.08, 0.56]); }
+      if (plain) { shade(c, x, y, 1 - depth * (0.8 + 0.2 * hash01(x, y, salt + 17))); setTint(c, x, y, [1, 0.95, 0.86]); }
+      else if (mossy) { shade(c, x, y, 1 - depth * (0.45 + 0.25 * hash01(x, y, salt + 17))); setTint(c, x, y, [0.74, 1.08, 0.56]); }
       else { shade(c, x, y, 1 - depth * (0.85 + 0.15 * hash01(x, y, salt + 17))); setTint(c, x, y, [1.02, 0.9, 0.76]); }
       return;
     }
     let f = best.tone;
-    if (bestT > 0.5 && bdy > 0.25) f *= 1.14;                         // lit top
+    if (bestT > 0.5 && bdy > 0.25) f = plain ? 1 : f * 1.14;         // lit top
     else if (bestT > 0.5 && bdy < -0.2) f *= 1 - depth * 0.4;         // shadowed foot
     if (hash01(x, y, salt + 29) < 0.1) f *= 1 - depth * 0.2;
     shade(c, x, y, f);

@@ -1,3 +1,4 @@
+import { MOBS } from '../src/config/mobs.js';
 import { readFileSync } from 'node:fs';
 import { OUTFITS, outfitOf } from '../src/config/outfits.js';
 import { WANDERERS } from '../src/config/wanderers.js';
@@ -33,6 +34,10 @@ ok('animals are rounder: a second box on the body and the head', /out\.push\(\[0
 ok('eyes with whites', /EYE_WHITE, 0, true\]\)/.test(animals));
 ok('sheep in lumpy wool, cows with patches and an udder, pigs with nostrils, chickens with wings',
   /WOOL_SHADE/.test(animals) && /PATCH, 0, false/.test(animals) && /0x8a4a48, 0, true/.test(animals) && /0xe8e2d6, 0, false\]\]/.test(animals));
+// Reported directly: "Chickens only have 2 legs".
+ok('chickens stand on two legs; everything else on four',
+  MOBS.filter((m) => m.legs === 2).map((m) => m.id).join() === 'chicken' && /const BIRD_LEGS = \[\[-1, 0, 1\], \[1, 0, -1\], null, null\]/.test(animals)
+  && /spec\.legs === 2 \? BIRD_LEGS : CORNER_LEGS/.test(animals) && /setMatrixAt\(i \* 4 \+ k, NO_LEG\)/.test(animals));
 ok('room for all of it', Number(animals.match(/const DETAIL_CAP = (\d+);/)[1]) >= 20);
 
 process.exit(f ? 1 : 0);

@@ -46,7 +46,7 @@ export const BLOCKS = [
   { id: 5, name: 'Leaves', glyph: 'leaf', color: 0x5dab45, material: 'plant', cost: { wood: 1 }, unlock: null },
   { id: 6, name: 'Sand', glyph: 'sand', color: 0xe4cf92, material: 'dirt', cost: { wood: 1 }, unlock: null },
   { id: 7, name: 'Planks', glyph: 'planks', color: 0xc49360, material: 'wood', cost: { wood: 1 }, unlock: null },
-  { id: 8, name: 'Cobblestone', glyph: 'cobble', color: 0x8f8d89, material: 'stone', cost: { stone: 1 }, unlock: null },
+  { id: 8, name: 'Cobblestone', glyph: 'cobble', color: 0xa1a1aa, material: 'stone', cost: { stone: 1 }, unlock: null },
   { id: 9, name: 'Brick', glyph: 'brick', color: 0xb5583f, material: 'stone', cost: { brick: 1 }, unlock: null },
   { id: 10, name: 'Glass', glyph: 'pane', color: 0xc2e5f2, transparent: true, opacity: 0.35, cost: { glass: 1 }, unlock: null },
   // Thin enough to read as water over a sandy bed, but not so thin that the
@@ -361,7 +361,7 @@ BLOCKS.push(
 // solid blocks, with a post wherever the run turns, ends or meets another
 // (see propShapes' wallBoxes); like a fence, nothing climbs over one.
 export const WALLS = [
-  { id: 161, name: 'Cobblestone Wall', color: 0x8f8d89 },
+  { id: 161, name: 'Cobblestone Wall', color: 0xa1a1aa },
   { id: 162, name: 'Stone Wall', color: 0x9d9b97 },
   { id: 163, name: 'Brick Wall', color: 0xb5583f },
   { id: 164, name: 'Dark Stone Wall', color: 0x4e5666 },

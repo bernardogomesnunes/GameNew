@@ -195,10 +195,11 @@ ok('and an orientation change is re-measured once it has settled',
   const { tileFor, tileValue } = await import('../src/render/BlockTextures.js');
   const t = tileFor(8);
   const px = t.length / 4;
+  // Earth: well below the tile's average (the tile is scaled to average 1).
   let earth = 0, lit = 0, warm = 0, mossy = 0;
   for (let i = 0; i < px; i++) {
     const [r, g, b] = [0, 1, 2].map((ch) => tileValue(t[i * 4 + ch]));
-    if (Math.max(r, g) < 0.55) earth++;
+    if (Math.max(r, g) < 0.8) earth++;
     if (r >= 1.3) lit++;
     if (r > b * 1.08) warm++;
     if (g > r * 1.15 && g > b * 1.3) mossy++;
@@ -206,7 +207,9 @@ ok('and an orientation change is re-measured once it has settled',
   ok(`cobblestone is stones with earth between them (${Math.round(earth / px * 100)}% earth)`, earth / px > 0.12 && earth / px < 0.6);
   ok('lit along the tops of the stones', lit > 10);
   ok('and not all one grey: the earth and the odd stone are warm', warm > 20);
-  ok('with moss in the cracks', mossy > 20);
+  // Requested directly: "Cobble was fine as it was ... the only one I think
+  // it got worse". Back to the first one: plain earth, no moss.
+  ok('and no moss: the cobblestone is as it first was', mossy === 0);
 
   // Requested directly: "can you give it some depth or 3d texture like the
   // tiles?" Each texel has a height, and the shader tilts the light by it.

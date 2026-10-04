@@ -5,6 +5,8 @@
  * is drawn from a handful of boxes (see MobView), sized here in blocks:
  * `body` is width × height × length, `head` one edge of a cube, `leg` how
  * tall it stands. A creature is `leg + body.h` tall at the shoulder.
+ * `legs` is 2 for birds, which stand on a pair under the middle; anything
+ * else has four, one at each corner.
  *
  * `biomes` are ids from config/biomes.js. `herd` is how many turn up
  * together. `skittish` animals bolt when you come near; the rest only run
@@ -67,7 +69,7 @@ export const MOBS = [
   {
     id: 'chicken', name: 'Chicken', biomes: ['plains', 'forestOak', 'wetland'], weight: 2, farm: true,
     herd: [2, 4], hp: 2, walk: 0.9, run: 4.2, skittish: false,
-    body: { w: 0.26, h: 0.28, l: 0.34 }, head: 0.18, leg: 0.18,
+    body: { w: 0.26, h: 0.28, l: 0.34 }, head: 0.18, leg: 0.18, legs: 2,
     colour: 0xf4efe6, headColour: 0xf8f4ec, legColour: 0xe0a64a,
     drops: { raw_meat: [1, 1], feather: [1, 3] },
   },
