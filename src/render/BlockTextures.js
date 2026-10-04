@@ -1,3 +1,4 @@
+import { paintLegacyCobble } from './legacyCobble.js';
 import * as THREE from 'three';
 import { BLOCKS, BLOCKS_BY_ID } from '../config/blocks.js';
 import { blockTexture, TILE_SCALE } from '../config/textures.js';
@@ -88,9 +89,46 @@ export function tileFor(blockId, { top = false } = {}) {
   const spec = BLOCKS_BY_ID.get(blockId);
   let recipe = blockTexture(spec);
   if (top && recipe) recipe = recipe.top ?? recipe;
-  const tile = recipe ? finish(paint(recipe, spec, spec.id), recipe, spec) : null;
+  const tile = !recipe ? null
+    : recipe.legacy === 'cobble' ? legacyTile(paintLegacyCobble(spec.id), spec)
+    : finish(paint(recipe, spec, spec.id), recipe, spec);
   tiles.set(key, tile);
   return tile;
+}
+
+/**
+ * A tile from before the 32px textures (see render/legacyCobble.js), doubled
+ * to fill a layer and written straight through: its level times its tint is
+ * what the block's colour is multiplied by, as it was then — no gamma. The
+ * one thing done to it is a single even lift so it averages to its block's
+ * colour, like every other tile now; the old ones sat at about 0.8 of theirs,
+ * and next to blocks that don't it would only read as dimmer.
+ */
+function legacyTile({ level, tint, height, size }, spec) {
+  const out = new Uint8Array(TILE * TILE * 4);
+  const h = new Float32Array(TILE * TILE);
+  const f = TILE / size;
+  const col = new THREE.Color(spec?.color ?? 0xffffff);
+  const w = [0.2126 * col.r, 0.7152 * col.g, 0.0722 * col.b];
+  const ws = w[0] + w[1] + w[2] || 1;
+  let sum = 0;
+  for (let i = 0; i < size * size; i++) {
+    const l = Math.max(0, Math.min(1, level[i]));
+    sum += l * (w[0] * tint[i * 3] + w[1] * tint[i * 3 + 1] + w[2] * tint[i * 3 + 2]) / ws;
+  }
+  const k = sum > 0 ? (size * size) / sum : 1;
+  for (let y = 0; y < TILE; y++) {
+    for (let x = 0; x < TILE; x++) {
+      const s = Math.floor(y / f) * size + Math.floor(x / f), o = y * TILE + x;
+      const l = Math.max(0, Math.min(1, level[s])) * k;
+      for (let ch = 0; ch < 3; ch++) out[o * 4 + ch] = Math.round(Math.min(1, (l * tint[s * 3 + ch]) / TILE_SCALE) * 255);
+      out[o * 4 + 3] = 255;
+      h[o] = height[s];
+    }
+  }
+  out.height = h;
+  out.shine = null;
+  return out;
 }
 export const TILE_SIZE = TILE;
 

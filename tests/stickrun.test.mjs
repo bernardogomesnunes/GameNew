@@ -25,7 +25,7 @@ ok('the stick decides, from how far up the thumb is',
   /running = -dy >= RADIUS \* STICK_RUN_REACH && Math\.abs\(dx\) <= -dy \* STICK_RUN_SPREAD;/.test(ui));
 ok('walking is measured inside the rim, so the rim is full walking pace',
   /if \(len > RADIUS\) \{ dx = \(dx \/ len\) \* RADIUS; dy = \(dy \/ len\) \* RADIUS; \}\s*setKnob/.test(ui));
-ok('and handed on to the game', /onChange\(out\.x, -out\.y, running\);/.test(ui) && /this\.player\.stickSprint = running;/.test(game));
+ok('and handed on to the game', /onChange\(out\.x, -out\.y, running\);/.test(ui) && /this\.player\.stickSprint = !!run;/.test(game));
 ok('letting go stops running', /running = false;\s*base\.classList\.remove\('active', 'running'\);/.test(ui));
 ok('you can see it: the rim lights and the knob goes over it', /\.stick-base\.running \{/.test(css) && /STICK_RUN_KNOB/.test(ui));
 ok('the reach follows the base as drawn', /RADIUS = Math\.max\(30, base\.offsetWidth \* 0\.4\)/.test(ui));

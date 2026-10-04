@@ -1065,12 +1065,9 @@ export class Game {
         this.player.externalMove.z = z;
         // Carried on up past the stick's rim, straight ahead: run. The stick
         // decides (UIManager.bindStick) — the rim itself is full walking pace.
-        const running = !!run;
-        if (running && !this.player.stickSprint && !this.toldStickRun) {
-          this.toldStickRun = true;
-          this.ui?.toast({ kind: 'challenge', title: 'Running', body: 'Push the stick up past its rim to run — come back inside it to walk' });
-        }
-        this.player.stickSprint = running;
+        // No toast about it — asked for directly: "remove the toast about
+        // running". The stick's rim lights while you run (styles.css).
+        this.player.stickSprint = !!run;
       },
       onLookStick: (x, y) => { this.player.lookInput.x = x; this.player.lookInput.y = y; },
       // Dragging the picture (UIManager.bindLookSurface): turns you as the

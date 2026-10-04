@@ -39,7 +39,8 @@ const flat = (size = 64, floorY = 0) => {
   };
   const walk = speedOf(1, false), run = speedOf(1, true);
   ok(`the stick pushed right out runs (${walk.toFixed(1)} → ${run.toFixed(1)} blocks a second)`, run > walk * 1.4);
-  ok('Game runs you when the stick says so, and says so once', /onMove: \(x, z, run = false\) => \{/.test(game) && /const running = !!run;/.test(game) && /Push the stick up past its rim to run/.test(game));
+  // Asked for directly: "remove the toast about running".
+  ok('Game runs you when the stick says so, with no toast about it', /onMove: \(x, z, run = false\) => \{/.test(game) && /this\.player\.stickSprint = !!run;/.test(game) && !/title: 'Running'/.test(game));
   const p = new PlayerController(world, new THREE.PerspectiveCamera(), { x: 32.5, y: 10, z: 32.5 });
   p.flying = true; p.stickSprint = true; p.externalMove.z = 1;
   const y0 = p.position.y;
