@@ -19,12 +19,16 @@ export class Crafting {
    *                rings: once one is forged the other is closed (Phase 7c).
    * @param onMade  (recipe) — after a recipe runs.
    */
-  constructor({ inventory, world, skills = null, locked = null, onMade = null }) {
+  constructor({ inventory, world, skills = null, locked = null, onMade = null, hidden = null, onStudy = null }) {
     this.inventory = inventory;
     this.world = world;
     this.skills = skills;
     this.locked = locked;
     this.onMade = onMade;
+    // A recipe not offered at all right now — a university's studies past
+    // the next level (DuiltGame.studyHidden) — and what studying does.
+    this.hidden = hidden;
+    this.onStudy = onStudy;
   }
 
   /**
@@ -48,12 +52,12 @@ export class Crafting {
    * age they appear, greyed out until you are standing at one.
    */
   available(age, { station = 'hand', near = null, atStations = [] } = {}) {
-    return recipesFor(age, station).map((r) => {
+    return recipesFor(age, station).filter((r) => !this.hidden?.(r)).map((r) => {
       const missing = this.inventory.missing(r.inputs);
       const placeOk = !r.needs || this.conditionMet(r.needs, near);
       const stationOk = this.atStation(r, atStations);
       const lock = this.locked?.(r) ?? null;
-      const roomOk = this.inventory.roomFor(r.output.id, r.output.count) >= r.output.count;
+      const roomOk = r.study ? true : this.inventory.roomFor(r.output.id, r.output.count) >= r.output.count;
       const ok = Object.keys(missing).length === 0 && placeOk && stationOk && roomOk && !lock;
       let reason = null;
       // Generic rather than hardcoded to "workshop" now that a second
@@ -107,6 +111,8 @@ export class Crafting {
   /** How many of `runs` would have somewhere to go in the bag. */
   batchThatFits(recipe, runs) {
     if (runs <= 0) return 0;
+    // Studying makes no item, and is one level at a time.
+    if (recipe.study) return Math.min(runs, 1);
     const fits = this.inventory.roomFor(recipe.output.id, recipe.output.count * runs);
     return Math.min(runs, Math.floor(fits / recipe.output.count));
   }
@@ -148,6 +154,13 @@ export class Crafting {
     const bill = {};
     for (const [id, n] of Object.entries(recipe.inputs)) bill[id] = n * runs;
     if (!this.inventory.spend(bill)) return { ok: false, reason: 'Your materials changed — try again.' };
+
+    // Studying (a university): no item — the skill or the research is what you get.
+    if (recipe.study) {
+      this.onStudy?.(recipe);
+      this.onMade?.(recipe);
+      return { ok: true, made: 1, item: null, name: recipe.result, studied: recipe.study };
+    }
 
     const made = recipe.output.count * runs;
     const leftover = this.inventory.add(recipe.output.id, made);

@@ -77,6 +77,8 @@ for (const spec of STRUCTURES) {
   }
 }
 for (const r of RECIPES) {
+  // Studying (a university) makes no item — it raises a skill or teaches engineering.
+  if (r.study) { ok(`study ${r.id} says what it gives instead`, r.output.id == null && !!r.result); continue; }
   ok(`recipe ${r.id} outputs a real item`, ITEMS_BY_ID.has(r.output.id));
   for (const id of Object.keys(r.inputs)) ok(`  and takes ${id}, which is real`, ITEMS_BY_ID.has(id));
 }

@@ -115,6 +115,27 @@ const LATER = [
     xpReward: 80,
     check: (c) => c.stats.claimed.size >= 3,
   },
+  // Backlog batch 2: the University, and what studying there opens up.
+  {
+    id: 'a_university',
+    age: 2,
+    structure: 'university',
+    name: 'Found a university',
+    description: 'A room with two tables in it, walls and a roof. Study there to raise your skills — and learn engineering.',
+    icon: '🎓',
+    xpReward: 80,
+    check: (c) => c.stats.claimed.has('university'),
+  },
+  {
+    id: 'a_engineering',
+    age: 3,
+    structure: 'engineering',
+    name: 'Raise an Engineering Centre',
+    description: 'Learn engineering at your university, then build a hall with a stone floor and claim it.',
+    icon: '⚙️',
+    xpReward: 100,
+    check: (c) => c.stats.claimed.has('engineering'),
+  },
   {
     id: 'a_pen',
     age: 2,

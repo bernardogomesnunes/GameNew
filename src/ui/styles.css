@@ -1430,6 +1430,11 @@ body.editing-building #building-hint {
 @keyframes people-hungry { 50% { opacity: 0.45; } }
 
 /* The building popup: what it does, then what the next level needs. */
+/* Your skills, at the top of the bag (backlog batch 2). */
+.bag-skills { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: 100%; margin: 0 0 10px; padding: 0; border: 0; background: none; cursor: pointer; font: inherit; color: inherit; }
+.bag-skill { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border: 1px solid var(--panel-border); border-radius: 9px; background: rgba(35,42,45,0.05); font-size: 15px; line-height: 1.1; }
+.bag-skill b { font-size: 14px; }
+.bag-skill em { font-style: normal; font-size: 10.5px; color: var(--text-dim); }
 /* A building's cost, as item icons and counts (backlog batch 2). */
 .building-costs { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; }
 .cost-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border-radius: 999px; border: 1px solid var(--panel-border); background: rgba(35,42,45,0.05); font-size: 13px; }
