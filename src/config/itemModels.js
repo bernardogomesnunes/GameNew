@@ -1,6 +1,7 @@
 import { CROPS } from './crops.js';
 import { ARMOUR_PIECES } from './armour.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
+import { TOOL_TIERS } from './tiers.js';
 
 /**
  * Little voxel models for the things you carry that aren't blocks — the
@@ -165,6 +166,8 @@ const swordModel = (blade, edge, guard, grip) => [
 ITEM_MODELS.sword_wood = swordModel(0xcbaa8a, 0xdcc0a0, 0x8a6440, 0x5e4128);
 ITEM_MODELS.sword_stone = swordModel(0x9a9aa2, 0xb9b9c1, 0x6b6b72, 0x5e4128);
 ITEM_MODELS.sword_iron = swordModel(0xc9ced6, 0xeef1f5, 0xe2c26a, 0x3a2a20);
+// The tiers past iron (config/tiers.js).
+for (const t of TOOL_TIERS) if (t.key !== 'iron') ITEM_MODELS[`sword_${t.key}`] = swordModel(t.color, t.edge, t.guard, 0x3a2a20);
 
 // An upgraded piece looks like its plain self — the glint is drawn over
 // it (see cubes.js itemIcon).
