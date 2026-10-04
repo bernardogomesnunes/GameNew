@@ -4202,13 +4202,16 @@ export class Game {
     if (near(this.player.position, 2)) this.duilt?.hurt(8, 'catapult');
   }
 
+  // Water and lava aren't broken (asked for directly: "water blocks should
+  // not be breakable") — the ray still stops at a lake's surface, for the
+  // bucket and for building against it, but Break does nothing there.
   breakBlock() {
     if (this.manning) return;
     const hit = this.raycast();
     if (this.hitBandit(hit)) return;
     if (this.catchFireflies(hit)) return;
     if (this.hitMob(hit)) return;
-    if (!hit) { this.digTarget = null; return; }
+    if (!hit || isFluid(hit.block)) { this.digTarget = null; return; }
 
     let wornBy = null;
     if (this.duilt) {
@@ -4249,7 +4252,8 @@ export class Game {
     const changes = [];
     for (const t of targets) {
       const prev = this.world.getBlock(t.x, t.y, t.z);
-      if (prev === AIR) continue;
+      // A mirrored copy that lands in water leaves the water be, too.
+      if (prev === AIR || isFluid(prev)) continue;
       changes.push({ x: t.x, y: t.y, z: t.z, prev, next: AIR });
     }
     const broke = this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
