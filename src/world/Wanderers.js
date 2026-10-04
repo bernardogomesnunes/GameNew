@@ -162,6 +162,9 @@ export class Wanderers {
       if (p.strike > 0) p.strike = Math.max(0, p.strike - dt);
       if (p.fear > 0) p.fear = Math.max(0, p.fear - dt);
       if (this.suffer(p, dt)) continue;
+      // The showcase's people (world/showcase.js) stand where they were put,
+      // facing the camera — a rider still in the saddle.
+      if (p.still) { this.riding(p); continue; }
       // Frozen, everything it does runs slow.
       const t = p.frozen > 0 ? dt * FREEZE_SLOW : dt;
       // Stunned, it stands where it was struck: no thinking, no striking.
@@ -489,6 +492,7 @@ export class Wanderers {
   }
 
   gone(p, player) {
+    if (p.still) return false;
     if (p.landmark) {
       if (Math.hypot(p.landmark.x - player.x, p.landmark.z - player.z) <= (p.landmark.leave ?? LEAVE)) return false;
       this.present.delete(p.landmark);
