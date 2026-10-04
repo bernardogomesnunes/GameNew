@@ -11,6 +11,14 @@ const GRAVITY = -26;
 const JUMP_SPEED = 8.2;
 const WALK_SPEED = 4.6;
 const SPRINT_SPEED = 7.2;
+/**
+ * Sneaking (asked for directly, a Down button on the right "to sneak"): a
+ * slow, careful walk with your head a little lower, and the edge of a drop
+ * stops you instead of tipping you over it.
+ */
+const SNEAK_SPEED = 1.6;
+const SNEAK_DROP = 0.28;
+const SNEAK_EASE = 12;
 // A heavy blow's shove: how fast it throws you back, how high, and how quickly it dies away.
 const KNOCK_SPEED = 9, KNOCK_LIFT = 5.5, KNOCK_FADE = 6;
 const FLY_SPEED = 10;
@@ -108,6 +116,10 @@ export class PlayerController {
     // (asked for directly: "can't run in mobile").
     this.stickSprint = false;
     this.externalUp = 0;
+    // The touch Down button held (Game.onFlyDown): sneaking, on your feet.
+    this.sneakHeld = false;
+    this.sneaking = false;
+    this.sneakLag = 0; // how far down the camera has dipped for a sneak, in blocks
     // Held right-stick deflection: turns the camera at a rate, unlike the
     // mouse and drag paths which apply one-off deltas. `lookSmoothed` trails it
     // so starting and stopping a turn eases instead of snapping.
@@ -227,8 +239,10 @@ export class PlayerController {
     // The stick pushed right out only ever means faster, never down.
     const sprinting = this.flying ? this.keys.has(b.down) || this.stickSprint : shift || this.stickSprint;
     const goingDown = this.keys.has(b.down) && !this.flying || shift;
+    // On your feet, the Down key or button sneaks. A sneak is never a run.
+    this.sneaking = !this.flying && !this.swimming && (this.sneakHeld || this.keys.has(b.down));
     // Running on your feet, for whoever's watching (duilt/Suspicion.js).
-    this.running = !this.flying && sprinting && wish.lengthSq() > 0.01;
+    this.running = !this.flying && !this.sneaking && sprinting && wish.lengthSq() > 0.01;
 
     if (this.flying) {
       const speed = (sprinting ? FLY_SPRINT_SPEED : FLY_SPEED) * this.speedScale;
@@ -255,7 +269,7 @@ export class PlayerController {
       this.velocity.y += (targetVy - this.velocity.y) * k;
       this.grounded = false;
     } else {
-      const speed = (sprinting ? SPRINT_SPEED : WALK_SPEED) * this.speedScale;
+      const speed = (this.sneaking ? SNEAK_SPEED : sprinting ? SPRINT_SPEED : WALK_SPEED) * this.speedScale;
       this.velocity.x = wish.x * speed + this.knock.x;
       this.velocity.z = wish.z * speed + this.knock.z;
       const fade = Math.exp(-KNOCK_FADE * dt);
@@ -271,6 +285,7 @@ export class PlayerController {
 
     this.moveAndCollide(this.velocity.x * dt, this.velocity.y * dt, this.velocity.z * dt);
     this.trackFall();
+    this.sneakLag += ((this.sneaking ? SNEAK_DROP : 0) - this.sneakLag) * (1 - Math.exp(-SNEAK_EASE * dt));
     this.stepLag *= Math.exp(-STEP_EASE * dt);
     if (this.stepLag < 1e-3) this.stepLag = 0;
     this.syncCamera();
@@ -350,18 +365,27 @@ export class PlayerController {
         || z - HALF_WIDTH < b.minZ || z + HALF_WIDTH > b.maxZ + 1;
   }
 
+  /**
+   * Sneaking on the ground, a step that would leave nothing under your feet
+   * isn't taken — you stop at the edge of a drop, the way a careful step
+   * does, and can lean out over it to build.
+   */
+  wouldStepOff(x, z) {
+    return this.sneaking && this.grounded && !this.collidesAt(x, this.position.y - 0.05, z);
+  }
+
   moveAndCollide(dx, dy, dz) {
     const p = this.position;
 
     if (dx !== 0) {
       const nx = p.x + dx;
-      if (this.outsideBounds(nx, p.z)) this.velocity.x = 0;
+      if (this.outsideBounds(nx, p.z) || this.wouldStepOff(nx, p.z)) this.velocity.x = 0;
       else if (!this.collidesAt(nx, p.y, p.z)) p.x = nx;
       else if (!this.stepUp(nx, p.z)) this.velocity.x = 0;
     }
     if (dz !== 0) {
       const nz = p.z + dz;
-      if (this.outsideBounds(p.x, nz)) this.velocity.z = 0;
+      if (this.outsideBounds(p.x, nz) || this.wouldStepOff(p.x, nz)) this.velocity.z = 0;
       else if (!this.collidesAt(p.x, p.y, nz)) p.z = nz;
       else if (!this.stepUp(p.x, nz)) this.velocity.z = 0;
     }
@@ -477,7 +501,7 @@ export class PlayerController {
   }
 
   syncCamera() {
-    const eyeY = this.position.y + EYE_HEIGHT - this.stepLag;
+    const eyeY = this.position.y + EYE_HEIGHT - this.stepLag - this.sneakLag;
     this.camera.position.set(this.position.x, eyeY, this.position.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0);
     // Out of your own eyes (playtest, P3): behind your shoulder, or in front

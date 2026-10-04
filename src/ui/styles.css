@@ -558,11 +558,10 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
    centres it on the slot the single one had, so neither Up nor Down lands
    exactly where your thumb was and gets pressed by reflex. */
 .stick-side.paired { transform: translateY(calc(var(--side-btn) / 2)); }
-/* In the air, Up and Down sit beside the walking stick, inboard of it where
-   Break used to be — asked for directly: "when flying it's good to have the
-   up and down on the left". Mirrored with the sticks. */
-body.flying #side-right { right: auto; left: calc(var(--stick-edge) + var(--stick-size) + 10px); }
-body.flying.touch-walk-right #side-right { left: auto; right: calc(var(--stick-edge) + var(--stick-size) + 10px); }
+/* Up and Down stay on the right in the air too — asked for directly, after
+   a spell with them on the left: "on the right we should have two buttons,
+   one with an arrow top to jump, the other arrow down to sneak. This can then
+   be used for fly". */
 
 /* A fixed stick (UIManager.bindStick's `fixed`): it stays where it's drawn,
    and only a touch on it — or just round it — takes it. The rest of its half

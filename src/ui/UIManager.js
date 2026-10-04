@@ -526,9 +526,9 @@ export class UIManager {
         <div class="stick-side" id="side-left">
           <button class="touch-btn small" id="t-break">${icon('mine')}<span>Break</span></button>
         </div>
-        <div class="stick-side" id="side-right">
+        <div class="stick-side paired" id="side-right">
           <button class="touch-btn small" id="t-jump">${icon('up')}<span id="t-jump-label">Jump</span></button>
-          <button class="touch-btn small" id="t-down" hidden>${icon('down')}<span>Down</span></button>
+          <button class="touch-btn small" id="t-down">${icon('down')}<span id="t-down-label">Sneak</span></button>
         </div>
 
         <!-- Left edge, above the walking stick: the rest of what you press. -->
@@ -1834,18 +1834,15 @@ export class UIManager {
 
   setFlyIndicator(flying) {
     this.q('#t-fly').classList.toggle('active', flying);
-    this.q('#t-down').hidden = !flying; // descend only means anything while flying
-    // Two buttons where there was one, so the pair re-centres on the slot the
-    // single one had rather than shunting it up the screen. And in the air
-    // they move over beside the walking stick (asked for directly: "when
-    // flying it's good to have the up and down on the left") — the other
-    // thumb is busy turning you. See body.flying in styles.css.
-    this.q('#side-right')?.classList.toggle('paired', !!flying);
+    // Two buttons on the right, always (asked for directly: "on the right we
+    // should have two buttons, one with an arrow top to jump, the other arrow
+    // down to sneak. This can then be used for fly"). On your feet they jump
+    // and sneak; in the air the same two climb and descend.
     document.body.classList.toggle('flying', !!flying);
-    // The same button jumps on the ground and climbs in the air. Once Down is
-    // showing beneath it, "Jump" is the odd one out of a pair.
     const label = this.q('#t-jump-label');
     if (label) label.textContent = flying ? 'Up' : 'Jump';
+    const down = this.q('#t-down-label');
+    if (down) down.textContent = flying ? 'Down' : 'Sneak';
   }
 
   /**

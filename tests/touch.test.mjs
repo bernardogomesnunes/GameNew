@@ -63,8 +63,9 @@ ok('with Down under it, once you are flying', sideRight.includes('id="t-down"'))
   ok('and Jump is the one that becomes Up', /label\.textContent = flying \? 'Up' : 'Jump'/.test(ui));
   // Dropping Down into the slot the single button had means a thumb reaching
   // for Up by reflex sinks instead.
+  // Always a pair now (Jump and Sneak on the ground, Up and Down in the air).
   ok('the pair moves off the slot the single button had',
-    /this\.q\('#side-right'\)\?\.classList\.toggle\('paired'/.test(ui)
+    /<div class="stick-side paired" id="side-right">/.test(ui)
     && /\.stick-side\.paired \{ transform: translateY\(calc\(var\(--side-btn\) \/ 2\)\)/.test(css));
   // Straddling needs room underneath, and sideways the hotbar is right there.
   ok('and lifts instead of straddling where there is no room below',

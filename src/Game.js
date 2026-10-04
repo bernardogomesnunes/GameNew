@@ -1073,8 +1073,11 @@ export class Game {
         if (this.player.flying) { this.upHeld = held; this.recomputeVertical(); }
         else if (held) this.player.requestJump();
       },
+      // Down: in the air or the water it takes you down; on your feet it
+      // sneaks (PlayerController's sneakHeld).
       onFlyDown: (held) => {
         this.downHeld = held;
+        this.player.sneakHeld = held;
         this.recomputeVertical();
       },
       // Touch goes through the same two verbs as mouse buttons, so a queued
