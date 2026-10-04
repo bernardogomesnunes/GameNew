@@ -550,6 +550,19 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
    centres it on the slot the single one had, so neither Up nor Down lands
    exactly where your thumb was and gets pressed by reflex. */
 .stick-side.paired { transform: translateY(calc(var(--side-btn) / 2)); }
+/* In the air, Up and Down sit beside the walking stick, inboard of it where
+   Break used to be — asked for directly: "when flying it's good to have the
+   up and down on the left". Mirrored with the sticks. */
+body.flying #side-right { right: auto; left: calc(var(--stick-edge) + var(--stick-size) + 10px); }
+body.flying.touch-walk-right #side-right { left: auto; right: calc(var(--stick-edge) + var(--stick-size) + 10px); }
+
+/* A fixed stick (UIManager.bindStick's `fixed`): it stays where it's drawn,
+   and only a touch on it — or just round it — takes it. The rest of its half
+   of the screen lets touches through to the picture, so a look-drag with the
+   other thumb that starts down there turns you instead of grabbing it. */
+.stick-zone.stick-fixed { pointer-events: none; }
+.stick-zone.stick-fixed .stick-base { pointer-events: auto; touch-action: none; }
+.stick-zone.stick-fixed .stick-base::before { content: ''; position: absolute; inset: -18px; border-radius: 50%; }
 
 /* More opens a sheet across the bottom rather than stacking buttons up the
  * edge. The stack had a ceiling, and on hitting it folded into a second column
