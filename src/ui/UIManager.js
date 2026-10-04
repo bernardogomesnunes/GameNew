@@ -8,7 +8,7 @@ import { Panels } from './Panels.js';
 import { StoryView, INTRO, ENDINGS, endingFor } from './Story.js';
 import { askConfirm } from './Confirm.js';
 import { LORE, loreKnowledge } from '../config/lore.js';
-import { ITEMS_BY_ID, itemName, isFood } from '../config/items.js';
+import { ITEMS_BY_ID, itemName, isFood, BARE_HANDS } from '../config/items.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { blockIcon, itemIcon } from '../config/cubes.js';
@@ -95,8 +95,12 @@ function touchLayoutPreview(c) {
 const LOOK_SLOP = 10;
 /** How long a still touch on the picture waits before it starts breaking. */
 const LOOK_HOLD_MS = 300;
-/** How long a tap keeps digging, to finish an ordinary block (Game's NORMAL_BREAK_MS and the hold's own delay). */
-const TAP_FINISH_MS = 450;
+/**
+ * The longest a tap keeps digging. A tap carries on until its block is
+ * through (Game.setBreaking's `once`), and this is only the backstop — past
+ * the slowest block by hand (Game's BARE_HAND_MS) plus the hold's delay.
+ */
+const TAP_FINISH_MS = 1600;
 
 export class UIManager {
   constructor(root, { bus, game, callbacks }) {
@@ -551,13 +555,18 @@ export class UIManager {
 
       if (playable.every((s) => !s)) {
         hotbar.appendChild(el(`<div class="hotbar-empty">Nothing equipped — open your bag and drag something up</div>`));
+        if (this.selectedItemId !== BARE_HANDS) this.selectHands(0);
         this.showHotbarLabel();
         return;
       }
       playable.forEach((s, i) => {
         if (!s) {
+          // An empty slot is bare hands (backlog batch 2): selectable, and
+          // what you hold when you pick it is nothing at all.
+          const selected = this.selectedItemId === BARE_HANDS && this.handsSlot === i;
           hotbar.appendChild(el(`
-            <div class="hotbar-slot empty" data-slot="${i}">
+            <div class="hotbar-slot empty ${selected ? 'selected' : ''}" data-slot="${i}" data-hands="1"
+                 data-name="Bare hands" data-note="Breaks anything, slowly — builds nothing" title="Bare hands">
               <span class="key">${i + 1}</span>
             </div>
           `));
@@ -584,9 +593,11 @@ export class UIManager {
       // down to nothing, moved back to the bag by hand, a bucket swapped
       // for its filled counterpart — same as before, just read off real
       // slots now instead of a list rebuilt from the bag's contents.
-      const stillValid = playable.some((s) => s && (this.selectedItemId
-        ? s.id === this.selectedItemId
-        : ITEMS_BY_ID.get(s.id)?.block === this.selectedBlockId));
+      const stillValid = this.selectedItemId === BARE_HANDS
+        ? !playable[this.handsSlot]
+        : playable.some((s) => s && (this.selectedItemId
+          ? s.id === this.selectedItemId
+          : ITEMS_BY_ID.get(s.id)?.block === this.selectedBlockId));
       if (!stillValid) {
         const first = playable.find(Boolean);
         if (first) {
@@ -666,9 +677,10 @@ export class UIManager {
     });
     this.q('#hotbar').addEventListener('click', (e) => {
       const slot = e.target.closest('.hotbar-slot');
-      // An empty Duilt playable slot has nothing to select — see it filled
-      // from the bag panel instead.
-      if (!slot || slot.classList.contains('empty')) return;
+      if (!slot) return;
+      // An empty Duilt playable slot is bare hands.
+      if (slot.dataset.hands) { this.selectHands(Number(slot.dataset.slot)); return; }
+      if (slot.classList.contains('empty')) return;
       if (slot.dataset.tool) { this.selectItem(slot.dataset.item); return; }
       const id = Number(slot.dataset.id);
       const availability = this.game.blockAvailability(id);
@@ -895,10 +907,10 @@ export class UIManager {
   bindLookSurface() {
     const zone = this.q('#look-zone');
     let id = null, start = null, last = null, moved = false, holding = false, timer = null, finishing = null;
-    // A tap into an ordinary block finishes it: digging takes a quarter of a
-    // second by hand, longer than a tap lasts, so the tap carries on just
-    // long enough. Only when the tap started a dig — a tap that struck
-    // somebody isn't repeated.
+    // A tap into a block finishes it: digging takes longer than a tap lasts
+    // (half a second or more by hand), so the tap carries on until the
+    // block is through, and stops there. Only when the tap started a dig —
+    // a tap that struck somebody isn't repeated.
     const stopFinishing = () => {
       if (!finishing) return;
       clearTimeout(finishing);
@@ -908,7 +920,7 @@ export class UIManager {
     const tap = () => {
       this.cb.onBreakTap();
       if (!this.cb.isDigging?.()) return;
-      this.cb.onBreakHold?.(true);
+      this.cb.onBreakHold?.(true, { once: true });
       finishing = setTimeout(stopFinishing, TAP_FINISH_MS);
     };
     zone.addEventListener('touchstart', (e) => {
@@ -1083,6 +1095,16 @@ export class UIManager {
     this.cb.onSelectSlot(id);
   }
 
+  /** Selects an empty slot: bare hands (BARE_HANDS in config/items.js). */
+  selectHands(i) {
+    this.selectedItemId = BARE_HANDS;
+    this.handsSlot = i;
+    this.root.querySelectorAll('#hotbar .hotbar-slot').forEach((s) =>
+      s.classList.toggle('selected', !!s.dataset.hands && Number(s.dataset.slot) === i));
+    this.showHotbarLabel();
+    this.cb.onSelectItem?.(BARE_HANDS);
+  }
+
   /** Selects a tool slot — the bucket, today — instead of a placeable block. */
   selectItem(id) {
     this.selectedItemId = id;
@@ -1120,6 +1142,7 @@ export class UIManager {
       // number keys always meant — nothing to look up, since the slot's
       // position in the bag *is* the number now.
       const slot = this.root.querySelectorAll('#hotbar .hotbar-slot')[n - 1];
+      if (slot?.dataset.hands) return void this.selectHands(n - 1);
       if (!slot || slot.classList.contains('empty')) return;
       if (slot.dataset.tool) this.selectItem(slot.dataset.item);
       else this.selectBlock(Number(slot.dataset.id));

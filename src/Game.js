@@ -60,7 +60,9 @@ import { nextView, VIEW_NAMES } from './config/avatar.js';
 import { AvatarView } from './render/AvatarView.js';
 import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
-import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood } from './config/items.js';
+import { CrackView } from './render/CrackView.js';
+import { LOGS, LEAVES, leafHeld, orphanLeaves } from './world/leafDecay.js';
+import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood, isTool, BARE_HANDS } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox, bodyFits } from './world/Mobs.js';
@@ -240,14 +242,22 @@ const CLAIM_COLUMN_MIN_HEIGHT = 1;
 const CLAIM_COLUMN_MAX_HEIGHT = 24;
 const CLAIM_COLUMN_DEFAULT_HEIGHT = 4;
 
-// How long a block takes to actually come free — see breakDelayFor. Bare
-// hands (or a tool with nothing to say about this material) sit at
-// NORMAL_BREAK_MS; the one thing a mining tool changes is knocking a
-// material it's suited to down near enough to instant, or a wrong one up to
+// How long a block takes to actually come free — see breakDelayFor. A tool
+// with nothing to say about this material sits at NORMAL_BREAK_MS; one suited
+// to it knocks it down near enough to instant, a wrong one up to
 // SLOW_BREAK_MS. Only applies in Duilt — Creative has no bag to fill and no
 // reason to make you wait for anything.
 const NORMAL_BREAK_MS = 260;
 const SLOW_BREAK_MS = 900;
+// Bare hands — nothing held, an empty slot, or a block or anything else that
+// isn't a tool — by what the block is made of. Backlog batch 2: tools were
+// faster already, but by hand it should take a bit longer: soft things a
+// little, wood more, stone most (still breakable — just the slow way).
+const BARE_HAND_MS = { plant: 320, dirt: 450, wood: 620, stone: 800 };
+/** Leaves with no tree fall this long after it goes, spread over the next few seconds. */
+const LEAF_DECAY_MIN_MS = 500, LEAF_DECAY_SPREAD_MS = 4000;
+/** How long a dig's cracks stay in sight after the last swing at it. */
+const CRACK_LINGER_MS = 450;
 
 /**
  * Items that fully replace Break/Place while selected, rather than digging
@@ -390,6 +400,7 @@ export class Game {
     // 1.002 left the outline a thousandth of a block off the face it traces —
     // below what a depth buffer can tell apart, so the two fought and the
     // outline sparkled. A hundredth of a block is still visually flush.
+    this.crackView = new CrackView(this.scene);
     this.hoverBox = this.buildWireBox(0xffffff, 1.01);
     this.hoverBox.visible = false;
     this.scene.add(this.hoverBox);
@@ -1110,7 +1121,7 @@ export class Game {
       onBreakTap: () => this.primaryAction(),
       // Whether the last Break started digging into something not yet through.
       isDigging: () => !!this.digTarget,
-      onBreakHold: (held) => this.setBreaking(held),
+      onBreakHold: (held, opts) => this.setBreaking(held, opts),
       onPlaceTap: () => this.secondaryAction(),
       onPlaceHold: (held) => this.setPlacing(held),
 
@@ -1555,7 +1566,8 @@ export class Game {
 
   /** You, and what's in your hand, brought up to date with the frame. */
   updateYou(dt, playing) {
-    const held = this.selectedItemId ? { itemId: this.selectedItemId } : { blockId: this.selectedBlockId };
+    const held = this.selectedItemId === BARE_HANDS ? {}
+      : this.selectedItemId ? { itemId: this.selectedItemId } : { blockId: this.selectedBlockId };
     const third = this.player.view !== 'first';
     this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third });
     this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning });
@@ -1585,8 +1597,9 @@ export class Game {
    * Only plain breaking repeats. With something queued the same button puts it
    * down, and holding it should not stamp forty copies.
    */
-  setBreaking(on) {
+  setBreaking(on, { once = false } = {}) {
     const want = on && !this.armed && !this.moving;
+    if (want) this.breakOnce = once;
     if (want === this.breaking) return;
     this.breaking = want;
     if (want) {
@@ -2826,12 +2839,14 @@ export class Game {
    * the selected tool refuses it outright.
    *
    * Bare hands (nothing selected, or a non-mining item) are never in the
-   * effectiveness table at all, so they always land on the NORMAL/`false`
-   * fallback — every material, always breakable, just not the fast way.
+   * effectiveness table at all, so every material is always breakable by
+   * hand — at BARE_HAND_MS, slower than any tool that isn't wrong for it.
    * `blocked` only fires when a tool is actively wrong for the job.
    */
   breakDelayFor(blockId) {
-    const tier = toolEffectiveness(this.selectedItemId, materialOf(blockId));
+    const material = materialOf(blockId);
+    if (!isTool(this.selectedItemId)) return { ms: BARE_HAND_MS[material] ?? NORMAL_BREAK_MS, blocked: false, tier: 'hands' };
+    const tier = toolEffectiveness(this.selectedItemId, material);
     if (tier === 'impossible') return { ms: 0, blocked: true, tier };
     if (tier === 'fast') return { ms: 0, blocked: false, tier };
     if (tier === 'slow') return { ms: SLOW_BREAK_MS, blocked: false, tier };
@@ -4203,13 +4218,17 @@ export class Game {
         }
         return;
       }
-      if (isNewTarget) this.digTarget = { key, startedAt: performance.now() };
+      if (isNewTarget) this.digTarget = { key, x: hit.x, y: hit.y, z: hit.z, ms, startedAt: performance.now() };
+      this.digTarget.lastHitAt = performance.now();
       if (ms > 0 && performance.now() - this.digTarget.startedAt < ms) {
         // Not through yet: the pick going in, in whatever it is.
         this.sound?.dig(soundOf(BLOCKS_BY_ID.get(this.world.getBlock(hit.x, hit.y, hit.z))));
         return;
       }
       this.digTarget = null;
+      // A tap that carries on digging (UIManager's bindLookSurface) stops
+      // here, once its block is through — not on into the one behind it.
+      if (this.breakOnce) this.setBreaking(false);
       // A tool only wears doing the job it's actually suited for — the speed
       // bonus has a cost, digging around with the wrong tool (or bare hands,
       // which was never in the effectiveness table to begin with) does not.
@@ -4493,6 +4512,8 @@ export class Game {
   }
 
   placeBlock() {
+    // Empty-handed, there is nothing to put down.
+    if (this.selectedItemId === BARE_HANDS) return;
     const hit = this.raycast();
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
@@ -4612,6 +4633,37 @@ export class Game {
       const trees = grown.filter((c) => c.prev === SAPLING).length;
       this.ui?.toast({ kind: 'xp', title: trees > 1 ? `${trees} saplings have grown into trees` : 'A sapling has grown into a tree', body: 'Ten days in the ground' });
     }
+  }
+
+  /**
+   * Leaves left with no tree (world/leafDecay.js): each goes on its own,
+   * somewhere in the next few seconds, so a crown thins out rather than
+   * blinking away. Not an edit — nothing to undo, nothing to the bag.
+   */
+  queueLeafDecay({ x, y, z }) {
+    if (this.leafDecayWorld !== this.world) { this.leafDecay = new Map(); this.leafDecayWorld = this.world; }
+    const now = performance.now();
+    for (const l of orphanLeaves(this.world, x, y, z)) {
+      const key = `${l.x},${l.y},${l.z}`;
+      if (!this.leafDecay.has(key)) this.leafDecay.set(key, { ...l, queuedAt: now, at: now + LEAF_DECAY_MIN_MS + Math.random() * LEAF_DECAY_SPREAD_MS });
+    }
+  }
+
+  tickLeafDecay() {
+    if (!this.leafDecay?.size) return;
+    if (this.leafDecayWorld !== this.world) { this.leafDecay.clear(); return; }
+    const now = performance.now();
+    let fell = false;
+    for (const [key, l] of this.leafDecay) {
+      if (l.at > now) continue;
+      this.leafDecay.delete(key);
+      if (!LEAVES.has(this.world.getBlock(l.x, l.y, l.z))) continue;
+      // Something may have caught it since — wood put back near it.
+      if (this.woodPlacedAt > l.queuedAt && leafHeld(this.world, l.x, l.y, l.z)) continue;
+      this.world.setBlock(l.x, l.y, l.z, AIR);
+      fell = true;
+    }
+    if (fell) this.remeshDirty();
   }
 
   /** What a sapling under the crosshair says: how long until it's a tree. */
@@ -4781,6 +4833,11 @@ export class Game {
     else this.sound?.break(soundOf(BLOCKS_BY_ID.get(first.prev)));
     // Anything that opens a way for water, or blocks one, sets it running.
     for (const c of changes) { this.water?.touch(c.x, c.y, c.z); this.lava?.touch(c.x, c.y, c.z); }
+    // A trunk cut away can leave its leaves with nothing to hold.
+    for (const c of changes) {
+      if (LOGS.has(c.prev) && !LOGS.has(c.next)) this.queueLeafDecay(c);
+      else if (LOGS.has(c.next)) this.woodPlacedAt = performance.now();
+    }
     this.remeshDirty();
 
     if (this.duilt) {
@@ -5087,6 +5144,7 @@ export class Game {
         this.player.jumpScale = white ? WHITE_RING_JUMP : 1;
       }
       this.updateHover();
+      this.updateCracks();
       this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false });
       this.settlerView.update(this.withShowcase('settlers', this.duilt?.settlers.people ?? []));
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
@@ -5116,6 +5174,7 @@ export class Game {
       this.tickGuardian(dt);
       this.runWater(dt);
       this.growCrops(dt);
+      this.tickLeafDecay();
       this.lookForPlaces(dt);
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
@@ -5320,6 +5379,18 @@ export class Game {
     if (this.lastMinimapAt && now - this.lastMinimapAt < MINIMAP_INTERVAL_MS) return;
     this.lastMinimapAt = now;
     this.ui.updateMinimap(this.world.gen, this.player.position.x, this.player.position.z, this.player.yaw);
+  }
+
+  /**
+   * Cracks on the block being dug, as far along as the dig is (CrackView).
+   * Only while you are still at it: a dig left alone keeps its progress, but
+   * its cracks fade out of sight after CRACK_LINGER_MS.
+   */
+  updateCracks() {
+    const d = this.digTarget;
+    const now = performance.now();
+    const live = d?.ms > 0 && now - d.lastHitAt < CRACK_LINGER_MS && this.world.getBlock(d.x, d.y, d.z) !== AIR;
+    this.crackView.update(live ? d : null, live ? (now - d.startedAt) / d.ms : 0);
   }
 
   updateHover() {
