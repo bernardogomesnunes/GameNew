@@ -1,7 +1,7 @@
 import { World } from '../src/world/World.js';
 import { ChunkMesher } from '../src/world/ChunkMesher.js';
 import { ChunkGen } from '../src/world/ChunkGen.js';
-import { tileFor } from '../src/render/BlockTextures.js';
+import { tileFor, TILE_SIZE } from '../src/render/BlockTextures.js';
 
 /**
  * Requested directly: "Leaves block could have small holes in it like trees
@@ -17,10 +17,12 @@ const LEAVES = 5, WOOD = 4, STONE = 3;
   const tile = tileFor(LEAVES);
   let holes = 0;
   for (let i = 3; i < tile.length; i += 4) if (tile[i] === 0) holes++;
-  ok(`a leaf has real holes you see through (${holes} of 256 pixels)`, holes >= 10 && holes < 60);
-  const corner = (x, y) => tile[(y * 16 + x) * 4 + 3];
-  ok('its corners are bitten off, so a face reads rounded, not square', corner(0, 0) === 0 && corner(15, 0) === 0 && corner(0, 15) === 0 && corner(15, 15) === 0);
-  ok('and the middle of each edge is still there', corner(8, 0) === 255 && corner(0, 8) === 255);
+  // The same share of the face as at 16×16: between a twenty-fifth and a quarter.
+  const n = TILE_SIZE, all = n * n;
+  ok(`a leaf has real holes you see through (${holes} of ${all} pixels)`, holes >= all * 0.04 && holes < all * 0.24);
+  const corner = (x, y) => tile[(y * n + x) * 4 + 3];
+  ok('its corners are bitten off, so a face reads rounded, not square', corner(0, 0) === 0 && corner(n - 1, 0) === 0 && corner(0, n - 1) === 0 && corner(n - 1, n - 1) === 0);
+  ok('and the middle of each edge is still there', corner(n / 2, 0) === 255 && corner(0, n / 2) === 255);
   const stone = tileFor(STONE);
   let solid = true;
   for (let i = 3; i < stone.length; i += 4) if (stone[i] !== 255) solid = false;

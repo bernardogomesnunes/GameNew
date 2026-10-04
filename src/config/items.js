@@ -66,7 +66,7 @@ export const ITEMS = [
   { id: 'brick', name: 'Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'brick', block: 9, madeBy: 'Fired from earth in a kiln' },
   { id: 'glass', name: 'Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xb9dce8, glyph: 'pane', block: 10, madeBy: 'Fired from sand in a kiln' },
   { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: 'Cut and dressed at a workshop' },
-  { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xf0cf62, glyph: 'gold', block: 13, madeBy: 'Brought up from a mine' },
+  { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xeec43e, glyph: 'gold', block: 13, madeBy: 'Brought up from a mine' },
 
   // --- growing things ------------------------------------------------------
   // Each crop's own seeds come up as that crop — see config/crops.js. There
@@ -195,7 +195,7 @@ export const ITEMS = [
   { id: 'dark_stone', name: 'Dark Stone', kind: 'refined', stackTo: STACK_BULK, color: 0x4f4b57, glyph: 'stone', block: 156, madeBy: 'Stone darkened over a dark-wood fire' },
   { id: 'dark_brick', name: 'Dark Brick', kind: 'refined', stackTo: STACK_BULK, color: 0x5c4b52, glyph: 'brick', block: 157, madeBy: 'Brick darkened over a dark-wood fire' },
   { id: 'sky_marble', name: 'Sky Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe8eef8, glyph: 'marble', block: 158, madeBy: 'Marble polished with powdered glass' },
-  { id: 'gold_trim', name: 'Gold Trim', kind: 'refined', stackTo: STACK_BULK, color: 0xf2c94c, glyph: 'trim', block: 159, madeBy: 'Stone banded with gold' },
+  { id: 'gold_trim', name: 'Gold Trim', kind: 'refined', stackTo: STACK_BULK, color: 0xecc040, glyph: 'trim', block: 159, madeBy: 'Stone banded with gold' },
   // Calçada portuguesa (playtest, P9).
   { id: 'calcada', name: 'Calçada', kind: 'refined', stackTo: STACK_BULK, color: 0xf1ede2, glyph: 'calcada', block: 209, madeBy: 'Limestone knapped into little setts' },
   { id: 'calcada_dark', name: 'Dark Calçada', kind: 'refined', stackTo: STACK_BULK, color: 0x45434a, glyph: 'calcada', block: 210, madeBy: 'Dark stone knapped into little setts' },
@@ -258,7 +258,7 @@ export const ITEMS = [
   // a recipe actually asks for.
   { id: 'iron_ore', name: 'Iron Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xa9948d, glyph: 'gravel', block: 38, madeBy: 'Mined from the Summit' },
   { id: 'copper_ore', name: 'Copper Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xbb8a67, glyph: 'gravel', block: 39, madeBy: 'Mined from the Summit' },
-  { id: 'gold_ore', name: 'Gold Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xd6bd5c, glyph: 'gold', block: 40, madeBy: 'Mined from the Summit' },
+  { id: 'gold_ore', name: 'Gold Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xaaa088, glyph: 'gold', block: 40, madeBy: 'Mined from the Summit' },
   // The ring ores (Phase 7c) — see blocks.js. Each ring needs its own.
   { id: 'sunstone', name: 'Sunstone', kind: 'raw', stackTo: STACK_GOODS, color: 0xffd76a, glyph: 'crystal', block: 191, madeBy: 'Very rare — deep in the caves, or in a chest. For the White Ring' },
   { id: 'nightstone', name: 'Nightstone', kind: 'raw', stackTo: STACK_GOODS, color: 0x5a4a7a, glyph: 'crystal', block: 192, madeBy: 'Very rare — deep in the caves, or in a chest. For the Black Ring' },

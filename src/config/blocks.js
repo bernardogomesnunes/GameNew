@@ -35,53 +35,53 @@ const LAVA_FLOW_BASE = 115;
 export const LAVA = 45;
 
 export const BLOCKS = [
-  { id: 1, name: 'Grass', glyph: 'grass', color: 0x97cc81, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
-  { id: 2, name: 'Dirt', glyph: 'dirt', color: 0xc69972, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
-  { id: 3, name: 'Stone', glyph: 'stone', color: 0xafafb6, material: 'stone', cost: { stone: 1 }, unlock: null },
-  { id: 4, name: 'Wood', glyph: 'log', color: 0xcc9e72, material: 'wood', cost: { wood: 2 }, unlock: null },
+  { id: 1, name: 'Grass', glyph: 'grass', color: 0x7fc254, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
+  { id: 2, name: 'Dirt', glyph: 'dirt', color: 0x9c6e48, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
+  { id: 3, name: 'Stone', glyph: 'stone', color: 0x9d9b97, material: 'stone', cost: { stone: 1 }, unlock: null },
+  { id: 4, name: 'Wood', glyph: 'log', color: 0x7d5a3a, material: 'wood', cost: { wood: 2 }, unlock: null },
   // Opaque on purpose. At 0.9 the transparency was invisible, but it put every
   // tree in the game into the depth-write-disabled transparent pass, which the
   // renderer re-sorts on every camera move — the shimmer you saw walking
   // through a forest. Opaque leaves also merge into the single opaque draw call.
-  { id: 5, name: 'Leaves', glyph: 'leaf', color: 0x82c675, material: 'plant', cost: { wood: 1 }, unlock: null },
-  { id: 6, name: 'Sand', glyph: 'sand', color: 0xded09f, material: 'dirt', cost: { wood: 1 }, unlock: null },
-  { id: 7, name: 'Planks', glyph: 'planks', color: 0xd1b38c, material: 'wood', cost: { wood: 1 }, unlock: null },
-  { id: 8, name: 'Cobblestone', glyph: 'cobble', color: 0xa1a1aa, material: 'stone', cost: { stone: 1 }, unlock: null },
-  { id: 9, name: 'Brick', glyph: 'brick', color: 0xd1887a, material: 'stone', cost: { brick: 1 }, unlock: null },
-  { id: 10, name: 'Glass', glyph: 'pane', color: 0xb9dce8, transparent: true, opacity: 0.35, cost: { glass: 1 }, unlock: null },
+  { id: 5, name: 'Leaves', glyph: 'leaf', color: 0x5dab45, material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 6, name: 'Sand', glyph: 'sand', color: 0xe4cf92, material: 'dirt', cost: { wood: 1 }, unlock: null },
+  { id: 7, name: 'Planks', glyph: 'planks', color: 0xc49360, material: 'wood', cost: { wood: 1 }, unlock: null },
+  { id: 8, name: 'Cobblestone', glyph: 'cobble', color: 0x8f8d89, material: 'stone', cost: { stone: 1 }, unlock: null },
+  { id: 9, name: 'Brick', glyph: 'brick', color: 0xb5583f, material: 'stone', cost: { brick: 1 }, unlock: null },
+  { id: 10, name: 'Glass', glyph: 'pane', color: 0xc2e5f2, transparent: true, opacity: 0.35, cost: { glass: 1 }, unlock: null },
   // Thin enough to read as water over a sandy bed, but not so thin that the
   // sand shows through and turns the rivers grey, which is what 0.6 did.
-  { id: 11, name: 'Water', glyph: 'water', color: 0x83add7, transparent: true, opacity: 0.78, cost: { wood: 3 }, unlock: null },
+  { id: 11, name: 'Water', glyph: 'water', color: 0x4f97d8, transparent: true, opacity: 0.78, cost: { wood: 3 }, unlock: null },
   // Requested directly: "Snow should be white." The old 0xceddec read as a
   // pale lavender-blue next to Glass and Water rather than snow.
-  { id: 12, name: 'Snow', glyph: 'snow', color: 0xf5f7f8, cost: { wood: 1 }, unlock: { type: 'level', value: 3 } },
-  { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xf0cf62, material: 'stone', cost: { gold: 1 }, unlock: { type: 'level', value: 6 } },
-  { id: 14, name: 'Obsidian', glyph: 'obsidian', color: 0x372648, material: 'stone', cost: { stone: 4 }, unlock: { type: 'achievement', value: 'underground' } },
-  { id: 15, name: 'Red Glass', glyph: 'pane', color: 0xde9390, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: { type: 'level', value: 4 } },
-  { id: 16, name: 'Blue Glass', glyph: 'pane', color: 0x90aade, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: { type: 'level', value: 4 } },
-  { id: 17, name: 'Marble', glyph: 'marble', color: 0xe3dbc8, material: 'stone', cost: { stone: 3 }, unlock: { type: 'achievement', value: 'architect' } },
-  { id: 18, name: 'Amethyst', glyph: 'crystal', color: 0xb895dc, transparent: true, opacity: 0.55, cost: { gold: 2 }, unlock: { type: 'level', value: 8 } },
-  { id: 19, name: 'Ground', color: 0x89c47c, system: true },
+  { id: 12, name: 'Snow', glyph: 'snow', color: 0xf4f8fb, cost: { wood: 1 }, unlock: { type: 'level', value: 3 } },
+  { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xeec43e, material: 'stone', cost: { gold: 1 }, unlock: { type: 'level', value: 6 } },
+  { id: 14, name: 'Obsidian', glyph: 'obsidian', color: 0x2b163f, material: 'stone', cost: { stone: 4 }, unlock: { type: 'achievement', value: 'underground' } },
+  { id: 15, name: 'Red Glass', glyph: 'pane', color: 0xe86a62, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: { type: 'level', value: 4 } },
+  { id: 16, name: 'Blue Glass', glyph: 'pane', color: 0x6a92e6, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: { type: 'level', value: 4 } },
+  { id: 17, name: 'Marble', glyph: 'marble', color: 0xece4d3, material: 'stone', cost: { stone: 3 }, unlock: { type: 'achievement', value: 'architect' } },
+  { id: 18, name: 'Amethyst', glyph: 'crystal', color: 0xa77de2, transparent: true, opacity: 0.55, cost: { gold: 2 }, unlock: { type: 'level', value: 8 } },
+  { id: 19, name: 'Ground', color: 0x7fc254, system: true },
   // Duilt blocks. Saplings grow into forests; farmland is soil that has been
   // turned, which is what a farm is actually made of.
-  { id: 20, name: 'Sapling', glyph: 'sprout', color: 0x9fcd8b, shape: 'sapling', material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 20, name: 'Sapling', glyph: 'sprout', color: 0x6fbf4a, shape: 'sapling', material: 'plant', cost: { wood: 1 }, unlock: null },
   // Dark, turned earth in furrows — requested directly: "Farm should be
   // dirt." It used to be a pale tan you could take for sand.
-  { id: 21, name: 'Farmland', glyph: 'farmland', color: 0x8d6645, material: 'dirt', cost: { wood: 1 }, unlock: null },
+  { id: 21, name: 'Farmland', glyph: 'farmland', color: 0x6a4529, material: 'dirt', cost: { wood: 1 }, unlock: null },
   // Ground the biomes are made of. Six kinds of country used to share four
   // top blocks between them, so a meadow, a forest, the highlands and a
   // wetland were all the same green: you could walk from one to another and
   // the only thing that changed was how many trees there were. These are what
   // let each one have its own floor.
-  { id: 22, name: 'Moss', glyph: 'moss', color: 0x81c271, soil: true, material: 'dirt', unlock: null },
-  { id: 23, name: 'Gravel', glyph: 'gravel', color: 0xbbb6ae, material: 'stone', unlock: null },
-  { id: 24, name: 'Clay', glyph: 'clay', color: 0xa3beca, soil: true, material: 'dirt', unlock: null },
+  { id: 22, name: 'Moss', glyph: 'moss', color: 0x6ea844, soil: true, material: 'dirt', unlock: null },
+  { id: 23, name: 'Gravel', glyph: 'gravel', color: 0x98928a, material: 'stone', unlock: null },
+  { id: 24, name: 'Clay', glyph: 'clay', color: 0x93afc4, soil: true, material: 'dirt', unlock: null },
   // The ocean's own floor — everything else underwater already borrowed Sand
   // (see ChunkGen's RIVERBED), which is fine for a riverbed but wrong once a
   // whole biome is the seabed: Sand is the Sands biome's own top block, and
   // sharing it would be the exact "two biomes read as one" problem the rest
   // of this file exists to avoid.
-  { id: 25, name: 'Silt', glyph: 'clay', color: 0x8b9a8a, material: 'dirt', unlock: null },
+  { id: 25, name: 'Silt', glyph: 'clay', color: 0x84927a, material: 'dirt', unlock: null },
 
   // Phase 4: real dynamic light, real half-height shapes, and furniture.
   //
@@ -122,21 +122,21 @@ export const BLOCKS = [
     shape: 'lantern',
     cost: { wood: 2 }, unlock: null,
   },
-  { id: 27, name: 'Stone Slab', glyph: 'slab', color: 0xafafb6, shape: 'slab', material: 'stone', cost: { stone: 1 }, unlock: null },
-  { id: 28, name: 'Plank Slab', glyph: 'slab', color: 0xd1b38c, shape: 'slab', material: 'wood', cost: { wood: 1 }, unlock: null },
-  { id: 29, name: 'Stone Stairs', glyph: 'stair', color: 0xafafb6, shape: 'stair', material: 'stone', cost: { stone: 1 }, unlock: null },
-  { id: 30, name: 'Plank Stairs', glyph: 'stair', color: 0xd1b38c, shape: 'stair', material: 'wood', cost: { wood: 1 }, unlock: null },
+  { id: 27, name: 'Stone Slab', glyph: 'slab', color: 0x9d9b97, shape: 'slab', material: 'stone', cost: { stone: 1 }, unlock: null },
+  { id: 28, name: 'Plank Slab', glyph: 'slab', color: 0xc49360, shape: 'slab', material: 'wood', cost: { wood: 1 }, unlock: null },
+  { id: 29, name: 'Stone Stairs', glyph: 'stair', color: 0x9d9b97, shape: 'stair', material: 'stone', cost: { stone: 1 }, unlock: null },
+  { id: 30, name: 'Plank Stairs', glyph: 'stair', color: 0xc49360, shape: 'stair', material: 'wood', cost: { wood: 1 }, unlock: null },
 
   // Furniture: a shape shared across recoloured variants, the same pattern
   // Glass/Red Glass/Blue Glass above already uses — a distinct 3D prop shape
   // (see PropRenderer) that comes in more than one finish.
-  { id: 31, name: 'Oak Table', glyph: 'table', color: 0xd1b38c, shape: 'table', material: 'wood', cost: { wood: 4 }, unlock: null },
-  { id: 32, name: 'Marble Table', glyph: 'table', color: 0xe3dbc8, shape: 'table', material: 'stone', cost: { stone: 3 }, unlock: null },
-  { id: 33, name: 'Oak Chair', glyph: 'chair', color: 0xd1b38c, shape: 'chair', material: 'wood', cost: { wood: 3 }, unlock: null },
-  { id: 34, name: 'Red Chair', glyph: 'chair', color: 0xd1887a, shape: 'chair', material: 'wood', cost: { wood: 3 }, unlock: null },
-  { id: 35, name: 'Red Rug', glyph: 'rug', color: 0xd1887a, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
-  { id: 36, name: 'Blue Rug', glyph: 'rug', color: 0x90aade, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
-  { id: 37, name: 'Green Rug', glyph: 'rug', color: 0x82c675, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 31, name: 'Oak Table', glyph: 'table', color: 0xc49360, shape: 'table', material: 'wood', cost: { wood: 4 }, unlock: null },
+  { id: 32, name: 'Marble Table', glyph: 'table', color: 0xece4d3, shape: 'table', material: 'stone', cost: { stone: 3 }, unlock: null },
+  { id: 33, name: 'Oak Chair', glyph: 'chair', color: 0xc49360, shape: 'chair', material: 'wood', cost: { wood: 3 }, unlock: null },
+  { id: 34, name: 'Red Chair', glyph: 'chair', color: 0xb5503c, shape: 'chair', material: 'wood', cost: { wood: 3 }, unlock: null },
+  { id: 35, name: 'Red Rug', glyph: 'rug', color: 0xb8443a, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 36, name: 'Blue Rug', glyph: 'rug', color: 0x4f74c4, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 37, name: 'Green Rug', glyph: 'rug', color: 0x4f9a40, shape: 'rug', material: 'plant', cost: { wood: 1 }, unlock: null },
 
   // Ore. Embedded in the rock of the Summit biome only (see ChunkGen.oreAt) —
   // a vein you find, not a block anyone places, the same way Moss or Clay are
@@ -144,27 +144,25 @@ export const BLOCKS = [
   // speckled mark already reads as flecks in rock; gold ore borrows the
   // existing gold mark instead, so it reads as kin to Gold Block without
   // being the same colour — ore is duller, unrefined, still in the stone.
-  // Backlog batch 2: it read as wood, so it is yellower now, and its own
-  // `texture` (cracked rock with flecks that glint; config/textures.js).
-  { id: 38, name: 'Iron Ore', glyph: 'gravel', color: 0xa9948d, material: 'stone', unlock: null },
-  { id: 39, name: 'Copper Ore', glyph: 'gravel', color: 0xbb8a67, material: 'stone', unlock: null },
-  { id: 40, name: 'Gold Ore', glyph: 'gold', texture: 'gold_ore', color: 0xd6bd5c, material: 'stone', unlock: null },
+  { id: 38, name: 'Iron Ore', glyph: 'gravel', color: 0xa69a92, material: 'stone', unlock: null },
+  { id: 39, name: 'Copper Ore', glyph: 'gravel', color: 0xa39684, material: 'stone', unlock: null },
+  { id: 40, name: 'Gold Ore', glyph: 'gold', color: 0xaaa088, material: 'stone', unlock: null },
 
   // Two more trees, requested directly so the forest reads as more than one
   // kind of wood: a pale trunk and canopy for a birch-like grove, and a
   // deep, dark pairing for a denser one. Same `cost`/`unlock` shape as the
   // original Wood/Leaves so they behave identically once cut and carried.
-  { id: 41, name: 'White Wood', glyph: 'log', color: 0xe8e0d0, material: 'wood', cost: { wood: 2 }, unlock: null },
-  { id: 42, name: 'White Leaves', glyph: 'leaf', color: 0xd7e3ab, material: 'plant', cost: { wood: 1 }, unlock: null },
-  { id: 43, name: 'Dark Wood', glyph: 'log', color: 0x6b4a3a, material: 'wood', cost: { wood: 2 }, unlock: null },
-  { id: 44, name: 'Dark Leaves', glyph: 'leaf', color: 0x4a7a52, material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 41, name: 'White Wood', glyph: 'log', color: 0xe4dfd4, material: 'wood', cost: { wood: 2 }, unlock: null },
+  { id: 42, name: 'White Leaves', glyph: 'leaf', color: 0xc6dc80, material: 'plant', cost: { wood: 1 }, unlock: null },
+  { id: 43, name: 'Dark Wood', glyph: 'log', color: 0x553826, material: 'wood', cost: { wood: 2 }, unlock: null },
+  { id: 44, name: 'Dark Leaves', glyph: 'leaf', color: 0x2f6a3a, material: 'plant', cost: { wood: 1 }, unlock: null },
 
   // Found in the deep caverns under the tall mountains, never placed from a
   // recipe — the same natural-only shape the three ores above already use.
   // Lights itself the way a Lantern does (see LightManager) rather than
   // needing its own render special-case.
   {
-    id: 45, name: 'Lava', glyph: 'water', color: 0xe8672c,
+    id: 45, name: 'Lava', glyph: 'water', color: 0xf26a18,
     light: { color: 0xff8040, intensity: 5, distance: 14, decay: 1 },
     material: 'stone', unlock: null,
   },
@@ -174,11 +172,11 @@ export const BLOCKS = [
   // alike (caught by mapdraw.test.mjs's own "no two biomes share a colour"
   // check). A deeper, shadier green than ordinary Moss, the way a canopy
   // thick enough to earn "dark" in its name would actually shade its floor.
-  { id: 46, name: 'Dark Moss', glyph: 'moss', color: 0x4a6045, soil: true, material: 'dirt', unlock: null },
+  { id: 46, name: 'Dark Moss', glyph: 'moss', color: 0x47683a, soil: true, material: 'dirt', unlock: null },
   // The Giant Grove's floor: a deep bed of fallen leaves under trees too big
   // to let much grass grow. Its own ground so the grove reads as somewhere
   // else underfoot and on the map (every biome has its own top block).
-  { id: 147, name: 'Forest Floor', glyph: 'litter', color: 0x8a7a48, soil: true, material: 'dirt', unlock: null },
+  { id: 147, name: 'Forest Floor', glyph: 'litter', color: 0x7a643a, soil: true, material: 'dirt', unlock: null },
 
   // Ranching. A fence stands a block and a half tall to anything walking
   // into it (see World.collisionBoxAt) — too high for you to jump or an
@@ -190,9 +188,9 @@ export const BLOCKS = [
   // `stateOf` marks a block that is another block in a different state: it
   // has no item or recipe of its own, and breaking it gives back the item of
   // the block it's a state of.
-  { id: 47, name: 'Fence', glyph: 'fence', color: 0xc9a67c, shape: 'fence', material: 'wood', cost: { wood: 1 }, unlock: null },
-  { id: 48, name: 'Gate', glyph: 'gate', color: 0xa9825a, shape: 'gate', material: 'wood', cost: { wood: 2 }, unlock: null },
-  { id: 49, name: 'Open Gate', glyph: 'gate', color: 0xa9825a, shape: 'gate_open', material: 'wood', stateOf: 48, unlock: null },
+  { id: 47, name: 'Fence', glyph: 'fence', color: 0xb3844f, shape: 'fence', material: 'wood', cost: { wood: 1 }, unlock: null },
+  { id: 48, name: 'Gate', glyph: 'gate', color: 0x9a6c40, shape: 'gate', material: 'wood', cost: { wood: 2 }, unlock: null },
+  { id: 49, name: 'Open Gate', glyph: 'gate', color: 0x9a6c40, shape: 'gate_open', material: 'wood', stateOf: 48, unlock: null },
 
   // Flowing water, one block per level: 7 right beside a source (or falling
   // straight down), 1 at the thin end of a spill. Water (11) is the still
@@ -201,7 +199,7 @@ export const BLOCKS = [
   // weaker they are (ChunkMesher.emitFlowingWater), walked and swum through
   // like any water, and never placed or carried on their own.
   ...[1, 2, 3, 4, 5, 6, 7].map((level) => ({
-    id: FLOW_BASE + level, name: 'Flowing Water', glyph: 'water', color: 0x83add7, transparent: true, opacity: 0.78,
+    id: FLOW_BASE + level, name: 'Flowing Water', glyph: 'water', color: 0x4f97d8, transparent: true, opacity: 0.78,
     shape: 'water_flow', stateOf: 11, level, unlock: null,
   })),
 
@@ -215,7 +213,7 @@ export const BLOCKS = [
   // it only runs three blocks from its source, and slowly (see
   // world/WaterFlow.js). Level 3 beside the source or falling, 1 at the end.
   ...[1, 2, 3].map((level) => ({
-    id: LAVA_FLOW_BASE + level, name: 'Flowing Lava', glyph: 'water', color: 0xe8672c,
+    id: LAVA_FLOW_BASE + level, name: 'Flowing Lava', glyph: 'water', color: 0xf26a18,
     light: { color: 0xff8040, intensity: 3, distance: 9, decay: 1 },
     shape: 'lava_flow', stateOf: 45, level, material: 'stone', unlock: null,
   })),
@@ -229,7 +227,7 @@ export const BLOCKS = [
     light: { color: 0xffd79a, intensity: 6, distance: 22, decay: 1, y: 0.3 }, cost: { wood: 2 }, unlock: null,
   },
 
-  { id: 69, name: 'Door', glyph: 'door', color: 0xb08a60, shape: 'door', material: 'wood', cost: { wood: 3 }, facing: 0, unlock: null },
+  { id: 69, name: 'Door', glyph: 'door', color: 0xa5763f, shape: 'door', material: 'wood', cost: { wood: 3 }, facing: 0, unlock: null },
 ];
 
 // Stairs, chairs and doors face a way: the way you were looking when you put
@@ -277,8 +275,8 @@ const DOOR_BASE = 69;
 // `wall` is what fills in under the slope where a roof needs solid courses —
 // the ends of a gable — so a brick roof has brick gable ends.
 export const ROOF_MATERIALS = [
-  { key: 'brick', name: 'Brick Roof Tiles', color: 0xc9765c, wall: 9 },
-  { key: 'stone', name: 'Stone Roof Tiles', color: 0x8e93a0, wall: 8 },
+  { key: 'brick', name: 'Brick Roof Tiles', color: 0xb04c34, wall: 9 },
+  { key: 'stone', name: 'Stone Roof Tiles', color: 0x5b6577, wall: 8 },
 ];
 /** The pieces of one roof material, in the order their ids run. */
 const ROOF_KINDS = ['steep', 'steep', 'steep', 'steep', 'lo', 'lo', 'lo', 'lo', 'hi', 'hi', 'hi', 'hi', 'ridge_x', 'ridge_z', 'peak'];
@@ -350,23 +348,23 @@ export const DARK_STONE = 156;
 export const DARK_BRICK = 157;
 export const SKY_MARBLE = 158;
 BLOCKS.push(
-  { id: DARK_STONE, name: 'Dark Stone', glyph: 'stone', color: 0x4f4b57, material: 'stone', unlock: null },
-  { id: DARK_BRICK, name: 'Dark Brick', glyph: 'brick', color: 0x5c4b52, material: 'stone', unlock: null },
-  { id: SKY_MARBLE, name: 'Sky Marble', glyph: 'marble', color: 0xe8eef8, material: 'stone', unlock: null },
-  { id: 159, name: 'Gold Trim', glyph: 'trim', color: 0xf2c94c, material: 'stone', unlock: null },
+  { id: DARK_STONE, name: 'Dark Stone', glyph: 'stone', color: 0x4e5666, material: 'stone', unlock: null },
+  { id: DARK_BRICK, name: 'Dark Brick', glyph: 'brick', color: 0x58322a, material: 'stone', unlock: null },
+  { id: SKY_MARBLE, name: 'Sky Marble', glyph: 'marble', color: 0xeaf0fa, material: 'stone', unlock: null },
+  { id: 159, name: 'Gold Trim', glyph: 'trim', color: 0xecc040, material: 'stone', unlock: null },
   // Plaster between dark oak beams — the beams are painted into the
   // texture (see textures.js `timber`), so it lays like any block.
-  { id: 160, name: 'Timber Frame', glyph: 'timber', color: 0xf0e6cf, material: 'wood', unlock: null },
+  { id: 160, name: 'Timber Frame', glyph: 'timber', color: 0xf2e8d2, material: 'wood', unlock: null },
 );
 
 // Walls: a thick, low stone fence. They join each other, fences, gates and
 // solid blocks, with a post wherever the run turns, ends or meets another
 // (see propShapes' wallBoxes); like a fence, nothing climbs over one.
 export const WALLS = [
-  { id: 161, name: 'Cobblestone Wall', color: 0xa1a1aa },
-  { id: 162, name: 'Stone Wall', color: 0xafafb6 },
-  { id: 163, name: 'Brick Wall', color: 0xd1887a },
-  { id: 164, name: 'Dark Stone Wall', color: 0x4f4b57 },
+  { id: 161, name: 'Cobblestone Wall', color: 0x8f8d89 },
+  { id: 162, name: 'Stone Wall', color: 0x9d9b97 },
+  { id: 163, name: 'Brick Wall', color: 0xb5583f },
+  { id: 164, name: 'Dark Stone Wall', color: 0x4e5666 },
 ];
 for (const w of WALLS) BLOCKS.push({ ...w, glyph: 'wall', shape: 'wall', material: 'stone', unlock: null });
 
@@ -374,9 +372,9 @@ for (const w of WALLS) BLOCKS.push({ ...w, glyph: 'wall', shape: 'wall', materia
 // capital at the top and plain shaft between (see ChunkMesher, which looks
 // above and below each one).
 export const PILLARS = [
-  { id: 165, name: 'Stone Pillar', color: 0xc4c4ca },
-  { id: 166, name: 'Marble Pillar', color: 0xe3dbc8 },
-  { id: 167, name: 'Dark Pillar', color: 0x4f4b57 },
+  { id: 165, name: 'Stone Pillar', color: 0xb8b4ac },
+  { id: 166, name: 'Marble Pillar', color: 0xece4d3 },
+  { id: 167, name: 'Dark Pillar', color: 0x4e5666 },
 ];
 for (const c of PILLARS) BLOCKS.push({ ...c, glyph: 'pillar', shape: 'pillar', material: 'stone', unlock: null });
 
@@ -391,8 +389,8 @@ function quad(base, spec) {
 // swings it up against the side its hinges are on (see Game.toggleGate).
 export const TRAPDOOR = 168;
 export const TRAPDOOR_OPEN = 172;
-quad(TRAPDOOR, { name: 'Trapdoor', glyph: 'trapdoor', color: 0xb08a60, shape: 'trapdoor', material: 'wood', unlock: null });
-quad(TRAPDOOR_OPEN, { name: 'Open Trapdoor', glyph: 'trapdoor', color: 0xb08a60, shape: 'trapdoor_open', material: 'wood', stateOf: TRAPDOOR, unlock: null });
+quad(TRAPDOOR, { name: 'Trapdoor', glyph: 'trapdoor', color: 0xa5763f, shape: 'trapdoor', material: 'wood', unlock: null });
+quad(TRAPDOOR_OPEN, { name: 'Open Trapdoor', glyph: 'trapdoor', color: 0xa5763f, shape: 'trapdoor_open', material: 'wood', stateOf: TRAPDOOR, unlock: null });
 // A window in a wooden frame with crossbars, glazed — the glass is drawn
 // see-through (ChunkMesher's pane material).
 quad(176, { name: 'Framed Window', glyph: 'window', color: 0x9a7350, shape: 'window', unlock: null });
@@ -422,11 +420,11 @@ export const SUNSTONE_ORE = 191;
 export const NIGHTSTONE_ORE = 192;
 BLOCKS.push(
   {
-    id: SUNSTONE_ORE, name: 'Sunstone Ore', glyph: 'gravel', color: 0x9a948a, overlay: 'sunstone_ore', material: 'stone',
+    id: SUNSTONE_ORE, name: 'Sunstone Ore', glyph: 'gravel', color: 0x9a9488, overlay: 'sunstone_ore', material: 'stone',
     light: { color: 0xffd98a, intensity: 2.5, distance: 9, decay: 1, y: 0.5 }, unlock: null,
   },
   {
-    id: NIGHTSTONE_ORE, name: 'Nightstone Ore', glyph: 'gravel', color: 0x45404d, overlay: 'nightstone_ore', material: 'stone',
+    id: NIGHTSTONE_ORE, name: 'Nightstone Ore', glyph: 'gravel', color: 0x403a4c, overlay: 'nightstone_ore', material: 'stone',
     light: { color: 0xa77bff, intensity: 2.5, distance: 9, decay: 1, y: 0.5 }, unlock: null,
   },
 );
@@ -455,9 +453,9 @@ quad(PAINTING, { name: 'Painting', glyph: 'painting', color: 0x8a6440, shape: 'p
 // Asked for directly: "a road block looking like calçada portuguesa".
 export const CALCADA = 209, CALCADA_DARK = 210, CALCADA_WAVE = 211;
 BLOCKS.push(
-  { id: CALCADA, name: 'Calçada', glyph: 'calcada', color: 0xf1ede2, material: 'stone', unlock: null },
-  { id: CALCADA_DARK, name: 'Dark Calçada', glyph: 'calcada', color: 0x45434a, material: 'stone', unlock: null },
-  { id: CALCADA_WAVE, name: 'Calçada Wave', glyph: 'calcada_wave', color: 0xf1ede2, material: 'stone', unlock: null },
+  { id: CALCADA, name: 'Calçada', glyph: 'calcada', color: 0xf2eee3, material: 'stone', unlock: null },
+  { id: CALCADA_DARK, name: 'Dark Calçada', glyph: 'calcada', color: 0x1d1c20, material: 'stone', unlock: null },
+  { id: CALCADA_WAVE, name: 'Calçada Wave', glyph: 'calcada_wave', color: 0xf2eee3, material: 'stone', unlock: null },
 );
 
 // The defence buildings' furnishings (White path): a rack of arms for a

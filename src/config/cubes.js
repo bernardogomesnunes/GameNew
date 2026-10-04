@@ -2,7 +2,7 @@ import { BLOCKS_BY_ID, shapeOf } from './blocks.js';
 import { GLYPHS, inkOn } from './glyphs.js';
 import { boxesFor, fenceBoxes, wallBoxes } from '../world/propShapes.js';
 import { slopeGeometry, orient } from '../world/slopes.js';
-import { tileFor, TILE_SIZE } from '../render/BlockTextures.js';
+import { tileFor, TILE_SIZE, tileValue } from '../render/BlockTextures.js';
 import { ITEM_MODELS } from './itemModels.js';
 import { UPGRADES } from './upgrades.js';
 
@@ -60,11 +60,15 @@ export function shade(color, amount) {
 }
 
 const faceImages = new Map();
+/** sRGB to light and back, so the tile multiplies the colour the way the shader does. */
+const toLight = (v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+const toByte = (v) => Math.round(255 * Math.min(1, v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055));
 
 /**
- * A block's world texture as a tiny image, tinted its colour — a 16×16 BMP,
+ * A block's world texture as a tiny image, tinted its colour — a 32×32 BMP,
  * because a BMP is a header and the pixels, nothing to compress, and every
- * browser draws one.
+ * browser draws one. The tile multiplies the colour as light, the way the
+ * block shader does, so the icon is the colour the block is in the world.
  */
 function tileImage(blockId, color, top = false) {
   const key = top ? `${blockId}:top` : blockId;
@@ -79,7 +83,7 @@ function tileImage(blockId, color, top = false) {
     dv.setUint32(2, size, true); dv.setUint32(10, 54, true); dv.setUint32(14, 40, true);
     dv.setInt32(18, n, true); dv.setInt32(22, n, true);
     dv.setUint16(26, 1, true); dv.setUint16(28, 24, true); dv.setUint32(34, row * n, true);
-    const r = (color >> 16) & 255, g = (color >> 8) & 255, b = color & 255;
+    const [r, g, b] = [16, 8, 0].map((s) => toLight(((color >> s) & 255) / 255));
     for (let y = 0; y < n; y++) {
       for (let x = 0; x < n; x++) {
         const t = (y * n + x) * 4;
@@ -87,7 +91,7 @@ function tileImage(blockId, color, top = false) {
         // world (a larger y is higher) — row 0 goes at the bottom here too,
         // so a stone lit from above in the world is lit from above here.
         const o = 54 + y * row + x * 3;
-        bytes[o] = Math.round(b * tile[t + 2] / 255); bytes[o + 1] = Math.round(g * tile[t + 1] / 255); bytes[o + 2] = Math.round(r * tile[t] / 255);
+        bytes[o] = toByte(b * tileValue(tile[t + 2])); bytes[o + 1] = toByte(g * tileValue(tile[t + 1])); bytes[o + 2] = toByte(r * tileValue(tile[t]));
       }
     }
     let bin = '';

@@ -53,7 +53,8 @@ ok('sky-marble, near white with a cool cast, for the Sky Kingdom',
 {
   const tile = tileFor(160);
   let beams = 0;
-  for (let i = 0; i < tile.length / 4; i++) if (tile[i * 4] > tile[i * 4 + 2] + 40) beams++;
+  // Brown: red well over blue, as a multiple of the plaster's colour.
+  for (let i = 0; i < tile.length / 4; i++) if (tile[i * 4] > tile[i * 4 + 2] * 1.6) beams++;
   ok(`timber framing has brown beams painted over its plaster (${beams} pixels)`, textureFor('timber')?.beams && beams > 40);
   ok('gold trim has a texture of its own', !!textureFor('trim') && !!tileFor(159));
 }

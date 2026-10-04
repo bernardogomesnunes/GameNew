@@ -2,7 +2,7 @@ import { cubeSvg, itemIcon, hasCube, shade, blockIcon } from '../src/config/cube
 const blockIconOf = (i) => (i.block != null ? blockIcon(i.block) : null);
 import { BLOCKS, BLOCKS_BY_ID, PLACEABLE_BLOCKS } from '../src/config/blocks.js';
 import { ITEMS } from '../src/config/items.js';
-import { TEXTURES, textureFor, TILE_BASE } from '../src/config/textures.js';
+import { TEXTURES, textureFor, TILE_SCALE } from '../src/config/textures.js';
 import { readFileSync } from 'node:fs';
 
 /**
@@ -119,15 +119,18 @@ ok('each channel takes the skew differently',
   ok(`${names.length} materials have a recipe`, names.length >= 15);
   ok('every recipe darkens by something', Object.values(TEXTURES).every((r) => (r.depth ?? 0) > 0));
   // Tiles multiply the block's colour, so anything approaching black would
-  // wipe the palette out rather than shade it.
+  // wipe the palette out rather than shade it. (Depth is in what you see,
+  // not in light, since the 32×32 tiles: half as dark looks half as dark.)
   ok('and none of them so much that the colour is lost',
-    Object.values(TEXTURES).every((r) => (r.depth ?? 0) <= 0.3));
+    Object.values(TEXTURES).every((r) => (r.depth ?? 0) <= 0.55));
   ok('every recipe names something to draw', Object.values(TEXTURES).every((r) =>
-    r.marks || r.lines || r.blobs || r.veins || r.cracks || r.band || r.speck || r.setts));
+    r.marks || r.lines || r.veins || r.cracks || r.band || r.speck || r.setts));
   ok('the glyphs they key off are real',
     names.every((n) => BLOCKS.some((b) => (b.texture ?? b.glyph) === n) || ITEMS.some((i) => i.glyph === n)));
   ok('a material with no recipe is simply flat', textureFor('nonesuch') === null);
-  ok('tiles start near white, so they only ever shade', TILE_BASE > 0.9 && TILE_BASE <= 1);
+  // A tile can lighten as well as darken now (light mortar on red brick),
+  // and averages to the block's colour; the scale is how far past it a byte reaches.
+  ok('tiles reach past the block colour by a fixed scale', TILE_SCALE > 1 && TILE_SCALE <= 8);
 }
 
 // The shader has to declare its own attributes: three only plumbs `uv` and
@@ -150,7 +153,7 @@ ok('a wall facing east or west has its tile the right way up', /const swap = d =
 ok('and the ends of a log have rings, not more bark', /d === 1 \? topLayerTable\(\) : layerTable\(\)/.test(mesher));
 // Shading after the vertex colour, so it shades the colour the block ended up.
 ok('the tile shades the varied colour, not the flat registry one',
-  /#include <color_fragment>[\s\S]{0,300}diffuseColor\.rgb \*= tile\.rgb/.test(mesher));
+  /#include <color_fragment>[\s\S]{0,600}diffuseColor\.rgb \*= tile\.rgb/.test(mesher));
 ok('and a tile with holes in it (leaves) is see-through there', /if \(tile\.a < 0\.5\) discard;/.test(mesher));
 
 
@@ -189,19 +192,21 @@ ok('and an orientation change is re-measured once it has settled',
 {
   // Reported directly, with a photo of a cobbled street: the cobblestone
   // "looks awful". It is round stones bedded in earth now.
-  const { tileFor } = await import('../src/render/BlockTextures.js');
+  const { tileFor, tileValue } = await import('../src/render/BlockTextures.js');
   const t = tileFor(8);
   const px = t.length / 4;
-  let earth = 0, lit = 0, warm = 0;
+  let earth = 0, lit = 0, warm = 0, mossy = 0;
   for (let i = 0; i < px; i++) {
-    const r = t[i * 4], g = t[i * 4 + 1], b = t[i * 4 + 2];
-    if (r < 200) earth++;
-    if (r >= 245) lit++;
-    if (r > b + 6) warm++;
+    const [r, g, b] = [0, 1, 2].map((ch) => tileValue(t[i * 4 + ch]));
+    if (Math.max(r, g) < 0.55) earth++;
+    if (r >= 1.3) lit++;
+    if (r > b * 1.08) warm++;
+    if (g > r * 1.15 && g > b * 1.3) mossy++;
   }
   ok(`cobblestone is stones with earth between them (${Math.round(earth / px * 100)}% earth)`, earth / px > 0.12 && earth / px < 0.6);
   ok('lit along the tops of the stones', lit > 10);
   ok('and not all one grey: the earth and the odd stone are warm', warm > 20);
+  ok('with moss in the cracks', mossy > 20);
 
   // Requested directly: "can you give it some depth or 3d texture like the
   // tiles?" Each texel has a height, and the shader tilts the light by it.
