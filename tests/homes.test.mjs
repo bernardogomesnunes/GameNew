@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { World } from '../src/world/World.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
-import { BED, BED_HEAD, PAINTING, bedPart, isPainting, turned, facingOf, mirrored, FACING_STEP, BLOCKS_BY_ID } from '../src/config/blocks.js';
+import { BED, BED_HEAD, PAINTING, bedPart, pairPart, pairOther, WAR_TENT, WAR_TENT_BACK, isTent, isPainting, turned, facingOf, mirrored, FACING_STEP, BLOCKS_BY_ID } from '../src/config/blocks.js';
 import { ITEMS_BY_ID, ITEM_FOR_BLOCK } from '../src/config/items.js';
 import { RECIPES } from '../src/config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../src/config/starterDesigns.js';
@@ -29,8 +29,16 @@ ok('it turns the way you face, head and foot alike', [0, 1, 2, 3].every((d) => f
 ok('the mirror turns it too', bedPart(mirrored(turned(BED, 1), { flipX: true })).facing === 3);
 ok('broken, the foot gives back the bed and the head nothing — one bed, not two',
   ITEM_FOR_BLOCK.get(BED + 2) === 'bed' && !ITEM_FOR_BLOCK.has(BED_HEAD + 2));
-ok('placing one puts its head in the next block along, the way it faces',
-  /const \[sx, sz\] = FACING_STEP\[bedPart\(next\)\.facing\];[\s\S]{0,400}next: BED_HEAD \+ bedPart\(next\)\.facing/.test(game));
+{
+  // Beds and war tents are both two-block things now (blocks.js PAIRS).
+  const foot = pairPart(BED + 1), head = pairOther(foot, 5, 5);
+  ok('placing one puts its head in the next block along, the way it faces',
+    head.x === 6 && head.z === 5 && /const part = pairPart\(next\);\s*const at = pairOther\(part, t\.x, t\.z\);[\s\S]{0,400}next: part\.pair\.second \+ part\.facing/.test(game));
+  ok('and the head finds its foot again', JSON.stringify(pairOther(pairPart(BED_HEAD + 1), 6, 5)) === '{"x":5,"z":5}');
+  const flap = pairPart(WAR_TENT), back = pairOther(flap, 5, 5);
+  ok('a war tent is two blocks long too: its back goes behind the flap (backlog batch 2)',
+    back.x === 5 && back.z === 6 && isTent(WAR_TENT_BACK) && JSON.stringify(pairOther(pairPart(WAR_TENT_BACK), 5, 6)) === '{"x":5,"z":5}');
+}
 ok('and breaking either half takes the other with it', /withBedHalves\(this\.withDoorHalves\(/.test(game));
 ok('a step for each facing: -z, +x, +z, -x', JSON.stringify(FACING_STEP) === '[[0,-1],[1,0],[0,1],[-1,0]]');
 {

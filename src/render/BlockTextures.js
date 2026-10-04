@@ -42,7 +42,7 @@ export function blockTextureArray() {
   const layerOf = new Map();
   const topOf = new Map();
   for (const spec of BLOCKS) {
-    const recipe = textureFor(spec.glyph);
+    const recipe = textureFor(spec.texture ?? spec.glyph);
     if (!recipe) continue;
     layerOf.set(spec.id, tiles.length);
     tiles.push(paint(recipe, spec.id));
@@ -71,7 +71,7 @@ export function tileFor(blockId, { top = false } = {}) {
   const key = top ? `${blockId}:top` : blockId;
   if (tiles.has(key)) return tiles.get(key);
   const spec = BLOCKS.find((b) => b.id === blockId);
-  let recipe = spec && textureFor(spec.glyph);
+  let recipe = spec && textureFor(spec.texture ?? spec.glyph);
   if (top && recipe) recipe = recipe.top ?? recipe;
   const tile = recipe ? paint(recipe, spec.id) : null;
   tiles.set(key, tile);
@@ -387,6 +387,29 @@ function paint(recipe, salt) {
   }
   if (height) for (let i = 0; i < n * n; i++) height[i] *= recipe.bump;
 
+  // Shine: metal. Backlog batch 2: gold trim and gold ore "look like wood",
+  // and should "shine a bit like gold". A tile can only darken its block's
+  // colour, so the shine is a mask of its own (see packBumps), which the
+  // block shader turns into a highlight that follows the sun and your eye.
+  // The bright parts of the tile shine, its dark lines and marks don't, and
+  // `glints` are single pixels that shine at full strength — flecks in ore.
+  let shine = null;
+  if (recipe.shine || recipe.glints) {
+    shine = new Float32Array(n * n);
+    let lo = Infinity, hi = -Infinity;
+    for (const v of level) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    for (let i = 0; i < n * n; i++) {
+      shine[i] = (recipe.shine ?? 0) * (hi > lo ? (level[i] - lo) / (hi - lo) : 1);
+    }
+    for (let g = 0; g < (recipe.glints ?? 0); g++) {
+      const x = Math.floor(hash01(g, 59, salt) * n);
+      const y = Math.floor(hash01(g, 61, salt) * n);
+      shine[y * n + x] = 1;
+      // Most flecks are two pixels, so they read at a distance.
+      if (hash01(g, 67, salt) < 0.6) shine[y * n + ((x + 1) % n)] = 1;
+    }
+  }
+
   const out = new Uint8Array(n * n * 4);
   for (let i = 0; i < n * n; i++) {
     const l = Math.max(0, Math.min(1, level[i]));
@@ -396,24 +419,28 @@ function paint(recipe, salt) {
     out[i * 4 + 3] = alpha[i];
   }
   out.height = height;
+  out.shine = shine;
   return out;
 }
 
 /**
  * The tiles' heights, as a second layered texture laid out like the first:
  * red is how high a pixel stands, alpha says whether the layer has any depth
- * at all (so a flat one costs the shader one lookup, not five).
+ * at all (so a flat one costs the shader one lookup, not five), and green is
+ * how much it shines (metal; see `shine` in paint).
  */
 function packBumps(tiles) {
   const n = TILE;
   const data = new Uint8Array(n * n * 4 * tiles.length);
   tiles.forEach((tile, i) => {
-    const h = tile.height;
-    if (!h) return;
+    const h = tile.height, sh = tile.shine;
     for (let p = 0; p < n * n; p++) {
       const o = (i * n * n + p) * 4;
-      data[o] = Math.round(Math.max(0, Math.min(1, h[p])) * 255);
-      data[o + 3] = 255;
+      if (h) {
+        data[o] = Math.round(Math.max(0, Math.min(1, h[p])) * 255);
+        data[o + 3] = 255;
+      }
+      if (sh) data[o + 1] = Math.round(Math.max(0, Math.min(1, sh[p])) * 255);
     }
   });
   const tex = new THREE.DataArrayTexture(data, n, n, tiles.length);

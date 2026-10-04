@@ -26,6 +26,8 @@
  *   beams     timber framing: brown beams N pixels wide round the edge and across
  *   setts     calçada: little square stones N pixels across, joints between, each a shade its own
  *   wave      a band of dark setts swinging across the tile, the calçada's wave
+ *   shine     metal: how much the face shines, 0..1, its dark marks less
+ *   glints    N bright flecks that shine at full strength — gold in ore
  *   depth     how dark the darkest mark goes, 0..1 off white
  *   scale     how many tile-pixels across; 16 unless the pattern needs room
  */
@@ -45,7 +47,9 @@ export const TEXTURES = {
   marble:    { veins: 2, depth: 0.08, scale: 16 },
   // Phase 7a. Gold trim: a framed band with a line through it. Timber:
   // plaster between dark beams (`beams` wide), the beams tinted brown.
-  trim:      { band: 2, lines: 'h', every: 8, depth: 0.24, bump: 0.6, scale: 16 },
+  // Backlog batch 2: gold "looks like wood" — so gold shines (`shine`, the
+  // whole face; `glints`, single bright flecks; see BlockTextures.paint).
+  trim:      { band: 2, lines: 'h', every: 8, depth: 0.24, bump: 0.6, shine: 0.8, scale: 16 },
   timber:    { beams: 2, marks: 10, depth: 0.08, bump: 0.5, scale: 16 },
   // Playtest, P9: calçada portuguesa — setts of limestone in mortar, and
   // the wave of dark basalt through it.
@@ -67,12 +71,17 @@ export const TEXTURES = {
   pane:      { band: 1, depth: 0.10, scale: 16 },
   crystal:   { veins: 3, depth: 0.12, scale: 16 },
   obsidian:  { marks: 10, depth: 0.20, scale: 16 },
-  gold:      { marks: 8, depth: 0.10, scale: 16 },
+  gold:      { marks: 8, depth: 0.10, shine: 0.7, glints: 4, scale: 16 },
+  gold_ore:  { marks: 14, depth: 0.2, cracks: 2, shine: 0.12, glints: 9, scale: 16 },
   sprout:    { marks: 16, depth: 0.18, scale: 16 },
   seeds:     { marks: 18, depth: 0.14, scale: 16 },
 };
 
-/** The recipe for a material, or null when it should stay perfectly flat. */
+/**
+ * The recipe for a material, or null when it should stay perfectly flat. Keyed
+ * by the block's glyph, or its own `texture` when its icon and its surface
+ * differ (Gold Ore: the gold icon, but rock with flecks in it).
+ */
 export function textureFor(glyph) {
   return TEXTURES[glyph] ?? null;
 }
