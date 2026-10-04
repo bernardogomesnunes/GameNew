@@ -473,8 +473,8 @@ export class UIManager {
       <div id="touch-controls">
         <!--
           The picture itself is the camera (backlog batch 2, priority 0 — "the
-          controls are shit for pvp"): drag anywhere to look, tap to break or
-          strike, hold still to keep breaking. Under everything else, so the
+          controls are shit for pvp"): drag anywhere to look, tap to place or
+          strike, hold still to break. Under everything else, so the
           walking stick and the buttons still get their own touches.
         -->
         <div id="look-zone"></div>
@@ -512,7 +512,7 @@ export class UIManager {
         </div>
 
         <!--
-          Break's element stays, hidden — a tap on the picture is Break now, and
+          Break's element stays, hidden — holding the picture is Break now, and
           its label is still where the action names are written. Jump sits at
           the bottom right, under the thumb that looks (asked for directly: the
           left stick walks, the picture turns you, "jump can be on the right").
@@ -939,9 +939,13 @@ export class UIManager {
    * priority 0). One finger anywhere that isn't a stick or a button:
    *
    *   drag        turns you, like a mouse — the picture follows the finger
-   *   tap         Break's job: break, strike, fill a bucket, cancel a carry
-   *   hold still  keeps breaking, as holding Break did; drag while holding
-   *               to sweep along a wall
+   *   tap         Place's job: puts down the block you hold, opens a gate —
+   *               and strikes whatever is in front of you; holding a tool or
+   *               nothing, it digs as Break's tap did (Game.tapAction)
+   *   hold still  breaks, and keeps breaking; drag while holding to sweep
+   *               along a wall
+   *
+   * Played on: "place should be tap, break should be a hold".
    *
    * A touch only becomes a look once it has moved past LOOK_SLOP, so a tap
    * doesn't nudge the view; past that it's a look and never a tap.
@@ -960,8 +964,8 @@ export class UIManager {
       this.cb.onBreakHold?.(false);
     };
     const tap = () => {
-      this.cb.onBreakTap();
-      if (!this.cb.isDigging?.()) return;
+      const did = this.cb.onTap ? this.cb.onTap() : (this.cb.onBreakTap(), 'break');
+      if (did !== 'break' || !this.cb.isDigging?.()) return;
       this.cb.onBreakHold?.(true, { once: true });
       finishing = setTimeout(stopFinishing, TAP_FINISH_MS);
     };

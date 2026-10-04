@@ -38,9 +38,11 @@ ok('no look stick: dragging the picture aims the camera', /this\.bindLookSurface
 // The camera keeps the finer curve wherever it lives; it is a property of
 // aiming, not of a side of the screen. See the look-speed block below for what
 // the number is and why.
-ok('a tap on the picture is Break; holding still keeps breaking; a drag never taps',
+// Played on: "place should be tap, break should be a hold" — a tap asks the
+// game what it is (Game.tapAction) and only a tap that dug carries on digging.
+ok('a tap on the picture places (or strikes); holding still breaks; a drag never taps',
   /else if \(!moved && e\.type === 'touchend'\) tap\(\);/.test(ui)
-  && /this\.cb\.onBreakTap\(\);\s*if \(!this\.cb\.isDigging\?\.\(\)\) return;\s*this\.cb\.onBreakHold\?\.\(true, \{ once: true \}\);\s*finishing = setTimeout\(stopFinishing, TAP_FINISH_MS\);/.test(ui)
+  && /const did = this\.cb\.onTap \? this\.cb\.onTap\(\) : \(this\.cb\.onBreakTap\(\), 'break'\);\s*if \(did !== 'break' \|\| !this\.cb\.isDigging\?\.\(\)\) return;\s*this\.cb\.onBreakHold\?\.\(true, \{ once: true \}\);\s*finishing = setTimeout\(stopFinishing, TAP_FINISH_MS\);/.test(ui)
   && /holding = true;\s*this\.cb\.onBreakTap\(\);\s*this\.cb\.onBreakHold\?\.\(true\);/.test(ui)
   && /if \(moved\) this\.cb\.onLookDrag\?\.\(/.test(ui));
 
