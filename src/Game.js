@@ -2990,7 +2990,7 @@ export class Game {
       // Experience for a hunt — not for one of your own penned animals.
       if (!mob.penId) {
         this.gamification.onKill({ kind: 'mob', hp: spec.hp, name: `a ${spec.name.toLowerCase()}` });
-        this.duilt?.note('hunt');
+        this.duilt?.note('hunt', mob.type);
         this.tellMoment('first_hunt');
       }
       const gained = this.duilt?.collect(drops) ?? {};
@@ -3130,6 +3130,7 @@ export class Game {
     if (!m) return;
     this.ui?.toast({ kind: 'story', title: m.title, body: m.text, duration: 9000 });
     this.editedAt = Date.now();
+    this.bus.emit('duilt:moment', { id });
   }
 
   /** The hermit's tale: who fell from the sky before you did (config/tales.js). */
@@ -4351,7 +4352,7 @@ export class Game {
       if (res.killed) {
         if (!mob.penId) {
           this.gamification.onKill({ kind: 'mob', hp: MOBS_BY_ID.get(mob.type)?.hp ?? 0 });
-          this.duilt?.note('hunt');
+          this.duilt?.note('hunt', mob.type);
         }
         this.duilt?.collect(res.drops);
       }
@@ -4792,6 +4793,7 @@ export class Game {
       this.ui?.toast({ kind: 'achievement', title: `You found ${PLACE_NAMES[lm.kind].replace(/^(A|An|The) /, (a) => a.toLowerCase())}`, body: 'It\'s on your map now' });
       const m = momentForPlace(lm.kind);
       if (m) this.tellMoment(m);
+      this.bus.emit('duilt:found', { kind: lm.kind });
     }
   }
 

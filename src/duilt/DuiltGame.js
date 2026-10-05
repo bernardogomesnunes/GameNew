@@ -129,6 +129,10 @@ export class DuiltGame {
     // Story moments told in this world (config/moments.js), in the order
     // they happened — each only once.
     this.moments = [];
+    // For the secrets (config/achievements.js): which kinds of animal you've
+    // hunted, and which traders you've bought from.
+    this.huntedKinds = new Set();
+    this.tradedWith = new Set();
     // The Stone Kingdom's war on you, from the last age on — see War.js.
     this.war = new War();
     // The dark path's attacks on the Sky Kingdom, and its taxes (SkyWar.js).
@@ -782,8 +786,9 @@ export class DuiltGame {
   // ---- quests (config/quests.js) ----
 
   /** Counts a quest can ask about: 'hunt' (an animal), 'trade', 'evolve'. */
-  note(kind) {
+  note(kind, what = null) {
     if (kind in this.tally) this.tally[kind] += 1;
+    if (kind === 'hunt' && what) this.huntedKinds.add(what);
   }
 
   /**
@@ -931,6 +936,7 @@ export class DuiltGame {
     if (!this.sandbox) this.inventory.remove('coin', price);
     this.inventory.add(id, n);
     this.tally.trade += 1;
+    this.tradedWith.add(traderId);
     this.bus?.emit('duilt:bought', { trader: traderId, itemId: id, count: n, price });
     return { ok: true, id, n, price, name: itemName(id) };
   }
@@ -1205,6 +1211,8 @@ export class DuiltGame {
       quests: this.quests,
       tally: this.tally,
       moments: this.moments,
+      huntedKinds: [...this.huntedKinds],
+      tradedWith: [...this.tradedWith],
       heard: [...this.heard],
       war: this.war.toJSON(),
       skyWar: this.skyWar.toJSON(),
@@ -1246,6 +1254,8 @@ export class DuiltGame {
     this.tally = { hunt: 0, trade: 0, evolve: 0 };
     for (const k of Object.keys(this.tally)) if (Number.isFinite(data.tally?.[k])) this.tally[k] = data.tally[k];
     this.moments = Array.isArray(data.moments) ? data.moments.filter((id) => MOMENTS[id]) : [];
+    this.huntedKinds = new Set(Array.isArray(data.huntedKinds) ? data.huntedKinds.filter((k) => typeof k === 'string') : []);
+    this.tradedWith = new Set(Array.isArray(data.tradedWith) ? data.tradedWith.filter((k) => TRADERS_BY_ID.has(k)) : []);
     this.questBoard();
     this.heard = new Set(Array.isArray(data.heard) ? data.heard.filter((k) => TALES_BY_ID.has(k)) : []);
     this.boosts = {};

@@ -112,6 +112,9 @@ export class GamificationEngine {
     // The market and the building ladder (the batch's traders and levels):
     // checked as they happen, so a goal can ask what just did.
     this.bus.on('duilt:bought', (e = {}) => this.checkAchievements({ type: 'bought', ...e }));
+    // Places found and story moments told: the secrets ask about both.
+    this.bus.on('duilt:found', () => this.checkAchievements(null));
+    this.bus.on('duilt:moment', () => this.checkAchievements(null));
     // A quest handed in pays its experience (config/quests.js).
     this.bus.on('duilt:quest', ({ quest } = {}) => {
       if (this.duilt?.sandbox || !quest) return;
@@ -312,6 +315,7 @@ export class GamificationEngine {
     if (this.duilt?.sandbox) return 0;
     const xp = killXp(kind, hp);
     this.addXp(xp, name ? `Brought down ${name}` : null);
+    this.checkAchievements({ type: 'kill', kind });
     return xp;
   }
 
