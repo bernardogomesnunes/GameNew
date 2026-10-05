@@ -69,3 +69,11 @@ original point. Priority 0 is what the user marked **most important**.
     - neutral, but hostile if you steal from their chests or attack them;
     - they never come down from the trees.
 - **Stone Kingdom outposts:** generated rarely, with very good loot.
+
+## Added later — systems
+
+- **Storage controller** (asked for directly): a new block that controls every storehouse at once.
+  - Can be placed anywhere. Opening it lists every item held across all your storehouses, with a search.
+  - Comes built into a **town hall**: building the town hall gives you one, out of the box.
+  - The town hall's requirement is the blocks needed to craft a controller (its ingredients), not the controller item itself.
+  - Open question: there is no Town Hall building yet — a new building, or the existing Village?
