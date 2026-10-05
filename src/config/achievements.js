@@ -1,5 +1,6 @@
 import { AGES } from './ages.js';
 import { STRUCTURES_BY_ID } from './structures.js';
+import { SECRETS } from './secrets.js';
 
 /**
  * The goals, which are also how the game teaches itself.
@@ -340,7 +341,12 @@ function requiredGoals() {
 // Required goals first within a band, then the teaching goals alongside
 // them — Array.prototype.sort is stable, so a tie on `age` keeps whichever
 // of the two came first here.
-export const ACHIEVEMENTS = [...requiredGoals(), ...OPENING, ...LATER].sort((x, y) => x.age - y.age);
+export const ACHIEVEMENTS = [
+  ...[...requiredGoals(), ...OPENING, ...LATER].sort((x, y) => x.age - y.age),
+  // The secrets (config/secrets.js) last, and in no age: never one of an
+  // age's goals, never in its count — a band of their own in the panel.
+  ...SECRETS,
+];
 
 export const ACHIEVEMENTS_BY_ID = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
 
@@ -350,6 +356,11 @@ export function achievementsForAge(age) {
 }
 
 /** Every age that has goals, with its name — what the panel draws as bands. */
+/** The secrets, for their own band at the bottom of the Goals tab. */
+export function secretGoals() {
+  return ACHIEVEMENTS.filter((a) => a.secret);
+}
+
 export function goalBands() {
   return AGES
     .map(({ age, name }) => ({ age, name, goals: achievementsForAge(age) }))

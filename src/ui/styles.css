@@ -1596,6 +1596,10 @@ body.touch .ctl-keys { display: none; }
 .story-dots i { width: 7px; height: 7px; border-radius: 50%; background: rgba(243, 238, 226, 0.25); }
 .story-dots i.on { background: #e8c24a; }
 
+/* The secrets band (config/secrets.js): locked cards are a question and a hint. */
+.goal-band.secrets .ach-card.secret .ach-desc { font-style: italic; }
+.goal-band.secrets .ach-card.secret .ach-icon { font-weight: 700; color: var(--text-dim); }
+
 /* Quests, in the Goals panel (config/quests.js). */
 .quest-card {
   background: rgba(255, 255, 255, 0.55); border: 1px solid var(--panel-border); border-radius: 10px;

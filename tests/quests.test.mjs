@@ -101,7 +101,7 @@ ok('no quests in Creative', sand.questBoard().length === 0);
 
 // --- wired in ------------------------------------------------------------------------------------
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
-ok('hunting, evolving and trading are counted', /this\.duilt\?\.note\('hunt'\)/.test(game) && /if \(r\.ok\) this\.duilt\.note\('evolve'\)/.test(game)
+ok('hunting, evolving and trading are counted', /this\.duilt\?\.note\('hunt', mob\.type\)/.test(game) && /if \(r\.ok\) this\.duilt\.note\('evolve'\)/.test(game)
   && /this\.tally\.trade \+= 1;/.test(readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.url), 'utf8')));
 const eng = readFileSync(new URL('../src/gamification/GamificationEngine.js', import.meta.url), 'utf8');
 ok('a quest handed in pays its experience', /this\.bus\.on\('duilt:quest'[\s\S]{0,200}this\.addXp\(quest\.reward\?\.xp/.test(eng));

@@ -15,7 +15,7 @@ import { RECIPES } from '../config/recipes.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { blockIcon, itemIcon } from '../config/cubes.js';
-import { goalBands } from '../config/achievements.js';
+import { goalBands, secretGoals } from '../config/achievements.js';
 import { ageIntro } from '../config/ages.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
@@ -1141,7 +1141,7 @@ export class UIManager {
       this.buildHotbar();
     });
     this.bus.on('achievement:unlock', (a) => {
-      this.toast({ kind: 'achievement', title: `${a.icon} Achievement: ${a.name}`, body: a.description });
+      this.toast({ kind: 'achievement', title: `${a.icon} ${a.secret ? 'Secret found' : 'Achievement'}: ${a.name}`, body: a.description });
     });
     this.bus.on('challenge:complete', (c) => {
       this.toast({ kind: 'challenge', title: 'Challenge complete!', body: c.description });
@@ -1630,7 +1630,7 @@ export class UIManager {
         </div>`;
     }).join('') + (next
       ? `<div class="goal-next">Age ${next.age} appears here once you finish Age ${s.age}.</div>`
-      : '');
+      : '') + this.secretsHtml(done);
 
     const dc = s.dailyChallenge;
     const list = this.q('#challenge-list');
@@ -1645,6 +1645,23 @@ export class UIManager {
     }).join('');
     this.renderLore();
     this.renderQuests();
+  }
+
+  /**
+   * The secrets (config/secrets.js): a band of their own under the ages, a
+   * hint and a question mark until each is found, never in an age's count.
+   */
+  secretsHtml(done) {
+    const secrets = secretGoals();
+    if (!secrets.length) return '';
+    const found = secrets.filter((g) => done.has(g.id)).length;
+    return `
+      <div class="goal-band secrets">
+        <div class="goal-band-head"><span>Secrets</span><span class="goal-band-count">${found} / ${secrets.length}</span></div>
+        ${secrets.map((g) => (done.has(g.id)
+          ? `<div class="ach-card done"><div class="ach-icon">${g.icon}</div><div class="ach-body"><div class="ach-name">${escapeHtml(g.name)}</div><div class="ach-desc">${escapeHtml(g.description)}</div></div><span class="ach-done" aria-label="Done">✓</span></div>`
+          : `<div class="ach-card locked secret"><div class="ach-icon">?</div><div class="ach-body"><div class="ach-name">A secret</div><div class="ach-desc">${escapeHtml(g.hint)}</div></div></div>`)).join('')}
+      </div>`;
   }
 
   /**
