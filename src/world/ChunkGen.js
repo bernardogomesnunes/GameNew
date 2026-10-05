@@ -426,13 +426,31 @@ export class ChunkGen {
    * Generation writes with `byHand: false`, so a chunk nobody has touched
    * stays untouched and need never be saved.
    */
+  /**
+   * Whether dry ground at x, z (height h) is beach: low enough to be shore,
+   * with the sea itself within BEACH_REACH. `heightOf` lets fill answer from
+   * the heights it already has; `probes` lets far terrain look less closely.
+   */
+  beachAt(x, z, h = this.heightAt(x, z), heightOf = (a, b) => this.heightAt(a, b), probes = BEACH_PROBES) {
+    if (h < SEA_LEVEL || h > SEA_LEVEL + BEACH_BAND) return false;
+    for (const [dx, dz] of probes) if (heightOf(x + dx, z + dz) < SEA_LEVEL) return true;
+    return false;
+  }
+
   fill(world, chunk) {
     const ox = chunk.cx * CHUNK_SIZE, oz = chunk.cz * CHUNK_SIZE;
+    // Every column's height, and BEACH_REACH more round the edge, worked out
+    // once: the beach test looks at its neighbours, and asking heightAt for
+    // each of them again would be most of the cost of making a chunk.
+    const M = BEACH_REACH, W = CHUNK_SIZE + 2 * M;
+    const heights = this.heightGrid ??= new Int32Array(W * W);
+    for (let gz = 0; gz < W; gz++) for (let gx = 0; gx < W; gx++) heights[gz * W + gx] = this.heightAt(ox - M + gx, oz - M + gz);
+    const heightOf = (a, b) => heights[(b - oz + M) * W + (a - ox + M)];
 
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
         const x = ox + lx, z = oz + lz;
-        const h = this.heightAt(x, z);
+        const h = heightOf(x, z);
         const index = this.biomeIndexAt(x, z);
         const biome = BIOMES[index];
         chunk.surface[lz * CHUNK_SIZE + lx] = h;
@@ -458,7 +476,7 @@ export class ChunkGen {
         // a coastline rather than a hard edge where one biome's own colour
         // just happens to stop. Only above water — a flooded column already
         // gets its own bed below.
-        const beach = !water && h <= SEA_LEVEL + BEACH_BAND;
+        const beach = !water && this.beachAt(x, z, h, heightOf);
         const top = beach ? SAND : surfaceFor(biome, h);
         const under = beach ? SAND : s.under;
         const hasOres = biome.ores?.length > 0;
@@ -688,6 +706,19 @@ const SEA_LEVEL = 100;
 // How many blocks above sea level still counts as shore — see fill's own
 // beach note.
 const BEACH_BAND = 4;
+// And how far from the sea it can be. Without this, every dry column within
+// BEACH_BAND of sea level was sand wherever it stood — two thirds of all the
+// land, measured, mostly plains and birch woods nowhere near water (reported
+// directly: "the world is mostly sand. Sand should only occur in deserts or
+// beaches next to an ocean").
+const BEACH_REACH = 3;
+/** Where to look for the sea from a shore column: every way, one to BEACH_REACH out. */
+const BEACH_PROBES = [];
+for (let r = 1; r <= BEACH_REACH; r++) {
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) BEACH_PROBES.push([dx * r, dz * r]);
+}
+/** The far terrain's cheaper look: just the ring at BEACH_REACH. */
+export const FAR_BEACH_PROBES = BEACH_PROBES.slice(-8);
 // A small safety floor, not a real limit any biome's own numbers reach any
 // more — see WORLD_HEIGHT.
 const MIN_HEIGHT = 6;

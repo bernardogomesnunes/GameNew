@@ -143,7 +143,7 @@ ok('dry land never gets pulled down to the water height it is not under', !anyLa
   ok(`far ground is made of flat tops and upright sides, nothing sloping (${faces} faces)`, slanted === 0);
 }
 {
-  const { ChunkGen } = await import('../src/world/ChunkGen.js');
+  const { ChunkGen, FAR_BEACH_PROBES } = await import('../src/world/ChunkGen.js');
   const { BIOMES, surfaceFor } = await import('../src/config/biomes.js');
   const gen = new ChunkGen({ seed: 4242 });
   const t = new FarTerrain(fakeScene);
@@ -155,7 +155,9 @@ ok('dry land never gets pulled down to the water height it is not under', !anyLa
     if (col.water) continue;
     checked++;
     const h = gen.heightAt(x + 4, 704), b = BIOMES[gen.biomeIndexAt(x + 4, 704)];
-    const top = h <= 104 ? 6 : surfaceFor(b, h);
+    // Sand only on shore that's by the sea (ChunkGen.beachAt), looked for a
+    // little less closely out here than up close.
+    const top = gen.beachAt(x + 4, 704, h, undefined, FAR_BEACH_PROBES) ? 6 : surfaceFor(b, h);
     if (col.top === h - SINK && col.colour.getHex() === BLOCKS_BY_ID.get(top).color) right++;
     if (col.canopy) wooded++;
   }
