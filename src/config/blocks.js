@@ -75,7 +75,9 @@ export const BLOCKS = [
   // let each one have its own floor.
   { id: 22, name: 'Moss', glyph: 'moss', color: 0x6ea844, soil: true, material: 'dirt', unlock: null },
   { id: 23, name: 'Gravel', glyph: 'gravel', color: 0x98928a, material: 'stone', unlock: null },
-  { id: 24, name: 'Clay', glyph: 'clay', color: 0x93afc4, soil: true, material: 'dirt', unlock: null },
+  // Warm earthen clay, the kind bricks are fired from. It was a pale blue
+  // (Minecraft's), which read as "weird blue blocks that I don't recognise".
+  { id: 24, name: 'Clay', glyph: 'clay', color: 0xb39882, soil: true, material: 'dirt', unlock: null },
   // The ocean's own floor — everything else underwater already borrowed Sand
   // (see ChunkGen's RIVERBED), which is fine for a riverbed but wrong once a
   // whole biome is the seabed: Sand is the Sands biome's own top block, and

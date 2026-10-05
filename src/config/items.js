@@ -49,7 +49,7 @@ export const ITEMS = [
   // forest floor or a river bank would hand you nothing at all.
   { id: 'moss', name: 'Moss', kind: 'raw', stackTo: STACK_BULK, color: 0x81c271, glyph: 'moss', block: 22, madeBy: 'Lifted from a forest floor' },
   { id: 'gravel', name: 'Gravel', kind: 'raw', stackTo: STACK_BULK, color: 0xbbb6ae, glyph: 'gravel', block: 23, madeBy: 'Scraped off the mountainside' },
-  { id: 'clay', name: 'Clay', kind: 'raw', stackTo: STACK_BULK, color: 0xa3beca, glyph: 'clay', block: 24, madeBy: 'Dug from wet ground' },
+  { id: 'clay', name: 'Clay', kind: 'raw', stackTo: STACK_BULK, color: 0xb39882, glyph: 'clay', block: 24, madeBy: 'Dug from wet ground' },
   // The two extra forests' own wood, and the tall mountain's own hazards —
   // added alongside the terrain overhaul. Same shape as Wood/Leaves above:
   // gathered, not crafted, which is why they carry no recipe (see
