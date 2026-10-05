@@ -3,6 +3,7 @@ import { ITEM_MODELS } from '../config/itemModels.js';
 import { ITEMS_BY_ID } from '../config/items.js';
 import { BLOCKS_BY_ID } from '../config/blocks.js';
 import { boxesFor } from '../world/propShapes.js';
+import { tileFor, TILE_SIZE, tileValue } from './BlockTextures.js';
 
 /**
  * What you hold, as a little 3D thing (playtest, P7). Asked for directly:
@@ -92,4 +93,74 @@ export function heldGeometryFor(held) {
   if (!key) return null;
   const boxes = heldBoxes(held);
   return boxes.length ? heldGeometry(key, boxes) : null;
+}
+
+/** sRGB to light and back, so the tile multiplies the colour the way the block shader does (as the icons do, config/cubes.js). */
+const toLight = (v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+const toByte = (v) => Math.round(255 * Math.min(1, v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055));
+
+const faceTextures = new Map();
+/** A block's tile tinted its colour, as a texture — the picture its icon shows. */
+function faceTexture(blockId, color, top) {
+  const key = `${blockId}:${top ? 'top' : 'side'}`;
+  if (faceTextures.has(key)) return faceTextures.get(key);
+  const tile = tileFor(blockId, { top });
+  let tex = null;
+  if (tile) {
+    const n = TILE_SIZE, data = new Uint8Array(n * n * 4);
+    const [r, g, b] = [16, 8, 0].map((sh) => toLight(((color >> sh) & 255) / 255));
+    for (let i = 0; i < n * n; i++) {
+      data[i * 4] = toByte(r * tileValue(tile[i * 4]));
+      data[i * 4 + 1] = toByte(g * tileValue(tile[i * 4 + 1]));
+      data[i * 4 + 2] = toByte(b * tileValue(tile[i * 4 + 2]));
+      data[i * 4 + 3] = 255;
+    }
+    tex = new THREE.DataTexture(data, n, n, THREE.RGBAFormat);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.needsUpdate = true;
+  }
+  faceTextures.set(key, tex);
+  return tex;
+}
+
+const cubes = new Map();
+let cubeGeometry = null;
+/**
+ * A plain block held in the hand, textured the way it is in the world and in
+ * its icon. Asked for directly: "Blocks the player is holding should be the
+ * same as the icon." Null for a shaped block (a stair, a door, a lantern) or
+ * one with no texture, which keep their boxes.
+ *
+ * Returns { geometry, materials }: a unit cube standing on y = 0, centred on
+ * x and z like heldGeometry, with one material per face (+x -x +y -y +z -z)
+ * — the top its top tile, the rest its side tile.
+ */
+export function heldTexturedCube(blockId) {
+  if (cubes.has(blockId)) return cubes.get(blockId);
+  const b = BLOCKS_BY_ID.get(blockId);
+  let out = null;
+  if (b && !b.shape) {
+    const side = faceTexture(blockId, b.color, false);
+    if (side) {
+      const top = faceTexture(blockId, b.color, true) ?? side;
+      const mat = (map) => new THREE.MeshLambertMaterial({ map });
+      const s = mat(side);
+      if (!cubeGeometry) cubeGeometry = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+      out = { geometry: cubeGeometry, materials: [s, s, mat(top), s, s, s] };
+    }
+  }
+  cubes.set(blockId, out);
+  return out;
+}
+
+/** The block a held thing is, if it's a plain textured cube — see heldTexturedCube. */
+export function heldCubeFor({ itemId = null, blockId = null } = {}) {
+  if (itemId) {
+    if (ITEM_MODELS[itemId] || HELD_MODELS[itemId]) return null;
+    const block = ITEMS_BY_ID.get(itemId)?.block;
+    return block != null ? heldTexturedCube(block) : null;
+  }
+  return blockId != null ? heldTexturedCube(blockId) : null;
 }

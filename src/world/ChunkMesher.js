@@ -3,7 +3,7 @@ import { blockTextureArray, layerFor, topLayerFor, TILE_SIZE } from '../render/B
 import { withHeightFog } from '../render/atmosphere.js';
 import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
-  roofPart,
+  roofPart, doorPart,
 } from '../config/blocks.js';
 import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, windowBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
@@ -93,6 +93,31 @@ for (const id of BLOCKS_BY_ID.keys()) {
 /** Quarter-turns a stair, chair or door is drawn at. */
 const FACING = new Uint8Array(256);
 for (const id of BLOCKS_BY_ID.keys()) FACING[id] = facingOf(id);
+/** Doors, by part: 1 for a bottom half, 2 for a top — see doorMirrored. */
+const DOOR_HALF = new Uint8Array(256);
+for (let id = 0; id < 256; id++) { const d = doorPart(id); if (d) DOOR_HALF[id] = d.top ? 2 : 1; }
+/**
+ * The way to a door's hinge side, by its facing: a shut door is drawn hinged
+ * at x = 0, and `turn` takes a direction (dx, dz) to (-dz, dx) each quarter.
+ */
+const HINGE_STEP = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+/**
+ * Whether a door is drawn the other way round: hinged on its far side.
+ * Asked for directly: "When 2 doors are next to each other we should have
+ * them open each from their side, leaving the middle open." A door whose
+ * hinge side has another door beside it facing the same way is the right
+ * half of a pair, so it hinges on its outer edge — and the two swing open
+ * away from each other.
+ */
+export function doorMirrored(id, neighbourOnHingeSide) {
+  if (!DOOR_HALF[id]) return false;
+  const n = neighbourOnHingeSide;
+  return n > 0 && DOOR_HALF[n] === DOOR_HALF[id] && FACING[n] === FACING[id];
+}
+/** A door's boxes mirrored across its own width (local x), before it is turned. */
+function mirrorX(boxes) {
+  return boxes.map((b) => ({ ...b, minX: 1 - b.maxX, maxX: 1 - b.minX }));
+}
 // Water of any kind, flowing water, and the still water flowing water is
 // drawn with — see emitFlowingWater.
 const IS_WATER = new Uint8Array(256);
@@ -961,7 +986,13 @@ export class ChunkMesher {
                 px: IS_RUG[vol[idx + 1]], nx: IS_RUG[vol[idx - 1]],
                 pz: IS_RUG[vol[idx + PAD]], nz: IS_RUG[vol[idx - PAD]],
               })
-              : turn(boxesFor(shape), FACING[id]);
+              : DOOR_HALF[id]
+                ? (() => {
+                  const [hx, hz] = HINGE_STEP[FACING[id] & 3];
+                  const local = boxesFor(shape);
+                  return turn(doorMirrored(id, vol[idx + hx + hz * PAD]) ? mirrorX(local) : local, FACING[id]);
+                })()
+                : turn(boxesFor(shape), FACING[id]);
           const col = baseColor(id);
           for (const b of boxes) {
             this.emitPropBox(b.glow ? glow : b.pane ? pane : buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ,
