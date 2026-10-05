@@ -1353,6 +1353,9 @@ body.touch #top-buttons .touch-moved { display: none !important; }
     top: 94px; left: 12px; right: 12px; max-width: none;
     align-items: stretch; max-height: 86px; overflow: hidden;
   }
+  /* A story moment is a few lines, and is read once: the band makes room for
+     it while it's up. */
+  #toast-stack:has(.toast.story) { max-height: 230px; }
 }
 
 /* --- a phone on its side --------------------------------------------------
@@ -1408,6 +1411,7 @@ body.touch #top-buttons .touch-moved { display: none !important; }
   /* The toast band comes down with everything else, and stays narrow: it is
      across the top of a picture that is now mostly sky. */
   body.touch #toast-stack { top: 40px; max-height: 48px; }
+  body.touch #toast-stack:has(.toast.story) { max-height: 150px; }
 }
 
 /* --- the building you are pointing at ------------------------------------ */
