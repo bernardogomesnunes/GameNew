@@ -249,13 +249,28 @@ const CLAIM_COLUMN_DEFAULT_HEIGHT = 4;
 // to it knocks it down near enough to instant, a wrong one up to
 // SLOW_BREAK_MS. Only applies in Duilt — Creative has no bag to fill and no
 // reason to make you wait for anything.
-const NORMAL_BREAK_MS = 260;
-const SLOW_BREAK_MS = 900;
+//
+// Played on: "Breaking stuff generally is too fast, but with tools it's even
+// faster. Reduce the speed and make sure it scales well for better tier
+// tools. I'm expecting the best pickaxe to have the speed of the stone axe."
+// So every block takes its time now, a tool suited to it only cuts that
+// time — by how good the tool is (TOOL_TIER_SPEED) — and nothing is instant.
+//
 // Bare hands — nothing held, an empty slot, or a block or anything else that
-// isn't a tool — by what the block is made of. Backlog batch 2: tools were
-// faster already, but by hand it should take a bit longer: soft things a
-// little, wood more, stone most (still breakable — just the slow way).
-const BARE_HAND_MS = { plant: 320, dirt: 450, wood: 620, stone: 800 };
+// isn't a tool — by what the block is made of: soft things a little, wood
+// more, stone most (still breakable — just the slow way).
+const BARE_HAND_MS = { plant: 500, dirt: 1000, wood: 1500, stone: 2200 };
+const NORMAL_BREAK_MS = 1000;
+/** A tool with nothing to say about a material works at this share of bare hands' time; a wrong one at this. */
+const TOOL_NORMAL = 0.85, TOOL_SLOW = 1.0;
+/** A tool suited to the material, by its tier: stone takes 45% of bare hands' time, the best 12%. */
+const TOOL_TIER_SPEED = { stone: 0.45, iron: 0.32, gold: 0.22, sky: 0.12, dark: 0.12 };
+/**
+ * The rest after a block comes free before the next one starts, while held.
+ * Played on: "I'd like to have a bigger pause between breaking each block if
+ * I'm bare hands or not with the right tool for the block."
+ */
+const BREAK_REST_MS = { right: 140, other: 450 };
 /** Leaves with no tree fall this long after it goes, spread over the next few seconds. */
 const LEAF_DECAY_MIN_MS = 500, LEAF_DECAY_SPREAD_MS = 4000;
 /** How long a dig's cracks stay in sight after the last swing at it. */
@@ -1635,6 +1650,7 @@ export class Game {
   /** One frame of a held break. Re-aims every time, so it eats what you point at. */
   tickBreaking(now) {
     if (!this.breaking) return;
+    if (now < (this.breakRestUntil ?? 0)) return;
     if (now - this.breakHeldSince < HOLD_BREAK_DELAY_MS) return;
     if (now - this.lastBreakAt < HOLD_BREAK_INTERVAL_MS) return;
     this.lastBreakAt = now;
@@ -2905,12 +2921,16 @@ export class Game {
    */
   breakDelayFor(blockId) {
     const material = materialOf(blockId);
-    if (!isTool(this.selectedItemId)) return { ms: BARE_HAND_MS[material] ?? NORMAL_BREAK_MS, blocked: false, tier: 'hands' };
+    const bare = BARE_HAND_MS[material] ?? NORMAL_BREAK_MS;
+    if (!isTool(this.selectedItemId)) return { ms: bare, blocked: false, tier: 'hands' };
     const tier = toolEffectiveness(this.selectedItemId, material);
     if (tier === 'impossible') return { ms: 0, blocked: true, tier };
-    if (tier === 'fast') return { ms: 0, blocked: false, tier };
-    if (tier === 'slow') return { ms: SLOW_BREAK_MS, blocked: false, tier };
-    return { ms: NORMAL_BREAK_MS, blocked: false, tier };
+    if (tier === 'fast') {
+      const grade = ITEMS_BY_ID.get(this.selectedItemId)?.tier ?? 'stone';
+      return { ms: Math.round(bare * (TOOL_TIER_SPEED[grade] ?? TOOL_TIER_SPEED.stone)), blocked: false, tier };
+    }
+    if (tier === 'slow') return { ms: Math.round(bare * TOOL_SLOW), blocked: false, tier };
+    return { ms: Math.round(bare * TOOL_NORMAL), blocked: false, tier };
   }
 
   /**
@@ -4289,6 +4309,8 @@ export class Game {
         return;
       }
       this.digTarget = null;
+      // A breath before the next one, longer without the right tool.
+      this.breakRestUntil = performance.now() + (tier === 'fast' ? BREAK_REST_MS.right : BREAK_REST_MS.other);
       // A tap that carries on digging (UIManager's bindLookSurface) stops
       // here, once its block is through — not on into the one behind it.
       if (this.breakOnce) this.setBreaking(false);
