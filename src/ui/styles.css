@@ -999,9 +999,11 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
   /* Played on: the walking stick was a little small to find without looking
      ("the joystick on the left needs to be slightly bigger"), and the column
      above it a little big ("the buttons on top can be slightly smaller"). */
-  :root { --stick-inset: 72px; --stick-edge: 12px; --stick-size: 108px; --stick-bottom: 18px;
+  /* Bigger again (asked for directly: "let's make the controller bigger and
+     less sensitive to running"). */
+  :root { --stick-inset: 72px; --stick-edge: 12px; --stick-size: 128px; --stick-bottom: 18px;
           --stick-zone: 78px; --stick-gap: 20px; }
-  .stick-knob { --knob: 48px; }
+  .stick-knob { --knob: 56px; }
   .touch-buttons .touch-btn { width: 48px; height: 48px; border-radius: 14px; }
   .touch-buttons { gap: 8px; }
 }

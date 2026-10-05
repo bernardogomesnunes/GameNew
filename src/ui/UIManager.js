@@ -108,9 +108,10 @@ function touchLayoutPreview(c) {
  * of straight ahead (the tangent of 30°). The knob is then drawn this far up,
  * just over the rim, so you can see you've crossed it.
  */
-const STICK_RUN_REACH = 1.5;
-const STICK_RUN_SPREAD = 0.58;
-const STICK_RUN_KNOB = 1.3;
+// Further out than it was (1.5): "less sensitive to running".
+const STICK_RUN_REACH = 1.9;
+const STICK_RUN_SPREAD = 0.5;
+const STICK_RUN_KNOB = 1.35;
 const LOOK_SLOP = 10;
 /** How long a still touch on the picture waits before it starts breaking. */
 const LOOK_HOLD_MS = 300;
@@ -1026,7 +1027,10 @@ export class UIManager {
     // rate and the camera felt like it was lagging behind the thumb. 1.25
     // keeps the fine control near centre and gives back the middle of the
     // range. Movement just wants to reach full speed readily.
-    this.bindStick('#stick-left', (x, y, run) => this.cb.onMove(x, y, run), { deadZone: 0.10, curve: 1.1, fixed: true });
+    // A steeper curve than it was (1.1): most of the stick is a walk you can
+    // steer, and only the rim is full pace — "we are moving really fast, only
+    // in mobile".
+    this.bindStick('#stick-left', (x, y, run) => this.cb.onMove(x, y, run), { deadZone: 0.12, curve: 1.6, fixed: true });
     // A steeper curve than the walking stick: most of a look is a small
     // correction, and a linear stick spends nearly all its travel on speeds
     // too fast to aim with. At half a thumb this now turns about a fifth of
@@ -1565,6 +1569,15 @@ export class UIManager {
   }
 
   populateStats() {
+    // A Creative world has no goals: nothing in it counts (see
+    // GamificationEngine.checkAchievements). Reported directly: "take something
+    // apart goal is not working" — it was listed there, and could never tick.
+    if (this.game.duilt?.sandbox) {
+      this.q('#stats-sub').textContent = 'Creative · no goals here';
+      this.q('#ach-grid').innerHTML = `<div class="goal-next">Creative is for building freely, so nothing here counts towards goals or levels. Open a Duilt world to work through the ages.</div>`;
+      this.q('#challenge-list').innerHTML = '';
+      return;
+    }
     const s = this.gamification.snapshot();
     const done = s.achievementsUnlocked;
     // Only the ages you've reached. Reported directly: the whole list, every

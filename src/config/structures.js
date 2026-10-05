@@ -1290,6 +1290,17 @@ export function producesAt(spec, tier = 0) {
 }
 
 /** How long a cycle takes at a given tier — see producesAt, same fallback. */
+/**
+ * How fast buildings work in a world against the rate written on them: a
+ * fifth. Asked for directly, once a building's day became the game's
+ * fifteen-minute day: "Items are producing way too much now. Let's change
+ * this to 1st level like 3 to 4 items each max". The rates here are still
+ * written as so much a day, and their ratios still hold; DuiltGame runs its
+ * buildings on a day five game days long, so a forest's 20 wood is 4 a game
+ * day. Anything showing a rate per game day multiplies by this.
+ */
+export const PRODUCTION_PACE = 0.2;
+
 export function intervalAt(spec, tier = 0) {
   if (!hasLevels(spec)) return spec?.everySeconds ?? 0;
   return spec.tiers[clampTier(spec, tier)].everySeconds ?? spec.everySeconds ?? 0;
