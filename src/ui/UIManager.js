@@ -2008,7 +2008,21 @@ export class UIManager {
     const tray = this.q('#touch-tray');
     if (!tray) return;
     tray.hidden = !tray.hidden;
-    this.q('#t-more')?.classList.toggle('active', !tray.hidden);
+    const more = this.q('#t-more');
+    more?.classList.toggle('active', !tray.hidden);
+    // Opened just above More, never over it — reported directly: with Fly
+    // gone from Duilt, More sat lower and the sheet covered it, so the one
+    // button that closes the sheet couldn't be pressed. Where More is
+    // depends on Fly and on which side the controls are set to, so it's
+    // measured rather than written down.
+    if (!tray.hidden && more) {
+      const top = more.getBoundingClientRect().top;
+      if (top > 0) {
+        tray.style.bottom = `${Math.round(window.innerHeight - top + 8)}px`;
+        tray.style.maxHeight = `${Math.max(120, Math.round(top - 64))}px`;
+        tray.style.overflowY = 'auto';
+      }
+    }
   }
 
   closeTray() {
