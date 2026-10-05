@@ -54,13 +54,18 @@ export const BLOCKS = [
   { id: 11, name: 'Water', glyph: 'water', color: 0x4f97d8, transparent: true, opacity: 0.78, cost: { wood: 3 }, unlock: null },
   // Requested directly: "Snow should be white." The old 0xceddec read as a
   // pale lavender-blue next to Glass and Water rather than snow.
-  { id: 12, name: 'Snow', glyph: 'snow', color: 0xf4f8fb, cost: { wood: 1 }, unlock: { type: 'level', value: 3 } },
-  { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xeec43e, material: 'stone', cost: { gold: 1 }, unlock: { type: 'level', value: 6 } },
-  { id: 14, name: 'Obsidian', glyph: 'obsidian', color: 0x2b163f, material: 'stone', cost: { stone: 4 }, unlock: { type: 'achievement', value: 'underground' } },
-  { id: 15, name: 'Red Glass', glyph: 'pane', color: 0xe86a62, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: { type: 'level', value: 4 } },
-  { id: 16, name: 'Blue Glass', glyph: 'pane', color: 0x6a92e6, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: { type: 'level', value: 4 } },
-  { id: 17, name: 'Marble', glyph: 'marble', color: 0xece4d3, material: 'stone', cost: { stone: 3 }, unlock: { type: 'achievement', value: 'architect' } },
-  { id: 18, name: 'Amethyst', glyph: 'crystal', color: 0xa77de2, transparent: true, opacity: 0.55, cost: { gold: 2 }, unlock: { type: 'level', value: 8 } },
+  // No block waits on a level or an achievement any more: in a settlement
+  // you place what you have, and what you have is gated by age and by what
+  // you can make. A level gate was a soft lock once experience came only
+  // from goals (asked for directly: "avoid soft blocking the game"), and
+  // Marble and Obsidian waited on achievements that no longer exist.
+  { id: 12, name: 'Snow', glyph: 'snow', color: 0xf4f8fb, cost: { wood: 1 }, unlock: null },
+  { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xeec43e, material: 'stone', cost: { gold: 1 }, unlock: null },
+  { id: 14, name: 'Obsidian', glyph: 'obsidian', color: 0x2b163f, material: 'stone', cost: { stone: 4 }, unlock: null },
+  { id: 15, name: 'Red Glass', glyph: 'pane', color: 0xe86a62, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: null },
+  { id: 16, name: 'Blue Glass', glyph: 'pane', color: 0x6a92e6, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: null },
+  { id: 17, name: 'Marble', glyph: 'marble', color: 0xece4d3, material: 'stone', cost: { stone: 3 }, unlock: null },
+  { id: 18, name: 'Amethyst', glyph: 'crystal', color: 0xa77de2, transparent: true, opacity: 0.55, cost: { gold: 2 }, unlock: null },
   { id: 19, name: 'Ground', color: 0x7fc254, system: true },
   // Duilt blocks. Saplings grow into forests; farmland is soil that has been
   // turned, which is what a farm is actually made of.
