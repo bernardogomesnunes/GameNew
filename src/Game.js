@@ -763,6 +763,12 @@ export class Game {
    * the player waits for mid-build.
    */
   saveNow() {
+    // The autosave's clock starts again from any save. It was set once, at
+    // startup, and never again — so five minutes in, every frame saved: a
+    // copy of the whole world into the browser and another upload, sixty
+    // times a second (found looking into a pickaxe's wear coming back new,
+    // and very likely behind the phone running out of memory as well).
+    this.lastAutosave = performance.now();
     if (this.discarded || !this.worldId) return false;
     if (this.worldIsLocal) return this.saveLocally();
     if (!this.cloud?.signedIn) return false;

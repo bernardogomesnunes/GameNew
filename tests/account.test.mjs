@@ -36,7 +36,7 @@ ok('Game.js always has one, cloud or not', /this\.local = new LocalWorlds\(\);/.
 ok('a new world decides once where it lives, not per-save',
   /this\.worldIsLocal = !this\.cloud\?\.signedIn;/.test(game));
 ok('saving dispatches on that decision, not on being signed in right now',
-  /saveNow\(\) \{[\s\S]{0,200}if \(this\.worldIsLocal\) return this\.saveLocally\(\);/.test(game));
+  /saveNow\(\) \{[\s\S]{0,800}if \(this\.worldIsLocal\) return this\.saveLocally\(\);/.test(game));
 ok('opening asks the local library first — free, and synchronous, unlike the network',
   /if \(this\.local\.has\(id\)\)/.test(game));
 ok('deleting checks the same way before ever reaching the cloud',
