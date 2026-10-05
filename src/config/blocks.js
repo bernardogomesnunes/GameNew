@@ -416,6 +416,20 @@ BLOCKS.push({
 // world (see ChunkGen.ringOreAt). The rock is an ordinary cube, lit like
 // the cave round it; `overlay` names the crystals drawn on top of it (see
 // ChunkMesher.buildProps), which glow whatever the light.
+/**
+ * Rock as it lies underground (asked for directly: "There should be different
+ * rock types, like grey, white, dark grey, marbled, turquoise, and orangey.
+ * Ordered by rarity to find naturally."). Grey is plain Stone, dark grey Dark
+ * Stone and marbled Marble; these are the other three. See ChunkGen's rock
+ * layers for where each lies.
+ */
+export const WHITE_STONE = 235, TURQUOISE_STONE = 236, ORANGE_STONE = 237;
+BLOCKS.push(
+  { id: WHITE_STONE, name: 'White Stone', glyph: 'stone', color: 0xe4e0d8, material: 'stone', unlock: null },
+  { id: TURQUOISE_STONE, name: 'Turquoise Stone', glyph: 'stone', color: 0x63b5ab, material: 'stone', unlock: null },
+  { id: ORANGE_STONE, name: 'Orange Stone', glyph: 'stone', color: 0xd38d57, material: 'stone', unlock: null },
+);
+
 export const SUNSTONE_ORE = 191;
 export const NIGHTSTONE_ORE = 192;
 BLOCKS.push(

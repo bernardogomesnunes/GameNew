@@ -38,6 +38,10 @@ export const ITEMS = [
   { id: 'wood', name: 'Wood', kind: 'raw', stackTo: STACK_BULK, color: 0xcc9e72, glyph: 'log', block: 4, madeBy: 'Cut from trees' },
   { id: 'leaves', name: 'Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x82c675, glyph: 'leaf', block: 5, madeBy: 'Stripped from trees' },
   { id: 'stone', name: 'Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stone', block: 3, madeBy: 'Mined from rock' },
+  // The rarer rocks underground (world/ChunkGen.js's rock layers).
+  { id: 'stone_white', name: 'White Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xe4e0d8, glyph: 'stone', block: 235, madeBy: 'Mined from the pale rock layers' },
+  { id: 'stone_turquoise', name: 'Turquoise Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x63b5ab, glyph: 'stone', block: 236, madeBy: 'Mined from a rare blue-green seam' },
+  { id: 'stone_orange', name: 'Orange Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xd38d57, glyph: 'stone', block: 237, madeBy: 'Mined from the rarest seam of all' },
   { id: 'sand', name: 'Sand', kind: 'raw', stackTo: STACK_BULK, color: 0xded09f, glyph: 'sand', block: 6, madeBy: 'Dug from the riverbank' },
   { id: 'grass', name: 'Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x97cc81, glyph: 'grass', block: 1, madeBy: 'Cut from the plains' },
   // What the other kinds of country are made of. Without these, digging up a

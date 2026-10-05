@@ -9,6 +9,31 @@ import { stampSky } from './skyKingdom.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
+
+// --- under the ground (asked for directly, after a big play) ------------------
+//
+// "We need deeper dirt terrain ... the average should be 6, ranging from 3 to
+// 12, and add more cobblestone to the terrain, this should be naturally
+// appearing", and "different rock types, like grey, white, dark grey,
+// marbled, turquoise, and orangey, ordered by rarity ... below dirt we should
+// have different layers of different rocks ... and sprinkle some ores here
+// and there but pretty rare".
+const DIRT_ID = 2, STONE_ID = 3, COBBLE_ID = 8, MARBLE_ID = 17, DARK_STONE_ID = 156;
+const WHITE_STONE_ID = 235, TURQUOISE_STONE_ID = 236, ORANGE_STONE_ID = 237;
+/** Soil over the rock, where a biome's soil is dirt: 3 to 12 blocks, about 6 deep on average. */
+export const SOIL_MIN = 3, SOIL_MAX = 12;
+const SOIL_SKEW = 1.6;
+/** The rocks below it, most common first, and how often each band is that rock. */
+export const ROCK_LAYERS = [
+  [STONE_ID, 46], [WHITE_STONE_ID, 18], [DARK_STONE_ID, 14], [MARBLE_ID, 10], [TURQUOISE_STONE_ID, 7], [ORANGE_STONE_ID, 5],
+];
+const ROCK_WEIGHT = ROCK_LAYERS.reduce((n, [, w]) => n + w, 0);
+/** A band of rock is about this thick, and its kind holds across this much of the map. */
+const LAYER_THICK = 5, LAYER_REGION = 40;
+/** Cobble lies in pockets in the top of the rock, and now and then breaks the surface. */
+const COBBLE_POCKET_DEPTH = 10, COBBLE_POCKET = 0.5, COBBLE_OUTCROP = 0.82;
+/** Ore anywhere in rock, not only where a biome is rich in it: rare. */
+const STRAY_ORES = [[38, 0.0016], [39, 0.0016], [40, 0.0005]];
 /** Which BIOMES entry is the tall, ore-rich range — used for its caverns. */
 const MOUNTAINS2_INDEX = BIOME_INDEX.get('mountains2');
 
@@ -95,6 +120,11 @@ export class ChunkGen {
     // 3D: caves have to be able to open and close as you go down, not just
     // wander in x/z. See caveAt.
     this.cave = createNoise3D(seeded(seed + 2551));
+    // The soil's depth, the rock bands' tilt, cobble pockets and outcrops.
+    this.soil = createNoise2D(seeded(seed + 5113));
+    this.strata = createNoise2D(seeded(seed + 6211));
+    this.pocket = createNoise3D(seeded(seed + 7307));
+    this.outcrop = createNoise2D(seeded(seed + 8419));
     // The biome map is already stateless — it answers per column from noise —
     // so it needs nothing but a centre to bias towards.
     this.biomes = new BiomeMap({ sizeX: 1, sizeZ: 1, seed, homePull });
@@ -166,6 +196,41 @@ export class ChunkGen {
    * a seeded generator for the same reason every other placement here is —
    * ask twice, from any chunk, get the same answer.
    */
+  /** How deep the soil is over the rock at a column where it's dirt: SOIL_MIN to SOIL_MAX. */
+  soilDepthAt(x, z) {
+    const n = Math.max(0, Math.min(1, (this.soil(x / 30, z / 30) + 1) / 2));
+    return SOIL_MIN + Math.round((SOIL_MAX - SOIL_MIN) * n ** SOIL_SKEW);
+  }
+
+  /**
+   * Plain rock at one block: bands of the six kinds, a few blocks thick and
+   * tilting gently with the land, each band's kind holding across a stretch
+   * of the map — or a pocket of cobble near the top.
+   */
+  rockAt(x, y, z, rockFloor) {
+    if (y >= rockFloor - COBBLE_POCKET_DEPTH && this.pocket(x / 7, y / 5, z / 7) > COBBLE_POCKET) return COBBLE_ID;
+    const band = Math.floor((y + this.strata(x / 48, z / 48) * 6) / LAYER_THICK);
+    const region = Math.floor(x / LAYER_REGION) * 7919 + Math.floor(z / LAYER_REGION);
+    let pick = hash01(band, region, this.seed ^ 0x51a7) * ROCK_WEIGHT;
+    for (const [id, w] of ROCK_LAYERS) {
+      if ((pick -= w) < 0) return id;
+    }
+    return STONE_ID;
+  }
+
+  /** A rare ore in rock anywhere, or 0. */
+  strayOreAt(x, y, z) {
+    const r = hash01(x, z, this.seed ^ (0x0e5d + y * 0x4c1b));
+    let acc = 0;
+    for (const [id, chance] of STRAY_ORES) if (r < (acc += chance)) return id;
+    return 0;
+  }
+
+  /** Whether cobble breaks the surface at a column (a rare outcrop in grass). */
+  outcropAt(x, z) {
+    return this.outcrop(x / 9, z / 9) > COBBLE_OUTCROP;
+  }
+
   oreAt(x, y, z, biomeIndex) {
     const biome = BIOMES[biomeIndex];
     for (const o of biome.ores ?? []) {
@@ -397,7 +462,11 @@ export class ChunkGen {
         const top = beach ? SAND : surfaceFor(biome, h);
         const under = beach ? SAND : s.under;
         const hasOres = biome.ores?.length > 0;
-        const rockFloor = h - 1 - s.depth;
+        // Deeper soil where it's dirt (SOIL_MIN..SOIL_MAX); other ground keeps its own.
+        const soil = s.under === DIRT_ID && !beach ? this.soilDepthAt(x, z) : s.depth;
+        const rockFloor = h - 1 - soil;
+        const layered = s.rock === STONE_ID;
+        const outcrop = !water && !beach && s.under === DIRT_ID && this.outcropAt(x, z);
         let below = 0;
         for (let y = 0; y < h; y++) {
           let block;
@@ -414,9 +483,14 @@ export class ChunkGen {
                 && hash01(x, z, this.seed ^ (0x1c5e + y * 0x2f1)) < LOOT_CHANCE) {
                 block = CHEST + Math.floor(hash01(z, x, this.seed ^ 0x4d2) * 4);
               }
-            } else block = (y < RING_ORE_TOP && this.ringOreAt(x, y, z, index, rockFloor)) || (hasOres ? (this.oreAt(x, y, z, index) || s.rock) : s.rock);
-          } else if (y < h - 1) block = under;
-          else block = water ? bed : top;
+            } else {
+              block = (y < RING_ORE_TOP && this.ringOreAt(x, y, z, index, rockFloor))
+                || (hasOres && this.oreAt(x, y, z, index))
+                || this.strayOreAt(x, y, z)
+                || (layered ? this.rockAt(x, y, z, rockFloor) : s.rock);
+            }
+          } else if (y < h - 1) block = outcrop && y >= h - 3 ? COBBLE_ID : under;
+          else block = water ? bed : outcrop ? COBBLE_ID : top;
           chunk.set(lx, y, lz, block);
           below = block;
         }
