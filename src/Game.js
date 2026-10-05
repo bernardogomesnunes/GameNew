@@ -153,6 +153,8 @@ const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream 
 const DEEP_RANGE = 80;
 /** How far past DEEP_RANGE a chunk's deep mesh is kept, so walking back and forth doesn't rebuild it. */
 const DEEP_SLACK = 32;
+/** Milliseconds a frame for making and drawing land while the loading screen is up. */
+const BOOT_BUDGET_MS = 40;
 const EDIT_REBUILD_NOW = 4; // chunks an edit rebuilds on the spot; see remeshDirty
 /**
  * How often a world writes itself down while you play.
@@ -515,7 +517,11 @@ export class Game {
     // continue. Which one is decided by the screen, not here.
     // Something behind the worlds screen rather than a blank canvas. It is
     // scenery, not a save: a world only becomes real once it is on the account.
-    this.newWorld({ silent: true, scenery: true });
+    // It's the title scene's own world (openTitle), made once: this used to
+    // make a world of its own first, only for openTitle to throw it away and
+    // make another — a third of the wait before the game appeared.
+    this.newWorld({ mode: CREATIVE, name: 'Title', silent: true, scenery: true, seed: TITLE_SEED });
+    this.bootWorld = this.world;
 
     this.symmetryTool = new SymmetryTool(this.world);
     // A stable id per world, so incremental sync can tell "the world I already
@@ -1593,6 +1599,26 @@ export class Game {
    * against the corner closest to the player and the line sits beyond the point
    * where everything is already sky-coloured.
    */
+  /**
+   * How much of the land round the title scene is drawn, 0..1 — what the
+   * loading screen's bar follows. Every chunk within `reach` blocks of the
+   * scene's middle, made and meshed.
+   */
+  titleProgress(reach = 48) {
+    const site = this.title?.site;
+    if (!site || !this.world) return 1;
+    let need = 0, done = 0;
+    const c0x = Math.floor((site.x - reach) / CHUNK_SIZE), c1x = Math.floor((site.x + reach) / CHUNK_SIZE);
+    const c0z = Math.floor((site.z - reach) / CHUNK_SIZE), c1z = Math.floor((site.z + reach) / CHUNK_SIZE);
+    for (let cx = c0x; cx <= c1x; cx++) {
+      for (let cz = c0z; cz <= c1z; cz++) {
+        need++;
+        if (this.world.hasChunk(cx, cz) && this.world.getChunk(cx, cz).mesh) done++;
+      }
+    }
+    return need ? done / need : 1;
+  }
+
   /** How far a chunk is from you, squared, to its nearest edge. */
   chunkDistSq(chunk) {
     const p = this.player?.position;
@@ -4101,7 +4127,9 @@ export class Game {
    */
   openTitle() {
     if (this.title) return true;
-    this.newWorld({ mode: CREATIVE, name: 'Title', scenery: true, silent: true, seed: TITLE_SEED });
+    // The world boot made is this one, untouched: no need to make it twice.
+    if (this.world !== this.bootWorld) this.newWorld({ mode: CREATIVE, name: 'Title', scenery: true, silent: true, seed: TITLE_SEED });
+    this.bootWorld = null;
     const gen = this.world.gen;
     const site = { ...TITLE_SITE, y: gen.heightAt(TITLE_SITE.x, TITLE_SITE.z) };
     const { blocks, places } = titlePlaceBlocks(site, (x, z) => gen.heightAt(x, z));
@@ -5755,7 +5783,7 @@ export class Game {
     if (!this.remeshQueue.size) return;
     // A long queue means you are walking into new country, and the ground
     // ahead matters more than a couple of frames of headroom.
-    if (this.remeshQueue.size > 60) budgetMs = 9;
+    if (this.remeshQueue.size > 60) budgetMs = Math.max(budgetMs, 9);
     const start = performance.now();
     const w = this.world;
     let built = 0;
@@ -5960,8 +5988,10 @@ export class Game {
     // These run regardless: the world should finish drawing itself behind the
     // worlds screen rather than streaming in after you arrive.
     this.streamChunks();
-    this.generateQueued();
-    this.drainRemeshQueue();
+    // Under the loading screen nothing needs a smooth frame, so the land is
+    // made and drawn several times faster (see ui/loading.js).
+    this.generateQueued(this.booting ? BOOT_BUDGET_MS : undefined);
+    this.drainRemeshQueue(this.booting ? BOOT_BUDGET_MS : undefined);
     this.updateDeep();
     this.updateChunkVisibility();
     this.updateFarTerrain();
