@@ -15,7 +15,7 @@ import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool } from '../config/items.js';
 import { MILESTONES } from '../config/skills.js';
-import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
+import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, PRODUCTION_PACE } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
@@ -569,13 +569,15 @@ export class DuiltGame {
     if (!hasLevels(spec)) return null;
     const status = tierStatus(this.world, structure.region, structure.type, structure.tier ?? 0);
     const rateOf = (tier) => {
+      // A farm's or a pen's output is what's in it, not what the spec says.
+      if (spec.fromCrops || spec.fromAnimals) return null;
       const produces = producesAt(spec, tier);
       return Object.keys(produces).length ? { produces, everySeconds: intervalAt(spec, tier) } : null;
     };
     return {
       ...status,
       rate: rateOf(status.tier),
-      next: status.next && { ...status.next, rate: rateOf(status.tier + 1) },
+      next: status.next && { ...status.next, rate: rateOf(status.tier + 1), yield: yieldAt(spec, status.tier + 1) },
     };
   }
 

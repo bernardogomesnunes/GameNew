@@ -420,7 +420,8 @@ export class DuiltUI {
         <p><strong>${level.canEvolve ? `Ready to evolve to ${next.name}` : `To evolve to ${next.name}`}</strong></p>
         ${level.canEvolve ? '' : next.missing?.length ? `<ul>${next.missing.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}
         ${next.cost ? `<p>Costs ${Object.entries(next.cost).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' and ')} from your bag when you evolve it.</p>` : ''}
-        ${next.rate ? `<p class="dim">Then: ${rateText(next.rate.produces, next.rate.everySeconds)}</p>` : ''}`;
+        ${next.rate ? `<p class="dim">Then: ${rateText(next.rate.produces, next.rate.everySeconds)}</p>`
+          : next.yield > 1 ? `<p class="dim">Then: ${next.yield}× everything ${spec?.fromAnimals ? 'its animals give' : 'it grows'}</p>` : ''}`;
 
     body.innerHTML = `
       <div class="building-state ${structure.valid ? 'good' : 'bad'}">

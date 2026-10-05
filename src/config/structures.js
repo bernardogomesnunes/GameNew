@@ -1240,6 +1240,69 @@ export const STRUCTURES = [
   },
 ];
 
+/**
+ * Levels for every building that makes something. Asked for directly:
+ * "Let's work on the level up farms and buildings as a whole please. Let's
+ * build it." A quarry, a storehouse and a temple each had a ladder written
+ * for them; everything else that produces — a forest, a farm, a pen, a
+ * kiln, a market, a tavern, a mine... — climbs this one.
+ *
+ * Each rung is built and then paid for, like a temple's: lights so the work
+ * goes on after dark, a chest for the takings, and a bill from your bag when
+ * you press Evolve. In return the building makes more each cycle — half as
+ * much again, then two and a half times, then three and a half — at the
+ * same pace. A farm or a pen,
+ * whose output is what is growing or living in it, gets the same factor on
+ * whatever that is (`yield`, see yieldAt).
+ */
+const CHEST_BLOCK = 148;
+export const STANDARD_LEVELS = [
+  { id: 'humble', label: 'Humble', mult: 1, blurb: 'Just started. It works, slowly.' },
+  {
+    id: 'tended', label: 'Tended', mult: 1.5, lights: 1, chests: 0, cost: { planks: 12, cobblestone: 8 },
+    blurb: 'A light to work by, and someone keeping it.',
+  },
+  {
+    id: 'thriving', label: 'Thriving', mult: 2.5, lights: 2, chests: 1, cost: { planks: 20, coin: 15 },
+    blurb: 'A chest for what it makes, and lit both ends.',
+  },
+  {
+    id: 'renowned', label: 'Renowned', mult: 3.5, lights: 4, chests: 2, cost: { iron_ingot: 4, coin: 40 },
+    blurb: 'Known across the land. People walk out of their way to see it.',
+  },
+];
+
+/** `produces` times `mult`, each count rounded up, so a single fruit still grows. */
+export function scaleProduce(produces, mult) {
+  if (!mult || mult === 1) return produces;
+  const out = {};
+  for (const [id, n] of Object.entries(produces ?? {})) out[id] = Math.ceil(n * mult);
+  return out;
+}
+
+function standardTiers(spec) {
+  const fromContents = spec.fromCrops || spec.fromAnimals;
+  return STANDARD_LEVELS.map((l, i) => ({
+    id: l.id,
+    name: `${l.label} ${spec.name}`,
+    blurb: l.blurb,
+    standard: true,
+    yield: l.mult,
+    ...(i > 0 && !fromContents ? { produces: scaleProduce(spec.produces, l.mult) } : {}),
+    ...(l.cost ? { cost: l.cost } : {}),
+    needs: i === 0 ? [] : [
+      { test: (ctx) => count(ctx, LIGHTS) >= l.lights, say: (ctx) => plural(l.lights - count(ctx, LIGHTS), 'light') },
+      ...(l.chests ? [{ test: (ctx) => count(ctx, [CHEST_BLOCK]) >= l.chests, say: (ctx) => plural(l.chests - count(ctx, [CHEST_BLOCK]), 'chest') }] : []),
+    ],
+  }));
+}
+
+for (const spec of STRUCTURES) {
+  if (spec.tiers?.length) continue;
+  const makes = Object.keys(spec.produces ?? {}).length || spec.fromCrops || spec.fromAnimals;
+  if (makes && spec.everySeconds) spec.tiers = standardTiers(spec);
+}
+
 export const STRUCTURES_BY_ID = new Map(STRUCTURES.map((s) => [s.id, s]));
 
 export function structuresForAge(age) {
@@ -1300,6 +1363,16 @@ export function producesAt(spec, tier = 0) {
  * day. Anything showing a rate per game day multiplies by this.
  */
 export const PRODUCTION_PACE = 0.2;
+
+/**
+ * How many times over a building makes what's in it at a tier — for a farm
+ * or a pen, whose output isn't written on the spec. 1 for anything without
+ * the standard ladder.
+ */
+export function yieldAt(spec, tier = 0) {
+  if (!hasLevels(spec)) return 1;
+  return spec.tiers[clampTier(spec, tier)].yield ?? 1;
+}
 
 export function intervalAt(spec, tier = 0) {
   if (!hasLevels(spec)) return spec?.everySeconds ?? 0;
