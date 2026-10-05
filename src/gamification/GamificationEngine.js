@@ -94,35 +94,52 @@ export class GamificationEngine {
    * predicate over `stats`, and it stays that way whether the world has a
    * settlement in it or not.
    */
+  /** bus.on, remembered for dispose. */
+  on(event, handler) {
+    (this.offs ??= []).push(this.bus.on(event, handler));
+  }
+
+  /** Drops every subscription — see watchSettlement. Called when the game replaces this engine. */
+  dispose() {
+    for (const off of this.offs ?? []) off();
+    this.offs = [];
+    this.duilt = null;
+  }
+
   watchSettlement() {
-    this.bus.on('duilt:age', ({ age, size }) => {
+    // Every subscription is kept, so dispose() can drop them: a new engine
+    // is made for every world, on one bus that lives as long as the page.
+    // Never dropped, each old engine stayed subscribed — holding its whole
+    // world in memory (reported directly: "the game is breaking after a
+    // while") and still paying quest XP and checking goals of its own.
+    this.on('duilt:age', ({ age, size }) => {
       this.state.age = Math.max(this.state.age, age ?? 1);
       if (size) this.state.landSize = Math.max(this.state.landSize, size);
       this.checkAchievements(null);
     });
-    this.bus.on('territory:expanded', ({ size } = {}) => {
+    this.on('territory:expanded', ({ size } = {}) => {
       if (size) this.state.landSize = Math.max(this.state.landSize, size);
       this.checkAchievements(null);
     });
-    this.bus.on('structure:claimed', ({ structure } = {}) => {
+    this.on('structure:claimed', ({ structure } = {}) => {
       if (structure?.type) this.state.claimed.add(structure.type);
       this.state.claimedCount += 1;
       this.checkAchievements(null);
     });
     // The market and the building ladder (the batch's traders and levels):
     // checked as they happen, so a goal can ask what just did.
-    this.bus.on('duilt:bought', (e = {}) => this.checkAchievements({ type: 'bought', ...e }));
+    this.on('duilt:bought', (e = {}) => this.checkAchievements({ type: 'bought', ...e }));
     // Places found and story moments told: the secrets ask about both.
-    this.bus.on('duilt:found', () => this.checkAchievements(null));
-    this.bus.on('duilt:moment', () => this.checkAchievements(null));
+    this.on('duilt:found', () => this.checkAchievements(null));
+    this.on('duilt:moment', () => this.checkAchievements(null));
     // A quest handed in pays its experience (config/quests.js).
-    this.bus.on('duilt:quest', ({ quest } = {}) => {
+    this.on('duilt:quest', ({ quest } = {}) => {
       if (this.duilt?.sandbox || !quest) return;
       this.addXp(quest.reward?.xp ?? 0, `Quest: ${quest.title}`);
       this.checkAchievements({ type: 'quest', quest });
     });
-    this.bus.on('structure:upgraded', ({ structure } = {}) => this.checkAchievements({ type: 'upgraded', structure }));
-    this.bus.on('settler:arrived', () => {
+    this.on('structure:upgraded', ({ structure } = {}) => this.checkAchievements({ type: 'upgraded', structure }));
+    this.on('settler:arrived', () => {
       this.state.settlersEver += 1;
       this.checkAchievements(null);
     });
