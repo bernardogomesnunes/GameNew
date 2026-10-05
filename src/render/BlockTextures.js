@@ -90,7 +90,7 @@ export function tileFor(blockId, { top = false } = {}) {
   let recipe = blockTexture(spec);
   if (top && recipe) recipe = recipe.top ?? recipe;
   const tile = !recipe ? null
-    : recipe.legacy === 'cobble' ? legacyTile(paintLegacyCobble(spec.id), spec)
+    : recipe.legacy === 'cobble' ? legacyTile(paintLegacyCobble(spec.id, undefined, recipe.size ?? 16), spec)
     : finish(paint(recipe, spec, spec.id), recipe, spec);
   tiles.set(key, tile);
   return tile;
