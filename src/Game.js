@@ -151,6 +151,8 @@ const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream 
 // one on the surface can see it, and it was most of every chunk's triangles;
 // this is enough to cover the biggest caverns once you're down in one.
 const DEEP_RANGE = 80;
+/** How far past DEEP_RANGE a chunk's deep mesh is kept, so walking back and forth doesn't rebuild it. */
+const DEEP_SLACK = 32;
 const EDIT_REBUILD_NOW = 4; // chunks an edit rebuilds on the spot; see remeshDirty
 /**
  * How often a world writes itself down while you play.
@@ -389,6 +391,8 @@ export class Game {
     this.scene.add(hemi);
 
     this.mesher = new ChunkMesher(this.scene);
+    // Sealed caves are only meshed near you — see updateDeep.
+    this.mesher.deepNear = (chunk) => this.chunkDistSq(chunk) <= DEEP_RANGE * DEEP_RANGE;
     this.mesher.ao = this.graphics.ao !== false;
     this.farTerrain = new FarTerrain(this.scene);
     this.clouds = new SkyClouds(this.scene);
@@ -617,7 +621,7 @@ export class Game {
     this.clock = new THREE.Clock();
     // What's behind the worlds screen the game opens on — see openTitle.
     this.openTitle();
-    this.renderer.setAnimationLoop(() => this.tick());
+    this.renderer.setAnimationLoop(() => this.safeTick());
   }
 
   /**
@@ -631,7 +635,57 @@ export class Game {
    * `visibilitychange` is the event that actually fires on mobile;
    * `pagehide` catches the desktop close. Both are cheap and idempotent.
    */
+  /**
+   * One frame, and what happens when one fails. A frame that throws used to
+   * leave the game frozen, or a phone that took the 3D canvas back left a
+   * white screen (reported directly: "the game breaks and I see a white
+   * screen") — with the world unsaved since the last autosave. Now three
+   * failures in a row, or the canvas taken away, saves and says so.
+   */
+  safeTick() {
+    try {
+      this.tick();
+      this.tickErrors = 0;
+    } catch (err) {
+      console.error(err);
+      if (++this.tickErrors >= 3) this.crashed(err?.message || String(err));
+    }
+  }
+
+  /** The game can't go on: save what there is, and say so with a way back. */
+  crashed(reason) {
+    if (this.crashedWith) return;
+    this.crashedWith = reason;
+    this.renderer.setAnimationLoop(null);
+    let saved = false;
+    try { saved = this.saveNow(); } catch (err) { console.error(err); }
+    const box = document.createElement('div');
+    box.id = 'crash';
+    box.setAttribute('role', 'alertdialog');
+    box.innerHTML = `<div class="crash-card">
+      <h2>The game stopped</h2>
+      <p class="crash-state">${saved ? 'Saving your world…' : 'Nothing to save.'}</p>
+      <button type="button" class="primary">Reload</button>
+      <p class="crash-why"></p>
+    </div>`;
+    box.querySelector('.crash-why').textContent = reason;
+    box.querySelector('button').addEventListener('click', () => location.reload());
+    // Inside the game's own container: full screen, nothing outside it shows.
+    (this.container ?? document.body).appendChild(box);
+    if (saved) {
+      const state = box.querySelector('.crash-state');
+      Promise.resolve(this.saving).then(
+        () => { state.textContent = this.saveError ? 'Saved on this phone — it goes up to your account when you reload.' : 'Your world is saved.'; },
+        () => { state.textContent = 'Saved on this phone — it goes up to your account when you reload.'; });
+    }
+  }
+
   wireSaveOnLeave() {
+    // The phone took the 3D canvas back — out of graphics memory, most often.
+    this.renderer.domElement.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.crashed('The phone ran out of graphics memory.');
+    });
     const save = () => this.saveNow();
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') save();
@@ -1536,6 +1590,36 @@ export class Game {
    * against the corner closest to the player and the line sits beyond the point
    * where everything is already sky-coloured.
    */
+  /** How far a chunk is from you, squared, to its nearest edge. */
+  chunkDistSq(chunk) {
+    const p = this.player?.position;
+    if (!p) return 0;
+    const minX = chunk.cx * CHUNK_SIZE, minZ = chunk.cz * CHUNK_SIZE;
+    const dx = Math.max(minX - p.x, 0, p.x - (minX + CHUNK_SIZE));
+    const dz = Math.max(minZ - p.z, 0, p.z - (minZ + CHUNK_SIZE));
+    return dx * dx + dz * dz;
+  }
+
+  /**
+   * The deep meshes follow you: built for chunks coming within DEEP_RANGE,
+   * let go of once they're a couple of chunks past it. Only when you cross
+   * into another chunk — between those, nothing changes.
+   */
+  updateDeep() {
+    const p = this.player?.position;
+    if (!p || !this.world) return;
+    const at = `${Math.floor(p.x / CHUNK_SIZE)},${Math.floor(p.z / CHUNK_SIZE)}`;
+    if (at === this.deepAt && this.world === this.deepWorld) return;
+    this.deepAt = at;
+    this.deepWorld = this.world;
+    const near = DEEP_RANGE * DEEP_RANGE, far = (DEEP_RANGE + DEEP_SLACK) ** 2;
+    for (const chunk of this.world.allChunks()) {
+      const d = this.chunkDistSq(chunk);
+      if (chunk.deepSkipped) { if (d <= near && chunk.mesh) this.remeshQueue.add(chunk); }
+      else if (d > far && chunk.mesh) this.mesher.dropDeep(chunk);
+    }
+  }
+
   updateChunkVisibility() {
     const px = this.player.position.x, pz = this.player.position.z;
     const maxSq = this.renderDistance * this.renderDistance;
@@ -5770,6 +5854,7 @@ export class Game {
     this.streamChunks();
     this.generateQueued();
     this.drainRemeshQueue();
+    this.updateDeep();
     this.updateChunkVisibility();
     this.updateFarTerrain();
     this.updateClouds(dt);
