@@ -86,10 +86,12 @@ export const BIOMES = [
     niche: { temp: 0.38, wet: 0.6 },
     base: 103, amplitude: 4, rough: 2.5,
     flat: 1.2,
-    // Bare dirt rather than Moss — an open, sparser grove reads as lighter
-    // underfoot too, and it keeps every forest its own colour on the map
-    // (see mapdraw.test.mjs) instead of two of the three sharing Moss.
-    surface: { top: DIRT, under: DIRT, depth: 3, rock: STONE },
+    // Grass, like the plains: it was bare dirt, and birch woods are a
+    // quarter of the land — reported directly: "Most of the world should be
+    // turf with dirt below."
+    surface: { top: GRASS, under: DIRT, depth: 3, rock: STONE },
+    // On the map, its pale leaves set it apart from the plains' same grass.
+    mapTint: WHITE_LEAVES,
     trees: { chance: 0.1, trunk: [4, 7], canopy: 2, wood: WHITE_WOOD, leaves: WHITE_LEAVES },
   },
   {

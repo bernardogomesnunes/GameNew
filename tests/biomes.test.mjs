@@ -60,8 +60,14 @@ for (const b of BIOMES) {
 // walking from one to the next changed the height of the ground and nothing
 // else — six biomes that looked like two.
 {
-  const tops = BIOMES.map((b) => b.surface.top);
-  ok(`every biome has its own ground (${tops.join(', ')})`, new Set(tops).size === BIOMES.length);
+  // Birch woods share the plains' grass (asked for directly: "Most of the
+  // world should be turf with dirt below"); they're told apart by their
+  // white trees, and on the map by their leaves' tint.
+  const tops = BIOMES.filter((b) => b.id !== 'forestBirch').map((b) => b.surface.top);
+  ok(`every other biome has its own ground (${tops.join(', ')})`, new Set(tops).size === tops.length);
+  const birch = BIOMES.find((b) => b.id === 'forestBirch');
+  ok('birch woods are grass, told apart by their trees and on the map', birch.surface.top === BIOMES.find((b) => b.id === 'plains').surface.top
+    && birch.mapTint === birch.trees.leaves);
   // Trees are the other half of how a biome reads. A forest has to be
   // obviously more wooded than the open country beside it.
   const forest = BIOMES_BY_ID.get('forestOak');

@@ -3,7 +3,7 @@ import { withHeightFog } from './atmosphere.js';
 import { biomeCssColours, waterCssColour } from './biomePalette.js';
 import { BIOMES, surfaceFor } from '../config/biomes.js';
 import { BLOCKS_BY_ID } from '../config/blocks.js';
-import { hash01 } from '../world/ChunkGen.js';
+import { hash01, FAR_BEACH_PROBES } from '../world/ChunkGen.js';
 import { skylineAt, kingdomFor } from '../world/kingdom.js';
 
 /**
@@ -273,7 +273,8 @@ export class FarTerrain {
     const index = gen.biomeIndexAt(cx, cz);
     const biome = BIOMES[index];
     if (water) return { top: water - SINK, water: true, colour: this.waterColour, side: this.waterColour };
-    const beach = h <= SEA_LEVEL + BEACH_BAND;
+    // The same shore as the real ground (ChunkGen.beachAt): low, and by the sea.
+    const beach = gen.beachAt ? gen.beachAt(cx, cz, h, undefined, FAR_BEACH_PROBES) : h <= SEA_LEVEL + BEACH_BAND;
     const topId = biome ? (beach ? SAND : surfaceFor(biome, h)) : null;
     const colour = topId != null ? colourOf(topId) : (this.colours[index] ?? this.colours[0]);
     const side = biome ? colourOf(beach ? SAND : biome.surface.under) : colour;
