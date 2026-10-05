@@ -4,7 +4,7 @@ import { ChunkMesher } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { buildTemplatePlacement, rotateTemplate, captureBlocks } from './tools/Templates.js';
-import { roofPlan, roofBlocks, roofPeak, roofPick, roofTypeFor } from './tools/RoofTool.js';
+import { roofPlan, roofBlocks, roofPeak, roofPick, roofTypeFor, roofUnder } from './tools/RoofTool.js';
 import { pickBuild, wallFootprintAt } from './tools/PointerPick.js';
 import { ROOFS_BY_ID, facingLabel } from './config/roofs.js';
 import { clearPlan, clearCells, cellBounds } from './tools/ClearTool.js';
@@ -1994,7 +1994,7 @@ export class Game {
     const changes = roofPlan(this.world, pick, { shape, turn, type, base });
 
     const laid = roofBlocks(pick, { shape, turn })
-      .map((b) => ({ x: b.x, y: base + b.dy, z: b.z, type: roofTypeFor(type, b) }));
+      .map((b) => ({ x: b.x, y: base + b.dy, z: b.z, type: roofTypeFor(type, b, roofUnder(this.world, b.x, base, b.z)) }));
     // Re-laying a roof has to take the old one's corners down as well as put
     // the new one up, or turning a gable leaves a cross on the roof.
     if (relay) {
@@ -2047,7 +2047,7 @@ export class Game {
     this.roofKey = key;
     const cells = roofBlocks(pick, { shape: this.pendingRoof, turn: this.roofTurn });
     const blocks = cells.map((b) => ({
-      dx: b.x - pick.bounds.minX, dy: b.dy, dz: b.z - pick.bounds.minZ, type: roofTypeFor(this.selectedBlockId, b),
+      dx: b.x - pick.bounds.minX, dy: b.dy, dz: b.z - pick.bounds.minZ, type: roofTypeFor(this.selectedBlockId, b, roofUnder(this.world, b.x, base, b.z)),
     }));
     this.roofGhost.show(blocks, {
       x: pick.bounds.maxX - pick.bounds.minX,
@@ -3119,9 +3119,18 @@ export class Game {
     if (now - (this.lastStrikeAt ?? 0) < this.strikeCooldown()) return true;
     this.lastStrikeAt = now;
     this.digTarget = null;
+    // They go in a jar (batch: "catching fireflies should be done with a jar
+    // that needs to be crafted with glass"): an empty one in, a full one out.
+    const d = this.duilt;
+    if (d && !d.sandbox && d.inventory.countOf('jar') < 1) {
+      this.ui.toast({ kind: 'xp', title: 'You need a jar', body: 'Make a glass jar at the bench, then catch them in it.' });
+      return true;
+    }
+    if (d && !d.sandbox) d.inventory.remove('jar', 1);
     this.fireflies.catchFrom(swarm);
-    const got = this.duilt?.collect({ fireflies: 1 }) ?? {};
-    this.ui.toast({ kind: 'xp', title: 'Caught some fireflies', body: got.fireflies ? '+1 fireflies' : undefined });
+    const got = d?.collect({ fireflies: 1 }) ?? {};
+    if (d && !d.sandbox && !got.fireflies) d.inventory.add('jar', 1);
+    this.ui.toast({ kind: 'xp', title: 'Caught some fireflies', body: got.fireflies ? '+1 jar of fireflies' : undefined });
     return true;
   }
 

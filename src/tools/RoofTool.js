@@ -1,5 +1,5 @@
 import { pickFootprint } from './PointerPick.js';
-import { roofPart, roofBlock, ROOF_MATERIALS } from '../config/blocks.js';
+import { roofPart, roofBlock, ROOF_MATERIALS, BLOCKS_BY_ID } from '../config/blocks.js';
 
 /**
  * Turning a roof shape into blocks over the building you are pointing at.
@@ -88,11 +88,31 @@ export function slopeAt(shape, { xm, xp, zm, zp }, turn) {
  * turned the right way, with the matching brick or stone under them where a
  * roof needs solid courses — the ends of a gable — and on a flat roof.
  */
-export function roofTypeFor(type, block) {
+export function roofTypeFor(type, block, under = null) {
   const part = roofPart(type);
   if (!part) return type;
-  if (!block.slope) return ROOF_MATERIALS[part.mat].wall;
+  if (!block.slope) return gableFill(under) ?? ROOF_MATERIALS[part.mat].wall;
   return roofBlock({ mat: part.mat, ...block.slope });
+}
+
+/**
+ * What the solid courses under a roof are made of: the wall they stand on.
+ * Asked for directly: "can't we know which block is below and fill the space
+ * with that texture? I know that this might be weird in some cases but
+ * majority will be fine" — a gable end in brick over a plank house was the
+ * one thing that gave a hand-built roof away. Only a plain whole block will
+ * do; anything else (air, glass, a door, a stair) falls back to the tiles'
+ * own brick or stone.
+ */
+export function gableFill(id) {
+  const spec = id ? BLOCKS_BY_ID.get(id) : null;
+  if (!spec || spec.shape || spec.transparent || spec.roof || spec.stateOf != null) return null;
+  return id;
+}
+
+/** The block a roof column stands on: the top of its wall, just under the eave. */
+export function roofUnder(world, x, eave, z) {
+  return world.getBlock(x, eave - 1, z);
 }
 
 /** The `{ x, y, z, prev, next }` changes for roofing a pick at a given eave. */
@@ -104,7 +124,7 @@ export function roofPlan(world, pick, { shape, turn = 0, type, base = null }) {
     const y = eave + b.dy;
     if (!world.inBounds(b.x, y, b.z)) continue;
     const prev = world.getBlock(b.x, y, b.z);
-    const next = roofTypeFor(type, b);
+    const next = roofTypeFor(type, b, roofUnder(world, b.x, eave, b.z));
     if (prev === next) continue;
     changes.push({ x: b.x, y, z: b.z, prev, next });
   }

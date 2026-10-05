@@ -48,6 +48,7 @@ export const GLYPHS = {
   pane: 'M5 5h14v14H5zM8.5 16 16 8.5',
   snow: 'M12 4v16M5 8l14 8M19 8 5 16',
   gold: 'M6.5 16h11l-2-7h-7l-2 7Z',
+  coin: 'M12 5a7 7 0 1 0 .01 0M12 8.5v7M14 9.5h-3a1.3 1.3 0 0 0 0 2.6h2a1.3 1.3 0 0 1 0 2.6h-3',
   crystal: 'M12 4l5 5.5-5 10.5-5-10.5ZM7 9.5h10',
 
   // things you carry

@@ -219,7 +219,10 @@ export const ITEMS = [
   { id: 'banner_white', name: 'White Banner', kind: 'refined', stackTo: STACK_GOODS, color: 0xf4f1ea, glyph: 'banner', block: 182, madeBy: 'Woven white, with the gold sun of the sky' },
   { id: 'banner_black', name: 'Black Banner', kind: 'refined', stackTo: STACK_GOODS, color: 0x2e2a33, glyph: 'banner', block: 186, madeBy: 'Woven black, with the red tower of the stone' },
   { id: 'firefly_lantern', name: 'Firefly Lantern', kind: 'refined', stackTo: STACK_GOODS, color: 0xd9ec9a, glyph: 'lantern', block: 190, madeBy: 'Glass, with fireflies you caught in it' },
-  { id: 'fireflies', name: 'Fireflies', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8ff5a, glyph: 'firefly', madeBy: 'Caught at night — Break on a swarm' },
+  // Batch: "catching fireflies should be done with a jar that needs to be
+  // crafted with glass, a jar of fireflies can then craft a firefly lantern".
+  { id: 'fireflies', name: 'Jar of Fireflies', kind: 'raw', stackTo: STACK_GOODS, color: 0xc8ff5a, glyph: 'firefly', madeBy: 'Caught at night — an empty jar, and Break on a swarm' },
+  { id: 'jar', name: 'Glass Jar', kind: 'refined', stackTo: STACK_GOODS, color: 0xcfe6d8, glyph: 'vase', madeBy: 'Blown from glass, at the bench' },
   // Homes (playtest, P1).
   { id: 'bed', name: 'Bed', kind: 'refined', stackTo: STACK_GOODS, color: 0xb84a3e, glyph: 'bed', block: 193, madeBy: 'Planks, stuffed with leaves — two blocks long, put down the way you face' },
   { id: 'painting', name: 'Painting', kind: 'refined', stackTo: STACK_GOODS, color: 0x8a6440, glyph: 'painting', block: 201, madeBy: 'A little landscape in a frame — Place on it to wake there when you fall' },
@@ -268,6 +271,9 @@ export const ITEMS = [
   { id: 'nightstone', name: 'Nightstone', kind: 'raw', stackTo: STACK_GOODS, color: 0x5a4a7a, glyph: 'crystal', block: 192, madeBy: 'Very rare — deep in the caves, or in a chest. For the Black Ring' },
   { id: 'iron_ingot', name: 'Iron Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xc7c7cd, glyph: 'gold', madeBy: 'Smelted at a foundry' },
   { id: 'copper_ingot', name: 'Copper Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xd69264, glyph: 'gold', madeBy: 'Smelted at a foundry' },
+  // Coins (batch: "coins as an item, that can be found in chests randomly or
+  // made in the foundry") — what a market's traders take for their goods.
+  { id: 'coin', name: 'Coins', kind: 'refined', stackTo: STACK_BULK, color: 0xe8bf3a, glyph: 'coin', madeBy: 'Struck at a foundry, or found in old chests' },
 
   // --- the Temple (Phase 7c) ------------------------------------------------
   //

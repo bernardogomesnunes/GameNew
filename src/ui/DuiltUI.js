@@ -431,6 +431,7 @@ export class DuiltUI {
         <ul>${does.map((d) => `<li>${d}</li>`).join('')}</ul>
       </div>
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
+      ${this.stationRecipesHtml(spec)}
       ${level ? `<div class="building-sec"><h4>Level: ${level.name}</h4>${evolve}</div>` : ''}
       <div class="building-facts">
         <span>${size} blocks</span>
@@ -445,6 +446,7 @@ export class DuiltUI {
       </div>`;
 
     body.querySelector('[data-evolve]')?.addEventListener('click', () => actions.onEvolve?.());
+    this.wireCraft(body, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
     body.querySelector('[data-store]')?.addEventListener('click', () => actions.onOpenStore?.());
@@ -991,7 +993,7 @@ export class DuiltUI {
     this.tip = tip;
     this.tipAt = null; // { attr, index } of the hovered slot
 
-    const TIPPED = '.bag-slot[data-tip], .cost-chip[data-tip]';
+    const TIPPED = '.bag-slot[data-tip], .cost-chip[data-tip], .recipe-icon[data-tip]';
     this.el.addEventListener('pointerover', (e) => {
       if (e.pointerType === 'touch') return;
       const btn = e.target.closest?.(TIPPED);
@@ -1005,7 +1007,7 @@ export class DuiltUI {
     // A chip has nothing else to do when pressed, so a tap is how a phone
     // asks what it is: tap shows the card, tap again (or anywhere) puts it away.
     this.el.addEventListener('click', (e) => {
-      const chip = e.target.closest?.('.cost-chip[data-tip]');
+      const chip = e.target.closest?.('.cost-chip[data-tip], .recipe-icon[data-tip]');
       if (!chip) { if (this.tipChip) this.hideSlotTip(); return; }
       if (this.tipChip === chip && !this.tip.hidden) { this.hideSlotTip(); return; }
       this.showSlotTip(chip);
@@ -1402,27 +1404,44 @@ export class DuiltUI {
       return;
     }
 
-    this.q('#bench-list').innerHTML = recipes.map((r) => {
+    const list = this.q('#bench-list');
+    list.innerHTML = this.recipeGridHtml(recipes);
+    this.wireCraft(list, () => this.renderBench());
+  }
+
+  /**
+   * Recipes as a grid of tiles: what it makes, big, with its name, what goes
+   * in, and Make. Asked for directly: "items could be something shown in a
+   * grid, with the icon and name, and the make button". The bench and every
+   * station's own popup (a foundry, a workshop...) draw the same tiles.
+   *
+   * The blurb rides on the big icon as its card — hovered with a mouse,
+   * tapped on a phone — so a tile stays small enough for two to a row.
+   */
+  recipeGridHtml(recipes) {
+    const d = this.duilt;
+    return recipes.map((r) => {
       const inputs = Object.entries(r.inputs).map(([id, n]) => {
         const have = d.inventory.countOf(id);
         return itemChip(id, n, { have, short: !d.sandbox && have < n });
-      }).join('<span class="recipe-op">+</span>');
-      const result = r.study
-        ? `<span class="recipe-result">${escapeHtml(r.result)}</span>`
-        : itemChip(r.output.id, r.output.count);
+      }).join('');
+      const spec = r.study ? null : ITEMS_BY_ID.get(r.output.id);
+      const icon = r.study
+        ? glyphSvg('flask', { size: 30, color: 0x7b8bb0 })
+        : itemIcon(spec, { size: 40 }) ?? glyphSvg(spec?.glyph, { size: 30, color: spec?.color ?? 0x888888 });
+      const count = !r.study && r.output.count > 1 ? `<b>×${r.output.count}</b>` : '';
+      const name = r.study ? r.result : itemName(r.output.id);
       return `
-        <div class="recipe-row ${r.ok ? '' : 'blocked'}">
-          <div class="recipe-text">
-            <strong>${r.name}${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${r.station}</span>` : ''}</strong>
-            <em>${r.blurb}</em>
-            <span class="recipe-cost">${inputs}<span class="recipe-op">→</span>${result}</span>
-          </div>
+        <div class="recipe-tile ${r.ok ? '' : 'blocked'}">
+          <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(name)}" data-tip-info="${escapeAttr(r.blurb ?? '')}">${icon}${count}</span>
+          <strong class="recipe-name">${r.name}</strong>
+          ${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${r.station}</span>` : ''}
+          <span class="recipe-cost">${inputs}</span>
           <div class="recipe-actions">
             <!--
               Never disabled. A dead button eats the tap and says nothing, so
-              pressing one you cannot afford felt like the game was broken —
-              the reason was on screen the whole time, in small grey type under
-              a row you had already given up on. Press it and it tells you.
+              pressing one you cannot afford felt like the game was broken.
+              Press it and it tells you why.
             -->
             <button class="secondary${r.ok ? '' : ' cannot'}" data-craft="${r.id}" data-times="1">Make</button>
             ${r.batch && r.maxBatch > 1 ? `<button class="secondary" data-craft="${r.id}" data-times="${r.maxBatch}">×${r.maxBatch}</button>` : ''}
@@ -1430,8 +1449,12 @@ export class DuiltUI {
           ${r.reason ? `<div class="recipe-why warn">${r.reason}</div>` : ''}
         </div>`;
     }).join('');
+  }
 
-    this.q('#bench-list').querySelectorAll('[data-craft]').forEach((b) =>
+  /** The Make buttons in `root`: craft where you stand, say how it went, redraw. */
+  wireCraft(root, rerender) {
+    const d = this.duilt;
+    root.querySelectorAll('[data-craft]').forEach((b) =>
       b.addEventListener('click', () => {
         const pos = this.game.player?.position;
         const res = d.crafting.craft(b.dataset.craft, Number(b.dataset.times),
@@ -1439,8 +1462,25 @@ export class DuiltUI {
         this.bus.emit('toast', res.ok
           ? { kind: 'challenge', title: res.studied ? `Studied: ${res.name}` : `Made ${res.made} ${res.name.toLowerCase()}` }
           : { kind: 'xp', title: 'Cannot make that', body: res.reason });
-        this.renderBench();
+        rerender();
       }));
+  }
+
+  /**
+   * What a station makes, in its own popup (batch: "the pop up should have
+   * the list of things that can be crafted there, let's keep the craft
+   * nearby functionality cause I love it"). The bench still lists them all;
+   * this is the same recipes, with the building you are standing at.
+   */
+  stationRecipesHtml(spec) {
+    const d = this.duilt;
+    if (!d || !spec?.station) return '';
+    const near = this.game.player?.position;
+    const recipes = d.crafting.available(d.age, { station: spec.station, near, atStations: d.stationsNear(near) });
+    const body = recipes.length
+      ? `<div class="recipe-grid">${this.recipeGridHtml(recipes)}</div>`
+      : '<p class="dim">Nothing to make here yet — more comes with the next age.</p>';
+    return `<div class="building-sec building-make"><h4>Make here</h4>${body}</div>`;
   }
 
   // ---- skills ----

@@ -61,6 +61,6 @@ ok('an Engineering Centre, from Age 2, needs engineering studied first', eng.age
   ok('what you studied is saved', back.research.engineering === true && back.skills.levelOf('foraging') === 2);
 }
 
-ok('the bench shows what studying gives, not an item', /const result = r\.study\s*\? `<span class="recipe-result">\$\{escapeHtml\(r\.result\)\}<\/span>`/.test(ui) && /Studied: \$\{res\.name\}/.test(ui));
+ok('the bench shows what studying gives, not an item', /const name = r\.study \? r\.result : itemName\(r\.output\.id\);/.test(ui) && /const icon = r\.study\s*\? glyphSvg\('flask'/.test(ui) && /Studied: \$\{res\.name\}/.test(ui));
 
 process.exit(f ? 1 : 0);
