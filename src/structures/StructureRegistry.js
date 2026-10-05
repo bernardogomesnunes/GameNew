@@ -484,6 +484,8 @@ export class StructureRegistry {
         excludes: s.excludes ?? [],
         // A farm's crops: one seed each, put in by hand (duilt/Crops.js).
         ...(s.seeds?.length ? { seeds: s.seeds } : {}),
+        // A town hall's controller, not yet handed over for want of room.
+        ...(s.owed ? { owed: s.owed } : {}),
       })),
     };
   }

@@ -38,6 +38,13 @@ const STAIRS = [29, 30, 57, 58, 59, 60, 61, 62]; // stone and plank stairs, ever
 const BEDS = [193, 194, 195, 196];
 const RACKS = [212, 213, 214, 215];
 const TRAINING = [216, 217, 218, 219, 220, 221, 222, 223];
+const CALCADAS = [209, 210, 211];
+/**
+ * A storage controller's parts (asked for directly). The recipe that makes
+ * one and the Town Hall that comes with one both read this, so the hall
+ * always costs exactly what the block would.
+ */
+export const CONTROLLER_PARTS = { planks: 8, glass: 2, brick: 4 };
 const tall = (ctx) => ctx.region.maxY - ctx.region.minY + 1;
 const longSide = (ctx) => Math.max(ctx.region.maxX - ctx.region.minX, ctx.region.maxZ - ctx.region.minZ) + 1;
 const shortSide = (ctx) => Math.min(ctx.region.maxX - ctx.region.minX, ctx.region.maxZ - ctx.region.minZ) + 1;
@@ -589,6 +596,60 @@ export const STRUCTURES = [
     skill: 'politics',
   },
 
+  {
+    // Asked for directly: "a block that can control all storages ... It can
+    // be added to a town hall when you build it it comes out of the box.
+    // Just by requiring the blocks that are needed to craft it not the
+    // actual item as requirement." So the hall costs a storage controller's
+    // parts (CONTROLLER_PARTS, the same object the recipe reads) and hands
+    // one over, built, once it stands — see DuiltGame.payGifts. Its own
+    // panel opens the stores too. Optional: no age goal asks for one.
+    id: 'townhall',
+    name: 'Town Hall',
+    icon: '🔔',
+    age: 4,
+    blurb: 'Where the town keeps its accounts. Comes with a storage controller that reaches every storehouse.',
+    minSize: 7,
+    maxSize: 20,
+    cost: CONTROLLER_PARTS,
+    gives: { storage_controller: 1 },
+    stores: true,
+    requires: [
+      {
+        id: 'floor',
+        test: (ctx) => count(ctx, [STONE, COBBLE, BRICK, MARBLE, ...CALCADAS]) >= 30,
+        say: (ctx) => `Needs ${30 - count(ctx, [STONE, COBBLE, BRICK, MARBLE, ...CALCADAS])} more stone, brick or calçada — a hall has a floor that takes boots`,
+      },
+      {
+        id: 'hall',
+        test: (ctx) => ctx.shelteredVolume() >= 30,
+        say: (ctx) => ctx.shelteredVolume() === 0
+          ? 'Needs a hall inside — walls all round and a roof over the top'
+          : `The hall is too small — ${30 - ctx.shelteredVolume()} more cells of room under the roof`,
+      },
+      {
+        id: 'windows',
+        test: (ctx) => count(ctx, WINDOWS) >= 4,
+        say: (ctx) => `Needs ${plural(4 - count(ctx, WINDOWS), 'window')} — accounts are kept in daylight`,
+      },
+      {
+        id: 'tower',
+        test: (ctx) => tall(ctx) >= 8,
+        say: (ctx) => `Needs to stand 8 blocks tall, for a bell tower — yours is ${tall(ctx)}`,
+      },
+      {
+        id: 'town',
+        test: (ctx) => ctx.hasNeighbour([PLANKS, BRICK, GLASS, WOOD], 12),
+        say: () => 'Build it among your town, not out in a field',
+      },
+    ],
+    // The town's dues: a coin or so every couple of hours, the 12-a-day
+    // ceiling every building keeps to.
+    produces: { coin: 1 },
+    everySeconds: 7200,
+    skill: 'politics',
+  },
+
   // Two buildings a town grows into rather than needs — nothing in Age 4's
   // goals asks for either of them, the way nothing ever asked for a second
   // kiln. They exist for what they give back once you want it.
@@ -1009,6 +1070,11 @@ export const STRUCTURES = [
     minSize: 14,
     maxSize: 28,
     cost: { wood: 20, seeds_carrot: 4, seeds_potato: 4 },
+    // Asked for directly: the town hall "should come with the village too".
+    // A village is a whole start raised at once, so it carries the hall's
+    // storage controller as well, and its panel reaches every storehouse.
+    gives: { storage_controller: 1 },
+    stores: true,
     requires: [
       {
         id: 'trunks',

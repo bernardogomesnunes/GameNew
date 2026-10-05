@@ -144,6 +144,8 @@ export const BLOCK_TEXTURES = {
   'Copper Ore':    { mottle: 0.14, marks: 24, flecks: STONE_FLECKS, ore: 6, nugget: [1.4, 0.98, 0.62], depth: 0.32, speck: 0.04, bump: 0.4 },
   'Sunstone Ore':  { mottle: 0.14, marks: 30, flecks: STONE_FLECKS, cracks: 2, depth: 0.32, speck: 0.04 },
   'Nightstone Ore': { mottle: 0.14, marks: 30, flecks: [[0.9, 0.86, 1.12], [1.1, 1.06, 1.14]], cracks: 2, depth: 0.32, speck: 0.04 },
+  // A cabinet: boards between brass bands.
+  'Storage Controller': { lines: 'planks', band: 4, marks: 6, flecks: [[0.8, 0.7, 0.62]], depth: 0.4, speck: 0.03, bump: 0.6, shine: 0.25 },
   'Lava':          { crust: 5, glow: [1.08, 1.75, 1.85], depth: 0.5, speck: 0.03 },
   'Flowing Lava':  { crust: 5, glow: [1.08, 1.75, 1.85], depth: 0.5, speck: 0.03 },
   'Dark Moss':     { clumps: 18, marks: 24, flecks: [[1.12, 1.1, 0.8], [0.8, 0.92, 0.9]], depth: 0.36, mottle: 0.14, speck: 0.06 },

@@ -13,7 +13,7 @@ import { Skills } from '../progression/Skills.js';
 import { Crafting } from './Crafting.js';
 import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
-import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool } from '../config/items.js';
+import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool, stackLimit } from '../config/items.js';
 import { MILESTONES } from '../config/skills.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, PRODUCTION_PACE } from '../config/structures.js';
 import { AIR, BLOCKS_BY_ID } from '../config/blocks.js';
@@ -462,6 +462,12 @@ export class DuiltGame {
     // Raising your god's Sanctuary calls its guardian to you (Phase 7d).
     const raised = STRUCTURES_BY_ID.get(typeId);
     if (result.ok && raised?.ring && !this.guardian) this.summonGuardian(raised.ring, region);
+    // A town hall comes with its storage controller (and a village with
+    // one too) — owed until there's room for it; see payGifts.
+    if (result.ok && raised?.gives) {
+      result.structure.owed = { ...raised.gives };
+      this.payGifts();
+    }
     if (result.ok && !this.sandbox) {
       const spec = STRUCTURES_BY_ID.get(typeId);
       if (spec?.skill) this.skills.record(spec.skill, 5);
@@ -628,6 +634,100 @@ export class DuiltGame {
     const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
     const tier = tierStatus(this.world, structure.region, structure.type, structure.tier ?? 0);
     return { structure, store, used, free: store.size - used, size: store.size, items, tier };
+  }
+
+  // ---- the storage controller ----
+
+  /**
+   * Every storehouse's shelves, as one list (asked for directly: a block
+   * "which will list all the Items available and allow search"). Broken
+   * storehouses count too — what's on their shelves is still yours, the
+   * same reading storedCount takes.
+   *
+   * Returns [{ id, count, stores }] — how many in all, and in how many
+   * storehouses — sorted by name.
+   */
+  storeTotals() {
+    const byId = new Map();
+    for (const s of this.structures.structures) {
+      if (!s.store) continue;
+      const seen = new Set();
+      for (const slot of s.store.slots) {
+        if (!slot) continue;
+        const row = byId.get(slot.id) ?? { id: slot.id, count: 0, stores: 0 };
+        row.count += slot.count;
+        if (!seen.has(slot.id)) { seen.add(slot.id); row.stores++; }
+        byId.set(slot.id, row);
+      }
+    }
+    return [...byId.values()].sort((a, b) => itemName(a.id).localeCompare(itemName(b.id)));
+  }
+
+  /**
+   * Takes a stack of something out of whichever storehouses hold it, into
+   * the bag — up to one full stack, or one tool (each carries its own wear,
+   * so tools move whole). Returns how many arrived.
+   */
+  takeFromStores(itemId) {
+    let want = isTool(itemId) ? 1 : stackLimit(itemId);
+    let moved = 0;
+    for (const s of this.structures.structures) {
+      if (!s.store || want <= 0) continue;
+      const store = s.store;
+      for (let i = 0; i < store.slots.length && want > 0; i++) {
+        const slot = store.slots[i];
+        if (!slot || slot.id !== itemId) continue;
+        if (isTool(itemId)) {
+          const n = store.moveTo(this.inventory, i);
+          moved += n; want -= n;
+          if (!n) return moved;
+          continue;
+        }
+        const take = Math.min(slot.count, want);
+        const arrived = take - this.inventory.add(itemId, take);
+        if (!arrived) return moved;
+        slot.count -= arrived;
+        if (slot.count <= 0) store.slots[i] = null;
+        store.changed();
+        moved += arrived; want -= arrived;
+      }
+    }
+    return moved;
+  }
+
+  /**
+   * Everything but your tools, out of the bag and onto whichever shelves
+   * have room — the storehouse's "Put it all in", for all of them at once.
+   * Returns { moved, stuck }.
+   */
+  storeAllAway() {
+    const stores = this.structures.stores().map((x) => x.store);
+    let moved = 0, stuck = 0;
+    this.inventory.slots.forEach((s, i) => {
+      if (!s || isTool(s.id)) return;
+      for (const store of stores) {
+        moved += this.inventory.moveTo(store, i);
+        if (!this.inventory.slots[i]) return;
+      }
+      stuck++;
+    });
+    return { moved, stuck };
+  }
+
+  /**
+   * What a building comes with, handed over once it stands — a town hall's
+   * storage controller (and a village's). Into the bag, or a storehouse if
+   * the bag's full; if neither has room it waits, and is tried again every
+   * few seconds until it fits (see tick).
+   */
+  payGifts() {
+    for (const s of this.structures.structures) {
+      const gives = s.owed;
+      if (!gives) continue;
+      if (!this.structures.deliver(gives)) continue;
+      delete s.owed;
+      this.bus?.emit('structure:gift', { structure: s, items: gives });
+    }
   }
 
   /**
@@ -800,6 +900,7 @@ export class DuiltGame {
         taxRate: this.skyTaxRate(),
       });
       this.countTaxes();
+      this.payGifts();
     }
   }
 

@@ -255,6 +255,76 @@ function marketBlocks() {
   return g.blocks();
 }
 
+/**
+ * A town hall (asked for directly: "we need a town hall building ... detail
+ * the building, they're all looking too boxy"). Outside is -z. A calçada
+ * forecourt under a porch on posts, lanterns either side of the door; a
+ * cobble plinth with timber-framed walls over it, oak posts at the corners
+ * and between the windows; a slate roof with a chimney at the back; and a
+ * stone bell tower rising out of the front of the roof, open on all four
+ * sides at the top, a gold bell in it and a slate cap. Inside, a red rug
+ * runs from the door to the clerks' counter, with the town chest behind it
+ * and a chandelier over the middle. No storage controller in it — the hall
+ * hands you one when it stands (structures.js, `gives`), and a design with
+ * one in it would ask you for the block before you had it.
+ */
+function townhallBlocks() {
+  const g = grid();
+  const W = 9, Z0 = 2, Z1 = 10, H = 4;                 // hall z 2..10, walls y 1..4
+  const TOWER = { x0: 3, x1: 5, z0: Z0, z1: Z0 + 2 };
+  // The forecourt and the hall's floor.
+  g.box(0, 0, 0, W - 1, 0, Z0 - 1, CALCADA);
+  g.box(0, 0, Z0, W - 1, 0, Z1, COBBLE);
+  // Walls: a cobble plinth course, timber framing over it, oak posts.
+  for (let x = 0; x < W; x++) for (const z of [Z0, Z1]) g.put(x, 1, z, COBBLE);
+  for (let z = Z0; z <= Z1; z++) for (const x of [0, W - 1]) g.put(x, 1, z, COBBLE);
+  for (let y = 2; y <= H; y++) {
+    for (let x = 0; x < W; x++) { g.put(x, y, Z0, TIMBER); g.put(x, y, Z1, TIMBER); }
+    for (let z = Z0; z <= Z1; z++) { g.put(0, y, z, TIMBER); g.put(W - 1, y, z, TIMBER); }
+  }
+  const posts = [[0, Z0], [W - 1, Z0], [0, Z1], [W - 1, Z1], [0, 6], [W - 1, 6], [3, Z0], [5, Z0], [3, Z1], [5, Z1]];
+  for (const [x, z] of posts) g.box(x, 1, z, x, H, z, WOOD);
+  // Windows, two high: either side of the door, across the back, down both sides.
+  for (const x of [1, 7]) g.box(x, 2, Z0, x, 3, Z0, WINDOW);
+  for (const x of [1, 2, 6, 7]) g.box(x, 2, Z1, x, 3, Z1, WINDOW);
+  for (const z of [4, 8]) { g.box(0, 2, z, 0, 3, z, WINDOW + 1); g.box(W - 1, 2, z, W - 1, 3, z, WINDOW + 1); }
+  // The ceiling, and slate over it with a chimney at the back.
+  g.box(0, H + 1, Z0, W - 1, H + 1, Z1, PLANKS);
+  g.add(withChimney(gable(0, Z0, W, Z1 - Z0 + 1, H + 2, SLATE, TIMBER), 7, Z1 - 1, H + 2, 4, BRICK));
+  // The bell tower: stone up through the roof, open at the top, a bell in it.
+  const top = H + 7;
+  for (let y = H + 2; y <= top; y++) {
+    for (let x = TOWER.x0; x <= TOWER.x1; x++) {
+      for (let z = TOWER.z0; z <= TOWER.z1; z++) {
+        const edge = x === TOWER.x0 || x === TOWER.x1 || z === TOWER.z0 || z === TOWER.z1;
+        const corner = (x === TOWER.x0 || x === TOWER.x1) && (z === TOWER.z0 || z === TOWER.z1);
+        const belfry = y >= top - 1 && !corner;        // the openings the bell rings out of
+        g.put(x, y, z, edge && !belfry ? (y === H + 2 ? COBBLE : STONE) : null);
+      }
+    }
+  }
+  g.put(4, top, Z0 + 1, GOLD);                          // the bell
+  g.box(TOWER.x0, top + 1, TOWER.z0, TOWER.x1, top + 1, TOWER.z1, STONE);
+  g.add(gable(TOWER.x0, TOWER.z0, 3, 3, top + 2, SLATE, STONE));
+  // The porch: posts, a plank roof edged with stairs, lanterns by the door.
+  for (const x of [0, 2, 6, 8]) g.box(x, 1, 0, x, 3, 0, WOOD);
+  g.box(0, H, 0, W - 1, H, Z0 - 1, PLANKS);
+  for (let x = 0; x < W; x++) g.put(x, H, 0, turned(30, 2));
+  g.put(3, 3, Z0 - 1, LANTERN);
+  g.put(5, 3, Z0 - 1, LANTERN);
+  g.add(door(4, 1, Z0));
+  // Inside: a rug to the counter, the counter, the town chest, a chandelier.
+  for (let z = Z0 + 1; z <= 7; z++) g.put(4, 1, z, RED_RUG);
+  for (const x of [2, 3, 4, 5, 6]) g.put(x, 1, 8, OAK_TABLE_);
+  g.put(3, 2, 8, LANTERN);
+  g.put(4, 1, 9, turned(OAK_CHAIR, 2));
+  g.put(1, 1, 9, CHEST);
+  g.put(7, 1, 9, CHEST);
+  for (const z of [4, 6]) { g.put(1, 1, z, turned(OAK_CHAIR, 1)); g.put(7, 1, z, turned(OAK_CHAIR, 3)); }
+  g.put(4, H, 5, CHANDELIER);
+  return g.blocks();
+}
+
 /** A working with timber holding the roof up. Aim it deep — the rules check. */
 function mineBlocks() {
   const blocks = [...slab(0, 0, 6, 6, 0, STONE)];
@@ -720,6 +790,15 @@ export const STARTER_DESIGNS = [
     footprint: '11 × 11',
     note: 'Put it among your buildings — it will not count on its own in a field.',
     blocks: marketBlocks(),
+  },
+  {
+    id: 'starter_townhall',
+    structure: 'townhall',
+    name: 'Town hall',
+    size: 11,
+    footprint: '9 × 11',
+    note: 'Put it among your buildings. It hands you a storage controller once it stands.',
+    blocks: townhallBlocks(),
   },
   {
     id: 'starter_townhouse',

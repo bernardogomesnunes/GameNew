@@ -72,7 +72,7 @@ for (const design of STARTER_DESIGNS) {
   if (design.structure === 'granary') {
     for (let dx = 0; dx < 4; dx++) for (let dz = 0; dz < 4; dz++) world.setBlock(10 + dx, groundY, 10 + dz, FARMLAND);
   }
-  if (design.structure === 'market' || design.structure === 'tavern' || design.structure === 'foundry') {
+  if (design.structure === 'market' || design.structure === 'tavern' || design.structure === 'foundry' || design.structure === 'townhall') {
     // A neighbour, since a market, tavern or foundry has to stand among your town.
     for (let dy = 0; dy < 3; dy++) world.setBlock(15, groundY + dy, 15, PLANKS);
   }

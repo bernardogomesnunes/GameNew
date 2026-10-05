@@ -191,6 +191,16 @@ const LATER = [
     check: (c) => c.stats.claimed.has('engineering'),
   },
   {
+    id: 'a_townhall',
+    age: 4,
+    structure: 'townhall',
+    name: 'Raise a town hall',
+    description: 'A stone-floored hall with four windows and a bell tower, among your town. It hands you a storage controller: every storehouse in one list.',
+    icon: '🔔',
+    xpReward: 120,
+    check: (c) => c.stats.claimed.has('townhall'),
+  },
+  {
     id: 'a_pen',
     age: 2,
     structure: 'pen', // the goal that sends you to it — see ages.test.mjs
