@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { lookColours } from '../config/avatar.js';
-import { heldGeometryFor } from './heldModel.js';
+import { heldGeometryFor, heldCubeFor } from './heldModel.js';
 import { ITEMS_BY_ID } from '../config/items.js';
 
 /**
@@ -35,6 +35,12 @@ export class HandView {
     // blade ahead of you, and the tip leans the whole thing away from you.
     this.item.rotation.order = 'XYZ';
     this.group.add(this.item);
+    // A plain block, textured like its icon (heldCubeFor) — the item mesh's
+    // boxes can only be flat colours.
+    this.cube = new THREE.Mesh(new THREE.BufferGeometry(), []);
+    this.cube.rotation.order = 'XYZ';
+    this.cube.visible = false;
+    this.group.add(this.cube);
     this.fistMat = new THREE.MeshLambertMaterial({ color: 0xe0b48e });
     this.fist = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.34), this.fistMat);
     this.fist.position.set(0.04, -0.04, 0.08);
@@ -56,10 +62,13 @@ export class HandView {
     const key = held.itemId ?? held.blockId ?? null;
     if (key !== this.key) {
       this.key = key;
-      const geo = heldGeometryFor(held);
+      const cube = heldCubeFor(held);
+      const geo = cube ? null : heldGeometryFor(held);
       this.item.visible = !!geo;
-      this.fist.visible = !geo;
+      this.cube.visible = !!cube;
+      this.fist.visible = !geo && !cube;
       if (geo) this.item.geometry = geo;
+      if (cube) { this.cube.geometry = cube.geometry; this.cube.material = cube.materials; }
       // A tool or a sword is held the way your avatar holds it in third
       // person (asked for directly: "the blade should be pointing front
       // like in the third person, not facing right"): the handle in your
@@ -71,6 +80,8 @@ export class HandView {
       else this.item.rotation.set(0.1, 0.35, 0.15);
       // A block sits smaller in the hand than a sword is long.
       this.item.scale.setScalar(pointing ? 0.34 : held.itemId ? 0.24 : 0.18);
+      this.cube.rotation.copy(this.item.rotation);
+      this.cube.scale.setScalar(0.18);
     }
     this.fistMat.color.setHex(lookColours(look).skin);
 

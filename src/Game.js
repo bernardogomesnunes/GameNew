@@ -4352,7 +4352,7 @@ export class Game {
     // A door swings both its halves together.
     const door = doorPart(hit.block);
     const trap = isTrapdoor(hit.block);
-    const cells = door ? this.doorCells(hit) : [{ x: hit.x, y: hit.y, z: hit.z, block: hit.block }];
+    const cells = door ? [...this.doorCells(hit), ...this.doorPartnerCells(hit, door)] : [{ x: hit.x, y: hit.y, z: hit.z, block: hit.block }];
     const shutting = door ? door.open : trap ? hit.block >= TRAPDOOR_OPEN : GATE_SWING[hit.block] === GATE_SHUT;
     if (shutting && cells.some((c) => this.blockOverlapsPlayerAABB(c))) {
       this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : trap ? 'Step out from under it first' : 'Step out of the gateway first' });
@@ -4368,6 +4368,26 @@ export class Game {
     }
     this.remeshDirty();
     this.editedAt = Date.now();
+  }
+
+  /**
+   * The door beside this one in a pair — the same way round, beside it along
+   * the doorway, shut or open alike — so a double door swings as one. Asked
+   * for directly: "When 2 doors are next to each other we should have them
+   * open each from their side, leaving the middle open." Each is drawn hinged
+   * on its outer edge (ChunkMesher's doorMirrored).
+   */
+  doorPartnerCells(at, door) {
+    const steps = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+    const [hx, hz] = steps[door.facing & 3];
+    for (const k of [1, -1]) {
+      const x = at.x + hx * k, z = at.z + hz * k;
+      if (!this.world.inBounds(x, at.y, z)) continue;
+      const block = this.world.getBlock(x, at.y, z);
+      const p = doorPart(block);
+      if (p && p.facing === door.facing && p.top === door.top && p.open === door.open) return this.doorCells({ x, y: at.y, z, block });
+    }
+    return [];
   }
 
   /** Both halves of the door at a cell — or just the one, if its other half is missing. */
