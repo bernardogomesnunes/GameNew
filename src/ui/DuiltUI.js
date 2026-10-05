@@ -217,6 +217,18 @@ export class DuiltUI {
           <div id="store-hotbar-grid"></div>
           <div class="store-head"><span>In your bag</span></div>
           <div id="store-bag-grid"></div>`,
+        'panel-stores': `
+          <!--
+            The storage controller: every storehouse's shelves as one list,
+            searched like the bench is. A tap takes a stack into the bag from
+            wherever it is kept; nobody needs to know which shed.
+          -->
+          <div class="store-head">
+            <span id="stores-where"></span>
+            <button class="secondary" id="btn-stores-all">Put it all away</button>
+          </div>
+          <input id="stores-search" class="panel-search" type="search" placeholder="Search — planks, iron, seeds…" autocomplete="off" enterkeyhint="search">
+          <div id="stores-list" class="recipe-grid"></div>`,
         'panel-claim': `
           <div id="claim-list"></div>`,
         'panel-buildings': `
@@ -267,6 +279,8 @@ export class DuiltUI {
     this.q('#btn-claim-column').addEventListener('click', () => this.game.beginClaimColumn());
     this.q('#btn-claim-area').addEventListener('click', () => this.game.beginClaimSelection());
     this.q('#btn-store-all').addEventListener('click', () => this.storeEverything());
+    this.q('#btn-stores-all').addEventListener('click', () => this.storeAllAway());
+    this.q('#stores-search').addEventListener('input', () => this.renderStores());
     this.wireSlotTip();
 
     this.bus.on('inventory:change', () => {
@@ -448,6 +462,7 @@ export class DuiltUI {
       <div class="building-actions">
         ${next ? `<button class="${level.canEvolve ? 'primary' : 'secondary cannot'}" data-evolve>Evolve to ${withArticle(next.name)}</button>` : ''}
         ${summary ? `<button class="${level?.canEvolve ? 'secondary' : 'primary'}" data-store>Open it</button>` : ''}
+        ${spec?.stores ? `<button class="${level?.canEvolve ? 'secondary' : 'primary'}" data-stores>All stores</button>` : ''}
         <button class="${summary || level?.canEvolve ? 'secondary' : 'primary'}" data-move>Move it</button>
         <button class="secondary" data-change>${locked ? 'Change it' : 'Done changing'}</button>
         <button class="danger secondary" data-delete>Delete it</button>
@@ -458,6 +473,7 @@ export class DuiltUI {
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
     body.querySelector('[data-store]')?.addEventListener('click', () => actions.onOpenStore?.());
+    body.querySelector('[data-stores]')?.addEventListener('click', () => actions.onOpenStores?.());
     body.querySelector('[data-move]').addEventListener('click', () => actions.onMove?.());
     body.querySelector('[data-change]').addEventListener('click', () => actions.onChange?.());
     body.querySelector('[data-delete]').addEventListener('click', () => {
@@ -1196,6 +1212,78 @@ export class DuiltUI {
       d.structures.toggleExclude(this.store.id, btn.dataset.route);
       this.renderStore();
     }));
+  }
+
+  // ---- the storage controller ----
+
+  /** Every storehouse at once (a storage controller, or a town hall's panel). */
+  showStores() {
+    const search = this.q('#stores-search');
+    if (search) search.value = '';
+    this.renderStores();
+  }
+
+  /**
+   * Everything on every shelf, as tiles: the item, how many in all, and in
+   * how many storehouses. A tap takes a stack into the bag (see
+   * DuiltGame.takeFromStores). The search matches names, the same way the
+   * bench's does.
+   */
+  renderStores() {
+    const d = this.duilt;
+    const list = this.q('#stores-list');
+    if (!list) return;
+    if (!d) { list.innerHTML = ''; return this.noWorld('#stores-list'); }
+    const sheds = d.structures.stores().length;
+    const all = d.storeTotals();
+    const q = (this.q('#stores-search')?.value ?? '').trim().toLowerCase();
+    const rows = q ? all.filter((r) => itemName(r.id).toLowerCase().includes(q)) : all;
+    const where = this.q('#stores-where');
+    if (where) {
+      const total = all.reduce((n, r) => n + r.count, 0);
+      where.textContent = sheds
+        ? `${total} thing${total === 1 ? '' : 's'} in ${sheds} storehouse${sheds === 1 ? '' : 's'}`
+        : 'No storehouses yet';
+    }
+    if (!rows.length) {
+      list.innerHTML = `<div class="sub" style="margin:0">${!sheds ? 'Build a storehouse, and whatever goes on its shelves shows up here.'
+        : q ? `Nothing called "${escapeHtml(q)}" in any storehouse.` : 'Nothing on the shelves yet. Tap “Put it all away” to start.'}</div>`;
+      return;
+    }
+    list.innerHTML = rows.map((r) => {
+      const spec = ITEMS_BY_ID.get(r.id);
+      const icon = itemIcon(spec, { size: 40 }) ?? glyphSvg(spec?.glyph, { size: 30, color: spec?.color ?? 0x888888 });
+      return `
+        <div class="recipe-tile">
+          <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(itemName(r.id))}" data-tip-info="${escapeAttr(spec?.madeBy ?? '')}">${icon}<b>×${r.count}</b></span>
+          <strong class="recipe-name">${escapeHtml(itemName(r.id))}</strong>
+          <span class="recipe-cost dim">${r.stores === 1 ? 'In 1 storehouse' : `Across ${r.stores} storehouses`}</span>
+          <div class="recipe-actions"><button class="secondary" data-take="${escapeAttr(r.id)}">Take</button></div>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('[data-take]').forEach((b) => b.addEventListener('click', () => {
+      const id = b.dataset.take;
+      const n = d.takeFromStores(id);
+      this.bus.emit('toast', n
+        ? { kind: 'xp', title: `Took ${n} ${itemName(id).toLowerCase()}` }
+        : { kind: 'xp', title: 'Your bag is full', body: 'Put something away first' });
+      this.renderStores();
+    }));
+  }
+
+  /** "Put it all away": everything but your tools, onto whichever shelves have room. */
+  storeAllAway() {
+    const d = this.duilt;
+    if (!d) return;
+    if (!d.structures.stores().length) {
+      this.bus.emit('toast', { kind: 'xp', title: 'No storehouses yet', body: 'Build one, and this puts things on its shelves' });
+      return;
+    }
+    const { moved, stuck } = d.storeAllAway();
+    this.renderStores();
+    this.bus.emit('toast', moved
+      ? { kind: 'xp', title: `Put ${moved} away`, body: stuck ? 'Every shelf filled up before the rest' : 'Your tools stayed with you' }
+      : { kind: 'xp', title: 'Nothing moved', body: stuck ? 'Every shelf is full' : 'Only your tools are left' });
   }
 
   putInStore(i) {

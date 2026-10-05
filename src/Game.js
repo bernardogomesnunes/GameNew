@@ -46,7 +46,7 @@ function serialiseWorldState({ world, mode, economy, duilt, territoryBounds }) {
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
 import { panelForKey } from './config/panels.js';
-import { STRUCTURES_BY_ID } from './config/structures.js';
+import { STRUCTURES_BY_ID, structureName } from './config/structures.js';
 import { DESIGN_FOR_STRUCTURE } from './config/starterDesigns.js';
 import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
@@ -77,7 +77,7 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView } from './render/ArmyView.js';
-import { BED, NIGHTSTONE_ORE, SKY_LIFT, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent } from './config/blocks.js';
+import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent } from './config/blocks.js';
 import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
 import { Suspicion, SUSPICION, AMBUSH } from './duilt/Suspicion.js';
@@ -194,7 +194,7 @@ const swings = (id) => !!GATE_SWING[id] || !!doorPart(id) || isTrapdoor(id);
 /** What Place does to a door or gate — "Open" or "Close" — or null for anything else. */
 export function swingLabel(id) {
   if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
-  if (isChest(id)) return 'Open';
+  if (isChest(id) || id === STORAGE_CONTROLLER) return 'Open';
   if (isCatapult(id)) return 'Man';
   if (isPainting(id)) return 'Home';
   if (isTrapdoor(id)) return id >= TRAPDOOR_OPEN ? 'Close' : 'Open';
@@ -557,6 +557,16 @@ export class Game {
     // Story moments (config/moments.js): the first stranger who stays, the first altar.
     this.bus.on('settler:arrived', () => this.tellMoment('first_settler'));
     this.bus.on('structure:claimed', ({ structure } = {}) => { if (structure?.type === 'temple') this.tellMoment('first_temple'); });
+    // What a building comes with — a town hall's storage controller.
+    this.bus.on('structure:gift', ({ structure, items } = {}) => {
+      const [id, n] = Object.entries(items ?? {})[0] ?? [];
+      if (!id) return;
+      this.ui.toast({
+        kind: 'challenge',
+        title: `${n} ${itemName(id).toLowerCase()} for your ${structureName(structure?.type).toLowerCase()}`,
+        body: 'Put it down anywhere — Place on it to reach every storehouse.',
+      });
+    });
     // A purchase from a market's trader changes the bag: save it with the world.
     this.bus.on('duilt:bought', () => { this.editedAt = Date.now(); });
     this.bus.on('duilt:boostEnded', ({ boost }) => this.ui?.toast({
@@ -1735,6 +1745,7 @@ export class Game {
     if (this.banditTarget(aimed) || this.mobTarget(aimed) || this.fireflyTarget(aimed)) return breaks();
     if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
+      || aimed.block === STORAGE_CONTROLLER
       || aimed.block === SKY_LIFT || isCatapult(aimed.block)
       || (aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)))) return places();
     const item = this.selectedItemId;
@@ -1773,6 +1784,8 @@ export class Game {
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
     // And at a chest, Place opens it.
     if (aimed && isChest(aimed.block)) return void this.openChest(aimed);
+    // And at a storage controller, every storehouse at once.
+    if (aimed && aimed.block === STORAGE_CONTROLLER) return void this.ui.openStores();
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
     // At a war tent, Place makes camp there; at the dark god's altar, the oath.
@@ -2094,6 +2107,7 @@ export class Game {
       onMove: () => this.beginMove(structure),
       onDelete: () => this.deleteBuilding(structure),
       onOpenStore: () => this.ui.openStore(structure),
+      onOpenStores: () => this.ui.openStores(),
       onEvolve: () => this.evolveBuilding(structure),
       onSow: (kind) => this.sowFarm(structure, kind, true),
       onUnsow: (kind) => this.sowFarm(structure, kind, false),
@@ -4717,7 +4731,7 @@ export class Game {
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
     // shouldn't go on to build against it.
-    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block) || isPainting(hit.block)) return;
+    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block) || isPainting(hit.block) || hit.block === STORAGE_CONTROLLER) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {

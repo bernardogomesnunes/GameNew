@@ -2213,6 +2213,12 @@ export class UIManager {
     this.duiltUI?.showTrader(person);
   }
 
+  /** Every storehouse at once — a storage controller, or a town hall's panel. */
+  openStores() {
+    this.openPanel('panel-stores');
+    this.duiltUI?.showStores();
+  }
+
   /** Opens a storehouse's shelves alongside the bag. */
   openStore(structure) {
     this.openPanel('panel-store');

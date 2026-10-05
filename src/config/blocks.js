@@ -443,6 +443,15 @@ BLOCKS.push(
   { id: GREY_STONE, name: 'Dark Grey Stone', glyph: 'stone', color: 0x6c6b6a, material: 'stone', unlock: null },
 );
 
+/**
+ * The storage controller (asked for directly: "a block that can control all
+ * storages ... can be placed anywhere which will list all the Items
+ * available and allow search"). A banded cabinet; Place on it opens every
+ * storehouse at once — see Game.openStores and DuiltUI.renderStores.
+ */
+export const STORAGE_CONTROLLER = 239;
+BLOCKS.push({ id: STORAGE_CONTROLLER, name: 'Storage Controller', glyph: 'controller', color: 0xa5814f, material: 'wood', unlock: null });
+
 export const SUNSTONE_ORE = 191;
 export const NIGHTSTONE_ORE = 192;
 BLOCKS.push(

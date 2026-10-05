@@ -1,4 +1,5 @@
 import { ARMOUR_PIECES } from './armour.js';
+import { CONTROLLER_PARTS } from './structures.js';
 import { tieredRecipes } from './tiers.js';
 import { SKILLS, MAX_LEVEL } from './skills.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
@@ -273,6 +274,17 @@ export const RECIPES = [
     inputs: { planks: 6 },
     output: { id: 'chest', count: 1 },
     blurb: 'Twenty-seven slots in a box you can put anywhere. Place opens it.',
+  },
+  {
+    // Asked for directly. A town hall comes with one; this makes more, for
+    // anywhere else you want to reach your stores from.
+    id: 'storage_controller',
+    name: 'Storage Controller',
+    station: 'hand',
+    age: 4,
+    inputs: CONTROLLER_PARTS,
+    output: { id: 'storage_controller', count: 1 },
+    blurb: 'Lists everything in every storehouse, with a search. Place on it to open.',
   },
   // Swords (Phase 6b): at the bench, each a step harder than the last.
   {

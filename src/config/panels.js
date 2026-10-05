@@ -120,6 +120,18 @@ export const PANELS = [
     // the map, which is the bag again under a different name.
   },
   {
+    id: 'panel-stores',
+    title: 'Every storehouse',
+    sub: 'Everything on every shelf. Tap something to take a stack of it.',
+    subId: 'stores-sub',
+    wide: true,
+    layer: 'duilt',
+    mode: 'duilt',
+    label: 'Stores',
+    // No key: it opens from a storage controller, or a town hall's panel —
+    // the block is the thing you build to reach your stores from afar.
+  },
+  {
     id: 'panel-claim',
     title: 'What is this?',
     sub: "The game will check what you've built and tell you if anything's missing.",
