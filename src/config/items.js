@@ -186,6 +186,19 @@ export const ITEMS = [
     grants: 'mirror',
   },
 
+  // --- the flying machine (asked for directly: "a flying machine that
+  // should fly with front and space to go up, left and right to move, this
+  // is a wooden plane da Vinci style") -----------------------------------
+  //
+  // Owning one is what lets you fly in Duilt — see Game.wireFlight. Fly to
+  // take off, forward to go, Jump climbs, Sneak dives, look to steer; turn
+  // it off in the air and the wings bring you down in a glide.
+  {
+    id: 'flying_machine', name: 'Flying Machine', kind: 'tool', stackTo: STACK_TOOL, color: 0xc49360, glyph: 'glider',
+    durability: null, madeBy: 'Built at a workshop from planks and wool', unlocks: 'Flying',
+    flies: true,
+  },
+
   // --- Phase 4: light, half-height shapes, furniture -----------------------
   { id: 'roof_brick', name: 'Brick Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0xc9765c, glyph: 'rooftile', block: 86, madeBy: 'Fired from brick into curved tiles' },
   { id: 'roof_stone', name: 'Stone Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x8e93a0, glyph: 'rooftile', block: 101, madeBy: 'Split from stone into slates' },

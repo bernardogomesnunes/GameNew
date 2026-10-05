@@ -58,6 +58,7 @@ import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/d
 import { SWIFT_SPEED } from './config/upgrades.js';
 import { nextView, VIEW_NAMES } from './config/avatar.js';
 import { AvatarView } from './render/AvatarView.js';
+import { GliderView } from './render/GliderView.js';
 import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { CrackView } from './render/CrackView.js';
@@ -447,6 +448,7 @@ export class Game {
     // You (playtest, P3 and P7): your figure, seen out of first person, and
     // what's in your hand in first person.
     this.avatarView = new AvatarView(this.scene);
+    this.glider = new GliderView(this.scene);
     this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
@@ -1085,6 +1087,7 @@ export class Game {
       },
       onOpenMenu: () => { this.ui.refreshCloudPanel(); this.ui.openPanel('panel-menu'); document.exitPointerLock?.(); },
       onToggleFly: () => { this.player.toggleFly(); this.ui.setFlyIndicator(this.player.flying); return this.player.flying; },
+      canFly: () => this.player?.canFly?.() ?? true,
       onSaveTemplate: (name) => this.saveTemplate(name),
       onPickTemplate: (id) => {
         this.clearPending({ quiet: true });
@@ -1342,6 +1345,7 @@ export class Game {
     let spawn = built.origin.spawn;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, spawn ?? this.findSafeSpawn());
+    this.wireFlight();
     this.player.binds = { ...this.controls.keys };
     this.player.view = this.controls.view ?? 'first';
     // Face the way the spawn picked: the open direction. Arriving on a good
@@ -1442,6 +1446,7 @@ export class Game {
     this.mode = data.mode === DUILT ? DUILT : CREATIVE;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, data.player);
+    this.wireFlight();
     this.player.binds = { ...this.controls.keys };
     this.player.view = this.controls.view ?? 'first';
     this.player.yaw = data.player.yaw || 0;
@@ -1684,6 +1689,35 @@ export class Game {
     const third = this.player.view !== 'first';
     this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third });
     this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning });
+    // The flying machine went with it: you come down on its wings.
+    if (this.player.flying && !this.player.canFly()) {
+      this.player.flying = false;
+      this.ui?.setFlyIndicator(false);
+    }
+    const machine = this.hasFlyingMachine();
+    this.glider.update(this.player, playing && machine ? (this.player.flying ? 'fly' : this.player.gliding ? 'glide' : null) : null, dt);
+  }
+
+  /** In Duilt, flying is the flying machine's — see wireFlight. */
+  hasFlyingMachine() {
+    return !!this.duilt && !this.duilt.sandbox && this.duilt.inventory.countOf('flying_machine') > 0;
+  }
+
+  /**
+   * Who may fly (asked for directly: a flying machine, "a wooden plane da
+   * Vinci style"). Creative flies as it always has; in Duilt you fly once
+   * you own a flying machine, and its wings hold you when you stop flying
+   * in the air — a glide down, not a fall.
+   */
+  wireFlight() {
+    const p = this.player;
+    if (!p) return;
+    p.canFly = () => !this.duilt || this.duilt.sandbox || this.hasFlyingMachine();
+    p.canGlide = () => this.hasFlyingMachine();
+    p.onFlyRefused = () => this.ui?.toast({
+      kind: 'xp', title: 'You need a flying machine',
+      body: 'Build one at a workshop in Age 3, from planks and wool.',
+    });    this.ui?.refreshTools?.();
   }
 
   requestPointerLock() {
