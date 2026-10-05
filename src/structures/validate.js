@@ -286,6 +286,9 @@ export function tierStatus(world, region, structureId, currentTier = null) {
   const ctx = inspect(world, region);
   let floor = 0;
   for (let i = 1; i < spec.tiers.length; i++) {
+    // The standard ladder is paid for, so a building is never claimed
+    // already up it: every rung of that is an Evolve, bill and all.
+    if (currentTier == null && spec.tiers[i].standard) break;
     if (!(spec.tiers[i].needs ?? []).every((n) => n.test(ctx))) break;
     floor = i;
   }

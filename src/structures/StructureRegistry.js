@@ -1,4 +1,4 @@
-import { STRUCTURES_BY_ID, holdsAt, isStore, hasLevels, producesAt, intervalAt } from '../config/structures.js';
+import { STRUCTURES_BY_ID, holdsAt, isStore, hasLevels, producesAt, intervalAt, scaleProduce, yieldAt } from '../config/structures.js';
 import { Inventory } from '../items/Inventory.js';
 import { tierStatus, validateStructure } from './validate.js';
 
@@ -394,7 +394,7 @@ export class StructureRegistry {
       // A pen's output is whatever lives in it (see duilt/Ranch.js), asked
       // for here rather than read off the spec.
       // A farm's, whatever grows in it.
-      const produces = spec.fromAnimals || spec.fromCrops ? (producesFor?.(s) ?? {}) : producesAt(spec, tier);
+      const produces = spec.fromAnimals || spec.fromCrops ? scaleProduce(producesFor?.(s) ?? {}, yieldAt(spec, tier)) : producesAt(spec, tier);
       if (!everySeconds) continue;
 
       const periodMs = everySeconds * 1000 * this.dayScale;
