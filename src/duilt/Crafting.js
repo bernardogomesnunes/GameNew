@@ -156,10 +156,12 @@ export class Crafting {
     if (!this.inventory.spend(bill)) return { ok: false, reason: 'Your materials changed — try again.' };
 
     // Studying (a university): no item — the skill or the research is what you get.
+    // Studying makes no item and takes time (DuiltGame.startStudy): this
+    // starts it; the skill or the research comes when its days are up.
     if (recipe.study) {
       this.onStudy?.(recipe);
       this.onMade?.(recipe);
-      return { ok: true, made: 1, item: null, name: recipe.result, studied: recipe.study };
+      return { ok: true, made: 1, item: null, name: recipe.result, studied: recipe.study, started: true };
     }
 
     const made = recipe.output.count * runs;

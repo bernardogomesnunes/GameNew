@@ -41,26 +41,36 @@ ok('an Engineering Centre, from Age 2, needs engineering studied first', eng.age
 
   g.inventory.add('planks', 100); g.inventory.add('stone', 100);
   const r = g.crafting.craft('study_foraging_1', 1, { atStations: atUni });
-  ok('studying raises the skill a level', r.ok && r.studied === 'foraging' && g.skills.levelOf('foraging') === 1);
+  // Research takes time (asked for directly): two game days at level 1, a day more each level.
+  ok('studying starts research: paid for now, done later', r.ok && r.started && r.studied === 'foraging' && g.skills.levelOf('foraging') === 0 && g.studying?.id === 'study_foraging_1');
+  ok('two game days for level 1, a day more each level after', DuiltGame.researchDays({ level: 1 }) === 2 && DuiltGame.researchDays({ level: 4 }) === 5);
   ok('and takes what it costs', g.inventory.countOf('planks') === 97 && g.inventory.countOf('stone') === 98);
   ok('and gives no item', !g.inventory.slots.some((s) => s?.id == null && s));
+  ok('the university does one thing at a time, and says what it is busy with',
+    !g.crafting.craft('study_engineering', 1, { atStations: atUni }).ok && /busy with foraging level 1/i.test(g.crafting.available(2, { station: 'university', atStations: atUni }).find((x) => x.id === 'study_engineering').reason));
+  g.days += 1;
+  ok('not done after one day', !g.finishResearch() && g.researchProgress().ratio === 0.5 && g.skills.levelOf('foraging') === 0);
+  g.days += 1;
+  ok('done after two: the skill rises a level', g.finishResearch() && g.skills.levelOf('foraging') === 1 && !g.studying);
   ok('then the next level is what is offered', studies().find((x) => x.study === 'foraging').level === 2);
   ok('the next costs more', RECIPES.find((x) => x.id === 'study_foraging_2').inputs.planks > RECIPES.find((x) => x.id === 'study_foraging_1').inputs.planks);
   ok('the higher levels want gold', RECIPES.find((x) => x.id === 'study_politics_6').inputs.gold === 2 && !RECIPES.find((x) => x.id === 'study_politics_4').inputs.gold);
-  ok('one level at a time, however much you have', g.crafting.craft('study_foraging_2', 5, { atStations: atUni }).ok && g.skills.levelOf('foraging') === 2);
+  ok('one level at a time, however much you have', g.crafting.craft('study_foraging_2', 5, { atStations: atUni }).ok && (g.days += 3, g.finishResearch()) && g.skills.levelOf('foraging') === 2);
 
   // Engineering, and the centre.
   const region = { minX: 2, maxX: 8, minY: 1, maxY: 4, minZ: 2, maxZ: 8 };
   const offer = () => g.claimOptionsFor(region).find((o) => o.id === 'engineering');
   ok('before engineering, the Engineering Centre is refused, and says why', offer() && !offer().ok && /Study engineering at a university/.test(offer().reason));
-  ok('researching engineering', g.crafting.craft('study_engineering', 1, { atStations: atUni }).ok && g.research.engineering === true);
+  ok('researching engineering', g.crafting.craft('study_engineering', 1, { atStations: atUni }).ok && (g.days += 2, g.finishResearch()) && g.research.engineering === true);
   ok('is done once — then it\'s off the list', !studies().some((x) => x.study === 'engineering'));
   ok('and the centre is no longer refused for it', !/Study engineering/.test(offer().reason ?? ''));
+  g.inventory.add('planks', 50); g.inventory.add('stone', 50);
+  g.crafting.craft('study_building_1', 1, { atStations: atUni });
   const back = new DuiltGame({ world, scene: new THREE.Scene(), bus: null });
   back.loadJSON(JSON.parse(JSON.stringify(g.toJSON())));
-  ok('what you studied is saved', back.research.engineering === true && back.skills.levelOf('foraging') === 2);
+  ok('what you studied is saved, and what is being studied', back.research.engineering === true && back.skills.levelOf('foraging') === 2 && back.studying?.id === 'study_building_1');
 }
 
-ok('the bench shows what studying gives, not an item', /const name = r\.study \? r\.result : itemName\(r\.output\.id\);/.test(ui) && /const icon = r\.study\s*\? glyphSvg\('flask'/.test(ui) && /Studied: \$\{res\.name\}/.test(ui));
+ok('the bench shows what studying gives, not an item — and Research, how long, and a bar while it runs', /const name = r\.study \? r\.result : itemName\(r\.output\.id\);/.test(ui) && /const icon = r\.study\s*\? glyphSvg\('flask'/.test(ui) && /const verb = r\.study \? 'Research' : 'Make';/.test(ui) && /Takes \$\{this\.duilt\.constructor\.researchDays\(r\)\} days/.test(ui) && /class="research-bar"/.test(ui) && /Researching · \$\{escapeHtml\(d\.researchLeftText\(\)\)\} left/.test(ui));
 
 process.exit(f ? 1 : 0);

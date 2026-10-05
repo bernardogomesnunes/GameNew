@@ -21,8 +21,14 @@ const duiltGame = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.
 
 // --- the button only shows once tierStatus says the level is reachable -----
 
-ok('the panel shows an Evolve button exactly when level.canEvolve says so',
-  /\$\{level\?\.canEvolve \? `<button class="primary" data-evolve>Evolve to \$\{withArticle\(next\.name\)\}<\/button>` : ''\}/.test(ui));
+// Asked for directly: "Evolve buttons is not available in any pop up of a
+// building. Just have a button there to evolve." Always there while there's
+// a next level; pressed early, it says what's missing.
+ok('the panel always shows Evolve while there is a next level, bright when it qualifies',
+  /\$\{next \? `<button class="\$\{level\.canEvolve \? 'primary' : 'secondary cannot'\}" data-evolve>Evolve to \$\{withArticle\(next\.name\)\}<\/button>` : ''\}/.test(ui));
+const reg = readFileSync(new URL('../src/structures/StructureRegistry.js', import.meta.url), 'utf8');
+ok('pressed early, it says what is still missing', /reason: missing\.length \? `Still needs \$\{missing\.join\(', '\)\}\.`/.test(reg));
+ok('and its cost is item pills, with what you have', /class="evolve-cost">Costs <span class="recipe-cost">\$\{Object\.entries\(next\.cost\)\.map/.test(ui));
 ok('withArticle does not double up on a tier name that already carries its own',
   /function withArticle\(name\) \{\s*const lower = name\.toLowerCase\(\);\s*return \/\^an\? \/\.test\(lower\) \? lower : `a \$\{lower\}`;/.test(ui));
 ok('and the panel says it is ready, instead of the old "settles on your next change to it" line',

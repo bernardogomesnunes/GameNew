@@ -110,7 +110,12 @@ export class StructureRegistry {
     const spec = STRUCTURES_BY_ID.get(s.type);
     if (!hasLevels(spec)) return { ok: false, reason: 'Nothing here has a level to reach.' };
     const status = tierStatus(this.world, s.region, s.type, s.tier ?? 0);
-    if (!status.canEvolve) return { ok: false, reason: "It doesn't qualify for the next level yet." };
+    // Said in full: the button is always there now, so pressing it early has
+    // to say what's still missing rather than just "not yet".
+    if (!status.canEvolve) {
+      const missing = status.next?.missing ?? [];
+      return { ok: false, reason: missing.length ? `Still needs ${missing.join(', ')}.` : 'It\'s at its top level.' };
+    }
     const tierDef = spec.tiers[status.tier + 1];
     // Some rungs are paid for as well as built — a temple's, in devotion.
     if (tierDef.cost) {

@@ -22,6 +22,7 @@ import { lootFor, LOOT } from './Loot.js';
 import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN } from '../config/traders.js';
 import { QUESTS, QUESTS_BY_ID } from '../config/quests.js';
 import { MOMENTS } from '../config/moments.js';
+import { RECIPES_BY_ID } from '../config/recipes.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { ageOf, ageIntro, FINAL_AGE } from '../config/ages.js';
@@ -143,11 +144,15 @@ export class DuiltGame {
     this.army = new Army({ world });
     // What's been studied at a university that isn't a skill (backlog batch 2).
     this.research = {};
+    // What the university is researching now, if anything: { id, name,
+    // started, days } — `started` on the world's day count (this.days).
+    this.studying = null;
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
-      locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you` : null),
+      locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
+        : r.study && this.studying ? `The university is busy with ${this.studying.name.toLowerCase()} — ${this.researchLeftText()} left` : null),
       hidden: (r) => this.studyHidden(r),
-      onStudy: (r) => this.study(r),
+      onStudy: (r) => this.startStudy(r),
       onMade: (r) => {
         if (r.ring && !this.ring) {
           this.ring = r.ring;
@@ -171,6 +176,54 @@ export class DuiltGame {
     if (!r.study) return false;
     if (r.study === 'engineering') return !!this.research.engineering;
     return this.skills.levelOf(r.study) !== r.level - 1;
+  }
+
+  /**
+   * How long a piece of research takes, in game days. Asked for directly:
+   * "We should start as 2 in day games and increase time for research in
+   * each level. By 1 day." — two days for level 1, three for level 2...
+   */
+  static researchDays(r) {
+    return 1 + (r?.level ?? 1);
+  }
+
+  /**
+   * Studying at a university takes time (asked for directly: "The
+   * university should research stuff and this should take time"). The bill
+   * is paid when it starts; the skill rises, or the research is learnt,
+   * once its days have passed (finishResearch). One thing at a time. In a
+   * sandbox it's done at once, as before.
+   */
+  startStudy(r) {
+    if (this.sandbox) return this.study(r);
+    this.studying = { id: r.id, name: r.result ?? r.name, started: this.days, days: DuiltGame.researchDays(r) };
+    this.bus?.emit('research:started', { ...this.studying });
+  }
+
+  /** How far the research is: { id, name, done, days, ratio }, or null. */
+  researchProgress() {
+    const st = this.studying;
+    if (!st) return null;
+    const done = Math.max(0, Math.min(st.days, this.days - st.started));
+    return { ...st, done, ratio: done / st.days };
+  }
+
+  researchLeftText() {
+    const p = this.researchProgress();
+    if (!p) return '';
+    const left = p.days - p.done;
+    return left >= 1 ? `${Math.ceil(left * 10) / 10} days` : `${Math.max(1, Math.round(left * 24))} hours`;
+  }
+
+  /** Finishes the research once its days are up. Returns what was learnt, or null. */
+  finishResearch() {
+    const p = this.researchProgress();
+    if (!p || p.done < p.days) return null;
+    const r = RECIPES_BY_ID.get(p.id);
+    this.studying = null;
+    if (r) this.study(r);
+    this.bus?.emit('research:finished', { id: p.id, name: p.name });
+    return p;
   }
 
   /** What studying does: a skill up a level, or a piece of research learnt. */
@@ -1203,6 +1256,7 @@ export class DuiltGame {
       worn: this.worn,
       ring: this.ring,
       research: this.research,
+      studying: this.studying,
       skyFallen: this.skyFallen || undefined,
       guardian: this.guardian?.toJSON() ?? null,
       spawn: this.spawn,
@@ -1242,6 +1296,9 @@ export class DuiltGame {
     this.health.loadJSON(data.health);
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
     this.research = data.research && typeof data.research === 'object' ? { engineering: !!data.research.engineering } : {};
+    const st = data.studying;
+    this.studying = st && RECIPES_BY_ID.get(st.id)?.study && Number.isFinite(st.started) && Number.isFinite(st.days)
+      ? { id: st.id, name: String(st.name ?? RECIPES_BY_ID.get(st.id).result), started: st.started, days: st.days } : null;
     this.skyFallen = data.skyFallen === true;
     this.holdSky();
     const sp = data.spawn;
