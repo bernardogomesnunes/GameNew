@@ -81,6 +81,32 @@ export function battlementsOf(ctx) {
 /** "1 more window", "3 more windows". */
 const plural = (n, word) => `${n} more ${word}${n === 1 ? '' : 's'}`;
 
+/**
+ * A level's need for so many of something in the building, with what it
+ * is as an item — so a panel can draw it as a pill with its icon and how
+ * many are still wanted (asked for directly: "let's use the same pattern
+ * for needed items with icons and the pill too").
+ *
+ *   blocks  the block ids that count
+ *   n       how many it wants
+ *   item    the item the pill shows
+ *   fit     the items Evolve may take from your bag and put in the building
+ *           itself (lights, chests: asked for directly — "can't seem to
+ *           evolve any building even with the items in inventory"). A
+ *           claimed building is locked, so nothing put down by hand could
+ *           ever reach it without unlocking it first. Anything that's part
+ *           of the walls has no `fit`, and is built in with Change it.
+ */
+function want(blocks, n, item, word, { fit = null, say = null } = {}) {
+  const short = (ctx) => Math.max(0, n - count(ctx, blocks));
+  return {
+    test: (ctx) => short(ctx) === 0,
+    say: (ctx) => (say ? say(short(ctx)) : plural(short(ctx), word)),
+    short, item, blocks, ...(fit ? { fit } : {}),
+  };
+}
+const LIGHT_ITEMS = ['lantern', 'firefly_lantern', 'chandelier'];
+
 
 /** Counts matching blocks in the region. */
 const count = (ctx, ids) => ctx.countOf(ids);
@@ -233,8 +259,14 @@ export const STRUCTURES = [
     // asked for across every building — and it is the levels below, not
     // the building itself, that turn it into something worth having
     // staffed, climbing toward that same ceiling rather than past it.
-    produces: { stone: 1 },
-    everySeconds: 8640,
+    // Asked for directly: "Quarry could benefit for giving cobble too, a bit
+    // less than stone." Every level gives both, less cobble than stone — two
+    // to one at the first, still ten a day in all, then about three to two.
+    // Each cycle stays under the eight hours an absence is paid for (see
+    // StructureRegistry.collect), or a first quarry would never pay out
+    // while you were away.
+    produces: { stone: 2, cobblestone: 1 },
+    everySeconds: 25920,
     skill: 'building',
     /**
      * How a quarry grows — the first building to use the same ladder a
@@ -257,7 +289,7 @@ export const STRUCTURES = [
       { id: 'seam', name: 'A Seam Cut', blurb: 'A scrape at the rock. Barely worth the walk.', needs: [] },
       {
         id: 'face', name: 'A Working Face', blurb: 'Wide enough to work properly.',
-        produces: { stone: 1, cobblestone: 1 }, everySeconds: 10800,
+        produces: { stone: 3, cobblestone: 2 }, everySeconds: 25920,
         needs: [
           { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 40, say: (ctx) => `${40 - count(ctx, [STONE, COBBLE])} more stone showing` },
           { test: (ctx) => ctx.countOf(0) >= 16, say: (ctx) => `${16 - ctx.countOf(0)} more cut out of it` },
@@ -273,7 +305,7 @@ export const STRUCTURES = [
       },
       {
         id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, opened right up.',
-        produces: { stone: 2, cobblestone: 2 }, everySeconds: 14400,
+        produces: { stone: 3, cobblestone: 2 }, everySeconds: 20736,
         needs: [
           { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 90, say: (ctx) => `${90 - count(ctx, [STONE, COBBLE])} more stone showing` },
           { test: (ctx) => ctx.countOf(0) >= 44, say: (ctx) => `${44 - ctx.countOf(0)} more cut out of it` },
@@ -384,10 +416,7 @@ export const STRUCTURES = [
         slots: 240,
         blurb: 'Room overhead as well as around, so more goes in.',
         needs: [
-          {
-            test: (ctx) => count(ctx, [PLANKS, WOOD]) >= 60,
-            say: (ctx) => `${60 - count(ctx, [PLANKS, WOOD])} more planks or wood`,
-          },
+          want([PLANKS, WOOD], 60, 'planks', 'planks', { say: (n) => `${n} more planks or wood` }),
           {
             test: (ctx) => ctx.shelteredVolume() >= 18,
             say: (ctx) => `a bigger room inside — ${18 - ctx.shelteredVolume()} more cells of it`,
@@ -400,14 +429,8 @@ export const STRUCTURES = [
         slots: 280,
         blurb: 'A hard floor and a proper span. Everything you own fits in here.',
         needs: [
-          {
-            test: (ctx) => count(ctx, [PLANKS, WOOD, BRICK]) >= 140,
-            say: (ctx) => `${140 - count(ctx, [PLANKS, WOOD, BRICK])} more planks, wood or brick`,
-          },
-          {
-            test: (ctx) => count(ctx, [STONE, COBBLE, BRICK]) >= 25,
-            say: (ctx) => `${25 - count(ctx, [STONE, COBBLE, BRICK])} more stone or brick, for a floor that will take the weight`,
-          },
+          want([PLANKS, WOOD, BRICK], 140, 'planks', 'planks', { say: (n) => `${n} more planks, wood or brick` }),
+          want([STONE, COBBLE, BRICK], 25, 'stone', 'stone', { say: (n) => `${n} more stone or brick, for a floor that will take the weight` }),
           {
             test: (ctx) => ctx.shelteredVolume() >= 40,
             say: (ctx) => `a much bigger room — ${40 - ctx.shelteredVolume()} more cells of it`,
@@ -1209,34 +1232,34 @@ export const STRUCTURES = [
         id: 'chapel', name: 'A Chapel', blurb: 'Light comes in through its windows now.',
         produces: { devotion: 1 }, everySeconds: 14400, cost: { devotion: 3 },
         needs: [
-          { test: (ctx) => count(ctx, WINDOWS) >= 2, say: (ctx) => plural(2 - count(ctx, WINDOWS), 'window') },
-          { test: (ctx) => count(ctx, LIGHTS) >= 2, say: (ctx) => plural(2 - count(ctx, LIGHTS), 'light') },
+          want(WINDOWS, 2, 'window', 'window'),
+          want(LIGHTS, 2, 'lantern', 'light', { fit: LIGHT_ITEMS }),
         ],
       },
       {
         id: 'temple', name: 'A Temple', blurb: 'Columns now, and room for a congregation.',
         produces: { devotion: 2 }, everySeconds: 21600, cost: { devotion: 8 },
         needs: [
-          { test: (ctx) => count(ctx, PILLARS) >= 4, say: (ctx) => plural(4 - count(ctx, PILLARS), 'pillar') },
-          { test: (ctx) => count(ctx, STONEWORK) >= 60, say: (ctx) => `${60 - count(ctx, STONEWORK)} more stonework` },
+          want(PILLARS, 4, 'pillar_stone', 'pillar'),
+          want(STONEWORK, 60, 'stone', 'stonework', { say: (n) => `${n} more stonework` }),
         ],
       },
       {
         id: 'great', name: 'A Great Temple', blurb: 'Gold on the stone, and light enough to read by at night.',
         produces: { devotion: 2 }, everySeconds: 14400, cost: { devotion: 15 },
         needs: [
-          { test: (ctx) => count(ctx, PILLARS) >= 8, say: (ctx) => plural(8 - count(ctx, PILLARS), 'pillar') },
-          { test: (ctx) => count(ctx, GILDING) >= 4, say: (ctx) => `${4 - count(ctx, GILDING)} more gold trim or gold` },
-          { test: (ctx) => count(ctx, LIGHTS) >= 4, say: (ctx) => plural(4 - count(ctx, LIGHTS), 'light') },
+          want(PILLARS, 8, 'pillar_stone', 'pillar'),
+          want(GILDING, 4, 'gold_trim', 'gold trim', { say: (n) => `${n} more gold trim or gold` }),
+          want(LIGHTS, 4, 'lantern', 'light', { fit: LIGHT_ITEMS }),
         ],
       },
       {
         id: 'high', name: 'The High Temple', blurb: 'Banners hang in it. Here the rings are forged — the White, or the Black.',
         produces: { devotion: 3 }, everySeconds: 21600, cost: { devotion: 25 },
         needs: [
-          { test: (ctx) => count(ctx, BANNERS) >= 2, say: (ctx) => plural(2 - count(ctx, BANNERS), 'banner') },
-          { test: (ctx) => count(ctx, GILDING) >= 8, say: (ctx) => `${8 - count(ctx, GILDING)} more gold trim or gold` },
-          { test: (ctx) => count(ctx, PILLARS) >= 12, say: (ctx) => plural(12 - count(ctx, PILLARS), 'pillar') },
+          want(BANNERS, 2, 'banner_white', 'banner'),
+          want(GILDING, 8, 'gold_trim', 'gold trim', { say: (n) => `${n} more gold trim or gold` }),
+          want(PILLARS, 12, 'pillar_stone', 'pillar'),
         ],
       },
     ],
@@ -1321,7 +1344,7 @@ export const STRUCTURES = [
  * whose output is what is growing or living in it, gets the same factor on
  * whatever that is (`yield`, see yieldAt).
  */
-const CHEST_BLOCK = 148;
+const CHESTS = [148, 149, 150, 151];   // a chest, every way it faces
 export const STANDARD_LEVELS = [
   { id: 'humble', label: 'Humble', mult: 1, blurb: 'Just started. It works, slowly.' },
   {
@@ -1357,8 +1380,8 @@ function standardTiers(spec) {
     ...(i > 0 && !fromContents ? { produces: scaleProduce(spec.produces, l.mult) } : {}),
     ...(l.cost ? { cost: l.cost } : {}),
     needs: i === 0 ? [] : [
-      { test: (ctx) => count(ctx, LIGHTS) >= l.lights, say: (ctx) => plural(l.lights - count(ctx, LIGHTS), 'light') },
-      ...(l.chests ? [{ test: (ctx) => count(ctx, [CHEST_BLOCK]) >= l.chests, say: (ctx) => plural(l.chests - count(ctx, [CHEST_BLOCK]), 'chest') }] : []),
+      want(LIGHTS, l.lights, 'lantern', 'light', { fit: LIGHT_ITEMS }),
+      ...(l.chests ? [want(CHESTS, l.chests, 'chest', 'chest', { fit: ['chest'] })] : []),
     ],
   }));
 }

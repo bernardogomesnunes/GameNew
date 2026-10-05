@@ -2129,6 +2129,19 @@ export class Game {
    * listener), so there is nothing more to do here than ask and say why not.
    */
   evolveBuilding(structure) {
+    // What it still wants that can come from your bag — its lights, its
+    // chests — goes in first (DuiltGame.evolvePlan), paid for like any
+    // block you place. The building is locked against stray edits, not
+    // against this, so it is opened just for the one change.
+    const plan = this.duilt.evolvePlan(structure);
+    if (!plan.ok) return void this.ui.toast({ kind: 'xp', title: "Can't evolve it yet", body: plan.reason });
+    if (plan.changes.length) {
+      const wasLocked = structure.locked !== false;
+      this.duilt.structures.setLocked(structure.id, false);
+      const placed = this.applyChanges(plan.changes, { chargeResources: !this.duilt.sandbox });
+      this.duilt.structures.setLocked(structure.id, wasLocked);
+      if (!placed) return;
+    }
     const r = this.duilt.structures.evolve(structure.id);
     if (r.ok) this.duilt.note('evolve');
     if (!r.ok) this.ui.toast({ kind: 'xp', title: "Can't evolve it yet", body: r.reason });
