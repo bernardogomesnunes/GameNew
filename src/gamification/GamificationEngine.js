@@ -107,6 +107,10 @@ export class GamificationEngine {
       this.state.claimedCount += 1;
       this.checkAchievements(null);
     });
+    // The market and the building ladder (the batch's traders and levels):
+    // checked as they happen, so a goal can ask what just did.
+    this.bus.on('duilt:bought', (e = {}) => this.checkAchievements({ type: 'bought', ...e }));
+    this.bus.on('structure:upgraded', ({ structure } = {}) => this.checkAchievements({ type: 'upgraded', structure }));
     this.bus.on('settler:arrived', () => {
       this.state.settlersEver += 1;
       this.checkAchievements(null);

@@ -110,6 +110,55 @@ const OPENING = [
 
 /** The goals that are about running the place rather than starting it. */
 const LATER = [
+  // The building ladder, the market's traders and their coins (the batch:
+  // "level up farms and buildings as a whole", the goblin traders, coins).
+  {
+    id: 'first_evolve',
+    age: 2,
+    name: 'Look after it',
+    description: 'Evolve a building a level: give it what its next level asks for — lights, a chest — and press Evolve in its pop-up.',
+    icon: '⬆️',
+    xpReward: 60,
+    check: (c) => c.event?.type === 'upgraded',
+  },
+  {
+    id: 'coin_purse',
+    age: 4,
+    name: 'A full purse',
+    description: 'Hold twenty coins. Strike them at a foundry from gold or copper, or find them in old chests.',
+    icon: '🪙',
+    xpReward: 80,
+    check: (c) => (c.duilt?.inventory?.countOf('coin') ?? 0) >= 20,
+    progress: (c) => (c.duilt ? `${Math.min(20, c.duilt.inventory.countOf('coin'))}/20` : null),
+  },
+  {
+    id: 'first_trade',
+    age: 4,
+    name: 'Strike a bargain',
+    description: 'Buy something from the goblin who keeps your market. Point at them and tap.',
+    icon: '🤝',
+    xpReward: 80,
+    check: (c) => c.event?.type === 'bought',
+  },
+  {
+    id: 'market_town',
+    age: 5,
+    name: 'A market town',
+    description: 'Evolve a market until all four traders live in it — stone, steel, glass and seed.',
+    icon: '🏪',
+    xpReward: 200,
+    check: (c) => (c.duilt?.marketTraders?.().length ?? 0) >= 4,
+  },
+  {
+    id: 'renowned',
+    age: 5,
+    name: 'Known across the land',
+    description: 'Take any building to Renowned, the top of its ladder.',
+    icon: '🌟',
+    xpReward: 250,
+    check: (c) => c.event?.type === 'upgraded'
+      && STRUCTURES_BY_ID.get(c.event.structure?.type)?.tiers?.[c.event.structure.tier ?? 0]?.id === 'renowned',
+  },
   {
     id: 'three_kinds',
     age: 2,
