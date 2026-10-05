@@ -2181,10 +2181,16 @@ export class Game {
     if (plan.changes.length) {
       const wasLocked = structure.locked !== false;
       this.duilt.structures.setLocked(structure.id, false);
+      // Not climbed on the way: this one press is the one level.
+      this.evolvingNow = true;
       const placed = this.applyChanges(plan.changes, { chargeResources: !this.duilt.sandbox });
+      this.evolvingNow = false;
       this.duilt.structures.setLocked(structure.id, wasLocked);
       if (!placed) return;
     }
+    // What isn't built in is taken from the bag instead, and counted as built.
+    if (Object.keys(plan.pay ?? {}).length && !this.duilt.sandbox) this.duilt.inventory.spend(plan.pay);
+    this.duilt.structures.addCredit(structure.id, plan.credit);
     const r = this.duilt.structures.evolve(structure.id);
     if (r.ok) this.duilt.note('evolve');
     if (!r.ok) this.ui.toast({ kind: 'xp', title: "Can't evolve it yet", body: r.reason });
@@ -2225,6 +2231,17 @@ export class Game {
     if (!s || !this.duilt) return;
     const t = this.duilt.territory;
     this.duilt.structures.grow(s.id, changes, { inside: (x, z) => t?.contains?.(x, z) ?? true });
+  }
+
+  /**
+   * After an edit to the building open for changes: if what's in it now
+   * reaches the next level, it levels up by itself — see
+   * StructureRegistry.climb.
+   */
+  climbEditing() {
+    const s = this.editingStructure;
+    if (!s || !this.duilt || this.evolvingNow) return;
+    if (this.duilt.structures.climb(s.id)) this.duilt.note('evolve');
   }
 
   /** The other half of startEditing — locks the building back up and hands the strip back to the crosshair. */
@@ -3512,6 +3529,7 @@ export class Game {
     this.sound?.break?.(soundOf(BLOCKS_BY_ID.get(changes[0].prev)), { x: changes[0].x, z: changes[0].z });
     this.growEditing(changes);
     this.duilt.structures.revalidateAround(changes);
+    this.climbEditing();
     this.duilt.settlers.revalidate();
     this.duilt.territory.onBlocksChanged(changes);
     this.editedAt = Date.now();
@@ -5208,6 +5226,7 @@ export class Game {
       if (Object.keys(gained).length) this.bus.emit('duilt:gathered', { gained });
       this.growEditing(changes);
       this.duilt.structures.revalidateAround(changes);
+      this.climbEditing();
       // A design that was waiting for something — fields, a neighbour — may
       // have just got it.
       for (const w of this.duilt.retryWaiting(changes)) {

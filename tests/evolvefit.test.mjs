@@ -87,14 +87,15 @@ for (const [id, n] of Object.entries(STRUCTURES_BY_ID.get('storehouse').cost ?? 
 const sh = g.claim(shedRegion, 'storehouse');
 ok('a shed claims', sh.ok);
 const shedPlan = g.evolvePlan(sh.structure);
-ok('its next level wants planks built in: Change it', !shedPlan.ok && /Change it/.test(shedPlan.reason));
+ok('its next level\'s planks can come from the bag instead of being built in',
+  (shedPlan.ok && shedPlan.pay?.planks > 0) || /more planks[\s\S]*in your bag/.test(shedPlan.reason));
 const shedWants = tierStatus(world, shedRegion, 'storehouse', sh.structure.tier).next.wants;
 ok('and planks show as a pill, not a sentence', shedWants.some((w) => w.item === 'planks' && w.n > 0 && !w.fit));
 
 // --- the panels -----------------------------------------------------------------
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
-ok('needs are drawn as pills', /needsHtml\(next\)/.test(ui) && /itemChip\(w\.item, w\.n/.test(ui));
+ok('needs are drawn as pills', /needsHtml\(next\)/.test(ui) && /itemChip\(items\[0\], n/.test(ui));
 ok('the storehouse panel uses the same pills, with an Evolve button', /this\.needsHtml\(up\)/.test(ui) && /data-store-evolve/.test(ui));
 ok('and no longer says it settles on your next change', !/settle there on your next change/.test(ui));
 ok('Evolve puts the plan in before evolving', /const plan = this\.duilt\.evolvePlan\(structure\)/.test(game));

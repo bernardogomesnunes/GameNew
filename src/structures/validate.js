@@ -279,11 +279,14 @@ export function validateStructure(world, region, structureId) {
  * as any other requirement, so `tier` still drops on its own when the floor
  * does.
  */
-export function tierStatus(world, region, structureId, currentTier = null) {
+export function tierStatus(world, region, structureId, currentTier = null, { credit = null } = {}) {
   const spec = STRUCTURES_BY_ID.get(structureId);
   if (!spec?.tiers?.length) return null;
 
   const ctx = inspect(world, region);
+  // What Evolve has already taken from your bag for this building, counted
+  // as if it were built in — see structures.js's work.
+  ctx.credit = credit ?? {};
   let floor = 0;
   for (let i = 1; i < spec.tiers.length; i++) {
     // The standard ladder is paid for, so a building is never claimed
@@ -316,6 +319,8 @@ export function tierStatus(world, region, structureId, currentTier = null) {
       // structures.js's want) — what the panels draw as pills.
       wants: (next.needs ?? []).filter((n) => !n.test(ctx)).map((n) => ({
         say: n.say(ctx), item: n.item ?? null, n: n.short?.(ctx) ?? null, fit: n.fit ?? null,
+        // What Evolve takes from your bag instead of it being built in.
+        price: n.item && n.short ? { item: n.item, n: Math.ceil(n.short(ctx) / (n.per ?? 1)) } : null,
       })),
     },
   };

@@ -633,7 +633,7 @@ export class DuiltGame {
     if (!store) return null;
     const used = store.slots.filter(Boolean).length;
     const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
-    const tier = tierStatus(this.world, structure.region, structure.type, structure.tier ?? 0);
+    const tier = tierStatus(this.world, structure.region, structure.type, structure.tier ?? 0, { credit: structure.credit });
     return { structure, store, used, free: store.size - used, size: store.size, items, tier };
   }
 
@@ -653,64 +653,87 @@ export class DuiltGame {
    * Returns { ok, reason } or { ok, changes } — the blocks to put in first
    * (empty if it already qualifies). Nothing is placed or spent here.
    */
-  evolvePlan(structure, { dry = false } = {}) {
+  evolvePlan(structure, { dry = false, buyAll = false } = {}) {
     const spec = STRUCTURES_BY_ID.get(structure?.type);
     if (!hasLevels(spec)) return { ok: false, reason: 'Nothing here has a level to reach.' };
     const tier = structure.tier ?? 0;
-    const status = tierStatus(this.world, structure.region, structure.type, tier);
+    const credit = structure.credit ?? {};
+    const status = tierStatus(this.world, structure.region, structure.type, tier, { credit });
     const next = spec.tiers[tier + 1];
     if (!next) return { ok: false, reason: 'It\'s at its top level.' };
-    // Its bill is checked first, so nothing gets put in a building that then
-    // can't be paid for.
-    const short = this.sandbox ? {} : this.inventory.missing(next.cost ?? {});
-    if (Object.keys(short).length) {
-      return { ok: false, reason: `Needs ${Object.entries(short).map(([id, n]) => `${n} more ${itemName(id).toLowerCase()}`).join(' and ')} in your bag.` };
+    // A level paid for once (and lost to a broken wall) isn't paid for again.
+    const cost = (structure.paidTo ?? 0) >= tier + 1 ? {} : (next.cost ?? {});
+    if (status.canEvolve) {
+      const short = this.sandbox ? {} : this.inventory.missing(cost);
+      if (Object.keys(short).length) return { ok: false, reason: this.shortText(short) };
+      return { ok: true, changes: [], pay: {}, credit: {} };
     }
-    if (status.canEvolve) return { ok: true, changes: [] };
 
     const ctx = inspect(this.world, structure.region);
+    ctx.credit = credit;
     const missing = (next.needs ?? []).filter((n) => !n.test(ctx));
-    const byHand = missing.filter((n) => !n.fit);
-    if (byHand.length) {
-      return { ok: false, reason: `Still needs ${byHand.map((n) => n.say(ctx)).join(', ')} — built into it: press Change it, then build them in.` };
-    }
-    // What to put in, and from which of the items that would do.
+    // Two ways to meet each need (asked for directly: "if I edit the
+    // building and increase the blocks needed it should evolve, or else I
+    // can just click evolve and it will use them from my inventory"). This
+    // is the second: lights and chests are put in for real, from the bag,
+    // where there's room; anything else — planks in the walls, room under
+    // the roof, rock dug out — is taken from the bag instead of built, and
+    // counted as built from then on (structure.credit).
     const changes = [];
+    const pay = {};
+    const owed = {};
     const taken = new Set();
     const spare = {};
     for (const need of missing) {
       let left = need.short(ctx);
-      const kind = need.fit.includes('chest') ? 'chest' : 'light';
-      const spots = this.fitSpots(structure.region, kind, taken);
-      for (const item of need.fit) {
-        const have = this.sandbox ? left : this.inventory.countOf(item) - (spare[item] ?? 0);
-        for (let i = 0; i < have && left > 0; i++) {
-          const spot = spots.shift();
-          if (!spot) {
-            return { ok: false, reason: `There's no room inside it for ${need.say(ctx).replace(/ more /, ' ')} — press Change it and put them in yourself.` };
+      if (need.fit && !buyAll) {
+        const kind = need.fit.includes('chest') ? 'chest' : 'light';
+        const spots = this.fitSpots(structure.region, kind, taken);
+        for (const item of need.fit) {
+          const have = this.sandbox ? left : this.inventory.countOf(item) - (spare[item] ?? 0);
+          for (let i = 0; i < have && left > 0 && spots.length; i++) {
+            const spot = spots.shift();
+            taken.add(`${spot.x},${spot.y},${spot.z}`);
+            changes.push({ ...spot, prev: AIR, next: ITEMS_BY_ID.get(item).block });
+            spare[item] = (spare[item] ?? 0) + 1;
+            left--;
           }
-          taken.add(`${spot.x},${spot.y},${spot.z}`);
-          changes.push({ ...spot, prev: AIR, next: ITEMS_BY_ID.get(item).block });
-          spare[item] = (spare[item] ?? 0) + 1;
-          left--;
+          if (left <= 0) break;
         }
-        if (left <= 0) break;
+        // No room for the rest (or none in the bag): those are bought too.
       }
       if (left > 0) {
-        const what = need.fit.map((id) => itemName(id).toLowerCase()).join(' or ');
-        return { ok: false, reason: `Needs ${left} more ${what} in your bag — Evolve puts ${left === 1 ? 'it' : 'them'} in for you.` };
+        const item = need.fit ? need.fit[0] : need.item;
+        pay[item] = (pay[item] ?? 0) + Math.ceil(left / (need.per ?? 1));
+        owed[need.key ?? item] = (owed[need.key ?? item] ?? 0) + left;
       }
     }
+    // Everything it takes at once — what goes in, what's bought, and the
+    // level's own bill — so nothing is put in a building that can't then be
+    // finished.
+    const bill = { ...cost };
+    for (const [id, n] of Object.entries(pay)) bill[id] = (bill[id] ?? 0) + n;
+    for (const [id, n] of Object.entries(spare)) bill[id] = (bill[id] ?? 0) + n;
+    const short = this.sandbox ? {} : this.inventory.missing(bill);
+    if (Object.keys(short).length) return { ok: false, reason: this.shortText(short) };
     // Tried in place first: putting things in mustn't break the building (a
     // house's room is counted in empty cells) or still fall short. A panel
     // only asking whether the button should look ready (`dry`) skips it.
-    if (dry) return { ok: true, changes };
+    if (dry || !changes.length) return { ok: true, changes, pay, credit: owed };
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
+    const after = { ...credit };
+    for (const [k, n] of Object.entries(owed)) after[k] = (after[k] ?? 0) + n;
     const stands = validateStructure(this.world, structure.region, structure.type).ok
-      && tierStatus(this.world, structure.region, structure.type, tier).canEvolve;
+      && tierStatus(this.world, structure.region, structure.type, tier, { credit: after }).canEvolve;
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, AIR);
-    if (!stands) return { ok: false, reason: 'There\'s no room inside it to put those without breaking it — press Change it and put them in yourself.' };
-    return { ok: true, changes };
+    // Nowhere to put them without breaking it: they're bought instead.
+    if (!stands) return this.evolvePlan(structure, { buyAll: true });
+    return { ok: true, changes, pay, credit: owed };
+  }
+
+  /** "Needs 4 more planks and 2 more lanterns in your bag." */
+  shortText(short) {
+    return `Needs ${Object.entries(short).map(([id, n]) => `${n} more ${itemName(id).toLowerCase()}`).join(' and ')} in your bag.`;
   }
 
   /**
@@ -853,7 +876,7 @@ export class DuiltGame {
   levelSummary(structure) {
     const spec = STRUCTURES_BY_ID.get(structure?.type);
     if (!hasLevels(spec)) return null;
-    const status = tierStatus(this.world, structure.region, structure.type, structure.tier ?? 0);
+    const status = tierStatus(this.world, structure.region, structure.type, structure.tier ?? 0, { credit: structure.credit });
     const rateOf = (tier) => {
       // A farm's or a pen's output is what's in it, not what the spec says.
       if (spec.fromCrops || spec.fromAnimals) return null;
@@ -863,6 +886,7 @@ export class DuiltGame {
     return {
       ...status,
       rate: rateOf(status.tier),
+      yield: yieldAt(spec, status.tier),
       next: status.next && { ...status.next, rate: rateOf(status.tier + 1), yield: yieldAt(spec, status.tier + 1) },
     };
   }
