@@ -7,16 +7,15 @@
  * can find the texture we had for cobble, because the new one looks awful".
  * So this is not a recipe tuned to look like it: it is the same stones, from
  * the same hashes and the same block id, thrown the same way. BlockTextures
- * doubles each pixel to fill a 32px layer and writes its levels straight
- * through, with none of the new painter's gamma or brightness levelling, so
- * the block shows exactly the tile it used to.
+ * writes its levels straight through, with none of the new painter's gamma,
+ * so the stones look exactly as they used to — now painted at 32px with the
+ * same stones, so a face holds four times as many (see `size` below).
  *
- * Returns { level, tint, height } at 16×16: level is 0..1 (0.98 at its
+ * Returns { level, tint, height, size } at size×size: level is 0..1 (0.98 at its
  * lightest, as the old tiles were), tint a per-pixel colour multiplier,
  * height a 0..1 dome per stone for the shader's depth.
  */
 
-const N = 16;
 const TILE_BASE = 0.98;
 
 function hash01(a, b, salt) {
@@ -28,8 +27,16 @@ function hash01(a, b, salt) {
 
 export const LEGACY_COBBLE = { cobbles: 6, speck: 0.03, depth: 0.28, bump: 1 };
 
-export function paintLegacyCobble(salt, recipe = LEGACY_COBBLE) {
-  const n = N;
+/**
+ * `size` is the tile's width in pixels, with the stones the same size in
+ * pixels whatever it is: 16 is the first tile; 32 fills a whole layer with
+ * stones half as big, four times as many to a block face (asked for
+ * directly: "I'd like it to have more cobble per square"). More are thrown
+ * to fill the bigger tile, in proportion.
+ */
+export function paintLegacyCobble(salt, recipe = LEGACY_COBBLE, size = 16) {
+  const n = size;
+  const more = (n * n) / 256;
   const level = new Float32Array(n * n).fill(TILE_BASE);
   const darken = (x, y, amount) => {
     const i = ((y % n) + n) % n * n + (((x % n) + n) % n);
@@ -44,7 +51,7 @@ export function paintLegacyCobble(salt, recipe = LEGACY_COBBLE) {
   const wrap = (d) => (d > n / 2 ? d - n : d < -n / 2 ? d + n : d);
   const stones = [];
   let k = 0;
-  for (const [tries, rlo, rhi] of [[recipe.cobbles * 40, 2.8, 4.4], [200, 1.6, 2.6], [200, 1, 1.5]]) {
+  for (const [tries, rlo, rhi] of [[recipe.cobbles * 40 * more, 2.8, 4.4], [200 * more, 1.6, 2.6], [200 * more, 1, 1.5]]) {
     for (let t = 0; t < tries; t++, k++) {
       const st = {
         x: hash01(k, 107, salt) * n, y: hash01(k, 109, salt) * n,

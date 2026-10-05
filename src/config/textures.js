@@ -79,7 +79,9 @@ export const TEXTURES = {
   clay:      { strata: 4, marks: 16, flecks: [[1.06, 1.0, 0.94], [0.9, 0.94, 1.0]], depth: 0.16, mottle: 0.08, speck: 0.03 },
   stone:     { mottle: 0.16, hue: 0.5, marks: 40, flecks: STONE_FLECKS, cracks: 2, depth: 0.3, speck: 0.05, bump: 0.25 },
   // The first cobblestone, exactly (render/legacyCobble.js): asked for twice.
-  cobble:    { legacy: 'cobble', bump: 1 },
+  // Painted at the full 32px with the same stones: four times as many to a
+  // face ("more cobble per square").
+  cobble:    { legacy: 'cobble', size: 32, bump: 1 },
   brick:     { lines: 'brick', mortar: [1.5, 1.62, 1.7], depth: 0.3, speck: 0.05, marks: 18, bump: 0.7 },
   marble:    { veins: 3, vein: [0.78, 0.76, 0.74], mottle: 0.05, edge: 0.07, depth: 0.2, speck: 0.015 },
   // Phase 7a. Gold trim: a framed band with a groove through it. Timber:
