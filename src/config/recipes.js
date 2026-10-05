@@ -203,6 +203,27 @@ export const RECIPES = [
     batch: 6,
     blurb: 'What the tavern jar has always meant by "brought up from a mine."',
   },
+  // Coins (batch: "made in the foundry"): gold or copper, struck small.
+  {
+    id: 'strike_coins',
+    name: 'Strike coins',
+    station: 'foundry',
+    age: 4,
+    inputs: { gold: 1 },
+    output: { id: 'coin', count: 10 },
+    batch: 10,
+    blurb: 'One lump of gold, cut and stamped into ten.',
+  },
+  {
+    id: 'strike_copper_coins',
+    name: 'Strike copper coins',
+    station: 'foundry',
+    age: 4,
+    inputs: { copper_ingot: 1 },
+    output: { id: 'coin', count: 3 },
+    batch: 10,
+    blurb: 'Worth less than gold, but there is more of it.',
+  },
 
   // --- Age 5: the expensive end -------------------------------------------
   {
@@ -636,14 +657,24 @@ export const RECIPES = [
     blurb: 'Black, with the red tower of the Stone Kingdom.',
   },
   {
+    id: 'jar',
+    name: 'Glass jar',
+    station: 'hand',
+    age: 3,
+    inputs: { glass: 1 },
+    output: { id: 'jar', count: 1 },
+    batch: 8,
+    blurb: 'Empty, with a cork. Take it out at night, to where the fireflies are.',
+  },
+  {
     id: 'firefly_lantern',
     name: 'Firefly Lantern',
     station: 'hand',
     age: 3,
-    inputs: { glass: 1, planks: 1, fireflies: 2 },
+    inputs: { fireflies: 1, planks: 1 },
     output: { id: 'firefly_lantern', count: 1 },
     batch: 4,
-    blurb: 'Fireflies you caught, in glass. A soft green light, the way the Sky Kingdom lights its paths.',
+    blurb: 'A jar of fireflies you caught, set in a frame. A soft green light, the way the Sky Kingdom lights its paths.',
   },
 ];
 

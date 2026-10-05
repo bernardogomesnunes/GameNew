@@ -238,10 +238,20 @@ ITEM_MODELS.fireflies = [
   ...stack([[0.14, 0.14, 0.62, 0.74, 0xa98058]]),
   box(0.34, 0.2, 0.77, 0.4, 0.26, 0.79, 0xe8ff7a), box(0.56, 0.38, 0.77, 0.62, 0.44, 0.79, 0xe8ff7a), box(0.42, 0.48, 0.77, 0.48, 0.54, 0.79, 0xe8ff7a),
 ];
+// An empty jar: the same glass and cork, nothing lit inside.
+ITEM_MODELS.jar = [
+  ...stack([[0.22, 0.22, 0, 0.62, 0xd6ebe0]]),
+  ...stack([[0.14, 0.14, 0.62, 0.74, 0xa98058]]),
+];
 // Ingots: a bar with a narrower top.
 const ingot = (main, top) => [box(0.16, 0, 0.3, 0.84, 0.14, 0.7, main), box(0.22, 0.14, 0.35, 0.78, 0.24, 0.65, top)];
 ITEM_MODELS.iron_ingot = ingot(0xb3b8bf, 0xd6dae0);
 ITEM_MODELS.copper_ingot = ingot(0xc27a4e, 0xdd9a6c);
+// Coins: a short stack, and one more lying beside it.
+ITEM_MODELS.coin = [
+  ...stack([[0.2, 0.2, 0, 0.08, 0xd9a92e], [0.2, 0.2, 0.08, 0.16, 0xe8bf3a], [0.2, 0.2, 0.16, 0.24, 0xd9a92e], [0.2, 0.2, 0.24, 0.32, 0xf0cf55]], 0.42, 0.45),
+  ...stack([[0.17, 0.17, 0, 0.07, 0xe8bf3a]], 0.74, 0.7),
+];
 // The pry bar and the chalk line, though nothing makes them any more.
 ITEM_MODELS.pry_bar = [box(0.46, 0, 0.46, 0.54, 0.86, 0.54, 0x5a5f66), box(0.28, 0.8, 0.46, 0.54, 0.88, 0.54, 0x5a5f66)];
 ITEM_MODELS.chalk_line = [box(0.3, 0.2, 0.4, 0.7, 0.6, 0.6, 0xc94a3e), box(0.46, 0.6, 0.48, 0.54, 0.95, 0.52, 0xf2ede2), box(0.36, 0.3, 0.6, 0.64, 0.5, 0.62, 0x8e2f27)];
