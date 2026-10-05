@@ -95,8 +95,8 @@ ok('and planks show as a pill, not a sentence', shedWants.some((w) => w.item ===
 // --- the panels -----------------------------------------------------------------
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
-ok('needs are drawn as pills', /needsHtml\(next\)/.test(ui) && /itemChip\(items\[0\], n/.test(ui));
-ok('the storehouse panel uses the same pills, with an Evolve button', /this\.needsHtml\(up\)/.test(ui) && /data-store-evolve/.test(ui));
+ok('what Evolve costs is drawn as pills', /evolveHtml\(structure, next\)/.test(ui) && /Object\.entries\(bill\)\.map\(\(\[id, n\]\) => \{/.test(ui));
+ok('the storehouse panel uses the same price and button', /this\.evolveHtml\(summary\.structure, up, \{ attr: 'data-store-evolve'/.test(ui));
 ok('and no longer says it settles on your next change', !/settle there on your next change/.test(ui));
 ok('Evolve puts the plan in before evolving', /const plan = this\.duilt\.evolvePlan\(structure\)/.test(game));
 

@@ -409,23 +409,40 @@ export class DuiltUI {
    * enough; what's built into the walls says to build it in with Change
    * it; anything that isn't an item at all (a bigger room) stays a line.
    */
-  needsHtml(next) {
+  /**
+   * Evolving a building: one price and a button (asked for directly:
+   * "buildings should have a cost to evolve just like for building, and I
+   * click evolve and it should evolve the building"). The price is the
+   * level's own bill plus whatever it still needs, as items — Evolve pays
+   * it from the bag and the building goes up a level, lights and chests put
+   * in where there's room. Building those needs in yourself (with Change)
+   * is still the other way, folded away underneath.
+   *
+   * `attr` is the button's data attribute, so a panel can wire its own.
+   */
+  evolveHtml(structure, next, { attr = 'data-evolve', label = null } = {}) {
     const d = this.duilt;
+    const plan = d?.evolvePlan(structure, { dry: true }) ?? null;
+    const ready = !!plan?.ok;
+    const bill = plan?.bill ?? next?.cost ?? {};
+    const pills = Object.entries(bill).map(([id, n]) => {
+      const have = d?.inventory.countOf(id) ?? 0;
+      return itemChip(id, n, { have, short: !d?.sandbox && have < n });
+    }).join('');
+    return `
+      ${pills ? `<p class="evolve-cost">Cost <span class="recipe-cost">${pills}</span></p>` : '<p class="dim">Free — it already has everything it needs.</p>'}
+      <button class="${ready ? 'primary' : 'secondary cannot'} building-evolve" ${attr}>${escapeHtml(label ?? `Evolve to ${next.name}`)}</button>
+      ${this.needsHtml(next)}`;
+  }
+
+  /** The other way to a level: what to build in, folded away under the button. */
+  needsHtml(next) {
     const wants = next?.wants ?? [];
     if (!wants.length) return '';
-    // One row per need: what to build in, and what Evolve takes from your
-    // bag instead (asked for directly: "if I edit the building and increase
-    // the blocks needed it should evolve, or else I can just click evolve
-    // and it will use them from my inventory").
-    const rows = wants.map((w) => {
-      const items = w.fit ?? (w.price ? [w.price.item] : []);
-      const n = w.fit ? w.n : w.price?.n;
-      const have = items.reduce((t, id) => t + (d?.inventory.countOf(id) ?? 0), 0);
-      const pill = items.length && n ? itemChip(items[0], n, { have, short: !d?.sandbox && have < n }) : '';
-      return `<li><span>${escapeHtml(w.say)}</span>${pill ? `<span class="recipe-cost">${pill}</span>` : ''}</li>`;
-    }).join('');
-    return `<p class="evolve-cost evolve-build-head">${icon('hammer')} Needs</p><ul class="evolve-todo">${rows}</ul>`
-      + '<p class="dim evolve-note">Build them in with Change and it levels up by itself. Or press Evolve and they come from your bag.</p>';
+    return `<details class="evolve-diy"><summary>Or build it yourself</summary>
+      <ul class="evolve-todo">${wants.map((w) => `<li>${escapeHtml(w.say)}</li>`).join('')}</ul>
+      <p class="dim evolve-note">Press Change and build these in — it levels up by itself, and only the level's own cost is taken.</p>
+    </details>`;
   }
 
   /**
@@ -489,9 +506,6 @@ export class DuiltUI {
     const made = this.makesOf(structure, spec, level);
     const does = this.buildingDoes(structure, spec, level, summary);
     const next = level?.next;
-    // Ready means pressing it works now — including when what it still
-    // wants is a lantern or a chest Evolve can put in from your bag.
-    const ready = !!next && !!d?.evolvePlan(structure, { dry: true }).ok;
     const nextMade = next?.rate ? this.makesOf(structure, { ...spec, fromCrops: false, fromAnimals: false }, { rate: next.rate })
       : next && (spec?.fromCrops || spec?.fromAnimals) ? this.makesOf(structure, spec, { yield: next.yield }) : null;
     const levelSec = !level ? '' : `
@@ -499,13 +513,8 @@ export class DuiltUI {
         <div class="building-sec-head"><h4>Level</h4><span class="level-pill">${escapeHtml(level.name)}</span></div>
         ${!next ? '<p class="dim">Top level.</p>' : `
           <p class="level-next">Next: <strong>${escapeHtml(next.name)}</strong></p>
-          ${this.needsHtml(next)}
-          ${next.cost ? `<p class="evolve-cost">Costs <span class="recipe-cost">${Object.entries(next.cost).map(([id, n]) => {
-            const have = d?.inventory.countOf(id) ?? 0;
-            return itemChip(id, n, { have, short: !d?.sandbox && have < n });
-          }).join('')}</span></p>` : ''}
           ${nextMade ? this.makesHtml(nextMade, 'Then makes') : next.yield > 1 ? `<p class="dim">Then: ${next.yield}× as much.</p>` : ''}
-          <button class="${ready ? 'primary' : 'secondary cannot'} building-evolve" data-evolve>Evolve to ${escapeHtml(next.name)}</button>`}
+          ${this.evolveHtml(structure, next)}`}
       </div>`;
     return `
       ${structure.valid ? '' : `<div class="building-state bad">Stopped: ${escapeHtml(structure.brokenReason ?? 'something it needs is missing')}</div>`}
@@ -1236,10 +1245,8 @@ export class DuiltUI {
         // The same pills as the building's own panel. This used to say a
         // shed that qualified would settle by itself on the next change to it,
         // from before levels were evolved by a button — it never did.
-        const ready = !!this.duilt?.evolvePlan(summary.structure, { dry: true }).ok;
         next.innerHTML = `<strong>Evolve it to a ${up.name.toLowerCase()} — ${up.slots} slots</strong>
-          ${this.needsHtml(up)}
-          <button class="${ready ? 'primary' : 'secondary cannot'}" data-store-evolve>Evolve to ${withArticle(up.name)}</button>`;
+          ${this.evolveHtml(summary.structure, up, { attr: 'data-store-evolve', label: `Evolve to ${withArticle(up.name)}` })}`;
         next.querySelector('[data-store-evolve]').addEventListener('click', () => {
           this.game.evolveBuilding?.(summary.structure);
           this.renderStore();

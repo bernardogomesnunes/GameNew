@@ -1989,3 +1989,7 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 .evolve-todo { margin: 2px 0 6px; padding: 0; list-style: none; }
 .evolve-todo li { margin: 4px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .evolve-todo li .recipe-cost { flex-shrink: 0; }
+/* Evolve: building it yourself, folded away under the button */
+.evolve-diy { margin-top: 8px; }
+.evolve-diy summary { cursor: pointer; font-size: 13px; color: var(--px-text-dim, #6b5236); padding: 4px 0; }
+.evolve-diy .evolve-todo li { display: list-item; margin-left: 18px; list-style: disc; }
