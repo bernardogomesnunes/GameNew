@@ -66,7 +66,7 @@ ok('the front door draws the list on its own step, unconditionally',
 ok('signing in is still offered, just not forced',
   /data-signin/.test(home) && /Saved right here for now/.test(home));
 ok('and hidden entirely in a build with no cloud to sign in to',
-  /accountBtn\.hidden = !this\.cb\.isCloudConfigured\?\.\(\);/.test(home));
+  /const cloud = !!this\.cb\.isCloudConfigured\?\.\(\);/.test(home) && /id="home-account" \$\{cloud \? '' : 'hidden'\}/.test(home));
 
 // --- LocalWorlds itself: a whole world in, a whole world back out ------------
 
