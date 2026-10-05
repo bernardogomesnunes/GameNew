@@ -112,7 +112,7 @@ for (const design of STARTER_DESIGNS) {
   const region = stamp(world, design, { x: 20, y: 30, z: 20 });
   const check = validateStructure(world, region, 'mine');
   ok('a mine dug at the surface is refused', !check.ok && check.failed === 'depth');
-  ok('and it says how deep it has to go', /y 12/.test(check.reason));
+  ok('and it says how much deeper to dig', /^Dig it \d+ blocks deeper$/.test(check.reason));
 }
 
 // A monument with something built over it is refused.

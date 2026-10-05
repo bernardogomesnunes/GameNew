@@ -355,6 +355,44 @@ export class StructureRegistry {
     for (const s of touched) this.recheck(s);
   }
 
+  /**
+   * While a building is open for changes, what you place or dig right
+   * against it becomes part of it (reported directly: "if I add more and
+   * lock, these new added blocks do not make part of the building which is
+   * weird"). The box a building was claimed with used to be fixed for good,
+   * so a wall added on the outside, or a quarry dug one layer deeper, never
+   * counted for anything.
+   *
+   * A change counts if it touches the box (one block out, on any side,
+   * including above and below). The box stops growing at the building's
+   * largest size, at the edge of your land (`inside`), and where it would
+   * run into another building. Returns whether the box changed.
+   */
+  grow(id, changes, { inside = () => true } = {}) {
+    const s = this.structures.find((x) => x.id === id);
+    const spec = STRUCTURES_BY_ID.get(s?.type);
+    if (!s || !spec || !changes?.length) return false;
+    let grew = false;
+    for (const c of changes) {
+      const r = s.region;
+      const near = c.x >= r.minX - 1 && c.x <= r.maxX + 1 && c.y >= r.minY - 1 && c.y <= r.maxY + 1
+        && c.z >= r.minZ - 1 && c.z <= r.maxZ + 1;
+      const within = c.x >= r.minX && c.x <= r.maxX && c.y >= r.minY && c.y <= r.maxY && c.z >= r.minZ && c.z <= r.maxZ;
+      if (!near || within || !inside(c.x, c.z)) continue;
+      const next = {
+        minX: Math.min(r.minX, c.x), maxX: Math.max(r.maxX, c.x),
+        minY: Math.min(r.minY, c.y), maxY: Math.max(r.maxY, c.y),
+        minZ: Math.min(r.minZ, c.z), maxZ: Math.max(r.maxZ, c.z),
+      };
+      if (next.maxX - next.minX + 1 > spec.maxSize || next.maxZ - next.minZ + 1 > spec.maxSize) continue;
+      if (this.overlaps(next, s.id)) continue;
+      s.region = next;
+      grew = true;
+    }
+    if (grew) this.recheck(s);
+    return grew;
+  }
+
   recheck(structure) {
     const check = validateStructure(this.world, structure.region, structure.type);
     const wasValid = structure.valid;

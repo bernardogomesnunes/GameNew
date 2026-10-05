@@ -1983,3 +1983,8 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
   font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 700; font-variant-numeric: tabular-nums;
 }
 .evolve-note { margin: -2px 0 6px; font-size: 12.5px; }
+/* Evolve: work on the building itself, as a checklist */
+.evolve-build-head { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.evolve-build-head svg { width: 16px; height: 16px; }
+.evolve-todo { margin: 2px 0 6px; padding-left: 18px; }
+.evolve-todo li { margin: 2px 0; }

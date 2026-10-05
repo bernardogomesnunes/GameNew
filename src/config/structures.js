@@ -228,7 +228,7 @@ export const STRUCTURES = [
     name: 'Quarry',
     icon: '⛏️',
     age: 2,
-    blurb: 'A face of rock you have cut into, open to the weather.',
+    blurb: 'A hole you dig into rock, open to the sky.',
     minSize: 4,
     maxSize: 16,
     cost: {},
@@ -236,19 +236,19 @@ export const STRUCTURES = [
       {
         id: 'rock',
         test: (ctx) => count(ctx, [STONE, COBBLE]) >= 24,
-        say: (ctx) => `Needs ${24 - count(ctx, [STONE, COBBLE])} more stone showing — dig down to the rock`,
+        say: (ctx) => `Dig down until ${24 - count(ctx, [STONE, COBBLE])} more stone blocks show inside it`,
       },
       {
         // A quarry is a hole in something. Without this, a flat patch of
         // untouched stone counts, and the building does no work to earn it.
         id: 'cut',
         test: (ctx) => ctx.countOf(0) >= 8,
-        say: () => 'Nothing has been cut out of it yet — break some of the rock',
+        say: (ctx) => `Dig out ${8 - ctx.countOf(0)} more blocks from inside it`,
       },
       {
         id: 'sky',
         test: (ctx) => ctx.openSkyColumns() >= 4,
-        say: () => 'It needs to be open to the sky — you are underground here',
+        say: () => 'Open it to the sky — it can’t be underground',
       },
     ],
     // Stone has fewer sinks than wood or food — you don't eat it, and most
@@ -286,37 +286,37 @@ export const STRUCTURES = [
     // day even at the last rung, not the 480 the old flat 8-per-120s rate
     // worked out to.
     tiers: [
-      { id: 'seam', name: 'A Seam Cut', blurb: 'A scrape at the rock. Barely worth the walk.', needs: [] },
+      { id: 'seam', name: 'A Scrape', blurb: 'A scrape at the rock. Barely worth the walk.', needs: [] },
       {
         id: 'face', name: 'A Working Face', blurb: 'Wide enough to work properly.',
         produces: { stone: 3, cobblestone: 2 }, everySeconds: 25920,
         needs: [
-          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 40, say: (ctx) => `${40 - count(ctx, [STONE, COBBLE])} more stone showing` },
-          { test: (ctx) => ctx.countOf(0) >= 16, say: (ctx) => `${16 - ctx.countOf(0)} more cut out of it` },
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 40, say: (ctx) => `Uncover ${40 - count(ctx, [STONE, COBBLE])} more stone blocks in it` },
+          { test: (ctx) => ctx.countOf(0) >= 16, say: (ctx) => `Dig out ${16 - ctx.countOf(0)} more blocks from it` },
         ],
       },
       {
-        id: 'deepcut', name: 'A Deep Cut', blurb: 'Cut back far enough to keep two haulers busy.',
-        produces: { stone: 2, cobblestone: 1 }, everySeconds: 14400,
+        id: 'deepcut', name: 'A Deep Dig', blurb: 'Dug back far enough to keep two haulers busy.',
+        produces: { stone: 3, cobblestone: 2 }, everySeconds: 21600,
         needs: [
-          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 60, say: (ctx) => `${60 - count(ctx, [STONE, COBBLE])} more stone showing` },
-          { test: (ctx) => ctx.countOf(0) >= 28, say: (ctx) => `${28 - ctx.countOf(0)} more cut out of it` },
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 60, say: (ctx) => `Uncover ${60 - count(ctx, [STONE, COBBLE])} more stone blocks in it` },
+          { test: (ctx) => ctx.countOf(0) >= 28, say: (ctx) => `Dig out ${28 - ctx.countOf(0)} more blocks from it` },
         ],
       },
       {
         id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, opened right up.',
-        produces: { stone: 3, cobblestone: 2 }, everySeconds: 20736,
+        produces: { stone: 3, cobblestone: 2 }, everySeconds: 18000,
         needs: [
-          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 90, say: (ctx) => `${90 - count(ctx, [STONE, COBBLE])} more stone showing` },
-          { test: (ctx) => ctx.countOf(0) >= 44, say: (ctx) => `${44 - ctx.countOf(0)} more cut out of it` },
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 90, say: (ctx) => `Uncover ${90 - count(ctx, [STONE, COBBLE])} more stone blocks in it` },
+          { test: (ctx) => ctx.countOf(0) >= 44, say: (ctx) => `Dig out ${44 - ctx.countOf(0)} more blocks from it` },
         ],
       },
       {
         id: 'openpit', name: 'An Open Pit', blurb: 'As much rock as a claim this size can show.',
-        produces: { stone: 3, cobblestone: 2 }, everySeconds: 17280,
+        produces: { stone: 3, cobblestone: 2 }, everySeconds: 14400,
         needs: [
-          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 130, say: (ctx) => `${130 - count(ctx, [STONE, COBBLE])} more stone showing` },
-          { test: (ctx) => ctx.countOf(0) >= 64, say: (ctx) => `${64 - ctx.countOf(0)} more cut out of it` },
+          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 130, say: (ctx) => `Uncover ${130 - count(ctx, [STONE, COBBLE])} more stone blocks in it` },
+          { test: (ctx) => ctx.countOf(0) >= 64, say: (ctx) => `Dig out ${64 - ctx.countOf(0)} more blocks from it` },
         ],
       },
     ],
@@ -419,7 +419,7 @@ export const STRUCTURES = [
           want([PLANKS, WOOD], 60, 'planks', 'planks', { say: (n) => `${n} more planks or wood` }),
           {
             test: (ctx) => ctx.shelteredVolume() >= 18,
-            say: (ctx) => `a bigger room inside — ${18 - ctx.shelteredVolume()} more cells of it`,
+            say: (ctx) => `Make the room inside bigger — ${18 - ctx.shelteredVolume()} more blocks of space under the roof`,
           },
         ],
       },
@@ -433,7 +433,7 @@ export const STRUCTURES = [
           want([STONE, COBBLE, BRICK], 25, 'stone', 'stone', { say: (n) => `${n} more stone or brick, for a floor that will take the weight` }),
           {
             test: (ctx) => ctx.shelteredVolume() >= 40,
-            say: (ctx) => `a much bigger room — ${40 - ctx.shelteredVolume()} more cells of it`,
+            say: (ctx) => `Make the room inside much bigger — ${40 - ctx.shelteredVolume()} more blocks of space under the roof`,
           },
         ],
       },
@@ -648,7 +648,7 @@ export const STRUCTURES = [
         test: (ctx) => ctx.shelteredVolume() >= 30,
         say: (ctx) => ctx.shelteredVolume() === 0
           ? 'Needs a hall inside — walls all round and a roof over the top'
-          : `The hall is too small — ${30 - ctx.shelteredVolume()} more cells of room under the roof`,
+          : `Make the hall bigger — ${30 - ctx.shelteredVolume()} more blocks of space under the roof`,
       },
       {
         id: 'windows',
@@ -809,7 +809,7 @@ export const STRUCTURES = [
       {
         id: 'depth',
         test: (ctx) => ctx.region.minY <= 12,
-        say: (ctx) => `Too shallow — the floor has to reach y 12 or lower, and it is at ${ctx.region.minY}`,
+        say: (ctx) => `Dig it ${ctx.region.minY - 12} blocks deeper`,
       },
       {
         id: 'rock',
@@ -819,7 +819,7 @@ export const STRUCTURES = [
       {
         id: 'shaft',
         test: (ctx) => ctx.countOf(0) >= 16,
-        say: () => 'Needs a shaft cut into it — break more of the rock out',
+        say: () => 'Dig out more of the rock inside it',
       },
       {
         id: 'props',

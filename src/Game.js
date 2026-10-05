@@ -2199,6 +2199,18 @@ export class Game {
     });
   }
 
+  /**
+   * What you place or dig right against the building you're changing
+   * becomes part of it — see StructureRegistry.grow. Only while it's open
+   * for changes: a locked building's box stays put.
+   */
+  growEditing(changes) {
+    const s = this.editingStructure;
+    if (!s || !this.duilt) return;
+    const t = this.duilt.territory;
+    this.duilt.structures.grow(s.id, changes, { inside: (x, z) => t?.contains?.(x, z) ?? true });
+  }
+
   /** The other half of startEditing — locks the building back up and hands the strip back to the crosshair. */
   finishEditing() {
     const structure = this.editingStructure;
@@ -3469,6 +3481,7 @@ export class Game {
     }
     this.remeshDirty();
     this.sound?.break?.(soundOf(BLOCKS_BY_ID.get(changes[0].prev)), { x: changes[0].x, z: changes[0].z });
+    this.growEditing(changes);
     this.duilt.structures.revalidateAround(changes);
     this.duilt.settlers.revalidate();
     this.duilt.territory.onBlocksChanged(changes);
@@ -5164,6 +5177,7 @@ export class Game {
     if (this.duilt) {
       const gained = this.duilt.onBlocksBroken(changes);
       if (Object.keys(gained).length) this.bus.emit('duilt:gathered', { gained });
+      this.growEditing(changes);
       this.duilt.structures.revalidateAround(changes);
       // A design that was waiting for something — fields, a neighbour — may
       // have just got it.
