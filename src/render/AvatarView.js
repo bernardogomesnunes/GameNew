@@ -88,7 +88,7 @@ export class AvatarView {
     this.group.visible = visible;
     if (!visible) return;
     const p = player.position;
-    this.group.position.set(p.x, p.y, p.z);
+    this.group.position.set(p.x, p.y + (player.seatHeight || 0), p.z);
     this.group.rotation.y = player.yaw;
     this.head.rotation.x = player.pitch * 0.6;
 

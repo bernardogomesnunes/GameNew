@@ -320,3 +320,9 @@ ITEM_MODELS.flying_machine = [
   box(0.36, 0.46, 0.82, 0.64, 0.49, 0.94, 0xefe6d2),
 ];
 
+// The cart: a plank box on two wheels, shafts out the front.
+ITEM_MODELS.cart = [
+  box(0.18, 0.32, 0.22, 0.82, 0.62, 0.72, 0xa77b4f),
+  box(0.06, 0.12, 0.38, 0.18, 0.5, 0.56, 0x5e4129), box(0.82, 0.12, 0.38, 0.94, 0.5, 0.56, 0x5e4129),
+  box(0.3, 0.4, 0.72, 0.36, 0.46, 0.98, 0x8a6440), box(0.64, 0.4, 0.72, 0.7, 0.46, 0.98, 0x8a6440),
+];

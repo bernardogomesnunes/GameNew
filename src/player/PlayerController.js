@@ -134,6 +134,7 @@ export class PlayerController {
     this.sprint = false;
     this.jumpQueued = false;
     this.stepLag = 0; // how far the camera still trails a step up, in blocks
+    this.seatHeight = 0; // how far up a saddle lifts you while riding
     // Which key does what — see config/controls.js. Game hands over the
     // player's own choices; these are the defaults until it does.
     this.binds = { ...DEFAULT_CONTROLS.keys };
@@ -515,7 +516,7 @@ export class PlayerController {
   }
 
   syncCamera() {
-    const eyeY = this.position.y + EYE_HEIGHT - this.stepLag - this.sneakLag;
+    const eyeY = this.position.y + EYE_HEIGHT + this.seatHeight - this.stepLag - this.sneakLag;
     this.camera.position.set(this.position.x, eyeY, this.position.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0);
     // Out of your own eyes (playtest, P3): behind your shoulder, or in front
@@ -552,7 +553,7 @@ export class PlayerController {
   }
 
   eyePosition() {
-    return new THREE.Vector3(this.position.x, this.position.y + EYE_HEIGHT, this.position.z);
+    return new THREE.Vector3(this.position.x, this.position.y + EYE_HEIGHT + (this.seatHeight || 0), this.position.z);
   }
 
   /**

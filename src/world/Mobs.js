@@ -55,7 +55,8 @@ export class Mobs {
     // are the showcase's (`still` — world/showcase.js), which stand where
     // they were put and do nothing at all, so a picture of them is the same
     // picture every time.
-    this.list = this.list.filter((m) => !m.dead && (m.penId || m.still || Math.hypot(m.x - player.x, m.z - player.z) < DESPAWN));
+    // Nor are horses you've tamed (`owned`, see Game.tameHorse).
+    this.list = this.list.filter((m) => !m.dead && (m.penId || m.owned || m.still || Math.hypot(m.x - player.x, m.z - player.z) < DESPAWN));
     this.sinceSpawn += dt;
     if (this.sinceSpawn >= SPAWN_EVERY && this.wild() < this.cap) {
       this.sinceSpawn = 0;
@@ -63,6 +64,8 @@ export class Mobs {
     }
     for (const m of this.list) {
       if (m.still) continue;
+      // Being ridden: where it goes is where you go (Game.tickRide).
+      if (m.ridden) continue;
       this.think(m, dt, player, lure);
       this.move(m, dt);
     }
@@ -71,7 +74,7 @@ export class Mobs {
   /** How many wild animals are about — the cap doesn't count yours. */
   wild() {
     let n = 0;
-    for (const m of this.list) if (!m.penId) n++;
+    for (const m of this.list) if (!m.penId && !m.owned) n++;
     return n;
   }
 
@@ -173,7 +176,8 @@ export class Mobs {
     const dx = m.x - player.x, dz = m.z - player.z;
     const d = Math.hypot(dx, dz) || 1;
 
-    if (spec.skittish && d < SCARE && m.fleeFor <= 0) m.fleeFor = FLEE_TIME * 0.6;
+    // Your own horse doesn't bolt from you.
+    if (spec.skittish && !m.owned && d < SCARE && m.fleeFor <= 0) m.fleeFor = FLEE_TIME * 0.6;
     if (m.fleeFor > 0) {
       m.fleeFor -= dt;
       m.grazing = false;
@@ -188,6 +192,9 @@ export class Mobs {
       m.timer -= dt;
       return;
     }
+
+    // Your horse waits where you left it: grazing, never wandering off.
+    if (m.owned) { m.target = null; m.speed = 0; m.grazing = true; return; }
 
     // Food in your hand: a farm animal comes to heel and follows you — this
     // is how you get one into a pen.
@@ -282,7 +289,8 @@ export class Mobs {
   pick(origin, dir, maxDistance) {
     let best = null;
     for (const m of this.list) {
-      if (m.dying > 0 || m.dead) continue;
+      // The horse you're sat on is never what you're aiming at.
+      if (m.dying > 0 || m.dead || m.ridden) continue;
       const spec = MOBS_BY_ID.get(m.type);
       // An upright box around the whole animal, as wide as it is long so
       // which way it faces doesn't matter — generous, which is the point:

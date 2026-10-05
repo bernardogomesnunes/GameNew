@@ -3,6 +3,7 @@ import { Crops, harvestOf, farmProduce, FARM_SEED_SLOTS } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND, cropOf } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
 import { penProduce, herdToJSON } from './Ranch.js';
+import { MOBS_BY_ID } from '../config/mobs.js';
 import { Inventory } from '../items/Inventory.js';
 import { Territory } from '../world/Territory.js';
 import { StructureRegistry } from '../structures/StructureRegistry.js';
@@ -53,6 +54,8 @@ import { Army, ARMY_SIZE } from '../world/Army.js';
 
 /** How many slots a chest you make has. A chest left where you fell holds whatever you had. */
 export const CHEST_SLOTS = 27;
+/** A cart's load (asked for directly: "This should take 40 slots of items"). */
+export const CART_SLOTS = 40;
 const chestKey = (x, y, z) => `${x},${y},${z}`;
 
 /** The leaves of every kind of tree. */
@@ -83,6 +86,10 @@ export class DuiltGame {
     this.sandbox = sandbox;
     // Animals kept in pens — see duilt/Ranch.js. Wild ones aren't here.
     this.herd = [];
+    // Horses you've tamed, and the carts on them (tameHorse/hitchCart):
+    // the same objects the Mobs list holds, so where one stands is saved
+    // where it's got to — see toJSON.
+    this.mounts = [];
     this.dayTime = null; // see toJSON
     // Designs you placed that didn't count yet — see waitFor.
     this.waiting = [];
@@ -615,6 +622,29 @@ export class DuiltGame {
     return [...found];
   }
 
+  /** A tamed horse takes a cart: forty slots on wheels. Returns { ok, reason }. */
+  hitchCart(m) {
+    if (!m?.owned) return { ok: false, reason: 'Tame the horse first — fruit or carrots in your hand, then Place on it.' };
+    if (m.cart) return { ok: false, reason: 'It already has a cart.' };
+    if (!this.inventory.endless && !this.inventory.remove('cart', 1)) return { ok: false, reason: 'You have no cart.' };
+    m.cart = true;
+    m.inventory = new Inventory({ slots: CART_SLOTS, bus: this.bus });
+    return { ok: true };
+  }
+
+  /** A wild horse, tamed with the fruit or carrots in your hand (`held`). Returns { ok, reason, item }. */
+  tameHorse(m, held) {
+    const spec = MOBS_BY_ID.get(m?.type);
+    if (!spec?.tameWith || m.owned) return { ok: false, reason: 'That one is already yours.' };
+    const item = spec.tameWith.includes(held) && (this.inventory.endless || this.inventory.countOf(held) > 0) ? held : null;
+    if (!item) return { ok: false, reason: 'Hold fruit or carrots, then Place on it to tame it.' };
+    if (!this.inventory.endless) this.inventory.remove(item, 1);
+    m.owned = true;
+    m.fleeFor = 0;
+    this.mounts.push(m);
+    return { ok: true, item };
+  }
+
   /**
    * What a storehouse is holding, as a line you can read.
    *
@@ -622,6 +652,13 @@ export class DuiltGame {
    * without walking its slots itself.
    */
   storeSummary(structure) {
+    if (structure?.mount) {
+      const store = structure.mount.inventory;
+      if (!store) return null;
+      const used = store.slots.filter(Boolean).length;
+      const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
+      return { structure: null, mount: structure.mount, store, used, free: store.size - used, size: store.size, items, tier: { name: 'In the cart' } };
+    }
     if (structure?.chest) {
       const { x, y, z } = structure.chest;
       const chest = this.chestAt(x, y, z);
@@ -1423,6 +1460,8 @@ export class DuiltGame {
    * shelves, or a chest (`{ chest: { x, y, z } }`).
    */
   containerFor(target) {
+    // A horse's cart: forty slots that go where the horse goes.
+    if (target?.mount) return target.mount.cart ? target.mount.inventory ?? null : null;
     if (target?.chest) {
       const { x, y, z } = target.chest;
       return this.chestAt(x, y, z)?.inventory ?? null;
@@ -1519,6 +1558,11 @@ export class DuiltGame {
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
       herd: herdToJSON(this.herd),
+      mounts: this.mounts.filter((m) => !m.dead).map((m) => ({
+        type: m.type, x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
+        facing: Math.round((m.facing ?? 0) * 100) / 100, owned: true, cart: !!m.cart,
+        ...(m.inventory ? { inventory: m.inventory.toJSON() } : {}),
+      })),
       // The time of day, 0..1 — see render/DayCycle.js. Kept with the world
       // so night is still night when you come back to it.
       dayTime: this.dayTime,
@@ -1580,6 +1624,14 @@ export class DuiltGame {
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
+    this.mounts = (data.mounts ?? []).map((r) => {
+      const m = { ...r, owned: true };
+      if (r.cart) {
+        m.inventory = new Inventory({ slots: CART_SLOTS, bus: this.bus });
+        if (r.inventory) m.inventory.loadJSON(r.inventory);
+      }
+      return m;
+    });
     this.dayTime = typeof data.dayTime === 'number' ? data.dayTime : null;
     this.waiting = Array.isArray(data.waiting) ? data.waiting.filter((w) => w?.region && w.type) : [];
     this.crops.loadJSON(data.crops);

@@ -59,6 +59,7 @@ import { SWIFT_SPEED } from './config/upgrades.js';
 import { nextView, VIEW_NAMES } from './config/avatar.js';
 import { AvatarView } from './render/AvatarView.js';
 import { GliderView } from './render/GliderView.js';
+import { CartView } from './render/CartView.js';
 import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { CrackView } from './render/CrackView.js';
@@ -269,6 +270,8 @@ const NORMAL_BREAK_MS = 1000;
 const TOOL_NORMAL = 0.85, TOOL_SLOW = 1.0;
 /** A tool suited to the material, by its tier: stone takes 45% of bare hands' time, the best 12%. */
 const TOOL_TIER_SPEED = { stone: 0.45, iron: 0.32, gold: 0.22, sky: 0.12, dark: 0.12 };
+/** On horseback: this much faster than on foot, and sat this much higher. */
+const RIDE_SPEED = 1.9, SEAT_HEIGHT = 0.9;
 /**
  * The rest after a block comes free before the next one starts, while held.
  * Played on: "I'd like to have a bigger pause between breaking each block if
@@ -450,6 +453,7 @@ export class Game {
     // what's in your hand in first person.
     this.avatarView = new AvatarView(this.scene);
     this.glider = new GliderView(this.scene);
+    this.cartView = new CartView(this.scene);
     this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
@@ -1698,6 +1702,7 @@ export class Game {
     }
     const machine = this.hasFlyingMachine();
     this.glider.update(this.player, playing && machine ? (this.player.flying ? 'fly' : this.player.gliding ? 'glide' : null) : null, dt);
+    this.cartView.update(this.duilt?.mounts);
   }
 
   /** In Duilt, flying is the flying machine's — see wireFlight. */
@@ -1866,6 +1871,9 @@ export class Game {
     // Pointing at a gate, Place opens or shuts it — before anything you're
     // holding gets a say, the same way you'd reach for a latch.
     const aimed = this.raycast();
+    // At a horse: tame it, put a cart on it, open the cart, or ride it.
+    const horse = this.horseTarget(aimed);
+    if (horse) return void this.useHorse(horse);
     // At your guardian, Place gives it its next order.
     if (this.guardianTarget(aimed)) return void this.commandGuardian();
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
@@ -3145,6 +3153,86 @@ export class Game {
     return { ms: Math.round(bare * TOOL_NORMAL), blocked: false, tier };
   }
 
+  /** The horse under the crosshair, if that's what's there. */
+  horseTarget(hit) {
+    if (!this.duilt || this.riding) return null;
+    const m = this.mobTarget(hit);
+    return m && MOBS_BY_ID.get(m.type)?.rideable ? m : null;
+  }
+
+  /**
+   * Place on a horse (asked for directly: "horses with wooden carts, at
+   * age 2 — you need to have a horse and build the cart and apply the cart
+   * to the horse and it's done. This should take 40 slots of items").
+   * A wild one is tamed with fruit or vegetables; yours takes a cart if
+   * you're holding one; with a cart it opens (forty slots, and Ride); without
+   * one you get on.
+   */
+  useHorse(m) {
+    const d = this.duilt;
+    if (!m.owned) {
+      const r = d.tameHorse(m, this.selectedItemId);
+      if (!r.ok) return void this.ui.toast({ kind: 'xp', title: 'A wild horse', body: r.reason });
+      this.ui.toast({ kind: 'challenge', title: 'The horse is yours', body: 'Build a cart and use it on it — forty slots, and something to ride.' });
+      this.editedAt = Date.now();
+      return;
+    }
+    if (this.selectedItemId === 'cart' && !m.cart) {
+      const r = d.hitchCart(m);
+      this.ui.toast(r.ok
+        ? { kind: 'challenge', title: 'Cart hitched', body: 'Place on it to load it, or to ride.' }
+        : { kind: 'xp', title: 'No cart', body: r.reason });
+      if (r.ok) this.editedAt = Date.now();
+      return;
+    }
+    if (m.cart) return void this.ui.openStore({ mount: m });
+    this.startRide(m);
+  }
+
+  /** Up on the horse: you steer, it goes where you go, faster than on foot. */
+  startRide(m) {
+    if (!m?.owned || this.riding) return;
+    this.ui.closePanel?.('panel-store');
+    this.player.flying = false;
+    this.player.teleport?.(m.x, m.y, m.z) ?? this.player.position.set(m.x, m.y, m.z);
+    // A horse's head is down its +z; your view at yaw 0 looks down -z.
+    this.player.yaw = (m.facing ?? 0) + Math.PI;
+    this.player.seatHeight = SEAT_HEIGHT;
+    m.ridden = true;
+    this.riding = m;
+    this.ui.toast({ kind: 'xp', title: 'Riding', body: 'Sneak (or the Down button) to get off.' });
+  }
+
+  /** Down off the horse, beside it; it stays where you left it. `stay`: you're elsewhere already. */
+  stopRide(stay = false) {
+    const m = this.riding;
+    if (!m) return;
+    this.riding = null;
+    m.ridden = false;
+    m.speed = 0;
+    this.player.seatHeight = 0;
+    if (stay) return;
+    const side = (m.facing ?? 0) + Math.PI / 2;
+    this.player.position.x = m.x + Math.sin(side) * 1.2;
+    this.player.position.z = m.z + Math.cos(side) * 1.2;
+  }
+
+  /** Each frame while riding: the horse under you, and Sneak to get off. */
+  tickRide(dt) {
+    const m = this.riding;
+    if (!m) return;
+    if (m.dead || m.dying || !this.duilt || this.player.flying) return void this.stopRide();
+    if (this.player.sneaking) return void this.stopRide();
+    const p = this.player.position;
+    const moved = Math.hypot(p.x - m.x, p.z - m.z);
+    // Sent somewhere in one go (a respawn, a bed): the horse stays behind.
+    if (moved > 6) return void this.stopRide(true);
+    m.x = p.x; m.y = p.y; m.z = p.z;
+    m.facing = this.player.yaw + Math.PI;
+    m.speed = dt > 0 ? moved / dt : 0;
+    m.grazing = false;
+  }
+
   /**
    * The animal under the crosshair, if one is nearer than the block behind
    * it and within arm's reach. Wild animals, see world/Mobs.js.
@@ -3171,6 +3259,8 @@ export class Game {
   hitMob(hit) {
     const mob = this.mobTarget(hit);
     if (!mob) return false;
+    // Your own horse, and whatever its cart carries, is never hunted.
+    if (mob.owned) return true;
     const now = performance.now();
     if (now - (this.lastStrikeAt ?? 0) < this.strikeCooldown()) return true;
     this.lastStrikeAt = now;
@@ -5608,6 +5698,7 @@ export class Game {
       const wasSwimming = this.player.swimming;
       this.player.update(dt);
       this.keepApart();
+      this.tickRide(dt);
       this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
         this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
@@ -5615,7 +5706,8 @@ export class Game {
         // The White Ring (Phase 7c): faster on your feet, and a higher jump.
         const white = this.duilt.ringWorn() === 'white';
         this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed() * (white ? WHITE_RING_SPEED : 1)
-          * (this.duilt.boosted('speed') ? COFFEE_SPEED : 1) * (this.duilt.wearing('swift') ? SWIFT_SPEED : 1);
+          * (this.duilt.boosted('speed') ? COFFEE_SPEED : 1) * (this.duilt.wearing('swift') ? SWIFT_SPEED : 1)
+          * (this.riding ? RIDE_SPEED : 1);
         this.dayCycle.nightSight = this.duilt.wearing('night');
         this.ui?.duiltUI?.renderBoosts();
         this.ui?.duiltUI?.renderArmy();
@@ -5829,6 +5921,9 @@ export class Game {
     // Your penned animals come back with the save, and join the wild ones.
     if (this.duilt && this.mobsHerdOf !== this.duilt) {
       this.mobs.adopt(this.duilt.herd);
+      // And your horses, carts and all.
+      this.mobs.adopt(this.duilt.mounts);
+      this.stopRide(true);
       this.mobsHerdOf = this.duilt;
     }
   }
@@ -5986,7 +6081,9 @@ export class Game {
     if (mob) {
       const spec = MOBS_BY_ID.get(mob.type);
       this.hoverBox.visible = false;
-      this.ui?.setPersonHint(spec.name, mob.hp < spec.hp ? 'hurt — keep at it'
+      this.ui?.setPersonHint(spec.name, mob.owned ? (mob.cart ? 'yours — Place to open the cart' : 'yours — Place to ride')
+        : mob.hp < spec.hp ? 'hurt — keep at it'
+        : spec.rideable && this.duilt ? 'hold fruit or carrots, Place to tame'
         : mob.penId ? 'yours — kept in the pen'
           : spec.farm && this.duilt ? 'hold vegetables or seeds to lead it' : 'hit to hunt');
       return;
