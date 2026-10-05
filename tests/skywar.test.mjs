@@ -99,7 +99,7 @@ ok('it\'s over if you leave alive', /if \(far > SKY_ATTACK_OUT\) \{ war\.withdra
 ok('lost if your army is wiped out there — and you\'re driven home', /if \(war\.attack\.army > 0 && d\.army\.total === 0\) this\.skyAttackLost\('army'\)/.test(game) && /if \(how === 'army'\) \{\s*const home = this\.homeSpawn\(\);/.test(game));
 ok('lost if you fall there: you wake at home, not at your camp', /const routed = !!this\.duilt\.skyWar\.attack && !this\.duilt\.sandbox;\s*const home = routed \? this\.homeSpawn\(\) : this\.respawnPoint\(\);/.test(game) && /if \(routed\) this\.skyAttackLost\('fell'\);/.test(game));
 ok('its guards\' blows are armoured against, and named when they beat you', HIT_CAUSES.has('sky') && /WANDERERS\[p\.kind\]\?\.sky \? 'sky' : 'bandit'/.test(game) && /sky: 'The Sky Kingdom\\'s guards beat you'/.test(game));
-ok('a Taxes line on every building that makes something', /Taxes: the Sky Kingdom takes \$\{Math\.round\(tax \* 100\)\}% of what it makes, until it falls/.test(ui));
+ok('a Taxes line on every building that makes something', /if \(tax > 0 && this\.makesOf\(structure, spec, level\)\) out\.push\(`Taxes: the Sky Kingdom takes \$\{Math\.round\(tax \* 100\)\}% of what it makes, until it falls\.`\)/.test(ui));
 ok('and when it falls, its taxes end', /Its taxes end\./.test(game));
 
 // --- winning: the island joins your land, the Stone King honours you, the ending ----------------------------

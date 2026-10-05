@@ -7,7 +7,7 @@ import { penProduce } from '../duilt/Ranch.js';
 import { FARM_SEED_SLOTS } from '../duilt/Crops.js';
 import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
-import { howToGet } from '../config/recipes.js';
+import { howToGet, RECIPES } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
 import { WEAR_SLOTS, SLOT_NAMES, ARMOUR_PER_POINT } from '../config/armour.js';
@@ -16,6 +16,7 @@ import { itemIcon } from '../config/cubes.js';
 import { renderPanels } from './Panel.js';
 import { TRADERS_BY_ID } from '../config/traders.js';
 import { icon } from './icons.js';
+import { pixelIcon } from './pixelIcons.js';
 
 /**
  * The Duilt interface: the bag, the stomach, the claim menu and the goal list.
@@ -420,8 +421,8 @@ export class DuiltUI {
       fit.length ? `<p class="evolve-cost">Needs <span class="recipe-cost">${fit.map((w) => {
         const have = held(w);
         return itemChip(w.item, w.n, { have, short: !d?.sandbox && have < w.n });
-      }).join('')}</span> from your bag — Evolve puts ${fit.length === 1 && fit[0].n === 1 ? 'it' : 'them'} in</p>` : '',
-      hand.length ? `<p class="evolve-cost">Build in <span class="recipe-cost">${hand.map((w) => itemChip(w.item, w.n)).join('')}</span> — press Change it</p>` : '',
+      }).join('')}</span></p><p class="dim evolve-note">Taken from your bag and put in for you.</p>` : '',
+      hand.length ? `<p class="evolve-cost">Build in <span class="recipe-cost">${hand.map((w) => itemChip(w.item, w.n)).join('')}</span></p><p class="dim evolve-note">Tap Change below and add them yourself.</p>` : '',
       lines.length ? `<ul>${lines.map((w) => `<li>${w.say}</li>`).join('')}</ul>` : '',
     ].join('');
   }
@@ -444,58 +445,27 @@ export class DuiltUI {
     const sub = this.q('#building-sub');
     if (!body) return;
 
-    const r = structure.region;
-    const size = `${r.maxX - r.minX + 1} × ${r.maxZ - r.minZ + 1} × ${r.maxY - r.minY + 1}`;
     const locked = structure.locked !== false;
-    if (sub) sub.textContent = spec?.name ?? 'A building you claimed';
+    // Its name is the title; nothing under it — the popup says the rest.
+    const title = this.q('#building-title');
+    if (title) title.textContent = spec?.name ?? 'Building';
+    if (sub) { sub.textContent = ''; sub.hidden = true; }
 
-    // Reported directly: "on the buildings manage pop ups, we should not be
-    // throwing [filler] text there, we should say what it produces, and
-    // what's needed to evolve the building." So: what it does, what the next
-    // level needs, and the buttons. Nothing else.
-    const summary = this.duilt?.storeSummary(structure) ?? null;
-    const level = this.duilt?.levelSummary(structure) ?? null;
-    const does = this.buildingDoes(structure, spec, level, summary);
-    const next = level?.next;
-    // Ready means pressing it works now — including when what it still
-    // wants is a lantern or a chest Evolve can put in from your bag.
-    const ready = !!next && !!this.duilt?.evolvePlan(structure, { dry: true }).ok;
-    const evolve = !level ? ''
-      : !next
-        ? `<p>${level.name} is its top level.</p>`
-        : `
-        <p><strong>${ready ? `Ready to evolve to ${next.name}` : `To evolve to ${next.name}`}</strong></p>
-        ${this.needsHtml(next)}
-        ${next.cost ? `<p class="evolve-cost">Costs <span class="recipe-cost">${Object.entries(next.cost).map(([id, n]) => {
-          const have = this.duilt?.inventory.countOf(id) ?? 0;
-          return itemChip(id, n, { have, short: !this.duilt?.sandbox && have < n });
-        }).join('')}</span> from your bag</p>` : ''}
-        ${next.rate ? `<p class="dim">Then: ${rateText(next.rate.produces, next.rate.everySeconds)}</p>`
-          : next.yield > 1 ? `<p class="dim">Then: ${next.yield}× everything ${spec?.fromAnimals ? 'its animals give' : 'it grows'}</p>` : ''}`;
-
-    body.innerHTML = `
-      <div class="building-state ${structure.valid ? 'good' : 'bad'}">
-        ${structure.valid ? 'Working' : `Stopped: ${structure.brokenReason ?? 'something it needs is missing'}`}
-      </div>
-      <div class="building-sec">
-        <h4>What it does</h4>
-        <ul>${does.map((d) => `<li>${d}</li>`).join('')}</ul>
-      </div>
-      ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
-      ${this.stationRecipesHtml(spec)}
-      ${level ? `<div class="building-sec"><h4>Level: ${level.name}</h4>${evolve}</div>` : ''}
-      <div class="building-facts">
-        <span>${size} blocks</span>
-        <span>${locked ? 'Locked' : 'Open for changes'}</span>
-      </div>
-      <div class="building-actions">
-        ${next ? `<button class="${ready ? 'primary' : 'secondary cannot'}" data-evolve>Evolve to ${withArticle(next.name)}</button>` : ''}
-        ${summary ? `<button class="${ready ? 'secondary' : 'primary'}" data-store>Open it</button>` : ''}
-        ${spec?.stores ? `<button class="${ready ? 'secondary' : 'primary'}" data-stores>All stores</button>` : ''}
-        <button class="${summary || ready ? 'secondary' : 'primary'}" data-move>Move it</button>
-        <button class="secondary" data-change>${locked ? 'Change it' : 'Done changing'}</button>
-        <button class="danger secondary" data-delete>Delete it</button>
-      </div>`;
+    // Asked for directly: "architecture of info needs improvement as today
+    // we have lots of actions below in each building ... Maybe evolve won't
+    // be on the footer." So the popup reads top to bottom as the building:
+    // what it makes, then its level with Evolve right under what that level
+    // needs, then what's made here — and the few things you can do *to* the
+    // building (open, move, change, delete) as a small row of tools at the
+    // very bottom. Nothing to close it but the cross.
+    try {
+      body.innerHTML = this.buildingBodyHtml(structure, spec, locked);
+    } catch (err) {
+      // A building that can't be drawn mustn't take the game down with it:
+      // say so, keep the tools to move or delete it, and log what broke.
+      console.error('Building panel', structure?.type, err);
+      body.innerHTML = `<div class="building-state bad">This building's details couldn't be shown (${escapeHtml(err?.message ?? 'unknown error')}).</div>${this.buildingToolsHtml(structure, spec, locked, null)}`;
+    }
 
     body.querySelector('[data-evolve]')?.addEventListener('click', () => actions.onEvolve?.());
     this.wireCraft(body, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
@@ -503,12 +473,66 @@ export class DuiltUI {
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
     body.querySelector('[data-store]')?.addEventListener('click', () => actions.onOpenStore?.());
     body.querySelector('[data-stores]')?.addEventListener('click', () => actions.onOpenStores?.());
-    body.querySelector('[data-move]').addEventListener('click', () => actions.onMove?.());
-    body.querySelector('[data-change]').addEventListener('click', () => actions.onChange?.());
-    body.querySelector('[data-delete]').addEventListener('click', () => {
-      this.confirm({ title: `Delete this ${spec?.name?.toLowerCase() ?? 'building'}?`, body: 'The blocks come back to your bag.', ok: 'Delete', danger: true })
+    body.querySelector('[data-move]')?.addEventListener('click', () => actions.onMove?.());
+    body.querySelector('[data-change]')?.addEventListener('click', () => actions.onChange?.());
+    body.querySelector('[data-delete]')?.addEventListener('click', () => {
+      this.confirm({ title: `Delete this ${spec?.name?.toLowerCase() ?? 'building'}?`, body: 'Its blocks stay where they are.', ok: 'Delete', danger: true })
         .then((yes) => { if (yes) actions.onDelete?.(); });
     });
+  }
+
+  buildingBodyHtml(structure, spec, locked) {
+    const d = this.duilt;
+    const summary = d?.storeSummary(structure) ?? null;
+    const level = d?.levelSummary(structure) ?? null;
+    const made = this.makesOf(structure, spec, level);
+    const does = this.buildingDoes(structure, spec, level, summary);
+    const next = level?.next;
+    // Ready means pressing it works now — including when what it still
+    // wants is a lantern or a chest Evolve can put in from your bag.
+    const ready = !!next && !!d?.evolvePlan(structure, { dry: true }).ok;
+    const nextMade = next?.rate ? this.makesOf(structure, { ...spec, fromCrops: false, fromAnimals: false }, { rate: next.rate }) : null;
+    const levelSec = !level ? '' : `
+      <div class="building-sec building-level">
+        <div class="building-sec-head"><h4>Level</h4><span class="level-pill">${escapeHtml(level.name)}</span></div>
+        ${!next ? '<p class="dim">Top level.</p>' : `
+          <p class="level-next">Next: <strong>${escapeHtml(next.name)}</strong></p>
+          ${this.needsHtml(next)}
+          ${next.cost ? `<p class="evolve-cost">Costs <span class="recipe-cost">${Object.entries(next.cost).map(([id, n]) => {
+            const have = d?.inventory.countOf(id) ?? 0;
+            return itemChip(id, n, { have, short: !d?.sandbox && have < n });
+          }).join('')}</span></p>` : ''}
+          ${nextMade ? this.makesHtml(nextMade, 'Then makes') : next.yield > 1 ? `<p class="dim">Then: ${next.yield}× as much.</p>` : ''}
+          <button class="${ready ? 'primary' : 'secondary cannot'} building-evolve" data-evolve>Evolve to ${escapeHtml(next.name)}</button>`}
+      </div>`;
+    return `
+      ${structure.valid ? '' : `<div class="building-state bad">Stopped: ${escapeHtml(structure.brokenReason ?? 'something it needs is missing')}</div>`}
+      <div class="building-sec">
+        ${this.makesHtml(made)}
+        ${does.map((t) => `<p class="building-line">${escapeHtml(t)}</p>`).join('')}
+        ${summary || spec?.stores ? `<div class="building-inline">
+          ${summary ? `<button class="primary" data-store>Open</button>` : ''}
+          ${spec?.stores ? `<button class="${summary ? 'secondary' : 'primary'}" data-stores>Every storehouse</button>` : ''}
+        </div>` : ''}
+      </div>
+      ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
+      ${levelSec}
+      ${this.stationRecipesHtml(spec)}
+      ${this.buildingToolsHtml(structure, spec, locked)}`;
+  }
+
+  /**
+   * The things you do to a building rather than with it — move it, change
+   * its blocks, delete it — as a small row of tools at the bottom, out of
+   * the way of what the building is for.
+   */
+  buildingToolsHtml(structure, spec, locked) {
+    return `
+      <div class="building-tools">
+        <button class="tool-btn" data-move>${icon('select', 16)}<span>Move</span></button>
+        <button class="tool-btn" data-change>${icon('hammer', 16)}<span>${locked ? 'Change' : 'Done'}</span></button>
+        <button class="tool-btn danger" data-delete aria-label="Delete">${pixelIcon('trash', 16)}<span>Delete</span></button>
+      </div>`;
   }
 
   /**
@@ -544,33 +568,47 @@ export class DuiltUI {
       </div>`;
   }
 
-  /** What a building gives you, one plain line per thing. */
+  /**
+   * What a building is for, in one or two plain lines about the game — not
+   * how the game works underneath (asked for directly: "Copy should be
+   * straightforward about game, not about concepts"). What it makes is
+   * drawn as pills beside this (makesHtml); these are the rest.
+   */
   buildingDoes(structure, spec, level, summary) {
     const out = [];
-    const rate = spec?.fromCrops ? null : level?.rate ?? (spec && Object.keys(spec.produces ?? {}).length
-      ? { produces: spec.produces, everySeconds: spec.everySeconds } : null);
-    const made = rate && rateText(rate.produces, rate.everySeconds);
-    if (made) out.push(made);
-    if (spec?.fromCrops) {
-      const grown = this.duilt?.producesFor(structure) ?? {};
-      out.push(rateText(grown, spec.everySeconds) ?? 'Grows the crops you put a seed in for — none yet');
+    if (spec?.fromCrops && !Object.keys(this.duilt?.producesFor(structure) ?? {}).length) out.push('Plant seeds below and it grows them.');
+    if (spec?.fromAnimals && !Object.keys(penProduce(structure, this.duilt?.herd ?? [])).length) out.push('Lead sheep, cows or chickens in. They give wool, milk and eggs.');
+    if (spec?.grantsCapacity) out.push(`Home for ${spec.grantsCapacity === 1 ? 'one family' : `${spec.grantsCapacity} families`}.`);
+    if (spec?.station === 'university') out.push('Research skills and engineering here.');
+    else if (spec?.station) {
+      const made = [...new Set(RECIPES.filter((r) => r.station === spec.station && r.output?.id).map((r) => itemName(r.output.id).toLowerCase()))];
+      if (made.length) out.push(`Make ${made.length > 3 ? `${made.slice(0, 3).join(', ')} and more` : made.join(' and ')} here.`);
     }
-    if (spec?.fromAnimals) {
-      const kept = penProduce(structure, this.duilt?.herd ?? []);
-      const pen = rateText(kept, spec.everySeconds);
-      out.push(pen ?? 'Makes wool, milk or eggs from the animals kept in it — none in it yet');
-    }
-    // The Sky Kingdom's share, after a lost attack on it (duilt/SkyWar.js).
+    if (summary) out.push(summary.items ? `${summary.items} things in ${summary.used} of ${summary.size} slots.` : `Empty — ${summary.size} slots.`);
+    if (spec?.stores) out.push('Reach every storehouse from here.');
     const tax = this.duilt?.skyTaxRate?.() ?? 0;
-    const makes = made || spec?.fromCrops || spec?.fromAnimals;
-    if (tax > 0 && makes) out.push(`Taxes: the Sky Kingdom takes ${Math.round(tax * 100)}% of what it makes, until it falls`);
-    if (spec?.grantsCapacity) out.push(`Room for ${spec.grantsCapacity} settler household${spec.grantsCapacity > 1 ? 's' : ''}`);
-    if (spec?.station) out.push(`Lets you craft ${spec.station} recipes while you're near it`);
-    if (summary) {
-      out.push(`Stores your things: ${summary.items ? `${summary.items} in ${summary.used} of ${summary.size} slots` : `empty, ${summary.size} slots`}`);
-    }
-    if (!out.length) out.push('Nothing to collect — it counts towards your age goals');
+    // The Sky Kingdom's share, after a lost attack on it (duilt/SkyWar.js).
+    if (tax > 0 && this.makesOf(structure, spec, level)) out.push(`Taxes: the Sky Kingdom takes ${Math.round(tax * 100)}% of what it makes, until it falls.`);
+    if (!out.length && !this.makesOf(structure, spec, level)) out.push('Makes nothing. It counts toward your age goals.');
     return out;
+  }
+
+  /** What a building makes a game day, as { item: n }, or null. */
+  makesOf(structure, spec, level) {
+    const rate = level?.rate ?? (spec && Object.keys(spec.produces ?? {}).length ? { produces: spec.produces, everySeconds: spec.everySeconds } : null);
+    let produces = spec?.fromCrops ? this.duilt?.producesFor(structure)
+      : spec?.fromAnimals ? penProduce(structure, this.duilt?.herd ?? []) : rate?.produces;
+    const every = rate?.everySeconds ?? spec?.everySeconds;
+    if (!produces || !Object.keys(produces).length || !every) return null;
+    const out = {};
+    for (const [k, v] of Object.entries(produces)) out[k] = Math.max(1, Math.round(v * PRODUCTION_PACE * 86400 / every));
+    return out;
+  }
+
+  /** "Makes [🪵 4] [🍎 1] a day", as pills. */
+  makesHtml(made, label = 'Makes') {
+    if (!made) return '';
+    return `<p class="evolve-cost">${label} <span class="recipe-cost">${Object.entries(made).map(([id, n]) => itemChip(id, n)).join('')}</span> a day</p>`;
   }
 
   openPanel(id) {
@@ -1665,8 +1703,8 @@ export class DuiltUI {
     const recipes = d.crafting.available(d.age, { station: spec.station, near, atStations: d.stationsNear(near) });
     const body = recipes.length
       ? `<div class="recipe-grid">${this.recipeGridHtml(recipes)}</div>`
-      : '<p class="dim">Nothing to make here yet — more comes with the next age.</p>';
-    return `<div class="building-sec building-make"><h4>Make here</h4>${body}</div>`;
+      : '<p class="dim">Nothing to make here yet. More comes next age.</p>';
+    return `<div class="building-sec building-make"><h4>${spec.station === 'university' ? 'Research' : 'Make here'}</h4>${body}</div>`;
   }
 
   // ---- skills ----

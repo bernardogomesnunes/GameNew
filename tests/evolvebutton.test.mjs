@@ -25,17 +25,20 @@ const duiltGame = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.
 // building. Just have a button there to evolve." Always there while there's
 // a next level; pressed early, it says what's missing.
 ok('the panel always shows Evolve while there is a next level, bright when it qualifies',
-  /\$\{next \? `<button class="\$\{ready \? 'primary' : 'secondary cannot'\}" data-evolve>Evolve to \$\{withArticle\(next\.name\)\}<\/button>` : ''\}/.test(ui)
+  // In the Level section now, under what the level needs, not in a footer
+  // of buttons (asked for directly: "Maybe evolve won't be on the footer").
+  /<button class="\$\{ready \? 'primary' : 'secondary cannot'\} building-evolve" data-evolve>Evolve to \$\{escapeHtml\(next\.name\)\}<\/button>/.test(ui)
   // Bright when pressing it works now — including when Evolve can put in
   // what's missing from your bag (DuiltGame.evolvePlan).
-  && /const ready = !!next && !!this\.duilt\?\.evolvePlan\(structure, \{ dry: true \}\)\.ok;/.test(ui));
+  && /const ready = !!next && !!d\?\.evolvePlan\(structure, \{ dry: true \}\)\.ok;/.test(ui));
 const reg = readFileSync(new URL('../src/structures/StructureRegistry.js', import.meta.url), 'utf8');
 ok('pressed early, it says what is still missing', /reason: missing\.length \? `Still needs \$\{missing\.join\(', '\)\}\.`/.test(reg));
 ok('and its cost is item pills, with what you have', /class="evolve-cost">Costs <span class="recipe-cost">\$\{Object\.entries\(next\.cost\)\.map/.test(ui));
 ok('withArticle does not double up on a tier name that already carries its own',
   /function withArticle\(name\) \{\s*const lower = name\.toLowerCase\(\);\s*return \/\^an\? \/\.test\(lower\) \? lower : `a \$\{lower\}`;/.test(ui));
 ok('and the panel says it is ready, instead of the old "settles on your next change to it" line',
-  /Ready to evolve to \$\{next\.name\}/.test(ui)
+  // Ready is the button itself, bright, under the level it would reach.
+  /<p class="level-next">Next: <strong>\$\{escapeHtml\(next\.name\)\}<\/strong><\/p>/.test(ui)
   && !/settles there on your next change to it/.test(ui));
 ok('the click wires to the same onEvolve callback Game.js supplies',
   /data-evolve.*addEventListener\('click', \(\) => actions\.onEvolve\?\.\(\)\)/.test(ui));

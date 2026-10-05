@@ -1816,7 +1816,7 @@ export class UIManager {
       this.q('#account-title').textContent = creating ? 'Create an account' : 'Sign in';
       this.q('#account-sub').textContent = creating
         ? 'Your worlds follow the account, so a cleared browser or a new phone keeps them.'
-        : 'Keep your worlds off this device, so they survive a cleared browser.';
+        : 'Sign in to keep your worlds and play them on any device.';
       this.q('#btn-cloud-signin').textContent = creating ? 'Create account' : 'Sign in';
       this.q('#btn-account-switch').textContent = creating
         ? 'I already have an account' : 'Create an account instead';
@@ -1879,7 +1879,7 @@ export class UIManager {
       this.refreshAccountSummary();
     } else {
       if (title) title.textContent = this.accountMode === 'create' ? 'Create an account' : 'Sign in';
-      if (sub) sub.textContent = 'Keep your worlds off this device, so they survive a cleared browser.';
+      if (sub) sub.textContent = 'Sign in to keep your worlds and play them on any device.';
     }
     this.refreshAccountLabel();
   }

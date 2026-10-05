@@ -51,7 +51,7 @@ export const PANELS = [
     id: 'panel-account',
     title: 'Sign in',
     titleId: 'account-title',
-    sub: 'Keep your worlds off this device, so they survive a cleared browser.',
+    sub: 'Sign in to keep your worlds and play them on any device.',
     subId: 'account-sub',
     layer: 'main',
     mode: 'any',
@@ -134,7 +134,7 @@ export const PANELS = [
   {
     id: 'panel-claim',
     title: 'What is this?',
-    sub: "The game will check what you've built and tell you if anything's missing.",
+    sub: "Pick what this is. If something's missing, it tells you what.",
     layer: 'duilt',
     mode: 'duilt',
     key: 'KeyC',
@@ -147,7 +147,7 @@ export const PANELS = [
   {
     id: 'panel-buildings',
     title: 'Buildings',
-    sub: 'Two ways in: build it yourself and have it checked, or drop a ready-made one.',
+    sub: 'Build it yourself and claim it, or place a ready-made one.',
     wide: true,
     layer: 'duilt',
     mode: 'duilt',
@@ -157,7 +157,7 @@ export const PANELS = [
   {
     id: 'panel-bench',
     title: 'Workbench',
-    sub: 'Small work you can do anywhere. Bigger work will need a workshop.',
+    sub: 'Make tools and blocks. Some need a workshop nearby.',
     subId: 'bench-sub',
     wide: true,
     layer: 'duilt',
@@ -168,6 +168,8 @@ export const PANELS = [
   {
     id: 'panel-building',
     title: 'This building',
+    // The building's own name goes up here when it opens — see showBuilding.
+    titleId: 'building-title',
     subId: 'building-sub',
     layer: 'duilt',
     mode: 'duilt',
@@ -196,7 +198,7 @@ export const PANELS = [
   {
     id: 'panel-skills',
     title: 'Skills',
-    sub: 'You get better by doing — and credit lands on milestones, not repetition. Or study at a University.',
+    sub: 'Skills go up as you play. Research them faster at a university.',
     layer: 'duilt',
     mode: 'survival',
     // A key of its own (backlog batch 2): on a computer there was no way in at all.
