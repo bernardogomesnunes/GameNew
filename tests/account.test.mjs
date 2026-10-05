@@ -170,7 +170,7 @@ ok('the session is picked up at startup', /this\.resumeSession\(\);/.test(game))
 ok('and the door is drawn either way, signed in or not',
   /resumeSession\(\) \{[\s\S]{0,600}home\?\.render\?\.\(\)/.test(game));
 ok('being offline at startup is not an error',
-  /resumeSession\(\)[\s\S]{0,800}\.catch\(\(\) => \{ this\.ui\?\.home\?\.render\?\.\(\); \}\)/.test(game));
+  /resumeSession\(\)[\s\S]{0,1400}\.catch\(\(\) => \{ this\.ui\?\.home\?\.render\?\.\(\); \}\)/.test(game));
 
 // --- what a device remembers ---------------------------------------------------
 

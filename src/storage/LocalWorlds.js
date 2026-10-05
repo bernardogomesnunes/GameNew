@@ -54,7 +54,7 @@ export class LocalWorlds {
     } catch {
       // Almost always the quota, not a fluke — say so plainly rather than
       // leaving a save that silently didn't happen.
-      throw new Error('This browser has no room left to save — free some space or export the world instead.');
+      throw new Error('This browser is full. Sign in to keep your worlds in your account, or delete a world you don\'t need.');
     }
     const index = readIndex().filter((w) => w.id !== id);
     index.push({
