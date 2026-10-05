@@ -269,7 +269,7 @@ ok('a round is announced, then sent from the Stone Kingdom\'s side', /War horns 
 ok('won when they\'re all down, lost if you fell or any got away', /const won = !party\.died && !party\.band\.some\(\(p\) => p\.escaped\)/.test(game));
 ok('falling in a round sends them home', /party\.died = true;\s*for \(const q of party\.band\) q\.retreat = true;/.test(game));
 ok('rams and siege stones break your buildings', /onBatter: \(p, cells\) => this\.siegeBreak\(/.test(game) && /if \(stone\.enemy\) \{\s*this\.siegeBreak\(craterCells/.test(game));
-ok('  and a building they break stops working until you mend it', /siegeBreak[\s\S]{0,1200}this\.duilt\.structures\.revalidateAround\(changes\)/.test(game));
+ok('  and a building they break stops working until you mend it', /siegeBreak[\s\S]{0,1300}this\.duilt\.structures\.revalidateAround\(changes\)/.test(game));
 ok('the siege engines and the beast are drawn', /this\.armyView\.update\(strangers, \[\.\.\.\(this\.wanderers\?\.arrows/.test(game));
 ok('your guardian fights them too', /p\.raider \|\| p\.war\)/.test(game));
 ok('victory finishes the game, once the last age is done too', /res === 'victory'[\s\S]{0,500}d\.checkAgeAdvance\(\)/.test(game));

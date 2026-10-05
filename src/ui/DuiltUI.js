@@ -422,8 +422,12 @@ export class DuiltUI {
         const have = held(w);
         return itemChip(w.item, w.n, { have, short: !d?.sandbox && have < w.n });
       }).join('')}</span></p><p class="dim evolve-note">Taken from your bag and put in for you.</p>` : '',
-      hand.length ? `<p class="evolve-cost">Build in <span class="recipe-cost">${hand.map((w) => itemChip(w.item, w.n)).join('')}</span></p><p class="dim evolve-note">Tap Change below and add them yourself.</p>` : '',
-      lines.length ? `<ul>${lines.map((w) => `<li>${w.say}</li>`).join('')}</ul>` : '',
+      hand.length ? `<p class="evolve-cost">Build in <span class="recipe-cost">${hand.map((w) => itemChip(w.item, w.n)).join('')}</span></p>` : '',
+      // Work on the building itself, not a trade (asked for directly: "If
+      // it's a trade off like forest with some items, we are good. If we
+      // need to build something we need to be clear").
+      lines.length ? `<p class="evolve-cost evolve-build-head">${icon('hammer')} Build</p><ul class="evolve-todo">${lines.map((w) => `<li>${escapeHtml(w.say)}</li>`).join('')}</ul>` : '',
+      hand.length || lines.length ? '<p class="dim evolve-note">Tap Change below, then build or dig right against it. What you add becomes part of it.</p>' : '',
     ].join('');
   }
 
@@ -601,7 +605,9 @@ export class DuiltUI {
     const every = rate?.everySeconds ?? spec?.everySeconds;
     if (!produces || !Object.keys(produces).length || !every) return null;
     const out = {};
-    for (const [k, v] of Object.entries(produces)) out[k] = Math.max(1, Math.round(v * PRODUCTION_PACE * 86400 / every));
+    // One decimal: rounded to whole numbers, two levels a few tenths apart
+    // read as the same, and evolving looked like it did nothing.
+    for (const [k, v] of Object.entries(produces)) out[k] = Math.max(0.1, Math.round(v * PRODUCTION_PACE * 864000 / every) / 10);
     return out;
   }
 
