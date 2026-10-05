@@ -25,7 +25,10 @@ const duiltGame = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.
 // building. Just have a button there to evolve." Always there while there's
 // a next level; pressed early, it says what's missing.
 ok('the panel always shows Evolve while there is a next level, bright when it qualifies',
-  /\$\{next \? `<button class="\$\{level\.canEvolve \? 'primary' : 'secondary cannot'\}" data-evolve>Evolve to \$\{withArticle\(next\.name\)\}<\/button>` : ''\}/.test(ui));
+  /\$\{next \? `<button class="\$\{ready \? 'primary' : 'secondary cannot'\}" data-evolve>Evolve to \$\{withArticle\(next\.name\)\}<\/button>` : ''\}/.test(ui)
+  // Bright when pressing it works now — including when Evolve can put in
+  // what's missing from your bag (DuiltGame.evolvePlan).
+  && /const ready = !!next && !!this\.duilt\?\.evolvePlan\(structure, \{ dry: true \}\)\.ok;/.test(ui));
 const reg = readFileSync(new URL('../src/structures/StructureRegistry.js', import.meta.url), 'utf8');
 ok('pressed early, it says what is still missing', /reason: missing\.length \? `Still needs \$\{missing\.join\(', '\)\}\.`/.test(reg));
 ok('and its cost is item pills, with what you have', /class="evolve-cost">Costs <span class="recipe-cost">\$\{Object\.entries\(next\.cost\)\.map/.test(ui));
@@ -42,7 +45,9 @@ ok('the click wires to the same onEvolve callback Game.js supplies',
 ok('buildingActions exposes onEvolve alongside change/move/delete',
   /onEvolve: \(\) => this\.evolveBuilding\(structure\)/.test(game));
 ok('evolveBuilding asks the registry and only complains on the way back',
-  /evolveBuilding\(structure\) \{\s*const r = this\.duilt\.structures\.evolve\(structure\.id\);\s*if \(r\.ok\) this\.duilt\.note\('evolve'\);\s*if \(!r\.ok\)/.test(game));
+  /const r = this\.duilt\.structures\.evolve\(structure\.id\);\s*if \(r\.ok\) this\.duilt\.note\('evolve'\);\s*if \(!r\.ok\)/.test(game)
+  // ...after putting in what its plan says can come from the bag.
+  && /evolveBuilding\(structure\) \{[\s\S]{0,400}const plan = this\.duilt\.evolvePlan\(structure\);/.test(game));
 
 // --- DuiltUI redraws the open panel off the bus event, not a local call ----
 

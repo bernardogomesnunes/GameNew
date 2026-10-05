@@ -26,6 +26,6 @@ ok('a monument says it makes nothing, and why it counts', /Nothing to collect/.t
 import { readFileSync } from 'node:fs';
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 ok('the long paragraph about locking is gone', !/Protected, so you cannot take a wall out of it/.test(ui));
-ok('the next level lists what it still needs', /To evolve to \$\{next\.name\}/.test(ui) && /next\.missing\.map/.test(ui));
+ok('the next level lists what it still needs', /To evolve to \$\{next\.name\}/.test(ui) && /this\.needsHtml\(next\)/.test(ui));
 
 process.exit(f ? 1 : 0);

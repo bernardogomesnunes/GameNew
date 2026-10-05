@@ -311,6 +311,12 @@ export function tierStatus(world, region, structureId, currentTier = null) {
       cost: next.cost ?? null,
       // Only what is actually missing, in the order the rules are written.
       missing: (next.needs ?? []).filter((n) => !n.test(ctx)).map((n) => n.say(ctx)),
+      // The same, as things: what item each is, how many are still wanted,
+      // and whether Evolve can put them in from your bag (`fit`, see
+      // structures.js's want) — what the panels draw as pills.
+      wants: (next.needs ?? []).filter((n) => !n.test(ctx)).map((n) => ({
+        say: n.say(ctx), item: n.item ?? null, n: n.short?.(ctx) ?? null, fit: n.fit ?? null,
+      })),
     },
   };
 }

@@ -67,7 +67,7 @@ export const ITEMS = [
   { id: 'farmland', name: 'Turned Soil', kind: 'refined', stackTo: STACK_BULK, color: 0xc4986c, glyph: 'farmland', block: 21, madeBy: 'Dirt broken up for planting' },
 
   // --- what the quarry, kiln and mine give back ----------------------------
-  { id: 'cobblestone', name: 'Cobblestone', kind: 'raw', stackTo: STACK_BULK, color: 0xa1a1aa, glyph: 'cobble', block: 8, madeBy: 'Split from quarried stone' },
+  { id: 'cobblestone', name: 'Cobblestone', kind: 'raw', stackTo: STACK_BULK, color: 0xc8c6c2, glyph: 'cobble', block: 8, madeBy: 'Split from quarried stone' },
   { id: 'brick', name: 'Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'brick', block: 9, madeBy: 'Fired from earth in a kiln' },
   { id: 'glass', name: 'Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xb9dce8, glyph: 'pane', block: 10, madeBy: 'Fired from sand in a kiln' },
   { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: 'Cut and dressed at a workshop' },
@@ -206,7 +206,7 @@ export const ITEMS = [
   { id: 'calcada_dark', name: 'Dark Calçada', kind: 'refined', stackTo: STACK_BULK, color: 0x45434a, glyph: 'calcada', block: 210, madeBy: 'Dark stone knapped into little setts' },
   { id: 'calcada_wave', name: 'Calçada Wave', kind: 'refined', stackTo: STACK_BULK, color: 0xf1ede2, glyph: 'calcada_wave', block: 211, madeBy: 'White and dark setts, laid in a wave' },
   { id: 'timber_frame', name: 'Timber Frame', kind: 'refined', stackTo: STACK_BULK, color: 0xf0e6cf, glyph: 'timber', block: 160, madeBy: 'Clay plaster set between planks' },
-  { id: 'wall_cobble', name: 'Cobblestone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xa1a1aa, glyph: 'wall', block: 161, madeBy: 'Laid from cobblestone — joins up like a fence' },
+  { id: 'wall_cobble', name: 'Cobblestone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xc8c6c2, glyph: 'wall', block: 161, madeBy: 'Laid from cobblestone — joins up like a fence' },
   { id: 'wall_stone', name: 'Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'wall', block: 162, madeBy: 'Laid from stone — joins up like a fence' },
   { id: 'wall_brick', name: 'Brick Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'wall', block: 163, madeBy: 'Laid from brick — joins up like a fence' },
   { id: 'wall_dark', name: 'Dark Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0x4f4b57, glyph: 'wall', block: 164, madeBy: 'Laid from dark stone — joins up like a fence' },

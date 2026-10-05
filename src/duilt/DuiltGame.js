@@ -1,12 +1,12 @@
 import { GAME_DAY_SECONDS } from '../render/DayCycle.js';
 import { Crops, harvestOf, farmProduce, FARM_SEED_SLOTS } from './Crops.js';
-import { FIELD_CROPS, CROPS_BY_KIND } from '../config/crops.js';
+import { FIELD_CROPS, CROPS_BY_KIND, cropOf } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
 import { penProduce, herdToJSON } from './Ranch.js';
 import { Inventory } from '../items/Inventory.js';
 import { Territory } from '../world/Territory.js';
 import { StructureRegistry } from '../structures/StructureRegistry.js';
-import { tierStatus, validateStructure } from '../structures/validate.js';
+import { tierStatus, validateStructure, inspect } from '../structures/validate.js';
 import { Hunger } from '../survival/Hunger.js';
 import { Health } from '../survival/Health.js';
 import { Skills } from '../progression/Skills.js';
@@ -16,7 +16,7 @@ import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool, stackLimit } from '../config/items.js';
 import { MILESTONES } from '../config/skills.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, PRODUCTION_PACE } from '../config/structures.js';
-import { AIR, BLOCKS_BY_ID } from '../config/blocks.js';
+import { AIR, BLOCKS_BY_ID, isFluid, doorPart } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
 import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN } from '../config/traders.js';
@@ -69,6 +69,7 @@ export const LEAF_DROPS = [['sapling', 0.1], ['fruit', 0.06]];
 export const WILD_SEEDS = FIELD_CROPS.map((c) => `seeds_${c.kind}`);
 export const GRASS_DROPS = [[WILD_SEEDS, 0.2]];
 const GRASS = 1;
+const FARMLAND_BLOCK = 21;
 
 const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds_carrot: 4, seeds_potato: 4 };
 
@@ -634,6 +635,119 @@ export class DuiltGame {
     const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
     const tier = tierStatus(this.world, structure.region, structure.type, structure.tier ?? 0);
     return { structure, store, used, free: store.size - used, size: store.size, items, tier };
+  }
+
+  // ---- evolving ----
+
+  /**
+   * What pressing Evolve would do, before it does it. Reported directly:
+   * "can't seem to evolve any building even with the items in inventory."
+   * A level's lights and chests had to be put inside the building, and a
+   * claimed building is locked — so the lantern in your bag never counted,
+   * and nothing said why. Now anything a level wants that Evolve can fit
+   * (`fit`, see structures.js's want) is taken from your bag and put in:
+   * lights hung from the ceiling, chests on the floor against a wall.
+   * What's part of the walls — planks, windows, pillars — is still built
+   * in by hand, with Change it, and the refusal says so.
+   *
+   * Returns { ok, reason } or { ok, changes } — the blocks to put in first
+   * (empty if it already qualifies). Nothing is placed or spent here.
+   */
+  evolvePlan(structure, { dry = false } = {}) {
+    const spec = STRUCTURES_BY_ID.get(structure?.type);
+    if (!hasLevels(spec)) return { ok: false, reason: 'Nothing here has a level to reach.' };
+    const tier = structure.tier ?? 0;
+    const status = tierStatus(this.world, structure.region, structure.type, tier);
+    const next = spec.tiers[tier + 1];
+    if (!next) return { ok: false, reason: 'It\'s at its top level.' };
+    // Its bill is checked first, so nothing gets put in a building that then
+    // can't be paid for.
+    const short = this.sandbox ? {} : this.inventory.missing(next.cost ?? {});
+    if (Object.keys(short).length) {
+      return { ok: false, reason: `Needs ${Object.entries(short).map(([id, n]) => `${n} more ${itemName(id).toLowerCase()}`).join(' and ')} in your bag.` };
+    }
+    if (status.canEvolve) return { ok: true, changes: [] };
+
+    const ctx = inspect(this.world, structure.region);
+    const missing = (next.needs ?? []).filter((n) => !n.test(ctx));
+    const byHand = missing.filter((n) => !n.fit);
+    if (byHand.length) {
+      return { ok: false, reason: `Still needs ${byHand.map((n) => n.say(ctx)).join(', ')} — built into it: press Change it, then build them in.` };
+    }
+    // What to put in, and from which of the items that would do.
+    const changes = [];
+    const taken = new Set();
+    const spare = {};
+    for (const need of missing) {
+      let left = need.short(ctx);
+      const kind = need.fit.includes('chest') ? 'chest' : 'light';
+      const spots = this.fitSpots(structure.region, kind, taken);
+      for (const item of need.fit) {
+        const have = this.sandbox ? left : this.inventory.countOf(item) - (spare[item] ?? 0);
+        for (let i = 0; i < have && left > 0; i++) {
+          const spot = spots.shift();
+          if (!spot) {
+            return { ok: false, reason: `There's no room inside it for ${need.say(ctx).replace(/ more /, ' ')} — press Change it and put them in yourself.` };
+          }
+          taken.add(`${spot.x},${spot.y},${spot.z}`);
+          changes.push({ ...spot, prev: AIR, next: ITEMS_BY_ID.get(item).block });
+          spare[item] = (spare[item] ?? 0) + 1;
+          left--;
+        }
+        if (left <= 0) break;
+      }
+      if (left > 0) {
+        const what = need.fit.map((id) => itemName(id).toLowerCase()).join(' or ');
+        return { ok: false, reason: `Needs ${left} more ${what} in your bag — Evolve puts ${left === 1 ? 'it' : 'them'} in for you.` };
+      }
+    }
+    // Tried in place first: putting things in mustn't break the building (a
+    // house's room is counted in empty cells) or still fall short. A panel
+    // only asking whether the button should look ready (`dry`) skips it.
+    if (dry) return { ok: true, changes };
+    for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
+    const stands = validateStructure(this.world, structure.region, structure.type).ok
+      && tierStatus(this.world, structure.region, structure.type, tier).canEvolve;
+    for (const c of changes) this.world.setBlock(c.x, c.y, c.z, AIR);
+    if (!stands) return { ok: false, reason: 'There\'s no room inside it to put those without breaking it — press Change it and put them in yourself.' };
+    return { ok: true, changes };
+  }
+
+  /**
+   * Where Evolve can put a light or a chest inside a building: empty cells
+   * in its region, best first. A light hangs from a ceiling, or stands on a
+   * post or a wall top; a chest goes on a floor against a wall. Never in a
+   * doorway, never on a crop or in water.
+   */
+  fitSpots(region, kind, taken = new Set()) {
+    const w = this.world;
+    const solid = (id) => id !== AIR && !isFluid(id) && !cropOf(id);
+    const out = [];
+    const cx = (region.minX + region.maxX) / 2, cz = (region.minZ + region.maxZ) / 2;
+    for (let y = region.minY; y <= region.maxY; y++) {
+      for (let x = region.minX; x <= region.maxX; x++) {
+        for (let z = region.minZ; z <= region.maxZ; z++) {
+          if (w.getBlock(x, y, z) !== AIR || taken.has(`${x},${y},${z}`)) continue;
+          const below = w.getBlock(x, y - 1, z), above = w.getBlock(x, y + 1, z);
+          const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => w.getBlock(x + dx, y, z + dz));
+          if ([...sides, below, above].some((id) => doorPart(id))) continue;
+          if (below === FARMLAND_BLOCK || cropOf(below) || isFluid(below)) continue;
+          const walls = sides.filter(solid).length;
+          let score;
+          if (kind === 'light') {
+            if (solid(above) && y > region.minY && !solid(below)) score = 4;   // hung from a ceiling
+            else if (solid(below)) score = walls ? 2 : 1;
+            else continue;
+          } else {
+            if (!solid(below)) continue;
+            score = 1 + walls;
+          }
+          const d = Math.hypot(x - cx, z - cz);
+          out.push({ x, y, z, score: score * 100 + (kind === 'light' ? -d : d) });
+        }
+      }
+    }
+    return out.sort((a, b) => b.score - a.score).map(({ x, y, z }) => ({ x, y, z }));
   }
 
   // ---- the storage controller ----
