@@ -127,7 +127,7 @@ ok('and says so when it cannot', /Could not delete that world/.test(game));
 ok('the world drawn behind the front door is never saved',
   /scenery = false/.test(game) && /this\.discarded = !!scenery;/.test(game));
 ok('and the front door makes one so the canvas is not blank',
-  /newWorld\(\{ silent: true, scenery: true \}\)/.test(game));
+  /newWorld\(\{ mode: CREATIVE, name: 'Title', silent: true, scenery: true, seed: TITLE_SEED \}\)/.test(game));
 
 // --- a save that does not land ------------------------------------------------
 

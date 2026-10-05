@@ -47,7 +47,7 @@ ok('the texture layer is a byte', any.attributes.layer.array instanceof Uint8Arr
 
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 ok('the game asks for deep meshes only within DEEP_RANGE', /this\.mesher\.deepNear = \(chunk\) => this\.chunkDistSq\(chunk\) <= DEEP_RANGE \* DEEP_RANGE;/.test(game));
-ok('and keeps them following you, frame by frame', /this\.drainRemeshQueue\(\);\s*this\.updateDeep\(\);/.test(game));
+ok('and keeps them following you, frame by frame', /this\.drainRemeshQueue\([^)]*\);\s*this\.updateDeep\(\);/.test(game));
 
 // --- and if it happens anyway: saved, and said ------------------------------------------
 ok('a phone taking the canvas back saves and says so', /webglcontextlost[\s\S]{0,120}e\.preventDefault\(\);\s*this\.crashed\(/.test(game));
