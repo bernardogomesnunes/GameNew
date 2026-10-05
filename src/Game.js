@@ -643,6 +643,7 @@ export class Game {
    */
   discardCurrentWorld() {
     this.discarded = true;
+    this.pendingSave = false;
     this.dropSafeCopy();
     // If it was synced, take it off the server too — a world you deleted
     // coming back on your next device is worse than not syncing at all.
@@ -744,6 +745,14 @@ export class Game {
         const list = await this.cloudList({ maxAgeMs: 0 });
         const mine = list.find((w) => w.id === this.worldId) ?? null;
         const agreed = this.syncState.agreedFor(this.worldId);
+        // It was in the account and isn't any more: deleted, here or on
+        // another device. Uploading would bring back a world you threw away.
+        if (!mine && agreed) {
+          this.pendingSave = false;
+          this.discarded = true;
+          this.dropSafeCopy(this.worldId);
+          return false;
+        }
         // Somebody else saved this world since we opened it. Refusing would
         // strand the afternoon in hand, so it goes up — but it is said out
         // loud, because quietly writing over another device is the one thing
@@ -800,8 +809,12 @@ export class Game {
     } catch { /* out of room; the upload is still the real save */ }
   }
 
-  dropSafeCopy() {
-    try { localStorage.removeItem(UNSENT_KEY); } catch { /* private window */ }
+  /** Throws the unsent copy away — only if it is world `id`'s, when one is given. */
+  dropSafeCopy(id = null) {
+    try {
+      if (id && JSON.parse(localStorage.getItem(UNSENT_KEY) || 'null')?.worldId !== id) return;
+      localStorage.removeItem(UNSENT_KEY);
+    } catch { /* private window */ }
   }
 
   /** Anything that never made it up last time goes up now. */
@@ -814,6 +827,12 @@ export class Game {
       const world = World.deserialize(held.state.world, { makeGen: makeChunkGen });
       const list = await this.cloudList({ maxAgeMs: 0 });
       const mine = list.find((w) => w.id === held.worldId) ?? null;
+      // Saved before and gone from the account now means deleted: the copy
+      // goes, rather than the world coming back.
+      if (!mine && this.syncState.agreedFor(held.worldId)) {
+        this.dropSafeCopy(held.worldId);
+        return false;
+      }
       const res = await this.cloud.save(held.worldId, {
         world,
         name: held.name,
@@ -994,7 +1013,9 @@ export class Game {
       // because there is no second copy of anything to tell apart by name.
       onOpenWorld: (id) => this.openWorld(id),
       onDeleteWorld: (id) => {
-        if (id === this.worldId) this.discarded = true;
+        if (id === this.worldId) { this.discarded = true; this.pendingSave = false; }
+        // Its unsent copy goes too, or the next startup uploads it again.
+        this.dropSafeCopy(id);
         this.syncState.forget(id);
         if (this.local.has(id)) {
           this.local.delete(id);
