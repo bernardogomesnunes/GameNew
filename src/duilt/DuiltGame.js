@@ -21,6 +21,7 @@ import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
 import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN } from '../config/traders.js';
 import { QUESTS, QUESTS_BY_ID } from '../config/quests.js';
+import { MOMENTS } from '../config/moments.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { ageOf, ageIntro, FINAL_AGE } from '../config/ages.js';
@@ -125,6 +126,9 @@ export class DuiltGame {
     // Running counts a quest can ask about: animals you hunted, things you
     // bought, buildings you evolved. Only ever go up.
     this.tally = { hunt: 0, trade: 0, evolve: 0 };
+    // Story moments told in this world (config/moments.js), in the order
+    // they happened — each only once.
+    this.moments = [];
     // The Stone Kingdom's war on you, from the last age on — see War.js.
     this.war = new War();
     // The dark path's attacks on the Sky Kingdom, and its taxes (SkyWar.js).
@@ -765,6 +769,16 @@ export class DuiltGame {
     return r;
   }
 
+  /**
+   * A story moment, the first time it comes up in this world: its words, or
+   * null if it's been told already (or there's no story here — a sandbox).
+   */
+  moment(id) {
+    if (this.sandbox || !MOMENTS[id] || this.moments.includes(id)) return null;
+    this.moments.push(id);
+    return MOMENTS[id];
+  }
+
   // ---- quests (config/quests.js) ----
 
   /** Counts a quest can ask about: 'hunt' (an animal), 'trade', 'evolve'. */
@@ -1190,6 +1204,7 @@ export class DuiltGame {
       found: [...this.found],
       quests: this.quests,
       tally: this.tally,
+      moments: this.moments,
       heard: [...this.heard],
       war: this.war.toJSON(),
       skyWar: this.skyWar.toJSON(),
@@ -1230,6 +1245,7 @@ export class DuiltGame {
     }
     this.tally = { hunt: 0, trade: 0, evolve: 0 };
     for (const k of Object.keys(this.tally)) if (Number.isFinite(data.tally?.[k])) this.tally[k] = data.tally[k];
+    this.moments = Array.isArray(data.moments) ? data.moments.filter((id) => MOMENTS[id]) : [];
     this.questBoard();
     this.heard = new Set(Array.isArray(data.heard) ? data.heard.filter((k) => TALES_BY_ID.has(k)) : []);
     this.boosts = {};

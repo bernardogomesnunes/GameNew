@@ -9,6 +9,7 @@ import { StoryView, INTRO, ENDINGS, endingFor } from './Story.js';
 import { askConfirm } from './Confirm.js';
 import { LORE, loreKnowledge } from '../config/lore.js';
 import { GIVERS } from '../config/quests.js';
+import { MOMENTS } from '../config/moments.js';
 import { ITEMS_BY_ID, itemName, isFood, BARE_HANDS } from '../config/items.js';
 import { RECIPES } from '../config/recipes.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
@@ -1260,7 +1261,7 @@ export class UIManager {
    * offers it here, where it is next to the sentence saying what it laid. It
    * leaves with the toast, and it works under a thumb, which Ctrl+Z never did.
    */
-  toast({ kind, title, body, action = null }) {
+  toast({ kind, title, body, action = null, duration = null }) {
     const stack = this.q('#toast-stack');
     // A retry that keeps failing the same way — a save that cannot reach the
     // account, say — fires this exact toast again every few minutes. Piling
@@ -1307,7 +1308,10 @@ export class UIManager {
     if (this.isTouch || this.isAnyPanelOpen()) this.collapseToasts();
 
     stack.appendChild(node);
-    setTimeout(() => this.dismissToast(node), action ? 7000 : 3400);
+    // A story moment (config/moments.js) is a few lines, not a few words:
+    // it stays long enough to read, and a tap puts it away sooner.
+    if (duration) node.addEventListener('click', () => this.dismissToast(node));
+    setTimeout(() => this.dismissToast(node), duration ?? (action ? 7000 : 3400));
     while (stack.children.length > 5) stack.removeChild(stack.firstChild);
   }
 
@@ -1699,7 +1703,13 @@ export class UIManager {
     if (tab.hidden) return;
     const k = loreKnowledge(d);
     const known = LORE.filter((page) => page.known(k));
-    list.innerHTML = `<div class="lore-count">${known.length} of ${LORE.length} pages</div>`
+    // Your own story so far: the moments told in this world, in order.
+    const told = (d.moments ?? []).map((id) => MOMENTS[id]).filter(Boolean);
+    const story = told.length
+      ? `<div class="lore-count">Your story</div>${told.map((m) => `
+          <div class="lore-page moment"><div class="lore-head"><span class="lore-icon">✦</span>${escapeHtml(m.title)}</div><p>${escapeHtml(m.text)}</p></div>`).join('')}`
+      : '';
+    list.innerHTML = story + `<div class="lore-count">${known.length} of ${LORE.length} pages</div>`
       + LORE.map((page) => (page.known(k)
         ? `<div class="lore-page">
             <div class="lore-head"><span class="lore-icon">${page.icon}</span>${escapeHtml(page.title)}</div>
