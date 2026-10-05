@@ -23,6 +23,9 @@ const SNEAK_EASE = 12;
 const KNOCK_SPEED = 9, KNOCK_LIFT = 5.5, KNOCK_FADE = 6;
 const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
+// Coming down under a flying machine's wings with the flying turned off: a
+// glide, not a fall — the wings hold you, and the landing doesn't hurt.
+const GLIDE_FALL_SPEED = 3.5;
 /*
  * Walking into something low lifts you onto it instead of stopping you dead.
  * A slab's hitbox is only the bottom half of its cell (see
@@ -173,9 +176,18 @@ export class PlayerController {
   }
 
   toggleFly() {
+    // In Duilt you fly by owning a flying machine (Game sets canFly); a
+    // world without one says why rather than doing nothing.
+    if (!this.flying && !this.canFly()) { this.onFlyRefused?.(); return; }
     this.flying = !this.flying;
     this.velocity.set(0, 0, 0);
   }
+
+  /** Whether flying is allowed right now. Anything goes until Game says otherwise. */
+  canFly() { return true; }
+
+  /** Whether the wings will hold a fall — see GLIDE_FALL_SPEED. */
+  canGlide() { return false; }
 
   look(deltaX, deltaY) {
     this.yaw -= deltaX;
@@ -276,6 +288,8 @@ export class PlayerController {
       this.knock.x *= fade; this.knock.z *= fade;
       this.velocity.y += GRAVITY * dt;
       if (this.velocity.y < -50) this.velocity.y = -50;
+      this.gliding = !this.grounded && this.velocity.y < -GLIDE_FALL_SPEED && this.canGlide();
+      if (this.gliding) this.velocity.y = -GLIDE_FALL_SPEED;
       if (this.jumpQueued && this.grounded) {
         this.velocity.y = JUMP_SPEED * (this.jumpScale ?? 1);
         this.grounded = false;
@@ -298,7 +312,7 @@ export class PlayerController {
    * a lake is how you survive a cliff.
    */
   trackFall() {
-    if (this.flying || this.swimming) { this.fallPeak = null; return; }
+    if (this.flying || this.swimming || this.gliding) { this.fallPeak = null; return; }
     if (!this.grounded) {
       this.fallPeak = Math.max(this.fallPeak ?? this.position.y, this.position.y);
       return;

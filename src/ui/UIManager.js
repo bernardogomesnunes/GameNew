@@ -1960,6 +1960,9 @@ export class UIManager {
     for (const btn of this.root.querySelectorAll('.needs-tool')) {
       btn.hidden = held !== null && !held.has(btn.dataset.tool);
     }
+    // Fly only shows when you can: in Duilt, once you own a flying machine.
+    const fly = this.q('#t-fly');
+    if (fly) fly.hidden = !(this.cb.canFly?.() ?? true);
   }
 
   /** Says which way the mirror is set, on the button that set it. */

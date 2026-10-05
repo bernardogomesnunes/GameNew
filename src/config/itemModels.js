@@ -311,3 +311,12 @@ ITEM_MODELS.devotion = [
     box(0.86, 0.22, 0.32, 0.92, 0.64, 0.68, BRASS),
   ];
 }
+
+// The flying machine: a wooden keel, ribbed canvas wings either side, a tail.
+ITEM_MODELS.flying_machine = [
+  box(0.46, 0.38, 0.1, 0.54, 0.46, 0.9, 0x8a6440),
+  box(0.04, 0.46, 0.3, 0.46, 0.5, 0.62, 0xefe6d2), box(0.54, 0.46, 0.3, 0.96, 0.5, 0.62, 0xefe6d2),
+  box(0.04, 0.5, 0.3, 0.46, 0.53, 0.33, 0x8a6440), box(0.54, 0.5, 0.3, 0.96, 0.53, 0.33, 0x8a6440),
+  box(0.36, 0.46, 0.82, 0.64, 0.49, 0.94, 0xefe6d2),
+];
+

@@ -148,6 +148,15 @@ export const RECIPES = [
     blurb: 'Earth, shaped and fired. Holds a wall up far better than it has any right to.',
   },
   {
+    id: 'flying_machine',
+    name: 'Flying Machine',
+    station: 'workshop',
+    age: 3,
+    inputs: { planks: 24, wool: 12 },
+    output: { id: 'flying_machine', count: 1 },
+    blurb: 'Wood and canvas, after Leonardo. Press Fly to take off, Jump to climb, Sneak to dive. Stop flying in the air and you glide down.',
+  },
+  {
     id: 'glass',
     name: 'Glass',
     station: 'workshop',
