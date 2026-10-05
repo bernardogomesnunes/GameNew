@@ -26,7 +26,11 @@ const WINDOW = 176, OAK_TABLE = 31, OAK_CHAIR = 33, RED_RUG = 35, LANTERN_BLOCK 
 // buildings, adding a roof and door to every building is minimum." Every
 // building you walk into has a door hung in its doorway and a pitched roof
 // of tiles over its ceiling — slate on the early ones, since brick doesn't
-// exist until the workshop, brick from then on.
+// exist until the workshop, brick from then on. The workshop itself, the
+// kiln, the university and the engineering centre are early ones: their
+// designs were roofed in brick tiles you could only make once a workshop
+// stood (reported: "I need to craft brick tiles roofs to the workshop, but I
+// need the workshop to build them").
 const SLATE = roofBlock({ mat: 1 }), TILE = roofBlock({ mat: 0 });
 
 /** A door in a doorway at (dx, dy, dz) — both halves, facing in from -z. */
@@ -175,7 +179,7 @@ function kilnBlocks() {
   blocks.push(...ring(1, 1, 3, 3, 3, COBBLE));
   blocks.push(...slab(1, 1, 3, 3, 4, COBBLE));
   // A tiled roof, with the chimney coming up through it.
-  blocks.push(...withChimney(gable(1, 1, 3, 3, 5, TILE, COBBLE), 3, 3, 5, 2, BRICK));
+  blocks.push(...withChimney(gable(1, 1, 3, 3, 5, SLATE, COBBLE), 3, 3, 5, 2, BRICK));
   return blocks;   // the two cells left at (2,2,2) and (2,2,3) are the chamber
 }
 
@@ -674,7 +678,7 @@ export const STARTER_DESIGNS = [
     size: 6,
     footprint: '6 × 6',
     note: 'Stand inside it to use the recipes it unlocks.',
-    blocks: room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: TILE }),
+    blocks: room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: SLATE }),
   },
   // Backlog batch 2: the University and the Engineering Centre.
   {
@@ -685,7 +689,7 @@ export const STARTER_DESIGNS = [
     footprint: '6 × 6',
     note: 'Stand inside it to study.',
     blocks: [
-      ...room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: TILE }),
+      ...room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: SLATE }),
       // Two desks to study at.
       { dx: 2, dy: 1, dz: 3, type: 31 }, { dx: 3, dy: 1, dz: 3, type: 31 },
     ],
@@ -697,7 +701,7 @@ export const STARTER_DESIGNS = [
     size: 7,
     footprint: '7 × 7',
     note: 'Study engineering at a university first.',
-    blocks: room({ w: 7, h: 3, wall: PLANKS, floor: STONE, tiles: TILE }),
+    blocks: room({ w: 7, h: 3, wall: PLANKS, floor: STONE, tiles: SLATE }),
   },
   {
     id: 'starter_kiln',
