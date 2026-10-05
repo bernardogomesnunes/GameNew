@@ -76,4 +76,13 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 ok('only while the building is open for changes', /growEditing\(changes\) \{\s*const s = this\.editingStructure;\s*if \(!s/.test(game)
   && (game.match(/this\.growEditing\(changes\);/g) ?? []).length === 2);
 
+// --- a quarry grows as you dig it, open for changes or not -----------------------------
+q.locked = true;
+ok('a quarry never stops you digging it', reg.blocking([{ x: q.region.minX + 1, y: q.region.minY, z: q.region.minZ + 1 }]) === null);
+const fy = q.region.minY, fx = q.region.minX + 1, fz = q.region.minZ + 1;
+world.setBlock(fx, fy, fz, AIR);
+const dugInto = reg.growDug([{ x: fx, y: fy, z: fz, prev: STONE, next: AIR }]);
+ok('digging out its floor takes in the rock below', dugInto.includes(q) && q.region.minY === fy - 1);
+ok('digging far from it does nothing', reg.growDug([{ x: q.region.maxX + 9, y: fy, z: fz, prev: STONE, next: AIR }]).length === 0);
+
 process.exit(f ? 1 : 0);

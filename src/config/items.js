@@ -71,7 +71,7 @@ export const ITEMS = [
   { id: 'brick', name: 'Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'brick', block: 9, madeBy: 'Fired from earth in a kiln' },
   { id: 'glass', name: 'Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xb9dce8, glyph: 'pane', block: 10, madeBy: 'Fired from sand in a kiln' },
   { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: 'Cut and dressed at a workshop' },
-  { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xeec43e, glyph: 'gold', block: 13, madeBy: 'Brought up from a mine' },
+  { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xf9d040, glyph: 'gold', block: 13, madeBy: 'Brought up from a mine' },
 
   // --- growing things ------------------------------------------------------
   // Each crop's own seeds come up as that crop — see config/crops.js. There
@@ -200,7 +200,7 @@ export const ITEMS = [
   { id: 'dark_stone', name: 'Dark Stone', kind: 'refined', stackTo: STACK_BULK, color: 0x4f4b57, glyph: 'stone', block: 156, madeBy: 'Stone darkened over a dark-wood fire' },
   { id: 'dark_brick', name: 'Dark Brick', kind: 'refined', stackTo: STACK_BULK, color: 0x5c4b52, glyph: 'brick', block: 157, madeBy: 'Brick darkened over a dark-wood fire' },
   { id: 'sky_marble', name: 'Sky Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe8eef8, glyph: 'marble', block: 158, madeBy: 'Marble polished with powdered glass' },
-  { id: 'gold_trim', name: 'Gold Trim', kind: 'refined', stackTo: STACK_BULK, color: 0xecc040, glyph: 'trim', block: 159, madeBy: 'Stone banded with gold' },
+  { id: 'gold_trim', name: 'Gold Trim', kind: 'refined', stackTo: STACK_BULK, color: 0xf7cf3c, glyph: 'trim', block: 159, madeBy: 'Stone banded with gold' },
   // Calçada portuguesa (playtest, P9).
   { id: 'calcada', name: 'Calçada', kind: 'refined', stackTo: STACK_BULK, color: 0xf1ede2, glyph: 'calcada', block: 209, madeBy: 'Limestone knapped into little setts' },
   { id: 'calcada_dark', name: 'Dark Calçada', kind: 'refined', stackTo: STACK_BULK, color: 0x45434a, glyph: 'calcada', block: 210, madeBy: 'Dark stone knapped into little setts' },

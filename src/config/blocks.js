@@ -60,7 +60,7 @@ export const BLOCKS = [
   // from goals (asked for directly: "avoid soft blocking the game"), and
   // Marble and Obsidian waited on achievements that no longer exist.
   { id: 12, name: 'Snow', glyph: 'snow', color: 0xf4f8fb, cost: { wood: 1 }, unlock: null },
-  { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xeec43e, material: 'stone', cost: { gold: 1 }, unlock: null },
+  { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xf9d040, material: 'stone', cost: { gold: 1 }, unlock: null },
   { id: 14, name: 'Obsidian', glyph: 'obsidian', color: 0x2b163f, material: 'stone', cost: { stone: 4 }, unlock: null },
   { id: 15, name: 'Red Glass', glyph: 'pane', color: 0xe86a62, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: null },
   { id: 16, name: 'Blue Glass', glyph: 'pane', color: 0x6a92e6, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: null },
@@ -358,7 +358,7 @@ BLOCKS.push(
   { id: DARK_STONE, name: 'Dark Stone', glyph: 'stone', color: 0x4e5666, material: 'stone', unlock: null },
   { id: DARK_BRICK, name: 'Dark Brick', glyph: 'brick', color: 0x58322a, material: 'stone', unlock: null },
   { id: SKY_MARBLE, name: 'Sky Marble', glyph: 'marble', color: 0xeaf0fa, material: 'stone', unlock: null },
-  { id: 159, name: 'Gold Trim', glyph: 'trim', color: 0xecc040, material: 'stone', unlock: null },
+  { id: 159, name: 'Gold Trim', glyph: 'trim', color: 0xf7cf3c, material: 'stone', unlock: null },
   // Plaster between dark oak beams — the beams are painted into the
   // texture (see textures.js `timber`), so it lays like any block.
   { id: 160, name: 'Timber Frame', glyph: 'timber', color: 0xf2e8d2, material: 'wood', unlock: null },

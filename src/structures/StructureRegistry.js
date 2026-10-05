@@ -260,9 +260,40 @@ export class StructureRegistry {
   blocking(changes) {
     for (const c of changes) {
       const s = this.at(c.x, c.y, c.z);
-      if (s && s.locked !== false) return s;
+      // A quarry is a hole you keep digging: locking it protects nothing.
+      if (s && s.locked !== false && !STRUCTURES_BY_ID.get(s.type)?.growsWhenDug) return s;
     }
     return null;
+  }
+
+  /**
+   * Digging in or against a quarry takes in the rock it opens onto: below
+   * a dug floor, beyond a dug wall. Returns the quarries the digging
+   * touched, grown or not, so they can level up (see climb).
+   */
+  growDug(changes, { inside = () => true } = {}) {
+    const touched = [];
+    for (const s of this.structures) {
+      if (!STRUCTURES_BY_ID.get(s.type)?.growsWhenDug) continue;
+      const cells = [];
+      for (const c of changes) {
+        if (c.next !== 0) continue;
+        const r = s.region;
+        const near = c.x >= r.minX - 1 && c.x <= r.maxX + 1 && c.y >= r.minY - 1 && c.y <= r.maxY + 1
+          && c.z >= r.minZ - 1 && c.z <= r.maxZ + 1;
+        if (!near) continue;
+        cells.push(c);
+        if (c.y <= r.minY) cells.push({ x: c.x, y: c.y - 1, z: c.z });
+        if (c.x <= r.minX) cells.push({ x: c.x - 1, y: c.y, z: c.z });
+        if (c.x >= r.maxX) cells.push({ x: c.x + 1, y: c.y, z: c.z });
+        if (c.z <= r.minZ) cells.push({ x: c.x, y: c.y, z: c.z - 1 });
+        if (c.z >= r.maxZ) cells.push({ x: c.x, y: c.y, z: c.z + 1 });
+      }
+      if (!cells.length) continue;
+      this.grow(s.id, cells, { inside });
+      touched.push(s);
+    }
+    return touched;
   }
 
   /** Unlocked, a building can be edited like any other blocks — and may break. */

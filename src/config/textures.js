@@ -90,7 +90,9 @@ export const TEXTURES = {
   // plaster between dark beams (`beams` wide), the beams tinted brown.
   // Backlog batch 2: gold "looks like wood" — so gold shines (`shine`, the
   // whole face; `glints`, bright flecks; see BlockTextures.finish).
-  trim:      { band: 4, depth: 0.4, speck: 0.03, bump: 0.6, shine: 0.8 },
+  // Still read as wood after that (reported again): the band's rails and
+  // groove are plank lines. It's a polished plate now, like gold itself.
+  trim:      { plate: 2, depth: 0.34, speck: 0.02, bump: 0.5, shine: 1, glints: 6 },
   timber:    { beams: 4, beamTint: [0.42, 0.3, 0.2], marks: 14, flecks: [[0.94, 0.92, 0.88]], depth: 0.12, mottle: 0.05, cracks: 1, bump: 0.5 },
   // Playtest, P9: calçada portuguesa — setts of limestone in mortar, and
   // the wave of dark basalt through it.
@@ -113,7 +115,7 @@ export const TEXTURES = {
   pane:      { frame: 2, depth: 0.22, speck: 0.01 },
   crystal:   { facets: 3, sheen: [1.3, 1.15, 1.4], depth: 0.3, speck: 0.02 },
   obsidian:  { facets: 3, sheen: [1.7, 1.25, 1.88], marks: 10, flecks: [[1.5, 1.2, 1.8]], depth: 0.4, speck: 0.03, bump: 0.3 },
-  gold:      { plate: 3, depth: 0.42, speck: 0.03, bump: 0.5, shine: 0.7, glints: 4 },
+  gold:      { plate: 3, depth: 0.36, speck: 0.02, bump: 0.5, shine: 1, glints: 6 },
   sprout:    { marks: 30, flecks: [[1.1, 1.08, 0.8]], depth: 0.3, mottle: 0.1 },
   seeds:     { marks: 30, depth: 0.28, mottle: 0.1 },
 };

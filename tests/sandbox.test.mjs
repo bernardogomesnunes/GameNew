@@ -34,7 +34,8 @@ const g = new DuiltGame({ world, scene, bus, sandbox: true });
 
 {
   g.grantCreativeKit();
-  ok('grants one of every item there is', ITEMS.every((i) => g.inventory.countOf(i.id) === 1));
+  ok('grants one of every item there is, but the building tools', ITEMS.filter((i) => !i.grants).every((i) => g.inventory.countOf(i.id) === 1));
+  ok('no pry bar or chalk line: Clear and Mirror aren\'t for players', g.inventory.countOf('pry_bar') === 0 && g.inventory.countOf('chalk_line') === 0);
   ok('grew the bag to fit all of them rather than losing any off the end',
     g.inventory.size >= ITEMS.length);
 }
