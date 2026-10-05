@@ -1048,6 +1048,9 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 .building-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .building-actions button { flex: 1 1 auto; min-height: 40px; min-width: 150px; }
 .building-actions button:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Evolve before it qualifies: still pressable, and it says what's missing. */
+.building-actions .cannot { opacity: 0.6; }
+.evolve-cost { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .building-note { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--text-dim); }
 .building-note .warn { color: #e0a052; }
 
@@ -1074,6 +1077,13 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 }
 .recipe-name { font-size: 13px; line-height: 1.2; }
 .recipe-tile .recipe-station { margin-left: 0; }
+/* Research at the university: how long it takes, and a bar while it runs. */
+.research-takes { font-size: 11.5px; color: var(--text-dim); }
+.research-bar { width: 100%; height: 8px; border-radius: 999px; background: rgba(35,42,45,0.1); overflow: hidden; margin-top: 4px; }
+.research-bar i { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.4s; }
+.research-left { font-size: 12px; color: var(--accent); font-weight: 600; }
+.recipe-tile.researching { border-color: var(--accent); }
+
 /* A trader's stall: how many coins you have, over the goods. */
 .trade-coins { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-dim); margin: 2px 0 6px; }
 /* In a station's own popup, where it is made goes without saying. */

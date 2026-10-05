@@ -423,7 +423,10 @@ export class DuiltUI {
         : `
         <p><strong>${level.canEvolve ? `Ready to evolve to ${next.name}` : `To evolve to ${next.name}`}</strong></p>
         ${level.canEvolve ? '' : next.missing?.length ? `<ul>${next.missing.map((m) => `<li>${m}</li>`).join('')}</ul>` : ''}
-        ${next.cost ? `<p>Costs ${Object.entries(next.cost).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' and ')} from your bag when you evolve it.</p>` : ''}
+        ${next.cost ? `<p class="evolve-cost">Costs <span class="recipe-cost">${Object.entries(next.cost).map(([id, n]) => {
+          const have = this.duilt?.inventory.countOf(id) ?? 0;
+          return itemChip(id, n, { have, short: !this.duilt?.sandbox && have < n });
+        }).join('')}</span> from your bag</p>` : ''}
         ${next.rate ? `<p class="dim">Then: ${rateText(next.rate.produces, next.rate.everySeconds)}</p>`
           : next.yield > 1 ? `<p class="dim">Then: ${next.yield}× everything ${spec?.fromAnimals ? 'its animals give' : 'it grows'}</p>` : ''}`;
 
@@ -443,7 +446,7 @@ export class DuiltUI {
         <span>${locked ? 'Locked' : 'Open for changes'}</span>
       </div>
       <div class="building-actions">
-        ${level?.canEvolve ? `<button class="primary" data-evolve>Evolve to ${withArticle(next.name)}</button>` : ''}
+        ${next ? `<button class="${level.canEvolve ? 'primary' : 'secondary cannot'}" data-evolve>Evolve to ${withArticle(next.name)}</button>` : ''}
         ${summary ? `<button class="${level?.canEvolve ? 'secondary' : 'primary'}" data-store>Open it</button>` : ''}
         <button class="${summary || level?.canEvolve ? 'secondary' : 'primary'}" data-move>Move it</button>
         <button class="secondary" data-change>${locked ? 'Change it' : 'Done changing'}</button>
@@ -1434,21 +1437,37 @@ export class DuiltUI {
       const icon = r.study
         ? glyphSvg('flask', { size: 30, color: 0x7b8bb0 })
         : itemIcon(spec, { size: 40 }) ?? glyphSvg(spec?.glyph, { size: 30, color: spec?.color ?? 0x888888 });
-      const count = !r.study && r.output.count > 1 ? `<b>×${r.output.count}</b>` : '';
+      // Research (asked for directly): the level it reaches on the card, how
+      // long it takes, Research rather than Make — and while it's going, a
+      // bar and the time left instead of a button.
+      const count = r.study ? `<b>Lv ${r.level}</b>` : r.output.count > 1 ? `<b>×${r.output.count}</b>` : '';
       const name = r.study ? r.result : itemName(r.output.id);
+      const going = r.study ? d.researchProgress?.() : null;
+      if (going && going.id === r.id) {
+        return `
+        <div class="recipe-tile researching">
+          <span class="recipe-icon">${icon}${count}</span>
+          <strong class="recipe-name">${escapeHtml(r.result)}</strong>
+          <div class="research-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(going.ratio * 100)}"><i style="width:${Math.round(going.ratio * 100)}%"></i></div>
+          <div class="research-left">Researching · ${escapeHtml(d.researchLeftText())} left</div>
+        </div>`;
+      }
+      const verb = r.study ? 'Research' : 'Make';
+      const takes = r.study && !d.sandbox ? `<span class="research-takes">Takes ${this.duilt.constructor.researchDays(r)} days</span>` : '';
       return `
         <div class="recipe-tile ${r.ok ? '' : 'blocked'}">
           <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(name)}" data-tip-info="${escapeAttr(r.blurb ?? '')}">${icon}${count}</span>
           <strong class="recipe-name">${r.name}</strong>
           ${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${r.station}</span>` : ''}
           <span class="recipe-cost">${inputs}</span>
+          ${takes}
           <div class="recipe-actions">
             <!--
               Never disabled. A dead button eats the tap and says nothing, so
               pressing one you cannot afford felt like the game was broken.
               Press it and it tells you why.
             -->
-            <button class="secondary${r.ok ? '' : ' cannot'}" data-craft="${r.id}" data-times="1">Make</button>
+            <button class="secondary${r.ok ? '' : ' cannot'}" data-craft="${r.id}" data-times="1">${verb}</button>
             ${r.batch && r.maxBatch > 1 ? `<button class="secondary" data-craft="${r.id}" data-times="${r.maxBatch}">×${r.maxBatch}</button>` : ''}
           </div>
           ${r.reason ? `<div class="recipe-why warn">${r.reason}</div>` : ''}
@@ -1500,9 +1519,12 @@ export class DuiltUI {
         const pos = this.game.player?.position;
         const res = d.crafting.craft(b.dataset.craft, Number(b.dataset.times),
           { near: pos, atStations: d.stationsNear(pos) });
-        this.bus.emit('toast', res.ok
-          ? { kind: 'challenge', title: res.studied ? `Studied: ${res.name}` : `Made ${res.made} ${res.name.toLowerCase()}` }
-          : { kind: 'xp', title: 'Cannot make that', body: res.reason });
+        // Research starting says so itself (Game's research:started).
+        if (!res.started) {
+          this.bus.emit('toast', res.ok
+            ? { kind: 'challenge', title: `Made ${res.made} ${res.name.toLowerCase()}` }
+            : { kind: 'xp', title: 'Cannot make that', body: res.reason });
+        }
         rerender();
       }));
   }

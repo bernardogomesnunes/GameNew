@@ -548,6 +548,12 @@ export class Game {
     // The land grows when an age is finished, and the wall has to grow with it.
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
     this.bus.on('health:died', ({ cause }) => this.die(cause));
+    // University research takes days (DuiltGame.startStudy): said when it starts and when it's done.
+    this.bus.on('research:started', ({ name, days }) => this.ui?.toast({ kind: 'challenge', title: `Researching ${name}`, body: `Takes ${days} days — see how it's going at the university` }));
+    this.bus.on('research:finished', ({ name }) => {
+      this.ui?.toast({ kind: 'achievement', title: `Research done: ${name}`, body: 'The university is free for the next thing' });
+      this.editedAt = Date.now();
+    });
     // Story moments (config/moments.js): the first stranger who stays, the first altar.
     this.bus.on('settler:arrived', () => this.tellMoment('first_settler'));
     this.bus.on('structure:claimed', ({ structure } = {}) => { if (structure?.type === 'temple') this.tellMoment('first_temple'); });
@@ -5393,6 +5399,8 @@ export class Game {
       this.duilt.dayTime = this.dayCycle.time;
       // The world's own count of days, for saplings to grow by.
       this.duilt.days += (this.dayCycle.time - clockWas + 1) % 1;
+      // Research at the university finishes when its days are up.
+      this.duilt.finishResearch();
     }
     this.dayCycle.apply(this.camera, this.horizon);
     this.updateAir(dt);
