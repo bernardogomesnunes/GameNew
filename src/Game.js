@@ -396,6 +396,7 @@ export class Game {
     this.skyMist = new SkyMist(this.scene);
     this.setAtmosphere(this.graphics.atmosphere !== false);
     this.lights = new LightManager(this.scene);
+    this.gamification?.dispose?.();
     this.gamification = new GamificationEngine(this.bus);
     this.economy = new EconomyEngine(this.bus);
     // Duilt is the game. Creative is the sandbox this grew out of and is
@@ -1368,6 +1369,7 @@ export class Game {
     // After the rules exist, not before: this reads the border off `duilt`,
     // and called a line earlier it only ever saw the world that came before.
     this.applyTerritoryBounds();
+    this.gamification?.dispose?.();
     this.gamification = new GamificationEngine(this.bus);
     this.gamification.setDuilt(this.duilt);
     this.economy = new EconomyEngine(this.bus);

@@ -516,8 +516,27 @@ class QuadBuffer {
     }
     geo.setIndex(new THREE.BufferAttribute(index, 1));
     geo.computeBoundingSphere();
-    return geo;
+    return freeAfterUpload(geo);
   }
+}
+
+/**
+ * Drops a chunk geometry's vertex arrays once they're on the GPU.
+ *
+ * three.js keeps a copy of every array in JavaScript after uploading it, in
+ * case it has to upload again. A chunk mesh never does — a changed chunk is
+ * meshed into new geometry, and nothing reads a mesh back (blocks are found
+ * by the world's own ray, not the mesh's) — so the copies were dead weight:
+ * hundreds of megabytes of them a few minutes in, which is what a phone's
+ * browser ran out of (reported directly: "the game is breaking after a
+ * while ... our game seems to have become too big for the browser"). The
+ * bounding sphere, needed for culling, is worked out before this.
+ */
+function dropArray() { this.array = null; }
+export function freeAfterUpload(geo) {
+  for (const attr of Object.values(geo.attributes)) attr.onUpload(dropArray);
+  geo.index?.onUpload(dropArray);
+  return geo;
 }
 
 let LAYER = null; // block id -> texture layer, filled on first use
@@ -1115,6 +1134,7 @@ export class ChunkMesher {
     geo.addGroup(litIndices, glow.index.length, 1);
     if (pane.index.length) geo.addGroup(litIndices + glow.index.length, pane.index.length, 2);
     geo.computeBoundingSphere();
+    freeAfterUpload(geo);
 
     const mesh = new THREE.Mesh(geo, [propMaterial, glowMaterial, paneMaterial]);
     mesh.position.set(baseX, 0, baseZ);
