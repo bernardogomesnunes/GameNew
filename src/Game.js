@@ -756,9 +756,16 @@ export class Game {
     if (!this.pendingSave || this.discarded || !this.cloud?.signedIn) return false;
     if (this.saving) return this.saving;
 
+    const id = this.worldId;
     this.saving = (async () => {
       try {
         const list = await this.cloudList({ maxAgeMs: 0 });
+        // Left while the list was on its way: Leave puts the title scene up
+        // at once, so what's loaded now is another world — and uploading it
+        // is how the title scene once landed in an account as a world called
+        // "Title", in place of the world just left. That one went aside whole
+        // at saveNow (keepSafe); it's that copy that goes up.
+        if (this.worldId !== id) return await this.sendUnsent();
         const mine = list.find((w) => w.id === this.worldId) ?? null;
         const agreed = this.syncState.agreedFor(this.worldId);
         // It was in the account and isn't any more: deleted, here or on

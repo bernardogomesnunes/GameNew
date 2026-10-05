@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:offline": "VITE_NEON_URL= vite",
     "build": "vite build",
     "preview": "vite preview",
     "test": "node tests/run.mjs"
