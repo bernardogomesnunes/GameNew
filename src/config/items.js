@@ -41,6 +41,7 @@ export const ITEMS = [
   // The rarer rocks underground (world/ChunkGen.js's rock layers).
   { id: 'stone_white', name: 'White Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xe4e0d8, glyph: 'stone', block: 235, madeBy: 'Mined from the pale rock layers' },
   { id: 'stone_turquoise', name: 'Turquoise Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x63b5ab, glyph: 'stone', block: 236, madeBy: 'Mined from a rare blue-green seam' },
+  { id: 'stone_grey', name: 'Dark Grey Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x6c6b6a, glyph: 'stone', block: 238, madeBy: 'Mined from the dark rock layers' },
   { id: 'stone_orange', name: 'Orange Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xd38d57, glyph: 'stone', block: 237, madeBy: 'Mined from the rarest seam of all' },
   { id: 'sand', name: 'Sand', kind: 'raw', stackTo: STACK_BULK, color: 0xded09f, glyph: 'sand', block: 6, madeBy: 'Dug from the riverbank' },
   { id: 'grass', name: 'Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x97cc81, glyph: 'grass', block: 1, madeBy: 'Cut from the plains' },
