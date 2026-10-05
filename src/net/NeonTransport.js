@@ -190,7 +190,10 @@ export class NeonTransport {
         block_count: meta.blockCount ?? 0,
         revision: meta.revision ?? 1,
         updated_at: now,
-        deleted_at: null, // pushing to a soft-deleted world brings it back
+        // No deleted_at: a save never undoes a delete. It used to send null
+        // here, so a late save — an upload left over from a dropped
+        // connection, another tab still open — quietly brought a world you
+        // had deleted back to your list as if it were new.
       }],
     });
 
