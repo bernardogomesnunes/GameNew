@@ -1946,6 +1946,15 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 }
 .confirm-title { font-weight: 700; }
 .story-card { --px-cut: 4px; border: 4px solid var(--px-wood-dark); background: var(--px-paper); }
+/* On parchment now, so dark ink in the pixel font (asked for directly: "The
+   text should be black and with the pixel font here"), off the frame's
+   edge, and the Skip button and the dots in ink rather than the pale tones
+   the old dark card used. */
+.story-card { color: var(--px-text); padding-bottom: 12px; }
+.story-text { font-family: var(--px-font); font-size: 17px; line-height: 1.5; color: var(--px-text); padding: 0 16px; }
+.story-foot { padding: 0 12px; }
+.story-foot .secondary { color: var(--px-text); border-color: var(--px-wood-dark); background: var(--px-paper-2); }
+.story-dots i { background: rgba(43, 29, 18, 0.25); }
 #minimap { border: 3px solid var(--px-ink); box-shadow: inset 0 0 0 2px var(--px-paper-2); }
 /* The account form: full-width fields at a size a thumb can hit and iOS
    won't zoom into (16px), and the button across under them. */
