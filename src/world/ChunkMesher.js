@@ -706,6 +706,7 @@ export class ChunkMesher {
     }
 
     for (const fluid of FLUIDS) this.emitFlowing(byType, lo, top, fluid);
+    this.emitRoofSides(byType, lo, top);
 
     const meshes = new Map();
     for (const [deep, types] of [[false, byType], [true, deepByType]]) {
@@ -905,6 +906,76 @@ export class ChunkMesher {
   }
 
   /**
+   * The sides of a roof tile laid on a wall — the triangles a gable end shows
+   * under its slope — in the wall's own texture. Reported with a picture: a
+   * log house's gable was filled with logs, but every slope tile's side was a
+   * flat brown wedge over them, because props are drawn in plain colour. So
+   * these are drawn here, with the blocks, on the layer of the block the tile
+   * sits on; buildProps leaves them out. A side against a solid neighbour is
+   * never seen, and is skipped.
+   */
+  emitRoofSides(byType, lo, top) {
+    const vol = this.padded, P2 = PAD * PAD;
+    const layers = layerTable();
+    const solid = (id) => id > 0 && IS_CUBE[id] && !IS_TRANSPARENT[id];
+    for (let y = lo; y <= top; y++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+          const idx = (y + 1) * P2 + (lz + 1) * PAD + lx + 1;
+          const id = vol[idx];
+          if (!(id > 0) || !SLOPED[id] || !roofPart(id)) continue;
+          const below = vol[idx - P2];
+          if (!solid(below)) continue;
+          const g = slopeGeometry(OVERLAY[id] ?? shapeOf(id), FACING[id], this.slopeCorner(idx, id), { filled: true, style: roofPart(id).mat === 1 ? 'slate' : 'clay' });
+          const key = bufferKeyFor(below);
+          let buf = byType.get(key);
+          if (!buf) { buf = this.takeBuffer(); byType.set(key, buf); }
+          const col = baseColor(below), layer = layers[below];
+          for (const f of g.faces) {
+            if (f.color !== 'below') continue;
+            if (solid(vol[idx + f.out[0] + f.out[2] * PAD])) continue;
+            const { pts, n } = orient(f.pts, f.out);
+            const shade = f.out[0] ? SHADE.px : SHADE.pz;
+            // Across the wall and up it, the same way a whole block's tile lies.
+            const uv = pts.map(([px, py, pz]) => [f.out[0] ? pz : px, py]);
+            const at = pts.map(([px, py, pz]) => [lx + px, y + py, lz + pz]);
+            for (let i = 1; i < pts.length - 1; i++) {
+              this.pushPoly(buf, [at[0], at[i], at[i + 1], at[i + 1]], n, col, shade, layer, [uv[0], uv[i], uv[i + 1], uv[i + 1]]);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /** A roof tile's corner with its neighbours (world/slopes.js), read off the padded copy. */
+  slopeCorner(idx, id) {
+    if (!SLOPE[id]) return null;
+    const vol = this.padded;
+    const at = (dx, dz) => {
+      const n = vol[idx + dx + dz * PAD];
+      return n > 0 && SLOPE[n] ? { kind: SLOPE[n], facing: FACING[n] } : null;
+    };
+    return cornerOf(SLOPE[id], FACING[id], at);
+  }
+
+  /** One textured quad from four corners, each with its own place on the tile. A triangle repeats its last. */
+  pushPoly(buf, corners, [nx, ny, nz], col, shade, layer, uvs) {
+    if (buf.quads === buf.cap) buf.grow(buf.cap * 2);
+    const q = buf.quads, p = q * 12;
+    const r = col.r * shade, g = col.g * shade, b = col.b * shade;
+    for (let k = 0; k < 4; k++) {
+      const [x, y, z] = corners[k], o = p + k * 3;
+      buf.position[o] = x; buf.position[o + 1] = y; buf.position[o + 2] = z;
+      buf.normal[o] = nx; buf.normal[o + 1] = ny; buf.normal[o + 2] = nz;
+      buf.color[o] = r; buf.color[o + 1] = g; buf.color[o + 2] = b;
+      buf.uv[q * 8 + k * 2] = uvs[k][0]; buf.uv[q * 8 + k * 2 + 1] = uvs[k][1];
+    }
+    buf.layer.fill(layer, q * 4, q * 4 + 4);
+    buf.quads = q + 1;
+  }
+
+  /**
    * Quad buffers are kept between rebuilds rather than grown from nothing
    * every time: toGeometry copies out exactly what it needs, so the same
    * big arrays serve every chunk.
@@ -970,6 +1041,9 @@ export class ChunkMesher {
               this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col, false, stair ? STAIR_SHADE : null, tone);
             }
             for (const f of g.faces) {
+              // A roof tile's sides over a wall are drawn with the blocks,
+              // in the wall's texture (see emitRoofSides).
+              if (f.color === 'below' && roofPart(id)) continue;
               const c = f.color === 'below' ? belowCol : f.color != null ? colorOfHex(f.color) : col;
               this.emitFace(buf, lx, ly, lz, f, c);
             }
