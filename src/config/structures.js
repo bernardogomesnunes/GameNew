@@ -251,6 +251,10 @@ export const STRUCTURES = [
     minSize: 4,
     maxSize: 16,
     cost: {},
+    // Dug, not built: never locked against digging, and it takes in the rock
+    // you open up as you go (StructureRegistry.growDug) — reported directly:
+    // digging another layer "already tried it and it does not work".
+    growsWhenDug: true,
     requires: [
       {
         id: 'rock',

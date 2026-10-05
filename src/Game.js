@@ -1311,6 +1311,10 @@ export class Game {
     this.mode = mode;
     this.showcase = null;
     this.title = null;
+    // Nothing is open for changes in a world you've only just entered.
+    this.editingStructure = null;
+    this.updateEditOutline?.();
+    this.ui?.clearEditingBanner?.();
     // Scenery is the world drawn behind the worlds screen so the canvas is not
     // blank. It is nobody's world and it is never saved; anything else you make
     // un-discards, which is to say saving is on again.
@@ -1416,6 +1420,10 @@ export class Game {
     this.world = data.world;
     this.showcase = null;
     this.title = null;
+    // Nothing is open for changes in a world you've only just entered.
+    this.editingStructure = null;
+    this.updateEditOutline?.();
+    this.ui?.clearEditingBanner?.();
     // Carried with the world, not reset to now: whether it has been played
     // since the account last saw it is a fact about the world.
     this.editedAt = data.editedAt ?? 0;
@@ -2213,11 +2221,12 @@ export class Game {
   startEditing(structure) {
     this.duilt.structures.setLocked(structure.id, false);
     this.editingStructure = structure;
+    this.updateEditOutline();
     this.ui.closePanel('panel-building');
     this.ui.setEditingBanner(STRUCTURES_BY_ID.get(structure.type)?.name ?? 'Building');
     this.ui.toast({
       kind: 'xp', title: 'Open for changes',
-      body: 'Break and place inside it — it is re-checked as you go',
+      body: 'Build or dig in it, or right against it — the gold box is what counts, and it levels up by itself',
     });
   }
 
@@ -2230,7 +2239,31 @@ export class Game {
     const s = this.editingStructure;
     if (!s || !this.duilt) return;
     const t = this.duilt.territory;
-    this.duilt.structures.grow(s.id, changes, { inside: (x, z) => t?.contains?.(x, z) ?? true });
+    if (this.duilt.structures.grow(s.id, changes, { inside: (x, z) => t?.contains?.(x, z) ?? true })) this.updateEditOutline();
+  }
+
+  /**
+   * The edge of the building open for changes, in gold, so you can see what
+   * counts as part of it — and watch it grow as you build or dig against it
+   * (see StructureRegistry.grow). Hidden when nothing is open.
+   */
+  updateEditOutline() {
+    const s = this.editingStructure;
+    if (!s) { if (this.editOutline) this.editOutline.visible = false; return; }
+    if (!this.editOutline) {
+      this.editOutline = new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
+        // No depth test: findable from inside the building and through its walls.
+        new THREE.LineBasicMaterial({ color: 0xf1c84b, transparent: true, opacity: 0.95, depthTest: false }),
+      );
+      this.editOutline.renderOrder = 12;
+      this.scene.add(this.editOutline);
+    }
+    const r = s.region;
+    const w = r.maxX - r.minX + 1, h = r.maxY - r.minY + 1, d = r.maxZ - r.minZ + 1;
+    this.editOutline.scale.set(w + 0.04, h + 0.04, d + 0.04);
+    this.editOutline.position.set(r.minX + w / 2, r.minY + h / 2, r.minZ + d / 2);
+    this.editOutline.visible = true;
   }
 
   /**
@@ -2238,10 +2271,17 @@ export class Game {
    * reaches the next level, it levels up by itself — see
    * StructureRegistry.climb.
    */
-  climbEditing() {
+  climbEditing(changes = []) {
+    if (!this.duilt || this.evolvingNow) return;
+    const reg = this.duilt.structures;
+    // A quarry grows as you dig it, open for changes or not.
+    const t = this.duilt.territory;
+    const dug = reg.growDug(changes, { inside: (x, z) => t?.contains?.(x, z) ?? true });
     const s = this.editingStructure;
-    if (!s || !this.duilt || this.evolvingNow) return;
-    if (this.duilt.structures.climb(s.id)) this.duilt.note('evolve');
+    let up = 0;
+    for (const q of dug) if (q !== s) up += reg.climb(q.id);
+    if (s) up += reg.climb(s.id);
+    if (up) this.duilt.note('evolve');
   }
 
   /** The other half of startEditing — locks the building back up and hands the strip back to the crosshair. */
@@ -2249,6 +2289,7 @@ export class Game {
     const structure = this.editingStructure;
     if (!structure) return;
     this.editingStructure = null;
+    this.updateEditOutline();
     this.duilt.structures.setLocked(structure.id, true);
     this.ui.clearEditingBanner();
     this.ui.toast({ kind: 'xp', title: 'Finished changing', body: 'Protected again' });
@@ -2270,6 +2311,7 @@ export class Game {
     // to no longer exists to finish editing.
     if (this.editingStructure?.id === structure.id) {
       this.editingStructure = null;
+      this.updateEditOutline();
       this.ui.clearEditingBanner();
     }
 
@@ -2323,6 +2365,7 @@ export class Game {
     // an edit in progress on the same building is done, one way or another.
     if (this.editingStructure?.id === structure.id) {
       this.editingStructure = null;
+      this.updateEditOutline();
       this.ui.clearEditingBanner();
     }
     const r = structure.region;
@@ -3529,7 +3572,7 @@ export class Game {
     this.sound?.break?.(soundOf(BLOCKS_BY_ID.get(changes[0].prev)), { x: changes[0].x, z: changes[0].z });
     this.growEditing(changes);
     this.duilt.structures.revalidateAround(changes);
-    this.climbEditing();
+    this.climbEditing(changes);
     this.duilt.settlers.revalidate();
     this.duilt.territory.onBlocksChanged(changes);
     this.editedAt = Date.now();
@@ -5226,7 +5269,7 @@ export class Game {
       if (Object.keys(gained).length) this.bus.emit('duilt:gathered', { gained });
       this.growEditing(changes);
       this.duilt.structures.revalidateAround(changes);
-      this.climbEditing();
+      this.climbEditing(changes);
       // A design that was waiting for something — fields, a neighbour — may
       // have just got it.
       for (const w of this.duilt.retryWaiting(changes)) {

@@ -266,7 +266,11 @@ export class DuiltGame {
       seen.add(s.id);
       return { id: s.id, count: 1, wear: 0 };
     });
-    for (const item of ITEMS) inv.add(item.id, 1);
+    // Not the pry bar and the chalk line (asked for directly: "Clear and
+    // mirror can be used by you to build stuff but users don't need it,
+    // let's remove them from the menu"). Owning one is what shows its
+    // button, and nothing else hands them out.
+    for (const item of ITEMS) if (!item.grants) inv.add(item.id, 1);
     inv.changed();
   }
 

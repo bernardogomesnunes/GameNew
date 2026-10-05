@@ -19,7 +19,7 @@ const scene = { add() {}, remove() {} };
   const d = new DuiltGame({ world, scene, sandbox: true });
   d.grantCreativeKit();
   const inv = d.inventory;
-  const all = () => ITEMS.every((i) => inv.countOf(i.id) === 1);
+  const all = () => ITEMS.filter((i) => !i.grants).every((i) => inv.countOf(i.id) === 1);
   ok('a creative bag holds exactly one of everything', all());
 
   const fruitAt = inv.slots.findIndex((s) => s?.id === 'fruit');
@@ -52,7 +52,7 @@ const scene = { add() {}, remove() {} };
   d.inventory.slots[2] = { id: 'axe', count: 1, wear: 40 };
   d.grantCreativeKit();
   ok('an old creative save comes back as one of everything, nothing worn',
-    ITEMS.every((i) => d.inventory.countOf(i.id) === 1) && d.inventory.findTool('axe').slot.wear === 0);
+    ITEMS.filter((i) => !i.grants).every((i) => d.inventory.countOf(i.id) === 1) && d.inventory.findTool('axe').slot.wear === 0);
 }
 
 {
