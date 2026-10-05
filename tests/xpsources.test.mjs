@@ -36,7 +36,7 @@ ok('no block waits on a level or an achievement', BLOCKS.every((b) => !b.unlock)
 
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 ok('your own kills count: hunting, fighting, a burning sword, the ring, a catapult',
-  /if \(!mob\.penId\) this\.gamification\.onKill\(\{ kind: 'mob'/.test(game) && (game.match(/this\.personKilled\(p\);/g) ?? []).length >= 4);
+  /if \(!mob\.penId\) \{\s*this\.gamification\.onKill\(\{ kind: 'mob'/.test(game) && (game.match(/this\.personKilled\(p\);/g) ?? []).length >= 4);
 ok('not your own penned animals', !/gamification\.onKill\(\{ kind: 'mob'[^\n]*\n[^\n]*forgetAnimal/.test(game) && /if \(!mob\.penId\)/.test(game));
 
 process.exit(f ? 1 : 0);

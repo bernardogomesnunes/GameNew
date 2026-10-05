@@ -2102,6 +2102,7 @@ export class Game {
    */
   evolveBuilding(structure) {
     const r = this.duilt.structures.evolve(structure.id);
+    if (r.ok) this.duilt.note('evolve');
     if (!r.ok) this.ui.toast({ kind: 'xp', title: "Can't evolve it yet", body: r.reason });
   }
 
@@ -2979,7 +2980,10 @@ export class Game {
     if (killed) {
       const spec = MOBS_BY_ID.get(mob.type);
       // Experience for a hunt — not for one of your own penned animals.
-      if (!mob.penId) this.gamification.onKill({ kind: 'mob', hp: spec.hp, name: `a ${spec.name.toLowerCase()}` });
+      if (!mob.penId) {
+        this.gamification.onKill({ kind: 'mob', hp: spec.hp, name: `a ${spec.name.toLowerCase()}` });
+        this.duilt?.note('hunt');
+      }
       const gained = this.duilt?.collect(drops) ?? {};
       const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
       this.ui.toast({ kind: 'xp', title: `Hunted a ${spec.name.toLowerCase()}`, body: got || undefined });
@@ -4323,7 +4327,10 @@ export class Game {
       if (mob.dying || !near(mob, 2.5)) continue;
       const res = this.mobs.hit(mob, STONE_HITS, c.x, c.z);
       if (res.killed) {
-        if (!mob.penId) this.gamification.onKill({ kind: 'mob', hp: MOBS_BY_ID.get(mob.type)?.hp ?? 0 });
+        if (!mob.penId) {
+          this.gamification.onKill({ kind: 'mob', hp: MOBS_BY_ID.get(mob.type)?.hp ?? 0 });
+          this.duilt?.note('hunt');
+        }
         this.duilt?.collect(res.drops);
       }
     }

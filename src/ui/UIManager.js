@@ -8,6 +8,7 @@ import { Panels } from './Panels.js';
 import { StoryView, INTRO, ENDINGS, endingFor } from './Story.js';
 import { askConfirm } from './Confirm.js';
 import { LORE, loreKnowledge } from '../config/lore.js';
+import { GIVERS } from '../config/quests.js';
 import { ITEMS_BY_ID, itemName, isFood, BARE_HANDS } from '../config/items.js';
 import { RECIPES } from '../config/recipes.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
@@ -246,10 +247,12 @@ export class UIManager {
         'panel-stats': `
           <div class="tab-row">
             <button class="tab-btn active" data-tab="tab-achievements">Goals</button>
+            <button class="tab-btn" data-tab="tab-quests" id="quests-tab">Quests</button>
             <button class="tab-btn" data-tab="tab-challenges">Today</button>
             <button class="tab-btn" data-tab="tab-lore" id="lore-tab">Lore</button>
           </div>
           <div class="tab-panel" id="tab-achievements"><div id="ach-grid"></div></div>
+          <div class="tab-panel" id="tab-quests" hidden><div id="quest-list"></div></div>
           <div class="tab-panel" id="tab-challenges" hidden><div id="challenge-list"></div></div>
           <div class="tab-panel" id="tab-lore" hidden><div id="lore-list"></div></div>`,
         'panel-menu': `
@@ -1637,6 +1640,51 @@ export class UIManager {
       </div>`;
     }).join('');
     this.renderLore();
+    this.renderQuests();
+  }
+
+  /**
+   * Quests (config/quests.js): what each giver asked, how far along it is,
+   * what it pays, and Hand in once it's done — from here, wherever you are.
+   * Ready ones first, then open, then the ones handed in, which keep their
+   * thanks so the story they told can be read again. Only in a Duilt world.
+   */
+  renderQuests() {
+    const d = this.game.duilt;
+    const tab = this.q('#quests-tab'), list = this.q('#quest-list');
+    if (!tab || !list) return;
+    tab.hidden = !d || d.sandbox;
+    if (tab.hidden) return;
+    const rows = d.questBoard();
+    const ready = rows.filter((r) => r.ready).length;
+    tab.textContent = ready ? `Quests · ${ready}` : 'Quests';
+    const order = (r) => (r.ready ? 0 : r.done ? 2 : 1);
+    const chip = (id, n) => {
+      const spec = ITEMS_BY_ID.get(id);
+      const art = itemIcon(spec, { size: 20 }) ?? glyphSvg(spec?.glyph, { size: 14, color: spec?.color });
+      return `<span class="quest-chip" title="${escapeHtml(itemName(id))}">${art}<b>${n}</b></span>`;
+    };
+    list.innerHTML = rows.length ? [...rows].sort((a, b) => order(a) - order(b)).map(({ quest: q, done, ready: can, progress }) => {
+      const g = GIVERS[q.from] ?? { name: q.from, icon: '•' };
+      const reward = Object.entries(q.reward.items ?? {}).map(([id, n]) => chip(id, n)).join('')
+        + (q.reward.xp ? `<span class="quest-xp">+${q.reward.xp} XP</span>` : '');
+      return `
+        <div class="quest-card ${done ? 'done' : can ? 'ready' : ''}">
+          <div class="quest-head"><span class="quest-icon">${g.icon}</span><span><strong>${escapeHtml(q.title)}</strong><em>${escapeHtml(g.name)}${g.note && !done ? ` · ${escapeHtml(g.note)}` : ''}</em></span>${done ? '<span class="ach-done" aria-label="Done">✓</span>' : ''}</div>
+          <p class="quest-text">${escapeHtml(done ? q.thanks : q.ask)}</p>
+          ${done ? '' : `<ul class="quest-needs">${progress.map((p) => `<li class="${p.have >= p.need ? 'met' : ''}">${escapeHtml(p.label)}${p.need > 1 || p.item ? ` <b>${p.have}/${p.need}</b>` : p.have >= p.need ? ' <b>✓</b>' : ''}</li>`).join('')}</ul>
+          <div class="quest-foot"><span class="quest-reward">${reward}</span>${can ? `<button class="primary" data-quest="${q.id}">Hand in</button>` : ''}</div>`}
+        </div>`;
+    }).join('') : '<div class="lore-count">No one has asked anything of you yet.</div>';
+    for (const b of list.querySelectorAll('[data-quest]')) {
+      b.addEventListener('click', () => {
+        const res = d.handInQuest(b.dataset.quest);
+        this.toast(res.ok
+          ? { kind: 'achievement', title: `Quest done: ${res.quest.title}`, body: res.quest.thanks }
+          : { kind: 'xp', title: 'Can\'t hand that in yet', body: res.reason });
+        this.renderQuests();
+      });
+    }
   }
 
   /**

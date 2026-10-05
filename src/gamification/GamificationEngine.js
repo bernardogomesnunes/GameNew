@@ -112,6 +112,12 @@ export class GamificationEngine {
     // The market and the building ladder (the batch's traders and levels):
     // checked as they happen, so a goal can ask what just did.
     this.bus.on('duilt:bought', (e = {}) => this.checkAchievements({ type: 'bought', ...e }));
+    // A quest handed in pays its experience (config/quests.js).
+    this.bus.on('duilt:quest', ({ quest } = {}) => {
+      if (this.duilt?.sandbox || !quest) return;
+      this.addXp(quest.reward?.xp ?? 0, `Quest: ${quest.title}`);
+      this.checkAchievements({ type: 'quest', quest });
+    });
     this.bus.on('structure:upgraded', ({ structure } = {}) => this.checkAchievements({ type: 'upgraded', structure }));
     this.bus.on('settler:arrived', () => {
       this.state.settlersEver += 1;
