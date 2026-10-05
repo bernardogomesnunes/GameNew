@@ -38,10 +38,16 @@ ok('each says whether it can be made', list.every(x => typeof x.ok === 'boolean'
 g.inventory.add('wood', 200);
 // The cabin has a door and a slate roof now.
 g.inventory.add('door', 1);
-g.inventory.add('roof_stone', 30);
+g.inventory.add('roof_stone', 40);   // eaves over the walls take a few more
 // And a bed and a painting in it (playtest, P1).
 g.inventory.add('bed', 1);
 g.inventory.add('painting', 1);
+// And a plank floor, a stone plinth and chimney, windows and a step at the
+// door ("they're all looking too boxy").
+g.inventory.add('planks', 100);
+g.inventory.add('stone', 60);
+g.inventory.add('window', 6);
+g.inventory.add('stairs_plank', 2);
 const b = g.territory.bounds();
 const anchor = { x: b.minX + 4, y: 30, z: b.minZ + 4 };
 const plan = g.starterPlacement('house', anchor);
