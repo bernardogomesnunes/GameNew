@@ -12,6 +12,8 @@
  *   beard     always a beard, this colour (otherwise one in four men, in their hair colour)
  *   gear      what's in the right hand: 'sword', 'spear', 'staff' or 'bow'
  *   gearColour the blade's (or bow's) colour, if not plain steel or wood
+ *   ears      a goblin's ears, out to the sides
+ *   nose      a goblin's long nose
  *
  * Anyone not listed (settlers) wears their hair and carries nothing.
  */
@@ -31,6 +33,9 @@ export const OUTFITS = {
   hermit: { hat: 'hood', hatColour: 0x6b6355, beard: 0xd9d4c8, gear: 'staff' },
   explorer: { hat: 'cap', hatColour: 0x7a5a3a, gear: 'staff' },
   messenger: { hat: 'cap', hatColour: 0x2f4f7a },
+  // A market's traders (config/traders.js): goblins — green, with big ears
+  // and a long nose, under a cap the colour of their trade.
+  trader: { hat: 'cap', ears: true, nose: true },
   // Yours.
   soldier: { hat: 'helm', gear: 'sword' },
   archer: { hat: 'hood', gear: 'bow' },

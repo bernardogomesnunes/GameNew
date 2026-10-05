@@ -2132,6 +2132,12 @@ export class UIManager {
     this.duiltUI?.showBuilding(structure, actions);
   }
 
+  /** A market's trader, and what they sell. */
+  openTrader(person) {
+    this.openPanel('panel-trade');
+    this.duiltUI?.showTrader(person);
+  }
+
   /** Opens a storehouse's shelves alongside the bag. */
   openStore(structure) {
     this.openPanel('panel-store');

@@ -14,6 +14,7 @@ import { WEAR_SLOTS, SLOT_NAMES, ARMOUR_PER_POINT } from '../config/armour.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { itemIcon } from '../config/cubes.js';
 import { renderPanels } from './Panel.js';
+import { TRADERS_BY_ID } from '../config/traders.js';
 import { icon } from './icons.js';
 
 /**
@@ -240,6 +241,9 @@ export class DuiltUI {
           <div id="bench-list"></div>`,
         'panel-building': `
           <div id="building-body"></div>`,
+        'panel-trade': `
+          <div id="trade-coins" class="trade-coins"></div>
+          <div id="trade-list" class="recipe-grid"></div>`,
         'panel-finish': `
           <div id="finish-body"></div>`,
         'panel-skills': `
@@ -1450,6 +1454,42 @@ export class DuiltUI {
           ${r.reason ? `<div class="recipe-why warn">${r.reason}</div>` : ''}
         </div>`;
     }).join('');
+  }
+
+  /**
+   * A goblin trader's stall (config/traders.js): what they sell, for how many
+   * coins, as the same tiles the bench draws — the goods, big, with how many
+   * you get, the price, and Buy.
+   */
+  showTrader(person) {
+    const d = this.duilt;
+    const t = TRADERS_BY_ID.get(person?.trader);
+    if (!d || !t) return;
+    this.trader = person;
+    const sub = this.q('#trade-sub');
+    if (sub) sub.textContent = `${t.name} — ${t.trade.toLowerCase()}`;
+    const coins = d.inventory.countOf('coin');
+    this.q('#trade-coins').innerHTML = `${itemChip('coin', coins)} <span>${d.sandbox ? 'Free in Creative' : `You have ${coins} coin${coins === 1 ? '' : 's'}. Strike more at a foundry, or find them in chests.`}</span>`;
+    const list = this.q('#trade-list');
+    list.innerHTML = t.goods.map(([id, n, price], i) => {
+      const spec = ITEMS_BY_ID.get(id);
+      const icon = itemIcon(spec, { size: 40 }) ?? glyphSvg(spec?.glyph, { size: 30, color: spec?.color ?? 0x888888 });
+      const afford = d.sandbox || coins >= price;
+      return `
+        <div class="recipe-tile ${afford ? '' : 'blocked'}">
+          <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(itemName(id))}" data-tip-info="${escapeAttr(spec?.madeBy ?? '')}">${icon}${n > 1 ? `<b>×${n}</b>` : ''}</span>
+          <strong class="recipe-name">${escapeHtml(itemName(id))}</strong>
+          <span class="recipe-cost">${itemChip('coin', price, { have: coins, short: !afford })}</span>
+          <div class="recipe-actions"><button class="secondary${afford ? '' : ' cannot'}" data-buy="${i}">Buy</button></div>
+        </div>`;
+    }).join('');
+    list.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => {
+      const res = d.buyFrom(t.id, Number(b.dataset.buy));
+      this.bus.emit('toast', res.ok
+        ? { kind: 'challenge', title: `Bought ${res.n} ${res.name.toLowerCase()}`, body: d.sandbox ? undefined : `${res.price} coin${res.price === 1 ? '' : 's'} to ${t.name}` }
+        : { kind: 'xp', title: 'Cannot buy that', body: res.reason });
+      this.showTrader(person);
+    }));
   }
 
   /** The Make buttons in `root`: craft where you stand, say how it went, redraw. */
