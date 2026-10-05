@@ -163,7 +163,7 @@ export const RECIPES = [
     age: 3,
     inputs: { planks: 24, wool: 12 },
     output: { id: 'flying_machine', count: 1 },
-    blurb: 'Wood and canvas, after Leonardo. Press Fly to take off, Jump to climb, Sneak to dive. Stop flying in the air and you glide down.',
+    blurb: 'Wood and canvas, after Leonardo. Hold it and Place to set it down; Place on it to climb in and fly. Jump climbs, Sneak dives, Fly lands — and on the ground, Sneak gets you out.',
   },
   {
     id: 'glass',

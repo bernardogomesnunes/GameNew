@@ -58,7 +58,7 @@ import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/d
 import { SWIFT_SPEED } from './config/upgrades.js';
 import { nextView, VIEW_NAMES } from './config/avatar.js';
 import { AvatarView } from './render/AvatarView.js';
-import { GliderView } from './render/GliderView.js';
+import { GliderView, MachineView } from './render/GliderView.js';
 import { CartView } from './render/CartView.js';
 import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
@@ -274,6 +274,8 @@ const TOOL_NORMAL = 0.85, TOOL_SLOW = 1.0;
 const TOOL_TIER_SPEED = { stone: 0.45, iron: 0.32, gold: 0.22, sky: 0.12, dark: 0.12 };
 /** On horseback: this much faster than on foot, and sat this much higher. */
 const RIDE_SPEED = 1.9, SEAT_HEIGHT = 0.9;
+/** A parked flying machine's reach for the crosshair: this far either side of it, and this tall. */
+const MACHINE_HALF = 1.4, MACHINE_TALL = 2.8;
 /**
  * The rest after a block comes free before the next one starts, while held.
  * Played on: "I'd like to have a bigger pause between breaking each block if
@@ -293,7 +295,7 @@ const CRACK_LINGER_MS = 450;
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
 const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', flying_machine: 'setDownMachine' };
 /**
  * Whether saved progression `a` is further along than `b`. By level first:
  * `xp` is only what's been earned towards the next level, so comparing it
@@ -458,6 +460,7 @@ export class Game {
     this.avatarView = new AvatarView(this.scene);
     this.glider = new GliderView(this.scene);
     this.cartView = new CartView(this.scene);
+    this.machineView = new MachineView(this.scene);
     this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
@@ -1792,13 +1795,110 @@ export class Game {
       this.ui?.setFlyIndicator(false);
     }
     const machine = this.hasFlyingMachine();
-    this.glider.update(this.player, playing && machine ? (this.player.flying ? 'fly' : this.player.gliding ? 'glide' : null) : null, dt);
+    this.glider.update(this.player, playing && machine ? (this.player.flying ? 'fly' : this.player.gliding ? 'glide' : 'parked') : null, dt);
+    this.machineView.update(this.duilt?.machines, this.piloting);
     this.cartView.update(this.duilt?.mounts);
   }
 
-  /** In Duilt, flying is the flying machine's — see wireFlight. */
+  /** In Duilt, flying is the flying machine's — you fly while you're in one. See pilot. */
   hasFlyingMachine() {
-    return !!this.duilt && !this.duilt.sandbox && this.duilt.inventory.countOf('flying_machine') > 0;
+    return !!this.duilt && !!this.piloting;
+  }
+
+  /**
+   * Hold the flying machine and press Place: it's set down on the block you
+   * point at, facing the way you face (asked for directly: "a physical
+   * vehicle to fly. I could place it and fly in it").
+   */
+  setDownMachine() {
+    const d = this.duilt, hit = this.raycast();
+    if (!d || !hit) return;
+    const x = hit.x + 0.5, y = hit.y + 1, z = hit.z + 0.5;
+    for (let up = 0; up < 3; up++) {
+      if (this.world.isCollidable(hit.x, hit.y + 1 + up, hit.z)) {
+        return void this.ui.toast({ kind: 'xp', title: 'No room', body: 'Set it down somewhere open, with sky above it.' });
+      }
+    }
+    const r = d.placeMachine(x, y, z, this.player.yaw);
+    if (!r.ok) return void this.ui.toast({ kind: 'xp', title: 'No flying machine', body: r.reason });
+    this.editedAt = Date.now();
+    this.ui.toast({ kind: 'challenge', title: 'Flying machine set down', body: 'Place on it to climb in. Hit it to pick it up again.' });
+  }
+
+  /** The flying machine under the crosshair, nearer than the block behind it. */
+  machineTarget(hit = this.raycast()) {
+    const list = this.duilt?.machines;
+    if (!list?.length || this.piloting) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    let best = null;
+    for (const m of list) {
+      const t = rayBox(eye, dir, m.x - MACHINE_HALF, m.y, m.z - MACHINE_HALF, m.x + MACHINE_HALF, m.y + MACHINE_TALL, m.z + MACHINE_HALF);
+      if (t != null && t <= REACH && (!best || t < best.t)) best = { m, t };
+    }
+    if (!best) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < best.t) return null;
+    }
+    return best.m;
+  }
+
+  /** Break on a flying machine standing in the world puts it back in your bag. */
+  pickUpMachine(hit) {
+    const m = this.machineTarget(hit);
+    if (!m) return false;
+    const r = this.duilt.pickUpMachine(m);
+    this.ui.toast(r.ok
+      ? { kind: 'xp', title: 'Flying machine picked up', body: 'It is back in your bag.' }
+      : { kind: 'xp', title: 'Can\'t pick it up', body: r.reason });
+    if (r.ok) this.editedAt = Date.now();
+    return true;
+  }
+
+  /** In and up: Jump climbs, Sneak dives, Fly lands. On the ground, Sneak gets you out. */
+  pilot(m) {
+    if (!m || this.piloting) return;
+    this.stopRide();
+    this.piloting = m;
+    this.player.teleport?.(m.x, m.y, m.z) ?? this.player.position.set(m.x, m.y, m.z);
+    this.player.yaw = m.yaw ?? this.player.yaw;
+    this.player.flying = true;
+    this.player.velocity?.set?.(0, 0, 0);
+    this.ui?.setFlyIndicator?.(true);
+    this.ui?.refreshTools?.();
+    this.ui.toast({ kind: 'xp', title: 'Flying', body: 'Jump climbs, Sneak dives. Fly to land; on the ground, Sneak to get out.' });
+  }
+
+  /** Out of the machine, beside it; it stays where it landed. `stay`: you're elsewhere already. */
+  leaveMachine(stay = false) {
+    const m = this.piloting;
+    if (!m) return;
+    this.piloting = null;
+    this.player.flying = false;
+    this.ui?.setFlyIndicator?.(false);
+    // Down to whatever's under it, so a machine left in the air doesn't hang there.
+    let y = Math.floor(m.y);
+    while (y > 0 && !this.world.isCollidable(Math.floor(m.x), y - 1, Math.floor(m.z))) y--;
+    m.y = y;
+    this.ui?.refreshTools?.();
+    if (stay) return;
+    const side = (m.yaw ?? 0) + Math.PI / 2;
+    this.player.position.x = m.x + Math.sin(side) * 1.8;
+    this.player.position.z = m.z + Math.cos(side) * 1.8;
+  }
+
+  /** Each frame in the machine: it goes where you go; land and Sneak to get out. */
+  tickPilot() {
+    const m = this.piloting;
+    if (!m) return;
+    const p = this.player;
+    if (!this.duilt || !this.duilt.machines.includes(m)) return void this.leaveMachine(true);
+    // Sent somewhere in one go (a respawn, a bed): the machine stays behind.
+    if (Math.hypot(p.position.x - m.x, p.position.z - m.z) > 30) return void this.leaveMachine(true);
+    m.x = p.position.x; m.y = p.position.y; m.z = p.position.z;
+    m.yaw = p.yaw;
+    const down = p.sneakHeld || p.keys?.has?.(p.binds?.down);
+    if (p.grounded && (p.sneaking || (p.flying && down))) this.leaveMachine();
   }
 
   /**
@@ -1814,8 +1914,9 @@ export class Game {
     p.canGlide = () => this.hasFlyingMachine();
     p.onFlyRefused = () => this.ui?.toast({
       kind: 'xp', title: 'You need a flying machine',
-      body: 'Build one at a workshop in Age 3, from planks and wool.',
-    });    this.ui?.refreshTools?.();
+      body: 'Build one at a workshop in Age 3, set it down with Place, and Place on it to climb in.',
+    });
+    this.ui?.refreshTools?.();
   }
 
   requestPointerLock() {
@@ -1965,6 +2066,9 @@ export class Game {
     // At a horse: tame it, put a cart on it, open the cart, or ride it.
     const horse = this.horseTarget(aimed);
     if (horse) return void this.useHorse(horse);
+    // At a flying machine you set down, Place climbs in.
+    const machine = this.machineTarget(aimed);
+    if (machine) return void this.pilot(machine);
     // At your guardian, Place gives it its next order.
     if (this.guardianTarget(aimed)) return void this.commandGuardian();
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
@@ -3282,7 +3386,7 @@ export class Game {
 
   /** Up on the horse: you steer, it goes where you go, faster than on foot. */
   startRide(m) {
-    if (!m?.owned || this.riding) return;
+    if (!m?.owned || this.riding || this.piloting) return;
     this.ui.closePanel?.('panel-store');
     this.player.flying = false;
     this.player.teleport?.(m.x, m.y, m.z) ?? this.player.position.set(m.x, m.y, m.z);
@@ -3348,6 +3452,9 @@ export class Game {
    * Returns whether the press was spent on an animal.
    */
   hitMob(hit) {
+    // A flying machine standing there takes the blow the same way: it goes
+    // back in your bag.
+    if (this.pickUpMachine(hit)) return true;
     const mob = this.mobTarget(hit);
     if (!mob) return false;
     // Your own horse, and whatever its cart carries, is never hunted.
@@ -5790,6 +5897,7 @@ export class Game {
       this.player.update(dt);
       this.keepApart();
       this.tickRide(dt);
+      this.tickPilot();
       this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
         this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
@@ -6016,6 +6124,8 @@ export class Game {
       // And your horses, carts and all.
       this.mobs.adopt(this.duilt.mounts);
       this.stopRide(true);
+      // A machine you were flying belonged to the world just left.
+      this.piloting = null;
       this.mobsHerdOf = this.duilt;
     }
   }
@@ -6169,6 +6279,11 @@ export class Game {
     }
     // Same for an animal — named before you swing, and no block outline
     // behind it saying the swing will land on the ground.
+    if (!this.armed && this.machineTarget(hit)) {
+      this.hoverBox.visible = false;
+      this.ui?.setPersonHint('Flying machine', 'Place to fly · hit to pick up');
+      return;
+    }
     const mob = this.armed ? null : this.mobTarget(hit);
     if (mob) {
       const spec = MOBS_BY_ID.get(mob.type);

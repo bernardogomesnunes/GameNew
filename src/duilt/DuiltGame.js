@@ -90,6 +90,11 @@ export class DuiltGame {
     // the same objects the Mobs list holds, so where one stands is saved
     // where it's got to — see toJSON.
     this.mounts = [];
+    // Flying machines you've set down in the world (asked for directly: "a
+    // physical vehicle to fly. I could place it and fly in it"): { x, y, z,
+    // yaw }. One you're flying is the same record, moving with you — see
+    // Game.pilot.
+    this.machines = [];
     this.dayTime = null; // see toJSON
     // Designs you placed that didn't count yet — see waitFor.
     this.waiting = [];
@@ -620,6 +625,23 @@ export class DuiltGame {
       }
     }
     return [...found];
+  }
+
+  /** Sets a flying machine from your bag down at x, y, z. Returns { ok, reason, machine }. */
+  placeMachine(x, y, z, yaw = 0) {
+    if (!this.inventory.remove('flying_machine', 1)) return { ok: false, reason: 'You have no flying machine.' };
+    const machine = { x, y, z, yaw };
+    this.machines.push(machine);
+    return { ok: true, machine };
+  }
+
+  /** Back into your bag. Returns { ok, reason }. */
+  pickUpMachine(machine) {
+    const i = this.machines.indexOf(machine);
+    if (i === -1) return { ok: false, reason: 'It is not here.' };
+    if (this.inventory.add('flying_machine', 1) > 0) return { ok: false, reason: 'Your bag is full.' };
+    this.machines.splice(i, 1);
+    return { ok: true };
   }
 
   /** A tamed horse takes a cart: forty slots on wheels. Returns { ok, reason }. */
@@ -1558,6 +1580,10 @@ export class DuiltGame {
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
       herd: herdToJSON(this.herd),
+      machines: this.machines.map((m) => ({
+        x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
+        yaw: Math.round((m.yaw ?? 0) * 100) / 100,
+      })),
       mounts: this.mounts.filter((m) => !m.dead).map((m) => ({
         type: m.type, x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
         facing: Math.round((m.facing ?? 0) * 100) / 100, owned: true, cart: !!m.cart,
@@ -1624,6 +1650,7 @@ export class DuiltGame {
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
+    this.machines = (data.machines ?? []).filter((m) => Number.isFinite(m?.x)).map((m) => ({ x: m.x, y: m.y, z: m.z, yaw: m.yaw ?? 0 }));
     this.mounts = (data.mounts ?? []).map((r) => {
       const m = { ...r, owned: true };
       if (r.cart) {

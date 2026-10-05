@@ -46,13 +46,28 @@ export class GliderView {
     fin.position.set(0, 0.2, 1.45);
     this.left = wing(-1);
     this.right = wing(1);
-    this.group.add(keel, mast, tail, fin, this.left, this.right);
+    // On the ground it stands on a frame: two struts down to a pair of
+    // skids, so a parked machine is something standing there, not floating.
+    this.stand = new THREE.Group();
+    for (const x of [-0.7, 0.7]) {
+      const strut = new THREE.Mesh(new THREE.BoxGeometry(0.08, 2.5, 0.08), dark);
+      strut.position.set(x, -1.25, 0);
+      const skid = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.08, 1.8), dark);
+      skid.position.set(x, -2.46, 0.1);
+      this.stand.add(strut, skid);
+    }
+    this.group.add(keel, mast, tail, fin, this.left, this.right, this.stand);
     this.group.visible = false;
     scene.add(this.group);
     this.t = 0;
   }
 
-  /** Follows the player; `mode` is 'fly', 'glide' or null (hidden). */
+  dispose() {
+    this.group.removeFromParent();
+    this.group.traverse((o) => { o.geometry?.dispose(); o.material?.dispose?.(); });
+  }
+
+  /** Follows the player (or stands for a parked one); `mode` is 'fly', 'glide', 'parked' or null (hidden). */
   update(player, mode, dt) {
     this.group.visible = !!mode;
     if (!mode || !player) return;
@@ -63,9 +78,37 @@ export class GliderView {
     const yaw = player.yaw ?? 0;
     this.group.position.set(p.x + Math.sin(yaw) * 0.6, p.y + 2.5, p.z + Math.cos(yaw) * 0.6);
     this.group.rotation.set(0, yaw, 0);
-    // A slow beat while flying; held out flat for a glide.
-    const beat = mode === 'fly' ? Math.sin(this.t * 4.5) * 0.22 : 0.06;
+    this.stand.visible = mode === 'parked';
+    // A slow beat while flying; held out flat for a glide; folded a little at rest.
+    const beat = mode === 'fly' ? Math.sin(this.t * 4.5) * 0.22 : mode === 'parked' ? -0.12 : 0.06;
     this.left.rotation.z = -beat;
     this.right.rotation.z = beat;
+  }
+}
+
+/**
+ * The flying machines set down in the world (DuiltGame.machines), one
+ * GliderView each, parked. The one you're flying is drawn on you instead.
+ */
+export class MachineView {
+  constructor(scene) {
+    this.scene = scene;
+    this.views = new Map(); // machine record -> its GliderView
+  }
+
+  update(machines, flying) {
+    const seen = new Set();
+    for (const m of machines ?? []) {
+      if (m === flying) continue;
+      seen.add(m);
+      let v = this.views.get(m);
+      if (!v) { v = new GliderView(this.scene); this.views.set(m, v); }
+      v.update({ position: m, yaw: m.yaw ?? 0 }, 'parked', 0);
+    }
+    for (const [m, v] of this.views) {
+      if (seen.has(m)) continue;
+      v.dispose();
+      this.views.delete(m);
+    }
   }
 }
