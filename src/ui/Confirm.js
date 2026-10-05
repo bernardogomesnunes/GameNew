@@ -7,8 +7,10 @@
  *
  *   askConfirm(root, { title, body, ok, cancel, danger }) → Promise<boolean>
  *
- * Resolves true on the confirm button, false on Cancel, a tap outside the
- * card, or Escape.
+ * Resolves true on the confirm button, false on the cross, a tap outside
+ * the card, or Escape. No Cancel button (asked for directly: "Cancel is the
+ * cross so we can remove it") — `cancel` is now the cross's label, for
+ * screen readers.
  */
 export function askConfirm(root, { title, body = '', ok = 'OK', cancel = 'Cancel', danger = false } = {}) {
   return new Promise((resolve) => {
@@ -16,10 +18,10 @@ export function askConfirm(root, { title, body = '', ok = 'OK', cancel = 'Cancel
     el.className = 'confirm-backdrop';
     el.innerHTML = `
       <div class="confirm-card" role="alertdialog" aria-modal="true">
+        <button class="panel-close confirm-close" data-no>×</button>
         <strong class="confirm-title"></strong>
         <p class="confirm-body"></p>
         <div class="confirm-actions">
-          <button class="secondary" data-no></button>
           <button class="primary${danger ? ' danger' : ''}" data-yes></button>
         </div>
       </div>`;
@@ -27,7 +29,7 @@ export function askConfirm(root, { title, body = '', ok = 'OK', cancel = 'Cancel
     el.querySelector('.confirm-title').textContent = title;
     el.querySelector('.confirm-body').textContent = body;
     el.querySelector('.confirm-body').hidden = !body;
-    el.querySelector('[data-no]').textContent = cancel;
+    el.querySelector('[data-no]').setAttribute('aria-label', cancel);
     el.querySelector('[data-yes]').textContent = ok;
 
     const done = (answer) => {

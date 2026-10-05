@@ -1948,3 +1948,38 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 #btn-cloud-signin { width: 100%; padding: 12px 16px; font-size: 17px; }
 /* Framed now, so the rows need room inside the frame. */
 .skill-row, .stat-row.framed, .challenge-card { padding: 10px 12px; }
+
+/* --- the building popup, laid out as the building (see DuiltUI.showBuilding) */
+.building-sec { padding: 10px 12px; }
+.building-sec-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.building-sec-head h4 { margin: 0; }
+.level-pill {
+  font-size: 13px; font-weight: 700; padding: 2px 8px 3px;
+  background: var(--px-gold); color: var(--px-ink); border: 2px solid var(--px-ink);
+}
+.building-line { margin: 4px 0 0; font-size: 14px; color: var(--px-text); line-height: 1.35; }
+.level-next { margin: 4px 0 6px; font-size: 14px; }
+.building-evolve { width: 100%; margin-top: 8px; padding: 11px 14px; font-size: 16px; }
+.building-inline { display: flex; gap: 8px; margin-top: 10px; }
+.building-inline button { flex: 1; padding: 9px 12px; }
+/* The tools: small, at the bottom, all one weight — none is the point of the popup. */
+.building-tools { display: flex; gap: 8px; margin-top: 12px; }
+.tool-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-family: var(--px-font); font-size: 14px; padding: 7px 8px 9px; cursor: pointer;
+  background: var(--px-paper-2); color: var(--px-text); border: 2px solid var(--px-wood-dark);
+  box-shadow: inset 0 -3px 0 var(--px-paper-3);
+}
+.tool-btn:active { transform: translateY(2px); box-shadow: none; }
+.tool-btn.danger { color: var(--px-red-dark); }
+/* The confirm dialog: a cross in the corner instead of a Cancel button. */
+.confirm-card { position: relative; padding-right: 48px; }
+.confirm-close { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; font-size: 18px; line-height: 1; padding: 0; cursor: pointer; }
+.confirm-actions button { min-width: 120px; }
+/* Numbers in a clear face. At these sizes the pixel font's 2 reads as an 8 —
+   a cost or a count you misread is worse than one that looks less pixel. */
+.cost-chip b, .bag-slot b, .hotbar-slot b, .recipe-icon b, .px-count, #level-badge,
+.vital-count, .skill-level, .goal-band-count, .research-left, .level-pill {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.evolve-note { margin: -2px 0 6px; font-size: 12.5px; }
