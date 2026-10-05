@@ -20,6 +20,7 @@ import { AIR, BLOCKS_BY_ID } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
 import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN } from '../config/traders.js';
+import { QUESTS, QUESTS_BY_ID } from '../config/quests.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { ageOf, ageIntro, FINAL_AGE } from '../config/ages.js';
@@ -69,6 +70,9 @@ const GRASS = 1;
 
 const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds_carrot: 4, seeds_potato: 4 };
 
+/** How a quest names the place it sends you to. */
+const FIND_WORDS = { ruin: 'a ruin', hermit: 'the hermit\'s hut', kingdom: 'the Stone Kingdom' };
+
 export class DuiltGame {
   constructor({ world, scene, bus, age = 1, sandbox = false }) {
     this.world = world;
@@ -115,6 +119,12 @@ export class DuiltGame {
     this.boosts = {};
     // Places you've found out in the world (playtest, P4), as "kind@x,z".
     this.found = new Set();
+    // Quests (config/quests.js): for each one that has opened, what the
+    // counts stood at when it did, and whether it's been handed in.
+    this.quests = {};
+    // Running counts a quest can ask about: animals you hunted, things you
+    // bought, buildings you evolved. Only ever go up.
+    this.tally = { hunt: 0, trade: 0, evolve: 0 };
     // The Stone Kingdom's war on you, from the last age on — see War.js.
     this.war = new War();
     // The dark path's attacks on the Sky Kingdom, and its taxes (SkyWar.js).
@@ -615,6 +625,8 @@ export class DuiltGame {
 
     const next = this.territory.advance();
     if (next) {
+      // The new age's quests open now, so their counts start from here.
+      this.questBoard();
       this.bus?.emit('duilt:age', {
         age: next.age, name: next.name, size: next.size, intro: ageIntro(next.age, this.ring),
       });
@@ -753,6 +765,71 @@ export class DuiltGame {
     return r;
   }
 
+  // ---- quests (config/quests.js) ----
+
+  /** Counts a quest can ask about: 'hunt' (an animal), 'trade', 'evolve'. */
+  note(kind) {
+    if (kind in this.tally) this.tally[kind] += 1;
+  }
+
+  /**
+   * Every quest open to you now, with where it stands: { quest, done, ready,
+   * progress: [{ label, have, need }] }. Opens a quest (its counts start from
+   * here) the first time it's asked about at its age. None in a sandbox.
+   */
+  questBoard() {
+    if (this.sandbox) return [];
+    return QUESTS.filter((q) => q.age <= this.age).map((q) => {
+      // Age 1's are open from the world's first moment, so they count from zero.
+      const st = this.quests[q.id] ?? (this.quests[q.id] = { since: q.age === 1 ? { hunt: 0, trade: 0, evolve: 0 } : { ...this.tally }, done: false });
+      const progress = this.questProgress(q, st);
+      return { quest: q, done: st.done, ready: !st.done && progress.every((p) => p.have >= p.need), progress };
+    });
+  }
+
+  questProgress(q, st) {
+    const n = q.needs;
+    if (n.deliver) {
+      return Object.entries(n.deliver).map(([id, need]) => ({ label: itemName(id), item: id, have: Math.min(need, this.inventory.countOf(id)), need }));
+    }
+    if (n.claim) {
+      const name = STRUCTURES_BY_ID.get(n.claim)?.name ?? n.claim;
+      return [{ label: `Claim ${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name.toLowerCase()}`, have: this.structures.list().some((s) => s.type === n.claim && s.valid) ? 1 : 0, need: 1 }];
+    }
+    for (const [kind, words] of [['hunt', 'Animals hunted'], ['trade', 'Things bought'], ['evolve', 'Buildings evolved']]) {
+      if (n[kind]) return [{ label: words, have: Math.min(n[kind], this.tally[kind] - (st.since[kind] ?? this.tally[kind])), need: n[kind] }];
+    }
+    if (n.find) {
+      return [{ label: `Find ${FIND_WORDS[n.find] ?? n.find}`, have: this.foundPlaces().some((p) => p.kind === n.find) ? 1 : 0, need: 1 }];
+    }
+    return [];
+  }
+
+  /**
+   * Hands a quest in: what it asked for out of your bag, its reward in. All
+   * or nothing — a bag too full for the reward gives everything back and
+   * says so, rather than eating either. Returns { ok, reason | quest }.
+   */
+  handInQuest(id) {
+    const row = this.questBoard().find((r) => r.quest.id === id);
+    if (!row) return { ok: false, reason: 'That quest isn\'t open.' };
+    if (row.done) return { ok: false, reason: 'Already handed in.' };
+    if (!row.ready) return { ok: false, reason: 'Not done yet.' };
+    const q = row.quest;
+    const asked = q.needs.deliver ?? {};
+    if (!this.inventory.spend(asked)) return { ok: false, reason: 'Your bag changed — try again.' };
+    const gives = q.reward.items ?? {};
+    const fits = Object.entries(gives).every(([item, n]) => this.inventory.roomFor(item, n) >= n);
+    if (!fits) {
+      for (const [item, n] of Object.entries(asked)) this.inventory.add(item, n);
+      return { ok: false, reason: 'Your bag is full — make room for the reward first.' };
+    }
+    for (const [item, n] of Object.entries(gives)) this.inventory.add(item, n);
+    this.quests[id].done = true;
+    this.bus?.emit('duilt:quest', { quest: q });
+    return { ok: true, quest: q };
+  }
+
   /**
    * The traders living in your markets (batch: "the trader ... a goblin
    * looking creature ... to start the market only has one trader, but
@@ -839,6 +916,7 @@ export class DuiltGame {
     if (this.inventory.roomFor(id, n) < n) return { ok: false, reason: 'Your bag is full — nowhere to put it.' };
     if (!this.sandbox) this.inventory.remove('coin', price);
     this.inventory.add(id, n);
+    this.tally.trade += 1;
     this.bus?.emit('duilt:bought', { trader: traderId, itemId: id, count: n, price });
     return { ok: true, id, n, price, name: itemName(id) };
   }
@@ -1110,6 +1188,8 @@ export class DuiltGame {
       spawn: this.spawn,
       boosts: { ...this.boosts },
       found: [...this.found],
+      quests: this.quests,
+      tally: this.tally,
       heard: [...this.heard],
       war: this.war.toJSON(),
       skyWar: this.skyWar.toJSON(),
@@ -1144,6 +1224,13 @@ export class DuiltGame {
     const sp = data.spawn;
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
     this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);
+    this.quests = {};
+    for (const [id, q] of Object.entries(data.quests ?? {})) {
+      if (QUESTS_BY_ID.has(id) && q && typeof q === 'object') this.quests[id] = { since: { ...(q.since ?? {}) }, done: !!q.done };
+    }
+    this.tally = { hunt: 0, trade: 0, evolve: 0 };
+    for (const k of Object.keys(this.tally)) if (Number.isFinite(data.tally?.[k])) this.tally[k] = data.tally[k];
+    this.questBoard();
     this.heard = new Set(Array.isArray(data.heard) ? data.heard.filter((k) => TALES_BY_ID.has(k)) : []);
     this.boosts = {};
     for (const [name, left] of Object.entries(data.boosts ?? {})) if (BOOSTS[name] && Number.isFinite(left) && left > 0) this.boosts[name] = left;

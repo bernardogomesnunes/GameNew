@@ -23,7 +23,7 @@ ok('rocks, wood and food; weapons, armour and ores', /rocks/i.test(TRADERS[0].tr
 ok('a new market has one trader, and each level brings another', tradersFor(0).length === 1 && tradersFor(1).length === 2 && tradersFor(3).length === TRADERS.length && tradersFor(9).length === TRADERS.length);
 
 // Buying.
-const buyer = { inventory: new Inventory({ slots: 40 }), sandbox: false, bus: null };
+const buyer = { inventory: new Inventory({ slots: 40 }), sandbox: false, bus: null, tally: { hunt: 0, trade: 0, evolve: 0 } };
 const buy = (i, t = 'stonemonger') => DuiltGame.prototype.buyFrom.call(buyer, t, i);
 const [id, n, price] = TRADERS[0].goods[0];
 let r = buy(0);

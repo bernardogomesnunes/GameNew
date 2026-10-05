@@ -36,7 +36,7 @@ ok('the click wires to the same onEvolve callback Game.js supplies',
 ok('buildingActions exposes onEvolve alongside change/move/delete',
   /onEvolve: \(\) => this\.evolveBuilding\(structure\)/.test(game));
 ok('evolveBuilding asks the registry and only complains on the way back',
-  /evolveBuilding\(structure\) \{\s*const r = this\.duilt\.structures\.evolve\(structure\.id\);\s*if \(!r\.ok\)/.test(game));
+  /evolveBuilding\(structure\) \{\s*const r = this\.duilt\.structures\.evolve\(structure\.id\);\s*if \(r\.ok\) this\.duilt\.note\('evolve'\);\s*if \(!r\.ok\)/.test(game));
 
 // --- DuiltUI redraws the open panel off the bus event, not a local call ----
 
