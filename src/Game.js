@@ -2978,6 +2978,8 @@ export class Game {
     }
     if (killed) {
       const spec = MOBS_BY_ID.get(mob.type);
+      // Experience for a hunt — not for one of your own penned animals.
+      if (!mob.penId) this.gamification.onKill({ kind: 'mob', hp: spec.hp, name: `a ${spec.name.toLowerCase()}` });
       const gained = this.duilt?.collect(drops) ?? {};
       const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
       this.ui.toast({ kind: 'xp', title: `Hunted a ${spec.name.toLowerCase()}`, body: got || undefined });
@@ -3029,6 +3031,7 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
     if (res.killed) {
+      this.personKilled(p);
       const gained = this.duilt?.collect(res.drops) ?? {};
       const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
       this.ui.toast({ kind: 'xp', title: `Beat ${p.name === WANDERERS[p.kind].noun ? p.name : `${p.name}, ${WANDERERS[p.kind].noun ?? 'a bandit'}`}`, body: got || undefined });
@@ -3036,9 +3039,15 @@ export class Game {
     return true;
   }
 
+  /** Experience for a person you brought down yourself — as much as they took to beat. */
+  personKilled(p) {
+    this.gamification.onKill({ kind: 'person', hp: WANDERERS[p.kind]?.hp ?? 0, name: p.name });
+  }
+
   /** Whatever a bandit burnt down by a fire sword dropped, into the bag. */
   collectFallen() {
     for (const { p, drops } of this.wanderers.fallen.splice(0)) {
+      this.personKilled(p);
       const gained = this.duilt?.collect(drops) ?? {};
       const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
       this.ui?.toast({ kind: 'xp', title: `${p.name} burnt down`, body: got || undefined });
@@ -3221,6 +3230,7 @@ export class Game {
     if (this.duilt.ringWorn() === 'black' && this.wanderers) {
       const res = this.wanderers.hit(p, BLACK_RING_SPARK, this.player.position.x, this.player.position.z);
       if (res?.killed) {
+        this.personKilled(p);
         const gained = this.duilt.collect(res.drops) ?? {};
         const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
         this.ui.toast({ kind: 'xp', title: `The ring's spark felled ${p.name}`, body: got || undefined });
@@ -4303,6 +4313,7 @@ export class Game {
       if (!WANDERERS[p.kind].hp || !near(p, 2.5)) continue;
       const res = this.wanderers.hit(p, STONE_HITS, c.x, c.z);
       if (res?.killed) {
+        this.personKilled(p);
         const gained = this.duilt?.collect(res.drops) ?? {};
         const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
         this.ui.toast({ kind: 'xp', title: `The stone got ${p.name}, a bandit`, body: got || undefined });
@@ -4311,7 +4322,10 @@ export class Game {
     for (const mob of this.mobs?.list ?? []) {
       if (mob.dying || !near(mob, 2.5)) continue;
       const res = this.mobs.hit(mob, STONE_HITS, c.x, c.z);
-      if (res.killed) this.duilt?.collect(res.drops);
+      if (res.killed) {
+        if (!mob.penId) this.gamification.onKill({ kind: 'mob', hp: MOBS_BY_ID.get(mob.type)?.hp ?? 0 });
+        this.duilt?.collect(res.drops);
+      }
     }
     if (near(this.player.position, 2)) this.duilt?.hurt(8, 'catapult');
   }

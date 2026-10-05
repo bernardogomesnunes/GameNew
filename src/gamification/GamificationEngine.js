@@ -3,10 +3,7 @@ import { ACHIEVEMENTS } from '../config/achievements.js';
 import { CHALLENGES_BY_ID, dailyChallengeIdsFor } from '../config/challenges.js';
 
 const SESSION_IDLE_MS = 120_000; // no block edits for 2 minutes ends the session
-const SPAM_SOFT_CAP = 40; // same-type placements per session before XP tapers off
 const ENCLOSED_CHECK_COOLDOWN_MS = 1000;
-const XP_BASE_PER_BLOCK = 3;
-const FIRST_TIME_TYPE_BONUS = 30;
 
 function todayStr(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -16,6 +13,11 @@ function daysBetween(a, b) {
   const A = new Date(a + 'T00:00:00');
   const B = new Date(b + 'T00:00:00');
   return Math.round((B - A) / 86_400_000);
+}
+
+/** Experience for a kill: an animal pays twice its hit points, a person theirs — never less than 3. */
+export function killXp(kind, hp = 0) {
+  return Math.max(3, Math.round(kind === 'mob' ? hp * 2 : hp));
 }
 
 function requiredXpForLevel(level) {
@@ -269,12 +271,10 @@ export class GamificationEngine {
       if (this.detectEnclosedSpace(world, x, y, z)) this.state.enclosedSpacesFound += 1;
     }
 
-    const countThisType = s.byType.get(type);
-    const spamFactor = countThisType > SPAM_SOFT_CAP ? Math.max(0.15, SPAM_SOFT_CAP / countThisType) : 1;
-    const varietyMultiplier = 1 + Math.min(s.distinctTypes.size - 1, 10) * 0.06;
-    let xp = Math.round(XP_BASE_PER_BLOCK * varietyMultiplier * spamFactor);
-    if (isFirstEver) xp += FIRST_TIME_TYPE_BONUS;
-    this.addXp(xp, isFirstEver ? `New block type: ${BLOCKS_BY_ID.get(type)?.name}` : null);
+    // No experience for placing (asked for directly: "remove the experience
+    // by placing and stuff, experience should come from goals ... Plus
+    // killing players and mobs should give exp too"). It's still counted,
+    // for the goals that ask how much you've built.
 
     this.checkAchievements({ type: 'place', blockId: type, x, y, z });
     this.checkChallenges();
@@ -294,6 +294,21 @@ export class GamificationEngine {
     this.checkChallenges();
   }
 
+  // ---- kills ----
+
+  /**
+   * Something you brought down yourself: an animal (`mob`, its hit points)
+   * or a person (`person`, theirs) — the harder to bring down, the more it
+   * pays. Your army, soldiers and guardian fight for you, but the
+   * experience is for what you do yourself. Nothing in a sandbox.
+   */
+  onKill({ kind, hp = 0, name = null } = {}) {
+    if (this.duilt?.sandbox) return 0;
+    const xp = killXp(kind, hp);
+    this.addXp(xp, name ? `Brought down ${name}` : null);
+    return xp;
+  }
+
   // ---- templates ----
 
   /**
@@ -305,7 +320,6 @@ export class GamificationEngine {
     this.state.templatesSaved += 1;
     this.state.largestTemplateBlocks = Math.max(this.state.largestTemplateBlocks, record.blockCount);
     this.state.templateNames.add(record.name.toLowerCase());
-    this.addXp(40 + Math.min(120, Math.round(record.blockCount / 4)), `Template: ${record.name}`);
     this.checkAchievements({ type: 'template:save', record });
   }
 
