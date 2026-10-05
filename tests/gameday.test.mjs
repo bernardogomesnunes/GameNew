@@ -46,6 +46,25 @@ ok('away overnight pays two game days, not a mountain', forestAfter(8 * 3600, ga
 ok('a registry left on real days still pays by real days', forestAfter(GAME_DAY_SECONDS).got.wood === undefined && forestAfter(6 * 3600).got.wood === 5);
 
 const duilt = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.url), 'utf8');
-ok('Duilt runs its buildings on game days', /new StructureRegistry\(\{ world, bus, inventory: this\.inventory, dayLengthSeconds: GAME_DAY_SECONDS \}\)/.test(duilt));
+ok('Duilt runs its buildings on game days, at PRODUCTION_PACE', /new StructureRegistry\(\{ world, bus, inventory: this\.inventory, dayLengthSeconds: GAME_DAY_SECONDS \/ PRODUCTION_PACE \}\)/.test(duilt));
+
+// Asked for directly: "Items are producing way too much now. Let's change this
+// to 1st level like 3 to 4 items each max".
+{
+  const { STRUCTURES, producesAt, intervalAt, PRODUCTION_PACE } = await import('../src/config/structures.js');
+  let most = 0, who = '';
+  for (const spec of STRUCTURES) {
+    const p = producesAt(spec, 0), e = intervalAt(spec, 0);
+    if (!e) continue;
+    for (const [id, n] of Object.entries(p)) {
+      const perGameDay = n * PRODUCTION_PACE * 86400 / e;
+      if (perGameDay > most) { most = perGameDay; who = `${spec.id} ${id}`; }
+    }
+  }
+  ok(`at its first level no building makes more than 4 of anything a game day (most: ${who}, ${most})`, most <= 4 && most >= 3);
+  const forest = forestAfter(GAME_DAY_SECONDS, { dayLengthSeconds: GAME_DAY_SECONDS / PRODUCTION_PACE }).got.wood ?? 0;
+  const fiveDays = (() => { const { reg, t0 } = forestAfter(0, { dayLengthSeconds: GAME_DAY_SECONDS / PRODUCTION_PACE }); let w = 0; for (let t = 5; t <= 5 * GAME_DAY_SECONDS; t += 5) w += reg.collect({ now: t0 + t * 1000 }).wood ?? 0; return w; })();
+  ok(`a forest makes 4 wood a game day at that pace (${fiveDays} over five days)`, fiveDays === 20 && forest <= 5);
+}
 
 process.exit(f ? 1 : 0);

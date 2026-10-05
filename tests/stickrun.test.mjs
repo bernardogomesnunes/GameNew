@@ -35,7 +35,8 @@ const RADIUS = 43;
 const runs = (dx, dy) => -dy >= RADIUS * reach && Math.abs(dx) <= -dy * spread;
 ok('the thumb at the rim, straight up, walks', !runs(0, -RADIUS));
 ok('a little over the rim still walks', !runs(0, -RADIUS * 1.2));
-ok('well past it, straight up, runs', runs(0, -RADIUS * 1.7));
+ok('well past it, straight up, runs', runs(0, -RADIUS * 2.1));
+ok('just past the old line no longer runs ("less sensitive to running")', !runs(0, -RADIUS * 1.7));
 ok('well past it but off to the side walks', !runs(RADIUS * 1.5, -RADIUS * 1.6));
 ok('backwards never runs', !runs(0, RADIUS * 2));
 
@@ -51,4 +52,9 @@ ok(`the column above it is smaller (${btn}px, was 56)`, btn < 56 && btn >= 44);
 ok('the bench and the buildings list keep their height while searching',
   /#panel-bench > \.panel, #panel-buildings > \.panel \{ height: min\(86vh, 760px\); \}/.test(css));
 
+// Asked for directly: "we are moving really fast, only in mobile, let's make
+// the controller bigger and less sensitive to running".
+const game2 = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+ok('a thumb walks at 80% of a key\'s pace, and runs at full', /const TOUCH_WALK = 0\.8;/.test(game2) && /const k = run \? 1 : TOUCH_WALK;/.test(game2));
+ok('the stick is bigger again (128px)', /--stick-size: 128px/.test(css));
 process.exit(f ? 1 : 0);

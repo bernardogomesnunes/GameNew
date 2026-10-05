@@ -6,7 +6,7 @@ import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { FARM_SEED_SLOTS } from '../duilt/Crops.js';
 import { CROPS } from '../config/crops.js';
-import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt } from '../config/structures.js';
+import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
 import { howToGet } from '../config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
@@ -77,7 +77,8 @@ function rateText(produces, everySeconds) {
   if (!produces || !Object.keys(produces).length || !everySeconds) return null;
   const daily = everySeconds > 300;
   const makes = Object.entries(produces)
-    .map(([k, v]) => `${daily ? Math.round(v * 86400 / everySeconds) : v} ${itemName(k).toLowerCase()}`)
+    // Per game day, at the pace buildings actually work (PRODUCTION_PACE).
+    .map(([k, v]) => `${daily ? Math.max(1, Math.round(v * PRODUCTION_PACE * 86400 / everySeconds)) : v} ${itemName(k).toLowerCase()}`)
     .join(', ');
   return `Makes ${makes} a ${daily ? 'day' : 'minute'}`;
 }

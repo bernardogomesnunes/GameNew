@@ -74,7 +74,9 @@ export const TEXTURES = {
   litter:    { litter: 70, marks: 30, flecks: EARTH_FLECKS, depth: 0.38, mottle: 0.14, speck: 0.08 },
   dirt:      { marks: 46, flecks: EARTH_FLECKS, depth: 0.34, mottle: 0.16, hue: 0.3, speck: 0.07 },
   farmland:  { furrows: 8, marks: 30, flecks: EARTH_FLECKS, depth: 0.42, mottle: 0.1, speck: 0.08 },
-  sand:      { ripples: 3, hue: 0.2, marks: 60, flecks: [[0.72, 0.66, 0.6], [1.08, 0.92, 0.88], [1.12, 1.12, 1.1], [0.95, 0.9, 1.0]], depth: 0.22, mottle: 0.06, speck: 0.05 },
+  // Quieter (asked for directly: "Sand texture needs to have less noise"):
+  // the ripples stay, a third of the grains, softer and finer speckle.
+  sand:      { ripples: 3, hue: 0.12, marks: 18, flecks: [[0.86, 0.8, 0.74], [1.06, 1.04, 1.02]], depth: 0.14, mottle: 0.04, speck: 0.015 },
   gravel:    { pebbles: 6, marks: 10, flecks: [[1.06, 1.0, 0.9], [0.9, 0.95, 1.06], [1.14, 1.06, 0.94], [0.72, 0.72, 0.75], [1.12, 1.1, 1.08]], depth: 0.42, speck: 0.05 },
   clay:      { strata: 4, marks: 16, flecks: [[1.06, 1.0, 0.94], [0.9, 0.94, 1.0]], depth: 0.16, mottle: 0.08, speck: 0.03 },
   stone:     { mottle: 0.16, hue: 0.5, marks: 40, flecks: STONE_FLECKS, cracks: 2, depth: 0.3, speck: 0.05, bump: 0.25 },

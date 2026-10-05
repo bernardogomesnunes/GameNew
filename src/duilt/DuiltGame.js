@@ -15,7 +15,7 @@ import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool } from '../config/items.js';
 import { MILESTONES } from '../config/skills.js';
-import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt } from '../config/structures.js';
+import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
 import { AIR } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
@@ -90,7 +90,9 @@ export class DuiltGame {
     this.inventory = new Inventory({ bus, endless: sandbox });
     this.territory = new Territory({ world, scene, bus, age, sandbox });
     // A building's day is a game day (see StructureRegistry's dayLengthSeconds).
-    this.structures = new StructureRegistry({ world, bus, inventory: this.inventory, dayLengthSeconds: GAME_DAY_SECONDS });
+    // At PRODUCTION_PACE: a building's day is five game days, so what it makes
+    // a game day is a fifth of what's written on it.
+    this.structures = new StructureRegistry({ world, bus, inventory: this.inventory, dayLengthSeconds: GAME_DAY_SECONDS / PRODUCTION_PACE });
     this.hunger = new Hunger(bus);
     // Ten hearts — see survival/Health.js. A sandbox never takes damage.
     this.health = new Health(bus);

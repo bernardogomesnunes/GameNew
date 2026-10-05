@@ -101,6 +101,8 @@ import { Guardian } from './world/Guardian.js';
 import { settlerName, settlerColour } from './config/settlers.js';
 
 const REACH = 7;
+/** How fast the touch stick walks at its rim, against a key's full walking pace. */
+const TOUCH_WALK = 0.8;
 /** The war only comes on while you're this near home — it's your settlement they want. */
 const WAR_HOME_RANGE = 220;
 /** Blows a block of a claimed wall, gatehouse or watchtower takes before it breaks. */
@@ -1061,8 +1063,12 @@ export class Game {
       },
       onCycleSymmetry: () => this.symmetryTool.cycle(),
       onMove: (x, z, run = false) => {
-        this.player.externalMove.x = x;
-        this.player.externalMove.z = z;
+        // A thumb walks a little slower than a key does: on a phone you
+        // steer with the same thumb, and full pace was too fast to place
+        // anything by ("we are moving really fast, only in mobile").
+        const k = run ? 1 : TOUCH_WALK;
+        this.player.externalMove.x = x * k;
+        this.player.externalMove.z = z * k;
         // Carried on up past the stick's rim, straight ahead: run. The stick
         // decides (UIManager.bindStick) — the rim itself is full walking pace.
         // No toast about it — asked for directly: "remove the toast about

@@ -149,6 +149,12 @@ export class Inventory {
    */
   roomFor(id, count = 1) {
     if (!ITEMS_BY_ID.has(id) || count <= 0) return 0;
+    // An endless bag (a sandbox) takes anything — `add` keeps one of each
+    // and calls the rest handed over. Reported directly: "Getting bag is
+    // full toast when there's clearly slots in my bag" — making a tool in
+    // Creative, where every slot holds one of something and a tool never
+    // stacks, counted no room at all.
+    if (this.endless) return count;
     const limit = stackLimit(id);
     let room = 0;
     for (const slot of this.slots) {
@@ -179,7 +185,8 @@ export class Inventory {
     if (this.endless) {
       if (this.countOf(id)) return 0;
       const i = this.firstEmpty();
-      if (i === -1) return count;
+      // No slot to show it in: an endless bag still takes it (see roomFor).
+      if (i === -1) return 0;
       this.slots[i] = { id, count: 1, wear: 0 };
       this.changed();
       return 0;

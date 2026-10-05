@@ -248,7 +248,7 @@ ok('the ones in the sheet stay solid', /\.touch-tray \.touch-btn \{ background: 
 // travel on speeds too fast to aim with.
 ok('a dragged pixel turns you a set amount, scaled by your sensitivity, like the mouse',
   /onLookDrag: \(dx, dy\) => \{\s*const k = TOUCH_LOOK \* \(this\.controls\.sensitivity \?\? 1\);\s*this\.player\.look\(dx \* k, dy \* k\);/.test(readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8'))
-  && /onMove[^\n]*curve: 1\.1/.test(ui));
+  && /onMove[^\n]*curve: 1\.6/.test(ui));
 
 // --- a phone on its side ------------------------------------------------------
 
