@@ -19,11 +19,19 @@ const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf
 
 {
   const hands = Object.fromEntries([...game.match(/const BARE_HAND_MS = \{([^}]*)\}/)[1].matchAll(/(\w+): (\d+)/g)].map((m) => [m[1], +m[2]]));
-  const normal = +game.match(/const NORMAL_BREAK_MS = (\d+);/)[1];
-  ok('by hand, everything is slower than a tool that is not wrong for it', Object.values(hands).every((ms) => ms > normal));
+  // Played on: "Breaking stuff generally is too fast, but with tools it's even
+  // faster ... I'm expecting the best pickaxe to have the speed of the stone
+  // axe." A tool only shortens bare hands' time, by its tier.
+  const speeds = Object.fromEntries([...game.match(/const TOOL_TIER_SPEED = \{([^}]*)\}/)[1].matchAll(/(\w+): ([\d.]+)/g)].map((m) => [m[1], +m[2]]));
   ok('soft things least, stone most', hands.plant < hands.dirt && hands.dirt < hands.wood && hands.wood < hands.stone);
-  ok('but still breakable — slower than the wrong tool is never the point', hands.stone <= +game.match(/const SLOW_BREAK_MS = (\d+);/)[1]);
-  ok('anything that is not a tool digs by hand', /if \(!isTool\(this\.selectedItemId\)\) return \{ ms: BARE_HAND_MS\[material\]/.test(game));
+  ok('nothing breaks in an instant any more: stone by hand takes seconds', hands.stone >= 2000 && hands.plant >= 400);
+  ok('each better tier is faster', speeds.stone > speeds.iron && speeds.iron > speeds.gold && speeds.gold > speeds.sky && speeds.sky === speeds.dark);
+  ok(`the best pickaxe on stone (${Math.round(hands.stone * speeds.sky)}ms) is about the stone axe on wood (${Math.round(hands.wood * speeds.stone)}ms) or quicker`,
+    hands.stone * speeds.sky <= hands.wood * speeds.stone);
+  ok('a suited tool reads its tier off the item', /const grade = ITEMS_BY_ID\.get\(this\.selectedItemId\)\?\.tier \?\? 'stone';/.test(game));
+  ok('a rest between blocks, longer without the right tool', /this\.breakRestUntil = performance\.now\(\) \+ \(tier === 'fast' \? BREAK_REST_MS\.right : BREAK_REST_MS\.other\);/.test(game)
+    && /if \(now < \(this\.breakRestUntil \?\? 0\)\) return;/.test(game));
+  ok('anything that is not a tool digs by hand', /if \(!isTool\(this\.selectedItemId\)\) return \{ ms: bare, blocked: false, tier: 'hands' \};/.test(game));
   ok('bare hands is not a tool, and no tool table knows it', !isTool(BARE_HANDS) && toolEffectiveness(BARE_HANDS, 'stone') === 'normal');
 }
 

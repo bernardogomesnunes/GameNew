@@ -120,7 +120,7 @@ const LOOK_HOLD_MS = 300;
  * through (Game.setBreaking's `once`), and this is only the backstop — past
  * the slowest block by hand (Game's BARE_HAND_MS) plus the hold's delay.
  */
-const TAP_FINISH_MS = 1600;
+const TAP_FINISH_MS = 2600;
 
 export class UIManager {
   constructor(root, { bus, game, callbacks }) {
