@@ -1221,7 +1221,12 @@ body.at-home #blocker { align-items: stretch; padding: 0; }
   text-shadow: 2px 2px 0 var(--px-ink), -1px -1px 0 var(--px-ink), 1px -1px 0 var(--px-ink), -1px 1px 0 var(--px-ink);
 }
 .home-card {
-  width: min(440px, 100%); max-height: 62%; display: flex; flex-direction: column;
+  /* All the room under the logo, not a fixed share of the screen: a step
+     that fits (asked for: "we have the space to have this pop up fully
+     showing all the content instead of needing to scroll") shows whole,
+     and only a screen too short for it scrolls. */
+  width: min(440px, 100%); max-height: none; flex: 0 1 auto; min-height: 0; margin-top: 12px;
+  display: flex; flex-direction: column;
   padding: 16px 14px 16px; pointer-events: auto;
   filter: drop-shadow(0 6px 0 rgba(43, 29, 18, 0.45));
 }
