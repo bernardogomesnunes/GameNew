@@ -81,7 +81,7 @@ const settle = (flow) => { let n = 0; while (flow.busy && n < 300) { flow.step()
   mesher.rebuild(world, chunk);
   let topAt = null;
   for (const m of chunk.mesh.values()) {
-    const P = m.geometry.attributes.position.array, N = m.geometry.attributes.normal.array;
+    const P = m.geometry.attributes.position.array, N = Float32Array.from(m.geometry.attributes.normal.array, (v) => v / 127);
     for (let i = 0; i < P.length; i += 3) {
       if (N[i + 1] !== 1) continue;
       const x = P[i] + 16, z = P[i + 2] + 16;

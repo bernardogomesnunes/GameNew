@@ -41,7 +41,7 @@ const LEAVES = 5, WOOD = 4, STONE = 3;
   const facesAt = (x, y) => {
     let n = 0;
     for (const m of chunk.mesh.values()) {
-      const P = m.geometry.attributes.position.array, N = m.geometry.attributes.normal.array;
+      const P = m.geometry.attributes.position.array, N = Float32Array.from(m.geometry.attributes.normal.array, (v) => v / 127);
       for (let q = 0; q < P.length; q += 12) {
         if (Math.abs(N[q]) === 1 && P[q] === x && P[q + 1] >= y && P[q + 1] <= y + 1) n++;
       }

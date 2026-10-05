@@ -116,7 +116,7 @@ for (const [name, id, top] of [['stair', STAIR, 2], ['slab', SLAB, 1.5]]) {
   const facesAt = (test) => {
     let n = 0;
     for (const m of chunk.mesh.values()) {
-      const P = m.geometry.attributes.position.array, N = m.geometry.attributes.normal.array;
+      const P = m.geometry.attributes.position.array, N = Float32Array.from(m.geometry.attributes.normal.array, (v) => v / 127);
       for (let q = 0; q < P.length; q += 12) if (test(P.subarray(q, q + 12), N.subarray(q, q + 3))) n++;
     }
     return n;

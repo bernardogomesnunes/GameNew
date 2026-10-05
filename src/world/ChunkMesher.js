@@ -503,10 +503,16 @@ class QuadBuffer {
     const q = this.quads;
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(this.position.slice(0, q * 12), 3));
-    geo.setAttribute('normal', new THREE.BufferAttribute(this.normal.slice(0, q * 12), 3));
+    // Normals in a byte each, not a float: a quarter of the memory, and a
+    // face's direction needs no more than 1/127 to light right. The layer is
+    // a tile number under 256 — a byte too. Graphics memory is what a phone
+    // runs out of first (reported directly: a white screen after a while).
+    const nf = this.normal, normal = new Int8Array(q * 12);
+    for (let k = 0; k < normal.length; k++) normal[k] = Math.round(nf[k] * 127);
+    geo.setAttribute('normal', new THREE.BufferAttribute(normal, 3, true));
     geo.setAttribute('color', new THREE.BufferAttribute(this.color.slice(0, q * 12), 3));
     geo.setAttribute('tileUv', new THREE.BufferAttribute(this.uv.slice(0, q * 8), 2));
-    geo.setAttribute('layer', new THREE.BufferAttribute(this.layer.slice(0, q * 4), 1));
+    geo.setAttribute('layer', new THREE.BufferAttribute(Uint8Array.from(this.layer.subarray(0, q * 4)), 1));
     // Winding is already baked into the vertex order (see emitQuad), so the
     // index is the same 0-1-2 0-2-3 pattern for every quad.
     const index = q * 4 > 65535 ? new Uint32Array(q * 6) : new Uint16Array(q * 6);
@@ -559,6 +565,14 @@ export class ChunkMesher {
     this.scene = scene;
     this.tone = [0, 0, 0]; // leafTone's answer, reused rather than allocated per face
     this.activeMeshes = new Set();
+    /**
+     * Whether a chunk gets its deep mesh (the sealed caves — see skyFill).
+     * Game says yes only near the player: the deep meshes of every chunk to
+     * the horizon were two thirds of all the geometry, never drawn, and the
+     * graphics memory they took is what ran a phone out (a white screen
+     * after a while). Null builds them everywhere.
+     */
+    this.deepNear = null;
     this.origin = [0, 0, 0];
     /** Shadow where blocks meet — the graphics setting; see AO_LIGHT. */
     this.ao = true;
@@ -605,6 +619,18 @@ export class ChunkMesher {
       this.disposeMesh(chunk.propMesh);
       this.activeMeshes.delete(chunk.propMesh);
       chunk.propMesh = null;
+    }
+  }
+
+  /** Lets go of a chunk's deep mesh; Game has it rebuilt when you come near again. */
+  dropDeep(chunk) {
+    chunk.deepSkipped = true;
+    if (!chunk.mesh) return;
+    for (const [key, mesh] of chunk.mesh) {
+      if (!mesh.userData.deep) continue;
+      this.disposeMesh(mesh);
+      this.activeMeshes.delete(mesh);
+      chunk.mesh.delete(key);
     }
   }
 
@@ -728,7 +754,10 @@ export class ChunkMesher {
     this.emitRoofSides(byType, lo, top);
 
     const meshes = new Map();
+    const wantDeep = !this.deepNear || this.deepNear(chunk);
+    chunk.deepSkipped = !wantDeep;
     for (const [deep, types] of [[false, byType], [true, deepByType]]) {
+      if (deep && !wantDeep) continue;
       for (const [key, buf] of types) {
         // The surface detail rides along as tileUv (where on its tile each
         // corner sits) and layer (which material's tile). A quad that greedy

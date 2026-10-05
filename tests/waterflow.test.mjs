@@ -143,7 +143,7 @@ function settle(flow, max = 200) {
   const chunk = world.getChunk(1, 1);
   mesher.rebuild(world, chunk);
   const water = chunk.mesh.get(WATER);
-  const P = water.geometry.attributes.position.array, N = water.geometry.attributes.normal.array;
+  const P = water.geometry.attributes.position.array, N = Float32Array.from(water.geometry.attributes.normal.array, (v) => v / 127);
   let low = null, high = null;
   for (let i = 0; i < P.length; i += 3) {
     if (N[i + 1] !== 1) continue;

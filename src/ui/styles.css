@@ -2007,3 +2007,18 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 .evolve-diy { margin-top: 8px; }
 .evolve-diy summary { cursor: pointer; font-size: 13px; color: var(--px-text-dim, #6b5236); padding: 4px 0; }
 .evolve-diy .evolve-todo li { display: list-item; margin-left: 18px; list-style: disc; }
+
+/* The game stopped (Game.crashed): over everything, never a white screen. */
+#crash {
+  position: fixed; inset: 0; z-index: 10000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px; background: rgba(6, 10, 15, 0.88); font-family: var(--px-font);
+}
+#crash .crash-card {
+  max-width: 360px; width: 100%; padding: 20px; text-align: center;
+  background: var(--panel-solid); color: var(--text);
+  border: 2px solid var(--panel-border-strong); border-radius: var(--radius);
+}
+#crash h2 { margin: 0 0 8px; }
+#crash button { width: 100%; margin-top: 12px; font-family: inherit; }
+#crash .crash-why { margin: 12px 0 0; font-size: 12px; color: var(--text-dim); overflow-wrap: anywhere; }
