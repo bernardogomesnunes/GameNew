@@ -47,12 +47,12 @@ function door(dx, dy, dz) {
  * roof you'd get pointing the tool at it. The ridge runs the long way; the
  * gable ends are filled in the building's own walling.
  */
-function gable(x0, z0, w, d, dy, tile, wall) {
+function gable(x0, z0, w, d, dy, tile, wall, turn = w > d ? 1 : 0) {
   const spans = new Map();
   for (let x = 0; x < w; x++) {
     for (let z = 0; z < d; z++) spans.set(`${x0 + x},${z0 + z}`, { xm: x + 1, xp: w - x, zm: z + 1, zp: d - z });
   }
-  return roofBlocks({ spans }, { shape: ROOFS_BY_ID.get('gable'), turn: w > d ? 1 : 0 })
+  return roofBlocks({ spans }, { shape: ROOFS_BY_ID.get('gable'), turn })
     .map((b) => ({ dx: b.x, dy: dy + b.dy, dz: b.z, type: b.slope ? roofTypeFor(tile, b) : wall }));
 }
 
@@ -83,20 +83,70 @@ function shifted(blocks, dx0, dz0) {
  * the limit, so these are all a size up from where they look like they should
  * be.
  */
-function room({ w, h, wall, floor = null, roof = wall, door: hasDoor = true, tiles = null }) {
-  const blocks = [];
-  if (floor != null) blocks.push(...slab(0, 0, w, w, 0, floor));
+function room({ w, h, wall, floor = null, roof = wall, door: hasDoor = true, tiles = null, chimney = null }) {
+  // Asked for directly: "Detail the building, they're all looking too
+  // boxy." So a room is drawn the way it would be built: a cobble plinth
+  // under the walls, posts up the corners (logs on timber, cobble quoins on
+  // stone), framed windows in every wall long enough to take one, a roof
+  // whose eaves overhang the walls by a block all round, and a step at the
+  // door. The eaves overhang the sloped sides; the gable ends stand flush on
+  // the walls, so there's no gap under them to see into the loft through.
+  // The overhang is why everything sits one block in from the corner.
+  const g = grid();
+  const o = tiles != null ? 1 : 0;                     // room for the eaves
   const base = floor != null ? 1 : 0;
-  for (let dy = base; dy < base + h; dy++) blocks.push(...ring(0, 0, w, w, dy, wall));
-  blocks.push(...slab(0, 0, w, w, base + h, roof));
-  if (tiles != null) blocks.push(...gable(0, 0, w, w, base + h + 1, tiles, wall));
-  if (!hasDoor) return blocks;
-  const mid = Math.floor(w / 2);
-  return [
-    ...blocks.filter((b) => !(b.dz === 0 && b.dx === mid && b.dy >= base && b.dy < base + Math.min(2, h))),
-    ...(h >= 2 ? door(mid, base, 0) : []),
-  ];
+  const x0 = o, z0 = o, x1 = o + w - 1, z1 = o + w - 1;
+  const post = POST_FOR[wall] ?? wall;
+  const plinth = h >= 2 ? (PLINTH_FOR[wall] ?? wall) : wall;
+  if (floor != null) g.box(x0, 0, z0, x1, 0, z1, floor);
+  for (let y = base; y < base + h; y++) {
+    const course = y === base ? plinth : wall;
+    for (let x = x0; x <= x1; x++) { g.put(x, y, z0, course); g.put(x, y, z1, course); }
+    for (let z = z0; z <= z1; z++) { g.put(x0, y, z, course); g.put(x1, y, z, course); }
+  }
+  for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) g.box(x, base, z, x, base + h - 1, z, post);
+  // Windows, above the plinth: one in the middle of each side and the back,
+  // two once a wall is long enough, and either side of the door on a wide
+  // front. A room only one course high has no wall above its plinth for them.
+  // A tall room gets an upper row too, so its walls aren't blank overhead.
+  const rows = h >= 4 ? [base + 1, base + 3] : h >= 2 ? [base + 1] : [];
+  for (const wy of rows) {
+    const spots = w >= 7 ? [2, w - 3] : w >= 5 ? [Math.floor(w / 2)] : [];
+    for (const s of spots) {
+      g.put(x0, wy, z0 + s, WINDOW + 1);
+      g.put(x1, wy, z0 + s, WINDOW + 1);
+      g.put(x0 + s, wy, z1, WINDOW);
+    }
+    if (w >= 8 || wy > base + 1) for (const s of w >= 7 ? [2, w - 3] : [Math.floor(w / 2)]) g.put(x0 + s, wy, z0, WINDOW);
+  }
+  g.box(x0, base + h, z0, x1, base + h, z1, roof);
+  if (tiles != null) {
+    const tiles_ = gable(0, z0, w + 2, w, base + h + 1, tiles, wall, 0);
+    g.add(chimney ? withChimney(tiles_, x1 - 1, z1 - 1, base + h + 1, chimney.h ?? 3, chimney.type ?? BRICK) : tiles_);
+  }
+  if (hasDoor) {
+    const mid = x0 + Math.floor(w / 2);
+    for (let y = base; y < base + Math.min(2, h); y++) g.put(mid, y, z0, null);
+    if (h >= 2) g.add(door(mid, base, z0));
+    // A step up to the door, out under the eaves.
+    if (o && base) g.put(mid, 0, z0 - 1, turned(STEP_FOR[wall] ?? 30, 2));
+  }
+  return g.blocks();
 }
+
+/**
+ * What stands at a room's corners, by its walling: logs at plank walls,
+ * cobble quoins at stone and brick. Log walls are their own posts.
+ */
+const POST_FOR = { 7: 4, 3: 8, 9: 8 };
+/**
+ * The course under the walls. Stone under log walls, because a log cabin
+ * is a first-age house and cobblestone isn't cut until the second; cobble
+ * under the rest.
+ */
+const PLINTH_FOR = { 7: 8, 4: 3, 3: 8, 9: 3 };
+/** The step at the door: plank stairs at a timber door, stone at a stone one. */
+const STEP_FOR = { 7: 30, 4: 30, 3: 29, 9: 29 };
 
 /** A trunk with a leafy crown, at a local offset. */
 function tree(ox, oz, h = 4) {
@@ -134,27 +184,15 @@ function forestBlocks() {
 }
 
 function houseBlocks() {
-  // A 5x5 shell, four high, with a doorway punched in one wall.
-  const blocks = [];
-  for (let dx = 0; dx < 5; dx++) {
-    for (let dz = 0; dz < 5; dz++) {
-      for (let dy = 0; dy < 4; dy++) {
-        const shell = dx === 0 || dx === 4 || dz === 0 || dz === 4 || dy === 0 || dy === 3;
-        if (shell) blocks.push({ dx, dy, dz, type: WOOD });
-      }
-    }
-  }
-  // The doorway, with its door. A house needs a way in, and the rules only
-  // ask that the room above it stays sealed.
+  // A log cabin: a plank floor, a stone plinth, log walls with a window in
+  // each side and the back, a slate roof over the eaves and a stone chimney
+  // — every block of it a first-age thing (window: planks and sand, at
+  // the bench). See room.
   return [
-    ...blocks.filter((b) => !(b.dz === 0 && b.dx === 2 && (b.dy === 1 || b.dy === 2))),
-    ...door(2, 1, 0),
-    ...gable(0, 0, 5, 5, 4, SLATE, WOOD),
+    ...room({ w: 5, h: 3, wall: WOOD, floor: PLANKS, roof: WOOD, tiles: SLATE, chimney: { h: 3, type: STONE } }),
     // Somewhere to sleep, and a painting over it — where you wake after a
-    // fall, once you've chosen it (playtest, P1). Both are first-age things;
-    // windows and the rest come with the townhouse.
-    ...bed(1, 1, 2, 2),
-    { dx: 3, dy: 2, dz: 3, type: PAINTING + 2 },
+    // fall, once you've chosen it (playtest, P1).
+    ...shifted([...bed(1, 1, 2, 2), { dx: 3, dy: 2, dz: 3, type: PAINTING + 2 }], 1, 1),
   ];
 }
 
@@ -173,7 +211,9 @@ function quarryBlocks() {
 
 /** A stone hearth with a sealed cobble chamber standing on it. */
 function kilnBlocks() {
-  const blocks = [...slab(0, 0, 5, 5, 0, DIRT)];
+  // On a stone hearth rather than bare earth, with a stack of firewood
+  // against it (asked for: "they're all looking too boxy").
+  const blocks = [...slab(0, 0, 5, 5, 0, STONE), ...woodpile(0, 0)];
   blocks.push(...slab(1, 1, 3, 3, 1, COBBLE));
   blocks.push(...ring(1, 1, 3, 3, 2, COBBLE));
   blocks.push(...ring(1, 1, 3, 3, 3, COBBLE));
@@ -185,7 +225,7 @@ function kilnBlocks() {
 
 /** A taller, thicker-walled kiln — the chamber holds three cells instead of two. */
 function foundryBlocks() {
-  const blocks = [...slab(0, 0, 5, 5, 0, STONE)];
+  const blocks = [...slab(0, 0, 5, 5, 0, STONE), ...woodpile(0, 0)];
   blocks.push(...slab(1, 1, 3, 3, 1, STONE));
   blocks.push(...ring(1, 1, 3, 3, 2, STONE));
   blocks.push(...ring(1, 1, 3, 3, 3, STONE));
@@ -194,6 +234,14 @@ function foundryBlocks() {
   // Slate over it, and a taller chimney than the kiln's — it runs hotter.
   blocks.push(...withChimney(gable(1, 1, 3, 3, 6, SLATE, STONE), 3, 3, 6, 3, BRICK));
   return blocks;   // three cells left, at (2,2,2), (2,2,3) and (2,2,4)
+}
+
+/** Firewood stacked on its side in a corner: three logs and one on top. */
+function woodpile(dx, dz) {
+  return [
+    { dx, dy: 1, dz, type: WOOD }, { dx: dx + 1, dy: 1, dz, type: WOOD },
+    { dx, dy: 1, dz: dz + 1, type: WOOD }, { dx, dy: 2, dz, type: WOOD },
+  ];
 }
 
 /**
@@ -406,14 +454,12 @@ function monumentBlocks() {
 
 /** A bigger, better-finished room than a house's — three households' worth. */
 function townhouseBlocks() {
-  // Furnished (playtest, P1): framed windows front, back and sides, two
-  // beds, a table with chairs, a rug, a lantern and a painting.
-  const shell = room({ w: 8, h: 3, wall: PLANKS, floor: STONE, tiles: TILE });
-  const windows = [[2, 2, 7, 0], [5, 2, 7, 0], [0, 2, 3, 1], [0, 2, 5, 1], [7, 2, 3, 1], [7, 2, 5, 1]];
-  const at = new Set(windows.map(([x, y, z]) => `${x},${y},${z}`));
-  return [
-    ...shell.filter((b) => !at.has(`${b.dx},${b.dy},${b.dz}`)),
-    ...windows.map(([dx, dy, dz, f]) => ({ dx, dy, dz, type: WINDOW + f })),
+  // Furnished (playtest, P1): two beds, a table with chairs, a rug, a
+  // lantern and a painting. The room brings its own windows, front, back
+  // and sides, and a chimney; the furniture sits a block in, inside the
+  // eaves (see room).
+  const shell = room({ w: 8, h: 3, wall: PLANKS, floor: STONE, tiles: TILE, chimney: { h: 3 } });
+  return [...shell, ...shifted([
     ...bed(2, 1, 5, 2),
     ...bed(5, 1, 5, 2),
     { dx: 5, dy: 1, dz: 2, type: OAK_TABLE },
@@ -423,7 +469,7 @@ function townhouseBlocks() {
     { dx: 4, dy: 1, dz: 3, type: RED_RUG },
     { dx: 1, dy: 1, dz: 1, type: LANTERN_BLOCK },
     { dx: 3, dy: 2, dz: 6, type: PAINTING + 2 },
-  ];
+  ], 1, 1)];
 }
 
 /** A bed with its foot at (dx, dy, dz), facing `f` — both halves (playtest, P1). */
@@ -455,16 +501,26 @@ function militaryBlocks() {
  * rather than one room wearing four labels.
  */
 function villageBlocks() {
-  const house = () => room({ w: 5, h: 2, wall: WOOD, floor: PLANKS, tiles: TILE });
-  const shed = () => room({ w: 5, h: 2, wall: PLANKS, floor: PLANKS, tiles: TILE });
-  return [
-    ...shifted(farmBlocks(), 0, 0),
-    ...shifted(forestBlocks(), 0, 5),
-    ...shifted(house(), 9, 3),
-    ...shifted(house(), 9, 9),
-    ...shifted(house(), 15, 3),
-    ...shifted(shed(), 15, 9),
-  ];
+  // Each house a cabin with its own plinth, windows, eaves and chimney (see
+  // room), along a gravel lane.
+  // The fourth building, the biggest, is the village's hall — a village
+  // comes with a town hall's storage controller (structures.js), so it has
+  // somewhere to keep it, with a lantern on a post at its door.
+  const house = () => room({ w: 5, h: 2, wall: WOOD, floor: PLANKS, tiles: TILE, chimney: { h: 2, type: STONE } });
+  const hall = () => room({ w: 6, h: 3, wall: PLANKS, floor: COBBLE, tiles: SLATE });
+  const g = grid();
+  g.add(farmBlocks());
+  g.add(shifted(forestBlocks(), 0, 6));
+  // The lane, along the front of the houses and down between them.
+  g.box(8, 0, 7, 25, 0, 7, GRAVEL);
+  g.box(16, 0, 0, 16, 0, 16, GRAVEL);
+  g.add(shifted(house(), 9, 0));
+  g.add(shifted(house(), 9, 8));
+  g.add(shifted(house(), 17, 0));
+  g.add(shifted(hall(), 17, 8));
+  g.box(25, 1, 7, 25, 2, 7, FENCE);
+  g.put(25, 3, 7, LANTERN);
+  return g.blocks();
 }
 
 // ---- Defence (White path) ------------------------------------------------------
@@ -760,8 +816,8 @@ export const STARTER_DESIGNS = [
     note: 'Stand inside it to study.',
     blocks: [
       ...room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: SLATE }),
-      // Two desks to study at.
-      { dx: 2, dy: 1, dz: 3, type: 31 }, { dx: 3, dy: 1, dz: 3, type: 31 },
+      // Two desks to study at, inside the eaves.
+      { dx: 3, dy: 1, dz: 4, type: 31 }, { dx: 4, dy: 1, dz: 4, type: 31 },
     ],
   },
   {
@@ -946,6 +1002,9 @@ for (const d of STARTER_DESIGNS) {
     if (b.dz > mz) mz = b.dz;
   }
   d.extent = { x: mx, y: my, z: mz };
+  // Read off the blocks too, for the same reason: eaves made every roofed
+  // design two wider than the numbers once written beside it.
+  d.footprint = `${mx + 1} × ${mz + 1}`;
   d.cost = costOf(d.blocks);
 }
 
