@@ -164,6 +164,16 @@ export const PANELS = [
     // the same question C already answers, so C answers it here too.
   },
   {
+    id: 'panel-trade',
+    title: 'Trader',
+    subId: 'trade-sub',
+    wide: true,
+    layer: 'duilt',
+    mode: 'duilt',
+    label: 'Trader',
+    // No key: you open a stall by pointing at whoever keeps it.
+  },
+  {
     id: 'panel-finish',
     title: 'Finished',
     subId: 'finish-sub',

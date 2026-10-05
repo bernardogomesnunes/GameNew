@@ -16,9 +16,10 @@ import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool } from '../config/items.js';
 import { MILESTONES } from '../config/skills.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, PRODUCTION_PACE } from '../config/structures.js';
-import { AIR } from '../config/blocks.js';
+import { AIR, BLOCKS_BY_ID } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
+import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN } from '../config/traders.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { ageOf, ageIntro, FINAL_AGE } from '../config/ages.js';
@@ -750,6 +751,96 @@ export class DuiltGame {
     if (!r) return null;
     if (this.army.sworn && r.replaced) this.army.total = Math.min(ARMY_SIZE, this.army.total + r.replaced);
     return r;
+  }
+
+  /**
+   * The traders living in your markets (batch: "the trader ... a goblin
+   * looking creature ... to start the market only has one trader, but
+   * evolving it will lead to have more. As residents of the city"): one per
+   * level of each market, standing about inside it. Worked out from the
+   * market rather than saved — a market's level is who lives there — and
+   * kept between frames so they stay where they stood.
+   */
+  marketTraders() {
+    const cache = this._traders ?? (this._traders = new Map());
+    const out = [];
+    for (const s of this.structures.list()) {
+      if (s.type !== 'market' || !s.valid) continue;
+      const r = s.region;
+      const key = `${s.tier ?? 0}:${r.minX},${r.minY},${r.minZ},${r.maxX},${r.maxY},${r.maxZ}`;
+      let entry = cache.get(s.id);
+      if (!entry || entry.key !== key) {
+        entry = { key, people: this.placeTraders(s, tradersFor(s.tier ?? 0)) };
+        cache.set(s.id, entry);
+      }
+      out.push(...entry.people);
+    }
+    return out;
+  }
+
+  /**
+   * Spots to stand on inside a market, a couple of blocks apart: on a whole
+   * floor block (not a counter), under the roof before out in the yard, and
+   * nearest the middle first. A rug is somewhere to stand, too.
+   */
+  placeTraders(s, traders) {
+    const r = s.region, w = this.world;
+    const cx = (r.minX + r.maxX) / 2, cz = (r.minZ + r.maxZ) / 2;
+    const shape = (id) => BLOCKS_BY_ID.get(id)?.shape;
+    const free = (id) => id === AIR || shape(id) === 'rug';
+    const ground = (id) => id !== AIR && id !== 11 && id !== 45 && !shape(id);
+    const roofed = (x, y, z) => {
+      for (let dy = 2; dy <= 6; dy++) if (w.getBlock(x, y + dy, z) !== AIR) return true;
+      return false;
+    };
+    const spotsAt = [];
+    for (let x = r.minX; x <= r.maxX; x++) {
+      for (let z = r.minZ; z <= r.maxZ; z++) {
+        // The ground floor only: never up on a ceiling, or on the roof.
+        for (let y = r.minY; y <= Math.min(r.maxY, r.minY + 2); y++) {
+          if (ground(w.getBlock(x, y - 1, z)) && free(w.getBlock(x, y, z)) && free(w.getBlock(x, y + 1, z))) {
+            spotsAt.push({ x, y, z, inside: roofed(x, y, z), d: Math.hypot(x - cx, z - cz) });
+            break;
+          }
+        }
+      }
+    }
+    spotsAt.sort((a, b) => (b.inside - a.inside) || (a.d - b.d));
+    const spots = [];
+    for (const c of spotsAt) {
+      if (spots.length >= traders.length) break;
+      if (spots.some((p) => Math.hypot(p.x - c.x, p.z - c.z) < 2.5)) continue;
+      spots.push(c);
+    }
+    return traders.slice(0, spots.length).map((t, i) => ({
+      kind: 'trader',
+      trader: t.id,
+      name: t.name,
+      x: spots[i].x + 0.5, y: spots[i].y, z: spots[i].z + 0.5,
+      colour: t.coat,
+      helm: t.cap,
+      skin: GOBLIN_SKIN,
+      facing: 0,
+      marketId: s.id,
+    }));
+  }
+
+  /**
+   * Buys goods number `index` from a trader, for coins. Returns { ok, reason }
+   * — and says what is short, the same as the bench does.
+   */
+  buyFrom(traderId, index) {
+    const t = TRADERS_BY_ID.get(traderId);
+    const g = t?.goods[index];
+    if (!g) return { ok: false, reason: 'They have nothing like that.' };
+    const [id, n, price] = g;
+    const have = this.inventory.countOf('coin');
+    if (!this.sandbox && have < price) return { ok: false, reason: `Needs ${price - have} more coin${price - have === 1 ? '' : 's'}.` };
+    if (this.inventory.roomFor(id, n) < n) return { ok: false, reason: 'Your bag is full — nowhere to put it.' };
+    if (!this.sandbox) this.inventory.remove('coin', price);
+    this.inventory.add(id, n);
+    this.bus?.emit('duilt:bought', { trader: traderId, itemId: id, count: n, price });
+    return { ok: true, id, n, price, name: itemName(id) };
   }
 
   /** What a building makes that depends on what's in it: a pen's animals, a farm's crops. */

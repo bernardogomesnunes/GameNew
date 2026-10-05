@@ -12,7 +12,7 @@
  */
 
 import { ITEM_FOR_BLOCK } from './items.js';
-import { doorBlock, roofBlock, turned, BED, BED_HEAD, FACING_STEP, PAINTING, WEAPON_RACK, TRAINING_DUMMY, ARCHERY_TARGET } from './blocks.js';
+import { doorBlock, roofBlock, turned, CHEST, BED, BED_HEAD, FACING_STEP, PAINTING, WEAPON_RACK, TRAINING_DUMMY, ARCHERY_TARGET } from './blocks.js';
 import { ROOFS_BY_ID } from './roofs.js';
 import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
 
@@ -202,17 +202,53 @@ function withChimney(roof, dx, dz, dy, h, type) {
   return [...roof.filter((b) => !(b.dx === dx && b.dz === dz)), ...chimney];
 }
 
-/** A roofed stall on a laid floor, with the rest of the square left open. */
+/**
+ * A market hall (batch: "a market building should be improved to be bigger,
+ * and a bit more detailed. Windows, different areas inside. One that is
+ * important is the place where a new mob will live. The trader"). Outside
+ * is -z: a cobbled yard with two awninged stalls, then the hall — framed
+ * windows all round, a chandelier, a counter with the stock chest behind it
+ * on the left, and on the right the traders' corner, rugged and fenced off,
+ * where the goblins who keep the market live (config/traders.js).
+ */
 function marketBlocks() {
-  const blocks = [...slab(0, 0, 7, 7, 0, PLANKS)];
-  blocks.push(...ring(1, 1, 5, 5, 1, PLANKS));
-  blocks.push(...ring(1, 1, 5, 5, 2, PLANKS));
-  blocks.push(...slab(1, 1, 5, 5, 3, PLANKS));
-  return [
-    ...blocks.filter((b) => !(b.dz === 1 && b.dx === 3 && (b.dy === 1 || b.dy === 2))),
-    ...door(3, 1, 1),
-    ...gable(1, 1, 5, 5, 4, TILE, PLANKS),
-  ];
+  const g = grid();
+  const W = 11, Z0 = 4, Z1 = 10;                                 // the hall, z 4..10
+  // The yard, and a stall either side of the way in.
+  g.box(0, 0, 0, W - 1, 0, Z0 - 1, COBBLE);
+  for (const x0 of [0, 8]) {
+    for (const x of [x0, x0 + 2]) g.box(x, 1, 0, x, 2, 0, WOOD);
+    g.box(x0, 3, 0, x0 + 2, 3, 1, PLANKS);
+    g.put(x0 + 1, 1, 0, OAK_TABLE_);
+  }
+  // The hall: floor, walls with posts at the corners and either side of the
+  // door, a ceiling, and a tiled roof.
+  g.box(0, 0, Z0, W - 1, 0, Z1, PLANKS);
+  for (let y = 1; y <= 3; y++) {
+    for (let x = 0; x < W; x++) { g.put(x, y, Z0, PLANKS); g.put(x, y, Z1, PLANKS); }
+    for (let z = Z0; z <= Z1; z++) { g.put(0, y, z, PLANKS); g.put(W - 1, y, z, PLANKS); }
+  }
+  for (const [x, z] of [[0, Z0], [W - 1, Z0], [0, Z1], [W - 1, Z1], [4, Z0], [6, Z0]]) g.box(x, 1, z, x, 3, z, WOOD);
+  g.box(0, 4, Z0, W - 1, 4, Z1, PLANKS);
+  g.add(gable(0, Z0, W, Z1 - Z0 + 1, 5, TILE, PLANKS));
+  // Windows: two at the front, three at the back, two each end.
+  for (const x of [2, 8]) g.put(x, 2, Z0, WINDOW);
+  for (const x of [2, 5, 8]) g.put(x, 2, Z1, WINDOW);
+  for (const z of [6, 8]) { g.put(0, 2, z, WINDOW + 1); g.put(W - 1, 2, z, WINDOW + 1); }
+  g.add(door(5, 1, Z0));
+  // The counter, on the left, with the stock chest behind it.
+  for (const x of [1, 2, 3]) g.put(x, 1, 7, OAK_TABLE_);
+  g.put(2, 2, 7, LANTERN);
+  g.put(1, 1, 9, CHEST);
+  // The traders' corner, on the right: rugs, a seat, a chest of their own,
+  // fenced off from the way through.
+  for (const x of [7, 8, 9]) for (const z of [7, 8, 9]) g.put(x, 1, z, RED_RUG);
+  g.put(9, 1, 9, turned(OAK_CHAIR, 2));
+  g.put(9, 1, 5, CHEST);
+  for (const z of [7, 8, 9]) g.put(6, 1, z, FENCE);
+  // A light over the middle, hung from the ceiling.
+  g.put(5, 3, 7, CHANDELIER);
+  return g.blocks();
 }
 
 /** A working with timber holding the roof up. Aim it deep — the rules check. */
@@ -675,9 +711,9 @@ export const STARTER_DESIGNS = [
   {
     id: 'starter_market',
     structure: 'market',
-    name: 'Starter market',
-    size: 7,
-    footprint: '7 × 7',
+    name: 'Market hall',
+    size: 11,
+    footprint: '11 × 11',
     note: 'Put it among your buildings — it will not count on its own in a field.',
     blocks: marketBlocks(),
   },

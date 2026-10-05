@@ -23,9 +23,9 @@ const MAX = 64;
  * tool in hand"), all one instanced mesh, this many slots a person. A part
  * someone hasn't got is scaled to nothing.
  */
-const SLOTS = 15;
+const SLOTS = 17;
 const EYE_L = 0, EYE_R = 1, MOUTH = 2, HAND_L = 3, HAND_R = 4, BOOT_L = 5, BOOT_R = 6, BELT = 7,
-  HAT = 8, HAT_EXTRA = 9, PLUME = 10, CAPE = 11, BEARD = 12, GEAR = 13, GEAR_2 = 14;
+  HAT = 8, HAT_EXTRA = 9, PLUME = 10, CAPE = 11, BEARD = 12, GEAR = 13, GEAR_2 = 14, EAR_L = 15, EAR_R = 16;
 const EYE = 0x231c22, BOOT = 0x3a2a20, BELT_LEATHER = 0x2e2620, STEEL = 0xc9ced6, WOOD = 0x6b4a2e, GOLD = 0xe8c04f;
 const NOTHING = new THREE.Matrix4().makeScale(0, 0, 0);
 const HURT_RED = new THREE.Color(0xd23a2a);   // beds run out long before this; the cap is just for the buffer
@@ -157,7 +157,8 @@ export class SettlerView {
       this.limbs.setColorAt(i * 4, this._colour);
       this.limbs.setColorAt(i * 4 + 1, this._colour);
       const who = personHash(p);
-      this._colour.setHex(SKINS[who % SKINS.length]);
+      // Their own skin, if they have one — a market's goblin traders are green.
+      this._colour.setHex(p.skin ?? SKINS[who % SKINS.length]);
       if (p.hurt > 0) this._colour.lerp(HURT_RED, 0.5);
       this.heads.setColorAt(i, this._colour);
       // A soldier's helm (or an archer's hood) where hair would be.
@@ -185,7 +186,7 @@ export class SettlerView {
     const o = outfitOf(p) ?? {};
     const parts = this.parts, base = this._m, at = i * SLOTS;
     const headW = width * 0.72, hc = legH + bodyH + headH / 2, front = headW / 2;
-    const skin = SKINS[who % SKINS.length];
+    const skin = p.skin ?? SKINS[who % SKINS.length];
     const put = (slot, x, y, z, sx, sy, sz, hex) => {
       this._pos.set(x, y, z).applyQuaternion(this._q);
       base.compose(this._pos.set(p.x + this._pos.x, p.y + this._pos.y, p.z + this._pos.z), this._q, this._size.set(sx, sy, sz));
@@ -253,9 +254,20 @@ export class SettlerView {
       put(CAPE, 0, legH + bodyH - capeH / 2, -width * 0.34 - 0.025, width * 0.96, capeH, 0.04, o.cape);
     } else none(CAPE);
 
+    // A goblin's ears, out to the sides and up, and a long nose where a
+    // beard would go (the market's traders — config/traders.js).
+    if (o.ears) {
+      this._colour.setHex(skin).offsetHSL(0, 0, -0.06);
+      const ear = this._colour.getHex();
+      put(EAR_L, -headW * 0.68, hc + headH * 0.12, -headW * 0.05, headW * 0.42, headH * 0.16, 0.07, ear);
+      put(EAR_R, headW * 0.68, hc + headH * 0.12, -headW * 0.05, headW * 0.42, headH * 0.16, 0.07, ear);
+    } else { none(EAR_L); none(EAR_R); }
     // A beard: theirs always, or one man in four among everybody else.
     const beard = o.beard ?? (!o.hat && ((who >> 5) % 4 === 0) ? hairHex : null);
-    if (beard != null) put(BEARD, 0, hc - headH * 0.32, front + 0.015, headW * 0.82, headH * 0.4, 0.06, beard);
+    if (o.nose) {
+      this._colour.setHex(skin).offsetHSL(0, 0.04, -0.1);
+      put(BEARD, 0, hc - headH * 0.06, front + 0.07, 0.1, 0.11, 0.16, this._colour.getHex());
+    } else if (beard != null) put(BEARD, 0, hc - headH * 0.32, front + 0.015, headW * 0.82, headH * 0.4, 0.06, beard);
     else none(BEARD);
 
     // What's in the right hand, swinging with the arm.

@@ -91,6 +91,7 @@ import { SOLDIER } from './world/Defenders.js';
 import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
 import { WANDERERS, NEWS } from './config/wanderers.js';
+import { TRADERS_BY_ID } from './config/traders.js';
 import { MobView } from './render/MobView.js';
 // The showcase (docs/plan-look-and-sound.md, section 1): see openShowcase.
 import { ShowcaseView } from './render/ShowcaseView.js';
@@ -546,6 +547,8 @@ export class Game {
     // The land grows when an age is finished, and the wall has to grow with it.
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
     this.bus.on('health:died', ({ cause }) => this.die(cause));
+    // A purchase from a market's trader changes the bag: save it with the world.
+    this.bus.on('duilt:bought', () => { this.editedAt = Date.now(); });
     this.bus.on('duilt:boostEnded', ({ boost }) => this.ui?.toast({
       kind: 'xp', title: `Your ${BOOSTS[boost].name.toLowerCase()} has worn off`, body: BOOSTS[boost].says,
     }));
@@ -1720,7 +1723,7 @@ export class Game {
       || this.pendingRoof || this.pendingTemplate) return breaks();
     const aimed = this.raycast();
     if (this.banditTarget(aimed) || this.mobTarget(aimed) || this.fireflyTarget(aimed)) return breaks();
-    if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.guardianTarget(aimed)) return places();
+    if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
       || aimed.block === SKY_LIFT || isCatapult(aimed.block)
       || (aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)))) return places();
@@ -1736,6 +1739,9 @@ export class Game {
     // Pointed at the Stone King, Place speaks to him (Phase 7e) — and the hermit, too (7j).
     if (this.kingTarget()) return void this.speakToKing();
     if (this.hermitTarget()) return void this.speakToHermit();
+    // And at a market's trader, Place opens their stall.
+    const trader = this.traderTarget();
+    if (trader) return void this.ui.openTrader(trader);
     // Place puts down what you are holding, on a mouse and under a thumb
     // alike. Cancelling is Escape, or the Break button — which says "Cancel"
     // while you are carrying something, so there is nothing to guess.
@@ -3057,6 +3063,33 @@ export class Game {
     if (!this.wanderers || !this.duilt) return null;
     const eye = this.player.eyePosition(), dir = this.player.lookDirection();
     const found = this.wanderView.pickAt(this.wanderers.list.filter((p) => p.kind === 'hermit' && !p.dead && !(p.fear > 0)), eye, dir, REACH);
+    if (!found) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < found.t) return null;
+    }
+    return found.person;
+  }
+
+  /** The goblin traders in your markets, turned to look at you when you're near. */
+  tradersFacingYou() {
+    const list = this.duilt?.marketTraders() ?? [];
+    const me = this.player?.position;
+    if (me) {
+      for (const t of list) {
+        const dx = me.x - t.x, dz = me.z - t.z;
+        if (dx * dx + dz * dz < 64) t.facing = Math.atan2(dx, dz);
+      }
+    }
+    return list;
+  }
+
+  /** A market's trader under the crosshair, if nearer than the block behind them. */
+  traderTarget(hit = this.raycast()) {
+    const list = this.duilt?.marketTraders() ?? [];
+    if (!list.length) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const found = this.wanderView.pickAt(list, eye, dir, REACH);
     if (!found) return null;
     if (hit) {
       const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
@@ -5319,7 +5352,10 @@ export class Game {
     // What's heard here: the place and the hour, archers loosing, the music.
     if (this.world) hear(this, dt, playing);
     const strangers = this.wanderers?.list ?? [];
-    this.wanderView.update(strangers.filter((p) => !WANDERERS[p.kind].siege && !WANDERERS[p.kind].beast));
+    this.wanderView.update([
+      ...strangers.filter((p) => !WANDERERS[p.kind].siege && !WANDERERS[p.kind].beast),
+      ...this.tradersFacingYou(),
+    ]);
     const ours = this.duilt?.defenders;
     this.defenderView.update(this.withShowcase('defenders', ours?.people ?? []));
     this.warriorView.update(this.withShowcase('warriors', this.duilt?.army.field ?? []));
@@ -5579,6 +5615,14 @@ export class Game {
           : stranger.hp < spec.hp ? `${spec.noun} — hurt, keep at it`
             : stranger.war ? `${spec.about} — round ${stranger.round} of ${LAST_ROUND}, hit to fight`
               : stranger.raider ? 'a bandit, raiding — hit to fight' : spec.aboutHostile);
+      return;
+    }
+    // A goblin trader in one of your markets.
+    const trader = !this.armed && this.traderTarget(hit);
+    if (trader) {
+      this.hoverBox.visible = false;
+      const spec = TRADERS_BY_ID.get(trader.trader);
+      this.ui?.setPersonHint(`${trader.name} the trader`, `${spec?.trade.toLowerCase() ?? 'goods'} for coins — ${this.ui?.isTouch ? 'tap' : 'right click'} to trade`);
       return;
     }
     // Your guardian.
