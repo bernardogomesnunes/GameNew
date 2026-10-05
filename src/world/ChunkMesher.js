@@ -7,7 +7,7 @@ import {
 } from '../config/blocks.js';
 import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, windowBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
-import { textureFor, TILE_SCALE } from '../config/textures.js';
+import { textureFor, blockTexture, TILE_SCALE } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
 
 const SOLID_SENTINEL = -1; // below the world: never draw a face against it
@@ -79,6 +79,25 @@ for (const [id, b] of BLOCKS_BY_ID) {
   const t = textureFor(b.texture ?? b.glyph);
   CUTOUT[id] = IS_CUBE[id] && t && (t.gaps || t.bite) ? 1 : 0;
 }
+/**
+ * Turf with something on top of it is drawn as the earth under its grass.
+ * Reported with a picture: two turf blocks stacked, and the lower one's
+ * sides still had the grass hanging over their top edge, under the block
+ * sitting on it. Grass doesn't grow in the dark, so a grass-sided block
+ * (one whose texture has a `fringe`) with a solid block over it draws
+ * every face as its `under` block — dirt — and goes back to grass the
+ * moment that block is taken off.
+ */
+const COVERED_AS = new Uint8Array(256);
+for (const [id, b] of BLOCKS_BY_ID) {
+  const t = blockTexture(b);
+  if (IS_CUBE[id] && t?.fringe?.under) COVERED_AS[id] = t.fringe.under;
+}
+/** Whether a cell's contents stop grass growing under it: a whole, solid block. */
+function covers(id) {
+  return id === SOLID_SENTINEL || (id > 0 && IS_CUBE[id] && !IS_TRANSPARENT[id] && !CUTOUT[id]);
+}
+
 /** Rugs, which run into each other (see propShapes' rugBoxes). */
 const IS_RUG = new Uint8Array(256);
 for (const id of BLOCKS_BY_ID.keys()) IS_RUG[id] = shapeOf(id) === 'rug' ? 1 : 0;
@@ -611,12 +630,14 @@ export class ChunkMesher {
           for (let j = 0; j < dv; j++) {
             let idx = yBase + (slice + 1) * S[d] + (j + 1) * S[v] + S[u];
             for (let i = 0; i < du; i++, n++, idx += S[u]) {
-              const self = vol[idx];
+              let self = vol[idx];
               // A shaped block (slab, stair, furniture) never emits its own
               // cube face — its real geometry comes from buildProps below —
               // and it doesn't hide a neighbour's face either: it only fills
               // part of its cell, so the rest of that face is on show.
               if (self <= 0 || !IS_CUBE[self]) { mask[n] = 0; continue; }
+              // Turf under a block is drawn as dirt (see COVERED_AS).
+              if (COVERED_AS[self] && covers(vol[idx + S[1]])) self = COVERED_AS[self];
               const other = vol[idx + step];
               let face;
               if (other === AIR) face = self;
