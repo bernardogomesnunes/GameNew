@@ -18,14 +18,14 @@ const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
 // marbled, turquoise, and orangey, ordered by rarity ... below dirt we should
 // have different layers of different rocks ... and sprinkle some ores here
 // and there but pretty rare".
-const DIRT_ID = 2, STONE_ID = 3, COBBLE_ID = 8, MARBLE_ID = 17, DARK_STONE_ID = 156;
-const WHITE_STONE_ID = 235, TURQUOISE_STONE_ID = 236, ORANGE_STONE_ID = 237;
+const DIRT_ID = 2, STONE_ID = 3, COBBLE_ID = 8, MARBLE_ID = 17;
+const WHITE_STONE_ID = 235, TURQUOISE_STONE_ID = 236, ORANGE_STONE_ID = 237, GREY_STONE_ID = 238;
 /** Soil over the rock, where a biome's soil is dirt: 3 to 12 blocks, about 6 deep on average. */
 export const SOIL_MIN = 3, SOIL_MAX = 12;
 const SOIL_SKEW = 1.6;
 /** The rocks below it, most common first, and how often each band is that rock. */
 export const ROCK_LAYERS = [
-  [STONE_ID, 46], [WHITE_STONE_ID, 18], [DARK_STONE_ID, 14], [MARBLE_ID, 10], [TURQUOISE_STONE_ID, 7], [ORANGE_STONE_ID, 5],
+  [STONE_ID, 46], [WHITE_STONE_ID, 18], [GREY_STONE_ID, 14], [MARBLE_ID, 10], [TURQUOISE_STONE_ID, 7], [ORANGE_STONE_ID, 5],
 ];
 const ROCK_WEIGHT = ROCK_LAYERS.reduce((n, [, w]) => n + w, 0);
 /** A band of rock is about this thick, and its kind holds across this much of the map. */

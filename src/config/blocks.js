@@ -419,15 +419,21 @@ BLOCKS.push({
 /**
  * Rock as it lies underground (asked for directly: "There should be different
  * rock types, like grey, white, dark grey, marbled, turquoise, and orangey.
- * Ordered by rarity to find naturally."). Grey is plain Stone, dark grey Dark
- * Stone and marbled Marble; these are the other three. See ChunkGen's rock
+ * Ordered by rarity to find naturally."). Grey is plain Stone and marbled
+ * Marble; these are the other four. See ChunkGen's rock
  * layers for where each lies.
  */
 export const WHITE_STONE = 235, TURQUOISE_STONE = 236, ORANGE_STONE = 237;
+// Dark grey rock — its own natural block. The layer used to be the Stone
+// Kingdom's Dark Stone, a slate-blue cut block with mortar lines, which read
+// as "weird blue blocks" in the ground (reported directly) and handed out a
+// crafted material for nothing.
+export const GREY_STONE = 238;
 BLOCKS.push(
   { id: WHITE_STONE, name: 'White Stone', glyph: 'stone', color: 0xe4e0d8, material: 'stone', unlock: null },
   { id: TURQUOISE_STONE, name: 'Turquoise Stone', glyph: 'stone', color: 0x63b5ab, material: 'stone', unlock: null },
   { id: ORANGE_STONE, name: 'Orange Stone', glyph: 'stone', color: 0xd38d57, material: 'stone', unlock: null },
+  { id: GREY_STONE, name: 'Dark Grey Stone', glyph: 'stone', color: 0x6c6b6a, material: 'stone', unlock: null },
 );
 
 export const SUNSTONE_ORE = 191;

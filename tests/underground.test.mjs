@@ -28,7 +28,11 @@ for (let i = 0; i < 20000; i++) {
 }
 const order = ROCK_LAYERS.map(([id]) => counts.get(id) ?? 0);
 ok(`six rocks in layers, each rarer than the last (${order.join(' > ')})`, order.every((n, i) => n > 0 && (i === 0 || n < order[i - 1])));
-ok('grey, white, dark grey, marbled, turquoise, orange', ROCK_LAYERS.map(([id]) => BLOCKS_BY_ID.get(id).name).join(', ') === 'Stone, White Stone, Dark Stone, Marble, Turquoise Stone, Orange Stone');
+ok('grey, white, dark grey, marbled, turquoise, orange', ROCK_LAYERS.map(([id]) => BLOCKS_BY_ID.get(id).name).join(', ') === 'Stone, White Stone, Dark Grey Stone, Marble, Turquoise Stone, Orange Stone');
+// Reported: "weird blue blocks that I don't recognise" — the dark grey layer
+// was the Stone Kingdom's slate-blue cut Dark Stone. It is its own rock now.
+ok('the dark grey layer is natural rock, not the Stone Kingdom\'s cut Dark Stone', !ROCK_LAYERS.some(([id]) => id === 156)
+  && BLOCKS_BY_ID.get(238).glyph === 'stone');
 ok('the new rocks can be mined and carried', [WHITE_STONE, TURQUOISE_STONE, ORANGE_STONE].every((id) => ITEM_FOR_BLOCK.has(id)));
 
 let cobble = 0;
