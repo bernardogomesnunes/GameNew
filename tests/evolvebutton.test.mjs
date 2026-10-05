@@ -24,16 +24,15 @@ const duiltGame = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.
 // Asked for directly: "Evolve buttons is not available in any pop up of a
 // building. Just have a button there to evolve." Always there while there's
 // a next level; pressed early, it says what's missing.
-ok('the panel always shows Evolve while there is a next level, bright when it qualifies',
-  // In the Level section now, under what the level needs, not in a footer
-  // of buttons (asked for directly: "Maybe evolve won't be on the footer").
-  /<button class="\$\{ready \? 'primary' : 'secondary cannot'\} building-evolve" data-evolve>Evolve to \$\{escapeHtml\(next\.name\)\}<\/button>/.test(ui)
-  // Bright when pressing it works now — including when Evolve can put in
-  // what's missing from your bag (DuiltGame.evolvePlan).
-  && /const ready = !!next && !!d\?\.evolvePlan\(structure, \{ dry: true \}\)\.ok;/.test(ui));
+ok('the panel always shows Evolve while there is a next level, bright when pressing it works',
+  // One price and a button (asked for directly: "buildings should have a
+  // cost to evolve just like for building and I click evolve and it should
+  // evolve the building").
+  /<button class="\$\{ready \? 'primary' : 'secondary cannot'\} building-evolve" \$\{attr\}>/.test(ui)
+  && /const plan = d\?\.evolvePlan\(structure, \{ dry: true \}\) \?\? null;\s*const ready = !!plan\?\.ok;/.test(ui));
 const reg = readFileSync(new URL('../src/structures/StructureRegistry.js', import.meta.url), 'utf8');
 ok('pressed early, it says what is still missing', /reason: missing\.length \? `Still needs \$\{missing\.join\(', '\)\}\.`/.test(reg));
-ok('and its cost is item pills, with what you have', /class="evolve-cost">Costs <span class="recipe-cost">\$\{Object\.entries\(next\.cost\)\.map/.test(ui));
+ok('and its cost is item pills, with what you have', /class="evolve-cost">Cost <span class="recipe-cost">\$\{pills\}/.test(ui) && /const bill = plan\?\.bill \?\? next\?\.cost \?\? \{\};/.test(ui));
 ok('withArticle does not double up on a tier name that already carries its own',
   /function withArticle\(name\) \{\s*const lower = name\.toLowerCase\(\);\s*return \/\^an\? \/\.test\(lower\) \? lower : `a \$\{lower\}`;/.test(ui));
 ok('and the panel says it is ready, instead of the old "settles on your next change to it" line',

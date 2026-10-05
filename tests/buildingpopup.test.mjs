@@ -35,7 +35,7 @@ import { readFileSync } from 'node:fs';
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 ok('the long paragraph about locking is gone', !/Protected, so you cannot take a wall out of it/.test(ui));
 ok('the next level lists what it still needs', /Next: <strong>\$\{escapeHtml\(next\.name\)\}<\/strong>/.test(ui) && /this\.needsHtml\(next\)/.test(ui));
-ok('Evolve sits with the level, not in the footer', /building-evolve" data-evolve/.test(ui) && !/building-tools[\s\S]{0,600}data-evolve/.test(ui));
+ok('Evolve sits with the level, not in the footer', /\$\{this\.evolveHtml\(structure, next\)\}/.test(ui) && !/building-tools[\s\S]{0,600}data-evolve/.test(ui));
 ok('a building that fails to draw still opens, with its tools', /catch \(err\)[\s\S]{0,400}buildingToolsHtml/.test(ui));
 
 process.exit(f ? 1 : 0);

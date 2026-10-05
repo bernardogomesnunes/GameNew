@@ -669,8 +669,8 @@ export class DuiltGame {
     const cost = (structure.paidTo ?? 0) >= tier + 1 ? {} : (next.cost ?? {});
     if (status.canEvolve) {
       const short = this.sandbox ? {} : this.inventory.missing(cost);
-      if (Object.keys(short).length) return { ok: false, reason: this.shortText(short) };
-      return { ok: true, changes: [], pay: {}, credit: {} };
+      if (Object.keys(short).length) return { ok: false, reason: this.shortText(short), bill: cost, short };
+      return { ok: true, changes: [], pay: {}, credit: {}, bill: cost };
     }
 
     const ctx = inspect(this.world, structure.region);
@@ -719,11 +719,11 @@ export class DuiltGame {
     for (const [id, n] of Object.entries(pay)) bill[id] = (bill[id] ?? 0) + n;
     for (const [id, n] of Object.entries(spare)) bill[id] = (bill[id] ?? 0) + n;
     const short = this.sandbox ? {} : this.inventory.missing(bill);
-    if (Object.keys(short).length) return { ok: false, reason: this.shortText(short) };
+    if (Object.keys(short).length) return { ok: false, reason: this.shortText(short), bill, short };
     // Tried in place first: putting things in mustn't break the building (a
     // house's room is counted in empty cells) or still fall short. A panel
     // only asking whether the button should look ready (`dry`) skips it.
-    if (dry || !changes.length) return { ok: true, changes, pay, credit: owed };
+    if (dry || !changes.length) return { ok: true, changes, pay, credit: owed, bill };
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, c.next);
     const after = { ...credit };
     for (const [k, n] of Object.entries(owed)) after[k] = (after[k] ?? 0) + n;
@@ -732,7 +732,7 @@ export class DuiltGame {
     for (const c of changes) this.world.setBlock(c.x, c.y, c.z, AIR);
     // Nowhere to put them without breaking it: they're bought instead.
     if (!stands) return this.evolvePlan(structure, { buyAll: true });
-    return { ok: true, changes, pay, credit: owed };
+    return { ok: true, changes, pay, credit: owed, bill };
   }
 
   /** "Needs 4 more planks and 2 more lanterns in your bag." */
