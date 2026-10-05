@@ -1728,3 +1728,223 @@ body.touch .ctl-keys { display: none; }
 .confirm-body { margin: 0 0 14px; color: var(--text-dim); font-size: 13.5px; line-height: 1.5; }
 .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
 .confirm-actions .danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* ===========================================================================
+ * Pixel art, everywhere (asked for directly: "The big ask is Ui. Not the
+ * voxel sandbox and textures. But every panel control and all ... Let's give
+ * it a pixel art kinda look and feel instead of the plain ui we have now").
+ *
+ * The worlds screen was drawn in it first (see "pixel art" above). This is
+ * the rest of the game following: the shared tokens remapped to the same
+ * parchment, wood and ink, so every component that already reads them
+ * follows on its own; then the pieces that draw themselves — panels and their
+ * headers, buttons, the toolbar, toasts, the HUD, slots, cards, tabs, inputs
+ * and chips — in the pixel kit's frames, bevels and stepped corners. Last in
+ * the file on purpose: it is a skin over the rules above, not a rewrite of
+ * them, so layout stays exactly as it was.
+ * ======================================================================== */
+:root {
+  --panel-solid: var(--px-paper);
+  --panel: var(--px-paper-2);
+  --panel-border: rgba(74, 46, 25, 0.45);
+  --panel-border-strong: var(--px-wood-dark);
+  --accent: #3f8a2a;
+  --accent-dim: rgba(90, 165, 58, 0.2);
+  --accent-2: #a8761c;
+  --text: var(--px-text);
+  --text-dim: var(--px-text-dim);
+  --danger: var(--px-red);
+  --good: #3f8a2a;
+  --radius: 0px;
+  --blur: none;
+}
+#ui-root { font-family: var(--px-font); }
+/* No curves in pixel art — except the thumbsticks, which are a thumb's circle. */
+#ui-root *:not(.stick-base):not(.stick-knob) { border-radius: 0 !important; }
+
+/* A stepped corner, for anything framed. */
+.panel, .toast, .confirm-card, .story-card, .icon-btn,
+button.primary, button.secondary, button.danger {
+  --px-cut: 3px;
+  clip-path: polygon(
+    0 var(--px-cut), var(--px-cut) var(--px-cut), var(--px-cut) 0,
+    calc(100% - var(--px-cut)) 0, calc(100% - var(--px-cut)) var(--px-cut), 100% var(--px-cut),
+    100% calc(100% - var(--px-cut)), calc(100% - var(--px-cut)) calc(100% - var(--px-cut)), calc(100% - var(--px-cut)) 100%,
+    var(--px-cut) 100%, var(--px-cut) calc(100% - var(--px-cut)), 0 calc(100% - var(--px-cut)));
+}
+
+/* --- panels ------------------------------------------------------------- */
+.panel {
+  --px-cut: 4px;
+  background: var(--px-paper); color: var(--px-text);
+  border: 4px solid var(--px-wood-dark);
+  box-shadow: inset 0 0 0 3px var(--px-paper-2);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.overlay { background: rgba(28, 18, 10, 0.55); }
+/* The colours only — its layout (sticky, bleeding to the edges) is the one
+   .panel-head rule further up, and tests/hoverfix keeps it the only one. */
+#ui-root .panel-head:where(*) {
+  background: var(--px-wood); color: #fff3d6;
+  border-bottom: 4px solid var(--px-wood-dark);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.18), inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+}
+.panel-head h2, .panel-head h3, .panel-head strong {
+  color: #fff3d6; font-weight: 700; letter-spacing: 0.02em; text-shadow: 2px 2px 0 var(--px-wood-dark);
+}
+.panel-head p, .panel-head .sub, .panel-head span { color: rgba(255, 243, 214, 0.85); }
+.panel-close {
+  color: #fff; background: var(--px-red) !important; border: 3px solid var(--px-ink) !important;
+  box-shadow: inset 0 -3px 0 var(--px-red-dark), inset 0 2px 0 rgba(255, 255, 255, 0.25);
+}
+.panel h2, .panel h3, .panel h4 { font-weight: 700; }
+
+/* --- buttons ------------------------------------------------------------ */
+button.primary, button.secondary, button.danger {
+  font-family: var(--px-font); font-weight: 600; letter-spacing: 0.02em;
+  border: 3px solid var(--px-ink); color: #fff; text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.05s steps(1), filter 0.1s;
+}
+button.primary { background: var(--px-grass); box-shadow: inset 0 -4px 0 var(--px-grass-dark), inset 0 3px 0 rgba(255, 255, 255, 0.3); }
+button.secondary { background: var(--px-stone); box-shadow: inset 0 -4px 0 var(--px-stone-dark), inset 0 3px 0 rgba(255, 255, 255, 0.3); }
+button.danger { background: var(--px-red); box-shadow: inset 0 -4px 0 var(--px-red-dark), inset 0 3px 0 rgba(255, 255, 255, 0.25); }
+button.primary:active, button.secondary:active, button.danger:active { transform: translateY(2px); box-shadow: none; }
+button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brightness(0.9); }
+
+/* --- the toolbar and the HUD -------------------------------------------- */
+.icon-btn {
+  background: var(--px-wood); color: #fff3d6; border: 3px solid var(--px-ink);
+  box-shadow: inset 0 -3px 0 var(--px-wood-dark), inset 0 2px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.icon-btn span { font-family: var(--px-font); text-shadow: 1px 1px 0 var(--px-wood-dark); }
+.icon-btn.active { background: var(--px-gold); color: var(--px-ink); box-shadow: inset 0 -3px 0 #b8901f; }
+.icon-btn.active span { text-shadow: none; }
+
+#level-badge {
+  background: var(--px-gold); color: var(--px-ink); border: 3px solid var(--px-ink);
+  font-family: var(--px-font); font-weight: 700; box-shadow: inset 0 -3px 0 #b8901f;
+}
+#xp-bar-track { background: rgba(43, 29, 18, 0.55); border: 3px solid var(--px-ink); }
+#xp-bar-fill { background: var(--px-grass); box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 var(--px-grass-dark); }
+.vital {
+  background: rgba(244, 231, 197, 0.92); border: 3px solid var(--px-ink);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.vital-track { background: rgba(43, 29, 18, 0.25); border: 2px solid var(--px-ink); }
+.vital-fill { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.3); }
+
+#hotbar-wrap #hotbar {
+  background: var(--px-wood); border: 3px solid var(--px-ink);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.18), inset 0 -3px 0 var(--px-wood-dark);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.hotbar-slot {
+  background: var(--px-paper-3); border: 2px solid var(--px-wood-dark);
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.2), inset -2px -2px 0 rgba(255, 255, 255, 0.3);
+}
+.hotbar-slot.active, .hotbar-slot.selected {
+  background: var(--px-paper); border-color: var(--px-gold);
+  box-shadow: 0 0 0 2px var(--px-ink), inset 0 0 0 2px var(--px-gold);
+}
+#hotbar-label {
+  font-family: var(--px-font); background: rgba(244, 231, 197, 0.95); color: var(--px-ink);
+  border: 3px solid var(--px-ink); backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+#hotbar-label.preview { border-color: var(--px-grass-dark); }
+
+/* The touch controls stay dark — they sit over the world, not a panel —
+   but square and in the same ink. */
+.touch-btn {
+  font-family: var(--px-font); border: 3px solid rgba(0, 0, 0, 0.55) !important;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.3), inset 0 2px 0 rgba(255, 255, 255, 0.18);
+}
+.stick-base { border: 3px solid rgba(0, 0, 0, 0.45); }
+
+/* --- toasts -------------------------------------------------------------- */
+.toast {
+  background: var(--px-paper); color: var(--px-text);
+  border: 3px solid var(--px-ink);
+  box-shadow: inset 6px 0 0 var(--px-wood), inset 0 -3px 0 var(--px-paper-3);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  padding-left: 18px;
+}
+.toast.achievement { box-shadow: inset 6px 0 0 var(--px-gold), inset 0 -3px 0 var(--px-paper-3); }
+.toast.challenge { box-shadow: inset 6px 0 0 var(--px-grass), inset 0 -3px 0 var(--px-paper-3); }
+.toast.story { box-shadow: inset 6px 0 0 #7a5aa0, inset 0 -3px 0 var(--px-paper-3); }
+.toast strong, .toast .toast-title { font-weight: 700; }
+
+/* --- slots --------------------------------------------------------------- */
+.bag-slot, .wear-slot {
+  background: var(--px-paper-3); border: 2px solid var(--px-wood-dark);
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.2), inset -2px -2px 0 rgba(255, 255, 255, 0.3);
+}
+.bag-slot.held, .bag-slot.lifted, .bag-slot.selected { border-color: var(--px-gold); box-shadow: 0 0 0 2px var(--px-ink), inset 0 0 0 2px var(--px-gold); }
+.slot-discard { background: var(--px-red); color: #fff; border: 2px solid var(--px-ink); opacity: 0.9; }
+.slot-tip {
+  background: var(--px-paper); color: var(--px-text); border: 3px solid var(--px-ink);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+
+/* --- cards inside panels ------------------------------------------------- */
+.menu-card, .building-card, .recipe-tile, .quest-card, .ach-card, .claim-row, .skill-row,
+.challenge-card, .roof-row, .template-row, .version-row, .farm-seed, .store-next, .bag-skill,
+.building-sec, .guide-panel, .finish-line, .home-gate {
+  background: var(--px-paper-2); border: 3px solid var(--px-wood-dark);
+  box-shadow: inset 0 -3px 0 var(--px-paper-3);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.menu-card-icon, .building-icon, .quest-icon, .ach-icon, .claim-icon, .skill-icon, .finish-icon {
+  background: var(--px-paper); border: 2px solid var(--px-wood-dark); color: var(--px-wood-dark);
+}
+.recipe-icon { background: var(--px-paper); border: 2px solid var(--px-wood-dark); }
+.recipe-tile.blocked, .ach-card:not(.ach-done) { opacity: 0.85; }
+.ach-card.ach-done, .quest-card.done { background: #d9ecb9; border-color: var(--px-grass-dark); box-shadow: inset 0 -3px 0 #b5d58a; }
+.building-state.good { background: #d9ecb9; border: 3px solid var(--px-grass-dark); color: var(--px-grass-dark); }
+.building-state.bad { background: #f2c9bf; border: 3px solid var(--px-red); color: var(--px-red-dark); }
+.research-bar, .skill-track, .sus-bar { background: rgba(43, 29, 18, 0.2); border: 2px solid var(--px-ink); }
+.research-bar > *, .skill-fill, .sus-fill { background: var(--px-grass); }
+
+/* --- tabs, chips, inputs -------------------------------------------------- */
+.tab-btn, .mode-btn, .ctl-seg button, .routing-chip, .army-mode {
+  font-family: var(--px-font); background: var(--px-paper-2); color: var(--px-text);
+  border: 3px solid var(--px-wood-dark); box-shadow: inset 0 -3px 0 var(--px-paper-3);
+}
+.tab-btn.active, .tab-btn[aria-selected="true"], .mode-btn.active, .ctl-seg button.active, .routing-chip:not(.off) {
+  background: var(--px-grass); color: #fff; border-color: var(--px-ink);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.35); box-shadow: inset 0 -3px 0 var(--px-grass-dark);
+}
+.routing-chip.off { background: var(--px-paper-3); color: var(--px-text-dim); text-decoration: line-through; }
+.cost-chip, .quest-chip, .boost, .armour-badge, .world-tag {
+  background: #fffaf0; border: 2px solid var(--px-ink); color: var(--px-text);
+}
+.cost-chip.short { background: #f8ddd6; border-color: var(--px-red); }
+.cost-chip b { font-weight: 700; }
+
+#ui-root input[type="text"], #ui-root input[type="search"], #ui-root input[type="email"],
+#ui-root input[type="password"], #ui-root input[type="number"], #ui-root select, #ui-root textarea, .panel-search {
+  font-family: var(--px-font); background: #fffaf0; color: var(--px-text);
+  border: 3px solid var(--px-wood-dark); box-shadow: inset 0 3px 0 rgba(43, 29, 18, 0.12);
+}
+#ui-root input:focus, #ui-root select:focus, .panel-search:focus { outline: none; border-color: var(--px-grass-dark); }
+#ui-root input[type="range"] { accent-color: var(--px-grass); }
+.hint-key, .ctl-key, .help-key, .guide-key {
+  background: var(--px-paper); border: 2px solid var(--px-ink); box-shadow: inset 0 -2px 0 var(--px-paper-3);
+}
+
+/* --- dialogs and the story ------------------------------------------------ */
+.confirm-backdrop { background: rgba(28, 18, 10, 0.55); }
+.confirm-card {
+  --px-cut: 4px;
+  background: var(--px-paper); color: var(--px-text); border: 4px solid var(--px-wood-dark);
+  box-shadow: inset 0 0 0 3px var(--px-paper-2);
+}
+.confirm-title { font-weight: 700; }
+.story-card { --px-cut: 4px; border: 4px solid var(--px-wood-dark); background: var(--px-paper); }
+#minimap { border: 3px solid var(--px-ink); box-shadow: inset 0 0 0 2px var(--px-paper-2); }
+/* The account form: full-width fields at a size a thumb can hit and iOS
+   won't zoom into (16px), and the button across under them. */
+#cloud-email, #cloud-password { width: 100%; padding: 10px 12px; font-size: 16px; margin-bottom: 4px; }
+#btn-cloud-signin { width: 100%; padding: 12px 16px; font-size: 17px; }
+/* Framed now, so the rows need room inside the frame. */
+.skill-row, .stat-row.framed, .challenge-card { padding: 10px 12px; }
