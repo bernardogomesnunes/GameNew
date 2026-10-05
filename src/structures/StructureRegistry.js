@@ -87,7 +87,7 @@ export class StructureRegistry {
   retier(structure, { initial = false } = {}) {
     const spec = STRUCTURES_BY_ID.get(structure?.type);
     if (!hasLevels(spec)) return null;
-    const status = tierStatus(this.world, structure.region, structure.type, initial ? null : (structure.tier ?? 0));
+    const status = tierStatus(this.world, structure.region, structure.type, initial ? null : (structure.tier ?? 0), { credit: structure.credit });
     const was = structure.tier ?? 0;
     structure.tier = status.tier;
     if (isStore(spec)) this.storeFor(structure).resize(status.slots);
@@ -109,7 +109,7 @@ export class StructureRegistry {
     if (!s) return { ok: false, reason: 'That building no longer exists.' };
     const spec = STRUCTURES_BY_ID.get(s.type);
     if (!hasLevels(spec)) return { ok: false, reason: 'Nothing here has a level to reach.' };
-    const status = tierStatus(this.world, s.region, s.type, s.tier ?? 0);
+    const status = tierStatus(this.world, s.region, s.type, s.tier ?? 0, { credit: s.credit });
     // Said in full: the button is always there now, so pressing it early has
     // to say what's still missing rather than just "not yet".
     if (!status.canEvolve) {
@@ -118,7 +118,8 @@ export class StructureRegistry {
     }
     const tierDef = spec.tiers[status.tier + 1];
     // Some rungs are paid for as well as built — a temple's, in devotion.
-    if (tierDef.cost) {
+    // Once: a level lost to a broken wall and built back isn't paid twice.
+    if (tierDef.cost && (s.paidTo ?? 0) < status.tier + 1) {
       const short = this.inventory?.missing(tierDef.cost) ?? {};
       if (Object.keys(short).length) {
         return { ok: false, reason: `Needs ${Object.entries(short).map(([id, n]) => `${n} more ${id.replace(/_/g, ' ')}`).join(' and ')} in your bag.` };
@@ -126,9 +127,37 @@ export class StructureRegistry {
       this.inventory.spend(tierDef.cost);
     }
     s.tier = status.tier + 1;
+    s.paidTo = Math.max(s.paidTo ?? 0, s.tier);
     const slots = isStore(spec) ? this.storeFor(s).resize(tierDef.slots) : null;
     this.bus?.emit('structure:upgraded', { structure: s, name: tierDef.name, slots, blurb: tierDef.blurb });
     return { ok: true, name: tierDef.name, slots, blurb: tierDef.blurb };
+  }
+
+  /**
+   * Levels a building up as far as what's built in it now reaches — the
+   * first of the two ways to evolve (asked for directly: "if I edit the
+   * building and increase the blocks needed it should evolve"). Called
+   * after edits to a building open for changes. A level with a bill is paid
+   * from the bag the same as pressing Evolve; one you can't pay yet waits
+   * for the button. Returns how many levels it went up.
+   */
+  climb(id) {
+    const s = this.structures.find((x) => x.id === id);
+    if (!s?.valid || !hasLevels(STRUCTURES_BY_ID.get(s.type))) return 0;
+    let n = 0;
+    while (tierStatus(this.world, s.region, s.type, s.tier ?? 0, { credit: s.credit })?.canEvolve) {
+      if (!this.evolve(id).ok) break;
+      n++;
+    }
+    return n;
+  }
+
+  /** What Evolve took from the bag in place of building it in — see structures.js's work. */
+  addCredit(id, credit) {
+    const s = this.structures.find((x) => x.id === id);
+    if (!s) return;
+    s.credit ??= {};
+    for (const [k, n] of Object.entries(credit ?? {})) s.credit[k] = (s.credit[k] ?? 0) + n;
   }
 
   /** Every standing storehouse, with what it is holding. */
@@ -524,6 +553,10 @@ export class StructureRegistry {
         ...(s.seeds?.length ? { seeds: s.seeds } : {}),
         // A town hall's controller, not yet handed over for want of room.
         ...(s.owed ? { owed: s.owed } : {}),
+        // What Evolve took from the bag instead of it being built in, and
+        // the highest level paid for — see climb and evolve.
+        ...(s.credit ? { credit: s.credit } : {}),
+        ...(s.paidTo ? { paidTo: s.paidTo } : {}),
       })),
     };
   }

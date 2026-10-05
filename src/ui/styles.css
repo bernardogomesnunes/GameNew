@@ -1986,5 +1986,6 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 /* Evolve: work on the building itself, as a checklist */
 .evolve-build-head { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .evolve-build-head svg { width: 16px; height: 16px; }
-.evolve-todo { margin: 2px 0 6px; padding-left: 18px; }
-.evolve-todo li { margin: 2px 0; }
+.evolve-todo { margin: 2px 0 6px; padding: 0; list-style: none; }
+.evolve-todo li { margin: 4px 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.evolve-todo li .recipe-cost { flex-shrink: 0; }

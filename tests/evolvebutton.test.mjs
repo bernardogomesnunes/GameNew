@@ -65,8 +65,8 @@ ok('the toast names the actual building, not always "storehouse" the way it used
 // --- the two places that ask a live building's level pass its own tier -----
 
 ok('storeSummary reads the level relative to what the structure actually stands at',
-  /tierStatus\(this\.world, structure\.region, structure\.type, structure\.tier \?\? 0\)/.test(duiltGame));
+  /tierStatus\(this\.world, structure\.region, structure\.type, structure\.tier \?\? 0, \{ credit: structure\.credit \}\)/.test(duiltGame));
 ok('so does levelSummary — omitting the current tier would read the floor instead, not the button-gated state',
-  (duiltGame.match(/tierStatus\(this\.world, structure\.region, structure\.type, structure\.tier \?\? 0\)/g) ?? []).length === 2);
+  (duiltGame.match(/tierStatus\(this\.world, structure\.region, structure\.type, structure\.tier \?\? 0, \{ credit: structure\.credit \}\)/g) ?? []).length === 2);
 
 process.exit(f ? 1 : 0);

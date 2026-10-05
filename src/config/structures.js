@@ -98,11 +98,30 @@ const plural = (n, word) => `${n} more ${word}${n === 1 ? '' : 's'}`;
  *           of the walls has no `fit`, and is built in with Change it.
  */
 function want(blocks, n, item, word, { fit = null, say = null } = {}) {
-  const short = (ctx) => Math.max(0, n - count(ctx, blocks));
+  return work((ctx) => count(ctx, blocks), n, { item, key: item, fit, say: say ?? ((k) => plural(k, word)), blocks });
+}
+
+/**
+ * Any need a level has that you meet by building — so many of something,
+ * so much room, so much rock dug out — with what Evolve takes from your bag
+ * instead (asked for directly: "There should be both options, if I edit
+ * the building and increase the blocks needed it should evolve, or else I
+ * can just click evolve and it will use them from my inventory").
+ *
+ *   measure  how much of it the building has now
+ *   n        how much the level wants
+ *   item     what Evolve takes from your bag instead: `per` of what's
+ *            missing for each one (a block for a block, by default)
+ *   key      what it's counted under once paid for (`ctx.credit`, from
+ *            the structure's own `credit` — see StructureRegistry.evolve):
+ *            the level is yours from then on, blocks or no blocks
+ */
+function work(measure, n, { item, per = 1, key = item, fit = null, say, blocks = null }) {
+  const short = (ctx) => Math.max(0, n - measure(ctx) - (ctx.credit?.[key] ?? 0));
   return {
     test: (ctx) => short(ctx) === 0,
-    say: (ctx) => (say ? say(short(ctx)) : plural(short(ctx), word)),
-    short, item, blocks, ...(fit ? { fit } : {}),
+    say: (ctx) => say(short(ctx)),
+    short, item, key, per, blocks, ...(fit ? { fit } : {}),
   };
 }
 const LIGHT_ITEMS = ['lantern', 'firefly_lantern', 'chandelier'];
@@ -291,32 +310,32 @@ export const STRUCTURES = [
         id: 'face', name: 'A Working Face', blurb: 'Wide enough to work properly.',
         produces: { stone: 3, cobblestone: 2 }, everySeconds: 25920,
         needs: [
-          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 40, say: (ctx) => `Uncover ${40 - count(ctx, [STONE, COBBLE])} more stone blocks in it` },
-          { test: (ctx) => ctx.countOf(0) >= 16, say: (ctx) => `Dig out ${16 - ctx.countOf(0)} more blocks from it` },
+          work((ctx) => count(ctx, [STONE, COBBLE]), 40, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
+          work((ctx) => ctx.countOf(0), 16, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
         ],
       },
       {
         id: 'deepcut', name: 'A Deep Dig', blurb: 'Dug back far enough to keep two haulers busy.',
         produces: { stone: 3, cobblestone: 2 }, everySeconds: 21600,
         needs: [
-          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 60, say: (ctx) => `Uncover ${60 - count(ctx, [STONE, COBBLE])} more stone blocks in it` },
-          { test: (ctx) => ctx.countOf(0) >= 28, say: (ctx) => `Dig out ${28 - ctx.countOf(0)} more blocks from it` },
+          work((ctx) => count(ctx, [STONE, COBBLE]), 60, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
+          work((ctx) => ctx.countOf(0), 28, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
         ],
       },
       {
         id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, opened right up.',
         produces: { stone: 3, cobblestone: 2 }, everySeconds: 18000,
         needs: [
-          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 90, say: (ctx) => `Uncover ${90 - count(ctx, [STONE, COBBLE])} more stone blocks in it` },
-          { test: (ctx) => ctx.countOf(0) >= 44, say: (ctx) => `Dig out ${44 - ctx.countOf(0)} more blocks from it` },
+          work((ctx) => count(ctx, [STONE, COBBLE]), 90, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
+          work((ctx) => ctx.countOf(0), 44, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
         ],
       },
       {
         id: 'openpit', name: 'An Open Pit', blurb: 'As much rock as a claim this size can show.',
         produces: { stone: 3, cobblestone: 2 }, everySeconds: 14400,
         needs: [
-          { test: (ctx) => count(ctx, [STONE, COBBLE]) >= 130, say: (ctx) => `Uncover ${130 - count(ctx, [STONE, COBBLE])} more stone blocks in it` },
-          { test: (ctx) => ctx.countOf(0) >= 64, say: (ctx) => `Dig out ${64 - ctx.countOf(0)} more blocks from it` },
+          work((ctx) => count(ctx, [STONE, COBBLE]), 130, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
+          work((ctx) => ctx.countOf(0), 64, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
         ],
       },
     ],
@@ -417,10 +436,7 @@ export const STRUCTURES = [
         blurb: 'Room overhead as well as around, so more goes in.',
         needs: [
           want([PLANKS, WOOD], 60, 'planks', 'planks', { say: (n) => `${n} more planks or wood` }),
-          {
-            test: (ctx) => ctx.shelteredVolume() >= 18,
-            say: (ctx) => `Make the room inside bigger — ${18 - ctx.shelteredVolume()} more blocks of space under the roof`,
-          },
+          work((ctx) => ctx.shelteredVolume(), 18, { item: 'planks', key: 'space', say: (k) => `Make the room inside bigger — ${k} more blocks of space under the roof` }),
         ],
       },
       {
@@ -431,10 +447,7 @@ export const STRUCTURES = [
         needs: [
           want([PLANKS, WOOD, BRICK], 140, 'planks', 'planks', { say: (n) => `${n} more planks, wood or brick` }),
           want([STONE, COBBLE, BRICK], 25, 'stone', 'stone', { say: (n) => `${n} more stone or brick, for a floor that will take the weight` }),
-          {
-            test: (ctx) => ctx.shelteredVolume() >= 40,
-            say: (ctx) => `Make the room inside much bigger — ${40 - ctx.shelteredVolume()} more blocks of space under the roof`,
-          },
+          work((ctx) => ctx.shelteredVolume(), 40, { item: 'planks', key: 'space', say: (k) => `Make the room inside much bigger — ${k} more blocks of space under the roof` }),
         ],
       },
     ],
@@ -1255,7 +1268,9 @@ export const STRUCTURES = [
       },
       {
         id: 'high', name: 'The High Temple', blurb: 'Banners hang in it. Here the rings are forged — the White, or the Black.',
-        produces: { devotion: 3 }, everySeconds: 21600, cost: { devotion: 25 },
+        // More than the Great Temple's three a cycle: it used to make exactly
+        // the same, so the last level gave nothing for its 25 devotion.
+        produces: { devotion: 4 }, everySeconds: 21600, cost: { devotion: 25 },
         needs: [
           want(BANNERS, 2, 'banner_white', 'banner'),
           want(GILDING, 8, 'gold_trim', 'gold trim', { say: (n) => `${n} more gold trim or gold` }),

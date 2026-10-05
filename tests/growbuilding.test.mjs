@@ -70,8 +70,8 @@ const structures = readFileSync(new URL('../src/config/structures.js', import.me
 ok('no "cut" in what a quarry asks for', !/more cut out of it|Nothing has been cut|Seam Cut|Deep Cut/.test(structures));
 ok('no "cells" anywhere a building asks for something', !/cells of/.test(structures));
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
-ok('building work is a Build checklist, apart from the item pills', /evolve-build-head">\$\{icon\('hammer'\)\} Build<\/p><ul class="evolve-todo">/.test(ui));
-ok('and it says how', /Tap Change below, then build or dig right against it\. What you add becomes part of it\./.test(ui));
+ok('what a level needs is one checklist, each with what Evolve takes instead', /evolve-build-head">\$\{icon\('hammer'\)\} Needs<\/p><ul class="evolve-todo">/.test(ui));
+ok('and it says both ways', /Build them in with Change and it levels up by itself\. Or press Evolve and they come from your bag\./.test(ui));
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 ok('only while the building is open for changes', /growEditing\(changes\) \{\s*const s = this\.editingStructure;\s*if \(!s/.test(game)
   && (game.match(/this\.growEditing\(changes\);/g) ?? []).length === 2);

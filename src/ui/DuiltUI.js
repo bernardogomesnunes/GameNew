@@ -413,22 +413,19 @@ export class DuiltUI {
     const d = this.duilt;
     const wants = next?.wants ?? [];
     if (!wants.length) return '';
-    const pills = wants.filter((w) => w.item && w.n != null);
-    const fit = pills.filter((w) => w.fit), hand = pills.filter((w) => !w.fit);
-    const lines = wants.filter((w) => !(w.item && w.n != null));
-    const held = (w) => w.fit.reduce((n, id) => n + (d?.inventory.countOf(id) ?? 0), 0);
-    return [
-      fit.length ? `<p class="evolve-cost">Needs <span class="recipe-cost">${fit.map((w) => {
-        const have = held(w);
-        return itemChip(w.item, w.n, { have, short: !d?.sandbox && have < w.n });
-      }).join('')}</span></p><p class="dim evolve-note">Taken from your bag and put in for you.</p>` : '',
-      hand.length ? `<p class="evolve-cost">Build in <span class="recipe-cost">${hand.map((w) => itemChip(w.item, w.n)).join('')}</span></p>` : '',
-      // Work on the building itself, not a trade (asked for directly: "If
-      // it's a trade off like forest with some items, we are good. If we
-      // need to build something we need to be clear").
-      lines.length ? `<p class="evolve-cost evolve-build-head">${icon('hammer')} Build</p><ul class="evolve-todo">${lines.map((w) => `<li>${escapeHtml(w.say)}</li>`).join('')}</ul>` : '',
-      hand.length || lines.length ? '<p class="dim evolve-note">Tap Change below, then build or dig right against it. What you add becomes part of it.</p>' : '',
-    ].join('');
+    // One row per need: what to build in, and what Evolve takes from your
+    // bag instead (asked for directly: "if I edit the building and increase
+    // the blocks needed it should evolve, or else I can just click evolve
+    // and it will use them from my inventory").
+    const rows = wants.map((w) => {
+      const items = w.fit ?? (w.price ? [w.price.item] : []);
+      const n = w.fit ? w.n : w.price?.n;
+      const have = items.reduce((t, id) => t + (d?.inventory.countOf(id) ?? 0), 0);
+      const pill = items.length && n ? itemChip(items[0], n, { have, short: !d?.sandbox && have < n }) : '';
+      return `<li><span>${escapeHtml(w.say)}</span>${pill ? `<span class="recipe-cost">${pill}</span>` : ''}</li>`;
+    }).join('');
+    return `<p class="evolve-cost evolve-build-head">${icon('hammer')} Needs</p><ul class="evolve-todo">${rows}</ul>`
+      + '<p class="dim evolve-note">Build them in with Change and it levels up by itself. Or press Evolve and they come from your bag.</p>';
   }
 
   /**
@@ -495,7 +492,8 @@ export class DuiltUI {
     // Ready means pressing it works now — including when what it still
     // wants is a lantern or a chest Evolve can put in from your bag.
     const ready = !!next && !!d?.evolvePlan(structure, { dry: true }).ok;
-    const nextMade = next?.rate ? this.makesOf(structure, { ...spec, fromCrops: false, fromAnimals: false }, { rate: next.rate }) : null;
+    const nextMade = next?.rate ? this.makesOf(structure, { ...spec, fromCrops: false, fromAnimals: false }, { rate: next.rate })
+      : next && (spec?.fromCrops || spec?.fromAnimals) ? this.makesOf(structure, spec, { yield: next.yield }) : null;
     const levelSec = !level ? '' : `
       <div class="building-sec building-level">
         <div class="building-sec-head"><h4>Level</h4><span class="level-pill">${escapeHtml(level.name)}</span></div>
@@ -602,6 +600,11 @@ export class DuiltUI {
     const rate = level?.rate ?? (spec && Object.keys(spec.produces ?? {}).length ? { produces: spec.produces, everySeconds: spec.everySeconds } : null);
     let produces = spec?.fromCrops ? this.duilt?.producesFor(structure)
       : spec?.fromAnimals ? penProduce(structure, this.duilt?.herd ?? []) : rate?.produces;
+    // A farm's or a pen's level makes more of what's in it — the same
+    // rounding up StructureRegistry.collect pays out with.
+    if ((spec?.fromCrops || spec?.fromAnimals) && produces && (level?.yield ?? 1) !== 1) {
+      produces = Object.fromEntries(Object.entries(produces).map(([k, v]) => [k, Math.ceil(v * level.yield)]));
+    }
     const every = rate?.everySeconds ?? spec?.everySeconds;
     if (!produces || !Object.keys(produces).length || !every) return null;
     const out = {};
