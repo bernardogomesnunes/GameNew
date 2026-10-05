@@ -96,6 +96,7 @@ import { momentForPlace } from './config/moments.js';
 import { MobView } from './render/MobView.js';
 // The showcase (docs/plan-look-and-sound.md, section 1): see openShowcase.
 import { ShowcaseView } from './render/ShowcaseView.js';
+import { TITLE_SEED, TITLE_SITE, TITLE_TIME, TITLE_HERDS, titlePlaceBlocks, orbitPose, orbitHeight, messengerPath } from './world/titleScene.js';
 import { SHOWCASE_SEED, SHOWCASE_TIMES, SHOWCASE_SPOTS_BY_ID, SHOWCASE_BUILDINGS, SHOWCASE_FIGURES, findShowcaseSite, flattenShowcase, placeBlocks, showcaseLabels, spotPose } from './world/showcase.js';
 import { Defenders } from './world/Defenders.js';
 import { Army } from './world/Army.js';
@@ -607,6 +608,8 @@ export class Game {
     this.wireSaveOnLeave();
     this.lastAutosave = performance.now();
     this.clock = new THREE.Clock();
+    // What's behind the worlds screen the game opens on — see openTitle.
+    this.openTitle();
     this.renderer.setAnimationLoop(() => this.tick());
   }
 
@@ -1034,6 +1037,7 @@ export class Game {
           this.ui.toast({ kind: 'xp', title: 'Could not import', body: err.message });
         }
       },
+      onGoHome: () => this.openTitle(),
       onNewWorld: (mode, name) => { this.newWorld({ mode, name }); this.ui.closePanel('panel-menu'); },
       onRenameWorld: (name) => { this.worldName = name; this.saveNow(); },
       lastSavedAt: () => this.syncState.agreedFor(this.worldId)?.at ?? 0,
@@ -1269,6 +1273,7 @@ export class Game {
   newWorld({ silent, mode = this.mode, name, scenery = false, seed } = {}) {
     this.mode = mode;
     this.showcase = null;
+    this.title = null;
     // Scenery is the world drawn behind the worlds screen so the canvas is not
     // blank. It is nobody's world and it is never saved; anything else you make
     // un-discards, which is to say saving is on again.
@@ -1373,6 +1378,7 @@ export class Game {
   loadFromData(data, { silent } = {}) {
     this.world = data.world;
     this.showcase = null;
+    this.title = null;
     // Carried with the world, not reset to now: whether it has been played
     // since the account last saw it is a fact about the world.
     this.editedAt = data.editedAt ?? 0;
@@ -3633,6 +3639,92 @@ export class Game {
     return false;
   }
 
+  // ---- the title scene (world/titleScene.js) ----
+
+  /**
+   * The landscape behind the worlds screen (asked for directly: "a beautiful
+   * generated landscape, with animals roaming around and messengers, maybe
+   * one mine and a bandit hut showing"). A meadow in a fixed world, an old
+   * mine and a bandit camp laid either side of it, herds put out to graze,
+   * bandits round their fire and a messenger on the road — the same people
+   * and animals the game makes in play, left to get on with it while the
+   * camera circles (tickTitle). Scenery: never saved, built again the same
+   * every time.
+   */
+  openTitle() {
+    if (this.title) return true;
+    this.newWorld({ mode: CREATIVE, name: 'Title', scenery: true, silent: true, seed: TITLE_SEED });
+    const gen = this.world.gen;
+    const site = { ...TITLE_SITE, y: gen.heightAt(TITLE_SITE.x, TITLE_SITE.z) };
+    const { blocks, places } = titlePlaceBlocks(site, (x, z) => gen.heightAt(x, z));
+    for (const [x, y, z, id] of blocks) if (this.world.getBlock(x, y, z) !== id) this.world.setBlock(x, y, z, id);
+    this.syncMobs();
+    // Herds out to graze, wandering as any herd does.
+    for (const h of TITLE_HERDS) {
+      const spec = MOBS_BY_ID.get(h.type);
+      if (!spec) continue;
+      for (let i = 0; i < h.n; i++) {
+        const x = site.x + h.dx + (i % 2) * 2 - 1, z = site.z + h.dz + Math.floor(i / 2) * 2 - 1;
+        this.mobs.list.push(this.mobs.make(spec, x + 0.5, gen.heightAt(x, z), z + 0.5));
+      }
+    }
+    // Bandits round the camp's fire, idling the way they do at any camp.
+    const camp = places.find((p) => p.kind === 'camp');
+    if (camp) {
+      const lm = { kind: 'camp', x: camp.x, y: camp.y, z: camp.z, half: camp.half, leave: 400 };
+      this.wanderers.present.add(lm);
+      for (let i = 0; i < 3; i++) {
+        const a = (i / 3) * Math.PI * 2;
+        const x = camp.x + 0.5 + Math.cos(a) * 3, z = camp.z + 0.5 + Math.sin(a) * 3;
+        this.wanderers.list.push(this.wanderers.person('bandit', x, camp.y, z, { landmark: lm, home: { x: camp.x + 0.5, z: camp.z + 0.5 } }));
+      }
+    }
+    // Nobody comes for you here: no raids, no explorers of its own — the
+    // messengers are sent by tickTitle, across the view.
+    this.wanderers.untilExplorer = Infinity;
+    this.mobs.cap = 14;
+    // High enough on its circle to clear every treetop it passes.
+    const topAt = (x, z) => {
+      for (let y = this.world.height - 1; y > 0; y--) if (this.world.getBlock(x, y, z) !== AIR) return y;
+      return 0;
+    };
+    this.title = { site, eyeY: orbitHeight(site, topAt), t: 0, sent: 0, untilMessenger: 2 };
+    this.showcaseTime(TITLE_TIME);
+    this.tickTitle(0);
+    return true;
+  }
+
+  /**
+   * One frame of the title: the camera a little further round its circle,
+   * and the meadow's animals and people getting on with things — run here
+   * because play is paused while the worlds screen is up.
+   */
+  tickTitle(dt) {
+    const tl = this.title;
+    if (!tl || !this.player) return;
+    tl.t += dt;
+    const pose = orbitPose(tl.site, tl.t, tl.eyeY);
+    const eye = this.player.eyePosition().y - this.player.position.y;
+    this.player.flying = true;
+    this.player.position.set(pose.eye.x, pose.eye.y - eye, pose.eye.z);
+    this.player.yaw = pose.yaw;
+    this.player.pitch = pose.pitch;
+    this.player.syncCamera();
+    // The animals see the camera, high over the meadow, as nobody near.
+    const far = { x: pose.eye.x, y: pose.eye.y + 40, z: pose.eye.z };
+    this.mobs?.tick(dt, far);
+    const middle = { x: tl.site.x, y: tl.site.y + 40, z: tl.site.z };
+    // A messenger on the road every so often, two at most.
+    tl.untilMessenger -= dt;
+    if (this.wanderers && tl.untilMessenger <= 0 && this.wanderers.count('messenger') < 2) {
+      tl.untilMessenger = 25 + (tl.sent % 3) * 10;
+      const { from, to } = messengerPath(tl.site, tl.sent++);
+      const y = this.world.gen.heightAt(Math.floor(from.x), Math.floor(from.z));
+      this.wanderers.list.push(this.wanderers.person('messenger', from.x, y, from.z, { goal: to, stage: 'leaving' }));
+    }
+    this.wanderers?.tick(dt, middle);
+  }
+
   // ---- the showcase (world/showcase.js) ----
 
   /**
@@ -5409,6 +5501,8 @@ export class Game {
     }
 
     if (!playing) this.player.releaseKeys();
+    // Behind the worlds screen, the title scene keeps itself going.
+    if (!playing && this.title) this.tickTitle(dt);
 
     // These run regardless: the world should finish drawing itself behind the
     // worlds screen rather than streaming in after you arrive.
@@ -5421,7 +5515,7 @@ export class Game {
     // The clock only runs while you're playing; a menu is a pause.
     const clockWas = this.dayCycle.time;
     // The showcase holds the hour it was set to, for its pictures.
-    if (playing && !this.showcase) this.dayCycle.advance(dt);
+    if (playing && !this.showcase && !this.title) this.dayCycle.advance(dt);
     if (this.duilt) {
       this.duilt.dayTime = this.dayCycle.time;
       // The world's own count of days, for saplings to grow by.

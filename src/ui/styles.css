@@ -88,6 +88,12 @@ html, body { margin: 0; height: 100%; background: var(--bg); overscroll-behavior
   text-align: center;
 }
 #blocker[hidden] { display: none; }
+/* The worlds screen sits over the title scene (world/titleScene.js), so the
+   landscape is the picture: no dark wash over it, and none of the game's
+   own controls — there's no game going on to control. */
+body.at-home #blocker { background: linear-gradient(180deg, rgba(10, 16, 22, 0) 35%, rgba(10, 16, 22, 0.45)); }
+body.at-home #crosshair, body.at-home #hud-top, body.at-home #top-buttons, body.at-home #hotbar-wrap,
+body.at-home #touch-controls, body.at-home #vitals, body.at-home #minimap { display: none !important; }
 #blocker .card { max-width: 460px; }
 #blocker h1 { font-size: 28px; margin: 0 0 8px; }
 #blocker p { color: var(--text-dim); line-height: 1.5; margin: 6px 0; }

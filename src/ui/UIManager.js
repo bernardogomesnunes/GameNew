@@ -167,6 +167,8 @@ export class UIManager {
     this.wireEvents();
     this.wireBus();
     this.updateXp();
+    // The worlds screen is open from the markup, before any panel event.
+    this.updateHudVisibility();
   }
 
   // Read live off the game: both engines are replaced wholesale on New World,
@@ -1367,6 +1369,9 @@ export class UIManager {
     const hidden = this.panels.all().some((el) => !el.hidden);
     document.body.classList.toggle('panel-open', hidden);
     document.body.classList.toggle('bag-open', this.panels.isOpen('panel-bag'));
+    // On the worlds screen there's no game to show the controls of: the
+    // title scene is the whole picture behind the menu.
+    document.body.classList.toggle('at-home', this.panels.isOpen('blocker'));
   }
 
   /** Fills a panel in just before it is shown, if it has anything to fill. */
@@ -1762,6 +1767,8 @@ export class UIManager {
 
   /** Brings up the worlds screen, always at the top of the journey. */
   openHome() {
+    // The title scene behind it again, in place of the world just left.
+    this.cb.onGoHome?.();
     this.home?.reset();
     this.showBlocker();
   }
