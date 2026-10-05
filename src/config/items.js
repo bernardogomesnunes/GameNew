@@ -202,7 +202,7 @@ export const ITEMS = [
   // it off in the air and the wings bring you down in a glide.
   {
     id: 'flying_machine', name: 'Flying Machine', kind: 'tool', stackTo: STACK_TOOL, color: 0xc49360, glyph: 'glider',
-    durability: null, madeBy: 'Built at a workshop from planks and wool', unlocks: 'Flying',
+    durability: null, madeBy: 'Built at a workshop from planks and wool', unlocks: 'Set it down and fly it',
     flies: true,
   },
 
