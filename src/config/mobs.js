@@ -75,6 +75,19 @@ export const MOBS = [
   },
 ];
 
+// The horse (asked for directly: "horses with wooden carts, at age 2 — you
+// need to have a horse and build the cart and apply the cart to the horse").
+// Wild on the plains and quick to bolt; hold fruit or vegetables and press
+// Place on one to tame it (Game.tameHorse), then use a cart on it.
+MOBS.push({
+  id: 'horse', name: 'Horse', biomes: ['plains'], weight: 2,
+  herd: [2, 3], hp: 12, walk: 1.4, run: 7.5, skittish: true,
+  body: { w: 0.62, h: 0.75, l: 1.5 }, head: 0.42, leg: 0.9,
+  colour: 0x8a5a36, headColour: 0x7a4e2e, legColour: 0x4a3020,
+  drops: { raw_meat: [2, 3], hide: [1, 2] },
+  tameWith: ['fruit', 'vegetables'], rideable: true,
+});
+
 export const MOBS_BY_ID = new Map(MOBS.map((m) => [m.id, m]));
 
 /** Every species that lives in a biome, for the spawner to choose among. */

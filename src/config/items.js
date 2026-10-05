@@ -186,6 +186,13 @@ export const ITEMS = [
     grants: 'mirror',
   },
 
+  // --- the cart: use it on a horse you've tamed, and it pulls it — forty
+  // slots on wheels, and something to ride (see Game.hitchCart) ----------
+  {
+    id: 'cart', name: 'Cart', kind: 'tool', stackTo: STACK_TOOL, color: 0xa77b4f, glyph: 'cart',
+    durability: null, madeBy: 'Built from planks and wood', unlocks: 'Carrying forty slots on a horse',
+  },
+
   // --- the flying machine (asked for directly: "a flying machine that
   // should fly with front and space to go up, left and right to move, this
   // is a wooden plane da Vinci style") -----------------------------------

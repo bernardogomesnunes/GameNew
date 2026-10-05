@@ -1228,7 +1228,7 @@ export class DuiltUI {
     const all = this.q('#btn-store-all');
     if (all) all.hidden = !!summary.grave;
     const title = this.q('#store-title');
-    if (title) title.textContent = summary.chest ? (summary.grave ? 'What you were carrying' : summary.found ?? 'Chest') : 'Storehouse';
+    if (title) title.textContent = summary.mount ? 'Cart' : summary.chest ? (summary.grave ? 'What you were carrying' : summary.found ?? 'Chest') : 'Storehouse';
 
     const kind = summary.tier?.name ?? 'On the shelves';
     this.q('#store-where').textContent = summary.free
@@ -1236,7 +1236,12 @@ export class DuiltUI {
       : `${kind} — full`;
 
     const next = this.q('#store-next');
-    if (next) {
+    // A cart comes with its horse: get on from here.
+    if (next && summary.mount) {
+      next.hidden = false;
+      next.innerHTML = '<button type="button" class="primary" data-store-ride>Ride the horse</button>';
+      next.querySelector('[data-store-ride]').addEventListener('click', () => this.game.startRide?.(summary.mount));
+    } else if (next) {
       const up = summary.tier?.next;
       next.hidden = !up;
       if (up) {
@@ -1259,7 +1264,7 @@ export class DuiltUI {
       sub.textContent = summary.grave
         ? 'Tap anything to take it back. The chest goes once it is empty.'
         : summary.items
-          ? `Tap anything to move it between your bag and the ${summary.chest ? 'chest' : 'shelves'}.`
+          ? `Tap anything to move it between your bag and the ${summary.mount ? 'cart' : summary.chest ? 'chest' : 'shelves'}.`
           : 'Nothing in here yet. Tap something in your bag to put it away.';
     }
 
@@ -1279,7 +1284,7 @@ export class DuiltUI {
     const chips = this.q('#store-routing-chips');
     if (!box || !chips) return;
     // A chest takes nothing from deliveries — only what you put in it.
-    if (summary.chest) { box.hidden = true; return; }
+    if (summary.chest || summary.mount) { box.hidden = true; return; }
     if (!PRODUCIBLE_ITEMS.length) { box.hidden = true; return; }
     box.hidden = false;
 
@@ -1385,7 +1390,7 @@ export class DuiltUI {
     if (this.store.chest && d.chestAt(this.store.chest.x, this.store.chest.y, this.store.chest.z)?.grave) return;
     const moved = d.inventory.moveTo(store, i);
     if (!moved) {
-      this.bus.emit('toast', { kind: 'xp', title: this.store.chest ? 'The chest is full' : 'No room on the shelves', body: 'Take something out first' });
+      this.bus.emit('toast', { kind: 'xp', title: this.store.mount ? 'The cart is full' : this.store.chest ? 'The chest is full' : 'No room on the shelves', body: 'Take something out first' });
       return;
     }
     this.renderStore();

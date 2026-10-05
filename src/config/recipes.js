@@ -148,6 +148,15 @@ export const RECIPES = [
     blurb: 'Earth, shaped and fired. Holds a wall up far better than it has any right to.',
   },
   {
+    id: 'cart',
+    name: 'Cart',
+    station: 'hand',
+    age: 2,
+    inputs: { planks: 16, wood: 4 },
+    output: { id: 'cart', count: 1 },
+    blurb: 'Tame a horse (fruit or vegetables in your hand, then Place on it), then use this on it. Forty slots, and you can ride it.',
+  },
+  {
     id: 'flying_machine',
     name: 'Flying Machine',
     station: 'workshop',

@@ -96,6 +96,8 @@ export const GLYPHS = {
   calcada_wave: 'M4 4h16v16H4ZM4 12c3-4 5-4 8 0s5 4 8 0M4 16c3-4 5-4 8 0s5 4 8 0',
   catapult: 'M3.5 16.5h17M7 19a2 2 0 1 0 .01 0M17 19a2 2 0 1 0 .01 0M12 16.5l5-10M14.5 6.5h5M16.5 4.5a1.6 1.6 0 1 0 .01 0M8.5 16.5v-6h7',
   sword: 'M19 5 10 14M19 5h-3.5M19 5v3.5M7.5 11.5l5 5M10 14l-4.5 4.5',
+  // A cart: a box on two wheels, and the shafts out the front.
+  cart: 'M4 9h13v6H4zM6 18.5a2 2 0 1 0 0-.01M15 18.5a2 2 0 1 0 0-.01M17 11h4',
   // The flying machine: a keel, and two ribbed wings off it.
   glider: 'M12 5v14M12 9C9 6 5 6 2 9l3 1 2 3 2-1 3 1M12 9c3-3 7-3 10 0l-3 1-2 3-2-1-3 1M9 19h6',
   shovel: 'M12 4v10M8.5 14h7L15 18.5a3 3 0 0 1-6 0Z',
