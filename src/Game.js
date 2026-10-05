@@ -719,6 +719,15 @@ export class Game {
       this.ui?.home?.forgetWorlds?.();
       return !!result;
     } catch (err) {
+      // Signed in, a full browser is no reason to lose the world: it goes up
+      // to the account instead, where it should have been anyway (reported
+      // directly: "this browser does not have more memory").
+      if (this.cloud?.signedIn) {
+        this.worldIsLocal = false;
+        this.local.delete(this.worldId);
+        this.bus.emit('toast', { kind: 'challenge', title: 'Moved to your account', body: 'This browser was full, so the world is kept in your account now.' });
+        return this.saveNow();
+      }
       this.saveError = err?.message ?? 'Could not save in this browser.';
       // Once a session: a browser that's out of room says so, but not on every autosave.
       if (!this.toldSaveError) {
@@ -910,6 +919,13 @@ export class Game {
         this.ui?.home?.refreshCloudWorlds?.({ force: true });
         // Anything a dropped connection stranded last time goes up now.
         this.sendUnsent();
+        // A world made before this check finished was decided as this
+        // browser's (newWorld asks signedIn, and it wasn't yet) — tapping
+        // Create the moment the game opens is enough. Signing in moves those
+        // to the account; staying signed in never signs in again, so they'd
+        // sit in the browser for good, growing until it was full. They move
+        // now, the open one included.
+        this.adoptLocalWorlds();
       })
       .catch(() => { this.ui?.home?.render?.(); });
   }
@@ -2824,6 +2840,19 @@ export class Game {
    * mid-migration, a dropped connection) is simply left in the local
    * library rather than lost, and picked up again on the next sign-in.
    */
+  /** Every browser world into the account, the one open now too — see resumeSession. */
+  async adoptLocalWorlds() {
+    if (!this.cloud?.signedIn) return 0;
+    const moved = await this.migrateLocalWorlds();
+    if (this.worldIsLocal && !this.discarded && this.worldId) {
+      this.worldIsLocal = false;
+      this.local.delete(this.worldId);
+      this.saveNow();
+    }
+    if (moved) { this.forgetCloudList(); this.ui?.home?.forgetWorlds?.(); this.ui?.home?.refreshCloudWorlds?.({ force: true }); }
+    return moved;
+  }
+
   async migrateLocalWorlds() {
     if (!this.cloud?.signedIn) return 0;
     let moved = 0;
