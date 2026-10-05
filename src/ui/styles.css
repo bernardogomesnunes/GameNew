@@ -273,6 +273,11 @@ body.touch #minimap { display: none; }
 .toast.level { border-left-color: var(--accent-2); }
 .toast.achievement { border-left-color: #b98bd6; }
 .toast.challenge { border-left-color: var(--good); }
+/* A story moment (config/moments.js): longer, in the story's own type, and
+   tappable to put away. */
+#toast-stack .toast.story { pointer-events: auto; cursor: pointer; border-left-color: #e8c24a; max-width: 300px; max-height: none; }
+.toast.story .title { font-family: Georgia, 'Times New Roman', serif; }
+.toast.story .body { font-family: Georgia, 'Times New Roman', serif; line-height: 1.45; color: var(--text); }
 .toast .title { font-weight: 700; margin-bottom: 2px; }
 .toast .body { color: var(--text-dim); }
 /* The only part of a toast you can touch. The stack is pointer-events: none so
@@ -1619,6 +1624,7 @@ body.touch .ctl-keys { display: none; }
 .lore-head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13.5px; }
 .lore-icon { width: 22px; text-align: center; color: var(--accent-2); font-size: 15px; }
 .lore-page.locked { opacity: 0.6; border-style: dashed; }
+.lore-page.moment { border-left: 3px solid #e8c24a; }
 .lore-page.locked p { font-family: inherit; font-style: italic; color: var(--text-dim); }
 .lore-replay { margin-top: 8px; font-size: 12.5px; padding: 6px 12px; }
 

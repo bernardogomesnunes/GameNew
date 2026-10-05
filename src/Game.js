@@ -92,6 +92,7 @@ import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
 import { WANDERERS, NEWS } from './config/wanderers.js';
 import { TRADERS_BY_ID } from './config/traders.js';
+import { momentForPlace } from './config/moments.js';
 import { MobView } from './render/MobView.js';
 // The showcase (docs/plan-look-and-sound.md, section 1): see openShowcase.
 import { ShowcaseView } from './render/ShowcaseView.js';
@@ -547,6 +548,9 @@ export class Game {
     // The land grows when an age is finished, and the wall has to grow with it.
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
     this.bus.on('health:died', ({ cause }) => this.die(cause));
+    // Story moments (config/moments.js): the first stranger who stays, the first altar.
+    this.bus.on('settler:arrived', () => this.tellMoment('first_settler'));
+    this.bus.on('structure:claimed', ({ structure } = {}) => { if (structure?.type === 'temple') this.tellMoment('first_temple'); });
     // A purchase from a market's trader changes the bag: save it with the world.
     this.bus.on('duilt:bought', () => { this.editedAt = Date.now(); });
     this.bus.on('duilt:boostEnded', ({ boost }) => this.ui?.toast({
@@ -1741,7 +1745,11 @@ export class Game {
     if (this.hermitTarget()) return void this.speakToHermit();
     // And at a market's trader, Place opens their stall.
     const trader = this.traderTarget();
-    if (trader) return void this.ui.openTrader(trader);
+    if (trader) {
+      this.ui.openTrader(trader);
+      this.tellMoment('first_trader');
+      return;
+    }
     // Place puts down what you are holding, on a mouse and under a thumb
     // alike. Cancelling is Escape, or the Break button — which says "Cancel"
     // while you are carrying something, so there is nothing to guess.
@@ -2983,6 +2991,7 @@ export class Game {
       if (!mob.penId) {
         this.gamification.onKill({ kind: 'mob', hp: spec.hp, name: `a ${spec.name.toLowerCase()}` });
         this.duilt?.note('hunt');
+        this.tellMoment('first_hunt');
       }
       const gained = this.duilt?.collect(drops) ?? {};
       const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
@@ -3111,6 +3120,18 @@ export class Game {
     return found.person;
   }
 
+  /**
+   * A story moment (config/moments.js), the first time it comes up in this
+   * world: a few lines on a card that stays a little longer than a toast,
+   * kept in the Lore tab after. Nothing in a sandbox.
+   */
+  tellMoment(id) {
+    const m = this.duilt?.moment(id);
+    if (!m) return;
+    this.ui?.toast({ kind: 'story', title: m.title, body: m.text, duration: 9000 });
+    this.editedAt = Date.now();
+  }
+
   /** The hermit's tale: who fell from the sky before you did (config/tales.js). */
   speakToHermit() {
     this.hermitTold = (this.hermitTold ?? -1) + 1;
@@ -3177,6 +3198,7 @@ export class Game {
     const got = d?.collect({ fireflies: 1 }) ?? {};
     if (d && !d.sandbox && !got.fireflies) d.inventory.add('jar', 1);
     this.ui.toast({ kind: 'xp', title: 'Caught some fireflies', body: got.fireflies ? '+1 jar of fireflies' : undefined });
+    if (got.fireflies) this.tellMoment('first_fireflies');
     return true;
   }
 
@@ -4596,6 +4618,7 @@ export class Game {
     });
     if (routed) this.skyAttackLost('fell');
     this.dying = false;
+    this.tellMoment('first_fall');
   }
 
   /** The chest you fell by, emptied: it's gone. */
@@ -4767,6 +4790,8 @@ export class Game {
       if (Math.hypot(lm.x - x, lm.z - z) > FOUND_REACH + lm.half) continue;
       if (!this.duilt.discover(lm)) continue;
       this.ui?.toast({ kind: 'achievement', title: `You found ${PLACE_NAMES[lm.kind].replace(/^(A|An|The) /, (a) => a.toLowerCase())}`, body: 'It\'s on your map now' });
+      const m = momentForPlace(lm.kind);
+      if (m) this.tellMoment(m);
     }
   }
 
@@ -5340,6 +5365,8 @@ export class Game {
       this.growCrops(dt);
       this.tickLeafDecay();
       this.lookForPlaces(dt);
+      // The first time it gets properly dark (config/moments.js).
+      if (this.duilt && !this.duilt.moments.includes('first_night') && daylightAt(this.dayCycle.time).day < 0.25) this.tellMoment('first_night');
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
       this.gamification.tick(performance.now());
