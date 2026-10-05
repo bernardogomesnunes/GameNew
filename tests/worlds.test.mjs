@@ -67,7 +67,9 @@ ok('and so does a Data API call', /keepTrying\(\(\) => this\.send/.test(
 // nowhere else, so "New world" while the account is unreachable is an offer to
 // spend an evening on something that has nowhere to be saved.
 ok('no New world card while the account cannot be reached',
-  /\$\{failed \? '' : `\s*<button class="world-card world-card-new"/.test(home));
+  // Not on the menu, and not as the list's own empty-state button either.
+  /\$\{this\.cloudError \? '' : `<button class="px-btn px-big" data-new="1">/.test(home)
+  && /: \(failed \? '' : this\.cloudWorlds == null/.test(home));
 ok('but the retry is still there', /data-retry="1"/.test(home));
 
 // Signing out is the other place a stale promise was dangerous.

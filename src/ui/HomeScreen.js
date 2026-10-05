@@ -1,4 +1,4 @@
-import { icon } from './icons.js';
+import { pixelIcon } from './pixelIcons.js';
 
 /**
  * The front door: where you land before you are in a world.
@@ -70,7 +70,11 @@ export class HomeScreen {
   constructor(root, callbacks) {
     this.root = root;
     this.cb = callbacks;
-    this.step = 'home';       // 'home' | 'kind' | 'name'
+    // Asked for directly: "a panel opens up with the buttons create new
+    // world or open world, the account and settings ... Then create a new
+    // world shows the flow we have today ... And open world shows the list
+    // of the worlds." So the front door is a menu, and the list is a step.
+    this.step = 'home';       // 'home' (the menu) | 'worlds' | 'kind' | 'name'
     this.kind = 'duilt';
     // Derived from whether you are signed in, not chosen — see whereToLive.
     this.where = null;
@@ -80,46 +84,82 @@ export class HomeScreen {
     this.mount();
   }
 
+  /**
+   * The name up in the sky over the title scene (world/titleScene.js), and
+   * the card at the bottom that every step is drawn in — pixel art, like
+   * the rest of the screens (asked for: "a pixel art kinda look and feel
+   * instead of the plain ui we have now").
+   */
   mount() {
     this.root.innerHTML = `
-      <div class="home">
-        <header class="home-head">
-          <div>
-            <h1>Duilt</h1>
-            <p class="home-tag">Arrive somewhere empty. Leave a civilisation.</p>
-          </div>
-          <button class="home-account" id="home-account">Sign in</button>
+      <div class="home px">
+        <header class="home-logo">
+          <h1 class="px-logo">Duilt</h1>
+          <p class="home-tag">Arrive somewhere empty. Leave a civilisation.</p>
         </header>
-        <div class="home-body" id="home-body"></div>
-        <footer class="home-foot">
-          <button class="home-link" id="home-settings">Settings</button>
-        </footer>
+        <div class="home-card px-panel">
+          <div class="home-body" id="home-body"></div>
+        </div>
       </div>`;
     this.body = this.root.querySelector('#home-body');
-    this.root.querySelector('#home-settings').addEventListener('click', () => this.cb.onSettings?.());
-    // A build with no cloud configured at all has nothing this button could
-    // do — there is no account to sign in to, only an error to show for
-    // trying. Hidden rather than left to fail on tap.
-    const accountBtn = this.root.querySelector('#home-account');
-    accountBtn.hidden = !this.cb.isCloudConfigured?.();
-    accountBtn.addEventListener('click', () => this.cb.onAccount?.());
+    this.accountLabel = 'Sign in';
   }
 
   /** Re-reads the worlds and draws whichever step we are on. */
   render() {
     if (this.step === 'kind') return this.renderKind();
     if (this.step === 'name') return this.renderName();
-    return this.renderHome();
+    if (this.step === 'worlds') return this.renderWorlds();
+    return this.renderMenu();
   }
 
   setAccount(label) {
-    const el = this.root.querySelector('#home-account');
+    this.accountLabel = label;
+    const el = this.root.querySelector('#home-account-label');
     if (el) el.textContent = label;
+  }
+
+  // ---- the menu ----
+
+  /**
+   * The four ways on from here. Open world says how many there are, so you
+   * know before you tap; and if the account can't be reached that is said
+   * here too, with the detail one step in, where the list would be.
+   */
+  renderMenu() {
+    const rows = this.cloudWorlds ?? this.cb.knownWorlds?.() ?? [];
+    const cloud = !!this.cb.isCloudConfigured?.();
+    this.body.innerHTML = `
+      <div class="home-menu">
+        <!--
+          No new world while the account is out of reach. Worlds are kept on
+          the account and nowhere else, so one started now would have nowhere
+          to go the moment you left it — offering it is offering to waste an
+          evening.
+        -->
+        ${this.cloudError ? '' : `<button class="px-btn px-big" data-new="1">${pixelIcon('plus', 20)}<span>Create new world</span></button>`}
+        <button class="px-btn px-big px-stone" data-worlds="1">${pixelIcon('open', 20)}<span>Open world</span>${rows.length ? `<b class="px-count">${rows.length}</b>` : ''}</button>
+        ${this.cloudError ? `<p class="home-warn">${pixelIcon('warn', 14)} Could not reach your account — open your worlds to see why.</p>` : ''}
+        <div class="home-row">
+          <!--
+            A build with no cloud configured at all has nothing this button
+            could do — no account to sign in to, only an error to show for
+            trying. Hidden rather than left to fail on tap.
+          -->
+          <button class="px-btn px-small px-wood" id="home-account" ${cloud ? '' : 'hidden'}>${pixelIcon('person', 16)}<span id="home-account-label">${escapeHtml(this.accountLabel)}</span></button>
+          <button class="px-btn px-small px-wood" id="home-settings">${pixelIcon('gear', 16)}<span>Settings</span></button>
+        </div>
+      </div>`;
+    this.body.querySelector('[data-new]')?.addEventListener('click', () => { this.step = 'kind'; this.render(); });
+    this.body.querySelector('[data-worlds]').addEventListener('click', () => { this.step = 'worlds'; this.render(); });
+    this.body.querySelector('#home-account').addEventListener('click', () => this.cb.onAccount?.());
+    this.body.querySelector('#home-settings').addEventListener('click', () => this.cb.onSettings?.());
+    this.refreshCloudWorlds();
   }
 
   // ---- the list ----
 
-  renderHome() {
+  renderWorlds() {
     // Until the account has answered, what we knew last time — never an empty
     // list that fills in seconds later (reported directly).
     const rows = this.cloudWorlds ?? this.cb.knownWorlds?.() ?? [];
@@ -128,6 +168,10 @@ export class HomeScreen {
     const line = (r) => describe({ mode: r.mode, timestamp: when(r), age: r.age });
 
     this.body.innerHTML = `
+      <div class="home-steps">
+        <button class="px-btn px-small px-wood px-back" data-back="1" aria-label="Back">${pixelIcon('back', 16)}</button>
+        <div class="home-label">Your worlds</div>
+      </div>
       ${failed ? `
         <div class="home-gate warn">
           <strong>Could not reach your account</strong>
@@ -149,34 +193,28 @@ export class HomeScreen {
         account and nowhere else, so one started now would have nowhere to go
         the moment you left it — offering it is offering to waste an evening.
       -->
-      ${failed ? '' : `
-        <button class="world-card world-card-new" data-new="1">
-          <span class="world-text">
-            <strong>New world</strong>
-            <em>Start somewhere fresh</em>
-          </span>
-          <span class="world-go">${icon('plus', 18)}</span>
-        </button>`}
-
       ${rows.length ? `
-        <div class="home-label">Your worlds</div>
         <div class="world-list">
           ${rows.map((r) => `
             <div class="world-card" data-open="${escapeAttr(r.id)}" role="button" tabindex="0">
+              <span class="world-play">${pixelIcon('play', 16)}</span>
               <span class="world-text">
                 <strong>${escapeHtml(r.name || 'Untitled world')}</strong>
                 <em>${line(r)}</em>
               </span>
-              <button class="world-remove" data-remove="${escapeAttr(r.id)}" data-remove-name="${escapeAttr(r.name || 'this world')}" title="Delete this world" aria-label="Delete this world">${icon('close', 15)}</button>
+              <!-- A bin, not a cross (asked for directly): a cross reads as "close". -->
+              <button class="world-remove" data-remove="${escapeAttr(r.id)}" data-remove-name="${escapeAttr(r.name || 'this world')}" title="Delete this world" aria-label="Delete this world">${pixelIcon('trash', 18)}</button>
             </div>`).join('')}
         </div>`
       : (failed ? '' : this.cloudWorlds == null && this.cb.isCloudConfigured?.()
         // Not answered yet, and nothing remembered (the first visit on this
         // device): "no worlds" would be a scare, not a fact.
         ? `<p class="home-note">Loading your worlds…</p>`
-        : `<p class="home-note">No worlds yet. Start one below.</p>`)}
+        : `<p class="home-note">No worlds yet.</p>
+           <button class="px-btn px-big" data-new="1">${pixelIcon('plus', 20)}<span>Create new world</span></button>`)}
     `;
 
+    this.body.querySelector('[data-back]').addEventListener('click', () => { this.step = 'home'; this.render(); });
     this.body.querySelector('[data-new]')?.addEventListener('click', () => { this.step = 'kind'; this.render(); });
     // Selecting a line of text inside a folded panel on a phone is a fight;
     // a button is not.
@@ -256,7 +294,8 @@ export class HomeScreen {
       this.startHealing();
     } finally {
       this.cloudPending = false;
-      if (this.step === 'home') this.renderHome();
+      if (this.step === 'home') this.renderMenu();
+      else if (this.step === 'worlds') this.renderWorlds();
     }
   }
 
@@ -283,7 +322,7 @@ export class HomeScreen {
       this.healTimer = null;
       // A backgrounded tab is nobody looking at anything.
       if (document.visibilityState === 'hidden') { this.startHealing(); return; }
-      if (!this.cloudError || this.step !== 'home') return;
+      if (!this.cloudError || (this.step !== 'home' && this.step !== 'worlds')) return;
       this.healAttempt++;
       this.refreshCloudWorlds({ force: true });
     }, gap);
@@ -306,7 +345,10 @@ export class HomeScreen {
 
   renderKind() {
     this.body.innerHTML = `
-      <div class="home-label">What kind of world?</div>
+      <div class="home-steps">
+        <button class="px-btn px-small px-wood px-back" data-back="1" aria-label="Back">${pixelIcon('back', 16)}</button>
+        <div class="home-label">What kind of world?</div>
+      </div>
       <div class="kind-list">
         ${KINDS.map((k) => `
           <button class="kind-card ${k.id === this.kind ? 'chosen' : ''}" data-kind="${k.id}">
@@ -319,8 +361,7 @@ export class HomeScreen {
           </button>`).join('')}
       </div>
       <div class="home-actions">
-        <button class="secondary" data-back="1">Back</button>
-        <button class="primary" data-next="1">Next</button>
+        <button class="px-btn px-big" data-next="1"><span>Next</span>${pixelIcon('play', 16)}</button>
       </div>`;
 
     this.body.querySelectorAll('[data-kind]').forEach((el) =>
@@ -339,7 +380,10 @@ export class HomeScreen {
     const where = whereToLive(this.where, signedIn);
 
     this.body.innerHTML = `
-      <div class="home-label">Name your world</div>
+      <div class="home-steps">
+        <button class="px-btn px-small px-wood px-back" data-back="1" aria-label="Back">${pixelIcon('back', 16)}</button>
+        <div class="home-label">Name your world</div>
+      </div>
       <p class="home-note">${kind.name} · ${kind.tagline}</p>
       <input type="text" id="home-world-name" maxlength="40" placeholder="${defaultName(kind)}" />
 
@@ -363,8 +407,7 @@ export class HomeScreen {
       `) : ''}
 
       <div class="home-actions">
-        <button class="secondary" data-back="1">Back</button>
-        <button class="primary" data-create="1">Create world</button>
+        <button class="px-btn px-big" data-create="1">${pixelIcon('plus', 18)}<span>Create world</span></button>
       </div>`;
 
     const input = this.body.querySelector('#home-world-name');
