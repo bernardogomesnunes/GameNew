@@ -124,6 +124,18 @@ const LOOK_HOLD_MS = 300;
  */
 const TAP_FINISH_MS = 2600;
 
+/**
+ * How much use a tool has left, as a bar under it (asked for directly: "Let's
+ * add a bar of durability to the inventory icon"). Green while there's
+ * plenty, amber under half, red near the end. Nothing for what never wears.
+ */
+function wearBar(slot, spec) {
+  if (!spec?.durability) return '';
+  const left = Math.max(0, 1 - (slot.wear ?? 0) / spec.durability);
+  const tone = left > 0.5 ? 'ok' : left > 0.2 ? 'low' : 'out';
+  return `<span class="wear ${tone}"><i style="width:${Math.round(left * 100)}%"></i></span>`;
+}
+
 export class UIManager {
   constructor(root, { bus, game, callbacks }) {
     this.bus = bus;
@@ -615,6 +627,7 @@ export class UIManager {
             <span class="key">${i + 1}</span>
             <div class="swatch swatch-cube">${itemIcon(spec, { size: 30 }) ?? glyphSvg(spec?.glyph, { size: 18, color: spec?.color })}</div>
             <span class="held">${s.count}</span>
+            ${wearBar(s, spec)}
           </div>
         `));
       });

@@ -2022,3 +2022,10 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 #crash h2 { margin: 0 0 8px; }
 #crash button { width: 100%; margin-top: 12px; font-family: inherit; }
 #crash .crash-why { margin: 12px 0 0; font-size: 12px; color: var(--text-dim); overflow-wrap: anywhere; }
+
+/* A tool's wear on the hotbar (UIManager's wearBar), as in the bag. */
+.hotbar-slot { position: relative; }
+.hotbar-slot .wear { position: absolute; left: 6px; right: 6px; bottom: 4px; height: 4px; background: rgba(0, 0, 0, 0.5); }
+.hotbar-slot .wear i { display: block; height: 100%; background: #5aa53a; }
+.hotbar-slot .wear.low i { background: #f1c84b; }
+.hotbar-slot .wear.out i { background: #b84a3a; }

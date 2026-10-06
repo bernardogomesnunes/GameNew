@@ -104,7 +104,10 @@ export const TEXTURES = {
   // we should change it to wooden logs texture." Bark up the sides —
   // wandering furrows, a crack or two, a knot — and growth rings on the cut
   // ends (`top`, painted as a layer of its own), pale wood inside dark bark.
-  log:       { bark: 7, knots: 1, marks: 14, flecks: [[0.86, 0.94, 0.8], [1.1, 1.0, 0.9]], depth: 0.45, speck: 0.05, bump: 0.6,
+  // No knots any more, and shallower furrows (asked for directly: "it has
+  // round forms that look artificial, can be simpler but with the kind of
+  // depth there's turf").
+  log:       { bark: 7, marks: 14, flecks: [[0.86, 0.94, 0.8], [1.1, 1.0, 0.9]], depth: 0.34, speck: 0.05, bump: 0.45,
                top: { rings: 3, heart: [1.6, 1.52, 1.4], depth: 0.25, speck: 0.04, lift: 0 } },
   // Requested directly: "Leaves block could have small holes in it like
   // trees have and be somehow more rounded instead of sharp cubes." `gaps`
@@ -137,7 +140,7 @@ export const BLOCK_TEXTURES = {
   // Birch: white bark with dark dashes. Dark oak: deeper furrows.
   'White Wood':    { bark: 4, birch: true, marks: 10, flecks: [[0.6, 0.6, 0.62]], depth: 0.5, speck: 0.03, bump: 0.3,
                      top: { rings: 3, heart: [1.04, 0.98, 0.86], depth: 0.2, speck: 0.03, lift: 0 } },
-  'Dark Wood':     { bark: 9, knots: 2, marks: 10, flecks: [[0.86, 0.95, 0.82]], depth: 0.55, speck: 0.05, bump: 0.8,
+  'Dark Wood':     { bark: 9, marks: 10, flecks: [[0.86, 0.95, 0.82]], depth: 0.55, speck: 0.05, bump: 0.8,
                      top: { rings: 2.5, heart: [1.85, 1.7, 1.55], depth: 0.25, speck: 0.04, lift: 0 } },
   'White Leaves':  { leaves: 120, blossom: 14, flecks: [[1.1, 1.08, 0.8], [1, 1, 1], [0.94, 1.0, 0.96]], depth: 0.36, speck: 0.03, holes: 6, gaps: 14, bite: 6 },
   'Dark Leaves':   { leaves: 140, flecks: [[1.08, 1.1, 0.86], [1, 1, 1], [0.84, 0.98, 1.06]], depth: 0.46, speck: 0.04, holes: 4, gaps: 12, bite: 6 },
