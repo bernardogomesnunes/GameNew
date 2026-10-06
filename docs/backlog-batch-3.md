@@ -33,6 +33,7 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#24–26 Every wood its own set.** White (birch) and dark wood each get planks, fence, gate, door and trapdoor, made like oak's. They count as oak's for what buildings need. PR #134.
 - **#23 Walls for every stone.** Seven more: dark brick, marble, sky marble, white, dark grey, turquoise and orange stone. Sandstone comes with #33. PR #134.
 - **#6 Slabs.** A slab goes in the top or bottom half of a block, by where you point. A slab on the open half of one of its kind makes the full block, for the one slab. PR #135.
+- **#19 Chimneys.** New Stone Brick block (and its wall), and chimneys in stone brick and brick. They stack into one flue with a lip on top, and smoke rises from the top one. PR #136.
 
 ## Needs a decision first
 
@@ -46,7 +47,6 @@ point's number (#n, in the order it was written) so it can be traced back.
 
 ## Priority 1 — blocks and placement (each a few hours)
 
-- **#19 A chimney block** in stone brick and in brick. Needs a new stone brick block.
 - **#33 Desert blocks:** sandstone, sandstone bricks, and a sand path with rounded corners. They spawn in deserts.
 
 ## Priority 2 — the world looking alive
@@ -79,6 +79,6 @@ point's number (#n, in the order it was written) so it can be traced back.
 ## Suggested order
 
 1. The decisions above (#12, #27).
-2. Priority 1: the chimney; desert blocks.
+2. Priority 1: desert blocks.
 3. #8 grass tufts, then the rest of Priority 2.
 4. Priority 3, one system at a time: wood mill first, as it feeds furniture and the per-wood sets.

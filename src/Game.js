@@ -61,6 +61,7 @@ import { AvatarView } from './render/AvatarView.js';
 import { GliderView, MachineView } from './render/GliderView.js';
 import { CartView } from './render/CartView.js';
 import { FlameView } from './render/FlameView.js';
+import { SmokeView } from './render/SmokeView.js';
 import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { CrackView } from './render/CrackView.js';
@@ -464,6 +465,7 @@ export class Game {
     this.cartView = new CartView(this.scene);
     this.machineView = new MachineView(this.scene);
     this.flames = new FlameView(this.scene);
+    this.smoke = new SmokeView(this.scene);
     this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
@@ -6009,6 +6011,7 @@ export class Game {
       this.updateCracks();
       this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false });
       this.flames.update(this.world, this.player.position);
+      this.smoke.update(this.world, this.player.position);
       this.settlerView.update(this.withShowcase('settlers', this.duilt?.settlers.people ?? []));
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();

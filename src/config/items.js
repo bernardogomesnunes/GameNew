@@ -271,6 +271,11 @@ export const ITEMS = [
   { id: 'wall_grey_stone', name: 'Dark Grey Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0x6c6b6a, glyph: 'wall', block: 324, madeBy: 'Laid from dark grey stone — joins up like a fence' },
   { id: 'wall_turquoise', name: 'Turquoise Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0x63b5ab, glyph: 'wall', block: 325, madeBy: 'Laid from turquoise stone — joins up like a fence' },
   { id: 'wall_orange', name: 'Orange Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xd38d57, glyph: 'wall', block: 326, madeBy: 'Laid from orange stone — joins up like a fence' },
+  // Stone brick, its wall, and chimneys (#19).
+  { id: 'stone_brick', name: 'Stone Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xb4b1ab, glyph: 'brick', block: 329, madeBy: 'Stone cut square at the bench' },
+  { id: 'wall_stone_brick', name: 'Stone Brick Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xb4b1ab, glyph: 'wall', block: 332, madeBy: 'Laid from stone brick — joins up like a fence' },
+  { id: 'chimney_stone_brick', name: 'Stone Brick Chimney', kind: 'refined', stackTo: STACK_BULK, color: 0xb4b1ab, glyph: 'chimney', block: 330, madeBy: 'Stone brick round a flue — stack them, and the top one smokes' },
+  { id: 'chimney_brick', name: 'Brick Chimney', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'chimney', block: 331, madeBy: 'Brick round a flue — stack them, and the top one smokes' },
   { id: 'stairs_plank', name: 'Plank Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'stair', block: 30, madeBy: 'Cut into steps from planks' },
   { id: 'table_oak', name: 'Oak Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xd1b38c, glyph: 'table', block: 31, madeBy: 'Built at the workshop' },
   { id: 'table_marble', name: 'Marble Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xe3dbc8, glyph: 'table', block: 32, madeBy: 'Cut and dressed at the workshop' },
