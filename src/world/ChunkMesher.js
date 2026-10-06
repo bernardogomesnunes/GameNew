@@ -5,7 +5,7 @@ import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
   roofPart, doorPart, endAxisOf, ID_COUNT,
 } from '../config/blocks.js';
-import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, chimneyBoxes, pathBoxes, windowBoxes, turn } from './propShapes.js';
+import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, chimneyBoxes, pathBoxes, pathCornerGaps, windowBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
 import { textureFor, blockTexture, TILE_SCALE } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
@@ -1165,6 +1165,18 @@ export class ChunkMesher {
                   return turn(doorMirrored(id, vol[idx + hx + hz * PAD]) ? mirrorX(local) : local, FACING[id]);
                 })()
                 : turn(boxesFor(shape), FACING[id]);
+          // A path's rounded corners are filled with the ground beside them —
+          // grass, sand, whatever it's cut into — in that ground's own
+          // texture, so the rounding reads as the path's edge, not a notch.
+          if (IS_PATH[id]) {
+            const joins = { px: IS_PATH[vol[idx + 1]], nx: IS_PATH[vol[idx - 1]], pz: IS_PATH[vol[idx + PAD]], nz: IS_PATH[vol[idx - PAD]] };
+            for (const gap of pathCornerGaps(joins)) {
+              const ground = gap.sides.map(([dx, dz]) => vol[idx + dx + dz * PAD])
+                .find((n) => n > 0 && IS_CUBE[n] && !IS_TRANSPARENT[n] && !IS_PATH[n]);
+              if (!ground) continue;
+              for (const b of gap.boxes) this.emitTexBox(tex, ground, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ);
+            }
+          }
           const col = baseColor(id);
           if (TEX_FROM[id]) {
             for (const b of boxes) this.emitTexBox(tex, TEX_FROM[id], lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ);

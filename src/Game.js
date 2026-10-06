@@ -567,6 +567,9 @@ export class Game {
     this.roofKey = null;         // what the preview was last built for
     this.lastRoof = null;        // the roof this tool put up, while it is untouched
     this.roofGhost = new BuildGhost(this.scene);
+    // A saved build, queued: where it would go and which way round, before it goes.
+    this.templateGhost = new BuildGhost(this.scene);
+    this.templateGhostKey = null;
     // What the crosshair is on, worked out once a frame and shared by every
     // tool that needs to know which build you mean.
     this.pick = null;
@@ -1226,7 +1229,7 @@ export class Game {
         return !!this.pendingClear;
       },
       onDeleteTemplate: (id) => this.templates.delete(id),
-      onRotateTemplate: () => { this.templateRotation = (this.templateRotation + 1) % 4; return this.templateRotation; },
+      onRotateTemplate: () => this.turnTemplate(),
       onPlaceTemplate: () => this.stampTemplate(),
       getTemplates: () => this.templates.list(),
       /** Which building tools you actually have — see UIManager.refreshTools. */
@@ -1809,10 +1812,7 @@ export class Game {
       const turnKey = this.controls.keys.turn;
       if (e.code === turnKey && this.moving) this.turnMove();
       else if (e.code === turnKey && this.pendingRoof) this.turnRoof();
-      else if (e.code === turnKey && this.pendingTemplate) {
-        this.templateRotation = (this.templateRotation + 1) % 4;
-        this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });
-      }
+      else if (e.code === turnKey && this.pendingTemplate) this.turnTemplate();
     });
   }
 
@@ -2105,6 +2105,9 @@ export class Game {
     // A roof with more than one way round takes this button, so a phone has a
     // way to turn it. See setToolReadout, which labels it to match.
     if (this.pendingRoof?.turns > 1) return void this.turnRoof();
+    // So does a saved build: on a phone there's no R (asked for directly:
+    // "on creative buildings do not rotate when moving").
+    if (this.pendingTemplate) return void this.turnTemplate();
     if (this.armed) return void this.clearPending();
     if (this.manning) return void this.letGo();
     // Pointing at a gate, Place opens or shuts it — before anything you're
@@ -2165,6 +2168,28 @@ export class Game {
     return record;
   }
 
+  /**
+   * The queued saved build, drawn where it would land and the way it's
+   * turned — pass null to put the preview away. It follows the crosshair
+   * the way stampTemplate anchors it.
+   */
+  updateTemplatePreview(onBuild) {
+    if (onBuild == null || !this.pendingTemplate) {
+      if (this.templateGhostKey !== null) { this.templateGhost.hide(); this.templateGhostKey = null; }
+      return;
+    }
+    const t = this.pendingTemplate, size = t.size;
+    const key = `${t.id ?? t.name}:${this.templateRotation}`;
+    if (key !== this.templateGhostKey) {
+      const oriented = rotateTemplate(t, this.templateRotation);
+      const top = Math.max(0, ...oriented.blocks.map((b) => b.dy));
+      this.templateGhost.show(oriented.blocks, { x: size - 1, y: top, z: size - 1 });
+      this.templateGhostKey = key;
+    }
+    this.templateGhost.moveTo(this.stampAnchor({ x: size - 1, y: 0, z: size - 1 }));
+    this.templateGhost.setValid(!!onBuild);
+  }
+
   /** Stamps the queued template where you are pointing, charged and undoable as one action. */
   stampTemplate() {
     if (!this.pendingTemplate) return false;
@@ -2200,6 +2225,8 @@ export class Game {
     this.roofTurn = 0;
     this.roofGhost.hide();
     this.roofKey = null;
+    this.templateGhost.hide();
+    this.templateGhostKey = null;
     this.selection.hide();
     if (had) this.ui?.toast({ kind: 'xp', title: 'Put it away' });
   }
@@ -2224,6 +2251,15 @@ export class Game {
   }
 
   /** Next orientation of the queued roof. A hip roof has only one, and says so. */
+  /** Turns the queued saved build a quarter-turn — the preview turns with it. */
+  turnTemplate() {
+    if (!this.pendingTemplate) return 0;
+    this.templateRotation = (this.templateRotation + 1) % 4;
+    this.ui.toast({ kind: 'xp', title: `Turned ${this.templateRotation * 90}\u00b0` });
+    this.sound?.click?.();
+    return this.templateRotation;
+  }
+
   turnRoof() {
     if (!this.pendingRoof) return 0;
     if (this.pendingRoof.turns <= 1) {
@@ -6630,9 +6666,11 @@ export class Game {
     } else if (this.pendingTemplate) {
       this.updateRoofPreview(null);
       this.selection.hide();
-      this.ui.setToolReadout({ template: this.pendingTemplate.name, onBuild: !!hit });
+      this.updateTemplatePreview(!!hit);
+      this.ui.setToolReadout({ template: this.pendingTemplate.name, onBuild: !!hit, facing: `${this.templateRotation * 90}\u00b0` });
     } else {
       this.updateRoofPreview(null);
+      this.updateTemplatePreview(null);
       this.selection.hide();
       this.ui.setToolReadout(null);
     }

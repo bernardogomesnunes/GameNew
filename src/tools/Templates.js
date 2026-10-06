@@ -1,4 +1,4 @@
-import { AIR } from '../config/blocks.js';
+import { AIR, quarterTurned } from '../config/blocks.js';
 
 /**
  * Saved designs: reading one off a build, turning it, and putting it down.
@@ -33,7 +33,9 @@ export function rotateTemplate(template, quarterTurns = 1) {
   const s = template.size;
   let blocks = template.blocks;
   for (let t = 0; t < turns; t++) {
-    blocks = blocks.map(({ dx, dy, dz, type }) => ({ dx: s - 1 - dz, dy, dz: dx, type }));
+    // Each block that faces a way — a stair, a door, a chair, a log lying
+    // down — faces the next way round too, as when a building is moved.
+    blocks = blocks.map(({ dx, dy, dz, type }) => ({ dx: s - 1 - dz, dy, dz: dx, type: quarterTurned(type) }));
   }
   return { ...template, blocks };
 }
