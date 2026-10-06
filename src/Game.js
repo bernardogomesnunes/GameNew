@@ -52,7 +52,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, swungTrapdoor, TRAPDOOR_OPEN, pairPart, pairOther, isPainting } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, pairPart, pairOther, isPainting } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/upgrades.js';
@@ -60,6 +60,7 @@ import { nextView, VIEW_NAMES } from './config/avatar.js';
 import { AvatarView } from './render/AvatarView.js';
 import { GliderView, MachineView } from './render/GliderView.js';
 import { CartView } from './render/CartView.js';
+import { FlameView } from './render/FlameView.js';
 import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { CrackView } from './render/CrackView.js';
@@ -153,6 +154,8 @@ const IMMEDIATE_CHUNKS = 25;  // meshed before the first frame; the rest stream 
 const DEEP_RANGE = 80;
 /** How far past DEEP_RANGE a chunk's deep mesh is kept, so walking back and forth doesn't rebuild it. */
 const DEEP_SLACK = 32;
+/** Grass and dirt: an edit to either may let turf spread (duilt/TurfSpread.js). */
+const TURFY = new Set([1, 2]);
 /** Milliseconds a frame for making and drawing land while the loading screen is up. */
 const BOOT_BUDGET_MS = 40;
 const EDIT_REBUILD_NOW = 4; // chunks an edit rebuilds on the spot; see remeshDirty
@@ -204,7 +207,7 @@ export function swingLabel(id) {
   if (isChest(id) || id === STORAGE_CONTROLLER) return 'Open';
   if (isCatapult(id)) return 'Man';
   if (isPainting(id)) return 'Home';
-  if (isTrapdoor(id)) return id >= TRAPDOOR_OPEN ? 'Close' : 'Open';
+  if (isTrapdoor(id)) return isOpenTrapdoor(id) ? 'Close' : 'Open';
   if (id === SKY_LIFT) return 'Ride';
   const door = doorPart(id);
   return door ? (door.open ? 'Close' : 'Open') : null;
@@ -463,6 +466,7 @@ export class Game {
     this.glider = new GliderView(this.scene);
     this.cartView = new CartView(this.scene);
     this.machineView = new MachineView(this.scene);
+    this.flames = new FlameView(this.scene);
     this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
@@ -1323,7 +1327,7 @@ export class Game {
       getModeLabel: () => this.mode === DUILT ? 'Duilt' : 'Creative',
       onOpenBag: () => this.ui.toggleBag(),
       onOpenClaim: () => this.openClaim(),
-      onHintTap: () => (this.hintUses ? this.secondaryAction() : this.openClaim()),
+      onHintTap: () => (this.moving ? this.turnMove() : this.hintUses ? this.secondaryAction() : this.openClaim()),
       onFinishEditing: () => this.finishEditing(),
       onStampStarter: (id) => this.stampStarter(id),
       // The showcase (docs/plan-look-and-sound.md, section 1) — see openShowcase.
@@ -1793,7 +1797,8 @@ export class Game {
       // Change view (playtest, P3) — F5 unless rebound, and not a reload.
       if (e.code === this.controls.keys.view) { e.preventDefault(); this.cycleView(); return; }
       const turnKey = this.controls.keys.turn;
-      if (e.code === turnKey && this.pendingRoof) this.turnRoof();
+      if (e.code === turnKey && this.moving) this.turnMove();
+      else if (e.code === turnKey && this.pendingRoof) this.turnRoof();
       else if (e.code === turnKey && this.pendingTemplate) {
         this.templateRotation = (this.templateRotation + 1) % 4;
         this.ui.toast({ kind: 'xp', title: `Rotated ${this.templateRotation * 90}\u00b0` });
@@ -2761,6 +2766,22 @@ export class Game {
       ? { kind: 'challenge', title: `${spec?.name ?? 'Building'} moved`, body: 'It still counts' }
       : { kind: 'xp', title: `${spec?.name ?? 'Building'} moved`, body: structure.brokenReason ?? 'It no longer qualifies here' });
     return true;
+  }
+
+  /**
+   * Turns the building you're carrying a quarter-turn (asked for directly:
+   * "Moving buildings should allow rotate, only when moving"): its blocks go
+   * round its middle, and each one that faces a way faces the next way round.
+   */
+  turnMove() {
+    const m = this.moving;
+    if (!m) return;
+    const { x: ex, z: ez } = m.extent;
+    m.blocks = m.blocks.map((b) => ({ dx: ez - b.dz, dy: b.dy, dz: b.dx, type: quarterTurned(b.type) }));
+    m.extent = { x: ez, y: m.extent.y, z: ex };
+    this.ghost.show(m.blocks, m.extent);
+    this.updateMove();
+    this.sound?.click?.();
   }
 
   /** Puts it back where it was. Nothing has changed, so there is nothing to undo. */
@@ -5053,7 +5074,7 @@ export class Game {
     const door = doorPart(hit.block);
     const trap = isTrapdoor(hit.block);
     const cells = door ? [...this.doorCells(hit), ...this.doorPartnerCells(hit, door)] : [{ x: hit.x, y: hit.y, z: hit.z, block: hit.block }];
-    const shutting = door ? door.open : trap ? hit.block >= TRAPDOOR_OPEN : GATE_SWING[hit.block] === GATE_SHUT;
+    const shutting = door ? door.open : trap ? isOpenTrapdoor(hit.block) : GATE_SWING[hit.block] === GATE_SHUT;
     if (shutting && cells.some((c) => this.blockOverlapsPlayerAABB(c))) {
       this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : trap ? 'Step out from under it first' : 'Step out of the gateway first' });
       return;
@@ -5061,7 +5082,10 @@ export class Game {
     this.sound?.creak(!shutting, door ? 'door' : trap ? 'trapdoor' : 'gate');
     for (const c of cells) {
       const part = doorPart(c.block);
-      const next = part ? doorBlock({ ...part, open: !part.open }) : trap ? swungTrapdoor(c.block) : GATE_SWING[c.block];
+      // A trapdoor shuts onto the floor when that's where it stands — ground
+      // under it and nothing over it — and at the top of its cell otherwise.
+      const low = trap && this.world.isCollidable(c.x, c.y - 1, c.z) && !this.world.isCollidable(c.x, c.y + 1, c.z);
+      const next = part ? doorBlock({ ...part, open: !part.open }) : trap ? swungTrapdoor(c.block, { low }) : GATE_SWING[c.block];
       this.world.setBlock(c.x, c.y, c.z, next);
       this.water?.touch(c.x, c.y, c.z);
       this.lava?.touch(c.x, c.y, c.z);
@@ -5332,7 +5356,9 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: 'Locked block', body: availability.reason });
       return;
     }
-    const held = this.placedBlock(type);
+    // A log lies along the face it's put against, a trapdoor sits on it
+    // (blocks.js logOnFace, trapdoorOnFace).
+    const held = trapdoorOnFace(logOnFace(this.placedBlock(type), hit.normal), hit.normal);
     const door = doorPart(held);
     // A bed or a tent: one thing in two blocks (blocks.js PAIRS).
     const pair = pairPart(held);
@@ -5415,11 +5441,19 @@ export class Game {
     }
   }
 
+  /** Where turf never spreads by itself: a claimed building's own dirt. */
+  turfSkip() {
+    const reg = this.duilt?.structures;
+    return reg ? (x, y, z) => !!reg.at(x, y, z) : null;
+  }
+
   growCrops(dt) {
     this.cropClock = (this.cropClock ?? 0) + dt;
     if (this.cropClock < CROP_TICK_SECONDS || !this.duilt) return;
     this.cropClock = 0;
     if (this.duilt.crops.grow(this.world).length) this.remeshDirty();
+    // Turf creeping over bare dirt, a block at a time (duilt/TurfSpread.js).
+    if (this.duilt.turf.spread(this.world, this.duilt.days, this.turfSkip()).length) this.remeshDirty();
     const grown = this.duilt.saplings.grow(this.world, this.duilt.days);
     if (grown.length) {
       this.remeshDirty();
@@ -5616,6 +5650,9 @@ export class Game {
         if (is && is.stage === 0 && !(was && was.kind === is.kind)) this.duilt.crops.plant(c.x, c.y, c.z, is.kind);
         else if (was && !is) this.duilt.crops.remove(c.x, c.y, c.z);
         // A sapling counts its ten days from the day it went in.
+        // Dirt opened to the sky beside turf, or turf put down beside dirt:
+        // the turf will creep over it in time.
+        if (TURFY.has(c.prev) || TURFY.has(c.next) || c.next === AIR) this.duilt.turf.consider(this.world, c.x, c.y, c.z, this.duilt.days, this.turfSkip());
         if (c.next === SAPLING && c.prev !== SAPLING) this.duilt.saplings.plant(c.x, c.y, c.z, this.duilt.days);
         else if (c.prev === SAPLING && c.next !== SAPLING) this.duilt.saplings.remove(c.x, c.y, c.z);
       }
@@ -5960,6 +5997,7 @@ export class Game {
       this.updateHover();
       this.updateCracks();
       this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false });
+      this.flames.update(this.world, this.player.position);
       this.settlerView.update(this.withShowcase('settlers', this.duilt?.settlers.people ?? []));
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
@@ -6376,7 +6414,7 @@ export class Game {
       : catapult
         ? `Catapult — ${how}`
       : trapdoor
-        ? `Trapdoor · ${hit.block >= TRAPDOOR_OPEN ? 'open' : 'shut'} — ${how}`
+        ? `Trapdoor · ${isOpenTrapdoor(hit.block) ? 'open' : 'shut'} — ${how}`
       : lift
         ? (lift === 'nowhere' ? 'Sky lift · only an anchor tower\'s goes anywhere' : lift === 'cut' ? 'Sky lift · its chain is cut, it goes nowhere now' : `Sky lift — ${how} ${lift.up ? 'up to the Sky Kingdom' : 'down to the ground'}`)
       : chainLink

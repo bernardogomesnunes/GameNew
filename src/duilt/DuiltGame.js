@@ -2,6 +2,7 @@ import { GAME_DAY_SECONDS } from '../render/DayCycle.js';
 import { Crops, harvestOf, farmProduce, FARM_SEED_SLOTS } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND, cropOf } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
+import { TurfSpread } from './TurfSpread.js';
 import { penProduce, herdToJSON } from './Ranch.js';
 import { MOBS_BY_ID } from '../config/mobs.js';
 import { Inventory } from '../items/Inventory.js';
@@ -103,6 +104,8 @@ export class DuiltGame {
     // Saplings, and the world's own count of days for them to grow by: it
     // only runs while you play (Game adds each day as the clock turns).
     this.saplings = new Saplings();
+    // Bare dirt next to turf grows over in 5 to 50 game days (TurfSpread).
+    this.turf = new TurfSpread();
     this.days = 0;
     // What a broken leaf drops besides itself: Math.random, unless a test
     // wants it to be sure.
@@ -1597,6 +1600,7 @@ export class DuiltGame {
       waiting: this.waiting,
       crops: this.crops.toJSON(),
       saplings: this.saplings.toJSON(),
+      turf: this.turf.toJSON(),
       days: this.days,
       savedAt: Date.now(),
     };
@@ -1665,6 +1669,7 @@ export class DuiltGame {
     this.waiting = Array.isArray(data.waiting) ? data.waiting.filter((w) => w?.region && w.type) : [];
     this.crops.loadJSON(data.crops);
     this.saplings.loadJSON(data.saplings);
+    this.turf.loadJSON(data.turf);
     this.days = Number.isFinite(data.days) ? data.days : 0;
     this.war.loadJSON(data.war);
     this.skyWar.loadJSON(data.skyWar);

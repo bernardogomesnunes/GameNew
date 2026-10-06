@@ -210,6 +210,8 @@ export class World {
     if (shape === 'fence' || shape === 'gate' || shape === 'wall') return { minY: y, maxY: y + FENCE_HEIGHT };
     // A shut trapdoor is a floor high in its cell: stood on, walked under.
     if (shape === 'trapdoor') return { minY: y + 0.8125, maxY: y + 1 };
+    // And one shut on the floor is a low step, like a slab's thinner cousin.
+    if (shape === 'trapdoor_low') return { minY: y, maxY: y + 0.1875 };
     return { minY: y, maxY: y + 1 };
   }
 

@@ -400,6 +400,11 @@ export const TRAPDOOR = 168;
 export const TRAPDOOR_OPEN = 172;
 quad(TRAPDOOR, { name: 'Trapdoor', glyph: 'trapdoor', color: 0xa5763f, shape: 'trapdoor', material: 'wood', unlock: null });
 quad(TRAPDOOR_OPEN, { name: 'Open Trapdoor', glyph: 'trapdoor', color: 0xa5763f, shape: 'trapdoor_open', material: 'wood', stateOf: TRAPDOOR, unlock: null });
+// Shut on the floor of its cell, as one put down on top of a block lies
+// (asked for directly: "Trapdoors should be placed on the face of the block
+// not with space below on top facing always").
+export const TRAPDOOR_LOW = 246;
+quad(TRAPDOOR_LOW, { name: 'Trapdoor', glyph: 'trapdoor', color: 0xa5763f, shape: 'trapdoor_low', material: 'wood', stateOf: TRAPDOOR, unlock: null });
 // A window in a wooden frame with crossbars, glazed — the glass is drawn
 // see-through (ChunkMesher's pane material).
 quad(176, { name: 'Framed Window', glyph: 'window', color: 0x9a7350, shape: 'window', unlock: null });
@@ -510,7 +515,10 @@ export const WAR_TENT = 224, CAMPFIRE = 228;
 quad(WAR_TENT, { name: 'War Tent', glyph: 'tent', color: 0x6b5a48, shape: 'war_tent', material: 'plant', unlock: null });
 BLOCKS.push({
   id: CAMPFIRE, name: 'Campfire', glyph: 'campfire', color: 0x6b4a2e, shape: 'campfire', material: 'wood',
-  light: { color: 0xffa04a, intensity: 4, distance: 14, decay: 1, y: 0.4 }, unlock: null,
+  // `flame`: real moving flames over it (render/FlameView.js); `flicker`:
+  // its light wavers with them (asked for directly: "Campfire fire needs some
+  // movement to show flames").
+  light: { color: 0xffa04a, intensity: 4, distance: 14, decay: 1, y: 0.4, flame: true, flicker: true }, unlock: null,
 });
 // Two blocks long (backlog batch 2): the front, with its flap, where you
 // aim, and the back behind it — a state of the front, like a bed's head.
@@ -560,14 +568,82 @@ export function isPainting(id) {
 
 /** Whether a block is a trapdoor, open or shut, whichever way it faces. */
 export function isTrapdoor(id) {
-  return id >= TRAPDOOR && id <= TRAPDOOR_OPEN + 3;
+  return (id >= TRAPDOOR && id <= TRAPDOOR_OPEN + 3) || (id >= TRAPDOOR_LOW && id <= TRAPDOOR_LOW + 3);
 }
-/** The same trapdoor swung the other way. */
-export function swungTrapdoor(id) {
-  return id < TRAPDOOR_OPEN ? id + 4 : id - 4;
+/** Whether a trapdoor is swung open (standing against its hinge side). */
+export function isOpenTrapdoor(id) {
+  return id >= TRAPDOOR_OPEN && id <= TRAPDOOR_OPEN + 3;
+}
+/**
+ * The same trapdoor swung the other way. Shutting, it closes at the top of
+ * its cell — or on the floor of it, `low`, when that's where it belongs.
+ */
+export function swungTrapdoor(id, { low = false } = {}) {
+  if (isOpenTrapdoor(id)) return (low ? TRAPDOOR_LOW : TRAPDOOR) + (id - TRAPDOOR_OPEN);
+  if (id >= TRAPDOOR_LOW) return TRAPDOOR_OPEN + (id - TRAPDOOR_LOW);
+  return id + 4;
+}
+/**
+ * A trapdoor put on the face you point at: on top of a block it lies on the
+ * floor; under one it shuts at the top; against a wall it stands against
+ * that wall, hinged on it. `normal` is the face hit.
+ */
+export function trapdoorOnFace(id, normal) {
+  if (!isTrapdoor(id) || !normal) return id;
+  const facing = (id - TRAPDOOR) & 3;
+  if (normal.y > 0) return TRAPDOOR_LOW + facing;
+  if (normal.y < 0) return TRAPDOOR + facing;
+  // Facing counts quarter-turns from -z (0 -z, 1 +x, 2 +z, 3 -x): the hinge
+  // goes on the side the wall is, against the face's normal.
+  const hinge = normal.z > 0 ? 0 : normal.x < 0 ? 1 : normal.z < 0 ? 2 : 3;
+  return TRAPDOOR_OPEN + hinge;
+}
+
+// Logs lying down (asked for directly: "Logs should be placed in vertical
+// and horizontal directions"): each wood along x and along z, as states of
+// the upright log, so it drops, counts and costs as that wood. The ring
+// texture goes on the ends, wherever they point (ChunkMesher's layer pick).
+const LOGS = [4, 41, 43];
+export const LOG_SIDE_BASE = 240; // log k along x is LOG_SIDE_BASE + 2k, along z + 2k + 1
+for (const [k, baseId] of LOGS.entries()) {
+  const base = BLOCKS.find((b) => b.id === baseId);
+  BLOCKS.push({ ...base, id: LOG_SIDE_BASE + 2 * k, stateOf: baseId, axis: 0, cost: undefined });
+  BLOCKS.push({ ...base, id: LOG_SIDE_BASE + 2 * k + 1, stateOf: baseId, axis: 2, cost: undefined });
 }
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
+
+/**
+ * A log turned to lie along the face it was placed against: `normal` is the
+ * face hit (x, y or z set). An upright face, or anything not a log, is as it
+ * was.
+ */
+export function logOnFace(id, normal) {
+  const k = LOGS.indexOf(id);
+  if (k === -1 || !normal) return id;
+  if (normal.x) return LOG_SIDE_BASE + 2 * k;
+  if (normal.z) return LOG_SIDE_BASE + 2 * k + 1;
+  return id;
+}
+
+/**
+ * A block turned a quarter-turn clockwise seen from above, as a building is
+ * when you turn it while moving it: stairs, doors and roofs face the next
+ * way round, and a log lying along x lies along z (and back).
+ */
+export function quarterTurned(id) {
+  const b = BLOCKS_BY_ID.get(id);
+  if (!b) return id;
+  if (b.axis === 0) return id + 1;
+  if (b.axis === 2) return id - 1;
+  if (b.facing != null) return turned(id, (b.facing + 1) & 3);
+  return id;
+}
+
+/** Which axis a block's ends point along: 0 x, 1 y (upright, and anything not a lying log), 2 z. */
+export function endAxisOf(id) {
+  return BLOCKS_BY_ID.get(id)?.axis ?? 1;
+}
 
 /** Ground a tree will take root in. */
 export const SOIL_IDS = BLOCKS.filter((b) => b.soil).map((b) => b.id);

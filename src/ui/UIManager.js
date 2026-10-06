@@ -1510,7 +1510,8 @@ export class UIManager {
     const el = this.q('#building-hint');
     if (!el) return;
     if (!name) { el.hidden = true; el.classList.remove('bad'); return; }
-    const how = this.isTouch ? 'Place to drop it' : 'Click to drop it, Escape to cancel';
+    // Tapping the strip turns it (Game.turnMove); R does on a keyboard.
+    const how = this.isTouch ? 'Tap here to turn it · Place to drop it' : 'R to turn it · click to drop it · Escape to cancel';
     el.innerHTML = `<b>Moving the ${name.toLowerCase()}</b><span>${reason ?? how}</span>`;
     el.classList.toggle('bad', !!reason);
     el.hidden = false;
