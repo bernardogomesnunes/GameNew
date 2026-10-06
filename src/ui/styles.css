@@ -807,6 +807,13 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 .vital-boosts[hidden] { display: none; }
 .boost { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; color: #3c4650; font-variant-numeric: tabular-nums; }
 .boost svg { width: 14px; height: 14px; filter: drop-shadow(0 1px 0 rgba(0,0,0,0.25)); }
+/* A barracks training somebody (batch 3, #29). */
+.vital-training { gap: 5px; padding: 4px 8px; font-size: 11px; font-weight: 700; color: #3c4650; font-variant-numeric: tabular-nums; cursor: pointer; }
+.vital-training[hidden] { display: none; }
+.vital-training .train-glyph svg { width: 14px; height: 14px; display: block; }
+.train-hud-bar { width: 38px; height: 6px; border-radius: 999px; background: rgba(35,42,45,0.18); overflow: hidden; }
+.train-hud-bar i { display: block; height: 100%; background: var(--accent); }
+.train-hud-more { color: var(--text-dim); font-weight: 600; }
 .vital-hearts[hidden] { display: none; }
 .heart { position: relative; width: 13px; height: 13px; display: inline-block; }
 .heart svg { width: 13px; height: 13px; display: block; fill: rgba(35, 42, 45, 0.22); }

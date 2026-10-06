@@ -2461,6 +2461,8 @@ export class Game {
     const r = this.duilt.trainSoldier(structure, unit, this.bedsIn(structure.region));
     if (!r.ok) return void this.ui.toast({ kind: 'xp', title: "Can't train that yet", body: r.reason });
     this.ui.toast({ kind: 'xp', title: `Training a ${r.unit.name.toLowerCase()}`, body: 'They join the others in front of the barracks when they are ready' });
+    // The pop-up shows them in its line straight away, whatever else redraws it.
+    if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(structure, this.buildingActions(structure));
   }
 
   /** Puts a seed into a farm, or takes one out (DuiltGame.sowFarm), saying why not when it can't. */
@@ -6120,6 +6122,7 @@ export class Game {
           * (this.riding ? RIDE_SPEED : 1);
         this.dayCycle.nightSight = this.duilt.wearing('night');
         this.ui?.duiltUI?.renderBoosts();
+        this.ui?.duiltUI?.renderTraining();
         this.ui?.duiltUI?.renderArmy();
         this.player.jumpScale = white ? WHITE_RING_JUMP : 1;
       }

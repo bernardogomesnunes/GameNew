@@ -185,6 +185,8 @@ export class DuiltGame {
       world, structures: this.structures, inventory: this.inventory, skills: this.skills, bus,
       // They eat from the storehouses before your bag (#10).
       stores: () => this.structures.stores().map((x) => x.store),
+      // The barracks's soldiers live here too, and eat with everyone.
+      garrison: () => this.defenders?.residents ?? 0,
     });
     this.lastCollect = Date.now();
   }

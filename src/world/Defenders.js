@@ -70,6 +70,30 @@ export class Defenders {
     return [...this.soldiers, ...this.archers];
   }
 
+  /** How many soldiers your barracks have trained between them — who live in the town. */
+  get residents() {
+    return Object.values(this.trained).reduce((n, t) => n + t.roster.length, 0);
+  }
+
+  /**
+   * The soldier nearest to coming out of training, across every barracks:
+   * { unit, of, ratio, secondsLeft, more } — `more` being how many else are
+   * waiting anywhere — or null when nobody is training. `daySeconds` is how
+   * long a game day lasts.
+   */
+  nextOut(days, daySeconds) {
+    let best = null, waiting = 0;
+    for (const [of, t] of Object.entries(this.trained)) {
+      if (!t.queue.length) continue;
+      waiting += t.queue.length;
+      const done = t.since + TRAIN_DAYS;
+      if (!best || done < best.done) best = { unit: t.queue[0], of, done, since: t.since };
+    }
+    if (!best) return null;
+    const ratio = Math.min(1, Math.max(0, (days - best.since) / TRAIN_DAYS));
+    return { unit: best.unit, of: best.of, ratio, secondsLeft: Math.max(0, (best.done - days) * daySeconds), more: waiting - 1 };
+  }
+
   /** The catapults your crews have set up, to draw: { x, y, z, facing, swing }. */
   get engines() {
     return this.soldiers.filter((s) => s.engine).map((s) => s.engine);
