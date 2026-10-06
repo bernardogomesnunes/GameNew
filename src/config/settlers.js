@@ -57,7 +57,12 @@ export const SETTLERS = {
    * answers. Nobody starves and nobody leaves — they just stop working, and
    * you can see it in what your buildings hand over.
    */
-  eatEverySeconds: 90,
+  // Once a game day (render/DayCycle.js GAME_DAY_SECONDS — backlog batch 3,
+  // #10: "Settlers take a little food from your storehouses each day").
+  eatEverySeconds: 900,
+
+  /** How often anyone who went without tries again, so food put away is eaten soon, not tomorrow. */
+  retryHungrySeconds: 60,
 
   /** How much one settler puts away per meal. */
   foodPerMeal: 1,

@@ -2,6 +2,9 @@ import { SETTLERS, settlerName, settlerColour } from '../config/settlers.js';
 import { STRUCTURES_BY_ID } from '../config/structures.js';
 import { ITEMS } from '../config/items.js';
 
+/** Everything edible, least nourishing first — what settlers work down through. */
+const FOODS = ITEMS.filter((i) => i.kind === 'food').sort((a, b) => (a.feeds ?? 0) - (b.feeds ?? 0));
+
 /**
  * The population: who has moved in, where they sleep, and what they work on.
  *
@@ -37,10 +40,16 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const STEP_UP = 4;
 
 export class Settlers {
-  constructor({ world, structures, inventory, skills, bus, rand = Math.random }) {
+  /**
+   * @param stores () => the storehouses' shelves (Inventories), which
+   *               settlers eat from before they touch your bag.
+   */
+  constructor({ world, structures, inventory, skills, bus, rand = Math.random, stores = null }) {
     this.world = world;
     this.structures = structures;
     this.inventory = inventory;
+    this.stores = stores;
+    this.sinceRetry = 0;
     this.skills = skills;
     this.bus = bus;
     this.rand = rand;
@@ -80,13 +89,30 @@ export class Settlers {
    * work down from the least nourishing, so the fruit goes before the
    * vegetables you were keeping for yourself.
    */
-  larder() {
-    return ITEMS.filter((i) => i.kind === 'food' && this.inventory.countOf(i.id) > 0)
-      .sort((a, b) => (a.feeds ?? 0) - (b.feeds ?? 0));
+  larder(from = this.inventory) {
+    return FOODS.filter((i) => from.countOf(i.id) > 0);
+  }
+
+  /**
+   * Where a meal comes from: the storehouses first — that's what they're
+   * for (backlog batch 3, #10: "Settlers take a little food from your
+   * storehouses each day") — and only then your bag. Returns { from, food }
+   * for the cheapest food in the first place that has any, or null.
+   */
+  nextMeal() {
+    for (const from of [...(this.stores?.() ?? []), this.inventory]) {
+      const food = from && this.larder(from)[0];
+      if (food) return { from, food };
+    }
+    return null;
   }
 
   foodOnHand() {
-    return this.larder().reduce((n, i) => n + this.inventory.countOf(i.id), 0);
+    let n = 0;
+    for (const from of [...(this.stores?.() ?? []), this.inventory]) {
+      for (const i of this.larder(from)) n += from.countOf(i.id);
+    }
+    return n;
   }
 
   /** People who went without at the last meal. */
@@ -114,9 +140,16 @@ export class Settlers {
     }
 
     this.sinceMeal += dtSeconds;
+    this.sinceRetry += dtSeconds;
     if (this.sinceMeal >= SETTLERS.eatEverySeconds) {
       this.sinceMeal = 0;
+      this.sinceRetry = 0;
       this.eat();
+    } else if (this.hungry && this.sinceRetry >= SETTLERS.retryHungrySeconds) {
+      // Whoever went without has another go, so food put away is eaten
+      // within the minute rather than at tomorrow's meal.
+      this.sinceRetry = 0;
+      this.eat({ onlyHungry: true });
     }
 
     for (const p of this.people) this.walk(p, dtSeconds);
@@ -162,14 +195,15 @@ export class Settlers {
    * and death is the point: it decides how well the place runs, and the houses
    * decide who lives in it.
    */
-  eat() {
+  eat({ onlyHungry = false } = {}) {
     if (!this.people.length) return 0;
     let fed = 0;
     for (const p of this.people) {
       const was = p.hungry;
-      const food = this.larder()[0];
-      if (food) {
-        this.inventory.remove(food.id, SETTLERS.foodPerMeal);
+      if (onlyHungry && !was) { fed++; continue; }
+      const meal = this.nextMeal();
+      if (meal) {
+        meal.from.remove(meal.food.id, SETTLERS.foodPerMeal);
         p.hungry = false;
         fed++;
       } else {

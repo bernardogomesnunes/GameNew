@@ -357,8 +357,10 @@ export class DuiltUI {
       this.saidHungry = true;
       this.bus.emit('toast', {
         kind: 'xp',
-        title: count === 1 ? 'Somebody has nothing to eat' : `${count} of your people have nothing to eat`,
-        body: 'They stop working until there is food — build a farm',
+        // Gently (backlog batch 3, #10): nobody leaves and nobody starves;
+        // fed, they just work better.
+        title: count === 1 ? 'Somebody is hungry' : `${count} of your people are hungry`,
+        body: 'Put some food in a storehouse — fed, they work better',
       });
     });
     this.bus.on('settler:arrived', ({ settler, population }) => {
@@ -761,7 +763,7 @@ export class DuiltUI {
     this.q('#people-count').textContent = `${population}/${target}`;
     // Hunger wins the tooltip: it is the one that is costing you something.
     box.title = hungry
-      ? `${hungry === 1 ? 'Somebody has' : `${hungry} people have`} nothing to eat, so they are not working — build a farm`
+      ? `${hungry === 1 ? 'Somebody is' : `${hungry} people are`} hungry — put some food in a storehouse; fed, they work better`
       : (d.settlers.blockedReason() ?? `${target - population} more on the way`);
     box.classList.toggle('full', population >= target && target > 0 && !hungry);
     box.classList.toggle('hungry', hungry > 0);
@@ -782,8 +784,8 @@ export class DuiltUI {
     const { population, target, houses, hungry } = d.settlers;
     const say = (title, body) => this.bus.emit('toast', { kind: 'xp', title, body });
     if (hungry) {
-      return say(hungry === 1 ? 'Somebody has nothing to eat' : `${hungry} people have nothing to eat`,
-        'They stop working until there is food — build a farm');
+      return say(hungry === 1 ? 'Somebody is hungry' : `${hungry} of your people are hungry`,
+        'Put some food in a storehouse — fed, they work better');
     }
     const reason = d.settlers.blockedReason();
     if (reason) return say(houses ? `${population} living here` : 'Nobody lives here yet', reason);
