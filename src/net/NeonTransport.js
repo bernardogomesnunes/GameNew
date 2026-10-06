@@ -339,6 +339,11 @@ function describeError(status, detail) {
     return 'Your session expired — sign in again.';
   }
   if (status === 409) return 'That world changed elsewhere. Reload it before saving again.';
+  // migrations/0005: a size backstop said no. Asking again gets the same
+  // answer, so say what happened instead.
+  if (/_size\b/.test(detail) && /check constraint|23514/i.test(detail)) {
+    return 'This world is too large to sync to the cloud. Your local save is untouched.';
+  }
   if (status >= 500) return 'The cloud is unreachable right now. Your local save is untouched.';
   return `Cloud request failed (${status}). ${detail.slice(0, 160)}`;
 }

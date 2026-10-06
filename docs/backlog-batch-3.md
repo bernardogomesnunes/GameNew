@@ -22,6 +22,7 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#28 Water.** PR #130.
   - Pointing at water, a block goes into it, so ponds can be filled in.
   - A bucket clears a lone water block; water joined to other water stays.
+- **#10 Villagers eat.** Already in since PR #82: `Settlers.eat()` takes one food per settler a day, cheapest first. A hungry settler stops working, and nobody starves or leaves. Left to check: that a warning shows when the larder runs dry.
 - **#31 Clouds** drift smoothly, never jumping as you move, and are slightly see-through. PR #131.
 - **#30 Fireflies** each fly their own wandering closed loop, back exactly to where they started, at their own pace. PR #131.
 - **#22 Campfire flames that move.** Three flame tongues that sway and flicker; the fire's light flickers with them. PR #132.
@@ -65,6 +66,13 @@ All done (see above).
 - **#29 Barracks train soldiers.**
   - Archers, warriors, swordsmen, and a catapult crew who set one up and fire it in a war.
   - Each costs food and gear.
+
+## Working method (skills added to Claude)
+
+- **Superpowers:** brainstorming before each new system (#1, #9, #29, #32), writing-plans for multi-step ones, test-driven-development for every block or system, verification-before-completion before each PR.
+- **Terse and caveman:** replies and docs stay short. Commit messages and PR bodies follow the same rules.
+- **Parallel work:** the per-wood and per-stone sets (#23 to #26) share one pattern, so one PR covers them. Independent items go to parallel agents.
+- **Per PR:** one test file per item, `npm test` green, then a line moved from "Needs" to "Done already" here.
 
 ## Suggested order
 
