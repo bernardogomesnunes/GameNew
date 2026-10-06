@@ -1,5 +1,5 @@
 import { GAME_DAY_SECONDS } from '../render/DayCycle.js';
-import { Crops, harvestOf, farmProduce, FARM_SEED_SLOTS } from './Crops.js';
+import { Crops, harvestOf, farmProduce, tendFarm, FARM_SEED_SLOTS } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND, cropOf } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
 import { TurfSpread } from './TurfSpread.js';
@@ -1340,6 +1340,20 @@ export class DuiltGame {
     seeds.push(kind);
     this.bus?.emit('structure:sown', { structure: s, kind });
     return { ok: true };
+  }
+
+  /**
+   * Every farm's crops, out in its soil (batch 3, #13): what's put in it
+   * sown on its bare farmland, cut and resown when it pays out, pulled up
+   * when it's taken out. Returns the cells changed. See Crops.tendFarm.
+   */
+  tendFarms(world = this.world, now = Date.now()) {
+    const changes = [];
+    for (const s of this.structures.structures) {
+      if (!s.valid || !STRUCTURES_BY_ID.get(s.type)?.fromCrops) continue;
+      changes.push(...tendFarm(world, this.crops, s, now));
+    }
+    return changes;
   }
 
   /** Takes a crop back out of a farm: it stops growing there, and its seed comes back. */

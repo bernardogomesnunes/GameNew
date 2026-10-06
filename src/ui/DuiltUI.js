@@ -578,6 +578,7 @@ export class DuiltUI {
       <div class="building-sec">
         <h4>Crops · ${sown.length} of ${FARM_SEED_SLOTS}</h4>
         <div class="farm-seeds">${slots}</div>
+        ${sown.length ? '<p class="dim">They grow in its soil, and it cuts and resows them when it pays out. You can plant and pick there too.</p>' : ''}
         ${pick}
       </div>`;
   }
