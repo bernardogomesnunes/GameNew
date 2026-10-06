@@ -22,6 +22,7 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#28 Water.** PR #130.
   - Pointing at water, a block goes into it, so ponds can be filled in.
   - A bucket clears a lone water block; water joined to other water stays.
+- **#10 Villagers eat.** Already in since PR #82: `Settlers.eat()` takes one food per settler a day, cheapest first. A hungry settler stops working, and nobody starves or leaves. Left to check: that a warning shows when the larder runs dry.
 - **#31 Clouds** drift smoothly, never jumping as you move, and are slightly see-through. PR #131.
 - **#30 Fireflies** each fly their own wandering closed loop, back exactly to where they started, at their own pace. PR #131.
 
@@ -68,7 +69,6 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#9 Composting.**
   - A compost bin takes seeds and leaves and makes compost.
   - Compost on farmland or put into a farm speeds growth or raises yield.
-- **#10 Villagers eat.** Settlers take a little food from your storehouses each day. Fed: they work better. Hungry: a gentle warning, nothing harsh.
 - **#13 Farms show their crops.**
   - A farm's crops grow visibly on its farmland, the same as ones you plant yourself.
   - You can plant in the farm's tilled soil by hand.
@@ -80,6 +80,13 @@ point's number (#n, in the order it was written) so it can be traced back.
   - It makes stripped logs.
   - It makes a full furniture set: cabinets, wardrobes, bedside tables.
   - It makes wooden wall panels you put on one face of a block for interiors, in plain, patterned and two-tone wood.
+
+## Working method (skills added to Claude)
+
+- **Superpowers:** brainstorming before each new system (#1, #9, #29, #32), writing-plans for multi-step ones, test-driven-development for every block or system, verification-before-completion before each PR.
+- **Terse and caveman:** replies and docs stay short. Commit messages and PR bodies follow the same rules.
+- **Parallel work:** the per-wood and per-stone sets (#23 to #26) share one pattern, so one PR covers them. Independent items go to parallel agents.
+- **Per PR:** one test file per item, `npm test` green, then a line moved from "Needs" to "Done already" here.
 
 ## Suggested order
 
