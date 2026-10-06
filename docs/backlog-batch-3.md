@@ -48,7 +48,8 @@ point's number (#n, in the order it was written) so it can be traced back.
   - Chimneys stand two blocks clear of the roof now, in the new chimney blocks, smoking.
   - Towers: the university has a stone-brick tower with an open top and its own pyramid.
 - **#17 Workshop, engineering centre and university redone.** Stone-brick plinths, open-trapdoor shutters at the windows, stone-brick stacks. The workshop has a log store under a lean-to on stone-brick wall piers; the engineering centre a walled yard with a crane. No brick on any of them (brick comes from the workshop). PR #145.
-- **University moves to Age 3** (asked for directly), and the engineering centre with it, since it needs research done at the university. The university's two tables are made at the workshop, an Age 3 building, so in Age 2 it couldn't be built.
+- **University moves to Age 3** (asked for directly), and the engineering centre with it, since it needs research done at the university. The university's two tables are made at the workshop, an Age 3 building, so in Age 2 it couldn't be built. PR #146.
+- **#1 A backpack.** A Back slot in the gear row, between the boots and the ring. Leather backpack (hide and string, by hand, Age 1): +10 bag slots. Reinforced (the leather one with iron, Age 4): +20. Taking it off, or swapping to a smaller one, moves what's in its slots into the rest of the bag; if there isn't room it stays on and says how much to clear. Nothing is ever dropped. PR #147.
 
 ## Priority 1 — blocks and placement
 
@@ -60,9 +61,6 @@ All done (see above).
 
 ## Priority 3 — systems
 
-- **#1 A backpack.**
-  - Crafted, worn in the boots/ring row (or its own slot).
-  - Adds bag slots: e.g. +10 leather, +20 reinforced.
 - **#9 Composting.**
   - A compost bin takes seeds and leaves and makes compost.
   - Compost on farmland or put into a farm speeds growth or raises yield.

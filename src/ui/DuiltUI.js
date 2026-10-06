@@ -975,18 +975,22 @@ export class DuiltUI {
       const spec = ITEMS_BY_ID.get(piece?.id);
       const inner = spec
         ? `<span class="swatch swatch-cube">${itemIcon(spec, { size: 34 }) ?? glyphSvg(spec.glyph, { size: 20, color: spec.color })}</span>`
-          + `<span class="wear"><i style="width:${Math.round((1 - piece.wear / spec.durability) * 100)}%"></i></span>`
-        : `<span class="wear-ghost">${glyphSvg({ head: 'helm', body: 'cuirass', legs: 'greaves', feet: 'boots', ring: 'ring' }[k], { size: 22, color: 0x9aa0a6 })}</span>`;
-      const tip = spec ? `${spec.name}${spec.armour ? ` · ${spec.armour} armour` : ''} — tap to take off` : `${SLOT_NAMES[k]} — nothing on`;
+          + (spec.durability ? `<span class="wear"><i style="width:${Math.round((1 - piece.wear / spec.durability) * 100)}%"></i></span>` : '')
+        : `<span class="wear-ghost">${glyphSvg({ head: 'helm', body: 'cuirass', legs: 'greaves', feet: 'boots', back: 'backpack', ring: 'ring' }[k], { size: 22, color: 0x9aa0a6 })}</span>`;
+      const what = spec?.armour ? `${spec.armour} armour` : spec?.bagSlots ? `+${spec.bagSlots} bag slots` : '';
+      const tip = spec ? `${spec.name}${what ? ` · ${what}` : ''} — tap to take off` : `${SLOT_NAMES[k]} — nothing on`;
       return `<div class="wear-cell"><button class="bag-slot wear-slot${spec ? '' : ' empty'}${fits === k ? ' fits' : ''}" data-wear="${k}"
-        aria-label="${escapeAttr(tip)}" data-tip="${escapeAttr(spec ? spec.name : SLOT_NAMES[k])}" data-tip-info="${escapeAttr(spec ? `${spec.armour ? `${spec.armour} armour · ` : ''}tap to take off` : k === 'ring' ? 'Forged at the Temple' : 'Lift a piece from your bag, then tap here')}">${inner}</button>
+        aria-label="${escapeAttr(tip)}" data-tip="${escapeAttr(spec ? spec.name : SLOT_NAMES[k])}" data-tip-info="${escapeAttr(spec ? `${what ? `${what} · ` : ''}tap to take off` : k === 'ring' ? 'Forged at the Temple' : k === 'back' ? 'Lift a backpack from your bag, then tap here' : 'Lift a piece from your bag, then tap here')}">${inner}</button>
         <span class="wear-label">${SLOT_NAMES[k]}</span></div>`;
     }).join('');
     grid.querySelectorAll('[data-wear]').forEach((btn) => btn.addEventListener('click', () => this.tapWear(btn.dataset.wear)));
     const points = d.armour();
-    this.q('#armour-sum').textContent = points
-      ? `— ${points} armour, a blow ${Math.round(points * ARMOUR_PER_POINT * 100)}% softer`
-      : '— nothing on';
+    const extra = ITEMS_BY_ID.get(d.worn.back?.id)?.bagSlots ?? 0;
+    const parts = [
+      points ? `${points} armour, a blow ${Math.round(points * ARMOUR_PER_POINT * 100)}% softer` : null,
+      extra ? `+${extra} bag slots` : null,
+    ].filter(Boolean);
+    this.q('#armour-sum').textContent = parts.length ? `— ${parts.join(' · ')}` : '— nothing on';
   }
 
   /** A wear slot tapped: put on what's lifted, or take off what's there. */
@@ -1001,12 +1005,14 @@ export class DuiltUI {
       }
       const r = d.wear(this.held);
       this.held = null;
-      if (r.ok) this.bus.emit('toast', { kind: 'xp', title: `Wearing the ${spec.name.toLowerCase()}` });
+      this.bus.emit('toast', { kind: 'xp', title: r.ok ? `Wearing the ${spec.name.toLowerCase()}` : r.reason });
     } else if (d.worn[k]) {
       const r = d.takeOff(k);
       this.bus.emit('toast', { kind: 'xp', title: r.ok ? `Took off the ${itemName(r.id).toLowerCase()}` : r.reason });
     } else {
-      this.bus.emit('toast', { kind: 'xp', title: k === 'ring' ? 'Your ring is forged at the Temple' : `Lift a piece of armour from your bag, then tap ${SLOT_NAMES[k]}` });
+      this.bus.emit('toast', { kind: 'xp', title: k === 'ring' ? 'Your ring is forged at the Temple'
+        : k === 'back' ? 'Make a backpack at the bench, lift it from your bag, then tap Back'
+          : `Lift a piece of armour from your bag, then tap ${SLOT_NAMES[k]}` });
     }
     this.renderBag();
     this.renderHealth();

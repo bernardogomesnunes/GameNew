@@ -23,8 +23,21 @@
  * The ring slot is for the ring you forge at the top of the Temple (7c).
  */
 
-export const WEAR_SLOTS = ['head', 'body', 'legs', 'feet', 'ring'];
-export const SLOT_NAMES = { head: 'Head', body: 'Body', legs: 'Legs', feet: 'Feet', ring: 'Ring' };
+export const WEAR_SLOTS = ['head', 'body', 'legs', 'feet', 'back', 'ring'];
+export const SLOT_NAMES = { head: 'Head', body: 'Body', legs: 'Legs', feet: 'Feet', back: 'Back', ring: 'Ring' };
+
+/**
+ * Backpacks (backlog batch 3, #1: "Crafted, worn in the boots/ring row.
+ * Adds bag slots: e.g. +10 leather, +20 reinforced"). Worn on your back,
+ * between the boots and the ring; while it's on, the bag has `slots` more.
+ * The reinforced one is the leather one with iron at the seams.
+ */
+export const BACKPACKS = [
+  { id: 'backpack_leather', name: 'Leather Backpack', slots: 10, age: 1, inputs: { hide: 4, string: 2 },
+    main: 0x9a6b45, trim: 0x6b4a30, madeBy: 'Hide and string, stitched at the bench' },
+  { id: 'backpack_reinforced', name: 'Reinforced Backpack', slots: 20, age: 4, inputs: { backpack_leather: 1, iron_ingot: 2, hide: 2 },
+    main: 0x7d5538, trim: 0xc9ced6, madeBy: 'A leather backpack with iron at the seams' },
+];
 
 /** How much each point of armour takes off a blow — a full sky or dark set (13 points) takes about half. */
 export const ARMOUR_PER_POINT = 0.04;

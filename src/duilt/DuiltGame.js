@@ -5,7 +5,7 @@ import { Saplings } from './Saplings.js';
 import { TurfSpread } from './TurfSpread.js';
 import { penProduce, herdToJSON } from './Ranch.js';
 import { MOBS_BY_ID } from '../config/mobs.js';
-import { Inventory } from '../items/Inventory.js';
+import { Inventory, DEFAULT_SLOTS, PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { Territory } from '../world/Territory.js';
 import { StructureRegistry } from '../structures/StructureRegistry.js';
 import { tierStatus, validateStructure, inspect } from '../structures/validate.js';
@@ -1404,9 +1404,14 @@ export class DuiltGame {
     const s = inv.slots[index];
     const spec = ITEMS_BY_ID.get(s?.id);
     if (!spec?.wears) return { ok: false, reason: s ? `You can't wear ${spec?.name?.toLowerCase() ?? 'that'}.` : 'Nothing there.' };
+    const undo = this.bagSnapshot();
     const was = this.worn[spec.wears];
     this.worn[spec.wears] = { id: s.id, wear: s.wear ?? 0 };
     inv.slots[index] = was ? { id: was.id, count: 1, wear: was.wear } : null;
+    // A smaller backpack for a bigger one: what's in the slots going has to
+    // fit in the ones staying, or it stays as it was.
+    const fit = this.fitBag();
+    if (!fit.ok) { this.restoreBag(undo); return { ok: false, reason: fit.reason }; }
     inv.changed();
     return { ok: true, slot: spec.wears, swapped: was?.id ?? null };
   }
@@ -1415,10 +1420,60 @@ export class DuiltGame {
   takeOff(slot) {
     const piece = this.worn[slot];
     if (!piece) return { ok: false, reason: 'Nothing on there.' };
-    if (this.inventory.add(piece.id, 1, { wear: piece.wear }) > 0) return { ok: false, reason: 'No room in your bag.' };
+    const undo = this.bagSnapshot();
     this.worn[slot] = null;
+    // A backpack off: its slots go with it, so what's in them — and the
+    // backpack itself — has to fit in the rest of the bag first. Nothing is
+    // ever dropped to make it fit.
+    const fit = this.fitBag({ extra: slot === 'back' ? 1 : 0 });
+    if (!fit.ok) { this.restoreBag(undo); return { ok: false, reason: fit.reason }; }
+    if (this.inventory.add(piece.id, 1, { wear: piece.wear }) > 0) { this.restoreBag(undo); return { ok: false, reason: 'No room in your bag.' }; }
     this.inventory.changed();
     return { ok: true, id: piece.id };
+  }
+
+  /**
+   * How many slots the bag has: forty, and what the backpack on your back
+   * adds (backlog batch 3, #1).
+   */
+  bagSize() {
+    return DEFAULT_SLOTS + (ITEMS_BY_ID.get(this.worn.back?.id)?.bagSlots ?? 0);
+  }
+
+  /**
+   * Makes the bag the size the backpack says. Growing is free. Shrinking
+   * moves whatever is in the slots that go into empty ones that stay — the
+   * bag's before the hotbar's — and refuses, changing nothing, if there
+   * aren't enough. A creative bag holds one of everything and is left alone.
+   */
+  fitBag({ extra = 0 } = {}) {
+    const inv = this.inventory;
+    if (inv.endless) return { ok: true };
+    const to = this.bagSize(), s = inv.slots;
+    if (s.length <= to && !extra) { inv.grow(to); return { ok: true }; }
+    const out = [], free = [];
+    for (let i = to; i < s.length; i++) if (s[i]) out.push(i);
+    for (let i = PLAYABLE_SLOTS; i < to; i++) if (!s[i]) free.push(i);
+    for (let i = 0; i < PLAYABLE_SLOTS; i++) if (!s[i]) free.push(i);
+    if (out.length + extra > free.length) {
+      const n = out.length + extra - free.length;
+      return { ok: false, reason: `Your backpack is full — make room for ${n} more thing${n === 1 ? '' : 's'} in your bag first.` };
+    }
+    out.forEach((from, k) => { s[free[k]] = s[from]; s[from] = null; });
+    if (s.length < to) inv.grow(to);
+    s.length = to;
+    inv.changed();
+    return { ok: true };
+  }
+
+  /** What's worn and in the bag, to put back if a change can't be made. */
+  bagSnapshot() {
+    return { slots: this.inventory.slots.slice(), worn: { ...this.worn } };
+  }
+
+  restoreBag({ slots, worn }) {
+    this.inventory.slots = slots;
+    this.worn = worn;
   }
 
   /**
@@ -1661,6 +1716,8 @@ export class DuiltGame {
       const w = data.worn?.[k];
       this.worn[k] = w && ITEMS_BY_ID.get(w.id)?.wears === k ? { id: w.id, wear: Number(w.wear) || 0 } : null;
     }
+    // A backpack on: its slots come back with it (the saved bag has them too).
+    if (!this.inventory.endless) this.inventory.grow(this.bagSize());
     this.chests.clear();
     for (const c of Array.isArray(data.chests) ? data.chests : []) {
       if (typeof c?.key !== 'string') continue;
