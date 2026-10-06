@@ -114,10 +114,11 @@ const run = (arrows, seconds) => { for (let t = 0; t < seconds; t += 1 / 60) arr
 
 // --- in the game -------------------------------------------------------------------------
 
-ok('with the bow in hand, Break shoots', /bow: 'shootBow'/.test(game) && /shootBow\(\) \{/.test(game));
+// Drawn and let go now (tests/drawbow.test.mjs); Break still shoots where nothing draws.
+ok('with the bow in hand, Break shoots', /bow: 'shootBow'/.test(game) && /shootBow\(shot = drawShot\(FULL_DRAW_MS\)\) \{/.test(game));
 ok('each shot spends an arrow, and you\'re told when there are none', /inventory\.remove\('arrow', 1\)/.test(game) && /title: 'No arrows'/.test(game));
 ok('it wears the bow', /useTool\('bow'\)/.test(game));
-ok('animals and bandits both take the hit', /this\.mobs\.hit\(hit\.mob, ARROW_DAMAGE/.test(game) && /this\.wanderers\.hit\(p, ARROW_DAMAGE/.test(game));
+ok('animals and bandits both take the hit — as hard as the bow was drawn', /const damage = arrow\.damage \?\? ARROW_DAMAGE;/.test(game) && /this\.mobs\.hit\(hit\.mob, damage/.test(game) && /this\.wanderers\.hit\(p, damage/.test(game));
 ok('and fall the same as to a blow', /if \(killed\) this\.mobFell\(hit\.mob, drops\)/.test(game) && /if \(res\.killed\) this\.banditFell\(p, res\)/.test(game));
 ok('your own horse is never shot', /!mob\.mob\.owned/.test(game));
 

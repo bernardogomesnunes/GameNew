@@ -613,6 +613,8 @@ export class DuiltUI {
     const t = d.defenders.barracks(structure.id);
     const bunks = Math.min(MAX_SOLDIERS, this.buildingActionsCache?.bunks?.() ?? MAX_SOLDIERS);
     const room = bunks - t.roster.length - t.queue.length;
+    // Soldiers eat with the town (Settlers); those who went without fight weaker.
+    const hungry = Math.min(d.settlers.soldiersHungry ?? 0, t.roster.length);
     const tally = (list) => UNITS.map((u) => [u, list.filter((x) => x === u.id).length]).filter(([, n]) => n)
       .map(([u, n]) => `${n} ${n === 1 ? u.name.toLowerCase() : u.plural}`).join(', ');
     // Who's in training (asked for directly: "show in the pop up when I add
@@ -646,6 +648,7 @@ export class DuiltUI {
       <div class="building-sec">
         <h4>Soldiers · ${t.roster.length} of ${bunks} bunks</h4>
         <p class="building-line">${t.roster.length ? escapeHtml(tally(t.roster)) : t.queue.length ? 'Nobody out yet.' : 'Nobody yet — train them below.'}</p>
+        ${hungry ? `<p class="building-line bad">${hungry === 1 ? 'One is' : `${hungry} are`} hungry — they hit softer and don't recover until fed. Put food in a storehouse.</p>` : ''}
         ${t.queue.length ? `<h4>Training · ${t.queue.length}</h4>` : ''}
         ${training}
         ${room > 0 ? '<p class="dim">Train one — paid now, out of your bag:</p>' : '<p class="dim">Every bunk is spoken for. Add beds to train more.</p>'}

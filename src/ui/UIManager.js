@@ -191,6 +191,8 @@ export class UIManager {
   markup() {
     return `
       <div id="crosshair"></div>
+      <!-- How far the bow is drawn: fills as you hold, the arrow goes when you let go. -->
+      <div id="draw-meter" hidden><i></i></div>
 
       <div id="blocker" class="overlay"></div>
 
@@ -984,7 +986,7 @@ export class UIManager {
    */
   bindLookSurface() {
     const zone = this.q('#look-zone');
-    let id = null, start = null, last = null, moved = false, holding = false, timer = null, finishing = null;
+    let id = null, start = null, last = null, moved = false, holding = false, timer = null, finishing = null, drawing = false;
     // A tap into a block finishes it: digging takes longer than a tap lasts
     // (half a second or more by hand), so the tap carries on until the
     // block is through, and stops there. Only when the tap started a dig —
@@ -1010,6 +1012,11 @@ export class UIManager {
       start = last = { x: t.clientX, y: t.clientY };
       moved = false;
       holding = false;
+      // The bow in hand: the finger going down draws it, at once, and lifting
+      // it looses — you can still drag to aim while it's drawn (asked for
+      // directly: "pull the bow and just release the arrow when I lift").
+      drawing = !!this.cb.onDrawStart?.();
+      if (drawing) return;
       timer = setTimeout(() => {
         if (id === null || moved) return;
         holding = true;
@@ -1030,7 +1037,8 @@ export class UIManager {
       for (const t of e.changedTouches) {
         if (t.identifier !== id) continue;
         clearTimeout(timer);
-        if (holding) this.cb.onBreakHold?.(false);
+        if (drawing) { drawing = false; this.cb.onDrawEnd?.(); }
+        else if (holding) this.cb.onBreakHold?.(false);
         else if (!moved && e.type === 'touchend') tap();
         id = null;
       }
@@ -2278,6 +2286,19 @@ export class UIManager {
   openStore(structure) {
     this.openPanel('panel-store');
     this.duiltUI?.showStore(structure);
+  }
+
+  /** How far the bow is drawn, 0..1, under the crosshair — or null to hide it. */
+  setDrawMeter(power) {
+    const el = this.q('#draw-meter');
+    if (!el) return;
+    const on = power != null;
+    if (el.hidden === on) el.hidden = !on;
+    if (!on) return void el.classList.remove('full');
+    const pct = `${Math.round(power * 100)}%`;
+    const fill = el.firstElementChild;
+    if (fill.style.width !== pct) fill.style.width = pct;
+    el.classList.toggle('full', power >= 1);
   }
 
   /**

@@ -27,6 +27,10 @@ export const TOWER_ARCHER = { range: 26, every: 2.2, damage: 3 };
 export const TRAIN_DAYS = 0.15;
 /** Bunks beyond this train no more. */
 export const MAX_SOLDIERS = 6;
+/** A soldier who went without their meal hits this much as hard, and doesn't get their breath back. */
+export const HUNGRY_STRENGTH = 0.6;
+/** A blow or an arrow from `s`, as hard as they can manage today. */
+export const blowOf = (s, hits) => (s.hungry ? Math.max(1, Math.round(hits * HUNGRY_STRENGTH)) : hits);
 const ARROW_SPEED = 26;
 const TALL = 2;
 const TABARD = 0xdfe6f2, STEEL = 0xb9bec6, ARCHER_COAT = 0x5f7f4a, HOOD = 0x3f5a34;
@@ -62,6 +66,9 @@ export class Defenders {
     // Per barracks: who it has trained, who it's training next, and the
     // day it started on the first of those.
     this.trained = {}; // structureId -> { roster: [unitId], queue: [unitId], since }
+    // How many of the soldiers went without their meal (Settlers.eat): the
+    // first that many fight weaker until they're fed.
+    this.hungry = 0;
     this.nextId = 1;
   }
 
@@ -226,6 +233,8 @@ export class Defenders {
    * @param on       { strike(enemy, damage, from), shot(enemy, damage, from) }
    */
   tick(dt, enemies, on = {}) {
+    let hungry = this.hungry;
+    for (const s of this.soldiers) s.hungry = hungry-- > 0;
     for (const s of this.soldiers) {
       const u = UNITS_BY_ID.get(s.unit);
       if (u?.ranged) this.bowman(s, u, dt, enemies);
@@ -252,7 +261,7 @@ export class Defenders {
       else s.speed = 0;
       if (d <= m.reach && s.cooldown <= 0) {
         s.cooldown = m.every;
-        on.strike?.(target, m.hits, s);
+        on.strike?.(target, blowOf(s, m.hits), s);
       }
       return;
     }
@@ -264,7 +273,7 @@ export class Defenders {
     s.foe = null;
     const away = Math.hypot(s.x - s.post.x, s.z - s.post.z);
     if (away > 0.4) { s.target = { x: s.post.x, z: s.post.z }; this.step(s, s.post.x, s.post.z, dt, (u?.speed ?? SOLDIER.speed) * 0.7); }
-    else { s.target = null; s.speed = 0; s.hp = Math.min(u?.hp ?? SOLDIER.hp, s.hp + dt * 0.5); }
+    else { s.target = null; s.speed = 0; if (!s.hungry) s.hp = Math.min(u?.hp ?? SOLDIER.hp, s.hp + dt * 0.5); }
   }
 
   /** The enemy nearest `at`, within `range` of it, or null. */
@@ -296,7 +305,7 @@ export class Defenders {
     s.facing = Math.atan2(target.x - s.x, target.z - s.z);
     if (d <= r.range && s.cooldown <= 0) {
       s.cooldown = r.every;
-      this.loose(s, target, r.damage);
+      this.loose(s, target, blowOf(s, r.damage));
     }
   }
 
