@@ -48,6 +48,41 @@ export const RECIPES = [
     output: { id: 'shovel', count: 1 },
     blurb: 'Digs dirt and sand far faster than bare hands. Wears out; make a spare.',
   },
+  // Dug out of the ground, rock comes up as whatever layer it was — marble,
+  // white stone, cobblestone — and only plain stone made the first tools
+  // (played on: "I need rocks to make a pickaxe ... I like the rule but we
+  // need some kind of gateway. Maybe make stone from cobble"). Each knocks
+  // back down to stone by hand, never for more than it took to make.
+  {
+    id: 'stone_from_cobblestone',
+    name: 'Stone from cobblestone',
+    station: 'hand',
+    age: 1,
+    inputs: { cobblestone: 2 },
+    output: { id: 'stone', count: 1 },
+    batch: 8,
+    blurb: 'Two rough blocks knocked into one cut one.',
+  },
+  {
+    id: 'stone_from_white',
+    name: 'Stone from white stone',
+    station: 'hand',
+    age: 1,
+    inputs: { stone_white: 1 },
+    output: { id: 'stone', count: 1 },
+    batch: 8,
+    blurb: 'The pale layers under the soil, trimmed square.',
+  },
+  {
+    id: 'stone_from_marble',
+    name: 'Stone from marble',
+    station: 'hand',
+    age: 1,
+    inputs: { marble: 1 },
+    output: { id: 'stone', count: 1 },
+    batch: 8,
+    blurb: 'Rough marble out of the ground, broken down for plain stone.',
+  },
   {
     id: 'bucket',
     name: 'Bucket',
