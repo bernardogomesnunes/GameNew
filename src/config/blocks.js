@@ -131,10 +131,13 @@ export const BLOCKS = [
     shape: 'lantern',
     cost: { wood: 2 }, unlock: null,
   },
-  { id: 27, name: 'Stone Slab', glyph: 'slab', color: 0xbab8b3, shape: 'slab', material: 'stone', cost: { stone: 1 }, unlock: null },
-  { id: 28, name: 'Plank Slab', glyph: 'slab', color: 0xc49360, shape: 'slab', material: 'wood', cost: { wood: 1 }, unlock: null },
-  { id: 29, name: 'Stone Stairs', glyph: 'stair', color: 0xbab8b3, shape: 'stair', material: 'stone', cost: { stone: 1 }, unlock: null },
-  { id: 30, name: 'Plank Stairs', glyph: 'stair', color: 0xc49360, shape: 'stair', material: 'wood', cost: { wood: 1 }, unlock: null },
+  // `tex`: drawn in that block's texture, not a flat colour (asked for
+  // directly: "Stone slabs are not looking like stone") — see ChunkMesher's
+  // TEX_FROM.
+  { id: 27, name: 'Stone Slab', glyph: 'slab', color: 0xbab8b3, shape: 'slab', material: 'stone', tex: 3, cost: { stone: 1 }, unlock: null },
+  { id: 28, name: 'Plank Slab', glyph: 'slab', color: 0xc49360, shape: 'slab', material: 'wood', tex: 7, cost: { wood: 1 }, unlock: null },
+  { id: 29, name: 'Stone Stairs', glyph: 'stair', color: 0xbab8b3, shape: 'stair', material: 'stone', tex: 3, cost: { stone: 1 }, unlock: null },
+  { id: 30, name: 'Plank Stairs', glyph: 'stair', color: 0xc49360, shape: 'stair', material: 'wood', tex: 7, cost: { wood: 1 }, unlock: null },
 
   // Furniture: a shape shared across recoloured variants, the same pattern
   // Glass/Red Glass/Blue Glass above already uses — a distinct 3D prop shape

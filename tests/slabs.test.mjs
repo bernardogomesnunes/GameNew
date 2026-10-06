@@ -54,6 +54,28 @@ ok('and puts a slab in the half you pointed at', /slabOnFace\(.*hit\.normal, upF
   ok('and it\'s drawn', c.propMesh.geometry.attributes.position.count === 24);
 }
 
+// --- in stone's own texture ---------------------------------------------------------------
+
+{
+  // Asked for directly: "Stone slabs are not looking like stone now they should."
+  const w = new World({ sizeX: 16, sizeZ: 16, height: 8 });
+  w.setBlock(2, 1, 2, 27);
+  w.setBlock(4, 1, 2, 29);
+  w.setBlock(6, 1, 2, 47); // a fence stays a plain prop
+  const c = w.getChunk(0, 0);
+  new ChunkMesher({ add() {}, remove() {} }).rebuild(w, c);
+  const geo = c.propMesh.geometry, mats = c.propMesh.material;
+  const group = geo.groups.find((gr) => gr.materialIndex === 3);
+  const full = w.getChunk(0, 0);
+  ok('slabs and stairs are drawn with the blocks\' own textured material', !!group && mats[3] !== mats[0] && mats[3].vertexColors);
+  const layer = geo.attributes.layer.array, idx = geo.index.array;
+  const used = new Set();
+  for (let k = group.start; k < group.start + group.count; k++) used.add(layer[idx[k]]);
+  const { layerFor } = await import('../src/render/BlockTextures.js');
+  ok(`in stone's tile (${[...used].join(', ')})`, used.size === 1 && used.has(layerFor(3)));
+  ok('a fence is still a plain prop', geo.groups.find((gr) => gr.materialIndex === 0).count > 0 && !!full);
+}
+
 // --- where the ray met the face ----------------------------------------------------------
 
 {

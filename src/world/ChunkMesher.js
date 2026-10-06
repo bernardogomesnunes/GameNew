@@ -105,6 +105,12 @@ function covers(id) {
 /** Rugs, which run into each other (see propShapes' rugBoxes). */
 const IS_RUG = new Uint8Array(IDS);
 for (const id of BLOCKS_BY_ID.keys()) IS_RUG[id] = shapeOf(id) === 'rug' ? 1 : 0;
+/**
+ * Shaped blocks drawn in another block's texture rather than a flat colour:
+ * a stone slab or stair in stone's, a plank one in planks' (blocks.js `tex`).
+ */
+const TEX_FROM = new Uint16Array(IDS);
+for (const [id, b] of BLOCKS_BY_ID) if (b.tex) TEX_FROM[id] = b.tex;
 /** Paths, which run into each other and round off where they stop (see propShapes' pathBoxes). */
 const IS_PATH = new Uint8Array(IDS);
 for (const id of BLOCKS_BY_ID.keys()) IS_PATH[id] = shapeOf(id) === 'path' ? 1 : 0;
@@ -1071,6 +1077,8 @@ export class ChunkMesher {
     const buf = { position: [], normal: [], color: [], index: [] };
     const glow = { position: [], normal: [], color: [], index: [] };
     const pane = { position: [], normal: [], color: [], index: [] };
+    // Textured like the blocks: where in its tile each corner sits, and which tile.
+    const tex = { position: [], normal: [], color: [], index: [], uv: [], layer: [] };
     // Reads the padded copy rebuild just made, so a fence at a chunk's edge
     // sees the fence in the next chunk and joins up with it.
     const vol = this.padded, P2 = PAD * PAD;
@@ -1099,7 +1107,8 @@ export class ChunkMesher {
             for (const b of g.boxes) {
               // A stair's step: its tone by how high it is, its faces by STAIR_SHADE.
               const tone = stair ? STAIR_STEP_TONE[Math.max(0, Math.min(2, Math.round(b.maxY * 3) - 1))] : 1;
-              this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col, false, stair ? STAIR_SHADE : null, tone);
+              if (TEX_FROM[id]) this.emitTexBox(tex, TEX_FROM[id], lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, stair ? STAIR_SHADE : null, tone);
+              else this.emitPropBox(buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ, col, false, stair ? STAIR_SHADE : null, tone);
             }
             for (const f of g.faces) {
               // A roof tile's sides over a wall are drawn with the blocks,
@@ -1157,6 +1166,10 @@ export class ChunkMesher {
                 })()
                 : turn(boxesFor(shape), FACING[id]);
           const col = baseColor(id);
+          if (TEX_FROM[id]) {
+            for (const b of boxes) this.emitTexBox(tex, TEX_FROM[id], lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ);
+            continue;
+          }
           for (const b of boxes) {
             this.emitPropBox(b.glow ? glow : b.pane ? pane : buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ,
               b.color != null ? colorOfHex(b.color) : col, b.glow);
@@ -1164,12 +1177,13 @@ export class ChunkMesher {
         }
       }
     }
-    if (!buf.position.length && !glow.position.length && !pane.position.length) return;
+    if (!buf.position.length && !glow.position.length && !pane.position.length && !tex.position.length) return;
 
-    // One mesh, three materials: the ordinary lit props, the glowing parts,
-    // then the glass.
+    // One mesh, four materials: the ordinary lit props, the glowing parts,
+    // the glass, then the textured ones (slabs and stairs).
     const litIndices = buf.index.length;
-    for (const part of [glow, pane]) {
+    const plain = buf.position.length / 3;
+    for (const part of [glow, pane, tex]) {
       const offset = buf.position.length / 3;
       for (const k of ['position', 'normal', 'color']) for (const v of part[k]) buf[k].push(v);
       for (const i of part.index) buf.index.push(i + offset);
@@ -1182,10 +1196,20 @@ export class ChunkMesher {
     geo.addGroup(0, litIndices, 0);
     geo.addGroup(litIndices, glow.index.length, 1);
     if (pane.index.length) geo.addGroup(litIndices + glow.index.length, pane.index.length, 2);
+    if (tex.index.length) {
+      // Only the textured faces read these; the rest carry zeros.
+      const n = buf.position.length / 3, before = plain + (glow.position.length + pane.position.length) / 3;
+      const uv = new Float32Array(n * 2), layer = new Float32Array(n);
+      uv.set(tex.uv, before * 2);
+      layer.set(tex.layer, before);
+      geo.setAttribute('tileUv', new THREE.BufferAttribute(uv, 2));
+      geo.setAttribute('layer', new THREE.BufferAttribute(layer, 1));
+      geo.addGroup(litIndices + glow.index.length + pane.index.length, tex.index.length, 3);
+    }
     geo.computeBoundingSphere();
     freeAfterUpload(geo);
 
-    const mesh = new THREE.Mesh(geo, [propMaterial, glowMaterial, paneMaterial]);
+    const mesh = new THREE.Mesh(geo, [propMaterial, glowMaterial, paneMaterial, opaqueMaterial]);
     mesh.position.set(baseX, 0, baseZ);
     mesh.frustumCulled = true;
     mesh.userData.chunk = chunk;
@@ -1251,6 +1275,27 @@ export class ChunkMesher {
         if (sign > 0) buf.index.push(base, base + 1, base + 2, base, base + 2, base + 3);
         else buf.index.push(base, base + 3, base + 2, base, base + 2, base + 1);
       }
+    }
+  }
+
+  /**
+   * A box drawn in a block's texture (`texId`'s): emitPropBox's faces, each
+   * carrying where in the tile its corners sit — laid the way a full block's
+   * are (see emitQuad: across a wall runs across, up runs up) — and which
+   * tile, so a stone slab is stone cut in half, not a grey box.
+   */
+  emitTexBox(part, texId, x0, y0, z0, x1, y1, z1, shades = null, tone = 1) {
+    const before = part.position.length;
+    this.emitPropBox(part, x0, y0, z0, x1, y1, z1, baseColor(texId), false, shades, tone);
+    const side = layerTable()[texId], end = topLayerTable()[texId];
+    for (let p = before; p < part.position.length; p += 3) {
+      const x = part.position[p], y = part.position[p + 1], z = part.position[p + 2];
+      const n = p / 3;
+      const nx = part.normal[n * 3], ny = part.normal[n * 3 + 1];
+      if (nx) part.uv.push(z, y);
+      else if (ny) part.uv.push(z, x);
+      else part.uv.push(x, y);
+      part.layer.push(ny ? end : side);
     }
   }
 
