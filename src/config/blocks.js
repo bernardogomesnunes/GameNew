@@ -243,8 +243,8 @@ export const BLOCKS = [
 // them down (see Game.placeBlock). Requested directly: "chairs are only
 // placed on one direction, would be nice to have them placed in multiple
 // directions, same for stairs and doors." The block a player holds is facing
-// 0; the other three facings are states of it, each its own block id so the
-// chunk data stays one byte a cell. `facing` counts quarter-turns — see
+// 0; the other three facings are states of it, each its own block id so a
+// cell holds one number. `facing` counts quarter-turns — see
 // propShapes' `turn`.
 const TURNS = [29, 30, 33, 34];
 /** Facing f (1..3) of TURNS[k] is block TURN_BASE + 3k + f. */
@@ -612,6 +612,20 @@ for (const [k, baseId] of LOGS.entries()) {
 }
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
+
+/**
+ * How many ids there are room for, and one past the highest in use: what the
+ * mesher's per-id tables are sized to.
+ *
+ * Ids used to be one byte, and by backlog batch 3 only six were left — not
+ * enough for a fence, door and trapdoor in every wood. A chunk is still a
+ * byte a cell until a block numbered past 255 goes into it, and then just
+ * that chunk widens to two (see Chunk.set), so ordinary land costs a phone
+ * no more memory than before.
+ */
+export const ID_LIMIT = 4096;
+export const ID_COUNT = Math.max(...BLOCKS_BY_ID.keys()) + 1;
+if (ID_COUNT > ID_LIMIT) throw new Error(`Block id ${ID_COUNT - 1} is past ${ID_LIMIT - 1}`);
 
 /**
  * A log turned to lie along the face it was placed against: `normal` is the

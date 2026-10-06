@@ -1,4 +1,4 @@
-import { BLOCKS, BLOCKS_BY_ID, AIR } from '../config/blocks.js';
+import { BLOCKS_BY_ID, AIR } from '../config/blocks.js';
 import { World } from '../world/World.js';
 import { ChunkGen } from '../world/ChunkGen.js';
 
@@ -132,24 +132,31 @@ export function buildVox(world, { includeSystem = false } = {}) {
   sizeView.setUint32(4, sy, true);
   sizeView.setUint32(8, sz, true);
 
+  // The palette holds 255 colours, from index 1, and block ids now run past
+  // that — so each kind of block in the export gets the next free index, in
+  // the order they turn up. Past 255 kinds, the rest share the last one.
+  const slot = new Map();
+  const rgba = new Uint8Array(256 * 4);
+  const indexOf = (id) => {
+    let i = slot.get(id);
+    if (i !== undefined) return i;
+    i = Math.min(slot.size + 1, 255);
+    slot.set(id, i);
+    const color = BLOCKS_BY_ID.get(id)?.color ?? 0xffffff, o = (i - 1) * 4;
+    rgba[o] = (color >> 16) & 255;
+    rgba[o + 1] = (color >> 8) & 255;
+    rgba[o + 2] = color & 255;
+    rgba[o + 3] = 255;
+    return i;
+  };
+
   const xyzi = new Uint8Array(4 + voxels.length * 4);
   new DataView(xyzi.buffer).setUint32(0, voxels.length, true);
   voxels.forEach(([vx, vy, vz, id], i) => {
     const o = 4 + i * 4;
     xyzi[o] = vx; xyzi[o + 1] = vy; xyzi[o + 2] = vz;
-    xyzi[o + 3] = id; // palette index; .vox reserves 0, and no block uses it
+    xyzi[o + 3] = indexOf(id); // .vox reserves palette index 0
   });
-
-  // Palette is 255 entries starting at index 1, so a block's id indexes it directly.
-  const rgba = new Uint8Array(256 * 4);
-  for (const b of BLOCKS) {
-    if (b.id < 1 || b.id > 255) continue;
-    const o = (b.id - 1) * 4;
-    rgba[o] = (b.color >> 16) & 255;
-    rgba[o + 1] = (b.color >> 8) & 255;
-    rgba[o + 2] = b.color & 255;
-    rgba[o + 3] = 255;
-  }
 
   const header = new Uint8Array(8);
   const hv = new DataView(header.buffer);
