@@ -63,6 +63,8 @@ import { CartView } from './render/CartView.js';
 import { FlameView } from './render/FlameView.js';
 import { SmokeView } from './render/SmokeView.js';
 import { GrassView } from './render/GrassView.js';
+import { ArrowView } from './render/ArrowView.js';
+import { Arrows, ARROW_DAMAGE } from './world/Arrows.js';
 import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { CrackView } from './render/CrackView.js';
@@ -213,6 +215,8 @@ export function swingLabel(id) {
 }
 // The catapult (Phase 6c) — see manCatapult.
 const CATAPULT_RELOAD = 2;      // seconds between throws
+// The bow: how long a draw takes between one arrow and the next.
+const BOW_DRAW_MS = 550;
 const CATAPULT_REACH = 4;       // walk further than this from it and you let go
 const CATAPULT_MIN_THROW = 6;   // it won't drop a stone closer than this
 const CATAPULT_AMMO = ['stone', 'cobblestone'];
@@ -298,7 +302,7 @@ const CRACK_LINGER_MS = 450;
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow' };
 const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', flying_machine: 'setDownMachine' };
 /**
  * Whether saved progression `a` is further along than `b`. By level first:
@@ -468,6 +472,7 @@ export class Game {
     this.flames = new FlameView(this.scene);
     this.smoke = new SmokeView(this.scene);
     this.grass = new GrassView(this.scene);
+    this.arrowView = new ArrowView(this.scene);
     this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene);
@@ -3531,20 +3536,75 @@ export class Game {
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
-    if (killed) {
-      const spec = MOBS_BY_ID.get(mob.type);
-      // Experience for a hunt — not for one of your own penned animals.
-      if (!mob.penId) {
-        this.gamification.onKill({ kind: 'mob', hp: spec.hp, name: `a ${spec.name.toLowerCase()}` });
-        this.duilt?.note('hunt', mob.type);
-        this.tellMoment('first_hunt');
-      }
-      const gained = this.duilt?.collect(drops) ?? {};
-      const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
-      this.ui.toast({ kind: 'xp', title: `Hunted a ${spec.name.toLowerCase()}`, body: got || undefined });
-      if (mob.penId) this.duilt?.forgetAnimal(mob);
-    }
+    if (killed) this.mobFell(mob, drops);
     return true;
+  }
+
+  /** An animal brought down, by a blow or an arrow: experience, what it left, and saying so. */
+  mobFell(mob, drops) {
+    const spec = MOBS_BY_ID.get(mob.type);
+    // Experience for a hunt — not for one of your own penned animals.
+    if (!mob.penId) {
+      this.gamification.onKill({ kind: 'mob', hp: spec.hp, name: `a ${spec.name.toLowerCase()}` });
+      this.duilt?.note('hunt', mob.type);
+      this.tellMoment('first_hunt');
+    }
+    const gained = this.duilt?.collect(drops) ?? {};
+    const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+    this.ui.toast({ kind: 'xp', title: `Hunted a ${spec.name.toLowerCase()}`, body: got || undefined });
+    if (mob.penId) this.duilt?.forgetAnimal(mob);
+  }
+
+  /**
+   * Break, with the bow in hand: an arrow, from your eye the way you look
+   * (asked for directly: "we don't have bow and arrows"). It flies on its
+   * own — see world/Arrows.js — and whatever it meets takes the hit
+   * (arrowHit). A short draw between shots; each one spends an arrow and
+   * wears the bow a little.
+   */
+  shootBow() {
+    const now = performance.now();
+    if (now - (this.lastShotAt ?? 0) < BOW_DRAW_MS) return;
+    const d = this.duilt;
+    const paying = d && !d.sandbox;
+    if (paying && !d.inventory.has('arrow', 1)) {
+      this.ui.toast({ kind: 'xp', title: 'No arrows', body: 'Make them at the bench from planks and string' });
+      return;
+    }
+    this.lastShotAt = now;
+    if (paying) {
+      d.inventory.remove('arrow', 1);
+      if (d.inventory.useTool('bow') === 'worn') this.ui.toast({ kind: 'xp', title: 'Bow broke', body: 'Worn out — craft another' });
+    }
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    this.arrows?.shoot({ x: eye.x + dir.x * 0.4, y: eye.y + dir.y * 0.4 - 0.08, z: eye.z + dir.z * 0.4 }, dir);
+    this.sound?.strike({ weapon: true });
+  }
+
+  /** What's alive on an arrow's next stretch of flight: an animal or a bandit, whichever's nearer. */
+  arrowTarget(from, dir, length) {
+    const mob = this.mobs?.pick(from, dir, length);
+    const wild = mob && !mob.mob.owned ? { kind: 'mob', mob: mob.mob, t: mob.t } : null;
+    const people = this.wanderers ? this.wanderers.list.filter((p) => WANDERERS[p.kind].hp) : [];
+    const found = people.length ? this.wanderView.pickAt(people, from, dir, length) : null;
+    const bandit = found ? { kind: 'bandit', person: found.person, t: found.t } : null;
+    if (wild && bandit) return wild.t <= bandit.t ? wild : bandit;
+    return wild ?? bandit;
+  }
+
+  /** An arrow found its mark. */
+  arrowHit(arrow, hit) {
+    if (hit.kind === 'mob') {
+      const { killed, drops } = this.mobs.hit(hit.mob, ARROW_DAMAGE, arrow.x - arrow.vx, arrow.z - arrow.vz);
+      this.sound?.strike({ weapon: true });
+      if (killed) this.mobFell(hit.mob, drops);
+      return;
+    }
+    const p = hit.person;
+    const res = this.wanderers.hit(p, ARROW_DAMAGE, arrow.x - arrow.vx, arrow.z - arrow.vz);
+    if (!res) return;
+    this.sound?.strike({ weapon: true });
+    if (res.killed) this.banditFell(p, res);
   }
 
   /**
@@ -3589,13 +3649,16 @@ export class Game {
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
-    if (res.killed) {
-      this.personKilled(p);
-      const gained = this.duilt?.collect(res.drops) ?? {};
-      const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
-      this.ui.toast({ kind: 'xp', title: `Beat ${p.name === WANDERERS[p.kind].noun ? p.name : `${p.name}, ${WANDERERS[p.kind].noun ?? 'a bandit'}`}`, body: got || undefined });
-    }
+    if (res.killed) this.banditFell(p, res);
     return true;
+  }
+
+  /** A bandit beaten, by a blow or an arrow: experience, what they had, and saying so. */
+  banditFell(p, res) {
+    this.personKilled(p);
+    const gained = this.duilt?.collect(res.drops) ?? {};
+    const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+    this.ui.toast({ kind: 'xp', title: `Beat ${p.name === WANDERERS[p.kind].noun ? p.name : `${p.name}, ${WANDERERS[p.kind].noun ?? 'a bandit'}`}`, body: got || undefined });
   }
 
   /** Experience for a person you brought down yourself — as much as they took to beat. */
@@ -4894,6 +4957,7 @@ export class Game {
   /** Stones in flight, and the aim while you're manning one. Every frame. */
   tickCatapult(dt) {
     this.projectiles?.tick(dt);
+    this.arrows?.tick(dt);
     const m = this.manning;
     if (!m) return;
     const p = this.player.position;
@@ -6097,6 +6161,7 @@ export class Game {
     this.showcaseView.update(this.showcase, dt);
     this.armyView.update(strangers, [...(this.wanderers?.arrows ?? []), ...(ours?.arrows ?? [])], dt);
     this.projectileView.update(this.projectiles?.list ?? []);
+    this.arrowView.update(this.arrows?.list ?? []);
     this.fireflyView.update(this.fireflies);
     this.guardianView.update(this.duilt?.guardian, dt);
     this.renderer.render(this.scene, this.camera);
@@ -6175,6 +6240,13 @@ export class Game {
       this.mobsHerdOf = null;
     }
     if (this.fireflies?.world !== this.world) this.fireflies = new Fireflies({ world: this.world });
+    if (this.arrows?.world !== this.world) {
+      this.arrows = new Arrows({
+        world: this.world,
+        hitTest: (from, dir, length) => this.arrowTarget(from, dir, length),
+        onHit: (a, hit) => this.arrowHit(a, hit),
+      });
+    }
     if (this.projectiles?.world !== this.world) {
       this.projectiles = new Projectiles({ world: this.world, onImpact: (s, landed) => this.stoneLands(landed, s) });
       this.manning = null;

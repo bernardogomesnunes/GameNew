@@ -37,6 +37,7 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#33 Desert blocks.** Sandstone lies three blocks under desert sand and breaks through it in outcrops. Sandstone Brick, a Sandstone Wall, and a Sand Path that sits a sixteenth low and rounds its corners where it stops. PR #137.
 - **#8 Grass tufts.** Little crossed blades on the turf round you, one batch, swaying, shrinking away at the edge of their reach. A switch in graphics settings. PR #139.
 - **Stone slabs looked plain.** Stone and plank slabs and stairs are drawn in their block's texture. PR #138.
+- **Bow and arrows** (asked for directly). Hemp grows wild on open grass, ripe; picked it gives fibre and seeds to plant on farmland. Its seed also turns up breaking turf. Fibre → string → bow and arrows, by hand from Age 1. Traders sell hemp seeds, fibre, string, bows and arrows. With the bow held, Break shoots: arrows fly fast, drop a little, hit animals and bandits for 5, and stick in blocks. PR #140.
 
 ## Needs a decision first
 
@@ -51,10 +52,6 @@ point's number (#n, in the order it was written) so it can be traced back.
 ## Priority 1 — blocks and placement
 
 All done (see above).
-
-## Next — asked for directly
-
-- **Bow and arrows.** Hemp grows in the wild; picking it gives fibre and seeds, and the seeds can be planted for more. Now and then a seed turns up while breaking turf. Fibre is spun into string, string goes into a bow and into arrows. Traders sell hemp, fibre and string.
 
 ## Priority 2 — the world looking alive
 
@@ -85,5 +82,5 @@ All done (see above).
 ## Suggested order
 
 1. The decisions above (#12, #27).
-2. Bow and arrows, then the rest of Priority 2.
+2. The rest of Priority 2.
 3. Priority 3, one system at a time: wood mill first, as it feeds furniture and the per-wood sets.

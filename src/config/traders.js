@@ -36,6 +36,7 @@ export const TRADERS = [
     goods: [
       ['iron_ore', 4, 4], ['copper_ore', 4, 3], ['gold_ore', 3, 8], ['iron_ingot', 2, 6],
       ['sword_stone', 1, 4], ['sword_iron', 1, 14], ['axe_iron', 1, 10], ['pickaxe_iron', 1, 12],
+      ['bow', 1, 8], ['arrow', 8, 3],
       ['armour_leather_head', 1, 4], ['armour_leather_body', 1, 6], ['armour_leather_legs', 1, 5], ['armour_leather_feet', 1, 4],
       ['armour_iron_head', 1, 12], ['armour_iron_body', 1, 18], ['armour_iron_legs', 1, 15], ['armour_iron_feet', 1, 12],
     ],
@@ -62,6 +63,7 @@ export const TRADERS = [
       ['seeds_carrot', 4, 2], ['seeds_potato', 4, 2], ['seeds_cabbage', 4, 2], ['seeds_lettuce', 4, 2],
       ['seeds_pepper', 3, 3], ['seeds_zucchini', 3, 3], ['seeds_broccoli', 3, 3], ['seeds_coffee', 3, 4],
       ['sapling', 2, 3], ['egg', 4, 2], ['milk', 2, 3], ['wool', 4, 3], ['feather', 4, 2], ['hide', 2, 3],
+      ['seeds_hemp', 4, 2], ['hemp_fibre', 6, 2], ['string', 4, 3],
     ],
   },
 ];

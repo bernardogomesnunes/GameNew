@@ -477,6 +477,36 @@ export const RECIPES = [
     batch: 4,
     blurb: 'A door in the floor, or on a wall. Place opens and shuts it.',
   },
+  // The bow and its arrows (asked for directly).
+  {
+    id: 'string',
+    name: 'String',
+    station: 'hand',
+    age: 1,
+    inputs: { hemp_fibre: 3 },
+    output: { id: 'string', count: 1 },
+    batch: 4,
+    blurb: 'Hemp fibre twisted into string. Bows and arrows need it.',
+  },
+  {
+    id: 'bow',
+    name: 'Bow',
+    station: 'hand',
+    age: 1,
+    inputs: { planks: 3, string: 3 },
+    output: { id: 'bow', count: 1 },
+    blurb: 'Hold it and press Break to shoot. It needs arrows.',
+  },
+  {
+    id: 'arrow',
+    name: 'Arrows',
+    station: 'hand',
+    age: 1,
+    inputs: { planks: 1, string: 1 },
+    output: { id: 'arrow', count: 4 },
+    batch: 4,
+    blurb: 'For the bow. They fly far and drop a little as they go.',
+  },
   // Desert blocks (#33).
   {
     id: 'sandstone',

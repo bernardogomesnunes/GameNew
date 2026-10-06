@@ -30,6 +30,12 @@ export const CROPS = [
   // blocks sit apart from the first seven's — the ids after those were
   // already taken — hence its own `base`.
   { kind: 'coffee', name: 'Coffee', produce: 'coffee_beans', leaf: 0x3f7f45, crop: 0xb8362e, base: 205 },
+  // Hemp (asked for directly: bow and arrows, with string "from fiber from
+  // hemp that is planted in the wild"). Not food: picked ripe it gives
+  // fibre, and seeds to plant more. It grows wild on open grass
+  // (config/biomes.js `scatter`), and its seed turns up in turf like any
+  // field crop's.
+  { kind: 'hemp', name: 'Hemp', produce: 'hemp_fibre', leaf: 0x5f8f3e, crop: 0xa3a85a, base: 337, fibre: true },
 ];
 export const CROPS_BY_KIND = new Map(CROPS.map((c) => [c.kind, c]));
 /** The field crops — everything but coffee, which comes from the hermit's chest, not out of the grass. */
@@ -110,6 +116,13 @@ export function cropBoxes(kind, stage) {
       box(0.3, 0.62, 0.3, 0.7, 0.78, 0.7, c.leaf),
       box(0.12, 0.38, 0.44, 0.2, 0.46, 0.52, c.crop), box(0.8, 0.44, 0.3, 0.88, 0.52, 0.38, c.crop),
       box(0.4, 0.5, 0.8, 0.48, 0.58, 0.88, c.crop), box(0.56, 0.36, 0.12, 0.64, 0.44, 0.2, c.crop),
+    ];
+    case 'hemp': return [
+      // Tall and thin: a stalk, fans of narrow leaves up it, a seed head on top.
+      box(0.46, 0, 0.46, 0.54, 0.95, 0.54, 0x6f8a45),
+      box(0.18, 0.28, 0.46, 0.82, 0.34, 0.54, c.leaf), box(0.46, 0.4, 0.2, 0.54, 0.46, 0.8, c.leaf),
+      box(0.24, 0.56, 0.46, 0.76, 0.62, 0.54, c.leaf), box(0.46, 0.66, 0.26, 0.54, 0.72, 0.74, c.leaf),
+      box(0.4, 0.82, 0.4, 0.6, 1, 0.6, c.crop),
     ];
     default: return tuft(0.5, 0.5, c.leaf);
   }

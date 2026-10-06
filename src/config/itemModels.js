@@ -169,6 +169,25 @@ ITEM_MODELS.sword_iron = swordModel(0xc9ced6, 0xeef1f5, 0xe2c26a, 0x3a2a20);
 // The tiers past iron (config/tiers.js).
 for (const t of TOOL_TIERS) if (t.key !== 'iron') ITEM_MODELS[`sword_${t.key}`] = swordModel(t.color, t.edge, t.guard, 0x3a2a20);
 
+// The bow and what it's made of (asked for directly). A bow stands curved,
+// its string straight across its back; an arrow lies along it.
+const WOODY = 0x9a6c40, DARKWOOD = 0x6b4a2e, TWINE = 0xe6dcc0;
+ITEM_MODELS.bow = [
+  box(0.44, 0.02, 0.46, 0.54, 0.18, 0.54, DARKWOOD), box(0.5, 0.16, 0.46, 0.6, 0.34, 0.54, WOODY),
+  box(0.56, 0.32, 0.46, 0.66, 0.68, 0.54, WOODY), box(0.5, 0.66, 0.46, 0.6, 0.84, 0.54, WOODY),
+  box(0.44, 0.82, 0.46, 0.54, 0.98, 0.54, DARKWOOD), box(0.42, 0.06, 0.48, 0.45, 0.94, 0.52, TWINE),
+];
+ITEM_MODELS.arrow = [
+  box(0.47, 0.04, 0.47, 0.53, 0.84, 0.53, 0xb08a5a), box(0.45, 0.82, 0.45, 0.55, 0.98, 0.55, 0x8c9096),
+  box(0.4, 0.04, 0.48, 0.6, 0.22, 0.52, 0xe8e2d4), box(0.48, 0.04, 0.4, 0.52, 0.22, 0.6, 0xc94a3e),
+];
+ITEM_MODELS.string = stack([[0.26, 0.26, 0, 0.12, TWINE], [0.2, 0.2, 0.12, 0.24, 0xd8cdb0], [0.26, 0.26, 0.24, 0.34, TWINE], [0.06, 0.06, 0.34, 0.5, 0x8a6440]]);
+ITEM_MODELS.hemp_fibre = [
+  box(0.3, 0, 0.4, 0.38, 0.9, 0.48, 0xc9b98a), box(0.42, 0, 0.44, 0.5, 0.95, 0.52, 0xd6c79a),
+  box(0.54, 0, 0.4, 0.62, 0.86, 0.48, 0xbcaa78), box(0.62, 0, 0.5, 0.7, 0.8, 0.58, 0xc9b98a),
+  box(0.26, 0.4, 0.38, 0.74, 0.48, 0.6, 0x6b8a45),
+];
+
 // Tools, and the rest of what was still a flat drawing on a tile (backlog
 // batch 2: "3D icons in the bag for weapons and other items — feathers,
 // bucket, chalk line"). The same models are what the hand holds (see

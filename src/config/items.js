@@ -169,6 +169,21 @@ export const ITEMS = [
     effectiveness: { plant: 'fast' },
   },
 
+  // --- the bow (asked for directly) ------------------------------------------
+  //
+  // "Arrow is made from string, which should come from fiber from hemp that
+  // is planted in the wild. Traders will allow to trade for this." Hemp
+  // fibre spun into string; string and planks into a bow and its arrows.
+  // With the bow in hand, Break looses an arrow (Game.shootBow).
+  { id: 'hemp_fibre', name: 'Hemp Fibre', kind: 'raw', stackTo: STACK_BULK, color: 0xc9b98a, glyph: 'fibre', madeBy: 'Picked from ripe hemp' },
+  { id: 'string', name: 'String', kind: 'refined', stackTo: STACK_BULK, color: 0xe6dcc0, glyph: 'string', madeBy: 'Hemp fibre, spun at the bench' },
+  { id: 'arrow', name: 'Arrow', kind: 'refined', stackTo: STACK_BULK, color: 0xb08a5a, glyph: 'arrow', madeBy: 'Planks and string, at the bench — the bow shoots them' },
+  {
+    id: 'bow', name: 'Bow', kind: 'tool', stackTo: STACK_TOOL, color: 0x9a6c40, glyph: 'bow',
+    durability: 200, madeBy: 'Planks and string, at the bench', unlocks: 'Hunting and fighting from a distance',
+    weapon: true, ranged: true,
+  },
+
   // --- building tools -------------------------------------------------------
   //
   // Clearing a hillside and mirroring a wall were buttons that were simply
