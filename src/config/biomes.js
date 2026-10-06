@@ -41,7 +41,7 @@
  * Adding one is an entry here. Nothing else needs to know it exists.
  */
 
-const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, COBBLE = 8;
+const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, COBBLE = 8, SANDSTONE = 333;
 // No saplings in the wild: a sapling is only ever one somebody planted
 // (playtest, P8 — see duilt/Saplings.js).
 const MOSS = 22, GRAVEL = 23, CLAY = 24, SILT = 25;
@@ -136,7 +136,9 @@ export const BIOMES = [
     niche: { temp: 0.9, wet: 0.12 },
     base: 104, amplitude: 6, rough: 4,
     flat: 1.8,
-    surface: { top: SAND, under: SAND, depth: 6, rock: STONE },
+    // Sandstone under the sand (#33), three down, and breaking through it
+    // in outcrops where the ground's bones show.
+    surface: { top: SAND, under: SAND, depth: 6, rock: STONE, bed: SANDSTONE, cover: 3, outcrop: SANDSTONE },
     trees: { chance: 0 },
     scatter: [],
   },

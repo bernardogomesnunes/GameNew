@@ -101,7 +101,7 @@ ok('oak is just as it was', doorBlock({ open: true }) === 77 && swungGate(48) ==
 
 {
   const items = WALLS.map((w) => ITEM_FOR_BLOCK.get(w.id));
-  ok(`a wall for every stone: ${WALLS.length}`, WALLS.length === 12 && items.every((id) => ITEMS_BY_ID.has(id)));
+  ok(`a wall for every stone: ${WALLS.length}`, WALLS.length === 13 && items.every((id) => ITEMS_BY_ID.has(id)));
   ok('each laid at the bench from its own stone', items.every((id) => {
     const r = RECIPES.find((x) => x.output.id === id);
     return r && Object.keys(r.inputs).every((k) => ITEMS_BY_ID.get(k)?.block != null);

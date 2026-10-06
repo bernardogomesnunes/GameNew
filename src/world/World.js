@@ -222,6 +222,8 @@ export class World {
     // A slab in the top half of its cell: a ceiling you walk under, or a
     // floor half a block up.
     if (shape === 'slab_top') return { minY: y + 0.5, maxY: y + 1 };
+    // A path sits a sixteenth under the ground beside it.
+    if (shape === 'path') return { minY: y, maxY: y + 0.9375 };
     if (shape === 'stair' || shape === 'roof' || shape === 'roof_hi') return { minY: y, maxY: y + 1, stair: true };
     // Half-pitch pieces and the caps on a ridge or a peak come up half way.
     if (shape.startsWith('roof')) return { minY: y, maxY: y + 0.5, stair: true };

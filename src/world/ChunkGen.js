@@ -484,7 +484,12 @@ export class ChunkGen {
         const soil = s.under === DIRT_ID && !beach ? this.soilDepthAt(x, z) : s.depth;
         const rockFloor = h - 1 - soil;
         const layered = s.rock === STONE_ID;
-        const outcrop = !water && !beach && s.under === DIRT_ID && this.outcropAt(x, z);
+        // What breaks the surface in an outcrop: cobble through soil, or a
+        // biome's own (sandstone through desert sand, #33).
+        const outcropBlock = s.outcrop ?? (s.under === DIRT_ID ? COBBLE_ID : 0);
+        const outcrop = !water && !beach && outcropBlock && this.outcropAt(x, z);
+        // A bed of rock under the cover of loose ground (the desert's sandstone).
+        const bedFrom = s.bed && !beach ? h - 1 - s.cover : -1;
         let below = 0;
         for (let y = 0; y < h; y++) {
           let block;
@@ -507,8 +512,8 @@ export class ChunkGen {
                 || this.strayOreAt(x, y, z)
                 || (layered ? this.rockAt(x, y, z, rockFloor) : s.rock);
             }
-          } else if (y < h - 1) block = outcrop && y >= h - 3 ? COBBLE_ID : under;
-          else block = water ? bed : outcrop ? COBBLE_ID : top;
+          } else if (y < h - 1) block = outcrop && y >= h - 3 ? outcropBlock : y < bedFrom ? s.bed : under;
+          else block = water ? bed : outcrop ? outcropBlock : top;
           chunk.set(lx, y, lz, block);
           below = block;
         }
