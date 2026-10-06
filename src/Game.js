@@ -52,7 +52,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, pairPart, pairOther, isPainting } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/upgrades.js';
@@ -192,18 +192,15 @@ const CROP_TICK_SECONDS = 2;
 /** How near you come to a place, past its edge, to have found it. */
 const FOUND_REACH = 24;
 const TAME_EVERY_MS = 1000; // how often pens take in animals led into them
-// A gate, shut and open: Place on one swings it to the other. See toggleGate.
-const GATE_SHUT = 48, GATE_OPEN = 49;
 // How often running water advances a block. See world/WaterFlow.js.
 const WATER_STEP_SECONDS = 0.25;
 // Lava is thicker: a block a second.
 const LAVA_STEP_SECONDS = 1;
-const GATE_SWING = { [GATE_SHUT]: GATE_OPEN, [GATE_OPEN]: GATE_SHUT };
 /** A gate or either half of a door: something Place swings rather than builds on. */
-const swings = (id) => !!GATE_SWING[id] || !!doorPart(id) || isTrapdoor(id);
+const swings = (id) => isGate(id) || !!doorPart(id) || isTrapdoor(id);
 /** What Place does to a door or gate — "Open" or "Close" — or null for anything else. */
 export function swingLabel(id) {
-  if (GATE_SWING[id]) return id === GATE_SHUT ? 'Open' : 'Close';
+  if (isGate(id)) return isOpenGate(id) ? 'Close' : 'Open';
   if (isChest(id) || id === STORAGE_CONTROLLER) return 'Open';
   if (isCatapult(id)) return 'Man';
   if (isPainting(id)) return 'Home';
@@ -5074,7 +5071,7 @@ export class Game {
     const door = doorPart(hit.block);
     const trap = isTrapdoor(hit.block);
     const cells = door ? [...this.doorCells(hit), ...this.doorPartnerCells(hit, door)] : [{ x: hit.x, y: hit.y, z: hit.z, block: hit.block }];
-    const shutting = door ? door.open : trap ? isOpenTrapdoor(hit.block) : GATE_SWING[hit.block] === GATE_SHUT;
+    const shutting = door ? door.open : trap ? isOpenTrapdoor(hit.block) : isOpenGate(hit.block);
     if (shutting && cells.some((c) => this.blockOverlapsPlayerAABB(c))) {
       this.ui.toast({ kind: 'xp', title: door ? 'Step out of the doorway first' : trap ? 'Step out from under it first' : 'Step out of the gateway first' });
       return;
@@ -5085,7 +5082,7 @@ export class Game {
       // A trapdoor shuts onto the floor when that's where it stands — ground
       // under it and nothing over it — and at the top of its cell otherwise.
       const low = trap && this.world.isCollidable(c.x, c.y - 1, c.z) && !this.world.isCollidable(c.x, c.y + 1, c.z);
-      const next = part ? doorBlock({ ...part, open: !part.open }) : trap ? swungTrapdoor(c.block, { low }) : GATE_SWING[c.block];
+      const next = part ? doorBlock({ ...part, open: !part.open }) : trap ? swungTrapdoor(c.block, { low }) : swungGate(c.block);
       this.world.setBlock(c.x, c.y, c.z, next);
       this.water?.touch(c.x, c.y, c.z);
       this.lava?.touch(c.x, c.y, c.z);
@@ -6385,7 +6382,7 @@ export class Game {
       ? this.duilt.structures.at(hit.x, hit.y, hit.z)
       : null;
     const waiting = hit && !onBuilding && this.duilt ? this.duilt.waitingAt(hit.x, hit.y, hit.z) : null;
-    const gate = hit && GATE_SWING[hit.block];
+    const gate = hit && isGate(hit.block);
     const door = hit && doorPart(hit.block);
     const chest = hit && isChest(hit.block);
     const catapult = hit && isCatapult(hit.block);
@@ -6406,7 +6403,7 @@ export class Game {
     // on a phone opened "What is this?").
     this.hintUses = !!swing && !onBuilding;
     this.ui?.setBuildingHint(gate
-      ? `Gate · ${hit.block === GATE_SHUT ? 'shut' : 'open'} — ${how}`
+      ? `Gate · ${isOpenGate(hit.block) ? 'open' : 'shut'} — ${how}`
       : door
         ? `Door · ${door.open ? 'open' : 'shut'} — ${how}`
       : chest

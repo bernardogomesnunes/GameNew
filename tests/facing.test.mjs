@@ -38,7 +38,7 @@ const RECIPE_LIST = Array.isArray(RECIPES) ? RECIPES : Object.values(RECIPES);
   ok('only the facing-0 block is in the bag', PLACEABLE_BLOCKS.filter((b) => b.shape === 'stair').length === 2);
   ok('breaking a turned stair or chair gives the same item back',
     ITEM_FOR_BLOCK.get(turned(STAIR, 2)) === ITEM_FOR_BLOCK.get(STAIR) && ITEM_FOR_BLOCK.get(turned(CHAIR, 1)) === 'chair_oak');
-  ok('every block id still fits in a byte', Math.max(...BLOCKS_BY_ID.keys()) < 256);
+  ok('every block id fits the room there is for them (blocks.js ID_LIMIT)', Math.max(...BLOCKS_BY_ID.keys()) < 4096);
   ok('the door is an item with a recipe', ITEMS_BY_ID.get('door')?.block === DOOR && RECIPE_LIST.some((r) => r.output?.id === 'door'));
   ok('only the bottom half of a door is the item', ITEM_FOR_BLOCK.get(doorBlock({ top: true })) == null
     && ITEM_FOR_BLOCK.get(doorBlock({ open: true, facing: 2 })) === 'door');

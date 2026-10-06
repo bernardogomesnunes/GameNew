@@ -1,4 +1,4 @@
-import { AIR, BLOCKS_BY_ID } from '../config/blocks.js';
+import { AIR, countsAs } from '../config/blocks.js';
 import { STRUCTURES_BY_ID } from '../config/structures.js';
 
 /**
@@ -22,8 +22,9 @@ export function inspect(world, region) {
   for (let x = region.minX; x <= region.maxX; x++) {
     for (let y = region.minY; y <= region.maxY; y++) {
       for (let z = region.minZ; z <= region.maxZ; z++) {
-        // A log lying down counts as the log it is (blocks.js LOG_SIDE_BASE).
-        const raw = world.getBlock(x, y, z), id = BLOCKS_BY_ID.get(raw)?.axis != null ? BLOCKS_BY_ID.get(raw).stateOf : raw;
+        // A log lying down counts as the log it is, a dark wood fence as a
+        // fence (blocks.js countsAs).
+        const id = countsAs(world.getBlock(x, y, z));
         tally.set(id, (tally.get(id) ?? 0) + 1);
         if (id !== AIR) solids++;
       }
@@ -49,7 +50,7 @@ export function inspect(world, region) {
       for (let x = region.minX - range; x <= region.maxX + range; x++) {
         for (let y = region.minY - range; y <= region.maxY + range; y++) {
           for (let z = region.minZ - range; z <= region.maxZ + range; z++) {
-            if (list.includes(world.getBlock(x, y, z))) return true;
+            if (list.includes(countsAs(world.getBlock(x, y, z)))) return true;
           }
         }
       }
@@ -193,7 +194,7 @@ export function inspect(world, region) {
               && y >= region.minY && y <= region.maxY
               && z >= region.minZ && z <= region.maxZ;
             if (inside) continue;
-            if (list.includes(world.getBlock(x, y, z))) return true;
+            if (list.includes(countsAs(world.getBlock(x, y, z)))) return true;
           }
         }
       }

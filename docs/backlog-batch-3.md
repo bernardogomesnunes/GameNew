@@ -29,6 +29,9 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#16 Logs in three directions.** Placed against a side, a log lies along x or z. PR #132.
 - **#15 Trapdoors on the face you point at.** On a floor it lies low, under a ceiling it sits high, against a wall it stands open. PR #132.
 - **#14 Turn a building while moving it.** R on desktop; on a phone, tap the hint. PR #132.
+- **Room for more blocks.** Block ids go past 255 now (up to 4096). PR #133.
+- **#24–26 Every wood its own set.** White (birch) and dark wood each get planks, fence, gate, door and trapdoor, made like oak's. They count as oak's for what buildings need. PR #134.
+- **#23 Walls for every stone.** Seven more: dark brick, marble, sky marble, white, dark grey, turquoise and orange stone. Sandstone comes with #33. PR #134.
 
 ## Needs a decision first
 
@@ -46,10 +49,6 @@ point's number (#n, in the order it was written) so it can be traced back.
   - Place in the bottom or top half of a block, by where you point.
   - A slab on a slab of the same kind becomes a full block.
 - **#19 A chimney block** in stone brick and in brick. Needs a new stone brick block.
-- **#23 Walls for every stone** (stone, cobble, brick, dark stone, sandstone…).
-- **#24 Fences for every wood** (oak, birch, dark).
-- **#25 Trapdoors for every wood.**
-- **#26 Doors for every wood.**
 - **#33 Desert blocks:** sandstone, sandstone bricks, and a sand path with rounded corners. They spawn in deserts.
 
 ## Priority 2 — the world looking alive
@@ -82,6 +81,6 @@ point's number (#n, in the order it was written) so it can be traced back.
 ## Suggested order
 
 1. The decisions above (#12, #27).
-2. Priority 1 as two or three PRs: slabs; per-wood and per-stone sets with the chimney; desert blocks.
+2. Priority 1: slabs; the chimney; desert blocks.
 3. #8 grass tufts, then the rest of Priority 2.
 4. Priority 3, one system at a time: wood mill first, as it feeds furniture and the per-wood sets.
