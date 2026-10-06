@@ -42,6 +42,8 @@
  */
 
 const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, COBBLE = 8, SANDSTONE = 333;
+/** Ripe hemp — config/crops.js, block base + RIPE. */
+const WILD_HEMP = 340;
 // No saplings in the wild: a sapling is only ever one somebody planted
 // (playtest, P8 — see duilt/Saplings.js).
 const MOSS = 22, GRAVEL = 23, CLAY = 24, SILT = 25;
@@ -64,6 +66,8 @@ export const BIOMES = [
     // Fewer trees than before — requested directly, "green with fewer trees
     // just some."
     trees: { chance: 0.003, trunk: [4, 6], canopy: 2, wood: WOOD, leaves: LEAVES },
+    // Wild hemp, ripe, here and there on the open grass (`on`: only on turf).
+    scatter: [{ block: WILD_HEMP, chance: 0.004, on: GRASS }],
   },
   {
     // The everyday wood: same wood/leaves it always had, the middle of the
@@ -93,6 +97,7 @@ export const BIOMES = [
     // On the map, its pale leaves set it apart from the plains' same grass.
     mapTint: WHITE_LEAVES,
     trees: { chance: 0.1, trunk: [4, 7], canopy: 2, wood: WHITE_WOOD, leaves: WHITE_LEAVES },
+    scatter: [{ block: WILD_HEMP, chance: 0.002, on: GRASS }],
   },
   {
     // Warmer, wetter, denser: the darkest and thickest of the three.

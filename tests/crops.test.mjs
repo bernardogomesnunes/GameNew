@@ -27,7 +27,7 @@ const FARMLAND = 21;
   ok('carrots, potatoes, cabbage, lettuce, peppers, zucchini and broccoli',
     ['carrot', 'potato', 'cabbage', 'lettuce', 'pepper', 'zucchini', 'broccoli'].every((k) => kinds.includes(k)));
   ok('each has seeds to plant', CROPS.every((c) => ITEMS_BY_ID.get(`seeds_${c.kind}`)?.block === cropBlock(c.kind, 0)));
-  ok('and something to eat', CROPS.every((c) => isFood(c.produce)));
+  ok('and something to eat — or, for hemp, fibre', CROPS.every((c) => isFood(c.produce) || (c.fibre && ITEMS_BY_ID.has(c.produce))));
   ok('carrots are the vegetables the game already had', CROPS.find((c) => c.kind === 'carrot').produce === 'vegetables');
   ok('farmland is dirt-coloured, not green', (() => {
     const c = BLOCKS_BY_ID.get(FARMLAND).color;

@@ -410,11 +410,12 @@ export class ChunkGen {
   }
 
   /** What is scattered on a column — a boulder, a sapling — or 0. */
-  scatterAt(x, z) {
+  scatterAt(x, z, top = null) {
     const biome = BIOMES[this.biomeIndexAt(x, z)];
     let n = 0;
     for (const sc of biome.scatter ?? []) {
-      if (hash01(x, z, this.seed ^ (0x2c01 + n++)) < sc.chance) return sc.block;
+      // Some things only grow on one ground (wild hemp, on turf).
+      if (hash01(x, z, this.seed ^ (0x2c01 + n++)) < sc.chance && (sc.on == null || sc.on === top)) return sc.block;
     }
     return 0;
   }
@@ -531,7 +532,7 @@ export class ChunkGen {
           for (let y = h; y < Math.min(water, this.height); y++) chunk.set(lx, y, lz, WATER);
           if (road && water <= this.height) chunk.set(lx, water - 1, lz, BRIDGE);
         } else if (!road) {
-          const sc = this.scatterAt(x, z);
+          const sc = this.scatterAt(x, z, below);
           if (sc && h < this.height) chunk.set(lx, h, lz, sc);
         }
       }

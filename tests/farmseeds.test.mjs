@@ -29,7 +29,7 @@ ok('nothing makes it, costs it or needs it',
   STRUCTURES.every((s) => !('seeds' in (s.produces ?? {})) && !('seeds' in (s.cost ?? {})))
   && RECIPES.every((r) => !('seeds' in (r.inputs ?? {})) && r.output?.id !== 'seeds')
   && Object.values(LOOT).every((l) => l.items.every(([id]) => id !== 'seeds')));
-ok('grass gives one crop\'s seeds, never coffee', GRASS_DROPS[0][0] === WILD_SEEDS && WILD_SEEDS.length === 7 && !WILD_SEEDS.includes('seeds_coffee'));
+ok('grass gives one crop\'s seeds, never coffee — hemp\'s too (asked for: "lucky enough to find a seed while going through turf")', GRASS_DROPS[0][0] === WILD_SEEDS && WILD_SEEDS.length === 8 && !WILD_SEEDS.includes('seeds_coffee') && WILD_SEEDS.includes('seeds_hemp'));
 ok('Place with seeds no longer plants "whatever comes up"', !/plantMixed/.test(game));
 {
   const inv = new Inventory();
