@@ -64,7 +64,8 @@ function setup() {
   const d = g.defenders, post = [{ id: 7, type: 'barracks', region: b.region, valid: true, beds: 6 }];
   d.sync(post, g.days + TRAIN_DAYS * 0.5);
   ok('nobody before their time', d.soldiers.length === 0);
-  d.sync(post, g.days + TRAIN_DAYS * 1.01);
+  const out = d.sync(post, g.days + TRAIN_DAYS * 1.01);
+  ok('and says who came out, and how many are still in line', out.length === 1 && out[0].unit === 'warrior' && out[0].left === 5);
   ok(`the first after ${TRAIN_DAYS} of a day — the warrior, first in line`, d.soldiers.length === 1 && d.soldiers[0].unit === 'warrior' && d.soldiers[0].kind === 'footman');
   d.sync(post, g.days + TRAIN_DAYS * 6.01);
   ok('then the rest, one after another', d.soldiers.length === 6 && d.soldiers.filter((s) => s.unit === 'archer').length === 5);
@@ -151,7 +152,17 @@ function oneOf(unit) {
 
 // --- in the game -----------------------------------------------------------------------------
 
-ok('the barracks pop-up trains them: what each costs, what\'s short, who\'s training', /barracksHtml\(structure\)/.test(ui) && /data-train="\$\{u\.id\}"/.test(ui) && /Needs \$\{escapeHtml\(cost\.short/.test(ui) && /ready in/.test(ui));
+ok('the barracks pop-up trains them: what each costs, what\'s short, who\'s training', /barracksHtml\(structure\)/.test(ui) && /data-train="\$\{u\.id\}"/.test(ui) && /Needs \$\{escapeHtml\(cost\.short/.test(ui) && /Training · \$\{t\.queue\.length\}/.test(ui));
+// Asked for directly: "show in the pop up when I add one warrior or other to
+// create, and show the progress".
+ok('the pop-up lists who is in training, in order, the first with a filling bar and its time left',
+  /class="train-queue"/.test(ui) && /data-train-bar style="width:\$\{Math\.round\(now\.ratio \* 100\)\}%"/.test(ui) && /data-train-left/.test(ui) && /'Next' : 'Waiting'/.test(ui));
+ok('  read off the clock: done / TRAIN_DAYS, and the time that leaves',
+  /\(d\.days - t\.since\) \/ TRAIN_DAYS/.test(ui) && /min left/.test(ui) && /Done — out when you close this/.test(ui));
+ok('and each one out of training says so, with how many are still in line',
+  /for \(const j of d\.defenders\.sync\(posts, d\.days\)\)/.test(game) && /is ready`/.test(game) && /more training at the barracks/.test(game));
+ok('  and kept moving while it is open, redrawn when one comes out', /setInterval\(\(\) => this\.tickBarracks\(\), 500\)/.test(ui)
+  && /if \(shape !== this\.barracksShape\) return void this\.showBuilding/.test(ui) && /clearInterval\(this\.barracksTimer\)/.test(ui));
 ok('the game pays and puts them in line, counting the bunks', /onTrain: \(unit\) => this\.trainSoldier\(structure, unit\)/.test(game) && /this\.duilt\.trainSoldier\(structure, unit, this\.bedsIn\(structure\.region\)\)/.test(game));
 ok('a crew\'s stone lands on the enemy, and only hurts them', /lob: \(engine, target, crew\) => this\.crewThrows\(engine, target, crew\)/.test(game) && /if \(stone\.crew\) \{/.test(game));
 ok('and its catapult is drawn', /this\.engineView\.update\(ours\?\.engines \?\? \[\]\)/.test(game));

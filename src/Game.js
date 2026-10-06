@@ -85,6 +85,7 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView, EngineView } from './render/ArmyView.js';
+import { UNITS_BY_ID } from './config/soldiers.js';
 import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent } from './config/blocks.js';
 import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
@@ -4087,7 +4088,11 @@ export class Game {
       const posts = d.structures.list()
         .filter((s) => s.type === 'barracks' || s.type === 'watchtower')
         .map((s) => ({ id: s.id, type: s.type, region: s.region, valid: s.valid, beds: s.type === 'barracks' ? this.bedsIn(s.region) : 0 }));
-      d.defenders.sync(posts, d.days);
+      // Each one out of training says so (asked for directly: "show the progress").
+      for (const j of d.defenders.sync(posts, d.days)) {
+        const u = UNITS_BY_ID.get(j.unit);
+        this.ui?.toast({ kind: 'xp', title: `Your ${u?.name.toLowerCase() ?? 'soldier'} is ready`, body: j.left ? `${j.left} more training at the barracks` : 'Out in front of the barracks' });
+      }
     }
     const enemies = this.wanderers.list.filter((p) => WANDERERS[p.kind].hp && !p.dead && !p.done && (p.war || p.raider || p.angry));
     d.defenders.tick(dt, enemies, {

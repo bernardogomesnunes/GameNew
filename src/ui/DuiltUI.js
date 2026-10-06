@@ -6,6 +6,9 @@ import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { FARM_SEED_SLOTS } from '../duilt/Crops.js';
 import { UNITS, UNITS_BY_ID, unitCost } from '../config/soldiers.js';
+
+/** What's drawn beside each kind of soldier in a barracks's line. */
+const UNIT_GLYPHS = { warrior: 'sword', swordsman: 'sword', archer: 'bow', crew: 'catapult' };
 import { TRAIN_DAYS, MAX_SOLDIERS } from '../world/Defenders.js';
 import { GAME_DAY_SECONDS } from '../render/DayCycle.js';
 import { stationName } from '../duilt/Crafting.js';
@@ -499,6 +502,11 @@ export class DuiltUI {
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
     body.querySelectorAll('[data-train]').forEach((b) => b.addEventListener('click', () => actions.onTrain?.(b.dataset.train)));
+    if (structure.type === 'barracks' && this.duilt) {
+      const t = this.duilt.defenders.barracks(structure.id);
+      this.barracksShape = `${t.roster.length}/${t.queue.length}`;
+      if (!this.barracksTimer) this.barracksTimer = setInterval(() => this.tickBarracks(), 500);
+    }
     body.querySelector('[data-store]')?.addEventListener('click', () => actions.onOpenStore?.());
     body.querySelector('[data-stores]')?.addEventListener('click', () => actions.onOpenStores?.());
     body.querySelector('[data-move]')?.addEventListener('click', () => actions.onMove?.());
@@ -604,9 +612,23 @@ export class DuiltUI {
     const room = bunks - t.roster.length - t.queue.length;
     const tally = (list) => UNITS.map((u) => [u, list.filter((x) => x === u.id).length]).filter(([, n]) => n)
       .map(([u, n]) => `${n} ${n === 1 ? u.name.toLowerCase() : u.plural}`).join(', ');
-    const left = t.queue.length ? Math.max(0, Math.ceil(((t.since + TRAIN_DAYS - d.days) * GAME_DAY_SECONDS) / 60)) : 0;
-    const training = t.queue.length
-      ? `<p class="dim">Training ${escapeHtml(UNITS_BY_ID.get(t.queue[0])?.name.toLowerCase() ?? '')} — ready in ${left <= 1 ? 'a minute' : `${left} minutes`}${t.queue.length > 1 ? `, then ${t.queue.length - 1} more` : ''}.</p>` : '';
+    // Who's in training (asked for directly: "show in the pop up when I add
+    // one warrior or other to create, and show the progress"): a row each,
+    // in the order they'll come out, the first with its bar filling and the
+    // time it has left — kept moving by tickBarracks while this is open.
+    const now = this.trainingProgress(structure);
+    const training = !t.queue.length ? '' : `
+        <div class="train-queue">
+          ${t.queue.map((id, i) => {
+            const u = UNITS_BY_ID.get(id);
+            return `<div class="train-row${i === 0 ? ' now' : ''}">
+              <span class="train-glyph">${glyphSvg(UNIT_GLYPHS[id] ?? 'sword', { size: 18 })}</span>
+              <span class="train-name">${escapeHtml(u?.name ?? id)}</span>
+              <span class="train-when"${i === 0 ? ' data-train-left' : ''}>${i === 0 ? escapeHtml(now.text) : i === 1 ? 'Next' : 'Waiting'}</span>
+              ${i === 0 ? `<div class="research-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(now.ratio * 100)}"><i data-train-bar style="width:${Math.round(now.ratio * 100)}%"></i></div>` : ''}
+            </div>`;
+          }).join('')}
+        </div>`;
     const gearName = (id, n) => `${n > 1 ? `${n} ` : ''}${itemName(id).toLowerCase()}${n > 1 && !itemName(id).endsWith('s') ? 's' : ''}`;
     const buttons = UNITS.map((u) => {
       const cost = unitCost(u, d.inventory);
@@ -620,11 +642,44 @@ export class DuiltUI {
     return `
       <div class="building-sec">
         <h4>Soldiers · ${t.roster.length} of ${bunks} bunks</h4>
-        <p class="building-line">${t.roster.length ? escapeHtml(tally(t.roster)) : 'Nobody yet — train them below.'}</p>
+        <p class="building-line">${t.roster.length ? escapeHtml(tally(t.roster)) : t.queue.length ? 'Nobody out yet.' : 'Nobody yet — train them below.'}</p>
+        ${t.queue.length ? `<h4>Training · ${t.queue.length}</h4>` : ''}
         ${training}
         ${room > 0 ? '<p class="dim">Train one — paid now, out of your bag:</p>' : '<p class="dim">Every bunk is spoken for. Add beds to train more.</p>'}
         <div class="train-units">${buttons}</div>
       </div>`;
+  }
+
+  /**
+   * How far along the first soldier in a barracks's line is: { ratio, text }.
+   * Read off the world's own clock of days. The world stands still while a
+   * pop-up is open (Game.phase), so this is where it had got to when you
+   * opened it — the bar moves on by itself only if the clock does.
+   */
+  trainingProgress(structure) {
+    const d = this.duilt, t = d?.defenders.barracks(structure.id);
+    if (!t?.queue.length) return { ratio: 0, text: '' };
+    const ratio = Math.min(1, Math.max(0, (d.days - t.since) / TRAIN_DAYS));
+    const secs = Math.ceil((1 - ratio) * TRAIN_DAYS * GAME_DAY_SECONDS);
+    return { ratio, text: ratio >= 1 ? 'Done — out when you close this' : secs >= 60 ? `${Math.ceil(secs / 60)} min left` : `${secs} s left` };
+  }
+
+  /**
+   * While a barracks's pop-up is open with somebody training, its bar and
+   * time move on by themselves; when one comes out (or the line changes any
+   * other way) the whole pop-up is drawn again.
+   */
+  tickBarracks() {
+    const s = this.building;
+    const open = s?.type === 'barracks' && this.panels.isOpen('panel-building');
+    if (!open) { clearInterval(this.barracksTimer); this.barracksTimer = null; return; }
+    const t = this.duilt?.defenders.barracks(s.id);
+    const shape = `${t?.roster.length}/${t?.queue.length}`;
+    if (shape !== this.barracksShape) return void this.showBuilding(s, this.buildingActionsCache);
+    const now = this.trainingProgress(s);
+    const bar = this.q('#building-body [data-train-bar]'), left = this.q('#building-body [data-train-left]');
+    if (bar) { bar.style.width = `${Math.round(now.ratio * 100)}%`; bar.parentElement?.setAttribute('aria-valuenow', String(Math.round(now.ratio * 100))); }
+    if (left) left.textContent = now.text;
   }
 
   /**
