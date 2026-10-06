@@ -62,7 +62,7 @@ ok('sky-marble, near white with a cool cast, for the Sky Kingdom',
 // --- walls ------------------------------------------------------------------------------
 
 {
-  ok('walls: cobble, stone, brick and dark stone, and one for every other stone', WALLS.length === 12 && WALLS.every((w) => BLOCKS_BY_ID.get(w.id).shape === 'wall'));
+  ok('walls: cobble, stone, brick and dark stone, and one for every other stone', WALLS.length === 13 && WALLS.every((w) => BLOCKS_BY_ID.get(w.id).shape === 'wall'));
   ok('running straight through, a wall is one piece with no post', wallBoxes({ px: 1, nx: 1 }).length === 1 && wallBoxes({ px: 1, nx: 1 })[0].maxY < 1);
   const corner = wallBoxes({ px: 1, pz: 1 });
   ok('at a corner it has a post, taller than the wall', corner.some((b) => b.maxY === 1 && b.minX === 0.25) && corner.length === 3);

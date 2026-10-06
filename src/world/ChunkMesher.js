@@ -5,7 +5,7 @@ import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
   roofPart, doorPart, endAxisOf, ID_COUNT,
 } from '../config/blocks.js';
-import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, chimneyBoxes, windowBoxes, turn } from './propShapes.js';
+import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, chimneyBoxes, pathBoxes, windowBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
 import { textureFor, blockTexture, TILE_SCALE } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
@@ -105,6 +105,9 @@ function covers(id) {
 /** Rugs, which run into each other (see propShapes' rugBoxes). */
 const IS_RUG = new Uint8Array(IDS);
 for (const id of BLOCKS_BY_ID.keys()) IS_RUG[id] = shapeOf(id) === 'rug' ? 1 : 0;
+/** Paths, which run into each other and round off where they stop (see propShapes' pathBoxes). */
+const IS_PATH = new Uint8Array(IDS);
+for (const id of BLOCKS_BY_ID.keys()) IS_PATH[id] = shapeOf(id) === 'path' ? 1 : 0;
 /** Stairs and roof tiles, which turn corners with each other (see world/slopes.js). */
 const SLOPE = new Uint8Array(IDS);
 const SLOPED = new Uint8Array(IDS);
@@ -201,7 +204,7 @@ export const AO_LIGHT = [1, 0.8, 0.66, 0.54];
 const OCCLUDES = new Uint8Array(IDS + 1);
 for (let id = 1; id < IDS; id++) {
   const shape = shapeOf(id);
-  OCCLUDES[id + 1] = !OPEN[id] || SLOPED[id] || shape === 'slab' || shape === 'slab_top' || shape === 'pillar' || shape === 'chimney' || shape === 'wall' ? 1 : 0;
+  OCCLUDES[id + 1] = !OPEN[id] || SLOPED[id] || shape === 'slab' || shape === 'slab_top' || shape === 'pillar' || shape === 'chimney' || shape === 'path' || shape === 'wall' ? 1 : 0;
 }
 
 /**
@@ -1131,6 +1134,11 @@ export class ChunkMesher {
               ? pillarBoxes({ base: !IS_PILLAR[vol[idx - P2]], capital: !IS_PILLAR[vol[idx + P2]] })
             : shape === 'chimney'
               ? chimneyBoxes({ top: !IS_CHIMNEY[vol[idx + P2]] })
+            : IS_PATH[id]
+              ? pathBoxes({
+                px: IS_PATH[vol[idx + 1]], nx: IS_PATH[vol[idx - 1]],
+                pz: IS_PATH[vol[idx + PAD]], nz: IS_PATH[vol[idx - PAD]],
+              })
             : shape === 'fence' || shape === 'gate' || shape === 'gate_open'
             ? fenceBoxes(shape, {
               px: JOINS_FENCE[vol[idx + 1]], nx: JOINS_FENCE[vol[idx - 1]],

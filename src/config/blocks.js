@@ -727,6 +727,19 @@ BLOCKS.push(
 );
 WALLS.push({ id: 332, name: 'Stone Brick Wall', color: 0xb4b1ab });
 
+// Desert blocks (backlog batch 3, #33): sandstone, which lies under the
+// desert's sand and breaks through it in outcrops (ChunkGen), its bricks and
+// wall, and a sand path that rounds its corners off wherever it doesn't run
+// on into more path (propShapes' pathBoxes).
+export const SANDSTONE = 333, SANDSTONE_BRICK = 334, SAND_PATH = 335;
+BLOCKS.push(
+  { id: SANDSTONE, name: 'Sandstone', glyph: 'sandstone', color: 0xd2b27a, material: 'stone', unlock: null },
+  { id: SANDSTONE_BRICK, name: 'Sandstone Brick', glyph: 'brick', color: 0xd8bf86, material: 'stone', countsAs: 3, unlock: null },
+  { id: SAND_PATH, name: 'Sand Path', glyph: 'path', color: 0xd2b77c, shape: 'path', material: 'dirt', unlock: null },
+  { id: 336, name: 'Sandstone Wall', glyph: 'wall', color: 0xd2b27a, shape: 'wall', material: 'stone', countsAs: 162, unlock: null },
+);
+WALLS.push({ id: 336, name: 'Sandstone Wall', color: 0xd2b27a });
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**

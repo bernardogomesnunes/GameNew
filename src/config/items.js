@@ -271,6 +271,11 @@ export const ITEMS = [
   { id: 'wall_grey_stone', name: 'Dark Grey Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0x6c6b6a, glyph: 'wall', block: 324, madeBy: 'Laid from dark grey stone — joins up like a fence' },
   { id: 'wall_turquoise', name: 'Turquoise Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0x63b5ab, glyph: 'wall', block: 325, madeBy: 'Laid from turquoise stone — joins up like a fence' },
   { id: 'wall_orange', name: 'Orange Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xd38d57, glyph: 'wall', block: 326, madeBy: 'Laid from orange stone — joins up like a fence' },
+  // Desert blocks (#33).
+  { id: 'sandstone', name: 'Sandstone', kind: 'raw', stackTo: STACK_BULK, color: 0xd2b27a, glyph: 'sandstone', block: 333, madeBy: 'Dug from under the desert sand, or pressed from sand' },
+  { id: 'sandstone_brick', name: 'Sandstone Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd8bf86, glyph: 'brick', block: 334, madeBy: 'Sandstone cut into bricks' },
+  { id: 'sand_path', name: 'Sand Path', kind: 'refined', stackTo: STACK_BULK, color: 0xd2b77c, glyph: 'path', block: 335, madeBy: 'Sand tamped flat — its corners round off where it stops' },
+  { id: 'wall_sandstone', name: 'Sandstone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xd2b27a, glyph: 'wall', block: 336, madeBy: 'Laid from sandstone — joins up like a fence' },
   // Stone brick, its wall, and chimneys (#19).
   { id: 'stone_brick', name: 'Stone Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xb4b1ab, glyph: 'brick', block: 329, madeBy: 'Stone cut square at the bench' },
   { id: 'wall_stone_brick', name: 'Stone Brick Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xb4b1ab, glyph: 'wall', block: 332, madeBy: 'Laid from stone brick — joins up like a fence' },

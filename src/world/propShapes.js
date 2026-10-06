@@ -339,6 +339,29 @@ export function chimneyBoxes({ top = true } = {}) {
   }
   return out;
 }
+/**
+ * A sand path (#33): a sixteenth under the ground beside it, its corners
+ * rounded off wherever neither side round that corner runs on into more path
+ * — so a single block is a rounded patch, and a run of them a winding track.
+ * `joins` is { px, nx, pz, nz }, as for a rug.
+ */
+export const PATH_TOP = 0.9375;
+export function pathBoxes(joins = {}) {
+  const H = PATH_TOP, r = 0.25, q = 0.1;
+  const nn = !joins.nx && !joins.nz, pn = !joins.px && !joins.nz, np = !joins.nx && !joins.pz, pp = !joins.px && !joins.pz;
+  const out = [
+    { minX: r, maxX: 1 - r, minY: 0, maxY: H, minZ: 0, maxZ: 1 },
+    { minX: 0, maxX: r, minY: 0, maxY: H, minZ: nn ? r : 0, maxZ: np ? 1 - r : 1 },
+    { minX: 1 - r, maxX: 1, minY: 0, maxY: H, minZ: pn ? r : 0, maxZ: pp ? 1 - r : 1 },
+  ];
+  // A step into each rounded corner, so it curves rather than notches.
+  if (nn) out.push({ minX: q, maxX: r, minY: 0, maxY: H, minZ: q, maxZ: r });
+  if (pn) out.push({ minX: 1 - r, maxX: 1 - q, minY: 0, maxY: H, minZ: q, maxZ: r });
+  if (np) out.push({ minX: q, maxX: r, minY: 0, maxY: H, minZ: 1 - r, maxZ: 1 - q });
+  if (pp) out.push({ minX: 1 - r, maxX: 1 - q, minY: 0, maxY: H, minZ: 1 - r, maxZ: 1 - q });
+  return out;
+}
+PROP_SHAPES.path = pathBoxes();
 PROP_SHAPES.wall = wallBoxes();
 PROP_SHAPES.chimney = chimneyBoxes();
 PROP_SHAPES.pillar = pillarBoxes();
