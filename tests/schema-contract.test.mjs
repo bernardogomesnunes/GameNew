@@ -48,3 +48,17 @@ await test('every WORLDS_MODE_VALUES entry is a plain lowercase word', () => {
   // module is the one place a mode string gets to mean "allowed."
   for (const mode of WORLDS_MODE_VALUES) assert.match(mode, /^[a-z]+$/);
 });
+
+await test('CLOUD_LIMITS match what 0005 enforces', async () => {
+  const { CLOUD_LIMITS } = await import('../db/schema.mjs');
+  const sql = migrations('0005_cloud_limits.sql');
+  assert.ok(sql.includes(`octet_length(rle) <= ${CLOUD_LIMITS.chunkBytes}`), 'chunk limit differs from 0005');
+  assert.ok(sql.includes(`>= ${CLOUD_LIMITS.worldsPerAccount} then`), 'world cap differs from 0005');
+});
+
+await test('a chunk cannot encode past the chunk limit', async () => {
+  const { CLOUD_LIMITS } = await import('../db/schema.mjs');
+  // Worst case: every cell differs from its neighbour, 3 bytes a run.
+  const cells = 16 * 16 * 200;
+  assert.ok(cells * 3 <= CLOUD_LIMITS.chunkBytes);
+});
