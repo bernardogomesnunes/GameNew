@@ -84,7 +84,7 @@ import { GuardianView } from './render/GuardianView.js';
 import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
-import { ArmyView } from './render/ArmyView.js';
+import { ArmyView, EngineView } from './render/ArmyView.js';
 import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent } from './config/blocks.js';
 import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
@@ -488,6 +488,7 @@ export class Game {
     this.guardianView = new GuardianView(this.scene);
     // The Stone Kingdom's rams, catapults and beast, and its arrows.
     this.armyView = new ArmyView(this.scene);
+    this.engineView = new EngineView(this.scene);
     // Your soldiers and tower archers (the defence buildings).
     this.defenderView = new SettlerView(this.scene);
     // Your army, on the dark path.
@@ -2448,7 +2449,17 @@ export class Game {
       onEvolve: () => this.evolveBuilding(structure),
       onSow: (kind) => this.sowFarm(structure, kind, true),
       onUnsow: (kind) => this.sowFarm(structure, kind, false),
+      // A barracks (batch 3, #29): who to train, and how many bunks it has.
+      onTrain: (unit) => this.trainSoldier(structure, unit),
+      bunks: () => this.bedsIn(structure.region),
     };
+  }
+
+  /** Trains a soldier at a barracks (DuiltGame.trainSoldier), saying why not when it can't. */
+  trainSoldier(structure, unit) {
+    const r = this.duilt.trainSoldier(structure, unit, this.bedsIn(structure.region));
+    if (!r.ok) return void this.ui.toast({ kind: 'xp', title: "Can't train that yet", body: r.reason });
+    this.ui.toast({ kind: 'xp', title: `Training a ${r.unit.name.toLowerCase()}`, body: 'They join the others in front of the barracks when they are ready' });
   }
 
   /** Puts a seed into a farm, or takes one out (DuiltGame.sowFarm), saying why not when it can't. */
@@ -4082,7 +4093,24 @@ export class Game {
     d.defenders.tick(dt, enemies, {
       strike: (e, damage, by) => this.defenderHits(e, damage, by),
       shot: (e, damage, by) => this.defenderHits(e, damage, by),
+      lob: (engine, target, crew) => this.crewThrows(engine, target, crew),
     });
+  }
+
+  /**
+   * A catapult crew's stone (batch 3, #29), lobbed at the ground under the
+   * enemy it's aimed at. It lands among them and hurts them, and only them:
+   * it breaks no blocks and hurts none of yours (see stoneLands).
+   */
+  crewThrows(engine, target, crew) {
+    if (!this.projectiles) return;
+    const x = Math.floor(target.x), z = Math.floor(target.z);
+    let y = Math.min(this.world.height - 1, Math.floor(target.y) + 6);
+    while (y > 0 && !this.world.collisionBoxAt(x, y, z)) y--;
+    const from = { x: engine.x, y: engine.y + 2.2, z: engine.z };
+    const stone = this.projectiles.fire(from, bestAim(this.world, from, { x: target.x, y: y + 1, z: target.z }));
+    stone.crew = crew;
+    this.sound?.catapult({ x: engine.x, z: engine.z });
   }
 
   /** How many bunks a barracks has: the foot of every bed in it. */
@@ -4101,7 +4129,8 @@ export class Game {
     if (!res?.killed) return;
     const gained = this.duilt.collect(res.drops) ?? {};
     const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
-    this.ui?.toast({ kind: 'xp', title: `Your ${by.kind === 'archer' ? 'archers' : 'soldiers'} brought down ${e.name}`, body: got || undefined });
+    const who = by.kind === 'archer' || by.kind === 'bowman' ? 'archers' : by.kind === 'crew' ? 'catapult crew' : 'soldiers';
+    this.ui?.toast({ kind: 'xp', title: `Your ${who} brought down ${e.name}`, body: got || undefined });
   }
 
   /** A raider's blow on one of your soldiers — or one of your army. */
@@ -4111,7 +4140,7 @@ export class Game {
       return;
     }
     if (!this.duilt.defenders.hurt(soldier, hits)) return;
-    this.ui?.toast({ kind: 'xp', title: 'One of your soldiers has fallen', body: 'The barracks will train another' });
+    this.ui?.toast({ kind: 'xp', title: 'One of your soldiers has fallen', body: `${soldier.name ?? 'Your soldier'} is gone — train another at the barracks` });
   }
 
   // ---- the dark path: the oath, the army, the camp (world/Army.js) ----
@@ -5022,6 +5051,15 @@ export class Game {
    */
   stoneLands(landed, stone = {}) {
     const c = { x: landed.cell.x + 0.5, y: landed.cell.y + 0.5, z: landed.cell.z + 0.5 };
+    // Your crew's stones hurt the enemy where they land, and nothing else.
+    if (stone.crew) {
+      this.sound?.boom?.({ x: c.x, z: c.z });
+      for (const p of this.wanderers?.list ?? []) {
+        if (!WANDERERS[p.kind].hp || p.dead || !(p.war || p.raider || p.angry)) continue;
+        if (Math.hypot(p.x - c.x, p.z - c.z) < 2.5 && Math.abs(p.y - c.y) < 3) this.defenderHits(p, STONE_HITS, stone.crew);
+      }
+      return;
+    }
     // The enemy's stones are thrown at your buildings, and break them.
     if (stone.enemy) {
       this.siegeBreak(craterCells(this.world, c));
@@ -6167,6 +6205,7 @@ export class Game {
     this.warriorView.update(this.withShowcase('warriors', this.duilt?.army.field ?? []));
     this.showcaseView.update(this.showcase, dt);
     this.armyView.update(strangers, [...(this.wanderers?.arrows ?? []), ...(ours?.arrows ?? [])], dt);
+    this.engineView.update(ours?.engines ?? []);
     this.projectileView.update(this.projectiles?.list ?? []);
     this.arrowView.update(this.arrows?.list ?? []);
     this.fireflyView.update(this.fireflies);

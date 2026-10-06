@@ -5,6 +5,9 @@ import { askConfirm } from './Confirm.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { FARM_SEED_SLOTS } from '../duilt/Crops.js';
+import { UNITS, UNITS_BY_ID, unitCost } from '../config/soldiers.js';
+import { TRAIN_DAYS, MAX_SOLDIERS } from '../world/Defenders.js';
+import { GAME_DAY_SECONDS } from '../render/DayCycle.js';
 import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
@@ -338,6 +341,9 @@ export class DuiltUI {
     this.bus.on('structure:sown', ({ structure }) => {
       if (this.building?.id === structure?.id) this.showBuilding(structure, this.buildingActionsCache);
     });
+    this.bus.on('duilt:training', ({ structure }) => {
+      if (this.building?.id === structure?.id) this.showBuilding(structure, this.buildingActionsCache);
+    });
     this.bus.on('structure:downgraded', ({ structure, name, blurb }) => {
       if (this.panels.isOpen('panel-store')) this.renderStore();
       if (this.building?.id === structure?.id) this.showBuilding(structure, this.buildingActionsCache);
@@ -492,6 +498,7 @@ export class DuiltUI {
     this.wireCraft(body, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
+    body.querySelectorAll('[data-train]').forEach((b) => b.addEventListener('click', () => actions.onTrain?.(b.dataset.train)));
     body.querySelector('[data-store]')?.addEventListener('click', () => actions.onOpenStore?.());
     body.querySelector('[data-stores]')?.addEventListener('click', () => actions.onOpenStores?.());
     body.querySelector('[data-move]')?.addEventListener('click', () => actions.onMove?.());
@@ -530,6 +537,7 @@ export class DuiltUI {
         </div>` : ''}
       </div>
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
+      ${structure.type === 'barracks' ? this.barracksHtml(structure) : ''}
       ${levelSec}
       ${this.stationRecipesHtml(spec)}
       ${this.buildingToolsHtml(structure, spec, locked)}`;
@@ -584,6 +592,42 @@ export class DuiltUI {
   }
 
   /**
+   * A barracks's soldiers (batch 3, #29): who it has, who's training and
+   * when they'll be ready, and a button for each kind it can train, with
+   * what it costs and — when you can't — what's short.
+   */
+  barracksHtml(structure) {
+    const d = this.duilt;
+    if (!d) return '';
+    const t = d.defenders.barracks(structure.id);
+    const bunks = Math.min(MAX_SOLDIERS, this.buildingActionsCache?.bunks?.() ?? MAX_SOLDIERS);
+    const room = bunks - t.roster.length - t.queue.length;
+    const tally = (list) => UNITS.map((u) => [u, list.filter((x) => x === u.id).length]).filter(([, n]) => n)
+      .map(([u, n]) => `${n} ${n === 1 ? u.name.toLowerCase() : u.plural}`).join(', ');
+    const left = t.queue.length ? Math.max(0, Math.ceil(((t.since + TRAIN_DAYS - d.days) * GAME_DAY_SECONDS) / 60)) : 0;
+    const training = t.queue.length
+      ? `<p class="dim">Training ${escapeHtml(UNITS_BY_ID.get(t.queue[0])?.name.toLowerCase() ?? '')} — ready in ${left <= 1 ? 'a minute' : `${left} minutes`}${t.queue.length > 1 ? `, then ${t.queue.length - 1} more` : ''}.</p>` : '';
+    const gearName = (id, n) => `${n > 1 ? `${n} ` : ''}${itemName(id).toLowerCase()}${n > 1 && !itemName(id).endsWith('s') ? 's' : ''}`;
+    const buttons = UNITS.map((u) => {
+      const cost = unitCost(u, d.inventory);
+      const can = cost.ok && room > 0;
+      const price = [`${u.food} food`, ...Object.entries(u.gear).map(([id, n]) => gearName(id, n))].join(', ');
+      return `<button class="train-unit${can ? '' : ' cant'}" data-train="${u.id}" title="${escapeAttr(u.blurb)}">
+        <strong>${escapeHtml(u.name)}</strong><span>${escapeHtml(price)}</span>
+        ${cost.ok ? '' : `<span class="short">Needs ${escapeHtml(cost.short.join(', '))}</span>`}
+      </button>`;
+    }).join('');
+    return `
+      <div class="building-sec">
+        <h4>Soldiers · ${t.roster.length} of ${bunks} bunks</h4>
+        <p class="building-line">${t.roster.length ? escapeHtml(tally(t.roster)) : 'Nobody yet — train them below.'}</p>
+        ${training}
+        ${room > 0 ? '<p class="dim">Train one — paid now, out of your bag:</p>' : '<p class="dim">Every bunk is spoken for. Add beds to train more.</p>'}
+        <div class="train-units">${buttons}</div>
+      </div>`;
+  }
+
+  /**
    * What a building is for, in one or two plain lines about the game — not
    * how the game works underneath (asked for directly: "Copy should be
    * straightforward about game, not about concepts"). What it makes is
@@ -604,6 +648,7 @@ export class DuiltUI {
     const tax = this.duilt?.skyTaxRate?.() ?? 0;
     // The Sky Kingdom's share, after a lost attack on it (duilt/SkyWar.js).
     if (tax > 0 && this.makesOf(structure, spec, level)) out.push(`Taxes: the Sky Kingdom takes ${Math.round(tax * 100)}% of what it makes, until it falls.`);
+    if (structure.type === 'barracks') out.push('Trains soldiers who go out to fight anything that comes at your land.');
     if (!out.length && !this.makesOf(structure, spec, level)) out.push('Makes nothing. It counts toward your age goals.');
     return out;
   }

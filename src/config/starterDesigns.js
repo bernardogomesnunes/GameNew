@@ -1079,7 +1079,7 @@ export const STARTER_DESIGNS = [
     name: 'Barracks',
     size: 13,
     footprint: '13 × 14',
-    note: 'A soldier for every bunk. They train while you play, and march out to meet the army.',
+    note: 'Train warriors, swordsmen, archers and catapult crews here, a soldier a bunk — each costs food and gear.',
     blocks: barracksBlocks(),
   },
   {

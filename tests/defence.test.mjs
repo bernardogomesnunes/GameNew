@@ -100,6 +100,12 @@ for (const [block, shape] of [[WEAPON_RACK, 'weapon_rack'], [TRAINING_DUMMY, 'tr
   ok('a new barracks has trained nobody yet', d.soldiers.length === 0);
   ok('a watchtower has its two archers at once', d.archers.length === 2);
   ok(`  up on the lookout, not on the roof (y ${d.archers[0].y - towerAt.y} of ${tw.extent.y})`, d.archers.every((a) => a.y - towerAt.y === 12));
+  // Batch 3, #29: nobody comes for free any more — you pay the barracks for
+  // each one (config/soldiers.js; tests/soldiers.test.mjs). Six swordsmen, as
+  // the barracks used to train by itself.
+  d.sync(posts, 1);
+  ok('nobody is trained until you pay for them', d.soldiers.length === 0);
+  for (let i = 0; i < 6; i++) d.order(1, 'swordsman', 0);
   d.sync(posts, TRAIN_DAYS * 2.5);
   ok(`a soldier every ${TRAIN_DAYS} of a day (${d.soldiers.length} after ${TRAIN_DAYS * 2.5})`, d.soldiers.length === 2);
   d.sync(posts, 10);
@@ -113,7 +119,7 @@ for (const [block, shape] of [[WEAPON_RACK, 'weapon_rack'], [TRAINING_DUMMY, 'tr
   for (let i = 0; i < 200; i++) d.tick(0.05, [enemy], { strike: (e, n, by) => blows.push(by), shot: (e, n, by) => shots.push(by) });
   const after = d.soldiers.map((s) => Math.hypot(s.x - enemy.x, s.z - enemy.z));
   ok(`soldiers march out to it (nearest ${Math.min(...before).toFixed(1)} → ${Math.min(...after).toFixed(1)})`, Math.min(...after) < 2.5);
-  ok(`and fight it (${blows.length} blows in 10 s)`, blows.length >= 6 && blows.every((b) => b.kind === 'soldier'));
+  ok(`and fight it (${blows.length} blows in 10 s)`, blows.length >= 6 && blows.every((b) => b.unit === 'swordsman'));
   const far = { x: towerAt.x + 3, y: 4, z: towerAt.z - 18, hp: 999, name: 'Saba' };
   for (let i = 0; i < 200; i++) d.tick(0.05, [far], { shot: (e, n, by) => shots.push({ e, by }) });
   ok(`the tower's archers shoot what comes in range (${shots.length} arrows home in 10 s)`, shots.length >= 4 && shots.every((s) => s.by.kind === 'archer' && s.e === far));
@@ -121,18 +127,21 @@ for (const [block, shape] of [[WEAPON_RACK, 'weapon_rack'], [TRAINING_DUMMY, 'tr
   for (let i = 0; i < 400; i++) d.tick(0.05, [], {});
   ok('nothing left to fight, they go back to their posts', d.soldiers.every((s) => Math.hypot(s.x - s.post.x, s.z - s.post.z) < 0.6));
 
-  // A soldier falls: the barracks trains another.
+  // A soldier falls: gone, and another costs the same again.
   const s0 = d.soldiers[0];
-  ok('a soldier can be beaten', d.hurt(s0, 99) && d.trained['1'].count === 5);
+  ok('a soldier can be beaten', d.hurt(s0, 99) && d.trained['1'].roster.length === 5);
   d.tick(0.05, [], {});
   ok('and is gone', !d.soldiers.includes(s0));
   d.sync(posts, 10 + TRAIN_DAYS);
-  ok('and the barracks trains another', d.soldiers.length === 6);
+  ok('and nobody takes their place unless you pay for one', d.soldiers.length === 5);
+  d.order(1, 'swordsman', 10 + TRAIN_DAYS);
+  d.sync(posts, 10 + 2 * TRAIN_DAYS);
+  ok('paid for, another joins', d.soldiers.length === 6);
 
   // Saved with the world.
   const back = new Defenders({ world });
   back.loadJSON(JSON.parse(JSON.stringify(d.toJSON())));
-  back.sync(posts, 10 + TRAIN_DAYS);
+  back.sync(posts, 10 + 2 * TRAIN_DAYS);
   ok('saved: the same soldiers are there when you come back', back.soldiers.length === 6);
   d.sync(posts.map((p) => (p.id === 1 ? { ...p, valid: false } : p)), 11);
   ok('the barracks broken, its soldiers are gone', d.soldiers.length === 0 && !d.trained['1']);
@@ -143,6 +152,7 @@ for (const [block, shape] of [[WEAPON_RACK, 'weapon_rack'], [TRAINING_DUMMY, 'tr
   w.untilMessenger = w.untilExplorer = 1e9;
   const d2 = new Defenders({ world, rand: rng(2) });
   d2.sync(posts, 0);
+  for (let i = 0; i < 6; i++) d2.order(1, 'swordsman', 0);
   d2.sync(posts, 10);
   const target = d2.soldiers[0];
   const [raider] = w.sendWarband({ x: target.x, z: target.z + 1 }, { x: target.x, z: -1000 }, 4, [['soldier', 1]], 7);
@@ -158,6 +168,6 @@ ok('  for the wall, the gatehouse and the watchtower', KINDS.slice(0, 3).every((
 ok('a gatehouse shuts its gate when a round is coming', /if \(what === 'warn'\) \{\s*const shut = this\.shutGates\(\)/.test(game) && /doorBlock\(\{ \.\.\.part, open: false \}\)/.test(game));
 ok('the soldiers and archers run every frame, and are drawn', /this\.tickWar\(\);\s*this\.tickDefence\(dt\);/.test(game) && /this\.defenderView\.update\((this\.withShowcase\('defenders', )?ours\?\.people/.test(game));
 ok('a barracks is as big as its bunks', /beds: s\.type === 'barracks' \? this\.bedsIn\(s\.region\) : 0/.test(game));
-ok('raiders fight your soldiers, and a soldier can fall', /foes: \(\) => \[\.\.\.\(this\.duilt\?\.defenders\.soldiers/.test(game) && /One of your soldiers has fallen/.test(game));
+ok('raiders fight your soldiers, and a soldier can fall', /foes: \(\) => \[\.\.\.\(this\.duilt\?\.defenders\.soldiers/.test(game) && /One of your soldiers has fallen/.test(game) && /train another at the barracks/.test(game));
 
 process.exit(f ? 1 : 0);

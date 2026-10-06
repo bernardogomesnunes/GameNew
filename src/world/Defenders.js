@@ -1,15 +1,19 @@
 import { groundAt, bodyFits } from './Mobs.js';
 import { roofPart } from '../config/blocks.js';
+import { UNITS_BY_ID, LEGACY_UNIT } from '../config/soldiers.js';
 
 /**
  * Your side of the war (the defence buildings — config/structures.js): the
  * soldiers a barracks trains, and the archers a watchtower posts.
  *
- *   Soldiers  one for every bunk in a barracks (up to six), trained one at
- *             a time while you play. They stand at their barracks, and when
- *             anything of the Stone Kingdom's — or a raiding bandit — comes
- *             within reach of it, they march out and fight it. Beaten, a
- *             soldier is gone, and the barracks trains another.
+ *   Soldiers  a barracks trains who you pay it to (config/soldiers.js —
+ *             warriors, swordsmen, archers and catapult crews), one at a
+ *             time while you play, up to a soldier a bunk. They stand at
+ *             their barracks, and when anything of the Stone Kingdom's — or
+ *             a raiding bandit — comes within reach of it, they go for it:
+ *             swords close in, archers shoot from where they are, a crew
+ *             sets its catapult up and lobs stones. Beaten, a soldier is
+ *             gone, and training another costs the same again.
  *   Archers   two on the lookout of every watchtower. They shoot at
  *             whatever comes within range, arrows you can see fly.
  *
@@ -19,7 +23,7 @@ import { roofPart } from '../config/blocks.js';
 
 export const SOLDIER = { hp: 24, hits: 4, reach: 1.9, every: 1.1, speed: 3.2, range: 28, leash: 44 };
 export const TOWER_ARCHER = { range: 26, every: 2.2, damage: 3 };
-/** A barracks trains a soldier in this much of a game day. */
+/** A barracks trains a soldier in this much of a game day. Melee stats for a soldier of no unit (the showcase's). */
 export const TRAIN_DAYS = 0.15;
 /** Bunks beyond this train no more. */
 export const MAX_SOLDIERS = 6;
@@ -55,14 +59,37 @@ export class Defenders {
     this.soldiers = [];
     this.archers = [];
     this.arrows = [];
-    // Per barracks: how many it has trained, and the day it started on the next.
-    this.trained = {}; // structureId -> { count, since }
+    // Per barracks: who it has trained, who it's training next, and the
+    // day it started on the first of those.
+    this.trained = {}; // structureId -> { roster: [unitId], queue: [unitId], since }
     this.nextId = 1;
   }
 
   /** Everyone of yours, to draw. */
   get people() {
     return [...this.soldiers, ...this.archers];
+  }
+
+  /** The catapults your crews have set up, to draw: { x, y, z, facing, swing }. */
+  get engines() {
+    return this.soldiers.filter((s) => s.engine).map((s) => s.engine);
+  }
+
+  /** What a barracks has: { roster, queue, since } — trained, waiting, and since when. */
+  barracks(id) {
+    return this.trained[String(id)] ?? { roster: [], queue: [], since: 0 };
+  }
+
+  /**
+   * Puts one `unit` in line at barracks `id` (paid for already — see
+   * DuiltGame.trainSoldier). Training starts now if nobody is ahead of it.
+   */
+  order(id, unit, days) {
+    const key = String(id);
+    const t = this.trained[key] ?? (this.trained[key] = { roster: [], queue: [], since: days });
+    if (!t.queue.length) t.since = days;
+    t.queue.push(unit);
+    return t;
   }
 
   /**
@@ -85,28 +112,36 @@ export class Defenders {
         if (this.archers.some((a) => a.post.of === b.id)) continue;
         for (const spot of this.lookout(b.region)) this.archers.push(this.person('archer', spot, b.id));
       } else if (b.type === 'barracks') {
+        const t = this.trained[b.id] ?? (this.trained[b.id] = { roster: [], queue: [], since: days });
+        // The next in line joins every TRAIN_DAYS.
+        while (t.queue.length && days - t.since >= TRAIN_DAYS) { t.roster.push(t.queue.shift()); t.since += TRAIN_DAYS; }
+        if (!t.queue.length) t.since = days;
+        // Everyone on the roster stands at their place in front of it, a
+        // bunk each: whoever isn't there yet comes out.
         const bunks = Math.min(MAX_SOLDIERS, b.beds ?? 0);
-        const t = this.trained[b.id] ?? (this.trained[b.id] = { count: 0, since: days });
-        // One more each TRAIN_DAYS, up to a soldier a bunk.
-        while (t.count < bunks && days - t.since >= TRAIN_DAYS) { t.count++; t.since += TRAIN_DAYS; }
-        if (t.count >= bunks) t.since = days;
-        const here = this.soldiers.filter((s) => s.post.of === b.id);
         const yard = this.parade(b.region);
-        for (let i = here.length; i < t.count && yard; i++) {
+        const here = this.soldiers.filter((s) => s.post.of === b.id);
+        t.roster.slice(0, bunks).forEach((unit, i) => {
+          if (!yard || here.some((s) => s.slot === i)) return;
           const spot = { x: yard.x + (i % 3) - 1, y: yard.y, z: yard.z + Math.floor(i / 3) };
-          this.soldiers.push(this.person('soldier', spot, b.id));
-        }
+          const s = this.person(UNITS_BY_ID.get(unit)?.kind ?? 'soldier', spot, b.id, unit);
+          s.slot = i;
+          this.soldiers.push(s);
+        });
       }
     }
   }
 
-  person(kind, spot, of) {
+  /** A figure of yours: a tower's archer, or one of a barracks's soldiers trained as `unit`. */
+  person(kind, spot, of, unit = null) {
+    const u = UNITS_BY_ID.get(unit);
+    const tower = kind === 'archer' && !u;
     return {
-      id: `d${this.nextId++}`, kind, x: spot.x + 0.5, y: spot.y, z: spot.z + 0.5,
+      id: `d${this.nextId++}`, kind, unit, x: spot.x + 0.5, y: spot.y, z: spot.z + 0.5,
       post: { x: spot.x + 0.5, y: spot.y, z: spot.z + 0.5, of },
-      hp: kind === 'soldier' ? SOLDIER.hp : 1, cooldown: this.rand() * 1.5, hurt: 0,
-      colour: kind === 'soldier' ? TABARD : ARCHER_COAT, helm: kind === 'soldier' ? STEEL : HOOD,
-      name: kind === 'soldier' ? 'Your soldier' : 'Your archer',
+      hp: u?.hp ?? (tower ? 1 : SOLDIER.hp), cooldown: this.rand() * 1.5, hurt: 0,
+      colour: tower ? ARCHER_COAT : TABARD, helm: tower ? HOOD : STEEL,
+      name: u ? `Your ${u.name.toLowerCase()}` : tower ? 'Your archer' : 'Your soldier',
       target: null, speed: 0,
     };
   }
@@ -158,39 +193,131 @@ export class Defenders {
    * @param on       { strike(enemy, damage, from), shot(enemy, damage, from) }
    */
   tick(dt, enemies, on = {}) {
-    for (const s of this.soldiers) this.soldier(s, dt, enemies, on);
+    for (const s of this.soldiers) {
+      const u = UNITS_BY_ID.get(s.unit);
+      if (u?.ranged) this.bowman(s, u, dt, enemies);
+      else if (u?.siege) this.crew(s, u, dt, enemies, on);
+      else this.soldier(s, dt, enemies, on);
+    }
     this.soldiers = this.soldiers.filter((s) => s.hp > 0);
     for (const a of this.archers) this.archer(a, dt, enemies);
     this.flyArrows(dt, on);
   }
 
   soldier(s, dt, enemies, on) {
+    const u = UNITS_BY_ID.get(s.unit);
+    const m = u?.melee ?? SOLDIER, speed = u?.speed ?? SOLDIER.speed;
     s.cooldown = Math.max(0, s.cooldown - dt);
     s.hurt = Math.max(0, s.hurt - dt);
-    // Whoever's nearest their post, within reach of it.
-    let target = null, best = SOLDIER.range;
-    for (const e of enemies) {
-      if (e.dead) continue;
-      const d = Math.hypot(e.x - s.post.x, e.z - s.post.z);
-      if (d < best) { best = d; target = e; }
-    }
+    const target = this.nearestTo(s.post, enemies, SOLDIER.range);
     s.target = target ? { x: target.x, z: target.z } : null;
     s.foe = target;
     const away = Math.hypot(s.x - s.post.x, s.z - s.post.z);
     if (target && away < SOLDIER.leash) {
       const d = Math.hypot(target.x - s.x, target.z - s.z);
-      if (d > SOLDIER.reach * 0.8) this.step(s, target.x, target.z, dt, SOLDIER.speed);
+      if (d > m.reach * 0.8) this.step(s, target.x, target.z, dt, speed);
       else s.speed = 0;
-      if (d <= SOLDIER.reach && s.cooldown <= 0) {
-        s.cooldown = SOLDIER.every;
-        on.strike?.(target, SOLDIER.hits, s);
+      if (d <= m.reach && s.cooldown <= 0) {
+        s.cooldown = m.every;
+        on.strike?.(target, m.hits, s);
       }
       return;
     }
-    // Nothing to fight: back to the post, and stand easy there.
+    this.standEasy(s, dt, u);
+  }
+
+  /** Nothing to fight: back to the post, and get their breath back there. */
+  standEasy(s, dt, u) {
     s.foe = null;
-    if (away > 0.4) { s.target = { x: s.post.x, z: s.post.z }; this.step(s, s.post.x, s.post.z, dt, SOLDIER.speed * 0.7); }
-    else { s.target = null; s.speed = 0; s.hp = Math.min(SOLDIER.hp, s.hp + dt * 0.5); }
+    const away = Math.hypot(s.x - s.post.x, s.z - s.post.z);
+    if (away > 0.4) { s.target = { x: s.post.x, z: s.post.z }; this.step(s, s.post.x, s.post.z, dt, (u?.speed ?? SOLDIER.speed) * 0.7); }
+    else { s.target = null; s.speed = 0; s.hp = Math.min(u?.hp ?? SOLDIER.hp, s.hp + dt * 0.5); }
+  }
+
+  /** The enemy nearest `at`, within `range` of it, or null. */
+  nearestTo(at, enemies, range) {
+    let target = null, best = range;
+    for (const e of enemies) {
+      if (e.dead) continue;
+      const d = Math.hypot(e.x - at.x, e.z - at.z);
+      if (d < best) { best = d; target = e; }
+    }
+    return target;
+  }
+
+  /**
+   * A barracks archer: out from its post towards whatever's coming, only as
+   * far as it takes to have it in range, and shooting from there.
+   */
+  bowman(s, u, dt, enemies) {
+    const r = u.ranged;
+    s.cooldown = Math.max(0, s.cooldown - dt);
+    s.hurt = Math.max(0, s.hurt - dt);
+    const target = this.nearestTo(s.post, enemies, SOLDIER.range);
+    s.foe = target;
+    const away = Math.hypot(s.x - s.post.x, s.z - s.post.z);
+    if (!target || away >= SOLDIER.leash) return this.standEasy(s, dt, u);
+    const d = Math.hypot(target.x - s.x, target.z - s.z);
+    if (d > r.range * 0.85) { s.target = { x: target.x, z: target.z }; this.step(s, target.x, target.z, dt, u.speed); }
+    else { s.target = null; s.speed = 0; }
+    s.facing = Math.atan2(target.x - s.x, target.z - s.z);
+    if (d <= r.range && s.cooldown <= 0) {
+      s.cooldown = r.every;
+      this.loose(s, target, r.damage);
+    }
+  }
+
+  /**
+   * A catapult crew: they stay by their barracks. When the enemy comes
+   * within throw of it they set the catapult up in front of them, then lob
+   * a stone at the nearest every so often; with nobody left to throw at for
+   * a while, they pack it away again. `on.lob(engine, target, crew)` throws.
+   */
+  crew(s, u, dt, enemies, on) {
+    const g = u.siege;
+    s.cooldown = Math.max(0, s.cooldown - dt);
+    s.hurt = Math.max(0, s.hurt - dt);
+    const target = this.nearestTo(s.post, enemies, g.range);
+    if (!target) {
+      s.idle = (s.idle ?? 0) + dt;
+      if (s.engine && s.idle >= g.packAfter) { s.engine = null; s.setup = null; }
+      if (s.engine?.swing > 0) s.engine.swing = Math.max(0, s.engine.swing - dt);
+      return this.standEasy(s, dt, u);
+    }
+    s.idle = 0;
+    s.foe = target;
+    // Back at the post first: it goes up where they stand.
+    if (Math.hypot(s.x - s.post.x, s.z - s.post.z) > 0.4) { s.target = { x: s.post.x, z: s.post.z }; this.step(s, s.post.x, s.post.z, dt, u.speed); return; }
+    s.target = null; s.speed = 0;
+    const facing = Math.atan2(target.x - s.x, target.z - s.z);
+    s.facing = facing;
+    if (!s.engine) {
+      s.setup = (s.setup ?? g.setup) - dt;
+      if (s.setup > 0) return;
+      // Set up a little in front of them, towards the enemy.
+      s.engine = { x: s.x + Math.sin(facing) * 1.6, y: s.y, z: s.z + Math.cos(facing) * 1.6, facing, swing: 0, crew: s };
+      s.cooldown = Math.max(s.cooldown, 1);
+    }
+    const e = s.engine;
+    e.facing = Math.atan2(target.x - e.x, target.z - e.z);
+    if (e.swing > 0) e.swing = Math.max(0, e.swing - dt);
+    if (s.cooldown > 0) return;
+    s.cooldown = g.every;
+    e.swing = 0.6;
+    on.lob?.(e, target, s);
+  }
+
+  /** An arrow from `a` at `target`, straight at where it stands, landing when it gets there. */
+  loose(a, target, damage) {
+    const from = { x: a.x, y: a.y + 1.4, z: a.z };
+    const to = { x: target.x, y: target.y + 1.1, z: target.z };
+    const d = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z) || 1;
+    const t = d / ARROW_SPEED;
+    this.arrows.push({
+      x: from.x, y: from.y, z: from.z,
+      vx: (to.x - from.x) / t, vy: (to.y - from.y) / t, vz: (to.z - from.z) / t,
+      left: t, target, from: a, age: 0, ours: true, damage,
+    });
   }
 
   /** One step for a soldier, round what's in the way rather than through it. */
@@ -211,16 +338,7 @@ export class Defenders {
     a.facing = Math.atan2(target.x - a.x, target.z - a.z);
     if (a.cooldown > 0) return;
     a.cooldown = TOWER_ARCHER.every;
-    // Straight at where it stands, dropping a little: it lands when it gets there.
-    const from = { x: a.x, y: a.y + 1.4, z: a.z };
-    const to = { x: target.x, y: target.y + 1.1, z: target.z };
-    const d = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z) || 1;
-    const t = d / ARROW_SPEED;
-    this.arrows.push({
-      x: from.x, y: from.y, z: from.z,
-      vx: (to.x - from.x) / t, vy: (to.y - from.y) / t, vz: (to.z - from.z) / t,
-      left: t, target, from: a, age: 0, ours: true,
-    });
+    this.loose(a, target, TOWER_ARCHER.damage);
   }
 
   flyArrows(dt, on) {
@@ -233,19 +351,25 @@ export class Defenders {
       if (r.left > 0) continue;
       // There: in it if it's still about where it was, else in the ground.
       const e = r.target;
-      if (!e.dead && Math.hypot(e.x - r.x, e.z - r.z) < 1.4) { r.done = true; on.shot?.(e, TOWER_ARCHER.damage, r.from); }
+      if (!e.dead && Math.hypot(e.x - r.x, e.z - r.z) < 1.4) { r.done = true; on.shot?.(e, r.damage ?? TOWER_ARCHER.damage, r.from); }
       else r.stuck = true;
     }
     this.arrows = this.arrows.filter((r) => !r.done && r.age < 4);
   }
 
-  /** A blow from the enemy on one of your soldiers. */
+  /** A blow from the enemy on one of your soldiers. Fallen, they're off their barracks's roster. */
   hurt(s, damage) {
     s.hp -= damage;
     s.hurt = 0.3;
     if (s.hp > 0) return false;
     const t = this.trained[s.post.of];
-    if (t) t.count = Math.max(0, t.count - 1);
+    if (t) {
+      const i = t.roster[s.slot] === s.unit ? s.slot : t.roster.indexOf(s.unit);
+      if (i >= 0) t.roster.splice(i, 1);
+      // The others keep their places; the one fallen leaves a gap at the end.
+      for (const o of this.soldiers) if (o.post.of === s.post.of && o !== s && o.slot > s.slot) o.slot--;
+      s.slot = -1;
+    }
     return true;
   }
 
@@ -255,8 +379,12 @@ export class Defenders {
 
   loadJSON(data) {
     this.trained = {};
+    const known = (list) => (Array.isArray(list) ? list.filter((u) => UNITS_BY_ID.has(u)) : []);
     for (const [id, t] of Object.entries(data?.trained ?? {})) {
-      if (Number.isInteger(t?.count) && Number.isFinite(t?.since)) this.trained[id] = { count: Math.min(t.count, MAX_SOLDIERS), since: t.since };
+      if (!Number.isFinite(t?.since)) continue;
+      // Saved before you chose who to train: so many soldiers, all the same.
+      if (Number.isInteger(t.count)) this.trained[id] = { roster: Array(Math.min(t.count, MAX_SOLDIERS)).fill(LEGACY_UNIT), queue: [], since: t.since };
+      else this.trained[id] = { roster: known(t.roster).slice(0, MAX_SOLDIERS), queue: known(t.queue), since: t.since };
     }
     this.soldiers = [];
     this.archers = [];

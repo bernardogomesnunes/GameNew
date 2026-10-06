@@ -154,3 +154,38 @@ export class ArmyView {
     this.arrowMat.dispose();
   }
 }
+
+/**
+ * Your catapult crews' catapults (batch 3, #29 — world/Defenders.js
+ * `engines`): the same frame and arm as the Stone Kingdom's, set up where
+ * the crew put it, turned on whatever it's throwing at, its arm whipping
+ * over when it throws. Made when it's set up, dropped when it's packed away.
+ */
+export class EngineView {
+  constructor(scene) {
+    this.scene = scene;
+    this.shown = new Map(); // engine → its model
+  }
+
+  update(engines) {
+    const seen = new Set(engines);
+    for (const e of engines) {
+      let m = this.shown.get(e);
+      if (!m) {
+        m = catapultModel();
+        this.scene.add(m.group);
+        this.shown.set(e, m);
+      }
+      m.group.position.set(e.x, e.y, e.z);
+      m.group.rotation.y = e.facing ?? 0;
+      m.swing.rotation.x = (e.swing ?? 0) > 0 ? 1.6 * Math.sin(((e.swing ?? 0) / 0.6) * Math.PI) : 0;
+    }
+    for (const [e, m] of this.shown) {
+      if (seen.has(e)) continue;
+      this.scene.remove(m.group);
+      m.group.traverse((o) => o.geometry?.dispose?.());
+      for (const mat of m.mats) mat.dispose();
+      this.shown.delete(e);
+    }
+  }
+}
