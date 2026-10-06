@@ -22,7 +22,7 @@ Strong points:
 - Schema changes are numbered files in `migrations/`, with a test (`schema-contract.test.mjs`) that checks the app against them.
 
 Gaps, most serious first:
-1. **No size limits on cloud rows.** `world_chunks.rle` is `bytea` and `worlds.duilt`, `economy` and `progression.stats` are `jsonb`, all unbounded. One account can write gigabytes. Fix: `check (octet_length(rle) < 65536)` and `pg_column_size` checks on the jsonb columns, plus a per-player world cap (for example 20) through an insert policy.
+1. **No size limits on cloud rows.** `world_chunks.rle` is `bytea` and `worlds.duilt`, `economy` and `progression.stats` are `jsonb`, all unbounded. One account can write gigabytes. Fix: `check (octet_length(rle) <= 262144)` (worst case is 153,600 bytes: 51,200 cells at 3 bytes a run, height 200) and `pg_column_size` checks on the jsonb columns, plus a per-player world cap (for example 20) through an insert policy.
 2. **No rate limiting.** The Data API accepts as many writes as a client sends. Fix: Neon plan limits plus a per-player row cap, and a debounce check in `SyncEngine` (autosave already throttled in PR #129).
 3. **World import trusts the file.** `parseWorldPayload` checks only a format string, then `World.deserialize` runs on the rest. A crafted `.voxworld.json` can allocate huge arrays or load unknown block ids. Fix: validate sizes, chunk counts and ids before allocating, and cap file size.
 4. **No Content-Security-Policy.** `index.html` has none. Fix: a CSP header on Vercel allowing only self, the Neon hosts and `data:` images. This limits the damage of any future XSS.
