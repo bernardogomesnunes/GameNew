@@ -38,16 +38,8 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#8 Grass tufts.** Little crossed blades on the turf round you, one batch, swaying, shrinking away at the edge of their reach. A switch in graphics settings. PR #139.
 - **Stone slabs looked plain.** Stone and plank slabs and stairs are drawn in their block's texture. PR #138.
 - **Bow and arrows** (asked for directly). Hemp grows wild on open grass, ripe; picked it gives fibre and seeds to plant on farmland. Its seed also turns up breaking turf. Fibre → string → bow and arrows, by hand from Age 1. Traders sell hemp seeds, fibre, string, bows and arrows. With the bow held, Break shoots: arrows fly fast, drop a little, hit animals and bandits for 5, and stick in blocks. PR #140.
-
-## Needs a decision first
-
-- **#12 Day length 30 min, and sleeping.**
-  - A day is 15 min now (10 min daylight, nights at double speed).
-  - Buildings count production per game day, so a 30-min day halves what they make per real hour unless production is doubled to match. **Which do you want?**
-  - Sleeping: use a bed at night. The night passes in about 30 s behind a pixel-art screen with game tips.
-- **#27 "Top level granary".** Not sure what this means:
-  - a new top level for the granary,
-  - or the granary's top level not working?
+- **#32 Wood mill.** A block you put down (Age 2); within a few blocks of it wood goes further: three planks to a log, doors, trapdoors and stairs for less. It also makes stripped logs (every wood, standing or lying), a cabinet, a wardrobe and a bedside table, and wall panels (plain, patterned, two-tone) that go flat on the face you point at. Place on it opens the bench on what's made there. PR #142.
+- **#12 and #27** dropped (asked for directly).
 
 ## Priority 1 — blocks and placement
 
@@ -73,14 +65,8 @@ All done (see above).
 - **#29 Barracks train soldiers.**
   - Archers, warriors, swordsmen, and a catapult crew who set one up and fire it in a war.
   - Each costs food and gear.
-- **#32 Wood mill and furniture.** The wood mill is the first "machine": a placeable block you use.
-  - It turns logs into planks, stairs, doors and trapdoors for less wood.
-  - It makes stripped logs.
-  - It makes a full furniture set: cabinets, wardrobes, bedside tables.
-  - It makes wooden wall panels you put on one face of a block for interiors, in plain, patterned and two-tone wood.
-
 ## Suggested order
 
-1. The decisions above (#12, #27).
+1. #10 villagers eat (next).
 2. The rest of Priority 2.
-3. Priority 3, one system at a time: wood mill first, as it feeds furniture and the per-wood sets.
+3. The rest of Priority 3, one system at a time.

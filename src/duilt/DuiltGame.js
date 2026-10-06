@@ -18,7 +18,7 @@ import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool, stackLimit } from '../config/items.js';
 import { MILESTONES } from '../config/skills.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, PRODUCTION_PACE } from '../config/structures.js';
-import { AIR, BLOCKS_BY_ID, isFluid, doorPart } from '../config/blocks.js';
+import { AIR, BLOCKS_BY_ID, isFluid, doorPart, stationOf } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
 import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN } from '../config/traders.js';
@@ -74,6 +74,8 @@ export const WILD_SEEDS = FIELD_CROPS.map((c) => `seeds_${c.kind}`);
 export const GRASS_DROPS = [[WILD_SEEDS, 0.2]];
 const GRASS = 1;
 const FARMLAND_BLOCK = 21;
+/** How near a station block (the wood mill) you have to stand to work at it. */
+const BLOCK_STATION_REACH = 4;
 
 const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds_carrot: 4, seeds_potato: 4 };
 
@@ -629,6 +631,17 @@ export class DuiltGame {
         found.add(spec.station);
         // And how far it's built up, for recipes that ask a level of it.
         for (let t = 0; t <= (s.tier ?? 0); t++) found.add(`${spec.station}@${t}`);
+      }
+    }
+    // And the stations that are a block, not a building — the wood mill
+    // (#32): within a few blocks of one, you're at it.
+    const bx = Math.floor(position.x), by = Math.floor(position.y), bz = Math.floor(position.z);
+    for (let x = bx - BLOCK_STATION_REACH; x <= bx + BLOCK_STATION_REACH; x++) {
+      for (let y = by - 2; y <= by + 3; y++) {
+        for (let z = bz - BLOCK_STATION_REACH; z <= bz + BLOCK_STATION_REACH; z++) {
+          const station = stationOf(this.world.getBlock(x, y, z));
+          if (station) found.add(station);
+        }
       }
     }
     return [...found];

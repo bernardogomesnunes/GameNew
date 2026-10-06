@@ -34,7 +34,11 @@ export const GLYPHS = {
   // Two courses in a running bond. Three lines and one stagger read as an
   // equals sign; it is the offset between courses that says brick.
   brick: 'M4 9h16M4 12.5h16M4 16h16M11 9v3.5M7.5 12.5V16M15.5 12.5V16',
-  bow: 'M8 4c8 2 10 14 0 16M8 4v16M5 12h12M15 10l2 2-2 2',
+  mill: 'M4 14h16M6 14v6M18 14v6M12 6a5 5 0 1 0 0.01 0M12 9v2',
+  cabinet: 'M5 6h14v13H5zM12 6v13M10 12h0.5M13.5 12h0.5',
+  wardrobe: 'M6 3h12v18H6zM12 3v18M10 12h0.5M13.5 12h0.5',
+  panel: 'M5 4h14v16H5zM9.5 4v16M14.5 4v16',
+    bow: 'M8 4c8 2 10 14 0 16M8 4v16M5 12h12M15 10l2 2-2 2',
   arrow: 'M5 19 18 6M18 6h-4M18 6v4M5 19l1-4M5 19l4-1',
   string: 'M6 7c6-3 12 3 6 6s-6 7 6 5M6 7v1',
   fibre: 'M7 20c1-6 0-10 2-16M11 20c0-6 1-10 0-16M15 20c-1-6 1-10 3-15',

@@ -286,6 +286,17 @@ export const ITEMS = [
   { id: 'wall_grey_stone', name: 'Dark Grey Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0x6c6b6a, glyph: 'wall', block: 324, madeBy: 'Laid from dark grey stone — joins up like a fence' },
   { id: 'wall_turquoise', name: 'Turquoise Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0x63b5ab, glyph: 'wall', block: 325, madeBy: 'Laid from turquoise stone — joins up like a fence' },
   { id: 'wall_orange', name: 'Orange Stone Wall', kind: 'refined', stackTo: STACK_BULK, color: 0xd38d57, glyph: 'wall', block: 326, madeBy: 'Laid from orange stone — joins up like a fence' },
+  // The wood mill and what it makes (#32).
+  { id: 'wood_mill', name: 'Wood Mill', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a7350, glyph: 'mill', block: 341, madeBy: 'Built at the bench — stand by it and wood goes further; Place on it to use it' },
+  { id: 'stripped_log', name: 'Stripped Oak Log', kind: 'refined', stackTo: STACK_BULK, color: 0xc9a072, glyph: 'log', block: 345, madeBy: 'An oak log with its bark taken off, at the wood mill' },
+  { id: 'stripped_log_white', name: 'Stripped White Log', kind: 'refined', stackTo: STACK_BULK, color: 0xeee6d6, glyph: 'log', block: 346, madeBy: 'A white log with its bark taken off, at the wood mill' },
+  { id: 'stripped_log_dark', name: 'Stripped Dark Log', kind: 'refined', stackTo: STACK_BULK, color: 0x8a5e3e, glyph: 'log', block: 347, madeBy: 'A dark log with its bark taken off, at the wood mill' },
+  { id: 'cabinet', name: 'Cabinet', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08458, glyph: 'cabinet', block: 354, madeBy: 'Made at the wood mill' },
+  { id: 'wardrobe', name: 'Wardrobe', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a6c46, glyph: 'wardrobe', block: 358, madeBy: 'Made at the wood mill — taller than you' },
+  { id: 'bedside_table', name: 'Bedside Table', kind: 'refined', stackTo: STACK_GOODS, color: 0xb98d60, glyph: 'cabinet', block: 362, madeBy: 'Made at the wood mill' },
+  { id: 'panel_plain', name: 'Wood Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xc49360, glyph: 'panel', block: 366, madeBy: 'Boards for a wall, at the wood mill — goes flat on the face you point at' },
+  { id: 'panel_pattern', name: 'Patterned Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xc49360, glyph: 'panel', block: 370, madeBy: 'Raised squares for a wall, at the wood mill' },
+  { id: 'panel_twotone', name: 'Two-tone Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xd8b98c, glyph: 'panel', block: 374, madeBy: 'Dark below, light above, a rail between — at the wood mill' },
   // Desert blocks (#33).
   { id: 'sandstone', name: 'Sandstone', kind: 'raw', stackTo: STACK_BULK, color: 0xd2b27a, glyph: 'sandstone', block: 333, madeBy: 'Dug from under the desert sand, or pressed from sand' },
   { id: 'sandstone_brick', name: 'Sandstone Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd8bf86, glyph: 'brick', block: 334, madeBy: 'Sandstone cut into bricks' },

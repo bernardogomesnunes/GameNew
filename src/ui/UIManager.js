@@ -2259,6 +2259,16 @@ export class UIManager {
   }
 
   /** Every storehouse at once — a storage controller, or a town hall's panel. */
+  /** Opens the bench, searching for `query` — what a wood mill opens on. */
+  openBench(query = '') {
+    this.openPanel('panel-bench');
+    const search = this.q('#bench-search');
+    if (search) {
+      search.value = query;
+      this.duiltUI?.renderBench();
+    }
+  }
+
   openStores() {
     this.openPanel('panel-stores');
     this.duiltUI?.showStores();

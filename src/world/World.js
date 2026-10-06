@@ -8,10 +8,12 @@ export const CHUNK_SIZE = 16;
  * A stair fills its cell like a cube, but says it's a stair, so you walk
  * straight up a flight of them (see PlayerController.stepUp).
  */
-const HALF_SHAPES = new Set(['slab', 'chair', 'lantern', 'firefly', 'bed_foot', 'bed_head']);
+const HALF_SHAPES = new Set(['slab', 'chair', 'lantern', 'firefly', 'bed_foot', 'bed_head', 'bedside_table']);
 // An open gate is a gap in the fence anyone walks through; so is an open door.
 // A chandelier hangs overhead; you walk under it.
-const NO_COLLISION_SHAPES = new Set(['rug', 'gate_open', 'door_open', 'door_open_top', 'chandelier', 'trapdoor_open', 'banner_white', 'banner_black', 'painting', 'sapling', 'campfire', 'chain']);
+const NO_COLLISION_SHAPES = new Set(['rug', 'gate_open', 'door_open', 'door_open_top', 'chandelier', 'trapdoor_open', 'banner_white', 'banner_black', 'painting', 'sapling', 'campfire', 'chain',
+  // Wall panels lie flat on a wall, a sixteenth thick, like a painting.
+  'panel_plain', 'panel_pattern', 'panel_twotone']);
 // Taller than its cell: a fence, or a shut gate, stops you at a block and a
 // half — past jumping, and past anything an animal can step.
 const FENCE_HEIGHT = 1.5;
@@ -222,6 +224,8 @@ export class World {
     // A slab in the top half of its cell: a ceiling you walk under, or a
     // floor half a block up.
     if (shape === 'slab_top') return { minY: y + 0.5, maxY: y + 1 };
+    // A wardrobe stands taller than you; nothing climbs it.
+    if (shape === 'wardrobe') return { minY: y, maxY: y + 1.9 };
     // A path sits a sixteenth under the ground beside it.
     if (shape === 'path') return { minY: y, maxY: y + 0.9375 };
     if (shape === 'stair' || shape === 'roof' || shape === 'roof_hi') return { minY: y, maxY: y + 1, stair: true };

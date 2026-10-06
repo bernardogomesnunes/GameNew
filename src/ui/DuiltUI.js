@@ -5,6 +5,7 @@ import { askConfirm } from './Confirm.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { FARM_SEED_SLOTS } from '../duilt/Crops.js';
+import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
 import { howToGet, RECIPES } from '../config/recipes.js';
@@ -1579,7 +1580,9 @@ export class DuiltUI {
     // Everything for the age, hand and workshop alike. A workshop recipe you
     // cannot see is a workshop you never learn you need, so they are listed
     // from the age they appear and greyed out until you are standing at one.
-    const all = d.crafting.available(d.age, { station: null, near, atStations });
+    // Creative has no ages to wait for: its bench offers everything, or a
+    // wood mill there would open on nothing at all.
+    const all = d.crafting.available(d.sandbox ? FINAL_AGE : d.age, { station: null, near, atStations });
     // Backlog batch 2: a search, for a list that is long by the later ages.
     // Matches what it's called, what it makes and what goes into it.
     const search = this.q('#bench-search');
@@ -1588,7 +1591,7 @@ export class DuiltUI {
       search.addEventListener('input', () => this.renderBench());
     }
     const query = search?.value ?? '';
-    const recipes = all.filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
+    const recipes = all.filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
     if (!recipes.length) {
       this.q('#bench-list').innerHTML = `<div class="sub" style="margin:8px 0">Nothing you can make matches “${escapeHtml(query.trim())}”.</div>`;
       return;
@@ -1640,7 +1643,7 @@ export class DuiltUI {
         <div class="recipe-tile ${r.ok ? '' : 'blocked'}">
           <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(name)}" data-tip-info="${escapeAttr(r.blurb ?? '')}">${icon}${count}</span>
           <strong class="recipe-name">${r.name}</strong>
-          ${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${r.station}</span>` : ''}
+          ${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${stationName(r.station)}</span>` : ''}
           <span class="recipe-cost">${inputs}</span>
           ${takes}
           <div class="recipe-actions">

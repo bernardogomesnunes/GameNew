@@ -52,7 +52,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/upgrades.js';
@@ -70,6 +70,7 @@ import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { CrackView } from './render/CrackView.js';
 import { LOGS, LEAVES, leafHeld, orphanLeaves } from './world/leafDecay.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood, isTool, BARE_HANDS, ITEM_FOR_BLOCK } from './config/items.js';
+import { stationName } from './duilt/Crafting.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox, bodyFits } from './world/Mobs.js';
@@ -206,6 +207,7 @@ const swings = (id) => isGate(id) || !!doorPart(id) || isTrapdoor(id);
 export function swingLabel(id) {
   if (isGate(id)) return isOpenGate(id) ? 'Close' : 'Open';
   if (isChest(id) || id === STORAGE_CONTROLLER) return 'Open';
+  if (stationOf(id)) return 'Use';
   if (isCatapult(id)) return 'Man';
   if (isPainting(id)) return 'Home';
   if (isTrapdoor(id)) return isOpenTrapdoor(id) ? 'Close' : 'Open';
@@ -2072,7 +2074,7 @@ export class Game {
     if (this.banditTarget(aimed) || this.mobTarget(aimed) || this.fireflyTarget(aimed)) return breaks();
     if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
-      || aimed.block === STORAGE_CONTROLLER
+      || aimed.block === STORAGE_CONTROLLER || stationOf(aimed.block)
       || aimed.block === SKY_LIFT || isCatapult(aimed.block)
       || (aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)))) return places();
     const item = this.selectedItemId;
@@ -2119,6 +2121,8 @@ export class Game {
     if (aimed && isChest(aimed.block)) return void this.openChest(aimed);
     // And at a storage controller, every storehouse at once.
     if (aimed && aimed.block === STORAGE_CONTROLLER) return void this.ui.openStores();
+    // At a wood mill (#32), the bench, showing what's made there.
+    if (aimed && stationOf(aimed.block)) return void this.ui.openBench(stationName(stationOf(aimed.block)));
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
     // At a war tent, Place makes camp there; at the dark god's altar, the oath.
@@ -5210,7 +5214,7 @@ export class Game {
     const look = this.lookFacing();
     const shape = BLOCKS_BY_ID.get(type)?.shape;
     // A chair and a chest face you; a stair climbs away from you.
-    return turned(type, shape === 'chair' || shape === 'chest' ? look + 2 : look);
+    return turned(type, shape === 'chair' || shape === 'chest' || BLOCKS_BY_ID.get(type)?.facesYou ? look + 2 : look);
   }
 
   /** Opens the chest you're pointing at, on the store screen. */
@@ -5414,7 +5418,7 @@ export class Game {
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
     // shouldn't go on to build against it.
-    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block) || isPainting(hit.block) || hit.block === STORAGE_CONTROLLER) return;
+    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block) || isPainting(hit.block) || hit.block === STORAGE_CONTROLLER || stationOf(hit.block)) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
@@ -5437,7 +5441,7 @@ export class Game {
     // A log lies along the face it's put against, a trapdoor sits on it, a
     // slab goes in the half you pointed at (blocks.js logOnFace,
     // trapdoorOnFace, slabOnFace).
-    const held = slabOnFace(trapdoorOnFace(logOnFace(this.placedBlock(type), hit.normal), hit.normal), hit.normal, upFace);
+    const held = panelOnFace(slabOnFace(trapdoorOnFace(logOnFace(this.placedBlock(type), hit.normal), hit.normal), hit.normal, upFace), hit.normal);
     const door = doorPart(held);
     // A bed or a tent: one thing in two blocks (blocks.js PAIRS).
     const pair = pairPart(held);
@@ -6480,6 +6484,7 @@ export class Game {
     const catapult = hit && isCatapult(hit.block);
     const trapdoor = hit && isTrapdoor(hit.block);
     const painting = hit && isPainting(hit.block);
+    const mill = hit && stationOf(hit.block);
     let lift = hit && hit.block === SKY_LIFT ? (this.world.gen && liftAt(this.world.gen, hit.x, hit.y, hit.z)) || 'nowhere' : null;
     const sw = this.duilt && !this.duilt.sandbox ? this.duilt.skyWar : null;
     if (lift && lift !== 'nowhere' && sw?.chains[skyFor(this.world.gen).towers.indexOf(lift.tower)]) lift = 'cut';
@@ -6488,7 +6493,7 @@ export class Game {
     const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door || chest || catapult || trapdoor || painting || (lift && lift !== 'nowhere' && lift !== 'cut')) && swingLabel(hit.block);
+    const swing = (gate || door || chest || catapult || trapdoor || painting || mill || (lift && lift !== 'nowhere' && lift !== 'cut')) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     // What tapping the hint itself does: the same thing, for a chest, a door
     // or a gate — not the claim panel (reported: tapping "Chest — tap Open"
@@ -6508,6 +6513,8 @@ export class Game {
         ? (lift === 'nowhere' ? 'Sky lift · only an anchor tower\'s goes anywhere' : lift === 'cut' ? 'Sky lift · its chain is cut, it goes nowhere now' : `Sky lift — ${how} ${lift.up ? 'up to the Sky Kingdom' : 'down to the ground'}`)
       : chainLink
         ? `Anchor chain — break it to cut it (${sw.chainsCut} of ${CHAINS} cut)`
+      : mill
+        ? `${BLOCKS_BY_ID.get(hit.block).name} — ${how}`
       : painting
         ? (this.isSpawnAt(hit) ? 'Painting · you wake here after a fall' : `Painting — ${how} to wake here after a fall`)
       : sapling && !onBuilding
