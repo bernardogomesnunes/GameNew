@@ -41,6 +41,13 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#32 Wood mill.** A block you put down (Age 2); within a few blocks of it wood goes further: three planks to a log, doors, trapdoors and stairs for less. It also makes stripped logs (every wood, standing or lying), a cabinet, a wardrobe and a bedside table, and wall panels (plain, patterned, two-tone) that go flat on the face you point at. Place on it opens the bench on what's made there. PR #142.
 - **#12 and #27** dropped (asked for directly).
 - **#10 Villagers eat.** Once a game day each settler eats one food, the cheapest, from your storehouses first and your bag only after. Fed, they give their building its +50%; hungry, they don't, and a gentle note says to put food in a storehouse. Nobody leaves or starves; anyone hungry tries again every minute. PR #143.
+- **#5 Buildings that read from a distance.** The ready-made designs no longer all wear the same gable. PR #145.
+  - Pyramid (hipped) roofs: garrison (reads as a tower), granary, university.
+  - A lean-to: the storehouse, low at the door, high at the back.
+  - Small roofs: a tiled hood over the doors of the workshop, engineering centre, tavern and townhouse.
+  - Chimneys stand two blocks clear of the roof now, in the new chimney blocks, smoking.
+  - Towers: the university has a stone-brick tower with an open top and its own pyramid.
+- **#17 Workshop, engineering centre and university redone.** Stone-brick plinths, open-trapdoor shutters at the windows, stone-brick stacks. The workshop has a log store under a lean-to on stone-brick wall piers; the engineering centre a walled yard with a crane. No brick on any of them (brick comes from the workshop). PR #145.
 
 ## Priority 1 — blocks and placement
 
@@ -48,8 +55,7 @@ All done (see above).
 
 ## Priority 2 — the world looking alive
 
-- **#5 Building designs that read from a distance.** Each building type gets its own silhouette: small roofs, pyramid roofs, chimneys, towers.
-- **#17 Workshop, engineering centre and university** redone with the new walls, trapdoors and chimneys.
+All done (see above).
 
 ## Priority 3 — systems
 
@@ -68,5 +74,4 @@ All done (see above).
 
 ## Suggested order
 
-1. The rest of Priority 2.
-2. The rest of Priority 3, one system at a time.
+1. Priority 3, one system at a time.
