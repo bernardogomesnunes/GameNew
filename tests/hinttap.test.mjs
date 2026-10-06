@@ -13,7 +13,7 @@ const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf
 
 ok('tapping the strip asks the game what it means', /else if \(this\.cb\.onHintTap\) this\.cb\.onHintTap\(\);/.test(ui));
 ok('at a chest, door, gate, trapdoor, catapult or painting: what Place does', /this\.hintUses = !!swing && !onBuilding;/.test(game)
-  && /onHintTap: \(\) => \(this\.hintUses \? this\.secondaryAction\(\) : this\.openClaim\(\)\)/.test(game));
+  && /onHintTap: \(\) => \(this\.moving \? this\.turnMove\(\) : this\.hintUses \? this\.secondaryAction\(\) : this\.openClaim\(\)\)/.test(game));
 ok('anywhere else, the claim panel as before', /this\.hintUses \? this\.secondaryAction\(\) : this\.openClaim\(\)/.test(game));
 ok('and it never carries over from the last thing you looked at', /this\.hoverHit = hit;\s*this\.hintUses = false;/.test(game));
 ok('the chest is one of them', /const swing = \(gate \|\| door \|\| chest \|\| catapult \|\| trapdoor \|\| painting\b/.test(game));

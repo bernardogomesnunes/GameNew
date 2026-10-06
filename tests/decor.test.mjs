@@ -109,7 +109,7 @@ ok('sky-marble, near white with a cool cast, for the Sky Kingdom',
   const shut = w.collisionBoxAt(2, 1, 2);
   ok('shut, it is a floor high in its cell, stood on', shut.minY === 1.8125 && shut.maxY === 2);
   ok('open, you go through', w.collisionBoxAt(4, 1, 4) === null);
-  ok('in the game, Place opens and closes it', /trap \? swungTrapdoor\(c\.block\)/.test(game) && /isTrapdoor\(id\)\) return id >= TRAPDOOR_OPEN \? 'Close' : 'Open'/.test(game));
+  ok('in the game, Place opens and closes it', /trap \? swungTrapdoor\(c\.block, \{ low \}\)/.test(game) && /isTrapdoor\(id\)\) return isOpenTrapdoor\(id\) \? 'Close' : 'Open'/.test(game));
 }
 
 // --- windows, banners, vases, lanterns ------------------------------------------------------

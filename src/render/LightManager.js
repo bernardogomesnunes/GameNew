@@ -33,9 +33,19 @@ export class LightManager {
       for (const light of this.pool) light.visible = false;
       return;
     }
-    if (now - this.lastScan < RESCAN_INTERVAL_MS) return;
-    this.lastScan = now;
+    if (now - this.lastScan >= RESCAN_INTERVAL_MS) {
+      this.lastScan = now;
+      this.assign(world, playerPos);
+    }
+    // A fire's light wavers every frame, after any rescan has set it.
+    for (const light of this.pool) {
+      const e = light.userData.entry;
+      if (light.visible && e?.light.flicker) light.intensity = e.light.intensity * flicker(now / 1000, e.x * 7 + e.z * 13);
+    }
+  }
 
+  /** Hands the pool's lights to the placed lights nearest you. */
+  assign(world, playerPos) {
     const nearest = [];
     for (const entry of world.lights.values()) {
       const dx = entry.x + 0.5 - playerPos.x;
@@ -58,8 +68,10 @@ export class LightManager {
         // hard bright disc and then nothing; the blocks' lights use 1.
         light.decay = entry.light.decay ?? 2;
         light.visible = true;
+        light.userData.entry = entry;
       } else {
         light.visible = false;
+        light.userData.entry = null;
       }
     }
   }
@@ -68,4 +80,9 @@ export class LightManager {
     for (const light of this.pool) this.scene.remove(light);
     this.pool = [];
   }
+}
+
+/** How bright a fire is at time `t` (s), 0.75..1.05: a few waves at odd rates, so it never visibly repeats. */
+export function flicker(t, seed = 0) {
+  return 0.9 + 0.08 * Math.sin(t * 9.1 + seed) + 0.05 * Math.sin(t * 15.7 + seed * 1.3) + 0.03 * Math.sin(t * 23.3 + seed * 0.7);
 }

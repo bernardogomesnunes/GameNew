@@ -3,7 +3,7 @@ import { blockTextureArray, layerFor, topLayerFor, TILE_SIZE } from '../render/B
 import { withHeightFog } from '../render/atmosphere.js';
 import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
-  roofPart, doorPart,
+  roofPart, doorPart, endAxisOf,
 } from '../config/blocks.js';
 import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, windowBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
@@ -544,6 +544,9 @@ export function freeAfterUpload(geo) {
   geo.index?.onUpload(dropArray);
   return geo;
 }
+
+/** Which axis each block's end faces (its `top` texture) point along — see blocks.js endAxisOf. */
+const END_AXIS = new Uint8Array(256).map((_, id) => endAxisOf(id));
 
 let LAYER = null; // block id -> texture layer, filled on first use
 function layerTable() {
@@ -1338,7 +1341,9 @@ export class ChunkMesher {
       }
       flip = aoFlip(c00, c10, c11, c01);
     }
-    const layer = (d === 1 ? topLayerTable() : layerTable())[id];
+    // A log's rings go on its ends: up and down for one standing, along x
+    // or z for one lying down.
+    const layer = (d === END_AXIS[id] ? topLayerTable() : layerTable())[id];
     const L = buf.layer, l = q * 4;
     L[l] = layer; L[l + 1] = layer; L[l + 2] = layer; L[l + 3] = layer;
     // Corners of the quad in tile space: 0,0 to w,h along u and v, so one

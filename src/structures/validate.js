@@ -1,4 +1,4 @@
-import { AIR } from '../config/blocks.js';
+import { AIR, BLOCKS_BY_ID } from '../config/blocks.js';
 import { STRUCTURES_BY_ID } from '../config/structures.js';
 
 /**
@@ -22,7 +22,8 @@ export function inspect(world, region) {
   for (let x = region.minX; x <= region.maxX; x++) {
     for (let y = region.minY; y <= region.maxY; y++) {
       for (let z = region.minZ; z <= region.maxZ; z++) {
-        const id = world.getBlock(x, y, z);
+        // A log lying down counts as the log it is (blocks.js LOG_SIDE_BASE).
+        const raw = world.getBlock(x, y, z), id = BLOCKS_BY_ID.get(raw)?.axis != null ? BLOCKS_BY_ID.get(raw).stateOf : raw;
         tally.set(id, (tally.get(id) ?? 0) + 1);
         if (id !== AIR) solids++;
       }

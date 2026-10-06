@@ -24,6 +24,11 @@ point's number (#n, in the order it was written) so it can be traced back.
   - A bucket clears a lone water block; water joined to other water stays.
 - **#31 Clouds** drift smoothly, never jumping as you move, and are slightly see-through. PR #131.
 - **#30 Fireflies** each fly their own wandering closed loop, back exactly to where they started, at their own pace. PR #131.
+- **#22 Campfire flames that move.** Three flame tongues that sway and flicker; the fire's light flickers with them. PR #132.
+- **#7 Dirt turns to turf.** Open-topped dirt next to turf becomes turf after a random 5 to 50 game days, also while you're away. Not inside buildings. PR #132.
+- **#16 Logs in three directions.** Placed against a side, a log lies along x or z. PR #132.
+- **#15 Trapdoors on the face you point at.** On a floor it lies low, under a ceiling it sits high, against a wall it stands open. PR #132.
+- **#14 Turn a building while moving it.** R on desktop; on a phone, tap the hint. PR #132.
 
 ## Needs a decision first
 
@@ -40,23 +45,16 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#6 Slabs.**
   - Place in the bottom or top half of a block, by where you point.
   - A slab on a slab of the same kind becomes a full block.
-- **#15 Trapdoors on the face you point at:** against a wall or under a ceiling, not only on top.
-- **#16 Logs in three directions** (up, along x, along z), set by the face you place against, like stairs.
 - **#19 A chimney block** in stone brick and in brick. Needs a new stone brick block.
 - **#23 Walls for every stone** (stone, cobble, brick, dark stone, sandstone…).
 - **#24 Fences for every wood** (oak, birch, dark).
 - **#25 Trapdoors for every wood.**
 - **#26 Doors for every wood.**
 - **#33 Desert blocks:** sandstone, sandstone bricks, and a sand path with rounded corners. They spawn in deserts.
-- **#14 Rotate a building while moving it** (only while moving).
 
 ## Priority 2 — the world looking alive
 
-- **#7 Dirt turns to turf.**
-  - Dirt with its top open, next to turf, becomes turf after a random 5 to 50 game days.
-  - It also happens while you're away, like crops growing.
 - **#8 3D grass tufts** on turf. They're light: drawn in batches near you, and fade with distance.
-- **#22 Campfire flames that move:** flickering flame planes with a soft light flicker.
 - **#5 Building designs that read from a distance.** Each building type gets its own silhouette: small roofs, pyramid roofs, chimneys, towers.
 - **#17 Workshop, engineering centre and university** redone with the new walls, trapdoors and chimneys.
 
@@ -84,6 +82,6 @@ point's number (#n, in the order it was written) so it can be traced back.
 ## Suggested order
 
 1. The decisions above (#12, #27).
-2. Priority 1 as two or three PRs: slabs/trapdoors/logs; per-wood and per-stone sets with the chimney; desert blocks.
-3. #7 and #8 together (turf spreading, grass tufts), then the rest of Priority 2.
+2. Priority 1 as two or three PRs: slabs; per-wood and per-stone sets with the chimney; desert blocks.
+3. #8 grass tufts, then the rest of Priority 2.
 4. Priority 3, one system at a time: wood mill first, as it feeds furniture and the per-wood sets.

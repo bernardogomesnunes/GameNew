@@ -326,6 +326,12 @@ PROP_SHAPES.trapdoor = [
   { minX: 0.16, maxX: 0.32, minY: 1, maxY: 1.025, minZ: 0, maxZ: 0.22, color: IRON },
   { minX: 0.68, maxX: 0.84, minY: 1, maxY: 1.025, minZ: 0, maxZ: 0.22, color: IRON },
 ];
+// Shut on the floor: the same boards, lying low in the cell, hinges on top.
+PROP_SHAPES.trapdoor_low = [
+  { minX: 0, maxX: 1, minY: 0, maxY: 0.1875, minZ: 0, maxZ: 1 },
+  { minX: 0.16, maxX: 0.32, minY: 0.1875, maxY: 0.2125, minZ: 0, maxZ: 0.22, color: IRON },
+  { minX: 0.68, maxX: 0.84, minY: 0.1875, maxY: 0.2125, minZ: 0, maxZ: 0.22, color: IRON },
+];
 PROP_SHAPES.trapdoor_open = [
   { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: 0.1875 },
   { minX: 0.06, maxX: 0.94, minY: 0.74, maxY: 0.86, minZ: 0.1875, maxZ: 0.24, color: BATTEN },
@@ -495,7 +501,7 @@ PROP_SHAPES.archery_target = [
 // The dark path's camp. A war tent: canvas over a ridge pole in steps, the
 // flap tied back on the side towards you (-z), a pennant on the pole, and
 // guy ropes pegged out at the corners. A campfire: a ring of stones, logs
-// crossed in it, and the flames, glowing.
+// crossed in it, and the embers glowing.
 const CANVAS = 0x6b5a48, CANVAS_DARK = 0x52443a, ROPE = 0xc9b88f, FLAME_LOW = 0xff8a3a;
 // Two blocks long (backlog batch 2): the front, with the flap and the
 // pole, runs on into the back, which closes the canvas and is pegged out.
@@ -521,9 +527,9 @@ PROP_SHAPES.campfire = [
     { minX: x, maxX: x + 0.14, minY: 0, maxY: 0.12, minZ: z, maxZ: z + 0.14, color: 0x77736c })),
   { minX: 0.22, maxX: 0.78, minY: 0.04, maxY: 0.14, minZ: 0.44, maxZ: 0.56 },
   { minX: 0.44, maxX: 0.56, minY: 0.1, maxY: 0.2, minZ: 0.22, maxZ: 0.78 },
-  { minX: 0.36, maxX: 0.64, minY: 0.14, maxY: 0.34, minZ: 0.36, maxZ: 0.64, color: FLAME_LOW, glow: true },
-  { minX: 0.42, maxX: 0.58, minY: 0.34, maxY: 0.52, minZ: 0.42, maxZ: 0.58, color: 0xffb347, glow: true },
-  { minX: 0.46, maxX: 0.54, minY: 0.52, maxY: 0.64, minZ: 0.46, maxZ: 0.54, color: 0xffe08a, glow: true },
+  // Only the embers are the block's: the flames over them move, and are
+  // drawn apart from it (render/FlameView.js).
+  { minX: 0.34, maxX: 0.66, minY: 0.12, maxY: 0.2, minZ: 0.34, maxZ: 0.66, color: FLAME_LOW, glow: true },
 ];
 
 // The Sky Kingdom's chain: links of dark iron, one across and one along,

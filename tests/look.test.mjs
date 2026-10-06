@@ -153,7 +153,7 @@ ok('and the UVs are sized to the quad', /put\(2, w, 0\); put\(4, w, h\)/.test(me
 // tile ran sideways on every east and west face, so bark read as planks and
 // brick courses stood on end there.
 ok('a wall facing east or west has its tile the right way up', /const swap = d === 0;/.test(mesher));
-ok('and the ends of a log have rings, not more bark', /d === 1 \? topLayerTable\(\) : layerTable\(\)/.test(mesher));
+ok('and the ends of a log have rings, not more bark — wherever its ends point', /d === END_AXIS\[id\] \? topLayerTable\(\) : layerTable\(\)/.test(mesher));
 // Shading after the vertex colour, so it shades the colour the block ended up.
 ok('the tile shades the varied colour, not the flat registry one',
   /#include <color_fragment>[\s\S]{0,600}diffuseColor\.rgb \*= tile\.rgb/.test(mesher));
