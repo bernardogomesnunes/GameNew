@@ -57,6 +57,7 @@ point's number (#n, in the order it was written) so it can be traced back.
   - **Archer:** 3 food, a bow and 20 arrows. Shoots from range instead of closing in.
   - **Catapult crew:** 5 food, a catapult and 10 stone. When the enemy comes within throw, they set a catapult up in front of the barracks and lob stones that hurt only the enemy. They pack it away once the enemy is gone.
   - A fallen soldier is gone; nobody replaces them for free any more. Soldiers from older saves come back as swordsmen.
+  - The pop-up lists who's in training, in order, with a bar and time left for the first; a toast says when each one comes out (asked for directly). The world stands still while a pop-up is open, so the bar shows where training had got to when you opened it. PR #150.
 
 ## Priority 1 — blocks and placement
 

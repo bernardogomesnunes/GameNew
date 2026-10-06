@@ -99,8 +99,11 @@ export class Defenders {
    *
    * @param buildings  [{ id, type, region, valid, beds }] — your claimed ones
    * @param days       the world's own count of days (DuiltGame.days)
+   * @returns          who finished training just now: [{ unit, of, left }],
+   *                   `left` being how many are still in line behind them
    */
   sync(buildings, days) {
+    const joined = [];
     // Ids as strings throughout: the training is saved as JSON, whose keys are.
     const standing = new Map(buildings.filter((b) => b.valid).map((b) => [String(b.id), { ...b, id: String(b.id) }]));
     this.soldiers = this.soldiers.filter((s) => standing.get(s.post.of)?.type === 'barracks');
@@ -114,7 +117,12 @@ export class Defenders {
       } else if (b.type === 'barracks') {
         const t = this.trained[b.id] ?? (this.trained[b.id] = { roster: [], queue: [], since: days });
         // The next in line joins every TRAIN_DAYS.
-        while (t.queue.length && days - t.since >= TRAIN_DAYS) { t.roster.push(t.queue.shift()); t.since += TRAIN_DAYS; }
+        while (t.queue.length && days - t.since >= TRAIN_DAYS) {
+          const unit = t.queue.shift();
+          t.roster.push(unit);
+          t.since += TRAIN_DAYS;
+          joined.push({ unit, of: b.id, left: t.queue.length });
+        }
         if (!t.queue.length) t.since = days;
         // Everyone on the roster stands at their place in front of it, a
         // bunk each: whoever isn't there yet comes out.
@@ -130,6 +138,7 @@ export class Defenders {
         });
       }
     }
+    return joined;
   }
 
   /** A figure of yours: a tower's archer, or one of a barracks's soldiers trained as `unit`. */
