@@ -257,20 +257,23 @@ for (const [k, baseId] of TURNS.entries()) {
   }
 }
 
-/** Door part (open?, top?, facing) is block DOOR_BASE + 8·open + 4·top + facing. */
+/** Door part (open?, top?, facing) is block base + 8·open + 4·top + facing; oak's base is DOOR_BASE. */
 const DOOR_BASE = 69;
-{
-  const door = BLOCKS.find((b) => b.id === DOOR_BASE);
+/** The first id of every wood's doors — see WOOD_SETS. */
+const DOOR_BASES = [DOOR_BASE];
+function doorParts(base) {
+  const door = BLOCKS.find((b) => b.id === base);
   for (let i = 1; i < 16; i++) {
     const open = i >= 8, top = (i & 4) !== 0, facing = i & 3;
     BLOCKS.push({
-      ...door, id: DOOR_BASE + i, stateOf: DOOR_BASE, facing, cost: undefined,
-      name: open ? 'Open Door' : 'Door',
+      ...door, id: base + i, stateOf: base, facing, cost: undefined,
+      name: open ? `Open ${door.name}` : door.name,
       shape: `door${open ? '_open' : ''}${top ? '_top' : ''}`,
       ...(top ? { part: 'top' } : {}),
     });
   }
 }
+doorParts(DOOR_BASE);
 
 // Roof tiles — telhas. Requested directly: "we should have something
 // similar [to stairs] but with telhas. roofing can be done with bricks and
@@ -566,22 +569,33 @@ export function isPainting(id) {
   return id >= PAINTING && id <= PAINTING + 3;
 }
 
+/** The wood set a trapdoor belongs to, open or shut, or null. */
+function trapSet(id) {
+  for (const s of WOOD_SETS) {
+    if ((id >= s.trapdoor && id <= s.trapdoor + 3) || (id >= s.trapdoorOpen && id <= s.trapdoorOpen + 3)
+      || (id >= s.trapdoorLow && id <= s.trapdoorLow + 3)) return s;
+  }
+  return null;
+}
 /** Whether a block is a trapdoor, open or shut, whichever way it faces. */
 export function isTrapdoor(id) {
-  return (id >= TRAPDOOR && id <= TRAPDOOR_OPEN + 3) || (id >= TRAPDOOR_LOW && id <= TRAPDOOR_LOW + 3);
+  return trapSet(id) != null;
 }
 /** Whether a trapdoor is swung open (standing against its hinge side). */
 export function isOpenTrapdoor(id) {
-  return id >= TRAPDOOR_OPEN && id <= TRAPDOOR_OPEN + 3;
+  const s = trapSet(id);
+  return !!s && id >= s.trapdoorOpen && id <= s.trapdoorOpen + 3;
 }
 /**
  * The same trapdoor swung the other way. Shutting, it closes at the top of
  * its cell — or on the floor of it, `low`, when that's where it belongs.
  */
 export function swungTrapdoor(id, { low = false } = {}) {
-  if (isOpenTrapdoor(id)) return (low ? TRAPDOOR_LOW : TRAPDOOR) + (id - TRAPDOOR_OPEN);
-  if (id >= TRAPDOOR_LOW) return TRAPDOOR_OPEN + (id - TRAPDOOR_LOW);
-  return id + 4;
+  const s = trapSet(id);
+  if (!s) return id;
+  if (isOpenTrapdoor(id)) return (low ? s.trapdoorLow : s.trapdoor) + (id - s.trapdoorOpen);
+  if (id >= s.trapdoorLow && id <= s.trapdoorLow + 3) return s.trapdoorOpen + (id - s.trapdoorLow);
+  return s.trapdoorOpen + (id - s.trapdoor);
 }
 /**
  * A trapdoor put on the face you point at: on top of a block it lies on the
@@ -589,14 +603,32 @@ export function swungTrapdoor(id, { low = false } = {}) {
  * that wall, hinged on it. `normal` is the face hit.
  */
 export function trapdoorOnFace(id, normal) {
-  if (!isTrapdoor(id) || !normal) return id;
-  const facing = (id - TRAPDOOR) & 3;
-  if (normal.y > 0) return TRAPDOOR_LOW + facing;
-  if (normal.y < 0) return TRAPDOOR + facing;
+  const s = trapSet(id);
+  if (!s || !normal) return id;
+  const facing = facingOf(id);
+  if (normal.y > 0) return s.trapdoorLow + facing;
+  if (normal.y < 0) return s.trapdoor + facing;
   // Facing counts quarter-turns from -z (0 -z, 1 +x, 2 +z, 3 -x): the hinge
   // goes on the side the wall is, against the face's normal.
   const hinge = normal.z > 0 ? 0 : normal.x < 0 ? 1 : normal.z < 0 ? 2 : 3;
-  return TRAPDOOR_OPEN + hinge;
+  return s.trapdoorOpen + hinge;
+}
+
+/** Whether a block is a gate, of any wood, open or shut. */
+export function isGate(id) {
+  return WOOD_SETS.some((s) => id === s.gate || id === s.gateOpen);
+}
+/** Whether a gate is open. */
+export function isOpenGate(id) {
+  return WOOD_SETS.some((s) => id === s.gateOpen);
+}
+/** A gate swung the other way: shut to open, open to shut. Anything else is as it was. */
+export function swungGate(id) {
+  for (const s of WOOD_SETS) {
+    if (id === s.gate) return s.gateOpen;
+    if (id === s.gateOpen) return s.gate;
+  }
+  return id;
 }
 
 // Logs lying down (asked for directly: "Logs should be placed in vertical
@@ -610,6 +642,63 @@ for (const [k, baseId] of LOGS.entries()) {
   BLOCKS.push({ ...base, id: LOG_SIDE_BASE + 2 * k, stateOf: baseId, axis: 0, cost: undefined });
   BLOCKS.push({ ...base, id: LOG_SIDE_BASE + 2 * k + 1, stateOf: baseId, axis: 2, cost: undefined });
 }
+
+// Every wood its own planks, fence, gate, door and trapdoor (backlog batch 3,
+// #24–26: "Fences for every wood", "Trapdoors for every wood", "Doors for
+// every wood"). Oak's are the ones the game always had; white (birch) and
+// dark wood each get a run of 32 ids past 255 — see ID_LIMIT. Each counts,
+// for a building's needs, as the oak piece it matches (`countsAs`), so a pen
+// fenced in dark wood is still a pen.
+export const WOOD_SETS = [
+  { key: 'oak', log: 4, planks: 7, fence: 47, gate: 48, gateOpen: 49, trapdoor: TRAPDOOR, trapdoorOpen: TRAPDOOR_OPEN, trapdoorLow: TRAPDOOR_LOW, door: DOOR_BASE },
+];
+const WOOD_RUN = 32;
+const OAK = WOOD_SETS[0];
+[
+  { key: 'white', name: 'White', log: 41, base: 256, planks: 0xe2d6bd, fence: 0xd8cbb0, gate: 0xcdbfa2, door: 0xd4c6a8 },
+  { key: 'dark', name: 'Dark', log: 43, base: 256 + WOOD_RUN, planks: 0x6e4a33, fence: 0x654330, gate: 0x5c3d2b, door: 0x5a3b28 },
+].forEach((w) => {
+  const set = {
+    key: w.key, log: w.log, planks: w.base, fence: w.base + 1, gate: w.base + 2, gateOpen: w.base + 3,
+    trapdoor: w.base + 4, trapdoorOpen: w.base + 8, trapdoorLow: w.base + 12, door: w.base + 16,
+  };
+  WOOD_SETS.push(set);
+  const from = BLOCKS.length;
+  BLOCKS.push(
+    { id: set.planks, name: `${w.name} Planks`, glyph: 'planks', color: w.planks, material: 'wood', unlock: null },
+    { id: set.fence, name: `${w.name} Fence`, glyph: 'fence', color: w.fence, shape: 'fence', material: 'wood', unlock: null },
+    { id: set.gate, name: `${w.name} Gate`, glyph: 'gate', color: w.gate, shape: 'gate', material: 'wood', unlock: null },
+    { id: set.gateOpen, name: `Open ${w.name} Gate`, glyph: 'gate', color: w.gate, shape: 'gate_open', material: 'wood', stateOf: set.gate, unlock: null },
+  );
+  const trap = { name: `${w.name} Trapdoor`, glyph: 'trapdoor', color: w.door, material: 'wood', unlock: null };
+  quad(set.trapdoor, { ...trap, shape: 'trapdoor' });
+  quad(set.trapdoorOpen, { ...trap, name: `Open ${w.name} Trapdoor`, shape: 'trapdoor_open', stateOf: set.trapdoor });
+  quad(set.trapdoorLow, { ...trap, shape: 'trapdoor_low', stateOf: set.trapdoor });
+  BLOCKS.push({ id: set.door, name: `${w.name} Door`, glyph: 'door', color: w.door, shape: 'door', material: 'wood', facing: 0, unlock: null });
+  doorParts(set.door);
+  DOOR_BASES.push(set.door);
+  // What each piece is in oak, state for state.
+  const asOak = (id) => {
+    for (const k of ['planks', 'fence', 'gate', 'gateOpen']) if (id === set[k]) return OAK[k];
+    for (const k of ['trapdoor', 'trapdoorOpen', 'trapdoorLow']) if (id >= set[k] && id <= set[k] + 3) return OAK[k] + id - set[k];
+    return OAK.door + id - set.door;
+  };
+  for (const b of BLOCKS.slice(from)) b.countsAs = asOak(b.id);
+});
+
+// More walls (#23, "Walls for every stone"): one for each stone you can lay
+// that didn't have one. For a building's needs they count as stone wall.
+const MORE_WALLS = [
+  { id: 320, name: 'Dark Brick Wall', color: 0x58322a },
+  { id: 321, name: 'Marble Wall', color: 0xece4d3 },
+  { id: 322, name: 'Sky Marble Wall', color: 0xeaf0fa },
+  { id: 323, name: 'White Stone Wall', color: 0xe4e0d8 },
+  { id: 324, name: 'Dark Grey Stone Wall', color: 0x6c6b6a },
+  { id: 325, name: 'Turquoise Stone Wall', color: 0x63b5ab },
+  { id: 326, name: 'Orange Stone Wall', color: 0xd38d57 },
+];
+for (const w of MORE_WALLS) BLOCKS.push({ ...w, glyph: 'wall', shape: 'wall', material: 'stone', countsAs: 162, unlock: null });
+WALLS.push(...MORE_WALLS);
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
@@ -657,6 +746,18 @@ export function quarterTurned(id) {
 /** Which axis a block's ends point along: 0 x, 1 y (upright, and anything not a lying log), 2 z. */
 export function endAxisOf(id) {
   return BLOCKS_BY_ID.get(id)?.axis ?? 1;
+}
+
+/**
+ * What a block counts as when a building's needs are tallied: a log lying
+ * down as the log it is, a white or dark wood piece as the oak one it
+ * matches, a newer wall as stone wall. Anything else is itself.
+ */
+export function countsAs(id) {
+  const b = BLOCKS_BY_ID.get(id);
+  if (!b) return id;
+  if (b.countsAs != null) return b.countsAs;
+  return b.axis != null ? b.stateOf : id;
 }
 
 /** Ground a tree will take root in. */
@@ -780,16 +881,19 @@ export function roofBlock({ mat = 0, kind = 'steep', facing = 0 }) {
   return base + { steep: 0, lo: 4, hi: 8 }[kind] + (facing & 3);
 }
 
-/** { open, top, facing } for any half of a door, or null. */
+/** { open, top, facing, base } for any half of a door of any wood, or null. `base` is which wood's. */
 export function doorPart(id) {
-  if (id < DOOR_BASE || id > DOOR_BASE + 15) return null;
-  const i = id - DOOR_BASE;
-  return { open: i >= 8, top: (i & 4) !== 0, facing: i & 3 };
+  for (const base of DOOR_BASES) {
+    if (id < base || id > base + 15) continue;
+    const i = id - base;
+    return { open: i >= 8, top: (i & 4) !== 0, facing: i & 3, base };
+  }
+  return null;
 }
 
-/** The block for a door part. */
-export function doorBlock({ open = false, top = false, facing = 0 }) {
-  return DOOR_BASE + (open ? 8 : 0) + (top ? 4 : 0) + (facing & 3);
+/** The block for a door part — oak unless `base` says which wood. */
+export function doorBlock({ open = false, top = false, facing = 0, base = DOOR_BASE }) {
+  return base + (open ? 8 : 0) + (top ? 4 : 0) + (facing & 3);
 }
 
 export function isTransparent(id) {
