@@ -48,6 +48,7 @@ point's number (#n, in the order it was written) so it can be traced back.
   - Chimneys stand two blocks clear of the roof now, in the new chimney blocks, smoking.
   - Towers: the university has a stone-brick tower with an open top and its own pyramid.
 - **#17 Workshop, engineering centre and university redone.** Stone-brick plinths, open-trapdoor shutters at the windows, stone-brick stacks. The workshop has a log store under a lean-to on stone-brick wall piers; the engineering centre a walled yard with a crane. No brick on any of them (brick comes from the workshop). PR #145.
+- **University moves to Age 3** (asked for directly), and the engineering centre with it, since it needs research done at the university. The university's two tables are made at the workshop, an Age 3 building, so in Age 2 it couldn't be built.
 
 ## Priority 1 — blocks and placement
 

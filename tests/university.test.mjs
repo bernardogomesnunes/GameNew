@@ -25,16 +25,18 @@ ok('and on a computer, K opens them', PANELS.find((p) => p.id === 'panel-skills'
 // --- the buildings ----------------------------------------------------------------------
 
 const uni = STRUCTURES_BY_ID.get('university'), eng = STRUCTURES_BY_ID.get('engineering');
-ok('a University, from Age 2, is a station: desks under a roof', uni.age === 2 && uni.station === 'university' && uni.requires.some((r) => r.id === 'desks'));
-ok('an Engineering Centre, from Age 2, needs engineering studied first', eng.age === 2 && eng.station === 'engineering' && eng.research === 'engineering');
+// Age 3, with the workshop that makes the tables it needs (asked for directly: "University move to age 3").
+ok('a University, from Age 3, is a station: desks under a roof', uni.age === 3 && uni.station === 'university' && uni.requires.some((r) => r.id === 'desks'));
+ok('and the tables it asks for can be made by then', RECIPES.find((r) => r.id === 'table_oak').age <= uni.age);
+ok('an Engineering Centre, from Age 3, needs engineering studied first', eng.age === 3 && eng.station === 'engineering' && eng.research === 'engineering');
 
 // --- studying -------------------------------------------------------------------------------
 
 {
   const world = new World({ sizeX: 32, sizeZ: 32, height: 32 });
-  const g = new DuiltGame({ world, scene: new THREE.Scene(), bus: null, age: 2 });
+  const g = new DuiltGame({ world, scene: new THREE.Scene(), bus: null, age: 3 });
   const atUni = ['university', 'university@0'];
-  const studies = () => g.crafting.available(2, { station: null, atStations: atUni }).filter((r) => r.study);
+  const studies = () => g.crafting.available(3, { station: null, atStations: atUni }).filter((r) => r.study);
   ok('one study a skill on offer — the next level — and engineering', studies().length === 5
     && studies().filter((r) => r.study !== 'engineering').every((r) => r.level === 1));
   ok('not without standing at a university', !g.crafting.craft('study_foraging_1', 1, { atStations: [] }).ok);
@@ -47,7 +49,7 @@ ok('an Engineering Centre, from Age 2, needs engineering studied first', eng.age
   ok('and takes what it costs', g.inventory.countOf('planks') === 97 && g.inventory.countOf('stone') === 98);
   ok('and gives no item', !g.inventory.slots.some((s) => s?.id == null && s));
   ok('the university does one thing at a time, and says what it is busy with',
-    !g.crafting.craft('study_engineering', 1, { atStations: atUni }).ok && /busy with foraging level 1/i.test(g.crafting.available(2, { station: 'university', atStations: atUni }).find((x) => x.id === 'study_engineering').reason));
+    !g.crafting.craft('study_engineering', 1, { atStations: atUni }).ok && /busy with foraging level 1/i.test(g.crafting.available(3, { station: 'university', atStations: atUni }).find((x) => x.id === 'study_engineering').reason));
   g.days += 1;
   ok('not done after one day', !g.finishResearch() && g.researchProgress().ratio === 0.5 && g.skills.levelOf('foraging') === 0);
   g.days += 1;
