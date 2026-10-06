@@ -168,7 +168,7 @@ ok('  no wild herds or explorers wander through', /this\.mobs\.cap = 0/.test(gam
 ok('  its own people join the lists the game draws', /withShowcase\('settlers'/.test(game) && /withShowcase\('defenders'/.test(game) && /withShowcase\('warriors'/.test(game));
 ok('  a new world or a load leaves it', (game.match(/this\.showcase = null;/g) ?? []).length >= 3);
 ok('spots and times for scripts', /showcaseSpot\(id, \{ settle = false \} = \{\}\)/.test(game) && /showcaseTime\(when\)/.test(game) && /finishLoading\(\)/.test(game));
-ok('  the clock holds while it\'s open', /if \(playing && !this\.showcase && !this\.title\) this\.dayCycle\.advance\(dt\)/.test(game));
+ok('  the clock holds while it\'s open', /if \(\(playing \|\| watchingBarracks\) && !this\.showcase && !this\.title\) this\.dayCycle\.advance\(dt\)/.test(game));
 ok('in the menu, behind the workshop switch', MENU_BY_ID.get('menu-showcase')?.dev === true && !menuFor({ cloud: true }).some((m) => m.id === 'menu-showcase'));
 ok('  with a way in, a spot to look from, and the hour', ui.includes('id="btn-showcase-open"') && ui.includes('id="showcase-spot"') && ui.includes('data-showcase-time'));
 ok('the picture script is there', existsSync(new URL('../tools/showcase-shots.mjs', import.meta.url)));

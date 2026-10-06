@@ -15,8 +15,28 @@ export const ARROW_SPEED = 34;
 export const ARROW_GRAVITY = 6;
 /** What an arrow takes off whatever it hits — a bandit (12) falls to three. */
 export const ARROW_DAMAGE = 5;
-/** How long an arrow stays stuck in a block. */
-export const STUCK_SECONDS = 12;
+/** How long an arrow stays stuck in a block — long enough to walk over and take it back. */
+export const STUCK_SECONDS = 60;
+/** How near you have to walk to an arrow stuck in something to pick it up. */
+export const PICKUP_REACH = 1.6;
+/** How long you hold the bow drawn for a full-strength shot, in ms; anything less flies slower and hits softer. */
+export const FULL_DRAW_MS = 900;
+/** A draw shorter than this is let go of without loosing anything. */
+export const MIN_DRAW_MS = 120;
+
+/**
+ * What a draw of `heldMs` gives: { power 0..1, speed, damage }. Half a draw
+ * flies about two-thirds as fast and hits for three; a full one, ARROW_SPEED
+ * and ARROW_DAMAGE.
+ */
+export function drawShot(heldMs) {
+  const power = Math.max(0, Math.min(1, heldMs / FULL_DRAW_MS));
+  return {
+    power,
+    speed: ARROW_SPEED * (0.4 + 0.6 * power),
+    damage: Math.max(1, Math.round(ARROW_DAMAGE * (0.3 + 0.7 * power))),
+  };
+}
 /** An arrow still flying after this (off over the edge of everything) is gone. */
 const MAX_FLIGHT = 6;
 const STEP = 1 / 120;
@@ -35,13 +55,13 @@ export class Arrows {
     this.nextId = 1;
   }
 
-  /** Looses an arrow from `from` along `dir` (need not be unit length). */
-  shoot(from, dir, speed = ARROW_SPEED) {
+  /** Looses an arrow from `from` along `dir` (need not be unit length), hitting for `damage`. */
+  shoot(from, dir, speed = ARROW_SPEED, damage = ARROW_DAMAGE) {
     const len = Math.hypot(dir.x, dir.y, dir.z) || 1;
     const a = {
       id: this.nextId++, x: from.x, y: from.y, z: from.z,
       vx: (dir.x / len) * speed, vy: (dir.y / len) * speed, vz: (dir.z / len) * speed,
-      age: 0, stuck: false,
+      age: 0, stuck: false, damage,
     };
     this.list.push(a);
     return a;
@@ -81,5 +101,20 @@ export class Arrows {
       if (!a.stuck && a.age > MAX_FLIGHT) a.done = true;
     }
     this.list = this.list.filter((a) => !a.done);
+  }
+
+  /**
+   * Every arrow stuck within PICKUP_REACH of `at` (where you stand — your
+   * middle, so one in the ground at your feet counts), taken out of the
+   * world. Returns how many: they go back in your bag.
+   */
+  collect(at, reach = PICKUP_REACH) {
+    let n = 0;
+    for (const a of this.list) {
+      if (!a.stuck || a.done) continue;
+      if (Math.hypot(a.x - at.x, a.y - at.y, a.z - at.z) <= reach) { a.done = true; n++; }
+    }
+    if (n) this.list = this.list.filter((a) => !a.done);
+    return n;
   }
 }

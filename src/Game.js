@@ -64,7 +64,7 @@ import { FlameView } from './render/FlameView.js';
 import { SmokeView } from './render/SmokeView.js';
 import { GrassView } from './render/GrassView.js';
 import { ArrowView } from './render/ArrowView.js';
-import { Arrows, ARROW_DAMAGE } from './world/Arrows.js';
+import { Arrows, ARROW_DAMAGE, drawShot, FULL_DRAW_MS, MIN_DRAW_MS } from './world/Arrows.js';
 import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { CrackView } from './render/CrackView.js';
@@ -86,6 +86,7 @@ import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView, EngineView } from './render/ArmyView.js';
 import { UNITS_BY_ID } from './config/soldiers.js';
+import { blowOf } from './world/Defenders.js';
 import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent } from './config/blocks.js';
 import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
@@ -220,6 +221,8 @@ export function swingLabel(id) {
 const CATAPULT_RELOAD = 2;      // seconds between throws
 // The bow: how long a draw takes between one arrow and the next.
 const BOW_DRAW_MS = 550;
+/** Drawn all the way, the view closes in this much, as you'd squint down the arrow. */
+const BOW_ZOOM = 0.12;
 const CATAPULT_REACH = 4;       // walk further than this from it and you let go
 const CATAPULT_MIN_THROW = 6;   // it won't drop a stone closer than this
 const CATAPULT_AMMO = ['stone', 'cobblestone'];
@@ -1328,6 +1331,9 @@ export class Game {
       onPlaceTap: () => this.secondaryAction(),
       onPlaceHold: (held) => this.setPlacing(held),
       onTap: () => this.tapAction(),
+      // The bow, under a thumb: down draws it, up looses (UIManager.bindLookSurface).
+      onDrawStart: () => this.startDraw(),
+      onDrawEnd: () => this.releaseDraw(),
 
       // ---- duilt ----
       // Both modes run on DuiltGame now — Creative is that same engine with
@@ -1731,6 +1737,10 @@ export class Game {
         else if (e.button === 2) this.cancelMove();
         return;
       }
+      // The bow is drawn while the button's down and looses as it comes
+      // up (asked for directly: "pull the bow and just release the arrow
+      // when I lift the click").
+      if (e.button === 0 && this.startDraw()) return;
       if (e.button === 0) { this.primaryAction(); this.setBreaking(true); }
       else if (e.button === 2) { this.secondaryAction(); this.setPlacing(true); }
     });
@@ -1749,7 +1759,11 @@ export class Game {
     // a mouseup: releasing outside the canvas, tabbing away mid-hold, or the
     // browser taking the pointer back.
     for (const [target, event] of [[window, 'mouseup'], [window, 'blur'], [document, 'visibilitychange']]) {
-      target.addEventListener(event, () => { this.setBreaking(false); this.setPlacing(false); });
+      target.addEventListener(event, () => {
+        this.setBreaking(false); this.setPlacing(false);
+        // Let go of the button: the arrow goes. Taken away from the game: it doesn't.
+        this.releaseDraw({ cancel: event !== 'mouseup' });
+      });
     }
 
     window.addEventListener('keydown', (e) => {
@@ -1835,7 +1849,7 @@ export class Game {
       : this.selectedItemId ? { itemId: this.selectedItemId } : { blockId: this.selectedBlockId };
     const third = this.player.view !== 'first';
     this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third });
-    this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning });
+    this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning, draw: this.drawing ? this.drawPower() : 0 });
     // The flying machine went with it: you come down on its wings.
     if (this.player.flying && !this.player.canFly()) {
       this.player.flying = false;
@@ -3616,9 +3630,9 @@ export class Game {
    * (arrowHit). A short draw between shots; each one spends an arrow and
    * wears the bow a little.
    */
-  shootBow() {
+  shootBow(shot = drawShot(FULL_DRAW_MS)) {
     const now = performance.now();
-    if (now - (this.lastShotAt ?? 0) < BOW_DRAW_MS) return;
+    if (now - (this.lastShotAt ?? 0) < (this.drawing || shot.power < 1 ? 150 : BOW_DRAW_MS)) return;
     const d = this.duilt;
     const paying = d && !d.sandbox;
     if (paying && !d.inventory.has('arrow', 1)) {
@@ -3631,8 +3645,77 @@ export class Game {
       if (d.inventory.useTool('bow') === 'worn') this.ui.toast({ kind: 'xp', title: 'Bow broke', body: 'Worn out — craft another' });
     }
     const eye = this.player.eyePosition(), dir = this.player.lookDirection();
-    this.arrows?.shoot({ x: eye.x + dir.x * 0.4, y: eye.y + dir.y * 0.4 - 0.08, z: eye.z + dir.z * 0.4 }, dir);
+    this.arrows?.shoot({ x: eye.x + dir.x * 0.4, y: eye.y + dir.y * 0.4 - 0.08, z: eye.z + dir.z * 0.4 }, dir, shot.speed, shot.damage);
     this.sound?.strike({ weapon: true });
+  }
+
+  /** Whether the bow is what's in your hand, with nothing else taking the button. */
+  bowReady() {
+    return this.selectedItemId === 'bow' && this.isPlaying && !this.armed && !this.moving && !this.manning;
+  }
+
+  /**
+   * Starts drawing the bow — the button (or finger) is down. Returns true
+   * when the press was the bow's, so nothing else acts on it. With no arrow
+   * to nock it says so and draws nothing.
+   */
+  startDraw() {
+    if (!this.bowReady()) return false;
+    const d = this.duilt;
+    if (d && !d.sandbox && !d.inventory.has('arrow', 1)) {
+      this.ui.toast({ kind: 'xp', title: 'No arrows', body: 'Make them at the bench from planks and string' });
+      return true;
+    }
+    this.drawing = { since: performance.now() };
+    return true;
+  }
+
+  /** How far the bow is drawn, 0..1, or 0 when it isn't. */
+  drawPower(now = performance.now()) {
+    return this.drawing ? drawShot(now - this.drawing.since).power : 0;
+  }
+
+  /**
+   * The button (or finger) comes up: the arrow goes, as hard as it was
+   * drawn. Too short a pull, or `cancel` (the window lost the pointer),
+   * lets it down without shooting.
+   */
+  releaseDraw({ cancel = false } = {}) {
+    if (!this.drawing) return false;
+    const held = performance.now() - this.drawing.since;
+    this.drawing = null;
+    this.setZoom(1);
+    if (cancel || held < MIN_DRAW_MS || this.selectedItemId !== 'bow') return false;
+    this.shootBow(drawShot(held));
+    this.handView?.strike();
+    return true;
+  }
+
+  /** The view's field of view, closed in by `k` of itself (1 is as set). */
+  setZoom(k) {
+    const fov = (this.controls?.fov ?? 75) * k;
+    if (Math.abs(this.camera.fov - fov) < 0.01) return;
+    this.camera.fov = fov;
+    this.camera.updateProjectionMatrix();
+  }
+
+  /**
+   * Every frame: the drawn bow's pull — the meter, the zoom, the hand —
+   * let down if it's been put away, and any arrow you walk over picked up.
+   */
+  tickBow() {
+    if (this.drawing && this.selectedItemId !== 'bow') this.releaseDraw({ cancel: true });
+    const p = this.drawPower();
+    if (this.drawing) this.setZoom(1 - BOW_ZOOM * p);
+    this.ui?.setDrawMeter?.(this.drawing ? p : null);
+    // Arrows stuck in the world come back when you walk over them.
+    if (!this.arrows || !this.player) return;
+    const at = this.player.position;
+    const n = this.arrows.collect({ x: at.x, y: at.y + 0.9, z: at.z });
+    if (n && this.duilt && !this.duilt.sandbox) {
+      const left = this.duilt.inventory.add('arrow', n);
+      if (n - left > 0) this.ui.toast({ kind: 'xp', title: `Picked up ${n - left === 1 ? 'an arrow' : `${n - left} arrows`}` });
+    }
   }
 
   /** What's alive on an arrow's next stretch of flight: an animal or a bandit, whichever's nearer. */
@@ -3648,14 +3731,15 @@ export class Game {
 
   /** An arrow found its mark. */
   arrowHit(arrow, hit) {
+    const damage = arrow.damage ?? ARROW_DAMAGE;
     if (hit.kind === 'mob') {
-      const { killed, drops } = this.mobs.hit(hit.mob, ARROW_DAMAGE, arrow.x - arrow.vx, arrow.z - arrow.vz);
+      const { killed, drops } = this.mobs.hit(hit.mob, damage, arrow.x - arrow.vx, arrow.z - arrow.vz);
       this.sound?.strike({ weapon: true });
       if (killed) this.mobFell(hit.mob, drops);
       return;
     }
     const p = hit.person;
-    const res = this.wanderers.hit(p, ARROW_DAMAGE, arrow.x - arrow.vx, arrow.z - arrow.vz);
+    const res = this.wanderers.hit(p, damage, arrow.x - arrow.vx, arrow.z - arrow.vz);
     if (!res) return;
     this.sound?.strike({ weapon: true });
     if (res.killed) this.banditFell(p, res);
@@ -4120,6 +4204,24 @@ export class Game {
   tickDefence(dt) {
     const d = this.duilt;
     if (!d || d.sandbox || !this.wanderers) return;
+    this.syncDefence();
+    const enemies = this.wanderers.list.filter((p) => WANDERERS[p.kind].hp && !p.dead && !p.done && (p.war || p.raider || p.angry));
+    // Soldiers who went without their meal fight weaker (Defenders.tick).
+    d.defenders.hungry = Math.min(d.settlers.soldiersHungry ?? 0, d.settlers.soldiers ?? 0);
+    d.defenders.tick(dt, enemies, {
+      strike: (e, damage, by) => this.defenderHits(e, damage, by),
+      shot: (e, damage, by) => this.defenderHits(e, damage, by),
+      lob: (engine, target, crew) => this.crewThrows(engine, target, crew),
+    });
+  }
+
+  /**
+   * Your barracks and towers brought in line with what's standing, once a
+   * second: soldiers out of training, archers posted.
+   */
+  syncDefence() {
+    const d = this.duilt;
+    if (!d || d.sandbox || !this.wanderers) return;
     const now = performance.now();
     if (now - (this.defenceSyncedAt ?? 0) > DEFENCE_SYNC_MS) {
       this.defenceSyncedAt = now;
@@ -4132,12 +4234,6 @@ export class Game {
         this.ui?.toast({ kind: 'xp', title: `Your ${u?.name.toLowerCase() ?? 'soldier'} is ready`, body: j.left ? `${j.left} more training at the barracks` : 'Out in front of the barracks' });
       }
     }
-    const enemies = this.wanderers.list.filter((p) => WANDERERS[p.kind].hp && !p.dead && !p.done && (p.war || p.raider || p.angry));
-    d.defenders.tick(dt, enemies, {
-      strike: (e, damage, by) => this.defenderHits(e, damage, by),
-      shot: (e, damage, by) => this.defenderHits(e, damage, by),
-      lob: (engine, target, crew) => this.crewThrows(engine, target, crew),
-    });
   }
 
   /**
@@ -5099,7 +5195,7 @@ export class Game {
       this.sound?.boom?.({ x: c.x, z: c.z });
       for (const p of this.wanderers?.list ?? []) {
         if (!WANDERERS[p.kind].hp || p.dead || !(p.war || p.raider || p.angry)) continue;
-        if (Math.hypot(p.x - c.x, p.z - c.z) < 2.5 && Math.abs(p.y - c.y) < 3) this.defenderHits(p, STONE_HITS, stone.crew);
+        if (Math.hypot(p.x - c.x, p.z - c.z) < 2.5 && Math.abs(p.y - c.y) < 3) this.defenderHits(p, blowOf(stone.crew, STONE_HITS), stone.crew);
       }
       return;
     }
@@ -6202,11 +6298,14 @@ export class Game {
       if (this.duilt && !this.duilt.moments.includes('first_night') && daylightAt(this.dayCycle.time).day < 0.25) this.tellMoment('first_night');
       this.tickBreaking(performance.now());
       this.tickPlacing(performance.now());
+      this.tickBow();
       this.gamification.tick(performance.now());
       if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.saveNow();
     }
 
     if (!playing) this.player.releaseKeys();
+    // A pop-up over a drawn bow lets it down.
+    if (!playing && this.drawing) this.releaseDraw({ cancel: true });
     // Behind the worlds screen, the title scene keeps itself going.
     if (!playing && this.title) this.tickTitle(dt);
 
@@ -6221,10 +6320,16 @@ export class Game {
     this.updateChunkVisibility();
     this.updateFarTerrain();
     this.updateClouds(dt);
-    // The clock only runs while you're playing; a menu is a pause.
+    // The clock only runs while you're playing; a menu is a pause. Except a
+    // barracks's pop-up: its training bar is something you sit and watch
+    // fill (asked for directly), so the day goes on behind it — and so does
+    // the training, and those who finish come out (syncDefence). Nothing
+    // else moves: no hunger, no mobs, no one walks.
     const clockWas = this.dayCycle.time;
+    const watchingBarracks = !playing && this.ui?.duiltUI?.building?.type === 'barracks' && this.ui.isPanelOpen?.('panel-building');
     // The showcase holds the hour it was set to, for its pictures.
-    if (playing && !this.showcase && !this.title) this.dayCycle.advance(dt);
+    if ((playing || watchingBarracks) && !this.showcase && !this.title) this.dayCycle.advance(dt);
+    if (watchingBarracks) this.syncDefence();
     if (this.duilt) {
       this.duilt.dayTime = this.dayCycle.time;
       // The world's own count of days, for saplings to grow by.

@@ -69,7 +69,7 @@ const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8
 ok('the game opens on it', /this\.openTitle\(\);\s*this\.renderer\.setAnimationLoop/.test(game));
 ok('it keeps going behind the worlds screen', /if \(!playing && this\.title\) this\.tickTitle\(dt\);/.test(game));
 ok('and comes back when you leave a world', /openHome\(\) \{\s*\/\/[^\n]*\n\s*this\.cb\.onGoHome\?\.\(\);/.test(uim) && /onGoHome: \(\) => this\.openTitle\(\)/.test(game));
-ok('the clock holds still on it', /if \(playing && !this\.showcase && !this\.title\) this\.dayCycle\.advance\(dt\);/.test(game));
+ok('the clock holds still on it', /if \(\(playing \|\| watchingBarracks\) && !this\.showcase && !this\.title\) this\.dayCycle\.advance\(dt\);/.test(game));
 ok('no game controls over it', /body\.at-home #hotbar-wrap/.test(css) && /toggle\('at-home', this\.panels\.isOpen\('blocker'\)\)/.test(uim));
 
 console.log(f ? `\n${f} failed` : '\nall passed');

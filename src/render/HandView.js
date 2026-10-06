@@ -56,7 +56,12 @@ export class HandView {
     this.swing = 1;
   }
 
-  update(dt, player, { held = {}, look, visible }) {
+  /**
+   * `draw` (0..1) is how far a bow is drawn: it comes up in front of you and
+   * in towards the middle, upright, with an arrow on the string pulled back
+   * as far as you've drawn it.
+   */
+  update(dt, player, { held = {}, look, visible, draw = 0 }) {
     this.group.visible = visible;
     if (!visible) return;
     const key = held.itemId ?? held.blockId ?? null;
@@ -96,11 +101,27 @@ export class HandView {
     // camera can see, so a tall phone screen doesn't push it out of sight.
     const halfH = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * REACH;
     const halfW = halfH * this.camera.aspect;
+    // Drawn, the bow comes up and in, steadier the further it's pulled.
+    const pull = Math.max(0, Math.min(1, draw));
+    const settle = 1 - pull * 0.7;
     this.group.position.set(
-      halfW * 0.62 + Math.sin(this.phase) * 0.025 * bob,
-      -halfH * 0.62 - Math.abs(Math.cos(this.phase)) * 0.03 * bob - chop * 0.08,
-      -REACH + chop * 0.06,
+      halfW * (0.62 - 0.4 * pull) + Math.sin(this.phase) * 0.025 * bob * settle,
+      -halfH * (0.62 - 0.3 * pull) - Math.abs(Math.cos(this.phase)) * 0.03 * bob * settle - chop * 0.08,
+      -REACH + chop * 0.06 + pull * 0.08,
     );
-    this.group.rotation.set(-chop * 0.9, chop * 0.25, 0);
+    this.group.rotation.set(-chop * 0.9, chop * 0.25, pull * 0.25);
+    // The arrow on the string, its tail coming back towards you as you draw.
+    if (!this.nocked) {
+      this.nocked = new THREE.Group();
+      const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.014, 0.014, 0.42), new THREE.MeshLambertMaterial({ color: 0x9a7a52 }));
+      const tip = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.03, 0.05), new THREE.MeshLambertMaterial({ color: 0x8a8f96 }));
+      tip.position.z = -0.23;
+      const fletch = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.04, 0.08), new THREE.MeshLambertMaterial({ color: 0xe6e0d2 }));
+      fletch.position.z = 0.18;
+      this.nocked.add(shaft, tip, fletch);
+      this.group.add(this.nocked);
+    }
+    this.nocked.visible = pull > 0;
+    if (pull > 0) this.nocked.position.set(-0.02, 0.06, 0.02 + pull * 0.14);
   }
 }

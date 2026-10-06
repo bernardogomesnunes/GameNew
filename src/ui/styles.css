@@ -80,6 +80,12 @@ html, body { margin: 0; height: 100%; background: var(--bg); overscroll-behavior
   content: ''; position: absolute; background: rgba(255,255,255,0.75); box-shadow: 0 0 2px rgba(0,0,0,0.8);
 }
 #crosshair::before { left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); }
+/* How far the bow is drawn, just under the crosshair. */
+#draw-meter { position: absolute; left: 50%; top: calc(50% + 22px); width: 64px; height: 6px; transform: translateX(-50%);
+  border-radius: 999px; background: rgba(0,0,0,0.35); overflow: hidden; pointer-events: none; z-index: 5; }
+#draw-meter[hidden] { display: none; }
+#draw-meter i { display: block; height: 100%; width: 0; background: #f2e2a4; }
+#draw-meter.full i { background: #ffffff; }
 #crosshair::after { top: 50%; left: 0; right: 0; height: 2px; transform: translateY(-50%); }
 
 /* Blocker / pointer-lock prompt */
@@ -1999,6 +2005,7 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
   background: var(--px-gold); color: var(--px-ink); border: 2px solid var(--px-ink);
 }
 .building-line { margin: 4px 0 0; font-size: 14px; color: var(--px-text); line-height: 1.35; }
+.building-line.bad { color: var(--px-red-dark, #a33a2c); }
 .level-next { margin: 4px 0 6px; font-size: 14px; }
 .building-evolve { width: 100%; margin-top: 8px; padding: 11px 14px; font-size: 16px; }
 .building-inline { display: flex; gap: 8px; margin-top: 10px; }
