@@ -12,7 +12,10 @@
  */
 
 import { ITEM_FOR_BLOCK } from './items.js';
-import { doorBlock, roofBlock, turned, CHEST, BED, BED_HEAD, FACING_STEP, PAINTING, WEAPON_RACK, TRAINING_DUMMY, ARCHERY_TARGET } from './blocks.js';
+import {
+  doorBlock, roofBlock, roofPart, turned, CHEST, BED, BED_HEAD, FACING_STEP, PAINTING, WEAPON_RACK, TRAINING_DUMMY, ARCHERY_TARGET,
+  TRAPDOOR_OPEN, STONE_BRICK, CHIMNEYS, LOG_SIDE_BASE,
+} from './blocks.js';
 import { ROOFS_BY_ID } from './roofs.js';
 import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
 
@@ -48,12 +51,27 @@ function door(dx, dy, dz) {
  * gable ends are filled in the building's own walling.
  */
 function gable(x0, z0, w, d, dy, tile, wall, turn = w > d ? 1 : 0) {
+  return pitched(x0, z0, w, d, dy, tile, wall, 'gable', turn);
+}
+
+/**
+ * A roof of any of the Roof tool's shapes — 'gable', 'hip' (over a square,
+ * a pyramid) or 'lean' (a lean-to) — the same way `gable` lays one.
+ * Backlog batch 3, #5: "Each building type gets its own silhouette: small
+ * roofs, pyramid roofs, chimneys, towers." Not every building a gable.
+ */
+function pitched(x0, z0, w, d, dy, tile, wall, shape, turn = 0) {
   const spans = new Map();
   for (let x = 0; x < w; x++) {
     for (let z = 0; z < d; z++) spans.set(`${x0 + x},${z0 + z}`, { xm: x + 1, xp: w - x, zm: z + 1, zp: d - z });
   }
-  return roofBlocks({ spans }, { shape: ROOFS_BY_ID.get('gable'), turn })
+  return roofBlocks({ spans }, { shape: ROOFS_BY_ID.get(shape), turn })
     .map((b) => ({ dx: b.x, dy: dy + b.dy, dz: b.z, type: b.slope ? roofTypeFor(tile, b) : wall }));
+}
+
+/** The highest block a list has in one column — where a roof is, there. */
+function topAt(blocks, dx, dz) {
+  return Math.max(...blocks.filter((b) => b.dx === dx && b.dz === dz).map((b) => b.dy));
 }
 
 /** A solid rectangle of one block, at one height. */
@@ -83,7 +101,10 @@ function shifted(blocks, dx0, dz0) {
  * the limit, so these are all a size up from where they look like they should
  * be.
  */
-function room({ w, h, wall, floor = null, roof = wall, door: hasDoor = true, tiles = null, chimney = null }) {
+function room({
+  w, h, wall, floor = null, roof = wall, door: hasDoor = true, tiles = null, chimney = null,
+  shape = 'gable', plinth: plinthType = null, shutters = false, hood = false,
+}) {
   // Asked for directly: "Detail the building, they're all looking too
   // boxy." So a room is drawn the way it would be built: a cobble plinth
   // under the walls, posts up the corners (logs on timber, cobble quoins on
@@ -97,7 +118,7 @@ function room({ w, h, wall, floor = null, roof = wall, door: hasDoor = true, til
   const base = floor != null ? 1 : 0;
   const x0 = o, z0 = o, x1 = o + w - 1, z1 = o + w - 1;
   const post = POST_FOR[wall] ?? wall;
-  const plinth = h >= 2 ? (PLINTH_FOR[wall] ?? wall) : wall;
+  const plinth = h >= 2 ? (plinthType ?? PLINTH_FOR[wall] ?? wall) : wall;
   if (floor != null) g.box(x0, 0, z0, x1, 0, z1, floor);
   for (let y = base; y < base + h; y++) {
     const course = y === base ? plinth : wall;
@@ -112,17 +133,43 @@ function room({ w, h, wall, floor = null, roof = wall, door: hasDoor = true, til
   const rows = h >= 4 ? [base + 1, base + 3] : h >= 2 ? [base + 1] : [];
   for (const wy of rows) {
     const spots = w >= 7 ? [2, w - 3] : w >= 5 ? [Math.floor(w / 2)] : [];
+    // Shutters (#17): open trapdoors either side of a window, flat against
+    // the wall outside it — hinged on it, facing the way trapdoorOnFace
+    // would hang one put on that face. Only where the eaves leave room.
+    const shutter = (x, z, f) => { if (shutters && o) g.put(x, wy, z, TRAPDOOR_OPEN + f); };
     for (const s of spots) {
       g.put(x0, wy, z0 + s, WINDOW + 1);
       g.put(x1, wy, z0 + s, WINDOW + 1);
       g.put(x0 + s, wy, z1, WINDOW);
+      for (const k of [-1, 1]) { shutter(x0 - 1, z0 + s + k, 1); shutter(x1 + 1, z0 + s + k, 3); }
     }
-    if (w >= 8 || wy > base + 1) for (const s of w >= 7 ? [2, w - 3] : [Math.floor(w / 2)]) g.put(x0 + s, wy, z0, WINDOW);
+    if (w >= 8 || wy > base + 1) {
+      for (const s of w >= 7 ? [2, w - 3] : [Math.floor(w / 2)]) {
+        g.put(x0 + s, wy, z0, WINDOW);
+        for (const k of [-1, 1]) shutter(x0 + s + k, z0 - 1, 2);
+      }
+    }
   }
   g.box(x0, base + h, z0, x1, base + h, z1, roof);
   if (tiles != null) {
-    const tiles_ = gable(0, z0, w + 2, w, base + h + 1, tiles, wall, 0);
-    g.add(chimney ? withChimney(tiles_, x1 - 1, z1 - 1, base + h + 1, chimney.h ?? 3, chimney.type ?? BRICK) : tiles_);
+    const top = base + h + 1;
+    // The eaves overhang the sloped sides: both of a gable's, all four of a
+    // hipped roof's, and the low front of a lean-to.
+    let tiles_ = shape === 'hip' ? pitched(0, 0, w + 2, w + 2, top, tiles, wall, 'hip')
+      : shape === 'lean' ? pitched(x0, 0, w, w + 1, top, tiles, wall, 'lean', 1)
+        : gable(0, z0, w + 2, w, top, tiles, wall, 0);
+    // A lean-to's high side is wall right up under its tiles, or the loft
+    // shows through it.
+    if (shape === 'lean') {
+      for (let x = x0; x <= x1; x++) for (let y = top; y < topAt(tiles_, x, z1); y++) tiles_.push({ dx: x, dy: y, dz: z1, type: wall });
+    }
+    // A chimney stands `h` clear of the roof where it comes through, so it
+    // reads from a distance rather than sitting flush in the slope.
+    if (chimney) {
+      const cx = x1 - 1, cz = z1 - 1;
+      tiles_ = withChimney(tiles_, cx, cz, top, topAt(tiles_, cx, cz) - top + 1 + (chimney.h ?? 2), chimney.type ?? CHIMNEYS[1]);
+    }
+    g.add(tiles_);
   }
   if (hasDoor) {
     const mid = x0 + Math.floor(w / 2);
@@ -130,6 +177,11 @@ function room({ w, h, wall, floor = null, roof = wall, door: hasDoor = true, til
     if (h >= 2) g.add(door(mid, base, z0));
     // A step up to the door, out under the eaves.
     if (o && base) g.put(mid, 0, z0 - 1, turned(STEP_FOR[wall] ?? 30, 2));
+    // A hood over it (#5's "small roofs"): three half-pitch tiles leaning
+    // on the wall above the door.
+    if (hood && o && tiles != null && h >= 2) {
+      for (let x = mid - 1; x <= mid + 1; x++) g.put(x, base + 2, z0 - 1, roofBlock({ mat: roofPart(tiles).mat, kind: 'lo', facing: 2 }));
+    }
   }
   return g.blocks();
 }
@@ -189,7 +241,7 @@ function houseBlocks() {
   // — every block of it a first-age thing (window: planks and sand, at
   // the bench). See room.
   return [
-    ...room({ w: 5, h: 3, wall: WOOD, floor: PLANKS, roof: WOOD, tiles: SLATE, chimney: { h: 3, type: STONE } }),
+    ...room({ w: 5, h: 3, wall: WOOD, floor: PLANKS, roof: WOOD, tiles: SLATE, chimney: { h: 2, type: STONE } }),
     // Somewhere to sleep, and a painting over it — where you wake after a
     // fall, once you've chosen it (playtest, P1).
     ...shifted([...bed(1, 1, 2, 2), { dx: 3, dy: 2, dz: 3, type: PAINTING + 2 }], 1, 1),
@@ -458,7 +510,7 @@ function townhouseBlocks() {
   // lantern and a painting. The room brings its own windows, front, back
   // and sides, and a chimney; the furniture sits a block in, inside the
   // eaves (see room).
-  const shell = room({ w: 8, h: 3, wall: PLANKS, floor: STONE, tiles: TILE, chimney: { h: 3 } });
+  const shell = room({ w: 8, h: 3, wall: PLANKS, floor: STONE, tiles: TILE, chimney: { h: 2 }, shutters: true, hood: true });
   return [...shell, ...shifted([
     ...bed(2, 1, 5, 2),
     ...bed(5, 1, 5, 2),
@@ -481,9 +533,93 @@ function bed(dx, dy, dz, f) {
   ];
 }
 
-/** A room with a brick hearth for a floor — the brick is the hearth the rule asks for. */
+/**
+ * A room with a brick hearth for a floor — the brick is the hearth the rule
+ * asks for — a brick stack for it and a hood over the door. No lantern: a
+ * light is what its next level asks you to hang.
+ */
 function tavernBlocks() {
-  return room({ w: 6, h: 2, wall: PLANKS, floor: BRICK, tiles: TILE });
+  return room({ w: 6, h: 2, wall: PLANKS, floor: BRICK, tiles: TILE, chimney: { h: 2, type: CHIMNEYS[1] }, hood: true, shutters: true });
+}
+
+// Backlog batch 3, #17: "Workshop, engineering centre and university redone
+// with the new walls, trapdoors and chimneys." All three come before brick
+// (the workshop is where brick is first made), so what's new on them is
+// stone brick: the plinth, the stacks, the walls round a yard.
+
+/**
+ * A workshop: a timber shop on a stone-brick plinth, shuttered windows, a
+ * hood over the door, a stone-brick stack from the forge, and against its
+ * side an open log store under a lean-to on stone-brick wall piers.
+ */
+function workshopBlocks() {
+  const g = grid();
+  g.add(room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: SLATE, plinth: STONE_BRICK,
+    chimney: { h: 2, type: CHIMNEYS[0] }, shutters: true, hood: true }));
+  // The log store, x 8..9 against the east wall: two piers at its open
+  // corners, a lean-to falling away from the wall, logs stacked under it.
+  for (const z of [1, 6]) g.box(9, 1, z, 9, 2, z, STONE_BRICK_WALL);
+  for (let z = 1; z <= 6; z++) {
+    g.put(8, 3, z, roofBlock({ mat: 1, kind: 'hi', facing: 3 }));
+    g.put(9, 3, z, roofBlock({ mat: 1, kind: 'lo', facing: 3 }));
+  }
+  for (let z = 2; z <= 5; z++) { g.put(8, 1, z, LOG_ALONG_Z); g.put(9, 1, z, LOG_ALONG_Z); g.put(8, 2, z, LOG_ALONG_Z); }
+  g.box(8, 0, 1, 9, 0, 6, GRAVEL);
+  return g.blocks();
+}
+
+/**
+ * A university: a timber hall on a stone-brick plinth under a hipped slate
+ * roof, with a square stone-brick tower rising out of its front corner —
+ * open at the top on every side, and a pyramid of slate over that. Two
+ * desks to study at inside. (No lantern up there: lanterns are made at a
+ * workshop, which comes an age after the university.)
+ */
+function universityBlocks() {
+  const g = grid();
+  g.add(room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: SLATE, shape: 'hip', plinth: STONE_BRICK, shutters: true }));
+  // The tower stands on the ceiling over the front-left corner, x 1..3,
+  // z 1..3, so the room under it is the same room.
+  const top = 4, crown = 8;                                  // its first course, its top course
+  g.box(1, top, 1, 3, crown + 3, 3, null);                    // clear the roof where it comes through
+  for (let y = top; y <= crown; y++) {
+    for (let x = 1; x <= 3; x++) {
+      for (let z = 1; z <= 3; z++) {
+        const edge = x !== 2 || z !== 2, corner = x !== 2 && z !== 2;
+        if (edge && (corner || y < crown - 1)) g.put(x, y, z, STONE_BRICK);
+      }
+    }
+  }
+  g.put(2, crown - 2, 2, STONE_BRICK);                        // the belfry's floor
+  g.box(1, crown + 1, 1, 3, crown + 1, 3, STONE_BRICK);
+  g.add(pitched(1, 1, 3, 3, crown + 2, SLATE, STONE_BRICK, 'hip'));
+  // Two desks to study at, inside the eaves.
+  g.put(3, 1, 4, OAK_TABLE); g.put(4, 1, 4, OAK_TABLE);
+  return g.blocks();
+}
+
+/**
+ * An engineering centre: a tall timber hall on a stone-brick plinth under a
+ * slate gable, a stone-brick stack, shuttered windows, and beside it a yard
+ * walled in stone brick with a crane — a log mast, a jib out over the yard,
+ * a rope down to a crate on the ground.
+ */
+function engineeringBlocks() {
+  const g = grid();
+  g.add(room({ w: 7, h: 3, wall: PLANKS, floor: STONE, tiles: SLATE, plinth: STONE_BRICK,
+    chimney: { h: 2, type: CHIMNEYS[0] }, shutters: true, hood: true }));
+  // The yard, x 9..13, z 2..6: paved, walled on its three open sides.
+  g.box(9, 0, 2, 13, 0, 6, STONE_BRICK);
+  for (let x = 9; x <= 13; x++) { g.put(x, 1, 2, STONE_BRICK_WALL); g.put(x, 1, 6, STONE_BRICK_WALL); }
+  for (let z = 2; z <= 6; z++) g.put(13, 1, z, STONE_BRICK_WALL);
+  // The crane: a mast up past the ridge, a counterweight, a jib, a rope, a crate.
+  const jib = 11;
+  g.box(10, 1, 4, 10, jib, 4, WOOD);
+  g.put(9, jib, 4, STONE_BRICK);
+  for (let x = 11; x <= 12; x++) g.put(x, jib, 4, LOG_ALONG_X);
+  g.box(12, 4, 4, 12, jib - 1, 4, FENCE);
+  g.put(12, 1, 4, CHEST);
+  return g.blocks();
 }
 
 /**
@@ -492,7 +628,9 @@ function tavernBlocks() {
  * part of it.
  */
 function militaryBlocks() {
-  return room({ w: 6, h: 5, wall: STONE, tiles: SLATE });
+  // Hipped: over a tall square of stone it's a pyramid, so the garrison
+  // reads as a tower from across the map, not as a tall shed.
+  return room({ w: 6, h: 5, wall: STONE, tiles: SLATE, shape: 'hip' });
 }
 
 /**
@@ -534,6 +672,7 @@ function villageBlocks() {
 const DARK_STONE = 156, DARK_BRICK = 157, STONE_WALL_POST = 162, STONE_PILLAR = 165;
 const STONE_STAIRS = 29, LANTERN = 26, CHANDELIER = 85, WHITE_BANNER = 182;
 const CALCADA = 209, GRAVEL = 23, TIMBER = 160, DARK_WOOD = 43, OAK_TABLE_ = 31;
+const STONE_BRICK_WALL = 332, LOG_ALONG_X = LOG_SIDE_BASE, LOG_ALONG_Z = LOG_SIDE_BASE + 1;
 
 /** A grid of cells, later writes over earlier — the way these are drawn. */
 function grid() {
@@ -795,7 +934,8 @@ export const STARTER_DESIGNS = [
     size: 5,
     footprint: '5 × 5',
     note: 'Put it where you walk past it — your buildings deliver here when your bag is full.',
-    blocks: room({ w: 5, h: 2, wall: WOOD, floor: PLANKS, tiles: SLATE }),
+    // A lean-to: low at the door, high at the back — a shed, by its outline.
+    blocks: room({ w: 5, h: 2, wall: WOOD, floor: PLANKS, tiles: SLATE, shape: 'lean' }),
   },
   {
     id: 'starter_workshop',
@@ -804,7 +944,7 @@ export const STARTER_DESIGNS = [
     size: 6,
     footprint: '6 × 6',
     note: 'Stand inside it to use the recipes it unlocks.',
-    blocks: room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: SLATE }),
+    blocks: workshopBlocks(),
   },
   // Backlog batch 2: the University and the Engineering Centre.
   {
@@ -814,11 +954,7 @@ export const STARTER_DESIGNS = [
     size: 6,
     footprint: '6 × 6',
     note: 'Stand inside it to study.',
-    blocks: [
-      ...room({ w: 6, h: 2, wall: PLANKS, floor: STONE, tiles: SLATE }),
-      // Two desks to study at, inside the eaves.
-      { dx: 3, dy: 1, dz: 4, type: 31 }, { dx: 4, dy: 1, dz: 4, type: 31 },
-    ],
+    blocks: universityBlocks(),
   },
   {
     id: 'starter_engineering',
@@ -827,7 +963,7 @@ export const STARTER_DESIGNS = [
     size: 7,
     footprint: '7 × 7',
     note: 'Study engineering at a university first.',
-    blocks: room({ w: 7, h: 3, wall: PLANKS, floor: STONE, tiles: SLATE }),
+    blocks: engineeringBlocks(),
   },
   {
     id: 'starter_kiln',
@@ -898,7 +1034,8 @@ export const STARTER_DESIGNS = [
     size: 6,
     footprint: '6 × 6',
     note: 'Build it within 16 blocks of your fields.',
-    blocks: room({ w: 6, h: 3, wall: PLANKS, tiles: TILE }),
+    // Hipped and shuttered, so it reads as a barn and not a house.
+    blocks: room({ w: 6, h: 3, wall: PLANKS, tiles: TILE, shape: 'hip', shutters: true }),
   },
   {
     id: 'starter_military',
