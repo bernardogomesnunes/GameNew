@@ -1,5 +1,9 @@
 import { STRUCTURES_BY_ID, holdsAt, isStore, hasLevels, producesAt, intervalAt, scaleProduce, yieldAt } from '../config/structures.js';
 import { Inventory } from '../items/Inventory.js';
+import { cropOf } from '../config/crops.js';
+
+/** Planting, growing or picking a crop: a crop or nothing, before and after. */
+const isCropChange = (c) => (c.prev === 0 || !!cropOf(c.prev)) && (c.next === 0 || !!cropOf(c.next)) && c.prev !== c.next;
 import { tierStatus, validateStructure } from './validate.js';
 
 /**
@@ -261,7 +265,11 @@ export class StructureRegistry {
     for (const c of changes) {
       const s = this.at(c.x, c.y, c.z);
       // A quarry is a hole you keep digging: locking it protects nothing.
-      if (s && s.locked !== false && !STRUCTURES_BY_ID.get(s.type)?.growsWhenDug) return s;
+      // A farm is soil you plant in and pick from (batch 3, #13: "You can
+      // plant in the farm's tilled soil by hand") — only its crops, though.
+      const spec = s && STRUCTURES_BY_ID.get(s.type);
+      if (spec?.fromCrops && isCropChange(c)) continue;
+      if (s && s.locked !== false && !spec?.growsWhenDug) return s;
     }
     return null;
   }

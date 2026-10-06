@@ -5534,7 +5534,10 @@ export class Game {
     this.cropClock = (this.cropClock ?? 0) + dt;
     if (this.cropClock < CROP_TICK_SECONDS || !this.duilt) return;
     this.cropClock = 0;
-    if (this.duilt.crops.grow(this.world).length) this.remeshDirty();
+    // A farm's own crops first, out in its soil (batch 3, #13), then everything growing.
+    const tended = this.duilt.tendFarms(this.world).length;
+    const ripened = this.duilt.crops.grow(this.world).length;
+    if (tended || ripened) this.remeshDirty();
     // Turf creeping over bare dirt, a block at a time (duilt/TurfSpread.js).
     if (this.duilt.turf.spread(this.world, this.duilt.days, this.turfSkip()).length) this.remeshDirty();
     const grown = this.duilt.saplings.grow(this.world, this.duilt.days);
