@@ -220,7 +220,7 @@ ok('a lift anywhere else goes nowhere', liftAt(gen, at.x, 0, at.z) === null);
     && RECIPES.some((r) => r.output.id === chain?.id && r.inputs.iron_ingot) && (itemIcon(chain) ?? '').includes('<svg'));
   ok('a sky lift: gold, modelled, drawn in the bag', PROP_SHAPES.sky_lift?.length >= 4 && BLOCKS_BY_ID.get(SKY_LIFT) && (itemIcon(lift) ?? '').includes('<svg'));
   ok('Place on a lift rides it, and the button says Ride', /aimed\.block === SKY_LIFT\) return void this\.rideLift\(aimed\)/.test(game) && /if \(id === SKY_LIFT\) return 'Ride';/.test(game));
-  ok('the hint says where it goes, and tapping it rides', /up to the Sky Kingdom' : 'down to the ground'/.test(game) && /painting \|\| \(lift && lift !== 'nowhere' && lift !== 'cut'\)\) && swingLabel/.test(game));
+  ok('the hint says where it goes, and tapping it rides', /up to the Sky Kingdom' : 'down to the ground'/.test(game) && /painting \|\| mill \|\| \(lift && lift !== 'nowhere' && lift !== 'cut'\)\) && swingLabel/.test(game));
   ok('warriors following you ride up with you', /army\.mode === 'follow'\) \{\s*for \(const w of army\.field\)/.test(game));
 }
 

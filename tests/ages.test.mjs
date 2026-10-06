@@ -1,3 +1,5 @@
+import { BLOCKS } from '../src/config/blocks.js';
+import { ITEM_FOR_BLOCK } from '../src/config/items.js';
 import * as THREE from 'three';
 import { AGES, RINGS, FINAL_AGE, ageOf } from '../src/config/ages.js';
 import { ACHIEVEMENTS } from '../src/config/achievements.js';
@@ -84,15 +86,19 @@ for (const r of RECIPES) {
 }
 
 // A workshop recipe with no workshop in the game is a recipe nobody can reach.
-const stations = new Set(STRUCTURES.map((s) => s.station).filter(Boolean));
+// A station is a building, or a block you put down (the wood mill).
+const stations = new Set([...STRUCTURES.map((s) => s.station), ...BLOCKS.map((b) => b.station)].filter(Boolean));
 for (const r of RECIPES) {
   if (r.station === 'hand') continue;
-  ok(`recipe ${r.id} needs a "${r.station}", which some building provides`, stations.has(r.station));
+  ok(`recipe ${r.id} needs a "${r.station}", which some building or block provides`, stations.has(r.station));
 }
 
 // You cannot be sent to make something before the building exists.
+// Nor at a block before the recipe that makes the block (the wood mill).
 for (const r of RECIPES.filter((x) => x.station !== 'hand')) {
-  const provider = STRUCTURES.find((s) => s.station === r.station);
+  const block = BLOCKS.find((b) => b.station === r.station && b.stateOf == null);
+  const provider = STRUCTURES.find((s) => s.station === r.station)
+    ?? (block && RECIPES.find((x) => x.output.id === ITEM_FOR_BLOCK.get(block.id)));
   ok(`${r.id} (age ${r.age}) comes no earlier than its ${provider.id} (age ${provider.age})`,
     r.age >= provider.age);
 }

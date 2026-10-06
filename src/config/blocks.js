@@ -743,6 +743,43 @@ BLOCKS.push(
 );
 WALLS.push({ id: 336, name: 'Sandstone Wall', color: 0xd2b27a });
 
+// The wood mill (backlog batch 3, #32): the first machine — a block you put
+// down and use. Within reach of one (DuiltGame.stationsNear, `station`), wood
+// goes further: more planks to a log, doors, trapdoors and stairs for less,
+// stripped logs, furniture and wall panels. It faces you like a chest.
+export const WOOD_MILL = 341;
+quad(WOOD_MILL, { name: 'Wood Mill', glyph: 'mill', color: 0x9a7350, shape: 'wood_mill', material: 'wood', station: 'wood_mill', facesYou: true, unlock: null });
+
+// Stripped logs: the bark taken off at the mill, pale wood with the grain
+// showing, in each wood. They stand or lie like logs (logOnFace) and count as
+// the log they were for a building's needs.
+export const STRIPPED_LOGS = [345, 346, 347];
+const STRIPPED_SIDE_BASE = 348; // stripped log k along x is base + 2k, along z + 2k + 1
+[
+  { name: 'Stripped Oak Log', color: 0xc9a072, log: 4 },
+  { name: 'Stripped White Log', color: 0xeee6d6, log: 41 },
+  { name: 'Stripped Dark Log', color: 0x8a5e3e, log: 43 },
+].forEach((w, k) => {
+  const base = { id: STRIPPED_LOGS[k], name: w.name, glyph: 'log', color: w.color, material: 'wood', countsAs: w.log, unlock: null };
+  BLOCKS.push(base);
+  BLOCKS.push({ ...base, id: STRIPPED_SIDE_BASE + 2 * k, stateOf: base.id, axis: 0 });
+  BLOCKS.push({ ...base, id: STRIPPED_SIDE_BASE + 2 * k + 1, stateOf: base.id, axis: 2 });
+});
+
+// Furniture from the mill: a cabinet, a wardrobe (taller than you), a
+// bedside table. Each faces you when you put it down.
+export const CABINET = 354, WARDROBE = 358, BEDSIDE_TABLE = 362;
+quad(CABINET, { name: 'Cabinet', glyph: 'cabinet', color: 0xb08458, shape: 'cabinet', material: 'wood', facesYou: true, unlock: null });
+quad(WARDROBE, { name: 'Wardrobe', glyph: 'wardrobe', color: 0x9a6c46, shape: 'wardrobe', material: 'wood', facesYou: true, unlock: null });
+quad(BEDSIDE_TABLE, { name: 'Bedside Table', glyph: 'cabinet', color: 0xb98d60, shape: 'bedside_table', material: 'wood', facesYou: true, unlock: null });
+
+// Wooden wall panels for indoors, flat against the face of the block you
+// point at (panelOnFace): plain boards, raised squares, or two-tone.
+export const PANELS = [366, 370, 374];
+quad(366, { name: 'Wood Panel', glyph: 'panel', color: 0xc49360, shape: 'panel_plain', material: 'wood', panel: true, unlock: null });
+quad(370, { name: 'Patterned Panel', glyph: 'panel', color: 0xc49360, shape: 'panel_pattern', material: 'wood', panel: true, unlock: null });
+quad(374, { name: 'Two-tone Panel', glyph: 'panel', color: 0xd8b98c, shape: 'panel_twotone', material: 'wood', panel: true, unlock: null });
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**
@@ -765,11 +802,32 @@ if (ID_COUNT > ID_LIMIT) throw new Error(`Block id ${ID_COUNT - 1} is past ${ID_
  * was.
  */
 export function logOnFace(id, normal) {
-  const k = LOGS.indexOf(id);
-  if (k === -1 || !normal) return id;
-  if (normal.x) return LOG_SIDE_BASE + 2 * k;
-  if (normal.z) return LOG_SIDE_BASE + 2 * k + 1;
+  if (!normal) return id;
+  for (const [list, sideBase] of [[LOGS, LOG_SIDE_BASE], [STRIPPED_LOGS, STRIPPED_SIDE_BASE]]) {
+    const k = list.indexOf(id);
+    if (k === -1) continue;
+    if (normal.x) return sideBase + 2 * k;
+    if (normal.z) return sideBase + 2 * k + 1;
+    return id;
+  }
   return id;
+}
+
+/**
+ * A wall panel turned to lie flat against the face pointed at: facing f
+ * has its back to the side FACING_STEP[f] points at, so the wall is behind
+ * it. On a floor or a ceiling it keeps the way you placed it.
+ */
+export function panelOnFace(id, normal) {
+  const b = BLOCKS_BY_ID.get(id);
+  if (!b?.panel || !normal || normal.y) return id;
+  const f = normal.z > 0 ? 0 : normal.x < 0 ? 1 : normal.z < 0 ? 2 : 3;
+  return turned(id, f);
+}
+
+/** The station a block is, if you can work at it (the wood mill), or null. */
+export function stationOf(id) {
+  return BLOCKS_BY_ID.get(id)?.station ?? null;
 }
 
 /**

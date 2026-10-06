@@ -140,6 +140,14 @@ export const BLOCK_TEXTURES = {
   // with darker joints.
   'Sandstone':       { strata: 5, marks: 20, flecks: [[1.05, 1.02, 0.95], [0.86, 0.8, 0.74]], depth: 0.5, mottle: 0.06, speck: 0.03, cracks: 1, bump: 0.45 },
   'Sandstone Brick': { lines: 'brick', mortar: [0.8, 0.77, 0.72], depth: 0.3, speck: 0.03, marks: 14, bump: 0.6 },
+  // Stripped logs (#32): the bark off, the pale wood showing its grain —
+  // faint furrows down the sides — and the rings on the ends.
+  'Stripped Oak Log':   { bark: 3, marks: 8, flecks: [[1.06, 1.02, 0.94]], depth: 0.14, mottle: 0.05, speck: 0.02, bump: 0.25,
+                          top: { rings: 3, heart: [1.16, 1.1, 1.02], depth: 0.22, speck: 0.03, lift: 0 } },
+  'Stripped White Log': { bark: 3, marks: 6, flecks: [[0.96, 0.95, 0.92]], depth: 0.1, mottle: 0.04, speck: 0.02, bump: 0.2,
+                          top: { rings: 3, heart: [0.96, 0.92, 0.84], depth: 0.18, speck: 0.03, lift: 0 } },
+  'Stripped Dark Log':  { bark: 3, marks: 8, flecks: [[1.1, 1.04, 0.96]], depth: 0.18, mottle: 0.06, speck: 0.03, bump: 0.3,
+                          top: { rings: 2.5, heart: [1.3, 1.22, 1.12], depth: 0.24, speck: 0.03, lift: 0 } },
   'Dark Stone':    { lines: 'ashlar', mottle: 0.14, hue: 0.25, marks: 46, flecks: [[0.86, 0.94, 1.12], [1.12, 1.12, 1.16], [0.8, 0.84, 0.92]], depth: 0.42, speck: 0.05, bump: 0.6 },
   'Dark Brick':    { lines: 'brick', mortar: [0.5, 0.46, 0.46], depth: 0.32, speck: 0.05, marks: 22, bump: 0.8 },
   'Dark Calçada':  { setts: 5, joint: [1.85, 1.8, 1.72], depth: 0.3, speck: 0.03, bump: 0.6 },

@@ -10,6 +10,9 @@ import { itemName } from '../config/items.js';
  * ingredient or standing in the wrong place.
  */
 
+/** A station as it's written for people: wood_mill is "wood mill". */
+export const stationName = (station) => String(station).replace(/_/g, ' ');
+
 const WATER_BLOCK = 11;
 const WATER_RANGE = 4;
 
@@ -66,8 +69,8 @@ export class Crafting {
       // shows up.
       if (lock) reason = lock;
       else if (!stationOk) reason = r.tier && atStations.includes(r.station)
-        ? `Needs your ${r.station} built up further — level ${r.tier + 1}`
-        : `Stand at your ${r.station} to make this`;
+        ? `Needs your ${stationName(r.station)} built up further — level ${r.tier + 1}`
+        : `Stand at your ${stationName(r.station)} to make this`;
       else if (!placeOk) reason = r.needs === 'water' ? 'Stand closer to the river' : `Needs ${r.needs} nearby`;
       else if (Object.keys(missing).length) {
         reason = 'Needs ' + Object.entries(missing)

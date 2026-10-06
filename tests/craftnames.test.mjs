@@ -28,7 +28,7 @@ ok('every word has to match, in any order', matchesSearch('axe stone', ['Stone A
 ok('what goes into it counts too', matchesSearch('planks', ['Bed', 'A place to sleep', 'Bed', 'Planks', 'Wool']));
 ok('the bench has a search box over its list', /<input id="bench-search" class="panel-search" type="search"/.test(ui));
 ok('which filters by name, what it makes and what goes in',
-  /matchesSearch\(query, \[r\.name, r\.blurb, r\.station, itemName\(r\.output\.id\), \.\.\.Object\.keys\(r\.inputs\)\.map\(itemName\)\]\)/.test(ui));
+  /matchesSearch\(query, \[r\.name, r\.blurb, r\.station, stationName\(r\.station\), itemName\(r\.output\.id\), \.\.\.Object\.keys\(r\.inputs\)\.map\(itemName\)\]\)/.test(ui));
 ok('and says so when nothing matches', /Nothing you can make matches/.test(ui));
 
 process.exit(f ? 1 : 0);

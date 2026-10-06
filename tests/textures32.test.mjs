@@ -41,7 +41,8 @@ const arr = blockTextureArray();
 ok(`one layer per textured block, stacked (${arr.layers} layers)`, arr.texture.image.width === 32 && arr.texture.image.depth === arr.layers);
 // Colour and depth layers, a third more for the mips: kept well under a phone's appetite.
 const bytes = arr.layers * 32 * 32 * 4 * (2 + 1 / 3);
-ok(`the whole atlas is phone-sized (${Math.round(bytes / 1024)} KB)`, bytes < 1.5 * 1024 * 1024 && arr.layers <= 80);
+// The layer count only has to fit the byte the mesher sends it in; the bytes are the budget.
+ok(`the whole atlas is phone-sized (${Math.round(bytes / 1024)} KB, ${arr.layers} layers)`, bytes < 1.5 * 1024 * 1024 && arr.layers <= 255);
 ok('mipmapped for the distance, crisp up close', arr.texture.generateMipmaps && /LinearMipmapLinear/.test(painter) && /magFilter = THREE\.NearestFilter/.test(painter));
 ok('sampled with the quad\'s own gradients, so tile seams do not blur', /textureGrad\(blockTiles, vec3\(fract\(vTileUv\), vLayer\), tileDx, tileDy\)/.test(mesher));
 ok('and scaled back up by the tile scale in the shader', /diffuseColor\.rgb \*= tile\.rgb \* \$\{TILE_SCALE/.test(mesher));
