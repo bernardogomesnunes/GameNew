@@ -40,6 +40,7 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **Bow and arrows** (asked for directly). Hemp grows wild on open grass, ripe; picked it gives fibre and seeds to plant on farmland. Its seed also turns up breaking turf. Fibre → string → bow and arrows, by hand from Age 1. Traders sell hemp seeds, fibre, string, bows and arrows. With the bow held, Break shoots: arrows fly fast, drop a little, hit animals and bandits for 5, and stick in blocks. PR #140.
 - **#32 Wood mill.** A block you put down (Age 2); within a few blocks of it wood goes further: three planks to a log, doors, trapdoors and stairs for less. It also makes stripped logs (every wood, standing or lying), a cabinet, a wardrobe and a bedside table, and wall panels (plain, patterned, two-tone) that go flat on the face you point at. Place on it opens the bench on what's made there. PR #142.
 - **#12 and #27** dropped (asked for directly).
+- **#10 Villagers eat.** Once a game day each settler eats one food, the cheapest, from your storehouses first and your bag only after. Fed, they give their building its +50%; hungry, they don't, and a gentle note says to put food in a storehouse. Nobody leaves or starves; anyone hungry tries again every minute. PR #143.
 
 ## Priority 1 — blocks and placement
 
@@ -58,15 +59,14 @@ All done (see above).
 - **#9 Composting.**
   - A compost bin takes seeds and leaves and makes compost.
   - Compost on farmland or put into a farm speeds growth or raises yield.
-- **#10 Villagers eat.** Settlers take a little food from your storehouses each day. Fed: they work better. Hungry: a gentle warning, nothing harsh.
 - **#13 Farms show their crops.**
   - A farm's crops grow visibly on its farmland, the same as ones you plant yourself.
   - You can plant in the farm's tilled soil by hand.
 - **#29 Barracks train soldiers.**
   - Archers, warriors, swordsmen, and a catapult crew who set one up and fire it in a war.
   - Each costs food and gear.
+
 ## Suggested order
 
-1. #10 villagers eat (next).
-2. The rest of Priority 2.
-3. The rest of Priority 3, one system at a time.
+1. The rest of Priority 2.
+2. The rest of Priority 3, one system at a time.

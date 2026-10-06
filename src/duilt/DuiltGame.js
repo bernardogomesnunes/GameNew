@@ -182,6 +182,8 @@ export class DuiltGame {
     });
     this.settlers = new Settlers({
       world, structures: this.structures, inventory: this.inventory, skills: this.skills, bus,
+      // They eat from the storehouses before your bag (#10).
+      stores: () => this.structures.stores().map((x) => x.store),
     });
     this.lastCollect = Date.now();
   }
