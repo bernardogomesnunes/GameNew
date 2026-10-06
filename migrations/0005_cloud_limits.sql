@@ -1,3 +1,6 @@
+-- Already applied against the live database (2026-10-06), after a clean run on a
+-- copy of production. All 12 constraints validated against the existing rows.
+--
 -- Backstops on what one account can store, set far above any real world.
 --
 -- The game wants very large settlements, so these are not play limits. They
