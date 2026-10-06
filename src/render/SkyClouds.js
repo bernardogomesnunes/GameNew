@@ -39,7 +39,10 @@ export class SkyClouds {
     // Unlit on purpose: a cloud seen from below or the side is still bright
     // in real daylight, and MeshLambertMaterial's directional shading was
     // turning every face but the sun-facing one a flat, un-cloud-like grey.
-    const material = new THREE.MeshBasicMaterial({ color: CLOUD_COLOR });
+    // A little see-through (asked for directly: "they should be transparent
+    // or cloudy"), and not writing depth, so one cloud behind another shows
+    // through it rather than being cut out of it.
+    const material = new THREE.MeshBasicMaterial({ color: CLOUD_COLOR, transparent: true, opacity: 0.78, depthWrite: false });
     // Nor tone mapped (render/atmosphere.js): the world is drawn brighter
     // than it was, and a cloud already near white would burn out to a flat
     // white card and lose its sunset colour.
@@ -52,22 +55,40 @@ export class SkyClouds {
     this.mesh.castShadow = false;
     scene.add(this.mesh);
 
-    this.offset = 0;
+    // How far the whole layer has drifted, ever. Not wrapped: wrapping it
+    // every CELL jumped every cloud back a whole cell at once.
+    this.drift = 0;
+    this.variants = new Map();
     this.dummy = new THREE.Object3D();
-    // Each cell's own puff shape and jitter, worked out once and stable
-    // forever after — a hash of its index, not stored noise, so there is
-    // nothing to regenerate as cells are reused while the player walks.
-    this.variants = [];
-    for (let i = 0; i < this.count; i++) {
-      this.variants.push({
-        w: 9 + hash01(i, 1) * 11,
-        d: 7 + hash01(i, 2) * 9,
-        h: 2 + hash01(i, 3) * 2,
-        yOff: hash01(i, 4) * 8,
-        xJitter: (hash01(i, 5) - 0.5) * CELL * 0.6,
-        zJitter: (hash01(i, 6) - 0.5) * CELL * 0.6,
-      });
-    }
+  }
+
+  /**
+   * A cloud's own shape and jitter, from the sky cell it belongs to — not
+   * from where that cell sits relative to you. Keyed by where you stood, all
+   * of them changed shape and jumped each time you crossed a cell (reported
+   * directly: "The clouds tickle whenever I move ... they should move
+   * smoothly no matter my movement").
+   */
+  variant(cx, cz) {
+    // Kept, so a frame allocates nothing: the same few dozen cells are asked
+    // for every frame, and only change as the sky drifts or you travel.
+    const key = cx * 1048576 + cz;
+    const known = this.variants.get(key);
+    if (known) return known;
+    if (this.variants.size > 600) this.variants.clear();
+    // Both coordinates packed into one number, unique to the cell (a sum or
+    // xor of the two gave mirror-image cells the same cloud).
+    const i = (((cx + 32768) & 0xffff) << 16) | ((cz + 32768) & 0xffff);
+    const v = {
+      w: 9 + hash01(i, 1) * 11,
+      d: 7 + hash01(i, 2) * 9,
+      h: 2 + hash01(i, 3) * 2,
+      yOff: hash01(i, 4) * 8,
+      xJitter: (hash01(i, 5) - 0.5) * CELL * 0.6,
+      zJitter: (hash01(i, 6) - 0.5) * CELL * 0.6,
+    };
+    this.variants.set(key, v);
+    return v;
   }
 
   /** Tints the clouds — grey-blue at night, warm at dusk. See render/DayCycle.js. */
@@ -76,18 +97,17 @@ export class SkyClouds {
   }
 
   update(dt, playerX, playerZ) {
-    this.offset = (this.offset + dt * DRIFT_SPEED) % CELL;
-    const baseX = Math.round(playerX / CELL) * CELL;
-    const baseZ = Math.round(playerZ / CELL) * CELL;
+    this.drift += dt * DRIFT_SPEED;
+    // The cells round you, in the drifting sky's own frame: a cloud is its
+    // cell's, wherever you are, and moves only by the drift.
+    const baseX = Math.round((playerX - this.drift) / CELL);
+    const baseZ = Math.round(playerZ / CELL);
     let i = 0;
     for (let gx = -RADIUS; gx <= RADIUS; gx++) {
       for (let gz = -RADIUS; gz <= RADIUS; gz++, i++) {
-        const v = this.variants[i];
-        this.dummy.position.set(
-          baseX + gx * CELL + v.xJitter + this.offset,
-          CLOUD_Y + v.yOff,
-          baseZ + gz * CELL + v.zJitter,
-        );
+        const cx = baseX + gx, cz = baseZ + gz;
+        const v = this.variant(cx, cz);
+        this.dummy.position.set(cx * CELL + v.xJitter + this.drift, CLOUD_Y + v.yOff, cz * CELL + v.zJitter);
         this.dummy.scale.set(v.w, v.h, v.d);
         this.dummy.updateMatrix();
         this.mesh.setMatrixAt(i, this.dummy.matrix);

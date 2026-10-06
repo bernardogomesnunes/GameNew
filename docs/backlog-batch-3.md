@@ -22,6 +22,8 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#28 Water.** PR #130.
   - Pointing at water, a block goes into it, so ponds can be filled in.
   - A bucket clears a lone water block; water joined to other water stays.
+- **#31 Clouds** drift smoothly, never jumping as you move, and are slightly see-through. PR #131.
+- **#30 Fireflies** each fly their own wandering closed loop, back exactly to where they started, at their own pace. PR #131.
 
 ## Needs a decision first
 
@@ -55,10 +57,6 @@ point's number (#n, in the order it was written) so it can be traced back.
   - It also happens while you're away, like crops growing.
 - **#8 3D grass tufts** on turf. They're light: drawn in batches near you, and fade with distance.
 - **#22 Campfire flames that move:** flickering flame planes with a soft light flicker.
-- **#30 Fireflies.** Each flies its own smooth looping path back to where it started, so no grid-like pattern shows.
-- **#31 Clouds.**
-  - They jitter when the camera moves; they should drift smoothly whatever you do.
-  - Softer and see-through.
 - **#5 Building designs that read from a distance.** Each building type gets its own silhouette: small roofs, pyramid roofs, chimneys, towers.
 - **#17 Workshop, engineering centre and university** redone with the new walls, trapdoors and chimneys.
 
