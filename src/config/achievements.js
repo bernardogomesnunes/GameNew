@@ -258,7 +258,7 @@ const LATER = [
   },
   {
     id: 'a_barracks', age: 5, structure: 'barracks', name: 'Soldiers of your own',
-    description: 'Raise a barracks with bunks, arms and a yard to train in. It trains a soldier for every bunk.',
+    description: 'Raise a barracks with bunks, arms and a yard to train in. Train soldiers there, a soldier a bunk.',
     icon: '⚔️', xpReward: 200, check: (c) => c.stats.claimed.has('barracks'),
   },
   {

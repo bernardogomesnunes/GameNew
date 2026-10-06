@@ -51,6 +51,12 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **University moves to Age 3** (asked for directly), and the engineering centre with it, since it needs research done at the university. The university's two tables are made at the workshop, an Age 3 building, so in Age 2 it couldn't be built. PR #146.
 - **#1 A backpack.** A Back slot in the gear row, between the boots and the ring. Leather backpack (hide and string, by hand, Age 1): +10 bag slots. Reinforced (the leather one with iron, Age 4): +20. Taking it off, or swapping to a smaller one, moves what's in its slots into the rest of the bag; if there isn't room it stays on and says how much to clear. Nothing is ever dropped. PR #147.
 - **#13 Farms show their crops.** The seeds put into a farm come up on its bare farmland, taking turns cell by cell, and grow like any crop. When the farm pays out, what was ripe is cut and sown again. A crop taken out of the farm comes up out of its soil. You can plant and pick in a locked farm's soil by hand (only crops — its soil is still locked); what you plant there is yours and the farm leaves it alone. PR #148.
+- **#29 Barracks train soldiers.** From the barracks pop-up you choose who to train, a soldier a bunk, paid up front from your bag. They join one at a time (about two and a half minutes each). PR #149.
+  - **Warrior:** 3 food and a stone sword.
+  - **Swordsman:** 4 food, an iron sword and an iron cuirass. Tougher, and hits harder.
+  - **Archer:** 3 food, a bow and 20 arrows. Shoots from range instead of closing in.
+  - **Catapult crew:** 5 food, a catapult and 10 stone. When the enemy comes within throw, they set a catapult up in front of the barracks and lob stones that hurt only the enemy. They pack it away once the enemy is gone.
+  - A fallen soldier is gone; nobody replaces them for free any more. Soldiers from older saves come back as swordsmen.
 
 ## Priority 1 — blocks and placement
 
@@ -65,9 +71,6 @@ All done (see above).
 - **#9 Composting.**
   - A compost bin takes seeds and leaves and makes compost.
   - Compost on farmland or put into a farm speeds growth or raises yield.
-- **#29 Barracks train soldiers.**
-  - Archers, warriors, swordsmen, and a catapult crew who set one up and fire it in a war.
-  - Each costs food and gear.
 
 ## Suggested order
 

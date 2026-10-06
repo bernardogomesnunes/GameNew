@@ -32,7 +32,8 @@ import { pickTale, TALES_BY_ID } from '../config/tales.js';
 import { War } from './War.js';
 import { SkyWar } from './SkyWar.js';
 import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
-import { Defenders } from '../world/Defenders.js';
+import { Defenders, MAX_SOLDIERS } from '../world/Defenders.js';
+import { UNITS_BY_ID, unitCost, payForUnit } from '../config/soldiers.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';
 
 /**
@@ -1354,6 +1355,28 @@ export class DuiltGame {
       changes.push(...tendFarm(world, this.crops, s, now));
     }
     return changes;
+  }
+
+  /**
+   * Trains one soldier at a barracks (batch 3, #29): `unitId` is a warrior,
+   * swordsman, archer or catapult crew (config/soldiers.js). Their food and
+   * gear come out of your bag now; they join in TRAIN_DAYS, after anyone
+   * already in line. A barracks holds a soldier a bunk — `bunks`, counted
+   * by Game off the beds in it. Returns { ok, reason }.
+   */
+  trainSoldier(s, unitId, bunks) {
+    const unit = UNITS_BY_ID.get(unitId);
+    if (!unit) return { ok: false, reason: 'Nobody trains as that' };
+    if (s?.type !== 'barracks' || !s.valid) return { ok: false, reason: 'Only a standing barracks trains soldiers' };
+    const t = this.defenders.barracks(s.id);
+    const room = Math.min(MAX_SOLDIERS, bunks) - t.roster.length - t.queue.length;
+    if (room <= 0) return { ok: false, reason: `Every bunk is spoken for — ${Math.min(MAX_SOLDIERS, bunks)} soldiers at most here` };
+    const cost = unitCost(unit, this.inventory);
+    if (!cost.ok) return { ok: false, reason: `Needs ${cost.short.join(', ')}` };
+    payForUnit(unit, this.inventory);
+    this.defenders.order(s.id, unitId, this.days);
+    this.bus?.emit('duilt:training', { structure: s, unit: unitId });
+    return { ok: true, unit };
   }
 
   /** Takes a crop back out of a farm: it stops growing there, and its seed comes back. */

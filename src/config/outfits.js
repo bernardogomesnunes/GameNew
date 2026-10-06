@@ -39,6 +39,11 @@ export const OUTFITS = {
   // Yours.
   soldier: { hat: 'helm', gear: 'sword' },
   archer: { hat: 'hood', gear: 'bow' },
+  // What a barracks trains (config/soldiers.js).
+  footman: { hat: 'cap', hatColour: 0x7a5a3a, gear: 'sword', gearColour: 0xafafb7 },
+  swordsman: { hat: 'helm', plume: 0x3a5aa8, gear: 'sword' },
+  bowman: { hat: 'hood', hatColour: 0x3f5a34, gear: 'bow' },
+  crew: { hat: 'cap', hatColour: 0x5a4030 },
 };
 
 /** What someone wears — their kind's outfit, or nothing special. */

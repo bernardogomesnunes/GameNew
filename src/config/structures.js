@@ -942,7 +942,7 @@ export const STRUCTURES = [
   // stone. What they do is in Game/Defenders: claimed walls, gatehouses and
   // towers take three blows a block to break; a gatehouse shuts its gate
   // when a round is coming; a watchtower posts two archers on its top; a
-  // barracks trains a soldier for every bunk.
+  // barracks trains who you pay it to, a soldier a bunk (config/soldiers.js).
   {
     id: 'wall',
     name: 'Stone Wall',
@@ -1071,7 +1071,7 @@ export const STRUCTURES = [
     name: 'Barracks',
     icon: '⚔️',
     age: 5,
-    blurb: 'A hall of bunks with arms on the walls and a yard to train in. It trains a soldier for every bunk, and they march out to meet the Stone Kingdom\'s army.',
+    blurb: 'A hall of bunks with arms on the walls and a yard to train in. Train warriors, swordsmen, archers and catapult crews here, a soldier a bunk, for food and gear — they go out to meet the Stone Kingdom\'s army.',
     minSize: 7,
     maxSize: 18,
     cost: { iron_ingot: 4, planks: 10 },
