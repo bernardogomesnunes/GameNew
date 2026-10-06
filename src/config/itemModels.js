@@ -1,5 +1,5 @@
 import { CROPS } from './crops.js';
-import { ARMOUR_PIECES } from './armour.js';
+import { ARMOUR_PIECES, BACKPACKS } from './armour.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 import { TOOL_TIERS } from './tiers.js';
 
@@ -153,6 +153,17 @@ const ARMOUR_MODEL = {
   ],
 };
 for (const p of ARMOUR_PIECES) ITEM_MODELS[p.id] = ARMOUR_MODEL[p.slot](p.main, p.trim);
+
+// Backpacks (batch 3, #1): a pack with a rolled flap over its top, a pocket
+// on the front, two straps down its back, and its trim on the buckles.
+const backpackModel = (m, t) => [
+  box(0.22, 0.04, 0.3, 0.78, 0.72, 0.7, m),
+  box(0.2, 0.62, 0.28, 0.8, 0.8, 0.72, t),           // the flap
+  box(0.3, 0.12, 0.7, 0.7, 0.42, 0.8, m),            // the pocket
+  box(0.46, 0.4, 0.8, 0.54, 0.48, 0.82, t),          // its buckle
+  box(0.28, 0.08, 0.24, 0.36, 0.76, 0.3, t), box(0.64, 0.08, 0.24, 0.72, 0.76, 0.3, t), // the straps
+];
+for (const b of BACKPACKS) ITEM_MODELS[b.id] = backpackModel(b.main, b.trim);
 
 // Swords (the playtest list, P6/P7): a blade standing on its point's end,
 // a crossguard and a wrapped grip with a pommel.

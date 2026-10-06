@@ -91,6 +91,7 @@ export const GLYPHS = {
   cuirass: 'M8 5h8l3 3-2 2v9H7v-9L5 8ZM9.5 5c0 1.5 1 2.5 2.5 2.5S14.5 6.5 14.5 5M7 12h10',
   greaves: 'M6 5h12v3H6ZM7 8h4v11H7ZM13 8h4v11h-4ZM7 13h4M13 13h4',
   boots: 'M6 5h5v9h4l4 3v2H6ZM6 17h13M8 5v9',
+  backpack: 'M7 9a5 5 0 0 1 10 0v10H7ZM10 6V4h4v2M7 12h10M10 15h4v3h-4Z',
   ring: 'M12 9a5.5 5.5 0 1 0 .01 0M12 9 10 6h4ZM10 6l2-2 2 2',
   // Phase 7a.
   firefly: 'M12 9.5a2 2.6 0 1 0 .01 0M12 15v3.5M9 9.5 5.5 7M15 9.5 18.5 7M9.5 12.5 6 14M14.5 12.5 18 14M5 19h.01M19 4h.01M4 11h.01',

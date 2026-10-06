@@ -22,7 +22,7 @@ const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8'
 
 // --- the sets ---------------------------------------------------------------------------
 
-ok('five places to wear things: head, body, legs, feet (playtest, P6) and a ring', WEAR_SLOTS.join() === 'head,body,legs,feet,ring');
+ok('six places to wear things: head, body, legs, feet (playtest, P6), a backpack (batch 3, #1) and a ring', WEAR_SLOTS.join() === 'head,body,legs,feet,back,ring');
 ok('five sets in tiers — leather, iron, gold, sky, dark (key stone) — of four pieces each, boots and all (backlog batch 2)',
   ARMOUR_SETS.map((s) => s.key).join() === 'leather,iron,gold,sky,stone' && ARMOUR_PIECES.length === 20);
 const total = (key) => ARMOUR_PIECES.filter((p) => p.set === key).reduce((n, p) => n + p.points, 0);

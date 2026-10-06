@@ -1,6 +1,6 @@
 import { BLOCKS } from './blocks.js';
 import { CROPS, cropBaseOf } from './crops.js';
-import { ARMOUR_PIECES } from './armour.js';
+import { ARMOUR_PIECES, BACKPACKS } from './armour.js';
 import { tieredItems } from './tiers.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
@@ -395,6 +395,13 @@ export const ITEMS = [
     glyph: { head: 'helm', body: 'cuirass', legs: 'greaves', feet: 'boots' }[p.slot],
     wears: p.slot, armour: p.points, set: p.set, durability: p.durability, madeBy: p.madeBy,
     ...(p.disguise ? { disguise: p.disguise } : {}),
+  })),
+
+  // --- backpacks (batch 3, #1) — see config/armour.js ----------------------
+  // Worn on your back: `bagSlots` more slots in the bag while it's on.
+  ...BACKPACKS.map((b) => ({
+    id: b.id, name: b.name, kind: 'gear', stackTo: 1, color: b.main, glyph: 'backpack',
+    wears: 'back', bagSlots: b.slots, madeBy: `${b.madeBy} — wear it for ${b.slots} more bag slots`,
   })),
 ];
 
