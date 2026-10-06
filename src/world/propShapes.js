@@ -16,6 +16,9 @@ export const PROP_SHAPES = {
   slab: [
     { minX: 0, maxX: 1, minY: 0, maxY: 0.5, minZ: 0, maxZ: 1 },
   ],
+  slab_top: [
+    { minX: 0, maxX: 1, minY: 0.5, maxY: 1, minZ: 0, maxZ: 1 },
+  ],
   // Requested directly: "stairs need three steps, and to have stair until
   // the end of the block, filling the back until the top, or else there
   // will be a hole when doing stairs." Three steps of a third, climbing

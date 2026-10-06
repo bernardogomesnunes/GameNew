@@ -198,7 +198,7 @@ export const AO_LIGHT = [1, 0.8, 0.66, 0.54];
 const OCCLUDES = new Uint8Array(IDS + 1);
 for (let id = 1; id < IDS; id++) {
   const shape = shapeOf(id);
-  OCCLUDES[id + 1] = !OPEN[id] || SLOPED[id] || shape === 'slab' || shape === 'pillar' || shape === 'wall' ? 1 : 0;
+  OCCLUDES[id + 1] = !OPEN[id] || SLOPED[id] || shape === 'slab' || shape === 'slab_top' || shape === 'pillar' || shape === 'wall' ? 1 : 0;
 }
 
 /**

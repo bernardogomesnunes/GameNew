@@ -402,7 +402,9 @@ export class DuiltGame {
     const bill = {};
     for (const c of changes) {
       if (c.next === AIR) continue;
-      const itemId = ITEM_FOR_BLOCK.get(c.next);
+      // A change can say what it costs: a slab put on a slab makes a whole
+      // block, and costs the one slab (Game.placeBlock).
+      const itemId = c.item ?? ITEM_FOR_BLOCK.get(c.next);
       if (!itemId) continue;
       bill[itemId] = (bill[itemId] ?? 0) + 1;
     }

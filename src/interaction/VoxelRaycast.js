@@ -42,6 +42,9 @@ export function castVoxelRay(world, origin, direction, maxDistance = 7) {
         placeX: x + normal.x,
         placeY: y + normal.y,
         placeZ: z + normal.z,
+        // Where on the face the ray met it — a slab goes in the top or the
+        // bottom half by this (blocks.js slabOnFace).
+        point: { x: origin.x + direction.x * traveled, y: origin.y + direction.y * traveled, z: origin.z + direction.z * traveled },
       };
     }
     if (tMaxX < tMaxY && tMaxX < tMaxZ) {
