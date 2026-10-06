@@ -712,6 +712,21 @@ for (const s of SLABS) {
   BLOCKS.push({ ...BLOCKS.find((b) => b.id === s.id), id: s.top, stateOf: s.id, shape: 'slab_top', cost: undefined });
 }
 
+// Stone brick, and chimneys of it and of brick (backlog batch 3, #19: "A
+// chimney block in stone brick and in brick"). A chimney is a hollow flue;
+// stacked, it reads as one stack, with a lip on the top one and smoke going
+// up out of it (render/SmokeView.js, which finds them by `smoke`).
+export const STONE_BRICK = 329;
+export const CHIMNEYS = [330, 331];
+BLOCKS.push(
+  // Counts as stone for what a building needs: it's stone, cut.
+  { id: STONE_BRICK, name: 'Stone Brick', glyph: 'brick', color: 0xb4b1ab, material: 'stone', countsAs: 3, unlock: null },
+  { id: 330, name: 'Stone Brick Chimney', glyph: 'chimney', color: 0xb4b1ab, shape: 'chimney', material: 'stone', smoke: true, unlock: null },
+  { id: 331, name: 'Brick Chimney', glyph: 'chimney', color: 0xb5583f, shape: 'chimney', material: 'stone', smoke: true, unlock: null },
+  { id: 332, name: 'Stone Brick Wall', glyph: 'wall', color: 0xb4b1ab, shape: 'wall', material: 'stone', countsAs: 162, unlock: null },
+);
+WALLS.push({ id: 332, name: 'Stone Brick Wall', color: 0xb4b1ab });
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**

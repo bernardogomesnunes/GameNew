@@ -133,6 +133,9 @@ export const BLOCK_TEXTURES = {
   // The Stone Kingdom. Four dark materials that used to read as one grey:
   // big cut blocks with cool flecks; small warm bricks in darker mortar;
   // glassy purple-black with a sheen; and black basalt setts.
+  // Big cut stones, squared and coursed (#19) — the dark stone's ashlar in
+  // pale grey, quieter.
+  'Stone Brick':   { lines: 'ashlar', mottle: 0.1, hue: 0.3, marks: 30, flecks: STONE_FLECKS, depth: 0.36, speck: 0.04, bump: 0.6 },
   'Dark Stone':    { lines: 'ashlar', mottle: 0.14, hue: 0.25, marks: 46, flecks: [[0.86, 0.94, 1.12], [1.12, 1.12, 1.16], [0.8, 0.84, 0.92]], depth: 0.42, speck: 0.05, bump: 0.6 },
   'Dark Brick':    { lines: 'brick', mortar: [0.5, 0.46, 0.46], depth: 0.32, speck: 0.05, marks: 22, bump: 0.8 },
   'Dark Calçada':  { setts: 5, joint: [1.85, 1.8, 1.72], depth: 0.3, speck: 0.03, bump: 0.6 },

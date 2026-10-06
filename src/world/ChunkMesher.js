@@ -5,7 +5,7 @@ import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
   roofPart, doorPart, endAxisOf, ID_COUNT,
 } from '../config/blocks.js';
-import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, windowBoxes, turn } from './propShapes.js';
+import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, chimneyBoxes, windowBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
 import { textureFor, blockTexture, TILE_SCALE } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
@@ -70,6 +70,9 @@ for (let id = 1; id < IDS; id++) JOINS_WALL[id] = JOINS_FENCE[id] && !FENCE_RAIL
 /** Pillars, which stack into one column (see propShapes' pillarBoxes). */
 const IS_PILLAR = new Uint8Array(IDS);
 for (const id of BLOCKS_BY_ID.keys()) IS_PILLAR[id] = shapeOf(id) === 'pillar' ? 1 : 0;
+/** Chimneys, which stack into one flue (see propShapes' chimneyBoxes). */
+const IS_CHIMNEY = new Uint8Array(IDS);
+for (const id of BLOCKS_BY_ID.keys()) IS_CHIMNEY[id] = shapeOf(id) === 'chimney' ? 1 : 0;
 /**
  * Leaves, and anything else with holes in its texture: a face beside one is
  * drawn even though a solid block stands there, because you can see it
@@ -198,7 +201,7 @@ export const AO_LIGHT = [1, 0.8, 0.66, 0.54];
 const OCCLUDES = new Uint8Array(IDS + 1);
 for (let id = 1; id < IDS; id++) {
   const shape = shapeOf(id);
-  OCCLUDES[id + 1] = !OPEN[id] || SLOPED[id] || shape === 'slab' || shape === 'slab_top' || shape === 'pillar' || shape === 'wall' ? 1 : 0;
+  OCCLUDES[id + 1] = !OPEN[id] || SLOPED[id] || shape === 'slab' || shape === 'slab_top' || shape === 'pillar' || shape === 'chimney' || shape === 'wall' ? 1 : 0;
 }
 
 /**
@@ -1126,6 +1129,8 @@ export class ChunkMesher {
             ? turn(windowBoxes({ below: vol[idx - P2] === id, above: vol[idx + P2] === id }), FACING[id])
             : shape === 'pillar'
               ? pillarBoxes({ base: !IS_PILLAR[vol[idx - P2]], capital: !IS_PILLAR[vol[idx + P2]] })
+            : shape === 'chimney'
+              ? chimneyBoxes({ top: !IS_CHIMNEY[vol[idx + P2]] })
             : shape === 'fence' || shape === 'gate' || shape === 'gate_open'
             ? fenceBoxes(shape, {
               px: JOINS_FENCE[vol[idx + 1]], nx: JOINS_FENCE[vol[idx - 1]],

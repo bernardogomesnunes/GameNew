@@ -315,7 +315,32 @@ export function pillarBoxes({ base = true, capital = true } = {}) {
   }
   return out;
 }
+/**
+ * A chimney's flue: four walls round a hollow, a lip round the top of the
+ * top one (`top`). Stacked, the walls run on unbroken (ChunkMesher looks
+ * above each one, as it does for pillars).
+ */
+export function chimneyBoxes({ top = true } = {}) {
+  const a = 0.14, b = 0.86, t = 0.16, y1 = top ? 0.84 : 1;
+  const out = [
+    { minX: a, maxX: b, minY: 0, maxY: y1, minZ: a, maxZ: a + t },
+    { minX: a, maxX: b, minY: 0, maxY: y1, minZ: b - t, maxZ: b },
+    { minX: a, maxX: a + t, minY: 0, maxY: y1, minZ: a + t, maxZ: b - t },
+    { minX: b - t, maxX: b, minY: 0, maxY: y1, minZ: a + t, maxZ: b - t },
+  ];
+  if (top) {
+    const c = 0.06, d = 0.94, w = 0.2;
+    out.push(
+      { minX: c, maxX: d, minY: y1, maxY: 1, minZ: c, maxZ: c + w },
+      { minX: c, maxX: d, minY: y1, maxY: 1, minZ: d - w, maxZ: d },
+      { minX: c, maxX: c + w, minY: y1, maxY: 1, minZ: c + w, maxZ: d - w },
+      { minX: d - w, maxX: d, minY: y1, maxY: 1, minZ: c + w, maxZ: d - w },
+    );
+  }
+  return out;
+}
 PROP_SHAPES.wall = wallBoxes();
+PROP_SHAPES.chimney = chimneyBoxes();
 PROP_SHAPES.pillar = pillarBoxes();
 
 // A trapdoor, shut: boards high in the cell (you stand on it), battens

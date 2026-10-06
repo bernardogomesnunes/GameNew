@@ -1,4 +1,4 @@
-import { AIR, isFluid, isSystemBlock, shapeOf, lightOf } from '../config/blocks.js';
+import { AIR, isFluid, isSystemBlock, shapeOf, lightOf, BLOCKS_BY_ID, ID_COUNT } from '../config/blocks.js';
 
 export const CHUNK_SIZE = 16;
 
@@ -15,6 +15,9 @@ const NO_COLLISION_SHAPES = new Set(['rug', 'gate_open', 'door_open', 'door_open
 // Taller than its cell: a fence, or a shut gate, stops you at a block and a
 // half — past jumping, and past anything an animal can step.
 const FENCE_HEIGHT = 1.5;
+/** Blocks something keeps track of wherever they are: 1 casts light, 2 smokes (a chimney). */
+const MARKED = new Uint8Array(ID_COUNT);
+for (const [id, b] of BLOCKS_BY_ID) MARKED[id] = (b.light ? 1 : 0) | (b.smoke ? 2 : 0);
 
 export class Chunk {
   constructor(cx, cz, height) {
@@ -117,6 +120,8 @@ export class World {
     // LightManager, which reads this to light only whichever lanterns are
     // actually nearest the player rather than all of them at once.
     this.lights = new Map();
+    // Every chimney, the same way — see render/SmokeView.js.
+    this.smokes = new Map();
 
     if (this.endless) {
       // Wherever the settlement actually is — the same point the biome map's
@@ -313,6 +318,8 @@ export class World {
     const light = lightOf(value);
     if (light) this.lights.set(key, { x, y, z, light });
     else this.lights.delete(key);
+    if (MARKED[value] & 2) this.smokes.set(key, { x, y, z });
+    else this.smokes.delete(key);
   }
 
   /** Finds every light-emitting block already in a chunk's data — see `lights`. */
@@ -322,9 +329,11 @@ export class World {
       for (let ly = 0; ly < chunk.height; ly++) {
         for (let lz = 0; lz < CHUNK_SIZE; lz++) {
           const id = chunk.get(lx, ly, lz);
-          if (id === AIR) continue;
+          if (!MARKED[id]) continue;
+          const x = baseX + lx, z = baseZ + lz, key = `${x},${ly},${z}`;
           const light = lightOf(id);
-          if (light) this.lights.set(`${baseX + lx},${ly},${baseZ + lz}`, { x: baseX + lx, y: ly, z: baseZ + lz, light });
+          if (light) this.lights.set(key, { x, y: ly, z, light });
+          if (MARKED[id] & 2) this.smokes.set(key, { x, y: ly, z });
         }
       }
     }
