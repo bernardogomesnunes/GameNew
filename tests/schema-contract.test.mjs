@@ -53,7 +53,7 @@ await test('CLOUD_LIMITS match what 0005 enforces', async () => {
   const { CLOUD_LIMITS } = await import('../db/schema.mjs');
   const sql = migrations('0005_cloud_limits.sql');
   assert.ok(sql.includes(`octet_length(rle) <= ${CLOUD_LIMITS.chunkBytes}`), 'chunk limit differs from 0005');
-  assert.ok(sql.includes(`>= ${CLOUD_LIMITS.worldsPerAccount} then`), 'world cap differs from 0005');
+  assert.ok(!/create trigger|worlds_cap/i.test(sql), '0005 must not cap how many worlds an account has');
 });
 
 await test('a chunk cannot encode past the chunk limit', async () => {

@@ -1,7 +1,6 @@
 import { deriveUrls } from './cloudConfig.js';
 import { describeFailure } from './CloudAuth.js';
 import { keepTrying } from './retry.js';
-import { CLOUD_LIMITS } from '../../db/schema.mjs';
 
 /**
  * SyncEngine transport over the Neon Data API (PostgREST).
@@ -340,11 +339,8 @@ function describeError(status, detail) {
     return 'Your session expired — sign in again.';
   }
   if (status === 409) return 'That world changed elsewhere. Reload it before saving again.';
-  // migrations/0005: a check constraint or the world-count trigger said no.
-  // Asking again gets the same answer, so say what happened instead.
-  if (/World limit reached/i.test(detail)) {
-    return `You have the most worlds an account can keep (${CLOUD_LIMITS.worldsPerAccount}). Delete one to save a new world.`;
-  }
+  // migrations/0005: a size backstop said no. Asking again gets the same
+  // answer, so say what happened instead.
   if (/_size\b/.test(detail) && /check constraint|23514/i.test(detail)) {
     return 'This world is too large to sync to the cloud. Your local save is untouched.';
   }
