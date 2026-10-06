@@ -3,7 +3,7 @@ import { blockTextureArray, layerFor, topLayerFor, TILE_SIZE } from '../render/B
 import { withHeightFog } from '../render/atmosphere.js';
 import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
-  roofPart, doorPart, endAxisOf,
+  roofPart, doorPart, endAxisOf, ID_COUNT,
 } from '../config/blocks.js';
 import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, windowBoxes, turn } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
@@ -28,11 +28,12 @@ export const STAIR_STEP_TONE = [0.86, 0.93, 1];
 /*
  * Per-id lookups for the mesher's inner loop, which runs a few hundred
  * thousand times a chunk — a Map lookup per cell there was most of the cost
- * of building one. Ids are bytes (Chunk stores a Uint8Array).
+ * of building one. Sized to the ids in use (blocks.js ID_COUNT).
  */
-const IS_CUBE = new Uint8Array(256);
-const IS_TRANSPARENT = new Uint8Array(256);
-for (let id = 0; id < 256; id++) {
+const IDS = ID_COUNT;
+const IS_CUBE = new Uint8Array(IDS);
+const IS_TRANSPARENT = new Uint8Array(IDS);
+for (let id = 0; id < IDS; id++) {
   IS_CUBE[id] = shapeOf(id) === 'cube' ? 1 : 0;
   IS_TRANSPARENT[id] = isTransparent(id) ? 1 : 0;
 }
@@ -40,41 +41,41 @@ for (let id = 0; id < 256; id++) {
 // border each side, laid out x fastest, then z, then y.
 const PAD = CHUNK_SIZE + 2;
 // Cells light passes through, for skyFill: anything but a solid opaque cube.
-const OPEN = new Uint8Array(256);
-for (let id = 0; id < 256; id++) OPEN[id] = !IS_CUBE[id] || IS_TRANSPARENT[id] || id === AIR ? 1 : 0;
+const OPEN = new Uint8Array(IDS);
+for (let id = 0; id < IDS; id++) OPEN[id] = !IS_CUBE[id] || IS_TRANSPARENT[id] || id === AIR ? 1 : 0;
 // What a fence or gate joins up with: another fence or gate, or a solid wall.
-const JOINS_FENCE = new Uint8Array(256);
-for (let id = 1; id < 256; id++) {
+const JOINS_FENCE = new Uint8Array(IDS);
+for (let id = 1; id < IDS; id++) {
   const shape = shapeOf(id);
   JOINS_FENCE[id] = shape === 'fence' || shape === 'gate' || shape === 'gate_open' || shape === 'wall'
     || (IS_CUBE[id] && !IS_TRANSPARENT[id]) ? 1 : 0;
 }
 /** Cubes with something drawn over them — the ring ores' crystals (blocks.js `overlay`). */
-const OVERLAY = new Array(256).fill(null);
+const OVERLAY = new Array(IDS).fill(null);
 for (const [id, b] of BLOCKS_BY_ID) if (b.overlay) OVERLAY[id] = b.overlay;
 /**
  * Walls join walls (and solid blocks); a fence or gate beside a wall runs its
  * rails into the wall's post instead (backlog batch 2: the two reaching out
  * to each other "and it's ugly"). FENCE_RAILS is the shape of those rails.
  */
-const IS_WALL = new Uint8Array(256);
-const FENCE_RAILS = new Array(256).fill(null);
-for (let id = 1; id < 256; id++) {
+const IS_WALL = new Uint8Array(IDS);
+const FENCE_RAILS = new Array(IDS).fill(null);
+for (let id = 1; id < IDS; id++) {
   const shape = shapeOf(id);
   IS_WALL[id] = shape === 'wall' ? 1 : 0;
   if (shape === 'fence' || shape === 'gate') FENCE_RAILS[id] = shape;
 }
-const JOINS_WALL = new Uint8Array(256);
-for (let id = 1; id < 256; id++) JOINS_WALL[id] = JOINS_FENCE[id] && !FENCE_RAILS[id] && shapeOf(id) !== 'gate_open' ? 1 : 0;
+const JOINS_WALL = new Uint8Array(IDS);
+for (let id = 1; id < IDS; id++) JOINS_WALL[id] = JOINS_FENCE[id] && !FENCE_RAILS[id] && shapeOf(id) !== 'gate_open' ? 1 : 0;
 /** Pillars, which stack into one column (see propShapes' pillarBoxes). */
-const IS_PILLAR = new Uint8Array(256);
+const IS_PILLAR = new Uint8Array(IDS);
 for (const id of BLOCKS_BY_ID.keys()) IS_PILLAR[id] = shapeOf(id) === 'pillar' ? 1 : 0;
 /**
  * Leaves, and anything else with holes in its texture: a face beside one is
  * drawn even though a solid block stands there, because you can see it
  * through the holes — the next leaf in, or the trunk inside the canopy.
  */
-const CUTOUT = new Uint8Array(256);
+const CUTOUT = new Uint8Array(IDS);
 for (const [id, b] of BLOCKS_BY_ID) {
   const t = textureFor(b.texture ?? b.glyph);
   CUTOUT[id] = IS_CUBE[id] && t && (t.gaps || t.bite) ? 1 : 0;
@@ -88,7 +89,7 @@ for (const [id, b] of BLOCKS_BY_ID) {
  * every face as its `under` block — dirt — and goes back to grass the
  * moment that block is taken off.
  */
-const COVERED_AS = new Uint8Array(256);
+const COVERED_AS = new Uint8Array(IDS);
 for (const [id, b] of BLOCKS_BY_ID) {
   const t = blockTexture(b);
   if (IS_CUBE[id] && t?.fringe?.under) COVERED_AS[id] = t.fringe.under;
@@ -99,22 +100,22 @@ function covers(id) {
 }
 
 /** Rugs, which run into each other (see propShapes' rugBoxes). */
-const IS_RUG = new Uint8Array(256);
+const IS_RUG = new Uint8Array(IDS);
 for (const id of BLOCKS_BY_ID.keys()) IS_RUG[id] = shapeOf(id) === 'rug' ? 1 : 0;
 /** Stairs and roof tiles, which turn corners with each other (see world/slopes.js). */
-const SLOPE = new Uint8Array(256);
-const SLOPED = new Uint8Array(256);
+const SLOPE = new Uint8Array(IDS);
+const SLOPED = new Uint8Array(IDS);
 for (const id of BLOCKS_BY_ID.keys()) {
   const shape = shapeOf(id);
   SLOPE[id] = SLOPE_KIND[shape] ?? 0;
   SLOPED[id] = shape === 'stair' || shape.startsWith('roof') ? 1 : 0;
 }
 /** Quarter-turns a stair, chair or door is drawn at. */
-const FACING = new Uint8Array(256);
+const FACING = new Uint8Array(IDS);
 for (const id of BLOCKS_BY_ID.keys()) FACING[id] = facingOf(id);
 /** Doors, by part: 1 for a bottom half, 2 for a top — see doorMirrored. */
-const DOOR_HALF = new Uint8Array(256);
-for (let id = 0; id < 256; id++) { const d = doorPart(id); if (d) DOOR_HALF[id] = d.top ? 2 : 1; }
+const DOOR_HALF = new Uint8Array(IDS);
+for (let id = 0; id < IDS; id++) { const d = doorPart(id); if (d) DOOR_HALF[id] = d.top ? 2 : 1; }
 /**
  * The way to a door's hinge side, by its facing: a shut door is drawn hinged
  * at x = 0, and `turn` takes a direction (dx, dz) to (-dz, dx) each quarter.
@@ -139,9 +140,9 @@ function mirrorX(boxes) {
 }
 // Water of any kind, flowing water, and the still water flowing water is
 // drawn with — see emitFlowingWater.
-const IS_WATER = new Uint8Array(256);
-const IS_FLOWING = new Uint8Array(256);
-for (let id = 1; id < 256; id++) {
+const IS_WATER = new Uint8Array(IDS);
+const IS_FLOWING = new Uint8Array(IDS);
+for (let id = 1; id < IDS; id++) {
   IS_WATER[id] = isWater(id) ? 1 : 0;
   IS_FLOWING[id] = isFlowing(id) ? 1 : 0;
 }
@@ -149,9 +150,9 @@ const STILL_WATER = 11;
 /** How high flowing water stands in its cell, by level 1..7. */
 const flowHeight = (level) => 0.1 + level * 0.11;
 /** The same for lava, which runs thicker and shorter: level 1..3. */
-const IS_LAVA = new Uint8Array(256);
-const IS_LAVA_FLOW = new Uint8Array(256);
-for (let id = 1; id < 256; id++) {
+const IS_LAVA = new Uint8Array(IDS);
+const IS_LAVA_FLOW = new Uint8Array(IDS);
+for (let id = 1; id < IDS; id++) {
   IS_LAVA[id] = isLava(id) ? 1 : 0;
   IS_LAVA_FLOW[id] = isLavaFlow(id) ? 1 : 0;
 }
@@ -160,10 +161,13 @@ const FLUIDS = [
   { any: IS_WATER, flow: IS_FLOWING, height: (id) => flowHeight(waterLevel(id)), still: STILL_WATER },
   { any: IS_LAVA, flow: IS_LAVA_FLOW, height: (id) => 0.25 + lavaLevel(id) * 0.2, still: LAVA },
 ];
+// A face in the mask is its block id in the low ID_BITS bits, then flags.
+const ID_BITS = 12;
+const ID_MASK = (1 << ID_BITS) - 1;
 // A mask bit marking a face that looks into a sealed cave.
-const DEEP = 0x100;
+const DEEP = 1 << ID_BITS;
 /** Mask flag: a leaf face open to the air — drawn on its own (playtest, P2). */
-const EXPOSED = 0x200;
+const EXPOSED = DEEP << 1;
 const PAD_STRIDE = [1, PAD * PAD, PAD];
 
 /*
@@ -181,7 +185,7 @@ const PAD_STRIDE = [1, PAD * PAD, PAD];
  * exactly as before. Greedy meshing only merges faces whose four corners
  * match, so a field stays one quad and only the strip along a wall splits.
  */
-const AO_SHIFT = 10;
+const AO_SHIFT = ID_BITS + 2;
 /** Brightness at a corner by how occluded it is: open, one, two, an inner corner. */
 export const AO_LIGHT = [1, 0.8, 0.66, 0.54];
 /**
@@ -191,8 +195,8 @@ export const AO_LIGHT = [1, 0.8, 0.66, 0.54];
  * shadow pooled round a chair leg reads as dirt. Indexed by id + 1, so the
  * below-the-world sentinel (-1) reads as nothing.
  */
-const OCCLUDES = new Uint8Array(257);
-for (let id = 1; id < 256; id++) {
+const OCCLUDES = new Uint8Array(IDS + 1);
+for (let id = 1; id < IDS; id++) {
   const shape = shapeOf(id);
   OCCLUDES[id + 1] = !OPEN[id] || SLOPED[id] || shape === 'slab' || shape === 'pillar' || shape === 'wall' ? 1 : 0;
 }
@@ -406,7 +410,7 @@ function getMaterial(key) {
  * harder shade on its undersides and sides, and darker the deeper it sits
  * in the canopy.
  */
-const LEAFY = new Uint8Array(256);
+const LEAFY = new Uint8Array(IDS);
 for (const id of [5, 42, 44]) LEAFY[id] = 1;
 /** Face shade for leaves: the same light, more contrast than stone. */
 const LEAF_SHADE = { side: 0.78, under: 0.42 };
@@ -425,7 +429,7 @@ const NEIGHBOURS = [1, -1, PAD * PAD, -(PAD * PAD), PAD, -PAD];
  * printed. Worked stone and glass get none — a brick wall with mottled bricks
  * looks damaged rather than natural.
  */
-const VARIATION = new Float32Array(256);
+const VARIATION = new Float32Array(IDS);
 for (const [id, amount] of Object.entries({
   1: 0.26, 22: 0.26,           // grass, moss — the big open surfaces
   2: 0.18, 21: 0.15,           // dirt, farmland
@@ -546,20 +550,20 @@ export function freeAfterUpload(geo) {
 }
 
 /** Which axis each block's end faces (its `top` texture) point along — see blocks.js endAxisOf. */
-const END_AXIS = new Uint8Array(256).map((_, id) => endAxisOf(id));
+const END_AXIS = new Uint8Array(IDS).map((_, id) => endAxisOf(id));
 
 let LAYER = null; // block id -> texture layer, filled on first use
 function layerTable() {
   if (LAYER) return LAYER;
-  LAYER = new Float32Array(256);
-  for (let id = 0; id < 256; id++) LAYER[id] = layerFor(id);
+  LAYER = new Float32Array(IDS);
+  for (let id = 0; id < IDS; id++) LAYER[id] = layerFor(id);
   return LAYER;
 }
 let TOP_LAYER = null; // the same for top and bottom faces (a log's rings)
 function topLayerTable() {
   if (TOP_LAYER) return TOP_LAYER;
-  TOP_LAYER = new Float32Array(256);
-  for (let id = 0; id < 256; id++) TOP_LAYER[id] = topLayerFor(id);
+  TOP_LAYER = new Float32Array(IDS);
+  for (let id = 0; id < IDS; id++) TOP_LAYER[id] = topLayerFor(id);
   return TOP_LAYER;
 }
 
@@ -741,7 +745,7 @@ export class ChunkMesher {
                 h++;
               }
 
-              this.emitQuad(id & DEEP ? deepByType : byType, id & 0xff, d, u, v, sign, slice, i, j, w, h, id & EXPOSED, (id >> AO_SHIFT) & 0xff);
+              this.emitQuad(id & DEEP ? deepByType : byType, id & ID_MASK, d, u, v, sign, slice, i, j, w, h, id & EXPOSED, (id >> AO_SHIFT) & 0xff);
 
               for (let l = 0; l < h; l++) {
                 for (let k = 0; k < w; k++) mask[n + k + l * du] = 0;

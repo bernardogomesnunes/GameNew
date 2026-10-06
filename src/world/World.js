@@ -51,7 +51,17 @@ export class Chunk {
   }
 
   set(lx, ly, lz, value) {
+    if (value > 0xff && this.data.BYTES_PER_ELEMENT === 1) this.widen();
     this.data[this.index(lx, ly, lz)] = value;
+  }
+
+  /**
+   * Two bytes a cell from now on. A chunk starts at one, which holds every
+   * block numbered up to 255 — all the land generation makes — and only
+   * widens when a block past that is put in it. See blocks.js ID_LIMIT.
+   */
+  widen() {
+    if (this.data.BYTES_PER_ELEMENT === 1) this.data = Uint16Array.from(this.data);
   }
 
   surfaceAt(lx, lz) {
@@ -483,21 +493,24 @@ function chunkKey(cx, cz) {
   return (cx + KEY_OFFSET) * (KEY_OFFSET * 2) + (cz + KEY_OFFSET);
 }
 
-export function rleEncode(uint8arr) {
+export function rleEncode(data) {
   const out = [];
   let i = 0;
-  while (i < uint8arr.length) {
-    const value = uint8arr[i];
+  while (i < data.length) {
+    const value = data[i];
     let run = 1;
-    while (i + run < uint8arr.length && uint8arr[i + run] === value && run < 65535) run++;
+    while (i + run < data.length && data[i + run] === value && run < 65535) run++;
     out.push(value, run);
     i += run;
   }
   return out;
 }
 
+/** Back to cells: a byte each, or two if any block in it is numbered past 255. */
 export function rleDecode(pairs, length) {
-  const out = new Uint8Array(length);
+  let wide = false;
+  for (let p = 0; p < pairs.length; p += 2) if (pairs[p] > 0xff) { wide = true; break; }
+  const out = wide ? new Uint16Array(length) : new Uint8Array(length);
   let i = 0;
   for (let p = 0; p < pairs.length; p += 2) {
     const value = pairs[p], run = pairs[p + 1];

@@ -25,22 +25,46 @@ export function hashBytes(bytes) {
   return h.toString(16).padStart(8, '0');
 }
 
-/** Packs a chunk's run-length pairs as [uint8 blockId][uint16 runLength], matching world_chunks.rle. */
+/**
+ * Packs a chunk's run-length pairs for world_chunks.rle.
+ *
+ * Two layouts. The first, what every chunk saved before block ids outgrew a
+ * byte has: [uint8 blockId][uint16 runLength] over and over. The second, for
+ * a chunk holding a block numbered past 254: a mark — 0xff, then 2 — and
+ * [uint16 blockId][uint16 runLength]. No block has ever been 255, so no old
+ * chunk starts with the mark. A chunk that fits the first layout still gets
+ * it, so what is already saved hashes the same and is not uploaded again.
+ */
+export const WIDE_MARK = [0xff, 2];
+
 export function packRle(pairs) {
-  const out = new Uint8Array((pairs.length / 2) * 3);
+  let wide = false;
+  for (let i = 0; i < pairs.length; i += 2) if (pairs[i] >= 0xff) { wide = true; break; }
+  const per = wide ? 4 : 3, head = wide ? 2 : 0;
+  const out = new Uint8Array(head + (pairs.length / 2) * per);
   const view = new DataView(out.buffer);
-  let o = 0;
+  if (wide) out.set(WIDE_MARK);
+  let o = head;
   for (let i = 0; i < pairs.length; i += 2) {
-    out[o] = pairs[i] & 0xff;
-    view.setUint16(o + 1, Math.min(pairs[i + 1], 0xffff), true);
-    o += 3;
+    if (wide) view.setUint16(o, pairs[i], true);
+    else out[o] = pairs[i];
+    view.setUint16(o + per - 2, Math.min(pairs[i + 1], 0xffff), true);
+    o += per;
   }
   return out;
+}
+
+export function isWide(bytes) {
+  return bytes.length >= 2 && bytes[0] === WIDE_MARK[0] && bytes[1] === WIDE_MARK[1] && (bytes.length - 2) % 4 === 0;
 }
 
 export function unpackRle(bytes) {
   const pairs = [];
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (isWide(bytes)) {
+    for (let o = 2; o + 3 < bytes.length; o += 4) pairs.push(view.getUint16(o, true), view.getUint16(o + 2, true));
+    return pairs;
+  }
   for (let o = 0; o + 2 < bytes.length; o += 3) {
     pairs.push(bytes[o], view.getUint16(o + 1, true));
   }

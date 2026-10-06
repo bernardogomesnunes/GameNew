@@ -111,7 +111,7 @@ export class CloudWorlds {
     for (const c of chunks) {
       const chunk = world.getChunk(c.cx, c.cz);
       if (!chunk) continue; // a chunk outside this world's bounds is not ours to place
-      writeRle(chunk.data, unpackRle(c.bytes));
+      writeRle(chunk, unpackRle(c.bytes));
       if (world.endless) {
         chunk.touched = true;
         chunk.dirty = true;
@@ -179,7 +179,9 @@ export class CloudWorlds {
   }
 }
 
-function writeRle(data, pairs) {
+function writeRle(chunk, pairs) {
+  for (let i = 0; i < pairs.length; i += 2) if (pairs[i] > 0xff) { chunk.widen(); break; }
+  const data = chunk.data;
   let o = 0;
   for (let i = 0; i < pairs.length; i += 2) {
     const value = pairs[i];
