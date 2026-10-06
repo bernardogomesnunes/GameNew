@@ -57,9 +57,13 @@ point's number (#n, in the order it was written) so it can be traced back.
   - **Archer:** 3 food, a bow and 20 arrows. Shoots from range instead of closing in.
   - **Catapult crew:** 5 food, a catapult and 10 stone. When the enemy comes within throw, they set a catapult up in front of the barracks and lob stones that hurt only the enemy. They pack it away once the enemy is gone.
   - A fallen soldier is gone; nobody replaces them for free any more. Soldiers from older saves come back as swordsmen.
-  - The pop-up lists who's in training, in order, with a bar and time left for the first; a toast says when each one comes out (asked for directly). The world stands still while a pop-up is open, so the bar shows where training had got to when you opened it. PR #150.
+  - The pop-up lists who's in training, in order, with a bar and time left for the first; a toast says when each one comes out (asked for directly). PR #150. The world stands still while a pop-up is open, except the barracks' own clock: with its pop-up open the bar moves and soldiers still come out. PR #153.
   - The HUD shows who's nearest out of training, beside the drinks: a bar, the time left, and how many more are in line; tap it for the whole line. PR #151.
   - Trained soldiers live in the town (asked for directly): counted on the people chip and eating their meal with everyone, from the storehouses then the bag. They sleep in the barracks, so they take no house from a settler. PR #151.
+  - Soldiers who went without food hit at 60% and don't get their breath back until fed; the barracks pop-up says how many are hungry. PR #153.
+- **Saved builds turn** (asked for directly). R, the tool panel, or Place on a phone turns a queued saved build a quarter at a time, stairs and doors facing round with it, and you see it where it would go before you put it down. PR #152.
+- **Rounded paths fill their corners** (asked for directly) with the ground beside them, in that block's own texture. PR #152.
+- **Bow: hold to draw, let go to shoot** (asked for directly), mouse or finger. The longer the draw (full at 0.9 s), the faster and harder the arrow; a twitch, tabbing away or pausing shoots nothing. A meter under the crosshair, a slight zoom and an arrow on the string while drawn. Arrows stuck in the world stay 60 s and go back in the bag when you walk over them. Arrows hit every unit of the dark army, rams and catapults included. PR #153.
 
 ## Priority 1 — blocks and placement
 
@@ -70,6 +74,8 @@ All done (see above).
 All done (see above).
 
 ## Priority 3 — systems
+
+- **Furniture in every wood** (left for the end, asked for directly).
 
 - **#9 Composting.**
   - A compost bin takes seeds and leaves and makes compost.
