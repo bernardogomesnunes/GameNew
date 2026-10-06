@@ -219,6 +219,26 @@ export class Inventory {
   }
 
   /**
+   * Picking up something that's only in the bag, with an empty equipped slot
+   * to hand: its stack moves up into that slot, so what you just broke is
+   * there to place (asked for directly: "When I break a new block and
+   * there's an equipped empty slot that block should go there and not the
+   * bag"). Tools stay where they are. Returns whether it moved.
+   */
+  bringUp(id) {
+    if (this.endless || isTool(id)) return false;
+    if (this.slots.slice(0, PLAYABLE_SLOTS).some((s) => s?.id === id)) return false;
+    const free = this.slots.slice(0, PLAYABLE_SLOTS).indexOf(null);
+    if (free === -1) return false;
+    const from = this.slots.findIndex((s, i) => i >= PLAYABLE_SLOTS && s?.id === id);
+    if (from === -1) return false;
+    this.slots[free] = this.slots[from];
+    this.slots[from] = null;
+    this.changed();
+    return true;
+  }
+
+  /**
    * Removes up to `count`, latest slots first so partial stacks are consumed
    * before full ones. Returns how many were actually taken.
    */

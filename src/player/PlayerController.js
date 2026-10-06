@@ -60,6 +60,8 @@ const SWIM_SPEED = 3.0;      // walking speed underwater; water resists you
 const SWIM_VERTICAL_SPEED = 3.2; // paddling up (Space) or diving down (Ctrl)
 const SWIM_FLOAT_SPEED = 0.8; // passive buoyancy — no input at all still drifts up
 const SWIM_EASE = 6;         // how fast vertical speed catches up to the target above
+/** How high a swimmer can climb out: onto a bank level with the water, not one a block above it. */
+const SWIM_STEP_HEIGHT = 1.25;
 /*
  * Camera-on-a-stick tuning.
  *
@@ -445,7 +447,11 @@ export class PlayerController {
     }
     if (!highest) return false;
     const rise = highest.maxY - p.y;
-    const limit = highest.stair ? STAIR_STEP_HEIGHT : STEP_HEIGHT;
+    // Swimming, you pull yourself out onto a bank level with the water —
+    // floating, your feet are most of a block under its surface, too far for
+    // an ordinary step (asked for directly: "I should be able to leave the
+    // water to a block that it's the same height as the water").
+    const limit = this.swimming ? SWIM_STEP_HEIGHT : highest.stair ? STAIR_STEP_HEIGHT : STEP_HEIGHT;
     if (rise <= 0 || rise > limit + 1e-6) return false;
     if (this.collidesAt(x, highest.maxY, z) || this.collidesAt(p.x, highest.maxY, p.z)) return false;
     p.x = x;

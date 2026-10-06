@@ -537,23 +537,25 @@ function bark(c, recipe, salt, depth) {
   }
 }
 
-/** Birch: white bark with dark dashes across it and the odd black scar. */
+/**
+ * Birch: white bark with thin grey dashes across it and the odd scar. The
+ * dashes were black and up to two pixels thick — "too contrasty black lines,
+ * they need to be thinner and maybe more grey".
+ */
 function birch(c, recipe, salt, depth) {
   each((x, y, px, py) => shade(c, x, y, 1 - (vnoise(px, py, 8, 1, salt) - 0.3) * 0.12));
   for (let i = 0; i < 26; i++) {
     const x = Math.floor(hash01(i, 31, salt) * TILE), y = Math.floor(hash01(i, 37, salt) * TILE);
-    const len = 3 + Math.floor(hash01(i, 41, salt) * 5), thick = hash01(i, 43, salt) < 0.25 ? 2 : 1;
+    const len = 3 + Math.floor(hash01(i, 41, salt) * 5);
     for (let d = 0; d < len; d++) {
-      for (let t = 0; t < thick; t++) {
-        shade(c, x + d, y + t, 1 - depth * (0.6 + 0.4 * hash01(i, d, salt)));
-        tint(c, x + d, y + t, [0.82, 0.8, 0.82]);
-      }
+      shade(c, x + d, y, 1 - depth * (0.32 + 0.22 * hash01(i, d, salt)));
+      tint(c, x + d, y, [0.92, 0.92, 0.95]);
     }
   }
   for (let s = 0; s < 2; s++) {
     const cx = Math.floor(hash01(s, 47, salt) * TILE), cy = Math.floor(hash01(s, 53, salt) * TILE);
-    for (let row = 0; row < 3; row++) {
-      for (let dx = -(3 - row); dx <= 3 - row; dx++) { shade(c, cx + dx, cy - row, 1 - depth * 1.3); tint(c, cx + dx, cy - row, [0.7, 0.66, 0.66]); }
+    for (let row = 0; row < 2; row++) {
+      for (let dx = -(2 - row); dx <= 2 - row; dx++) { shade(c, cx + dx, cy - row, 1 - depth * 0.7); tint(c, cx + dx, cy - row, [0.86, 0.86, 0.9]); }
     }
   }
 }

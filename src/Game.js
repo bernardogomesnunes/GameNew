@@ -3275,7 +3275,14 @@ export class Game {
     if (!this.duilt.inventory.remove('bucket', 1)) return;
     this.duilt.inventory.add('bucket_water', 1);
     this.sound?.bucket(true);
-    this.ui.toast({ kind: 'xp', title: 'Bucket filled', body: 'Scooped up' });
+    // A lone block of water goes into the bucket whole; water joined to more
+    // water is a pond, and a pond is never emptied a bucket at a time (asked
+    // for directly: "If it's a lonely block of water a bucket should clear it
+    // out. If it's more like 2 don't").
+    const joined = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1], [0, 1, 0], [0, -1, 0]]
+      .some(([dx, dy, dz]) => this.world.getBlock(hit.x + dx, hit.y + dy, hit.z + dz) === WATER);
+    const cleared = !joined && this.applyChanges([{ x: hit.x, y: hit.y, z: hit.z, prev: WATER, next: AIR }], { chargeResources: false });
+    this.ui.toast({ kind: 'xp', title: 'Bucket filled', body: cleared ? 'And the water is gone' : 'Scooped up' });
   }
 
   /**
@@ -5330,7 +5337,11 @@ export class Game {
     // A bed or a tent: one thing in two blocks (blocks.js PAIRS).
     const pair = pairPart(held);
     const crop = cropOf(held);
-    const targets = this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
+    // Pointing at water, the block goes into it rather than on top of it:
+    // that's how a pond is filled in, a block at a time (asked for directly:
+    // "Should be able to place blocks on water, and remove it this way").
+    const into = hit.block === WATER || isFlowing(hit.block);
+    const targets = into ? this.computeTargets(hit.x, hit.y, hit.z) : this.computeTargets(hit.placeX, hit.placeY, hit.placeZ);
     const changes = [];
     for (const t of targets) {
       // A mirrored copy is turned to match, so a stair on the far side

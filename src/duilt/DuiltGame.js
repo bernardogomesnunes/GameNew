@@ -378,6 +378,8 @@ export class DuiltGame {
     if (this.sandbox) return {};
     const gained = {};
     for (const [id, n] of Object.entries(drops)) {
+      // Into the equipped row if there's room there — see Inventory.bringUp.
+      this.inventory.bringUp(id);
       const leftover = this.inventory.add(id, n);
       if (n - leftover > 0) gained[id] = n - leftover;
       if (leftover > 0) this.bus?.emit('duilt:bagfull', { itemId: id, lost: leftover });

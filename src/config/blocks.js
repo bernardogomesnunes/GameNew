@@ -37,8 +37,10 @@ export const LAVA = 45;
 export const BLOCKS = [
   { id: 1, name: 'Grass', glyph: 'grass', color: 0x7fc254, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
   { id: 2, name: 'Dirt', glyph: 'dirt', color: 0x9c6e48, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
-  { id: 3, name: 'Stone', glyph: 'stone', color: 0x9d9b97, material: 'stone', cost: { stone: 1 }, unlock: null },
-  { id: 4, name: 'Wood', glyph: 'log', color: 0x7d5a3a, material: 'wood', cost: { wood: 2 }, unlock: null },
+  // Lighter, nearer cobblestone (asked for directly: "Stone needs to be
+  // lighter like cobble") — it was a dull mid grey.
+  { id: 3, name: 'Stone', glyph: 'stone', color: 0xbab8b3, material: 'stone', cost: { stone: 1 }, unlock: null },
+  { id: 4, name: 'Wood', glyph: 'log', color: 0x93704c, material: 'wood', cost: { wood: 2 }, unlock: null },
   // Opaque on purpose. At 0.9 the transparency was invisible, but it put every
   // tree in the game into the depth-write-disabled transparent pass, which the
   // renderer re-sorts on every camera move — the shimmer you saw walking
@@ -129,9 +131,9 @@ export const BLOCKS = [
     shape: 'lantern',
     cost: { wood: 2 }, unlock: null,
   },
-  { id: 27, name: 'Stone Slab', glyph: 'slab', color: 0x9d9b97, shape: 'slab', material: 'stone', cost: { stone: 1 }, unlock: null },
+  { id: 27, name: 'Stone Slab', glyph: 'slab', color: 0xbab8b3, shape: 'slab', material: 'stone', cost: { stone: 1 }, unlock: null },
   { id: 28, name: 'Plank Slab', glyph: 'slab', color: 0xc49360, shape: 'slab', material: 'wood', cost: { wood: 1 }, unlock: null },
-  { id: 29, name: 'Stone Stairs', glyph: 'stair', color: 0x9d9b97, shape: 'stair', material: 'stone', cost: { stone: 1 }, unlock: null },
+  { id: 29, name: 'Stone Stairs', glyph: 'stair', color: 0xbab8b3, shape: 'stair', material: 'stone', cost: { stone: 1 }, unlock: null },
   { id: 30, name: 'Plank Stairs', glyph: 'stair', color: 0xc49360, shape: 'stair', material: 'wood', cost: { wood: 1 }, unlock: null },
 
   // Furniture: a shape shared across recoloured variants, the same pattern
@@ -369,7 +371,7 @@ BLOCKS.push(
 // (see propShapes' wallBoxes); like a fence, nothing climbs over one.
 export const WALLS = [
   { id: 161, name: 'Cobblestone Wall', color: 0xc8c6c2 },
-  { id: 162, name: 'Stone Wall', color: 0x9d9b97 },
+  { id: 162, name: 'Stone Wall', color: 0xbab8b3 },
   { id: 163, name: 'Brick Wall', color: 0xb5583f },
   { id: 164, name: 'Dark Stone Wall', color: 0x4e5666 },
 ];
