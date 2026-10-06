@@ -362,6 +362,35 @@ export function pathBoxes(joins = {}) {
   return out;
 }
 PROP_SHAPES.path = pathBoxes();
+
+/**
+ * What a path's rounded corners leave open (asked for directly: "Rounded
+ * sand paths should fill the space with the block around texture"): for
+ * each corner it rounds, the boxes the rounding cut away, and which way the
+ * ground beside it lies — so the mesher fills the gap with that ground,
+ * rather than leaving a notch down to the block below. Full height: they
+ * are part of the ground the path is cut into.
+ *   [{ boxes, sides: [dx, dz][] }] — sides nearest first, then the diagonal.
+ */
+export function pathCornerGaps(joins = {}) {
+  const r = 0.25, q = 0.1, out = [];
+  const corner = (cx, cz) => {
+    // The corner square at (cx, cz) ∈ {0,1}², less the step pathBoxes puts in it.
+    const x0 = cx ? 1 - r : 0, x1 = cx ? 1 : r, z0 = cz ? 1 - r : 0, z1 = cz ? 1 : r;
+    const ex0 = cx ? 1 - q : 0, ex1 = cx ? 1 : q, ez0 = cz ? 1 - q : 0, ez1 = cz ? 1 : q;
+    return [
+      { minX: ex0, maxX: ex1, minY: 0, maxY: 1, minZ: z0, maxZ: z1 },
+      { minX: cx ? x0 : ex1, maxX: cx ? ex0 : x1, minY: 0, maxY: 1, minZ: ez0, maxZ: ez1 },
+    ];
+  };
+  for (const [cx, cz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+    const xs = cx ? 'px' : 'nx', zs = cz ? 'pz' : 'nz';
+    if (joins[xs] || joins[zs]) continue;
+    const sx = cx ? 1 : -1, sz = cz ? 1 : -1;
+    out.push({ boxes: corner(cx, cz), sides: [[sx, 0], [0, sz], [sx, sz]] });
+  }
+  return out;
+}
 // The wood mill (#32), facing 0 with its front to -z: a sawbench on four
 // legs, a round blade standing up through the middle of it, a log on the
 // bench waiting for it, and the crank on its side.
