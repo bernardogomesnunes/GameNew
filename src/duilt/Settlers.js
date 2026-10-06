@@ -43,12 +43,20 @@ export class Settlers {
   /**
    * @param stores () => the storehouses' shelves (Inventories), which
    *               settlers eat from before they touch your bag.
+   * @param garrison () => how many soldiers your barracks have trained.
+   *               They live in the town too (asked for directly: "The
+   *               militia created in barracks should be considered resident
+   *               of the town too"): counted with everyone, and fed with
+   *               everyone. They sleep in their barracks's bunks, so they
+   *               take no house from a settler.
    */
-  constructor({ world, structures, inventory, skills, bus, rand = Math.random, stores = null }) {
+  constructor({ world, structures, inventory, skills, bus, rand = Math.random, stores = null, garrison = null }) {
     this.world = world;
     this.structures = structures;
     this.inventory = inventory;
     this.stores = stores;
+    this.garrison = garrison;
+    this.soldiersHungry = 0;
     this.sinceRetry = 0;
     this.skills = skills;
     this.bus = bus;
@@ -61,6 +69,16 @@ export class Settlers {
 
   get population() {
     return this.people.length;
+  }
+
+  /** Soldiers living in the town, in their barracks. */
+  get soldiers() {
+    return Math.max(0, this.garrison?.() ?? 0);
+  }
+
+  /** Everyone who lives here: the settlers in the houses and the soldiers in the barracks. */
+  get residents() {
+    return this.population + this.soldiers;
   }
 
   /** Roofs standing: one household each. */
@@ -117,7 +135,7 @@ export class Settlers {
 
   /** People who went without at the last meal. */
   get hungry() {
-    return this.people.filter((p) => p.hungry).length;
+    return this.people.filter((p) => p.hungry).length + Math.min(this.soldiersHungry, this.soldiers);
   }
 
   /** Why nobody new is coming, in one line, or null when somebody is on the way. */
@@ -196,7 +214,7 @@ export class Settlers {
    * decide who lives in it.
    */
   eat({ onlyHungry = false } = {}) {
-    if (!this.people.length) return 0;
+    if (!this.people.length && !this.soldiers) return 0;
     let fed = 0;
     for (const p of this.people) {
       const was = p.hungry;
@@ -213,8 +231,18 @@ export class Settlers {
         if (!was) { p.target = null; p.wait = 0.5; p.atWork = true; }
       }
     }
-    const short = this.people.length - fed;
-    if (short > 0) this.bus?.emit('settler:hungry', { count: short, population: this.population });
+    // The soldiers eat the same, one each, after the settlers.
+    const soldiers = this.soldiers;
+    const mouths = onlyHungry ? Math.min(this.soldiersHungry, soldiers) : soldiers;
+    let unfed = 0;
+    for (let i = 0; i < mouths; i++) {
+      const meal = this.nextMeal();
+      if (meal) { meal.from.remove(meal.food.id, SETTLERS.foodPerMeal); fed++; } else unfed++;
+    }
+    this.soldiersHungry = unfed;
+    if (onlyHungry) fed += soldiers - mouths;
+    const short = this.people.length + soldiers - fed;
+    if (short > 0) this.bus?.emit('settler:hungry', { count: short, population: this.residents });
     return fed;
   }
 

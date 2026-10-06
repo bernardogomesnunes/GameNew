@@ -150,6 +150,49 @@ function oneOf(unit) {
   ok('fallen, a soldier is off the roster, and nobody comes free in their place', d.soldiers.length === 0 && d.barracks(7).roster.length === 0);
 }
 
+// --- they live in the town (asked for directly: "The militia created in
+// barracks should be considered resident of the town too") ----------------------------------
+
+{
+  const { g, b } = setup();
+  const post = [{ id: 7, type: 'barracks', region: b.region, valid: true, beds: 6 }];
+  g.defenders.sync(post, 0);
+  ok('no soldiers, nobody extra living here', g.settlers.soldiers === 0 && g.settlers.residents === g.settlers.population);
+  g.defenders.order(7, 'warrior', 0); g.defenders.order(7, 'archer', 0);
+  g.defenders.sync(post, TRAIN_DAYS * 0.5);
+  ok('still training, they don\'t live here yet', g.settlers.soldiers === 0);
+  g.defenders.sync(post, TRAIN_DAYS * 2.01);
+  ok(`trained, each lives in the town (${g.settlers.residents} residents, ${g.settlers.soldiers} of them soldiers)`, g.settlers.soldiers === 2 && g.settlers.residents === g.settlers.population + 2);
+  // They eat with everyone, one each a day — from the storehouses, then the bag.
+  g.inventory.add('fruit', 5);
+  g.settlers.eat();
+  ok('and eat with everyone, one each', g.inventory.countOf('fruit') === 5 - 2 - g.settlers.population && g.settlers.hungry === 0);
+  g.inventory.remove('fruit', g.inventory.countOf('fruit'));
+  g.settlers.eat();
+  ok('with nothing to eat, they go hungry with everyone', g.settlers.hungry === 2 + g.settlers.population);
+  g.inventory.add('fruit', 1);
+  g.settlers.eat({ onlyHungry: true });
+  ok('food put out goes to whoever went without', g.settlers.hungry === 1 + g.settlers.population && g.inventory.countOf('fruit') === 0);
+  const fallen = g.defenders.soldiers[0];
+  g.defenders.hurt(fallen, 999);
+  ok('a fallen soldier no longer lives here', g.settlers.soldiers === 1);
+}
+
+// --- progress on the HUD (asked for directly: "add the progress in the ui too") --------------
+
+{
+  const d = new Defenders({ world: new World({ sizeX: 16, sizeZ: 16, height: 8 }) });
+  ok('nobody training, nothing on the HUD', d.nextOut(0, 900) === null);
+  d.order(1, 'warrior', 0); d.order(1, 'archer', 0); d.order(2, 'crew', 0.05);
+  const n = d.nextOut(TRAIN_DAYS * 0.5, 900);
+  ok(`the HUD shows who's nearest out, how far along, the time left and how many more (${JSON.stringify(n)})`,
+    n.unit === 'warrior' && Math.abs(n.ratio - 0.5) < 1e-9 && Math.round(n.secondsLeft) === Math.round(TRAIN_DAYS * 0.5 * 900) && n.more === 2);
+}
+ok('the HUD has a training chip, drawn every frame, that says the whole line when tapped',
+  /id="vital-training"/.test(ui) && /renderTraining\(\) \{/.test(ui) && /this\.ui\?\.duiltUI\?\.renderTraining\(\);/.test(game) && /class="train-hud-bar"/.test(ui));
+ok('the people on the HUD count the soldiers on both sides', /`\$\{population \+ soldiers\}\/\$\{target \+ soldiers\}`/.test(ui));
+ok('the pop-up is drawn again the moment one is put in line', /if \(this\.ui\.isPanelOpen\('panel-building'\)\) this\.ui\.openBuilding\(structure, this\.buildingActions\(structure\)\);\s*\}/.test(game));
+
 // --- in the game -----------------------------------------------------------------------------
 
 ok('the barracks pop-up trains them: what each costs, what\'s short, who\'s training', /barracksHtml\(structure\)/.test(ui) && /data-train="\$\{u\.id\}"/.test(ui) && /Needs \$\{escapeHtml\(cost\.short/.test(ui) && /Training · \$\{t\.queue\.length\}/.test(ui));

@@ -133,6 +133,9 @@ export class DuiltUI {
         </div>
         <!-- Drinks going (playtest, P5): one chip each, counting down. -->
         <div class="vital vital-boosts" id="vital-boosts" hidden></div>
+        <!-- A barracks training somebody (asked for directly: "add the
+             progress in the ui too"): who's next out, a bar, the time left. -->
+        <button type="button" class="vital vital-training" id="vital-training" hidden></button>
         <button class="vital-eat" id="btn-eat" hidden>Eat</button>
         <!--
           Population sits beside hunger because it is the same kind of fact:
@@ -789,6 +792,40 @@ export class DuiltUI {
       + `<b>${clockOf(boosts[n])}</b></span>`).join('');
   }
 
+  /**
+   * The soldier nearest to coming out of training, on the HUD beside the
+   * drinks: who, a bar, the time left, and how many more are in line.
+   * Called every frame; only touches the page when what it says has changed.
+   * Tapping it says the whole line.
+   */
+  renderTraining() {
+    const box = this.q('#vital-training');
+    const d = this.duilt;
+    if (!box || !d) return;
+    const next = d.sandbox ? null : d.defenders.nextOut(d.days, GAME_DAY_SECONDS);
+    const pct = next ? Math.round(next.ratio * 100) : 0;
+    const key = next ? `${next.unit}:${clockOf(next.secondsLeft)}:${pct}:${next.more}` : '';
+    if (key === this.trainingKey) return;
+    this.trainingKey = key;
+    box.hidden = !next;
+    if (!next) return;
+    const u = UNITS_BY_ID.get(next.unit);
+    box.title = `Training a ${u?.name.toLowerCase() ?? 'soldier'} at the barracks`;
+    box.innerHTML = `<span class="train-glyph">${glyphSvg(UNIT_GLYPHS[next.unit] ?? 'sword', { size: 14 })}</span>`
+      + `<span class="train-hud-name">${escapeHtml(u?.name ?? '')}</span>`
+      + `<span class="train-hud-bar"><i style="width:${pct}%"></i></span>`
+      + `<b>${next.ratio >= 1 ? 'ready' : clockOf(next.secondsLeft)}</b>`
+      + (next.more ? `<span class="train-hud-more">+${next.more}</span>` : '');
+    if (!box.dataset.wired) {
+      box.dataset.wired = '1';
+      box.addEventListener('click', () => {
+        const all = Object.values(this.duilt?.defenders.trained ?? {}).flatMap((t) => t.queue);
+        const names = all.map((id) => UNITS_BY_ID.get(id)?.name.toLowerCase()).filter(Boolean);
+        this.bus.emit('toast', { kind: 'xp', title: `Training ${names.length === 1 ? 'a soldier' : `${names.length} soldiers`}`, body: names.join(', ') });
+      });
+    }
+  }
+
   /** The army's banner: how many are left, and what they're doing. Hidden until you have one. */
   renderArmy() {
     const army = this.duilt?.army;
@@ -857,11 +894,13 @@ export class DuiltUI {
     const d = this.duilt;
     const box = this.q('#vital-people');
     if (!d || !box) return;
-    const { population, target, houses, hungry } = d.settlers;
+    const { population, target, houses, hungry, soldiers } = d.settlers;
     // Hidden until there is a house: a 0/0 on the HUD from the first minute is
-    // a promise the game has not made yet.
-    box.hidden = houses === 0 && population === 0;
-    this.q('#people-count').textContent = `${population}/${target}`;
+    // a promise the game has not made yet. Soldiers live here too, in their
+    // barracks's bunks: counted on both sides, so they never look like a
+    // house standing empty.
+    box.hidden = houses === 0 && population === 0 && soldiers === 0;
+    this.q('#people-count').textContent = `${population + soldiers}/${target + soldiers}`;
     // Hunger wins the tooltip: it is the one that is costing you something.
     box.title = hungry
       ? `${hungry === 1 ? 'Somebody is' : `${hungry} people are`} hungry — put some food in a storehouse; fed, they work better`
@@ -882,15 +921,17 @@ export class DuiltUI {
   sayPeople() {
     const d = this.duilt;
     if (!d) return;
-    const { population, target, houses, hungry } = d.settlers;
+    const { population, target, houses, hungry, soldiers } = d.settlers;
     const say = (title, body) => this.bus.emit('toast', { kind: 'xp', title, body });
+    // The soldiers are counted with everyone (they live in the barracks).
+    const camp = soldiers ? ` and ${soldiers} soldier${soldiers === 1 ? '' : 's'}` : '';
     if (hungry) {
       return say(hungry === 1 ? 'Somebody is hungry' : `${hungry} of your people are hungry`,
         'Put some food in a storehouse — fed, they work better');
     }
     const reason = d.settlers.blockedReason();
-    if (reason) return say(houses ? `${population} living here` : 'Nobody lives here yet', reason);
-    say(`${population} of ${target} moved in`,
+    if (reason) return say(houses || soldiers ? `${population} living here${camp}` : 'Nobody lives here yet', reason);
+    say(`${population} of ${target} moved in${camp}`,
       population < target ? 'Somebody is on the way' : 'Every house has a household');
   }
 
