@@ -93,11 +93,18 @@ export class Fireflies {
     if (y == null) return null;
     const dots = [];
     for (let i = 0; i < SWARM; i++) {
+      // Each dot flies its own closed path: a wandering loop made of a few
+      // waves of its own sizes and phases, that comes back exactly to where
+      // it began and goes round again (asked for directly: "a perfect loop
+      // like they'll roam around until the starting point"). Two plain waves
+      // traced the same figure of eight for every one of them.
+      const r = 0.6 + this.rand() * 3.2;
+      const harmonics = () => [1, 2, 3].map((k) => ({ k, a: (this.rand() * 0.8 + 0.2) / k, p: this.rand() * 6.28 }));
       dots.push({
-        // Each dot traces its own slow loop about the middle: radius, height, speed and phase.
-        r: 0.6 + this.rand() * 3.2, h: 0.3 + this.rand() * 2.4,
-        f1: 0.25 + this.rand() * 0.5, f2: 0.2 + this.rand() * 0.45, f3: 0.3 + this.rand() * 0.6,
-        p1: this.rand() * 6.28, p2: this.rand() * 6.28, p3: this.rand() * 6.28,
+        r, h: 0.3 + this.rand() * 2.4,
+        // Once round its loop every 15-40 seconds.
+        w: (Math.PI * 2) / (15 + this.rand() * 25), p0: this.rand() * 6.28,
+        hx: harmonics(), hz: harmonics(), hy: harmonics(),
         blink: 0.5 + this.rand() * 1.4, bp: this.rand() * 6.28,
       });
     }
@@ -115,9 +122,10 @@ export class Fireflies {
     const t = this.clock;
     for (const s of this.swarms) {
       for (const d of s.dots) {
-        const x = s.x + Math.sin(t * d.f1 + d.p1) * d.r;
-        const z = s.z + Math.cos(t * d.f2 + d.p2) * d.r;
-        const y = s.y + d.h + Math.sin(t * d.f3 + d.p3) * 0.5;
+        const a = t * d.w + d.p0;
+        const x = s.x + loop(d.hx, a) * d.r;
+        const z = s.z + loop(d.hz, a) * d.r;
+        const y = s.y + d.h + loop(d.hy, a) * 0.5;
         const pulse = Math.max(0, Math.sin(t * d.blink + d.bp));
         each(x, y, z, this.level * (0.15 + 0.85 * pulse * pulse));
       }
@@ -149,4 +157,11 @@ export class Fireflies {
     s.dots.splice(0, n);
     return n;
   }
+}
+
+/** One axis of a dot's loop at angle `a`: its waves summed, -1..1 or so; the same every time round. */
+function loop(waves, a) {
+  let v = 0;
+  for (const h of waves) v += h.a * Math.cos(h.k * a + h.p);
+  return v * 0.6;
 }
