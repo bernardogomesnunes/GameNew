@@ -34,6 +34,9 @@ export const DEFAULTS = {
   // GPU — but the cloud bank is see-through and so drawn over itself, which a
   // slow phone's fill rate notices.
   atmosphere: true,
+  // Grass tufts on the turf near you (render/GrassView.js): one batch of a
+  // few hundred little models, cheap, but off for the slowest phones.
+  grass: true,
 };
 
 export const DISTANCES = {

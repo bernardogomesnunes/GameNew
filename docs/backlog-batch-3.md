@@ -35,6 +35,8 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **#6 Slabs.** A slab goes in the top or bottom half of a block, by where you point. A slab on the open half of one of its kind makes the full block, for the one slab. PR #135.
 - **#19 Chimneys.** New Stone Brick block (and its wall), and chimneys in stone brick and brick. They stack into one flue with a lip on top, and smoke rises from the top one. PR #136.
 - **#33 Desert blocks.** Sandstone lies three blocks under desert sand and breaks through it in outcrops. Sandstone Brick, a Sandstone Wall, and a Sand Path that sits a sixteenth low and rounds its corners where it stops. PR #137.
+- **#8 Grass tufts.** Little crossed blades on the turf round you, one batch, swaying, shrinking away at the edge of their reach. A switch in graphics settings. PR #139.
+- **Stone slabs looked plain.** Stone and plank slabs and stairs are drawn in their block's texture. PR #138.
 
 ## Needs a decision first
 
@@ -50,9 +52,12 @@ point's number (#n, in the order it was written) so it can be traced back.
 
 All done (see above).
 
+## Next — asked for directly
+
+- **Bow and arrows.** Hemp grows in the wild; picking it gives fibre and seeds, and the seeds can be planted for more. Now and then a seed turns up while breaking turf. Fibre is spun into string, string goes into a bow and into arrows. Traders sell hemp, fibre and string.
+
 ## Priority 2 — the world looking alive
 
-- **#8 3D grass tufts** on turf. They're light: drawn in batches near you, and fade with distance.
 - **#5 Building designs that read from a distance.** Each building type gets its own silhouette: small roofs, pyramid roofs, chimneys, towers.
 - **#17 Workshop, engineering centre and university** redone with the new walls, trapdoors and chimneys.
 
@@ -80,5 +85,5 @@ All done (see above).
 ## Suggested order
 
 1. The decisions above (#12, #27).
-2. #8 grass tufts, then the rest of Priority 2.
+2. Bow and arrows, then the rest of Priority 2.
 3. Priority 3, one system at a time: wood mill first, as it feeds furniture and the per-wood sets.
