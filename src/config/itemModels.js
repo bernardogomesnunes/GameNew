@@ -172,10 +172,13 @@ for (const t of TOOL_TIERS) if (t.key !== 'iron') ITEM_MODELS[`sword_${t.key}`] 
 // The bow and what it's made of (asked for directly). A bow stands curved,
 // its string straight across its back; an arrow lies along it.
 const WOODY = 0x9a6c40, DARKWOOD = 0x6b4a2e, TWINE = 0xe6dcc0;
+// The wood bows out towards -x, the way a tool's head faces, with the
+// string behind it on the hand's side (reported directly: the bow "should
+// have the wood going for the opposite direction").
 ITEM_MODELS.bow = [
-  box(0.44, 0.02, 0.46, 0.54, 0.18, 0.54, DARKWOOD), box(0.5, 0.16, 0.46, 0.6, 0.34, 0.54, WOODY),
-  box(0.56, 0.32, 0.46, 0.66, 0.68, 0.54, WOODY), box(0.5, 0.66, 0.46, 0.6, 0.84, 0.54, WOODY),
-  box(0.44, 0.82, 0.46, 0.54, 0.98, 0.54, DARKWOOD), box(0.42, 0.06, 0.48, 0.45, 0.94, 0.52, TWINE),
+  box(0.46, 0.02, 0.46, 0.56, 0.18, 0.54, DARKWOOD), box(0.4, 0.16, 0.46, 0.5, 0.34, 0.54, WOODY),
+  box(0.34, 0.32, 0.46, 0.44, 0.68, 0.54, WOODY), box(0.4, 0.66, 0.46, 0.5, 0.84, 0.54, WOODY),
+  box(0.46, 0.82, 0.46, 0.56, 0.98, 0.54, DARKWOOD), box(0.55, 0.06, 0.48, 0.58, 0.94, 0.52, TWINE),
 ];
 ITEM_MODELS.arrow = [
   box(0.47, 0.04, 0.47, 0.53, 0.84, 0.53, 0xb08a5a), box(0.45, 0.82, 0.45, 0.55, 0.98, 0.55, 0x8c9096),
@@ -207,11 +210,14 @@ const pickaxeModel = (metal, edge) => [
   box(0.85, 0.68, 0.44, 0.93, 0.84, 0.56, edge),
   box(0.44, 0, 0.44, 0.56, 0.1, 0.56, GRIP),
 ];
+// The blade up, like the axe's and the pick's heads: the hand holds the
+// bottom of every model, so a blade at the bottom was held upside down
+// (reported directly: "the shovel when in hand is wrong, it's turned down").
 const shovelModel = (metal, edge) => [
-  box(0.46, 0.32, 0.46, 0.54, 0.94, 0.54, HAFT),
-  box(0.36, 0.92, 0.45, 0.64, 1, 0.55, GRIP),
-  box(0.34, 0.06, 0.45, 0.66, 0.36, 0.55, metal),
-  box(0.38, 0, 0.46, 0.62, 0.06, 0.54, edge),
+  box(0.36, 0, 0.45, 0.64, 0.08, 0.55, GRIP),
+  box(0.46, 0.06, 0.46, 0.54, 0.68, 0.54, HAFT),
+  box(0.34, 0.64, 0.45, 0.66, 0.94, 0.55, metal),
+  box(0.38, 0.94, 0.46, 0.62, 1, 0.54, edge),
 ];
 const STONE_HEAD = 0x9a9aa2, STONE_EDGE = 0xc2c2c9;
 ITEM_MODELS.axe = axeModel(STONE_HEAD, STONE_EDGE);
