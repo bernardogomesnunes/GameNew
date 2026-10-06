@@ -52,7 +52,7 @@ import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './s
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/upgrades.js';
@@ -65,7 +65,7 @@ import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { CrackView } from './render/CrackView.js';
 import { LOGS, LEAVES, leafHeld, orphanLeaves } from './world/leafDecay.js';
-import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood, isTool, BARE_HANDS } from './config/items.js';
+import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood, isTool, BARE_HANDS, ITEM_FOR_BLOCK } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox, bodyFits } from './world/Mobs.js';
@@ -5353,9 +5353,23 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: 'Locked block', body: availability.reason });
       return;
     }
-    // A log lies along the face it's put against, a trapdoor sits on it
-    // (blocks.js logOnFace, trapdoorOnFace).
-    const held = trapdoorOnFace(logOnFace(this.placedBlock(type), hit.normal), hit.normal);
+    // How far up the face you pointed: a slab goes in that half of the block.
+    const upFace = hit.point ? hit.point.y - hit.y : 0;
+    // A slab on the open half of one of its own kind makes the whole block,
+    // for the one slab (blocks.js slabMerge).
+    const whole = slabMerge(this.placedBlock(type), hit.block, hit.normal, upFace);
+    if (whole) {
+      const item = ITEM_FOR_BLOCK.get(type);
+      const changes = this.computeTargets(hit.x, hit.y, hit.z)
+        .filter((t) => this.world.getBlock(t.x, t.y, t.z) === hit.block && !this.blockOverlapsPlayerAABB(t))
+        .map((t) => ({ x: t.x, y: t.y, z: t.z, prev: hit.block, next: whole, item }));
+      if (changes.length) this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
+      return;
+    }
+    // A log lies along the face it's put against, a trapdoor sits on it, a
+    // slab goes in the half you pointed at (blocks.js logOnFace,
+    // trapdoorOnFace, slabOnFace).
+    const held = slabOnFace(trapdoorOnFace(logOnFace(this.placedBlock(type), hit.normal), hit.normal), hit.normal, upFace);
     const door = doorPart(held);
     // A bed or a tent: one thing in two blocks (blocks.js PAIRS).
     const pair = pairPart(held);

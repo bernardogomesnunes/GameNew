@@ -700,6 +700,18 @@ const MORE_WALLS = [
 for (const w of MORE_WALLS) BLOCKS.push({ ...w, glyph: 'wall', shape: 'wall', material: 'stone', countsAs: 162, unlock: null });
 WALLS.push(...MORE_WALLS);
 
+// Slabs in the top half of a block as well as the bottom, by where you point
+// (backlog batch 3, #6: "Place in the bottom or top half of a block, by where
+// you point. A slab on a slab of the same kind becomes a full block."). The
+// top half is a state of the slab you hold; two halves make `full`.
+export const SLABS = [
+  { id: 27, top: 327, full: 3 },
+  { id: 28, top: 328, full: 7 },
+];
+for (const s of SLABS) {
+  BLOCKS.push({ ...BLOCKS.find((b) => b.id === s.id), id: s.top, stateOf: s.id, shape: 'slab_top', cost: undefined });
+}
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**
@@ -758,6 +770,40 @@ export function countsAs(id) {
   if (!b) return id;
   if (b.countsAs != null) return b.countsAs;
   return b.axis != null ? b.stateOf : id;
+}
+
+/** { slab, top } for either half of a slab, or null. */
+export function slabPart(id) {
+  for (const slab of SLABS) {
+    if (id === slab.id) return { slab, top: false };
+    if (id === slab.top) return { slab, top: true };
+  }
+  return null;
+}
+
+/**
+ * Which half a slab goes in, from the face pointed at: on top of a block it
+ * lies at the bottom of the cell above; under one it hangs at the top of the
+ * cell below; on a side, the half of the side you pointed at. `y` is how far
+ * up that side, 0..1. Anything not a slab is as it was.
+ */
+export function slabOnFace(id, normal, y = 0) {
+  const p = slabPart(id);
+  if (!p || !normal) return id;
+  const top = normal.y < 0 || (!normal.y && y >= 0.5);
+  return top ? p.slab.top : p.slab.id;
+}
+
+/**
+ * The full block a slab makes put on the open half of one of its own kind,
+ * or null. Pointed at a bottom slab's top (or the upper half of its side),
+ * or a top slab's underside (or the lower half of its side).
+ */
+export function slabMerge(held, hitBlock, normal, y = 0) {
+  const h = slabPart(held), p = slabPart(hitBlock);
+  if (!h || !p || h.slab !== p.slab || !normal) return null;
+  const open = p.top ? normal.y < 0 || (!normal.y && y < 0.5) : normal.y > 0 || (!normal.y && y >= 0.5);
+  return open ? p.slab.full : null;
 }
 
 /** Ground a tree will take root in. */
