@@ -502,7 +502,9 @@ export const STRUCTURES = [
     id: 'university',
     name: 'University',
     icon: '🎓',
-    age: 2,
+    // Age 3, with the workshop: the tables it asks for are made there
+    // (asked for directly: "University move to age 3").
+    age: 3,
     blurb: 'Desks under a roof. Study here to get better at what you do — and to learn engineering.',
     minSize: 4,
     maxSize: 16,
@@ -533,7 +535,8 @@ export const STRUCTURES = [
     id: 'engineering',
     name: 'Engineering Centre',
     icon: '⚙️',
-    age: 2,
+    // With the university it is studied for.
+    age: 3,
     blurb: 'A long hall with a wide door. Where carts, flying machines and trains will be worked out.',
     minSize: 5,
     maxSize: 20,

@@ -1234,7 +1234,7 @@ RECIPES.push(...tieredRecipes());
 for (const s of SKILLS) {
   for (let level = 1; level <= MAX_LEVEL; level++) {
     RECIPES.push({
-      id: `study_${s.id}_${level}`, name: `Study ${s.name.toLowerCase()}`, station: 'university', age: 2,
+      id: `study_${s.id}_${level}`, name: `Study ${s.name.toLowerCase()}`, station: 'university', age: 3,
       study: s.id, level,
       inputs: { planks: 3 * level, stone: 2 * level, ...(level > 4 ? { gold: level - 4 } : {}) },
       output: { id: null, count: 1 },
@@ -1245,7 +1245,7 @@ for (const s of SKILLS) {
 }
 // And engineering, once: what an Engineering Centre needs before it can be raised.
 RECIPES.push({
-  id: 'study_engineering', name: 'Research engineering', station: 'university', age: 2,
+  id: 'study_engineering', name: 'Research engineering', station: 'university', age: 3,
   study: 'engineering', level: 1,
   inputs: { planks: 16, stone: 16 }, output: { id: null, count: 1 },
   result: 'Engineering',

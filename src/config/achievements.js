@@ -172,7 +172,7 @@ const LATER = [
   // Backlog batch 2: the University, and what studying there opens up.
   {
     id: 'a_university',
-    age: 2,
+    age: 3,
     structure: 'university',
     name: 'Found a university',
     description: 'A room with two tables in it, walls and a roof. Study there to raise your skills — and learn engineering.',
