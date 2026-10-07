@@ -1,4 +1,4 @@
-import { BLOCKS } from './blocks.js';
+import { BLOCKS, BLOCKS_BY_ID, WOOD_FURNITURE } from './blocks.js';
 import { CROPS, cropBaseOf } from './crops.js';
 import { ARMOUR_PIECES, BACKPACKS } from './armour.js';
 import { tieredItems } from './tiers.js';
@@ -404,6 +404,18 @@ export const ITEMS = [
     wears: 'back', bagSlots: b.slots, madeBy: `${b.madeBy} — wear it for ${b.slots} more bag slots`,
   })),
 ];
+
+// Furniture in every wood (backlog batch 3) — see blocks.js WOOD_FURNITURE.
+// Each white or dark piece is its oak item again, in that wood: `table_white`,
+// `cabinet_dark`.
+export const FURNITURE_ITEM = new Map(); // `${wood}:${key}` -> item id
+for (const f of WOOD_FURNITURE) {
+  const oak = ITEMS.find((i) => i.block === WOOD_FURNITURE.find((o) => o.wood === 'oak' && o.key === f.key).id);
+  if (f.wood === 'oak') { FURNITURE_ITEM.set(`oak:${f.key}`, oak.id); continue; }
+  const b = BLOCKS_BY_ID.get(f.id), id = `${oak.id.replace(/_oak$/, '')}_${f.wood}`;
+  FURNITURE_ITEM.set(`${f.wood}:${f.key}`, id);
+  ITEMS.push({ ...oak, id, name: b.name, color: b.color, block: f.id, madeBy: `${oak.madeBy} — in ${f.wood} wood` });
+}
 
 // Tools past stone: iron, gold, sky and dark (backlog batch 2) — see config/tiers.js.
 ITEMS.push(...tieredItems(new Map(ITEMS.map((i) => [i.id, i]))));

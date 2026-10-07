@@ -1,4 +1,5 @@
 import { CROPS, RIPE, cropBoxes } from '../config/crops.js';
+import { toneHex } from '../config/blocks.js';
 
 /**
  * What a non-cube block actually looks like: a handful of boxes in unit-cell
@@ -414,10 +415,12 @@ PROP_SHAPES.wood_mill = [
 ];
 
 // Furniture from the mill, fronts to -z (they face you, like a chest).
-const HANDLE = 0x4a3a2c, TOP = 0xc9a072;
+// The top a shade lighter than the body, whatever wood it's in (`tone`, see
+// boxColor); the handles and kick plate dark iron.
+const HANDLE = 0x4a3a2c;
 PROP_SHAPES.cabinet = [
   { minX: 0.04, maxX: 0.96, minY: 0, maxY: 0.86, minZ: 0.08, maxZ: 0.96 },
-  { minX: 0, maxX: 1, minY: 0.86, maxY: 0.92, minZ: 0.04, maxZ: 1, color: TOP },
+  { minX: 0, maxX: 1, minY: 0.86, maxY: 0.92, minZ: 0.04, maxZ: 1, tone: 1.18 },
   { minX: 0.08, maxX: 0.49, minY: 0.08, maxY: 0.8, minZ: 0.05, maxZ: 0.08 },
   { minX: 0.51, maxX: 0.92, minY: 0.08, maxY: 0.8, minZ: 0.05, maxZ: 0.08 },
   { minX: 0.43, maxX: 0.47, minY: 0.4, maxY: 0.54, minZ: 0.02, maxZ: 0.05, color: HANDLE },
@@ -427,7 +430,7 @@ PROP_SHAPES.cabinet = [
 // Taller than you: it stands up past its own block, the way a banner does.
 PROP_SHAPES.wardrobe = [
   { minX: 0.02, maxX: 0.98, minY: 0, maxY: 1.86, minZ: 0.1, maxZ: 0.98 },
-  { minX: 0, maxX: 1, minY: 1.86, maxY: 1.94, minZ: 0.06, maxZ: 1, color: TOP },
+  { minX: 0, maxX: 1, minY: 1.86, maxY: 1.94, minZ: 0.06, maxZ: 1, tone: 1.35 },
   { minX: 0.06, maxX: 0.49, minY: 0.12, maxY: 1.8, minZ: 0.07, maxZ: 0.1 },
   { minX: 0.51, maxX: 0.94, minY: 0.12, maxY: 1.8, minZ: 0.07, maxZ: 0.1 },
   { minX: 0.43, maxX: 0.47, minY: 0.9, maxY: 1.1, minZ: 0.04, maxZ: 0.07, color: HANDLE },
@@ -436,7 +439,7 @@ PROP_SHAPES.wardrobe = [
 ];
 PROP_SHAPES.bedside_table = [
   { minX: 0.16, maxX: 0.84, minY: 0.06, maxY: 0.54, minZ: 0.18, maxZ: 0.84 },
-  { minX: 0.1, maxX: 0.9, minY: 0.54, maxY: 0.6, minZ: 0.12, maxZ: 0.9, color: TOP },
+  { minX: 0.1, maxX: 0.9, minY: 0.54, maxY: 0.6, minZ: 0.12, maxZ: 0.9, tone: 1.13 },
   { minX: 0.2, maxX: 0.8, minY: 0.32, maxY: 0.5, minZ: 0.15, maxZ: 0.18 },
   { minX: 0.46, maxX: 0.54, minY: 0.38, maxY: 0.44, minZ: 0.12, maxZ: 0.15, color: HANDLE },
   { minX: 0.18, maxX: 0.26, minY: 0, maxY: 0.06, minZ: 0.2, maxZ: 0.28, color: HANDLE },
@@ -447,18 +450,18 @@ PROP_SHAPES.bedside_table = [
 
 // Wall panels, facing 0: flat against the wall on their -z side, a
 // sixteenth thick, like a painting.
-const PANEL_T = 0.0625, PANEL_DARK = 0x7a5232;
+const PANEL_T = 0.0625;
 PROP_SHAPES.panel_plain = [
   { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: PANEL_T },
   // The boards: three seams down it.
-  ...[0.25, 0.5, 0.75].map((x) => ({ minX: x - 0.008, maxX: x + 0.008, minY: 0, maxY: 1, minZ: PANEL_T, maxZ: PANEL_T + 0.004, color: PANEL_DARK })),
+  ...[0.25, 0.5, 0.75].map((x) => ({ minX: x - 0.008, maxX: x + 0.008, minY: 0, maxY: 1, minZ: PANEL_T, maxZ: PANEL_T + 0.004, tone: 0.62 })),
 ];
 PROP_SHAPES.panel_pattern = [
   { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: 0.04 },
   ...[[0.08, 0.08], [0.54, 0.08], [0.08, 0.54], [0.54, 0.54]].map(([x, y]) => (
-    { minX: x, maxX: x + 0.38, minY: y, maxY: y + 0.38, minZ: 0.04, maxZ: 0.07, color: 0xd6a872 })),
+    { minX: x, maxX: x + 0.38, minY: y, maxY: y + 0.38, minZ: 0.04, maxZ: 0.07, tone: 1.12 })),
   ...[[0.14, 0.14], [0.6, 0.14], [0.14, 0.6], [0.6, 0.6]].map(([x, y]) => (
-    { minX: x, maxX: x + 0.26, minY: y, maxY: y + 0.26, minZ: 0.07, maxZ: 0.075, color: 0xb88450 })),
+    { minX: x, maxX: x + 0.26, minY: y, maxY: y + 0.26, minZ: 0.07, maxZ: 0.075, tone: 0.9 })),
 ];
 PROP_SHAPES.panel_twotone = [
   { minX: 0, maxX: 1, minY: 0, maxY: 0.5, minZ: 0, maxZ: PANEL_T, color: 0x6e4a33 },
@@ -778,6 +781,17 @@ PROP_SHAPES.sapling = [
 ];
 
 /** The boxes for a shape, or the slab's if a new shape id has none registered yet. */
+/**
+ * A box's colour on a block whose colour is `base`: the box's own if it has
+ * one (a handle's iron), else the block's, lighter or darker by its `tone` —
+ * so one shape serves every wood (a cabinet's top a shade lighter than its
+ * body in oak, white wood or dark).
+ */
+export function boxColor(box, base) {
+  if (box.color != null) return box.color;
+  return box.tone ? toneHex(base, box.tone) : base;
+}
+
 export function boxesFor(shape) {
   return PROP_SHAPES[shape] ?? PROP_SHAPES.slab;
 }

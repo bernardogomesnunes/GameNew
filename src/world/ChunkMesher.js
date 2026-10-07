@@ -5,7 +5,7 @@ import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
   roofPart, doorPart, endAxisOf, ID_COUNT,
 } from '../config/blocks.js';
-import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, chimneyBoxes, pathBoxes, pathCornerGaps, windowBoxes, turn } from './propShapes.js';
+import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, chimneyBoxes, pathBoxes, pathCornerGaps, windowBoxes, turn, boxColor } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
 import { textureFor, blockTexture, TILE_SCALE } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
@@ -1184,7 +1184,7 @@ export class ChunkMesher {
           }
           for (const b of boxes) {
             this.emitPropBox(b.glow ? glow : b.pane ? pane : buf, lx + b.minX, ly + b.minY, lz + b.minZ, lx + b.maxX, ly + b.maxY, lz + b.maxZ,
-              b.color != null ? colorOfHex(b.color) : col, b.glow);
+              b.color != null || b.tone ? colorOfHex(boxColor(b, BLOCKS_BY_ID.get(id).color)) : col, b.glow);
           }
         }
       }
