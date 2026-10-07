@@ -1927,8 +1927,11 @@ export class Game {
     return found;
   }
 
-  /** Place on a train: coal in hand fires it, a car couples on, otherwise you climb into the cab. */
-  useTrain(t) {
+  /**
+   * Place on a train: coal in hand fires it, a car couples on; otherwise, on
+   * a car it opens what the car carries, and on the engine you climb into the cab.
+   */
+  useTrain(t, part = null) {
     const d = this.duilt;
     if (this.selectedItemId === 'coal') {
       const n = d.fuelTrain(t);
@@ -1942,6 +1945,11 @@ export class Game {
       const r = d.coupleCar(t);
       this.ui.toast(r.ok ? { kind: 'xp', title: 'Car coupled on', body: `${t.cars} of 5.` } : { kind: 'xp', title: 'Can\'t couple it', body: r.reason });
       if (r.ok) this.editedAt = Date.now();
+      return;
+    }
+    if (part?.kind === 'car') {
+      const car = t.loads[part.index - 1];
+      if (car) this.ui.openStore({ car });
       return;
     }
     this.drive(t);
@@ -2279,7 +2287,7 @@ export class Game {
     if (machine) return void this.pilot(machine);
     // At a train: coal fires it, a car couples on, and anything else climbs in to drive.
     const train = this.trainTarget(aimed);
-    if (train) return void this.useTrain(train.train);
+    if (train) return void this.useTrain(train.train, train.part);
     // At your guardian, Place gives it its next order.
     if (this.guardianTarget(aimed)) return void this.commandGuardian();
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
@@ -6806,10 +6814,12 @@ export class Game {
     if (aboard) {
       const t = aboard.train, coal = this.duilt.inventory.endless ? 'coal without end' : `${t.coal} coal`;
       this.hoverBox.visible = false;
+      const load = aboard.part.kind === 'car' ? t.loads[aboard.part.index - 1] : null;
       this.ui?.setPersonHint(aboard.part.kind === 'engine' ? 'Steam engine' : 'Rail car',
         this.selectedItemId === 'coal' ? `Place to fire it · ${coal} in the bunker`
           : this.selectedItemId === 'rail_car' ? `Place to couple it on · ${t.cars} of 5 cars`
-            : `Place to drive · ${coal} · ${t.cars} car${t.cars === 1 ? '' : 's'} · hit to take ${t.cars ? 'the last car' : 'it'} off`);
+            : load ? `Place to open it · ${load.slots.filter(Boolean).length} of ${load.size} slots used · hit to take the last car off`
+              : `Place to drive · ${coal} · ${t.cars} car${t.cars === 1 ? '' : 's'} · hit to take ${t.cars ? 'the last car' : 'it'} off`);
       return;
     }
     const mob = this.armed ? null : this.mobTarget(hit);

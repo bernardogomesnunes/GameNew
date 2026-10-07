@@ -97,6 +97,9 @@ function escapeHtml(s) {
 }
 const escapeAttr = escapeHtml;
 
+/** A store bigger than this shows its slots a page at a time (a train's car is a thousand). */
+const STORE_PAGE = 200;
+
 export class DuiltUI {
   constructor(root, { game, bus, panels }) {
     this.root = root;
@@ -1339,6 +1342,7 @@ export class DuiltUI {
    */
   showStore(structure) {
     this.store = structure ?? null;
+    this.storePage = 0;
     this.renderStore();
   }
 
@@ -1358,9 +1362,23 @@ export class DuiltUI {
       return;
     }
 
-    grid.innerHTML = summary.store.slots
-      .map((s, i) => this.slotHtml(s, i, { attr: 'data-store-slot', empty: 'Empty shelf' }))
+    // A train's car is a thousand slots — too many to draw at once on a
+    // phone — so a big store shows a page of them at a time.
+    const pages = Math.ceil(summary.store.slots.length / STORE_PAGE);
+    const page = Math.min(this.storePage ?? 0, pages - 1);
+    const from = page * STORE_PAGE;
+    const pager = pages > 1
+      ? `<div class="store-pager"><button type="button" class="secondary" data-store-page="-1"${page ? '' : ' disabled'}>‹</button>
+        <span>Slots ${from + 1}–${Math.min(from + STORE_PAGE, summary.store.slots.length)} of ${summary.store.slots.length}</span>
+        <button type="button" class="secondary" data-store-page="1"${page < pages - 1 ? '' : ' disabled'}>›</button></div>`
+      : '';
+    grid.innerHTML = pager + summary.store.slots.slice(from, from + STORE_PAGE)
+      .map((s, i) => this.slotHtml(s, from + i, { attr: 'data-store-slot', empty: 'Empty shelf' }))
       .join('');
+    grid.querySelectorAll('[data-store-page]').forEach((btn) => btn.addEventListener('click', () => {
+      this.storePage = Math.max(0, Math.min(pages - 1, page + Number(btn.dataset.storePage)));
+      this.renderStore();
+    }));
     // Equipped and bag, same split as the bag panel's own two grids — see
     // renderBag. Both tap straight into the store, same as any bag slot
     // always could; reordering equipped-vs-bag stays the bag panel's job.
@@ -1382,7 +1400,7 @@ export class DuiltUI {
     const all = this.q('#btn-store-all');
     if (all) all.hidden = !!summary.grave;
     const title = this.q('#store-title');
-    if (title) title.textContent = summary.mount ? 'Cart' : summary.chest ? (summary.grave ? 'What you were carrying' : summary.found ?? 'Chest') : 'Storehouse';
+    if (title) title.textContent = summary.mount ? 'Cart' : summary.car ? 'Rail car' : summary.chest ? (summary.grave ? 'What you were carrying' : summary.found ?? 'Chest') : 'Storehouse';
 
     const kind = summary.tier?.name ?? 'On the shelves';
     this.q('#store-where').textContent = summary.free
@@ -1418,7 +1436,7 @@ export class DuiltUI {
       sub.textContent = summary.grave
         ? 'Tap anything to take it back. The chest goes once it is empty.'
         : summary.items
-          ? `Tap anything to move it between your bag and the ${summary.mount ? 'cart' : summary.chest ? 'chest' : 'shelves'}.`
+          ? `Tap anything to move it between your bag and the ${summary.mount ? 'cart' : summary.car ? 'car' : summary.chest ? 'chest' : 'shelves'}.`
           : 'Nothing in here yet. Tap something in your bag to put it away.';
     }
 
@@ -1438,7 +1456,7 @@ export class DuiltUI {
     const chips = this.q('#store-routing-chips');
     if (!box || !chips) return;
     // A chest takes nothing from deliveries — only what you put in it.
-    if (summary.chest || summary.mount) { box.hidden = true; return; }
+    if (summary.chest || summary.mount || summary.car) { box.hidden = true; return; }
     if (!PRODUCIBLE_ITEMS.length) { box.hidden = true; return; }
     box.hidden = false;
 
@@ -1544,7 +1562,7 @@ export class DuiltUI {
     if (this.store.chest && d.chestAt(this.store.chest.x, this.store.chest.y, this.store.chest.z)?.grave) return;
     const moved = d.inventory.moveTo(store, i);
     if (!moved) {
-      this.bus.emit('toast', { kind: 'xp', title: this.store.mount ? 'The cart is full' : this.store.chest ? 'The chest is full' : 'No room on the shelves', body: 'Take something out first' });
+      this.bus.emit('toast', { kind: 'xp', title: this.store.mount ? 'The cart is full' : this.store.car ? 'The car is full' : this.store.chest ? 'The chest is full' : 'No room on the shelves', body: 'Take something out first' });
       return;
     }
     this.renderStore();

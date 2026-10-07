@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { World } from '../src/world/World.js';
-import { Trains, RAIL, PART_LENGTH, MAX_CARS, MAX_SPEED, BLOCKS_PER_COAL, BUNKER, trainLength, nextRail } from '../src/world/Trains.js';
+import { Trains, RAIL, PART_LENGTH, MAX_CARS, MAX_SPEED, BLOCKS_PER_COAL, BUNKER, CAR_SLOTS, trainLength, nextRail } from '../src/world/Trains.js';
 import { BLOCKS_BY_ID, COAL_ORE } from '../src/config/blocks.js';
 import { ITEMS_BY_ID } from '../src/config/items.js';
 import { RECIPES_BY_ID } from '../src/config/recipes.js';
@@ -139,10 +139,34 @@ ok('each part 8 long', PART_LENGTH === 8 && MAX_CARS === 5);
   ok('trains are kept in the save', Array.isArray(saved.trains));
 }
 
+// --- what a car carries ---------------------------------------------------------------------
+
+{
+  const w = flat();
+  lay(w, line(10, 40, 20));
+  const d = new DuiltGame({ world: w, scene: new THREE.Scene(), bus: null, age: 5 });
+  d.inventory.add('locomotive', 1); d.inventory.add('rail_car', 1); d.inventory.add('stone', 300);
+  const t = d.placeTrain({ x: 35, y: Y, z: 20 }, { x: 1, z: 0 }).train;
+  d.coupleCar(t);
+  const car = d.containerFor({ car: t.loads[0] });
+  ok(`a car carries ${CAR_SLOTS} slots`, CAR_SLOTS === 1000 && car?.size === 1000);
+  const sum = d.storeSummary({ car });
+  ok('and opens like a cart, as a car', sum.car && sum.size === 1000 && sum.free === 1000);
+  d.inventory.moveTo(car, d.inventory.slots.findIndex((x) => x?.id === 'stone'));
+  ok('goods go from your bag into it', car.countOf('stone') > 0);
+  ok('a car with goods in it stays on — empty it first', !d.pickUpTrain(t).ok && t.cars === 1);
+  // Kept with the world, slot for slot, and small: only what's in it.
+  const saved = JSON.parse(JSON.stringify(d.toJSON()));
+  const back = new DuiltGame({ world: w, scene: new THREE.Scene(), bus: null, age: 5 });
+  back.loadJSON(saved);
+  ok('what\'s in the car comes back with the save', back.trains.list[0]?.loads[0]?.countOf('stone') === car.countOf('stone'));
+  ok('and an empty thousand slots costs the save nothing', JSON.stringify(saved.trains).length < 600);
+}
+
 // --- in the game --------------------------------------------------------------------------------
 
 ok('Place with an engine sets it on the rail you point at', /locomotive: 'setDownTrain'/.test(game) && /setDownTrain\(\) \{/.test(game));
-ok('Place on a train: coal fires it, a car couples, else you drive', /const train = this\.trainTarget\(aimed\);\s*if \(train\) return void this\.useTrain\(train\.train\);/.test(game));
+ok('Place on a train: coal fires it, a car couples, else you drive', /const train = this\.trainTarget\(aimed\);\s*if \(train\) return void this\.useTrain\(train\.train, train\.part\);/.test(game));
 ok('forward and back are the throttle, keys or stick alike', /t\.throttle = p\.moveInput\(\)\.z;/.test(game));
 ok('Sneak gets you down', /if \(p\.sneaking\) return void this\.leaveTrain\(\);/.test(game));
 ok('hit a train and it comes apart into your bag', /if \(this\.pickUpMachine\(hit\) \|\| this\.pickUpTrain\(hit\)\) return true;/.test(game));
