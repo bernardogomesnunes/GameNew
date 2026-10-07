@@ -64,6 +64,7 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **Saved builds turn** (asked for directly). R, the tool panel, or Place on a phone turns a queued saved build a quarter at a time, stairs and doors facing round with it, and you see it where it would go before you put it down. PR #152.
 - **Rounded paths fill their corners** (asked for directly) with the ground beside them, in that block's own texture. PR #152.
 - **Bow: hold to draw, let go to shoot** (asked for directly), mouse or finger. The longer the draw (full at 0.9 s), the faster and harder the arrow; a twitch, tabbing away or pausing shoots nothing. A meter under the crosshair, a slight zoom and an arrow on the string while drawn. Arrows stuck in the world stay 60 s and go back in the bag when you walk over them. Arrows hit every unit of the dark army, rams and catapults included. PR #153.
+- **Stone from what you dig** (played on: soft-blocked with no stone for a pickaxe). Under the soil the rock comes up as marble, white stone or cobblestone, none of them stone. At the bench, by hand from Age 1: 2 cobblestone, 1 white stone or 1 marble → 1 stone. PR #155.
 
 ## Priority 1 — blocks and placement
 
