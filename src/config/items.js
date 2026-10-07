@@ -300,7 +300,7 @@ export const ITEMS = [
   // Trains (backlog batch 2, Age 5) — see world/Trains.js.
   { id: 'rail', name: 'Rail', kind: 'refined', stackTo: STACK_BULK, color: 0x8d8f96, glyph: 'rail', block: 378, madeBy: 'Iron on wooden sleepers, at an engineering centre — lay it in a line, and it joins up round corners and up a step' },
   { id: 'coal_ore', name: 'Coal Ore', kind: 'raw', stackTo: STACK_BULK, color: 0x8f8a86, glyph: 'coal', block: 379, madeBy: 'A seam of coal in the rock of the high peaks — break it for the coal' },
-  { id: 'coal', name: 'Coal', kind: 'raw', stackTo: STACK_BULK, color: 0x2f2d31, glyph: 'coal', madeBy: 'Dug from seams in the high peaks, or brought up by a mine' },
+  { id: 'coal', name: 'Coal', kind: 'raw', stackTo: STACK_BULK, color: 0x2f2d31, glyph: 'coal', madeBy: 'Dug from seams in the high peaks, brought up by a mine, or burned from wood at a foundry' },
   { id: 'locomotive', name: 'Steam Engine', kind: 'refined', stackTo: STACK_GOODS, color: 0x3d4148, glyph: 'engine', madeBy: 'Built at an engineering centre — Place it on a rail; Place on it to drive; coal in your hand and Place to fire it' },
   { id: 'rail_car', name: 'Rail Car', kind: 'refined', stackTo: STACK_GOODS, color: 0x7a5236, glyph: 'railcar', madeBy: 'Built at an engineering centre — Place it on a train to couple it on the back, five at most' },
   // Desert blocks (#33).
