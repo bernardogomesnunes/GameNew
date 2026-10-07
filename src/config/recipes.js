@@ -781,6 +781,47 @@ export const RECIPES = [
     output: { id: 'rail_car', count: 1 },
     blurb: 'Place it on a train to couple it on behind. An engine pulls five.',
   },
+  // The stone mill (asked for directly): built by hand, like the wood mill.
+  {
+    id: 'stone_mill',
+    name: 'Stone Mill',
+    station: 'hand',
+    age: 2,
+    inputs: { stone: 6, cobblestone: 4, planks: 4 },
+    output: { id: 'stone_mill', count: 1 },
+    blurb: 'A grindstone on a block of stone. Stand by it and stone goes further, and it grinds gravel. Place on it to use it.',
+  },
+  // What it grinds: gravel from rock, and sand from gravel.
+  {
+    id: 'mill_gravel',
+    name: 'Grind gravel',
+    station: 'stone_mill',
+    age: 2,
+    inputs: { cobblestone: 1 },
+    output: { id: 'gravel', count: 2 },
+    batch: 8,
+    blurb: 'Cobblestone ground down to gravel, for paths and roads.',
+  },
+  {
+    id: 'mill_gravel_stone',
+    name: 'Grind gravel from stone',
+    station: 'stone_mill',
+    age: 2,
+    inputs: { stone: 1 },
+    output: { id: 'gravel', count: 2 },
+    batch: 8,
+    blurb: 'Cut stone, ground down to gravel.',
+  },
+  {
+    id: 'mill_sand',
+    name: 'Grind sand',
+    station: 'stone_mill',
+    age: 2,
+    inputs: { gravel: 1 },
+    output: { id: 'sand', count: 2 },
+    batch: 8,
+    blurb: 'Gravel ground finer still — sand, for glass and sandstone, far from any beach.',
+  },
   // Desert blocks (#33).
   {
     id: 'sandstone',
@@ -1373,6 +1414,28 @@ for (const [key, e] of Object.entries(UPGRADES)) {
       blurb: `Lays ${e.name} on it — ${e.says}.`,
     });
   }
+}
+
+// At the stone mill (asked for directly: "make all the variations easier and
+// cheaper"): every block cut from stone — bricks, walls, stairs, roof tiles,
+// pillars, chimneys, calçada — half as much again for the same stone. Not
+// the slab (two slabs make a whole stone block, and that breaks back into
+// stone) nor anything that turns back into raw stone: no loop at the mill
+// makes stone out of nothing.
+const STONE_MILLED = [
+  'stone_brick', 'sandstone_brick', 'stairs_stone', 'roof_stone', 'roof_brick',
+  'wall_stone', 'wall_cobble', 'wall_brick', 'wall_dark', 'wall_stone_brick', 'wall_sandstone', 'wall_dark_brick',
+  'wall_marble', 'wall_sky_marble', 'wall_white_stone', 'wall_grey_stone', 'wall_turquoise', 'wall_orange',
+  'chimney_stone_brick', 'chimney_brick', 'pillar_stone', 'pillar_marble', 'pillar_dark',
+  'calcada', 'calcada_dark', 'calcada_wave',
+];
+for (const id of STONE_MILLED) {
+  const r = RECIPES.find((x) => x.id === id);
+  RECIPES.push({
+    ...r, id: `stone_mill_${id}`, station: 'stone_mill', age: Math.max(2, r.age),
+    output: { ...r.output, count: Math.ceil(r.output.count * 1.5) }, batch: r.batch ?? 8,
+    blurb: `${r.blurb ?? ''} Half as much again at the stone mill.`.trim(),
+  });
 }
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));

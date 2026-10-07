@@ -825,6 +825,13 @@ export const WOOD_FURNITURE = FURNITURE.map((f) => ({ wood: 'oak', key: f.key, i
   }
 });
 
+// The stone mill (asked for directly: "a machine like wood mill to treat
+// stone and make all the variations easier and cheaper and mill it for
+// gravel too"). A grindstone on a stone base; within reach of one, stone
+// goes further — see recipes.js's stone mill recipes. It faces you.
+export const STONE_MILL = 380;
+quad(STONE_MILL, { name: 'Stone Mill', glyph: 'stonemill', color: 0x9a968f, shape: 'stone_mill', material: 'stone', station: 'stone_mill', facesYou: true, unlock: null });
+
 // Trains (backlog batch 2, Age 5 — see world/Trains.js): rail, a flat run of
 // sleepers and two iron rails that join up with the rail beside them, and
 // coal, in seams in the high peaks, that the engine burns.
