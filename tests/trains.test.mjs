@@ -36,6 +36,10 @@ ok('rail is a block you walk over, with its own shape', BLOCKS_BY_ID.get(RAIL)?.
 ok('coal ore gives coal, not itself', BLOCKS_BY_ID.get(COAL_ORE)?.drops === 'coal' && ITEMS_BY_ID.has('coal'));
 ok('coal is in the high peaks', BIOMES.find((b) => b.id === 'mountains2').ores.some((o) => o.block === COAL_ORE));
 ok('and a mine brings it up', STRUCTURES_BY_ID.get('mine').produces.coal > 0);
+ok('or wood burns down to it at the foundry — dearer than digging it', (() => {
+  const r = RECIPES_BY_ID.get('charcoal');
+  return r?.station === 'foundry' && r.output.id === 'coal' && r.inputs.wood >= 3 && r.age <= 5;
+})());
 ok('engine, cars and rail are worked out at the engineering centre, in Age 5, from iron',
   ['rail', 'locomotive', 'rail_car'].every((id) => { const r = RECIPES_BY_ID.get(id); return r?.station === 'engineering' && r.age === 5 && r.inputs.iron_ingot > 0; }));
 ok('each part 8 long', PART_LENGTH === 8 && MAX_CARS === 5);

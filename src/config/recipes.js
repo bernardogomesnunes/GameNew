@@ -258,6 +258,19 @@ export const RECIPES = [
     batch: 6,
     blurb: 'What the tavern jar has always meant by "brought up from a mine."',
   },
+  // Asked for directly: a way to coal that isn't a seam in the high peaks or
+  // a mine's slow trickle — wood, burned down slow in the foundry. Four logs
+  // to one coal, so digging a seam is still the better way.
+  {
+    id: 'charcoal',
+    name: 'Burn charcoal',
+    station: 'foundry',
+    age: 4,
+    inputs: { wood: 4 },
+    output: { id: 'coal', count: 1 },
+    batch: 8,
+    blurb: 'Logs burned down slow, with the air kept out. What a steam engine runs on, if there is no seam to dig.',
+  },
   // Coins (batch: "made in the foundry"): gold or copper, struck small.
   {
     id: 'strike_coins',
