@@ -65,6 +65,7 @@ point's number (#n, in the order it was written) so it can be traced back.
 - **Rounded paths fill their corners** (asked for directly) with the ground beside them, in that block's own texture. PR #152.
 - **Bow: hold to draw, let go to shoot** (asked for directly), mouse or finger. The longer the draw (full at 0.9 s), the faster and harder the arrow; a twitch, tabbing away or pausing shoots nothing. A meter under the crosshair, a slight zoom and an arrow on the string while drawn. Arrows stuck in the world stay 60 s and go back in the bag when you walk over them. Arrows hit every unit of the dark army, rams and catapults included. PR #153.
 - **Stone from what you dig** (played on: soft-blocked with no stone for a pickaxe). Under the soil the rock comes up as marble, white stone or cobblestone, none of them stone. At the bench, by hand from Age 1: 2 cobblestone, 1 white stone or 1 marble → 1 stone. PR #155.
+- **Furniture in every wood** (asked for directly). Table, chair, cabinet, wardrobe, bedside table, plain and patterned panels in white and dark wood as well as oak, each made where the oak one is from that wood's planks, and counting as the oak piece for a building's needs. Accents (a cabinet's top, a panel's squares) are shades of the piece's own wood. PR #157.
 
 ## Priority 1 — blocks and placement
 
@@ -76,7 +77,6 @@ All done (see above).
 
 ## Priority 3 — systems
 
-- **Furniture in every wood** (left for the end, asked for directly).
 
 - **#9 Composting.**
   - A compost bin takes seeds and leaves and makes compost.
