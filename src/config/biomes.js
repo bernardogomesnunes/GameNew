@@ -49,7 +49,7 @@ const WILD_HEMP = 340;
 const MOSS = 22, GRAVEL = 23, CLAY = 24, SILT = 25;
 const WHITE_WOOD = 41, WHITE_LEAVES = 42, DARK_WOOD = 43, DARK_LEAVES = 44, DARK_MOSS = 46;
 const FOREST_FLOOR = 147;
-const IRON_ORE = 38, COPPER_ORE = 39, GOLD_ORE = 40;
+const IRON_ORE = 38, COPPER_ORE = 39, GOLD_ORE = 40, COAL_ORE = 379;
 
 export const BIOMES = [
   {
@@ -209,6 +209,8 @@ export const BIOMES = [
       { block: IRON_ORE, chance: 0.018, salt: 0x4f11 },
       { block: COPPER_ORE, chance: 0.014, salt: 0x4f22 },
       { block: GOLD_ORE, chance: 0.008, salt: 0x4f33 },
+      // What a train burns (Age 5) — commoner than iron, as coal is.
+      { block: COAL_ORE, chance: 0.024, salt: 0x4f44 },
     ],
   },
   {

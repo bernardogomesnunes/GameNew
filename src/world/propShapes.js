@@ -469,6 +469,35 @@ PROP_SHAPES.panel_twotone = [
   { minX: 0, maxX: 1, minY: 0.46, maxY: 0.54, minZ: 0, maxZ: 0.09, color: 0x5a3b28 },
 ];
 
+// Rail (trains, Age 5): wooden sleepers across, two iron rails along, flat
+// on the ground. It runs on into the rail beside it: straight through along
+// x or z, and where it meets rail on both an x side and a z side, a half
+// length out to each — round the corner. On its own it lies along x.
+const SLEEPER = 0x6b4a33;
+const RAIL_H = 0.13, SLEEPER_H = 0.05;
+function railRun(axis, from, to) {
+  const out = [];
+  const box = (a0, a1, b0, b1, y0, y1, color) => (axis === 'z'
+    ? { minX: a0, maxX: a1, minY: y0, maxY: y1, minZ: b0, maxZ: b1, ...(color != null ? { color } : {}) }
+    : { minX: b0, maxX: b1, minY: y0, maxY: y1, minZ: a0, maxZ: a1, ...(color != null ? { color } : {}) });
+  for (let c = 0.125; c < 1; c += 0.25) {
+    if (c < from || c > to) continue;
+    out.push(box(0.06, 0.94, c - 0.06, c + 0.06, 0, SLEEPER_H, SLEEPER));
+  }
+  for (const r of [0.22, 0.72]) out.push(box(r, r + 0.06, from, to, SLEEPER_H, RAIL_H));
+  return out;
+}
+export function railBoxes({ px = 0, nx = 0, pz = 0, nz = 0 } = {}) {
+  const onX = px || nx, onZ = pz || nz;
+  if (!onZ) return railRun('x', 0, 1);
+  if (!onX) return railRun('z', 0, 1);
+  return [
+    ...(px ? railRun('x', 0.5, 1) : []), ...(nx ? railRun('x', 0, 0.5) : []),
+    ...(pz ? railRun('z', 0.5, 1) : []), ...(nz ? railRun('z', 0, 0.5) : []),
+  ];
+}
+PROP_SHAPES.rail = railBoxes();
+
 PROP_SHAPES.wall = wallBoxes();
 PROP_SHAPES.chimney = chimneyBoxes();
 PROP_SHAPES.pillar = pillarBoxes();

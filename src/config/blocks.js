@@ -825,6 +825,15 @@ export const WOOD_FURNITURE = FURNITURE.map((f) => ({ wood: 'oak', key: f.key, i
   }
 });
 
+// Trains (backlog batch 2, Age 5 — see world/Trains.js): rail, a flat run of
+// sleepers and two iron rails that join up with the rail beside them, and
+// coal, in seams in the high peaks, that the engine burns.
+export const RAIL = 378, COAL_ORE = 379;
+BLOCKS.push(
+  { id: RAIL, name: 'Rail', glyph: 'rail', color: 0x8d8f96, shape: 'rail', material: 'stone', unlock: null },
+  { id: COAL_ORE, name: 'Coal Ore', glyph: 'coal', color: 0x8f8a86, material: 'stone', drops: 'coal', unlock: null },
+);
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**

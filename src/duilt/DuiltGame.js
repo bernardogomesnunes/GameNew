@@ -35,6 +35,7 @@ import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
 import { Defenders, MAX_SOLDIERS } from '../world/Defenders.js';
 import { UNITS_BY_ID, unitCost, payForUnit } from '../config/soldiers.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';
+import { Trains } from '../world/Trains.js';
 
 /**
  * Everything that makes Duilt different from the sandbox, in one object.
@@ -99,6 +100,8 @@ export class DuiltGame {
     // yaw }. One you're flying is the same record, moving with you — see
     // Game.pilot.
     this.machines = [];
+    // Trains on your rails (Age 5) — see world/Trains.js.
+    this.trains = new Trains({ world });
     this.dayTime = null; // see toJSON
     // Designs you placed that didn't count yet — see waitFor.
     this.waiting = [];
@@ -323,7 +326,8 @@ export class DuiltGame {
    * trees by hand.
    */
   yieldFor(blockId) {
-    const itemId = ITEM_FOR_BLOCK.get(blockId);
+    // An ore that gives what's in it, not itself back: coal ore, coal.
+    const itemId = BLOCKS_BY_ID.get(blockId)?.drops ?? ITEM_FOR_BLOCK.get(blockId);
     if (!itemId) return null;
     return { itemId, amount: 1 };
   }
@@ -667,6 +671,52 @@ export class DuiltGame {
     if (this.inventory.add('flying_machine', 1) > 0) return { ok: false, reason: 'Your bag is full.' };
     this.machines.splice(i, 1);
     return { ok: true };
+  }
+
+  /**
+   * A steam engine from your bag set down on the rail at `at`, facing the way
+   * you look (`look`, {x, z}). Returns { ok, reason, train }.
+   */
+  placeTrain(at, look) {
+    const endless = this.inventory.endless;
+    if (!endless && !this.inventory.has('locomotive', 1)) return { ok: false, reason: 'You have no steam engine.' };
+    const r = this.trains.place(at, look);
+    if (r.ok && !endless) this.inventory.remove('locomotive', 1);
+    return r;
+  }
+
+  /** A rail car from your bag coupled on the back of `train`. Returns { ok, reason }. */
+  coupleCar(train) {
+    const endless = this.inventory.endless;
+    if (!endless && !this.inventory.has('rail_car', 1)) return { ok: false, reason: 'You have no rail car.' };
+    const r = this.trains.couple(train);
+    if (r.ok && !endless) this.inventory.remove('rail_car', 1);
+    return r;
+  }
+
+  /** Coal from your bag into the engine's bunker. Returns how much went in. */
+  fuelTrain(train) {
+    const have = this.inventory.endless ? 64 : this.inventory.countOf('coal');
+    const n = this.trains.loadCoal(train, have);
+    if (n && !this.inventory.endless) this.inventory.remove('coal', n);
+    return n;
+  }
+
+  /**
+   * The last car back into your bag, or with none left the engine — and the
+   * coal still in its bunker with it. Returns { ok, reason, piece }.
+   */
+  pickUpTrain(train) {
+    const piece = train.cars > 0 ? 'rail_car' : 'locomotive';
+    const back = { [piece]: 1, ...(piece === 'locomotive' && train.coal ? { coal: train.coal } : {}) };
+    if (!this.inventory.endless) {
+      for (const [id, n] of Object.entries(back)) {
+        if (this.inventory.roomFor(id, n) < n) return { ok: false, reason: 'Your bag is full.' };
+      }
+      for (const [id, n] of Object.entries(back)) this.inventory.add(id, n);
+    }
+    this.trains.uncouple(train);
+    return { ok: true, piece };
   }
 
   /** A tamed horse takes a cart: forty slots on wheels. Returns { ok, reason }. */
@@ -1700,6 +1750,7 @@ export class DuiltGame {
         x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
         yaw: Math.round((m.yaw ?? 0) * 100) / 100,
       })),
+      trains: this.trains.toJSON(),
       mounts: this.mounts.filter((m) => !m.dead).map((m) => ({
         type: m.type, x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
         facing: Math.round((m.facing ?? 0) * 100) / 100, owned: true, cart: !!m.cart,
@@ -1770,6 +1821,7 @@ export class DuiltGame {
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
     this.machines = (data.machines ?? []).filter((m) => Number.isFinite(m?.x)).map((m) => ({ x: m.x, y: m.y, z: m.z, yaw: m.yaw ?? 0 }));
+    this.trains.loadJSON(data.trains);
     this.mounts = (data.mounts ?? []).map((r) => {
       const m = { ...r, owned: true };
       if (r.cart) {

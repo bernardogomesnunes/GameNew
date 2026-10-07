@@ -852,7 +852,9 @@ export const STRUCTURES = [
     // maxed quarry's own fifteen (see quarry's produces note) — a mine
     // going straight down was never meant to out-produce a quarry that
     // actually worked its way up to it.
-    produces: { stone: 1, gold: 1 },
+    // And coal, for the trains (backlog batch 2: "Runs on coal, which comes
+    // from the mine as passive output").
+    produces: { stone: 1, gold: 1, coal: 1 },
     everySeconds: 8640,
     skill: 'building',
   },

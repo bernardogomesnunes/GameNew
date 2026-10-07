@@ -199,6 +199,20 @@ export class PlayerController {
     this.pitch = Math.max(-limit, Math.min(limit, this.pitch));
   }
 
+  /**
+   * The way you're asking to go, keys and the stick together, -1..1 each:
+   * { x: to your right, z: ahead }. A train reads it as its throttle.
+   */
+  moveInput() {
+    const b = this.binds;
+    let x = this.externalMove.x, z = this.externalMove.z;
+    if (this.keys.has(b.forward)) z += 1;
+    if (this.keys.has(b.back)) z -= 1;
+    if (this.keys.has(b.right)) x += 1;
+    if (this.keys.has(b.left)) x -= 1;
+    return { x: Math.max(-1, Math.min(1, x)), z: Math.max(-1, Math.min(1, z)) };
+  }
+
   requestJump() {
     this.jumpQueued = true;
   }
@@ -230,15 +244,8 @@ export class PlayerController {
         -this.lookSmoothed.y * LOOK_PITCH_SPEED * boost * dt,
       );
     }
-    let moveX = this.externalMove.x;
-    let moveZ = this.externalMove.z;
+    const { x: moveX, z: moveZ } = this.moveInput();
     const b = this.binds;
-    if (this.keys.has(b.forward)) moveZ += 1;
-    if (this.keys.has(b.back)) moveZ -= 1;
-    if (this.keys.has(b.right)) moveX += 1;
-    if (this.keys.has(b.left)) moveX -= 1;
-    moveX = Math.max(-1, Math.min(1, moveX));
-    moveZ = Math.max(-1, Math.min(1, moveZ));
 
     const forward = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = new THREE.Vector3(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
@@ -532,8 +539,11 @@ export class PlayerController {
       const dir = this.lookDirection();
       const away = this.view === 'behind' ? -1 : 1;
       const eye = this._eye.set(this.position.x, eyeY, this.position.z);
-      const reach = this.clearDistance(eye, dir.x * away, dir.y * away + (away < 0 ? 0.12 : 0), dir.z * away, VIEW_DISTANCE);
-      this.camera.position.set(eye.x + dir.x * away * reach, eye.y + (dir.y * away + (away < 0 ? 0.12 : 0)) * reach, eye.z + dir.z * away * reach);
+      // `viewLift` raises it, and `viewReach` takes it further back — over
+      // the cars and the whole engine in view, driving a train.
+      const up = away < 0 ? 0.12 + (this.viewLift || 0) : 0;
+      const reach = this.clearDistance(eye, dir.x * away, dir.y * away + up, dir.z * away, this.viewReach || VIEW_DISTANCE);
+      this.camera.position.set(eye.x + dir.x * away * reach, eye.y + (dir.y * away + up) * reach, eye.z + dir.z * away * reach);
       this.camera.lookAt(eye);
     }
     if (!this.camera.isPerspectiveCamera) return;

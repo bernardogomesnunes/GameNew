@@ -738,6 +738,36 @@ export const RECIPES = [
     batch: 8,
     blurb: 'Dark below, light above, a rail between.',
   },
+  // Trains (backlog batch 2: "Age 5: a train on a one-block rail ... built
+  // from iron"), worked out at the engineering centre.
+  {
+    id: 'rail',
+    name: 'Rail',
+    station: 'engineering',
+    age: 5,
+    inputs: { iron_ingot: 1, planks: 2 },
+    output: { id: 'rail', count: 8 },
+    batch: 8,
+    blurb: 'Two iron rails on wooden sleepers. Lay them in a line; they turn corners and climb a step on their own.',
+  },
+  {
+    id: 'locomotive',
+    name: 'Steam Engine',
+    station: 'engineering',
+    age: 5,
+    inputs: { iron_ingot: 24, brick: 8, planks: 8 },
+    output: { id: 'locomotive', count: 1 },
+    blurb: 'Eight long, three wide, four high. Set it on a rail, fire it with coal, and Place on it to drive: forward and back, Sneak to get down.',
+  },
+  {
+    id: 'rail_car',
+    name: 'Rail Car',
+    station: 'engineering',
+    age: 5,
+    inputs: { iron_ingot: 12, planks: 12 },
+    output: { id: 'rail_car', count: 1 },
+    blurb: 'Place it on a train to couple it on behind. An engine pulls five.',
+  },
   // Desert blocks (#33).
   {
     id: 'sandstone',

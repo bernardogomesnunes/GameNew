@@ -161,6 +161,7 @@ export const BLOCK_TEXTURES = {
   'Dark Leaves':   { leaves: 140, flecks: [[1.08, 1.1, 0.86], [1, 1, 1], [0.84, 0.98, 1.06]], depth: 0.46, speck: 0.04, holes: 4, gaps: 12, bite: 6 },
   'Gold Ore':      { mottle: 0.14, marks: 24, flecks: STONE_FLECKS, ore: 6, nugget: [1.55, 1.3, 0.55], depth: 0.32, speck: 0.04, bump: 0.4, shine: 0.1, glints: 10 },
   'Iron Ore':      { mottle: 0.14, marks: 24, flecks: STONE_FLECKS, ore: 6, nugget: [1.3, 1.02, 0.86], depth: 0.32, speck: 0.04, bump: 0.4 },
+  'Coal Ore':      { mottle: 0.14, marks: 24, flecks: STONE_FLECKS, ore: 7, nugget: [0.32, 0.31, 0.33], depth: 0.32, speck: 0.04, bump: 0.4, shine: 0.05, glints: 4 },
   'Copper Ore':    { mottle: 0.14, marks: 24, flecks: STONE_FLECKS, ore: 6, nugget: [1.4, 0.98, 0.62], depth: 0.32, speck: 0.04, bump: 0.4 },
   'Sunstone Ore':  { mottle: 0.14, marks: 30, flecks: STONE_FLECKS, cracks: 2, depth: 0.32, speck: 0.04 },
   'Nightstone Ore': { mottle: 0.14, marks: 30, flecks: [[0.9, 0.86, 1.12], [1.1, 1.06, 1.14]], cracks: 2, depth: 0.32, speck: 0.04 },

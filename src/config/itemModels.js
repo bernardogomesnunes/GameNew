@@ -356,6 +356,25 @@ ITEM_MODELS.flying_machine = [
   box(0.36, 0.46, 0.82, 0.64, 0.49, 0.94, 0xefe6d2),
 ];
 
+// Trains (Age 5): a lump of coal; the steam engine, boiler forward and cab
+// behind on a black frame; a rail car, a wooden coach with its roof.
+ITEM_MODELS.coal = [
+  box(0.28, 0, 0.3, 0.7, 0.3, 0.68, 0x2f2d31), box(0.36, 0.3, 0.38, 0.6, 0.42, 0.6, 0x3b393e),
+  box(0.22, 0, 0.42, 0.3, 0.16, 0.58, 0x26252a),
+];
+ITEM_MODELS.locomotive = [
+  box(0.3, 0.08, 0.04, 0.7, 0.2, 0.96, 0x2e3036),
+  box(0.34, 0.2, 0.38, 0.66, 0.5, 0.96, 0x2f5a44), box(0.44, 0.5, 0.82, 0.56, 0.68, 0.92, 0x2e3036),
+  box(0.3, 0.2, 0.04, 0.7, 0.66, 0.38, 0x2f5a44), box(0.28, 0.66, 0.02, 0.72, 0.7, 0.4, 0x4a4d55),
+  box(0.26, 0, 0.12, 0.3, 0.14, 0.88, 0x3a3a3e), box(0.7, 0, 0.12, 0.74, 0.14, 0.88, 0x3a3a3e),
+];
+ITEM_MODELS.rail_car = [
+  box(0.3, 0.08, 0.04, 0.7, 0.2, 0.96, 0x2e3036),
+  box(0.3, 0.2, 0.06, 0.7, 0.58, 0.94, 0x7a5236), box(0.29, 0.36, 0.12, 0.71, 0.48, 0.88, 0x2a3440),
+  box(0.28, 0.58, 0.04, 0.72, 0.64, 0.96, 0x4a4d55),
+  box(0.26, 0, 0.14, 0.3, 0.12, 0.86, 0x3a3a3e), box(0.7, 0, 0.14, 0.74, 0.12, 0.86, 0x3a3a3e),
+];
+
 // The cart: a plank box on two wheels, shafts out the front.
 ITEM_MODELS.cart = [
   box(0.18, 0.32, 0.22, 0.82, 0.62, 0.72, 0xa77b4f),
