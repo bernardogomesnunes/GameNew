@@ -723,6 +723,15 @@ export class Game {
       if (document.visibilityState === 'hidden') save();
     });
     window.addEventListener('pagehide', save);
+    // Run is on Ctrl (asked for directly), and Ctrl+W closes a browser tab —
+    // a page can't stop that, but it can ask first. Only while you're
+    // playing with the mouse taken (a keyboard); the world is saved either way.
+    window.addEventListener('beforeunload', (e) => {
+      save();
+      if (!this.isPlaying || !this.pointerLocked) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
   }
 
   /**
@@ -6532,7 +6541,7 @@ export class Game {
     if (p.flying || !p.grounded || p.swimming) return;
     const moved = Math.hypot(p.position.x - wasAt.x, p.position.z - wasAt.z);
     if (moved < 1e-4) return;
-    this.sound.walk(moved, underfoot(), { sprint: p.sprint });
+    this.sound.walk(moved, underfoot(), { sprint: p.running });
   }
 
   /**
