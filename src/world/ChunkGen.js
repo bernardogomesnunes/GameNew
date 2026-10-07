@@ -18,7 +18,7 @@ const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
 // marbled, turquoise, and orangey, ordered by rarity ... below dirt we should
 // have different layers of different rocks ... and sprinkle some ores here
 // and there but pretty rare".
-const DIRT_ID = 2, STONE_ID = 3, COBBLE_ID = 8, MARBLE_ID = 17;
+const DIRT_ID = 2, STONE_ID = 3, COBBLE_ID = 8, MARBLE_ID = 17, GRAVEL_ID = 23;
 const WHITE_STONE_ID = 235, TURQUOISE_STONE_ID = 236, ORANGE_STONE_ID = 237, GREY_STONE_ID = 238;
 /** Soil over the rock, where a biome's soil is dirt: 3 to 12 blocks, about 6 deep on average. */
 export const SOIL_MIN = 3, SOIL_MAX = 12;
@@ -32,6 +32,13 @@ const ROCK_WEIGHT = ROCK_LAYERS.reduce((n, [, w]) => n + w, 0);
 const LAYER_THICK = 5, LAYER_REGION = 40;
 /** Cobble lies in pockets in the top of the rock, and now and then breaks the surface. */
 const COBBLE_POCKET_DEPTH = 10, COBBLE_POCKET = 0.5, COBBLE_OUTCROP = 0.82;
+/**
+ * Gravel lies in pockets all through the rock, at any depth (asked for
+ * directly: "Gravel should appear underground more often to be fair") — it
+ * was only on the bare tops of the green mountains. Read off the same pocket
+ * field as the cobble, somewhere else in it, smaller and a little rarer.
+ */
+const GRAVEL_POCKET = 0.72, GRAVEL_SHIFT = 517.3;
 /** Ore anywhere in rock, not only where a biome is rich in it: rare. */
 const STRAY_ORES = [[38, 0.0016], [39, 0.0016], [40, 0.0005]];
 /** Which BIOMES entry is the tall, ore-rich range — used for its caverns. */
@@ -209,6 +216,7 @@ export class ChunkGen {
    */
   rockAt(x, y, z, rockFloor) {
     if (y >= rockFloor - COBBLE_POCKET_DEPTH && this.pocket(x / 7, y / 5, z / 7) > COBBLE_POCKET) return COBBLE_ID;
+    if (this.pocket(x / 5 + GRAVEL_SHIFT, y / 4, z / 5 - GRAVEL_SHIFT) > GRAVEL_POCKET) return GRAVEL_ID;
     const band = Math.floor((y + this.strata(x / 48, z / 48) * 6) / LAYER_THICK);
     const region = Math.floor(x / LAYER_REGION) * 7919 + Math.floor(z / LAYER_REGION);
     let pick = hash01(band, region, this.seed ^ 0x51a7) * ROCK_WEIGHT;
