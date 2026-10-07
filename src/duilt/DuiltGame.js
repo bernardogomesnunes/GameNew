@@ -35,7 +35,7 @@ import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
 import { Defenders, MAX_SOLDIERS } from '../world/Defenders.js';
 import { UNITS_BY_ID, unitCost, payForUnit } from '../config/soldiers.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';
-import { Trains } from '../world/Trains.js';
+import { Trains, CAR_SLOTS } from '../world/Trains.js';
 
 /**
  * Everything that makes Duilt different from the sandbox, in one object.
@@ -101,7 +101,7 @@ export class DuiltGame {
     // Game.pilot.
     this.machines = [];
     // Trains on your rails (Age 5) — see world/Trains.js.
-    this.trains = new Trains({ world });
+    this.trains = new Trains({ world, makeLoad: () => new Inventory({ slots: CAR_SLOTS, bus: this.bus }) });
     this.dayTime = null; // see toJSON
     // Designs you placed that didn't count yet — see waitFor.
     this.waiting = [];
@@ -708,6 +708,9 @@ export class DuiltGame {
    */
   pickUpTrain(train) {
     const piece = train.cars > 0 ? 'rail_car' : 'locomotive';
+    // A car with goods in it stays on — empty it first, the same as a chest.
+    const load = train.loads[train.cars - 1];
+    if (piece === 'rail_car' && load?.slots.some(Boolean)) return { ok: false, reason: 'Empty the last car first.' };
     const back = { [piece]: 1, ...(piece === 'locomotive' && train.coal ? { coal: train.coal } : {}) };
     if (!this.inventory.endless) {
       for (const [id, n] of Object.entries(back)) {
@@ -749,6 +752,12 @@ export class DuiltGame {
    * without walking its slots itself.
    */
   storeSummary(structure) {
+    if (structure?.car) {
+      const store = structure.car;
+      const used = store.slots.filter(Boolean).length;
+      const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
+      return { structure: null, car: true, store, used, free: store.size - used, size: store.size, items, tier: { name: 'In the car' } };
+    }
     if (structure?.mount) {
       const store = structure.mount.inventory;
       if (!store) return null;
@@ -1650,6 +1659,8 @@ export class DuiltGame {
   containerFor(target) {
     // A horse's cart: forty slots that go where the horse goes.
     if (target?.mount) return target.mount.cart ? target.mount.inventory ?? null : null;
+    // A train's car: a thousand slots on the rails.
+    if (target?.car) return target.car;
     if (target?.chest) {
       const { x, y, z } = target.chest;
       return this.chestAt(x, y, z)?.inventory ?? null;

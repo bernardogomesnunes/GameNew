@@ -2063,3 +2063,7 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 .hotbar-slot .wear i { display: block; height: 100%; background: #5aa53a; }
 .hotbar-slot .wear.low i { background: #f1c84b; }
 .hotbar-slot .wear.out i { background: #b84a3a; }
+
+/* A big store's pages (a train's car): back, which slots, on. */
+.store-pager { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px; font-size: 12px; }
+.store-pager button { min-width: 44px; }

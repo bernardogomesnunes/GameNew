@@ -22,6 +22,8 @@ export const PART_LENGTH = 8, PART_GAP = 0.5;
 /** Each part's width and height, for picking it out and drawing it. */
 export const PART_WIDTH = 3, PART_HEIGHT = 4;
 export const MAX_CARS = 5;
+/** What each car carries (backlog batch 2: "1,000 slots of items"). */
+export const CAR_SLOTS = 1000;
 /** Blocks per second flat out; how fast it picks up, slows under brakes, and rolls to a stop. */
 export const MAX_SPEED = 12, ACCEL = 2.5, BRAKE = 6, ROLL = 1.2;
 /** How far one coal takes it. */
@@ -62,8 +64,13 @@ export function trainLength(cars) {
 }
 
 export class Trains {
-  constructor({ world }) {
+  /**
+   * @param makeLoad (saved?) → what a car carries, an Inventory — given by
+   *                 DuiltGame, so this stays free of the bag's own code
+   */
+  constructor({ world, makeLoad = null }) {
     this.world = world;
+    this.makeLoad = makeLoad;
     this.list = [];
     this.nextId = 1;
   }
@@ -92,7 +99,7 @@ export class Trains {
     }
     if (back.length < PART_LENGTH + 1) return { ok: false, reason: `Not enough rail behind it: it needs ${PART_LENGTH + 1} in a line, it has ${back.length}.` };
     const trail = back.reverse();
-    const train = { id: this.nextId++, trail, head: trail.length - 1, speed: 0, throttle: 0, cars: 0, fuel: 0, coal: 0 };
+    const train = { id: this.nextId++, trail, head: trail.length - 1, speed: 0, throttle: 0, cars: 0, fuel: 0, coal: 0, loads: [] };
     this.list.push(train);
     return { ok: true, train };
   }
@@ -103,12 +110,13 @@ export class Trains {
     const need = train.head - trainLength(train.cars + 1);
     if (!this.extendBack(train, need)) return { ok: false, reason: 'Not enough rail behind the train for another car.' };
     train.cars++;
+    train.loads.push(this.makeLoad?.() ?? null);
     return { ok: true };
   }
 
   /** The last car off the back, or (with none) the engine off the rail. Returns 'car', 'engine' or null. */
   uncouple(train) {
-    if (train.cars > 0) { train.cars--; return 'car'; }
+    if (train.cars > 0) { train.cars--; train.loads.pop(); return 'car'; }
     this.list = this.list.filter((t) => t !== train);
     return 'engine';
   }
@@ -256,6 +264,9 @@ export class Trains {
     return this.list.map((t) => ({
       trail: t.trail.map((c) => [c.x, c.y, c.z]), head: Math.round(t.head * 100) / 100,
       cars: t.cars, fuel: Math.round(t.fuel * 10) / 10, coal: t.coal,
+      // What's in each car, by the slots that hold anything — a car is a
+      // thousand slots and most of them empty.
+      loads: t.loads.map((l) => (l ? l.slots.map((s, i) => (s ? [i, s.id, s.count, s.wear || 0] : null)).filter(Boolean) : null)),
     }));
   }
 
@@ -265,7 +276,18 @@ export class Trains {
       .map((t) => ({
         id: this.nextId++, trail: t.trail.map(([x, y, z]) => ({ x, y, z })), head: t.head, speed: 0, throttle: 0,
         cars: Math.max(0, Math.min(MAX_CARS, t.cars | 0)), fuel: Math.max(0, +t.fuel || 0), coal: Math.max(0, t.coal | 0),
+        loads: [],
       }));
+    for (const [k, t] of this.list.entries()) {
+      const saved = data.filter((d) => Array.isArray(d?.trail) && d.trail.length >= 2 && Number.isFinite(d.head))[k]?.loads ?? [];
+      t.loads = Array.from({ length: t.cars }, (_, i) => {
+        const load = this.makeLoad?.() ?? null;
+        const slots = new Array(CAR_SLOTS).fill(null);
+        for (const [slot, id, count, wear] of saved[i] ?? []) if (slot >= 0 && slot < CAR_SLOTS) slots[slot] = { id, count, wear };
+        load?.loadJSON?.({ slots });
+        return load;
+      });
+    }
   }
 }
 
