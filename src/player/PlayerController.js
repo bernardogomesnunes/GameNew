@@ -57,7 +57,7 @@ const NEAR_CLOSE = 0.05;
  * you back toward the surface instead of straight to the bottom.
  */
 const SWIM_SPEED = 3.0;      // walking speed underwater; water resists you
-const SWIM_VERTICAL_SPEED = 3.2; // paddling up (Space) or diving down (Ctrl)
+const SWIM_VERTICAL_SPEED = 3.2; // paddling up (Space) or diving down (Shift)
 const SWIM_FLOAT_SPEED = 0.8; // passive buoyancy — no input at all still drifts up
 const SWIM_EASE = 6;         // how fast vertical speed catches up to the target above
 /** How high a swimmer can climb out: onto a bank level with the water, not one a block above it. */
@@ -92,6 +92,9 @@ const LOOK_ACCEL_MAX = 1.35;  // multiplier reached at full ramp (~170 deg/s pea
 const LOOK_ACCEL_TIME = 0.75; // seconds of sustained deflection to get there
 const LOOK_ACCEL_GATE = 0.7;  // deflection above which the ramp charges
 
+/** Forward pressed twice within this many ms (and held) runs. */
+const DOUBLE_TAP_MS = 300;
+
 export class PlayerController {
   constructor(world, camera, spawn) {
     this.world = world;
@@ -117,7 +120,7 @@ export class PlayerController {
 
     this.keys = new Set();
     this.externalMove = { x: 0, z: 0 };
-    // The touch stick pushed all the way out runs — a phone has no Shift
+    // The touch stick pushed all the way out runs — a phone has no Ctrl
     // (asked for directly: "can't run in mobile").
     this.stickSprint = false;
     this.externalUp = 0;
@@ -148,12 +151,21 @@ export class PlayerController {
       this.keys.add(e.code);
       const b = this.binds;
       if (e.code === b.sprint) this.sprint = true;
+      // Forward twice, quickly, and held: you run until you let go (asked
+      // for directly: "if I click two times front and leave it then it
+      // should run too").
+      if (e.code === b.forward && !e.repeat) {
+        const now = performance.now();
+        if (now - (this.forwardTapAt ?? -Infinity) < DOUBLE_TAP_MS) this.tapRun = true;
+        this.forwardTapAt = now;
+      }
       if (e.code === b.jump) this.jumpQueued = true;
       if (e.code === b.fly && !e.repeat) this.toggleFly();
     };
     this._onKeyUp = (e) => {
       this.keys.delete(e.code);
       if (e.code === this.binds.sprint) this.sprint = false;
+      if (e.code === this.binds.forward) this.tapRun = false;
     };
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('keyup', this._onKeyUp);
@@ -170,9 +182,10 @@ export class PlayerController {
    * explicit.
    */
   releaseKeys() {
-    if (!this.keys.size && !this.sprint) return;
+    if (!this.keys.size && !this.sprint && !this.tapRun) return;
     this.keys.clear();
     this.sprint = false;
+    this.tapRun = false;
     this.jumpQueued = false;
     this.velocity.x = 0;
     this.velocity.z = 0;
@@ -254,13 +267,13 @@ export class PlayerController {
       .addScaledVector(right, moveX);
     if (wish.lengthSq() > 1) wish.normalize();
 
-    const shift = this.sprint || this.keys.has(b.sprint);
-    // One key, two jobs — asked for directly: fly down "on shift" as well as
-    // sprint. On your feet Shift sprints; flying or swimming it takes you
-    // down, and in the air the down key (Ctrl) is the one that goes faster.
-    // The stick pushed right out only ever means faster, never down.
-    const sprinting = this.flying ? this.keys.has(b.down) || this.stickSprint : shift || this.stickSprint;
-    const goingDown = this.keys.has(b.down) && !this.flying || shift;
+    // One key, one job, on foot and in the air alike: Run (Ctrl) goes
+    // faster — running, or flying faster — and Down (Shift) goes lower —
+    // sneaking, or flying or swimming down (still "fly down on shift", as
+    // first asked for). Forward double-tapped runs too, and so does the
+    // stick pushed right out.
+    const sprinting = this.sprint || this.keys.has(b.sprint) || this.tapRun || this.stickSprint;
+    const goingDown = this.keys.has(b.down);
     // On your feet, the Down key or button sneaks. A sneak is never a run.
     this.sneaking = !this.flying && !this.swimming && (this.sneakHeld || this.keys.has(b.down));
     // Running on your feet, for whoever's watching (duilt/Suspicion.js).

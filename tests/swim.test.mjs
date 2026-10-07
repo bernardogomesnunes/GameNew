@@ -72,10 +72,11 @@ const camera = new THREE.Object3D();
 {
   const p = new PlayerController(world, camera, { x: 16, y: 8, z: 16 });
   p.velocity.set(0, 0, 0);
-  p.keys.add('ControlLeft');
+  // The dive key is Shift now (Down: sneak, or fly or swim down).
+  p.keys.add('ShiftLeft');
   for (let i = 0; i < 20; i++) p.update(1 / 30);
   const dived = p.velocity.y;
-  p.keys.delete('ControlLeft');
+  p.keys.delete('ShiftLeft');
   ok('holding the dive key drives you down', dived < -0.5);
 
   p.velocity.set(0, 0, 0);

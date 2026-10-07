@@ -24,8 +24,12 @@ export const ACTIONS = [
   { id: 'left', name: 'Step left', key: 'KeyA' },
   { id: 'right', name: 'Step right', key: 'KeyD' },
   { id: 'jump', name: 'Jump / swim or fly up', key: 'Space' },
-  { id: 'sprint', name: 'Sprint — or down, flying or swimming', key: 'ShiftLeft' },
-  { id: 'down', name: 'Sneak — or fly faster, or swim down', key: 'ControlLeft' },
+  // Asked for directly: "Running in desktop is on shift, that should be
+  // sneaking, we can have run on ctrl". Each key now means one thing on
+  // foot and in the air: Ctrl faster, Shift lower. Double-tapping forward
+  // runs too (PlayerController).
+  { id: 'sprint', name: 'Run — or fly faster', key: 'ControlLeft' },
+  { id: 'down', name: 'Sneak — or fly or swim down', key: 'ShiftLeft' },
   { id: 'fly', name: 'Fly on / off', key: 'KeyF' },
   { id: 'turn', name: 'Turn a roof or design', key: 'KeyR' },
   // Playtest, P3: "in desktop there should be a key".
@@ -34,6 +38,8 @@ export const ACTIONS = [
 
 export const DEFAULT_CONTROLS = {
   keys: Object.fromEntries(ACTIONS.map((a) => [a.id, a.key])),
+  // 2: run and sneak swapped onto Ctrl and Shift — see loadControls.
+  keysVersion: 2,
   fov: 75,            // degrees, vertical
   sensitivity: 1,     // times the default mouse speed
   volume: 0.7,        // 0..1, the master — 0 is sound off
@@ -78,7 +84,14 @@ export function loadControls() {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null');
     if (!raw) return structuredClone(DEFAULT_CONTROLS);
-    return { ...DEFAULT_CONTROLS, ...raw, keys: { ...DEFAULT_CONTROLS.keys, ...(raw.keys ?? {}) }, look: { ...DEFAULT_LOOK, ...(raw.look ?? {}) } };
+    const keys = { ...DEFAULT_CONTROLS.keys, ...(raw.keys ?? {}) };
+    // Saved before run and sneak swapped, still on the old defaults (Shift
+    // ran, Ctrl sneaked): swapped to the new ones. Keys you chose yourself stay.
+    if ((raw.keysVersion ?? 1) < 2 && keys.sprint === 'ShiftLeft' && keys.down === 'ControlLeft') {
+      keys.sprint = 'ControlLeft';
+      keys.down = 'ShiftLeft';
+    }
+    return { ...DEFAULT_CONTROLS, ...raw, keysVersion: 2, keys, look: { ...DEFAULT_LOOK, ...(raw.look ?? {}) } };
   } catch {
     return structuredClone(DEFAULT_CONTROLS);
   }
