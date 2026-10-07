@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ITEM_MODELS } from '../config/itemModels.js';
 import { ITEMS_BY_ID } from '../config/items.js';
 import { BLOCKS_BY_ID } from '../config/blocks.js';
-import { boxesFor } from '../world/propShapes.js';
+import { boxesFor, boxColor } from '../world/propShapes.js';
 import { tileFor, TILE_SIZE, tileValue } from './BlockTextures.js';
 
 /**
@@ -53,7 +53,7 @@ export function heldBoxes({ itemId = null, blockId = null } = {}) {
   if (blockId != null) {
     const b = BLOCKS_BY_ID.get(blockId);
     if (!b) return [];
-    if (b.shape) return boxesFor(b.shape).map((x) => ({ ...x, color: x.color ?? b.color }));
+    if (b.shape) return boxesFor(b.shape).map((x) => ({ ...x, color: boxColor(x, b.color) }));
     return [box(0, 0, 0, 1, 1, 1, b.color)];
   }
   return [];

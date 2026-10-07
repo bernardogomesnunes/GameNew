@@ -1,6 +1,6 @@
 import { BLOCKS_BY_ID, shapeOf } from './blocks.js';
 import { GLYPHS, inkOn } from './glyphs.js';
-import { boxesFor, fenceBoxes, wallBoxes } from '../world/propShapes.js';
+import { boxesFor, fenceBoxes, wallBoxes, boxColor } from '../world/propShapes.js';
 import { slopeGeometry, orient } from '../world/slopes.js';
 import { tileFor, TILE_SIZE, tileValue } from '../render/BlockTextures.js';
 import { ITEM_MODELS } from './itemModels.js';
@@ -229,7 +229,7 @@ function boxesSvg(boxes, c, size, { fit = false } = {}) {
   for (const b of order) {
     // A box can carry its own colour (a lantern's iron frame), and a lit one
     // (its glass) isn't shaded.
-    const bc = b.color ?? c;
+    const bc = boxColor(b, c);
     const f = b.glow ? { top: 1, left: 1, right: 1 } : FACE;
     body += poly([p(b.minX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.minZ), p(b.maxX, b.maxY, b.maxZ), p(b.minX, b.maxY, b.maxZ)], shade(bc, f.top));
     body += poly([p(b.minX, b.maxY, b.maxZ), p(b.maxX, b.maxY, b.maxZ), p(b.maxX, b.minY, b.maxZ), p(b.minX, b.minY, b.maxZ)], shade(bc, f.left));

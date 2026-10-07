@@ -780,6 +780,51 @@ quad(366, { name: 'Wood Panel', glyph: 'panel', color: 0xc49360, shape: 'panel_p
 quad(370, { name: 'Patterned Panel', glyph: 'panel', color: 0xc49360, shape: 'panel_pattern', material: 'wood', panel: true, unlock: null });
 quad(374, { name: 'Two-tone Panel', glyph: 'panel', color: 0xd8b98c, shape: 'panel_twotone', material: 'wood', panel: true, unlock: null });
 
+// Furniture in every wood (backlog batch 3, asked for directly): the oak
+// pieces again in white and in dark wood — table, chair, cabinet, wardrobe,
+// bedside table and the plain and patterned panels (the two-tone panel is two
+// woods already). Each is its wood's planks, lighter or darker the way the
+// oak piece is to oak planks, and counts as the oak piece for a building's
+// needs: a university studies at a dark table as well as an oak one.
+const OAK_PLANKS = 0xc49360;
+const FURNITURE = [
+  { key: 'table', name: 'Table', shape: 'table', glyph: 'table', oak: 31, color: 0xc49360, at: 0, turns: false },
+  { key: 'chair', name: 'Chair', shape: 'chair', glyph: 'chair', oak: 33, color: 0xc49360, at: 1 },
+  { key: 'cabinet', name: 'Cabinet', shape: 'cabinet', glyph: 'cabinet', oak: CABINET, color: 0xb08458, at: 5, facesYou: true },
+  { key: 'wardrobe', name: 'Wardrobe', shape: 'wardrobe', glyph: 'wardrobe', oak: WARDROBE, color: 0x9a6c46, at: 9, facesYou: true },
+  { key: 'bedside_table', name: 'Bedside Table', shape: 'bedside_table', glyph: 'cabinet', oak: BEDSIDE_TABLE, color: 0xb98d60, at: 13, facesYou: true },
+  { key: 'panel_plain', name: 'Panel', shape: 'panel_plain', glyph: 'panel', oak: 366, color: 0xc49360, at: 17, panel: true },
+  { key: 'panel_pattern', name: 'Patterned Panel', shape: 'panel_pattern', glyph: 'panel', oak: 370, color: 0xc49360, at: 21, panel: true },
+];
+/** `hex` with each channel scaled by `k`, as far as white or black. */
+export function toneHex(hex, k) {
+  const ch = (s) => Math.max(0, Math.min(255, Math.round(((hex >> s) & 255) * k)));
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+/** `hex` as `oak` is to oak planks, but from `planks`: each channel by the same share. */
+const asWood = (oak, planks) => {
+  const ch = (h, s) => (h >> s) & 255;
+  const c = (s) => Math.max(0, Math.min(255, Math.round(ch(planks, s) * ch(oak, s) / ch(OAK_PLANKS, s))));
+  return (c(16) << 16) | (c(8) << 8) | c(0);
+};
+/** Every wood's furniture: { wood, key, id } — oak's are the pieces above. */
+export const WOOD_FURNITURE = FURNITURE.map((f) => ({ wood: 'oak', key: f.key, id: f.oak }));
+[
+  { key: 'white', name: 'White', base: 384, planks: 0xe2d6bd },
+  { key: 'dark', name: 'Dark', base: 416, planks: 0x6e4a33 },
+].forEach((w) => {
+  for (const f of FURNITURE) {
+    const id = w.base + f.at;
+    const spec = {
+      name: `${w.name} ${f.name}`, glyph: f.glyph, color: asWood(f.color, w.planks), shape: f.shape, material: 'wood',
+      countsAs: f.oak, ...(f.facesYou ? { facesYou: true } : {}), ...(f.panel ? { panel: true } : {}), unlock: null,
+    };
+    if (f.turns === false) BLOCKS.push({ id, ...spec });
+    else quad(id, spec);
+    WOOD_FURNITURE.push({ wood: w.key, key: f.key, id });
+  }
+});
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**

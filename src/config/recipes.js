@@ -3,6 +3,7 @@ import { CONTROLLER_PARTS } from './structures.js';
 import { tieredRecipes } from './tiers.js';
 import { SKILLS, MAX_LEVEL } from './skills.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
+import { FURNITURE_ITEM } from './items.js';
 
 /**
  * What you can make, and where you can make it.
@@ -1217,6 +1218,20 @@ export const RECIPES = [
     blurb: 'A jar of fireflies you caught, set in a frame. A soft green light, the way the Sky Kingdom lights its paths.',
   },
 ];
+
+// Furniture in every wood (backlog batch 3): each oak piece's recipe again,
+// where it's made and for as much, in white or dark planks.
+for (const [key, id] of FURNITURE_ITEM) {
+  const [wood, piece] = key.split(':');
+  if (wood === 'oak') continue;
+  const oak = RECIPES.find((r) => r.output.id === FURNITURE_ITEM.get(`oak:${piece}`) && !r.inputs.dark_planks);
+  const planks = `${wood}_planks`;
+  RECIPES.push({
+    ...oak, id, name: oak.name.replace(/^(Oak |Wood )?/, `${wood[0].toUpperCase()}${wood.slice(1)} `),
+    inputs: Object.fromEntries(Object.entries(oak.inputs).map(([k, n]) => [k === 'planks' ? planks : k, n])),
+    output: { ...oak.output, id },
+  });
+}
 
 // The Temple (Phase 7c). Offerings turn what you have into devotion; a
 // chapel (tier 1) blesses water; the High Temple (tier 4) forges a ring —
