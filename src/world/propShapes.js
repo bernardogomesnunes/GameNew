@@ -414,6 +414,27 @@ PROP_SHAPES.wood_mill = [
   { minX: 0.94, maxX: 1, minY: 0.62, maxY: 0.68, minZ: 0.44, maxZ: 0.7, color: MILL_DARK },
 ];
 
+// The stone mill, facing 0 with its front to -z: a block of dressed stone
+// for a base, a grindstone standing up in a wooden frame on top of it, its
+// axle through the frame, and a crank on the side.
+const GRIND = 0xb9b4aa, GRIND_EDGE = 0xd6d1c6, MILL_FRAME = 0x6b4a33;
+PROP_SHAPES.stone_mill = [
+  { minX: 0.06, maxX: 0.94, minY: 0, maxY: 0.5, minZ: 0.1, maxZ: 0.9 },
+  { minX: 0.02, maxX: 0.98, minY: 0.5, maxY: 0.56, minZ: 0.06, maxZ: 0.94, tone: 1.12 },
+  // The frame: two uprights and the axle across between them.
+  { minX: 0.16, maxX: 0.24, minY: 0.56, maxY: 1.04, minZ: 0.44, maxZ: 0.56, color: MILL_FRAME },
+  { minX: 0.76, maxX: 0.84, minY: 0.56, maxY: 1.04, minZ: 0.44, maxZ: 0.56, color: MILL_FRAME },
+  { minX: 0.24, maxX: 0.76, minY: 0.84, maxY: 0.9, minZ: 0.47, maxZ: 0.53, color: MILL_FRAME },
+  // The grindstone: a thick disc, as a cross of two slabs, standing up across the axle.
+  { minX: 0.4, maxX: 0.6, minY: 0.6, maxY: 1.14, minZ: 0.34, maxZ: 0.66, color: GRIND },
+  { minX: 0.4, maxX: 0.6, minY: 0.7, maxY: 1.04, minZ: 0.24, maxZ: 0.76, color: GRIND },
+  { minX: 0.38, maxX: 0.62, minY: 1.1, maxY: 1.16, minZ: 0.42, maxZ: 0.58, color: GRIND_EDGE },
+  // A trough for what it grinds, at the front, and the crank.
+  { minX: 0.28, maxX: 0.72, minY: 0.56, maxY: 0.66, minZ: 0.1, maxZ: 0.26, color: MILL_FRAME },
+  { minX: 0.84, maxX: 0.9, minY: 0.84, maxY: 0.9, minZ: 0.47, maxZ: 0.53, color: MILL_FRAME },
+  { minX: 0.88, maxX: 0.94, minY: 0.7, maxY: 0.9, minZ: 0.47, maxZ: 0.53, color: MILL_FRAME },
+];
+
 // Furniture from the mill, fronts to -z (they face you, like a chest).
 // The top a shade lighter than the body, whatever wood it's in (`tone`, see
 // boxColor); the handles and kick plate dark iron.

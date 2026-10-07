@@ -297,6 +297,7 @@ export const ITEMS = [
   { id: 'panel_plain', name: 'Wood Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xc49360, glyph: 'panel', block: 366, madeBy: 'Boards for a wall, at the wood mill — goes flat on the face you point at' },
   { id: 'panel_pattern', name: 'Patterned Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xc49360, glyph: 'panel', block: 370, madeBy: 'Raised squares for a wall, at the wood mill' },
   { id: 'panel_twotone', name: 'Two-tone Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xd8b98c, glyph: 'panel', block: 374, madeBy: 'Dark below, light above, a rail between — at the wood mill' },
+  { id: 'stone_mill', name: 'Stone Mill', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a968f, glyph: 'stonemill', block: 380, madeBy: 'Built at the bench — stand by it and stone goes further, and it grinds gravel; Place on it to use it' },
   // Trains (backlog batch 2, Age 5) — see world/Trains.js.
   { id: 'rail', name: 'Rail', kind: 'refined', stackTo: STACK_BULK, color: 0x8d8f96, glyph: 'rail', block: 378, madeBy: 'Iron on wooden sleepers, at an engineering centre — lay it in a line, and it joins up round corners and up a step' },
   { id: 'coal_ore', name: 'Coal Ore', kind: 'raw', stackTo: STACK_BULK, color: 0x8f8a86, glyph: 'coal', block: 379, madeBy: 'A seam of coal in the rock of the high peaks — break it for the coal' },

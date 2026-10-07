@@ -97,6 +97,32 @@ function escapeHtml(s) {
 }
 const escapeAttr = escapeHtml;
 
+/**
+ * One tile for each thing, made the way you can make it here. Reported
+ * directly: "two trapdoors that look the same on the bench" — the hand one
+ * and the wood mill's cheaper one, side by side. Where something is made both
+ * by hand and at a station (a wood mill, a stone mill), standing at the
+ * station shows only the station's way; anywhere else, only the hand's. Things
+ * made two ways at the same place (stone from cobblestone, or from marble)
+ * all stay.
+ */
+export function oneWayEach(recipes) {
+  const ways = new Map();
+  for (const r of recipes) if (!r.study) ways.set(r.output.id, [...(ways.get(r.output.id) ?? []), r]);
+  return recipes.filter((r) => {
+    const same = r.study ? [] : ways.get(r.output.id);
+    const hand = same.filter((o) => o.station === 'hand'), there = same.filter((o) => o.station !== 'hand' && o.atStation);
+    if (!hand.length || hand.length === same.length) return true;
+    if (r.station === 'hand') return !there.some((o) => o.output.id === r.output.id && sameStuff(o, r));
+    return r.atStation || !hand.some((o) => sameStuff(o, r));
+  });
+}
+/** Whether two recipes are the same thing made two ways: the same output from the same kinds of input. */
+function sameStuff(a, b) {
+  const ka = Object.keys(a.inputs).sort().join(), kb = Object.keys(b.inputs).sort().join();
+  return a.output.id === b.output.id && ka === kb;
+}
+
 /** A store bigger than this shows its slots a page at a time (a train's car is a thousand). */
 const STORE_PAGE = 200;
 
@@ -1762,7 +1788,7 @@ export class DuiltUI {
       search.addEventListener('input', () => this.renderBench());
     }
     const query = search?.value ?? '';
-    const recipes = all.filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
+    const recipes = oneWayEach(all).filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
     if (!recipes.length) {
       this.q('#bench-list').innerHTML = `<div class="sub" style="margin:8px 0">Nothing you can make matches “${escapeHtml(query.trim())}”.</div>`;
       return;
@@ -1813,7 +1839,7 @@ export class DuiltUI {
       return `
         <div class="recipe-tile ${r.ok ? '' : 'blocked'}">
           <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(name)}" data-tip-info="${escapeAttr(r.blurb ?? '')}">${icon}${count}</span>
-          <strong class="recipe-name">${r.name}</strong>
+          <strong class="recipe-name">${r.name.replace(/ \(mill\)$/, '')}</strong>
           ${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${stationName(r.station)}</span>` : ''}
           <span class="recipe-cost">${inputs}</span>
           ${takes}

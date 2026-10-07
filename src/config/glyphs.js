@@ -110,6 +110,8 @@ export const GLYPHS = {
   sword: 'M19 5 10 14M19 5h-3.5M19 5v3.5M7.5 11.5l5 5M10 14l-4.5 4.5',
   // A cart: a box on two wheels, and the shafts out the front.
   cart: 'M4 9h13v6H4zM6 18.5a2 2 0 1 0 0-.01M15 18.5a2 2 0 1 0 0-.01M17 11h4',
+  // The stone mill: a grindstone in its frame on a block.
+  stonemill: 'M4 14h16v6H4zM7 14V6M17 14V6M12 5a5 5 0 1 0 .01 0M12 9.5v1M7 10h10',
   // Trains (Age 5): a length of track, a lump of coal, the engine, a car.
   rail: 'M8 3v18M16 3v18M5 6h14M5 10.5h14M5 15h14M5 19.5h14',
   coal: 'M5 15l3-7 6-2 5 5-2 7-8 1Z',
