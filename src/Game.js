@@ -59,6 +59,8 @@ import { SWIFT_SPEED } from './config/upgrades.js';
 import { nextView, VIEW_NAMES } from './config/avatar.js';
 import { AvatarView } from './render/AvatarView.js';
 import { GliderView, MachineView } from './render/GliderView.js';
+import { TrainView } from './render/TrainView.js';
+import { RAIL, BUNKER } from './world/Trains.js';
 import { CartView } from './render/CartView.js';
 import { FlameView } from './render/FlameView.js';
 import { SmokeView } from './render/SmokeView.js';
@@ -309,7 +311,7 @@ const CRACK_LINGER_MS = 450;
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
 const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', flying_machine: 'setDownMachine' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', flying_machine: 'setDownMachine', locomotive: 'setDownTrain', rail_car: 'railCarHint' };
 /**
  * Whether saved progression `a` is further along than `b`. By level first:
  * `xp` is only what's been earned towards the next level, so comparing it
@@ -475,6 +477,7 @@ export class Game {
     this.glider = new GliderView(this.scene);
     this.cartView = new CartView(this.scene);
     this.machineView = new MachineView(this.scene);
+    this.trainView = new TrainView(this.scene);
     this.flames = new FlameView(this.scene);
     this.smoke = new SmokeView(this.scene);
     this.grass = new GrassView(this.scene);
@@ -1858,6 +1861,7 @@ export class Game {
     const machine = this.hasFlyingMachine();
     this.glider.update(this.player, playing && machine ? (this.player.flying ? 'fly' : this.player.gliding ? 'glide' : 'parked') : null, dt);
     this.machineView.update(this.duilt?.machines, this.piloting);
+    this.trainView.update(this.duilt?.trains, dt, this.driving);
     this.cartView.update(this.duilt?.mounts);
   }
 
@@ -1884,6 +1888,146 @@ export class Game {
     if (!r.ok) return void this.ui.toast({ kind: 'xp', title: 'No flying machine', body: r.reason });
     this.editedAt = Date.now();
     this.ui.toast({ kind: 'challenge', title: 'Flying machine set down', body: 'Place on it to climb in. Hit it to pick it up again.' });
+  }
+
+  /**
+   * Hold a steam engine and Place on a rail: it's set on the line there,
+   * facing the way you look, with the rail behind it under its length
+   * (backlog batch 2: "a train on a one-block rail").
+   */
+  setDownTrain() {
+    const d = this.duilt, hit = this.raycast();
+    if (!d || !hit) return;
+    if (hit.block !== RAIL) {
+      return void this.ui.toast({ kind: 'xp', title: 'Set it on a rail', body: 'Lay a line of rail first — nine at least — and Place on it.' });
+    }
+    const look = this.player.lookDirection();
+    const r = d.placeTrain({ x: hit.x, y: hit.y, z: hit.z }, { x: look.x, z: look.z });
+    if (!r.ok) return void this.ui.toast({ kind: 'xp', title: 'No room for it', body: r.reason });
+    this.editedAt = Date.now();
+    this.ui.toast({ kind: 'challenge', title: 'Steam engine on the rails', body: 'Coal in your hand and Place on it to fire it. Place on it to drive.' });
+  }
+
+  /** A rail car in hand goes on a train — Place on one. */
+  railCarHint() {
+    this.ui.toast({ kind: 'xp', title: 'Place it on a train', body: 'Point at a train on the rails and Place: the car couples on behind.' });
+  }
+
+  /** The train part under the crosshair, nearer than the block behind it: { train, part } or null. */
+  trainTarget(hit = this.raycast()) {
+    const trains = this.duilt?.trains;
+    if (!trains?.list.length || this.driving) return null;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const found = trains.pick(eye, dir, REACH + 2);
+    if (!found) return null;
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < found.t) return null;
+    }
+    return found;
+  }
+
+  /** Place on a train: coal in hand fires it, a car couples on, otherwise you climb into the cab. */
+  useTrain(t) {
+    const d = this.duilt;
+    if (this.selectedItemId === 'coal') {
+      const n = d.fuelTrain(t);
+      this.ui.toast(n
+        ? { kind: 'xp', title: `${n} coal in the bunker`, body: `${t.coal} of ${BUNKER} — Place on it to drive.` }
+        : { kind: 'xp', title: t.coal >= BUNKER ? 'The bunker is full' : 'No coal', body: t.coal >= BUNKER ? undefined : 'Dig it in the high peaks, or a mine brings it up.' });
+      if (n) this.editedAt = Date.now();
+      return;
+    }
+    if (this.selectedItemId === 'rail_car') {
+      const r = d.coupleCar(t);
+      this.ui.toast(r.ok ? { kind: 'xp', title: 'Car coupled on', body: `${t.cars} of 5.` } : { kind: 'xp', title: 'Can\'t couple it', body: r.reason });
+      if (r.ok) this.editedAt = Date.now();
+      return;
+    }
+    this.drive(t);
+  }
+
+  /** Break on a train standing there: its last car back in your bag, or the engine when it has none. */
+  pickUpTrain(hit) {
+    const found = this.trainTarget(hit);
+    if (!found) return false;
+    const r = this.duilt.pickUpTrain(found.train);
+    this.ui.toast(r.ok
+      ? { kind: 'xp', title: r.piece === 'rail_car' ? 'Car taken off' : 'Steam engine picked up', body: 'It is back in your bag.' }
+      : { kind: 'xp', title: 'Can\'t pick it up', body: r.reason });
+    if (r.ok) this.editedAt = Date.now();
+    return true;
+  }
+
+  /** Into the cab: forward and back drive it, Sneak gets you down. */
+  drive(t) {
+    if (!t || this.driving) return;
+    this.stopRide();
+    this.leaveMachine();
+    this.driving = t;
+    const cab = this.duilt.trains.cab(t);
+    this.player.flying = false;
+    this.player.position.set(cab.x, cab.y, cab.z);
+    this.player.velocity?.set?.(0, 0, 0);
+    this.player.yaw = cab.yaw + Math.PI;
+    this.cabYaw = cab.yaw;
+    this.player.viewLift = 0.55;
+    this.player.viewReach = 9;
+    const fired = this.duilt.inventory.endless || t.coal > 0 || t.fuel > 0;
+    this.ui.toast({
+      kind: 'xp', title: 'Driving',
+      body: fired ? 'Forward and back to drive. Sneak to get down.' : 'No coal in it — get down (Sneak), hold coal and Place on it to fire it.',
+    });
+  }
+
+  /** Down from the cab, beside the engine. `stay`: you're elsewhere already. */
+  leaveTrain(stay = false) {
+    const t = this.driving;
+    if (!t) return;
+    t.throttle = 0;
+    this.driving = null;
+    this.player.viewLift = 0;
+    this.player.viewReach = 0;
+    if (stay || !this.duilt) return;
+    const cab = this.duilt.trains.cab(t);
+    const side = cab.yaw + Math.PI / 2;
+    const x = cab.x + Math.sin(side) * 2.4, z = cab.z + Math.cos(side) * 2.4;
+    // Onto whatever's there: up out of the ground, or down to it.
+    let y = Math.floor(cab.y);
+    const bx = Math.floor(x), bz = Math.floor(z);
+    while (y < cab.y + 6 && (this.world.isCollidable(bx, y, bz) || this.world.isCollidable(bx, y + 1, bz))) y++;
+    while (y > cab.y - 8 && !this.world.isCollidable(bx, y - 1, bz)) y--;
+    this.player.position.set(x, y, z);
+    this.player.velocity?.set?.(0, 0, 0);
+  }
+
+  /**
+   * Each frame you're driving: forward and back are the throttle, you stand
+   * in the cab wherever the train has got to, and your view turns with it
+   * round a bend. Sneak to get down.
+   */
+  tickDrive() {
+    const t = this.driving;
+    if (!t) return;
+    const trains = this.duilt?.trains;
+    if (!trains || !trains.list.includes(t)) return void this.leaveTrain(true);
+    const p = this.player;
+    if (p.sneaking) return void this.leaveTrain();
+    const cab = trains.cab(t);
+    // Sent somewhere in one go (a respawn, a bed): the train stays behind.
+    if (Math.hypot(p.position.x - cab.x, p.position.z - cab.z) > 12) return void this.leaveTrain(true);
+    t.throttle = p.moveInput().z;
+    const empty = t.throttle && !this.duilt.inventory.endless && t.coal <= 0 && t.fuel <= 0;
+    if (empty && !this.toldEmpty) {
+      this.toldEmpty = true;
+      this.ui.toast({ kind: 'xp', title: 'Out of coal', body: 'Get down (Sneak), hold coal and Place on the engine.' });
+    } else if (!empty) this.toldEmpty = false;
+    p.position.set(cab.x, cab.y, cab.z);
+    p.velocity?.set?.(0, 0, 0);
+    let turn = cab.yaw - (this.cabYaw ?? cab.yaw);
+    turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+    p.yaw += turn;
+    this.cabYaw = cab.yaw;
   }
 
   /** The flying machine under the crosshair, nearer than the block behind it. */
@@ -2133,6 +2277,9 @@ export class Game {
     // At a flying machine you set down, Place climbs in.
     const machine = this.machineTarget(aimed);
     if (machine) return void this.pilot(machine);
+    // At a train: coal fires it, a car couples on, and anything else climbs in to drive.
+    const train = this.trainTarget(aimed);
+    if (train) return void this.useTrain(train.train);
     // At your guardian, Place gives it its next order.
     if (this.guardianTarget(aimed)) return void this.commandGuardian();
     if (aimed && swings(aimed.block)) return void this.toggleGate(aimed);
@@ -3586,9 +3733,8 @@ export class Game {
    * Returns whether the press was spent on an animal.
    */
   hitMob(hit) {
-    // A flying machine standing there takes the blow the same way: it goes
-    // back in your bag.
-    if (this.pickUpMachine(hit)) return true;
+    // A flying machine or a train standing there takes it: back in your bag.
+    if (this.pickUpMachine(hit) || this.pickUpTrain(hit)) return true;
     const mob = this.mobTarget(hit);
     if (!mob) return false;
     // Your own horse, and whatever its cart carries, is never hunted.
@@ -6243,6 +6389,8 @@ export class Game {
       this.keepApart();
       this.tickRide(dt);
       this.tickPilot();
+      this.duilt?.trains.tick(dt, { endless: this.duilt.inventory.endless });
+      this.tickDrive();
       this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
         this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
@@ -6493,8 +6641,9 @@ export class Game {
       // And your horses, carts and all.
       this.mobs.adopt(this.duilt.mounts);
       this.stopRide(true);
-      // A machine you were flying belonged to the world just left.
+      // A machine you were flying belonged to the world just left, and so did a train.
       this.piloting = null;
+      this.driving = null;
       this.mobsHerdOf = this.duilt;
     }
   }
@@ -6651,6 +6800,16 @@ export class Game {
     if (!this.armed && this.machineTarget(hit)) {
       this.hoverBox.visible = false;
       this.ui?.setPersonHint('Flying machine', 'Place to fly · hit to pick up');
+      return;
+    }
+    const aboard = this.armed ? null : this.trainTarget(hit);
+    if (aboard) {
+      const t = aboard.train, coal = this.duilt.inventory.endless ? 'coal without end' : `${t.coal} coal`;
+      this.hoverBox.visible = false;
+      this.ui?.setPersonHint(aboard.part.kind === 'engine' ? 'Steam engine' : 'Rail car',
+        this.selectedItemId === 'coal' ? `Place to fire it · ${coal} in the bunker`
+          : this.selectedItemId === 'rail_car' ? `Place to couple it on · ${t.cars} of 5 cars`
+            : `Place to drive · ${coal} · ${t.cars} car${t.cars === 1 ? '' : 's'} · hit to take ${t.cars ? 'the last car' : 'it'} off`);
       return;
     }
     const mob = this.armed ? null : this.mobTarget(hit);

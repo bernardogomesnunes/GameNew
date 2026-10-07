@@ -110,6 +110,11 @@ export const GLYPHS = {
   sword: 'M19 5 10 14M19 5h-3.5M19 5v3.5M7.5 11.5l5 5M10 14l-4.5 4.5',
   // A cart: a box on two wheels, and the shafts out the front.
   cart: 'M4 9h13v6H4zM6 18.5a2 2 0 1 0 0-.01M15 18.5a2 2 0 1 0 0-.01M17 11h4',
+  // Trains (Age 5): a length of track, a lump of coal, the engine, a car.
+  rail: 'M8 3v18M16 3v18M5 6h14M5 10.5h14M5 15h14M5 19.5h14',
+  coal: 'M5 15l3-7 6-2 5 5-2 7-8 1Z',
+  engine: 'M3 16V9h9V6h3v3h3l3 3v4ZM14 5h2M5 18.5a1.8 1.8 0 1 0 0-.01M11 18.5a1.8 1.8 0 1 0 0-.01M18 18.5a1.8 1.8 0 1 0 0-.01',
+  railcar: 'M3 7h18v9H3zM7 7v9M12 7v9M17 7v9M6 18.5a1.8 1.8 0 1 0 0-.01M18 18.5a1.8 1.8 0 1 0 0-.01',
   // The flying machine: a keel, and two ribbed wings off it.
   glider: 'M12 5v14M12 9C9 6 5 6 2 9l3 1 2 3 2-1 3 1M12 9c3-3 7-3 10 0l-3 1-2 3-2-1-3 1M9 19h6',
   shovel: 'M12 4v10M8.5 14h7L15 18.5a3 3 0 0 1-6 0Z',

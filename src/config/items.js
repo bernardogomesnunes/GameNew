@@ -297,6 +297,12 @@ export const ITEMS = [
   { id: 'panel_plain', name: 'Wood Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xc49360, glyph: 'panel', block: 366, madeBy: 'Boards for a wall, at the wood mill — goes flat on the face you point at' },
   { id: 'panel_pattern', name: 'Patterned Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xc49360, glyph: 'panel', block: 370, madeBy: 'Raised squares for a wall, at the wood mill' },
   { id: 'panel_twotone', name: 'Two-tone Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xd8b98c, glyph: 'panel', block: 374, madeBy: 'Dark below, light above, a rail between — at the wood mill' },
+  // Trains (backlog batch 2, Age 5) — see world/Trains.js.
+  { id: 'rail', name: 'Rail', kind: 'refined', stackTo: STACK_BULK, color: 0x8d8f96, glyph: 'rail', block: 378, madeBy: 'Iron on wooden sleepers, at an engineering centre — lay it in a line, and it joins up round corners and up a step' },
+  { id: 'coal_ore', name: 'Coal Ore', kind: 'raw', stackTo: STACK_BULK, color: 0x8f8a86, glyph: 'coal', block: 379, madeBy: 'A seam of coal in the rock of the high peaks — break it for the coal' },
+  { id: 'coal', name: 'Coal', kind: 'raw', stackTo: STACK_BULK, color: 0x2f2d31, glyph: 'coal', madeBy: 'Dug from seams in the high peaks, or brought up by a mine' },
+  { id: 'locomotive', name: 'Steam Engine', kind: 'refined', stackTo: STACK_GOODS, color: 0x3d4148, glyph: 'engine', madeBy: 'Built at an engineering centre — Place it on a rail; Place on it to drive; coal in your hand and Place to fire it' },
+  { id: 'rail_car', name: 'Rail Car', kind: 'refined', stackTo: STACK_GOODS, color: 0x7a5236, glyph: 'railcar', madeBy: 'Built at an engineering centre — Place it on a train to couple it on the back, five at most' },
   // Desert blocks (#33).
   { id: 'sandstone', name: 'Sandstone', kind: 'raw', stackTo: STACK_BULK, color: 0xd2b27a, glyph: 'sandstone', block: 333, madeBy: 'Dug from under the desert sand, or pressed from sand' },
   { id: 'sandstone_brick', name: 'Sandstone Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd8bf86, glyph: 'brick', block: 334, madeBy: 'Sandstone cut into bricks' },

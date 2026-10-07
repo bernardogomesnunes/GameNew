@@ -5,7 +5,7 @@ import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
   roofPart, doorPart, endAxisOf, ID_COUNT,
 } from '../config/blocks.js';
-import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, wallBoxes, pillarBoxes, chimneyBoxes, pathBoxes, pathCornerGaps, windowBoxes, turn, boxColor } from './propShapes.js';
+import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, railBoxes, wallBoxes, pillarBoxes, chimneyBoxes, pathBoxes, pathCornerGaps, windowBoxes, turn, boxColor } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
 import { textureFor, blockTexture, TILE_SCALE } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
@@ -105,6 +105,9 @@ function covers(id) {
 /** Rugs, which run into each other (see propShapes' rugBoxes). */
 const IS_RUG = new Uint8Array(IDS);
 for (const id of BLOCKS_BY_ID.keys()) IS_RUG[id] = shapeOf(id) === 'rug' ? 1 : 0;
+/** Rail, which runs on into the rail beside it, level or a step up or down (see propShapes' railBoxes). */
+const IS_RAIL = new Uint8Array(IDS);
+for (const id of BLOCKS_BY_ID.keys()) IS_RAIL[id] = shapeOf(id) === 'rail' ? 1 : 0;
 /**
  * Shaped blocks drawn in another block's texture rather than a flat colour:
  * a stone slab or stair in stone's, a plank one in planks' (blocks.js `tex`).
@@ -1153,6 +1156,13 @@ export class ChunkMesher {
               px: JOINS_FENCE[vol[idx + 1]], nx: JOINS_FENCE[vol[idx - 1]],
               pz: JOINS_FENCE[vol[idx + PAD]], nz: JOINS_FENCE[vol[idx - PAD]],
             })
+            : IS_RAIL[id]
+              ? railBoxes({
+                px: IS_RAIL[vol[idx + 1]] | IS_RAIL[vol[idx + 1 + P2]] | IS_RAIL[vol[idx + 1 - P2]],
+                nx: IS_RAIL[vol[idx - 1]] | IS_RAIL[vol[idx - 1 + P2]] | IS_RAIL[vol[idx - 1 - P2]],
+                pz: IS_RAIL[vol[idx + PAD]] | IS_RAIL[vol[idx + PAD + P2]] | IS_RAIL[vol[idx + PAD - P2]],
+                nz: IS_RAIL[vol[idx - PAD]] | IS_RAIL[vol[idx - PAD + P2]] | IS_RAIL[vol[idx - PAD - P2]],
+              })
             : IS_RUG[id]
               ? rugBoxes({
                 px: IS_RUG[vol[idx + 1]], nx: IS_RUG[vol[idx - 1]],
