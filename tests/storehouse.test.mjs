@@ -54,6 +54,28 @@ function stuff(inv) {
     AGES.some((a) => a.goals.some((g) => g.structure === 'storehouse')));
 }
 
+// --- what buildings make goes to the storehouse first (asked for directly:
+// "we need the farms to produce their items to the storage if there's one.
+// Or else I'll be full inventory every time I'm back") ---------------------------
+{
+  const { reg, inventory, put } = settlement();
+  const shed = put('storehouse', box(0));
+  reg.storeFor(shed).resize(HOLDS);
+  ok('with a storehouse, a payout goes on its shelves, not in your bag',
+    reg.deliver({ vegetables: 12 }) && reg.storeFor(shed).countOf('vegetables') === 12 && inventory.countOf('vegetables') === 0);
+  shed.excludes = ['fruit'];
+  ok('a storehouse set to skip something leaves it for your bag', reg.deliver({ fruit: 3 }) && inventory.countOf('fruit') === 3 && reg.storeFor(shed).countOf('fruit') === 0);
+  shed.excludes = [];
+  // Full shelves: the rest comes to the bag.
+  const shelves = reg.storeFor(shed);
+  while (shelves.firstEmpty() !== -1) shelves.add('axe', 1);
+  ok('shelves full, it comes to your bag after all', reg.deliver({ potato: 5 }) && inventory.countOf('potato') === 5);
+}
+{
+  const { reg, inventory } = settlement();
+  ok('with no storehouse, it comes to your bag as it always did', reg.deliver({ vegetables: 4 }) && inventory.countOf('vegetables') === 4);
+}
+
 // --- it is its own container, not a bigger bag -------------------------------
 {
   const { reg, inventory, put } = settlement();
