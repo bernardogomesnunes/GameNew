@@ -116,6 +116,8 @@ import { Guardian } from './world/Guardian.js';
 import { settlerName, settlerColour } from './config/settlers.js';
 
 const REACH = 7;
+/** The longest Save and leave waits for the upload before letting you go anyway. */
+const LEAVE_SAVE_WAIT_MS = 15000;
 /** How fast the touch stick walks at its rim, against a key's full walking pace. */
 const TOUCH_WALK = 0.8;
 /** The war only comes on while you're this near home — it's your settlement they want. */
@@ -766,10 +768,18 @@ export class Game {
    * away is held off too, or closing the tab afterwards would quietly write
    * the very state you just refused.
    */
-  leaveWorld(save = true) {
-    if (save) this.saveNow();
-    else this.discarded = true;
-    return save;
+  /**
+   * Saves (or not) on the way out. A cloud save is waited for — up to
+   * LEAVE_SAVE_WAIT_MS, so a bad connection never keeps you in — so Save
+   * and leave can show it saving (asked for directly: "when saving the button
+   * should have a loading indication"). Whatever hasn't gone up by then is
+   * kept aside (keepSafe) and sent the next time.
+   */
+  async leaveWorld(save = true) {
+    if (!save) { this.discarded = true; return false; }
+    const ok = this.saveNow();
+    if (this.saving) await Promise.race([Promise.resolve(this.saving).catch(() => {}), new Promise((r) => setTimeout(r, LEAVE_SAVE_WAIT_MS))]);
+    return ok;
   }
 
   /**

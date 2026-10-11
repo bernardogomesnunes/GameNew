@@ -136,6 +136,27 @@ function wearBar(slot, spec) {
   return `<span class="wear ${tone}"><i style="width:${Math.round(left * 100)}%"></i></span>`;
 }
 
+/**
+ * A button that's working: a little spinner and `label` in place of its own
+ * words, and it can't be pressed again meanwhile. `null` puts it back.
+ */
+export function setBusy(btn, label) {
+  if (!btn) return;
+  if (label) {
+    if (btn.dataset.idleHtml == null) btn.dataset.idleHtml = btn.innerHTML;
+    btn.classList.add('busy');
+    btn.disabled = true;
+    btn.setAttribute('aria-busy', 'true');
+    btn.innerHTML = `<span class="px-spinner" aria-hidden="true"></span>${label}`;
+  } else {
+    btn.classList.remove('busy');
+    btn.disabled = false;
+    btn.removeAttribute('aria-busy');
+    if (btn.dataset.idleHtml != null) btn.innerHTML = btn.dataset.idleHtml;
+    delete btn.dataset.idleHtml;
+  }
+}
+
 export class UIManager {
   constructor(root, { bus, game, callbacks }) {
     this.bus = bus;
@@ -825,8 +846,17 @@ export class UIManager {
       btn.addEventListener('click', () => this.showMenuSection(null)));
     this.q('#btn-resume').addEventListener('click', () => this.cb.onResume());
     // No "Saved" toast: saving is something you stop thinking about (backlog batch 2).
-    this.q('#btn-leave').addEventListener('click', () => {
-      this.cb.onLeaveWorld?.(true);
+    // But it does show that it's saving, until it has (asked for directly:
+    // "when saving the button should have a loading indication").
+    this.q('#btn-leave').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      if (btn.classList.contains('busy')) return;
+      setBusy(btn, 'Saving…');
+      try {
+        await this.cb.onLeaveWorld?.(true);
+      } finally {
+        setBusy(btn, null);
+      }
       this.closePanel('panel-menu');
       this.openHome();
     });

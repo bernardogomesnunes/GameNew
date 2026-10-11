@@ -204,7 +204,11 @@ export class StructureRegistry {
   }
 
   /**
-   * Puts a building's output somewhere: the bag first, then the storehouses.
+   * Puts a building's output somewhere: the storehouses first, then the bag
+   * (asked for directly: "we need the farms to produce their items to the
+   * storage if there's one. Or else I'll be full inventory every time I'm
+   * back"). With no storehouse, or none with room or taking that item, it
+   * comes to the bag as it always did.
    *
    * All of it or none of it. Partly delivering means the rest is destroyed,
    * and destroyed is precisely what a storehouse exists to prevent — so if any
@@ -219,9 +223,9 @@ export class StructureRegistry {
       let left = amount;
       // A shed that has excluded this item is skipped for it and only it —
       // everything else it still takes normally.
-      const into = [this.inventory, ...storeList
+      const into = [...storeList
         .filter((s) => !s.structure.excludes?.includes(id))
-        .map((s) => s.store)];
+        .map((s) => s.store), this.inventory];
       for (const where of into) {
         if (left <= 0) break;
         const before = left;
