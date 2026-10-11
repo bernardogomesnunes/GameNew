@@ -134,7 +134,7 @@ export class Wanderers {
     this.list = this.list.filter((p) => !p.dead && !this.gone(p, player));
     for (const lm of this.landmarks) {
       // Only the hut, the camps and the Stone Kingdom have anyone living in them.
-      if (lm.kind !== 'hermit' && lm.kind !== 'camp' && lm.kind !== 'kingdom') continue;
+      if (lm.kind !== 'hermit' && lm.kind !== 'camp' && lm.kind !== 'kingdom' && lm.kind !== 'tribe') continue;
       if (!this.present.has(lm) && Math.hypot(lm.x - player.x, lm.z - player.z) < VISIT) this.populate(lm);
     }
     const sky = this.sky();
@@ -467,9 +467,20 @@ export class Wanderers {
     const away = Math.atan2(p.x - fromX, p.z - fromZ);
     const kx = p.x + Math.sin(away) * 0.6, kz = p.z + Math.cos(away) * 0.6;
     const ground = groundAt(this.world, kx, kz, p.y, TALL);
-    if (ground != null && ground <= p.y + 0.05 && this.fits(p, kx, kz, ground)) { p.x = kx; p.z = kz; }
+    if (ground != null && ground <= p.y + 0.05 && !(p.perch != null && ground < p.perch - 0.6) && this.fits(p, kx, kz, ground)) { p.x = kx; p.z = kz; }
     p.vy = 1.5;
     return { killed: false, drops: {} };
+  }
+
+  /**
+   * A landmark's people, all of them angry at once — the tree tribe, when
+   * you take from their chests. Returns how many saw it (the living ones
+   * there now); none, and nobody minds.
+   */
+  anger(lm) {
+    const there = this.list.filter((q) => q.landmark === lm && !q.dead);
+    for (const q of there) q.angry = true;
+    return there.length;
   }
 
   /** A bandit losing its nerve for `seconds` — it breaks and runs (Phase 7d). */
@@ -545,6 +556,15 @@ export class Wanderers {
     }
     if (lm.kind === 'hermit') {
       this.list.push(this.person('hermit', lm.x + 0.5, lm.y, lm.z + 3.5, { landmark: lm, home }));
+      return;
+    }
+    if (lm.kind === 'tribe') {
+      // Up on the decks and the tower, one at each perch. `perch` is the
+      // floor they stand on: they never step below it (they never come down).
+      for (const at of lm.perches ?? []) {
+        const x = lm.x + at.dx, z = lm.z + at.dz, y = lm.y + at.dy;
+        this.list.push(this.person('tribe', x, y, z, { landmark: lm, home: { x, z }, perch: y }));
+      }
       return;
     }
     const n = 3 + Math.floor(this.rand() * 2);
@@ -633,7 +653,7 @@ export class Wanderers {
     }
     if (spec.siege === 'ram') return this.ram(p, dt, spec);
     if (spec.siege === 'catapult') return this.catapult(p, dt, spec);
-    const fights = p.kind === 'bandit' || p.kind === 'guard' || spec.sky || p.war;
+    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'tribe' || spec.sky || p.war;
     if (fights) p.cooldown = Math.max(0, p.cooldown - dt);
     // Up on his beast, the Warlord only swings: the beast does the going.
     if (p.mount && !p.mount.dead) {
@@ -659,7 +679,7 @@ export class Wanderers {
       return;
     }
 
-    if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard' || p.kind === 'royal_guard') {
+    if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard' || p.kind === 'royal_guard' || p.kind === 'tribe') {
       const dx = p.x - player.x, dz = p.z - player.z;
       const d = Math.hypot(dx, dz) || 1;
       // Bandits don't come to you — not yet. They back off and watch.
@@ -745,7 +765,7 @@ export class Wanderers {
     // Bolder in the dark: they come from further off.
     const aggro = spec.aggro * (this.night() ? 1.6 : 1);
     // An archer keeps its distance and shoots.
-    if (hostile && spec.shoots && d < spec.shoots && Math.abs(player.y - p.y) < 6) {
+    if (hostile && spec.shoots && d < spec.shoots && Math.abs(player.y - p.y) < (spec.shootsDown ?? 6)) {
       const keep = spec.standOff;
       p.target = d < keep - 2 ? { x: p.x - (dx / d) * 4, z: p.z - (dz / d) * 4 }
         : d > keep + 2 ? { x: player.x - (dx / d) * keep, z: player.z - (dz / d) * keep } : null;
@@ -849,6 +869,8 @@ export class Wanderers {
   /** Whether `p` fights you: its own side's say, or because you struck it. */
   hostileOf(p) {
     if (p.war || p.angry) return true;
+    // The tree people leave you be, unless you've struck one or robbed them.
+    if (p.kind === 'tribe') return false;
     if (p.kind === 'guard') return this.kingdomHostile();
     if (WANDERERS[p.kind]?.sky) return this.skyHostile();
     return this.hostile();
@@ -893,6 +915,8 @@ export class Wanderers {
         // just their middle — so nobody walks through the side of a wall.
         const footing = (x, z) => {
           const g = groundAt(this.world, x, z, p.y, TALL);
+          // Up a tree, never a step below the floor they stand on.
+          if (g != null && p.perch != null && g < p.perch - 0.6) return null;
           return g != null && this.fits(p, x, z, g) ? g : null;
         };
         let ground = footing(nx, nz);

@@ -1,6 +1,7 @@
 import { hash01 } from './ChunkGen.js';
 import { BIOMES } from '../config/biomes.js';
 import { kingdomFor } from './kingdom.js';
+import { turned } from '../config/blocks.js';
 
 /**
  * Places in the world that somebody else built: the hermit's hut, and the
@@ -22,7 +23,8 @@ const DARK_WOOD = 43, PLANKS = 7, COBBLE = 8, LANTERN = 26, SLAB_PLANK = 28, RED
       STONE = 3, WOOD = 4, LEAVES = 5, MARBLE = 17, GOLD = 13, MOSS = 22, GRAVEL = 23, STONE_SLAB = 27,
       IRON_ORE = 38, COPPER_ORE = 39, GOLD_ORE = 40, DARK_MOSS = 46,
       DARK_STONE = 156, DARK_BRICK = 157, SKY_MARBLE = 158, GOLD_TRIM = 159,
-      COBBLE_WALL = 161, STONE_PILLAR = 165, MARBLE_PILLAR = 166, DARK_PILLAR = 167;
+      COBBLE_WALL = 161, STONE_PILLAR = 165, MARBLE_PILLAR = 166, DARK_PILLAR = 167,
+      PLANK_STAIRS = 30, GREEN_RUG = 37, DARK_LEAVES = 44, FIREFLY_LANTERN = 190;
 
 /** How far out each kind stands, from the middle of the world. */
 const HERMIT_AT = [320, 420];
@@ -78,14 +80,52 @@ export function landmarksFor(gen) {
     }
   });
 
+  // The tree tribes (backlog batch 2, "More places in the wild"): up in the
+  // tallest trees — a Giant Grove if there's one near, a forest if not.
+  for (let i = 0; i < TRIBES; i++) {
+    const a = hash01(seed, 400 + i, 7501) * Math.PI * 2;
+    const r = TRIBE_AT[0] + hash01(seed, 410 + i, 7502) * (TRIBE_AT[1] - TRIBE_AT[0]);
+    const site = groveNear(gen, Math.cos(a) * r, Math.sin(a) * r, TRIBE.half, out);
+    if (site) out.push({ kind: 'tribe', ...site, half: TRIBE.half, clear: TRIBE.clear, blocks: TRIBE.blocks, perches: TRIBE.perches });
+  }
+
   gen.landmarkCache = out;
   return out;
+}
+
+/** How many tree tribes, and how far out — past the old border, for after the war. */
+const TRIBES = 3;
+const TRIBE_AT = [380, 950];
+/** The country a tribe would choose, best first. */
+const GROVES = ['giantGrove', 'forestOak', 'forestDark', 'forestBirch'];
+
+/**
+ * A level spot for a tribe near (x, z), in the best woods within reach: a
+ * Giant Grove's tallest trees if there's one, then the forests, then
+ * anywhere settled at all.
+ */
+function groveNear(gen, x, z, half, taken) {
+  for (const want of GROVES) {
+    for (let r = 0; r <= 240; r += 24) {
+      const steps = r === 0 ? 1 : Math.ceil((2 * Math.PI * r) / 24);
+      for (let k = 0; k < steps; k++) {
+        const a = (k / steps) * Math.PI * 2;
+        const sx = Math.round(x + Math.cos(a) * r), sz = Math.round(z + Math.sin(a) * r);
+        if (BIOMES[gen.biomeIndexAt(sx, sz)]?.id !== want) continue;
+        if (taken.some((t) => Math.max(Math.abs(t.x - sx), Math.abs(t.z - sz)) < t.half + half + 6)) continue;
+        const y = levelAt(gen, sx, sz, half);
+        if (y != null) return { x: sx, z: sz, y };
+      }
+    }
+  }
+  return siteNear(gen, x, z, half, taken);
 }
 
 /** What each kind of place is called, found. */
 export const PLACE_NAMES = {
   kingdom: 'The Stone Kingdom', hermit: 'The hermit\'s hut', camp: 'A bandit camp',
   ruin: 'An old ruin', ruined_temple: 'A forgotten temple', mine: 'An abandoned mine', monument: 'A monument',
+  tribe: 'A tree tribe',
 };
 
 /**
@@ -158,7 +198,7 @@ export function stampLandmarks(gen, chunk, chunkSize) {
         if (lx < 0 || lz < 0 || lx >= chunkSize || lz >= chunkSize) continue;
         const ground = gen.heightAt(x, z);
         for (let y = ground; y < lm.y; y++) put(x, y, z, DIRT);
-        for (let y = lm.y; y < lm.y + CLEAR; y++) put(x, y, z, 0);
+        for (let y = lm.y; y < lm.y + (lm.clear ?? CLEAR); y++) put(x, y, z, 0);
         chunk.surface[lz * chunkSize + lx] = lm.y;
       }
     }
@@ -378,6 +418,191 @@ function monumentBlocks(roll) {
   return blocks;
 }
 
+// ---- the tree tribes --------------------------------------------------------------
+
+/**
+ * A tree tribe's village (backlog batch 2): "mystical tree houses full of
+ * vibrant greens, with wooden bridges between trees; huts inside the leaves,
+ * and watchtowers on top of the canopy with stairs around them."
+ *
+ * Five giant trees, grown with the village rather than found, so it's always
+ * the same shape: a great tree in the middle, four round it. Twelve up, a
+ * deck rings the great tree and railed bridges run out from it to a deck
+ * round each of the others, where a hut of planks sits in under the leaves.
+ * A stair winds round the great tree from the ground, past the deck, up
+ * through its crown to a watchtower on top.
+ *
+ * `perches` are where the tribe stand — every one of them on a deck, the
+ * tower or a bridge, never on the ground (they never come down).
+ */
+const TRIBE = (() => {
+  const DECK = 12;                 // the decks' floor, above the ground
+  const TOWER = 27;                // the watchtower's floor, on the great tree's top
+  const cells = new Map();         // "x,y,z" -> block, the last word wins
+  const key = (x, y, z) => `${x},${y},${z}`;
+  const set = (x, y, z, id) => cells.set(key(x, y, z), id);
+  const has = (x, y, z) => cells.has(key(x, y, z));
+  const reserved = new Set();      // kept clear of leaves: stairs, headroom, decks
+  const keep = (x, y, z) => reserved.add(key(x, y, z));
+
+  const trees = [
+    { x: 0, z: 0, tall: TOWER, crown: 6 },
+    { x: -10, z: -8, tall: 21, crown: 5 },
+    { x: 10, z: -7, tall: 22, crown: 5 },
+    { x: -9, z: 10, tall: 20, crown: 5 },
+    { x: 9, z: 9, tall: 21, crown: 5 },
+  ];
+  // Two-by-two trunks: (x..x+1, z..z+1).
+  const trunk = (t, x, z) => x >= t.x && x <= t.x + 1 && z >= t.z && z <= t.z + 1;
+  const ring = (t, d, x, z) => Math.max(Math.max(t.x - x, x - (t.x + 1)), Math.max(t.z - z, z - (t.z + 1))) === d;
+  const within = (t, d, x, z) => Math.max(Math.max(t.x - x, x - (t.x + 1)), Math.max(t.z - z, z - (t.z + 1))) <= d;
+
+  // --- the stair round the great tree, ground to crown ---
+  const great = trees[0];
+  const around = [[0, -1], [1, -1], [2, -1], [2, 0], [2, 1], [2, 2], [1, 2], [0, 2], [-1, 2], [-1, 1], [-1, 0], [-1, -1]];
+  const steps = [];
+  for (let k = 0; k <= TOWER; k++) {
+    const [x, z] = around[k % around.length];
+    const [nx, nz] = around[(k + 1) % around.length];
+    // Facing the way up: 0 north (-z), 1 east, 2 south, 3 west.
+    const facing = nx > x ? 1 : nx < x ? 3 : nz > z ? 2 : 0;
+    steps.push({ x, z, y: k, facing });
+  }
+  // The last step is in the tower's floor; the two below it come up
+  // through a hole in it.
+  const opening = new Set(steps.slice(TOWER - 2).map((st) => `${st.x},${st.z}`));
+  for (const st of steps) {
+    keep(st.x, st.y, st.z); keep(st.x, st.y + 1, st.z); keep(st.x, st.y + 2, st.z);
+  }
+
+  // --- decks ---
+  const floor = new Set();         // "x,z" of deck and bridge floor at DECK
+  const deck = (x, z) => floor.add(`${x},${z}`);
+  // The great tree's: a ring two to four out, the stair's ring left open.
+  for (let x = great.x - 4; x <= great.x + 5; x++) for (let z = great.z - 4; z <= great.z + 5; z++) {
+    if (!within(great, 1, x, z)) deck(x, z);
+  }
+  // Each of the others: three out all round.
+  for (const t of trees.slice(1)) {
+    for (let x = t.x - 3; x <= t.x + 4; x++) for (let z = t.z - 3; z <= t.z + 4; z++) if (!trunk(t, x, z)) deck(x, z);
+  }
+  // Bridges from the great deck to each: two wide, stepping one way then the
+  // other, so every plank meets the next along an edge.
+  for (const t of trees.slice(1)) {
+    let x = Math.sign(t.x) * 5 + (t.x > 0 ? 0 : 1), z = Math.sign(t.z) * 5 + (t.z > 0 ? 0 : 1);
+    const tx = t.x + (t.x > 0 ? -3 : 4), tz = t.z + (t.z > 0 ? -3 : 4);
+    let i = 0;
+    while ((x !== tx || z !== tz) && i++ < 40) {
+      deck(x, z); deck(x + 1, z); deck(x, z + 1);
+      if (Math.abs(tx - x) >= Math.abs(tz - z)) x += Math.sign(tx - x); else z += Math.sign(tz - z);
+    }
+    deck(x, z);
+  }
+  for (const c of floor) {
+    const [x, z] = c.split(',').map(Number);
+    set(x, DECK, z, PLANKS);
+    for (let y = DECK; y <= DECK + 3; y++) keep(x, y, z);
+  }
+  // A rail round every edge — where the floor stops, a fence — except over
+  // the stair's own ring, which is the way up.
+  for (const c of floor) {
+    const [x, z] = c.split(',').map(Number);
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ax = x + dx, az = z + dz;
+      if (floor.has(`${ax},${az}`) || trees.some((t) => trunk(t, ax, az)) || within(great, 1, ax, az)) continue;
+      set(ax, DECK + 1, az, FENCE);
+      keep(ax, DECK + 1, az);
+    }
+  }
+
+  // --- the huts, in under the leaves of the four ---
+  const perches = [];
+  trees.slice(1).forEach((t, i) => {
+    // Walls two out from the trunk, three high, a door facing the great tree.
+    const doorX = t.x > 0 ? t.x - 2 : t.x + 3, doorZ = t.z > 0 ? t.z - 2 : t.z + 3;
+    for (let x = t.x - 2; x <= t.x + 3; x++) for (let z = t.z - 2; z <= t.z + 3; z++) {
+      if (!ring(t, 2, x, z)) continue;
+      const door = (x === doorX && z === (t.z > 0 ? t.z : t.z + 1)) || (z === doorZ && x === (t.x > 0 ? t.x : t.x + 1));
+      for (let dy = 1; dy <= 3; dy++) if (!(door && dy <= 2)) set(x, DECK + dy, z, i % 2 ? DARK_WOOD : PLANKS);
+    }
+    // A roof of leaves, and the canopy above it.
+    for (let x = t.x - 3; x <= t.x + 4; x++) for (let z = t.z - 3; z <= t.z + 4; z++) {
+      if (!trunk(t, x, z)) set(x, DECK + 4, z, LEAVES);
+    }
+    // Inside: moss underfoot, a green rug, a firefly lantern, and on two of
+    // the four the tribe's chest.
+    for (let x = t.x - 1; x <= t.x + 2; x++) for (let z = t.z - 1; z <= t.z + 2; z++) {
+      if (!trunk(t, x, z)) set(x, DECK, z, (x + z) & 1 ? MOSS : PLANKS);
+    }
+    set(t.x - 1, DECK + 1, t.z - 1, FIREFLY_LANTERN);
+    set(t.x + 2, DECK + 1, t.z + 2, GREEN_RUG);
+    if (i % 2 === 0) set(t.x + 2, DECK + 1, t.z - 1, CHEST + 2);
+    // One of the tribe on the walk round each hut, outside its door.
+    perches.push({ dx: (t.x > 0 ? t.x - 3 : t.x + 4) + 0.5, dy: DECK + 1, dz: (t.z > 0 ? t.z - 3 : t.z + 4) + 0.5 });
+  });
+  // Two on the great deck.
+  perches.push({ dx: great.x - 3 + 0.5, dy: DECK + 1, dz: great.z + 4 + 0.5 });
+  perches.push({ dx: great.x + 4 + 0.5, dy: DECK + 1, dz: great.z - 3 + 0.5 });
+  // Firefly lanterns on the great deck's rail, midway along each side —
+  // the corners are where the bridges go.
+  for (const [x, z] of [[-5, 0], [6, 1], [1, -5], [0, 6]]) set(great.x + x, DECK + 2, great.z + z, FIREFLY_LANTERN);
+
+  // --- the watchtower, on top of the great tree's crown ---
+  for (let x = great.x - 2; x <= great.x + 3; x++) for (let z = great.z - 2; z <= great.z + 3; z++) {
+    const hole = opening.has(`${x - great.x},${z - great.z}`);
+    if (!hole) set(x, TOWER, z, PLANKS);
+    for (let y = TOWER; y <= TOWER + 4; y++) keep(x, y, z);
+    const edge = x === great.x - 2 || x === great.x + 3 || z === great.z - 2 || z === great.z + 3;
+    if (edge && !hole && !within(great, 1, x, z)) set(x, TOWER + 1, z, FENCE);
+  }
+  for (const [x, z] of [[-2, -2], [3, -2], [-2, 3], [3, 3]]) {
+    for (let y = TOWER + 1; y <= TOWER + 3; y++) set(great.x + x, y, great.z + z, WOOD);
+  }
+  for (let x = great.x - 2; x <= great.x + 3; x++) for (let z = great.z - 2; z <= great.z + 3; z++) set(x, TOWER + 4, z, SLAB_PLANK);
+  set(great.x, TOWER + 3, great.z, FIREFLY_LANTERN);
+  perches.push({ dx: great.x + 2 + 0.5, dy: TOWER + 1, dz: great.z + 2 + 0.5 });
+
+  // --- the trees themselves ---
+  for (const t of trees) {
+    for (let y = 0; y < t.tall; y++) for (let x = t.x; x <= t.x + 1; x++) for (let z = t.z; z <= t.z + 1; z++) {
+      set(x, y, z, WOOD);
+    }
+    // A crown of leaves, wide and a little flattened; dark leaves through it
+    // and moss, for the greens.
+    const cy = t.tall - 3;
+    for (let x = t.x - t.crown; x <= t.x + 1 + t.crown; x++) {
+      for (let z = t.z - t.crown; z <= t.z + 1 + t.crown; z++) {
+        for (let y = cy - 4; y < t.tall; y++) {
+          const fx = (x - (t.x + 0.5)) / (t.crown + 0.5), fz = (z - (t.z + 0.5)) / (t.crown + 0.5), fy = (y - cy) / 4.2;
+          if (fx * fx + fy * fy + fz * fz > 1) continue;
+          if (has(x, y, z) || reserved.has(key(x, y, z))) continue;
+          if (y <= DECK + 4) continue;
+          const roll = hash01(x * 31 + y, z * 17 - y, 7601);
+          set(x, y, z, roll < 0.12 ? DARK_LEAVES : roll < 0.16 ? MOSS : LEAVES);
+        }
+      }
+    }
+  }
+  // The stair, last, over anything — and the air over each step, all the
+  // way up through the crown.
+  for (const st of steps) {
+    set(great.x + st.x, st.y, great.z + st.z, turned(PLANK_STAIRS, st.facing));
+  }
+  for (const st of steps) {
+    for (const dy of [1, 2]) {
+      const k2 = key(great.x + st.x, st.y + dy, great.z + st.z);
+      if (!steps.some((o) => o.x === st.x && o.z === st.z && o.y === st.y + dy)) cells.delete(k2);
+    }
+  }
+
+  const blocks = [];
+  for (const [k, id] of cells) {
+    const [x, y, z] = k.split(',').map(Number);
+    blocks.push([x, y, z, id]);
+  }
+  return { half: 16, clear: TOWER + 8, blocks, perches };
+})();
+
 const PLACES = [
   { kind: 'ruin', count: 4, at: [300, 700], half: 6, build: ruinBlocks },
   { kind: 'ruined_temple', count: 2, at: [450, 950], half: 8, build: ruinedTempleBlocks },
@@ -396,5 +621,6 @@ export function landmarkDesigns() {
     { kind: 'hermit', half: HUT.half, blocks: HUT.blocks },
     { kind: 'camp', half: CAMP.half, blocks: CAMP.blocks },
     ...PLACES.map((p) => ({ kind: p.kind, half: p.half, blocks: p.build(0.5) })),
+    { kind: 'tribe', half: TRIBE.half, blocks: TRIBE.blocks },
   ];
 }

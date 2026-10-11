@@ -115,7 +115,8 @@ flattenShowcase(world, site);
   ok('the ground under it is flat grass with open sky over it', flat);
   ok('  and the chunks it changed are kept while you\'re away', world.getChunk(r.minX >> 4, r.minZ >> 4).touched);
 }
-ok('the places are laid on its floor', placeBlocks(site).length > 500 && placeBlocks(site).every(([, y]) => y >= site.y - 14 && y < site.y + 20));
+// The tree tribe's great tree and its watchtower stand some 35 high.
+ok('the places are laid on its floor', placeBlocks(site).length > 500 && placeBlocks(site).every(([, y]) => y >= site.y - 14 && y < site.y + 40));
 ok('a label for every building and every figure', showcaseLabels(site).length === SHOWCASE_BUILDINGS.length + figures.length);
 
 for (const s of SHOWCASE_SPOTS.filter((x) => x.group === 'main')) {

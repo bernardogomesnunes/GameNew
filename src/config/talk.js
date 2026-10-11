@@ -73,6 +73,7 @@ export const EXPLORER_TALK = {
     ruined_temple: ['Marble pillars to the {dir}, half of them down. Gold on the altar, still.'],
     mine: ['An old mine to the {dir} — the timbers creak, but there\'s ore in the walls.'],
     monument: ['From the hills you can see a tall black stone to the {dir}. Gold at the top.'],
+    tribe: ['To the {dir} the trees are so tall people live in them — bridges, huts, a tower on top. They waved. I didn\'t touch anything.'],
   },
   stories: [
     'Up north the mountains are so high there\'s snow at noon in summer.',
@@ -84,6 +85,16 @@ export const EXPLORER_TALK = {
   ],
   bye: ['Well, the map won\'t draw itself. Safe building!', 'I\'ll be off. If I find anything, I\'ll send word.'],
 };
+
+/** One of the tree people (world/landmarks.js), while they're not angry with you. */
+export const TRIBE_TALK = [
+  'You walk on the ground? All day? How strange.',
+  'The trees remember everything. Be kind to them.',
+  'We have not come down since my grandmother\'s grandmother. Why would we?',
+  'Our chests are ours. Take from them and you will hear our bows.',
+  'Up here the wind sings. Down there you only hear your own feet.',
+  'The great tree is older than both kingdoms. It will be here after them.',
+];
 
 /** A soldier or tower archer of yours. */
 export const SOLDIER_TALK = [
@@ -116,7 +127,7 @@ const fill = (line, vars) => line.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
 /**
  * The next thing someone says.
  *
- *   who      'settler' | 'explorer' | 'soldier' | 'warrior'
+ *   who      'settler' | 'explorer' | 'soldier' | 'warrior' | 'tribe'
  *   person   the person; their `said` counts how far the conversation got
  *   job      a settler's work, lower case, or null
  *   jobId    that building's id ('farm'), for lines about it
@@ -143,6 +154,7 @@ export function talkLine({ who, person, job = null, jobId = null, at = null, lan
     return fill(pick(EXPLORER_TALK.stories), vars);
   }
   if (who === 'soldier') return fill(pick(SOLDIER_TALK), vars);
+  if (who === 'tribe') return fill(pick(TRIBE_TALK), vars);
   if (who === 'warrior') return fill(pick(WARRIOR_TALK), vars);
 
   // A settler: what's on their mind first, then whatever else.

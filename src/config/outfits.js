@@ -33,6 +33,8 @@ export const OUTFITS = {
   hermit: { hat: 'hood', hatColour: 0x6b6355, beard: 0xd9d4c8, gear: 'staff' },
   explorer: { hat: 'cap', hatColour: 0x7a5a3a, gear: 'staff' },
   messenger: { hat: 'cap', hatColour: 0x2f4f7a },
+  // The tree people: leaf-green hoods, and bows.
+  tribe: { hat: 'hood', hatColour: 0x3c7a2c, gear: 'bow', gearColour: 0x6b4a2e },
   // A market's traders (config/traders.js): goblins — green, with big ears
   // and a long nose, under a cap the colour of their trade.
   trader: { hat: 'cap', ears: true, nose: true },

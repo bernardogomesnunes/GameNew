@@ -193,6 +193,25 @@ export const WANDERERS = {
     fleeBelow: -1,
     drops: { planks: [4, 8], stone: [2, 5] },
   },
+  // A tree tribe (world/landmarks.js): up in the tallest trees, and they
+  // never come down. Neutral — until you strike one of them or take from
+  // their chests; then the whole tribe looses arrows at you from the decks.
+  tribe: {
+    noun: 'one of the tree people',
+    about: 'one of the tree people — they never come down',
+    aboutHostile: 'one of the tree people — angry now, hit to fight',
+    colours: [0x4f8a3c, 0x3f7a4a, 0x6a9a3a, 0x2f6b46],
+    helm: 0x2f5a2a,
+    speed: 1.6,
+    roam: 2.5,
+    hp: 16, hits: 2, reach: 1.8, every: 1.3,
+    shoots: 20,       // from the decks, at whoever's below
+    shootsDown: 30,   // however far below
+    standOff: 6,
+    aggro: 22, run: 3, fleeBelow: -1,
+    leash: 40,
+    drops: { hemp_fibre: [1, 3], fruit: [0, 2], arrow: [1, 4] },
+  },
   explorer: {
     noun: 'an explorer',
     about: 'an explorer, passing through',
@@ -260,6 +279,10 @@ export const NEWS = {
     victor: ['Lord of the Sky! The island that cast you down hangs at your feet. My halls are open to you, always.', 'They will sing of this in the deep halls for a thousand years: the exile who brought down the Sky King.', 'The white god is silent at last. Rule your island well, my lord — and remember who gave you the army that took it.'],
     sworn: ['A thousand of my warriors march under your banner. Feed them, and they will follow you to the sky itself.', 'The Sky Kingdom hangs on its chains, far to the {dir} — look for its light low in the sky. Bring it down, and I will honour you above every lord I have.', 'Its anchor towers stand on the ground under it, each with a lift up the chain. Its King sits in the palace in the middle. Go to the {dir}.'],
   },
+  tribe: [
+    'There are people living up in the great trees to the {dir}. They never come down.',
+    'Lights in the treetops to the {dir}, at night. The tree people, they say. Leave their chests alone.',
+  ],
   quiet: [
     'The roads are quiet. That\'s all the news there is.',
     'An explorer came through mapping the far country. Didn\'t stay.',

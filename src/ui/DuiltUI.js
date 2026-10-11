@@ -1623,8 +1623,11 @@ export class DuiltUI {
       this.bus.emit('toast', { kind: 'xp', title: 'Your bag is full', body: 'Put something away first' });
       return;
     }
-    // Emptied, the chest you fell by is gone.
+    // Taken from a chest out in the world: somebody may have seen (the
+    // tree tribes — Game.tookFromChest).
     const c = this.store.chest;
+    if (c && !d.chestAt(c.x, c.y, c.z)?.grave) this.game.tookFromChest?.(c);
+    // Emptied, the chest you fell by is gone.
     if (c && d.chestAt(c.x, c.y, c.z)?.grave && d.chestEmpty(c.x, c.y, c.z)) {
       this.game.clearGrave?.(c);
       this.closePanel('panel-store');
