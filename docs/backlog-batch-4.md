@@ -55,6 +55,19 @@ What's there now was checked in the code before writing this.
 
 ## B. Goals and ages: 12 ages
 
+**Done in PR #168,** with A6 (the goals). As built:
+- Age 1 is Exile: wood, water, a pickaxe.
+- Ages 2–9: Roots, Settle, Forge, Hearth, Town, Faith, Bastion, Walls.
+- Age 10 is Reckoning: the war, the wall down.
+- Age 11 is Renown: find a ruin, a forgotten temple, an abandoned mine and
+  a monument.
+- Age 12 is Legend: a market town, 100 coins, 25 buildings, full armour.
+- Ages 11 and 12 will change as C and D land.
+- Old saves move up to the age with at least as much land.
+- A save keeps at most the central 320 square whole.
+
+The draft it was built from:
+
 Asked for directly: "we need more ages to divide all this, and increase the
 terrain available for building ... age 12". Also: 3 goals per age up to
 Age 5, then 4 per age. Age 1 teaches how to play. From Age 2 on, the goals

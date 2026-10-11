@@ -37,7 +37,7 @@ function stamped(id, at = { x: 40, y: 4, z: 40 }) {
 
 for (const id of KINDS) {
   const spec = STRUCTURES_BY_ID.get(id);
-  ok(`${spec?.name}: from Age 5, before the war comes`, spec?.age === 5);
+  ok(`${spec?.name}: from Age 8, before the war comes`, spec?.age === 8);
   const d = DESIGN_FOR_STRUCTURE.get(id);
   const kinds = new Set(d.blocks.map((b) => BLOCKS_BY_ID.get(b.type)?.stateOf ?? b.type));
   ok(`  a detailed design: ${d.blocks.length} blocks of ${kinds.size} kinds`, d.blocks.length > 200 && kinds.size >= 8);

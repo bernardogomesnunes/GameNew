@@ -30,8 +30,10 @@ ok('what was claimed last session counts', s.claimed.has('farm') && s.claimed.ha
 ok('a broken building does not', !s.claimed.has('quarry'));
 ok('the settler who moved in counts', s.settlersEver === 1);
 ok('and the land is the land you have', s.landSize === 48);
-ok('so the goals about them unlock without doing it all again',
-  g.state.achievementsUnlocked.has('first_claim') && g.state.achievementsUnlocked.has('first_settler'));
+ok('so the goals of the age behind it unlock without doing it all again',
+  ['req_1_wood', 'req_1_water', 'req_1_pickaxe'].every((id) => g.state.achievementsUnlocked.has(id)));
+ok('and this age\'s own count as they stand (forest, farm, house — all built)',
+  ['req_2_forest', 'req_2_farm', 'req_2_house'].every((id) => g.state.achievementsUnlocked.has(id)));
 
 const sandbox = new GamificationEngine(new EventBus());
 sandbox.setDuilt({ ...duilt, sandbox: true });

@@ -16,7 +16,7 @@ import { RECIPES } from '../config/recipes.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { blockIcon, itemIcon } from '../config/cubes.js';
-import { goalBands, secretGoals } from '../config/achievements.js';
+import { goalBands, secretGoals, ACHIEVEMENTS_BY_ID } from '../config/achievements.js';
 import { ageIntro } from '../config/ages.js';
 import { CHALLENGES_BY_ID } from '../config/challenges.js';
 import { menuFor, MENU_BY_ID, HAS_DEV_SECTIONS } from '../config/menu.js';
@@ -1697,17 +1697,25 @@ export class UIManager {
       return;
     }
     const s = this.gamification.snapshot();
-    const done = s.achievementsUnlocked;
+    const unlocked = s.achievementsUnlocked;
+    // This world's age, and this world's goals: what's unlocked is kept
+    // across every world you play, so a card ticked in another one — or a
+    // building raised here ahead of its age — must not tick it here
+    // (reported directly: "I have goals checked in age 4 and didn't even
+    // finish age 3").
+    const d = this.game.duilt;
+    const age = d?.age ?? s.age;
+    const done = { has: (id) => { const g = ACHIEVEMENTS_BY_ID.get(id); return g?.met ? g.met(d) : unlocked.has(id); } };
     // Only the ages you've reached. Reported directly: the whole list, every
     // age at once, read as a wall of things not done before you'd done any.
     // The next age's band appears when this one is finished, with one line
     // below saying so, so it's clear there is more without showing it.
     const bands = goalBands();
-    const shown = bands.filter((band) => band.age <= s.age);
-    const next = bands.find((band) => band.age > s.age);
+    const shown = bands.filter((band) => band.age <= age);
+    const next = bands.find((band) => band.age > age);
     const shownGoals = shown.flatMap((band) => band.goals);
     const shownDone = shownGoals.filter((g) => done.has(g.id)).length;
-    this.q('#stats-sub').textContent = `Age ${s.age} · ${shownDone} of ${shownGoals.length} done · level ${s.level}`;
+    this.q('#stats-sub').textContent = `Age ${age} · ${shownDone} of ${shownGoals.length} done · level ${s.level}`;
 
     // Banded by age, because the bands are the order you are meant to do them
     // in — this list is the only thing teaching the game now, and a flat grid
@@ -1740,8 +1748,8 @@ export class UIManager {
           }).join('')}
         </div>`;
     }).join('') + (next
-      ? `<div class="goal-next">Age ${next.age} appears here once you finish Age ${s.age}.</div>`
-      : '') + this.secretsHtml(done);
+      ? `<div class="goal-next">Age ${next.age} appears here once you finish every goal of Age ${age}.</div>`
+      : '') + this.secretsHtml(unlocked);
 
     const dc = s.dailyChallenge;
     const list = this.q('#challenge-list');

@@ -22,6 +22,9 @@ const TREE_BLOCKS = new Set([4, 5, 41, 42, 43, 44]);
 export { RINGS } from '../config/ages.js';
 import { RINGS } from '../config/ages.js';
 
+/** The most claimed land a save keeps whole — see keptBounds. */
+export const KEEP_SIZE = 320;
+
 const EDGE = 0xf0c674;
 
 /** How far above a block's top face the edge stroke floats, to avoid z-fighting. */
@@ -76,6 +79,21 @@ export class Territory {
   /** The claimed square, in world block coordinates. */
   bounds() {
     const half = this.size / 2;
+    return {
+      minX: this.centreX - half, maxX: this.centreX + half - 1,
+      minZ: this.centreZ - half, maxZ: this.centreZ + half - 1,
+    };
+  }
+
+  /**
+   * The claimed land a save keeps in full, touched or not (World.serialize's
+   * keepBounds) — the land, up to the 320 square the last age used to give.
+   * Past that, twelve ages of land (up to 512) would be two and a half times
+   * the chunks in every save; what you've built or dug out there is kept
+   * anyway, because touched chunks always are.
+   */
+  keptBounds() {
+    const half = Math.min(this.size, KEEP_SIZE) / 2;
     return {
       minX: this.centreX - half, maxX: this.centreX + half - 1,
       minZ: this.centreZ - half, maxZ: this.centreZ + half - 1,

@@ -28,7 +28,7 @@ import { RECIPES_BY_ID } from '../config/recipes.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { Notices } from './Notices.js';
-import { ageOf, ageIntro, FINAL_AGE } from '../config/ages.js';
+import { ageOf, ageIntro, FINAL_AGE, WAR_AGE, OLD_AGE, AGES_VERSION } from '../config/ages.js';
 import { pickTale, TALES_BY_ID } from '../config/tales.js';
 import { War } from './War.js';
 import { SkyWar } from './SkyWar.js';
@@ -146,6 +146,9 @@ export class DuiltGame {
     this.boosts = {};
     // Places you've found out in the world (playtest, P4), as "kind@x,z".
     this.found = new Set();
+    // Age 1's lessons, once learnt (see noted): a tree broken for wood, a
+    // bucket filled, a pickaxe made.
+    this.firsts = new Set();
     // Quests (config/quests.js): for each one that has opened, what the
     // counts stood at when it did, and whether it's been handed in.
     this.quests = {};
@@ -618,7 +621,7 @@ export class DuiltGame {
         done,
         // "Have four houses standing" is only useful alongside how many you
         // have. A single-count goal says it in the label already.
-        progress: g.structure && (g.count ?? 1) > 1 ? `${Math.min(have, g.count)}/${g.count}` : null,
+        progress: done ? null : g.progress ? g.progress(this) : g.structure && (g.count ?? 1) > 1 ? `${Math.min(have, g.count)}/${g.count}` : null,
       };
     });
   }
@@ -1041,6 +1044,23 @@ export class DuiltGame {
     };
   }
 
+  /**
+   * Whether you've done one of Age 1's lessons yet — and if it's in your bag
+   * right now, that counts, and is remembered: wood (a tree broken), water
+   * (a bucket filled), a pickaxe (made, of any metal).
+   */
+  noted(key) {
+    if (this.firsts.has(key)) return true;
+    const has = {
+      wood: () => this.inventory.countOf('wood') > 0,
+      water: () => this.inventory.countOf('bucket_water') > 0,
+      pickaxe: () => this.inventory.slots.some((s) => s && (s.id === 'pickaxe' || s.id.startsWith('pickaxe_'))),
+    }[key];
+    if (!has?.()) return false;
+    this.firsts.add(key);
+    return true;
+  }
+
   ageComplete() {
     const goals = this.ageGoals();
     return goals.length > 0 && goals.every((g) => g.done);
@@ -1090,7 +1110,7 @@ export class DuiltGame {
    * the Black Ring already on your hand there's no war — you're the King's.
    */
   declareWar() {
-    if (this.sandbox || this.age < FINAL_AGE) return false;
+    if (this.sandbox || this.age < WAR_AGE) return false;
     if (!this.war.declare(this.days, { ring: this.ring })) return false;
     this.bus?.emit('war:declared', { due: this.war.due });
     return true;
@@ -1162,6 +1182,12 @@ export class DuiltGame {
       this.hunger.exertion = Math.max(0, this.hunger.exertion - dtSeconds); // decays back to resting
       // Heals while you're fed, faster resting in a house.
       this.health.tick(dtSeconds, { hungerRatio: this.hunger.ratio, resting });
+      // Age 1's lessons happen in the bag, not in a building: a look a
+      // second is plenty to notice a pickaxe made or a bucket filled.
+      if (this.age === 1) {
+        this.untilLessons = (this.untilLessons ?? 0) - dtSeconds;
+        if (this.untilLessons <= 0) { this.untilLessons = 1; this.checkAgeAdvance(); }
+      }
     }
 
     // Drinks wear off.
@@ -1746,6 +1772,9 @@ export class DuiltGame {
       spawn: this.spawn,
       boosts: { ...this.boosts },
       found: [...this.found],
+      firsts: [...this.firsts],
+      // Twelve ages, not six (config/ages.js) — so an older save's age is moved on load.
+      agesVersion: AGES_VERSION,
       quests: this.quests,
       tally: this.tally,
       moments: this.moments,
@@ -1786,7 +1815,9 @@ export class DuiltGame {
   loadJSON(data) {
     if (!data) return;
     this.inventory.loadJSON(data.inventory);
-    this.territory.setAge(data.territory?.age ?? 1);
+    // A save from before the twelve ages: the same land or more (OLD_AGE).
+    const was = data.territory?.age ?? 1;
+    this.territory.setAge(data.agesVersion >= AGES_VERSION ? was : OLD_AGE[was] ?? was);
     this.structures.loadJSON(data.structures);
     this.hunger.loadJSON(data.hunger);
     this.health.loadJSON(data.health);
@@ -1800,6 +1831,7 @@ export class DuiltGame {
     const sp = data.spawn;
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
     this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);
+    this.firsts = new Set(Array.isArray(data.firsts) ? data.firsts.filter((k) => typeof k === 'string') : []);
     this.quests = {};
     for (const [id, q] of Object.entries(data.quests ?? {})) {
       if (QUESTS_BY_ID.has(id) && q && typeof q === 'object') this.quests[id] = { since: { ...(q.since ?? {}) }, done: !!q.done };

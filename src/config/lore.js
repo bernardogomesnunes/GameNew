@@ -56,7 +56,7 @@ export const LORE = [
   {
     id: 'stone', title: 'The Stone Kingdom', icon: '⛰',
     known: (k) => learned(k, 'stone') || k.found.has('kingdom') || k.state.ring === 'black' || k.state.war !== 'peace',
-    hint: 'Its patrols are on the roads from Age 2. Listen to the messengers, or find its walls.',
+    hint: 'Its patrols are on the roads from Age 3. Listen to the messengers, or find its walls.',
     text: (k) => (k.state.ring === 'black'
       ? 'A walled city of dark stone, and your ally now. Its King gave you an army to take the sky with.'
       : 'A walled city of dark stone that follows the dark god. Its army is why you fell — it has wanted the sky for longer than anyone remembers.'),
@@ -86,7 +86,7 @@ export const LORE = [
   {
     id: 'kings', title: 'The two kings', icon: '♛',
     known: (k) => learned(k, 'kings') || k.found.has('kingdom'),
-    hint: 'Every tavern tells their tale, from Age 4.',
+    hint: 'Every tavern tells their tale, from Age 5.',
     text: (k) => (k.ending === 'dark' || k.ending === 'yielded'
       ? 'The Stone King, who wanted the sky, and the Sky King, who wouldn\'t let it go. One of them got what he wanted — with your help.'
       : 'The Stone King, who wants the sky, and the Sky King, who won\'t let it go. Everything in this land turns on the two of them.'),

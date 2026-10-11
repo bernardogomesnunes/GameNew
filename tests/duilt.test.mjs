@@ -57,9 +57,17 @@ ok('cannot claim outside your land', !g.claim(far, 'farm').ok);
 
 // --- the age gate ---
 let goals = g.ageGoals();
-ok('Age 1 has three goals', goals.length === 3);
+// Age 1 teaches (asked for directly: "break tree, gather water, build a pick axe").
+ok('Age 1 has three goals: wood, water, a pickaxe', goals.map((x) => x.id).join() === 'wood,water,pickaxe');
+ok('the wood chopped above counts; the rest not yet', goals.find((x) => x.id === 'wood').done && !goals.find((x) => x.id === 'water').done);
+ok('age does not advance early', g.checkAgeAdvance() === null && g.age === 1);
+g.inventory.remove('bucket', 1); g.inventory.add('bucket_water', 1);
+g.inventory.add('pickaxe', 1);
+g.checkAgeAdvance();
+ok('a bucket filled and a pickaxe made: on to Age 2', g.age === 2 && g.territory.size === 64);
+goals = g.ageGoals();
 ok('farm goal is done, others are not', goals.find(x=>x.id==='farm').done && !goals.find(x=>x.id==='house').done);
-ok('age does not advance early', g.age === 1);
+ok('and Age 2 waits for the rest', g.checkAgeAdvance() === null && g.age === 2);
 
 // satisfy the other two
 const hx = origin.minX + 10, hz = origin.minZ + 10;
@@ -85,8 +93,8 @@ outer: for (let x = origin.minX+1; x < origin.minX+24; x++) {
 ok('the generated trees form a claimable forest', found !== null);
 if (found) {
   g.claim(found, 'forest');
-  ok('claiming the last goal advances the age', g.age === 2);
-  ok('and the border doubles to 64', g.territory.size === 64);
+  ok('claiming the last goal advances the age', g.age === 3);
+  ok('and the border grows to 96', g.territory.size === 96);
   ok('the expansion is announced', events.some(e => e.t === 'duilt:age'));
 }
 

@@ -35,7 +35,7 @@ export const SLOT_NAMES = { head: 'Head', body: 'Body', legs: 'Legs', feet: 'Fee
 export const BACKPACKS = [
   { id: 'backpack_leather', name: 'Leather Backpack', slots: 10, age: 1, inputs: { hide: 4, string: 2 },
     main: 0x9a6b45, trim: 0x6b4a30, madeBy: 'Hide and string, stitched at the bench' },
-  { id: 'backpack_reinforced', name: 'Reinforced Backpack', slots: 20, age: 4, inputs: { backpack_leather: 1, iron_ingot: 2, hide: 2 },
+  { id: 'backpack_reinforced', name: 'Reinforced Backpack', slots: 20, age: 5, inputs: { backpack_leather: 1, iron_ingot: 2, hide: 2 },
     main: 0x7d5538, trim: 0xc9ced6, madeBy: 'A leather backpack with iron at the seams' },
 ];
 
@@ -58,7 +58,7 @@ export const ARMOUR_SETS = [
     madeBy: 'Stitched from hides',
   },
   {
-    key: 'iron', name: 'Iron', age: 4, durability: 200,
+    key: 'iron', name: 'Iron', age: 5, durability: 200,
     main: 0xc9ced6, trim: 0x8a8f96,
     pieces: {
       head: { name: 'Iron Helm', points: 2, inputs: { iron_ingot: 3 } },
@@ -69,7 +69,7 @@ export const ARMOUR_SETS = [
     madeBy: 'Plate from your foundry',
   },
   {
-    key: 'gold', name: 'Gold', age: 5, durability: 160,
+    key: 'gold', name: 'Gold', age: 8, durability: 160,
     main: 0xf0cf62, trim: 0xb8862e,
     pieces: {
       head: { name: 'Gold Helm', points: 2, inputs: { gold: 3 } },
@@ -80,7 +80,7 @@ export const ARMOUR_SETS = [
     madeBy: 'Beaten gold — it turns a blow better than iron, and wears faster',
   },
   {
-    key: 'sky', name: 'Sky', age: 4, durability: 300,
+    key: 'sky', name: 'Sky', age: 5, durability: 300,
     main: 0xe6ebf2, trim: 0xe2c26a,
     pieces: {
       head: { name: 'Sky Helm', points: 3, inputs: { iron_ingot: 2, gold: 1 } },
@@ -92,7 +92,7 @@ export const ARMOUR_SETS = [
     disguise: 'sky',
   },
   {
-    key: 'stone', name: 'Dark', age: 4, durability: 300,
+    key: 'stone', name: 'Dark', age: 5, durability: 300,
     main: 0x3f3c45, trim: 0x9a2c2c,
     pieces: {
       head: { name: 'Dark Helm', points: 3, inputs: { iron_ingot: 2, dark_stone: 1 } },

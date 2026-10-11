@@ -22,7 +22,7 @@ for (const t of TOOL_TIERS) {
     const id = tieredId(kind, t.key);
     const item = ITEMS_BY_ID.get(id);
     ok(`${t.name} ${kind}: an item, a bench recipe from its age, a model in the hand`,
-      item?.kind === 'tool' && recipe(id)?.age === (id === 'sword_iron' ? 4 : t.age) && recipe(id).station === 'hand'
+      item?.kind === 'tool' && recipe(id)?.age === t.age && recipe(id).station === 'hand'
       && heldBoxes({ itemId: id }).length > 1);
   }
 }
@@ -51,9 +51,9 @@ ok(`each tier guards more than the one before (${['leather', 'iron', 'gold', 'sk
 ok('every piece has a recipe', ARMOUR_PIECES.every((p) => recipe(p.id)));
 
 // Revealed as you go.
-ok('at Age 4 the bench says what is new: iron tools and armour', ['Iron Axe', 'Iron Pickaxe', 'Iron Shovel', 'Iron Helm'].every((n) => newGearAt(4).includes(n)));
-ok('at Age 5, gold', ['Gold Axe', 'Gold Sword', 'Gold Cuirass'].every((n) => newGearAt(5).includes(n)) && !newGearAt(5).includes('Iron Axe'));
-ok('at Age 6, sky and dark', ['Sky Axe', 'Dark Sword'].every((n) => newGearAt(6).includes(n)));
-ok('nothing from a later age shows at the bench early', RECIPES.filter((r) => r.age <= 3).every((r) => !/^(Iron|Gold|Sky|Dark) (Axe|Pickaxe|Shovel)/.test(r.name)));
+ok('at Age 5 the bench says what is new: iron tools and armour', ['Iron Axe', 'Iron Pickaxe', 'Iron Shovel', 'Iron Helm'].every((n) => newGearAt(5).includes(n)));
+ok('at Age 8, gold', ['Gold Axe', 'Gold Sword', 'Gold Cuirass'].every((n) => newGearAt(8).includes(n)) && !newGearAt(8).includes('Iron Axe'));
+ok('at Age 10, sky and dark', ['Sky Axe', 'Dark Sword'].every((n) => newGearAt(10).includes(n)));
+ok('nothing from a later age shows at the bench early', RECIPES.filter((r) => r.age <= 4).every((r) => !/^(Iron|Gold|Sky|Dark) (Axe|Pickaxe|Shovel)/.test(r.name)));
 
 process.exit(f ? 1 : 0);

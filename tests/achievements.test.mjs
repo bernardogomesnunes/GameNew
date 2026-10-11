@@ -37,8 +37,9 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
   ok('claiming three different kinds tracks all three kinds', gam.state.claimed.size === 3);
   ok('and the count-based side kept working too', gam.state.claimedCount === 3);
-  ok('so "three different buildings" actually unlocks',
-    gam.state.achievementsUnlocked.has('three_kinds'));
+  // "Three different buildings" was a teaching card; the goals are each
+  // age's own now (asked for directly: "be objective in goals").
+  ok('and no teaching card is left to unlock off it', !ACHIEVEMENTS.some((a) => a.id === 'three_kinds'));
 }
 
 {
@@ -48,17 +49,17 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
   for (let i = 0; i < 6; i++) bus.emit('structure:claimed', { structure: { type: 'farm' }, spec: {} });
 
   ok('claiming the same kind repeatedly is one kind', gam.state.claimed.size === 1);
-  ok('but still six buildings for the count-only goal', gam.state.achievementsUnlocked.has('a_street'));
-  ok('and "one of everything" is correctly still out of reach',
-    !gam.state.achievementsUnlocked.has('many_kinds'));
+  ok('and nothing unlocks without a world to read', ![...gam.state.achievementsUnlocked].some((id) => id.startsWith('req_')));
 }
 
 // --- age achievements are gone, not just hidden -----------------------------
 
 ok('no achievement just restates reaching the next age',
   !ACHIEVEMENTS.some((a) => a.border || /^age_/.test(a.id)));
-ok('but the real goals that shared those age bands are still there',
-  ACHIEVEMENTS.some((a) => a.id === 'three_kinds') && ACHIEVEMENTS.some((a) => a.id === 'a_town'));
+ok('every card is one of an age\'s own goals, or a secret',
+  ACHIEVEMENTS.every((a) => a.required || a.secret));
+ok('"Put it back" and the repeated house and residents cards are gone (asked for directly)',
+  !ACHIEVEMENTS.some((a) => ['first_place', 'a_crowd', 'a_street', 'first_settler'].includes(a.id)));
 
 /**
  * Requested directly, on top of the fix above: "achievements should be
@@ -100,8 +101,8 @@ ok('but the real goals that shared those age bands are still there',
 {
   const bus = new EventBus();
   const gam = new GamificationEngine(bus);
-  const forest = ACHIEVEMENTS.find((a) => a.required && a.age === 1 && /forest/i.test(a.name));
-  ok('there is a required forest goal in age 1 to test against', !!forest);
+  const forest = ACHIEVEMENTS.find((a) => a.required && a.age === 2 && /forest/i.test(a.name));
+  ok('there is a required forest goal in age 2 to test against', !!forest);
   ok('with no settlement set, it does not throw and reads as not done',
     forest.check(gam.ctx()) === false);
 }
@@ -114,10 +115,10 @@ ok('but the real goals that shared those age bands are still there',
   const world = new World({ sizeX: 8, sizeZ: 8, height: 8 });
   const inventory = new Inventory();
   const structures = new StructureRegistry({ world, bus: null, inventory });
-  gam.setDuilt({ structures });
+  gam.setDuilt({ structures, age: 2 });
 
-  const houseGoal = ACHIEVEMENTS.find((a) => a.id === 'req_1_house');
-  ok('the age-1 house goal exists', !!houseGoal);
+  const houseGoal = ACHIEVEMENTS.find((a) => a.id === 'req_2_house');
+  ok('the age-2 house goal exists', !!houseGoal);
   ok('not yet built, it is not done', houseGoal.check(gam.ctx()) === false);
 
   const push = (type) => structures.structures.push({
@@ -129,6 +130,26 @@ ok('but the real goals that shared those age bands are still there',
     houseGoal.check(gam.ctx()) === true);
 }
 
+// --- a card only ticks in its own age ------------------------------------------------------------
+
+{
+  const bus = new EventBus();
+  const gam = new GamificationEngine(bus);
+  const world = new World({ sizeX: 8, sizeZ: 8, height: 8 });
+  const structures = new StructureRegistry({ world, bus: null, inventory: new Inventory() });
+  structures.structures.push({
+    id: 1, type: 'market', region: { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: 1 },
+    valid: true, locked: true, claimedAt: Date.now(), lastPaidAt: Date.now(), brokenReason: null,
+  });
+  const market = ACHIEVEMENTS.find((a) => a.id === 'req_5_market');
+  gam.setDuilt({ structures, age: 3 });
+  ok('a market raised in Age 3 does not tick Age 5\'s card (reported directly)', !market.check(gam.ctx()) && !market.met({ structures, age: 3 }) && !gam.state.achievementsUnlocked.has('req_5_market'));
+  ok('in Age 5 it does', market.met({ structures, age: 5 }));
+  ok('and past it, it reads as done', market.met({ structures: new StructureRegistry({ world, bus: null, inventory: new Inventory() }), age: 6 }));
+  gam.setDuilt({ structures, age: 7 });
+  ok('a world opened past its first ages counts their goals quietly', gam.state.achievementsUnlocked.has('req_3_quarry') && gam.state.achievementsUnlocked.has('req_6_townhall'));
+}
+
 // --- claiming for real, through the bus, unlocks the required goals in turn -
 
 {
@@ -136,7 +157,7 @@ ok('but the real goals that shared those age bands are still there',
   const gam = new GamificationEngine(bus);
   const world = new World({ sizeX: 8, sizeZ: 8, height: 8 });
   const structures = new StructureRegistry({ world, bus, inventory: new Inventory() });
-  gam.setDuilt({ structures });
+  gam.setDuilt({ structures, age: 2 });
 
   const region = { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: 1 };
   const claim = (type) => {
@@ -148,11 +169,11 @@ ok('but the real goals that shared those age bands are still there',
     bus.emit('structure:claimed', { structure: s, spec: {} });
   };
 
-  ok('nothing required is unlocked before anything is built',
-    !ACHIEVEMENTS.some((a) => a.required && gam.state.achievementsUnlocked.has(a.id)));
+  ok('nothing of Age 2 is unlocked before anything is built',
+    !ACHIEVEMENTS.some((a) => a.required && a.age === 2 && gam.state.achievementsUnlocked.has(a.id)));
   claim('forest'); claim('farm'); claim('house');
-  ok('all three of age 1\'s required goals unlock as their buildings go up',
-    ['req_1_forest', 'req_1_farm', 'req_1_house'].every((id) => gam.state.achievementsUnlocked.has(id)));
+  ok('all three of age 2\'s goals unlock as their buildings go up',
+    ['req_2_forest', 'req_2_farm', 'req_2_house'].every((id) => gam.state.achievementsUnlocked.has(id)));
   ok('and they paid real XP, not zero', gam.state.xp > 0);
 }
 

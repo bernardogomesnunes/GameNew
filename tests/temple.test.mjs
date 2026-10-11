@@ -100,7 +100,7 @@ ok('mined, they give the ore', ITEM_FOR_BLOCK.get(SUNSTONE_ORE) === 'sunstone' &
 // --- the Temple ---------------------------------------------------------------------------
 
 const TEMPLE = STRUCTURES_BY_ID.get('temple');
-ok('a temple, from Age 3, that is a station to stand at', TEMPLE?.age === 3 && TEMPLE.station === 'temple');
+ok('a temple, from Age 4, that is a station to stand at', TEMPLE?.age === 4 && TEMPLE.station === 'temple');
 ok('five levels: Shrine, Chapel, Temple, Great Temple, High Temple',
   TEMPLE.tiers.map((t) => t.id).join() === 'shrine,chapel,temple,great,high');
 ok('each after the first paid for in devotion, more each time',
@@ -173,14 +173,14 @@ function shrine() {
   const early = g.crafting.craft('holy_water', 1, { atStations: atShrine });
   ok(`holy water needs a chapel, not a shrine (${early.reason})`, !early.ok);
   ok('at a chapel it\'s blessed', g.crafting.craft('holy_water', 1, { atStations: ['temple', 'temple@0', 'temple@1'] }).ok && g.inventory.countOf('holy_water') === 2);
-  const tooSoon = g.crafting.available(3, { station: null, atStations: atShrine }).find((r) => r.id === 'ring_white');
+  const tooSoon = g.crafting.available(4, { station: null, atStations: atShrine }).find((r) => r.id === 'ring_white');
   ok(`a ring can't be forged below the High Temple (${tooSoon.reason})`, !tooSoon.ok && /level 5/.test(tooSoon.reason));
 
   const forged = g.crafting.craft('ring_white', 1, { atStations: atHigh });
   ok('at the High Temple, the White Ring is forged', forged.ok && g.inventory.countOf('ring_white') === 1 && g.ring === 'white');
   const other = g.crafting.craft('ring_black', 1, { atStations: atHigh });
   ok(`and the Black Ring is closed for good (${other.reason})`, !other.ok && g.inventory.countOf('ring_black') === 0);
-  const avail = g.crafting.available(3, { station: null, atStations: atHigh }).find((r) => r.id === 'ring_black');
+  const avail = g.crafting.available(4, { station: null, atStations: atHigh }).find((r) => r.id === 'ring_black');
   ok('the bench says so too', !avail.ok && /White Ring/.test(avail.reason));
 
   // Wear it.

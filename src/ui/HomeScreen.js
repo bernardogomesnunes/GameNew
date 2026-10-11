@@ -30,7 +30,7 @@ const KINDS = [
     name: 'Duilt',
     tagline: 'The game',
     blurb: 'Arrive on thirty-two blocks of land with an axe and a bucket. '
-      + 'Claim a forest, break ground on a farm, build a house — and the border moves out.',
+      + 'Chop a tree, fetch water, make a pickaxe — then claim a forest, a farm and a house, and the border moves out. Twelve ages of it.',
     recommended: true,
   },
   {

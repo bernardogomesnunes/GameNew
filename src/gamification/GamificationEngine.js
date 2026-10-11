@@ -149,6 +149,14 @@ export class GamificationEngine {
    *  loaded one, or leaving Duilt for Creative, where it goes back to null. */
   setDuilt(duilt) {
     this.duilt = duilt ?? null;
+    // A world opened past its first ages: their goals were met long ago, so
+    // they're counted quietly rather than as a burst of cards and XP all at
+    // once (a world from before there were twelve ages opens part-way).
+    if (this.duilt && !this.duilt.sandbox) {
+      for (const ach of ACHIEVEMENTS) {
+        if (ach.required && ach.age < this.duilt.age) this.state.achievementsUnlocked.add(ach.id);
+      }
+    }
     this.checkAchievements(null);
   }
 

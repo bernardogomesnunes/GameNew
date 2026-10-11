@@ -28,8 +28,8 @@ const recipe = (id) => RECIPES.find((r) => r.id === id);
 
 // --- the mill itself ---------------------------------------------------------------------
 
-ok('the wood mill is a block you put down, made at the bench in Age 2',
-  PLACEABLE_BLOCKS.some((b) => b.id === WOOD_MILL) && recipe('wood_mill')?.station === 'hand' && recipe('wood_mill').age === 2);
+ok('the wood mill is a block you put down, made at the bench in Age 3',
+  PLACEABLE_BLOCKS.some((b) => b.id === WOOD_MILL) && recipe('wood_mill')?.station === 'hand' && recipe('wood_mill').age === 3);
 ok('it is a station, whichever way it faces', [0, 1, 2, 3].every((k) => stationOf(WOOD_MILL + k) === 'wood_mill'));
 ok('it is modelled: a bench, a blade, a log', boxesFor('wood_mill').length >= 10);
 {
@@ -40,8 +40,8 @@ ok('it is modelled: a bench, a blade, a log', boxesFor('wood_mill').length >= 10
   ok('beside one, you are', g.stationsNear({ x: 16.5, y: 1, z: 16.5 }).includes('wood_mill'));
   ok('a few blocks off, still', g.stationsNear({ x: 21.5, y: 1, z: 20.5 }).includes('wood_mill'));
   ok('across the room, not', !g.stationsNear({ x: 26.5, y: 1, z: 16.5 }).includes('wood_mill'));
-  const at = g.crafting.available(2, { station: null, atStations: g.stationsNear({ x: 16.5, y: 1, z: 16.5 }) });
-  const away = g.crafting.available(2, { station: null, atStations: [] });
+  const at = g.crafting.available(3, { station: null, atStations: g.stationsNear({ x: 16.5, y: 1, z: 16.5 }) });
+  const away = g.crafting.available(3, { station: null, atStations: [] });
   ok('by it, its recipes can be made; away, they say where to go',
     at.find((r) => r.id === 'cabinet').atStation && /Stand at your wood mill/.test(away.find((r) => r.id === 'cabinet').reason));
 }

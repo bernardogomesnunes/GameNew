@@ -17,7 +17,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 // --- the machine --------------------------------------------------------------------------------
 
 ok('the stone mill is a block you stand by, like the wood mill', stationOf(STONE_MILL) === 'stone_mill' && BLOCKS_BY_ID.get(STONE_MILL).facesYou);
-ok('made by hand, from Age 2', RECIPES_BY_ID.get('stone_mill')?.station === 'hand' && RECIPES_BY_ID.get('stone_mill').age === 2 && ITEMS_BY_ID.get('stone_mill')?.block === STONE_MILL);
+ok('made by hand, from Age 3', RECIPES_BY_ID.get('stone_mill')?.station === 'hand' && RECIPES_BY_ID.get('stone_mill').age === 3 && ITEMS_BY_ID.get('stone_mill')?.block === STONE_MILL);
 
 // --- what it grinds -----------------------------------------------------------------------------
 

@@ -23,7 +23,7 @@ const { PlayerController } = await import('../src/player/PlayerController.js');
 const item = ITEMS_BY_ID.get('flying_machine');
 ok('there is a flying machine', item?.flies === true && item.glyph === 'glider');
 const r = RECIPES.find((x) => x.output?.id === 'flying_machine');
-ok('built at a workshop in Age 3, from planks and wool', r?.station === 'workshop' && r.age === 3 && r.inputs.planks > 0 && r.inputs.wool > 0);
+ok('built at a workshop in Age 4, from planks and wool', r?.station === 'workshop' && r.age === 4 && r.inputs.planks > 0 && r.inputs.wool > 0);
 ok('it has a 3D model in the bag', Array.isArray(ITEM_MODELS.flying_machine) && ITEM_MODELS.flying_machine.length > 3);
 
 // --- flying is the machine's ---------------------------------------------------------
