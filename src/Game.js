@@ -119,7 +119,7 @@ import { settlerName, settlerColour } from './config/settlers.js';
 
 const REACH = 7;
 /** Out in the world, who'll stop for a word (config/talk.js). */
-const TALKERS = new Set(['explorer', 'messenger']);
+const TALKERS = new Set(['explorer', 'messenger', 'tribe']);
 /** The longest Save and leave waits for the upload before letting you go anyway. */
 const LEAVE_SAVE_WAIT_MS = 15000;
 /** How fast the touch stick walks at its rim, against a key's full walking pace. */
@@ -2263,9 +2263,11 @@ export class Game {
     if (this.manning || this.pendingClaim || this.pendingClaimColumn || this.pendingClear
       || this.pendingRoof || this.pendingTemplate) return breaks();
     const aimed = this.raycast();
+    // Someone who'll talk gets a word, not a blow: a tap is Place. Holding
+    // still strikes them, the way it breaks a block.
+    if (this.talkTarget(aimed)) return places();
     if (this.banditTarget(aimed) || this.mobTarget(aimed) || this.fireflyTarget(aimed)) return breaks();
-    if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)
-      || this.talkTarget(aimed)) return places();
+    if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
       || aimed.block === STORAGE_CONTROLLER || stationOf(aimed.block)
       || aimed.block === SKY_LIFT || isCatapult(aimed.block)
@@ -4039,7 +4041,7 @@ export class Game {
       if (d.army?.active) add('warrior', this.warriorView.pickAt(d.army.field, eye, dir, REACH));
     }
     if (this.wanderers) {
-      const f = this.wanderView.pickAt(this.wanderers.list.filter((p) => TALKERS.has(p.kind) && !(p.fear > 0)), eye, dir, REACH);
+      const f = this.wanderView.pickAt(this.wanderers.list.filter((p) => TALKERS.has(p.kind) && !(p.fear > 0) && !p.angry && !p.dead), eye, dir, REACH);
       if (f) add(f.person.kind, f);
     }
     if (!found.length) return null;
@@ -4066,6 +4068,7 @@ export class Game {
         job: work ? structureName(work.type).toLowerCase() : null, jobId: work?.type ?? null,
       });
       if (who === 'explorer') title = `${person.name}, an explorer`;
+      if (who === 'tribe') title = `${person.name} of the tree people`;
     }
     // A settler stops and turns to you while they talk, then goes back to
     // whatever they were on the way to.
@@ -5659,6 +5662,24 @@ export class Game {
       body: rare ? `${rare} is what a ${rare === 'Sunstone' ? 'White' : 'Black'} Ring is forged from` : 'Somebody left this here',
     });
     return loot;
+  }
+
+  /**
+   * Something taken from a chest out in the world. At a tree tribe's
+   * village, that's theft, and they see it (asked for: "neutral, but hostile
+   * if you steal from their chests or attack them") — the whole tribe, at
+   * once. Said once, the first time.
+   */
+  tookFromChest({ x, z }) {
+    if (!this.world.gen || !this.wanderers) return false;
+    const lm = landmarksFor(this.world.gen).find((l) => l.kind === 'tribe' && Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1);
+    if (!lm) return false;
+    const already = this.wanderers.list.some((p) => p.landmark === lm && p.angry && !p.dead);
+    const saw = this.wanderers.anger(lm);
+    if (saw && !already) {
+      this.ui?.toast({ kind: 'xp', title: 'The tree people saw that', body: 'Thief! Arrows from the decks — get out from under the trees' });
+    }
+    return saw > 0;
   }
 
   /**

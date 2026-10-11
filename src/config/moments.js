@@ -48,6 +48,10 @@ export const MOMENTS = {
     title: 'A forgotten altar',
     text: 'Someone prayed here once, to a god whose name has worn off the stone. The offering left on the altar is still there. Nobody came back for it.',
   },
+  found_tribe: {
+    title: 'People in the trees',
+    text: 'Bridges strung between giant trees, huts tucked in under the leaves, a tower on top. Faces watch you from the decks. They never come down — and they never forget a thief.',
+  },
   found_mine: {
     title: 'Picks left where they fell',
     text: 'An old working, its timbers sagging. The miners left their picks where they dropped them, as if they meant to come back after supper.',

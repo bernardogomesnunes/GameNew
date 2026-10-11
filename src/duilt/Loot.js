@@ -38,6 +38,14 @@ export const LOOT = {
       ['beer', 0.4, 1, 3], ['cooked_meat', 0.5, 1, 3], ['coin', 0.7, 10, 30]],
     ring: 0.06,
   },
+  // A tree tribe's chest (world/landmarks.js): what the forest gives, and
+  // the bows they hunt with. Take from it and the tribe sees.
+  tribe: {
+    name: 'The tree people\'s chest',
+    items: [['fruit', 0.8, 3, 6], ['hemp_fibre', 0.6, 2, 5], ['string', 0.5, 1, 3], ['arrow', 0.6, 4, 12], ['bow', 0.25, 1, 1],
+      ['seeds_hemp', 0.5, 2, 4], ['kombucha', 0.35, 1, 2], ['armour_leather_body', 0.15, 1, 1], ['gold', 0.4, 1, 3], ['coin', 0.5, 4, 14]],
+    ring: 0.08,
+  },
   ruin: {
     name: 'A chest in the rubble',
     items: [['cooked_meat', 0.6, 1, 3], ['fruit', 0.5, 2, 4], ['sword_stone', 0.3, 1, 1], ['armour_leather_head', 0.2, 1, 1],
