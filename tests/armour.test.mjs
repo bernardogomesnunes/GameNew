@@ -39,7 +39,7 @@ ok('sky armour is white steel and gold; stone, blackened iron',
   ok('each made at the bench, from things that exist',
     ARMOUR_PIECES.every((p) => RECIPES.some((r) => r.output.id === p.id && r.station === 'hand' && Object.keys(r.inputs).every((k) => ITEMS_BY_ID.has(k)))));
   ok('leather from hides at Age 1; the metal sets from the foundry\'s iron', RECIPES.find((r) => r.id === 'armour_leather_body').inputs.hide
-    && ['sky', 'stone'].every((s) => RECIPES.find((r) => r.id === `armour_${s}_body`).inputs.iron_ingot && RECIPES.find((r) => r.id === `armour_${s}_body`).age === 4));
+    && ['sky', 'stone'].every((s) => RECIPES.find((r) => r.id === `armour_${s}_body`).inputs.iron_ingot && RECIPES.find((r) => r.id === `armour_${s}_body`).age === 5));
   ok('modelled in the bag — a helm, a cuirass, greaves — in each set\'s colours',
     ARMOUR_PIECES.every((p) => ITEM_MODELS[p.id]?.some((b) => b.color === p.main) && (itemIcon(ITEMS_BY_ID.get(p.id)) ?? '').startsWith('<svg')));
   ok('with marks of their own', ['helm', 'cuirass', 'greaves', 'ring'].every((g) => GLYPHS[g]));

@@ -1,7 +1,7 @@
 import { BLOCKS } from '../src/config/blocks.js';
 import { ITEM_FOR_BLOCK } from '../src/config/items.js';
 import * as THREE from 'three';
-import { AGES, RINGS, FINAL_AGE, ageOf } from '../src/config/ages.js';
+import { AGES, RINGS, FINAL_AGE, WAR_AGE, ageOf } from '../src/config/ages.js';
 import { ACHIEVEMENTS } from '../src/config/achievements.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge } from '../src/config/structures.js';
 import { RECIPES, recipesFor } from '../src/config/recipes.js';
@@ -26,7 +26,9 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
 // --- the arc holds together --------------------------------------------------
 
-ok(`there are ${AGES.length} ages`, AGES.length === 6);
+ok(`there are ${AGES.length} ages (asked for directly: "age 12")`, AGES.length === 12);
+// "3 goals per age until age 5 and then we can go with 4".
+ok('three goals an age up to Age 5, four after', AGES.every((a) => a.goals.length === (a.age <= 5 ? 3 : 4)));
 ok('they are numbered 1..n with no gaps', AGES.every((a, i) => a.age === i + 1));
 ok('every age has a name, an intro and goals',
   AGES.every((a) => a.name && a.intro && a.goals?.length));
@@ -41,8 +43,10 @@ ok('the land grows every age', AGES.every((a, i) => i === 0 || a.size > AGES[i -
 // leaving the area until age 6, and increase just a little the range,
 // starting on 32 but going higher than 256"). Worlds are endless now, so
 // the old cap at the width of a 256 world is gone.
-ok('it starts at 32 and ends past 256', AGES[0].size === 32 && AGES[AGES.length - 1].size > 256 && AGES[AGES.length - 1].size <= 400);
-ok('only the last ring opens the wall', AGES.filter((a) => a.open).length === 1 && AGES[AGES.length - 1].open === true);
+// And more of it: "increase the terrain available for building".
+ok('it starts at 32 and ends at 512', AGES[0].size === 32 && AGES[AGES.length - 1].size === 512);
+ok(`the wall stays up until the war's age (${WAR_AGE}), and down from then on`,
+  AGES.every((a) => !!a.open === a.age >= WAR_AGE) && WAR_AGE < FINAL_AGE);
 ok('Territory reads the same list', RINGS.length === AGES.length
   && RINGS.every((r, i) => r.size === AGES[i].size && r.name === AGES[i].name));
 
@@ -64,7 +68,7 @@ for (const age of AGES) {
 // An optional one (the pen) is sent to by a teaching goal naming it instead.
 for (const spec of STRUCTURES) {
   const wanted = AGES.some((a) => a.goals.some((g) => g.structure === spec.id))
-    || ACHIEVEMENTS.some((g) => g.structure === spec.id && g.age >= spec.age);
+    || (spec.id.startsWith('sanctuary_') && AGES.some((a) => a.goals.some((g) => g.id === 'sanctuary')));
   ok(`the ${spec.id} is something some age asks for`, wanted);
 }
 
@@ -121,6 +125,37 @@ const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed:
 
 // --- and completing them advances, right through to the end ------------------
 
+/** Makes one goal true, whatever it asks — a building, or one of the tests in ages.js. */
+function satisfy(g, goal, give) {
+  if (goal.structure) {
+    const have = g.structures.countOf(goal.structure);
+    if (have < (goal.count ?? 1)) give(goal.structure, (goal.count ?? 1) - have);
+    return;
+  }
+  const renowned = STRUCTURES_BY_ID.get('farm').tiers.findIndex((t) => t.id === 'renowned');
+  const make = {
+    wood: () => g.firsts.add('wood'),
+    water: () => g.firsts.add('water'),
+    pickaxe: () => g.firsts.add('pickaxe'),
+    evolve: () => { give('farm', 1); g.structures.structures.at(-1).tier = 1; },
+    ring: () => { g.ring = 'white'; },
+    sanctuary: () => give('sanctuary_white', 1),
+    fifteen: () => give('house', Math.max(0, 15 - g.structures.list().length)),
+    twentyfive: () => give('house', Math.max(0, 25 - g.structures.list().length)),
+    war: () => { g.war.stage = 'won'; },
+    renowned: () => { give('farm', 1); g.structures.structures.at(-1).tier = renowned; },
+    ruin: () => g.found.add('ruin@1,1'),
+    ruined_temple: () => g.found.add('ruined_temple@2,2'),
+    old_mine: () => g.found.add('mine@3,3'),
+    old_monument: () => g.found.add('monument@4,4'),
+    market_town: () => { g.marketTraders = () => [1, 2, 3, 4]; },
+    coins: () => g.inventory.add('coin', 100),
+    armoured: () => { for (const k of ['head', 'body', 'legs', 'feet']) g.worn[k] = { id: `armour_leather_${k}`, wear: 0 }; },
+  }[goal.id];
+  ok(`  (the test knows how to meet "${goal.label}")`, !!make);
+  make?.();
+}
+
 {
   const g = new DuiltGame({ world, scene, bus: null });
   // Stand in for the buildings: the goals only ask how many are standing.
@@ -137,12 +172,7 @@ const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed:
   let reached = 1;
   for (const age of AGES) {
     ok(`walked into age ${age.age}`, g.age === age.age);
-    const need = new Map();
-    for (const goal of age.goals) need.set(goal.structure, goal.count ?? 1);
-    for (const [type, n] of need) {
-      const have = g.structures.countOf(type);
-      if (have < n) give(type, n - have);
-    }
+    for (const goal of age.goals) satisfy(g, goal, give);
     ok(`  its goals now read as done`, g.ageGoals().every((x) => x.done));
     g.checkAgeAdvance();
     if (age.age < FINAL_AGE) {
@@ -161,16 +191,16 @@ const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed:
   const bus = { emit: (name, data) => events.push(name), on() {} };
   const g = new DuiltGame({ world, scene, bus });
   g.territory.setAge(FINAL_AGE);
-  g.structures.structures.push({
-    id: 1, type: 'monument', valid: true, locked: true,
-    region: { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: 1 },
-    claimedAt: 0, lastPaidAt: 0, brokenReason: null,
-  });
-  g.structures.structures.push({
-    id: 2, type: 'village', valid: true, locked: true,
-    region: { minX: 2, maxX: 3, minY: 0, maxY: 1, minZ: 0, maxZ: 1 },
-    claimedAt: 0, lastPaidAt: 0, brokenReason: null,
-  });
+  const give = (type, n = 1) => {
+    for (let i = 0; i < n; i++) {
+      g.structures.structures.push({
+        id: g.structures.nextId++, type, valid: true, locked: true,
+        region: { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: 1 },
+        claimedAt: 0, lastPaidAt: 0, brokenReason: null,
+      });
+    }
+  };
+  for (const goal of ageOf(FINAL_AGE).goals) satisfy(g, goal, give);
   g.checkAgeAdvance();
   g.checkAgeAdvance();
   g.checkAgeAdvance();

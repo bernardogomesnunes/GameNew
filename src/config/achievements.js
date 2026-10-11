@@ -34,7 +34,7 @@ import { SECRETS } from './secrets.js';
  *                goals from ages.js directly rather than through here, so
  *                the one thing that must never be wrong about them is not
  *                routed through the achievement-unlock bookkeeping at all.
- *                Absent (falsy) for a teaching goal alongside it.
+ *                Every age's card is one now; only the secrets aren't.
  *   name         the goal, as an instruction where it can be
  *   description  what to actually do
  *   icon         one emoji, for the card
@@ -45,278 +45,10 @@ import { SECRETS } from './secrets.js';
  *                required goal has nothing to test and stays undone.
  *   progress     optional; a "3/6" string over the same context, or null
  *                when a goal is a single yes/no rather than a count.
+ *   met          (required goals) whether it's met in this world now —
+ *                what the card shows, since what's unlocked is kept across
+ *                every world you play.
  */
-
-/** The goals that teach the verbs, in the order a new player meets them. */
-const OPENING = [
-  {
-    id: 'first_break',
-    age: 1,
-    name: 'Take something apart',
-    description: 'Break a block. Whatever it was goes into your bag.',
-    icon: '⛏️',
-    xpReward: 10,
-    check: (c) => c.stats.totalBlocksBroken >= 1,
-  },
-  {
-    id: 'first_place',
-    age: 1,
-    name: 'Put it back',
-    description: 'Place a block out of your bag.',
-    icon: '🧱',
-    xpReward: 10,
-    check: (c) => c.stats.totalBlocksPlaced >= 1,
-  },
-  {
-    id: 'first_walls',
-    age: 1,
-    name: 'Four walls',
-    description: 'Place 40 blocks. A room you can stand in is about that many.',
-    icon: '🏠',
-    xpReward: 30,
-    check: (c) => c.stats.totalBlocksPlaced >= 40,
-    // Counting where you are: reported directly that this "does not count",
-    // when it did — there was nothing on the card to show it moving.
-    progress: (c) => `${Math.min(c.stats.totalBlocksPlaced, 40)}/40`,
-  },
-  {
-    id: 'first_roof',
-    age: 1,
-    name: 'Something over your head',
-    description: 'Point at what you built and put a roof on it.',
-    icon: '🏘️',
-    xpReward: 40,
-    check: (c) => c.stats.totalBlocksPlaced >= 100,
-    progress: (c) => `${Math.min(c.stats.totalBlocksPlaced, 100)}/100`,
-  },
-  {
-    id: 'first_claim',
-    age: 1,
-    name: 'Make it a building',
-    description: 'Point at what you built and claim it. A claimed building works on its own.',
-    icon: '📐',
-    xpReward: 60,
-    check: (c) => c.stats.claimedCount >= 1,
-  },
-  {
-    id: 'first_settler',
-    age: 1,
-    name: 'Somebody moves in',
-    description: 'Put up a second house. The first one is yours; every one after brings somebody.',
-    icon: '👤',
-    xpReward: 80,
-    check: (c) => c.stats.settlersEver >= 1,
-  },
-];
-
-/** The goals that are about running the place rather than starting it. */
-const LATER = [
-  // The building ladder, the market's traders and their coins (the batch:
-  // "level up farms and buildings as a whole", the goblin traders, coins).
-  {
-    id: 'first_evolve',
-    age: 2,
-    name: 'Look after it',
-    description: 'Evolve a building a level: give it what its next level asks for — lights, a chest — and press Evolve in its pop-up.',
-    icon: '⬆️',
-    xpReward: 60,
-    check: (c) => c.event?.type === 'upgraded',
-  },
-  {
-    id: 'coin_purse',
-    age: 4,
-    name: 'A full purse',
-    description: 'Hold twenty coins. Strike them at a foundry from gold or copper, or find them in old chests.',
-    icon: '🪙',
-    xpReward: 80,
-    check: (c) => (c.duilt?.inventory?.countOf('coin') ?? 0) >= 20,
-    progress: (c) => (c.duilt ? `${Math.min(20, c.duilt.inventory.countOf('coin'))}/20` : null),
-  },
-  {
-    id: 'first_trade',
-    age: 4,
-    name: 'Strike a bargain',
-    description: 'Buy something from the goblin who keeps your market. Point at them and tap.',
-    icon: '🤝',
-    xpReward: 80,
-    check: (c) => c.event?.type === 'bought',
-  },
-  {
-    id: 'market_town',
-    age: 5,
-    name: 'A market town',
-    description: 'Evolve a market until all four traders live in it — stone, steel, glass and seed.',
-    icon: '🏪',
-    xpReward: 200,
-    check: (c) => (c.duilt?.marketTraders?.().length ?? 0) >= 4,
-  },
-  {
-    id: 'renowned',
-    age: 5,
-    name: 'Known across the land',
-    description: 'Take any building to Renowned, the top of its ladder.',
-    icon: '🌟',
-    xpReward: 250,
-    check: (c) => c.event?.type === 'upgraded'
-      && STRUCTURES_BY_ID.get(c.event.structure?.type)?.tiers?.[c.event.structure.tier ?? 0]?.id === 'renowned',
-  },
-  {
-    id: 'three_kinds',
-    age: 2,
-    name: 'Three different buildings',
-    description: 'Claim three kinds of building. Each one makes something the next one needs.',
-    icon: '🏗️',
-    xpReward: 80,
-    check: (c) => c.stats.claimed.size >= 3,
-  },
-  // Backlog batch 2: the University, and what studying there opens up.
-  {
-    id: 'a_university',
-    age: 3,
-    structure: 'university',
-    name: 'Found a university',
-    description: 'A room with two tables in it, walls and a roof. Study there to raise your skills — and learn engineering.',
-    icon: '🎓',
-    xpReward: 80,
-    check: (c) => c.stats.claimed.has('university'),
-  },
-  {
-    id: 'a_engineering',
-    age: 3,
-    structure: 'engineering',
-    name: 'Raise an Engineering Centre',
-    description: 'Learn engineering at your university, then build a hall with a stone floor and claim it.',
-    icon: '⚙️',
-    xpReward: 100,
-    check: (c) => c.stats.claimed.has('engineering'),
-  },
-  {
-    id: 'a_townhall',
-    age: 4,
-    structure: 'townhall',
-    name: 'Raise a town hall',
-    description: 'A stone-floored hall with four windows and a bell tower, among your town. It hands you a storage controller: every storehouse in one list.',
-    icon: '🔔',
-    xpReward: 120,
-    check: (c) => c.stats.claimed.has('townhall'),
-  },
-  {
-    id: 'a_pen',
-    age: 2,
-    structure: 'pen', // the goal that sends you to it — see ages.test.mjs
-    name: 'Keep animals',
-    description: 'Fence a pen with a gate, lead farm animals in with food in your hand, and claim it.',
-    icon: '🐑',
-    xpReward: 80,
-    check: (c) => c.stats.claimed.has('pen'),
-  },
-  {
-    id: 'a_shrine',
-    age: 3,
-    structure: 'temple', // the goal that sends you to it — see ages.test.mjs
-    name: 'A place to pray',
-    description: 'Raise a shrine — an altar, a light and a roof over them. Build it up, and at the top it forges a ring.',
-    icon: '⛪',
-    xpReward: 100,
-    check: (c) => c.stats.claimed.has('temple'),
-  },
-  {
-    id: 'a_sanctuary_white',
-    age: 3,
-    structure: 'sanctuary_white',
-    name: 'The stag of light',
-    description: 'Bear the White Ring and raise the White Sanctuary. Its guardian comes to you.',
-    icon: '🕊️',
-    xpReward: 200,
-    check: (c) => c.stats.claimed.has('sanctuary_white'),
-  },
-  {
-    id: 'a_sanctuary_black',
-    age: 3,
-    structure: 'sanctuary_black',
-    name: 'The beast of shadow',
-    description: 'Bear the Black Ring and raise the Black Sanctuary. Its guardian comes to you.',
-    icon: '🕳️',
-    xpReward: 200,
-    check: (c) => c.stats.claimed.has('sanctuary_black'),
-  },
-  // The defence buildings (White path): what to raise before the war comes.
-  {
-    id: 'a_wall', age: 5, structure: 'wall', name: 'Walls that could hold',
-    description: 'Raise a stretch of stone wall with battlements, and claim it. Claimed, each block takes three blows to break.',
-    icon: '🧱', xpReward: 150, check: (c) => c.stats.claimed.has('wall'),
-  },
-  {
-    id: 'a_gatehouse', age: 5, structure: 'gatehouse', name: 'A gate in the wall',
-    description: 'Raise a gatehouse — two towers and a gate between them. It shuts itself when a round of the war is coming.',
-    icon: '🏰', xpReward: 200, check: (c) => c.stats.claimed.has('gatehouse'),
-  },
-  {
-    id: 'a_watchtower', age: 5, structure: 'watchtower', name: 'Eyes on the road',
-    description: 'Raise a watchtower with a stair up to its lookout. Two archers keep watch from it.',
-    icon: '🗼', xpReward: 200, check: (c) => c.stats.claimed.has('watchtower'),
-  },
-  {
-    id: 'a_barracks', age: 5, structure: 'barracks', name: 'Soldiers of your own',
-    description: 'Raise a barracks with bunks, arms and a yard to train in. Train soldiers there, a soldier a bunk.',
-    icon: '⚔️', xpReward: 200, check: (c) => c.stats.claimed.has('barracks'),
-  },
-  {
-    id: 'a_street',
-    age: 2,
-    name: 'A street of them',
-    description: 'Claim six buildings.',
-    icon: '🏙️',
-    xpReward: 120,
-    check: (c) => c.stats.claimedCount >= 6,
-  },
-  {
-    id: 'a_crowd',
-    age: 3,
-    name: 'Five people living here',
-    description: 'Houses bring settlers, and settlers work your buildings.',
-    icon: '👥',
-    xpReward: 150,
-    check: (c) => c.stats.settlersEver >= 5,
-  },
-  {
-    id: 'a_design',
-    age: 3,
-    name: 'Build it twice',
-    description: 'Save something you built as a design, then stamp it somewhere else.',
-    icon: '📋',
-    xpReward: 90,
-    check: (c) => c.stats.templatesPlaced >= 1,
-  },
-  {
-    id: 'many_kinds',
-    age: 4,
-    name: 'One of everything',
-    description: 'Claim six different kinds of building.',
-    icon: '🗂️',
-    xpReward: 200,
-    check: (c) => c.stats.claimed.size >= 6,
-  },
-  {
-    id: 'first_ore',
-    age: 4,
-    name: 'Something in the rock',
-    description: 'Climb the one mountain tall enough to have it, and bring back iron, copper or gold ore.',
-    icon: '⛏️',
-    xpReward: 220,
-    check: (c) => !!c.duilt
-      && ['iron_ore', 'copper_ore', 'gold_ore'].some((id) => c.duilt.inventory?.countOf(id) >= 1),
-  },
-  {
-    id: 'a_town',
-    age: 5,
-    name: 'Fifteen buildings',
-    description: 'A settlement that would show up on a map.',
-    icon: '🌆',
-    xpReward: 300,
-    check: (c) => c.stats.claimedCount >= 15,
-  },
-];
 
 /**
  * Age N's own goals from ages.js, as achievements — "1. Build a forest,
@@ -326,33 +58,66 @@ const LATER = [
  * the file doc comment above for why DuiltGame.ageComplete does not read
  * achievement-unlock state to ask the same question.
  */
+/** What a goal that isn't a building says about itself, on its card. */
+const GOAL_WORDS = {
+  wood: { icon: '🪓', description: 'Swing your axe at a tree trunk. The wood goes into your bag.' },
+  water: { icon: '🪣', description: 'Hold your bucket and tap water to fill it.' },
+  pickaxe: { icon: '⛏️', description: 'Open your bag and make a stone pickaxe — dig stone out of the ground, or knock it out of cobblestone.' },
+  evolve: { icon: '⬆️', description: 'Give a building what its next level asks for — lights, a chest — and press Evolve in its pop-up.' },
+  ring: { icon: '💍', description: 'Build your shrine up to its height and forge the White Ring or the Black. Which one is your choice.' },
+  sanctuary: { icon: '🛕', description: 'The White Sanctuary or the Black — the one for the ring you bear. Its guardian comes to you.' },
+  fifteen: { icon: '🌆', description: 'A settlement that would show up on a map.' },
+  war: { icon: '⚔️', description: 'Beat the ten rounds of the Stone Kingdom — or, sworn to the dark god, bring down the Sky Kingdom.' },
+  renowned: { icon: '🌟', description: 'Take any building to the top of its ladder.' },
+  ruin: { icon: '🏚️', description: 'Old walls standing in the grass. Messengers and explorers say where.' },
+  ruined_temple: { icon: '🏛️', description: 'Marble pillars, half of them fallen, and an altar.' },
+  old_mine: { icon: '⛏️', description: 'Timber over a hole in the ground, left in a hurry.' },
+  old_monument: { icon: '🗿', description: 'A tall black stone, gold at the top.' },
+  market_town: { icon: '🏪', description: 'Evolve a market until all four traders live in it — stone, steel, glass and seed.' },
+  coins: { icon: '🪙', description: 'Strike them at a foundry, sell to the traders, or find them in old chests.' },
+  twentyfive: { icon: '🏙️', description: 'A town people walk days to see.' },
+  armoured: { icon: '🛡️', description: 'Anything on all four: leather, iron, gold — made at the bench.' },
+};
+
+/**
+ * Age N's goals, and nothing else: asked for directly, "be objective in
+ * goals. we need 3 goals per age until age 5 and then we can go with 4".
+ * The teaching cards that sat beside them ("Put it back", "Five people
+ * living here", house counts again and again) are gone — an age is done when
+ * every card in it is.
+ *
+ * A card only ticks in the age it belongs to, or once you're past it: a
+ * building raised early doesn't tick a later age's card (reported directly:
+ * "I have goals checked in age 4 and didn't even finish age 3").
+ */
 function requiredGoals() {
   return AGES.flatMap((age) => age.goals.map((g, i) => {
     const spec = g.structure ? STRUCTURES_BY_ID.get(g.structure) : null;
+    const words = GOAL_WORDS[g.id] ?? {};
+    const done = (d) => (g.structure ? d.structures.countOf(g.structure) >= (g.count ?? 1) : !!g.test?.(d));
     return {
-      id: `req_${age.age}_${g.structure ?? i}`,
+      id: `req_${age.age}_${g.structure ?? g.id ?? i}`,
       age: age.age,
       required: true,
       name: g.label,
-      description: spec ? spec.blurb : g.label,
-      icon: spec?.icon ?? '🚩',
+      description: spec ? spec.blurb : words.description ?? g.label,
+      icon: spec?.icon ?? words.icon ?? '🚩',
       xpReward: 30 * age.age,
-      check: (c) => !!c.duilt && (g.structure
-        ? c.duilt.structures.countOf(g.structure) >= (g.count ?? 1)
-        : !!g.test?.(c.duilt)),
+      check: (c) => !!c.duilt && (c.duilt.age > age.age || (c.duilt.age === age.age && done(c.duilt))),
       progress: (c) => {
-        if (!g.structure || (g.count ?? 1) <= 1 || !c.duilt) return null;
+        if (!c.duilt) return null;
+        if (g.progress) return g.progress(c.duilt);
+        if (!g.structure || (g.count ?? 1) <= 1) return null;
         return `${Math.min(c.duilt.structures.countOf(g.structure), g.count)}/${g.count}`;
       },
+      /** Whether it's met, in this world, now (for the card). */
+      met: (d) => !!d && (d.age > age.age || (d.age === age.age && done(d))),
     };
   }));
 }
 
-// Required goals first within a band, then the teaching goals alongside
-// them — Array.prototype.sort is stable, so a tie on `age` keeps whichever
-// of the two came first here.
 export const ACHIEVEMENTS = [
-  ...[...requiredGoals(), ...OPENING, ...LATER].sort((x, y) => x.age - y.age),
+  ...requiredGoals(),
   // The secrets (config/secrets.js) last, and in no age: never one of an
   // age's goals, never in its count — a band of their own in the panel.
   ...SECRETS,

@@ -21,10 +21,10 @@
  */
 
 export const TOOL_TIERS = [
-  { key: 'iron', name: 'Iron', age: 4, durability: 300, color: 0xc9ced6, edge: 0xeef1f5, guard: 0xe2c26a, metal: 'iron_ingot', extra: {}, bonus: 1, sword: 9 },
-  { key: 'gold', name: 'Gold', age: 5, durability: 200, color: 0xf0cf62, edge: 0xfbe7a1, guard: 0xb8862e, metal: 'gold', extra: {}, bonus: 1, sword: 10 },
-  { key: 'sky', name: 'Sky', age: 6, durability: 500, color: 0xe6ebf2, edge: 0xffffff, guard: 0xe2c26a, metal: 'sky_marble', extra: { gold: 1 }, bonus: 2, sword: 12 },
-  { key: 'dark', name: 'Dark', age: 6, durability: 500, color: 0x3f3c45, edge: 0x6a6574, guard: 0x9a2c2c, metal: 'dark_stone', extra: { iron_ingot: 1 }, bonus: 3, sword: 13 },
+  { key: 'iron', name: 'Iron', age: 5, durability: 300, color: 0xc9ced6, edge: 0xeef1f5, guard: 0xe2c26a, metal: 'iron_ingot', extra: {}, bonus: 1, sword: 9 },
+  { key: 'gold', name: 'Gold', age: 8, durability: 200, color: 0xf0cf62, edge: 0xfbe7a1, guard: 0xb8862e, metal: 'gold', extra: {}, bonus: 1, sword: 10 },
+  { key: 'sky', name: 'Sky', age: 10, durability: 500, color: 0xe6ebf2, edge: 0xffffff, guard: 0xe2c26a, metal: 'sky_marble', extra: { gold: 1 }, bonus: 2, sword: 12 },
+  { key: 'dark', name: 'Dark', age: 10, durability: 500, color: 0x3f3c45, edge: 0x6a6574, guard: 0x9a2c2c, metal: 'dark_stone', extra: { iron_ingot: 1 }, bonus: 3, sword: 13 },
 ];
 
 /** The four kinds in every tier: the stone tool each is modelled on, and how much metal it takes. */

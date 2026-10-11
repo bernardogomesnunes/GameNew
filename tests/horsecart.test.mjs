@@ -24,7 +24,7 @@ ok('horses live wild on the plains', horse?.biomes.includes('plains') && horse.r
 ok('they are tamed with fruit or carrots', horse.tameWith.includes('fruit') && horse.tameWith.includes('vegetables'));
 ok('there is a cart', ITEMS_BY_ID.get('cart')?.glyph === 'cart' && Array.isArray(ITEM_MODELS.cart));
 const r = RECIPES.find((x) => x.output?.id === 'cart');
-ok('made by hand in Age 2, from planks and wood', r?.station === 'hand' && r.age === 2 && r.inputs.planks > 0 && r.inputs.wood > 0);
+ok('made by hand in Age 3, from planks and wood', r?.station === 'hand' && r.age === 3 && r.inputs.planks > 0 && r.inputs.wood > 0);
 ok('a cart holds forty slots', CART_SLOTS === 40);
 
 // --- taming, hitching, loading ---------------------------------------------------------

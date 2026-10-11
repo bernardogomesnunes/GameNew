@@ -363,8 +363,11 @@ await test('achievements and stats survive a push/pull round trip', async () => 
 
   const gam = new GamificationEngine(new EventBus());
   const world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
-  gam.onBlockBroken({ world, x: 1, y: 1, z: 1, type: 3, now: 1000 }); // unlocks "first_break"
-  assert.ok(gam.state.achievementsUnlocked.has('first_break'));
+  gam.onBlockBroken({ world, x: 1, y: 1, z: 1, type: 3, now: 1000 });
+  // A world in Age 3: Age 1 and 2's goals are met (config/achievements.js).
+  const settlement = { age: 3, structures: { countOf: () => 0, list: () => [] } };
+  gam.setDuilt(settlement);
+  assert.ok(gam.state.achievementsUnlocked.has('req_2_forest'));
 
   await withFetch(backend.fetchImpl, () => cloud.save('world-7', {
     world, name: 'Progress test', mode: 'creative',
@@ -375,24 +378,25 @@ await test('achievements and stats survive a push/pull round trip', async () => 
   // The row a real player already has: written before this fix, so
   // `stats` is still the column's empty default and `achievements` []
   // regardless of what was unlocked — the fallback path must not choke on it.
-  assert.deepEqual(backend.progression.achievements, ['first_break']);
+  assert.ok(backend.progression.achievements.includes('req_2_forest'));
   assert.ok(Object.keys(backend.progression.stats).length > 0, 'the full snapshot must ride along, not just the picked columns');
 
   const remote = await withFetch(backend.fetchImpl, () => cloud.progression());
-  assert.ok(remote.achievementsUnlocked.includes('first_break'), 'the achievement must actually come back');
+  assert.ok(remote.achievementsUnlocked.includes('req_2_forest'), 'the achievement must actually come back');
   assert.equal(remote.totalBlocksBroken, 1);
 
   // What Game.js's restoreFromCloud does with it.
   const fresh = new GamificationEngine(new EventBus());
   fresh.loadJSON(remote);
-  assert.ok(fresh.state.achievementsUnlocked.has('first_break'), 'a restored device must not have lost the achievement');
+  assert.ok(fresh.state.achievementsUnlocked.has('req_2_forest'), 'a restored device must not have lost the achievement');
 
   // The regression exactly as reported: breaking a block on the "restored"
   // engine must not re-fire an achievement it already has.
   let refired = false;
-  fresh.bus.on('achievement:unlock', (a) => { if (a.id === 'first_break') refired = true; });
+  fresh.bus.on('achievement:unlock', (a) => { if (a.id === 'req_2_forest') refired = true; });
+  fresh.duilt = settlement;
   fresh.onBlockBroken({ world, x: 2, y: 1, z: 1, type: 3, now: 2000 });
-  assert.equal(refired, false, 'first_break must not unlock a second time after a restore');
+  assert.equal(refired, false, 'a goal must not unlock a second time after a restore');
 });
 
 await test('a pre-fix progression row (empty stats) still restores what it can', async () => {

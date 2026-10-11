@@ -16,10 +16,11 @@ const { progressionAhead } = await import('../src/Game.js');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
 
-const walls = ACHIEVEMENTS_BY_ID.get('first_walls');
-ok('"Four walls" shows how far along you are', walls.progress({ stats: { totalBlocksPlaced: 12 } }) === '12/40');
-ok('and stops at 40', walls.progress({ stats: { totalBlocksPlaced: 589 } }) === '40/40');
-ok('the roof goal counts too', ACHIEVEMENTS_BY_ID.get('first_roof').progress({ stats: { totalBlocksPlaced: 30 } }) === '30/100');
+// The counting goals are each age's own now (config/ages.js).
+const town = { duilt: { structures: { list: () => Array.from({ length: 7 }, () => ({ valid: true })) }, inventory: { countOf: () => 140 } } };
+ok('"Fifteen buildings" shows how far along you are', ACHIEVEMENTS_BY_ID.get('req_9_fifteen').progress(town) === '7/15');
+ok('and "a hundred coins" stops at 100', ACHIEVEMENTS_BY_ID.get('req_12_coins').progress(town) === '100/100');
+ok('"a second house" counts too', ACHIEVEMENTS_BY_ID.get('req_3_house').progress({ duilt: { structures: { countOf: () => 1 } } }) === '1/2');
 ok('a done goal is marked done, with a tick', /class="ach-card \$\{isDone \? 'done' : 'locked'\}/.test(ui) && /<span class="ach-done" aria-label="Done">✓<\/span>/.test(ui));
 ok('and looks it', /\.ach-card\.done \{ background: rgba\(41, 158, 138/.test(css) && /\.ach-done \{/.test(css));
 

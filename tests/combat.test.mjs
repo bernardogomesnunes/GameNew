@@ -29,7 +29,7 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
   ok('and harder than any other tool', swords[0].damage > Math.max(...['axe', 'pickaxe', 'shovel'].map((id) => ITEMS_BY_ID.get(id).damage)));
   const recipes = swords.map((s) => RECIPES.find((r) => r.output.id === s.id));
   ok('all made at the bench', recipes.every((r) => r && r.station === 'hand'));
-  ok('stone from Age 2, iron needs the foundry\'s iron', recipes[1].inputs.stone && recipes[1].age === 2 && recipes[2].inputs.iron_ingot);
+  ok('stone from Age 3, iron needs the foundry\'s iron', recipes[1].inputs.stone && recipes[1].age === 3 && recipes[2].inputs.iron_ingot);
   ok('and drawn as a sword', typeof GLYPHS.sword === 'string' && swords.every((s) => s.glyph === 'sword'));
   const hp = WANDERERS.bandit.hp;
   ok(`a bandit (${hp} points) takes three wooden blows, two of stone`,
@@ -164,7 +164,7 @@ world.ensureAround(atCamp.x, atCamp.z, 48);
 
 ok('break hits a bandit before an animal or a block', /if \(this\.hitBandit\(hit\)\) return;\s*(if \(this\.\w+\(hit\)\) return;\s*)*if \(this\.hitMob\(hit\)\) return;/.test(game));
 ok('swords hit with their damage, and wear', /this\.wanderers\.hit\(p, this\.blowDamage\(tool\)( \* \(ambush \? AMBUSH : 1\))?, x, z\)/.test(game) && /return \(tool\?\.damage \?\? FIST_DAMAGE\)/.test(game) && /hitBandit[\s\S]{0,1300}useTool\(tool\.id\)/.test(game));
-ok('bandits are hostile from Age 2, never in Creative', /hostile: \(\) => !!\(this\.duilt && !this\.duilt\.sandbox && this\.duilt\.age >= 2\)/.test(game));
+ok('bandits are hostile from Age 3, never in Creative', /hostile: \(\) => !!\(this\.duilt && !this\.duilt\.sandbox && this\.duilt\.age >= 3\)/.test(game));
 ok('a bandit\'s blow costs you hearts', /this\.duilt\.hurt\(hits, p\.war \? 'army' : WANDERERS\[p\.kind\]\?\.sky \? 'sky' : 'bandit'\)/.test(game));
 ok('and dying to one says so', /bandit: 'The bandits beat you'/.test(game));
 ok('a raid is announced, a robbery too', /Bandits on the road/.test(game) && /robbed your/.test(game));

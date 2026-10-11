@@ -7,7 +7,7 @@ import { Wanderers } from '../src/world/Wanderers.js';
 import { Fireflies } from '../src/world/Fireflies.js';
 import { WANDERERS } from '../src/config/wanderers.js';
 import { ROUNDS, LAST_ROUND, FIRST_ROUND_DAYS, ROUND_GAP_DAYS, WARN_DAYS, RETRY_DAYS, companyWords } from '../src/config/war.js';
-import { AGES, FINAL_AGE } from '../src/config/ages.js';
+import { AGES, FINAL_AGE, WAR_AGE } from '../src/config/ages.js';
 import { ITEMS_BY_ID } from '../src/config/items.js';
 import { RECIPES } from '../src/config/recipes.js';
 import { HIT_CAUSES } from '../src/config/armour.js';
@@ -27,10 +27,10 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const rng = (seed) => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 
-// --- the land: locked until the last age, then open -------------------------------------------
+// --- the land: locked until the war's age, then open -------------------------------------------
 
 ok(`the border grows ${AGES.map((a) => a.size).join(' → ')}`, AGES[0].size === 32 && AGES[AGES.length - 1].size > 256);
-ok('until the last age it\'s a wall; from it, you walk where you like', AGES.every((a) => !!a.open === (a.age === FINAL_AGE)));
+ok(`until the war's age (${WAR_AGE}) it's a wall; from it, you walk where you like`, AGES.every((a) => !!a.open === (a.age >= WAR_AGE)));
 ok('  and Game takes the wall down when it opens', /!t\.open \? t\.bounds\(\) : null/.test(game));
 ok('  but building still stops at your border', /const outside = changes\.find\(\(c\) => !this\.duilt\.territory\.contains\(c\.x, c\.z\)\)/.test(game));
 
@@ -90,12 +90,16 @@ ok('hurt by the army is its own cause, and armour takes it', HIT_CAUSES.has('arm
   const events = [];
   const bus = { emit: (e, d) => events.push([e, d]), on() {} };
   const g = new DuiltGame({ world, scene: new THREE.Scene(), bus });
-  ok('no war before the last age', !g.declareWar() && g.war.stage === 'peace');
-  g.territory.setAge(FINAL_AGE - 1);
+  ok('no war before the war\'s age', !g.declareWar() && g.war.stage === 'peace');
+  g.territory.setAge(WAR_AGE - 1);
   g.ageComplete = () => true;
   g.checkAgeAdvance();
   ok('reaching it: the border opens, and war is declared — no ring needed',
-    g.age === FINAL_AGE && g.territory.open && g.war.atWar && events.some(([e]) => e === 'war:declared'));
+    g.age === WAR_AGE && g.territory.open && g.war.atWar && events.some(([e]) => e === 'war:declared'));
+  // Its own goal is ending the war, so the age can't move on until it's over.
+  const warGoal = AGES.find((a) => a.age === WAR_AGE).goals.find((x) => x.id === 'war');
+  ok('the war\'s age asks for the war to end', !!warGoal && !warGoal.test(g));
+  g.territory.setAge(FINAL_AGE);
   ok('the game can\'t finish while the war is on', g.checkAgeAdvance() === null && !g.finished);
 
   const saved = new DuiltGame({ world, scene: new THREE.Scene(), bus });
@@ -243,7 +247,7 @@ const north = { x: 128, z: -1000 };
 
 {
   const horn = ITEMS_BY_ID.get('war_horn');
-  ok('a war horn, made at the bench in the last age', !!horn && RECIPES.some((r) => r.output.id === 'war_horn' && r.station === 'hand' && r.age === FINAL_AGE));
+  ok('a war horn, made at the bench in the war\'s age', !!horn && RECIPES.some((r) => r.output.id === 'war_horn' && r.station === 'hand' && r.age === WAR_AGE));
   ok('  drawn as a horn', (itemIcon(horn) ?? '').includes('<svg'));
   ok('  Break with it calls the next round', /war_horn: 'blowHorn'/.test(game) && /war\.horn\(d\.days\)/.test(game));
 }

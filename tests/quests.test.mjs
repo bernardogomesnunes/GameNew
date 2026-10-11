@@ -4,7 +4,7 @@ import { ITEMS_BY_ID } from '../src/config/items.js';
 import { RECIPES } from '../src/config/recipes.js';
 import { STRUCTURES, STRUCTURES_BY_ID } from '../src/config/structures.js';
 import { MOBS } from '../src/config/mobs.js';
-import { FINAL_AGE } from '../src/config/ages.js';
+import { FINAL_AGE, WAR_AGE, AGES } from '../src/config/ages.js';
 import { Inventory } from '../src/items/Inventory.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
 
@@ -43,11 +43,13 @@ for (const q of QUESTS) {
     }
   }
   if (n.claim) ok(`${q.id}: a ${n.claim} can be built by Age ${q.age}`, (STRUCTURES_BY_ID.get(n.claim)?.age ?? 99) <= q.age);
-  if (n.find) ok(`${q.id}: only once the wall is down — nothing before then is out of reach`, q.age === FINAL_AGE);
+  if (n.find) ok(`${q.id}: only once the wall is down — nothing before then is out of reach`, q.age >= WAR_AGE);
   if (n.trade) ok(`${q.id}: a market can be built by then`, STRUCTURES_BY_ID.get('market').age <= q.age);
   for (const id of Object.keys(q.reward.items ?? {})) ok(`${q.id}: rewards ${id}, a real item`, ITEMS_BY_ID.has(id));
 }
-ok('a few for every age', [1, 2, 3, 4, 5, 6].every((a) => QUESTS.filter((q) => q.age === a).length >= 2));
+// Twelve ages now: one at least in every age up to the war; the ages after
+// it get theirs with the new stories (docs/backlog-batch-4.md).
+ok('at least one for every age up to the war', AGES.filter((a) => a.age <= WAR_AGE).every((a) => QUESTS.some((q) => q.age === a.age)));
 
 // --- nothing waits on a quest ------------------------------------------------------------------
 for (const file of ['config/ages.js', 'config/structures.js', 'config/recipes.js', 'config/achievements.js', 'duilt/Crafting.js', 'structures/validate.js']) {
@@ -88,10 +90,10 @@ ok('a bag too full for the reward: nothing taken, and it says why', !r.ok && /fu
 const later = world({ age: 2 });
 later.tally.hunt = 7;
 ok('Age 1\'s hunt counts from the start of the world', row.call(null, 'q_hunt') && later.questBoard().find((x) => x.quest.id === 'q_hunt').ready);
-const a4 = world({ age: 3 });
+const a4 = world({ age: 4 });
 a4.tally.trade = 5;
 a4.questBoard();
-a4.age = 4;
+a4.age = 5;
 ok('a later age\'s count starts when it opens: earlier trades don\'t count', !a4.questBoard().find((x) => x.quest.id === 'q_trade').ready);
 a4.note('trade');
 ok('and one more does', a4.questBoard().find((x) => x.quest.id === 'q_trade').ready);

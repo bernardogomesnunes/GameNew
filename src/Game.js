@@ -834,7 +834,7 @@ export class Game {
         player: this.player,
         duilt: this.duilt ? this.duilt.toJSON() : null,
         economy: this.economy,
-        territoryBounds: this.duilt ? this.duilt.territory.bounds() : null,
+        territoryBounds: this.duilt ? this.duilt.territory.keptBounds() : null,
       });
       this.local.saveProgression(this.gamification.toJSON());
       this.saveError = null;
@@ -1412,7 +1412,7 @@ export class Game {
       // dug into — see World.serialize's keepBounds. this.duilt.toJSON()
       // above is already plain data by the time serialiseWorldState runs,
       // so the live bounds have to ride along separately.
-      territoryBounds: this.duilt ? this.duilt.territory.bounds() : null,
+      territoryBounds: this.duilt ? this.duilt.territory.keptBounds() : null,
     };
   }
 
@@ -1516,7 +1516,7 @@ export class Game {
           kind: 'xp',
           title: mode === DUILT ? 'Welcome to Duilt' : 'New world generated',
           body: mode === DUILT
-            ? 'You have 32 blocks of land, an axe and a bucket. Build a forest, a farm and a house.'
+            ? 'You have 32 blocks of land, an axe and a bucket. Chop a tree, fill your bucket with water, and make a pickaxe.'
             : 'Have fun building!',
         });
         if (!this.pointerLocked && !document.body.classList.contains('touch')) this.ui.setResumeHint(true);
@@ -2151,7 +2151,7 @@ export class Game {
     p.canGlide = () => this.hasFlyingMachine();
     p.onFlyRefused = () => this.ui?.toast({
       kind: 'xp', title: 'You need a flying machine',
-      body: 'Build one at a workshop in Age 3, set it down with Place, and Place on it to climb in.',
+      body: 'Build one at a workshop in Age 4, set it down with Place, and Place on it to climb in.',
     });
     this.ui?.refreshTools?.();
   }
@@ -3339,7 +3339,7 @@ export class Game {
       gamification: this.gamification,
       economy: this.economy,
       duilt: this.duilt ? this.duilt.toJSON() : null,
-      territoryBounds: this.duilt ? this.duilt.territory.bounds() : null,
+      territoryBounds: this.duilt ? this.duilt.territory.keptBounds() : null,
       revision,
     });
     this.syncState.agree(this.worldId, result.revision);
@@ -6694,7 +6694,7 @@ export class Game {
         // Now and then the story instead of a place: what the roads are saying (config/tales.js).
         onNews: (p, line) => this.ui.toast({ kind: 'challenge', title: `${p.name}, a messenger`, body: this.messengerTale() ?? line }),
         // Bandits (Phase 6b): hostile from Age 2, never in Creative.
-        hostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.age >= 2),
+        hostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.age >= 3),
         // The Stone Kingdom's guards (Phase 7e): the White Ring is their enemy.
         kingdomHostile: () => !!(this.duilt && !this.duilt.sandbox && this.duilt.ring === 'white'),
         night: () => daylightAt(this.dayCycle.time).day < 0.3,

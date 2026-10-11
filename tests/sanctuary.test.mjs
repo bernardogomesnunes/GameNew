@@ -52,7 +52,7 @@ for (const [id, ring] of [['sanctuary_white', 'white'], ['sanctuary_black', 'bla
   const world = flat();
   const region = stamp(world, 'sanctuary_white');
   const g = new DuiltGame({ world, scene: new THREE.Scene(), bus: null, sandbox: false });
-  g.territory.setAge(3);
+  g.territory.setAge(4);
   g.inventory.add('devotion', 20);
   const none = g.claimOptionsFor(region).find((o) => o.id === 'sanctuary_white');
   ok(`without a ring, no Sanctuary (${none.reason})`, !none.ok && /White Ring/.test(none.reason));

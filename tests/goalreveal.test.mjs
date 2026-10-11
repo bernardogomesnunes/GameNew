@@ -26,12 +26,12 @@ const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8
 
 // --- goals: only the ages reached --------------------------------------------
 
-ok('only bands up to your age are drawn', /const shown = bands\.filter\(\(band\) => band\.age <= s\.age\);/.test(ui)
+ok('only bands up to this world\'s age are drawn', /const age = d\?\.age \?\? s\.age;/.test(ui) && /const shown = bands\.filter\(\(band\) => band\.age <= age\);/.test(ui)
   && /this\.q\('#ach-grid'\)\.innerHTML = shown\.map\(/.test(ui));
 ok('the header counts what is shown, not every goal in the game',
   /\$\{shownDone\} of \$\{shownGoals\.length\} done/.test(ui) && !/ACHIEVEMENTS\.length/.test(ui));
 ok('one line says the next age is coming, without listing it',
-  /Age \$\{next\.age\} appears here once you finish Age \$\{s\.age\}\./.test(ui) && /\.goal-next \{/.test(css));
+  /Age \$\{next\.age\} appears here once you finish every goal of Age \$\{age\}\./.test(ui) && /\.goal-next \{/.test(css));
 ok('no dimmed "ahead" bands left over', !/goal-band\.ahead/.test(css) && !/'ahead'/.test(ui));
 
 // --- bag on a phone: no HUD hotbar under it -----------------------------------
