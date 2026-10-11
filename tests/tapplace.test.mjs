@@ -18,7 +18,7 @@ const game = (over = {}) => {
     pendingRoof: null, pendingTemplate: null, selectedItemId: null, did: [],
     raycast: () => ({ x: 0, y: 0, z: 0, block: 1 }),
     banditTarget: () => null, mobTarget: () => null, fireflyTarget: () => null,
-    kingTarget: () => null, hermitTarget: () => null, guardianTarget: () => null, isAltar: () => false,
+    kingTarget: () => null, hermitTarget: () => null, guardianTarget: () => null, talkTarget: () => null, isAltar: () => false,
     primaryAction() { this.did.push('break'); }, secondaryAction() { this.did.push('place'); },
   }, over);
   return g;
@@ -31,6 +31,7 @@ ok('at an animal, a tap strikes', tap({ mobTarget: () => ({}) }) === 'break/brea
 ok('at a bandit, a tap strikes — even holding a block', tap({ banditTarget: () => ({}) }) === 'break/break');
 ok('at fireflies, a tap catches them', tap({ fireflyTarget: () => ({}) }) === 'break/break');
 ok('at the King, a tap speaks to him', tap({ kingTarget: () => ({}), selectedItemId: 'stone_sword' }) === 'place/place');
+ok('at a settler or an explorer, a tap talks — even holding a tool', tap({ talkTarget: () => ({}), selectedItemId: 'stone_pickaxe' }) === 'place/place');
 ok('holding a tool, a tap digs (nothing to put down)', tap({ selectedItemId: 'stone_pickaxe' }) === 'break/break');
 ok('bare hands, a tap digs', tap({ selectedItemId: 'hands' }) === 'break/break');
 ok('holding fruit, a tap eats it', tap({ selectedItemId: 'fruit' }) === 'break/break');

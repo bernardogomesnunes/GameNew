@@ -25,7 +25,16 @@ function perDay(tier) {
   return Object.values(produces).reduce((a, b) => a + b, 0) * 86400 / everySeconds;
 }
 
-ok('its first level is a genuine trickle — ten stone a day', perDay(0) === 10);
+ok(`its first level: ${perDay(0)} rock a day`, perDay(0) === 30);
+// Reported directly: "Bricks production is way higher than stone. Quarry can
+// produce cobble and white and dark stone."
+const kiln = STRUCTURES_BY_ID.get('kiln');
+const per = (spec, tier, id) => (producesAt(spec, tier)[id] ?? 0) * 86400 / intervalAt(spec, tier);
+ok('every level gives stone, cobblestone, white stone and dark stone',
+  quarry.tiers.every((_, i) => ['stone', 'cobblestone', 'stone_white', 'dark_stone'].every((id) => per(quarry, i, id) > 0)));
+ok(`a first quarry makes more stone (${per(quarry, 0, 'stone')}) than a first kiln makes brick (${per(kiln, 0, 'brick')})`,
+  per(quarry, 0, 'stone') > per(kiln, 0, 'brick'));
+ok('no one thing past fifteen a day, at any level', quarry.tiers.every((_, i) => Object.keys(producesAt(quarry, i)).every((id) => per(quarry, i, id) <= 15)));
 ok('it has more than one level to climb', quarry.tiers.length >= 5);
 ok('and every level produces more than the one before it',
   quarry.tiers.every((_, i) => i === 0 || perDay(i) > perDay(i - 1)));

@@ -200,10 +200,12 @@ export const STRUCTURES = [
     // known for.
     fromCrops: true,
     // Requested directly: no building should hand over more than 10-15 of
-    // anything in a day. A 2-hour cycle at one of each keeps a farm at a
-    // dozen a day, not the twelve dozen a 12-minute cycle worked out to.
+    // anything in a day. A 2-hour cycle at one of each kept a farm at a
+    // dozen a day — still "wayyyy too much, seeds and all", reported
+    // directly, with four crops in: four dozen of each. Halved, to a 4-hour
+    // cycle: six of each crop a day, and six of its seed.
     produces: { vegetables: 1, seeds_carrot: 1 },
-    everySeconds: 7200,
+    everySeconds: 14400,
     skill: 'building',
   },
 
@@ -288,8 +290,12 @@ export const STRUCTURES = [
     // Each cycle stays under the eight hours an absence is paid for (see
     // StructureRegistry.collect), or a first quarry would never pay out
     // while you were away.
-    produces: { stone: 2, cobblestone: 1 },
-    everySeconds: 25920,
+    // Then, reported directly: "Bricks production is way higher than stone.
+    // Quarry can produce cobble and white and dark stone." So every level
+    // gives all four, stone still the most of any one of them, and a first
+    // quarry (twelve stone a day) out-makes a first kiln (six brick).
+    produces: { stone: 2, cobblestone: 1, stone_white: 1, dark_stone: 1 },
+    everySeconds: 14400,
     skill: 'building',
     /**
      * How a quarry grows — the first building to use the same ladder a
@@ -312,7 +318,7 @@ export const STRUCTURES = [
       { id: 'seam', name: 'A Scrape', blurb: 'A scrape at the rock. Barely worth the walk.', needs: [] },
       {
         id: 'face', name: 'A Working Face', blurb: 'Wide enough to work properly.',
-        produces: { stone: 3, cobblestone: 2 }, everySeconds: 25920,
+        produces: { stone: 2, cobblestone: 2, stone_white: 1, dark_stone: 1 }, everySeconds: 14400,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 40, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 16, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
@@ -320,7 +326,7 @@ export const STRUCTURES = [
       },
       {
         id: 'deepcut', name: 'A Deep Dig', blurb: 'Dug back far enough to keep two haulers busy.',
-        produces: { stone: 3, cobblestone: 2 }, everySeconds: 21600,
+        produces: { stone: 2, cobblestone: 2, stone_white: 2, dark_stone: 1 }, everySeconds: 14400,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 60, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 28, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
@@ -328,7 +334,7 @@ export const STRUCTURES = [
       },
       {
         id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, opened right up.',
-        produces: { stone: 3, cobblestone: 2 }, everySeconds: 18000,
+        produces: { stone: 2, cobblestone: 2, stone_white: 2, dark_stone: 2 }, everySeconds: 14400,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 90, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 44, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
@@ -336,7 +342,7 @@ export const STRUCTURES = [
       },
       {
         id: 'openpit', name: 'An Open Pit', blurb: 'As much rock as a claim this size can show.',
-        produces: { stone: 3, cobblestone: 2 }, everySeconds: 14400,
+        produces: { stone: 2, cobblestone: 2, stone_white: 2, dark_stone: 2 }, everySeconds: 12000,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 130, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 64, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
@@ -595,8 +601,11 @@ export const STRUCTURES = [
     // Requested directly: no building should hand over more than 10-15 of
     // anything in a day. A 2-hour cycle keeps both at a dozen, not the
     // near-300 a 300-second cycle worked out to.
+    // Reported directly: "Bricks production is way higher than stone." A
+    // 4-hour cycle: six brick and six glass a day, under a first quarry's
+    // twelve stone.
     produces: { brick: 1, glass: 1 },
-    everySeconds: 7200,
+    everySeconds: 14400,
     skill: 'building',
   },
 

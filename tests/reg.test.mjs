@@ -32,12 +32,12 @@ reg.list()[0].seeds = ['carrot'];
 const growing = (s) => farmProduce(s);
 const t0 = reg.list()[0].lastPaidAt;
 ok('nothing owed immediately', Object.keys(reg.collect({ now: t0 + 1000, producesFor: growing })).length === 0);
-let got = reg.collect({ now: t0 + 7_200_000, producesFor: growing });   // farm: every 7200s
+let got = reg.collect({ now: t0 + 14_400_000, producesFor: growing });   // farm: every 14400s
 ok('one cycle pays out', got.vegetables === 1 && got.seeds_carrot === 1);
-got = reg.collect({ now: t0 + 7_200_000 + 7_199_000, producesFor: growing });
+got = reg.collect({ now: t0 + 14_400_000 + 14_399_000, producesFor: growing });
 ok('a partial second cycle pays nothing', Object.keys(got).length === 0);
-got = reg.collect({ now: t0 + 28_800_000, producesFor: growing });
-ok('the remaining three cycles pay together', got.vegetables === 3);
+got = reg.collect({ now: t0 + 43_200_000, producesFor: growing });
+ok('the remaining two cycles pay together', got.vegetables === 2);
 
 // offline accrual is capped so eight hours away isn't a windfall of a week
 ({ inventory, reg, world } = setup());
@@ -45,8 +45,8 @@ reg.claim(FARM, 'farm');
 reg.list()[0].seeds = ['carrot'];
 const t1 = reg.list()[0].lastPaidAt;
 got = reg.collect({ now: t1 + 72 * 3600_000, producesFor: farmProduce });  // three days away
-const capCycles = Math.floor((8 * 3600) / 7200);
-ok(`offline capped at 8h (${capCycles} cycles, not 36)`, got.vegetables === capCycles);
+const capCycles = Math.floor((8 * 3600) / 14400);
+ok(`offline capped at 8h (${capCycles} cycles, not 18)`, got.vegetables === capCycles);
 
 // breaking a building stops it, with a reason
 ({ inventory, reg, world } = setup());

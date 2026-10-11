@@ -27,6 +27,7 @@ import { MOMENTS } from '../config/moments.js';
 import { RECIPES_BY_ID } from '../config/recipes.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
+import { Notices } from './Notices.js';
 import { ageOf, ageIntro, FINAL_AGE } from '../config/ages.js';
 import { pickTale, TALES_BY_ID } from '../config/tales.js';
 import { War } from './War.js';
@@ -101,6 +102,8 @@ export class DuiltGame {
     // Game.pilot.
     this.machines = [];
     // Trains on your rails (Age 5) — see world/Trains.js.
+    // The notification centre's list, kept with the world (duilt/Notices.js).
+    this.notices = new Notices();
     this.trains = new Trains({ world, makeLoad: () => new Inventory({ slots: CAR_SLOTS, bus: this.bus }) });
     this.dayTime = null; // see toJSON
     // Designs you placed that didn't count yet — see waitFor.
@@ -1762,6 +1765,7 @@ export class DuiltGame {
         yaw: Math.round((m.yaw ?? 0) * 100) / 100,
       })),
       trains: this.trains.toJSON(),
+      notices: this.notices.toJSON(),
       mounts: this.mounts.filter((m) => !m.dead).map((m) => ({
         type: m.type, x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
         facing: Math.round((m.facing ?? 0) * 100) / 100, owned: true, cart: !!m.cart,
@@ -1833,6 +1837,7 @@ export class DuiltGame {
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
     this.machines = (data.machines ?? []).filter((m) => Number.isFinite(m?.x)).map((m) => ({ x: m.x, y: m.y, z: m.z, yaw: m.yaw ?? 0 }));
     this.trains.loadJSON(data.trains);
+    this.notices.loadJSON(data.notices);
     this.mounts = (data.mounts ?? []).map((r) => {
       const m = { ...r, owned: true };
       if (r.cart) {

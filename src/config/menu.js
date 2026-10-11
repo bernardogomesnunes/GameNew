@@ -32,6 +32,15 @@
  */
 
 export const MENU = [
+  // Asked for directly: "a Notification Centre to show game notifications
+  // per world. Accessed via menu". First, because it's the one you come back
+  // to after a message slid away before you'd read it.
+  {
+    id: 'menu-notices',
+    name: 'Notifications',
+    icon: 'bell',
+    blurb: 'Every message this world has shown you, newest first.',
+  },
   {
     id: 'menu-world',
     name: 'World details',

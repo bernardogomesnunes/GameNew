@@ -7,6 +7,7 @@ import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
 import { StoryView, INTRO, ENDINGS, endingFor } from './Story.js';
 import { askConfirm } from './Confirm.js';
+import { ago } from '../duilt/Notices.js';
 import { LORE, loreKnowledge } from '../config/lore.js';
 import { GIVERS } from '../config/quests.js';
 import { MOMENTS } from '../config/moments.js';
@@ -295,6 +296,14 @@ export class UIManager {
           <div class="tab-panel" id="tab-lore" hidden><div id="lore-list"></div></div>`,
         'panel-menu': `
           <div id="menu-index"></div>
+
+          <div class="menu-section" id="menu-notices" hidden>
+            <button class="menu-back" data-menu-back="1">${icon('chevron', 14)}<span>Menu</span></button>
+            <div id="notice-list" class="notice-list"></div>
+            <div class="field-row" style="margin-top:10px">
+              <button class="secondary" id="btn-notices-clear">Clear all</button>
+            </div>
+          </div>
 
           <div class="menu-section" id="menu-world" hidden>
             <button class="menu-back" data-menu-back="1">${icon('chevron', 14)}<span>Menu</span></button>
@@ -848,6 +857,10 @@ export class UIManager {
     // No "Saved" toast: saving is something you stop thinking about (backlog batch 2).
     // But it does show that it's saving, until it has (asked for directly:
     // "when saving the button should have a loading indication").
+    this.q('#btn-notices-clear')?.addEventListener('click', () => {
+      this.game?.duilt?.notices?.clear();
+      this.renderNotices();
+    });
     this.q('#btn-leave').addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       if (btn.classList.contains('busy')) return;
@@ -1317,8 +1330,15 @@ export class UIManager {
    * offers it here, where it is next to the sentence saying what it laid. It
    * leaves with the toast, and it works under a thumb, which Ctrl+Z never did.
    */
-  toast({ kind, title, body, action = null, duration = null }) {
+  toast({ kind, title, body, action = null, duration = null, full = null }) {
     const stack = this.q('#toast-stack');
+    // Every one is kept with the world for the notification centre — the
+    // whole of it, where the toast only had room for the start (`full`).
+    const notices = this.game?.duilt?.notices;
+    if (notices) {
+      notices.add({ kind, title, body: full ?? body });
+      this.refreshNoticeCount();
+    }
     // A retry that keeps failing the same way — a save that cannot reach the
     // account, say — fires this exact toast again every few minutes. Piling
     // up five identical copies (reported directly: a wall of "Not saved to
@@ -1479,6 +1499,7 @@ export class UIManager {
         ${this.devOpen ? 'Hide' : 'Show'} the workshop tools
       </button>` : '';
     box.innerHTML = sections.map(card).join('') + toggle;
+    this.refreshNoticeCount();
     this.q('#btn-menu-dev')?.addEventListener('click', () => {
       this.devOpen = !this.devOpen;
       this.renderMenuIndex();
@@ -1490,6 +1511,35 @@ export class UIManager {
         else this.showMenuSection(btn.dataset.menu);
       });
     });
+  }
+
+  /**
+   * The notification centre (duilt/Notices.js): this world's messages, newest
+   * first. Opening it counts them as read.
+   */
+  renderNotices() {
+    const box = this.q('#notice-list');
+    const notices = this.game?.duilt?.notices;
+    if (!box) return;
+    const list = notices?.newest() ?? [];
+    box.innerHTML = list.length
+      ? list.map((n) => `<div class="notice ${escapeHtml(n.kind)}${n.at > (notices.seenAt ?? 0) ? ' new' : ''}">
+          <div class="notice-head"><strong>${escapeHtml(n.title)}${n.n > 1 ? ` <span class="notice-n">×${n.n}</span>` : ''}</strong><span class="notice-at">${ago(n.at)}</span></div>
+          ${n.body ? `<div class="notice-body">${escapeHtml(n.body)}</div>` : ''}
+        </div>`).join('')
+      : '<div class="notice-empty">Nothing yet. Messages from this world will gather here.</div>';
+    const clear = this.q('#btn-notices-clear');
+    if (clear) clear.hidden = !list.length;
+    notices?.markSeen();
+    this.refreshNoticeCount();
+  }
+
+  /** The unread count on the Notifications card. */
+  refreshNoticeCount() {
+    const card = this.root?.querySelector?.('[data-menu="menu-notices"] strong');
+    if (!card) return;
+    const n = this.game?.duilt?.notices?.unread() ?? 0;
+    card.innerHTML = `Notifications${n ? ` <span class="notice-badge">${n > 99 ? '99+' : n}</span>` : ''}`;
   }
 
   showMenuSection(id) {
@@ -1504,6 +1554,7 @@ export class UIManager {
     if (resume) resume.hidden = !!id;
     // The heading follows you in and back out, so the card you tapped and the
     // page you land on say the same thing.
+    if (id === 'menu-notices') this.renderNotices();
     const def = id ? MENU_BY_ID.get(id) : null;
     const title = this.q('#panel-menu h2');
     if (title) title.textContent = def ? def.name : (panelDef('panel-menu')?.title ?? 'Menu');
