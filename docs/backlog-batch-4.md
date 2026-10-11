@@ -9,6 +9,10 @@ or PRs and is recorded here when it lands.
 
 ## A. Quick improvements (first)
 
+**Done in PR #167:** 1 notification centre, 2 the away toast, 3 farms
+halved, 4 the storage panel, 5 the quarry's four stones and a slower kiln,
+7 people talk. Number 6 (goals) goes with the 12 ages in B.
+
 What's there now was checked in the code before writing this.
 
 1. **Notification centre.** Every toast is also kept, per world, in a list. It
