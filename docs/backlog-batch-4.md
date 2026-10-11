@@ -125,6 +125,15 @@ other one."
 
 ### D1. Civilisations to raid
 
+**Tree tribes done in PR #169:**
+- Villages in giant trees: decks, bridges, huts under the leaves, and a
+  stair up to a watchtower on the crown.
+- The people never come down. They're neutral until struck or robbed, then
+  they shoot from the trees.
+
+Next: abandoned and living cities, Stone Kingdom outposts, gems and gem
+armour.
+
 Asked for directly: "villages and different civilisations to attack after the
 first end game, collect their valuables ... diamonds and different new
 armour".
