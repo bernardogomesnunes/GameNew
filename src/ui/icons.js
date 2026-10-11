@@ -7,6 +7,7 @@ const PATHS = {
   symmetry: 'M12 3v18M8 8 4 12l4 4M16 8l4 4-4 4',
   fullscreen: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
   stats: 'M5 20v-8M12 20V4M19 20v-5M3 20h18',
+  bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4l2-2M10 21h4',
   menu: 'M4 7h16M4 12h16M4 17h16',
   close: 'M6 6l12 12M18 6 6 18',
   plus: 'M12 5v14M5 12h14',

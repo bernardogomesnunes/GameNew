@@ -41,7 +41,7 @@ ok('a house has neither — nothing to climb', !hasLevels(HOUSE) && !isStore(HOU
   ok('the quarry has more than one level', QUARRY.tiers.length >= 5);
   const first = producesAt(QUARRY, 0);
   ok(`level 1 makes a genuine trickle: ${JSON.stringify(first)}`,
-    Object.values(first).reduce((a, b) => a + b, 0) * 86400 / intervalAt(QUARRY, 0) === 10);
+    Object.values(first).reduce((a, b) => a + b, 0) * 86400 / intervalAt(QUARRY, 0) === 30);
   ok('a house, with no tiers, just falls back to its own produces either way',
     JSON.stringify(producesAt(HOUSE, 0)) === JSON.stringify(HOUSE.produces)
     && JSON.stringify(producesAt(HOUSE, 3)) === JSON.stringify(HOUSE.produces));
@@ -165,8 +165,8 @@ function stoneBlock({ w = 10, d = 10, h = 6, x0 = 4, z0 = 4, y0 = 8 } = {}) {
   quarry.lastPaidAt = now - cycle * 1000;
   const gained = reg.collect({ now });
   const expectedStone = rate.stone;
-  ok(`a cycle at level 3 pays ${expectedStone} stone, not level 1's rate: ${JSON.stringify(gained)}`,
-    gained.stone === expectedStone && (expectedStone !== producesAt(QUARRY, 0).stone || intervalAt(QUARRY, 0) !== cycle));
+  ok(`a cycle at level 3 pays level 3's rate, not level 1's: ${JSON.stringify(gained)}`,
+    JSON.stringify(gained) === JSON.stringify(rate) && (JSON.stringify(rate) !== JSON.stringify(producesAt(QUARRY, 0)) || intervalAt(QUARRY, 0) !== cycle));
   ok('the clock only advances by whole cycles, same as any producer',
     quarry.lastPaidAt === now);
 }

@@ -255,8 +255,15 @@ export class DuiltUI {
           </div>
           <div class="store-head"><span>Equipped</span></div>
           <div id="store-hotbar-grid"></div>
-          <div class="store-head"><span>In your bag</span></div>
-          <div id="store-bag-grid"></div>`,
+          <!--
+            Asked for directly: "Storage when open, I'd like to see the list of
+            the storage bigger, and collapse my inventory below". The shelves
+            get the room; the bag folds up under them, a tap away.
+          -->
+          <button type="button" class="store-fold" id="btn-store-bag" aria-expanded="false">
+            <span>In your bag</span><span id="store-bag-count" class="store-fold-count"></span><span class="store-fold-arrow" aria-hidden="true">▸</span>
+          </button>
+          <div id="store-bag-grid" hidden></div>`,
         'panel-stores': `
           <!--
             The storage controller: every storehouse's shelves as one list,
@@ -319,6 +326,10 @@ export class DuiltUI {
     this.q('#btn-claim-column').addEventListener('click', () => this.game.beginClaimColumn());
     this.q('#btn-claim-area').addEventListener('click', () => this.game.beginClaimSelection());
     this.q('#btn-store-all').addEventListener('click', () => this.storeEverything());
+    this.q('#btn-store-bag').addEventListener('click', () => {
+      this.storeBagOpen = !this.storeBagOpen;
+      this.renderStore();
+    });
     this.q('#btn-stores-all').addEventListener('click', () => this.storeAllAway());
     this.q('#stores-search').addEventListener('input', () => this.renderStores());
     this.wireSlotTip();
@@ -1414,6 +1425,15 @@ export class DuiltUI {
     bagGrid.innerHTML = d.inventory.slots.slice(PLAYABLE_SLOTS)
       .map((s, i) => this.slotHtml(s, i + PLAYABLE_SLOTS, { attr: 'data-bag-slot' }))
       .join('');
+    // Folded by default: the shelves are what you came to look at.
+    const open = !!this.storeBagOpen;
+    bagGrid.hidden = !open;
+    this.q('#panel-store')?.classList.toggle('bag-open', open);
+    const fold = this.q('#btn-store-bag');
+    if (fold) fold.setAttribute('aria-expanded', String(open));
+    const used = d.inventory.slots.slice(PLAYABLE_SLOTS).filter(Boolean).length;
+    const count = this.q('#store-bag-count');
+    if (count) count.textContent = `${used} of ${d.inventory.slots.length - PLAYABLE_SLOTS}`;
 
     grid.querySelectorAll('[data-store-slot]').forEach((btn) =>
       btn.addEventListener('click', () => this.takeFromStore(Number(btn.dataset.storeSlot))));

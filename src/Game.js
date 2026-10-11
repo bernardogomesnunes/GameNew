@@ -71,6 +71,8 @@ import { HandView } from './render/HandView.js';
 import { LAVA_PER_SECOND, fallDamage } from './survival/Health.js';
 import { CrackView } from './render/CrackView.js';
 import { LOGS, LEAVES, leafHeld, orphanLeaves } from './world/leafDecay.js';
+import { earnedLines } from './duilt/Notices.js';
+import { talkLine } from './config/talk.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood, isTool, BARE_HANDS, ITEM_FOR_BLOCK } from './config/items.js';
 import { stationName } from './duilt/Crafting.js';
 import { MOBS_BY_ID } from './config/mobs.js';
@@ -116,6 +118,8 @@ import { Guardian } from './world/Guardian.js';
 import { settlerName, settlerColour } from './config/settlers.js';
 
 const REACH = 7;
+/** Out in the world, who'll stop for a word (config/talk.js). */
+const TALKERS = new Set(['explorer', 'messenger']);
 /** The longest Save and leave waits for the upload before letting you go anyway. */
 const LEAVE_SAVE_WAIT_MS = 15000;
 /** How fast the touch stick walks at its rim, against a key's full walking pace. */
@@ -1592,9 +1596,10 @@ export class Game {
     if (data.duilt) {
       const earned = this.duilt.loadJSON(data.duilt);
       if (earned && Object.keys(earned).length && this.ui) {
-        const parts = Object.entries(earned).map(([id, n]) => `${n} ${id}`);
+        // The biggest few on the toast; every one of them in Notifications.
+        const { short, full } = earnedLines(earned, itemName);
         setTimeout(() => this.ui.toast({
-          kind: 'challenge', title: 'Your buildings kept working', body: parts.join(', '),
+          kind: 'challenge', title: 'Your buildings kept working', body: short, full,
         }), 600);
       }
     }
@@ -2259,7 +2264,8 @@ export class Game {
       || this.pendingRoof || this.pendingTemplate) return breaks();
     const aimed = this.raycast();
     if (this.banditTarget(aimed) || this.mobTarget(aimed) || this.fireflyTarget(aimed)) return breaks();
-    if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)) return places();
+    if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)
+      || this.talkTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
       || aimed.block === STORAGE_CONTROLLER || stationOf(aimed.block)
       || aimed.block === SKY_LIFT || isCatapult(aimed.block)
@@ -2283,6 +2289,9 @@ export class Game {
       this.tellMoment('first_trader');
       return;
     }
+    // Anyone else who'll talk: a settler, an explorer, a messenger, a soldier.
+    const talker = this.talkTarget();
+    if (talker) return void this.talkTo(talker);
     // Place puts down what you are holding, on a mouse and under a thumb
     // alike. Cancelling is Escape, or the Break button — which says "Cancel"
     // while you are carrying something, so there is nothing to guess.
@@ -4011,6 +4020,61 @@ export class Game {
       if (blockT != null && blockT < found.t) return null;
     }
     return found.person;
+  }
+
+  /**
+   * Somebody who'll talk, under the crosshair and nearer than the block
+   * behind them: a settler, an explorer, a messenger, one of your soldiers
+   * or your army. Asked for directly: "When I click npcs in the game they
+   * should throw a message, but conversation like".
+   */
+  talkTarget(hit = this.raycast()) {
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    const d = this.duilt;
+    const found = [];
+    const add = (who, f) => { if (f && !f.person.dead && !f.person.foe) found.push({ who, ...f }); };
+    if (d) {
+      add('settler', this.settlerView.pickAt(d.settlers.people, eye, dir, REACH));
+      if (d.defenders) add('soldier', this.defenderView.pickAt(d.defenders.people, eye, dir, REACH));
+      if (d.army?.active) add('warrior', this.warriorView.pickAt(d.army.field, eye, dir, REACH));
+    }
+    if (this.wanderers) {
+      const f = this.wanderView.pickAt(this.wanderers.list.filter((p) => TALKERS.has(p.kind) && !(p.fear > 0)), eye, dir, REACH);
+      if (f) add(f.person.kind, f);
+    }
+    if (!found.length) return null;
+    const best = found.sort((a, b) => a.t - b.t)[0];
+    if (hit) {
+      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
+      if (blockT != null && blockT < best.t) return null;
+    }
+    return best;
+  }
+
+  /** The next line of a conversation (config/talk.js), in a speech bubble. */
+  talkTo({ who, person }) {
+    const me = this.player.position;
+    let title = person.name, line;
+    if (who === 'messenger') {
+      // A messenger always has news — the story, or somewhere real.
+      title = `${person.name}, a messenger`;
+      line = this.messengerTale() ?? this.wanderers.newsFrom(person.settlement ?? me);
+    } else {
+      const work = who === 'settler' ? this.duilt?.structures.list().find((s) => s.id === person.workId) : null;
+      line = talkLine({
+        who, person, at: me, landmarks: this.wanderers?.landmarks,
+        job: work ? structureName(work.type).toLowerCase() : null, jobId: work?.type ?? null,
+      });
+      if (who === 'explorer') title = `${person.name}, an explorer`;
+    }
+    // A settler stops and turns to you while they talk, then goes back to
+    // whatever they were on the way to.
+    if (who === 'settler') {
+      person.facing = Math.atan2(me.x - person.x, me.z - person.z);
+      if (person.target) { person.target = null; person.atWork = !person.atWork; }
+      person.wait = Math.max(person.wait ?? 0, 4);
+    }
+    this.ui?.toast({ kind: 'talk', title, body: `“${line}”`, duration: 6000 });
   }
 
   /** The goblin traders in your markets, turned to look at you when you're near. */
@@ -6763,7 +6827,7 @@ export class Game {
     if (person) {
       const work = this.duilt.structures.list().find((s) => s.id === person.workId);
       const job = work ? STRUCTURES_BY_ID.get(work.type)?.name?.toLowerCase() : null;
-      this.ui?.setPersonHint(person.name, job ? `works the ${job}` : 'looking for work');
+      this.ui?.setPersonHint(person.name, `${job ? `works the ${job}` : 'looking for work'} · ${this.ui?.isTouch ? 'tap' : 'right click'} to talk`);
       return;
     }
     // One of your army.
@@ -6793,7 +6857,7 @@ export class Game {
       const spec = WANDERERS[stranger.kind];
       const fights = spec.hp && !spec.flees && this.wanderers.hostileOf(stranger);
       this.ui?.setPersonHint(stranger.name, spec.flees && stranger.fear > 0 ? `${spec.noun} — running from you`
-        : !fights ? spec.about
+        : !fights ? `${spec.about}${TALKERS.has(stranger.kind) ? ` · ${this.ui?.isTouch ? 'tap' : 'right click'} to talk` : ''}`
         : stranger.hp <= spec.fleeBelow ? `${spec.noun} — running for it`
           : stranger.hp < spec.hp ? `${spec.noun} — hurt, keep at it`
             : stranger.war ? `${spec.about} — round ${stranger.round} of ${LAST_ROUND}, hit to fight`
