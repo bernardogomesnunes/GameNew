@@ -2018,6 +2018,7 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 .building-line.bad { color: var(--px-red-dark, #a33a2c); }
 .level-next { margin: 4px 0 6px; font-size: 14px; }
 .building-evolve { width: 100%; margin-top: 8px; padding: 11px 14px; font-size: 16px; }
+.building-craft-missing { width: 100%; margin-top: 8px; padding: 9px 14px; font-size: 14px; }
 .building-inline { display: flex; gap: 8px; margin-top: 10px; }
 .building-inline button { flex: 1; padding: 9px 12px; }
 /* The tools: small, at the bottom, all one weight — none is the point of the popup. */

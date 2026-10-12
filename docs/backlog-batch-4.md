@@ -53,6 +53,17 @@ What's there now was checked in the code before writing this.
    - settlers talk about their day.
    - Tap again for the next line.
 
+## A2. Asked for since
+
+- **Craft what's missing.** A button by Evolve on a building's pop-up (and a
+  storehouse's). It crafts what the next level is short of from what's in
+  your bag:
+  - by hand, or at any station you've built;
+  - a step or two down the chain, so it makes the planks for a lantern too;
+  - nothing is half-made, and nothing is made by eating something else on
+    the list;
+  - what can't be made is left, and said.
+
 ## B. Goals and ages: 12 ages
 
 **Done in PR #168,** with A6 (the goals). As built:
