@@ -484,10 +484,37 @@ export class DuiltUI {
       const have = d?.inventory.countOf(id) ?? 0;
       return itemChip(id, n, { have, short: !d?.sandbox && have < n });
     }).join('');
+    // Short of something there's a recipe for: one press makes it from
+    // what's in your bag (asked for directly: "a craft button").
+    const short = plan?.short ?? {};
+    const craftable = !ready && Object.keys(short).some((id) => RECIPES.some((r) => r.output.id === id && !r.study));
     return `
       ${pills ? `<p class="evolve-cost">Cost <span class="recipe-cost">${pills}</span></p>` : '<p class="dim">Free — it already has everything it needs.</p>'}
+      ${craftable ? '<button class="secondary building-craft-missing" data-craft-missing>Craft what\'s missing</button>' : ''}
       <button class="${ready ? 'primary' : 'secondary cannot'} building-evolve" ${attr}>${escapeHtml(label ?? `Evolve to ${next.name}`)}</button>
       ${this.needsHtml(next)}`;
+  }
+
+  /**
+   * "Craft what's missing": what the next level is short of, made from
+   * what's in the bag — DuiltGame.craftMissing — and said: what was made,
+   * and what couldn't be.
+   */
+  wireCraftMissing(root, structure, redraw) {
+    root.querySelector('[data-craft-missing]')?.addEventListener('click', () => {
+      const d = this.duilt;
+      const short = d?.evolvePlan(structure, { dry: true })?.short ?? {};
+      if (!d || !Object.keys(short).length) return redraw();
+      const want = {};
+      for (const [id, n] of Object.entries(short)) want[id] = d.inventory.countOf(id) + n;
+      const { made, still } = d.craftMissing(want, { position: this.game?.player?.position ?? null });
+      const list = (o) => Object.entries(o).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(', ');
+      const anything = Object.keys(made).length;
+      this.bus.emit('toast', anything
+        ? { kind: 'challenge', title: `Made ${list(made)}`, body: Object.keys(still).length ? `Couldn't make ${list(still)} — not enough in your bag` : 'Everything it needs is in your bag' }
+        : { kind: 'xp', title: 'Nothing could be made', body: `Not enough in your bag for ${list(still)}` });
+      redraw();
+    });
   }
 
   /** The other way to a level: what to build in, folded away under the button. */
@@ -542,6 +569,7 @@ export class DuiltUI {
 
     body.querySelector('[data-evolve]')?.addEventListener('click', () => actions.onEvolve?.());
     this.wireCraft(body, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
+    this.wireCraftMissing(body, structure, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
     body.querySelectorAll('[data-train]').forEach((b) => b.addEventListener('click', () => actions.onTrain?.(b.dataset.train)));
@@ -1474,6 +1502,7 @@ export class DuiltUI {
           this.game.evolveBuilding?.(summary.structure);
           this.renderStore();
         });
+        this.wireCraftMissing(next, summary.structure, () => this.renderStore());
       }
     }
 

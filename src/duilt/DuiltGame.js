@@ -24,7 +24,7 @@ import { lootFor, LOOT } from './Loot.js';
 import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN } from '../config/traders.js';
 import { QUESTS, QUESTS_BY_ID } from '../config/quests.js';
 import { MOMENTS } from '../config/moments.js';
-import { RECIPES_BY_ID } from '../config/recipes.js';
+import { RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { Notices } from './Notices.js';
@@ -882,6 +882,84 @@ export class DuiltGame {
     // Nowhere to put them without breaking it: they're bought instead.
     if (!stands) return this.evolvePlan(structure, { buyAll: true });
     return { ok: true, changes, pay, credit: owed, bill };
+  }
+
+  /**
+   * Every station you have: the ones you've built (a claimed building with a
+   * station, and its level) and the ones you're standing by (a wood mill, a
+   * stone mill — blocks, so only near).
+   */
+  stationsOwned(position = null) {
+    const out = new Set(position ? this.stationsNear(position) : []);
+    for (const s of this.structures.list()) {
+      const spec = STRUCTURES_BY_ID.get(s.type);
+      if (!spec?.station || s.valid === false) continue;
+      out.add(spec.station);
+      for (let t = 0; t <= (s.tier ?? 0); t++) out.add(`${spec.station}@${t}`);
+    }
+    return [...out];
+  }
+
+  /**
+   * Crafts what's short, out of what's in the bag — asked for directly: "a
+   * craft button ... craft whatever items needed if I have materials in my
+   * inventory. If something is missing we just don't craft it because it
+   * can't be done."
+   *
+   * For each thing short, a recipe for it — at hand, or at a station you've
+   * built — and, a step or two down, the parts that recipe needs. Each is
+   * worked out on a copy of the bag first, and only made for real if it all
+   * comes out: nothing is half-made, and nothing is made by eating something
+   * else on the same list. What can't be made is left, and said.
+   *
+   * Returns { made: { item: n }, still: { item: n } }.
+   */
+  craftMissing(want, { position = null } = {}) {
+    const atStations = this.stationsOwned(position);
+    const made = {};
+    const still = {};
+    const recipesFor = (id) => RECIPES
+      .filter((r) => r.output.id === id && !r.study && !r.ring && !r.needs && (this.sandbox || r.age <= this.age)
+        && this.crafting.atStation(r, atStations) && !this.crafting.hidden?.(r) && !this.crafting.locked?.(r))
+      // The cheapest first: a mill's way before the bench's, if you have the mill.
+      .sort((a, b) => cost(a) - cost(b));
+    const cost = (r) => Object.values(r.inputs).reduce((t, n) => t + n, 0) / r.output.count;
+
+    /**
+     * Makes `n` of `id` in `inv` (a bag, real or a copy); whether it worked.
+     * A part that's also on the list is made on top of what the list wants
+     * of it (`held`), so making one thing never eats another.
+     */
+    const make = (craft, inv, id, n, depth, making, held) => {
+      const short = n - inv.countOf(id);
+      if (short <= 0) return true;
+      if (depth > 3 || making.has(id)) return false;
+      for (const r of recipesFor(id)) {
+        const runs = Math.ceil(short / r.output.count);
+        const before = inv.toJSON();
+        const inner = new Set(making).add(id);
+        const parts = Object.entries(r.inputs).every(([part, k]) => make(craft, inv, part, k * runs + (held[part] ?? 0), depth + 1, inner, held));
+        if (parts && craft.craft(r.id, runs, { atStations }).ok) return true;
+        inv.loadJSON(before);
+      }
+      return false;
+    };
+
+    for (const [id, n] of Object.entries(want)) {
+      if (this.inventory.countOf(id) >= n) continue;
+      // On a copy first, with the rest of the list held back.
+      const copy = new Inventory({ slots: this.inventory.slots.length });
+      copy.loadJSON(this.inventory.toJSON());
+      const dry = new Crafting({ inventory: copy, world: this.world, hidden: this.crafting.hidden, locked: this.crafting.locked });
+      const held = Object.fromEntries(Object.entries(want).filter(([other]) => other !== id && this.inventory.countOf(other) >= want[other]));
+      const ok = make(dry, copy, id, n, 0, new Set(), held)
+        && Object.entries(want).every(([other, k]) => other === id || this.inventory.countOf(other) < k || copy.countOf(other) >= k);
+      if (!ok) { still[id] = n - this.inventory.countOf(id); continue; }
+      const had = this.inventory.countOf(id);
+      make(this.crafting, this.inventory, id, n, 0, new Set(), held);
+      made[id] = this.inventory.countOf(id) - had;
+    }
+    return { made, still };
   }
 
   /** "Needs 4 more planks and 2 more lanterns in your bag." */
