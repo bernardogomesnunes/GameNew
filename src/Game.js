@@ -5676,12 +5676,14 @@ export class Game {
    */
   tookFromChest({ x, z }) {
     if (!this.world.gen || !this.wanderers) return false;
-    const lm = landmarksFor(this.world.gen).find((l) => (l.kind === 'tribe' || l.kind === 'city') && Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1);
+    const lm = landmarksFor(this.world.gen).find((l) => (l.kind === 'tribe' || l.kind === 'city' || l.kind === 'outpost') && Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1);
     if (!lm) return false;
     const already = this.wanderers.list.some((p) => p.landmark === lm && p.angry && !p.dead);
     const saw = this.wanderers.anger(lm);
     if (saw && !already) {
-      this.ui?.toast(lm.kind === 'city'
+      this.ui?.toast(lm.kind === 'outpost'
+        ? { kind: 'xp', title: 'The armoury is guarded', body: 'The Kingdom\'s guards saw that — fight, or run' }
+        : lm.kind === 'city'
         ? { kind: 'xp', title: 'Thief!', body: 'The guards are after you, and the market\'s shut to you — get out of the city' }
         : { kind: 'xp', title: 'The tree people saw that', body: 'Thief! Arrows from the decks — get out from under the trees' });
     }

@@ -186,3 +186,66 @@ export function cityDesign(roll, ruined = false) {
   }
   return { half: CITY_HALF, clear: 14, blocks, people, chests: chestsAt.length };
 }
+
+/**
+ * A Stone Kingdom outpost (backlog batch 2: "Stone Kingdom outposts:
+ * generated rarely, with very good loot"). A small fort of dark brick out in
+ * the wilds: a wall with a gate on its south side, a tower at each corner
+ * flying the black banner, a dark calçada yard and a keep in the middle with
+ * the armoury's chests in it. Its guards are the Kingdom's own — they treat
+ * you as the Kingdom does (the White Ring is their enemy), and come for you
+ * if you strike one or take from the armoury.
+ *
+ * Returns { half, clear, blocks, people } like cityDesign.
+ */
+export function outpostDesign(roll) {
+  const DARK_BRICK = 157, DARK_STONE = 156, DARK_STONE_WALL = 164, DARK_CALCADA = 210, BLACK_BANNER = 186,
+        DARK_PLANKS = 288, CHEST_ID = CHEST;
+  const cells = new Map();
+  const put = (x, y, z, id) => cells.set(`${x},${y},${z}`, id);
+  const W = 9;
+  const people = [];
+  // The yard.
+  for (let x = -W; x <= W; x++) for (let z = -W; z <= W; z++) put(x, -1, z, (x + z) & 1 ? DARK_CALCADA : DARK_STONE);
+  // The wall, with merlons and a gate south.
+  for (let x = -W; x <= W; x++) for (let z = -W; z <= W; z++) {
+    if (Math.max(Math.abs(x), Math.abs(z)) !== W) continue;
+    const gate = z === W && Math.abs(x) <= 1;
+    for (let y = 0; y < 4; y++) if (!(gate && y <= 2)) put(x, y, z, y === 0 ? DARK_STONE : DARK_BRICK);
+    if ((x + z) % 2 === 0) put(x, 4, z, DARK_STONE_WALL);
+  }
+  // Corner towers flying the black banner.
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const cx = sx * W, cz = sz * W;
+    for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (let y = 0; y < 7; y++) put(cx + dx, y, cz + dz, DARK_BRICK);
+    put(cx, 7, cz, LANTERN);
+    put(cx, 8, cz, BLACK_BANNER);
+  }
+  // The keep: dark brick, a plank floor, a door on the south, two chests —
+  // the armoury — and a light.
+  const K = 3;
+  for (let x = -K; x <= K; x++) for (let z = -K; z <= K; z++) {
+    put(x, 0, z, DARK_PLANKS);
+    const edge = Math.max(Math.abs(x), Math.abs(z)) === K;
+    for (let y = 1; y <= 4; y++) {
+      if (edge && !(z === K && x === 0 && y <= 2)) put(x, y, z, y === 1 ? DARK_STONE : DARK_BRICK);
+      else if (!edge) put(x, y, z, AIR);
+    }
+    put(x, 5, z, DARK_STONE);
+    if (edge && (x + z) % 2 === 0) put(x, 6, z, DARK_STONE_WALL);
+  }
+  put(-2, 1, -2, CHEST_ID + 2);
+  put(2, 1, -2, CHEST_ID + 2);
+  put(0, 1, -2, LANTERN);
+  put(0, 3, K + 1, LANTERN);
+  // Four of the Kingdom's guards: two at the gate, two in the yard.
+  people.push({ kind: 'guard', dx: -2.5, dy: 0, dz: W - 2 + 0.5 }, { kind: 'guard', dx: 3.5, dy: 0, dz: W - 2 + 0.5 });
+  people.push({ kind: 'guard', dx: -6.5, dy: 0, dz: -5.5 }, { kind: 'guard', dx: 6.5, dy: 0, dz: roll < 0.5 ? -5.5 : 5.5 });
+  const blocks = [];
+  for (const [k, id] of cells) {
+    if (!id) continue;
+    const [x, y, z] = k.split(',').map(Number);
+    blocks.push([x, y, z, id]);
+  }
+  return { half: W + 2, clear: 12, blocks, people };
+}

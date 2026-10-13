@@ -324,6 +324,10 @@ export const NEWS = {
     'There\'s a walled city to the {dir}, with a market in the square. They take coins.',
     'Merchants on the road from the {dir} — a city out that way, guards on the gate.',
   ],
+  outpost: [
+    'The Stone Kingdom has a fort out to the {dir}. Dark walls, black banners. They say its armoury is full.',
+    'Soldiers in dark iron at a fort to the {dir}. Don\'t go near it wearing anything white.',
+  ],
   ruined_city: [
     'To the {dir} there\'s a city with nobody in it. Walls fallen, roofs caved in. Chests still in the houses, they say.',
     'An empty city to the {dir}. Whatever happened there, the people never came back.',

@@ -2,7 +2,7 @@ import { hash01 } from './ChunkGen.js';
 import { BIOMES } from '../config/biomes.js';
 import { kingdomFor } from './kingdom.js';
 import { turned } from '../config/blocks.js';
-import { cityDesign, CITY_HALF } from './cities.js';
+import { cityDesign, CITY_HALF, outpostDesign } from './cities.js';
 
 /**
  * Places in the world that somebody else built: the hermit's hut, and the
@@ -101,9 +101,23 @@ export function landmarksFor(gen) {
     out.push({ kind: ruined ? 'ruined_city' : 'city', ...site, half: d.half, clear: d.clear, blocks: d.blocks, people: d.people });
   });
 
+  // Stone Kingdom outposts (backlog batch 2): rare, far out, with the
+  // Kingdom's guards and an armoury worth the fight.
+  for (let i = 0; i < OUTPOSTS; i++) {
+    const a = hash01(seed, 600 + i, 7801) * Math.PI * 2;
+    const r = OUTPOST_AT[0] + hash01(seed, 610 + i, 7802) * (OUTPOST_AT[1] - OUTPOST_AT[0]);
+    const d = outpostDesign(hash01(seed, 620 + i, 7803));
+    const site = siteNear(gen, Math.cos(a) * r, Math.sin(a) * r, d.half, out);
+    if (site) out.push({ kind: 'outpost', ...site, half: d.half, clear: d.clear, blocks: d.blocks, people: d.people });
+  }
+
   gen.landmarkCache = out;
   return out;
 }
+
+/** How many Stone Kingdom outposts, and how far out. */
+const OUTPOSTS = 2;
+const OUTPOST_AT = [600, 1150];
 
 /** Which cities a world has: false lives, true lies in ruins. */
 const CITIES = [false, false, true, true];
@@ -141,7 +155,7 @@ function groveNear(gen, x, z, half, taken) {
 export const PLACE_NAMES = {
   kingdom: 'The Stone Kingdom', hermit: 'The hermit\'s hut', camp: 'A bandit camp',
   ruin: 'An old ruin', ruined_temple: 'A forgotten temple', mine: 'An abandoned mine', monument: 'A monument',
-  tribe: 'A tree tribe', city: 'A city', ruined_city: 'An abandoned city',
+  tribe: 'A tree tribe', city: 'A city', ruined_city: 'An abandoned city', outpost: 'A Stone Kingdom outpost',
 };
 
 /**

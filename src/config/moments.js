@@ -48,6 +48,10 @@ export const MOMENTS = {
     title: 'A forgotten altar',
     text: 'Someone prayed here once, to a god whose name has worn off the stone. The offering left on the altar is still there. Nobody came back for it.',
   },
+  found_outpost: {
+    title: 'The Kingdom, out here',
+    text: 'A fort of dark brick, black banners on its towers, guards in dark iron at the gate. The Stone Kingdom keeps a watch even this far out — and keeps its armoury full.',
+  },
   found_city: {
     title: 'A city',
     text: 'Walls, a gate with guards on it, streets of houses and a market in the square. People who have never heard of you, going about their day. They take coins.',
