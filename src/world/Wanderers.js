@@ -134,7 +134,7 @@ export class Wanderers {
     this.list = this.list.filter((p) => !p.dead && !this.gone(p, player));
     for (const lm of this.landmarks) {
       // Only the hut, the camps and the Stone Kingdom have anyone living in them.
-      if (lm.kind !== 'hermit' && lm.kind !== 'camp' && lm.kind !== 'kingdom' && lm.kind !== 'tribe') continue;
+      if (lm.kind !== 'hermit' && lm.kind !== 'camp' && lm.kind !== 'kingdom' && lm.kind !== 'tribe' && lm.kind !== 'city') continue;
       if (!this.present.has(lm) && Math.hypot(lm.x - player.x, lm.z - player.z) < VISIT) this.populate(lm);
     }
     const sky = this.sky();
@@ -479,7 +479,11 @@ export class Wanderers {
    */
   anger(lm) {
     const there = this.list.filter((q) => q.landmark === lm && !q.dead);
-    for (const q of there) q.angry = true;
+    for (const q of there) {
+      q.angry = true;
+      // Those who don't fight run from you.
+      if (WANDERERS[q.kind]?.flees) q.fear = Math.max(q.fear ?? 0, FLEE_SECONDS);
+    }
     return there.length;
   }
 
@@ -556,6 +560,14 @@ export class Wanderers {
     }
     if (lm.kind === 'hermit') {
       this.list.push(this.person('hermit', lm.x + 0.5, lm.y, lm.z + 3.5, { landmark: lm, home }));
+      return;
+    }
+    if (lm.kind === 'city') {
+      // Guards at the gates, merchants at their stalls, citizens in the streets.
+      for (const at of lm.people ?? []) {
+        const x = lm.x + at.dx, z = lm.z + at.dz, y = lm.y + at.dy;
+        this.list.push(this.person(at.kind, x, y, z, { landmark: lm, home: { x, z }, ...(at.trader ? { trader: at.trader } : {}) }));
+      }
       return;
     }
     if (lm.kind === 'tribe') {
@@ -653,7 +665,7 @@ export class Wanderers {
     }
     if (spec.siege === 'ram') return this.ram(p, dt, spec);
     if (spec.siege === 'catapult') return this.catapult(p, dt, spec);
-    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'tribe' || spec.sky || p.war;
+    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'tribe' || p.kind === 'city_guard' || spec.sky || p.war;
     if (fights) p.cooldown = Math.max(0, p.cooldown - dt);
     // Up on his beast, the Warlord only swings: the beast does the going.
     if (p.mount && !p.mount.dead) {
@@ -670,6 +682,8 @@ export class Wanderers {
     if (fights && this.fight(p, dt, player, spec)) return;
     // The King doesn't leave his throne.
     if (p.kind === 'king' || p.kind === 'sky_king') { p.target = null; p.speed = 0; return; }
+    // Nor a merchant their stall — unless they're running from you.
+    if (p.kind === 'merchant' && !(p.fear > 0)) { p.target = null; p.speed = 0; return; }
     // Struck, someone who doesn't fight runs from you.
     if (spec.flees && p.fear > 0) {
       const dx = p.x - player.x, dz = p.z - player.z;
@@ -679,7 +693,8 @@ export class Wanderers {
       return;
     }
 
-    if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard' || p.kind === 'royal_guard' || p.kind === 'tribe') {
+    if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard' || p.kind === 'royal_guard' || p.kind === 'tribe'
+      || p.kind === 'citizen' || p.kind === 'city_guard') {
       const dx = p.x - player.x, dz = p.z - player.z;
       const d = Math.hypot(dx, dz) || 1;
       // Bandits don't come to you — not yet. They back off and watch.
@@ -869,8 +884,9 @@ export class Wanderers {
   /** Whether `p` fights you: its own side's say, or because you struck it. */
   hostileOf(p) {
     if (p.war || p.angry) return true;
-    // The tree people leave you be, unless you've struck one or robbed them.
-    if (p.kind === 'tribe') return false;
+    // The tree people and a city's people leave you be, unless you've struck
+    // one or robbed them.
+    if (p.kind === 'tribe' || WANDERERS[p.kind]?.neutral) return false;
     if (p.kind === 'guard') return this.kingdomHostile();
     if (WANDERERS[p.kind]?.sky) return this.skyHostile();
     return this.hostile();

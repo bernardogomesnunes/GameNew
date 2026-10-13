@@ -46,6 +46,22 @@ export const LOOT = {
       ['seeds_hemp', 0.5, 2, 4], ['kombucha', 0.35, 1, 2], ['armour_leather_body', 0.15, 1, 1], ['gold', 0.4, 1, 3], ['coin', 0.5, 4, 14]],
     ring: 0.08,
   },
+  // A house in a living city (world/cities.js): what people keep at home.
+  // Take from it and the guards hear of it.
+  city: {
+    name: 'A chest in someone\'s house',
+    items: [['cooked_meat', 0.5, 1, 3], ['wool', 0.4, 1, 4], ['gold', 0.4, 1, 3],
+      ['beer', 0.4, 1, 2], ['lantern', 0.2, 1, 1], ['painting', 0.1, 1, 1], ['coin', 0.8, 5, 20]],
+    ring: 0.03,
+  },
+  // An abandoned city's houses: left in a hurry, and never come back for.
+  ruined_city: {
+    name: 'A chest nobody came back for',
+    items: [['gold', 0.7, 2, 6], ['sword_gold', 0.15, 1, 1], ['armour_gold_head', 0.12, 1, 1],
+      ['armour_gold_body', 0.08, 1, 1], ['iron_ingot', 0.5, 1, 4], ['amethyst', 0.25, 1, 2], ['gold_trim', 0.3, 1, 3],
+      ['sword_iron', 0.2, 1, 1], ['painting', 0.15, 1, 1], ['coin', 0.85, 10, 35]],
+    ring: 0.15,
+  },
   ruin: {
     name: 'A chest in the rubble',
     items: [['cooked_meat', 0.6, 1, 3], ['fruit', 0.5, 2, 4], ['sword_stone', 0.3, 1, 1], ['armour_leather_head', 0.2, 1, 1],

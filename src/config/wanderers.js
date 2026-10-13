@@ -212,6 +212,43 @@ export const WANDERERS = {
     leash: 40,
     drops: { hemp_fibre: [1, 3], fruit: [0, 2], arrow: [1, 4] },
   },
+  // The living cities (world/cities.js): citizens in the streets, guards at
+  // the gates, merchants at the stalls. Neutral — strike one, or take from
+  // a chest in their city, and the guards come for you and the rest run.
+  citizen: {
+    noun: 'a citizen',
+    about: 'a citizen, about their day',
+    colours: [0x8a5a44, 0x5a6f8a, 0x7a7a52, 0x8a4a6a, 0x4a7a6a],
+    speed: 1.4,
+    roam: 5,
+    hp: 10, flees: true, run: 3.6,
+    neutral: true,
+    drops: { coin: [0, 3], fruit: [0, 1] },
+  },
+  city_guard: {
+    noun: 'a city guard',
+    about: 'a city guard — keeping the peace',
+    aboutHostile: 'a city guard — after you now, hit to fight',
+    colours: [0x5a5f6a, 0x4f5560],
+    helm: 0x9a9fa8,
+    speed: 1.4,
+    roam: 2,
+    hp: 24, hits: 3, reach: 1.9, every: 1.2,
+    aggro: 18, run: 3.8, fleeBelow: -1,
+    neutral: true,
+    leash: 50,
+    drops: { coin: [2, 6], iron_ingot: [0, 1] },
+  },
+  merchant: {
+    noun: 'a merchant',
+    about: 'a merchant at a stall',
+    colours: [0x7a2f3a, 0x3f5a7a],
+    speed: 0,
+    roam: 0,
+    hp: 10, flees: true, run: 3.4,
+    neutral: true,
+    drops: { coin: [3, 8] },
+  },
   explorer: {
     noun: 'an explorer',
     about: 'an explorer, passing through',
@@ -282,6 +319,14 @@ export const NEWS = {
   tribe: [
     'There are people living up in the great trees to the {dir}. They never come down.',
     'Lights in the treetops to the {dir}, at night. The tree people, they say. Leave their chests alone.',
+  ],
+  city: [
+    'There\'s a walled city to the {dir}, with a market in the square. They take coins.',
+    'Merchants on the road from the {dir} — a city out that way, guards on the gate.',
+  ],
+  ruined_city: [
+    'To the {dir} there\'s a city with nobody in it. Walls fallen, roofs caved in. Chests still in the houses, they say.',
+    'An empty city to the {dir}. Whatever happened there, the people never came back.',
   ],
   quiet: [
     'The roads are quiet. That\'s all the news there is.',

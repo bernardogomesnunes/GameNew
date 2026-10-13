@@ -119,7 +119,7 @@ import { settlerName, settlerColour } from './config/settlers.js';
 
 const REACH = 7;
 /** Out in the world, who'll stop for a word (config/talk.js). */
-const TALKERS = new Set(['explorer', 'messenger', 'tribe']);
+const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard']);
 /** The longest Save and leave waits for the upload before letting you go anyway. */
 const LEAVE_SAVE_WAIT_MS = 15000;
 /** How fast the touch stick walks at its rim, against a key's full walking pace. */
@@ -2265,7 +2265,7 @@ export class Game {
     const aimed = this.raycast();
     // Someone who'll talk gets a word, not a blow: a tap is Place. Holding
     // still strikes them, the way it breaks a block.
-    if (this.talkTarget(aimed)) return places();
+    if (this.talkTarget(aimed) || this.traderTarget(aimed)) return places();
     if (this.banditTarget(aimed) || this.mobTarget(aimed) || this.fireflyTarget(aimed)) return breaks();
     if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
@@ -4069,6 +4069,7 @@ export class Game {
       });
       if (who === 'explorer') title = `${person.name}, an explorer`;
       if (who === 'tribe') title = `${person.name} of the tree people`;
+      if (who === 'city_guard') title = `${person.name}, of the city guard`;
     }
     // A settler stops and turns to you while they talk, then goes back to
     // whatever they were on the way to.
@@ -4095,7 +4096,10 @@ export class Game {
 
   /** A market's trader under the crosshair, if nearer than the block behind them. */
   traderTarget(hit = this.raycast()) {
-    const list = this.duilt?.marketTraders() ?? [];
+    // Your markets' goblins, and a living city's merchants while they'll
+    // still deal with you.
+    const list = [...(this.duilt?.marketTraders() ?? []),
+      ...(this.wanderers?.list.filter((p) => p.kind === 'merchant' && p.trader && !p.dead && !p.angry && !(p.fear > 0)) ?? [])];
     if (!list.length) return null;
     const eye = this.player.eyePosition(), dir = this.player.lookDirection();
     const found = this.wanderView.pickAt(list, eye, dir, REACH);
@@ -5672,12 +5676,14 @@ export class Game {
    */
   tookFromChest({ x, z }) {
     if (!this.world.gen || !this.wanderers) return false;
-    const lm = landmarksFor(this.world.gen).find((l) => l.kind === 'tribe' && Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1);
+    const lm = landmarksFor(this.world.gen).find((l) => (l.kind === 'tribe' || l.kind === 'city') && Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1);
     if (!lm) return false;
     const already = this.wanderers.list.some((p) => p.landmark === lm && p.angry && !p.dead);
     const saw = this.wanderers.anger(lm);
     if (saw && !already) {
-      this.ui?.toast({ kind: 'xp', title: 'The tree people saw that', body: 'Thief! Arrows from the decks — get out from under the trees' });
+      this.ui?.toast(lm.kind === 'city'
+        ? { kind: 'xp', title: 'Thief!', body: 'The guards are after you, and the market\'s shut to you — get out of the city' }
+        : { kind: 'xp', title: 'The tree people saw that', body: 'Thief! Arrows from the decks — get out from under the trees' });
     }
     return saw > 0;
   }
@@ -6878,6 +6884,7 @@ export class Game {
       const spec = WANDERERS[stranger.kind];
       const fights = spec.hp && !spec.flees && this.wanderers.hostileOf(stranger);
       this.ui?.setPersonHint(stranger.name, spec.flees && stranger.fear > 0 ? `${spec.noun} — running from you`
+        : stranger.kind === 'merchant' && stranger.trader && !stranger.angry ? `${(TRADERS_BY_ID.get(stranger.trader)?.trade ?? 'goods').toLowerCase()} for coins — ${this.ui?.isTouch ? 'tap' : 'right click'} to trade`
         : !fights ? `${spec.about}${TALKERS.has(stranger.kind) ? ` · ${this.ui?.isTouch ? 'tap' : 'right click'} to talk` : ''}`
         : stranger.hp <= spec.fleeBelow ? `${spec.noun} — running for it`
           : stranger.hp < spec.hp ? `${spec.noun} — hurt, keep at it`

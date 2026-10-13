@@ -48,6 +48,14 @@ export const MOMENTS = {
     title: 'A forgotten altar',
     text: 'Someone prayed here once, to a god whose name has worn off the stone. The offering left on the altar is still there. Nobody came back for it.',
   },
+  found_city: {
+    title: 'A city',
+    text: 'Walls, a gate with guards on it, streets of houses and a market in the square. People who have never heard of you, going about their day. They take coins.',
+  },
+  found_ruined_city: {
+    title: 'A city of nobody',
+    text: 'The gate stands open on empty streets. Roofs caved in, moss in the square, a statue with its head gone. Whoever lived here left in a hurry — and left their chests.',
+  },
   found_tribe: {
     title: 'People in the trees',
     text: 'Bridges strung between giant trees, huts tucked in under the leaves, a tower on top. Faces watch you from the decks. They never come down — and they never forget a thief.',

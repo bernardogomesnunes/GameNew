@@ -34,7 +34,7 @@ const WINDOW = 176, OAK_TABLE = 31, OAK_CHAIR = 33, RED_RUG = 35, LANTERN_BLOCK 
 // designs were roofed in brick tiles you could only make once a workshop
 // stood (reported: "I need to craft brick tiles roofs to the workshop, but I
 // need the workshop to build them").
-const SLATE = roofBlock({ mat: 1 }), TILE = roofBlock({ mat: 0 });
+export const SLATE = roofBlock({ mat: 1 }), TILE = roofBlock({ mat: 0 });
 
 /** A door in a doorway at (dx, dy, dz) — both halves, facing in from -z. */
 function door(dx, dy, dz) {
@@ -101,7 +101,7 @@ function shifted(blocks, dx0, dz0) {
  * the limit, so these are all a size up from where they look like they should
  * be.
  */
-function room({
+export function room({
   w, h, wall, floor = null, roof = wall, door: hasDoor = true, tiles = null, chimney = null,
   shape = 'gable', plinth: plinthType = null, shutters = false, hood = false,
 }) {

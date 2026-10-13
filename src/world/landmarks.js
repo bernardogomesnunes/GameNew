@@ -2,6 +2,7 @@ import { hash01 } from './ChunkGen.js';
 import { BIOMES } from '../config/biomes.js';
 import { kingdomFor } from './kingdom.js';
 import { turned } from '../config/blocks.js';
+import { cityDesign, CITY_HALF } from './cities.js';
 
 /**
  * Places in the world that somebody else built: the hermit's hut, and the
@@ -89,9 +90,24 @@ export function landmarksFor(gen) {
     if (site) out.push({ kind: 'tribe', ...site, half: TRIBE.half, clear: TRIBE.clear, blocks: TRIBE.blocks, perches: TRIBE.perches });
   }
 
+  // Cities (world/cities.js): two with people living in them, two long
+  // abandoned — further out still, for after the war.
+  CITIES.forEach((ruined, i) => {
+    const a = hash01(seed, 500 + i, 7701) * Math.PI * 2;
+    const r = CITY_AT[0] + hash01(seed, 510 + i, 7702) * (CITY_AT[1] - CITY_AT[0]);
+    const site = siteNear(gen, Math.cos(a) * r, Math.sin(a) * r, CITY_HALF, out);
+    if (!site) return;
+    const d = cityDesign(hash01(seed, 520 + i, 7703), ruined);
+    out.push({ kind: ruined ? 'ruined_city' : 'city', ...site, half: d.half, clear: d.clear, blocks: d.blocks, people: d.people });
+  });
+
   gen.landmarkCache = out;
   return out;
 }
+
+/** Which cities a world has: false lives, true lies in ruins. */
+const CITIES = [false, false, true, true];
+const CITY_AT = [480, 1050];
 
 /** How many tree tribes, and how far out — past the old border, for after the war. */
 const TRIBES = 3;
@@ -125,7 +141,7 @@ function groveNear(gen, x, z, half, taken) {
 export const PLACE_NAMES = {
   kingdom: 'The Stone Kingdom', hermit: 'The hermit\'s hut', camp: 'A bandit camp',
   ruin: 'An old ruin', ruined_temple: 'A forgotten temple', mine: 'An abandoned mine', monument: 'A monument',
-  tribe: 'A tree tribe',
+  tribe: 'A tree tribe', city: 'A city', ruined_city: 'An abandoned city',
 };
 
 /**
