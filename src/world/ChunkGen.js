@@ -41,6 +41,11 @@ const COBBLE_POCKET_DEPTH = 10, COBBLE_POCKET = 0.5, COBBLE_OUTCROP = 0.82;
 const GRAVEL_POCKET = 0.72, GRAVEL_SHIFT = 517.3;
 /** Ore anywhere in rock, not only where a biome is rich in it: rare. */
 const STRAY_ORES = [[38, 0.0016], [39, 0.0016], [40, 0.0005]];
+/**
+ * Diamonds (backlog batch 4): only in the deepest rock, below DIAMOND_TOP,
+ * and rarer there than gold is anywhere.
+ */
+const DIAMOND_ORE = 250, DIAMOND_TOP = 32, DIAMOND_CHANCE = 0.0006;
 /** Which BIOMES entry is the tall, ore-rich range — used for its caverns. */
 const MOUNTAINS2_INDEX = BIOME_INDEX.get('mountains2');
 
@@ -226,11 +231,12 @@ export class ChunkGen {
     return STONE_ID;
   }
 
-  /** A rare ore in rock anywhere, or 0. */
+  /** A rare ore in rock anywhere, or 0 — and, down near the bottom, a diamond. */
   strayOreAt(x, y, z) {
     const r = hash01(x, z, this.seed ^ (0x0e5d + y * 0x4c1b));
     let acc = 0;
     for (const [id, chance] of STRAY_ORES) if (r < (acc += chance)) return id;
+    if (y < DIAMOND_TOP && r < acc + DIAMOND_CHANCE) return DIAMOND_ORE;
     return 0;
   }
 

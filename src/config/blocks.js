@@ -841,6 +841,16 @@ BLOCKS.push(
   { id: COAL_ORE, name: 'Coal Ore', glyph: 'coal', color: 0x8f8a86, material: 'stone', drops: 'coal', unlock: null },
 );
 
+// Gems (backlog batch 4, D1: "precious rocks like diamonds and different new
+// armour that leads you to a stronger stats"): diamond deep in the rock
+// anywhere, ruby in the high peaks. Under 256, so a chunk with one in it
+// stays a byte a cell.
+export const DIAMOND_ORE = 250, RUBY_ORE = 251;
+BLOCKS.push(
+  { id: DIAMOND_ORE, name: 'Diamond Ore', glyph: 'crystal', color: 0x9aa6ab, material: 'stone', drops: 'diamond', unlock: null },
+  { id: RUBY_ORE, name: 'Ruby Ore', glyph: 'crystal', color: 0xa08a8c, material: 'stone', drops: 'ruby', unlock: null },
+);
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**

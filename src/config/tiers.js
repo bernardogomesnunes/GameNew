@@ -25,6 +25,8 @@ export const TOOL_TIERS = [
   { key: 'gold', name: 'Gold', age: 8, durability: 200, color: 0xf0cf62, edge: 0xfbe7a1, guard: 0xb8862e, metal: 'gold', extra: {}, bonus: 1, sword: 10 },
   { key: 'sky', name: 'Sky', age: 10, durability: 500, color: 0xe6ebf2, edge: 0xffffff, guard: 0xe2c26a, metal: 'sky_marble', extra: { gold: 1 }, bonus: 2, sword: 12 },
   { key: 'dark', name: 'Dark', age: 10, durability: 500, color: 0x3f3c45, edge: 0x6a6574, guard: 0x9a2c2c, metal: 'dark_stone', extra: { iron_ingot: 1 }, bonus: 3, sword: 13 },
+  // Gems (backlog batch 4): diamond, the hardest and longest-lasting of all.
+  { key: 'diamond', name: 'Diamond', age: 10, durability: 900, color: 0x9fe8f2, edge: 0xe6fbff, guard: 0x6a7480, metal: 'diamond', extra: { iron_ingot: 1 }, bonus: 3, sword: 15 },
 ];
 
 /** The four kinds in every tier: the stone tool each is modelled on, and how much metal it takes. */
@@ -60,7 +62,7 @@ export function tieredItems(itemsById) {
         ...base,
         id, name: `${t.name} ${k.name}`, color: t.color, tier: t.key,
         durability: k.kind === 'sword' ? Math.round(t.durability * 1.2) : t.durability,
-        madeBy: `Crafted at the bench from ${t.name === 'Sky' ? 'sky marble and gold' : t.name === 'Dark' ? 'dark stone and iron' : t.name.toLowerCase()}`,
+        madeBy: `Crafted at the bench from ${t.name === 'Sky' ? 'sky marble and gold' : t.name === 'Dark' ? 'dark stone and iron' : t.name === 'Diamond' ? 'diamond and iron' : t.name.toLowerCase()}`,
         damage: k.kind === 'sword' ? t.sword : (base.damage ?? 1) + t.bonus,
         effectiveness: k.kind === 'sword' ? base.effectiveness : upgraded(base.effectiveness),
       });

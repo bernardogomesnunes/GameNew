@@ -16,7 +16,7 @@ let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const recipe = (id) => RECIPES.find((r) => r.id === id);
 
-ok('four tiers past stone: iron, gold, sky, dark', TOOL_TIERS.map((t) => t.key).join() === 'iron,gold,sky,dark');
+ok('five tiers past stone: iron, gold, sky, dark, and diamond (backlog batch 4)', TOOL_TIERS.map((t) => t.key).join() === 'iron,gold,sky,dark,diamond');
 for (const t of TOOL_TIERS) {
   for (const kind of ['axe', 'pickaxe', 'shovel', 'sword']) {
     const id = tieredId(kind, t.key);
@@ -43,7 +43,7 @@ ok('past stone, the wrong job is only ordinary', toolEffectiveness('pickaxe', 'd
 ok('and nothing is out of reach — a metal axe will take on stone, slowly', toolEffectiveness('axe', 'stone') === 'impossible' && toolEffectiveness('axe_iron', 'stone') === 'slow');
 
 // Armour tiers.
-ok('armour comes in leather, iron, gold, sky and dark', ARMOUR_SETS.map((s) => s.name).join() === 'Leather,Iron,Gold,Sky,Dark');
+ok('armour comes in leather, iron, gold, diamond, sky and dark', ARMOUR_SETS.map((s) => s.name).join() === 'Leather,Iron,Gold,Diamond,Sky,Dark');
 ok('the Stone Kingdom\'s set is Dark now, under the same ids', ITEMS_BY_ID.get('armour_stone_head').name === 'Dark Helm');
 const points = (key) => ARMOUR_PIECES.filter((p) => p.set === key).reduce((n, p) => n + p.points, 0);
 ok(`each tier guards more than the one before (${['leather', 'iron', 'gold', 'sky', 'stone'].map(points).join(' < ')})`,

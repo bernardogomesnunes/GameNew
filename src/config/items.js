@@ -300,6 +300,10 @@ export const ITEMS = [
   { id: 'stone_mill', name: 'Stone Mill', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a968f, glyph: 'stonemill', block: 380, madeBy: 'Built at the bench — stand by it and stone goes further, and it grinds gravel; Place on it to use it' },
   // Trains (backlog batch 2, Age 5) — see world/Trains.js.
   { id: 'rail', name: 'Rail', kind: 'refined', stackTo: STACK_BULK, color: 0x8d8f96, glyph: 'rail', block: 378, madeBy: 'Iron on wooden sleepers, at an engineering centre — lay it in a line, and it joins up round corners and up a step' },
+  { id: 'diamond', name: 'Diamond', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fe8f2, glyph: 'crystal', madeBy: 'Dug from the deepest rock, near the bottom of the world — rare' },
+  { id: 'ruby', name: 'Ruby', kind: 'raw', stackTo: STACK_GOODS, color: 0xd8304a, glyph: 'crystal', madeBy: 'Found in the rock of the high peaks; a foundry strikes coins from it' },
+  { id: 'diamond_ore', name: 'Diamond Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0x9aa6ab, glyph: 'crystal', block: 250, madeBy: 'Diamonds in the deepest rock — break it for the diamond' },
+  { id: 'ruby_ore', name: 'Ruby Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xa08a8c, glyph: 'crystal', block: 251, madeBy: 'Rubies in the rock of the high peaks — break it for the ruby' },
   { id: 'coal_ore', name: 'Coal Ore', kind: 'raw', stackTo: STACK_BULK, color: 0x8f8a86, glyph: 'coal', block: 379, madeBy: 'A seam of coal in the rock of the high peaks — break it for the coal' },
   { id: 'coal', name: 'Coal', kind: 'raw', stackTo: STACK_BULK, color: 0x2f2d31, glyph: 'coal', madeBy: 'Dug from seams in the high peaks, brought up by a mine, or burned from wood at a foundry' },
   { id: 'locomotive', name: 'Steam Engine', kind: 'refined', stackTo: STACK_GOODS, color: 0x3d4148, glyph: 'engine', madeBy: 'Built at an engineering centre — Place it on a rail; Place on it to drive; coal in your hand and Place to fire it' },
