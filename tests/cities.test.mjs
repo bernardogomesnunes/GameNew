@@ -110,7 +110,7 @@ ok('they say what they sell', /stranger\.kind === 'merchant' && stranger\.trader
   ok(`the guards reach you (${hits.length} blows)`, hits.length > 0);
 }
 
-ok('taking from a house\'s chest is theft', /\(l\.kind === 'tribe' \|\| l\.kind === 'city'\)/.test(game) && /title: 'Thief!'/.test(game));
+ok('taking from a house\'s chest is theft', /l\.kind === 'tribe' \|\| l\.kind === 'city'/.test(game) && /title: 'Thief!'/.test(game));
 ok('they talk, while you\'re welcome', /TALKERS = new Set\(\[[^\]]*'citizen', 'city_guard'/.test(game)
   && CITIZEN_TALK.includes(talkLine({ who: 'citizen', person: { id: 2 } })) && CITY_GUARD_TALK.includes(talkLine({ who: 'city_guard', person: { id: 2 } })));
 ok('everyone has a look of their own', ['citizen', 'city_guard', 'merchant'].every((k) => WANDERERS[k] && readFileSync(new URL('../src/config/outfits.js', import.meta.url), 'utf8').includes(`${k}: {`)));

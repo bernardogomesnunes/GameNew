@@ -151,8 +151,18 @@ other one."
 - Two abandoned cities: the same plan, crumbled and mossy, empty, with more
   and better chests.
 
-Next: Stone Kingdom outposts, gems and gem armour, and train passengers
-(there are cities to take them to now).
+**Gems done in PR #173:**
+- Diamond ore deep down, ruby ore in the high peaks.
+- Diamond tools, sword and armour, the best there is, from the war's age.
+- A ruby strikes 25 coins at the foundry.
+
+**Stone Kingdom outposts done:**
+- Two a world, far out: a dark-brick fort with four of the Kingdom's guards.
+- An armoury of two chests: diamonds, rubies, dark armour, coins.
+- The guards treat you as the Kingdom does, and come for you if you rob
+  the armoury.
+
+Next: train passengers (there are cities to take them to now).
 
 Asked for directly: "villages and different civilisations to attack after the
 first end game, collect their valuables ... diamonds and different new

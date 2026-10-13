@@ -73,6 +73,7 @@ export const EXPLORER_TALK = {
     ruined_temple: ['Marble pillars to the {dir}, half of them down. Gold on the altar, still.'],
     mine: ['An old mine to the {dir} — the timbers creak, but there\'s ore in the walls.'],
     monument: ['From the hills you can see a tall black stone to the {dir}. Gold at the top.'],
+    outpost: ['I gave the Stone Kingdom\'s fort to the {dir} a wide berth. Those guards don\'t smile.'],
     city: ['There\'s a walled city to the {dir}. Good beds, better food, and a market that takes coins.'],
     ruined_city: ['I walked through an empty city to the {dir}. Not a soul. I didn\'t stay the night.'],
     tribe: ['To the {dir} the trees are so tall people live in them — bridges, huts, a tower on top. They waved. I didn\'t touch anything.'],

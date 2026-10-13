@@ -54,6 +54,14 @@ export const LOOT = {
       ['beer', 0.4, 1, 2], ['lantern', 0.2, 1, 1], ['painting', 0.1, 1, 1], ['coin', 0.8, 5, 20]],
     ring: 0.03,
   },
+  // A Stone Kingdom outpost's armoury (backlog batch 2: "very good loot").
+  outpost: {
+    name: 'The outpost\'s armoury',
+    items: [['iron_ingot', 0.8, 3, 8], ['dark_stone', 0.6, 4, 12], ['gold', 0.6, 2, 6], ['sword_dark', 0.25, 1, 1],
+      ['armour_stone_head', 0.3, 1, 1], ['armour_stone_body', 0.25, 1, 1], ['armour_stone_legs', 0.25, 1, 1], ['armour_stone_feet', 0.3, 1, 1],
+      ['diamond', 0.35, 1, 3], ['ruby', 0.35, 1, 2], ['arrow', 0.5, 6, 16], ['coin', 0.9, 20, 50]],
+    ring: 0.2,
+  },
   // An abandoned city's houses: left in a hurry, and never come back for.
   ruined_city: {
     name: 'A chest nobody came back for',

@@ -134,7 +134,7 @@ export class Wanderers {
     this.list = this.list.filter((p) => !p.dead && !this.gone(p, player));
     for (const lm of this.landmarks) {
       // Only the hut, the camps and the Stone Kingdom have anyone living in them.
-      if (lm.kind !== 'hermit' && lm.kind !== 'camp' && lm.kind !== 'kingdom' && lm.kind !== 'tribe' && lm.kind !== 'city') continue;
+      if (lm.kind !== 'hermit' && lm.kind !== 'camp' && lm.kind !== 'kingdom' && lm.kind !== 'tribe' && lm.kind !== 'city' && lm.kind !== 'outpost') continue;
       if (!this.present.has(lm) && Math.hypot(lm.x - player.x, lm.z - player.z) < VISIT) this.populate(lm);
     }
     const sky = this.sky();
@@ -562,7 +562,7 @@ export class Wanderers {
       this.list.push(this.person('hermit', lm.x + 0.5, lm.y, lm.z + 3.5, { landmark: lm, home }));
       return;
     }
-    if (lm.kind === 'city') {
+    if (lm.kind === 'city' || lm.kind === 'outpost') {
       // Guards at the gates, merchants at their stalls, citizens in the streets.
       for (const at of lm.people ?? []) {
         const x = lm.x + at.dx, z = lm.z + at.dz, y = lm.y + at.dy;
