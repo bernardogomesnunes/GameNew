@@ -162,7 +162,7 @@ other one."
 - The guards treat you as the Kingdom does, and come for you if you rob
   the armoury.
 
-**Train passengers done:**
+**Train passengers done in PR #175:**
 - Stations are your settlement and every living city (each has a name now).
 - Stop a train with cars near one and whoever was bound there gets off and
   pays a coin for every 120 blocks they rode. New passengers get on for
