@@ -6520,7 +6520,7 @@ export class Game {
       }
       this.updateHover();
       this.updateCracks();
-      this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false });
+      this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false, look: this.player.lookDirection() });
       this.flames.update(this.world, this.player.position);
       this.smoke.update(this.world, this.player.position);
       this.grass.update(this.world, this.player.position, performance.now(), { enabled: this.graphics.grass !== false });
