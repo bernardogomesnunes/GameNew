@@ -116,7 +116,13 @@ export class Trains {
 
   /** The last car off the back, or (with none) the engine off the rail. Returns 'car', 'engine' or null. */
   uncouple(train) {
-    if (train.cars > 0) { train.cars--; train.loads.pop(); return 'car'; }
+    if (train.cars > 0) {
+      train.cars--;
+      train.loads.pop();
+      // Whoever was riding in it gets off where it stands.
+      train.riders = (train.riders ?? []).filter((r) => r.car < train.cars);
+      return 'car';
+    }
     this.list = this.list.filter((t) => t !== train);
     return 'engine';
   }
@@ -267,6 +273,8 @@ export class Trains {
       // What's in each car, by the slots that hold anything — a car is a
       // thousand slots and most of them empty.
       loads: t.loads.map((l) => (l ? l.slots.map((s, i) => (s ? [i, s.id, s.count, s.wear || 0] : null)).filter(Boolean) : null)),
+      // Who's riding, and where to (world/Passengers.js).
+      ...(t.riders?.length ? { riders: t.riders.map((r) => ({ ...r })) } : {}),
     }));
   }
 
@@ -277,6 +285,9 @@ export class Trains {
         id: this.nextId++, trail: t.trail.map(([x, y, z]) => ({ x, y, z })), head: t.head, speed: 0, throttle: 0,
         cars: Math.max(0, Math.min(MAX_CARS, t.cars | 0)), fuel: Math.max(0, +t.fuel || 0), coal: Math.max(0, t.coal | 0),
         loads: [],
+        riders: (Array.isArray(t.riders) ? t.riders : [])
+          .filter((r) => Number.isInteger(r?.car) && r.car < Math.min(MAX_CARS, t.cars | 0) && r.n > 0 && typeof r.to === 'string')
+          .map((r) => ({ car: r.car, n: Math.min(10, r.n | 0), to: r.to, fare: Math.max(1, r.fare | 0) })),
       }));
     for (const [k, t] of this.list.entries()) {
       const saved = data.filter((d) => Array.isArray(d?.trail) && d.trail.length >= 2 && Number.isFinite(d.head))[k]?.loads ?? [];

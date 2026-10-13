@@ -3,6 +3,7 @@ import { BIOMES } from '../config/biomes.js';
 import { kingdomFor } from './kingdom.js';
 import { turned } from '../config/blocks.js';
 import { cityDesign, CITY_HALF, outpostDesign } from './cities.js';
+import { cityName } from './Passengers.js';
 
 /**
  * Places in the world that somebody else built: the hermit's hut, and the
@@ -98,7 +99,7 @@ export function landmarksFor(gen) {
     const site = siteNear(gen, Math.cos(a) * r, Math.sin(a) * r, CITY_HALF, out);
     if (!site) return;
     const d = cityDesign(hash01(seed, 520 + i, 7703), ruined);
-    out.push({ kind: ruined ? 'ruined_city' : 'city', ...site, half: d.half, clear: d.clear, blocks: d.blocks, people: d.people });
+    out.push({ kind: ruined ? 'ruined_city' : 'city', ...site, half: d.half, clear: d.clear, blocks: d.blocks, people: d.people, name: cityName(site.x, site.z) });
   });
 
   // Stone Kingdom outposts (backlog batch 2): rare, far out, with the

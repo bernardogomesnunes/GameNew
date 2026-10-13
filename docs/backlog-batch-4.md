@@ -162,7 +162,13 @@ other one."
 - The guards treat you as the Kingdom does, and come for you if you rob
   the armoury.
 
-Next: train passengers (there are cities to take them to now).
+**Train passengers done:**
+- Stations are your settlement and every living city (each has a name now).
+- Stop a train with cars near one and whoever was bound there gets off and
+  pays a coin for every 120 blocks they rode. New passengers get on for
+  another station, ten seats a car.
+- They sit in the windows (the glass is see-through now), and pointing at a
+  car says who's aboard and where they're going.
 
 Asked for directly: "villages and different civilisations to attack after the
 first end game, collect their valuables ... diamonds and different new

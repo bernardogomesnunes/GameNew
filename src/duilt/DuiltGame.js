@@ -28,6 +28,8 @@ import { RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { Notices } from './Notices.js';
+import { stationsFor, serve as serveStations } from '../world/Passengers.js';
+import { landmarksFor } from '../world/landmarks.js';
 import { ageOf, ageIntro, FINAL_AGE, WAR_AGE, OLD_AGE, AGES_VERSION } from '../config/ages.js';
 import { pickTale, TALES_BY_ID } from '../config/tales.js';
 import { War } from './War.js';
@@ -36,7 +38,7 @@ import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
 import { Defenders, MAX_SOLDIERS } from '../world/Defenders.js';
 import { UNITS_BY_ID, unitCost, payForUnit } from '../config/soldiers.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';
-import { Trains, CAR_SLOTS } from '../world/Trains.js';
+import { Trains, CAR_SLOTS, PART_LENGTH } from '../world/Trains.js';
 
 /**
  * Everything that makes Duilt different from the sandbox, in one object.
@@ -1139,6 +1141,27 @@ export class DuiltGame {
     return true;
   }
 
+  /**
+   * Trains standing at a station (world/Passengers.js): fares paid into the
+   * bag (a storehouse when it's full), and passengers on for the next.
+   * Checked a few times a second, not every frame.
+   */
+  serveTrains(dt) {
+    this.untilStations = (this.untilStations ?? 0) - dt;
+    if (this.untilStations > 0 || !this.trains.list.length) return [];
+    this.untilStations = 0.5;
+    this.stations ??= stationsFor(this.world.gen ? landmarksFor(this.world.gen) : [], { x: this.territory.centreX, z: this.territory.centreZ });
+    const made = serveStations(this.trains.list, this.stations, (t) => this.trains.pointAt(t, t.head - PART_LENGTH / 2), this.rand);
+    for (const m of made) {
+      if (m.fare > 0 && !this.inventory.endless) {
+        const left = this.inventory.add('coin', m.fare);
+        if (left > 0) this.structures.deliver({ coin: left });
+      }
+      this.bus?.emit('train:stop', m);
+    }
+    return made;
+  }
+
   ageComplete() {
     const goals = this.ageGoals();
     return goals.length > 0 && goals.every((g) => g.done);
@@ -1252,6 +1275,7 @@ export class DuiltGame {
   // ---- the clock ----
 
   tick(dtSeconds, { resting = false } = {}) {
+    this.serveTrains(dtSeconds);
     // A sandbox never gets hungry — hunger simply never ticks down from its
     // starting full value, which is also what keeps the HUD bar honest
     // without needing its own sandbox check: full is full.

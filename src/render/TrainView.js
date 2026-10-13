@@ -114,7 +114,18 @@ function car(mats) {
   }
   box(g, W + 0.2, 0.16, len + 0.2, 0, DECK + 2.32, 0, mats.roof);
   box(g, W - 0.6, 0.14, len, 0, DECK + 2.48, 0, mats.roof);
-  return { group: g, spin };
+  // Its passengers (world/Passengers.js): ten seats, five down each side,
+  // a head and shoulders showing in the windows — hidden till someone sits.
+  const seats = [];
+  for (let i = 0; i < 10; i++) {
+    const side = i % 2 ? 1 : -1, z = -2.6 + Math.floor(i / 2) * 1.3;
+    const coat = mats.coats[i % mats.coats.length];
+    const body = box(g, 0.5, 0.75, 0.4, side * 0.55, DECK + 0.45, z, coat);
+    const head = box(g, 0.34, 0.34, 0.34, side * 0.55, DECK + 1.2, z, mats.skin);
+    body.visible = head.visible = false;
+    seats.push([body, head]);
+  }
+  return { group: g, spin, seats };
 }
 
 export class TrainView {
@@ -122,7 +133,10 @@ export class TrainView {
     this.scene = scene;
     this.mats = {
       iron: mat(IRON), boiler: mat(BOILER), brass: mat(BRASS), red: mat(RED), wheel: mat(WHEEL),
-      coach: mat(COACH), trim: mat(COACH_TRIM), roof: mat(ROOF), glass: mat(GLASS),
+      coach: mat(COACH), trim: mat(COACH_TRIM), roof: mat(ROOF),
+      // See-through, so the passengers show (world/Passengers.js).
+      glass: new THREE.MeshLambertMaterial({ color: GLASS, transparent: true, opacity: 0.4, depthWrite: false }),
+      skin: mat(0xd9a77c), coats: [0x7a2f3a, 0x3f5a7a, 0x5f7a3e, 0x8a6a44, 0x6d4a7a].map(mat),
     };
     this.parts = new Map(); // `${train.id}:${index}` -> { group, spin, kind }
     this.puffs = [];
@@ -149,6 +163,11 @@ export class TrainView {
         v.group.position.set(p.x, p.y, p.z);
         v.group.rotation.y = p.yaw;
         v.group.rotation.x = -p.pitch;
+        // Its passengers, in their seats.
+        if (v.seats) {
+          const n = (t.riders ?? []).filter((r) => r.car === p.index - 1).reduce((s, r) => s + r.n, 0);
+          v.seats.forEach(([body, head], i) => { body.visible = head.visible = i < n; });
+        }
         // The wheels turn as far as the train went.
         const turn = (t.speed * dt) / 0.55;
         for (const w of v.spin) w.rotation.x += turn;

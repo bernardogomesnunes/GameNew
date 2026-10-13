@@ -606,6 +606,14 @@ export class Game {
     });
     // Story moments (config/moments.js): the first stranger who stays, the first altar.
     this.bus.on('settler:arrived', () => this.tellMoment('first_settler'));
+    // A train at a station (world/Passengers.js): who got off and paid, and who got on.
+    this.bus.on('train:stop', ({ station, off, fare, on, to }) => {
+      const where = station.key === 'home' ? 'Home' : station.name;
+      const parts = [];
+      if (off) parts.push(`${off} got off and paid ${fare} coin${fare === 1 ? '' : 's'}`);
+      if (on) parts.push(`${on} got on for ${to.map((n) => (n === 'home' ? 'your settlement' : n)).join(' and ')}`);
+      this.ui?.toast({ kind: 'challenge', title: `Station: ${where}`, body: parts.join(' · ') });
+    });
     this.bus.on('structure:claimed', ({ structure } = {}) => { if (structure?.type === 'temple') this.tellMoment('first_temple'); });
     // What a building comes with — a town hall's storage controller.
     this.bus.on('structure:gift', ({ structure, items } = {}) => {
@@ -2060,6 +2068,14 @@ export class Game {
     turn = Math.atan2(Math.sin(turn), Math.cos(turn));
     p.yaw += turn;
     this.cabYaw = cab.yaw;
+  }
+
+  /** " · 6 aboard for Ashford" — who's riding in a car, and where to. */
+  ridersText(train, car) {
+    const rs = (train.riders ?? []).filter((r) => r.car === car);
+    if (!rs.length) return '';
+    const names = rs.map((r) => (r.to === 'home' ? 'home' : this.duilt?.stations?.find((s) => s.key === r.to)?.name ?? 'a city'));
+    return ` · ${rs.reduce((t, r) => t + r.n, 0)} aboard for ${[...new Set(names)].join(' and ')}`;
   }
 
   /** The flying machine under the crosshair, nearer than the block behind it. */
@@ -6931,7 +6947,7 @@ export class Game {
       this.ui?.setPersonHint(aboard.part.kind === 'engine' ? 'Steam engine' : 'Rail car',
         this.selectedItemId === 'coal' ? `Place to fire it · ${coal} in the bunker`
           : this.selectedItemId === 'rail_car' ? `Place to couple it on · ${t.cars} of 5 cars`
-            : load ? `Place to open it · ${load.slots.filter(Boolean).length} of ${load.size} slots used · hit to take the last car off`
+            : load ? `Place to open it · ${load.slots.filter(Boolean).length} of ${load.size} slots used${this.ridersText(t, aboard.part.index - 1)} · hit to take the last car off`
               : `Place to drive · ${coal} · ${t.cars} car${t.cars === 1 ? '' : 's'} · hit to take ${t.cars ? 'the last car' : 'it'} off`);
       return;
     }
