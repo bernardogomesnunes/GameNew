@@ -142,8 +142,17 @@ other one."
 - The people never come down. They're neutral until struck or robbed, then
   they shoot from the trees.
 
-Next: abandoned and living cities, Stone Kingdom outposts, gems and gem
-armour.
+**Cities done in PR #173:**
+- Two living cities a world, past the old border. Each is walled with
+  gates, guards, calçada streets, a plaza with a statue, and two merchants
+  with goods a market at home doesn't keep. A dozen houses, each lit.
+- The people are neutral. Strike one or take from a house's chest, and the
+  guards come for you while the rest run.
+- Two abandoned cities: the same plan, crumbled and mossy, empty, with more
+  and better chests.
+
+Next: Stone Kingdom outposts, gems and gem armour, and train passengers
+(there are cities to take them to now).
 
 Asked for directly: "villages and different civilisations to attack after the
 first end game, collect their valuables ... diamonds and different new

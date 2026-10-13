@@ -73,6 +73,8 @@ export const EXPLORER_TALK = {
     ruined_temple: ['Marble pillars to the {dir}, half of them down. Gold on the altar, still.'],
     mine: ['An old mine to the {dir} — the timbers creak, but there\'s ore in the walls.'],
     monument: ['From the hills you can see a tall black stone to the {dir}. Gold at the top.'],
+    city: ['There\'s a walled city to the {dir}. Good beds, better food, and a market that takes coins.'],
+    ruined_city: ['I walked through an empty city to the {dir}. Not a soul. I didn\'t stay the night.'],
     tribe: ['To the {dir} the trees are so tall people live in them — bridges, huts, a tower on top. They waved. I didn\'t touch anything.'],
   },
   stories: [
@@ -94,6 +96,22 @@ export const TRIBE_TALK = [
   'Our chests are ours. Take from them and you will hear our bows.',
   'Up here the wind sings. Down there you only hear your own feet.',
   'The great tree is older than both kingdoms. It will be here after them.',
+];
+
+/** A living city's people (world/cities.js), while they're not angry with you. */
+export const CITIZEN_TALK = [
+  'Mind the cart! Oh — sorry. Visitor?',
+  'The market\'s in the square. Ottavio\'s prices are a scandal, but his marble is the best there is.',
+  'Have you come far? You\'ve the look of someone who builds things.',
+  'The walls keep the bandits out. Mostly.',
+  'There was a city like this to the far side of the hills, once. Nobody lives there now.',
+  'Mabel at the stall sells seed you can\'t get anywhere else.',
+];
+export const CITY_GUARD_TALK = [
+  'Keep your hands to yourself in here, and we\'ll get on.',
+  'Gates shut at dark. Mostly.',
+  'Trade all you like. Steal, and you\'ll meet my sword.',
+  'Quiet day. Let\'s keep it that way.',
 ];
 
 /** A soldier or tower archer of yours. */
@@ -155,6 +173,8 @@ export function talkLine({ who, person, job = null, jobId = null, at = null, lan
   }
   if (who === 'soldier') return fill(pick(SOLDIER_TALK), vars);
   if (who === 'tribe') return fill(pick(TRIBE_TALK), vars);
+  if (who === 'citizen') return fill(pick(CITIZEN_TALK), vars);
+  if (who === 'city_guard') return fill(pick(CITY_GUARD_TALK), vars);
   if (who === 'warrior') return fill(pick(WARRIOR_TALK), vars);
 
   // A settler: what's on their mind first, then whatever else.

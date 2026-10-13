@@ -48,7 +48,7 @@ ok('soldiers and the army have something to say', !!talkLine({ who: 'soldier', p
 // --- in the game ---------------------------------------------------------------------------------
 
 ok('Place on someone talks to them', /const talker = this\.talkTarget\(\);\s*if \(talker\) return void this\.talkTo\(talker\);/.test(game));
-ok('a tap on a phone does too — a word, not a blow', /if \(this\.talkTarget\(aimed\)\) return places\(\);\s*if \(this\.banditTarget\(aimed\)/.test(game));
+ok('a tap on a phone does too — a word, not a blow', /if \(this\.talkTarget\(aimed\) \|\| this\.traderTarget\(aimed\)\) return places\(\);\s*if \(this\.banditTarget\(aimed\)/.test(game));
 ok('a messenger gives the news (or the story)', /who === 'messenger'[\s\S]{0,200}this\.messengerTale\(\) \?\? this\.wanderers\.newsFrom/.test(game));
 ok('settlers stop and turn to you', /person\.facing = Math\.atan2\(me\.x - person\.x, me\.z - person\.z\)/.test(game));
 ok('pointing at them says you can', /looking for work'\} · \$\{this\.ui\?\.isTouch \? 'tap' : 'right click'\} to talk/.test(game));

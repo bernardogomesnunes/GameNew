@@ -68,7 +68,39 @@ export const TRADERS = [
   },
 ];
 
-export const TRADERS_BY_ID = new Map(TRADERS.map((t) => [t.id, t]));
+/**
+ * The merchants of the living cities (world/cities.js): people, not goblins,
+ * at stalls in the plaza — goods from far away a market at home doesn't
+ * carry, at a price. Not one of a market's own (tradersFor).
+ */
+export const CITY_TRADERS = [
+  {
+    id: 'merchant',
+    name: 'Ottavio',
+    trade: 'Fine goods from far away',
+    coat: 0x7a2f3a,
+    cap: 0x3a1f25,
+    goods: [
+      ['marble', 8, 5], ['sky_marble', 4, 9], ['gold', 3, 7], ['gold_trim', 4, 6], ['amethyst', 2, 8],
+      ['window', 4, 4], ['chandelier', 1, 6], ['painting', 1, 5], ['firefly_lantern', 2, 6],
+      ['sword_gold', 1, 22], ['armour_gold_head', 1, 18], ['armour_gold_body', 1, 26], ['armour_gold_legs', 1, 22], ['armour_gold_feet', 1, 18],
+    ],
+  },
+  {
+    id: 'provisioner',
+    name: 'Mabel',
+    trade: 'Food, drink and seed',
+    coat: 0x3f5a7a,
+    cap: 0x2a3d55,
+    goods: [
+      ['cooked_meat', 4, 3], ['fruit', 6, 2], ['vegetables', 6, 2], ['egg', 6, 2], ['milk', 2, 3],
+      ['beer', 2, 3], ['kombucha', 2, 3], ['coffee', 2, 3], ['wool', 4, 3],
+      ['seeds_pepper', 3, 3], ['seeds_zucchini', 3, 3], ['seeds_broccoli', 3, 3], ['seeds_coffee', 3, 4], ['seeds_hemp', 4, 2],
+    ],
+  },
+];
+
+export const TRADERS_BY_ID = new Map([...TRADERS, ...CITY_TRADERS].map((t) => [t.id, t]));
 
 /** Who lives in a market at a level (0 = as claimed): one more each level. */
 export function tradersFor(tier = 0) {
