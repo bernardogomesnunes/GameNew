@@ -142,7 +142,7 @@ other one."
 - The people never come down. They're neutral until struck or robbed, then
   they shoot from the trees.
 
-**Cities done in PR #173:**
+**Cities done in PR #172:**
 - Two living cities a world, past the old border. Each is walled with
   gates, guards, calçada streets, a plaza with a statue, and two merchants
   with goods a market at home doesn't keep. A dozen houses, each lit.
