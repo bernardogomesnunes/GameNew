@@ -358,6 +358,13 @@ ITEM_MODELS.flying_machine = [
 
 // Trains (Age 5): a lump of coal; the steam engine, boiler forward and cab
 // behind on a black frame; a rail car, a wooden coach with its roof.
+// Gems: a cut stone, wide at the girdle and pointed below.
+const gem = (c, hi, lo) => [
+  box(0.36, 0.12, 0.36, 0.64, 0.2, 0.64, lo), box(0.3, 0.2, 0.3, 0.7, 0.34, 0.7, c),
+  box(0.36, 0.34, 0.36, 0.64, 0.42, 0.64, hi), box(0.44, 0.04, 0.44, 0.56, 0.12, 0.56, lo),
+];
+ITEM_MODELS.diamond = gem(0x9fe8f2, 0xe6fbff, 0x6cc4d2);
+ITEM_MODELS.ruby = gem(0xd8304a, 0xf2738a, 0x98182e);
 ITEM_MODELS.coal = [
   box(0.28, 0, 0.3, 0.7, 0.3, 0.68, 0x2f2d31), box(0.36, 0.3, 0.38, 0.6, 0.42, 0.6, 0x3b393e),
   box(0.22, 0, 0.42, 0.3, 0.16, 0.58, 0x26252a),

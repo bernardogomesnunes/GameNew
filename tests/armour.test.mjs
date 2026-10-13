@@ -23,8 +23,10 @@ const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8'
 // --- the sets ---------------------------------------------------------------------------
 
 ok('six places to wear things: head, body, legs, feet (playtest, P6), a backpack (batch 3, #1) and a ring', WEAR_SLOTS.join() === 'head,body,legs,feet,back,ring');
-ok('five sets in tiers — leather, iron, gold, sky, dark (key stone) — of four pieces each, boots and all (backlog batch 2)',
-  ARMOUR_SETS.map((s) => s.key).join() === 'leather,iron,gold,sky,stone' && ARMOUR_PIECES.length === 20);
+ok('six sets in tiers — leather, iron, gold, diamond (backlog batch 4), sky, dark (key stone) — of four pieces each, boots and all',
+  ARMOUR_SETS.map((s) => s.key).join() === 'leather,iron,gold,diamond,sky,stone' && ARMOUR_PIECES.length === 24);
+ok('diamond is the strongest, and lasts longest', ARMOUR_SETS.every((s) => s.key === 'diamond' || ARMOUR_PIECES.filter((p) => p.set === s.key).reduce((n, p) => n + p.points, 0) < ARMOUR_PIECES.filter((p) => p.set === 'diamond').reduce((n, p) => n + p.points, 0))
+  && ARMOUR_SETS.every((s) => s.durability <= ARMOUR_SETS.find((d) => d.key === 'diamond').durability));
 const total = (key) => ARMOUR_PIECES.filter((p) => p.set === key).reduce((n, p) => n + p.points, 0);
 ok(`leather is light (${total('leather')}), the two kingdoms' metal is heavier (${total('sky')}, ${total('stone')})`,
   total('leather') < total('sky') && total('sky') === total('stone'));

@@ -83,7 +83,7 @@ export const CITY_TRADERS = [
     goods: [
       ['marble', 8, 5], ['sky_marble', 4, 9], ['gold', 3, 7], ['gold_trim', 4, 6], ['amethyst', 2, 8],
       ['window', 4, 4], ['chandelier', 1, 6], ['painting', 1, 5], ['firefly_lantern', 2, 6],
-      ['sword_gold', 1, 22], ['armour_gold_head', 1, 18], ['armour_gold_body', 1, 26], ['armour_gold_legs', 1, 22], ['armour_gold_feet', 1, 18],
+      ['diamond', 1, 45], ['ruby', 1, 30], ['sword_gold', 1, 22], ['armour_gold_head', 1, 18], ['armour_gold_body', 1, 26], ['armour_gold_legs', 1, 22], ['armour_gold_feet', 1, 18],
     ],
   },
   {

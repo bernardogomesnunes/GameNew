@@ -292,6 +292,17 @@ export const RECIPES = [
     batch: 10,
     blurb: 'Worth less than gold, but there is more of it.',
   },
+  // Rubies (backlog batch 4): a gem worth a purse of coins.
+  {
+    id: 'strike_ruby_coins',
+    name: 'Strike coins from a ruby',
+    station: 'foundry',
+    age: 10,
+    inputs: { ruby: 1 },
+    output: { id: 'coin', count: 25 },
+    batch: 4,
+    blurb: 'A ruby\'s worth, in coins — the market takes them.',
+  },
 
   // --- Age 5: the expensive end -------------------------------------------
   {

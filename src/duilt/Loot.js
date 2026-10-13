@@ -59,7 +59,7 @@ export const LOOT = {
     name: 'A chest nobody came back for',
     items: [['gold', 0.7, 2, 6], ['sword_gold', 0.15, 1, 1], ['armour_gold_head', 0.12, 1, 1],
       ['armour_gold_body', 0.08, 1, 1], ['iron_ingot', 0.5, 1, 4], ['amethyst', 0.25, 1, 2], ['gold_trim', 0.3, 1, 3],
-      ['sword_iron', 0.2, 1, 1], ['painting', 0.15, 1, 1], ['coin', 0.85, 10, 35]],
+      ['sword_iron', 0.2, 1, 1], ['painting', 0.15, 1, 1], ['ruby', 0.3, 1, 2], ['diamond', 0.15, 1, 2], ['coin', 0.85, 10, 35]],
     ring: 0.15,
   },
   ruin: {

@@ -79,6 +79,20 @@ export const ARMOUR_SETS = [
     },
     madeBy: 'Beaten gold — it turns a blow better than iron, and wears faster',
   },
+  // Gem armour (backlog batch 4, D1: "different new armour that leads you to
+  // a stronger stats"): diamond, bound in iron. The best there is, from the
+  // war's age on — and only from what's dug out of the deepest rock or taken.
+  {
+    key: 'diamond', name: 'Diamond', age: 10, durability: 600,
+    main: 0x9fe8f2, trim: 0x6a7480,
+    pieces: {
+      head: { name: 'Diamond Helm', points: 4, inputs: { diamond: 3, iron_ingot: 1 } },
+      body: { name: 'Diamond Cuirass', points: 6, inputs: { diamond: 5, iron_ingot: 2 } },
+      legs: { name: 'Diamond Greaves', points: 4, inputs: { diamond: 4, iron_ingot: 1 } },
+      feet: { name: 'Diamond Boots', points: 3, inputs: { diamond: 2, iron_ingot: 1 } },
+    },
+    madeBy: 'Diamond, bound in iron — the best armour there is',
+  },
   {
     key: 'sky', name: 'Sky', age: 5, durability: 300,
     main: 0xe6ebf2, trim: 0xe2c26a,
