@@ -156,7 +156,7 @@ other one."
 - Diamond tools, sword and armour, the best there is, from the war's age.
 - A ruby strikes 25 coins at the foundry.
 
-**Stone Kingdom outposts done:**
+**Stone Kingdom outposts done in PR #174:**
 - Two a world, far out: a dark-brick fort with four of the Kingdom's guards.
 - An armoury of two chests: diamonds, rubies, dark armour, coins.
 - The guards treat you as the Kingdom does, and come for you if you rob
