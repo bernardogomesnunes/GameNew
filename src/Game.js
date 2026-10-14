@@ -59,6 +59,7 @@ import { SWIFT_SPEED } from './config/upgrades.js';
 import { nextView, VIEW_NAMES } from './config/avatar.js';
 import { AvatarView } from './render/AvatarView.js';
 import { GliderView, MachineView } from './render/GliderView.js';
+import { HELIX_SKIDS } from './render/HelixView.js';
 import { TrainView } from './render/TrainView.js';
 import { RAIL, BUNKER } from './world/Trains.js';
 import { CartView } from './render/CartView.js';
@@ -300,7 +301,7 @@ const TOOL_NORMAL = 0.85, TOOL_SLOW = 1.0;
 const TOOL_TIER_SPEED = { stone: 0.45, iron: 0.32, gold: 0.22, sky: 0.12, dark: 0.12 };
 /** On horseback: this much faster than on foot, and sat this much higher. */
 const RIDE_SPEED = 1.9, SEAT_HEIGHT = 0.9;
-/** A parked flying machine's reach for the crosshair: this far either side of it, and this tall. */
+/** A parked machine's reach for the crosshair: this far either side of it, and (a Plainer) this tall. */
 const MACHINE_HALF = 1.4, MACHINE_TALL = 2.8;
 /**
  * The rest after a block comes free before the next one starts, while held.
@@ -321,7 +322,7 @@ const CRACK_LINGER_MS = 450;
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
 const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', flying_machine: 'setDownMachine', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace', helix: 'setDownMachine', flying_machine: 'wearSelected' };
 /**
  * Whether saved progression `a` is further along than `b`. By level first:
  * `xp` is only what's been earned towards the next level, so comparing it
@@ -1935,36 +1936,56 @@ export class Game {
       this.player.flying = false;
       this.ui?.setFlyIndicator(false);
     }
-    const machine = this.hasFlyingMachine();
-    this.glider.update(this.player, playing && machine ? (this.player.flying ? 'fly' : this.player.gliding ? 'glide' : 'parked') : null, dt);
-    this.machineView.update(this.duilt?.machines, this.piloting);
+    // The Plainer's wings, while it carries you; not in a Helix, which is drawn round you.
+    const wings = playing && this.wearingPlainer() && !this.piloting && (this.player.flying || this.player.gliding);
+    this.glider.update(this.player, wings ? (this.player.flying ? 'fly' : 'glide') : null, dt);
+    this.machineView.update(this.duilt?.machines, this.piloting, dt, this.player);
     this.trainView.update(this.duilt?.trains, dt, this.driving);
     this.cartView.update(this.duilt?.mounts);
   }
 
-  /** In Duilt, flying is the flying machine's — you fly while you're in one. See pilot. */
+  /** In Duilt, flying is a machine's: the Plainer you wear, or the Helix you're in. See pilot. */
   hasFlyingMachine() {
-    return !!this.duilt && !!this.piloting;
+    return !!this.duilt && (this.wearingPlainer() || !!this.piloting);
+  }
+
+  /** The Plainer on your body (asked for directly: "Plainer should be held as chest plate instead of placed"). */
+  wearingPlainer() {
+    return this.duilt?.worn?.body?.id === 'flying_machine';
+  }
+
+  /** Place with something you wear in hand: on it goes, from the bag (the Plainer, so a thumb can put it on). */
+  wearSelected() {
+    const d = this.duilt, id = this.selectedItemId;
+    if (!d || !id) return;
+    const i = d.inventory.slots.findIndex((s) => s?.id === id);
+    if (i < 0) return;
+    const r = d.wear(i);
+    const name = ITEMS_BY_ID.get(id)?.name ?? 'It';
+    this.ui.toast(r.ok
+      ? { kind: 'challenge', title: `${name} on`, body: id === 'flying_machine' ? 'Fly to take off: Jump climbs, Sneak dives. Stop in the air and its wings glide you down.' : undefined }
+      : { kind: 'xp', title: `Can't put it on`, body: r.reason });
+    if (r.ok) { this.editedAt = Date.now(); this.ui?.refreshTools?.(); }
   }
 
   /**
-   * Hold the flying machine and press Place: it's set down on the block you
-   * point at, facing the way you face (asked for directly: "a physical
-   * vehicle to fly. I could place it and fly in it").
+   * Hold the Helix and press Place: it's set down on the block you point
+   * at, standing on its skids, facing the way you face (asked for directly:
+   * "a physical vehicle to fly. I could place it and fly in it").
    */
   setDownMachine() {
     const d = this.duilt, hit = this.raycast();
     if (!d || !hit) return;
-    const x = hit.x + 0.5, y = hit.y + 1, z = hit.z + 0.5;
-    for (let up = 0; up < 3; up++) {
+    const x = hit.x + 0.5, y = hit.y + 1 + HELIX_SKIDS, z = hit.z + 0.5;
+    for (let up = 0; up < 4; up++) {
       if (this.world.isCollidable(hit.x, hit.y + 1 + up, hit.z)) {
         return void this.ui.toast({ kind: 'xp', title: 'No room', body: 'Set it down somewhere open, with sky above it.' });
       }
     }
     const r = d.placeMachine(x, y, z, this.player.yaw);
-    if (!r.ok) return void this.ui.toast({ kind: 'xp', title: 'No flying machine', body: r.reason });
+    if (!r.ok) return void this.ui.toast({ kind: 'xp', title: 'No Helix', body: r.reason });
     this.editedAt = Date.now();
-    this.ui.toast({ kind: 'challenge', title: 'Flying machine set down', body: 'Place on it to climb in. Hit it to pick it up again.' });
+    this.ui.toast({ kind: 'challenge', title: 'Helix set down', body: 'Place on it to climb in. Hit it to pick it up again.' });
   }
 
   /**
@@ -2248,7 +2269,9 @@ export class Game {
     const eye = this.player.eyePosition(), dir = this.player.lookDirection();
     let best = null;
     for (const m of list) {
-      const t = rayBox(eye, dir, m.x - MACHINE_HALF, m.y, m.z - MACHINE_HALF, m.x + MACHINE_HALF, m.y + MACHINE_TALL, m.z + MACHINE_HALF);
+      const helix = m.kind === 'helix';
+      const y0 = helix ? m.y - HELIX_SKIDS : m.y, y1 = helix ? m.y + 3.2 : m.y + MACHINE_TALL;
+      const t = rayBox(eye, dir, m.x - MACHINE_HALF, y0, m.z - MACHINE_HALF, m.x + MACHINE_HALF, y1, m.z + MACHINE_HALF);
       if (t != null && t <= REACH && (!best || t < best.t)) best = { m, t };
     }
     if (!best) return null;
@@ -2265,24 +2288,34 @@ export class Game {
     if (!m) return false;
     const r = this.duilt.pickUpMachine(m);
     this.ui.toast(r.ok
-      ? { kind: 'xp', title: 'Flying machine picked up', body: 'It is back in your bag.' }
+      ? { kind: 'xp', title: `${r.id === 'helix' ? 'Helix' : 'Plainer'} picked up`, body: r.id === 'helix' ? 'It is back in your bag.' : 'It is back in your bag — wear it (Body) to fly.' }
       : { kind: 'xp', title: 'Can\'t pick it up', body: r.reason });
     if (r.ok) this.editedAt = Date.now();
     return true;
   }
 
-  /** In and up: Jump climbs, Sneak dives, Fly lands. On the ground, Sneak gets you out. */
+  /**
+   * Into the Helix and up: it flies as Creative does — hover, Jump rises,
+   * Sneak sinks, go where you look. Land and Sneak to get out. A Plainer an
+   * older save left parked can't be climbed into: it's worn now.
+   */
   pilot(m) {
     if (!m || this.piloting) return;
+    if (m.kind !== 'helix') return void this.ui.toast({ kind: 'xp', title: 'A Plainer', body: 'It\'s worn now, not flown from the ground: hit it to pick it up, then wear it (Body).' });
     this.stopRide();
     this.piloting = m;
-    this.player.teleport?.(m.x, m.y, m.z) ?? this.player.position.set(m.x, m.y, m.z);
+    // Your feet where its skids stand, and you up in the cabin over them:
+    // land, and it lands on its skids, not its floor.
+    this.player.teleport?.(m.x, m.y - HELIX_SKIDS, m.z) ?? this.player.position.set(m.x, m.y - HELIX_SKIDS, m.z);
+    this.player.seatHeight = HELIX_SKIDS;
     this.player.yaw = m.yaw ?? this.player.yaw;
     this.player.flying = true;
     this.player.velocity?.set?.(0, 0, 0);
+    // From behind, far enough back to see the whole of it.
+    this.player.viewReach = 9;
     this.ui?.setFlyIndicator?.(true);
     this.ui?.refreshTools?.();
-    this.ui.toast({ kind: 'xp', title: 'Flying', body: 'Jump climbs, Sneak dives. Fly to land; on the ground, Sneak to get out.' });
+    this.ui.toast({ kind: 'xp', title: 'Flying the Helix', body: 'Jump rises, Sneak sinks, look to steer. Land and Sneak to get out.' });
   }
 
   /** Out of the machine, beside it; it stays where it landed. `stay`: you're elsewhere already. */
@@ -2291,11 +2324,14 @@ export class Game {
     if (!m) return;
     this.piloting = null;
     this.player.flying = false;
+    this.player.viewReach = 0;
+    this.player.seatHeight = 0;
     this.ui?.setFlyIndicator?.(false);
-    // Down to whatever's under it, so a machine left in the air doesn't hang there.
+    // Down to whatever's under it, so a machine left in the air doesn't
+    // hang there — standing on its skids.
     let y = Math.floor(m.y);
     while (y > 0 && !this.world.isCollidable(Math.floor(m.x), y - 1, Math.floor(m.z))) y--;
-    m.y = y;
+    m.y = y + (m.kind === 'helix' ? HELIX_SKIDS : 0);
     this.ui?.refreshTools?.();
     if (stay) return;
     const side = (m.yaw ?? 0) + Math.PI / 2;
@@ -2311,7 +2347,7 @@ export class Game {
     if (!this.duilt || !this.duilt.machines.includes(m)) return void this.leaveMachine(true);
     // Sent somewhere in one go (a respawn, a bed): the machine stays behind.
     if (Math.hypot(p.position.x - m.x, p.position.z - m.z) > 30) return void this.leaveMachine(true);
-    m.x = p.position.x; m.y = p.position.y; m.z = p.position.z;
+    m.x = p.position.x; m.y = p.position.y + (m.kind === 'helix' ? HELIX_SKIDS : 0); m.z = p.position.z;
     m.yaw = p.yaw;
     const down = p.sneakHeld || p.keys?.has?.(p.binds?.down);
     if (p.grounded && (p.sneaking || (p.flying && down))) this.leaveMachine();
@@ -2319,18 +2355,18 @@ export class Game {
 
   /**
    * Who may fly (asked for directly: a flying machine, "a wooden plane da
-   * Vinci style"). Creative flies as it always has; in Duilt you fly once
-   * you own a flying machine, and its wings hold you when you stop flying
-   * in the air — a glide down, not a fall.
+   * Vinci style"). Creative flies as it always has; in Duilt you fly
+   * wearing the Plainer, or in a Helix. The Plainer's wings hold you when
+   * you stop flying in the air — a glide down, not a fall.
    */
   wireFlight() {
     const p = this.player;
     if (!p) return;
     p.canFly = () => !this.duilt || this.duilt.sandbox || this.hasFlyingMachine();
-    p.canGlide = () => this.hasFlyingMachine();
+    p.canGlide = () => this.wearingPlainer();
     p.onFlyRefused = () => this.ui?.toast({
-      kind: 'xp', title: 'You need a flying machine',
-      body: 'Build one at a workshop in Age 4, set it down with Place, and Place on it to climb in.',
+      kind: 'xp', title: 'You need a Plainer',
+      body: 'Build one at a workshop in Age 4 and wear it (Body) — or fly a Helix.',
     });
     this.ui?.refreshTools?.();
   }
@@ -2501,7 +2537,7 @@ export class Game {
     // At a horse: tame it, put a cart on it, open the cart, or ride it.
     const horse = this.horseTarget(aimed);
     if (horse) return void this.useHorse(horse);
-    // At a flying machine you set down, Place climbs in.
+    // At a Helix you set down, Place climbs in.
     const machine = this.machineTarget(aimed);
     if (machine) return void this.pilot(machine);
     // At a train: coal fires it, a car couples on, and anything else climbs in to drive.
@@ -6996,6 +7032,7 @@ export class Game {
       this.mobs.adopt(this.duilt.mounts);
       this.stopRide(true);
       // A machine you were flying belonged to the world just left, and so did a train.
+      if (this.piloting && this.player) { this.player.seatHeight = 0; this.player.viewReach = 0; }
       this.piloting = null;
       this.driving = null;
       this.mobsHerdOf = this.duilt;
@@ -7154,7 +7191,8 @@ export class Game {
     // behind it saying the swing will land on the ground.
     if (!this.armed && this.machineTarget(hit)) {
       this.hoverBox.visible = false;
-      this.ui?.setPersonHint('Flying machine', 'Place to fly · hit to pick up');
+      const m = this.machineTarget(hit);
+      this.ui?.setPersonHint(m.kind === 'helix' ? 'Helix' : 'Plainer', m.kind === 'helix' ? 'Place to fly · hit to pick up' : 'hit to pick up, then wear it');
       return;
     }
     const aboard = this.armed ? null : this.trainTarget(hit);

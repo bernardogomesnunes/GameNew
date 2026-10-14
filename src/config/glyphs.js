@@ -120,6 +120,7 @@ export const GLYPHS = {
   railcar: 'M3 7h18v9H3zM7 7v9M12 7v9M17 7v9M6 18.5a1.8 1.8 0 1 0 0-.01M18 18.5a1.8 1.8 0 1 0 0-.01',
   // The flying machine: a keel, and two ribbed wings off it.
   glider: 'M12 5v14M12 9C9 6 5 6 2 9l3 1 2 3 2-1 3 1M12 9c3-3 7-3 10 0l-3 1-2 3-2-1-3 1M9 19h6',
+  helix: 'M3 5h18M12 5v3M7 8h8l3 4v3H8l-3-3zM18 13h4M20 11v4M8 15v3M14 15v3M6 18h10',
   shovel: 'M12 4v10M8.5 14h7L15 18.5a3 3 0 0 1-6 0Z',
   // Tapered, with a handle over the rim. Straight sides made it a waste bin.
   // A pry bar (the Clear tool) and a chalk line (the Symmetry tool) had no

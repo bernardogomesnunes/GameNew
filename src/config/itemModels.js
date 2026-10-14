@@ -356,6 +356,16 @@ ITEM_MODELS.flying_machine = [
   box(0.36, 0.46, 0.82, 0.64, 0.49, 0.94, 0xefe6d2),
 ];
 
+// The Helix: a red cabin, a glass front, a tail boom, two rotor blades
+// crossed on top and the skids under it.
+ITEM_MODELS.helix = [
+  box(0.3, 0.2, 0.3, 0.7, 0.55, 0.7, 0xc8402e), box(0.32, 0.3, 0.2, 0.68, 0.52, 0.3, 0x9fd3ff),
+  box(0.45, 0.38, 0.7, 0.55, 0.46, 0.98, 0xc8402e), box(0.47, 0.46, 0.9, 0.53, 0.6, 0.98, 0xc8402e),
+  box(0.48, 0.55, 0.48, 0.52, 0.62, 0.52, 0x2e3036),
+  box(0.02, 0.62, 0.46, 0.98, 0.65, 0.54, 0x2e3036), box(0.46, 0.62, 0.02, 0.54, 0.65, 0.98, 0x2e3036),
+  box(0.28, 0.08, 0.25, 0.34, 0.12, 0.75, 0x2e3036), box(0.66, 0.08, 0.25, 0.72, 0.12, 0.75, 0x2e3036),
+];
+
 // Trains (Age 5): a lump of coal; the steam engine, boiler forward and cab
 // behind on a black frame; a rail car, a wooden coach with its roof.
 // The god's wand (world/godCube.js): a pale staff, a star at its tip.

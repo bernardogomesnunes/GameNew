@@ -212,13 +212,24 @@ export const ITEMS = [
   // should fly with front and space to go up, left and right to move, this
   // is a wooden plane da Vinci style") -----------------------------------
   //
-  // Owning one is what lets you fly in Duilt — see Game.wireFlight. Fly to
-  // take off, forward to go, Jump climbs, Sneak dives, look to steer; turn
-  // it off in the air and the wings bring you down in a glide.
+  // Renamed the Plainer, and worn on the body like a breastplate rather
+  // than set down (asked for directly: "the one we have now should be
+  // called plainer ... Plainer should be held as chest plate instead of
+  // placed"). Its id stays, so a save keeps it. Wearing it is what lets you
+  // fly in Duilt — see Game.wireFlight. Fly to take off, forward to go,
+  // Jump climbs, Sneak dives, look to steer; turn it off in the air and the
+  // wings bring you down in a glide.
   {
-    id: 'flying_machine', name: 'Flying Machine', kind: 'tool', stackTo: STACK_TOOL, color: 0xc49360, glyph: 'glider',
-    durability: null, madeBy: 'Built at a workshop from planks and wool', unlocks: 'Set it down and fly it',
+    id: 'flying_machine', name: 'Plainer', kind: 'gear', stackTo: STACK_TOOL, color: 0xc49360, glyph: 'glider',
+    wears: 'body', madeBy: 'Built at a workshop from planks and wool', unlocks: 'Wear it to fly',
     flies: true,
+  },
+  // The Helix (asked for directly: "a diff flying machine called helix ...
+  // similar to fly mode in creative"): a helicopter you set down and climb
+  // into, and fly as Creative flies — hover, up, down, any way you look.
+  {
+    id: 'helix', name: 'Helix', kind: 'tool', stackTo: STACK_TOOL, color: 0xc8402e, glyph: 'helix',
+    durability: null, madeBy: 'Built at an engineering centre from iron, glass and planks', unlocks: 'Set it down and fly it',
   },
 
   // --- Phase 4: light, half-height shapes, furniture -----------------------
