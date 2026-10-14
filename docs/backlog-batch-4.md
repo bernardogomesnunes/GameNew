@@ -86,9 +86,12 @@ What's there now was checked in the code before writing this.
   - Your own sky lifts work: a lift rides its chain, straight up or down,
     to the lift at the other end. Tapping a lift's hint rides it too,
     instead of opening the claim panel.
-- Asked for at the same time, still to do: a blockier train; the flying
-  machine renamed the Plainer and worn on the chest; a new Helix
-  helicopter that flies like Creative's fly mode.
+- **A blockier train** (PR #181): square wheels with hubs, a boiler
+  stepped round instead of smooth, a box chimney and dome, a lamp, and
+  plank walls on the coaches.
+- Asked for at the same time, still to do: the flying machine renamed the
+  Plainer and worn on the chest; a new Helix helicopter that flies like
+  Creative's fly mode.
 
 ## B. Goals and ages: 12 ages
 
