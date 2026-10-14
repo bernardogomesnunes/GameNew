@@ -111,7 +111,13 @@ export class CloudWorlds {
     for (const c of chunks) {
       const chunk = world.getChunk(c.cx, c.cz);
       if (!chunk) continue; // a chunk outside this world's bounds is not ours to place
+      world.forgetLights(chunk);
       writeRle(chunk, unpackRle(c.bytes));
+      // Its lanterns and chimneys, which writing the data straight in never
+      // told the world about (reported directly: "Old lanterns in my world
+      // stopped throwing light" — every lantern saved to the account was
+      // dark once the world was opened again; one put down since, lit).
+      world.scanLights(chunk);
       if (world.endless) {
         chunk.touched = true;
         chunk.dirty = true;
