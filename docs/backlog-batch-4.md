@@ -73,6 +73,12 @@ What's there now was checked in the code before writing this.
   - Save and leave now shows its spinner. Before, a save to this browser
     held the page before the spinner was ever drawn.
 
+- **Rail bends** (PR #179). Asked for directly: "Rails need to curve in
+  this scenario like rounded iron bars". Where rail turns a corner, joining
+  one x side and one z side, it's drawn as a quarter circle. The iron bars
+  are arcs that run on into the straight rail with no step, and the
+  sleepers fan round the bend. Junctions and straight runs are unchanged.
+
 ## B. Goals and ages: 12 ages
 
 **Done in PR #168,** with A6 (the goals). As built:
