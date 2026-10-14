@@ -218,4 +218,7 @@ ok('age 1 has no workshop recipes to be confused by',
   recipesFor(1).every((r) => r.station === 'hand'));
 ok('the later ages do', recipesFor(FINAL_AGE).some((r) => r.station === 'workshop'));
 
-process.exit(f ? 1 : 0);
+// Over 64 KB of output: exiting straight away, into a pipe that's slow to be
+// read (the whole suite at once), dropped the end of it — the runner then
+// counted a few hundred of these instead of all of them. Out once it's written.
+process.stdout.write('', () => process.exit(f ? 1 : 0));

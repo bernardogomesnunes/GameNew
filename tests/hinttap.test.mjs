@@ -12,7 +12,7 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 
 ok('tapping the strip asks the game what it means', /else if \(this\.cb\.onHintTap\) this\.cb\.onHintTap\(\);/.test(ui));
-ok('at a chest, door, gate, trapdoor, catapult or painting: what Place does', /this\.hintUses = !!swing && !onBuilding;/.test(game)
+ok('at a chest, door, gate, trapdoor, catapult or painting: what Place does', /this\.hintUses = \(!!swing \|\| !!lift\) && !onBuilding;/.test(game)
   && /onHintTap: \(\) => \(this\.moving \? this\.turnMove\(\) : this\.hintUses \? this\.secondaryAction\(\) : this\.openClaim\(\)\)/.test(game));
 ok('anywhere else, the claim panel as before', /this\.hintUses \? this\.secondaryAction\(\) : this\.openClaim\(\)/.test(game));
 ok('and it never carries over from the last thing you looked at', /this\.hoverHit = hit;\s*this\.hintUses = false;/.test(game));

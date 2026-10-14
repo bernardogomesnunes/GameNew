@@ -79,6 +79,17 @@ What's there now was checked in the code before writing this.
   are arcs that run on into the straight rail with no step, and the
   sleepers fan round the bend. Junctions and straight runs are unchanged.
 
+- **Train and sky lift under a thumb** (PR #180).
+  - A tap at a train or a flying machine is Place, whatever you hold: coal
+    into the bunker, a car coupled on, the cab. Holding takes one piece
+    off. Lift and press again for the next.
+  - Your own sky lifts work: a lift rides its chain, straight up or down,
+    to the lift at the other end. Tapping a lift's hint rides it too,
+    instead of opening the claim panel.
+- Asked for at the same time, still to do: a blockier train; the flying
+  machine renamed the Plainer and worn on the chest; a new Helix
+  helicopter that flies like Creative's fly mode.
+
 ## B. Goals and ages: 12 ages
 
 **Done in PR #168,** with A6 (the goals). As built:
