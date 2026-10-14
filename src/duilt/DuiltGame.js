@@ -109,6 +109,9 @@ export class DuiltGame {
     this.notices = new Notices();
     // The collection book (duilt/Collection.js): everything you've held.
     this.collection = new Collection();
+    // The god's cube (world/godCube.js): whether you've beaten the other
+    // god, taken his stash, and where to come back to.
+    this.cube = { beaten: false, stash: false };
     this.trains = new Trains({ world, makeLoad: () => new Inventory({ slots: CAR_SLOTS, bus: this.bus }) });
     this.dayTime = null; // see toJSON
     // Designs you placed that didn't count yet — see waitFor.
@@ -1186,6 +1189,26 @@ export class DuiltGame {
     return { fresh, paid };
   }
 
+  /** Which god's cube is yours to face: the other one from your ring's. */
+  get otherGod() {
+    return this.ring === 'black' ? 'white' : 'dark';
+  }
+
+  /**
+   * Whether the way to the god's cube is open from your Sanctuary, and if not
+   * why: after the big wars (the war won on the white path, the Sky Kingdom
+   * brought down on the dark), and not once the god's beaten.
+   */
+  cubeRefuses() {
+    if (this.sandbox) return 'Not in Creative.';
+    if (!this.ring) return 'Forge a ring first.';
+    if (this.ring === 'black' ? !this.skyFallen : this.war.stage !== 'won') {
+      return this.ring === 'black' ? 'Bring down the Sky Kingdom first.' : 'Win the war against the Stone Kingdom first.';
+    }
+    if (this.cube.beaten) return `The ${this.otherGod} god is beaten. His cube is empty.`;
+    return null;
+  }
+
   ageComplete() {
     const goals = this.ageGoals();
     return goals.length > 0 && goals.every((g) => g.done);
@@ -1924,6 +1947,7 @@ export class DuiltGame {
       trains: this.trains.toJSON(),
       notices: this.notices.toJSON(),
       collection: this.collection.toJSON(),
+      cube: { beaten: this.cube.beaten, stash: this.cube.stash, ...(this.cube.inside ? { inside: true, back: this.cube.back } : {}) },
       mounts: this.mounts.filter((m) => !m.dead).map((m) => ({
         type: m.type, x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
         facing: Math.round((m.facing ?? 0) * 100) / 100, owned: true, cart: !!m.cart,
@@ -2000,6 +2024,10 @@ export class DuiltGame {
     this.trains.loadJSON(data.trains);
     this.notices.loadJSON(data.notices);
     this.collection.loadJSON(data.collection);
+    const cube = data.cube ?? {};
+    this.cube = { beaten: cube.beaten === true, stash: cube.stash === true };
+    // Saved inside the cube: you come back out where you went in (Game).
+    if (cube.inside && cube.back && Number.isFinite(cube.back.x)) this.cube.back = { x: cube.back.x, y: cube.back.y, z: cube.back.z };
     this.mounts = (data.mounts ?? []).map((r) => {
       const m = { ...r, owned: true };
       if (r.cart) {

@@ -24,6 +24,8 @@ import { groundAt, surfaceAt, isLoaded, bodyFits } from './Mobs.js';
  */
 
 const TALL = 2;               // a person needs two blocks of headroom
+/** A god's creatures (summon): how often, and how many at once in the hall. */
+const SUMMON_EVERY = 14, MAX_MINIONS = 8;
 const VISIT = 120;            // a landmark's people are about when you're this close...
 const LEAVE = 160;            // ...and gone again past this
 const EXPLORERS = 2;          // at most this many crossing at once
@@ -463,13 +465,31 @@ export class Wanderers {
     // it, never up a step: a blow used to lift a bandit you'd trapped in a
     // hole straight out over its edge (reported: "locked one in a hole and
     // when I beat them they go out of the hole").
-    if (spec.siege || spec.beast) return { killed: false, drops: {} };
+    if (spec.siege || spec.beast || spec.noKnock) return { killed: false, drops: {} };
     const away = Math.atan2(p.x - fromX, p.z - fromZ);
     const kx = p.x + Math.sin(away) * 0.6, kz = p.z + Math.cos(away) * 0.6;
     const ground = groundAt(this.world, kx, kz, p.y, TALL);
     if (ground != null && ground <= p.y + 0.05 && !(p.perch != null && ground < p.perch - 0.6) && this.fits(p, kx, kz, ground)) { p.x = kx; p.z = kz; }
     p.vy = 1.5;
     return { killed: false, drops: {} };
+  }
+
+  /**
+   * A god calls their creatures (world/godCube.js): three at a time from the
+   * spots round the hall, every SUMMON_EVERY seconds — twice as often once
+   * the god is hurt below half — while there are fewer than MAX_MINIONS.
+   */
+  summon(p, dt, spec) {
+    p.summonIn = (p.summonIn ?? SUMMON_EVERY / 2) - dt * (p.hp < spec.hp / 2 ? 2 : 1);
+    if (p.summonIn > 0) return;
+    p.summonIn = SUMMON_EVERY;
+    const lm = p.landmark;
+    const alive = this.list.filter((q) => q.kind === spec.minion && q.landmark === lm && !q.dead).length;
+    const spots = lm?.spawns ?? [];
+    for (let i = 0; i < Math.min(3, MAX_MINIONS - alive) && spots.length; i++) {
+      const at = spots[Math.floor(this.rand() * spots.length)];
+      this.list.push(this.person(spec.minion, at.x, at.y, at.z, { landmark: lm, home: { x: at.x, z: at.z }, angry: true }));
+    }
   }
 
   /**
@@ -665,8 +685,10 @@ export class Wanderers {
     }
     if (spec.siege === 'ram') return this.ram(p, dt, spec);
     if (spec.siege === 'catapult') return this.catapult(p, dt, spec);
-    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'tribe' || p.kind === 'city_guard' || spec.sky || p.war;
-    if (fights) p.cooldown = Math.max(0, p.cooldown - dt);
+    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'tribe' || p.kind === 'city_guard' || spec.sky || p.war
+      || spec.god || p.kind === 'shade' || p.kind === 'seraph';
+    if (fights) p.cooldown = Math.max(0, p.cooldown - (spec.god && p.hp < spec.hp / 2 ? dt * 1.6 : dt));
+    if (spec.god && !p.dead) this.summon(p, dt, spec);
     // Up on his beast, the Warlord only swings: the beast does the going.
     if (p.mount && !p.mount.dead) {
       const d = Math.hypot(player.x - p.x, player.z - p.z);
@@ -694,7 +716,7 @@ export class Wanderers {
     }
 
     if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard' || p.kind === 'royal_guard' || p.kind === 'tribe'
-      || p.kind === 'citizen' || p.kind === 'city_guard') {
+      || p.kind === 'citizen' || p.kind === 'city_guard' || spec.god || p.kind === 'shade' || p.kind === 'seraph') {
       const dx = p.x - player.x, dz = p.z - player.z;
       const d = Math.hypot(dx, dz) || 1;
       // Bandits don't come to you — not yet. They back off and watch.
@@ -721,6 +743,9 @@ export class Wanderers {
       p.stage = 'leaving';
     }
 
+    // Nowhere to be going (someone of a landmark this hasn't been taught):
+    // they stand, rather than the whole tick falling over.
+    if (!p.goal) { p.target = null; p.speed = 0; return; }
     p.target = p.goal;
     p.speed = spec.speed;
     if (Math.hypot(p.goal.x - p.x, p.goal.z - p.z) > 3) return;

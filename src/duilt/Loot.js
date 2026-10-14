@@ -54,6 +54,13 @@ export const LOOT = {
       ['beer', 0.4, 1, 2], ['lantern', 0.2, 1, 1], ['painting', 0.1, 1, 1], ['coin', 0.8, 5, 20]],
     ring: 0.03,
   },
+  // A god's stash, in his cube (world/godCube.js): laid in when the cube is,
+  // not rolled — this is only its name, and what it holds.
+  god_stash: {
+    name: 'The god\'s stash',
+    items: [['god_wand', 1, 1, 1], ['diamond', 1, 4, 8], ['coin', 1, 2500, 3000]],
+    ring: 0,
+  },
   // A Stone Kingdom outpost's armoury (backlog batch 2: "very good loot").
   outpost: {
     name: 'The outpost\'s armoury',

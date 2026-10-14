@@ -495,6 +495,21 @@ export class DuiltUI {
       ${this.needsHtml(next)}`;
   }
 
+ /**
+   * The way to the other god's cube, from your Sanctuary (world/godCube.js):
+   * open once the big wars are won, and said why not until then.
+   */
+  cubeHtml() {
+    const d = this.duilt;
+    if (!d) return '';
+    const refuse = d.cubeRefuses();
+    return `<div class="building-sec">
+      <p class="building-line"><strong>The ${d.otherGod} god</strong> — the god you didn't choose, in his cube beyond the world.</p>
+      ${refuse ? `<p class="dim">${escapeHtml(refuse)}</p>` : '<p class="dim">Beat him, or take his stash and get out alive.</p>'}
+      <button class="${refuse ? 'secondary cannot' : 'primary'}" data-cube${refuse ? ' disabled' : ''}>Step through to his cube</button>
+    </div>`;
+  }
+
   /**
    * "Craft what's missing": what the next level is short of, made from
    * what's in the bag — DuiltGame.craftMissing — and said: what was made,
@@ -573,6 +588,7 @@ export class DuiltUI {
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
     body.querySelectorAll('[data-train]').forEach((b) => b.addEventListener('click', () => actions.onTrain?.(b.dataset.train)));
+    body.querySelector('[data-cube]')?.addEventListener('click', () => { this.closePanel('panel-building'); actions.onCube?.(); });
     if (structure.type === 'barracks' && this.duilt) {
       const t = this.duilt.defenders.barracks(structure.id);
       this.barracksShape = `${t.roster.length}/${t.queue.length}`;
@@ -617,6 +633,7 @@ export class DuiltUI {
       </div>
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
       ${structure.type === 'barracks' ? this.barracksHtml(structure) : ''}
+      ${structure.type === 'sanctuary_white' || structure.type === 'sanctuary_black' ? this.cubeHtml() : ''}
       ${levelSec}
       ${this.stationRecipesHtml(spec)}
       ${this.buildingToolsHtml(structure, spec, locked)}`;
