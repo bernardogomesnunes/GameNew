@@ -606,6 +606,12 @@ export class Game {
     });
     // Story moments (config/moments.js): the first stranger who stays, the first altar.
     this.bus.on('settler:arrived', () => this.tellMoment('first_settler'));
+    // The collection book (duilt/Collection.js): a share of it collected.
+    this.bus.on('collection:milestone', ({ at, coins, item, have }) => {
+      this.ui?.toast(item
+        ? { kind: 'achievement', title: 'The collection book is full!', body: `Every item there is — ${have} of them. +${coins} coins, and the Collector's Crown`, duration: 9000 }
+        : { kind: 'achievement', title: `Collection book: ${Math.round(at * 100)}%`, body: `${have} items collected. +${coins} coins` });
+    });
     // A train at a station (world/Passengers.js): who got off and paid, and who got on.
     this.bus.on('train:stop', ({ station, off, fare, on, to }) => {
       const where = station.key === 'home' ? 'Home' : station.name;

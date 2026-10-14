@@ -188,6 +188,13 @@ armour".
 
 ### D2. The market: every item, and a reward for all of them
 
+**Done in PR #176:**
+- A Book tab in the Goals panel.
+- Every item you've held in this world is ticked off, by group (246
+  items). A test checks every one can be had.
+- Rewards at 10/25/50/75%: 50/150/400/800 coins. At 100%: 2,000 coins
+  and the Collector's Crown, worn on the head (5 points, never wears out).
+
 - Every item in the game can be had somehow: crafted, dug, dropped, found, or
   bought from a trader. A test checks it, so nothing is ever out of reach.
 - Traders stock the hard-to-get items at a price, and their stock rotates.

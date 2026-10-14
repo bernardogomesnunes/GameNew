@@ -28,6 +28,7 @@ import { RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
 import { BOOSTS, BOOST_SECONDS } from '../config/drinks.js';
 import { Guardian } from '../world/Guardian.js';
 import { Notices } from './Notices.js';
+import { Collection } from './Collection.js';
 import { stationsFor, serve as serveStations } from '../world/Passengers.js';
 import { landmarksFor } from '../world/landmarks.js';
 import { ageOf, ageIntro, FINAL_AGE, WAR_AGE, OLD_AGE, AGES_VERSION } from '../config/ages.js';
@@ -106,6 +107,8 @@ export class DuiltGame {
     // Trains on your rails (Age 5) — see world/Trains.js.
     // The notification centre's list, kept with the world (duilt/Notices.js).
     this.notices = new Notices();
+    // The collection book (duilt/Collection.js): everything you've held.
+    this.collection = new Collection();
     this.trains = new Trains({ world, makeLoad: () => new Inventory({ slots: CAR_SLOTS, bus: this.bus }) });
     this.dayTime = null; // see toJSON
     // Designs you placed that didn't count yet — see waitFor.
@@ -1162,6 +1165,27 @@ export class DuiltGame {
     return made;
   }
 
+  /**
+   * Ticks off the book whatever's in your bag or on you, and pays any
+   * milestone that's been reached — coins into the bag (a storehouse if
+   * it's full), the crown for the last. Not in a sandbox: its bag holds
+   * everything already.
+   */
+  noteCollection() {
+    if (this.sandbox) return null;
+    const ids = this.inventory.slots.filter(Boolean).map((s) => s.id);
+    for (const w of Object.values(this.worn)) if (w) ids.push(w.id);
+    const fresh = this.collection.note(ids);
+    const paid = this.collection.due();
+    for (const m of paid) {
+      const left = this.inventory.add('coin', m.coins);
+      if (left > 0) this.structures.deliver({ coin: left });
+      if (m.item && this.inventory.add(m.item, 1) > 0) this.structures.deliver({ [m.item]: 1 });
+      this.bus?.emit('collection:milestone', { ...m, have: this.collection.have.size });
+    }
+    return { fresh, paid };
+  }
+
   ageComplete() {
     const goals = this.ageGoals();
     return goals.length > 0 && goals.every((g) => g.done);
@@ -1276,6 +1300,8 @@ export class DuiltGame {
 
   tick(dtSeconds, { resting = false } = {}) {
     this.serveTrains(dtSeconds);
+    this.untilBook = (this.untilBook ?? 0) - dtSeconds;
+    if (this.untilBook <= 0) { this.untilBook = 1; this.noteCollection(); }
     // A sandbox never gets hungry — hunger simply never ticks down from its
     // starting full value, which is also what keeps the HUD bar honest
     // without needing its own sandbox check: full is full.
@@ -1897,6 +1923,7 @@ export class DuiltGame {
       })),
       trains: this.trains.toJSON(),
       notices: this.notices.toJSON(),
+      collection: this.collection.toJSON(),
       mounts: this.mounts.filter((m) => !m.dead).map((m) => ({
         type: m.type, x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
         facing: Math.round((m.facing ?? 0) * 100) / 100, owned: true, cart: !!m.cart,
@@ -1972,6 +1999,7 @@ export class DuiltGame {
     this.machines = (data.machines ?? []).filter((m) => Number.isFinite(m?.x)).map((m) => ({ x: m.x, y: m.y, z: m.z, yaw: m.yaw ?? 0 }));
     this.trains.loadJSON(data.trains);
     this.notices.loadJSON(data.notices);
+    this.collection.loadJSON(data.collection);
     this.mounts = (data.mounts ?? []).map((r) => {
       const m = { ...r, owned: true };
       if (r.cart) {

@@ -358,6 +358,13 @@ ITEM_MODELS.flying_machine = [
 
 // Trains (Age 5): a lump of coal; the steam engine, boiler forward and cab
 // behind on a black frame; a rail car, a wooden coach with its roof.
+// The Collector's Crown (duilt/Collection.js): a gold band with points.
+ITEM_MODELS.collector_crown = [
+  box(0.24, 0.1, 0.24, 0.76, 0.3, 0.76, 0xf2c94c), box(0.3, 0.12, 0.3, 0.7, 0.28, 0.7, 0x6b4a1e),
+  ...[[0.24, 0.24], [0.68, 0.24], [0.24, 0.68], [0.68, 0.68], [0.46, 0.24], [0.46, 0.68]].map(([x, z]) => box(x, 0.3, z, x + 0.08, 0.46, z + 0.08, 0xf2c94c)),
+  box(0.46, 0.18, 0.2, 0.54, 0.26, 0.24, 0xd8304a), box(0.46, 0.18, 0.76, 0.54, 0.26, 0.8, 0x9fe8f2),
+];
+
 // Gems: a cut stone, wide at the girdle and pointed below.
 const gem = (c, hi, lo) => [
   box(0.36, 0.12, 0.36, 0.64, 0.2, 0.64, lo), box(0.3, 0.2, 0.3, 0.7, 0.34, 0.7, c),
