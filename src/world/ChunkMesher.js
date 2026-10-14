@@ -5,7 +5,7 @@ import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
   roofPart, doorPart, endAxisOf, ID_COUNT,
 } from '../config/blocks.js';
-import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, railBoxes, wallBoxes, pillarBoxes, chimneyBoxes, pathBoxes, pathCornerGaps, windowBoxes, turn, boxColor } from './propShapes.js';
+import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, railBoxes, railCurve, wallBoxes, pillarBoxes, chimneyBoxes, pathBoxes, pathCornerGaps, windowBoxes, turn, boxColor } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
 import { textureFor, blockTexture, TILE_SCALE } from '../config/textures.js';
 import { CHUNK_SIZE } from './World.js';
@@ -108,6 +108,12 @@ for (const id of BLOCKS_BY_ID.keys()) IS_RUG[id] = shapeOf(id) === 'rug' ? 1 : 0
 /** Rail, which runs on into the rail beside it, level or a step up or down (see propShapes' railBoxes). */
 const IS_RAIL = new Uint8Array(IDS);
 for (const id of BLOCKS_BY_ID.keys()) IS_RAIL[id] = shapeOf(id) === 'rail' ? 1 : 0;
+/** Which sides the rail at `idx` of a padded copy runs on into: rail beside it, level or a step up or down. */
+function railJoins(vol, idx) {
+  const P2 = PAD * PAD;
+  const at = (o) => IS_RAIL[vol[idx + o]] | IS_RAIL[vol[idx + o + P2]] | IS_RAIL[vol[idx + o - P2]];
+  return { px: at(1), nx: at(-1), pz: at(PAD), nz: at(-PAD) };
+}
 /**
  * Shaped blocks drawn in another block's texture rather than a flat colour:
  * a stone slab or stair in stone's, a plank one in planks' (blocks.js `tex`).
@@ -1140,6 +1146,13 @@ export class ChunkMesher {
             }
             continue;
           }
+          // Rail round a corner is bent round it (propShapes' railCurve).
+          const bend = IS_RAIL[id] ? railCurve(railJoins(vol, idx)) : null;
+          if (bend) {
+            const base = BLOCKS_BY_ID.get(id).color;
+            for (const p of bend) this.emitPrism(buf, lx, ly, lz, p, colorOfHex(boxColor(p, base)));
+            continue;
+          }
           const boxes = shape === 'window'
             ? turn(windowBoxes({ below: vol[idx - P2] === id, above: vol[idx + P2] === id }), FACING[id])
             : shape === 'pillar'
@@ -1157,12 +1170,7 @@ export class ChunkMesher {
               pz: JOINS_FENCE[vol[idx + PAD]], nz: JOINS_FENCE[vol[idx - PAD]],
             })
             : IS_RAIL[id]
-              ? railBoxes({
-                px: IS_RAIL[vol[idx + 1]] | IS_RAIL[vol[idx + 1 + P2]] | IS_RAIL[vol[idx + 1 - P2]],
-                nx: IS_RAIL[vol[idx - 1]] | IS_RAIL[vol[idx - 1 + P2]] | IS_RAIL[vol[idx - 1 - P2]],
-                pz: IS_RAIL[vol[idx + PAD]] | IS_RAIL[vol[idx + PAD + P2]] | IS_RAIL[vol[idx + PAD - P2]],
-                nz: IS_RAIL[vol[idx - PAD]] | IS_RAIL[vol[idx - PAD + P2]] | IS_RAIL[vol[idx - PAD - P2]],
-              })
+              ? railBoxes(railJoins(vol, idx))
             : IS_RUG[id]
               ? rugBoxes({
                 px: IS_RUG[vol[idx + 1]], nx: IS_RUG[vol[idx - 1]],
@@ -1297,6 +1305,44 @@ export class ChunkMesher {
         if (sign > 0) buf.index.push(base, base + 1, base + 2, base, base + 2, base + 3);
         else buf.index.push(base, base + 3, base + 2, base, base + 2, base + 1);
       }
+    }
+  }
+
+  /**
+   * An upright prism at cell (ox, oy, oz): `p.pts`, four corners [x, z]
+   * round its floor (either way round), stood from `p.minY` to `p.maxY`.
+   * For what can't be an upright box — the pieces of a rail's bend. Its
+   * top and its four sides; it sits on something, so no underside.
+   */
+  emitPrism(buf, ox, oy, oz, p, col) {
+    const S = SHADE;
+    const pts = p.pts;
+    const mx = pts.reduce((t, q) => t + q[0], 0) / pts.length, mz = pts.reduce((t, q) => t + q[1], 0) / pts.length;
+    const quad = (v, n, shade) => {
+      // Wound to face along n.
+      const [a, b, c] = v;
+      const cx = (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]);
+      const cy = (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]);
+      const cz = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+      const vs = cx * n[0] + cy * n[1] + cz * n[2] < 0 ? [v[0], v[3], v[2], v[1]] : v;
+      const base = buf.position.length / 3;
+      for (const q of vs) {
+        buf.position.push(ox + q[0], oy + q[1], oz + q[2]);
+        buf.normal.push(n[0], n[1], n[2]);
+        buf.color.push(col.r * shade, col.g * shade, col.b * shade);
+      }
+      buf.index.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    };
+    quad(pts.map(([x, z]) => [x, p.maxY, z]), [0, 1, 0], S.py);
+    for (let i = 0; i < pts.length; i++) {
+      const [x0, z0] = pts[i], [x1, z1] = pts[(i + 1) % pts.length];
+      let nx = z1 - z0, nz = -(x1 - x0);
+      const len = Math.hypot(nx, nz);
+      if (!len) continue;
+      nx /= len; nz /= len;
+      // Outward: away from the middle.
+      if (nx * ((x0 + x1) / 2 - mx) + nz * ((z0 + z1) / 2 - mz) < 0) { nx = -nx; nz = -nz; }
+      quad([[x0, p.minY, z0], [x1, p.minY, z1], [x1, p.maxY, z1], [x0, p.maxY, z0]], [nx, 0, nz], Math.abs(nx) * S.px + Math.abs(nz) * S.pz);
     }
   }
 

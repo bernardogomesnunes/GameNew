@@ -519,6 +519,47 @@ export function railBoxes({ px = 0, nx = 0, pz = 0, nz = 0 } = {}) {
 }
 PROP_SHAPES.rail = railBoxes();
 
+/**
+ * Rail that turns a corner, bent round it rather than two half lengths
+ * meeting in an L (asked for directly: "Rails need to curve in this
+ * scenario like rounded iron bars"). Only where it joins exactly one x side
+ * and one z side; anything else (a straight run, a junction) is railBoxes.
+ *
+ * A quarter circle about the cell's corner between the two sides it joins:
+ * the iron bars as arcs at the same distances from that corner as a
+ * straight rail's bars are from the cell's edge, so they run on into the
+ * straight rail on either side with no step; the sleepers fanned across it.
+ *
+ * Not boxes — a bend can't be made of upright boxes — but prisms: four
+ * corners [x, z] round the floor, stood up from minY to maxY. Null when the
+ * rail doesn't turn.
+ */
+const CURVE_STEPS = 10;
+export function railCurve({ px = 0, nx = 0, pz = 0, nz = 0 } = {}) {
+  if (!(px ^ nx) || !(pz ^ nz)) return null;
+  // The corner it turns about, and the way into the cell from it.
+  const cx = px ? 1 : 0, cz = pz ? 1 : 0;
+  const ux = px ? -1 : 1, uz = pz ? -1 : 1;
+  // θ 0 is the z side's edge, θ 90° the x side's.
+  const at = (r, a) => [cx + ux * r * Math.cos(a), cz + uz * r * Math.sin(a)];
+  const out = [];
+  // The sleepers, fanned across the bend: wedges, as wide as a straight
+  // run's halfway across, narrowing towards the corner.
+  const half = 0.06 / 0.5;
+  for (let i = 0; i < 4; i++) {
+    const a = ((i + 0.5) / 4) * (Math.PI / 2);
+    out.push({ pts: [at(0.12, a - half), at(0.94, a - half), at(0.94, a + half), at(0.12, a + half)], minY: 0, maxY: SLEEPER_H, color: SLEEPER });
+  }
+  // The bars: short pieces round each arc, each one's ends on the arc.
+  for (const [r0, r1] of [[0.22, 0.28], [0.72, 0.78]]) {
+    for (let i = 0; i < CURVE_STEPS; i++) {
+      const a0 = (i / CURVE_STEPS) * (Math.PI / 2), a1 = ((i + 1) / CURVE_STEPS) * (Math.PI / 2);
+      out.push({ pts: [at(r0, a0), at(r1, a0), at(r1, a1), at(r0, a1)], minY: SLEEPER_H, maxY: RAIL_H });
+    }
+  }
+  return out;
+}
+
 PROP_SHAPES.wall = wallBoxes();
 PROP_SHAPES.chimney = chimneyBoxes();
 PROP_SHAPES.pillar = pillarBoxes();
