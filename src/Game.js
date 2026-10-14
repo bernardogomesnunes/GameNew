@@ -2037,6 +2037,9 @@ export class Game {
     const found = this.trainTarget(hit);
     if (!found) return false;
     const r = this.duilt.pickUpTrain(found.train);
+    // One piece a press: a hold that kept going took every car and then the
+    // engine. The rest of this press does nothing; lift and press again.
+    this.holdSpent = true;
     this.ui.toast(r.ok
       ? { kind: 'xp', title: r.piece === 'rail_car' ? 'Car taken off' : 'Steam engine picked up', body: 'It is back in your bag.' }
       : { kind: 'xp', title: 'Can\'t pick it up', body: r.reason });
@@ -2357,6 +2360,7 @@ export class Game {
    * down, and holding it should not stamp forty copies.
    */
   setBreaking(on, { once = false } = {}) {
+    if (!on) this.holdSpent = false;
     const want = on && !this.armed && !this.moving;
     if (want) this.breakOnce = once;
     if (want === this.breaking) return;
@@ -2369,7 +2373,7 @@ export class Game {
 
   /** One frame of a held break. Re-aims every time, so it eats what you point at. */
   tickBreaking(now) {
-    if (!this.breaking) return;
+    if (!this.breaking || this.holdSpent) return;
     if (now < (this.breakRestUntil ?? 0)) return;
     if (now - this.breakHeldSince < HOLD_BREAK_DELAY_MS) return;
     if (now - this.lastBreakAt < HOLD_BREAK_INTERVAL_MS) return;
@@ -2444,6 +2448,12 @@ export class Game {
     if (this.talkTarget(aimed) || this.traderTarget(aimed)) return places();
     if (this.banditTarget(aimed) || this.mobTarget(aimed) || this.fireflyTarget(aimed)) return breaks();
     if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)) return places();
+    // A train or a flying machine: a tap is Place — coal into the bunker, a
+    // car coupled on, a car opened, the cab or the seat. Holding takes it
+    // apart (asked for directly: "train should be broke with pressing and
+    // adding coal with click"); with coal in hand a tap used to be Break,
+    // and took the train to bits instead of firing it.
+    if (this.trainTarget(aimed) || this.machineTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
       || aimed.block === STORAGE_CONTROLLER || stationOf(aimed.block)
       || aimed.block === SKY_LIFT || aimed.block === WAY_OUT || isCatapult(aimed.block)
@@ -5044,9 +5054,43 @@ export class Game {
    * landing's takes you back down to the tower. Warriors following you come
    * too.
    */
+  /**
+   * A sky lift of your own (asked for directly: "Sky lift in creative does
+   * not work"): it rides its chain — links straight up or down from it — to
+   * the lift at the other end, and sets you down beside that one. Null
+   * without a chain, or with nothing at the far end of it.
+   */
+  chainLift(x, y, z) {
+    for (const dir of [1, -1]) {
+      let at = y + dir, links = 0;
+      while (links < this.world.height && this.world.getBlock(x, at, z) === CHAIN) { at += dir; links++; }
+      if (links && this.world.getBlock(x, at, z) === SKY_LIFT) return { up: dir > 0, to: this.standBeside(x, at, z), links };
+    }
+    return null;
+  }
+
+  /** Somewhere to stand by the block at (x, y, z): ground beside it, two clear above — or on top of it. */
+  standBeside(x, y, z) {
+    const w = this.world;
+    for (const fy of [y, y + 1, y - 1]) {
+      for (const [dx, dz] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+        const sx = x + dx, sz = z + dz;
+        if (w.isSolid(sx, fy - 1, sz) && !w.isSolid(sx, fy, sz) && !w.isSolid(sx, fy + 1, sz)) return { x: sx + 0.5, y: fy, z: sz + 0.5 };
+      }
+    }
+    return { x: x + 0.5, y: y + 1, z: z + 0.5 };
+  }
+
   rideLift({ x, y, z }) {
     const ride = this.world.gen ? liftAt(this.world.gen, x, y, z) : null;
-    if (!ride) return;
+    if (!ride) {
+      const own = this.chainLift(x, y, z);
+      if (!own) return void this.ui?.toast({ kind: 'xp', title: 'It goes nowhere yet', body: 'Hang chain straight up or down from it, with another sky lift at the far end — it rides the chain between them.' });
+      this.player.teleport(own.to.x, own.to.y, own.to.z);
+      this.player.velocity?.set?.(0, 0, 0);
+      this.sound?.lift();
+      return void this.ui?.toast({ kind: 'challenge', title: own.up ? 'Up the chain' : 'Down the chain', body: `${own.links} links` });
+    }
     const i = skyFor(this.world.gen).towers.indexOf(ride.tower);
     if (this.duilt && !this.duilt.sandbox && this.duilt.skyWar.chains[i]) {
       this.ui?.toast({ kind: 'xp', title: 'Its chain is cut', body: 'This lift goes nowhere now — another tower\'s still might' });
@@ -7148,7 +7192,8 @@ export class Game {
     const trapdoor = hit && isTrapdoor(hit.block);
     const painting = hit && isPainting(hit.block);
     const mill = hit && stationOf(hit.block);
-    let lift = hit && hit.block === SKY_LIFT ? (this.world.gen && liftAt(this.world.gen, hit.x, hit.y, hit.z)) || 'nowhere' : null;
+    let lift = hit && hit.block === SKY_LIFT
+      ? (this.world.gen && liftAt(this.world.gen, hit.x, hit.y, hit.z)) || this.chainLift(hit.x, hit.y, hit.z) || 'nowhere' : null;
     const sw = this.duilt && !this.duilt.sandbox ? this.duilt.skyWar : null;
     if (lift && lift !== 'nowhere' && sw?.chains[skyFor(this.world.gen).towers.indexOf(lift.tower)]) lift = 'cut';
     // An anchor tower's chain, on the dark path: Break cuts it.
@@ -7161,7 +7206,7 @@ export class Game {
     // What tapping the hint itself does: the same thing, for a chest, a door
     // or a gate — not the claim panel (reported: tapping "Chest — tap Open"
     // on a phone opened "What is this?").
-    this.hintUses = !!swing && !onBuilding;
+    this.hintUses = (!!swing || !!lift) && !onBuilding;
     this.ui?.setBuildingHint(gate
       ? `Gate · ${isOpenGate(hit.block) ? 'open' : 'shut'} — ${how}`
       : door
@@ -7173,7 +7218,8 @@ export class Game {
       : trapdoor
         ? `Trapdoor · ${isOpenTrapdoor(hit.block) ? 'open' : 'shut'} — ${how}`
       : lift
-        ? (lift === 'nowhere' ? 'Sky lift · only an anchor tower\'s goes anywhere' : lift === 'cut' ? 'Sky lift · its chain is cut, it goes nowhere now' : `Sky lift — ${how} ${lift.up ? 'up to the Sky Kingdom' : 'down to the ground'}`)
+        ? (lift === 'nowhere' ? 'Sky lift · hang chain from it to another lift' : lift === 'cut' ? 'Sky lift · its chain is cut, it goes nowhere now'
+          : `Sky lift — ${how} ${lift.tower ? (lift.up ? 'up to the Sky Kingdom' : 'down to the ground') : (lift.up ? 'up the chain' : 'down the chain')}`)
       : chainLink
         ? `Anchor chain — break it to cut it (${sw.chainsCut} of ${CHAINS} cut)`
       : mill
@@ -7187,7 +7233,7 @@ export class Game {
           + (onBuilding.locked === false ? ' · unlocked' : '')
       : waiting
         ? `${STRUCTURES_BY_ID.get(waiting.type)?.name ?? 'Building'} · not working yet — ${waiting.reason}`
-        : null, { manage: waiting ? 'see why' : ((!swing && !sapling) || !!onBuilding) });
+        : null, { manage: waiting ? 'see why' : ((!swing && !sapling && !lift) || !!onBuilding) });
     // The single block under the crosshair, except while a roof is queued —
     // there the whole building is highlighted and one more box on top of it is
     // just noise.
