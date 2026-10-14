@@ -30,6 +30,7 @@ globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
 const { Game } = await import('../src/Game.js');
 const chunks = new Map();
 const fake = {
+  drawnAround: Game.prototype.drawnAround,
   title: { site: { x: 0, z: 0 } },
   world: { hasChunk: (cx, cz) => chunks.has(`${cx},${cz}`), getChunk: (cx, cz) => chunks.get(`${cx},${cz}`) },
 };

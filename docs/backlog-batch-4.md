@@ -64,6 +64,15 @@ What's there now was checked in the code before writing this.
     the list;
   - what can't be made is left, and said.
 
+- **Loading screens** (PR #178). Asked for directly: "a loading on the
+  create world like a loading as we have in the beginning and on save the
+  loading spinner".
+  - The startup loading screen comes back up when you create a world, open
+    one, or go back to your worlds. Its bar follows the land round you being
+    drawn.
+  - Save and leave now shows its spinner. Before, a save to this browser
+    held the page before the spinner was ever drawn.
+
 ## B. Goals and ages: 12 ages
 
 **Done in PR #168,** with A6 (the goals). As built:

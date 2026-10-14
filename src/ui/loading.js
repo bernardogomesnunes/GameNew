@@ -24,6 +24,32 @@ export function loadingProgress(pct, label) {
   if (label) root.querySelector('.ld-label').textContent = label;
 }
 
+/**
+ * Puts the screen back up, as it was at the start, for making or opening a
+ * world later on (asked for directly: "a loading on the create world like
+ * a loading as we have in the beginning"). Its look is still in index.html;
+ * only the markup is made again, since loadingDone took it away.
+ */
+export function loadingShow(label) {
+  let root = el();
+  // Still fading out from last time: that one goes now, a fresh one comes.
+  if (root?.classList.contains('ld-gone')) { root.remove(); root = null; }
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'loading';
+    root.setAttribute('role', 'progressbar');
+    root.setAttribute('aria-label', 'Loading');
+    root.setAttribute('aria-valuemin', '0');
+    root.setAttribute('aria-valuemax', '100');
+    root.setAttribute('aria-valuenow', '6');
+    root.innerHTML = '<div class="ld-card"><h1 class="ld-logo">Duilt</h1>'
+      + '<div class="ld-bar"><div class="ld-track"><div class="ld-fill"></div></div></div>'
+      + '<p class="ld-label"></p></div>';
+    document.body.appendChild(root);
+  }
+  loadingProgress(6, label);
+}
+
 /** Fades it out and removes it. */
 export function loadingDone() {
   const root = el();

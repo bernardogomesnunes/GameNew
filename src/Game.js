@@ -117,6 +117,7 @@ import { Defenders } from './world/Defenders.js';
 import { Army } from './world/Army.js';
 import { Guardian } from './world/Guardian.js';
 import { settlerName, settlerColour } from './config/settlers.js';
+import { loadingShow, loadingProgress, loadingDone, nextPaint, followDrawing } from './ui/loading.js';
 
 const REACH = 7;
 /** The god's wand's beam (useWand): how often, how fast, how hard. */
@@ -1016,6 +1017,30 @@ export class Game {
    * or not doesn't decide it; where the world itself was saved does, which
    * is what lets a local world stay open-able after you sign in mid-session.
    */
+  /**
+   * The loading screen over a world being made, opened or left (asked for
+   * directly: "a loading on the create world like a loading as we have in
+   * the beginning"). It goes up and is drawn before `work`, which holds
+   * everything up while it runs; then the bar follows the land round you
+   * being drawn, made faster under it as at the start (see `booting`).
+   * Gone once that's done, or at once if `work` came to nothing.
+   */
+  async withLoading(label, work) {
+    loadingShow(label);
+    await nextPaint();
+    try {
+      const ok = await work();
+      if (ok === false) return ok;
+      loadingProgress(50, 'Drawing the land…');
+      this.booting = true;
+      await followDrawing(() => this.drawnAround(this.title?.site ?? this.player?.position), { from: 50 });
+      return ok;
+    } finally {
+      this.booting = false;
+      loadingDone();
+    }
+  }
+
   async openWorld(id) {
     if (!id) return false;
     // What you were in goes up (or gets written down) before you leave it,
@@ -1173,7 +1198,7 @@ export class Game {
       onSelectItem: (id) => { this.selectedItemId = id; },
       // Opening a world by its id. There is no "open by name" any more,
       // because there is no second copy of anything to tell apart by name.
-      onOpenWorld: (id) => this.openWorld(id),
+      onOpenWorld: (id) => this.withLoading('Opening your world…', () => this.openWorld(id)),
       onDeleteWorld: (id) => {
         if (id === this.worldId) { this.discarded = true; this.pendingSave = false; }
         // Its unsent copy goes too, or the next startup uploads it again.
@@ -1220,8 +1245,8 @@ export class Game {
           this.ui.toast({ kind: 'xp', title: 'Could not import', body: err.message });
         }
       },
-      onGoHome: () => this.openTitle(),
-      onNewWorld: (mode, name) => { this.newWorld({ mode, name }); this.ui.closePanel('panel-menu'); },
+      onGoHome: () => (this.title ? true : this.withLoading('Back to your worlds…', () => this.openTitle())),
+      onNewWorld: (mode, name) => this.withLoading('Building the world…', () => { this.newWorld({ mode, name }); this.ui.closePanel('panel-menu'); }),
       onRenameWorld: (name) => { this.worldName = name; this.saveNow(); },
       lastSavedAt: () => this.syncState.agreedFor(this.worldId)?.at ?? 0,
       onResume: () => {
@@ -1685,7 +1710,11 @@ export class Game {
    * scene's middle, made and meshed.
    */
   titleProgress(reach = 48) {
-    const site = this.title?.site;
+    return this.drawnAround(this.title?.site, reach);
+  }
+
+  /** How much of the land within `reach` of `site` is made and drawn, 0..1. */
+  drawnAround(site, reach = 48) {
     if (!site || !this.world) return 1;
     let need = 0, done = 0;
     const c0x = Math.floor((site.x - reach) / CHUNK_SIZE), c1x = Math.floor((site.x + reach) / CHUNK_SIZE);
