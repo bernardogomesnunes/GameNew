@@ -7,7 +7,8 @@ import { PART_LENGTH, PART_WIDTH } from '../world/Trains.js';
  * where the trail puts it. The engine: a green boiler on a black frame, its
  * chimney at the front, a cab at the back you stand in to drive; a car: a
  * wooden coach with windows down both sides. Smoke puffs from the chimney
- * while it's being driven.
+ * while it's being driven. All of it blocks, as the world is: square wheels,
+ * a boiler stepped round rather than smooth.
  */
 const IRON = 0x2e3036, BOILER = 0x2f5a44, BRASS = 0xc9a55a, RED = 0x9a2a22, WHEEL = 0x3a3a3e;
 const COACH = 0x7a5236, COACH_TRIM = 0x5a3b28, ROOF = 0x4a4d55, GLASS = 0x2a3440;
@@ -28,20 +29,34 @@ function box(g, w, h, d, x, y, z, m) {
   return mesh;
 }
 
-/** Wheels and axles along a part: a pair at each z, turning about x. */
-function wheels(g, zs, r, m) {
+/**
+ * Square wheels, as everything else in the world is blocks (asked for
+ * directly: "The train could be more blocky"): a disc of blocks — a
+ * square, a cross over it — and a lighter hub, turning about x.
+ */
+function wheels(g, zs, r, mats) {
   const out = [];
-  const geo = new THREE.CylinderGeometry(r, r, 0.22, 14);
+  const t = 0.22, s = r * 2;
   for (const z of zs) {
     for (const x of [-W / 2 + 0.35, W / 2 - 0.35]) {
-      const w = new THREE.Mesh(geo, m);
-      w.rotation.z = Math.PI / 2;
+      const w = new THREE.Group();
       w.position.set(x, r + 0.05, z);
+      w.add(new THREE.Mesh(new THREE.BoxGeometry(t, s * 0.72, s * 0.72), mats.wheel));
+      w.add(new THREE.Mesh(new THREE.BoxGeometry(t, s, s * 0.44), mats.wheel));
+      w.add(new THREE.Mesh(new THREE.BoxGeometry(t, s * 0.44, s), mats.wheel));
+      const hub = new THREE.Mesh(new THREE.BoxGeometry(t + 0.06, s * 0.3, s * 0.3), mats.red);
+      w.add(hub);
       g.add(w);
       out.push(w);
     }
   }
   return out;
+}
+
+/** A blocky round along z: a wide flat box and a tall narrow one through it, so its cross-section is a stepped circle. */
+function blockRound(g, r, len, x, y, z, m) {
+  box(g, r * 2, r * 1.4, len, x, y - r * 0.7, z, m);
+  box(g, r * 1.4, r * 2, len, x, y - r, z, m);
 }
 
 function frame(g, mats) {
@@ -51,36 +66,32 @@ function frame(g, mats) {
     box(g, W - 0.2, 0.4, 0.3, 0, DECK - 0.5, z, mats.red);
     for (const x of [-0.9, 0.9]) box(g, 0.25, 0.25, 0.3, x, DECK - 0.42, z + Math.sign(z) * 0.25, mats.iron);
   }
+  // A walkway along each side, a step proud of the frame.
+  for (const x of [-W / 2 + 0.1, W / 2 - 0.1]) box(g, 0.2, 0.1, L - 0.6, x, DECK - 0.1, 0, mats.iron);
 }
 
 function engine(mats) {
   const g = new THREE.Group();
   frame(g, mats);
-  const spin = wheels(g, [2.6, 0.9, -0.8, -2.6], 0.6, mats.wheel);
+  const spin = wheels(g, [2.6, 0.9, -0.8, -2.6], 0.6, mats);
+  // The rods joining the big wheels, either side.
+  for (const x of [-W / 2 + 0.2, W / 2 - 0.2]) box(g, 0.08, 0.14, 3.6, x, 0.6, 0, mats.brass);
   // The boiler, lying along it from the cab to the smokebox at the front —
-  // low enough that from the footplate you see out over it.
+  // low enough that from the footplate you see out over it. Square, stepped.
   const BY = DECK + 0.95, BR = 0.9;
-  const boiler = new THREE.Mesh(new THREE.CylinderGeometry(BR, BR, 4.6, 18), mats.boiler);
-  boiler.rotation.x = Math.PI / 2;
-  boiler.position.set(0, BY, 1.3);
-  g.add(boiler);
-  const smokebox = new THREE.Mesh(new THREE.CylinderGeometry(BR + 0.04, BR + 0.04, 0.6, 18), mats.iron);
-  smokebox.rotation.x = Math.PI / 2;
-  smokebox.position.set(0, BY, 3.8);
-  g.add(smokebox);
+  blockRound(g, BR, 4.6, 0, BY, 1.3, mats.boiler);
+  blockRound(g, BR + 0.05, 0.6, 0, BY, 3.8, mats.iron);
+  // The smokebox door: a darker square on the front, a brass handle.
+  box(g, 1.1, 1.1, 0.06, 0, BY - 0.55, 4.12, mats.wheel);
+  box(g, 0.16, 0.16, 0.06, 0, BY - 0.08, 4.17, mats.brass);
   // Brass bands round it, a dome on top, and the chimney at the front.
-  for (const z of [0, 1.5, 3]) {
-    const band = new THREE.Mesh(new THREE.CylinderGeometry(BR + 0.03, BR + 0.03, 0.08, 18), mats.brass);
-    band.rotation.x = Math.PI / 2;
-    band.position.set(0, BY, z);
-    g.add(band);
-  }
-  const dome = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.4, 0.45, 12), mats.brass);
-  dome.position.set(0, BY + BR + 0.15, 1.2);
-  g.add(dome);
-  const chimney = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.26, 1.4, 12), mats.iron);
-  chimney.position.set(0, BY + BR + 0.6, 3.3);
-  g.add(chimney);
+  for (const z of [0, 1.5, 3]) blockRound(g, BR + 0.04, 0.12, 0, BY, z, mats.brass);
+  box(g, 0.7, 0.4, 0.7, 0, BY + BR - 0.05, 1.2, mats.brass);
+  box(g, 0.5, 0.15, 0.5, 0, BY + BR + 0.35, 1.2, mats.brass);
+  box(g, 0.6, 1.2, 0.6, 0, BY + BR - 0.05, 3.3, mats.iron);
+  box(g, 0.8, 0.22, 0.8, 0, BY + BR + 1.1, 3.3, mats.iron);
+  // A lamp on the front, under the chimney.
+  box(g, 0.34, 0.34, 0.2, 0, DECK + 0.05, L / 2 - 0.1, mats.lamp);
   // The cab at the back: a raised footplate you stand on, sides to the
   // waist, a front to the chest with the window open above it, corner posts
   // up to the roof, open behind.
@@ -88,24 +99,31 @@ function engine(mats) {
   box(g, W, FOOTPLATE, cl, 0, DECK, cz, mats.iron);
   for (const x of [-W / 2 + 0.06, W / 2 - 0.06]) {
     box(g, 0.12, 1.4, cl, x, DECK, cz, mats.boiler);
-    for (const z of [cz - cl / 2 + 0.1, cz + cl / 2 - 0.1]) box(g, 0.14, ROOF_AT - 1.4, 0.14, x, DECK + 1.4, z, mats.boiler);
+    box(g, 0.16, 0.14, cl, x, DECK + 1.4, cz, mats.brass);
+    for (const z of [cz - cl / 2 + 0.1, cz + cl / 2 - 0.1]) box(g, 0.16, ROOF_AT - 1.4, 0.16, x, DECK + 1.4, z, mats.boiler);
   }
   box(g, W, 1.4, 0.12, 0, DECK, cz + cl / 2 - 0.06, mats.boiler);
+  // The roof, two steps: a wide eave and a raised middle.
   box(g, W + 0.2, 0.14, cl + 0.3, 0, DECK + ROOF_AT, cz, mats.roof);
+  box(g, W - 0.6, 0.14, cl + 0.1, 0, DECK + ROOF_AT + 0.14, cz, mats.roof);
   return { group: g, spin, chimneyTop: new THREE.Vector3(0, DECK + 2.6, 3.3) };
 }
 
 function car(mats) {
   const g = new THREE.Group();
   frame(g, mats);
-  const spin = wheels(g, [2.8, 1.8, -1.8, -2.8], 0.45, mats.wheel);
-  // A wooden coach: low walls, a band of windows, a curved-looking roof.
+  const spin = wheels(g, [2.8, 1.8, -1.8, -2.8], 0.45, mats);
+  // A wooden coach: plank walls in two tones, a band of windows, a
+  // stepped roof.
   const len = L - 0.6;
   box(g, W, 0.12, len, 0, DECK, 0, mats.trim);
   for (const x of [-W / 2 + 0.07, W / 2 - 0.07]) {
-    box(g, 0.14, 0.9, len, x, DECK + 0.12, 0, mats.coach);
+    // Planks, upright, every other one darker.
+    const n = 12, pw = len / n;
+    for (let i = 0; i < n; i++) box(g, 0.14, 0.9, pw, x, DECK + 0.12, -len / 2 + pw * (i + 0.5), i % 2 ? mats.trim : mats.coach);
     box(g, 0.1, 0.8, len - 0.4, x, DECK + 1.02, 0, mats.glass);
-    for (let z = -len / 2 + 0.1; z <= len / 2; z += 1.2) box(g, 0.16, 0.8, 0.16, x, DECK + 1.02, z, mats.coach);
+    for (let z = -len / 2 + 0.1; z <= len / 2; z += 1.2) box(g, 0.18, 0.8, 0.18, x, DECK + 1.02, z, mats.trim);
+    box(g, 0.16, 0.12, len, x, DECK + 1.02, 0, mats.trim);
     box(g, 0.14, 0.5, len, x, DECK + 1.82, 0, mats.coach);
   }
   for (const z of [-len / 2 + 0.07, len / 2 - 0.07]) {
@@ -114,6 +132,7 @@ function car(mats) {
   }
   box(g, W + 0.2, 0.16, len + 0.2, 0, DECK + 2.32, 0, mats.roof);
   box(g, W - 0.6, 0.14, len, 0, DECK + 2.48, 0, mats.roof);
+  box(g, W - 1.4, 0.12, len - 0.4, 0, DECK + 2.62, 0, mats.roof);
   // Its passengers (world/Passengers.js): ten seats, five down each side,
   // a head and shoulders showing in the windows — hidden till someone sits.
   const seats = [];
@@ -134,6 +153,7 @@ export class TrainView {
     this.mats = {
       iron: mat(IRON), boiler: mat(BOILER), brass: mat(BRASS), red: mat(RED), wheel: mat(WHEEL),
       coach: mat(COACH), trim: mat(COACH_TRIM), roof: mat(ROOF),
+      lamp: new THREE.MeshBasicMaterial({ color: 0xffe9a8 }),
       // See-through, so the passengers show (world/Passengers.js).
       glass: new THREE.MeshLambertMaterial({ color: GLASS, transparent: true, opacity: 0.4, depthWrite: false }),
       skin: mat(0xd9a77c), coats: [0x7a2f3a, 0x3f5a7a, 0x5f7a3e, 0x8a6a44, 0x6d4a7a].map(mat),
