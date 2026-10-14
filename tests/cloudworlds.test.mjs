@@ -210,6 +210,7 @@ await test('an endless Duilt world survives save and restore', async () => {
   // Build something, the way a player actually would.
   world.setBlock(3, 20, 3, 4);
   world.setBlock(3, 21, 3, 4);
+  world.setBlock(4, 20, 3, 26); // a lantern
   // Walk around, generating land nobody touched. This must never end up in
   // the upload — see SyncEngine's touched-only rule for endless worlds.
   world.ensureAround(0, 0, 120);
@@ -243,6 +244,9 @@ await test('an endless Duilt world survives save and restore', async () => {
   assert.equal(restored.world.gen.seed, 99, 'the same seed, or unexplored land would not match what it was');
   assert.equal(restored.world.getBlock(3, 20, 3), 4, 'a block the player actually placed');
   assert.equal(restored.world.getBlock(3, 21, 3), 4);
+  // Reported directly: "Old lanterns in my world stopped throwing light" —
+  // the chunks came back but the world was never told where their lights were.
+  assert.ok(restored.world.lights.has('4,20,3'), 'a lantern saved to the account still lights when the world is opened again');
   assert.deepEqual(restored.duilt, duiltState, 'the bag, the buildings, the age — not a blank map');
   assert.equal(restored.economy.wood, 12);
   assert.equal(restored.mode, 'duilt');

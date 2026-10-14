@@ -17,9 +17,21 @@ const NO_COLLISION_SHAPES = new Set(['rug', 'rail', 'gate_open', 'door_open', 'd
 // Taller than its cell: a fence, or a shut gate, stops you at a block and a
 // half — past jumping, and past anything an animal can step.
 const FENCE_HEIGHT = 1.5;
-/** Blocks something keeps track of wherever they are: 1 casts light, 2 smokes (a chimney). */
+/**
+ * Blocks something keeps track of wherever they are: 1 casts light, 2 smokes
+ * (a chimney), 4 is a light the land makes itself — lava, a glowing ore —
+ * rather than one somebody set there. See scanLights.
+ */
 const MARKED = new Uint8Array(ID_COUNT);
-for (const [id, b] of BLOCKS_BY_ID) MARKED[id] = (b.light ? 1 : 0) | (b.smoke ? 2 : 0);
+for (const [id, b] of BLOCKS_BY_ID) {
+  MARKED[id] = (b.light ? 1 : 0) | (b.smoke ? 2 : 0) | (b.light && (isFluid(id) || /Ore$/.test(b.name)) ? 4 : 0);
+}
+
+/** Where cell `i` of a chunk's data is (the inverse of Chunk.index). */
+function cellOf(i) {
+  const row = (i / CHUNK_SIZE) | 0;
+  return { lx: i % CHUNK_SIZE, lz: row % CHUNK_SIZE, ly: (row / CHUNK_SIZE) | 0 };
+}
 
 export class Chunk {
   constructor(cx, cz, height) {
@@ -173,6 +185,11 @@ export class World {
     const chunk = new Chunk(cx, cz, this.height);
     this.chunks.set(key, chunk);
     this.gen.fill(this, chunk);
+    // A place the land comes with — a city's lanterns, a camp's fire — is
+    // written straight into the chunk, never through setBlock, so it would
+    // never light. Not lava or glowing ore: there's no end of those down
+    // there, and they're not what anybody is looking for a glow from.
+    this.scanLights(chunk, { placedOnly: true });
     return chunk;
   }
 
@@ -328,20 +345,38 @@ export class World {
     else this.smokes.delete(key);
   }
 
-  /** Finds every light-emitting block already in a chunk's data — see `lights`. */
-  scanLights(chunk) {
+  /**
+   * Finds every light-emitting block (and chimney) already in a chunk's data
+   * — see `lights`. Anything that writes a chunk's data other than through
+   * setBlock has to call this after: loading a save, from this device or
+   * the account, and generation. `placedOnly` leaves out lava and glowing
+   * ore (see MARKED).
+   */
+  scanLights(chunk, { placedOnly = false } = {}) {
     const baseX = chunk.cx * CHUNK_SIZE, baseZ = chunk.cz * CHUNK_SIZE;
-    for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-      for (let ly = 0; ly < chunk.height; ly++) {
-        for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-          const id = chunk.get(lx, ly, lz);
-          if (!MARKED[id]) continue;
-          const x = baseX + lx, z = baseZ + lz, key = `${x},${ly},${z}`;
-          const light = lightOf(id);
-          if (light) this.lights.set(key, { x, y: ly, z, light });
-          if (MARKED[id] & 2) this.smokes.set(key, { x, y: ly, z });
-        }
-      }
+    const data = chunk.data;
+    for (let i = 0; i < data.length; i++) {
+      const m = MARKED[data[i]];
+      if (!m || (placedOnly && m & 4)) continue;
+      const id = data[i];
+      const { lx, ly, lz } = cellOf(i);
+      const x = baseX + lx, z = baseZ + lz, key = `${x},${ly},${z}`;
+      const light = lightOf(id);
+      if (light) this.lights.set(key, { x, y: ly, z, light });
+      if (m & 2) this.smokes.set(key, { x, y: ly, z });
+    }
+  }
+
+  /** Lets go of a chunk's lights and chimneys: it's leaving memory, or about to be written over. */
+  forgetLights(chunk) {
+    const baseX = chunk.cx * CHUNK_SIZE, baseZ = chunk.cz * CHUNK_SIZE;
+    const data = chunk.data;
+    for (let i = 0; i < data.length; i++) {
+      if (!MARKED[data[i]]) continue;
+      const { lx, ly, lz } = cellOf(i);
+      const key = `${baseX + lx},${ly},${baseZ + lz}`;
+      this.lights.delete(key);
+      this.smokes.delete(key);
     }
   }
 
@@ -391,6 +426,7 @@ export class World {
       const dx = chunk.cx - px, dz = chunk.cz - pz;
       if (dx * dx + dz * dz <= c * c) continue;
       this.chunks.delete(key);
+      this.forgetLights(chunk);
       dropped.push(chunk);
     }
     return dropped;
@@ -473,6 +509,7 @@ export class World {
         // Generate the land first, then lay the player's changes over it, so a
         // chunk they half-dug keeps the ground around the hole.
         const chunk = world.getChunk(c.cx, c.cz);
+        world.forgetLights(chunk);
         chunk.data = rleDecode(c.rle, chunk.data.length);
         chunk.touched = true;
         chunk.dirty = true;
@@ -490,6 +527,7 @@ export class World {
     for (const c of json.chunks) {
       const chunk = world.getChunk(c.cx, c.cz);
       if (!chunk) continue;
+      world.forgetLights(chunk);
       chunk.data = rleDecode(c.rle, chunk.data.length);
       chunk.dirty = true;
       world.scanLights(chunk);

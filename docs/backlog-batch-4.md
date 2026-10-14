@@ -99,6 +99,15 @@ What's there now was checked in the code before writing this.
   - A Plainer an older save left parked is still there. Hit it to pick it
     up, then wear it.
 
+- **Saved lanterns light again** (PR #183). Reported directly: "Old
+  lanterns in my world stopped throwing light".
+  - A world opened from the account never told the game where its saved
+    lanterns were, so only ones placed since lit.
+  - The places the land comes with (cities, camps, tribes, outposts) never
+    lit either: their lanterns were written straight into the land.
+  - Both are scanned now. Lava and glowing ore aren't, so there's no flood
+    of lights underground.
+
 ## B. Goals and ages: 12 ages
 
 **Done in PR #168,** with A6 (the goals). As built:

@@ -37,4 +37,46 @@ const beside = lightGroups([lamp(-1, 2, 0), ...town], { x: 0, y: 2, z: 0 }, { x:
 ok('one right beside you is lit even behind you', beside.some((g) => g.members.some((m) => m.entry.x === -1)));
 ok('nothing lit, nothing asked', lightGroups([], me).length === 0);
 
+// --- lanterns the world doesn't hear about ---------------------------------------------------------
+// Reported again: "Old lanterns in my world stopped throwing light". Opened
+// from the account, a world's saved chunks were written straight in and
+// never scanned (cloudworlds.test checks that path); and the places the
+// land comes with — a city's lanterns, a camp's fire — are written straight
+// into a chunk as it's made, so they never lit at all.
+{
+  const { World } = await import('../src/world/World.js');
+  const { ChunkGen, WORLD_HEIGHT } = await import('../src/world/ChunkGen.js');
+  const { landmarksFor } = await import('../src/world/landmarks.js');
+  const { LANTERN_ID } = { LANTERN_ID: 26 };
+  let city = null, gen = null;
+  for (const seed of [41, 2024, 7, 99]) {
+    gen = new ChunkGen({ seed, height: WORLD_HEIGHT });
+    city = landmarksFor(gen).find((l) => l.kind === 'city');
+    if (city) break;
+  }
+  const world = new World({ height: WORLD_HEIGHT, gen });
+  const cx = city.x >> 4, cz = city.z >> 4;
+  for (let a = -2; a <= 2; a++) for (let b = -2; b <= 2; b++) world.getChunk(cx + a, cz + b);
+  const lit = [...world.lights.values()].filter((e) => world.getBlock(e.x, e.y, e.z) === LANTERN_ID);
+  ok(`a city's lanterns light as soon as its land is made (${lit.length})`, lit.length >= 8);
+  ok('  every light the world knows of is really there', [...world.lights.values()].every((e) => lightOf(world.getBlock(e.x, e.y, e.z))));
+  ok('  but not lava or glowing ore deep down — no end of those, nobody looks to them for light',
+    [...world.lights.values()].every((e) => ![45, 116, 117, 118, 191, 192].includes(world.getBlock(e.x, e.y, e.z))));
+  const before = world.lights.size;
+  world.forgetBeyond(city.x + 5000, city.z, 64);
+  ok(`walked away from, its lights go with its land (${before} → ${world.lights.size})`, world.lights.size === 0);
+  world.getChunk(cx, cz);
+  ok('  and come back with it', world.lights.size > 0);
+  // A save laid over made land: the lanterns in the save, not the ones it was made with.
+  const c = world.getChunk(cx, cz);
+  const json = { endless: true, height: WORLD_HEIGHT, seed: gen.seed, homeX: gen.biomes.centreX, homeZ: gen.biomes.centreZ, chunks: [] };
+  const { rleEncode } = await import('../src/world/World.js');
+  const data = c.data.slice();
+  for (let i = 0; i < data.length; i++) if (data[i] === LANTERN_ID) data[i] = 0;   // every lantern broken
+  json.chunks.push({ cx, cz, rle: rleEncode(data), surface: Array.from(c.surface) });
+  const back = World.deserialize(json, { makeGen: () => new ChunkGen({ seed: gen.seed, height: WORLD_HEIGHT, homeX: gen.biomes.centreX, homeZ: gen.biomes.centreZ }) });
+  const inChunk = [...back.lights.values()].filter((e) => e.x >> 4 === cx && e.z >> 4 === cz);
+  ok('lanterns broken before saving don\'t come back as lights from the land they were made with', inChunk.every((e) => lightOf(back.getBlock(e.x, e.y, e.z))) && !inChunk.some((e) => back.getBlock(e.x, e.y, e.z) === LANTERN_ID));
+}
+
 process.exit(f ? 1 : 0);
