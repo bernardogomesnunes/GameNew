@@ -29,7 +29,7 @@ const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8
   ok('done: back as it was', btn.innerHTML === 'Save and leave' && !btn.disabled && !classes.has('busy') && !attrs['aria-busy']);
 }
 ok('Save and leave shows it while it saves, and only then leaves',
-  /#btn-leave'\)\.addEventListener\('click', async[\s\S]{0,200}setBusy\(btn, 'Saving…'\);[\s\S]{0,80}await this\.cb\.onLeaveWorld\?\.\(true\);[\s\S]{0,120}this\.openHome\(\);/.test(ui));
+  /#btn-leave'\)\.addEventListener\('click', async[\s\S]{0,200}setBusy\(btn, 'Saving…'\);[\s\S]{0,400}await this\.cb\.onLeaveWorld\?\.\(true\);[\s\S]{0,300}this\.openHome\(\);/.test(ui));
 ok('the spinner is pixel-style: a square turning a quarter at a time', /\.px-spinner \{[\s\S]*steps\(4\)/.test(css) && /@keyframes px-spin/.test(css));
 
 // --- the wait ------------------------------------------------------------------------------------

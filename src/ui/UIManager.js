@@ -28,6 +28,7 @@ import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 import { CLEARS, clearArtSvg } from '../config/clears.js';
 import { Minimap } from '../render/Minimap.js';
 import { drawWorldMap, MAP_ZOOMS } from '../render/WorldMap.js';
+import { nextPaint } from './loading.js';
 import { SHOWCASE_SPOTS, SHOWCASE_TIMES } from '../world/showcase.js';
 
 /**
@@ -126,6 +127,8 @@ const LOOK_HOLD_MS = 300;
  * the slowest block by hand (Game's BARE_HAND_MS) plus the hold's delay.
  */
 const TAP_FINISH_MS = 2600;
+/** The least time Save and leave shows its spinner, so a quick save is seen to happen. */
+const SAVE_SPIN_MS = 500;
 
 /**
  * How much use a tool has left, as a bar under it (asked for directly: "Let's
@@ -729,7 +732,9 @@ export class UIManager {
       // only granted to a gesture — and the world arrives from the account a
       // moment later.
       onOpen: (id) => { this.enterWorld(); this.cb.onOpenWorld(id); },
-      onCreate: (mode, name) => { this.cb.onNewWorld(mode, name); this.enterWorld(); },
+      // The loading screen covers the making (Game.withLoading), so entering
+      // can come first, inside the tap.
+      onCreate: (mode, name) => { this.enterWorld(); this.cb.onNewWorld(mode, name); },
       onRemove: async (id, label) => {
         const yes = await this.confirm({ title: `Delete "${label}"?`, body: 'Everything built in it goes with it, and this cannot be undone.', ok: 'Delete', danger: true });
         if (!yes) return false;
@@ -869,8 +874,14 @@ export class UIManager {
       const btn = e.currentTarget;
       if (btn.classList.contains('busy')) return;
       setBusy(btn, 'Saving…');
+      // Drawn before the save, not after: saving to this browser happens all
+      // at once and holds the page, so the spinner never showed. And held a
+      // moment, so a quick save is seen to have happened.
+      const shown = performance.now();
+      await nextPaint();
       try {
         await this.cb.onLeaveWorld?.(true);
+        await new Promise((r) => setTimeout(r, Math.max(0, SAVE_SPIN_MS - (performance.now() - shown))));
       } finally {
         setBusy(btn, null);
       }
