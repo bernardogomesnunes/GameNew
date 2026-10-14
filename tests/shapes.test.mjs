@@ -52,7 +52,9 @@ const LANTERN = 26, SLAB_STONE = 27, STAIRS_STONE = 29, CHAIR_OAK = 33, RUG_GREE
   const NATURAL = new Set([38, 39, 40, 41, 42, 43, 44, 45, 46, 147, 191, 192, 235, 236, 237, 238, 250, 251, 379]);
   // A block that's only another one in a different state (an open gate) has
   // no item of its own — see blocks.js's `stateOf`.
-  const newBlockIds = BLOCKS.filter((b) => b.id >= 26 && b.stateOf == null).map((b) => b.id);
+  // Nor does world furniture nobody places — Godstone and the way out of
+  // the god's cube (world/godCube.js), like bedrock.
+  const newBlockIds = BLOCKS.filter((b) => b.id >= 26 && b.stateOf == null && !b.system).map((b) => b.id);
   for (const id of newBlockIds) {
     const item = [...ITEMS_BY_ID.values()].find((i) => i.block === id);
     ok(`block ${BLOCKS_BY_ID.get(id).name} has an item that places it`, !!item);

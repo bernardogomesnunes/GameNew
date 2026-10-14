@@ -396,6 +396,13 @@ export const ITEMS = [
     id: 'ring_black', name: 'Black Ring', kind: 'ring', stackTo: STACK_TOOL, color: 0x3a3045, glyph: 'ring', wears: 'ring', ring: 'black',
     madeBy: 'Obsidian and Nightstone, forged at the High Temple — a dark spark hurts whoever strikes you',
   },
+  // The god's stash (world/godCube.js): the wand. Break picks the block you
+  // point at to copy, or, at anything further off, looses a beam; Place
+  // puts down a copy of the picked block, for a coin.
+  {
+    id: 'god_wand', name: 'The God\'s Wand', kind: 'tool', stackTo: STACK_TOOL, color: 0xc8b0ff, glyph: 'wand',
+    durability: null, madeBy: 'Taken from a god\'s stash, in his cube',
+  },
   // The collection book's last reward (duilt/Collection.js): worn, as good
   // as a diamond helm, and it never wears out.
   {

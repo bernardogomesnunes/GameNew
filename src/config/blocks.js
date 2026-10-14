@@ -851,6 +851,14 @@ BLOCKS.push(
   { id: RUBY_ORE, name: 'Ruby Ore', glyph: 'crystal', color: 0xa08a8c, material: 'stone', drops: 'ruby', unlock: null },
 );
 
+// The god's cube (world/godCube.js): Godstone, that nothing breaks — a
+// system block, like bedrock — and the way out, a glowing gate in its wall.
+BLOCKS.push(
+  { id: 252, name: 'Godstone', glyph: 'stone', color: 0x766b8f, material: 'stone', system: true, unlock: null },
+  { id: 253, name: 'Way Out', glyph: 'stone', color: 0xbfa6ff, material: 'stone', system: true, unlock: null,
+    light: { color: 0xc8b0ff, intensity: 4, distance: 16, decay: 1 } },
+);
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**

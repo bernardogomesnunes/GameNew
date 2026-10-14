@@ -111,6 +111,20 @@ in blocks.
 
 ## C. Main story: the gods' resolution
 
+**Done in PR #177:**
+- On a Sanctuary's pop-up, "Step through to his cube" once the war is won
+  (white ring) or the sky has fallen (dark ring).
+- A 100×100 hall, 40 tall, of Godstone nothing breaks, far out and high up.
+  Pillars, lights, an altar with his stash, and a glowing Way Out in the
+  south wall.
+- The god: 600 hp, hits hard, no knockback. Every 14 s he calls up to 3
+  shades or seraphs (8 at most alive), twice as often below half.
+- The Way Out lets you go only once he's dead or his stash is taken.
+- The stash: 2,500–3,000 coins, 4–8 diamonds and the God's Wand.
+- The wand: Break on a block picks it, Place puts down a copy (1 coin
+  each). Break at anyone or at open air fires a beam, 12 damage. On a
+  phone, once a block is picked a tap on a block places.
+
 Asked for directly: "No matter which one you'd choose, you need to fight the
 other one."
 

@@ -358,6 +358,12 @@ ITEM_MODELS.flying_machine = [
 
 // Trains (Age 5): a lump of coal; the steam engine, boiler forward and cab
 // behind on a black frame; a rail car, a wooden coach with its roof.
+// The god's wand (world/godCube.js): a pale staff, a star at its tip.
+ITEM_MODELS.god_wand = [
+  box(0.46, 0, 0.46, 0.54, 0.7, 0.54, 0xd8cbb0), box(0.44, 0.1, 0.44, 0.56, 0.16, 0.56, 0xe8c04f),
+  box(0.4, 0.7, 0.4, 0.6, 0.9, 0.6, 0xc8b0ff), box(0.46, 0.66, 0.34, 0.54, 0.94, 0.66, 0xe6dcff), box(0.34, 0.76, 0.46, 0.66, 0.84, 0.54, 0xe6dcff),
+];
+
 // The Collector's Crown (duilt/Collection.js): a gold band with points.
 ITEM_MODELS.collector_crown = [
   box(0.24, 0.1, 0.24, 0.76, 0.3, 0.76, 0xf2c94c), box(0.3, 0.12, 0.3, 0.7, 0.28, 0.7, 0x6b4a1e),

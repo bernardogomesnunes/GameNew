@@ -212,6 +212,39 @@ export const WANDERERS = {
     leash: 40,
     drops: { hemp_fibre: [1, 3], fruit: [0, 2], arrow: [1, 4] },
   },
+  // The gods, in their cube (world/godCube.js) — whichever one you didn't
+  // choose. Huge in strength, slow, heavy blows raised where you can see
+  // them; every so often they call their creatures, faster when they're hurt.
+  dark_god: {
+    noun: 'the dark god', about: 'the dark god', aboutHostile: 'the dark god — beat him, or take his stash and run',
+    colours: [0x1d1a22], helm: 0x2a2430,
+    speed: 2.2, roam: 4,
+    hp: 600, hits: 6, reach: 2.6, every: 1.6, windup: 0.8,
+    aggro: 70, run: 3.4, fleeBelow: -1, leash: 400,
+    god: true, minion: 'shade', noKnock: true,
+    drops: { coin: [400, 600], diamond: [3, 6], nightstone: [2, 4] },
+  },
+  white_god: {
+    noun: 'the white god', about: 'the white god', aboutHostile: 'the white god — beat him, or take his stash and run',
+    colours: [0xf4efe2], helm: 0xe8c04f,
+    speed: 2.2, roam: 4,
+    hp: 600, hits: 6, reach: 2.6, every: 1.6, windup: 0.8,
+    aggro: 70, run: 3.4, fleeBelow: -1, leash: 400,
+    god: true, minion: 'seraph', noKnock: true,
+    drops: { coin: [400, 600], diamond: [3, 6], sunstone: [2, 4] },
+  },
+  shade: {
+    noun: 'a shade', about: 'a shade of the dark god', aboutHostile: 'a shade of the dark god — hit to fight',
+    colours: [0x2a2430, 0x231f2a], helm: 0x16131a,
+    speed: 2.6, roam: 6, hp: 22, hits: 3, reach: 1.8, every: 1.2, aggro: 70, run: 3.6, fleeBelow: -1, leash: 400,
+    drops: { coin: [2, 6] },
+  },
+  seraph: {
+    noun: 'a seraph', about: 'a seraph of the white god', aboutHostile: 'a seraph of the white god — hit to fight',
+    colours: [0xf6f1df, 0xeef0f5], helm: 0xe8c04f,
+    speed: 2.6, roam: 6, hp: 22, hits: 3, reach: 1.8, every: 1.2, aggro: 70, run: 3.6, fleeBelow: -1, leash: 400,
+    drops: { coin: [2, 6] },
+  },
   // The living cities (world/cities.js): citizens in the streets, guards at
   // the gates, merchants at the stalls. Neutral — strike one, or take from
   // a chest in their city, and the guards come for you and the rest run.

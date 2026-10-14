@@ -164,7 +164,7 @@ const flat = () => {
 
 ok('their chest holds what the forest gives, and bows', LOOT.tribe.items.every(([id]) => ITEMS_BY_ID.has(id)) && LOOT.tribe.items.some(([id]) => id === 'bow'));
 ok('taking from it is noticed', /if \(c && !d\.chestAt\(c\.x, c\.y, c\.z\)\?\.grave\) this\.game\.tookFromChest\?\.\(c\);/.test(ui)
-  && /tookFromChest\(\{ x, z \}\)[\s\S]{0,400}l\.kind === 'tribe'[\s\S]{0,300}this\.wanderers\.anger\(lm\)/.test(game));
+  && /tookFromChest\(\{ x, z \}\)[\s\S]{0,900}l\.kind === 'tribe'[\s\S]{0,300}this\.wanderers\.anger\(lm\)/.test(game));
 ok('they\'ll talk, while they\'re not angry with you', /TALKERS = new Set\(\[[^\]]*'tribe'/.test(game) && /!p\.angry && !p\.dead/.test(game)
   && TRIBE_TALK.includes(talkLine({ who: 'tribe', person: { id: 1 } })));
 

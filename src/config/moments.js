@@ -48,6 +48,22 @@ export const MOMENTS = {
     title: 'A forgotten altar',
     text: 'Someone prayed here once, to a god whose name has worn off the stone. The offering left on the altar is still there. Nobody came back for it.',
   },
+  cube_dark: {
+    title: 'The dark god\'s cube',
+    text: 'Walls of Godstone that nothing breaks, a hall of black pillars, and at the far end, before his altar, the dark god himself. He has waited a long time for the one who chose the light.',
+  },
+  cube_white: {
+    title: 'The white god\'s cube',
+    text: 'Marble and gold and a light with no sun behind it. At the far end, before his altar, the white god turns to look at the one who swore to the dark.',
+  },
+  god_dark_beaten: {
+    title: 'The dark god falls',
+    text: 'The shades scatter like smoke. The dark god is gone, and the cube is quiet. Whatever comes next, it is yours to make.',
+  },
+  god_white_beaten: {
+    title: 'The white god falls',
+    text: 'The seraphs fade like breath on glass. The white god is gone, and the light in the cube goes out. The sky has no master now but you.',
+  },
   found_outpost: {
     title: 'The Kingdom, out here',
     text: 'A fort of dark brick, black banners on its towers, guards in dark iron at the gate. The Stone Kingdom keeps a watch even this far out — and keeps its armoury full.',

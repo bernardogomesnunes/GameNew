@@ -33,6 +33,11 @@ export const OUTFITS = {
   hermit: { hat: 'hood', hatColour: 0x6b6355, beard: 0xd9d4c8, gear: 'staff' },
   explorer: { hat: 'cap', hatColour: 0x7a5a3a, gear: 'staff' },
   messenger: { hat: 'cap', hatColour: 0x2f4f7a },
+  // The gods in their cube, and their creatures.
+  dark_god: { hat: 'crown', hatColour: 0x4a3a5a, cape: 0x1d1a22, beard: 0x2a2228, gear: 'sword', gearColour: 0x6a4a8a },
+  white_god: { hat: 'crown', hatColour: 0xe8c04f, cape: 0xfafafa, beard: 0xece6d8, gear: 'staff' },
+  shade: { hat: 'hood', hatColour: 0x16131a, gear: 'sword', gearColour: 0x4a3a5a },
+  seraph: { hat: 'helm', plume: 0xfafafa, gear: 'spear', gearColour: 0xe8c04f },
   // A living city's people.
   citizen: { hat: 'cap' },
   city_guard: { hat: 'helm', gear: 'spear', gearColour: 0xafafb7 },

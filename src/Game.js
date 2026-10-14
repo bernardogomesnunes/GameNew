@@ -73,6 +73,7 @@ import { CrackView } from './render/CrackView.js';
 import { LOGS, LEAVES, leafHeld, orphanLeaves } from './world/leafDecay.js';
 import { earnedLines } from './duilt/Notices.js';
 import { talkLine } from './config/talk.js';
+import { cubeSite, cubeDesign, WAY_OUT, CUBE_SIZE } from './world/godCube.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood, isTool, BARE_HANDS, ITEM_FOR_BLOCK } from './config/items.js';
 import { stationName } from './duilt/Crafting.js';
 import { MOBS_BY_ID } from './config/mobs.js';
@@ -118,6 +119,8 @@ import { Guardian } from './world/Guardian.js';
 import { settlerName, settlerColour } from './config/settlers.js';
 
 const REACH = 7;
+/** The god's wand's beam (useWand): how often, how fast, how hard. */
+const WAND_EVERY_MS = 350, WAND_BEAM_SPEED = 70, WAND_BEAM_DAMAGE = 12;
 /** Out in the world, who'll stop for a word (config/talk.js). */
 const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard']);
 /** The longest Save and leave waits for the upload before letting you go anyway. */
@@ -316,8 +319,8 @@ const CRACK_LINGER_MS = 450;
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', flying_machine: 'setDownMachine', locomotive: 'setDownTrain', rail_car: 'railCarHint' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', flying_machine: 'setDownMachine', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace' };
 /**
  * Whether saved progression `a` is further along than `b`. By level first:
  * `xp` is only what's been earned towards the next level, so comparing it
@@ -1506,6 +1509,13 @@ export class Game {
     const sandbox = mode !== DUILT;
     this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus, sandbox });
     if (sandbox) this.duilt.grantCreativeKit();
+    // Saved inside the god's cube: back out where you went in.
+    if (this.duilt.cube?.back) {
+      const b = this.duilt.cube.back;
+      this.player.position.set(b.x, b.y, b.z);
+      this.duilt.cube.inside = false;
+      delete this.duilt.cube.back;
+    }
     else this.duilt.grantStartingKit();
     // Every new world starts in the morning.
     if (this.dayCycle) this.dayCycle.time = MORNING;
@@ -2076,6 +2086,121 @@ export class Game {
     this.cabYaw = cab.yaw;
   }
 
+  // ---- the god's cube (world/godCube.js) ------------------------------------
+
+  /**
+   * Through your Sanctuary to the other god's cube, once the big wars are
+   * won: the cube laid out far over the world, the god before his altar and
+   * the first of his creatures with him, and you at its south wall.
+   */
+  enterCube() {
+    const d = this.duilt;
+    const refuse = d?.cubeRefuses();
+    if (!d || refuse) return void this.ui?.toast({ kind: 'xp', title: 'The way is shut', body: refuse ?? '' });
+    const home = { x: d.territory.centreX, z: d.territory.centreZ };
+    const site = cubeSite(this.world.gen, home);
+    const god = d.otherGod;
+    const plan = cubeDesign(god);
+    for (const [x, y, z, id] of plan.blocks) this.world.setBlock(site.x + x, site.y + y, site.z + z, id, { byHand: false });
+    const abs = (p) => ({ x: site.x + p.x, y: site.y + p.y, z: site.z + p.z });
+    // The stash, laid in once: the chest keeps what's left of it after.
+    const stash = abs(plan.stash);
+    if (!d.chestAt(stash.x, stash.y, stash.z, { create: false })) {
+      const chest = d.chestAt(stash.x, stash.y, stash.z);
+      chest.found = 'god_stash';
+      if (!d.cube.stash) for (const [id, , lo] of LOOT.god_stash.items) chest.inventory.add(id, lo);
+    }
+    const lm = { kind: 'cube', x: site.x + CUBE_SIZE / 2, z: site.z + CUBE_SIZE / 2, y: site.y + 1, half: CUBE_SIZE / 2, leave: 400, spawns: plan.spawns.map(abs) };
+    this.wanderers.list = this.wanderers.list.filter((p) => p.landmark?.kind !== 'cube');
+    const throne = abs(plan.throne);
+    const kind = `${god}_god`;
+    const godPerson = this.wanderers.person(kind, throne.x, throne.y, throne.z, { landmark: lm, home: { x: throne.x, z: throne.z }, angry: true, name: `the ${god} god`, facing: 0 });
+    this.wanderers.list.push(godPerson);
+    this.cube = { lm, god: godPerson, stash, exit: abs(plan.exit) };
+    const p = this.player.position;
+    d.cube.back = { x: p.x, y: p.y, z: p.z };
+    d.cube.inside = true;
+    const at = abs(plan.entry);
+    p.set(at.x, at.y, at.z);
+    this.player.velocity?.set?.(0, 0, 0);
+    this.player.yaw = 0;
+    this.tellMoment(god === 'dark' ? 'cube_dark' : 'cube_white');
+    this.ui?.toast({ kind: 'story', title: `The ${god} god's cube`, body: 'Beat him — or take his stash from the altar and get back to the way out alive.', duration: 8000 });
+    this.editedAt = Date.now();
+  }
+
+  /** Out through the way out — only once the god's beaten, or his stash taken. */
+  leaveCube() {
+    const d = this.duilt;
+    if (!d) return;
+    if (!d.cube.beaten && !d.cube.stash) {
+      return void this.ui?.toast({ kind: 'xp', title: 'The cube holds you', body: 'Beat the god, or take his stash — then the way out lets you go' });
+    }
+    this.backFromCube();
+    this.ui?.toast({ kind: 'achievement', title: 'Out of the cube', body: d.cube.beaten ? 'The other god is beaten. The world is yours.' : 'With his stash. He\'ll be waiting, if you ever go back.' });
+  }
+
+  /** Home through the Sanctuary, and the cube's people gone with it. */
+  backFromCube() {
+    const d = this.duilt;
+    const back = d?.cube.back ?? this.respawnPoint?.();
+    if (back) { this.player.position.set(back.x, back.y, back.z); this.player.velocity?.set?.(0, 0, 0); }
+    if (this.wanderers) this.wanderers.list = this.wanderers.list.filter((p) => p.landmark?.kind !== 'cube');
+    if (d) { d.cube.inside = false; delete d.cube.back; }
+    this.cube = null;
+    this.editedAt = Date.now();
+  }
+
+  /** Every frame: has the god fallen? */
+  cubeTick() {
+    const c = this.cube, d = this.duilt;
+    if (!c || !d) return;
+    if (c.god.dead && !d.cube.beaten) {
+      d.cube.beaten = true;
+      // His creatures go with him.
+      for (const q of this.wanderers.list) if (q.landmark === c.lm && !q.dead) q.done = true;
+      this.wanderers.list = this.wanderers.list.filter((q) => !(q.landmark === c.lm && q !== c.god));
+      this.tellMoment(c.god.kind === 'dark_god' ? 'god_dark_beaten' : 'god_white_beaten');
+      this.ui?.toast({ kind: 'achievement', title: `${c.god.kind === 'dark_god' ? 'The dark god' : 'The white god'} is beaten`, body: 'His stash is on the altar, and the way out is open', duration: 9000 });
+      this.editedAt = Date.now();
+    }
+  }
+
+  // ---- the god's wand --------------------------------------------------------
+
+  /**
+   * Break with the wand: a block in reach is picked to copy; anything else —
+   * somebody, or open air — gets a beam (a fast bolt that strikes hard).
+   */
+  useWand() {
+    const hit = this.raycast();
+    if (hit && !this.banditTarget(hit) && !this.mobTarget?.(hit) && !this.world.isIndestructible(hit.x, hit.y, hit.z)) {
+      this.wandBlock = hit.block;
+      return void this.ui?.toast({ kind: 'xp', title: `Wand: ${BLOCKS_BY_ID.get(hit.block)?.name ?? 'that'}`, body: 'Place puts down a copy — a coin each' });
+    }
+    const now = performance.now();
+    if (now - (this.lastShotAt ?? 0) < WAND_EVERY_MS) return;
+    this.lastShotAt = now;
+    const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+    this.arrows?.shoot({ x: eye.x + dir.x * 0.4, y: eye.y + dir.y * 0.4 - 0.08, z: eye.z + dir.z * 0.4 }, dir, WAND_BEAM_SPEED, WAND_BEAM_DAMAGE);
+    this.sound?.strike({ weapon: true });
+  }
+
+  /** Place with the wand: a copy of the picked block, for a coin, in your own land. */
+  wandPlace() {
+    const d = this.duilt;
+    if (!this.wandBlock) return void this.ui?.toast({ kind: 'xp', title: 'Nothing picked', body: 'Break with the wand on a block to pick it' });
+    const hit = this.raycast();
+    if (!hit) return;
+    const t = { x: hit.placeX, y: hit.placeY, z: hit.placeZ };
+    if (!this.world.inBounds(t.x, t.y, t.z) || this.blockOverlapsPlayerAABB(t)) return;
+    const prev = this.world.getBlock(t.x, t.y, t.z);
+    if (prev !== AIR && !isFluid(prev)) return;
+    const paying = d && !d.sandbox;
+    if (paying && !d.inventory.has('coin', 1)) return void this.ui?.toast({ kind: 'xp', title: 'No coins', body: 'Each copy costs a coin' });
+    if (this.applyChanges([{ ...t, prev, next: this.placedBlock(this.wandBlock) }], { chargeResources: false }) && paying) d.inventory.remove('coin', 1);
+  }
+
   /** " · 6 aboard for Ashford" — who's riding in a car, and where to. */
   ridersText(train, car) {
     const rs = (train.riders ?? []).filter((r) => r.car === car);
@@ -2292,9 +2417,12 @@ export class Game {
     if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
       || aimed.block === STORAGE_CONTROLLER || stationOf(aimed.block)
-      || aimed.block === SKY_LIFT || isCatapult(aimed.block)
+      || aimed.block === SKY_LIFT || aimed.block === WAY_OUT || isCatapult(aimed.block)
       || (aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)))) return places();
     const item = this.selectedItemId;
+    // The wand: a tap puts down a copy once a block's picked; a hold (Break)
+    // picks one, or looses a beam.
+    if (item === 'god_wand') return this.wandBlock && aimed ? places() : breaks();
     if (PLACE_OVERRIDE[item] && !BREAK_OVERRIDE[item]) return places();
     if (item) return breaks();
     return places();
@@ -2356,6 +2484,8 @@ export class Game {
     if (aimed && aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)) return void this.swearOath();
     // At an anchor tower's lift (or one on the island), up or down it goes.
     if (aimed && aimed.block === SKY_LIFT) return void this.rideLift(aimed);
+    // The way out of the god's cube.
+    if (aimed && aimed.block === WAY_OUT) return void this.leaveCube();
     // And at a catapult, Place takes hold of it.
     if (aimed && isCatapult(aimed.block)) return void this.manCatapult(aimed);
     // A full bucket takes the button too, instead of placing a block.
@@ -2705,6 +2835,7 @@ export class Game {
       onOpenStore: () => this.ui.openStore(structure),
       onOpenStores: () => this.ui.openStores(),
       onEvolve: () => this.evolveBuilding(structure),
+      onCube: () => this.enterCube(),
       onSow: (kind) => this.sowFarm(structure, kind, true),
       onUnsow: (kind) => this.sowFarm(structure, kind, false),
       // A barracks (batch 3, #29): who to train, and how many bunks it has.
@@ -5698,6 +5829,13 @@ export class Game {
    */
   tookFromChest({ x, z }) {
     if (!this.world.gen || !this.wanderers) return false;
+    // The god's stash: taken, and the way out opens.
+    const stash = this.cube?.stash;
+    if (stash && x === stash.x && z === stash.z && this.duilt && !this.duilt.cube.stash) {
+      this.duilt.cube.stash = true;
+      this.ui?.toast({ kind: 'achievement', title: 'The god\'s stash is yours', body: 'The way out will let you go now — get to it alive', duration: 7000 });
+      return true;
+    }
     const lm = landmarksFor(this.world.gen).find((l) => (l.kind === 'tribe' || l.kind === 'city' || l.kind === 'outpost') && Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1);
     if (!lm) return false;
     const already = this.wanderers.list.some((p) => p.landmark === lm && p.angry && !p.dead);
@@ -6533,6 +6671,7 @@ export class Game {
       this.tickPilot();
       this.duilt?.trains.tick(dt, { endless: this.duilt.inventory.endless });
       this.tickDrive();
+      this.cubeTick();
       this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
         this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
