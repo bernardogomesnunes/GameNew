@@ -110,6 +110,35 @@ Forge the Black Ring and the Stone King becomes your ally.
 - **Ending (by force):** "You struck the Sky King down in his own throne room. The Stone King named you Lord of the Sky." His empty throne and fallen crown, the island under black banners, and you as Lord of the Sky.
 - **Ending (by chains):** "You cut the four chains, and the island sank until its King came down and gave it up." The island sinking, its King coming down, and you as Lord of the Sky.
 
+## The god's cube: the last fight
+
+After the big wars, you must face the god you did not choose. No matter which ring you wear, you fight the other one.
+
+- **How to get there:** open your Sanctuary's pop-up and choose "Step through to his cube". It appears once the war is won (white path) or the Sky Kingdom has fallen (dark path).
+- **The place:** a hall 100 blocks wide and 40 tall, made of Godstone that nothing can break, far out and high up. It has pillars, lights, an altar holding his stash, and a glowing **Way Out** in the south wall.
+- **White path:** you face the dark god, in a hall of black pillars.
+- **Dark path:** you face the white god, in a hall of marble, gold and light with no sun behind it.
+
+| | The dark god | The white god |
+|---|---|---|
+| Health | 600 | 600 |
+| Fights with | Shades (22 health, hit for 3) | Seraphs (22 health, hit for 3) |
+| Drops if killed | 400 to 600 coins, 3 to 6 diamonds, 2 to 4 Nightstone | 400 to 600 coins, 3 to 6 diamonds, 2 to 4 Sunstone |
+
+Each god is huge, slow and hits hard, raising heavy blows where you can see them. Nothing knocks him back. Every 14 seconds he calls up to 3 of his creatures (8 at most alive at once), and twice as often once he is below half health.
+
+**Two ways out.** The Way Out lets you leave only once he is dead or his stash has been taken.
+
+1. **Kill the god.** A boss fight in waves.
+2. **Steal his stash** from the altar and reach the Way Out alive. The stash holds 2,500 to 3,000 coins, 4 to 8 diamonds and **The God's Wand**.
+
+**The God's Wand.**
+
+- Break on a block picks it.
+- Place puts down a copy of the picked block. Each copy costs 1 coin.
+- Break at anyone, or at open air, fires a beam for 12 damage.
+- On a phone, once a block is picked, a tap on a block places a copy.
+
 ## Characters
 
 | Who | Role |
@@ -118,6 +147,7 @@ Forge the Black Ring and the Stone King becomes your ally.
 | The Stone King | Rules the Stone Kingdom from a throne in the red keep. Wants the sky |
 | The Sky King | Rules the Sky Kingdom from a golden throne. Will not give it up |
 | The Warlord (Vorhak) | The Stone army's general. Rides a black beast. Leads round 10 |
+| The dark god and the white god | Meet in the god's cube, whichever you did not choose |
 | Aurelion | The white stag of light, guardian of the White Sanctuary |
 | Umbra | The shadow beast, guardian of the Black Sanctuary |
 | Grub | A goblin trader who keeps a stall at the market. "His family has kept a stall at every crossroads since before the kingdoms" |
@@ -187,6 +217,10 @@ Each is told once per world, the first time it happens, and kept in your Lore ta
 | A stone that remembers (a monument) | "A great stone raised for something nobody remembers. Whatever it was, it mattered enough to drag all this here." |
 | Bandit fires (a bandit camp) | "Tents, a fire pit, and whatever they took from the road piled up beside it. They've been watching your settlement from here. Now you're watching back." |
 | Smoke from a chimney (the hermit's hut) | "A little hut with smoke from its chimney, and a garden gone half wild. The hermit who wrote to you all this time lives here." |
+| The dark god's cube (stepping in on the white path) | "Walls of Godstone that nothing breaks, a hall of black pillars, and at the far end, before his altar, the dark god himself. He has waited a long time for the one who chose the light." |
+| The white god's cube (stepping in on the dark path) | "Marble and gold and a light with no sun behind it. At the far end, before his altar, the white god turns to look at the one who swore to the dark." |
+| The dark god falls | "The shades scatter like smoke. The dark god is gone, and the cube is quiet. Whatever comes next, it is yours to make." |
+| The white god falls | "The seraphs fade like breath on glass. The white god is gone, and the light in the cube goes out. The sky has no master now but you." |
 | The Stone Kingdom (finding it) | "Dark walls and a red tower, and an old road running straight to its gate. From out here it looks patient, like something that has never once had to hurry." |
 
 ## The lore book

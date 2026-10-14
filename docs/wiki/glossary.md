@@ -13,6 +13,8 @@
 | Devotion | Resource made at a Temple from worshippers and offerings |
 | Evolve | Raise a building to its next level |
 | Game day | 15 real minutes |
+| God's cube | The sealed hall of Godstone where you face the god you did not choose |
+| Godstone | A block nothing can break, which the god's cube is made of |
 | Goal | A requirement of an age. Finishing all of an age's goals moves the border out |
 | Guardian | The beast your god sends when you raise a Sanctuary |
 | Hotbar | The first nine bag slots, selected with keys 1 to 9 |
@@ -26,5 +28,6 @@
 | Station | A building or block where certain recipes can be made |
 | Tier | A material grade of a tool, or a level of a building |
 | Tale | A line of story told by a messenger or the hermit |
+| Wand | The God's Wand: copies a picked block for a coin, and fires a beam |
 | Warrior | One of the 1,000 given by the Stone King (or the cheap barracks soldier) |
 | Workbench | The crafting panel (E) |

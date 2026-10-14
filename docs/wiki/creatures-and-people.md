@@ -57,6 +57,8 @@ Tap a person to hear a line or two. Tap again for the next.
 | Siege catapult | 30 | | Lobs stones at buildings from 26 blocks |
 | Black beast | 50 | 4 | The Warlord's mount |
 | The Warlord (Vorhak) | 80 | 5 | Leads round 10 of the war |
+| The dark god or the white god | 600 | 6 | Waits in the god's cube. Slow, no knockback, calls creatures every 14 seconds |
+| Shade or seraph | 22 | 3 | The god's creatures. Up to 3 per call, 8 alive at most |
 | Sky Kingdom guard | 22 | 3 | Guards the floating island |
 | Royal guard | 28 | 3 | Two always stand beside the Sky King |
 | The Sky King | 70 | 4 | Rules the floating island. Raises his arms and glows white before a heavy blow |

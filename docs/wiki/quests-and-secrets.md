@@ -98,7 +98,7 @@ One-off lines of story, told the first time something happens in a world. Each i
 The Book tab in the Goals panel ticks off every item you have ever held in this world. It does not count rings, upgraded pieces or the crown itself. Tap an item for what it is and who sells it.
 
 
-The book holds **246 items** in five groups.
+The book holds **247 items** in five groups.
 
 | Share of the book | Reward |
 |---|---|
@@ -120,9 +120,9 @@ Planks, Turned Soil, Brick, Glass, Marble, String, Arrow, Brick Roof Tiles, Ston
 
 Fruit, Carrots, Coffee Beans, Potatoes, Cabbage, Lettuce, Peppers, Zucchini, Broccoli, Raw Meat, Cooked Meat, Egg, Milk, Beer, Kombucha, Coffee, Holy Water.
 
-### Tools and weapons (30)
+### Tools and weapons (31)
 
-Stone Axe, Stone Pickaxe, Stone Shovel, Bucket, Bucket of Water, Wooden Sword, Stone Sword, Iron Sword, Bow, Cart, Flying Machine, Iron Axe, Iron Pickaxe, Iron Shovel, Gold Axe, Gold Pickaxe, Gold Shovel, Gold Sword, Sky Axe, Sky Pickaxe, Sky Shovel, Sky Sword, Dark Axe, Dark Pickaxe, Dark Shovel, Dark Sword, Diamond Axe, Diamond Pickaxe, Diamond Shovel, Diamond Sword.
+Stone Axe, Stone Pickaxe, Stone Shovel, Bucket, Bucket of Water, Wooden Sword, Stone Sword, Iron Sword, Bow, Cart, Flying Machine, The God's Wand, Iron Axe, Iron Pickaxe, Iron Shovel, Gold Axe, Gold Pickaxe, Gold Shovel, Gold Sword, Sky Axe, Sky Pickaxe, Sky Shovel, Sky Sword, Dark Axe, Dark Pickaxe, Dark Shovel, Dark Sword, Diamond Axe, Diamond Pickaxe, Diamond Shovel, Diamond Sword.
 
 ### Armour and gear (26)
 

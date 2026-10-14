@@ -99,6 +99,10 @@ The war begins the moment you reach **Age 10**, whichever ring you bear. The wal
 
 Win round 10 and the raids end for good. Fireflies drift across your land at night, and the white ending plays. See [Lore and story](lore.md).
 
+## The god's cube
+
+After the war is won (white path) or the Sky Kingdom has fallen (dark path), you can step through from your Sanctuary to fight the god you did not choose, or steal his stash. Full details are in [Lore and story](lore.md#the-gods-cube-the-last-fight).
+
 ## Guardians
 
 Raise a Sanctuary and your god's guardian comes to you. It fights bandits and follows your orders: tap it to cycle follow, stay, attack.

@@ -150,6 +150,7 @@ A tool shows a bar on the hotbar as it wears out. Make a spare.
 | Chalk line | - | - | Crafted at the bench |
 | Cart | - | - | Built from planks and wood |
 | Flying Machine | - | - | Built at a workshop from planks and wool |
+| The God's Wand | - | - | Taken from a god's stash, in his cube |
 | Iron Axe | 4 | 300 | Crafted at the bench from iron |
 | Iron Pickaxe | 3 | 300 | Crafted at the bench from iron |
 | Iron Shovel | 3 | 300 | Crafted at the bench from iron |
