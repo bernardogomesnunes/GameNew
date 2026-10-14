@@ -89,9 +89,15 @@ What's there now was checked in the code before writing this.
 - **A blockier train** (PR #181): square wheels with hubs, a boiler
   stepped round instead of smooth, a box chimney and dome, a lamp, and
   plank walls on the coaches.
-- Asked for at the same time, still to do: the flying machine renamed the
-  Plainer and worn on the chest; a new Helix helicopter that flies like
-  Creative's fly mode.
+- **The Plainer and the Helix** (PR #182).
+  - The flying machine is now the Plainer, worn in the Body place like a
+    breastplate. Hold it and Place puts it on. Wearing it lets you fly,
+    and its wings glide you down when you stop.
+  - The Helix is a new helicopter, built at an engineering centre in
+    Age 8. Set it down, Place on it to climb in, and it flies as Creative
+    does. Land and Sneak to get out.
+  - A Plainer an older save left parked is still there. Hit it to pick it
+    up, then wear it.
 
 ## B. Goals and ages: 12 ages
 

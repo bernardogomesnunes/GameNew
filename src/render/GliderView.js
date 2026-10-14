@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { HelixView } from './HelixView.js';
 
 /**
  * The flying machine, drawn on you while you fly with it (asked for
@@ -87,23 +88,31 @@ export class GliderView {
 }
 
 /**
- * The flying machines set down in the world (DuiltGame.machines), one
- * GliderView each, parked. The one you're flying is drawn on you instead.
+ * The machines set down in the world (DuiltGame.machines), each drawn as
+ * what it is: a Helix as a helicopter, standing on its skids; a Plainer
+ * left over from a save before it was worn, parked on its frame. The Helix
+ * you're flying is drawn round you, its rotors turning.
  */
 export class MachineView {
   constructor(scene) {
     this.scene = scene;
-    this.views = new Map(); // machine record -> its GliderView
+    this.views = new Map(); // machine record -> its view
   }
 
-  update(machines, flying) {
+  /** `flying`: the machine you're in; `you`: the player, whose place and facing it takes. */
+  update(machines, flying, dt = 0, you = null) {
     const seen = new Set();
     for (const m of machines ?? []) {
-      if (m === flying) continue;
+      const helix = m.kind === 'helix';
+      if (m === flying && !helix) continue;
       seen.add(m);
       let v = this.views.get(m);
-      if (!v) { v = new GliderView(this.scene); this.views.set(m, v); }
-      v.update({ position: m, yaw: m.yaw ?? 0 }, 'parked', 0);
+      if (!v) { v = helix ? new HelixView(this.scene) : new GliderView(this.scene); this.views.set(m, v); }
+      if (!helix) { v.update({ position: m, yaw: m.yaw ?? 0 }, 'parked', 0); continue; }
+      const flown = m === flying && you;
+      // Flown, its floor is where you sit: your feet and the seat over them.
+      const at = flown ? { x: you.position.x, y: you.position.y + (you.seatHeight || 0), z: you.position.z } : m;
+      v.update({ position: at, yaw: flown ? you.yaw : m.yaw ?? 0 }, flown ? 'fly' : 'parked', dt);
     }
     for (const [m, v] of this.views) {
       if (seen.has(m)) continue;

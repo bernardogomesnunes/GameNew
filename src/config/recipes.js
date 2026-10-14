@@ -194,12 +194,21 @@ export const RECIPES = [
   },
   {
     id: 'flying_machine',
-    name: 'Flying Machine',
+    name: 'Plainer',
     station: 'workshop',
     age: 4,
     inputs: { planks: 24, wool: 12 },
     output: { id: 'flying_machine', count: 1 },
-    blurb: 'Wood and canvas, after Leonardo. Hold it and Place to set it down; Place on it to climb in and fly. Jump climbs, Sneak dives, Fly lands — and on the ground, Sneak gets you out.',
+    blurb: 'Wood and canvas wings, after Leonardo, strapped on like a breastplate. Wear it (Body) and Fly takes off: Jump climbs, Sneak dives, Fly lands — stop in the air and its wings glide you down.',
+  },
+  {
+    id: 'helix',
+    name: 'Helix',
+    station: 'engineering',
+    age: 8,
+    inputs: { iron_ingot: 20, glass: 8, planks: 6 },
+    output: { id: 'helix', count: 1 },
+    blurb: 'A helicopter. Hold it and Place to set it down; Place on it to climb in. It flies as Creative does: hover, Jump to rise, Sneak to sink. Land and Sneak to get out.',
   },
   {
     id: 'glass',

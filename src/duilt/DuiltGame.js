@@ -99,9 +99,11 @@ export class DuiltGame {
     // the same objects the Mobs list holds, so where one stands is saved
     // where it's got to — see toJSON.
     this.mounts = [];
-    // Flying machines you've set down in the world (asked for directly: "a
-    // physical vehicle to fly. I could place it and fly in it"): { x, y, z,
-    // yaw }. One you're flying is the same record, moving with you — see
+    // Machines you've set down in the world (asked for directly: "a
+    // physical vehicle to fly. I could place it and fly in it"): { kind,
+    // x, y, z, yaw }. A Helix is kind 'helix'; a record with no kind is a
+    // Plainer parked by a save from before it was worn — pick it up to
+    // wear it. One you're flying is the same record, moving with you — see
     // Game.pilot.
     this.machines = [];
     // Trains on your rails (Age 5) — see world/Trains.js.
@@ -670,21 +672,26 @@ export class DuiltGame {
     return [...found];
   }
 
-  /** Sets a flying machine from your bag down at x, y, z. Returns { ok, reason, machine }. */
+  /**
+   * Sets a Helix from your bag down at x, y, z — its cabin floor there.
+   * Returns { ok, reason, machine }. (The Plainer is worn now, not set
+   * down: see items.js.)
+   */
   placeMachine(x, y, z, yaw = 0) {
-    if (!this.inventory.remove('flying_machine', 1)) return { ok: false, reason: 'You have no flying machine.' };
-    const machine = { x, y, z, yaw };
+    if (!this.inventory.endless && !this.inventory.remove('helix', 1)) return { ok: false, reason: 'You have no Helix.' };
+    const machine = { kind: 'helix', x, y, z, yaw };
     this.machines.push(machine);
     return { ok: true, machine };
   }
 
-  /** Back into your bag. Returns { ok, reason }. */
+  /** Back into your bag: a Helix as a Helix, a Plainer parked by an older save as a Plainer. Returns { ok, reason, id }. */
   pickUpMachine(machine) {
     const i = this.machines.indexOf(machine);
     if (i === -1) return { ok: false, reason: 'It is not here.' };
-    if (this.inventory.add('flying_machine', 1) > 0) return { ok: false, reason: 'Your bag is full.' };
+    const id = machine.kind === 'helix' ? 'helix' : 'flying_machine';
+    if (!this.inventory.endless && this.inventory.add(id, 1) > 0) return { ok: false, reason: 'Your bag is full.' };
     this.machines.splice(i, 1);
-    return { ok: true };
+    return { ok: true, id };
   }
 
   /**
@@ -1941,6 +1948,7 @@ export class DuiltGame {
       settlers: this.settlers.toJSON(),
       herd: herdToJSON(this.herd),
       machines: this.machines.map((m) => ({
+        ...(m.kind ? { kind: m.kind } : {}),
         x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
         yaw: Math.round((m.yaw ?? 0) * 100) / 100,
       })),
@@ -2020,7 +2028,7 @@ export class DuiltGame {
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
-    this.machines = (data.machines ?? []).filter((m) => Number.isFinite(m?.x)).map((m) => ({ x: m.x, y: m.y, z: m.z, yaw: m.yaw ?? 0 }));
+    this.machines = (data.machines ?? []).filter((m) => Number.isFinite(m?.x)).map((m) => ({ ...(m.kind === 'helix' ? { kind: 'helix' } : {}), x: m.x, y: m.y, z: m.z, yaw: m.yaw ?? 0 }));
     this.trains.loadJSON(data.trains);
     this.notices.loadJSON(data.notices);
     this.collection.loadJSON(data.collection);
