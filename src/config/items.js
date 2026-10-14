@@ -193,12 +193,12 @@ export const ITEMS = [
   {
     id: 'pry_bar', name: 'Pry bar', kind: 'tool', stackTo: STACK_TOOL, color: 0xc6a984, glyph: 'clear',
     durability: null, madeBy: 'Crafted at the bench', unlocks: 'Clearing a lot of blocks at once',
-    grants: 'clear',
+    grants: 'clear', noBook: true, // Creative's bag only (backlog batch 2) — not one to collect
   },
   {
     id: 'chalk_line', name: 'Chalk line', kind: 'tool', stackTo: STACK_TOOL, color: 0xddd3bd, glyph: 'symmetry',
     durability: null, madeBy: 'Crafted at the bench', unlocks: 'Mirroring what you place',
-    grants: 'mirror',
+    grants: 'mirror', noBook: true,
   },
 
   // --- the cart: use it on a horse you've tamed, and it pulls it — forty
@@ -396,6 +396,13 @@ export const ITEMS = [
     id: 'ring_black', name: 'Black Ring', kind: 'ring', stackTo: STACK_TOOL, color: 0x3a3045, glyph: 'ring', wears: 'ring', ring: 'black',
     madeBy: 'Obsidian and Nightstone, forged at the High Temple — a dark spark hurts whoever strikes you',
   },
+  // The collection book's last reward (duilt/Collection.js): worn, as good
+  // as a diamond helm, and it never wears out.
+  {
+    id: 'collector_crown', name: 'Collector\'s Crown', kind: 'armour', stackTo: STACK_TOOL, color: 0xf2c94c, glyph: 'helm',
+    wears: 'head', armour: 5, durability: Infinity, noBook: true,
+    madeBy: 'Given for collecting every item there is',
+  },
 
   // --- armour (Phase 7b) — see config/armour.js ---------------------------
   //
@@ -435,7 +442,7 @@ ITEMS.push(...tieredItems(new Map(ITEMS.map((i) => [i.id, i]))));
 // piece with the upgrade's name in front and its power added.
 for (const [key, e] of Object.entries(UPGRADES)) {
   const bases = e.weapon ? UPGRADABLE_SWORDS.map((id) => ITEMS.find((i) => i.id === id))
-    : ITEMS.filter((i) => i.kind === 'armour' && e.slots.includes(i.wears));
+    : ITEMS.filter((i) => i.kind === 'armour' && e.slots.includes(i.wears) && !i.noBook);
   for (const base of bases) {
     ITEMS.push({
       ...base, id: upgradedId(base.id, key), name: `${e.name} ${base.name}`, upgrade: key,

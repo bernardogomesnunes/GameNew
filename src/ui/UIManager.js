@@ -7,6 +7,8 @@ import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
 import { StoryView, INTRO, ENDINGS, endingFor } from './Story.js';
 import { askConfirm } from './Confirm.js';
+import { BOOK, BOOK_GROUPS, bookGroup } from '../duilt/Collection.js';
+import { TRADERS, CITY_TRADERS } from '../config/traders.js';
 import { ago } from '../duilt/Notices.js';
 import { LORE, loreKnowledge } from '../config/lore.js';
 import { GIVERS } from '../config/quests.js';
@@ -289,11 +291,13 @@ export class UIManager {
             <button class="tab-btn" data-tab="tab-quests" id="quests-tab">Quests</button>
             <button class="tab-btn" data-tab="tab-challenges">Today</button>
             <button class="tab-btn" data-tab="tab-lore" id="lore-tab">Lore</button>
+            <button class="tab-btn" data-tab="tab-book" id="book-tab">Book</button>
           </div>
           <div class="tab-panel" id="tab-achievements"><div id="ach-grid"></div></div>
           <div class="tab-panel" id="tab-quests" hidden><div id="quest-list"></div></div>
           <div class="tab-panel" id="tab-challenges" hidden><div id="challenge-list"></div></div>
-          <div class="tab-panel" id="tab-lore" hidden><div id="lore-list"></div></div>`,
+          <div class="tab-panel" id="tab-lore" hidden><div id="lore-list"></div></div>
+          <div class="tab-panel" id="tab-book" hidden><div id="book-list"></div></div>`,
         'panel-menu': `
           <div id="menu-index"></div>
 
@@ -1763,6 +1767,7 @@ export class UIManager {
       </div>`;
     }).join('');
     this.renderLore();
+    this.renderBook();
     this.renderQuests();
   }
 
@@ -1831,6 +1836,46 @@ export class UIManager {
    * The lore book (config/lore.js): the pages you know, and locked ones
    * saying where to look. Only in a Duilt world — Creative has no story.
    */
+  /**
+   * The collection book (duilt/Collection.js): how far along, what the next
+   * share pays, and every item by group — had ones in colour, the rest dim.
+   * Tap one for what it is and how it's had.
+   */
+  renderBook() {
+    const d = this.game.duilt;
+    const tab = this.q('#book-tab'), list = this.q('#book-list');
+    if (!tab || !list) return;
+    tab.hidden = !d || d.sandbox;
+    if (tab.hidden) return;
+    const c = d.collection;
+    const next = c.next();
+    const pct = Math.floor(c.progress() * 100);
+    list.innerHTML = `
+      <div class="book-head">
+        <strong>${c.have.size} of ${BOOK.length} items · ${pct}%</strong>
+        <div class="book-bar"><span style="width:${pct}%"></span></div>
+        <p class="dim">${next ? `At ${Math.round(next.at * 100)}%: +${next.coins} coins${next.item ? ' and the Collector\'s Crown' : ''}.` : 'Every item there is. The crown is yours.'}
+          Everything you hold, in your bag or on you, is ticked off.</p>
+      </div>
+      <div class="book-detail" id="book-detail" hidden></div>
+      ${BOOK_GROUPS.map((g) => {
+        const items = bookGroup(g.id);
+        const got = items.filter((i) => c.have.has(i.id)).length;
+        return `<div class="book-group">
+          <div class="book-group-head"><span>${escapeHtml(g.name)}</span><span>${got} / ${items.length}</span></div>
+          <div class="book-grid">${items.map((i) => `<button class="book-item ${c.have.has(i.id) ? 'have' : ''}" data-book="${i.id}" aria-label="${escapeHtml(i.name)}">${itemIcon(i, { size: 30 }) ?? ''}</button>`).join('')}</div>
+        </div>`;
+      }).join('')}`;
+    const detail = list.querySelector('#book-detail');
+    list.querySelectorAll('[data-book]').forEach((b) => b.addEventListener('click', () => {
+      const item = ITEMS_BY_ID.get(b.dataset.book);
+      const sold = [...TRADERS, ...CITY_TRADERS].filter((t) => t.goods.some(([id]) => id === item.id)).map((t) => t.name);
+      detail.hidden = false;
+      detail.innerHTML = `<strong>${escapeHtml(item.name)}</strong>${c.have.has(item.id) ? ' ✓' : ''}
+        <p>${escapeHtml((item.madeBy ?? '').replace(/([^.!?])$/, '$1.'))}${sold.length ? ` Sold by ${escapeHtml(sold.join(' and '))}.` : ''}</p>`;
+    }));
+  }
+
   renderLore() {
     const d = this.game.duilt;
     const tab = this.q('#lore-tab'), list = this.q('#lore-list');
