@@ -19,7 +19,7 @@ const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8
 // The counting goals are each age's own now (config/ages.js).
 const town = { duilt: { structures: { list: () => Array.from({ length: 7 }, () => ({ valid: true })) }, inventory: { countOf: () => 140 } } };
 ok('"Fifteen buildings" shows how far along you are', ACHIEVEMENTS_BY_ID.get('req_9_fifteen').progress(town) === '7/15');
-ok('and "forty buildings" counts its way up too', ACHIEVEMENTS_BY_ID.get('req_12_forty').progress(town) === '7/40');
+ok('and "half the book" counts its way up too', ACHIEVEMENTS_BY_ID.get('req_11_book_half').progress({ duilt: { collection: { progress: () => 0.2 } } }) === '20/50%');
 ok('"a second house" counts too', ACHIEVEMENTS_BY_ID.get('req_3_house').progress({ duilt: { structures: { countOf: () => 1 } } }) === '1/2');
 ok('a done goal is marked done, with a tick', /class="ach-card \$\{isDone \? 'done' : 'locked'\}/.test(ui) && /<span class="ach-done" aria-label="Done">✓<\/span>/.test(ui));
 ok('and looks it', /\.ach-card\.done \{ background: rgba\(41, 158, 138/.test(css) && /\.ach-done \{/.test(css));

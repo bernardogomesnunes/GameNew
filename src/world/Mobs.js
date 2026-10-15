@@ -37,8 +37,10 @@ export class Mobs {
    * @param avoid  (x, z) => true where nothing should spawn — your own
    *               settlement, so a herd doesn't appear in the middle of it.
    */
-  constructor({ world, rand = Math.random, avoid = null, cap = CAP }) {
+  constructor({ world, rand = Math.random, avoid = null, cap = CAP, onBite = null }) {
     this.world = world;
+    // (mob, damage): a dinosaur's bite landing on you — Game hurts you for it.
+    this.onBite = onBite;
     this.rand = rand;
     this.avoid = avoid;
     this.cap = cap;
@@ -176,6 +178,32 @@ export class Mobs {
     const dx = m.x - player.x, dz = m.z - player.z;
     const d = Math.hypot(dx, dz) || 1;
 
+    // A hunter (the raptor) comes for you when you come near, and keeps on
+    // until you've got well away; something that `charges` (a triceratops)
+    // only once you've struck it, for a while. Either bites when it's close.
+    // Never one of yours.
+    m.biteIn = Math.max(0, (m.biteIn ?? 0) - dt);
+    if (m.angryFor > 0) m.angryFor -= dt;
+    const attack = m.owned || player.y == null ? null
+      : spec.hunts && (d < spec.hunts.aggro || (m.chasing && d < spec.hunts.give)) ? spec.hunts
+      : spec.charges && m.angryFor > 0 ? spec.charges : null;
+    if (attack && Math.abs(m.y - player.y) < 3) {
+      m.chasing = true;
+      m.grazing = false;
+      m.fleeFor = 0;
+      // Round whatever stopped it (a trunk, a boulder) before coming on again.
+      if (m.detour > 0 && d > attack.reach && m.target) { m.detour -= dt; m.speed = spec.run; return; }
+      if (d > attack.reach * 0.8) { m.target = { x: player.x, z: player.z }; m.speed = spec.run; }
+      else { m.target = null; m.speed = 0; m.facing = Math.atan2(-dx, -dz); }
+      if (d <= attack.reach && m.biteIn <= 0) {
+        m.biteIn = attack.every;
+        this.onBite?.(m, attack.damage);
+      }
+      m.timer = 0;
+      return;
+    }
+    m.chasing = false;
+
     // Your own horse doesn't bolt from you.
     if (spec.skittish && !m.owned && d < SCARE && m.fleeFor <= 0) m.fleeFor = FLEE_TIME * 0.6;
     if (m.fleeFor > 0) {
@@ -253,7 +281,16 @@ export class Mobs {
           if (g != null) { nx = m.x; nz = m.z + Math.sign(dz) * step; ground = g; }
         }
         m.facing = Math.atan2(dx, dz);
-        if (ground == null) {
+        if (ground == null && m.chasing) {
+          // Coming for you and something's in the way: off to one side a
+          // few steps, then at you again (see think) — a raptor in the
+          // jungle would otherwise stand against the first trunk for good.
+          // The same way round each time, so it doesn't dither.
+          m.detourSide ??= this.rand() < 0.5 ? 1 : -1;
+          const a = Math.atan2(dx, dz) + m.detourSide * Math.PI * 0.42;
+          m.target = { x: m.x + Math.sin(a) * 5, z: m.z + Math.cos(a) * 5 };
+          m.detour = 1;
+        } else if (ground == null) {
           // A wall, a cliff, water, or unmade land: give up on that way and
           // think again next frame.
           m.target = null;
@@ -318,6 +355,13 @@ export class Mobs {
       m.target = null;
       m.speed = 0;
       return { killed: true, drops: this.rollDrops(spec) };
+    }
+    // A dinosaur that fights back turns on you instead of running.
+    if ((spec.hunts || spec.charges) && !m.owned) {
+      m.angryFor = spec.charges?.for ?? 10;
+      m.chasing = true;
+      m.timer = 0;
+      return { killed: false, drops: {} };
     }
     m.fleeFor = FLEE_TIME;
     m.timer = 0;

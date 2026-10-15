@@ -32,7 +32,7 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 ok(`the border grows ${AGES.map((a) => a.size).join(' → ')}`, AGES[0].size === 32 && AGES[AGES.length - 1].size > 256);
 ok(`until the war's age (${WAR_AGE}) it's a wall; from it, you walk where you like`, AGES.every((a) => !!a.open === (a.age >= WAR_AGE)));
 ok('  and Game takes the wall down when it opens', /!t\.open \? t\.bounds\(\) : null/.test(game));
-ok('  but building still stops at your border', /const outside = changes\.find\(\(c\) => !this\.duilt\.territory\.contains\(c\.x, c\.z\)\)/.test(game));
+ok('  but building still stops at your border (the Past, nobody\'s land, aside)', /const outside = changes\.find\(\(c\) => !this\.duilt\.territory\.contains\(c\.x, c\.z\) && !inPast\(c\.x, centreX\)\)/.test(game));
 
 // --- the rounds -------------------------------------------------------------------------------
 

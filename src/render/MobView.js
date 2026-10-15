@@ -40,6 +40,13 @@ const FEATURES = {
   pig: (s) => [ears(s, 0.3, 0.22), snout(s, 0.5, 0.4, 0xd88a84), tail(s, 0.1, 0.16, s.colour),
     [-0.1, -0.15, 0.685, 0.08, 0.1, 0.03, 0x8a4a48, 0, true], [0.1, -0.15, 0.685, 0.08, 0.1, 0.03, 0x8a4a48, 0, true]],
   // Comb and wattle, a beak, a tail, and wings.
+  // The dinosaurs (config/mobs.js): a raptor's long stiff tail, a crest and
+  // claws; a triceratops' frill and three horns; a long-neck's tail.
+  raptor: (s) => [[0, 0.1, -1.0, 0.45, 0.35, 1.0, s.colour, 0.08, false], [0, 0.55, -0.05, 0.12, 0.35, 0.5, 0xb84a2a, 0, true],
+    snout(s, 0.55, 0.38, s.headColour), [-0.45, -0.35, 0.35, 0.15, 0.28, 0.12, s.legColour, 0.6, false], [0.45, -0.35, 0.35, 0.15, 0.28, 0.12, s.legColour, 0.6, false]],
+  trike: (s) => [[0, 0.55, -0.45, 1.5, 1.1, 0.14, 0xb59a6a, -0.25, true], horn(s, -1, 0.9), horn(s, 1, 0.9),
+    [0, -0.05, 0.62, 0.14, 0.45, 0.14, HORN, 1.0, true], snout(s, 0.5, 0.4, 0x8a7a5a), tail(s, 0.22, 0.9, s.colour)],
+  longneck: (s) => [[0, 0.05, -0.85, 0.22, 0.2, 0.9, s.colour, 0.12, false], snout(s, 0.55, 0.4, s.headColour)],
   chicken: (s) => [[0, -0.05, 0.6, 0.3, 0.2, 0.35, 0xe0a64a, 0, true], [0, 0.6, 0.05, 0.12, 0.3, 0.45, 0xd23a2a, 0, true], [0, -0.35, 0.45, 0.12, 0.25, 0.12, 0xd23a2a, 0, true], [0, 0.35, -0.55, 0.6, 0.7, 0.35, s.colour, -0.5, false],
     [-0.53, 0.05, -0.05, 0.1, 0.62, 0.72, 0xe8e2d6, 0, false], [0.53, 0.05, -0.05, 0.1, 0.62, 0.72, 0xe8e2d6, 0, false]],
 };
@@ -135,13 +142,27 @@ export class MobView {
       this.bodies.setMatrixAt(i, this._part);
       this.bodies.setColorAt(i, this.tint(spec.colour, flash));
 
-      // head: at the front, dropped to the ground while grazing
-      const hy = m.grazing ? Math.max(head / 2, leg * 0.5) : leg + h * 0.85;
-      const hz = l / 2 + head * (m.grazing ? 0.25 : 0.3);
+      // head: at the front, dropped to the ground while grazing — or, on a
+      // neck (a long-neck's), carried up and out ahead of the body.
+      const neck = spec.neck;
+      const hy = m.grazing ? Math.max(head / 2, leg * 0.5) : leg + h * 0.85 + (neck?.up ?? 0);
+      const hz = l / 2 + head * (m.grazing ? 0.25 : 0.3) + (neck?.out ?? 0);
       this.local(0, hy, hz, head, head, head);
       this.heads.setMatrixAt(i, this._part);
       this.heads.setColorAt(i, this.tint(spec.headColour, flash));
 
+      // The neck, from the top of the body's front to the head.
+      if (neck && d < MAX * DETAIL_CAP) {
+        const by = leg + h * 0.8, bz = l / 2 * 0.75;
+        const dy = hy - by, dz = hz - bz, len = Math.hypot(dy, dz);
+        this._part.makeTranslation(0, (by + hy) / 2, (bz + hz) / 2);
+        this._part.multiply(this._tmp.makeRotationX(Math.atan2(dz, dy)));
+        this._part.multiply(this._tmp.makeScale(neck.w, len, neck.w));
+        this._part.premultiply(this._base);
+        this.details.setMatrixAt(d, this._part);
+        this.details.setColorAt(d, this.tint(spec.colour, flash));
+        d++;
+      }
       // The details, each placed off the head (h: true) or the body.
       for (const [x, y, z, sx, sy, sz, colour, tilt, onHead] of featuresOf(spec, m)) {
         if (d >= MAX * DETAIL_CAP) break;

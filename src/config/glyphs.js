@@ -158,6 +158,7 @@ export const GLYPHS = {
   controller: 'M5 3.5h14v17H5ZM5 9.2h14M5 14.8h14M10.5 6.4h3M10.5 12h3M10.5 17.6h3',
   chest: 'M4 9.5h16v10H4ZM4.5 9.5c0-2.5 2-4 4-4h7c2 0 4 1.5 4 4M4 12.5h16M11 11h2v3h-2Z',
   egg: 'M12 4c3.6 0 6 5.2 6 9a6 6 0 0 1-12 0c0-3.8 2.4-9 6-9Z',
+  hourglass: 'M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9s10 4 10 9',
   milk: 'M9 4h6M9.5 4v3L7 10.5V20h10v-9.5L14.5 7V4M7 13.5h10',
 
   // from animals

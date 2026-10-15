@@ -13,7 +13,9 @@ const HALF_SHAPES = new Set(['slab', 'chair', 'lantern', 'firefly', 'bed_foot', 
 // A chandelier hangs overhead; you walk under it.
 const NO_COLLISION_SHAPES = new Set(['rug', 'rail', 'gate_open', 'door_open', 'door_open_top', 'chandelier', 'trapdoor_open', 'banner_white', 'banner_black', 'painting', 'sapling', 'campfire', 'chain',
   // Wall panels lie flat on a wall, a sixteenth thick, like a painting.
-  'panel_plain', 'panel_pattern', 'panel_twotone']);
+  'panel_plain', 'panel_pattern', 'panel_twotone',
+  // An egg in the grass, as low as a rug.
+  'egg']);
 // Taller than its cell: a fence, or a shut gate, stops you at a block and a
 // half — past jumping, and past anything an animal can step.
 const FENCE_HEIGHT = 1.5;

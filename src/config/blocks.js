@@ -859,6 +859,21 @@ BLOCKS.push(
     light: { color: 0xc8b0ff, intensity: 4, distance: 16, decay: 1 } },
 );
 
+// Time travel (world/past.js): the machine you sit in, and the eggs the
+// dinosaurs lay in the Past — take one home, set it down, and it hatches.
+export const TIME_MACHINE = 441, EGG_RAPTOR = 442, EGG_TRIKE = 443, EGG_LONGNECK = 444;
+/** The Past's own ground (config/biomes.js): deep jungle moss, and the fern plains' turf. */
+export const JUNGLE_FLOOR = 445, FERN_TURF = 446;
+BLOCKS.push(
+  { id: JUNGLE_FLOOR, name: 'Jungle Floor', glyph: 'moss', color: 0x3f5a2a, soil: true, material: 'dirt', unlock: null },
+  { id: FERN_TURF, name: 'Fern Turf', glyph: 'moss', color: 0x8fb848, soil: true, material: 'dirt', unlock: null },
+  { id: TIME_MACHINE, name: 'Time Machine', glyph: 'hourglass', color: 0xc9a55a, shape: 'time_machine', material: 'stone', unlock: null,
+    light: { color: 0x9fe8ff, intensity: 3, distance: 10, decay: 1, y: 0.9 } },
+  { id: EGG_RAPTOR, name: 'Raptor Egg', glyph: 'egg', color: 0x8a9a6a, shape: 'egg', material: 'wood', unlock: null },
+  { id: EGG_TRIKE, name: 'Triceratops Egg', glyph: 'egg', color: 0xd8c39a, shape: 'egg', material: 'wood', unlock: null },
+  { id: EGG_LONGNECK, name: 'Long-neck Egg', glyph: 'egg', color: 0xb7c4cf, shape: 'egg', material: 'wood', unlock: null },
+);
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**

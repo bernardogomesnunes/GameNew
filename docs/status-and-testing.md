@@ -42,12 +42,13 @@ Two lists, kept up to date as things land:
 | Pop-ups with search keep one size | #184 |
 | Ages 11 and 12 goals: Conquest, and The God | #185 |
 | Markets: a rare shelf that changes every two days | #186 |
+| Time travel, part one: the machine, the Past, dinosaurs, eggs | #187 |
 
 ### Not done yet
 
 | What | Where it's from | When |
 |---|---|---|
-| **Time travel:** the machine, the Past (dinosaurs, taming, eggs), the Future (city, university, future blocks) | Batch 4, D3 | Next |
+| **Time travel, rest:** dinosaurs fighting beside you, mythical creatures, the Future (city, university, future blocks) | Batch 4, D3 | Next |
 | Two or three more new peoples to raid | Batch 4, D1 | Later |
 | Places you've taken marked on the map; new ones appearing over time | Batch 4, D1 | Later |
 | Battle mode (computer rivals first) | Batch 4, E | After time travel |
@@ -111,6 +112,15 @@ means only the automated tests have checked it.
   - Taking the stash and leaving is seen in a browser.
   - **Killing the god** is not seen.
 - [ ] **The wand:** Break to pick a block, Place to copy it for a coin, Break at open air for a beam.
+
+### Time travel (new)
+
+- [ ] **The time machine:** make one (Age 11), set it down, Place on it, To the Past.
+- [ ] **The Past:** jungle and fern plains. Look for eggs lying in the ferns.
+- [ ] **Raptors** hunt you; **triceratops** charge if you hit them; **long-necks** graze.
+- [ ] **Tame:** raw meat for a raptor, fruit or vegetables for the others. Then tap to ride.
+- [ ] **Eggs:** bring one home, set it down; two game days later it hatches, tame.
+- [ ] **Home:** Place on the machine by your landing spot.
 
 ### Fixes worth a quick look
 

@@ -41,6 +41,9 @@ import { UNITS_BY_ID, unitCost, payForUnit } from '../config/soldiers.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';
 import { Trains, CAR_SLOTS, PART_LENGTH } from '../world/Trains.js';
 
+/** Game days a dinosaur egg takes to hatch once it's set down. */
+export const HATCH_DAYS = 2;
+
 /**
  * Everything that makes Duilt different from the sandbox, in one object.
  *
@@ -114,6 +117,12 @@ export class DuiltGame {
     // The god's cube (world/godCube.js): whether you've beaten the other
     // god, taken his stash, and where to come back to.
     this.cube = { beaten: false, stash: false, entered: false };
+    // Time travel (world/past.js): whether you've been to the Past, and,
+    // while you're there, where to come back to.
+    this.time = { pastVisited: false, back: null, hatched: 0 };
+    // Dinosaur eggs set down, each { x, y, z, type, laid } — `laid` on the
+    // world's day count. HATCH_DAYS on, they hatch (Game.hatchEggs).
+    this.eggs = [];
     this.trains = new Trains({ world, makeLoad: () => new Inventory({ slots: CAR_SLOTS, bus: this.bus }) });
     this.dayTime = null; // see toJSON
     // Designs you placed that didn't count yet — see waitFor.
@@ -761,7 +770,7 @@ export class DuiltGame {
     const spec = MOBS_BY_ID.get(m?.type);
     if (!spec?.tameWith || m.owned) return { ok: false, reason: 'That one is already yours.' };
     const item = spec.tameWith.includes(held) && (this.inventory.endless || this.inventory.countOf(held) > 0) ? held : null;
-    if (!item) return { ok: false, reason: 'Hold fruit or carrots, then Place on it to tame it.' };
+    if (!item) return { ok: false, reason: spec.tameWith.includes('raw_meat') ? 'Hold raw meat, then Place on it to tame it.' : 'Hold fruit or carrots, then Place on it to tame it.' };
     if (!this.inventory.endless) this.inventory.remove(item, 1);
     m.owned = true;
     m.fleeFor = 0;
@@ -1904,6 +1913,19 @@ export class DuiltGame {
     return true;
   }
 
+  /** An egg set down at x, y, z (`type` the dinosaur in it), to hatch HATCH_DAYS on. */
+  layEgg(x, y, z, type) {
+    this.eggs = this.eggs.filter((e) => !(e.x === x && e.y === y && e.z === z));
+    this.eggs.push({ x, y, z, type, laid: this.days });
+  }
+
+  /** The eggs due to hatch now — taken off the list; Game brings them out. */
+  hatchDue() {
+    const due = this.eggs.filter((e) => this.days - e.laid >= HATCH_DAYS);
+    if (due.length) this.eggs = this.eggs.filter((e) => !due.includes(e));
+    return due;
+  }
+
   /** The kinds of place you've taken from: 'city', 'ruined_city', 'tribe', 'outpost'. */
   raidedKinds() {
     return new Set([...this.raided].map((k) => k.split('@')[0]));
@@ -1958,6 +1980,8 @@ export class DuiltGame {
       boosts: { ...this.boosts },
       found: [...this.found],
       raided: [...this.raided],
+      time: { pastVisited: this.time.pastVisited || undefined, back: this.time.back ?? undefined, hatched: this.time.hatched || undefined },
+      eggs: this.eggs,
       firsts: [...this.firsts],
       // Twelve ages, not six (config/ages.js) — so an older save's age is moved on load.
       agesVersion: AGES_VERSION,
@@ -2021,6 +2045,13 @@ export class DuiltGame {
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
     this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);
     this.raided = new Set(Array.isArray(data.raided) ? data.raided.filter((k) => typeof k === 'string') : []);
+    const time = data.time ?? {};
+    this.time = {
+      pastVisited: time.pastVisited === true,
+      back: time.back && Number.isFinite(time.back.x) ? { x: time.back.x, y: time.back.y, z: time.back.z } : null,
+      hatched: Number.isInteger(time.hatched) ? time.hatched : 0,
+    };
+    this.eggs = Array.isArray(data.eggs) ? data.eggs.filter((e) => Number.isFinite(e?.x) && typeof e.type === 'string' && Number.isFinite(e.laid)) : [];
     this.firsts = new Set(Array.isArray(data.firsts) ? data.firsts.filter((k) => typeof k === 'string') : []);
     this.quests = {};
     for (const [id, q] of Object.entries(data.quests ?? {})) {

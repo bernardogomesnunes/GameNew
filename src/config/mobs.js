@@ -88,6 +88,42 @@ MOBS.push({
   tameWith: ['fruit', 'vegetables'], rideable: true,
 });
 
+// The Past's dinosaurs (world/past.js — asked for directly: "a separate
+// world of dinosaurs ... dinosaurs hit hard ... taming: feed a dinosaur to
+// tame it, then ride it"). Bigger and tougher than anything at home:
+//   `hunts`    comes for you when you come near, and bites — the raptor;
+//   `charges`  minds its own business until struck, then comes for you;
+//   `neck`     a head carried up and out on a neck (MobView).
+// Each is tamed by feeding it what it eats (`tameWith`), and ridden.
+MOBS.push(
+  {
+    id: 'raptor', name: 'Raptor', biomes: ['pastJungle', 'pastFerns'], weight: 3,
+    herd: [2, 3], hp: 18, walk: 2.2, run: 8.4, skittish: false,
+    hunts: { aggro: 16, give: 30, damage: 3, reach: 1.8, every: 1.1 },
+    body: { w: 0.42, h: 0.5, l: 1.1 }, head: 0.4, leg: 0.8, legs: 2,
+    colour: 0x6d7f45, headColour: 0x7d8f50, legColour: 0x55633a,
+    drops: { raw_meat: [2, 3], hide: [1, 1] },
+    tameWith: ['raw_meat'], rideable: true,
+  },
+  {
+    id: 'trike', name: 'Triceratops', biomes: ['pastFerns', 'pastJungle'], weight: 3,
+    herd: [2, 3], hp: 40, walk: 1.0, run: 5.8, skittish: false,
+    charges: { damage: 4, reach: 2.4, every: 1.4, for: 8 },
+    body: { w: 1.4, h: 1.2, l: 2.6 }, head: 0.9, leg: 0.8,
+    colour: 0x8a7a5a, headColour: 0x9a8a68, legColour: 0x6a5c42,
+    drops: { raw_meat: [5, 8], hide: [2, 4] },
+    tameWith: ['vegetables', 'fruit'], rideable: true,
+  },
+  {
+    id: 'longneck', name: 'Long-neck', biomes: ['pastFerns'], weight: 2,
+    herd: [1, 2], hp: 60, walk: 0.9, run: 3.6, skittish: false,
+    body: { w: 1.8, h: 1.8, l: 3.6 }, head: 0.7, leg: 2.0, neck: { up: 3, out: 1.4, w: 0.55 },
+    colour: 0x7f8a90, headColour: 0x8e999f, legColour: 0x646d72,
+    drops: { raw_meat: [8, 12], hide: [3, 5] },
+    tameWith: ['vegetables', 'fruit'], rideable: true,
+  },
+);
+
 export const MOBS_BY_ID = new Map(MOBS.map((m) => [m.id, m]));
 
 /** Every species that lives in a biome, for the spawner to choose among. */

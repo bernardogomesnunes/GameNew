@@ -395,6 +395,18 @@ export const ITEMS = [
   { id: 'war_tent', name: 'War Tent', kind: 'refined', stackTo: STACK_GOODS, color: 0x6b5a48, glyph: 'tent', block: 224, madeBy: 'Canvas on a pole — pitch it on the march, and Place on it to make camp' },
   { id: 'campfire', name: 'Campfire', kind: 'refined', stackTo: STACK_GOODS, color: 0x6b4a2e, glyph: 'campfire', block: 228, madeBy: 'Stones and crossed logs, burning — light for a camp' },
   { id: 'chain', name: 'Chain', kind: 'refined', stackTo: STACK_GOODS, color: 0x5a5f66, glyph: 'chain', block: 229, madeBy: 'Iron links — hang a lamp from it, or a kingdom' },
+  // Time travel (world/past.js): the machine, and the dinosaurs' eggs from
+  // the Past — set one down and in a couple of days it hatches, tame.
+  { id: 'time_machine', name: 'Time Machine', kind: 'refined', stackTo: STACK_TOOL, color: 0xc9a55a, glyph: 'hourglass', block: 441,
+    madeBy: 'Built at an engineering centre — set it down and Place on it to travel' },
+  { id: 'jungle_floor', name: 'Jungle Floor', kind: 'raw', stackTo: STACK_BULK, color: 0x3f5a2a, glyph: 'moss', block: 445, madeBy: 'Dug in the jungles of the Past' },
+  { id: 'fern_turf', name: 'Fern Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x8fb848, glyph: 'moss', block: 446, madeBy: 'Dug in the fern plains of the Past' },
+  { id: 'egg_raptor', name: 'Raptor Egg', kind: 'raw', stackTo: STACK_GOODS, color: 0x8a9a6a, glyph: 'egg', block: 442,
+    madeBy: 'Lying in the jungles of the Past — set it down and it hatches, tame, in two days' },
+  { id: 'egg_trike', name: 'Triceratops Egg', kind: 'raw', stackTo: STACK_GOODS, color: 0xd8c39a, glyph: 'egg', block: 443,
+    madeBy: 'Lying in the Past\'s jungles and fern plains — set it down and it hatches, tame, in two days' },
+  { id: 'egg_longneck', name: 'Long-neck Egg', kind: 'raw', stackTo: STACK_GOODS, color: 0xb7c4cf, glyph: 'egg', block: 444,
+    madeBy: 'Lying in the Past\'s fern plains — set it down and it hatches, tame, in two days' },
   { id: 'sky_lift', name: 'Sky Lift', kind: 'refined', stackTo: STACK_GOODS, color: 0xe2c26a, glyph: 'lift', block: 230, madeBy: 'The Sky Kingdom\'s own — at its anchor towers, Place on one to ride the chain' },
   // The war horn (the Ten Rounds): Break with it in hand calls the next round now.
   { id: 'war_horn', name: 'War Horn', kind: 'refined', stackTo: 1, color: 0xc9a46a, glyph: 'horn', madeBy: 'Made at the bench — Break with it in hand calls the Stone Kingdom\'s next round now' },

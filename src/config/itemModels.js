@@ -366,6 +366,20 @@ ITEM_MODELS.helix = [
   box(0.28, 0.08, 0.25, 0.34, 0.12, 0.75, 0x2e3036), box(0.66, 0.08, 0.25, 0.72, 0.12, 0.75, 0x2e3036),
 ];
 
+// The time machine: a dark plinth, brass posts and ring, a glass drum with
+// a bright core. The eggs: ovals, each its own colour, speckled.
+ITEM_MODELS.time_machine = [
+  box(0.08, 0, 0.08, 0.92, 0.14, 0.92, 0x3a3a42), box(0.12, 0.14, 0.12, 0.2, 0.86, 0.2, 0xc9a55a), box(0.8, 0.14, 0.12, 0.88, 0.86, 0.2, 0xc9a55a),
+  box(0.12, 0.14, 0.8, 0.2, 0.86, 0.88, 0xc9a55a), box(0.8, 0.14, 0.8, 0.88, 0.86, 0.88, 0xc9a55a),
+  box(0.26, 0.14, 0.26, 0.74, 0.78, 0.74, 0x9fe8ff), box(0.42, 0.3, 0.42, 0.58, 0.62, 0.58, 0xe8fbff), box(0.08, 0.78, 0.08, 0.92, 0.86, 0.92, 0xc9a55a),
+];
+for (const [id, colour] of [['egg_raptor', 0x8a9a6a], ['egg_trike', 0xd8c39a], ['egg_longneck', 0xb7c4cf]]) {
+  ITEM_MODELS[id] = [
+    box(0.32, 0.06, 0.32, 0.68, 0.24, 0.68, colour), box(0.26, 0.24, 0.26, 0.74, 0.62, 0.74, colour), box(0.34, 0.62, 0.34, 0.66, 0.82, 0.66, colour),
+    box(0.4, 0.4, 0.25, 0.48, 0.46, 0.26, 0x5a5040), box(0.58, 0.52, 0.74, 0.64, 0.58, 0.75, 0x5a5040),
+  ];
+}
+
 // Trains (Age 5): a lump of coal; the steam engine, boiler forward and cab
 // behind on a black frame; a rail car, a wooden coach with its roof.
 // The god's wand (world/godCube.js): a pale staff, a star at its tip.

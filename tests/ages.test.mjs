@@ -159,8 +159,8 @@ function satisfy(g, goal, give) {
     book_half: () => g.collection.note(BOOK.slice(0, Math.ceil(BOOK.length / 2)).map((i) => i.id)),
     cube_open: () => { g.cube.entered = true; },
     god_done: () => { g.cube.beaten = true; },
-    book_most: () => g.collection.note(BOOK.slice(0, Math.ceil(BOOK.length * 0.75)).map((i) => i.id)),
-    forty: () => give('house', Math.max(0, 40 - g.structures.list().length)),
+    past: () => { g.time.pastVisited = true; },
+    hatch: () => { g.time.hatched = 1; },
   }[goal.id];
   ok(`  (the test knows how to meet "${goal.label}")`, !!make);
   make?.();

@@ -15,7 +15,7 @@ import { SettlerView } from './render/SettlerView.js';
 import { CloudAuth } from './net/CloudAuth.js';
 import { CloudWorlds } from './net/CloudWorlds.js';
 import { isCloudConfigured } from './net/cloudConfig.js';
-import { DuiltGame } from './duilt/DuiltGame.js';
+import { DuiltGame, HATCH_DAYS } from './duilt/DuiltGame.js';
 import { generateEndlessWorld } from './world/StarterWorld.js';
 import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
 import { FarTerrain } from './render/FarTerrain.js';
@@ -93,7 +93,8 @@ import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView, EngineView } from './render/ArmyView.js';
 import { UNITS_BY_ID } from './config/soldiers.js';
 import { blowOf } from './world/Defenders.js';
-import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent } from './config/blocks.js';
+import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent, TIME_MACHINE, EGG_RAPTOR, EGG_TRIKE, EGG_LONGNECK } from './config/blocks.js';
+import { inPast, pastArrival } from './world/past.js';
 import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
 import { Suspicion, SUSPICION, AMBUSH } from './duilt/Suspicion.js';
@@ -123,6 +124,8 @@ import { loadingShow, loadingProgress, loadingDone, nextPaint, followDrawing } f
 const REACH = 7;
 /** The god's wand's beam (useWand): how often, how fast, how hard. */
 const WAND_EVERY_MS = 350, WAND_BEAM_SPEED = 70, WAND_BEAM_DAMAGE = 12;
+/** Which dinosaur is in which egg (world/past.js). */
+const EGG_TYPE = { [EGG_RAPTOR]: 'raptor', [EGG_TRIKE]: 'trike', [EGG_LONGNECK]: 'longneck' };
 /** Out in the world, who'll stop for a word (config/talk.js). */
 const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard']);
 /** The longest Save and leave waits for the upload before letting you go anyway. */
@@ -2483,6 +2486,11 @@ export class Game {
     // Someone who'll talk gets a word, not a blow: a tap is Place. Holding
     // still strikes them, the way it breaks a block.
     if (this.talkTarget(aimed) || this.traderTarget(aimed)) return places();
+    // A horse or a dinosaur: yours, a tap gets on; wild, a tap with what it
+    // eats in your hand tames it. Without, a tap hunts it as any animal.
+    // (Taming used to be Place only, and a tap always struck it.)
+    const mount = this.horseTarget(aimed);
+    if (mount && (mount.owned || MOBS_BY_ID.get(mount.type)?.tameWith?.includes(this.selectedItemId))) return places();
     if (this.banditTarget(aimed) || this.mobTarget(aimed) || this.fireflyTarget(aimed)) return breaks();
     if (this.kingTarget(aimed) || this.hermitTarget(aimed) || this.traderTarget(aimed) || this.guardianTarget(aimed)) return places();
     // A train or a flying machine: a tap is Place — coal into the bunker, a
@@ -2493,7 +2501,7 @@ export class Game {
     if (this.trainTarget(aimed) || this.machineTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
       || aimed.block === STORAGE_CONTROLLER || stationOf(aimed.block)
-      || aimed.block === SKY_LIFT || aimed.block === WAY_OUT || isCatapult(aimed.block)
+      || aimed.block === SKY_LIFT || aimed.block === WAY_OUT || aimed.block === TIME_MACHINE || isCatapult(aimed.block)
       || (aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)))) return places();
     const item = this.selectedItemId;
     // The wand: a tap puts down a copy once a block's picked; a hold (Break)
@@ -2562,6 +2570,8 @@ export class Game {
     if (aimed && aimed.block === SKY_LIFT) return void this.rideLift(aimed);
     // The way out of the god's cube.
     if (aimed && aimed.block === WAY_OUT) return void this.leaveCube();
+    // A time machine: to the Past, or home from it.
+    if (aimed && aimed.block === TIME_MACHINE) return void this.useTimeMachine();
     // And at a catapult, Place takes hold of it.
     if (aimed && isCatapult(aimed.block)) return void this.manCatapult(aimed);
     // A full bucket takes the button too, instead of placing a block.
@@ -3915,8 +3925,11 @@ export class Game {
     const d = this.duilt;
     if (!m.owned) {
       const r = d.tameHorse(m, this.selectedItemId);
-      if (!r.ok) return void this.ui.toast({ kind: 'xp', title: 'A wild horse', body: r.reason });
-      this.ui.toast({ kind: 'challenge', title: 'The horse is yours', body: 'Build a cart and use it on it — forty slots, and something to ride.' });
+      const name = (MOBS_BY_ID.get(m.type)?.name ?? 'Horse').toLowerCase();
+      if (!r.ok) return void this.ui.toast({ kind: 'xp', title: `A wild ${name}`, body: r.reason });
+      this.ui.toast(m.type === 'horse'
+        ? { kind: 'challenge', title: 'The horse is yours', body: 'Build a cart and use it on it — forty slots, and something to ride.' }
+        : { kind: 'challenge', title: `The ${name} is yours`, body: 'Place on it to ride. It waits where you leave it.' });
       this.editedAt = Date.now();
       return;
     }
@@ -5937,6 +5950,95 @@ export class Game {
    * if you steal from their chests or attack them") — the whole tribe, at
    * once. Said once, the first time.
    */
+  // ---- time travel (world/past.js) ----
+
+  /** Place on a time machine: in the Past, home again; anywhere else, the choice of when. */
+  useTimeMachine() {
+    const d = this.duilt, gen = this.world?.gen;
+    if (!d || !gen) return;
+    if (inPast(this.player.position.x, gen.biomes.centreX)) return void this.travelHome();
+    this.ui.confirm({
+      title: 'The time machine',
+      body: 'The Past: jungle and fern plains, dinosaurs that hit hard, and eggs to bring home. It sets you down by another machine — the way back. (The Future is still being built.)',
+      ok: 'To the Past',
+    }).then((yes) => { if (yes) this.travelPast(); });
+  }
+
+  /** To the Past: set down on dry ground there, by a machine of its own for the way home. */
+  travelPast() {
+    const d = this.duilt, gen = this.world.gen, w = this.world;
+    const p = this.player.position;
+    d.time.back = { x: p.x, y: p.y, z: p.z };
+    let at = pastArrival(gen.biomes.centreX, gen.biomes.centreZ);
+    // Not in a river: a little further along until the ground's dry.
+    for (let i = 0; i < 40 && gen.waterLevelAt(at.x, at.z); i++) at = { x: at.x, z: at.z + 8 };
+    const y = gen.heightAt(at.x, at.z);
+    // A clearing to land in — whatever grew there is cut back — and the
+    // machine beside it, on firm ground.
+    for (let dx = -1; dx <= 2; dx++) {
+      for (let dz = -1; dz <= 1; dz++) {
+        if (!w.isSolid(at.x + dx, y - 1, at.z + dz)) w.setBlock(at.x + dx, y - 1, at.z + dz, 2);
+        for (let dy = 0; dy < 4; dy++) w.setBlock(at.x + dx, y + dy, at.z + dz, 0);
+      }
+    }
+    w.setBlock(at.x + 2, y, at.z, TIME_MACHINE);
+    this.remeshDirty();
+    this.stopRide?.();
+    this.player.teleport?.(at.x + 0.5, y, at.z + 0.5) ?? this.player.position.set(at.x + 0.5, y, at.z + 0.5);
+    this.player.velocity?.set?.(0, 0, 0);
+    const first = !d.time.pastVisited;
+    d.time.pastVisited = true;
+    this.editedAt = Date.now();
+    this.sound?.lift?.();
+    this.ui.toast({ kind: 'achievement', title: 'The Past', body: first ? 'Long before the kingdoms. Mind the raptors — and look for eggs in the ferns.' : 'Back among the dinosaurs.', duration: 6000 });
+  }
+
+  /** Home from the Past: back where you left. */
+  travelHome() {
+    const d = this.duilt, gen = this.world.gen;
+    const b = d.time.back ?? { x: gen.biomes.centreX + 0.5, y: gen.heightAt(gen.biomes.centreX, gen.biomes.centreZ), z: gen.biomes.centreZ + 0.5 };
+    d.time.back = null;
+    this.stopRide?.();
+    this.player.teleport?.(b.x, b.y + 0.05, b.z) ?? this.player.position.set(b.x, b.y + 0.05, b.z);
+    this.player.velocity?.set?.(0, 0, 0);
+    this.editedAt = Date.now();
+    this.sound?.lift?.();
+    this.ui.toast({ kind: 'xp', title: 'Home again', body: 'The present, where you left it.' });
+  }
+
+  /** A dinosaur's bite: through your armour, and a jolt, as a bandit's blow is. */
+  dinoBites(m, damage) {
+    if (!this.duilt || this.duilt.sandbox || this.riding === m) return;
+    const taken = this.duilt.hurt(damage, 'dinosaur');
+    if (!taken) return;
+    if (this.player.grounded) this.player.velocity.y = 4.5;
+    this.sound?.blow?.(damage >= 4, { x: m.x, z: m.z });
+  }
+
+  /** Eggs whose time has come (DuiltGame.hatchDue): out comes a dinosaur, tame, and yours. */
+  hatchEggs(dt) {
+    this.eggClock = (this.eggClock ?? 0) + dt;
+    if (this.eggClock < 1 || !this.duilt || !this.mobs) return;
+    this.eggClock = 0;
+    for (const e of this.duilt.hatchDue()) {
+      // Too far off to be loaded: it waits for you to come back.
+      if (!this.world.hasChunk(e.x >> 4, e.z >> 4)) { this.duilt.eggs.push(e); continue; }
+      // Picked up again since: nothing to hatch.
+      if (EGG_TYPE[this.world.getBlock(e.x, e.y, e.z)] !== e.type) continue;
+      const spec = MOBS_BY_ID.get(e.type);
+      if (!spec) continue;
+      this.world.setBlock(e.x, e.y, e.z, 0);
+      this.remeshDirty();
+      const m = this.mobs.make(spec, e.x + 0.5, e.y, e.z + 0.5);
+      m.owned = true;
+      this.mobs.list.push(m);
+      this.duilt.mounts.push(m);
+      this.duilt.time.hatched += 1;
+      this.editedAt = Date.now();
+      this.ui.toast({ kind: 'achievement', title: `A ${spec.name.toLowerCase()} hatched`, body: 'Tame, and yours. Place on it to ride.', duration: 6000 });
+    }
+  }
+
   tookFromChest({ x, z }) {
     if (!this.world.gen || !this.wanderers) return false;
     // The god's stash: taken, and the way out opens.
@@ -6218,7 +6320,13 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: 'Seeds go in farmland', body: 'Put down farmland and plant on top of it' });
       return;
     }
-    this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' });
+    if (!this.applyChanges(changes, { viaSymmetry: this.symmetryTool.mode !== 'off' })) return;
+    // A dinosaur's egg set down: it hatches in a couple of days (hatchEggs).
+    for (const c of changes) {
+      if (!EGG_TYPE[c.next] || !this.duilt) continue;
+      this.duilt.layEgg(c.x, c.y, c.z, EGG_TYPE[c.next]);
+      this.ui.toast({ kind: 'challenge', title: 'An egg, set down', body: `It hatches in ${HATCH_DAYS} days — tame, and yours.` });
+    }
   }
 
   /** Brings every planted crop up to the stage its time in the ground says. */
@@ -6391,7 +6499,9 @@ export class Game {
     // Duilt has its own economy: the border says where, the bag says whether.
     let duiltBill = null;
     if (this.duilt) {
-      const outside = changes.find((c) => !this.duilt.territory.contains(c.x, c.z));
+      // The Past (world/past.js) is nobody's land: dig there, take its eggs, build.
+      const centreX = this.world.gen?.biomes.centreX ?? 0;
+      const outside = changes.find((c) => !this.duilt.territory.contains(c.x, c.z) && !inPast(c.x, centreX));
       if (outside) {
         this.ui?.toast({
           kind: 'xp',
@@ -6838,6 +6948,7 @@ export class Game {
       this.growCrops(dt);
       this.tickLeafDecay();
       this.lookForPlaces(dt);
+      this.hatchEggs(dt);
       // The first time it gets properly dark (config/moments.js).
       if (this.duilt && !this.duilt.moments.includes('first_night') && daylightAt(this.dayCycle.time).day < 0.25) this.tellMoment('first_night');
       this.tickBreaking(performance.now());
@@ -6975,6 +7086,7 @@ export class Game {
       this.mobs = new Mobs({
         world: this.world,
         avoid: (x, z) => !!(this.duilt && !this.duilt.sandbox && this.duilt.territory.contains(x, z)),
+        onBite: (m, damage) => this.dinoBites(m, damage),
       });
       this.mobsHerdOf = null;
     }
@@ -7219,7 +7331,7 @@ export class Game {
       this.hoverBox.visible = false;
       this.ui?.setPersonHint(spec.name, mob.owned ? (mob.cart ? 'yours — Place to open the cart' : 'yours — Place to ride')
         : mob.hp < spec.hp ? 'hurt — keep at it'
-        : spec.rideable && this.duilt ? 'hold fruit or carrots, Place to tame'
+        : spec.rideable && this.duilt ? (spec.tameWith?.includes('raw_meat') ? 'hold raw meat, Place to tame' : 'hold fruit or carrots, Place to tame')
         : mob.penId ? 'yours — kept in the pen'
           : spec.farm && this.duilt ? 'hold vegetables or seeds to lead it' : 'hit to hunt');
       return;

@@ -181,8 +181,7 @@ export const AGES = [
   // Ages 11 and 12, reworked as the draft had them (backlog batch 4, B;
   // asked for directly: "Next fix 11 12 goals"): after the war, Conquest —
   // the peoples past your border and their treasure — and then the god. The
-  // time-travel goals the draft had come with time travel itself, so the
-  // game can never end waiting on something that isn't there yet.
+  // time-travel goals the draft had came with time travel itself.
   {
     age: 11,
     name: 'Conquest',
@@ -201,12 +200,13 @@ export const AGES = [
     name: 'The God',
     size: 512,
     open: true,
-    intro: 'The god you didn\'t choose waits in his cube beyond the world. Your Sanctuary opens the way.',
+    intro: 'The god you didn\'t choose waits in his cube beyond the world, and the machine waits for the Past. Your Sanctuary opens the way.',
     goals: [
       { id: 'cube_open', label: 'Open the way at your Sanctuary', test: (d) => !!d.cube?.entered },
       { id: 'god_done', label: 'Beat the other god, or steal his stash', test: (d) => !!(d.cube?.beaten || d.cube?.stash) },
-      { id: 'book_most', label: 'Fill three quarters of the collection book', test: (d) => (d.collection?.progress() ?? 0) >= 0.75, progress: (d) => `${Math.floor((d.collection?.progress() ?? 0) * 100)}/75%` },
-      { id: 'forty', label: 'Forty buildings standing', test: (d) => buildings(d) >= 40, progress: (d) => `${Math.min(buildings(d), 40)}/40` },
+      // Time travel (world/past.js), as the draft had it.
+      { id: 'past', label: 'Travel to the Past', test: (d) => !!d.time?.pastVisited },
+      { id: 'hatch', label: 'Hatch a dinosaur from an egg', test: (d) => (d.time?.hatched ?? 0) > 0 },
     ],
     // Nothing comes after this one. Finishing it finishes the game.
     final: true,

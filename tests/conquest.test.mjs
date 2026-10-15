@@ -17,8 +17,8 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 ok('Age 11 is Conquest, Age 12 the god', ageOf(11).name === 'Conquest' && ageOf(12).name === 'The God' && ageOf(12).final);
 ok('  Conquest: a city\'s treasure, another people, diamond armour, half the book',
   ageOf(11).goals.map((g) => g.id).join() === 'city_treasure,second_people,gem_armour,book_half');
-ok('  the god: the way opened, the god beaten or his stash taken, three quarters of the book, forty buildings',
-  ageOf(12).goals.map((g) => g.id).join() === 'cube_open,god_done,book_most,forty');
+ok('  the god and time: the way opened, the god beaten or his stash taken, the Past, a dinosaur hatched',
+  ageOf(12).goals.map((g) => g.id).join() === 'cube_open,god_done,past,hatch');
 
 const { world } = generateDuiltWorld({ sizeX: 64, sizeZ: 64, seed: 3 });
 const d = new DuiltGame({ world, scene: new THREE.Scene(), bus: { emit() {} } });

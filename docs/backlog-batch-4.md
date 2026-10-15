@@ -287,6 +287,27 @@ armour".
 
 ### D3. Side story: time travel
 
+**The Past, part one, done in PR #187:**
+- A **time machine** (engineering centre, Age 11: iron, gold, glass, two
+  diamonds, two rubies). Set it down and Place on it.
+- **The Past** is prehistoric land a long way east (world/past.js):
+  - two biomes of its own, Prehistoric Jungle and Fern Plains, and nothing
+    else grows there;
+  - you land in a clearing beside a machine of its own, the way home;
+  - it's nobody's land, so you can dig and build there.
+- **Dinosaurs:**
+  - the raptor hunts you and bites (3 a bite, armour helps) and goes
+    round what's in its way;
+  - the triceratops charges once struck;
+  - the long-neck grazes, head up on its neck.
+  - Tame them by feeding (raw meat for a raptor, fruit or vegetables for
+    the others) and ride them. On a phone a tap does it.
+- **Eggs** lie in the ferns. Take one home, set it down, and two days later
+  a tame one hatches.
+- Age 12 now asks for the Past and a hatched dinosaur, as this draft had it.
+- Still to do: dinosaurs fighting beside you (the army), mythical creatures,
+  and the Future.
+
 Unlocked after the first end game.
 
 - **The time machine:** a craftable block you place, sit in, and pick Past or

@@ -202,6 +202,15 @@ export const RECIPES = [
     blurb: 'Wood and canvas wings, after Leonardo, strapped on like a breastplate. Wear it (Body) and Fly takes off: Jump climbs, Sneak dives, Fly lands — stop in the air and its wings glide you down.',
   },
   {
+    id: 'time_machine',
+    name: 'Time Machine',
+    station: 'engineering',
+    age: 11,
+    inputs: { iron_ingot: 24, gold: 8, glass: 10, diamond: 2, ruby: 2 },
+    output: { id: 'time_machine', count: 1 },
+    blurb: 'Set it down and Place on it: the Past, where the dinosaurs are. It sets you down by another, the way home.',
+  },
+  {
     id: 'helix',
     name: 'Helix',
     station: 'engineering',
