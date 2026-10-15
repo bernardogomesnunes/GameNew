@@ -108,6 +108,14 @@ export const CITIZEN_TALK = [
   'There was a city like this to the far side of the hills, once. Nobody lives there now.',
   'Mabel at the stall sells seed you can\'t get anywhere else.',
 ];
+export const FUTURIAN_TALK = [
+  'Oh — you came by the old machine? We read about those.',
+  'The university is just across the square. Its Archive holds how all of this was made.',
+  'Mind the trams. They don\'t make a sound.',
+  'Clothes like yours! Is it a costume? It\'s very good.',
+  'Everyone up there flies. Walking is for the square, and for visitors.',
+  'There were kingdoms here once, they say. And before that, dinosaurs. Imagine.',
+];
 export const CITY_GUARD_TALK = [
   'Keep your hands to yourself in here, and we\'ll get on.',
   'Gates shut at dark. Mostly.',
@@ -176,6 +184,7 @@ export function talkLine({ who, person, job = null, jobId = null, at = null, lan
   if (who === 'tribe') return fill(pick(TRIBE_TALK), vars);
   if (who === 'citizen') return fill(pick(CITIZEN_TALK), vars);
   if (who === 'city_guard') return fill(pick(CITY_GUARD_TALK), vars);
+  if (who === 'futurian') return fill(pick(FUTURIAN_TALK), vars);
   if (who === 'warrior') return fill(pick(WARRIOR_TALK), vars);
 
   // A settler: what's on their mind first, then whatever else.

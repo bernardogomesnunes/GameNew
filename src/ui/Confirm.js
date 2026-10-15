@@ -5,14 +5,16 @@
  * (not an `.overlay`), because opening a panel closes the others, and this
  * has to sit on top of the panel that asked.
  *
- *   askConfirm(root, { title, body, ok, cancel, danger }) → Promise<boolean>
+ *   askConfirm(root, { title, body, ok, cancel, danger, alt }) → Promise<boolean | 'alt'>
  *
+ * `alt`, when given, is a second choice beside the first (the time machine:
+ * the Past or the Future); choosing it resolves 'alt'.
  * Resolves true on the confirm button, false on the cross, a tap outside
  * the card, or Escape. No Cancel button (asked for directly: "Cancel is the
  * cross so we can remove it") — `cancel` is now the cross's label, for
  * screen readers.
  */
-export function askConfirm(root, { title, body = '', ok = 'OK', cancel = 'Cancel', danger = false } = {}) {
+export function askConfirm(root, { title, body = '', ok = 'OK', cancel = 'Cancel', danger = false, alt = null } = {}) {
   return new Promise((resolve) => {
     const el = document.createElement('div');
     el.className = 'confirm-backdrop';
@@ -22,7 +24,7 @@ export function askConfirm(root, { title, body = '', ok = 'OK', cancel = 'Cancel
         <strong class="confirm-title"></strong>
         <p class="confirm-body"></p>
         <div class="confirm-actions">
-          <button class="primary${danger ? ' danger' : ''}" data-yes></button>
+          <button class="primary${danger ? ' danger' : ''}" data-yes></button>${alt ? '\n          <button class="primary" data-alt></button>' : ''}
         </div>
       </div>`;
     // Text, not markup: titles carry world names, which are whatever you typed.
@@ -31,6 +33,7 @@ export function askConfirm(root, { title, body = '', ok = 'OK', cancel = 'Cancel
     el.querySelector('.confirm-body').hidden = !body;
     el.querySelector('[data-no]').setAttribute('aria-label', cancel);
     el.querySelector('[data-yes]').textContent = ok;
+    if (alt) el.querySelector('[data-alt]').textContent = alt;
 
     const done = (answer) => {
       document.removeEventListener('keydown', onKey, true);
@@ -44,6 +47,7 @@ export function askConfirm(root, { title, body = '', ok = 'OK', cancel = 'Cancel
     el.addEventListener('click', (e) => { if (e.target === el) done(false); });
     el.querySelector('[data-no]').addEventListener('click', () => done(false));
     el.querySelector('[data-yes]').addEventListener('click', () => done(true));
+    el.querySelector('[data-alt]')?.addEventListener('click', () => done('alt'));
     document.addEventListener('keydown', onKey, true);
     root.appendChild(el);
     el.querySelector('[data-yes]').focus();

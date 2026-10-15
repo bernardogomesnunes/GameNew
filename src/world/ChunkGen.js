@@ -6,6 +6,7 @@ import { stampLandmarks, landmarksFor } from './landmarks.js';
 import { roadAt, roadBlock } from './roads.js';
 import { stampKingdom } from './kingdom.js';
 import { stampSky } from './skyKingdom.js';
+import { inFuture, stampFuture, FUTURE_GROUND } from './future.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
@@ -147,6 +148,8 @@ export class ChunkGen {
 
   /** The ground height at a column, before anything is planted on it. */
   heightAt(x, z) {
+    // The Future's city stands on level ground (world/future.js).
+    if (inFuture(x, this.biomes.centreX)) return FUTURE_GROUND;
     const { weights } = this.biomes.weigh(x, z);
     const base = this.biomes.blend(weights, 'base');
     const amplitude = this.biomes.blend(weights, 'amplitude');
@@ -321,6 +324,7 @@ export class ChunkGen {
 
   /** A river's own water level over this column, or 0 away from one. */
   riverLevelAt(x, z) {
+    if (inFuture(x, this.biomes.centreX)) return 0;
     return this.riverCut(x, z) > RIVER_DEPTH * 0.35 ? this.heightAt(x, z) + 1 : 0;
   }
 
@@ -346,6 +350,7 @@ export class ChunkGen {
 
   /** A mountain stream's own water level over this column, or 0 away from one. */
   streamLevelAt(x, z) {
+    if (inFuture(x, this.biomes.centreX)) return 0;
     const { weights } = this.biomes.weigh(x, z);
     return this.streamCut(x, z, weights) > STREAM_DEPTH * 0.4 ? this.heightAt(x, z) + 1 : 0;
   }
@@ -572,6 +577,8 @@ export class ChunkGen {
     });
     // The Sky Kingdom and its anchor towers — only on the dark path (see skyKingdom.js).
     stampSky(this, chunk, CHUNK_SIZE);
+    // The Future's city, where this chunk is in it (see future.js).
+    stampFuture(this, chunk, CHUNK_SIZE);
 
     chunk.dirty = true;
   }

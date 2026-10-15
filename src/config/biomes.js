@@ -262,6 +262,21 @@ export const BIOMES = [
     trees: { chance: 0.006, trunk: [7, 10], canopy: 3, wood: WOOD, leaves: LEAVES, giants: 0.5 },
     scatter: [{ block: 444, chance: 0.0008 }, { block: 443, chance: 0.0005 }],
   },
+  // --- the Future (world/future.js) ---------------------------------------
+  //
+  // One city, all of it: flat ground under paving, no trees, nothing wild.
+  // What stands on it is laid by world/future.js, not grown.
+  {
+    id: 'futureCity',
+    name: 'Future City',
+    era: 'future',
+    niche: { temp: 0.5, wet: 0.5 },
+    base: 108, amplitude: 0, rough: 0,
+    flat: 1,
+    surface: { top: 447, under: STONE, depth: 3, rock: STONE },
+    trees: { chance: 0 },
+    scatter: [],
+  },
 ];
 
 export const BIOMES_BY_ID = new Map(BIOMES.map((b) => [b.id, b]));

@@ -413,6 +413,19 @@ export const ITEMS = [
   // or stay.
   { id: 'dino_whistle', name: 'Dinosaur Whistle', kind: 'tool', stackTo: STACK_TOOL, color: 0xd8c39a, glyph: 'whistle', durability: null,
     madeBy: 'Carved from hide and string', unlocks: 'Place to call your dinosaurs to follow — or to stay' },
+  // The Future's city (world/future.js): learnt at its university's Archive
+  // and made at an engineering centre once you're home (config/recipes.js
+  // `future`). Neon, screens, lit windows and lamps shine on their own at night.
+  { id: 'pavement', name: 'Pavement', kind: 'refined', stackTo: STACK_BULK, color: 0xc4c8cc, glyph: 'stone', block: 447, madeBy: 'Paving slabs from the Future — cut at an engineering centre' },
+  { id: 'asphalt', name: 'Asphalt', kind: 'refined', stackTo: STACK_BULK, color: 0x3a3c41, glyph: 'stone', block: 448, madeBy: 'The Future\'s roads: gravel bound in coal tar' },
+  { id: 'tinted_glass', name: 'Tinted Glass', kind: 'refined', stackTo: STACK_BULK, color: 0x4f8fb0, glyph: 'pane', block: 449, madeBy: 'The towers\' blue glass, from the Future' },
+  { id: 'steel_panel', name: 'Steel Panel', kind: 'refined', stackTo: STACK_BULK, color: 0x9aa3ad, glyph: 'stone', block: 450, madeBy: 'Brushed steel from the Future\'s towers' },
+  { id: 'neon_pink', name: 'Neon Pink', kind: 'refined', stackTo: STACK_BULK, color: 0xff4fb8, glyph: 'lantern', block: 451, madeBy: 'Glowing glass from the Future — it shines all night' },
+  { id: 'neon_cyan', name: 'Neon Cyan', kind: 'refined', stackTo: STACK_BULK, color: 0x3fe6ff, glyph: 'lantern', block: 452, madeBy: 'Glowing glass from the Future — it shines all night' },
+  { id: 'screen', name: 'Screen', kind: 'refined', stackTo: STACK_BULK, color: 0x3c7cff, glyph: 'pane', block: 453, madeBy: 'A lit screen from the Future' },
+  { id: 'maglev_rail', name: 'Maglev Rail', kind: 'refined', stackTo: STACK_BULK, color: 0x6f7884, glyph: 'rail', block: 454, madeBy: 'The trams\' track, from the Future' },
+  { id: 'lit_window', name: 'Lit Window', kind: 'refined', stackTo: STACK_BULK, color: 0xffe2a0, glyph: 'pane', block: 455, madeBy: 'A window with the lights on behind it — it glows at night' },
+  { id: 'future_lamp', name: 'Future Lamp', kind: 'refined', stackTo: STACK_GOODS, color: 0xe6fbff, glyph: 'lantern', block: 456, madeBy: 'The Future\'s street lamp: a cold bright light' },
   { id: 'sky_lift', name: 'Sky Lift', kind: 'refined', stackTo: STACK_GOODS, color: 0xe2c26a, glyph: 'lift', block: 230, madeBy: 'The Sky Kingdom\'s own — at its anchor towers, Place on one to ride the chain' },
   // The war horn (the Ten Rounds): Break with it in hand calls the next round now.
   { id: 'war_horn', name: 'War Horn', kind: 'refined', stackTo: 1, color: 0xc9a46a, glyph: 'horn', madeBy: 'Made at the bench — Break with it in hand calls the Stone Kingdom\'s next round now' },

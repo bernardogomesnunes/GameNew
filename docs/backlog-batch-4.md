@@ -319,7 +319,35 @@ armour".
 - **A creature out of legend:** the Basilisk, rare in the deep jungle. It's
   a crowned serpent-lizard that hunts (6 a bite, 120 hp), nobody tames it,
   and it drops Basilisk Scales.
-- Still to do: the Future.
+
+**Part three, done in PR #189: the Future.**
+- The time machine's pop-up now offers **To the Past** or **To the Future**.
+- **The city:** far west of home (as far as the Past is east). One city, on
+  flat ground, all of it:
+  - a grid of streets with lane markings; the east–west ones carry two
+    maglev rails each;
+  - pavements with lamp posts;
+  - on almost every block a glass tower, 24 to 80 high: steel frame, blue
+    glass, some windows lit, a door in each side, floors inside, a neon
+    ring on the roof and a mast. Some step in near the top; some carry a
+    big screen. A few blocks are small parks.
+- **At night it glows:** neon, screens, lit windows and lamps are drawn with
+  their own light, so they stay bright in the dark.
+- **Trams** glide along the rails and **flying cars** pass overhead in lanes
+  above the streets. They're scenery: you can't ride them or be hit.
+- **People:** a dozen futurians about the plaza. They're neutral, and they
+  talk (tap).
+- **The university** is just east of the plaza; walk straight in through its
+  door. Place on (or tap) the **Archive** inside, and you learn the Future's
+  blocks.
+- **Its blocks:** Pavement, Asphalt, Tinted Glass, Steel Panel, Neon Pink,
+  Neon Cyan, Screen, Maglev Rail, Lit Window and Future Lamp. Each is made at
+  an engineering centre (Age 11), but only once you've read the Archive.
+- The Future isn't your land: the border stops you breaking or building
+  there, so its blocks can't simply be carried home. Learning them is the
+  way.
+- Your following dinosaurs come along. A time machine in the plaza takes you
+  home.
 
 Unlocked after the first end game.
 

@@ -93,8 +93,11 @@ import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView, EngineView } from './render/ArmyView.js';
 import { UNITS_BY_ID } from './config/soldiers.js';
 import { blowOf } from './world/Defenders.js';
-import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent, TIME_MACHINE, EGG_RAPTOR, EGG_TRIKE, EGG_LONGNECK } from './config/blocks.js';
+import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent, TIME_MACHINE, EGG_RAPTOR, EGG_TRIKE, EGG_LONGNECK, ARCHIVE } from './config/blocks.js';
 import { inPast, pastArrival } from './world/past.js';
+import { inFuture, futureArrival, FUTURE_GROUND } from './world/future.js';
+import { FutureView } from './render/FutureView.js';
+import { RECIPES } from './config/recipes.js';
 import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
 import { Suspicion, SUSPICION, AMBUSH } from './duilt/Suspicion.js';
@@ -134,7 +137,7 @@ const EGG_TYPE = { [EGG_RAPTOR]: 'raptor', [EGG_TRIKE]: 'trike', [EGG_LONGNECK]:
  */
 const WHISTLE_REACH = 60, PACK_HEEL = 4, PACK_FIGHT = 14, PACK_CATCH_UP = 40, PACK_STUCK = 3, PACK_LOST = 120, PACK_TRAVEL = 24;
 /** Out in the world, who'll stop for a word (config/talk.js). */
-const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard']);
+const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard', 'futurian']);
 /** The longest Save and leave waits for the upload before letting you go anyway. */
 const LEAVE_SAVE_WAIT_MS = 15000;
 /** How fast the touch stick walks at its rim, against a key's full walking pace. */
@@ -517,6 +520,8 @@ export class Game {
     // The Stone Kingdom's rams, catapults and beast, and its arrows.
     this.armyView = new ArmyView(this.scene);
     this.engineView = new EngineView(this.scene);
+    // The Future's trams and flying cars.
+    this.futureView = new FutureView(this.scene);
     // Your soldiers and tower archers (the defence buildings).
     this.defenderView = new SettlerView(this.scene);
     // Your army, on the dark path.
@@ -2508,7 +2513,7 @@ export class Game {
     if (this.trainTarget(aimed) || this.machineTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
       || aimed.block === STORAGE_CONTROLLER || stationOf(aimed.block)
-      || aimed.block === SKY_LIFT || aimed.block === WAY_OUT || aimed.block === TIME_MACHINE || isCatapult(aimed.block)
+      || aimed.block === SKY_LIFT || aimed.block === WAY_OUT || aimed.block === TIME_MACHINE || aimed.block === ARCHIVE || isCatapult(aimed.block)
       || (aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)))) return places();
     const item = this.selectedItemId;
     // The wand: a tap puts down a copy once a block's picked; a hold (Break)
@@ -2579,6 +2584,8 @@ export class Game {
     if (aimed && aimed.block === WAY_OUT) return void this.leaveCube();
     // A time machine: to the Past, or home from it.
     if (aimed && aimed.block === TIME_MACHINE) return void this.useTimeMachine();
+    // The Archive, in the Future's university: its knowledge, to take home.
+    if (aimed && aimed.block === ARCHIVE) return void this.readArchive();
     // And at a catapult, Place takes hold of it.
     if (aimed && isCatapult(aimed.block)) return void this.manCatapult(aimed);
     // A full bucket takes the button too, instead of placing a block.
@@ -5959,16 +5966,70 @@ export class Game {
    */
   // ---- time travel (world/past.js) ----
 
-  /** Place on a time machine: in the Past, home again; anywhere else, the choice of when. */
+  /** Place on a time machine: in the Past or the Future, home again; anywhere else, the choice of when. */
   useTimeMachine() {
     const d = this.duilt, gen = this.world?.gen;
     if (!d || !gen) return;
-    if (inPast(this.player.position.x, gen.biomes.centreX)) return void this.travelHome();
+    const x = this.player.position.x, cx = gen.biomes.centreX;
+    if (inPast(x, cx) || inFuture(x, cx)) return void this.travelHome();
     this.ui.confirm({
       title: 'The time machine',
-      body: 'The Past: jungle and fern plains, dinosaurs that hit hard, and eggs to bring home. It sets you down by another machine — the way back. (The Future is still being built.)',
+      body: 'The Past: jungle and fern plains, dinosaurs that hit hard, and eggs to bring home. The Future: a city of glass towers, trams and flying cars — and a university whose Archive knows how it was all made. Either way it sets you down by another machine, the way back.',
       ok: 'To the Past',
-    }).then((yes) => { if (yes) this.travelPast(); });
+      alt: 'To the Future',
+    }).then((go) => { if (go === 'alt') this.travelFuture(); else if (go) this.travelPast(); });
+  }
+
+  /**
+   * To the Future: the plaza in the middle of its city, a machine beside you
+   * for the way home, and its people about the square.
+   */
+  travelFuture() {
+    const d = this.duilt, gen = this.world.gen, w = this.world;
+    const p = this.player.position;
+    d.time.back = { x: p.x, y: p.y, z: p.z };
+    const at = futureArrival(gen.biomes.centreX, gen.biomes.centreZ);
+    const y = FUTURE_GROUND;
+    w.setBlock(at.x + 2, y, at.z, TIME_MACHINE);
+    this.remeshDirty();
+    this.stopRide?.();
+    this.bringPack(p, { x: at.x, y, z: at.z });
+    this.player.teleport?.(at.x + 0.5, y, at.z + 0.5) ?? this.player.position.set(at.x + 0.5, y, at.z + 0.5);
+    this.player.velocity?.set?.(0, 0, 0);
+    this.peopleTheFuture(at, y);
+    const first = !d.time.futureVisited;
+    d.time.futureVisited = true;
+    this.editedAt = Date.now();
+    this.sound?.lift?.();
+    this.ui.toast({ kind: 'achievement', title: 'The Future', body: first ? 'Towers of glass, trams and flying cars. The university is just east of the square — find its Archive.' : 'Back in the city to come.', duration: 7000 });
+  }
+
+  /** The Future's people, about its plaza: a dozen of them, going about their day. */
+  peopleTheFuture(at, y) {
+    if (!this.wanderers) return;
+    this.wanderers.list = this.wanderers.list.filter((q) => q.landmark?.kind !== 'future');
+    const lm = { kind: 'future', x: at.x, z: at.z, y, half: 60, leave: 400 };
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2, r = 5 + (k % 3) * 3;
+      const x = at.x + 0.5 + Math.cos(a) * r, z = at.z + 0.5 + Math.sin(a) * r;
+      this.wanderers.list.push(this.wanderers.person('futurian', x, y, z, { landmark: lm, home: { x, z } }));
+    }
+  }
+
+  /**
+   * The Archive (Place on it, in the Future's university): how the city was
+   * made — its paving, glass and steel, neon, screens and lamps — to make at
+   * an engineering centre at home (config/recipes.js `future`).
+   */
+  readArchive() {
+    const d = this.duilt;
+    if (!d) return;
+    if (d.time.futureKnown) return void this.ui.toast({ kind: 'xp', title: 'The Archive', body: 'You know all it has to teach. Make it at an engineering centre, at home.' });
+    d.time.futureKnown = true;
+    this.editedAt = Date.now();
+    this.sound?.lift?.();
+    const names = RECIPES.filter((r) => r.future).map((r) => r.name);
+    this.ui.toast({ kind: 'achievement', title: 'Knowledge of the Future', body: `${names.join(', ')} — yours to make at an engineering centre.`, duration: 9000 });
   }
 
   /** To the Past: set down on dry ground there, by a machine of its own for the way home. */
@@ -6001,11 +6062,12 @@ export class Game {
     this.ui.toast({ kind: 'achievement', title: 'The Past', body: first ? 'Long before the kingdoms. Mind the raptors — and look for eggs in the ferns.' : 'Back among the dinosaurs.', duration: 6000 });
   }
 
-  /** Home from the Past: back where you left. */
+  /** Home from the Past or the Future: back where you left. */
   travelHome() {
     const d = this.duilt, gen = this.world.gen;
     const b = d.time.back ?? { x: gen.biomes.centreX + 0.5, y: gen.heightAt(gen.biomes.centreX, gen.biomes.centreZ), z: gen.biomes.centreZ + 0.5 };
     d.time.back = null;
+    if (this.wanderers) this.wanderers.list = this.wanderers.list.filter((q) => q.landmark?.kind !== 'future');
     this.stopRide?.();
     this.bringPack(this.player.position, b);
     this.player.teleport?.(b.x, b.y + 0.05, b.z) ?? this.player.position.set(b.x, b.y + 0.05, b.z);
@@ -7119,6 +7181,8 @@ export class Game {
     this.projectileView.update(this.projectiles?.list ?? []);
     this.arrowView.update(this.arrows?.list ?? []);
     this.fireflyView.update(this.fireflies);
+    const gen = this.world?.gen;
+    this.futureView.update(gen && this.player?.position, performance.now() / 1000, gen?.biomes.centreX, gen?.biomes.centreZ);
     this.guardianView.update(this.duilt?.guardian, dt);
     this.renderer.render(this.scene, this.camera);
   }

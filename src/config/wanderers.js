@@ -258,6 +258,17 @@ export const WANDERERS = {
     neutral: true,
     drops: { coin: [0, 3], fruit: [0, 1] },
   },
+  // The Future's people (world/future.js), about its plaza in pale suits.
+  futurian: {
+    noun: 'a futurian',
+    about: 'someone from the Future, about their day',
+    colours: [0xdfe6ee, 0xb8c4d2, 0x6fd6e8, 0xe58fc4, 0x3a3f4a],
+    speed: 1.5,
+    roam: 8,
+    hp: 10, flees: true, run: 3.8,
+    neutral: true,
+    drops: { coin: [1, 4] },
+  },
   city_guard: {
     noun: 'a city guard',
     about: 'a city guard — keeping the peace',
