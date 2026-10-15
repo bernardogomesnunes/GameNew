@@ -90,6 +90,7 @@ export class Panels {
     if (el.hidden) {
       el.hidden = false;
       if (!this.isScreen(id)) this.order = this.order.filter((x) => x !== id).concat(id);
+      holdSearchHeight(el);
       for (const fn of this.openHooks) fn(id);
     }
     return true;
@@ -142,4 +143,22 @@ export function isTyping(event) {
   if (!el || !el.tagName) return false;
   if (el.isContentEditable) return true;
   return el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT';
+}
+
+/**
+ * A pop-up with a search in it keeps one size while you search (asked for
+ * directly: "Crafting pop up should be fixed size or else searching is
+ * continuously changing sizes. All pop ups with search should."). CSS gives
+ * it its height (styles.css, `.panel:has(.panel-search)`); this pins that
+ * height in pixels as it opens, so nothing that happens while it's open — a
+ * phone's keyboard sliding up for the search box, its toolbars coming and
+ * going — can change it. Opened again, it's measured again.
+ */
+export function holdSearchHeight(overlay) {
+  const panel = overlay?.querySelector?.('.panel');
+  if (!panel?.querySelector?.('.panel-search')) return;
+  panel.classList.remove('held');
+  panel.style.height = '';
+  const h = panel.getBoundingClientRect?.().height;
+  if (h > 0) { panel.style.height = `${Math.round(h)}px`; panel.classList.add('held'); }
 }

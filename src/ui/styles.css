@@ -1614,8 +1614,15 @@ body.editing-building #building-hint {
    phone: "when searching for an item in the bench pop up, the pop up reduces
    a lot its size if it shows only one item — would be nice to have it fixed
    height to keep the same view". Sized to the screen rather than to what's
-   left in the list, so the search box stays where your thumb left it. */
-#panel-bench > .panel, #panel-buildings > .panel { height: min(86vh, 760px); }
+   left in the list, so the search box stays where your thumb left it. And
+   every pop-up with a search, not just those two (asked for directly: "All
+   pop ups with search should") — Panels.holdSearchHeight pins it as it opens. */
+#panel-bench > .panel, #panel-buildings > .panel, .overlay > .panel:has(.panel-search) { height: min(86vh, 760px); }
+/* Pinned (Panels.holdSearchHeight): no cap to shrink it when a keyboard
+   takes the bottom of the screen, and from the top, so the search box is
+   still in sight above it. The list scrolls inside, as ever. */
+.overlay > .panel.held { max-height: none; }
+.overlay:has(> .panel.held) { align-items: flex-start; }
 /* A search over a long list (backlog batch 2): the bench, the buildings. */
 .panel-search {
   display: block; width: 100%; box-sizing: border-box; margin: 0 0 10px; padding: 10px 12px;

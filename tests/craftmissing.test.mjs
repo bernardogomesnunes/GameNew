@@ -73,8 +73,27 @@ const bill = { planks: 12, cobblestone: 8, lantern: 1 };
 }
 
 ok('the button sits by Evolve, when the next level is short of something with a recipe',
-  /data-craft-missing>Craft what\\'s missing<\/button>/.test(ui) && /const craftable = !ready && Object\.keys\(short\)\.some/.test(ui));
-ok('on a building\'s pop-up and a storehouse\'s', (ui.match(/this\.wireCraftMissing\(/g) ?? []).length === 2);
+  /data-craft-missing>Craft what\\'s missing<\/button>/.test(ui) && /const craftable = !ready && this\.craftable\(short\);/.test(ui));
+ok('on a building\'s pop-up, a storehouse\'s — and a ready-made building\'s card (asked for directly: "the option to craft from the building is not showing")',
+  (ui.match(/this\.wireCraftMissing\(/g) ?? []).length === 3 && /data-craft-for="\$\{spec\.id\}">Craft what's missing<\/button>/.test(ui));
+ok('  the whole bill goes in, so what it takes as it is is held back', /\?\.evolvePlan\(structure, \{ dry: true \}\)\?\.bill\)/.test(ui) && /DESIGN_FOR_STRUCTURE\.get\(btn\.dataset\.craftFor\)\?\.cost/.test(ui));
 ok('and it says what it made, and what it couldn\'t', /Couldn't make \$\{list\(still\)\}/.test(ui) && /Nothing could be made/.test(ui));
+
+{
+  // More than a batch: a house's twenty-five planks used to stop at the
+  // first eight presses' sixteen, and say it was done.
+  const g = make({ age: 2 });
+  g.inventory.add('wood', 40);
+  const { made, still } = g.craftMissing({ planks: 25 });
+  ok(`more than a batch is made in as many as it takes (${made.planks} planks)`, g.inventory.countOf('planks') >= 25 && !still.planks);
+}
+{
+  // A bill that takes wood as it is: the wood stays wood.
+  const g = make({ age: 2 });
+  g.inventory.add('wood', 80);
+  const { made, still } = g.craftMissing({ planks: 25, wood: 75 });
+  ok(`what the bill takes as it is is never made into something else on it (${g.inventory.countOf('wood')} wood left)`, g.inventory.countOf('wood') >= 75 || (still.planks > 0 && g.inventory.countOf('wood') === 80));
+  ok('  and what can\'t be made without it is said', still.planks > 0 || made.planks >= 25);
+}
 
 process.exit(f ? 1 : 0);

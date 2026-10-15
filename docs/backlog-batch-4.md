@@ -108,6 +108,15 @@ What's there now was checked in the code before writing this.
   - Both are scanned now. Lava and glowing ore aren't, so there's no flood
     of lights underground.
 
+- **Craft what's missing, everywhere; search pop-ups that hold still**
+  (PR #184).
+  - The button is on a ready-made building's card in Buildings too. It
+    was only on a level's Evolve, so a house (no levels) never had one.
+  - It used to stop at one batch (16 of 25 planks) and say it was done.
+    It now makes all of it, and never uses up what the bill takes as it is.
+  - Every pop-up with a search keeps one height, pinned as it opens, so a
+    phone's keyboard can't shrink it.
+
 ## B. Goals and ages: 12 ages
 
 **Done in PR #168,** with A6 (the goals). As built:
