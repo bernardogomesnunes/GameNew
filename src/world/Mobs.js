@@ -221,6 +221,9 @@ export class Mobs {
       return;
     }
 
+    // A dinosaur of yours you've whistled to follow: Game leads it
+    // (Game.tickPack) — to you, or at whatever's coming for you.
+    if (m.owned && m.follow) return;
     // Your horse waits where you left it: grazing, never wandering off.
     if (m.owned) { m.target = null; m.speed = 0; m.grazing = true; return; }
 
@@ -281,7 +284,7 @@ export class Mobs {
           if (g != null) { nx = m.x; nz = m.z + Math.sign(dz) * step; ground = g; }
         }
         m.facing = Math.atan2(dx, dz);
-        if (ground == null && m.chasing) {
+        if (ground == null && (m.chasing || m.follow)) {
           // Coming for you and something's in the way: off to one side a
           // few steps, then at you again (see think) — a raptor in the
           // jungle would otherwise stand against the first trunk for good.

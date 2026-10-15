@@ -126,6 +126,13 @@ const REACH = 7;
 const WAND_EVERY_MS = 350, WAND_BEAM_SPEED = 70, WAND_BEAM_DAMAGE = 12;
 /** Which dinosaur is in which egg (world/past.js). */
 const EGG_TYPE = { [EGG_RAPTOR]: 'raptor', [EGG_TRIKE]: 'trike', [EGG_LONGNECK]: 'longneck' };
+/**
+ * Your dinosaurs (Game.tickPack): how far the whistle carries; how close
+ * they keep; how far from them (and you) they'll go for something; how far
+ * behind one catches you up (or how long getting no nearer); how far off
+ * one's lost to you; and how near it has to be to come through time.
+ */
+const WHISTLE_REACH = 60, PACK_HEEL = 4, PACK_FIGHT = 14, PACK_CATCH_UP = 40, PACK_STUCK = 3, PACK_LOST = 120, PACK_TRAVEL = 24;
 /** Out in the world, who'll stop for a word (config/talk.js). */
 const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard']);
 /** The longest Save and leave waits for the upload before letting you go anyway. */
@@ -325,7 +332,7 @@ const CRACK_LINGER_MS = 450;
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
 const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace', helix: 'setDownMachine', flying_machine: 'wearSelected' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace', helix: 'setDownMachine', flying_machine: 'wearSelected', dino_whistle: 'blowWhistle' };
 /**
  * Whether saved progression `a` is further along than `b`. By level first:
  * `xp` is only what's been earned towards the next level, so comparing it
@@ -5984,6 +5991,7 @@ export class Game {
     w.setBlock(at.x + 2, y, at.z, TIME_MACHINE);
     this.remeshDirty();
     this.stopRide?.();
+    this.bringPack(p, { x: at.x, y, z: at.z });
     this.player.teleport?.(at.x + 0.5, y, at.z + 0.5) ?? this.player.position.set(at.x + 0.5, y, at.z + 0.5);
     this.player.velocity?.set?.(0, 0, 0);
     const first = !d.time.pastVisited;
@@ -5999,11 +6007,108 @@ export class Game {
     const b = d.time.back ?? { x: gen.biomes.centreX + 0.5, y: gen.heightAt(gen.biomes.centreX, gen.biomes.centreZ), z: gen.biomes.centreZ + 0.5 };
     d.time.back = null;
     this.stopRide?.();
+    this.bringPack(this.player.position, b);
     this.player.teleport?.(b.x, b.y + 0.05, b.z) ?? this.player.position.set(b.x, b.y + 0.05, b.z);
     this.player.velocity?.set?.(0, 0, 0);
     this.editedAt = Date.now();
     this.sound?.lift?.();
     this.ui.toast({ kind: 'xp', title: 'Home again', body: 'The present, where you left it.' });
+  }
+
+  /** Your tamed dinosaurs: the ones that fight (config/mobs.js `fight`), wherever they are. */
+  pack() {
+    return (this.duilt?.mounts ?? []).filter((m) => !m.dead && MOBS_BY_ID.get(m.type)?.fight);
+  }
+
+  /**
+   * The whistle (asked for directly: "build an army of dinosaurs", and
+   * "ride it or have it fight beside you"): your dinosaurs in earshot follow
+   * you, and fight what comes at you — or, blown again, stay where they are.
+   */
+  blowWhistle() {
+    const p = this.player.position;
+    const near = this.pack().filter((m) => Math.hypot(m.x - p.x, m.z - p.z) <= WHISTLE_REACH);
+    if (!near.length) return void this.ui.toast({ kind: 'xp', title: 'Nothing answers', body: 'Tame a dinosaur in the Past — or hatch one — and blow it within earshot.' });
+    const follow = !near.some((m) => m.follow);
+    for (const m of near) { m.follow = follow; if (!follow) { m.target = null; m.speed = 0; } }
+    this.editedAt = Date.now();
+    this.sound?.lift?.();
+    this.ui.toast(follow
+      ? { kind: 'challenge', title: `${near.length} dinosaur${near.length === 1 ? '' : 's'} at your heel`, body: 'They follow you, and go for anything that comes at you. Blow again and they stay.' }
+      : { kind: 'xp', title: 'Stay', body: `${near.length} dinosaur${near.length === 1 ? '' : 's'} wait where they are.` });
+  }
+
+  /**
+   * Your following dinosaurs, each frame: at whatever's coming for you near
+   * by — bandits, the Kingdom's soldiers, a wild raptor — or back at your
+   * side. Fought off, it drops what it carried into your bag.
+   */
+  tickPack(dt) {
+    const pack = this.pack().filter((m) => m.follow && !m.ridden);
+    if (!pack.length) return;
+    const p = this.player.position;
+    const hostile = this.wanderers?.hostile();
+    const people = (this.wanderers?.list ?? []).filter((e) => WANDERERS[e.kind].hp && !e.dead && (hostile || e.angry || e.raider || e.war || this.wanderers.hostileOf(e)));
+    const beasts = (this.mobs?.list ?? []).filter((e) => !e.owned && !e.dead && !(e.dying > 0) && (e.chasing || e.angryFor > 0));
+    for (const m of pack) {
+      const spec = MOBS_BY_ID.get(m.type);
+      m.biteIn = Math.max(0, (m.biteIn ?? 0) - dt);
+      const away = Math.hypot(m.x - p.x, m.z - p.z);
+      // Left a long way behind (you went through time, or somewhere it
+      // can't): it waits there until you come back for it.
+      if (away > PACK_LOST) { m.target = null; m.speed = 0; continue; }
+      let foe = null, fd = PACK_FIGHT;
+      for (const e of [...people, ...beasts]) {
+        const de = Math.hypot(e.x - m.x, e.z - m.z);
+        if (de < fd && Math.hypot(e.x - p.x, e.z - p.z) < PACK_FIGHT * 2) { foe = e; fd = de; }
+      }
+      m.grazing = false;
+      if (foe) {
+        m.bestAway = away; m.sinceBetter = 0;
+        if (fd > spec.fight.reach * 0.8) { m.target = { x: foe.x, z: foe.z }; m.speed = spec.run; continue; }
+        m.target = null; m.speed = 0; m.facing = Math.atan2(foe.x - m.x, foe.z - m.z);
+        if (m.biteIn > 0) continue;
+        m.biteIn = spec.fight.every;
+        const res = people.includes(foe) ? this.wanderers.hit(foe, spec.fight.damage, m.x, m.z) : this.mobs.hit(foe, spec.fight.damage, m.x, m.z);
+        if (res?.killed) {
+          const gained = this.duilt.collect(res.drops) ?? {};
+          const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+          this.ui.toast({ kind: 'xp', title: `Your ${spec.name.toLowerCase()} brought down ${foe.name ?? `a ${MOBS_BY_ID.get(foe.type)?.name.toLowerCase()}`}`, body: got || undefined });
+        }
+        continue;
+      }
+      // Fallen too far behind (a cliff, a river it won't cross), or got no
+      // nearer than its best for a while (a long-neck among houses it can't
+      // fit between, a raptor in a thicket): it catches you up the way a pet
+      // does, just behind you.
+      if (away > PACK_HEEL * 3 && away > (m.bestAway ?? Infinity) - 1) m.sinceBetter = (m.sinceBetter ?? 0) + dt;
+      else { m.bestAway = away; m.sinceBetter = 0; }
+      if (away > PACK_CATCH_UP || m.sinceBetter > PACK_STUCK) {
+        const back = this.player.yaw ?? 0;
+        const tx = p.x + Math.sin(back) * 4, tz = p.z + Math.cos(back) * 4;
+        const ty = this.mobs.groundAt(tx, tz, p.y + 2, spec);
+        if (ty != null) { m.x = tx; m.z = tz; m.y = ty; m.vy = 0; m.target = null; m.detour = 0; m.bestAway = 4; m.sinceBetter = 0; continue; }
+      }
+      // Round a trunk or a wall it walked into (Mobs.move), before coming on.
+      if (m.detour > 0 && m.target) { m.detour -= dt; m.speed = spec.run; continue; }
+      // At your side: a few blocks off, running to catch up.
+      if (away > PACK_HEEL) {
+        const k = (away - PACK_HEEL + 0.5) / away;
+        m.target = { x: m.x + (p.x - m.x) * k, z: m.z + (p.z - m.z) * k };
+        m.speed = away > 8 ? spec.run : spec.walk * 2;
+      } else { m.target = null; m.speed = 0; }
+    }
+  }
+
+  /** Your dinosaurs at your heel go where you go — through time, too. */
+  bringPack(from, to) {
+    let i = 0;
+    for (const m of this.pack()) {
+      if (!m.follow || m.ridden || Math.hypot(m.x - from.x, m.z - from.z) > PACK_TRAVEL) continue;
+      const a = (i++ / 6) * Math.PI * 2;
+      m.x = to.x + Math.cos(a) * 3; m.z = to.z + Math.sin(a) * 3; m.y = to.y + 1; m.vy = 0;
+      m.target = null;
+    }
   }
 
   /** A dinosaur's bite: through your armour, and a jolt, as a bandit's blow is. */
@@ -6949,6 +7054,7 @@ export class Game {
       this.tickLeafDecay();
       this.lookForPlaces(dt);
       this.hatchEggs(dt);
+      this.tickPack(dt);
       // The first time it gets properly dark (config/moments.js).
       if (this.duilt && !this.duilt.moments.includes('first_night') && daylightAt(this.dayCycle.time).day < 0.25) this.tellMoment('first_night');
       this.tickBreaking(performance.now());

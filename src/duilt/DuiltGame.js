@@ -2010,7 +2010,7 @@ export class DuiltGame {
       cube: { beaten: this.cube.beaten, stash: this.cube.stash, entered: this.cube.entered || undefined, ...(this.cube.inside ? { inside: true, back: this.cube.back } : {}) },
       mounts: this.mounts.filter((m) => !m.dead).map((m) => ({
         type: m.type, x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
-        facing: Math.round((m.facing ?? 0) * 100) / 100, owned: true, cart: !!m.cart,
+        facing: Math.round((m.facing ?? 0) * 100) / 100, owned: true, cart: !!m.cart, ...(m.follow ? { follow: true } : {}),
         ...(m.inventory ? { inventory: m.inventory.toJSON() } : {}),
       })),
       // The time of day, 0..1 — see render/DayCycle.js. Kept with the world

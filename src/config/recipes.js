@@ -211,6 +211,15 @@ export const RECIPES = [
     blurb: 'Set it down and Place on it: the Past, where the dinosaurs are. It sets you down by another, the way home.',
   },
   {
+    id: 'dino_whistle',
+    name: 'Dinosaur Whistle',
+    station: 'hand',
+    age: 11,
+    inputs: { hide: 2, string: 2 },
+    output: { id: 'dino_whistle', count: 1 },
+    blurb: 'Place to call your tamed dinosaurs: they follow you and fight what comes at you. Place again and they stay where they are.',
+  },
+  {
     id: 'helix',
     name: 'Helix',
     station: 'engineering',

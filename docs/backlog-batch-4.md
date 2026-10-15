@@ -305,8 +305,21 @@ armour".
 - **Eggs** lie in the ferns. Take one home, set it down, and two days later
   a tame one hatches.
 - Age 12 now asks for the Past and a hatched dinosaur, as this draft had it.
-- Still to do: dinosaurs fighting beside you (the army), mythical creatures,
-  and the Future.
+**Part two, done in PR #188:**
+- **The dinosaur army:**
+  - A Dinosaur Whistle (by hand, Age 11: hide and string). Blow it (tap)
+    and your tamed dinosaurs in earshot follow you; blow again and they
+    stay.
+  - Following, they keep close and go for whatever comes at you: bandits,
+    the Kingdom's soldiers, a wild raptor. A raptor bites for 4, a
+    triceratops gores for 6, a long-neck's tail hits for 8.
+  - They round what's in their way. One that can't get to you catches you
+    up, the way a pet does, and they come through the time machine with
+    you.
+- **A creature out of legend:** the Basilisk, rare in the deep jungle. It's
+  a crowned serpent-lizard that hunts (6 a bite, 120 hp), nobody tames it,
+  and it drops Basilisk Scales.
+- Still to do: the Future.
 
 Unlocked after the first end game.
 
