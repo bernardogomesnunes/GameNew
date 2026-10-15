@@ -43,7 +43,7 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
   ok(`out there, only the Past's own (${past} of ${past + present})`, present === 0);
   ok(`and none of it at home (${inside} of ${inside + outside})`, inside === 0);
   ok('every one of its biomes has dinosaurs in it', [...era].every((id) => mobsForBiome(id).some((m) => ['raptor', 'trike', 'longneck'].includes(m.id))));
-  ok('and eggs lying about in it', BIOMES.filter((b) => b.era).every((b) => b.scatter.some((s) => [442, 443, 444].includes(s.block))));
+  ok('and eggs lying about in it', BIOMES.filter((b) => b.era === 'past').every((b) => b.scatter.some((s) => [442, 443, 444].includes(s.block))));
 }
 
 // --- the machine --------------------------------------------------------------------------------------
@@ -52,8 +52,8 @@ ok('a time machine: a block, an item, made at an engineering centre after the wa
   && ITEMS_BY_ID.get('time_machine')?.block === TIME_MACHINE && RECIPES.find((r) => r.output.id === 'time_machine')?.station === 'engineering'
   && RECIPES.find((r) => r.output.id === 'time_machine').age === 11);
 ok('Place on it: the choice of when — or, in the Past, home', /if \(aimed && aimed\.block === TIME_MACHINE\) return void this\.useTimeMachine\(\);/.test(game)
-  && /if \(inPast\(this\.player\.position\.x, gen\.biomes\.centreX\)\) return void this\.travelHome\(\);/.test(game));
-ok('  a tap does it on a phone', /aimed\.block === WAY_OUT \|\| aimed\.block === TIME_MACHINE \|\| isCatapult\(aimed\.block\)[\s\S]{0,120}return places\(\);/.test(game));
+  && /if \(inPast\(x, cx\) \|\| inFuture\(x, cx\)\) return void this\.travelHome\(\);/.test(game));
+ok('  a tap does it on a phone', /aimed\.block === WAY_OUT \|\| aimed\.block === TIME_MACHINE \|\| aimed\.block === ARCHIVE \|\| isCatapult\(aimed\.block\)[\s\S]{0,120}return places\(\);/.test(game));
 ok('there, a clearing and a machine of its own for the way back', /w\.setBlock\(at\.x \+ 2, y, at\.z, TIME_MACHINE\);/.test(game) && /d\.time\.back = \{ x: p\.x, y: p\.y, z: p\.z \};/.test(game));
 
 // --- the dinosaurs --------------------------------------------------------------------------------------

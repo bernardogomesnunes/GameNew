@@ -119,7 +119,7 @@ export class DuiltGame {
     this.cube = { beaten: false, stash: false, entered: false };
     // Time travel (world/past.js): whether you've been to the Past, and,
     // while you're there, where to come back to.
-    this.time = { pastVisited: false, back: null, hatched: 0 };
+    this.time = { pastVisited: false, back: null, hatched: 0, futureVisited: false, futureKnown: false };
     // Dinosaur eggs set down, each { x, y, z, type, laid } — `laid` on the
     // world's day count. HATCH_DAYS on, they hatch (Game.hatchEggs).
     this.eggs = [];
@@ -200,7 +200,9 @@ export class DuiltGame {
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
-        : r.study && this.studying ? `The university is busy with ${this.studying.name.toLowerCase()} — ${this.researchLeftText()} left` : null),
+        : r.study && this.studying ? `The university is busy with ${this.studying.name.toLowerCase()} — ${this.researchLeftText()} left`
+        // The Future's materials: read its Archive first (world/future.js).
+        : r.future && !this.time.futureKnown ? 'Knowledge from the Future — read the Archive in its university, and bring it home' : null),
       hidden: (r) => this.studyHidden(r),
       onStudy: (r) => this.startStudy(r),
       onMade: (r) => {
@@ -1980,7 +1982,10 @@ export class DuiltGame {
       boosts: { ...this.boosts },
       found: [...this.found],
       raided: [...this.raided],
-      time: { pastVisited: this.time.pastVisited || undefined, back: this.time.back ?? undefined, hatched: this.time.hatched || undefined },
+      time: {
+        pastVisited: this.time.pastVisited || undefined, back: this.time.back ?? undefined, hatched: this.time.hatched || undefined,
+        futureVisited: this.time.futureVisited || undefined, futureKnown: this.time.futureKnown || undefined,
+      },
       eggs: this.eggs,
       firsts: [...this.firsts],
       // Twelve ages, not six (config/ages.js) — so an older save's age is moved on load.
@@ -2050,6 +2055,8 @@ export class DuiltGame {
       pastVisited: time.pastVisited === true,
       back: time.back && Number.isFinite(time.back.x) ? { x: time.back.x, y: time.back.y, z: time.back.z } : null,
       hatched: Number.isInteger(time.hatched) ? time.hatched : 0,
+      futureVisited: time.futureVisited === true,
+      futureKnown: time.futureKnown === true,
     };
     this.eggs = Array.isArray(data.eggs) ? data.eggs.filter((e) => Number.isFinite(e?.x) && typeof e.type === 'string' && Number.isFinite(e.laid)) : [];
     this.firsts = new Set(Array.isArray(data.firsts) ? data.firsts.filter((k) => typeof k === 'string') : []);

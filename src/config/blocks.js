@@ -874,6 +874,29 @@ BLOCKS.push(
   { id: EGG_LONGNECK, name: 'Long-neck Egg', glyph: 'egg', color: 0xb7c4cf, shape: 'egg', material: 'wood', unlock: null },
 );
 
+// The Future (world/future.js): a city of glass towers. Its streets and
+// walls, and the lights that keep it bright all night — `glows` blocks are
+// drawn shining by their own light (see ChunkMesher's glow material). The
+// Archive, in its university, is where its knowledge is kept: nothing
+// breaks it, and Place on it learns how all this is made.
+export const PAVEMENT = 447, ASPHALT = 448, TINTED_GLASS = 449, STEEL_PANEL = 450, NEON_PINK = 451, NEON_CYAN = 452,
+  SCREEN = 453, MAGLEV_RAIL = 454, LIT_WINDOW = 455, FUTURE_LAMP = 456, ARCHIVE = 457;
+BLOCKS.push(
+  { id: PAVEMENT, name: 'Pavement', glyph: 'stone', color: 0xc4c8cc, material: 'stone', unlock: null },
+  { id: ASPHALT, name: 'Asphalt', glyph: 'stone', color: 0x3a3c41, material: 'stone', unlock: null },
+  { id: TINTED_GLASS, name: 'Tinted Glass', glyph: 'pane', color: 0x4f8fb0, transparent: true, opacity: 0.55, material: 'stone', unlock: null },
+  { id: STEEL_PANEL, name: 'Steel Panel', glyph: 'stone', color: 0x9aa3ad, material: 'stone', unlock: null },
+  { id: NEON_PINK, name: 'Neon Pink', glyph: 'lantern', color: 0xff4fb8, glows: true, material: 'stone', unlock: null },
+  { id: NEON_CYAN, name: 'Neon Cyan', glyph: 'lantern', color: 0x3fe6ff, glows: true, material: 'stone', unlock: null },
+  { id: SCREEN, name: 'Screen', glyph: 'pane', color: 0x3c7cff, glows: true, material: 'stone', unlock: null },
+  { id: MAGLEV_RAIL, name: 'Maglev Rail', glyph: 'rail', color: 0x6f7884, material: 'stone', unlock: null },
+  { id: LIT_WINDOW, name: 'Lit Window', glyph: 'pane', color: 0xffe2a0, glows: true, material: 'stone', unlock: null },
+  { id: FUTURE_LAMP, name: 'Future Lamp', glyph: 'lantern', color: 0xe6fbff, glows: true, material: 'stone', unlock: null,
+    light: { color: 0xd8f6ff, intensity: 3, distance: 14, decay: 1 } },
+  { id: ARCHIVE, name: 'Archive', glyph: 'crystal', color: 0x5fd0ff, glows: true, material: 'stone', system: true, unlock: null,
+    light: { color: 0x8fe0ff, intensity: 4, distance: 14, decay: 1 } },
+);
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**

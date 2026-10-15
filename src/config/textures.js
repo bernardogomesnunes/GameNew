@@ -169,6 +169,18 @@ export const BLOCK_TEXTURES = {
   'Nightstone Ore': { mottle: 0.14, marks: 30, flecks: [[0.9, 0.86, 1.12], [1.1, 1.06, 1.14]], cracks: 2, depth: 0.32, speck: 0.04 },
   // A cabinet: boards between brass bands.
   'Storage Controller': { lines: 'planks', band: 4, marks: 6, flecks: [[0.8, 0.7, 0.62]], depth: 0.4, speck: 0.03, bump: 0.6, shine: 0.25 },
+  // The Future (world/future.js): pale paving slabs, black tarmac with grit
+  // in it, brushed steel, framed glass, and a screen's fine grid.
+  'Pavement':      { lines: 'ashlar', mottle: 0.05, marks: 12, flecks: STONE_FLECKS, depth: 0.2, speck: 0.03, bump: 0.3 },
+  'Asphalt':       { mottle: 0.08, marks: 70, flecks: [[1.5, 1.5, 1.5], [0.75, 0.75, 0.78]], depth: 0.2, speck: 0.08 },
+  'Steel Panel':   { plate: 2, depth: 0.3, speck: 0.02, bump: 0.4, shine: 0.5, glints: 2 },
+  'Maglev Rail':   { plate: 1, depth: 0.4, speck: 0.02, bump: 0.5, shine: 0.6, glints: 2 },
+  'Lit Window':    { frame: 2, depth: 0.16, speck: 0.01 },
+  // Neon: a glass tube's bright core in a thin frame; the lamp, frosted.
+  'Neon Pink':     { frame: 1, mottle: 0.06, depth: 0.12, speck: 0.01 },
+  'Neon Cyan':     { frame: 1, mottle: 0.06, depth: 0.12, speck: 0.01 },
+  'Future Lamp':   { frame: 2, mottle: 0.04, depth: 0.14, speck: 0.02 },
+  'Screen':        { frame: 1, mottle: 0.12, depth: 0.2, speck: 0.03 },
   'Lava':          { crust: 5, glow: [1.08, 1.75, 1.85], depth: 0.5, speck: 0.03 },
   'Flowing Lava':  { crust: 5, glow: [1.08, 1.75, 1.85], depth: 0.5, speck: 0.03 },
   'Dark Moss':     { clumps: 18, marks: 24, flecks: [[1.12, 1.1, 0.8], [0.8, 0.92, 0.9]], depth: 0.36, mottle: 0.14, speck: 0.06 },

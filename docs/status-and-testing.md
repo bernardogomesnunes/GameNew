@@ -44,15 +44,15 @@ Two lists, kept up to date as things land:
 | Markets: a rare shelf that changes every two days | #186 |
 | Time travel, part one: the machine, the Past, dinosaurs, eggs | #187 |
 | Time travel, part two: the dinosaur army (the whistle), the Basilisk | #188 |
+| Time travel, part three: the Future (the city, trams and flying cars, the university's Archive, ten new blocks) | #189 |
 
 ### Not done yet
 
 | What | Where it's from | When |
 |---|---|---|
-| **Time travel, the Future:** a city of towers, neon and trams; its university brings the future's blocks home | Batch 4, D3 | Next |
 | Two or three more new peoples to raid | Batch 4, D1 | Later |
 | Places you've taken marked on the map; new ones appearing over time | Batch 4, D1 | Later |
-| Battle mode (computer rivals first) | Batch 4, E | After time travel |
+| Battle mode (computer rivals first) | Batch 4, E | Next |
 | Composting | Batch 3, #9 | Last |
 
 Batches 2 and 3 are otherwise done; see their docs.
@@ -124,6 +124,10 @@ means only the automated tests have checked it.
 - [ ] **Home:** Place on the machine by your landing spot.
 - [ ] **The whistle:** make one (hide, string), blow it near your dinosaurs. They follow and fight; blow again to make them stay.
 - [ ] **The Basilisk:** rare in the Past's jungle. It hunts, and hits hard.
+- [ ] **The Future:** Place on the machine, To the Future. Towers, trams, flying cars; look at it at night.
+- [ ] **The Archive:** walk east from the plaza into the university and tap the glowing block. Then, at home, make Neon or Steel Panel at an engineering centre.
+- [ ] **Futurians** in the plaza: tap one to talk.
+- [ ] **Frame rate in the city** on your phone *(not measured: the test browser runs at 2–3 fps whatever it draws)*.
 
 ### Fixes worth a quick look
 

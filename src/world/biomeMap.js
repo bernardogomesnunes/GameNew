@@ -1,4 +1,5 @@
 import { inPast } from './past.js';
+import { inFuture } from './future.js';
 import { createNoise2D } from 'simplex-noise';
 import { BIOMES, BIOME_INDEX, HOME_BIOME } from '../config/biomes.js';
 
@@ -205,9 +206,11 @@ export class BiomeMap {
    */
   weigh(x, z) {
     const { temp, wet } = this.climate(x, z);
-    // The Past (world/past.js): its own biomes there, and only there.
+    // The Past (world/past.js) and the Future (world/future.js): their own
+    // biomes there, and only there.
     const past = inPast(x, this.centreX ?? 0);
-    const range = past ? 0 : this.rangeFactor(x, z);
+    const era = past ? 'past' : inFuture(x, this.centreX ?? 0) ? 'future' : null;
+    const range = era ? 0 : this.rangeFactor(x, z);
     const summit = range > 0 ? this.summitFactor(x, z) : 0;
     const weights = new Array(BIOMES.length);
     let total = 0;
@@ -225,7 +228,7 @@ export class BiomeMap {
       // A rare biome doesn't compete on climate: it takes over land
       // afterwards, below.
       if (b.rare) w = 0;
-      if (!!b.era !== past) w = 0;
+      if ((b.era ?? null) !== era) w = 0;
       weights[i] = w;
       total += w;
       if (w > bestW) { bestW = w; best = i; }
@@ -235,7 +238,7 @@ export class BiomeMap {
     // those biomes' weight handed to it, so its edge blends like any other
     // border and the land never jumps. Only that country, so a giant grove
     // is always somewhere wooded or grassy, never out on the sea or a peak.
-    for (const i of past ? [] : this.rareIndexes) {
+    for (const i of era ? [] : this.rareIndexes) {
       const f = this.rareFactor(i, x, z);
       if (f <= 0) continue;
       const within = BIOMES[i].rare.within;

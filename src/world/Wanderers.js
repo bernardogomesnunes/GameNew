@@ -716,7 +716,7 @@ export class Wanderers {
     }
 
     if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard' || p.kind === 'royal_guard' || p.kind === 'tribe'
-      || p.kind === 'citizen' || p.kind === 'city_guard' || spec.god || p.kind === 'shade' || p.kind === 'seraph') {
+      || p.kind === 'citizen' || p.kind === 'futurian' || p.kind === 'city_guard' || spec.god || p.kind === 'shade' || p.kind === 'seraph') {
       const dx = p.x - player.x, dz = p.z - player.z;
       const d = Math.hypot(dx, dz) || 1;
       // Bandits don't come to you — not yet. They back off and watch.

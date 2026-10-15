@@ -40,6 +40,8 @@ export const OUTFITS = {
   seraph: { hat: 'helm', plume: 0xfafafa, gear: 'spear', gearColour: 0xe8c04f },
   // A living city's people.
   citizen: { hat: 'cap' },
+  // The Future's people: a pale visor.
+  futurian: { hat: 'helm', hatColour: 0xe8eef4 },
   city_guard: { hat: 'helm', gear: 'spear', gearColour: 0xafafb7 },
   merchant: { hat: 'cap', beard: 0x5a3f2a },
   // The tree people: leaf-green hoods, and bows.

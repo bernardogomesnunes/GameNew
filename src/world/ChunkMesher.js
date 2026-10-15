@@ -279,8 +279,11 @@ function colorOfHex(hex) {
   return c;
 }
 
+const GLOWS = new Uint8Array(ID_COUNT);
+for (const [id, b] of BLOCKS_BY_ID) if (b.glows) GLOWS[id] = 1;
+
 function bufferKeyFor(blockId) {
-  return isTransparent(blockId) ? blockId : OPAQUE_KEY;
+  return isTransparent(blockId) ? blockId : GLOWS[blockId] ? GLOW_KEY : OPAQUE_KEY;
 }
 
 /**
@@ -406,8 +409,32 @@ function withBlockTextures(mat) {
   return mat;
 }
 
+/**
+ * Whole blocks that shine by their own light (the Future's neon, screens and
+ * lit windows): the terrain material, textured and lit like any block, with
+ * its own colour added back on top — so at night, when the sun's gone, the
+ * block still shows its colour rather than falling dark with everything else.
+ */
+const GLOW_KEY = 'glow';
+const GLOW_SELF = 0.75;
+let glowCubeMaterial = null;
+function glowCubes() {
+  if (glowCubeMaterial) return glowCubeMaterial;
+  const mat = withBlockTextures(new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true }));
+  const before = mat.onBeforeCompile, key = mat.customProgramCacheKey;
+  mat.onBeforeCompile = (shader, renderer) => {
+    before?.call(mat, shader, renderer);
+    shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>',
+      `#include <emissivemap_fragment>\n      totalEmissiveRadiance += diffuseColor.rgb * ${GLOW_SELF.toFixed(2)};`);
+  };
+  mat.customProgramCacheKey = function () { return `${key.call(this)}|glow1`; };
+  glowCubeMaterial = withHeightFog(mat);
+  return glowCubeMaterial;
+}
+
 function getMaterial(key) {
   if (key === OPAQUE_KEY) return opaqueMaterial;
+  if (key === GLOW_KEY) return glowCubes();
   if (materialCache.has(key)) return materialCache.get(key);
   const cfg = BLOCKS_BY_ID.get(key);
   const mat = withHeightFog(withBlockTextures(new THREE.MeshLambertMaterial({
