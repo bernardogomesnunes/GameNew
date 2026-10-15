@@ -45,6 +45,7 @@ Two lists, kept up to date as things land:
 | Time travel, part one: the machine, the Past, dinosaurs, eggs | #187 |
 | Time travel, part two: the dinosaur army (the whistle), the Basilisk | #188 |
 | Time travel, part three: the Future (the city, trams and flying cars, the university's Archive, ten new blocks) | #189 |
+| Battle mode, step 1: a new world type with three computer rivals; their armies come once you've a barracks; take a city's standard to weaken them | #192 |
 
 ### Not done yet
 
@@ -52,7 +53,8 @@ Two lists, kept up to date as things land:
 |---|---|---|
 | Two or three more new peoples to raid | Batch 4, D1 | Later |
 | Places you've taken marked on the map; new ones appearing over time | Batch 4, D1 | Later |
-| Battle mode (computer rivals first) | Batch 4, E | Next |
+| Battle mode, step 2: AI rivals via an API key, through our server | Batch 4, E | Later |
+| Battle mode, step 3: real multiplayer (needs a game server) | Batch 4, E | Later |
 | Composting | Batch 3, #9 | Last |
 
 Batches 2 and 3 are otherwise done; see their docs.
@@ -128,6 +130,15 @@ means only the automated tests have checked it.
 - [ ] **The Archive:** walk east from the plaza into the university and tap the glowing block. Then, at home, make Neon or Steel Panel at an engineering centre.
 - [ ] **Futurians** in the plaza: tap one to talk.
 - [ ] **Frame rate in the city** on your phone *(not measured: the test browser runs at 2–3 fps whatever it draws)*.
+
+### Battle mode (new)
+
+- [ ] **Create a Battle world.** The welcome names the three rivals and their directions; open the map to see them.
+- [ ] **Build a barracks.** A toast says the rivals have noticed. Their first army comes about half a game day later, with a warning.
+- [ ] **Beat an army** at home: gold, and a toast.
+- [ ] **March on a city** (about 5,000 blocks, so take a horse or the Helix). Beat its garrison, then tap the gold standard in the plaza.
+- [ ] **Come back** to a city you took: nobody guards it for 3 days.
+- [ ] **Balance:** how strong rivals feel, how often they come *(guesses: a rival gains 0.6 strength a game day, and attacks every 2 days)*.
 
 ### Fixes worth a quick look
 

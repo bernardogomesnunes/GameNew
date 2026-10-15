@@ -258,6 +258,32 @@ export const WANDERERS = {
     neutral: true,
     drops: { coin: [0, 3], fruit: [0, 1] },
   },
+  // Battle's rivals (world/rivals.js, duilt/Rivals.js): their soldiers, sent
+  // at you in their own colours, and the garrison that guards their city —
+  // it fights you on sight, until you've taken their standard.
+  rival_soldier: {
+    noun: 'a rival soldier', one: 'a rival soldier', many: 'rival soldiers',
+    about: 'a soldier of a rival city',
+    colours: [0x5a5560],
+    helm: 0x8a8790,
+    speed: 1.9,
+    hp: 24, hits: 3, reach: 1.8, every: 1.2,
+    aggro: 16, run: 3.4, fleeBelow: -1,
+    drops: { coin: [1, 3], iron_ingot: [0, 1] },
+  },
+  rival_guard: {
+    noun: 'a rival guard',
+    about: 'a guard of a rival city — they fight you on sight',
+    colours: [0x5a5560],
+    helm: 0x8a8790,
+    speed: 1.4,
+    roam: 3,
+    hp: 26, hits: 3, reach: 1.9, every: 1.2,
+    aggro: 18, run: 3.8, fleeBelow: -1,
+    garrison: true,
+    leash: 44,
+    drops: { coin: [2, 5], iron_ingot: [0, 1] },
+  },
   // The Future's people (world/future.js), about its plaza in pale suits.
   futurian: {
     noun: 'a futurian',

@@ -1,3 +1,4 @@
+import { Rivals } from './Rivals.js';
 import { GAME_DAY_SECONDS } from '../render/DayCycle.js';
 import { Crops, harvestOf, farmProduce, tendFarm, FARM_SEED_SLOTS } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND, cropOf } from '../config/crops.js';
@@ -120,6 +121,8 @@ export class DuiltGame {
     // Time travel (world/past.js): whether you've been to the Past, and,
     // while you're there, where to come back to.
     this.time = { pastVisited: false, back: null, hatched: 0, futureVisited: false, futureKnown: false };
+    // A Battle world's rivals (duilt/Rivals.js), or null in any other world.
+    this.battle = null;
     // Dinosaur eggs set down, each { x, y, z, type, laid } — `laid` on the
     // world's day count. HATCH_DAYS on, they hatch (Game.hatchEggs).
     this.eggs = [];
@@ -1982,6 +1985,7 @@ export class DuiltGame {
       boosts: { ...this.boosts },
       found: [...this.found],
       raided: [...this.raided],
+      ...(this.battle ? { battle: this.battle.toJSON() } : {}),
       time: {
         pastVisited: this.time.pastVisited || undefined, back: this.time.back ?? undefined, hatched: this.time.hatched || undefined,
         futureVisited: this.time.futureVisited || undefined, futureKnown: this.time.futureKnown || undefined,
@@ -2050,6 +2054,7 @@ export class DuiltGame {
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
     this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);
     this.raided = new Set(Array.isArray(data.raided) ? data.raided.filter((k) => typeof k === 'string') : []);
+    this.battle = data.battle ? Rivals.fromJSON(data.battle) : null;
     const time = data.time ?? {};
     this.time = {
       pastVisited: time.pastVisited === true,

@@ -65,7 +65,7 @@ export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], st
 export const SITE_COLOURS = { kingdom: '#2a2533', sky: '#f3cf6a' };
 
 function drawSite(ctx, s, x, z, radius, width, height) {
-  const fill = SITE_COLOURS[s.kind] ?? '#ffffff';
+  const fill = s.colour ?? SITE_COLOURS[s.kind] ?? '#ffffff';
   const inside = Math.abs(s.x - x) < radius && Math.abs(s.z - z) < radius;
   let [px, py] = worldToCanvas(s.x, s.z, x, z, radius, width, height);
   const far = Math.round(Math.hypot(s.x - x, s.z - z));

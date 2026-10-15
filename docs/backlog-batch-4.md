@@ -383,6 +383,30 @@ Asked for directly: "some kind of age of empires".
   3. **Real multiplayer:** invite friends. Needs a game server, which is the
      biggest piece in this batch. Plan it on its own once 1 is fun.
 
+**Step 1, done in PR #192: computer rivals.** Decided with you: three
+rivals; nobody wins (you conquer their cities to weaken them, and they
+rebuild); their attacks start once you have a barracks; no sides for now.
+- **A new world type, Battle,** on the "Create world" screen. It's Duilt's
+  rules with three rival cities about 5,000 blocks out, a third of the way
+  round the compass from each other. They're on your map from the start,
+  each in its colour.
+- **Each rival grows stronger by the day.** Strength decides how many guard
+  its city and how big its armies are: soldiers, then archers, a battering
+  ram from 4, a catapult from 8.
+- **Your first barracks starts the attacks.** One city at a time, with a
+  minute's warning, from their direction, in their colours (the Stone
+  Kingdom's war system). They only come while you're home.
+  - Beat an army: +gold, and they're a little weaker.
+  - Lose: they're a little stronger.
+- **Conquer a city:** walk there, beat its garrison (they fight on sight),
+  then Place on or tap the **War Standard** in the plaza.
+  - Tribute in gold, and their strength is halved.
+  - The city is yours for 3 days while they rebuild: no garrison, and no
+    armies from them.
+  - Then they grow back and come again.
+- The cloud world list still says "Duilt" for a Battle world. Only this
+  device's list says "Battle"; I didn't touch the cloud-save code.
+
 ## Suggested order
 
 1. A: the quick improvements.

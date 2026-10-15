@@ -53,7 +53,7 @@ ok('a time machine: a block, an item, made at an engineering centre after the wa
   && RECIPES.find((r) => r.output.id === 'time_machine').age === 11);
 ok('Place on it: the choice of when — or, in the Past, home', /if \(aimed && aimed\.block === TIME_MACHINE\) return void this\.useTimeMachine\(\);/.test(game)
   && /if \(inPast\(x, cx\) \|\| inFuture\(x, cx\)\) return void this\.travelHome\(\);/.test(game));
-ok('  a tap does it on a phone', /aimed\.block === WAY_OUT \|\| aimed\.block === TIME_MACHINE \|\| aimed\.block === ARCHIVE \|\| isCatapult\(aimed\.block\)[\s\S]{0,120}return places\(\);/.test(game));
+ok('  a tap does it on a phone', /aimed\.block === WAY_OUT \|\| aimed\.block === TIME_MACHINE \|\| aimed\.block === ARCHIVE \|\| aimed\.block === WAR_STANDARD \|\| isCatapult\(aimed\.block\)[\s\S]{0,120}return places\(\);/.test(game));
 ok('there, a clearing and a machine of its own for the way back', /w\.setBlock\(at\.x \+ 2, y, at\.z, TIME_MACHINE\);/.test(game) && /d\.time\.back = \{ x: p\.x, y: p\.y, z: p\.z \};/.test(game));
 
 // --- the dinosaurs --------------------------------------------------------------------------------------

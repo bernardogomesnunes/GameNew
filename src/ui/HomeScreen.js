@@ -34,6 +34,13 @@ const KINDS = [
     recommended: true,
   },
   {
+    id: 'battle',
+    name: 'Battle',
+    tagline: 'Rivals',
+    blurb: 'Duilt, with three rival cities out in the world. Once you build a barracks their armies come for you; '
+      + 'march on a city, beat its garrison and take its standard to break its strength. Nobody wins for good — they rebuild.',
+  },
+  {
     id: 'creative',
     name: 'Creative',
     tagline: 'Free build',
@@ -55,7 +62,7 @@ function ago(ts) {
 }
 
 function describe(save) {
-  const kind = KINDS.find((k) => k.id === save.mode)?.name ?? 'World';
+  const kind = save.battle ? 'Battle' : KINDS.find((k) => k.id === save.mode)?.name ?? 'World';
   const bits = [kind];
   if (save.mode === 'duilt' && save.age) bits.push(`Age ${save.age}`);
   bits.push(ago(save.timestamp));
