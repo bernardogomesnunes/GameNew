@@ -45,7 +45,7 @@ Two lists, kept up to date as things land:
 | Time travel, part one: the machine, the Past, dinosaurs, eggs | #187 |
 | Time travel, part two: the dinosaur army (the whistle), the Basilisk | #188 |
 | Time travel, part three: the Future (the city, trams and flying cars, the university's Archive, ten new blocks) | #189 |
-| Battle mode, step 1: a new world type with three computer rivals; their armies come once you've a barracks; take a city's standard to weaken them | #191 |
+| Battle mode, step 1: a new world type with three computer rivals; their armies come once you've a barracks; take a city's standard to weaken them | #192 |
 
 ### Not done yet
 

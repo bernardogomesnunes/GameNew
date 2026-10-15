@@ -383,7 +383,7 @@ Asked for directly: "some kind of age of empires".
   3. **Real multiplayer:** invite friends. Needs a game server, which is the
      biggest piece in this batch. Plan it on its own once 1 is fun.
 
-**Step 1, done in PR #191: computer rivals.** Decided with you: three
+**Step 1, done in PR #192: computer rivals.** Decided with you: three
 rivals; nobody wins (you conquer their cities to weaken them, and they
 rebuild); their attacks start once you have a barracks; no sides for now.
 - **A new world type, Battle,** on the "Create world" screen. It's Duilt's
