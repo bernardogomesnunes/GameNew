@@ -21,7 +21,7 @@ import { WEAR_SLOTS, SLOT_NAMES, ARMOUR_PER_POINT } from '../config/armour.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { itemIcon } from '../config/cubes.js';
 import { renderPanels } from './Panel.js';
-import { TRADERS_BY_ID } from '../config/traders.js';
+import { TRADERS_BY_ID, goodsFor, restockIn } from '../config/traders.js';
 import { icon } from './icons.js';
 import { pixelIcon } from './pixelIcons.js';
 
@@ -1957,12 +1957,17 @@ export class DuiltUI {
     const coins = d.inventory.countOf('coin');
     this.q('#trade-coins').innerHTML = `${itemChip('coin', coins)} <span>${d.sandbox ? 'Free in Creative' : `You have ${coins} coin${coins === 1 ? '' : 's'}. Strike more at a foundry, or find them in chests.`}</span>`;
     const list = this.q('#trade-list');
-    list.innerHTML = t.goods.map(([id, n, price], i) => {
+    // Their own goods, then the rare shelf — what nobody can make, a new
+    // pick every couple of days (config/traders.js goodsFor).
+    const goods = goodsFor(t, { day: d.days, age: d.sandbox ? Infinity : d.age });
+    const firstRare = goods.findIndex((g) => g[3]);
+    const days = restockIn(d.days);
+    list.innerHTML = goods.map(([id, n, price, rare], i) => {
       const spec = ITEMS_BY_ID.get(id);
       const icon = itemIcon(spec, { size: 40 }) ?? glyphSvg(spec?.glyph, { size: 30, color: spec?.color ?? 0x888888 });
       const afford = d.sandbox || coins >= price;
-      return `
-        <div class="recipe-tile ${afford ? '' : 'blocked'}">
+      return `${i === firstRare ? `<div class="trade-rare-head">Rare goods — new ones in ${days} day${days === 1 ? '' : 's'}</div>` : ''}
+        <div class="recipe-tile ${afford ? '' : 'blocked'}${rare ? ' rare' : ''}">
           <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(itemName(id))}" data-tip-info="${escapeAttr(spec?.madeBy ?? '')}">${icon}${n > 1 ? `<b>×${n}</b>` : ''}</span>
           <strong class="recipe-name">${escapeHtml(itemName(id))}</strong>
           <span class="recipe-cost">${itemChip('coin', price, { have: coins, short: !afford })}</span>

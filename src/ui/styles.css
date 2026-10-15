@@ -2131,3 +2131,8 @@ button.busy { cursor: progress; opacity: 0.92; }
 .book-item svg { width: 100%; height: 100%; }
 .book-item:not(.have) svg { filter: grayscale(1) brightness(0.35); opacity: 0.45; }
 .book-item.have { background: rgba(232, 194, 74, 0.18); border-color: rgba(232, 194, 74, 0.5); }
+
+/* A trader's rare shelf (config/traders.js goodsFor): its own heading across
+   the grid, and the goods on it edged in gold. */
+.trade-rare-head { grid-column: 1 / -1; margin: 8px 0 0; font-size: 13px; font-weight: 700; color: #a3781c; }
+.recipe-tile.rare { box-shadow: inset 0 0 0 2px #e0b440; }
