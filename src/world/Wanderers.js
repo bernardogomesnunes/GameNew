@@ -136,7 +136,7 @@ export class Wanderers {
     this.list = this.list.filter((p) => !p.dead && !this.gone(p, player));
     for (const lm of this.landmarks) {
       // Only the hut, the camps and the Stone Kingdom have anyone living in them.
-      if (lm.kind !== 'hermit' && lm.kind !== 'camp' && lm.kind !== 'kingdom' && lm.kind !== 'tribe' && lm.kind !== 'city' && lm.kind !== 'outpost') continue;
+      if (lm.kind !== 'hermit' && lm.kind !== 'camp' && lm.kind !== 'kingdom' && lm.kind !== 'tribe' && lm.kind !== 'city' && lm.kind !== 'outpost' && lm.kind !== 'rival') continue;
       if (!this.present.has(lm) && Math.hypot(lm.x - player.x, lm.z - player.z) < VISIT) this.populate(lm);
     }
     const sky = this.sky();
@@ -590,6 +590,21 @@ export class Wanderers {
       }
       return;
     }
+    if (lm.kind === 'rival') {
+      // A rival's city (world/rivals.js): its garrison — as many as they're
+      // strong — in their colour, and its citizens. Taken and not yet
+      // rebuilt, nobody's guarding it.
+      const st = this.rivalState?.(lm) ?? { garrison: 4, fallen: false, colour: null };
+      let guards = st.fallen ? 0 : st.garrison;
+      for (const at of lm.people ?? []) {
+        if (at.kind === 'rival_guard' && guards-- <= 0) continue;
+        const x = lm.x + at.dx, z = lm.z + at.dz, y = lm.y + at.dy;
+        const p = this.person(at.kind, x, y, z, { landmark: lm, home: { x, z } });
+        if (at.kind === 'rival_guard' && st.colour != null) p.colour = st.colour;
+        this.list.push(p);
+      }
+      return;
+    }
     if (lm.kind === 'tribe') {
       // Up on the decks and the tower, one at each perch. `perch` is the
       // floor they stand on: they never step below it (they never come down).
@@ -685,7 +700,7 @@ export class Wanderers {
     }
     if (spec.siege === 'ram') return this.ram(p, dt, spec);
     if (spec.siege === 'catapult') return this.catapult(p, dt, spec);
-    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'tribe' || p.kind === 'city_guard' || spec.sky || p.war
+    const fights = p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'tribe' || p.kind === 'city_guard' || spec.garrison || spec.sky || p.war
       || spec.god || p.kind === 'shade' || p.kind === 'seraph';
     if (fights) p.cooldown = Math.max(0, p.cooldown - (spec.god && p.hp < spec.hp / 2 ? dt * 1.6 : dt));
     if (spec.god && !p.dead) this.summon(p, dt, spec);
@@ -716,7 +731,7 @@ export class Wanderers {
     }
 
     if (p.kind === 'hermit' || p.kind === 'bandit' || p.kind === 'guard' || p.kind === 'sky_guard' || p.kind === 'royal_guard' || p.kind === 'tribe'
-      || p.kind === 'citizen' || p.kind === 'futurian' || p.kind === 'city_guard' || spec.god || p.kind === 'shade' || p.kind === 'seraph') {
+      || p.kind === 'citizen' || p.kind === 'futurian' || p.kind === 'city_guard' || spec.garrison || spec.god || p.kind === 'shade' || p.kind === 'seraph') {
       const dx = p.x - player.x, dz = p.z - player.z;
       const d = Math.hypot(dx, dz) || 1;
       // Bandits don't come to you — not yet. They back off and watch.
@@ -909,6 +924,8 @@ export class Wanderers {
   /** Whether `p` fights you: its own side's say, or because you struck it. */
   hostileOf(p) {
     if (p.war || p.angry) return true;
+    // A rival's garrison: on sight, while their city stands.
+    if (WANDERERS[p.kind]?.garrison) return !(this.rivalState?.(p.landmark)?.fallen);
     // The tree people and a city's people leave you be, unless you've struck
     // one or robbed them.
     if (p.kind === 'tribe' || WANDERERS[p.kind]?.neutral) return false;

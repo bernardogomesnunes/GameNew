@@ -897,6 +897,15 @@ BLOCKS.push(
     light: { color: 0x8fe0ff, intensity: 4, distance: 14, decay: 1 } },
 );
 
+// Battle (world/rivals.js): a rival city's standard, on its plinth in the
+// plaza. Nothing breaks it; Place on it, once its garrison is beaten, and
+// the city is yours until they win it back.
+export const WAR_STANDARD = 458;
+BLOCKS.push(
+  { id: WAR_STANDARD, name: 'War Standard', glyph: 'banner', color: 0xc8a040, glows: true, material: 'wood', system: true, unlock: null,
+    light: { color: 0xffd27a, intensity: 3, distance: 10, decay: 1 } },
+);
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**

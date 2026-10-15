@@ -7,6 +7,7 @@ import { roadAt, roadBlock } from './roads.js';
 import { stampKingdom } from './kingdom.js';
 import { stampSky } from './skyKingdom.js';
 import { inFuture, stampFuture, FUTURE_GROUND } from './future.js';
+import { stampRivals, rivalSites } from './rivals.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
@@ -399,6 +400,8 @@ export class ChunkGen {
     // Nor over somebody's ruin or camp: a clearing round every landmark,
     // wide enough that no canopy reaches in over it.
     if (landmarksFor(this).some((l) => Math.max(Math.abs(l.x - x), Math.abs(l.z - z)) <= l.half + LANDMARK_CLEARING)) return null;
+    // Nor over a Battle world's rival cities — wide enough that a giant's crown doesn't reach in.
+    if (this.battle && rivalSites(this).some((l) => Math.max(Math.abs(l.x - x), Math.abs(l.z - z)) <= l.half + LANDMARK_CLEARING + 8)) return null;
     const [lo, hi] = t.trunk ?? [4, 6];
     const base = lo + Math.floor(hash01(x, z, this.seed ^ 0x1b9d) * (hi - lo + 1));
     const canopy = t.canopy ?? 2;
@@ -579,6 +582,8 @@ export class ChunkGen {
     stampSky(this, chunk, CHUNK_SIZE);
     // The Future's city, where this chunk is in it (see future.js).
     stampFuture(this, chunk, CHUNK_SIZE);
+    // A Battle world's rival cities — only while `battle` is set (see rivals.js).
+    stampRivals(this, chunk, CHUNK_SIZE);
 
     chunk.dirty = true;
   }

@@ -40,6 +40,9 @@ export const OUTFITS = {
   seraph: { hat: 'helm', plume: 0xfafafa, gear: 'spear', gearColour: 0xe8c04f },
   // A living city's people.
   citizen: { hat: 'cap' },
+  // A rival's soldiers and guards, in helms (their coats are their city's colour).
+  rival_soldier: { hat: 'helm', gear: 'sword', gearColour: 0xafafb7 },
+  rival_guard: { hat: 'helm', gear: 'spear', gearColour: 0xafafb7 },
   // The Future's people: a pale visor.
   futurian: { hat: 'helm', hatColour: 0xe8eef4 },
   city_guard: { hat: 'helm', gear: 'spear', gearColour: 0xafafb7 },

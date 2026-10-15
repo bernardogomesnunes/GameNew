@@ -176,6 +176,8 @@ export const BLOCK_TEXTURES = {
   'Steel Panel':   { plate: 2, depth: 0.3, speck: 0.02, bump: 0.4, shine: 0.5, glints: 2 },
   'Maglev Rail':   { plate: 1, depth: 0.4, speck: 0.02, bump: 0.5, shine: 0.6, glints: 2 },
   'Lit Window':    { frame: 2, depth: 0.16, speck: 0.01 },
+  // A rival's standard (world/rivals.js): gold cloth in a dark frame.
+  'War Standard':  { frame: 3, mottle: 0.1, depth: 0.3, speck: 0.02, shine: 0.4, glints: 4 },
   // Neon: a glass tube's bright core in a thin frame; the lamp, frosted.
   'Neon Pink':     { frame: 1, mottle: 0.06, depth: 0.12, speck: 0.01 },
   'Neon Cyan':     { frame: 1, mottle: 0.06, depth: 0.12, speck: 0.01 },

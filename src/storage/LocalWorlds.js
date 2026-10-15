@@ -60,6 +60,7 @@ export class LocalWorlds {
     index.push({
       id, name: payload.name, mode: payload.mode,
       age: duilt?.territory?.age ?? null,
+      ...(duilt?.battle ? { battle: true } : {}),
       updatedAt: payload.updatedAt,
     });
     writeIndex(index);

@@ -164,9 +164,9 @@ export const PLACE_NAMES = {
  * middle and the height its floor sits at, or null if there's nowhere
  * within reach (all sea, say).
  */
-function siteNear(gen, x, z, half, taken = []) {
+export function siteNear(gen, x, z, half, taken = [], reach = 160) {
   const cx = Math.round(x), cz = Math.round(z);
-  for (let r = 0; r <= 160; r += 8) {
+  for (let r = 0; r <= reach; r += 8) {
     const steps = r === 0 ? 1 : Math.ceil((2 * Math.PI * r) / 8);
     for (let k = 0; k < steps; k++) {
       const a = (k / steps) * Math.PI * 2;
