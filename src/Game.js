@@ -2960,7 +2960,8 @@ export class Game {
   trainSoldier(structure, unit) {
     const r = this.duilt.trainSoldier(structure, unit, this.bedsIn(structure.region));
     if (!r.ok) return void this.ui.toast({ kind: 'xp', title: "Can't train that yet", body: r.reason });
-    this.ui.toast({ kind: 'xp', title: `Training a ${r.unit.name.toLowerCase()}`, body: 'They join the others in front of the barracks when they are ready' });
+    const who = r.unit.name.toLowerCase();
+    this.ui.toast({ kind: 'xp', title: `Training ${/^[aeiou]/.test(who) ? 'an' : 'a'} ${who}`, body: 'They join the others in front of the barracks when they are ready' });
     // The pop-up shows them in its line straight away, whatever else redraws it.
     if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(structure, this.buildingActions(structure));
   }
