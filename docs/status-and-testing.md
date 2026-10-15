@@ -68,20 +68,20 @@ means only the automated tests have checked it.
 ### Early and middle game
 
 - [x] **Notification centre.** Menu → Notices. Do the old toasts show, and does Clear work? *(I checked it in a browser: they show, and Clear all empties it.)*
-- [ ] **People talk.** Tap a settler, the messenger, the explorer or a trader. Tap again for the next line. *(Explorer checked in a browser: two taps, two different lines. Settler, messenger and trader not.)*
+- [ ] **People talk.** Tap a settler, the messenger, the explorer or a trader. Tap again for the next line. *(Explorer and messenger checked in a browser: two taps, two different lines. Settler and trader not.)*
 - [x] **Quests.** In the Goals panel, hand one in from anywhere. The hermit's six fruit is the first. *(Checked in a browser: Hand in took the six fruit and paid the seeds.)*
 - [x] **Secrets and daily challenges** in the Goals panel. *(Checked in a browser: seven secret hints, two challenges under Today.)*
 - [ ] **Rare goods at the market:** two hard-to-get items per trader, new every two game days.
-- [ ] **Collection book.** Goals → Book. Coins at 10%, 25%, 50% and 75%; the Collector's Crown at 100%. *(The book opens and counts what you hold, seen in a browser. The coins and the crown not reached.)*
-- [ ] **Stone mill** and **wood mill**: stand by one at the bench, and the cheaper recipes appear. *(Stone mill checked in a browser: 0 mill recipes at the bench without one, 19 with one beside you. Wood mill not.)*
-- [ ] **Backpacks** (Back slot): leather +10 slots, reinforced +20. *(Leather checked in a browser: 40 → 50. Reinforced not.)*
+- [ ] **Collection book.** Goals → Book. Coins at 10%, 25%, 50% and 75%; the Collector's Crown at 100%. *(Seen in a browser: the book counts what you hold, and at 10% it paid +50 coins with a toast. 25% and up, and the crown, not reached.)*
+- [x] **Stone mill** and **wood mill**: stand by one at the bench, and the cheaper recipes appear. *(Checked in a browser. Stone mill: 0 mill recipes without one, 19 with one beside you. Wood mill: 0, then 12.)*
+- [x] **Backpacks** (Back slot): leather +10 slots, reinforced +20. *(Checked in a browser: leather 40 → 50, reinforced 40 → 60.)*
 - [ ] **Bow:** hold to draw, let go to shoot. Hemp → fibre → string. *(Hold and release checked in a browser: one arrow spent and in flight. The hemp chain not.)*
 - [x] **Horse and cart:** tame a horse with fruit or vegetables, ride it, put a cart on it. *(Checked in a browser, by taps: tamed, ridden, cart hitched.)*
-- [ ] **Drinks:** beer, kombucha and coffee boosts, with the countdown chip. *(Coffee checked in a browser: the 3:00 chip. Beer and kombucha not.)*
-- [ ] **University studies** and their skills.
-- [ ] **Storage controller:** every storehouse in one list.
-- [ ] **Barracks:** train each kind of soldier, including the catapult crew. Hungry soldiers hit softer.
-- [ ] **Evolving buildings** with the Evolve button, and "Craft what's missing" on a card *(#184 is new)*.
+- [x] **Drinks:** beer, kombucha and coffee boosts, with the countdown chip. *(Checked in a browser: all three chips.)*
+- [ ] **University studies** and their skills. *(A study started at the university's bench and finished when its days were up, seen in a browser. What the skill then does not checked.)*
+- [x] **Storage controller:** every storehouse in one list. *(Checked in a browser: a tap on it opened the list with my storehouse in it.)*
+- [ ] **Barracks:** train each kind of soldier, including the catapult crew. Hungry soldiers hit softer. *(Training checked in a browser: all four kinds, out two days later; each greyed out until you have its gear. Hungry soldiers not checked. Fixed "Training a archer" → "an archer".)*
+- [x] **Evolving buildings** with the Evolve button, and "Craft what's missing" on a card. *(Checked in a browser: Evolve turned a storehouse into a warehouse, 240 → 280 slots. Craft what's missing was checked with #184.)*
 
 ### Vehicles
 
@@ -89,7 +89,7 @@ means only the automated tests have checked it.
 - [ ] **Passengers:** stop near a living city with cars on. Do people get off and pay, and get on?
 - [x] **Sky lift of your own:** two lifts joined by a straight run of chain. *(Checked in a browser: a tap on the bottom lift took me up 12 links.)*
 - [x] **Plainer:** wear it, Fly, then turn Fly off in the air. Its wings should glide you down. *(Checked in a browser: with Fly off 30 up it fell at a steady 3.5 a second, gliding, not dropping.)*
-- [ ] **Helix:** set it down, climb in, fly it, land, get out with Sneak. *(Set down, climb in and rise with Jump checked in a browser. Landing and getting out not.)*
+- [x] **Helix:** set it down, climb in, fly it, land, get out with Sneak. *(Checked in a browser: up with Jump, down with Sneak to the ground, and out.)*
 
 ### Late game: your god and the war (Ages 7 to 10)
 
