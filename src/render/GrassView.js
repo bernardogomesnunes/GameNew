@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { PALETTE } from '../config/palette.js';
 
 /**
  * Grass tufts on turf (backlog batch 3, #8: "3D grass tufts on turf. They're
@@ -81,7 +82,7 @@ export class GrassView {
     this.vec = new THREE.Vector3();
     this.size = new THREE.Vector3();
     this.colour = new THREE.Color();
-    this.base = new THREE.Color(0x7fc254);
+    this.base = new THREE.Color(PALETTE.spring);   // the grass block's own (config/palette.js)
   }
 
   /** Once a frame: where the tufts are (now and then, or when you've moved), then the wind. */

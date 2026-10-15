@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SKY, GRADE } from '../config/palette.js';
 
 /**
  * Light, colour and air (docs/plan-look-and-sound.md, sections 2 and 4).
@@ -29,9 +30,9 @@ import * as THREE from 'three';
  */
 export const TONE_MAPPING = THREE.NeutralToneMapping;
 /** How much brighter the whole picture is drawn: what turns "pastel" into "fresh" rather than "grey". */
-export const EXPOSURE = 1.32;
+export const EXPOSURE = GRADE.exposure;
 /** The saturation lift after tone mapping: 1 is none. Small — the palette is meant to stay soft. */
-export const SATURATION = 1.14;
+export const SATURATION = GRADE.saturation;
 
 let graded = false;
 
@@ -131,9 +132,9 @@ export function withHeightFog(mat) {
   return mat;
 }
 
-const MIST_DAY = new THREE.Color(0xe4edf5);
-const MIST_DAWN = new THREE.Color(0xf6e3d6);
-const MIST_NIGHT = new THREE.Color(0x27324f);
+const MIST_DAY = new THREE.Color(SKY.mistDay);
+const MIST_DAWN = new THREE.Color(SKY.mistDawn);
+const MIST_NIGHT = new THREE.Color(SKY.mistNight);
 
 const bump = (x, at, width) => Math.max(0, 1 - Math.abs(x - at) / width);
 
