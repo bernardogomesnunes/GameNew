@@ -126,7 +126,12 @@ What's there now was checked in the code before writing this.
 - Age 11 is Renown: find a ruin, a forgotten temple, an abandoned mine and
   a monument.
 - Age 12 is Legend: a market town, 100 coins, 25 buildings, full armour.
-- Ages 11 and 12 will change as C and D land.
+- Ages 11 and 12 will change as C and D land. **Done in PR #185:**
+  - Age 11 is Conquest: a city's treasure, another people raided,
+    diamond armour, half the collection book.
+  - Age 12 is The God: into the cube, beat him or take his stash, three
+    quarters of the book, forty buildings.
+  - The draft's time-travel goals come with time travel.
 - Old saves move up to the age with at least as much land.
 - A save keeps at most the central 320 square whole.
 

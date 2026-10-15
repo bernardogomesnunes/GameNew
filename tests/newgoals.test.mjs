@@ -7,7 +7,7 @@ import { Inventory } from '../src/items/Inventory.js';
 /**
  * Goals for the batch's new systems — building levels, coins, the market's
  * traders — as the ages' own goals now (config/ages.js): evolving a building
- * in Age 6, Renowned in Age 10, a market town and a hundred coins in Age 12.
+ * in Age 6, Renowned in Age 10, diamond armour and half the book in Age 11.
  */
 
 let f = 0;
@@ -24,7 +24,7 @@ const duilt = (age) => ({
 });
 const has = (g, id) => g.state.achievementsUnlocked.has(id);
 
-ok('each one exists, in the age it belongs to', ['req_6_evolve', 'req_10_renowned', 'req_12_market_town', 'req_12_coins'].every((id) => ACHIEVEMENTS_BY_ID.has(id)));
+ok('each one exists, in the age it belongs to', ['req_6_evolve', 'req_10_renowned', 'req_11_gem_armour', 'req_11_book_half'].every((id) => ACHIEVEMENTS_BY_ID.has(id)));
 
 {
   const bus = new EventBus();
@@ -45,20 +45,23 @@ ok('each one exists, in the age it belongs to', ['req_6_evolve', 'req_10_renowne
   ok('in Age 10, a Renowned building ticks it', has(g, 'req_10_renowned'));
 }
 
+// Age 11 (Conquest) — reworked: armour from the diamonds, and the book.
 {
   const bus = new EventBus();
   const g = new GamificationEngine(bus);
-  g.setDuilt(duilt(12));
-  inventory.add('coin', 20);
+  const d = duilt(11);
+  d.collection = { progress: () => 0.2 };
+  g.setDuilt(d);
+  d.worn.body = { id: 'armour_iron_body' };
   bus.emit('duilt:bought', { trader: 'stonemonger', itemId: 'stone', count: 16, price: 2 });
-  ok('twenty coins is not a hundred', !has(g, 'req_12_coins'));
-  inventory.add('coin', 80);
+  ok('iron armour isn\'t gem armour', !has(g, 'req_11_gem_armour'));
+  d.worn.body = { id: 'armour_diamond_body' };
   bus.emit('duilt:bought', { trader: 'stonemonger', itemId: 'stone', count: 16, price: 2 });
-  ok('a hundred is', has(g, 'req_12_coins'));
-  ok('one trader is not a market town', !has(g, 'req_12_market_town'));
-  traders = 4;
-  bus.emit('structure:upgraded', { structure: { type: 'market', tier: 3 } });
-  ok('four of them is', has(g, 'req_12_market_town'));
+  ok('diamond is', has(g, 'req_11_gem_armour'));
+  ok('a fifth of the book is not half', !has(g, 'req_11_book_half'));
+  d.collection.progress = () => 0.5;
+  bus.emit('duilt:bought', { trader: 'stonemonger', itemId: 'stone', count: 16, price: 2 });
+  ok('half is', has(g, 'req_11_book_half'));
 }
 
 process.exit(f ? 1 : 0);

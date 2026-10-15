@@ -22,8 +22,8 @@ The game is a ladder of twelve **ages**. Each age has a few goals. Finish every 
 | 8 | Bastion | 256 | Mine, garrison, barracks, sanctuary |
 | 9 | Walls | 320 | Wall, gatehouse, watchtower, 15 buildings |
 | 10 | Reckoning | 384 (open) | End the war, village, monument, a Renowned building |
-| 11 | Renown | 448 (open) | Find a ruin, forgotten temple, abandoned mine, monument |
-| 12 | Legend | 512 (open) | All four traders, 100 coins, 25 buildings, full armour |
+| 11 | Conquest | 448 (open) | A city's treasure, another people raided, diamond armour, half the collection book |
+| 12 | The God | 512 (open) | Into the god's cube, beat him or steal his stash, three quarters of the book, 40 buildings |
 
 ## Every goal
 
@@ -155,31 +155,31 @@ Land: **384 by 384 blocks** (open: the border no longer stops you walking).
 
 On the dark path this age reads: *The wall is down. The Stone King calls you his own, and the Sky Kingdom doesn't know you're coming. Raise a village, and take back the sky.*
 
-### Age 11: Renown
+### Age 11: Conquest
 
-*The world past your border is yours to walk. Go and find what the old peoples left behind.*
+*Past your border are peoples with treasure of their own: cities, tree tribes, the Kingdom's outposts. Take what you can carry.*
 
 Land: **448 by 448 blocks** (open: the border no longer stops you walking).
 
 | Goal | How |
 |---|---|
-| Find a ruin | Old walls standing in the grass. Messengers and explorers say where. |
-| Find a forgotten temple | Marble pillars, half of them fallen, and an altar. |
-| Find an abandoned mine | Timber over a hole in the ground, left in a hurry. |
-| Find a monument | A tall black stone, gold at the top. |
+| Take a city's treasure | Take anything from a chest in a living city's houses (the guards come for you) or an abandoned city's (nobody's left to mind). |
+| Raid another people | Take from a tree tribe's hut or a Stone Kingdom outpost's armoury. |
+| Wear a piece of diamond armour | Diamond ore is deep, below y 32. Diamond armour is made from Age 10. |
+| Fill half the collection book | Goals → Book. Every item you've ever held counts. |
 
-### Age 12: Legend
+### Age 12: The God
 
-*They tell stories about you now. Make the place worth the stories.*
+*The god you didn't choose waits in his cube beyond the world. Your Sanctuary opens the way.*
 
 Land: **512 by 512 blocks** (open: the border no longer stops you walking).
 
 | Goal | How |
 |---|---|
-| A market town, all four traders | Evolve a market until all four traders live in it, stone, steel, glass and seed. |
-| Hold a hundred coins | Strike them at a foundry, sell to the traders, or find them in old chests. |
-| Twenty-five buildings standing | A town people walk days to see. |
-| Wear armour on head, body, legs and feet | Anything on all four: leather, iron, gold, made at the bench. |
+| Open the way at your Sanctuary | Its pop-up has "Step through to his cube" once the war is won (white) or the sky has fallen (dark). |
+| Beat the other god, or steal his stash | Kill him, or take the wand from the chest on his altar and leave by the Way Out. |
+| Fill three quarters of the collection book | Goals → Book. |
+| Forty buildings standing | Any kind, claimed and working. |
 
 This is the last age. Finishing it finishes the game.
 
@@ -190,6 +190,5 @@ This is the last age. Finishing it finishes the game.
 - **Forge a ring (Age 7):** build the Temple up to the High Temple, then forge the White Ring or the Black Ring. This is a one-way choice. See [Lore and story](lore.md).
 - **End the war (Age 10):** on the white path, win the Ten Rounds. On the dark path, bring down the Sky Kingdom. See [Combat and war](combat-and-war.md).
 - **Take a building to Renowned (Age 10):** the top level of any building (Renowned, or the High Temple).
-- **A market town (Age 12):** evolve a market to level 3 so all four traders live in it.
-- **Hold 100 coins (Age 12):** strike coins at a foundry, sell to traders, or find them in chests.
-- **Armour on head, body, legs and feet (Age 12):** any armour counts, even leather.
+- **Take a city's treasure (Age 11):** taking from a living city is theft: its guards come for you and its merchants shut their stalls to you. An abandoned city is safer.
+- **Open the way (Age 12):** see [Combat and war](combat-and-war.md#the-gods-cube).

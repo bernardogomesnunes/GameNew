@@ -8,6 +8,7 @@ import { RECIPES, recipesFor } from '../src/config/recipes.js';
 import { ITEMS_BY_ID } from '../src/config/items.js';
 import { generateDuiltWorld } from '../src/world/StarterWorld.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
+import { BOOK } from '../src/duilt/Collection.js';
 
 /**
  * The arc, end to end.
@@ -151,6 +152,15 @@ function satisfy(g, goal, give) {
     market_town: () => { g.marketTraders = () => [1, 2, 3, 4]; },
     coins: () => g.inventory.add('coin', 100),
     armoured: () => { for (const k of ['head', 'body', 'legs', 'feet']) g.worn[k] = { id: `armour_leather_${k}`, wear: 0 }; },
+    // Ages 11 and 12 (Conquest, The God).
+    city_treasure: () => g.raided.add('city@1,1'),
+    second_people: () => g.raided.add('tribe@2,2'),
+    gem_armour: () => { g.worn.body = { id: 'armour_diamond_body', wear: 0 }; },
+    book_half: () => g.collection.note(BOOK.slice(0, Math.ceil(BOOK.length / 2)).map((i) => i.id)),
+    cube_open: () => { g.cube.entered = true; },
+    god_done: () => { g.cube.beaten = true; },
+    book_most: () => g.collection.note(BOOK.slice(0, Math.ceil(BOOK.length * 0.75)).map((i) => i.id)),
+    forty: () => give('house', Math.max(0, 40 - g.structures.list().length)),
   }[goal.id];
   ok(`  (the test knows how to meet "${goal.label}")`, !!make);
   make?.();

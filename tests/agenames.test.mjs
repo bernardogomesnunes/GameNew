@@ -14,13 +14,14 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const duilt = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.url), 'utf8');
 
 // Twelve now (asked for directly: "we need more ages to divide all this ... age 12").
-ok('Exile, Roots, Settle, Forge, Hearth, Town, Faith, Bastion, Walls, Reckoning, Renown, Legend',
-  AGES.map((a) => a.name).join() === 'Exile,Roots,Settle,Forge,Hearth,Town,Faith,Bastion,Walls,Reckoning,Renown,Legend');
+// Ages 11 and 12 reworked (asked for directly: "Next fix 11 12 goals").
+ok('Exile, Roots, Settle, Forge, Hearth, Town, Faith, Bastion, Walls, Reckoning, Conquest, The God',
+  AGES.map((a) => a.name).join() === 'Exile,Roots,Settle,Forge,Hearth,Town,Faith,Bastion,Walls,Reckoning,Conquest,The God');
 ok('the border rings carry the same names', RINGS.map((r) => r.name).join() === AGES.map((a) => a.name).join());
 ok('Exile: thrown down from the sky', /Thrown down from the sky/.test(AGES[0].intro));
 ok('Faith: the choice of god comes', /choose your god/.test(AGES[6].intro));
 ok('Bastion: the Stone Kingdom has heard of you', /Stone Kingdom/.test(AGES[7].intro));
-const keys = ['tree', 'forest', 'quarry', 'workshop', 'market', 'hall', 'shrine', 'mine', 'walls', 'village', 'find', 'stories'];
+const keys = ['tree', 'forest', 'quarry', 'workshop', 'market', 'hall', 'shrine', 'mine', 'walls', 'village', 'peoples', 'Sanctuary'];
 ok('each still says what to do', AGES.every((a, i) => new RegExp(keys[i]).test(a.intro)));
 const R = AGES.find((a) => a.name === 'Reckoning');
 ok('the Reckoning on the white path, or with no ring: the Stone Kingdom is coming', ageIntro(R.age, 'white') === R.intro && ageIntro(R.age, null) === R.intro && /ten rounds/.test(R.intro));

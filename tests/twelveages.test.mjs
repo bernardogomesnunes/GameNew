@@ -40,7 +40,7 @@ const make = () => new DuiltGame({ world: new World({ sizeX: 32, sizeZ: 32, heig
 
 {
   const goals = AGES.flatMap((a) => a.goals);
-  ok('one goal for the Sanctuary, either one', goals.filter((x) => /Sanctuary/i.test(x.label)).length === 1 && !goals.some((x) => /sanctuary_(white|black)/.test(x.structure ?? '')));
+  ok('one goal for the Sanctuary, either one', goals.filter((x) => /Sanctuary/i.test(x.label) && x.id !== 'cube_open').length === 1 && !goals.some((x) => /sanctuary_(white|black)/.test(x.structure ?? '')));
   const g = make();
   const sanctuary = goals.find((x) => x.id === 'sanctuary');
   g.structures.structures.push({ id: 1, type: 'sanctuary_black', valid: true, region: { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: 0, maxZ: 1 } });

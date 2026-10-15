@@ -178,30 +178,35 @@ export const AGES = [
       { id: 'renowned', label: 'Take a building to Renowned', test: (d) => d.structures.list().some((s) => STRUCTURES_BY_ID.get(s.type)?.tiers?.[s.tier ?? 0]?.id === 'renowned') },
     ],
   },
+  // Ages 11 and 12, reworked as the draft had them (backlog batch 4, B;
+  // asked for directly: "Next fix 11 12 goals"): after the war, Conquest —
+  // the peoples past your border and their treasure — and then the god. The
+  // time-travel goals the draft had come with time travel itself, so the
+  // game can never end waiting on something that isn't there yet.
   {
     age: 11,
-    name: 'Renown',
+    name: 'Conquest',
     size: 448,
     open: true,
-    intro: 'The world past your border is yours to walk. Go and find what the old peoples left behind.',
+    intro: 'Past your border are peoples with treasure of their own: cities, tree tribes, the Kingdom\'s outposts. Take what you can carry.',
     goals: [
-      { id: 'ruin', label: 'Find a ruin', test: foundKind('ruin') },
-      { id: 'ruined_temple', label: 'Find a forgotten temple', test: foundKind('ruined_temple') },
-      { id: 'old_mine', label: 'Find an abandoned mine', test: foundKind('mine') },
-      { id: 'old_monument', label: 'Find a monument', test: foundKind('monument') },
+      { id: 'city_treasure', label: 'Take a city\'s treasure', test: (d) => ['city', 'ruined_city'].some((k) => d.raidedKinds?.().has(k)) },
+      { id: 'second_people', label: 'Raid another people', test: (d) => ['tribe', 'outpost'].some((k) => d.raidedKinds?.().has(k)) },
+      { id: 'gem_armour', label: 'Wear a piece of diamond armour', test: (d) => ['head', 'body', 'legs', 'feet'].some((k) => d.worn?.[k]?.id?.startsWith('armour_diamond_')) },
+      { id: 'book_half', label: 'Fill half the collection book', test: (d) => (d.collection?.progress() ?? 0) >= 0.5, progress: (d) => `${Math.floor((d.collection?.progress() ?? 0) * 100)}/50%` },
     ],
   },
   {
     age: 12,
-    name: 'Legend',
+    name: 'The God',
     size: 512,
     open: true,
-    intro: 'They tell stories about you now. Make the place worth the stories.',
+    intro: 'The god you didn\'t choose waits in his cube beyond the world. Your Sanctuary opens the way.',
     goals: [
-      { id: 'market_town', label: 'A market town — all four traders', test: (d) => (d.marketTraders?.().length ?? 0) >= 4 },
-      { id: 'coins', label: 'Hold a hundred coins', test: (d) => (d.inventory?.countOf('coin') ?? 0) >= 100, progress: (d) => `${Math.min(d.inventory?.countOf('coin') ?? 0, 100)}/100` },
-      { id: 'twentyfive', label: 'Twenty-five buildings standing', test: (d) => buildings(d) >= 25, progress: (d) => `${Math.min(buildings(d), 25)}/25` },
-      { id: 'armoured', label: 'Wear armour on head, body, legs and feet', test: (d) => ['head', 'body', 'legs', 'feet'].every((k) => !!d.worn?.[k]) },
+      { id: 'cube_open', label: 'Open the way at your Sanctuary', test: (d) => !!d.cube?.entered },
+      { id: 'god_done', label: 'Beat the other god, or steal his stash', test: (d) => !!(d.cube?.beaten || d.cube?.stash) },
+      { id: 'book_most', label: 'Fill three quarters of the collection book', test: (d) => (d.collection?.progress() ?? 0) >= 0.75, progress: (d) => `${Math.floor((d.collection?.progress() ?? 0) * 100)}/75%` },
+      { id: 'forty', label: 'Forty buildings standing', test: (d) => buildings(d) >= 40, progress: (d) => `${Math.min(buildings(d), 40)}/40` },
     ],
     // Nothing comes after this one. Finishing it finishes the game.
     final: true,

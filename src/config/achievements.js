@@ -69,14 +69,14 @@ const GOAL_WORDS = {
   fifteen: { icon: '🌆', description: 'A settlement that would show up on a map.' },
   war: { icon: '⚔️', description: 'Beat the ten rounds of the Stone Kingdom — or, sworn to the dark god, bring down the Sky Kingdom.' },
   renowned: { icon: '🌟', description: 'Take any building to the top of its ladder.' },
-  ruin: { icon: '🏚️', description: 'Old walls standing in the grass. Messengers and explorers say where.' },
-  ruined_temple: { icon: '🏛️', description: 'Marble pillars, half of them fallen, and an altar.' },
-  old_mine: { icon: '⛏️', description: 'Timber over a hole in the ground, left in a hurry.' },
-  old_monument: { icon: '🗿', description: 'A tall black stone, gold at the top.' },
-  market_town: { icon: '🏪', description: 'Evolve a market until all four traders live in it — stone, steel, glass and seed.' },
-  coins: { icon: '🪙', description: 'Strike them at a foundry, sell to the traders, or find them in old chests.' },
-  twentyfive: { icon: '🏙️', description: 'A town people walk days to see.' },
-  armoured: { icon: '🛡️', description: 'Anything on all four: leather, iron, gold — made at the bench.' },
+  city_treasure: { icon: '💰', description: 'Take anything from a chest in a city\'s houses. A living city\'s guards come for you; an abandoned one has nobody left to mind.' },
+  second_people: { icon: '🏹', description: 'Take from a tree tribe\'s hut, high in the giant trees, or a Stone Kingdom outpost\'s armoury.' },
+  gem_armour: { icon: '💎', description: 'Diamond ore lies deep, below y 32. Diamond armour is made at the bench.' },
+  book_half: { icon: '📖', description: 'Goals → Book. Every item you\'ve ever held counts.' },
+  cube_open: { icon: '🌀', description: 'Your Sanctuary\'s pop-up opens the way once the war is won, or the sky has fallen.' },
+  god_done: { icon: '⚡', description: 'Kill him — or take the wand from the chest on his altar and get to the Way Out alive.' },
+  book_most: { icon: '📚', description: 'Goals → Book. Three quarters of everything there is.' },
+  forty: { icon: '🏰', description: 'Forty buildings, claimed and working.' },
 };
 
 /**
