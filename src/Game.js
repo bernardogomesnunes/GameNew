@@ -11,6 +11,7 @@ import { clearPlan, clearCells, cellBounds } from './tools/ClearTool.js';
 import { CLEARS_BY_ID } from './config/clears.js';
 import { SelectionHighlight } from './tools/SelectionHighlight.js';
 import { BuildGhost } from './tools/BuildGhost.js';
+import { loadModels } from './render/Models.js';
 import { SettlerView } from './render/SettlerView.js';
 import { CloudAuth } from './net/CloudAuth.js';
 import { CloudWorlds } from './net/CloudWorlds.js';
@@ -512,7 +513,7 @@ export class Game {
     this.arrowView = new ArrowView(this.scene);
     this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
-    this.wanderView = new SettlerView(this.scene);
+    this.wanderView = new SettlerView(this.scene, 'wanderers');
     this.skyBeacon = new SkyBeacon(this.scene);
     // In disguise on the island: how near you are to being seen through,
     // and the ? and ! over the guards' heads (duilt/Suspicion.js).
@@ -527,12 +528,15 @@ export class Game {
     // The Future's trams and flying cars.
     this.futureView = new FutureView(this.scene);
     // Your soldiers and tower archers (the defence buildings).
-    this.defenderView = new SettlerView(this.scene);
+    this.defenderView = new SettlerView(this.scene, 'defenders');
     // Your army, on the dark path.
-    this.warriorView = new SettlerView(this.scene);
+    this.warriorView = new SettlerView(this.scene, 'warriors');
     // The showcase's labels and its two guardians — see openShowcase.
     this.showcaseView = new ShowcaseView(this.scene);
     this.showcase = null;
+    // Every animal, person and vehicle's model (render/Models.js): the views
+    // draw their boxes until these are in.
+    this.modelsLoaded = loadModels();
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 

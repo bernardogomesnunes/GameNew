@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SETTLERS } from '../config/settlers.js';
 import { SKINS, HAIRS } from '../config/avatar.js';
 import { outfitOf } from '../config/outfits.js';
+import { modelKit, Crowds } from './Models.js';
 
 /**
  * The settlers, drawn.
@@ -32,6 +33,25 @@ const HURT_RED = new THREE.Color(0xd23a2a);   // beds run out long before this; 
 const WINDUP_GLOW = new THREE.Color(0xfff6d8);
 const FROST = new THREE.Color(0x9fe6ff), EMBER = new THREE.Color(0xff7a3a), SPARK = new THREE.Color(0xffe066);
 
+/** A model is two blocks tall; a person here is SETTLERS.build.height. */
+const TURN = Math.PI;
+const SETTLER_LOOKS = 6, CITIZEN_LOOKS = 4;
+
+/**
+ * Which model draws a person (render/Models.js, tools/mobs/people.py). Their
+ * kind, mostly; but among the strangers (`role` 'wanderers') a soldier or an
+ * archer is the Stone Kingdom's, and settlers and citizens come in several
+ * looks, one per person.
+ */
+export function personModel(p, role, who = personHash(p)) {
+  const k = p.kind;
+  if (!k || k === 'settler') return who % SETTLER_LOOKS ? `settler_${who % SETTLER_LOOKS}` : 'settler';
+  if (k === 'citizen') return who % CITIZEN_LOOKS ? `citizen_${who % CITIZEN_LOOKS}` : 'citizen';
+  if (role === 'wanderers' && k === 'soldier') return 'warrior';
+  if (role === 'wanderers' && k === 'archer') return 'stone_archer';
+  return k;
+}
+
 /** A number that's the same for a person every frame — from their name, or where they began. */
 function personHash(p) {
   if (p._hash != null) return p._hash;
@@ -42,8 +62,9 @@ function personHash(p) {
 }
 
 export class SettlerView {
-  constructor(scene) {
+  constructor(scene, role = 'settlers') {
     this.scene = scene;
+    this.role = role;
     const { height, width } = SETTLERS.build;
     // Legs, a body, a head with hair, and two arms (playtest, P3: "people
     // ... with arms and legs that swing as they walk").
@@ -93,13 +114,19 @@ export class SettlerView {
     this._scale = new THREE.Vector3(1, 1, 1);
     this._colour = new THREE.Color();
     this._size = new THREE.Vector3();
+    // Each kind's model, once loaded, drawn in place of the boxes.
+    this.crowds = new Crowds(scene, MAX);
+    this._modelScale = new THREE.Vector3().setScalar(height / 2);
+    this._tint = new THREE.Color();
+    this._pose = { leg_l: [0, 0, 0], leg_r: [0, 0, 0], arm_l: [0, 0, 0], arm_r: [0, 0, 0] };
   }
 
   /** Redraws every settler where they now are. Called each frame. */
   update(people) {
     const n = Math.min(people.length, MAX);
     for (const m of this.meshes) m.count = m === this.limbs ? n * 4 : m === this.parts ? n * SLOTS : n;
-    if (!n) return;
+    this.crowds.begin();
+    if (!n) { this.crowds.end(); return; }
     const { legH, bodyH, headH, width } = this;
 
     for (let i = 0; i < n; i++) {
@@ -127,6 +154,26 @@ export class SettlerView {
       };
       place(this.bodies, 0, legH + bodyH / 2, 0);
       place(this.shadows, 0, 0.03, 0);
+
+      // Their model, if it has loaded: posed, and the boxes put away. A model
+      // faces -z, so it's turned round, and a turn about x is the other way.
+      const kit = modelKit(personModel(p, this.role));
+      const raised = p.windup > 0 && p.winding ? -2.7 : p.strike > 0 ? -1.6 * (p.strike / 0.3) : null;
+      if (kit) {
+        this._e.set(0, (p.facing ?? 0) + TURN, 0);
+        this._q.setFromEuler(this._e);
+        base.compose(this._pos.set(p.x, p.y, p.z), this._q, this._modelScale);
+        const pose = this._pose;
+        pose.leg_r[0] = -swing;
+        pose.leg_l[0] = swing;
+        pose.arm_r[0] = -(raised ?? -swing * 0.8);
+        pose.arm_l[0] = -(raised ?? swing * 0.8);
+        this.crowds.get(kit).add(base, pose, this.modelTint(p));
+        for (const mesh of [this.bodies, this.heads, this.hair]) mesh.setMatrixAt(i, NOTHING);
+        for (let k = 0; k < 4; k++) this.limbs.setMatrixAt(i * 4 + k, NOTHING);
+        for (let k = 0; k < SLOTS; k++) this.parts.setMatrixAt(i * SLOTS + k, NOTHING);
+        continue;
+      }
       place(this.heads, 0, legH + bodyH + headH / 2, 0);
       place(this.hair, 0, legH + bodyH + headH * 0.86, -width * 0.02);
 
@@ -144,7 +191,6 @@ export class SettlerView {
       limb(1, width * 0.24, legH, legH, lw, -swing);
       // Arms: swinging as they walk; raised overhead winding up a heavy
       // blow (the Sky King's — Wanderers.fight), and brought down striking.
-      const raised = p.windup > 0 && p.winding ? -2.7 : p.strike > 0 ? -1.6 * (p.strike / 0.3) : null;
       limb(2, -width * 0.64, legH + bodyH * 0.95, bodyH * 0.95, aw, raised ?? -swing * 0.8);
       limb(3, width * 0.64, legH + bodyH * 0.95, bodyH * 0.95, aw, raised ?? swing * 0.8);
 
@@ -173,6 +219,19 @@ export class SettlerView {
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
     }
+    this.crowds.end();
+  }
+
+  /** The same flashes as coatColour, over a model's own colours: null when there are none. */
+  modelTint(p) {
+    if (!(p.hurt > 0 || (p.windup > 0 && p.winding) || p.frozen > 0 || p.burning > 0 || p.stunned > 0)) return null;
+    const c = this._tint.set(1, 1, 1);
+    if (p.hurt > 0) c.lerp(HURT_RED, 0.55);
+    if (p.windup > 0 && p.winding) c.lerp(WINDUP_GLOW, 0.5);
+    if (p.frozen > 0) c.lerp(FROST, 0.55);
+    if (p.burning > 0) c.lerp(EMBER, 0.3 + 0.25 * Math.abs(Math.sin(performance.now() / 90)));
+    if (p.stunned > 0 && Math.sin(performance.now() / 45) > 0.2) c.lerp(SPARK, 0.65);
+    return c;
   }
 
   /**
@@ -326,9 +385,11 @@ export class SettlerView {
 
   setVisible(on) {
     for (const m of this.meshes) m.visible = on;
+    this.crowds.setVisible(on);
   }
 
   dispose() {
+    this.crowds.dispose();
     for (const m of this.meshes) {
       this.scene.remove(m);
       m.geometry.dispose();

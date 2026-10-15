@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { MOBS_BY_ID } from '../config/mobs.js';
+import { modelKit, Crowds } from './Models.js';
 
 /**
  * The animals, drawn: a body, a head and four legs each, out of one unit
@@ -89,6 +90,9 @@ const HURT_COLOUR = new THREE.Color(0xd9534f);
 const CORNER_LEGS = [[-1, -1, 1], [1, 1, 1], [1, -1, -1], [-1, 1, -1]];
 const BIRD_LEGS = [[-1, 0, 1], [1, 0, -1], null, null];
 const NO_LEG = new THREE.Matrix4().makeScale(0, 0, 0);
+/** A model faces -z; an animal here faces +z. */
+const TURN = new THREE.Matrix4().makeRotationY(Math.PI);
+const HURT_TINT = new THREE.Color(1, 0.45, 0.42);
 
 export class MobView {
   constructor(scene) {
@@ -119,6 +123,12 @@ export class MobView {
     this._s = new THREE.Vector3();
     this._c = new THREE.Color();
     this._one = new THREE.Quaternion();
+    // Each species' model (render/Models.js), once loaded: drawn in place of
+    // the boxes above.
+    this.crowds = new Crowds(scene, MAX);
+    this._turned = new THREE.Matrix4();
+    this._tint = new THREE.Color();
+    this._pose = {};
   }
 
   update(mobs) {
@@ -127,7 +137,8 @@ export class MobView {
     this.heads.count = n;
     this.legs.count = n * 4;
     let d = 0;
-    if (!n) { this.details.count = 0; return; }
+    this.crowds.begin();
+    if (!n) { this.details.count = 0; this.crowds.end(); return; }
 
     for (let i = 0; i < n; i++) {
       const m = mobs[i];
@@ -141,6 +152,24 @@ export class MobView {
       this._base.compose(this._v.set(m.x, m.y, m.z), this._q, this._s.set(1, 1, 1));
 
       const flash = m.hurt > 0 ? Math.min(1, m.hurt / 0.25) * 0.7 : 0;
+
+      // Its model, if that has loaded: the boxes for this one are put away.
+      const kit = modelKit(m.type);
+      if (kit) {
+        const swing = m.speed > 0 ? Math.sin(m.stride * (5 / Math.max(0.3, leg + 0.2))) * 0.55 : 0;
+        const pose = this._pose;
+        pose.leg_fl = pose.leg_br = pose.leg_l = [swing, 0, 0];
+        pose.leg_fr = pose.leg_bl = pose.leg_r = [-swing, 0, 0];
+        pose.head = [m.grazing ? -0.6 : 0, 0, 0];
+        pose.neck = [m.grazing ? -0.5 : 0, 0, 0];
+        pose.tail = [0, Math.sin((m.stride ?? 0) * 3) * 0.3, 0];
+        this._turned.multiplyMatrices(this._base, TURN);
+        this.crowds.get(kit).add(this._turned, pose, flash ? this._tint.copy(HURT_TINT).lerp(this._c.set(1, 1, 1), 1 - flash) : null);
+        this.bodies.setMatrixAt(i, NO_LEG);
+        this.heads.setMatrixAt(i, NO_LEG);
+        for (let k = 0; k < 4; k++) this.legs.setMatrixAt(i * 4 + k, NO_LEG);
+        continue;
+      }
 
       // body
       this.local(0, leg + h / 2, 0, w, h, l);
@@ -203,6 +232,7 @@ export class MobView {
       }
     }
     this.details.count = d;
+    this.crowds.end();
     for (const m of [this.bodies, this.heads, this.legs, this.details]) {
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
@@ -223,5 +253,6 @@ export class MobView {
 
   setVisible(on) {
     for (const m of [this.bodies, this.heads, this.legs, this.details]) m.visible = on;
+    this.crowds.setVisible(on);
   }
 }

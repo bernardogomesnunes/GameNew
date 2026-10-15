@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { dress, poseBone } from './Models.js';
 
 /**
  * The Helix, drawn (asked for directly: "Flying machine should for sure be
@@ -97,5 +98,12 @@ export class HelixView {
     this.spin += (want - this.spin) * Math.min(1, dt * 1.5);
     this.rotor.rotation.y += this.spin * dt;
     this.tailRotor.rotation.x += this.spin * 1.6 * dt;
+    // Its model (render/Models.js), once loaded: nose down -z like this one,
+    // scaled to the cabin you stand in, its skids on the ground.
+    const model = dress(this.group, 'helix', { turn: 0, scale: 1.8, y: -HELIX_SKIDS });
+    if (model) {
+      poseBone(model.bones.rotor, 0, this.rotor.rotation.y, 0);
+      poseBone(model.bones.tail_rotor, this.tailRotor.rotation.x, 0, 0);
+    }
   }
 }

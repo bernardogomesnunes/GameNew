@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { dress, poseBone } from './Models.js';
 
 /**
  * The guardian, drawn (Phase 7d): a few boxes each, legs that swing as it
@@ -65,6 +66,12 @@ export function beast() {
   return { group: g, legs };
 }
 
+/** The diagonal pairs of a model's four legs, swung by `s`. */
+function swingLegs(bones, s) {
+  poseBone(bones.leg_fl, s); poseBone(bones.leg_br, s);
+  poseBone(bones.leg_fr, -s); poseBone(bones.leg_bl, -s);
+}
+
 export class GuardianView {
   constructor(scene) {
     this.scene = scene;
@@ -83,6 +90,8 @@ export class GuardianView {
       this.scene.add(this.shown.group);
     }
     const { group, legs } = this.shown;
+    // Its model (render/Models.js), once loaded, in place of the boxes.
+    const model = dress(group, guardian.ring === 'white' ? 'aurelion' : 'umbra');
     group.visible = true;
     this.clock += dt;
     group.position.set(guardian.x, guardian.y, guardian.z);
@@ -91,6 +100,7 @@ export class GuardianView {
     // breath either way.
     const swing = guardian.moving ? Math.sin(this.clock * 12) * 0.6 : 0;
     legs.forEach((l, i) => { l.rotation.x = (i === 0 || i === 3 ? swing : -swing); });
+    if (model) swingLegs(model.bones, swing);
     group.position.y += Math.sin(this.clock * 2) * 0.03 + (guardian.moving ? Math.abs(Math.sin(this.clock * 12)) * 0.06 : 0);
   }
 

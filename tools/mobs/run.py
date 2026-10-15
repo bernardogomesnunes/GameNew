@@ -11,8 +11,9 @@ after the socket is the addon's own code.
     BLENDER_MCP_DISABLE_TELEMETRY=1 python tools/mobs/run.py art/mobs [group ...] [--only id,id]
 
 Groups: featured animals creatures people vehicles (default: all). Writes
-<id>.glb and renders/<id>.png per model, one contact sheet per group in
-sheets/, and stats.json.
+each model to public/models/<id>.glb (and public/models/index.json, the list
+the game loads), and into the art folder renders/<id>.png, one contact
+sheet per group in sheets/, and stats.json.
 """
 import importlib.util, json, os, sys, time
 import blender_mcp
@@ -27,6 +28,8 @@ groups = args[1:] or ['featured', 'animals', 'creatures', 'people', 'vehicles']
 for d in ('', 'renders', 'sheets'):
     os.makedirs(os.path.join(out, d), exist_ok=True)
 here = os.path.dirname(os.path.abspath(__file__))
+pub = os.path.abspath(os.path.join(here, '..', '..', 'public', 'models'))
+os.makedirs(pub, exist_ok=True)
 
 addon_path = os.path.join(os.path.dirname(blender_mcp.__file__), 'bundled', 'addon.py')
 spec = importlib.util.spec_from_file_location('blendermcp_addon', addon_path)
@@ -62,7 +65,7 @@ for g in groups:
         t = time.time()
         r = send('execute_code', code=code(
             f'import json\nm = next(m for m in GROUPS[{g!r}] if m["id"] == {mid!r})\n'
-            f's = export_each([m], {out!r})\n'
+            f's = export_each([m], {pub!r})\n'
             f'render_one(m, {os.path.join(out, "renders", mid + ".png")!r}, samples={samples})\n'
             f'print(json.dumps(s))'))
         s = json.loads(r['result'].strip().splitlines()[-1])[mid]
@@ -72,6 +75,11 @@ json.dump(stats, open(stats_path, 'w'), indent=1)
 info = send('get_scene_info')
 print('get_scene_info:', info.get('object_count'), 'objects in the last scene')
 
+# The game loads them from public/models/ (src/render/Models.js), listed in index.json.
+ids = sorted(f[:-4] for f in os.listdir(pub) if f.endswith('.glb'))
+json.dump(ids, open(os.path.join(pub, 'index.json'), 'w'))
+print('public/models:', len(ids), 'models')
+
 # Contact sheets: four across, a label under each.
 bold = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
 font = ImageFont.truetype(bold, 22) if os.path.exists(bold) else ImageFont.load_default()
@@ -80,6 +88,7 @@ for g in groups:
     if not items:
         continue
     cols, cell, lab = 4, 360, 40
+    items = [it for it in items if not it[0].rsplit('_', 1)[-1].isdigit()]   # variants stay off the sheets
     rows = (len(items) + cols - 1) // cols
     sheet = Image.new('RGB', (cols * cell, rows * (cell + lab)), '#eef5f4')
     d = ImageDraw.Draw(sheet)

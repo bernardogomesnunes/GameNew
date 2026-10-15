@@ -31,6 +31,7 @@ On touch devices the left thumb drives a virtual joystick, the right side of the
 - `src/config/` — `blocks.js`, `achievements.js`, `challenges.js`: plain arrays of config objects. Add a new block/achievement/challenge by adding an entry, not by touching engine logic.
 - `src/storage/SaveManager.js` — localStorage persistence (RLE-compressed chunk data) with named saves + autosave.
 - `src/ui/UIManager.js` — hotbar, XP bar, toasts, stats/achievements panel, save/load menu, and touch controls, all DOM-based and driven by an event bus.
+- `src/render/Models.js` — the animals', people's and vehicles' models: `.glb` files in `public/models/`, built in Blender by `tools/mobs/` (see `art/mobs/sheets/`). Loaded at start; each view draws its old boxes until they're in.
 - `src/Game.js` — wires everything together: scene/camera/renderer, the game loop, and the block-edit pipeline (apply → undo stack → chunk remesh → gamification hooks).
 
 ## Design notes on the gamification system

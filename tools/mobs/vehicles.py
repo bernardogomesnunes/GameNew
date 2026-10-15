@@ -418,3 +418,13 @@ CATAPULT = dict(
 )
 
 VEHICLES = [CART, GLIDER, HELIX, ENGINE, RAILCAR, FLYCAR, TRAM, RAM, CATAPULT]
+
+
+# The Future's traffic comes in the colours of its view (FutureView's CAR_COLOURS).
+def _car(i, colour):
+    car = dict(FLYCAR, id=f'flying_car_{i}', name=f'Flying car {i + 1}')
+    car['cubes'] = [box(c[0], c[1], c[2], c[3], {'all': future_body(colour)}) if c[0] in ('hull', 'nose') else c for c in FLYCAR['cubes']]
+    return car
+
+
+VEHICLES += [_car(i, col) for i, col in enumerate(['#e8ecf0', '#ff4fb8', '#3fe6ff', '#9b7bff', '#2b2f38'], start=1)]

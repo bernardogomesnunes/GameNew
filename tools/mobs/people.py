@@ -350,3 +350,20 @@ PEOPLE = [
     person('shade', 'Shade', hat='hood', hatColour='#16131a', skin='void', glowEyes=G['violet'], hair=None, coat='#1d1a22', trim='#2e2838', robe=True,
            belt=None, gear='sword', gearColour='#4a3a5a', gearGlow=G['violet']),
 ]
+
+# A town is many people: settlers and citizens come in several looks, and the
+# game picks one per person (render/SettlerView.js, by a hash of their name).
+SETTLER_LOOKS = [
+    dict(coat='#3a6a8a', shirt=C['paper'], trousers='#4a3a30', hair='#2a1e16', skin='light'),
+    dict(coat='#8a5a32', shirt=C['paper2'], trousers='#3a3024', hair='#c98a3a', skin='mid', beard='#c98a3a'),
+    dict(coat='#6a7a3a', shirt=C['paper'], trousers='#4a3a30', hair='#4a2e19', skin='dark'),
+    dict(coat='#9a3a3a', shirt=C['paper2'], trousers='#3a3024', hair='#1e1612', skin='tan', hat='cap', hatColour='#5a4030'),
+    dict(coat='#6a4a7a', shirt=C['paper'], trousers='#3a3030', hair='#d9c08a', skin='light'),
+]
+CITIZEN_LOOKS = [
+    dict(hatColour='#3a6a8a', coat=C['paper'], trim='#3a6a8a', hair='#4a2e19', skin='light'),
+    dict(hatColour=C['grassDark'], coat='#d6bd85', trim=C['grassDark'], hair='#1e1612', skin='mid'),
+    dict(hatColour='#7a2a20', coat='#e6d2a2', trim='#7a2a20', hair='#c98a3a', skin='tan'),
+]
+PEOPLE += [person(f'settler_{i + 1}', f'Settler {i + 2}', **look) for i, look in enumerate(SETTLER_LOOKS)]
+PEOPLE += [person(f'citizen_{i + 1}', f'Citizen {i + 2}', hat='cap', trousers='#6a5a4a', **look) for i, look in enumerate(CITIZEN_LOOKS)]

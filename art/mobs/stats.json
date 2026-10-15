@@ -636,5 +636,148 @@
   "kb": 29.2,
   "name": "Siege catapult",
   "group": "vehicles"
+ },
+ "settler_1": {
+  "cubes": 6,
+  "triangles": 72,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 15.0,
+  "name": "Settler 2",
+  "group": "people"
+ },
+ "settler_2": {
+  "cubes": 6,
+  "triangles": 72,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 15.0,
+  "name": "Settler 3",
+  "group": "people"
+ },
+ "settler_3": {
+  "cubes": 6,
+  "triangles": 72,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 15.0,
+  "name": "Settler 4",
+  "group": "people"
+ },
+ "settler_4": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 18.0,
+  "name": "Settler 5",
+  "group": "people"
+ },
+ "settler_5": {
+  "cubes": 6,
+  "triangles": 72,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 15.0,
+  "name": "Settler 6",
+  "group": "people"
+ },
+ "citizen_1": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 17.9,
+  "name": "Citizen 2",
+  "group": "people"
+ },
+ "citizen_2": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 18.0,
+  "name": "Citizen 3",
+  "group": "people"
+ },
+ "citizen_3": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 18.0,
+  "name": "Citizen 4",
+  "group": "people"
+ },
+ "flying_car_1": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car 2",
+  "group": "vehicles"
+ },
+ "flying_car_2": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car 3",
+  "group": "vehicles"
+ },
+ "flying_car_3": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car 4",
+  "group": "vehicles"
+ },
+ "flying_car_4": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car 5",
+  "group": "vehicles"
+ },
+ "flying_car_5": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car 6",
+  "group": "vehicles"
  }
 }

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { dress } from './Models.js';
 
 /**
  * The carts on your horses (asked for directly: "horses with wooden carts"):
@@ -54,6 +55,8 @@ export class CartView {
         this.carts.set(m, g);
         this.scene.add(g);
       }
+      // Its model (render/Models.js), once loaded.
+      dress(g, 'cart', { scale: 0.9 });
       const f = m.facing ?? 0;
       // A horse faces down its own +z, so behind it is -z.
       g.position.set(m.x - Math.sin(f) * BEHIND, m.y, m.z - Math.cos(f) * BEHIND);
