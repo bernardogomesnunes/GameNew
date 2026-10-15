@@ -41,12 +41,12 @@ Two lists, kept up to date as things land:
 | Craft button missing on mobile | #184 |
 | Pop-ups with search keep one size | #184 |
 | Ages 11 and 12 goals: Conquest, and The God | #185 |
+| Markets: a rare shelf that changes every two days | #186 |
 
 ### Not done yet
 
 | What | Where it's from | When |
 |---|---|---|
-| **Markets:** traders stock hard-to-get items, and their stock rotates | Batch 4, D2 | Next |
 | **Time travel:** the machine, the Past (dinosaurs, taming, eggs), the Future (city, university, future blocks) | Batch 4, D3 | Next |
 | Two or three more new peoples to raid | Batch 4, D1 | Later |
 | Places you've taken marked on the map; new ones appearing over time | Batch 4, D1 | Later |
@@ -66,6 +66,7 @@ means only the automated tests have checked it.
 - [ ] **People talk.** Tap a settler, the messenger, the explorer or a trader. Tap again for the next line.
 - [ ] **Quests.** In the Goals panel, hand one in from anywhere. The hermit's six fruit is the first.
 - [ ] **Secrets and daily challenges** in the Goals panel.
+- [ ] **Rare goods at the market:** two hard-to-get items per trader, new every two game days.
 - [ ] **Collection book.** Goals → Book. Coins at 10%, 25%, 50% and 75%; the Collector's Crown at 100%.
 - [ ] **Stone mill** and **wood mill**: stand by one at the bench, and the cheaper recipes appear.
 - [ ] **Backpacks** (Back slot): leather +10 slots, reinforced +20.

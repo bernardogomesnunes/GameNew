@@ -267,6 +267,15 @@ armour".
 - Rewards at 10/25/50/75%: 50/150/400/800 coins. At 100%: 2,000 coins
   and the Collector's Crown, worn on the head (5 points, never wears out).
 
+**Rare goods done in PR #186:**
+- Each market trader has a rare shelf of hard-to-get goods: things nobody
+  can make (clay, snow, obsidian, diamonds, rubies, a jar of fireflies,
+  garden vegetables) and things slow or dear to make. Two are out at a
+  time, and they change every two game days.
+- Each comes from an age, so a young market doesn't sell diamond tools.
+- Nothing that decides the story is sold: no Sky or Dark gear, and no ring
+  ore.
+
 - Every item in the game can be had somehow: crafted, dug, dropped, found, or
   bought from a trader. A test checks it, so nothing is ever out of reach.
 - Traders stock the hard-to-get items at a price, and their stock rotates.

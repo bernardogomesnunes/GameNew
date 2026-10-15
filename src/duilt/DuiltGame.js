@@ -21,7 +21,7 @@ import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, 
 import { AIR, BLOCKS_BY_ID, isFluid, doorPart, stationOf } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
-import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN } from '../config/traders.js';
+import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN, goodsFor } from '../config/traders.js';
 import { QUESTS, QUESTS_BY_ID } from '../config/quests.js';
 import { MOMENTS } from '../config/moments.js';
 import { RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
@@ -1566,7 +1566,8 @@ export class DuiltGame {
    */
   buyFrom(traderId, index) {
     const t = TRADERS_BY_ID.get(traderId);
-    const g = t?.goods[index];
+    // Today's stall, its rare shelf included — as DuiltUI.showTrader draws it.
+    const g = goodsFor(t, { day: this.days, age: this.sandbox ? Infinity : this.age })[index];
     if (!g) return { ok: false, reason: 'They have nothing like that.' };
     const [id, n, price] = g;
     const have = this.inventory.countOf('coin');
