@@ -954,7 +954,17 @@ export class DuiltGame {
         const before = inv.toJSON();
         const inner = new Set(making).add(id);
         const parts = Object.entries(r.inputs).every(([part, k]) => make(craft, inv, part, k * runs + (held[part] ?? 0), depth + 1, inner, held));
-        if (parts && craft.craft(r.id, runs, { atStations }).ok) return true;
+        // A recipe makes at most a batch at a time (planks, eight), so it's
+        // pressed as many times as it takes — once used to make sixteen of
+        // the twenty-five planks a house wanted and call that done.
+        let left = parts ? runs : 0;
+        while (left > 0) {
+          const res = craft.craft(r.id, left, { atStations });
+          const did = res.ok ? Math.round((res.made ?? 0) / r.output.count) : 0;
+          if (did <= 0) break;
+          left -= did;
+        }
+        if (parts && left <= 0) return true;
         inv.loadJSON(before);
       }
       return false;

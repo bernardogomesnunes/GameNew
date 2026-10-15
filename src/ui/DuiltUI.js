@@ -487,7 +487,7 @@ export class DuiltUI {
     // Short of something there's a recipe for: one press makes it from
     // what's in your bag (asked for directly: "a craft button").
     const short = plan?.short ?? {};
-    const craftable = !ready && Object.keys(short).some((id) => RECIPES.some((r) => r.output.id === id && !r.study));
+    const craftable = !ready && this.craftable(short);
     return `
       ${pills ? `<p class="evolve-cost">Cost <span class="recipe-cost">${pills}</span></p>` : '<p class="dim">Free — it already has everything it needs.</p>'}
       ${craftable ? '<button class="secondary building-craft-missing" data-craft-missing>Craft what\'s missing</button>' : ''}
@@ -513,15 +513,20 @@ export class DuiltUI {
   /**
    * "Craft what's missing": what the next level is short of, made from
    * what's in the bag — DuiltGame.craftMissing — and said: what was made,
-   * and what couldn't be.
+   * and what couldn't be. `structure` is the building whose next level it
+   * is, or a function giving the whole bill itself (a ready-made building's
+   * card, see renderBuildings). The button is `[data-craft-missing]`, or
+   * `sel` for a list with one on every card.
+   *
+   * The whole bill goes in, not just what's short of it: what the bill
+   * takes as it is (the house's own wood) is then held back, never made
+   * into something else on it.
    */
-  wireCraftMissing(root, structure, redraw) {
-    root.querySelector('[data-craft-missing]')?.addEventListener('click', () => {
+  wireCraftMissing(root, structure, redraw, sel = '[data-craft-missing]') {
+    root.querySelectorAll(sel).forEach((btn) => btn.addEventListener('click', () => {
       const d = this.duilt;
-      const short = d?.evolvePlan(structure, { dry: true })?.short ?? {};
-      if (!d || !Object.keys(short).length) return redraw();
-      const want = {};
-      for (const [id, n] of Object.entries(short)) want[id] = d.inventory.countOf(id) + n;
+      const want = (typeof structure === 'function' ? structure(btn) : d?.evolvePlan(structure, { dry: true })?.bill) ?? {};
+      if (!d || !Object.keys(d.inventory.missing(want)).length) return redraw();
       const { made, still } = d.craftMissing(want, { position: this.game?.player?.position ?? null });
       const list = (o) => Object.entries(o).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(', ');
       const anything = Object.keys(made).length;
@@ -529,7 +534,12 @@ export class DuiltUI {
         ? { kind: 'challenge', title: `Made ${list(made)}`, body: Object.keys(still).length ? `Couldn't make ${list(still)} — not enough in your bag` : 'Everything it needs is in your bag' }
         : { kind: 'xp', title: 'Nothing could be made', body: `Not enough in your bag for ${list(still)}` });
       redraw();
-    });
+    }));
+  }
+
+  /** Whether anything in `short` has a recipe — so "Craft what's missing" has something to try. */
+  craftable(short) {
+    return Object.keys(short ?? {}).some((id) => RECIPES.some((r) => r.output.id === id && !r.study));
   }
 
   /** The other way to a level: what to build in, folded away under the button. */
@@ -1803,6 +1813,7 @@ export class DuiltUI {
           ${design ? `
           <div class="building-costs">${costLine}</div>
           <div class="building-actions">
+            ${!canStamp && this.craftable(shortfall) ? `<button class="secondary" data-craft-for="${spec.id}">Craft what's missing</button>` : ''}
             <button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
               Place a ${design.footprint} starter
             </button>
@@ -1815,6 +1826,11 @@ export class DuiltUI {
         this.closePanel('panel-buildings');
         this.onStampStarter?.(b.dataset.stamp);
       }));
+    // A ready-made building you're short for: the same button as a level's
+    // (asked for directly: "the option to craft from the building is not
+    // showing") — it makes what it can of the bill from your bag.
+    this.wireCraftMissing(this.q('#buildings-list'), (btn) => DESIGN_FOR_STRUCTURE.get(btn.dataset.craftFor)?.cost ?? {},
+      () => this.renderBuildings(), '[data-craft-for]');
   }
 
   /**

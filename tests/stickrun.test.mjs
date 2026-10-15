@@ -50,7 +50,7 @@ ok(`the column above it is smaller (${btn}px, was 56)`, btn < 56 && btn >= 44);
 
 // The bench keeps its height while you search.
 ok('the bench and the buildings list keep their height while searching',
-  /#panel-bench > \.panel, #panel-buildings > \.panel \{ height: min\(86vh, 760px\); \}/.test(css));
+  /#panel-bench > \.panel, #panel-buildings > \.panel, \.overlay > \.panel:has\(\.panel-search\) \{ height: min\(86vh, 760px\); \}/.test(css));
 
 // Asked for directly: "we are moving really fast, only in mobile, let's make
 // the controller bigger and less sensitive to running".
