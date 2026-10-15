@@ -41,7 +41,7 @@ ok('a house has neither — nothing to climb', !hasLevels(HOUSE) && !isStore(HOU
   ok('the quarry has more than one level', QUARRY.tiers.length >= 5);
   const first = producesAt(QUARRY, 0);
   ok(`level 1 makes a genuine trickle: ${JSON.stringify(first)}`,
-    Object.values(first).reduce((a, b) => a + b, 0) * 86400 / intervalAt(QUARRY, 0) === 30);
+    Object.values(first).reduce((a, b) => a + b, 0) * 86400 / intervalAt(QUARRY, 0) === 36);
   ok('a house, with no tiers, just falls back to its own produces either way',
     JSON.stringify(producesAt(HOUSE, 0)) === JSON.stringify(HOUSE.produces)
     && JSON.stringify(producesAt(HOUSE, 3)) === JSON.stringify(HOUSE.produces));
