@@ -95,6 +95,8 @@ MOBS.push({
 //   `charges`  minds its own business until struck, then comes for you;
 //   `neck`     a head carried up and out on a neck (MobView).
 // Each is tamed by feeding it what it eats (`tameWith`), and ridden.
+//   `fight`    how it fights for you once it's yours and following (the
+//              whistle — Game.tickPack): a bite, a horn, a tail.
 MOBS.push(
   {
     id: 'raptor', name: 'Raptor', biomes: ['pastJungle', 'pastFerns'], weight: 3,
@@ -104,6 +106,7 @@ MOBS.push(
     colour: 0x6d7f45, headColour: 0x7d8f50, legColour: 0x55633a,
     drops: { raw_meat: [2, 3], hide: [1, 1] },
     tameWith: ['raw_meat'], rideable: true,
+    fight: { damage: 4, reach: 1.9, every: 1.0 },
   },
   {
     id: 'trike', name: 'Triceratops', biomes: ['pastFerns', 'pastJungle'], weight: 3,
@@ -113,6 +116,7 @@ MOBS.push(
     colour: 0x8a7a5a, headColour: 0x9a8a68, legColour: 0x6a5c42,
     drops: { raw_meat: [5, 8], hide: [2, 4] },
     tameWith: ['vegetables', 'fruit'], rideable: true,
+    fight: { damage: 6, reach: 2.6, every: 1.4 },
   },
   {
     id: 'longneck', name: 'Long-neck', biomes: ['pastFerns'], weight: 2,
@@ -121,6 +125,18 @@ MOBS.push(
     colour: 0x7f8a90, headColour: 0x8e999f, legColour: 0x646d72,
     drops: { raw_meat: [8, 12], hide: [3, 5] },
     tameWith: ['vegetables', 'fruit'], rideable: true,
+    fight: { damage: 8, reach: 3.6, every: 2.2 },
+  },
+  // And the Past's one creature out of legend (D3: "dinosaurs and
+  // mythological creatures"): the Basilisk, rare in the deep jungle — a
+  // crowned serpent-lizard the length of a long-neck, that nobody tames.
+  {
+    id: 'basilisk', name: 'Basilisk', biomes: ['pastJungle'], weight: 0.4,
+    herd: [1, 1], hp: 120, walk: 1.2, run: 6.4, skittish: false,
+    hunts: { aggro: 20, give: 36, damage: 6, reach: 2.8, every: 1.6 },
+    body: { w: 1.1, h: 0.85, l: 3.8 }, head: 0.95, leg: 0.45,
+    colour: 0x2f4a2a, headColour: 0x3a5a32, legColour: 0x243a20,
+    drops: { raw_meat: [6, 10], basilisk_scale: [2, 4] },
   },
 );
 

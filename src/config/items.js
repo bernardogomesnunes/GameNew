@@ -407,6 +407,12 @@ export const ITEMS = [
     madeBy: 'Lying in the Past\'s jungles and fern plains — set it down and it hatches, tame, in two days' },
   { id: 'egg_longneck', name: 'Long-neck Egg', kind: 'raw', stackTo: STACK_GOODS, color: 0xb7c4cf, glyph: 'egg', block: 444,
     madeBy: 'Lying in the Past\'s fern plains — set it down and it hatches, tame, in two days' },
+  { id: 'basilisk_scale', name: 'Basilisk Scale', kind: 'raw', stackTo: STACK_GOODS, color: 0x3a5a32, glyph: 'crystal',
+    madeBy: 'From the Basilisk, a crowned beast out of legend deep in the Past\'s jungle — if you can bring it down' },
+  // The whistle your tamed dinosaurs answer to (Game.blowWhistle): follow,
+  // or stay.
+  { id: 'dino_whistle', name: 'Dinosaur Whistle', kind: 'tool', stackTo: STACK_TOOL, color: 0xd8c39a, glyph: 'whistle', durability: null,
+    madeBy: 'Carved from hide and string', unlocks: 'Place to call your dinosaurs to follow — or to stay' },
   { id: 'sky_lift', name: 'Sky Lift', kind: 'refined', stackTo: STACK_GOODS, color: 0xe2c26a, glyph: 'lift', block: 230, madeBy: 'The Sky Kingdom\'s own — at its anchor towers, Place on one to ride the chain' },
   // The war horn (the Ten Rounds): Break with it in hand calls the next round now.
   { id: 'war_horn', name: 'War Horn', kind: 'refined', stackTo: 1, color: 0xc9a46a, glyph: 'horn', madeBy: 'Made at the bench — Break with it in hand calls the Stone Kingdom\'s next round now' },

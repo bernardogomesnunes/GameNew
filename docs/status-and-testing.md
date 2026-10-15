@@ -43,12 +43,13 @@ Two lists, kept up to date as things land:
 | Ages 11 and 12 goals: Conquest, and The God | #185 |
 | Markets: a rare shelf that changes every two days | #186 |
 | Time travel, part one: the machine, the Past, dinosaurs, eggs | #187 |
+| Time travel, part two: the dinosaur army (the whistle), the Basilisk | #188 |
 
 ### Not done yet
 
 | What | Where it's from | When |
 |---|---|---|
-| **Time travel, rest:** dinosaurs fighting beside you, mythical creatures, the Future (city, university, future blocks) | Batch 4, D3 | Next |
+| **Time travel, the Future:** a city of towers, neon and trams; its university brings the future's blocks home | Batch 4, D3 | Next |
 | Two or three more new peoples to raid | Batch 4, D1 | Later |
 | Places you've taken marked on the map; new ones appearing over time | Batch 4, D1 | Later |
 | Battle mode (computer rivals first) | Batch 4, E | After time travel |
@@ -121,6 +122,8 @@ means only the automated tests have checked it.
 - [ ] **Tame:** raw meat for a raptor, fruit or vegetables for the others. Then tap to ride.
 - [ ] **Eggs:** bring one home, set it down; two game days later it hatches, tame.
 - [ ] **Home:** Place on the machine by your landing spot.
+- [ ] **The whistle:** make one (hide, string), blow it near your dinosaurs. They follow and fight; blow again to make them stay.
+- [ ] **The Basilisk:** rare in the Past's jungle. It hunts, and hits hard.
 
 ### Fixes worth a quick look
 
