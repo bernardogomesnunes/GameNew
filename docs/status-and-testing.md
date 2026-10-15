@@ -85,7 +85,7 @@ means only the automated tests have checked it.
 
 ### Vehicles
 
-- [ ] **Trains:** rail and curves, engine, cars, coal; drive it; open a car's 1,000 slots.
+- [x] **Trains:** rail and curves, engine, cars, coal; drive it; open a car's 1,000 slots. *(Checked in a browser, by taps: engine set down, a car coupled, coal in, driven with the stick, and the car opened with 1,000 free. A second car was refused because my test track was too short behind it, which is right.)*
 - [ ] **Passengers:** stop near a living city with cars on. Do people get off and pay, and get on?
 - [x] **Sky lift of your own:** two lifts joined by a straight run of chain. *(Checked in a browser: a tap on the bottom lift took me up 12 links.)*
 - [x] **Plainer:** wear it, Fly, then turn Fly off in the air. Its wings should glide you down. *(Checked in a browser: with Fly off 30 up it fell at a steady 3.5 a second, gliding, not dropping.)*
@@ -95,8 +95,8 @@ means only the automated tests have checked it.
 
 - [ ] **Temple:** choose your god; devotion; temple upgrades.
 - [ ] **Rings:** Sunstone or Nightstone ore deep in caves; forge the White or Black Ring.
-- [ ] **Sanctuary and guardian:** Aurelion heals you, Umbra scares enemies. Tap it to cycle follow, stay, attack. Downed, it returns a day later.
-- [ ] **The Ten Rounds (white path):** the wall comes down, ten raids, the Warlord. Defence buildings help.
+- [ ] **Sanctuary and guardian:** Aurelion heals you, Umbra scares enemies. Tap it to cycle follow, stay, attack. Downed, it returns a day later. *(Tapping cycles follow → stay → attack → follow, seen in a browser. Healing, scaring and coming back not checked.)*
+- [ ] **The Ten Rounds (white path):** the wall comes down, ten raids, the Warlord. Defence buildings help. *(Round 1 seen in a browser: the warning, three bandits from the right side, beaten, +6 gold, round 2 next. Later rounds and the Warlord not.)*
 - [ ] **Swear the oath (dark path):** Black Ring on, Place on the Nightstone in the Stone Kingdom's dark temple. You get 1,000 warriors.
 - [ ] **The march:** camp, or send the army ahead as an expedition.
 - [ ] **Cut the chains:** break a link of an anchor tower's chain. Cut all four and the island sinks; two days later the King comes down.
@@ -107,15 +107,15 @@ means only the automated tests have checked it.
 
 ### After the war: the endless world
 
-- [ ] **Cities:** two living, two abandoned, past the old border. Merchants; guards if you steal.
-- [ ] **City lanterns** at night *(dark until #183; now lit, not seen in a browser)*.
-- [ ] **Tree tribes:** villages in the giant trees. They shoot from the decks if you rob them.
-- [ ] **Stone Kingdom outposts:** a dark-brick fort with four guards and an armoury.
-- [ ] **Gems:** diamond ore deep (below y 32), ruby in the high peaks. Diamond tools and armour; a ruby strikes 25 coins at the foundry.
+- [ ] **Cities:** two living, two abandoned, past the old border. Merchants; guards if you steal. *(A living city seen in a browser: 16 people, guards, merchants and citizens, none hostile. Stealing not checked.)*
+- [ ] **City lanterns** at night. *(22 lights in a city at night, seen in a browser, but the glow looks faint in the picture. Worth a look on your phone.)*
+- [ ] **Tree tribes:** villages in the giant trees. They shoot from the decks if you rob them. *(A village seen in a browser, seven of them on the decks, not hostile. Robbing them not checked.)*
+- [ ] **Stone Kingdom outposts:** a dark-brick fort with four guards and an armoury. *(The fort and its four guards seen in a browser. The armoury not.)*
+- [ ] **Gems:** diamond ore deep (below y 32), ruby in the high peaks. Diamond tools and armour; a ruby strikes 25 coins at the foundry. *(Both ores are in the generated land: 271 diamond and 147 ruby in the first 56 chunks. Tools, armour and the foundry not checked.)*
 - [ ] **The god's cube:** from your Sanctuary's pop-up.
   - Taking the stash and leaving is seen in a browser.
   - **Killing the god** is not seen.
-- [ ] **The wand:** Break to pick a block, Place to copy it for a coin, Break at open air for a beam.
+- [x] **The wand:** Break to pick a block, Place to copy it for a coin, Break at open air for a beam. *(Checked in a browser: picked marble, copied it for a coin, and a beam at open air.)*
 
 ### Time travel (new)
 
