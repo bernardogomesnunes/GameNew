@@ -113,7 +113,7 @@ export class DuiltGame {
     this.collection = new Collection();
     // The god's cube (world/godCube.js): whether you've beaten the other
     // god, taken his stash, and where to come back to.
-    this.cube = { beaten: false, stash: false };
+    this.cube = { beaten: false, stash: false, entered: false };
     this.trains = new Trains({ world, makeLoad: () => new Inventory({ slots: CAR_SLOTS, bus: this.bus }) });
     this.dayTime = null; // see toJSON
     // Designs you placed that didn't count yet — see waitFor.
@@ -156,6 +156,9 @@ export class DuiltGame {
     this.boosts = {};
     // Places you've found out in the world (playtest, P4), as "kind@x,z".
     this.found = new Set();
+    // The places you've taken treasure from — a city's, a tribe's, an
+    // outpost's — the same keys as `found`. Age 11's goals read it.
+    this.raided = new Set();
     // Age 1's lessons, once learnt (see noted): a tree broken for wood, a
     // bucket filled, a pickaxe made.
     this.firsts = new Set();
@@ -1892,6 +1895,19 @@ export class DuiltGame {
     return true;
   }
 
+  /** Marks a place as one you've taken from (Age 11, Conquest). Returns whether it was new. */
+  raid(lm) {
+    const key = `${lm.kind}@${lm.x},${lm.z}`;
+    if (this.raided.has(key)) return false;
+    this.raided.add(key);
+    return true;
+  }
+
+  /** The kinds of place you've taken from: 'city', 'ruined_city', 'tribe', 'outpost'. */
+  raidedKinds() {
+    return new Set([...this.raided].map((k) => k.split('@')[0]));
+  }
+
   /** The places you've found, as { kind, x, z } — for the map. */
   foundPlaces() {
     return [...this.found].map((k) => {
@@ -1940,6 +1956,7 @@ export class DuiltGame {
       spawn: this.spawn,
       boosts: { ...this.boosts },
       found: [...this.found],
+      raided: [...this.raided],
       firsts: [...this.firsts],
       // Twelve ages, not six (config/ages.js) — so an older save's age is moved on load.
       agesVersion: AGES_VERSION,
@@ -1965,7 +1982,7 @@ export class DuiltGame {
       trains: this.trains.toJSON(),
       notices: this.notices.toJSON(),
       collection: this.collection.toJSON(),
-      cube: { beaten: this.cube.beaten, stash: this.cube.stash, ...(this.cube.inside ? { inside: true, back: this.cube.back } : {}) },
+      cube: { beaten: this.cube.beaten, stash: this.cube.stash, entered: this.cube.entered || undefined, ...(this.cube.inside ? { inside: true, back: this.cube.back } : {}) },
       mounts: this.mounts.filter((m) => !m.dead).map((m) => ({
         type: m.type, x: Math.round(m.x * 100) / 100, y: Math.round(m.y * 100) / 100, z: Math.round(m.z * 100) / 100,
         facing: Math.round((m.facing ?? 0) * 100) / 100, owned: true, cart: !!m.cart,
@@ -2002,6 +2019,7 @@ export class DuiltGame {
     const sp = data.spawn;
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
     this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);
+    this.raided = new Set(Array.isArray(data.raided) ? data.raided.filter((k) => typeof k === 'string') : []);
     this.firsts = new Set(Array.isArray(data.firsts) ? data.firsts.filter((k) => typeof k === 'string') : []);
     this.quests = {};
     for (const [id, q] of Object.entries(data.quests ?? {})) {
@@ -2043,7 +2061,7 @@ export class DuiltGame {
     this.notices.loadJSON(data.notices);
     this.collection.loadJSON(data.collection);
     const cube = data.cube ?? {};
-    this.cube = { beaten: cube.beaten === true, stash: cube.stash === true };
+    this.cube = { beaten: cube.beaten === true, stash: cube.stash === true, entered: cube.entered === true || cube.beaten === true || cube.stash === true };
     // Saved inside the cube: you come back out where you went in (Game).
     if (cube.inside && cube.back && Number.isFinite(cube.back.x)) this.cube.back = { x: cube.back.x, y: cube.back.y, z: cube.back.z };
     this.mounts = (data.mounts ?? []).map((r) => {

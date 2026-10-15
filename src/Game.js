@@ -2173,6 +2173,7 @@ export class Game {
     const p = this.player.position;
     d.cube.back = { x: p.x, y: p.y, z: p.z };
     d.cube.inside = true;
+    d.cube.entered = true;
     const at = abs(plan.entry);
     p.set(at.x, at.y, at.z);
     this.player.velocity?.set?.(0, 0, 0);
@@ -5945,8 +5946,13 @@ export class Game {
       this.ui?.toast({ kind: 'achievement', title: 'The god\'s stash is yours', body: 'The way out will let you go now — get to it alive', duration: 7000 });
       return true;
     }
-    const lm = landmarksFor(this.world.gen).find((l) => (l.kind === 'tribe' || l.kind === 'city' || l.kind === 'outpost') && Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1);
+    const lm = landmarksFor(this.world.gen).find((l) => (l.kind === 'tribe' || l.kind === 'city' || l.kind === 'outpost' || l.kind === 'ruined_city')
+      && Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1);
     if (!lm) return false;
+    // Taken from: Age 11 counts it (a city's treasure, a second people).
+    this.duilt?.raid(lm);
+    // An abandoned city has nobody left to mind.
+    if (lm.kind === 'ruined_city') return false;
     const already = this.wanderers.list.some((p) => p.landmark === lm && p.angry && !p.dead);
     const saw = this.wanderers.anger(lm);
     if (saw && !already) {
