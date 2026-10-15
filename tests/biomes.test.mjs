@@ -100,7 +100,8 @@ ok('an out-of-range biome index falls back rather than throwing', biomeAt(999) =
     }
   }
   const total = [...seen.values()].reduce((a, b) => a + b, 0);
-  for (const b of BIOMES) {
+  // The Past's biomes (world/past.js) grow only there, a long way off this map.
+  for (const b of BIOMES.filter((x) => !x.era)) {
     const share = (seen.get(b.id) ?? 0) / total;
     // A biome nobody ever stands in is content that does not exist.
     ok(`${b.id} covers ${(share * 100).toFixed(1)}% of the map`, share > 0.01);

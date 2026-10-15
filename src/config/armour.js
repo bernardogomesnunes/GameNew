@@ -43,7 +43,7 @@ export const BACKPACKS = [
 export const ARMOUR_PER_POINT = 0.04;
 
 /** What armour helps with: being hit, not falling or burning. */
-export const HIT_CAUSES = new Set(['bandit', 'catapult', 'army', 'sky']);
+export const HIT_CAUSES = new Set(['bandit', 'catapult', 'army', 'sky', 'dinosaur']);
 
 export const ARMOUR_SETS = [
   {

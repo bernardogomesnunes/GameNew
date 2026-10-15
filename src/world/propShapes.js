@@ -560,6 +560,29 @@ export function railCurve({ px = 0, nx = 0, pz = 0, nz = 0 } = {}) {
   return out;
 }
 
+// The time machine (world/past.js): a brass plinth, four posts and a ring
+// round a glass drum with a glowing core — the seat you sit in to go.
+const BRASS = 0xc9a55a, TM_GLASS = 0x9fe8ff, TM_DARK = 0x3a3a42;
+PROP_SHAPES.time_machine = [
+  { minX: 0.02, maxX: 0.98, minY: 0, maxY: 0.16, minZ: 0.02, maxZ: 0.98, color: TM_DARK },
+  { minX: 0.08, maxX: 0.92, minY: 0.16, maxY: 0.22, minZ: 0.08, maxZ: 0.92, color: BRASS },
+  ...[[0.06, 0.06], [0.82, 0.06], [0.06, 0.82], [0.82, 0.82]].map(([x, z]) => ({ minX: x, maxX: x + 0.12, minY: 0.22, maxY: 0.96, minZ: z, maxZ: z + 0.12, color: BRASS })),
+  { minX: 0.24, maxX: 0.76, minY: 0.22, maxY: 0.84, minZ: 0.24, maxZ: 0.76, color: TM_GLASS, pane: true },
+  { minX: 0.4, maxX: 0.6, minY: 0.36, maxY: 0.7, minZ: 0.4, maxZ: 0.6, color: 0xe8fbff, glow: true },
+  { minX: 0.04, maxX: 0.96, minY: 0.84, maxY: 0.92, minZ: 0.04, maxZ: 0.96, color: BRASS },
+  { minX: 0.44, maxX: 0.56, minY: 0.92, maxY: 1.04, minZ: 0.44, maxZ: 0.56, color: TM_DARK },
+];
+// A dinosaur's egg: an oval of three stacked boxes, speckled, on a little
+// ring of straw.
+PROP_SHAPES.egg = [
+  { minX: 0.24, maxX: 0.76, minY: 0, maxY: 0.05, minZ: 0.24, maxZ: 0.76, color: 0xc9a85a },
+  { minX: 0.34, maxX: 0.66, minY: 0.05, maxY: 0.2, minZ: 0.34, maxZ: 0.66 },
+  { minX: 0.3, maxX: 0.7, minY: 0.2, maxY: 0.46, minZ: 0.3, maxZ: 0.7 },
+  { minX: 0.36, maxX: 0.64, minY: 0.46, maxY: 0.6, minZ: 0.36, maxZ: 0.64 },
+  { minX: 0.42, maxX: 0.48, minY: 0.32, maxY: 0.38, minZ: 0.29, maxZ: 0.3, tone: 0.7 },
+  { minX: 0.56, maxX: 0.62, minY: 0.4, maxY: 0.45, minZ: 0.69, maxZ: 0.71, tone: 0.7 },
+];
+
 PROP_SHAPES.wall = wallBoxes();
 PROP_SHAPES.chimney = chimneyBoxes();
 PROP_SHAPES.pillar = pillarBoxes();

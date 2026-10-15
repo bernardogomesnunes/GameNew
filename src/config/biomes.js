@@ -232,6 +232,36 @@ export const BIOMES = [
     trees: { chance: 0 },
     scatter: [],
   },
+  // --- the Past (world/past.js) -------------------------------------------
+  //
+  // `era: 'past'` biomes grow only in the Past, and nothing else does there
+  // (biomeMap.js's weigh). Added at the end, so no biome already saved in a
+  // chunk changes its number.
+  {
+    // Dense and dark, the giants of the old world, on deep moss — where the
+    // raptors hunt.
+    id: 'pastJungle',
+    name: 'Prehistoric Jungle',
+    era: 'past',
+    niche: { temp: 0.8, wet: 0.85 },
+    base: 106, amplitude: 9, rough: 3,
+    flat: 0.9,
+    surface: { top: 445, under: DIRT, depth: 4, rock: STONE },
+    trees: { chance: 0.06, trunk: [8, 12], canopy: 3, wood: DARK_WOOD, leaves: DARK_LEAVES, giants: 0.35 },
+    scatter: [{ block: 443, chance: 0.0009 }, { block: 442, chance: 0.0006 }],
+  },
+  {
+    // Open fern country with the odd great tree — where the herds graze.
+    id: 'pastFerns',
+    name: 'Fern Plains',
+    era: 'past',
+    niche: { temp: 0.75, wet: 0.45 },
+    base: 103, amplitude: 5, rough: 2,
+    flat: 1.3,
+    surface: { top: 446, under: DIRT, depth: 4, rock: STONE },
+    trees: { chance: 0.006, trunk: [7, 10], canopy: 3, wood: WOOD, leaves: LEAVES, giants: 0.5 },
+    scatter: [{ block: 444, chance: 0.0008 }, { block: 443, chance: 0.0005 }],
+  },
 ];
 
 export const BIOMES_BY_ID = new Map(BIOMES.map((b) => [b.id, b]));

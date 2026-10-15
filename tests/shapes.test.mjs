@@ -49,7 +49,8 @@ const LANTERN = 26, SLAB_STONE = 27, STAIRS_STONE = 29, CHAIR_OAK = 33, RUG_GREE
   // loop's own id >= 26 cutoff so they were never in it to begin with.
   // The rarer rocks (235-238) are mined from their layers, not made, and
   // so is coal ore (379).
-  const NATURAL = new Set([38, 39, 40, 41, 42, 43, 44, 45, 46, 147, 191, 192, 235, 236, 237, 238, 250, 251, 379]);
+  // The Past's ground and its eggs (world/past.js) are found there, not made.
+  const NATURAL = new Set([38, 39, 40, 41, 42, 43, 44, 45, 46, 147, 191, 192, 235, 236, 237, 238, 250, 251, 379, 442, 443, 444, 445, 446]);
   // A block that's only another one in a different state (an open gate) has
   // no item of its own — see blocks.js's `stateOf`.
   // Nor does world furniture nobody places — Godstone and the way out of
