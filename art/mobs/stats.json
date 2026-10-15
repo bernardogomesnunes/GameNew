@@ -1,0 +1,38 @@
+{
+ "cow": {
+  "cubes": 16,
+  "triangles": 192,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 28.7
+ },
+ "moon_cow": {
+  "cubes": 20,
+  "triangles": 240,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 36.5
+ },
+ "explorer": {
+  "cubes": 18,
+  "triangles": 216,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 33.3
+ },
+ "sky_warrior": {
+  "cubes": 21,
+  "triangles": 252,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 39.7
+ }
+}
