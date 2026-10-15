@@ -151,8 +151,8 @@ function stuff(inv) {
   ok('a payout with nowhere to go leaves the time owed', quarry.lastPaidAt === owed);
 
   // Make room, and the same production turns up rather than having evaporated.
-  // One for each thing a quarry gives: stone, cobblestone, white and dark stone.
-  for (const i of [10, 11, 12, 13]) inventory.slots[i] = null;
+  // One for each thing a quarry gives: stone, cobblestone, white and dark stone, clay.
+  for (const i of [10, 11, 12, 13, 14]) inventory.slots[i] = null;
   const gained = reg.collect({ now });
   ok(`emptying a slot pays out what was owed: ${JSON.stringify(gained)}`, (gained.stone ?? 0) > 0);
   ok('and the clock has moved on now it has', quarry.lastPaidAt > owed);
