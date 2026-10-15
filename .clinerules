@@ -1,0 +1,10 @@
+# Git workflow
+- Before any edit: run `git status` and `git branch --show-current`. If on main, or the tree is dirty, stop and tell me.
+- Start each task from fresh main: `git checkout main && git pull origin main && git checkout -b cline/<short-task-name>`.
+- Never commit or push to main. Never force-push. Never rewrite history. Never merge.
+- Commit small and often, one idea per commit, message in plain English saying why.
+- Run `node tests/run.mjs` before the last commit. It must end `0 failed`.
+- Never commit .env, keys or tokens. Check `git diff --staged` before each commit.
+- Push with `git push -u origin <branch>`. Then tell me the branch name. Open a PR only if I ask.
+- On a merge conflict or any git error you do not understand: stop and ask me.
+- Read docs/cline-tasks.md for the task list, game rules and code style.
