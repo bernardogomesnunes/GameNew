@@ -876,9 +876,12 @@ function blades(c, recipe, salt, depth) {
  * lit tip leaning warm), and a few tiny flowers in the bloom colours.
  */
 function tufts(c, recipe, salt, depth) {
+  // Small patches, many to a tile and quiet. Two big cells made one light
+  // blob per tile, which repeated across a plain as a grid of circles
+  // (reported directly).
   each((x, y, px, py) => {
-    const v = fbm(px, py, salt + 31, 2, 2);
-    shade(c, x, y, v < 0.4 ? 1 - depth * 0.3 : v > 0.62 ? 1 + depth * 0.25 : 1);
+    const v = fbm(px, py, salt + 31, 8, 2);
+    shade(c, x, y, v < 0.36 ? 1 - depth * 0.18 : v > 0.66 ? 1 + depth * 0.14 : 1);
   });
   for (let t = 0; t < recipe.tufts; t++) {
     const x = Math.floor(hash01(t, 3, salt) * TILE), y = Math.floor(hash01(t, 5, salt) * TILE);

@@ -75,7 +75,7 @@ export const TEXTURES = {
                // Hytale's way (asked for directly, with a picture): clean
                // tufts in two or three tones, no grain, and a few tiny
                // flowers in pink, lilac, white and butter.
-               top: { tufts: 70, flowers: 4, bloom: [[1.5, 1.05, 1.3], [1.25, 1.15, 1.55], [1.45, 1.42, 1.38], [1.5, 1.35, 0.85]], depth: 0.34, mottle: 0.06 } },
+               top: { tufts: 70, flowers: 4, bloom: [[1.5, 1.05, 1.3], [1.25, 1.15, 1.55], [1.45, 1.42, 1.38], [1.5, 1.35, 0.85]], depth: 0.34 } },
   moss:      { clumps: 18, marks: 24, flecks: [[1.15, 1.12, 0.7], [0.82, 0.95, 0.9]], depth: 0.34, mottle: 0.14, speck: 0.06 },
   litter:    { litter: 70, marks: 30, flecks: EARTH_FLECKS, depth: 0.38, mottle: 0.14, speck: 0.08 },
   // Chunky clods with a lit upper edge and a few pebbles, in place of a
