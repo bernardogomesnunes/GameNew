@@ -264,10 +264,16 @@ function paint(recipe, spec, salt) {
   if (recipe.litter) litter(c, recipe, salt, depth);
   if (recipe.leaves) leaves(c, recipe, salt, depth);
   if (recipe.blades) blades(c, recipe, salt, depth);
+  if (recipe.tufts) tufts(c, recipe, salt, depth);
+  if (recipe.clods) clods(c, recipe, salt, depth);
+  if (recipe.strips) strips(c, recipe, salt, depth);
   if (recipe.ore) ore(c, recipe, salt, depth);
   if (recipe.cracks) cracks(c, recipe, salt, depth);
   if (recipe.marks) marks(c, recipe, salt, depth);
-  if (recipe.speck) each((x, y) => shade(c, x, y, 1 + (hash01(x, y, salt + 977) - 0.5) * 2 * recipe.speck));
+  // A fine grain over everything, much quieter than it was (asked for
+  // directly: the textures "have a grain that does not favor the overall
+  // look"); the ramp in finish() does the work it did, in clean steps.
+  if (recipe.speck) each((x, y) => shade(c, x, y, 1 + (hash01(x, y, salt + 977) - 0.5) * 2 * recipe.speck * GRAIN));
   if (recipe.edge) edge(c, recipe.edge);
   if (recipe.gaps || recipe.bite) cutouts(c, recipe, salt);
   return c;
@@ -286,17 +292,21 @@ function grassSide(recipe, spec, salt) {
   const ratio = [16, 8, 0].map((s) => Math.min(1.85, (((dirtSpec.color >> s) & 255) + 1) / (((spec.color >> s) & 255) + 1)));
   const c = canvas();
   for (let x = 0; x < TILE; x++) {
-    let hang = turf + Math.round((vnoise(x + 0.5, 0, 8, 1, salt) - 0.5) * 4);
-    if (hash01(x, 5, salt) < 0.22) hang += 1 + Math.floor(hash01(x, 6, salt) * 4);
+    // The turf hangs in steps two pixels wide, the way a pixel artist would
+    // draw it, with the odd longer drip.
+    const cx = x >> 1;
+    let hang = turf + Math.round((vnoise(cx * 2 + 0.5, 0, 8, 1, salt) - 0.5) * 4);
+    if (hash01(cx, 5, salt) < 0.22) hang += 1 + Math.floor(hash01(cx, 6, salt) * 4);
     for (let y = 0; y < TILE; y++) {
       const i = at(x, y);
       const fromGrass = y >= TILE - hang;
       const src = fromGrass ? grass : dirt;
       c.L[i] = src.L[i];
       for (let ch = 0; ch < 3; ch++) c.T[i * 3 + ch] = src.T[i * 3 + ch] * (fromGrass ? 1 : ratio[ch]);
-      if (y === TILE - hang - 1) c.L[i] *= 0.62;
-      else if (y === TILE - hang - 2) c.L[i] *= 0.84;
-      else if (fromGrass && y === TILE - hang) c.L[i] *= 0.9;
+      if (y === TILE - hang - 1) c.L[i] *= 0.74;
+      else if (y === TILE - hang - 2) c.L[i] *= 0.9;
+      else if (fromGrass && y === TILE - hang) c.L[i] *= 0.88;
+      else if (fromGrass && y === TILE - 1) c.L[i] *= 1.12;   // the lit lip along the top
     }
   }
   return c;
@@ -860,6 +870,100 @@ function blades(c, recipe, salt, depth) {
   }
 }
 
+/**
+ * Grass from above, the way Hytale paints it: soft patches in two or three
+ * clean tones, tufts drawn as little clusters (a dark root, a mid blade, a
+ * lit tip leaning warm), and a few tiny flowers in the bloom colours.
+ */
+function tufts(c, recipe, salt, depth) {
+  each((x, y, px, py) => {
+    const v = fbm(px, py, salt + 31, 2, 2);
+    shade(c, x, y, v < 0.4 ? 1 - depth * 0.3 : v > 0.62 ? 1 + depth * 0.25 : 1);
+  });
+  for (let t = 0; t < recipe.tufts; t++) {
+    const x = Math.floor(hash01(t, 3, salt) * TILE), y = Math.floor(hash01(t, 5, salt) * TILE);
+    const tall = 3 + Math.floor(hash01(t, 7, salt) * 3), lean = hash01(t, 9, salt) < 0.5 ? -1 : 1;
+    for (let k = 0; k < tall; k++) {
+      const f = k === 0 ? 1 - depth * 0.55 : k === tall - 1 ? 1 + depth * 0.55 : 1 + depth * 0.1;
+      const bx = x + (k >= tall - 2 ? lean : 0);
+      shade(c, bx, y + k, f);
+      if (k === tall - 1) tint(c, bx, y + k, [1.06, 1.05, 0.88]);
+      // A second blade beside the first, a step shorter.
+      if (k < tall - 1) shade(c, x - lean, y + k, k === 0 ? 1 - depth * 0.45 : 1 + depth * 0.3);
+    }
+  }
+  const fl = recipe.flowers ?? 0, cols = recipe.bloom ?? [[1.4, 1.35, 1.3]];
+  for (let f = 0; f < fl; f++) {
+    const x = Math.floor(hash01(f, 41, salt) * TILE), y = Math.floor(hash01(f, 43, salt) * TILE);
+    const col = pick(cols, hash01(f, 47, salt));
+    for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+      const i = at(x + dx, y + dy);
+      c.L[i] = dx === dy ? 1.25 : 1.12;
+      setTint(c, x + dx, y + dy, col);
+    }
+    shade(c, x, y - 1, 1 - depth * 0.5);
+    shade(c, x + 1, y - 1, 1 - depth * 0.5);
+  }
+}
+
+/**
+ * Earth as chunky clods: each lump one clean tone, lit along its upper edge
+ * and shaded along its lower one, dark cracks between, and a few pebbles.
+ */
+function clods(c, recipe, salt, depth) {
+  const pts = scatter(recipe.clods, recipe.clods, 0.38, salt + 61);
+  const tones = [1 - depth * 0.35, 1 - depth * 0.1, 1 + depth * 0.1, 1 + depth * 0.25];
+  each((x, y, px, py) => {
+    const { d1, d2, p, dy } = nearest(pts, px, py);
+    const edge = d2 - d1;
+    let f = pick(tones, p.h);
+    if (edge < 0.7 && p.h2 > 0.35) f = 1 - depth * 0.55;
+    else if (edge < 1.8) f *= dy > 0 ? 1 + depth * 0.3 : 1 - depth * 0.2;
+    shade(c, x, y, f);
+    lift(c, x, y, edge < 0.7 ? 0.2 : 0.6 + p.h * 0.4);
+    if (p.h2 < 0.3) tint(c, x, y, [1.05, 0.98, 0.92]);
+    else if (p.h2 > 0.8) tint(c, x, y, [0.95, 0.96, 1.04]);
+  });
+  for (let k = 0; k < (recipe.stones ?? 0); k++) {
+    const x = Math.floor(hash01(k, 71, salt) * TILE), y = Math.floor(hash01(k, 73, salt) * TILE);
+    for (const [dx, dy, f] of [[0, 0, 1.3], [1, 0, 1.2], [0, -1, 1.05], [1, -1, 0.9]]) {
+      const i = at(x + dx, y + dy);
+      c.L[i] = f;
+      setTint(c, x + dx, y + dy, [1.08, 1.06, 1.14]);
+    }
+  }
+}
+
+/**
+ * Bark in vertical strips, the stylised way: each strip a clean tone, a
+ * dark furrow between strips, short darker dashes running up them, and
+ * the odd break across.
+ */
+function strips(c, recipe, salt, depth) {
+  const edges = [];
+  for (let x = 0; x < TILE;) {
+    edges.push(x);
+    x += 3 + Math.floor(hash01(x, 13, salt) * 3);
+  }
+  const stripOf = (x) => { let k = 0; for (let i = 0; i < edges.length; i++) if (x >= edges[i]) k = i; return k; };
+  const tones = [1 - depth * 0.2, 1, 1 + depth * 0.18];
+  each((x, y) => {
+    const k = stripOf(x), x0 = edges[k];
+    let f = pick(tones, hash01(k, 17, salt));
+    if (x === x0) { f = 1 - depth * 0.8; tint(c, x, y, [0.92, 0.9, 0.96]); }
+    else if (x === x0 + 1) f *= 1 + depth * 0.25;
+    // Furrows that wander: a strip's edge breaks now and then.
+    if (x === x0 && hash01(k * 7 + (y >> 2), 19, salt) < 0.18) f = 1;
+    shade(c, x, y, f);
+    lift(c, x, y, x === x0 ? 0 : 0.8);
+  });
+  for (let d = 0; d < (recipe.dashes ?? 18); d++) {
+    const x = Math.floor(hash01(d, 23, salt) * TILE), y = Math.floor(hash01(d, 29, salt) * TILE);
+    const len = 3 + Math.floor(hash01(d, 31, salt) * 4);
+    for (let k = 0; k < len; k++) shade(c, x, y + k, 1 - depth * 0.45);
+  }
+}
+
 /** Ore: nuggets of metal (`nugget`) set in stone, with a dark rim and a glint. */
 function ore(c, recipe, salt, depth) {
   const nug = recipe.nugget ?? [1.3, 1.3, 1.3];
@@ -963,8 +1067,33 @@ function cutouts(c, recipe, salt) {
  * brightness instead (a log's pale end against its dark bark), and so does a
  * grass side, whose earth is meant to be darker than its turf.
  */
+/** How much of each recipe's fine grain is kept (see paint). */
+const GRAIN = 0.3;
+/** The tone ramp's step: every pixel snaps to a multiple of this off the block's colour. */
+const RAMP_STEP = 0.075;
+
+/**
+ * Pixel art's ramp, laid over every tile (asked for directly: "textures are
+ * dull and have a grain"): each pixel's brightness snaps to a few clean
+ * steps, and the steps shift in hue as they go, darker ones towards cool
+ * violet and lighter ones towards warm yellow, the way a painter shades
+ * rather than adding grey. A recipe with `ramp: false` is left smooth.
+ */
+function ramp(c, recipe) {
+  if (recipe.ramp === false) return;
+  const step = recipe.rampStep ?? RAMP_STEP;
+  for (let i = 0; i < TILE * TILE; i++) {
+    const q = 1 + Math.round((c.L[i] - 1) / step) * step;
+    c.L[i] = q;
+    const d = q - 1;
+    const m = d < 0 ? [1 + 0.32 * d, 1 + 0.12 * d, 1 - 0.38 * d] : [1 + 0.16 * d, 1 + 0.1 * d, 1 - 0.3 * d];
+    for (let ch = 0; ch < 3; ch++) c.T[i * 3 + ch] *= Math.max(0.2, m[ch]);
+  }
+}
+
 function finish(c, recipe, spec) {
   const n = TILE, N = n * n;
+  ramp(c, recipe);
   const light = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
     for (let ch = 0; ch < 3; ch++) light[i * 3 + ch] = Math.max(0, c.L[i] * c.T[i * 3 + ch]) ** GAMMA;

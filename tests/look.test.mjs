@@ -127,7 +127,7 @@ ok('each channel takes the skew differently',
   ok('and none of them so much that the colour is lost',
     Object.values(TEXTURES).every((r) => (r.depth ?? 0) <= 0.55));
   ok('every recipe names something to draw', painted.every((r) =>
-    r.marks || r.lines || r.veins || r.cracks || r.band || r.speck || r.setts));
+    r.marks || r.lines || r.veins || r.cracks || r.band || r.speck || r.setts || r.tufts || r.clods || r.strips));
   ok('the glyphs they key off are real',
     names.every((n) => BLOCKS.some((b) => (b.texture ?? b.glyph) === n) || ITEMS.some((i) => i.glyph === n)));
   ok('a material with no recipe is simply flat', textureFor('nonesuch') === null);
@@ -224,7 +224,8 @@ ok('and an orientation change is re-measured once it has settled',
   const h = t.height;
   ok('cobblestone has depth: stones stand up out of the earth', !!h && Math.max(...h) > 0.5 && [...h].filter((v) => v === 0).length > 20);
   ok('brick has depth too, its mortar sunk', !!tileFor(9).height);
-  ok('and a flat block has none', !tileFor(2).height);
+  // Dirt has depth since its clods (asked for: dirt reworked after the grass); sand is still flat.
+  ok('and a flat block has none', !tileFor(6).height);
   ok('the depth is lit per texel in the block shader',
     /#include <normal_fragment_maps>[\s\S]{0,2000}blockBumps[\s\S]{0,1200}normal = normalize\(N - \(T \* hx \+ B \* hy\)/.test(mesher));
   ok('and a layer with no depth costs one lookup, not five', /if \(here\.a > 0\.5\)/.test(mesher));

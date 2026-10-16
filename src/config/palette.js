@@ -17,7 +17,9 @@
  * an item made of a block follows it (config/items.js); the sky and the light
  * are SKY (render/DayCycle.js, render/atmosphere.js). The greens were pulled
  * back a second time ("greens are still too saturated"): grass and leaves sit
- * near chroma 20 to 28, soft like the watercolour village.
+ * near chroma 20 to 28, soft like the watercolour village. Then, with
+ * Hytale as the picture, the grass came back fresher (chroma ~42) once its
+ * texture lost the grain that had made it look dull.
  */
 
 /** The named colours everything else is picked from. */
@@ -29,9 +31,9 @@ export const PALETTE = {
   // Pinks and warm earth.
   rose: 0xd8687c, bubblegum: 0xf2a5c0, blush: 0xf8d3dc, peach: 0xf4b48c, apricot: 0xeb9a64, terracotta: 0xc46a5e,
   // Greens and teals.
-  spring: 0xb4cf9a, sage: 0x9fbf98, moss: 0x92b48a, mint: 0xa8d8c4, teal: 0x86b4a0, deepTeal: 0x527f84,
+  spring: 0xa8d48a, sage: 0x9fbf98, moss: 0x92b48a, mint: 0xa8d8c4, teal: 0x86b4a0, deepTeal: 0x527f84,
   // Wood and stone.
-  honey: 0xdcb48a, cocoa: 0x9a6a58, plumwood: 0xa8786a, stone: 0xb8b2c6, slate: 0x7a74a8,
+  honey: 0xdcb48a, cocoa: 0x9a6a58, plumwood: 0xa07a5a, stone: 0xb8b2c6, slate: 0x7a74a8,
   // Sky and water.
   cloud: 0xfff7f2, powder: 0xa9cdf2, water: 0x6aa8de,
 };
@@ -129,8 +131,8 @@ export const SKY = {
   zenithDay: 0x5c9cec, zenithDusk: 0x5a48ac, zenithNight: 0x0e0b30,
   washDay: 0xf8d2e6, washDusk: 0xffd29a, washNight: 0x6a46b0,
   glowDay: 0x4a3f3a, glowDusk: 0xff8f8a,
-  sunDay: 0xfff0d6, sunLow: 0xffb48e, moon: 0xb9a8f0,
-  ambientDay: 0xe2e2ff, ambientDusk: 0xeac4dc, ambientNight: 0x8a7cc4,
+  sunDay: 0xfff2d8, sunLow: 0xffb48e, moon: 0xb9a8f0,
+  ambientDay: 0xfff1e2, ambientDusk: 0xeac4dc, ambientNight: 0x8a7cc4,
   cloudDay: 0xfff7f2, cloudDusk: 0xf7b8c8, cloudNight: 0x4a3f7a,
   groundDay: 0x8a6a5a, groundNight: 0x241c3a,
   mistDay: 0xebe6f6, mistDawn: 0xf6d6e2, mistNight: 0x3a2f62,
@@ -145,5 +147,5 @@ export const GRADE = {
   exposure: 1.16, saturation: 1.04,
   // Split toning (asked for: shader packs like Complementary as inspiration):
   // shade leans lavender, light leans warm peach.
-  shadowTint: 0x8a7ad8, shadowAmount: 0.22, lightTint: 0xffd9b8, lightAmount: 0.12,
+  shadowTint: 0x8a7ad8, shadowAmount: 0.14, lightTint: 0xffd9b8, lightAmount: 0.12,
 };
