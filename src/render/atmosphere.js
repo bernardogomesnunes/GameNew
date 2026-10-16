@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SKY, GRADE } from '../config/palette.js';
 
 /**
  * Light, colour and air (docs/plan-look-and-sound.md, sections 2 and 4).
@@ -29,11 +30,18 @@ import * as THREE from 'three';
  */
 export const TONE_MAPPING = THREE.NeutralToneMapping;
 /** How much brighter the whole picture is drawn: what turns "pastel" into "fresh" rather than "grey". */
-export const EXPOSURE = 1.32;
+export const EXPOSURE = GRADE.exposure;
 /** The saturation lift after tone mapping: 1 is none. Small — the palette is meant to stay soft. */
-export const SATURATION = 1.14;
+export const SATURATION = GRADE.saturation;
 
 let graded = false;
+
+/** A tint as a multiplier with the same brightness as white, for the split toning. */
+function tintVec(hex) {
+  const c = new THREE.Color(hex);
+  const l = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  return [c.r / l, c.g / l, c.b / l].map((v) => v.toFixed(3)).join(', ');
+}
 
 /**
  * Sets the renderer's tone mapping and adds the saturation lift to every
@@ -52,6 +60,13 @@ export function gradeRenderer(renderer) {
   {
     float lum = dot( gl_FragColor.rgb, vec3( 0.2126, 0.7152, 0.0722 ) );
     gl_FragColor.rgb = max( mix( vec3( lum ), gl_FragColor.rgb, ${SATURATION.toFixed(3)} ), 0.0 );
+    // Split toning, the way a shader pack grades a scene: shade leans
+    // ${GRADE.shadowTint}, light leans ${GRADE.lightTint}, each at its own strength
+    // (config/palette.js), with brightness kept.
+    float sh = 1.0 - smoothstep( 0.0, 0.5, lum );
+    float hi = smoothstep( 0.45, 1.0, lum );
+    gl_FragColor.rgb *= mix( vec3( 1.0 ), vec3( ${tintVec(GRADE.shadowTint)} ), sh * ${GRADE.shadowAmount.toFixed(3)} );
+    gl_FragColor.rgb *= mix( vec3( 1.0 ), vec3( ${tintVec(GRADE.lightTint)} ), hi * ${GRADE.lightAmount.toFixed(3)} );
   }
 #endif
 `;
@@ -131,9 +146,9 @@ export function withHeightFog(mat) {
   return mat;
 }
 
-const MIST_DAY = new THREE.Color(0xe4edf5);
-const MIST_DAWN = new THREE.Color(0xf6e3d6);
-const MIST_NIGHT = new THREE.Color(0x27324f);
+const MIST_DAY = new THREE.Color(SKY.mistDay);
+const MIST_DAWN = new THREE.Color(SKY.mistDawn);
+const MIST_NIGHT = new THREE.Color(SKY.mistNight);
 
 const bump = (x, at, width) => Math.max(0, 1 - Math.abs(x - at) / width);
 
@@ -157,22 +172,35 @@ export function mistAt(time, day, dusk) {
 // ---- the sky -------------------------------------------------------------
 
 /**
- * The sky as a dome round the camera: deeper blue straight up than at the
- * horizon, and a warm glow round the sun, wide and orange as it sets. The
- * horizon colour is the fog's own, so land fading into the distance meets
- * the sky without a seam.
+ * The sky as a dome round the camera, painted like a storybook sky rather than
+ * one flat colour (asked for directly: "sky should not be a plain color"):
  *
- * Not tone mapped, like the fog and the clear colour it replaces, which is
- * what keeps the three the same colour on screen.
+ * - three bands, horizon to a middle colour to the zenith, so a day sky goes
+ *   pale to cornflower and a dusk sky peach to orchid to violet;
+ * - a slow watercolour wash over it: big soft patches tinted towards `wash`
+ *   (pink by day, peach at dusk, violet at night), so no two parts of the sky
+ *   are quite the same colour;
+ * - thin wisps of cloud lying along the horizon;
+ * - at night, faint violet and teal nebulae among the stars;
+ * - and the warm glow round the sun, wide and rosy as it sets.
+ *
+ * The horizon colour is the fog's own, so land fading into the distance meets
+ * the sky without a seam. Not tone mapped, like the fog and the clear colour
+ * it replaces, which is what keeps the three the same colour on screen.
  */
 export class SkyDome {
   constructor(scene) {
     this.uniforms = {
       zenith: { value: new THREE.Color(0x5d9de0) },
+      mid: { value: new THREE.Color(0x9fc3f2) },
       horizon: { value: new THREE.Color(0xadd7f5) },
+      wash: { value: new THREE.Color(0xf6d6e6) },
       glow: { value: new THREE.Color(0x000000) },
       sunDir: { value: new THREE.Vector3(0, 1, 0) },
       glowWidth: { value: 6 },
+      night: { value: 0 },
+      time: { value: 0 },
+      rays: { value: 0 },
     };
     const material = new THREE.ShaderMaterial({
       uniforms: this.uniforms,
@@ -183,17 +211,53 @@ export class SkyDome {
           gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
         }`,
       fragmentShader: `
-        uniform vec3 zenith, horizon, glow, sunDir;
-        uniform float glowWidth;
+        uniform vec3 zenith, mid, horizon, wash, glow, sunDir;
+        uniform float glowWidth, night, time, rays;
         varying vec3 vDir;
+        float hash( vec3 p ) {
+          p = fract( p * 0.3183099 + 0.1 );
+          p *= 17.0;
+          return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) );
+        }
+        float noise( vec3 x ) {
+          vec3 i = floor( x ), f = fract( x );
+          f = f * f * ( 3.0 - 2.0 * f );
+          return mix( mix( mix( hash( i ), hash( i + vec3( 1, 0, 0 ) ), f.x ), mix( hash( i + vec3( 0, 1, 0 ) ), hash( i + vec3( 1, 1, 0 ) ), f.x ), f.y ),
+                      mix( mix( hash( i + vec3( 0, 0, 1 ) ), hash( i + vec3( 1, 0, 1 ) ), f.x ), mix( hash( i + vec3( 0, 1, 1 ) ), hash( i + vec3( 1, 1, 1 ) ), f.x ), f.y ), f.z );
+        }
+        float fbm( vec3 p ) {
+          return 0.55 * noise( p ) + 0.3 * noise( p * 2.1 ) + 0.15 * noise( p * 4.3 );
+        }
         void main() {
           vec3 d = normalize( vDir );
-          // A broad band of horizon colour low down, quickly deepening.
-          float up = pow( clamp( d.y, 0.0, 1.0 ), 0.5 );
-          vec3 col = mix( horizon, zenith, up );
+          float up = clamp( d.y, 0.0, 1.0 );
+          // Three bands: a broad pale horizon, the middle colour, the zenith.
+          float a = smoothstep( 0.0, 0.32, pow( up, 0.7 ) );
+          float b = smoothstep( 0.25, 1.0, up );
+          vec3 col = mix( mix( horizon, mid, a ), zenith, b );
+          // The watercolour wash: big soft patches, drifting slowly.
+          vec3 q = d * 2.2 + vec3( time * 0.004, 0.0, time * 0.002 );
+          float w = fbm( q );
+          col = mix( col, wash, smoothstep( 0.4, 0.9, w ) * ( 0.24 - 0.1 * up ) );
+          col *= 0.96 + 0.08 * fbm( q * 1.3 + 3.1 );
+          // Wisps of cloud lying along the horizon, stretched sideways.
+          float wisp = fbm( vec3( d.x * 3.0, d.y * 26.0, d.z * 3.0 ) + time * 0.006 );
+          float band = smoothstep( 0.02, 0.12, up ) * ( 1.0 - smoothstep( 0.18, 0.42, up ) );
+          col = mix( col, mix( wash, vec3( 1.0 ), 0.55 - 0.4 * night ), smoothstep( 0.55, 0.8, wisp ) * band * ( 0.55 - 0.3 * night ) );
+          // Night: faint nebulae, violet and teal, high in the sky.
+          float neb = fbm( d * 3.4 + 11.0 );
+          vec3 nebCol = mix( vec3( 0.42, 0.24, 0.66 ), vec3( 0.18, 0.46, 0.52 ), fbm( d * 1.6 + 5.0 ) );
+          col += nebCol * smoothstep( 0.52, 0.85, neb ) * smoothstep( 0.15, 0.6, up ) * 0.22 * night;
           float s = max( dot( d, sunDir ), 0.0 );
+          // Rays of light fanning out from the sun, turning slowly: soft
+          // spokes, strongest near the sun and low in the sky.
+          vec3 sx = normalize( cross( sunDir, vec3( 0.0, 1.0, 0.001 ) ) );
+          vec3 sy = cross( sx, sunDir );
+          float ang = atan( dot( d, sy ), dot( d, sx ) );
+          float spokes = 0.5 + 0.5 * sin( ang * 18.0 + time * 0.03 ) * sin( ang * 7.0 - time * 0.02 );
+          col += glow * rays * smoothstep( 0.55, 1.0, s ) * pow( spokes, 3.0 ) * ( 1.0 - 0.5 * up );
           // A wide warm wash and a tighter bright halo, both strongest low.
-          col += glow * ( pow( s, glowWidth ) * 0.75 + pow( s, 48.0 ) * 0.5 ) * ( 1.0 - 0.6 * up );
+          col += glow * ( pow( s, glowWidth ) * 0.75 + pow( s, 48.0 ) * 0.5 ) * ( 1.0 - 0.6 * pow( up, 0.5 ) );
           gl_FragColor = linearToOutputTexel( vec4( col, 1.0 ) );
         }`,
       side: THREE.BackSide,

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SKY } from '../config/palette.js';
 import { SkyDome, heightFog, mistAt } from './atmosphere.js';
 
 /**
@@ -36,30 +37,38 @@ export const MORNING = 0.32;
  * sky above it (see atmosphere.js's SkyDome) — a deeper blue overhead by day,
  * a warm band and a violet-blue overhead at sunset, near black at night.
  */
-const SKY_DAY = new THREE.Color(0xb3dbf5);
-const SKY_NIGHT = new THREE.Color(0x0f1834);
-const SKY_DUSK = new THREE.Color(0xf7a46c);
-const ZENITH_DAY = new THREE.Color(0x4f93dc);
-const ZENITH_NIGHT = new THREE.Color(0x050a1c);
-const ZENITH_DUSK = new THREE.Color(0x5b6aae);
+// The storybook palette's sky (config/palette.js): powder blue by day, pink
+// at dusk, indigo at night.
+const SKY_DAY = new THREE.Color(SKY.horizonDay);
+const SKY_NIGHT = new THREE.Color(SKY.horizonNight);
+const SKY_DUSK = new THREE.Color(SKY.horizonDusk);
+const ZENITH_DAY = new THREE.Color(SKY.zenithDay);
+const ZENITH_NIGHT = new THREE.Color(SKY.zenithNight);
+const ZENITH_DUSK = new THREE.Color(SKY.zenithDusk);
+const MID_DAY = new THREE.Color(SKY.midDay);
+const MID_DUSK = new THREE.Color(SKY.midDusk);
+const MID_NIGHT = new THREE.Color(SKY.midNight);
+const WASH_DAY = new THREE.Color(SKY.washDay);
+const WASH_DUSK = new THREE.Color(SKY.washDusk);
+const WASH_NIGHT = new THREE.Color(SKY.washNight);
 /** The glow round the sun: faint by day, a wide orange wash as it sets. */
-const GLOW_DAY = new THREE.Color(0x4a4232);
-const GLOW_DUSK = new THREE.Color(0xff8a3c);
+const GLOW_DAY = new THREE.Color(SKY.glowDay);
+const GLOW_DUSK = new THREE.Color(SKY.glowDusk);
 /*
  * Light with contrast (plan section 2): a warmer sun, and shade filled by a
  * cooler sky, so a lit face and a shaded one differ in colour as well as in
  * brightness. Low down the sun turns gold.
  */
-const SUN_DAY = new THREE.Color(0xffe6bf);
-const SUN_LOW = new THREE.Color(0xffb46e);
-const AMBIENT_DAY = new THREE.Color(0xd9e4ff);
-const AMBIENT_DUSK = new THREE.Color(0xe6c7d6);
-const AMBIENT_NIGHT = new THREE.Color(0xaab4cf);
-const CLOUD_DAY = new THREE.Color(0xfbfaf4);
-const CLOUD_NIGHT = new THREE.Color(0x3b4563);
-const CLOUD_DUSK = new THREE.Color(0xf6c3a4);
-const GROUND_DAY = new THREE.Color(0x7f6445);
-const GROUND_NIGHT = new THREE.Color(0x1d1a24);
+const SUN_DAY = new THREE.Color(SKY.sunDay);
+const SUN_LOW = new THREE.Color(SKY.sunLow);
+const AMBIENT_DAY = new THREE.Color(SKY.ambientDay);
+const AMBIENT_DUSK = new THREE.Color(SKY.ambientDusk);
+const AMBIENT_NIGHT = new THREE.Color(SKY.ambientNight);
+const CLOUD_DAY = new THREE.Color(SKY.cloudDay);
+const CLOUD_NIGHT = new THREE.Color(SKY.cloudNight);
+const CLOUD_DUSK = new THREE.Color(SKY.cloudDusk);
+const GROUND_DAY = new THREE.Color(SKY.groundDay);
+const GROUND_NIGHT = new THREE.Color(SKY.groundNight);
 
 const smooth = (a, b, x) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
@@ -108,7 +117,7 @@ export class DayCycle {
     this.clouds = clouds;
     this.time = MORNING;
 
-    this.moonLight = new THREE.DirectionalLight(0xc4d0f0, 0);
+    this.moonLight = new THREE.DirectionalLight(SKY.moon, 0);
     scene.add(this.moonLight);
 
     // A square sun and moon — this is a world of blocks.
@@ -191,6 +200,12 @@ export class DayCycle {
     const dome = this.dome.uniforms;
     dome.horizon.value.copy(this.sky);
     dome.zenith.value.copy(this.zenith);
+    dome.mid.value.copy(MID_NIGHT).lerp(MID_DAY, l.day).lerp(MID_DUSK, l.dusk * 0.75);
+    dome.wash.value.copy(WASH_NIGHT).lerp(WASH_DAY, l.day).lerp(WASH_DUSK, l.dusk * 0.8);
+    dome.night.value = 1 - l.day;
+    // Sun rays: faint by day, strong as it rises and sets.
+    dome.rays.value = 0.25 + 0.9 * l.dusk;
+    dome.time.value = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000;
     dome.glow.value.copy(GLOW_DAY).lerp(GLOW_DUSK, l.dusk).multiplyScalar(Math.max(0, Math.min(1, (l.sunHeight + 0.25) * 4)));
     dome.glowWidth.value = 10 - 6 * l.dusk;
     dome.sunDir.value.copy(dir);

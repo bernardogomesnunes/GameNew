@@ -512,6 +512,16 @@ export const TOOL_FOR = new Map(
   ITEMS.filter((i) => i.grants).map((i) => [i.grants, i.id]),
 );
 
+// An item made of a block takes the block's storybook colour (config/palette.js),
+// kept as much lighter or darker than the block as it was before.
+for (const it of ITEMS) {
+  const b = it.block != null ? BLOCKS_BY_ID.get(it.block) : null;
+  if (!b || it.color == null || b.formerColor == null || b.formerColor === b.color) continue;
+  const ch = (h, s) => (h >> s) & 255;
+  const at = (s) => Math.max(0, Math.min(255, ch(b.color, s) + ch(it.color, s) - ch(b.formerColor, s)));
+  it.color = (at(16) << 16) | (at(8) << 8) | at(0);
+}
+
 export const ITEMS_BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
 
 /** Items that place a block, keyed by block id — the reverse lookup for mining. */

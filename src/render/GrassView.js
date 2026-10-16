@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { PALETTE } from '../config/palette.js';
 
 /**
  * Grass tufts on turf (backlog batch 3, #8: "3D grass tufts on turf. They're
@@ -33,7 +34,9 @@ function tuftGeometry() {
     const lean = 0.08;
     const b = pos.length / 3;
     pos.push(-cx, 0, -cz, cx, 0, cz, cx * 0.25 + lean * Math.sin(a), h, cz * 0.25 - lean * Math.cos(a), -cx * 0.25 + lean * Math.sin(a), h, -cz * 0.25 - lean * Math.cos(a));
-    col.push(0.74, 0.74, 0.74, 0.74, 0.74, 0.74, 1.14, 1.14, 1.14, 1.14, 1.14, 1.14);
+    // Root to tip a little lighter than they were: the tufts read as the
+    // same fresh grass as the ground, not dark spikes on it.
+    col.push(0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 1.28, 1.26, 1.12, 1.28, 1.26, 1.12);
     idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
   }
   const g = new THREE.BufferGeometry();
@@ -81,7 +84,7 @@ export class GrassView {
     this.vec = new THREE.Vector3();
     this.size = new THREE.Vector3();
     this.colour = new THREE.Color();
-    this.base = new THREE.Color(0x7fc254);
+    this.base = new THREE.Color(PALETTE.spring);   // the grass block's own (config/palette.js)
   }
 
   /** Once a frame: where the tufts are (now and then, or when you've moved), then the wind. */

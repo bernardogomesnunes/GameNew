@@ -67,12 +67,20 @@ const STONE_FLECKS = [[1.08, 1.0, 0.88], [0.9, 0.96, 1.08], [1.1, 1.04, 0.95], [
 const EARTH_FLECKS = [[0.72, 0.64, 0.58], [1.12, 1.04, 0.92], [0.9, 0.86, 0.95], [1.05, 0.92, 0.8]];
 
 export const TEXTURES = {
-  grass:     { marks: 20, flecks: [[1.12, 1.08, 0.7], [0.86, 1, 0.98]], depth: 0.3, mottle: 0.12, speck: 0.05,
+  grass:     { marks: 20, flecks: [[1.1, 1.06, 0.86], [0.86, 1, 0.98]], depth: 0.3, mottle: 0.12, speck: 0.05,
                fringe: { under: 2, turf: 6 },
-               top: { blades: 150, marks: 10, flecks: [[1.18, 1.12, 0.62], [1.2, 1.0, 1.1], [0.84, 1.0, 1.0]], depth: 0.32, mottle: 0.14, speck: 0.05 } },
+               // Softer, and scattered with tiny blooms (the storybook palette,
+               // config/palette.js): pink, lilac and butter where the old
+               // turf had acid yellow-green flecks.
+               // Hytale's way (asked for directly, with a picture): clean
+               // tufts in two or three tones, no grain, and a few tiny
+               // flowers in pink, lilac, white and butter.
+               top: { tufts: 70, flowers: 4, bloom: [[1.5, 1.05, 1.3], [1.25, 1.15, 1.55], [1.45, 1.42, 1.38], [1.5, 1.35, 0.85]], depth: 0.34 } },
   moss:      { clumps: 18, marks: 24, flecks: [[1.15, 1.12, 0.7], [0.82, 0.95, 0.9]], depth: 0.34, mottle: 0.14, speck: 0.06 },
   litter:    { litter: 70, marks: 30, flecks: EARTH_FLECKS, depth: 0.38, mottle: 0.14, speck: 0.08 },
-  dirt:      { marks: 46, flecks: EARTH_FLECKS, depth: 0.34, mottle: 0.16, hue: 0.3, speck: 0.07 },
+  // Chunky clods with a lit upper edge and a few pebbles, in place of a
+  // field of flecks (asked for directly: dirt is next after the grass).
+  dirt:      { clods: 8, stones: 3, depth: 0.24, mottle: 0.06, hue: 0.2, bump: 0.3 },
   farmland:  { furrows: 8, marks: 30, flecks: EARTH_FLECKS, depth: 0.42, mottle: 0.1, speck: 0.08 },
   // Quieter (asked for directly: "Sand texture needs to have less noise"):
   // the ripples stay, a third of the grains, softer and finer speckle.
@@ -99,7 +107,7 @@ export const TEXTURES = {
   calcada:      { setts: 5, joint: [0.62, 0.6, 0.57], depth: 0.3, speck: 0.03, bump: 0.6 },
   calcada_wave: { setts: 5, joint: [0.62, 0.6, 0.57], wave: true, depth: 0.3, speck: 0.03, bump: 0.6 },
   snow:      { mottle: 0.05, marks: 18, flecks: [[0.9, 0.94, 1.0], [1.04, 1.04, 1.04]], depth: 0.06, speck: 0.02 },
-  planks:    { lines: 'planks', marks: 6, flecks: [[0.8, 0.7, 0.62]], depth: 0.42, speck: 0.03, bump: 0.45 },
+  planks:    { lines: 'planks', marks: 4, flecks: [[0.8, 0.7, 0.62]], depth: 0.36, bump: 0.45 },
   // Requested directly: "the wood trunk has similar texture as the planks,
   // we should change it to wooden logs texture." Bark up the sides —
   // wandering furrows, a crack or two, a knot — and growth rings on the cut
@@ -107,13 +115,15 @@ export const TEXTURES = {
   // No knots any more, and shallower furrows (asked for directly: "it has
   // round forms that look artificial, can be simpler but with the kind of
   // depth there's turf").
-  log:       { bark: 7, marks: 14, flecks: [[0.86, 0.94, 0.8], [1.1, 1.0, 0.9]], depth: 0.34, speck: 0.05, bump: 0.45,
+  // Bark in clean vertical strips with dashes running up them, the
+  // stylised way (asked for directly: "woods textures could be improved").
+  log:       { strips: 1, dashes: 16, marks: 6, flecks: [[0.9, 0.96, 0.84], [1.1, 1.02, 0.9]], depth: 0.36, bump: 0.45,
                top: { rings: 3, heart: [1.6, 1.52, 1.4], depth: 0.25, speck: 0.04, lift: 0 } },
   // Requested directly: "Leaves block could have small holes in it like
   // trees have and be somehow more rounded instead of sharp cubes." `gaps`
   // are real holes you see through, and `bite` takes the corners off each
   // face so a canopy's edge reads soft instead of as a row of squares.
-  leaf:      { leaves: 120, flecks: [[1.14, 1.12, 0.74], [1, 1, 1], [0.86, 1.0, 1.02]], depth: 0.42, speck: 0.04, holes: 6, gaps: 14, bite: 6 },
+  leaf:      { leaves: 120, flecks: [[1.1, 1.08, 0.9], [1, 1, 1], [0.9, 0.98, 1.06]], depth: 0.4, speck: 0.04, holes: 6, gaps: 14, bite: 6 },
   water:     { ripples: 2, mottle: 0.08, depth: 0.08, speck: 0.02 },
   pane:      { frame: 2, depth: 0.22, speck: 0.01 },
   crystal:   { facets: 3, sheen: [1.3, 1.15, 1.4], depth: 0.3, speck: 0.02 },
@@ -155,7 +165,7 @@ export const BLOCK_TEXTURES = {
   // Birch: white bark with dark dashes. Dark oak: deeper furrows.
   'White Wood':    { bark: 4, birch: true, marks: 10, flecks: [[0.6, 0.6, 0.62]], depth: 0.5, speck: 0.03, bump: 0.3,
                      top: { rings: 3, heart: [1.04, 0.98, 0.86], depth: 0.2, speck: 0.03, lift: 0 } },
-  'Dark Wood':     { bark: 9, marks: 10, flecks: [[0.86, 0.95, 0.82]], depth: 0.55, speck: 0.05, bump: 0.8,
+  'Dark Wood':     { strips: 1, dashes: 20, marks: 6, flecks: [[0.86, 0.95, 0.82]], depth: 0.5, bump: 0.7,
                      top: { rings: 2.5, heart: [1.85, 1.7, 1.55], depth: 0.25, speck: 0.04, lift: 0 } },
   'White Leaves':  { leaves: 120, blossom: 14, flecks: [[1.1, 1.08, 0.8], [1, 1, 1], [0.94, 1.0, 0.96]], depth: 0.36, speck: 0.03, holes: 6, gaps: 14, bite: 6 },
   'Dark Leaves':   { leaves: 140, flecks: [[1.08, 1.1, 0.86], [1, 1, 1], [0.84, 0.98, 1.06]], depth: 0.46, speck: 0.04, holes: 4, gaps: 12, bite: 6 },

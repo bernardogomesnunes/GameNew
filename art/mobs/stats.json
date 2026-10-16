@@ -1,0 +1,783 @@
+{
+ "cow": {
+  "cubes": 16,
+  "triangles": 192,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 28.7,
+  "name": "Cow",
+  "group": "animals"
+ },
+ "deer": {
+  "cubes": 17,
+  "triangles": 204,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 30.0,
+  "name": "Deer",
+  "group": "animals"
+ },
+ "rabbit": {
+  "cubes": 11,
+  "triangles": 132,
+  "atlas": [
+   128,
+   16
+  ],
+  "kb": 20.8,
+  "name": "Rabbit",
+  "group": "animals"
+ },
+ "boar": {
+  "cubes": 13,
+  "triangles": 156,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 24.5,
+  "name": "Boar",
+  "group": "animals"
+ },
+ "goat": {
+  "cubes": 14,
+  "triangles": 168,
+  "atlas": [
+   128,
+   16
+  ],
+  "kb": 25.2,
+  "name": "Goat",
+  "group": "animals"
+ },
+ "sheep": {
+  "cubes": 12,
+  "triangles": 144,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 23.7,
+  "name": "Sheep",
+  "group": "animals"
+ },
+ "pig": {
+  "cubes": 11,
+  "triangles": 132,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 21.5,
+  "name": "Pig",
+  "group": "animals"
+ },
+ "chicken": {
+  "cubes": 10,
+  "triangles": 120,
+  "atlas": [
+   128,
+   16
+  ],
+  "kb": 18.9,
+  "name": "Chicken",
+  "group": "animals"
+ },
+ "horse": {
+  "cubes": 17,
+  "triangles": 204,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 31.6,
+  "name": "Horse",
+  "group": "animals"
+ },
+ "raptor": {
+  "cubes": 9,
+  "triangles": 108,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 18.7,
+  "name": "Raptor",
+  "group": "animals"
+ },
+ "trike": {
+  "cubes": 13,
+  "triangles": 156,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 29.8,
+  "name": "Triceratops",
+  "group": "animals"
+ },
+ "longneck": {
+  "cubes": 13,
+  "triangles": 156,
+  "atlas": [
+   256,
+   128
+  ],
+  "kb": 36.2,
+  "name": "Long-neck",
+  "group": "animals"
+ },
+ "basilisk": {
+  "cubes": 20,
+  "triangles": 240,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 38.8,
+  "name": "Basilisk",
+  "group": "animals"
+ },
+ "moon_cow": {
+  "cubes": 20,
+  "triangles": 240,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 36.5,
+  "name": "Moon Cow",
+  "group": "creatures"
+ },
+ "aurelion": {
+  "cubes": 19,
+  "triangles": 228,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 34.4,
+  "name": "Aurelion, the white stag",
+  "group": "creatures"
+ },
+ "umbra": {
+  "cubes": 16,
+  "triangles": 192,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 29.9,
+  "name": "Umbra, the black beast",
+  "group": "creatures"
+ },
+ "warbeast": {
+  "cubes": 18,
+  "triangles": 216,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 36.3,
+  "name": "The Warlord's beast",
+  "group": "creatures"
+ },
+ "settler": {
+  "cubes": 6,
+  "triangles": 72,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 15.0,
+  "name": "Settler",
+  "group": "people"
+ },
+ "soldier": {
+  "cubes": 10,
+  "triangles": 120,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 20.9,
+  "name": "Soldier",
+  "group": "people"
+ },
+ "archer": {
+  "cubes": 15,
+  "triangles": 180,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 27.8,
+  "name": "Archer",
+  "group": "people"
+ },
+ "footman": {
+  "cubes": 11,
+  "triangles": 132,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 22.1,
+  "name": "Footman",
+  "group": "people"
+ },
+ "swordsman": {
+  "cubes": 12,
+  "triangles": 144,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 23.7,
+  "name": "Swordsman",
+  "group": "people"
+ },
+ "bowman": {
+  "cubes": 15,
+  "triangles": 180,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 27.8,
+  "name": "Bowman",
+  "group": "people"
+ },
+ "crew": {
+  "cubes": 9,
+  "triangles": 108,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 19.4,
+  "name": "Siege crew",
+  "group": "people"
+ },
+ "hermit": {
+  "cubes": 11,
+  "triangles": 132,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 23.0,
+  "name": "Hermit",
+  "group": "people"
+ },
+ "messenger": {
+  "cubes": 10,
+  "triangles": 120,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 20.9,
+  "name": "Messenger",
+  "group": "people"
+ },
+ "explorer": {
+  "cubes": 18,
+  "triangles": 216,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 33.3,
+  "name": "Explorer",
+  "group": "people"
+ },
+ "bandit": {
+  "cubes": 13,
+  "triangles": 156,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 25.1,
+  "name": "Bandit",
+  "group": "people"
+ },
+ "citizen": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 17.9,
+  "name": "Citizen",
+  "group": "people"
+ },
+ "merchant": {
+  "cubes": 11,
+  "triangles": 132,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 22.3,
+  "name": "Merchant",
+  "group": "people"
+ },
+ "trader": {
+  "cubes": 12,
+  "triangles": 144,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 23.6,
+  "name": "Goblin trader",
+  "group": "people"
+ },
+ "tribe": {
+  "cubes": 15,
+  "triangles": 180,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 27.9,
+  "name": "Tree person",
+  "group": "people"
+ },
+ "city_guard": {
+  "cubes": 9,
+  "triangles": 108,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 19.9,
+  "name": "City guard",
+  "group": "people"
+ },
+ "rival_soldier": {
+  "cubes": 9,
+  "triangles": 108,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 19.5,
+  "name": "Rival soldier",
+  "group": "people"
+ },
+ "rival_guard": {
+  "cubes": 9,
+  "triangles": 108,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 19.9,
+  "name": "Rival guard",
+  "group": "people"
+ },
+ "futurian": {
+  "cubes": 6,
+  "triangles": 72,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 15.3,
+  "name": "Futurian",
+  "group": "people"
+ },
+ "guard": {
+  "cubes": 9,
+  "triangles": 108,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 19.9,
+  "name": "Stone guard",
+  "group": "people"
+ },
+ "warrior": {
+  "cubes": 9,
+  "triangles": 108,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 19.3,
+  "name": "Stone warrior",
+  "group": "people"
+ },
+ "stone_archer": {
+  "cubes": 15,
+  "triangles": 180,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 28.0,
+  "name": "Stone archer",
+  "group": "people"
+ },
+ "king": {
+  "cubes": 17,
+  "triangles": 204,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 30.5,
+  "name": "Stone King",
+  "group": "people"
+ },
+ "warlord": {
+  "cubes": 12,
+  "triangles": 144,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 24.0,
+  "name": "Vorhak the Warlord",
+  "group": "people"
+ },
+ "sky_guard": {
+  "cubes": 10,
+  "triangles": 120,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 21.4,
+  "name": "Sky guard",
+  "group": "people"
+ },
+ "royal_guard": {
+  "cubes": 11,
+  "triangles": 132,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 23.1,
+  "name": "Royal guard",
+  "group": "people"
+ },
+ "sky_king": {
+  "cubes": 18,
+  "triangles": 216,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 32.7,
+  "name": "Sky King",
+  "group": "people"
+ },
+ "seraph": {
+  "cubes": 14,
+  "triangles": 168,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 29.1,
+  "name": "Seraph",
+  "group": "people"
+ },
+ "white_god": {
+  "cubes": 17,
+  "triangles": 204,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 31.6,
+  "name": "The white god",
+  "group": "people"
+ },
+ "dark_god": {
+  "cubes": 18,
+  "triangles": 216,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 32.7,
+  "name": "The dark god",
+  "group": "people"
+ },
+ "shade": {
+  "cubes": 12,
+  "triangles": 144,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 23.8,
+  "name": "Shade",
+  "group": "people"
+ },
+ "sky_warrior": {
+  "cubes": 21,
+  "triangles": 252,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 39.7,
+  "name": "Sky Warrior",
+  "group": "people"
+ },
+ "cart": {
+  "cubes": 14,
+  "triangles": 168,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 26.5,
+  "name": "Horse cart",
+  "group": "vehicles"
+ },
+ "glider": {
+  "cubes": 10,
+  "triangles": 120,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 21.5,
+  "name": "Flying machine",
+  "group": "vehicles"
+ },
+ "helix": {
+  "cubes": 17,
+  "triangles": 204,
+  "atlas": [
+   128,
+   256
+  ],
+  "kb": 33.8,
+  "name": "The Helix",
+  "group": "vehicles"
+ },
+ "train_engine": {
+  "cubes": 24,
+  "triangles": 288,
+  "atlas": [
+   512,
+   256
+  ],
+  "kb": 78.6,
+  "name": "Steam engine",
+  "group": "vehicles"
+ },
+ "rail_car": {
+  "cubes": 15,
+  "triangles": 180,
+  "atlas": [
+   512,
+   256
+  ],
+  "kb": 70.2,
+  "name": "Rail car",
+  "group": "vehicles"
+ },
+ "flying_car": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car",
+  "group": "vehicles"
+ },
+ "tram": {
+  "cubes": 3,
+  "triangles": 36,
+  "atlas": [
+   512,
+   256
+  ],
+  "kb": 25.4,
+  "name": "Maglev tram",
+  "group": "vehicles"
+ },
+ "battering_ram": {
+  "cubes": 15,
+  "triangles": 180,
+  "atlas": [
+   256,
+   128
+  ],
+  "kb": 34.8,
+  "name": "Battering ram",
+  "group": "vehicles"
+ },
+ "catapult": {
+  "cubes": 15,
+  "triangles": 180,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 29.2,
+  "name": "Siege catapult",
+  "group": "vehicles"
+ },
+ "settler_1": {
+  "cubes": 6,
+  "triangles": 72,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 15.0,
+  "name": "Settler 2",
+  "group": "people"
+ },
+ "settler_2": {
+  "cubes": 6,
+  "triangles": 72,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 15.0,
+  "name": "Settler 3",
+  "group": "people"
+ },
+ "settler_3": {
+  "cubes": 6,
+  "triangles": 72,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 15.0,
+  "name": "Settler 4",
+  "group": "people"
+ },
+ "settler_4": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 18.0,
+  "name": "Settler 5",
+  "group": "people"
+ },
+ "settler_5": {
+  "cubes": 6,
+  "triangles": 72,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 15.0,
+  "name": "Settler 6",
+  "group": "people"
+ },
+ "citizen_1": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 17.9,
+  "name": "Citizen 2",
+  "group": "people"
+ },
+ "citizen_2": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 18.0,
+  "name": "Citizen 3",
+  "group": "people"
+ },
+ "citizen_3": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   32
+  ],
+  "kb": 18.0,
+  "name": "Citizen 4",
+  "group": "people"
+ },
+ "flying_car_1": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car 2",
+  "group": "vehicles"
+ },
+ "flying_car_2": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car 3",
+  "group": "vehicles"
+ },
+ "flying_car_3": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car 4",
+  "group": "vehicles"
+ },
+ "flying_car_4": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car 5",
+  "group": "vehicles"
+ },
+ "flying_car_5": {
+  "cubes": 8,
+  "triangles": 96,
+  "atlas": [
+   128,
+   128
+  ],
+  "kb": 17.3,
+  "name": "Flying car 6",
+  "group": "vehicles"
+ }
+}

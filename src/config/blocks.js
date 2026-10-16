@@ -27,6 +27,7 @@
 // palette still has one dark anchor rather than every block converging on
 // the same pale middle.
 import { CROPS, RIPE, cropBaseOf } from './crops.js';
+import { blockColour } from './palette.js';
 
 /** Flowing water of level L is block FLOW_BASE + L, for L in 1..7. */
 const FLOW_BASE = 49;
@@ -905,6 +906,15 @@ BLOCKS.push(
   { id: WAR_STANDARD, name: 'War Standard', glyph: 'banner', color: 0xc8a040, glows: true, material: 'wood', system: true, unlock: null,
     light: { color: 0xffd27a, intensity: 3, distance: 10, decay: 1 } },
 );
+
+// The storybook palette (config/palette.js) paints every block it names; the
+// colour each was written with above is kept as `formerColor`, which an item
+// made of the block reads to stay as much lighter or darker than it as it was.
+for (const b of BLOCKS) {
+  const c = blockColour(b.name);
+  b.formerColor = b.color;
+  if (c != null) b.color = c;
+}
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 

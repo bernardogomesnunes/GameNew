@@ -1,3 +1,4 @@
+import { TIER_COLOURS } from './palette.js';
 /**
  * Tiers for tools and weapons (backlog batch 2): "stone, iron, gold, sky and
  * dark, for swords, axes, shovels and armour".
@@ -28,6 +29,9 @@ export const TOOL_TIERS = [
   // Gems (backlog batch 4): diamond, the hardest and longest-lasting of all.
   { key: 'diamond', name: 'Diamond', age: 10, durability: 900, color: 0x9fe8f2, edge: 0xe6fbff, guard: 0x6a7480, metal: 'diamond', extra: { iron_ingot: 1 }, bonus: 3, sword: 15 },
 ];
+
+// The storybook palette's tiers (config/palette.js): lavender iron, a violet dark guard.
+for (const t of TOOL_TIERS) Object.assign(t, TIER_COLOURS[t.key] ?? {});
 
 /** The four kinds in every tier: the stone tool each is modelled on, and how much metal it takes. */
 const KINDS = [

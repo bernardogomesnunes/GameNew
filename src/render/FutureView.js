@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { dress } from './Models.js';
 import { CELL, FUTURE_GROUND, inFuture, futureArrival } from '../world/future.js';
 
 /**
@@ -92,6 +93,10 @@ export class FutureView {
     const here = !!at && inFuture(at.x, centreX);
     this.group.visible = here;
     if (!here) return;
+    // Their models (render/Models.js), once loaded: a tram runs along x, a
+    // car faces -z as a model does, in its own colour.
+    for (const t of this.trams) dress(t, 'tram', { turn: Math.PI / 2, scale: [1.36, 1.07, 2.0] });
+    this.cars.forEach((c, i) => dress(c.mesh, i % 6 ? `flying_car_${i % 6}` : 'flying_car', { turn: 0, scale: 1.3, y: -0.6 }));
     const o = futureArrival(centreX, centreZ);
     const u = at.x - o.x, v = at.z - o.z;
     const street = (n) => Math.floor((n + CELL / 2) / CELL);

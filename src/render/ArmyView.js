@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { dress, poseBone } from './Models.js';
 import { WANDERERS } from '../config/wanderers.js';
 import { beast } from './GuardianView.js';
 
@@ -70,6 +71,12 @@ function beastModel() {
   return { group: b.group, legs: b.legs, mats };
 }
 
+/** The diagonal pairs of a model's four legs, swung by `s`. */
+function swingLegs(bones, s) {
+  poseBone(bones.leg_fl, s); poseBone(bones.leg_br, s);
+  poseBone(bones.leg_fr, -s); poseBone(bones.leg_bl, -s);
+}
+
 export class ArmyView {
   constructor(scene) {
     this.scene = scene;
@@ -95,6 +102,10 @@ export class ArmyView {
         this.shown.set(p, m);
       }
       // Face the way it's going; standing, the way it last faced (or was set to).
+      // Its model (render/Models.js), once loaded: the catapult is built
+      // facing the other way, its bucket at the back.
+      const model = dress(m.group, spec.siege === 'ram' ? 'battering_ram' : spec.siege === 'catapult' ? 'catapult' : 'warbeast',
+        { scale: spec.beast ? 0.75 / 1.3 : 0.7, turn: spec.siege === 'catapult' ? 0 : Math.PI, ownMaterial: true });
       if (p.target) {
         const dx = p.target.x - p.x, dz = p.target.z - p.z;
         if (dx || dz) p.facing = Math.atan2(dx, dz);
@@ -117,6 +128,15 @@ export class ArmyView {
         mat.color.copy(m.base[i]);
         if (p.hurt > 0) mat.color.lerp(HURT, 0.6);
       });
+      if (model) {
+        model.material.color.set(0xffffff);
+        if (p.hurt > 0) model.material.color.lerp(HURT, 0.6);
+        // The ram's trunk drives forward; the catapult's arm flings over.
+        const log = model.bones.log;
+        if (log && m.swing) log.position.z = log.userData.rest.position.z - m.swing.position.z / 0.7;
+        if (m.swing) poseBone(model.bones.arm, m.swing.rotation.x);
+        if (m.legs) swingLegs(model.bones, m.legs[0].rotation.x);
+      }
     }
     for (const [p, m] of this.shown) {
       if (seen.has(p)) continue;
@@ -179,6 +199,8 @@ export class EngineView {
       m.group.position.set(e.x, e.y, e.z);
       m.group.rotation.y = e.facing ?? 0;
       m.swing.rotation.x = (e.swing ?? 0) > 0 ? 1.6 * Math.sin(((e.swing ?? 0) / 0.6) * Math.PI) : 0;
+      const model = dress(m.group, 'catapult', { scale: 0.7, turn: 0 });
+      if (model) poseBone(model.bones.arm, m.swing.rotation.x);
     }
     for (const [e, m] of this.shown) {
       if (seen.has(e)) continue;

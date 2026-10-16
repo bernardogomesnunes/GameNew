@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { World, CHUNK_SIZE } from './world/World.js';
-import { ChunkMesher } from './world/ChunkMesher.js';
+import { ChunkMesher, WIND } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { buildTemplatePlacement, rotateTemplate, captureBlocks } from './tools/Templates.js';
@@ -11,6 +11,7 @@ import { clearPlan, clearCells, cellBounds } from './tools/ClearTool.js';
 import { CLEARS_BY_ID } from './config/clears.js';
 import { SelectionHighlight } from './tools/SelectionHighlight.js';
 import { BuildGhost } from './tools/BuildGhost.js';
+import { loadModels } from './render/Models.js';
 import { SettlerView } from './render/SettlerView.js';
 import { CloudAuth } from './net/CloudAuth.js';
 import { CloudWorlds } from './net/CloudWorlds.js';
@@ -393,6 +394,12 @@ export class Game {
     // Tone mapping and a small saturation lift (render/atmosphere.js).
     gradeRenderer(this.renderer);
     this.canvasRoot.appendChild(this.renderer.domElement);
+    // A soft violet vignette over the picture, the last touch of a shader
+    // pack's grade (asked for: Complementary shaders as inspiration). Drawn
+    // by the page, over the canvas, so it costs the GPU nothing.
+    const vignette = document.createElement('div');
+    vignette.className = 'vignette';
+    this.canvasRoot.appendChild(vignette);
 
     this.scene = new THREE.Scene();
     // A softer, paler sky than the original saturated blue — the block
@@ -512,7 +519,7 @@ export class Game {
     this.arrowView = new ArrowView(this.scene);
     this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
-    this.wanderView = new SettlerView(this.scene);
+    this.wanderView = new SettlerView(this.scene, 'wanderers');
     this.skyBeacon = new SkyBeacon(this.scene);
     // In disguise on the island: how near you are to being seen through,
     // and the ? and ! over the guards' heads (duilt/Suspicion.js).
@@ -527,12 +534,15 @@ export class Game {
     // The Future's trams and flying cars.
     this.futureView = new FutureView(this.scene);
     // Your soldiers and tower archers (the defence buildings).
-    this.defenderView = new SettlerView(this.scene);
+    this.defenderView = new SettlerView(this.scene, 'defenders');
     // Your army, on the dark path.
-    this.warriorView = new SettlerView(this.scene);
+    this.warriorView = new SettlerView(this.scene, 'warriors');
     // The showcase's labels and its two guardians — see openShowcase.
     this.showcaseView = new ShowcaseView(this.scene);
     this.showcase = null;
+    // Every animal, person and vehicle's model (render/Models.js): the views
+    // draw their boxes until these are in.
+    this.modelsLoaded = loadModels();
     this.moving = null;   // the building currently in the air
     this.editingStructure = null;   // the building currently unlocked for changes — see startEditing
 
@@ -7215,10 +7225,12 @@ export class Game {
       }
       this.updateHover();
       this.updateCracks();
-      this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false, look: this.player.lookDirection() });
+      this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false, look: this.player.lookDirection(), night: 1 - (this.dayCycle?.light?.day ?? 1) });
       this.flames.update(this.world, this.player.position);
       this.smoke.update(this.world, this.player.position);
       this.grass.update(this.world, this.player.position, performance.now(), { enabled: this.graphics.grass !== false });
+      // The wind in the leaves (ChunkMesher's WIND).
+      WIND.value = performance.now() / 1000;
       this.settlerView.update(this.withShowcase('settlers', this.duilt?.settlers.people ?? []));
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();

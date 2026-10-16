@@ -80,7 +80,7 @@ ok('everything is on the flattened ground', SHOWCASE_BUILDINGS.every((b) => b.ey
 // --- the camera spots --------------------------------------------------------------------------
 
 ok(`${SHOWCASE_SPOTS.length} spots, every id different`, SHOWCASE_SPOTS_BY_ID.size === SHOWCASE_SPOTS.length);
-ok('each named, grouped and placeable', SHOWCASE_SPOTS.every((s) => s.name && ['main', 'buildings'].includes(s.group) && typeof s.resolve === 'function'));
+ok('each named, grouped and placeable', SHOWCASE_SPOTS.every((s) => s.name && ['main', 'buildings', 'lab'].includes(s.group) && typeof s.resolve === 'function'));
 for (const id of ['overview', 'row-1', 'animals-1', 'people-settlers', 'people-stone', 'people-sky', 'guardians',
   'kingdom-gate', 'kingdom-street', 'kingdom-keep', 'kingdom-air', 'sky-gate', 'sky-palace', 'sky-below', 'forest']) {
   ok(`  the '${id}' spot`, SHOWCASE_SPOTS_BY_ID.get(id)?.group === 'main');
@@ -179,5 +179,19 @@ ok('the picture script is there', existsSync(new URL('../tools/showcase-shots.mj
     /390x780/.test(tool) && /day,dusk,night/.test(tool) && /--out/.test(tool) && /showcaseSpot\(/.test(tool));
 }
 ok('and the plan says how to use it', /tools\/showcase-shots\.mjs/.test(plan));
+
+
+// --- the texture lab (world/labDesigns.js) ---------------------------------------------------
+// Asked for directly: "setup a creative world and build a couple of buildings, from template
+// and one by yourself, for us to test this properly."
+{
+  const { standBlocks } = await import('../src/world/labDesigns.js');
+  const { BLOCKS_BY_ID } = await import('../src/config/blocks.js');
+  const lab = SHOWCASE_BUILDINGS.filter((b) => b.place === 'lab');
+  ok('the lab has a cottage of its own and a stand of every block', lab.map((b) => b.id).sort().join() === 'lab_cottage,lab_materials');
+  const named = standBlocks().map((id) => BLOCKS_BY_ID.get(id).name);
+  ok(`the stand holds the everyday blocks (${named.length} in all)`, ['Grass', 'Dirt', 'Wood', 'Planks', 'Stone', 'Leaves'].every((n) => named.includes(n)) && named.length > 60);
+  ok('and the lab has close spots at eye height', ['lab-garden', 'lab-stand'].every((id) => SHOWCASE_SPOTS_BY_ID.get(id)?.group === 'lab'));
+}
 
 process.exit(f ? 1 : 0);

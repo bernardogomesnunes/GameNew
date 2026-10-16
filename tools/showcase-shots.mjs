@@ -102,6 +102,8 @@ try {
   const started = Date.now();
   await page.goto(url);
   await page.waitForFunction(() => !!window.__game, null, { timeout: 60_000 });
+  // The models (render/Models.js) load after the game starts; wait for them.
+  await ev(() => window.__game.modelsLoaded, null, 120_000);
   const opened = await ev(({ labels, hud, hand }) => {
     const g = window.__game;
     g.ui.hideBlocker();

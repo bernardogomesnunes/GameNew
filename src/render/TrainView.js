@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { dress } from './Models.js';
 import { PART_LENGTH, PART_WIDTH } from '../world/Trains.js';
 
 /**
@@ -180,6 +181,9 @@ export class TrainView {
           this.scene.add(v.group);
           this.parts.set(key, v);
         }
+        // Its model (render/Models.js), once loaded. The passengers' seats
+        // stay, so who's aboard still shows.
+        dress(v.group, p.kind === 'engine' ? 'train_engine' : 'rail_car', { keep: (v.seats ?? []).flat() });
         v.group.position.set(p.x, p.y, p.z);
         v.group.rotation.y = p.yaw;
         v.group.rotation.x = -p.pitch;

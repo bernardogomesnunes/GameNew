@@ -303,12 +303,25 @@ const BUMP_STRENGTH = 1.6;
 /** Metal: how tight the highlight is, how bright, and the lift side-on. */
 const SHINE_POWER = 14, SHINE_SPEC = 1.2, SHINE_LIFT = 0.32;
 
+/**
+ * The wind in the leaves (asked for: Hytale as inspiration, whose first art
+ * pillar is a world in constant motion). Every leaf face sways a little, by
+ * where it is in the world, so neighbouring leaves move together and the
+ * canopy ripples rather than shivers. Game advances `value` each frame.
+ */
+export const WIND = { value: 0 };
+/** How far a leaf sways, in blocks. */
+const SWAY = 0.045;
+
 function withBlockTextures(mat) {
   const { texture, bumps } = blockTextureArray();
   if (!texture) return mat;
+  const leafLayers = [...new Set([5, 42, 44].flatMap((id) => [layerFor(id), topLayerFor(id)]))].filter((l) => l != null && l >= 0);
+  const isLeaf = leafLayers.length ? leafLayers.map((l) => `abs( layer - ${l.toFixed(1)} ) < 0.5`).join(' || ') : 'false';
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.blockTiles = { value: texture };
     shader.uniforms.blockBumps = { value: bumps };
+    shader.uniforms.wind = WIND;
     // Our own attribute names and our own varyings. Three only declares `uv`
     // and `vMapUv` for a material that has a `map`, and this one deliberately
     // does not have one — the tiles are an array, which `map` cannot hold. The
@@ -316,6 +329,7 @@ function withBlockTextures(mat) {
     shader.vertexShader = `
       attribute vec2 tileUv;
       attribute float layer;
+      uniform float wind;
       varying vec2 vTileUv;
       varying float vLayer;
       ${shader.vertexShader}
@@ -323,6 +337,12 @@ function withBlockTextures(mat) {
       #include <begin_vertex>
       vTileUv = tileUv;
       vLayer = layer;
+      if ( ${isLeaf} ) {
+        vec3 wp = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;
+        float t = wind * 1.3 + wp.x * 0.35 + wp.z * 0.27;
+        transformed.x += ${SWAY.toFixed(3)} * sin( t ) + ${(SWAY * 0.4).toFixed(3)} * sin( t * 2.3 + wp.y );
+        transformed.z += ${(SWAY * 0.7).toFixed(3)} * cos( t * 0.8 + wp.y * 0.5 );
+      }
     `);
     // Injected after the vertex colour has been folded in, so the tile shades
     // the colour the block actually ended up — variation and all — rather than

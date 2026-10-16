@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SKY } from '../config/palette.js';
 
 /**
  * A drifting layer of low-poly puffs high over the world — requested
@@ -22,7 +23,7 @@ const DRIFT_SPEED = 0.7;     // blocks/second
 // A pale, warm-white rather than pure white — the sky itself (Game.js's
 // 0xadd7f5) and every block already sit in the same softened palette, and a
 // stark white cloud would be the one saturated thing in the sky.
-const CLOUD_COLOR = 0xfbfaf4;
+const CLOUD_COLOR = SKY.cloudDay;   // config/palette.js
 
 function hash01(i, salt) {
   let h = Math.imul(i | 0, 0x27d4eb2d) ^ Math.imul(salt | 0, 0x9e3779b1);

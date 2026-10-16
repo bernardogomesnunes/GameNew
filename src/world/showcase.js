@@ -4,6 +4,7 @@ import { WANDERERS } from '../config/wanderers.js';
 import { BIOMES } from '../config/biomes.js';
 import { isFluid } from '../config/blocks.js';
 import { landmarkDesigns, landmarksFor, PLACE_NAMES } from './landmarks.js';
+import { labDesigns } from './labDesigns.js';
 import { kingdomFor, CITY_HALF } from './kingdom.js';
 import { skyFor, FLOOR, ISLAND_R } from './skyKingdom.js';
 
@@ -98,6 +99,9 @@ function allDesigns() {
     ...landmarkDesigns().map((p) => ({
       id: `place_${p.kind}`, name: plainName(PLACE_NAMES[p.kind] ?? p.kind), place: p.kind, blocks: p.blocks,
     })),
+    // The texture lab (world/labDesigns.js): a cottage of our own and a
+    // stand of every block, for judging textures and light.
+    ...labDesigns(),
   ];
 }
 
@@ -359,6 +363,19 @@ export const SHOWCASE_SPOTS = [
   ...SHOWCASE_BUILDINGS.map((b) => ({
     id: `b-${b.id}`, name: b.name, group: 'buildings', where: 'showcase',
     resolve: ({ site }) => ({ eye: at(site, b.eye), look: at(site, b.look) }),
+  })),
+  // The texture lab, close up and at eye height (world/labDesigns.js): how
+  // grass, dirt, wood and stone read when you're standing on them.
+  ...[
+    ['lab-garden', 'The texture lab: the cottage garden, standing at the gate', 'lab_cottage', (b) => ({ eye: [b.x0 + 3, 2.2, b.z0 - 6], look: [b.x0 + 8, 2.5, b.z0 + 6] })],
+    ['lab-stand', 'The texture lab: every block, close', 'lab_materials', (b) => ({ eye: [b.x0 + 9, 4, b.z0 - 7], look: [b.x0 + 9, 2.5, b.z0 + 4] })],
+  ].map(([id, name, of, pose]) => ({
+    id, name, group: 'lab', where: 'showcase',
+    resolve: ({ site }) => {
+      const it = SHOWCASE_BUILDINGS.find((x) => x.id === of);
+      const p = pose({ x0: it.centre.x - it.w / 2, z0: it.centre.z - it.d / 2 });
+      return { eye: at(site, p.eye), look: at(site, p.look) };
+    },
   })),
 ];
 

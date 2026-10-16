@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { dress, poseBone } from './Models.js';
 import { HelixView } from './HelixView.js';
 
 /**
@@ -84,6 +85,13 @@ export class GliderView {
     const beat = mode === 'fly' ? Math.sin(this.t * 4.5) * 0.22 : mode === 'parked' ? -0.12 : 0.06;
     this.left.rotation.z = -beat;
     this.right.rotation.z = beat;
+    // Its model (render/Models.js), once loaded: the keel where this one's
+    // is; the stand a parked one rests on stays.
+    const model = dress(this.group, 'glider', { turn: 0, y: -31.5 / 16, keep: [this.stand] });
+    if (model) {
+      poseBone(model.bones.wing_l, 0, 0, -beat);
+      poseBone(model.bones.wing_r, 0, 0, beat);
+    }
   }
 }
 

@@ -23,6 +23,8 @@ const RESCAN_INTERVAL_MS = 200; // lanterns don't move; the player does, and not
 const CLUSTER = 4;
 /** How much further away a light behind you counts as, against one in front. */
 const BEHIND = 3;
+/** How many lights get a glow round them (see Glows), nearest first. */
+const MAX_GLOWS = 64;
 
 export class LightManager {
   constructor(scene) {
@@ -35,18 +37,22 @@ export class LightManager {
       this.pool.push(light);
     }
     this.lastScan = 0;
+    this.glows = new Glows(scene, MAX_GLOWS);
   }
 
   /** Call once a frame. Cheap to call when nothing has changed — it throttles itself. */
-  update(world, playerPos, { enabled = true, now = performance.now(), look = null } = {}) {
+  update(world, playerPos, { enabled = true, now = performance.now(), look = null, night = 0 } = {}) {
     if (!enabled || !world?.lights?.size) {
       for (const light of this.pool) light.visible = false;
+      this.glows.show([], 0);
       return;
     }
     if (now - this.lastScan >= RESCAN_INTERVAL_MS) {
       this.lastScan = now;
       this.assign(world, playerPos, look);
+      this.glows.show(nearestLights(world.lights.values(), playerPos, MAX_GLOWS), night);
     }
+    this.glows.setNight(night);
     // A fire's light wavers every frame, after any rescan has set it.
     for (const light of this.pool) {
       const e = light.userData.entry;
@@ -87,7 +93,88 @@ export class LightManager {
   dispose() {
     for (const light of this.pool) this.scene.remove(light);
     this.pool = [];
+    this.glows.dispose();
   }
+}
+
+/** The placed lights nearest `at`, up to `max`, each as { x, y, z, color }. */
+export function nearestLights(entries, at, max) {
+  const out = [];
+  for (const e of entries) {
+    const x = e.x + 0.5, y = e.y + (e.light.y ?? 0.5), z = e.z + 0.5;
+    out.push({ x, y, z, color: e.light.color, d2: (x - at.x) ** 2 + (y - at.y) ** 2 + (z - at.z) ** 2 });
+  }
+  return out.sort((a, b) => a.d2 - b.d2).slice(0, max);
+}
+
+/**
+ * A soft glow round each light: what a shader pack's bloom does to a lantern
+ * at night, done the cheap way (asked for: Complementary shaders as
+ * inspiration). One batch of points, added onto whatever is behind them,
+ * faint by day and full at night.
+ */
+export class Glows {
+  constructor(scene, max) {
+    this.max = max;
+    this.positions = new Float32Array(max * 3);
+    this.colors = new Float32Array(max * 3);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(this.colors, 3));
+    geo.setDrawRange(0, 0);
+    this.material = new THREE.PointsMaterial({
+      size: 2.6, sizeAttenuation: true, map: glowTexture(), vertexColors: true,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.2,
+    });
+    this.points = new THREE.Points(geo, this.material);
+    this.points.frustumCulled = false;
+    this.points.renderOrder = 12;
+    scene.add(this.points);
+    this.scene = scene;
+    this._c = new THREE.Color();
+  }
+
+  show(list, night) {
+    const n = Math.min(list.length, this.max);
+    for (let i = 0; i < n; i++) {
+      const g = list[i];
+      this.positions.set([g.x, g.y, g.z], i * 3);
+      this._c.setHex(g.color ?? 0xffd27a);
+      this.colors.set([this._c.r, this._c.g, this._c.b], i * 3);
+    }
+    const geo = this.points.geometry;
+    geo.attributes.position.needsUpdate = true;
+    geo.attributes.color.needsUpdate = true;
+    geo.setDrawRange(0, n);
+    this.setNight(night);
+  }
+
+  setNight(night) {
+    this.material.opacity = 0.18 + 0.62 * night;
+  }
+
+  dispose() {
+    this.scene.remove(this.points);
+    this.points.geometry.dispose();
+    this.material.dispose();
+  }
+}
+
+let glowTex = null;
+/** A round soft falloff, white in the middle, made in code so it needs no canvas. */
+function glowTexture() {
+  if (glowTex) return glowTex;
+  const N = 64, data = new Uint8Array(N * N * 4);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const r = Math.hypot(x + 0.5 - N / 2, y + 0.5 - N / 2) / (N / 2);
+    const a = Math.max(0, 1 - r) ** 2.2;
+    const i = (y * N + x) * 4;
+    data[i] = data[i + 1] = data[i + 2] = 255;
+    data[i + 3] = Math.round(a * 255);
+  }
+  glowTex = new THREE.DataTexture(data, N, N);
+  glowTex.needsUpdate = true;
+  return glowTex;
 }
 
 /**
