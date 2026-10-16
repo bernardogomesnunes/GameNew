@@ -1501,8 +1501,14 @@ export class Game {
   applyTerritoryBounds() {
     if (!this.player) return;
     // From the last age the wall is down (config/ages.js): you walk where you like.
+    // In Battle it never stood (asked: "Battle mode should have the same
+    // border has duilt? I though it shouldn't") — the rivals are 5,000
+    // blocks out, and you have to be able to march on them. The border
+    // still marks your land: where you can build and claim, growing with
+    // the ages as in Duilt.
     const t = this.duilt?.territory;
-    this.player.setBounds(this.duilt && !this.duilt.sandbox && !t.open ? t.bounds() : null);
+    const walled = this.duilt && !this.duilt.sandbox && !this.duilt.battle && !t.open;
+    this.player.setBounds(walled ? t.bounds() : null);
   }
 
   /** Duilt owns scene objects (the border), so swapping worlds must clean up. */
@@ -1607,7 +1613,10 @@ export class Game {
         if (!this.pointerLocked && !document.body.classList.contains('touch')) this.ui.setResumeHint(true);
       };
       // A new Duilt world opens on the story so far (docs/plan-phase7-lore.md, 7j).
-      if (mode === DUILT) this.ui.story.play(INTRO, { onDone: welcome });
+      // Not in Battle (reported directly: "In battle mode it seems that we
+      // are showing the same intro, we should not") — its rivals' welcome
+      // says what that world is about instead.
+      if (mode === DUILT && !battle) this.ui.story.play(INTRO, { onDone: welcome });
       else welcome();
     }
   }
@@ -2970,7 +2979,8 @@ export class Game {
   trainSoldier(structure, unit) {
     const r = this.duilt.trainSoldier(structure, unit, this.bedsIn(structure.region));
     if (!r.ok) return void this.ui.toast({ kind: 'xp', title: "Can't train that yet", body: r.reason });
-    this.ui.toast({ kind: 'xp', title: `Training a ${r.unit.name.toLowerCase()}`, body: 'They join the others in front of the barracks when they are ready' });
+    const who = r.unit.name.toLowerCase();
+    this.ui.toast({ kind: 'xp', title: `Training ${/^[aeiou]/.test(who) ? 'an' : 'a'} ${who}`, body: 'They join the others in front of the barracks when they are ready' });
     // The pop-up shows them in its line straight away, whatever else redraws it.
     if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(structure, this.buildingActions(structure));
   }

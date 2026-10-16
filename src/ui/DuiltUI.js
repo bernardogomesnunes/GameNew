@@ -908,7 +908,8 @@ export class DuiltUI {
     box.hidden = !next;
     if (!next) return;
     const u = UNITS_BY_ID.get(next.unit);
-    box.title = `Training a ${u?.name.toLowerCase() ?? 'soldier'} at the barracks`;
+    const who = u?.name.toLowerCase() ?? 'soldier';
+    box.title = `Training ${/^[aeiou]/.test(who) ? 'an' : 'a'} ${who} at the barracks`;
     box.innerHTML = `<span class="train-glyph">${glyphSvg(UNIT_GLYPHS[next.unit] ?? 'sword', { size: 14 })}</span>`
       + `<span class="train-hud-name">${escapeHtml(u?.name ?? '')}</span>`
       + `<span class="train-hud-bar"><i style="width:${pct}%"></i></span>`
