@@ -64,4 +64,16 @@ export const SECRETS = [
     description: 'Lived every story moment there is to live.',
     check: (c) => Object.keys(MOMENTS).every((id) => c.duilt?.moments?.includes(id)),
   },
+  {
+    id: 's_both_ways', name: 'Both ways', icon: '⏳', xpReward: 200,
+    hint: 'Backwards, and forwards.',
+    description: 'Traveled to the Past, and to the Future.',
+    check: (c) => !!(c.duilt?.time?.pastVisited && c.duilt?.time?.futureVisited),
+  },
+  {
+    id: 's_archive', name: 'Tomorrow\'s scholar', icon: '📚', xpReward: 200,
+    hint: 'Someone, someday, wrote it all down.',
+    description: 'Read the Archive in the Future\'s university.',
+    check: (c) => !!c.duilt?.time?.futureKnown,
+  },
 ].map((s) => ({ ...s, secret: true, age: null }));
