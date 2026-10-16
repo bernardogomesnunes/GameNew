@@ -48,6 +48,7 @@ Two lists, kept up to date as things land:
 | Battle mode, step 1: a new world type with three computer rivals; their armies come once you've a barracks; take a city's standard to weaken them | #192 |
 | Quarries dig out clay too (1 a cycle at every level, about 6 a day); clay was only on wetland before | #193 |
 | Battle worlds no longer play Duilt's opening story; they go straight to the rivals' welcome | #197 |
+| Battle: no wall holds you in, so you can march on the rivals; the border still marks where you build | #198 |
 
 ### Not done yet
 

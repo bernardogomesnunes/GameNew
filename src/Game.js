@@ -1491,8 +1491,14 @@ export class Game {
   applyTerritoryBounds() {
     if (!this.player) return;
     // From the last age the wall is down (config/ages.js): you walk where you like.
+    // In Battle it never stood (asked: "Battle mode should have the same
+    // border has duilt? I though it shouldn't") — the rivals are 5,000
+    // blocks out, and you have to be able to march on them. The border
+    // still marks your land: where you can build and claim, growing with
+    // the ages as in Duilt.
     const t = this.duilt?.territory;
-    this.player.setBounds(this.duilt && !this.duilt.sandbox && !t.open ? t.bounds() : null);
+    const walled = this.duilt && !this.duilt.sandbox && !this.duilt.battle && !t.open;
+    this.player.setBounds(walled ? t.bounds() : null);
   }
 
   /** Duilt owns scene objects (the border), so swapping worlds must clean up. */
