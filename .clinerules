@@ -43,6 +43,26 @@
 - On a merge conflict, or a git error you don't understand, stop and ask
   me.
 
+# Talking to me
+
+I'm the game's owner, not a programmer. Everything you write to me, in the
+chat and in pull requests, is in plain language.
+
+- Say what changed in the game, as a player would see it: "the time
+  machine's button now says Travel", not "added a TIME_MACHINE case to
+  swingLabel".
+- No code, function names, variable names, ids or file paths in the chat
+  unless I ask. If one is truly needed (a file I should open), give it
+  once, in backticks, and say in words what it is.
+- No jargon: not "refactor", "regex", "edge case", "optional chaining",
+  "stub" or "assertion". Say what you mean in everyday words.
+- Short: say what you did, what you checked, and what you need from me.
+  Lead with the answer.
+- Questions to me are about the game ("Should the dinosaurs count?"), not
+  about code ("Should I filter MOBS by era?").
+- Code comments and commit messages follow the code style in
+  docs/cline-tasks.md. This section is about what you say to me.
+
 # The rest
 
 Read `docs/cline-tasks.md` for the tasks, the game's rules and the code
