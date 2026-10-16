@@ -35,6 +35,10 @@ ok('Every stall: all the traders', by('s_every_stall').check({ duilt: { ...blank
 ok('Know the woods: every animal', by('s_woods').check({ duilt: { ...blank(), huntedKinds: new Set(MOBS.map((m) => m.id)) } }));
 ok('Everyone\'s errand: every quest handed in', by('s_errands').check({ duilt: { ...blank(), quests: Object.fromEntries(QUESTS.map((q) => [q.id, { done: true }])) } }));
 ok('The whole story: every moment', by('s_whole_story').check({ duilt: { ...blank(), moments: Object.keys(MOMENTS) } }));
+ok('Both ways: to the Past and the Future', by('s_both_ways').check({ duilt: { ...blank(), time: { pastVisited: true, futureVisited: true } } }));
+ok('Both ways: not done with only one way', !by('s_both_ways').check({ duilt: { ...blank(), time: { pastVisited: true } } })
+  && !by('s_both_ways').check({ duilt: { ...blank(), time: { futureVisited: true } } }));
+ok('Tomorrow\'s scholar: read the Archive', by('s_archive').check({ duilt: { ...blank(), time: { futureKnown: true } } }));
 
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 ok('a band of their own, hint until found', /secretsHtml\(done\)/.test(ui) && /A secret<\/div><div class="ach-desc">\$\{escapeHtml\(g\.hint\)\}/.test(ui));
