@@ -9,6 +9,25 @@ which is what `.clinerules` now guards against: run only the one test file
 while you work, read big files by searching them, and stop to ask rather
 than retrying the same thing.
 
+## Cline's settings (for the owner, not the agent)
+
+Things to set in Cline on your computer. They can't live in the repo.
+
+1. **Auto-approve:** turn it on for reading files, editing files and safe
+   commands, with a request cap of about 50. Without it, Cline stops before
+   every step and waits for a click, so a task left running overnight
+   mostly sits idle.
+2. **Plan, then Act:** start each task in Plan mode, approve the plan, then
+   switch to Act. A wrong approach is caught before it costs hours.
+3. **Model:** pick a strong one. A small or local model loops and redoes
+   work, which is slower overall.
+4. **Custom instructions:** paste this into Cline's settings:
+
+   > Be fast and minimal. Follow .clinerules exactly. Plan in three lines
+   > before editing. Run only the test file you changed until the end. If
+   > you're stuck for two attempts or 45 minutes, stop and tell me what's
+   > blocking. Never read files over 1,000 lines whole.
+
 ## Before you start
 
 - **The game:** Duilt, a voxel sandbox in plain JavaScript and Three.js. No
