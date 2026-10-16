@@ -67,6 +67,9 @@ html, body { margin: 0; height: 100%; background: var(--bg); overscroll-behavior
 
 #game-canvas-root { position: absolute; inset: 0; }
 #game-canvas-root canvas { display: block; width: 100%; height: 100%; }
+/* The vignette over the picture (Game.js): soft violet at the edges, nothing in the middle. */
+#game-canvas-root .vignette { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, rgba(40, 26, 80, 0) 58%, rgba(40, 26, 80, 0.30) 100%); }
 
 #ui-root { position: absolute; inset: 0; pointer-events: none; user-select: none; color: var(--text); }
 #ui-root button, #ui-root input { font-family: inherit; }

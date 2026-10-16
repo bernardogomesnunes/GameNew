@@ -203,6 +203,8 @@ export class DayCycle {
     dome.mid.value.copy(MID_NIGHT).lerp(MID_DAY, l.day).lerp(MID_DUSK, l.dusk * 0.75);
     dome.wash.value.copy(WASH_NIGHT).lerp(WASH_DAY, l.day).lerp(WASH_DUSK, l.dusk * 0.8);
     dome.night.value = 1 - l.day;
+    // Sun rays: faint by day, strong as it rises and sets.
+    dome.rays.value = 0.25 + 0.9 * l.dusk;
     dome.time.value = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000;
     dome.glow.value.copy(GLOW_DAY).lerp(GLOW_DUSK, l.dusk).multiplyScalar(Math.max(0, Math.min(1, (l.sunHeight + 0.25) * 4)));
     dome.glowWidth.value = 10 - 6 * l.dusk;

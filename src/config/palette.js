@@ -141,4 +141,9 @@ export const SKY = {
  * a saturation lift. The old 1.32 and 1.14 turned the grass neon; these keep
  * the palette near the colours it's painted, with the faintest lift.
  */
-export const GRADE = { exposure: 1.16, saturation: 1.04 };
+export const GRADE = {
+  exposure: 1.16, saturation: 1.04,
+  // Split toning (asked for: shader packs like Complementary as inspiration):
+  // shade leans lavender, light leans warm peach.
+  shadowTint: 0x8a7ad8, shadowAmount: 0.22, lightTint: 0xffd9b8, lightAmount: 0.12,
+};

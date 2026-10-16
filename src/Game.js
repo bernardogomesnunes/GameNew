@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { World, CHUNK_SIZE } from './world/World.js';
-import { ChunkMesher } from './world/ChunkMesher.js';
+import { ChunkMesher, WIND } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
 import { castVoxelRay } from './interaction/VoxelRaycast.js';
 import { buildTemplatePlacement, rotateTemplate, captureBlocks } from './tools/Templates.js';
@@ -394,6 +394,12 @@ export class Game {
     // Tone mapping and a small saturation lift (render/atmosphere.js).
     gradeRenderer(this.renderer);
     this.canvasRoot.appendChild(this.renderer.domElement);
+    // A soft violet vignette over the picture, the last touch of a shader
+    // pack's grade (asked for: Complementary shaders as inspiration). Drawn
+    // by the page, over the canvas, so it costs the GPU nothing.
+    const vignette = document.createElement('div');
+    vignette.className = 'vignette';
+    this.canvasRoot.appendChild(vignette);
 
     this.scene = new THREE.Scene();
     // A softer, paler sky than the original saturated blue — the block
@@ -7209,10 +7215,12 @@ export class Game {
       }
       this.updateHover();
       this.updateCracks();
-      this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false, look: this.player.lookDirection() });
+      this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false, look: this.player.lookDirection(), night: 1 - (this.dayCycle?.light?.day ?? 1) });
       this.flames.update(this.world, this.player.position);
       this.smoke.update(this.world, this.player.position);
       this.grass.update(this.world, this.player.position, performance.now(), { enabled: this.graphics.grass !== false });
+      // The wind in the leaves (ChunkMesher's WIND).
+      WIND.value = performance.now() / 1000;
       this.settlerView.update(this.withShowcase('settlers', this.duilt?.settlers.people ?? []));
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();

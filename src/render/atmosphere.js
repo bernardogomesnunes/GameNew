@@ -36,6 +36,13 @@ export const SATURATION = GRADE.saturation;
 
 let graded = false;
 
+/** A tint as a multiplier with the same brightness as white, for the split toning. */
+function tintVec(hex) {
+  const c = new THREE.Color(hex);
+  const l = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  return [c.r / l, c.g / l, c.b / l].map((v) => v.toFixed(3)).join(', ');
+}
+
 /**
  * Sets the renderer's tone mapping and adds the saturation lift to every
  * material that is tone mapped. The lift goes into three's own tone mapping
@@ -53,6 +60,13 @@ export function gradeRenderer(renderer) {
   {
     float lum = dot( gl_FragColor.rgb, vec3( 0.2126, 0.7152, 0.0722 ) );
     gl_FragColor.rgb = max( mix( vec3( lum ), gl_FragColor.rgb, ${SATURATION.toFixed(3)} ), 0.0 );
+    // Split toning, the way a shader pack grades a scene: shade leans
+    // ${GRADE.shadowTint}, light leans ${GRADE.lightTint}, each at its own strength
+    // (config/palette.js), with brightness kept.
+    float sh = 1.0 - smoothstep( 0.0, 0.5, lum );
+    float hi = smoothstep( 0.45, 1.0, lum );
+    gl_FragColor.rgb *= mix( vec3( 1.0 ), vec3( ${tintVec(GRADE.shadowTint)} ), sh * ${GRADE.shadowAmount.toFixed(3)} );
+    gl_FragColor.rgb *= mix( vec3( 1.0 ), vec3( ${tintVec(GRADE.lightTint)} ), hi * ${GRADE.lightAmount.toFixed(3)} );
   }
 #endif
 `;
@@ -186,6 +200,7 @@ export class SkyDome {
       glowWidth: { value: 6 },
       night: { value: 0 },
       time: { value: 0 },
+      rays: { value: 0 },
     };
     const material = new THREE.ShaderMaterial({
       uniforms: this.uniforms,
@@ -197,7 +212,7 @@ export class SkyDome {
         }`,
       fragmentShader: `
         uniform vec3 zenith, mid, horizon, wash, glow, sunDir;
-        uniform float glowWidth, night, time;
+        uniform float glowWidth, night, time, rays;
         varying vec3 vDir;
         float hash( vec3 p ) {
           p = fract( p * 0.3183099 + 0.1 );
@@ -234,6 +249,13 @@ export class SkyDome {
           vec3 nebCol = mix( vec3( 0.42, 0.24, 0.66 ), vec3( 0.18, 0.46, 0.52 ), fbm( d * 1.6 + 5.0 ) );
           col += nebCol * smoothstep( 0.52, 0.85, neb ) * smoothstep( 0.15, 0.6, up ) * 0.22 * night;
           float s = max( dot( d, sunDir ), 0.0 );
+          // Rays of light fanning out from the sun, turning slowly: soft
+          // spokes, strongest near the sun and low in the sky.
+          vec3 sx = normalize( cross( sunDir, vec3( 0.0, 1.0, 0.001 ) ) );
+          vec3 sy = cross( sx, sunDir );
+          float ang = atan( dot( d, sy ), dot( d, sx ) );
+          float spokes = 0.5 + 0.5 * sin( ang * 18.0 + time * 0.03 ) * sin( ang * 7.0 - time * 0.02 );
+          col += glow * rays * smoothstep( 0.55, 1.0, s ) * pow( spokes, 3.0 ) * ( 1.0 - 0.5 * up );
           // A wide warm wash and a tighter bright halo, both strongest low.
           col += glow * ( pow( s, glowWidth ) * 0.75 + pow( s, 48.0 ) * 0.5 ) * ( 1.0 - 0.6 * pow( up, 0.5 ) );
           gl_FragColor = linearToOutputTexel( vec4( col, 1.0 ) );
