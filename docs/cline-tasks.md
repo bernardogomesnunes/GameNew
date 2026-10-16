@@ -1,7 +1,13 @@
 # Tasks for Cline
 
-Small, self-contained tasks for a new coding agent to try. Start with
-**Task 1**. Tasks 2 and 3 are backups of about the same size.
+Small, self-contained tasks for a new coding agent to try. Task 1 is done
+(on the branch `cline-test`, waiting for review). Do **Task 2** next, then
+Task 3.
+
+Each one should take **under 30 minutes**. Task 1 took about 8½ hours,
+which is what `.clinerules` now guards against: run only the one test file
+while you work, read big files by searching them, and stop to ask rather
+than retrying the same thing.
 
 ## Before you start
 
@@ -11,8 +17,10 @@ Small, self-contained tasks for a new coding agent to try. Start with
   read it).
 - **Run it:** `npm install`, then `npm run dev:offline` and open
   `http://localhost:5173`. Offline mode needs no account or database.
-- **Tests:** `node tests/run.mjs` runs every test (about 6,900 checks, a few
-  minutes). To run one file: `node tests/<name>.test.mjs`. A test file prints
+- **Tests:** while you work, run only the file you changed:
+  `node tests/<name>.test.mjs`. It takes under a second. `node tests/run.mjs`
+  runs every test (about 6,900 checks, about 5 minutes); run it once, at the
+  end. A test file prints
   `PASS`/`FAIL` lines and exits non-zero on a failure. There's no test
   framework; copy the style of the file you're in.
 - **Code style:** match the file you're in. Comments explain *why*, in plain
@@ -28,14 +36,15 @@ Small, self-contained tasks for a new coding agent to try. Start with
 - **Never commit `.env`** or any key, token or password.
 - **Never use real people's or real worlds' names** in tests or sample
   data. Use labels like "Test world 1".
-- Run the whole suite before you open the PR. It must end
+- Run the whole suite once before you open the PR. It must end
   `... passed, 0 failed`.
+- No browser check unless the task asks for one.
 - In the PR description, say what you checked and what you didn't. Don't
   claim something works if you didn't see it work.
 
 ---
 
-## Task 1 (start here): two secret achievements for time travel
+## Task 1 (done, waiting for review): two secret achievements for time travel
 
 **Why:** the game has hidden achievements called *secrets* (Goals tab, at
 the bottom). Time travel was just added (the Past and the Future), and no
@@ -79,15 +88,15 @@ for the other secrets:
 
 - `node tests/secrets.test.mjs` passes, with your new checks in it;
 - `node tests/run.mjs` ends `0 failed`;
-- in the running game (offline), Goals shows the two new secrets as locked
-  hints at the bottom. A screenshot in the PR is enough.
+- (A browser check was asked for here. It isn't needed for tasks like
+  this; the tests cover it.)
 
 **Don't:** add new saved state, change `time` or `DuiltGame`, or make a
 secret one of an age's goals.
 
 ---
 
-## Task 2 (backup): futurians mention the Archive only until you've read it
+## Task 2 (next): futurians mention the Archive only until you've read it
 
 **Why:** the Future's people say a fixed set of lines (`FUTURIAN_TALK` in
 `src/config/talk.js`). One of them points you to the Archive, and they keep
@@ -107,9 +116,12 @@ saying it after you've read it.
 check). Before reading, some line mentions the Archive. After reading, none
 of the "go to it" lines comes up over several turns.
 
+**Done when:** `node tests/future.test.mjs` and `node tests/talk.test.mjs`
+pass, then the full suite once. No browser check needed.
+
 ---
 
-## Task 3 (backup): the Age 12 "Travel to the Past" card is out of date
+## Task 3: the Age 12 "Travel to the Past" card is out of date
 
 **Why:** the card's description in `src/config/achievements.js`
 (`GOAL_WORDS.past`) says "set it down and Place on it". The machine's pop-up
@@ -127,6 +139,9 @@ pick the Past.
 It's a one-line change; what it tests is whether the agent looks before it
 edits and leaves a test behind.
 
+**Done when:** `node tests/twelveages.test.mjs` passes, then the full suite
+once. No browser check needed.
+
 ---
 
 ## How to report back
@@ -136,4 +151,5 @@ scholar"). Its body says:
 
 - what changed, in two or three bullets;
 - the test result line from `node tests/run.mjs`;
-- what you checked in the running game, and what you didn't.
+- what you checked, and what you didn't;
+- roughly how long it took.
