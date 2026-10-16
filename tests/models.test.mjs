@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { readFileSync, existsSync } from 'node:fs';
 import { addKit, modelKit, Crowd, dress, poseBone } from '../src/render/Models.js';
-import { MobView } from '../src/render/MobView.js';
+import { MobView, mobModel } from '../src/render/MobView.js';
 import { SettlerView, personModel } from '../src/render/SettlerView.js';
 import { MOBS } from '../src/config/mobs.js';
 import { OUTFITS } from '../src/config/outfits.js';
@@ -32,6 +32,11 @@ ok('among strangers, a soldier is the Stone Kingdom\'s', personModel({ kind: 'so
 ok('and an archer is a Stone archer', personModel({ kind: 'archer' }, 'wanderers') === 'stone_archer');
 ok('but your own soldier is yours', personModel({ kind: 'soldier' }, 'defenders') === 'soldier');
 ok('anyone else is drawn as their kind', personModel({ kind: 'sky_king' }, 'wanderers') === 'sky_king');
+
+ok('about one cow in nine is a Moon Cow, always the same ones',
+  mobModel({ type: 'cow', id: 4 }) === 'moon_cow' && mobModel({ type: 'cow', id: 5 }) === 'cow'
+  && Array.from({ length: 90 }, (_, id) => mobModel({ type: 'cow', id })).filter((x) => x === 'moon_cow').length === 10
+  && mobModel({ type: 'pig', id: 4 }) === 'pig');
 
 // --- no browser, no models: the views draw what they drew before -----------------------
 ok('nothing loads without a browser', modelKit('cow') === null);

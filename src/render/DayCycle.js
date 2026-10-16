@@ -45,6 +45,12 @@ const SKY_DUSK = new THREE.Color(SKY.horizonDusk);
 const ZENITH_DAY = new THREE.Color(SKY.zenithDay);
 const ZENITH_NIGHT = new THREE.Color(SKY.zenithNight);
 const ZENITH_DUSK = new THREE.Color(SKY.zenithDusk);
+const MID_DAY = new THREE.Color(SKY.midDay);
+const MID_DUSK = new THREE.Color(SKY.midDusk);
+const MID_NIGHT = new THREE.Color(SKY.midNight);
+const WASH_DAY = new THREE.Color(SKY.washDay);
+const WASH_DUSK = new THREE.Color(SKY.washDusk);
+const WASH_NIGHT = new THREE.Color(SKY.washNight);
 /** The glow round the sun: faint by day, a wide orange wash as it sets. */
 const GLOW_DAY = new THREE.Color(SKY.glowDay);
 const GLOW_DUSK = new THREE.Color(SKY.glowDusk);
@@ -194,6 +200,10 @@ export class DayCycle {
     const dome = this.dome.uniforms;
     dome.horizon.value.copy(this.sky);
     dome.zenith.value.copy(this.zenith);
+    dome.mid.value.copy(MID_NIGHT).lerp(MID_DAY, l.day).lerp(MID_DUSK, l.dusk * 0.75);
+    dome.wash.value.copy(WASH_NIGHT).lerp(WASH_DAY, l.day).lerp(WASH_DUSK, l.dusk * 0.8);
+    dome.night.value = 1 - l.day;
+    dome.time.value = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000;
     dome.glow.value.copy(GLOW_DAY).lerp(GLOW_DUSK, l.dusk).multiplyScalar(Math.max(0, Math.min(1, (l.sunHeight + 0.25) * 4)));
     dome.glowWidth.value = 10 - 6 * l.dusk;
     dome.sunDir.value.copy(dir);

@@ -90,6 +90,16 @@ const HURT_COLOUR = new THREE.Color(0xd9534f);
 const CORNER_LEGS = [[-1, -1, 1], [1, 1, 1], [1, -1, -1], [-1, 1, -1]];
 const BIRD_LEGS = [[-1, 0, 1], [1, 0, -1], null, null];
 const NO_LEG = new THREE.Matrix4().makeScale(0, 0, 0);
+/**
+ * Which model draws an animal: its species, except that about one cow in
+ * nine is a Moon Cow, cream with glowing teal runes, a blanket and a crystal
+ * floating over its head. The same cow is always the same one.
+ */
+export function mobModel(m) {
+  if (m.type === 'cow' && Number.isInteger(m.id) && m.id % 9 === 4) return 'moon_cow';
+  return m.type;
+}
+
 /** A model faces -z; an animal here faces +z. */
 const TURN = new THREE.Matrix4().makeRotationY(Math.PI);
 const HURT_TINT = new THREE.Color(1, 0.45, 0.42);
@@ -154,7 +164,7 @@ export class MobView {
       const flash = m.hurt > 0 ? Math.min(1, m.hurt / 0.25) * 0.7 : 0;
 
       // Its model, if that has loaded: the boxes for this one are put away.
-      const kit = modelKit(m.type);
+      const kit = modelKit(mobModel(m)) ?? modelKit(m.type);
       if (kit) {
         const swing = m.speed > 0 ? Math.sin(m.stride * (5 / Math.max(0.3, leg + 0.2))) * 0.55 : 0;
         const pose = this._pose;

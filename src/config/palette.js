@@ -15,7 +15,9 @@
  *
  * Blocks take their colour from BLOCK_COLOURS by name (config/blocks.js);
  * an item made of a block follows it (config/items.js); the sky and the light
- * are SKY (render/DayCycle.js, render/atmosphere.js).
+ * are SKY (render/DayCycle.js, render/atmosphere.js). The greens were pulled
+ * back a second time ("greens are still too saturated"): grass and leaves sit
+ * near chroma 20 to 28, soft like the watercolour village.
  */
 
 /** The named colours everything else is picked from. */
@@ -27,9 +29,9 @@ export const PALETTE = {
   // Pinks and warm earth.
   rose: 0xd8687c, bubblegum: 0xf2a5c0, blush: 0xf8d3dc, peach: 0xf4b48c, apricot: 0xeb9a64, terracotta: 0xc46a5e,
   // Greens and teals.
-  spring: 0x9cc77a, sage: 0x8fbf88, moss: 0x7cae72, mint: 0x9fd9c0, teal: 0x66b892, deepTeal: 0x3e6f78,
+  spring: 0xb4cf9a, sage: 0x9fbf98, moss: 0x92b48a, mint: 0xa8d8c4, teal: 0x86b4a0, deepTeal: 0x527f84,
   // Wood and stone.
-  honey: 0xd4a272, cocoa: 0x9a6a58, plumwood: 0x8a5850, stone: 0xb8b2c6, slate: 0x5e5a8a,
+  honey: 0xdcb48a, cocoa: 0x9a6a58, plumwood: 0xa8786a, stone: 0xb8b2c6, slate: 0x7a74a8,
   // Sky and water.
   cloud: 0xfff7f2, powder: 0xa9cdf2, water: 0x6aa8de,
 };
@@ -43,11 +45,11 @@ const P = PALETTE;
  */
 export const BLOCK_COLOURS = {
   // The ground.
-  Grass: P.spring, Ground: P.spring, Dirt: P.cocoa, Farmland: 0x74463a, Sand: 0xf0dca2, Snow: 0xf6f4fb,
-  Moss: P.moss, 'Dark Moss': 0x557a64, 'Forest Floor': 0x6e5a52, 'Jungle Floor': 0x46604a, 'Fern Turf': 0x98c46e,
+  Grass: P.spring, Ground: P.spring, Dirt: P.cocoa, Farmland: 0x7a4c40, Sand: 0xf0dca2, Snow: 0xf6f4fb,
+  Moss: P.moss, 'Dark Moss': 0x66806e, 'Forest Floor': 0x6e5a52, 'Jungle Floor': 0x586e56, 'Fern Turf': 0xa6c288,
   Gravel: 0xa7a0b4, Clay: 0xc2988a, Silt: 0x8f9a8a, 'Sand Path': 0xe2c290,
   // Trees.
-  Wood: P.plumwood, Leaves: P.teal, Sapling: 0x86c07a,
+  Wood: P.plumwood, Leaves: P.teal, Sapling: 0x9cc08e,
   'White Wood': 0xefe6ea, 'White Leaves': 0xf2b6cf, 'Dark Wood': 0x4e3646, 'Dark Leaves': P.deepTeal,
   'Stripped Oak Log': 0xd6a87e, 'Stripped White Log': 0xf2e8ee, 'Stripped Dark Log': 0x8a5e6a,
   // Stone.
@@ -64,7 +66,7 @@ export const BLOCK_COLOURS = {
   'Iron Ore': 0xb0a8b8, 'Copper Ore': 0xb49a8c, 'Gold Ore': 0xb8ac90, 'Coal Ore': 0x948c96,
   'Diamond Ore': 0xa2b0bc, 'Ruby Ore': 0xaa8a96, 'Sunstone Ore': 0xa8a090, 'Nightstone Ore': 0x433a5e,
   // Brick and roofs.
-  Brick: P.terracotta, 'Brick Chimney': P.terracotta, 'Brick Roof Tiles': 0xcf6f7a,
+  Brick: P.terracotta, 'Brick Chimney': P.terracotta, 'Brick Roof Tiles': 0xd98a8c,
   'Dark Brick': 0x6a3a40, 'Stone Brick Chimney': 0xb2abc2,
   // Wood worked.
   Planks: P.honey, 'Oak Table': P.honey, 'Oak Chair': P.honey, 'Wood Panel': P.honey, 'Patterned Panel': P.honey,
@@ -82,7 +84,7 @@ export const BLOCK_COLOURS = {
   Water: P.water, Lava: 0xff7a3a, Lantern: P.lantern, 'Firefly Lantern': 0xe2f2a0, 'Lit Window': 0xffe2a0,
   Amethyst: 0xb48ae6, 'Way Out': 0xc4a8ff, 'Gold Block': 0xf6cf5a, 'Gold Trim': 0xf6cf5a, Chandelier: 0x5d5568, Chain: 0x5e5e74,
   // Cloth.
-  'Red Chair': 0xc75a72, 'Red Rug': 0xc4566e, 'Blue Rug': 0x6c7fd0, 'Green Rug': 0x6fa58a, Bed: 0xc4566e,
+  'Red Chair': 0xc75a72, 'Red Rug': 0xc4566e, 'Blue Rug': 0x6c7fd0, 'Green Rug': 0x7fa894, Bed: 0xc4566e,
   'White Banner': 0xf7f2f4, 'Black Banner': 0x2e2a3e, 'War Tent': 0x6e5c5a, 'War Standard': 0xd0a84a,
   // Things.
   Vase: 0xd48a6c, Urn: 0xb8925e, Painting: 0x8a6448, Catapult: 0x8a6448, 'Weapon Rack': 0x7e5a48,
@@ -90,9 +92,9 @@ export const BLOCK_COLOURS = {
   'Time Machine': 0xd0aa5e, Rail: 0x8f8ca0, 'Maglev Rail': 0x747a8c,
   'Raptor Egg': 0x92a072, 'Triceratops Egg': 0xdcc6a0, 'Long-neck Egg': 0xbccae0,
   // Crops: softer greens.
-  'Carrot Plant': 0x7cb06a, 'Potato Plant': 0x86b070, 'Cabbage Plant': 0x8fbf7a, 'Lettuce Plant': 0x9fd07c,
-  'Pepper Plant': 0x6faa64, 'Zucchini Plant': 0x6aa468, 'Broccoli Plant': 0x649a5e, 'Coffee Plant': 0x4f8a5e,
-  'Hemp Plant': 0x6f9a58,
+  'Carrot Plant': 0x8cb27c, 'Potato Plant': 0x94b282, 'Cabbage Plant': 0x9cc08c, 'Lettuce Plant': 0xa8c890,
+  'Pepper Plant': 0x80aa76, 'Zucchini Plant': 0x7ea67a, 'Broccoli Plant': 0x769c70, 'Coffee Plant': 0x648c6e,
+  'Hemp Plant': 0x809a6a,
   // The Future keeps its neon, a touch nearer the rest.
   Pavement: 0xc8c8d6, Asphalt: 0x3c3a4a, 'Steel Panel': 0xa0a6b8, 'Neon Pink': 0xff5fbf, 'Neon Cyan': 0x4fe8ff,
   Screen: 0x4a7cff, 'Future Lamp': 0xe8faff, Archive: 0x64d2ff,
@@ -122,8 +124,10 @@ export const TIER_COLOURS = {
 
 /** The sky and the light over a day (render/DayCycle.js) and the mist (render/atmosphere.js). */
 export const SKY = {
-  horizonDay: 0xcfe0f6, horizonDusk: 0xf3a5b6, horizonNight: 0x2d2560,
-  zenithDay: 0x7fa8e6, zenithDusk: 0x4b3f8f, zenithNight: 0x0f0c2e,
+  horizonDay: 0xdcecfb, horizonDusk: 0xffbfa6, horizonNight: 0x3d2c74,
+  midDay: 0xa6c8f7, midDusk: 0xe596bf, midNight: 0x281f62,
+  zenithDay: 0x5c9cec, zenithDusk: 0x5a48ac, zenithNight: 0x0e0b30,
+  washDay: 0xf8d2e6, washDusk: 0xffd29a, washNight: 0x6a46b0,
   glowDay: 0x4a3f3a, glowDusk: 0xff8f8a,
   sunDay: 0xfff0d6, sunLow: 0xffb48e, moon: 0xb9a8f0,
   ambientDay: 0xe2e2ff, ambientDusk: 0xeac4dc, ambientNight: 0x8a7cc4,

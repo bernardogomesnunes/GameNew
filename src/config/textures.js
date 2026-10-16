@@ -67,9 +67,12 @@ const STONE_FLECKS = [[1.08, 1.0, 0.88], [0.9, 0.96, 1.08], [1.1, 1.04, 0.95], [
 const EARTH_FLECKS = [[0.72, 0.64, 0.58], [1.12, 1.04, 0.92], [0.9, 0.86, 0.95], [1.05, 0.92, 0.8]];
 
 export const TEXTURES = {
-  grass:     { marks: 20, flecks: [[1.12, 1.08, 0.7], [0.86, 1, 0.98]], depth: 0.3, mottle: 0.12, speck: 0.05,
+  grass:     { marks: 20, flecks: [[1.1, 1.06, 0.86], [0.86, 1, 0.98]], depth: 0.3, mottle: 0.12, speck: 0.05,
                fringe: { under: 2, turf: 6 },
-               top: { blades: 150, marks: 10, flecks: [[1.18, 1.12, 0.62], [1.2, 1.0, 1.1], [0.84, 1.0, 1.0]], depth: 0.32, mottle: 0.14, speck: 0.05 } },
+               // Softer, and scattered with tiny blooms (the storybook palette,
+               // config/palette.js): pink, lilac and butter where the old
+               // turf had acid yellow-green flecks.
+               top: { blades: 150, marks: 14, flecks: [[1.22, 1.0, 1.14], [1.08, 1.04, 1.24], [1.16, 1.12, 0.9], [0.88, 0.98, 0.98]], depth: 0.26, mottle: 0.12, speck: 0.04 } },
   moss:      { clumps: 18, marks: 24, flecks: [[1.15, 1.12, 0.7], [0.82, 0.95, 0.9]], depth: 0.34, mottle: 0.14, speck: 0.06 },
   litter:    { litter: 70, marks: 30, flecks: EARTH_FLECKS, depth: 0.38, mottle: 0.14, speck: 0.08 },
   dirt:      { marks: 46, flecks: EARTH_FLECKS, depth: 0.34, mottle: 0.16, hue: 0.3, speck: 0.07 },
@@ -113,7 +116,7 @@ export const TEXTURES = {
   // trees have and be somehow more rounded instead of sharp cubes." `gaps`
   // are real holes you see through, and `bite` takes the corners off each
   // face so a canopy's edge reads soft instead of as a row of squares.
-  leaf:      { leaves: 120, flecks: [[1.14, 1.12, 0.74], [1, 1, 1], [0.86, 1.0, 1.02]], depth: 0.42, speck: 0.04, holes: 6, gaps: 14, bite: 6 },
+  leaf:      { leaves: 120, flecks: [[1.1, 1.08, 0.9], [1, 1, 1], [0.9, 0.98, 1.06]], depth: 0.4, speck: 0.04, holes: 6, gaps: 14, bite: 6 },
   water:     { ripples: 2, mottle: 0.08, depth: 0.08, speck: 0.02 },
   pane:      { frame: 2, depth: 0.22, speck: 0.01 },
   crystal:   { facets: 3, sheen: [1.3, 1.15, 1.4], depth: 0.3, speck: 0.02 },
