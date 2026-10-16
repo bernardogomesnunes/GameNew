@@ -1597,7 +1597,10 @@ export class Game {
         if (!this.pointerLocked && !document.body.classList.contains('touch')) this.ui.setResumeHint(true);
       };
       // A new Duilt world opens on the story so far (docs/plan-phase7-lore.md, 7j).
-      if (mode === DUILT) this.ui.story.play(INTRO, { onDone: welcome });
+      // Not in Battle (reported directly: "In battle mode it seems that we
+      // are showing the same intro, we should not") — its rivals' welcome
+      // says what that world is about instead.
+      if (mode === DUILT && !battle) this.ui.story.play(INTRO, { onDone: welcome });
       else welcome();
     }
   }

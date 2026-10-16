@@ -116,6 +116,7 @@ ok('  the same places every time for the same world', rivalSites(new ChunkGen({ 
 
 ok('a third kind of world on the home screen', /id: 'battle',\s*name: 'Battle',/.test(src('ui/HomeScreen.js')) && /save\.battle \? 'Battle'/.test(src('ui/HomeScreen.js')));
 ok('  Duilt\'s rules, with the rivals in it', /if \(battle\) mode = DUILT;/.test(game) && /if \(battle\) \{ this\.duilt\.battle = new Rivals\(\); this\.world\.gen\.battle = true; \}/.test(game));
+ok('  and not the Duilt story\'s opening — straight to who your rivals are', /if \(mode === DUILT && !battle\) this\.ui\.story\.play\(INTRO/.test(game) && /if \(battle\) return this\.battleWelcome\(\);/.test(game));
 ok('your first barracks starts them coming', /!b\.armed && d\.structures\.countOf\('barracks'\) > 0 && b\.arm\(d\.days\)/.test(game));
 ok('their army comes the way the Stone Kingdom\'s does, from their side, in their colours', /this\.wanderers\.sendWarband\(home, site, this\.duilt\.territory\.size \/ 2, this\.duilt\.battle\.company\(r\), 0\)/.test(game)
   && /q\.colour = rivalColour\(r\.id\)/.test(game));

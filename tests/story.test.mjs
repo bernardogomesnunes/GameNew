@@ -61,7 +61,7 @@ ok('the island yielded to its chains: that one', endingFor({ ring: 'black', skyF
 
 // --- in the game -----------------------------------------------------------------------------------
 
-ok('a new Duilt world opens on the intro, and the welcome after it', /if \(mode === DUILT\) this\.ui\.story\.play\(INTRO, \{ onDone: welcome \}\);\s*else welcome\(\);/.test(game));
+ok('a new Duilt world opens on the intro, and the welcome after it', /if \(mode === DUILT && !battle\) this\.ui\.story\.play\(INTRO, \{ onDone: welcome \}\);\s*else welcome\(\);/.test(game));
 ok('not over the story: pointer lock waits for it', /requestPointerLock\(\) \{\s*\/\/[^\n]*\n\s*if \(this\.ui\.story\?\.open\) return;/.test(game));
 ok('a path\'s end plays its ending, then what you built', /this\.bus\.on\('duilt:won', \(\) => \{\s*const which = endingFor\(this\.game\.duilt\);[\s\S]{0,120}this\.story\.play\(ENDINGS\[which\], \{ last: 'Continue', onDone: \(\) => this\.openPanel\('panel-finish'\) \}\);/.test(ui));
 ok('the Ten Rounds won ends the white path there and then', /The dark army is broken[\s\S]{0,300}d\.endWhitePath\(\);/.test(game));

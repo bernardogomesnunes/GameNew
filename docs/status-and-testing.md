@@ -47,6 +47,7 @@ Two lists, kept up to date as things land:
 | Time travel, part three: the Future (the city, trams and flying cars, the university's Archive, ten new blocks) | #189 |
 | Battle mode, step 1: a new world type with three computer rivals; their armies come once you've a barracks; take a city's standard to weaken them | #192 |
 | Quarries dig out clay too (1 a cycle at every level, about 6 a day); clay was only on wetland before | #193 |
+| Battle worlds no longer play Duilt's opening story; they go straight to the rivals' welcome | #197 |
 
 ### Not done yet
 
