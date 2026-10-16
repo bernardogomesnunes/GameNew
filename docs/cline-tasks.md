@@ -2,7 +2,7 @@
 
 Small, self-contained tasks for a new coding agent to try. Task 1 is done
 (on the branch `cline-test`, waiting for review). Do **Task 2** next, then
-Task 3.
+Tasks 3 to 7 in order. Each is its own branch and its own pull request.
 
 Each one should take **under 30 minutes**. Task 1 took about 8½ hours,
 which is what `.clinerules` now guards against: run only the one test file
@@ -160,6 +160,111 @@ edits and leaves a test behind.
 
 **Done when:** `node tests/twelveages.test.mjs` passes, then the full suite
 once. No browser check needed.
+---
+
+## Task 4: secrets show up the moment you earn them
+
+**Why:** achievements, secrets included, are only checked when something
+happens: a block placed or broken, a building claimed, a place found
+(`src/gamification/GamificationEngine.js`, `checkAchievements`). Travelling
+in time, reading the Archive or hatching an egg isn't one of those
+moments, so "Both ways" and "Tomorrow's scholar" only pop up after your
+next block.
+
+**What to do:** in `src/Game.js`, call `this.gamification?.checkAchievements(null)`
+at the end of `travelPast`, `travelFuture`, `readArchive` and `hatchEggs`
+(the last only when an egg actually hatched). Search for each name; don't
+read the file whole.
+
+**Tests:** in `tests/future.test.mjs` (it already reads `Game.js` as text),
+check each of those four functions calls it. Copy the style of the regex
+checks already there.
+
+**Done when:** `node tests/future.test.mjs` and `node tests/past.test.mjs`
+pass, then the full suite once. About 20 minutes.
+
+---
+
+## Task 5: "Know the woods" counts only the animals of home
+
+**Why:** the secret "Know the woods" (`s_woods` in `src/config/secrets.js`)
+asks for one of every animal in `MOBS`. Since time travel, `MOBS` includes
+the raptor, triceratops, long-neck and the Basilisk, so the secret now
+quietly needs a trip to the Past. Its hint says "Every creature that walks
+these lands".
+
+**Owner's call:** if you'd rather the Past's creatures count, skip this
+task.
+
+**What to do:** count only animals whose `biomes` are all present-day ones.
+A biome belongs to another time when its entry in `src/config/biomes.js`
+has an `era` (look up `BIOMES_BY_ID`). Don't list the animal ids by hand:
+new ones should be picked up by themselves.
+
+**Tests:** `tests/secrets.test.mjs` has "Know the woods: every animal".
+Make it hunt only the present-day ones, and add a check that hunting the
+dinosaurs isn't needed.
+
+**Done when:** `node tests/secrets.test.mjs` passes, then the full suite
+once. About 20 minutes.
+
+---
+
+## Task 6: say what tapping a special block does
+
+**Why:** aim at a door and the Place button says **Open**; at a sky lift,
+**Ride**. That's `swingLabel(id)` near the top of `src/Game.js`. The newer
+blocks you tap say nothing.
+
+**What to do:** in `swingLabel`, return:
+
+| Block | Label |
+|---|---|
+| `TIME_MACHINE` | Travel |
+| `ARCHIVE` | Read |
+| `WAR_STANDARD` | Take |
+| `WAY_OUT` | Leave |
+
+Each is already imported at the top of `Game.js`. Then check the second
+place that decides whether to show the label (search `swingLabel(hit.block)`):
+it only shows for some blocks, so add these four there too.
+
+**Tests:** `tests/doorlabel.test.mjs` tests `swingLabel`. Add one check for
+each new label.
+
+**Done when:** `node tests/doorlabel.test.mjs` passes, then the full suite
+once. About 30 minutes.
+
+---
+
+## Task 7 (a bit bigger): the War Standard as a flag on a pole
+
+**Why:** a Battle rival's standard (`WAR_STANDARD`, block 458 in
+`src/config/blocks.js`) is drawn as a plain glowing gold cube. It should
+look like a standard: a pole with a flag on it.
+
+**What to do:**
+
+- In `src/world/propShapes.js`, add `PROP_SHAPES.banner_war`, built the way
+  `banner_white` and `banner_black` are (search `bannerFrame`). Gold cloth,
+  dark pole, and the cloth's boxes marked `glow: true` so it shines at
+  night (search `glow: true` in that file for examples).
+- Give `WAR_STANDARD` `shape: 'banner_war'` in `blocks.js`. Keep it
+  `system: true` and keep its `light`.
+
+**Watch out:** it must still be tappable. `tests/battle.test.mjs` checks the
+standard is in a rival city. After your change, check the raycast still
+finds it: other banners can be pointed at, so it should be fine, but make
+sure.
+
+**Tests:** add to `tests/battle.test.mjs`: the standard's shape is
+`banner_war`, and that shape exists in `PROP_SHAPES`.
+
+**Done when:** `node tests/battle.test.mjs`, `node tests/shapes.test.mjs`
+and `node tests/textures32.test.mjs` pass, then the full suite once. One
+screenshot in the pull request would help, but it's optional. About 45
+minutes.
+
 
 ---
 
