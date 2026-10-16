@@ -1,10 +1,49 @@
-# Git workflow
-- Before any edit: run `git status` and `git branch --show-current`. If on main, or the tree is dirty, stop and tell me.
-- Start each task from fresh main: `git checkout main && git pull origin main && git checkout -b cline/<short-task-name>`.
-- Never commit or push to main. Never force-push. Never rewrite history. Never merge.
-- Commit small and often, one idea per commit, message in plain English saying why.
-- Run `node tests/run.mjs` before the last commit. It must end `0 failed`.
-- Never commit .env, keys or tokens. Check `git diff --staged` before each commit.
-- Push with `git push -u origin <branch>`. Then tell me the branch name. Open a PR only if I ask.
-- On a merge conflict or any git error you do not understand: stop and ask me.
-- Read docs/cline-tasks.md for the task list, game rules and code style.
+# Working fast
+
+- A small task (a config entry and a test) should take under 30 minutes.
+  If you pass 45 minutes, or the same step fails twice, stop and write down
+  what's blocking you. Don't keep trying.
+- Plan first, in three lines: the files you'll change, the test you'll add,
+  the one command that proves it works. Then do exactly that.
+- Never read `src/Game.js` (7,800 lines), `src/ui/UIManager.js` or
+  `src/duilt/DuiltGame.js` whole. Search them and read only the lines
+  around what you found.
+- Read each file you need once. Don't re-read a file you just edited to
+  check it.
+- Don't refactor, rename, reformat or tidy anything the task doesn't name.
+- When the task's "Done when" list is met, stop: commit, push, open the
+  pull request. Don't polish.
+
+# Tests
+
+- While working, run only the test file you changed:
+  `node tests/<name>.test.mjs`. It takes under a second.
+- Run the full suite, `node tests/run.mjs` (about 5 minutes), once, at the
+  end. If something fails, fix it, re-run just that test file, then the full
+  suite once more. Never run the full suite more than twice in a task.
+- A failing test in code you didn't touch: say so in the pull request.
+  Don't try to fix it.
+- Don't start the dev server or open a browser unless the task says it's
+  needed.
+
+# Git
+
+- Start each task from fresh main:
+  `git checkout main && git pull origin main && git checkout -b cline/<short-task-name>`.
+  Then check `git branch --show-current` is not main.
+- If the working tree has changes before you start, stop and ask me.
+- Never commit or push to main. Never force-push, rewrite history or merge.
+- Check `git diff --staged` before each commit. Never commit `.env`, keys
+  or tokens.
+- One commit per task is fine. The message says why, in plain English.
+- At the end: `git push -u origin <branch>`, then open a pull request with
+  `gh pr create --fill` if `gh` is installed. If it isn't, give me this
+  link to open one:
+  `https://github.com/bernardogomesnunes/GameNew/compare/<branch>?expand=1`.
+- On a merge conflict, or a git error you don't understand, stop and ask
+  me.
+
+# The rest
+
+Read `docs/cline-tasks.md` for the tasks, the game's rules and the code
+style.
