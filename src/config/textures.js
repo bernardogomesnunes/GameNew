@@ -195,6 +195,12 @@ export const BLOCK_TEXTURES = {
   'Screen':        { frame: 1, mottle: 0.12, depth: 0.2, speck: 0.03 },
   'Lava':          { crust: 5, glow: [1.08, 1.75, 1.85], depth: 0.5, speck: 0.03 },
   'Flowing Lava':  { crust: 5, glow: [1.08, 1.75, 1.85], depth: 0.5, speck: 0.03 },
+  // The storybook look (blocks.js, CAP_RED and on): mushroom caps with pale
+  // spots on them, a soft stem, and glass in pieces of colour in leading.
+  'Red Mushroom Cap':   { ore: 5, nugget: [1.2, 3.2, 3.0], mottle: 0.1, depth: 0.2, speck: 0.02, bump: 0.35 },
+  'Lilac Mushroom Cap': { ore: 5, nugget: [1.5, 1.95, 1.2], mottle: 0.1, depth: 0.2, speck: 0.02, bump: 0.35 },
+  'Mushroom Stem':      { strata: 3, marks: 10, flecks: [[0.94, 0.9, 0.86]], depth: 0.1, mottle: 0.05, speck: 0.02, bump: 0.2 },
+  'Stained Glass':      { frame: 2, marks: 40, flecks: [[1.3, 0.62, 0.7], [0.6, 0.9, 1.45], [1.2, 1.2, 0.5], [0.7, 1.3, 0.8]], mottle: 0.25, depth: 0.3, speck: 0.01 },
   'Dark Moss':     { clumps: 18, marks: 24, flecks: [[1.12, 1.1, 0.8], [0.8, 0.92, 0.9]], depth: 0.36, mottle: 0.14, speck: 0.06 },
 };
 

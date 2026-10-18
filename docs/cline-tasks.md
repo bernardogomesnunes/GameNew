@@ -366,6 +366,74 @@ says "game days".
 minutes.
 ---
 
+## More from building the granary (Tasks 12 to 14)
+
+Small code changes noticed while the granary was built (#208). Each was
+checked in the code before it was written down. Same rules: one branch and
+one pull request each.
+
+---
+
+## Task 12: tap the people counter to feed the hungry
+
+**Why:** the hungry notice has a **Give food** button, but it goes after
+12 seconds. After that the only sign is the people counter at the top
+turning to "hungry", and tapping it only explains the numbers.
+
+**What to do:** in `src/ui/DuiltUI.js`, `sayPeople()` runs when the people
+counter is tapped. When somebody is hungry (`this.duilt.settlers.hungry` is
+more than 0), make the tap call `this.giveFood()` instead, the same thing
+the notice's button does. Also in `renderPeople()`, change the hungry
+tooltip from "put some food in a storehouse" to "tap to feed them, or fill
+the granary".
+
+**Tests:** in `tests/granary.test.mjs`, add a check that `sayPeople`
+calls `giveFood` when someone is hungry (reading the source, like the other
+checks in that file do), and one for the new tooltip words.
+
+**Done when:** `node tests/granary.test.mjs` passes, then the full suite.
+About 20 minutes.
+
+---
+
+## Task 13: say "granary" where a granary is meant
+
+**Why:** granaries now count as stores, but some messages still say
+"storehouse" for them.
+
+**What to do:**
+- In `src/ui/DuiltUI.js`, `renderStores()` (the "Every storehouse" list)
+  says "N things in N storehouses" and "Across N storehouses". With a
+  granary among them, say "stores" instead: "N things in 3 stores".
+- In `src/Game.js`, `deleteBuilding()` refuses to take down a store with
+  things in it, saying "Empty the storehouse first". Use the building's own
+  name (`STRUCTURES_BY_ID.get(structure.type).name`), so a granary says
+  "Empty the granary first".
+
+**Tests:** add checks to `tests/storediscard.test.mjs` that both messages
+use the new words.
+
+**Done when:** that test file passes, then the full suite. About 20 minutes.
+
+---
+
+## Task 14: "Put it all in" in a granary says why things stayed out
+
+**Why:** a granary only takes what farms grow. Pressing **Put it all in**
+in a granary with stone in your bag says "The shelves filled up before the
+rest", or "The shelves are full", which isn't true: it has no limit.
+
+**What to do:** in `src/ui/DuiltUI.js`, `storeEverything()`. When the
+store is a granary (`store instanceof Granary`; `Granary` is already
+imported there), say "The granary only takes what farms grow" for whatever
+stayed in the bag, instead of the shelves wording.
+
+**Tests:** add a check to `tests/storediscard.test.mjs` for the new words.
+
+**Done when:** that test file passes, then the full suite. About 15 minutes.
+
+---
+
 ## How to report back
 
 Open a PR titled after the task (e.g. "Secrets: Both ways, and Tomorrow's

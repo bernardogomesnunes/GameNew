@@ -48,6 +48,11 @@ g.inventory.add('planks', 100);
 g.inventory.add('stone', 60);
 g.inventory.add('window', 6);
 g.inventory.add('stairs_plank', 2);
+// The storybook look: teal and mint shingles, curls and vines.
+g.inventory.add('roof_teal', 40);
+g.inventory.add('roof_mint', 40);
+g.inventory.add('trim_curl', 4);
+g.inventory.add('vines', 8);
 const b = g.territory.bounds();
 const anchor = { x: b.minX + 4, y: 30, z: b.minZ + 4 };
 const plan = g.starterPlacement('house', anchor);

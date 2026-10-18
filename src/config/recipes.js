@@ -1148,6 +1148,67 @@ export const RECIPES = [
     batch: 8,
     blurb: 'Slates: the same sloped roof in grey stone.',
   },
+  // The storybook look (asked for directly: buildings "need to fit more the
+  // mood and vibe of the mobs whimsical and mystical"): coloured shingles,
+  // mushroom caps, vines and wisteria, stained glass, fairy lights and a
+  // curl of wood. Each opens by the age of the first ready-made design that
+  // uses it (starterDesigns.js): the house at Age 1, the storehouse at 3,
+  // the market at 5.
+  {
+    id: 'roof_teal', name: 'Teal Roof Tiles', station: 'hand', age: 1,
+    inputs: { stone: 1, leaves: 1 }, output: { id: 'roof_teal', count: 2 }, batch: 8,
+    blurb: 'Slates stained teal. Hold them and use the Roof tool.',
+  },
+  {
+    id: 'roof_mint', name: 'Mint Roof Tiles', station: 'hand', age: 1,
+    inputs: { stone: 1, leaves: 1, sand: 1 }, output: { id: 'roof_mint', count: 3 }, batch: 8,
+    blurb: 'Paler than teal. Mixed in with it, a roof looks mossy.',
+  },
+  {
+    id: 'roof_lilac', name: 'Lilac Roof Tiles', station: 'hand', age: 2,
+    inputs: { stone: 1, white_leaves: 1 }, output: { id: 'roof_lilac', count: 2 }, batch: 8,
+    blurb: 'Slates stained with blossom, for a roof like a mushroom\'s cap.',
+  },
+  {
+    id: 'trim_curl', name: 'Curled Trim', station: 'hand', age: 1,
+    inputs: { planks: 1 }, output: { id: 'trim_curl', count: 2 }, batch: 8,
+    blurb: 'A curl of wood for a gable\'s tip or the end of an eave.',
+  },
+  {
+    id: 'vines', name: 'Hanging Vines', station: 'hand', age: 1,
+    inputs: { leaves: 2 }, output: { id: 'vines', count: 2 }, batch: 8,
+    blurb: 'Hang them under eaves and windowsills.',
+  },
+  {
+    id: 'wisteria', name: 'Wisteria', station: 'hand', age: 2,
+    inputs: { white_leaves: 2 }, output: { id: 'wisteria', count: 2 }, batch: 8,
+    blurb: 'Lilac flowers to hang from a roof\'s edge or a beam.',
+  },
+  {
+    id: 'cap_red', name: 'Red Mushroom Cap', station: 'hand', age: 3,
+    inputs: { clay: 1, leaves: 1 }, output: { id: 'cap_red', count: 2 }, batch: 8,
+    blurb: 'Red with pale spots. Put one on a stem, or let it grow out of a roof.',
+  },
+  {
+    id: 'cap_lilac', name: 'Lilac Mushroom Cap', station: 'hand', age: 3,
+    inputs: { clay: 1, white_leaves: 1 }, output: { id: 'cap_lilac', count: 2 }, batch: 8,
+    blurb: 'A lilac cap, spotted pale.',
+  },
+  {
+    id: 'mushroom_stem', name: 'Mushroom Stem', station: 'hand', age: 3,
+    inputs: { clay: 1, sand: 1 }, output: { id: 'mushroom_stem', count: 2 }, batch: 8,
+    blurb: 'The pale stalk a cap sits on.',
+  },
+  {
+    id: 'glass_stained', name: 'Stained Glass', station: 'workshop', age: 4,
+    inputs: { glass: 2 }, output: { id: 'glass_stained', count: 2 }, batch: 8,
+    blurb: 'Pieces of coloured glass in leading, for a window that glows at night.',
+  },
+  {
+    id: 'fairy_lights', name: 'Fairy Lights', station: 'workshop', age: 4,
+    inputs: { glass: 1, string: 1 }, output: { id: 'fairy_lights', count: 4 }, batch: 8,
+    blurb: 'A string of little lights to hang along eaves and stalls.',
+  },
   {
     id: 'stairs_stone',
     name: 'Stone Stairs',

@@ -15,7 +15,9 @@ const NO_COLLISION_SHAPES = new Set(['rug', 'rail', 'gate_open', 'door_open', 'd
   // Wall panels lie flat on a wall, a sixteenth thick, like a painting.
   'panel_plain', 'panel_pattern', 'panel_twotone',
   // An egg in the grass, as low as a rug.
-  'egg']);
+  'egg',
+  // The storybook look: what hangs from above, and a curl of trim on a roof.
+  'vines', 'wisteria', 'fairy_lights', 'curl']);
 // Taller than its cell: a fence, or a shut gate, stops you at a block and a
 // half — past jumping, and past anything an animal can step.
 const FENCE_HEIGHT = 1.5;

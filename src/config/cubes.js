@@ -1,4 +1,4 @@
-import { BLOCKS_BY_ID, shapeOf } from './blocks.js';
+import { BLOCKS_BY_ID, shapeOf, roofStyle } from './blocks.js';
 import { GLYPHS, inkOn } from './glyphs.js';
 import { boxesFor, fenceBoxes, wallBoxes, boxColor } from '../world/propShapes.js';
 import { slopeGeometry, orient } from '../world/slopes.js';
@@ -191,7 +191,7 @@ export function shapeSvg(blockId, { size = 22 } = {}) {
   if (!spec) return '';
   const shape = shapeOf(blockId);
   if (shape.startsWith('roof')) {
-    const style = spec.roof?.mat === 1 ? 'slate' : 'clay';
+    const style = roofStyle(spec.roof?.mat);
     return facesSvg(slopeGeometry(shape, 0, null, { style }).faces, spec.color ?? 0x888888, size);
   }
   const boxes = shape === 'fence' || shape === 'gate' || shape === 'gate_open'

@@ -894,6 +894,54 @@ PROP_SHAPES.sapling = [
   { minX: 0.4, maxX: 0.6, minY: 0.9, maxY: 0.98, minZ: 0.4, maxZ: 0.6, color: LEAF },
 ];
 
+// The storybook look (blocks.js, CAP_RED and on): things that hang from
+// what's above them and a curl of wood for a gable's tip.
+//
+// Vines: strands of leaf hanging from the top of the cell, of different
+// lengths, a leaf off each here and there. The block's own green, lighter
+// and darker strand by strand.
+const strand = (x, z, len, tone) => [
+  { minX: x, maxX: x + 0.08, minY: 1 - len, maxY: 1, minZ: z, maxZ: z + 0.08, tone },
+  { minX: x - 0.06, maxX: x + 0.14, minY: 1 - len * 0.55, maxY: 1 - len * 0.55 + 0.08, minZ: z - 0.03, maxZ: z + 0.11, tone },
+  { minX: x - 0.04, maxX: x + 0.12, minY: 1 - len, maxY: 1 - len + 0.07, minZ: z - 0.02, maxZ: z + 0.1, tone },
+];
+PROP_SHAPES.vines = [
+  ...strand(0.12, 0.2, 0.9, 1), ...strand(0.42, 0.1, 0.55, 0.85), ...strand(0.7, 0.3, 0.8, 1.1),
+  ...strand(0.25, 0.68, 0.65, 0.9), ...strand(0.58, 0.8, 0.95, 1), ...strand(0.84, 0.62, 0.45, 0.85),
+];
+// Wisteria: a green stem from the top, then a cluster of flowers narrowing
+// as it hangs, the block's lilac, palest at the tip.
+const WISTERIA_STEM = 0x6f9a5a;
+const raceme = (x, z, len) => {
+  const out = [{ minX: x + 0.03, maxX: x + 0.09, minY: 1 - len * 0.25, maxY: 1, minZ: z + 0.03, maxZ: z + 0.09, color: WISTERIA_STEM }];
+  for (let i = 0; i < 4; i++) {
+    const w = 0.2 - i * 0.04, y1 = 1 - len * 0.25 - i * len * 0.19;
+    out.push({ minX: x + 0.06 - w / 2, maxX: x + 0.06 + w / 2, minY: y1 - len * 0.19, maxY: y1, minZ: z + 0.06 - w / 2, maxZ: z + 0.06 + w / 2, tone: 0.9 + i * 0.08 });
+  }
+  return out;
+};
+PROP_SHAPES.wisteria = [...raceme(0.14, 0.18, 0.95), ...raceme(0.6, 0.12, 0.7), ...raceme(0.36, 0.62, 0.85), ...raceme(0.74, 0.7, 0.6)];
+// Fairy lights: a string sagging across the cell, a little bulb hanging off
+// it every so often in warm white, pink and mint, lit whatever the hour.
+const FAIRY_STRING = 0x3b3440, BULBS = [0xfff1c4, 0xffb7d5, 0xb8f2d8];
+PROP_SHAPES.fairy_lights = [];
+for (let i = 0; i < 10; i++) {
+  const x0 = i / 10, sag = (x) => 0.86 - 0.18 * Math.sin(Math.PI * x);
+  const y = sag(x0 + 0.05);
+  PROP_SHAPES.fairy_lights.push({ minX: x0, maxX: x0 + 0.1, minY: y, maxY: y + 0.03, minZ: 0.48, maxZ: 0.52, color: FAIRY_STRING });
+  if (i % 2) PROP_SHAPES.fairy_lights.push({ minX: x0 + 0.02, maxX: x0 + 0.09, minY: y - 0.09, maxY: y, minZ: 0.465, maxZ: 0.535, color: BULBS[(i >> 1) % 3], glow: true });
+}
+// A curl of wood (facing 0, flat across x): a post rising from the bottom
+// of the cell and rolling over into a spiral, the way the cottages' eaves
+// and gable tips curl in the pictures it was asked for with.
+PROP_SHAPES.curl = [
+  { minX: 0.4, maxX: 0.56, minY: 0, maxY: 0.72, minZ: 0.42, maxZ: 0.58 },
+  { minX: 0.4, maxX: 0.88, minY: 0.72, maxY: 0.86, minZ: 0.42, maxZ: 0.58, tone: 1.08 },
+  { minX: 0.76, maxX: 0.88, minY: 0.38, maxY: 0.72, minZ: 0.42, maxZ: 0.58 },
+  { minX: 0.58, maxX: 0.76, minY: 0.38, maxY: 0.5, minZ: 0.42, maxZ: 0.58, tone: 0.92 },
+  { minX: 0.58, maxX: 0.68, minY: 0.5, maxY: 0.6, minZ: 0.42, maxZ: 0.58, tone: 0.92 },
+];
+
 /** The boxes for a shape, or the slab's if a new shape id has none registered yet. */
 /**
  * A box's colour on a block whose colour is `base`: the box's own if it has

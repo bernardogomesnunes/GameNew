@@ -3,7 +3,7 @@ import { blockTextureArray, layerFor, topLayerFor, TILE_SIZE } from '../render/B
 import { withHeightFog } from '../render/atmosphere.js';
 import {
   BLOCKS_BY_ID, AIR, isTransparent, shapeOf, facingOf, isWater, isFlowing, waterLevel, isLava, isLavaFlow, lavaLevel, LAVA,
-  roofPart, doorPart, endAxisOf, ID_COUNT,
+  roofPart, roofStyle, doorPart, endAxisOf, ID_COUNT,
 } from '../config/blocks.js';
 import { boxesFor, fenceBoxes, fenceStubs, rugBoxes, railBoxes, railCurve, wallBoxes, pillarBoxes, chimneyBoxes, pathBoxes, pathCornerGaps, windowBoxes, turn, boxColor } from './propShapes.js';
 import { SLOPE_KIND, cornerOf, slopeGeometry, orient } from './slopes.js';
@@ -1049,7 +1049,7 @@ export class ChunkMesher {
           if (!(id > 0) || !SLOPED[id] || !roofPart(id)) continue;
           const below = vol[idx - P2];
           if (!solid(below)) continue;
-          const g = slopeGeometry(OVERLAY[id] ?? shapeOf(id), FACING[id], this.slopeCorner(idx, id), { filled: true, style: roofPart(id).mat === 1 ? 'slate' : 'clay' });
+          const g = slopeGeometry(OVERLAY[id] ?? shapeOf(id), FACING[id], this.slopeCorner(idx, id), { filled: true, style: roofStyle(roofPart(id).mat) });
           const key = bufferKeyFor(below);
           let buf = byType.get(key);
           if (!buf) { buf = this.takeBuffer(); byType.set(key, buf); }
@@ -1156,7 +1156,7 @@ export class ChunkMesher {
             // wall's colour; anywhere else it's a shell with timber under it.
             const below = vol[idx - P2];
             const filled = below > 0 && IS_CUBE[below] && !IS_TRANSPARENT[below];
-            const style = roofPart(id)?.mat === 1 ? 'slate' : 'clay';
+            const style = roofStyle(roofPart(id)?.mat);
             const g = slopeGeometry(shape, FACING[id], corner, { filled, style });
             const col = baseColor(id), belowCol = filled ? baseColor(below) : col;
             const stair = shape === 'stair';

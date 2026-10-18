@@ -290,17 +290,28 @@ doorParts(DOOR_BASE);
 //
 // `wall` is what fills in under the slope where a roof needs solid courses —
 // the ends of a gable — so a brick roof has brick gable ends.
+//
+// Then the storybook colours (asked for directly: buildings "need to fit more
+// the mood and vibe of the mobs whimsical and mystical", after pictures of
+// cottages roofed in teal and mint shingles, and a mushroom house in lilac):
+// teal, mint and lilac shingles, laid like slate. Each material's fifteen
+// pieces run from its own `base`; `style` is how its tiles are drawn
+// (world/slopes.js) — curved telhas or flat shingles.
 export const ROOF_MATERIALS = [
-  { key: 'brick', name: 'Brick Roof Tiles', color: 0xb04c34, wall: 9 },
-  { key: 'stone', name: 'Stone Roof Tiles', color: 0x5b6577, wall: 8 },
+  { key: 'brick', name: 'Brick Roof Tiles', color: 0xb04c34, wall: 9, base: 86, style: 'clay' },
+  { key: 'stone', name: 'Stone Roof Tiles', color: 0x5b6577, wall: 8, base: 101, style: 'slate' },
+  { key: 'teal', name: 'Teal Roof Tiles', color: 0x3f9a92, wall: 7, base: 460, style: 'slate' },
+  { key: 'mint', name: 'Mint Roof Tiles', color: 0x8fd1b0, wall: 7, base: 475, style: 'slate' },
+  { key: 'lilac', name: 'Lilac Roof Tiles', color: 0x9f86d6, wall: 7, base: 490, style: 'slate' },
 ];
+/** How a roof material's tiles are drawn: 'clay' (curved) or 'slate' (flat). */
+export const roofStyle = (mat) => ROOF_MATERIALS[mat]?.style ?? 'clay';
 /** The pieces of one roof material, in the order their ids run. */
 const ROOF_KINDS = ['steep', 'steep', 'steep', 'steep', 'lo', 'lo', 'lo', 'lo', 'hi', 'hi', 'hi', 'hi', 'ridge_x', 'ridge_z', 'peak'];
 const ROOF_SHAPE = { steep: 'roof', lo: 'roof_lo', hi: 'roof_hi', ridge_x: 'roof_ridge_x', ridge_z: 'roof_ridge_z', peak: 'roof_peak' };
-/** Piece i of roof material m is block ROOF_BASE + 15m + i. */
-const ROOF_BASE = 86;
+/** Piece i of a roof material is block `base` + i. */
 ROOF_MATERIALS.forEach((mat, m) => {
-  const base = ROOF_BASE + 15 * m;
+  const base = mat.base;
   ROOF_KINDS.forEach((kind, i) => {
     const turnsWay = i < 12;
     BLOCKS.push({
@@ -907,6 +918,29 @@ BLOCKS.push(
     light: { color: 0xffd27a, intensity: 3, distance: 10, decay: 1 } },
 );
 
+// The storybook look for buildings (asked for directly: they "need to fit
+// more the mood and vibe of the mobs whimsical and mystical ... this might
+// require new blocks and lights", with four pictures — a mossy cottage in
+// mint and teal shingles with curled eaves, a teal-roofed tower house, a
+// mushroom house hung with wisteria and fairy lights, a hut with red
+// spotted mushrooms growing out of its roof; see docs/claude-tasks.md).
+// Mushroom caps and their stem, stained glass, vines and wisteria hanging
+// from what's above them, a string of fairy lights, and a curl of wood for
+// a gable's tip. The roof tiles are with the others, above.
+export const CAP_RED = 505, CAP_LILAC = 506, MUSHROOM_STEM = 507, STAINED_GLASS = 508,
+  HANGING_VINES = 509, WISTERIA = 510, FAIRY_LIGHTS = 511, CURL = 512;
+BLOCKS.push(
+  { id: CAP_RED, name: 'Red Mushroom Cap', glyph: 'fruit', color: 0xd2484f, material: 'plant', unlock: null },
+  { id: CAP_LILAC, name: 'Lilac Mushroom Cap', glyph: 'fruit', color: 0xa178d0, material: 'plant', unlock: null },
+  { id: MUSHROOM_STEM, name: 'Mushroom Stem', glyph: 'log', color: 0xefe4cf, material: 'plant', unlock: null },
+  { id: STAINED_GLASS, name: 'Stained Glass', glyph: 'pane', color: 0xd99a6a, transparent: true, opacity: 0.6, material: 'stone', unlock: null },
+  { id: HANGING_VINES, name: 'Hanging Vines', glyph: 'leaf', color: 0x5e9a5a, shape: 'vines', material: 'plant', unlock: null },
+  { id: WISTERIA, name: 'Wisteria', glyph: 'leaf', color: 0xb48ae0, shape: 'wisteria', material: 'plant', unlock: null },
+  { id: FAIRY_LIGHTS, name: 'Fairy Lights', glyph: 'lantern', color: 0xffe2a8, shape: 'fairy_lights', material: 'wood', unlock: null,
+    light: { color: 0xffd7b0, intensity: 2, distance: 8, decay: 1, y: 0.8 } },
+);
+quad(CURL, { name: 'Curled Trim', glyph: 'planks', color: 0xa0784e, shape: 'curl', material: 'wood', facesYou: true, unlock: null });
+
 // The storybook palette (config/palette.js) paints every block it names; the
 // colour each was written with above is kept as `formerColor`, which an item
 // made of the block reads to stay as much lighter or darker than it as it was.
@@ -1145,7 +1179,7 @@ export function roofPart(id) {
 
 /** The block for a roof piece. */
 export function roofBlock({ mat = 0, kind = 'steep', facing = 0 }) {
-  const base = ROOF_BASE + 15 * mat;
+  const base = ROOF_MATERIALS[mat].base;
   if (kind === 'ridge_x') return base + 12;
   if (kind === 'ridge_z') return base + 13;
   if (kind === 'peak') return base + 14;

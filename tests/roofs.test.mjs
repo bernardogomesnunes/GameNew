@@ -52,7 +52,13 @@ const STAIR = SLOPE_KIND.stair;
   ok('each is an item with a recipe name to match', ITEMS_BY_ID.get('roof_brick')?.block === brick.id && ITEMS_BY_ID.get('roof_stone')?.block === stone.id);
   ok('placed by hand they turn like a stair', facingOf(turned(brick.id, 3)) === 3 && roofPart(turned(brick.id, 3)).kind === 'steep');
   ok('every piece gives the same tiles back', ['lo', 'hi', 'ridge_x', 'peak'].every((kind) => ITEM_FOR_BLOCK.get(roofBlock({ mat: 1, kind, facing: 2 })) === 'roof_stone'));
-  ok('only one piece of each is held', PLACEABLE_BLOCKS.filter((b) => b.roof).length === 2);
+  // One for each material: brick and stone, then teal, mint and lilac (the storybook look).
+  ok('only one piece of each is held', PLACEABLE_BLOCKS.filter((b) => b.roof).length === ROOF_MATERIALS.length);
+  ok('teal, mint and lilac, each its own item, laid flat like slate', ['roof_teal', 'roof_mint', 'roof_lilac'].every((id, i) => {
+    const block = ITEMS_BY_ID.get(id)?.block;
+    return roofPart(block)?.mat === i + 2 && ROOF_MATERIALS[i + 2].style === 'slate'
+      && ['lo', 'hi', 'ridge_x', 'peak'].every((kind) => ITEM_FOR_BLOCK.get(roofBlock({ mat: i + 2, kind, facing: 1 })) === id);
+  }));
 
   const g = slopeGeometry('roof', 0);
   const top = g.faces.filter((fc) => fc.out[1] > 0);
