@@ -946,10 +946,17 @@ export const STRUCTURES = [
         say: () => 'Build it near the fields it is meant to serve',
       },
     ],
-    // Requested directly: no building should hand over more than 10-15 of
-    // anything in a day — see the farm's own note above for the same fix.
-    produces: { vegetables: 1, seeds_potato: 1 },
-    everySeconds: 7200,
+    // A store, not a producer (asked for directly: "Granary should not
+    // produce vegetables it should store them efficiently and free the
+    // storage rooms ... It should be the place that villagers go for food").
+    // It keeps all a farm grows, one slot a kind and no limit ("It should not
+    // have a hard limit as these produce a lot"): see items/Granary.js.
+    // Farm produce goes to it before any storehouse, what's already in the
+    // storehouses is moved over, and villagers eat from it first
+    // (StructureRegistry.stores).
+    granary: true,
+    produces: {},
+    everySeconds: 0,
     skill: 'foraging',
   },
 
@@ -1505,7 +1512,7 @@ function clampTier(spec, tier) {
 
 /** True for a building that holds things — a tiers entry with `slots` on it. */
 export function isStore(spec) {
-  return hasLevels(spec) && spec.tiers.some((t) => t.slots != null);
+  return !!spec?.granary || (hasLevels(spec) && spec.tiers.some((t) => t.slots != null));
 }
 
 /** How many slots a building has at a tier, clamped to the tiers it actually has. */

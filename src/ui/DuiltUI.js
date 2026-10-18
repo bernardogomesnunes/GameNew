@@ -3,6 +3,7 @@ import { BOOSTS, clockOf } from '../config/drinks.js';
 import { FINAL_AGE } from '../config/ages.js';
 import { askConfirm } from './Confirm.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
+import { Granary } from '../items/Granary.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { FARM_SEED_SLOTS } from '../duilt/Crops.js';
 import { UNITS, UNITS_BY_ID, unitCost } from '../config/soldiers.js';
@@ -125,6 +126,16 @@ function sameStuff(a, b) {
 
 /** A store bigger than this shows its slots a page at a time (a train's car is a thousand). */
 const STORE_PAGE = 200;
+
+/** "Ana is hungry", "Ana and Bo are hungry", "Ana, Bo and 3 others are hungry". */
+export function hungryTitle(names, count = names.length) {
+  const others = count - Math.min(names.length, 2);
+  if (!names.length) return count === 1 ? 'Somebody is hungry' : `${count} of your people are hungry`;
+  if (names.length === 1 && count === 1) return `${names[0]} is hungry`;
+  if (count === 2 && names.length === 2) return `${names[0]} and ${names[1]} are hungry`;
+  const named = names.length >= 2 ? `${names[0]}, ${names[1]}` : names[0];
+  return `${named} and ${others} other${others === 1 ? '' : 's'} are hungry`;
+}
 
 export class DuiltUI {
   constructor(root, { game, bus, panels }) {
@@ -401,20 +412,27 @@ export class DuiltUI {
       });
     });
     this.bus.on('settler:left', () => this.renderVitals());
-    this.bus.on('settler:hungry', ({ count }) => {
+    this.bus.on('settler:hungry', ({ count, names = [] }) => {
       this.renderVitals();
-      // Said once when it starts, not every meal: the HUD carries it from
-      // then on and a toast every 90 seconds is nagging.
-      if (this.saidHungry) return;
-      this.saidHungry = true;
+      // Said when somebody new goes hungry, not every meal: the HUD carries
+      // it from then on and a toast every 90 seconds is nagging.
+      const who = names.join('|') || String(count);
+      if (this.saidHungry === who) return;
+      this.saidHungry = who;
       this.bus.emit('toast', {
         kind: 'xp',
         // Gently (backlog batch 3, #10): nobody leaves and nobody starves;
-        // fed, they just work better.
-        title: count === 1 ? 'Somebody is hungry' : `${count} of your people are hungry`,
-        body: 'Put some food in a storehouse — fed, they work better',
+        // fed, they just work better. Named, with a button to feed them
+        // (asked for directly: "alert the user a villager is hungry which
+        // and a button in the notification to give it food").
+        title: hungryTitle(names, count),
+        body: 'There was nothing to eat. Fill the granary, or give them some from your bag — fed, they work better.',
+        action: { label: 'Give food', onClick: () => this.giveFood() },
+        // Longer than a button's usual seven seconds: it's worth catching.
+        duration: 12000,
       });
     });
+    this.bus.on('settler:fed', () => { this.saidHungry = null; this.renderVitals(); });
     this.bus.on('settler:arrived', ({ settler, population }) => {
       this.renderVitals();
       this.bus.emit('toast', {
@@ -799,7 +817,8 @@ export class DuiltUI {
       const made = [...new Set(RECIPES.filter((r) => r.station === spec.station && r.output?.id).map((r) => itemName(r.output.id).toLowerCase()))];
       if (made.length) out.push(`Make ${made.length > 3 ? `${made.slice(0, 3).join(', ')} and more` : made.join(' and ')} here.`);
     }
-    if (summary) out.push(summary.items ? `${summary.items} things in ${summary.used} of ${summary.size} slots.` : `Empty — ${summary.size} slots.`);
+    if (summary?.granary) out.push(summary.items ? `${summary.items} things, ${summary.used} kind${summary.used === 1 ? '' : 's'}. No limit.` : 'Empty. Keeps all your farms grow, with no limit.');
+    else if (summary) out.push(summary.items ? `${summary.items} things in ${summary.used} of ${summary.size} slots.` : `Empty — ${summary.size} slots.`);
     if (spec?.stores) out.push('Reach every storehouse from here.');
     const tax = this.duilt?.skyTaxRate?.() ?? 0;
     // The Sky Kingdom's share, after a lost attack on it (duilt/SkyWar.js).
@@ -1423,6 +1442,17 @@ export class DuiltUI {
       <div class="sub" style="margin:4px 0 0">${this.itemBits(slot, spec).join(' · ')}</div>`;
   }
 
+  /** The hungry notice's button: feed whoever's hungry now, and say how it went. */
+  giveFood() {
+    const s = this.duilt?.settlers;
+    if (!s?.hungry) return;
+    const left = s.feedHungry();
+    this.renderVitals();
+    this.bus.emit('toast', left
+      ? { kind: 'xp', title: 'Not enough food', body: `${left} still hungry. There's nothing more to eat in the granary, the storehouses or your bag.` }
+      : { kind: 'challenge', title: 'Everyone has eaten', body: 'Back to work' });
+  }
+
   // ---- storehouses ----
 
   /**
@@ -1502,12 +1532,14 @@ export class DuiltUI {
     const all = this.q('#btn-store-all');
     if (all) all.hidden = !!summary.grave;
     const title = this.q('#store-title');
-    if (title) title.textContent = summary.mount ? 'Cart' : summary.car ? 'Rail car' : summary.chest ? (summary.grave ? 'What you were carrying' : summary.found ?? 'Chest') : 'Storehouse';
+    if (title) title.textContent = summary.mount ? 'Cart' : summary.car ? 'Rail car' : summary.chest ? (summary.grave ? 'What you were carrying' : summary.found ?? 'Chest') : summary.granary ? 'Granary' : 'Storehouse';
 
     const kind = summary.tier?.name ?? 'On the shelves';
-    this.q('#store-where').textContent = summary.free
-      ? `${kind} — ${summary.free} of ${summary.size} free`
-      : `${kind} — full`;
+    this.q('#store-where').textContent = summary.granary
+      ? `${summary.used} kind${summary.used === 1 ? '' : 's'} of produce — no limit`
+      : summary.free
+        ? `${kind} — ${summary.free} of ${summary.size} free`
+        : `${kind} — full`;
 
     const next = this.q('#store-next');
     // A cart comes with its horse: get on from here.
@@ -1538,9 +1570,11 @@ export class DuiltUI {
     if (sub) {
       sub.textContent = summary.grave
         ? 'Tap anything to take it back. The chest goes once it is empty.'
-        : summary.items
-          ? `Tap anything to move it between your bag and the ${summary.mount ? 'cart' : summary.car ? 'car' : summary.chest ? 'chest' : 'shelves'}.`
-          : 'Nothing in here yet. Tap something in your bag to put it away.';
+        : summary.granary
+          ? 'All your farms grow comes here first, and your people eat from it first. Tap anything to move it between your bag and the granary.'
+          : summary.items
+            ? `Tap anything to move it between your bag and the ${summary.mount ? 'cart' : summary.car ? 'car' : summary.chest ? 'chest' : 'shelves'}.`
+            : 'Nothing in here yet. Tap something in your bag to put it away.';
     }
 
     this.renderStoreRouting(summary);
@@ -1558,8 +1592,9 @@ export class DuiltUI {
     const box = this.q('#store-routing');
     const chips = this.q('#store-routing-chips');
     if (!box || !chips) return;
-    // A chest takes nothing from deliveries — only what you put in it.
-    if (summary.chest || summary.mount || summary.car) { box.hidden = true; return; }
+    // A chest takes nothing from deliveries — only what you put in it. A
+    // granary takes all the farms grow, and only that: nothing to choose.
+    if (summary.chest || summary.mount || summary.car || summary.granary) { box.hidden = true; return; }
     if (!PRODUCIBLE_ITEMS.length) { box.hidden = true; return; }
     box.hidden = false;
 
@@ -1664,6 +1699,10 @@ export class DuiltUI {
     // The chest you fell by only gives back — it isn't a place to keep things.
     if (this.store.chest && d.chestAt(this.store.chest.x, this.store.chest.y, this.store.chest.z)?.grave) return;
     const moved = d.inventory.moveTo(store, i);
+    if (!moved && store instanceof Granary) {
+      this.bus.emit('toast', { kind: 'xp', title: 'Only what farms grow', body: 'The granary keeps crops and their seeds. Put the rest in a storehouse' });
+      return;
+    }
     if (!moved) {
       this.bus.emit('toast', { kind: 'xp', title: this.store.mount ? 'The cart is full' : this.store.car ? 'The car is full' : this.store.chest ? 'The chest is full' : 'No room on the shelves', body: 'Take something out first' });
       return;

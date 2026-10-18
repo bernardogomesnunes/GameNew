@@ -215,6 +215,7 @@ export class Settlers {
    */
   eat({ onlyHungry = false } = {}) {
     if (!this.people.length && !this.soldiers) return 0;
+    const wasHungry = this.hungry;
     let fed = 0;
     for (const p of this.people) {
       const was = p.hungry;
@@ -242,8 +243,21 @@ export class Settlers {
     this.soldiersHungry = unfed;
     if (onlyHungry) fed += soldiers - mouths;
     const short = this.people.length + soldiers - fed;
-    if (short > 0) this.bus?.emit('settler:hungry', { count: short, population: this.residents });
+    // Who, by name (asked for directly: "a way to alert the user a villager
+    // is hungry which and a button in the notification to give it food").
+    if (short > 0) this.bus?.emit('settler:hungry', { count: short, population: this.residents, names: this.people.filter((p) => p.hungry).map((p) => p.name) });
+    else if (wasHungry) this.bus?.emit('settler:fed', {});
     return fed;
+  }
+
+  /**
+   * The notice's Give food: whoever's hungry eats now, from the granary,
+   * the storehouses or your bag, in that order (nextMeal). Returns how many
+   * are still hungry after.
+   */
+  feedHungry() {
+    if (this.hungry) this.eat({ onlyHungry: true });
+    return this.hungry;
   }
 
   /**

@@ -38,6 +38,9 @@ export const CROPS = [
   { kind: 'hemp', name: 'Hemp', produce: 'hemp_fibre', leaf: 0x5f8f3e, crop: 0xa3a85a, base: 337, fibre: true },
 ];
 export const CROPS_BY_KIND = new Map(CROPS.map((c) => [c.kind, c]));
+
+/** Everything a farm can grow: each crop, and its seeds. What a granary keeps (structures.js). */
+export const FARM_ITEMS = new Set(CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`]));
 /** The field crops — everything but coffee, which comes from the hermit's chest, not out of the grass. */
 export const FIELD_CROPS = CROPS.filter((c) => c.kind !== 'coffee');
 
