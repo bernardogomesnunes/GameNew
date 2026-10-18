@@ -819,6 +819,8 @@ export class DuiltGame {
     const used = store.slots.filter(Boolean).length;
     const items = store.slots.reduce((n, s) => n + (s?.count ?? 0), 0);
     const tier = tierStatus(this.world, structure.region, structure.type, structure.tier ?? 0, { credit: structure.credit });
+    // A granary has no shelves to run out of: one slot a kind, no limit (items/Granary.js).
+    if (STRUCTURES_BY_ID.get(structure.type)?.granary) return { structure, store, used, free: Infinity, size: used, items, tier, granary: true };
     return { structure, store, used, free: store.size - used, size: store.size, items, tier };
   }
 

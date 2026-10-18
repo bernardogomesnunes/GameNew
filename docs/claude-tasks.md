@@ -81,9 +81,9 @@ them. Question for the owner: should anything still trickle in while away
 
 > "I should be able to delete shit from storehouses"
 
-**Fix:** in a storehouse's pop-up, a way to throw a stack away, with a
-"Sure?" step so nothing goes by accident. The same in the bag, if it isn't
-there already.
+**Done (#208):** each stack in a storehouse's pop-up (and a granary's,
+cart's or chest's) has the bag's red cross. Tapping it asks "Throw away 64
+stone? They're gone for good." first. The bag already had it.
 
 ### 6. Forests you can run through
 
@@ -117,6 +117,17 @@ already made stays. Check it in the browser by walking through a forest.
 
 **The owner's answers:** the granary keeps everything a farm produces. You
 can take things out and put more in. No hard limit: farms produce a lot.
+
+**Done (#208):**
+- The granary no longer produces anything. It keeps everything a farm
+  grows (each crop and its seeds), one slot for each kind, with no limit.
+- Farm produce goes to it before any storehouse, and farm produce already
+  on storehouse shelves is moved over to it, freeing them.
+- You can take things out, or put more in, from its pop-up. Anything a farm
+  doesn't grow is turned away with a message.
+- Villagers eat from it first, then the storehouses, then your bag.
+- When villagers go hungry, the notice names them ("Ana and Bo are
+  hungry") and has a **Give food** button that feeds them at once.
 
 ### 8. Buildings that produce ore
 

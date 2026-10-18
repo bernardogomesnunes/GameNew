@@ -1,6 +1,7 @@
+import { Granary } from '../items/Granary.js';
 import { STRUCTURES_BY_ID, holdsAt, isStore, hasLevels, producesAt, intervalAt, scaleProduce, yieldAt } from '../config/structures.js';
 import { Inventory } from '../items/Inventory.js';
-import { cropOf } from '../config/crops.js';
+import { cropOf, FARM_ITEMS } from '../config/crops.js';
 
 /** Planting, growing or picking a crop: a crop or nothing, before and after. */
 const isCropChange = (c) => (c.prev === 0 || !!cropOf(c.prev)) && (c.next === 0 || !!cropOf(c.next)) && c.prev !== c.next;
@@ -66,7 +67,9 @@ export class StructureRegistry {
     if (!isStore(spec)) return null;
     if (!structure.store) {
       structure.tier = structure.tier ?? 0;
-      structure.store = new Inventory({ slots: holdsAt(spec, structure.tier), bus: this.bus });
+      structure.store = spec.granary
+        ? new Granary({ bus: this.bus, accepts: (id) => FARM_ITEMS.has(id) })
+        : new Inventory({ slots: holdsAt(spec, structure.tier), bus: this.bus });
     }
     return structure.store;
   }
@@ -164,11 +167,38 @@ export class StructureRegistry {
     for (const [k, n] of Object.entries(credit ?? {})) s.credit[k] = (s.credit[k] ?? 0) + n;
   }
 
-  /** Every standing storehouse, with what it is holding. */
+  /**
+   * Every standing storehouse, with what it is holding — the granaries
+   * first. Farm produce is delivered to a granary before a storehouse, and
+   * villagers look for a meal in one first (Settlers.nextMeal), both because
+   * this is the order they're asked in.
+   */
   stores() {
     return this.structures
       .filter((s) => s.valid && isStore(STRUCTURES_BY_ID.get(s.type)))
+      .sort((a, b) => !!STRUCTURES_BY_ID.get(b.type).granary - !!STRUCTURES_BY_ID.get(a.type).granary)
       .map((s) => ({ structure: s, store: this.storeFor(s) }));
+  }
+
+  /**
+   * Moves what farms grow out of the storehouses into a granary, freeing
+   * their shelves (asked for directly: "free the storage rooms"). Run when a
+   * granary goes up and at every collect, so produce put away by hand, or
+   * delivered before there was a granary, ends up there too. Returns how
+   * many things moved.
+   */
+  gatherIntoGranaries() {
+    const all = this.stores();
+    const granary = all.find((s) => s.store instanceof Granary)?.store;
+    if (!granary) return 0;
+    let moved = 0;
+    for (const { store } of all) {
+      if (store instanceof Granary) continue;
+      store.slots.forEach((slot, i) => {
+        if (slot && granary.accepts(slot.id)) moved += store.moveTo(granary, i);
+      });
+    }
+    return moved;
   }
 
   /**
@@ -395,6 +425,7 @@ export class StructureRegistry {
     // A storehouse claimed as a finished warehouse starts as one, rather than
     // needing an Evolve press for a rung it was already built to.
     this.retier(structure, { initial: true });
+    if (spec.granary) this.gatherIntoGranaries();
     this.bus?.emit('structure:claimed', { structure, spec });
     return { ok: true, reason: check.reason, structure, replaced };
   }
@@ -497,6 +528,7 @@ export class StructureRegistry {
     const taxed = {};
     const stalled = [];
     const capMs = Math.min(MAX_OFFLINE_HOURS * 3600_000, MAX_OFFLINE_DAYS * REAL_DAY_SECONDS * this.dayScale * 1000);
+    this.gatherIntoGranaries();
 
     for (const s of this.structures) {
       if (!s.valid) continue;
