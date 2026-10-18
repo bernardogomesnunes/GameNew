@@ -64,7 +64,7 @@ Things to set in Cline on your computer. They can't live in the repo.
 
 ---
 
-## Task 1 (done, waiting for review): two secret achievements for time travel
+## Task 1 (done, merged in #212): two secret achievements for time travel
 
 **Why:** the game has hidden achievements called *secrets* (Goals tab, at
 the bottom). Time travel was just added (the Past and the Future), and no
