@@ -1170,6 +1170,12 @@ export class ChunkMesher {
               // A roof tile's sides over a wall are drawn with the blocks,
               // in the wall's texture (see emitRoofSides).
               if (f.color === 'below' && roofPart(id)) continue;
+              // Its edge over the wall (slopes.js bandedSides) is hidden
+              // against a solid block, as the wall under it is.
+              if (f.rim) {
+                const n = vol[idx + f.out[0] + f.out[2] * PAD];
+                if (n > 0 && IS_CUBE[n] && !IS_TRANSPARENT[n]) continue;
+              }
               const c = f.color === 'below' ? belowCol : f.color != null ? colorOfHex(f.color) : col;
               this.emitFace(buf, lx, ly, lz, f, c);
             }
