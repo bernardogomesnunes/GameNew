@@ -36,6 +36,7 @@ const GLIDE_FALL_SPEED = 3.5;
  */
 const JUMP_BUFFER = 0.2; // seconds a press waits for the ground
 const COYOTE_TIME = 0.1; // seconds after leaving the ground you can still jump
+const AUTO_JUMP_LOOK = 0.3; // how far ahead Auto jump looks for a block, in blocks
 /*
  * Walking into something low lifts you onto it instead of stopping you dead.
  * A slab's hitbox is only the bottom half of its cell (see
@@ -150,6 +151,7 @@ export class PlayerController {
     this.jumpQueued = false;
     this.jumpWait = 0; // how much longer a press of Jump waits for the ground
     this.jumpHeld = false; // the phone's Jump button, held down
+    this.autoJump = false; // the Controls setting — see autoJumpAhead
     this.airTime = 0; // seconds since you were last on the ground
     this.stepLag = 0; // how far the camera still trails a step up, in blocks
     this.seatHeight = 0; // how far up a saddle lifts you while riding
@@ -329,7 +331,7 @@ export class PlayerController {
       this.gliding = !this.grounded && this.velocity.y < -GLIDE_FALL_SPEED && this.canGlide();
       if (this.gliding) this.velocity.y = -GLIDE_FALL_SPEED;
       if (this.jumpQueued) this.jumpWait = JUMP_BUFFER;
-      const wanted = this.jumpWait > 0 || this.jumpHeld || this.keys.has(b.jump);
+      const wanted = this.jumpWait > 0 || this.jumpHeld || this.keys.has(b.jump) || this.autoJumpAhead(wish);
       if (wanted && this.airTime <= COYOTE_TIME && this.velocity.y <= 0) {
         this.velocity.y = JUMP_SPEED * (this.jumpScale ?? 1);
         this.grounded = false;
@@ -471,6 +473,27 @@ export class PlayerController {
     } else {
       this.grounded = this.collidesAt(p.x, p.y - 0.05, p.z);
     }
+  }
+
+  /**
+   * With Auto jump on (config/controls.js), whether walking the way `wish`
+   * points runs you into something too high to step onto but low enough to
+   * jump onto, with room above it and above you: a block, not a wall.
+   */
+  autoJumpAhead(wish) {
+    if (!this.autoJump || this.sneaking || !this.grounded || wish.lengthSq() < 0.01) return false;
+    const p = this.position;
+    const len = Math.sqrt(wish.lengthSq());
+    const ax = p.x + (wish.x / len) * AUTO_JUMP_LOOK, az = p.z + (wish.z / len) * AUTO_JUMP_LOOK;
+    let highest = null;
+    for (const h of this.collisionBoxesAt(ax, p.y, az)) {
+      if (!highest || h.maxY > highest.maxY) highest = h;
+    }
+    if (!highest) return false;
+    const rise = highest.maxY - p.y;
+    const stepped = highest.stair ? STAIR_STEP_HEIGHT : STEP_HEIGHT;
+    if (rise <= stepped + 1e-6 || rise > 1 + 1e-6) return false;
+    return !this.collidesAt(ax, highest.maxY, az) && !this.collidesAt(p.x, highest.maxY, p.z);
   }
 
   /**

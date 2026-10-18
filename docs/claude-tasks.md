@@ -16,19 +16,14 @@ was found is under **Now**.
 
 > "When saving the game breaks"
 
-**Now:** a new world, signed out, saves cleanly in the browser: three
-saves, then Save and leave, with no errors. So it depends on something in
-the owner's world, or on being signed in.
+**What it was:** "Saving loads the button and then shows the loading of the
+beginning of the game". The menu's only Save was **Save and leave**: it
+saved, then took you back to the worlds screen, which rebuilds the scenery
+behind it under a loading screen.
 
-**Need from the owner:**
-- what "breaks" looks like (it freezes, shows an error, loses progress,
-  goes back to the home screen?);
-- whether you're signed in;
-- which world, and roughly how big;
-- the phone and browser.
-
-**Then:** reproduce it with a world that size, fix it, and add a test that
-saves that kind of world.
+**Done (#206):** a plain **Save** in the menu, beside Save and leave. It
+shows it's saving, then says "Saved" (or "Not saved — try again"), and keeps
+you in the world. Checked in the browser, signed out.
 
 ### 2. The Marble Table can't be made in time for the temple
 
@@ -63,6 +58,12 @@ just before you land, or in a moment a step or a wall leaves you off the
 ground, still jumps; you can still jump just after walking off an edge; and
 holding Jump keeps jumping each time you land. Tested in code, not yet on a
 phone.
+
+The owner then said the misses come while running: the small buttons, the
+timing, and going into a block together. **Done (#206):** an **Auto jump**
+setting in Controls (off to begin with). With it on, walking into a block
+one high hops you onto it with no button; a wall two high is left alone.
+The bigger buttons are Cline's Task 8.
 
 ### 4. Buildings produce only while you play
 
@@ -114,8 +115,8 @@ already made stays. Check it in the browser by walking through a forest.
 3. A notice when a villager is hungry, naming who, with a **Give food**
    button that feeds them from the granary or your bag.
 
-Questions for the owner: what counts as food (fruit, vegetables, meat,
-bread, drinks?), and is there a limit per kind?
+**The owner's answers:** the granary keeps everything a farm produces. You
+can take things out and put more in. No hard limit: farms produce a lot.
 
 ### 8. Buildings that produce ore
 
@@ -125,9 +126,9 @@ bread, drinks?), and is there a limit per kind?
 **Now:** the mine (Age 8) produces stone, gold and coal, with no iron or
 copper. The foundry smelts, but produces nothing by itself.
 
-**Fix:** the mine also brings up iron ore and copper ore, opened at an
-earlier age so iron isn't only from digging. Or a separate ore building, if
-the owner prefers. Questions: which ages, and how much a day?
+**The owner's answer:** a mine building that produces ore, with 5 levels.
+It starts with copper, then iron, gold from level 3, and diamonds at
+level 5.
 
 ### 9. Buildings that fit the whimsical, mystical look
 
@@ -147,4 +148,4 @@ Screenshots of each for the owner to approve.
 ## Order
 
 1 and 2 first (blocking). Then 3 and 4 (felt every minute of play). Then
-5, 6, 8. Then 7 and 9, which need answers from the owner first.
+5, 6, 8. Then 7. 9 still needs references from the owner.

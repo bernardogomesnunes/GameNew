@@ -91,7 +91,34 @@ const steps = (pl, n) => { let peak = pl.position.y; for (let i = 0; i < n; i++)
   ok('a tap a frame after walking off an edge still jumps', left >= 0 && pl.velocity.y > 5);
 }
 
+// Auto jump (asked for directly: "we can add auto jump as an option in controls").
+{
+  const walkIn = (autoJump, wallHigh = 1) => {
+    const pl = setUp();
+    if (wallHigh > 1) for (let x = 0; x < 32; x++) for (let y = 11; y < 10 + wallHigh; y++) pl.world.setBlock(x, y, 15, STONE);
+    pl.autoJump = autoJump;
+    pl.yaw = 0;
+    pl.externalMove = { x: 0, z: 1 };
+    let jumps = 0;
+    for (let i = 0; i < 120; i++) { pl.update(dt); if (pl.velocity.y > 5) jumps++; }
+    return { over: pl.position.z < 15.5, jumps };
+  };
+  ok('on: walking into a block hops you onto it, no button', walkIn(true).over);
+  ok('off: walking into a block stops you, as before', !walkIn(false).over && walkIn(false).jumps === 0);
+  ok('on: a wall two blocks high is not jumped at', walkIn(true, 2).jumps === 0);
+  {
+    const pl = setUp();
+    pl.autoJump = true;
+    let jumps = 0;
+    for (let i = 0; i < 120; i++) { pl.update(dt); if (pl.velocity.y > 5) jumps++; }
+    ok('on: standing still next to a block, nothing', jumps === 0);
+  }
+  const { DEFAULT_CONTROLS } = await import('../src/config/controls.js');
+  ok('it starts off, and is a choice in Controls', DEFAULT_CONTROLS.autoJump === 'off' && /data-seg="autoJump"/.test(readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8')));
+}
+
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+ok('the setting reaches you, made, loaded or changed', (game.match(/this\.player\.autoJump = this\.controls\.autoJump === 'on';/g) ?? []).length === 3);
 ok("the phone's Jump button, held, holds the jump", /this\.player\.jumpHeld = held && !this\.player\.flying;/.test(game));
 
 process.exit(f ? 1 : 0);

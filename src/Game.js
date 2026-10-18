@@ -829,9 +829,19 @@ export class Game {
    */
   async leaveWorld(save = true) {
     if (!save) { this.discarded = true; return false; }
+    return this.saveAndWait();
+  }
+
+  /**
+   * Saves, waiting for a cloud save as leaving does, and stays (reported
+   * directly: "Saving loads the button and then shows the loading of the
+   * beginning of the game" — the only Save was Save and leave). Whether it
+   * got saved.
+   */
+  async saveAndWait() {
     const ok = this.saveNow();
     if (this.saving) await Promise.race([Promise.resolve(this.saving).catch(() => {}), new Promise((r) => setTimeout(r, LEAVE_SAVE_WAIT_MS))]);
-    return ok;
+    return ok && !this.saveError;
   }
 
   /**
@@ -1246,6 +1256,7 @@ export class Game {
         return true;
       },
       onLeaveWorld: (save) => this.leaveWorld(save),
+      onSaveWorld: () => this.saveAndWait(),
       onExportWorld: (name) => {
         const payload = exportWorldFile({ ...this.saveState(), templates: this.templates.list(), name: name || 'My world' });
         this.ui.toast({ kind: 'challenge', title: 'World exported', body: `${payload.templates.length} designs included` });
@@ -1562,6 +1573,7 @@ export class Game {
     this.wireFlight();
     this.player.binds = { ...this.controls.keys };
     this.player.view = this.controls.view ?? 'first';
+    this.player.autoJump = this.controls.autoJump === 'on';
     // Face the way the spawn picked: the open direction. Arriving on a good
     // open spot while looking at the one wall behind you is the same bad first
     // impression as arriving inside the hill.
@@ -1676,6 +1688,7 @@ export class Game {
     this.wireFlight();
     this.player.binds = { ...this.controls.keys };
     this.player.view = this.controls.view ?? 'first';
+    this.player.autoJump = this.controls.autoJump === 'on';
     this.player.yaw = data.player.yaw || 0;
     this.player.pitch = data.player.pitch || 0;
     if (!this.gamification) this.gamification = new GamificationEngine(this.bus);
@@ -7368,6 +7381,7 @@ export class Game {
     this.camera.updateProjectionMatrix();
     this.sound.setLevels(this.controls);
     this.ui?.applyTouchLayout(this.controls);
+    if (this.player) this.player.autoJump = this.controls.autoJump === 'on';
     return this.controls;
   }
 
