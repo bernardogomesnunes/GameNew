@@ -8,6 +8,7 @@ import { Inventory } from '../src/items/Inventory.js';
  * Goals for the batch's new systems — building levels, coins, the market's
  * traders — as the ages' own goals now (config/ages.js): evolving a building
  * in Age 6, Renowned in Age 10, diamond armour and half the book in Age 11.
+ * Age 6's evolving is taught on the mine now: "Dig your mine down to iron".
  */
 
 let f = 0;
@@ -24,16 +25,19 @@ const duilt = (age) => ({
 });
 const has = (g, id) => g.state.achievementsUnlocked.has(id);
 
-ok('each one exists, in the age it belongs to', ['req_6_evolve', 'req_10_renowned', 'req_11_gem_armour', 'req_11_book_half'].every((id) => ACHIEVEMENTS_BY_ID.has(id)));
+ok('each one exists, in the age it belongs to', ['req_6_mine', 'req_8_mine_gold', 'req_10_renowned', 'req_11_gem_armour', 'req_11_book_half'].every((id) => ACHIEVEMENTS_BY_ID.has(id)));
 
 {
   const bus = new EventBus();
   const g = new GamificationEngine(bus);
   g.setDuilt(duilt(6));
-  built.push({ type: 'forest', tier: 1, valid: true });
+  built.push({ type: 'mine', tier: 0, valid: true });
   bus.emit('structure:upgraded', { structure: built[0] });
-  ok('evolving a building ticks "Evolve a building a level" in Age 6', has(g, 'req_6_evolve'));
-  built[0].tier = renowned;
+  ok('a mine just standing doesn\'t tick "Dig your mine down to iron" in Age 6', !has(g, 'req_6_mine'));
+  built[0].tier = 1;
+  bus.emit('structure:upgraded', { structure: built[0] });
+  ok('evolved a level, it does', has(g, 'req_6_mine'));
+  built[0] = { type: 'forest', tier: renowned, valid: true };
   bus.emit('structure:upgraded', { structure: built[0] });
   ok('but not Age 10\'s Renowned while it\'s still Age 6', !has(g, 'req_10_renowned'));
 }

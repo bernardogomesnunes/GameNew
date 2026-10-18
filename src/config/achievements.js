@@ -63,7 +63,7 @@ const GOAL_WORDS = {
   wood: { icon: '🪓', description: 'Swing your axe at a tree trunk. The wood goes into your bag.' },
   water: { icon: '🪣', description: 'Hold your bucket and tap water to fill it.' },
   pickaxe: { icon: '⛏️', description: 'Open your bag and make a stone pickaxe — dig stone out of the ground, or knock it out of cobblestone.' },
-  evolve: { icon: '⬆️', description: 'Give a building what its next level asks for — lights, a chest — and press Evolve in its pop-up.' },
+  mine_gold: { icon: '⚒️', description: 'Dig your mine out further and prop its roof until it reaches its third level, where gold ore shows.' },
   ring: { icon: '💍', description: 'Build your shrine up to its height and forge the White Ring or the Black. Which one is your choice.' },
   sanctuary: { icon: '🛕', description: 'The White Sanctuary or the Black — the one for the ring you bear. Its guardian comes to you.' },
   fifteen: { icon: '🌆', description: 'A settlement that would show up on a map.' },
@@ -94,7 +94,9 @@ function requiredGoals() {
   return AGES.flatMap((age) => age.goals.map((g, i) => {
     const spec = g.structure ? STRUCTURES_BY_ID.get(g.structure) : null;
     const words = GOAL_WORDS[g.id] ?? {};
-    const done = (d) => (g.structure ? d.structures.countOf(g.structure) >= (g.count ?? 1) : !!g.test?.(d));
+    // A goal's own test first, as DuiltGame.ageGoals reads it: Age 6's mine
+    // goal names the mine but asks for it a level down, not just standing.
+    const done = (d) => (g.test ? !!g.test(d) : g.structure ? d.structures.countOf(g.structure) >= (g.count ?? 1) : false);
     return {
       id: `req_${age.age}_${g.structure ?? g.id ?? i}`,
       age: age.age,
