@@ -1495,9 +1495,17 @@ export class DuiltUI {
         <span>Slots ${from + 1}–${Math.min(from + STORE_PAGE, summary.store.slots.length)} of ${summary.store.slots.length}</span>
         <button type="button" class="secondary" data-store-page="1"${page < pages - 1 ? '' : ' disabled'}>›</button></div>`
       : '';
+    // The same cross as the bag's, to throw a stack away (asked for directly:
+    // "I should be able to delete shit from storehouses"). Not in the chest
+    // you fell by: that only gives back.
+    const bin = summary.grave ? null : 'data-store-discard';
     grid.innerHTML = pager + summary.store.slots.slice(from, from + STORE_PAGE)
-      .map((s, i) => this.slotHtml(s, from + i, { attr: 'data-store-slot', empty: 'Empty shelf' }))
+      .map((s, i) => this.slotHtml(s, from + i, { attr: 'data-store-slot', empty: 'Empty shelf', discardAttr: bin }))
       .join('');
+    grid.querySelectorAll('[data-store-discard]').forEach((btn) => btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.discardFromStore(Number(btn.dataset.storeDiscard));
+    }));
     grid.querySelectorAll('[data-store-page]').forEach((btn) => btn.addEventListener('click', () => {
       this.storePage = Math.max(0, Math.min(pages - 1, page + Number(btn.dataset.storePage)));
       this.renderStore();
@@ -1707,6 +1715,25 @@ export class DuiltUI {
       this.bus.emit('toast', { kind: 'xp', title: this.store.mount ? 'The cart is full' : this.store.car ? 'The car is full' : this.store.chest ? 'The chest is full' : 'No room on the shelves', body: 'Take something out first' });
       return;
     }
+    this.renderStore();
+  }
+
+  /**
+   * Throws a stack out of a store, after a "Sure?": a storehouse's stack
+   * can be hundreds of something, and a stray tap shouldn't lose it.
+   */
+  async discardFromStore(i) {
+    const d = this.duilt;
+    const store = this.store && d?.containerFor(this.store);
+    const slot = store?.slots[i];
+    if (!slot) return;
+    const what = `${slot.count > 1 ? `${slot.count} ` : ''}${itemName(slot.id).toLowerCase()}`;
+    if (!await this.confirm({ title: `Throw away ${what}?`, body: 'They\'re gone for good.', ok: 'Throw away', danger: true })) return;
+    // Still the same stack: the shelves may have moved while you decided.
+    if (store.slots[i] !== slot) return;
+    const gone = store.discard(i);
+    if (!gone) return;
+    this.bus.emit('toast', { kind: 'xp', title: `Threw away ${gone.count > 1 ? `${gone.count} ` : ''}${itemName(gone.id).toLowerCase()}` });
     this.renderStore();
   }
 

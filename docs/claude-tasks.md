@@ -81,9 +81,9 @@ them. Question for the owner: should anything still trickle in while away
 
 > "I should be able to delete shit from storehouses"
 
-**Fix:** in a storehouse's pop-up, a way to throw a stack away, with a
-"Sure?" step so nothing goes by accident. The same in the bag, if it isn't
-there already.
+**Done (#208):** each stack in a storehouse's pop-up (and a granary's,
+cart's or chest's) has the bag's red cross. Tapping it asks "Throw away 64
+stone? They're gone for good." first. The bag already had it.
 
 ### 6. Forests you can run through
 

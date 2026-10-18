@@ -1517,7 +1517,8 @@ export function isStore(spec) {
 
 /** How many slots a building has at a tier, clamped to the tiers it actually has. */
 export function holdsAt(spec, tier = 0) {
-  if (!isStore(spec)) return 0;
+  // A granary has no shelves to count: one slot a kind, no limit (items/Granary.js).
+  if (!isStore(spec) || spec.granary) return 0;
   return spec.tiers[clampTier(spec, tier)].slots;
 }
 

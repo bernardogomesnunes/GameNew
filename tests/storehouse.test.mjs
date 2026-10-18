@@ -358,8 +358,9 @@ function raise(world, x0, z0, y0, { w, h, wall = PLANKS, floor = PLANKS }) {
   ok('and refuses a size that makes no sense', inv.resize(0) === inv.size && inv.resize(-3) === inv.size);
 }
 
+// All but the granary, which has no shelves at all: one slot a kind, no limit.
 ok('every building the game calls a store has tiers',
-  [...STRUCTURES_BY_ID.values()].every((s) => !isStore(s) || s.tiers.every((t) => t.slots > 0)));
+  [...STRUCTURES_BY_ID.values()].every((s) => !isStore(s) || s.granary || s.tiers.every((t) => t.slots > 0)));
 
 // --- routing: what a shed's own deliveries skip -------------------------------
 {
