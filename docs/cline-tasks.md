@@ -2,7 +2,8 @@
 
 Small, self-contained tasks for a new coding agent to try. Task 1 is done
 (on the branch `cline-test`, waiting for review). Do **Task 2** next, then
-Tasks 3 to 7 in order. Each is its own branch and its own pull request.
+Tasks 3 to 11 in order. Tasks 8 to 11 are quick wins from the owner's
+latest list. Each is its own branch and its own pull request.
 
 Each one should take **under 30 minutes**. Task 1 took about 8½ hours,
 which is what `.clinerules` now guards against: run only the one test file
@@ -266,6 +267,103 @@ screenshot in the pull request would help, but it's optional. About 45
 minutes.
 
 
+
+---
+
+## Quick wins from the owner's new batch (Tasks 8 to 11)
+
+From the owner's list of improvements (October). Each is small and
+self-contained. Same rules: one branch and one pull request each.
+
+---
+
+## Task 8: bigger buttons on the phone
+
+**Why:** asked for directly: "button size is too small, increase buttons
+8 px in size".
+
+**What to do:** in `src/ui/styles.css`, make the on-screen buttons 8 pixels
+bigger, in width and height: the touch buttons (search `.touch-btn`) and the
+small side ones (Jump, Sneak, Break), which take their size from
+`--side-btn`. Leave the hotbar slots and the pop-ups' buttons alone. Check
+nothing overlaps at a 390 × 780 phone screen.
+
+**Tests:** none to add (it's styling). Run the full suite once.
+
+**Done when:** the full suite passes. A screenshot at phone size in the
+pull request, if you can. About 20 minutes.
+
+---
+
+## Task 9: recipe names say what you get
+
+**Why:** asked for directly: "I've seen Dress planks name on one menu it
+should be planks and in the stone mill split stone should be cobblestone".
+
+**What to do:** in `src/config/recipes.js`, rename the recipes the player
+sees:
+
+| Now | Should say |
+|---|---|
+| Dress planks | Planks |
+| Split stone | Cobblestone |
+| Dress marble | Marble |
+
+Search for any other recipe whose name isn't the thing it makes (look for
+names starting "Dress", "Split" or "Cut"), and list them in the pull request
+rather than changing them.
+
+**Tests:** search `tests/` for the old names first and update any test that
+checks them. Run `node tests/stonemill.test.mjs` and
+`node tests/woodmill.test.mjs`, then the full suite once.
+
+**Done when:** the three names are changed and the full suite passes.
+About 15 minutes.
+
+---
+
+## Task 10: the mills open the bench with an empty search box
+
+**Why:** asked for directly: "When opening the stone mill and wood mill the
+search has its names written". Tapping a mill opens the crafting pop-up
+with "Stone Mill" or "Wood Mill" typed into its search box.
+
+**What to do:** in `src/Game.js`, search `openBench(stationName(`. Open the
+bench with no search text instead. The mill's own recipes still show,
+because you're standing by it.
+
+**Tests:** add a check to `tests/stonemill.test.mjs` (or the wood mill's
+test, whichever already reads `Game.js`) that tapping a mill opens the
+bench without a search text.
+
+**Done when:** that test passes, then the full suite once. About 15
+minutes.
+
+---
+
+## Task 11: university studies say "game days"
+
+**Why:** asked for directly: "University learnings should take in game days
+to complete and not real days". They already count game days. A game day is
+15 minutes of play (`GAME_DAY_SECONDS` in `src/render/DayCycle.js`), but the
+pop-ups just say "Takes 2 days", which reads like real days.
+
+**What to do:** wherever a study's length is shown, say game days and
+roughly how long that is to play, for example "Takes 2 game days (about 30
+minutes of play)". Three places:
+
+- the toast when a study starts: `src/Game.js`, search `Researching ${name}`;
+- the recipe card: `src/ui/DuiltUI.js`, search `research-takes`;
+- the time left: `src/duilt/DuiltGame.js`, `researchLeftText`.
+
+Work the minutes out from `GAME_DAY_SECONDS`, not a typed-in number.
+
+**Tests:** search `tests/` for "days" next to research or study, and update
+any test that checks the old wording. Add one check that the start message
+says "game days".
+
+**Done when:** those tests pass, then the full suite once. About 25
+minutes.
 ---
 
 ## How to report back
