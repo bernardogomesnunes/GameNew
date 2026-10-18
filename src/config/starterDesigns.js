@@ -15,6 +15,7 @@ import { ITEM_FOR_BLOCK } from './items.js';
 import {
   doorBlock, roofBlock, roofPart, turned, CHEST, BED, BED_HEAD, FACING_STEP, PAINTING, WEAPON_RACK, TRAINING_DUMMY, ARCHERY_TARGET,
   TRAPDOOR_OPEN, STONE_BRICK, CHIMNEYS, LOG_SIDE_BASE,
+  CAP_RED, CAP_LILAC, MUSHROOM_STEM, STAINED_GLASS, HANGING_VINES, WISTERIA, FAIRY_LIGHTS, CURL,
 } from './blocks.js';
 import { ROOFS_BY_ID } from './roofs.js';
 import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
@@ -35,6 +36,92 @@ const WINDOW = 176, OAK_TABLE = 31, OAK_CHAIR = 33, RED_RUG = 35, LANTERN_BLOCK 
 // stood (reported: "I need to craft brick tiles roofs to the workshop, but I
 // need the workshop to build them").
 export const SLATE = roofBlock({ mat: 1 }), TILE = roofBlock({ mat: 0 });
+// The storybook shingles (blocks.js ROOF_MATERIALS): teal, mint and lilac.
+export const TEAL = roofBlock({ mat: 2 }), MINT = roofBlock({ mat: 3 }), LILAC = roofBlock({ mat: 4 });
+
+// ---- the storybook look ---------------------------------------------------------
+// Asked for directly: buildings "need to fit more the mood and vibe of the
+// mobs whimsical and mystical", after four pictures (docs/claude-tasks.md,
+// item 9), then "build the house, the marketplace and the storehouse with
+// this new style". What the pictures share, as things a design can do to
+// itself once it stands: a roof patched in two colours so it reads mossy,
+// curls of wood at the gable tips, vines hanging under the eaves, and
+// mushrooms growing out of things.
+
+/**
+ * A repeatable 0..1 for a cell, so a design comes out the same every time.
+ * Integer mixing rather than a sine: neighbouring cells of a sine hash fell
+ * in diagonal stripes across a roof, not patches.
+ */
+const speckle = (dx, dy, dz) => {
+  let h = Math.imul(dx, 73856093) ^ Math.imul(dy, 19349663) ^ Math.imul(dz, 83492791);
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+};
+
+/** Turns about `share` of a roof's tiles to another colour, piece for piece. */
+function mottled(blocks, tile, share) {
+  const mat = roofPart(tile).mat;
+  return blocks.map((b) => {
+    const r = roofPart(b.type);
+    if (!r || r.mat === mat || speckle(b.dx, b.dy, b.dz) >= share) return b;
+    return { ...b, type: roofBlock({ mat, kind: r.kind, facing: r.facing }) };
+  });
+}
+
+/**
+ * A curl of wood standing on each end of a roof's ridge, rolling outward.
+ * The ridge is the roof's highest course; its ends are wherever that course
+ * stops along its length.
+ */
+function curledTips(blocks) {
+  const tiles = blocks.filter((b) => roofPart(b.type));
+  if (!tiles.length) return blocks;
+  const top = Math.max(...tiles.map((b) => b.dy));
+  const ridge = tiles.filter((b) => b.dy === top);
+  const xs = ridge.map((b) => b.dx), zs = ridge.map((b) => b.dz);
+  const alongX = Math.max(...xs) - Math.min(...xs) >= Math.max(...zs) - Math.min(...zs);
+  const at = alongX ? ridge.filter((b) => b.dx === Math.min(...xs) || b.dx === Math.max(...xs))
+    : ridge.filter((b) => b.dz === Math.min(...zs) || b.dz === Math.max(...zs));
+  const tips = at.map((b) => {
+    const high = alongX ? b.dx === Math.max(...xs) : b.dz === Math.max(...zs);
+    // The curl rolls towards +x at facing 0; turned, towards +z, -x, -z.
+    const facing = alongX ? (high ? 0 : 2) : (high ? 3 : 1);
+    return { dx: b.dx, dy: top + 1, dz: b.dz, type: turned(CURL, facing) };
+  });
+  return [...blocks, ...tips];
+}
+
+/**
+ * Hangs `type` (vines, wisteria) under about `share` of a roof's eaves: the
+ * lowest tiles with nothing under them, the overhang, never over a door.
+ */
+function hungUnderEaves(blocks, type, share) {
+  const taken = new Set(blocks.map((b) => `${b.dx},${b.dy},${b.dz}`));
+  const tiles = blocks.filter((b) => roofPart(b.type));
+  if (!tiles.length) return blocks;
+  const low = Math.min(...tiles.map((b) => b.dy));
+  const doors = blocks.filter((b) => b.type === doorBlock({ facing: 2 }));
+  const hung = tiles
+    .filter((b) => b.dy === low && !taken.has(`${b.dx},${b.dy - 1},${b.dz}`))
+    .filter((b) => !doors.some((d) => Math.abs(d.dx - b.dx) <= 1 && Math.abs(d.dz - b.dz) <= 1))
+    .filter((b) => speckle(b.dx, b.dy + 7, b.dz) < share)
+    .map((b) => ({ dx: b.dx, dy: b.dy - 1, dz: b.dz, type }));
+  return [...blocks, ...hung];
+}
+
+/**
+ * A mushroom: a pale stem `h` tall from (dx, dy, dz), and a cap over it —
+ * one block for a small one, a 3 × 3 with a crown for `wide`.
+ */
+function mushroom(dx, dy, dz, h, cap, wide = false) {
+  const out = [];
+  for (let y = dy; y < dy + h; y++) out.push({ dx, dy: y, dz, type: MUSHROOM_STEM });
+  if (!wide) return [...out, { dx, dy: dy + h, dz, type: cap }];
+  for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) out.push({ dx: dx + x, dy: dy + h, dz: dz + z, type: cap });
+  return [...out, { dx, dy: dy + h + 1, dz, type: cap }];
+}
 
 /** A door in a doorway at (dx, dy, dz) — both halves, facing in from -z. */
 function door(dx, dy, dz) {
@@ -237,14 +324,41 @@ function forestBlocks() {
 
 function houseBlocks() {
   // A log cabin: a plank floor, a stone plinth, log walls with a window in
-  // each side and the back, a slate roof over the eaves and a stone chimney
-  // — every block of it a first-age thing (window: planks and sand, at
-  // the bench). See room.
+  // each side and the back, a roof over the eaves and a stone chimney —
+  // every block of it a first-age thing (window: planks and sand, at the
+  // bench). See room.
+  // In the storybook look (asked for directly: "build the house ... with
+  // this new style"): teal shingles patched with mint so the roof reads as
+  // mossy, a curl of wood on each gable's tip, vines hanging from the eaves
+  // and the chimney a course taller, as in the Mistamber cottage.
+  const shell = room({ w: 5, h: 3, wall: WOOD, floor: PLANKS, roof: WOOD, tiles: TEAL, chimney: { h: 3, type: STONE } });
   return [
-    ...room({ w: 5, h: 3, wall: WOOD, floor: PLANKS, roof: WOOD, tiles: SLATE, chimney: { h: 2, type: STONE } }),
+    ...hungUnderEaves(curledTips(mottled(shell, MINT, 0.35)), HANGING_VINES, 0.4),
     // Somewhere to sleep, and a painting over it — where you wake after a
     // fall, once you've chosen it (playtest, P1).
     ...shifted([...bed(1, 1, 2, 2), { dx: 3, dy: 2, dz: 3, type: PAINTING + 2 }], 1, 1),
+  ];
+}
+
+/**
+ * A storehouse: a lean-to, low at the door and high at the back — a shed, by
+ * its outline. In the storybook look (asked for directly, with the house
+ * and the market): mint shingles patched with teal, a curl at each end of
+ * its high edge, vines from the low eave, and a red spotted mushroom growing
+ * out of the back of its roof like the one on the mushroom hut in the
+ * pictures — with a small one against its side.
+ */
+function storehouseBlocks() {
+  const shell = room({ w: 5, h: 2, wall: WOOD, floor: PLANKS, tiles: MINT, shape: 'lean' });
+  const dressed = hungUnderEaves(curledTips(mottled(shell, TEAL, 0.3)), HANGING_VINES, 0.35);
+  // Out of the back corner of the roof, standing clear of its slope.
+  const cx = 4, cz = 5;
+  const roofTop = topAt(dressed, cx, cz);
+  return [
+    ...dressed.filter((b) => !(b.dx === cx && b.dz === cz && b.dy > roofTop)),
+    ...mushroom(cx, roofTop + 1, cz, 1, CAP_RED, true),
+    // And a little one against the side wall, clear of the eave over the door.
+    ...mushroom(0, 0, 2, 1, CAP_RED),
   ];
 }
 
@@ -318,12 +432,21 @@ function withChimney(roof, dx, dz, dy, h, type) {
 function marketBlocks() {
   const g = grid();
   const W = 11, Z0 = 4, Z1 = 10;                                 // the hall, z 4..10
-  // The yard, and a stall either side of the way in.
+  // The yard, and a stall either side of the way in. In the storybook look
+  // (asked for directly, with the house and the storehouse): each stall's
+  // awning is a mushroom's cap, red on one and lilac on the other, with
+  // fairy lights strung along its front.
   g.box(0, 0, 0, W - 1, 0, Z0 - 1, COBBLE);
-  for (const x0 of [0, 8]) {
+  for (const [x0, cap] of [[0, CAP_RED], [8, CAP_LILAC]]) {
     for (const x of [x0, x0 + 2]) g.box(x, 1, 0, x, 2, 0, WOOD);
-    g.box(x0, 3, 0, x0 + 2, 3, 1, PLANKS);
+    g.box(x0, 3, 0, x0 + 2, 3, 1, cap);
     g.put(x0 + 1, 1, 0, OAK_TABLE_);
+    g.put(x0 + 1, 2, 0, FAIRY_LIGHTS);
+  }
+  // Two mushroom lamps either side of the way to the door.
+  for (const x of [3, 7]) {
+    g.add(mushroom(x, 1, 2, 2, x === 3 ? CAP_LILAC : CAP_RED));
+    g.put(x, 4, 2, FAIRY_LIGHTS);
   }
   // The hall: floor, walls with posts at the corners and either side of the
   // door, a ceiling, and a tiled roof.
@@ -334,9 +457,13 @@ function marketBlocks() {
   }
   for (const [x, z] of [[0, Z0], [W - 1, Z0], [0, Z1], [W - 1, Z1], [4, Z0], [6, Z0]]) g.box(x, 1, z, x, 3, z, WOOD);
   g.box(0, 4, Z0, W - 1, 4, Z1, PLANKS);
-  g.add(gable(0, Z0, W, Z1 - Z0 + 1, 5, TILE, PLANKS));
-  // Windows: two at the front, three at the back, two each end.
-  for (const x of [2, 8]) g.put(x, 2, Z0, WINDOW);
+  // Lilac shingles patched with mint, like the mushroom house's cap, and a
+  // curl at each end of the ridge.
+  g.add(curledTips(mottled(gable(0, Z0, W, Z1 - Z0 + 1, 5, LILAC, PLANKS), MINT, 0.25)));
+  // Wisteria hanging along the front, under the edge of the roof.
+  for (const x of [1, 3, 7, 9]) g.put(x, 4, Z0 - 1, WISTERIA);
+  // Windows: stained glass at the front, plain at the back, two each end.
+  for (const x of [2, 8]) g.put(x, 2, Z0, STAINED_GLASS);
   for (const x of [2, 5, 8]) g.put(x, 2, Z1, WINDOW);
   for (const z of [6, 8]) { g.put(0, 2, z, WINDOW + 1); g.put(W - 1, 2, z, WINDOW + 1); }
   g.add(door(5, 1, Z0));
@@ -934,8 +1061,7 @@ export const STARTER_DESIGNS = [
     size: 5,
     footprint: '5 × 5',
     note: 'Put it where you walk past it — your buildings deliver here when your bag is full.',
-    // A lean-to: low at the door, high at the back — a shed, by its outline.
-    blocks: room({ w: 5, h: 2, wall: WOOD, floor: PLANKS, tiles: SLATE, shape: 'lean' }),
+    blocks: storehouseBlocks(),
   },
   {
     id: 'starter_workshop',

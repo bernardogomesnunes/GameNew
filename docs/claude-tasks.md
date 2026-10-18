@@ -200,6 +200,28 @@ a few colours; curled wooden trim; little fairy lights.
 where they're needed, one building at a time, starting with the house.
 Screenshots of each for the owner to approve.
 
+**First round (#209), the owner's pick: "build the house, the marketplace
+and the storehouse with this new style".**
+- New blocks, each made by hand or at the workshop by the age of the first
+  design using it:
+  - teal, mint and lilac roof tiles;
+  - red and lilac mushroom caps and a mushroom stem;
+  - stained glass;
+  - hanging vines and wisteria, which you walk through;
+  - fairy lights, which glow;
+  - a curl of wood for a gable's tip.
+- House: teal shingles patched with mint so the roof looks mossy, curls on
+  the gables, vines under the eaves, a taller chimney.
+- Storehouse: mint shingles patched with teal, curls along the high edge,
+  a red spotted mushroom growing out of the roof and a small one by the
+  door.
+- Market: lilac roof patched with mint, curls on the ridge, wisteria along
+  the front, stained glass at the front, the stalls' awnings made of red and
+  lilac mushroom caps with fairy lights under them, and two mushroom lamps
+  by the way in.
+- Waiting on the owner's verdict from the screenshots before the other
+  buildings.
+
 ---
 
 ## Order

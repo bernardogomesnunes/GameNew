@@ -235,6 +235,18 @@ export const ITEMS = [
   // --- Phase 4: light, half-height shapes, furniture -----------------------
   { id: 'roof_brick', name: 'Brick Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0xc9765c, glyph: 'rooftile', block: 86, madeBy: 'Fired from brick into curved tiles' },
   { id: 'roof_stone', name: 'Stone Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x8e93a0, glyph: 'rooftile', block: 101, madeBy: 'Split from stone into slates' },
+  // The storybook look (blocks.js, ROOF_MATERIALS and CAP_RED on).
+  { id: 'roof_teal', name: 'Teal Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x3f9a92, glyph: 'rooftile', block: 460, madeBy: 'Slates stained teal with crushed leaves' },
+  { id: 'roof_mint', name: 'Mint Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x8fd1b0, glyph: 'rooftile', block: 475, madeBy: 'Slates stained mint: leaves, and sand to pale them' },
+  { id: 'roof_lilac', name: 'Lilac Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x9f86d6, glyph: 'rooftile', block: 490, madeBy: 'Slates stained lilac with blossom' },
+  { id: 'cap_red', name: 'Red Mushroom Cap', kind: 'refined', stackTo: STACK_BULK, color: 0xd2484f, glyph: 'fruit', block: 505, madeBy: 'Shaped from clay and leaves, the way the old houses grow them' },
+  { id: 'cap_lilac', name: 'Lilac Mushroom Cap', kind: 'refined', stackTo: STACK_BULK, color: 0xa178d0, glyph: 'fruit', block: 506, madeBy: 'Shaped from clay and blossom' },
+  { id: 'mushroom_stem', name: 'Mushroom Stem', kind: 'refined', stackTo: STACK_BULK, color: 0xefe4cf, glyph: 'log', block: 507, madeBy: 'Shaped from clay and sand' },
+  { id: 'glass_stained', name: 'Stained Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xd99a6a, glyph: 'pane', block: 508, madeBy: 'Glass in pieces of colour, leaded together at a workshop' },
+  { id: 'vines', name: 'Hanging Vines', kind: 'refined', stackTo: STACK_BULK, color: 0x5e9a5a, glyph: 'leaf', block: 509, madeBy: 'Twisted from leaves. Hangs from whatever is above it' },
+  { id: 'wisteria', name: 'Wisteria', kind: 'refined', stackTo: STACK_BULK, color: 0xb48ae0, glyph: 'leaf', block: 510, madeBy: 'Gathered from blossom. Hangs from whatever is above it' },
+  { id: 'fairy_lights', name: 'Fairy Lights', kind: 'refined', stackTo: STACK_BULK, color: 0xffe2a8, glyph: 'lantern', block: 511, madeBy: 'Little glass bulbs on a string, made at a workshop' },
+  { id: 'trim_curl', name: 'Curled Trim', kind: 'refined', stackTo: STACK_BULK, color: 0xa0784e, glyph: 'planks', block: 512, madeBy: 'A plank steamed into a curl, for a gable\'s tip or the end of an eave' },
   { id: 'chandelier', name: 'Chandelier', kind: 'refined', stackTo: STACK_GOODS, color: 0x5d5552, glyph: 'chandelier', block: 85, madeBy: 'Wrought from iron and hung with candles' },
   { id: 'lantern', name: 'Lantern', kind: 'refined', stackTo: STACK_GOODS, color: 0xffd27a, glyph: 'lantern', block: 26, madeBy: 'Crafted from planks and glass' },
   { id: 'slab_stone', name: 'Stone Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'slab', block: 27, madeBy: 'Split from cut stone' },
