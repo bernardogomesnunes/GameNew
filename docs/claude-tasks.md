@@ -275,6 +275,23 @@ the steps.
 **Also needed for either:** a few wall blocks to mix, such as plaster,
 mossy cobble, and timber framing in the storybook colours.
 
+## Also asked for along the way
+
+> "Sun stone should be last level of mining, farm should allow extra slots
+> with level up, pen should give meat too (stored in a store house) items in
+> store house need a sorting button to place all the items in the first rows"
+
+**Done (#215):**
+- The mine's fifth level also brings up sunstone.
+- A farm grows one more crop for each level it's evolved: 4, then 5, 6
+  and 7.
+- Chickens, sheep and cows give meat as well as eggs, wool and milk, not
+  only pigs. A pen gives at most 2 meat a cycle, like anything else, and it
+  goes to the storehouses.
+- A storehouse's pop-up has a **Sort** button. It joins stacks of the same
+  thing, puts everything in order of name and packs it into the first rows.
+  Tools and worn things keep their wear.
+
 ## Order
 
 1 and 2 first (blocking). Then 3 and 4 (felt every minute of play). Then

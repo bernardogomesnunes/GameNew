@@ -5,7 +5,7 @@ import { askConfirm } from './Confirm.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { Granary } from '../items/Granary.js';
 import { penProduce } from '../duilt/Ranch.js';
-import { FARM_SEED_SLOTS } from '../duilt/Crops.js';
+import { farmSeedSlots } from '../duilt/Crops.js';
 import { UNITS, UNITS_BY_ID, unitCost } from '../config/soldiers.js';
 
 /** What's drawn beside each kind of soldier in a barracks's line. */
@@ -246,6 +246,7 @@ export class DuiltUI {
           -->
           <div class="store-head">
             <span id="store-where">On the shelves</span>
+            <button class="secondary" id="btn-store-sort">Sort</button>
             <button class="secondary" id="btn-store-all">Put it all in</button>
           </div>
           <!--
@@ -337,6 +338,7 @@ export class DuiltUI {
     this.q('#btn-claim-column').addEventListener('click', () => this.game.beginClaimColumn());
     this.q('#btn-claim-area').addEventListener('click', () => this.game.beginClaimSelection());
     this.q('#btn-store-all').addEventListener('click', () => this.storeEverything());
+    this.q('#btn-store-sort').addEventListener('click', () => this.sortStore());
     this.q('#btn-store-bag').addEventListener('click', () => {
       this.storeBagOpen = !this.storeBagOpen;
       this.renderStore();
@@ -686,7 +688,7 @@ export class DuiltUI {
   }
 
   /**
-   * A farm's crops (backlog batch 2): FARM_SEED_SLOTS slots, one seed a
+   * A farm's crops (backlog batch 2): farmSeedSlots slots, one seed a
    * crop. Tap a crop to take it out (its seed comes back); below, the seeds
    * in your bag that aren't in yet, tap one to put it in.
    */
@@ -698,21 +700,22 @@ export class DuiltUI {
       return itemIcon(spec, { size: 22 }) ?? glyphSvg('seeds', { size: 16, color: spec?.color });
     };
     const name = (kind) => CROPS.find((c) => c.kind === kind)?.name ?? kind;
-    const slots = Array.from({ length: FARM_SEED_SLOTS }, (_, i) => {
+    const room = farmSeedSlots(structure);
+    const slots = Array.from({ length: Math.max(room, sown.length) }, (_, i) => {
       const kind = sown[i];
       return kind
         ? `<button class="farm-seed sown" data-unsow="${kind}" title="Take it out — the seed comes back">${seedIcon(kind)}<span>${name(kind)}</span><span class="x" aria-hidden="true">×</span></button>`
         : '<div class="farm-seed empty">Empty</div>';
     }).join('');
-    const room = sown.length < FARM_SEED_SLOTS;
+    const free = sown.length < room;
     const yours = CROPS.filter((c) => !sown.includes(c.kind) && (inv?.endless || inv?.has(`seeds_${c.kind}`, 1)));
-    const pick = !room ? '<p class="dim">Four crops is a full farm — tap one to take it out.</p>'
+    const pick = !free ? `<p class="dim">${room} crops is a full farm — tap one to take it out, or evolve it for another.</p>`
       : yours.length
         ? `<p class="dim">Put in a seed:</p><div class="farm-seed-pick">${yours.map((c) => `<button class="farm-seed" data-sow="${c.kind}">${seedIcon(c.kind)}<span>${c.name}</span>${inv?.endless ? '' : `<span class="n">${inv.countOf(`seeds_${c.kind}`)}</span>`}</button>`).join('')}</div>`
         : '<p class="dim">No seeds in your bag that aren\'t in already — break grass, or pick a ripe crop.</p>';
     return `
       <div class="building-sec">
-        <h4>Crops · ${sown.length} of ${FARM_SEED_SLOTS}</h4>
+        <h4>Crops · ${sown.length} of ${room}</h4>
         <div class="farm-seeds">${slots}</div>
         ${sown.length ? '<p class="dim">They grow in its soil, and it cuts and resows them when it pays out. You can plant and pick there too.</p>' : ''}
         ${pick}
@@ -1543,6 +1546,8 @@ export class DuiltUI {
 
     const all = this.q('#btn-store-all');
     if (all) all.hidden = !!summary.grave;
+    const sort = this.q('#btn-store-sort');
+    if (sort) sort.hidden = !!summary.grave;
     const title = this.q('#store-title');
     if (title) title.textContent = summary.mount ? 'Cart' : summary.car ? 'Rail car' : summary.chest ? (summary.grave ? 'What you were carrying' : summary.found ?? 'Chest') : summary.granary ? 'Granary' : 'Storehouse';
 
@@ -1769,6 +1774,16 @@ export class DuiltUI {
    * Tools stay because walking away from your own axe is never what you meant,
    * and it is the one thing you would have to notice and undo by hand.
    */
+  /** The Sort button: stacks joined, in order of name, packed into the first rows. */
+  sortStore() {
+    const d = this.duilt;
+    const store = this.store && d?.containerFor(this.store);
+    if (!store) return;
+    this.storePage = 0;
+    if (!store.sortSlots()) this.bus.emit('toast', { kind: 'xp', title: 'Already sorted' });
+    this.renderStore();
+  }
+
   storeEverything() {
     const d = this.duilt;
     const store = this.store && d?.containerFor(this.store);

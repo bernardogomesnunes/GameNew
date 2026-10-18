@@ -910,8 +910,10 @@ export const STRUCTURES = [
         ],
       },
       {
-        id: 'diamonds', name: 'A Diamond Seam', blurb: 'As deep as anyone has dug. Something glitters.',
-        produces: { copper_ore: 1, iron_ore: 1, gold_ore: 1, diamond: 1, stone: 1, coal: 1 }, everySeconds: 7200,
+        // And sunstone, the White Ring's ore (asked for directly: "Sun stone
+        // should be last level of mining").
+        id: 'diamonds', name: 'A Diamond Seam', blurb: 'As deep as anyone has dug. Something glitters, and something glows.',
+        produces: { copper_ore: 1, iron_ore: 1, gold_ore: 1, diamond: 1, sunstone: 1, stone: 1, coal: 1 }, everySeconds: 7200,
         needs: [
           work((ctx) => ctx.countOf(0), 64, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
           work((ctx) => count(ctx, [STONE, COBBLE]), 100, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),

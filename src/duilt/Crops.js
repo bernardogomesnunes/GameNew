@@ -73,6 +73,15 @@ export function harvestOf(blockId) {
 /** How many crops one farm grows at once (backlog batch 2: "up to 4 crops"). */
 export const FARM_SEED_SLOTS = 4;
 
+/**
+ * How many crops this farm can grow: one more for each level it's evolved
+ * (asked for directly: "farm should allow extra slots with level up") —
+ * four as a Humble Farm, seven as a Renowned one.
+ */
+export function farmSeedSlots(structure) {
+  return FARM_SEED_SLOTS + Math.max(0, structure?.tier ?? 0);
+}
+
 const FARMLAND = 21, AIR = 0;
 
 /**
