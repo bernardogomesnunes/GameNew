@@ -67,7 +67,7 @@ export const SECRETS = [
   {
     id: 's_both_ways', name: 'Both ways', icon: '⏳', xpReward: 200,
     hint: 'Backwards, and forwards.',
-    description: 'Traveled to the Past, and to the Future.',
+    description: 'Travelled to the Past, and to the Future.',
     check: (c) => !!(c.duilt?.time?.pastVisited && c.duilt?.time?.futureVisited),
   },
   {
