@@ -73,9 +73,17 @@ The bigger buttons are Cline's Task 8.
 **Now:** buildings are paid by the real clock. Away from the game, they keep
 producing for up to 8 hours, which fills the storehouses.
 
-**Fix:** pay them by time played, not time away. Closing the game pauses
-them. Question for the owner: should anything still trickle in while away
-(say an hour's worth), or nothing at all?
+**The owner's answer:** "game closed no production".
+
+**Done (#213):**
+- Buildings work only while the game is open.
+- Opening a world pays nothing for the time it was closed.
+- Putting the game away (another app, the phone locked) stops their clocks
+  until you're back.
+- A cycle half done when you left is still half done when you return.
+- Menus and pop-ups still count as playing.
+- Crops in fields still grow while you're away, as before; they don't fill
+  any storage.
 
 ### 5. Throw things away from a storehouse
 
@@ -90,9 +98,14 @@ stone? They're gone for good." first. The bag already had it.
 > "It's impossible to run inside forests, I want them with leaves taller
 > and space between logs"
 
-**Fix:** trees spaced further apart, and taller trunks so the canopy starts
-above your head. This changes only land you haven't been to yet; what's
-already made stays. Check it in the browser by walking through a forest.
+**Done (#213):**
+- No two trunks closer than three blocks.
+- No tree's leaves lower than four blocks over the ground, so you can run
+  and jump under a crown. Saplings grow by the same rule.
+- The forests still have most of the world's trees.
+- Land you've built on or changed is saved as it is and doesn't change.
+  Land you've only walked through grows again with the new spacing.
+- Checked in the browser, standing in a birch forest.
 
 ---
 

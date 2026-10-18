@@ -10,10 +10,12 @@ import { tierStatus, validateStructure } from './validate.js';
 /**
  * Every building the player has claimed, and the clock that pays them out.
  *
- * Production runs on wall-clock time rather than frames, which means it also
- * runs while the tab is closed. Coming back to a full granary is most of the
- * reason to come back at all, and a game that only advances while you watch it
- * is a game you have to babysit.
+ * Production runs on wall-clock time rather than frames, but only while the
+ * game is open: the time it's closed or put away is skipped (skipAway). It
+ * used to run while the tab was closed too, and came back to storehouses
+ * filled to the roof (asked for directly: "Let's put progress items only in
+ * game time not all the time or it's gonna fill any storage", then "game
+ * closed no production").
  *
  * Structures are re-checked as the world changes: dig the dirt out from under
  * your own farm and it stops producing — with a warning, never silently.
@@ -596,6 +598,17 @@ export class StructureRegistry {
     if (Object.keys(gained).length) this.bus?.emit('structure:produced', { gained });
     if (stalled.length) this.bus?.emit('structure:stalled', { structures: stalled });
     return gained;
+  }
+
+  /**
+   * Time the game wasn't open isn't paid for: every building's clock moves on
+   * by `ms`, so a cycle half done when you left is still half done when you
+   * come back, and nothing is owed for the time between. See DuiltGame's
+   * loadJSON (a world opened) and resumeClock (the game brought back).
+   */
+  skipAway(ms, { now = Date.now() } = {}) {
+    if (!(ms > 0)) return;
+    for (const s of this.structures) s.lastPaidAt = Math.min(now, (s.lastPaidAt ?? now) + ms);
   }
 
   /** Seconds until the next payout from any building, or null if none produce. */

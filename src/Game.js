@@ -773,10 +773,12 @@ export class Game {
       this.crashed('The phone ran out of graphics memory.');
     });
     const save = () => this.saveNow();
+    // Put away, the buildings stop working until it's back (DuiltGame.pauseClock).
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') save();
+      if (document.visibilityState === 'hidden') { this.duilt?.pauseClock(); save(); }
+      else this.duilt?.resumeClock();
     });
-    window.addEventListener('pagehide', save);
+    window.addEventListener('pagehide', () => { this.duilt?.pauseClock(); save(); });
     // Run is on Ctrl (asked for directly), and Ctrl+W closes a browser tab —
     // a page can't stop that, but it can ask first. Only while you're
     // playing with the mouse taken (a keyboard); the world is saved either way.
