@@ -82,6 +82,40 @@ export class Inventory {
     return this.slots.length;
   }
 
+  /**
+   * Tidies a container (asked for directly: "items in store house need a
+   * sorting button to place all the items in the first rows"): stacks of the
+   * same thing joined up to their limit, everything in order of name, and
+   * all of it packed into the first slots. Tools, and anything worn or one
+   * to a slot, keep their own slots and their wear. Nothing is added or
+   * lost. Returns whether anything moved.
+   */
+  sortSlots() {
+    if (this.endless) return false;
+    const before = JSON.stringify(this.slots);
+    const tools = [], piles = new Map();
+    for (const s of this.slots) {
+      if (!s) continue;
+      // Kept as they are: tools, anything worn, anything one to a slot.
+      if (isTool(s.id) || s.wear || stackLimit(s.id) === 1) tools.push(s);
+      else piles.set(s.id, (piles.get(s.id) ?? 0) + s.count);
+    }
+    const sorted = [];
+    for (const [id, total] of piles) {
+      const limit = stackLimit(id);
+      for (let left = total; left > 0; left -= limit) sorted.push({ id, count: Math.min(limit, left), wear: 0 });
+    }
+    sorted.push(...tools.map((t) => ({ ...t })));
+    const name = (id) => ITEMS_BY_ID.get(id)?.name ?? id;
+    sorted.sort((a, b) => name(a.id).localeCompare(name(b.id)) || b.count - a.count || a.wear - b.wear);
+    const next = new Array(this.slots.length).fill(null);
+    sorted.forEach((s, i) => { next[i] = s; });
+    this.slots = next;
+    if (JSON.stringify(this.slots) === before) return false;
+    this.changed();
+    return true;
+  }
+
   /** Packs everything to the front, keeping the order it was in. */
   compact() {
     const filled = this.slots.filter(Boolean);

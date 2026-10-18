@@ -81,7 +81,8 @@ ok('Place with seeds no longer plants "whatever comes up"', !/plantMixed/.test(g
 
 // --- the pop-up -----------------------------------------------------------------------
 
-ok('the farm\'s pop-up shows its crop slots', /spec\?\.fromCrops \? this\.farmSeedsHtml\(structure\) : ''/.test(ui) && /Crops · \$\{sown\.length\} of \$\{FARM_SEED_SLOTS\}/.test(ui));
+ok('the farm\'s pop-up shows its crop slots', /spec\?\.fromCrops \? this\.farmSeedsHtml\(structure\) : ''/.test(ui) && /Crops · \$\{sown\.length\} of \$\{room\}/.test(ui));
+// One more slot each level up (asked for directly) — see tests/harvest2.test.mjs.
 ok('tap a seed to put it in, a crop to take it out',
   /data-sow="\$\{c\.kind\}"/.test(ui) && /data-unsow="\$\{kind\}"/.test(ui)
   && /onSow: \(kind\) => this\.sowFarm\(structure, kind, true\)/.test(game) && /onUnsow: \(kind\) => this\.sowFarm\(structure, kind, false\)/.test(game));

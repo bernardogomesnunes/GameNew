@@ -19,7 +19,7 @@ const src = readFileSync(gamePath, 'utf8');
 // `indexOf('newWorld(')` alone finds the constructor's own call to it first
 // — this needs the method definition itself, further down the file.
 const defAt = src.indexOf('newWorld({ silent, mode');
-const body = src.slice(defAt, defAt + 2000);
+const body = src.slice(defAt, defAt + 3200);
 
 ok('newWorld no longer builds a small fixed-size world for Creative',
   !/sizeX:\s*64,\s*sizeZ:\s*64/.test(body));

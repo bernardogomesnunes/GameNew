@@ -59,6 +59,16 @@ export class Granary extends Inventory {
   /** One slot a kind: halving a stack would make two. */
   split() { return false; }
 
+  /** In order of name; it's already one slot a kind, packed at the front. */
+  sortSlots() {
+    const name = (id) => ITEMS_BY_ID.get(id)?.name ?? id;
+    const before = this.slots.map((s) => s.id).join();
+    this.slots.sort((a, b) => name(a.id).localeCompare(name(b.id)));
+    if (this.slots.map((s) => s.id).join() === before) return false;
+    this.changed();
+    return true;
+  }
+
   /** Drops the slot of anything run out. */
   tidy() {
     if (!this.slots.some((s) => !s)) return;

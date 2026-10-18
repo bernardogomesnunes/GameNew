@@ -35,10 +35,16 @@ export function penProduce(pen, herd) {
   const byKind = {};
   for (const m of penAnimals(pen, herd)) byKind[m.type] = (byKind[m.type] ?? 0) + 1;
   const out = {};
+  let meat = 0;
   for (const [kind, n] of Object.entries(byKind)) {
     const item = PEN_YIELD[kind];
     if (item) out[item] = (out[item] ?? 0) + Math.min(PER_KIND, n);
+    // Meat from every kind, not only pigs (asked for directly: "pen should
+    // give meat too"): one a cycle for each kind that's there, the same
+    // PER_KIND ceiling on it as on anything else.
+    if (item && item !== 'raw_meat') meat++;
   }
+  if (meat) out.raw_meat = Math.min(PER_KIND, (out.raw_meat ?? 0) + meat);
   return out;
 }
 

@@ -1,6 +1,6 @@
 import { Rivals } from './Rivals.js';
 import { GAME_DAY_SECONDS } from '../render/DayCycle.js';
-import { Crops, harvestOf, farmProduce, tendFarm, FARM_SEED_SLOTS } from './Crops.js';
+import { Crops, harvestOf, farmProduce, tendFarm, farmSeedSlots } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND, cropOf } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
 import { TurfSpread } from './TurfSpread.js';
@@ -1632,7 +1632,8 @@ export class DuiltGame {
     const seeds = s.seeds ?? (s.seeds = []);
     if (!CROPS_BY_KIND.has(kind)) return { ok: false, reason: 'That isn\'t a crop' };
     if (seeds.includes(kind)) return { ok: false, reason: `It's already growing ${CROPS_BY_KIND.get(kind).name.toLowerCase()}` };
-    if (seeds.length >= FARM_SEED_SLOTS) return { ok: false, reason: `A farm grows ${FARM_SEED_SLOTS} crops at most — take one out first` };
+    const room = farmSeedSlots(s);
+    if (seeds.length >= room) return { ok: false, reason: `This farm grows ${room} crops at most — take one out, or evolve it for another` };
     const id = `seeds_${kind}`;
     if (!this.inventory.endless && !this.inventory.remove(id, 1)) return { ok: false, reason: `You have no ${itemName(id).toLowerCase()}` };
     seeds.push(kind);
