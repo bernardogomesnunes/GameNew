@@ -130,14 +130,60 @@ copper. The foundry smelts, but produces nothing by itself.
 It starts with copper, then iron, gold from level 3, and diamonds at
 level 5.
 
+**Done (#207):** the Mine now opens at Age 5, with the foundry that smelts
+its ore, and climbs five levels by digging it out further and propping the
+roof:
+
+| Level | Brings up |
+|---|---|
+| 1, A Shaft | copper ore, stone, coal |
+| 2, A Drift | adds iron ore |
+| 3, A Gold Gallery | adds gold ore |
+| 4, Deep Workings | the same, more often |
+| 5, A Diamond Seam | adds diamonds |
+
+Digging inside it is never refused, as in a quarry. Age 6's "evolve a
+building" goal is now "Dig your mine down to iron", and Age 8's mine goal is
+"Dig your mine down to gold". Gold comes up as ore for the foundry now,
+like copper and iron.
+
 ### 9. Buildings that fit the whimsical, mystical look
 
 > "Buildings need rebuilding, they need to fit more the mood and vibe of the
 > mobs whimsical and mystical this might require new blocks and lights - ask
 > me for references"
 
-**Need from the owner:** pictures or links of the look you want, before
-starting.
+**The owner's references** (four screenshots of Minecraft builds, sent in
+the chat; described here, not copied in, as they're other people's work):
+
+1. *Mistamber* cottage: a steep, crooked roof in mint and teal tiles with
+   moss growing over it; oak beams framing it; curled wooden flourishes on
+   the eaves and gable tips; leaning brick and stone chimneys with smoke; a
+   stained-glass window; a red door on a mossy stone base; lanterns by the
+   door; red-capped mushrooms and blue flowers along the path.
+2. *Fantasy house*: dark wood framing with a steep teal roof whose tips
+   curl up; a slim tower with a pointed teal spire and lit windows; warm
+   lanterns; stone steps.
+3. *Mushroom house*: a giant mushroom cap for a roof, purple, pink and
+   pale green, with purple flowers hanging from its rim like wisteria; a
+   tree-trunk body with a round door and little balconies; amethyst
+   crystals and small warm lights all round.
+4. *Whimsical mushroom hut*: a timber cottage with a grassy, mossy roof,
+   red-and-white spotted mushroom caps growing out of it, a cobbled path
+   and flowers.
+
+**What they share:** steep, crooked roofs in teal, mint or purple; curled
+tips; moss, vines and hanging flowers; mushrooms; warm small lights;
+stained glass and crystals; leaning chimneys.
+
+**Already in the game:** moss, dark moss, amethyst, lanterns, firefly
+lanterns, brick and stone chimneys, brick and stone roof tiles, red, blue
+and tinted glass, clay.
+
+**New blocks needed:** teal roof tiles and mint roof tiles (and mossy
+versions); a red spotted mushroom cap, a purple mushroom cap and a pale
+mushroom stem; hanging vines and hanging purple flowers; stained glass in
+a few colours; curled wooden trim; little fairy lights.
 
 **Then:** redesign the ready-made buildings, with new blocks and lights
 where they're needed, one building at a time, starting with the house.
@@ -148,4 +194,4 @@ Screenshots of each for the owner to approve.
 ## Order
 
 1 and 2 first (blocking). Then 3 and 4 (felt every minute of play). Then
-5, 6, 8. Then 7. 9 still needs references from the owner.
+5, 6, 8. Then 7 and 9.
