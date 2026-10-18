@@ -1391,6 +1391,9 @@ export class DuiltGame {
     this.settlers.tick(dtSeconds);
 
     const now = Date.now();
+    // Running again after being put away, without having been told: the
+    // time away still isn't paid for.
+    if (this.awaySince != null) this.resumeClock(now);
     if (now - this.lastCollect > 5000) {
       this.lastCollect = now;
       this.structures.collect({
@@ -1403,6 +1406,22 @@ export class DuiltGame {
       this.countTaxes();
       this.payGifts();
     }
+  }
+
+  /**
+   * The game put away — another app, the phone locked, the tab hidden: the
+   * buildings' clocks stop until it's back (asked for directly: "game closed
+   * no production"). Game calls these on the page's visibility.
+   */
+  pauseClock(now = Date.now()) {
+    this.awaySince ??= now;
+  }
+
+  resumeClock(now = Date.now()) {
+    if (this.awaySince == null) return;
+    this.structures.skipAway(now - this.awaySince, { now });
+    this.awaySince = null;
+    this.lastCollect = now;
   }
 
   /** What the Sky Kingdom takes of what your buildings make: on the dark path, after a lost attack, until it falls. */
@@ -2130,7 +2149,10 @@ export class DuiltGame {
     this.army.loadJSON(data.army);
     // A world already at the last age from before there was a war: it starts now.
     this.declareWar();
-    // Pay out everything earned while the tab was shut.
+    // The time it was closed isn't paid for (asked for directly: "game closed
+    // no production"): only what came due while it was open and wasn't
+    // collected before it was saved.
+    if (Number.isFinite(data.savedAt)) this.structures.skipAway(Date.now() - data.savedAt);
     this.lastCollect = Date.now();
     const gained = this.structures.collect({
       now: Date.now(),

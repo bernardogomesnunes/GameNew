@@ -91,6 +91,15 @@ export const TREE_SIZES = [
   { upTo: 0.92, size: 'tall' },
   { upTo: 1, size: 'towering' },
 ];
+/**
+ * Room to move in a wood (asked for directly: "It's impossible to run inside
+ * forests, i want them with leaves taller and space between logs"). No two
+ * trunks closer than TREE_SPACING + 1 blocks, so there are always at least
+ * two clear columns between them; and no leaves lower than LEAF_CLEARANCE
+ * blocks over the ground, so you can run and jump under a crown.
+ */
+export const TREE_SPACING = 2;
+export const LEAF_CLEARANCE = 4;
 /** How far round a landmark's footprint no tree grows. */
 const LANDMARK_CLEARING = 5;
 /** One tree in this many is a giant (unless its biome says otherwise). */
@@ -389,6 +398,15 @@ export class ChunkGen {
     const t = biome.trees;
     if (!t?.chance) return null;
     if (roll >= t.chance) return null;
+    // Spaced out: a tree only where no stronger one (a lower roll) is
+    // within TREE_SPACING. Two trees that close can't both be the
+    // strongest, so they never both stand; the rolls alone decide, so any
+    // chunk asking gets the same answer.
+    for (let dx = -TREE_SPACING; dx <= TREE_SPACING; dx++) {
+      for (let dz = -TREE_SPACING; dz <= TREE_SPACING; dz++) {
+        if ((dx || dz) && hash01(x + dx, z + dz, this.seed ^ 0x5f3a) < roll) return null;
+      }
+    }
     const ground = this.heightAt(x, z);
     // Both mountain tiers only take root near their own foot — see
     // biomes.js's own note on why, requested directly for both.
@@ -801,10 +819,17 @@ const CAVERN_WATER_CHANCE = 0.2;
  */
 export function sizedTree(style, ground, base, size) {
   const canopy = style.canopy ?? 2;
-  if (size === 'small') return { style, trunk: Math.max(3, base - 2), ground, size, canopy: Math.max(1, canopy - (canopy > 1 ? 1 : 0)) };
-  if (size === 'normal') return { style, trunk: base, ground, size, canopy };
+  // A small or normal crown's lowest leaves are a block under the top of
+  // its trunk (treeShape), so the trunk is at least LEAF_CLEARANCE + 1.
+  const low = LEAF_CLEARANCE + 1;
+  if (size === 'small') return { style, trunk: Math.max(low, base - 2), ground, size, canopy: Math.max(1, canopy - (canopy > 1 ? 1 : 0)) };
+  if (size === 'normal') return { style, trunk: Math.max(low, base), ground, size, canopy };
   const stretch = size === 'tall' ? 1.5 : 2;
-  return { style, trunk: Math.round(base * stretch), ground, size, canopy: canopy + (size === 'tall' ? 1 : 2) };
+  const crown = canopy + (size === 'tall' ? 1 : 2);
+  // A tall crown hangs `below` blocks under the top of its trunk plus one
+  // (treeShape's crownShape): a trunk tall enough to keep that clear too.
+  const below = Math.round(crown + 0.6);
+  return { style, trunk: Math.max(Math.round(base * stretch), LEAF_CLEARANCE + below - 1), ground, size, canopy: crown };
 }
 
 /**

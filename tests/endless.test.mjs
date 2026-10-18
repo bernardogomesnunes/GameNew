@@ -91,7 +91,9 @@ ok('it stays inside 0..1', [...Array(500)].every((_, i) => {
       // biome's trees were as wide as a meadow's, which stopped holding
       // once narrower ones (highlands, snowfield, peaks) could land here.
       const top = tree.ground + tree.trunk;
-      const r = tree.style.canopy ?? 2;
+      // The tree's own crown: a small one's is a block narrower than its
+      // biome's (ChunkGen's sizedTree).
+      const r = tree.canopy ?? tree.style.canopy ?? 2;
       const left = world.getBlock(x - r, top, z);
       const right = world.getBlock(x + r, top, z);
       if (left !== 0 || right !== 0) whole++;
