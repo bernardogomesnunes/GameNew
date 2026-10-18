@@ -143,6 +143,8 @@ const WHISTLE_REACH = 60, PACK_HEEL = 4, PACK_FIGHT = 14, PACK_CATCH_UP = 40, PA
 const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard', 'futurian']);
 /** The longest Save and leave waits for the upload before letting you go anyway. */
 const LEAVE_SAVE_WAIT_MS = 15000;
+/** How much land round the title scene's middle, and under its camera, is ready before the worlds screen shows. */
+const TITLE_READY_REACH = 24, TITLE_EYE_REACH = 16;
 /** How fast the touch stick walks at its rim, against a key's full walking pace. */
 const TOUCH_WALK = 0.8;
 /** The war only comes on while you're this near home — it's your settlement they want. */
@@ -580,7 +582,7 @@ export class Game {
     // It's the title scene's own world (openTitle), made once: this used to
     // make a world of its own first, only for openTitle to throw it away and
     // make another — a third of the wait before the game appeared.
-    this.newWorld({ mode: CREATIVE, name: 'Title', silent: true, scenery: true, seed: TITLE_SEED });
+    this.newWorld({ mode: CREATIVE, name: 'Title', silent: true, scenery: true, title: true, seed: TITLE_SEED });
     this.bootWorld = this.world;
 
     this.symmetryTool = new SymmetryTool(this.world);
@@ -1075,7 +1077,8 @@ export class Game {
       if (ok === false) return ok;
       loadingProgress(50, 'Drawing the land…');
       this.booting = true;
-      await followDrawing(() => this.drawnAround(this.title?.site ?? this.player?.position), { from: 50 });
+      // Back to the worlds screen: only what its camera sees first (titleProgress).
+      await followDrawing(() => (this.title ? this.titleProgress() : this.drawnAround(this.player?.position)), { from: 50 });
       return ok;
     } finally {
       this.booting = false;
@@ -1533,7 +1536,7 @@ export class Game {
     this.duilt = null;
   }
 
-  newWorld({ silent, mode = this.mode, name, scenery = false, seed } = {}) {
+  newWorld({ silent, mode = this.mode, name, scenery = false, title = false, seed } = {}) {
     // Battle (backlog batch 4, E) is Duilt's rules with three rivals in the
     // world (duilt/Rivals.js) — a Duilt world with `battle` on its settlement.
     const battle = mode === BATTLE;
@@ -1567,9 +1570,15 @@ export class Game {
     // nothing stopping it from being just as endless. Both modes start in
     // exactly the same generated world now; only what you're allowed to do
     // in it differs.
-    const built = generateEndlessWorld({ height: WORLD_HEIGHT, ...(seed != null ? { seed } : {}) });
+    // The title scene behind the worlds screen (`title`) lays out no
+    // settlement and starts where it's looked at (openTitle); see
+    // generateEndlessWorld. The showcase is scenery too, but builds on its
+    // settlement, so it keeps one.
+    const built = generateEndlessWorld({ height: WORLD_HEIGHT, settle: !title, ...(seed != null ? { seed } : {}) });
     this.world = built.world;
-    let spawn = built.origin.spawn;
+    let spawn = title
+      ? { x: TITLE_SITE.x + 0.5, y: this.world.gen.heightAt(TITLE_SITE.x, TITLE_SITE.z) + 1, z: TITLE_SITE.z + 0.5 }
+      : built.origin.spawn;
     if (this.player) this.player.dispose();
     this.player = new PlayerController(this.world, this.camera, spawn ?? this.findSafeSpawn());
     this.wireFlight();
@@ -1589,7 +1598,10 @@ export class Game {
     // own note on exactly what it switches off.
     const sandbox = mode !== DUILT;
     this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus, sandbox });
-    if (sandbox) this.duilt.grantCreativeKit();
+    // Not for the title scene: nobody plays in it, and a kit of one of everything
+    // was hundreds of bag changes at every start (reported directly: "The
+    // game is taking too long to load").
+    if (sandbox && !title) this.duilt.grantCreativeKit();
     if (battle) { this.duilt.battle = new Rivals(); this.world.gen.battle = true; }
     // Saved inside the god's cube: back out where you went in.
     if (this.duilt.cube?.back) {
@@ -1598,7 +1610,7 @@ export class Game {
       this.duilt.cube.inside = false;
       delete this.duilt.cube.back;
     }
-    else this.duilt.grantStartingKit();
+    else if (!title) this.duilt.grantStartingKit();
     // Every new world starts in the morning.
     if (this.dayCycle) this.dayCycle.time = MORNING;
     // After the rules exist, not before: this reads the border off `duilt`,
@@ -1609,7 +1621,9 @@ export class Game {
     this.gamification.setDuilt(this.duilt);
     this.economy = new EconomyEngine(this.bus);
     if (this.symmetryTool) this.symmetryTool = new SymmetryTool(this.world);
-    this.rebuildAllChunks();
+    // The title scene's land comes in nearest first, a little a frame,
+    // rather than all of it before anything is drawn (see rebuildAllChunks).
+    this.rebuildAllChunks({ all: !title });
     this.bus.emit('economy:change', {});
     if (!silent) {
       this.ui.refreshForMode();
@@ -1732,12 +1746,14 @@ export class Game {
    * large world in one go is close to a second of frozen tab; this way the
    * nearby world is solid immediately and the horizon fills in over a few frames.
    */
-  rebuildAllChunks() {
+  rebuildAllChunks({ all = true } = {}) {
     this.mesher.clearAll();
     this.remeshQueue.clear();
     // An endless world has only the settlement in it until something asks for
     // more, so the first thing to do is ask for everything within sight.
-    if (this.world.endless && this.player) {
+    // Not for the title scene (`all` false): streamChunks queues it nearest first.
+    if (this.world.endless && this.player && !all) this.streamedAt = null;
+    else if (this.world.endless && this.player) {
       this.world.ensureAround(this.player.position.x, this.player.position.z, this.renderDistance);
       this.streamedAt = null;
     }
@@ -1771,23 +1787,39 @@ export class Game {
    * loading screen's bar follows. Every chunk within `reach` blocks of the
    * scene's middle, made and meshed.
    */
-  titleProgress(reach = 48) {
-    return this.drawnAround(this.title?.site, reach);
+  /**
+   * How much of the title scene's land is ready, 0..1: only what the camera
+   * sees at first — round the middle it looks at, and under where it flies
+   * — not all 48 blocks round. The rest is made behind the worlds screen
+   * as it's needed (reported directly: "The game is taking too long to
+   * load"; most of the wait was land nobody was looking at yet).
+   */
+  titleProgress() {
+    const tl = this.title;
+    if (!tl) return 1;
+    const eye = orbitPose(tl.site, tl.t, tl.eyeY).eye;
+    return this.drawnAround([{ ...tl.site, reach: TITLE_READY_REACH }, { ...eye, reach: TITLE_EYE_REACH }]);
   }
 
-  /** How much of the land within `reach` of `site` is made and drawn, 0..1. */
+  /**
+   * How much of the land within `reach` of `site` is made and drawn, 0..1.
+   * `site` can be a list of places, each with its own `reach`.
+   */
   drawnAround(site, reach = 48) {
     if (!site || !this.world) return 1;
-    let need = 0, done = 0;
-    const c0x = Math.floor((site.x - reach) / CHUNK_SIZE), c1x = Math.floor((site.x + reach) / CHUNK_SIZE);
-    const c0z = Math.floor((site.z - reach) / CHUNK_SIZE), c1z = Math.floor((site.z + reach) / CHUNK_SIZE);
-    for (let cx = c0x; cx <= c1x; cx++) {
-      for (let cz = c0z; cz <= c1z; cz++) {
-        need++;
-        if (this.world.hasChunk(cx, cz) && this.world.getChunk(cx, cz).mesh) done++;
-      }
+    const keys = new Set();
+    for (const s of Array.isArray(site) ? site : [{ ...site, reach }]) {
+      const r = s.reach ?? reach;
+      const c0x = Math.floor((s.x - r) / CHUNK_SIZE), c1x = Math.floor((s.x + r) / CHUNK_SIZE);
+      const c0z = Math.floor((s.z - r) / CHUNK_SIZE), c1z = Math.floor((s.z + r) / CHUNK_SIZE);
+      for (let cx = c0x; cx <= c1x; cx++) for (let cz = c0z; cz <= c1z; cz++) keys.add(`${cx},${cz}`);
     }
-    return need ? done / need : 1;
+    let done = 0;
+    for (const key of keys) {
+      const [cx, cz] = key.split(',').map(Number);
+      if (this.world.hasChunk(cx, cz) && this.world.getChunk(cx, cz).mesh) done++;
+    }
+    return keys.size ? done / keys.size : 1;
   }
 
   /** How far a chunk is from you, squared, to its nearest edge. */
@@ -5059,7 +5091,7 @@ export class Game {
   openTitle() {
     if (this.title) return true;
     // The world boot made is this one, untouched: no need to make it twice.
-    if (this.world !== this.bootWorld) this.newWorld({ mode: CREATIVE, name: 'Title', scenery: true, silent: true, seed: TITLE_SEED });
+    if (this.world !== this.bootWorld) this.newWorld({ mode: CREATIVE, name: 'Title', scenery: true, title: true, silent: true, seed: TITLE_SEED });
     this.bootWorld = null;
     const gen = this.world.gen;
     const site = { ...TITLE_SITE, y: gen.heightAt(TITLE_SITE.x, TITLE_SITE.z) };
@@ -7083,7 +7115,14 @@ export class Game {
     const start = performance.now();
     const w = this.world;
     let built = 0;
-    for (const chunk of this.remeshQueue) {
+    // Nearest first: the queue is in the order chunks came to need drawing,
+    // and land made earlier for something else (a settlement, a search) was
+    // drawn before the land in front of you (reported directly: "The game
+    // is taking too long to load").
+    const queue = this.remeshQueue.size > 1 && this.player
+      ? [...this.remeshQueue].sort((a, b) => this.chunkDistSq(a) - this.chunkDistSq(b))
+      : this.remeshQueue;
+    for (const chunk of queue) {
       // Stop before one that would run past the budget, not after it has:
       // a rebuild is several milliseconds, and starting one at 5.9 of 6 is a
       // dropped frame. Always at least one a frame, so the queue can't stall.

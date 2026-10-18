@@ -163,7 +163,7 @@ ok('the forest spot finds forest', !!forestNear(gen, site));
 
 ok('Game opens it in a seeded Creative world that is never saved',
   /openShowcase\(/.test(game) && /newWorld\(\{ mode: CREATIVE, name: 'Showcase', scenery: true, silent: true, seed: SHOWCASE_SEED \}\)/.test(game));
-ok('  a new world can be given its seed', /generateEndlessWorld\(\{ height: WORLD_HEIGHT, \.\.\.\(seed != null \? \{ seed \} : \{\}\) \}\)/.test(game));
+ok('  a new world can be given its seed', /generateEndlessWorld\(\{ height: WORLD_HEIGHT, settle: !title, \.\.\.\(seed != null \? \{ seed \} : \{\}\) \}\)/.test(game));
 ok('  the starter designs go down through starterPlacement, as a tap does', /this\.duilt\.starterPlacement\(b\.structure/.test(game));
 ok('  no wild herds or explorers wander through', /this\.mobs\.cap = 0/.test(game) && /untilExplorer = Infinity/.test(game));
 ok('  its own people join the lists the game draws', /withShowcase\('settlers'/.test(game) && /withShowcase\('defenders'/.test(game) && /withShowcase\('warriors'/.test(game));
