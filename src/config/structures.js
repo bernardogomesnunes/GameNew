@@ -833,11 +833,17 @@ export const STRUCTURES = [
     id: 'mine',
     name: 'Mine',
     icon: '⚒️',
-    age: 8,
+    // Age 5, with the foundry that smelts what it brings up (asked for
+    // directly: "We need buildings to produce ores, the one the smelts is
+    // cool, but we need passive generation too").
+    age: 5,
     blurb: 'Everything easy is above ground. This is not above ground.',
     minSize: 4,
     maxSize: 16,
     cost: { planks: 8 },
+    // Dug like a quarry: never locked against digging, and it takes in the
+    // rock you open up, so digging it out is how it climbs its levels.
+    growsWhenDug: true,
     requires: [
       {
         id: 'depth',
@@ -867,9 +873,51 @@ export const STRUCTURES = [
     // actually worked its way up to it.
     // And coal, for the trains (backlog batch 2: "Runs on coal, which comes
     // from the mine as passive output").
-    produces: { stone: 1, gold: 1, coal: 1 },
+    // Then ore, by level (asked for directly: "a mine building, which
+    // generates ores, with 5 levels and starts with copper and then iron and
+    // goes to gold at 3 and diamonds at 5"). Gold comes up as ore now, for
+    // the foundry, like copper and iron.
+    produces: { copper_ore: 1, stone: 1, coal: 1 },
     everySeconds: 8640,
     skill: 'building',
+    // Climbed by digging, as a quarry is: dig it out further, prop the roof,
+    // and the level follows.
+    tiers: [
+      { id: 'shaft', name: 'A Shaft', blurb: 'A hole in the rock and a seam of copper.', needs: [] },
+      {
+        id: 'drift', name: 'A Drift', blurb: 'Driven along the seam far enough to strike iron.',
+        produces: { copper_ore: 1, iron_ore: 1, stone: 1, coal: 1 }, everySeconds: 8640,
+        needs: [
+          work((ctx) => ctx.countOf(0), 24, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
+          work((ctx) => count(ctx, [PLANKS, WOOD]), 12, { item: 'planks', key: 'props', say: (k) => `Prop the roof with ${k} more planks or logs` }),
+        ],
+      },
+      {
+        id: 'gallery', name: 'A Gold Gallery', blurb: 'Deep enough for gold to show in the walls.',
+        produces: { copper_ore: 1, iron_ore: 1, gold_ore: 1, stone: 1, coal: 1 }, everySeconds: 8640,
+        needs: [
+          work((ctx) => ctx.countOf(0), 36, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
+          work((ctx) => count(ctx, [STONE, COBBLE]), 60, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
+        ],
+      },
+      {
+        id: 'workings', name: 'Deep Workings', blurb: 'Galleries off galleries, worked day and night.',
+        produces: { copper_ore: 1, iron_ore: 1, gold_ore: 1, stone: 1, coal: 1 }, everySeconds: 7200,
+        needs: [
+          work((ctx) => ctx.countOf(0), 50, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
+          work((ctx) => count(ctx, [STONE, COBBLE]), 80, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
+          work((ctx) => count(ctx, [PLANKS, WOOD]), 16, { item: 'planks', key: 'props', say: (k) => `Prop the roof with ${k} more planks or logs` }),
+        ],
+      },
+      {
+        id: 'diamonds', name: 'A Diamond Seam', blurb: 'As deep as anyone has dug. Something glitters.',
+        produces: { copper_ore: 1, iron_ore: 1, gold_ore: 1, diamond: 1, stone: 1, coal: 1 }, everySeconds: 7200,
+        needs: [
+          work((ctx) => ctx.countOf(0), 64, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
+          work((ctx) => count(ctx, [STONE, COBBLE]), 100, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
+        ],
+      },
+    ],
   },
 
   {

@@ -71,7 +71,7 @@ export const ITEMS = [
   { id: 'brick', name: 'Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'brick', block: 9, madeBy: 'Fired from earth in a kiln' },
   { id: 'glass', name: 'Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xb9dce8, glyph: 'pane', block: 10, madeBy: 'Fired from sand in a kiln' },
   { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: 'Cut and dressed at a workshop' },
-  { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xf9d040, glyph: 'gold', block: 13, madeBy: 'Brought up from a mine' },
+  { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xf9d040, glyph: 'gold', block: 13, madeBy: 'Smelted from gold ore at a foundry. A mine brings the ore up from its third level' },
 
   // --- growing things ------------------------------------------------------
   // Each crop's own seeds come up as that crop — see config/crops.js. There
@@ -311,7 +311,7 @@ export const ITEMS = [
   { id: 'stone_mill', name: 'Stone Mill', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a968f, glyph: 'stonemill', block: 380, madeBy: 'Built at the bench — stand by it and stone goes further, and it grinds gravel; Place on it to use it' },
   // Trains (backlog batch 2, Age 5) — see world/Trains.js.
   { id: 'rail', name: 'Rail', kind: 'refined', stackTo: STACK_BULK, color: 0x8d8f96, glyph: 'rail', block: 378, madeBy: 'Iron on wooden sleepers, at an engineering centre — lay it in a line, and it joins up round corners and up a step' },
-  { id: 'diamond', name: 'Diamond', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fe8f2, glyph: 'crystal', madeBy: 'Dug from the deepest rock, near the bottom of the world — rare' },
+  { id: 'diamond', name: 'Diamond', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fe8f2, glyph: 'crystal', madeBy: 'Dug from the deepest rock, near the bottom of the world — rare. A mine at its fifth level brings some up' },
   { id: 'ruby', name: 'Ruby', kind: 'raw', stackTo: STACK_GOODS, color: 0xd8304a, glyph: 'crystal', madeBy: 'Found in the rock of the high peaks; a foundry strikes coins from it' },
   { id: 'diamond_ore', name: 'Diamond Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0x9aa6ab, glyph: 'crystal', block: 250, madeBy: 'Diamonds in the deepest rock — break it for the diamond' },
   { id: 'ruby_ore', name: 'Ruby Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xa08a8c, glyph: 'crystal', block: 251, madeBy: 'Rubies in the rock of the high peaks — break it for the ruby' },
@@ -363,9 +363,9 @@ export const ITEMS = [
   // under 5% of the rock (see biomes.js's `ores` and ChunkGen.oreAt). A
   // foundry (config/structures.js) is what turns the raw ore into something
   // a recipe actually asks for.
-  { id: 'iron_ore', name: 'Iron Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xa9948d, glyph: 'gravel', block: 38, madeBy: 'Mined from the Summit' },
-  { id: 'copper_ore', name: 'Copper Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xbb8a67, glyph: 'gravel', block: 39, madeBy: 'Mined from the Summit' },
-  { id: 'gold_ore', name: 'Gold Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xaaa088, glyph: 'gold', block: 40, madeBy: 'Mined from the Summit' },
+  { id: 'iron_ore', name: 'Iron Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xa9948d, glyph: 'gravel', block: 38, madeBy: 'Mined from the Summit, or brought up by a mine from its second level' },
+  { id: 'copper_ore', name: 'Copper Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xbb8a67, glyph: 'gravel', block: 39, madeBy: 'Mined from the Summit, or brought up by any mine' },
+  { id: 'gold_ore', name: 'Gold Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xaaa088, glyph: 'gold', block: 40, madeBy: 'Mined from the Summit, or brought up by a mine from its third level' },
   // The ring ores (Phase 7c) — see blocks.js. Each ring needs its own.
   { id: 'sunstone', name: 'Sunstone', kind: 'raw', stackTo: STACK_GOODS, color: 0xffd76a, glyph: 'crystal', block: 191, madeBy: 'Very rare — deep in the caves, or in a chest. For the White Ring' },
   { id: 'nightstone', name: 'Nightstone', kind: 'raw', stackTo: STACK_GOODS, color: 0x5a4a7a, glyph: 'crystal', block: 192, madeBy: 'Very rare — deep in the caves, or in a chest. For the Black Ring' },

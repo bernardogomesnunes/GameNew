@@ -34,6 +34,9 @@ import { STRUCTURES_BY_ID } from './structures.js';
 /** A building of yours, standing, `n` of them. */
 const built = (structure, count = 1) => ({ structure, count });
 
+/** Whether a mine of yours has reached a level (0 is its first): see the mine's tiers in structures.js. */
+const mineDownTo = (d, tier) => d.structures.list().some((s) => s.type === 'mine' && s.valid !== false && (s.tier ?? 0) >= tier);
+
 /** How many buildings you have, of any kind. */
 const buildings = (d) => d.structures.list().filter((s) => s.valid !== false).length;
 
@@ -119,7 +122,9 @@ export const AGES = [
       { ...built('townhouse'), label: 'Raise a townhouse — three households under one roof' },
       { ...built('university'), label: 'Found a university' },
       { ...built('townhall'), label: 'Raise a town hall' },
-      { id: 'evolve', label: 'Evolve a building a level', test: (d) => d.structures.list().some((s) => (s.tier ?? 0) >= 1) },
+      // Evolving a building, taught on the mine (open since Age 5): its
+      // second level is where iron comes up for the foundry.
+      { ...built('mine'), label: 'Dig your mine down to iron: evolve it a level', test: (d) => mineDownTo(d, 1) },
     ],
   },
   {
@@ -138,9 +143,10 @@ export const AGES = [
     age: 8,
     name: 'Bastion',
     size: 256,
-    intro: 'The Stone Kingdom has heard of you. Drive a mine, raise a garrison and a barracks, and your god\'s Sanctuary.',
+    intro: 'The Stone Kingdom has heard of you. Dig your mine down to gold, raise a garrison and a barracks, and your god\'s Sanctuary.',
     goals: [
-      { ...built('mine'), label: 'Drive a mine underground' },
+      // The mine opens at Age 5 now; here it's dug down to its third level, where the gold is.
+      { id: 'mine_gold', label: 'Dig your mine down to gold', test: (d) => mineDownTo(d, 2) },
       { ...built('military'), label: 'Raise a garrison' },
       { ...built('barracks'), label: 'Raise a barracks' },
       // Asked for directly: one goal, not one for each god — you build yours.

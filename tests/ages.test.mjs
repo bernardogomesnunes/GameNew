@@ -128,6 +128,12 @@ const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed:
 
 /** Makes one goal true, whatever it asks — a building, or one of the tests in ages.js. */
 function satisfy(g, goal, give) {
+  // A building at a level (Age 6's mine down to iron).
+  if (goal.structure === 'mine' && goal.test) {
+    if (!g.structures.countOf('mine')) give('mine', 1);
+    g.structures.structures.find((s) => s.type === 'mine').tier = 1;
+    return;
+  }
   if (goal.structure) {
     const have = g.structures.countOf(goal.structure);
     if (have < (goal.count ?? 1)) give(goal.structure, (goal.count ?? 1) - have);
@@ -139,6 +145,7 @@ function satisfy(g, goal, give) {
     water: () => g.firsts.add('water'),
     pickaxe: () => g.firsts.add('pickaxe'),
     evolve: () => { give('farm', 1); g.structures.structures.at(-1).tier = 1; },
+    mine_gold: () => { if (!g.structures.countOf('mine')) give('mine', 1); g.structures.structures.find((s) => s.type === 'mine').tier = 2; },
     ring: () => { g.ring = 'white'; },
     sanctuary: () => give('sanctuary_white', 1),
     fifteen: () => give('house', Math.max(0, 15 - g.structures.list().length)),
