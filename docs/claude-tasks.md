@@ -224,7 +224,45 @@ and the storehouse with this new style".**
 
 ---
 
+### 10. Buildings with organic shapes and mixed walls (for the future)
+
+> "to be honest the houses look squares, if you noticed the ones I sent have
+> this organic form. also they diversify the textures by using multiple
+> blocks on the walls. My take is, we should keep your examples for
+> templates, because they are good, but we need to improve them somehow,
+> not sure if by level would be feasible, or to have different house types
+> available to build on our building list."
+
+**Keep:** the house, storehouse and market from #209, as the simple
+templates.
+
+**What the pictures do that ours don't:**
+- **Shape:** an upper floor jutting out over the lower one; roofs at
+  different heights meeting each other; a tower or turret with a pointed
+  cap; crooked chimneys; steps and porches; footprints that aren't a plain
+  square.
+- **Walls:** several blocks mixed in one wall, such as stone at the bottom
+  then timber and plaster above, moss and vines patching it, and logs at
+  the corners and along the floors. Not one block all over.
+
+**Two ways to offer it:**
+1. **By level.** A house evolves into a bigger, fancier one: a cottage,
+   then a two-storey house with an upper floor jutting out, then one with a
+   turret. Houses have no levels today, so this means adding them (and
+   deciding what each level gives, such as more people living there).
+2. **House types in the building list.** Several designs for the same
+   building to choose from: a cottage, a mushroom house, a tower house.
+   Today each building has exactly one ready-made design, so this means
+   letting a building have several, and a way to pick one.
+
+My suggestion: types first, because it's only new designs and a picker,
+with no game rules to change. Then levels later, using the same designs as
+the steps.
+
+**Also needed for either:** a few wall blocks to mix, such as plaster,
+mossy cobble, and timber framing in the storybook colours.
+
 ## Order
 
 1 and 2 first (blocking). Then 3 and 4 (felt every minute of play). Then
-5, 6, 8. Then 7 and 9.
+5, 6, 8. Then 7 and 9. 10 is for later.
