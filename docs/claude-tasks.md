@@ -38,9 +38,9 @@ saves that kind of world.
 or a block of gold. The Marble Table recipe opens only at **Age 8**. The
 oak table, the same shape, opens at Age 4.
 
-**Fix:** open the Marble Table recipe at Age 4, at the workshop like the
-oak table. About 10 minutes, with a test that every altar the temple
-accepts can be made by the temple's age.
+**Done (#205):** the Marble Table, and the dressed marble it's made from,
+open at Age 4, at the workshop like the oak table. A test checks the table
+can be made by the temple's age.
 
 ---
 
@@ -56,8 +56,13 @@ ground" only when standing squarely on it, so pressed against a wall the
 jump is dropped. The fix may be to accept a jump pressed just before
 landing, or just after leaving an edge.
 
-**Fix:** reproduce with the phone's Jump button against a wall, fix it, and
-test it in the browser.
+**Done (#205):** a simulation of walking into walls, steps and corners
+jumped almost every time, so no single broken spot was found. Jumping now
+forgives instead: a tap counts for a fifth of a second, so one that comes
+just before you land, or in a moment a step or a wall leaves you off the
+ground, still jumps; you can still jump just after walking off an edge; and
+holding Jump keeps jumping each time you land. Tested in code, not yet on a
+phone.
 
 ### 4. Buildings produce only while you play
 

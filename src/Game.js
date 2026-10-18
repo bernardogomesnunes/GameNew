@@ -1364,6 +1364,8 @@ export class Game {
         this.player.look(dx * k, dy * k);
       },
       onJumpOrFlyUp: (held) => {
+        // Held on your feet, it keeps jumping each time you land (PlayerController's JUMP_BUFFER).
+        this.player.jumpHeld = held && !this.player.flying;
         if (this.player.flying) { this.upHeld = held; this.recomputeVertical(); }
         else if (held) this.player.requestJump();
       },

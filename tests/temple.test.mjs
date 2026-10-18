@@ -205,4 +205,15 @@ ok('the Black Ring sparks back at a bandit that hits you', /ringWorn\(\) === 'bl
 ok('forging one is announced', /this\.bus\.on\('ring:forged'/.test(game));
 ok('holy water is drunk with Break', /holy_water: 'drinkSelected'/.test(game));
 
+{
+  // Reported directly: "Marble table is needed for the temple but I can't
+  // build it from the bench" — the table, and the marble it's cut from,
+  // opened only at Age 8.
+  const temple = STRUCTURES_BY_ID.get('temple');
+  const byOutput = (id) => RECIPES.find((r) => r.output.id === id);
+  const table = byOutput('table_marble'), marble = byOutput('marble'), oak = byOutput('table_oak');
+  ok(`a Marble Table, for the altar, can be made by the temple's age (${temple.age}): table Age ${table.age}, marble Age ${marble.age}`,
+    table.age <= temple.age && marble.age <= temple.age && table.age === oak.age);
+}
+
 process.exit(f ? 1 : 0);

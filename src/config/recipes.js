@@ -435,10 +435,13 @@ export const RECIPES = [
 
   // --- Age 5: the expensive end -------------------------------------------
   {
+    // Age 4, with the temple: its altar can be a Marble Table, and the
+    // table is made from this (reported directly: "Marble table is needed
+    // for the temple but I can't build it from the bench").
     id: 'marble',
     name: 'Dress marble',
     station: 'workshop',
-    age: 8,
+    age: 4,
     inputs: { stone: 4 },
     output: { id: 'marble', count: 1 },
     batch: 4,
@@ -1231,7 +1234,8 @@ export const RECIPES = [
     id: 'table_marble',
     name: 'Marble Table',
     station: 'workshop',
-    age: 8,
+    // With the oak table and the temple it can be the altar of.
+    age: 4,
     inputs: { marble: 3 },
     output: { id: 'table_marble', count: 1 },
     blurb: 'The same shape as the oak table, cut from marble instead.',

@@ -27,6 +27,16 @@ const FLY_SPRINT_SPEED = 20;
 // glide, not a fall — the wings hold you, and the landing doesn't hurt.
 const GLIDE_FALL_SPEED = 3.5;
 /*
+ * Jumping forgives a little (reported directly: "I have to click multiple
+ * times to jump when I'm next to blocks"). A press counts for a moment
+ * rather than the one frame it lands in, so one that comes as you land, or
+ * in a frame a step or a wall leaves you off the ground, still jumps; and
+ * you can still jump just after walking off an edge. Holding Jump keeps
+ * jumping, each time you land, as holding Space always did.
+ */
+const JUMP_BUFFER = 0.2; // seconds a press waits for the ground
+const COYOTE_TIME = 0.1; // seconds after leaving the ground you can still jump
+/*
  * Walking into something low lifts you onto it instead of stopping you dead.
  * A slab's hitbox is only the bottom half of its cell (see
  * World.collisionBoxAt), so half a block is enough to walk onto one from
@@ -138,6 +148,9 @@ export class PlayerController {
     this.speedScale = 1;
     this.sprint = false;
     this.jumpQueued = false;
+    this.jumpWait = 0; // how much longer a press of Jump waits for the ground
+    this.jumpHeld = false; // the phone's Jump button, held down
+    this.airTime = 0; // seconds since you were last on the ground
     this.stepLag = 0; // how far the camera still trails a step up, in blocks
     this.seatHeight = 0; // how far up a saddle lifts you while riding
     // Which key does what — see config/controls.js. Game hands over the
@@ -187,6 +200,8 @@ export class PlayerController {
     this.sprint = false;
     this.tapRun = false;
     this.jumpQueued = false;
+    this.jumpWait = 0;
+    this.jumpHeld = false;
     this.velocity.x = 0;
     this.velocity.z = 0;
   }
@@ -313,14 +328,20 @@ export class PlayerController {
       if (this.velocity.y < -50) this.velocity.y = -50;
       this.gliding = !this.grounded && this.velocity.y < -GLIDE_FALL_SPEED && this.canGlide();
       if (this.gliding) this.velocity.y = -GLIDE_FALL_SPEED;
-      if (this.jumpQueued && this.grounded) {
+      if (this.jumpQueued) this.jumpWait = JUMP_BUFFER;
+      const wanted = this.jumpWait > 0 || this.jumpHeld || this.keys.has(b.jump);
+      if (wanted && this.airTime <= COYOTE_TIME && this.velocity.y <= 0) {
         this.velocity.y = JUMP_SPEED * (this.jumpScale ?? 1);
         this.grounded = false;
+        this.jumpWait = 0;
+        this.airTime = Infinity; // one jump per landing, not a second from the coyote time
       }
     }
     this.jumpQueued = false;
+    this.jumpWait = Math.max(0, this.jumpWait - dt);
 
     this.moveAndCollide(this.velocity.x * dt, this.velocity.y * dt, this.velocity.z * dt);
+    this.airTime = this.grounded ? 0 : this.airTime + dt;
     this.trackFall();
     this.sneakLag += ((this.sneaking ? SNEAK_DROP : 0) - this.sneakLag) * (1 - Math.exp(-SNEAK_EASE * dt));
     this.stepLag *= Math.exp(-STEP_EASE * dt);
