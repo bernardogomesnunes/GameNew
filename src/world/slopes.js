@@ -200,7 +200,13 @@ function roofGeometry(shape, facing, corner, filled, style) {
     }
   }
   if (filled) {
-    faces.push(...sides(heightAt).map((f) => ({ ...f, color: 'below' })));
+    // Over a wall, the wall comes up to the underside of the tiles and the
+    // roof's own edge runs along above it, as thick as an eave's (asked for
+    // directly, of the roof "out of the building": "can we have that part of
+    // the roof appearing when they are connected to a block? That would mean
+    // a cut on the side of the wood block the same height of the side when
+    // it's not connected").
+    faces.push(...bandedSides(heightAt));
   } else {
     faces.push(...shellEdges(heightAt));
   }
@@ -302,6 +308,45 @@ function shellEdges(heightAt) {
   return faces;
 }
 
+/**
+ * A filled roof piece's four sides: the wall below in the wall's own colour
+ * ('below'), up to SHELL under the slope, and the roof's edge over it in the
+ * roof's (`rim`) — the band an eave shows. Laid in strips along each side,
+ * split where the slope bends and where the wall's top meets the floor, so
+ * the two never overlap and every strip is a plain four-sided piece.
+ */
+function bandedSides(heightAt) {
+  const faces = [];
+  const edges = [[[0, 0], [1, 0], [0, -1]], [[1, 0], [1, 1], [1, 0]], [[1, 1], [0, 1], [0, 1]], [[0, 1], [0, 0], [-1, 0]]];
+  for (const [[x0, z0], [x1, z1], [ox, oz]] of edges) {
+    const at = (s) => [x0 + (x1 - x0) * s, z0 + (z1 - z0) * s];
+    const h = (s) => heightAt(...at(s));
+    // Where it bends (a ridge's kink), and where the wall's top crosses the floor.
+    let cuts = [0, 1];
+    if (Math.abs(h(0.5) - (h(0) + h(1)) / 2) > 1e-6) cuts = [0, 0.5, 1];
+    const more = [];
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const sa = cuts[i], sb = cuts[i + 1], ta = h(sa) - SHELL, tb = h(sb) - SHELL;
+      if ((ta < 0) !== (tb < 0) && Math.abs(ta - tb) > 1e-9) more.push(sa + (sb - sa) * (ta / (ta - tb)));
+    }
+    cuts = [...cuts, ...more].sort((a, b) => a - b);
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const sa = cuts[i], sb = cuts[i + 1];
+      if (sb - sa < 1e-9) continue;
+      const [ax, az] = at(sa), [bx, bz] = at(sb);
+      const ha = h(sa), hb = h(sb);
+      const ta = Math.max(0, ha - SHELL), tb = Math.max(0, hb - SHELL);
+      if (ta > 1e-6 || tb > 1e-6) {
+        faces.push({ pts: [[ax, 0, az], [bx, 0, bz], [bx, tb, bz], [ax, ta, az]], out: [ox, 0, oz], tone: 1, color: 'below' });
+      }
+      if (ha > 1e-6 || hb > 1e-6) {
+        faces.push({ pts: [[ax, ta, az], [bx, tb, bz], [bx, hb, bz], [ax, ha, az]], out: [ox, 0, oz], tone: 0.8, rim: true });
+      }
+    }
+  }
+  return faces;
+}
+
 /** The (x, z) in a cell `a` from the edge facing f climbs to and `b` from g's. */
 function cellPoint(f, g, a, b) {
   const onZ = (dir, v) => (dir === 0 ? v : 1 - v);   // facing 0 climbs to z = 0
@@ -321,24 +366,6 @@ function prism(poly, height, rise, tone = 1) {
       pts: [[x0, height(x0, z0), z0], [x1, height(x1, z1), z1], [x1, height(x1, z1) + rise, z1], [x0, height(x0, z0) + rise, z0]],
       out: [mx, 0, mz], tone: tone * 0.85,
     });
-  }
-  return faces;
-}
-
-/** The four walls down a piece's sides, each as tall as the roof along it. */
-function sides(heightAt) {
-  const faces = [];
-  const edges = [[[0, 0], [1, 0], [0, -1]], [[1, 0], [1, 1], [1, 0]], [[1, 1], [0, 1], [0, 1]], [[0, 1], [0, 0], [-1, 0]]];
-  for (const [[x0, z0], [x1, z1], [ox, oz]] of edges) {
-    const xm = (x0 + x1) / 2, zm = (z0 + z1) / 2;
-    const h0 = heightAt(x0, z0), h1 = heightAt(x1, z1), hm = heightAt(xm, zm);
-    if (h0 < 1e-6 && h1 < 1e-6 && hm < 1e-6) continue;
-    // A corner that comes down to nothing is the bottom corner already.
-    const pts = [[x0, 0, z0], [x1, 0, z1]];
-    if (h1 > 1e-6) pts.push([x1, h1, z1]);
-    if (Math.abs(hm - (h0 + h1) / 2) > 1e-6) pts.push([xm, hm, zm]);
-    if (h0 > 1e-6) pts.push([x0, h0, z0]);
-    if (pts.length >= 3) faces.push({ pts, out: [ox, 0, oz], tone: 1 });
   }
   return faces;
 }
