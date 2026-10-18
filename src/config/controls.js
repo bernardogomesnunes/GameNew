@@ -52,6 +52,9 @@ export const DEFAULT_CONTROLS = {
   // and More sit beside. See UIManager.applyTouchLayout.
   walkSide: 'left',   // 'left' | 'right'
   actionSide: 'walk', // 'walk' | 'look'
+  // Walking into a block a step high hops you onto it (asked for directly:
+  // "we can add auto jump as an option in controls"). See PlayerController.
+  autoJump: 'off',    // 'on' | 'off'
   // How you see the world, and how you look in it (playtest, P3) — see
   // config/avatar.js.
   view: 'first',      // 'first' | 'behind' | 'front'

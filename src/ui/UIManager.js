@@ -129,6 +129,8 @@ const LOOK_HOLD_MS = 300;
 const TAP_FINISH_MS = 2600;
 /** The least time Save and leave shows its spinner, so a quick save is seen to happen. */
 const SAVE_SPIN_MS = 500;
+/** How long Save says "Saved" before it's Save again. */
+const SAVED_LABEL_MS = 2500;
 
 /**
  * How much use a tool has left, as a bar under it (asked for directly: "Let's
@@ -382,6 +384,12 @@ export class UIManager {
               </div>
               <div class="ctl-touch-preview" id="ctl-touch-preview" aria-hidden="true"></div>
             </div>
+            <div class="ctl-seg-row ctl-autojump">
+              <span>Auto jump: walking into a block hops you onto it</span>
+              <div class="ctl-seg" data-seg="autoJump">
+                <button data-val="off">Off</button><button data-val="on">On</button>
+              </div>
+            </div>
             <div class="ctl-sliders">
               <label>Field of view <b id="ctl-fov-val"></b>
                 <input type="range" id="ctl-fov" min="${FOV_RANGE[0]}" max="${FOV_RANGE[1]}" step="1" />
@@ -431,13 +439,14 @@ export class UIManager {
           </div>
 
           <!--
-            The three ways out, on every screen of the menu. They were mixed in
-            with a "Save a copy" that made a second world out of the one you
-            were in — which is not what anybody pressing Save in a pause menu
-            means. Saving happens when you leave.
+            The ways out, on every screen of the menu. They were mixed in with
+            a "Save a copy" that made a second world out of the one you were
+            in — which is not what anybody pressing Save in a pause menu means.
+            Save saves this world and keeps you in it.
           -->
           <div class="menu-actions menu-resume">
             <button class="primary" id="btn-resume">Back to the world</button>
+            <button class="secondary" id="btn-save">Save</button>
             <button class="secondary" id="btn-leave">Save and leave</button>
             <!--
               Leaving without saving is the undo for a whole session, so it is
@@ -869,6 +878,24 @@ export class UIManager {
     this.q('#btn-notices-clear')?.addEventListener('click', () => {
       this.game?.duilt?.notices?.clear();
       this.renderNotices();
+    });
+    // Save and stay: the button says it's saving, then that it has.
+    this.q('#btn-save').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      if (btn.classList.contains('busy')) return;
+      setBusy(btn, 'Saving…');
+      const shown = performance.now();
+      await nextPaint();
+      let ok = false;
+      try {
+        ok = await this.cb.onSaveWorld?.();
+        await new Promise((r) => setTimeout(r, Math.max(0, SAVE_SPIN_MS - (performance.now() - shown))));
+      } finally {
+        setBusy(btn, null);
+      }
+      btn.textContent = ok ? 'Saved' : 'Not saved — try again';
+      clearTimeout(this.savedLabelTimer);
+      this.savedLabelTimer = setTimeout(() => { btn.textContent = 'Save'; }, SAVED_LABEL_MS);
     });
     this.q('#btn-leave').addEventListener('click', async (e) => {
       const btn = e.currentTarget;

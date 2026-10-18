@@ -38,7 +38,7 @@ ok('the spinner is pixel-style: a square turning a quarter at a time', /\.px-spi
   // A cloud save that takes a moment: leaving waits for it.
   let landed = false;
   const fake = {
-    saving: null,
+    saving: null, saveAndWait: Game.prototype.saveAndWait,
     saveNow() { this.saving = new Promise((r) => setTimeout(() => { landed = true; r(true); }, 50)); return true; },
   };
   const t0 = Date.now();
@@ -46,7 +46,7 @@ ok('the spinner is pixel-style: a square turning a quarter at a time', /\.px-spi
   ok(`leaving waits for the save to land (${Date.now() - t0} ms)`, landed);
 
   // One that never answers: leaving doesn't wait for ever.
-  const stuck = { saving: null, saveNow() { this.saving = new Promise(() => {}); return true; } };
+  const stuck = { saving: null, saveAndWait: Game.prototype.saveAndWait, saveNow() { this.saving = new Promise(() => {}); return true; } };
   const realTimeout = globalThis.setTimeout;
   globalThis.setTimeout = (fn) => realTimeout(fn, 0); // the cap, without waiting out its seconds
   const left = await Promise.race([Game.prototype.leaveWorld.call(stuck, true).then(() => 'left'), new Promise((r) => realTimeout(() => r('stuck'), 500))]);
@@ -56,6 +56,23 @@ ok('the spinner is pixel-style: a square turning a quarter at a time', /\.px-spi
   // Leave without saving: no wait, and nothing saved.
   const nosave = { saveNow() { throw new Error('saved'); } };
   ok('leave without saving saves nothing', (await Game.prototype.leaveWorld.call(nosave, false)) === false && nosave.discarded === true);
+}
+
+// --- Save, and stay ----------------------------------------------------------------------------
+// Reported directly: "Saving loads the button and then shows the loading of
+// the beginning of the game" — the only Save took you out of the world.
+
+ok('the menu has a Save that keeps you in the world', ui.includes('id="btn-save"') && /#btn-save'\)\.addEventListener\('click', async[\s\S]{0,200}setBusy\(btn, 'Saving…'\);[\s\S]{0,300}await this\.cb\.onSaveWorld\?\.\(\);/.test(ui));
+{
+  const save = ui.match(/#btn-save'\)\.addEventListener[\s\S]*?\n    \}\);/)[0];
+  ok('and it neither leaves nor shows the loading screen', !/openHome|onLeaveWorld|withLoading/.test(save));
+  ok('it says "Saved" once it has', /'Saved'/.test(save));
+  let landed = false;
+  const fake = { saving: null, saveNow() { this.saving = new Promise((r) => setTimeout(() => { landed = true; r(true); }, 50)); return true; } };
+  const saved = await Game.prototype.saveAndWait.call(fake);
+  ok('Save waits for the save to land, and says it did', landed && saved === true && !fake.discarded);
+  const failed = { saveNow() { this.saveError = 'full'; return true; } };
+  ok('a save that failed says so', (await Game.prototype.saveAndWait.call(failed)) === false);
 }
 
 process.exit(f ? 1 : 0);

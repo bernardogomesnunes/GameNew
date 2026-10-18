@@ -21,6 +21,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
 const icons = readFileSync(new URL('../src/ui/icons.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 
 // --- the declarations hold together -----------------------------------------
 
@@ -88,15 +89,18 @@ ok('and the way back is too', css.includes('.menu-back'));
 
 // --- the things you came to do are on the first screen -----------------------
 
-// Three ways out, and only three. "Save a copy" made a second world out of the
-// one you were in, which is not what Save means in a pause menu.
+// Back, Save, and two ways out. "Save a copy" made a second world out of the
+// one you were in, which is not what Save means in a pause menu; Save saves
+// this one and keeps you in it (reported directly: "Saving loads the button
+// and then shows the loading of the beginning of the game").
 {
   const index = ui.slice(ui.indexOf('menu-actions menu-resume'), ui.indexOf('panel-account'));
   ok('Back to the world is on the index', index.includes('id="btn-resume"'));
+  ok('and Save', index.includes('id="btn-save"'));
   ok('and Save and leave', index.includes('id="btn-leave"'));
   ok('and Leave without saving', index.includes('id="btn-leave-nosave"'));
-  ok('and nothing else', (index.match(/<button/g) ?? []).length === 3);
-  ok('saving a copy is gone', !ui.includes('id="btn-save"'));
+  ok('and nothing else', (index.match(/<button/g) ?? []).length === 4);
+  ok('saving a copy is gone: Save saves this world', !/onSaveAs|saveCopy|Save a copy<\/button>/.test(ui) && /onSaveWorld: \(\) => this\.saveAndWait\(\)/.test(game));
   // Which leaves renaming to the field itself.
   ok('the name is still editable', ui.includes('id="save-name"'));
   ok('and renaming happens when you leave the field',
