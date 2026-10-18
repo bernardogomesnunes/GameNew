@@ -27,6 +27,7 @@ const game = {
   renderDistance: 160,
   remeshQueue: new Set(),
   player: { position: { x: world.centreX, y: 100, z: world.centreZ } },
+  chunkDistSq: G.chunkDistSq,
 };
 
 // Fly a long way east in one step: a whole new stretch of country is missing.

@@ -346,7 +346,11 @@ export class DuiltUI {
     this.wireSlotTip();
 
     this.bus.on('inventory:change', () => {
-      this.renderBag();
+      // Only while it's open: it's drawn afresh when it opens (onOpen). A
+      // Creative kit, hundreds of things added one by one, redrew the whole
+      // closed bag hundreds of times, most of a slow load (reported
+      // directly: "The game is taking too long to load").
+      if (this.panels.isOpen('panel-bag')) this.renderBag();
       this.renderHealth();
       this.renderVitals();
       // A storehouse is an Inventory too, so its own changes come through

@@ -54,7 +54,7 @@ ok('  entered first, inside the tap, then made', /onCreate: \(mode, name\) => \{
 ok('opening one too', /onOpenWorld: \(id\) => this\.withLoading\('Opening your world…'/.test(game));
 ok('and going back to your worlds', /onGoHome: \(\) => \(this\.title \? true : this\.withLoading\('Back to your worlds…'/.test(game));
 ok('drawn before the work starts, gone after the land round you is drawn', /loadingShow\(label\);\s*await nextPaint\(\);/.test(game)
-  && /followDrawing\(\(\) => this\.drawnAround\(this\.title\?\.site \?\? this\.player\?\.position\)/.test(game) && /finally \{\s*this\.booting = false;\s*loadingDone\(\);/.test(game));
+  && /followDrawing\(\(\) => \(this\.title \? this\.titleProgress\(\) : this\.drawnAround\(this\.player\?\.position\)\)/.test(game) && /finally \{\s*this\.booting = false;\s*loadingDone\(\);/.test(game));
 
 // --- saving ------------------------------------------------------------------------------------------------
 

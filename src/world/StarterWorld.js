@@ -56,9 +56,14 @@ function rng(seed) {
  * one part of an endless world the seed cannot make again, and there are
  * roughly nine of them.
  */
-export function generateEndlessWorld({ height = WORLD_HEIGHT, seed = Date.now() % 1000000 } = {}) {
+export function generateEndlessWorld({ height = WORLD_HEIGHT, seed = Date.now() % 1000000, settle = true } = {}) {
   const gen = new ChunkGen({ seed, height, homeX: 0, homeZ: 0 });
   const world = new World({ height, gen });
+  // Scenery (the title scene behind the worlds screen) has no settlement:
+  // laying one out made sixty-odd chunks of land nobody looks at, before the
+  // land the camera does (reported directly: "The game is taking too long
+  // to load").
+  if (!settle) return { world, origin: { spawn: null } };
   const origin = settleOrigin(world, seed);
   return { world, origin };
 }
