@@ -47,8 +47,30 @@ const d = new DuiltGame({ world, scene: new THREE.Scene(), bus: { emit() {} } })
 d.inventory.add('flying_machine', 1);
 const at = d.inventory.slots.findIndex((x) => x?.id === 'flying_machine');
 ok('put on, it goes in the Body place', d.wear(at).ok && d.worn.body?.id === 'flying_machine' && d.inventory.countOf('flying_machine') === 0);
-ok('wearing it is what lets you fly, and glide', /hasFlyingMachine\(\) \{\s*return !!this\.duilt && \(this\.wearingPlainer\(\) \|\| !!this\.piloting\);/.test(game)
+// Asked for directly: "Flying machine should be a plainer and should not fly
+// with fly button, that's for the helix ... Two different mobility vehicles."
+ok('wearing it glides you down; only a Helix flies', /hasFlyingMachine\(\) \{\s*return !!this\.duilt && !!this\.piloting;/.test(game)
   && /wearingPlainer\(\) \{\s*return this\.duilt\?\.worn\?\.body\?\.id === 'flying_machine';/.test(game) && /p\.canGlide = \(\) => this\.wearingPlainer\(\);/.test(game));
+{
+  // Stepping off somewhere high in it: down slowly, and across faster than running.
+  globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
+  globalThis.document ??= { addEventListener() {}, removeEventListener() {}, pointerLockElement: null };
+  const { PlayerController } = await import('../src/player/PlayerController.js');
+  const { World } = await import('../src/world/World.js');
+  const air = new World({ sizeX: 64, sizeZ: 64, height: 120 });
+  for (let x = 0; x < 64; x++) for (let z = 0; z < 64; z++) air.setBlock(x, 1, z, 3);
+  const fall = (glides) => {
+    const pl = new PlayerController(air, new THREE.PerspectiveCamera(), { x: 32, y: 100, z: 60 });
+    pl.canGlide = () => glides;
+    pl.externalMove = { x: 0, z: 1 };
+    pl.stickSprint = true;
+    for (let i = 0; i < 60; i++) pl.update(1 / 60);
+    return { down: 100 - pl.position.y, across: 60 - pl.position.z };
+  };
+  const plain = fall(false), wings = fall(true);
+  ok(`gliding: a second from the top, ${wings.down.toFixed(1)} down, ${wings.across.toFixed(1)} across (falling, ${plain.down.toFixed(1)} down, ${plain.across.toFixed(1)} across)`,
+    wings.down < plain.down / 2 && wings.across > plain.across * 1.15);
+}
 ok('holding it, Place puts it on — it is never set down any more', /flying_machine: 'wearSelected'/.test(game) && !/flying_machine: 'setDownMachine'/.test(game));
 ok('no armour to it: it never wears through', d.armour() === 0);
 ok('taken off, it is back in the bag', d.takeOff('body').ok && d.inventory.countOf('flying_machine') === 1);

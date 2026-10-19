@@ -2157,7 +2157,7 @@ export class UIManager {
     for (const btn of this.root.querySelectorAll('.needs-tool')) {
       btn.hidden = held !== null && !held.has(btn.dataset.tool);
     }
-    // Fly only shows when you can: in Duilt, wearing a Plainer or in a Helix.
+    // Fly only shows when you can: in Duilt, in a Helix.
     const fly = this.q('#t-fly');
     if (fly) fly.hidden = !(this.cb.canFly?.() ?? true);
   }

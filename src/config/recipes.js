@@ -199,7 +199,7 @@ export const RECIPES = [
     age: 4,
     inputs: { planks: 24, wool: 12 },
     output: { id: 'flying_machine', count: 1 },
-    blurb: 'Wood and canvas wings, after Leonardo, strapped on like a breastplate. Wear it (Body) and Fly takes off: Jump climbs, Sneak dives, Fly lands — stop in the air and its wings glide you down.',
+    blurb: 'Wood and canvas wings, after Leonardo, strapped on like a breastplate. Wear it (Body), climb somewhere high and step off: its wings glide you down, faster than you run. For flying, build a Helix.',
   },
   {
     id: 'time_machine',
