@@ -381,7 +381,7 @@ export const ITEMS = [
   { id: 'gold_ore', name: 'Gold Ore', kind: 'raw', stackTo: STACK_GOODS, color: 0xaaa088, glyph: 'gold', block: 40, madeBy: 'Mined from the Summit, or brought up by a mine from its third level' },
   // The ring ores (Phase 7c) — see blocks.js. Each ring needs its own.
   { id: 'sunstone', name: 'Sunstone', kind: 'raw', stackTo: STACK_GOODS, color: 0xffd76a, glyph: 'crystal', block: 191, madeBy: 'Very rare — deep in the caves, in a chest, or brought up by a mine at its fifth level. For the White Ring' },
-  { id: 'nightstone', name: 'Nightstone', kind: 'raw', stackTo: STACK_GOODS, color: 0x5a4a7a, glyph: 'crystal', block: 192, madeBy: 'Very rare — deep in the caves, or in a chest. For the Black Ring' },
+  { id: 'nightstone', name: 'Nightstone', kind: 'raw', stackTo: STACK_GOODS, color: 0x5a4a7a, glyph: 'crystal', block: 192, madeBy: 'Very rare — deep in the caves, in a chest, or brought up by a mine at its fifth level. For the Black Ring' },
   { id: 'iron_ingot', name: 'Iron Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xc7c7cd, glyph: 'gold', madeBy: 'Smelted at a foundry' },
   { id: 'copper_ingot', name: 'Copper Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xd69264, glyph: 'gold', madeBy: 'Smelted at a foundry' },
   // Coins (batch: "coins as an item, that can be found in chests randomly or

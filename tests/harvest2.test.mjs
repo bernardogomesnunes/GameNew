@@ -20,6 +20,8 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const mine = STRUCTURES_BY_ID.get('mine');
 ok('the mine\'s last level brings up sunstone', producesAt(mine, 4).sunstone > 0);
 ok('  and no level before it', [0, 1, 2, 3].every((t) => !producesAt(mine, t).sunstone));
+ok('the mine\'s last level brings up nightstone too', producesAt(mine, 4).nightstone > 0);
+ok('  and no level before it', [0, 1, 2, 3].every((t) => !producesAt(mine, t).nightstone));
 
 // --- farms -------------------------------------------------------------------------
 const farm = STRUCTURES_BY_ID.get('farm');
