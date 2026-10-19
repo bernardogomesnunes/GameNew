@@ -37,7 +37,7 @@ A claimed building:
 | Foundry | 5 | Smelting, coins and charcoal |
 | Granary | 7 | Vegetables and potato seeds |
 | Mine | 8 | Stone, gold, coal |
-| Garrison | 8 | Stone and planks |
+| Garrison | 8 | The first military building. Here is where you get your defense. |
 | Stone Wall | 8 | Defence |
 | Gatehouse | 8 | Defence; shuts its gate before a war round |
 | Watchtower | 8 | Defence; two archers |
