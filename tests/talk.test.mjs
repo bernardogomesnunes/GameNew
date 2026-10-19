@@ -52,6 +52,6 @@ ok('a tap on a phone does too — a word, not a blow', /if \(this\.talkTarget\(a
 ok('a messenger gives the news (or the story)', /who === 'messenger'[\s\S]{0,200}this\.messengerTale\(\) \?\? this\.wanderers\.newsFrom/.test(game));
 ok('settlers stop and turn to you', /person\.facing = Math\.atan2\(me\.x - person\.x, me\.z - person\.z\)/.test(game));
 ok('pointing at them says you can', /looking for work'\} · \$\{this\.ui\?\.isTouch \? 'tap' : 'right click'\} to talk/.test(game));
-ok('a block in the way stops it', /talkTarget[\s\S]{0,1200}blockT < best\.t\) return null/.test(game));
+ok('a block in the way stops it', /talkTarget[\s\S]{0,1200}if \(hit && this\.inTheWay\(hit, eye, dir, best\.t\)\) return null/.test(game));
 
 process.exit(f ? 1 : 0);
