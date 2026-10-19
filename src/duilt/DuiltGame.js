@@ -214,6 +214,10 @@ export class DuiltGame {
           this.bus?.emit('ring:forged', { ring: r.ring });
           // The Black Ring makes you the Stone King's: he calls his army home.
           if (r.ring === 'black' && this.war.truce()) this.bus?.emit('war:truce', { round: this.war.round });
+          // It's one of Age 7's goals: the last one done, the age moves on
+          // now, not at the next block you happen to place (reported
+          // directly: "ive finish age seven and cant progress to 8").
+          this.checkAgeAdvance();
         }
       },
     });
