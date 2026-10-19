@@ -143,6 +143,7 @@ export class MobView {
 
   update(mobs) {
     const n = Math.min(mobs.length, MAX);
+    const now = performance.now() / 1000;
     this.bodies.count = n;
     this.heads.count = n;
     this.legs.count = n * 4;
@@ -155,6 +156,12 @@ export class MobView {
       const spec = MOBS_BY_ID.get(m.type);
       const { w, h, l } = spec.body;
       const leg = spec.leg, head = spec.head;
+      // Give a stopped animal a little life without confusing grazing with
+      // idling: grazing already has its own lowered-head pose and stays still.
+      const idle = m.speed <= 0 && !m.grazing && m.dying <= 0;
+      const phase = (m.id ?? i) * 2.399;
+      const look = idle ? Math.sin(now * 1.15 + phase) * 0.16 : 0;
+      const nod = idle ? Math.sin(now * 1.8 + phase * 1.7) * 0.035 : 0;
       // Toppling: rolls onto its side over the dying time.
       const roll = m.dying > 0 ? (1 - m.dying / 0.6) * (Math.PI / 2) : 0;
       this._e.set(0, m.facing, roll);
@@ -170,8 +177,8 @@ export class MobView {
         const pose = this._pose;
         pose.leg_fl = pose.leg_br = pose.leg_l = [swing, 0, 0];
         pose.leg_fr = pose.leg_bl = pose.leg_r = [-swing, 0, 0];
-        pose.head = [m.grazing ? -0.6 : 0, 0, 0];
-        pose.neck = [m.grazing ? -0.5 : 0, 0, 0];
+        pose.head = [m.grazing ? -0.6 : nod, look, 0];
+        pose.neck = [m.grazing ? -0.5 : nod * 0.65, look * 0.55, 0];
         pose.tail = [0, Math.sin((m.stride ?? 0) * 3) * 0.3, 0];
         this._turned.multiplyMatrices(this._base, TURN);
         this.crowds.get(kit).add(this._turned, pose, flash ? this._tint.copy(HURT_TINT).lerp(this._c.set(1, 1, 1), 1 - flash) : null);
@@ -189,9 +196,10 @@ export class MobView {
       // head: at the front, dropped to the ground while grazing — or, on a
       // neck (a long-neck's), carried up and out ahead of the body.
       const neck = spec.neck;
-      const hy = m.grazing ? Math.max(head / 2, leg * 0.5) : leg + h * 0.85 + (neck?.up ?? 0);
+      const hy = m.grazing ? Math.max(head / 2, leg * 0.5) : leg + h * 0.85 + (neck?.up ?? 0) + nod;
       const hz = l / 2 + head * (m.grazing ? 0.25 : 0.3) + (neck?.out ?? 0);
-      this.local(0, hy, hz, head, head, head);
+      const headX = look * head * 0.3;
+      this.local(headX, hy, hz, head, head, head);
       this.heads.setMatrixAt(i, this._part);
       this.heads.setColorAt(i, this.tint(spec.headColour, flash));
 
@@ -199,7 +207,7 @@ export class MobView {
       if (neck && d < MAX * DETAIL_CAP) {
         const by = leg + h * 0.8, bz = l / 2 * 0.75;
         const dy = hy - by, dz = hz - bz, len = Math.hypot(dy, dz);
-        this._part.makeTranslation(0, (by + hy) / 2, (bz + hz) / 2);
+        this._part.makeTranslation(headX * 0.6, (by + hy) / 2, (bz + hz) / 2);
         this._part.multiply(this._tmp.makeRotationX(Math.atan2(dz, dy)));
         this._part.multiply(this._tmp.makeScale(neck.w, len, neck.w));
         this._part.premultiply(this._base);
@@ -211,7 +219,7 @@ export class MobView {
       for (const [x, y, z, sx, sy, sz, colour, tilt, onHead] of featuresOf(spec, m)) {
         if (d >= MAX * DETAIL_CAP) break;
         const oy = onHead ? hy : leg + h / 2, oz = onHead ? hz : 0;
-        this._part.makeTranslation(x, oy + y, oz + z);
+        this._part.makeTranslation(x + (onHead ? headX : 0), oy + y, oz + z);
         if (tilt) this._part.multiply(this._tmp.makeRotationX(tilt));
         this._part.multiply(this._tmp.makeScale(sx, sy, sz));
         this._part.premultiply(this._base);
