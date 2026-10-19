@@ -16,7 +16,7 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 
 // --- the train under a thumb -----------------------------------------------------------------------
 
-const tap = game.slice(game.indexOf('  tapAction() {'), game.indexOf('  secondaryAction() {'));
+const tap = game.slice(game.indexOf('  tapAction('), game.indexOf('  secondaryAction() {'));
 ok('a tap at a train or a flying machine is Place, whatever you hold', /if \(this\.trainTarget\(aimed\) \|\| this\.machineTarget\(aimed\)\) return places\(\);/.test(tap));
 ok('  and that comes before what you hold has its say (coal used to make it Break)',
   tap.indexOf('this.trainTarget(aimed)') < tap.indexOf("const item = this.selectedItemId;"));

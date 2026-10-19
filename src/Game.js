@@ -1446,7 +1446,7 @@ export class Game {
       onBreakHold: (held, opts) => this.setBreaking(held, opts),
       onPlaceTap: () => this.secondaryAction(),
       onPlaceHold: (held) => this.setPlacing(held),
-      onTap: () => this.tapAction(),
+      onTap: (at) => this.tapAction(at),
       // The bow, under a thumb: down draws it, up looses (UIManager.bindLookSurface).
       onDrawStart: () => this.startDraw(),
       onDrawEnd: () => this.releaseDraw(),
@@ -2573,12 +2573,24 @@ export class Game {
    * whatever you hold that has nothing to put down: a tool, bare hands, food
    * to eat, a bucket to fill. Returns 'place' or 'break'.
    */
-  tapAction() {
+  tapAction(at = null) {
     if (this.moving) { this.secondaryAction(); return 'place'; }
     const breaks = () => { this.primaryAction(); return 'break'; };
     const places = () => { this.secondaryAction(); return 'place'; };
     if (this.manning || this.pendingClaim || this.pendingClaimColumn || this.pendingClear
       || this.pendingRoof || this.pendingTemplate) return breaks();
+    // A finger on someone who'll talk or trade means them, wherever the
+    // crosshair is (reported directly: "Clicking on a market man does not
+    // open the menu to trade" — the tap went to the floor under the
+    // crosshair, not the trader under the finger).
+    if (at && !this.armed) {
+      const ray = this.rayThrough(at.x, at.y);
+      const someone = ray && this.aimedAlong(ray, () => {
+        const hit = this.raycast();
+        return this.kingTarget(hit) || this.hermitTarget(hit) || this.traderTarget(hit) || this.talkTarget(hit);
+      });
+      if (someone) return this.aimedAlong(ray, places);
+    }
     const aimed = this.raycast();
     // Someone who'll talk gets a word, not a blow: a tap is Place. Holding
     // still strikes them, the way it breaks a block.
@@ -3826,6 +3838,33 @@ export class Game {
 
   // ---- raycasting / block edits ----
 
+  /**
+   * The line through a point on the screen, as an eye and a direction to aim
+   * along instead of the crosshair's. Out of first person it starts level
+   * with your head rather than back at the camera, so it reaches as far.
+   */
+  rayThrough(clientX, clientY) {
+    const rect = this.renderer?.domElement.getBoundingClientRect();
+    if (!rect?.width || !rect.height) return null;
+    const ndc = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
+    const caster = new THREE.Raycaster();
+    caster.setFromCamera(ndc, this.camera);
+    const { origin, direction } = caster.ray;
+    const along = Math.max(0, this.player.eyePosition().sub(origin).dot(direction));
+    return { eye: origin.clone().addScaledVector(direction, along), dir: direction.clone() };
+  }
+
+  /** Runs `fn` with you looking along `ray` — every aim it makes reads it. */
+  aimedAlong(ray, fn) {
+    const p = this.player;
+    const had = { eyePosition: Object.hasOwn(p, 'eyePosition') && p.eyePosition, lookDirection: Object.hasOwn(p, 'lookDirection') && p.lookDirection };
+    p.eyePosition = () => ray.eye.clone();
+    p.lookDirection = () => ray.dir.clone();
+    try { return fn(); } finally {
+      for (const [k, v] of Object.entries(had)) { if (v) p[k] = v; else delete p[k]; }
+    }
+  }
+
   raycast(reach = REACH) {
     const origin = this.player.eyePosition();
     const dir = this.player.lookDirection();
@@ -4390,10 +4429,7 @@ export class Game {
     }
     if (!found.length) return null;
     const best = found.sort((a, b) => a.t - b.t)[0];
-    if (hit) {
-      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
-      if (blockT != null && blockT < best.t) return null;
-    }
+    if (hit && this.inTheWay(hit, eye, dir, best.t)) return null;
     return best;
   }
 
@@ -4448,11 +4484,22 @@ export class Game {
     const eye = this.player.eyePosition(), dir = this.player.lookDirection();
     const found = this.wanderView.pickAt(list, eye, dir, REACH);
     if (!found) return null;
-    if (hit) {
-      const blockT = rayBox(eye, dir, hit.x, hit.y, hit.z, hit.x + 1, hit.y + 1, hit.z + 1);
-      if (blockT != null && blockT < found.t) return null;
-    }
+    if (hit && this.inTheWay(hit, eye, dir, found.t)) return null;
     return found.person;
+  }
+
+  /**
+   * Whether the block `hit` stands between you and someone `t` along the
+   * line from `eye`. Only as much of it as you'd bump into: a rug under a
+   * trader's feet, vines hanging in front, or the low half a lantern or a
+   * chair fills don't hide them (a tap on a trader behind their stall went
+   * to the stall).
+   */
+  inTheWay(hit, eye, dir, t) {
+    const box = this.world.collisionBoxAt(hit.x, hit.y, hit.z);
+    if (!box) return false;
+    const blockT = rayBox(eye, dir, hit.x, box.minY, hit.z, hit.x + 1, box.maxY, hit.z + 1);
+    return blockT != null && blockT < t;
   }
 
   /**
