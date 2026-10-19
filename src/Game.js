@@ -47,7 +47,7 @@ function serialiseWorldState({ world, mode, economy, duilt, territoryBounds }) {
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
 import { panelForKey } from './config/panels.js';
-import { STRUCTURES_BY_ID, structureName } from './config/structures.js';
+import { STRUCTURES_BY_ID, structureName, MINE_FLOOR } from './config/structures.js';
 import { DESIGN_FOR_STRUCTURE } from './config/starterDesigns.js';
 import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
@@ -55,6 +55,7 @@ import { EventBus } from './core/EventBus.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
+import { mineStairs } from './duilt/mineStairs.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/upgrades.js';
 import { nextView, VIEW_NAMES } from './config/avatar.js';
@@ -3655,6 +3656,11 @@ export class Game {
     // Follow the ground where it actually landed, or a slide sideways leaves
     // the building floating off a slope.
     if (b.x !== aimed.x || b.z !== aimed.z) b.y = this.world.surfaceHeight(b.x, b.z);
+    // A mine goes down to its depth under where you aimed, and gets a stair
+    // up to the top (asked for directly: "I'd like to keep the placement at
+    // 91 blocks deep, but it should open a stairs to the top").
+    const aimedY = b.y;
+    if (typeId === 'mine') b.y = Math.min(b.y, MINE_FLOOR);
     const plan = this.duilt.starterPlacement(typeId, { x: b.x, y: b.y, z: b.z });
     if (!plan.ok) {
       this.ui.toast({ kind: 'xp', title: 'Cannot place that', body: plan.reason });
@@ -3668,13 +3674,31 @@ export class Game {
       minY: b.y, maxY: b.y + e.y,
       minZ: b.z, maxZ: b.z + e.z,
     };
+    const stairs = typeId === 'mine' ? this.digMineStairs(region, aimedY) : null;
     const claim = this.duilt.claim(region, typeId);
     // Refused, it's remembered rather than forgotten: it says what it's
     // waiting for when you look at it, and counts the moment it can.
     if (!claim.ok) this.duilt.waitFor(region, typeId, claim.reason);
+    const way = stairs == null ? '' : stairs ? ' Stairs lead down to it.' : ' No room for stairs beside it here — dig your own way down.';
     this.ui.toast(claim.ok
-      ? { kind: 'challenge', title: `${plan.design.name} placed`, body: claim.reason }
-      : { kind: 'xp', title: `${plan.design.name} placed — not working yet`, body: `${claim.reason}. It will start as soon as it can.` });
+      ? { kind: 'challenge', title: `${plan.design.name} placed`, body: `${claim.reason}${way}` }
+      : { kind: 'xp', title: `${plan.design.name} placed — not working yet`, body: `${claim.reason}. It will start as soon as it can.${way}` });
+  }
+
+  /**
+   * A ready-made mine's inside dug out, and its stair cut up to the surface
+   * (duilt/mineStairs.js) — free, and the rock it cuts isn't handed to you:
+   * it's part of the mine. Whether there was room for the stair.
+   */
+  digMineStairs(region, aimedY) {
+    const d = this.duilt;
+    const fits = (x, z) => d.sandbox || d.territory.contains(x, z);
+    const { changes, side } = mineStairs(this.world, region, { look: aimedY + 40, fits });
+    // Not through somebody's building: a stair that would cut one goes nowhere.
+    const ok = side != null && !d.structures.blocking(changes);
+    const dig = ok ? changes : mineStairs(this.world, region, { fits: () => false }).changes;
+    const dug = !dig.length || this.applyChanges(dig, { chargeResources: false, gather: false });
+    return ok && dug;
   }
 
   // ---- cloud ----
@@ -6906,7 +6930,7 @@ export class Game {
    * back — it goes in your bag when you do — and a tool that lays a lot at once
    * has a tool that takes a lot away again.
    */
-  applyChanges(changes, { viaSymmetry = false, chargeResources = true } = {}) {
+  applyChanges(changes, { viaSymmetry = false, chargeResources = true, gather = true } = {}) {
     changes = this.withUprooted(this.withBedHalves(this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z)))));
     if (!changes.length) return false;
 
@@ -6999,7 +7023,7 @@ export class Game {
     this.remeshDirty();
 
     if (this.duilt) {
-      const gained = this.duilt.onBlocksBroken(changes);
+      const gained = gather ? this.duilt.onBlocksBroken(changes) : {};
       if (Object.keys(gained).length) this.bus.emit('duilt:gathered', { gained });
       this.growEditing(changes);
       this.duilt.structures.revalidateAround(changes);
@@ -7021,7 +7045,9 @@ export class Game {
     // already refuses to unlock anything for one on its own, but there's no
     // reason to spend the bookkeeping (session tracking, build-score, spatial
     // heuristics) feeding it events nothing downstream will ever act on.
-    if (!this.duilt?.sandbox) {
+    // Nor for what the game digs for you (`gather` off — a mine's stair):
+    // it isn't you placing a few hundred blocks.
+    if (!this.duilt?.sandbox && gather) {
       for (const c of changes) {
         if (c.next !== AIR) this.gamification.onBlockPlaced({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.next, viaSymmetry, now });
         else this.gamification.onBlockBroken({ world: this.world, x: c.x, y: c.y, z: c.z, type: c.prev, now });

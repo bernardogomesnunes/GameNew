@@ -19,6 +19,8 @@ const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, PLANKS = 7
       SAPLING = 20, FARMLAND = 21, FENCE = 47, GATE = 48, GATE_OPEN = 49;
 
 // The Temple's materials (Phase 7c) — see blocks.js for the ids.
+/** How deep a mine's floor has to be: y 12, some ninety blocks under the land. */
+export const MINE_FLOOR = 12;
 const PILLARS = [165, 166, 167];
 const STONEWORK = [STONE, COBBLE, BRICK, MARBLE, 156, 157, 158, 159, ...PILLARS];
 const ALTARS = [32, GOLD, 180, 181];
@@ -847,8 +849,8 @@ export const STRUCTURES = [
     requires: [
       {
         id: 'depth',
-        test: (ctx) => ctx.region.minY <= 12,
-        say: (ctx) => `Dig it ${ctx.region.minY - 12} blocks deeper`,
+        test: (ctx) => ctx.region.minY <= MINE_FLOOR,
+        say: (ctx) => `Dig it ${ctx.region.minY - MINE_FLOOR} blocks deeper`,
       },
       {
         id: 'rock',

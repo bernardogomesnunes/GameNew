@@ -1150,7 +1150,7 @@ export const STARTER_DESIGNS = [
     name: 'Starter working',
     size: 6,
     footprint: '6 × 6',
-    note: 'Aim it low. The floor has to reach y 12 or below.',
+    note: 'It goes down to y 12 under where you aim, dug out, with a stair up to the top.',
     blocks: mineBlocks(),
   },
   {
