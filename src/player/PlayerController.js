@@ -26,6 +26,12 @@ const FLY_SPRINT_SPEED = 20;
 // Coming down under a flying machine's wings with the flying turned off: a
 // glide, not a fall — the wings hold you, and the landing doesn't hurt.
 const GLIDE_FALL_SPEED = 3.5;
+/**
+ * And across the air, faster than running: a glider covers ground as it
+ * comes down (asked for directly: "Plainer I need to go high in the sky and
+ * drop and I'll plain through the air descending").
+ */
+const GLIDE_SPEED = 9;
 /*
  * Jumping forgives a little (reported directly: "I have to click multiple
  * times to jump when I'm next to blocks"). A press counts for a moment
@@ -321,7 +327,8 @@ export class PlayerController {
       this.velocity.y += (targetVy - this.velocity.y) * k;
       this.grounded = false;
     } else {
-      const speed = (this.sneaking ? SNEAK_SPEED : sprinting ? SPRINT_SPEED : WALK_SPEED) * this.speedScale;
+      // Gliding (last frame's: it's decided below, once the fall is known).
+      const speed = (this.gliding ? GLIDE_SPEED : this.sneaking ? SNEAK_SPEED : sprinting ? SPRINT_SPEED : WALK_SPEED) * this.speedScale;
       this.velocity.x = wish.x * speed + this.knock.x;
       this.velocity.z = wish.z * speed + this.knock.z;
       const fade = Math.exp(-KNOCK_FADE * dt);

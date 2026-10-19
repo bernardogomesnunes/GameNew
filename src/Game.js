@@ -2037,9 +2037,14 @@ export class Game {
     this.cartView.update(this.duilt?.mounts);
   }
 
-  /** In Duilt, flying is a machine's: the Plainer you wear, or the Helix you're in. See pilot. */
+  /**
+   * In Duilt, flying is the Helix's, and only while you're in one (asked for
+   * directly: "Flying machine should be a plainer and should not fly with fly
+   * button, that's for the helix ... Two different mobility vehicles"). The
+   * Plainer you wear only glides — see wireFlight's canGlide. See pilot.
+   */
   hasFlyingMachine() {
-    return !!this.duilt && (this.wearingPlainer() || !!this.piloting);
+    return !!this.duilt && !!this.piloting;
   }
 
   /** The Plainer on your body (asked for directly: "Plainer should be held as chest plate instead of placed"). */
@@ -2056,7 +2061,7 @@ export class Game {
     const r = d.wear(i);
     const name = ITEMS_BY_ID.get(id)?.name ?? 'It';
     this.ui.toast(r.ok
-      ? { kind: 'challenge', title: `${name} on`, body: id === 'flying_machine' ? 'Fly to take off: Jump climbs, Sneak dives. Stop in the air and its wings glide you down.' : undefined }
+      ? { kind: 'challenge', title: `${name} on`, body: id === 'flying_machine' ? 'Climb somewhere high and step off: its wings glide you down, faster than you run. Steer as you walk.' : undefined }
       : { kind: 'xp', title: `Can't put it on`, body: r.reason });
     if (r.ok) { this.editedAt = Date.now(); this.ui?.refreshTools?.(); }
   }
@@ -2449,9 +2454,11 @@ export class Game {
 
   /**
    * Who may fly (asked for directly: a flying machine, "a wooden plane da
-   * Vinci style"). Creative flies as it always has; in Duilt you fly
-   * wearing the Plainer, or in a Helix. The Plainer's wings hold you when
-   * you stop flying in the air — a glide down, not a fall.
+   * Vinci style"). Creative flies as it always has; in Duilt you fly in a
+   * Helix, and only there. The Plainer's wings hold you when you fall — a
+   * glide down, not a fall — and that's all it does ("Plainer I need to go
+   * high in the sky and drop and I'll plain through the air descending
+   * helix is a helicopter which allows flying in all directions").
    */
   wireFlight() {
     const p = this.player;
@@ -2459,8 +2466,8 @@ export class Game {
     p.canFly = () => !this.duilt || this.duilt.sandbox || this.hasFlyingMachine();
     p.canGlide = () => this.wearingPlainer();
     p.onFlyRefused = () => this.ui?.toast({
-      kind: 'xp', title: 'You need a Plainer',
-      body: 'Build one at a workshop in Age 4 and wear it (Body) — or fly a Helix.',
+      kind: 'xp', title: 'Flying is the Helix\'s',
+      body: 'Set a Helix down and climb in. A Plainer, worn, glides you down from somewhere high.',
     });
     this.ui?.refreshTools?.();
   }

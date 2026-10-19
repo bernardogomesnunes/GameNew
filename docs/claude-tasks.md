@@ -292,6 +292,17 @@ mossy cobble, and timber framing in the storybook colours.
   thing, puts everything in order of name and packs it into the first rows.
   Tools and worn things keep their wear.
 
+> "Flying machine should be a plainer and should not fly with fly button,
+> that's for the helix. Helix should be placed and fly button appear when
+> enter in the helix. Two different mobility vehicles."
+
+**Done (#217):**
+- Only the Helix flies. You set it down, climb in, and the Fly button
+  appears; it goes when you climb out.
+- The Plainer, worn, only glides. Step off somewhere high and its wings
+  bring you down slowly, faster across than you run, steering as you walk.
+- Creative still flies freely.
+
 ## Order
 
 1 and 2 first (blocking). Then 3 and 4 (felt every minute of play). Then

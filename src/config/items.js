@@ -215,13 +215,14 @@ export const ITEMS = [
   // Renamed the Plainer, and worn on the body like a breastplate rather
   // than set down (asked for directly: "the one we have now should be
   // called plainer ... Plainer should be held as chest plate instead of
-  // placed"). Its id stays, so a save keeps it. Wearing it is what lets you
-  // fly in Duilt — see Game.wireFlight. Fly to take off, forward to go,
-  // Jump climbs, Sneak dives, look to steer; turn it off in the air and the
-  // wings bring you down in a glide.
+  // placed"). Its id stays, so a save keeps it. It glides, and only glides
+  // (asked for directly: "Flying machine should be a plainer and should not
+  // fly with fly button, that's for the helix"): step off somewhere high and
+  // its wings bring you down, faster across than you run — see
+  // Game.wireFlight.
   {
     id: 'flying_machine', name: 'Plainer', kind: 'gear', stackTo: STACK_TOOL, color: 0xc49360, glyph: 'glider',
-    wears: 'body', madeBy: 'Built at a workshop from planks and wool', unlocks: 'Wear it to fly',
+    wears: 'body', madeBy: 'Built at a workshop from planks and wool', unlocks: 'Wear it to glide down from somewhere high',
     flies: true,
   },
   // The Helix (asked for directly: "a diff flying machine called helix ...
