@@ -1734,6 +1734,10 @@ export class Game {
     if (this.dayCycle) this.dayCycle.time = this.duilt.dayTime ?? MORNING;
     this.gamification.setDuilt(this.duilt);
     this.applyTerritoryBounds();
+    // Saved with its age's goals all met but the age never moved on (a ring
+    // forged last, before forging checked — reported directly: "ive finish
+    // age seven and cant progress to 8"): it moves on as it opens.
+    if (!sandbox) this.duilt.checkAgeAdvance();
     this.rebuildAllChunks();
     if (this.ui) {
       this.ui.updateXp();
