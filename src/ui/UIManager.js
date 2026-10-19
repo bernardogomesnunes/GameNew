@@ -1082,8 +1082,8 @@ export class UIManager {
       finishing = null;
       this.cb.onBreakHold?.(false);
     };
-    const tap = () => {
-      const did = this.cb.onTap ? this.cb.onTap() : (this.cb.onBreakTap(), 'break');
+    const tap = (at) => {
+      const did = this.cb.onTap ? this.cb.onTap(at) : (this.cb.onBreakTap(), 'break');
       if (did !== 'break' || !this.cb.isDigging?.()) return;
       this.cb.onBreakHold?.(true, { once: true });
       finishing = setTimeout(stopFinishing, TAP_FINISH_MS);
@@ -1124,7 +1124,7 @@ export class UIManager {
         clearTimeout(timer);
         if (drawing) { drawing = false; this.cb.onDrawEnd?.(); }
         else if (holding) this.cb.onBreakHold?.(false);
-        else if (!moved && e.type === 'touchend') tap();
+        else if (!moved && e.type === 'touchend') tap(start);
         id = null;
       }
     };
