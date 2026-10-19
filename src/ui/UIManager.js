@@ -894,6 +894,22 @@ export class UIManager {
         setBusy(btn, null);
       }
       btn.textContent = ok ? 'Saved' : 'Not saved — try again';
+      if (!ok) {
+        // A generic retry label tells the player that the save failed, but
+        // hides the reason Game.saveAndWait already captured (quota, expired
+        // account session, rejected cloud request, etc.). Surface the actual
+        // failure so a transient network problem can be distinguished from a
+        // game or account problem on both touch and desktop.
+        const reason = this.game?.saveError;
+        this.game?.ui?.toast?.({
+          kind: 'xp',
+          title: 'Could not save',
+          body: reason || 'The save did not finish. Check your connection and try again.',
+        });
+        if (reason) btn.title = reason;
+      } else {
+        btn.removeAttribute('title');
+      }
       clearTimeout(this.savedLabelTimer);
       this.savedLabelTimer = setTimeout(() => { btn.textContent = 'Save'; }, SAVED_LABEL_MS);
     });
