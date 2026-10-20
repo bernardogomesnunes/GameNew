@@ -80,7 +80,8 @@ ok(`they eat once a game day (${SETTLERS.eatEverySeconds} s)`, SETTLERS.eatEvery
   ok('and nobody already fed eats twice', shelves.countOf('fruit') === 3);
 }
 
-ok('the warning is gentle: what to do, not doom', /are hungry/.test(ui) && /Put some food in a storehouse — fed, they work better/.test(ui) && !/stop working until/.test(ui));
+// CL-12: tapping the counter now feeds them, so the hint says that.
+ok('the warning is gentle: what to do, not doom', /are hungry/.test(ui) && /tap to feed them, or fill the granary/.test(ui) && !/stop working until/.test(ui));
 
 {
   // In the game itself, the settlers are given the storehouses to eat from.

@@ -13,7 +13,7 @@ import { LOGS } from '../world/leafDecay.js';
  */
 
 const STONE = 3, STONE_STAIRS = 29, LANTERN = 26;
-const LEAVES = new Set([5, 42, 44]);
+const LEAVES = new Set([5, 42, 44, 517]);
 
 // Round the well, the way up: each cell, and which way its stair climbs —
 // towards the next cell (facing 0 climbs towards -z, 1 +x, 2 +z, 3 -x).

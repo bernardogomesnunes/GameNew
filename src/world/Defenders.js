@@ -137,15 +137,15 @@ export class Defenders {
     const joined = [];
     // Ids as strings throughout: the training is saved as JSON, whose keys are.
     const standing = new Map(buildings.filter((b) => b.valid).map((b) => [String(b.id), { ...b, id: String(b.id) }]));
-    this.soldiers = this.soldiers.filter((s) => standing.get(s.post.of)?.type === 'barracks');
+    this.soldiers = this.soldiers.filter((s) => ['barracks', 'military'].includes(standing.get(s.post.of)?.type));
     this.archers = this.archers.filter((a) => standing.get(a.post.of)?.type === 'watchtower');
-    for (const id of Object.keys(this.trained)) if (standing.get(id)?.type !== 'barracks') delete this.trained[id];
+    for (const id of Object.keys(this.trained)) if (!['barracks', 'military'].includes(standing.get(id)?.type)) delete this.trained[id];
 
     for (const b of standing.values()) {
       if (b.type === 'watchtower') {
         if (this.archers.some((a) => a.post.of === b.id)) continue;
         for (const spot of this.lookout(b.region)) this.archers.push(this.person('archer', spot, b.id));
-      } else if (b.type === 'barracks') {
+      } else if (b.type === 'barracks' || b.type === 'military') {
         const t = this.trained[b.id] ?? (this.trained[b.id] = { roster: [], queue: [], since: days });
         // The next in line joins every TRAIN_DAYS.
         while (t.queue.length && days - t.since >= TRAIN_DAYS) {

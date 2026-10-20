@@ -62,7 +62,15 @@ export const OUTFITS = {
   crew: { hat: 'cap', hatColour: 0x5a4030 },
 };
 
+const GROUP_OUTFITS = {
+  caravan_guard: { hat: 'helm', hatColour: 0xc9a46c, gear: 'spear' },
+  caravaner: { hat: 'cap', hatColour: 0x9a6847 },
+  moss_guard: { hat: 'helm', hatColour: 0x829c60, gear: 'spear' },
+  mossfolk: { hat: 'hood', hatColour: 0x748c56 },
+};
+
 /** What someone wears — their kind's outfit, or nothing special. */
 export function outfitOf(person) {
-  return OUTFITS[person?.kind] ?? null;
+  if (person?.unit === 'shield_guard') return { hat: 'helm', visor: true, gear: 'spear', shield: true };
+  return OUTFITS[person?.kind] ?? GROUP_OUTFITS[person?.kind] ?? null;
 }

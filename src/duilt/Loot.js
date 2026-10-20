@@ -69,6 +69,16 @@ export const LOOT = {
       ['diamond', 0.35, 1, 3], ['ruby', 0.35, 1, 2], ['arrow', 0.5, 6, 16], ['coin', 0.9, 20, 50]],
     ring: 0.2,
   },
+  caravan: {
+    name: 'The dune caravans\' supplies',
+    items: [['gold', 0.5, 1, 4], ['coffee_beans', 0.6, 2, 5], ['kombucha', 0.35, 1, 2], ['string', 0.4, 2, 5], ['iron_ingot', 0.25, 1, 2], ['coin', 0.9, 12, 35]],
+    ring: 0.08,
+  },
+  mossfolk: {
+    name: 'The mossfolk\'s offering chest',
+    items: [['fruit', 0.8, 3, 7], ['seeds_cabbage', 0.6, 2, 5], ['hemp_fibre', 0.55, 2, 5], ['firefly_lantern', 0.25, 1, 1], ['kombucha', 0.3, 1, 2], ['coin', 0.4, 3, 12]],
+    ring: 0.1,
+  },
   // An abandoned city's houses: left in a hurry, and never come back for.
   ruined_city: {
     name: 'A chest nobody came back for',

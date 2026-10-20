@@ -1,7 +1,7 @@
 import { Rivals } from './Rivals.js';
-import { GAME_DAY_SECONDS } from '../render/DayCycle.js';
+import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { Crops, harvestOf, farmProduce, tendFarm, farmSeedSlots } from './Crops.js';
-import { FIELD_CROPS, CROPS_BY_KIND, cropOf } from '../config/crops.js';
+import { FIELD_CROPS, CROPS_BY_KIND, cropOf, RIPE } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
 import { TurfSpread } from './TurfSpread.js';
 import { penProduce, herdToJSON } from './Ranch.js';
@@ -70,7 +70,7 @@ export const CART_SLOTS = 40;
 const chestKey = (x, y, z) => `${x},${y},${z}`;
 
 /** The leaves of every kind of tree. */
-const LEAF_BLOCKS = new Set([5, 42, 44]);
+const LEAF_BLOCKS = new Set([5, 42, 44, 517]);
 /** What a broken leaf might drop besides itself, and how often. */
 export const LEAF_DROPS = [['sapling', 0.1], ['fruit', 0.06]];
 /**
@@ -275,7 +275,7 @@ export class DuiltGame {
     const p = this.researchProgress();
     if (!p) return '';
     const left = p.days - p.done;
-    return left >= 1 ? `${Math.ceil(left * 10) / 10} days` : `${Math.max(1, Math.round(left * 24))} hours`;
+    return gameDaysText(left);
   }
 
   /** Finishes the research once its days are up. Returns what was learnt, or null. */
@@ -1648,6 +1648,16 @@ export class DuiltGame {
     return penProduce(s, this.herd);
   }
 
+  /** Apply one compost to a tracked, unripe crop. */
+  compostCrop(x, y, z) {
+    const planted = this.crops.planted.get(`${x},${y},${z}`);
+    if (!planted) return { ok: false, reason: 'There is no growing crop here.' };
+    if (Crops.stageAt(planted.at, Date.now()) >= RIPE) return { ok: false, reason: 'That crop is already ripe.' };
+    if (!this.inventory.endless && !this.inventory.remove('compost', 1)) return { ok: false, reason: 'You have no compost.' };
+    this.crops.compost(x, y, z);
+    return { ok: true };
+  }
+
   /**
    * Puts one seed into a farm (backlog batch 2): "put in one seed per crop
    * you want, up to 4 crops". A carrot seed in means carrots — and carrot
@@ -1681,8 +1691,8 @@ export class DuiltGame {
   }
 
   /**
-   * Trains one soldier at a barracks (batch 3, #29): `unitId` is a warrior,
-   * swordsman, archer or catapult crew (config/soldiers.js). Their food and
+   * Trains one soldier at a barracks, or a spear guard at a Garrison:
+   * `unitId` comes from config/soldiers.js. Their food and
    * gear come out of your bag now; they join in TRAIN_DAYS, after anyone
    * already in line. A barracks holds a soldier a bunk — `bunks`, counted
    * by Game off the beds in it. Returns { ok, reason }.
@@ -1690,7 +1700,8 @@ export class DuiltGame {
   trainSoldier(s, unitId, bunks) {
     const unit = UNITS_BY_ID.get(unitId);
     if (!unit) return { ok: false, reason: 'Nobody trains as that' };
-    if (s?.type !== 'barracks' || !s.valid) return { ok: false, reason: 'Only a standing barracks trains soldiers' };
+    if (!['barracks', 'military'].includes(s?.type) || !s.valid) return { ok: false, reason: 'Only a standing barracks or Garrison trains soldiers' };
+    if (s.type === 'military' && unitId !== 'shield_guard') return { ok: false, reason: 'A Garrison trains spear guards' };
     const t = this.defenders.barracks(s.id);
     const room = Math.min(MAX_SOLDIERS, bunks) - t.roster.length - t.queue.length;
     if (room <= 0) return { ok: false, reason: `Every bunk is spoken for — ${Math.min(MAX_SOLDIERS, bunks)} soldiers at most here` };
@@ -1988,7 +1999,7 @@ export class DuiltGame {
     return [...this.found].map((k) => {
       const [kind, at] = k.split('@');
       const [x, z] = at.split(',').map(Number);
-      return { kind, x, z };
+      return { kind, x, z, raided: this.raided.has(k) };
     });
   }
 

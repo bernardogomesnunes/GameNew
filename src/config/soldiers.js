@@ -45,6 +45,12 @@ export const UNITS = [
     food: 5, gear: { catapult: 1, stone: 10 },
     blurb: 'Sets a catapult up in front of the barracks when the enemy comes, and lobs stones into them.',
   },
+  {
+    id: 'shield_guard', kind: 'shield_guard', name: 'Spear guard', plural: 'spear guards', hp: 30, speed: 3,
+    melee: { hits: 4, reach: 2.2, every: 1.25 },
+    food: 4, gear: { weapon_rack: 1 },
+    blurb: 'A spear guard with a shield, trained by request at a Garrison. Uses one weapon rack and four food.',
+  },
 ];
 export const UNITS_BY_ID = new Map(UNITS.map((u) => [u.id, u]));
 

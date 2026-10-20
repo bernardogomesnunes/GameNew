@@ -30,7 +30,7 @@ const HEEL = 2;             // and how close it comes before it stops
 const STEP = 1;             // the highest ledge an animal walks up
 const DROP = 3;             // the furthest drop it will walk off
 
-const LEAVES = new Set([5, 42, 44]);
+const LEAVES = new Set([5, 42, 44, 517]);
 
 export class Mobs {
   /**

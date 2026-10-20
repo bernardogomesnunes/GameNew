@@ -17,6 +17,7 @@ const early = (d) => d.structure === 'workshop' || (STRUCTURES_BY_ID.get(d.struc
 for (const d of STARTER_DESIGNS.filter(early)) {
   ok(`${d.name}: no brick roof tiles`, !brickTiled(d));
 }
-ok('the workshop is roofed in slate', STARTER_DESIGNS.filter((d) => d.structure === 'workshop').every((d) => d.blocks.some((b) => roofPart(b.type)?.mat === 1)));
+// Teal and mint now, approved by the owner on 20 October (it was slate).
+ok('the workshop is roofed in teal and mint', STARTER_DESIGNS.filter((d) => d.structure === 'workshop').every((d) => [2, 3].every((m) => d.blocks.some((b) => roofPart(b.type)?.mat === m))));
 
 process.exit(f ? 1 : 0);

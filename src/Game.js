@@ -21,7 +21,7 @@ import { generateEndlessWorld } from './world/StarterWorld.js';
 import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
 import { FarTerrain } from './render/FarTerrain.js';
 import { SkyClouds } from './render/SkyClouds.js';
-import { DayCycle, MORNING, daylightAt } from './render/DayCycle.js';
+import { DayCycle, MORNING, daylightAt, gameDaysText } from './render/DayCycle.js';
 import { Sound, soundOf } from './audio/Sound.js';
 import { hear } from './audio/listen.js';
 import { loadControls, saveControls } from './config/controls.js';
@@ -78,7 +78,6 @@ import { earnedLines } from './duilt/Notices.js';
 import { talkLine } from './config/talk.js';
 import { cubeSite, cubeDesign, WAY_OUT, CUBE_SIZE } from './world/godCube.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood, isTool, BARE_HANDS, ITEM_FOR_BLOCK } from './config/items.js';
-import { stationName } from './duilt/Crafting.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox, bodyFits } from './world/Mobs.js';
@@ -141,7 +140,7 @@ const EGG_TYPE = { [EGG_RAPTOR]: 'raptor', [EGG_TRIKE]: 'trike', [EGG_LONGNECK]:
  */
 const WHISTLE_REACH = 60, PACK_HEEL = 4, PACK_FIGHT = 14, PACK_CATCH_UP = 40, PACK_STUCK = 3, PACK_LOST = 120, PACK_TRAVEL = 24;
 /** Out in the world, who'll stop for a word (config/talk.js). */
-const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard', 'futurian']);
+const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard', 'futurian', 'caravaner', 'mossfolk']);
 /** The longest Save and leave waits for the upload before letting you go anyway. */
 const LEAVE_SAVE_WAIT_MS = 15000;
 /** How much land round the title scene's middle, and under its camera, is ready before the worlds screen shows. */
@@ -244,6 +243,10 @@ export function swingLabel(id) {
   if (stationOf(id)) return 'Use';
   if (isCatapult(id)) return 'Man';
   if (isPainting(id)) return 'Home';
+  if (id === TIME_MACHINE) return 'Travel';
+  if (id === ARCHIVE) return 'Read';
+  if (id === WAR_STANDARD) return 'Take';
+  if (id === WAY_OUT) return 'Leave';
   if (isTrapdoor(id)) return isOpenTrapdoor(id) ? 'Close' : 'Open';
   if (id === SKY_LIFT) return 'Ride';
   const door = doorPart(id);
@@ -341,7 +344,7 @@ const CRACK_LINGER_MS = 450;
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
 const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace', helix: 'setDownMachine', flying_machine: 'wearSelected', dino_whistle: 'blowWhistle' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', compost: 'compostSelected', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace', helix: 'setDownMachine', flying_machine: 'wearSelected', dino_whistle: 'blowWhistle' };
 /**
  * Whether saved progression `a` is further along than `b`. By level first:
  * `xp` is only what's been earned towards the next level, so comparing it
@@ -636,7 +639,7 @@ export class Game {
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
     this.bus.on('health:died', ({ cause }) => this.die(cause));
     // University research takes days (DuiltGame.startStudy): said when it starts and when it's done.
-    this.bus.on('research:started', ({ name, days }) => this.ui?.toast({ kind: 'challenge', title: `Researching ${name}`, body: `Takes ${days} days — see how it's going at the university` }));
+    this.bus.on('research:started', ({ name, days }) => this.ui?.toast({ kind: 'challenge', title: `Researching ${name}`, body: `Takes ${gameDaysText(days)} — see how it's going at the university` }));
     this.bus.on('research:finished', ({ name }) => {
       this.ui?.toast({ kind: 'achievement', title: `Research done: ${name}`, body: 'The university is free for the next thing' });
       this.editedAt = Date.now();
@@ -2675,7 +2678,7 @@ export class Game {
     // And at a storage controller, every storehouse at once.
     if (aimed && aimed.block === STORAGE_CONTROLLER) return void this.ui.openStores();
     // At a wood mill (#32), the bench, showing what's made there.
-    if (aimed && stationOf(aimed.block)) return void this.ui.openBench(stationName(stationOf(aimed.block)));
+    if (aimed && stationOf(aimed.block)) return void this.ui.openBench();
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
     // At a war tent, Place makes camp there; at the dark god's altar, the oath.
@@ -3054,7 +3057,8 @@ export class Game {
     const r = this.duilt.trainSoldier(structure, unit, this.bedsIn(structure.region));
     if (!r.ok) return void this.ui.toast({ kind: 'xp', title: "Can't train that yet", body: r.reason });
     const who = r.unit.name.toLowerCase();
-    this.ui.toast({ kind: 'xp', title: `Training ${/^[aeiou]/.test(who) ? 'an' : 'a'} ${who}`, body: 'They join the others in front of the barracks when they are ready' });
+    const postName = structure.type === 'military' ? 'Garrison' : 'barracks';
+    this.ui.toast({ kind: 'xp', title: `Training ${/^[aeiou]/.test(who) ? 'an' : 'a'} ${who}`, body: `They join the defenders outside the ${postName} when they are ready` });
     // The pop-up shows them in its line straight away, whatever else redraws it.
     if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(structure, this.buildingActions(structure));
   }
@@ -3217,7 +3221,7 @@ export class Game {
       this.ui.toast({
         kind: 'xp',
         title: 'There is still something in it',
-        body: 'Empty the storehouse first — nothing gets thrown away here',
+        body: `Empty the ${spec?.name?.toLowerCase() ?? 'storehouse'} first — nothing gets thrown away here`,
       });
       return;
     }
@@ -3997,6 +4001,24 @@ export class Game {
     this.ui.toast({ kind: 'xp', title: 'Bucket emptied', body: 'Poured out — watch where it runs' });
   }
 
+  /** Place compost on a growing crop to advance it one stage. */
+  compostSelected() {
+    if (!this.duilt) return;
+    const hit = this.raycast();
+    if (!hit || !cropOf(this.world.getBlock(hit.x, hit.y, hit.z))) {
+      this.ui.toast({ kind: 'xp', title: 'Point at a growing crop', body: 'Compost moves an unripe crop ahead by one stage' });
+      return;
+    }
+    const result = this.duilt.compostCrop(hit.x, hit.y, hit.z);
+    if (!result.ok) {
+      this.ui.toast({ kind: 'xp', title: result.reason });
+      return;
+    }
+    const changes = this.duilt.crops.grow(this.world);
+    if (changes.length) this.remeshDirty();
+    this.ui.toast({ kind: 'challenge', title: 'Compost added', body: 'The crop has grown one stage' });
+  }
+
   /**
    * What Break does with food selected: eat it instead of digging.
    * DuiltGame.eat() already does the real work (which slot, hunger, the
@@ -4474,6 +4496,7 @@ export class Game {
       const work = who === 'settler' ? this.duilt?.structures.list().find((s) => s.id === person.workId) : null;
       line = talkLine({
         who, person, at: me, landmarks: this.wanderers?.landmarks,
+        archiveRead: !!this.duilt?.time?.futureKnown,
         job: work ? structureName(work.type).toLowerCase() : null, jobId: work?.type ?? null,
       });
       if (who === 'explorer') title = `${person.name}, an explorer`;
@@ -5000,12 +5023,14 @@ export class Game {
     if (now - (this.defenceSyncedAt ?? 0) > DEFENCE_SYNC_MS) {
       this.defenceSyncedAt = now;
       const posts = d.structures.list()
-        .filter((s) => s.type === 'barracks' || s.type === 'watchtower')
-        .map((s) => ({ id: s.id, type: s.type, region: s.region, valid: s.valid, beds: s.type === 'barracks' ? this.bedsIn(s.region) : 0 }));
+        .filter((s) => s.type === 'barracks' || s.type === 'military' || s.type === 'watchtower')
+        .map((s) => ({ id: s.id, type: s.type, region: s.region, valid: s.valid, beds: s.type === 'barracks' || s.type === 'military' ? this.bedsIn(s.region) : 0 }));
       // Each one out of training says so (asked for directly: "show the progress").
       for (const j of d.defenders.sync(posts, d.days)) {
         const u = UNITS_BY_ID.get(j.unit);
-        this.ui?.toast({ kind: 'xp', title: `Your ${u?.name.toLowerCase() ?? 'soldier'} is ready`, body: j.left ? `${j.left} more training at the barracks` : 'Out in front of the barracks' });
+        const post = d.structures.list().find((s) => String(s.id) === String(j.of));
+        const postName = post?.type === 'military' ? 'Garrison' : 'barracks';
+        this.ui?.toast({ kind: 'xp', title: `Your ${u?.name.toLowerCase() ?? 'soldier'} is ready`, body: j.left ? `${j.left} more in training at the ${postName}` : `Outside the ${postName}` });
       }
     }
   }
@@ -6276,6 +6301,7 @@ export class Game {
     const first = !d.time.futureVisited;
     d.time.futureVisited = true;
     this.editedAt = Date.now();
+    this.gamification?.checkAchievements(null);
     this.sound?.lift?.();
     this.ui.toast({ kind: 'achievement', title: 'The Future', body: first ? 'Towers of glass, trams and flying cars. The university is just east of the square — find its Archive.' : 'Back in the city to come.', duration: 7000 });
   }
@@ -6303,6 +6329,7 @@ export class Game {
     if (d.time.futureKnown) return void this.ui.toast({ kind: 'xp', title: 'The Archive', body: 'You know all it has to teach. Make it at an engineering centre, at home.' });
     d.time.futureKnown = true;
     this.editedAt = Date.now();
+    this.gamification?.checkAchievements(null);
     this.sound?.lift?.();
     const names = RECIPES.filter((r) => r.future).map((r) => r.name);
     this.ui.toast({ kind: 'achievement', title: 'Knowledge of the Future', body: `${names.join(', ')} — yours to make at an engineering centre.`, duration: 9000 });
@@ -6334,6 +6361,7 @@ export class Game {
     const first = !d.time.pastVisited;
     d.time.pastVisited = true;
     this.editedAt = Date.now();
+    this.gamification?.checkAchievements(null);
     this.sound?.lift?.();
     this.ui.toast({ kind: 'achievement', title: 'The Past', body: first ? 'Long before the kingdoms. Mind the raptors — and look for eggs in the ferns.' : 'Back among the dinosaurs.', duration: 6000 });
   }
@@ -6463,6 +6491,7 @@ export class Game {
     this.eggClock = (this.eggClock ?? 0) + dt;
     if (this.eggClock < 1 || !this.duilt || !this.mobs) return;
     this.eggClock = 0;
+    let hatched = false;
     for (const e of this.duilt.hatchDue()) {
       // Too far off to be loaded: it waits for you to come back.
       if (!this.world.hasChunk(e.x >> 4, e.z >> 4)) { this.duilt.eggs.push(e); continue; }
@@ -6477,9 +6506,11 @@ export class Game {
       this.mobs.list.push(m);
       this.duilt.mounts.push(m);
       this.duilt.time.hatched += 1;
+      hatched = true;
       this.editedAt = Date.now();
       this.ui.toast({ kind: 'achievement', title: `A ${spec.name.toLowerCase()} hatched`, body: 'Tame, and yours. Place on it to ride.', duration: 6000 });
     }
+    if (hatched) this.gamification?.checkAchievements(null);
   }
 
   tookFromChest({ x, z }) {
@@ -6491,7 +6522,7 @@ export class Game {
       this.ui?.toast({ kind: 'achievement', title: 'The god\'s stash is yours', body: 'The way out will let you go now — get to it alive', duration: 7000 });
       return true;
     }
-    const lm = landmarksFor(this.world.gen).find((l) => (l.kind === 'tribe' || l.kind === 'city' || l.kind === 'outpost' || l.kind === 'ruined_city')
+    const lm = landmarksFor(this.world.gen).find((l) => (l.kind === 'tribe' || l.kind === 'city' || l.kind === 'outpost' || l.kind === 'ruined_city' || l.kind === 'caravan' || l.kind === 'mossfolk')
       && Math.abs(l.x - x) <= l.half + 1 && Math.abs(l.z - z) <= l.half + 1);
     if (!lm) return false;
     // Taken from: Age 11 counts it (a city's treasure, a second people).
@@ -6505,6 +6536,10 @@ export class Game {
         ? { kind: 'xp', title: 'The armoury is guarded', body: 'The Kingdom\'s guards saw that — fight, or run' }
         : lm.kind === 'city'
         ? { kind: 'xp', title: 'Thief!', body: 'The guards are after you, and the market\'s shut to you — get out of the city' }
+        : lm.kind === 'caravan'
+        ? { kind: 'xp', title: 'The caravan sounds the alarm', body: 'Its guards are after you — get out of the camp' }
+        : lm.kind === 'mossfolk'
+        ? { kind: 'xp', title: 'The mossfolk turn hostile', body: 'They saw you take from the offering chest — leave the village' }
         : { kind: 'xp', title: 'The tree people saw that', body: 'Thief! Arrows from the decks — get out from under the trees' });
     }
     return saw > 0;
@@ -7434,15 +7469,15 @@ export class Game {
     this.updateFarTerrain();
     this.updateClouds(dt);
     // The clock only runs while you're playing; a menu is a pause. Except a
-    // barracks's pop-up: its training bar is something you sit and watch
-    // fill (asked for directly), so the day goes on behind it — and so does
-    // the training, and those who finish come out (syncDefence). Nothing
+    // barracks or Garrison pop-up: its training bar is something you sit and
+    // watch fill, so the day goes on behind it — and so does training, and
+    // those who finish come out (syncDefence). Nothing
     // else moves: no hunger, no mobs, no one walks.
     const clockWas = this.dayCycle.time;
-    const watchingBarracks = !playing && this.ui?.duiltUI?.building?.type === 'barracks' && this.ui.isPanelOpen?.('panel-building');
+    const watchingTrainingPost = !playing && ['barracks', 'military'].includes(this.ui?.duiltUI?.building?.type) && this.ui.isPanelOpen?.('panel-building');
     // The showcase holds the hour it was set to, for its pictures.
-    if ((playing || watchingBarracks) && !this.showcase && !this.title) this.dayCycle.advance(dt);
-    if (watchingBarracks) this.syncDefence();
+    if ((playing || watchingTrainingPost) && !this.showcase && !this.title) this.dayCycle.advance(dt);
+    if (watchingTrainingPost) this.syncDefence();
     if (this.duilt) {
       this.duilt.dayTime = this.dayCycle.time;
       // The world's own count of days, for saplings to grow by.
@@ -7819,7 +7854,8 @@ export class Game {
     const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door || chest || catapult || trapdoor || painting || mill || (lift && lift !== 'nowhere' && lift !== 'cut')) && swingLabel(hit.block);
+    const swing = (gate || door || chest || catapult || trapdoor || painting || mill || (lift && lift !== 'nowhere' && lift !== 'cut')
+      || hit.block === TIME_MACHINE || hit.block === ARCHIVE || hit.block === WAR_STANDARD || hit.block === WAY_OUT) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     // What tapping the hint itself does: the same thing, for a chest, a door
     // or a gate — not the claim panel (reported: tapping "Chest — tap Open"

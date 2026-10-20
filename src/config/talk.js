@@ -77,6 +77,8 @@ export const EXPLORER_TALK = {
     city: ['There\'s a walled city to the {dir}. Good beds, better food, and a market that takes coins.'],
     ruined_city: ['I walked through an empty city to the {dir}. Not a soul. I didn\'t stay the night.'],
     tribe: ['To the {dir} the trees are so tall people live in them — bridges, huts, a tower on top. They waved. I didn\'t touch anything.'],
+    caravan: ['A dune caravan camps to the {dir}. Keep to the wells and they\'ll welcome you.'],
+    mossfolk: ['There\'s a village under the old trees to the {dir}. They keep a lantern burning for the paths.'],
   },
   stories: [
     'Up north the mountains are so high there\'s snow at noon in summer.',
@@ -98,6 +100,16 @@ export const TRIBE_TALK = [
   'Up here the wind sings. Down there you only hear your own feet.',
   'The great tree is older than both kingdoms. It will be here after them.',
 ];
+export const CARAVAN_TALK = [
+  'The dunes shift, but the stars keep their promises.',
+  'We travel where the wells are. Every season, a different road.',
+  'The guards watch the supplies. We have crossed too many empty miles to lose them.',
+];
+export const MOSSFOLK_TALK = [
+  'The lantern tree keeps the paths bright for everyone who belongs here.',
+  'The forest gives enough, if you take only what you need.',
+  'We tend the old roots. They remember the first people who lived here.',
+];
 
 /** A living city's people (world/cities.js), while they're not angry with you. */
 export const CITIZEN_TALK = [
@@ -115,6 +127,12 @@ export const FUTURIAN_TALK = [
   'Clothes like yours! Is it a costume? It\'s very good.',
   'Everyone up there flies. Walking is for the square, and for visitors.',
   'There were kingdoms here once, they say. And before that, dinosaurs. Imagine.',
+];
+const FUTURIAN_AFTER_ARCHIVE_TALK = [
+  'So you read the Archive? Then you know more about this city than most of us.',
+  'The Archive says our towers began as shelters. Hard to picture.',
+  'I used to think the trams had always been here. The Archive says otherwise.',
+  'You travelled all this way for a book, and came back with a whole age of knowledge.',
 ];
 export const CITY_GUARD_TALK = [
   'Keep your hands to yourself in here, and we\'ll get on.',
@@ -162,7 +180,7 @@ const fill = (line, vars) => line.replace(/\{(\w+)\}/g, (m, k) => vars[k] ?? m);
  *   landmarks  places in the world (Wanderers.landmarks)
  *   rand     random source
  */
-export function talkLine({ who, person, job = null, jobId = null, at = null, landmarks = [], rand = Math.random }) {
+export function talkLine({ who, person, job = null, jobId = null, at = null, landmarks = [], archiveRead = false, rand = Math.random }) {
   const said = person.said ?? 0;
   person.said = said + 1;
   const vars = { job: job ?? 'work', name: person.name ?? 'nobody', dir: 'east', place: '' };
@@ -182,9 +200,11 @@ export function talkLine({ who, person, job = null, jobId = null, at = null, lan
   }
   if (who === 'soldier') return fill(pick(SOLDIER_TALK), vars);
   if (who === 'tribe') return fill(pick(TRIBE_TALK), vars);
+  if (who === 'caravaner') return fill(pick(CARAVAN_TALK), vars);
+  if (who === 'mossfolk') return fill(pick(MOSSFOLK_TALK), vars);
   if (who === 'citizen') return fill(pick(CITIZEN_TALK), vars);
   if (who === 'city_guard') return fill(pick(CITY_GUARD_TALK), vars);
-  if (who === 'futurian') return fill(pick(FUTURIAN_TALK), vars);
+  if (who === 'futurian') return fill(pick(archiveRead ? FUTURIAN_AFTER_ARCHIVE_TALK : FUTURIAN_TALK), vars);
   if (who === 'warrior') return fill(pick(WARRIOR_TALK), vars);
 
   // A settler: what's on their mind first, then whatever else.

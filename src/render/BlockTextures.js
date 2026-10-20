@@ -238,6 +238,7 @@ function paint(recipe, spec, salt) {
   if (recipe.hue) each((x, y, px, py) => tint(c, x, y, HUE_SWING, (fbm(px, py, salt + 19, 2, 2) - 0.5) * 2 * recipe.hue));
   if (recipe.strata) strata(c, recipe, salt, depth);
   if (recipe.ripples) ripples(c, recipe, salt, depth);
+  if (recipe.rockFaces) rockFaces(c, recipe, salt, depth);
   if (recipe.furrows) furrows(c, recipe, salt, depth);
   if (recipe.pebbles) pebbles(c, recipe, salt, depth);
   if (recipe.cobbles) cobbles(c, recipe, salt, depth);
@@ -284,6 +285,20 @@ function paint(recipe, spec, salt) {
  * in a ragged line and a shadow under it. The earth is the Dirt block's own
  * tile, recoloured from grass to dirt — so it is the same earth you dig.
  */
+function rockFaces(c, recipe, salt, depth) {
+  // Broad chipped planes, with two deliberate edge tones. Quantised positions
+  // keep the silhouette pixel-drawn rather than cloudlike or finely speckled.
+  const pts = scatter(recipe.rockFaces, recipe.rockFaces, 0.32, salt);
+  each((x, y) => {
+    const { p, d1, d2, dx, dy } = nearest(pts, (x >> 1) * 2 + 1, (y >> 1) * 2 + 1);
+    const face = 0.94 + Math.floor(p.h * 4) * 0.045;
+    const edge = d2 - d1 < 0.65;
+    const lip = edge && dy > 0 && dx < 2;
+    shade(c, x, y, edge ? (lip ? 1.08 : 1 - depth) : face);
+    lift(c, x, y, edge ? 0.2 : 0.65 + p.h * 0.15);
+  });
+}
+
 function grassSide(recipe, spec, salt) {
   const { under, turf } = recipe.fringe;
   const dirtSpec = BLOCKS_BY_ID.get(under);

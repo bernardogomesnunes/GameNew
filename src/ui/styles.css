@@ -33,7 +33,7 @@
   --stick-size: 104px;
   --stick-bottom: 24px;
   --stick-zone: 78px;      /* how far up the screen the stick's area starts */
-  --side-btn: 54px;        /* the outboard buttons, which are their own size */
+  --side-btn: 62px;        /* the outboard buttons, which are their own size */
   --stick-gap: 24px;       /* clear air between the base and the column above it */
   /* A panel's own padding, as variables rather than numbers so .panel-head
      can cancel exactly this much of it to bleed to the edges — see .panel
@@ -622,7 +622,7 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
    icon and the label are the rest of that — they are what stops a white glyph
    disappearing into cloud. */
 .touch-btn {
-  width: 62px; height: 62px; border-radius: 18px;
+  width: 70px; height: 70px; border-radius: 18px;
   background: rgba(13, 17, 23, 0.30);
   backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   border: 1px solid rgba(255, 255, 255, 0.16); color: #eef2f6; /* kept dark on purpose, so an explicit light colour rather than following --text */
@@ -652,7 +652,7 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
    is 890px wide and was getting the desktop's chrome: a toolbar of labelled
    52px buttons across the top of a 390px-tall picture. */
 @media (max-width: 640px), (pointer: coarse) {
-  :root { --side-btn: 50px; --panel-pad-t: 14px; --panel-pad-x: 14px; --panel-pad-b: 14px; }
+  :root { --side-btn: 58px; --panel-pad-t: 14px; --panel-pad-x: 14px; --panel-pad-b: 14px; }
   #hud-top { right: auto; width: 55%; }
   /* Labels are worth their space on a desktop toolbar but eat a phone screen;
      the Help panel names every control instead. */
@@ -662,7 +662,7 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
   .icon-btn { min-width: 0; width: 36px; height: 36px; padding: 0; border-radius: 9px; }
   .icon-btn span { display: none; }
   .icon-btn.panel-close { width: 30px; height: 30px; }
-  .touch-btn { width: 56px; height: 56px; border-radius: 16px; }
+  .touch-btn { width: 64px; height: 64px; border-radius: 16px; }
   .touch-btn.small { border-radius: 14px; }
   .touch-btn span { font-size: 8.5px; }
   .ach-grid { grid-template-columns: 1fr; }
@@ -1041,7 +1041,7 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
   :root { --stick-inset: 72px; --stick-edge: 12px; --stick-size: 128px; --stick-bottom: 18px;
           --stick-zone: 78px; --stick-gap: 20px; }
   .stick-knob { --knob: 56px; }
-  .touch-buttons .touch-btn { width: 48px; height: 48px; border-radius: 14px; }
+  .touch-buttons .touch-btn { width: 56px; height: 56px; border-radius: 14px; }
   .touch-buttons { gap: 8px; }
 }
 @media (min-width: 721px) {
@@ -1484,11 +1484,11 @@ body.at-home #blocker { align-items: stretch; padding: 0; }
 @media (max-height: 560px) and (pointer: coarse) {
   body.touch {
     --stick-inset: 62px; --stick-edge: 12px; --stick-size: 68px; --stick-bottom: 8px;
-    --stick-zone: 52px; --stick-gap: 8px; --side-btn: 40px;
+    --stick-zone: 52px; --stick-gap: 8px; --side-btn: 48px;
   }
   body.touch .stick-zone { height: 66%; }
   body.touch .stick-knob { --knob: 30px; }
-  body.touch .touch-btn { width: 42px; height: 42px; border-radius: 11px; }
+  body.touch .touch-btn { width: 50px; height: 50px; border-radius: 11px; }
   body.touch .touch-btn.small { border-radius: 11px; }
   body.touch .touch-btn span { font-size: 7px; }
   body.touch .touch-buttons { gap: 5px; }

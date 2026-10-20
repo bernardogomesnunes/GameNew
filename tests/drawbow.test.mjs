@@ -85,7 +85,7 @@ ok('and the bow comes up with an arrow on the string', /draw = 0/.test(hand) && 
 
 // --- the barracks bar moves while you watch it ---------------------------------------------------
 
-ok('with the barracks open, its clock still runs', /watchingBarracks = !playing && .*'barracks'/.test(game) && /\(playing \|\| watchingBarracks\)/.test(game));
-ok('and soldiers still come out of it', /if \(watchingBarracks\) this\.syncDefence\(\);/.test(game));
+ok('with a training post open, its clock still runs', /watchingTrainingPost = !playing && \['barracks', 'military'\]/.test(game) && /\(playing \|\| watchingTrainingPost\)/.test(game));
+ok('and soldiers still come out of it', /if \(watchingTrainingPost\) this\.syncDefence\(\);/.test(game));
 
 process.exit(f ? 1 : 0);

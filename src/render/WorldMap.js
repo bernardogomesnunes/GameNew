@@ -44,13 +44,18 @@ export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], st
     if (Math.abs(p.x - x) >= radius || Math.abs(p.z - z) >= radius) continue;
     const [px, py] = worldToCanvas(p.x, p.z, x, z, radius, width, height);
     ctx.fillStyle = PLACE_COLOURS[p.kind] ?? '#ffffff';
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = p.raided ? '#ffd66e' : 'rgba(0, 0, 0, 0.75)';
+    ctx.lineWidth = p.raided ? 3 : 2;
     ctx.beginPath();
     ctx.moveTo(px, py - 8); ctx.lineTo(px + 8, py); ctx.lineTo(px, py + 8); ctx.lineTo(px - 8, py);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+    if (p.raided) {
+      ctx.beginPath();
+      ctx.moveTo(px - 3, py); ctx.lineTo(px - 1, py + 2); ctx.lineTo(px + 4, py - 3);
+      ctx.strokeStyle = '#fff4cf'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke();
+    }
   }
 
   // The two kingdoms: a marker and its name where it is, or — off the edge
@@ -103,5 +108,5 @@ function drawSite(ctx, s, x, z, radius, width, height) {
 
 /** The colour each kind of place is marked in on the map. */
 export const PLACE_COLOURS = {
-  kingdom: '#1e1a24', hermit: '#9be38a', camp: '#e0574a', ruin: '#c9c2b0', ruined_temple: '#f2f0ea', mine: '#9a7350', monument: '#3a3440', tribe: '#4fae3c', city: '#d9a441', ruined_city: '#8d8576', outpost: '#2a2430',
+  kingdom: '#1e1a24', hermit: '#9be38a', camp: '#e0574a', ruin: '#c9c2b0', ruined_temple: '#f2f0ea', mine: '#9a7350', monument: '#3a3440', tribe: '#4fae3c', city: '#d9a441', ruined_city: '#8d8576', outpost: '#2a2430', caravan: '#d58d4b', mossfolk: '#71b659',
 };

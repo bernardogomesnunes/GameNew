@@ -52,7 +52,7 @@ export const BLOCK_COLOURS = {
   Gravel: 0xa7a0b4, Clay: 0xc2988a, Silt: 0x8f9a8a, 'Sand Path': 0xe2c290,
   // Trees.
   Wood: P.plumwood, Leaves: P.teal, Sapling: 0x9cc08e,
-  'White Wood': 0xefe6ea, 'White Leaves': 0xf2b6cf, 'Dark Wood': 0x4e3646, 'Dark Leaves': P.deepTeal,
+  'White Wood': 0xefe6ea, 'White Leaves': 0xeeeef0, 'Pink Leaves': 0xf2b6cf, 'Dark Wood': 0x4e3646, 'Dark Leaves': P.deepTeal,
   'Stripped Oak Log': 0xd6a87e, 'Stripped White Log': 0xf2e8ee, 'Stripped Dark Log': 0x8a5e6a,
   // Stone.
   Stone: P.stone, Cobblestone: 0xc6bdd6, 'Stone Brick': 0xb2abc2, 'Stone Mill': 0xa29cb2,

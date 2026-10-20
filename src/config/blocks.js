@@ -914,7 +914,7 @@ BLOCKS.push(
 // the city is yours until they win it back.
 export const WAR_STANDARD = 458;
 BLOCKS.push(
-  { id: WAR_STANDARD, name: 'War Standard', glyph: 'banner', color: 0xc8a040, glows: true, material: 'wood', system: true, unlock: null,
+  { id: WAR_STANDARD, name: 'War Standard', glyph: 'banner', color: 0xc8a040, shape: 'war_standard', glows: true, material: 'wood', system: true, unlock: null,
     light: { color: 0xffd27a, intensity: 3, distance: 10, decay: 1 } },
 );
 
@@ -940,6 +940,16 @@ BLOCKS.push(
     light: { color: 0xffd7b0, intensity: 2, distance: 8, decay: 1, y: 0.8 } },
 );
 quad(CURL, { name: 'Curled Trim', glyph: 'planks', color: 0xa0784e, shape: 'curl', material: 'wood', facesYou: true, unlock: null });
+
+// The compost bin is a small crafting station for turning spare leaves and
+// seeds into compost (config/recipes.js). Its cabinet form keeps it legible
+// beside the farm without introducing a new renderer shape.
+export const COMPOST_BIN = 520;
+quad(COMPOST_BIN, { name: 'Compost Bin', glyph: 'moss', color: 0x76523b, shape: 'cabinet', material: 'wood', station: 'compost', facesYou: true, unlock: null });
+
+// Separate blossom from white foliage without renumbering saved blocks.
+export const PINK_LEAVES = 517;
+BLOCKS.push({ id: PINK_LEAVES, name: 'Pink Leaves', glyph: 'leaf', color: 0xf2b6cf, material: 'plant', cost: { wood: 1 }, unlock: null });
 
 // The storybook palette (config/palette.js) paints every block it names; the
 // colour each was written with above is kept as `formerColor`, which an item

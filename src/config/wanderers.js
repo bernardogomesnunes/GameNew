@@ -284,6 +284,32 @@ export const WANDERERS = {
     leash: 44,
     drops: { coin: [2, 5], iron_ingot: [0, 1] },
   },
+  caravan_guard: {
+    noun: 'a caravan guard', about: 'a guard of the dune caravans — keeping watch',
+    aboutHostile: 'a caravan guard — angry about the stolen supplies',
+    colours: [0x8c6040, 0x5c493c], helm: 0xc9a46c,
+    speed: 1.4, roam: 4, hp: 20, hits: 2, reach: 1.7, every: 1.3, aggro: 12, run: 3.4, fleeBelow: -1,
+    garrison: true, neutral: true,
+    drops: { coin: [1, 4], cooked_meat: [0, 1] },
+  },
+  caravaner: {
+    noun: 'a caravaner', about: 'a traveller of the dune caravans, taking a rest',
+    colours: [0xc58c52, 0x9a6847, 0x6f583d], speed: 1.2, roam: 5, hp: 10, flees: true, run: 3.4, neutral: true,
+    drops: { coin: [0, 3], fruit: [0, 1] },
+  },
+  moss_guard: {
+    noun: 'a mossfolk guard', about: 'a guardian of the mossfolk village',
+    aboutHostile: 'a mossfolk guardian — angry about the stolen offering',
+    colours: [0x54784a, 0x436147], helm: 0x829c60,
+    speed: 1.3, roam: 4, hp: 22, hits: 2, reach: 1.8, every: 1.25, aggro: 12, run: 3.4, fleeBelow: -1,
+    garrison: true, neutral: true,
+    drops: { fruit: [1, 3], hemp_fibre: [0, 2] },
+  },
+  mossfolk: {
+    noun: 'a mossfolk villager', about: 'a mossfolk villager, among the lantern trees',
+    colours: [0x748c56, 0x9c8557, 0x567866], speed: 1.25, roam: 5, hp: 10, flees: true, run: 3.5, neutral: true,
+    drops: { fruit: [0, 2], seeds_cabbage: [0, 1] },
+  },
   // The Future's people (world/future.js), about its plaza in pale suits.
   futurian: {
     noun: 'a futurian',
@@ -397,6 +423,14 @@ export const NEWS = {
   outpost: [
     'The Stone Kingdom has a fort out to the {dir}. Dark walls, black banners. They say its armoury is full.',
     'Soldiers in dark iron at a fort to the {dir}. Don\'t go near it wearing anything white.',
+  ],
+  caravan: [
+    'Dune caravans are camped far out to the {dir}. They carry rare wares, but their guards watch closely.',
+    'Travellers from a canvas camp to the {dir}. They cross the desert with the seasons.',
+  ],
+  mossfolk: [
+    'A village grown into the forest lies to the {dir}. Its lanterns are green at night.',
+    'There are mossfolk beneath the tallest trees to the {dir}. Their huts are all leaves and light.',
   ],
   ruined_city: [
     'To the {dir} there\'s a city with nobody in it. Walls fallen, roofs caved in. Chests still in the houses, they say.',

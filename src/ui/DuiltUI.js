@@ -9,9 +9,9 @@ import { farmSeedSlots } from '../duilt/Crops.js';
 import { UNITS, UNITS_BY_ID, unitCost } from '../config/soldiers.js';
 
 /** What's drawn beside each kind of soldier in a barracks's line. */
-const UNIT_GLYPHS = { warrior: 'sword', swordsman: 'sword', archer: 'bow', crew: 'catapult' };
+const UNIT_GLYPHS = { warrior: 'sword', swordsman: 'sword', archer: 'bow', crew: 'catapult', shield_guard: 'sword' };
 import { TRAIN_DAYS, MAX_SOLDIERS } from '../world/Defenders.js';
-import { GAME_DAY_SECONDS } from '../render/DayCycle.js';
+import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
@@ -660,7 +660,7 @@ export class DuiltUI {
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
     body.querySelectorAll('[data-train]').forEach((b) => b.addEventListener('click', () => actions.onTrain?.(b.dataset.train)));
     body.querySelector('[data-cube]')?.addEventListener('click', () => { this.closePanel('panel-building'); actions.onCube?.(); });
-    if (structure.type === 'barracks' && this.duilt) {
+    if ((structure.type === 'barracks' || structure.type === 'military') && this.duilt) {
       const t = this.duilt.defenders.barracks(structure.id);
       this.barracksShape = `${t.roster.length}/${t.queue.length}`;
       if (!this.barracksTimer) this.barracksTimer = setInterval(() => this.tickBarracks(), 500);
@@ -703,7 +703,7 @@ export class DuiltUI {
         </div>` : ''}
       </div>
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
-      ${structure.type === 'barracks' ? this.barracksHtml(structure) : ''}
+      ${structure.type === 'barracks' || structure.type === 'military' ? this.barracksHtml(structure) : ''}
       ${structure.type === 'sanctuary_white' || structure.type === 'sanctuary_black' ? this.cubeHtml() : ''}
       ${levelSec}
       ${this.stationRecipesHtml(spec)}
@@ -792,7 +792,8 @@ export class DuiltUI {
           }).join('')}
         </div>`;
     const gearName = (id, n) => `${n > 1 ? `${n} ` : ''}${itemName(id).toLowerCase()}${n > 1 && !itemName(id).endsWith('s') ? 's' : ''}`;
-    const buttons = UNITS.map((u) => {
+    const units = structure.type === 'military' ? UNITS.filter((u) => u.id === 'shield_guard') : UNITS.filter((u) => u.id !== 'shield_guard');
+    const buttons = units.map((u) => {
       const cost = unitCost(u, d.inventory);
       const can = cost.ok && room > 0;
       const price = [`${u.food} food`, ...Object.entries(u.gear).map(([id, n]) => gearName(id, n))].join(', ');
@@ -803,7 +804,7 @@ export class DuiltUI {
     }).join('');
     return `
       <div class="building-sec">
-        <h4>Soldiers · ${t.roster.length} of ${bunks} bunks</h4>
+        <h4>${structure.type === 'military' ? 'Spear guards' : 'Soldiers'} · ${t.roster.length} of ${bunks} bunks</h4>
         <p class="building-line">${t.roster.length ? escapeHtml(tally(t.roster)) : t.queue.length ? 'Nobody out yet.' : 'Nobody yet — train them below.'}</p>
         ${hungry ? `<p class="building-line bad">${hungry === 1 ? 'One is' : `${hungry} are`} hungry — they hit softer and don't recover until fed. Put food in a storehouse.</p>` : ''}
         ${t.queue.length ? `<h4>Training · ${t.queue.length}</h4>` : ''}
@@ -834,7 +835,7 @@ export class DuiltUI {
    */
   tickBarracks() {
     const s = this.building;
-    const open = s?.type === 'barracks' && this.panels.isOpen('panel-building');
+    const open = (s?.type === 'barracks' || s?.type === 'military') && this.panels.isOpen('panel-building');
     if (!open) { clearInterval(this.barracksTimer); this.barracksTimer = null; return; }
     const t = this.duilt?.defenders.barracks(s.id);
     const shape = `${t?.roster.length}/${t?.queue.length}`;
@@ -868,6 +869,7 @@ export class DuiltUI {
     // The Sky Kingdom's share, after a lost attack on it (duilt/SkyWar.js).
     if (tax > 0 && this.makesOf(structure, spec, level)) out.push(`Taxes: the Sky Kingdom takes ${Math.round(tax * 100)}% of what it makes, until it falls.`);
     if (structure.type === 'barracks') out.push('Trains soldiers who go out to fight anything that comes at your land.');
+    if (structure.type === 'military') out.push('Train spear guards here; they defend your land when enemies come.');
     if (!out.length && !this.makesOf(structure, spec, level)) out.push('Makes nothing. It counts toward your age goals.');
     return out;
   }
@@ -1065,7 +1067,7 @@ export class DuiltUI {
     this.q('#people-count').textContent = `${population + soldiers}/${target + soldiers}`;
     // Hunger wins the tooltip: it is the one that is costing you something.
     box.title = hungry
-      ? `${hungry === 1 ? 'Somebody is' : `${hungry} people are`} hungry — put some food in a storehouse; fed, they work better`
+      ? `${hungry === 1 ? 'Somebody is' : `${hungry} people are`} hungry — tap to feed them, or fill the granary`
       : (d.settlers.blockedReason() ?? `${target - population} more on the way`);
     box.classList.toggle('full', population >= target && target > 0 && !hungry);
     box.classList.toggle('hungry', hungry > 0);
@@ -1084,13 +1086,10 @@ export class DuiltUI {
     const d = this.duilt;
     if (!d) return;
     const { population, target, houses, hungry, soldiers } = d.settlers;
+    if (hungry) return this.giveFood();
     const say = (title, body) => this.bus.emit('toast', { kind: 'xp', title, body });
     // The soldiers are counted with everyone (they live in the barracks).
     const camp = soldiers ? ` and ${soldiers} soldier${soldiers === 1 ? '' : 's'}` : '';
-    if (hungry) {
-      return say(hungry === 1 ? 'Somebody is hungry' : `${hungry} of your people are hungry`,
-        'Put some food in a storehouse — fed, they work better');
-    }
     const reason = d.settlers.blockedReason();
     if (reason) return say(houses || soldiers ? `${population} living here${camp}` : 'Nobody lives here yet', reason);
     say(`${population} of ${target} moved in${camp}`,
@@ -1713,12 +1712,12 @@ export class DuiltUI {
     if (where) {
       const total = all.reduce((n, r) => n + r.count, 0);
       where.textContent = sheds
-        ? `${total} thing${total === 1 ? '' : 's'} in ${sheds} storehouse${sheds === 1 ? '' : 's'}`
-        : 'No storehouses yet';
+        ? `${total} thing${total === 1 ? '' : 's'} in ${sheds} store${sheds === 1 ? '' : 's'}`
+        : 'No stores yet';
     }
     if (!rows.length) {
-      list.innerHTML = `<div class="sub" style="margin:0">${!sheds ? 'Build a storehouse, and whatever goes on its shelves shows up here.'
-        : q ? `Nothing called "${escapeHtml(q)}" in any storehouse.` : 'Nothing on the shelves yet. Tap “Put it all away” to start.'}</div>`;
+      list.innerHTML = `<div class="sub" style="margin:0">${!sheds ? 'Build a store or granary, and whatever it holds shows up here.'
+        : q ? `Nothing called "${escapeHtml(q)}" in any store.` : 'Nothing on the shelves yet. Tap “Put it all away” to start.'}</div>`;
       return;
     }
     list.innerHTML = rows.map((r) => {
@@ -1728,7 +1727,7 @@ export class DuiltUI {
         <div class="recipe-tile">
           <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(itemName(r.id))}" data-tip-info="${escapeAttr(spec?.madeBy ?? '')}">${icon}<b>×${r.count}</b></span>
           <strong class="recipe-name">${escapeHtml(itemName(r.id))}</strong>
-          <span class="recipe-cost dim">${r.stores === 1 ? 'In 1 storehouse' : `Across ${r.stores} storehouses`}</span>
+          <span class="recipe-cost dim">${r.stores === 1 ? 'In 1 store' : `Across ${r.stores} stores`}</span>
           <div class="recipe-actions"><button class="secondary" data-take="${escapeAttr(r.id)}">Take</button></div>
         </div>`;
     }).join('');
@@ -1897,9 +1896,14 @@ export class DuiltUI {
       if (n) moved += n; else stuck++;
     });
     this.renderStore();
+    const remainderMessage = stuck
+      ? store instanceof Granary
+        ? 'The granary only takes what farms grow'
+        : moved ? 'The shelves filled up before the rest' : 'The shelves are full'
+      : moved ? 'Your tools stayed with you' : 'Only your tools are left';
     this.bus.emit('toast', moved
-      ? { kind: 'xp', title: `Put ${moved} away`, body: stuck ? 'The shelves filled up before the rest' : 'Your tools stayed with you' }
-      : { kind: 'xp', title: 'Nothing moved', body: stuck ? 'The shelves are full' : 'Only your tools are left' });
+      ? { kind: 'xp', title: `Put ${moved} away`, body: remainderMessage }
+      : { kind: 'xp', title: 'Nothing moved', body: remainderMessage });
   }
 
   // ---- claiming ----
@@ -2107,7 +2111,7 @@ export class DuiltUI {
         </div>`;
       }
       const verb = r.study ? 'Research' : 'Make';
-      const takes = r.study && !d.sandbox ? `<span class="research-takes">Takes ${this.duilt.constructor.researchDays(r)} days</span>` : '';
+      const takes = r.study && !d.sandbox ? `<span class="research-takes">Takes ${gameDaysText(this.duilt.constructor.researchDays(r))}</span>` : '';
       return `
         <div class="recipe-tile ${r.ok ? '' : 'blocked'}">
           <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(name)}" data-tip-info="${escapeAttr(r.blurb ?? '')}">${icon}${count}</span>

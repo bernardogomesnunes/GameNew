@@ -8,6 +8,7 @@ import { stampKingdom } from './kingdom.js';
 import { stampSky } from './skyKingdom.js';
 import { inFuture, stampFuture, FUTURE_GROUND } from './future.js';
 import { stampRivals, rivalSites } from './rivals.js';
+import { deepCaveColumn, stampDeepCaves, stampCaveRuins } from './deepCaves.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
@@ -303,6 +304,16 @@ export class ChunkGen {
    */
   caveAt(x, y, z, biomeIndex) {
     if (y < CAVE_FLOOR) return NOT_CARVED;
+    // The deep galleries (world/deepCaves.js), asked once a column: this is
+    // called for every block in it, bottom to top, and the answer is the
+    // column's.
+    // (A settlement moved while the world is made moves the caves too.)
+    const home = this.biomes;
+    if (this._caveX !== x || this._caveZ !== z || this._caveHomeX !== home.centreX || this._caveHomeZ !== home.centreZ) {
+      this._caveX = x; this._caveZ = z; this._caveHomeX = home.centreX; this._caveHomeZ = home.centreZ;
+      this._caveSpans = deepCaveColumn(this, x, z);
+    }
+    if (this._caveSpans.length && this._caveSpans.some((s) => y >= s.floor && y <= s.ceiling)) return AIR;
     const cavern = biomeIndex === MOUNTAINS2_INDEX && y < CAVERN_Y_MAX;
     const width = cavern ? CAVERN_WIDTH : CAVE_WIDTH;
     const n = this.cave(x * CAVE_FREQ, y * CAVE_FREQ_Y, z * CAVE_FREQ);
@@ -395,7 +406,9 @@ export class ChunkGen {
     const roll = hash01(x, z, this.seed ^ 0x5f3a);
     if (roll >= MAX_TREE_CHANCE) return null;
     const biome = BIOMES[this.biomeIndexAt(x, z)];
-    const t = biome.trees;
+    const foliage = biome.trees;
+    const t = foliage?.leaves === 42 && hash01(x, z, this.seed ^ 0x4b10) < 0.4
+      ? { ...foliage, leaves: 517 } : foliage;
     if (!t?.chance) return null;
     if (roll >= t.chance) return null;
     // Spaced out: a tree only where no stronger one (a lower roll) is
@@ -408,6 +421,7 @@ export class ChunkGen {
       }
     }
     const ground = this.heightAt(x, z);
+    if (deepCaveColumn(this,x,z).some(s=>s.floor <= ground && s.ceiling >= ground)) return null;
     // Both mountain tiers only take root near their own foot — see
     // biomes.js's own note on why, requested directly for both.
     if (biome.treeMaxHeight != null && ground > biome.treeMaxHeight) return null;
@@ -577,6 +591,9 @@ export class ChunkGen {
         }
       }
     }
+
+    stampDeepCaves(this, chunk, CHUNK_SIZE);
+    stampCaveRuins(this, chunk, CHUNK_SIZE);
 
     // Trees. Every column within a canopy's reach of this chunk is asked
     // whether it holds one, and only the blocks that land inside these walls
@@ -900,6 +917,6 @@ export function crownShape(put, cx, cy, cz, { r, below, above, leaves, salt }, s
 }
 
 /** Wood, leaves and saplings: standing on the ground rather than part of it. */
-const GROWS_ON_TOP = new Set([4, 5, 20, 41, 42, 43, 44]);
+const GROWS_ON_TOP = new Set([4, 5, 20, 41, 42, 43, 44, 517]);
 
 export { CHUNK_SIZE, surfaceFor, WORLD_HEIGHT };

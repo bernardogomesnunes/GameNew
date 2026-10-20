@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Visual finishing review</title>
+<style>
+body{margin:0;background:#edece8;color:#302d36;font:16px system-ui}main{max-width:1200px;margin:auto;padding:24px}h1{font-size:26px}h2{font-size:20px;margin-top:30px}.tiles{display:flex;gap:16px;justify-content:space-around}.tile{text-align:center}.tile svg{display:block;width:150px;height:150px}.tile p{margin:0}canvas{display:block;width:100%;border-radius:8px}.note{color:#68616e}img{width:100%;display:block}
+</style>
+<main><h1>Stone, foliage and villagers</h1><div class="tiles" id="tiles"></div>
+<img src="/art/mobs/sheets/villagers.png" alt="Ten detailed villagers">
+<h2>Deep gallery and ruined hall · seed 42</h2><p class="note">Generated terrain, viewed from inside the gallery. Preview lights are used for inspection.</p><div id="cave"></div><p id="status">Loading…</p></main>
+<script type="module">
+import * as THREE from 'three';
+import {blockIcon} from '/src/config/cubes.js';
+import {BLOCKS} from '/src/config/blocks.js';
+import {ChunkGen} from '/src/world/ChunkGen.js';
+import {World} from '/src/world/World.js';
+import {caveSite} from '/src/world/deepCaves.js';
+import {ChunkMesher} from '/src/world/ChunkMesher.js';
+import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {makeKit} from '/src/render/Models.js';
+for(const name of ['Stone','White Stone','Dark Stone','Stone Brick','White Leaves','Pink Leaves']) {
+  const b=BLOCKS.find(b=>b.name===name), el=document.createElement('div');el.className='tile';
+  el.innerHTML=blockIcon(b.id,{size:150})+`<p>${name}</p>`;document.querySelector('#tiles').append(el);
+}
+const ids=['settler',...Array.from({length:5},(_,i)=>`settler_${i+1}`),'citizen',...Array.from({length:3},(_,i)=>`citizen_${i+1}`)];
+for(const id of ids) {
+  const gltf=await new GLTFLoader().loadAsync(`/models/${id}.glb`);
+  const kit=makeKit(id,gltf.scene,mergeGeometries);
+  if(!kit.bones.some(b=>b.name==='body') || !kit.bones.some(b=>b.name==='head')) throw Error(`Missing bones: ${id}`);
+  if(!kit.material.map) throw Error(`Missing texture: ${id}`);
+}
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x302e3c);
+scene.add(new THREE.HemisphereLight(0xd9e4f7,0x8b725d,1.5));
+const gen=new ChunkGen({seed:42}),site=caveSite(gen,0,0),world=new World({height:200,gen});
+const mesher=new ChunkMesher(scene);
+for(let cx=Math.floor((site.x-40)/16);cx<=Math.floor((site.x+40)/16);cx++)
+for(let cz=Math.floor((site.z-32)/16);cz<=Math.floor((site.z+32)/16);cz++)mesher.rebuild(world,world.getChunk(cx,cz));
+for(const [x,z] of [[-7,5],[7,-5]]) {
+  const light=new THREE.PointLight(0xffd7a3,120,40,1.4);light.position.set(site.x+x,site.y+2,site.z+z);scene.add(light);
+}
+const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setSize(1200,600);renderer.setPixelRatio(1);
+document.querySelector('#cave').append(renderer.domElement);
+const camera=new THREE.PerspectiveCamera(70,2,.1,160);camera.position.set(site.x+22,site.y+4,site.z+18);camera.lookAt(site.x-4,site.y+5,site.z-5);
+renderer.render(scene,camera);
+document.querySelector('#status').textContent=`Ten GLBs loaded with textures and bones. Gallery floor y=${site.y}; entrance x=${site.x-224}, z=${site.z}.`;
+window.reviewReady=true;
+</script></html>

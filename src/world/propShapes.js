@@ -14,6 +14,12 @@ import { toneHex } from '../config/blocks.js';
 const DOOR_Z0 = 0.40625, DOOR_Z1 = 0.59375;
 
 export const PROP_SHAPES = {
+  war_standard: [
+    { minX: 0.46, maxX: 0.54, minY: 0, maxY: 0.98, minZ: 0.46, maxZ: 0.54, color: 0x59452c },
+    { minX: 0.42, maxX: 0.58, minY: 0.92, maxY: 1, minZ: 0.42, maxZ: 0.58, color: 0xd6b86f },
+    { minX: 0.5, maxX: 0.96, minY: 0.58, maxY: 0.9, minZ: 0.47, maxZ: 0.53, color: 0xc43b35, glow: true },
+    { minX: 0.5, maxX: 0.86, minY: 0.66, maxY: 0.82, minZ: 0.44, maxZ: 0.56, color: 0xe8c96c, glow: true },
+  ],
   slab: [
     { minX: 0, maxX: 1, minY: 0, maxY: 0.5, minZ: 0, maxZ: 1 },
   ],

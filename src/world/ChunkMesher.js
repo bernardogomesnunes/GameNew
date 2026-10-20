@@ -316,7 +316,7 @@ const SWAY = 0.045;
 function withBlockTextures(mat) {
   const { texture, bumps } = blockTextureArray();
   if (!texture) return mat;
-  const leafLayers = [...new Set([5, 42, 44].flatMap((id) => [layerFor(id), topLayerFor(id)]))].filter((l) => l != null && l >= 0);
+  const leafLayers = [...new Set([5, 42, 44, 517].flatMap((id) => [layerFor(id), topLayerFor(id)]))].filter((l) => l != null && l >= 0);
   const isLeaf = leafLayers.length ? leafLayers.map((l) => `abs( layer - ${l.toFixed(1)} ) < 0.5`).join(' || ') : 'false';
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.blockTiles = { value: texture };
@@ -479,7 +479,7 @@ function getMaterial(key) {
  * in the canopy.
  */
 const LEAFY = new Uint8Array(IDS);
-for (const id of [5, 42, 44]) LEAFY[id] = 1;
+for (const id of [5, 42, 44, 517]) LEAFY[id] = 1;
 /** Face shade for leaves: the same light, more contrast than stone. */
 const LEAF_SHADE = { side: 0.78, under: 0.42 };
 /** How much each solid neighbour darkens a leaf, and leaves two above it. */

@@ -46,7 +46,10 @@ const size = Number(phone.match(/--stick-size: (\d+)px/)[1]);
 ok(`the walking stick is bigger on a phone (${size}px, was 84)`, size >= 104);
 ok('its knob is centred on it whatever the size', /top: calc\(\(var\(--stick-size\) - var\(--knob\)\) \/ 2/.test(css));
 const btn = Number(phone.match(/\.touch-buttons \.touch-btn \{ width: (\d+)px; height: (\d+)px/)[1]);
-ok(`the column above it is smaller (${btn}px, was 56)`, btn < 56 && btn >= 44);
+// Then asked for directly (18 October): "button size is too small increase
+// buttons 8 px in size" — 48 + 8. Still the smallest buttons on a phone.
+const phoneBtn = Number(css.match(/\.touch-btn \{ width: (\d+)px; height: (\d+)px; border-radius: 16px; \}/)[1]);
+ok(`the column above it is 8px bigger than it was (${btn}px), and still smaller than the other buttons (${phoneBtn}px)`, btn === 56 && btn < phoneBtn);
 
 // The bench keeps its height while you search.
 ok('the bench and the buildings list keep their height while searching',
