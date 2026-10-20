@@ -31,6 +31,7 @@ import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SyncState } from './storage/WorldSync.js';
 import { LocalWorlds } from './storage/LocalWorlds.js';
+import { putBackup, getBackup, dropBackup } from './storage/BackupStore.js';
 import { claimRegion, blocksIn, claimHint } from './tools/ClaimArea.js';
 
 /**
@@ -143,6 +144,8 @@ const WHISTLE_REACH = 60, PACK_HEEL = 4, PACK_FIGHT = 14, PACK_CATCH_UP = 40, PA
 const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard', 'futurian', 'caravaner', 'mossfolk']);
 /** The longest a manual save waits for upload confirmation before offering a retry. */
 const LEAVE_SAVE_WAIT_MS = 15000;
+/** After an upload fails, the first try again; each one after waits twice as long, up to the second. */
+const UPLOAD_RETRY_MS = 30_000, UPLOAD_RETRY_MAX_MS = 5 * 60_000;
 /** How much land round the title scene's middle, and under its camera, is ready before the worlds screen shows. */
 const TITLE_READY_REACH = 24, TITLE_EYE_REACH = 16;
 /** How fast the touch stick walks at its rim, against a key's full walking pace. */
@@ -785,6 +788,8 @@ export class Game {
       else this.duilt?.resumeClock();
     });
     window.addEventListener('pagehide', () => { this.duilt?.pauseClock(); save(); });
+    // Back online: what's waiting goes up now, not at the next try.
+    window.addEventListener('online', () => { this.flush().catch(() => {}); });
     // Run is on Ctrl (asked for directly), and Ctrl+W closes a browser tab —
     // a page can't stop that, but it can ask first. Only while you're
     // playing with the mouse taken (a keyboard); the world is saved either way.
@@ -808,6 +813,8 @@ export class Game {
   discardCurrentWorld() {
     this.discarded = true;
     this.pendingSave = false;
+    clearTimeout(this.retryTimer);
+    this.uploadTrouble = false;
     this.dropSafeCopy();
     // If it was synced, take it off the server too — a world you deleted
     // coming back on your next device is worse than not syncing at all.
@@ -847,9 +854,11 @@ export class Game {
    * got saved.
    */
   async saveAndWait() {
+    // The Save button says how it went itself: see uploadFailed.
+    this.savingByHand = true;
     const ok = this.saveNow();
-    if (!ok) return false;
-    if (!this.saving) return !this.saveError;
+    if (!ok) { this.savingByHand = false; return false; }
+    if (!this.saving) { this.savingByHand = false; return !this.saveError; }
     let timer;
     try {
       const saved = await Promise.race([
@@ -859,6 +868,7 @@ export class Game {
       return saved === true && !this.saveError;
     } finally {
       clearTimeout(timer);
+      this.savingByHand = false;
     }
   }
 
@@ -965,6 +975,8 @@ export class Game {
         // handled separately by onDeleteWorld.
         if (!mine && agreed) {
           this.saveError = 'This world was not found in the current account. It has not been recreated and your pending backup has not been removed. Check that you are in the right account and try saving again. You can also export this world before leaving.';
+          // Not tried again by itself: it's the account to check, not the connection.
+          this.uploadFailed({ retry: false });
           return false;
         }
         // Somebody else saved this world since we opened it. Refusing would
@@ -983,6 +995,7 @@ export class Game {
         this.saveError = null;
         this.dropSafeCopy();
         this.ui?.home?.forgetWorlds?.();
+        this.uploadLanded();
         return true;
       } catch (err) {
         // Left pending on purpose: the next save tries again, and the copy put
@@ -991,16 +1004,48 @@ export class Game {
         // Best effort, and never awaited: a broken save_failures write must
         // never be the reason a retry gets delayed.
         this.cloud?.reportFailure(this.worldId, err).catch(() => {});
-        // Quiet: it tries again on its own, and a "not saved" every few
-        // minutes was noise (backlog batch 2). Nothing is lost meanwhile —
-        // the copy keepSafe put aside survives a closed tab, and sendUnsent
-        // sends it the next time the game starts.
+        // Nothing is lost meanwhile: the copy keepSafe put aside survives a closed tab,
+        // and sendUnsent sends it the next time the game starts.
+        this.uploadFailed();
         return false;
       } finally {
         this.saving = null;
       }
     })();
     return this.saving;
+  }
+
+  /**
+   * An upload didn't land (SAVE-4: "failed uploads retry without telling
+   * you"). Said once, not on every try: a "not saved" every few minutes was
+   * noise (backlog batch 2). And tried again soon, not at the next autosave
+   * five minutes on — half a minute, then twice as long each time, up to
+   * five — unless it's not the connection (`retry` false).
+   */
+  uploadFailed({ retry = true } = {}) {
+    if (!this.uploadTrouble) {
+      this.uploadTrouble = true;
+      if (!this.savingByHand) {
+        this.bus.emit('toast', {
+          kind: 'xp', title: 'Not saved to your account yet',
+          body: retry ? `${this.saveError} Your world is kept on this device, and it tries again by itself.` : this.saveError,
+        });
+      }
+    }
+    clearTimeout(this.retryTimer);
+    if (!retry) return;
+    const tries = this.uploadTries ?? 0;
+    this.uploadTries = tries + 1;
+    this.retryTimer = setTimeout(() => { this.flush().catch(() => {}); }, Math.min(UPLOAD_RETRY_MAX_MS, UPLOAD_RETRY_MS * 2 ** tries));
+  }
+
+  /** An upload landed: no more tries, and if it had been failing, say it's up now. */
+  uploadLanded() {
+    clearTimeout(this.retryTimer);
+    this.uploadTries = 0;
+    if (!this.uploadTrouble) return;
+    this.uploadTrouble = false;
+    if (!this.savingByHand) this.bus.emit('toast', { kind: 'xp', title: 'Saved to your account', body: 'The changes that were waiting went up.' });
   }
 
   /**
@@ -1013,18 +1058,30 @@ export class Game {
    * and this is the difference between "not saved yet" and "gone".
    */
   keepSafe() {
+    const record = { worldId: this.worldId, name: this.worldName, at: Date.now(), state: serialiseWorldState(this.saveState()) };
     try {
-      localStorage.setItem(UNSENT_KEY, JSON.stringify({
-        worldId: this.worldId,
-        name: this.worldName,
-        at: Date.now(),
-        state: serialiseWorldState(this.saveState()),
-      }));
-    } catch { /* out of room; the upload is still the real save */ }
+      localStorage.setItem(UNSENT_KEY, JSON.stringify(record));
+      // One that went to the bigger store before is older than this now.
+      dropBackup();
+      return;
+    } catch { /* out of room: below */ }
+    // Too big for this browser's small store (SAVE-5). An older, smaller copy
+    // left there would be sent in place of this one, so it goes, and this one
+    // goes to the bigger store (storage/BackupStore.js).
+    try { localStorage.removeItem(UNSENT_KEY); } catch { /* private window */ }
+    putBackup(record).then((kept) => {
+      if (kept || this.toldNoBackup) return;
+      this.toldNoBackup = true;
+      this.bus.emit('toast', {
+        kind: 'xp', title: 'No backup on this device',
+        body: 'This world is too big to keep a copy here. Stay connected until it says it\'s saved.',
+      });
+    });
   }
 
   /** Throws the unsent copy away — only if it is world `id`'s, when one is given. */
   dropSafeCopy(id = null) {
+    dropBackup(id);
     try {
       if (id && JSON.parse(localStorage.getItem(UNSENT_KEY) || 'null')?.worldId !== id) return;
       localStorage.removeItem(UNSENT_KEY);
@@ -1036,6 +1093,8 @@ export class Game {
     if (!this.cloud?.signedIn) return false;
     let held = null;
     try { held = JSON.parse(localStorage.getItem(UNSENT_KEY) || 'null'); } catch { held = null; }
+    // Too big for localStorage, it went to the bigger store (keepSafe).
+    held ??= await getBackup();
     if (!held?.worldId || !held.state) return false;
     try {
       const list = await this.cloudList({ maxAgeMs: 0 });
