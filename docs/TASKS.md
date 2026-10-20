@@ -36,7 +36,7 @@ Lost progress is the one thing that can't be undone, so this comes first.
 
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
-| SAVE-1 | **Find why the testing world lost progress** (reported: "Was not able to save my testing world it lost a lot of progress"). The owner thinks ChatGPT's "Explain failed world saves" solved it: confirm in play. | Owner | S | waiting |
+| SAVE-1 | **Find why the testing world lost progress** (reported: "Was not able to save my testing world it lost a lot of progress"). Saving works again, tested by the owner on 20 October (before, Save showed "Not saved — try again"). Watch for it coming back: a failure now says why. | Owner | S | done |
 | SAVE-2 | **A world missing from the account list is treated as deleted**, and its backup thrown away. Now explained on Save (ChatGPT's commit); the backup is still lost. See below. | Claude | S | to do |
 | SAVE-3 | **Save and leave leaves even when the save failed**, and says nothing. | Claude | S | to do |
 | SAVE-4 | **Failed uploads retry silently.** | Claude | S | to do |
@@ -344,7 +344,7 @@ keyboard up; the loading screens.
 
 | ID | Question | For |
 |---|---|---|
-| ASK-1 | Did ChatGPT's change fix it in play? If saves still fail, reconnect Neon so Claude can read the save failures. | SAVE-1 |
+| ASK-1 | Saving works again (20 October). Only if it fails again: reconnect Neon so Claude can read the save failures. | SAVE-1 |
 | ASK-2 | Block making (3.1): which machines, which ages, how interactive. Claude drafts first. | CRAFT-* |
 | ASK-3 | The job board (3.3): what jobs, from which age, how many villagers per job. | JOBS-* |
 | ASK-4 | How high the giant mountain goes, and whether the world gets taller. | WORLD-1 |
