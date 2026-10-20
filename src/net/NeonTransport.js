@@ -17,6 +17,16 @@ import { keepTrying } from './retry.js';
 
 const BYTEA_PREFIX = '\\x';
 
+/**
+ * How many chunks one request fetches or sends. The Data API won't answer
+ * with more than 10 MB at once (reported directly, opening a world: "Cloud
+ * request failed 400 … response is too large max 10485760 bytes"), and a
+ * world fetched in one request outgrows that. A hundred chunks is a few MB
+ * even at the biggest chunks seen; a page still refused as too large is
+ * halved and asked for again.
+ */
+const CHUNK_PAGE = 100;
+
 /** Postgres `bytea` crosses JSON as a hex string, both directions. */
 export function bytesToHex(bytes) {
   let out = BYTEA_PREFIX;
@@ -100,6 +110,8 @@ export class NeonTransport {
       // a 401 — this is the one shape worth a token refresh and a retry
       // rather than being taken as the database simply saying no.
       err.expiredToken = isExpiredJwtResponse(res.status, detail);
+      // Too much in one go, asked or sent: a smaller page will do.
+      err.tooLarge = res.status === 413 || /too large/i.test(detail);
       throw err;
     }
     if (res.status === 204) return null;
@@ -197,20 +209,21 @@ export class NeonTransport {
       }],
     });
 
-    if (chunks.length) {
-      await this.request('/world_chunks?on_conflict=world_id,cx,cz', {
-        method: 'POST',
-        prefer: 'resolution=merge-duplicates,return=minimal',
-        body: chunks.map((c) => ({
-          world_id: worldId,
-          cx: c.cx,
-          cz: c.cz,
-          rle: bytesToHex(c.bytes),
-          revision: meta.revision ?? 1,
-          updated_at: now,
-        })),
-      });
-    }
+    // In batches, as the chunks come back in pages (see CHUNK_PAGE): a world
+    // saved whole, or with much changed, is more than one request takes.
+    const rows = chunks.map((c) => ({
+      world_id: worldId,
+      cx: c.cx,
+      cz: c.cz,
+      rle: bytesToHex(c.bytes),
+      revision: meta.revision ?? 1,
+      updated_at: now,
+    }));
+    await inPages(rows.length, (from, size) => this.request('/world_chunks?on_conflict=world_id,cx,cz', {
+      method: 'POST',
+      prefer: 'resolution=merge-duplicates,return=minimal',
+      body: rows.slice(from, from + size),
+    }).then(() => size));
     return { revision: meta.revision ?? 1 };
   }
 
@@ -219,7 +232,14 @@ export class NeonTransport {
     const worlds = await this.request(`/worlds?select=*&id=eq.${worldId}&limit=1`);
     if (!worlds?.length) return null;
     const w = worlds[0];
-    const rows = await this.request(`/world_chunks?select=cx,cz,rle&world_id=eq.${worldId}`);
+    // A page at a time (see CHUNK_PAGE), in a fixed order so no page skips
+    // or repeats a chunk.
+    const rows = [];
+    await inPages(Infinity, async (from, size) => {
+      const page = await this.request(`/world_chunks?select=cx,cz,rle&world_id=eq.${worldId}&order=cx.asc,cz.asc&limit=${size}&offset=${from}`);
+      rows.push(...(page ?? []));
+      return (page?.length ?? 0) < size ? null : size;
+    });
     // migrations/0003 gave duilt and an endless world's seed their own
     // columns. A row saved before that migration ran has them nested inside
     // `economy` instead — the shape pushWorld used to write, and the only
@@ -341,6 +361,26 @@ function describeError(status, detail) {
   if (status === 409) return 'That world changed elsewhere. Reload it before saving again.';
   if (status >= 500) return 'The cloud is unreachable right now. Your local save is untouched.';
   return `Cloud request failed (${status}). ${detail.slice(0, 160)}`;
+}
+
+/**
+ * Runs `step(from, size)` over `total` things a page at a time: `step`
+ * returns how many it handled, or null when there are no more. A page
+ * refused as too large is halved and tried again, down to one.
+ */
+async function inPages(total, step) {
+  let from = 0, size = CHUNK_PAGE;
+  while (from < total) {
+    let done;
+    try {
+      done = await step(from, Math.min(size, total - from));
+    } catch (err) {
+      if (err.tooLarge && size > 1) { size = Math.ceil(size / 2); continue; }
+      throw err;
+    }
+    if (done == null) return;
+    from += done;
+  }
 }
 
 const DEVICE_KEY = 'voxelgame:device-key';
