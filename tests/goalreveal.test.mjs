@@ -45,6 +45,6 @@ ok('the hotbar comes back over the bag on desktop only',
 ok('a filled slot fills its cell like an empty one does', /\.bag-slot-wrap > \.bag-slot \{ width: 100%; \}/.test(css));
 ok('bag grids size rows to the square slots, not short of them',
   /#bag-hotbar-grid, #bag-grid \{[^}]*align-items: start;/.test(css)
-  && /#store-grid, #store-hotbar-grid, #store-bag-grid \{[^}]*align-items: start;/.test(css));
+  && /#store-grid, #store-hotbar-grid, #store-bag-grid(, #stores-hotbar-grid, #stores-bag-grid)? \{[^}]*align-items: start;/.test(css));
 
 process.exit(f ? 1 : 0);
