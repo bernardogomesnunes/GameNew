@@ -658,6 +658,7 @@ export class DuiltUI {
     this.wireCraftMissing(body, structure, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
+    body.querySelector('[data-farm-compost]')?.addEventListener('click', () => actions.onCompostFarm?.());
     body.querySelectorAll('[data-train]').forEach((b) => b.addEventListener('click', () => actions.onTrain?.(b.dataset.train)));
     body.querySelector('[data-cube]')?.addEventListener('click', () => { this.closePanel('panel-building'); actions.onCube?.(); });
     if ((structure.type === 'barracks' || structure.type === 'military') && this.duilt) {
@@ -750,12 +751,18 @@ export class DuiltUI {
       : yours.length
         ? `<p class="dim">Put in a seed:</p><div class="farm-seed-pick">${yours.map((c) => `<button class="farm-seed" data-sow="${c.kind}">${seedIcon(c.kind)}<span>${c.name}</span>${inv?.endless ? '' : `<span class="n">${inv.countOf(`seeds_${c.kind}`)}</span>`}</button>`).join('')}</div>`
         : '<p class="dim">No seeds in your bag that aren\'t in already — break grass, or pick a ripe crop.</p>';
+    const compost = sown.length ? `
+        <div class="farm-compost">
+          <p class="dim">Compost moves each crop this farm planted ahead by one stage.</p>
+          <button class="secondary" data-farm-compost${inv?.endless || inv?.has('compost', 1) ? '' : ' disabled'}>Add compost${inv?.endless ? '' : ` · ${inv?.countOf('compost') ?? 0} in your bag`}</button>
+        </div>` : '';
     return `
       <div class="building-sec">
         <h4>Crops · ${sown.length} of ${room}</h4>
         <div class="farm-seeds">${slots}</div>
         ${sown.length ? '<p class="dim">They grow in its soil, and it cuts and resows them when it pays out. You can plant and pick there too.</p>' : ''}
         ${pick}
+        ${compost}
       </div>`;
   }
 

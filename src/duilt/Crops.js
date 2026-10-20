@@ -29,6 +29,17 @@ export class Crops {
     return true;
   }
 
+  /** One farm dose advances every living crop the farm planted by one stage. */
+  compostFarm(farmId, now = Date.now()) {
+    let count = 0;
+    for (const crop of this.planted.values()) {
+      if (crop.farm !== farmId || Crops.stageAt(crop.at, now) >= RIPE) continue;
+      crop.at -= STAGE_SECONDS * 1000;
+      count++;
+    }
+    return count;
+  }
+
   /** The stage a crop planted at `at` has reached by `now`. */
   static stageAt(at, now) {
     return Math.max(0, Math.min(RIPE, Math.floor((now - at) / 1000 / STAGE_SECONDS)));

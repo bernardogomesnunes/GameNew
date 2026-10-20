@@ -30,7 +30,7 @@ export const TITLE_SEED = 718281;
  * an answer that never changes. tests/titlescene.test.mjs keeps the two in
  * step.
  */
-export const TITLE_SITE = { x: 258, z: 184 };
+export const TITLE_SITE = { x: -320, z: 64 };
 
 /** The hour it is held at: mid-morning, the sun up in the east (render/DayCycle.js). */
 export const TITLE_TIME = 0.34;

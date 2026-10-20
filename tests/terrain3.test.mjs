@@ -157,8 +157,10 @@ const MOUNTAINS2_INDEX = BIOME_INDEX.get('mountains2');
   // Mountains 2 is a minority of what mountain terrain there is, not half of
   // it — "a very high mountain," not "mountains are all that tall now."
   let m2Cols = 0, m1Cols = 0;
-  for (let x = -400; x < 400; x += 4) {
-    for (let z = -400; z < 400; z += 4) {
+  // Wider ranges and rare massifs need a regional sample: one small valley
+  // can legitimately contain only foothills or only a summit's flank.
+  for (let x = -4096; x < 4096; x += 32) {
+    for (let z = -4096; z < 4096; z += 32) {
       const idx = gen.biomeIndexAt(x, z);
       if (idx === MOUNTAINS2_INDEX) m2Cols++;
       else if (idx === MOUNTAINS1_INDEX) m1Cols++;

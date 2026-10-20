@@ -27,12 +27,11 @@ new is asked for: add it with the owner's words quoted.
 ## Who's on what
 
 **Claude**
-- Saving: SAVE-2 to SAVE-6.
+- Saving: SAVE-4 to SAVE-6.
 - The "Adding changes" list: CRAFT-1 to CRAFT-7, STORE-1, JOBS-1 to
-  JOBS-4, WORLD-1 to WORLD-3, MOBS-1 and MOBS-2.
+  JOBS-4 and MOBS-2.
 - Buildings: LOOK-1 and LOOK-2.
-- From earlier lists: OLD-2 (the rest of it), OLD-3, OLD-4, OLD-6 (the rest
-  of it), OLD-7, OLD-8.
+- From earlier lists: OLD-2 (the rest of it), OLD-3, OLD-4, OLD-7, OLD-8.
 - The wiki and the game's words: WIKI-1, COPY-1.
 - Under the hood: TECH-1 to TECH-15 (section 11).
 - Housekeeping: HOUSE-1, once the owner agrees.
@@ -54,8 +53,8 @@ new is asked for: add it with the owner's words quoted.
 | ID | What | Who | Status |
 |---|---|---|---|
 | SAVE-1 | **The testing world lost progress** ("Was not able to save my testing world it lost a lot of progress"). Saving works again, tested by the owner on 20 October; before, Save showed "Not saved — try again". | Owner | done |
-| SAVE-2 | **A world missing from the account's list is treated as deleted**: saving stops for that session and the backup copy is thrown away. "Explain failed world saves" (on main) now says so when you press Save; the backup is still lost. | Claude | to do |
-| SAVE-3 | **"Save and leave" leaves even when the save failed**, without saying so. | Claude | to do |
+| SAVE-2 | **A world missing from the account's list is treated as deleted**: saving stops for that session and the backup copy is thrown away. Now the backup is kept, Save says the world wasn't found and can be tried again, and the world is never made again on its own. Deleting a world on purpose still throws its backup away. | ChatGPT | done, #231 |
+| SAVE-3 | **"Save and leave" leaves even when the save failed**, without saying so. Now it stays in the world and says why; only a save that went through takes you to your worlds. | ChatGPT | done, #231 |
 | SAVE-4 | **Failed uploads retry without telling you.** | Claude | to do |
 | SAVE-5 | **The backup copy may not fit** in the browser's small local storage (about 5 MB) for a big world. | Claude | to do |
 | SAVE-6 | **The "world too big for the account" message** is on the unmerged branch `claude/backlog-batch-3-update`; the size limits it explains are live in the database since 6 October. | Claude | to do |
@@ -68,6 +67,7 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 | ID | What | PR |
 |---|---|---|
+| NOW-18 | ChatGPT's second round, checked and merged: saving keeps your backup when a world goes missing from the list, Save and leave stays put if the save failed, villagers no longer climb onto roofs, compost into a farm, raiders don't vanish at a pond, and, in new worlds, huge mountains, broader plains, flatter deserts and three shapes of giant tree. | #231 |
 | NOW-16 | ChatGPT's work, finished and merged: deep caves with ruins, caravan camps and mossfolk villages to raid, raided places marked on the map, composting, the Garrison training spear guards, new roof colours for the other buildings, cleaner stone, pink leaves on some birches, more detailed villagers, and Cline's thirteen small tasks. | #230 |
 | NOW-17 | A big world opens again: it's fetched and saved a part at a time. | #229 |
 | NOW-1 | Storage controller takes things too; on desktop, two-column store pop-ups, pop-ups you can drag, the bag beside them, dragging stacks between them. | #222 |
@@ -141,9 +141,15 @@ it produce 50% more; none of them carries or builds anything.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| WORLD-1 | Wider and bigger mountains, and now and then a Kilimanjaro. (The world is 200 blocks tall today.) | Claude | to do |
-| WORLD-2 | Big trees. | Claude | to do |
-| WORLD-3 | Bigger plains, flatter deserts. | Claude | to do |
+| WORLD-1 | Wider and bigger mountains, and now and then a Kilimanjaro. (The world is 200 blocks tall.) Wider ranges; in about 4 of every 10 areas of 1,024 blocks, a huge peak 420 to 560 blocks across rising to 174–186 high, never near the start or under the floating island. **New worlds only**: worlds made before keep their land (see below). | ChatGPT, Claude | done, #231 |
+| WORLD-2 | Big trees. Giant trees now come in three shapes, spreading, spire and tiered, up to about 40 blocks of trunk. New worlds only. | ChatGPT, Claude | done, #231 |
+| WORLD-3 | Bigger plains, flatter deserts. Plains and deserts about 28% wider, with gentler rises and bigger flat stretches. New worlds only. | ChatGPT, Claude | done, #231 |
+
+Why new worlds only: a saved world keeps only the chunks you changed (and
+your claimed land) and makes the rest again from its seed, so new land rules
+would reshape the country round an old world's builds, with steps where a
+kept chunk meets a remade one. Each world now remembers which land it was
+made with. Bringing the new land to an old world is the owner's call (ASK-6).
 | WORLD-4 | Big caves, as deep as the mine, with big galleries and ruins. One in every 512-block area: a 100-block main hall, an upper hall, a walkable slope down from the surface, and a ruin with pillars and a chest. | ChatGPT, Claude | done, #230 |
 
 ### 3.5 Creatures
@@ -153,7 +159,7 @@ it produce 50% more; none of them carries or builds anything.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| MOBS-1 | Villagers going onto roofs without jumping. (Found: a villager can step straight up 4 blocks, `STEP_UP` in `src/duilt/Settlers.js`.) | Claude | to do |
+| MOBS-1 | Villagers going onto roofs without jumping. (Found: a villager could step straight up 4 blocks.) Now they step up one block at a time and walk round a wall or house in the way; where there's no way, they give up and stand. | ChatGPT | done, #231 |
 | MOBS-2 | More natural behaviour for mobs. In part: "Polish idle and roaming creatures" (ChatGPT, on main since 20 October). | Claude | to do |
 
 ---
@@ -162,7 +168,7 @@ it produce 50% more; none of them carries or builds anything.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| LOOK-1 | "the houses look squares … the ones I sent have this organic form. also they diversify the textures by using multiple blocks on the walls." Keep the current designs as templates and improve them. (Not yet: the shapes are unchanged.) | Claude | to do |
+| LOOK-1 | "the houses look squares … the ones I sent have this organic form. also they diversify the textures by using multiple blocks on the walls." Keep the current designs as templates and improve them. ChatGPT tried clipped corners and a hip roof on the starter house, townhouse and cottages; held back until the owner says yes (ASK-7). | Claude | waiting |
 | LOOK-2 | The two ways the owner suggested for it: "not sure if by level would be feasible, or to have different house types available to build on our building list." | Claude | to do |
 | LOOK-3 | "Buildings need rebuilding, they need to fit more the mood and vibe of the mobs whimsical and mystical": the house, market and storehouse (#209); the other ready-made buildings with two-colour roofs and timber trim, the workshop teal and mint instead of slate (approved 20 October). | ChatGPT | done, #230 |
 | LOOK-4 | Cleaner stone textures: Stone, White Stone, Dark Stone, Stone Brick. | ChatGPT | done, #230 |
@@ -181,7 +187,7 @@ it produce 50% more; none of them carries or builds anything.
 | OLD-3 | Battle mode with AI rivals through an API key, kept on our server. The owner offered their own model server (needs HTTPS, key in an environment secret). | Batch 4 | Claude + Owner | waiting |
 | OLD-4 | Battle mode with real multiplayer, inviting friends. | Batch 4 | Claude | to do |
 | OLD-5 | Battle balance: how strong rivals feel and how often they come. | Batch 4 | Owner | waiting |
-| OLD-6 | Composting: a bin turns seeds and leaves into compost, which speeds a farm or raises its yield. In part (#230): the compost bin, and compost on a growing crop moves it on one stage. Compost into a farm is still to do. | Batch 3 | Claude | to do |
+| OLD-6 | Composting: a bin turns seeds and leaves into compost, which speeds a farm or raises its yield. The compost bin, and compost on a growing crop moves it on one stage (#230); "Add compost" in a farm's panel moves all its growing crops on one stage (#231). | Batch 3 | ChatGPT | done, #231 |
 | OLD-7 | Mist round the floating island and cloud below it: the one part of the look and sound plan not in the game. | Look and sound plan | Claude | to do |
 | OLD-8 | Battle worlds show as "Duilt" in the account's world list. | Batch 4 | Claude | to do |
 
@@ -201,7 +207,7 @@ Briefs in section 12. One branch and one PR each.
 | CL-2 | Futurians stop pointing you to the Archive once you've read it. | done, #230 (ChatGPT) |
 | CL-3 | The Age 12 "Travel to the Past" card says "To the Past". | done, #230 (ChatGPT) |
 | CL-4 | Secrets show up the moment you earn them. | done, #230 (ChatGPT) |
-| CL-5 | "Know the woods" counts only present-day animals. | done, #230 (ChatGPT) |
+| CL-5 | "Know the woods" counts every animal, the Past's dinosaurs too (ChatGPT says the owner asked for this; see ASK-2). | done, #231 (ChatGPT) |
 | CL-6 | Say what tapping a special block does: Travel, Read, Take, Leave. | done, #230 (ChatGPT) |
 | CL-7 | The War Standard drawn as a flag on a pole. | done, #230 (ChatGPT) |
 | CL-12 | Tap the people counter to feed the hungry. | done, #230 (ChatGPT) |
@@ -260,6 +266,9 @@ version is in `docs/history/status-and-testing.md`.
   hall, open the ruin's chest, climb to the upper hall; a caravan camp and
   a mossfolk village, and robbing them; compost on a crop; training spear
   guards at the Garrison; the bigger buttons.
+- **ChatGPT's second round (NOW-18):** in a new world, find a huge peak and
+  the three giant tree shapes; watch villagers walk round houses; Add
+  compost at a farm; Save and leave with no signal.
 
 ---
 
@@ -268,10 +277,12 @@ version is in `docs/history/status-and-testing.md`.
 | ID | Question | For |
 |---|---|---|
 | ASK-1 | Saving works again (20 October). Only if it fails again: reconnect Neon so Claude can read the save failures. | SAVE-1 |
-| ASK-2 | "Know the woods": ChatGPT made it count only present-day animals (CL-5). Say if the Past's creatures should count too. | CL-5 |
+| ASK-2 | "Know the woods": ChatGPT now counts the Past's dinosaurs too, saying the owner asked for it. Say if that's wrong. | CL-5 |
 | ASK-3 | The model server for Battle mode's AI rivals. | OLD-3 |
 | ASK-4 | Delete the old branches? | HOUSE-1 |
 | ASK-5 | Any change to the database itself waits for the owner's yes. | TECH-14 |
+| ASK-6 | Should worlds made before 20 October get the new mountains, plains and giant trees too? Their land away from your builds would change. | WORLD-1 to WORLD-3 |
+| ASK-7 | ChatGPT's rounder starter house, townhouse and cottages: yes or no? | LOOK-1 |
 
 ---
 
@@ -435,28 +446,10 @@ pass, then the full suite once. About 20 minutes.
 
 ---
 
-### CL-5: "Know the woods" counts only the animals of home
+### CL-5: "Know the woods" counts every animal
 
-**Why:** the secret "Know the woods" (`s_woods` in `src/config/secrets.js`)
-asks for one of every animal in `MOBS`. Since time travel, `MOBS` includes
-the raptor, triceratops, long-neck and the Basilisk, so the secret now
-quietly needs a trip to the Past. Its hint says "Every creature that walks
-these lands".
-
-**Owner's call:** if you'd rather the Past's creatures count, skip this
-task.
-
-**What to do:** count only animals whose `biomes` are all present-day ones.
-A biome belongs to another time when its entry in `src/config/biomes.js`
-has an `era` (look up `BIOMES_BY_ID`). Don't list the animal ids by hand:
-new ones should be picked up by themselves.
-
-**Tests:** `tests/secrets.test.mjs` has "Know the woods: every animal".
-Make it hunt only the present-day ones, and add a check that hunting the
-dinosaurs isn't needed.
-
-**Done when:** `node tests/secrets.test.mjs` passes, then the full suite
-once. About 20 minutes.
+Done (#231): ChatGPT reports the owner asked for the Past's dinosaurs to
+count too, so the secret asks for one of every animal in `MOBS`.
 
 ---
 
@@ -699,5 +692,6 @@ was done; nothing in them is open that isn't listed above.
 | `next-session.md` | Notes from the phase 6 and 7 work: done. |
 | `analysis-scaling.md` | The code, speed, safety and scaling review of 6 October (section 11). |
 | `plan-visuals-and-caves.md` | ChatGPT's plan and notes for the caves, stone, leaves and villagers (#230). |
+| `plan-world-scale-and-villagers.md` | ChatGPT's plan for the bigger mountains, plains, giant trees and villagers' walking (#231). |
 
 ---

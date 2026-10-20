@@ -33,6 +33,7 @@ const curtain = t.fence.children.find((c) => c.isMesh);
 const pos = curtain.geometry.attributes.position, alpha = curtain.geometry.attributes.color;
 
 // Every column's quad: its head stands CURTAIN (7) over the ground there.
+// Over uneven ground: five blocks of rise, since WORLD-3 made the plains flatter.
 let worst = 0, columns = 0, lo = Infinity, hi = -Infinity;
 for (let q = 0; q < pos.count; q += 4) {
   const x = Math.floor(Math.min(pos.getX(q), pos.getX(q + 1)) + 0.01);
@@ -44,7 +45,7 @@ for (let q = 0; q < pos.count; q += 4) {
   columns++;
 }
 ok(`the curtain is one column per block of edge (${columns} for a ${t.size}-block border)`, columns === t.size * 4 && t.gaps === 0);
-ok(`each stands on its own ground, over ground from ${lo} to ${hi} high (worst ${worst.toFixed(2)} off)`, hi - lo > 6 && worst < 0.01);
+ok(`each stands on its own ground, over ground from ${lo} to ${hi} high (worst ${worst.toFixed(2)} off)`, hi - lo >= 5 && worst < 0.01);
 ok('strong at the ground, gone at the top', alpha.getW(0) > 0.3 && alpha.getW(2) === 0);
 ok('and the ground line is still there', !!t.edge && t.edge.geometry.attributes.position.count > t.size * 8);
 

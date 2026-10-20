@@ -58,7 +58,7 @@ ok('drawn before the work starts, gone after the land round you is drawn', /load
 
 // --- saving ------------------------------------------------------------------------------------------------
 
-ok('Save and leave draws its spinner before saving, not after', /setBusy\(btn, 'Saving…'\);[\s\S]{0,400}await nextPaint\(\);\s*try \{\s*await this\.cb\.onLeaveWorld\?\.\(true\);/.test(ui));
+ok('Save and leave draws its spinner before saving, not after', /setBusy\(btn, 'Saving…'\);[\s\S]{0,400}await nextPaint\(\);\s*try \{\s*const saved = await this\.cb\.onLeaveWorld\?\.\(true\);/.test(ui));
 ok('  and holds it a moment, so a quick save is seen', /SAVE_SPIN_MS - \(performance\.now\(\) - shown\)/.test(ui));
 
 process.exit(f ? 1 : 0);

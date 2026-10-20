@@ -1519,7 +1519,7 @@ export const RECIPES = [
 for (const crop of CROPS) RECIPES.push({
   id: `compost_${crop.kind}`, name: `Compost — ${crop.name} Seeds`, station: 'compost', age: 2,
   inputs: { leaves: 4, [`seeds_${crop.kind}`]: 1 }, output: { id: 'compost', count: 1 },
-  blurb: 'Mix four leaves with a spare seed. Place the compost on a growing crop to move it ahead one stage.',
+  blurb: 'Mix four leaves with a spare seed. Place it on one growing crop, or add it to a farm to move all its growing crops ahead one stage.',
 });
 
 // Furniture in every wood (backlog batch 3): each oak piece's recipe again,

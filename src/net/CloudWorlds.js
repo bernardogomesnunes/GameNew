@@ -49,7 +49,7 @@ export class CloudWorlds {
       // World.serialize(), which the local save path already does the same
       // thing for.
       worldGen: world.endless
-        ? { seed: world.gen.seed, homeX: world.gen.biomes.centreX, homeZ: world.gen.biomes.centreZ }
+        ? { seed: world.gen.seed, homeX: world.gen.biomes.centreX, homeZ: world.gen.biomes.centreZ, terrain: world.gen.terrain }
         : null,
       spawn: player ? { x: player.position.x, y: player.position.y, z: player.position.z, yaw: player.yaw, pitch: player.pitch } : null,
       economy: economy?.toJSON?.() ?? {},
@@ -104,6 +104,8 @@ export class CloudWorlds {
         gen: new ChunkGen({
           seed: meta.worldGen.seed, height: meta.height,
           homeX: meta.worldGen.homeX, homeZ: meta.worldGen.homeZ,
+          // The shape of land it was made with; saved before there was a choice, the first.
+          terrain: meta.worldGen.terrain ?? 1,
         }),
       })
       : new World({ sizeX: meta.sizeX, sizeZ: meta.sizeZ, height: meta.height });

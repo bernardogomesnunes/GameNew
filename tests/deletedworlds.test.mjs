@@ -23,9 +23,7 @@ ok('deleting a world drops its unsent copy', /this\.dropSafeCopy\(id\)/.test(del
 ok('deleting the open world stops its pending save', /this\.pendingSave = false/.test(del));
 ok('the unsent copy is only dropped if it is that world', /dropSafeCopy\(id = null\)[\s\S]{0,200}worldId !== id\) return;/.test(game));
 
-const flush = game.slice(game.indexOf('async flush()'), game.indexOf('keepSafe() {'));
-ok('a save that finds its world deleted stops', /if \(!mine && agreed\) \{[\s\S]{0,120}this\.pendingSave = false;[\s\S]{0,60}this\.discarded = true;/.test(flush));
-const unsent = game.slice(game.indexOf('async sendUnsent()'), game.indexOf('async openWorld('));
-ok('so does the unsent copy at startup', /if \(!mine && this\.syncState\.agreedFor\(held\.worldId\)\) \{\s*this\.dropSafeCopy\(held\.worldId\);\s*return false;/.test(unsent));
+// Missing-list handling is exercised behaviorally in missingworld-save.test.mjs.
+// A missing row must block recreation without destroying pending progress.
 
 process.exit(f ? 1 : 0);
