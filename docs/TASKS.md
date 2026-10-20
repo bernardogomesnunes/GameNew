@@ -3,152 +3,77 @@
 Asked for directly: "We need to be better at keeping our house organised …
 a complete task document, with every idea and thing we discussed to do
 there listed. This way we can divide the work through different ways. Make
-sure we don't forget anything from the past."
+sure we don't forget anything from the past." Then: "I'd like to have one
+and only tasks file, and then inside you can divide which ones are for you
+or not", and "your work is to document everything that we discussed to do
+in that document no more".
 
-**This is the one and only tasks file** (asked for directly: "I'd like to
-have one and only tasks file, and then inside you can divide which ones are
-for you or not"). It was put together on 20 October 2026 from every
-planning doc, every message in the chat since 6 October, and the owner's
-"Adding changes" list. Everything to do, for everyone, is here, Cline's
-full briefs included (section 12). The old planning docs are in
-`docs/history/`, for reference only: nothing is added or ticked off there.
+**This is the one and only tasks file.** It lists what was asked for or
+agreed: in the chat since 6 October, in the owner's lists, and in the old
+planning docs. Nothing is added that wasn't discussed. The old planning
+docs are in `docs/history/`, for reference only.
 
 ## How to read it
 
 - **ID**: use it to talk about a task, in the chat, a commit or a PR.
-- **Who**: who it suits best.
-  - **Claude**: needs the whole codebase, a design, or a browser check.
-  - **Cline**: small, self-contained, a brief already written (section
-    12), under about 30 minutes.
-  - **Owner**: a decision, a test on the phone, or something only you can
-    reach (Neon, Vercel, Cline's settings).
-- **Size**: S (under an hour), M (a session), L (several sessions or PRs).
-- **Status**: *to do*, *in progress*, *waiting* (on a decision or a test),
-  or *done* with its PR number.
+- **Who**: Claude, Cline (briefs in section 12), or the owner.
+- **Status**: *to do*, *waiting* (on the owner), or *done* with its PR.
 
 When something lands: change its status here, with the PR. When something
-new is asked for: add it to the right section with the owner's words
-quoted.
+new is asked for: add it with the owner's words quoted.
 
 ---
 
-## The big pieces still to come
-
-The large new parts of the game, each designed first and agreed with the
-owner before it's built:
-
-1. **Villagers who work**: a job board, you choose jobs, builders, haulers,
-   farmers, woodcutters, miners, cooks, all seen at work (3.3, JOBS-1 to
-   JOBS-10).
-2. **Making blocks, not just gathering them**: the quarry gives stone
-   only; a forge darkens, a bleach bucket lightens, carpentry tools for
-   furniture, a more hands-on crafting pop-up (3.1, CRAFT-1 to CRAFT-8).
-3. **A bigger world**: wider mountains and now and then a giant one,
-   bigger trees and plains, flatter deserts, deep caves with galleries and
-   ruins (3.4, WORLD-1 to WORLD-4).
-4. **Buildings with character**: organic shapes, mixed walls, house types
-   to choose from, the storybook look for every building (4, LOOK-1 to
-   LOOK-5).
-5. **The storage interface** on top of the storage controller (3.2,
-   STORE-1).
-6. **After that**: new peoples to raid, map marks, Battle mode with AI
-   rivals and then with friends, composting (5).
-
 ## Who's on what
-
-Open tasks only, by who takes them. The sections below have the details.
 
 **Claude**
 - Saving: SAVE-2 to SAVE-6.
-- The new list, each designed first and agreed with the owner: block
-  making CRAFT-1 to CRAFT-8, the storage interface STORE-1 and STORE-2,
-  villagers who work JOBS-1 to JOBS-10, the bigger world WORLD-1 to
-  WORLD-4, creatures MOBS-1 and MOBS-2.
-- Buildings' looks: LOOK-1 to LOOK-5.
+- The "Adding changes" list: CRAFT-1 to CRAFT-7, STORE-1, JOBS-1 to
+  JOBS-4, WORLD-1 to WORLD-4, MOBS-1 and MOBS-2.
+- Buildings: LOOK-1 to LOOK-3.
 - From earlier lists: OLD-1 to OLD-4, OLD-6 to OLD-8.
-- Under the hood: TECH-1 to TECH-15 (section 11; TECH-9 and TECH-14 need the owner's yes).
-- The wiki and the words: WIKI-1, WIKI-2, WIKI-4, COPY-1 to COPY-3.
-- Housekeeping: HOUSE-1 (once the owner agrees), HOUSE-4.
-- Reviewing each of Cline's pull requests before the owner merges it.
+- The wiki and the game's words: WIKI-1, COPY-1.
+- Under the hood: TECH-1 to TECH-15 (section 11).
+- Housekeeping: HOUSE-1, once the owner agrees.
+- Reviewing Cline's work when asked.
 
 **Cline** (briefs in section 12)
-- CL-8 first (the test task), then CL-9, CL-10, CL-11, CL-2, CL-3, CL-4,
-  CL-6, CL-7, CL-12, CL-13, CL-14. CL-5 waits on the owner.
-- Later, once their briefs are written: COPY-2 and COPY-3 in small batches.
+- CL-8 first, then CL-9, CL-10, CL-11, CL-2, CL-3, CL-4, CL-6, CL-7,
+  CL-12, CL-13, CL-14. CL-5 waits on the owner.
 
 **Owner**
-- Try things on the phone: section 2 (NOW-1 to NOW-15) and section 9.
-- Decide: ASK-1 to ASK-9 (section 10), Battle balance (OLD-5), who the
-  wiki is for (WIKI-3).
-- Note strange descriptions as you find them (COPY-4).
+- Try things on the phone: section 2 and section 9.
+- Answer ASK-1 to ASK-5 (section 10); Battle balance (OLD-5).
 - Cline's settings on your computer (HOUSE-3).
 - Once there are players: keep the database awake (TECH-16).
 
 ---
 
-## 1. Urgent: saving
+## 1. Saving
 
-Lost progress is the one thing that can't be undone, so this comes first.
-
-| ID | What | Who | Size | Status |
-|---|---|---|---|---|
-| SAVE-1 | **Find why the testing world lost progress** (reported: "Was not able to save my testing world it lost a lot of progress"). Saving works again, tested by the owner on 20 October (before, Save showed "Not saved — try again"). Watch for it coming back: a failure now says why. | Owner | S | done |
-| SAVE-2 | **A world missing from the account list is treated as deleted**, and its backup thrown away. Now explained on Save (ChatGPT's commit); the backup is still lost. See below. | Claude | S | to do |
-| SAVE-3 | **Save and leave leaves even when the save failed**, and says nothing. | Claude | S | to do |
-| SAVE-4 | **Failed uploads retry silently.** | Claude | S | to do |
-| SAVE-5 | **The backup copy may not fit.** | Claude | S | to do |
-| SAVE-6 | **Say when a world is too big for the account.** Size limits on cloud saves have been live in the database since 6 October (set at least 1,000× above any real world, so not a worry today), but the game's message for hitting one never reached main: it's on the unmerged branch `claude/backlog-batch-3-update`. Bring that one message over. | Claude | S | to do |
-
-**SAVE-1, the save loss.** Every failed upload is written to the
-`save_failures` table in Neon with its reason. Claude can't reach the
-database: the Neon connection in Claude's sessions signs in to an account
-with no projects. **Owner:** reconnect Neon in claude.ai (Settings →
-Connectors → Neon), sign in with the account that owns the game's
-database, and pick "All projects you can access". Then Claude reads
-`save_failures` and the testing world's last save time, read-only.
-
-**SAVE-2.** While saving (`Game.flush`), the game asks the account for its
-list of worlds. If this world isn't in the list but was saved before, it
-decides the world was deleted (here or on another device): it stops saving
-for the rest of the session and throws away the backup copy. An expired
-sign-in does **not** trigger this: checked in the code, a missing or
-expired token is an error, retried once with a fresh one, and an error
-keeps the backup. It fires only when the list comes back fine without the
-world, such as after deleting it, or a copy of it, elsewhere. "Explain failed
-world saves" (ChatGPT, on main since 19 October) now says so when you press
-Save: "This world is no longer in your account…". Left to decide: is
-stopping right when the world is still open here? Safer: keep the backup
-copy and offer to save it as a new world, rather than dropping it.
-
-**SAVE-3.** "Save and leave" waits up to 15 seconds and then takes you to
-the worlds screen whether or not the save landed, without a word. The plain
-Save button now says "Not saved — try again" and why. Save and leave should
-too, and offer to stay.
-
-**SAVE-4.** When an upload fails, the game tries again later without
-telling you (a choice from batch 2, to cut noise). Keep it quiet for one
-failure, but say so if saves keep failing for more than a few minutes.
-
-**SAVE-5.** The backup copy for an upload that hasn't landed goes into the
-browser's small local storage (about 5 MB). A big world may not fit, and
-then there is no backup at all. Check the size of a real world, and keep
-the copy somewhere bigger (IndexedDB) if it doesn't fit.
+| ID | What | Who | Status |
+|---|---|---|---|
+| SAVE-1 | **The testing world lost progress** ("Was not able to save my testing world it lost a lot of progress"). Saving works again, tested by the owner on 20 October; before, Save showed "Not saved — try again". | Owner | done |
+| SAVE-2 | **A world missing from the account's list is treated as deleted**: saving stops for that session and the backup copy is thrown away. "Explain failed world saves" (on main) now says so when you press Save; the backup is still lost. | Claude | to do |
+| SAVE-3 | **"Save and leave" leaves even when the save failed**, without saying so. | Claude | to do |
+| SAVE-4 | **Failed uploads retry without telling you.** | Claude | to do |
+| SAVE-5 | **The backup copy may not fit** in the browser's small local storage (about 5 MB) for a big world. | Claude | to do |
+| SAVE-6 | **The "world too big for the account" message** is on the unmerged branch `claude/backlog-batch-3-update`; the size limits it explains are live in the database since 6 October. | Claude | to do |
 
 ---
 
 ## 2. Just done: try it on your phone
 
-Merged or about to be. Each has been checked by tests, most in a test
-browser, none on a real iPhone.
+Checked by tests, most in a test browser, none on a real iPhone.
 
 | ID | What | PR |
 |---|---|---|
-| NOW-1 | **Storage controller takes things too**: your bag is in its pop-up; tap a stack to put it away. On desktop: the storehouse and controller pop-ups in two columns, each scrolling on its own; pop-ups you drag by the title bar; the bag (I) opens beside them; drag stacks between them. | #222 |
+| NOW-1 | Storage controller takes things too; on desktop, two-column store pop-ups, pop-ups you can drag, the bag beside them, dragging stacks between them. | #222 |
 | NOW-2 | Forging the ring moves you to Age 8 at once; a world stuck at the end of an age moves on as it opens. | #221 |
-| NOW-3 | Placing a mine puts it 91 blocks down, dug out, with a spiral stair up to the surface. | #220 |
-| NOW-4 | Tap a trader (or anyone who talks) where they are on screen, not only with the crosshair. | #219 |
+| NOW-3 | Placing a mine puts it 91 blocks down, with a stair up to the surface. | #220 |
+| NOW-4 | Tap a trader (or anyone who talks) where they are on screen. | #219 |
 | NOW-5 | The mine's fifth level brings up nightstone as well as sunstone. | #218 |
-| NOW-6 | Only the Helix flies (Fly appears inside it); the Plainer glides. | #217 |
+| NOW-6 | Only the Helix flies; the Plainer glides. | #217 |
 | NOW-7 | Roof edges show over the walls too. | #216 |
 | NOW-8 | Sunstone at mine level 5; a crop slot more per farm level; meat from every pen; Sort in storehouses. | #215 |
 | NOW-9 | Faster start-up. | #214 |
@@ -159,48 +84,33 @@ browser, none on a real iPhone.
 | NOW-14 | Jump that forgives a slightly early or late tap; Marble Table at Age 4. | #205 |
 | NOW-15 | Storybook house, storehouse and market. | #209 |
 
-Older things still waiting for a first try are in section 9.
-
 ---
 
-## 3. New: the "Adding changes" list (20 October)
+## 3. The "Adding changes" list (20 October)
 
-The owner's newest list, in full. None of it is started. Each needs a short
-design agreed before it's built, so each starts as *waiting*.
+The owner's list, item by item. None of it is started.
 
-### 3.1 Making blocks, not just gathering them
+### 3.1 Making blocks
 
 > "Building stuff is only blocks and gathering them is just a crafting
 > mechanics. I'd like to change that. I want blocks like stone to have a
 > mechanic to craft."
 
-| ID | What | Who | Size | Status |
-|---|---|---|---|---|
-| CRAFT-1 | **The quarry gives stone only.** "Quarry will give stone only." Today it gives stone, cobblestone, white stone, dark stone and clay (clay was added in #193 because it was hard to find; it needs a new home, see CRAFT-8). | Claude | S | waiting |
-| CRAFT-2 | **Processing the rock.** "stone marble cobble, coloured stone except turquoise should be obtained by processing the rock." A machine (or the stone mill, grown up) turns stone into marble, cobble and the coloured stones. Turquoise stays as it is found. | Claude | M | waiting |
-| CRAFT-3 | **A forge to darken.** "To darken we need some kind of forge": dark stone, dark brick and the like are made by burning their light version. | Claude | M | waiting |
-| CRAFT-4 | **A bleach bucket to lighten.** "to lighten we should have some bleach bucket to place them": white stone and pale versions by soaking. | Claude | M | waiting |
-| CRAFT-5 | **A full carpentry set for furniture.** "For wood we should have a full carpentry set of tools to do the diff kinds of furniture as a wooden mill is not enough." Saw, plane, chisel and the like; each kind of furniture needs its tool. | Claude | M | waiting |
-| CRAFT-6 | **A more interactive crafting pop-up.** "The crafting experience here in the pop up should be slightly different and more interactive." For example: place the inputs, pick the tool, watch it made, not only a Make button. | Claude | L | waiting |
-| CRAFT-7 | **Weapons by molding and forging.** "To mold and forge weapons we can have the same logic." | Claude | M | waiting |
-| CRAFT-8 | **Where everything comes from afterwards.** Every block must still be obtainable (a test already checks it). Decide where clay, marble and the coloured stones come from once the quarry stops giving them, and update the ages so nobody is soft-blocked (as with stone and gravel in October). | Claude + Owner | S | waiting |
-
-**Decide first:** which machines exist (one "stone works" with modes, or
-separate forge, bleach vat, mill), at what age each opens, and what the
-interactive pop-up looks like. Claude drafts it, the owner agrees.
+| ID | What | Who | Status |
+|---|---|---|---|
+| CRAFT-1 | "Quarry will give stone only." (Today it also gives cobblestone, white stone, dark stone and clay.) | Claude | to do |
+| CRAFT-2 | "stone marble cobble, coloured stone except turquoise should be obtained by processing the rock." | Claude | to do |
+| CRAFT-3 | "To darken we need some kind of forge." | Claude | to do |
+| CRAFT-4 | "to lighten we should have some bleach bucket to place them." | Claude | to do |
+| CRAFT-5 | "For wood we should have a full carpentry set of tools to do the diff kinds of furniture as a wooden mill is not enough." | Claude | to do |
+| CRAFT-6 | "The crafting experience here in the pop up should be slightly different and more interactive." | Claude | to do |
+| CRAFT-7 | "To mold and forge weapons we can have the same logic." | Claude | to do |
 
 ### 3.2 A storage interface
 
-> "Buildings need a lot of blocks to do. And food and all take a lot of
-> space. We need a third storage item which is called a storage interface.
-> Which is a block that should be placed on top of the storage manager and
-> it allows me to see the list of storages and what they have, and clicking
-> shows me all the items."
-
-| ID | What | Who | Size | Status |
-|---|---|---|---|---|
-| STORE-1 | **Storage interface block**, set on top of the storage controller. Opens a list of every storehouse (and granary): name, how full, where it is. Tap one to see everything in it, and take or put things there. | Claude | M | to do |
-| STORE-2 | **Room for building in bulk.** Make sure a big build can draw on the stores without filling the bag (ties in with JOBS-3, builders). | Claude | M | waiting |
+| ID | What | Who | Status |
+|---|---|---|---|
+| STORE-1 | "Buildings need a lot of blocks to do. And food and all take a lot of space. We need a third storage item which is called a storage interface. Which is a block that should be placed on top of the storage manager and it allows me to see the list of storages and what they have, and clicking shows me all the items." | Claude | to do |
 
 ### 3.3 Villagers who work
 
@@ -209,120 +119,88 @@ interactive pop-up looks like. Claude drafts it, the owner agrees.
 > building right in the beginning that allows to give jobs to villagers.
 > This way we can make buildings way bigger."
 
-**What villagers do today** (checked in `src/duilt/Settlers.js`): every
-house after your own brings one villager. Each is sent, by the game, to the
-nearest building nobody works at, and walks between home and work. A
-building with a fed villager makes 50% more; one at the temple adds
-devotion. That's all: nobody carries anything, builds anything or does a
-chore you can see, and you can't choose who does what. Soldiers are trained
-at the barracks and are the one exception: they fight.
+Today each villager is sent to the nearest building by the game and makes
+it produce 50% more; none of them carries or builds anything.
 
-**What it should become:** villagers you put to work, and can watch doing
-it. They carry, build, farm and fetch, so your buildings can be far bigger
-than you'd place block by block yourself.
-
-| ID | What | Who | Size | Status |
-|---|---|---|---|---|
-| JOBS-1 | **A job board**, a building from the first ages ("right in the beginning"). Its pop-up lists every villager: name, home, job, where they are now, and whether they're fed. | Claude | M | waiting |
-| JOBS-2 | **You choose the jobs.** Tap a villager on the board (or in the world) and give them a job and a place. Nobody left idle: anyone without one still goes to the nearest building, as today. | Claude | M | waiting |
-| JOBS-3 | **Builders.** You set down a design as a see-through plan; builders fetch the blocks from the storehouses and put it up, block by block, while you do something else. What's missing they say, the way "Craft what's missing" does. | Claude | L | waiting |
-| JOBS-4 | **Haulers** ("storing stuff"). They carry what buildings make to the storehouses and granary, and carry blocks to the builders. Decide: does production still appear in the stores at once when nobody hauls (as now), or wait for a hauler? | Claude | L | waiting |
-| JOBS-5 | **Farmers.** They sow, harvest and replant the fields, the farm's and your own farmland, and take the crop to the granary. | Claude | M | waiting |
-| JOBS-6 | **Woodcutters and miners.** They fell trees and plant saplings back; they dig in the quarry and the mine, so those grow by being worked, not only by your digging. | Claude | L | waiting |
-| JOBS-7 | **Cooks.** At the tavern, they turn the harvest into meals; villagers who eat meals work better than on raw vegetables. | Claude | M | waiting |
-| JOBS-8 | **Seen at work.** A villager holds the tool of their job, carries sacks and blocks, and hammers, digs or sows where they are. Tap one to hear what they're doing ("Taking 20 stone to the new hall"). | Claude | M | waiting |
-| JOBS-9 | **Bigger buildings.** Once builders exist, ready-made designs that are far larger (several storeys, wings, towers) and would take hours by hand. Ties in with LOOK-1 to LOOK-3 (organic shapes, house types, levels). | Claude | L | waiting |
-| JOBS-10 | **Enough people for it.** Today it's one villager a house, three in a townhouse. Decide whether jobs need more people (bigger homes, an inn, villagers arriving as the town grows) or fewer jobs each. | Claude + Owner | M | waiting |
-
-**Decide first (ASK-3):** which jobs, from which age, how fast builders and
-haulers are, and whether hauling replaces the stores filling by themselves.
-Claude drafts a short design with a picture of the job board, the owner
-agrees, then it's built in this order: JOBS-1 and JOBS-2 (the board,
-choosing jobs), JOBS-8 (seeing them work), JOBS-4 (haulers), JOBS-3
-(builders), then the rest. MOBS-1 (villagers stepping onto roofs) gets
-fixed first, since they'll be walking about a lot more.
+| ID | What | Who | Status |
+|---|---|---|---|
+| JOBS-1 | A building, right in the beginning, that gives jobs to villagers. | Claude | to do |
+| JOBS-2 | Villagers who build. | Claude | to do |
+| JOBS-3 | Villagers who store stuff. | Claude | to do |
+| JOBS-4 | With villagers building, buildings way bigger. | Claude | to do |
 
 ### 3.4 A world at a bigger scale
 
 > "We need to step up our world generation. With big trees, and some big
 > mountains we need to reinforce the scale. We need wider and bigger
 > mountains and I mean a Kilimanjaro exists from time to time. 1 block is
-> 1 meter remember. Plains bigger and deserts flatter."
+> 1 meter remember. Plains bigger and deserts flatter. We should add big
+> caves, that go deep like mine deep, and have big galleries, with ruins."
 
-| ID | What | Who | Size | Status |
-|---|---|---|---|---|
-| WORLD-1 | **Wider, taller mountains**, and now and then a giant one, Kilimanjaro-sized: about 4,900 m high is far above the world's 200-block height, so decide the real top (the world may have to grow taller). | Claude | L | waiting |
-| WORLD-2 | **Bigger trees** at scale (giant trees exist; more of them, and bigger). | Claude | M | to do |
-| WORLD-3 | **Bigger plains, flatter deserts.** | Claude | M | to do |
-| WORLD-4 | **Big deep caves**: "go deep like mine deep, and have big galleries, with ruins." Caves today are tunnels with ring ores and a few chests below y 30. | Claude | L | to do |
+| ID | What | Who | Status |
+|---|---|---|---|
+| WORLD-1 | Wider and bigger mountains, and now and then a Kilimanjaro. (The world is 200 blocks tall today.) | Claude | to do |
+| WORLD-2 | Big trees. | Claude | to do |
+| WORLD-3 | Bigger plains, flatter deserts. | Claude | to do |
+| WORLD-4 | Big caves, as deep as the mine, with big galleries and ruins. | Claude | to do |
 
-Land you've built on is saved whole and doesn't change. Land you've only
-walked through regrows with the new rules, as with the roomier forests.
-Phone frame rate is the limit to watch.
-
-### 3.5 Creatures that move naturally
+### 3.5 Creatures
 
 > "Mobs have weird behaviours, let's make them more natural. Villagers are
 > going on roofs from the ground without even jumping."
 
-| ID | What | Who | Size | Status |
-|---|---|---|---|---|
-| MOBS-1 | **Villagers climbing onto roofs.** Found: a villager steps straight up as much as **4 blocks** (`STEP_UP` in `src/duilt/Settlers.js`). Make it one block, with a hop. | Claude | S | to do |
-| MOBS-2 | **Natural movement for everyone else**: animals, bandits, guards, dinosaurs. List what looks wrong, then fix each. (Main now has "Polish idle and roaming creatures", which may cover part of this: check it first.) | Claude + Owner | M | waiting |
+| ID | What | Who | Status |
+|---|---|---|---|
+| MOBS-1 | Villagers going onto roofs without jumping. (Found: a villager can step straight up 4 blocks, `STEP_UP` in `src/duilt/Settlers.js`.) | Claude | to do |
+| MOBS-2 | More natural behaviour for mobs. ("Polish idle and roaming creatures" is on main since 20 October.) | Claude | to do |
 
 ---
 
-## 4. The look of buildings
+## 4. Buildings
 
-| ID | What | Who | Size | Status |
-|---|---|---|---|---|
-| LOOK-1 | **Organic shapes and mixed walls** (asked: "the houses look squares … the ones I sent have this organic form. also they diversify the textures by using multiple blocks on the walls"). Upper floors jutting out, roofs at different heights, turrets, crooked chimneys, porches; stone, timber, plaster, moss mixed in one wall. Brief: `docs/claude-tasks.md`, item 10. | Claude | L | to do |
-| LOOK-2 | **House types to pick from** (a cottage, a mushroom house, a tower house), the suggested first step of LOOK-1: a building may have several designs and you choose one. | Claude | M | to do |
-| LOOK-3 | **Houses that grow by level**, later, using the designs from LOOK-2 as the steps. | Claude | M | waiting |
-| LOOK-4 | **New wall blocks to mix**: plaster, mossy cobble, timber framing in the storybook colours. | Claude | S | to do |
-| LOOK-5 | **The storybook look for the other ready-made buildings** (on hold since #209; the house, storehouse and market are done). | Claude | L | waiting |
+| ID | What | Who | Status |
+|---|---|---|---|
+| LOOK-1 | "the houses look squares … the ones I sent have this organic form. also they diversify the textures by using multiple blocks on the walls." Keep the current designs as templates and improve them. | Claude | to do |
+| LOOK-2 | The two ways the owner suggested for it: "not sure if by level would be feasible, or to have different house types available to build on our building list." | Claude | to do |
+| LOOK-3 | "Buildings need rebuilding, they need to fit more the mood and vibe of the mobs whimsical and mystical": the house, market and storehouse are done (#209); the other buildings are left. | Claude | to do |
 
 ---
 
 ## 5. Open from earlier lists
 
-| ID | What | From | Who | Size | Status |
-|---|---|---|---|---|---|
-| OLD-1 | **Two or three new peoples to raid**, past the old border. | Batch 4, D1 | Claude | L | to do |
-| OLD-2 | **Places you've taken marked on the map**, and new ones appearing over time. | Batch 4, D1 | Claude | M | to do |
-| OLD-3 | **Battle mode, step 2**: AI rivals through an API key, kept on our server, never in the page. The owner offered their own model server: it needs HTTPS, and its key goes in an environment secret, not the chat. | Batch 4, E | Claude + Owner | L | waiting |
-| OLD-4 | **Battle mode, step 3**: real multiplayer. Needs a game server; plan it on its own. | Batch 4, E | Claude | L | waiting |
-| OLD-5 | **Battle balance**: how strong rivals feel and how often they come (guesses today). | Batch 4, E | Owner | S | waiting |
-| OLD-6 | **Composting**: a bin takes seeds and leaves and makes compost; compost speeds a farm or raises its yield. Agreed: last. | Batch 3, #9 | Claude | M | to do |
-| OLD-8 | **Battle worlds say "Duilt" in your account's world list**; only this device's list says "Battle". Known since #192, left because it meant touching the cloud-save code. | Batch 4, E | Claude | S | to do |
-| OLD-7 | **Look and sound, the one piece not found in the code**: mist round the floating island, and cloud below it. Everything else in that plan is in (shadows, 32×32 textures, low mist, stars, sun rays, wind, new models, sound and music). | Look and sound plan | Claude | S | to do |
+| ID | What | From | Who | Status |
+|---|---|---|---|---|
+| OLD-1 | Two or three new peoples to raid. | Batch 4 | Claude | to do |
+| OLD-2 | Places you've taken marked on the map; new ones appearing over time. | Batch 4 | Claude | to do |
+| OLD-3 | Battle mode with AI rivals through an API key, kept on our server. The owner offered their own model server (needs HTTPS, key in an environment secret). | Batch 4 | Claude + Owner | waiting |
+| OLD-4 | Battle mode with real multiplayer, inviting friends. | Batch 4 | Claude | to do |
+| OLD-5 | Battle balance: how strong rivals feel and how often they come. | Batch 4 | Owner | waiting |
+| OLD-6 | Composting: a bin turns seeds and leaves into compost, which speeds a farm or raises its yield. Agreed: last. | Batch 3 | Claude | to do |
+| OLD-7 | Mist round the floating island and cloud below it: the one part of the look and sound plan not in the game. | Look and sound plan | Claude | to do |
+| OLD-8 | Battle worlds show as "Duilt" in the account's world list. | Batch 4 | Claude | to do |
 
 ---
 
 ## 6. Cline's queue
 
-Each has a full brief in section 12. One branch and one PR each; Claude
-reviews and the owner merges.
+Briefs in section 12. One branch and one PR each.
 
-| ID | What | Size | Status |
-|---|---|---|---|
-| CL-1 | Two secrets for time travel | S | done, #212 |
-| CL-8 | **Bigger buttons on the phone (+8 px).** Left to Cline as a test. | S | to do |
-| CL-9 | Recipe names say what you get ("Dress planks" → Planks, "Split stone" → Cobblestone). | S | to do |
-| CL-10 | The mills open the bench with an empty search box. | S | to do |
-| CL-11 | University studies say "game days" (about 15 minutes each). | S | to do |
-| CL-2 | Futurians stop pointing you to the Archive once you've read it. | S | to do |
-| CL-3 | The Age 12 "Travel to the Past" card says "To the Past". | S | to do |
-| CL-4 | Secrets show up the moment you earn them. | S | to do |
-| CL-5 | "Know the woods" counts only present-day animals (owner: skip it if the Past's creatures should count). | S | waiting |
-| CL-6 | Say what tapping a special block does: Travel, Read, Take, Leave. | S | to do |
-| CL-7 | The War Standard drawn as a flag on a pole. | S | to do |
-| CL-12 | Tap the people counter to feed the hungry. | S | to do |
-| CL-13 | Say "granary" where a granary is meant. | S | to do |
-| CL-14 | "Put it all in" in a granary says why things stayed out. | S | to do |
-
-New small tasks from the lists above that would suit Cline: COPY items in
-section 7, once the wording rules are agreed, and MOBS-1.
+| ID | What | Status |
+|---|---|---|
+| CL-1 | Two secrets for time travel | done, #212 |
+| CL-8 | Bigger buttons on the phone (+8 px) ("button size is too small increase buttons 8 px in size"). Left to Cline as a test. | to do |
+| CL-9 | "Dress planks" should be Planks; "Split stone" should be Cobblestone. | to do |
+| CL-10 | The mills open the bench with their name in the search box. | to do |
+| CL-11 | University studies should say game days. | to do |
+| CL-2 | Futurians stop pointing you to the Archive once you've read it. | to do |
+| CL-3 | The Age 12 "Travel to the Past" card says "To the Past". | to do |
+| CL-4 | Secrets show up the moment you earn them. | to do |
+| CL-5 | "Know the woods" counts only present-day animals. | waiting (ASK-2) |
+| CL-6 | Say what tapping a special block does: Travel, Read, Take, Leave. | to do |
+| CL-7 | The War Standard drawn as a flag on a pole. | to do |
+| CL-12 | Tap the people counter to feed the hungry. | to do |
+| CL-13 | Say "granary" where a granary is meant. | to do |
+| CL-14 | "Put it all in" in a granary says why things stayed out. | to do |
 
 ---
 
@@ -331,109 +209,59 @@ section 7, once the wording rules are agreed, and MOBS-1.
 > "Including the wiki … that is not good today, and copy overall that has
 > a lot of weird descriptions of elements."
 
-### The wiki (`docs/wiki/`)
-
-Fifteen pages, written on 14 October and not touched since, except one
-line about the garrison. Since then the game has changed under it: time
-travel, Battle mode, the Plainer and Helix, the mine at Age 5 with five
-levels, the granary as a store, buildings working only while you play,
-the stone and wood mills, the storybook buildings, new blocks, Auto jump,
-the plain Save, and more.
-
-| ID | What | Who | Size | Status |
-|---|---|---|---|---|
-| WIKI-1 | **Bring every page up to date** with the game as it is, one page at a time, each checked against the config it describes (`structures.js`, `items.js`, `recipes.js`, `ages.js`, `traders.js`, `mobs.js`). | Claude | L | to do |
-| WIKI-2 | **Generate the lists from the game's own config** (buildings, recipes, items, traders, goals), so the wiki can't drift again; keep the hand-written parts (story, how-tos) by hand. A test fails if a generated page is out of date. | Claude | M | to do |
-| WIKI-3 | **Decide what the wiki is for and who reads it**: players (then in plain language, by task: "how do I get iron?"), or us (then as reference). Today it's neither quite. | Owner | S | waiting |
-| WIKI-4 | **A wiki in the game**, if wanted: the same pages from a menu, searchable. | Claude | M | waiting |
-
-### The words in the game
-
-Every item has a "how you get it" line (`madeBy` in `src/config/items.js`,
-312 items), buildings have blurbs, levels have blurbs, recipes have names.
-Many were written one at a time and don't agree. Some examples, as they
-read today:
-
-- **Stone**: "Mined from rock", but rock gives marble, white stone or
-  cobble; stone comes from a quarry or from those at the bench.
-- **Marble**: "Cut and dressed at a workshop", but it's also dug.
-- **Gravel**: "Scraped off the mountainside", but most comes from
-  underground and the stone mill.
-- **Raw meat**: "Hunted", but every pen gives it now.
-- **Recipes** named for the action, not the thing: "Dress planks", "Split
-  stone" (CL-9).
-
-| ID | What | Who | Size | Status |
-|---|---|---|---|---|
-| COPY-1 | **Rules for the game's words**: one short page. For example: every "how you get it" lists every way, most common first, in the same order of parts; present tense; no jokes in the facts; names of buildings as the building list says them. | Claude, Owner agrees | S | to do |
-| COPY-2 | **Every item's description** rewritten to the rules, checked against where it really comes from. A test checks every item named as made at a building really is made there, and every way to get it is listed. | Claude, or Cline in batches | M | to do |
-| COPY-3 | **Buildings, levels, goals, notices and pop-ups**: the same pass. | Claude, or Cline in batches | M | to do |
-| COPY-4 | **Strange descriptions the owner has seen**: list them here as they're found. | Owner | S | to do |
+| ID | What | Who | Status |
+|---|---|---|---|
+| WIKI-1 | The wiki (`docs/wiki/`) brought up to date. It was written on 14 October; time travel, Battle mode, the Plainer and Helix, the mine, the granary and more came after. | Claude | to do |
+| COPY-1 | The weird descriptions in the game fixed. Examples as they read today: Stone "Mined from rock"; Marble "Cut and dressed at a workshop"; Gravel "Scraped off the mountainside"; Raw meat "Hunted". | Claude | to do |
 
 ---
 
 ## 8. Housekeeping
 
-| ID | What | Who | Size | Status |
-|---|---|---|---|---|
-| HOUSE-1 | **Old branches to delete**: `cline-test` (merged as #212), `claude/backlog-batch-3-update`, `claude/debug-overlay`, `claude/mob-models-blender`, `claude/stoic-dirac-yky1hi`. Checked 20 October: `mob-models-blender` and `stoic-dirac` hold nothing unmerged; `backlog-batch-3-update` holds SAVE-6's message (its review doc is now in `docs/history/analysis-scaling.md`); `debug-overlay` holds TECH-9. | Claude, Owner agrees | S | waiting |
-| HOUSE-2 | **One tasks file**: the old planning docs moved to `docs/history/`, Cline's briefs folded into section 12. | Claude | S | done |
-| HOUSE-3 | **Cline's settings** (on the owner's computer): auto-approve with a cap, Plan then Act, a strong model, the custom instructions. See section 12. LM Studio wasn't working: set it up together if still wanted. | Owner | S | waiting |
-| HOUSE-4 | **The full test suite takes about 10 minutes now** (7,200 checks). Find the slowest files and speed them up, so a PR waits less. Some timing checks fail now and then on a busy machine; make them steadier. | Claude | M | to do |
+| ID | What | Who | Status |
+|---|---|---|---|
+| HOUSE-1 | Old branches to delete: `cline-test`, `claude/backlog-batch-3-update` (holds SAVE-6), `claude/debug-overlay` (holds TECH-9), `claude/mob-models-blender`, `claude/stoic-dirac-yky1hi`. | Claude, once the owner agrees (ASK-4) | waiting |
+| HOUSE-2 | One tasks file. | Claude | done |
+| HOUSE-3 | Cline's settings on the owner's computer (section 12); LM Studio wasn't working. | Owner | waiting |
 
 ---
 
 ## 9. To try on the phone
 
-Things that exist but you haven't told us you've tried. Some were seen
-working in a test browser, some only by the automated tests; the longer
-version, saying which, is in `docs/history/status-and-testing.md`.
+Things that exist but haven't been confirmed in a real game. The longer
+version is in `docs/history/status-and-testing.md`.
 
-**Recent (section 2):** NOW-1 to NOW-15.
-
-**Early and middle game:** people talking (settler and trader), rare goods
-at the market, the collection book past 10%, the bow's hemp chain,
-university studies and what their skill then does, barracks and hungry
-soldiers.
-
-**Vehicles:** train passengers getting off and on.
-
-**Late game, your god and the war (Ages 7 to 10):** the temple and
-devotion; the rings; the sanctuary's guardian healing, scaring, coming
-back; the Ten Rounds past round 1 and the Warlord; the oath on the dark
-path and its 1,000 warriors; the march and the expedition; cutting the
-chains; the disguise; the palace and the Sky King; taxes after a lost
-attack; both endings.
-
-**After the war:** stealing in a city; city lanterns at night; robbing a
-tree tribe; an outpost's armoury; diamond and ruby gear; killing the god in
-his cube.
-
-**Time travel:** the machine, the Past, raptors, triceratops and
-long-necks, taming and eggs, the whistle and the dinosaur army, the
-Basilisk, the Future, the Archive, futurians, the frame rate in the city.
-
-**Battle mode:** create one; the barracks starts the attacks; beat an
-army; take a city's standard; come back to it; balance.
-
-**Fixes:** old lanterns in an account world; search pop-ups with the
-keyboard up; the loading screens.
+- **Recent:** section 2.
+- **Early and middle game:** people talking (settler and trader), rare
+  goods at the market, the collection book past 10%, the bow's hemp chain,
+  university studies and their skills, barracks and hungry soldiers.
+- **Vehicles:** train passengers getting off and on.
+- **Late game (Ages 7 to 10):** the temple and devotion; the rings; the
+  guardian; the Ten Rounds and the Warlord; the oath and the 1,000
+  warriors; the march and the expedition; cutting the chains; the
+  disguise; the palace and the Sky King; taxes after a lost attack; both
+  endings.
+- **After the war:** stealing in a city; city lanterns at night; robbing a
+  tree tribe; an outpost's armoury; diamond and ruby gear; killing the god.
+- **Time travel:** the machine, the Past, its dinosaurs, taming and eggs,
+  the whistle, the Basilisk, the Future, the Archive, futurians, the frame
+  rate in the city.
+- **Battle mode:** create one; the barracks starts the attacks; beat an
+  army; take a city's standard; come back to it.
+- **Fixes:** old lanterns in an account world; search pop-ups with the
+  keyboard up; the loading screens.
 
 ---
 
-## 10. Decisions waiting on the owner
+## 10. Waiting on the owner
 
 | ID | Question | For |
 |---|---|---|
 | ASK-1 | Saving works again (20 October). Only if it fails again: reconnect Neon so Claude can read the save failures. | SAVE-1 |
-| ASK-2 | Block making (3.1): which machines, which ages, how interactive. Claude drafts first. | CRAFT-* |
-| ASK-3 | Villagers who work (3.3): which jobs, from which age, how fast builders and haulers are, whether hauling replaces the stores filling by themselves, and whether there should be more villagers. | JOBS-* |
-| ASK-4 | How high the giant mountain goes, and whether the world gets taller. | WORLD-1 |
-| ASK-5 | Who the wiki is for. | WIKI-3 |
-| ASK-6 | "Know the woods": should the Past's creatures count? | CL-5 |
-| ASK-7 | The model server for Battle mode's AI rivals (HTTPS, key in an environment secret). | OLD-3 |
-| ASK-8 | Delete the old branches? | HOUSE-1 |
-| ASK-9 | Changes to the database itself (a new column and index, a migration runner): Claude never writes to it without your yes, each time. | TECH-14 |
+| ASK-2 | "Know the woods": should the Past's creatures count? | CL-5 |
+| ASK-3 | The model server for Battle mode's AI rivals. | OLD-3 |
+| ASK-4 | Delete the old branches? | HOUSE-1 |
+| ASK-5 | Any change to the database itself waits for the owner's yes. | TECH-14 |
 
 ---
 
@@ -444,9 +272,6 @@ players was written on 6 October, on a branch that never reached main. Its
 first point (size limits on cloud saves) was done that day. None of the rest
 was. The review itself is now in `docs/history/analysis-scaling.md`;
 re-checked against today's code on 20 October.
-
-None of this is something you'd see in play today. It's what keeps the game
-fast on phones, safe, and ready if it's ever shared or played by many.
 
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
@@ -463,7 +288,7 @@ fast on phones, safe, and ready if it's ever shared or played by many.
 | TECH-11 | **Type checks on the save format and the block list**, to catch the kind of mismatch that once broke saved worlds' mode. | Claude | M | to do |
 | TECH-12 | **Automatic browser checks**: load the game, place a block, save, reload, see it's there. The tests today never open a browser. | Claude | M | to do |
 | TECH-13 | **Checks on every pull request** (GitHub Actions: the tests and a build), so nothing merges red. There are none today. | Claude | S | to do |
-| TECH-14 | **The database at scale**: a player column and index on saved chunks so the security check stays fast with millions of them; a small runner for migrations, and a check the live database matches the code. Needs the owner's yes (ASK-9). | Claude + Owner | M | waiting |
+| TECH-14 | **The database at scale**: a player column and index on saved chunks so the security check stays fast with millions of them; a small runner for migrations, and a check the live database matches the code. Needs the owner's yes (ASK-5). | Claude + Owner | M | waiting |
 | TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | to do |
 | TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
 
@@ -846,24 +671,6 @@ scholar"). Its body says:
 - roughly how long it took.
 
 ---
-
-## Suggested order
-
-1. **Saving** (section 1). Nothing else matters if progress is lost.
-2. **Cline's queue** (section 6), in the background, a task at a time.
-3. **Quick fixes Claude can do now**: MOBS-1 (roof climbing), STORE-1
-   (storage interface), SAVE-3 and SAVE-4.
-4. **The words**: COPY-1 rules, then the wiki's generated lists (WIKI-2),
-   then the rest of the pages and the item descriptions, part by part, with
-   Cline helping.
-5. **The big new systems, one at a time, each designed first**: block
-   making (3.1), then villagers who work (3.3), then the bigger world
-   (3.4).
-6. **Buildings' looks** (section 4), between the big pieces.
-7. **Under the hood** (section 11), a little at a time: checks on every
-   PR (TECH-13) and the two-devices fix (TECH-1) first, then the phone
-   speed work (TECH-6 to TECH-8).
-8. **Later**: new peoples, map marks, Battle steps 2 and 3, composting.
 
 ## The old planning docs (history)
 
