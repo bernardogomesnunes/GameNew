@@ -25,6 +25,8 @@ import { renderPanels } from './Panel.js';
 import { TRADERS_BY_ID, goodsFor, restockIn } from '../config/traders.js';
 import { icon } from './icons.js';
 import { pixelIcon } from './pixelIcons.js';
+import { bindSlotDrag } from './SlotDrag.js';
+import { isDesktop } from './desktop.js';
 
 /**
  * The Duilt interface: the bag, the stomach, the claim menu and the goal list.
@@ -242,8 +244,14 @@ export class DuiltUI {
           <!--
             Both containers on one screen, because moving a thing between them
             is the only reason to be here. Two panels would mean remembering
-            what was in the other one.
+            what was in the other one. On a desktop they stand side by side,
+            each scrolling on its own (asked for directly: "In desktop we
+            should show both as we do in the same pop up, but we need to take
+            a look into scrolling beahaviours as they look odd"); on a phone
+            one above the other, the bag folded.
           -->
+          <div class="split-cols">
+          <section class="split-col" data-drop="store">
           <div class="store-head">
             <span id="store-where">On the shelves</span>
             <button class="secondary" id="btn-store-sort">Sort</button>
@@ -265,6 +273,8 @@ export class DuiltUI {
             <span class="store-routing-label">Won't take from deliveries:</span>
             <div id="store-routing-chips" class="store-routing-chips"></div>
           </div>
+          </section>
+          <section class="split-col split-bag" data-drop="bag">
           <div class="store-head"><span>Equipped</span></div>
           <div id="store-hotbar-grid"></div>
           <!--
@@ -275,19 +285,40 @@ export class DuiltUI {
           <button type="button" class="store-fold" id="btn-store-bag" aria-expanded="false">
             <span>In your bag</span><span id="store-bag-count" class="store-fold-count"></span><span class="store-fold-arrow" aria-hidden="true">▸</span>
           </button>
-          <div id="store-bag-grid" hidden></div>`,
+          <div id="store-bag-grid" hidden></div>
+          </section>
+          </div>`,
         'panel-stores': `
           <!--
             The storage controller: every storehouse's shelves as one list,
             searched like the bench is. A tap takes a stack into the bag from
             wherever it is kept; nobody needs to know which shed.
           -->
+          <div class="split-cols">
+          <section class="split-col" data-drop="stores">
           <div class="store-head">
             <span id="stores-where"></span>
             <button class="secondary" id="btn-stores-all">Put it all away</button>
           </div>
           <input id="stores-search" class="panel-search" type="search" placeholder="Search — planks, iron, seeds…" autocomplete="off" enterkeyhint="search">
-          <div id="stores-list" class="recipe-grid"></div>`,
+          <div id="stores-list" class="recipe-grid"></div>
+          </section>
+          <!--
+            Your bag, to put things away from here too (asked for directly:
+            "the storage manager block, it would be nice to have the ability
+            to push things here too that would go to the storages"). A tap
+            sends a stack to the storehouses — onto shelves that already keep
+            it first.
+          -->
+          <section class="split-col split-bag" data-drop="bag">
+          <div class="store-head"><span>Equipped</span></div>
+          <div id="stores-hotbar-grid" class="store-slots"></div>
+          <button type="button" class="store-fold" id="btn-stores-bag" aria-expanded="false">
+            <span>In your bag</span><span id="stores-bag-count" class="store-fold-count"></span><span class="store-fold-arrow" aria-hidden="true">▸</span>
+          </button>
+          <div id="stores-bag-grid" class="store-slots" hidden></div>
+          </section>
+          </div>`,
         'panel-claim': `
           <div id="claim-list"></div>`,
         'panel-buildings': `
@@ -344,7 +375,12 @@ export class DuiltUI {
       this.renderStore();
     });
     this.q('#btn-stores-all').addEventListener('click', () => this.storeAllAway());
+    this.q('#btn-stores-bag').addEventListener('click', () => {
+      this.storesBagOpen = !this.storesBagOpen;
+      this.renderStores();
+    });
     this.q('#stores-search').addEventListener('input', () => this.renderStores());
+    this.wireSlotDrag();
     this.wireSlotTip();
 
     this.bus.on('inventory:change', () => {
@@ -358,6 +394,7 @@ export class DuiltUI {
       // A storehouse is an Inventory too, so its own changes come through
       // here — and so does the bag half of the store screen.
       if (this.panels.isOpen('panel-store')) this.renderStore();
+      if (this.panels.isOpen('panel-stores')) this.renderStores();
       this.onBagChanged?.();
     });
     this.bus.on('hunger:change', () => this.renderVitals());
@@ -1517,31 +1554,10 @@ export class DuiltUI {
       this.storePage = Math.max(0, Math.min(pages - 1, page + Number(btn.dataset.storePage)));
       this.renderStore();
     }));
-    // Equipped and bag, same split as the bag panel's own two grids — see
-    // renderBag. Both tap straight into the store, same as any bag slot
-    // always could; reordering equipped-vs-bag stays the bag panel's job.
-    hotbarGrid.innerHTML = d.inventory.slots.slice(0, PLAYABLE_SLOTS)
-      .map((s, i) => this.slotHtml(s, i, { attr: 'data-bag-slot' }))
-      .join('');
-    bagGrid.innerHTML = d.inventory.slots.slice(PLAYABLE_SLOTS)
-      .map((s, i) => this.slotHtml(s, i + PLAYABLE_SLOTS, { attr: 'data-bag-slot' }))
-      .join('');
-    // Folded by default: the shelves are what you came to look at.
-    const open = !!this.storeBagOpen;
-    bagGrid.hidden = !open;
-    this.q('#panel-store')?.classList.toggle('bag-open', open);
-    const fold = this.q('#btn-store-bag');
-    if (fold) fold.setAttribute('aria-expanded', String(open));
-    const used = d.inventory.slots.slice(PLAYABLE_SLOTS).filter(Boolean).length;
-    const count = this.q('#store-bag-count');
-    if (count) count.textContent = `${used} of ${d.inventory.slots.length - PLAYABLE_SLOTS}`;
+    this.renderBagColumn({ hotbar: hotbarGrid, bag: bagGrid, fold: '#btn-store-bag', count: '#store-bag-count', panel: '#panel-store', open: this.storeBagOpen, onTap: (i) => this.putInStore(i) });
 
     grid.querySelectorAll('[data-store-slot]').forEach((btn) =>
       btn.addEventListener('click', () => this.takeFromStore(Number(btn.dataset.storeSlot))));
-    for (const g of [hotbarGrid, bagGrid]) {
-      g.querySelectorAll('[data-bag-slot]').forEach((btn) =>
-        btn.addEventListener('click', () => this.putInStore(Number(btn.dataset.bagSlot))));
-    }
     this.refreshSlotTip();
 
     const all = this.q('#btn-store-all');
@@ -1635,6 +1651,35 @@ export class DuiltUI {
     }));
   }
 
+  /**
+   * Your bag beside a store's own list: Equipped, then the rest folded under
+   * it on a phone (always out on a desktop — styles.css), each slot a tap
+   * that sends it in (`onTap`). Equipped and bag are the same split as the
+   * bag panel's own two grids — see renderBag; reordering them stays the bag
+   * panel's job.
+   */
+  renderBagColumn({ hotbar, bag, fold, count, panel, open, onTap }) {
+    const inv = this.duilt.inventory;
+    hotbar.innerHTML = inv.slots.slice(0, PLAYABLE_SLOTS)
+      .map((s, i) => this.slotHtml(s, i, { attr: 'data-bag-slot' }))
+      .join('');
+    bag.innerHTML = inv.slots.slice(PLAYABLE_SLOTS)
+      .map((s, i) => this.slotHtml(s, i + PLAYABLE_SLOTS, { attr: 'data-bag-slot' }))
+      .join('');
+    // Folded by default on a phone: what's kept is what you came to look at.
+    // Always out on a desktop, beside it.
+    bag.hidden = !open && !isDesktop();
+    this.q(panel)?.classList.toggle('bag-open', !!open);
+    this.q(fold)?.setAttribute('aria-expanded', String(!!open));
+    const used = inv.slots.slice(PLAYABLE_SLOTS).filter(Boolean).length;
+    const counter = this.q(count);
+    if (counter) counter.textContent = `${used} of ${inv.slots.length - PLAYABLE_SLOTS}`;
+    for (const g of [hotbar, bag]) {
+      g.querySelectorAll('[data-bag-slot]').forEach((btn) =>
+        btn.addEventListener('click', () => onTap(Number(btn.dataset.bagSlot))));
+    }
+  }
+
   // ---- the storage controller ----
 
   /** Every storehouse at once (a storage controller, or a town hall's panel). */
@@ -1655,6 +1700,11 @@ export class DuiltUI {
     const list = this.q('#stores-list');
     if (!list) return;
     if (!d) { list.innerHTML = ''; return this.noWorld('#stores-list'); }
+    const hotbar = this.q('#stores-hotbar-grid'), bag = this.q('#stores-bag-grid');
+    if (hotbar && bag) {
+      this.renderBagColumn({ hotbar, bag, fold: '#btn-stores-bag', count: '#stores-bag-count', panel: '#panel-stores', open: this.storesBagOpen, onTap: (i) => this.putInStores(i) });
+      this.refreshSlotTip();
+    }
     const sheds = d.structures.stores().length;
     const all = d.storeTotals();
     const q = (this.q('#stores-search')?.value ?? '').trim().toLowerCase();
@@ -1682,14 +1732,65 @@ export class DuiltUI {
           <div class="recipe-actions"><button class="secondary" data-take="${escapeAttr(r.id)}">Take</button></div>
         </div>`;
     }).join('');
-    list.querySelectorAll('[data-take]').forEach((b) => b.addEventListener('click', () => {
-      const id = b.dataset.take;
-      const n = d.takeFromStores(id);
-      this.bus.emit('toast', n
-        ? { kind: 'xp', title: `Took ${n} ${itemName(id).toLowerCase()}` }
-        : { kind: 'xp', title: 'Your bag is full', body: 'Put something away first' });
-      this.renderStores();
-    }));
+    list.querySelectorAll('[data-take]').forEach((b) => b.addEventListener('click', () => this.takeFromStores(b.dataset.take)));
+  }
+
+  /** A stack of something into the bag, from whichever storehouses keep it. */
+  takeFromStores(id) {
+    const n = this.duilt?.takeFromStores(id);
+    this.bus.emit('toast', n
+      ? { kind: 'xp', title: `Took ${n} ${itemName(id).toLowerCase()}` }
+      : { kind: 'xp', title: 'Your bag is full', body: 'Put something away first' });
+    this.renderStores();
+  }
+
+  /**
+   * Dragging stacks between the pop-ups on a desktop (ui/SlotDrag.js): from
+   * your bag — in its own pop-up, or beside the shelves — onto a
+   * storehouse's shelves or the storage controller's list, and back.
+   */
+  wireSlotDrag() {
+    const slotIn = (el, sel) => {
+      const b = el?.closest?.(sel);
+      return b && !b.classList.contains('empty') && !el.closest('.slot-discard') ? b : null;
+    };
+    bindSlotDrag(this.root, {
+      sourceOf: (el) => {
+        let b = slotIn(el, '[data-bag-slot]');
+        if (b) return { kind: 'bag', ref: Number(b.dataset.bagSlot), el: b };
+        b = slotIn(el, '#bag-grid [data-slot], #bag-hotbar-grid [data-slot]');
+        if (b) return { kind: 'bag', ref: Number(b.dataset.slot), el: b };
+        b = slotIn(el, '[data-store-slot]');
+        if (b) return { kind: 'store', ref: Number(b.dataset.storeSlot), el: b };
+        const tile = el?.closest?.('#stores-list .recipe-tile');
+        const take = tile?.querySelector('[data-take]');
+        return take ? { kind: 'stores', ref: take.dataset.take, el: tile.querySelector('.recipe-icon') ?? tile } : null;
+      },
+      zoneOf: (el) => {
+        const z = el?.closest?.('[data-drop]');
+        if (z) return { kind: z.dataset.drop, el: z };
+        const bag = el?.closest?.('#panel-bag .panel');
+        return bag ? { kind: 'bag', el: bag } : null;
+      },
+      drop: (src, kind) => {
+        if (src.kind === 'bag' && kind === 'store') this.putInStore(src.ref);
+        else if (src.kind === 'bag' && kind === 'stores') this.putInStores(src.ref);
+        else if (src.kind === 'store' && kind === 'bag') this.takeFromStore(src.ref);
+        else if (src.kind === 'stores' && kind === 'bag') this.takeFromStores(src.ref);
+      },
+    });
+  }
+
+  /** A stack from the bag into the storehouses, from the controller. */
+  putInStores(i) {
+    const d = this.duilt;
+    if (!d?.inventory.slots[i]) return;
+    if (!d.structures.stores().length) {
+      this.bus.emit('toast', { kind: 'xp', title: 'No storehouses yet', body: 'Build one, and this puts things on its shelves' });
+      return;
+    }
+    if (!d.putInStores(i)) this.bus.emit('toast', { kind: 'xp', title: 'No room on any shelf', body: 'Take something out first, or build another storehouse' });
+    this.renderStores();
   }
 
   /** "Put it all away": everything but your tools, onto whichever shelves have room. */

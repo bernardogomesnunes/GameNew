@@ -21,12 +21,21 @@ export class Panels {
    *                thing in front of you. Panels stack over a screen and
    *                closing one returns you to it.
    */
-  constructor(root, { screens = [] } = {}) {
+  constructor(root, { screens = [], companions = {}, sideBySide = () => false } = {}) {
     this.root = root;
     this.screens = new Set(screens);
+    // Panels that may stay open together, where `sideBySide()` says there's
+    // room: the bag beside a storehouse or the storage controller.
+    this.companions = companions;
+    this.sideBySide = sideBySide;
     this.order = [];          // panel ids, oldest first
     this.openHooks = [];
     this.closeHooks = [];
+  }
+
+  /** Whether `a` and `b` can be open at once right now. */
+  together(a, b) {
+    return !!(this.companions[a]?.includes(b) || this.companions[b]?.includes(a)) && this.sideBySide();
   }
 
   isScreen(id) {
@@ -85,13 +94,16 @@ export class Panels {
       // the old one belongs in front of the new one.
       this.closeAll();
     } else {
-      for (const other of this.openIds()) if (other !== id) this.close(other);
+      for (const other of this.openIds()) if (other !== id && !this.together(id, other)) this.close(other);
     }
     if (el.hidden) {
       el.hidden = false;
       if (!this.isScreen(id)) this.order = this.order.filter((x) => x !== id).concat(id);
       holdSearchHeight(el);
+      this.layer();
       for (const fn of this.openHooks) fn(id);
+    } else if (!this.isScreen(id)) {
+      this.toFront(id);
     }
     return true;
   }
@@ -101,8 +113,33 @@ export class Panels {
     if (!el || el.hidden) return false;
     el.hidden = true;
     this.order = this.order.filter((x) => x !== id);
+    this.layer();
     for (const fn of this.closeHooks) fn(id);
     return true;
+  }
+
+  /** Brings an open panel in front of the one beside it (a click on it). */
+  toFront(id) {
+    if (!this.isOpen(id) || this.order[this.order.length - 1] === id) return;
+    this.order = this.order.filter((x) => x !== id).concat(id);
+    this.layer();
+  }
+
+  /**
+   * Two open together are both `paired`: neither's backdrop takes clicks,
+   * so each can be reached (styles.css), the one at the back keeps the dim,
+   * and the one in front is drawn over the other. One alone is as it was.
+   */
+  layer() {
+    const open = this.openIds();
+    const paired = open.length > 1;
+    for (const el of this.panels()) {
+      const at = open.indexOf(el.id);
+      const on = paired && at >= 0;
+      el.classList?.toggle('paired', on);
+      el.classList?.toggle('paired-base', on && at === 0);
+      if (el.style) el.style.zIndex = on ? String(10 + at) : '';
+    }
   }
 
   /**

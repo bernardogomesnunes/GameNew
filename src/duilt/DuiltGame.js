@@ -1116,6 +1116,27 @@ export class DuiltGame {
    * have room — the storehouse's "Put it all in", for all of them at once.
    * Returns { moved, stuck }.
    */
+  /**
+   * One stack from the bag into the storehouses, from the storage controller
+   * (asked for directly: "the storage manager block, it would be nice to
+   * have the ability to push things here too that would go to the
+   * storages"). Onto shelves that already keep it first, so it joins its own
+   * kind, then wherever there's room; a granary takes only what farms grow.
+   * Returns how many went.
+   */
+  putInStores(i) {
+    const id = this.inventory.slots[i]?.id;
+    if (!id) return 0;
+    const stores = this.structures.stores().map((x) => x.store);
+    const keeps = (store) => store.slots.some((s) => s?.id === id);
+    let moved = 0;
+    for (const store of [...stores.filter(keeps), ...stores.filter((s) => !keeps(s))]) {
+      moved += this.inventory.moveTo(store, i);
+      if (!this.inventory.slots[i]) break;
+    }
+    return moved;
+  }
+
   storeAllAway() {
     const stores = this.structures.stores().map((x) => x.store);
     let moved = 0, stuck = 0;

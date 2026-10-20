@@ -5,6 +5,8 @@ import { renderPanels, panelDef } from './Panel.js';
 import { DuiltUI } from './DuiltUI.js';
 import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
+import { isDesktop } from './desktop.js';
+import { bindPanelWindows } from './PanelWindows.js';
 import { StoryView, INTRO, ENDINGS, endingFor } from './Story.js';
 import { askConfirm } from './Confirm.js';
 import { BOOK, BOOK_GROUPS, bookGroup } from '../duilt/Collection.js';
@@ -195,7 +197,16 @@ export class UIManager {
     // Every `.overlay` with an id is a panel, including the ones the Duilt
     // layer adds later. The worlds screen is an overlay too but is not a panel:
     // Escape must not dismiss it into a world nobody chose.
-    this.panels = new Panels(root, { screens: ['blocker'] });
+    // On a desktop the bag can stay open beside a storehouse or the storage
+    // controller, to drag things between them (asked for directly: "in
+    // desktop we could have pop ups that can move inside the screen, and then
+    // I can open my inventory and interact with them").
+    this.panels = new Panels(root, {
+      screens: ['blocker'],
+      companions: { 'panel-bag': ['panel-store', 'panel-stores'] },
+      sideBySide: isDesktop,
+    });
+    this.windows = bindPanelWindows(root, this.panels);
     this.panels.onOpen((id) => this.populatePanel(id));
     this.panels.onOpen(() => this.collapseToasts());
     this.panels.onOpen(() => this.updateHudVisibility());

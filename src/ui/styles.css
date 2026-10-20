@@ -955,16 +955,16 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 .store-next span { color: var(--text-dim); }
 .store-next ul { margin: 2px 0 0; padding-left: 17px; color: var(--text-dim); }
 .store-next li { margin: 2px 0; }
-#store-grid, #store-hotbar-grid, #store-bag-grid {
+#store-grid, #store-hotbar-grid, #store-bag-grid, #stores-hotbar-grid, #stores-bag-grid {
   display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px;
   margin: 10px 0 0; max-height: 26vh; overflow-y: auto; padding: 2px;
   align-items: start; /* same short-row overlap as the bag's; see #bag-grid */
 }
-#store-hotbar-grid { max-height: none; }
+#store-hotbar-grid, #stores-hotbar-grid { max-height: none; }
 /* The shelves get the room; the bag folds up under them (asked for directly). */
 #store-grid { max-height: 52vh; }
 #panel-store.bag-open #store-grid { max-height: 30vh; }
-#store-bag-grid[hidden] { display: none; }
+#store-bag-grid[hidden], #stores-bag-grid[hidden] { display: none; }
 .store-fold { display: flex; align-items: center; gap: 8px; width: 100%; margin: 12px 0 0; padding: 8px 10px; background: transparent; border: 1px solid var(--panel-border); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; text-align: left; }
 .store-fold-count { color: var(--text-dim); font-weight: 400; margin-left: auto; }
 .store-fold-arrow { display: inline-block; transition: transform 0.15s steps(2); }
@@ -1024,8 +1024,8 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
   .vital-track { width: 62px; }
   #bag-hotbar-grid, #bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
   #bag-grid { max-height: 42vh; }
-  #store-grid, #store-hotbar-grid, #store-bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  #store-bag-grid { max-height: 24vh; }
+  #store-grid, #store-hotbar-grid, #store-bag-grid, #stores-hotbar-grid, #stores-bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  #store-bag-grid, #stores-bag-grid { max-height: 24vh; }
   #store-grid { max-height: 50vh; }
   #panel-store.bag-open #store-grid { max-height: 26vh; }
   .bag-slot { min-height: 52px; }
@@ -1046,7 +1046,7 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 }
 @media (min-width: 721px) {
   #bag-hotbar-grid, #bag-grid { grid-template-columns: repeat(8, 1fr); }
-  #store-grid, #store-hotbar-grid, #store-bag-grid { grid-template-columns: repeat(8, 1fr); }
+  #store-grid, #store-hotbar-grid, #store-bag-grid, #stores-hotbar-grid, #stores-bag-grid { grid-template-columns: repeat(8, 1fr); }
 }
 
 /* Duilt hotbar: real equipped slots now, each showing what's actually stacked there. */
@@ -2142,3 +2142,64 @@ button.busy { cursor: progress; opacity: 0.92; }
    the grid, and the goods on it edged in gold. */
 .trade-rare-head { grid-column: 1 / -1; margin: 8px 0 0; font-size: 13px; font-weight: 700; color: #a3781c; }
 .recipe-tile.rare { box-shadow: inset 0 0 0 2px #e0b440; }
+
+/* --- pop-ups as windows, on a desktop ------------------------------------
+ * Asked for directly: "in desktop we could have pop ups that can move inside
+ * the screen, and then I can open my inventory and interact with them", and
+ * "In desktop we should show both as we do in the same pop up, but we need to
+ * take a look into scrolling beahaviours as they look odd". The query is
+ * ui/desktop.js's DESKTOP_QUERY.
+ */
+@media (min-width: 900px) and (pointer: fine) {
+  /* Dragged by the title bar (ui/PanelWindows.js). */
+  .panel-head { cursor: move; }
+  .panel-head button, .panel-head input { cursor: pointer; }
+  body.panel-dragging, body.panel-dragging * { user-select: none; cursor: move !important; }
+
+  /* A storehouse and the storage controller: what's kept on the left, your
+     bag on the right, each column scrolling on its own and the pop-up not at
+     all. It used to be one narrow column: the pop-up scrolled, the shelves
+     scrolled again inside it, and the bag sat out of sight below. */
+  .panel.panel-split {
+    max-width: min(1120px, 96vw); height: min(86vh, 820px);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .panel-split > .panel-head { flex: 0 0 auto; }
+  .panel-split .split-cols {
+    flex: 1 1 auto; min-height: 0;
+    display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 18px;
+  }
+  .panel-split .split-col { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 2px 6px 14px 2px; }
+  .panel-split .split-bag { border-left: 3px solid var(--panel-border); padding-left: 16px; }
+  /* One scroll a column: nothing inside it scrolls on its own. */
+  .panel-split #store-grid, .panel-split #store-bag-grid, .panel-split #stores-bag-grid,
+  #panel-store.bag-open .panel-split #store-grid { max-height: none; overflow: visible; }
+  .panel-split #store-grid, .panel-split #store-hotbar-grid, .panel-split #store-bag-grid,
+  .panel-split #stores-hotbar-grid, .panel-split #stores-bag-grid { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); }
+  /* The bag is always out beside them: nothing to unfold. */
+  .panel-split .store-fold { display: none; }
+  .panel-split #store-bag-grid, .panel-split #stores-bag-grid { margin-top: 10px; }
+
+  /* Two open together (the bag beside a storehouse): neither's backdrop takes
+     clicks, so both can be reached; the one behind keeps the dim. */
+  #ui-root .overlay.paired { pointer-events: none; background: transparent; }
+  #ui-root .overlay.paired.paired-base { background: rgba(28, 18, 10, 0.55); }
+  #ui-root .overlay.paired > .panel { pointer-events: auto; }
+  /* Side by side with the bag, a storehouse needs only its shelves — the bag
+     is beside it — and both narrow enough to fit across the screen. */
+  #ui-root .overlay.paired .panel.panel-split { max-width: min(640px, 48vw); }
+  #ui-root .overlay.paired .panel-split .split-cols { grid-template-columns: minmax(0, 1fr); }
+  #ui-root .overlay.paired .panel-split .split-bag { display: none; }
+  #ui-root #panel-bag.paired > .panel { max-width: min(560px, 46vw); }
+
+  /* The bag: only its slots scroll, not the pop-up round them as well. */
+  #panel-bag > .panel { display: flex; flex-direction: column; height: min(86vh, 820px); overflow: hidden; }
+  #panel-bag > .panel > * { flex: 0 0 auto; }
+  #panel-bag > .panel > #bag-grid { flex: 1 1 auto; min-height: 0; max-height: none; margin-bottom: 8px; }
+
+  /* Dragging a stack from one to the other (ui/SlotDrag.js). */
+  .slot-ghost { position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; width: 56px; height: 56px; opacity: 0.9; }
+  .slot-ghost .bag-slot, .slot-ghost .recipe-icon { width: 56px; height: 56px; }
+  .drop-ready { outline: 3px dashed #e0b44a; outline-offset: -3px; }
+  .drag-source { opacity: 0.45; }
+}
