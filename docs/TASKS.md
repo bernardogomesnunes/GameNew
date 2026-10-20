@@ -36,8 +36,8 @@ Lost progress is the one thing that can't be undone, so this comes first.
 
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
-| SAVE-1 | **Find why the testing world lost progress** (reported: "Was not able to save my testing world it lost a lot of progress"). | Claude + Owner | M | waiting |
-| SAVE-2 | **A world missing from the account list is treated as deleted.** See below. | Claude | M | to do |
+| SAVE-1 | **Find why the testing world lost progress** (reported: "Was not able to save my testing world it lost a lot of progress"). The owner thinks ChatGPT's "Explain failed world saves" solved it: confirm in play. | Owner | S | waiting |
+| SAVE-2 | **A world missing from the account list is treated as deleted**, and its backup thrown away. Now explained on Save (ChatGPT's commit); the backup is still lost. See below. | Claude | S | to do |
 | SAVE-3 | **Save and leave leaves even when the save failed**, and says nothing. | Claude | S | to do |
 | SAVE-4 | **Failed uploads retry silently.** | Claude | S | to do |
 | SAVE-5 | **The backup copy may not fit.** | Claude | S | to do |
@@ -50,18 +50,18 @@ Connectors → Neon), sign in with the account that owns the game's
 database, and pick "All projects you can access". Then Claude reads
 `save_failures` and the testing world's last save time, read-only.
 
-**SAVE-2, the likeliest suspect, not yet proven.** While saving
-(`Game.flush`), the game asks the account for its list of worlds. If this
-world isn't in the list but was saved before, it decides the world was
-deleted: it stops saving for the rest of the session (`discarded`) and
-throws away the backup copy. But a sign-in that has quietly expired gets an
-*empty* list back, not an error, because the database shows nothing to
-someone not signed in. So an expired session would look exactly like
-"deleted", and every save after it would silently not happen. The commit
-"Explain failed world saves" (on main) now names this case when you press
-Save, but it still stops saving. **Fix:** treat an empty or failed list as
-"don't know", never as "deleted"; check the sign-in before believing a
-world is gone; never drop the backup copy on that guess.
+**SAVE-2.** While saving (`Game.flush`), the game asks the account for its
+list of worlds. If this world isn't in the list but was saved before, it
+decides the world was deleted (here or on another device): it stops saving
+for the rest of the session and throws away the backup copy. An expired
+sign-in does **not** trigger this: checked in the code, a missing or
+expired token is an error, retried once with a fresh one, and an error
+keeps the backup. It fires only when the list comes back fine without the
+world, such as after deleting it, or a copy of it, elsewhere. "Explain failed
+world saves" (ChatGPT, on main since 19 October) now says so when you press
+Save: "This world is no longer in your account…". Left to decide: is
+stopping right when the world is still open here? Safer: keep the backup
+copy and offer to save it as a new world, rather than dropping it.
 
 **SAVE-3.** "Save and leave" waits up to 15 seconds and then takes you to
 the worlds screen whether or not the save landed, without a word. The plain
@@ -344,7 +344,7 @@ keyboard up; the loading screens.
 
 | ID | Question | For |
 |---|---|---|
-| ASK-1 | Reconnect Neon so Claude can read the save failures. | SAVE-1 |
+| ASK-1 | Did ChatGPT's change fix it in play? If saves still fail, reconnect Neon so Claude can read the save failures. | SAVE-1 |
 | ASK-2 | Block making (3.1): which machines, which ages, how interactive. Claude drafts first. | CRAFT-* |
 | ASK-3 | The job board (3.3): what jobs, from which age, how many villagers per job. | JOBS-* |
 | ASK-4 | How high the giant mountain goes, and whether the world gets taller. | WORLD-1 |
