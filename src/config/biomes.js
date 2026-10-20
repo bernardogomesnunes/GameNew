@@ -61,8 +61,6 @@ export const BIOMES = [
     // spends this), not a low amplitude alone.
     base: 104, amplitude: 1.8, rough: 0.5,
     flat: 1.9,
-    // WORLD-3 flattened it; worlds made before keep their land (biomeMap.js's TERRAIN).
-    before: { amplitude: 3, rough: 1, flat: 1.5 },
     surface: { top: GRASS, under: DIRT, depth: 3, rock: STONE },
     // Open ground you can actually build on: the starting plot lands here.
     // Fewer trees than before — requested directly, "green with fewer trees
@@ -140,7 +138,6 @@ export const BIOMES = [
     niche: { temp: 0.9, wet: 0.12 },
     base: 104, amplitude: 2, rough: 0.4,
     flat: 2.2,
-    before: { amplitude: 6, rough: 4, flat: 1.8 },
     // Sandstone under the sand (#33), three down, and breaking through it
     // in outcrops where the ground's bones show.
     surface: { top: SAND, under: SAND, depth: 6, rock: STONE, bed: SANDSTONE, cover: 3, outcrop: SANDSTONE },

@@ -90,6 +90,12 @@ for (const design of STARTER_DESIGNS) {
     + (check.ok ? '' : ` — failed "${check.failed}": ${check.reason}`), check.ok);
 }
 
+for (const [id, count] of [['house', 167], ['townhouse', 363], ['village', 830]]) {
+  const blocks = DESIGN_FOR_STRUCTURE.get(id).blocks;
+  ok(`the reshaped ${id} keeps all ${count} distinct blocks`,
+    blocks.length === count && new Set(blocks.map((b) => `${b.dx},${b.dy},${b.dz}`)).size === count);
+}
+
 // --- and the market's rule is not one it satisfies by existing --------------
 
 {

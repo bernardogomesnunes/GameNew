@@ -329,15 +329,30 @@ function houseBlocks() {
   // bench). See room.
   // In the storybook look (asked for directly: "build the house ... with
   // this new style"): teal shingles patched with mint so the roof reads as
-  // mossy, a curl of wood on each gable's tip, vines hanging from the eaves
-  // and the chimney a course taller, as in the Mistamber cottage.
-  const shell = room({ w: 5, h: 3, wall: WOOD, floor: PLANKS, roof: WOOD, tiles: TEAL, chimney: { h: 3, type: STONE } });
+  // mossy, a curl of wood at its crown, vines hanging from uneven eaves, and
+  // the chimney a course taller, as in the Mistamber cottage.
+  const shell = room({ w: 5, h: 3, wall: WOOD, floor: PLANKS, roof: WOOD, tiles: TEAL, shape: 'hip', chimney: { h: 3, type: STONE } });
+  // Clip the four square wall corners and move those same blocks into four
+  // uneven little wall shoulders. The perimeter stays sealed and the count
+  // is unchanged, but the hip roof now sits on a stepped, grown-in outline.
+  const shoulders = new Map([
+    ['1,1', [0, 2]], ['5,1', [2, 0]], ['1,5', [3, 6]], ['5,5', [6, 3]],
+  ]);
+  const organic = shell.map((b) => {
+    if (b.dy < 1 || b.dy > 3) return b;
+    const moved = shoulders.get(`${b.dx},${b.dz}`);
+    return moved ? { ...b, dx: moved[0], dz: moved[1] } : b;
+  });
   // A few plank infills break up the log walls while leaving ample solid wood
-  // for the House claim requirement. The off-centre upper windows and vines
-  // make this little cottage read as grown-in rather than perfectly squared.
-  const mixed = shell.map((b) => b.type === WOOD && b.dy > 0 && (b.dx + b.dz + b.dy) % 7 === 0 ? { ...b, type: PLANKS } : b);
+  // for the House claim requirement. The clipped corners, uneven shoulders,
+  // hip roof and vines give the cottage a hand-grown outline.
+  const mixed = organic.map((b) => b.type === WOOD && b.dy > 0 && (b.dx + b.dz + b.dy) % 7 === 0 ? { ...b, type: PLANKS } : b);
   return [
     ...hungUnderEaves(curledTips(mottled(mixed, MINT, 0.35)), HANGING_VINES, 0.4),
+    // Hip roofs have a single crown rather than two gable tips; these two
+    // tendrils keep the old 167-block house bill while dressing its eaves.
+    { dx: 0, dy: 4, dz: 2, type: HANGING_VINES },
+    { dx: 3, dy: 4, dz: 0, type: HANGING_VINES },
     // Somewhere to sleep, and a painting over it — where you wake after a
     // fall, once you've chosen it (playtest, P1).
     ...shifted([...bed(1, 1, 2, 2), { dx: 3, dy: 2, dz: 3, type: PAINTING + 2 }], 1, 1),
@@ -644,7 +659,16 @@ function townhouseBlocks() {
   // Brick infills alternate with plank walls; the corner posts stay timber,
   // so this larger shared home has its own palette and framed look.
   const shell = room({ w: 8, h: 3, wall: PLANKS, floor: STONE, tiles: LILAC, chimney: { h: 2 }, shutters: true, hood: true });
-  const mixed = shell.map((b) => b.type === PLANKS && b.dy > 0 && (b.dx * 3 + b.dz + b.dy) % 11 === 0 ? { ...b, type: BRICK } : b);
+  // The front-left post grows out towards the street, while the other
+  // corners step sideways. Move existing wall blocks, keeping the bill fixed.
+  const corners = new Map([
+    ['1,1', [1, 0]], ['8,1', [9, 1]], ['1,8', [0, 8]], ['8,8', [9, 8]],
+  ]);
+  const mixed = shell.map((b) => {
+    const moved = b.dy >= 1 && b.dy <= 3 ? corners.get(`${b.dx},${b.dz}`) : null;
+    const shaped = moved ? { ...b, dx: moved[0], dz: moved[1] } : b;
+    return shaped.type === PLANKS && shaped.dy > 0 && (shaped.dx * 3 + shaped.dz + shaped.dy) % 11 === 0 ? { ...shaped, type: BRICK } : shaped;
+  });
   return [...mixed, ...shifted([
     ...bed(2, 1, 5, 2),
     ...bed(5, 1, 5, 2),
@@ -778,7 +802,13 @@ function villageBlocks() {
   // The fourth building, the biggest, is the village's hall — a village
   // comes with a town hall's storage controller (structures.js), so it has
   // somewhere to keep it, with a lantern on a post at its door.
-  const house = () => room({ w: 5, h: 2, wall: WOOD, floor: PLANKS, tiles: TILE, chimney: { h: 2, type: STONE } });
+  const cottageCorners = new Map([['1,1', [0, 1]], ['5,1', [6, 1]], ['1,5', [0, 5]], ['5,5', [6, 5]]]);
+  const house = () => room({ w: 5, h: 2, wall: WOOD, floor: PLANKS, tiles: TILE, chimney: { h: 2, type: STONE } })
+    .map((b) => {
+      if (b.dy < 1 || b.dy > 2) return b;
+      const moved = cottageCorners.get(`${b.dx},${b.dz}`);
+      return moved ? { ...b, dx: moved[0], dz: moved[1] } : b;
+    });
   const hall = () => room({ w: 6, h: 3, wall: PLANKS, floor: COBBLE, tiles: SLATE });
   const g = grid();
   g.add(farmBlocks());
