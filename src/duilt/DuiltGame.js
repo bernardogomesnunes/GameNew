@@ -1655,7 +1655,6 @@ export class DuiltGame {
     if (Crops.stageAt(planted.at, Date.now()) >= RIPE) return { ok: false, reason: 'That crop is already ripe.' };
     if (!this.inventory.endless && !this.inventory.remove('compost', 1)) return { ok: false, reason: 'You have no compost.' };
     this.crops.compost(x, y, z);
-    this.bus?.emit('crop:composted', { x, y, z });
     return { ok: true };
   }
 

@@ -6,6 +6,14 @@ import { inFuture } from './future.js';
 export const CAVE_REGION = 512;
 const ENTRY_RUN = 180;
 const MAIN_ENTRY = -44, UPPER_START = 36, UPPER_END = 96;
+/**
+ * How far a complex's passages reach from its site: the descent's mouth to
+ * the upper hall's far wall, and the main gallery's sides. Nothing outside
+ * this box is ever carved, so a column there is answered at once: asking it
+ * for every block of every column made land a third slower to make.
+ */
+const REACH_MIN_X = MAIN_ENTRY - ENTRY_RUN - 3, REACH_MAX_X = UPPER_END + 25, REACH_MIN_Z = -30, REACH_MAX_Z = 40;
+const NONE = Object.freeze([]);
 
 export function caveSite(gen, rx, rz) {
   const x = rx * CAVE_REGION + 320 + Math.floor(hash01(rx, rz, gen.seed ^ 0x8c19) * 41) - 20;
@@ -20,21 +28,37 @@ export function caveSite(gen, rx, rz) {
   return { x, y, z, entryY };
 }
 
+/** A region's site, worked out once (it reads the land's height) and kept. */
+function siteFor(gen, rx, rz) {
+  fresh(gen);
+  // A number, not a string: this is asked for every block as land is made.
+  const key = rx * 65536 + rz;
+  const sites = gen._deepSites;
+  if (!sites.has(key)) sites.set(key, caveSite(gen, rx, rz));
+  return sites.get(key);
+}
+
+/** StarterWorld may relocate the settlement while finding its water source: forget what was worked out. */
+function fresh(gen) {
+  if (gen._deepHomeX === gen.biomes.centreX && gen._deepHomeZ === gen.biomes.centreZ && gen._deepSites) return;
+  gen._deepColumns = new Map();
+  gen._deepSites = new Map();
+  gen._deepHomeX = gen.biomes.centreX;
+  gen._deepHomeZ = gen.biomes.centreZ;
+}
+
 /** Inclusive open-air intervals in this column; floor is the first air cell. */
 export function deepCaveColumn(gen, x, z) {
-  // StarterWorld may relocate the settlement while finding its water source.
-  if (gen._deepHomeX !== gen.biomes.centreX || gen._deepHomeZ !== gen.biomes.centreZ) {
-    gen._deepColumns = new Map();
-    gen._deepHomeX = gen.biomes.centreX;
-    gen._deepHomeZ = gen.biomes.centreZ;
-  }
+  const s = siteFor(gen, Math.floor(x / CAVE_REGION), Math.floor(z / CAVE_REGION));
+  if (!s) return NONE;
+  const ddx = x - s.x, ddz = z - s.z;
+  if (ddx < REACH_MIN_X || ddx > REACH_MAX_X || ddz < REACH_MIN_Z || ddz > REACH_MAX_Z) return NONE;
   const key = `${x},${z}`;
-  const cache = gen._deepColumns ??= new Map();
+  const cache = gen._deepColumns;
   if (cache.has(key)) return cache.get(key);
   if (cache.size >= 1024) cache.clear();
-  const s = caveSite(gen, Math.floor(x / CAVE_REGION), Math.floor(z / CAVE_REGION));
   const spans = [];
-  if (s) {
+  {
     const dx = x - s.x, dz = z - s.z;
     // A 100m-long main gallery, with 15m of headroom in its central nave.
     const q = (dx / 52) ** 2 + (dz / 30) ** 2;
@@ -86,7 +110,7 @@ export function stampDeepCaves(gen, chunk, size) {
 export function stampCaveRuins(gen,chunk,size) {
   const ox=chunk.cx*size, oz=chunk.cz*size;
   const rx=Math.floor(ox/CAVE_REGION), rz=Math.floor(oz/CAVE_REGION);
-  const s=caveSite(gen,rx,rz);
+  const s=siteFor(gen,rx,rz);
   if(!s) return;
   const put=(dx,y,dz,id)=>{
     const x=s.x+dx-ox,z=s.z+dz-oz;

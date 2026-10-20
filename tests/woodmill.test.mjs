@@ -45,7 +45,9 @@ ok('it is modelled: a bench, a blade, a log', boxesFor('wood_mill').length >= 10
   ok('by it, its recipes can be made; away, they say where to go',
     at.find((r) => r.id === 'cabinet').atStation && /Stand at your wood mill/.test(away.find((r) => r.id === 'cabinet').reason));
 }
-ok('Place on it opens the bench, on what is made there', /stationOf\(aimed\.block\)\) return void this\.ui\.openBench\(stationName\(stationOf\(aimed\.block\)\)\)/.test(game)
+// CL-10 (asked for directly: the mills' search had their names written in it):
+// the bench opens with nothing typed; standing by the mill, its own way shows.
+ok('Place on it opens the bench, on what is made there', /stationOf\(aimed\.block\)\) return void this\.ui\.openBench\(\);/.test(game)
   && /if \(stationOf\(id\)\) return 'Use';/.test(game));
 
 // --- wood goes further ---------------------------------------------------------------------

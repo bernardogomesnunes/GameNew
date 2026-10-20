@@ -71,7 +71,7 @@ export const LOOT = {
   },
   caravan: {
     name: 'The dune caravans\' supplies',
-    items: [['coin', 0.9, 12, 35], ['gold', 0.5, 1, 4], ['coffee_beans', 0.6, 2, 5], ['kombucha', 0.35, 1, 2], ['string', 0.4, 2, 5], ['iron_ingot', 0.25, 1, 2]],
+    items: [['gold', 0.5, 1, 4], ['coffee_beans', 0.6, 2, 5], ['kombucha', 0.35, 1, 2], ['string', 0.4, 2, 5], ['iron_ingot', 0.25, 1, 2], ['coin', 0.9, 12, 35]],
     ring: 0.08,
   },
   mossfolk: {

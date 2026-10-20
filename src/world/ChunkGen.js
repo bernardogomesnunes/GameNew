@@ -304,7 +304,16 @@ export class ChunkGen {
    */
   caveAt(x, y, z, biomeIndex) {
     if (y < CAVE_FLOOR) return NOT_CARVED;
-    if (deepCaveColumn(this,x,z).some(s=>y>=s.floor && y<=s.ceiling)) return AIR;
+    // The deep galleries (world/deepCaves.js), asked once a column: this is
+    // called for every block in it, bottom to top, and the answer is the
+    // column's.
+    // (A settlement moved while the world is made moves the caves too.)
+    const home = this.biomes;
+    if (this._caveX !== x || this._caveZ !== z || this._caveHomeX !== home.centreX || this._caveHomeZ !== home.centreZ) {
+      this._caveX = x; this._caveZ = z; this._caveHomeX = home.centreX; this._caveHomeZ = home.centreZ;
+      this._caveSpans = deepCaveColumn(this, x, z);
+    }
+    if (this._caveSpans.length && this._caveSpans.some((s) => y >= s.floor && y <= s.ceiling)) return AIR;
     const cavern = biomeIndex === MOUNTAINS2_INDEX && y < CAVERN_Y_MAX;
     const width = cavern ? CAVERN_WIDTH : CAVE_WIDTH;
     const n = this.cave(x * CAVE_FREQ, y * CAVE_FREQ_Y, z * CAVE_FREQ);

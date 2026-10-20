@@ -1,4 +1,4 @@
-# Game tasks and shipped work
+# Duilt: every task in one place
 
 Asked for directly: "We need to be better at keeping our house organised …
 a complete task document, with every idea and thing we discussed to do
@@ -10,48 +10,40 @@ in that document no more".
 
 **This is the one and only tasks file.** It lists what was asked for or
 agreed: in the chat since 6 October, in the owner's lists, and in the old
-planning docs. Nothing is added that was not discussed. Older task notes point here and are not active checklists.
-
+planning docs. Nothing is added that wasn't discussed. The old planning
+docs are in `docs/history/`, for reference only.
 
 ## How to read it
 
 - **ID**: use it to talk about a task, in the chat, a commit or a PR.
 - **Who**: Claude, Cline (briefs in section 12), or the owner.
-- **Status**: *to do*, *waiting* (on the owner), *done, #PR* (merged), or *done (working tree)* (implemented here, not merged).
+- **Status**: *to do*, *waiting* (on the owner), or *done* with its PR.
 
-When something lands: update its status here with the PR or working-tree note. New requests go here with their status. Direct play/device checks stay open until verified.
+When something lands: change its status here, with the PR. When something
+new is asked for: add it with the owner's words quoted.
 
 ---
 
-## Priority order
-
-Priorities follow the owner's rule: first fix or verify the game that already exists; next improve current gameplay; last, plan wholly new systems.
-
-- **Priority 1 — Existing game:** SAVE-2 to SAVE-6, MOBS-1, OLD-8, WIKI-1, COPY-1, TECH-1 to TECH-8, TECH-10 to TECH-13, TECH-15, and the direct play/device checks in section 9. Completed code fixes stay in the implemented-work record; unfinished checks remain open.
-- **Priority 2 — Gameplay improvements:** CRAFT-1 to CRAFT-7, STORE-1, JOBS-1 to JOBS-4, WORLD-1 to WORLD-4, LOOK-1 to LOOK-3, GARRISON-1, OLD-1, OLD-2, OLD-6 and OLD-7. Completed items remain marked done in their original rows.
-- **Priority 3 — Future systems:** OLD-3 and OLD-4. TECH-16 is an owner follow-up for when the game has players.
-
-**Status note:** `done (working tree)` means implemented in this checkout but not merged. `done, #...` means merged in that PR. Manual checks remain open until played on the stated device.
-
-## Who's on what (original assignments)
+## Who's on what
 
 **Claude**
 - Saving: SAVE-2 to SAVE-6.
 - The "Adding changes" list: CRAFT-1 to CRAFT-7, STORE-1, JOBS-1 to
-  JOBS-4, WORLD-1 to WORLD-4, MOBS-1 and MOBS-2; statuses are below.
-- Buildings: LOOK-1 to LOOK-3.
-- From earlier lists: OLD-1 to OLD-4, OLD-6 to OLD-8.
+  JOBS-4, WORLD-1 to WORLD-3, MOBS-1 and MOBS-2.
+- Buildings: LOOK-1 and LOOK-2.
+- From earlier lists: OLD-2 (the rest of it), OLD-3, OLD-4, OLD-6 (the rest
+  of it), OLD-7, OLD-8.
 - The wiki and the game's words: WIKI-1, COPY-1.
 - Under the hood: TECH-1 to TECH-15 (section 11).
 - Housekeeping: HOUSE-1, once the owner agrees.
 - Reviewing Cline's work when asked.
 
 **Cline** (briefs in section 12)
-- Original assignments are retained for context; all implementation tasks
-  are marked with current status in section 6.
+- Nothing open: CL-1 to CL-14 are done.
+
 **Owner**
 - Try things on the phone: section 2 and section 9.
-- Answer ASK-1 to ASK-5 (section 10); Battle balance (OLD-5).
+- Answer ASK-1, ASK-3 to ASK-5 (section 10); Battle balance (OLD-5).
 - Cline's settings on your computer (HOUSE-3).
 - Once there are players: keep the database awake (TECH-16).
 
@@ -76,6 +68,8 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 | ID | What | PR |
 |---|---|---|
+| NOW-16 | ChatGPT's work, finished and merged: deep caves with ruins, caravan camps and mossfolk villages to raid, raided places marked on the map, composting, the Garrison training spear guards, new roof colours for the other buildings, cleaner stone, pink leaves on some birches, more detailed villagers, and Cline's thirteen small tasks. | #230 |
+| NOW-17 | A big world opens again: it's fetched and saved a part at a time. | #229 |
 | NOW-1 | Storage controller takes things too; on desktop, two-column store pop-ups, pop-ups you can drag, the bag beside them, dragging stacks between them. | #222 |
 | NOW-2 | Forging the ring moves you to Age 8 at once; a world stuck at the end of an age moves on as it opens. | #221 |
 | NOW-3 | Placing a mine puts it 91 blocks down, with a stair up to the surface. | #220 |
@@ -96,7 +90,7 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 ## 3. The "Adding changes" list (20 October)
 
-The owner's list, item by item. Check each row's status; some have since been implemented.
+The owner's list, item by item. None of it is started.
 
 ### 3.1 Making blocks
 
@@ -150,7 +144,7 @@ it produce 50% more; none of them carries or builds anything.
 | WORLD-1 | Wider and bigger mountains, and now and then a Kilimanjaro. (The world is 200 blocks tall today.) | Claude | to do |
 | WORLD-2 | Big trees. | Claude | to do |
 | WORLD-3 | Bigger plains, flatter deserts. | Claude | to do |
-| WORLD-4 | Big caves, as deep as the mine, with big galleries and ruins. Regional complexes now have a roughly 100m main gallery, an upper hall, walkable surface descent, and ruined pillars/floors with a cave-loot chest. Seeded across chunk boundaries; settlement/Future foundations protected. | Claude | done (working tree; device playtest pending) |
+| WORLD-4 | Big caves, as deep as the mine, with big galleries and ruins. One in every 512-block area: a 100-block main hall, an upper hall, a walkable slope down from the surface, and a ruin with pillars and a chest. | ChatGPT, Claude | done, #230 |
 
 ### 3.5 Creatures
 
@@ -160,7 +154,7 @@ it produce 50% more; none of them carries or builds anything.
 | ID | What | Who | Status |
 |---|---|---|---|
 | MOBS-1 | Villagers going onto roofs without jumping. (Found: a villager can step straight up 4 blocks, `STEP_UP` in `src/duilt/Settlers.js`.) | Claude | to do |
-| MOBS-2 | More natural behaviour for mobs. ("Polish idle and roaming creatures" is on main since 20 October.) | Claude | done (implementation; playtest in section 9) |
+| MOBS-2 | More natural behaviour for mobs. In part: "Polish idle and roaming creatures" (ChatGPT, on main since 20 October). | Claude | to do |
 
 ---
 
@@ -168,13 +162,13 @@ it produce 50% more; none of them carries or builds anything.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| LOOK-1 | "the houses look squares … the ones I sent have this organic form. also they diversify the textures by using multiple blocks on the walls." Keep the current designs as templates and improve them. | Claude | done (working tree) |
+| LOOK-1 | "the houses look squares … the ones I sent have this organic form. also they diversify the textures by using multiple blocks on the walls." Keep the current designs as templates and improve them. (Not yet: the shapes are unchanged.) | Claude | to do |
 | LOOK-2 | The two ways the owner suggested for it: "not sure if by level would be feasible, or to have different house types available to build on our building list." | Claude | to do |
-| LOOK-3 | "Buildings need rebuilding, they need to fit more the mood and vibe of the mobs whimsical and mystical": the house, market and storehouse were done (#209); the other starter buildings now have stronger two-colour roofs and timber accents. Block positions and counts are preserved; 24 screenshots captured in this workspace. | Claude | done (working tree) |
-| LOOK-4 | Cleaner stone textures: broad chipped planes instead of noisy mottling/flecks; quieter Stone Brick and Dark Stone joints. Keep the current colour/light direction. | Claude | done (working tree) |
-| LOOK-5 | White Leaves should be white; keep a separate Pink Leaves block/item, with both kinds of birch canopy in new terrain. Both gather, sway and decay as leaves. | Claude | done (working tree) |
-| LOOK-6 | Detail villagers while preserving the approved explorer, cows, dinosaurs and chickens. All six settlers and four citizens now have layered collars/cuffs, pockets/pouches, boots and facial/hair details, with apron/wrap/pack variants. Blender GLBs rebuilt; broader mob review remains separate. | Claude | done (working tree) |
-| GARRISON-1 | Replace passive stone and plank production with a player-requested military training queue; train shield-and-spear guards, with the Garrison operating as a defense post. | Owner | done (working tree) |
+| LOOK-3 | "Buildings need rebuilding, they need to fit more the mood and vibe of the mobs whimsical and mystical": the house, market and storehouse (#209); the other ready-made buildings with two-colour roofs and timber trim, the workshop teal and mint instead of slate (approved 20 October). | ChatGPT | done, #230 |
+| LOOK-4 | Cleaner stone textures: Stone, White Stone, Dark Stone, Stone Brick. | ChatGPT | done, #230 |
+| LOOK-5 | White leaves white, and pink leaves on about 40% of birch trees (approved 20 October). | ChatGPT | done, #230 |
+| LOOK-6 | More detailed villagers: collars, cuffs, pockets, boots, hair, aprons and packs on all six settlers and four citizens. | ChatGPT | done, #230 |
+| GARRISON-1 | The Garrison trains spear guards instead of making stone and planks (approved 20 October). | ChatGPT | done, #230 |
 
 ---
 
@@ -182,37 +176,37 @@ it produce 50% more; none of them carries or builds anything.
 
 | ID | What | From | Who | Status |
 |---|---|---|---|---|
-| OLD-1 | Two or three new peoples to raid. | Batch 4 | Claude | done (working tree) |
-| OLD-2 | Places you've taken marked on the map; new ones appearing over time. | Batch 4 | Claude | done (working tree) |
+| OLD-1 | Two or three new peoples to raid. Two: dune caravan camps and mossfolk forest villages, each with guards, a chest and talk. | Batch 4 | ChatGPT | done, #230 |
+| OLD-2 | Places you've taken marked on the map; new ones appearing over time. In part (#230): raided places are marked. New ones appearing over time is still to do. | Batch 4 | Claude | to do |
 | OLD-3 | Battle mode with AI rivals through an API key, kept on our server. The owner offered their own model server (needs HTTPS, key in an environment secret). | Batch 4 | Claude + Owner | waiting |
 | OLD-4 | Battle mode with real multiplayer, inviting friends. | Batch 4 | Claude | to do |
 | OLD-5 | Battle balance: how strong rivals feel and how often they come. | Batch 4 | Owner | waiting |
-| OLD-6 | Composting: a bin turns seeds and leaves into compost, which speeds a farm or raises its yield. Agreed: last. | Batch 3 | Claude | done (working tree) |
+| OLD-6 | Composting: a bin turns seeds and leaves into compost, which speeds a farm or raises its yield. In part (#230): the compost bin, and compost on a growing crop moves it on one stage. Compost into a farm is still to do. | Batch 3 | Claude | to do |
 | OLD-7 | Mist round the floating island and cloud below it: the one part of the look and sound plan not in the game. | Look and sound plan | Claude | to do |
 | OLD-8 | Battle worlds show as "Duilt" in the account's world list. | Batch 4 | Claude | to do |
 
 ---
 
-## 6. Cline task status
+## 6. Cline's queue
 
-Briefs in section 12. These rows show current status; CL-1 was merged in #212 and CL-2 to CL-14 are implemented in this working tree.
+Briefs in section 12. One branch and one PR each.
 
 | ID | What | Status |
 |---|---|---|
 | CL-1 | Two secrets for time travel | done, #212 |
-| CL-8 | Bigger buttons on the phone (+8 px) ("button size is too small increase buttons 8 px in size"). Left to Cline as a test. | done (working tree) |
-| CL-9 | "Dress planks" should be Planks; "Split stone" should be Cobblestone. | done (working tree) |
-| CL-10 | The mills open the bench with their name in the search box. | done (working tree) |
-| CL-11 | University studies should say game days. | done (working tree) |
-| CL-2 | Futurians stop pointing you to the Archive once you've read it. | done (working tree) |
-| CL-3 | The Age 12 "Travel to the Past" card says "To the Past". | done (working tree) |
-| CL-4 | Secrets show up the moment you earn them. | done (working tree) |
-| CL-5 | "Know the woods" counts only present-day animals. | done (working tree) |
-| CL-6 | Say what tapping a special block does: Travel, Read, Take, Leave. | done (working tree) |
-| CL-7 | The War Standard drawn as a flag on a pole. | done (working tree) |
-| CL-12 | Tap the people counter to feed the hungry. | done (working tree) |
-| CL-13 | Say "granary" where a granary is meant. | done (working tree) |
-| CL-14 | "Put it all in" in a granary says why things stayed out. | done (working tree) |
+| CL-8 | Bigger buttons on the phone (+8 px) ("button size is too small increase buttons 8 px in size"). Left to Cline as a test. | done, #230 (ChatGPT) |
+| CL-9 | "Dress planks" should be Planks; "Split stone" should be Cobblestone. | done, #230 (ChatGPT) |
+| CL-10 | The mills open the bench with their name in the search box. | done, #230 (ChatGPT) |
+| CL-11 | University studies should say game days. | done, #230 (ChatGPT) |
+| CL-2 | Futurians stop pointing you to the Archive once you've read it. | done, #230 (ChatGPT) |
+| CL-3 | The Age 12 "Travel to the Past" card says "To the Past". | done, #230 (ChatGPT) |
+| CL-4 | Secrets show up the moment you earn them. | done, #230 (ChatGPT) |
+| CL-5 | "Know the woods" counts only present-day animals. | done, #230 (ChatGPT) |
+| CL-6 | Say what tapping a special block does: Travel, Read, Take, Leave. | done, #230 (ChatGPT) |
+| CL-7 | The War Standard drawn as a flag on a pole. | done, #230 (ChatGPT) |
+| CL-12 | Tap the people counter to feed the hungry. | done, #230 (ChatGPT) |
+| CL-13 | Say "granary" where a granary is meant. | done, #230 (ChatGPT) |
+| CL-14 | "Put it all in" in a granary says why things stayed out. | done, #230 (ChatGPT) |
 
 ---
 
@@ -240,29 +234,8 @@ Briefs in section 12. These rows show current status; CL-1 was merged in #212 an
 
 ## 9. To try on the phone
 
-Things that exist but haven't been confirmed in a real game. The checks in this section are the current verification list.
-
-
-### Priority 1 — recent fixes to verify directly
-
-- Save in-world, then reopen the saved world and verify the save result and loaded state.
-- Verify stopped mobs and villagers use the idle pose, while grazing animals keep grazing.
-- Verify dialogue for settlers, traders, explorers and messengers, including successive lines.
-- Verify collection-book milestones and the 100% reward; check rare trader stock rotation.
-- Verify the hemp-to-fibre-to-string bow crafting path and hold/release shooting.
-- Verify university skill effects after research, and hungry soldiers' combat strength and recovery after feeding.
-- Verify train passengers board, leave and pay at stations.
-- Verify late battle rounds, the Warlord and the late-game endings.
-- Verify guardian healing, enemy-scare behavior and return after being downed.
-- Verify city guards respond to theft, tree-tribe hostility after theft, and outpost armoury contents.
-- Verify diamond gear, ruby conversion at the foundry and the Sanctuary's god-cube flow.
-- Play through time travel: Past creatures, taming/riding, egg hatching, whistle behavior, Basilisk, Future Archive and unlocking Future blocks.
-- Play through Battle mode: rival welcome/map, attacks, conquering a standard and the three-day recapture window; check balance.
-- Measure performance in the Future city on a real phone.
-- On an account-backed world, verify older saved lanterns relight after reopening.
-- On a real iPhone, verify search pop-ups with the keyboard open and recheck create/open/leave loading flow.
-- Review city lantern glow on a phone at night.
-- Play through WORLD-4: find a surface cave entrance, descend to the large gallery, open the ruin chest, and walk up to the upper hall; check phone performance. Browser render and generated-terrain checks pass, but this direct device check remains open.
+Things that exist but haven't been confirmed in a real game. The longer
+version is in `docs/history/status-and-testing.md`.
 
 - **Recent:** section 2.
 - **Early and middle game:** people talking (settler and trader), rare
@@ -283,6 +256,10 @@ Things that exist but haven't been confirmed in a real game. The checks in this 
   army; take a city's standard; come back to it.
 - **Fixes:** old lanterns in an account world; search pop-ups with the
   keyboard up; the loading screens.
+- **ChatGPT's work (NOW-16):** find a cave's mouth, walk down to the big
+  hall, open the ruin's chest, climb to the upper hall; a caravan camp and
+  a mossfolk village, and robbing them; compost on a crop; training spear
+  guards at the Garrison; the bigger buttons.
 
 ---
 
@@ -291,7 +268,7 @@ Things that exist but haven't been confirmed in a real game. The checks in this 
 | ID | Question | For |
 |---|---|---|
 | ASK-1 | Saving works again (20 October). Only if it fails again: reconnect Neon so Claude can read the save failures. | SAVE-1 |
-| ASK-2 | "Know the woods": should the Past's creatures count? Answered in the current implementation: they do not count. | CL-5 |
+| ASK-2 | "Know the woods": ChatGPT made it count only present-day animals (CL-5). Say if the Past's creatures should count too. | CL-5 |
 | ASK-3 | The model server for Battle mode's AI rivals. | OLD-3 |
 | ASK-4 | Delete the old branches? | HOUSE-1 |
 | ASK-5 | Any change to the database itself waits for the owner's yes. | TECH-14 |
@@ -301,7 +278,10 @@ Things that exist but haven't been confirmed in a real game. The checks in this 
 ## 11. Under the hood (the code review of 6 October)
 
 A review of the code, its speed, its safety and how it would cope with many
-players was written on 6 October and re-checked against today's code on 20 October. The actionable findings are tracked below.
+players was written on 6 October, on a branch that never reached main. Its
+first point (size limits on cloud saves) was done that day. None of the rest
+was. The review itself is now in `docs/history/analysis-scaling.md`;
+re-checked against today's code on 20 October.
 
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
@@ -702,9 +682,22 @@ scholar"). Its body says:
 
 ---
 
-## Older task notes
+## The old planning docs (history)
 
-The previous `claude-tasks.md`, `cline-tasks.md`, backlog, plan and status documents point to this file. They are retained as pointers only; this is the single active task list.
+Moved to `docs/history/`. They're the record of what was asked and how it
+was done; nothing in them is open that isn't listed above.
 
+| Doc | What it holds |
+|---|---|
+| `claude-tasks.md` | The October batch, item by item, with what was done. |
+| `cline-tasks.md` | Cline's briefs as first written (now section 12 here). |
+| `status-and-testing.md` | Everything asked since batch 4, and the full testing list. |
+| `backlog-batch-2.md`, `-3.md`, `-4.md` | The second, third and fourth batches, all done except what's in section 5. |
+| `plan-look-and-sound.md` | The look and sound revamp. |
+| `plan-phase7-lore.md` | The story, both paths: done. |
+| `plan-playtest-improvements.md` | P1 to P9 from the first playtest: done. |
+| `next-session.md` | Notes from the phase 6 and 7 work: done. |
+| `analysis-scaling.md` | The code, speed, safety and scaling review of 6 October (section 11). |
+| `plan-visuals-and-caves.md` | ChatGPT's plan and notes for the caves, stone, leaves and villagers (#230). |
 
-
+---

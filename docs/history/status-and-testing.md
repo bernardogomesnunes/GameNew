@@ -1,4 +1,150 @@
-# Historical task notes: status-and-testing
+# Status and testing
 
-Task status, shipped work, and outstanding work are maintained in [the canonical task file](TASKS.md). This document previously duplicated task tracking and is no longer an active checklist.
+Two lists, kept up to date as things land:
 
+1. **Everything asked for** since batch 4 began, and whether it's done.
+2. **What to test.** Features that exist but you haven't told me you've tried.
+   Some I've never seen working in a real game either. Those are marked
+   *(not seen in a browser)*: they're covered by tests only.
+
+## 1. Everything asked for
+
+### Done
+
+| What | PR |
+|---|---|
+| Notification centre (menu → Notices) | #167 |
+| Long "your buildings kept working" toast cut off | #167 |
+| Farms make half as much | #167 |
+| Storage pop-up: bigger list, bag folds below | #167 |
+| Quarry makes more stone; kiln slower | #167 |
+| People talk when tapped | #167 |
+| 12 ages; goals that make sense; an age needs all its goals | #168 |
+| Tree tribes | #169 |
+| "Craft what's missing" button | #170, fixed #184 |
+| Lanterns lighting a whole street | #171, fixed again #183 |
+| Living and abandoned cities | #172 |
+| Diamonds, rubies, diamond gear | #173 |
+| Stone Kingdom outposts | #174 |
+| Train passengers and fares | #175 |
+| Collection book in the market | #176 |
+| The god's cube, his stash and the wand | #177 |
+| Loading screen on create, open and leave; save spinner | #178 |
+| Rails curve round corners | #179 |
+| Train on a phone: tap adds coal, hold takes it apart | #180 |
+| Sky lift in Creative; the "What is this?" pop-up | #180 |
+| A blockier train | #181 |
+| Look for a 3D-modelling skill: none exists, modelled by hand | — |
+| Flying machine → the Plainer, worn on the chest | #182 |
+| The Helix: a helicopter that flies like Creative | #182 |
+| Old lanterns stopped lighting | #183 |
+| Craft button missing on mobile | #184 |
+| Pop-ups with search keep one size | #184 |
+| Ages 11 and 12 goals: Conquest, and The God | #185 |
+| Markets: a rare shelf that changes every two days | #186 |
+| Time travel, part one: the machine, the Past, dinosaurs, eggs | #187 |
+| Time travel, part two: the dinosaur army (the whistle), the Basilisk | #188 |
+| Time travel, part three: the Future (the city, trams and flying cars, the university's Archive, ten new blocks) | #189 |
+| Battle mode, step 1: a new world type with three computer rivals; their armies come once you've a barracks; take a city's standard to weaken them | #192 |
+| Quarries dig out clay too (1 a cycle at every level, about 6 a day); clay was only on wetland before | #193 |
+| Battle worlds no longer play Duilt's opening story; they go straight to the rivals' welcome | #197 |
+| Battle: no wall holds you in, so you can march on the rivals; the border still marks where you build | #198 |
+
+### Not done yet
+
+| What | Where it's from | When |
+|---|---|---|
+| Two or three more new peoples to raid | Batch 4, D1 | Later |
+| Places you've taken marked on the map; new ones appearing over time | Batch 4, D1 | Later |
+| Battle mode, step 2: AI rivals via an API key, through our server | Batch 4, E | Later |
+| Battle mode, step 3: real multiplayer (needs a game server) | Batch 4, E | Later |
+| Composting | Batch 3, #9 | Last |
+
+Batches 2 and 3 are otherwise done; see their docs.
+
+## 2. What to test
+
+Ordered roughly by how far into the game it is. *(not seen in a browser)*
+means only the automated tests have checked it.
+
+### Early and middle game
+
+- [x] **Notification centre.** Menu → Notices. Do the old toasts show, and does Clear work? *(I checked it in a browser: they show, and Clear all empties it.)*
+- [ ] **People talk.** Tap a settler, the messenger, the explorer or a trader. Tap again for the next line. *(Explorer and messenger checked in a browser: two taps, two different lines. Settler and trader not.)*
+- [x] **Quests.** In the Goals panel, hand one in from anywhere. The hermit's six fruit is the first. *(Checked in a browser: Hand in took the six fruit and paid the seeds.)*
+- [x] **Secrets and daily challenges** in the Goals panel. *(Checked in a browser: seven secret hints, two challenges under Today.)*
+- [ ] **Rare goods at the market:** two hard-to-get items per trader, new every two game days.
+- [ ] **Collection book.** Goals → Book. Coins at 10%, 25%, 50% and 75%; the Collector's Crown at 100%. *(Seen in a browser: the book counts what you hold, and at 10% it paid +50 coins with a toast. 25% and up, and the crown, not reached.)*
+- [x] **Stone mill** and **wood mill**: stand by one at the bench, and the cheaper recipes appear. *(Checked in a browser. Stone mill: 0 mill recipes without one, 19 with one beside you. Wood mill: 0, then 12.)*
+- [x] **Backpacks** (Back slot): leather +10 slots, reinforced +20. *(Checked in a browser: leather 40 → 50, reinforced 40 → 60.)*
+- [ ] **Bow:** hold to draw, let go to shoot. Hemp → fibre → string. *(Hold and release checked in a browser: one arrow spent and in flight. The hemp chain not.)*
+- [x] **Horse and cart:** tame a horse with fruit or vegetables, ride it, put a cart on it. *(Checked in a browser, by taps: tamed, ridden, cart hitched.)*
+- [x] **Drinks:** beer, kombucha and coffee boosts, with the countdown chip. *(Checked in a browser: all three chips.)*
+- [ ] **University studies** and their skills. *(A study started at the university's bench and finished when its days were up, seen in a browser. What the skill then does not checked.)*
+- [x] **Storage controller:** every storehouse in one list. *(Checked in a browser: a tap on it opened the list with my storehouse in it.)*
+- [ ] **Barracks:** train each kind of soldier, including the catapult crew. Hungry soldiers hit softer. *(Training checked in a browser: all four kinds, out two days later; each greyed out until you have its gear. Hungry soldiers not checked. Fixed "Training a archer" → "an archer".)*
+- [x] **Evolving buildings** with the Evolve button, and "Craft what's missing" on a card. *(Checked in a browser: Evolve turned a storehouse into a warehouse, 240 → 280 slots. Craft what's missing was checked with #184.)*
+
+### Vehicles
+
+- [x] **Trains:** rail and curves, engine, cars, coal; drive it; open a car's 1,000 slots. *(Checked in a browser, by taps: engine set down, a car coupled, coal in, driven with the stick, and the car opened with 1,000 free. A second car was refused because my test track was too short behind it, which is right.)*
+- [ ] **Passengers:** stop near a living city with cars on. Do people get off and pay, and get on?
+- [x] **Sky lift of your own:** two lifts joined by a straight run of chain. *(Checked in a browser: a tap on the bottom lift took me up 12 links.)*
+- [x] **Plainer:** wear it, Fly, then turn Fly off in the air. Its wings should glide you down. *(Checked in a browser: with Fly off 30 up it fell at a steady 3.5 a second, gliding, not dropping.)*
+- [x] **Helix:** set it down, climb in, fly it, land, get out with Sneak. *(Checked in a browser: up with Jump, down with Sneak to the ground, and out.)*
+
+### Late game: your god and the war (Ages 7 to 10)
+
+- [ ] **Temple:** choose your god; devotion; temple upgrades.
+- [ ] **Rings:** Sunstone or Nightstone ore deep in caves; forge the White or Black Ring.
+- [ ] **Sanctuary and guardian:** Aurelion heals you, Umbra scares enemies. Tap it to cycle follow, stay, attack. Downed, it returns a day later. *(Tapping cycles follow → stay → attack → follow, seen in a browser. Healing, scaring and coming back not checked.)*
+- [ ] **The Ten Rounds (white path):** the wall comes down, ten raids, the Warlord. Defence buildings help. *(Round 1 seen in a browser: the warning, three bandits from the right side, beaten, +6 gold, round 2 next. Later rounds and the Warlord not.)*
+- [ ] **Swear the oath (dark path):** Black Ring on, Place on the Nightstone in the Stone Kingdom's dark temple. You get 1,000 warriors.
+- [ ] **The march:** camp, or send the army ahead as an expedition.
+- [ ] **Cut the chains:** break a link of an anchor tower's chain. Cut all four and the island sinks; two days later the King comes down.
+- [ ] **Disguise:** full Sky armour; the suspicion eye and bar; your first blow unseen hits three times as hard.
+- [ ] **Storm the palace:** the Sky King's glowing heavy blow (step back and it misses); royal guards replaced every 18 seconds.
+- [ ] **Losing an attack:** taxes of 25%, 35%, 45%, then 50%; the Stone King replaces lost warriors.
+- [ ] **The endings,** each with its own picture.
+
+### After the war: the endless world
+
+- [ ] **Cities:** two living, two abandoned, past the old border. Merchants; guards if you steal. *(A living city seen in a browser: 16 people, guards, merchants and citizens, none hostile. Stealing not checked.)*
+- [ ] **City lanterns** at night. *(22 lights in a city at night, seen in a browser, but the glow looks faint in the picture. Worth a look on your phone.)*
+- [ ] **Tree tribes:** villages in the giant trees. They shoot from the decks if you rob them. *(A village seen in a browser, seven of them on the decks, not hostile. Robbing them not checked.)*
+- [ ] **Stone Kingdom outposts:** a dark-brick fort with four guards and an armoury. *(The fort and its four guards seen in a browser. The armoury not.)*
+- [ ] **Gems:** diamond ore deep (below y 32), ruby in the high peaks. Diamond tools and armour; a ruby strikes 25 coins at the foundry. *(Both ores are in the generated land: 271 diamond and 147 ruby in the first 56 chunks. Tools, armour and the foundry not checked.)*
+- [ ] **The god's cube:** from your Sanctuary's pop-up.
+  - Taking the stash and leaving is seen in a browser.
+  - **Killing the god** is not seen.
+- [x] **The wand:** Break to pick a block, Place to copy it for a coin, Break at open air for a beam. *(Checked in a browser: picked marble, copied it for a coin, and a beam at open air.)*
+
+### Time travel (new)
+
+- [ ] **The time machine:** make one (Age 11), set it down, Place on it, To the Past.
+- [ ] **The Past:** jungle and fern plains. Look for eggs lying in the ferns.
+- [ ] **Raptors** hunt you; **triceratops** charge if you hit them; **long-necks** graze.
+- [ ] **Tame:** raw meat for a raptor, fruit or vegetables for the others. Then tap to ride.
+- [ ] **Eggs:** bring one home, set it down; two game days later it hatches, tame.
+- [ ] **Home:** Place on the machine by your landing spot.
+- [ ] **The whistle:** make one (hide, string), blow it near your dinosaurs. They follow and fight; blow again to make them stay.
+- [ ] **The Basilisk:** rare in the Past's jungle. It hunts, and hits hard.
+- [ ] **The Future:** Place on the machine, To the Future. Towers, trams, flying cars; look at it at night.
+- [ ] **The Archive:** walk east from the plaza into the university and tap the glowing block. Then, at home, make Neon or Steel Panel at an engineering centre.
+- [ ] **Futurians** in the plaza: tap one to talk.
+- [ ] **Frame rate in the city** on your phone *(not measured: the test browser runs at 2–3 fps whatever it draws)*.
+
+### Battle mode (new)
+
+- [ ] **Create a Battle world.** The welcome names the three rivals and their directions; open the map to see them.
+- [ ] **Build a barracks.** A toast says the rivals have noticed. Their first army comes about half a game day later, with a warning.
+- [ ] **Beat an army** at home: gold, and a toast.
+- [ ] **March on a city** (about 5,000 blocks, so take a horse or the Helix). Beat its garrison, then tap the gold standard in the plaza.
+- [ ] **Come back** to a city you took: nobody guards it for 3 days.
+- [ ] **Balance:** how strong rivals feel, how often they come *(guesses: a rival gains 0.6 strength a game day, and attacks every 2 days)*.
+
+### Fixes worth a quick look
+
+- [ ] **Old lanterns** in a world from your account light again after reopening it *(#183; the account path isn't seen in a browser, I test signed out)*.
+- [ ] **Search pop-ups** keep their size with the keyboard up *(#184; a real iPhone keyboard not seen)*.
+- [ ] **The loading screen** when you create a world, open one, and leave.

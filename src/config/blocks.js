@@ -914,7 +914,7 @@ BLOCKS.push(
 // the city is yours until they win it back.
 export const WAR_STANDARD = 458;
 BLOCKS.push(
-  { id: WAR_STANDARD, name: 'War Standard', glyph: 'banner', color: 0xc8a040, shape: 'war_standard', material: 'wood', system: true, unlock: null,
+  { id: WAR_STANDARD, name: 'War Standard', glyph: 'banner', color: 0xc8a040, shape: 'war_standard', glows: true, material: 'wood', system: true, unlock: null,
     light: { color: 0xffd27a, intensity: 3, distance: 10, decay: 1 } },
 );
 

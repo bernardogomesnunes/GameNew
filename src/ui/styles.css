@@ -622,7 +622,7 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
    icon and the label are the rest of that — they are what stops a white glyph
    disappearing into cloud. */
 .touch-btn {
-  width: 62px; height: 62px; border-radius: 18px;
+  width: 70px; height: 70px; border-radius: 18px;
   background: rgba(13, 17, 23, 0.30);
   backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
   border: 1px solid rgba(255, 255, 255, 0.16); color: #eef2f6; /* kept dark on purpose, so an explicit light colour rather than following --text */

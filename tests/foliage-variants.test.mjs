@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { BLOCKS } from '../src/config/blocks.js';
 import { ITEM_FOR_BLOCK } from '../src/config/items.js';
-import { LEAVES, leafHeld } from '../src/world/LeafDecay.js';
+import { LEAVES, leafHeld } from '../src/world/leafDecay.js';
 import { tileFor } from '../src/render/BlockTextures.js';
 
 const white = BLOCKS.find(b => b.name === 'White Leaves');
