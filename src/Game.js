@@ -141,7 +141,7 @@ const EGG_TYPE = { [EGG_RAPTOR]: 'raptor', [EGG_TRIKE]: 'trike', [EGG_LONGNECK]:
 const WHISTLE_REACH = 60, PACK_HEEL = 4, PACK_FIGHT = 14, PACK_CATCH_UP = 40, PACK_STUCK = 3, PACK_LOST = 120, PACK_TRAVEL = 24;
 /** Out in the world, who'll stop for a word (config/talk.js). */
 const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard', 'futurian', 'caravaner', 'mossfolk']);
-/** The longest Save and leave waits for the upload before letting you go anyway. */
+/** The longest a manual save waits for upload confirmation before offering a retry. */
 const LEAVE_SAVE_WAIT_MS = 15000;
 /** How much land round the title scene's middle, and under its camera, is ready before the worlds screen shows. */
 const TITLE_READY_REACH = 24, TITLE_EYE_REACH = 16;
@@ -830,7 +830,7 @@ export class Game {
    */
   /**
    * Saves (or not) on the way out. A cloud save is waited for — up to
-   * LEAVE_SAVE_WAIT_MS, so a bad connection never keeps you in — so Save
+   * LEAVE_SAVE_WAIT_MS, so a bad connection offers a retry — so Save
    * and leave can show it saving (asked for directly: "when saving the button
    * should have a loading indication"). Whatever hasn't gone up by then is
    * kept aside (keepSafe) and sent the next time.
@@ -848,8 +848,18 @@ export class Game {
    */
   async saveAndWait() {
     const ok = this.saveNow();
-    if (this.saving) await Promise.race([Promise.resolve(this.saving).catch(() => {}), new Promise((r) => setTimeout(r, LEAVE_SAVE_WAIT_MS))]);
-    return ok && !this.saveError;
+    if (!ok) return false;
+    if (!this.saving) return !this.saveError;
+    let timer;
+    try {
+      const saved = await Promise.race([
+        Promise.resolve(this.saving).catch(() => false),
+        new Promise((resolve) => { timer = setTimeout(() => resolve(false), LEAVE_SAVE_WAIT_MS); }),
+      ]);
+      return saved === true && !this.saveError;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /**
@@ -949,13 +959,12 @@ export class Game {
         if (this.worldId !== id) return await this.sendUnsent();
         const mine = list.find((w) => w.id === this.worldId) ?? null;
         const agreed = this.syncState.agreedFor(this.worldId);
-        // It was in the account and isn't any more: deleted, here or on
-        // another device. Uploading would bring back a world you threw away.
+        // Absence is not proof of deletion (the account/list may have changed).
+        // Don't recreate a previously saved world, but keep its backup and
+        // allow the next ordinary save to check again. Explicit deletion is
+        // handled separately by onDeleteWorld.
         if (!mine && agreed) {
-          this.pendingSave = false;
-          this.discarded = true;
-          this.dropSafeCopy(this.worldId);
-          this.saveError = 'This world is no longer in your account, so the game will not recreate it. Return to your worlds and open the current copy.';
+          this.saveError = 'This world was not found in the current account. It has not been recreated and your pending backup has not been removed. Check that you are in the right account and try saving again. You can also export this world before leaving.';
           return false;
         }
         // Somebody else saved this world since we opened it. Refusing would
@@ -1029,15 +1038,14 @@ export class Game {
     try { held = JSON.parse(localStorage.getItem(UNSENT_KEY) || 'null'); } catch { held = null; }
     if (!held?.worldId || !held.state) return false;
     try {
-      const world = World.deserialize(held.state.world, { makeGen: makeChunkGen });
       const list = await this.cloudList({ maxAgeMs: 0 });
       const mine = list.find((w) => w.id === held.worldId) ?? null;
-      // Saved before and gone from the account now means deleted: the copy
-      // goes, rather than the world coming back.
+      // Keep an absent world's backup without resurrecting a possible delete.
+      // Check before rebuilding terrain: a blocked upload needs only metadata.
       if (!mine && this.syncState.agreedFor(held.worldId)) {
-        this.dropSafeCopy(held.worldId);
         return false;
       }
+      const world = World.deserialize(held.state.world, { makeGen: makeChunkGen });
       const res = await this.cloud.save(held.worldId, {
         world,
         name: held.name,
@@ -3046,6 +3054,7 @@ export class Game {
       onCube: () => this.enterCube(),
       onSow: (kind) => this.sowFarm(structure, kind, true),
       onUnsow: (kind) => this.sowFarm(structure, kind, false),
+      onCompostFarm: () => this.compostFarm(structure),
       // A barracks (batch 3, #29): who to train, and how many bunks it has.
       onTrain: (unit) => this.trainSoldier(structure, unit),
       bunks: () => this.bedsIn(structure.region),
@@ -3067,6 +3076,19 @@ export class Game {
   sowFarm(structure, kind, sow) {
     const r = sow ? this.duilt.sowFarm(structure, kind) : this.duilt.unsowFarm(structure, kind);
     if (!r.ok) this.ui.toast({ kind: 'xp', title: sow ? "Can't put that in" : "Can't take that out", body: r.reason });
+  }
+
+  /** Add compost through a farm's panel, advancing all its growing crops one stage. */
+  compostFarm(structure) {
+    const result = this.duilt.compostFarm(structure);
+    if (!result.ok) {
+      this.ui.toast({ kind: 'xp', title: "Can't compost this farm", body: result.reason });
+      return;
+    }
+    const changes = this.duilt.crops.grow(this.world);
+    if (changes.length) this.remeshDirty();
+    this.ui.toast({ kind: 'challenge', title: 'Farm composted', body: `Compost moved ${result.count} growing crop${result.count === 1 ? '' : 's'} ahead by one stage` });
+    if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(structure, this.buildingActions(structure));
   }
 
   /**
@@ -7854,7 +7876,7 @@ export class Game {
     const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
-    const swing = (gate || door || chest || catapult || trapdoor || painting || mill || (lift && lift !== 'nowhere' && lift !== 'cut')
+    const swing = hit && (gate || door || chest || catapult || trapdoor || painting || mill || (lift && lift !== 'nowhere' && lift !== 'cut')
       || hit.block === TIME_MACHINE || hit.block === ARCHIVE || hit.block === WAR_STANDARD || hit.block === WAY_OUT) && swingLabel(hit.block);
     const how = swing && (this.ui?.isTouch ? `tap ${swing}` : `right click to ${swing.toLowerCase()}`);
     // What tapping the hint itself does: the same thing, for a chest, a door

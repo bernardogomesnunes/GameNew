@@ -70,7 +70,11 @@ const GROVE = BIOME_INDEX.get('giantGrove');
   const top = t.ground + t.trunk + 2;
   for (let d = 0; d <= FEATURE_MARGIN; d++) if (world.getBlock(x + 1 + d, top, z) === leaves) wide = d;
   ok(`its crown spreads ${wide} blocks out from the trunk`, wide >= 6);
-  ok('and stays inside the margin a chunk looks past', wide < FEATURE_MARGIN);
+  // Neighbouring crowns can overlap this one; measure this giant's own
+  // footprint rather than attributing every leaf in the forest to it.
+  let reach=0;
+  gen.plantGiant((bx,by,bz,id)=>{if(id===leaves)reach=Math.max(reach,Math.abs(bx-x),Math.abs(bz-z));},x,z,t);
+  ok('and stays inside the margin a chunk looks past', reach <= FEATURE_MARGIN);
 
   // Made in a different order, the same giant is the same blocks: every
   // chunk works it out for itself.

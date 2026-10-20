@@ -257,14 +257,25 @@ export class Wanderers {
     if (!camp) { this.raidedTonight = true; return null; }
     const d = Math.hypot(camp.x - home.x, camp.z - home.z) || 1;
     const from = Math.min(RAID_FROM, d);
-    const ox = home.x + ((camp.x - home.x) / d) * from, oz = home.z + ((camp.z - home.z) / d) * from;
-    const y = surfaceAt(this.world, Math.floor(ox), Math.floor(oz));
+    let ox = home.x + ((camp.x - home.x) / d) * from, oz = home.z + ((camp.z - home.z) / d) * from;
+    let y = surfaceAt(this.world, Math.floor(ox), Math.floor(oz));
+    // A broader river or pond can cover the projected point. Use a nearby
+    // loaded shore rather than retrying the same water cell all night.
+    if(y==null) {
+      search: for(let r=4;r<=24;r+=4)for(let k=0;k<8;k++) {
+        const a=k*Math.PI/4,x=ox+Math.cos(a)*r,z=oz+Math.sin(a)*r;
+        const floor=surfaceAt(this.world,Math.floor(x),Math.floor(z));
+        if(floor!=null){ox=x;oz=z;y=floor;break search;}
+      }
+    }
     if (y == null) return null;
     const n = 2 + Math.floor(this.rand() * 2);
     const raiders = [];
     for (let i = 0; i < n; i++) {
-      const x = ox + (this.rand() - 0.5) * 4, z = oz + (this.rand() - 0.5) * 4;
-      const p = this.person('bandit', x, surfaceAt(this.world, Math.floor(x), Math.floor(z)) ?? y, z, {
+      let x = ox + (this.rand() - 0.5) * 4, z = oz + (this.rand() - 0.5) * 4;
+      let floor=surfaceAt(this.world,Math.floor(x),Math.floor(z));
+      if(floor==null){x=ox;z=oz;floor=y;}
+      const p = this.person('bandit', x, floor, z, {
         raider: true, stage: 'coming', settlement: home, home: { x: ox, z: oz },
       });
       raiders.push(p);

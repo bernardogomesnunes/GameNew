@@ -29,7 +29,7 @@ const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8
   ok('done: back as it was', btn.innerHTML === 'Save and leave' && !btn.disabled && !classes.has('busy') && !attrs['aria-busy']);
 }
 ok('Save and leave shows it while it saves, and only then leaves',
-  /#btn-leave'\)\.addEventListener\('click', async[\s\S]{0,200}setBusy\(btn, 'Saving…'\);[\s\S]{0,400}await this\.cb\.onLeaveWorld\?\.\(true\);[\s\S]{0,300}this\.openHome\(\);/.test(ui));
+  /#btn-leave'\)\.addEventListener\('click', async[\s\S]{0,200}setBusy\(btn, 'Saving…'\);[\s\S]{0,400}const saved = await this\.cb\.onLeaveWorld\?\.\(true\);[\s\S]*?this\.openHome\(\);/.test(ui));
 ok('the spinner is pixel-style: a square turning a quarter at a time', /\.px-spinner \{[\s\S]*steps\(4\)/.test(css) && /@keyframes px-spin/.test(css));
 
 // --- the wait ------------------------------------------------------------------------------------
@@ -45,13 +45,13 @@ ok('the spinner is pixel-style: a square turning a quarter at a time', /\.px-spi
   await Game.prototype.leaveWorld.call(fake, true);
   ok(`leaving waits for the save to land (${Date.now() - t0} ms)`, landed);
 
-  // One that never answers: leaving doesn't wait for ever.
+  // One that never answers: the wait ends, but leaving is refused.
   const stuck = { saving: null, saveAndWait: Game.prototype.saveAndWait, saveNow() { this.saving = new Promise(() => {}); return true; } };
   const realTimeout = globalThis.setTimeout;
   globalThis.setTimeout = (fn) => realTimeout(fn, 0); // the cap, without waiting out its seconds
-  const left = await Promise.race([Game.prototype.leaveWorld.call(stuck, true).then(() => 'left'), new Promise((r) => realTimeout(() => r('stuck'), 500))]);
+  const left = await Promise.race([Game.prototype.leaveWorld.call(stuck, true).then((saved) => saved ? 'left' : 'unsaved'), new Promise((r) => realTimeout(() => r('stuck'), 500))]);
   globalThis.setTimeout = realTimeout;
-  ok('a save that never answers still lets you go', left === 'left');
+  ok('a save that never answers refuses to leave after the wait', left === 'unsaved');
 
   // Leave without saving: no wait, and nothing saved.
   const nosave = { saveNow() { throw new Error('saved'); } };

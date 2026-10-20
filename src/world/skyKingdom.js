@@ -53,7 +53,7 @@ export const FLOOR = 172;
 /** Its rough radius. */
 export const ISLAND_R = 112;
 /** How far out from its middle the anchor towers stand, on the ground. */
-const TOWER_OUT = ISLAND_R + 30;
+export const TOWER_OUT = ISLAND_R + 30;
 /** How far out from its middle anything of it reaches: the towers and their footings. */
 export const SKY_REACH = TOWER_OUT + 6;
 /** The city wall stands this far in from the rim. */

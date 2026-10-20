@@ -87,7 +87,7 @@ export const TEXTURES = {
   sand:      { ripples: 3, hue: 0.12, marks: 18, flecks: [[0.86, 0.8, 0.74], [1.06, 1.04, 1.02]], depth: 0.14, mottle: 0.04, speck: 0.015 },
   gravel:    { pebbles: 6, marks: 10, flecks: [[1.06, 1.0, 0.9], [0.9, 0.95, 1.06], [1.14, 1.06, 0.94], [0.72, 0.72, 0.75], [1.12, 1.1, 1.08]], depth: 0.42, speck: 0.05 },
   clay:      { strata: 4, marks: 16, flecks: [[1.06, 1.0, 0.94], [0.9, 0.94, 1.0]], depth: 0.16, mottle: 0.08, speck: 0.03 },
-  stone:     { rockFaces: 3, hue: 0.12, depth: 0.2, bump: 0.2 },
+  stone:     { rockFaces: 3, fractured: true, hue: 0.12, depth: 0.18, speck: 0.1, rampStep: 0.035, bump: 0.2 },
   // The first cobblestone, exactly (render/legacyCobble.js): asked for twice.
   // Painted at the full 32px with the same stones: four times as many to a
   // face ("more cobble per square").
@@ -140,6 +140,8 @@ export const TEXTURES = {
  * Keyed by block name; each is a whole recipe, not a patch on the glyph's.
  */
 export const BLOCK_TEXTURES = {
+  // Keep the approved pale stone's quieter surface independent of rough rock.
+  'White Stone': { rockFaces: 3, hue: 0.12, depth: 0.2, bump: 0.2 },
   // The Stone Kingdom. Four dark materials that used to read as one grey:
   // big cut blocks with cool flecks; small warm bricks in darker mortar;
   // glassy purple-black with a sheen; and black basalt setts.

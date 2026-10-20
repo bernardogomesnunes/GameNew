@@ -1658,6 +1658,17 @@ export class DuiltGame {
     return { ok: true };
   }
 
+  /** Add one compost to a farm, advancing each of its growing crops a stage. */
+  compostFarm(s) {
+    if (!s?.valid || !STRUCTURES_BY_ID.get(s.type)?.fromCrops) return { ok: false, reason: 'That is not a working farm.' };
+    const now = Date.now();
+    const hasGrowingCrops = [...this.crops.planted.values()].some((crop) => crop.farm === s.id && Crops.stageAt(crop.at, now) < RIPE);
+    if (!hasGrowingCrops) return { ok: false, reason: 'This farm has no growing crops to compost.' };
+    if (!this.inventory.endless && !this.inventory.remove('compost', 1)) return { ok: false, reason: 'You have no compost.' };
+    const count = this.crops.compostFarm(s.id, now);
+    return { ok: true, count };
+  }
+
   /**
    * Puts one seed into a farm (backlog batch 2): "put in one seed per crop
    * you want, up to 4 crops". A carrot seed in means carrots — and carrot

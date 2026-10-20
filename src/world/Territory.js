@@ -307,12 +307,13 @@ export class Territory {
    * The top of the ground in a column on the border, or null where it isn't
    * there yet. The generator's height map is written once and never updated,
    * so a block broken on the edge would leave the border hanging over a hole:
-   * this finds the real top, starting a little above the recorded one.
+   * this finds the real top. Wider terrain can put a deep lake, or a tall
+   * built platform, well above the original seabed/ground height.
    */
   edgeTop(x, z) {
     if (!this.world.inBounds(x, 0, z)) return null;
     if (this.world.endless && !this.world.hasChunk(Math.floor(x) >> 4, Math.floor(z) >> 4)) return null;
-    const from = Math.min(this.world.height - 1, this.world.surfaceHeight(x, z) + 12);
+    const from = this.world.height - 1;
     for (let y = from; y >= 0; y--) {
       // Through a tree, not over it: the border is on the ground, and a tall
       // crown overhanging it would lift it into the leaves.

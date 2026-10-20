@@ -1,7 +1,6 @@
 import { QUESTS } from './quests.js';
 import { MOMENTS } from './moments.js';
 import { MOBS } from './mobs.js';
-import { BIOMES_BY_ID } from './biomes.js';
 import { TRADERS } from './traders.js';
 
 /**
@@ -50,10 +49,8 @@ export const SECRETS = [
   {
     id: 's_woods', name: 'Know the woods', icon: '🦌', xpReward: 200,
     hint: 'Every creature that walks these lands.',
-    description: 'Hunted one of every kind of animal.',
-    check: (c) => MOBS
-      .filter((m) => m.biomes.every((id) => !BIOMES_BY_ID.get(id)?.era))
-      .every((m) => c.duilt?.huntedKinds?.has(m.id)),
+    description: 'Hunted one of every kind of animal, today and in the Past.',
+    check: (c) => MOBS.every((m) => c.duilt?.huntedKinds?.has(m.id)),
   },
   {
     id: 's_errands', name: 'Everyone\'s errand', icon: '📜', xpReward: 300,

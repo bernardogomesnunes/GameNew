@@ -4,7 +4,6 @@ import { ACHIEVEMENTS, goalBands, secretGoals } from '../src/config/achievements
 import { QUESTS } from '../src/config/quests.js';
 import { MOMENTS } from '../src/config/moments.js';
 import { MOBS } from '../src/config/mobs.js';
-import { BIOMES_BY_ID } from '../src/config/biomes.js';
 import { TRADERS } from '../src/config/traders.js';
 import { Inventory } from '../src/items/Inventory.js';
 
@@ -33,8 +32,8 @@ ok('Every last stone: four ruins', by('s_every_ruin').check({ duilt: { ...blank(
 d.inventory.add('fireflies', 5);
 ok('Keeper of lights: five jars at once', by('s_fireflies').check({ duilt: d }));
 ok('Every stall: all the traders', by('s_every_stall').check({ duilt: { ...blank(), tradedWith: new Set(TRADERS.map((t) => t.id)) } }));
-const homeAnimals = MOBS.filter((m) => m.biomes.every((id) => !BIOMES_BY_ID.get(id)?.era));
-ok('Know the woods: every present-day animal, without hunting dinosaurs', by('s_woods').check({ duilt: { ...blank(), huntedKinds: new Set(homeAnimals.map((m) => m.id)) } }));
+const allAnimals = MOBS;
+ok('Know the woods: every present-day animal and every dinosaur in the Past', by('s_woods').check({ duilt: { ...blank(), huntedKinds: new Set(allAnimals.map((m) => m.id)) } }));
 ok('Everyone\'s errand: every quest handed in', by('s_errands').check({ duilt: { ...blank(), quests: Object.fromEntries(QUESTS.map((q) => [q.id, { done: true }])) } }));
 ok('The whole story: every moment', by('s_whole_story').check({ duilt: { ...blank(), moments: Object.keys(MOMENTS) } }));
 ok('Both ways: to the Past and the Future', by('s_both_ways').check({ duilt: { ...blank(), time: { pastVisited: true, futureVisited: true } } }));

@@ -934,8 +934,21 @@ export class UIManager {
       const shown = performance.now();
       await nextPaint();
       try {
-        await this.cb.onLeaveWorld?.(true);
+        const saved = await this.cb.onLeaveWorld?.(true);
         await new Promise((r) => setTimeout(r, Math.max(0, SAVE_SPIN_MS - (performance.now() - shown))));
+        if (!saved) {
+          this.game?.ui?.toast?.({
+            kind: 'xp', title: 'Could not save — still in your world',
+            body: this.game?.saveError || 'The save did not finish. Check your connection and try Save and leave again.',
+          });
+          return;
+        }
+      } catch (err) {
+        this.game?.ui?.toast?.({
+          kind: 'xp', title: 'Could not save — still in your world',
+          body: err?.message || 'The save did not finish. Try Save and leave again.',
+        });
+        return;
       } finally {
         setBusy(btn, null);
       }
