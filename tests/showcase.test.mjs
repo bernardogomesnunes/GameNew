@@ -16,7 +16,7 @@ import { MENU_BY_ID, menuFor } from '../src/config/menu.js';
 import { daylightAt } from '../src/render/DayCycle.js';
 
 /**
- * The showcase (docs/plan-look-and-sound.md, section 1): "a Creative test
+ * The showcase (docs/history/plan-look-and-sound.md, section 1): "a Creative test
  * world laid out for looking at — the Stone Kingdom; the Sky city; every
  * building template in rows; every animal and kind of person standing in a
  * line. Fixed camera spots, shot at phone size by day, at dusk and at night."
@@ -29,7 +29,7 @@ const game = read('../src/Game.js');
 const ui = read('../src/ui/UIManager.js');
 const mobsSrc = read('../src/world/Mobs.js');
 const wanderSrc = read('../src/world/Wanderers.js');
-const plan = read('../docs/plan-look-and-sound.md');
+const plan = read('../docs/history/plan-look-and-sound.md');
 
 // --- what's in it ------------------------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 /**
  * Going home in disguise (the dark path's third way to take the Sky
- * Kingdom — docs/plan-phase7-lore.md): "in Sky armour, with a few picked
+ * Kingdom — docs/history/plan-phase7-lore.md): "in Sky armour, with a few picked
  * warriors, you walk in as one of them ... guards grow suspicious if you
  * run, carry dark weapons, or linger, shown by a suspicion meter; if you're
  * caught, it becomes open battle."

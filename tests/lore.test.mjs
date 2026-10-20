@@ -6,7 +6,7 @@ import { LORE, loreKnowledge, endingFor } from '../src/config/lore.js';
 import { endingFor as storyEnding } from '../src/ui/Story.js';
 
 /**
- * The lore book (docs/plan-phase7-lore.md, 7j): "a lore book in the Goals
+ * The lore book (docs/history/plan-phase7-lore.md, 7j): "a lore book in the Goals
  * panel fills in as you learn: the two gods, the two kingdoms, and your
  * guardian."
  */

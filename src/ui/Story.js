@@ -1,5 +1,5 @@
 /**
- * The story, told in pictures (docs/plan-phase7-lore.md, 7j): a short
+ * The story, told in pictures (docs/history/plan-phase7-lore.md, 7j): a short
  * illustrated intro on a new world, and an illustrated ending for each path.
  *
  *   INTRO     the Sky Kingdom among its fireflies, the Stone army at its

@@ -1,7 +1,7 @@
 # Where to pick up — after the playtest list
 
 ## The whole playtest list is done (PR #29)
-Everything in `docs/plan-playtest-improvements.md` (P1–P9) is in, each with its own test file:
+Everything in `docs/history/plan-playtest-improvements.md` (P1–P9) is in, each with its own test file:
 - **P1 Homes:** beds, and a painting that sets where you wake; furnished houses (`homes.test`).
 - **P8 Saplings:** a 3D sapling that grows into a tree in 10 game days. None are generated; leaves drop them (`saplings.test`).
 - **P5 Drinks:** beer, kombucha and coffee, each a timed boost with a countdown chip. Coffee is a new crop (`drinks.test`).
@@ -12,7 +12,7 @@ Everything in `docs/plan-playtest-improvements.md` (P1–P9) is in, each with it
 - **P3 + P7:** a third-person view with your own avatar, what you hold drawn in 3D, and detailed animals and people (`avatar.test`).
 
 ## 7e, the Stone Kingdom, is done too
-A walled city of dark stone, about 1000–1400 blocks from home: a keep with the Stone King, guards, a dark temple, an armoury, barracks, a market, houses and an old road to its gate. It shows on the horizon, and so do your own builds (#130). See `docs/plan-phase7-lore.md`.
+A walled city of dark stone, about 1000–1400 blocks from home: a keep with the Stone King, guards, a dark temple, an armoury, barracks, a market, houses and an old road to its gate. It shows on the horizon, and so do your own builds (#130). See `docs/history/plan-phase7-lore.md`.
 
 **Done:** the war — borders 32 → 320, locked until Age 6; reaching Age 6 opens the wall and the Stone Kingdom declares war (ring or not); ten rounds with archers, rams, siege catapults and the Warlord on his beast; war horn; Black Ring calls it off; victory blesses your land with fireflies.
 
@@ -32,7 +32,7 @@ A walled city of dark stone, about 1000–1400 blocks from home: a keep with the
 
 **Done:** the lore book — a Lore tab in the Goals panel that fills in as you learn. That finishes the story (7j).
 
-**Next:** the look and sound revamp (`docs/plan-look-and-sound.md`).
+**Next:** the look and sound revamp (`docs/history/plan-look-and-sound.md`).
 
 # Before that — Phase 6
 
@@ -92,7 +92,7 @@ The Sanctuary and the guardian (`tests/sanctuary.test.mjs`).
 - **Downed:** it goes back to its Sanctuary and returns after a day of play (900 s). It's saved with the world.
 
 ## Next — what's on the plan now
-1. **Look, feel and sound** (`docs/plan-look-and-sound.md`), asked for after the Sky city:
+1. **Look, feel and sound** (`docs/history/plan-look-and-sound.md`), asked for after the Sky city:
    - a showcase world to judge changes by;
    - colour, light and shadow where blocks meet;
    - 32×32 textures from real photos;
@@ -104,8 +104,8 @@ The Sanctuary and the guardian (`tests/sanctuary.test.mjs`).
 3. **The story (7j):** done.
 
 ## Earlier notes
-- **Phase 7:** the plan is in `docs/plan-phase7-lore.md`. Next up is 7e, the Stone Kingdom, or the white path.
-- **Playtest improvements:** from the user's own play session, in `docs/plan-playtest-improvements.md`:
+- **Phase 7:** the plan is in `docs/history/plan-phase7-lore.md`. Next up is 7e, the Stone Kingdom, or the white path.
+- **Playtest improvements:** from the user's own play session, in `docs/history/plan-playtest-improvements.md`:
   - P1: bed, painting spawn point, furnished houses;
   - P2: forest lighting;
   - P3: mob models, third-person avatar;

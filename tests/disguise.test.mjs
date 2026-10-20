@@ -5,7 +5,7 @@ import { Wanderers } from '../src/world/Wanderers.js';
 import { Suspicion, SUSPICION, REASONS, AMBUSH } from '../src/duilt/Suspicion.js';
 
 /**
- * Going home in disguise (docs/plan-phase7-lore.md): in the Sky armour you
+ * Going home in disguise (docs/history/plan-phase7-lore.md): in the Sky armour you
  * walk in as one of them; guards grow suspicious if you run, show dark
  * things, crowd them or linger — a suspicion meter, shown in the HUD and
  * never as a toast (asked for directly) — and if you're caught it's open

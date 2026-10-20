@@ -52,7 +52,7 @@ const foundKind = (kind) => (d) => !!d.foundPlaces?.().some((p) => p.kind === ki
  * Every goal in an age counts — an age is done when all of them are — and
  * none is a card you can tick from a later age early (achievements.js).
  * Ages 11 and 12 ask for what the game already has past the war; the new
- * stories of backlog batch 4 (docs/backlog-batch-4.md) will take their
+ * stories of backlog batch 4 (docs/history/backlog-batch-4.md) will take their
  * places as they land.
  */
 export const AGES = [

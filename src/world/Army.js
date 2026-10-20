@@ -2,7 +2,7 @@ import { groundAt } from './Mobs.js';
 import { stepAround } from './Defenders.js';
 
 /**
- * Your army, on the dark path (docs/plan-phase7-lore.md): the thousand
+ * Your army, on the dark path (docs/history/plan-phase7-lore.md): the thousand
  * warriors the Stone King grants you when you swear at his dark god's altar
  * with the Black Ring on your hand.
  *

@@ -4,7 +4,7 @@ import { ROOFS_BY_ID } from '../config/roofs.js';
 import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
 
 /**
- * The Sky Kingdom (the dark path, docs/plan-phase7-lore.md): where you come
+ * The Sky Kingdom (the dark path, docs/history/plan-phase7-lore.md): where you come
  * from — "a mystical floating island 5,000 blocks away. Its underside is
  * rock, with waterfalls pouring off its edge. On top are white marble halls
  * and gold roofs, with fireflies drifting over it ... Its great chains run

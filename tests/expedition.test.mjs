@@ -3,7 +3,7 @@ import { World } from '../src/world/World.js';
 import { Army, MARCH_DAYS, ON_FIELD } from '../src/world/Army.js';
 
 /**
- * The expedition (docs/plan-phase7-lore.md): from the map, send the army
+ * The expedition (docs/history/plan-phase7-lore.md): from the map, send the army
  * ahead to the Sky Kingdom. It marches on its own for days, still eating,
  * makes camp below the island, and holds there until you join it.
  */

@@ -2,7 +2,7 @@ import { hash01 } from './ChunkGen.js';
 import { BIOMES } from '../config/biomes.js';
 
 /**
- * The Stone Kingdom (Phase 7e, docs/plan-phase7-lore.md): "a walled city of
+ * The Stone Kingdom (Phase 7e, docs/history/plan-phase7-lore.md): "a walled city of
  * dark stone, placed by the world seed away from home ... walls with towers
  * and a gatehouse; streets; houses, a market, an armoury and barracks, in
  * the new dark style; a keep with the Stone King."

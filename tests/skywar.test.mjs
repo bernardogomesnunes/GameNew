@@ -13,7 +13,7 @@ import { CHAIN } from '../src/config/blocks.js';
 import { NEWS } from '../src/config/wanderers.js';
 
 /**
- * The dark path, losing (docs/plan-phase7-lore.md, Decision 2): "you're
+ * The dark path, losing (docs/history/plan-phase7-lore.md, Decision 2): "you're
  * driven back to your castle. The Sky Kingdom takes a quarter of what your
  * buildings make as taxes until you conquer it. Each failed attempt raises
  * the tax a step ... Warriors lost are replaced by the Stone King, in fewer

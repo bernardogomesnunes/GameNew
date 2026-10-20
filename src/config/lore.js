@@ -1,7 +1,7 @@
 import { TALES_BY_ID } from './tales.js';
 
 /**
- * The lore book (docs/plan-phase7-lore.md, 7j: "a lore book in the Goals
+ * The lore book (docs/history/plan-phase7-lore.md, 7j: "a lore book in the Goals
  * panel fills in as you learn: the two gods, the two kingdoms, and your
  * guardian").
  *

@@ -66,7 +66,7 @@ ok('the goals are not a settings card', !MENU_BY_ID.has('menu-achievements'));
   ok('settings holds the notifications, the world, the graphics, the controls and the files',
     plain.map((m) => m.id).join() === 'menu-notices,menu-world,menu-graphics,menu-controls,menu-files,menu-profile');
   // The switch has one thing behind it now: the showcase, a workshop tool
-  // for judging how the game looks (docs/plan-look-and-sound.md, section 1).
+  // for judging how the game looks (docs/history/plan-look-and-sound.md, section 1).
   ok('and none of it is behind a switch any more', plain.every((m) => !m.dev));
   ok('the only thing behind the switch is the showcase',
     withCloud.filter((m) => !plain.includes(m)).map((m) => m.id).join() === 'menu-showcase');

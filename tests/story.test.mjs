@@ -5,7 +5,7 @@ import { DuiltGame } from '../src/duilt/DuiltGame.js';
 import { INTRO, ENDINGS, ART, ART_W, ART_H, paint, endingFor } from '../src/ui/Story.js';
 
 /**
- * The story in pictures (docs/plan-phase7-lore.md, 7j): "a short
+ * The story in pictures (docs/history/plan-phase7-lore.md, 7j): "a short
  * illustrated intro on a new world — the Sky Kingdom glowing among its
  * fireflies, the Stone army at its chains, the fall, and the flight down
  * to the ground, arriving somewhere far from anywhere" — and "each path
