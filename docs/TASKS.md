@@ -32,6 +32,28 @@ quoted.
 
 ---
 
+## The big pieces still to come
+
+The large new parts of the game, each designed first and agreed with the
+owner before it's built:
+
+1. **Villagers who work**: a job board, you choose jobs, builders, haulers,
+   farmers, woodcutters, miners, cooks, all seen at work (3.3, JOBS-1 to
+   JOBS-10).
+2. **Making blocks, not just gathering them**: the quarry gives stone
+   only; a forge darkens, a bleach bucket lightens, carpentry tools for
+   furniture, a more hands-on crafting pop-up (3.1, CRAFT-1 to CRAFT-8).
+3. **A bigger world**: wider mountains and now and then a giant one,
+   bigger trees and plains, flatter deserts, deep caves with galleries and
+   ruins (3.4, WORLD-1 to WORLD-4).
+4. **Buildings with character**: organic shapes, mixed walls, house types
+   to choose from, the storybook look for every building (4, LOOK-1 to
+   LOOK-5).
+5. **The storage interface** on top of the storage controller (3.2,
+   STORE-1).
+6. **After that**: new peoples to raid, map marks, Battle mode with AI
+   rivals and then with friends, composting (5).
+
 ## Who's on what
 
 Open tasks only, by who takes them. The sections below have the details.
@@ -40,7 +62,7 @@ Open tasks only, by who takes them. The sections below have the details.
 - Saving: SAVE-2 to SAVE-6.
 - The new list, each designed first and agreed with the owner: block
   making CRAFT-1 to CRAFT-8, the storage interface STORE-1 and STORE-2,
-  villagers with jobs JOBS-1 to JOBS-4, the bigger world WORLD-1 to
+  villagers who work JOBS-1 to JOBS-10, the bigger world WORLD-1 to
   WORLD-4, creatures MOBS-1 and MOBS-2.
 - Buildings' looks: LOOK-1 to LOOK-5.
 - From earlier lists: OLD-1 to OLD-4, OLD-6 to OLD-8.
@@ -178,24 +200,47 @@ interactive pop-up looks like. Claude drafts it, the owner agrees.
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
 | STORE-1 | **Storage interface block**, set on top of the storage controller. Opens a list of every storehouse (and granary): name, how full, where it is. Tap one to see everything in it, and take or put things there. | Claude | M | to do |
-| STORE-2 | **Room for building in bulk.** Make sure a big build can draw on the stores without filling the bag (ties in with JOBS-2). | Claude | M | waiting |
+| STORE-2 | **Room for building in bulk.** Make sure a big build can draw on the stores without filling the bag (ties in with JOBS-3, builders). | Claude | M | waiting |
 
-### 3.3 Villagers with jobs
+### 3.3 Villagers who work
 
 > "To make everything more interesting we should have villagers doing
 > chores like building, and storing stuff. My idea is to have another
 > building right in the beginning that allows to give jobs to villagers.
 > This way we can make buildings way bigger."
 
+**What villagers do today** (checked in `src/duilt/Settlers.js`): every
+house after your own brings one villager. Each is sent, by the game, to the
+nearest building nobody works at, and walks between home and work. A
+building with a fed villager makes 50% more; one at the temple adds
+devotion. That's all: nobody carries anything, builds anything or does a
+chore you can see, and you can't choose who does what. Soldiers are trained
+at the barracks and are the one exception: they fight.
+
+**What it should become:** villagers you put to work, and can watch doing
+it. They carry, build, farm and fetch, so your buildings can be far bigger
+than you'd place block by block yourself.
+
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
-| JOBS-1 | **A job board building**, from the first ages, where you give villagers jobs. | Claude | M | waiting |
-| JOBS-2 | **Villagers who build**: they carry blocks from the stores and put up a design (or a big one) for you, block by block. | Claude | L | waiting |
-| JOBS-3 | **Villagers who haul**: they carry what buildings make to the storehouses, and from storehouses to where it's needed. | Claude | L | waiting |
-| JOBS-4 | **Bigger buildings** once villagers build them. | Claude | M | waiting |
+| JOBS-1 | **A job board**, a building from the first ages ("right in the beginning"). Its pop-up lists every villager: name, home, job, where they are now, and whether they're fed. | Claude | M | waiting |
+| JOBS-2 | **You choose the jobs.** Tap a villager on the board (or in the world) and give them a job and a place. Nobody left idle: anyone without one still goes to the nearest building, as today. | Claude | M | waiting |
+| JOBS-3 | **Builders.** You set down a design as a see-through plan; builders fetch the blocks from the storehouses and put it up, block by block, while you do something else. What's missing they say, the way "Craft what's missing" does. | Claude | L | waiting |
+| JOBS-4 | **Haulers** ("storing stuff"). They carry what buildings make to the storehouses and granary, and carry blocks to the builders. Decide: does production still appear in the stores at once when nobody hauls (as now), or wait for a hauler? | Claude | L | waiting |
+| JOBS-5 | **Farmers.** They sow, harvest and replant the fields, the farm's and your own farmland, and take the crop to the granary. | Claude | M | waiting |
+| JOBS-6 | **Woodcutters and miners.** They fell trees and plant saplings back; they dig in the quarry and the mine, so those grow by being worked, not only by your digging. | Claude | L | waiting |
+| JOBS-7 | **Cooks.** At the tavern, they turn the harvest into meals; villagers who eat meals work better than on raw vegetables. | Claude | M | waiting |
+| JOBS-8 | **Seen at work.** A villager holds the tool of their job, carries sacks and blocks, and hammers, digs or sows where they are. Tap one to hear what they're doing ("Taking 20 stone to the new hall"). | Claude | M | waiting |
+| JOBS-9 | **Bigger buildings.** Once builders exist, ready-made designs that are far larger (several storeys, wings, towers) and would take hours by hand. Ties in with LOOK-1 to LOOK-3 (organic shapes, house types, levels). | Claude | L | waiting |
+| JOBS-10 | **Enough people for it.** Today it's one villager a house, three in a townhouse. Decide whether jobs need more people (bigger homes, an inn, villagers arriving as the town grows) or fewer jobs each. | Claude + Owner | M | waiting |
 
-Today each settler is tied to one building for its +50% and walks between
-home and work; nobody carries anything.
+**Decide first (ASK-3):** which jobs, from which age, how fast builders and
+haulers are, and whether hauling replaces the stores filling by themselves.
+Claude drafts a short design with a picture of the job board, the owner
+agrees, then it's built in this order: JOBS-1 and JOBS-2 (the board,
+choosing jobs), JOBS-8 (seeing them work), JOBS-4 (haulers), JOBS-3
+(builders), then the rest. MOBS-1 (villagers stepping onto roofs) gets
+fixed first, since they'll be walking about a lot more.
 
 ### 3.4 A world at a bigger scale
 
@@ -382,7 +427,7 @@ keyboard up; the loading screens.
 |---|---|---|
 | ASK-1 | Saving works again (20 October). Only if it fails again: reconnect Neon so Claude can read the save failures. | SAVE-1 |
 | ASK-2 | Block making (3.1): which machines, which ages, how interactive. Claude drafts first. | CRAFT-* |
-| ASK-3 | The job board (3.3): what jobs, from which age, how many villagers per job. | JOBS-* |
+| ASK-3 | Villagers who work (3.3): which jobs, from which age, how fast builders and haulers are, whether hauling replaces the stores filling by themselves, and whether there should be more villagers. | JOBS-* |
 | ASK-4 | How high the giant mountain goes, and whether the world gets taller. | WORLD-1 |
 | ASK-5 | Who the wiki is for. | WIKI-3 |
 | ASK-6 | "Know the woods": should the Past's creatures count? | CL-5 |
@@ -812,7 +857,7 @@ scholar"). Its body says:
    then the rest of the pages and the item descriptions, part by part, with
    Cline helping.
 5. **The big new systems, one at a time, each designed first**: block
-   making (3.1), then villagers with jobs (3.3), then the bigger world
+   making (3.1), then villagers who work (3.3), then the bigger world
    (3.4).
 6. **Buildings' looks** (section 4), between the big pieces.
 7. **Under the hood** (section 11), a little at a time: checks on every
