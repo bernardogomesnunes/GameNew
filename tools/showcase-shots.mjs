@@ -38,12 +38,13 @@
  */
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const localModule = (path) => pathToFileURL(join(root, path)).href;
 const args = parseArgs(process.argv.slice(2));
 
-const { SHOWCASE_SPOTS, SHOWCASE_TIMES } = await import(join(root, 'src/world/showcase.js'));
+const { SHOWCASE_SPOTS, SHOWCASE_TIMES } = await import(localModule('src/world/showcase.js'));
 
 if (args.list) {
   for (const s of SHOWCASE_SPOTS) console.log(`${s.id.padEnd(28)} ${s.group.padEnd(10)} ${s.name}`);
@@ -68,7 +69,7 @@ mkdirSync(out, { recursive: true });
 let server = null;
 let url = args.url;
 if (!url) {
-  const { createServer } = await import(join(root, 'node_modules/vite/dist/node/index.js'));
+  const { createServer } = await import(localModule('node_modules/vite/dist/node/index.js'));
   const port = Number(args.port ?? 5199);
   // No hot reload: an edit saved mid-run would reload the page out from under it.
   server = await createServer({ root, logLevel: 'error', server: { port, strictPort: true, hmr: false, watch: null } });
@@ -76,7 +77,7 @@ if (!url) {
   url = `http://localhost:${port}/`;
 }
 
-const { chromium } = await import(join(root, 'node_modules/playwright/index.mjs'));
+const { chromium } = await import(localModule('node_modules/playwright/index.mjs'));
 const bundled = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const executablePath = process.env.CHROMIUM_PATH || (existsSync(bundled) ? bundled : undefined);
 const browser = await chromium.launch({

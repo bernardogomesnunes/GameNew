@@ -56,6 +56,7 @@ export const ITEMS = [
   // shapes.test.mjs's NATURAL set).
   { id: 'white_wood', name: 'White Wood', kind: 'raw', stackTo: STACK_BULK, color: 0xe8e0d0, glyph: 'log', block: 41, madeBy: 'Cut from birch trees' },
   { id: 'white_leaves', name: 'White Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0xd7e3ab, glyph: 'leaf', block: 42, madeBy: 'Stripped from birch trees' },
+  { id: 'pink_leaves', name: 'Pink Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0xf2b6cf, glyph: 'leaf', block: 517, madeBy: 'Gathered from pink-blossomed birch trees' },
   { id: 'dark_wood', name: 'Dark Wood', kind: 'raw', stackTo: STACK_BULK, color: 0x6b4a3a, glyph: 'log', block: 43, madeBy: 'Cut from the dark forest' },
   { id: 'dark_leaves', name: 'Dark Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x4a7a52, glyph: 'leaf', block: 44, madeBy: 'Stripped from the dark forest' },
   { id: 'lava', name: 'Lava', kind: 'raw', stackTo: STACK_GOODS, color: 0xe8672c, glyph: 'water', block: 45, madeBy: 'Scooped from a cavern' },
@@ -65,6 +66,8 @@ export const ITEMS = [
   // --- worked materials ----------------------------------------------------
   { id: 'planks', name: 'Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'planks', block: 7, madeBy: 'Sawn from wood' },
   { id: 'farmland', name: 'Turned Soil', kind: 'refined', stackTo: STACK_BULK, color: 0xc4986c, glyph: 'farmland', block: 21, madeBy: 'Dirt broken up for planting' },
+  { id: 'compost_bin', name: 'Compost Bin', kind: 'refined', stackTo: STACK_GOODS, color: 0x76523b, glyph: 'moss', block: 513, madeBy: 'Built from planks and leaves' },
+  { id: 'compost', name: 'Compost', kind: 'refined', stackTo: STACK_GOODS, color: 0x5c4030, glyph: 'moss', madeBy: 'Leaves and seeds mixed at a compost bin — place on a growing crop to advance it one stage' },
 
   // --- what the quarry, kiln and mine give back ----------------------------
   { id: 'cobblestone', name: 'Cobblestone', kind: 'raw', stackTo: STACK_BULK, color: 0xc8c6c2, glyph: 'cobble', block: 8, madeBy: 'Split from quarried stone' },

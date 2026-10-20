@@ -332,8 +332,12 @@ function houseBlocks() {
   // mossy, a curl of wood on each gable's tip, vines hanging from the eaves
   // and the chimney a course taller, as in the Mistamber cottage.
   const shell = room({ w: 5, h: 3, wall: WOOD, floor: PLANKS, roof: WOOD, tiles: TEAL, chimney: { h: 3, type: STONE } });
+  // A few plank infills break up the log walls while leaving ample solid wood
+  // for the House claim requirement. The off-centre upper windows and vines
+  // make this little cottage read as grown-in rather than perfectly squared.
+  const mixed = shell.map((b) => b.type === WOOD && b.dy > 0 && (b.dx + b.dz + b.dy) % 7 === 0 ? { ...b, type: PLANKS } : b);
   return [
-    ...hungUnderEaves(curledTips(mottled(shell, MINT, 0.35)), HANGING_VINES, 0.4),
+    ...hungUnderEaves(curledTips(mottled(mixed, MINT, 0.35)), HANGING_VINES, 0.4),
     // Somewhere to sleep, and a painting over it — where you wake after a
     // fall, once you've chosen it (playtest, P1).
     ...shifted([...bed(1, 1, 2, 2), { dx: 3, dy: 2, dz: 3, type: PAINTING + 2 }], 1, 1),
@@ -637,8 +641,11 @@ function townhouseBlocks() {
   // lantern and a painting. The room brings its own windows, front, back
   // and sides, and a chimney; the furniture sits a block in, inside the
   // eaves (see room).
-  const shell = room({ w: 8, h: 3, wall: PLANKS, floor: STONE, tiles: TILE, chimney: { h: 2 }, shutters: true, hood: true });
-  return [...shell, ...shifted([
+  // Brick infills alternate with plank walls; the corner posts stay timber,
+  // so this larger shared home has its own palette and framed look.
+  const shell = room({ w: 8, h: 3, wall: PLANKS, floor: STONE, tiles: LILAC, chimney: { h: 2 }, shutters: true, hood: true });
+  const mixed = shell.map((b) => b.type === PLANKS && b.dy > 0 && (b.dx * 3 + b.dz + b.dy) % 11 === 0 ? { ...b, type: BRICK } : b);
+  return [...mixed, ...shifted([
     ...bed(2, 1, 5, 2),
     ...bed(5, 1, 5, 2),
     { dx: 5, dy: 1, dz: 2, type: OAK_TABLE },
@@ -1254,6 +1261,60 @@ export const STARTER_DESIGNS = [
     blocks: monumentBlocks(),
   },
 ];
+
+// The first themed designs established the house, storehouse and market
+// motifs. Carry that visual language through the rest of the catalogue while
+// giving each roof its own pastel pairing. The transformation only replaces
+// block types at existing coordinates, preserving each design's block count.
+const ROOF_PAIRS = {
+  townhouse: [4, 2], townhall: [2, 4], tavern: [3, 4], workshop: [2, 3],
+  university: [4, 3], engineering: [3, 2], kiln: [2, 4], foundry: [4, 2],
+  granary: [3, 2], military: [2, 4], gatehouse: [4, 2], watchtower: [2, 3],
+  barracks: [3, 4], village: [3, 2], temple: [4, 2],
+  house: [2, 3], storehouse: [3, 2], market: [4, 3],
+};
+
+function storybookShell(blocks, structure) {
+  const [main, fleck] = ROOF_PAIRS[structure] ?? [2, 3];
+  return blocks.map((b) => {
+    const part = roofPart(b.type);
+    if (!part) return b;
+    // Larger, readable patches make the two-color roofs show from a distance.
+    const mat = speckle(b.dx, b.dy + 31, b.dz) < 0.34 ? fleck : main;
+    return { ...b, type: roofBlock({ mat, kind: part.kind, facing: part.facing }) };
+  });
+}
+
+// Timber posts break up broad plain walls on the larger houses and halls.
+// They replace existing wall blocks; no new cell is added to a design.
+const TIMBER_FRAME_STRUCTURES = new Set([
+  'house', 'storehouse', 'market', 'workshop', 'university', 'engineering',
+  'townhall', 'townhouse', 'tavern', 'granary', 'military', 'gatehouse',
+  'watchtower', 'barracks', 'village', 'temple',
+]);
+
+function timberFrame(blocks, structure) {
+  if (!TIMBER_FRAME_STRUCTURES.has(structure)) return blocks;
+  const occupied = new Set(blocks.map((b) => `${b.dx},${b.dy},${b.dz}`));
+  const solid = blocks.filter((b) => !roofPart(b.type));
+  const minX = Math.min(...solid.map((b) => b.dx)), minZ = Math.min(...solid.map((b) => b.dz));
+  const at = (x, y, z) => occupied.has(`${x},${y},${z}`);
+  return blocks.map((b) => {
+    if (b.dy < 1 || b.dy > 4 || ![PLANKS, STONE, COBBLE].includes(b.type)) return b;
+    const frontOrBack = (!at(b.dx, b.dy, b.dz - 1) || !at(b.dx, b.dy, b.dz + 1)) && (b.dx - minX) % 3 === 0;
+    const side = (!at(b.dx - 1, b.dy, b.dz) || !at(b.dx + 1, b.dy, b.dz)) && (b.dz - minZ) % 3 === 0;
+    return frontOrBack || side ? { ...b, type: WOOD } : b;
+  });
+}
+
+for (const design of STARTER_DESIGNS) {
+  const occupiedBefore = new Set(design.blocks.map((b) => `${b.dx},${b.dy},${b.dz}`)).size;
+  if (!['mine', 'farm', 'pen'].includes(design.structure)) {
+    design.blocks = timberFrame(storybookShell(design.blocks, design.structure), design.structure);
+  }
+  const occupiedAfter = new Set(design.blocks.map((b) => `${b.dx},${b.dy},${b.dz}`)).size;
+  if (occupiedAfter !== occupiedBefore) throw new Error(`Whimsical styling changed the occupied block count for ${design.id}`);
+}
 
 // The real bounding box of each design's blocks. Claiming a cube instead would
 // wrap a house in an empty layer and break the "is it sealed?" test.

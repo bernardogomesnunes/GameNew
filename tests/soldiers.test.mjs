@@ -5,7 +5,8 @@ import { DuiltGame } from '../src/duilt/DuiltGame.js';
 import { Defenders, TRAIN_DAYS } from '../src/world/Defenders.js';
 import { UNITS, UNITS_BY_ID, unitCost, foodIn } from '../src/config/soldiers.js';
 import { ITEMS_BY_ID } from '../src/config/items.js';
-import { OUTFITS } from '../src/config/outfits.js';
+import { outfitOf } from '../src/config/outfits.js';
+import { STRUCTURES_BY_ID } from '../src/config/structures.js';
 
 /**
  * Backlog batch 3, #29: "Barracks train soldiers. Archers, warriors,
@@ -20,14 +21,14 @@ const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8'
 
 // --- who there is ----------------------------------------------------------------------------
 
-ok('warriors, swordsmen, archers and a catapult crew', UNITS.map((u) => u.name).join() === 'Warrior,Swordsman,Archer,Catapult crew');
+ok('warriors, swordsmen, archers, a catapult crew and a spear guard', UNITS.map((u) => u.name).join() === 'Warrior,Swordsman,Archer,Catapult crew,Spear guard');
 ok('each costs food and gear — real things you can hold', UNITS.every((u) => u.food > 0 && Object.keys(u.gear).length && Object.keys(u.gear).every((id) => ITEMS_BY_ID.has(id))));
 ok('archers take a bow and arrows; a crew, a catapult and stones to throw',
   UNITS_BY_ID.get('archer').gear.bow && UNITS_BY_ID.get('archer').gear.arrow && UNITS_BY_ID.get('crew').gear.catapult && UNITS_BY_ID.get('crew').gear.stone);
 ok('a swordsman is worth more than a warrior: tougher, harder-hitting, dearer',
   UNITS_BY_ID.get('swordsman').hp > UNITS_BY_ID.get('warrior').hp && UNITS_BY_ID.get('swordsman').melee.hits > UNITS_BY_ID.get('warrior').melee.hits
   && UNITS_BY_ID.get('swordsman').food > UNITS_BY_ID.get('warrior').food);
-ok('each drawn as itself — and none as the Stone Kingdom\'s own warriors', UNITS.every((u) => OUTFITS[u.kind] && u.kind !== 'warrior'));
+ok('each drawn as itself — and none as the Stone Kingdom\'s own warriors', UNITS.every((u) => outfitOf({ kind: u.kind, unit: u.id }) && u.kind !== 'warrior'));
 
 // --- training them at a barracks -------------------------------------------------------------
 
@@ -60,6 +61,16 @@ function setup() {
   ok('and fewer bunks, fewer soldiers', !g.trainSoldier({ ...b, id: 8 }, 'archer', 0).ok);
   ok('only a standing barracks trains', !g.trainSoldier({ ...b, valid: false }, 'archer', 6).ok && !g.trainSoldier({ ...b, type: 'house' }, 'archer', 6).ok);
 
+  const garrison = { ...b, id: 9, type: 'military' };
+  g.inventory.add('fruit', 8); g.inventory.add('weapon_rack', 1);
+  const guard = g.trainSoldier(garrison, 'shield_guard', 6);
+  ok('a Garrison trains a requested spear guard, charging food and a weapon rack', guard.ok && g.defenders.barracks(9).queue.join() === 'shield_guard' && g.inventory.countOf('weapon_rack') === 0);
+  ok('a Garrison refuses other units', !g.trainSoldier({ ...garrison, id: 10 }, 'warrior', 6).ok);
+  const posted = new Defenders({ world: g.world });
+  posted.order(9, 'shield_guard', 0);
+  posted.sync([{ id: 9, type: 'military', region: b.region, valid: true, beds: 1 }], TRAIN_DAYS * 1.01);
+  ok('Garrison guards finish training and stand outside their post', posted.soldiers.length === 1 && posted.soldiers[0].unit === 'shield_guard' && posted.soldiers[0].kind === 'shield_guard');
+
   // They join one at a time.
   const d = g.defenders, post = [{ id: 7, type: 'barracks', region: b.region, valid: true, beds: 6 }];
   d.sync(post, g.days + TRAIN_DAYS * 0.5);
@@ -77,6 +88,9 @@ function setup() {
   back.sync(post, g.days + TRAIN_DAYS * 6.01);
   ok('saved: the same soldiers, the same kinds', back.soldiers.map((s) => s.unit).sort().join() === d.soldiers.map((s) => s.unit).sort().join());
 }
+
+ok('the Garrison no longer produces stone or planks', Object.keys(STRUCTURES_BY_ID.get('military').produces ?? {}).length === 0);
+ok('the Garrison unit is visibly equipped with a spear and shield', outfitOf({ kind: 'shield_guard', unit: 'shield_guard' })?.gear === 'spear' && outfitOf({ kind: 'shield_guard', unit: 'shield_guard' })?.shield === true);
 
 {
   // A save from before you chose who to train: its soldiers come back as swordsmen.
@@ -203,10 +217,11 @@ ok('the pop-up lists who is in training, in order, the first with a filling bar 
 ok('  read off the clock: done / TRAIN_DAYS, and the time that leaves',
   /\(d\.days - t\.since\) \/ TRAIN_DAYS/.test(ui) && /min left/.test(ui) && /Done — out when you close this/.test(ui));
 ok('and each one out of training says so, with how many are still in line',
-  /for \(const j of d\.defenders\.sync\(posts, d\.days\)\)/.test(game) && /is ready`/.test(game) && /more training at the barracks/.test(game));
+  /for \(const j of d\.defenders\.sync\(posts, d\.days\)\)/.test(game) && /is ready`/.test(game) && /more in training at the \$\{postName\}/.test(game));
 ok('  and kept moving while it is open, redrawn when one comes out', /setInterval\(\(\) => this\.tickBarracks\(\), 500\)/.test(ui)
   && /if \(shape !== this\.barracksShape\) return void this\.showBuilding/.test(ui) && /clearInterval\(this\.barracksTimer\)/.test(ui));
 ok('the game pays and puts them in line, counting the bunks', /onTrain: \(unit\) => this\.trainSoldier\(structure, unit\)/.test(game) && /this\.duilt\.trainSoldier\(structure, unit, this\.bedsIn\(structure\.region\)\)/.test(game));
+ok('the Garrison shows its training queue and offers spear guards', /structure\.type === 'barracks' \|\| structure\.type === 'military' \? this\.barracksHtml\(structure\)/.test(ui) && /structure\.type === 'military' \? UNITS\.filter\(\(u\) => u\.id === 'shield_guard'\)/.test(ui));
 ok('a crew\'s stone lands on the enemy, and only hurts them', /lob: \(engine, target, crew\) => this\.crewThrows\(engine, target, crew\)/.test(game) && /if \(stone\.crew\) \{/.test(game));
 ok('and its catapult is drawn', /this\.engineView\.update\(ours\?\.engines \?\? \[\]\)/.test(game));
 

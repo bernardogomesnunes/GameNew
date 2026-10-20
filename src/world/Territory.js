@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /** Logs and leaves of every kind of tree — see buildEdgeStroke. */
-const TREE_BLOCKS = new Set([4, 5, 41, 42, 43, 44]);
+const TREE_BLOCKS = new Set([4, 5, 41, 42, 43, 44, 517]);
 
 /**
  * How much of the world you're allowed to touch.

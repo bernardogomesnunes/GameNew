@@ -46,7 +46,7 @@ const wall = (id) => {
 ok('leaves deep in a canopy are darker than its rim', /buried\+\+/.test(mesher) && /LEAF_BURIED \* buried/.test(mesher));
 ok('and those with canopy over their heads', /vol\[idx \+ 2 \* S\[1\]\] > 0 \? LEAF_UNDER_CANOPY/.test(mesher));
 ok('each tree leans its own way in hue', /hashInt\(x >> 2, z >> 2\)/.test(mesher));
-ok('every kind of leaf, not just oak', /for \(const id of \[5, 42, 44\]\) LEAFY\[id\] = 1/.test(mesher));
+ok('every kind of leaf, including blossom', /for \(const id of \[5, 42, 44, 517\]\) LEAFY\[id\] = 1/.test(mesher));
 ok('faces inside a canopy still merge, so a forest costs little more to draw', /if \(face && LEAFY\[self\] && other === AIR\) face \|= EXPOSED/.test(mesher) && /const single = id & EXPOSED/.test(mesher));
 
 process.exit(f ? 1 : 0);

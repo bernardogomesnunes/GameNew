@@ -24,9 +24,9 @@ const MAX = 64;
  * tool in hand"), all one instanced mesh, this many slots a person. A part
  * someone hasn't got is scaled to nothing.
  */
-const SLOTS = 17;
+const SLOTS = 19;
 const EYE_L = 0, EYE_R = 1, MOUTH = 2, HAND_L = 3, HAND_R = 4, BOOT_L = 5, BOOT_R = 6, BELT = 7,
-  HAT = 8, HAT_EXTRA = 9, PLUME = 10, CAPE = 11, BEARD = 12, GEAR = 13, GEAR_2 = 14, EAR_L = 15, EAR_R = 16;
+  HAT = 8, HAT_EXTRA = 9, PLUME = 10, CAPE = 11, BEARD = 12, GEAR = 13, GEAR_2 = 14, EAR_L = 15, EAR_R = 16, SHIELD = 17, SHIELD_BOSS = 18;
 const EYE = 0x231c22, BOOT = 0x3a2a20, BELT_LEATHER = 0x2e2620, STEEL = 0xc9ced6, WOOD = 0x6b4a2e, GOLD = 0xe8c04f;
 const NOTHING = new THREE.Matrix4().makeScale(0, 0, 0);
 const HEAD_PARTS = new Set([EYE_L, EYE_R, MOUTH, HAT, HAT_EXTRA, PLUME, BEARD, EAR_L, EAR_R]);
@@ -352,6 +352,10 @@ export class SettlerView {
       onLimb(GEAR, limbArm[1], armTop, armR, hand, 0.06, 0.05, 0.95, 0.06, 0x7a5232);
       onLimb(GEAR_2, limbArm[1], armTop, armR, hand, -0.05, 0.012, 0.88, 0.012, 0xe8e2d0);
     } else { none(GEAR); none(GEAR_2); }
+    if (o.shield) {
+      onLimb(SHIELD, limbArm[0], armTop, armL, -armLen * 0.55, 0.1, width * 0.46, bodyH * 0.72, width * 0.14, 0x8f4d33);
+      put(SHIELD_BOSS, -width * 0.64, legH + bodyH * 0.55, width * 0.18, width * 0.16, width * 0.16, 0.05, 0xc9a85d);
+    } else { none(SHIELD); none(SHIELD_BOSS); }
   }
 
   /** A person's coat colour this frame: their own, flashing when struck. */

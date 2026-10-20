@@ -64,5 +64,6 @@ export const OUTFITS = {
 
 /** What someone wears — their kind's outfit, or nothing special. */
 export function outfitOf(person) {
+  if (person?.unit === 'shield_guard') return { hat: 'helm', visor: true, gear: 'spear', shield: true };
   return OUTFITS[person?.kind] ?? null;
 }

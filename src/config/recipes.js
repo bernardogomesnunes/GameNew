@@ -4,6 +4,7 @@ import { tieredRecipes } from './tiers.js';
 import { SKILLS, MAX_LEVEL } from './skills.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 import { FURNITURE_ITEM } from './items.js';
+import { CROPS } from './crops.js';
 
 /**
  * What you can make, and where you can make it.
@@ -19,6 +20,11 @@ import { FURNITURE_ITEM } from './items.js';
  */
 
 export const RECIPES = [
+  {
+    id: 'compost_bin', name: 'Compost Bin', station: 'hand', age: 2,
+    inputs: { planks: 6, leaves: 4 }, output: { id: 'compost_bin', count: 1 },
+    blurb: 'A small cabinet for turning fallen leaves and spare seeds into rich compost.',
+  },
   {
     // Backlog batch 2: tools are named for what they're made of, and there
     // is no wooden axe — the first axe is stone. The ids stay, so the axe in
@@ -159,7 +165,7 @@ export const RECIPES = [
   // --- Age 2: what stone is good for --------------------------------------
   {
     id: 'cobblestone',
-    name: 'Split stone',
+    name: 'Cobblestone',
     station: 'hand',
     age: 3,
     inputs: { stone: 1 },
@@ -342,7 +348,7 @@ export const RECIPES = [
   },
   {
     id: 'planks_fine',
-    name: 'Dress planks',
+    name: 'Planks',
     station: 'workshop',
     age: 4,
     inputs: { wood: 1 },
@@ -439,7 +445,7 @@ export const RECIPES = [
     // table is made from this (reported directly: "Marble table is needed
     // for the temple but I can't build it from the bench").
     id: 'marble',
-    name: 'Dress marble',
+    name: 'Marble',
     station: 'workshop',
     age: 4,
     inputs: { stone: 4 },
@@ -1507,6 +1513,14 @@ export const RECIPES = [
     blurb: 'A jar of fireflies you caught, set in a frame. A soft green light, the way the Sky Kingdom lights its paths.',
   },
 ];
+
+// Seeds are distinct inventory items, so each crop can be composted without
+// inventing an ingredient-substitution rule for the recipe system.
+for (const crop of CROPS) RECIPES.push({
+  id: `compost_${crop.kind}`, name: `Compost — ${crop.name} Seeds`, station: 'compost', age: 2,
+  inputs: { leaves: 4, [`seeds_${crop.kind}`]: 1 }, output: { id: 'compost', count: 1 },
+  blurb: 'Mix four leaves with a spare seed. Place the compost on a growing crop to move it ahead one stage.',
+});
 
 // Furniture in every wood (backlog batch 3): each oak piece's recipe again,
 // where it's made and for as much, in white or dark planks.

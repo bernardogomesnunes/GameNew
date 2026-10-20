@@ -15,7 +15,7 @@ let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
 // A real generated world, all of a 256 border loaded.
-const TREES = new Set([4, 5, 41, 42, 43, 44]);
+const TREES = new Set([4, 5, 41, 42, 43, 44, 517]);
 const world = new World({ height: 120, gen: new ChunkGen({ seed: 11 }) });
 for (let cx = -10; cx <= 10; cx++) for (let cz = -10; cz <= 10; cz++) world.getChunk(cx, cz);
 // The ground in a column, found the slow way: down from the sky.

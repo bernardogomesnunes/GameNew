@@ -75,7 +75,7 @@ const GOAL_WORDS = {
   book_half: { icon: '📖', description: 'Goals → Book. Every item you\'ve ever held counts.' },
   cube_open: { icon: '🌀', description: 'Your Sanctuary\'s pop-up opens the way once the war is won, or the sky has fallen.' },
   god_done: { icon: '⚡', description: 'Kill him — or take the wand from the chest on his altar and get to the Way Out alive.' },
-  past: { icon: '⏳', description: 'Build a time machine at an engineering centre, set it down and Place on it.' },
+  past: { icon: '⏳', description: 'Build a time machine at an engineering centre, set it down, then choose To the Past.' },
   hatch: { icon: '🥚', description: 'Bring an egg back from the Past and set it down. Two days later, it hatches.' },
 };
 

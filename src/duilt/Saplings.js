@@ -24,7 +24,7 @@ export const GROW_DAYS = 10;
 const OAK = { trunk: [4, 6], canopy: 2, wood: 4, leaves: 5 };
 
 /** Wild wood and leaves of every kind: a crown can grow into another tree's. */
-const TREE_BLOCKS = new Set([4, 5, 41, 42, 43, 44]);
+const TREE_BLOCKS = new Set([4, 5, 41, 42, 43, 44, 517]);
 
 export class Saplings {
   constructor() {
