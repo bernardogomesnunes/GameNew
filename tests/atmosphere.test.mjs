@@ -5,7 +5,7 @@ import { daylightAt } from '../src/render/DayCycle.js';
 import { DEFAULTS as DEFAULT_GRAPHICS } from '../src/render/graphics.js';
 
 /**
- * The look revamp, light and air (docs/plan-look-and-sound.md, sections 2
+ * The look revamp, light and air (docs/history/plan-look-and-sound.md, sections 2
  * and 4) — asked for directly: "we need to improve the visuals, it's
  * imperative". Tone mapping and a saturation lift; a warmer sun and cooler
  * shade; a sky that's deeper blue overhead and gold round a setting sun; mist

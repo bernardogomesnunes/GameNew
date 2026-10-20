@@ -923,7 +923,7 @@ BLOCKS.push(
 // require new blocks and lights", with four pictures — a mossy cottage in
 // mint and teal shingles with curled eaves, a teal-roofed tower house, a
 // mushroom house hung with wisteria and fairy lights, a hut with red
-// spotted mushrooms growing out of its roof; see docs/claude-tasks.md).
+// spotted mushrooms growing out of its roof; see docs/history/claude-tasks.md).
 // Mushroom caps and their stem, stained glass, vines and wisteria hanging
 // from what's above them, a string of fairy lights, and a curl of wood for
 // a gable's tip. The roof tiles are with the others, above.

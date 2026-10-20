@@ -1,5 +1,5 @@
 /**
- * Armour and the ring (Phase 7b, docs/plan-phase7-lore.md).
+ * Armour and the ring (Phase 7b, docs/history/plan-phase7-lore.md).
  *
  * Five things you wear, apart from the bag: head, body, legs, feet (the
  * boots came with the playtest list, P6), and one ring.

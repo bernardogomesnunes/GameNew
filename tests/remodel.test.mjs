@@ -4,7 +4,7 @@ import { OUTFITS, outfitOf } from '../src/config/outfits.js';
 import { WANDERERS } from '../src/config/wanderers.js';
 
 /**
- * The look revamp, section 5 (docs/plan-look-and-sound.md): animals rounder
+ * The look revamp, section 5 (docs/history/plan-look-and-sound.md): animals rounder
  * and with more to them; people with faces, hands and boots, and outfits
  * that say who they are, with something in hand. Asked for directly: "we need
  * to improve the visuals, it's imperative".

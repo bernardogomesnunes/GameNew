@@ -41,7 +41,7 @@ export const TEAL = roofBlock({ mat: 2 }), MINT = roofBlock({ mat: 3 }), LILAC =
 
 // ---- the storybook look ---------------------------------------------------------
 // Asked for directly: buildings "need to fit more the mood and vibe of the
-// mobs whimsical and mystical", after four pictures (docs/claude-tasks.md,
+// mobs whimsical and mystical", after four pictures (docs/history/claude-tasks.md,
 // item 9), then "build the house, the marketplace and the storehouse with
 // this new style". What the pictures share, as things a design can do to
 // itself once it stands: a roof patched in two colours so it reads mossy,

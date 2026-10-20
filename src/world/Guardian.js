@@ -1,7 +1,7 @@
 import { groundAt } from './Mobs.js';
 
 /**
- * The guardian (Phase 7d, docs/plan-phase7-lore.md): what your god sends
+ * The guardian (Phase 7d, docs/history/plan-phase7-lore.md): what your god sends
  * when you raise its Sanctuary, tamed to you.
  *
  *   white  Aurelion, a great stag of light — fast, and heals you while

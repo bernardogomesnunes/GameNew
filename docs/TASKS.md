@@ -5,19 +5,21 @@ a complete task document, with every idea and thing we discussed to do
 there listed. This way we can divide the work through different ways. Make
 sure we don't forget anything from the past."
 
-This is the one list to plan from. It was put together on 20 October 2026
-from every planning doc in `docs/`, every message in the chat since
-6 October, and the owner's "Adding changes" list. The older docs stay as
-the history and the detailed briefs (see the end), but **this** is where
-something is added, given to someone, or ticked off.
+**This is the one and only tasks file** (asked for directly: "I'd like to
+have one and only tasks file, and then inside you can divide which ones are
+for you or not"). It was put together on 20 October 2026 from every
+planning doc, every message in the chat since 6 October, and the owner's
+"Adding changes" list. Everything to do, for everyone, is here, Cline's
+full briefs included (section 11). The old planning docs are in
+`docs/history/`, for reference only: nothing is added or ticked off there.
 
 ## How to read it
 
 - **ID**: use it to talk about a task, in the chat, a commit or a PR.
 - **Who**: who it suits best.
   - **Claude**: needs the whole codebase, a design, or a browser check.
-  - **Cline**: small, self-contained, a brief already written
-    (`docs/cline-tasks.md`), under about 30 minutes.
+  - **Cline**: small, self-contained, a brief already written (section
+    11), under about 30 minutes.
   - **Owner**: a decision, a test on the phone, or something only you can
     reach (Neon, Vercel, Cline's settings).
 - **Size**: S (under an hour), M (a session), L (several sessions or PRs).
@@ -27,6 +29,36 @@ something is added, given to someone, or ticked off.
 When something lands: change its status here, with the PR. When something
 new is asked for: add it to the right section with the owner's words
 quoted.
+
+---
+
+## Who's on what
+
+Open tasks only, by who takes them. The sections below have the details.
+
+**Claude**
+- Saving: SAVE-2, SAVE-3, SAVE-4, SAVE-5.
+- The new list, each designed first and agreed with the owner: block
+  making CRAFT-1 to CRAFT-8, the storage interface STORE-1 and STORE-2,
+  villagers with jobs JOBS-1 to JOBS-4, the bigger world WORLD-1 to
+  WORLD-4, creatures MOBS-1 and MOBS-2.
+- Buildings' looks: LOOK-1 to LOOK-5.
+- From earlier lists: OLD-1 to OLD-4, OLD-6, OLD-7.
+- The wiki and the words: WIKI-1, WIKI-2, WIKI-4, COPY-1 to COPY-3.
+- Housekeeping: HOUSE-1 (once the owner agrees), HOUSE-4.
+- Reviewing each of Cline's pull requests before the owner merges it.
+
+**Cline** (briefs in section 11)
+- CL-8 first (the test task), then CL-9, CL-10, CL-11, CL-2, CL-3, CL-4,
+  CL-6, CL-7, CL-12, CL-13, CL-14. CL-5 waits on the owner.
+- Later, once their briefs are written: COPY-2 and COPY-3 in small batches.
+
+**Owner**
+- Try things on the phone: section 2 (NOW-1 to NOW-15) and section 9.
+- Decide: ASK-1 to ASK-8 (section 10), Battle balance (OLD-5), who the
+  wiki is for (WIKI-3).
+- Note strange descriptions as you find them (COPY-4).
+- Cline's settings on your computer (HOUSE-3).
 
 ---
 
@@ -86,7 +118,7 @@ browser, none on a real iPhone.
 
 | ID | What | PR |
 |---|---|---|
-| NOW-1 | **Storage controller takes things too**: your bag is in its pop-up; tap a stack to put it away. On desktop: the storehouse and controller pop-ups in two columns, each scrolling on its own; pop-ups you drag by the title bar; the bag (I) opens beside them; drag stacks between them. | in progress (pushed, tests running) |
+| NOW-1 | **Storage controller takes things too**: your bag is in its pop-up; tap a stack to put it away. On desktop: the storehouse and controller pop-ups in two columns, each scrolling on its own; pop-ups you drag by the title bar; the bag (I) opens beside them; drag stacks between them. | #222 |
 | NOW-2 | Forging the ring moves you to Age 8 at once; a world stuck at the end of an age moves on as it opens. | #221 |
 | NOW-3 | Placing a mine puts it 91 blocks down, dug out, with a spiral stair up to the surface. | #220 |
 | NOW-4 | Tap a trader (or anyone who talks) where they are on screen, not only with the crosshair. | #219 |
@@ -220,8 +252,8 @@ Phone frame rate is the limit to watch.
 
 ## 6. Cline's queue
 
-Each has a full brief in `docs/cline-tasks.md`. One branch and one PR
-each; Claude reviews and the owner merges.
+Each has a full brief in section 11. One branch and one PR each; Claude
+reviews and the owner merges.
 
 | ID | What | Size | Status |
 |---|---|---|---|
@@ -296,8 +328,8 @@ read today:
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
 | HOUSE-1 | **Old branches to delete**: `cline-test` (merged as #212), `claude/backlog-batch-3-update`, `claude/debug-overlay`, `claude/mob-models-blender`, `claude/stoic-dirac-yky1hi`. Check each has nothing unmerged first. | Claude, Owner agrees | S | waiting |
-| HOUSE-2 | **Retire the old planning docs** into a `docs/history/` folder, leaving this file and the Cline briefs at the top. | Claude | S | to do |
-| HOUSE-3 | **Cline's settings** (on the owner's computer): auto-approve with a cap, Plan then Act, a strong model, the custom instructions. See the top of `docs/cline-tasks.md`. LM Studio wasn't working: set it up together if still wanted. | Owner | S | waiting |
+| HOUSE-2 | **One tasks file**: the old planning docs moved to `docs/history/`, Cline's briefs folded into section 11. | Claude | S | done |
+| HOUSE-3 | **Cline's settings** (on the owner's computer): auto-approve with a cap, Plan then Act, a strong model, the custom instructions. See section 11. LM Studio wasn't working: set it up together if still wanted. | Owner | S | waiting |
 | HOUSE-4 | **The full test suite takes about 10 minutes now** (7,200 checks). Find the slowest files and speed them up, so a PR waits less. Some timing checks fail now and then on a busy machine; make them steadier. | Claude | M | to do |
 
 ---
@@ -306,7 +338,7 @@ read today:
 
 Things that exist but you haven't told us you've tried. Some were seen
 working in a test browser, some only by the automated tests; the longer
-version, saying which, is in `docs/status-and-testing.md`.
+version, saying which, is in `docs/history/status-and-testing.md`.
 
 **Recent (section 2):** NOW-1 to NOW-15.
 
@@ -355,6 +387,384 @@ keyboard up; the loading screens.
 
 ---
 
+## 11. For Cline: how to work, and the briefs
+
+Cline: your tasks are the CL ones in "Who's on what" at the top, in that
+order. Do **one** at a time: its own branch and its own pull request. When
+it's merged, the owner (or Claude) marks it done in section 6. CL-1 is done
+(#212).
+
+### Cline's settings (for the owner, not the agent)
+
+Things to set in Cline on your computer. They can't live in the repo.
+
+1. **Auto-approve:** turn it on for reading files, editing files and safe
+   commands, with a request cap of about 50. Without it, Cline stops before
+   every step and waits for a click, so a task left running overnight
+   mostly sits idle.
+2. **Plan, then Act:** start each task in Plan mode, approve the plan, then
+   switch to Act. A wrong approach is caught before it costs hours.
+3. **Model:** pick a strong one. A small or local model loops and redoes
+   work, which is slower overall.
+4. **Custom instructions:** paste this into Cline's settings:
+
+   > Be fast and minimal. Follow .clinerules exactly. Plan in three lines
+   > before editing. Run only the test file you changed until the end. If
+   > you're stuck for two attempts or 45 minutes, stop and tell me what's
+   > blocking. Never read files over 1,000 lines whole.
+
+### Before you start
+
+- **The game:** Duilt, a voxel sandbox in plain JavaScript and Three.js. No
+  framework, no TypeScript. Config lives in `src/config/`, the world in
+  `src/world/`, the main loop in `src/Game.js` (big; search it rather than
+  read it).
+- **Run it:** `npm install`, then `npm run dev:offline` and open
+  `http://localhost:5173`. Offline mode needs no account or database.
+- **Tests:** while you work, run only the file you changed:
+  `node tests/<name>.test.mjs`. It takes under a second. `node tests/run.mjs`
+  runs every test (about 7,200 checks, about 10 minutes); run it once, at the
+  end. A test file prints
+  `PASS`/`FAIL` lines and exits non-zero on a failure. There's no test
+  framework; copy the style of the file you're in.
+- **Code style:** match the file you're in. Comments explain *why*, in plain
+  English, and often quote what the owner asked for ("asked for directly:
+  ..."). Use short names and no new dependencies.
+
+### Rules
+
+- Work on a new branch and open a pull request. **Don't merge it**; the owner
+  reviews and merges. Merging to `main` deploys the live game.
+- **Never touch the database** (Neon). Don't run queries or migrations, and
+  don't change `src/net/` (accounts and cloud saves), `db/` or `migrations/`.
+- **Never commit `.env`** or any key, token or password.
+- **Never use real people's or real worlds' names** in tests or sample
+  data. Use labels like "Test world 1".
+- Run the whole suite once before you open the PR. It must end
+  `... passed, 0 failed`.
+- No browser check unless the task asks for one.
+- In the PR description, say what you checked and what you didn't. Don't
+  claim something works if you didn't see it work.
+
+---
+
+### CL-2: futurians mention the Archive only until you've read it
+
+**Why:** the Future's people say a fixed set of lines (`FUTURIAN_TALK` in
+`src/config/talk.js`). One of them points you to the Archive, and they keep
+saying it after you've read it.
+
+**What to do:**
+
+- Pass whether the Archive has been read into `talkLine` (the one call is in
+  `src/Game.js`; search `talkLine({`).
+- Once it's read, futurians use a second, short list instead of the
+  "go to the Archive" line, e.g. "So you've read the Archive? Then you know
+  more than most of us."
+- Keep `talkLine` pure: it takes what it needs as arguments and reads no
+  globals.
+
+**Tests:** extend `tests/future.test.mjs` (there's already a futurian talk
+check). Before reading, some line mentions the Archive. After reading, none
+of the "go to it" lines comes up over several turns.
+
+**Done when:** `node tests/future.test.mjs` and `node tests/talk.test.mjs`
+pass, then the full suite once. No browser check needed.
+
+---
+
+### CL-3: the Age 12 "Travel to the Past" card is out of date
+
+**Why:** the card's description in `src/config/achievements.js`
+(`GOAL_WORDS.past`) says "set it down and Place on it". The machine's pop-up
+now offers **To the Past** and **To the Future**, so the card should say to
+pick the Past.
+
+**What to do:**
+
+- Reword that one description.
+- Search `src/` and `tests/` for anything else that says the same thing.
+  Today no test checks this wording.
+- Add one check to `tests/twelveages.test.mjs` that the card mentions
+  **To the Past**.
+
+It's a one-line change; what it tests is whether the agent looks before it
+edits and leaves a test behind.
+
+**Done when:** `node tests/twelveages.test.mjs` passes, then the full suite
+once. No browser check needed.
+---
+
+### CL-4: secrets show up the moment you earn them
+
+**Why:** achievements, secrets included, are only checked when something
+happens: a block placed or broken, a building claimed, a place found
+(`src/gamification/GamificationEngine.js`, `checkAchievements`). Travelling
+in time, reading the Archive or hatching an egg isn't one of those
+moments, so "Both ways" and "Tomorrow's scholar" only pop up after your
+next block.
+
+**What to do:** in `src/Game.js`, call `this.gamification?.checkAchievements(null)`
+at the end of `travelPast`, `travelFuture`, `readArchive` and `hatchEggs`
+(the last only when an egg actually hatched). Search for each name; don't
+read the file whole.
+
+**Tests:** in `tests/future.test.mjs` (it already reads `Game.js` as text),
+check each of those four functions calls it. Copy the style of the regex
+checks already there.
+
+**Done when:** `node tests/future.test.mjs` and `node tests/past.test.mjs`
+pass, then the full suite once. About 20 minutes.
+
+---
+
+### CL-5: "Know the woods" counts only the animals of home
+
+**Why:** the secret "Know the woods" (`s_woods` in `src/config/secrets.js`)
+asks for one of every animal in `MOBS`. Since time travel, `MOBS` includes
+the raptor, triceratops, long-neck and the Basilisk, so the secret now
+quietly needs a trip to the Past. Its hint says "Every creature that walks
+these lands".
+
+**Owner's call:** if you'd rather the Past's creatures count, skip this
+task.
+
+**What to do:** count only animals whose `biomes` are all present-day ones.
+A biome belongs to another time when its entry in `src/config/biomes.js`
+has an `era` (look up `BIOMES_BY_ID`). Don't list the animal ids by hand:
+new ones should be picked up by themselves.
+
+**Tests:** `tests/secrets.test.mjs` has "Know the woods: every animal".
+Make it hunt only the present-day ones, and add a check that hunting the
+dinosaurs isn't needed.
+
+**Done when:** `node tests/secrets.test.mjs` passes, then the full suite
+once. About 20 minutes.
+
+---
+
+### CL-6: say what tapping a special block does
+
+**Why:** aim at a door and the Place button says **Open**; at a sky lift,
+**Ride**. That's `swingLabel(id)` near the top of `src/Game.js`. The newer
+blocks you tap say nothing.
+
+**What to do:** in `swingLabel`, return:
+
+| Block | Label |
+|---|---|
+| `TIME_MACHINE` | Travel |
+| `ARCHIVE` | Read |
+| `WAR_STANDARD` | Take |
+| `WAY_OUT` | Leave |
+
+Each is already imported at the top of `Game.js`. Then check the second
+place that decides whether to show the label (search `swingLabel(hit.block)`):
+it only shows for some blocks, so add these four there too.
+
+**Tests:** `tests/doorlabel.test.mjs` tests `swingLabel`. Add one check for
+each new label.
+
+**Done when:** `node tests/doorlabel.test.mjs` passes, then the full suite
+once. About 30 minutes.
+
+---
+
+### CL-7: the War Standard as a flag on a pole
+
+**Why:** a Battle rival's standard (`WAR_STANDARD`, block 458 in
+`src/config/blocks.js`) is drawn as a plain glowing gold cube. It should
+look like a standard: a pole with a flag on it.
+
+**What to do:**
+
+- In `src/world/propShapes.js`, add `PROP_SHAPES.banner_war`, built the way
+  `banner_white` and `banner_black` are (search `bannerFrame`). Gold cloth,
+  dark pole, and the cloth's boxes marked `glow: true` so it shines at
+  night (search `glow: true` in that file for examples).
+- Give `WAR_STANDARD` `shape: 'banner_war'` in `blocks.js`. Keep it
+  `system: true` and keep its `light`.
+
+**Watch out:** it must still be tappable. `tests/battle.test.mjs` checks the
+standard is in a rival city. After your change, check the raycast still
+finds it: other banners can be pointed at, so it should be fine, but make
+sure.
+
+**Tests:** add to `tests/battle.test.mjs`: the standard's shape is
+`banner_war`, and that shape exists in `PROP_SHAPES`.
+
+**Done when:** `node tests/battle.test.mjs`, `node tests/shapes.test.mjs`
+and `node tests/textures32.test.mjs` pass, then the full suite once. One
+screenshot in the pull request would help, but it's optional. About 45
+minutes.
+
+
+
+---
+
+### CL-8: bigger buttons on the phone
+
+**Why:** asked for directly: "button size is too small, increase buttons
+8 px in size".
+
+**What to do:** in `src/ui/styles.css`, make the on-screen buttons 8 pixels
+bigger, in width and height: the touch buttons (search `.touch-btn`) and the
+small side ones (Jump, Sneak, Break), which take their size from
+`--side-btn`. Leave the hotbar slots and the pop-ups' buttons alone. Check
+nothing overlaps at a 390 × 780 phone screen.
+
+**Tests:** none to add (it's styling). Run the full suite once.
+
+**Done when:** the full suite passes. A screenshot at phone size in the
+pull request, if you can. About 20 minutes.
+
+---
+
+### CL-9: recipe names say what you get
+
+**Why:** asked for directly: "I've seen Dress planks name on one menu it
+should be planks and in the stone mill split stone should be cobblestone".
+
+**What to do:** in `src/config/recipes.js`, rename the recipes the player
+sees:
+
+| Now | Should say |
+|---|---|
+| Dress planks | Planks |
+| Split stone | Cobblestone |
+| Dress marble | Marble |
+
+Search for any other recipe whose name isn't the thing it makes (look for
+names starting "Dress", "Split" or "Cut"), and list them in the pull request
+rather than changing them.
+
+**Tests:** search `tests/` for the old names first and update any test that
+checks them. Run `node tests/stonemill.test.mjs` and
+`node tests/woodmill.test.mjs`, then the full suite once.
+
+**Done when:** the three names are changed and the full suite passes.
+About 15 minutes.
+
+---
+
+### CL-10: the mills open the bench with an empty search box
+
+**Why:** asked for directly: "When opening the stone mill and wood mill the
+search has its names written". Tapping a mill opens the crafting pop-up
+with "Stone Mill" or "Wood Mill" typed into its search box.
+
+**What to do:** in `src/Game.js`, search `openBench(stationName(`. Open the
+bench with no search text instead. The mill's own recipes still show,
+because you're standing by it.
+
+**Tests:** add a check to `tests/stonemill.test.mjs` (or the wood mill's
+test, whichever already reads `Game.js`) that tapping a mill opens the
+bench without a search text.
+
+**Done when:** that test passes, then the full suite once. About 15
+minutes.
+
+---
+
+### CL-11: university studies say "game days"
+
+**Why:** asked for directly: "University learnings should take in game days
+to complete and not real days". They already count game days. A game day is
+15 minutes of play (`GAME_DAY_SECONDS` in `src/render/DayCycle.js`), but the
+pop-ups just say "Takes 2 days", which reads like real days.
+
+**What to do:** wherever a study's length is shown, say game days and
+roughly how long that is to play, for example "Takes 2 game days (about 30
+minutes of play)". Three places:
+
+- the toast when a study starts: `src/Game.js`, search `Researching ${name}`;
+- the recipe card: `src/ui/DuiltUI.js`, search `research-takes`;
+- the time left: `src/duilt/DuiltGame.js`, `researchLeftText`.
+
+Work the minutes out from `GAME_DAY_SECONDS`, not a typed-in number.
+
+**Tests:** search `tests/` for "days" next to research or study, and update
+any test that checks the old wording. Add one check that the start message
+says "game days".
+
+**Done when:** those tests pass, then the full suite once. About 25
+minutes.
+---
+
+### CL-12: tap the people counter to feed the hungry
+
+**Why:** the hungry notice has a **Give food** button, but it goes after
+12 seconds. After that the only sign is the people counter at the top
+turning to "hungry", and tapping it only explains the numbers.
+
+**What to do:** in `src/ui/DuiltUI.js`, `sayPeople()` runs when the people
+counter is tapped. When somebody is hungry (`this.duilt.settlers.hungry` is
+more than 0), make the tap call `this.giveFood()` instead, the same thing
+the notice's button does. Also in `renderPeople()`, change the hungry
+tooltip from "put some food in a storehouse" to "tap to feed them, or fill
+the granary".
+
+**Tests:** in `tests/granary.test.mjs`, add a check that `sayPeople`
+calls `giveFood` when someone is hungry (reading the source, like the other
+checks in that file do), and one for the new tooltip words.
+
+**Done when:** `node tests/granary.test.mjs` passes, then the full suite.
+About 20 minutes.
+
+---
+
+### CL-13: say "granary" where a granary is meant
+
+**Why:** granaries now count as stores, but some messages still say
+"storehouse" for them.
+
+**What to do:**
+- In `src/ui/DuiltUI.js`, `renderStores()` (the "Every storehouse" list)
+  says "N things in N storehouses" and "Across N storehouses". With a
+  granary among them, say "stores" instead: "N things in 3 stores".
+- In `src/Game.js`, `deleteBuilding()` refuses to take down a store with
+  things in it, saying "Empty the storehouse first". Use the building's own
+  name (`STRUCTURES_BY_ID.get(structure.type).name`), so a granary says
+  "Empty the granary first".
+
+**Tests:** add checks to `tests/storediscard.test.mjs` that both messages
+use the new words.
+
+**Done when:** that test file passes, then the full suite. About 20 minutes.
+
+---
+
+### CL-14: "Put it all in" in a granary says why things stayed out
+
+**Why:** a granary only takes what farms grow. Pressing **Put it all in**
+in a granary with stone in your bag says "The shelves filled up before the
+rest", or "The shelves are full", which isn't true: it has no limit.
+
+**What to do:** in `src/ui/DuiltUI.js`, `storeEverything()`. When the
+store is a granary (`store instanceof Granary`; `Granary` is already
+imported there), say "The granary only takes what farms grow" for whatever
+stayed in the bag, instead of the shelves wording.
+
+**Tests:** add a check to `tests/storediscard.test.mjs` for the new words.
+
+**Done when:** that test file passes, then the full suite. About 15 minutes.
+
+---
+
+---
+
+### How to report back
+
+Open a PR titled after the task (e.g. "Secrets: Both ways, and Tomorrow's
+scholar"). Its body says:
+
+- what changed, in two or three bullets;
+- the test result line from `node tests/run.mjs`;
+- what you checked, and what you didn't;
+- roughly how long it took.
+
+---
+
 ## Suggested order
 
 1. **Saving** (section 1). Nothing else matters if progress is lost.
@@ -370,18 +780,20 @@ keyboard up; the loading screens.
 6. **Buildings' looks** (section 4), between the big pieces.
 7. **Later**: new peoples, map marks, Battle steps 2 and 3, composting.
 
-## Where the older docs are
+## The old planning docs (history)
 
-They're the history and the detailed briefs. Nothing in them is open that
-isn't listed above.
+Moved to `docs/history/`. They're the record of what was asked and how it
+was done; nothing in them is open that isn't listed above.
 
 | Doc | What it holds |
 |---|---|
-| `docs/claude-tasks.md` | The October batch, item by item, with what was done. |
-| `docs/cline-tasks.md` | Cline's briefs, CL-1 to CL-14, and its rules. |
-| `docs/status-and-testing.md` | Everything asked since batch 4, and the full testing list. |
-| `docs/backlog-batch-2.md`, `-3.md`, `-4.md` | The second, third and fourth batches, all done except what's in section 5. |
-| `docs/plan-look-and-sound.md` | The look and sound revamp. |
-| `docs/plan-phase7-lore.md` | The story, both paths: done. |
-| `docs/plan-playtest-improvements.md` | P1 to P9 from the first playtest: done. |
-| `docs/next-session.md` | Notes from the phase 6 and 7 work: done. |
+| `claude-tasks.md` | The October batch, item by item, with what was done. |
+| `cline-tasks.md` | Cline's briefs as first written (now section 11 here). |
+| `status-and-testing.md` | Everything asked since batch 4, and the full testing list. |
+| `backlog-batch-2.md`, `-3.md`, `-4.md` | The second, third and fourth batches, all done except what's in section 5. |
+| `plan-look-and-sound.md` | The look and sound revamp. |
+| `plan-phase7-lore.md` | The story, both paths: done. |
+| `plan-playtest-improvements.md` | P1 to P9 from the first playtest: done. |
+| `next-session.md` | Notes from the phase 6 and 7 work: done. |
+
+---

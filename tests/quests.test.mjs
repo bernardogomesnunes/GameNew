@@ -48,7 +48,7 @@ for (const q of QUESTS) {
   for (const id of Object.keys(q.reward.items ?? {})) ok(`${q.id}: rewards ${id}, a real item`, ITEMS_BY_ID.has(id));
 }
 // Twelve ages now: one at least in every age up to the war; the ages after
-// it get theirs with the new stories (docs/backlog-batch-4.md).
+// it get theirs with the new stories (docs/history/backlog-batch-4.md).
 ok('at least one for every age up to the war', AGES.filter((a) => a.age <= WAR_AGE).every((a) => QUESTS.some((q) => q.age === a.age)));
 
 // --- nothing waits on a quest ------------------------------------------------------------------

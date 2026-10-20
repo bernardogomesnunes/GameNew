@@ -1,6 +1,6 @@
 /**
  * The dark path's war on the Sky Kingdom: your attacks on it, and what a
- * lost one costs (docs/plan-phase7-lore.md, Decision 2: "you're driven back
+ * lost one costs (docs/history/plan-phase7-lore.md, Decision 2: "you're driven back
  * to your castle. The Sky Kingdom takes a quarter of what your buildings
  * make as taxes until you conquer it. Each failed attempt raises the tax a
  * step").

@@ -73,7 +73,7 @@ export const MENU = [
     opens: 'panel-account',
     needs: 'cloud',
   },
-  // The look-and-sound revamp's test bench (docs/plan-look-and-sound.md,
+  // The look-and-sound revamp's test bench (docs/history/plan-look-and-sound.md,
   // section 1): a world laid out for looking at, and the camera spots the
   // before-and-after pictures are taken from. A workshop tool, so behind the switch.
   {

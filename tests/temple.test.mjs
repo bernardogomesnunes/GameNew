@@ -16,7 +16,7 @@ import { RECIPES } from '../src/config/recipes.js';
 import { boxesFor } from '../src/world/propShapes.js';
 
 /**
- * Phase 7c — the Temple and the choice (docs/plan-phase7-lore.md), with the
+ * Phase 7c — the Temple and the choice (docs/history/plan-phase7-lore.md), with the
  * rings' own ores decided with the user: "we should have dedicated ores for
  * it. That can be found in chests or deep in the caves as a very rare
  * material."

@@ -1,5 +1,5 @@
 /**
- * What people wear, by who they are (docs/plan-look-and-sound.md, section 5:
+ * What people wear, by who they are (docs/history/plan-look-and-sound.md, section 5:
  * "outfits that say who they are"). Read by render/SettlerView.js, which draws
  * everybody — settlers, wanderers, guards, kings, your soldiers and your army
  * — from the one model.

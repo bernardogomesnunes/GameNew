@@ -2,7 +2,7 @@
 
 From the owner's list "New batch Duilt". The quick wins (bigger buttons,
 recipe names, the mills' search box, "game days" wording) went to Cline as
-Tasks 8 to 11 in `docs/cline-tasks.md`. These are the rest, blockers to
+Tasks 8 to 11 in `docs/history/cline-tasks.md`. These are the rest, blockers to
 finishing the game first.
 
 Each one was checked against the code before it was written down. What

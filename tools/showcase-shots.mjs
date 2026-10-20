@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Pictures of the showcase world, for judging a change to how the game
- * looks (docs/plan-look-and-sound.md, section 1).
+ * looks (docs/history/plan-look-and-sound.md, section 1).
  *
  * Opens the showcase (Game.openShowcase — world/showcase.js) in a phone-sized
  * browser, stands at every camera spot by day, at dusk and at night, and

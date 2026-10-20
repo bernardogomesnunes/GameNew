@@ -14,7 +14,7 @@ import { boxesFor, wallBoxes, pillarBoxes, PROP_SHAPES } from '../src/world/prop
 import { itemIcon } from '../src/config/cubes.js';
 
 /**
- * Phase 7a — the decorative pack (docs/plan-phase7-lore.md): walls that join
+ * Phase 7a — the decorative pack (docs/history/plan-phase7-lore.md): walls that join
  * like fences, pillars that stack, trapdoors that open with Place, framed
  * windows, timber framing, vases and urns, banners for both kingdoms, dark
  * stone and dark brick for the Stone Kingdom, sky-marble, gold trim and

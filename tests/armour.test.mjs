@@ -10,7 +10,7 @@ import { GLYPHS } from '../src/config/glyphs.js';
 import { itemIcon } from '../src/config/cubes.js';
 
 /**
- * Phase 7b (docs/plan-phase7-lore.md): "new bag slots for armour (head,
+ * Phase 7b (docs/history/plan-phase7-lore.md): "new bag slots for armour (head,
  * body and legs) and one ring. Armour sets, one per realm: leather; Sky
  * armour: white steel and gold; Stone armour: blackened iron. It takes
  * damage off each hit. Sky armour lets you walk among its people."

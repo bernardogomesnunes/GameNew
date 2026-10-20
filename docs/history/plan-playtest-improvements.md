@@ -1,6 +1,6 @@
 # Playtest improvements
 
-These come from the user's own game session (the "Duild new list of improvements" note). They're separate from the Phase 7 lore (`docs/plan-phase7-lore.md`) and mostly independent of it, so they can go in between lore steps. Each one ships the usual way: tests, a check at phone size in the browser, a PR, then merge.
+These come from the user's own game session (the "Duild new list of improvements" note). They're separate from the Phase 7 lore (`docs/history/plan-phase7-lore.md`) and mostly independent of it, so they can go in between lore steps. Each one ships the usual way: tests, a check at phone size in the browser, a PR, then merge.
 
 What's already there to build on:
 - **Framed windows, furniture, chests:** the windows are from 7a; tables, chairs and rugs are from Phase 4; chests are from 6a.

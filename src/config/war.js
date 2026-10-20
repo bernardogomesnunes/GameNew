@@ -1,6 +1,6 @@
 /**
  * The Stone Kingdom's war on you — the Ten Rounds (White path, chosen
- * directly in docs/plan-phase7-lore.md, then moved by the playtest:
+ * directly in docs/history/plan-phase7-lore.md, then moved by the playtest:
  * "when we hit [the last border] we get attacked, even if we didn't craft
  * the ring — it will be harder to beat because you need to craft it while
  * you are being attacked").

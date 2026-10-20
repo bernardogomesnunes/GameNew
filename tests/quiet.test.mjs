@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { RECIPES } from '../src/config/recipes.js';
 
 /**
- * Quick fixes, batch 2 (docs/backlog-batch-2.md, priority 1): our own
+ * Quick fixes, batch 2 (docs/history/backlog-batch-2.md, priority 1): our own
  * pop-ups instead of the browser's, fewer system messages, no session
  * bonus, Clear and Mirror off the bench, and the bag's scroll kept to the bag.
  */

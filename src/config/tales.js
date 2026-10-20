@@ -1,5 +1,5 @@
 /**
- * The story as people tell it (docs/plan-phase7-lore.md, 7j: "messengers
+ * The story as people tell it (docs/history/plan-phase7-lore.md, 7j: "messengers
  * and the hermit carry the story, with lines tied to your age, your Temple
  * and your path").
  *

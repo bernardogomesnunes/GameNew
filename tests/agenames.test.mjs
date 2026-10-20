@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { AGES, RINGS, ageIntro } from '../src/config/ages.js';
 
 /**
- * The ages get new names to fit the story (docs/plan-phase7-lore.md, 7j:
+ * The ages get new names to fit the story (docs/history/plan-phase7-lore.md, 7j:
  * "for example 'Exile' … 'Reckoning'"): from being thrown down from the
  * sky to the reckoning with one of the two kingdoms. Each still says what
  * to build, and the last says it differently on the dark path, where no

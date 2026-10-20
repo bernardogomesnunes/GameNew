@@ -4,7 +4,7 @@ import { ChunkMesher, AO_LIGHT, cornerOcclusion, aoFlip } from '../src/world/Chu
 import { DEFAULTS } from '../src/render/graphics.js';
 
 /**
- * Shadow where blocks meet (docs/plan-look-and-sound.md, section 2): "the
+ * Shadow where blocks meet (docs/history/plan-look-and-sound.md, section 2): "the
  * biggest single fix for 'flat'". Corners, under eaves, where a wall stands
  * on the ground — baked into the vertex colours of the chunk mesh.
  */
