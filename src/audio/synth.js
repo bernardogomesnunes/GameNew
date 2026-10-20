@@ -7,7 +7,7 @@
  * material, pitched in the 2–5 kHz range where the ear is most sensitive —
  * every action came out as the same bright tick in a different key.
  *
- * Recordings would have been the first choice (docs/plan-look-and-sound.md,
+ * Recordings would have been the first choice (docs/history/plan-look-and-sound.md,
  * section 6), but no CC0 library could be reached from where the game was
  * built, so these are made the way a foley artist thinks about a sound
  * rather than the way a synthesiser does: what is hit, what it is made of,

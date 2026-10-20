@@ -4,7 +4,7 @@
  * It began as a few tones made in code (a knock for a placed block, a
  * crunch for a broken one), and was heard as "awful … too high and don't
  * make a lot of sense in terms of representation of the action they are
- * meant for". So it is now three things (docs/plan-look-and-sound.md, 6):
+ * meant for". So it is now three things (docs/history/plan-look-and-sound.md, 6):
  *
  *  - **Effects**, from recipes.js: every material placed, broken, dug at and
  *    walked on sounds like itself, and blows, swords, bows, doors, gates,

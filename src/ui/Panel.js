@@ -18,7 +18,7 @@ export function panelMarkup(def, body = '') {
   const sub = def.sub || def.subId ? `<div class="sub"${subAttr}>${def.sub ?? ''}</div>` : '';
   return `
       <div class="overlay" id="${def.id}" hidden>
-        <div class="panel${def.wide ? ' panel-wide' : ''}">
+        <div class="panel${def.wide ? ' panel-wide' : ''}${def.split ? ' panel-split' : ''}">
           <div class="panel-head">
             <button class="icon-btn panel-close" data-close="${def.id}" aria-label="Close">${icon('close', 16)}</button>
             ${title}

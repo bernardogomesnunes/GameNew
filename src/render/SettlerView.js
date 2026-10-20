@@ -19,7 +19,7 @@ import { modelKit, Crowds } from './Models.js';
 
 const MAX = 64;
 /**
- * The small parts of a person (docs/plan-look-and-sound.md, section 5: "faces:
+ * The small parts of a person (docs/history/plan-look-and-sound.md, section 5: "faces:
  * eyes and a mouth ... hands ... outfits that say who they are ... a weapon or
  * tool in hand"), all one instanced mesh, this many slots a person. A part
  * someone hasn't got is scaled to nothing.

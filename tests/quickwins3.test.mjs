@@ -4,7 +4,7 @@ import { BLOCKS } from '../src/config/blocks.js';
 import { TEXTURES, BLOCK_TEXTURES } from '../src/config/textures.js';
 
 /**
- * Quick wins from the third list (docs/backlog-batch-3.md).
+ * Quick wins from the third list (docs/history/backlog-batch-3.md).
  */
 
 let f = 0;

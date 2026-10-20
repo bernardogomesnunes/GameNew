@@ -11,7 +11,7 @@ import { itemIcon } from '../src/config/cubes.js';
 import { NEWS } from '../src/config/wanderers.js';
 
 /**
- * The dark path, its first part (docs/plan-phase7-lore.md): the alliance,
+ * The dark path, its first part (docs/history/plan-phase7-lore.md): the alliance,
  * the oath at the dark god's altar, the King's thousand warriors, the
  * command wheel, and the camp.
  */

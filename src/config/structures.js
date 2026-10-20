@@ -1272,7 +1272,7 @@ export const STRUCTURES = [
 
   // ---- Phase 7c: the Temple ------------------------------------------------
   //
-  // A place of worship, from Age 3 (docs/plan-phase7-lore.md). It makes
+  // A place of worship, from Age 3 (docs/history/plan-phase7-lore.md). It makes
   // devotion — slowly by itself, faster with settlers who worship there
   // (the same staffing every building has), and from offerings you bring it
   // (recipes at the temple: food, gold, a lantern). It climbs from a Shrine

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { SKY, GRADE } from '../config/palette.js';
 
 /**
- * Light, colour and air (docs/plan-look-and-sound.md, sections 2 and 4).
+ * Light, colour and air (docs/history/plan-look-and-sound.md, sections 2 and 4).
  *
  * Reported directly: the game "looks dull and old". The light was a soft
  * ambient, a sun and a sky fill of about the same strength, drawn with no

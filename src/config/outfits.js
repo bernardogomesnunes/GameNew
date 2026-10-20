@@ -1,5 +1,5 @@
 /**
- * What people wear, by who they are (docs/plan-look-and-sound.md, section 5:
+ * What people wear, by who they are (docs/history/plan-look-and-sound.md, section 5:
  * "outfits that say who they are"). Read by render/SettlerView.js, which draws
  * everybody — settlers, wanderers, guards, kings, your soldiers and your army
  * — from the one model.
@@ -62,8 +62,15 @@ export const OUTFITS = {
   crew: { hat: 'cap', hatColour: 0x5a4030 },
 };
 
+const GROUP_OUTFITS = {
+  caravan_guard: { hat: 'helm', hatColour: 0xc9a46c, gear: 'spear' },
+  caravaner: { hat: 'cap', hatColour: 0x9a6847 },
+  moss_guard: { hat: 'helm', hatColour: 0x829c60, gear: 'spear' },
+  mossfolk: { hat: 'hood', hatColour: 0x748c56 },
+};
+
 /** What someone wears — their kind's outfit, or nothing special. */
 export function outfitOf(person) {
   if (person?.unit === 'shield_guard') return { hat: 'helm', visor: true, gear: 'spear', shield: true };
-  return OUTFITS[person?.kind] ?? null;
+  return OUTFITS[person?.kind] ?? GROUP_OUTFITS[person?.kind] ?? null;
 }

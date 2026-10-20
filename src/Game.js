@@ -117,7 +117,7 @@ import { WANDERERS, NEWS } from './config/wanderers.js';
 import { TRADERS_BY_ID } from './config/traders.js';
 import { momentForPlace } from './config/moments.js';
 import { MobView } from './render/MobView.js';
-// The showcase (docs/plan-look-and-sound.md, section 1): see openShowcase.
+// The showcase (docs/history/plan-look-and-sound.md, section 1): see openShowcase.
 import { ShowcaseView } from './render/ShowcaseView.js';
 import { TITLE_SEED, TITLE_SITE, TITLE_TIME, TITLE_HERDS, titlePlaceBlocks, orbitPose, orbitHeight, messengerPath } from './world/titleScene.js';
 import { SHOWCASE_SEED, SHOWCASE_TIMES, SHOWCASE_SPOTS_BY_ID, SHOWCASE_BUILDINGS, SHOWCASE_FIGURES, findShowcaseSite, flattenShowcase, placeBlocks, showcaseLabels, spotPose } from './world/showcase.js';
@@ -1470,7 +1470,7 @@ export class Game {
       onHintTap: () => (this.moving ? this.turnMove() : this.hintUses ? this.secondaryAction() : this.openClaim()),
       onFinishEditing: () => this.finishEditing(),
       onStampStarter: (id) => this.stampStarter(id),
-      // The showcase (docs/plan-look-and-sound.md, section 1) — see openShowcase.
+      // The showcase (docs/history/plan-look-and-sound.md, section 1) — see openShowcase.
       onOpenShowcase: (spot) => this.openShowcase({ spot }),
       onShowcaseSpot: (id) => this.showcaseSpot(id),
       onShowcaseTime: (t) => this.showcaseTime(t),
@@ -1647,7 +1647,7 @@ export class Game {
         });
         if (!this.pointerLocked && !document.body.classList.contains('touch')) this.ui.setResumeHint(true);
       };
-      // A new Duilt world opens on the story so far (docs/plan-phase7-lore.md, 7j).
+      // A new Duilt world opens on the story so far (docs/history/plan-phase7-lore.md, 7j).
       // Not in Battle (reported directly: "In battle mode it seems that we
       // are showing the same intro, we should not") — its rivals' welcome
       // says what that world is about instead.
@@ -5276,7 +5276,7 @@ export class Game {
 
   /**
    * Opens the showcase: a Creative world laid out for looking at
-   * (docs/plan-look-and-sound.md, section 1) — every building in labelled
+   * (docs/history/plan-look-and-sound.md, section 1) — every building in labelled
    * rows on flat grass, one of every animal and every kind of person
    * standing still, and fixed camera spots including the two kingdoms. See
    * world/showcase.js for the layout and tools/showcase-shots.mjs for the

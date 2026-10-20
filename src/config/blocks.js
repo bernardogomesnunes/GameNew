@@ -923,7 +923,7 @@ BLOCKS.push(
 // require new blocks and lights", with four pictures — a mossy cottage in
 // mint and teal shingles with curled eaves, a teal-roofed tower house, a
 // mushroom house hung with wisteria and fairy lights, a hut with red
-// spotted mushrooms growing out of its roof; see docs/claude-tasks.md).
+// spotted mushrooms growing out of its roof; see docs/history/claude-tasks.md).
 // Mushroom caps and their stem, stained glass, vines and wisteria hanging
 // from what's above them, a string of fairy lights, and a curl of wood for
 // a gable's tip. The roof tiles are with the others, above.
@@ -944,7 +944,7 @@ quad(CURL, { name: 'Curled Trim', glyph: 'planks', color: 0xa0784e, shape: 'curl
 // The compost bin is a small crafting station for turning spare leaves and
 // seeds into compost (config/recipes.js). Its cabinet form keeps it legible
 // beside the farm without introducing a new renderer shape.
-export const COMPOST_BIN = 513;
+export const COMPOST_BIN = 520;
 quad(COMPOST_BIN, { name: 'Compost Bin', glyph: 'moss', color: 0x76523b, shape: 'cabinet', material: 'wood', station: 'compost', facesYou: true, unlock: null });
 
 // Separate blossom from white foliage without renumbering saved blocks.

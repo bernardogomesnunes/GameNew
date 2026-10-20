@@ -10,7 +10,7 @@ import { STRUCTURES_BY_ID } from '../src/config/structures.js';
 import { DESIGN_FOR_STRUCTURE } from '../src/config/starterDesigns.js';
 
 /**
- * Phase 7d — the Sanctuary and the guardian (docs/plan-phase7-lore.md):
+ * Phase 7d — the Sanctuary and the guardian (docs/history/plan-phase7-lore.md):
  * "Only your god's Sanctuary can be built: the White Sanctuary (open marble
  * and light) or the Black Sanctuary (obsidian and a pit). Building it
  * summons the guardian, tamed to whoever called it: a great winged stag of

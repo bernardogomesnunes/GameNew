@@ -17,7 +17,7 @@ import { itemIcon } from '../src/config/cubes.js';
 import { FINAL_AGE } from '../src/config/ages.js';
 
 /**
- * The Sky Kingdom (the dark path — docs/plan-phase7-lore.md): the floating
+ * The Sky Kingdom (the dark path — docs/history/plan-phase7-lore.md): the floating
  * island 5,000 blocks out, its anchor towers and chains, the lifts up and
  * down, its guards and its King, and its fall.
  */

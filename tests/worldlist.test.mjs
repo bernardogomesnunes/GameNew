@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 /**
- * The worlds list (docs/backlog-batch-2.md, priority 0), both reported
+ * The worlds list (docs/history/backlog-batch-2.md, priority 0), both reported
  * directly: "the game worlds saved the old way are always in the list as I
  * login, after a couple of seconds the recent worlds show up ... we should
  * load the page with all items there listed", and "sometimes when I delete

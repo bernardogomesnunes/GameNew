@@ -11,7 +11,7 @@ import { BIOMES } from '../src/config/biomes.js';
 import { isChest } from '../src/config/blocks.js';
 
 /**
- * Phase 7e — the Stone Kingdom (docs/plan-phase7-lore.md): "a walled city of
+ * Phase 7e — the Stone Kingdom (docs/history/plan-phase7-lore.md): "a walled city of
  * dark stone, placed by the world seed away from home ... walls with towers
  * and a gatehouse; streets; houses, a market, an armoury and barracks, in
  * the new dark style; a keep with the Stone King. Its walls and towers show

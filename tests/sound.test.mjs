@@ -10,7 +10,7 @@ import {
 import { Sound } from '../src/audio/Sound.js';
 
 /**
- * The sound, redone (docs/plan-look-and-sound.md, section 6). Asked for
+ * The sound, redone (docs/history/plan-look-and-sound.md, section 6). Asked for
  * directly: "the sounds we have now are awful tbh they are too high and
  * don't make a lot of sense in terms of representation of the action they
  * are meant for." So: every action has a sound that's its own, each

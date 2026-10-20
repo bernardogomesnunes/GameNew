@@ -35,6 +35,6 @@ ok('collapseToasts is the one place that walks the stack, not copied per caller'
 ok('a panel staying open also keeps new toasts to one at a time, the same rule touch already had',
   /if \(this\.isTouch \|\| this\.isAnyPanelOpen\(\)\) this\.collapseToasts\(\);/.test(ui));
 ok('the collapse hook is registered on the one shared Panels instance, so every opener gets it',
-  /this\.panels = new Panels\(root, \{ screens: \['blocker'\] \}\);\s*\n\s*this\.panels\.onOpen\(\(id\) => this\.populatePanel\(id\)\);\s*\n\s*this\.panels\.onOpen\(\(\) => this\.collapseToasts\(\)\);/.test(ui));
+  /this\.panels = new Panels\(root, \{[^}]*screens: \['blocker'\],[\s\S]{0,200}?\}\);\s*\n\s*this\.windows = bindPanelWindows\(root, this\.panels\);\s*\n\s*this\.panels\.onOpen\(\(id\) => this\.populatePanel\(id\)\);\s*\n\s*this\.panels\.onOpen\(\(\) => this\.collapseToasts\(\)\);/.test(ui));
 
 process.exit(f ? 1 : 0);

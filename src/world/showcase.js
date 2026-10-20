@@ -10,7 +10,7 @@ import { skyFor, FLOOR, ISLAND_R } from './skyKingdom.js';
 
 /**
  * The showcase: a Creative world laid out for looking at
- * (docs/plan-look-and-sound.md, section 1).
+ * (docs/history/plan-look-and-sound.md, section 1).
  *
  * The look-and-sound revamp changes colour, texture, light and models across
  * the whole game, and a change like that can't be judged on one wall: a

@@ -18,6 +18,8 @@
  *   title    the heading; titleId when something rewrites it at runtime
  *   sub      the line under it; subId when something rewrites it at runtime
  *   wide     for panels showing a grid rather than a column
+ *   split    two columns side by side on a desktop — what's kept, and your
+ *            bag — each scrolling on its own (styles.css, .panel-split)
  *   layer    which surface draws its body — 'main' or the Duilt overlay
  *   mode     where it exists: 'any' (everywhere), 'duilt' (needs the Duilt
  *            engine under it — both real Duilt and a free-build sandbox run
@@ -112,6 +114,7 @@ export const PANELS = [
     sub: 'Tap anything to move it between your bag and the shelves.',
     subId: 'store-sub',
     wide: true,
+    split: true,
     layer: 'duilt',
     mode: 'duilt',
     label: 'Store',
@@ -122,9 +125,10 @@ export const PANELS = [
   {
     id: 'panel-stores',
     title: 'Every storehouse',
-    sub: 'Everything on every shelf. Tap something to take a stack of it.',
+    sub: 'Everything on every shelf. Tap something to take a stack of it, or something in your bag to put it away.',
     subId: 'stores-sub',
     wide: true,
+    split: true,
     layer: 'duilt',
     mode: 'duilt',
     label: 'Stores',
