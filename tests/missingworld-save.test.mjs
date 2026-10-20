@@ -17,6 +17,7 @@ function session({ rows = [], agreed = { revision: 2 }, error = null } = {}) {
     async cloudList() { calls.lists++; if (error) throw error; return rows; },
     async saveToCloud(name, options) { calls.saves++; calls.revision = options.revision; },
     dropSafeCopy() { calls.drops++; },
+    uploadFailed() {}, uploadLanded() {},
   };
   return { game, calls };
 }

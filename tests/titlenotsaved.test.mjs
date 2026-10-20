@@ -23,6 +23,7 @@ function fake() {
     async saveToCloud(name) { g.uploaded.push({ id: g.worldId, name }); },
     async sendUnsent() { g.sentHeld++; return true; },
     dropSafeCopy() {},
+    uploadFailed() {}, uploadLanded() {},
     ui: null,
   };
   return g;

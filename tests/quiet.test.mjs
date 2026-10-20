@@ -27,7 +27,10 @@ ok('Escape and a tap outside say no', /if \(e\.key === 'Escape'\) \{ e\.stopProp
 // --- fewer messages ---------------------------------------------------------------------------------
 
 ok('no "Saved" when you leave, no "Opened …" when you arrive', !/title: 'Saved', body: this\.game\.worldName/.test(ui) && !/title: `Opened "/.test(game));
-ok('no "Not saved to your account yet" every few minutes — it retries quietly', !/Not saved to your account yet/.test(game));
+// SAVE-4 ("failed uploads retry without telling you"): said once when the
+// uploads start failing and once when one lands — never on every retry.
+ok('no "Not saved to your account yet" every few minutes — said once, then retried quietly',
+  (game.match(/Not saved to your account yet/g) ?? []).length === 1 && /if \(!this\.uploadTrouble\) \{\s*this\.uploadTrouble = true;/.test(game));
 ok('no "made it up after all"', !/made it up after all/.test(game));
 ok('a browser out of room says so once a session, not on every autosave', /if \(!this\.toldSaveError\) \{\s*this\.toldSaveError = true;/.test(game));
 ok('a world changed on another device is still said out loud', /This world was open somewhere else/.test(game));

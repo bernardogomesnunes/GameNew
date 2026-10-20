@@ -27,7 +27,7 @@ new is asked for: add it with the owner's words quoted.
 ## Who's on what
 
 **Claude**
-- Saving: SAVE-4 to SAVE-6.
+- Saving: SAVE-6.
 - The "Adding changes" list: CRAFT-1 to CRAFT-7, STORE-1, JOBS-1 to
   JOBS-4 and MOBS-2.
 - Buildings: LOOK-2.
@@ -55,8 +55,8 @@ new is asked for: add it with the owner's words quoted.
 | SAVE-1 | **The testing world lost progress** ("Was not able to save my testing world it lost a lot of progress"). Saving works again, tested by the owner on 20 October; before, Save showed "Not saved — try again". | Owner | done |
 | SAVE-2 | **A world missing from the account's list is treated as deleted**: saving stops for that session and the backup copy is thrown away. Now the backup is kept, Save says the world wasn't found and can be tried again, and the world is never made again on its own. Deleting a world on purpose still throws its backup away. | ChatGPT | done, #231 |
 | SAVE-3 | **"Save and leave" leaves even when the save failed**, without saying so. Now it stays in the world and says why; only a save that went through takes you to your worlds. | ChatGPT | done, #231 |
-| SAVE-4 | **Failed uploads retry without telling you.** | Claude | to do |
-| SAVE-5 | **The backup copy may not fit** in the browser's small local storage (about 5 MB) for a big world. | Claude | to do |
+| SAVE-4 | **Failed uploads retry without telling you.** Now one message when uploads start failing ("Not saved to your account yet", why, and that it's kept on this device), tries again on its own after half a minute, then 1, 2, 4 and 5 minutes, at once when the connection comes back, and one message when it lands. | Claude | done, #233 |
+| SAVE-5 | **The backup copy may not fit** in the browser's small local storage (about 5 MB) for a big world. Now a copy too big for it goes to the browser's bigger store (IndexedDB; a 12 MB copy checked in Chromium); if it fits nowhere, you're told once. | Claude | done, #233 |
 | SAVE-6 | **The "world too big for the account" message** is on the unmerged branch `claude/backlog-batch-3-update`; the size limits it explains are live in the database since 6 October. | Claude | to do |
 
 ---
@@ -67,6 +67,7 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 | ID | What | PR |
 |---|---|---|
+| NOW-20 | Saving: a failed upload says so once, tries again by itself, and says when it's up; a big world's backup copy fits now. | #233 |
 | NOW-19 | The new mountains, plains and giant trees in old worlds too; the rounder starter house, townhouse and cottages. | #232 |
 | NOW-18 | ChatGPT's second round, checked and merged: saving keeps your backup when a world goes missing from the list, Save and leave stays put if the save failed, villagers no longer climb onto roofs, compost into a farm, raiders don't vanish at a pond, huge mountains, broader plains, flatter deserts and three shapes of giant tree. | #231 |
 | NOW-16 | ChatGPT's work, finished and merged: deep caves with ruins, caravan camps and mossfolk villages to raid, raided places marked on the map, composting, the Garrison training spear guards, new roof colours for the other buildings, cleaner stone, pink leaves on some birches, more detailed villagers, and Cline's thirteen small tasks. | #230 |
@@ -270,6 +271,8 @@ version is in `docs/history/status-and-testing.md`.
   the three giant tree shapes; watch villagers walk round houses; Add
   compost at a farm; Save and leave with no signal; build the new
   starter house; look for steps where your old world's land meets the new.
+- **Saving (NOW-20):** play with no signal for a minute, see the message,
+  then turn it back on and see "Saved to your account".
 
 ---
 
