@@ -2152,7 +2152,7 @@ button.busy { cursor: progress; opacity: 0.92; }
  */
 @media (min-width: 900px) and (pointer: fine) {
   /* Dragged by the title bar (ui/PanelWindows.js). */
-  .panel-head { cursor: move; }
+  .panel-head:hover { cursor: move; }
   .panel-head button, .panel-head input { cursor: pointer; }
   body.panel-dragging, body.panel-dragging * { user-select: none; cursor: move !important; }
 
@@ -2164,7 +2164,7 @@ button.busy { cursor: progress; opacity: 0.92; }
     max-width: min(1120px, 96vw); height: min(86vh, 820px);
     display: flex; flex-direction: column; overflow: hidden;
   }
-  .panel-split > .panel-head { flex: 0 0 auto; }
+  .panel-split > :first-child { flex: 0 0 auto; } /* its title bar never squeezed */
   .panel-split .split-cols {
     flex: 1 1 auto; min-height: 0;
     display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 18px;

@@ -100,8 +100,8 @@ ok('both grids share the same lift/tap binding — one inventory, two views of i
 ok('the store screen adds an Equipped grid alongside the shed and the bag',
   /id="store-hotbar-grid"/.test(duilt));
 ok('it is read from the same player inventory the bag grid already was',
-  /hotbarGrid\.innerHTML = d\.inventory\.slots\.slice\(0, PLAYABLE_SLOTS\)/.test(duilt));
+  /hotbar\.innerHTML = inv\.slots\.slice\(0, PLAYABLE_SLOTS\)/.test(duilt) && /const inv = this\.duilt\.inventory;/.test(duilt));
 ok('both equipped and bag tap straight into the store, same as any bag slot always could',
-  /for \(const g of \[hotbarGrid, bagGrid\]\) \{\s*g\.querySelectorAll\('\[data-bag-slot\]'\)\.forEach\(\(btn\) =>\s*btn\.addEventListener\('click', \(\) => this\.putInStore/.test(duilt));
+  /for \(const g of \[hotbar, bag\]\) \{\s*g\.querySelectorAll\('\[data-bag-slot\]'\)\.forEach\(\(btn\) =>\s*btn\.addEventListener\('click', \(\) => onTap/.test(duilt) && /onTap: \(i\) => this\.putInStore\(i\)/.test(duilt));
 
 process.exit(f ? 1 : 0);
