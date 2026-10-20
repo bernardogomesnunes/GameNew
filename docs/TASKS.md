@@ -44,7 +44,7 @@ Open tasks only, by who takes them. The sections below have the details.
   WORLD-4, creatures MOBS-1 and MOBS-2.
 - Buildings' looks: LOOK-1 to LOOK-5.
 - From earlier lists: OLD-1 to OLD-4, OLD-6 to OLD-8.
-- Under the hood: TECH-1 to TECH-16 (section 11).
+- Under the hood: TECH-1 to TECH-15 (section 11; TECH-9 and TECH-14 need the owner's yes).
 - The wiki and the words: WIKI-1, WIKI-2, WIKI-4, COPY-1 to COPY-3.
 - Housekeeping: HOUSE-1 (once the owner agrees), HOUSE-4.
 - Reviewing each of Cline's pull requests before the owner merges it.
