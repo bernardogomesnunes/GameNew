@@ -243,6 +243,11 @@ export class Mobs {
       return;
     }
 
+    // A roaming timer chooses how long to graze or when to pick the next
+    // destination; it must not expire halfway through a destination. Some
+    // routes take longer than the old random 3–7 second timer, which made
+    // think() replace the target and visibly stop an animal mid-walk.
+    if (m.target && m.speed > 0) return;
     m.timer -= dt;
     if (m.timer > 0) return;
     if (this.rand() < 0.45) {
@@ -268,6 +273,9 @@ export class Mobs {
       if (dist < 0.15) {
         m.target = null;
         m.speed = 0;
+        // The route is complete; make the next roaming decision now. The
+        // decision itself may choose a normal grazing pause.
+        m.timer = 0;
       } else {
         const step = Math.min(dist, m.speed * dt);
         let nx = m.x + (dx / dist) * step, nz = m.z + (dz / dist) * step;

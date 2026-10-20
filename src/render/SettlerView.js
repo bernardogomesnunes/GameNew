@@ -29,6 +29,7 @@ const EYE_L = 0, EYE_R = 1, MOUTH = 2, HAND_L = 3, HAND_R = 4, BOOT_L = 5, BOOT_
   HAT = 8, HAT_EXTRA = 9, PLUME = 10, CAPE = 11, BEARD = 12, GEAR = 13, GEAR_2 = 14, EAR_L = 15, EAR_R = 16;
 const EYE = 0x231c22, BOOT = 0x3a2a20, BELT_LEATHER = 0x2e2620, STEEL = 0xc9ced6, WOOD = 0x6b4a2e, GOLD = 0xe8c04f;
 const NOTHING = new THREE.Matrix4().makeScale(0, 0, 0);
+const HEAD_PARTS = new Set([EYE_L, EYE_R, MOUTH, HAT, HAT_EXTRA, PLUME, BEARD, EAR_L, EAR_R]);
 const HURT_RED = new THREE.Color(0xd23a2a);   // beds run out long before this; the cap is just for the buffer
 const WINDUP_GLOW = new THREE.Color(0xfff6d8);
 const FROST = new THREE.Color(0x9fe6ff), EMBER = new THREE.Color(0xff7a3a), SPARK = new THREE.Color(0xffe066);
@@ -124,6 +125,7 @@ export class SettlerView {
   /** Redraws every settler where they now are. Called each frame. */
   update(people) {
     const n = Math.min(people.length, MAX);
+    const now = performance.now() / 1000;
     for (const m of this.meshes) m.count = m === this.limbs ? n * 4 : m === this.parts ? n * SLOTS : n;
     this.crowds.begin();
     if (!n) { this.crowds.end(); return; }
@@ -142,6 +144,10 @@ export class SettlerView {
       p._walk = (p._walk ?? 0) + Math.min(moved, 0.5);
       p._stride = Math.max(0, Math.min(1, (p._stride ?? 0) + (moved > 0.002 ? 0.15 : -0.1)));
       const swing = Math.sin(p._walk * 5) * 0.6 * p._stride;
+      // A villager at either end of their route is resting, not frozen: keep
+      // their legs settling straight and let them glance around occasionally.
+      const idle = !p.target && !(p.windup > 0 && p.winding) && !(p.strike > 0);
+      const idleHead = idle ? Math.sin(now * 1.1 + (p.id ?? i) * 2.399) * width * 0.07 : 0;
 
       this._e.set(0, p.facing ?? 0, 0);
       this._q.setFromEuler(this._e);
@@ -166,6 +172,7 @@ export class SettlerView {
         const pose = this._pose;
         pose.leg_r[0] = -swing;
         pose.leg_l[0] = swing;
+        pose.head = [0, idle ? Math.sin(now * 0.7 + (p.id ?? i) * 2.399) * 0.16 : 0, 0];
         pose.arm_r[0] = -(raised ?? -swing * 0.8);
         pose.arm_l[0] = -(raised ?? swing * 0.8);
         this.crowds.get(kit).add(base, pose, this.modelTint(p));
@@ -174,8 +181,8 @@ export class SettlerView {
         for (let k = 0; k < SLOTS; k++) this.parts.setMatrixAt(i * SLOTS + k, NOTHING);
         continue;
       }
-      place(this.heads, 0, legH + bodyH + headH / 2, 0);
-      place(this.hair, 0, legH + bodyH + headH * 0.86, -width * 0.02);
+      place(this.heads, idleHead, legH + bodyH + headH / 2, 0);
+      place(this.hair, idleHead, legH + bodyH + headH * 0.86, -width * 0.02);
 
       // Limbs: each hangs from its joint and swings about it.
       const limb = (k, x, top, len, w, angle) => {
@@ -212,7 +219,7 @@ export class SettlerView {
       this._colour.setHex(p.helm ?? hairHex);
       this.hair.setColorAt(i, this._colour);
 
-      this.dressUp(i, p, who, hairHex, { limbArm: [-width * 0.64, width * 0.64], limbLeg: [-width * 0.24, width * 0.24], swing, raised });
+      this.dressUp(i, p, who, hairHex, { limbArm: [-width * 0.64, width * 0.64], limbLeg: [-width * 0.24, width * 0.24], swing, raised, idleHead });
     }
 
     for (const m of this.meshes) {
@@ -240,13 +247,14 @@ export class SettlerView {
    * person's own frame — +z is the way they face — and the hands, boots and
    * what's in the hand follow the swing of the limb they're on.
    */
-  dressUp(i, p, who, hairHex, { limbArm, limbLeg, swing, raised }) {
+  dressUp(i, p, who, hairHex, { limbArm, limbLeg, swing, raised, idleHead = 0 }) {
     const { legH, bodyH, headH, width } = this;
     const o = outfitOf(p) ?? {};
     const parts = this.parts, base = this._m, at = i * SLOTS;
     const headW = width * 0.72, hc = legH + bodyH + headH / 2, front = headW / 2;
     const skin = p.skin ?? SKINS[who % SKINS.length];
     const put = (slot, x, y, z, sx, sy, sz, hex) => {
+      if (HEAD_PARTS.has(slot)) x += idleHead;
       this._pos.set(x, y, z).applyQuaternion(this._q);
       base.compose(this._pos.set(p.x + this._pos.x, p.y + this._pos.y, p.z + this._pos.z), this._q, this._size.set(sx, sy, sz));
       parts.setMatrixAt(at + slot, base);

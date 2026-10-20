@@ -952,6 +952,7 @@ export class Game {
           this.pendingSave = false;
           this.discarded = true;
           this.dropSafeCopy(this.worldId);
+          this.saveError = 'This world is no longer in your account, so the game will not recreate it. Return to your worlds and open the current copy.';
           return false;
         }
         // Somebody else saved this world since we opened it. Refusing would
