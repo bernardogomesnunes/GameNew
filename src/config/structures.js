@@ -997,16 +997,10 @@ export const STRUCTURES = [
         say: () => 'The watch needs open sky above it — nothing built over the top',
       },
     ],
-    // What a standing garrison brings back with nothing yet to defend
-    // against: patrols that forage and salvage as they go. The building is
-    // deliberately plain — a normal producer, on the same footing as
-    // everything else here — so that whatever it should do once there is
-    // something to defend *against* can be added to this one entry later
-    // without moving anything that depends on it. Requested directly: no
-    // building should hand over more than 10-15 of anything in a day.
-    produces: { stone: 1, planks: 1 },
-    everySeconds: 7200,
-    skill: 'politics',
+    // Soldiers are trained on request in the building panel; no passive
+    // stone or plank production.
+    produces: {},
+    everySeconds: 0,
   },
 
   // ---- Defence (White path): against the Stone Kingdom's Ten Rounds ----------

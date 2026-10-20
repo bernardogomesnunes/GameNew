@@ -22,7 +22,7 @@ import { cityName } from './Passengers.js';
 
 const DARK_WOOD = 43, PLANKS = 7, COBBLE = 8, LANTERN = 26, SLAB_PLANK = 28, RED_RUG = 35,
       FENCE = 47, DIRT = 2, FARMLAND = 21, CHEST = 148,
-      STONE = 3, WOOD = 4, LEAVES = 5, MARBLE = 17, GOLD = 13, MOSS = 22, GRAVEL = 23, STONE_SLAB = 27,
+      STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, MARBLE = 17, GOLD = 13, MOSS = 22, GRAVEL = 23, STONE_SLAB = 27,
       IRON_ORE = 38, COPPER_ORE = 39, GOLD_ORE = 40, DARK_MOSS = 46,
       DARK_STONE = 156, DARK_BRICK = 157, SKY_MARBLE = 158, GOLD_TRIM = 159,
       COBBLE_WALL = 161, STONE_PILLAR = 165, MARBLE_PILLAR = 166, DARK_PILLAR = 167,
@@ -112,6 +112,20 @@ export function landmarksFor(gen) {
     if (site) out.push({ kind: 'outpost', ...site, half: d.half, clear: d.clear, blocks: d.blocks, people: d.people });
   }
 
+  // Two new peoples live beyond the old frontier. Their camps are seeded
+  // like the existing places, so they arrive as the player explores farther
+  // out and remain stable across chunks and saves.
+  for (const [i, people] of RAID_PEOPLES.entries()) {
+    for (let n = 0; n < 2; n++) {
+      const salt = 8200 + i * 100 + n * 10;
+      const a = hash01(seed, salt, 8101) * Math.PI * 2;
+      const r = 1100 + hash01(seed, salt + 1, 8102) * 800;
+      const d = people.design(hash01(seed, salt + 2, 8103));
+      const site = siteNear(gen, Math.cos(a) * r, Math.sin(a) * r, d.half, out, 240);
+      if (site) out.push({ kind: people.kind, ...site, half: d.half, clear: d.clear, blocks: d.blocks, people: d.people });
+    }
+  }
+
   gen.landmarkCache = out;
   return out;
 }
@@ -157,6 +171,7 @@ export const PLACE_NAMES = {
   kingdom: 'The Stone Kingdom', hermit: 'The hermit\'s hut', camp: 'A bandit camp',
   ruin: 'An old ruin', ruined_temple: 'A forgotten temple', mine: 'An abandoned mine', monument: 'A monument',
   tribe: 'A tree tribe', city: 'A city', ruined_city: 'An abandoned city', outpost: 'A Stone Kingdom outpost',
+  caravan: 'A dune caravan', mossfolk: 'A mossfolk village',
 };
 
 /**
@@ -633,6 +648,68 @@ const TRIBE = (() => {
   }
   return { half: 16, clear: TOWER + 8, blocks, perches };
 })();
+
+/** A far-travelling desert caravan: three canvas tents around a shared fire. */
+function caravanDesign(roll) {
+  const blocks = [];
+  for (let dx = -8; dx <= 8; dx++) for (let dz = -4; dz <= 5; dz++) {
+    blocks.push([dx, -1, dz, (dx + dz + Math.floor(roll * 7)) & 1 ? SAND : GRAVEL]);
+  }
+  blocks.push([0, 0, 0, LANTERN]);
+  for (const [cx, cz, chest] of [[-5, -1, true], [5, -1, false], [0, 3, false]]) {
+    const cloth = hash01(cx, cz, Math.floor(roll * 10000)) < 0.5 ? RED_RUG : GREEN_RUG;
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -1; dz <= 1; dz++) {
+      const edge = Math.abs(dx) === 2 || Math.abs(dz) === 1;
+      if (edge) {
+        blocks.push([cx + dx, 0, cz + dz, DARK_WOOD]);
+        if (!(dz === 1 && dx === 0)) blocks.push([cx + dx, 1, cz + dz, DARK_WOOD]);
+      } else blocks.push([cx + dx, 0, cz + dz, cloth]);
+      blocks.push([cx + dx, 2, cz + dz, dx === 0 ? PLANKS : SLAB_PLANK]);
+    }
+    if (chest) blocks.push([cx, 0, cz - 1, CHEST + 2]);
+  }
+  return {
+    half: 9, clear: 5, blocks,
+    people: [
+      { kind: 'caravan_guard', dx: -1.5, dy: 0, dz: 0.5 },
+      { kind: 'caravan_guard', dx: 1.5, dy: 0, dz: 0.5 },
+      { kind: 'caravaner', dx: 0.5, dy: 0, dz: 2.5 },
+      { kind: 'caravaner', dx: -5.5, dy: 0, dz: 0.5 },
+    ],
+  };
+}
+
+/** A village grown into the forest: four leaf-roofed huts around a lantern tree. */
+function mossfolkDesign() {
+  const blocks = [];
+  for (const [cx, cz] of [[-5, -4], [5, -4], [-5, 5], [5, 5]]) {
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+      blocks.push([cx + dx, -1, cz + dz, (dx + dz) & 1 ? MOSS : PLANKS]);
+      if (Math.abs(dx) === 2 || Math.abs(dz) === 2) {
+        blocks.push([cx + dx, 1, cz + dz, dx & 1 ? DARK_WOOD : PLANKS]);
+        blocks.push([cx + dx, 2, cz + dz, dx & 1 ? DARK_WOOD : PLANKS]);
+      }
+      blocks.push([cx + dx, 3, cz + dz, LEAVES]);
+    }
+    blocks.push([cx, 0, cz, GREEN_RUG], [cx + 1, 0, cz + 1, FIREFLY_LANTERN]);
+  }
+  blocks.push([0, -1, 0, MOSS], [0, 0, 0, WOOD], [0, 1, 0, WOOD], [0, 2, 0, LEAVES], [0, 3, 0, FIREFLY_LANTERN]);
+  blocks.push([-5, 0, -4, CHEST + 2]);
+  return {
+    half: 9, clear: 6, blocks,
+    people: [
+      { kind: 'moss_guard', dx: -1.5, dy: 0, dz: -0.5 },
+      { kind: 'moss_guard', dx: 1.5, dy: 0, dz: 0.5 },
+      { kind: 'mossfolk', dx: -4.5, dy: 0, dz: 0.5 },
+      { kind: 'mossfolk', dx: 4.5, dy: 0, dz: 0.5 },
+    ],
+  };
+}
+
+const RAID_PEOPLES = [
+  { kind: 'caravan', design: caravanDesign },
+  { kind: 'mossfolk', design: mossfolkDesign },
+];
 
 const PLACES = [
   { kind: 'ruin', count: 4, at: [300, 700], half: 6, build: ruinBlocks },

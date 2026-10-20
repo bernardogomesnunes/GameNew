@@ -73,6 +73,6 @@ ok('an Engineering Centre, from Age 4, needs engineering studied first', eng.age
   ok('what you studied is saved, and what is being studied', back.research.engineering === true && back.skills.levelOf('foraging') === 2 && back.studying?.id === 'study_building_1');
 }
 
-ok('the bench shows what studying gives, not an item — and Research, how long, and a bar while it runs', /const name = r\.study \? r\.result : itemName\(r\.output\.id\);/.test(ui) && /const icon = r\.study\s*\? glyphSvg\('flask'/.test(ui) && /const verb = r\.study \? 'Research' : 'Make';/.test(ui) && /Takes \$\{this\.duilt\.constructor\.researchDays\(r\)\} days/.test(ui) && /class="research-bar"/.test(ui) && /Researching · \$\{escapeHtml\(d\.researchLeftText\(\)\)\} left/.test(ui));
+  ok('the bench shows what studying gives, not an item — and Research, game-day duration, and a bar while it runs', /const name = r\.study \? r\.result : itemName\(r\.output\.id\);/.test(ui) && /const icon = r\.study\s*\? glyphSvg\('flask'/.test(ui) && /const verb = r\.study \? 'Research' : 'Make';/.test(ui) && /Takes \$\{gameDaysText\(this\.duilt\.constructor\.researchDays\(r\)\)\}/.test(ui) && /class="research-bar"/.test(ui) && /Researching · \$\{escapeHtml\(d\.researchLeftText\(\)\)\} left/.test(ui));
 
 process.exit(f ? 1 : 0);

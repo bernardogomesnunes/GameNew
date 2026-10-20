@@ -10,7 +10,7 @@
  */
 
 export const LOGS = new Set([4, 41, 43]);
-export const LEAVES = new Set([5, 42, 44]);
+export const LEAVES = new Set([5, 42, 44, 517]);
 /**
  * How far a leaf can be from wood, counted through leaves, and still hold on.
  * Generous on purpose: a giant's crown (ChunkGen.plantGiant) runs a dozen

@@ -283,6 +283,45 @@ def person(id, name, **kw):
         rest = {'wing_l': (0, 40, -12), 'wing_r': (0, -40, 12)}
         anim['wing_l'] = [(1, (0, 40, -12)), (13, (0, 60, -18)), (25, (0, 40, -12))]
         anim['wing_r'] = [(1, (0, -40, 12)), (13, (0, -60, 18)), (25, (0, -40, 12))]
+    # Ordinary villagers get the same layered finish as the explorer, while
+    # retaining their own scale, palette, bones and walk cycle.
+    if id == 'settler' or id.startswith('settler_') or id == 'citizen' or id.startswith('citizen_'):
+        accent = o['trim'] or o['shirt'] or C['paper']
+        cloth = lambda p, f: p.fill(coat).row(-1, coat2)
+        leather = lambda p, f: p.fill(o['belt']).row(0, shade(o['belt'], 1.2))
+        cubes += [
+            box('collar_l', 'body', (-3.5, 21.5, -2.7), (-0.5, 24.2, -2), accent),
+            box('collar_r', 'body', (0.5, 21.5, -2.7), (3.5, 24.2, -2), accent),
+            box('coat_hem', 'body', (-4.3, 11.5, -2.3), (4.3, 13, 2.3), cloth),
+            box('pocket', 'body', (-3.6, 15, -2.7), (-0.8, 18, -2), cloth),
+            box('pocket_flap', 'body', (-3.7, 17.6, -3), (-0.7, 18.5, -2.5), coat2),
+            box('belt_pouch', 'body', (3.5, 11, -1.5), (5.5, 14, 1), leather),
+            box('pouch_clasp', 'body', (4, 12.5, -1.8), (4.8, 13.4, -1.5), o['buckle']),
+            box('nose', 'head', (-0.8, 26.4, -4.8), (0.8, 28, -4), skin2),
+            box('ear_l', 'head', (-4.6, 26.5, -0.8), (-4, 28.5, 0.8), skin),
+            box('ear_r', 'head', (4, 26.5, -0.8), (4.6, 28.5, 0.8), skin),
+        ]
+        for side, x in [('l', -8), ('r', 4)]:
+            cubes.append(box(f'cuff_{side}', f'arm_{side}', (x - 0.2, 14.5, -2.2), (x + 4.2, 16, 2.2), accent))
+        for side, x in [('l', -4), ('r', 0)]:
+            cubes += [box(f'boot_toe_{side}', f'leg_{side}', (x, 0.5, -3), (x + 4, 3, -1.5), o['boots']),
+                      box(f'boot_sole_{side}', f'leg_{side}', (x - 0.1, 0, -3.1), (x + 4.1, 0.6, 2.1), shade(o['boots'], 0.65))]
+        if o['hair'] and not hat:
+            hair = o['hair']
+            cubes += [box('hair_top', 'head', (-4.2, 31, -4.1), (4.2, 32.6, 4.2), hair),
+                      box('hair_fringe', 'head', (-4.2, 29.8, -4.3), (-0.5, 31.4, -3.6), hair),
+                      box('hair_side', 'head', (3.5, 27.8, 1.5), (4.4, 31.2, 4.3), shade(hair, 0.85))]
+        if o['beard']:
+            cubes.append(box('beard_tip', 'head', (-2, 23, -4.5), (2, 25.5, -3.8), o['beard']))
+        # Different accessories read at playing distance, beyond colour swaps.
+        if id in ('settler_2', 'citizen_1'):
+            cubes.append(box('apron_bib', 'body', (-2.8, 13, -3), (2.8, 21.2, -2.5), C['paper2']))
+            cubes.append(box('apron_skirt', 'body', (-3, 6.5, -2.9), (3, 13, -2.3), C['paper2']))
+        if id in ('settler_4', 'citizen_2'):
+            cubes.append(box('shoulder_wrap', 'body', (-4.7, 21.5, -2.6), (4.7, 23.8, 2.6), accent))
+        if id in ('settler_1', 'settler_5', 'citizen_3'):
+            cubes.append(box('small_pack', 'body', (-3, 14, 2), (3, 21, 4), leather))
+            cubes.append(box('pack_flap', 'body', (-3.2, 19.5, 2), (3.2, 21.5, 4.4), coat2))
     return dict(id=id, name=name, bones=bones, cubes=cubes, anim=anim, rest=rest, scale=o['scale'])
 
 

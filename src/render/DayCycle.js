@@ -24,6 +24,12 @@ export const DAYLIGHT_SECONDS = 600;
 const NIGHT_SPEED = 2;
 /** Real seconds in a whole game day, sunrise to sunrise: fifteen minutes. */
 export const GAME_DAY_SECONDS = DAYLIGHT_SECONDS * (1 + 1 / NIGHT_SPEED);
+/** A game-day duration paired with its approximate real play time. */
+export function gameDaysText(days) {
+  const amount = Math.round(days * 10) / 10;
+  const minutes = Math.max(1, Math.round(days * GAME_DAY_SECONDS / 60));
+  return `${amount} game day${amount === 1 ? '' : 's'} (about ${minutes} minute${minutes === 1 ? '' : 's'} of play)`;
+}
 /** How fast the stars turn, as a fraction of the sun and moon's speed. */
 export const STAR_DRIFT = 0.12;
 /** How much light a Helm of Night Sight keeps, however dark it gets. */

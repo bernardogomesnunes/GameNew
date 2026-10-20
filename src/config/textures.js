@@ -87,7 +87,7 @@ export const TEXTURES = {
   sand:      { ripples: 3, hue: 0.12, marks: 18, flecks: [[0.86, 0.8, 0.74], [1.06, 1.04, 1.02]], depth: 0.14, mottle: 0.04, speck: 0.015 },
   gravel:    { pebbles: 6, marks: 10, flecks: [[1.06, 1.0, 0.9], [0.9, 0.95, 1.06], [1.14, 1.06, 0.94], [0.72, 0.72, 0.75], [1.12, 1.1, 1.08]], depth: 0.42, speck: 0.05 },
   clay:      { strata: 4, marks: 16, flecks: [[1.06, 1.0, 0.94], [0.9, 0.94, 1.0]], depth: 0.16, mottle: 0.08, speck: 0.03 },
-  stone:     { mottle: 0.16, hue: 0.5, marks: 40, flecks: STONE_FLECKS, cracks: 2, depth: 0.3, speck: 0.05, bump: 0.25 },
+  stone:     { rockFaces: 3, hue: 0.12, depth: 0.2, bump: 0.2 },
   // The first cobblestone, exactly (render/legacyCobble.js): asked for twice.
   // Painted at the full 32px with the same stones: four times as many to a
   // face ("more cobble per square").
@@ -145,7 +145,7 @@ export const BLOCK_TEXTURES = {
   // glassy purple-black with a sheen; and black basalt setts.
   // Big cut stones, squared and coursed (#19) — the dark stone's ashlar in
   // pale grey, quieter.
-  'Stone Brick':   { lines: 'ashlar', mottle: 0.1, hue: 0.3, marks: 30, flecks: STONE_FLECKS, depth: 0.36, speck: 0.04, bump: 0.6 },
+  'Stone Brick':   { lines: 'ashlar', hue: 0.1, depth: 0.26, bump: 0.4 },
   // Desert (#33): sandstone in thin wind-laid beds; its bricks in courses
   // with darker joints.
   'Sandstone':       { strata: 5, marks: 20, flecks: [[1.05, 1.02, 0.95], [0.86, 0.8, 0.74]], depth: 0.5, mottle: 0.06, speck: 0.03, cracks: 1, bump: 0.45 },
@@ -158,7 +158,7 @@ export const BLOCK_TEXTURES = {
                           top: { rings: 3, heart: [0.96, 0.92, 0.84], depth: 0.18, speck: 0.03, lift: 0 } },
   'Stripped Dark Log':  { bark: 3, marks: 8, flecks: [[1.1, 1.04, 0.96]], depth: 0.18, mottle: 0.06, speck: 0.03, bump: 0.3,
                           top: { rings: 2.5, heart: [1.3, 1.22, 1.12], depth: 0.24, speck: 0.03, lift: 0 } },
-  'Dark Stone':    { lines: 'ashlar', mottle: 0.14, hue: 0.25, marks: 46, flecks: [[0.86, 0.94, 1.12], [1.12, 1.12, 1.16], [0.8, 0.84, 0.92]], depth: 0.42, speck: 0.05, bump: 0.6 },
+  'Dark Stone':    { lines: 'ashlar', hue: 0.12, depth: 0.32, bump: 0.45 },
   'Dark Brick':    { lines: 'brick', mortar: [0.5, 0.46, 0.46], depth: 0.32, speck: 0.05, marks: 22, bump: 0.8 },
   'Dark Calçada':  { setts: 5, joint: [1.85, 1.8, 1.72], depth: 0.3, speck: 0.03, bump: 0.6 },
   'Sky Marble':    { veins: 2, vein: [0.84, 0.9, 1.06], marks: 10, flecks: [[1.24, 1.08, 0.66]], mottle: 0.04, edge: 0.06, depth: 0.14, speck: 0.012 },
@@ -167,7 +167,8 @@ export const BLOCK_TEXTURES = {
                      top: { rings: 3, heart: [1.04, 0.98, 0.86], depth: 0.2, speck: 0.03, lift: 0 } },
   'Dark Wood':     { strips: 1, dashes: 20, marks: 6, flecks: [[0.86, 0.95, 0.82]], depth: 0.5, bump: 0.7,
                      top: { rings: 2.5, heart: [1.85, 1.7, 1.55], depth: 0.25, speck: 0.04, lift: 0 } },
-  'White Leaves':  { leaves: 120, blossom: 14, flecks: [[1.1, 1.08, 0.8], [1, 1, 1], [0.94, 1.0, 0.96]], depth: 0.36, speck: 0.03, holes: 6, gaps: 14, bite: 6 },
+  'White Leaves':  { leaves: 100, flecks: [[1.02, 1.02, 1.02], [1, 1, 1], [0.93, 0.95, 0.97]], depth: 0.26, holes: 6, gaps: 14, bite: 6 },
+  'Pink Leaves':   { leaves: 100, blossom: 10, flecks: [[1.06, 0.96, 1.0], [1, 1, 1], [0.96, 1.02, 1.04]], depth: 0.28, holes: 6, gaps: 14, bite: 6 },
   'Dark Leaves':   { leaves: 140, flecks: [[1.08, 1.1, 0.86], [1, 1, 1], [0.84, 0.98, 1.06]], depth: 0.46, speck: 0.04, holes: 4, gaps: 12, bite: 6 },
   'Gold Ore':      { mottle: 0.14, marks: 24, flecks: STONE_FLECKS, ore: 6, nugget: [1.55, 1.3, 0.55], depth: 0.32, speck: 0.04, bump: 0.4, shine: 0.1, glints: 10 },
   'Iron Ore':      { mottle: 0.14, marks: 24, flecks: STONE_FLECKS, ore: 6, nugget: [1.3, 1.02, 0.86], depth: 0.32, speck: 0.04, bump: 0.4 },

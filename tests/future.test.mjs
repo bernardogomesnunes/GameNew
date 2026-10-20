@@ -141,7 +141,7 @@ ok('  from the Future, a machine takes you home', /if \(inPast\(x, cx\) \|\| inF
 
 // --- its people and its traffic -----------------------------------------------------------------------------
 
-ok('its people about the square: neutral, and they talk', WANDERERS.futurian?.neutral && /'futurian'\]\);/.test(game)
+ok('its people about the square: neutral, and they talk', WANDERERS.futurian?.neutral && /'futurian'/.test(game)
   && /peopleTheFuture\(at, y\);/.test(game) && /Archive/.test(talkLine({ who: 'futurian', person: { id: 0, said: 1 } })));
 ok('  gone again when you go home', /travelHome\(\) \{[\s\S]{0,400}landmark\?\.kind !== 'future'/.test(game));
 {

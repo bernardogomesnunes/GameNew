@@ -187,13 +187,13 @@
   "group": "creatures"
  },
  "settler": {
-  "cubes": 6,
-  "triangles": 72,
+  "cubes": 25,
+  "triangles": 300,
   "atlas": [
    128,
    32
   ],
-  "kb": 15.0,
+  "kb": 41.6,
   "name": "Settler",
   "group": "people"
  },
@@ -308,13 +308,13 @@
   "group": "people"
  },
  "citizen": {
-  "cubes": 8,
-  "triangles": 96,
+  "cubes": 24,
+  "triangles": 288,
   "atlas": [
    128,
    32
   ],
-  "kb": 17.9,
+  "kb": 40.1,
   "name": "Citizen",
   "group": "people"
  },
@@ -638,90 +638,90 @@
   "group": "vehicles"
  },
  "settler_1": {
-  "cubes": 6,
-  "triangles": 72,
+  "cubes": 27,
+  "triangles": 324,
   "atlas": [
    128,
    32
   ],
-  "kb": 15.0,
+  "kb": 44.5,
   "name": "Settler 2",
   "group": "people"
  },
  "settler_2": {
-  "cubes": 6,
-  "triangles": 72,
+  "cubes": 28,
+  "triangles": 336,
   "atlas": [
    128,
    32
   ],
-  "kb": 15.0,
+  "kb": 45.8,
   "name": "Settler 3",
   "group": "people"
  },
  "settler_3": {
-  "cubes": 6,
-  "triangles": 72,
+  "cubes": 25,
+  "triangles": 300,
   "atlas": [
    128,
    32
   ],
-  "kb": 15.0,
+  "kb": 41.7,
   "name": "Settler 4",
   "group": "people"
  },
  "settler_4": {
-  "cubes": 8,
-  "triangles": 96,
+  "cubes": 25,
+  "triangles": 300,
   "atlas": [
    128,
    32
   ],
-  "kb": 18.0,
+  "kb": 41.7,
   "name": "Settler 5",
   "group": "people"
  },
  "settler_5": {
-  "cubes": 6,
-  "triangles": 72,
+  "cubes": 27,
+  "triangles": 324,
   "atlas": [
    128,
    32
   ],
-  "kb": 15.0,
+  "kb": 44.4,
   "name": "Settler 6",
   "group": "people"
  },
  "citizen_1": {
-  "cubes": 8,
-  "triangles": 96,
+  "cubes": 26,
+  "triangles": 312,
   "atlas": [
    128,
    32
   ],
-  "kb": 17.9,
+  "kb": 43.0,
   "name": "Citizen 2",
   "group": "people"
  },
  "citizen_2": {
-  "cubes": 8,
-  "triangles": 96,
+  "cubes": 25,
+  "triangles": 300,
   "atlas": [
    128,
    32
   ],
-  "kb": 18.0,
+  "kb": 41.7,
   "name": "Citizen 3",
   "group": "people"
  },
  "citizen_3": {
-  "cubes": 8,
-  "triangles": 96,
+  "cubes": 26,
+  "triangles": 312,
   "atlas": [
    128,
    32
   ],
-  "kb": 18.0,
+  "kb": 43.0,
   "name": "Citizen 4",
   "group": "people"
  },

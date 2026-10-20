@@ -21,6 +21,14 @@ export class Crops {
     this.planted.delete(`${x},${y},${z}`);
   }
 
+  /** Compost advances a growing crop by one full stage and stays saved as its planting time. */
+  compost(x, y, z) {
+    const crop = this.planted.get(`${x},${y},${z}`);
+    if (!crop) return false;
+    crop.at -= STAGE_SECONDS * 1000;
+    return true;
+  }
+
   /** The stage a crop planted at `at` has reached by `now`. */
   static stageAt(at, now) {
     return Math.max(0, Math.min(RIPE, Math.floor((now - at) / 1000 / STAGE_SECONDS)));

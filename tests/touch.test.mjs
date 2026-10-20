@@ -71,7 +71,7 @@ ok('with Down under it, once you are flying', sideRight.includes('id="t-down"'))
   ok('and lifts instead of straddling where there is no room below',
     /body\.touch \.stick-side\.paired \{ transform: translateY\(calc\(var\(--side-btn\) \/ -2\)\)/.test(css));
   ok('the button size is one name, so the maths cannot drift from it',
-    /--side-btn: 54px/.test(css) && /--side-btn: 50px/.test(css) && /--side-btn: 40px/.test(css)
+    /--side-btn: 62px/.test(css) && /--side-btn: 58px/.test(css) && /--side-btn: 48px/.test(css)
     && /\.touch-btn\.small \{ width: var\(--side-btn\)/.test(css));
 }
 ok('and neither is left up in the column',

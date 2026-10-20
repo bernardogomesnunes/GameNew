@@ -101,7 +101,7 @@ const KINDS = ['ruin', 'ruined_temple', 'mine', 'monument'];
 
 // --- finding them ------------------------------------------------------------------------------
 
-ok('nobody lives in them — no bandits spawn at a ruin (only the hermit, camps, the kingdom, the tree tribes, the living cities, the outposts and Battle\'s rival cities have people)', /if \(lm\.kind !== 'hermit' && lm\.kind !== 'camp' && lm\.kind !== 'kingdom' && lm\.kind !== 'tribe' && lm\.kind !== 'city' && lm\.kind !== 'outpost' && lm\.kind !== 'rival'\) continue;/.test(wanderers));
+ok('people live at the inhabited landmarks, including caravans and mossfolk villages', /lm\.kind !== 'hermit'[\s\S]*lm\.kind !== 'caravan'[\s\S]*lm\.kind !== 'mossfolk'\) continue;/.test(wanderers));
 ok('messengers bring news of each, with the way to go', KINDS.every((k) => NEWS[k]?.length >= 2 && NEWS[k].every((line) => line.includes('{dir}'))));
 ok('walking up to one finds it', /this\.lookForPlaces\(dt\)/.test(game) && /this\.duilt\.discover\(lm\)/.test(game));
 {

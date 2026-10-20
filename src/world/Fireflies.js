@@ -23,7 +23,7 @@ const SPAWN_EVERY = 0.6;          // seconds between tries at a new swarm
 const FADE = 4;                   // seconds to fade fully in or out
 const CATCH = 5;                  // dots one catch takes
 const SCATTER_BELOW = 6;          // a swarm this thin scatters
-const LEAVES = new Set([5, 42, 44]);
+const LEAVES = new Set([5, 42, 44, 517]);
 
 export class Fireflies {
   constructor({ world, rand = Math.random }) {
