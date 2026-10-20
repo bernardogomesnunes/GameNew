@@ -67,6 +67,7 @@ function findSite(gen) {
   for (let k = 0; k < 24; k++) {
     const a = start + (k / 24) * Math.PI * 2;
     const cx = Math.round(home.x + Math.cos(a) * r), cz = Math.round(home.z + Math.sin(a) * r);
+    if(gen.waterLevelAt(cx,cz))continue;
     const heights = [];
     let bad = 0, wet = 0;
     for (let i = -4; i <= 4; i++) {

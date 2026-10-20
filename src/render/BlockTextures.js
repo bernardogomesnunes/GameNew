@@ -288,11 +288,17 @@ function paint(recipe, spec, salt) {
 function rockFaces(c, recipe, salt, depth) {
   // Broad chipped planes, with two deliberate edge tones. Quantised positions
   // keep the silhouette pixel-drawn rather than cloudlike or finely speckled.
-  const pts = scatter(recipe.rockFaces, recipe.rockFaces, 0.32, salt);
+  const rough = recipe.fractured;
+  const columns = recipe.rockFaces + (rough && hash01(salt, 17, 71) > 0.55 ? 1 : 0);
+  const rows = recipe.rockFaces - (rough && hash01(salt, 23, 91) > 0.4 ? 1 : 0);
+  const pts = scatter(columns, rows, rough ? 0.48 : 0.32, salt);
   each((x, y) => {
     const { p, d1, d2, dx, dy } = nearest(pts, (x >> 1) * 2 + 1, (y >> 1) * 2 + 1);
     const face = 0.94 + Math.floor(p.h * 4) * 0.045;
-    const edge = d2 - d1 < 0.65;
+    // Broken seams with a different width on each plane, rather than one
+    // continuous, equally spaced network of veins on every kind of rock.
+    const width = rough ? 0.28 + p.h2 * 0.65 : 0.65;
+    const edge = d2 - d1 < width && (!rough || hash01(x >> 2, y >> 2, salt + 53) > 0.2);
     const lip = edge && dy > 0 && dx < 2;
     shade(c, x, y, edge ? (lip ? 1.08 : 1 - depth) : face);
     lift(c, x, y, edge ? 0.2 : 0.65 + p.h * 0.15);

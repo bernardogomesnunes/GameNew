@@ -59,8 +59,8 @@ export const BIOMES = [
     // Almost no roll of its own — what makes Plains read as open country is
     // the huge flat patches (see `flat`, and ChunkGen.flatFactor for how it
     // spends this), not a low amplitude alone.
-    base: 104, amplitude: 3, rough: 1,
-    flat: 1.5,
+    base: 104, amplitude: 1.8, rough: 0.5,
+    flat: 1.9,
     surface: { top: GRASS, under: DIRT, depth: 3, rock: STONE },
     // Open ground you can actually build on: the starting plot lands here.
     // Fewer trees than before — requested directly, "green with fewer trees
@@ -132,15 +132,12 @@ export const BIOMES = [
     trees: { chance: 0.018, trunk: [7, 10], canopy: 3, wood: WOOD, leaves: LEAVES, giants: 0.7 },
   },
   {
-    // Requested directly: "bigger flat areas even, and some steeper between
-    // the flat areas." A higher `flat` than Plains for the first half, and a
-    // higher `rough` than Plains for the second — the dunes between the
-    // pans, not the pans themselves.
+    // WORLD-3: broad pans with low, gentle dunes between them.
     id: 'desert',
     name: 'Desert',
     niche: { temp: 0.9, wet: 0.12 },
-    base: 104, amplitude: 6, rough: 4,
-    flat: 1.8,
+    base: 104, amplitude: 2, rough: 0.4,
+    flat: 2.2,
     // Sandstone under the sand (#33), three down, and breaking through it
     // in outcrops where the ground's bones show.
     surface: { top: SAND, under: SAND, depth: 6, rock: STONE, bed: SANDSTONE, cover: 3, outcrop: SANDSTONE },
@@ -187,10 +184,8 @@ export const BIOMES = [
     // foothills — trees only take root in the lower blend zone (see
     // `treeMaxHeight`), not partway up the real mass of it. Nested inside
     // the same `range` gate Mountains 1 shares (`summitOnly` in
-    // biomeMap.js), so it stands inside the same ranges rather than needing
-    // a rarer footprint of its own — and, per the direct instruction to
-    // leave mountain footprints alone, that gate is untouched by the wider
-    // regions every other biome above just got.
+    // biomeMap.js), so it stands inside the same ranges. WORLD-1 now widens
+    // those ranges too; rare massifs have a broad shoulder and a high core.
     id: 'mountains2',
     name: 'High Peaks',
     niche: { temp: 0.28, wet: 0.28 },

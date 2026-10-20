@@ -110,6 +110,30 @@ const cropsAt = (world) => {
   ok('saved and loaded, a farm\'s crops still know their farm', back.planted.get('1,2,3').farm === 7 && back.planted.get('4,2,3').farm === undefined);
 }
 
+{
+  // One dose belongs to the farm: it moves its whole field on, while a crop
+  // planted by hand stays on its own clock. The changed times survive save.
+  const { world, g, farm } = setup();
+  g.inventory.add('seeds_carrot', 1); g.sowFarm(farm, 'carrot');
+  g.tendFarms(world, Date.now());
+  const own = [...g.crops.planted.values()][0];
+  const before = own.at;
+  g.crops.plant(10, 2, 10, 'potato', before);
+  g.inventory.add('compost', 1);
+  const result = g.compostFarm(farm);
+  ok('one compost advances all 16 farm crops', result.ok && result.count === 16 && g.inventory.countOf('compost') === 0);
+  ok('and leaves a hand-planted crop alone', g.crops.planted.get('10,2,10').at === before);
+  const restored = new Crops();
+  restored.loadJSON(JSON.parse(JSON.stringify(g.crops.toJSON())));
+  ok('the extra growth survives save and load', [...restored.planted.values()].filter((c) => c.farm === farm.id).every((c) => c.at === before - STAGE_SECONDS * 1000));
+  g.crops.grow(world);
+  ok('the farm visibly grows one stage', cropsAt(world).every((c) => c.stage === 1));
+  g.inventory.add('compost', 1);
+  for (const crop of g.crops.planted.values()) if (crop.farm === farm.id) crop.at = Date.now() - RIPE_MS;
+  g.crops.grow(world);
+  ok('a ripe field does not consume compost', !g.compostFarm(farm).ok && g.inventory.countOf('compost') === 1);
+}
+
 ok('the game tends farms on the crop clock', /this\.duilt\.tendFarms\(this\.world\)/.test(game));
 ok('and the farm says so', /They grow in its soil/.test(ui));
 

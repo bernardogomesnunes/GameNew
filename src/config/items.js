@@ -67,7 +67,7 @@ export const ITEMS = [
   { id: 'planks', name: 'Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'planks', block: 7, madeBy: 'Sawn from wood' },
   { id: 'farmland', name: 'Turned Soil', kind: 'refined', stackTo: STACK_BULK, color: 0xc4986c, glyph: 'farmland', block: 21, madeBy: 'Dirt broken up for planting' },
   { id: 'compost_bin', name: 'Compost Bin', kind: 'refined', stackTo: STACK_GOODS, color: 0x76523b, glyph: 'moss', block: 520, madeBy: 'Built from planks and leaves' },
-  { id: 'compost', name: 'Compost', kind: 'refined', stackTo: STACK_GOODS, color: 0x5c4030, glyph: 'moss', madeBy: 'Leaves and seeds mixed at a compost bin — place on a growing crop to advance it one stage' },
+  { id: 'compost', name: 'Compost', kind: 'refined', stackTo: STACK_GOODS, color: 0x5c4030, glyph: 'moss', madeBy: 'Leaves and seeds mixed at a compost bin — use on a crop or add to a farm to move growing crops ahead one stage' },
 
   // --- what the quarry, kiln and mine give back ----------------------------
   { id: 'cobblestone', name: 'Cobblestone', kind: 'raw', stackTo: STACK_BULK, color: 0xc8c6c2, glyph: 'cobble', block: 8, madeBy: 'Split from quarried stone' },

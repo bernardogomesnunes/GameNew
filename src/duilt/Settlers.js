@@ -1,6 +1,7 @@
 import { SETTLERS, settlerName, settlerColour } from '../config/settlers.js';
 import { STRUCTURES_BY_ID } from '../config/structures.js';
 import { ITEMS } from '../config/items.js';
+import {settlerFloor,settlerRoute} from './settlerNavigation.js';
 
 /** Everything edible, least nourishing first — what settlers work down through. */
 const FOODS = ITEMS.filter((i) => i.kind === 'food').sort((a, b) => (a.feeds ?? 0) - (b.feeds ?? 0));
@@ -31,13 +32,10 @@ const centreOf = (r) => ({
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
 /**
- * How far a settler will step up onto something built on the ground.
- *
- * Four, because that is a generous floor or terrace and the shortest tree
- * trunk in the game — so the check above it lands inside the leaves and the
- * climb is refused.
+ * Recover the floor at spawn/load or after construction. This is not a
+ * walking allowance: traversal probes from the previous feet, one step up.
  */
-const STEP_UP = 4;
+const FLOOR_SCAN = 4;
 
 export class Settlers {
   /**
@@ -351,7 +349,7 @@ export class Settlers {
 
     if (w.isSolid(ix, base, iz)) {
       let y = base;
-      while (y < base + STEP_UP && y < w.height - 2 && w.isSolid(ix, y, iz)) y++;
+      while (y < base + FLOOR_SCAN && y < w.height - 2 && w.isSolid(ix, y, iz)) y++;
       const roomToStand = !w.isSolid(ix, y, iz) && !w.isSolid(ix, y + 1, iz);
       return roomToStand ? y : base;
     }
@@ -454,10 +452,8 @@ export class Settlers {
   /**
    * One step of a settler's day: stand a while, then walk to the other end.
    *
-   * No pathfinding. They are crossing their own settlement, which is land the
-   * player has been levelling and building on, and a walker that gets stuck on
-   * a boulder looks far worse than one that steps over it — so they follow the
-   * ground height rather than colliding with it.
+   * Probe from the previous foot height, taking one-block steps and routing
+   * around buildings when the direct line is blocked.
    */
   walk(p, dt) {
     // Every tick, not only after a step. Somebody standing outside their house
@@ -465,7 +461,20 @@ export class Settlers {
     // whose ground you dig out should come down with it — waiting for their
     // next walk is up to a ten-second stretch of a person hanging in the air
     // or buried to the neck.
-    p.y = this.groundAt(p.x, p.z);
+    if(!Number.isFinite(p.y)||p.y<=0)p.y=this.groundAt(p.x,p.z);
+    const floor=settlerFloor(this.world,p.x,p.z,p.y);
+    if(floor!=null)p.y=floor;
+    else {
+      const below=this.groundAt(p.x,p.z);
+      let supported=false;
+      for(let y=Math.floor(p.y)-1;y>=0;y--) {
+        if(this.world.isSolid(Math.floor(p.x),y,Math.floor(p.z))){supported=true;break;}
+      }
+      // Construction may bury somebody who was resting. Recover them onto
+      // that new floor, while never using this scan to climb during travel.
+      const buried=p.wait>0 && this.world.isSolid(Math.floor(p.x),Math.floor(p.y),Math.floor(p.z));
+      if(below<p.y || !supported || buried)p.y=below;
+    }
 
     if (p.wait > 0) {
       p.wait -= dt;
@@ -487,19 +496,26 @@ export class Settlers {
     }
     if (!p.target) { p.wait = 1; return; }
 
-    const dx = p.target.x - p.x, dz = p.target.z - p.z;
-    const d = Math.hypot(dx, dz);
-    const step = SETTLERS.walkSpeed * dt;
-    if (d <= step) {
-      p.x = p.target.x; p.z = p.target.z;
-      const [lo, hi] = SETTLERS.restSeconds;
-      p.wait = lo + this.rand() * (hi - lo);
-      p.target = null;
-    } else {
-      p.x += (dx / d) * step;
-      p.z += (dz / d) * step;
+    if(p._routeFor!==p.target){p._route=null;p._routeFor=p.target;}
+    let remaining=SETTLERS.walkSpeed*Math.min(Math.max(0,dt),.5),planned=false;
+    while(remaining>1e-6) {
+      const aim=p._route?.[0]??p.target;
+      const dx=aim.x-p.x,dz=aim.z-p.z,d=Math.hypot(dx,dz);
+      if(d<.03) {
+        if(p._route?.length){p._route.shift();continue;}
+        const [lo,hi]=SETTLERS.restSeconds;
+        p.wait=lo+this.rand()*(hi-lo);p.target=null;p._route=null;break;
+      }
+      const step=Math.min(.2,remaining,d),nx=p.x+dx/d*step,nz=p.z+dz/d*step;
+      const ny=settlerFloor(this.world,nx,nz,p.y);
+      if(ny==null) {
+        if(planned){p.target=null;p._route=null;p.wait=2;p.atWork=false;break;}
+        p._route=settlerRoute(this.world,p,p.target);planned=true;
+        if(!p._route?.length){p.target=null;p.wait=2;p.atWork=false;break;}
+        continue;
+      }
+      p.x=nx;p.z=nz;p.y=ny;remaining-=step;
     }
-    p.y = this.groundAt(p.x, p.z);
   }
 
   /** Drops anyone whose house is gone, and re-employs anyone whose work went. */

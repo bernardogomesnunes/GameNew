@@ -1,0 +1,357 @@
+ok  accesstoken-noheader.test.mjs 2 passed
+ok  accesstoken-sessionfail.test.mjs 3 passed
+ok  accesstoken.test.mjs       22 passed
+
+--- account.test.mjs (52 passed, 1 failed)
+FAIL and an imported file becomes a world on the account too
+ok  achievements.test.mjs      25 passed
+ok  agenames.test.mjs          12 passed
+ok  ages.test.mjs              1484 passed
+ok  armour.test.mjs            39 passed
+ok  army.test.mjs              32 passed
+ok  arrival.test.mjs           14 passed
+ok  atmosphere.test.mjs        12 passed
+ok  autosave.test.mjs          3 passed
+ok  avatar.test.mjs            27 passed
+ok  axe.test.mjs               5 passed
+ok  backpack.test.mjs          18 passed
+ok  batch3a.test.mjs           5 passed
+
+--- battle.test.mjs (41 passed, 1 failed)
+FAIL   the standard: nothing breaks it, and it shines
+ok  biomes.test.mjs            115 passed
+ok  blockjoins.test.mjs        24 passed
+ok  border.test.mjs            18 passed
+
+--- bordercurtain.test.mjs (7 passed, 1 failed)
+FAIL each stands on its own ground, over ground from 100 to 106 high (worst 14.00 off)
+ok  bow.test.mjs               25 passed
+ok  browserfull.test.mjs       4 passed
+ok  bucket.test.mjs            20 passed
+ok  buildingcost.test.mjs      6 passed
+ok  buildinglevels.test.mjs    11 passed
+ok  buildingpopup.test.mjs     14 passed
+ok  campfire.test.mjs          6 passed
+ok  catapult.test.mjs          27 passed
+ok  chimney.test.mjs           16 passed
+ok  cities.test.mjs            34 passed
+ok  claimarea.test.mjs         23 passed
+ok  claimcolumn.test.mjs       12 passed
+ok  clear.test.mjs             42 passed
+ok  clouds.test.mjs            4 passed
+ok  cloudworlds.test.mjs       0 passed
+
+--- coinsstations.test.mjs (11 passed, 1 failed)
+FAIL added last, so a chest still rolls what it rolled before
+ok  collection.test.mjs        14 passed
+
+--- combat.test.mjs (23 passed, 1 failed)
+FAIL most nights a raid sets out (0 of 6)
+ok  conquest.test.mjs          16 passed
+ok  controls.test.mjs          8 passed
+ok  coveredturf.test.mjs       6 passed
+ok  craft.test.mjs             16 passed
+ok  craftmissing.test.mjs      17 passed
+ok  craftnames.test.mjs        15 passed
+ok  creativebag.test.mjs       12 passed
+ok  creativeterrain.test.mjs   3 passed
+ok  crops.test.mjs             43 passed
+ok  daynight.test.mjs          14 passed
+ok  deadclaim.test.mjs         12 passed
+ok  decor.test.mjs             36 passed
+ok  deep-caves.test.mjs        1 passed
+ok  defence.test.mjs           45 passed
+ok  deletedworlds.test.mjs     7 passed
+ok  desertblocks.test.mjs      16 passed
+ok  designdetail.test.mjs      33 passed
+ok  designs.test.mjs           175 passed
+ok  digremesh.test.mjs         4 passed
+ok  discard.test.mjs           8 passed
+ok  disguise.test.mjs          24 passed
+ok  doorlabel.test.mjs         10 passed
+ok  doorsheld.test.mjs         8 passed
+ok  drawbow.test.mjs           28 passed
+ok  drinks.test.mjs            33 passed
+ok  duilt.test.mjs             31 passed
+
+--- earlyroofs.test.mjs (7 passed, 1 failed)
+FAIL the workshop is roofed in slate
+ok  eat.test.mjs               12 passed
+ok  editbuilding.test.mjs      16 passed
+ok  endless.test.mjs           29 passed
+ok  evolveall.test.mjs         34 passed
+ok  evolvebutton.test.mjs      13 passed
+ok  evolvefit.test.mjs         19 passed
+ok  expedition.test.mjs        28 passed
+ok  exploit.test.mjs           3 passed
+ok  facing.test.mjs            50 passed
+ok  failuredetail.test.mjs     17 passed
+ok  farmcrops.test.mjs         26 passed
+ok  farmseeds.test.mjs         22 passed
+ok  farterrain.test.mjs        17 passed
+ok  fireflies.test.mjs         23 passed
+ok  fireflyjar.test.mjs        7 passed
+ok  fireflyloop.test.mjs       4 passed
+ok  flyingmachine.test.mjs     44 passed
+ok  flystick.test.mjs          7 passed
+ok  foliage-variants.test.mjs  1 passed
+ok  forests.test.mjs           8 passed
+ok  fullbag.test.mjs           16 passed
+ok  future.test.mjs            35 passed
+ok  gameday.test.mjs           10 passed
+ok  gems.test.mjs              13 passed
+ok  giant-forms.test.mjs       1 passed
+ok  goalage.test.mjs           9 passed
+ok  goalreveal.test.mjs        7 passed
+ok  goalsdone.test.mjs         10 passed
+ok  godcube.test.mjs           33 passed
+ok  granary.test.mjs           26 passed
+ok  grasstufts.test.mjs        13 passed
+ok  gravel.test.mjs            6 passed
+ok  growbuilding.test.mjs      15 passed
+ok  handsandcracks.test.mjs    26 passed
+
+--- hardness.test.mjs (33 passed, 1 failed)
+FAIL and a slow or normal break genuinely waits out its own delay before landing
+ok  harvest2.test.mjs          21 passed
+ok  healing.test.mjs           15 passed
+ok  health.test.mjs            43 passed
+
+--- hinttap.test.mjs (4 passed, 1 failed)
+FAIL the chest is one of them
+ok  holdplace.test.mjs         11 passed
+ok  homemenu.test.mjs          18 passed
+ok  homes.test.mjs             23 passed
+ok  horsecart.test.mjs         31 passed
+ok  hoverfix.test.mjs          9 passed
+ok  hs.test.mjs                23 passed
+ok  hudvisibility.test.mjs     16 passed
+ok  icons3d.test.mjs           4 passed
+ok  incidentalchunk.test.mjs   8 passed
+ok  inv.test.mjs               26 passed
+ok  itemchips.test.mjs         7 passed
+ok  jump.test.mjs              16 passed
+ok  jwtretry.test.mjs          11 passed
+ok  kingdom.test.mjs           39 passed
+ok  lanterns.test.mjs          12 passed
+ok  lavaflow.test.mjs          12 passed
+ok  leaves.test.mjs            9 passed
+ok  levels.test.mjs            26 passed
+ok  loading.test.mjs           16 passed
+ok  logaxis.test.mjs           7 passed
+ok  look.test.mjs              66 passed
+ok  lore.test.mjs              17 passed
+ok  mapdraw.test.mjs           15 passed
+ok  memory.test.mjs            6 passed
+ok  menu.test.mjs              54 passed
+ok  meshperf.test.mjs          5 passed
+ok  mine.test.mjs              18 passed
+ok  minestairs.test.mjs        13 passed
+ok  mirror.test.mjs            14 passed
+ok  mobs.test.mjs              27 passed
+ok  models.test.mjs            21 passed
+ok  moments.test.mjs           17 passed
+ok  newgoals.test.mjs          9 passed
+ok  notices.test.mjs           22 passed
+ok  outposts.test.mjs          13 passed
+ok  pack.test.mjs              13 passed
+ok  paneldefs.test.mjs         66 passed
+ok  panels.test.mjs            27 passed
+ok  passengers.test.mjs        18 passed
+ok  past.test.mjs              31 passed
+ok  persistence.test.mjs       0 passed
+ok  pick.test.mjs              38 passed
+
+--- places.test.mjs (27 passed, 1 failed)
+FAIL on dry land
+ok  playableslots.test.mjs     20 passed
+ok  playtime.test.mjs          10 passed
+ok  pvp.test.mjs               10 passed
+ok  quarryrate.test.mjs        8 passed
+ok  quests.test.mjs            93 passed
+ok  quickwins3.test.mjs        16 passed
+ok  quiet.test.mjs             15 passed
+ok  railbend.test.mjs          25 passed
+ok  ranch.test.mjs             30 passed
+ok  rarestock.test.mjs         12 passed
+ok  reg.test.mjs               37 passed
+ok  remodel.test.mjs           15 passed
+ok  retry.test.mjs             25 passed
+ok  ringage.test.mjs           7 passed
+ok  roads.test.mjs             19 passed
+ok  roof.test.mjs              127 passed
+ok  rooffill.test.mjs          7 passed
+ok  roofrim.test.mjs           22 passed
+ok  roofs.test.mjs             40 passed
+ok  roofsides.test.mjs         3 passed
+ok  roomyforests.test.mjs      4 passed
+ok  sanctuary.test.mjs         27 passed
+ok  sandbox.test.mjs           22 passed
+ok  saplings.test.mjs          28 passed
+ok  saveleave.test.mjs         7 passed
+ok  savespinner.test.mjs       12 passed
+ok  schema-contract.test.mjs   0 passed
+ok  searchpanels.test.mjs      6 passed
+ok  secrets.test.mjs           18 passed
+ok  settler-traversal.test.mjs 1 passed
+ok  settlers.test.mjs          89 passed
+ok  settlewet.test.mjs         2 passed
+ok  shapes.test.mjs            313 passed
+
+--- showcase.test.mjs (109 passed, 1 failed)
+FAIL and the plan says how to use it
+ok  silhouettes.test.mjs       45 passed
+ok  sites.test.mjs             18 passed
+
+--- sky.test.mjs (94 passed, 1 failed)
+FAIL the hint says where it goes, and tapping it rides
+
+--- skyscar.test.mjs (1 passed, did not run)
+PASS some world has its island over dry ground
+file:///C:/Users/berna/Documents/GitHub/GameNew/src/world/skyKingdom.js:577
+    for (let k = steps - 4; k < steps - 1; k++) { const [i, j] = ring(k); put(tx + i, top, tz + j, AIR); }
+                                                                 ^
+
+TypeError: ring is not a function or its return value is not iterable
+    at plan (file:///C:/Users/berna/Documents/GitHub/GameNew/src/world/skyKingdom.js:577:66)
+    at skyFor (file:///C:/Users/berna/Documents/GitHub/GameNew/src/world/skyKingdom.js:87:18)
+    at stampSky (file:///C:/Users/berna/Documents/GitHub/GameNew/src/world/skyKingdom.js:666:16)
+    at ChunkGen.fill (file:///C:/Users/berna/Documents/GitHub/GameNew/src/world/ChunkGen.js:629:5)
+    at file:///C:/Users/berna/Documents/GitHub/GameNew/tests/skyscar.test.mjs:35:43
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async node:internal/modules/esm/loader:639:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.15.0
+
+ok  skywar.test.mjs            48 passed
+ok  slabs.test.mjs             20 passed
+ok  sneak.test.mjs             13 passed
+ok  softshadow.test.mjs        10 passed
+ok  soldiers.test.mjs          55 passed
+ok  sound.test.mjs             52 passed
+ok  stairs.test.mjs            13 passed
+ok  starter.test.mjs           8 passed
+
+--- stickrun.test.mjs (19 passed, 1 failed)
+FAIL the column above it is smaller (56px, was 56)
+ok  stonegate.test.mjs         9 passed
+ok  stonemill.test.mjs         18 passed
+ok  storediscard.test.mjs      6 passed
+ok  storehouse.test.mjs        66 passed
+ok  storewindows.test.mjs      20 passed
+ok  story.test.mjs             19 passed
+ok  storybook.test.mjs         17 passed
+ok  streaming.test.mjs         8 passed
+ok  swim.test.mjs              11 passed
+ok  tales.test.mjs             23 passed
+ok  talk.test.mjs              18 passed
+ok  tapplace.test.mjs          18 passed
+ok  temple.test.mjs            48 passed
+ok  terrain3.test.mjs          13 passed
+ok  territorysave.test.mjs     9 passed
+ok  textures32.test.mjs        50 passed
+ok  tiers.test.mjs             39 passed
+ok  titlenotsaved.test.mjs     3 passed
+
+--- titlescene.test.mjs (18 passed, 2 failed)
+FAIL it is in the plains
+FAIL grass underfoot, not sand (16/81)
+ok  toaststack.test.mjs        4 passed
+ok  token.test.mjs             15 passed
+ok  tools.test.mjs             6 passed
+
+--- touch.test.mjs (16 passed, did not run)
+PASS the left stick walks
+PASS no look stick: dragging the picture aims the camera
+PASS a tap on the picture places (or strikes); holding still breaks; a drag never taps
+PASS Break keeps its element (labels still read from it), hidden
+PASS Jump is on the right, under the thumb that looks
+PASS with Down under it, once you are flying
+PASS the flying pair reads t-jump, t-down
+PASS and Jump is the one that becomes Up
+PASS the pair moves off the slot the single button had
+PASS and lifts instead of straddling where there is no room below
+PASS the button size is one name, so the maths cannot drift from it
+PASS and neither is left up in the column
+PASS Jump sits at the bottom right edge
+PASS so the stick with nothing outboard sits at the edge
+PASS and the one with Jump beside it comes in past it
+PASS and they are centred on the base, so the reach is sideways only
+file:///C:/Users/berna/Documents/GitHub/GameNew/tests/touch.test.mjs:92
+  const col = Number(css.match(/\.touch-btn \{\n  width: (\d+)px/)[1]);
+                                                                  ^
+
+TypeError: Cannot read properties of null (reading '1')
+    at file:///C:/Users/berna/Documents/GitHub/GameNew/tests/touch.test.mjs:92:67
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async node:internal/modules/esm/loader:639:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.15.0
+
+
+--- touchlayout.test.mjs (21 passed, 1 failed)
+FAIL the layout is applied when the game starts
+ok  townhall.test.mjs          32 passed
+ok  traders.test.mjs           13 passed
+ok  tradertap.test.mjs         9 passed
+ok  trainliftfix.test.mjs      13 passed
+ok  trains.test.mjs            47 passed
+ok  trapdoorface.test.mjs      10 passed
+ok  trees.test.mjs             21 passed
+ok  tribes.test.mjs            29 passed
+ok  turfspread.test.mjs        11 passed
+ok  turnbuild.test.mjs         14 passed
+ok  turnmove.test.mjs          10 passed
+ok  tweaks.test.mjs            13 passed
+ok  twelveages.test.mjs        19 passed
+ok  underground.test.mjs       9 passed
+ok  university.test.mjs        25 passed
+ok  upgrades.test.mjs          27 passed
+ok  validate.test.mjs          14 passed
+ok  villager-detail.test.mjs   1 passed
+
+--- villagerseat.test.mjs (9 passed, 1 failed)
+FAIL the warning is gentle: what to do, not doom
+ok  waiting.test.mjs           8 passed
+ok  wanderers.test.mjs         23 passed
+ok  war.test.mjs               73 passed
+ok  waterbreak.test.mjs        4 passed
+ok  waterflow.test.mjs         22 passed
+ok  wheelselect.test.mjs       8 passed
+ok  whitescreen.test.mjs       12 passed
+ok  wideids.test.mjs           16 passed
+ok  window.test.mjs            7 passed
+
+--- wiring.test.mjs (6 passed, did not run)
+PASS there are 180 modules to check
+PASS every module parses
+PASS 60 kinds of message go out
+PASS a toast reaches the screen
+PASS no new message is emitted into thin air
+PASS and the list of unheard ones is still accurate
+file:///C:/Users/berna/Documents/GitHub/GameNew/tests/wiring.test.mjs:109
+  const ui = all.find((a) => a.p === 'ui/UIManager.js').src;
+                                                       ^
+
+TypeError: Cannot read properties of undefined (reading 'src')
+    at file:///C:/Users/berna/Documents/GitHub/GameNew/tests/wiring.test.mjs:109:56
+    at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+    at async node:internal/modules/esm/loader:639:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.15.0
+
+ok  woodfurniture.test.mjs     21 passed
+
+--- woodmill.test.mjs (32 passed, 1 failed)
+FAIL Place on it opens the bench, on what is made there
+ok  woodsets.test.mjs          39 passed
+ok  world-scale.test.mjs       1 passed
+ok  worldlist.test.mjs         11 passed
+ok  worldloading.test.mjs      13 passed
+ok  worlds.test.mjs            12 passed
+ok  xpsources.test.mjs         9 passed
+
+7150 passed, 20 failed across 256 files

@@ -92,6 +92,15 @@ export const TREE_SIZES = [
   { upTo: 0.92, size: 'tall' },
   { upTo: 1, size: 'towering' },
 ];
+
+/** Distinct giant silhouettes, chosen once from the tree's world coordinates. */
+export function giantProfile(x,z,seed) {
+  const roll=hash01(x,z,seed^0x5c71);
+  const size=hash01(x,z,seed^0x2d4f),width=hash01(x,z,seed^0x77c1);
+  if(roll<1/3)return {form:'spreading',trunk:22+Math.floor(size*8),crown:9+width};
+  if(roll<2/3)return {form:'spire',trunk:30+Math.floor(size*11),crown:7+width*1.5};
+  return {form:'tiered',trunk:26+Math.floor(size*9),crown:8+width};
+}
 /**
  * Room to move in a wood (asked for directly: "It's impossible to run inside
  * forests, i want them with leaves taller and space between logs"). No two
@@ -161,12 +170,21 @@ export class ChunkGen {
   heightAt(x, z) {
     // The Future's city stands on level ground (world/future.js).
     if (inFuture(x, this.biomes.centreX)) return FUTURE_GROUND;
-    const { weights } = this.biomes.weigh(x, z);
+    const { weights, massif } = this.biomes.weigh(x, z);
     const base = this.biomes.blend(weights, 'base');
     const amplitude = this.biomes.blend(weights, 'amplitude');
     const rough = this.biomes.blend(weights, 'rough');
-    const n = this.shape(x * FREQ, z * FREQ);
-    const d = this.detail(x * FREQ_DETAIL, z * FREQ_DETAIL);
+    const mountains=(weights[MOUNTAINS1_INDEX]??0)+(weights[MOUNTAINS2_INDEX]??0);
+    const open=(weights[BIOME_INDEX.get('plains')]??0)+(weights[BIOME_INDEX.get('desert')]??0);
+    // Blend fixed-wavelength fields, not coordinates multiplied by a changing
+    // biome weight: the latter creates sharp seams far from the origin.
+    const ordinary=Math.max(0,1-mountains-open);
+    const n = this.shape(x*FREQ,z*FREQ)*ordinary
+      + this.shape(x*FREQ*.35,z*FREQ*.35)*mountains
+      + this.shape(x*FREQ*.6,z*FREQ*.6)*open;
+    const d = this.detail(x*FREQ_DETAIL,z*FREQ_DETAIL)*ordinary
+      + this.detail(x*FREQ_DETAIL*.35,z*FREQ_DETAIL*.35)*mountains
+      + this.detail(x*FREQ_DETAIL*.6,z*FREQ_DETAIL*.6)*open;
     let h = base + n * amplitude + d * rough;
     // Requested directly: "every biome has some more flat areas, even
     // mountains on top could have a flat area" — and, this round, that
@@ -179,6 +197,7 @@ export class ChunkGen {
     // world settling to the same height regardless of what it's in.
     const flat = this.flatFactor(x, z, weights);
     if (flat > 0) h += (base - h) * flat;
+    if(massif)h+=Math.max(0,massif.peak-h)*massif.influence;
     h = Math.round(h);
     // A river or a mountain stream cuts the ground down towards its bed
     // rather than being painted on afterwards, so the banks slope into it
@@ -432,8 +451,9 @@ export class ChunkGen {
     // A giant: one in GIANT_ONE_IN, or most of them in a giant grove.
     const giantOdds = t.giants ?? 1 / GIANT_ONE_IN;
     if (giantOdds > 0 && hash01(x, z, this.seed ^ 0x61a7) < giantOdds && this.giantFits(x, z, ground)) {
-      const trunk = 18 + Math.floor(hash01(x, z, this.seed ^ 0x2d4f) * 9); // 18..26
-      return { style: t, trunk, ground, giant: true, crown: 7 + Math.floor(hash01(x, z, this.seed ^ 0x77c1) * 3) };
+      const profile=giantProfile(x,z,this.seed);
+      const trunk=Math.min(profile.trunk,this.height-ground-14);
+      return { style:t,ground,giant:true,...profile,trunk };
     }
 
     const roll2 = hash01(x, z, this.seed ^ 0x4e2b);
@@ -447,6 +467,7 @@ export class ChunkGen {
   giantFits(x, z, ground) {
     const home = this.biomes;
     if (Math.hypot(x - home.centreX, z - home.centreZ) < GIANT_CLEAR_OF_HOME) return false;
+    if(this.height-ground<36)return false;
     for (const [dx, dz] of [[1, 0], [0, 1], [1, 1]]) {
       if (this.waterLevelAt(x + dx, z + dz)) return false;
       if (Math.abs(this.heightAt(x + dx, z + dz) - ground) > 2) return false;
@@ -638,7 +659,7 @@ export class ChunkGen {
    * reaching out partway up with leaves on their ends, and a crown twice the
    * width of anything else in the wood.
    */
-  plantGiant(put, x, z, { style, trunk, ground, crown }) {
+  plantGiant(put, x, z, { style, trunk, ground, crown, form='spreading' }) {
     const wood = style.wood, leaves = style.leaves;
     const salt = x * 131 + z * 7;
     const h = (a, b) => hash01(x * 17 + a, z * 29 + b, this.seed ^ 0x6b1d);
@@ -663,10 +684,13 @@ export class ChunkGen {
     // ending in a ball of leaves — so the crown spreads wide and low rather
     // than sitting on a bare pole like a lollipop.
     const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
-    for (const [storey, at] of [[0, topY - 11], [1, topY - 7], [2, topY - 3]]) {
+    const levels=form==='spire' ? [[0,topY-15],[1,topY-9],[2,topY-3]]
+      : form==='tiered' ? [[0,topY-16],[1,topY-10],[2,topY-4]]
+      : [[0,topY-11],[1,topY-7],[2,topY-3]];
+    for (const [storey, at] of levels) {
       dirs.forEach(([ux, uz], i) => {
         if (h(storey * 4 + i, 7) < 0.3) return;
-        const len = 4 + Math.floor(h(storey * 4 + i, 9) * 4) - storey;
+        const len = (form==='spire'?3:4) + Math.floor(h(storey * 4 + i, 9) * (form==='spire'?3:4)) - storey;
         // Start from the trunk face on that side.
         const sx = ux > 0 ? x + 1 : ux < 0 ? x : x + (i % 2);
         const sz = uz > 0 ? z + 1 : uz < 0 ? z : z + (i % 2);
@@ -682,7 +706,16 @@ export class ChunkGen {
     for (let y = topY; y < topY + 3; y++) {
       for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) put(x + dx, y, z + dz, wood, false);
     }
-    this.crown(put, cx, topY + 2, cz, { r: crown + 0.5, below: 4, above: 5, leaves, salt });
+    if(form==='spire') {
+      this.crown(put,cx,topY-3,cz,{r:crown+.5,below:5,above:5,leaves,salt});
+      this.crown(put,cx,topY+3,cz,{r:crown-.8,below:3,above:5,leaves,salt:salt+17});
+      this.crown(put,cx,topY+7,cz,{r:3.5,below:2,above:4,leaves,salt:salt+31});
+    } else if(form==='tiered') {
+      for(const [dy,r]of [[-7,crown+.5],[-1,crown-1],[5,crown-3]])
+        this.crown(put,cx,topY+dy,cz,{r,below:2,above:3,leaves,salt:salt+dy*7});
+    } else {
+      this.crown(put, cx, topY + 2, cz, { r: crown + 0.5, below: 5, above: 5, leaves, salt });
+    }
   }
 
   /**
@@ -784,7 +817,7 @@ const MIN_HEIGHT = 6;
 // flatFactor's own note on why this is tuned to turn up often rather than
 // to gate a rare feature. Lower than before: "flat areas of 50 to 100
 // blocks" needs a wider characteristic wavelength than the old 0.017 gave.
-const FREQ_FLAT = 0.008;
+const FREQ_FLAT = 0.005;
 const FLAT_BASE = 0.32;
 const FLAT_POWER = 1.6;
 // Caves: a narrow band around zero of a 3D field, everywhere, well below the

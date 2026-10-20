@@ -62,8 +62,8 @@ Priorities follow the owner's rule: first fix or verify the game that already ex
 | ID | What | Who | Status |
 |---|---|---|---|
 | SAVE-1 | **The testing world lost progress** ("Was not able to save my testing world it lost a lot of progress"). Saving works again, tested by the owner on 20 October; before, Save showed "Not saved — try again". | Owner | done |
-| SAVE-2 | **A world missing from the account's list is treated as deleted**: saving stops for that session and the backup copy is thrown away. "Explain failed world saves" (on main) now says so when you press Save; the backup is still lost. | Claude | to do |
-| SAVE-3 | **"Save and leave" leaves even when the save failed**, without saying so. | Claude | to do |
+| SAVE-2 | **A world missing from the account's list is treated as deleted**: now keeps the pending backup and permits later saves to retry, without automatically recreating a previously saved world. Startup checks the list before reconstructing backup terrain. Explicit deletion still discards its backup. No new polling or requests. | Claude | done (working tree; account/device playtest pending) |
+| SAVE-3 | **"Save and leave" leaves even when the save failed**, without saying so. Now stays in the world and explains failed, rejected or timed-out saves; only confirmed saves open the worlds screen. | Claude | done (working tree; device playtest pending) |
 | SAVE-4 | **Failed uploads retry without telling you.** | Claude | to do |
 | SAVE-5 | **The backup copy may not fit** in the browser's small local storage (about 5 MB) for a big world. | Claude | to do |
 | SAVE-6 | **The "world too big for the account" message** is on the unmerged branch `claude/backlog-batch-3-update`; the size limits it explains are live in the database since 6 October. | Claude | to do |
@@ -168,7 +168,7 @@ it produce 50% more; none of them carries or builds anything.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| LOOK-1 | "the houses look squares … the ones I sent have this organic form. also they diversify the textures by using multiple blocks on the walls." Keep the current designs as templates and improve them. | Claude | done (working tree) |
+| LOOK-1 | "the houses look squares … the ones I sent have this organic form. also they diversify the textures by using multiple blocks on the walls." The starter house, townhouse and village cottages now have stepped or clipped corners; the starter house also has a hip roof. Their block totals remain 167, 363 and 830 respectively. | Claude | done (working tree) |
 | LOOK-2 | The two ways the owner suggested for it: "not sure if by level would be feasible, or to have different house types available to build on our building list." | Claude | to do |
 | LOOK-3 | "Buildings need rebuilding, they need to fit more the mood and vibe of the mobs whimsical and mystical": the house, market and storehouse were done (#209); the other starter buildings now have stronger two-colour roofs and timber accents. Block positions and counts are preserved; 24 screenshots captured in this workspace. | Claude | done (working tree) |
 | LOOK-4 | Cleaner stone textures: broad chipped planes instead of noisy mottling/flecks; quieter Stone Brick and Dark Stone joints. Keep the current colour/light direction. | Claude | done (working tree) |
@@ -183,11 +183,11 @@ it produce 50% more; none of them carries or builds anything.
 | ID | What | From | Who | Status |
 |---|---|---|---|---|
 | OLD-1 | Two or three new peoples to raid. | Batch 4 | Claude | done (working tree) |
-| OLD-2 | Places you've taken marked on the map; new ones appearing over time. | Batch 4 | Claude | done (working tree) |
+| OLD-2 | Places you've taken marked on the map; new ones appearing over time. Places are seeded per world and revealed progressively as explored; captured sites get a gold map outline. | Batch 4 | Claude | done (working tree) |
 | OLD-3 | Battle mode with AI rivals through an API key, kept on our server. The owner offered their own model server (needs HTTPS, key in an environment secret). | Batch 4 | Claude + Owner | waiting |
 | OLD-4 | Battle mode with real multiplayer, inviting friends. | Batch 4 | Claude | to do |
 | OLD-5 | Battle balance: how strong rivals feel and how often they come. | Batch 4 | Owner | waiting |
-| OLD-6 | Composting: a bin turns seeds and leaves into compost, which speeds a farm or raises its yield. Agreed: last. | Batch 3 | Claude | done (working tree) |
+| OLD-6 | Composting: a bin turns seeds and leaves into compost, which speeds crops on a farm. A farm-panel action now uses one compost to advance each of its growing crops by one stage. | Batch 3 | Claude | done (working tree) |
 | OLD-7 | Mist round the floating island and cloud below it: the one part of the look and sound plan not in the game. | Look and sound plan | Claude | to do |
 | OLD-8 | Battle worlds show as "Duilt" in the account's world list. | Batch 4 | Claude | to do |
 
@@ -207,7 +207,7 @@ Briefs in section 12. These rows show current status; CL-1 was merged in #212 an
 | CL-2 | Futurians stop pointing you to the Archive once you've read it. | done (working tree) |
 | CL-3 | The Age 12 "Travel to the Past" card says "To the Past". | done (working tree) |
 | CL-4 | Secrets show up the moment you earn them. | done (working tree) |
-| CL-5 | "Know the woods" counts only present-day animals. | done (working tree) |
+| CL-5 | "Know the woods" counts every animal, including dinosaurs in the Past. | done (working tree) |
 | CL-6 | Say what tapping a special block does: Travel, Read, Take, Leave. | done (working tree) |
 | CL-7 | The War Standard drawn as a flag on a pole. | done (working tree) |
 | CL-12 | Tap the people counter to feed the hungry. | done (working tree) |
@@ -291,7 +291,7 @@ Things that exist but haven't been confirmed in a real game. The checks in this 
 | ID | Question | For |
 |---|---|---|
 | ASK-1 | Saving works again (20 October). Only if it fails again: reconnect Neon so Claude can read the save failures. | SAVE-1 |
-| ASK-2 | "Know the woods": should the Past's creatures count? Answered in the current implementation: they do not count. | CL-5 |
+| ASK-2 | "Know the woods": should the Past's creatures count? Yes — the secret now includes Past dinosaurs. | CL-5 |
 | ASK-3 | The model server for Battle mode's AI rivals. | OLD-3 |
 | ASK-4 | Delete the old branches? | HOUSE-1 |
 | ASK-5 | Any change to the database itself waits for the owner's yes. | TECH-14 |
@@ -455,25 +455,17 @@ pass, then the full suite once. About 20 minutes.
 
 ---
 
-### CL-5: "Know the woods" counts only the animals of home
+### CL-5: "Know the woods" includes the Past's animals
 
-**Why:** the secret "Know the woods" (`s_woods` in `src/config/secrets.js`)
-asks for one of every animal in `MOBS`. Since time travel, `MOBS` includes
-the raptor, triceratops, long-neck and the Basilisk, so the secret now
-quietly needs a trip to the Past. Its hint says "Every creature that walks
-these lands".
+**Why:** the owner asked for the Past's dinosaurs to count too. The secret
+"Know the woods" (`s_woods` in `src/config/secrets.js`) asks for one of every
+animal in `MOBS`, including the raptor, triceratops, long-neck and Basilisk.
 
-**Owner's call:** if you'd rather the Past's creatures count, skip this
-task.
+**What to do:** count every animal in `MOBS`; new kinds should be picked up
+without maintaining a separate id list.
 
-**What to do:** count only animals whose `biomes` are all present-day ones.
-A biome belongs to another time when its entry in `src/config/biomes.js`
-has an `era` (look up `BIOMES_BY_ID`). Don't list the animal ids by hand:
-new ones should be picked up by themselves.
-
-**Tests:** `tests/secrets.test.mjs` has "Know the woods: every animal".
-Make it hunt only the present-day ones, and add a check that hunting the
-dinosaurs isn't needed.
+**Tests:** `tests/secrets.test.mjs` covers all present-day animals and the
+Past's dinosaurs.
 
 **Done when:** `node tests/secrets.test.mjs` passes, then the full suite
 once. About 20 minutes.

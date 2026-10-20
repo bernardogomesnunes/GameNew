@@ -1,0 +1,52 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>World scale review</title>
+<style>body{margin:0;background:#edece8;color:#302d36;font:16px system-ui}main{max-width:1200px;margin:auto;padding:24px}h1{font-size:26px}h2{font-size:21px;margin:28px 0 8px}p{color:#68616e}canvas{display:block;width:100%;border-radius:8px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px}.pair h2{margin-top:24px}</style>
+<main><h1>World scale · seed 42</h1><h2>Rare broad massif</h2><p id="peak-note"></p><div id="mountain"></div><div class="pair"><section><h2>Larger plains</h2><div id="plains"></div></section><section><h2>Flatter desert</h2><div id="desert"></div></section></div><h2>Giant trees: spreading · spire · tiered</h2><p>Actual block meshes, preserving walking clearance beneath the crowns.</p><div id="trees"></div><p id="status">Loading…</p></main>
+<script type="module">
+import * as THREE from 'three';
+import {ChunkGen,giantProfile} from '/src/world/ChunkGen.js';
+import {World} from '/src/world/World.js';
+import {ChunkMesher} from '/src/world/ChunkMesher.js';
+import {massifSite} from '/src/world/massifs.js';
+import {BIOMES,surfaceFor} from '/src/config/biomes.js';
+import {BLOCKS_BY_ID} from '/src/config/blocks.js';
+const gen=new ChunkGen({seed:42,homePull:0});
+let site;
+for(let rx=-3;rx<=3&&!site;rx++)for(let rz=-3;rz<=3&&!site;rz++)site=massifSite(gen.biomes,rx,rz);
+document.querySelector('#peak-note').textContent=`Summit (${site.x}, ${site.z}), elevation ${gen.heightAt(site.x,site.z)}m. Terrain preview samples the game's generator every 8m.`;
+function litScene(){const s=new THREE.Scene();s.background=new THREE.Color(0xbdd8eb);s.add(new THREE.HemisphereLight(0xf4f5ff,0x8c8792,2));const sun=new THREE.DirectionalLight(0xfff4dc,2.1);sun.position.set(-100,200,120);s.add(sun);return s;}
+function render(scene,camera,id,width,height){const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});renderer.setSize(width,height);renderer.setPixelRatio(1);document.querySelector('#'+id).append(renderer.domElement);renderer.render(scene,camera);}
+function terrain(id,cx,cz,span,width,height){
+  const scene=litScene(),step=8,n=Math.ceil(span/step),heights=[],colours=[];
+  for(let z=0;z<=n;z++)for(let x=0;x<=n;x++){
+    const wx=Math.round(cx-span/2+x*step),wz=Math.round(cz-span/2+z*step),h=gen.heightAt(wx,wz);
+    const b=BIOMES[gen.biomeIndexAt(wx,wz)];heights.push(h);
+    colours.push(new THREE.Color(BLOCKS_BY_ID.get(h<100?11:surfaceFor(b,h)).color));
+  }
+  const positions=[],tones=[];
+  function quad(a,b,c,d,colour){for(const p of[a,b,c,a,c,d]){positions.push(...p);tones.push(colour.r,colour.g,colour.b);}}
+  for(let z=0;z<n;z++)for(let x=0;x<n;x++){
+    const i=z*(n+1)+x,h=Math.max(100,heights[i]),xx=x*step-span/2,zz=z*step-span/2,c=colours[i];
+    quad([xx,h,zz],[xx,h,zz+step],[xx+step,h,zz+step],[xx+step,h,zz],c);
+    const south=Math.max(100,heights[i+n+1]),east=Math.max(100,heights[i+1]);
+    if(h!==south)quad([xx,h,zz+step],[xx,south,zz+step],[xx+step,south,zz+step],[xx+step,h,zz+step],c.clone().multiplyScalar(.8));
+    if(h!==east)quad([xx+step,h,zz],[xx+step,h,zz+step],[xx+step,east,zz+step],[xx+step,east,zz],c.clone().multiplyScalar(.85));
+  }
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(tones,3));geo.computeVertexNormals();
+  scene.add(new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide})));
+  const aspect=width/height,camera=new THREE.OrthographicCamera(-span*.6*aspect,span*.6*aspect,span*.6,-span*.6,.1,3000);
+  camera.position.set(span*.8,span*.65,span);camera.lookAt(0,125,0);render(scene,camera,id,width,height);
+}
+terrain('mountain',site.x,site.z,720,1200,540);
+function core(name){for(let x=-2048;x<2048;x+=64)for(let z=-2048;z<2048;z+=64){if([[0,0],[-60,0],[60,0],[0,-60],[0,60]].every(([dx,dz])=>BIOMES[gen.biomeIndexAt(x+dx,z+dz)].id===name))return{x,z};}throw Error('No '+name);}
+for(const id of['plains','desert']){const c=core(id);terrain(id,c.x,c.z,400,590,300);}
+const scene=litScene(),treeGen=new ChunkGen({seed:42});treeGen.heightAt=()=>8;
+const world=new World({sizeX:112,sizeZ:64,height:96});
+for(let x=0;x<112;x++)for(let z=0;z<64;z++){world.setBlock(x,7,z,1);world.surfaceHeightMap[x*64+z]=8;}
+const forms=new Map();for(let x=0;forms.size<3;x++){const p=giantProfile(x,17,42);forms.set(p.form,p);}
+for(const [i,form]of['spreading','spire','tiered'].entries()){
+  treeGen.plantGiant((x,y,z,id,air)=>{if(!air||world.getBlock(x,y,z)===0)world.setBlock(x,y,z,id);},20+i*35,30,{...forms.get(form),ground:8,style:{wood:4,leaves:5}});
+}
+const mesher=new ChunkMesher(scene);for(const chunk of world.allChunks())mesher.rebuild(world,chunk);
+const camera=new THREE.OrthographicCamera(-62,62,29,-29,.1,600);camera.position.set(68,49,125);camera.lookAt(55,26,30);render(scene,camera,'trees',1200,560);
+document.querySelector('#status').textContent='Terrain and tree meshes rendered without JavaScript errors.';window.reviewReady=true;
+</script></html>

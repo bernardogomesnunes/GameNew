@@ -2,6 +2,7 @@ import { inPast } from './past.js';
 import { inFuture } from './future.js';
 import { createNoise2D } from 'simplex-noise';
 import { BIOMES, BIOME_INDEX, HOME_BIOME } from '../config/biomes.js';
+import {massifAt} from './massifs.js';
 
 /**
  * Which biome is where, and how much of it.
@@ -18,18 +19,12 @@ import { BIOMES, BIOME_INDEX, HOME_BIOME } from '../config/biomes.js';
  * what they look like from the ground.
  */
 
-// Requested directly: "increase the distances of each biome... they can get
-// bigger in footprint. All of them except the mountains." Lower frequency
-// means a bigger region of one climate — this is the one shared knob every
-// non-mountain biome's size comes from, so turning it down grows all of
-// them together. Roughly 1.7x the region radius of the previous 0.0055 (and
-// so about 3x the area) — mountains are untouched because their own size
-// comes from RANGE_FREQ below instead, on a separate, already-tuned-rare
-// gate that this multiplies into rather than replaces.
-const FREQ = 0.0032;
+// WORLD-3: broaden open-country regions. Climate wavelengths are another
+// 28% wider than the previous pass, while mountains use their own range gate.
+const FREQ = 0.0025;
 // Kept in the same ratio to FREQ as before, so the border wobble scales with
 // the bigger regions instead of looking proportionally smoother or jaggier.
-const FREQ_DETAIL = 0.0116;
+const FREQ_DETAIL = 0.0091;
 
 /**
  * The mountains' own placement, independent of climate.
@@ -48,8 +43,8 @@ const FREQ_DETAIL = 0.0116;
  * sharpens what's left, so a range reads as a real feature rather than a
  * gradient with no edge.
  */
-const RANGE_FREQ = 0.0016;
-const RANGE_BASE = 0.55;
+const RANGE_FREQ = 0.0010;
+const RANGE_BASE = 0.58;
 const RANGE_POWER = 2;
 
 /**
@@ -60,8 +55,8 @@ const RANGE_POWER = 2;
  * range rather than a whole separate tier of mountains with its own
  * footprint.
  */
-const SUMMIT_FREQ = 0.02;
-const SUMMIT_BASE = 0.48;
+const SUMMIT_FREQ = 0.008;
+const SUMMIT_BASE = 0.55;
 const SUMMIT_POWER = 1.4;
 
 /** Same generator the terrain uses, so one seed decides a whole world. */
@@ -84,6 +79,7 @@ export class BiomeMap {
    *   world they cannot start. 0 turns it off.
    */
   constructor({ sizeX, sizeZ, seed = 1, homePull = 1 }) {
+    this.seed=seed;
     this.sizeX = sizeX;
     this.sizeZ = sizeZ;
     this.temp = createNoise2D(mulberry32(seed + 101));
@@ -224,7 +220,7 @@ export class BiomeMap {
       // The epsilon keeps a column sitting exactly on a niche from going
       // infinite; 1/d^4 is sharp enough that biomes stay recognisable.
       let w = 1 / ((d2 + 0.0016) * (d2 + 0.0016));
-      if (b.range) w *= b.summitOnly ? range * summit : range;
+      if (b.range) w *= b.summitOnly ? range * summit : range * 3;
       // A rare biome doesn't compete on climate: it takes over land
       // afterwards, below.
       if (b.rare) w = 0;
@@ -259,8 +255,18 @@ export class BiomeMap {
       best = 0;
       for (let j = 1; j < weights.length; j++) if (weights[j] > weights[best]) best = j;
     }
+    const massif=era?null:massifAt(this,x,z);
+    if(massif) {
+      const share=massif.influence;
+      const summit=Math.min(1,Math.max(0,(share-.82)/.15));
+      for(let i=0;i<weights.length;i++)weights[i]*=1-share;
+      weights[BIOME_INDEX.get('mountains1')]+=total*share*(1-summit);
+      weights[BIOME_INDEX.get('mountains2')]+=total*share*summit;
+      best=0;
+      for(let i=1;i<weights.length;i++)if(weights[i]>weights[best])best=i;
+    }
     for (let i = 0; i < weights.length; i++) weights[i] /= total;
-    return { weights, index: best, temp, wet };
+    return { weights, index: best, temp, wet, massif };
   }
 
   /** A blended value of one numeric field across the biomes at a column. */
