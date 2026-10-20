@@ -9,6 +9,7 @@ import { stampSky } from './skyKingdom.js';
 import { inFuture, stampFuture, FUTURE_GROUND } from './future.js';
 import { stampRivals, rivalSites } from './rivals.js';
 import { deepCaveColumn, stampDeepCaves, stampCaveRuins } from './deepCaves.js';
+import { raiseFor } from './massifs.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
@@ -199,7 +200,7 @@ export class ChunkGen {
     // world settling to the same height regardless of what it's in.
     const flat = this.flatFactor(x, z, weights);
     if (flat > 0) h += (base - h) * flat;
-    if (massif) h += Math.max(0, massif.peak - h) * massif.influence;
+    if (massif) h = raiseFor(h, massif);
     h = Math.round(h);
     // A river or a mountain stream cuts the ground down towards its bed
     // rather than being painted on afterwards, so the banks slope into it
@@ -335,6 +336,7 @@ export class ChunkGen {
       this._caveSpans = deepCaveColumn(this, x, z);
     }
     if (this._caveSpans.length && this._caveSpans.some((s) => y >= s.floor && y <= s.ceiling)) return AIR;
+    if (y > CAVE_TOP) return NOT_CARVED;
     const cavern = biomeIndex === MOUNTAINS2_INDEX && y < CAVERN_Y_MAX;
     const width = cavern ? CAVERN_WIDTH : CAVE_WIDTH;
     const n = this.cave(x * CAVE_FREQ, y * CAVE_FREQ_Y, z * CAVE_FREQ);
@@ -839,6 +841,10 @@ const CAVE_FREQ_Y = 0.09;
 const CAVE_WIDTH = 0.05;
 // How many blocks of solid roof always sit between a cave and the surface.
 const CAVE_SURFACE_BUFFER = 6;
+// Nor higher than this: a tall mountain's rock is solid above it. Carved
+// to the top, a huge peak was holes from its roots to its summit, breaking
+// out all over its slopes — twice the land to draw, and phones gave up.
+const CAVE_TOP = 120;
 // Never carve within this many blocks of bedrock — a cave with no floor
 // underneath it is a hole, not a cave.
 const CAVE_FLOOR = 3;

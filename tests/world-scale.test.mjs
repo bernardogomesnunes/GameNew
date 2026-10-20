@@ -14,8 +14,36 @@ assert.deepEqual(site,massifSite(new ChunkGen({seed:42,homePull:0}).biomes,site.
 assert.ok(site.radius>=200,'huge mountains have broad foothills');
 assert.ok(gen.heightAt(site.x,site.z)>=170,'rare summit towers above the ordinary ranges');
 assert.ok(gen.heightAt(site.x,site.z)<200-5,'summits leave headroom');
-for(let d=0;d<site.radius+20;d++) {
-  assert.ok(Math.abs(gen.heightAt(site.x+d+1,site.z)-gen.heightAt(site.x+d,site.z))<=4,'no hard cliff at massif boundary');
+// The peak's own rise, apart from the mountain bumps under it, never steps
+// more than four blocks at a time, out along sixteen lines from the summit:
+// no cliff at its rim, at a ridge, or where the second summit meets the first.
+{
+  const weigh=gen.biomes.weigh.bind(gen.biomes);
+  const bare=(x,z)=>{gen.biomes.weigh=(a,b)=>({...weigh(a,b),massif:null});const h=gen.heightAt(x,z);gen.biomes.weigh=weigh;return h;};
+  const raise=(x,z)=>gen.heightAt(x,z)-bare(x,z);
+  let worst=0;
+  for(let k=0;k<16;k++){
+    const ux=Math.cos(k/16*Math.PI*2),uz=Math.sin(k/16*Math.PI*2);
+    for(let d=0;d<site.outer+20;d+=2){
+      const x=Math.round(site.x+ux*d),z=Math.round(site.z+uz*d);
+      worst=Math.max(worst,Math.abs(raise(x+1,z)-raise(x,z)),Math.abs(raise(x,z+1)-raise(x,z)));
+    }
+  }
+  assert.ok(worst<=4,`no hard cliff in the peak itself (worst step ${worst})`);
+}
+// Not a dome: its outline bulges and pinches, and ridges and valleys run down
+// its sides (reported: "mountains look too blobby").
+{
+  const reach=[];
+  for(let k=0;k<32;k++){
+    const ux=Math.cos(k/32*Math.PI*2),uz=Math.sin(k/32*Math.PI*2);
+    let d=0;while(massifAt(gen.biomes,Math.round(site.x+ux*d),Math.round(site.z+uz*d)))d+=4;
+    reach.push(d);
+  }
+  assert.ok(Math.max(...reach)>Math.min(...reach)*1.3,`an uneven outline (${Math.min(...reach)} to ${Math.max(...reach)} blocks out)`);
+  const ring=[];
+  for(let k=0;k<180;k++){const a=k/180*Math.PI*2;ring.push(gen.heightAt(Math.round(site.x+Math.cos(a)*site.radius*.4),Math.round(site.z+Math.sin(a)*site.radius*.4)));}
+  assert.ok(Math.max(...ring)-Math.min(...ring)>=15,`ridges and valleys round its flanks (${Math.min(...ring)} to ${Math.max(...ring)} high)`);
 }
 const home=new ChunkGen({seed:42,homeX:site.x,homeZ:site.z});
 assert.equal(massifAt(home.biomes,site.x,site.z),null,'starting plot protected');

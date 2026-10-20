@@ -50,6 +50,24 @@ function deepAndSurface(chunk) {
   ok(`dig a shaft down to it and nothing is deep any more (${open.deep})`, open.deep === 0);
 }
 
+// --- a cave at a chunk's corner is still sealed ------------------------------
+// The padded copy's corner columns hold no blocks, so they used to read as a
+// shaft of open sky to the bottom of the world, and any cave touching one was
+// drawn to the horizon: under a big mountain, most of them.
+
+{
+  const world = new World({ sizeX: 48, sizeZ: 48, height: 32 });
+  for (let x = 0; x < 48; x++) for (let z = 0; z < 48; z++) for (let y = 0; y < 20; y++) world.setBlock(x, y, z, STONE);
+  // A two-block pocket across the border, at the middle chunk's corner.
+  world.setBlock(16, 8, 15, 0);
+  world.setBlock(16, 8, 16, 0);
+  const mesher = new ChunkMesher(scene);
+  const chunk = world.getChunk(1, 1);
+  mesher.rebuild(world, chunk);
+  const s = deepAndSurface(chunk);
+  ok(`a sealed cave at a chunk's corner is deep, not open to the sky (${s.deep} deep quads)`, s.deep === 4 && s.surface === 1);
+}
+
 // --- a real world: most of the triangles are sealed, and it builds fast ------
 
 {

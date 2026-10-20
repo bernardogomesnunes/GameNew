@@ -67,6 +67,7 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 | ID | What | PR |
 |---|---|---|
+| NOW-21 | The game was breaking with the new land: far fewer triangles to draw everywhere (about half at home, a tenth at a huge peak); huge peaks less blobby, with an uneven outline, ridges and valleys, and a second summit. | #234 |
 | NOW-20 | Saving: a failed upload says so once, tries again by itself, and says when it's up; a big world's backup copy fits now. | #233 |
 | NOW-19 | The new mountains, plains and giant trees in old worlds too; the rounder starter house, townhouse and cottages. | #232 |
 | NOW-18 | ChatGPT's second round, checked and merged: saving keeps your backup when a world goes missing from the list, Save and leave stays put if the save failed, villagers no longer climb onto roofs, compost into a farm, raiders don't vanish at a pond, huge mountains, broader plains, flatter deserts and three shapes of giant tree. | #231 |
@@ -143,7 +144,7 @@ it produce 50% more; none of them carries or builds anything.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| WORLD-1 | Wider and bigger mountains, and now and then a Kilimanjaro. (The world is 200 blocks tall.) Wider ranges; in about 4 of every 10 areas of 1,024 blocks, a huge peak 420 to 560 blocks across rising to 174–186 high, never near the start or under the floating island. In every world, old ones too (the owner said yes). | ChatGPT, Claude | done, #231, #232 |
+| WORLD-1 | Wider and bigger mountains, and now and then a Kilimanjaro. (The world is 200 blocks tall.) Wider ranges; in about 4 of every 10 areas of 1,024 blocks, a huge peak 420 to 560 blocks across rising to 174–186 high, never near the start or under the floating island; an uneven outline, ridges and valleys, and a lower second summit ("mountains look too blobby", #234). In every world, old ones too (the owner said yes). | ChatGPT, Claude | done, #231, #232 |
 | WORLD-2 | Big trees. Giant trees now come in three shapes, spreading, spire and tiered, up to about 40 blocks of trunk. | ChatGPT, Claude | done, #231, #232 |
 | WORLD-3 | Bigger plains, flatter deserts. Plains and deserts about 28% wider, with gentler rises and bigger flat stretches. | ChatGPT, Claude | done, #231, #232 |
 
@@ -271,6 +272,8 @@ version is in `docs/history/status-and-testing.md`.
   the three giant tree shapes; watch villagers walk round houses; Add
   compost at a farm; Save and leave with no signal; build the new
   starter house; look for steps where your old world's land meets the new.
+- **The new land (NOW-21):** play near a huge peak and in a giant forest;
+  check the game doesn't break and the peaks look less like blobs.
 - **Saving (NOW-20):** play with no signal for a minute, see the message,
   then turn it back on and see "Saved to your account".
 
