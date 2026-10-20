@@ -20,7 +20,7 @@ let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
-const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
+const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const duiltUi = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 
 const column = ui.slice(ui.indexOf('id="touch-buttons-left"'), ui.indexOf('</div>\n    `;', ui.indexOf('id="touch-buttons-left"')));

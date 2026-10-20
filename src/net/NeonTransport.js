@@ -152,12 +152,13 @@ export class NeonTransport {
   async listWorlds() {
     await this.ensurePlayer();
     const rows = await this.request(
-      '/worlds?select=id,name,mode,block_count,revision,updated_at&deleted_at=is.null&order=updated_at.desc',
+      '/worlds?select=id,name,mode,battle:duilt->battle,block_count,revision,updated_at&deleted_at=is.null&order=updated_at.desc',
     );
     return (rows || []).map((r) => ({
       id: r.id,
       name: r.name,
       mode: r.mode,
+      battle: Boolean(r.battle),
       blockCount: r.block_count,
       revision: Number(r.revision),
       updatedAt: Date.parse(r.updated_at),
@@ -359,6 +360,9 @@ function describeError(status, detail) {
     return 'Your session expired — sign in again.';
   }
   if (status === 409) return 'That world changed elsewhere. Reload it before saving again.';
+  if (/\b(?:world_chunks|worlds|progression|templates)_[a-z_]+_size\b/.test(detail) && /check constraint|23514/i.test(detail)) {
+    return 'This world is too large to save to your account. Export a copy to keep your progress.';
+  }
   if (status >= 500) return 'The cloud is unreachable right now. Your local save is untouched.';
   return `Cloud request failed (${status}). ${detail.slice(0, 160)}`;
 }

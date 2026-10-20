@@ -1,6 +1,7 @@
 import { BLOCKS_BY_ID, AIR } from '../config/blocks.js';
 import { World } from '../world/World.js';
 import { ChunkGen } from '../world/ChunkGen.js';
+import { MAX_WORLD_FILE_BYTES, validateWorldImport } from './WorldImportValidation.js';
 
 /**
  * How an endless world is brought back: its seed, handed to a generator.
@@ -60,9 +61,10 @@ export function exportWorldFile(state) {
 }
 
 export function parseWorldPayload(text) {
+  if (typeof text !== 'string' || text.length > MAX_WORLD_FILE_BYTES) throw new Error('That world file is too large to import safely (128 MB maximum).');
   const data = JSON.parse(text);
-  if (data.format !== EXPORT_FORMAT) throw new Error('That file is not a Voxel Sandbox world.');
-  if (!data.world?.chunks) throw new Error('That world file is missing its block data.');
+  if (data?.format !== EXPORT_FORMAT) throw new Error('That file is not a Voxel Sandbox world.');
+  validateWorldImport(data);
   return {
     world: World.deserialize(data.world, { makeGen }),
     player: data.player,
@@ -184,14 +186,17 @@ export function exportTemplateFile(template) {
 
 /** Opens a file picker and resolves with the file's text. */
 export function pickFile(accept) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = accept;
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return resolve(null);
+      if (file.size > MAX_WORLD_FILE_BYTES) return reject(new Error('That world file is too large to import safely (128 MB maximum).'));
       const reader = new FileReader();
+      reader.onerror = () => reject(new Error('That world file could not be read.'));
+      reader.onabort = () => resolve(null);
       reader.onload = () => resolve({ name: file.name, text: String(reader.result) });
       reader.readAsText(file);
     };

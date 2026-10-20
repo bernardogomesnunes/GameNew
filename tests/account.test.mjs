@@ -118,7 +118,7 @@ ok('and hidden entirely in a build with no cloud to sign in to',
 
 ok('opening a world fetches it from the account', /await this\.restoreFromCloud\(id\)/.test(game));
 ok('and an imported file becomes a world on the account too',
-  /this\.loadFromData\(\{ \.\.\.data, worldId: newWorldId\(\) \}\);\n\s*this\.saveNow\(\);/.test(game));
+  /this\.loadFromData\(\{ \.\.\.data, worldId: newWorldId\(\) \}\);\r?\n\s*this\.saveNow\(\);/.test(game));
 ok('what you were in goes up before you leave it', /openWorld\(id\)[\s\S]{0,300}await this\.flush\(\)/.test(game));
 ok('deleting takes the account copy', /this\.cloud\?\.delete\(id\)/.test(game));
 ok('and says so when it cannot', /Could not delete that world/.test(game));

@@ -34,7 +34,7 @@ ok('it is only offered on a touch screen', /\.ctl-touch \{ display: none; \}/.te
 ok('where the keyboard list is hidden instead', /body\.touch \.ctl-keys \{ display: none; \}/.test(css));
 
 // Applied at start and on every change, and remembered with the rest of the controls.
-ok('the layout is applied when the game starts', /this\.ui\.applyTouchLayout\(this\.controls\);\n\s*this\.ui\.refreshForMode\(\)/.test(game));
+ok('the layout is applied when the game starts', /this\.ui\.applyTouchLayout\(this\.controls\);\r?\n\s*this\.ui\.refreshForMode\(\)/.test(game));
 ok('and whenever the controls change', /applyControls\(next\) \{[\s\S]{0,400}this\.ui\?\.applyTouchLayout\(this\.controls\)/.test(game));
 
 // The layout itself: each piece moves, none is left where it was.

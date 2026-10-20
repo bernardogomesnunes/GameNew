@@ -27,15 +27,21 @@ new is asked for: add it with the owner's words quoted.
 ## Who's on what
 
 **Claude**
-- Saving: SAVE-6.
 - The "Adding changes" list: CRAFT-1 to CRAFT-7, STORE-1, JOBS-1 to
   JOBS-4 and MOBS-2.
 - Buildings: LOOK-2.
-- From earlier lists: OLD-2 (the rest of it), OLD-3, OLD-4, OLD-7, OLD-8.
+- From earlier lists: OLD-2 (the rest of it), OLD-3, OLD-4, OLD-7.
 - The wiki and the game's words: WIKI-1, COPY-1.
 - Under the hood: TECH-1 to TECH-15 (section 11).
 - Housekeeping: HOUSE-1, once the owner agrees.
 - Reviewing Cline's work when asked.
+
+**ChatGPT**
+- SAVE-6, OLD-8 and TECH-2: implemented on `codex/remaining-priority-fixes`,
+  based on main `ac8ac66`; verification and review in progress. Not merged yet.
+- Next pipeline: crafting (CRAFT-1 to CRAFT-7), storage interface (STORE-1),
+  villager jobs (JOBS-1 to JOBS-4), house variants (LOOK-2), and mob behaviour
+  (MOBS-2). Performance and browser checks remain in section 11.
 
 **Cline** (briefs in section 12)
 - Nothing open: CL-1 to CL-14 are done.
@@ -57,7 +63,7 @@ new is asked for: add it with the owner's words quoted.
 | SAVE-3 | **"Save and leave" leaves even when the save failed**, without saying so. Now it stays in the world and says why; only a save that went through takes you to your worlds. | ChatGPT | done, #231 |
 | SAVE-4 | **Failed uploads retry without telling you.** Now one message when uploads start failing ("Not saved to your account yet", why, and that it's kept on this device), tries again on its own after half a minute, then 1, 2, 4 and 5 minutes, at once when the connection comes back, and one message when it lands. | Claude | done, #233 |
 | SAVE-5 | **The backup copy may not fit** in the browser's small local storage (about 5 MB) for a big world. Now a copy too big for it goes to the browser's bigger store (IndexedDB; a 12 MB copy checked in Chromium); if it fits nowhere, you're told once. | Claude | done, #233 |
-| SAVE-6 | **The "world too big for the account" message** is on the unmerged branch `claude/backlog-batch-3-update`; the size limits it explains are live in the database since 6 October. | Claude | to do |
+| SAVE-6 | Explain account size-limit errors and suggest exporting a copy. The database limits have been live since 6 October; no database changes needed. | ChatGPT | implemented on `codex/remaining-priority-fixes`, verification in progress |
 
 ---
 
@@ -190,7 +196,7 @@ can be a step.
 | OLD-5 | Battle balance: how strong rivals feel and how often they come. | Batch 4 | Owner | waiting |
 | OLD-6 | Composting: a bin turns seeds and leaves into compost, which speeds a farm or raises its yield. The compost bin, and compost on a growing crop moves it on one stage (#230); "Add compost" in a farm's panel moves all its growing crops on one stage (#231). | Batch 3 | ChatGPT | done, #231 |
 | OLD-7 | Mist round the floating island and cloud below it: the one part of the look and sound plan not in the game. | Look and sound plan | Claude | to do |
-| OLD-8 | Battle worlds show as "Duilt" in the account's world list. | Batch 4 | Claude | to do |
+| OLD-8 | Battle worlds show as "Duilt" in the account's world list. Fetch and retain Battle metadata in the account and remembered lists. | Batch 4 | ChatGPT | implemented on `codex/remaining-priority-fixes`, verification in progress |
 
 ---
 
@@ -298,7 +304,7 @@ re-checked against today's code on 20 October.
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
 | TECH-1 | **Two devices overwrite each other.** Saving the same world from two devices: the last one wins, chunk by chunk, with no check. Matters as soon as you play one world on phone and computer. | Claude | M | to do |
-| TECH-2 | **A world file you import is trusted as it is.** A broken or crafted file could freeze the game. Check its size and contents before loading it. | Claude | S | to do |
+| TECH-2 | **Check imported world files before loading.** Bound file size (128 MB), expanded terrain, block runs, saved building footprints, inventories and designs. Keep valid version 1/2 exports compatible. | ChatGPT | S | implemented on `codex/remaining-priority-fixes`, verification in progress |
 | TECH-3 | **A security header for the site** (Content-Security-Policy, set in Vercel's config): only our own scripts and Neon may run or be called. | Claude | S | to do |
 | TECH-4 | **Text put on screen escaped by default.** About 70 places write HTML; the ones that show your text are escaped by hand. One helper that always escapes, so a future change can't slip. | Claude | M | to do |
 | TECH-5 | **Limit how often a client can write to the database.** | Claude | S | to do |

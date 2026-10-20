@@ -61,7 +61,7 @@ ok(`there are ${files.length} modules to check`, files.length > 20);
 
 // --- every event has somebody on the other end -------------------------------
 
-const all = files.map((p) => ({ p: relative(ROOT, p), src: readFileSync(p, 'utf8') }));
+const all = files.map((p) => ({ p: relative(ROOT, p).replace(/\\/g, '/'), src: readFileSync(p, 'utf8') }));
 const joined = all.map((a) => a.src).join('\n');
 
 const emitted = new Set();

@@ -23,7 +23,7 @@ ok('one session check, however many ask at once', /this\.restoring \?\?= \(async
 ok('the account\'s worlds are remembered on the device each time they\'re fetched', /const cloud = await this\.cloudList\(\);\s*this\.rememberWorlds\(cloud\);/.test(game));
 ok('and shown the moment the screen opens, with this browser\'s own', /knownWorlds\(\) \{\s*return sortWorlds\(\[\.\.\.this\.local\.list\(\), \.\.\.\(this\.cloud \? this\.rememberedWorlds\(\) : \[\]\)\]\);/.test(game)
   && /const rows = this\.cloudWorlds \?\? this\.cb\.knownWorlds\?\.\(\) \?\? \[\];/.test(home));
-ok('only what a row needs is kept', /rows\.map\(\(\{ id, name, mode, age, updatedAt \}\) => \(\{ id, name, mode, age, updatedAt \}\)\)/.test(game));
+ok('only what a row needs is kept, including the Battle label', /rows\.map\(\(\{ id, name, mode, battle, age, updatedAt \}\) => \(\{ id, name, mode, battle, age, updatedAt \}\)\)/.test(game));
 ok('forgotten on sign-out, for whoever signs in next', /await this\.cloudAuth\.signOut\(\);\s*\/\/[^\n]*\n\s*this\.forgetRememberedWorlds\(\);/.test(game));
 ok('an account that can\'t be reached still shows what it last had', /err\.partial = sortWorlds\(\[\.\.\.local, \.\.\.this\.rememberedWorlds\(\)\]\);/.test(game));
 

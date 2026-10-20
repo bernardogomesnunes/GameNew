@@ -68,7 +68,7 @@ ok('a blocked attempt says why, once per new target rather than spamming while h
   /if \(isNewTarget\) \{[\s\S]{0,250}Can't break that/.test(game));
 ok('and a slow or normal break genuinely waits out its own delay before landing',
   // (While it waits, the pick is heard going in — audio/Sound.js's dig — and then it returns.)
-  /if \(ms > 0 && performance\.now\(\) - this\.digTarget\.startedAt < ms\) (?:return;|\{[^}]{0,200}\n\s*return;\n\s*\})/.test(game));
+  /if \(ms > 0 && performance\.now\(\) - this\.digTarget\.startedAt < ms\) (?:return;|\{[^}]{0,200}\r?\n\s*return;\r?\n\s*\})/.test(game));
 
 // --- wear: the cost of the speed bonus, not of using the tool at all --------
 

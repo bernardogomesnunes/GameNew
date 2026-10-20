@@ -1284,7 +1284,7 @@ export class Game {
   /** The account's list, as last seen — only what a row on the screen needs. */
   rememberWorlds(rows) {
     try {
-      localStorage.setItem(WORLDS_SEEN, JSON.stringify(rows.map(({ id, name, mode, age, updatedAt }) => ({ id, name, mode, age, updatedAt }))));
+      localStorage.setItem(WORLDS_SEEN, JSON.stringify(rows.map(({ id, name, mode, battle, age, updatedAt }) => ({ id, name, mode, battle, age, updatedAt }))));
     } catch { /* a full or blocked storage just means no head start next time */ }
   }
 
@@ -1343,9 +1343,9 @@ export class Game {
         this.ui.toast({ kind: 'challenge', title: 'Exported .vox', body: `${(bytes / 1024).toFixed(0)} KB \u00b7 opens in MagicaVoxel and Blender` });
       },
       onImportWorld: async () => {
-        const file = await pickFile('.json,application/json');
-        if (!file) return;
         try {
+          const file = await pickFile('.json,application/json');
+          if (!file) return;
           const data = parseWorldPayload(file.text);
           // An imported file is a new world, not a second copy of wherever it
           // came from: it gets a fresh id and follows the same rule any new
