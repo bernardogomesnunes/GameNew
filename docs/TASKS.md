@@ -10,7 +10,7 @@ have one and only tasks file, and then inside you can divide which ones are
 for you or not"). It was put together on 20 October 2026 from every
 planning doc, every message in the chat since 6 October, and the owner's
 "Adding changes" list. Everything to do, for everyone, is here, Cline's
-full briefs included (section 11). The old planning docs are in
+full briefs included (section 12). The old planning docs are in
 `docs/history/`, for reference only: nothing is added or ticked off there.
 
 ## How to read it
@@ -19,7 +19,7 @@ full briefs included (section 11). The old planning docs are in
 - **Who**: who it suits best.
   - **Claude**: needs the whole codebase, a design, or a browser check.
   - **Cline**: small, self-contained, a brief already written (section
-    11), under about 30 minutes.
+    12), under about 30 minutes.
   - **Owner**: a decision, a test on the phone, or something only you can
     reach (Neon, Vercel, Cline's settings).
 - **Size**: S (under an hour), M (a session), L (several sessions or PRs).
@@ -37,28 +37,30 @@ quoted.
 Open tasks only, by who takes them. The sections below have the details.
 
 **Claude**
-- Saving: SAVE-2, SAVE-3, SAVE-4, SAVE-5.
+- Saving: SAVE-2 to SAVE-6.
 - The new list, each designed first and agreed with the owner: block
   making CRAFT-1 to CRAFT-8, the storage interface STORE-1 and STORE-2,
   villagers with jobs JOBS-1 to JOBS-4, the bigger world WORLD-1 to
   WORLD-4, creatures MOBS-1 and MOBS-2.
 - Buildings' looks: LOOK-1 to LOOK-5.
-- From earlier lists: OLD-1 to OLD-4, OLD-6, OLD-7.
+- From earlier lists: OLD-1 to OLD-4, OLD-6 to OLD-8.
+- Under the hood: TECH-1 to TECH-15 (section 11; TECH-9 and TECH-14 need the owner's yes).
 - The wiki and the words: WIKI-1, WIKI-2, WIKI-4, COPY-1 to COPY-3.
 - Housekeeping: HOUSE-1 (once the owner agrees), HOUSE-4.
 - Reviewing each of Cline's pull requests before the owner merges it.
 
-**Cline** (briefs in section 11)
+**Cline** (briefs in section 12)
 - CL-8 first (the test task), then CL-9, CL-10, CL-11, CL-2, CL-3, CL-4,
   CL-6, CL-7, CL-12, CL-13, CL-14. CL-5 waits on the owner.
 - Later, once their briefs are written: COPY-2 and COPY-3 in small batches.
 
 **Owner**
 - Try things on the phone: section 2 (NOW-1 to NOW-15) and section 9.
-- Decide: ASK-1 to ASK-8 (section 10), Battle balance (OLD-5), who the
+- Decide: ASK-1 to ASK-9 (section 10), Battle balance (OLD-5), who the
   wiki is for (WIKI-3).
 - Note strange descriptions as you find them (COPY-4).
 - Cline's settings on your computer (HOUSE-3).
+- Once there are players: keep the database awake (TECH-16).
 
 ---
 
@@ -73,6 +75,7 @@ Lost progress is the one thing that can't be undone, so this comes first.
 | SAVE-3 | **Save and leave leaves even when the save failed**, and says nothing. | Claude | S | to do |
 | SAVE-4 | **Failed uploads retry silently.** | Claude | S | to do |
 | SAVE-5 | **The backup copy may not fit.** | Claude | S | to do |
+| SAVE-6 | **Say when a world is too big for the account.** Size limits on cloud saves have been live in the database since 6 October (set at least 1,000× above any real world, so not a worry today), but the game's message for hitting one never reached main: it's on the unmerged branch `claude/backlog-batch-3-update`. Bring that one message over. | Claude | S | to do |
 
 **SAVE-1, the save loss.** Every failed upload is written to the
 `save_failures` table in Neon with its reason. Claude can't reach the
@@ -246,13 +249,14 @@ Phone frame rate is the limit to watch.
 | OLD-4 | **Battle mode, step 3**: real multiplayer. Needs a game server; plan it on its own. | Batch 4, E | Claude | L | waiting |
 | OLD-5 | **Battle balance**: how strong rivals feel and how often they come (guesses today). | Batch 4, E | Owner | S | waiting |
 | OLD-6 | **Composting**: a bin takes seeds and leaves and makes compost; compost speeds a farm or raises its yield. Agreed: last. | Batch 3, #9 | Claude | M | to do |
+| OLD-8 | **Battle worlds say "Duilt" in your account's world list**; only this device's list says "Battle". Known since #192, left because it meant touching the cloud-save code. | Batch 4, E | Claude | S | to do |
 | OLD-7 | **Look and sound, the one piece not found in the code**: mist round the floating island, and cloud below it. Everything else in that plan is in (shadows, 32×32 textures, low mist, stars, sun rays, wind, new models, sound and music). | Look and sound plan | Claude | S | to do |
 
 ---
 
 ## 6. Cline's queue
 
-Each has a full brief in section 11. One branch and one PR each; Claude
+Each has a full brief in section 12. One branch and one PR each; Claude
 reviews and the owner merges.
 
 | ID | What | Size | Status |
@@ -327,9 +331,9 @@ read today:
 
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
-| HOUSE-1 | **Old branches to delete**: `cline-test` (merged as #212), `claude/backlog-batch-3-update`, `claude/debug-overlay`, `claude/mob-models-blender`, `claude/stoic-dirac-yky1hi`. Check each has nothing unmerged first. | Claude, Owner agrees | S | waiting |
-| HOUSE-2 | **One tasks file**: the old planning docs moved to `docs/history/`, Cline's briefs folded into section 11. | Claude | S | done |
-| HOUSE-3 | **Cline's settings** (on the owner's computer): auto-approve with a cap, Plan then Act, a strong model, the custom instructions. See section 11. LM Studio wasn't working: set it up together if still wanted. | Owner | S | waiting |
+| HOUSE-1 | **Old branches to delete**: `cline-test` (merged as #212), `claude/backlog-batch-3-update`, `claude/debug-overlay`, `claude/mob-models-blender`, `claude/stoic-dirac-yky1hi`. Checked 20 October: `mob-models-blender` and `stoic-dirac` hold nothing unmerged; `backlog-batch-3-update` holds SAVE-6's message (its review doc is now in `docs/history/analysis-scaling.md`); `debug-overlay` holds TECH-9. | Claude, Owner agrees | S | waiting |
+| HOUSE-2 | **One tasks file**: the old planning docs moved to `docs/history/`, Cline's briefs folded into section 12. | Claude | S | done |
+| HOUSE-3 | **Cline's settings** (on the owner's computer): auto-approve with a cap, Plan then Act, a strong model, the custom instructions. See section 12. LM Studio wasn't working: set it up together if still wanted. | Owner | S | waiting |
 | HOUSE-4 | **The full test suite takes about 10 minutes now** (7,200 checks). Find the slowest files and speed them up, so a PR waits less. Some timing checks fail now and then on a busy machine; make them steadier. | Claude | M | to do |
 
 ---
@@ -384,10 +388,43 @@ keyboard up; the loading screens.
 | ASK-6 | "Know the woods": should the Past's creatures count? | CL-5 |
 | ASK-7 | The model server for Battle mode's AI rivals (HTTPS, key in an environment secret). | OLD-3 |
 | ASK-8 | Delete the old branches? | HOUSE-1 |
+| ASK-9 | Changes to the database itself (a new column and index, a migration runner): Claude never writes to it without your yes, each time. | TECH-14 |
 
 ---
 
-## 11. For Cline: how to work, and the briefs
+## 11. Under the hood (the code review of 6 October)
+
+A review of the code, its speed, its safety and how it would cope with many
+players was written on 6 October, on a branch that never reached main. Its
+first point (size limits on cloud saves) was done that day. None of the rest
+was. The review itself is now in `docs/history/analysis-scaling.md`;
+re-checked against today's code on 20 October.
+
+None of this is something you'd see in play today. It's what keeps the game
+fast on phones, safe, and ready if it's ever shared or played by many.
+
+| ID | What | Who | Size | Status |
+|---|---|---|---|---|
+| TECH-1 | **Two devices overwrite each other.** Saving the same world from two devices: the last one wins, chunk by chunk, with no check. Matters as soon as you play one world on phone and computer. | Claude | M | to do |
+| TECH-2 | **A world file you import is trusted as it is.** A broken or crafted file could freeze the game. Check its size and contents before loading it. | Claude | S | to do |
+| TECH-3 | **A security header for the site** (Content-Security-Policy, set in Vercel's config): only our own scripts and Neon may run or be called. | Claude | S | to do |
+| TECH-4 | **Text put on screen escaped by default.** About 70 places write HTML; the ones that show your text are escaped by hand. One helper that always escapes, so a future change can't slip. | Claude | M | to do |
+| TECH-5 | **Limit how often a client can write to the database.** | Claude | S | to do |
+| TECH-6 | **Make land in the background** (a Web Worker): generating and drawing chunks happens on the same thread as the game, so a slow phone stutters as land streams in. The biggest single gain for phones. | Claude | L | to do |
+| TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude | M | to do |
+| TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Claude | M | to do |
+| TECH-9 | **The phone memory overlay** (a counter shown with `?debug`, for finding memory growth on a phone): one commit on the unmerged branch `claude/debug-overlay`. Merge it or drop it. | Claude, Owner agrees | S | waiting |
+| TECH-10 | **Split `src/Game.js`** (7,962 lines, from 6,488 on 6 October) by system (war, vehicles, building, input, saving), one part per PR, alongside other work. | Claude | L | to do |
+| TECH-11 | **Type checks on the save format and the block list**, to catch the kind of mismatch that once broke saved worlds' mode. | Claude | M | to do |
+| TECH-12 | **Automatic browser checks**: load the game, place a block, save, reload, see it's there. The tests today never open a browser. | Claude | M | to do |
+| TECH-13 | **Checks on every pull request** (GitHub Actions: the tests and a build), so nothing merges red. There are none today. | Claude | S | to do |
+| TECH-14 | **The database at scale**: a player column and index on saved chunks so the security check stays fast with millions of them; a small runner for migrations, and a check the live database matches the code. Needs the owner's yes (ASK-9). | Claude + Owner | M | waiting |
+| TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | to do |
+| TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
+
+---
+
+## 12. For Cline: how to work, and the briefs
 
 Cline: your tasks are the CL ones in "Who's on what" at the top, in that
 order. Do **one** at a time: its own branch and its own pull request. When
@@ -778,7 +815,10 @@ scholar"). Its body says:
    making (3.1), then villagers with jobs (3.3), then the bigger world
    (3.4).
 6. **Buildings' looks** (section 4), between the big pieces.
-7. **Later**: new peoples, map marks, Battle steps 2 and 3, composting.
+7. **Under the hood** (section 11), a little at a time: checks on every
+   PR (TECH-13) and the two-devices fix (TECH-1) first, then the phone
+   speed work (TECH-6 to TECH-8).
+8. **Later**: new peoples, map marks, Battle steps 2 and 3, composting.
 
 ## The old planning docs (history)
 
@@ -788,12 +828,13 @@ was done; nothing in them is open that isn't listed above.
 | Doc | What it holds |
 |---|---|
 | `claude-tasks.md` | The October batch, item by item, with what was done. |
-| `cline-tasks.md` | Cline's briefs as first written (now section 11 here). |
+| `cline-tasks.md` | Cline's briefs as first written (now section 12 here). |
 | `status-and-testing.md` | Everything asked since batch 4, and the full testing list. |
 | `backlog-batch-2.md`, `-3.md`, `-4.md` | The second, third and fourth batches, all done except what's in section 5. |
 | `plan-look-and-sound.md` | The look and sound revamp. |
 | `plan-phase7-lore.md` | The story, both paths: done. |
 | `plan-playtest-improvements.md` | P1 to P9 from the first playtest: done. |
 | `next-session.md` | Notes from the phase 6 and 7 work: done. |
+| `analysis-scaling.md` | The code, speed, safety and scaling review of 6 October (section 11). |
 
 ---

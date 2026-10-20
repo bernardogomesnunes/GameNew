@@ -61,11 +61,11 @@ chat and in pull requests, is in plain language.
 - Questions to me are about the game ("Should the dinosaurs count?"), not
   about code ("Should I filter MOBS by era?").
 - Code comments and commit messages follow the code style in
-  docs/TASKS.md, section 11. This section is about what you say to me.
+  docs/TASKS.md, section 12. This section is about what you say to me.
 
 # The rest
 
 Read `docs/TASKS.md` for the tasks: yours are the CL ones under "Who's on
-what" at the top, and section 11 has how to work, the game's rules, the
+what" at the top, and section 12 has how to work, the game's rules, the
 code style and each task's brief. It's the only tasks file; `docs/history/`
 is old and not to be worked from.
