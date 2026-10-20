@@ -1,6 +1,6 @@
 import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { BIOMES, BIOME_INDEX, surfaceFor } from '../config/biomes.js';
-import { BiomeMap, TERRAIN } from './biomeMap.js';
+import { BiomeMap } from './biomeMap.js';
 import { CHUNK_SIZE } from './World.js';
 import { stampLandmarks, landmarksFor } from './landmarks.js';
 import { roadAt, roadBlock } from './roads.js';
@@ -140,7 +140,7 @@ export class ChunkGen {
    * @param homePull how hard the middle of the world is dragged towards the
    *   home biome, so the starting plot is buildable ground
    */
-  constructor({ seed = 1, height = WORLD_HEIGHT, homePull = 1, homeX = 0, homeZ = 0, terrain = TERRAIN } = {}) {
+  constructor({ seed = 1, height = WORLD_HEIGHT, homePull = 1, homeX = 0, homeZ = 0 } = {}) {
     this.seed = seed | 0;
     this.height = height;
     this.shape = createNoise2D(seeded(seed));
@@ -161,9 +161,7 @@ export class ChunkGen {
     this.outcrop = createNoise2D(seeded(seed + 8419));
     // The biome map is already stateless — it answers per column from noise —
     // so it needs nothing but a centre to bias towards.
-    this.biomes = new BiomeMap({ sizeX: 1, sizeZ: 1, seed, homePull, terrain });
-    // Which shape of land this world was made with: see TERRAIN.
-    this.terrain = this.biomes.terrain;
+    this.biomes = new BiomeMap({ sizeX: 1, sizeZ: 1, seed, homePull });
     this.biomes.centreX = homeX;
     this.biomes.centreZ = homeZ;
     this.biomes.homeRadius = HOME_RADIUS;
@@ -177,19 +175,18 @@ export class ChunkGen {
     const base = this.biomes.blend(weights, 'base');
     const amplitude = this.biomes.blend(weights, 'amplitude');
     const rough = this.biomes.blend(weights, 'rough');
-    let n = this.shape(x * FREQ, z * FREQ);
-    let d = this.detail(x * FREQ_DETAIL, z * FREQ_DETAIL);
-    if (this.terrain >= 2) {
-      // Longer swells under mountains and open country (WORLD-1, WORLD-3).
-      // Blend fixed-wavelength fields, not coordinates multiplied by a
-      // changing biome weight: the latter creates sharp seams far from the
-      // origin.
-      const mountains = (weights[MOUNTAINS1_INDEX] ?? 0) + (weights[MOUNTAINS2_INDEX] ?? 0);
-      const open = (weights[PLAINS_INDEX] ?? 0) + (weights[DESERT_INDEX] ?? 0);
-      const ordinary = Math.max(0, 1 - mountains - open);
-      n = n * ordinary + this.shape(x * FREQ * 0.35, z * FREQ * 0.35) * mountains + this.shape(x * FREQ * 0.6, z * FREQ * 0.6) * open;
-      d = d * ordinary + this.detail(x * FREQ_DETAIL * 0.35, z * FREQ_DETAIL * 0.35) * mountains + this.detail(x * FREQ_DETAIL * 0.6, z * FREQ_DETAIL * 0.6) * open;
-    }
+    // Longer swells under mountains and open country (WORLD-1, WORLD-3).
+    // Blend fixed-wavelength fields, not coordinates multiplied by a changing
+    // biome weight: the latter creates sharp seams far from the origin.
+    const mountains = (weights[MOUNTAINS1_INDEX] ?? 0) + (weights[MOUNTAINS2_INDEX] ?? 0);
+    const open = (weights[PLAINS_INDEX] ?? 0) + (weights[DESERT_INDEX] ?? 0);
+    const ordinary = Math.max(0, 1 - mountains - open);
+    const n = this.shape(x * FREQ, z * FREQ) * ordinary
+      + this.shape(x * FREQ * 0.35, z * FREQ * 0.35) * mountains
+      + this.shape(x * FREQ * 0.6, z * FREQ * 0.6) * open;
+    const d = this.detail(x * FREQ_DETAIL, z * FREQ_DETAIL) * ordinary
+      + this.detail(x * FREQ_DETAIL * 0.35, z * FREQ_DETAIL * 0.35) * mountains
+      + this.detail(x * FREQ_DETAIL * 0.6, z * FREQ_DETAIL * 0.6) * open;
     let h = base + n * amplitude + d * rough;
     // Requested directly: "every biome has some more flat areas, even
     // mountains on top could have a flat area" — and, this round, that
@@ -230,8 +227,7 @@ export class ChunkGen {
    * ground.
    */
   flatFactor(x, z, weights) {
-    const freq = this.terrain >= 2 ? FREQ_FLAT : FREQ_FLAT_BEFORE;
-    const n = (this.flat(x * freq, z * freq) + 1) / 2;
+    const n = (this.flat(x * FREQ_FLAT, z * FREQ_FLAT) + 1) / 2;
     const factor = Math.pow(Math.max(0, n - FLAT_BASE) / (1 - FLAT_BASE), FLAT_POWER);
     const mult = weights ? this.biomes.blend(weights, 'flat') : 1;
     return Math.min(1, factor * mult);
@@ -466,10 +462,6 @@ export class ChunkGen {
     // A giant: one in GIANT_ONE_IN, or most of them in a giant grove.
     const giantOdds = t.giants ?? 1 / GIANT_ONE_IN;
     if (giantOdds > 0 && hash01(x, z, this.seed ^ 0x61a7) < giantOdds && this.giantFits(x, z, ground)) {
-      if (this.terrain < 2) {
-        const trunk = 18 + Math.floor(hash01(x, z, this.seed ^ 0x2d4f) * 9); // 18..26
-        return { style: t, trunk, ground, giant: true, crown: 7 + Math.floor(hash01(x, z, this.seed ^ 0x77c1) * 3) };
-      }
       const profile = giantProfile(x, z, this.seed);
       const trunk = Math.min(profile.trunk, this.height - ground - 14);
       return { style: t, ground, giant: true, ...profile, trunk };
@@ -486,7 +478,8 @@ export class ChunkGen {
   giantFits(x, z, ground) {
     const home = this.biomes;
     if (Math.hypot(x - home.centreX, z - home.centreZ) < GIANT_CLEAR_OF_HOME) return false;
-    if (this.terrain >= 2 && this.height - ground < 36) return false;
+    // Room for the tallest form and its crown under the world's ceiling.
+    if (this.height - ground < 36) return false;
     for (const [dx, dz] of [[1, 0], [0, 1], [1, 1]]) {
       if (this.waterLevelAt(x + dx, z + dz)) return false;
       if (Math.abs(this.heightAt(x + dx, z + dz) - ground) > 2) return false;
@@ -678,7 +671,7 @@ export class ChunkGen {
    * reaching out partway up with leaves on their ends, and a crown twice the
    * width of anything else in the wood.
    */
-  plantGiant(put, x, z, { style, trunk, ground, crown, form }) {
+  plantGiant(put, x, z, { style, trunk, ground, crown, form = 'spreading' }) {
     const wood = style.wood, leaves = style.leaves;
     const salt = x * 131 + z * 7;
     const h = (a, b) => hash01(x * 17 + a, z * 29 + b, this.seed ^ 0x6b1d);
@@ -733,8 +726,7 @@ export class ChunkGen {
       for(const [dy,r]of [[-7,crown+.5],[-1,crown-1],[5,crown-3]])
         this.crown(put,cx,topY+dy,cz,{r,below:2,above:3,leaves,salt:salt+dy*7});
     } else {
-      // A spreading giant hangs a course lower than one from an older world.
-      this.crown(put, cx, topY + 2, cz, { r: crown + 0.5, below: form ? 5 : 4, above: 5, leaves, salt });
+      this.crown(put, cx, topY + 2, cz, { r: crown + 0.5, below: 5, above: 5, leaves, salt });
     }
   }
 
@@ -838,8 +830,6 @@ const MIN_HEIGHT = 6;
 // to gate a rare feature. Lower than before: "flat areas of 50 to 100
 // blocks" needs a wider characteristic wavelength than the old 0.017 gave.
 const FREQ_FLAT = 0.005;
-// The same, in worlds made before WORLD-3 (see TERRAIN).
-const FREQ_FLAT_BEFORE = 0.008;
 const FLAT_BASE = 0.32;
 const FLAT_POWER = 1.6;
 // Caves: a narrow band around zero of a 3D field, everywhere, well below the

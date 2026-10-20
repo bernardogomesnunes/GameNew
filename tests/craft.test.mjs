@@ -52,7 +52,7 @@ g.inventory.add('stairs_plank', 2);
 g.inventory.add('roof_teal', 40);
 g.inventory.add('roof_mint', 40);
 g.inventory.add('trim_curl', 4);
-g.inventory.add('vines', 8);
+g.inventory.add('vines', 10);
 const b = g.territory.bounds();
 const anchor = { x: b.minX + 4, y: 30, z: b.minZ + 4 };
 const plan = g.starterPlacement('house', anchor);

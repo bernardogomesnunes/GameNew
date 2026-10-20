@@ -486,7 +486,6 @@ export class World {
         seed: this.gen.seed,
         homeX: this.gen.biomes.centreX,
         homeZ: this.gen.biomes.centreZ,
-        terrain: this.gen.terrain,
         chunks,
       };
     }
@@ -508,8 +507,7 @@ export class World {
     if (json.endless) {
       const world = new World({
         height: json.height,
-        // Saved before the land had shapes to choose from: the first one.
-        gen: makeGen({ seed: json.seed, height: json.height, homeX: json.homeX ?? 0, homeZ: json.homeZ ?? 0, terrain: json.terrain ?? 1 }),
+        gen: makeGen({ seed: json.seed, height: json.height, homeX: json.homeX ?? 0, homeZ: json.homeZ ?? 0 }),
       });
       for (const c of json.chunks) {
         // Generate the land first, then lay the player's changes over it, so a

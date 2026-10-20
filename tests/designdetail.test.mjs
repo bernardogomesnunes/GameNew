@@ -23,7 +23,8 @@ for (const id of ['house', 'storehouse', 'workshop', 'university', 'engineering'
   // the storehouse's lean-to (#5), out over its low front, row 0.
   const edge = id === 'storehouse' ? 'dz' : 'dx';
   ok(`${id}: its eaves overhang the walls`,
-    d.blocks.some((b) => b[edge] === 0 && roofPart(b.type)) && !d.blocks.some((b) => b[edge] === 0 && b.dy === 1 && !roofPart(b.type) && b.type !== 30 && b.type !== 29));
+    d.blocks.some((b) => b[edge] === 0 && roofPart(b.type)
+      && !d.blocks.some((wall) => wall.dx === b.dx && wall.dz === b.dz && wall.dy === 1 && !roofPart(wall.type) && wall.type !== 30 && wall.type !== 29)));
   // A plinth: the lowest course of wall isn't the wall's own material.
   const wallY = cells.has('3,0,3') ? 1 : 0;                 // a floor under the room lifts its walls
   const low = cells.get(`1,${wallY},2`), high = cells.get(`1,${wallY + 1},2`);
