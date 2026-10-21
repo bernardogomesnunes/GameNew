@@ -77,6 +77,7 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 | ID | What | PR |
 |---|---|---|
+| INV-1 | "Can you add search to inventory? Keep the height of the panel fixed while giving results" — searches bag and equipped items by name, keeps original slot actions, and retains the panel height for many, few or no matches. Equipment rows collapse while filtering and return when cleared. | `codex/inventory-search`; awaiting integration |
 | NOW-21 | The game was breaking with the new land: far fewer triangles to draw everywhere (about half at home, a tenth at a huge peak); huge peaks less blobby, with an uneven outline, ridges and valleys, and a second summit. | #234 |
 | NOW-20 | Saving: a failed upload says so once, tries again by itself, and says when it's up; a big world's backup copy fits now. | #233 |
 | NOW-19 | The new mountains, plains and giant trees in old worlds too; the rounder starter house, townhouse and cottages. | #232 |
@@ -351,7 +352,7 @@ re-checked against today's code on 20 October.
 | TECH-14 | **The database at scale**: a player column and index on saved chunks so the security check stays fast with millions of them; a small runner for migrations, and a check the live database matches the code. Needs the owner's yes (ASK-5). | Claude + Owner | M | waiting |
 | TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | done; integrated into main 21 October |
 | TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
-| TECH-17 | **Performance safeguards for future additions**: fixed-seed peak/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource checks, shared streaming allowance, and a PR performance workflow. Cave overdraw and crowd instance-buffer leaks fixed. Commands and limits in `docs/performance.md`. | ChatGPT | M | done (working tree; real-phone check and requiring CI on GitHub pending) |
+| TECH-17 | **Performance safeguards for future additions**: fixed-seed crest/slope/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource checks, shared streaming allowance, and a PR performance workflow. Cave overdraw and crowd instance-buffer leaks fixed. Follow-up rejects incomplete reports and growth in any disposal cycle; retains the old terrain window alongside a validated high crest after the range update. Commands and limits in `docs/performance.md`. | ChatGPT | M | runtime integrated; gate hardening PR #234; Performance budgets required on main; real-phone check pending |
 
 ---
 

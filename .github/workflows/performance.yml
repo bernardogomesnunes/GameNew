@@ -1,5 +1,6 @@
 name: Performance budgets
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches: [main]
@@ -7,6 +8,7 @@ permissions:
   contents: read
 jobs:
   performance:
+    name: Performance budgets
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

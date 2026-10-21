@@ -10,7 +10,8 @@ import { generateEndlessWorld } from '../../src/world/StarterWorld.js';
 // random seed happens to be cheap in a particular run. Keep a neighbour ring
 // so missing chunk borders cannot dominate the geometry measurements.
 export const SCENARIOS = Object.freeze([
-  { id: 'peak', x: -2521, z: -2584 },
+  { id: 'peak', x: -2521, z: -2720, minHeight: 170 },
+  { id: 'range_slope', x: -2521, z: -2584, minHeight: 100 },
   { id: 'forest', x: -744, z: 600 },
   { id: 'cave', x: 340, z: 781 },
   { id: 'settlement', x: 0, z: 0, settlement: true },
@@ -24,6 +25,10 @@ export function createScenario(spec, scene = new THREE.Scene()) {
   const x = spec.settlement ? world.centreX : spec.x;
   const z = spec.settlement ? world.centreZ : spec.z;
   const cx = Math.floor(x / 16), cz = Math.floor(z / 16);
+  const y = world.gen.heightAt(x, z);
+  if (spec.minHeight != null && y < spec.minHeight) {
+    throw new Error(`${spec.id} fixture lost its crest: height ${y} < ${spec.minHeight}`);
+  }
   const chunks = [];
   for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
     const chunk = world.getChunk(cx + dx, cz + dz);
@@ -31,7 +36,6 @@ export function createScenario(spec, scene = new THREE.Scene()) {
   }
   const generationMs = performance.now() - start;
   const mesher = new ChunkMesher(scene);
-  const y = world.gen.heightAt(x, z);
   return { scene, world, chunks, mesher, x, y, z, generationMs };
 }
 
@@ -39,7 +43,7 @@ export function meshMetrics(fixture) {
   const start = performance.now();
   for (const chunk of fixture.chunks) fixture.mesher.rebuild(fixture.world, chunk);
   const meshMs = performance.now() - start;
-  const out = { generationMs: fixture.generationMs, meshMs, chunks: fixture.chunks.length,
+  const out = { generationMs: fixture.generationMs, meshMs, surfaceHeight: fixture.y, chunks: fixture.chunks.length,
     surfaceTriangles: 0, deepTriangles: 0, geometryBytes: 0, meshes: fixture.mesher.activeMeshes.size };
   for (const mesh of fixture.mesher.activeMeshes) {
     const geometry = mesh.geometry;
