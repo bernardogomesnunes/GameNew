@@ -41,6 +41,9 @@ new is asked for: add it with the owner's words quoted.
   held work. The atomic-save migration remains disabled and **not applied**.
 - Future tasks follow `AGENTS.md`: regular commits, pushed branches and a PR at
   task completion. GitHub CLI authentication must be restored to create PRs here.
+- GitHub's default branch still points to `claude/voxel-sandbox-game-heuhyq`
+  (verified with remote HEAD). Repository settings need an authenticated owner
+  session to make `main` the default; no branch contents are missing from main.
 - Remaining work is explicitly marked in the tables; phone playtests, production
   database rollout and branch deletion still require the owner's action.
 
