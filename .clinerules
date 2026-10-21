@@ -35,7 +35,7 @@
 - Never commit or push to main. Never force-push, rewrite history or merge.
 - Check `git diff --staged` before each commit. Never commit `.env`, keys
   or tokens.
-- One commit per task is fine. The message says why, in plain English.
+- Commit coherent progress regularly; do not leave a long task entirely uncommitted. The message says why, in plain English. Follow the shared workflow in `AGENTS.md`.
 - At the end: `git push -u origin <branch>`, then open a pull request with
   `gh pr create --fill` if `gh` is installed. If it isn't, give me this
   link to open one:

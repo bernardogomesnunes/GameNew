@@ -57,7 +57,8 @@ ok('and locks it back up for real',
 // --- tidy-up: deleting or moving a building you were mid-edit on clears it --
 
 ok('deleting the building you were editing drops the edit state instead of pinning a ghost',
-  /deleteBuilding\(structure\) \{[\s\S]{0,300}this\.editingStructure\?\.id === structure\.id[\s\S]{0,100}this\.editingStructure = null/.test(game));
+  /this\.editingStructure\?\.id === structure\.id[\s\S]{0,100}this\.editingStructure = null/.test(
+    game.slice(game.indexOf('  deleteBuilding(structure) {'), game.indexOf('  cellsOf(r) {'))));
 ok('so does picking it up to move it',
   /beginMove\(structure\) \{[\s\S]{0,300}this\.editingStructure\?\.id === structure\.id[\s\S]{0,100}this\.editingStructure = null/.test(game));
 
