@@ -964,15 +964,8 @@ export class ChunkMesher {
       if (sky[n]) return at;
       const id = vol[n];
       if (id < 0 || !OPEN[id]) return at;
-<<<<<<< HEAD
       // fillPadded copies edge neighbours, but not the four corner columns.
       // Their empty padding must not connect sealed caves to the sky.
-=======
-      // The padding's four corner columns hold no blocks (fillPadded fills
-      // only the edges), so they read as air from top to bottom: a shaft of
-      // sky down every corner, into any cave that touched one. Under a big
-      // mountain that was most of its caves drawn to the horizon.
->>>>>>> origin/claude/voxel-sandbox-game-heuhyq
       const cx = n % PAD, cz = ((n / PAD) | 0) % PAD;
       if ((cx === 0 || cx === PAD - 1) && (cz === 0 || cz === PAD - 1)) return at;
       sky[n] = 1;

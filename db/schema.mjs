@@ -22,3 +22,8 @@ export const WORLDS_NOT_NULL = ['name', 'mode', 'size_x', 'size_z', 'height'];
 
 // migrations/0003_worlds_duilt_worldgen_columns.sql
 export const WORLDS_NULLABLE_JSON_COLUMNS = ['spawn', 'duilt', 'world_gen'];
+
+// migrations/0005_cloud_limits.sql: backstops only. No cap on worlds or chunks.
+export const CLOUD_LIMITS = {
+  chunkBytes: 262144,
+};
