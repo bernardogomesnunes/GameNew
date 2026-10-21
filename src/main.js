@@ -17,6 +17,11 @@ loadingProgress(35, 'Building the world…');
   const app = document.getElementById('app');
   const game = new Game(app);
   if (import.meta.env.DEV) window.__game = game;
+  // `?debug` shows what the game is holding on to (ui/DebugOverlay.js). Without
+  // it the file is never fetched.
+  if (new URLSearchParams(location.search).has('debug')) {
+    import('./ui/DebugOverlay.js').then((m) => m.startDebugOverlay(game)).catch(console.error);
+  }
   loadingProgress(60, 'Drawing the land…');
   // The land around the title scene, chunk by chunk — made faster while
   // this covers it (Game.booting).
