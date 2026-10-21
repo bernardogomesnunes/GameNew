@@ -1,0 +1,9 @@
+{
+  "scenes": {
+    "peak": { "surfaceTriangles": 2600, "geometryBytes": 26500000, "meshes": 40 },
+    "forest": { "surfaceTriangles": 61000, "geometryBytes": 17500000, "meshes": 34 },
+    "cave": { "surfaceTriangles": 26000, "geometryBytes": 10500000, "meshes": 45 },
+    "settlement": { "surfaceTriangles": 13000, "geometryBytes": 10000000, "meshes": 37 }
+  },
+  "browser": { "drawCalls": 160, "triangles": 350000, "geometryGrowth": 0, "textureGrowth": 0, "bufferGrowth": 0 }
+}

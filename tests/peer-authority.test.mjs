@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { World } from '../src/world/World.js';
+import { applyPeerWorldEdits } from '../src/net/applyPeerWorldEdits.js';
+const world=new World({sizeX:16,sizeZ:16,height:16});world.setBlock(1,1,1,148);let removed=0,meshed=0;
+const game={world,duilt:{removeChest(){removed++;},structures:{blocking(){throw Error('Guest locks must not approve host edits');},revalidateAround(){}}},remeshDirty(){meshed++;}};
+assert.equal(applyPeerWorldEdits(game,[{x:1,y:1,z:1,prev:148,next:0}]),true);
+assert.equal(world.getBlock(1,1,1),0);assert.equal(removed,1);assert.equal(meshed,1);
+console.log('PASS authoritative host edits bypass stale guest chest/claim approvals and update meshes');
+assert.equal(applyPeerWorldEdits(game,[{x:17,y:1,z:1,prev:0,next:3}]),false);
+console.log('PASS peer edits still validate block data and world bounds');

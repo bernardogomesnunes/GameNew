@@ -83,6 +83,7 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 
 | Recipe / result | Ingredients | Reusable tools | Age | Condition |
 | --- | --- | --- | --- | --- |
+| Storage Interface → 1 Storage Interface | 6 Planks, 2 Glass, 2 Copper Ingot | — | 3 | — |
 | Compost Bin → 1 Compost Bin | 6 Planks, 4 Leaves | — | 2 | — |
 | Stone Axe → 1 Stone Axe | 2 Wood, 3 Stone | — | 1 | — |
 | Stone Pickaxe → 1 Stone Pickaxe | 3 Wood, 4 Stone | — | 1 | — |

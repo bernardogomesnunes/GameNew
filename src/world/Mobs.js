@@ -258,6 +258,23 @@ export class Mobs {
     } else {
       const a = this.rand() * Math.PI * 2, r = 2 + this.rand() * 5;
       m.target = { x: m.x + Math.sin(a) * r, z: m.z + Math.cos(a) * r };
+      // Loose herds stay in sight of one another without marching as a
+      // single unit. Only reconsider this at a roaming decision; food,
+      // fear, combat and owned animals have already taken priority above.
+      if (spec.herd[1] > 1) {
+        let companion = null, nearest = 20;
+        for (const other of this.list) {
+          if (other === m || other.type !== m.type || other.dead || other.dying > 0 ||
+              other.owned || other.still || other.penId !== m.penId || Math.abs(other.y - m.y) > 3) continue;
+          const distance = Math.hypot(other.x - m.x, other.z - m.z);
+          if (distance < nearest) { companion = other; nearest = distance; }
+        }
+        if (companion && nearest > 7) {
+          const travel = Math.min(r, nearest - 4);
+          m.target = { x: m.x + (companion.x - m.x) / nearest * travel,
+            z: m.z + (companion.z - m.z) / nearest * travel };
+        }
+      }
       m.speed = spec.walk;
       m.grazing = false;
       m.timer = 3 + this.rand() * 4;
@@ -291,7 +308,12 @@ export class Mobs {
           const g = this.groundAt(m.x, m.z + Math.sign(dz) * step, m.y, spec);
           if (g != null) { nx = m.x; nz = m.z + Math.sign(dz) * step; ground = g; }
         }
-        m.facing = Math.atan2(dx, dz);
+        // Turn along the actual movement (including sliding round a fence),
+        // taking the shortest arc across +/- PI rather than snapping.
+        const heading = Math.atan2(nx - m.x, nz - m.z);
+        const turn = Math.atan2(Math.sin(heading - m.facing), Math.cos(heading - m.facing));
+        const maxTurn = (m.fleeFor > 0 || m.chasing ? 9 : 3) * dt;
+        m.facing += Math.max(-maxTurn, Math.min(maxTurn, turn));
         if (ground == null && (m.chasing || m.follow)) {
           // Coming for you and something's in the way: off to one side a
           // few steps, then at you again (see think) — a raptor in the

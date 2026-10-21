@@ -44,7 +44,7 @@ world.setBlock(fx+1, GY, fz+5, 11); // water within 6
 for (let x=fx;x<fx+4;x++) world.setBlock(x, GY+1, fz, 119); // carrots sown in it
 const region = {minX:fx,maxX:fx+3,minY:GY,maxY:GY+1,minZ:fz,maxZ:fz+3};
 const opts = g.claimOptionsFor(region);
-ok('claim menu offers every Age 1 building', opts.length === 3);
+ok('claim menu offers every Age 1 building, including the optional Work Hall', opts.length === 4 && opts.some(o=>o.id==='work_hall'));
 ok('the farm qualifies', opts.find(o=>o.id==='farm').ok);
 ok('the house does not, and says so', !opts.find(o=>o.id==='house').ok);
 const claim = g.claim(region, 'farm');

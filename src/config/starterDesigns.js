@@ -1048,6 +1048,11 @@ function barracksBlocks() {
 
 export const STARTER_DESIGNS = [
   {
+    id: 'starter_work_hall', structure: 'work_hall', name: 'Work Hall', size: 7, footprint: '7 × 7',
+    blocks: [...room({w:5,h:3,wall:WOOD,floor:PLANKS,tiles:MINT,shutters:true}),
+      {dx:3,dy:1,dz:3,type:OAK_TABLE}, {dx:4,dy:1,dz:3,type:OAK_CHAIR}],
+  },
+  {
     id: 'starter_forest',
     structure: 'forest',
     name: 'Starter grove',

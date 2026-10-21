@@ -24,7 +24,7 @@ ok('a failure says so rather than leaving the bar there forever', /catch\(\(err\
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 ok('boot makes the title scene\'s world, once', /this\.newWorld\(\{ mode: CREATIVE, name: 'Title', silent: true, scenery: true, title: true, seed: TITLE_SEED \}\);\s*this\.bootWorld = this\.world;/.test(game)
   && /if \(this\.world !== this\.bootWorld\) this\.newWorld\(/.test(game));
-ok('under the loading screen the land is made faster', /this\.generateQueued\(this\.booting \? BOOT_BUDGET_MS : undefined\);\s*this\.drainRemeshQueue\(this\.booting \? BOOT_BUDGET_MS : undefined\);/.test(game));
+ok('under the loading screen the land is made faster', /runStreamingWork\(this, frameStarted, undefined, BOOT_BUDGET_MS\);/.test(game));
 
 globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
 const { Game } = await import('../src/Game.js');

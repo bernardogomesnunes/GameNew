@@ -126,6 +126,10 @@ export function landmarksFor(gen) {
     }
   }
 
+  for (const descriptor of gen.emergingPlaces ?? []) {
+    const place = emergingLandmark(descriptor);
+    if (place) out.push(place);
+  }
   gen.landmarkCache = out;
   return out;
 }
@@ -710,6 +714,25 @@ const RAID_PEOPLES = [
   { kind: 'caravan', design: caravanDesign },
   { kind: 'mossfolk', design: mossfolkDesign },
 ];
+
+/** The same real camps/villages as the seeded world, rebuilt from a small save record. */
+export function emergingDesign(kind, seed = 0) {
+  const roll = hash01(seed, 711, 8401);
+  if (kind === 'caravan') return caravanDesign(roll);
+  if (kind === 'mossfolk') return mossfolkDesign(roll);
+  if (kind === 'camp') return { half: CAMP.half, blocks: CAMP.blocks };
+  if (kind === 'ruin') return { half: 6, blocks: ruinBlocks(roll) };
+  return null;
+}
+
+export function emergingLandmark(record) {
+  if (!record || ![record.x,record.y,record.z,record.seed].every(Number.isSafeInteger) ||
+      record.y < 1 || record.y > 190 || typeof record.id !== 'string') return null;
+  const design = emergingDesign(record.kind, record.seed);
+  if (!design) return null;
+  return { ...design, kind: record.kind, x: record.x, y: record.y, z: record.z,
+    id: record.id, day: record.day, emerging: true };
+}
 
 const PLACES = [
   { kind: 'ruin', count: 4, at: [300, 700], half: 6, build: ruinBlocks },

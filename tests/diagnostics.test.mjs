@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { Diagnostics } from '../src/core/Diagnostics.js';
+const listeners=new Map(),d=new Diagnostics({events:{addEventListener:(k,v)=>listeners.set(k,v),removeEventListener:k=>listeners.delete(k)},now:()=>1000});
+for(let i=0;i<1300;i++)d.frame(16);
+d.frame(Infinity);d.frame(50000);
+for(let i=0;i<30;i++)d.recordError(Error('Failed https://example.invalid/path?secret=abc eyJabcdefgh.ijklmnop.qrstuv'));
+assert.equal(d.frames.length,1200);assert.equal(d.errors.length,20);assert.equal(d.report().frames,1300);assert.equal(d.report().recentFPS,63);
+assert.ok(!JSON.stringify(d.report()).includes('secret=abc'));assert.ok(!JSON.stringify(d.report()).includes('eyJabcdefgh'));
+d.dispose();assert.equal(listeners.size,0);
+console.log('PASS bounded local diagnostics exclude URL/token details and dispose listeners');

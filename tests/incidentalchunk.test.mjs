@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { Game } from '../src/Game.js';
 import { World, CHUNK_SIZE } from '../src/world/World.js';
 import { ChunkGen } from '../src/world/ChunkGen.js';
 import { ChunkMesher } from '../src/world/ChunkMesher.js';
@@ -61,7 +62,13 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 
 // --- the fix: streamChunks sweeps dirty chunks too, not just what it made ---
 
-ok('every chunk streaming makes is queued for its mesh (generateQueued)', /generateQueued\([\s\S]{0,1200}this\.remeshQueue\.add\(this\.world\.getChunk\(cx, cz\)\);/.test(game));
+{
+  const generated = { cx: 2, cz: 3 };
+  const session = { genQueue: [{ cx: 2, cz: 3 }], remeshQueue: new Set(),
+    world: { endless: true, hasChunk: () => false, getChunk: () => generated } };
+  Game.prototype.generateQueued.call(session, Infinity);
+  ok('every chunk streaming makes is queued for its mesh (generateQueued)', session.remeshQueue.has(generated) && session.genQueue.length === 0);
+}
 ok('streamChunks also sweeps every dirty chunk, not just the ones it made',
   /streamChunks\(\)[\s\S]{0,2500}for \(const chunk of this\.world\.dirtyChunks\(\)\) this\.remeshQueue\.add\(chunk\);/.test(game));
 

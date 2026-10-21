@@ -171,7 +171,8 @@ export class ChunkGen {
   heightAt(x, z) {
     // The Future's city stands on level ground (world/future.js).
     if (inFuture(x, this.biomes.centreX)) return FUTURE_GROUND;
-    const { weights, massif } = this.biomes.weigh(x, z);
+    const { weights: biomeWeights, terrainWeights, massif } = this.biomes.weigh(x, z);
+    const weights = terrainWeights ?? biomeWeights;
     const base = this.biomes.blend(weights, 'base');
     const amplitude = this.biomes.blend(weights, 'amplitude');
     const rough = this.biomes.blend(weights, 'rough');
@@ -199,7 +200,13 @@ export class ChunkGen {
     // world settling to the same height regardless of what it's in.
     const flat = this.flatFactor(x, z, weights);
     if (flat > 0) h += (base - h) * flat;
-    if (massif) h += Math.max(0, massif.peak - h) * massif.influence;
+    if (massif) {
+      // A local lowland foundation, then broad foothills and narrow connected
+      // ridges. Biome colouring follows the landform; it never adds a second
+      // mountain-height blob underneath the ridge.
+      const foothillFloor = 104 + this.shape(x * 0.003, z * 0.003) * 5;
+      h += (foothillFloor - h) * massif.influence + massif.uplift;
+    }
     h = Math.round(h);
     // A river or a mountain stream cuts the ground down towards its bed
     // rather than being painted on afterwards, so the banks slope into it
@@ -335,6 +342,9 @@ export class ChunkGen {
       this._caveSpans = deepCaveColumn(this, x, z);
     }
     if (this._caveSpans.length && this._caveSpans.some((s) => y >= s.floor && y <= s.ceiling)) return AIR;
+    // Keep tall peaks solid above ordinary caves: perforated flanks expose
+    // large amounts of underground geometry. Deep gallery spans take priority.
+    if (y > 120) return NOT_CARVED;
     const cavern = biomeIndex === MOUNTAINS2_INDEX && y < CAVERN_Y_MAX;
     const width = cavern ? CAVERN_WIDTH : CAVE_WIDTH;
     const n = this.cave(x * CAVE_FREQ, y * CAVE_FREQ_Y, z * CAVE_FREQ);

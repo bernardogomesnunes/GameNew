@@ -1,4 +1,5 @@
 import { AIR, isFluid, isSystemBlock, shapeOf, lightOf, BLOCKS_BY_ID, ID_COUNT } from '../config/blocks.js';
+import { emergingState, installEmergingPlaces, validateEmergingDescriptors } from './emergingPlaceState.js';
 
 export const CHUNK_SIZE = 16;
 
@@ -193,6 +194,22 @@ export class World {
     // written straight into the chunk, never through setBlock, so it would
     // never light. Not lava or glowing ore: there's no end of those down
     // there, and they're not what anybody is looking for a glow from.
+    this.scanLights(chunk, { placedOnly: true });
+    return chunk;
+  }
+
+  /** Installs untouched worker terrain, preserving any intervening sync generation/edit. */
+  acceptGeneratedChunk({ cx, cz, height, data, surface, biomes }) {
+    if (!this.endless || height !== this.height || this.hasChunk(cx, cz)) return null;
+    if (!(data instanceof Uint8Array || data instanceof Uint16Array)
+      || data.length !== CHUNK_SIZE * this.height * CHUNK_SIZE
+      || !(surface instanceof Int16Array) || surface.length !== CHUNK_SIZE * CHUNK_SIZE
+      || !(biomes instanceof Uint8Array) || biomes.length !== CHUNK_SIZE * CHUNK_SIZE) return null;
+    const chunk = new Chunk(cx, cz, this.height);
+    chunk.data = data;
+    chunk.surface = surface;
+    chunk.biomes = biomes;
+    this.chunks.set(chunkKey(cx, cz), chunk);
     this.scanLights(chunk, { placedOnly: true });
     return chunk;
   }
@@ -486,6 +503,7 @@ export class World {
         seed: this.gen.seed,
         homeX: this.gen.biomes.centreX,
         homeZ: this.gen.biomes.centreZ,
+        emergingPlaces: emergingState(this.gen.emergingPlaces).places,
         chunks,
       };
     }
@@ -505,9 +523,12 @@ export class World {
 
   static deserialize(json, { makeGen } = {}) {
     if (json.endless) {
+      validateEmergingDescriptors(json.emergingPlaces);
+      const gen = makeGen({ seed: json.seed, height: json.height, homeX: json.homeX ?? 0, homeZ: json.homeZ ?? 0 });
+      installEmergingPlaces(gen, json.emergingPlaces);
       const world = new World({
         height: json.height,
-        gen: makeGen({ seed: json.seed, height: json.height, homeX: json.homeX ?? 0, homeZ: json.homeZ ?? 0 }),
+        gen,
       });
       for (const c of json.chunks) {
         // Generate the land first, then lay the player's changes over it, so a

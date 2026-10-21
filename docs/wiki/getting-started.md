@@ -13,12 +13,16 @@ You land on a plot 32 blocks wide with an axe, a bucket, 4 fruit, 4 carrot seeds
 7. Hang a **Painting** in your house and Place on it. That is where you wake if you fall.
 8. Keep going: each age asks for three or four buildings. See [Goals](goals.md).
 
+## Villagers can help
+
+Build a Work Hall from the Buildings list when you have villagers. Assign Builders for queued construction or Haulers to move the supplies you leave at the hall. Make sure they have food and a clear walking route.
+
 ## Tips
 
 - Buildings send what they make to your storehouses first, then your bag.
 - Build workplaces within 40 blocks of your houses, or settlers will not walk to them.
 - Evolve buildings (lamps, then chests, then coins and iron) for up to 3.5 times the output.
-- Keep a spare tool. Everything wears out.
+- Keep spare mining tools. Carpentry tools and the Weapon Mold are reusable.
 - Light a lantern or two. Night lasts 5 real minutes.
 - Cook your meat. Raw meat feeds 5. Cooked feeds 32.
 
@@ -37,6 +41,8 @@ You land on a plot 32 blocks wide with an axe, a bucket, 4 fruit, 4 carrot seeds
 | Story | Intro, tales, lore, war, two paths | Skipped, but the Sky Kingdom and Stone Kingdom are in the world to visit |
 
 You can save worlds in your browser, export them to a file, or sync them to your account.
+
+Battle worlds add three rival computer cities. Their armies begin after your first Barracks; see [Battle worlds](combat-and-war.md#battle-worlds).
 
 ## Controls
 

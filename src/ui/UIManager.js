@@ -7,7 +7,9 @@ import { HomeScreen } from './HomeScreen.js';
 import { Panels } from './Panels.js';
 import { isDesktop } from './desktop.js';
 import { bindPanelWindows } from './PanelWindows.js';
-import { StoryView, INTRO, ENDINGS, endingFor } from './Story.js';
+import { INTRO, ENDINGS, endingFor } from './StoryText.js';
+import { LazyStoryView } from './LazyStoryView.js';
+import { html, escapeHtml } from './html.js';
 import { askConfirm } from './Confirm.js';
 import { BOOK, BOOK_GROUPS, bookGroup } from '../duilt/Collection.js';
 import { TRADERS, CITY_TRADERS } from '../config/traders.js';
@@ -29,7 +31,6 @@ import { VIEWS, SKINS, HAIRS, CLOTHES, DEFAULT_LOOK } from '../config/avatar.js'
 import { ROOFS, roofProfileSvg } from '../config/roofs.js';
 import { CLEARS, clearArtSvg } from '../config/clears.js';
 import { Minimap } from '../render/Minimap.js';
-import { drawWorldMap, MAP_ZOOMS } from '../render/WorldMap.js';
 import { nextPaint } from './loading.js';
 import { SHOWCASE_SPOTS, SHOWCASE_TIMES } from '../world/showcase.js';
 
@@ -76,7 +77,7 @@ const TOOL_ACTION_LABELS = {
 
 function el(html) {
   const t = document.createElement('template');
-  t.innerHTML = html.trim();
+  t.innerHTML = String(html).trim();
   return t.content.firstElementChild;
 }
 
@@ -213,7 +214,10 @@ export class UIManager {
     this.panels.onClose((id) => this.duiltUI?.onPanelClosed(id));
     this.panels.onClose(() => this.updateHudVisibility());
     // The illustrated intro and endings: a panel of their own (ui/Story.js).
-    this.story = new StoryView(root, this.panels);
+    this.story = new LazyStoryView(root, this.panels, {
+      world: () => this.game.world,
+      onError: () => this.toast({ kind: 'xp', title: 'Story could not load', body: 'You can keep playing and replay it from Stats.' }),
+    });
 
     this.buildHotbar();
     this.wireEvents();
@@ -331,6 +335,7 @@ export class UIManager {
               <span>Name</span>
               <input type="text" id="save-name" maxlength="40" placeholder="Unnamed world" />
             </label>
+            <button class="secondary" id="btn-invite-battle">Invite a friend to Battle</button>
             <div id="save-hint" class="export-note" hidden></div>
           </div>
 
@@ -373,6 +378,7 @@ export class UIManager {
               </label>
             </div>
             <div class="export-note" id="gfx-note" hidden></div>
+            <button class="secondary" id="btn-diagnostics">Download diagnostics</button>
           </div>
 
           <div class="menu-section" id="menu-controls" hidden>
@@ -754,7 +760,7 @@ export class UIManager {
       onOpen: (id) => { this.enterWorld(); this.cb.onOpenWorld(id); },
       // The loading screen covers the making (Game.withLoading), so entering
       // can come first, inside the tap.
-      onCreate: (mode, name) => { this.enterWorld(); this.cb.onNewWorld(mode, name); },
+      onCreate: (mode, name, options) => { this.enterWorld(); this.cb.onNewWorld(mode, name, options); },
       onRemove: async (id, label) => {
         const yes = await this.confirm({ title: `Delete "${label}"?`, body: 'Everything built in it goes with it, and this cannot be undone.', ok: 'Delete', danger: true });
         if (!yes) return false;
@@ -891,6 +897,8 @@ export class UIManager {
       this.renderNotices();
     });
     // Save and stay: the button says it's saving, then that it has.
+    this.q('#btn-invite-battle').addEventListener('click',()=>this.cb.onInviteBattle?.());
+    this.q('#btn-diagnostics').addEventListener('click',()=>this.cb.onExportDiagnostics?.());
     this.q('#btn-save').addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       if (btn.classList.contains('busy')) return;
@@ -1431,10 +1439,10 @@ export class UIManager {
     const dupe = [...stack.children].find((n) => n.dataset.toastKey === key);
     if (dupe) this.dismissToast(dupe);
     if (kind === 'achievement') this.game?.sound?.chime();
-    const node = el(`<div class="toast ${kind}">
+    const node = el(html`<div class="toast ${kind}">
       <div class="title">${title}</div>
-      ${body ? `<div class="body">${body}</div>` : ''}
-      ${action ? `<button class="toast-action">${escapeHtml(action.label)}</button>` : ''}
+      ${body ? html`<div class="body">${body}</div>` : ''}
+      ${action ? html`<button class="toast-action">${action.label}</button>` : ''}
     </div>`);
     node.dataset.toastKey = key;
     if (action) {
@@ -1667,8 +1675,8 @@ export class UIManager {
     if (!text) { if (!el.hidden) el.hidden = true; return; }
     // A door or a gate on its own isn't a building: nothing to manage.
     const verb = typeof manage === 'string' ? manage : 'manage';
-    const extra = manage ? `<span>${this.isTouch ? 'Tap' : 'C'} to ${verb}</span>` : '';
-    const wanted = `<b>${text}</b>${extra}`;
+    const extra = manage ? html`<span>${this.isTouch ? 'Tap' : 'C'} to ${verb}</span>` : '';
+    const wanted = String(html`<b>${text}</b>${extra}`);
     if (el.innerHTML !== wanted) el.innerHTML = wanted;
     el.hidden = false;
   }
@@ -1686,7 +1694,7 @@ export class UIManager {
     if (!name) { el.hidden = true; el.classList.remove('bad'); return; }
     // Tapping the strip turns it (Game.turnMove); R does on a keyboard.
     const how = this.isTouch ? 'Tap here to turn it · Place to drop it' : 'R to turn it · click to drop it · Escape to cancel';
-    el.innerHTML = `<b>Moving the ${name.toLowerCase()}</b><span>${reason ?? how}</span>`;
+    el.innerHTML = html`<b>Moving the ${name.toLowerCase()}</b><span>${reason ?? how}</span>`;
     el.classList.toggle('bad', !!reason);
     el.hidden = false;
   }
@@ -1706,8 +1714,7 @@ export class UIManager {
     document.body.classList.add('editing-building');
     const el = this.q('#building-hint');
     if (!el) return;
-    el.innerHTML = `<b>Editing the ${name.toLowerCase()}</b>`
-      + `<span>${this.isTouch ? 'Tap' : 'Click'} here when you're done</span>`;
+    el.innerHTML = html`<b>Editing the ${name.toLowerCase()}</b><span>${this.isTouch ? 'Tap' : 'Click'} here when you're done</span>`;
     el.classList.remove('bad');
     el.hidden = false;
   }
@@ -1730,7 +1737,7 @@ export class UIManager {
     if (this.editingBanner) return;
     const el = this.q('#building-hint');
     if (!el) return;
-    el.innerHTML = `<b>${name}</b><span>${doing}</span>`;
+    el.innerHTML = html`<b>${name}</b><span>${doing}</span>`;
     el.classList.remove('bad');
     el.hidden = false;
   }
@@ -2489,9 +2496,9 @@ export class UIManager {
     }
   }
 
-  openStores() {
+  openStores(directory = false) {
     this.openPanel('panel-stores');
-    this.duiltUI?.showStores();
+    this.duiltUI?.showStores(directory);
   }
 
   /** Opens a storehouse's shelves alongside the bag. */
@@ -2619,7 +2626,7 @@ export class UIManager {
       list.innerHTML = `<div class="sub" style="margin:0;">No designs yet. Point at something you built and save it.</div>`;
       return;
     }
-    list.innerHTML = templates.map((t) => `
+    list.innerHTML = templates.map((t) => html`
       <div class="template-row">
         <div class="template-meta">
           <div class="template-name">${t.name}</div>
@@ -2703,10 +2710,23 @@ export class UIManager {
    * you are now, which is what the note under the canvas says outright
    * rather than leaving you to notice it drifted.
    */
-  renderMap() {
+  async renderMap() {
     const canvas = this.q('#map-canvas');
     const gen = this.game.world?.gen;
     if (!canvas || !gen) return;
+    const world = this.game.world;
+    const version = this.mapLoadVersion = (this.mapLoadVersion ?? 0) + 1;
+    const scale = this.q('#map-scale');
+    if (scale) scale.textContent = 'Loading the map…';
+    try {
+      this.mapModule ??= await import('../render/WorldMap.js');
+    } catch {
+      if (version === this.mapLoadVersion && this.game.world === world && this.panels.isOpen('panel-map')) {
+        if (scale) scale.textContent = 'Map could not load. Close and reopen to try again.';
+      }
+      return;
+    }
+    if (version !== this.mapLoadVersion || this.game.world !== world || !this.panels.isOpen('panel-map')) return;
     const p = this.game.player.position;
     // Recentred every open, but the zoom level you left it at carries over —
     // picking "far out" once should not mean picking it again every time.
@@ -2725,7 +2745,8 @@ export class UIManager {
   }
 
   stepMapZoom(delta) {
-    if (!this.mapView) return;
+    if (!this.mapView || !this.mapModule) return;
+    const { MAP_ZOOMS } = this.mapModule;
     this.mapView.zoomIndex = Math.max(0, Math.min(MAP_ZOOMS.length - 1, this.mapView.zoomIndex + delta));
     this.drawMap();
   }
@@ -2734,7 +2755,8 @@ export class UIManager {
   drawMap() {
     const canvas = this.q('#map-canvas');
     const gen = this.game.world?.gen;
-    if (!canvas || !gen || !this.mapView) return;
+    if (!canvas || !gen || !this.mapView || !this.mapModule) return;
+    const { MAP_ZOOMS, drawWorldMap } = this.mapModule;
     const { x, z, yaw, zoomIndex } = this.mapView;
     const radius = MAP_ZOOMS[zoomIndex];
     const duilt = this.game.duilt;
@@ -2805,12 +2827,6 @@ export class UIManager {
 
 }
 
-
-function escapeHtml(text) {
-  return String(text ?? '').replace(/[&<>"']/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-  ));
-}
 
 function timeAgo(ms) {
   if (!ms) return 'just now';

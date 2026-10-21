@@ -93,7 +93,7 @@ export const ITEMS = [
     id: `seeds_${c.kind}`, name: `${c.name} Seeds`, kind: 'raw', stackTo: STACK_GOODS, color: c.crop, glyph: 'seeds',
     block: cropBaseOf(c), madeBy: `Saved from a ripe ${c.name.toLowerCase()}`,
   })),
-  { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fcd8b, glyph: 'sprout', block: 20, madeBy: 'Grown from seed' },
+  { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fcd8b, glyph: 'sprout', block: 20, madeBy: 'Craft from Leaves, or find when breaking leaves — place on soil to grow a tree' },
 
   // --- food. Fruit spoils, preserves do not -------------------------------
   { id: 'fruit', name: 'Fruit', kind: 'food', stackTo: STACK_FOOD, color: 0xdc928f, glyph: 'fruit', feeds: 12, madeBy: 'Picked from a forest' },
@@ -109,8 +109,8 @@ export const ITEMS = [
   { id: 'broccoli', name: 'Broccoli', kind: 'food', stackTo: STACK_FOOD, color: 0x3e7b3c, glyph: 'vegetable', feeds: 18, madeBy: 'Cut from a farm' },
   // Hunted. Raw is barely worth eating on purpose: the fire is what makes
   // meat worth the chase — see the cook_meat recipe.
-  { id: 'raw_meat', name: 'Raw Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xd98b85, glyph: 'meat', feeds: 5, madeBy: 'Hunted' },
-  { id: 'cooked_meat', name: 'Cooked Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xb7825c, glyph: 'meat', feeds: 32, madeBy: 'Roasted over a fire' },
+  { id: 'raw_meat', name: 'Raw Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xd98b85, glyph: 'meat', feeds: 5, madeBy: 'Dropped by hunted animals and produced by occupied pens — cook it with Wood for a better meal' },
+  { id: 'cooked_meat', name: 'Cooked Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xb7825c, glyph: 'meat', feeds: 32, madeBy: 'Cook Raw Meat with Wood at the workbench' },
 
   // --- what animals leave behind -------------------------------------------
   { id: 'hide', name: 'Hide', kind: 'raw', stackTo: STACK_GOODS, color: 0xb99372, glyph: 'hide', madeBy: 'Hunted from deer, boar, goats and cows' },
@@ -300,6 +300,7 @@ export const ITEMS = [
   { id: 'painting', name: 'Painting', kind: 'refined', stackTo: STACK_GOODS, color: 0x8a6440, glyph: 'painting', block: 201, madeBy: 'A little landscape in a frame — Place on it to wake there when you fall' },
   { id: 'catapult', name: 'Catapult', kind: 'refined', stackTo: STACK_GOODS, color: 0x8a6440, glyph: 'catapult', block: 152, madeBy: 'Built at the bench — Place mans it, Break throws a stone' },
   { id: 'storage_controller', name: 'Storage Controller', kind: 'refined', stackTo: STACK_GOODS, color: 0xa5814f, glyph: 'controller', block: 239, madeBy: 'Built at the bench, or comes with a town hall — Place on it to reach every storehouse' },
+  { id: 'storage_interface', name: 'Storage Interface', kind: 'refined', stackTo: STACK_GOODS, color: 0x91b9a1, glyph: 'controller', block: 526, madeBy: 'Place above a storage controller to browse individual stores and open their shelves' },
   { id: 'chest', name: 'Chest', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a6b3f, glyph: 'chest', block: 148, madeBy: 'Knocked together from planks — Place opens it' },
   { id: 'door', name: 'Door', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08a60, glyph: 'door', block: 69, madeBy: 'Hung from planks — Place opens and shuts it' },
   // Every wood its own planks, fence, gate, door and trapdoor (backlog batch 3,

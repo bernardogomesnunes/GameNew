@@ -16,7 +16,7 @@ import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
 import { howToGet, RECIPES } from '../config/recipes.js';
-import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
+import { designsForStructure, starterDesign } from '../prefabs/HouseDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
 import { WEAR_SLOTS, SLOT_NAMES, ARMOUR_PER_POINT } from '../config/armour.js';
 import { glyphSvg } from '../config/glyphs.js';
@@ -150,6 +150,9 @@ export class DuiltUI {
     this.held = null;       // slot index lifted and waiting to be placed
     this.mount();
     this.wire();
+    this.bus.on('jobs:changed',()=>{
+      if(this.building?.type==='work_hall' && this.panels.isOpen('panel-building')) this.renderWorkHall(this.building);
+    });
   }
 
   /** The live Duilt state, or null in sandbox modes. */
@@ -655,6 +658,7 @@ export class DuiltUI {
       body.innerHTML = `<div class="building-state bad">This building's details couldn't be shown (${escapeHtml(err?.message ?? 'unknown error')}).</div>${this.buildingToolsHtml(structure, spec, locked, null)}`;
     }
 
+    if (structure.type==='work_hall') this.renderWorkHall(structure);
     body.querySelector('[data-evolve]')?.addEventListener('click', () => actions.onEvolve?.());
     this.wireCraft(body, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
     this.wireCraftMissing(body, structure, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
@@ -1691,10 +1695,35 @@ export class DuiltUI {
   // ---- the storage controller ----
 
   /** Every storehouse at once (a storage controller, or a town hall's panel). */
-  showStores() {
+  showStores(directory = false) {
+    this.storesDirectory = directory;
     const search = this.q('#stores-search');
     if (search) search.value = '';
     this.renderStores();
+  }
+
+  renderWorkHall(hall) {
+    const d=this.duilt,body=this.q('#building-body');
+    if(!d?.jobs||!body)return;
+    let section=body.querySelector('[data-work-hall]');
+    if(!section){section=document.createElement('section');section.dataset.workHall='1';body.append(section);}
+    const roles=[['automatic','Normal work'],['builder','Builder'],['hauler','Carry supplies']];
+    const stock=d.jobs.supplyForHall(hall.id);
+    const supplies=stock.slots.filter(Boolean).map(s=>`${s.count} ${itemName(s.id)}`).join(', ');
+    const available=[...new Set(d.inventory.slots.filter(Boolean).map(s=>s.id))].filter(id=>ITEMS_BY_ID.get(id)?.kind!=='tool'&&!ITEMS_BY_ID.get(id)?.wears);
+    section.innerHTML=`<h4>Villager jobs</h4><p class="dim">Builders place queued designs. Carriers walk supplies from this hall to your stores. Hungry villagers stop for food.</p>
+      ${d.settlers.people.map(p=>{const a=d.jobs.assignment(p.id);return `<label class="building-line">${escapeHtml(p.name??`Villager ${p.id}`)} <select data-job-person="${p.id}" ${hall.valid?'':'disabled'}>${roles.map(([id,name])=>`<option value="${id}" ${(a?.role??'automatic')===id?'selected':''}>${name}</option>`).join('')}</select><span class="dim">${escapeHtml(a?.status??'Normal work')}</span>${a?.carrying?`<button class="secondary" data-job-cargo="${p.id}">Return carried goods</button>`:''}</label>`;}).join('')||'<p class="dim">Build extra homes so villagers can move in.</p>'}
+      <h4>Supplies to carry</h4><p>${escapeHtml(supplies||'No supplies waiting.')}</p>
+      ${available.map(id=>`<button class="secondary" data-job-deposit="${escapeAttr(id)}">Put up to 32 ${escapeHtml(itemName(id))}</button>`).join('')}
+      <button class="secondary" data-job-recover>Return supplies to my bag</button>
+      <h4>Building orders</h4>${d.jobs.builds.map(j=>`<p>${escapeHtml(j.name)} · ${j.cursor}/${j.changes.length} · ${escapeHtml(j.reason??j.state)} ${j.state==='queued'?`<button class="secondary" data-job-cancel="${j.id}">Cancel and refund</button>`:`<button class="secondary" data-job-refund="${j.id}">Collect remaining materials</button>`}</p>`).join('')||'<p class="dim">Choose Build with villagers from the building list.</p>'}`;
+    const report=result=>{if(result?.ok===false)this.bus.emit('toast',{kind:'xp',title:result.reason??'Could not change that job'});this.renderWorkHall(hall);};
+    section.querySelectorAll('[data-job-person]').forEach(el=>el.addEventListener('change',()=>report(d.jobs.assign(Number(el.dataset.jobPerson),el.value,hall.id))));
+    section.querySelectorAll('[data-job-deposit]').forEach(el=>el.addEventListener('click',()=>report(d.jobs.deposit(hall.id,el.dataset.jobDeposit,32))));
+    section.querySelectorAll('[data-job-cancel]').forEach(el=>el.addEventListener('click',()=>report(d.jobs.cancelBuild(Number(el.dataset.jobCancel)))));
+    section.querySelectorAll('[data-job-refund]').forEach(el=>el.addEventListener('click',()=>report(d.jobs.collectRefund(Number(el.dataset.jobRefund)))));
+    section.querySelectorAll('[data-job-cargo]').forEach(el=>el.addEventListener('click',()=>report(d.jobs.recoverCargo(Number(el.dataset.jobCargo)))));
+    section.querySelector('[data-job-recover]')?.addEventListener('click',()=>report(d.jobs.recoverSupplies(hall.id)));
   }
 
   /**
@@ -1716,6 +1745,18 @@ export class DuiltUI {
     const sheds = d.structures.stores().length;
     const all = d.storeTotals();
     const q = (this.q('#stores-search')?.value ?? '').trim().toLowerCase();
+    if (this.storesDirectory) {
+      const stores = d.storeDirectory();
+      const visible = stores.filter(s => !q || s.name.toLowerCase().includes(q) || s.items.some(r=>itemName(r.id).toLowerCase().includes(q)));
+      const where = this.q('#stores-where');
+      if (where) where.textContent = `${stores.length} stores · choose one to open its shelves`;
+      list.innerHTML = visible.length ? visible.map(s => `<div class="recipe-tile"><strong>${escapeHtml(s.name)} #${s.id}</strong><span>${s.total} items${s.valid ? '' : ' · building needs repair'}</span><span class="dim">${escapeHtml(s.items.length ? s.items.map(r=>`${r.count} ${itemName(r.id)}`).join(', ') : 'Empty')}</span><button class="secondary" data-open-store="${s.id}">Open shelves</button></div>`).join('') : '<p class="dim">No stores match.</p>';
+      list.querySelectorAll('[data-open-store]').forEach(b=>b.addEventListener('click',()=>{
+        const store=stores.find(s=>String(s.id)===b.dataset.openStore);
+        if (store) this.game.ui.openStore(store.structure);
+      }));
+      return;
+    }
     const rows = q ? all.filter((r) => itemName(r.id).toLowerCase().includes(q)) : all;
     const where = this.q('#stores-where');
     if (where) {
@@ -1950,6 +1991,8 @@ export class DuiltUI {
   renderBuildings() {
     const d = this.duilt;
     if (!d) return this.noWorld('#buildings-list');
+    this.buildingDesigns ??= new Map();
+    const selectedDesign = (id) => starterDesign(id, this.buildingDesigns.get(id));
 
     // Every structure there is, in a sandbox — no age to gate them behind,
     // same as claimOptionsFor. And nothing to ever be short of: a sandbox
@@ -1964,7 +2007,7 @@ export class DuiltUI {
     const query = search?.value ?? '';
     const offered = (d.sandbox ? STRUCTURES : structuresForAge(d.age)).filter((spec) => matchesSearch(query, [
       spec.name, spec.blurb, this.whatItGivesYou(spec),
-      ...Object.keys(DESIGN_FOR_STRUCTURE.get(spec.id)?.cost ?? {}).map(itemName),
+      ...designsForStructure(spec.id).flatMap(design => [design.name, design.description ?? '', ...Object.keys(design.cost).map(itemName)]),
     ]));
     if (!offered.length) {
       this.q('#buildings-list').innerHTML = `<div class="sub" style="margin:8px 0">No building matches “${escapeHtml(query.trim())}”.</div>`;
@@ -1972,7 +2015,8 @@ export class DuiltUI {
     }
     this.q('#buildings-list').innerHTML = offered.map((spec) => {
       const built = d.structures.countOf(spec.id);
-      const design = DESIGN_FOR_STRUCTURE.get(spec.id);
+      const design = selectedDesign(spec.id);
+      const variants = designsForStructure(spec.id);
       const canStamp = design && (d.sandbox || d.inventory.hasAll(design.cost));
       const shortfall = design && !d.sandbox ? d.inventory.missing(design.cost) : {};
       // The full bill, not just what you're short — a shortfall note only ever
@@ -2011,12 +2055,16 @@ export class DuiltUI {
             <span>${this.whatItGivesYou(spec)}</span>
           </div>
           ${design ? `
+          ${variants.length > 1 ? `<label class="building-line">House design
+            <select data-building-design="${spec.id}" aria-label="${escapeHtml(spec.name)} design">${variants.map(v => `<option value="${v.id}" ${v.id === design.id ? 'selected' : ''}>${escapeHtml(v.name)} — ${v.footprint}</option>`).join('')}</select>
+          </label><p class="building-line">${escapeHtml(design.description ?? 'The original storybook design.')}</p>` : ''}
           <div class="building-costs">${costLine}</div>
           <div class="building-actions">
             ${!canStamp && this.craftable(shortfall) ? `<button class="secondary" data-craft-for="${spec.id}">Craft what's missing</button>` : ''}
             <button class="secondary" data-stamp="${spec.id}" ${canStamp ? '' : 'disabled'}>
-              Place a ${design.footprint} starter
+              ${design.workers?'Queue builders for':'Place'} a ${design.footprint} ${design.workers?'building':'starter'}
             </button>
+            ${!design.workers && d.structures.countOf('work_hall')>0 ? `<button class="secondary" data-worker-stamp="${spec.id}" ${canStamp?'':'disabled'}>Build with villagers</button>`:''}
           </div>` : ''}
         </div>`;
     }).join('');
@@ -2024,12 +2072,21 @@ export class DuiltUI {
     this.q('#buildings-list').querySelectorAll('[data-stamp]').forEach((b) =>
       b.addEventListener('click', () => {
         this.closePanel('panel-buildings');
-        this.onStampStarter?.(b.dataset.stamp);
+        this.onStampStarter?.(b.dataset.stamp, selectedDesign(b.dataset.stamp)?.id);
+      }));
+    this.q('#buildings-list').querySelectorAll('[data-worker-stamp]').forEach(button=>button.addEventListener('click',()=>{
+      this.closePanel('panel-buildings');
+      this.onStampStarter?.(button.dataset.workerStamp,selectedDesign(button.dataset.workerStamp)?.id,true);
+    }));
+    this.q('#buildings-list').querySelectorAll('[data-building-design]').forEach(select =>
+      select.addEventListener('change', () => {
+        this.buildingDesigns.set(select.dataset.buildingDesign, select.value);
+        this.renderBuildings();
       }));
     // A ready-made building you're short for: the same button as a level's
     // (asked for directly: "the option to craft from the building is not
     // showing") — it makes what it can of the bill from your bag.
-    this.wireCraftMissing(this.q('#buildings-list'), (btn) => DESIGN_FOR_STRUCTURE.get(btn.dataset.craftFor)?.cost ?? {},
+    this.wireCraftMissing(this.q('#buildings-list'), (btn) => selectedDesign(btn.dataset.craftFor)?.cost ?? {},
       () => this.renderBuildings(), '[data-craft-for]');
   }
 

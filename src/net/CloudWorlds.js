@@ -3,6 +3,8 @@ import { ChunkGen } from '../world/ChunkGen.js';
 import { SyncEngine, unpackRle } from '../storage/SyncEngine.js';
 import { NeonTransport } from './NeonTransport.js';
 import { AIR } from '../config/blocks.js';
+import { validateSaveMetadata } from '../storage/MetadataTypes.js';
+import { emergingState, installEmergingPlaces } from '../world/emergingPlaceState.js';
 
 /**
  * The cloud half of saving: what the menu panel actually calls.
@@ -49,7 +51,8 @@ export class CloudWorlds {
       // World.serialize(), which the local save path already does the same
       // thing for.
       worldGen: world.endless
-        ? { seed: world.gen.seed, homeX: world.gen.biomes.centreX, homeZ: world.gen.biomes.centreZ }
+        ? { seed: world.gen.seed, homeX: world.gen.biomes.centreX, homeZ: world.gen.biomes.centreZ,
+          emergingPlaces: emergingState(world.gen.emergingPlaces).places }
         : null,
       spawn: player ? { x: player.position.x, y: player.position.y, z: player.position.z, yaw: player.yaw, pitch: player.pitch } : null,
       economy: economy?.toJSON?.() ?? {},
@@ -67,6 +70,7 @@ export class CloudWorlds {
     // and World.serialize's matching note — so the one part of an endless
     // world somebody has a stake in can never shift under them because the
     // generator changed between sessions.
+    validateSaveMetadata(meta);
     const result = await this.sync.push(worldId, { world, meta, keepBounds: territoryBounds });
 
     if (gamification) {
@@ -91,6 +95,7 @@ export class CloudWorlds {
     const payload = await this.sync.pull(worldId);
     if (!payload) throw new Error('That world is no longer in the cloud.');
     const { meta, chunks } = payload;
+    validateSaveMetadata(meta);
 
     // A world with a seed is remade from it, not laid out on a grid — the
     // same distinction save() draws, in reverse. Getting this wrong is not
@@ -108,6 +113,7 @@ export class CloudWorlds {
       })
       : new World({ sizeX: meta.sizeX, sizeZ: meta.sizeZ, height: meta.height });
 
+    if (world.gen) installEmergingPlaces(world.gen, meta.worldGen.emergingPlaces);
     for (const c of chunks) {
       const chunk = world.getChunk(c.cx, c.cz);
       if (!chunk) continue; // a chunk outside this world's bounds is not ours to place

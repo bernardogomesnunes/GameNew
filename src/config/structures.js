@@ -134,6 +134,16 @@ const count = (ctx, ids) => ctx.countOf(ids);
 
 export const STRUCTURES = [
   {
+    id: 'work_hall', name: 'Work Hall', icon: '🧰', age: 1, optional: true,
+    blurb: 'Give villagers building and hauling jobs, and leave supplies for them to carry.',
+    minSize: 4, maxSize: 16, cost: {}, produces: {}, everySeconds: 0,
+    requires: [
+      { id: 'timber', test: ctx => count(ctx, [WOOD, PLANKS]) >= 20, say: () => 'Needs at least 20 logs or planks in the hall' },
+      { id: 'desk', test: ctx => count(ctx, DESKS) >= 1, say: () => 'Needs a table where villagers can collect their jobs' },
+      { id: 'room', test: ctx => ctx.shelteredVolume() >= 8, say: () => 'Needs a roofed room for the work desk and supplies' },
+    ],
+  },
+  {
     id: 'forest',
     name: 'Forest',
     icon: '🌲',

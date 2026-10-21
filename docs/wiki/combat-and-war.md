@@ -124,3 +124,11 @@ After you swear the oath, the Stone King gives you **1,000 warriors**. About 30 
 - **War Tent** (4 Wool, 2 Planks): wake there, and the army holds round it.
 - **Campfire** (2 Planks, 2 Stone): burns with a light of its own.
 - **Expedition:** from the map, send the army to the Sky Kingdom. It marches on its own for 2 days and makes camp beyond the nearest anchor tower: a cleared patch, three war tents, a campfire and two black banners. Use "Join your army at its camp" to go there. Your first order breaks camp. While it is away nobody is with you on the ground.
+
+## Battle worlds
+
+Choose Battle when creating a world to add three rival computer-controlled cities. They grow in strength as game days pass. Your first working Barracks starts their attack schedule: the first army is due after half a game day, and the others follow at staggered intervals. A warning precedes an attack. Only one rival army fights at a time.
+
+Beat an army to earn Gold and weaken its city. A defeat strengthens it. Enter a rival city, defeat its garrison and use its War Standard to claim it. That halves the rival's strength, pays tribute, and stops its armies for three game days while it rebuilds. There is no permanent final victory over all rivals; conquered cities can recover. Battle state saves with the world.
+
+These rivals run in the game. API-driven rivals and real multiplayer are not part of this implementation.

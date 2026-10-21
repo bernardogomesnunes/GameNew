@@ -8,13 +8,13 @@ Ten kinds of country. Similar ones sit together.
 |---|---|
 | Plains | Open grass, few trees, huge flat patches. Your settlement starts here. Wild hemp grows here. Horses, sheep, cows, pigs and chickens |
 | Oak Forest | The everyday wood on moss. Dense trees |
-| Birch Forest | Cooler. Pale trunks and leaves. Grass underfoot |
+| Birch Forest | Cooler. Pale trunks, white or pink leaves. Grass underfoot |
 | Dark Forest | The thickest, darkest wood on dark moss. Boar |
-| Giant Grove | Rare. Gigantic trees on a floor of fallen leaves. Tree tribes live here |
+| Giant Grove | Rare. Giant spreading, spire and tiered trees on fallen leaves. Tree tribes live here |
 | Desert | Sand over sandstone, with rocky outcrops. Rabbits |
 | Wetland | Low flat clay ground with pools |
-| Mountains | A short range about 20 blocks tall, with streams. Bare gravel above the tree line. Goats |
-| High Peaks | Rare and very tall (50 to 70 blocks). Most of the ore is here |
+| Mountains | Broad mountain ranges with streams, bare gravel above the tree line and goats |
+| High Peaks | Tall, wide peaks; occasional huge massifs span hundreds of blocks. Most exposed ore is here |
 | Ocean | Deep water ringed by sand beaches |
 
 ## Resources
@@ -79,6 +79,14 @@ Distances are in blocks from the middle of the world. Each place is placed from 
 
 **The Sky Kingdom.** See [Lore and story](lore.md).
 
+## Deep cave complexes
+
+Explore cave mouths away from the starting settlement. A long walkable descent reaches mine-depth galleries, with a broad main hall, an upper chamber, ruin pillars and a chest. Complex placement follows the world seed. Bring light and a way back; ordinary caverns and lava still exist elsewhere.
+
+## More peoples and raided places
+
+Dune caravan camps have canvas tents, guards and traders. Mossfolk villages have forest homes and their own guards. Both have chests and people to talk to. Taking their goods can turn their guards against you. A place you raid is marked on the map.
+
 ## Chests and loot
 
 What is in a chest is fixed when it is first opened, so the same chest always holds the same things. Every kind has a small chance of a ring crystal (Sunstone or Nightstone).
@@ -105,3 +113,4 @@ What is in a chest is fixed when it is first opened, so the same chest always ho
 - Turf spreads onto bare dirt over 5 to 50 game days.
 - Night falls twice as fast as day. Fireflies come out, and lanterns matter.
 - Animals, messengers and explorers come and go.
+- Terrain generation applies to old worlds too outside preserved edited chunks and claimed land. Saved builds keep their blocks; a boundary can show a step where preserved and regenerated terrain meet.

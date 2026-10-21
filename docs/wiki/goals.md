@@ -170,7 +170,7 @@ Land: **448 by 448 blocks** (open: the border no longer stops you walking).
 
 ### Age 12: The God
 
-*The god you didn't choose waits in his cube beyond the world. Your Sanctuary opens the way.*
+*The god you didn't choose waits in his cube beyond the world, and the machine waits for the Past. Your Sanctuary opens the way.*
 
 Land: **512 by 512 blocks** (open: the border no longer stops you walking).
 
@@ -178,8 +178,8 @@ Land: **512 by 512 blocks** (open: the border no longer stops you walking).
 |---|---|
 | Open the way at your Sanctuary | Its pop-up has "Step through to his cube" once the war is won (white) or the sky has fallen (dark). |
 | Beat the other god, or steal his stash | Kill him, or take the wand from the chest on his altar and leave by the Way Out. |
-| Fill three quarters of the collection book | Goals → Book. |
-| Forty buildings standing | Any kind, claimed and working. |
+| Travel to the Past | Build a Time Machine at an Engineering Centre and choose To the Past. |
+| Hatch a dinosaur from an egg | Bring an egg from the Past, place it and wait two game days. |
 
 This is the last age. Finishing it finishes the game.
 

@@ -58,19 +58,19 @@ Errands from the hermit, messengers, your settlers and Grub the trader.
 
 ## Secrets
 
-Hidden achievements. They show as a hint and a question mark until done. No border waits on them.
-
+Hidden achievements appear as hints until earned. None blocks an age.
 
 | Secret | Hint | What it takes | XP |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Cartographer | Some places can only be found on foot. | Found every kind of place out in the world: ruin, forgotten temple, old mine, monument, bandit camp, the hermit's hut and the Stone Kingdom. | 300 |
 | Every last stone | There is never only one ruin. | Found all four ruins. | 200 |
 | Keeper of lights | Warm nights, and plenty of jars. | Held five jars of fireflies at once. | 150 |
 | Every stall | Every goblin keeps a different stall. | Bought something from every trader in the market. | 200 |
-| Know the woods | Every creature that walks these lands. | Hunted one of every kind of animal. | 200 |
+| Know the woods | Every creature that walks these lands. | Hunted one of every kind of animal, today and in the Past. | 200 |
 | Everyone's errand | Everyone who asked something of you, answered. | Handed in every errand anyone gave you. | 300 |
 | The whole story | Live long enough, and see enough. | Lived every story moment there is to live. | 300 |
-
+| Both ways | Backwards, and forwards. | Travelled to the Past, and to the Future. | 200 |
+| Tomorrow's scholar | Someone, someday, wrote it all down. | Read the Archive in the Future's university. | 200 |
 
 ## Daily challenges
 
@@ -95,38 +95,34 @@ One-off lines of story, told the first time something happens in a world. Each i
 
 ## The Collection Book
 
-The Book tab in the Goals panel ticks off every item you have ever held in this world. It does not count rings, upgraded pieces or the crown itself. Tap an item for what it is and who sells it.
+The Book tab records every eligible item you have held in this world. Rings, upgraded pieces and the crown are excluded. The current registry contains **288 items** across five groups. Tap an entry in the game for its source and trader.
 
-
-The book holds **247 items** in five groups.
-
-| Share of the book | Reward |
-|---|---|
+| Collected | Reward |
+| --- | --- |
 | 10% | 50 coins |
 | 25% | 150 coins |
 | 50% | 400 coins |
 | 75% | 800 coins |
-| 100% | 2000 coins and the Collector's Crown |
+| 100% | 2000 coins and Collector's Crown |
 
-### From the land (55)
+### From the land (62)
 
-Dirt, Wood, Leaves, Stone, White Stone, Turquoise Stone, Dark Grey Stone, Orange Stone, Sand, Turf, Moss, Gravel, Clay, White Wood, White Leaves, Dark Wood, Dark Leaves, Lava, Dark Moss, Forest Floor, Cobblestone, Gold, Carrot Seeds, Potato Seeds, Cabbage Seeds, Lettuce Seeds, Pepper Seeds, Zucchini Seeds, Broccoli Seeds, Coffee Seeds, Hemp Seeds, Sapling, Hide, Wool, Feather, Hemp Fibre, Jar of Fireflies, Diamond, Ruby, Diamond Ore, Ruby Ore, Coal Ore, Coal, Sandstone, Water, Snow, Obsidian, Amethyst, Silt, Iron Ore, Copper Ore, Gold Ore, Sunstone, Nightstone, Devotion.
+Dirt, Wood, Leaves, Stone, White Stone, Turquoise Stone, Dark Grey Stone, Orange Stone, Sand, Turf, Moss, Gravel, Clay, White Wood, White Leaves, Pink Leaves, Dark Wood, Dark Leaves, Lava, Dark Moss, Forest Floor, Cobblestone, Gold, Carrot Seeds, Potato Seeds, Cabbage Seeds, Lettuce Seeds, Pepper Seeds, Zucchini Seeds, Broccoli Seeds, Coffee Seeds, Hemp Seeds, Sapling, Hide, Wool, Feather, Hemp Fibre, Jar of Fireflies, Diamond, Ruby, Diamond Ore, Ruby Ore, Coal Ore, Coal, Sandstone, Water, Snow, Obsidian, Amethyst, Silt, Iron Ore, Copper Ore, Gold Ore, Sunstone, Nightstone, Devotion, Jungle Floor, Fern Turf, Raptor Egg, Triceratops Egg, Long-neck Egg, Basilisk Scale.
 
-### Made and built (118)
+### Made and built (145)
 
-Planks, Turned Soil, Brick, Glass, Marble, String, Arrow, Brick Roof Tiles, Stone Roof Tiles, Chandelier, Lantern, Stone Slab, Plank Slab, Stone Stairs, Fence, Gate, Dark Stone, Dark Brick, Sky Marble, Gold Trim, Calçada, Dark Calçada, Calçada Wave, Timber Frame, Cobblestone Wall, Stone Wall, Brick Wall, Dark Stone Wall, Stone Pillar, Marble Pillar, Dark Pillar, Trapdoor, Framed Window, Vase, Urn, White Banner, Black Banner, Firefly Lantern, Glass Jar, Bed, Painting, Catapult, Storage Controller, Chest, Door, White Planks, White Fence, White Gate, White Trapdoor, White Door, Dark Planks, Dark Fence, Dark Gate, Dark Trapdoor, Dark Door, Dark Brick Wall, Marble Wall, Sky Marble Wall, White Stone Wall, Dark Grey Stone Wall, Turquoise Stone Wall, Orange Stone Wall, Wood Mill, Stripped Oak Log, Stripped White Log, Stripped Dark Log, Cabinet, Wardrobe, Bedside Table, Wood Panel, Patterned Panel, Two-tone Panel, Stone Mill, Rail, Steam Engine, Rail Car, Sandstone Brick, Sand Path, Sandstone Wall, Stone Brick, Stone Brick Wall, Stone Brick Chimney, Brick Chimney, Plank Stairs, Oak Table, Marble Table, Oak Chair, Red Chair, Red Rug, Blue Rug, Green Rug, Red Glass, Blue Glass, Iron Ingot, Copper Ingot, Coins, Weapon Rack, Training Dummy, Archery Target, War Tent, Campfire, Chain, Sky Lift, War Horn, White Table, White Chair, White Cabinet, White Wardrobe, White Bedside Table, White Panel, White Patterned Panel, Dark Table, Dark Chair, Dark Cabinet, Dark Wardrobe, Dark Bedside Table, Dark Panel, Dark Patterned Panel.
+Bleach Bucket, Forge, Planks, Turned Soil, Compost Bin, Compost, Brick, Glass, Marble, String, Arrow, Brick Roof Tiles, Stone Roof Tiles, Teal Roof Tiles, Mint Roof Tiles, Lilac Roof Tiles, Red Mushroom Cap, Lilac Mushroom Cap, Mushroom Stem, Stained Glass, Hanging Vines, Wisteria, Fairy Lights, Curled Trim, Chandelier, Lantern, Stone Slab, Plank Slab, Stone Stairs, Fence, Gate, Dark Stone, Dark Brick, Sky Marble, Gold Trim, Calçada, Dark Calçada, Calçada Wave, Timber Frame, Cobblestone Wall, Stone Wall, Brick Wall, Dark Stone Wall, Stone Pillar, Marble Pillar, Dark Pillar, Trapdoor, Framed Window, Vase, Urn, White Banner, Black Banner, Firefly Lantern, Glass Jar, Bed, Painting, Catapult, Storage Controller, Storage Interface, Chest, Door, White Planks, White Fence, White Gate, White Trapdoor, White Door, Dark Planks, Dark Fence, Dark Gate, Dark Trapdoor, Dark Door, Dark Brick Wall, Marble Wall, Sky Marble Wall, White Stone Wall, Dark Grey Stone Wall, Turquoise Stone Wall, Orange Stone Wall, Wood Mill, Stripped Oak Log, Stripped White Log, Stripped Dark Log, Cabinet, Wardrobe, Bedside Table, Wood Panel, Patterned Panel, Two-tone Panel, Stone Mill, Rail, Steam Engine, Rail Car, Sandstone Brick, Sand Path, Sandstone Wall, Stone Brick, Stone Brick Wall, Stone Brick Chimney, Brick Chimney, Plank Stairs, Oak Table, Marble Table, Oak Chair, Red Chair, Red Rug, Blue Rug, Green Rug, Red Glass, Blue Glass, Iron Ingot, Copper Ingot, Coins, Weapon Rack, Training Dummy, Archery Target, War Tent, Campfire, Chain, Time Machine, Pavement, Asphalt, Tinted Glass, Steel Panel, Neon Pink, Neon Cyan, Screen, Maglev Rail, Lit Window, Future Lamp, Sky Lift, War Horn, White Table, White Chair, White Cabinet, White Wardrobe, White Bedside Table, White Panel, White Patterned Panel, Dark Table, Dark Chair, Dark Cabinet, Dark Wardrobe, Dark Bedside Table, Dark Panel, Dark Patterned Panel.
 
 ### Food and drink (17)
 
 Fruit, Carrots, Coffee Beans, Potatoes, Cabbage, Lettuce, Peppers, Zucchini, Broccoli, Raw Meat, Cooked Meat, Egg, Milk, Beer, Kombucha, Coffee, Holy Water.
 
-### Tools and weapons (31)
+### Tools and weapons (37)
 
-Stone Axe, Stone Pickaxe, Stone Shovel, Bucket, Bucket of Water, Wooden Sword, Stone Sword, Iron Sword, Bow, Cart, Flying Machine, The God's Wand, Iron Axe, Iron Pickaxe, Iron Shovel, Gold Axe, Gold Pickaxe, Gold Shovel, Gold Sword, Sky Axe, Sky Pickaxe, Sky Shovel, Sky Sword, Dark Axe, Dark Pickaxe, Dark Shovel, Dark Sword, Diamond Axe, Diamond Pickaxe, Diamond Shovel, Diamond Sword.
+Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet, Weapon Mold, Stone Axe, Stone Pickaxe, Stone Shovel, Bucket, Bucket of Water, Wooden Sword, Stone Sword, Iron Sword, Bow, Cart, Helix, Dinosaur Whistle, The God's Wand, Iron Axe, Iron Pickaxe, Iron Shovel, Gold Axe, Gold Pickaxe, Gold Shovel, Gold Sword, Sky Axe, Sky Pickaxe, Sky Shovel, Sky Sword, Dark Axe, Dark Pickaxe, Dark Shovel, Dark Sword, Diamond Axe, Diamond Pickaxe, Diamond Shovel, Diamond Sword.
 
-### Armour and gear (26)
+### Armour and gear (27)
 
-Leather Cap, Leather Tunic, Leather Leggings, Leather Boots, Iron Helm, Iron Cuirass, Iron Greaves, Iron Boots, Gold Helm, Gold Cuirass, Gold Greaves, Gold Boots, Diamond Helm, Diamond Cuirass, Diamond Greaves, Diamond Boots, Sky Helm, Sky Cuirass, Sky Greaves, Sky Boots, Dark Helm, Dark Cuirass, Dark Greaves, Dark Boots, Leather Backpack, Reinforced Backpack.
+Plainer, Leather Cap, Leather Tunic, Leather Leggings, Leather Boots, Iron Helm, Iron Cuirass, Iron Greaves, Iron Boots, Gold Helm, Gold Cuirass, Gold Greaves, Gold Boots, Diamond Helm, Diamond Cuirass, Diamond Greaves, Diamond Boots, Sky Helm, Sky Cuirass, Sky Greaves, Sky Boots, Dark Helm, Dark Cuirass, Dark Greaves, Dark Boots, Leather Backpack, Reinforced Backpack.
 
-
-The Collector's Crown is worn on the head. It gives 5 armour points and never wears out.
+The Collector's Crown is worn on the head, gives 5 armour and never wears out.

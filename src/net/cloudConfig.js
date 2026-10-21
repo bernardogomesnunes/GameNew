@@ -19,6 +19,8 @@ const env = import.meta.env ?? {};
 
 export const CLOUD = {
   neonUrl: (env.VITE_NEON_URL || '').replace(/\/$/, ''),
+  // Enable only after the reviewed 0006 migration has been applied.
+  atomicSaves: env.VITE_ATOMIC_SAVES === 'true',
 };
 
 export function isCloudConfigured() {

@@ -964,6 +964,10 @@ export class ChunkMesher {
       if (sky[n]) return at;
       const id = vol[n];
       if (id < 0 || !OPEN[id]) return at;
+      // fillPadded copies edge neighbours, but not the four corner columns.
+      // Their empty padding must not connect sealed caves to the sky.
+      const cx = n % PAD, cz = ((n / PAD) | 0) % PAD;
+      if ((cx === 0 || cx === PAD - 1) && (cz === 0 || cz === PAD - 1)) return at;
       sky[n] = 1;
       stack[at] = n;
       return at + 1;

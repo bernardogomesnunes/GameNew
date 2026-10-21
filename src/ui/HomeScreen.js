@@ -393,6 +393,7 @@ export class HomeScreen {
       </div>
       <p class="home-note">${kind.name} · ${kind.tagline}</p>
       <input type="text" id="home-world-name" maxlength="40" placeholder="${defaultName(kind)}" />
+      ${this.kind === 'battle' && import.meta.env?.DEV ? '<label class="home-note"><input type="checkbox" id="home-local-ai"> Use my LM Studio model for rival strategies</label>' : ''}
 
       ${cloudable ? (signedIn ? `
         <!--
@@ -420,6 +421,7 @@ export class HomeScreen {
     const input = this.body.querySelector('#home-world-name');
     const create = () => this.cb.onCreate(this.kind, input.value.trim() || defaultName(kind), {
       cloud: where === 'cloud',
+      localAI: this.body.querySelector('#home-local-ai')?.checked === true,
     });
     this.body.querySelector('[data-signin]')?.addEventListener('click', () => this.cb.onAccount?.());
     this.body.querySelector('[data-back]').addEventListener('click', () => { this.step = 'kind'; this.render(); });

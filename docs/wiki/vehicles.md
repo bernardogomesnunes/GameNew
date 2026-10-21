@@ -7,12 +7,13 @@
 - Make a **Cart** by hand: 16 Planks, 4 Wood (Age 3). Use it on a tamed horse and the horse pulls it.
 - A cart carries 40 slots, and you can ride it.
 
-## Flying machine
+## Plainer
 
-- Make it at a Workshop: 24 Planks and 12 Wool (Age 4). A wooden plane with canvas, after Leonardo da Vinci.
-- Hold it and Place to set it down. Place on it to climb in.
-- Jump climbs, Sneak dives, the Fly key lands. On the ground, Sneak gets you out.
-- It stays parked where you leave it.
+Make a Plainer at a Workshop from 24 Planks and 12 Wool (Age 4). Equip it in the Body slot, climb somewhere high and step off. It glides down and across; it does not hover or gain height with Fly. Take it off to wear body armour instead.
+
+## Helix
+
+Make a Helix at an Engineering Centre from 20 Iron Ingots, 8 Glass and 6 Planks (Age 8). Place it on the ground, then Place on it to climb in. It can hover and fly: Jump rises, Sneak descends. Land, then Sneak to get out.
 
 ## Trains
 

@@ -77,7 +77,7 @@ ok('the button sits by Evolve, when the next level is short of something with a 
   /data-craft-missing>Craft what\\'s missing<\/button>/.test(ui) && /const craftable = !ready && this\.craftable\(short\);/.test(ui));
 ok('on a building\'s pop-up, a storehouse\'s — and a ready-made building\'s card (asked for directly: "the option to craft from the building is not showing")',
   (ui.match(/this\.wireCraftMissing\(/g) ?? []).length === 3 && /data-craft-for="\$\{spec\.id\}">Craft what's missing<\/button>/.test(ui));
-ok('  the whole bill goes in, so what it takes as it is is held back', /\?\.evolvePlan\(structure, \{ dry: true \}\)\?\.bill\)/.test(ui) && /DESIGN_FOR_STRUCTURE\.get\(btn\.dataset\.craftFor\)\?\.cost/.test(ui));
+ok('  the whole bill goes in, so what it takes as it is is held back', /\?\.evolvePlan\(structure, \{ dry: true \}\)\?\.bill\)/.test(ui) && /selectedDesign\(btn\.dataset\.craftFor\)\?\.cost/.test(ui));
 ok('and it says what it made, and what it couldn\'t', /Couldn't make \$\{list\(still\)\}/.test(ui) && /Nothing could be made/.test(ui));
 
 {

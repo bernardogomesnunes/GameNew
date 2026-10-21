@@ -289,6 +289,7 @@ export class Settlers {
    * double it, and spreading out is what makes a second quarry worth building.
    */
   assignWork(person) {
+    if (this.jobs?.controls(person)) { person.workId = null; return null; }
     const home = this.structures.list().find((s) => s.id === person.homeId);
     if (!home) { person.workId = null; return null; }
     const from = centreOf(home.region);
@@ -314,7 +315,7 @@ export class Settlers {
    * does not get the bonus.
    */
   staffedIds() {
-    return new Set(this.people.filter((p) => p.workId != null && !p.hungry).map((p) => p.workId));
+    return new Set(this.people.filter((p) => p.workId != null && !p.hungry && !this.jobs?.controls(p)).map((p) => p.workId));
   }
 
   /** What a building's output is multiplied by, given who works it. */
@@ -456,6 +457,7 @@ export class Settlers {
    * around buildings when the direct line is blocked.
    */
   walk(p, dt) {
+    if (this.jobs?.controls(p)) return;
     // Every tick, not only after a step. Somebody standing outside their house
     // while you lay a path under them should end up on the path, and somebody
     // whose ground you dig out should come down with it — waiting for their

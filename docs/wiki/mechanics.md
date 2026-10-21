@@ -43,10 +43,10 @@ See [Buildings](buildings.md). In short: build the thing, point at it, press **C
 
 ## Output of buildings
 
-- Each building has a cycle in real minutes (see its entry in [Buildings](buildings.md)).
-- A level multiplies output: 1, 1.5, 2.5, 3.5.
+- Buildings produce only while the world is open. [Buildings](buildings.md) lists average output per game day.
+- Many producers use output multipliers 1, 1.5, 2.5 and 3.5. Mines and quarries have their own five-step ladders.
 - A settler working there adds 50%.
-- Output goes to your storehouses first (skipping any that you have told to leave that item out), then your bag.
+- Farm harvest goes to a granary when there is one. Other goods go to storehouses that accept them, then your bag.
 - You can see each building's Taxes line if the Sky Kingdom is taxing you.
 
 ## Storage
@@ -58,19 +58,24 @@ See [Buildings](buildings.md). In short: build the thing, point at it, press **C
 | Cart | 40 |
 | Storehouse | 200, 240 as a Loft, 280 as a Warehouse |
 | Train car | 1,000 |
+| Granary | One stack per farm item kind, without a count limit |
 
-- The **Storage Controller** lists everything in every storehouse, with a search. A Town Hall and a Village each come with one.
+- The **Storage Controller** lists combined storehouse goods and accepts deposits. A Town Hall and a Village each come with one. A **Storage Interface** placed directly above it opens a directory of individual stores.
 - A storehouse can be set to refuse certain items.
-- Settlers eat from your storehouses first.
+- Settlers eat from available granaries and storehouses before your bag. The population panel names hungry people and offers Give food.
 
 ## Settlers
 
 - Your first house is your own. Each house after brings one household (a Townhouse or Village, three).
 - A new settler arrives about every 8 seconds while there is a free house.
-- Settlers find their own work: no assigning. They walk up to 40 blocks to a building each morning.
+- Settlers normally find nearby producing buildings themselves. Build a **Work Hall** at Age 1 to assign individual villagers as Builders or Haulers instead. Assigned workers stop providing the automatic production bonus.
+- Builders walk to queued designs and place their blocks over time. Queueing reserves the design materials; cancellation returns unspent materials. A full bag keeps the remainder available to collect later.
+- Haulers collect supplies deposited at the Work Hall, carry up to 32 items per trip, and walk to a valid store with room. Store exclusions and granary restrictions still apply. Carried items and work queues save with the world.
+- Hungry workers pause their jobs until fed; an unreachable path or changed construction site pauses progress.
 - Once a game day each settler eats one food, the cheapest first.
 - Hungry settlers do not give their building the +50%. Nobody starves or leaves.
 - Soldiers live in town, sleep in the barracks and eat the same way.
+- Use Compost on a growing crop to move it forward one stage, or Add compost in a Farm panel to advance every growing crop there. Farm seed slots rise from four to seven as it evolves.
 
 ## Skills
 
@@ -93,7 +98,7 @@ Struck at a Foundry, earned by a Town Hall, sold to traders, found in chests. Se
 
 ## Tool wear
 
-Every tool and armour piece has a number of uses. A bar on the hotbar goes from green to amber to red. A wooden or stone tool breaks sooner than iron.
+Most mining tools and armour pieces have a number of uses. Carpentry tools, the Weapon Mold and some special tools are reusable. A bar on the hotbar goes from green to amber to red. A wooden or stone tool breaks sooner than iron.
 
 ## Your land and the border
 
@@ -106,7 +111,9 @@ Every tool and armour piece has a number of uses. A bar on the hotbar goes from 
 - Worlds save in your browser automatically.
 - Export a world to a file, or export a block model to a `.vox` file for MagicaVoxel or Blender.
 - Sign in to sync your worlds to your account and play on any device.
-- Saving shows a spinner; it waits for the save to finish before taking you to the worlds screen.
+- **Save** stays in the world. **Save and leave** returns to the worlds screen only after a successful save.
+- If account saving fails, your backup stays on this device and the game explains why. Uploads retry while the session is open and when the connection returns.
+- Large backups use IndexedDB when they exceed local storage. An account size-limit error suggests exporting a copy. A missing account world is never silently recreated.
 
 ## Settings
 

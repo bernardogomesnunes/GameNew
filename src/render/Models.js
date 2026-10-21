@@ -180,7 +180,13 @@ export class Crowd {
   }
 
   dispose() {
-    for (const m of this.meshes) m?.removeFromParent();
+    for (const m of this.meshes) {
+      if (!m) continue;
+      m.removeFromParent();
+      // InstancedMesh owns its instance buffers; geometry/material are shared
+      // by the cached kit and must remain usable by other crowds.
+      m.dispose();
+    }
   }
 }
 

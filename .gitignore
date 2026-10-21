@@ -23,8 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Local benchmark reports (CI uploads them as artifacts)
+artifacts/performance/
+artifacts/crafting/
+
 # Python bytecode (tools/mobs)
 __pycache__/
-
-# Local crafting verification snapshots and reports
-/artifacts/crafting/

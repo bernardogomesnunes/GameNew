@@ -5,10 +5,10 @@ import { DuiltGame } from '../src/duilt/DuiltGame.js';
 import { STRUCTURES_BY_ID, CONTROLLER_PARTS } from '../src/config/structures.js';
 import { RECIPES_BY_ID } from '../src/config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../src/config/starterDesigns.js';
-import { BLOCKS_BY_ID, STORAGE_CONTROLLER } from '../src/config/blocks.js';
+import { BLOCKS_BY_ID, STORAGE_CONTROLLER, STORAGE_INTERFACE } from '../src/config/blocks.js';
 import { ITEMS_BY_ID, ITEM_FOR_BLOCK, itemName } from '../src/config/items.js';
 import { PANELS } from '../src/config/panels.js';
-import { swingLabel } from '../src/Game.js';
+import { swingLabel, Game } from '../src/Game.js';
 
 /**
  * The town hall and its storage controller. Asked for directly: "a block
@@ -114,7 +114,19 @@ ok('but leaves your tools with you', g3.inventory.countOf('axe') === 1);
 // --- wiring ---------------------------------------------------------------------
 
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
-ok('Place on a controller opens every store', /aimed\.block === STORAGE_CONTROLLER\) return void this\.ui\.openStores\(\)/.test(game));
+{
+  let opened = 0, placed = 0;
+  const session = { kingTarget: () => null, hermitTarget: () => null, traderTarget: () => null, talkTarget: () => null,
+    horseTarget: () => null, machineTarget: () => null, trainTarget: () => null, guardianTarget: () => null,
+    raycast: () => ({ block: STORAGE_CONTROLLER }), selectedBlockId: 3,
+    ui: { openStores() { opened++; } }, placeBlock() { placed++; },
+  };
+  Game.prototype.secondaryAction.call(session);
+  ok('Place on a controller opens every store', opened === 1 && placed === 0);
+  session.selectedBlockId = STORAGE_INTERFACE;
+  Game.prototype.secondaryAction.call(session);
+  ok('holding a storage interface places it instead of reopening the controller', opened === 1 && placed === 1);
+}
 ok('the building panel can too', /onOpenStores: \(\) => this\.ui\.openStores\(\)/.test(game));
 ok('a gift is said out loud', /bus\.on\('structure:gift'/.test(game));
 

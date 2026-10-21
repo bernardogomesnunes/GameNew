@@ -54,6 +54,11 @@ being possible for a real row to be read as emptier than it actually is.
 
 ## Files
 
+The proposed, **unapplied** `0006_atomic_world_saves.sql` has a gated client and
+an explicit [review and deployment guide](atomic-saves.md). The already-live
+0005 size limits are currently missing from this folder and must be recovered
+before reviewing/application of 0006. No live migration was run for this work.
+
 - `0001_baseline.sql` — documents the schema as it already existed before
   this folder existed. **Do not run this against the live database** — it
   already has this schema; running it will fail on "already exists." It

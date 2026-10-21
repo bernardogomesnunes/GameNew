@@ -1,6 +1,7 @@
 import { ID_LIMIT, BLOCKS_BY_ID } from '../config/blocks.js';
 import { CAR_SLOTS, MAX_CARS } from '../world/Trains.js';
 import { stackLimit } from '../config/items.js';
+import { validateEmergingDescriptors, validateEmergingState } from '../world/emergingPlaceState.js';
 
 // Bound both the input and the expanded blocks: a tiny RLE file can otherwise
 // request gigabytes before the importer has a chance to show an error.
@@ -23,6 +24,8 @@ export function validateWorldImport(data) {
   requireWorld(data.version === 1 || data.version === 2, 'uses an unsupported world format version');
   const w = data.world;
   requireWorld(record(w) && Array.isArray(w.chunks), 'is missing its block data');
+  validateEmergingDescriptors(w.emergingPlaces);
+  validateEmergingState(data.duilt?.emergingPlaces);
   requireWorld(integer(w.height, 1, 512), 'has an invalid height');
   requireWorld(w.endless === undefined || typeof w.endless === 'boolean', 'has invalid terrain settings');
   const cells = 256 * w.height;
@@ -95,10 +98,12 @@ export function validateWorldImport(data) {
   // Buildings are re-scanned on load. Bound the volume they can ask the world
   // to visit, even if their RLE terrain is perfectly small and valid.
   const savedStructures = data.duilt?.structures?.structures;
+  const jobBuilds = data.duilt?.jobs?.builds;
+  requireWorld(jobBuilds == null || (Array.isArray(jobBuilds) && jobBuilds.length <= 256), 'has invalid building orders');
   const waiting = data.duilt?.waiting;
   requireWorld(savedStructures == null || Array.isArray(savedStructures), 'has invalid buildings');
   requireWorld(waiting == null || Array.isArray(waiting), 'has invalid unfinished buildings');
-  const structures = [...(savedStructures ?? []), ...(waiting ?? [])];
+  const structures = [...(savedStructures ?? []), ...(waiting ?? []), ...(jobBuilds ?? [])];
   const granaryStores = new Set();
   if (structures != null) {
     requireWorld(Array.isArray(structures) && structures.length <= 4096, 'has too many buildings');

@@ -476,6 +476,8 @@ BLOCKS.push(
  */
 export const STORAGE_CONTROLLER = 239;
 BLOCKS.push({ id: STORAGE_CONTROLLER, name: 'Storage Controller', glyph: 'controller', color: 0xa5814f, material: 'wood', unlock: null });
+export const STORAGE_INTERFACE = 526;
+BLOCKS.push({ id: STORAGE_INTERFACE, name: 'Storage Interface', glyph: 'controller', color: 0x91b9a1, material: 'wood', unlock: null });
 
 export const SUNSTONE_ORE = 191;
 export const NIGHTSTONE_ORE = 192;

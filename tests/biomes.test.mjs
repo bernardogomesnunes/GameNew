@@ -1,5 +1,6 @@
 import { BIOMES, BIOMES_BY_ID, HOME_BIOME, surfaceFor, biomeAt } from '../src/config/biomes.js';
 import { BiomeMap } from '../src/world/biomeMap.js';
+import { massifSite } from '../src/world/massifs.js';
 import { generateTerrain, biomeOf } from '../src/world/TerrainGenerator.js';
 import { World } from '../src/world/World.js';
 import { WORLD_HEIGHT } from '../src/world/ChunkGen.js';
@@ -101,13 +102,23 @@ ok('an out-of-range biome index falls back rather than throwing', biomeAt(999) =
   }
   const total = [...seen.values()].reduce((a, b) => a + b, 0);
   // The Past's biomes (world/past.js) grow only there, a long way off this map.
-  for (const b of BIOMES.filter((x) => !x.era)) {
+  for (const b of BIOMES.filter((x) => !x.era && !x.range)) {
     const share = (seen.get(b.id) ?? 0) / total;
     // A biome nobody ever stands in is content that does not exist.
     ok(`${b.id} covers ${(share * 100).toFixed(1)}% of the map`, share > 0.01);
   }
   ok('and no single biome swallows the world',
     [...seen.values()].every((n) => n / total < 0.6));
+  // Mountain ranges are larger than the protected starting-world sample.
+  // Check actual remote ridges rather than demanding a peak next to home.
+  const remote = new BiomeMap({sizeX:512,sizeZ:512,seed:42,homePull:0});
+  let anchor;
+  for(let rx=-4;rx<=4&&!anchor;rx++)for(let rz=-4;rz<=4&&!anchor;rz++)anchor=massifSite(remote,rx,rz);
+  const mountains=new Set();
+  for(let x=anchor.x-600;x<=anchor.x+600;x+=12)for(let z=anchor.z-600;z<=anchor.z+600;z+=12){
+    const biome=BIOMES[remote.weigh(x,z).index];if(biome.range)mountains.add(biome.id);
+  }
+  ok('connected remote ridges contain both mountain biomes',mountains.has('mountains1')&&mountains.has('mountains2'));
 }
 
 // The settlement is placed at the centre and has to be buildable ground: a new

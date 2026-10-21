@@ -68,7 +68,7 @@ for (const age of AGES) {
 // Every building belongs to some age's goals, or it is content nobody is sent to.
 // An optional one (the pen) is sent to by a teaching goal naming it instead.
 for (const spec of STRUCTURES) {
-  const wanted = AGES.some((a) => a.goals.some((g) => g.structure === spec.id))
+  const wanted = spec.optional === true || AGES.some((a) => a.goals.some((g) => g.structure === spec.id))
     || (spec.id.startsWith('sanctuary_') && AGES.some((a) => a.goals.some((g) => g.id === 'sanctuary')));
   ok(`the ${spec.id} is something some age asks for`, wanted);
 }

@@ -16,6 +16,8 @@ import { Skills } from '../progression/Skills.js';
 import { Crafting } from './Crafting.js';
 import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
+import { starterDesign } from '../prefabs/HouseDesigns.js';
+import { VillagerJobs } from './VillagerJobs.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool, stackLimit } from '../config/items.js';
 import { MILESTONES } from '../config/skills.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, PRODUCTION_PACE } from '../config/structures.js';
@@ -32,6 +34,7 @@ import { Notices } from './Notices.js';
 import { Collection } from './Collection.js';
 import { stationsFor, serve as serveStations } from '../world/Passengers.js';
 import { landmarksFor } from '../world/landmarks.js';
+import { ensureEmergingPlaces, emergingState, installEmergingPlaces } from '../world/emergingPlaces.js';
 import { ageOf, ageIntro, FINAL_AGE, WAR_AGE, OLD_AGE, AGES_VERSION } from '../config/ages.js';
 import { pickTale, TALES_BY_ID } from '../config/tales.js';
 import { War } from './War.js';
@@ -138,6 +141,7 @@ export class DuiltGame {
     // Bare dirt next to turf grows over in 5 to 50 game days (TurfSpread).
     this.turf = new TurfSpread();
     this.days = 0;
+    this.emergingPlaces = emergingState(world.gen?.emergingPlaces);
     // What a broken leaf drops besides itself: Math.random, unless a test
     // wants it to be sure.
     this.rand = Math.random;
@@ -228,6 +232,7 @@ export class DuiltGame {
       // The barracks's soldiers live here too, and eat with everyone.
       garrison: () => this.defenders?.residents ?? 0,
     });
+    this.jobs = new VillagerJobs({world,settlers:this.settlers,structures:this.structures,inventory:this.inventory,bus});
     this.lastCollect = Date.now();
   }
 
@@ -600,8 +605,8 @@ export class DuiltGame {
    * Returned rather than applied so the caller can run it through the same
    * charged, undoable path as any other placement.
    */
-  starterPlacement(structureId, anchor) {
-    const design = DESIGN_FOR_STRUCTURE.get(structureId);
+  starterPlacement(structureId, anchor, designId = null) {
+    const design = starterDesign(structureId, designId);
     if (!design) return { ok: false, reason: 'No starter design for that.' };
     if (!this.sandbox && !this.inventory.hasAll(design.cost)) {
       const parts = Object.entries(this.inventory.missing(design.cost))
@@ -1080,6 +1085,16 @@ export class DuiltGame {
     return [...byId.values()].sort((a, b) => itemName(a.id).localeCompare(itemName(b.id)));
   }
 
+  /** Individual shelves, including empty stores, for the placed interface. */
+  storeDirectory() {
+    return this.structures.structures.filter(s => s.store).map(s => {
+      const counts = new Map();
+      for (const slot of s.store.slots) if (slot) counts.set(slot.id, (counts.get(slot.id) ?? 0) + slot.count);
+      const items = [...counts].map(([id,count]) => ({id,count})).sort((a,b) => itemName(a.id).localeCompare(itemName(b.id)));
+      return { id:s.id, name:STRUCTURES_BY_ID.get(s.type)?.name ?? 'Store', structure:s, valid:s.valid, items, total:items.reduce((n,r)=>n+r.count,0) };
+    });
+  }
+
   /**
    * Takes a stack of something out of whichever storehouses hold it, into
    * the bag — up to one full stack, or one tool (each carries its own wear,
@@ -1384,6 +1399,10 @@ export class DuiltGame {
   // ---- the clock ----
 
   tick(dtSeconds, { resting = false } = {}) {
+    if (Math.floor(this.days) !== this.emergingPlaces.checkedDay) {
+      const added = ensureEmergingPlaces(this);
+      if (added.length) this.bus?.emit('places:emerged', { places: added });
+    }
     this.serveTrains(dtSeconds);
     this.untilBook = (this.untilBook ?? 0) - dtSeconds;
     if (this.untilBook <= 0) { this.untilBook = 1; this.noteCollection(); }
@@ -1415,6 +1434,7 @@ export class DuiltGame {
     // Production is checked on a slow cadence; it's wall-clock based, so the
     // interval only decides how promptly you're told, not how much you get.
     this.settlers.tick(dtSeconds);
+    this.jobs.tick(dtSeconds);
 
     const now = Date.now();
     // Running again after being put away, without having been told: the
@@ -2054,6 +2074,7 @@ export class DuiltGame {
       spawn: this.spawn,
       boosts: { ...this.boosts },
       found: [...this.found],
+      emergingPlaces: emergingState(this.emergingPlaces),
       raided: [...this.raided],
       ...(this.battle ? { battle: this.battle.toJSON() } : {}),
       time: {
@@ -2077,6 +2098,7 @@ export class DuiltGame {
       chests: [...this.chests].map(([key, c]) => ({ key, grave: c.grave || undefined, found: c.found, ...c.inventory.toJSON() })),
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
+      jobs: this.jobs.toJSON(),
       herd: herdToJSON(this.herd),
       machines: this.machines.map((m) => ({
         ...(m.kind ? { kind: m.kind } : {}),
@@ -2167,6 +2189,7 @@ export class DuiltGame {
     }
     this.skills.loadJSON(data.skills);
     this.settlers.loadJSON(data.settlers);
+    this.jobs.loadJSON(data.jobs);
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
@@ -2192,6 +2215,8 @@ export class DuiltGame {
     this.saplings.loadJSON(data.saplings);
     this.turf.loadJSON(data.turf);
     this.days = Number.isFinite(data.days) ? data.days : 0;
+    this.emergingPlaces = emergingState(data.emergingPlaces ?? this.world.gen?.emergingPlaces);
+    installEmergingPlaces(this.world.gen, this.emergingPlaces);
     this.war.loadJSON(data.war);
     this.skyWar.loadJSON(data.skyWar);
     this.defenders.loadJSON(data.defenders);

@@ -298,7 +298,7 @@ await test('0 is never a size a real (fixed) world can have', async () => {
 
 // --- the second bug: worlds_mode_check never allowed 'duilt' either ----------
 
-await test('a mode the database check does not allow fails loudly, the way duilt once did', async () => {
+await test('a mode the database check does not allow fails before upload', async () => {
   const { cloud, backend } = makeCloudWorlds();
   const world = new World({ sizeX: 64, sizeZ: 64, height: 64 });
 
@@ -308,7 +308,7 @@ await test('a mode the database check does not allow fails loudly, the way duilt
       player: { position: { x: 0, y: 5, z: 0 }, yaw: 0, pitch: 0 },
       economy: { toJSON: () => ({}) }, duilt: null,
     })),
-    /worlds_mode_check/,
+    /Invalid save metadata: unsupported mode/,
   );
   assert.ok(!backend.worlds.has('world-4'), 'a rejected row must not end up half-saved');
 });

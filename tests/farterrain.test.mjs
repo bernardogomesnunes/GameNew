@@ -19,6 +19,7 @@ const fakeScene = { add() {}, remove() {} };
 // A generator with a lake at z < 0 (waterLevelAt returns 40 there) and dry
 // land everywhere else, so every sampled cell falls cleanly on one side.
 const gen = {
+  kingdomCache: null, // isolate lake/land sampling from procedural city roofs
   heightAt: (x, z) => (z < 0 ? 10 : 30),
   biomeIndexAt: () => 0,
   waterLevelAt: (x, z) => (z < 0 ? 40 : 0),

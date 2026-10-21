@@ -1,6 +1,7 @@
-import { deriveUrls } from './cloudConfig.js';
+import { CLOUD, deriveUrls } from './cloudConfig.js';
 import { describeFailure } from './CloudAuth.js';
 import { keepTrying } from './retry.js';
+import { clientWrites } from './WriteQueue.js';
 
 /**
  * SyncEngine transport over the Neon Data API (PostgREST).
@@ -43,10 +44,12 @@ export function hexToBytes(hex) {
 
 export class NeonTransport {
   /** @param auth a CloudAuth — asked for a fresh token on every request. */
-  constructor(auth, { baseUrl = deriveUrls().dataApi } = {}) {
+  constructor(auth, { baseUrl = deriveUrls().dataApi, writeQueue = clientWrites, atomicSaves = CLOUD.atomicSaves } = {}) {
     this.auth = auth;
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.playerId = null;
+    this.writeQueue = writeQueue;
+    this.atomicSaves = atomicSaves;
   }
 
   /**
@@ -91,6 +94,13 @@ export class NeonTransport {
   }
 
   async send(path, { method, body, prefer, token }) {
+    if (method !== 'GET' && method !== 'HEAD') {
+      return this.writeQueue.run(() => this.sendNow(path, { method, body, prefer, token }));
+    }
+    return this.sendNow(path, { method, body, prefer, token });
+  }
+
+  async sendNow(path, { method, body, prefer, token }) {
     const headers = { Authorization: `Bearer ${token}` };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (prefer) headers.Prefer = prefer;
@@ -170,6 +180,7 @@ export class NeonTransport {
    * the size of the current one is ~16 chunks; editing one corner uploads one.
    */
   async pushWorld({ worldId, meta, chunks }) {
+    if (this.atomicSaves) return this.pushWorldAtomic({ worldId, meta, chunks });
     const playerId = await this.ensurePlayer();
     const now = new Date().toISOString();
 
@@ -228,9 +239,36 @@ export class NeonTransport {
     return { revision: meta.revision ?? 1 };
   }
 
-  async pullWorld(worldId) {
+  /** Staged diffs are invisible until a revision-checked transaction publishes them. */
+  async pushWorldAtomic({ worldId, meta, chunks }) {
     await this.ensurePlayer();
-    const worlds = await this.request(`/worlds?select=*&id=eq.${worldId}&limit=1`);
+    if (!Number.isSafeInteger(meta.revision) || meta.revision < 1) throw new TypeError('Atomic saving requires the next known world revision.');
+    const saveId = crypto.randomUUID();
+    const begun = await this.request('/rpc/begin_world_save', {
+      method: 'POST', body: {
+        p_save_id: saveId, p_world_id: worldId, p_expected_revision: meta.revision - 1, p_expected_chunks: chunks.length,
+        p_metadata: {
+          name: meta.name, mode: meta.mode, size_x: meta.sizeX ?? 0, size_z: meta.sizeZ ?? 0, height: meta.height,
+          spawn: meta.spawn ?? null, economy: meta.economy ?? {}, duilt: meta.duilt ?? null,
+          world_gen: meta.worldGen ?? null, block_count: meta.blockCount ?? 0,
+        },
+      },
+    });
+    if (begun?.committed) return { revision: Number(begun.revision) };
+    const rows = chunks.map(c => ({ cx: c.cx, cz: c.cz, rle: bytesToHex(c.bytes) }));
+    await inPages(rows.length, (from, size) => this.request('/rpc/stage_world_save', {
+      method: 'POST', body: { p_save_id: saveId, p_chunks: rows.slice(from, from + size) },
+    }).then(() => size));
+    // keepTrying reuses this exact save ID if the committed response is lost.
+    const committed = await this.request('/rpc/commit_world_save', { method: 'POST', body: { p_save_id: saveId } });
+    const revision = Number(committed?.revision);
+    if (revision !== meta.revision) throw new Error('The account did not confirm the expected save revision.');
+    return { revision };
+  }
+
+  async pullWorld(worldId, attempt = 0) {
+    await this.ensurePlayer();
+    const worlds = await this.request(`/worlds?select=*&id=eq.${worldId}&deleted_at=is.null&limit=1`);
     if (!worlds?.length) return null;
     const w = worlds[0];
     // A page at a time (see CHUNK_PAGE), in a fixed order so no page skips
@@ -241,6 +279,15 @@ export class NeonTransport {
       rows.push(...(page ?? []));
       return (page?.length ?? 0) < size ? null : size;
     });
+    if (this.atomicSaves) {
+      const after = await this.request(`/worlds?select=revision&id=eq.${worldId}&deleted_at=is.null&limit=1`);
+      if (!after?.length || Number(after[0].revision) !== Number(w.revision)) {
+        if (attempt < 2) return this.pullWorld(worldId, attempt + 1);
+        const error = new Error('That world changed while it was opening. Try opening it again.');
+        error.status = 409;
+        throw error;
+      }
+    }
     // migrations/0003 gave duilt and an endless world's seed their own
     // columns. A row saved before that migration ran has them nested inside
     // `economy` instead — the shape pushWorld used to write, and the only
@@ -279,6 +326,12 @@ export class NeonTransport {
    */
   async deleteWorld(worldId) {
     await this.ensurePlayer();
+    if (this.atomicSaves) {
+      const rows = await this.request(`/worlds?select=revision&id=eq.${worldId}&deleted_at=is.null&limit=1`);
+      if (!rows?.length) return;
+      await this.request('/rpc/delete_world_atomic', { method: 'POST', body: { p_world_id: worldId, p_expected_revision: Number(rows[0].revision) } });
+      return;
+    }
     await this.request(`/worlds?id=eq.${worldId}`, {
       method: 'PATCH',
       prefer: 'return=minimal',

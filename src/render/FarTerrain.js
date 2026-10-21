@@ -138,9 +138,10 @@ export class FarTerrain {
   /**
    * Keeps the tiles around (x, z): makes the missing ones nearest first,
    * forgets the ones left far behind. Everything within reach is made at
-   * once the first time; after that only a few milliseconds' worth a frame.
+   * once the first time unless initialBudgetMs is supplied (normal play);
+   * after that only a few milliseconds' worth a frame.
    */
-  update(gen, x, z, { budgetMs = BUDGET_MS, world = null } = {}) {
+  update(gen, x, z, { budgetMs = BUDGET_MS, initialBudgetMs = Infinity, world = null } = {}) {
     if (!gen) return;
     this.world = world;
     if (gen !== this.gen) {
@@ -149,14 +150,20 @@ export class FarTerrain {
     }
     this.uniforms.uCentre.value.set(x, z);
     const first = this.layers.every((l) => !l.tiles.size);
-    const deadline = first ? Infinity : performance.now() + budgetMs;
+    const deadline = performance.now() + (first ? initialBudgetMs : budgetMs);
+    let made = 0;
     this.layers.forEach((layer) => {
       const { from, to } = layer;
       this.forgetFar(layer, x, z, from, to);
       for (const [tx, tz] of this.wanted(layer, x, z, from, to)) {
-        if (performance.now() > deadline) return;
         const key = `${tx},${tz}`;
-        if (!layer.tiles.has(key)) this.makeTile(layer, tx, tz);
+        if (!layer.tiles.has(key)) {
+          // One non-interruptible tile is minimum progress, just like a chunk
+          // in the other queues; later tiles must fit the shared allowance.
+          if (made && performance.now() > deadline) return;
+          this.makeTile(layer, tx, tz);
+          made++;
+        }
       }
     });
   }
@@ -217,8 +224,9 @@ export class FarTerrain {
     for (let gz = 0; gz < cells; gz++) {
       for (let gx = 0; gx < cells;) {
         const c = at(gx, gz);
+        if (c.detail) { gx++; continue; }
         let run = 1;
-        while (gx + run < cells && at(gx + run, gz).top === c.top && at(gx + run, gz).colour.equals(c.colour)) run++;
+        while (gx + run < cells && !at(gx + run, gz).detail && at(gx + run, gz).top === c.top && at(gx + run, gz).colour.equals(c.colour)) run++;
         const xa = x0 + gx * step, xb = xa + run * step, za = z0 + gz * step, zb = za + step;
         quad(out, [xa, c.top, za], [xa, c.top, zb], [xb, c.top, zb], [xb, c.top, za], [0, 1, 0], c.colour);
         gx += run;
@@ -228,15 +236,24 @@ export class FarTerrain {
       for (let gx = 0; gx < cells; gx++) {
         const c = at(gx, gz);
         const xa = x0 + gx * step, xb = xa + step, za = z0 + gz * step, zb = za + step;
+        if (c.detail) {
+          this.detail(out, xa, za, step, c, (dx, dz) => at(gx + dx, gz + dz));
+          continue;
+        }
         // Water is a flat sheet: the ground under it shows through nowhere.
         if (c.water) continue;
         for (const [dx, dz, nx, nz] of [[1, 0, 1, 0], [-1, 0, -1, 0], [0, 1, 0, 1], [0, -1, 0, -1]]) {
           const o = at(gx + dx, gz + dz);
-          const low = o.top;
-          if (low >= c.top) continue;
           const x = dx > 0 ? xb : xa, z = dz > 0 ? zb : za;
-          if (dx) quad(out, [x, low, za], [x, c.top, za], [x, c.top, zb], [x, low, zb], [nx, 0, nz], c.side);
-          else quad(out, [xa, low, z], [xb, low, z], [xb, c.top, z], [xa, c.top, z], [nx, 0, nz], c.side);
+          const strips = o.detail ? Math.round(step / o.detail[0].size) : 1;
+          for (let k = 0; k < strips; k++) {
+            const edge = o.detail?.[dx ? k * strips + (dx > 0 ? 0 : strips - 1) : (dz > 0 ? 0 : strips - 1) * strips + k];
+            const low = edge?.top ?? o.top;
+            if (low >= c.top) continue;
+            const a = (dx ? za : xa) + k * step / strips, b = a + step / strips;
+            if (dx) quad(out, [x, low, a], [x, c.top, a], [x, c.top, b], [x, low, b], [nx, 0, nz], c.side);
+            else quad(out, [a, low, z], [b, low, z], [b, c.top, z], [a, c.top, z], [nx, 0, nz], c.side);
+          }
         }
         if (c.canopy) this.canopy(out, xa, za, step, c);
       }
@@ -260,14 +277,24 @@ export class FarTerrain {
    * it's under water, the block on top and the one showing down its sides,
    * and how wooded it is.
    */
-  column(x, z, step, canopyHeight = 3) {
+  column(x, z, step, canopyHeight = 3, sampleBuilt = true) {
     const gen = this.gen;
     const cx = x + (step >> 1), cz = z + (step >> 1);
     // What's been built (#130): the Stone Kingdom's walls and towers stand
     // up on the horizon (Phase 7e), and anything you've built or dug in a
     // chunk you've changed shows as it really is.
-    const built = this.builtAt(x, z, step);
-    if (built) return built;
+    const built = sampleBuilt && this.builtAt(x, z, step);
+    if (built) {
+      if (step <= 4) return built;
+      // Only occupied cells need extra samples. A roof edge or narrow tower
+      // must not raise a whole 12/24-metre square to its tallest point.
+      const count = Math.ceil(step / 4), size = step / count;
+      built.detail = [];
+      for (let dz = 0; dz < count; dz++) for (let dx = 0; dx < count; dx++) {
+        built.detail.push({ ...this.column(x + dx * size, z + dz * size, size, canopyHeight, true), dx, dz, size });
+      }
+      return built;
+    }
     const water = gen.waterLevelAt(cx, cz);
     const h = gen.heightAt(cx, cz);
     const index = gen.biomeIndexAt(cx, cz);
@@ -344,6 +371,36 @@ export class FarTerrain {
     }
   }
 
+  /** Fine columns only within a built coarse cell, sharing the same tile/mask. */
+  detail(out, x, z, step, c, neighbour) {
+    const n = Math.round(step / c.detail[0].size);
+    for (const d of c.detail) {
+      const xa = x + d.dx * d.size, za = z + d.dz * d.size, xb = xa + d.size, zb = za + d.size;
+      quad(out, [xa,d.top,za], [xa,d.top,zb], [xb,d.top,zb], [xb,d.top,za], [0,1,0], d.colour);
+      if (d.water) continue;
+      for (const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const gx = d.dx + dx, gz = d.dz + dz;
+        let other;
+        if (gx >= 0 && gx < n && gz >= 0 && gz < n) other = c.detail[gz*n+gx];
+        else {
+          const across = neighbour(gx < 0 ? -1 : gx >= n ? 1 : 0, gz < 0 ? -1 : gz >= n ? 1 : 0);
+          // The neighbouring coarse cell may carry its own detail grid.
+          other = across.detail?.[((gz+n)%n)*n + ((gx+n)%n)] ?? across;
+        }
+        if (other.top >= d.top) continue;
+        const low = other.top;
+        if (dx) {
+          const xx = dx > 0 ? xb : xa;
+          quad(out,[xx,low,za],[xx,d.top,za],[xx,d.top,zb],[xx,low,zb],[dx,0,0],d.side);
+        } else {
+          const zz = dz > 0 ? zb : za;
+          quad(out,[xa,low,zz],[xb,low,zz],[xb,d.top,zz],[xa,d.top,zz],[0,0,dz],d.side);
+        }
+      }
+      if (d.canopy) this.canopy(out,xa,za,d.size,d);
+    }
+  }
+
   /** A column's woods, as leaf blocks over whichever quarters of it are wooded. */
   canopy(out, x0, z0, step, c) {
     const half = step / 2, top = c.top + c.canopy.height, bottom = c.top + 1, col = c.canopy.colour;
@@ -354,9 +411,16 @@ export class FarTerrain {
         if (hash01(xa, za, c.canopy.seed ^ 0x7ee5) < c.canopy.density) wooded.push([xa, za]);
       }
     }
-    // Deep in a forest every quarter is wooded: one block of leaves, not four.
-    if (wooded.length === 4) return leafBox(out, x0, z0, x0 + step, z0 + step, bottom, top, col);
-    for (const [xa, za] of wooded) leafBox(out, xa, za, xa + half, za + half, bottom, top, col);
+    // Keep little crowns even in dense woods. Broad flat slabs read as giant
+    // rectangular buildings; a low shoulder and smaller cap retain tree shape.
+    for (const [xa, za] of wooded) {
+      const variation = hash01(xa, za, c.canopy.seed ^ 0x19f3);
+      const shoulder = bottom + Math.max(0.5, (top - bottom) * 0.55);
+      const crownTop = Math.max(shoulder + 0.5, top + Math.floor(variation * 3) - 1);
+      const inset = Math.min(1, half / 4);
+      leafBox(out, xa, za, xa + half, za + half, bottom, shoulder, col);
+      leafBox(out, xa + inset, za + inset, xa + half - inset, za + half - inset, shoulder, crownTop, col);
+    }
   }
 
   /** A square mask of `size` chunks a side; remade only if the size changes. */

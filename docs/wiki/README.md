@@ -10,17 +10,18 @@ Duilt is a settlement game in a world of blocks. You are an exile from a kingdom
 |---|---|
 | [Getting started](getting-started.md) | Your first hour, controls, screens, game modes |
 | [Goals](goals.md) | All 12 ages and every goal in them |
-| [Quests, secrets and the Collection Book](quests-and-secrets.md) | Every quest, secret achievement, daily challenge and the 247-item book |
-| [Buildings](buildings.md) | All 27 buildings: what they need, what they make, how to level them |
+| [Quests, secrets and the Collection Book](quests-and-secrets.md) | Every quest, secret achievement, daily challenge and the current collection book |
+| [Buildings](buildings.md) | Every building: what they need, what they make, how to level them |
 | [Crafting](crafting.md) | Every recipe, grouped by kind, with ingredients and where to make it |
 | [Items](items.md) | Materials, food, drinks, tools, weapons and armour |
 | [Creatures and people](creatures-and-people.md) | Animals, townsfolk, enemies, bosses |
 | [The world](world.md) | Biomes, ores, places to find, chests and loot |
 | [Trading](trading.md) | Every trader and everything they sell, with prices |
-| [Vehicles](vehicles.md) | Horse and cart, flying machine, trains, the Sky Lift |
+| [Vehicles](vehicles.md) | Horse and cart, Plainer, Helix, trains, the Sky Lift |
 | [Combat and war](combat-and-war.md) | Weapons, soldiers, defences, the Ten Rounds, the god's cube |
 | [Lore and story](lore.md) | The kingdoms, the gods, the characters, both paths and both endings |
 | [Game mechanics](mechanics.md) | Hunger, health, time, settlers, skills, storage, drinks, coins |
+| [Time travel](time-travel.md) | The Time Machine, dinosaurs, eggs, the Future and its Archive |
 | [Glossary](glossary.md) | Game words explained |
 
 ## The game in one minute
@@ -30,9 +31,9 @@ Duilt is a settlement game in a world of blocks. You are an exile from a kingdom
 3. **Age 7 to 9:** a temple where you choose a god by forging a ring, a mine, a barracks, walls.
 4. **Age 10:** the border falls. The Stone Kingdom attacks in ten rounds. Or, if you forged the Black Ring, you take the Sky Kingdom instead.
 5. **After the war:** step through to the god's cube and face the god you did not choose.
-6. **Age 11 and 12:** explore the old world, trade, collect everything, and finish the game.
+6. **Age 11 and 12:** explore the old world, trade, collect everything, travel through time, and finish the game.
 
-## Two modes
+## Game modes
 
 | | Duilt | Creative |
 |---|---|---|
@@ -40,3 +41,5 @@ Duilt is a settlement game in a world of blocks. You are an exile from a kingdom
 | You start with | An axe, a bucket, a few seeds, 32 blocks of land | Every block, no limits |
 | Costs | Everything costs items | Everything is free |
 | Hunger and damage | Yes | None |
+
+**Battle** is another world mode: your settlement faces three computer-controlled rival cities. Building your first Barracks starts their armies. See [Battle worlds](combat-and-war.md#battle-worlds).

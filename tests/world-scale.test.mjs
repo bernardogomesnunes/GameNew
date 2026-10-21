@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {ChunkGen} from '../src/world/ChunkGen.js';
 import {BIOMES,BIOME_INDEX} from '../src/config/biomes.js';
 import {massifSite,massifAt} from '../src/world/massifs.js';
+import { mountainRangeAt, rangeDescriptor } from '../src/world/mountainRanges.js';
 import {World} from '../src/world/World.js';
 import {skyAt,ISLAND_R,TOWER_OUT} from '../src/world/skyKingdom.js';
 
@@ -12,14 +13,22 @@ for(let rx=-4;rx<=4&&!site;rx++)for(let rz=-4;rz<=4&&!site;rz++)site=massifSite(
 assert.ok(site,'rare peaks exist');
 assert.deepEqual(site,massifSite(new ChunkGen({seed:42,homePull:0}).biomes,site.rx,site.rz));
 assert.ok(site.radius>=200,'huge mountains have broad foothills');
-assert.ok(gen.heightAt(site.x,site.z)>=170,'rare summit towers above the ordinary ranges');
-assert.ok(gen.heightAt(site.x,site.z)<200-5,'summits leave headroom');
+// The anchor is now a point along a winding range, potentially a saddle.
+// Find its actual highest crest instead of requiring the centre of a blob.
+let summit = {x:site.x,z:site.z,h:0};
+const desc=rangeDescriptor(gen.biomes,site);
+for(let u=-desc.halfLength;u<=desc.halfLength;u+=8)for(let v=-80;v<=80;v+=8){
+  const x=Math.round(site.x+desc.cos*u-desc.sin*v),z=Math.round(site.z+desc.sin*u+desc.cos*v),h=gen.heightAt(x,z);
+  if(h>summit.h)summit={x,z,h};
+}
+assert.ok(summit.h>=170,'rare ridge summits tower above lowlands');
+assert.ok(summit.h<200-5,'summits leave headroom');
 for(let d=0;d<site.radius+20;d++) {
   assert.ok(Math.abs(gen.heightAt(site.x+d+1,site.z)-gen.heightAt(site.x+d,site.z))<=4,'no hard cliff at massif boundary');
 }
 const home=new ChunkGen({seed:42,homeX:site.x,homeZ:site.z});
 assert.equal(massifAt(home.biomes,site.x,site.z),null,'starting plot protected');
-const index=gen.biomeIndexAt(site.x,site.z);
+const index=gen.biomeIndexAt(summit.x,summit.z);
 assert.ok(['mountains1','mountains2'].includes(BIOMES[index].id),'summit uses a mountain biome');
 assert.equal(massifAt(gen.biomes,120000,0),null,'Past terrain retains its own generation');
 assert.equal(massifAt(gen.biomes,-120000,0),null,'Future terrain retains its own generation');

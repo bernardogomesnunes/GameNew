@@ -19,6 +19,7 @@ import { isCloudConfigured } from './net/cloudConfig.js';
 import { DuiltGame, HATCH_DAYS } from './duilt/DuiltGame.js';
 import { generateEndlessWorld } from './world/StarterWorld.js';
 import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
+import { runStreamingWork } from './world/streamingWork.js';
 import { FarTerrain } from './render/FarTerrain.js';
 import { SkyClouds } from './render/SkyClouds.js';
 import { DayCycle, MORNING, daylightAt, gameDaysText } from './render/DayCycle.js';
@@ -50,9 +51,14 @@ import { isTyping } from './ui/Panels.js';
 import { panelForKey } from './config/panels.js';
 import { STRUCTURES_BY_ID, structureName, MINE_FLOOR } from './config/structures.js';
 import { DESIGN_FOR_STRUCTURE } from './config/starterDesigns.js';
-import { exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
+import { starterDesign } from './prefabs/HouseDesigns.js';
+import { TerrainWorkerQueue } from './world/TerrainWorkerQueue.js';
+import { LocalRivalAI } from './duilt/LocalRivalAI.js';
+import { applyPeerWorldEdits } from './net/applyPeerWorldEdits.js';
+import { buildWorldPayload, exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
+import { Diagnostics } from './core/Diagnostics.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
@@ -95,7 +101,7 @@ import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView, EngineView } from './render/ArmyView.js';
 import { UNITS_BY_ID } from './config/soldiers.js';
 import { blowOf } from './world/Defenders.js';
-import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent, TIME_MACHINE, EGG_RAPTOR, EGG_TRIKE, EGG_LONGNECK, ARCHIVE, WAR_STANDARD } from './config/blocks.js';
+import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, STORAGE_INTERFACE, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent, TIME_MACHINE, EGG_RAPTOR, EGG_TRIKE, EGG_LONGNECK, ARCHIVE, WAR_STANDARD } from './config/blocks.js';
 import { inPast, pastArrival } from './world/past.js';
 import { inFuture, futureArrival, FUTURE_GROUND } from './world/future.js';
 import { FutureView } from './render/FutureView.js';
@@ -110,7 +116,7 @@ import { SkyBeacon } from './render/SkyBeacon.js';
 import { gradeRenderer, Motes } from './render/atmosphere.js';
 import { SkyMist } from './render/SkyMist.js';
 import { MODE_WORDS as ARMY_WORDS, MARCH_DAYS } from './world/Army.js';
-import { INTRO } from './ui/Story.js';
+import { INTRO } from './ui/StoryText.js';
 import { SOLDIER } from './world/Defenders.js';
 import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
@@ -242,7 +248,7 @@ const swings = (id) => isGate(id) || !!doorPart(id) || isTrapdoor(id);
 /** What Place does to a door or gate — "Open" or "Close" — or null for anything else. */
 export function swingLabel(id) {
   if (isGate(id)) return isOpenGate(id) ? 'Close' : 'Open';
-  if (isChest(id) || id === STORAGE_CONTROLLER) return 'Open';
+  if (isChest(id) || id === STORAGE_CONTROLLER || id === STORAGE_INTERFACE) return 'Open';
   if (stationOf(id)) return 'Use';
   if (isCatapult(id)) return 'Man';
   if (isPainting(id)) return 'Home';
@@ -365,6 +371,7 @@ export const BATTLE = 'battle';
 
 export class Game {
   constructor(container) {
+    this.diagnostics=new Diagnostics();
     this.container = container;
     this.bus = new EventBus();
 
@@ -640,6 +647,10 @@ export class Game {
 
     // The land grows when an age is finished, and the wall has to grow with it.
     this.bus.on('territory:expanded', () => this.applyTerritoryBounds());
+    this.bus.on('places:emerged', ({places}) => {
+      if(this.wanderers) this.wanderers.landmarks.push(...places);
+      this.ui?.toast({kind:'challenge',title:'New travellers have settled nearby',body:'Explore beyond your settlement to find their camps.'});
+    });
     this.bus.on('health:died', ({ cause }) => this.die(cause));
     // University research takes days (DuiltGame.startStudy): said when it starts and when it's done.
     this.bus.on('research:started', ({ name, days }) => this.ui?.toast({ kind: 'challenge', title: `Researching ${name}`, body: `Takes ${gameDaysText(days)} — see how it's going at the university` }));
@@ -1364,7 +1375,9 @@ export class Game {
         }
       },
       onGoHome: () => (this.title ? true : this.withLoading('Back to your worlds…', () => this.openTitle())),
-      onNewWorld: (mode, name) => this.withLoading('Building the world…', () => { this.newWorld({ mode, name }); this.ui.closePanel('panel-menu'); }),
+      onNewWorld: (mode, name, options) => this.withLoading('Building the world…', () => { this.newWorld({ mode, name, localAI: options?.localAI }); this.ui.closePanel('panel-menu'); }),
+      onInviteBattle: () => this.openPeerBattle(),
+      onExportDiagnostics:()=>this.diagnostics.download({mode:this.mode,loadedChunks:this.world?.chunks.size??0,graphics:{distance:this.renderDistance,pixelRatio:this.renderer.getPixelRatio()},renderer:{calls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,geometries:this.renderer.info.memory.geometries,textures:this.renderer.info.memory.textures}}),
       onRenameWorld: (name) => { this.worldName = name; this.saveNow(); },
       lastSavedAt: () => this.syncState.agreedFor(this.worldId)?.at ?? 0,
       onResume: () => {
@@ -1536,7 +1549,7 @@ export class Game {
       onOpenClaim: () => this.openClaim(),
       onHintTap: () => (this.moving ? this.turnMove() : this.hintUses ? this.secondaryAction() : this.openClaim()),
       onFinishEditing: () => this.finishEditing(),
-      onStampStarter: (id) => this.stampStarter(id),
+      onStampStarter: (id, designId, workers) => this.stampStarter(id, designId, workers),
       // The showcase (docs/history/plan-look-and-sound.md, section 1) — see openShowcase.
       onOpenShowcase: (spot) => this.openShowcase({ spot }),
       onShowcaseSpot: (id) => this.showcaseSpot(id),
@@ -1603,12 +1616,20 @@ export class Game {
 
   /** Duilt owns scene objects (the border), so swapping worlds must clean up. */
   disposeDuilt() {
+    if (!this.acceptingPeerSnapshot) {
+      this.peerPanel?.dispose();this.peerPanel=null;this.peerSession=null;
+      this.clearPeerAvatar();
+    }
+    this.localRivalAI?.dispose();
+    this.localRivalAI = null;
+    this.terrainWorker?.dispose();
+    this.terrainWorker = null;
     if (!this.duilt) return;
     this.duilt.territory.dispose();
     this.duilt = null;
   }
 
-  newWorld({ silent, mode = this.mode, name, scenery = false, title = false, seed } = {}) {
+  newWorld({ silent, mode = this.mode, name, scenery = false, title = false, seed, localAI = false } = {}) {
     // Battle (backlog batch 4, E) is Duilt's rules with three rivals in the
     // world (duilt/Rivals.js) — a Duilt world with `battle` on its settlement.
     const battle = mode === BATTLE;
@@ -1670,11 +1691,12 @@ export class Game {
     // own note on exactly what it switches off.
     const sandbox = mode !== DUILT;
     this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus, sandbox });
+    this.configureVillagerJobs();
     // Not for the title scene: nobody plays in it, and a kit of one of everything
     // was hundreds of bag changes at every start (reported directly: "The
     // game is taking too long to load").
     if (sandbox && !title) this.duilt.grantCreativeKit();
-    if (battle) { this.duilt.battle = new Rivals(); this.world.gen.battle = true; }
+    if (battle) { this.duilt.battle = new Rivals(); this.duilt.battle.localAI = localAI; this.world.gen.battle = true; }
     // Saved inside the god's cube: back out where you went in.
     if (this.duilt.cube?.back) {
       const b = this.duilt.cube.back;
@@ -1790,6 +1812,7 @@ export class Game {
     // same as a brand new sandbox world would.
     const sandbox = this.mode !== DUILT;
     this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus, sandbox });
+    this.configureVillagerJobs();
     if (data.duilt) {
       const earned = this.duilt.loadJSON(data.duilt);
       if (earned && Object.keys(earned).length && this.ui) {
@@ -2685,7 +2708,7 @@ export class Game {
     // and took the train to bits instead of firing it.
     if (this.trainTarget(aimed) || this.machineTarget(aimed)) return places();
     if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
-      || aimed.block === STORAGE_CONTROLLER || stationOf(aimed.block)
+      || aimed.block === STORAGE_CONTROLLER || aimed.block === STORAGE_INTERFACE || stationOf(aimed.block)
       || aimed.block === SKY_LIFT || aimed.block === WAY_OUT || aimed.block === TIME_MACHINE || aimed.block === ARCHIVE || aimed.block === WAR_STANDARD || isCatapult(aimed.block)
       || (aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)))) return places();
     const item = this.selectedItemId;
@@ -2743,7 +2766,14 @@ export class Game {
     // And at a chest, Place opens it.
     if (aimed && isChest(aimed.block)) return void this.openChest(aimed);
     // And at a storage controller, every storehouse at once.
-    if (aimed && aimed.block === STORAGE_CONTROLLER) return void this.ui.openStores();
+    if (aimed?.block === STORAGE_INTERFACE) {
+      if (this.world.getBlock(aimed.x, aimed.y - 1, aimed.z) !== STORAGE_CONTROLLER) {
+        this.ui.toast({kind:'xp',title:'Place this above a storage controller'});
+        return;
+      }
+      return void this.ui.openStores(true);
+    }
+    if (aimed && aimed.block === STORAGE_CONTROLLER && this.selectedBlockId !== STORAGE_INTERFACE) return void this.ui.openStores();
     // At a wood mill (#32), the bench, showing what's made there.
     if (aimed && stationOf(aimed.block)) return void this.ui.openBench();
     // And at a painting, Place makes it where you wake (playtest, P1).
@@ -3286,6 +3316,12 @@ export class Game {
    */
   deleteBuilding(structure) {
     const spec = STRUCTURES_BY_ID.get(structure.type);
+    if(structure.type==='work_hall') {
+      const jobs=this.duilt.jobs;
+      if(jobs.hallSupplies.get(structure.id)?.slots.some(Boolean)||[...jobs.assignments.values()].some(a=>a.hallId===structure.id&&a.carrying)||jobs.builds.some(j=>j.state==='queued'||Object.keys(j.escrow).length)) {
+        this.ui.toast({kind:'xp',title:'Empty the Work Hall first',body:'Return supplies and carried goods, then finish or cancel building orders and collect their remaining materials.'});return;
+      }
+    }
     // The building this would otherwise still be pinning the crosshair strip
     // to no longer exists to finish editing.
     if (this.editingStructure?.id === structure.id) {
@@ -3738,9 +3774,62 @@ export class Game {
   }
 
   /** Drops a ready-made building where you are aiming, charged and undoable as one action. */
-  stampStarter(typeId) {
+  clearPeerAvatar() {
+    this.peerPosition=null;
+    if(!this.peerAvatar)return;
+    const geometries=new Set(),materials=new Set();
+    this.peerAvatar.group.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);});
+    this.scene.remove(this.peerAvatar.group);for(const g of geometries)g.dispose();for(const m of materials)m.dispose();
+    this.peerAvatar=null;this.peerPosition=null;
+  }
+
+  async openPeerBattle() {
+    if(!this.duilt?.battle){this.ui.toast({kind:'xp',title:'Open a Battle world first'});return;}
+    const world=this.world;
+    const {PeerBattlePanel}=await import('./ui/PeerBattlePanel.js');
+    if(this.world!==world)return;
+    this.peerPanel ??= new PeerBattlePanel({
+      isBattle:()=>!!this.duilt?.battle,
+      getSnapshot:()=>buildWorldPayload({...this.saveState(),name:this.worldName}),
+      onPeer:peer=>{this.peerSession=peer;if(!peer)this.clearPeerAvatar();},
+      onPosition:position=>{this.peerPosition=position;this.peerAvatar??=new AvatarView(this.scene);},
+      onSnapshot:payload=>{
+        const data=parseWorldPayload(JSON.stringify(payload));
+        this.acceptingPeerSnapshot=true;
+        try{this.loadFromData({...data,worldId:newWorldId()});this.worldIsLocal=true;}
+        finally{this.acceptingPeerSnapshot=false;}
+        return true;
+      },
+      onEditRequest:cells=>{
+        if(!this.peerPosition||cells.some(c=>Math.hypot(c.x-this.peerPosition.x,c.y-this.peerPosition.y,c.z-this.peerPosition.z)>12||this.world.getBlock(c.x,c.y,c.z)!==c.prev))return {ok:false,reason:'Stay close to an unchanged building site.'};
+        this.applyingPeer=true;
+        try{const ok=this.applyChanges(cells);return {ok,changes:ok?this.lastCommittedChanges:[],reason:ok?null:'The host cannot pay for or approve those changes.'};}
+        finally{this.applyingPeer=false;}
+      },
+      onEdits:cells=>{
+        return applyPeerWorldEdits(this,cells);
+      },
+      onStatus:status=>{if(status.state==='closed'||status.state==='failed'){this.clearPeerAvatar();this.peerSession=null;}},
+    });
+    this.ui.closePanel('panel-menu');this.peerPanel.open();
+  }
+
+  configureVillagerJobs() {
+    const d=this.duilt;
+    d.jobs.canPlace=c=>this.world===d.world && d.territory.contains(c.x,c.z) && !d.structures.blocking([c]) && (c.next===AIR || !this.blockOverlapsPlayerAABB(c));
+    d.jobs.placeBlock=c=>this.applyChanges([c],{chargeResources:false,gather:false});
+    d.jobs.onBuildComplete=job=>{
+      const claim=d.claim(job.region,job.type);
+      if (!claim.ok) d.waitFor(job.region,job.type,claim.reason);
+      this.editedAt=Date.now();
+      this.ui?.toast({kind:'challenge',title:`${job.name} built`,body:claim.reason});
+    };
+  }
+
+  stampStarter(typeId, designId = null, workers = false) {
     if (!this.duilt) return;
-    const design = DESIGN_FOR_STRUCTURE.get(typeId);
+    const design = starterDesign(typeId, designId);
+    if (!design) return;
     const aimed = this.stampAnchor(design?.extent);
     const b = this.fitInsideLand(aimed, design?.extent);
     // Follow the ground where it actually landed, or a slide sideways leaves
@@ -3751,9 +3840,17 @@ export class Game {
     // 91 blocks deep, but it should open a stairs to the top").
     const aimedY = b.y;
     if (typeId === 'mine') b.y = Math.min(b.y, MINE_FLOOR);
-    const plan = this.duilt.starterPlacement(typeId, { x: b.x, y: b.y, z: b.z });
+    const plan = this.duilt.starterPlacement(typeId, { x: b.x, y: b.y, z: b.z }, designId);
     if (!plan.ok) {
       this.ui.toast({ kind: 'xp', title: 'Cannot place that', body: plan.reason });
+      return;
+    }
+    if (workers || design.workers) {
+      const e = design.extent;
+      const region = {minX:b.x,maxX:b.x+e.x,minY:b.y,maxY:b.y+e.y,minZ:b.z,maxZ:b.z+e.z};
+      const result = this.duilt.jobs.enqueueBuild({...plan,name:design.name,type:typeId,designId:design.id,region});
+      this.ui.toast({kind:result.ok?'challenge':'xp',title:result.ok?`${design.name} queued for builders`:'Cannot queue this building',body:result.ok?'Assign builders at the Work Hall. Reserved materials stay with this order.':result.reason});
+      if (result.ok) this.editedAt=Date.now();
       return;
     }
     if (!this.applyChanges(plan.changes)) return;
@@ -4927,7 +5024,15 @@ export class Game {
    */
   tickRivals() {
     const d = this.duilt, b = d?.battle;
-    if (!b || d.sandbox || !this.wanderers) return;
+    if (!b || d.sandbox || !this.wanderers || this.peerSession?.role==='guest') return;
+    if (b.localAI && import.meta.env?.DEV) {
+      this.localRivalAI ??= new LocalRivalAI({onStatus:status=>{
+        if (this.localAIStatus === status) return;
+        this.localAIStatus = status;
+        this.ui?.toast({kind:'challenge',title:status==='connected'?'LM Studio rivals connected':'LM Studio unavailable',body:status==='connected'?'Your model is choosing rival strategies.':'Normal rival strategies continue; the model will be tried again.'});
+      }});
+      void this.localRivalAI.tick(b);
+    }
     b.grow(d.days);
     if (!b.armed && d.structures.countOf('barracks') > 0 && b.arm(d.days)) {
       this.editedAt = Date.now();
@@ -6797,7 +6902,7 @@ export class Game {
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
     // shouldn't go on to build against it.
-    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block) || isPainting(hit.block) || hit.block === STORAGE_CONTROLLER || stationOf(hit.block)) return;
+    if (swings(hit.block) || isChest(hit.block) || isCatapult(hit.block) || isPainting(hit.block) || hit.block === STORAGE_INTERFACE || (hit.block === STORAGE_CONTROLLER && this.selectedBlockId !== STORAGE_INTERFACE) || stationOf(hit.block)) return;
     const type = this.selectedBlockId;
     const availability = this.blockAvailability(type);
     if (!availability.ok) {
@@ -6836,6 +6941,7 @@ export class Game {
       // climbs the mirrored way too.
       const next = mirrored(held, t);
       if (!this.world.inBounds(t.x, t.y, t.z)) continue;
+      if (held === STORAGE_INTERFACE && this.world.getBlock(t.x, t.y - 1, t.z) !== STORAGE_CONTROLLER) continue;
       // A seed goes in farmland and nowhere else; a sapling in the ground.
       if (crop && this.world.getBlock(t.x, t.y - 1, t.z) !== FARMLAND) continue;
       if (held === SAPLING && !SAPLING_GROUND.has(this.world.getBlock(t.x, t.y - 1, t.z))) continue;
@@ -7052,6 +7158,12 @@ export class Game {
    * has a tool that takes a lot away again.
    */
   applyChanges(changes, { viaSymmetry = false, chargeResources = true, gather = true } = {}) {
+    if(this.peerSession?.role==='guest'&&!this.applyingPeer){
+      if(changes.length>32){this.ui.toast({kind:'xp',title:'Build in small steps while visiting',body:'The host can place large designs.'});return false;}
+      try{void this.peerSession.sendEditRequest(changes).then(result=>{if(!result.ok)this.ui.toast({kind:'xp',title:'Host declined the edit',body:result.reason});}).catch(()=>this.ui.toast({kind:'xp',title:'Wait for the host connection'}));}
+      catch{this.ui.toast({kind:'xp',title:'Wait for the host world to finish loading'});}
+      return false;
+    }
     changes = this.withUprooted(this.withBedHalves(this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z)))));
     if (!changes.length) return false;
 
@@ -7177,6 +7289,8 @@ export class Game {
     // This is the one place blocks change, so it is the one place that decides
     // the world has been played. See editedAt.
     this.editedAt = Date.now();
+    this.lastCommittedChanges=changes;
+    if(this.peerSession?.role==='host'&&!this.applyingPeer)void this.peerSession.broadcastEdits(changes).catch(()=>this.ui?.toast({kind:'xp',title:'Your guest needs a fresh world copy',body:'Use Send current host world in the invitation panel.'}));
     return true;
   }
 
@@ -7266,6 +7380,22 @@ export class Game {
   /** Makes queued chunks, nearest first, for a few milliseconds a frame. */
   generateQueued(budgetMs = 4) {
     if (!this.genQueue?.length || !this.world?.endless) return;
+    if (Number.isFinite(budgetMs) && typeof Worker !== 'undefined') {
+      if (this.terrainWorker?.world !== this.world) {
+        this.terrainWorker?.dispose();
+        const world = this.world;
+        this.terrainWorker = new TerrainWorkerQueue(world, {
+          onChunk: chunk => { if (this.world === world) this.remeshQueue.add(chunk); },
+        });
+      }
+      if (this.terrainWorker.available) {
+        // Keep pending entries until their transferred chunk actually arrives.
+        // A full worker queue is backpressure, not a reason to block this frame.
+        this.genQueue = this.genQueue.filter(({cx,cz}) => !this.world.hasChunk(cx,cz));
+        for (const {cx,cz} of this.genQueue) if (!this.terrainWorker.request(cx,cz)) break;
+        return;
+      }
+    }
     const start = performance.now();
     let i = 0, made = 0;
     while (i < this.genQueue.length) {
@@ -7291,12 +7421,12 @@ export class Game {
    * where no real chunk is drawn (see updateChunkVisibility, which hands it
    * the mask) — so the two never overlap and nothing jumps as you move.
    */
-  updateFarTerrain() {
+  updateFarTerrain(budgetMs) {
     if (!this.farTerrain) return;
     if (!this.world?.endless) { this.farTerrain.setVisible(false); return; }
     this.farTerrain.setVisible(true);
     const { x, z } = this.player.position;
-    this.farTerrain.update(this.world.gen, x, z, { world: this.world });
+    this.farTerrain.update(this.world.gen, x, z, { world: this.world, budgetMs, initialBudgetMs: budgetMs });
   }
 
   /**
@@ -7310,9 +7440,8 @@ export class Game {
    */
   drainRemeshQueue(budgetMs = 6) {
     if (!this.remeshQueue.size) return;
-    // A long queue means you are walking into new country, and the ground
-    // ahead matters more than a couple of frames of headroom.
-    if (this.remeshQueue.size > 60) budgetMs = Math.max(budgetMs, 9);
+    // The caller shares this allowance with generation and distant terrain.
+    // A long queue must not silently increase it and stall the same frame.
     const start = performance.now();
     const w = this.world;
     let built = 0;
@@ -7445,11 +7574,16 @@ export class Game {
   }
 
   tick() {
+    const frameStarted = performance.now();
     // Always read the clock, even when nothing will use it: skipping it lets
     // the gap pile up, and the first frame after a pause would move the player
     // by however long they spent reading a menu. The cap covers the same thing
     // for a stalled tab — a single frame should never teleport anyone.
-    const dt = Math.min(this.clock.getDelta(), 0.1);
+    const frameDelta=this.clock.getDelta();
+    if(!document.hidden)this.diagnostics.frame(frameDelta*1000);
+    const dt = Math.min(frameDelta, 0.1);
+    if(this.peerSession?.ready&&this.player)this.peerSession.updatePosition({...this.player.position,yaw:this.player.yaw,pitch:this.player.pitch});
+    if(this.peerAvatar&&this.peerPosition)this.peerAvatar.update(dt,{position:this.peerPosition,yaw:this.peerPosition.yaw,pitch:this.peerPosition.pitch??0},{look:this.controls.avatar,visible:!!this.peerSession?.connected});
     this.syncPhase();
     const playing = this.isPlaying;
     this.syncMobs();
@@ -7467,7 +7601,7 @@ export class Game {
       this.cubeTick();
       this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
-        this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
+        if(this.peerSession?.role!=='guest')this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
         this.feelHurt(dt);
         // The White Ring (Phase 7c): faster on your feet, and a higher jump.
         const white = this.duilt.ringWorn() === 'white';
@@ -7543,11 +7677,9 @@ export class Game {
     this.streamChunks();
     // Under the loading screen nothing needs a smooth frame, so the land is
     // made and drawn several times faster (see ui/loading.js).
-    this.generateQueued(this.booting ? BOOT_BUDGET_MS : undefined);
-    this.drainRemeshQueue(this.booting ? BOOT_BUDGET_MS : undefined);
+    runStreamingWork(this, frameStarted, undefined, BOOT_BUDGET_MS);
     this.updateDeep();
     this.updateChunkVisibility();
-    this.updateFarTerrain();
     this.updateClouds(dt);
     // The clock only runs while you're playing; a menu is a pause. Except a
     // barracks or Garrison pop-up: its training bar is something you sit and

@@ -26,23 +26,20 @@ new is asked for: add it with the owner's words quoted.
 
 ## Who's on what
 
-**Claude**
-- The "Adding changes" list: STORE-1, JOBS-1 to
-  JOBS-4 and MOBS-2.
-- Buildings: LOOK-2.
-- From earlier lists: OLD-2 (the rest of it), OLD-3, OLD-4, OLD-7.
-- The wiki and the game's words: WIKI-1, COPY-1.
-- Under the hood: TECH-1 to TECH-15 (section 11).
-- Housekeeping: HOUSE-1, once the owner agrees.
-- Reviewing Cline's work when asked.
-
 **ChatGPT**
-- SAVE-6, OLD-8 and TECH-2: completed and verified in this change, including
-  import bounds, malformed loader records and Battle labels in world lists.
-- CRAFT-1 to CRAFT-7: completed and verified in this change; physical-phone playtesting remains.
-- Next pipeline: storage interface (STORE-1),
-  villager jobs (JOBS-1 to JOBS-4), house variants (LOOK-2), and mob behaviour
-  (MOBS-2). Performance and browser checks remain in section 11.
+- Gameplay batch implemented locally: crafting, the storage interface, Work Hall
+  builder/hauler jobs, larger building designs, house variants, natural mob
+  movement, emerging raid sites, connected mountain ranges and distant scenery.
+- LM Studio strategies work through a local development-server bridge. Direct
+  one-guest co-op supports shared building edits and positions; internet relay
+  and full Battle combat/state synchronization remain separate work.
+- Save/import guards, browser checks, CI, worker generation, lazy map/story,
+  metadata checks, local diagnostic exports and wiki updates are implemented.
+- Based on latest main `ac8ac66` (checked 21 October). Nothing in this batch
+  is merged or deployed. The database migration is prepared, tested in a
+  temporary PostgreSQL engine, disabled by default and **not applied**.
+- Remaining work is explicitly marked in the tables; phone playtests, production
+  database rollout and branch deletion still require the owner's action.
 
 **Cline** (briefs in section 12)
 - Nothing open: CL-1 to CL-14 are done.
@@ -64,7 +61,7 @@ new is asked for: add it with the owner's words quoted.
 | SAVE-3 | **"Save and leave" leaves even when the save failed**, without saying so. Now it stays in the world and says why; only a save that went through takes you to your worlds. | ChatGPT | done, #231 |
 | SAVE-4 | **Failed uploads retry without telling you.** Now one message when uploads start failing ("Not saved to your account yet", why, and that it's kept on this device), tries again on its own after half a minute, then 1, 2, 4 and 5 minutes, at once when the connection comes back, and one message when it lands. | Claude | done, #233 |
 | SAVE-5 | **The backup copy may not fit** in the browser's small local storage (about 5 MB) for a big world. Now a copy too big for it goes to the browser's bigger store (IndexedDB; a 12 MB copy checked in Chromium); if it fits nowhere, you're told once. | Claude | done, #233 |
-| SAVE-6 | Explain account size-limit errors and suggest exporting a copy. The database limits have been live since 6 October; no database changes needed. | ChatGPT | done (verified; this change) |
+| SAVE-6 | Explain account size-limit errors and suggest exporting a copy. The database limits have been live since 6 October; no database changes needed. Transport and retry/error handling checked. | ChatGPT | done locally on `codex/remaining-priority-fixes`; not merged |
 
 ---
 
@@ -99,7 +96,7 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 ## 3. The "Adding changes" list (20 October)
 
-The owner's list, item by item. Status is recorded below.
+The owner's list, item by item; implementation status is recorded below.
 
 ### 3.1 Making blocks
 
@@ -109,19 +106,29 @@ The owner's list, item by item. Status is recorded below.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| CRAFT-1 | "Quarry will give stone only." | ChatGPT | done (verified; this change) |
-| CRAFT-2 | "stone marble cobble, coloured stone except turquoise should be obtained by processing the rock." | ChatGPT | done (verified; this change) |
-| CRAFT-3 | "To darken we need some kind of forge." | ChatGPT | done (verified; this change) |
-| CRAFT-4 | "to lighten we should have some bleach bucket to place them." | ChatGPT | done (verified; this change) |
-| CRAFT-5 | "For wood we should have a full carpentry set of tools to do the diff kinds of furniture as a wooden mill is not enough." | ChatGPT | done (verified; this change) |
-| CRAFT-6 | "The crafting experience here in the pop up should be slightly different and more interactive." | ChatGPT | done (verified; this change) |
-| CRAFT-7 | "To mold and forge weapons we can have the same logic." | ChatGPT | done (verified; this change) |
+| CRAFT-1 | "Quarry will give stone only." | ChatGPT | done locally on `codex/remaining-priority-fixes`; not merged |
+| CRAFT-2 | "stone marble cobble, coloured stone except turquoise should be obtained by processing the rock." | ChatGPT | done locally on `codex/remaining-priority-fixes`; not merged |
+| CRAFT-3 | "To darken we need some kind of forge." | ChatGPT | done locally on `codex/remaining-priority-fixes`; not merged |
+| CRAFT-4 | "to lighten we should have some bleach bucket to place them." | ChatGPT | done locally on `codex/remaining-priority-fixes`; not merged |
+| CRAFT-5 | "For wood we should have a full carpentry set of tools to do the diff kinds of furniture as a wooden mill is not enough." | ChatGPT | done locally on `codex/remaining-priority-fixes`; not merged |
+| CRAFT-6 | "The crafting experience here in the pop up should be slightly different and more interactive." | ChatGPT | done locally on `codex/remaining-priority-fixes`; not merged |
+| CRAFT-7 | "To mold and forge weapons we can have the same logic." | ChatGPT | done locally on `codex/remaining-priority-fixes`; not merged |
+
+Crafting verification (21 October): finite-inventory touch browser at 390×780
+checks processing, furniture and weapon routes, batches, cancellation, station
+and tool changes, shortages, full bags, stale popups and repeated taps. Active
+work shows its full bill and spends only on the last step. Nearby station and
+water checks do not generate terrain; each action checks only its recipe.
+The full regression run passed 7,448 checks; the extended crafting checks also
+pass. Performance budgets and production build pass. Physical-phone playtesting
+remains with the owner. Existing natural rock deposits remain mineable; the
+processing routes provide their crafted supply and turquoise stays natural.
 
 ### 3.2 A storage interface
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| STORE-1 | "Buildings need a lot of blocks to do. And food and all take a lot of space. We need a third storage item which is called a storage interface. Which is a block that should be placed on top of the storage manager and it allows me to see the list of storages and what they have, and clicking shows me all the items." | Claude | to do |
+| STORE-1 | "Buildings need a lot of blocks to do. And food and all take a lot of space. We need a third storage item which is called a storage interface. Which is a block that should be placed on top of the storage manager and it allows me to see the list of storages and what they have, and clicking shows me all the items." | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
 
 ### 3.3 Villagers who work
 
@@ -135,10 +142,10 @@ it produce 50% more; none of them carries or builds anything.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| JOBS-1 | A building, right in the beginning, that gives jobs to villagers. | Claude | to do |
-| JOBS-2 | Villagers who build. | Claude | to do |
-| JOBS-3 | Villagers who store stuff. | Claude | to do |
-| JOBS-4 | With villagers building, buildings way bigger. | Claude | to do |
+| JOBS-1 | A building, right in the beginning, that gives jobs to villagers. | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
+| JOBS-2 | Villagers who build. | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
+| JOBS-3 | Villagers who store stuff. | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
+| JOBS-4 | With villagers building, buildings way bigger. | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
 
 ### 3.4 A world at a bigger scale
 
@@ -160,6 +167,15 @@ your builds takes the new shape. Where a kept chunk meets a remade one there
 can be a step.
 | WORLD-4 | Big caves, as deep as the mine, with big galleries and ruins. One in every 512-block area: a 100-block main hall, an upper hall, a walkable slope down from the surface, and a ruin with pillars and a chest. | ChatGPT, Claude | done, #230 |
 
+Terrain follow-up (21 October, implemented locally): the owner asked for
+"cordilheiras, and not just a blob" with a gradual transition into plains.
+Connected backbones, branching ridges, peaks/saddles and broad foothills now
+replace isolated oval uplift and climate-driven mountain bumps. Existing
+claimed/changed chunks stay saved; regenerated unclaimed land takes the new
+shape. This is an analytic landform system inspired by TerraForged/Tectonic,
+not hydraulic erosion or a downstream river-network simulation. Same-seed
+browser comparisons are in `art/review/terrain-ranges-*.png`.
+
 ### 3.5 Creatures
 
 > "Mobs have weird behaviours, let's make them more natural. Villagers are
@@ -168,7 +184,7 @@ can be a step.
 | ID | What | Who | Status |
 |---|---|---|---|
 | MOBS-1 | Villagers going onto roofs without jumping. (Found: a villager could step straight up 4 blocks.) Now they step up one block at a time and walk round a wall or house in the way; where there's no way, they give up and stand. | ChatGPT | done, #231 |
-| MOBS-2 | More natural behaviour for mobs. In part: "Polish idle and roaming creatures" (ChatGPT, on main since 20 October). | Claude | to do |
+| MOBS-2 | More natural behaviour for mobs. In part: "Polish idle and roaming creatures" (ChatGPT, on main since 20 October). | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
 
 ---
 
@@ -177,7 +193,7 @@ can be a step.
 | ID | What | Who | Status |
 |---|---|---|---|
 | LOOK-1 | "the houses look squares … the ones I sent have this organic form. also they diversify the textures by using multiple blocks on the walls." Keep the current designs as templates and improve them. The starter house has clipped corners and a hip roof; the townhouse and village cottages have stepped corners (the owner said yes). Already-built houses stay as they are. | ChatGPT | done, #232 |
-| LOOK-2 | The two ways the owner suggested for it: "not sure if by level would be feasible, or to have different house types available to build on our building list." | Claude | to do |
+| LOOK-2 | The two ways the owner suggested for it: "not sure if by level would be feasible, or to have different house types available to build on our building list." | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
 | LOOK-3 | "Buildings need rebuilding, they need to fit more the mood and vibe of the mobs whimsical and mystical": the house, market and storehouse (#209); the other ready-made buildings with two-colour roofs and timber trim, the workshop teal and mint instead of slate (approved 20 October). | ChatGPT | done, #230 |
 | LOOK-4 | Cleaner stone textures: Stone, White Stone, Dark Stone, Stone Brick. | ChatGPT | done, #230 |
 | LOOK-5 | White leaves white, and pink leaves on about 40% of birch trees (approved 20 October). | ChatGPT | done, #230 |
@@ -191,13 +207,13 @@ can be a step.
 | ID | What | From | Who | Status |
 |---|---|---|---|---|
 | OLD-1 | Two or three new peoples to raid. Two: dune caravan camps and mossfolk forest villages, each with guards, a chest and talk. | Batch 4 | ChatGPT | done, #230 |
-| OLD-2 | Places you've taken marked on the map; new ones appearing over time. In part (#230): raided places are marked. New ones appearing over time is still to do. | Batch 4 | Claude | to do |
-| OLD-3 | Battle mode with AI rivals through an API key, kept on our server. The owner offered their own model server (needs HTTPS, key in an environment secret). | Batch 4 | Claude + Owner | waiting |
-| OLD-4 | Battle mode with real multiplayer, inviting friends. | Batch 4 | Claude | to do |
+| OLD-2 | Places you've taken marked on the map; new ones appearing over time. In part (#230): raided places are marked. New ones appearing over time is still to do. | Batch 4 | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
+| OLD-3 | Battle mode with AI rivals through an API key, kept on our server. The owner offered their own model server (needs HTTPS, key in an environment secret). | Batch 4 | Claude + Owner | local LM Studio integration verified; hosted/mobile reachability remains separate |
+| OLD-4 | Battle mode with real multiplayer, inviting friends. | Batch 4 | Claude | direct/LAN co-op building and positions verified; full combat/state sync and internet relays remain |
 | OLD-5 | Battle balance: how strong rivals feel and how often they come. | Batch 4 | Owner | waiting |
 | OLD-6 | Composting: a bin turns seeds and leaves into compost, which speeds a farm or raises its yield. The compost bin, and compost on a growing crop moves it on one stage (#230); "Add compost" in a farm's panel moves all its growing crops on one stage (#231). | Batch 3 | ChatGPT | done, #231 |
-| OLD-7 | Mist round the floating island and cloud below it: the one part of the look and sound plan not in the game. | Look and sound plan | Claude | to do |
-| OLD-8 | Battle worlds show as "Duilt" in the account's world list. Fetch, retain and render Battle metadata in the account and remembered lists. | Batch 4 | ChatGPT | done (verified; this change) |
+| OLD-7 | Mist round the floating island and cloud below it: the one part of the look and sound plan not in the game. | Look and sound plan | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
+| OLD-8 | Battle worlds show as "Duilt" in the account's world list. Fetch, retain and render Battle metadata in live and remembered lists. Verified actual row rendering; the UI no longer drops the flag. | Batch 4 | ChatGPT | done locally on `codex/remaining-priority-fixes`; not merged |
 
 ---
 
@@ -231,8 +247,8 @@ Briefs in section 12. One branch and one PR each.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| WIKI-1 | The wiki (`docs/wiki/`) brought up to date. It was written on 14 October; time travel, Battle mode, the Plainer and Helix, the mine, the granary and more came after. | Claude | to do |
-| COPY-1 | The weird descriptions in the game fixed. Examples as they read today: Stone "Mined from rock"; Marble "Cut and dressed at a workshop"; Gravel "Scraped off the mountainside"; Raw meat "Hunted". | Claude | to do |
+| WIKI-1 | The wiki (`docs/wiki/`) brought up to date. It was written on 14 October; time travel, Battle mode, the Plainer and Helix, the mine, the granary and more came after. | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
+| COPY-1 | The weird descriptions in the game fixed. Examples as they read today: Stone "Mined from rock"; Marble "Cut and dressed at a workshop"; Gravel "Scraped off the mountainside"; Raw meat "Hunted". | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
 
 ---
 
@@ -304,24 +320,30 @@ re-checked against today's code on 20 October.
 
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
-| TECH-1 | **Two devices overwrite each other.** Saving the same world from two devices: the last one wins, chunk by chunk, with no check. Matters as soon as you play one world on phone and computer. | Claude | M | to do |
-| TECH-2 | **Check imported world files before loading.** Bound file size (128 MB), expanded terrain, derived lights/smoke, saved buildings, inventories and designs. Reject malformed loader records and excessive stack expansion. Keep valid version 1/2 exports compatible. | ChatGPT | S | done (verified; this change) |
-| TECH-3 | **A security header for the site** (Content-Security-Policy, set in Vercel's config): only our own scripts and Neon may run or be called. | Claude | S | to do |
-| TECH-4 | **Text put on screen escaped by default.** About 70 places write HTML; the ones that show your text are escaped by hand. One helper that always escapes, so a future change can't slip. | Claude | M | to do |
-| TECH-5 | **Limit how often a client can write to the database.** | Claude | S | to do |
-| TECH-6 | **Make land in the background** (a Web Worker): generating and drawing chunks happens on the same thread as the game, so a slow phone stutters as land streams in. The biggest single gain for phones. | Claude | L | to do |
-| TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude | M | to do |
-| TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Claude | M | to do |
+| TECH-1 | **Two devices overwrite each other.** Saving the same world from two devices: the last one wins, chunk by chunk, with no check. Matters as soon as you play one world on phone and computer. | Claude | M | migration 0006 and gated transport tested; waiting for approved database rollout |
+| TECH-2 | **Check imported world files before loading.** Bound file size (128 MB), expanded terrain, light/smoke records, building footprints, inventories and designs. Reject malformed loader records and excessive stack expansion before replacing the open world. Keep valid version 1/2 exports, null train loads, omitted wear and large Granary crop counts compatible. Verified rejected imports preserve the world and real exports import via Chromium. | ChatGPT | S | done locally on `codex/remaining-priority-fixes`; not merged |
+| TECH-3 | **A security header for the site** (Content-Security-Policy, set in Vercel's config): only our own scripts and Neon may run or be called. | Claude | S | done locally on `codex/remaining-priority-fixes`; not merged |
+| TECH-4 | **Text put on screen escaped by default.** About 70 places write HTML; the ones that show your text are escaped by hand. One helper that always escapes, so a future change can't slip. | Claude | M | done locally on `codex/remaining-priority-fixes`; not merged |
+| TECH-5 | **Limit how often a client can write to the database.** | Claude | S | bounded client queue implemented; server enforcement prepared in 0006, not activated |
+| TECH-6 | **Make land in the background** (a Web Worker): generating and drawing chunks happens on the same thread as the game, so a slow phone stutters as land streams in. The biggest single gain for phones. | Claude | L | done locally on `codex/remaining-priority-fixes`; not merged |
+| TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude | M | map/story artwork load lazily; war/Sky module split remains |
+| TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Claude | M | performance budgets, streaming allowance and GPU disposal checks implemented; 30-minute real-device war profile remains |
 | TECH-9 | **The phone memory overlay** (a counter shown with `?debug`, for finding memory growth on a phone): one commit on the unmerged branch `claude/debug-overlay`. Merge it or drop it. | Claude, Owner agrees | S | waiting |
-| TECH-10 | **Split `src/Game.js`** (7,962 lines, from 6,488 on 6 October) by system (war, vehicles, building, input, saving), one part per PR, alongside other work. | Claude | L | to do |
-| TECH-11 | **Type checks on the save format and the block list**, to catch the kind of mismatch that once broke saved worlds' mode. | Claude | M | to do |
-| TECH-12 | **Automatic browser checks**: load the game, place a block, save, reload, see it's there. The tests today never open a browser. | Claude | M | to do |
-| TECH-13 | **Checks on every pull request** (GitHub Actions: the tests and a build), so nothing merges red. There are none today. | Claude | S | to do |
+| TECH-10 | **Split `src/Game.js`** (7,962 lines, from 6,488 on 6 October) by system (war, vehicles, building, input, saving), one part per PR, alongside other work. | Claude | L | to do in separate subsystem PRs; new workers/jobs/peer helpers are outside Game.js |
+| TECH-11 | **Type checks on the save format and the block list**, to catch the kind of mismatch that once broke saved worlds' mode. | Claude | M | done locally on `codex/remaining-priority-fixes`; not merged |
+| TECH-12 | **Automatic browser checks**: isolated Chromium loads the game, verifies deferred assets, places a block, saves/reloads/reopens, rejects malformed imports without replacing the world, and imports a real export. Story's eager import fixed. | ChatGPT | M | done locally on `codex/remaining-priority-fixes`; not merged |
+| TECH-13 | **Checks on every pull request** (GitHub Actions: the tests and a build), so nothing merges red. There are none today. | Claude | S | done locally on `codex/remaining-priority-fixes`; not merged |
 | TECH-14 | **The database at scale**: a player column and index on saved chunks so the security check stays fast with millions of them; a small runner for migrations, and a check the live database matches the code. Needs the owner's yes (ASK-5). | Claude + Owner | M | waiting |
-| TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | to do |
+| TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | done locally on `codex/remaining-priority-fixes`; not merged |
 | TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
+| TECH-17 | **Performance safeguards for future additions**: fixed-seed peak/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource checks, shared streaming allowance, and a PR performance workflow. Cave overdraw and crowd instance-buffer leaks fixed. Commands and limits in `docs/performance.md`. | ChatGPT | M | done (working tree; real-phone check and requiring CI on GitHub pending) |
 
 ---
+
+Diagnostics: Settings > Graphics > **Download diagnostics** exports bounded
+local error and recent frame-time summaries; no automatic uploads or account
+identifiers. Multiplayer: Settings > World > **Invite a friend to Battle**.
+Local model setup and limitations are in [local-ai.md](local-ai.md).
 
 ## 12. For Cline: how to work, and the briefs
 

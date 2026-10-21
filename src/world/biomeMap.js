@@ -2,7 +2,7 @@ import { inPast } from './past.js';
 import { inFuture } from './future.js';
 import { createNoise2D } from 'simplex-noise';
 import { BIOMES, BIOME_INDEX, HOME_BIOME } from '../config/biomes.js';
-import {massifAt} from './massifs.js';
+import { mountainRangeAt } from './mountainRanges.js';
 
 /**
  * Which biome is where, and how much of it.
@@ -21,47 +21,14 @@ import {massifAt} from './massifs.js';
 
 // Lower frequency means a bigger region of one climate — the one shared knob
 // every non-mountain biome's size comes from. WORLD-3 ("plains bigger") made
-// it another 28% wider; mountains take their size from RANGE_FREQ instead.
+// it another 28% wider; mountains take their size from the ridge landform.
 const FREQ = 0.0025;
 // Kept in the same ratio to FREQ as before, so the border wobble scales with
 // the bigger regions instead of looking proportionally smoother or jaggier.
 const FREQ_DETAIL = 0.0091;
 
-/**
- * The mountains' own placement, independent of climate.
- *
- * Requested directly: "fewer bigger ranges, and mountains wider too." Every
- * biome's region size otherwise comes from FREQ above, shared by all of
- * them — there's no way to make just the mountains bigger by moving a niche
- * around, since niche placement only decides *which* biome wins a column,
- * never how large the climate region it's competing over is. RANGE_FREQ is
- * a second, much lower-frequency noise field that multiplies straight into
- * a biome's ordinary niche weight (see weigh()) rather than replacing the
- * pick outright — so the two still blend at a range's edge the same smooth
- * way any other biome border does, just gated to occur much more rarely and
- * across a much wider footprint. RANGE_BASE cuts off the bottom of that
- * noise entirely (most of the map is simply not eligible); RANGE_POWER then
- * sharpens what's left, so a range reads as a real feature rather than a
- * gradient with no edge.
- */
-// WORLD-1 ("wider and bigger mountains"): wider ranges than before, and
-// three times as strong against their neighbours (see weigh).
-const RANGE_FREQ = 0.0010;
-const RANGE_BASE = 0.58;
-const RANGE_POWER = 2;
-const RANGE_BOOST = 3;
-
-/**
- * Mountains 2, nested inside an eligible Mountains 1 range rather than
- * placed on its own — see biomes.js's own note on `summitOnly`. The same
- * base/cutoff/power shape the range gate itself uses, just at a higher
- * frequency and a stricter cutoff, so it reads as the rare, tall heart of a
- * range rather than a whole separate tier of mountains with its own
- * footprint.
- */
-const SUMMIT_FREQ = 0.008;
-const SUMMIT_BASE = 0.55;
-const SUMMIT_POWER = 1.4;
+// Mountain geography comes from the connected ridge landform. Climate chooses
+// the lowland foundation; ridge relief decides mountain surfaces afterwards.
 
 /** Same generator the terrain uses, so one seed decides a whole world. */
 function mulberry32(seed) {
@@ -89,7 +56,6 @@ export class BiomeMap {
     this.temp = createNoise2D(mulberry32(seed + 101));
     this.wet = createNoise2D(mulberry32(seed + 977));
     this.warp = createNoise2D(mulberry32(seed + 5501));
-    this.range = createNoise2D(mulberry32(seed + 8887));
     this.summit = createNoise2D(mulberry32(seed + 19301));
     // One patchy noise field per rare biome, each from its own salt, and the
     // biomes it can take over as indexes.
@@ -144,32 +110,18 @@ export class BiomeMap {
   }
 
   /**
-   * 0..1: how eligible this column is for a mountain range at all — low
-   * frequency and cut off/sharpened so most of the map is simply 0 (see
-   * RANGE_FREQ's own note above). Suppressed near the settlement the same
-   * way ordinary climate already is, and for the same reason: arriving to a
-   * wall of stone four blocks from spawn is exactly what homePull exists to
-   * prevent for every other biome too.
+   * 0..1: the connected range's broad foothill apron. Most of the map is
+   * outside a range, and the settlement is protected by the landform itself.
    */
   rangeFactor(x, z) {
-    const n = (this.range(x * RANGE_FREQ, z * RANGE_FREQ) + 1) / 2;
-    let factor = Math.pow(Math.max(0, n - RANGE_BASE) / (1 - RANGE_BASE), RANGE_POWER);
-    if (this.homePull > 0 && factor > 0) {
-      const dx = x - this.centreX, dz = z - this.centreZ;
-      const d = Math.sqrt(dx * dx + dz * dz) / this.homeRadius;
-      const pull = d >= 1 ? 0 : (1 - d) * (1 - d) * this.homePull;
-      factor *= 1 - pull;
-    }
-    return factor;
+    return mountainRangeAt(this, x, z)?.influence ?? 0;
   }
 
   /**
-   * 0..1: within an eligible range, how much of it is Mountains 2 rather
-   * than ordinary Mountains 1 — see biomes.js's `summitOnly`.
+   * 0..1: the ridge profile within the foothill apron, including saddles.
    */
   summitFactor(x, z) {
-    const n = (this.summit(x * SUMMIT_FREQ, z * SUMMIT_FREQ) + 1) / 2;
-    return Math.pow(Math.max(0, n - SUMMIT_BASE) / (1 - SUMMIT_BASE), SUMMIT_POWER);
+    return mountainRangeAt(this, x, z)?.ridge ?? 0;
   }
 
   /**
@@ -195,14 +147,9 @@ export class BiomeMap {
   /**
    * Every biome's share of a column, plus the winner.
    *
-   * Weight falls off with the square of the distance in climate space, which
-   * makes the winner dominate near the middle of its patch and the two
-   * neighbours share evenly right at a border. A `range` biome's weight is
-   * also multiplied by how eligible the column is for a range at all — see
-   * rangeFactor — which is what keeps the mountains fewer, bigger and wider
-   * than every other biome's climate-only placement, while still blending
-   * the same smooth way at the edges since it's a multiplier on the same
-   * weight rather than a separate switch.
+   * Climate selects the blended lowland foundation. Connected ridge relief
+   * then adds mountain surfaces above it; the two sets of weights are kept
+   * separate so mountain biomes cannot create a second height blob.
    */
   weigh(x, z) {
     const { temp, wet } = this.climate(x, z);
@@ -210,8 +157,7 @@ export class BiomeMap {
     // biomes there, and only there.
     const past = inPast(x, this.centreX ?? 0);
     const era = past ? 'past' : inFuture(x, this.centreX ?? 0) ? 'future' : null;
-    const range = era ? 0 : this.rangeFactor(x, z);
-    const summit = range > 0 ? this.summitFactor(x, z) : 0;
+    const massif = era ? null : mountainRangeAt(this, x, z, wet);
     const weights = new Array(BIOMES.length);
     let total = 0;
     let best = 0, bestW = -1;
@@ -224,7 +170,9 @@ export class BiomeMap {
       // The epsilon keeps a column sitting exactly on a niche from going
       // infinite; 1/d^4 is sharp enough that biomes stay recognisable.
       let w = 1 / ((d2 + 0.0016) * (d2 + 0.0016));
-      if (b.range) w *= b.summitOnly ? range * summit : range * RANGE_BOOST;
+      // Mountain locations and relief come from a connected landform, not
+      // isolated climate patches. Climate still chooses the lowland beneath.
+      if (b.range) w = 0;
       // A rare biome doesn't compete on climate: it takes over land
       // afterwards, below.
       if (b.rare) w = 0;
@@ -259,10 +207,12 @@ export class BiomeMap {
       best = 0;
       for (let j = 1; j < weights.length; j++) if (weights[j] > weights[best]) best = j;
     }
-    const massif = era ? null : massifAt(this, x, z);
+    const terrainWeights = weights.map(w => w / total);
     if(massif) {
-      const share=massif.influence;
-      const summit=Math.min(1,Math.max(0,(share-.82)/.15));
+      // Grass and the local biome survive on the broad foothill apron;
+      // stone and snow belong to the crest, independent of climate niches.
+      const share=Math.min(1,Math.max(0,(massif.ridge-.12)/.55))*massif.influence;
+      const summit=Math.min(1,Math.max(0,(massif.ridge-.70)/.20));
       for(let i=0;i<weights.length;i++)weights[i]*=1-share;
       weights[BIOME_INDEX.get('mountains1')]+=total*share*(1-summit);
       weights[BIOME_INDEX.get('mountains2')]+=total*share*summit;
@@ -270,7 +220,7 @@ export class BiomeMap {
       for(let i=1;i<weights.length;i++)if(weights[i]>weights[best])best=i;
     }
     for (let i = 0; i < weights.length; i++) weights[i] /= total;
-    return { weights, index: best, temp, wet, massif };
+    return { weights, terrainWeights, index: best, temp, wet, massif };
   }
 
   /** A blended value of one numeric field across the biomes at a column. */

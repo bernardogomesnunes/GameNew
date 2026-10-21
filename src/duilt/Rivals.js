@@ -96,7 +96,7 @@ export class Rivals {
    * your gate from 4, a catapult for your walls from 8.
    */
   company(r) {
-    const s = Math.floor(r.strength);
+    const s = Math.max(1, Math.min(MAX_STRENGTH, Math.floor(r.strength * (r.tactic === 'pressure' ? 1.15 : r.tactic === 'rebuild' ? .8 : 1))));
     const who = [['rival_soldier', 2 + Math.floor(s * 0.8)]];
     if (s >= 2) who.push(['archer', Math.floor(s / 2)]);
     if (s >= 4) who.push(['ram', 1]);
@@ -106,14 +106,14 @@ export class Rivals {
 
   /** How many guard their city: more as they grow. */
   garrison(r) {
-    return 2 + Math.round(r.strength);
+    return 2 + Math.round(r.strength) + (r.tactic === 'guard' ? 2 : 0);
   }
 
   /** Their army's beaten (won) or got the better of you; the next one comes ATTACK_GAP on. */
   resolve(r, won, days) {
     if (r.stage !== 'fighting') return;
     r.stage = 'waiting';
-    r.due = days + ATTACK_GAP;
+    r.due = days + ATTACK_GAP * (r.tactic === 'pressure' ? .8 : r.tactic === 'rebuild' ? 1.5 : 1);
     r.strength = won ? Math.max(1, r.strength - BEATEN) : Math.min(MAX_STRENGTH, r.strength + WON);
   }
 
@@ -135,13 +135,14 @@ export class Rivals {
   }
 
   toJSON() {
-    return { armed: this.armed, grownTo: this.grownTo, list: this.list.map((r) => ({ ...r })) };
+    return { armed: this.armed, localAI: this.localAI === true, grownTo: this.grownTo, list: this.list.map((r) => ({ ...r })) };
   }
 
   static fromJSON(data) {
     const out = new Rivals();
     if (!data || typeof data !== 'object') return out;
     out.armed = data.armed === true;
+    out.localAI = data.localAI === true;
     out.grownTo = Number.isFinite(data.grownTo) ? data.grownTo : null;
     for (const r of out.list) {
       const s = (data.list ?? []).find((x) => x?.id === r.id);
@@ -150,6 +151,7 @@ export class Rivals {
       if (Number.isInteger(s.falls)) r.falls = s.falls;
       if (Number.isFinite(s.fallenUntil)) r.fallenUntil = s.fallenUntil;
       if (Number.isFinite(s.due)) r.due = s.due;
+      if (['pressure', 'guard', 'rebuild'].includes(s.tactic)) r.tactic = s.tactic;
       // An army that was at your walls when the world was saved is gone
       // with the people; it comes again shortly.
       r.stage = 'waiting';

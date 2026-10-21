@@ -20,6 +20,7 @@ import { CROPS } from './crops.js';
  */
 
 export const RECIPES = [
+  { id: 'storage_interface', name: 'Storage Interface', station: 'hand', age: 3, inputs: { planks: 6, glass: 2, copper_ingot: 2 }, output: { id: 'storage_interface', count: 1 }, blurb: 'Place on top of a storage controller to browse each store.' },
   {
     id: 'compost_bin', name: 'Compost Bin', station: 'hand', age: 2,
     inputs: { planks: 6, leaves: 4 }, output: { id: 'compost_bin', count: 1 },
