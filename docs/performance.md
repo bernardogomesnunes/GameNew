@@ -79,8 +79,9 @@ Do not raise a budget just to make a failing change pass. Explain the content
 cost, check the affected scenes on a phone, and review the new limit. The
 workflow runs independently of the unit-test job so unrelated unit failures do
 not prevent performance measurements. Its stable job name is `Performance
-budgets`; it also supports manual dispatch. Requiring that check in main's
-branch protection is a separate repository setting.
+budgets`; it also supports manual dispatch. Main's branch protection requires
+that GitHub Actions check and an up-to-date branch, including for administrators
+(verified through the repository API on 21 October 2026).
 
 ## Runtime changes and limits
 
@@ -125,11 +126,11 @@ illustrations, resolving the earlier eager-import failure.
   Deliberately omitting instance cleanup in the test harness makes this check
   fail on WebGL-buffer growth; restoring the harness passes again.
 - Production build: passes; the existing large-bundle warning remains.
-- Full suite after completing the pending fixes: **7,445 passed / 0 failed
-  across 271 files**. The nine earlier failing assertions are resolved:
-  missing tool models and block textures added; crafting/quarry expectations
-  updated to requested rules; storage-controller interaction tested directly.
-  Full output: `artifacts/performance/completion-suite-final.txt`.
+- Latest full suite on the integrated main plus gate hardening: **7,516 passed /
+  0 failed across 288 files**. Full output:
+  `artifacts/performance/gate-full-suite.log`.
+- GitHub Actions: `Performance budgets` passed on PR #234; main's required
+  status check is configured with the GitHub Actions app identity.
 - Focused independent review: no remaining actionable findings after fixing
   the long-queue allowance override, zero-budget far-tile starvation, and
   incomplete instance-buffer accounting in the initial harness.
