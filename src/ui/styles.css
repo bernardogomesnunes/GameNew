@@ -865,6 +865,7 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
   /* Reported directly: at the end of the bag the scroll carried on into the
      panel and dragged Wearing and Equipped up off the top. It stops here. */
   overscroll-behavior: contain; }
+.bag-empty { grid-column: 1 / -1; margin: 8px 0; }
 /* What you're wearing (Phase 7b): four slots in a row, each named under it. */
 .bag-wear-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 56px)); gap: 8px; margin: 8px 0 4px; padding: 2px; }
 .wear-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }

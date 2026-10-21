@@ -218,6 +218,7 @@ export class DuiltUI {
 
       ${renderPanels('duilt', {
         'panel-bag': `
+          <input id="bag-search" class="panel-search" type="search" aria-label="Search inventory" aria-controls="bag-grid" placeholder="Search inventory…" autocomplete="off" enterkeyhint="search">
           <!--
             Two zones of the one bag, not two containers — moving between
             them is the same lift/tap gesture as rearranging either one on
@@ -235,12 +236,14 @@ export class DuiltUI {
             back — foraging and the rest seem to have disappeared from view").
             Tap the row for the whole of each.
           -->
+          <div id="bag-loadout">
           <button class="bag-skills" id="bag-skills" hidden></button>
           <div class="bag-section-head">Wearing <span class="sub" id="armour-sum"></span></div>
           <div id="bag-wear-grid" class="bag-wear-grid"></div>
           <div class="bag-section-head">Equipped <span class="sub">— what the hotbar shows, in order</span></div>
           <div id="bag-hotbar-grid" class="bag-hotbar-grid"></div>
-          <div class="bag-section-head">Your bag</div>
+          </div>
+          <div class="bag-section-head" id="bag-grid-label">Your bag</div>
           <div id="bag-grid"></div>
           <div id="bag-detail"></div>`,
         'panel-store': `
@@ -383,6 +386,10 @@ export class DuiltUI {
       this.renderStores();
     });
     this.q('#stores-search').addEventListener('input', () => this.renderStores());
+    this.q('#bag-search').addEventListener('input', () => {
+      this.q('#bag-grid').scrollTop = 0;
+      this.renderBag();
+    });
     this.wireSlotDrag();
     this.wireSlotTip();
 
@@ -1266,7 +1273,20 @@ export class DuiltUI {
 
     this.renderWear();
     hotbarGrid.innerHTML = slots.slice(0, PLAYABLE_SLOTS).map(slotHtml).join('');
-    grid.innerHTML = slots.slice(PLAYABLE_SLOTS).map((s, j) => slotHtml(s, j + PLAYABLE_SLOTS)).join('');
+    const query = this.q('#bag-search')?.value.trim().toLowerCase() ?? '';
+    const loadout = this.q('#bag-loadout');
+    if (loadout) loadout.hidden = !!query;
+    // Search the whole inventory, including equipped items, but keep each
+    // original index so lift/drop, discard and drag still reach the right slot.
+    if (query) {
+      grid.innerHTML = slots.map((slot, index) => slot && itemName(slot.id).toLowerCase().includes(query)
+        ? slotHtml(slot, index) : '').join('')
+        || '<p class="bag-empty dim" role="status">No items match your search.</p>';
+    } else {
+      grid.innerHTML = slots.slice(PLAYABLE_SLOTS).map((s, j) => slotHtml(s, j + PLAYABLE_SLOTS)).join('');
+    }
+    const label = this.q('#bag-grid-label');
+    if (label) label.textContent = query ? 'Search results' : 'Your bag';
 
     for (const g of [hotbarGrid, grid]) {
       g.querySelectorAll('[data-slot]').forEach((btn) => this.bindSlot(btn));
@@ -1453,7 +1473,8 @@ export class DuiltUI {
   showSlotTip(btn) {
     const attr = ['data-slot', 'data-store-slot', 'data-bag-slot', 'data-wear'].find((a) => btn.hasAttribute(a));
     // A cost chip has no slot to find again after a re-render; it just closes.
-    this.tipAt = attr ? { attr, index: btn.getAttribute(attr) } : null;
+    this.tipAt = attr ? { attr, index: btn.getAttribute(attr),
+      grid: btn.closest?.('#bag-grid, #bag-hotbar-grid')?.id } : null;
     this.tipChip = null;
     const info = btn.dataset.tipInfo;
     this.tip.innerHTML = `<strong>${escapeHtml(btn.dataset.tip)}</strong>${info ? `<span>${escapeHtml(info)}</span>` : ''}`;
@@ -1475,8 +1496,8 @@ export class DuiltUI {
   /** After a grid re-render, points the card at the new button for the same slot. */
   refreshSlotTip() {
     if (!this.tipAt) return;
-    const { attr, index } = this.tipAt;
-    const btn = this.el.querySelector(`.bag-slot[${attr}="${index}"]`);
+    const { attr, index, grid } = this.tipAt;
+    const btn = this.el.querySelector(`${grid ? `#${grid} ` : ''}.bag-slot[${attr}="${index}"]`);
     if (btn?.dataset.tip && btn.offsetParent) this.showSlotTip(btn);
     else this.hideSlotTip();
   }
