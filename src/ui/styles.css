@@ -2203,3 +2203,11 @@ button.busy { cursor: progress; opacity: 0.92; }
   .drop-ready { outline: 3px dashed #e0b44a; outline-offset: -3px; }
   .drag-source { opacity: 0.45; }
 }
+
+.recipe-tools { font-size: 11px; line-height: 1.4; color: var(--dim, #827568); }
+.recipe-tile:has(.craft-work) { grid-column: 1 / -1; }
+.craft-work { width: 100%; display: grid; gap: 8px; padding: 10px; border: 1px solid #b7a48e; border-radius: 8px; box-sizing: border-box; background: #f8f1e5; }
+.craft-work p { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.craft-work label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.craft-work input { width: 64px; min-width: 0; min-height: 44px; box-sizing: border-box; }
+.craft-work button { width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; white-space: normal; }

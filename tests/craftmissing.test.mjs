@@ -28,7 +28,8 @@ const bill = { planks: 12, cobblestone: 8, lantern: 1 };
 {
   const g = make({ owns: ['workshop'] });
   g.inventory.add('wood', 10); g.inventory.add('stone', 4); g.inventory.add('glass', 1);
-  const { made, still } = g.craftMissing(bill);
+  g.world.setBlock(2, 2, 2, 380);
+  const { made, still } = g.craftMissing(bill, { position: { x: 2, y: 2, z: 2 } });
   ok(`all of it, from wood, stone and glass in the bag (${JSON.stringify(made)})`, !Object.keys(still).length
     && g.inventory.countOf('planks') >= 12 && g.inventory.countOf('cobblestone') >= 8 && g.inventory.countOf('lantern') === 1);
   ok('the lantern\'s planks came on top of the twelve, not out of them', g.inventory.countOf('planks') >= 12);
@@ -40,7 +41,7 @@ const bill = { planks: 12, cobblestone: 8, lantern: 1 };
   const g = make();
   g.inventory.add('wood', 10); g.inventory.add('stone', 4); g.inventory.add('glass', 1);
   const { made, still } = g.craftMissing(bill);
-  ok('what can be made by hand is', made.planks > 0 && made.cobblestone > 0);
+  ok('hand work makes planks; cobble waits for a stone mill', made.planks > 0 && !made.cobblestone && still.cobblestone === 8);
   ok('and the lantern, which needs a workshop you don\'t have, is left — and said', still.lantern === 1 && g.inventory.countOf('glass') === 1);
 }
 

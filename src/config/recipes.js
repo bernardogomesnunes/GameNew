@@ -936,7 +936,7 @@ export const RECIPES = [
     name: 'Stone Mill',
     station: 'hand',
     age: 3,
-    inputs: { stone: 6, cobblestone: 4, planks: 4 },
+    inputs: { stone: 10, planks: 4 },
     output: { id: 'stone_mill', count: 1 },
     blurb: 'A grindstone on a block of stone. Stand by it and stone goes further, and it grinds gravel. Place on it to use it.',
   },
@@ -1655,6 +1655,44 @@ for (const id of STONE_MILLED) {
     output: { ...r.output, count: Math.ceil(r.output.count * 1.5) }, batch: r.batch ?? 8,
     blurb: `${r.blurb ?? ''} Half as much again at the stone mill.`.trim(),
   });
+}
+
+// Processing and reusable tools are applied to every recipe variant, including
+// the mill alternatives, so a second recipe cannot bypass the work tools.
+const CARPENTRY_TOOLS = ['carpentry_saw', 'carpentry_chisel', 'carpentry_plane', 'carpentry_mallet'];
+RECIPES.push(
+  { id: 'forge', name: 'Forge', station: 'hand', age: 3, inputs: { stone: 12, clay: 4 }, output: { id: 'forge', count: 1 }, blurb: 'Place a forge for darkening rock and shaping weapons over a fire.' },
+  { id: 'bleach_bucket', name: 'Bleach Bucket', station: 'hand', age: 3, inputs: { bucket_water: 1, wood: 2 }, output: { id: 'bleach_bucket', count: 1 }, blurb: 'Burn wood for ash and mix with water. Place the bucket, then wash stone in it.' },
+  { id: 'stone_white', name: 'Wash White Stone', station: 'bleach_bucket', age: 3, inputs: { stone: 2 }, output: { id: 'stone_white', count: 2 }, batch: 8, steps: ['Place rock in the bath', 'Wash and lift out'], blurb: 'Wash rock in wood-ash bleach to bring out its pale surface.' },
+  { id: 'stone_grey', name: 'Temper Grey Stone', station: 'forge', age: 3, inputs: { stone: 4, wood: 1 }, output: { id: 'stone_grey', count: 4 }, batch: 8, steps: ['Load the rock', 'Heat and cool'], blurb: 'A short firing darkens rock to grey.' },
+  { id: 'stone_orange', name: 'Tint Orange Stone', station: 'stone_mill', age: 3, inputs: { stone: 4, clay: 1 }, output: { id: 'stone_orange', count: 4 }, batch: 8, steps: ['Grind the clay tint', 'Dress the stone'], blurb: 'Dress rock with warm clay pigment.' },
+  { id: 'wash_clay', name: 'Wash Clay', station: 'hand', age: 1, needs: 'water', inputs: { dirt: 3 }, output: { id: 'clay', count: 1 }, batch: 8, steps: ['Sift the earth', 'Wash out the clay'], blurb: 'Wash earth by the river to separate the clay. A source for your first forge.' },
+  { id: 'weapon_mold', name: 'Weapon Mold', station: 'hand', age: 3, inputs: { clay: 3, stone: 1 }, output: { id: 'weapon_mold', count: 1 }, blurb: 'A reusable clay mold for casting weapon blanks.' },
+  ...CARPENTRY_TOOLS.map((id) => ({ id, name: id.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' '), station: 'hand', age: 1, inputs: { wood: 2, stone: 2 }, output: { id, count: 1 }, blurb: 'A reusable part of the carpenter’s kit. Keep all four tools in your bag for furniture.' })),
+);
+const furniture = new Set([...FURNITURE_ITEM.values(), 'bed', 'painting', 'chair_red', 'panel_twotone']);
+for (const r of RECIPES) {
+  if (furniture.has(r.output.id)) {
+    r.tools = CARPENTRY_TOOLS;
+    r.steps = ['Measure and saw', 'Chisel the joints', 'Plane and assemble'];
+  }
+  if (['marble', 'cobblestone', 'stone_brick'].includes(r.output.id)) {
+    r.station = 'stone_mill';
+    r.steps = ['Load the rock', 'Cut and dress'];
+  }
+  if (r.id === 'marble') r.age = 3;
+  if (r.output.id === 'sky_marble') r.steps = ['Grind the glass polish', 'Polish the marble'];
+  if (['dark_stone', 'dark_brick'].includes(r.id)) {
+    r.station = 'forge';
+    r.steps = ['Load the hearth', 'Fire and cool'];
+  }
+  if (r.id === 'bow') { r.tools = ['carpentry_saw', 'carpentry_plane']; r.steps = ['Shape the bow', 'Smooth and string']; }
+  if (/^sword_/.test(r.output.id) && !r.name.startsWith('Upgrade:')) {
+    const metal = !['sword_wood', 'sword_stone'].includes(r.output.id);
+    r.tools = metal ? ['weapon_mold'] : ['carpentry_chisel'];
+    if (metal) r.station = 'forge';
+    r.steps = metal ? ['Pack the mold', 'Forge the blank', 'Finish the edge'] : ['Shape the blank', 'Fit the grip'];
+  }
 }
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));

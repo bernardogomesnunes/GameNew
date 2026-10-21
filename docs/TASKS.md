@@ -27,7 +27,7 @@ new is asked for: add it with the owner's words quoted.
 ## Who's on what
 
 **Claude**
-- The "Adding changes" list: CRAFT-1 to CRAFT-7, STORE-1, JOBS-1 to
+- The "Adding changes" list: STORE-1, JOBS-1 to
   JOBS-4 and MOBS-2.
 - Buildings: LOOK-2.
 - From earlier lists: OLD-2 (the rest of it), OLD-3, OLD-4, OLD-7.
@@ -37,9 +37,10 @@ new is asked for: add it with the owner's words quoted.
 - Reviewing Cline's work when asked.
 
 **ChatGPT**
-- SAVE-6, OLD-8 and TECH-2: implemented on `codex/remaining-priority-fixes`,
-  based on main `ac8ac66`; verification and review in progress. Not merged yet.
-- Next pipeline: crafting (CRAFT-1 to CRAFT-7), storage interface (STORE-1),
+- SAVE-6, OLD-8 and TECH-2: completed and verified in this change, including
+  import bounds, malformed loader records and Battle labels in world lists.
+- CRAFT-1 to CRAFT-7: completed and verified in this change; physical-phone playtesting remains.
+- Next pipeline: storage interface (STORE-1),
   villager jobs (JOBS-1 to JOBS-4), house variants (LOOK-2), and mob behaviour
   (MOBS-2). Performance and browser checks remain in section 11.
 
@@ -63,7 +64,7 @@ new is asked for: add it with the owner's words quoted.
 | SAVE-3 | **"Save and leave" leaves even when the save failed**, without saying so. Now it stays in the world and says why; only a save that went through takes you to your worlds. | ChatGPT | done, #231 |
 | SAVE-4 | **Failed uploads retry without telling you.** Now one message when uploads start failing ("Not saved to your account yet", why, and that it's kept on this device), tries again on its own after half a minute, then 1, 2, 4 and 5 minutes, at once when the connection comes back, and one message when it lands. | Claude | done, #233 |
 | SAVE-5 | **The backup copy may not fit** in the browser's small local storage (about 5 MB) for a big world. Now a copy too big for it goes to the browser's bigger store (IndexedDB; a 12 MB copy checked in Chromium); if it fits nowhere, you're told once. | Claude | done, #233 |
-| SAVE-6 | Explain account size-limit errors and suggest exporting a copy. The database limits have been live since 6 October; no database changes needed. | ChatGPT | implemented on `codex/remaining-priority-fixes`, verification in progress |
+| SAVE-6 | Explain account size-limit errors and suggest exporting a copy. The database limits have been live since 6 October; no database changes needed. | ChatGPT | done (verified; this change) |
 
 ---
 
@@ -98,7 +99,7 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 ## 3. The "Adding changes" list (20 October)
 
-The owner's list, item by item. None of it is started.
+The owner's list, item by item. Status is recorded below.
 
 ### 3.1 Making blocks
 
@@ -108,13 +109,13 @@ The owner's list, item by item. None of it is started.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| CRAFT-1 | "Quarry will give stone only." (Today it also gives cobblestone, white stone, dark stone and clay.) | Claude | to do |
-| CRAFT-2 | "stone marble cobble, coloured stone except turquoise should be obtained by processing the rock." | Claude | to do |
-| CRAFT-3 | "To darken we need some kind of forge." | Claude | to do |
-| CRAFT-4 | "to lighten we should have some bleach bucket to place them." | Claude | to do |
-| CRAFT-5 | "For wood we should have a full carpentry set of tools to do the diff kinds of furniture as a wooden mill is not enough." | Claude | to do |
-| CRAFT-6 | "The crafting experience here in the pop up should be slightly different and more interactive." | Claude | to do |
-| CRAFT-7 | "To mold and forge weapons we can have the same logic." | Claude | to do |
+| CRAFT-1 | "Quarry will give stone only." | ChatGPT | done (verified; this change) |
+| CRAFT-2 | "stone marble cobble, coloured stone except turquoise should be obtained by processing the rock." | ChatGPT | done (verified; this change) |
+| CRAFT-3 | "To darken we need some kind of forge." | ChatGPT | done (verified; this change) |
+| CRAFT-4 | "to lighten we should have some bleach bucket to place them." | ChatGPT | done (verified; this change) |
+| CRAFT-5 | "For wood we should have a full carpentry set of tools to do the diff kinds of furniture as a wooden mill is not enough." | ChatGPT | done (verified; this change) |
+| CRAFT-6 | "The crafting experience here in the pop up should be slightly different and more interactive." | ChatGPT | done (verified; this change) |
+| CRAFT-7 | "To mold and forge weapons we can have the same logic." | ChatGPT | done (verified; this change) |
 
 ### 3.2 A storage interface
 
@@ -196,7 +197,7 @@ can be a step.
 | OLD-5 | Battle balance: how strong rivals feel and how often they come. | Batch 4 | Owner | waiting |
 | OLD-6 | Composting: a bin turns seeds and leaves into compost, which speeds a farm or raises its yield. The compost bin, and compost on a growing crop moves it on one stage (#230); "Add compost" in a farm's panel moves all its growing crops on one stage (#231). | Batch 3 | ChatGPT | done, #231 |
 | OLD-7 | Mist round the floating island and cloud below it: the one part of the look and sound plan not in the game. | Look and sound plan | Claude | to do |
-| OLD-8 | Battle worlds show as "Duilt" in the account's world list. Fetch and retain Battle metadata in the account and remembered lists. | Batch 4 | ChatGPT | implemented on `codex/remaining-priority-fixes`, verification in progress |
+| OLD-8 | Battle worlds show as "Duilt" in the account's world list. Fetch, retain and render Battle metadata in the account and remembered lists. | Batch 4 | ChatGPT | done (verified; this change) |
 
 ---
 
@@ -304,7 +305,7 @@ re-checked against today's code on 20 October.
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
 | TECH-1 | **Two devices overwrite each other.** Saving the same world from two devices: the last one wins, chunk by chunk, with no check. Matters as soon as you play one world on phone and computer. | Claude | M | to do |
-| TECH-2 | **Check imported world files before loading.** Bound file size (128 MB), expanded terrain, block runs, saved building footprints, inventories and designs. Keep valid version 1/2 exports compatible. | ChatGPT | S | implemented on `codex/remaining-priority-fixes`, verification in progress |
+| TECH-2 | **Check imported world files before loading.** Bound file size (128 MB), expanded terrain, derived lights/smoke, saved buildings, inventories and designs. Reject malformed loader records and excessive stack expansion. Keep valid version 1/2 exports compatible. | ChatGPT | S | done (verified; this change) |
 | TECH-3 | **A security header for the site** (Content-Security-Policy, set in Vercel's config): only our own scripts and Neon may run or be called. | Claude | S | to do |
 | TECH-4 | **Text put on screen escaped by default.** About 70 places write HTML; the ones that show your text are escaped by hand. One helper that always escapes, so a future change can't slip. | Claude | M | to do |
 | TECH-5 | **Limit how often a client can write to the database.** | Claude | S | to do |

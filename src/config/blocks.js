@@ -918,6 +918,13 @@ BLOCKS.push(
     light: { color: 0xffd27a, intensity: 3, distance: 10, decay: 1 } },
 );
 
+// Placeable processing stations; IDs preserve all existing saved blocks.
+export const BLEACH_BUCKET = 524, FORGE = 525;
+BLOCKS.push(
+  { id: BLEACH_BUCKET, name: 'Bleach Bucket', glyph: 'bucket', color: 0xdde8d7, material: 'wood', station: 'bleach_bucket', unlock: null },
+  { id: FORGE, name: 'Forge', glyph: 'stone', color: 0x655367, material: 'stone', station: 'forge', unlock: null },
+);
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in

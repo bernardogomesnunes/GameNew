@@ -41,9 +41,8 @@ ok('walls, bricks, stairs, roof tiles, pillars, chimneys and calçada among them
 {
   const RAW = new Set(['stone', 'cobblestone', 'marble', 'stone_white', 'stone_grey', 'stone_turquoise', 'stone_orange', 'sandstone']);
   const millOut = new Set(RECIPES.filter((r) => r.station === 'stone_mill').map((r) => r.output.id));
-  ok('the mill never makes raw stone', [...millOut].every((id) => !RAW.has(id)));
-  const backToRaw = RECIPES.filter((r) => RAW.has(r.output.id) && Object.keys(r.inputs).some((k) => millOut.has(k) && !['gravel', 'sand'].includes(k)));
-  ok(`and nothing it makes is turned back into raw stone (${backToRaw.map((r) => r.id).join(', ') || 'none'})`, !backToRaw.length);
+  ok('the mill processes stone into cobble, marble and coloured stone', ['cobblestone','marble','stone_orange'].every(id => millOut.has(id)));
+  ok('reclaiming cobble cannot multiply stone', at('cobblestone').output.count / at('cobblestone').inputs.stone * at('stone_from_cobblestone').output.count / at('stone_from_cobblestone').inputs.cobblestone <= 1);
   const slabs = SLABS.map((s) => ITEM_FOR_BLOCK.get(s.id));
   ok('slabs aren\'t made cheaper there', !RECIPES.some((r) => r.station === 'stone_mill' && slabs.includes(r.output.id)));
 }

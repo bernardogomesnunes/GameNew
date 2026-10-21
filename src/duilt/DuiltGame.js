@@ -685,6 +685,7 @@ export class DuiltGame {
     for (let x = bx - BLOCK_STATION_REACH; x <= bx + BLOCK_STATION_REACH; x++) {
       for (let y = by - 2; y <= by + 3; y++) {
         for (let z = bz - BLOCK_STATION_REACH; z <= bz + BLOCK_STATION_REACH; z++) {
+          if (this.world.hasChunk?.(x >> 4, z >> 4) === false) continue;
           const station = stationOf(this.world.getBlock(x, y, z));
           if (station) found.add(station);
         }

@@ -140,6 +140,8 @@ export const TEXTURES = {
  * Keyed by block name; each is a whole recipe, not a patch on the glyph's.
  */
 export const BLOCK_TEXTURES = {
+  'Bleach Bucket': { lines: 'planks', band: 3, depth: 0.2, bump: 0.25,
+    top: { ripples: 3, mottle: 0.04, depth: 0.12 } },
   // Keep the approved pale stone's quieter surface independent of rough rock.
   'White Stone': { rockFaces: 3, hue: 0.12, depth: 0.2, bump: 0.2 },
   // The Stone Kingdom. Four dark materials that used to read as one grey:

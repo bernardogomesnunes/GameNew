@@ -6,6 +6,8 @@ import { WANDERERS } from '../src/config/wanderers.js';
 import { ITEMS_BY_ID, isTool } from '../src/config/items.js';
 import { RECIPES } from '../src/config/recipes.js';
 import { GLYPHS } from '../src/config/glyphs.js';
+import { Inventory } from '../src/items/Inventory.js';
+import { Crafting } from '../src/duilt/Crafting.js';
 
 /**
  * Phase 6b — swords, and bandits that fight. Chosen directly: wood, stone
@@ -28,7 +30,13 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
   ok('each hitting harder than the last', swords[0].damage < swords[1].damage && swords[1].damage < swords[2].damage);
   ok('and harder than any other tool', swords[0].damage > Math.max(...['axe', 'pickaxe', 'shovel'].map((id) => ITEMS_BY_ID.get(id).damage)));
   const recipes = swords.map((s) => RECIPES.find((r) => r.output.id === s.id));
-  ok('all made at the bench', recipes.every((r) => r && r.station === 'hand'));
+  ok('wood and stone swords are shaped by hand; iron is forged with its mold', recipes.every((r, index) => {
+    const bag = new Inventory();
+    for (const [id, n] of Object.entries(r.inputs)) bag.add(id, n);
+    for (const id of r.tools ?? []) bag.add(id, 1);
+    const bench = new Crafting({ inventory: bag, world: null });
+    return bench.craft(r.id, 1, { atStations: index === 2 ? ['forge'] : [] }).ok && bag.countOf(r.output.id) === r.output.count;
+  }));
   ok('stone from Age 3, iron needs the foundry\'s iron', recipes[1].inputs.stone && recipes[1].age === 3 && recipes[2].inputs.iron_ingot);
   ok('and drawn as a sword', typeof GLYPHS.sword === 'string' && swords.every((s) => s.glyph === 'sword'));
   const hp = WANDERERS.bandit.hp;

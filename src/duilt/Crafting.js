@@ -41,8 +41,13 @@ export class Crafting {
    */
   atStation(r, atStations) {
     if (r.station === 'hand') return true;
+    if (r.station === 'forge' && atStations.includes('foundry')) return true;
     if (!atStations.includes(r.station)) return false;
     return !r.tier || atStations.includes(`${r.station}@${r.tier}`);
+  }
+
+  missingTools(recipe) {
+    return (recipe.tools ?? []).filter((id) => this.inventory.countOf(id) < 1);
   }
 
   /**
@@ -55,13 +60,25 @@ export class Crafting {
    * age they appear, greyed out until you are standing at one.
    */
   available(age, { station = 'hand', near = null, atStations = [] } = {}) {
-    return recipesFor(age, station).filter((r) => !this.hidden?.(r)).map((r) => {
+    return recipesFor(age, station).filter((r) => !this.hidden?.(r))
+      .map((r) => this.recipeStatus(r, { near, atStations }));
+  }
+
+  /** Recheck only the active work, rather than every recipe on every tap. */
+  availableRecipe(id, age, options = {}) {
+    const recipe = RECIPES_BY_ID.get(id);
+    if (!recipe || recipe.age > age || this.hidden?.(recipe)) return null;
+    return this.recipeStatus(recipe, options);
+  }
+
+  recipeStatus(r, { near = null, atStations = [] } = {}) {
       const missing = this.inventory.missing(r.inputs);
       const placeOk = !r.needs || this.conditionMet(r.needs, near);
       const stationOk = this.atStation(r, atStations);
       const lock = this.locked?.(r) ?? null;
       const roomOk = r.study ? true : this.inventory.roomFor(r.output.id, r.output.count) >= r.output.count;
-      const ok = Object.keys(missing).length === 0 && placeOk && stationOk && roomOk && !lock;
+      const toolsMissing = this.missingTools(r);
+      const ok = !toolsMissing.length && Object.keys(missing).length === 0 && placeOk && stationOk && roomOk && !lock;
       let reason = null;
       // Generic rather than hardcoded to "workshop" now that a second
       // station (foundry) exists — the recipe already knows which one it
@@ -71,6 +88,7 @@ export class Crafting {
       else if (!stationOk) reason = r.tier && atStations.includes(r.station)
         ? `Needs your ${stationName(r.station)} built up further — level ${r.tier + 1}`
         : `Stand at your ${stationName(r.station)} to make this`;
+      else if (toolsMissing.length) reason = 'Keep ' + toolsMissing.map(itemName).join(', ') + ' in your bag';
       else if (!placeOk) reason = r.needs === 'water' ? 'Stand closer to the river' : `Needs ${r.needs} nearby`;
       else if (Object.keys(missing).length) {
         reason = 'Needs ' + Object.entries(missing)
@@ -85,7 +103,6 @@ export class Crafting {
         // four of something only two of which could go anywhere.
         maxBatch: this.batchThatFits(r, this.maxBatch(r)),
       };
-    });
   }
 
   conditionMet(need, near) {
@@ -94,7 +111,10 @@ export class Crafting {
     for (let dx = -WATER_RANGE; dx <= WATER_RANGE; dx++) {
       for (let dy = -2; dy <= 2; dy++) {
         for (let dz = -WATER_RANGE; dz <= WATER_RANGE; dz++) {
-          if (this.world.getBlock(Math.floor(x) + dx, Math.floor(y) + dy, Math.floor(z) + dz) === WATER_BLOCK) return true;
+          const bx = Math.floor(x) + dx, bz = Math.floor(z) + dz;
+          // A crafting check must not pull new terrain into existence.
+          if (this.world.hasChunk?.(bx >> 4, bz >> 4) === false) continue;
+          if (this.world.getBlock(bx, Math.floor(y) + dy, bz) === WATER_BLOCK) return true;
         }
       }
     }
@@ -125,6 +145,7 @@ export class Crafting {
    * nothing would be the worst possible outcome.
    */
   craft(recipeId, times = 1, { near = null, atStations = [] } = {}) {
+    if (!Number.isSafeInteger(times) || times < 1) return { ok: false, reason: 'Choose a whole number of batches.' };
     const recipe = RECIPES_BY_ID.get(recipeId);
     if (!recipe) return { ok: false, reason: 'No such recipe.' };
 
@@ -140,6 +161,9 @@ export class Crafting {
     if (recipe.needs && !this.conditionMet(recipe.needs, near)) {
       return { ok: false, reason: recipe.needs === 'water' ? 'Stand closer to the river.' : `Needs ${recipe.needs} nearby.` };
     }
+
+    const toolsMissing = this.missingTools(recipe);
+    if (toolsMissing.length) return { ok: false, reason: 'Keep ' + toolsMissing.map(itemName).join(', ') + ' in your bag.' };
 
     const wanted = Math.min(times, this.maxBatch(recipe));
     if (wanted <= 0) {

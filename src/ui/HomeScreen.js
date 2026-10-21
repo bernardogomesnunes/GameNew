@@ -172,7 +172,7 @@ export class HomeScreen {
     const rows = this.cloudWorlds ?? this.cb.knownWorlds?.() ?? [];
     const failed = this.cloudError;
     const when = (r) => r.updatedAt ?? 0;
-    const line = (r) => describe({ mode: r.mode, timestamp: when(r), age: r.age });
+    const line = (r) => describe({ mode: r.mode, battle: r.battle, timestamp: when(r), age: r.age });
 
     this.body.innerHTML = `
       <div class="home-steps">

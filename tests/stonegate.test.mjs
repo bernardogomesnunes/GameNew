@@ -26,7 +26,14 @@ const split = RECIPES_BY_ID.get('cobblestone'), dress = RECIPES_BY_ID.get('marbl
 ok(`stone → cobblestone → stone gives nothing extra (${(split.output.count / split.inputs.stone) * back('cobblestone')} per stone)`, (split.output.count / split.inputs.stone) * back('cobblestone') <= 1);
 ok(`stone → marble → stone gives nothing extra (${(dress.output.count / dress.inputs.stone) * back('marble')} per stone)`, (dress.output.count / dress.inputs.stone) * back('marble') <= 1);
 const whiteMade = RECIPES.filter((r) => r.output.id === 'stone_white' && r.inputs.stone);
-ok('white stone isn\'t made from stone, so nothing loops there', whiteMade.length === 0);
+ok('washing stone pale and turning it back cannot multiply stone', whiteMade.length > 0 && whiteMade.every(r => {
+  const bag = new Inventory();
+  bag.add('stone', r.inputs.stone);
+  const bench = new Crafting({ inventory: bag, world: null });
+  return bench.craft(r.id, 1, { atStations: ['bleach_bucket'] }).ok
+    && bench.craft('stone_from_white', bag.countOf('stone_white')).ok
+    && bag.countOf('stone') <= r.inputs.stone;
+}));
 
 // In a bag: what was dug up turns into a pickaxe.
 {

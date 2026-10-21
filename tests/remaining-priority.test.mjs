@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { NeonTransport } from '../src/net/NeonTransport.js';
 import { parseWorldPayload, pickFile } from '../src/storage/WorldExport.js';
+import { validateWorldImport } from '../src/storage/WorldImportValidation.js';
+import { HomeScreen } from '../src/ui/HomeScreen.js';
+import { BLOCKS } from '../src/config/blocks.js';
 
 let failures = 0;
 async function check(name, fn) {
@@ -22,6 +25,15 @@ await check('account list fetches only Battle metadata and preserves its flag', 
     return [{id:'test', mode:'duilt', battle:{}, revision:1, updated_at:'2026-10-20'}];
   };
   assert.equal((await transport.listWorlds())[0].battle, true);
+});
+await check('Battle is displayed in fetched and remembered world rows', () => {
+  for (const remembered of [false, true]) {
+    const rows = [{ id: 'battle-world', name: 'Test', mode: 'duilt', battle: true, age: 3, updatedAt: Date.now() }];
+    const body = { innerHTML: '', querySelector: () => ({ addEventListener() {} }), querySelectorAll: () => [] };
+    HomeScreen.prototype.renderWorlds.call({ body, cloudWorlds: remembered ? null : rows,
+      cb: { knownWorlds: () => rows }, refreshCloudWorlds() {} });
+    assert.match(body.innerHTML, /<em>Battle · Age 3/);
+  }
 });
 const payload = () => ({format:'voxel-sandbox-world', version:2, name:'Test', mode:'creative', player:{x:1,y:2,z:1,yaw:0,pitch:0}, world:{sizeX:16,sizeZ:16,height:16,chunks:[{cx:0,cz:0,rle:[0,4096]}]}});
 await check('valid legacy and current exports still import', () => {
@@ -51,8 +63,43 @@ for (const [name, mutate] of [
   ['fake inventory length', p => p.duilt={chests:[{key:'0,0,0',slots:{length:1e9}}]}],
   ['implicit train inventories', p => p.duilt={trains:Array.from({length:20000},()=>({trail:[[0,1,0],[1,1,0]],head:0,cars:5}))}],
   ['thin building spanning thousands of chunks', p => { p.world={endless:true,seed:1,height:200,chunks:[]}; p.duilt={structures:{structures:[{type:'house',region:{minX:0,maxX:1048575,minY:1,maxY:1,minZ:0,maxZ:0}}]}}; }],
+  ['non-array herd', p => p.duilt={herd:{}}],
+  ['null mount', p => p.duilt={mounts:[null]}],
+  ['non-array machines', p => p.duilt={machines:{}}],
+  ['invalid settler records', p => p.duilt={settlers:{people:[null]}}],
+  ['invalid Battle list', p => p.duilt={battle:{list:{}}}],
+  ['invalid train trail', p => p.duilt={trains:[{cars:1,head:0,trail:[null,null]}]}],
+  ['invalid train load', p => p.duilt={trains:[{cars:1,head:0,trail:[[0,1,0],[1,1,0]],loads:[{}]}]}],
+  ['invalid achievement collection', p => p.gamification={achievementsUnlocked:{}}],
+  ['invalid daily challenges', p => p.gamification={dailyChallenge:{ids:{},completed:[]}}],
+  ['negative legacy defender count', p => p.duilt={defenders:{trained:{1:{count:-1,since:0}}}}],
+  ['fractional building tier', p => p.duilt={structures:{structures:[{id:1,type:'storehouse',tier:0.5,store:{},region:{minX:0,maxX:1,minY:1,maxY:2,minZ:0,maxZ:1}}]}}],
+  ['invalid inventory quantities', p => p.duilt={inventory:{slots:[{id:'stone',count:-2}]}}],
+  ['distant train coordinates', p => p.duilt={trains:[{cars:0,head:0,trail:[[1e300,0,0],[0,0,0]]}]}],
+  ['non-coercible saved notice', p => p.duilt={notices:{list:[{title:'Test',at:0,body:{toString:0}}]}}],
+  ['inventory stacks that expand excessively when sorted', p => p.duilt={inventory:{slots:[{id:'stone',count:Number.MAX_SAFE_INTEGER}]}}],
 ]) await check(`import rejects ${name} before world allocation`, () => {
   const p=payload(); mutate(p); assert.throws(() => parseWorldPayload(JSON.stringify(p)), /world file|world format/i);
+});
+await check('derived light records are bounded before allocating terrain', () => {
+  const p = payload();
+  const lamp = BLOCKS.find(b => b.light && !b.smoke);
+  p.world = { sizeX: 16, sizeZ: 256, height: 512,
+    chunks: [{cx:0,cz:0,rle:[lamp.id,131072]}] };
+  assert.throws(() => validateWorldImport(p), /too many.*light|too many.*tracked/i);
+});
+await check('older inventory wear and empty train cars remain compatible', () => {
+  const p = payload();
+  p.duilt = { inventory: {slots:[{id:'stone',count:3}]}, defenders:{trained:{1:{count:2,since:0}}},
+    trains:[{cars:1,head:0,trail:[[0,1,0],[1,1,0]],loads:[null]}] };
+  assert.equal(parseWorldPayload(JSON.stringify(p)).duilt.inventory.slots[0].count, 3);
+});
+await check('granary stores retain their intentionally large crop counts', () => {
+  const p = payload();
+  p.duilt = { structures: { structures: [{ id:1, type:'granary', tier:0,
+    region:{minX:0,maxX:1,minY:1,maxY:2,minZ:0,maxZ:1},
+    store:{slots:[{id:'fruit',count:1000000000}]} }] } };
+  assert.equal(parseWorldPayload(JSON.stringify(p)).duilt.structures.structures[0].store.slots[0].count, 1000000000);
 });
 await check('oversized selected files are refused before reading', async () => {
   const old = globalThis.document;

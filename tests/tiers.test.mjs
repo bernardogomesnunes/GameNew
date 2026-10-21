@@ -22,7 +22,7 @@ for (const t of TOOL_TIERS) {
     const id = tieredId(kind, t.key);
     const item = ITEMS_BY_ID.get(id);
     ok(`${t.name} ${kind}: an item, a bench recipe from its age, a model in the hand`,
-      item?.kind === 'tool' && recipe(id)?.age === t.age && recipe(id).station === 'hand'
+      item?.kind === 'tool' && recipe(id)?.age === t.age && recipe(id).station === (kind === 'sword' ? 'forge' : 'hand')
       && heldBoxes({ itemId: id }).length > 1);
   }
 }

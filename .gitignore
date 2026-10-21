@@ -25,3 +25,6 @@ dist-ssr
 
 # Python bytecode (tools/mobs)
 __pycache__/
+
+# Local crafting verification snapshots and reports
+/artifacts/crafting/

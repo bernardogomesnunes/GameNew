@@ -1,11 +1,16 @@
-import { ID_LIMIT } from '../config/blocks.js';
+import { ID_LIMIT, BLOCKS_BY_ID } from '../config/blocks.js';
 import { CAR_SLOTS, MAX_CARS } from '../world/Trains.js';
+import { stackLimit } from '../config/items.js';
 
 // Bound both the input and the expanded blocks: a tiny RLE file can otherwise
 // request gigabytes before the importer has a chance to show an error.
 export const MAX_WORLD_FILE_BYTES = 128 * 1024 * 1024;
 const MAX_CELLS = 64 * 1024 * 1024;
+// Every light/chimney cell expands into a Map key and object on load, beyond
+// its compact terrain buffer. A tiny RLE file must not request millions.
+const MAX_TRACKED_RECORDS = 100000;
 const MAX_COORD = (1 << 20) - 1;
+const RESERVED_KEYS = new Set(['__proto__', 'constructor', 'prototype', 'toString', 'valueOf']);
 const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, min, max) => Number.isInteger(value) && value >= min && value <= max;
 function requireWorld(condition, reason) {
@@ -35,6 +40,7 @@ export function validateWorldImport(data) {
   }
   requireWorld(count * cells <= MAX_CELLS && w.chunks.length <= count, 'is too large to import safely');
   const seen = new Set();
+  let trackedRecords = 0;
   for (const c of w.chunks) {
     requireWorld(record(c) && integer(c.cx, -MAX_COORD, MAX_COORD) && integer(c.cz, -MAX_COORD, MAX_COORD), 'has invalid chunk coordinates');
     if (!w.endless) requireWorld(c.cx >= 0 && c.cz >= 0 && c.cx < Math.ceil(w.sizeX / 16) && c.cz < Math.ceil(w.sizeZ / 16), 'has a chunk outside its bounds');
@@ -47,6 +53,9 @@ export function validateWorldImport(data) {
       requireWorld(integer(c.rle[i], 0, ID_LIMIT - 1) && integer(c.rle[i + 1], 1, cells), 'has invalid block runs');
       total += c.rle[i + 1];
       requireWorld(total <= cells, 'has overflowing block runs');
+      const block = BLOCKS_BY_ID.get(c.rle[i]);
+      trackedRecords += ((block?.light ? 1 : 0) + (block?.smoke ? 1 : 0)) * c.rle[i + 1];
+      requireWorld(trackedRecords <= MAX_TRACKED_RECORDS, 'has too many tracked light or smoke records to import safely');
     }
     requireWorld(total === cells, 'has incomplete block runs');
     if (c.surface != null) requireWorld(Array.isArray(c.surface) && c.surface.length === 256 && c.surface.every(v => integer(v, 0, w.height)), 'has invalid surface data');
@@ -56,6 +65,33 @@ export function validateWorldImport(data) {
   for (const key of ['gamification', 'economy', 'duilt']) requireWorld(data[key] == null || record(data[key]), `has invalid ${key} data`);
   requireWorld(data.name == null || (typeof data.name === 'string' && data.name.length <= 200), 'has an invalid name');
   requireWorld(data.templates == null || Array.isArray(data.templates), 'has invalid designs');
+  // These loaders use map/filter/find/Set directly. Reject malformed shapes
+  // before Game.loadFromData replaces the currently open world. Older exports
+  // may omit these fields entirely; absence keeps each loader's defaults.
+  const d = data.duilt, g = data.gamification;
+  const records = (value, name) => {
+    requireWorld(value == null || (Array.isArray(value) && value.every(record)), `has invalid ${name}`);
+  };
+  for (const key of ['herd', 'machines', 'mounts']) records(d?.[key], key);
+  records(d?.settlers?.people, 'settlers');
+  for (const key of ['herd', 'machines', 'mounts']) {
+    for (const entry of d?.[key] ?? []) requireWorld(['x', 'y', 'z'].every(k => Number.isFinite(entry[k])), `has invalid ${key} positions`);
+  }
+  for (const p of d?.settlers?.people ?? []) requireWorld(Number.isFinite(p.x) && Number.isFinite(p.z), 'has invalid settler positions');
+  records(d?.battle?.list, 'Battle rivals');
+  for (const key of ['distinctTypesPlacedEver', 'achievementsUnlocked', 'earlyUnlockedBlocks', 'templateNames']) {
+    requireWorld(g?.[key] == null || Array.isArray(g[key]), 'has invalid progression collections');
+  }
+  if (g?.dailyChallenge != null) {
+    requireWorld(record(g.dailyChallenge), 'has invalid daily challenges');
+    for (const key of ['ids', 'completed']) requireWorld(Array.isArray(g.dailyChallenge[key]), 'has invalid daily challenges');
+  }
+  if (d?.defenders?.trained != null) {
+    requireWorld(record(d.defenders.trained), 'has invalid trained defenders');
+    for (const t of Object.values(d.defenders.trained)) {
+      requireWorld(record(t) && (t.count == null || integer(t.count, 0, Number.MAX_SAFE_INTEGER)), 'has invalid trained defender counts');
+    }
+  }
   // Buildings are re-scanned on load. Bound the volume they can ask the world
   // to visit, even if their RLE terrain is perfectly small and valid.
   const savedStructures = data.duilt?.structures?.structures;
@@ -63,11 +99,15 @@ export function validateWorldImport(data) {
   requireWorld(savedStructures == null || Array.isArray(savedStructures), 'has invalid buildings');
   requireWorld(waiting == null || Array.isArray(waiting), 'has invalid unfinished buildings');
   const structures = [...(savedStructures ?? []), ...(waiting ?? [])];
+  const granaryStores = new Set();
   if (structures != null) {
     requireWorld(Array.isArray(structures) && structures.length <= 4096, 'has too many buildings');
     let volume = 0;
     for (const s of structures) {
       requireWorld(record(s) && record(s.region), 'has an invalid building');
+      requireWorld(s.tier == null || integer(s.tier, 0, 4096), 'has an invalid building tier');
+      if (s.type === 'granary' && record(s.store)) granaryStores.add(s.store);
+      for (const key of ['excludes', 'seeds']) requireWorld(s[key] == null || (Array.isArray(s[key]) && s[key].every(v => typeof v === 'string')), `has invalid building ${key}`);
       let size = 1;
       for (const axis of ['X', 'Y', 'Z']) {
         const lo = s.region[`min${axis}`], hi = s.region[`max${axis}`];
@@ -95,12 +135,27 @@ export function validateWorldImport(data) {
   }
   // Inventories occur in bags, chests, carts and building stores. Check every
   // occurrence, rather than trusting an object with an attacker-chosen length.
-  let nodes = 0, slots = 0;
+  let nodes = 0, slots = 0, expandedSlots = 0;
   const trains = data.duilt?.trains;
   if (trains != null) {
     requireWorld(Array.isArray(trains) && trains.length <= 256, 'has too many trains');
     for (const t of trains) {
       requireWorld(record(t) && integer(t.cars, 0, MAX_CARS), 'has invalid train cars');
+      requireWorld(Array.isArray(t.trail) && t.trail.length >= 2 && t.trail.every(p => Array.isArray(p) && p.length === 3
+        && p.every(v => Number.isFinite(v) && Math.abs(v) <= MAX_COORD * 16)), 'has invalid train tracks');
+      requireWorld(Number.isFinite(t.head), 'has an invalid train position');
+      if (t.loads != null) {
+        requireWorld(Array.isArray(t.loads) && t.loads.length <= MAX_CARS, 'has invalid train loads');
+        for (const load of t.loads) {
+          if (load == null) continue; // valid exports use null for an uninitialised car
+          requireWorld(Array.isArray(load) && load.every(slot => Array.isArray(slot) && slot.length >= 3
+            && integer(slot[0], 0, CAR_SLOTS - 1) && typeof slot[1] === 'string'
+            && integer(slot[2], 1, Number.MAX_SAFE_INTEGER)
+            && (slot[3] == null || (Number.isFinite(slot[3]) && slot[3] >= 0))), 'has invalid train loads');
+          for (const slot of load) expandedSlots += Math.ceil(slot[2] / stackLimit(slot[1]));
+          requireWorld(expandedSlots <= 100000, 'has inventory stacks too large to sort safely');
+        }
+      }
       slots += t.cars * CAR_SLOTS;
     }
     requireWorld(slots <= 100000, 'has too many train inventory slots');
@@ -121,9 +176,18 @@ export function validateWorldImport(data) {
         }
       }
       for (const [key, v] of Object.entries(value)) {
-        requireWorld(!['__proto__', 'constructor', 'prototype'].includes(key), 'has invalid game data keys');
+        requireWorld(!RESERVED_KEYS.has(key), 'has invalid game data keys');
         if (key === 'slots') {
           requireWorld(Array.isArray(v) && v.length <= 4096, 'has invalid inventory slots');
+          requireWorld(v.every(slot => slot == null || (record(slot) && typeof slot.id === 'string'
+            && integer(slot.count, 1, Number.MAX_SAFE_INTEGER)
+            && (slot.wear == null || (Number.isFinite(slot.wear) && slot.wear >= 0)))), 'has invalid inventory items');
+          // Ordinary Sort splits oversized piles into stack-sized objects.
+          // Granary has its own sort and intentionally keeps one large pile.
+          if (!granaryStores.has(value)) {
+            for (const slot of v) if (slot) expandedSlots += Math.ceil(slot.count / stackLimit(slot.id));
+            requireWorld(expandedSlots <= 100000, 'has inventory stacks too large to sort safely');
+          }
           slots += v.length;
           requireWorld(slots <= 100000, 'has too many inventory slots');
         }

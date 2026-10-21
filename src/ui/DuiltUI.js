@@ -510,6 +510,8 @@ export class DuiltUI {
 
   onPanelClosed(id) {
     this.hideSlotTip();
+    // Closing a popup cancels its unpaid work, even if its DOM is reused.
+    this.q('#' + id)?.querySelectorAll('.craft-work').forEach(work => work.remove());
     if (id === 'panel-bag') this.held = null;
     if (id === 'panel-building') this.building = null;
     // The open storehouse is forgotten on the way out, so the next one you
@@ -2126,6 +2128,7 @@ export class DuiltUI {
           ${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${stationName(r.station)}</span>` : ''}
           <span class="recipe-cost">${inputs}</span>
           ${takes}
+          ${r.tools?.length ? `<span class="recipe-tools">Reusable tools: ${r.tools.map(id => escapeHtml(itemName(id))).join(', ')}</span>` : ''}
           <div class="recipe-actions">
             <!--
               Never disabled. A dead button eats the tap and says nothing, so
@@ -2186,16 +2189,65 @@ export class DuiltUI {
     const d = this.duilt;
     root.querySelectorAll('[data-craft]').forEach((b) =>
       b.addEventListener('click', () => {
+        if (this.duilt !== d || !b.isConnected) return;
+        const recipe = RECIPES.find(r => r.id === b.dataset.craft);
+        const finish = (times) => {
+          if (this.duilt !== d || !b.isConnected) return;
+          const pos = this.game.player?.position;
+          const res = d.crafting.craft(b.dataset.craft, times,
+            { near: pos, atStations: d.stationsNear(pos) });
+          if (!res.started) {
+            this.bus.emit('toast', res.ok
+              ? { kind: 'challenge', title: 'Made ' + res.made + ' ' + res.name.toLowerCase() }
+              : { kind: 'xp', title: 'Cannot make that', body: res.reason });
+          }
+          rerender();
+        };
+        if (!recipe?.steps || recipe.study) return finish(Number(b.dataset.times));
+        // Prepare a batch without spending it. Recheck the live inventory and
+        // station on every action, and pay only when the final step succeeds.
+        const tile = b.closest('.recipe-tile');
+        root.querySelectorAll('.craft-work').forEach(work => work.remove());
+        const work = document.createElement('div');
+        work.className = 'craft-work';
         const pos = this.game.player?.position;
-        const res = d.crafting.craft(b.dataset.craft, Number(b.dataset.times),
-          { near: pos, atStations: d.stationsNear(pos) });
-        // Research starting says so itself (Game's research:started).
-        if (!res.started) {
-          this.bus.emit('toast', res.ok
-            ? { kind: 'challenge', title: `Made ${res.made} ${res.name.toLowerCase()}` }
-            : { kind: 'xp', title: 'Cannot make that', body: res.reason });
+        const current = d.crafting.availableRecipe(recipe.id, d.sandbox ? FINAL_AGE : d.age, { near: pos, atStations: d.stationsNear(pos) });
+        if (!current?.ok) {
+          this.bus.emit('toast', { kind: 'xp', title: 'Cannot make that', body: current?.reason ?? 'This recipe is no longer available.' });
+          return rerender();
         }
-        rerender();
+        const cap = Math.max(1, current?.maxBatch ?? 1);
+        work.innerHTML = '<label>Batches <input data-work-count type="number" min="1" max="' + cap + '" value="' + Math.min(cap, Number(b.dataset.times)) + '" inputmode="numeric"></label><p data-work-summary></p><p data-work-status role="status" aria-live="polite"></p><button class="secondary" data-work-next></button><button class="secondary" data-work-cancel>Cancel</button>';
+        tile.append(work);
+        let step = 0, done = false, batches = null;
+        const count = work.querySelector('[data-work-count]');
+        const next = work.querySelector('[data-work-next]');
+        const status = work.querySelector('[data-work-status]');
+        const show = () => { status.textContent = 'Step ' + (step + 1) + ' of ' + recipe.steps.length + ' · ' + recipe.steps[step]; next.textContent = recipe.steps[step]; };
+        const summary = () => {
+          const times = Number(count.value);
+          work.querySelector('[data-work-summary]').textContent = Number.isSafeInteger(times) && times >= 1 && times <= cap
+            ? `Makes ${recipe.output.count * times} ${itemName(recipe.output.id)} · Uses ` + Object.entries(recipe.inputs).map(([id, n]) => `${n * times} ${itemName(id)}`).join(', ') + '. Paid on the last step.'
+            : `Choose 1 to ${cap} whole batches.`;
+        };
+        count.addEventListener('input', summary);
+        work.querySelector('[data-work-cancel]').addEventListener('click', () => { done = true; work.remove(); b.focus(); });
+        next.addEventListener('click', () => {
+          if (done || !work.isConnected || this.duilt !== d) return;
+          const times = Number(count.value);
+          if (!Number.isSafeInteger(times) || times < 1 || times > cap) { status.textContent = 'Choose 1 to ' + cap + ' whole batches.'; return; }
+          if (batches !== null && times !== batches) { status.textContent = 'Batch changed — cancel and start again.'; return; }
+          const position = this.game.player?.position;
+          const live = d.crafting.availableRecipe(recipe.id, d.sandbox ? FINAL_AGE : d.age, { near: position, atStations: d.stationsNear(position) });
+          if (!live?.ok || times > live.maxBatch) { status.textContent = live?.reason ?? 'Materials changed — choose a smaller batch.'; return; }
+          batches = times;
+          count.disabled = true;
+          if (++step === recipe.steps.length) { done = true; return finish(times); }
+          show();
+        });
+        summary();
+        show();
+        next.focus();
       }));
   }
 

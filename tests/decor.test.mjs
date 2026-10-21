@@ -12,6 +12,8 @@ import { textureFor } from '../src/config/textures.js';
 import { tileFor } from '../src/render/BlockTextures.js';
 import { boxesFor, wallBoxes, pillarBoxes, PROP_SHAPES } from '../src/world/propShapes.js';
 import { itemIcon } from '../src/config/cubes.js';
+import { Inventory } from '../src/items/Inventory.js';
+import { Crafting } from '../src/duilt/Crafting.js';
 
 /**
  * Phase 7a — the decorative pack (docs/history/plan-phase7-lore.md): walls that join
@@ -35,7 +37,15 @@ const PIECES = ['dark_stone', 'dark_brick', 'sky_marble', 'gold_trim', 'timber_f
   const items = PIECES.map((id) => ITEMS_BY_ID.get(id));
   ok(`all ${PIECES.length} pieces are things you can hold`, items.every((i) => i && BLOCKS_BY_ID.has(i.block)));
   ok('each places a block you can put down', items.every((i) => PLACEABLE_BLOCKS.some((b) => b.id === i.block)));
-  ok('each is made at the bench', PIECES.every((id) => RECIPES.some((r) => r.output.id === id && r.station === 'hand')));
+  ok('each piece can be crafted with its materials, tools and processing station', PIECES.every((id) => {
+    const recipe = RECIPES.find((r) => r.output.id === id);
+    if (!recipe) return false;
+    const bag = new Inventory();
+    for (const [part, n] of Object.entries(recipe.inputs)) bag.add(part, n);
+    for (const tool of recipe.tools ?? []) bag.add(tool, 1);
+    const bench = new Crafting({ inventory: bag, world: null });
+    return bench.craft(recipe.id, 1, { atStations: [recipe.station] }).ok && bag.countOf(id) >= recipe.output.count;
+  }));
   ok('from things that exist', PIECES.every((id) => Object.keys(RECIPES.find((r) => r.output.id === id).inputs).every((k) => ITEMS_BY_ID.has(k))));
   ok('each has a mark of its own to draw', items.every((i) => GLYPHS[i.glyph] && GLYPHS[BLOCKS_BY_ID.get(i.block).glyph]));
   ok('and an icon in the bag', items.every((i) => (itemIcon(i) ?? '').startsWith('<svg')));

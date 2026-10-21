@@ -286,21 +286,8 @@ export const STRUCTURES = [
     // asked for across every building — and it is the levels below, not
     // the building itself, that turn it into something worth having
     // staffed, climbing toward that same ceiling rather than past it.
-    // Asked for directly: "Quarry could benefit for giving cobble too, a bit
-    // less than stone." Every level gives both, less cobble than stone — two
-    // to one at the first, still ten a day in all, then about three to two.
-    // Each cycle stays under the eight hours an absence is paid for (see
-    // StructureRegistry.collect), or a first quarry would never pay out
-    // while you were away.
-    // Then, reported directly: "Bricks production is way higher than stone.
-    // Quarry can produce cobble and white and dark stone." So every level
-    // gives all four, stone still the most of any one of them, and a first
-    // quarry (twelve stone a day) out-makes a first kiln (six brick).
-    // And clay (asked for directly: "Can you add 100 clay ... I can't find
-    // it anywhere. Maybe we need some way to get clay quarry is a good
-    // idea"): clay only lay on top of wetland, and a timber frame needs it.
-    // One a cycle at every level — six a day, a few frames' worth.
-    produces: { stone: 2, cobblestone: 1, stone_white: 1, dark_stone: 1, clay: 1 },
+    // Quarry output is plain rock; use a mill, forge or bleach bath to finish it.
+    produces: { stone: 2 },
     everySeconds: 14400,
     skill: 'building',
     /**
@@ -324,7 +311,7 @@ export const STRUCTURES = [
       { id: 'seam', name: 'A Scrape', blurb: 'A scrape at the rock. Barely worth the walk.', needs: [] },
       {
         id: 'face', name: 'A Working Face', blurb: 'Wide enough to work properly.',
-        produces: { stone: 2, cobblestone: 2, stone_white: 1, dark_stone: 1, clay: 1 }, everySeconds: 14400,
+        produces: { stone: 2 }, everySeconds: 13800,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 40, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 16, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
@@ -332,7 +319,7 @@ export const STRUCTURES = [
       },
       {
         id: 'deepcut', name: 'A Deep Dig', blurb: 'Dug back far enough to keep two haulers busy.',
-        produces: { stone: 2, cobblestone: 2, stone_white: 2, dark_stone: 1, clay: 1 }, everySeconds: 14400,
+        produces: { stone: 2 }, everySeconds: 13200,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 60, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 28, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
@@ -340,7 +327,7 @@ export const STRUCTURES = [
       },
       {
         id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, opened right up.',
-        produces: { stone: 2, cobblestone: 2, stone_white: 2, dark_stone: 2, clay: 1 }, everySeconds: 14400,
+        produces: { stone: 2 }, everySeconds: 12600,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 90, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 44, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
@@ -348,7 +335,7 @@ export const STRUCTURES = [
       },
       {
         id: 'openpit', name: 'An Open Pit', blurb: 'As much rock as a claim this size can show.',
-        produces: { stone: 2, cobblestone: 2, stone_white: 2, dark_stone: 2, clay: 1 }, everySeconds: 12000,
+        produces: { stone: 2 }, everySeconds: 12000,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 130, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 64, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),

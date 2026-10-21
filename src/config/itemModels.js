@@ -214,6 +214,40 @@ ITEM_MODELS.hemp_fibre = [
 // render/heldModel.js, which reads these first): a tool's head faces -x,
 // the way the hand swings it.
 const HAFT = 0x8a6440, GRIP = 0x5e4128;
+// Reusable workshop tools share these small models between bag and hand.
+ITEM_MODELS.carpentry_saw = [
+  box(0.16, 0.18, 0.46, 0.27, 0.88, 0.54, 0xb7bdc2),
+  box(0.16, 0.1, 0.44, 0.32, 0.2, 0.56, HAFT),
+  box(0.5, 0.1, 0.44, 0.62, 0.2, 0.56, HAFT),
+  box(0.28, 0.05, 0.44, 0.56, 0.13, 0.56, GRIP),
+  ...Array.from({ length: 6 }, (_, i) => box(0.1, 0.24 + i * 0.1, 0.47, 0.16, 0.29 + i * 0.1, 0.53, 0xe0e4e5)),
+];
+ITEM_MODELS.carpentry_chisel = [
+  box(0.42, 0.04, 0.42, 0.58, 0.42, 0.58, HAFT),
+  box(0.4, 0.4, 0.4, 0.6, 0.48, 0.6, 0xb3a17a),
+  box(0.45, 0.48, 0.45, 0.55, 0.88, 0.55, 0xaeb8bf),
+  box(0.39, 0.86, 0.46, 0.61, 0.98, 0.54, 0xe0e4e5),
+];
+ITEM_MODELS.carpentry_plane = [
+  box(0.12, 0.04, 0.26, 0.88, 0.28, 0.74, HAFT),
+  box(0.1, 0, 0.24, 0.9, 0.06, 0.76, GRIP),
+  box(0.42, 0.28, 0.38, 0.55, 0.58, 0.62, 0xb7bdc2),
+  box(0.65, 0.28, 0.42, 0.78, 0.55, 0.58, GRIP),
+  box(0.24, 0.28, 0.43, 0.34, 0.44, 0.57, GRIP),
+];
+ITEM_MODELS.carpentry_mallet = [
+  box(0.45, 0.02, 0.45, 0.55, 0.78, 0.55, GRIP),
+  box(0.18, 0.64, 0.32, 0.82, 0.94, 0.68, HAFT),
+  box(0.16, 0.64, 0.32, 0.24, 0.94, 0.68, 0xc5a476),
+];
+ITEM_MODELS.weapon_mold = [
+  box(0.12, 0, 0.24, 0.88, 0.12, 0.76, 0x775c49),
+  box(0.12, 0.12, 0.24, 0.88, 0.28, 0.34, 0xb38965),
+  box(0.12, 0.12, 0.66, 0.88, 0.28, 0.76, 0xb38965),
+  box(0.12, 0.12, 0.34, 0.24, 0.28, 0.66, 0xb38965),
+  box(0.76, 0.12, 0.34, 0.88, 0.28, 0.66, 0xb38965),
+  box(0.32, 0.12, 0.46, 0.68, 0.14, 0.54, 0x493b35),
+];
 const axeModel = (metal, edge) => [
   box(0.45, 0, 0.45, 0.55, 0.9, 0.55, HAFT),
   box(0.22, 0.58, 0.42, 0.45, 0.88, 0.58, metal),

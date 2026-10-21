@@ -33,23 +33,32 @@ export const STACK_TOOL = 1;
 // ground it came from — with the same tool-only items (below) pastelised on
 // their own since they have no block to match.
 export const ITEMS = [
+  { id: 'bleach_bucket', name: 'Bleach Bucket', kind: 'refined', stackTo: 1, color: 0xdde8d7, glyph: 'bucket', block: 524, madeBy: 'Water and wood ash mixed in a bucket — place it to wash stone pale' },
+  { id: 'forge', name: 'Forge', kind: 'refined', stackTo: 10, color: 0x655367, glyph: 'stone', block: 525, madeBy: 'Build from stone and clay — place it to darken rock and forge weapons' },
+  ...[
+    ['carpentry_saw', 'Carpentry Saw', 'Cuts planks to length'],
+    ['carpentry_chisel', 'Carpentry Chisel', 'Cuts mortises and carved details'],
+    ['carpentry_plane', 'Carpentry Plane', 'Smooths the timber'],
+    ['carpentry_mallet', 'Carpentry Mallet', 'Fits the joints together'],
+    ['weapon_mold', 'Weapon Mold', 'Shapes a weapon before forging'],
+  ].map(([id, name, madeBy]) => ({ id, name, madeBy: madeBy + ' — reusable; keep it in your bag', kind: 'tool', stackTo: 1, color: 0xb99673, glyph: 'axe', durability: null })),
   // --- raw materials, gathered from the world -----------------------------
   { id: 'dirt', name: 'Dirt', kind: 'raw', stackTo: STACK_BULK, color: 0xc69972, glyph: 'dirt', block: 2, madeBy: 'Foraged from the ground' },
   { id: 'wood', name: 'Wood', kind: 'raw', stackTo: STACK_BULK, color: 0xcc9e72, glyph: 'log', block: 4, madeBy: 'Cut from trees' },
   { id: 'leaves', name: 'Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x82c675, glyph: 'leaf', block: 5, madeBy: 'Stripped from trees' },
-  { id: 'stone', name: 'Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stone', block: 3, madeBy: 'Mined from rock' },
+  { id: 'stone', name: 'Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stone', block: 3, madeBy: 'Break rock blocks, or collect Stone from a quarry' },
   // The rarer rocks underground (world/ChunkGen.js's rock layers).
-  { id: 'stone_white', name: 'White Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xe4e0d8, glyph: 'stone', block: 235, madeBy: 'Mined from the pale rock layers' },
+  { id: 'stone_white', name: 'White Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xe4e0d8, glyph: 'stone', block: 235, madeBy: 'Washed pale in a placed bleach bucket, or mined from pale rock' },
   { id: 'stone_turquoise', name: 'Turquoise Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x63b5ab, glyph: 'stone', block: 236, madeBy: 'Mined from a rare blue-green seam' },
-  { id: 'stone_grey', name: 'Dark Grey Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x6c6b6a, glyph: 'stone', block: 238, madeBy: 'Mined from the dark rock layers' },
-  { id: 'stone_orange', name: 'Orange Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xd38d57, glyph: 'stone', block: 237, madeBy: 'Mined from the rarest seam of all' },
+  { id: 'stone_grey', name: 'Dark Grey Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x6c6b6a, glyph: 'stone', block: 238, madeBy: 'Darkened over a forge, or mined from dark rock' },
+  { id: 'stone_orange', name: 'Orange Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xd38d57, glyph: 'stone', block: 237, madeBy: 'Stone tinted with clay at a stone mill, or mined from an orange seam' },
   { id: 'sand', name: 'Sand', kind: 'raw', stackTo: STACK_BULK, color: 0xded09f, glyph: 'sand', block: 6, madeBy: 'Dug from the riverbank' },
   { id: 'grass', name: 'Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x97cc81, glyph: 'grass', block: 1, madeBy: 'Cut from the plains' },
   // What the other kinds of country are made of. Without these, digging up a
   // forest floor or a river bank would hand you nothing at all.
   { id: 'moss', name: 'Moss', kind: 'raw', stackTo: STACK_BULK, color: 0x81c271, glyph: 'moss', block: 22, madeBy: 'Lifted from a forest floor' },
-  { id: 'gravel', name: 'Gravel', kind: 'raw', stackTo: STACK_BULK, color: 0xbbb6ae, glyph: 'gravel', block: 23, madeBy: 'Scraped off the mountainside' },
-  { id: 'clay', name: 'Clay', kind: 'raw', stackTo: STACK_BULK, color: 0xb39882, glyph: 'clay', block: 24, madeBy: 'Dug from wetland ground — and a quarry turns some up' },
+  { id: 'gravel', name: 'Gravel', kind: 'raw', stackTo: STACK_BULK, color: 0xbbb6ae, glyph: 'gravel', block: 23, madeBy: 'Dig gravel deposits, or grind stone at a stone mill' },
+  { id: 'clay', name: 'Clay', kind: 'raw', stackTo: STACK_BULK, color: 0xb39882, glyph: 'clay', block: 24, madeBy: 'Dug from wetland ground, or washed from dirt by a river' },
   // The two extra forests' own wood, and the tall mountain's own hazards —
   // added alongside the terrain overhaul. Same shape as Wood/Leaves above:
   // gathered, not crafted, which is why they carry no recipe (see
@@ -70,10 +79,10 @@ export const ITEMS = [
   { id: 'compost', name: 'Compost', kind: 'refined', stackTo: STACK_GOODS, color: 0x5c4030, glyph: 'moss', madeBy: 'Leaves and seeds mixed at a compost bin — use on a crop or add to a farm to move growing crops ahead one stage' },
 
   // --- what the quarry, kiln and mine give back ----------------------------
-  { id: 'cobblestone', name: 'Cobblestone', kind: 'raw', stackTo: STACK_BULK, color: 0xc8c6c2, glyph: 'cobble', block: 8, madeBy: 'Split from quarried stone' },
+  { id: 'cobblestone', name: 'Cobblestone', kind: 'raw', stackTo: STACK_BULK, color: 0xc8c6c2, glyph: 'cobble', block: 8, madeBy: 'Split Stone into Cobblestone at a stone mill' },
   { id: 'brick', name: 'Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'brick', block: 9, madeBy: 'Fired from earth in a kiln' },
   { id: 'glass', name: 'Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xb9dce8, glyph: 'pane', block: 10, madeBy: 'Fired from sand in a kiln' },
-  { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: 'Cut and dressed at a workshop' },
+  { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: 'Dress Stone into Marble at a stone mill' },
   { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xf9d040, glyph: 'gold', block: 13, madeBy: 'Smelted from gold ore at a foundry. A mine brings the ore up from its third level' },
 
   // --- growing things ------------------------------------------------------
@@ -500,8 +509,22 @@ for (const f of WOOD_FURNITURE) {
   ITEMS.push({ ...oak, id, name: b.name, color: b.color, block: f.id, madeBy: `${oak.madeBy} — in ${f.wood} wood` });
 }
 
+// Furniture needs the reusable carpenter's kit as well as its materials.
+for (const id of FURNITURE_ITEM.values()) {
+  const item = ITEMS.find(i => i.id === id);
+  if (item) item.madeBy += ' — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag';
+}
+
 // Tools past stone: iron, gold, sky and dark (backlog batch 2) — see config/tiers.js.
 ITEMS.push(...tieredItems(new Map(ITEMS.map((i) => [i.id, i]))));
+
+for (const item of ITEMS) {
+  if (/^sword_/.test(item.id) && !['sword_wood', 'sword_stone'].includes(item.id)) {
+    item.madeBy = 'Forge from its listed materials at a Forge or Foundry — keep a Weapon Mold in your bag';
+  }
+  if (item.id === 'sword_wood' || item.id === 'sword_stone') item.madeBy += ' — keep a Carpentry Chisel in your bag';
+  if (item.id === 'bow') item.madeBy += ' — keep a Carpentry Saw and Plane in your bag';
+}
 
 // Upgraded pieces (playtest, P6) — see config/upgrades.js. Each is its
 // piece with the upgrade's name in front and its power added.
