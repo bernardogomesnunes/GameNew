@@ -11,6 +11,6 @@ const transportWith = (status, body) => {
 
 await test('a size limit is a plain message and is not retried', async () => {
   const t = transportWith(400, '{"code":"23514","message":"new row for relation \\"world_chunks\\" violates check constraint \\"world_chunks_rle_size\\""}');
-  await assert.rejects(() => t.request('/world_chunks', { method: 'POST', body: [] }), /too large to sync/);
+  await assert.rejects(() => t.request('/world_chunks', { method: 'POST', body: [] }), /too large to save to your account/);
   assert.equal(worthRetrying({ status: 400 }), false);
 });

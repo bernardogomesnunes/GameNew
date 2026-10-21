@@ -9,7 +9,6 @@ import { stampSky } from './skyKingdom.js';
 import { inFuture, stampFuture, FUTURE_GROUND } from './future.js';
 import { stampRivals, rivalSites } from './rivals.js';
 import { deepCaveColumn, stampDeepCaves, stampCaveRuins } from './deepCaves.js';
-import { raiseFor } from './massifs.js';
 
 /** Which BIOMES entry is the short range — used for its streams. */
 const MOUNTAINS1_INDEX = BIOME_INDEX.get('mountains1');
@@ -345,7 +344,7 @@ export class ChunkGen {
     if (this._caveSpans.length && this._caveSpans.some((s) => y >= s.floor && y <= s.ceiling)) return AIR;
     // Keep tall peaks solid above ordinary caves: perforated flanks expose
     // large amounts of underground geometry. Deep gallery spans take priority.
-    if (y > 120) return NOT_CARVED;
+    if (y > CAVE_TOP) return NOT_CARVED;
     const cavern = biomeIndex === MOUNTAINS2_INDEX && y < CAVERN_Y_MAX;
     const width = cavern ? CAVERN_WIDTH : CAVE_WIDTH;
     const n = this.cave(x * CAVE_FREQ, y * CAVE_FREQ_Y, z * CAVE_FREQ);
