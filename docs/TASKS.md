@@ -77,6 +77,7 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 | ID | What | PR |
 |---|---|---|
+| INV-1 | "Can you add search to inventory? Keep the height of the panel fixed while giving results" — searches bag and equipped items by name, keeps original slot actions, and retains the panel height for many, few or no matches. Equipment rows collapse while filtering and return when cleared. | `codex/inventory-search`; awaiting integration |
 | NOW-21 | The game was breaking with the new land: far fewer triangles to draw everywhere (about half at home, a tenth at a huge peak); huge peaks less blobby, with an uneven outline, ridges and valleys, and a second summit. | #234 |
 | NOW-20 | Saving: a failed upload says so once, tries again by itself, and says when it's up; a big world's backup copy fits now. | #233 |
 | NOW-19 | The new mountains, plains and giant trees in old worlds too; the rounder starter house, townhouse and cottages. | #232 |
