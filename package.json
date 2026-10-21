@@ -14,7 +14,7 @@
     "test": "node tests/run.mjs",
     "test:browser": "node tests/browser-smoke.mjs",
     "test:crafting": "node tests/crafting-processing.test.mjs && node tests/crafting-browser.mjs",
-    "test:performance": "node tests/performance-safety.test.mjs && node tests/streaming-budget.test.mjs && node tools/performance/run.mjs",
+    "test:performance": "node tests/performance-safety.test.mjs && node tests/streaming-budget.test.mjs && node tests/performance-fixtures.test.mjs && node tests/performance-report.test.mjs && node tools/performance/run.mjs",
     "test:performance:browser": "node tools/performance/browser.mjs"
   },
   "devDependencies": {

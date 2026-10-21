@@ -1,6 +1,7 @@
 {
   "scenes": {
-    "peak": { "surfaceTriangles": 2600, "geometryBytes": 26500000, "meshes": 40 },
+    "peak": { "surfaceTriangles": 6700, "geometryBytes": 26500000, "meshes": 40 },
+    "range_slope": { "surfaceTriangles": 13500, "geometryBytes": 11500000, "meshes": 45 },
     "forest": { "surfaceTriangles": 61000, "geometryBytes": 17500000, "meshes": 34 },
     "cave": { "surfaceTriangles": 26000, "geometryBytes": 10500000, "meshes": 45 },
     "settlement": { "surfaceTriangles": 13000, "geometryBytes": 10000000, "meshes": 37 }

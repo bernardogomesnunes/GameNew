@@ -40,20 +40,32 @@ Reports go to `artifacts/performance/node.json` and `browser.json`. The browser
 test draws actual terrain and the cow GLB, including an underground viewpoint,
 then repeatedly rebuilds and disposes meshes. A context loss or growth in
 geometry/texture/live WebGL-buffer counts after disposal fails the check.
+Every disposal cycle is checked against the warmed baseline, including
+intermediate cycles. Missing scenes, incomplete cycles and invalid or missing
+counters fail validation; an incomplete browser report cannot produce a pass.
 Buffer creation/deletion is instrumented only in the test, since geometry
 counts alone cannot detect leaked instance buffers. These are allocation
 counts, not a measurement of available GPU bytes. CPU geometry buffer sizes are
 recorded separately; GPU/driver overhead is not included in them.
 
 `tools/performance/budgets.json` gates geometry counts/bytes and draw calls. The
-initial terrain caps allow roughly 25% headroom over this reference run:
+terrain caps allow roughly 25% headroom over this reference run:
 
 | Scene (seed 4242; 9 meshed chunks + neighbour ring) | Surface triangles | All geometry bytes | Meshes |
 |---|---:|---:|---:|
-| Peak (-2521, -2584) | 2,012 | 21,027,084 | 32 |
+| Peak (-2521, -2720; height 181) | 5,318 | 20,815,392 | 34 |
+| Range slope (-2521, -2584; height 134) | 10,774 | 9,150,336 | 36 |
 | Giant forest (-744, 600) | 48,032 | 13,906,308 | 27 |
 | Gallery (340, 781) | 20,384 | 8,325,408 | 36 |
 | Starter settlement | 9,942 | 7,884,552 | 29 |
+
+The connected-range terrain update changed the original peak coordinate into
+a slope. Keep that original window as `range_slope` and add a fixed high crest
+as `peak`; the crest fixture fails if its height falls below 170. The updated
+peak surface cap is 6,700 triangles; its 26.5 MB geometry and 40-mesh caps stay
+unchanged. The added slope caps are 13,500 surface triangles, 11.5 MB and 45
+meshes. Forest, cave, settlement and browser caps remain unchanged. This
+rebaseline accounts for intentional terrain changes and retains both windows.
 
 These are small representative windows, not whole-view-distance guarantees.
 The Node report includes all deep geometry; the browser also checks how much is
@@ -66,8 +78,9 @@ the same device, using several runs.
 Do not raise a budget just to make a failing change pass. Explain the content
 cost, check the affected scenes on a phone, and review the new limit. The
 workflow runs independently of the unit-test job so unrelated unit failures do
-not prevent performance measurements. Branch protection must separately require
-the Performance budgets job if merges should be blocked on it.
+not prevent performance measurements. Its stable job name is `Performance
+budgets`; it also supports manual dispatch. Requiring that check in main's
+branch protection is a separate repository setting.
 
 ## Runtime changes and limits
 
@@ -89,8 +102,9 @@ This change does not automatically lower player-selected detail settings.
 
 ## Measured comparison
 
-In the same nine peak chunks, comparing the checkout's HEAD terrain/mesher
-against these fixes, surface triangles fall from **274,506 to 2,012**. Deep
+In the original nine peak chunks, comparing the terrain/mesher before the cave
+fix against that fix (before the connected-range terrain update), surface
+triangles fall from **274,506 to 2,012**. Deep
 triangles change from 122,006 to 267,566: the classifier correctly moves sealed
 caves out of the distant surface mesh. Total triangles also decrease, from
 396,512 to 269,578, because new high rock is no longer carved throughout.
@@ -120,5 +134,8 @@ illustrations, resolving the earlier eager-import failure.
   the long-queue allowance override, zero-budget far-tile starvation, and
   incomplete instance-buffer accounting in the initial harness.
 
-Work remains local. No GitHub branch-protection settings were changed; phone
-testing and the separate 30-minute settlement/war profiling task remain open.
+Runtime safeguards are integrated into main. The report-validation and terrain
+fixture follow-up is being delivered as a separate PR. Physical-phone testing
+and the separate 30-minute settlement/war profiling task remain open; these
+automated checks cannot guarantee that future content will never cause a
+performance problem.
