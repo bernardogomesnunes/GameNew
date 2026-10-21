@@ -29,22 +29,20 @@ const KINDS = [
     id: 'duilt',
     name: 'Duilt',
     tagline: 'The game',
-    blurb: 'Arrive on thirty-two blocks of land with an axe and a bucket. '
-      + 'Chop a tree, fetch water, make a pickaxe — then claim a forest, a farm and a house, and the border moves out. Twelve ages of it.',
+    blurb: 'Gather, build and grow through twelve ages.',
     recommended: true,
   },
   {
     id: 'battle',
     name: 'Battle',
     tagline: 'Rivals',
-    blurb: 'Duilt, with three rival cities out in the world. Once you build a barracks their armies come for you; '
-      + 'march on a city, beat its garrison and take its standard to break its strength. Nobody wins for good — they rebuild.',
+    blurb: 'Build your town. Defend it from three rival cities.',
   },
   {
     id: 'creative',
     name: 'Creative',
     tagline: 'Free build',
-    blurb: 'Generated terrain and every block available from the start. Nothing to earn, nothing to lose.',
+    blurb: 'Every block unlocked. Build without limits.',
   },
 ];
 
@@ -358,10 +356,9 @@ export class HomeScreen {
       </div>
       <div class="kind-list">
         ${KINDS.map((k) => `
-          <button class="kind-card ${k.id === this.kind ? 'chosen' : ''}" data-kind="${k.id}">
+          <button class="kind-card ${k.id === this.kind ? 'chosen' : ''}" data-kind="${k.id}" aria-pressed="${k.id === this.kind}">
             <span class="kind-head">
               <strong>${k.name}</strong>
-              <em>${k.tagline}</em>
               ${k.recommended ? '<span class="kind-flag">Start here</span>' : ''}
             </span>
             <span class="kind-blurb">${k.blurb}</span>

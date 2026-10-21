@@ -186,6 +186,12 @@ browser comparisons are in `art/review/terrain-ranges-*.png`.
 | MOBS-1 | Villagers going onto roofs without jumping. (Found: a villager could step straight up 4 blocks.) Now they step up one block at a time and walk round a wall or house in the way; where there's no way, they give up and stand. | ChatGPT | done, #231 |
 | MOBS-2 | More natural behaviour for mobs. In part: "Polish idle and roaming creatures" (ChatGPT, on main since 20 October). | Claude | done locally on `codex/remaining-priority-fixes`; not merged |
 
+### 3.6 World creation
+
+| ID | What | Who | Status |
+|---|---|---|---|
+| HOME-1 | "the amount of text we have on the selection of world type when creating a new world" — "show all cards and buttons in mobile instead of having scroll". Short descriptions and a compact layout keep Duilt, Battle, Creative, Back and Next visible; short wide screens use three columns. Verified in a touch browser at 11 phone/desktop sizes, down to 320×480, with mode selection and navigation preserved. | ChatGPT | done locally; not merged; physical-phone check remains |
+
 ---
 
 ## 4. Buildings
