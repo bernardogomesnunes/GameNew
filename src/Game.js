@@ -2620,6 +2620,10 @@ export class Game {
   /** Starts or stops placing on repeat — the same idea as setBreaking, for Place. */
   setPlacing(on) {
     const want = on && !this.armed && !this.moving;
+    if (this.selectedItemId === 'storage_remote') {
+      this.placing = false;
+      return;
+    }
     if (want === this.placing) return;
     this.placing = want;
     if (want) {
@@ -2678,6 +2682,7 @@ export class Game {
     const places = () => { this.secondaryAction(); return 'place'; };
     if (this.manning || this.pendingClaim || this.pendingClaimColumn || this.pendingClear
       || this.pendingRoof || this.pendingTemplate) return breaks();
+    if (this.selectedItemId === 'storage_remote') return places();
     // A finger on someone who'll talk or trade means them, wherever the
     // crosshair is (reported directly: "Clicking on a market man does not
     // open the menu to trade" — the tap went to the floor under the
@@ -2723,6 +2728,10 @@ export class Game {
   secondaryAction() {
     this.avatarView?.strike();
     this.handView?.strike();
+    // The held remote uses this world's existing shelves, wherever you aim.
+    if (this.selectedItemId === 'storage_remote' && !this.armed && !this.moving && !this.manning) {
+      return void this.ui.openStores(true);
+    }
     // Pointed at the Stone King, Place speaks to him (Phase 7e) — and the hermit, too (7j).
     if (this.kingTarget()) return void this.speakToKing();
     if (this.hermitTarget()) return void this.speakToHermit();
@@ -6898,6 +6907,7 @@ export class Game {
   placeBlock() {
     // Empty-handed, there is nothing to put down.
     if (this.selectedItemId === BARE_HANDS) return;
+    if (this.selectedItemId === 'storage_remote') return;
     const hit = this.raycast();
     if (!hit) return;
     // Place on a gate swings it (secondaryAction); a held Place repeating
@@ -7942,6 +7952,14 @@ export class Game {
     if (this.moving) {
       this.hoverBox.visible = false;
       this.updateMove();
+      return;
+    }
+
+    if (this.selectedItemId === 'storage_remote' && !this.armed) {
+      this.hoverBox.visible = false;
+      this.hintUses = true;
+      this.ui?.setAimedSwing('Open');
+      this.ui?.setBuildingHint(`Storage Remote — ${this.ui?.isTouch ? 'tap' : 'right click'} to open stores`, { manage: false });
       return;
     }
 

@@ -135,7 +135,7 @@ processing routes provide their crafted supply and turquoise stays natural.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| STORE-1 | "Buildings need a lot of blocks to do. And food and all take a lot of space. We need a third storage item which is called a storage interface. Which is a block that should be placed on top of the storage manager and it allows me to see the list of storages and what they have, and clicking shows me all the items." | Claude | done; integrated into main 21 October |
+| STORE-1 | "Buildings need a lot of blocks to do. And food and all take a lot of space. We need a third storage item which is called a storage interface. Which is a block that should be placed on top of the storage manager and it allows me to see the list of storages and what they have, and clicking shows me all the items." Follow-up: reusable **Storage Remote**, held in hand, opens the current world's store directory from anywhere with tap/right click; individual shelves and transfers use the existing interface. Age 3 hand recipe: 4 planks, 1 glass, 2 copper ingots. Includes a 3D model and empty-store guidance. | Claude / ChatGPT | interface integrated; remote implemented and verified, awaiting PR integration |
 
 ### 3.3 Villagers who work
 

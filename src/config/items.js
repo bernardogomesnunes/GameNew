@@ -301,6 +301,7 @@ export const ITEMS = [
   { id: 'catapult', name: 'Catapult', kind: 'refined', stackTo: STACK_GOODS, color: 0x8a6440, glyph: 'catapult', block: 152, madeBy: 'Built at the bench — Place mans it, Break throws a stone' },
   { id: 'storage_controller', name: 'Storage Controller', kind: 'refined', stackTo: STACK_GOODS, color: 0xa5814f, glyph: 'controller', block: 239, madeBy: 'Built at the bench, or comes with a town hall — Place on it to reach every storehouse' },
   { id: 'storage_interface', name: 'Storage Interface', kind: 'refined', stackTo: STACK_GOODS, color: 0x91b9a1, glyph: 'controller', block: 526, madeBy: 'Place above a storage controller to browse individual stores and open their shelves' },
+  { id: 'storage_remote', name: 'Storage Remote', kind: 'tool', stackTo: 1, color: 0x91b9a1, glyph: 'controller', durability: null, madeBy: 'Hold and tap or right click to browse this world’s stores from anywhere — reusable' },
   { id: 'chest', name: 'Chest', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a6b3f, glyph: 'chest', block: 148, madeBy: 'Knocked together from planks — Place opens it' },
   { id: 'door', name: 'Door', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08a60, glyph: 'door', block: 69, madeBy: 'Hung from planks — Place opens and shuts it' },
   // Every wood its own planks, fence, gate, door and trapdoor (backlog batch 3,

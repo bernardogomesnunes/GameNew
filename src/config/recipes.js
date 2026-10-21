@@ -21,6 +21,7 @@ import { CROPS } from './crops.js';
 
 export const RECIPES = [
   { id: 'storage_interface', name: 'Storage Interface', station: 'hand', age: 3, inputs: { planks: 6, glass: 2, copper_ingot: 2 }, output: { id: 'storage_interface', count: 1 }, blurb: 'Place on top of a storage controller to browse each store.' },
+  { id: 'storage_remote', name: 'Storage Remote', station: 'hand', age: 3, inputs: { planks: 4, glass: 1, copper_ingot: 2 }, output: { id: 'storage_remote', count: 1 }, blurb: 'Hold and use to open this world’s storage directory from anywhere. Reusable.' },
   {
     id: 'compost_bin', name: 'Compost Bin', station: 'hand', age: 2,
     inputs: { planks: 6, leaves: 4 }, output: { id: 'compost_bin', count: 1 },
