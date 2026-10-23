@@ -19,8 +19,59 @@ docs are in `docs/history/`, for reference only.
 - **Who**: Claude, Cline (briefs in section 12), or the owner.
 - **Status**: *to do*, *waiting* (on the owner), or *done* with its PR.
 
+Names in **Who** record previous responsibility, not an exclusive reservation.
+Any agent can take an open task after checking current main, open PRs and other
+active work. A feature marked done may still need a physical-device playtest;
+that does not mean its implementation should be repeated.
+
 When something lands: change its status here, with the PR. When something
 new is asked for: add it with the owner's words quoted.
+
+---
+
+## Agent handoff — checked 23 October 2026
+
+The owner is taking a break from this project to focus on others and may use
+other agents. This is the handoff index into the tasks below, not a second
+backlog. **Performance and stability remain the owner's first priority.**
+No engine migration, native app port or reduction in world detail has been
+chosen. This chat is handing off its remaining work rather than reserving it.
+
+**Verified baseline:** main includes [PR #239](https://github.com/bernardogomesnunes/GameNew/pull/239)
+(merge `730c5c3`), Storage Remote #235, inventory search #236 and the performance
+gate hardening #234. No open PRs were found at this audit. PR #239 passed both
+CI jobs and local verification: **7,550 tests, 0 failures / 292 files**, build,
+performance budgets and browser checks. These are dated results, not a promise
+that an agent's later checkout has passed them. Re-fetch/recheck before work.
+
+| Priority / state | Existing IDs | What the next agent should do |
+|---|---|---|
+| First: unresolved lag / Reload | TECH-18 | Reproduce the owner's actual failure, using a downloaded diagnostic report or a representative saved world when available. Profile the recorded CPU/streaming/render-submission stalls; distinguish frame errors, context loss and normal slow frames. Do not declare the reported crash solved by #239. |
+| First: sustained performance | TECH-8; playtests under TECH-17 and TECH-9 | Profile 30 minutes in a large settlement and a war round, including autosave, exploration, caves and return travel. Track frame-time spikes and retained resources, identify the top three costs and verify each change. A short fresh-world run and SwiftShader CI do not replace this or a physical iPhone test. |
+| Follow-up implementation | TECH-7 | Finish lazy loading war/Sky modules; map/story already load lazily. Check the download/bundle change and exercise late-game routes, saves and cancelled loads. |
+| Follow-up maintenance | TECH-10 | Extract one Game.js subsystem per PR with existing behavior preserved. Coordinate files with other agents; a refactor alone is not an FPS improvement. |
+| Discussed crafting follow-up | CRAFT-8 | Define the timing/dragging/animation interaction before implementing it. Current crafting is a sequence of action buttons; the richer interaction is not delivered. Keep this behind the performance priority. |
+| Partial: model-backed Battle | OLD-3; ASK-3 | Local LM Studio strategies work. Finish a separately configured authenticated hosted/mobile connection only after the owner supplies/chooses the endpoint arrangement; see `docs/local-ai.md`. |
+| Partial: multiplayer Battle | OLD-4 | Direct/LAN building and positions work. Remaining scope is combat/game-state synchronization and internet connectivity/relay. Do not present current co-op as complete Battle multiplayer. |
+| Blocked on database approval | TECH-1, TECH-5, TECH-14; ASK-5 | Review the prepared atomic-save/server-enforcement rollout and scaling work. Migration 0006 is not applied; atomic saves default off. Do not run migrations or activate production features without the owner's explicit approval. |
+| Owner / playtest decisions | OLD-5, TECH-16, HOUSE-1, HOUSE-3; sections 9–10 | Battle balance, any paid always-on database choice, optional Cline setup and approved branch cleanup remain. Physical-device checks include crafting, mobile world creation, inventory search and Storage Remote. ASK-1 is conditional on another save failure, not a current authentication blocker. |
+
+**Start safely:** read `AGENTS.md`, fetch main, check worktrees/status and open
+PRs, and preserve other agents' changes. Claim a task by ID with its actual
+scope. Use one coherent branch/PR and update this file when integrated. Old
+branch names and completed briefs are history, not evidence of missing work.
+This documentation request does not authorize starting those implementations.
+
+**Validation:** use `npm ci`, then `npm run dev`. In PowerShell, local offline
+development can use `$env:VITE_NEON_URL=''; npm run dev`. Run focused tests,
+then the checks relevant to the change. Performance work uses `npm run test:performance`,
+`npm run test:performance:browser` and
+`node tests/full-game-rendering-browser.mjs`; failure recovery uses
+`node tests/crash-diagnostics-browser.mjs`. Full regression/build commands are
+`npm test` and `npm run build`. CI definitions are in `.github/workflows/`.
+Never raise a performance cap simply to make new content pass. Keep measured
+CPU geometry bytes separate from total GPU memory and rendering counts
+separate from frame-rate guarantees.
 
 ---
 
@@ -35,14 +86,19 @@ new is asked for: add it with the owner's words quoted.
   and full Battle combat/state synchronization remain separate work.
 - Save/import guards, browser checks, CI, worker generation, lazy map/story,
   metadata checks, local diagnostic exports and wiki updates are implemented.
-- Repository reconciliation on 21 October includes every local and fetched remote
+- Repository reconciliation on 21 October included every local and fetched remote
   branch, the uncommitted mobile world-selection changes, cloud-limit contracts,
   the optional debug overlay and world secrets. No stashes or additional worktrees
-  held work. The atomic-save migration remains disabled and **not applied**.
+  held additional unfinished work at that reconciliation. A retained external
+  checkout may still exist; inspect worktrees before cleanup. The atomic-save
+  migration remains disabled and **not applied**.
 - Future tasks follow `AGENTS.md`: regular commits, pushed branches and a PR at
   task completion. GitHub CLI authentication is working; PRs can be created.
 - GitHub's default branch is `main` (set and verified through GitHub on
   23 October). GitHub CLI authentication is working.
+- First GPU-work reduction, crash recovery diagnostics/download and the
+  full-game rendering gate are integrated in #239. TECH-18 and TECH-8 remain
+  open; the owner's original Reload/lag failure is not yet reproduced.
 - Remaining work is explicitly marked in the tables; phone playtests, production
   database rollout and branch deletion still require the owner's action.
 
@@ -51,7 +107,8 @@ new is asked for: add it with the owner's words quoted.
 
 **Owner**
 - Try things on the phone: section 2 and section 9.
-- Answer ASK-1, ASK-3 to ASK-5 (section 10); Battle balance (OLD-5).
+- Answer ASK-3 to ASK-5 (section 10); ASK-1 only if saving fails again;
+  Battle balance (OLD-5).
 - Cline's settings on your computer (HOUSE-3).
 - Once there are players: keep the database awake (TECH-16).
 
@@ -76,6 +133,8 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 | ID | What | PR |
 |---|---|---|
+| TECH-18 / #239 | Download diagnostics is now available on the game's Reload screen. Play on iPhone and Windows PC; if it stops, retain the report and note the world/mode and action just before failure. Reduced covered far-terrain submissions keep detail/view distance; the original crash remains unresolved. | done implementation, #239; real-device verification open |
+| STORE-2 | Hold the Storage Remote and tap/right-click to open the current world's storage directory, then open actual shelves; check this away from the placed controller too. | done, #235; real-phone check remains |
 | INV-1 | "Can you add search to inventory? Keep the height of the panel fixed while giving results" — searches bag and equipped items by name, keeps original slot actions, and retains the panel height for many, few or no matches. Equipment rows collapse while filtering and return when cleared. | done, #236; merged into main 21 October; real-phone check remains |
 | NOW-21 | The game was breaking with the new land: far fewer triangles to draw everywhere (about half at home, a tenth at a huge peak); huge peaks less blobby, with an uneven outline, ridges and valleys, and a second summit. | #234 |
 | NOW-20 | Saving: a failed upload says so once, tries again by itself, and says when it's up; a big world's backup copy fits now. | #233 |
@@ -118,8 +177,9 @@ The owner's list, item by item; implementation status is recorded below.
 | CRAFT-3 | "To darken we need some kind of forge." | ChatGPT | done; integrated into main 21 October |
 | CRAFT-4 | "to lighten we should have some bleach bucket to place them." | ChatGPT | done; integrated into main 21 October |
 | CRAFT-5 | "For wood we should have a full carpentry set of tools to do the diff kinds of furniture as a wooden mill is not enough." | ChatGPT | done; integrated into main 21 October |
-| CRAFT-6 | "The crafting experience here in the pop up should be slightly different and more interactive." | ChatGPT | done; integrated into main 21 October |
+| CRAFT-6 | "The crafting experience here in the pop up should be slightly different and more interactive." Ordered action-button work steps, batch quantity, bill and cancellation. | ChatGPT | done for step-based workflow; integrated into main 21 October; richer interaction is CRAFT-8 |
 | CRAFT-7 | "To mold and forge weapons we can have the same logic." | ChatGPT | done; integrated into main 21 October |
+| CRAFT-8 | "Ok they will have timing challenges dragging or crafting animations ? Is that documented as a task?" Record and define this richer crafting interaction; the delivered action-button steps do not include timing challenges, dragging or crafting animations. Choose the interaction, touch/keyboard controls and cancellation/material rules before implementation; preserve the existing recipe/station/tool and performance safeguards. | Any agent + Owner for interaction choice | discussed follow-up; not implemented; lower priority than TECH-18/TECH-8 |
 
 Crafting verification (21 October): finite-inventory touch browser at 390×780
 checks processing, furniture and weapon routes, batches, cancellation, station
@@ -130,6 +190,11 @@ The full regression run passed 7,448 checks; the extended crafting checks also
 pass. Performance budgets and production build pass. Physical-phone playtesting
 remains with the owner. Existing natural rock deposits remain mineable; the
 processing routes provide their crafted supply and turquoise stays natural.
+The verified carpentry delivery is reusable Saw, Chisel, Plane and Mallet
+items/requirements plus work steps. Custom held 3D models for every shaping
+tool were not part of that verification; check asset coverage before claiming
+them complete. Crafting's bounded station/water checks are already delivered,
+not an open terrain-generation task.
 
 ### 3.2 A storage interface
 
@@ -152,8 +217,9 @@ and existing shelves. Age 3 hand recipe: 4 planks, 1 glass, 2 copper ingots.
 > building right in the beginning that allows to give jobs to villagers.
 > This way we can make buildings way bigger."
 
-Today each villager is sent to the nearest building by the game and makes
-it produce 50% more; none of them carries or builds anything.
+The Work Hall now assigns builder and hauler jobs, including construction and
+storage deliveries. The old nearest-building production boost is not the
+whole implemented jobs system; JOBS-1 through JOBS-4 are already integrated.
 
 | ID | What | Who | Status |
 |---|---|---|---|
@@ -240,7 +306,8 @@ browser comparisons are in `art/review/terrain-ranges-*.png`.
 
 ## 6. Cline's queue
 
-Briefs in section 12. One branch and one PR each.
+All CL tasks below are complete. Section 12 retains their historical briefs
+for context; do not take one as new work without a newly reported regression.
 
 | ID | What | Status |
 |---|---|---|
@@ -277,9 +344,9 @@ Briefs in section 12. One branch and one PR each.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| HOUSE-1 | Old branches to delete: `cline-test`, `claude/backlog-batch-3-update` (holds SAVE-6), `claude/debug-overlay` (holds TECH-9), `claude/mob-models-blender`, `claude/stoic-dirac-yky1hi`. | Claude, once the owner agrees (ASK-4) | waiting |
+| HOUSE-1 | Optional cleanup of old branches such as `cline-test`, `claude/backlog-batch-3-update`, `claude/debug-overlay`, `claude/mob-models-blender` and `claude/stoic-dirac-yky1hi`. Their retained work, including SAVE-6 and TECH-9, is already integrated. Recheck ancestry/worktree use before deleting any branch; do not delete another agent's checkout. | Any agent, once the owner agrees (ASK-4) | waiting for cleanup approval; not missing implementation |
 | HOUSE-2 | One tasks file. | Claude | done |
-| HOUSE-3 | Cline's settings on the owner's computer (section 12); LM Studio wasn't working. | Owner | waiting |
+| HOUSE-3 | Optional Cline settings on the owner's computer (section 12), if still using Cline. Local LM Studio was subsequently verified; hosted/mobile access is OLD-3, not an unresolved local setup failure. | Owner | optional owner setup; local model issue resolved |
 
 ---
 
@@ -289,6 +356,15 @@ Things that exist but haven't been confirmed in a real game. The longer
 version is in `docs/history/status-and-testing.md`.
 
 - **Recent:** section 2.
+- **Stability (TECH-18):** test the owner's saved worlds on both iPhone and
+  Windows PC, including caves/biomes and travel. If the game's Reload screen
+  appears, use **Download diagnostics** there and retain the report plus the
+  mode/world/action leading up to it. A powerful PC failing is not proof that
+  the phone and PC share a GPU-memory cause.
+- **Crafting / UI:** processing, furniture and weapons with a finite bag;
+  cancel, batches, missing tools and full bags; all world-type cards/buttons
+  on a small phone; inventory filtering with a fixed panel height; Storage
+  Remote held use far from the controller and opening the selected shelves.
 - **Early and middle game:** people talking (settler and trader), rare
   goods at the market, the collection book past 10%, the bow's hemp chain,
   university studies and their skills, barracks and hungry soldiers.
@@ -335,11 +411,10 @@ version is in `docs/history/status-and-testing.md`.
 
 ## 11. Under the hood (the code review of 6 October)
 
-A review of the code, its speed, its safety and how it would cope with many
-players was written on 6 October, on a branch that never reached main. Its
-first point (size limits on cloud saves) was done that day. None of the rest
-was. The review itself is now in `docs/history/analysis-scaling.md`;
-re-checked against today's code on 20 October.
+A review of the code, speed, safety and scaling was written on 6 October;
+the original is in `docs/history/analysis-scaling.md`. Many findings have since
+been implemented. The statuses below, audited on 23 October against main,
+supersede that historical review; do not repeat its already completed work.
 
 | ID | What | Who | Size | Status |
 |---|---|---|---|---|
@@ -348,19 +423,19 @@ re-checked against today's code on 20 October.
 | TECH-3 | **A security header for the site** (Content-Security-Policy, set in Vercel's config): only our own scripts and Neon may run or be called. | Claude | S | done; integrated into main 21 October |
 | TECH-4 | **Text put on screen escaped by default.** About 70 places write HTML; the ones that show your text are escaped by hand. One helper that always escapes, so a future change can't slip. | Claude | M | done; integrated into main 21 October |
 | TECH-5 | **Limit how often a client can write to the database.** | Claude | S | bounded client queue implemented; server enforcement prepared in 0006, not activated |
-| TECH-6 | **Make land in the background** (a Web Worker): generating and drawing chunks happens on the same thread as the game, so a slow phone stutters as land streams in. The biggest single gain for phones. | Claude | L | done; integrated into main 21 October |
+| TECH-6 | **Make land in the background** (a Web Worker): background terrain generation and a bounded main-thread fallback are implemented. Meshing, uploads and rendering still require profiling; the worker does not establish that all streaming stutter is solved. | Claude | L | done for worker generation; integrated into main 21 October; remaining stalls are TECH-18/TECH-8 |
 | TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude | M | map/story artwork load lazily; war/Sky module split remains |
 | TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Claude | M | performance budgets, streaming allowance and GPU disposal checks implemented; 30-minute real-device war profile remains |
 | TECH-9 | **The phone memory overlay**: optional counter shown with `?debug`, for finding memory growth on a phone. | ChatGPT | S | done; integrated into main 21 October; phone profiling remains |
-| TECH-10 | **Split `src/Game.js`** (7,962 lines, from 6,488 on 6 October) by system (war, vehicles, building, input, saving), one part per PR, alongside other work. | Claude | L | to do in separate subsystem PRs; new workers/jobs/peer helpers are outside Game.js |
+| TECH-10 | **Split `src/Game.js`** (over 8,000 lines as of this audit; measure again before work) by system (war, vehicles, building, input, saving), one part per PR, alongside other work. | Claude | L | to do in separate subsystem PRs; new workers/jobs/peer helpers are outside Game.js |
 | TECH-11 | **Type checks on the save format and the block list**, to catch the kind of mismatch that once broke saved worlds' mode. | Claude | M | done; integrated into main 21 October |
 | TECH-12 | **Automatic browser checks**: isolated Chromium loads the game, verifies deferred assets, places a block, saves/reloads/reopens, rejects malformed imports without replacing the world, and imports a real export. Story's eager import fixed. | ChatGPT | M | done; integrated into main 21 October |
-| TECH-13 | **Checks on every pull request** (GitHub Actions: the tests and a build), so nothing merges red. There are none today. | Claude | S | done; integrated into main 21 October |
+| TECH-13 | **Checks on every pull request**: GitHub Actions tests/build and browser checks exist; a separate Performance budgets job is required on main. Respect checks before integration. | Claude | S | done; integrated into main 21 October; full-game/recovery checks added in #239 |
 | TECH-14 | **The database at scale**: a player column and index on saved chunks so the security check stays fast with millions of them; a small runner for migrations, and a check the live database matches the code. Needs the owner's yes (ASK-5). | Claude + Owner | M | waiting |
 | TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | done; integrated into main 21 October |
 | TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
-| TECH-17 | **Performance safeguards for future additions**: fixed-seed crest/slope/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource checks, shared streaming allowance, and a PR performance workflow. Cave overdraw and crowd instance-buffer leaks fixed. Follow-up rejects incomplete reports and growth in any disposal cycle; retains the old terrain window alongside a validated high crest after the range update. Commands and limits in `docs/performance.md`. | ChatGPT | M | runtime and gate hardening integrated (#234, included with #236); Performance budgets required on main; real-phone check pending |
-| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on both iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | ChatGPT | M | first optimization and failure diagnostics in #239; actual failure still investigating; no engine migration approved |
+| TECH-17 | **Performance safeguards for future additions**: fixed-seed crest/slope/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource/disposal checks, shared streaming allowance and a required PR performance workflow. #239 adds an actual 802-chunk forest rendering comparison/cost gate; existing budgets are unchanged. Commands and limits in `docs/performance.md`. | ChatGPT | M | implementation integrated (#234, included with #236; full-game gate #239); real-phone check pending |
+| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on a weak-GPU iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | Any next agent | M | first optimization and diagnostics merged in #239 on 23 October; actual failure unresolved; no engine migration approved |
 
 ### TECH-18 implementation plan, 23 October
 
@@ -371,23 +446,51 @@ re-checked against today's code on 20 October.
 - [x] Reproduce a diagnostics defect: three caught frame errors trigger Reload but record zero diagnostic errors. Full-game experiment on the Radeon RX 7900 GRE reaches about 2.5 million submitted triangles in a forest and observes a 420 ms render submission stall during travel; no Reload reproduced in that bounded run. Evidence is local under `artifacts/performance/fullgame-stress.*`.
 - [x] **Crash reporting** — `src/core/Diagnostics.js`, `src/Game.js`: failing-first regressions cover caught-frame errors, failures before the first successful frame, bounded/redacted stacks and distinguishable context loss. Reports include cause/resource counters and cached graphics-backend details, downloadable directly on Reload. Actual browser checks pass for frame errors, real context loss and diagnostic collection failure; each still stops and saves. Collection cannot block recovery.
 - [x] **Covered far terrain** — `src/render/FarTerrain.js`: failing-first coverage tests include outer walls, negative coordinates, mask moves/resizes, restoring visibility and tiles created after the mask. Full-game 802-chunk forest comparisons on Radeon and SwiftShader preserve every pixel and skip 143,012 submitted triangles (about 5.7%). View distance/detail are unchanged; buffers remain resident, so this does not establish a memory reduction.
-- [x] **Verification and delivery** — focused regressions, full-game comparison, browser resource budgets, smoke/inventory/storage/crash checks and build pass; full suite: **7,550 passed, 0 failed / 292 files**. Smoke's file picker timed out once while other browsers ran, then passed on an isolated rerun. Independent review has no remaining blockers after the diagnostic-isolation fix. Pushed PR #239 against current main; CI is the integration gate. Measured gains/limits are in `docs/performance.md`. The owner's crash is not claimed fixed.
+- [x] **Verification and delivery** — focused regressions, full-game comparison, browser resource budgets, smoke/inventory/storage/crash checks and build pass; full suite: **7,550 passed, 0 failed / 292 files**. Smoke's file picker timed out once while other browsers ran, then passed on an isolated rerun. Independent review has no remaining blockers after the diagnostic-isolation fix. Both PR CI jobs passed; #239 merged into main on 23 October (`730c5c3`). Measured gains/limits are in `docs/performance.md`. The owner's crash is not claimed fixed.
+
+**Additional evidence saved for handoff:** a separate local Radeon RX 7900 GRE
+run at 1920×1080, ratio 1, collected 100 samples over about 6 minutes 40 seconds
+in a fresh Creative world. It crossed the five-minute autosave and included
+settlement, mountain, forest and cave locations plus 960 blocks of travel.
+No Reload, uncaught game error or context loss occurred. Autosave took 26.5 ms;
+maximum CPU render submission was 353.7 ms, with separate grass/streaming update
+spikes of 98.4/79.1 ms during transitions. Geometry source buffers peaked at
+264,884,478 bytes; that is not total VRAM. These are profiling leads, not proof
+of a driver cause, an absent leak or sustained iPhone performance. Results are
+summarized in PR #239; local `artifacts/performance/fullgame-longrun.*` files are
+ignored and will not be present in another clone. Reproduction scripts for
+the maintained checks are committed under `tests/` and `tools/performance/`.
+
+Remaining TECH-18 / TECH-8 work:
+
+- [ ] Reproduce and classify the owner's actual Reload failure, preferably
+  with its new diagnostic report and the affected saved world/mode.
+- [ ] Profile and reduce demonstrated streaming/CPU/render submission stalls
+  with before/after measurements; preserve save recovery and chosen detail.
+- [ ] Complete the 30-minute large-settlement/war profile and physical-iPhone
+  checks. Include account/network conditions where relevant; the local
+  Creative test blocked external requests and did not exercise those paths.
+- [ ] Compare an engine or native-app proposal only against an identified
+  bottleneck and equivalent content/device measurements. No migration or
+  wrapper application is authorized merely by this discussion.
 
 Review focus: first-frame failures; reporting while the graphics context is lost; reports containing no account/world identifiers; mask edges and negative coordinates; restoring coarse terrain while real chunks stream or unload. Real iPhone failure reproduction remains necessary.
 
 ---
 
-Diagnostics: Settings > Graphics > **Download diagnostics** exports bounded
-local error and recent frame-time summaries; no automatic uploads or account
-identifiers. Multiplayer: Settings > World > **Invite a friend to Battle**.
+Diagnostics: Settings > Graphics or the **Reload screen > Download diagnostics**
+exports bounded local errors, recent frame-time summaries and a failure/backend
+snapshot; no automatic uploads or account identifiers. Multiplayer:
+Settings > World > **Invite a friend to Battle**.
 Local model setup and limitations are in [local-ai.md](local-ai.md).
 
 ## 12. For Cline: how to work, and the briefs
 
-Cline: your tasks are the CL ones in "Who's on what" at the top, in that
-order. Do **one** at a time: its own branch and its own pull request. When
-it's merged, the owner (or Claude) marks it done in section 6. CL-1 is done
-(#212).
+**Historical briefs — all CL-1 through CL-14 are complete** (see section 6).
+The old "What to do" wording below is retained as implementation history,
+not an active assignment. Pick remaining work from the handoff index and
+current status tables. Follow `AGENTS.md` and current owner instructions;
+completed briefs do not override them.
 
 ### Cline's settings (for the owner, not the agent)
 
@@ -418,7 +521,8 @@ Things to set in Cline on your computer. They can't live in the repo.
   `http://localhost:5173`. Offline mode needs no account or database.
 - **Tests:** while you work, run only the file you changed:
   `node tests/<name>.test.mjs`. It takes under a second. `node tests/run.mjs`
-  runs every test (about 7,200 checks, about 10 minutes); run it once, at the
+  runs every test (7,550 checks / 292 files at the 23 October baseline;
+  runtime varies); run it once, at the
   end. A test file prints
   `PASS`/`FAIL` lines and exits non-zero on a failure. There's no test
   framework; copy the style of the file you're in.
