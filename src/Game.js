@@ -58,7 +58,7 @@ import { applyPeerWorldEdits } from './net/applyPeerWorldEdits.js';
 import { buildWorldPayload, exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
-import { Diagnostics } from './core/Diagnostics.js';
+import { Diagnostics, describeGraphicsBackend } from './core/Diagnostics.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
@@ -398,6 +398,7 @@ export class Game {
       antialias: this.graphics.antialias,
       powerPreference: 'high-performance',
     });
+    this.graphicsBackend = describeGraphicsBackend(this.renderer);
     this.coarse = coarse;
     this.quality = new QualityController({
       cap: Math.min(window.devicePixelRatio || 1, 2),
@@ -754,14 +755,31 @@ export class Game {
       this.tickErrors = 0;
     } catch (err) {
       console.error(err);
-      if (++this.tickErrors >= 3) this.crashed(err?.message || String(err));
+      this.diagnostics?.recordError(err, 'frame-error');
+      // Boot can fail before a successful tick has initialised the counter.
+      this.tickErrors ??= 0;
+      if (++this.tickErrors >= 3) this.crashed(err?.message || String(err), { kind: 'frame-error', error: err });
     }
   }
 
+  /** Small snapshots on request/failure; no world contents or account identifiers. */
+  diagnosticContext() {
+    const info = this.renderer?.info;
+    let contextLost = null;
+    try { contextLost = this.renderer?.getContext?.().isContextLost(); } catch { /* context may be unavailable */ }
+    return { mode:this.mode, loadedChunks:this.world?.chunks.size??0,
+      queues:{generate:this.genQueue?.length??0,remesh:this.remeshQueue?.size??0},
+      graphics:{distance:this.renderDistance,pixelRatio:this.renderer?.getPixelRatio?.()??null,
+        backend:this.graphicsBackend??null,contextLost},
+      renderer:{calls:info?.render.calls??null,triangles:info?.render.triangles??null,
+        geometries:info?.memory.geometries??null,textures:info?.memory.textures??null} };
+  }
+
   /** The game can't go on: save what there is, and say so with a way back. */
-  crashed(reason) {
+  crashed(reason, { kind = 'game-error', error = reason } = {}) {
     if (this.crashedWith) return;
     this.crashedWith = reason;
+    this.diagnostics?.recordCrash(error, kind, this.diagnosticContext());
     this.renderer.setAnimationLoop(null);
     let saved = false;
     try { saved = this.saveNow(); } catch (err) { console.error(err); }
@@ -772,10 +790,12 @@ export class Game {
       <h2>The game stopped</h2>
       <p class="crash-state">${saved ? 'Saving your world…' : 'Nothing to save.'}</p>
       <button type="button" class="primary">Reload</button>
+      <button type="button" class="secondary" data-crash-report>Download diagnostics</button>
       <p class="crash-why"></p>
     </div>`;
     box.querySelector('.crash-why').textContent = reason;
     box.querySelector('button').addEventListener('click', () => location.reload());
+    box.querySelector('[data-crash-report]').addEventListener('click', () => this.diagnostics?.download(this.diagnosticContext()));
     // Inside the game's own container: full screen, nothing outside it shows.
     (this.container ?? document.body).appendChild(box);
     if (saved) {
@@ -787,10 +807,10 @@ export class Game {
   }
 
   wireSaveOnLeave() {
-    // The phone took the 3D canvas back — out of graphics memory, most often.
+    // Context loss has several possible causes; it is not an out-of-memory measurement.
     this.renderer.domElement.addEventListener('webglcontextlost', (e) => {
       e.preventDefault();
-      this.crashed('The phone ran out of graphics memory.');
+      this.crashed('The graphics connection was lost. Reload to reconnect.', { kind: 'webgl-context-lost', error: e.statusMessage || 'Graphics context lost' });
     });
     const save = () => this.saveNow();
     // Put away, the buildings stop working until it's back (DuiltGame.pauseClock).
@@ -1377,7 +1397,7 @@ export class Game {
       onGoHome: () => (this.title ? true : this.withLoading('Back to your worlds…', () => this.openTitle())),
       onNewWorld: (mode, name, options) => this.withLoading('Building the world…', () => { this.newWorld({ mode, name, localAI: options?.localAI }); this.ui.closePanel('panel-menu'); }),
       onInviteBattle: () => this.openPeerBattle(),
-      onExportDiagnostics:()=>this.diagnostics.download({mode:this.mode,loadedChunks:this.world?.chunks.size??0,graphics:{distance:this.renderDistance,pixelRatio:this.renderer.getPixelRatio()},renderer:{calls:this.renderer.info.render.calls,triangles:this.renderer.info.render.triangles,geometries:this.renderer.info.memory.geometries,textures:this.renderer.info.memory.textures}}),
+      onExportDiagnostics:()=>this.diagnostics.download(this.diagnosticContext()),
       onRenameWorld: (name) => { this.worldName = name; this.saveNow(); },
       lastSavedAt: () => this.syncState.agreedFor(this.worldId)?.at ?? 0,
       onResume: () => {

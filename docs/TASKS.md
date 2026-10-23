@@ -360,6 +360,20 @@ re-checked against today's code on 20 October.
 | TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | done; integrated into main 21 October |
 | TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
 | TECH-17 | **Performance safeguards for future additions**: fixed-seed crest/slope/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource checks, shared streaming allowance, and a PR performance workflow. Cave overdraw and crowd instance-buffer leaks fixed. Follow-up rejects incomplete reports and growth in any disposal cycle; retains the old terrain window alongside a validated high crest after the range update. Commands and limits in `docs/performance.md`. | ChatGPT | M | runtime and gate hardening integrated (#234, included with #236); Performance budgets required on main; real-phone check pending |
+| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on both iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | ChatGPT | M | investigating; no engine migration approved |
+
+### TECH-18 implementation plan, 23 October
+
+**Goal:** make actual game failures diagnosable and remove proven redundant GPU work without reducing world detail or viewing distance.
+**Architecture:** reuse bounded local diagnostics and the existing far-terrain chunk mask; no account changes, telemetry uploads or per-frame reporting allocations.
+**Tech stack:** current JavaScript/Three.js/WebGL2, Node tests and isolated Playwright Chrome. The owner's Reload/lag reports above are the specification.
+
+- [x] Reproduce a diagnostics defect: three caught frame errors trigger Reload but record zero diagnostic errors. Full-game experiment on the Radeon RX 7900 GRE reaches about 2.5 million submitted triangles in a forest and observes a 420 ms render submission stall during travel; no Reload reproduced in that bounded run. Evidence is local under `artifacts/performance/fullgame-stress.*`.
+- [ ] **Crash reporting** — `src/core/Diagnostics.js`, `src/Game.js`: first add failing tests for caught-frame errors (including failure before the first successful frame), bounded/redacted stacks and distinguishable context loss. Record the cause and current resource counters; cache graphics-backend details once; offer diagnostics download directly on Reload. Keep existing save/reload behavior. Verify synthetic failures in the actual browser and commit.
+- [ ] **Covered far terrain** — `src/render/FarTerrain.js`: first test that a tile fully discarded by the existing real-chunk shader mask can be hidden on the CPU, with conservative edge coverage. Restore it when any coverage is lost, and check tiles created after the mask. Verify unchanged pixels and reduced submitted work in the full game, then commit.
+- [ ] **Verification and delivery** — run focused regressions, full-game and existing browser checks, performance budgets, build and full suite. Independent review, push a task PR against main and reconcile before integration. Record measured gains and remaining uncertainty; do not claim the owner's crash is solved without reproducing its cause.
+
+Review focus: first-frame failures; reporting while the graphics context is lost; reports containing no account/world identifiers; mask edges and negative coordinates; restoring coarse terrain while real chunks stream or unload. Real iPhone failure reproduction remains necessary.
 
 ---
 
