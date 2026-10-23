@@ -40,10 +40,10 @@ new is asked for: add it with the owner's words quoted.
   the optional debug overlay and world secrets. No stashes or additional worktrees
   held work. The atomic-save migration remains disabled and **not applied**.
 - Future tasks follow `AGENTS.md`: regular commits, pushed branches and a PR at
-  task completion. GitHub CLI authentication must be restored to create PRs here.
+  task completion. GitHub CLI authentication is working; PRs can be created.
 - GitHub's default branch still points to `claude/voxel-sandbox-game-heuhyq`
-  (verified with remote HEAD). Repository settings need an authenticated owner
-  session to make `main` the default; no branch contents are missing from main.
+  (verified through GitHub on 23 October). Changing the default to `main` remains
+  a repository-settings task; authentication is no longer a blocker.
 - Remaining work is explicitly marked in the tables; phone playtests, production
   database rollout and branch deletion still require the owner's action.
 
@@ -77,7 +77,7 @@ Checked by tests, most in a test browser, none on a real iPhone.
 
 | ID | What | PR |
 |---|---|---|
-| INV-1 | "Can you add search to inventory? Keep the height of the panel fixed while giving results" — searches bag and equipped items by name, keeps original slot actions, and retains the panel height for many, few or no matches. Equipment rows collapse while filtering and return when cleared. | `codex/inventory-search`; awaiting integration |
+| INV-1 | "Can you add search to inventory? Keep the height of the panel fixed while giving results" — searches bag and equipped items by name, keeps original slot actions, and retains the panel height for many, few or no matches. Equipment rows collapse while filtering and return when cleared. | done, #236; merged into main 21 October; real-phone check remains |
 | NOW-21 | The game was breaking with the new land: far fewer triangles to draw everywhere (about half at home, a tenth at a huge peak); huge peaks less blobby, with an uneven outline, ridges and valleys, and a second summit. | #234 |
 | NOW-20 | Saving: a failed upload says so once, tries again by itself, and says when it's up; a big world's backup copy fits now. | #233 |
 | NOW-19 | The new mountains, plains and giant trees in old worlds too; the rounder starter house, townhouse and cottages. | #232 |
@@ -137,6 +137,13 @@ processing routes provide their crafted supply and turquoise stays natural.
 | ID | What | Who | Status |
 |---|---|---|---|
 | STORE-1 | "Buildings need a lot of blocks to do. And food and all take a lot of space. We need a third storage item which is called a storage interface. Which is a block that should be placed on top of the storage manager and it allows me to see the list of storages and what they have, and clicking shows me all the items." | Claude | done; integrated into main 21 October |
+
+**STORE-2 — Storage Remote:** "for store 1, finish it with a new item that the
+user can hold which allows him to see the storage interface remotely anywhere
+in the game." Implemented in **PR #235**, with a reusable Age 3 recipe, held 3D
+model, mobile tap/right-click access to the current world's storage directory
+and existing shelves. Build, browser and performance CI pass; **awaiting merge**
+(verified 23 October). This follow-up is not on main yet.
 
 ### 3.3 Villagers who work
 
@@ -221,7 +228,7 @@ browser comparisons are in `art/review/terrain-ranges-*.png`.
 | ID | What | From | Who | Status |
 |---|---|---|---|---|
 | OLD-1 | Two or three new peoples to raid. Two: dune caravan camps and mossfolk forest villages, each with guards, a chest and talk. | Batch 4 | ChatGPT | done, #230 |
-| OLD-2 | Places you've taken marked on the map; new ones appearing over time. In part (#230): raided places are marked. New ones appearing over time is still to do. | Batch 4 | Claude | done; integrated into main 21 October |
+| OLD-2 | Places you've taken marked on the map; new ones appearing over time. Raided places are marked, and bounded emerging-site generation adds new places over game days with saved progress. | Batch 4 | Claude | done; integrated into main 21 October |
 | OLD-3 | Battle mode with AI rivals through an API key, kept on our server. The owner offered their own model server (needs HTTPS, key in an environment secret). | Batch 4 | Claude + Owner | local LM Studio integration verified; hosted/mobile reachability remains separate |
 | OLD-4 | Battle mode with real multiplayer, inviting friends. | Batch 4 | Claude | direct/LAN co-op building and positions verified; full combat/state sync and internet relays remain |
 | OLD-5 | Battle balance: how strong rivals feel and how often they come. | Batch 4 | Owner | waiting |
@@ -352,7 +359,7 @@ re-checked against today's code on 20 October.
 | TECH-14 | **The database at scale**: a player column and index on saved chunks so the security check stays fast with millions of them; a small runner for migrations, and a check the live database matches the code. Needs the owner's yes (ASK-5). | Claude + Owner | M | waiting |
 | TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | done; integrated into main 21 October |
 | TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
-| TECH-17 | **Performance safeguards for future additions**: fixed-seed crest/slope/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource checks, shared streaming allowance, and a PR performance workflow. Cave overdraw and crowd instance-buffer leaks fixed. Follow-up rejects incomplete reports and growth in any disposal cycle; retains the old terrain window alongside a validated high crest after the range update. Commands and limits in `docs/performance.md`. | ChatGPT | M | runtime integrated; gate hardening PR #234; Performance budgets required on main; real-phone check pending |
+| TECH-17 | **Performance safeguards for future additions**: fixed-seed crest/slope/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource checks, shared streaming allowance, and a PR performance workflow. Cave overdraw and crowd instance-buffer leaks fixed. Follow-up rejects incomplete reports and growth in any disposal cycle; retains the old terrain window alongside a validated high crest after the range update. Commands and limits in `docs/performance.md`. | ChatGPT | M | runtime and gate hardening integrated (#234, included with #236); Performance budgets required on main; real-phone check pending |
 
 ---
 
