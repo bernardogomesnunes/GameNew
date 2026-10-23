@@ -1770,8 +1770,8 @@ export class DuiltUI {
       const stores = d.storeDirectory();
       const visible = stores.filter(s => !q || s.name.toLowerCase().includes(q) || s.items.some(r=>itemName(r.id).toLowerCase().includes(q)));
       const where = this.q('#stores-where');
-      if (where) where.textContent = `${stores.length} stores · choose one to open its shelves`;
-      list.innerHTML = visible.length ? visible.map(s => `<div class="recipe-tile"><strong>${escapeHtml(s.name)} #${s.id}</strong><span>${s.total} items${s.valid ? '' : ' · building needs repair'}</span><span class="dim">${escapeHtml(s.items.length ? s.items.map(r=>`${r.count} ${itemName(r.id)}`).join(', ') : 'Empty')}</span><button class="secondary" data-open-store="${s.id}">Open shelves</button></div>`).join('') : '<p class="dim">No stores match.</p>';
+      if (where) where.textContent = stores.length ? `${stores.length} stores · choose one to open its shelves` : 'No stores yet';
+      list.innerHTML = visible.length ? visible.map(s => `<div class="recipe-tile"><strong>${escapeHtml(s.name)} #${s.id}</strong><span>${s.total} items${s.valid ? '' : ' · building needs repair'}</span><span class="dim">${escapeHtml(s.items.length ? s.items.map(r=>`${r.count} ${itemName(r.id)}`).join(', ') : 'Empty')}</span><button class="secondary" data-open-store="${s.id}">Open shelves</button></div>`).join('') : `<p class="dim">${stores.length ? 'No stores match.' : 'Build a store or granary, and its shelves will show up here.'}</p>`;
       list.querySelectorAll('[data-open-store]').forEach(b=>b.addEventListener('click',()=>{
         const store=stores.find(s=>String(s.id)===b.dataset.openStore);
         if (store) this.game.ui.openStore(store.structure);

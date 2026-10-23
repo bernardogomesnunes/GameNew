@@ -41,9 +41,8 @@ new is asked for: add it with the owner's words quoted.
   held work. The atomic-save migration remains disabled and **not applied**.
 - Future tasks follow `AGENTS.md`: regular commits, pushed branches and a PR at
   task completion. GitHub CLI authentication is working; PRs can be created.
-- GitHub's default branch still points to `claude/voxel-sandbox-game-heuhyq`
-  (verified through GitHub on 23 October). Changing the default to `main` remains
-  a repository-settings task; authentication is no longer a blocker.
+- GitHub's default branch is `main` (set and verified through GitHub on
+  23 October). GitHub CLI authentication is working.
 - Remaining work is explicitly marked in the tables; phone playtests, production
   database rollout and branch deletion still require the owner's action.
 
@@ -136,14 +135,15 @@ processing routes provide their crafted supply and turquoise stays natural.
 
 | ID | What | Who | Status |
 |---|---|---|---|
-| STORE-1 | "Buildings need a lot of blocks to do. And food and all take a lot of space. We need a third storage item which is called a storage interface. Which is a block that should be placed on top of the storage manager and it allows me to see the list of storages and what they have, and clicking shows me all the items." | Claude | done; integrated into main 21 October |
+| STORE-1 | "Buildings need a lot of blocks to do. And food and all take a lot of space. We need a third storage item which is called a storage interface. Which is a block that should be placed on top of the storage manager and it allows me to see the list of storages and what they have, and clicking shows me all the items." | Claude | done; integrated into main 21 October; handheld follow-up in STORE-2 |
 
 **STORE-2 — Storage Remote:** "for store 1, finish it with a new item that the
 user can hold which allows him to see the storage interface remotely anywhere
 in the game." Implemented in **PR #235**, with a reusable Age 3 recipe, held 3D
 model, mobile tap/right-click access to the current world's storage directory
-and existing shelves. Build, browser and performance CI pass; **awaiting merge**
-(verified 23 October). This follow-up is not on main yet.
+and existing shelves. Age 3 hand recipe: 4 planks, 1 glass, 2 copper ingots.
+**Done with PR #235**, integrated with inventory search and current main on
+23 October. No background storage scanning is added.
 
 ### 3.3 Villagers who work
 
