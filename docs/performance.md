@@ -135,8 +135,60 @@ illustrations, resolving the earlier eager-import failure.
   the long-queue allowance override, zero-budget far-tile starvation, and
   incomplete instance-buffer accounting in the initial harness.
 
-Runtime safeguards are integrated into main. The report-validation and terrain
-fixture follow-up is being delivered as a separate PR. Physical-phone testing
+Runtime safeguards and the report-validation/terrain-fixture follow-up are
+integrated into main. Physical-phone testing
 and the separate 30-minute settlement/war profiling task remain open; these
 automated checks cannot guarantee that future content will never cause a
 performance problem.
+
+## Full-game rendering and failure diagnosis, 23 October 2026
+
+The owner reports substantial lag and the game's Reload screen on both an
+iPhone and a Windows PC with a 16 GB dedicated GPU. A weak phone GPU does not
+explain both reports. A bounded two-minute full-game experiment used Chrome's
+actual Radeon RX 7900 GRE backend at 1280×720, pixel ratio 1 and antialiasing.
+It visited settlement, mountain, forest and cave locations, then travelled.
+The forest submitted about 2.5 million triangles per frame. Travel included a
+420 ms frame, almost entirely in renderer submission; this is CPU submission
+time, not completed GPU time. No Reload, game error or context loss occurred.
+The original failure's cause remains unconfirmed; this run does not cover
+long-session growth or certify iPhone performance.
+
+Covered far-terrain tiles now skip draw submission when every part, including
+their outer walls, is already discarded by the real-chunk shader mask. Tiles
+remain reusable and become visible as coverage is lost. This preserves viewing
+distance and detail. Geometry buffers remain resident, so this change reduces
+draw/vertex work rather than the memory occupied by those buffers.
+
+Run `node tests/full-game-rendering-browser.mjs` for the full-game comparison.
+It constructs the actual 802-chunk forest scene using the game's streaming
+methods, then compares the old and optimized rendering of one frozen frame.
+The default SwiftShader reference is **759 → 744 draw calls**, **2,494,218 →
+2,351,206 triangles** (143,012 fewer, about 5.7%), and **zero changed pixel
+channels**. A Radeon comparison also produced identical pixels and the same
+triangle reduction. Set `PERFORMANCE_USE_HARDWARE=1` to use Chrome's default
+graphics backend. These are rendering-equivalence checks, not sustained FPS
+measurements or a replay of the owner's failure.
+
+The required Performance budgets workflow now includes this check and writes
+`artifacts/performance/full-game-rendering.json`. Its separate `fullGame` caps
+are 1,000 draw calls, 3,100,000 triangles and 280,000,000 CPU geometry-buffer
+bytes, roughly 25% above the reference scene (223,929,318 bytes). Existing
+small-scene budgets remain unchanged. These CPU buffer sizes exclude textures,
+driver copies and other GPU allocations; they do not measure total VRAM.
+
+Caught frame failures now enter bounded local diagnostics with redacted stacks,
+including failures before the first successful frame. A fatal snapshot records
+the failure kind, cached graphics backend, pixel ratio, chunk/queue counts and
+renderer counters. Context loss is identified separately and no longer claims
+that a phone ran out of memory. The Reload screen offers **Download diagnostics**
+so the report remains accessible after a stop. Collection is best effort and
+cannot prevent the existing stop/save recovery; reports are downloaded locally
+and are not uploaded automatically. Run `node tests/crash-diagnostics-browser.mjs`
+to verify actual caught errors, graphics-context loss and a failure inside
+diagnostic collection, including saving the world.
+
+Next evidence needed: a diagnostic report from the owner's actual failure,
+physical-iPhone testing and longer sessions crossing autosave. An engine or
+native-app migration has not been chosen; these measurements do not establish
+that a migration would remove the underlying failure.

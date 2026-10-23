@@ -21,3 +21,4 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - run: node tests/storage-remote-browser.mjs
+      - run: node tests/crash-diagnostics-browser.mjs
