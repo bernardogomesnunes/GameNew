@@ -37,6 +37,14 @@ check('a successful frame resets the consecutive failure threshold',()=>{
   }finally{console.error=log;}
   assert.equal(stops.length,0);
 });
+check('diagnostic recording failures cannot suppress the frame failure threshold',()=>{
+  const {game,stops}=frameFixture();
+  game.diagnostics.recordError=()=>{throw new Error('Diagnostics unavailable');};
+  const log=console.error;console.error=()=>{};
+  try{for(let i=0;i<3;i++)Game.prototype.safeTick.call(game);}finally{console.error=log;}
+  assert.equal(stops.length,1);
+  assert.equal(stops[0].reason,'Synthetic frame failure');
+});
 check('fatal context loss is distinct from script failure and snapshots resource counts',()=>{
   const diagnostics=new Diagnostics({events:{},now:()=>1234});
   diagnostics.recordCrash('Graphics context lost','webgl-context-lost',{loadedChunks:20,renderer:{geometries:42}});
@@ -64,5 +72,13 @@ check('runtime context remains readable after the graphics context is lost',()=>
   assert.equal(context.graphics.contextLost,true);assert.equal(context.renderer.triangles,300);
   assert.equal(context.graphics.backend.renderer,'Test adapter');assert.equal(context.loadedChunks,1);
   assert.ok(!Object.hasOwn(context,'worldId'));
+});
+check('unavailable renderer queries leave a partial diagnostic snapshot',()=>{
+  const context=Game.prototype.diagnosticContext.call({renderer:{
+    getContext(){throw new Error('Context unavailable');},
+    getPixelRatio(){throw new Error('Renderer unavailable');},
+  }});
+  assert.equal(context.graphics.contextLost,null);
+  assert.equal(context.graphics.pixelRatio,null);
 });
 process.exitCode=failures?1:0;

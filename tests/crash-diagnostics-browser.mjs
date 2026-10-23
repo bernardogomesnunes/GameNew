@@ -9,7 +9,7 @@ try{
   await server.listen();
   browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH||undefined,
     args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
-  for(const kind of ['frame-error','webgl-context-lost']){
+  for(const kind of ['frame-error','webgl-context-lost','diagnostics-failure']){
     const page=await browser.newPage({viewport:{width:390,height:780},hasTouch:true,isMobile:true,acceptDownloads:true});
     await page.route('**/*',route=>{const url=new URL(route.request().url());return url.hostname==='127.0.0.1'||['blob:','data:'].includes(url.protocol)?route.continue():route.abort();});
     await page.goto(server.resolvedUrls.local[0]);
@@ -21,7 +21,13 @@ try{
     await page.waitForFunction(()=>window.__game.renderer.info.render.calls>0);
     await page.evaluate(kind=>{
       const g=window.__game;
-      if(kind==='frame-error')g.tick=()=>{throw new Error('Synthetic frame failure https://example.invalid/private?secret=abc');};
+      if(kind==='diagnostics-failure'){
+        const setLoop=g.renderer.setAnimationLoop.bind(g.renderer);
+        g.renderer.setAnimationLoop=loop=>{g.__recoveryStopped=loop===null;setLoop(loop);};
+        const error=new Error('Synthetic frame failure');
+        Object.defineProperty(error,'stack',{get(){throw new Error('Stack formatting failed');}});
+        g.tick=()=>{throw error;};
+      }else if(kind==='frame-error')g.tick=()=>{throw new Error('Synthetic frame failure https://example.invalid/private?secret=abc');};
       else{
         const extension=g.renderer.getContext().getExtension('WEBGL_lose_context');
         if(!extension)throw new Error('Context loss extension unavailable in test');
@@ -31,6 +37,13 @@ try{
     await page.locator('#crash').waitFor({state:'visible'});
     assert.equal(await page.locator('#crash').getAttribute('role'),'alertdialog');
     assert.equal(await page.locator('#crash').getByRole('button',{name:'Reload',exact:true}).count(),1);
+    if(kind==='diagnostics-failure'){
+      await page.waitForFunction(()=>document.querySelector('.crash-state')?.textContent==='Your world is saved.');
+      assert.match(await page.locator('.crash-why').innerText(),/Synthetic frame failure/);
+      assert.equal(await page.evaluate(()=>window.__game.__recoveryStopped),true);
+      console.log('PASS diagnostics failure: malformed error stack still stops rendering and saves the world');
+      await page.close();continue;
+    }
     if(kind==='webgl-context-lost'){
       assert.match(await page.locator('.crash-why').innerText(),/graphics connection was lost/i);
       assert.doesNotMatch(await page.locator('.crash-why').innerText(),/ran out|phone/i);

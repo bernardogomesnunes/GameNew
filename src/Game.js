@@ -755,7 +755,8 @@ export class Game {
       this.tickErrors = 0;
     } catch (err) {
       console.error(err);
-      this.diagnostics?.recordError(err, 'frame-error');
+      // Reporting is best effort: it must never suppress recovery or saving.
+      try { this.diagnostics?.recordError(err, 'frame-error'); } catch { /* malformed error/report */ }
       // Boot can fail before a successful tick has initialised the counter.
       this.tickErrors ??= 0;
       if (++this.tickErrors >= 3) this.crashed(err?.message || String(err), { kind: 'frame-error', error: err });
@@ -765,11 +766,12 @@ export class Game {
   /** Small snapshots on request/failure; no world contents or account identifiers. */
   diagnosticContext() {
     const info = this.renderer?.info;
-    let contextLost = null;
+    let contextLost = null, pixelRatio = null;
     try { contextLost = this.renderer?.getContext?.().isContextLost(); } catch { /* context may be unavailable */ }
+    try { pixelRatio = this.renderer?.getPixelRatio?.() ?? null; } catch { /* renderer may be unavailable */ }
     return { mode:this.mode, loadedChunks:this.world?.chunks.size??0,
       queues:{generate:this.genQueue?.length??0,remesh:this.remeshQueue?.size??0},
-      graphics:{distance:this.renderDistance,pixelRatio:this.renderer?.getPixelRatio?.()??null,
+      graphics:{distance:this.renderDistance,pixelRatio,
         backend:this.graphicsBackend??null,contextLost},
       renderer:{calls:info?.render.calls??null,triangles:info?.render.triangles??null,
         geometries:info?.memory.geometries??null,textures:info?.memory.textures??null} };
@@ -779,7 +781,7 @@ export class Game {
   crashed(reason, { kind = 'game-error', error = reason } = {}) {
     if (this.crashedWith) return;
     this.crashedWith = reason;
-    this.diagnostics?.recordCrash(error, kind, this.diagnosticContext());
+    try { this.diagnostics?.recordCrash(error, kind, this.diagnosticContext()); } catch { /* recovery takes priority over diagnostics */ }
     this.renderer.setAnimationLoop(null);
     let saved = false;
     try { saved = this.saveNow(); } catch (err) { console.error(err); }
@@ -795,7 +797,10 @@ export class Game {
     </div>`;
     box.querySelector('.crash-why').textContent = reason;
     box.querySelector('button').addEventListener('click', () => location.reload());
-    box.querySelector('[data-crash-report]').addEventListener('click', () => this.diagnostics?.download(this.diagnosticContext()));
+    box.querySelector('[data-crash-report]').addEventListener('click', (event) => {
+      try { this.diagnostics?.download(this.diagnosticContext()); }
+      catch { event.currentTarget.textContent = 'Diagnostics unavailable'; event.currentTarget.disabled = true; }
+    });
     // Inside the game's own container: full screen, nothing outside it shows.
     (this.container ?? document.body).appendChild(box);
     if (saved) {
