@@ -190,10 +190,11 @@ The full regression run passed 7,448 checks; the extended crafting checks also
 pass. Performance budgets and production build pass. Physical-phone playtesting
 remains with the owner. Existing natural rock deposits remain mineable; the
 processing routes provide their crafted supply and turquoise stays natural.
-The verified carpentry delivery is reusable Saw, Chisel, Plane and Mallet
-items/requirements plus work steps. Custom held 3D models for every shaping
-tool were not part of that verification; check asset coverage before claiming
-them complete. Crafting's bounded station/water checks are already delivered,
+The carpentry delivery includes reusable Saw, Chisel, Plane and Mallet
+items/requirements plus work steps. These four tools and the Weapon Mold
+already have dedicated 3D box models in `src/config/itemModels.js`, consumed
+by the held-item renderer (`src/render/heldModel.js`); do not list those models
+as missing. Crafting's bounded station/water checks are already delivered,
 not an open terrain-generation task.
 
 ### 3.2 A storage interface
