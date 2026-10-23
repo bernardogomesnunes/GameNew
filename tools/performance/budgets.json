@@ -6,5 +6,6 @@
     "cave": { "surfaceTriangles": 26000, "geometryBytes": 10500000, "meshes": 45 },
     "settlement": { "surfaceTriangles": 13000, "geometryBytes": 10000000, "meshes": 37 }
   },
-  "browser": { "drawCalls": 160, "triangles": 350000, "geometryGrowth": 0, "textureGrowth": 0, "bufferGrowth": 0 }
+  "browser": { "drawCalls": 160, "triangles": 350000, "geometryGrowth": 0, "textureGrowth": 0, "bufferGrowth": 0 },
+  "fullGame": { "drawCalls": 1000, "triangles": 3100000, "geometryBytes": 280000000 }
 }

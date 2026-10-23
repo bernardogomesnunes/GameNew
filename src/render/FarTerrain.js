@@ -266,6 +266,9 @@ export class FarTerrain {
     geo.computeBoundingSphere();
     const mesh = new THREE.Mesh(geo, layer.material);
     mesh.userData.far = true;
+    mesh.userData.tileX = tx;
+    mesh.userData.tileZ = tz;
+    mesh.visible = !this.tileCovered(layer, tx, tz);
     this.group.add(mesh);
     layer.tiles.set(`${tx},${tz}`, mesh);
     return mesh;
@@ -442,9 +445,11 @@ export class FarTerrain {
    * Only uploads when something actually changed.
    */
   setChunkMask(cx0, cz0, size, drawn, chunkSize) {
+    const resized = this.maskSize !== size;
     this.ensureMask(size);
     const data = this.maskData;
-    let changed = this.uniforms.uMaskOrigin.value.x !== cx0 * chunkSize
+    let changed = resized || this.maskChunkSize !== chunkSize
+      || this.uniforms.uMaskOrigin.value.x !== cx0 * chunkSize
       || this.uniforms.uMaskOrigin.value.y !== cz0 * chunkSize;
     for (let j = 0; j < size; j++) {
       for (let i = 0; i < size; i++) {
@@ -453,9 +458,31 @@ export class FarTerrain {
       }
     }
     if (!changed) return;
+    this.maskChunkSize = chunkSize;
     this.uniforms.uMaskOrigin.value.set(cx0 * chunkSize, cz0 * chunkSize);
     this.uniforms.uMaskBlocks.value = size * chunkSize;
     this.maskTexture.needsUpdate = true;
+    // A fully masked tile cannot contribute a pixel. Skip its draw call and
+    // vertex work instead of submitting it just to discard every fragment.
+    for (const layer of this.layers) for (const mesh of layer.tiles.values()) {
+      mesh.visible = !this.tileCovered(layer, mesh.userData.tileX, mesh.userData.tileZ);
+    }
+  }
+
+  /** Conservative coverage includes the maximum-edge walls' neighbouring chunk. */
+  tileCovered(layer, tx, tz) {
+    const chunkSize = this.maskChunkSize;
+    if (!(chunkSize > 0)) return false;
+    const origin = this.uniforms.uMaskOrigin.value;
+    const x0 = Math.floor((tx * layer.tile - origin.x) / chunkSize);
+    const z0 = Math.floor((tz * layer.tile - origin.y) / chunkSize);
+    const x1 = Math.floor(((tx + 1) * layer.tile - origin.x) / chunkSize);
+    const z1 = Math.floor(((tz + 1) * layer.tile - origin.y) / chunkSize);
+    if (x0 < 0 || z0 < 0 || x1 >= this.maskSize || z1 >= this.maskSize) return false;
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
+      if (!this.maskData[z * this.maskSize + x]) return false;
+    }
+    return true;
   }
 
   /** Every tile mesh standing, across both layers. */
