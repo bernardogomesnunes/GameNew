@@ -565,6 +565,52 @@ review found no production optimization defects; cave/save-evidence findings
 were fixed with regressions. Later changes on this branch only document the
 measured results. TECH-18 and TECH-8 remain partial for the work listed above.
 
+### TECH-18 / TECH-8 background local saves, 24 October
+
+**Spec:** "keep going ... best performance ... without compromising the game
+visuals"; continue the measured autosave/quota findings from #241. Claimed
+terrain, edited blocks, finite/legacy worlds, all graphics settings and save
+confirmation/recovery must survive. Implement natively on
+`codex/background-local-saves` in the current checkout; one final independent
+review. No dependencies or production database changes.
+
+**Design choice:** capture an owned binary snapshot of loaded edited/claimed
+chunks and metadata, then prepare missing claimed terrain in a dedicated
+worker and commit binary world data plus directory metadata atomically to a
+separate local IndexedDB database. This avoids whole-world RLE/JSON during
+play and localStorage's observed quota. Confirm only committed writes;
+preserve readable legacy records until replacement commits. Use serialized,
+bounded save requests; retain a working fallback and report storage failures.
+Keep exports/cloud formats unchanged. New local snapshots restore directly
+without generating terrain just to overwrite it. Measure snapshot-copy cost
+and additional retained buffers as well as worker time.
+
+- [ ] Reproduce capture/preparation/persistence boundaries with real-world
+  fixtures. Add failing-first snapshot tests for zero live-world generation,
+  owned buffers, claimed/edited preservation, negative coordinates, finite
+  worlds and exact restore including surfaces/biomes/placed lights.
+- [ ] Implement binary snapshot capture/completion/restore in
+  `src/storage/WorldSnapshot.js`; prove old exported data remains compatible.
+- [ ] Add real-browser failing checks for large local persistence, atomic
+  metadata, fresh-page restore, legacy coexistence/migration, failed commits,
+  overlapping saves/deletes, and worker failure. Implement the worker/backend
+  and `LocalWorlds` integration with bounded pending work.
+- [ ] Connect committed local-save promises to Game's existing Save and leave,
+  crash recovery, world switches, sign-in migration and deletion. Preserve
+  synchronous legacy fallback; do not present queued work as persisted.
+- [ ] Update profiling to await actual persistence and record preparation and
+  completion separately. Compare the developed fixture at home/away against
+  #241; keep resource and pixel-equivalence checks unchanged.
+- [ ] Run full regression/build/browser/performance checks and a sustained
+  session crossing saves. Review, commit/push, PR and merge under standing
+  authorization, then update this single task list with measured results.
+
+Review focus: failed transactions retain the previous save; late completion
+cannot resurrect deleted worlds or update another world's UI; rapid requests
+remain bounded; worker-disabled/private-storage cases; typed-array ownership;
+Save and leave/crash Reload wait for actual persistence. Physical-iPhone and
+the original owner Reload remain separate verification work.
+
 ---
 
 Diagnostics: Settings > Graphics or the **Reload screen > Download diagnostics**
