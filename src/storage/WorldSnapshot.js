@@ -28,13 +28,21 @@ export function captureWorldSnapshot(world,keepBounds=null){
 /** Worker preparation; the fallback yields between chunks. Never installs
  * generated terrain into the playing world or builds rendering resources.
  */
-export async function completeWorldSnapshot(snapshot,yieldWork=null){
+export async function completeWorldSnapshot(snapshot,yieldWork=null,previous=null){
+  const compatible=previous?.format===FORMAT&&previous.height===snapshot.height
+    &&previous.generation?.seed===snapshot.generation?.seed
+    &&previous.generation?.homeX===snapshot.generation?.homeX&&previous.generation?.homeZ===snapshot.generation?.homeZ;
+  const kept=new Map(compatible?previous.chunks.map(c=>[`${c.cx},${c.cz}`,c]):[]);
   let gen;
   for(let i=0;i<snapshot.chunks.length;i++){
     const c=snapshot.chunks[i];
     if(!c.data){
-      gen??=terrainGenerator(snapshot.generation);
-      snapshot.chunks[i]=generateTerrainChunk(snapshot.generation,c.cx,c.cz,gen);
+      const existing=kept.get(`${c.cx},${c.cz}`);
+      if(existing?.data)snapshot.chunks[i]=existing;
+      else{
+        gen??=terrainGenerator(snapshot.generation);
+        snapshot.chunks[i]=generateTerrainChunk(snapshot.generation,c.cx,c.cz,gen);
+      }
       if(yieldWork)await yieldWork();
     }
   }

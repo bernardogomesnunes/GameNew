@@ -56,7 +56,7 @@ try {
       }
     });
   });
-  const placed = await page.evaluate(() => {
+  const placed = await page.evaluate(async () => {
     const game = window.__game;
     game.newWorld({ mode: 'creative', name: 'Browser smoke', seed: 71823, silent: true });
     const x = Math.floor(game.player.position.x) + 4;
@@ -72,7 +72,7 @@ try {
     } finally { game.raycast = raycast; }
     const block = game.world.getBlock(x, y, z);
     if (block === previous) throw new Error('The real placement path did not change the world');
-    if (!game.saveNow()) throw new Error('Saving the local world failed');
+    if (!await game.saveAndWait()) throw new Error('Saving the local world failed');
     return { id: game.worldId, x, y, z, block };
   });
   await page.reload();

@@ -764,8 +764,8 @@ export class UIManager {
       onRemove: async (id, label) => {
         const yes = await this.confirm({ title: `Delete "${label}"?`, body: 'Everything built in it goes with it, and this cannot be undone.', ok: 'Delete', danger: true });
         if (!yes) return false;
-        this.cb.onDeleteWorld(id);
-        return true;
+        try{return await this.cb.onDeleteWorld(id)!==false;}
+        catch(error){this.toast({kind:'xp',title:'Could not delete that world',body:error.message});return false;}
       },
 
       // These open *over* the worlds screen rather than replacing it. They used

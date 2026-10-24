@@ -46,7 +46,7 @@ try{
       contextAttributes:g.renderer.getContext().getContextAttributes()};
   });
   if(!process.env.PROFILE_ALLOW_SOFTWARE)assert.doesNotMatch(report.backend.renderer,/swiftshader|llvmpipe|software/i,'Use actual hardware or explicitly label software profiling');
-  report.persistence=await page.evaluate(()=>{
+  report.persistence=await page.evaluate(async()=>{
     const g=window.__game;
     const native=Storage.prototype.setItem;let storageFailure=null;
     Storage.prototype.setItem=function(key,value){
@@ -54,11 +54,11 @@ try{
       catch(error){storageFailure={kind:error.name,characters:value.length};throw error;}
     };
     let saved;
-    try{saved=g.worldIsLocal&&g.saveNow();}finally{Storage.prototype.setItem=native;}
+    try{saved=g.worldIsLocal&&await g.saveAndWait();}finally{Storage.prototype.setItem=native;}
     // A profiler must retain a discovered workload failure, not shrink the
     // fixture until it passes. Continue collecting; validation will reject it.
     if(!saved)return{initialSavedAt:null,preflightError:g.saveError,storageFailure};
-    const restored=g.local.restore(g.worldId);
+    const restored=await g.local.restore(g.worldId);
     if(restored.mode!=='duilt'||!restored.world.chunks.length)throw new Error('Profile fixture did not restore its saved payload');
     return{initialSavedAt:restored.updatedAt};
   });
@@ -89,7 +89,7 @@ try{
         const original=object[name];
         object[name]=function(...args){const start=performance.now();try{
           return name==='saveNow'
-            ?window.__profileFixtureModule.observeSave(state,()=>original.apply(this,args))
+            ?window.__profileFixtureModule.observeSave(state,()=>original.apply(this,args),()=>g.saving??true)
             :original.apply(this,args);
         }finally{
           const ms=performance.now()-start,c=state.costs[`${label}.${name}`]??={calls:0,totalMs:0,maxMs:0};
@@ -145,15 +145,16 @@ try{
     if(sample.stop||!sample.playing||sample.geometryBytes>1024**3)break;
   }
   report.elapsedSeconds=(Date.now()-start)/1000;
-  const totals=await page.evaluate(()=>{
+  const totals=await page.evaluate(async()=>{
     const s=window.__sessionProfile;
+    await Promise.all(s.pendingSaves??[]);
     return {frames:s.frames,maxFrameMs:s.maxFrameMs,warFrames:s.warFrames,saves:s.saves,
       saveAttempts:s.saveAttempts,failedSaves:s.failedSaves,
-      histogram:Array.from(s.histogram),losses:s.losses};
+      histogram:Array.from(s.histogram),losses:s.losses,saveCompletionMs:s.saveCompletions??[]};
   });
   report.contextLosses=totals.losses;delete totals.losses;report.totals=totals;
-  report.persistence.lastSavedAt=await page.evaluate(()=>{
-    try{return window.__game.local.restore(window.__game.worldId).updatedAt;}catch{return null;}
+  report.persistence.lastSavedAt=await page.evaluate(async()=>{
+    try{return (await window.__game.local.restore(window.__game.worldId)).updatedAt;}catch{return null;}
   });
   report.completed=report.elapsedSeconds>=durationSeconds;
   report.failures=validateProfileReport(report);save();

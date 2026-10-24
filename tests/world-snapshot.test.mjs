@@ -51,3 +51,11 @@ assert.equal(fixed.endless,false);assert.equal(fixed.getBlock(3,4,5),3);
 assert.deepEqual(fixed.surfaceHeightMap,finite.surfaceHeightMap);
 assert.deepEqual(fixed.biomeMap,finite.biomeMap);
 console.log('PASS finite worlds retain blocks and full surface/biome maps');
+const first=await completeWorldSnapshot(captureWorldSnapshot(new World({height:32,gen:new ChunkGen({seed:8,height:32})}),
+  {minX:0,maxX:15,minZ:0,maxZ:15}));
+first.chunks[0].data[0]=77; // Saved claimed land from an earlier generator version.
+const next=captureWorldSnapshot(new World({height:32,gen:new ChunkGen({seed:8,height:32})}),
+  {minX:0,maxX:15,minZ:0,maxZ:15});
+await completeWorldSnapshot(next,null,first);
+assert.equal(next.chunks[0].data[0],77,'missing claimed chunks must reuse the committed terrain instead of regenerating it');
+console.log('PASS later saves reuse committed missing claimed terrain');
