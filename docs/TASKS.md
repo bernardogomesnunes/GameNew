@@ -436,7 +436,7 @@ supersede that historical review; do not repeat its already completed work.
 | TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | done; integrated into main 21 October |
 | TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
 | TECH-17 | **Performance safeguards for future additions**: fixed-seed crest/slope/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource/disposal checks, shared streaming allowance and a required PR performance workflow. #239 adds an actual 802-chunk forest rendering comparison/cost gate; existing budgets are unchanged. Commands and limits in `docs/performance.md`. | ChatGPT | M | implementation integrated (#234, included with #236; full-game gate #239); real-phone check pending |
-| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on a weak-GPU iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | Any next agent | M | first optimization and diagnostics merged in #239 on 23 October; actual failure unresolved; no engine migration approved |
+| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on a weak-GPU iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | ChatGPT: active on `codex/performance-streaming`, 24 October | M | first optimization and diagnostics merged in #239; streaming-stall follow-up in progress; actual failure unresolved; no engine migration approved |
 
 ### TECH-18 implementation plan, 23 October
 
@@ -476,6 +476,43 @@ Remaining TECH-18 / TECH-8 work:
   wrapper application is authorized merely by this discussion.
 
 Review focus: first-frame failures; reporting while the graphics context is lost; reports containing no account/world identifiers; mask edges and negative coordinates; restoring coarse terrain while real chunks stream or unload. Real iPhone failure reproduction remains necessary.
+
+### TECH-18 / TECH-8 follow-up plan, 24 October
+
+**Spec:** the owner's request to take the performance TECH tasks, with the
+existing detail/view-distance/save-recovery constraints above. Work in the
+current clean checkout on a task branch, as `docs/performance.md` specifies.
+**Architecture:** keep the current JavaScript/Three.js stack; fix demonstrated
+main-thread work at its source and keep profiling instrumentation in tools,
+not the normal game loop. This is native execution of the plan in this chat.
+
+- [x] Reproduce a concrete budget bypass before proposing a fix: one actual
+  GrassView update over unloaded mountain terrain synchronously generates
+  12 chunks, takes about 342 ms and produces zero visible tufts on this run.
+- [ ] Add failing-first grass regressions: unloaded endless terrain must not
+  generate, partially loaded/negative-coordinate terrain still works, tufts
+  appear after normal loading, and fully loaded output remains unchanged.
+  Implement the smallest guard in `src/render/GrassView.js`; preserve density,
+  radius, wind, user settings and the finite-world behavior. Commit.
+- [ ] Inspect/profile other measured streaming/minimap/submission costs;
+  change a hot path only when a reproducible test demonstrates its cause.
+- [ ] Add a repeatable local-only full-game long-session profiler under
+  `tools/performance/`, with a fixed-seed populated settlement, actual war
+  activity, exploration/return travel and autosaves. Reports must distinguish
+  CPU submission/source-buffer bytes from GPU time/VRAM, reject incomplete
+  runs, and record backend, configuration and the tested revision.
+- [ ] Run the 30-minute profile on actual desktop hardware and report frame
+  stalls and retained-resource trends. Record whether war/settlement/autosave
+  paths actually ran. Physical-iPhone and owner saved-world reproduction stay
+  open unless evidence is supplied; a clean synthetic run does not close them.
+- [ ] Run focused regressions, performance/browser budgets, relevant gameplay
+  smoke checks, build and full suite. Review the complete branch, commit/push,
+  open a PR, reconcile main and integrate under the standing authorization.
+
+Review focus: no visual query may generate an unloaded chunk; negative chunk
+coordinates; restoring details after worker arrival; unchanged loaded-world
+output; profile evidence that actually includes populated/war/autosave work;
+no production telemetry or account/database side effects.
 
 ---
 
