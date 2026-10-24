@@ -447,8 +447,15 @@ export class World {
       const dx = chunk.cx - px, dz = chunk.cz - pz;
       if (dx * dx + dz * dz <= c * c) continue;
       this.chunks.delete(key);
-      this.forgetLights(chunk);
       dropped.push(chunk);
+    }
+    // Light/smoke records are sparse. Sweeping them once avoids reading every
+    // block in hundreds of departing chunks on the same streaming frame.
+    if (dropped.length) {
+      const forgotten = new Set(dropped.map(chunk => chunkKey(chunk.cx, chunk.cz)));
+      for (const records of [this.lights, this.smokes]) for (const [key, at] of records) {
+        if (forgotten.has(chunkKey(at.x >> 4, at.z >> 4))) records.delete(key);
+      }
     }
     return dropped;
   }

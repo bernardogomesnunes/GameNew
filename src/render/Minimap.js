@@ -21,7 +21,15 @@ export class Minimap {
 
   update(gen, x, z, yaw) {
     if (!gen) return;
-    const { size, cells } = sampleTerrainGrid(gen, x, z, { radius: this.radius, step: this.step });
+    // The generated biome/water map does not change when the player turns.
+    // Keep just the latest grid; repainting still handles heading and resize.
+    let terrain = this.lastTerrain;
+    if (!terrain || terrain.gen !== gen || terrain.x !== x || terrain.z !== z
+      || terrain.radius !== this.radius || terrain.step !== this.step) {
+      terrain = this.lastTerrain = { gen, x, z, radius: this.radius, step: this.step,
+        grid: sampleTerrainGrid(gen, x, z, { radius: this.radius, step: this.step }) };
+    }
+    const { size, cells } = terrain.grid;
     const { width, height } = this.canvas;
     paintGrid(this.ctx, width, height, size, cells);
     drawHeadingArrow(this.ctx, width / 2, height / 2, yaw, 7);
