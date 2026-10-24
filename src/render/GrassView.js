@@ -139,6 +139,9 @@ export class GrassView {
   /** The top of the turf in a column — grass with open air on it — or null. */
   groundAt(world, x, z) {
     if (!world.endless && !world.inBounds(x, 0, z)) return null;
+    // Decorative sampling must not generate terrain outside the streaming
+    // budget. A later scan picks up chunks supplied by the normal loader.
+    if (world.endless && !world.hasChunk(x >> 4, z >> 4)) return null;
     const h = world.surfaceHeight(x, z);
     for (const y of [h, h + 1, h - 1]) {
       if (world.getBlock(x, y - 1, z) === GRASS && world.getBlock(x, y, z) === 0) return y;

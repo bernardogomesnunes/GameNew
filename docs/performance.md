@@ -200,3 +200,137 @@ Storage Remote all pass. The existing browser smoke test timed out once at its
 file picker while other browser checks ran, then passed on an isolated rerun.
 The production build retains its existing large-bundle warning. Independent
 review has no remaining blockers after adding diagnostic-failure isolation.
+
+## Streaming hot paths and sustained profiling, 24 October 2026
+
+PR #241 keeps grass decoration inside normal terrain streaming. Sampling an
+unloaded mountain must not call the world's generating accessors; the next
+regular grass scan picks up chunks after worker arrival. Loaded-world tuft
+transforms/colours and finite-world behaviour remain unchanged. Bulk unload
+now sweeps sparse light/smoke records once instead of scanning every block in
+each dropped chunk. The minimap keeps one terrain grid for the current
+generator, position and sampling settings; turning or resizing still repaints.
+These changes preserve detail, density, radius and view distance.
+
+Focused comparisons imported the actual modules from baseline `838fd99` and
+the implementation on this branch in the same process:
+
+| Workload | Before | After | Preserved result |
+|---|---:|---:|---|
+| Unloaded mountain grass scan | 298.38 ms; 12 generated chunks | 0.43 ms; 0 generated chunks | 0 visible tufts |
+| Drop 612 chunks | 67.19 ms | 0.78 ms | Same chunks dropped; same 13 retained lights |
+| 10 stationary minimap updates | 113.78 ms; 40,960 samples | 13.13 ms; 4,096 samples | Same terrain pixels; heading repainted |
+
+These are individual probes, not sustained FPS guarantees. Regression tests
+cover terrain arriving normally, negative coordinates, touched chunks,
+world/position/settings invalidation and canvas resize. The browser rendering
+comparison still produces identical pixels.
+
+Run `node tools/performance/profile.mjs` for a **30-minute** offline full-game
+profile. It ignores environment files, blocks external requests and builds a
+fixed-seed fixture through the actual design/claim/population systems: 56
+validated buildings, 55 villagers and eight hauler assignments. Six phases
+exercise settlement, live war actors, travel, return, verified underground
+air with actual deep draws, and recovery. The observer flies and is healed/fed
+between samples; normal simulation systems remain enabled. This is a
+repeatable stress workload, not a replay of the owner's saved world.
+
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` selects an installed Chrome. The default
+requires a hardware backend. `PROFILE_ALLOW_SOFTWARE=1` explicitly selects
+SwiftShader for debugging; it cannot establish device performance.
+`PROFILE_DURATION_SECONDS` (30–3600) and `PROFILE_SAMPLE_MS` (at least 1000)
+allow shorter harness checks. Short runs do not certify the 30-minute task.
+`PROFILE_REPORT` changes the JSON output path; the default is
+`artifacts/performance/long-session.json`. Reports include revision, browser,
+effective graphics settings, frame histogram, method CPU costs, resources,
+actual population/war activity and persistence results. Source geometry bytes
+are not VRAM, and renderer method duration is CPU submission time, not GPU
+completion time. Nested method times overlap and must not be added together.
+
+Validation rejects incomplete runs, missing workload/configuration evidence,
+stops, context loss, invalid counters and failed persistence. A save attempt
+returning false or throwing is a failure. Runs of at least ten minutes must
+also restore a newer persisted timestamp after a successful autosave. A failed
+initial save is retained in the report while the workload continues, then the
+process exits unsuccessfully; a completed duration is not a clean pass.
+
+The developed local fixture exposes `QuotaExceededError`: its first payload
+contains roughly **14 million characters**. The existing cloud-backup spill
+to IndexedDB (SAVE-5) does not cover `LocalWorlds`, which still saves its whole
+world synchronously to localStorage. No quota override or reduced fixture is
+used to hide this. Save capacity and synchronous autosave work remain part of
+the TECH-18/TECH-8 investigation; this finding does not identify the cause of
+the owner's Reload screen.
+
+The corrected run on `77f2ca2db90da67f5dced777694578e6fdf6ffcc` completed
+**1,800.059 seconds** in Chrome **155.0.8059.80** on the actual Radeon RX
+7900 GRE / ANGLE D3D11 backend, WebGL 2 with antialiasing. Viewport was
+1920×1080, pixel ratio 1; all graphics options were enabled/automatic, with
+effective render distance 234. Setup/warmup preceded the timed workload.
+All 180 ten-second samples retained 56 buildings and 55 villagers in actual
+playing state. Eight live war attackers were observed; the cave viewpoint was
+at (324.5, 12, 789.5), below surface height 103, with verified air/headroom and
+deep-mesh submissions. No page error, context loss or Reload occurred.
+
+The run **failed persistence validation**. Its initial save hit the native
+quota with 14,034,781 characters, and all six subsequent scheduled saves
+returned failure. Successful saves: **0**; restored final world: **none**.
+The profiler exited with status 1 for those persistence failures. This is a
+completed duration with a failed result, not a clean performance sign-off.
+
+| Measurement | Observed |
+|---|---:|
+| Frame intervals | 107,349 |
+| Histogram upper bounds, p50 / p95 / p99 | 17 / 17 / 20 ms |
+| Maximum frame interval | 2,308.3 ms |
+| Intervals at least 50 / 100 / 250 ms | 15 / 9 / 5 |
+| Largest synchronous save | 2,301.3 ms |
+| Renderer CPU submission, cumulative / maximum call | 405.35 s / 741.8 ms |
+| Simulation tick, cumulative / maximum call | 38.06 s / 36.8 ms |
+| Remesh queue draining, cumulative / maximum call | 27.38 s / 21.7 ms |
+| Maximum sampled draw calls / triangles | 954 / 2,746,396 |
+| Maximum sampled CPU geometry buffers | 252,963,126 bytes |
+
+Histogram values have 1 ms bins, with intervals of 2,000 ms or longer in the
+final bin; the separately recorded maximum retains their actual duration.
+The shader/model setup, operating system, garbage collection and profiler
+instrumentation affect timings; these numbers are one desktop run, not an
+FPS promise or evidence of GPU completion times. Cumulative method times are
+nested; simulation includes settlers and the frame includes rendering.
+
+| Phase end | Loaded chunks | CPU geometry MB (decimal) | Textures |
+|---|---:|---:|---:|
+| Initial settlement sample | 822 | 214.19 | 29 |
+| Settlement | 822 | 214.21 | 33 |
+| War | 822 | 214.25 | 37 |
+| Travel | 1,505 | 206.02 | 45 |
+| Return home | 847 | 222.11 | 45 |
+| Underground | 1,238 | 197.27 | 47 |
+| Final recovery at home | 797 | 220.38 | 47 |
+
+The home views settled rather than continuing to grow during their stationary
+windows. The final home geometry allocation was about 6.2 MB above the initial
+one; different assets were loaded during travel/war. This single cycle cannot
+establish that every retained resource is necessary or rule out longer-term
+growth. CPU voxel buffers, textures and driver allocations are outside the
+geometry-byte measurement. Raw local evidence is in
+`artifacts/performance/long-session-reviewed.json`, with the console log and
+`long-session-reviewed-summary.json` alongside it.
+
+The two away-from-home saves took **2,230.4 ms** and **2,301.3 ms**; home saves
+took roughly 162–186 ms. Source inspection shows that
+`LocalWorlds.save → World.serialize({keepBounds}) → getChunk` can generate
+missing claimed terrain synchronously before RLE/JSON/storage work. Chunk
+counts jumped on the away saves. The next investigation should count those
+fills and split snapshot/encoding/write durations, then bound preparation and
+provide reliable large-local-world persistence while preserving claimed land
+and existing save compatibility. Rendering submission/upload and individual
+remesh spikes remain separate follow-ups; the original owner Reload and
+physical-iPhone performance remain unverified.
+
+On this exact runtime/tool/test revision, CI reports **7,583 passed, 0 failed
+across 297 files**; build, gameplay/browser recovery, inventory search,
+Storage Remote and both performance gates pass. Local browser resource budgets
+and the full-game comparison also pass (**761 → 746 calls**, **2,494,710 →
+2,351,698 triangles**, identical pixels). Existing budget caps are unchanged.
+Only documentation changed after the measured/CI-tested revision.

@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import { World } from '../src/world/World.js';
+
+const gen={biomes:{centreX:0,centreZ:0},fill(){}};
+const world=new World({height:200,gen});
+const far=world.getChunk(-20,-20),near=world.getChunk(-1,-1),edited=world.getChunk(20,20);
+edited.touched=true;
+world.lights.set('far',{x:-320,y:2,z:-320,light:1});
+world.lights.set('edge',{x:-1,y:2,z:-16,light:1});
+world.lights.set('edited',{x:320,y:2,z:320,light:1});
+world.smokes.set('far-smoke',{x:-319,y:3,z:-319});
+world.smokes.set('near-smoke',{x:-2,y:3,z:-2});
+let reads=0;
+const data=far.data;
+Object.defineProperty(far,'data',{get(){reads++;return data;}});
+const dropped=world.forgetBeyond(0,0,32);
+assert.deepEqual(dropped,[far]);
+assert.equal(reads,0,'dropping terrain must not scan its full block buffer for sparse light records');
+console.log('PASS bulk chunk unload does not read terrain buffers');
+assert.equal(world.getChunk(-1,-1,false),near);
+assert.equal(world.getChunk(20,20,false),edited);
+assert.deepEqual([...world.lights.keys()],['edge','edited']);
+assert.deepEqual([...world.smokes.keys()],['near-smoke']);
+console.log('PASS dropped lights/smoke are removed while negative-edge and edited-chunk records survive');
+const before=[...world.lights];
+assert.deepEqual(world.forgetBeyond(0,0,32),[]);
+assert.deepEqual([...world.lights],before);
+console.log('PASS an unload with no dropped chunks preserves all light records');
