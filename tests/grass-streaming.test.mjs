@@ -35,9 +35,13 @@ check('partial coverage and negative coordinates keep loaded tufts without creat
     for(let i=0;i<view.mesh.count;i++){
       assert.ok(matrices[i*16+12]<0);assert.ok(matrices[i*16+14]<0);
     }
-    world.getChunk(0,0); // The normal generator/worker supplies another chunk.
+    const data=new Uint8Array(16*16*8),surface=new Int16Array(256).fill(2);
+    for(let x=0;x<16;x++)for(let z=0;z<16;z++){
+      data[z*16+x]=2;data[(16+z)*16+x]=1;
+    }
+    assert.ok(world.acceptGeneratedChunk({cx:0,cz:0,height:8,data,surface,biomes:new Uint8Array(256)}));
     view.update(world,{x:0,y:2,z:0},2000);
-    assert.equal(world.gen.fills,2);
+    assert.equal(world.gen.fills,1,'accepting worker terrain must not fall back to synchronous generation');
     assert.ok(Array.from({length:view.mesh.count},(_,i)=>matrices[i*16+12]).some(x=>x>=0),
       'standing still must pick up terrain arriving after the earlier scan');
   }finally{view.dispose();}

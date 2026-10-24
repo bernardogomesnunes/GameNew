@@ -1,6 +1,23 @@
 // Test-only workload, loaded by the local profiler; never imported by the game.
 import { STARTER_DESIGNS } from '../../src/config/starterDesigns.js';
 import { WAR_AGE } from '../../src/config/ages.js';
+import { caveSite, deepCaveColumn } from '../../src/world/deepCaves.js';
+export { observeSave } from './profile-report.js';
+
+export function undergroundView(world){
+  for(const [rx,rz] of [[0,1],[1,1],[-1,1],[0,2]]){
+    const site=caveSite(world.gen,rx,rz);if(!site)continue;
+    for(const [dx,dz] of [[-16,8],[-12,4],[16,8],[0,-10]]){
+      const x=site.x+dx,z=site.z+dz,surface=world.gen.heightAt(x,z);
+      for(const span of deepCaveColumn(world.gen,x,z)){
+        const y=span.floor+2;
+        if(y+3>=span.ceiling||y+3>=surface)continue;
+        if([0,1,2,3].every(dy=>world.getBlock(x,y+dy,z)===0))return{x:x+.5,y,z:z+.5,surface};
+      }
+    }
+  }
+  throw new Error('No validated underground air position for the cave workload');
+}
 
 export function prepareProfileWorld(game) {
   game.newWorld({mode:'duilt',name:'Test world 1',seed:4242,silent:true});
@@ -52,8 +69,11 @@ export function profilePhase(game,fixture,name,step=0){
   if(name==='settlement'||name==='war'||name==='return'||name==='recovery'){
     const at=fixture.view;game.player.teleport(at.x,at.y,at.z);
     game.player.yaw=0;game.player.pitch=-.15;
+  }else if(name==='caves'){
+    const at=undergroundView(game.world);game.player.teleport(at.x,at.y,at.z);
+    game.player.yaw=Math.PI/2;game.player.pitch=0;
   }else{
-    const x=name==='travel'?-744+step*32:340,z=name==='travel'?600:781;
+    const x=-744+step*32,z=600;
     game.player.teleport(x,game.world.gen.heightAt(x,z)+5,z);
   }
   game.player.flying=true;

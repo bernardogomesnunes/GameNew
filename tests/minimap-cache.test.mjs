@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { Minimap } from '../src/render/Minimap.js';
 
-const rotations=[],paint=[];
-const ctx={clearRect(){paint.length=0;},fillRect(){paint.push(this.fillStyle);},
+const rotations=[],paint=[];let cleared;
+const ctx={clearRect(...args){paint.length=0;cleared=args;},fillRect(){paint.push(this.fillStyle);},
   save(){},restore(){},translate(){},rotate(yaw){rotations.push(yaw);},
   beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){}};
 const canvas={width:120,height:120,getContext:()=>ctx};
@@ -26,3 +26,8 @@ map.radius=8;
 const previous=samples;map.update(otherGen,-.25,3.75,1);
 assert.ok(samples>previous,'map sampling settings must invalidate the cache');
 console.log('PASS movement, world changes and sampling settings refresh minimap terrain');
+const cached=samples;canvas.width=180;canvas.height=140;
+map.update(otherGen,-.25,3.75,2);
+assert.equal(samples,cached);assert.deepEqual(cleared,[0,0,180,140]);
+assert.equal(rotations.at(-1),-2);
+console.log('PASS resizing repaints the new canvas dimensions without invalidating terrain');

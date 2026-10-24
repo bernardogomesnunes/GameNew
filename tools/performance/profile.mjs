@@ -39,21 +39,61 @@ try{
     return window.__profileFixture=fixture.prepareProfileWorld(window.__game);
   });
   report.backend=await page.evaluate(()=>window.__game.graphicsBackend);
+  report.browserVersion=browser.version();
+  report.renderConfig=await page.evaluate(()=>{
+    const g=window.__game;
+    return{graphics:{...g.graphics},renderDistance:g.renderDistance,
+      contextAttributes:g.renderer.getContext().getContextAttributes()};
+  });
   if(!process.env.PROFILE_ALLOW_SOFTWARE)assert.doesNotMatch(report.backend.renderer,/swiftshader|llvmpipe|software/i,'Use actual hardware or explicitly label software profiling');
+  report.persistence=await page.evaluate(()=>{
+    const g=window.__game;
+    const native=Storage.prototype.setItem;let storageFailure=null;
+    Storage.prototype.setItem=function(key,value){
+      try{return native.call(this,key,value);}
+      catch(error){storageFailure={kind:error.name,characters:value.length};throw error;}
+    };
+    let saved;
+    try{saved=g.worldIsLocal&&g.saveNow();}finally{Storage.prototype.setItem=native;}
+    // A profiler must retain a discovered workload failure, not shrink the
+    // fixture until it passes. Continue collecting; validation will reject it.
+    if(!saved)return{initialSavedAt:null,preflightError:g.saveError,storageFailure};
+    const restored=g.local.restore(g.worldId);
+    if(restored.mode!=='duilt'||!restored.world.chunks.length)throw new Error('Profile fixture did not restore its saved payload');
+    return{initialSavedAt:restored.updatedAt};
+  });
+  if(report.persistence.preflightError)console.log('PREFLIGHT SAVE FAILURE '+JSON.stringify(report.persistence));
   console.log('PROFILE '+JSON.stringify({revision:report.revision,backend:report.backend,fixture:report.fixture,config:report.config}));
   await page.evaluate(()=>{
     const g=window.__game;
     const state=window.__sessionProfile={histogram:new Uint32Array(2001),frames:0,maxFrameMs:0,
-      warFrames:0,saves:0,costs:{},losses:[],previousFrame:null};
+      warFrames:0,saves:0,saveAttempts:0,failedSaves:0,deepDraws:0,costs:{},losses:[],previousFrame:null};
     g.renderer.domElement.addEventListener('webglcontextlost',event=>state.losses.push({at:performance.now(),status:event.statusMessage}));
+    const watchDeep=mesh=>{
+      if(!mesh.userData.deep)return;
+      const original=mesh.onBeforeRender;
+      mesh.onBeforeRender=function(renderer,scene,camera,geometry,material,group){
+        state.deepDraws++;original.call(this,renderer,scene,camera,geometry,material,group);
+      };
+    };
+    for(const mesh of g.mesher.activeMeshes)watchDeep(mesh);
+    const rebuild=g.mesher.rebuild;
+    g.mesher.rebuild=function(world,chunk){
+      const result=rebuild.call(this,world,chunk);
+      for(const mesh of chunk.mesh?.values()??[])watchDeep(mesh);
+      return result;
+    };
     for(const [object,names,label] of [[g,['tick','streamChunks','generateQueued','drainRemeshQueue','updateFarTerrain','updateMinimap','tickWar','saveNow'],'game'],
       [g.duilt,['tick'],'simulation'],[g.duilt.settlers,['tick'],'settlers'],[g.grass,['update'],'grass'],[g.renderer,['render'],'renderer']]){
       for(const name of names){
         const original=object[name];
-        object[name]=function(...args){const start=performance.now();try{return original.apply(this,args);}finally{
+        object[name]=function(...args){const start=performance.now();try{
+          return name==='saveNow'
+            ?window.__profileFixtureModule.observeSave(state,()=>original.apply(this,args))
+            :original.apply(this,args);
+        }finally{
           const ms=performance.now()-start,c=state.costs[`${label}.${name}`]??={calls:0,totalMs:0,maxMs:0};
           c.calls++;c.totalMs+=ms;c.maxMs=Math.max(c.maxMs,ms);
-          if(name==='saveNow')state.saves++;
         }};
       }
     }
@@ -87,8 +127,13 @@ try{
         warStage:g.duilt.war.stage,warParty:g.wanderers.warParty?.band.filter(p=>!p.dead&&!p.done).length??0,
         warActors:g.wanderers.warParty?.band.map(p=>({kind:p.kind,x:p.x,y:p.y,z:p.z,stage:p.stage,hp:p.hp,done:!!p.done,dead:!!p.dead}))??[],
         pixelRatio:g.renderer.getPixelRatio(),health:g.duilt.health.value,
+        position:{x:g.player.position.x,y:g.player.position.y,z:g.player.position.z},
+        surfaceHeight:g.world.gen.heightAt(g.player.position.x,g.player.position.z),
+        deepDraws:s.deepDraws,saveError:g.saveError??null,
         heap:performance.memory?.usedJSHeapSize??null,costs:s.costs};
-      s.costs={};
+      const x=Math.floor(g.player.position.x),y=Math.floor(g.player.position.y),z=Math.floor(g.player.position.z);
+      sample.headroom=g.world.hasChunk(x>>4,z>>4)&&[0,1,2].every(dy=>g.world.getBlock(x,y+dy,z)===0);
+      s.costs={};s.deepDraws=0;
       // Fixture maintenance keeps the observer alive; it does not disable any
       // update system, revive a dead player or hide a stopped/paused game.
       if(!g.duilt.health.dead)g.duilt.health.value=20;
@@ -103,12 +148,17 @@ try{
   const totals=await page.evaluate(()=>{
     const s=window.__sessionProfile;
     return {frames:s.frames,maxFrameMs:s.maxFrameMs,warFrames:s.warFrames,saves:s.saves,
+      saveAttempts:s.saveAttempts,failedSaves:s.failedSaves,
       histogram:Array.from(s.histogram),losses:s.losses};
   });
   report.contextLosses=totals.losses;delete totals.losses;report.totals=totals;
+  report.persistence.lastSavedAt=await page.evaluate(()=>{
+    try{return window.__game.local.restore(window.__game.worldId).updatedAt;}catch{return null;}
+  });
   report.completed=report.elapsedSeconds>=durationSeconds;
   report.failures=validateProfileReport(report);save();
   await page.screenshot({path:'artifacts/performance/long-session.png'});
+  console.log(`PROFILE COMPLETE: ${report.elapsedSeconds}s, ${report.failures.length} validation failure(s); report ${output}`);
   assert.deepEqual(report.failures,[]);
   console.log(`PASS ${durationSeconds}s full-game profile: ${totals.frames} frames, ${totals.warFrames} war frames, ${totals.saves} saves; report ${output}`);
 }catch(error){report.failure=String(error.stack);save();throw error;}
