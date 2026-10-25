@@ -20,11 +20,28 @@ try{
   globalThis.document={addEventListener(){}};
   const game={renderer:{domElement:{addEventListener(){}}},saveNow:()=>true,
     isPlaying:true,pointerLocked:false,worldIsLocal:true,saving:new Promise(()=>{}),discarded:false};
+  let checkpointed=false;
+  Object.assign(game,{worldId:'local',worldName:'Current',saveState:()=>({world:{}}),
+    local:{saveEmergency(){checkpointed=true;}}});
   Game.prototype.wireSaveOnLeave.call(game);let warned=false;
   events.beforeunload({preventDefault(){warned=true;}});
   assert.equal(warned,true,'closing a window must warn about a local save awaiting commit even without pointer lock');
+  assert.equal(checkpointed,true,'page closure must preserve the previously synchronous emergency save path');
   console.log('PASS an unconfirmed local save warns before browser closure without pointer lock');
 }finally{globalThis.document=previousDocument;globalThis.window=previousWindow;}
+{
+  const error=new Error('Synthetic denied local storage');let listed=0,opened=0;
+  const g={local:{storageError:error,refresh:async()=>{throw error;},list:()=>[],has:()=>false},
+    cloud:{signedIn:true},cloudAuth:{ready:true},cloudList:async()=>{listed++;return[{id:'cloud'}];},
+    rememberWorlds(){},rememberedWorlds:()=>[],worldIsLocal:true,discarded:true,
+    restoreFromCloud:async()=>{opened++;},ui:{toast(){}}};
+  let partial;try{await Game.prototype.listAllWorlds.call(g);}catch(e){partial=e.partial;}
+  assert.equal(listed,1,'local failure must not skip the healthy cloud library');
+  assert.ok(partial.some(row=>row.id==='cloud'));
+  g.local.refresh=async()=>{throw error;};
+  assert.equal(await Game.prototype.openWorld.call(g,'cloud'),true);assert.equal(opened,1);
+  console.log('PASS denied local storage preserves healthy cloud listing and opening');
+}
 let finish;const pending=new Promise(resolve=>{finish=resolve;});
 const other={worldId:'old',world:{},local:{save:()=>pending,saveProgression(){}},
   gamification:{toJSON:()=>({})},saveError:'new world status',bus:{emit(){}}};

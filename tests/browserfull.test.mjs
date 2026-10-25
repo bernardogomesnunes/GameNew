@@ -43,6 +43,16 @@ const fallback={worldId:'quota',world:{},worldIsLocal:true,local:{save(){throw n
 ok('legacy quota fallback still queues the signed-in account save',
   Game.prototype.saveLocally.call(fallback)===true&&fallback.queued&&!fallback.worldIsLocal);
 delete globalThis.localStorage;
+{
+  const data=new Map();globalThis.localStorage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+  const store=new LocalWorlds(),world=new World({sizeX:16,sizeZ:16,height:16});
+  world.setBlock(1,2,3,4);store.save('changed',{world,name:'Before',mode:'creative'});
+  const g={worldId:'changed',world,worldIsLocal:true,local:store,gamification:{toJSON:()=>({})},
+    cloud:{signedIn:true,async save(){world.setBlock(1,2,3,5);store.save('changed',{world,name:'After',mode:'creative'});return{revision:1};}}};
+  const moved=await Game.prototype.migrateLocalWorlds.call(g);
+  ok('a newer local save during upload is retained rather than deleted',moved===0&&store.has('changed')&&store.restore('changed').name==='After'&&g.worldIsLocal);
+  delete globalThis.localStorage;
+}
 ok('signed out, it says what to do about it', /This browser is full\. Sign in to keep your worlds in your account, or delete a world you don\\'t need\./.test(local));
 
 process.exit(f ? 1 : 0);

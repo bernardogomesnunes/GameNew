@@ -822,7 +822,14 @@ export class Game {
       e.preventDefault();
       this.crashed('The graphics connection was lost. Reload to reconnect.', { kind: 'webgl-context-lost', error: e.statusMessage || 'Graphics context lost' });
     });
-    const save = () => this.saveNow();
+    const save = () => {
+      const queued=this.saveNow();
+      if(this.worldIsLocal&&!this.discarded&&this.worldId&&this.local.saveEmergency){
+        try{this.local.saveEmergency(this.worldId,{...this.saveState(),name:this.worldName});}
+        catch{/* The last committed IndexedDB world and pending write remain intact. */}
+      }
+      return queued;
+    };
     // Put away, the buildings stop working until it's back (DuiltGame.pauseClock).
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') { this.duilt?.pauseClock(); save(); }
@@ -994,7 +1001,7 @@ export class Game {
     } catch (err) {
       // A failed background transaction retains the previous local save and
       // identity. Sign-in migration removes it only after a confirmed upload.
-      if(this.local.store)return failed(err);
+      if(this.local.store&&!this.local.storageError)return failed(err);
       // Signed in, a full browser is no reason to lose the world: it goes up
       // to the account instead, where it should have been anyway (reported
       // directly: "this browser does not have more memory").
@@ -1233,7 +1240,10 @@ export class Game {
     if (this.worldIsLocal&&!this.discarded) {
       if(!this.saveLocally()||(this.saving&&await this.saving!==true))return false;
     } else if(!this.worldIsLocal) await this.flush();
-    await this.local.refresh?.();
+    try{await this.local.refresh?.();}
+    catch(error){
+      if(!this.local.has(id)&&!this.cloud?.signedIn){this.ui.toast({kind:'xp',title:'Could not open that world',body:error.message});return false;}
+    }
 
     if (this.local.has(id)) {
       try {
@@ -1330,15 +1340,20 @@ export class Game {
     // been picked back up, so the first answer was "signed out: only what's
     // in this browser". Wait for the session, so the first answer is whole.
     if (this.cloud && !this.cloudAuth.ready) await this.cloudAuth.restore();
-    await this.local.refresh?.();
+    let localError;
+    try{await this.local.refresh?.();}catch(error){localError=error;}
     const local = this.local.list();
-    if (!this.cloud?.signedIn) return local;
+    localError??=this.local.storageError;
+    if (!this.cloud?.signedIn) {
+      if(localError){localError.partial=local;throw localError;}return local;
+    }
     try {
       const cloud = await this.cloudList();
       this.rememberWorlds(cloud);
+      if(localError){localError.partial=sortWorlds([...local,...cloud]);throw localError;}
       return sortWorlds([...local, ...cloud]);
     } catch (err) {
-      err.partial = sortWorlds([...local, ...this.rememberedWorlds()]);
+      err.partial ??= sortWorlds([...local, ...this.rememberedWorlds()]);
       throw err;
     }
   }
@@ -4105,11 +4120,11 @@ export class Game {
       try {
         const data = await this.local.restore(row.id);
         const world = restoreWorldSnapshot(data.world);
-        await this.cloud.save(row.id, {
+        const uploaded=await this.cloud.save(row.id, {
           world, name: data.name, mode: data.mode, player: data.player,
           gamification: this.gamification, economy: data.economy, duilt: data.duilt,
         });
-        await this.local.delete(row.id);
+        if(!uploaded||await this.local.delete(row.id,{ifUnchangedSince:data.updatedAt})===false)continue;
         if (this.worldId === row.id) this.worldIsLocal = false;
         moved++;
       } catch { /* stays local; retried on the next sign-in */ }

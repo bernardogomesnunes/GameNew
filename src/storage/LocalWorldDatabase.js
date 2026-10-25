@@ -19,7 +19,7 @@ async function transaction(stores,mode,action){
   const db=await open();
   return new Promise((resolve,reject)=>{
     const tx=db.transaction(stores,mode);let result,failure;
-    tx.oncomplete=()=>resolve(result instanceof IDBRequest?result.result:result);
+    tx.oncomplete=()=>resolve(typeof result==='function'?result():result instanceof IDBRequest?result.result:result);
     tx.onerror=tx.onabort=()=>reject(failure??tx.error??new Error('The local save did not complete.'));
     try{result=action(tx,error=>{failure=error;tx.abort();});}catch(error){tx.abort();reject(error);}
   });
@@ -33,7 +33,12 @@ export async function localWorldOperation(type,args,yieldWork=null){
     if(!body)throw new Error('That world is no longer saved in this browser.');return body;
   }
   if(type==='delete')return transaction(['worlds','metadata'],'readwrite',tx=>{
-    tx.objectStore('worlds').delete(args.id);tx.objectStore('metadata').delete(args.id);
+    let deleted=false;const metadata=tx.objectStore('metadata'),request=metadata.get(args.id);
+    request.onsuccess=()=>{
+      if(args.ifUnchangedSince!=null&&request.result?.updatedAt>args.ifUnchangedSince)return;
+      tx.objectStore('worlds').delete(args.id);metadata.delete(args.id);deleted=true;
+    };
+    return()=>deleted;
   });
   if(type!=='save')throw new Error('Unknown local storage operation.');
   const {id,payload}=args;

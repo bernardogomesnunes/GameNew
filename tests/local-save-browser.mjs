@@ -130,4 +130,31 @@ try{
   });
   assert.equal(reused.chunks,0);assert.equal(reused.block,4);
   console.log('PASS later saves reuse committed claimed terrain without regenerating it: '+JSON.stringify(reused));
+  const conditional=await page.evaluate(async()=>{
+    const {World}=await import('/src/world/World.js');const store=window.localTest;
+    const world=new World({sizeX:16,sizeZ:16,height:16});
+    await store.save('conditional',{world,name:'Before',mode:'creative'});
+    const before=(await store.restore('conditional')).updatedAt;
+    await store.save('conditional',{world,name:'After',mode:'creative'});
+    const deleted=await store.delete('conditional',{ifUnchangedSince:before});
+    return{deleted,name:(await store.restore('conditional')).name};
+  });
+  assert.deepEqual(conditional,{deleted:false,name:'After'});
+  console.log('PASS conditional migration cleanup retains a newer IndexedDB version atomically');
+  const denied=await page.evaluate(async()=>{
+    const {LocalWorlds}=await import('/src/storage/LocalWorlds.js');const {World}=await import('/src/world/World.js');
+    const world=new World({sizeX:16,sizeZ:16,height:16});
+    const body={world:world.serialize(),name:'Legacy access',mode:'creative',updatedAt:1};
+    localStorage.setItem('voxelgame:local:world:denied',JSON.stringify(body));
+    localStorage.setItem('voxelgame:local:index',JSON.stringify([{id:'denied',name:body.name,updatedAt:1}]));
+    const code=`import '${location.origin}/src/storage/local-world.worker.js';indexedDB.open=()=>{throw new DOMException('Synthetic denied storage','SecurityError');};`;
+    const url=URL.createObjectURL(new Blob([code],{type:'text/javascript'}));
+    const store=new LocalWorlds({workerFactory:()=>new Worker(url,{type:'module'})});await store.ready;
+    const old=(await store.restore('denied')).name;
+    await store.save('denied',{world,name:'Legacy still works',mode:'creative'});
+    URL.revokeObjectURL(url);
+    return{old,name:(await store.restore('denied')).name,warned:!!store.storageError};
+  });
+  assert.deepEqual(denied,{old:'Legacy access',name:'Legacy still works',warned:true});
+  console.log('PASS denied IndexedDB preserves legacy world access and the existing save fallback');
 }finally{await browser?.close();await server.close();}

@@ -79,6 +79,9 @@ ok('and hidden entirely in a build with no cloud to sign in to',
   };
   const { LocalWorlds } = await import('../src/storage/LocalWorlds.js');
   const lw = new LocalWorlds();
+  const modern=new LocalWorlds();modern.store={};modern.rows=[{id:'modern',updatedAt:1}];modern.storageError=new Error('Denied');
+  ok('denied modern storage cannot report a successful deletion',
+    (()=>{try{modern.delete('modern');return false;}catch{return modern.has('modern');}})());
 
   ok('a fresh browser holds nothing', lw.list().length === 0 && !lw.has('a'));
 
@@ -110,6 +113,8 @@ ok('and hidden entirely in a build with no cloud to sign in to',
 
   ok('progression rides along outside any one world',
     (lw.saveProgression({ xp: 40 }), lw.loadProgression().xp === 40));
+  lw.saveEmergency('emergency',{world:fakeWorld,gamification:{toJSON:()=>({xp:75})}});
+  ok('an emergency checkpoint synchronously persists shared progression',lw.loadProgression().xp===75);
 
   delete globalThis.localStorage;
 }

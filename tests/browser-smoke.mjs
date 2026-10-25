@@ -75,6 +75,11 @@ try {
     if (!await game.saveAndWait()) throw new Error('Saving the local world failed');
     return { id: game.worldId, x, y, z, block };
   });
+  // Navigation may stop workers immediately. The lifecycle checkpoint must
+  // retain an edit made after the last confirmed background save.
+  placed.block=await page.evaluate(({x,y,z,block})=>{
+    const next=block===1?2:1;window.__game.world.setBlock(x,y,z,next);return next;
+  },placed);
   await page.reload();
   await page.waitForFunction(() => window.__game && !window.__game.booting && (!document.querySelector('#loading') || document.querySelector('#loading').classList.contains('ld-gone')), { timeout: 120_000 });
   const restored = await page.evaluate(async ({ id, x, y, z }) => {
