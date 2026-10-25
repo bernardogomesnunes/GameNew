@@ -27,17 +27,27 @@ try{
     world.gen.fill=(...a)=>{fills++;return fill(...a);};
     const before=world.chunks.size;let beats=0;const heartbeat=setInterval(()=>beats++,10);
     const started=performance.now();
-    const result=await window.localTest.save('large',{world,name:'Large',mode:'duilt',duilt:{territory:{age:8}},
-      territoryBounds:{minX:-128,maxX:127,minZ:-128,maxZ:127}});
+    let completed=false,responsive=false;
+    const saving=window.localTest.save('large',{world,name:'Large',mode:'duilt',duilt:{territory:{age:8}},
+      territoryBounds:{minX:-128,maxX:127,minZ:-128,maxZ:127}}).then(result=>{completed=true;return result;});
+    // Message tasks are not subject to background-tab interval throttling.
+    // Verify task ordering while the real worker save remains outstanding.
+    const task=new Promise(resolve=>{
+      const channel=new MessageChannel();channel.port1.onmessage=()=>{
+        responsive=!completed;channel.port1.close();channel.port2.close();resolve();
+      };channel.port2.postMessage('responsive');
+    });
+    const [result]=await Promise.all([saving,task]);
     clearInterval(heartbeat);
     const payload=await window.localTest.restore('large');
     const {restoreWorldSnapshot}=await import('/src/storage/WorldSnapshot.js');
     const restored=restoreWorldSnapshot(payload.world);
-    return{saved:!!result,beats,ms:performance.now()-started,before,after:world.chunks.size,fills,
+    return{saved:!!result,beats,responsive,worker:!!window.localTest.store.worker,ms:performance.now()-started,before,after:world.chunks.size,fills,
       chunks:restored.chunks.size,block:restored.getBlock(-1,90,-1),age:window.localTest.list().find(r=>r.id==='large').age};
   });
   assert.equal(large.saved,true);assert.equal(large.fills,0);assert.equal(large.after,large.before);
-  assert.equal(large.chunks,256);assert.equal(large.block,4);assert.equal(large.age,8);assert.ok(large.beats>=3);
+  assert.equal(large.chunks,256);assert.equal(large.block,4);assert.equal(large.age,8);
+  assert.equal(large.worker,true);assert.equal(large.responsive,true);
   console.log('PASS large claimed world persists while the main thread responds, without live terrain generation: '+JSON.stringify(large));
   await page.reload();
   const reopened=await page.evaluate(async()=>{
