@@ -25,7 +25,16 @@ ok('and shown the moment the screen opens, with this browser\'s own', /knownWorl
   && /const rows = this\.cloudWorlds \?\? this\.cb\.knownWorlds\?\.\(\) \?\? \[\];/.test(home));
 ok('only what a row needs is kept, including the Battle label', /rows\.map\(\(\{ id, name, mode, battle, age, updatedAt \}\) => \(\{ id, name, mode, battle, age, updatedAt \}\)\)/.test(game));
 ok('forgotten on sign-out, for whoever signs in next', /await this\.cloudAuth\.signOut\(\);\s*\/\/[^\n]*\n\s*this\.forgetRememberedWorlds\(\);/.test(game));
-ok('an account that can\'t be reached still shows what it last had', /err\.partial = sortWorlds\(\[\.\.\.local, \.\.\.this\.rememberedWorlds\(\)\]\);/.test(game));
+globalThis.window??={addEventListener(){},removeEventListener(){}};
+const {Game}=await import('../src/Game.js');
+let fallback=[];
+try{
+  await Game.prototype.listAllWorlds.call({cloud:{signedIn:true},cloudAuth:{ready:true},
+    local:{list:()=>[{id:'local'}]},cloudList:async()=>{throw new Error('Synthetic offline account');},
+    rememberedWorlds:()=>[{id:'remembered'}]});
+}catch(error){fallback=error.partial??[];}
+ok('an account that can\'t be reached still shows what it last had',
+  fallback.some(row=>row.id==='local')&&fallback.some(row=>row.id==='remembered'));
 
 // --- a delete takes one world, not all of them ------------------------------------------------------
 

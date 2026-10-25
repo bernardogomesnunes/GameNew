@@ -59,3 +59,8 @@ const next=captureWorldSnapshot(new World({height:32,gen:new ChunkGen({seed:8,he
 await completeWorldSnapshot(next,null,first);
 assert.equal(next.chunks[0].data[0],77,'missing claimed chunks must reuse the committed terrain instead of regenerating it');
 console.log('PASS later saves reuse committed missing claimed terrain');
+const changedGen=new ChunkGen({seed:8,height:32});changedGen.sky=true;
+const changed=captureWorldSnapshot(new World({height:32,gen:changedGen}),{minX:0,maxX:15,minZ:0,maxZ:15});
+await completeWorldSnapshot(changed,null,first);
+assert.notEqual(changed.chunks[0].data[0],77,'explicit gameplay generator changes must invalidate cached missing terrain');
+console.log('PASS explicit Sky or other terrain settings invalidate missing-terrain reuse');

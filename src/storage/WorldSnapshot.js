@@ -30,8 +30,7 @@ export function captureWorldSnapshot(world,keepBounds=null){
  */
 export async function completeWorldSnapshot(snapshot,yieldWork=null,previous=null){
   const compatible=previous?.format===FORMAT&&previous.height===snapshot.height
-    &&previous.generation?.seed===snapshot.generation?.seed
-    &&previous.generation?.homeX===snapshot.generation?.homeX&&previous.generation?.homeZ===snapshot.generation?.homeZ;
+    &&JSON.stringify(previous.generation)===JSON.stringify(snapshot.generation);
   const kept=new Map(compatible?previous.chunks.map(c=>[`${c.cx},${c.cz}`,c]):[]);
   let gen;
   for(let i=0;i<snapshot.chunks.length;i++){
