@@ -12,33 +12,57 @@
  * copy of the same world to reconcile in the first place. Two disjoint
  * libraries need no merging, only listing together.
  *
- * Unlike CloudWorlds' SyncEngine, this keeps no incremental diff — writing
- * a whole world to localStorage is one synchronous call, not a network
- * round trip, so there is nothing to save by sending only what changed.
+ * Modern browsers store owned binary chunks through a background worker in
+ * IndexedDB. The small legacy library remains readable until replacement
+ * commits; environments without IndexedDB retain the synchronous old path.
  */
+
+import {captureWorldSnapshot} from './WorldSnapshot.js';
+import {LocalWorldWorker} from './LocalWorldWorker.js';
 
 const INDEX_KEY = 'voxelgame:local:index';
 const PROGRESSION_KEY = 'voxelgame:local:progression';
 const worldKey = (id) => `voxelgame:local:world:${id}`;
 
 export class LocalWorlds {
+  constructor({workerFactory}={}) {
+    this.rows=[];
+    if(typeof indexedDB!=='undefined'){
+      this.store=new LocalWorldWorker(workerFactory);
+      this.ready=this.refresh();
+      // A browser may deny persistent storage. The UI's awaited refresh/save
+      // reports it; merely constructing the library must not crash startup.
+      this.ready.catch(()=>{});
+    }
+  }
+  async refresh(){
+    if(this.store){
+      try{this.rows=await this.store.request('list');this.storageError=null;}
+      catch(error){this.storageError=error;if(!readIndex().length)throw error;}
+    }
+    return this.list();
+  }
   /** Every world this browser holds, newest first — what the worlds screen lists. */
   list() {
-    return readIndex().sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+    const rows=new Map(readIndex().map(row=>[row.id,row]));
+    for(const row of this.rows)if(!rows.has(row.id)||(rows.get(row.id).updatedAt??0)<=row.updatedAt)rows.set(row.id,row);
+    return [...rows.values()].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
   }
 
   /** Whether an id lives here at all, without paying for the full payload. */
   has(id) {
-    return readIndex().some((w) => w.id === id);
+    return this.list().some((w) => w.id === id);
   }
 
   /**
-   * Writes the world under its id, all at once. Returns a revision the same
-   * shape CloudWorlds.save does, so Game.js can treat both the same way.
+   * Writes atomically. IndexedDB returns a promise for the actual commit;
+   * the legacy fallback returns the same revision object synchronously.
    */
-  save(id, { world, name, mode, player, duilt, economy, territoryBounds, revision } = {}) {
+  save(id, { world, name, mode, player, duilt, economy, territoryBounds, revision } = {}, emergency=false) {
+    const background=this.store&&!this.storageError&&!emergency;
+    this.lastStamp=Math.max(Date.now(),(this.lastStamp??0)+1);
     const payload = {
-      world: world.serialize({ keepBounds: territoryBounds }),
+      world: background?captureWorldSnapshot(world,territoryBounds):world.serialize({ keepBounds: territoryBounds }),
       mode,
       name: name || 'Untitled world',
       player: player
@@ -46,9 +70,26 @@ export class LocalWorlds {
         : null,
       duilt: duilt ?? null,
       economy: economy?.toJSON?.() ?? {},
-      updatedAt: Date.now(),
+      updatedAt: this.lastStamp,
       revision: revision ?? Date.now(),
     };
+    if(background){
+      // JSON game metadata is small; detach it from live mutable simulation
+      // state before it joins a pending worker operation.
+      const owned={...structuredClone({...payload,world:null}),world:payload.world};
+      return this.store.request('save',{id,payload:owned}).then(result=>{
+        this.rows=this.rows.filter(row=>row.id!==id);this.rows.push(result.meta);
+        // A replacement is authoritative only after the IndexedDB commit.
+        try{
+          const index=readIndex();
+          if(!index.some(row=>row.id===id&&row.updatedAt>result.meta.updatedAt)
+            &&!(readLegacy(id)?.updatedAt>result.meta.updatedAt)){
+            localStorage.removeItem(worldKey(id));writeIndex(index.filter(row=>row.id!==id));
+          }
+        }catch{}
+        return{revision:result.revision};
+      });
+    }
     try {
       localStorage.setItem(worldKey(id), JSON.stringify(payload));
     } catch {
@@ -67,15 +108,36 @@ export class LocalWorlds {
     return { revision: payload.revision };
   }
 
+  // Browsers may stop workers during navigation or mobile suspension. Retain
+  // the old synchronous best-effort checkpoint on those lifecycle events.
+  // Normal gameplay saves never use this potentially expensive path.
+  saveEmergency(id,state){
+    const result=this.save(id,state,true);
+    if(state.gamification)this.saveProgression(state.gamification.toJSON?.()??state.gamification);
+    return result;
+  }
+
   /** The full payload back, or throws — the same contract CloudWorlds.restore keeps. */
   restore(id) {
-    let payload = null;
-    try { payload = JSON.parse(localStorage.getItem(worldKey(id)) ?? 'null'); } catch { payload = null; }
+    const modern=this.rows.find(row=>row.id===id),payload=readLegacy(id);
+    if(this.store&&modern&&(!payload||(payload.updatedAt??0)<=modern.updatedAt))return this.store.request('load',{id});
     if (!payload) throw new Error('That world is no longer saved in this browser.');
     return payload;
   }
 
-  delete(id) {
+  delete(id,{ifUnchangedSince=null}={}) {
+    const newer=()=>ifUnchangedSince!==null&&(this.list().some(row=>row.id===id&&row.updatedAt>ifUnchangedSince)
+      ||readLegacy(id)?.updatedAt>ifUnchangedSince);
+    if(newer())return false;
+    if(this.store&&this.storageError)throw new Error('Local storage is unavailable. Try deleting the world again when access is restored.');
+    if(this.store&&!this.storageError)return this.store.request('delete',{id,ifUnchangedSince}).then(deleted=>{
+      if(!deleted||newer())return false;
+      this.rows=this.rows.filter(row=>row.id!==id);this.deleteLegacy(id);return true;
+    });
+    this.deleteLegacy(id);return true;
+  }
+
+  deleteLegacy(id){
     try { localStorage.removeItem(worldKey(id)); } catch { /* nothing to remove */ }
     writeIndex(readIndex().filter((w) => w.id !== id));
   }
@@ -103,6 +165,10 @@ function readIndex() {
   } catch {
     return [];
   }
+}
+
+function readLegacy(id){
+  try{return JSON.parse(localStorage.getItem(worldKey(id))??'null');}catch{return null;}
 }
 
 function writeIndex(index) {

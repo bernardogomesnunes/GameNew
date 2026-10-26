@@ -32,6 +32,7 @@ import { SymmetryTool } from './tools/SymmetryTool.js';
 import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SyncState } from './storage/WorldSync.js';
 import { LocalWorlds } from './storage/LocalWorlds.js';
+import { restoreWorldSnapshot } from './storage/WorldSnapshot.js';
 import { putBackup, getBackup, dropBackup } from './storage/BackupStore.js';
 import { claimRegion, blocksIn, claimHint } from './tools/ClaimArea.js';
 
@@ -790,7 +791,7 @@ export class Game {
     box.setAttribute('role', 'alertdialog');
     box.innerHTML = `<div class="crash-card">
       <h2>The game stopped</h2>
-      <p class="crash-state">${saved ? 'Saving your world…' : 'Nothing to save.'}</p>
+      <p class="crash-state">${saved ? 'Saving your world…' : this.saveError ? 'Could not save your world.' : 'Nothing to save.'}</p>
       <button type="button" class="primary">Reload</button>
       <button type="button" class="secondary" data-crash-report>Download diagnostics</button>
       <p class="crash-why"></p>
@@ -805,9 +806,13 @@ export class Game {
     (this.container ?? document.body).appendChild(box);
     if (saved) {
       const state = box.querySelector('.crash-state');
-      Promise.resolve(this.saving).then(
-        () => { state.textContent = this.saveError ? 'Saved on this phone — it goes up to your account when you reload.' : 'Your world is saved.'; },
-        () => { state.textContent = 'Saved on this phone — it goes up to your account when you reload.'; });
+      const reload=box.querySelector('button');reload.disabled=true;
+      Promise.resolve(this.saving).then(result=>{
+        state.textContent = result!==false&&!this.saveError ? 'Your world is saved.'
+          : this.worldIsLocal ? `Could not save your world. ${this.saveError??'Try saving again before reloading.'}`
+          : 'Saved on this phone — it goes up to your account when you reload.';
+      },()=>{state.textContent='Could not confirm the save. Try saving again before reloading.';})
+        .finally(()=>{reload.disabled=false;});
     }
   }
 
@@ -817,7 +822,14 @@ export class Game {
       e.preventDefault();
       this.crashed('The graphics connection was lost. Reload to reconnect.', { kind: 'webgl-context-lost', error: e.statusMessage || 'Graphics context lost' });
     });
-    const save = () => this.saveNow();
+    const save = () => {
+      const queued=this.saveNow();
+      if(this.worldIsLocal&&!this.discarded&&this.worldId&&this.local.saveEmergency){
+        try{this.local.saveEmergency(this.worldId,{...this.saveState(),name:this.worldName});}
+        catch{/* The last committed IndexedDB world and pending write remain intact. */}
+      }
+      return queued;
+    };
     // Put away, the buildings stop working until it's back (DuiltGame.pauseClock).
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') { this.duilt?.pauseClock(); save(); }
@@ -831,7 +843,8 @@ export class Game {
     // playing with the mouse taken (a keyboard); the world is saved either way.
     window.addEventListener('beforeunload', (e) => {
       save();
-      if (!this.isPlaying || !this.pointerLocked) return;
+      const localPending=this.worldIsLocal&&this.saving&&!this.discarded;
+      if (!localPending&&(!this.isPlaying || !this.pointerLocked)) return;
       e.preventDefault();
       e.returnValue = '';
     });
@@ -926,9 +939,8 @@ export class Game {
    * exactly the "which copy is real" question local and cloud were kept
    * apart to avoid — see LocalWorlds' own note.
    *
-   * A local save is synchronous, so it returns whether it actually happened.
-   * A cloud save is queued instead, because a save must never be something
-   * the player waits for mid-build.
+   * Returns whether work was accepted; this.saving confirms queued local or
+   * cloud persistence. Save and leave and crash recovery await that result.
    */
   saveNow() {
     // The autosave's clock starts again from any save. It was set once, at
@@ -948,6 +960,16 @@ export class Game {
 
   /** The local half of saveNow — see its own note on why the two never mix. */
   saveLocally() {
+    const id=this.worldId,world=this.world;
+    const failed=err=>{
+      if(this.worldId!==id||this.world!==world)return false;
+      this.saveError=err?.message??'Could not save in this browser.';
+      if(!this.toldSaveError){
+        this.toldSaveError=true;
+        this.bus.emit('toast',{kind:'xp',title:'Not saved',body:this.saveError});
+      }
+      return false;
+    };
     try {
       const result = this.local.save(this.worldId, {
         world: this.world,
@@ -958,11 +980,28 @@ export class Game {
         economy: this.economy,
         territoryBounds: this.duilt ? this.duilt.territory.keptBounds() : null,
       });
+      if(result&&typeof result.then==='function'){
+        const progression=this.gamification.toJSON();
+        const saving=Promise.resolve(result).then(committed=>{
+          if(!committed)throw new Error('The local save did not complete.');
+          if(this.worldId===id&&this.world===world){
+            this.local.saveProgression(progression);this.saveError=null;
+            this.ui?.home?.forgetWorlds?.();
+          }
+          return true;
+        }).catch(failed);
+        this.saving=saving;
+        saving.then(()=>{if(this.saving===saving)this.saving=null;});
+        return true;
+      }
       this.local.saveProgression(this.gamification.toJSON());
       this.saveError = null;
       this.ui?.home?.forgetWorlds?.();
       return !!result;
     } catch (err) {
+      // A failed background transaction retains the previous local save and
+      // identity. Sign-in migration removes it only after a confirmed upload.
+      if(this.local.store&&!this.local.storageError)return failed(err);
       // Signed in, a full browser is no reason to lose the world: it goes up
       // to the account instead, where it should have been anyway (reported
       // directly: "this browser does not have more memory").
@@ -1198,11 +1237,17 @@ export class Game {
     if (!id) return false;
     // What you were in goes up (or gets written down) before you leave it,
     // or opening a second world throws away the first one's afternoon.
-    if (this.worldIsLocal) this.saveLocally(); else await this.flush();
+    if (this.worldIsLocal&&!this.discarded) {
+      if(!this.saveLocally()||(this.saving&&await this.saving!==true))return false;
+    } else if(!this.worldIsLocal) await this.flush();
+    try{await this.local.refresh?.();}
+    catch(error){
+      if(!this.local.has(id)&&!this.cloud?.signedIn){this.ui.toast({kind:'xp',title:'Could not open that world',body:error.message});return false;}
+    }
 
     if (this.local.has(id)) {
       try {
-        this.restoreFromLocal(id);
+        await this.restoreFromLocal(id);
         return true;
       } catch (err) {
         this.ui.toast({ kind: 'xp', title: 'Could not open that world', body: err.message });
@@ -1295,14 +1340,20 @@ export class Game {
     // been picked back up, so the first answer was "signed out: only what's
     // in this browser". Wait for the session, so the first answer is whole.
     if (this.cloud && !this.cloudAuth.ready) await this.cloudAuth.restore();
+    let localError;
+    try{await this.local.refresh?.();}catch(error){localError=error;}
     const local = this.local.list();
-    if (!this.cloud?.signedIn) return local;
+    localError??=this.local.storageError;
+    if (!this.cloud?.signedIn) {
+      if(localError){localError.partial=local;throw localError;}return local;
+    }
     try {
       const cloud = await this.cloudList();
       this.rememberWorlds(cloud);
+      if(localError){localError.partial=sortWorlds([...local,...cloud]);throw localError;}
       return sortWorlds([...local, ...cloud]);
     } catch (err) {
-      err.partial = sortWorlds([...local, ...this.rememberedWorlds()]);
+      err.partial ??= sortWorlds([...local, ...this.rememberedWorlds()]);
       throw err;
     }
   }
@@ -1352,13 +1403,13 @@ export class Game {
       // Opening a world by its id. There is no "open by name" any more,
       // because there is no second copy of anything to tell apart by name.
       onOpenWorld: (id) => this.withLoading('Opening your world…', () => this.openWorld(id)),
-      onDeleteWorld: (id) => {
+      onDeleteWorld: async (id) => {
         if (id === this.worldId) { this.discarded = true; this.pendingSave = false; }
         // Its unsent copy goes too, or the next startup uploads it again.
         this.dropSafeCopy(id);
         this.syncState.forget(id);
         if (this.local.has(id)) {
-          this.local.delete(id);
+          await this.local.delete(id);
           this.ui.home?.forgetWorlds?.();
           return true;
         }
@@ -4005,9 +4056,9 @@ export class Game {
   // ---- local ----
 
   /** The local half of restoreFromCloud — see openWorld for how the two get told apart. */
-  restoreFromLocal(id, { silent = false } = {}) {
-    const data = this.local.restore(id);
-    const world = World.deserialize(data.world, { makeGen: makeChunkGen });
+  async restoreFromLocal(id, { silent = false } = {}) {
+    const data = await this.local.restore(id);
+    const world = restoreWorldSnapshot(data.world);
     this.worldIsLocal = true;
     this.loadFromData({
       world,
@@ -4052,28 +4103,28 @@ export class Game {
   /** Every browser world into the account, the one open now too — see resumeSession. */
   async adoptLocalWorlds() {
     if (!this.cloud?.signedIn) return 0;
-    const moved = await this.migrateLocalWorlds();
-    if (this.worldIsLocal && !this.discarded && this.worldId) {
-      this.worldIsLocal = false;
-      this.local.delete(this.worldId);
-      this.saveNow();
+    if(this.worldIsLocal&&!this.discarded&&this.worldId){
+      if(!this.saveLocally()||(this.saving&&await this.saving!==true))return 0;
     }
+    const moved = await this.migrateLocalWorlds();
     if (moved) { this.forgetCloudList(); this.ui?.home?.forgetWorlds?.(); this.ui?.home?.refreshCloudWorlds?.({ force: true }); }
     return moved;
   }
 
   async migrateLocalWorlds() {
     if (!this.cloud?.signedIn) return 0;
+    if(this.worldIsLocal&&this.saving)await this.saving;
+    await this.local.refresh?.();
     let moved = 0;
     for (const row of this.local.list()) {
       try {
-        const data = this.local.restore(row.id);
-        const world = World.deserialize(data.world, { makeGen: makeChunkGen });
-        await this.cloud.save(row.id, {
+        const data = await this.local.restore(row.id);
+        const world = restoreWorldSnapshot(data.world);
+        const uploaded=await this.cloud.save(row.id, {
           world, name: data.name, mode: data.mode, player: data.player,
           gamification: this.gamification, economy: data.economy, duilt: data.duilt,
         });
-        this.local.delete(row.id);
+        if(!uploaded||await this.local.delete(row.id,{ifUnchangedSince:data.updatedAt})===false)continue;
         if (this.worldId === row.id) this.worldIsLocal = false;
         moved++;
       } catch { /* stays local; retried on the next sign-in */ }

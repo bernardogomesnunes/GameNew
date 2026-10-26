@@ -13,6 +13,15 @@ assert.equal(observeSave(state,()=>false),false);
 assert.throws(()=>observeSave(state,()=>{throw new Error('Synthetic save failure');}));
 assert.deepEqual(state,{saveAttempts:3,saves:1,failedSaves:2});
 console.log('PASS save attempts, false results and thrown errors cannot count as successful saves');
+for(const committed of [true,false]){
+  const queued=counters();let finish;
+  const saving=new Promise(resolve=>{finish=resolve;});
+  assert.equal(observeSave(queued,()=>true,()=>saving),true);
+  assert.equal(queued.saves,0);assert.equal(queued.failedSaves,0);
+  finish(committed);await Promise.all(queued.pendingSaves);
+  assert.equal(queued.saves,committed?1:0);assert.equal(queued.failedSaves,committed?0:1);
+}
+console.log('PASS queued asynchronous saves count only committed results');
 const previous=globalThis.localStorage;
 try{
   globalThis.localStorage={setItem(){throw new Error('Synthetic quota failure');}};

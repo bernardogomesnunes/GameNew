@@ -79,6 +79,9 @@ ok('and hidden entirely in a build with no cloud to sign in to',
   };
   const { LocalWorlds } = await import('../src/storage/LocalWorlds.js');
   const lw = new LocalWorlds();
+  const modern=new LocalWorlds();modern.store={};modern.rows=[{id:'modern',updatedAt:1}];modern.storageError=new Error('Denied');
+  ok('denied modern storage cannot report a successful deletion',
+    (()=>{try{modern.delete('modern');return false;}catch{return modern.has('modern');}})());
 
   ok('a fresh browser holds nothing', lw.list().length === 0 && !lw.has('a'));
 
@@ -110,6 +113,8 @@ ok('and hidden entirely in a build with no cloud to sign in to',
 
   ok('progression rides along outside any one world',
     (lw.saveProgression({ xp: 40 }), lw.loadProgression().xp === 40));
+  lw.saveEmergency('emergency',{world:fakeWorld,gamification:{toJSON:()=>({xp:75})}});
+  ok('an emergency checkpoint synchronously persists shared progression',lw.loadProgression().xp===75);
 
   delete globalThis.localStorage;
 }
@@ -119,7 +124,8 @@ ok('and hidden entirely in a build with no cloud to sign in to',
 ok('opening a world fetches it from the account', /await this\.restoreFromCloud\(id\)/.test(game));
 ok('and an imported file becomes a world on the account too',
   /this\.loadFromData\(\{ \.\.\.data, worldId: newWorldId\(\) \}\);\r?\n\s*this\.saveNow\(\);/.test(game));
-ok('what you were in goes up before you leave it', /openWorld\(id\)[\s\S]{0,300}await this\.flush\(\)/.test(game));
+// Previous-world persistence ordering is exercised through openWorld in
+// local-save-confirmation.test.mjs rather than a source-length expression.
 ok('deleting takes the account copy', /this\.cloud\?\.delete\(id\)/.test(game));
 ok('and says so when it cannot', /Could not delete that world/.test(game));
 

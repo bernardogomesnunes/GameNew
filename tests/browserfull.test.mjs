@@ -16,10 +16,43 @@ const local = readFileSync(new URL('../src/storage/LocalWorlds.js', import.meta.
 
 const resume = game.slice(game.indexOf('resumeSession() {'), game.indexOf('async cloudList('));
 ok('signed in at start-up, browser worlds move to the account', /this\.adoptLocalWorlds\(\);/.test(resume));
-const adopt = game.slice(game.indexOf('async adoptLocalWorlds()'), game.indexOf('async migrateLocalWorlds()'));
-ok('the open one included', /if \(this\.worldIsLocal && !this\.discarded && this\.worldId\) \{\s*this\.worldIsLocal = false;\s*this\.local\.delete\(this\.worldId\);\s*this\.saveNow\(\);/.test(adopt));
-const saveLocal = game.slice(game.indexOf('  saveLocally() {'), game.indexOf('async flush()'));
-ok('a full browser, signed in, sends the world to the account instead', /catch \(err\) \{[\s\S]{0,300}if \(this\.cloud\?\.signedIn\) \{\s*this\.worldIsLocal = false;[\s\S]{0,300}return this\.saveNow\(\);/.test(saveLocal));
+globalThis.window??={addEventListener(){},removeEventListener(){}};
+const {Game}=await import('../src/Game.js');
+const {LocalWorlds}=await import('../src/storage/LocalWorlds.js');
+const {World}=await import('../src/world/World.js');
+for(const succeeds of [true,false]){
+  const data=new Map();globalThis.localStorage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+  const store=new LocalWorlds(),world=new World({sizeX:16,sizeZ:16,height:16});world.setBlock(1,2,3,4);
+  let uploaded=0;
+  const g={worldId:'open',world,worldIsLocal:true,discarded:false,local:store,
+    gamification:{toJSON:()=>({})},bus:{emit(){}},forgetCloudList(){},
+    saveLocally(){return Game.prototype.saveLocally.call(this);},
+    migrateLocalWorlds(){return Game.prototype.migrateLocalWorlds.call(this);},
+    cloud:{signedIn:true,async save(id,{world:saved}){
+      ok('local original remains until upload commits',store.has(id));
+      ok('migration includes the current open-world edits',saved.getBlock(1,2,3)===4);
+      uploaded++;if(!succeeds)throw new Error('Synthetic upload failure');return{revision:1};
+    }}};
+  const moved=await Game.prototype.adoptLocalWorlds.call(g);
+  ok('migration attempts the open world',uploaded===1);
+  ok(succeeds?'successful adoption removes the committed local record':'failed adoption keeps the local world and identity',
+    moved===(succeeds?1:0)&&store.has('open')===!succeeds&&g.worldIsLocal===!succeeds);
+}
+const fallback={worldId:'quota',world:{},worldIsLocal:true,local:{save(){throw new Error('Quota');},delete(){}},
+  cloud:{signedIn:true},saveNow(){this.queued=true;return true;},bus:{emit(){}}};
+ok('legacy quota fallback still queues the signed-in account save',
+  Game.prototype.saveLocally.call(fallback)===true&&fallback.queued&&!fallback.worldIsLocal);
+delete globalThis.localStorage;
+{
+  const data=new Map();globalThis.localStorage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
+  const store=new LocalWorlds(),world=new World({sizeX:16,sizeZ:16,height:16});
+  world.setBlock(1,2,3,4);store.save('changed',{world,name:'Before',mode:'creative'});
+  const g={worldId:'changed',world,worldIsLocal:true,local:store,gamification:{toJSON:()=>({})},
+    cloud:{signedIn:true,async save(){world.setBlock(1,2,3,5);store.save('changed',{world,name:'After',mode:'creative'});return{revision:1};}}};
+  const moved=await Game.prototype.migrateLocalWorlds.call(g);
+  ok('a newer local save during upload is retained rather than deleted',moved===0&&store.has('changed')&&store.restore('changed').name==='After'&&g.worldIsLocal);
+  delete globalThis.localStorage;
+}
 ok('signed out, it says what to do about it', /This browser is full\. Sign in to keep your worlds in your account, or delete a world you don\\'t need\./.test(local));
 
 process.exit(f ? 1 : 0);

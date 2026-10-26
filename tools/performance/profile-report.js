@@ -1,9 +1,19 @@
 export const PROFILE_PHASES=['settlement','war','travel','return','caves','recovery'];
 
-export function observeSave(state,save){
+export function observeSave(state,save,completion=null){
   state.saveAttempts++;
   try{
     const result=save();
+    if(completion){
+      const start=performance.now();
+      const pending=Promise.resolve(result===true?completion():false).then(committed=>{
+        if(committed===true)state.saves++;else state.failedSaves++;
+        const durations=state.saveCompletions??=[];
+        if(durations.length<64)durations.push(performance.now()-start);
+      },()=>{state.failedSaves++;});
+      const jobs=state.pendingSaves??=new Set();jobs.add(pending);pending.then(()=>jobs.delete(pending));
+      return result;
+    }
     if(result===true)state.saves++;else state.failedSaves++;
     return result;
   }catch(error){state.failedSaves++;throw error;}

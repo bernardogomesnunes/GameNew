@@ -22,6 +22,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:performance:browser
       - run: node tests/full-game-rendering-browser.mjs
+      - run: node tests/local-save-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -334,3 +334,87 @@ Storage Remote and both performance gates pass. Local browser resource budgets
 and the full-game comparison also pass (**761 → 746 calls**, **2,494,710 →
 2,351,698 triangles**, identical pixels). Existing budget caps are unchanged.
 Only documentation changed after the measured/CI-tested revision.
+
+## Background local saves, 25 October 2026
+
+PR #242 addresses #241's observed local-storage quota failure and 2.3-second
+autosave stalls. The game captures owned binary copies of loaded edited and
+claimed chunks, then transfers those copies to a dedicated worker. Missing
+claimed terrain is prepared there, reusing previously committed terrain while
+the generation settings match. Whole-world RLE and JSON are absent from the
+normal gameplay save path. IndexedDB commits the binary payload and its small
+directory row in one transaction. Rendering settings, terrain detail, draw
+distance, exports and cloud formats are unchanged.
+
+The worker processes one operation at a time and retains at most one pending
+save snapshot; repeated same-world saves replace that pending snapshot and
+wait for its newer commit. Deletes and loads remain ordered. Failed writes
+retain the previous payload and directory. Legacy localStorage records remain
+readable, with newer records winning over an older background commit; an
+IndexedDB replacement removes only the legacy version it supersedes.
+Migration cleanup checks that the uploaded local version has not changed.
+
+`saveNow()` retains its accepted-work boolean. `Game.saving` confirms the
+actual commit, and Save and leave, crash recovery and world switches wait for
+that confirmation. A pending write is not reported as saved. New binary
+records restore blocks, surfaces, biomes and lights directly; old RLE worlds
+and finite maps still load. Worker-disabled browsers use the same database
+through a yielding fallback; browsers without IndexedDB retain the existing
+synchronous legacy path. Denied storage is reported without blocking healthy
+cloud worlds or pretending a modern world was deleted.
+
+Browsers may stop workers during navigation or mobile suspension. The
+existing synchronous best-effort legacy checkpoint, including shared XP and
+achievements, therefore remains on hidden/pagehide/beforeunload. That path can
+still stall during departure and is still limited by localStorage quota.
+The last committed IndexedDB world remains intact when it cannot fit.
+Immediate termination of a large, uncommitted save cannot be guaranteed;
+physical-iPhone lifecycle verification remains open. Background-save gains
+reported below apply to normal playing/autosave work.
+
+Run `node tests/local-save-browser.mjs` for real storage checks. The test
+covers a 256-chunk claimed world, continued main-thread task processing,
+fresh-page discovery/restore, legacy migration, competing versions, atomic
+abort, bounded rapid saves, delete ordering, denied storage and worker-disabled
+fallback. The required Performance budgets workflow runs it alongside the
+existing unchanged terrain/rendering budgets. Interval heartbeats are reported
+as diagnostics; task ordering verifies responsiveness without relying on
+background-tab timer scheduling. The ordinary game smoke checks an edit made
+after the previous committed save survives immediate navigation.
+
+### Measured follow-up and remaining limits, 26 October
+
+Exact runtime/tool/test revision `9ec1d92` passed **7,606 tests, 0 failures
+across 299 files**, the production build, gameplay browser checks and the
+required Performance budgets workflow. Final changes after that revision
+only document results. The existing large-bundle build warning remains.
+The local full-game comparison produced identical pixels with 751 → 736 draw
+calls and 2,494,026 → 2,351,014 triangles; no performance caps were raised.
+
+`artifacts/performance/background-save-session-final.json` records a completed
+**660.01-second** hardware run on a Radeon RX 7900 GRE, WebGL 2/ANGLE D3D11,
+1920 × 1080, pixel ratio 1, automatic graphics and render distance 234. It
+retained 56 buildings and 55 villagers through settlement, live war (up to
+eight attackers), travel, return, underground caves and recovery. It measured
+39,401 frames, including 32,840 war frames, with no game stop, page errors,
+context losses or validation failures. Both scheduled autosaves committed;
+the newer persisted world restored successfully.
+
+| Measurement | #241 baseline | #242 follow-up |
+|---|---|---|
+| Normal autosave game-thread work | Up to 2,301.3 ms; saves failed | 3.9 / 15.2 ms; both committed |
+| Asynchronous commit latency | No successful local persistence | 155.3 / 106.4 ms |
+| Longest frame | 2,308.3 ms | 747.4 ms |
+| Session length | 30 minutes | 11 minutes |
+
+These are dated runs, not a controlled claim about every future world or
+device. The final run had five frames above 50 ms, three above 250 ms; frame
+histogram p95 was at most 17 ms and p99 at most 21 ms. Renderer submission
+still reached 709.7 ms, and remesh draining 30.1 ms. Loaded chunks ranged from
+797 to 1,146; sampled terrain geometry reached 243.31 MB (CPU buffer bytes,
+not total GPU memory), returning to 797 chunks and 220.39 MB. Textures reached
+49. Submission/upload/meshing costs still require investigation. Repeat the
+full 30-minute scenario on this pipeline and test real iPhone suspension and
+rendering. The owner's original Reload has not been reproduced or certified
+fixed, and forced termination of an uncommitted large save remains limited
+by the best-effort lifecycle fallback described above.
