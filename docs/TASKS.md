@@ -46,8 +46,8 @@ that an agent's later checkout has passed them. Re-fetch/recheck before work.
 
 | Priority / state | Existing IDs | What the next agent should do |
 |---|---|---|
-| First: unresolved lag / Reload | TECH-18 | Continue from #241's measured 2.30-second autosave stall, local-save quota failure and render-submission spikes. Reproduce the owner's actual Reload using a diagnostic report or saved world when available; distinguish frame errors, context loss and slow frames. The original crash is unresolved. |
-| First: sustained performance | TECH-8; playtests under TECH-17 and TECH-9 | The 30-minute desktop settlement/war/travel/cave profile is recorded in #241 and docs/performance.md; it completed but failed persistence validation. Address synchronous save preparation and local-world capacity, then remaining submission/meshing spikes and physical-iPhone checks. Three focused hot paths are optimized; this is not a clean end-to-end performance sign-off. |
+| First: unresolved lag / Reload | TECH-18 | #242 fixes the measured normal-autosave stall and localStorage capacity path with background binary IndexedDB saves. Profile remaining render-submission/meshing spikes. Reproduce the owner's actual Reload using diagnostics or a saved world; the original crash is unresolved. |
+| First: sustained performance | TECH-8; playtests under TECH-17 and TECH-9 | #241 records the 30-minute baseline with failed persistence; #242's 11-minute hardware follow-up confirms two actual autosaves and restore with 4–15 ms game-thread save work. Repeat a full 30 minutes on the new pipeline and profile physical iPhone hardware. Remaining render/mesh stalls prevent an overall performance sign-off. |
 | Follow-up implementation | TECH-7 | Finish lazy loading war/Sky modules; map/story already load lazily. Check the download/bundle change and exercise late-game routes, saves and cancelled loads. |
 | Follow-up maintenance | TECH-10 | Extract one Game.js subsystem per PR with existing behavior preserved. Coordinate files with other agents; a refactor alone is not an FPS improvement. |
 | Discussed crafting follow-up | CRAFT-8 | Define the timing/dragging/animation interaction before implementing it. Current crafting is a sequence of action buttons; the richer interaction is not delivered. Keep this behind the performance priority. |
@@ -100,8 +100,10 @@ separate from frame-rate guarantees.
   full-game rendering gate are integrated in #239. TECH-18 and TECH-8 remain
   open. #241 adds three measured streaming/minimap optimizations and a
   completed 30-minute desktop profile with failed local persistence; the
-  owner's original Reload is not yet reproduced. Save capacity/preparation
-  and remaining submission stalls are the immediate follow-up.
+  owner's original Reload is not yet reproduced. #242 adds background local
+  persistence and an 11-minute desktop run with two confirmed autosaves and
+  restore. Remaining submission/meshing stalls and physical-device testing
+  are the immediate follow-up; visuals and performance caps are unchanged.
 - Remaining work is explicitly marked in the tables; phone playtests, production
   database rollout and branch deletion still require the owner's action.
 
@@ -429,7 +431,7 @@ supersede that historical review; do not repeat its already completed work.
 | TECH-5 | **Limit how often a client can write to the database.** | Claude | S | bounded client queue implemented; server enforcement prepared in 0006, not activated |
 | TECH-6 | **Make land in the background** (a Web Worker): background terrain generation and a bounded main-thread fallback are implemented. Meshing, uploads and rendering still require profiling; the worker does not establish that all streaming stutter is solved. | Claude | L | done for worker generation; integrated into main 21 October; remaining stalls are TECH-18/TECH-8 |
 | TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude | M | map/story artwork load lazily; war/Sky module split remains |
-| TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Any agent; desktop measurements by ChatGPT in #241 | M | 30-minute Radeon settlement/war/travel/cave profile completed; three focused hot paths optimized; persistence validation failed. Save preparation/capacity, remaining submission/meshing spikes and physical-iPhone profiling remain |
+| TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Any agent; desktop measurements by ChatGPT in #241/#242 | M | partial: 30-minute baseline and three hot-path fixes #241; background local persistence #242 passes an 11-minute hardware run with two confirmed autosaves/restore. Repeat full 30 minutes on the new pipeline; remaining submission/meshing spikes and physical-iPhone profiling remain |
 | TECH-9 | **The phone memory overlay**: optional counter shown with `?debug`, for finding memory growth on a phone. | ChatGPT | S | done; integrated into main 21 October; phone profiling remains |
 | TECH-10 | **Split `src/Game.js`** (over 8,000 lines as of this audit; measure again before work) by system (war, vehicles, building, input, saving), one part per PR, alongside other work. | Claude | L | to do in separate subsystem PRs; new workers/jobs/peer helpers are outside Game.js |
 | TECH-11 | **Type checks on the save format and the block list**, to catch the kind of mismatch that once broke saved worlds' mode. | Claude | M | done; integrated into main 21 October |
@@ -439,7 +441,7 @@ supersede that historical review; do not repeat its already completed work.
 | TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | done; integrated into main 21 October |
 | TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
 | TECH-17 | **Performance safeguards for future additions**: fixed-seed crest/slope/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource/disposal checks, shared streaming allowance and a required PR performance workflow. #239 adds an actual 802-chunk forest rendering comparison/cost gate; existing budgets are unchanged. Commands and limits in `docs/performance.md`. | ChatGPT | M | implementation integrated (#234, included with #236; full-game gate #239); real-phone check pending |
-| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on a weak-GPU iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | Any agent; #239 and #241 implemented by ChatGPT | M | diagnostics and covered-terrain reduction #239; streaming/minimap fixes and 30-minute desktop evidence #241. Original Reload unresolved; measured autosave stalls/quota and remaining submission costs need work; no engine migration approved |
+| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on a weak-GPU iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | Any agent; #239/#241/#242 implemented by ChatGPT | M | partial: diagnostics/render reduction #239; streaming/minimap fixes #241; measured normal-autosave stall/capacity fix #242. Original Reload, rendering spikes and physical-iPhone verification remain; no engine migration approved |
 
 ### TECH-18 implementation plan, 23 October
 
@@ -546,13 +548,11 @@ the largest cumulative measured CPU cost, with a **742 ms** maximum; remesh
 draining reached **21.7 ms**. Method times overlap. See `docs/performance.md`
 for resource trends and limitations.
 
-Next work within TECH-18 / TECH-8:
-- Give large **local worlds** a reliable persistence path and verify actual
-  restore/Save and leave/failure recovery. SAVE-5's IndexedDB cloud-backup
-  spill does not cover `LocalWorlds`; preserve existing local saves.
-- Split and measure snapshot/terrain/RLE/JSON/write costs, then remove
-  unbounded save preparation from gameplay frames while preserving claimed
-  terrain, world compatibility and save-failure reporting.
+Follow-up to this baseline within TECH-18 / TECH-8:
+- Delivered in #242: background binary local persistence, actual commit/restore
+  confirmation, Save and leave/failure guards and legacy compatibility. Normal
+  playing saves no longer prepare missing terrain or whole-world RLE/JSON on
+  the game thread; the synchronous emergency lifecycle fallback still remains.
 - Profile remaining submission/upload and single-chunk remesh stalls; verify
   any change against rendering equivalence and unchanged performance budgets.
 - Reproduce the owner's Reload and run on physical iPhone hardware.
@@ -585,23 +585,23 @@ Keep exports/cloud formats unchanged. New local snapshots restore directly
 without generating terrain just to overwrite it. Measure snapshot-copy cost
 and additional retained buffers as well as worker time.
 
-- [ ] Reproduce capture/preparation/persistence boundaries with real-world
+- [x] Reproduce capture/preparation/persistence boundaries with real-world
   fixtures. Add failing-first snapshot tests for zero live-world generation,
   owned buffers, claimed/edited preservation, negative coordinates, finite
   worlds and exact restore including surfaces/biomes/placed lights.
-- [ ] Implement binary snapshot capture/completion/restore in
+- [x] Implement binary snapshot capture/completion/restore in
   `src/storage/WorldSnapshot.js`; prove old exported data remains compatible.
-- [ ] Add real-browser failing checks for large local persistence, atomic
+- [x] Add real-browser failing checks for large local persistence, atomic
   metadata, fresh-page restore, legacy coexistence/migration, failed commits,
   overlapping saves/deletes, and worker failure. Implement the worker/backend
   and `LocalWorlds` integration with bounded pending work.
-- [ ] Connect committed local-save promises to Game's existing Save and leave,
+- [x] Connect committed local-save promises to Game's existing Save and leave,
   crash recovery, world switches, sign-in migration and deletion. Preserve
   synchronous legacy fallback; do not present queued work as persisted.
-- [ ] Update profiling to await actual persistence and record preparation and
+- [x] Update profiling to await actual persistence and record preparation and
   completion separately. Compare the developed fixture at home/away against
   #241; keep resource and pixel-equivalence checks unchanged.
-- [ ] Run full regression/build/browser/performance checks and a sustained
+- [x] Run full regression/build/browser/performance checks and a sustained
   session crossing saves. Review, commit/push, PR and merge under standing
   authorization, then update this single task list with measured results.
 
@@ -610,6 +610,40 @@ cannot resurrect deleted worlds or update another world's UI; rapid requests
 remain bounded; worker-disabled/private-storage cases; typed-array ownership;
 Save and leave/crash Reload wait for actual persistence. Physical-iPhone and
 the original owner Reload remain separate verification work.
+
+Implementation on PR #242 (25 October): owned binary snapshots, atomic local
+IndexedDB payload/directory commits, bounded worker requests, committed-terrain
+reuse, direct binary restore and legacy compatibility are implemented. Cache
+reuse checks the complete terrain configuration so explicit Sky/other gameplay
+changes still take effect. Actual browser tests cover 256 claimed chunks,
+fresh-page restore, atomic abort, forty overlapping saves, deletion ordering,
+newer competing legacy records, conditional migration cleanup, worker-disabled
+fallback and denied IndexedDB. The real-game smoke also checks an edit made
+after the last confirmed save survives immediate reload.
+
+Review repairs preserve emergency checkpoints and shared progression, retain
+new local edits made during cloud uploads, keep cloud access working when
+local storage fails, and reject deletion when the modern record cannot be
+removed. These repairs have failing-first regressions. On hidden/pagehide/
+beforeunload, the existing synchronous best-effort legacy checkpoint remains;
+normal playing saves use the worker. This fallback can still be expensive
+and quota-limited. Forced termination of an uncommitted large save cannot be
+guaranteed; physical-device suspension testing remains necessary.
+
+Delivery verification for #242 (26 October): exact runtime/tool/test revision
+`9ec1d92` passed **7,606 tests, 0 failures across 299 files**, build, gameplay
+browser checks and both performance gates. Rendering equivalence retained
+identical pixels (751 to 736 calls in the local comparison); caps were not
+raised. Final documentation is the only change after that runtime revision.
+The completed **660.01-second** Radeon RX 7900 GRE run kept 56 buildings and
+55 villagers across settlement, war, travel, return, caves and recovery:
+39,401 frames, two successful autosaves, fresh persisted restore, no Reload,
+page errors or context loss, and zero validation failures. Save dispatch cost
+was **3.9 / 15.2 ms**, with commits completing in **155.3 / 106.4 ms**.
+Remaining work: the original owner Reload, physical-iPhone rendering/lifecycle
+checks, a full 30-minute repeat on this pipeline and remaining rendering/mesh
+spikes (the new run still had a 747.4 ms maximum frame). TECH-8 and TECH-18
+remain partial; this completed batch is not a claim that all lag is solved.
 
 ---
 
