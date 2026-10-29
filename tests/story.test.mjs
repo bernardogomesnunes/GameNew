@@ -14,7 +14,7 @@ import { INTRO, ENDINGS, ART, ART_W, ART_H, paint, endingFor } from '../src/ui/S
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = ['WarRuntime','SkyRuntime'].map(name=>readFileSync(new URL(`../src/runtime/${name}.js`,import.meta.url),'utf8')).join('\n') + readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
 

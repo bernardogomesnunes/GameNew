@@ -40,6 +40,9 @@ try {
   await page.waitForFunction(() => window.__game && !window.__game.booting && (!document.querySelector('#loading') || document.querySelector('#loading').classList.contains('ld-gone')), { timeout: 120_000 });
   assert.equal(modules.includes('/src/ui/Story.js'), false, 'Story artwork loads only when played');
   assert.equal(modules.includes('/src/render/WorldMap.js'), false, 'Full map loads only when opened');
+  assert.equal(modules.includes('/src/world/skyKingdom.js'), false, 'Sky planning and stamping stay out of startup');
+  assert.equal(modules.includes('/src/runtime/WarRuntime.js'), false, 'War simulation stays out of startup');
+  assert.equal(modules.includes('/src/runtime/WandererWarRuntime.js'), false, 'Enemy siege and mount simulation stay out of startup');
   await page.evaluate(async () => {
     const { TerrainWorkerQueue } = await import('/src/world/TerrainWorkerQueue.js');
     const game = window.__game;
@@ -58,7 +61,7 @@ try {
   });
   const placed = await page.evaluate(async () => {
     const game = window.__game;
-    game.newWorld({ mode: 'creative', name: 'Browser smoke', seed: 71823, silent: true });
+    await game.newWorld({ mode: 'creative', name: 'Browser smoke', seed: 71823, silent: true });
     const x = Math.floor(game.player.position.x) + 4;
     const z = Math.floor(game.player.position.z);
     const y = Math.min(200, Math.floor(game.player.position.y) + 5);

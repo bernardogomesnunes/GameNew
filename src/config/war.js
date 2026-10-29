@@ -15,13 +15,7 @@
  * where — and a war horn calls the next one early when you're ready.
  */
 
-/** From the war being declared to the first round, and between rounds. */
-export const FIRST_ROUND_DAYS = 0.5;
-export const ROUND_GAP_DAYS = 1.5;
-/** How long before a round you hear it coming: about a minute of play. */
-export const WARN_DAYS = 0.05;
-/** A round lost comes again, this soon. */
-export const RETRY_DAYS = 1;
+export { FIRST_ROUND_DAYS, ROUND_GAP_DAYS, WARN_DAYS, RETRY_DAYS, LAST_ROUND } from './warState.js';
 /** What a round won is worth, in gold — more for the later ones. */
 export const ROUND_GOLD = (n) => 4 + n * 2;
 
@@ -48,7 +42,7 @@ export const ROUNDS = [
   { who: [['warlord', 1], ['warbeast', 1], ['soldier', 4], ['archer', 3], ['siege_catapult', 1]] },
 ];
 
-export const LAST_ROUND = ROUNDS.length;
+
 
 /** How a round's company reads in a sentence: "3 bandits, 2 archers and a battering ram". */
 export function companyWords(n, names) {
