@@ -1,3 +1,5 @@
+import { ensureSkyTerrain } from '../src/core/optionalFeatures.js';
+await ensureSkyTerrain();
 import { readFileSync, existsSync } from 'node:fs';
 import {
   SHOWCASE_SEED, SHOWCASE_TIMES, SHOWCASE_SPOTS, SHOWCASE_SPOTS_BY_ID, SHOWCASE_BUILDINGS, SHOWCASE_FIGURES,
@@ -25,7 +27,7 @@ import { daylightAt } from '../src/render/DayCycle.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
-const game = read('../src/Game.js');
+const game = read('../src/runtime/ShowcaseRuntime.js') + read('../src/Game.js');
 const ui = read('../src/ui/UIManager.js');
 const mobsSrc = read('../src/world/Mobs.js');
 const wanderSrc = read('../src/world/Wanderers.js');

@@ -12,7 +12,7 @@ import { SKY_LIFT, CHAIN } from '../src/config/blocks.js';
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = ['WarRuntime','SkyRuntime'].map(name=>readFileSync(new URL(`../src/runtime/${name}.js`,import.meta.url),'utf8')).join('\n') + readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 
 // --- the train under a thumb -----------------------------------------------------------------------
 

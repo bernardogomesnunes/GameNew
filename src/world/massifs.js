@@ -1,6 +1,6 @@
 import { inPast } from './past.js';
 import { inFuture } from './future.js';
-import { skyAt, TOWER_OUT } from './skyKingdom.js';
+import { skyAt, TOWER_OUT } from './skyLocation.js';
 
 /**
  * Now and then a huge mountain (WORLD-1: "wider and bigger mountains, and now

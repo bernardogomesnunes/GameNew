@@ -1,6 +1,6 @@
 import {World} from '../world/World.js';
 import {ChunkGen} from '../world/ChunkGen.js';
-import {terrainConfig,terrainGenerator,generateTerrainChunk} from '../world/terrainPayload.js';
+import {terrainConfig,terrainGenerator,generateTerrainChunk,prepareTerrain} from '../world/terrainPayload.js';
 
 const FORMAT='duilt-local-binary';
 
@@ -39,7 +39,7 @@ export async function completeWorldSnapshot(snapshot,yieldWork=null,previous=nul
       const existing=kept.get(`${c.cx},${c.cz}`);
       if(existing?.data)snapshot.chunks[i]=existing;
       else{
-        gen??=terrainGenerator(snapshot.generation);
+        if(!gen){await prepareTerrain(snapshot.generation);gen=terrainGenerator(snapshot.generation);}
         snapshot.chunks[i]=generateTerrainChunk(snapshot.generation,c.cx,c.cz,gen);
       }
       if(yieldWork)await yieldWork();
