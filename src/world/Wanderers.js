@@ -1,4 +1,4 @@
-import { WANDERERS, WANDERER_NAMES, NEWS } from '../config/wanderers.js';
+import { WANDERERS, WANDERER_NAMES, NEWS, rollExplorerGifts } from '../config/wanderers.js';
 import { STUN_SECONDS, BURN_SECONDS, BURN_DAMAGE, FREEZE_SECONDS, FREEZE_SLOW } from '../config/upgrades.js';
 import { landmarksFor } from './landmarks.js';
 import { groundAt, surfaceAt, isLoaded, bodyFits } from './Mobs.js';
@@ -669,7 +669,7 @@ export class Wanderers {
     if (y == null) return null;
     const on = a + Math.PI + (this.rand() - 0.5) * 0.7;
     const goal = { x: player.x + Math.cos(on) * 110, z: player.z + Math.sin(on) * 110 };
-    const p = this.person('explorer', x, y, z, { goal });
+    const p = this.person('explorer', x, y, z, { goal, gifts: rollExplorerGifts(this.rand) });
     this.list.push(p);
     return p;
   }

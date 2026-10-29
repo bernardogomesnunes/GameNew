@@ -13,6 +13,7 @@ Open the Workbench with **E**. It lists every recipe with a search box. A recipe
 | Anywhere (Workbench) | Nothing needed |
 | Workshop | Stand in a claimed Workshop |
 | Foundry | Stand at a claimed Foundry |
+| Planing Bench | Make the Planing Bench block (Age 2, 6 planks and 2 stone), place it and stand nearby: a log gives 3 planks instead of 2 |
 | Wood Mill | Make the Wood Mill block (Age 3) and stand within 4 blocks |
 | Stone Mill | Make the Stone Mill block (Age 3) and stand within 4 blocks |
 | Engineering Centre | Stand in a claimed Engineering Centre. First study engineering at a University |

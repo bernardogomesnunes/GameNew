@@ -34,6 +34,7 @@ export const STACK_TOOL = 1;
 // their own since they have no block to match.
 export const ITEMS = [
   { id: 'bleach_bucket', name: 'Bleach Bucket', kind: 'refined', stackTo: 1, color: 0xdde8d7, glyph: 'bucket', block: 524, madeBy: 'Water and wood ash mixed in a bucket — place it to wash stone pale' },
+  { id: 'planing_bench', name: 'Planing Bench', kind: 'refined', stackTo: 10, color: 0xb98a5a, glyph: 'planks', block: 527, madeBy: 'Build from planks and stone — place it and plane logs into more planks' },
   { id: 'forge', name: 'Forge', kind: 'refined', stackTo: 10, color: 0x655367, glyph: 'stone', block: 525, madeBy: 'Build from stone and clay — place it to darken rock and forge weapons' },
   ...[
     ['carpentry_saw', 'Carpentry Saw', 'Cuts planks to length'],

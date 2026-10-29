@@ -442,3 +442,20 @@ export const NEWS = {
     'Good weather on the plains. Herds are fat this year.',
   ],
 };
+
+/**
+ * What an explorer carries for you (IMP-1: "we need explorers to give
+ * saplings and other materials when approaches"; decided 29 October: "Each
+ * explorer should have 2 gifts available, that can be taken").
+ *
+ * Every explorer has two gifts, taken one at a time when you talk to them: a
+ * pair of saplings first, then one thing from the pack they carry. Once both
+ * are taken they have nothing more to give.
+ */
+export const EXPLORER_PACK = [
+  { dark_wood: 3 }, { white_wood: 3 }, { clay: 4 }, { seeds_carrot: 2 }, { seeds_potato: 2 }, { stone: 6 },
+];
+export function rollExplorerGifts(rand = Math.random) {
+  const extra = EXPLORER_PACK[Math.floor(rand() * EXPLORER_PACK.length)];
+  return [{ give: { sapling: 2 } }, { give: { ...extra } }];
+}

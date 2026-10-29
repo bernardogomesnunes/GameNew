@@ -1,3 +1,4 @@
+import { SOLDIER_CAPS } from '../src/config/soldiers.js';
 import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { generateDuiltWorld } from '../src/world/StarterWorld.js';
@@ -32,6 +33,8 @@ for (const spec of LEVELLED) {
     const a = spec.tiers[t - 1], b = spec.tiers[t];
     const gain = spec.fromCrops || spec.fromAnimals ? yieldAt(spec, t) > yieldAt(spec, t - 1)
       : b.slots != null ? b.slots > a.slots
+      // IMP-2, IMP-3: barracks and Garrison levels give room, not goods.
+      : ['barracks', 'military'].includes(spec.id) ? SOLDIER_CAPS[t] > SOLDIER_CAPS[t - 1]
       : perDay(spec, t) > perDay(spec, t - 1);
     if (!gain) better = false;
   }
@@ -44,7 +47,7 @@ for (const spec of LEVELLED) {
 const { world, origin } = generateDuiltWorld({ sizeX: 256, sizeZ: 256, seed: 11 });
 const g = new DuiltGame({ world, scene: new THREE.Scene(), bus: { emit() {} } });
 // What levels ask for — the bag has room for these, not for one of everything.
-const topUp = () => { for (const id of ['planks', 'cobblestone', 'coin', 'iron_ingot', 'lantern', 'chest', 'stone', 'window', 'pillar_stone', 'gold_trim', 'banner_white', 'devotion']) g.inventory.add(id, Math.max(0, 300 - g.inventory.countOf(id))); };
+const topUp = () => { for (const id of ['planks', 'cobblestone', 'coin', 'iron_ingot', 'lantern', 'chest', 'stone', 'window', 'pillar_stone', 'gold_trim', 'banner_white', 'devotion', 'weapon_rack', 'training_dummy']) g.inventory.add(id, Math.max(0, 300 - g.inventory.countOf(id))); };
 const gy = 40;
 let slot = 0;
 for (const spec of LEVELLED) {
