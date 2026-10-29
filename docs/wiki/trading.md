@@ -47,8 +47,8 @@ Each row is: what you get for one purchase, and the price in coins.
 | Marble | 8 | 6 |
 | Wood | 16 | 2 |
 | Planks | 32 | 2 |
-| White Wood | 8 | 3 |
-| Dark Wood | 8 | 3 |
+| White Log | 8 | 3 |
+| Dark Log | 8 | 3 |
 | Fruit | 6 | 2 |
 | Carrots | 6 | 2 |
 | Cooked Meat | 4 | 3 |
