@@ -100,9 +100,9 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView, EngineView } from './render/ArmyView.js';
-import { UNITS_BY_ID } from './config/soldiers.js';
+import { UNITS_BY_ID, soldierCap } from './config/soldiers.js';
 import { blowOf } from './world/Defenders.js';
-import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, STORAGE_INTERFACE, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent, TIME_MACHINE, EGG_RAPTOR, EGG_TRIKE, EGG_LONGNECK, ARCHIVE, WAR_STANDARD } from './config/blocks.js';
+import { NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, STORAGE_INTERFACE, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent, TIME_MACHINE, EGG_RAPTOR, EGG_TRIKE, EGG_LONGNECK, ARCHIVE, WAR_STANDARD } from './config/blocks.js';
 import { inPast, pastArrival } from './world/past.js';
 import { inFuture, futureArrival, FUTURE_GROUND } from './world/future.js';
 import { FutureView } from './render/FutureView.js';
@@ -3229,15 +3229,14 @@ export class Game {
       onSow: (kind) => this.sowFarm(structure, kind, true),
       onUnsow: (kind) => this.sowFarm(structure, kind, false),
       onCompostFarm: () => this.compostFarm(structure),
-      // A barracks (batch 3, #29): who to train, and how many bunks it has.
+      // A barracks (batch 3, #29): who to train. How many it holds is its level.
       onTrain: (unit) => this.trainSoldier(structure, unit),
-      bunks: () => this.bedsIn(structure.region),
     };
   }
 
   /** Trains a soldier at a barracks (DuiltGame.trainSoldier), saying why not when it can't. */
   trainSoldier(structure, unit) {
-    const r = this.duilt.trainSoldier(structure, unit, this.bedsIn(structure.region));
+    const r = this.duilt.trainSoldier(structure, unit);
     if (!r.ok) return void this.ui.toast({ kind: 'xp', title: "Can't train that yet", body: r.reason });
     const who = r.unit.name.toLowerCase();
     const postName = structure.type === 'military' ? 'Garrison' : 'barracks';
@@ -5316,7 +5315,7 @@ export class Game {
       this.defenceSyncedAt = now;
       const posts = d.structures.list()
         .filter((s) => s.type === 'barracks' || s.type === 'military' || s.type === 'watchtower')
-        .map((s) => ({ id: s.id, type: s.type, region: s.region, valid: s.valid, beds: s.type === 'barracks' || s.type === 'military' ? this.bedsIn(s.region) : 0 }));
+        .map((s) => ({ id: s.id, type: s.type, region: s.region, valid: s.valid, cap: s.type === 'barracks' || s.type === 'military' ? soldierCap(s) : 0 }));
       // Each one out of training says so (asked for directly: "show the progress").
       for (const j of d.defenders.sync(posts, d.days)) {
         const u = UNITS_BY_ID.get(j.unit);
@@ -5341,16 +5340,6 @@ export class Game {
     const stone = this.projectiles.fire(from, bestAim(this.world, from, { x: target.x, y: y + 1, z: target.z }));
     stone.crew = crew;
     this.sound?.catapult({ x: engine.x, z: engine.z });
-  }
-
-  /** How many bunks a barracks has: the foot of every bed in it. */
-  bedsIn(r) {
-    let n = 0;
-    for (let x = r.minX; x <= r.maxX; x++) for (let y = r.minY; y <= r.maxY; y++) for (let z = r.minZ; z <= r.maxZ; z++) {
-      const id = this.world.getBlock(x, y, z);
-      if (id >= BED && id <= BED + 3) n++;
-    }
-    return n;
   }
 
   /** One of your soldiers' blows, or an archer's arrow, landing. */

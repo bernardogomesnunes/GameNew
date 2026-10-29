@@ -1,6 +1,6 @@
 import { groundAt, bodyFits } from './Mobs.js';
 import { roofPart } from '../config/blocks.js';
-import { UNITS_BY_ID, LEGACY_UNIT } from '../config/soldiers.js';
+import { UNITS_BY_ID, LEGACY_UNIT, SOLDIER_CAPS } from '../config/soldiers.js';
 
 /**
  * Your side of the war (the defence buildings — config/structures.js): the
@@ -25,8 +25,8 @@ export const SOLDIER = { hp: 24, hits: 4, reach: 1.9, every: 1.1, speed: 3.2, ra
 export const TOWER_ARCHER = { range: 26, every: 2.2, damage: 3 };
 /** A barracks trains a soldier in this much of a game day. Melee stats for a soldier of no unit (the showcase's). */
 export const TRAIN_DAYS = 0.15;
-/** Bunks beyond this train no more. */
-export const MAX_SOLDIERS = 6;
+/** The most any one barracks holds (its top level; config/soldiers.js SOLDIER_CAPS). */
+export const MAX_SOLDIERS = 40;
 /** A soldier who went without their meal hits this much as hard, and doesn't get their breath back. */
 export const HUNGRY_STRENGTH = 0.6;
 /** A blow or an arrow from `s`, as hard as they can manage today. */
@@ -155,14 +155,14 @@ export class Defenders {
           joined.push({ unit, of: b.id, left: t.queue.length });
         }
         if (!t.queue.length) t.since = days;
-        // Everyone on the roster stands at their place in front of it, a
-        // bunk each: whoever isn't there yet comes out.
-        const bunks = Math.min(MAX_SOLDIERS, b.beds ?? 0);
+        // Everyone on the roster stands at their place in front of it:
+        // whoever isn't there yet comes out. `cap` is the building's level.
+        const bunks = Math.min(MAX_SOLDIERS, b.cap ?? SOLDIER_CAPS[0]);
         const yard = this.parade(b.region);
         const here = this.soldiers.filter((s) => s.post.of === b.id);
         t.roster.slice(0, bunks).forEach((unit, i) => {
           if (!yard || here.some((s) => s.slot === i)) return;
-          const spot = { x: yard.x + (i % 3) - 1, y: yard.y, z: yard.z + Math.floor(i / 3) };
+          const spot = { x: yard.x + (i % 8) - 4, y: yard.y, z: yard.z - Math.floor(i / 8) };
           const s = this.person(UNITS_BY_ID.get(unit)?.kind ?? 'soldier', spot, b.id, unit);
           s.slot = i;
           this.soldiers.push(s);
