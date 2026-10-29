@@ -30,8 +30,9 @@ console.log('PASS a cancelled saved-world feature load leaves the previous world
 
 assert.equal(await game.prepareFeatures(['missing'], () => { game.world = null; }), false);
 assert.equal(game.world, oldWorld);
-assert.equal(notices.at(-1).action.label, 'Retry');
+// A browser never re-fetches a module that failed to download: Reload, after saving.
+assert.equal(notices.at(-1).action.label, 'Reload');
 assert.equal(game.featureLoading, false);
 assert.equal(await game.prepareFeatures(['sky']), true);
 assert.equal(game.featureFailure, null);
-console.log('PASS feature failure preserves the world, offers retry, and a later successful load clears failure');
+console.log('PASS feature failure preserves the world, offers Reload, and a later successful load clears failure');

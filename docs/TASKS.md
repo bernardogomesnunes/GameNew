@@ -48,7 +48,7 @@ that an agent's later checkout has passed them. Re-fetch/recheck before work.
 |---|---|---|
 | First: unresolved lag / Reload | TECH-18 | #242 fixes the measured normal-autosave stall and localStorage capacity path with background binary IndexedDB saves. Profile remaining render-submission/meshing spikes. Reproduce the owner's actual Reload using diagnostics or a saved world; the original crash is unresolved. |
 | First: sustained performance | TECH-8; playtests under TECH-17 and TECH-9 | #241 records the 30-minute baseline with failed persistence; #242's 11-minute hardware follow-up confirms two actual autosaves and restore with 4–15 ms game-thread save work. Repeat a full 30 minutes on the new pipeline and profile physical iPhone hardware. Remaining render/mesh stalls prevent an overall performance sign-off. |
-| Follow-up implementation | TECH-7 | Finish lazy loading war/Sky modules; map/story already load lazily. Check the download/bundle change and exercise late-game routes, saves and cancelled loads. |
+| Done: smaller first download | TECH-7 | War, Sky and showcase code load only when needed (#251). Measured gain is small: about 34 KB of 1,768 KB. Further startup gains would need splitting the rest of `Game.js` (TECH-10). |
 | Follow-up maintenance | TECH-10 | Extract one Game.js subsystem per PR with existing behavior preserved. Coordinate files with other agents; a refactor alone is not an FPS improvement. |
 | Discussed crafting follow-up | CRAFT-8 | Define the timing/dragging/animation interaction before implementing it. Current crafting is a sequence of action buttons; the richer interaction is not delivered. Keep this behind the performance priority. |
 | Partial: model-backed Battle | OLD-3; ASK-3 | Local LM Studio strategies work. Finish a separately configured authenticated hosted/mobile connection only after the owner supplies/chooses the endpoint arrangement; see `docs/local-ai.md`. |
@@ -353,32 +353,27 @@ readiness boundaries, preserving synchronous terrain generation after load.
 Measure remaining frame costs before optimizing them; confirm render
 equivalence and run a full 30-minute save-crossing workload on the final code.
 
-- [ ] IMP-2/3/4: integrate military levels; regress blocked/uneven parade
-  slots, live capacity changes and existing roster saves in `Defenders.js`,
-  `DuiltGame.js`, `config/soldiers.js`, `config/structures.js` and military
-  tests. Verify real Evolve/training/capacity UI and text-only building rows
-  on desktop/mobile. Commit coherent repairs before the next task.
-- [ ] IMP-5: integrate guardian focus; failing-first real Game/Guardian
-  regressions for melee and arrow hits, latest target, stay/follow/hunt,
-  peaceful people, farm animals, dead/out-of-range targets and world reload.
-  Repair `Game.js` and `world/Guardian.js`; confirm in a running game.
-- [ ] TECH-18/8: record baseline timing/trace of remaining render/mesh
-  spikes, reproduce and fix demonstrated causes with regression evidence.
-  Run unchanged performance/resource/pixel checks and a final 30-minute
-  hardware settlement/war/travel/cave session with actual saves/restore.
-  Keep original owner Reload and physical-iPhone checks explicitly open if
-  unreproduced/unavailable; do not claim desktop evidence certifies phones.
-- [ ] TECH-7: inspect real startup dependency graph; split small shared
-  constants from optional implementations, await required terrain/game
-  readiness on create/open/import/travel paths, and guard cancelled/failed
-  loads. Assert startup network excludes deferred code and exercise war/Sky
-  entry plus saved-world restore. Compare production entry download bytes.
-- [ ] Final integration: full `npm test`, build, browser gameplay/IMP checks,
-  existing performance gates, independent branch review and fixes; commit,
-  push and PR against current main. Merge under standing owner authorization
-  only with green required checks; update this single task list and report
-  measured gains and remaining limitations. Retain original authorship and
-  close superseded #246/#247 only after their reviewed work is integrated.
+**Outcome (checked and finished by Claude on 29 October; ChatGPT ran out of
+credits partway):** PR #251.
+- [x] IMP-2/3: #247's levels, plus formation spots that are never inside
+  blocks or over holes, and trained soldiers kept (not lost) when a level is
+  lost. Browser check: Barracks and Garrison Evolve/train/full at 10, 20, 40.
+- [x] IMP-5: Aurelion finishes the last enemy you struck, by blow or arrow,
+  in every order; never farm animals or peaceful people.
+- [x] Big armies drawn in bounded instanced batches; shader preparation kept
+  off the frame that first shows something.
+- [x] TECH-7: war, Sky and showcase code load only when needed, before any
+  world that needs them opens. Measured: the first download is about 34 KB
+  smaller (1,768 KB to 1,734 KB), a small gain. A part that fails to download
+  offers Reload (after saving), since a browser never re-fetches a failed one.
+- [x] Checks: full `npm test`, build, performance budgets, and the browser
+  checks (smoke, inventory, crash diagnostics, full-game rendering with
+  identical pixels, lazy world/production, local saves, improvements, jobs,
+  Storage Remote, crafting). Land and the floating island generate block for
+  block the same as main. The two-player battle browser check can't connect
+  in the cloud container (fails the same on main).
+- [ ] Not done: the 30-minute session profile and the remaining render/mesh
+  spikes (TECH-8, TECH-18); the owner's original Reload and phone checks.
 
 **Review focus:** queued training must not duplicate/drop soldiers across
 reloads; blocked parade ground must not spawn inside solids or over voids;
@@ -510,7 +505,7 @@ supersede that historical review; do not repeat its already completed work.
 | TECH-4 | **Text put on screen escaped by default.** About 70 places write HTML; the ones that show your text are escaped by hand. One helper that always escapes, so a future change can't slip. | Claude | M | done; integrated into main 21 October |
 | TECH-5 | **Limit how often a client can write to the database.** | Claude | S | bounded client queue implemented; server enforcement prepared in 0006, not activated |
 | TECH-6 | **Make land in the background** (a Web Worker): background terrain generation and a bounded main-thread fallback are implemented. Meshing, uploads and rendering still require profiling; the worker does not establish that all streaming stutter is solved. | Claude | L | done for worker generation; integrated into main 21 October; remaining stalls are TECH-18/TECH-8 |
-| TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude | M | map/story artwork load lazily; war/Sky module split remains |
+| TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude; ChatGPT, Claude | M | done, #251: map/story/war/Sky/showcase load when needed; the first download is only about 34 KB smaller (1,768 to 1,734 KB) |
 | TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Any agent; desktop measurements by ChatGPT in #241/#242 | M | partial: 30-minute baseline and three hot-path fixes #241; background local persistence #242 passes an 11-minute hardware run with two confirmed autosaves/restore. Repeat full 30 minutes on the new pipeline; remaining submission/meshing spikes and physical-iPhone profiling remain |
 | TECH-9 | **The phone memory overlay**: optional counter shown with `?debug`, for finding memory growth on a phone. | ChatGPT | S | done; integrated into main 21 October; phone profiling remains |
 | TECH-10 | **Split `src/Game.js`** (over 8,000 lines as of this audit; measure again before work) by system (war, vehicles, building, input, saving), one part per PR, alongside other work. | Claude | L | to do in separate subsystem PRs; new workers/jobs/peer helpers are outside Game.js |
