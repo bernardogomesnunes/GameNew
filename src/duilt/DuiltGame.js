@@ -41,7 +41,7 @@ import { War } from './War.js';
 import { SkyWar } from './SkyWar.js';
 import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
 import { Defenders, MAX_SOLDIERS } from '../world/Defenders.js';
-import { UNITS_BY_ID, unitCost, payForUnit } from '../config/soldiers.js';
+import { UNITS_BY_ID, unitCost, payForUnit, soldierCap, SOLDIER_CAPS } from '../config/soldiers.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';
 import { Trains, CAR_SLOTS, PART_LENGTH } from '../world/Trains.js';
 
@@ -1726,17 +1726,21 @@ export class DuiltGame {
    * Trains one soldier at a barracks, or a spear guard at a Garrison:
    * `unitId` comes from config/soldiers.js. Their food and
    * gear come out of your bag now; they join in TRAIN_DAYS, after anyone
-   * already in line. A barracks holds a soldier a bunk — `bunks`, counted
-   * by Game off the beds in it. Returns { ok, reason }.
+   * already in line. A barracks holds as many as its level allows
+   * (`soldierCap`: 10, 20, 40). Returns { ok, reason }.
    */
-  trainSoldier(s, unitId, bunks) {
+  trainSoldier(s, unitId) {
     const unit = UNITS_BY_ID.get(unitId);
     if (!unit) return { ok: false, reason: 'Nobody trains as that' };
     if (!['barracks', 'military'].includes(s?.type) || !s.valid) return { ok: false, reason: 'Only a standing barracks or Garrison trains soldiers' };
     if (s.type === 'military' && unitId !== 'shield_guard') return { ok: false, reason: 'A Garrison trains spear guards' };
     const t = this.defenders.barracks(s.id);
-    const room = Math.min(MAX_SOLDIERS, bunks) - t.roster.length - t.queue.length;
-    if (room <= 0) return { ok: false, reason: `Every bunk is spoken for — ${Math.min(MAX_SOLDIERS, bunks)} soldiers at most here` };
+    const cap = Math.min(MAX_SOLDIERS, soldierCap(s));
+    const room = cap - t.roster.length - t.queue.length;
+    if (room <= 0) {
+      const next = SOLDIER_CAPS[(s.tier ?? 0) + 1];
+      return { ok: false, reason: `Full — ${cap} soldiers at most here${next ? `. Evolve it to hold ${next}` : ''}` };
+    }
     const cost = unitCost(unit, this.inventory);
     if (!cost.ok) return { ok: false, reason: `Needs ${cost.short.join(', ')}` };
     payForUnit(unit, this.inventory);

@@ -279,7 +279,7 @@ See the building panel for its purpose and claim requirements.
 
 ### Barracks
 
-A hall of bunks with arms on the walls and a yard to train in. Train warriors, swordsmen, archers and catapult crews here, a soldier a bunk, for food and gear — they go out to meet the Stone Kingdom's army.
+A hall with arms on the walls and a yard to train in. Train warriors, swordsmen, archers and catapult crews here for food and gear — they go out to meet the Stone Kingdom's army. It holds 10 soldiers; evolve it to a Drill Hall for 20 (4 weapon racks, 4 dummies or targets, 6 iron ingots and 20 planks) and a Fortress Barracks for 40 (8 and 8, 12 iron ingots, 40 planks). Beds are only furniture.
 
 - Available from Age 8; claim region 7–18 blocks on a side.
 - Claim fee: 4 Iron Ingot, 10 Planks.
