@@ -4669,6 +4669,8 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
     if (res.killed) this.banditFell(p, res);
+    // IMP-5: the guardian goes for whoever you struck (if it counts as an enemy).
+    else this.duilt?.guardian?.focus(p);
     return true;
   }
 
