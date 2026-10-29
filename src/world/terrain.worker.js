@@ -1,9 +1,10 @@
-import { generateTerrainChunk, terrainGenerator } from './terrainPayload.js';
+import { generateTerrainChunk, terrainGenerator, prepareTerrain } from './terrainPayload.js';
 
 let generator, generationSignature;
 
-self.onmessage = ({ data: { id, signature, config, cx, cz } }) => {
+self.onmessage = async ({ data: { id, signature, config, cx, cz } }) => {
   try {
+    await prepareTerrain(config);
     if (signature !== generationSignature) {
       generator = terrainGenerator(config);
       generationSignature = signature;

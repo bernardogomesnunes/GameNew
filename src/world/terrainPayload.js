@@ -1,6 +1,12 @@
 import { Chunk } from './World.js';
 import { ChunkGen } from './ChunkGen.js';
 import { emergingState, installEmergingPlaces } from './emergingPlaceState.js';
+import { ensureSkyTerrain } from '../core/optionalFeatures.js';
+
+/** Call before synchronous generation when the snapshot includes Sky terrain. */
+export async function prepareTerrain(config) {
+  if (config.sky) await ensureSkyTerrain();
+}
 
 /** Everything that changes procedural blocks; caches are rebuilt from this. */
 export function terrainConfig(world) {

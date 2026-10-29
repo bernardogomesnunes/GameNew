@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ISLAND_R } from '../world/skyKingdom.js';
+import { ISLAND_R } from '../world/skyLocation.js';
 
 /**
  * The Sky Kingdom seen from far off (world/skyKingdom.js): a small island

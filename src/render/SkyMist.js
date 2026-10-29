@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FLOOR, ISLAND_R } from '../world/skyKingdom.js';
+import { FLOOR, ISLAND_R } from '../world/skyLocation.js';
 import { BEACON_NEAR } from './SkyBeacon.js';
 
 /**

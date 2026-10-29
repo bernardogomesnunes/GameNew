@@ -14,8 +14,8 @@ try{
     await page.route('**/*',route=>{const url=new URL(route.request().url());return url.hostname==='127.0.0.1'||['blob:','data:'].includes(url.protocol)?route.continue():route.abort();});
     await page.goto(server.resolvedUrls.local[0]);
     await page.waitForFunction(()=>window.__game&&!window.__game.booting&&document.querySelector('#loading')?.classList.contains('ld-gone'),null,{timeout:120000});
-    await page.evaluate(()=>{
-      const g=window.__game;g.newWorld({mode:'creative',name:'Test world 1',seed:4242,silent:true});
+    await page.evaluate(async()=>{
+      const g=window.__game;await g.newWorld({mode:'creative',name:'Test world 1',seed:4242,silent:true});
       g.ui.refreshForMode();g.ui.hideBlocker();
     });
     await page.waitForFunction(()=>window.__game.renderer.info.render.calls>0);

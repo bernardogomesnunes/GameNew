@@ -1,4 +1,7 @@
-import { hash01 } from './ChunkGen.js';
+import { hash01 } from './hash.js';
+import { skyAt, SKY_AT, FLOOR, ISLAND_R, TOWER_OUT, SKY_REACH } from './skyLocation.js';
+export { skyAt, SKY_AT, FLOOR, ISLAND_R, TOWER_OUT, SKY_REACH } from './skyLocation.js';
+import { registerSkyTerrain } from '../core/optionalFeatures.js';
 import { isWater, doorBlock, turned, roofBlock, BED, BED_HEAD, FACING_STEP, PAINTING, WEAPON_RACK, TRAINING_DUMMY, ARCHERY_TARGET } from '../config/blocks.js';
 import { ROOFS_BY_ID } from '../config/roofs.js';
 import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
@@ -46,16 +49,6 @@ import { roofBlocks, roofTypeFor } from '../tools/RoofTool.js';
  */
 export const SCAR_DEPTH = 0.5;
 
-/** How far out from home it hangs. */
-export const SKY_AT = 5000;
-/** Its floor: the first open cell over its grass. */
-export const FLOOR = 172;
-/** Its rough radius. */
-export const ISLAND_R = 112;
-/** How far out from its middle the anchor towers stand, on the ground. */
-export const TOWER_OUT = ISLAND_R + 30;
-/** How far out from its middle anything of it reaches: the towers and their footings. */
-export const SKY_REACH = TOWER_OUT + 6;
 /** The city wall stands this far in from the rim. */
 const WALL_IN = 12;
 /** The citadel's wall: its half-width. */
@@ -86,14 +79,6 @@ export function skyFor(gen) {
   const { x, z } = skyAt(gen);
   gen.skyCache = plan(gen, x, z);
   return gen.skyCache;
-}
-
-/** Where its middle hangs, without planning any of it — cheap. */
-export function skyAt(gen) {
-  const seed = gen.seed ?? 0;
-  const home = { x: gen.biomes?.centreX ?? 0, z: gen.biomes?.centreZ ?? 0 };
-  const a = hash01(seed, 91, 0x5c01) * Math.PI * 2;
-  return { x: Math.round(home.x + Math.cos(a) * SKY_AT), y: FLOOR, z: Math.round(home.z + Math.sin(a) * SKY_AT) };
 }
 
 /** The island's rim radius at an angle — gently lobed, the same for a world every time. */
@@ -711,3 +696,5 @@ export function liftAt(gen, x, y, z) {
   }
   return null;
 }
+
+registerSkyTerrain(stampSky, skyFor);

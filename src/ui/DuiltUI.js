@@ -944,18 +944,24 @@ export class DuiltUI {
   renderHealth() {
     const d = this.duilt;
     const box = this.q('#vital-health');
-    if (!d || !box) return;
+    if (!d || !box) { this.healthRender = null; return; }
     box.hidden = !!d.sandbox;
-    if (box.hidden) return;
+    if (box.hidden) { this.healthRender = null; return; }
     const v = d.health.value;
+    const armour = d.armour();
+    // Inventory and hunger changes also call this renderer. Keep the hearts
+    // in place unless their values, world, or actual HUD element changed.
+    const previous = this.healthRender;
+    if (previous?.world === d && previous.box === box && previous.value === v
+      && previous.armour === armour && previous.sandbox === box.hidden) return;
     const heart = (fill) => `<span class="heart ${fill}"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.4-4.5-9.4-9C1.1 8.2 3.1 4.5 6.7 4.5c2.2 0 3.7 1.2 5.3 3.1 1.6-1.9 3.1-3.1 5.3-3.1 3.6 0 5.6 3.7 4.1 7-2 4.5-9.4 9-9.4 9Z"/></svg>`
       + `<span class="heart-red"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.4-4.5-9.4-9C1.1 8.2 3.1 4.5 6.7 4.5c2.2 0 3.7 1.2 5.3 3.1 1.6-1.9 3.1-3.1 5.3-3.1 3.6 0 5.6 3.7 4.1 7-2 4.5-9.4 9-9.4 9Z"/></svg></span></span>`;
-    const armour = d.armour();
     box.innerHTML = Array.from({ length: 10 }, (_, i) => heart(v >= 2 * (i + 1) ? 'full' : v === 2 * i + 1 ? 'half' : 'empty')).join('')
       // What you're wearing, beside the hearts: a shield and its points.
       + (armour ? `<span class="armour-badge"><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6Z"/></svg><b>${armour}</b></span>` : '');
     box.classList.toggle('low', v <= 6);
     box.title = `Health: ${v / 2} of 10 hearts${armour ? ` · ${armour} armour` : ''}`;
+    this.healthRender = { world: d, box, value: v, armour, sandbox: box.hidden };
   }
 
   /**

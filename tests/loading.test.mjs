@@ -21,7 +21,7 @@ ok('the bar moves with each real stage', /loadingProgress\(35, 'Building the wor
 ok('and goes away when the land is drawn', /game\.booting = false;\s*loadingDone\(\);/.test(main));
 ok('a failure says so rather than leaving the bar there forever', /catch\(\(err\) => \{[\s\S]*Reload the page/.test(main));
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/runtime/ShowcaseRuntime.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 ok('boot makes the title scene\'s world, once', /this\.newWorld\(\{ mode: CREATIVE, name: 'Title', silent: true, scenery: true, title: true, seed: TITLE_SEED \}\);\s*this\.bootWorld = this\.world;/.test(game)
   && /if \(this\.world !== this\.bootWorld\) this\.newWorld\(/.test(game));
 ok('under the loading screen the land is made faster', /runStreamingWork\(this, frameStarted, undefined, BOOT_BUDGET_MS\);/.test(game));
