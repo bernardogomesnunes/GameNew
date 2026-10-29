@@ -1704,10 +1704,20 @@ export class Game {
       .catch(error => {
         if (revision !== this.featureScope.revision) return false;
         this.featureFailure = true;
-        this.ui?.toast({ kind: 'xp', title: 'Could not load this part of the world', body: error.message,
-          action: { label: 'Retry', onClick: () => this.prepareFeatures(features, work) } });
+        // A browser remembers a module that failed to download and never
+        // asks for it again, so trying again in this page cannot work. The
+        // world in hand was not replaced: save it, then reload.
+        this.ui?.toast({ kind: 'xp', title: 'Could not load this part of the game',
+          body: 'Check your connection, then reload. Your world is saved first.',
+          action: { label: 'Reload', onClick: () => this.reloadForFeatures() } });
         return false;
       }).finally(() => { this.featureLoads.delete(marker); this.featureLoading = this.featureLoads.size > 0; });
+  }
+
+  /** Saves what's open (waiting for it, as leaving does), then reloads the page. */
+  async reloadForFeatures() {
+    try { await this.saveAndWait(); } catch { /* the backup copy is kept either way */ }
+    location.reload();
   }
 
   runFeature(feature, method, args) {

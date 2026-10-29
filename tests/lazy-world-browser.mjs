@@ -55,6 +55,8 @@ try {
   assert.deepEqual(errors, []);
   console.log('PASS browser lazy world: pending loads preserve the world, cancelled loads cannot replace it, and a later Sky teleport works');
 
+  // One game at a time: two running at once starve a software-rendered browser.
+  await page.close();
   const offline = await browser.newPage();
   await offline.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
   let attempts = 0;
@@ -67,11 +69,20 @@ try {
     return { result, preserved: game.worldId === id, failure: game.featureFailure };
   });
   assert.deepEqual(failed, { result: false, preserved: true, failure: true });
+  // A browser keeps a failed module download and never fetches it again, so
+  // the game offers Reload (after saving) rather than a Retry that can't work.
+  const offered = await offline.evaluate(() => [...document.querySelectorAll('.toast, [class*="toast"]')]
+    .some(t => /Could not load this part of the game/.test(t.textContent) && /Reload/.test(t.textContent)));
+  assert.equal(offered, true, 'the failure offers Reload');
+  assert.equal(attempts, 1);
+  await offline.reload();
+  await offline.waitForFunction(() => window.__game && document.querySelector('#loading')?.classList.contains('ld-gone'), null, { timeout: 120000 });
   const recovered = await offline.evaluate(async () => {
     const game = window.__game;
     const result = await game.newWorld({ mode: 'creative', name: 'Retry world', silent: true });
     return { result: result !== false, name: game.worldName };
   });
   assert.deepEqual(recovered, { result: true, name: 'Retry world' });
-  console.log('PASS browser failed optional import preserves the current world and can be retried after the connection recovers');
+  assert.equal(attempts, 2, 'the reloaded page fetches it afresh');
+  console.log('PASS browser failed optional import preserves the current world, offers Reload, and works after reloading');
 } finally { await browser?.close(); await server.close(); }
