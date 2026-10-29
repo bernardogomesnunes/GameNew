@@ -2213,7 +2213,7 @@ export class DuiltUI {
       return `
         <div class="recipe-tile ${r.ok ? '' : 'blocked'}">
           <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(name)}" data-tip-info="${escapeAttr(r.blurb ?? '')}">${icon}${count}</span>
-          <strong class="recipe-name">${r.name.replace(/ \(mill\)$/, '')}</strong>
+          <strong class="recipe-name">${escapeHtml(name)}</strong>
           ${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${stationName(r.station)}</span>` : ''}
           <span class="recipe-cost">${inputs}</span>
           ${takes}

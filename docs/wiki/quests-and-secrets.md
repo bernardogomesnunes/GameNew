@@ -107,7 +107,7 @@ The Book tab records every eligible item you have held in this world. Rings, upg
 
 ### From the land (62)
 
-Dirt, Wood, Leaves, Stone, White Stone, Turquoise Stone, Dark Grey Stone, Orange Stone, Sand, Turf, Moss, Gravel, Clay, White Wood, White Leaves, Pink Leaves, Dark Wood, Dark Leaves, Lava, Dark Moss, Forest Floor, Cobblestone, Gold, Carrot Seeds, Potato Seeds, Cabbage Seeds, Lettuce Seeds, Pepper Seeds, Zucchini Seeds, Broccoli Seeds, Coffee Seeds, Hemp Seeds, Sapling, Hide, Wool, Feather, Hemp Fibre, Jar of Fireflies, Diamond, Ruby, Diamond Ore, Ruby Ore, Coal Ore, Coal, Sandstone, Water, Snow, Obsidian, Amethyst, Silt, Iron Ore, Copper Ore, Gold Ore, Sunstone, Nightstone, Devotion, Jungle Floor, Fern Turf, Raptor Egg, Triceratops Egg, Long-neck Egg, Basilisk Scale.
+Dirt, Wood, Leaves, Stone, White Stone, Turquoise Stone, Dark Grey Stone, Orange Stone, Sand, Turf, Moss, Gravel, Clay, White Log, White Leaves, Pink Leaves, Dark Log, Dark Leaves, Lava, Dark Moss, Forest Floor, Cobblestone, Gold, Carrot Seeds, Potato Seeds, Cabbage Seeds, Lettuce Seeds, Pepper Seeds, Zucchini Seeds, Broccoli Seeds, Coffee Seeds, Hemp Seeds, Sapling, Hide, Wool, Feather, Hemp Fibre, Jar of Fireflies, Diamond, Ruby, Diamond Ore, Ruby Ore, Coal Ore, Coal, Sandstone, Water, Snow, Obsidian, Amethyst, Silt, Iron Ore, Copper Ore, Gold Ore, Sunstone, Nightstone, Devotion, Jungle Floor, Fern Turf, Raptor Egg, Triceratops Egg, Long-neck Egg, Basilisk Scale.
 
 ### Made and built (145)
 
