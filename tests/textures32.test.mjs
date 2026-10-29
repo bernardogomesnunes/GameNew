@@ -154,14 +154,14 @@ function leanings(id) {
 }
 {
   // Fresher: not a palette of greys. The everyday materials carry real colour.
-  const lively = ['Grass', 'Leaves', 'Dirt', 'Sand', 'Planks', 'Brick', 'Water', 'Gold Block', 'Wood', 'Moss', 'Farmland', 'Lava'];
+  const lively = ['Turf', 'Leaves', 'Dirt', 'Sand', 'Planks', 'Brick', 'Water', 'Gold', 'Wood', 'Moss', 'Turned Soil', 'Lava'];
   const dull = lively.filter((n) => chroma(colourOf(n)) < 20);
   ok(`everyday materials are properly coloured (${dull.join(', ') || 'none dull'})`, dull.length === 0);
   const cubesC = cubes.map((b) => chroma(b.color));
   const coloured = cubesC.filter((c) => c > 10).length;
   ok(`most full blocks are not grey (${coloured} of ${cubesC.length})`, coloured / cubesC.length > 0.6);
   // Similar materials told apart.
-  for (const [a, b] of [['Stone', 'Cobblestone'], ['Grass', 'Moss'], ['Dirt', 'Farmland'], ['Sand', 'Gravel'], ['Marble', 'Sky Marble'], ['Brick', 'Dark Brick'], ['Planks', 'Wood'], ['Gold Block', 'Gold Trim']]) {
+  for (const [a, b] of [['Stone', 'Cobblestone'], ['Turf', 'Moss'], ['Dirt', 'Turned Soil'], ['Sand', 'Gravel'], ['Marble', 'Sky Marble'], ['Brick', 'Dark Brick'], ['Planks', 'Wood'], ['Gold', 'Gold Trim']]) {
     const d = deltaE(colourOf(a), colourOf(b));
     ok(`${a} and ${b} differ in colour or in pattern (ΔE ${d.toFixed(1)})`, d >= 6 || blockTexture(BLOCKS.find((x) => x.name === a)) !== blockTexture(BLOCKS.find((x) => x.name === b)));
   }

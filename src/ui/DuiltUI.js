@@ -345,6 +345,7 @@ export class DuiltUI {
           <input id="buildings-search" class="panel-search" type="search" placeholder="Search — a farm, stone, settlers…" autocomplete="off" enterkeyhint="search">
           <div id="buildings-list"></div>`,
         'panel-bench': `
+          <div id="bench-station" class="export-note" hidden></div>
           <input id="bench-search" class="panel-search" type="search" placeholder="Search — an axe, planks, stone…" autocomplete="off" enterkeyhint="search">
           <div id="bench-list"></div>`,
         'panel-building': `
@@ -2156,7 +2157,18 @@ export class DuiltUI {
       search.addEventListener('input', () => this.renderBench());
     }
     const query = search?.value ?? '';
-    const recipes = oneWayEach(all).filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
+    // Used at a placed station (a bleach bucket, a forge, a planing bench...):
+    // only what is made there, with a way back to everything.
+    const only = this.benchStation ?? null;
+    const note = this.q('#bench-station');
+    if (note) {
+      note.hidden = !only;
+      if (only) {
+        note.innerHTML = `${escapeHtml(stationName(only))}: what is made here. <button class="secondary" id="bench-all" type="button">Show every recipe</button>`;
+        this.q('#bench-all').addEventListener('click', () => { this.benchStation = null; this.renderBench(); });
+      }
+    }
+    const recipes = oneWayEach(only ? all.filter((r) => r.station === only) : all).filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
     if (!recipes.length) {
       this.q('#bench-list').innerHTML = `<div class="sub" style="margin:8px 0">Nothing you can make matches “${escapeHtml(query.trim())}”.</div>`;
       return;
@@ -2207,7 +2219,7 @@ export class DuiltUI {
       return `
         <div class="recipe-tile ${r.ok ? '' : 'blocked'}">
           <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(name)}" data-tip-info="${escapeAttr(r.blurb ?? '')}">${icon}${count}</span>
-          <strong class="recipe-name">${r.name.replace(/ \(mill\)$/, '')}</strong>
+          <strong class="recipe-name">${escapeHtml(name)}</strong>
           ${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${stationName(r.station)}</span>` : ''}
           <span class="recipe-cost">${inputs}</span>
           ${takes}
