@@ -38,7 +38,7 @@ Tap a person to hear a line or two. Tap again for the next.
 |---|---|---|
 | Hermit | 10 | Lives alone in a hut. Talks (tap), gives errands, tells the story |
 | Messenger | 8 | Brings news of places, or a line of the story |
-| Explorer | 10 | Passes through, tells stories of places |
+| Explorer | 10 | Passes through, tells stories of places. Carries two gifts: talk to one for two saplings, then talk again for something from their pack (dark or white wood, clay, seeds or stone) |
 | Citizen | 10 | Lives in a city |
 | City guard | 24 | Keeps the peace. Hits for 3 |
 | Merchant | 10 | A stall in a living city |
