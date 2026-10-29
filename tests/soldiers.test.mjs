@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { World } from '../src/world/World.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
 import { Defenders, TRAIN_DAYS } from '../src/world/Defenders.js';
-import { UNITS, UNITS_BY_ID, unitCost, foodIn } from '../src/config/soldiers.js';
+import { UNITS, UNITS_BY_ID, unitCost, foodIn, soldierCap, SOLDIER_CAPS } from '../src/config/soldiers.js';
 import { ITEMS_BY_ID } from '../src/config/items.js';
 import { outfitOf } from '../src/config/outfits.js';
 import { STRUCTURES_BY_ID } from '../src/config/structures.js';
@@ -53,12 +53,16 @@ function setup() {
   ok('paid for out of the bag: three food, the plainest first, and the sword',
     foodIn(g.inventory) === food - 3 && g.inventory.countOf('sword_stone') === 0 && g.inventory.countOf('fruit') === 2 && g.inventory.countOf('vegetables') === 2);
 
-  // Bunks.
-  g.inventory.add('fruit', 50);
-  for (let i = 0; i < 5; i++) { g.inventory.add('bow', 1); g.inventory.add('arrow', 20); g.trainSoldier(b, 'archer', 6); }
-  const full = g.trainSoldier(b, 'archer', 6);
-  ok('a soldier a bunk: with every bunk spoken for, it says so', !full.ok && /bunk/.test(full.reason) && g.defenders.barracks(7).queue.length === 6);
-  ok('and fewer bunks, fewer soldiers', !g.trainSoldier({ ...b, id: 8 }, 'archer', 0).ok);
+  // Level, not beds (IMP-2): a barracks holds 10, 20 or 40.
+  g.inventory.add('fruit', 80);
+  for (let i = 0; i < 9; i++) { g.inventory.add('bow', 1); g.inventory.add('arrow', 20); g.trainSoldier(b, 'archer'); }
+  const full = g.trainSoldier(b, 'archer');
+  ok('a level-1 barracks holds ten: with the places taken, it says so and how to get more', !full.ok && /Full — 10/.test(full.reason) && /Evolve it to hold 20/.test(full.reason) && g.defenders.barracks(7).queue.length === 10);
+  ok('no beds are needed to train', soldierCap({ tier: 0 }) === 10);
+  ok('and each level holds more: 10, 20, 40', SOLDIER_CAPS.join() === '10,20,40' && soldierCap({ tier: 1 }) === 20 && soldierCap({ tier: 2 }) === 40 && soldierCap({ tier: 9 }) === 40);
+  g.inventory.add('bow', 1); g.inventory.add('arrow', 20);
+  const upgraded = g.trainSoldier({ ...b, tier: 1 }, 'archer');
+  ok('a level-2 barracks takes the eleventh', upgraded.ok);
   ok('only a standing barracks trains', !g.trainSoldier({ ...b, valid: false }, 'archer', 6).ok && !g.trainSoldier({ ...b, type: 'house' }, 'archer', 6).ok);
 
   const garrison = { ...b, id: 9, type: 'military' };
@@ -76,7 +80,7 @@ function setup() {
   d.sync(post, g.days + TRAIN_DAYS * 0.5);
   ok('nobody before their time', d.soldiers.length === 0);
   const out = d.sync(post, g.days + TRAIN_DAYS * 1.01);
-  ok('and says who came out, and how many are still in line', out.length === 1 && out[0].unit === 'warrior' && out[0].left === 5);
+  ok('and says who came out, and how many are still in line', out.length === 1 && out[0].unit === 'warrior' && out[0].left === 10);
   ok(`the first after ${TRAIN_DAYS} of a day — the warrior, first in line`, d.soldiers.length === 1 && d.soldiers[0].unit === 'warrior' && d.soldiers[0].kind === 'footman');
   d.sync(post, g.days + TRAIN_DAYS * 6.01);
   ok('then the rest, one after another', d.soldiers.length === 6 && d.soldiers.filter((s) => s.unit === 'archer').length === 5);
@@ -220,7 +224,7 @@ ok('and each one out of training says so, with how many are still in line',
   /for \(const j of d\.defenders\.sync\(posts, d\.days\)\)/.test(game) && /is ready`/.test(game) && /more in training at the \$\{postName\}/.test(game));
 ok('  and kept moving while it is open, redrawn when one comes out', /setInterval\(\(\) => this\.tickBarracks\(\), 500\)/.test(ui)
   && /if \(shape !== this\.barracksShape\) return void this\.showBuilding/.test(ui) && /clearInterval\(this\.barracksTimer\)/.test(ui));
-ok('the game pays and puts them in line, counting the bunks', /onTrain: \(unit\) => this\.trainSoldier\(structure, unit\)/.test(game) && /this\.duilt\.trainSoldier\(structure, unit, this\.bedsIn\(structure\.region\)\)/.test(game));
+ok('the game pays and puts them in line, by the building\'s level', /onTrain: \(unit\) => this\.trainSoldier\(structure, unit\)/.test(game) && /this\.duilt\.trainSoldier\(structure, unit\)/.test(game));
 ok('the Garrison shows its training queue and offers spear guards', /structure\.type === 'barracks' \|\| structure\.type === 'military' \? this\.barracksHtml\(structure\)/.test(ui) && /structure\.type === 'military' \? UNITS\.filter\(\(u\) => u\.id === 'shield_guard'\)/.test(ui));
 ok('a crew\'s stone lands on the enemy, and only hurts them', /lob: \(engine, target, crew\) => this\.crewThrows\(engine, target, crew\)/.test(game) && /if \(stone\.crew\) \{/.test(game));
 ok('and its catapult is drawn', /this\.engineView\.update\(ours\?\.engines \?\? \[\]\)/.test(game));

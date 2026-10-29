@@ -8,7 +8,7 @@ import { ITEMS } from './items.js';
  * You choose who to train at the barracks, and pay for each one up front:
  * `food` pieces of any food (the plainest first), and the `gear` they're
  * sent out with. Training one takes TRAIN_DAYS (world/Defenders.js), one
- * after another, and a barracks holds a soldier a bunk. One that falls is
+ * after another, and a barracks holds as many as its level allows (SOLDIER_CAPS). One that falls is
  * gone — training another costs the same again.
  *
  *   id      what the barracks and the save know it by
@@ -53,6 +53,15 @@ export const UNITS = [
   },
 ];
 export const UNITS_BY_ID = new Map(UNITS.map((u) => [u.id, u]));
+
+/**
+ * How many soldiers a barracks or Garrison trains and holds, by its level
+ * (IMP-2, IMP-3: "update the building and allow to create more, remove the
+ * number of beds logic"). Level 1, 2 and 3: 10, 20 and 40. Beds are only
+ * furniture now.
+ */
+export const SOLDIER_CAPS = [10, 20, 40];
+export const soldierCap = (structure) => SOLDIER_CAPS[Math.min(Math.max(structure?.tier ?? 0, 0), SOLDIER_CAPS.length - 1)];
 
 /** Soldiers trained before you chose who: they were swordsmen in all but name. */
 export const LEGACY_UNIT = 'swordsman';
