@@ -333,6 +333,63 @@ owner and block the task until answered.
 
 ---
 
+### ChatGPT execution batch, 29 October
+
+**Spec:** owner's request in this chat: IMP-2 then IMP-3 (levels 1–3 hold
+10/20/40; beds decorative), IMP-4 text-only buildings, IMP-5 last-hit enemy
+priority, then remaining TECH-18/TECH-8 lag/Reload investigation and TECH-7
+deferred war/Sky code. Keep visuals, world detail and existing saves intact.
+No production database changes, engine migration, new dependencies or raised
+performance limits. Work in the current checkout, preserve external worktrees.
+
+**Architecture:** reuse and retain Claude's existing commits from #247 and
+#246, with review repairs on `codex/military-guardian-performance`; IMP-4 is
+already in main via #245. Share capacity rules through `soldierCap`, retain
+existing Evolve/save formats, and validate each formation slot. Feed guardian
+priority only from successful player attacks on combat enemies, including
+arrows, with the same rule in all guardian modes; never farm animals or
+peaceful travellers. Defer genuinely optional war/Sky modules at explicit
+readiness boundaries, preserving synchronous terrain generation after load.
+Measure remaining frame costs before optimizing them; confirm render
+equivalence and run a full 30-minute save-crossing workload on the final code.
+
+- [ ] IMP-2/3/4: integrate military levels; regress blocked/uneven parade
+  slots, live capacity changes and existing roster saves in `Defenders.js`,
+  `DuiltGame.js`, `config/soldiers.js`, `config/structures.js` and military
+  tests. Verify real Evolve/training/capacity UI and text-only building rows
+  on desktop/mobile. Commit coherent repairs before the next task.
+- [ ] IMP-5: integrate guardian focus; failing-first real Game/Guardian
+  regressions for melee and arrow hits, latest target, stay/follow/hunt,
+  peaceful people, farm animals, dead/out-of-range targets and world reload.
+  Repair `Game.js` and `world/Guardian.js`; confirm in a running game.
+- [ ] TECH-18/8: record baseline timing/trace of remaining render/mesh
+  spikes, reproduce and fix demonstrated causes with regression evidence.
+  Run unchanged performance/resource/pixel checks and a final 30-minute
+  hardware settlement/war/travel/cave session with actual saves/restore.
+  Keep original owner Reload and physical-iPhone checks explicitly open if
+  unreproduced/unavailable; do not claim desktop evidence certifies phones.
+- [ ] TECH-7: inspect real startup dependency graph; split small shared
+  constants from optional implementations, await required terrain/game
+  readiness on create/open/import/travel paths, and guard cancelled/failed
+  loads. Assert startup network excludes deferred code and exercise war/Sky
+  entry plus saved-world restore. Compare production entry download bytes.
+- [ ] Final integration: full `npm test`, build, browser gameplay/IMP checks,
+  existing performance gates, independent branch review and fixes; commit,
+  push and PR against current main. Merge under standing owner authorization
+  only with green required checks; update this single task list and report
+  measured gains and remaining limitations. Retain original authorship and
+  close superseded #246/#247 only after their reviewed work is integrated.
+
+**Review focus:** queued training must not duplicate/drop soldiers across
+reloads; blocked parade ground must not spawn inside solids or over voids;
+enemy focus must never make civilians/animals enemies; deferred loading must
+never omit terrain/saved state or apply to a world that has been replaced;
+long-session resource trends and actual persistence must be verified rather
+than inferred from a short rendering test. Optional implementation details
+such as upgrade costs retain the existing PR defaults unless review exposes
+a gameplay defect. Independent read-only reviews are running for military,
+guardian and deferred-module boundaries; one final combined review follows.
+
 ## 6. Cline's queue
 
 All CL tasks below are complete. Section 12 retains their historical briefs
