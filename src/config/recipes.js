@@ -1664,6 +1664,10 @@ for (const id of STONE_MILLED) {
 const CARPENTRY_TOOLS = ['carpentry_saw', 'carpentry_chisel', 'carpentry_plane', 'carpentry_mallet'];
 RECIPES.push(
   { id: 'forge', name: 'Forge', station: 'hand', age: 3, inputs: { stone: 12, clay: 4 }, output: { id: 'forge', count: 1 }, blurb: 'Place a forge for darkening rock and shaping weapons over a fire.' },
+  // IMP-6, phase 1: the plane is placed, and gives more planks. A log is two
+  // planks by hand; at the bench it is three, from the second age on.
+  { id: 'planing_bench', name: 'Planing Bench', station: 'hand', age: 2, inputs: { planks: 6, stone: 2 }, output: { id: 'planing_bench', count: 1 }, blurb: 'A bench with a plane set in it. Place it, stand by it and logs give three planks, not two.' },
+  { id: 'bench_planks', name: 'Planks (planing bench)', station: 'planing_bench', age: 2, inputs: { wood: 1 }, output: { id: 'planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log at the planing bench, not two.' },
   { id: 'bleach_bucket', name: 'Bleach Bucket', station: 'hand', age: 3, inputs: { bucket_water: 1, wood: 2 }, output: { id: 'bleach_bucket', count: 1 }, blurb: 'Burn wood for ash and mix with water. Place the bucket, then wash stone or wood in it.' },
   { id: 'stone_white', name: 'Wash White Stone', station: 'bleach_bucket', age: 3, inputs: { stone: 2 }, output: { id: 'stone_white', count: 2 }, batch: 8, steps: ['Place rock in the bath', 'Wash and lift out'], blurb: 'Wash rock in wood-ash bleach to bring out its pale surface.' },
   { id: 'stone_grey', name: 'Temper Grey Stone', station: 'forge', age: 3, inputs: { stone: 4, wood: 1 }, output: { id: 'stone_grey', count: 4 }, batch: 8, steps: ['Load the rock', 'Heat and cool'], blurb: 'A short firing darkens rock to grey.' },

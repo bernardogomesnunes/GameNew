@@ -927,6 +927,12 @@ BLOCKS.push(
   { id: FORGE, name: 'Forge', glyph: 'stone', color: 0x655367, material: 'stone', station: 'forge', unlock: null },
 );
 
+// IMP-6, phase 1: "carpenter planer should be placed and give more planks".
+export const PLANING_BENCH = 527;
+BLOCKS.push(
+  { id: PLANING_BENCH, name: 'Planing Bench', glyph: 'planks', color: 0xb98a5a, material: 'wood', station: 'planing_bench', unlock: null },
+);
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in
