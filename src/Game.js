@@ -4645,6 +4645,7 @@ export class Game {
     const res = this.wanderers.hit(p, damage, arrow.x - arrow.vx, arrow.z - arrow.vz);
     if (!res) return;
     this.sound?.strike({ weapon: true });
+    this.focusGuardian(p, res);
     if (res.killed) this.banditFell(p, res);
   }
 
@@ -4690,10 +4691,22 @@ export class Game {
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
+    this.focusGuardian(p, res);
     if (res.killed) this.banditFell(p, res);
-    // IMP-5: the guardian goes for whoever you struck (if it counts as an enemy).
-    else this.duilt?.guardian?.focus(p);
     return true;
+  }
+
+  /** Combatants on the opposing side, never farm animals or fleeing travellers. */
+  guardianEnemy(p, includeDead = false) {
+    const spec = WANDERERS[p?.kind];
+    return !!(spec?.hp && (spec.hits || spec.siege) && !spec.flees
+      && (includeDead || !p.dead) && this.wanderers?.list.includes(p)
+      && this.wanderers.hostileOf(p));
+  }
+
+  /** Only successful player hits change priority; a lethal latest hit clears it. */
+  focusGuardian(p, result) {
+    if (result && this.guardianEnemy(p, true)) this.duilt?.guardian?.focus(result.killed ? null : p);
   }
 
   /** A bandit beaten, by a blow or an arrow: experience, what they had, and saying so. */
@@ -4970,8 +4983,7 @@ export class Game {
   tickGuardian(dt) {
     const g = this.duilt?.guardian;
     if (!g) return;
-    const hostile = this.wanderers?.hostile();
-    const enemies = (this.wanderers?.list ?? []).filter((p) => WANDERERS[p.kind].hp && !p.dead && (hostile || p.angry || p.raider || p.war));
+    const enemies = (this.wanderers?.list ?? []).filter((p) => this.guardianEnemy(p));
     g.tick(dt, this.player.position, enemies, {
       strike: (e, damage) => {
         const res = this.wanderers.hit(e, damage, g.x, g.z);
