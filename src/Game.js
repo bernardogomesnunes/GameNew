@@ -4677,13 +4677,14 @@ export class Game {
   guardianEnemy(p, includeDead = false) {
     const spec = WANDERERS[p?.kind];
     return !!(spec?.hp && (spec.hits || spec.siege) && !spec.flees
-      && (includeDead || !p.dead) && this.wanderers?.list.includes(p)
-      && this.wanderers.hostileOf(p));
+      && (includeDead || !p.dead) && this.wanderers?.hostileOf(p));
   }
 
   /** Only successful player hits change priority; a lethal latest hit clears it. */
   focusGuardian(p, result) {
-    if (result && this.guardianEnemy(p, true)) this.duilt?.guardian?.focus(result.killed ? null : p);
+    if (result && this.wanderers?.list.includes(p) && this.guardianEnemy(p, true)) {
+      this.duilt?.guardian?.focus(result.killed ? null : p);
+    }
   }
 
   /** A bandit beaten, by a blow or an arrow: experience, what they had, and saying so. */
