@@ -172,6 +172,17 @@ ok('spots and times for scripts', /showcaseSpot\(id, \{ settle = false \} = \{\}
 ok('  the clock holds while it\'s open', /if \(\(playing \|\| watchingTrainingPost\) && !this\.showcase && !this\.title\) this\.dayCycle\.advance\(dt\)/.test(game));
 ok('in the menu, behind the workshop switch', MENU_BY_ID.get('menu-showcase')?.dev === true && !menuFor({ cloud: true }).some((m) => m.id === 'menu-showcase'));
 ok('  with a way in, a spot to look from, and the hour', ui.includes('id="btn-showcase-open"') && ui.includes('id="showcase-spot"') && ui.includes('data-showcase-time'));
+// IMP-8 ("What the hell is the showcase? It broke my game"): said plainly,
+// asked before it opens, and Save and leave gets you out of it.
+ok('its menu entry says what it is, that it is heavy and that it leaves your world',
+  /test world/i.test(MENU_BY_ID.get('menu-showcase').blurb) && /Heavy/.test(MENU_BY_ID.get('menu-showcase').blurb) && /leaves your world/.test(MENU_BY_ID.get('menu-showcase').blurb));
+ok('  and it asks before opening', /title: 'Open the showcase\?'/.test(ui) && /if \(!await this\.confirm\(\{\s*title: 'Open the showcase\?'/.test(ui));
+{
+  const { Game } = await import('../src/Game.js');
+  const g = { showcase: { site: {} }, saveNow() { throw new Error('the showcase is never saved'); } };
+  ok('  Save and leave gets you out of it, without trying to save it', await Game.prototype.leaveWorld.call(g, true) === true);
+  ok('  and Save says why it is not saved, rather than "try again"', await Game.prototype.saveAndWait.call(g) === false && /never saved/.test(g.saveError));
+}
 ok('the picture script is there', existsSync(new URL('../tools/showcase-shots.mjs', import.meta.url)));
 {
   const tool = read('../tools/showcase-shots.mjs');

@@ -80,7 +80,9 @@ export const MENU = [
     id: 'menu-showcase',
     name: 'Showcase',
     icon: 'map',
-    blurb: 'A world with every building, animal and person in it, to judge how the game looks.',
+    // IMP-8 ("What the hell is the showcase? It broke my game"): said plainly,
+    // with what opening it does to the world you're in.
+    blurb: 'A test world for checking how the game looks. Heavy; leaves your world (saved first).',
     dev: true,
   },
 ];
