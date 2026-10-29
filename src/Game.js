@@ -4750,7 +4750,7 @@ export class Game {
   /** The next line of a conversation (config/talk.js), in a speech bubble. */
   talkTo({ who, person }) {
     const me = this.player.position;
-    let title = person.name, line;
+    let title = person.name, line, gift = null;
     if (who === 'messenger') {
       // A messenger always has news — the story, or somewhere real.
       title = `${person.name}, a messenger`;
@@ -4762,7 +4762,7 @@ export class Game {
         archiveRead: !!this.duilt?.time?.futureKnown,
         job: work ? structureName(work.type).toLowerCase() : null, jobId: work?.type ?? null,
       });
-      if (who === 'explorer') title = `${person.name}, an explorer`;
+      if (who === 'explorer') { title = `${person.name}, an explorer`; gift = this.explorerGift(person); }
       if (who === 'tribe') title = `${person.name} of the tree people`;
       if (who === 'city_guard') title = `${person.name}, of the city guard`;
     }
@@ -4773,7 +4773,26 @@ export class Game {
       if (person.target) { person.target = null; person.atWork = !person.atWork; }
       person.wait = Math.max(person.wait ?? 0, 4);
     }
-    this.ui?.toast({ kind: 'talk', title, body: `“${line}”`, duration: 6000 });
+    this.ui?.toast({ kind: 'talk', title, body: `“${line}”${gift ? `\n${gift}` : ''}`, duration: gift ? 8000 : 6000 });
+  }
+
+  /**
+   * An explorer hands over one of the two gifts they carry (IMP-1): saplings
+   * first, then something from their pack. Taken only if it fits in the bag;
+   * otherwise it stays with them. Returns a line to show, or null.
+   */
+  explorerGift(person) {
+    const next = person.gifts?.[0];
+    if (!next || !this.duilt || this.duilt.sandbox) return null;
+    const gained = this.duilt.collect(next.give);
+    const words = Object.entries(gained).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}${n > 1 && !itemName(id).toLowerCase().endsWith('s') ? 's' : ''}`);
+    if (!words.length) return 'They offer you something, but your bag is full.';
+    // A gift only partly taken stays partly on offer.
+    for (const [id, n] of Object.entries(gained)) next.give[id] -= n;
+    for (const id of Object.keys(next.give)) if (next.give[id] <= 0) delete next.give[id];
+    if (!Object.keys(next.give).length) person.gifts.shift();
+    const left = person.gifts.length;
+    return `They give you ${words.join(' and ')}.${left ? ' They have one more thing for you.' : ''}`;
   }
 
   /** The goblin traders in your markets, turned to look at you when you're near. */
