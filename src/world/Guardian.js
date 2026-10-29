@@ -42,6 +42,9 @@ const HUNT_RANGE = 18;
 const COUNTER = 2;
 /** Further than this from you and it catches up at once rather than running across the map. */
 const LEASH = 40;
+/** IMP-5: how long it keeps going for what you last struck, and how fast it closes in. */
+const FOCUS_SECONDS = 12;
+const FOCUS_HASTE = 1.3;
 const TALL = 2;
 
 export class Guardian {
@@ -62,6 +65,20 @@ export class Guardian {
     this.facing = 0;
     this.moving = false;
     this.hurt = 0;
+    /** The enemy you last struck (set by `focus`), so it goes for that one first. */
+    this.focused = null;
+    this.focusClock = 0;
+  }
+
+  /**
+   * You struck this enemy. The guardian goes for it before anything nearer,
+   * for a few seconds, in every order but "stay" (which still only guards what
+   * comes close). Only enemies it is given in `tick` count, so a farm animal
+   * or a peaceful traveller is never its target.
+   */
+  focus(enemy) {
+    this.focused = enemy;
+    this.focusClock = FOCUS_SECONDS;
   }
 
   get name() {
@@ -107,11 +124,20 @@ export class Guardian {
       const d = Math.hypot(e.x - centre.x, e.z - centre.z);
       if (d < best) { best = d; target = e; }
     }
+    // What you struck comes first. It lapses when it dies, leaves the list of
+    // enemies, runs off past the leash, or the clock runs out.
+    this.focusClock = Math.max(0, this.focusClock - dt);
+    const f = this.focused;
+    const chased = f && this.focusClock > 0 && !f.dead && enemies.includes(f)
+      && Math.hypot(f.x - this.x, f.z - this.z) <= LEASH;
+    if (!chased) this.focused = null;
+    else if (this.mode !== 'stay') target = f;
+    const hasty = target && target === this.focused;
     this.target = target;
 
     if (target) {
       const d = Math.hypot(target.x - this.x, target.z - this.z);
-      if (d > this.spec.reach * 0.8) this.stepTowards(target.x, target.z, dt, this.spec.speed * 1.15);
+      if (d > this.spec.reach * 0.8) this.stepTowards(target.x, target.z, dt, this.spec.speed * (hasty ? FOCUS_HASTE : 1.15));
       else this.moving = false;
       if (d <= this.spec.reach && this.cooldown <= 0) {
         this.cooldown = this.spec.every;

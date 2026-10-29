@@ -48,7 +48,7 @@
 
 ## Soldiers
 
-Build a **Barracks**. It holds one soldier per bunk, up to six. Pick who to train from its pop-up and pay up front from your bag. They join one at a time, about 2 minutes 15 seconds each, and live in town.
+Build a **Barracks**. A new one holds 10 soldiers; evolve it for 20, then 40. A **Garrison** works the same way for spear guards (10, 20, 40). Pick who to train from its pop-up and pay up front from your bag. They join one at a time, about 2 minutes 15 seconds each, and live in town.
 
 | Soldier | Cost | Health | Fights |
 |---|---|---|---|
@@ -68,7 +68,7 @@ Build a **Barracks**. It holds one soldier per bunk, up to six. Pick who to trai
 | Stone Wall | A section at least 8 long and 4 tall, up to 4 thick, with a walk along the top behind battlements. Each block takes three blows from a ram or siege stone to break |
 | Gatehouse | Two towers with guardrooms, a gate of at least two doors, battlements. It shuts its gate before a round |
 | Watchtower | At least 11 tall, a stair up inside, a lantern on top, battlements. Two archers keep watch and shoot anything of the Stone Kingdom's within 26 blocks |
-| Barracks | 4 beds, 2 weapon racks, 2 training dummies or archery targets, and a hall bigger than a house |
+| Barracks | 2 weapon racks, 2 training dummies or archery targets, and a hall bigger than a house |
 
 Raiders break blocks for real. A claimed building that loses blocks stops working until you put them back.
 

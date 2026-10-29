@@ -37,7 +37,6 @@ const WALLING = [STONE, COBBLE, BRICK, 156, 157, 161, 162, 163, 164, 165, 167];
 const DOORS = Array.from({ length: 16 }, (_, i) => 69 + i);
 const DESKS = [31, 32]; // oak and marble tables
 const STAIRS = [29, 30, 57, 58, 59, 60, 61, 62]; // stone and plank stairs, every facing
-const BEDS = [193, 194, 195, 196];
 const RACKS = [212, 213, 214, 215];
 const TRAINING = [216, 217, 218, 219, 220, 221, 222, 223];
 const CALCADAS = [209, 210, 211];
@@ -998,6 +997,25 @@ export const STRUCTURES = [
     // stone or plank production.
     produces: {},
     everySeconds: 0,
+    // IMP-3 ("the same rule here, to update the building and allow to create
+    // more too"): a Garrison trains and holds 10 spear guards, then 20, then
+    // 40 (config/soldiers.js SOLDIER_CAPS). The walls grow with it.
+    tiers: [
+      { id: 'post', name: 'A Garrison', blurb: 'Room for ten spear guards.', needs: [] },
+      {
+        id: 'bastion', name: 'A Bastion', blurb: 'Thicker walls, and room for twenty.',
+        cost: { stone: 40, planks: 20 },
+        needs: [want([STONE, COBBLE, BRICK], 100, 'stone', 'stone, cobble or brick', { say: (n) => `${n} more stone, cobble or brick in the walls` })],
+      },
+      {
+        id: 'citadel', name: 'A Citadel', blurb: 'Walls and lanterns for forty.',
+        cost: { stone: 80, planks: 40, iron_ingot: 6 },
+        needs: [
+          want([STONE, COBBLE, BRICK], 160, 'stone', 'stone, cobble or brick', { say: (n) => `${n} more stone, cobble or brick in the walls` }),
+          want(LIGHTS, 4, 'lantern', 'light', { fit: LIGHT_ITEMS }),
+        ],
+      },
+    ],
   },
 
   // ---- Defence (White path): against the Stone Kingdom's Ten Rounds ----------
@@ -1144,11 +1162,6 @@ export const STRUCTURES = [
     cost: { iron_ingot: 4, planks: 10 },
     requires: [
       {
-        id: 'bunks',
-        test: (ctx) => count(ctx, BEDS) >= 4,
-        say: (ctx) => `Needs bunks for its soldiers — ${plural(4 - count(ctx, BEDS), 'bed')}`,
-      },
-      {
         id: 'arms',
         test: (ctx) => count(ctx, RACKS) >= 2,
         say: (ctx) => `Needs arms on the walls — ${plural(2 - count(ctx, RACKS), 'weapon rack')}`,
@@ -1167,6 +1180,28 @@ export const STRUCTURES = [
     produces: {},
     everySeconds: 0,
     skill: 'politics',
+    // IMP-2 ("update the building and allow to create more, remove the number
+    // of beds logic"): a barracks trains and holds 10 soldiers, then 20, then
+    // 40 (config/soldiers.js SOLDIER_CAPS). Beds are only furniture now.
+    tiers: [
+      { id: 'barracks', name: 'A Barracks', blurb: 'Room for ten soldiers.', needs: [] },
+      {
+        id: 'drillhall', name: 'A Drill Hall', blurb: 'More racks and dummies, and room for twenty.',
+        cost: { iron_ingot: 6, planks: 20 },
+        needs: [
+          want(RACKS, 4, 'weapon_rack', 'weapon rack', { fit: ['weapon_rack'] }),
+          want(TRAINING, 4, 'training_dummy', 'training dummy or archery target', { fit: ['training_dummy', 'archery_target'] }),
+        ],
+      },
+      {
+        id: 'fortress', name: 'A Fortress Barracks', blurb: 'A full parade ground, and room for forty.',
+        cost: { iron_ingot: 12, planks: 40 },
+        needs: [
+          want(RACKS, 8, 'weapon_rack', 'weapon rack', { fit: ['weapon_rack'] }),
+          want(TRAINING, 8, 'training_dummy', 'training dummy or archery target', { fit: ['training_dummy', 'archery_target'] }),
+        ],
+      },
+    ],
   },
 
   // ---- Age 6: the last thing ---------------------------------------------

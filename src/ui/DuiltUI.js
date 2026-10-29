@@ -6,7 +6,7 @@ import { PLAYABLE_SLOTS } from '../items/Inventory.js';
 import { Granary } from '../items/Granary.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { farmSeedSlots } from '../duilt/Crops.js';
-import { UNITS, UNITS_BY_ID, unitCost } from '../config/soldiers.js';
+import { UNITS, UNITS_BY_ID, unitCost, soldierCap, SOLDIER_CAPS } from '../config/soldiers.js';
 
 /** What's drawn beside each kind of soldier in a barracks's line. */
 const UNIT_GLYPHS = { warrior: 'sword', swordsman: 'sword', archer: 'bow', crew: 'catapult', shield_guard: 'sword' };
@@ -788,8 +788,9 @@ export class DuiltUI {
     const d = this.duilt;
     if (!d) return '';
     const t = d.defenders.barracks(structure.id);
-    const bunks = Math.min(MAX_SOLDIERS, this.buildingActionsCache?.bunks?.() ?? MAX_SOLDIERS);
-    const room = bunks - t.roster.length - t.queue.length;
+    const cap = Math.min(MAX_SOLDIERS, soldierCap(structure));
+    const room = cap - t.roster.length - t.queue.length;
+    const nextCap = SOLDIER_CAPS[(structure.tier ?? 0) + 1];
     // Soldiers eat with the town (Settlers); those who went without fight weaker.
     const hungry = Math.min(d.settlers.soldiersHungry ?? 0, t.roster.length);
     const tally = (list) => UNITS.map((u) => [u, list.filter((x) => x === u.id).length]).filter(([, n]) => n)
@@ -824,12 +825,12 @@ export class DuiltUI {
     }).join('');
     return `
       <div class="building-sec">
-        <h4>${structure.type === 'military' ? 'Spear guards' : 'Soldiers'} · ${t.roster.length} of ${bunks} bunks</h4>
+        <h4>${structure.type === 'military' ? 'Spear guards' : 'Soldiers'} · ${t.roster.length} of ${cap}</h4>
         <p class="building-line">${t.roster.length ? escapeHtml(tally(t.roster)) : t.queue.length ? 'Nobody out yet.' : 'Nobody yet — train them below.'}</p>
         ${hungry ? `<p class="building-line bad">${hungry === 1 ? 'One is' : `${hungry} are`} hungry — they hit softer and don't recover until fed. Put food in a storehouse.</p>` : ''}
         ${t.queue.length ? `<h4>Training · ${t.queue.length}</h4>` : ''}
         ${training}
-        ${room > 0 ? '<p class="dim">Train one — paid now, out of your bag:</p>' : '<p class="dim">Every bunk is spoken for. Add beds to train more.</p>'}
+        ${room > 0 ? '<p class="dim">Train one — paid now, out of your bag:</p>' : `<p class="dim">Full — ${cap} at most here.${nextCap ? ` Evolve this building to hold ${nextCap}.` : ''}</p>`}
         <div class="train-units">${buttons}</div>
       </div>`;
   }
@@ -1176,7 +1177,7 @@ export class DuiltUI {
       <p class="finish-line">You arrived on thirty-two blocks of land with an axe and a bucket.
          What is standing now:</p>
       <ul class="finish-list">
-        ${rows.map((r) => `<li><span class="finish-icon">${r.spec.icon}</span>${r.spec.name}<span class="finish-n">${r.n}</span></li>`).join('')
+        ${rows.map((r) => `<li>${r.spec.name}<span class="finish-n">${r.n}</span></li>`).join('')
           || '<li>Nothing, somehow.</li>'}
       </ul>
       <p class="finish-line dim">${allAges ? `The world stays as it is. You can keep building in it — nothing
@@ -1989,7 +1990,6 @@ export class DuiltUI {
       .sort((a, b) => (b.id === first) - (a.id === first));
     list.innerHTML = options.map((o) => `
       <button class="claim-row ${o.ok ? 'ok' : 'blocked'}" data-claim="${o.id}" ${o.ok ? '' : 'disabled'}>
-        <span class="claim-icon">${o.icon}</span>
         <span class="claim-text">
           <strong>${o.name}</strong>
           <em>${o.ok ? o.blurb : o.reason}</em>
@@ -2065,7 +2065,6 @@ export class DuiltUI {
       return `
         <div class="building-card">
           <div class="building-head">
-            <span class="building-icon">${spec.icon}</span>
             <div class="building-title">
               <strong>${spec.name}</strong>
               <em>${spec.blurb}</em>

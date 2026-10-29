@@ -100,9 +100,9 @@ import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
 import { ArmyView, EngineView } from './render/ArmyView.js';
-import { UNITS_BY_ID } from './config/soldiers.js';
+import { UNITS_BY_ID, soldierCap } from './config/soldiers.js';
 import { blowOf } from './world/Defenders.js';
-import { BED, NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, STORAGE_INTERFACE, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent, TIME_MACHINE, EGG_RAPTOR, EGG_TRIKE, EGG_LONGNECK, ARCHIVE, WAR_STANDARD } from './config/blocks.js';
+import { NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, STORAGE_INTERFACE, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent, TIME_MACHINE, EGG_RAPTOR, EGG_TRIKE, EGG_LONGNECK, ARCHIVE, WAR_STANDARD } from './config/blocks.js';
 import { inPast, pastArrival } from './world/past.js';
 import { inFuture, futureArrival, FUTURE_GROUND } from './world/future.js';
 import { FutureView } from './render/FutureView.js';
@@ -3229,15 +3229,14 @@ export class Game {
       onSow: (kind) => this.sowFarm(structure, kind, true),
       onUnsow: (kind) => this.sowFarm(structure, kind, false),
       onCompostFarm: () => this.compostFarm(structure),
-      // A barracks (batch 3, #29): who to train, and how many bunks it has.
+      // A barracks (batch 3, #29): who to train. How many it holds is its level.
       onTrain: (unit) => this.trainSoldier(structure, unit),
-      bunks: () => this.bedsIn(structure.region),
     };
   }
 
   /** Trains a soldier at a barracks (DuiltGame.trainSoldier), saying why not when it can't. */
   trainSoldier(structure, unit) {
-    const r = this.duilt.trainSoldier(structure, unit, this.bedsIn(structure.region));
+    const r = this.duilt.trainSoldier(structure, unit);
     if (!r.ok) return void this.ui.toast({ kind: 'xp', title: "Can't train that yet", body: r.reason });
     const who = r.unit.name.toLowerCase();
     const postName = structure.type === 'military' ? 'Garrison' : 'barracks';
@@ -4669,6 +4668,8 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
     if (res.killed) this.banditFell(p, res);
+    // IMP-5: the guardian goes for whoever you struck (if it counts as an enemy).
+    else this.duilt?.guardian?.focus(p);
     return true;
   }
 
@@ -4750,7 +4751,7 @@ export class Game {
   /** The next line of a conversation (config/talk.js), in a speech bubble. */
   talkTo({ who, person }) {
     const me = this.player.position;
-    let title = person.name, line;
+    let title = person.name, line, gift = null;
     if (who === 'messenger') {
       // A messenger always has news — the story, or somewhere real.
       title = `${person.name}, a messenger`;
@@ -4762,7 +4763,7 @@ export class Game {
         archiveRead: !!this.duilt?.time?.futureKnown,
         job: work ? structureName(work.type).toLowerCase() : null, jobId: work?.type ?? null,
       });
-      if (who === 'explorer') title = `${person.name}, an explorer`;
+      if (who === 'explorer') { title = `${person.name}, an explorer`; gift = this.explorerGift(person); }
       if (who === 'tribe') title = `${person.name} of the tree people`;
       if (who === 'city_guard') title = `${person.name}, of the city guard`;
     }
@@ -4773,7 +4774,26 @@ export class Game {
       if (person.target) { person.target = null; person.atWork = !person.atWork; }
       person.wait = Math.max(person.wait ?? 0, 4);
     }
-    this.ui?.toast({ kind: 'talk', title, body: `“${line}”`, duration: 6000 });
+    this.ui?.toast({ kind: 'talk', title, body: `“${line}”${gift ? `\n${gift}` : ''}`, duration: gift ? 8000 : 6000 });
+  }
+
+  /**
+   * An explorer hands over one of the two gifts they carry (IMP-1): saplings
+   * first, then something from their pack. Taken only if it fits in the bag;
+   * otherwise it stays with them. Returns a line to show, or null.
+   */
+  explorerGift(person) {
+    const next = person.gifts?.[0];
+    if (!next || !this.duilt || this.duilt.sandbox) return null;
+    const gained = this.duilt.collect(next.give);
+    const words = Object.entries(gained).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}${n > 1 && !itemName(id).toLowerCase().endsWith('s') ? 's' : ''}`);
+    if (!words.length) return 'They offer you something, but your bag is full.';
+    // A gift only partly taken stays partly on offer.
+    for (const [id, n] of Object.entries(gained)) next.give[id] -= n;
+    for (const id of Object.keys(next.give)) if (next.give[id] <= 0) delete next.give[id];
+    if (!Object.keys(next.give).length) person.gifts.shift();
+    const left = person.gifts.length;
+    return `They give you ${words.join(' and ')}.${left ? ' They have one more thing for you.' : ''}`;
   }
 
   /** The goblin traders in your markets, turned to look at you when you're near. */
@@ -5295,7 +5315,7 @@ export class Game {
       this.defenceSyncedAt = now;
       const posts = d.structures.list()
         .filter((s) => s.type === 'barracks' || s.type === 'military' || s.type === 'watchtower')
-        .map((s) => ({ id: s.id, type: s.type, region: s.region, valid: s.valid, beds: s.type === 'barracks' || s.type === 'military' ? this.bedsIn(s.region) : 0 }));
+        .map((s) => ({ id: s.id, type: s.type, region: s.region, valid: s.valid, cap: s.type === 'barracks' || s.type === 'military' ? soldierCap(s) : 0 }));
       // Each one out of training says so (asked for directly: "show the progress").
       for (const j of d.defenders.sync(posts, d.days)) {
         const u = UNITS_BY_ID.get(j.unit);
@@ -5320,16 +5340,6 @@ export class Game {
     const stone = this.projectiles.fire(from, bestAim(this.world, from, { x: target.x, y: y + 1, z: target.z }));
     stone.crew = crew;
     this.sound?.catapult({ x: engine.x, z: engine.z });
-  }
-
-  /** How many bunks a barracks has: the foot of every bed in it. */
-  bedsIn(r) {
-    let n = 0;
-    for (let x = r.minX; x <= r.maxX; x++) for (let y = r.minY; y <= r.maxY; y++) for (let z = r.minZ; z <= r.maxZ; z++) {
-      const id = this.world.getBlock(x, y, z);
-      if (id >= BED && id <= BED + 3) n++;
-    }
-    return n;
   }
 
   /** One of your soldiers' blows, or an archer's arrow, landing. */
