@@ -1177,7 +1177,7 @@ export class DuiltUI {
       <p class="finish-line">You arrived on thirty-two blocks of land with an axe and a bucket.
          What is standing now:</p>
       <ul class="finish-list">
-        ${rows.map((r) => `<li><span class="finish-icon">${r.spec.icon}</span>${r.spec.name}<span class="finish-n">${r.n}</span></li>`).join('')
+        ${rows.map((r) => `<li>${r.spec.name}<span class="finish-n">${r.n}</span></li>`).join('')
           || '<li>Nothing, somehow.</li>'}
       </ul>
       <p class="finish-line dim">${allAges ? `The world stays as it is. You can keep building in it — nothing
@@ -1990,7 +1990,6 @@ export class DuiltUI {
       .sort((a, b) => (b.id === first) - (a.id === first));
     list.innerHTML = options.map((o) => `
       <button class="claim-row ${o.ok ? 'ok' : 'blocked'}" data-claim="${o.id}" ${o.ok ? '' : 'disabled'}>
-        <span class="claim-icon">${o.icon}</span>
         <span class="claim-text">
           <strong>${o.name}</strong>
           <em>${o.ok ? o.blurb : o.reason}</em>
@@ -2066,7 +2065,6 @@ export class DuiltUI {
       return `
         <div class="building-card">
           <div class="building-head">
-            <span class="building-icon">${spec.icon}</span>
             <div class="building-title">
               <strong>${spec.name}</strong>
               <em>${spec.blurb}</em>
