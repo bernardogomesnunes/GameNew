@@ -26,6 +26,12 @@ for (const tool of furniture.tools) inv.add(tool,1);
 assert.equal(craft.craft(furniture.id, 1, opts).ok, true);
 for (const tool of furniture.tools) assert.equal(inv.countOf(tool),1);
 console.log('PASS furniture needs reusable carpentry tools even at a mill');
+for (const id of ['table_oak','bed','painting']) assert.deepEqual(RECIPES_BY_ID.get(id).tools, ['carpentry_saw'], `${id} needs one tool`);
+assert.equal(RECIPES_BY_ID.get('wood_white').station, 'bleach_bucket');
+assert.equal(RECIPES_BY_ID.get('wood_dark').station, 'forge');
+assert.equal(RECIPES_BY_ID.get('wood_white').output.id, 'white_wood');
+assert.equal(RECIPES_BY_ID.get('wood_dark').output.id, 'dark_wood');
+console.log('PASS furniture needs one tool; wood can be bleached and charred like rock');
 const sword = RECIPES_BY_ID.get('sword_iron');
 for (const [id,n] of Object.entries(sword.inputs)) inv.add(id,n);
 assert.equal(craft.craft(sword.id,1,{atStations:['forge']}).ok,false);
@@ -37,7 +43,7 @@ assert.equal(craft.craft('planks',NaN).ok,false);
 assert.equal(craft.craft('planks',0.5).ok,false);
 console.log('PASS invalid batch counts are rejected');
 
-for (const id of ['marble','cobblestone','stone_brick','stone_white','stone_grey','stone_orange','dark_stone','dark_brick']) {
+for (const id of ['marble','cobblestone','stone_brick','stone_white','stone_grey','stone_orange','dark_stone','dark_brick','wood_white','wood_dark']) {
   const r = RECIPES_BY_ID.get(id);
   const bag = new Inventory();
   const bench = new Crafting({ inventory: bag, world: { getBlock: () => 0 } });
@@ -63,9 +69,9 @@ assert.equal(forge.craft('sword_iron',1,{atStations:['foundry']}).ok,true);
 console.log('PASS existing foundries can also forge weapons');
 const available = craft.available(12,{station:null,atStations:['forge','workshop','wood_mill']}).find(r=>r.id==='table_oak');
 assert.equal(available.ok,true);
-inv.remove('carpentry_chisel',1);
+inv.remove('carpentry_saw',1);
 assert.equal(craft.available(12,{station:null,atStations:['workshop']}).find(r=>r.id==='table_oak').ok,false);
-assert.match(craft.craft('table_oak',1,{atStations:['workshop']}).reason,/Chisel/);
+assert.match(craft.craft('table_oak',1,{atStations:['workshop']}).reason,/Saw/);
 console.log('PASS removing a reusable tool after opening the panel blocks the craft');
 
 const alternate = RECIPES_BY_ID.get('stone_mill_stone_brick');
@@ -101,17 +107,17 @@ const panelBag = new Inventory();
 const panelCraft = new Crafting({ inventory: panelBag, world: {} });
 for (const [id,n] of Object.entries(panel.inputs)) panelBag.add(id,n);
 assert.equal(panelCraft.craft(panel.id,1,{atStations:['wood_mill']}).ok,false,
-  'Two-tone wall panels need the same carpenter kit as other wooden panels');
+  'Two-tone wall panels need the same saw as other wooden panels');
 for (const tool of furniture.tools) panelBag.add(tool,1);
 assert.equal(panelCraft.craft(panel.id,1,{atStations:['wood_mill']}).ok,true);
 assert.ok(panel.steps?.length > 1);
-console.log('PASS two-tone wooden panels require the full reusable kit and work steps');
+console.log('PASS two-tone wooden panels need the saw and work steps');
 
 for (const id of [...FURNITURE_ITEM.values(), 'bed', 'painting', 'chair_red', 'panel_twotone']) {
   for (const r of RECIPES_BY_ID.values()) {
     if (r.output.id !== id) continue;
-    assert.deepEqual(r.tools, furniture.tools, `${r.id} uses the complete carpenter kit`);
+    assert.deepEqual(r.tools, furniture.tools, `${r.id} uses the one-saw rule`);
     assert.ok(r.steps?.length > 1, `${r.id} has work steps`);
   }
 }
-console.log('PASS all wooden furniture colours and recipe variants share the full kit and steps');
+console.log('PASS all wooden furniture colours and recipe variants share the one-tool rule and steps');
