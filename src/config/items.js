@@ -514,7 +514,7 @@ for (const f of WOOD_FURNITURE) {
 // Furniture needs the reusable carpenter's kit as well as its materials.
 for (const id of FURNITURE_ITEM.values()) {
   const item = ITEMS.find(i => i.id === id);
-  if (item) item.madeBy += ' — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag';
+  if (item) item.madeBy += ' — keep a Carpentry Saw in your bag';
 }
 
 // Tools past stone: iron, gold, sky and dark (backlog batch 2) — see config/tiers.js.
