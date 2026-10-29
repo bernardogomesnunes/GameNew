@@ -893,6 +893,9 @@ export class Game {
    */
   async leaveWorld(save = true) {
     if (!save) { this.discarded = true; return false; }
+    // The showcase is never saved (openShowcase), so there's nothing to wait
+    // for: Save and leave used to call that a failed save and keep you in it.
+    if (this.showcase) return true;
     return this.saveAndWait();
   }
 
@@ -903,6 +906,10 @@ export class Game {
    * got saved.
    */
   async saveAndWait() {
+    if (this.showcase) {
+      this.saveError = 'The showcase is never saved: it is built the same again every time it opens.';
+      return false;
+    }
     // The Save button says how it went itself: see uploadFailed.
     this.savingByHand = true;
     const ok = this.saveNow();

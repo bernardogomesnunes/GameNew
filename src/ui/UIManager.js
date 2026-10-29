@@ -443,6 +443,7 @@ export class UIManager {
           <!-- The showcase (world/showcase.js): a workshop tool, behind the switch. -->
           <div class="menu-section" id="menu-showcase" hidden>
             <button class="menu-back" data-menu-back="1">${icon('chevron', 14)}<span>Menu</span></button>
+            <p class="dim">A test world for checking how the game looks: every building, animal and person, all at once. It is heavy, and slow on a phone. Opening it saves and closes the world you are in; open that again from your worlds.</p>
             <div class="field-row" style="flex-wrap:wrap;">
               <button class="secondary" id="btn-showcase-open">Open the showcase</button>
             </div>
@@ -974,7 +975,16 @@ export class UIManager {
     this.q('#btn-export-vox').addEventListener('click', () => this.cb.onExportVox(this.q('#save-name').value));
     this.q('#btn-import-world').addEventListener('click', () => this.cb.onImportWorld());
     // The showcase: open it, or move about it once it's open.
-    this.q('#btn-showcase-open').addEventListener('click', () => { this.cb.onOpenShowcase?.(this.q('#showcase-spot').value); this.closeAllPanels(); });
+    this.q('#btn-showcase-open').addEventListener('click', async () => {
+      // Asked first, so nobody opens it by accident (IMP-8).
+      if (!await this.confirm({
+        title: 'Open the showcase?',
+        body: 'A heavy test world with everything in it, for checking how the game looks. Your world is saved and closed first. Nothing you do in the showcase is kept.',
+        ok: 'Open',
+      })) return;
+      this.cb.onOpenShowcase?.(this.q('#showcase-spot').value);
+      this.closeAllPanels();
+    });
     this.q('#showcase-spot').addEventListener('change', (e) => { if (this.cb.onShowcaseSpot?.(e.target.value)) this.closeAllPanels(); });
     this.root.querySelectorAll('[data-showcase-time]').forEach((b) => b.addEventListener('click', () => this.cb.onShowcaseTime?.(b.dataset.showcaseTime)));
     // Renaming is the field, not a button beside it: type a name, leave the

@@ -10,6 +10,8 @@ jobs:
   performance:
     name: Performance budgets
     runs-on: ubuntu-latest
+    # The browser save checks alone take about eight minutes on a runner;
+    # 10 cancelled passing runs at random. The budgets themselves are unchanged.
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
