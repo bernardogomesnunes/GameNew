@@ -44,7 +44,7 @@ const me = { duilt, explorerGift };
   ok('the first talk gives two saplings', bag.sapling === 2 && /sapling/.test(first) && /one more thing/.test(first));
   ok('and one gift is left', person.gifts.length === 1);
   const second = me.explorerGift(person);
-  ok('the second talk gives the pack item', bag.dark_wood === 3 && /dark wood/.test(second) && !/one more/.test(second));
+  ok('the second talk gives the pack item', bag.dark_wood === 3 && /dark log/.test(second) && !/one more/.test(second));
   ok('after that they have nothing more', person.gifts.length === 0 && me.explorerGift(person) === null && bag.sapling === 2);
 }
 {
