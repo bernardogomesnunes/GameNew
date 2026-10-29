@@ -1664,19 +1664,26 @@ for (const id of STONE_MILLED) {
 const CARPENTRY_TOOLS = ['carpentry_saw', 'carpentry_chisel', 'carpentry_plane', 'carpentry_mallet'];
 RECIPES.push(
   { id: 'forge', name: 'Forge', station: 'hand', age: 3, inputs: { stone: 12, clay: 4 }, output: { id: 'forge', count: 1 }, blurb: 'Place a forge for darkening rock and shaping weapons over a fire.' },
-  { id: 'bleach_bucket', name: 'Bleach Bucket', station: 'hand', age: 3, inputs: { bucket_water: 1, wood: 2 }, output: { id: 'bleach_bucket', count: 1 }, blurb: 'Burn wood for ash and mix with water. Place the bucket, then wash stone in it.' },
+  { id: 'bleach_bucket', name: 'Bleach Bucket', station: 'hand', age: 3, inputs: { bucket_water: 1, wood: 2 }, output: { id: 'bleach_bucket', count: 1 }, blurb: 'Burn wood for ash and mix with water. Place the bucket, then wash stone or wood in it.' },
   { id: 'stone_white', name: 'Wash White Stone', station: 'bleach_bucket', age: 3, inputs: { stone: 2 }, output: { id: 'stone_white', count: 2 }, batch: 8, steps: ['Place rock in the bath', 'Wash and lift out'], blurb: 'Wash rock in wood-ash bleach to bring out its pale surface.' },
   { id: 'stone_grey', name: 'Temper Grey Stone', station: 'forge', age: 3, inputs: { stone: 4, wood: 1 }, output: { id: 'stone_grey', count: 4 }, batch: 8, steps: ['Load the rock', 'Heat and cool'], blurb: 'A short firing darkens rock to grey.' },
+  // Wood takes the same two treatments as rock: a wash in the bleach bucket to
+  // bring out pale grain, a firing in the forge to char it dark. One unit in,
+  // one unit out; the forge also burns one as fuel.
+  { id: 'wood_white', name: 'Bleach White Wood', station: 'bleach_bucket', age: 3, inputs: { wood: 2 }, output: { id: 'white_wood', count: 2 }, batch: 8, steps: ['Lay the logs in the bath', 'Wash and dry'], blurb: 'Wash logs in wood-ash bleach to bring out a pale grain.' },
+  { id: 'wood_dark', name: 'Char Dark Wood', station: 'forge', age: 3, inputs: { wood: 5 }, output: { id: 'dark_wood', count: 4 }, batch: 8, steps: ['Load the logs', 'Char and cool'], blurb: 'A slow firing chars logs dark. One log in five is burnt as fuel.' },
   { id: 'stone_orange', name: 'Tint Orange Stone', station: 'stone_mill', age: 3, inputs: { stone: 4, clay: 1 }, output: { id: 'stone_orange', count: 4 }, batch: 8, steps: ['Grind the clay tint', 'Dress the stone'], blurb: 'Dress rock with warm clay pigment.' },
   { id: 'wash_clay', name: 'Wash Clay', station: 'hand', age: 1, needs: 'water', inputs: { dirt: 3 }, output: { id: 'clay', count: 1 }, batch: 8, steps: ['Sift the earth', 'Wash out the clay'], blurb: 'Wash earth by the river to separate the clay. A source for your first forge.' },
   { id: 'weapon_mold', name: 'Weapon Mold', station: 'hand', age: 3, inputs: { clay: 3, stone: 1 }, output: { id: 'weapon_mold', count: 1 }, blurb: 'A reusable clay mold for casting weapon blanks.' },
-  ...CARPENTRY_TOOLS.map((id) => ({ id, name: id.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' '), station: 'hand', age: 1, inputs: { wood: 2, stone: 2 }, output: { id, count: 1 }, blurb: 'A reusable part of the carpenter’s kit. Keep all four tools in your bag for furniture.' })),
+  ...CARPENTRY_TOOLS.map((id) => ({ id, name: id.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' '), station: 'hand', age: 1, inputs: { wood: 2, stone: 2 }, output: { id, count: 1 }, blurb: 'A reusable carpenter’s tool. Furniture, beds and paintings need only the saw in your bag; the others are for swords and bows.' })),
 );
 const furniture = new Set([...FURNITURE_ITEM.values(), 'bed', 'painting', 'chair_red', 'panel_twotone']);
 for (const r of RECIPES) {
   if (furniture.has(r.output.id)) {
-    r.tools = CARPENTRY_TOOLS;
-    r.steps = ['Measure and saw', 'Chisel the joints', 'Plane and assemble'];
+    // One tool is enough: the saw. (It used to ask for all four of the kit at
+    // once, which nobody could meet early in the game.)
+    r.tools = ['carpentry_saw'];
+    r.steps = ['Measure and saw', 'Fit the joints', 'Assemble'];
   }
   if (['marble', 'cobblestone', 'stone_brick'].includes(r.output.id)) {
     r.station = 'stone_mill';
