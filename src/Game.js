@@ -45,8 +45,12 @@ const UNSENT_KEY = 'voxelgame:unsent';
 const makeChunkGen = (o) => new ChunkGen(o);
 
 /** Everything about a world that has to survive, as plain JSON. */
-function serialiseWorldState({ world, mode, economy, duilt, territoryBounds }) {
-  return { world: world.serialize({ keepBounds: territoryBounds }), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null };
+function serialiseWorldState({ world, mode, economy, duilt, territoryBounds, player }) {
+  // Where you stand rides along: the unsent copy that goes up later must not
+  // overwrite the account's saved position with nothing.
+  const at = player?.position;
+  return { world: world.serialize({ keepBounds: territoryBounds }), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null,
+    ...(at ? { player: { x: at.x, y: at.y, z: at.z, yaw: player.yaw, pitch: player.pitch } } : {}) };
 }
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
@@ -1193,7 +1197,9 @@ export class Game {
         world,
         name: held.name,
         mode: held.state.mode,
-        player: null,
+        player: Number.isFinite(held.state.player?.y)
+          ? { position: { x: held.state.player.x, y: held.state.player.y, z: held.state.player.z }, yaw: held.state.player.yaw, pitch: held.state.player.pitch }
+          : null,
         gamification: null,
         economy: { toJSON: () => held.state.economy ?? {} },
         duilt: held.state.duilt,
