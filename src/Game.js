@@ -7773,7 +7773,8 @@ export class Game {
     const sw = this.duilt && !this.duilt.sandbox ? this.duilt.skyWar : null;
     if (lift?.tower && sw?.chains[gameFeature('sky').skyFor(this.world.gen).towers.indexOf(lift.tower)]) lift = 'cut';
     // An anchor tower's chain, on the dark path: Break cuts it.
-    const chainLink = hit && hit.block === CHAIN && sw && this.duilt.ring === 'black' && !this.duilt.skyFallen && chainAt(this.world.gen, hit.x, hit.y, hit.z) >= 0;
+    const chainLink = hit && hit.block === CHAIN && sw && this.duilt.ring === 'black' && !this.duilt.skyFallen
+      && gameFeature('sky')?.chainAt(this.world.gen, hit.x, hit.y, hit.z) >= 0;
     const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
