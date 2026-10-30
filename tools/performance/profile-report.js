@@ -33,6 +33,12 @@ export function validateProfileReport(report){
     failures.push('Populated large settlement was not exercised');
   if((report.totals?.warFrames??0)<1)failures.push('No live war-party frames were observed');
   const histogram=report.totals?.histogram;
+  const rendered=report.totals?.renderedFrames,gap=report.totals?.maxRenderGapMs;
+  if(!Number.isSafeInteger(rendered)||rendered<1||rendered>report.totals?.frames+1
+    ||!Number.isFinite(gap)||gap<0)failures.push('Missing or inconsistent rendered-frame measurements');
+  // This is a freeze guard, not an FPS target: simulation can keep ticking
+  // while shader preparation leaves the same image on screen for seconds.
+  if(gap>1000)failures.push('Display froze for more than one second between rendered frames');
   if(!Number.isFinite(report.totals?.frames)||report.totals.frames<samples.length
     ||!Number.isFinite(report.totals?.maxFrameMs)||report.totals.maxFrameMs<0
     ||!Array.isArray(histogram)||histogram.length!==2001
@@ -48,13 +54,17 @@ export function validateProfileReport(report){
     failures.push('No actual populated settlement sample');
   if(!samples.some(s=>s.phase==='caves'&&s.headroom&&s.position?.y+2<s.surfaceHeight&&s.deepDraws>0))
     failures.push('No validated underground view with actual deep rendering');
-  for(const phase of PROFILE_PHASES)if(!samples.some(s=>s.phase===phase))failures.push(`Missing phase: ${phase}`);
+  for(const phase of PROFILE_PHASES){
+    if(!samples.some(s=>s.phase===phase))failures.push(`Missing phase: ${phase}`);
+    if(!samples.some(s=>s.phase===phase&&s.drawnFrames>0))failures.push(`No rendered frames in phase: ${phase}`);
+  }
   for(const sample of samples){
     for(const key of ['chunks','geometryBytes','calls','triangles','geometries','textures','population','buildings']){
       if(!Number.isFinite(sample[key])||sample[key]<0)failures.push(`Invalid ${key} counter`);
     }
     if(sample.stop)failures.push('Game stopped');
     if(!sample.playing)failures.push('Profile left actual playing state');
+    if(!Number.isSafeInteger(sample.drawnFrames)||sample.drawnFrames<0)failures.push('Invalid sampled rendered-frame counter');
   }
   if(report.pageCrash||(report.errors??[]).length||(report.contextLosses??[]).length)
     failures.push('Page error, tab crash or graphics-context loss');
