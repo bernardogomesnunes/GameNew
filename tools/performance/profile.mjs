@@ -68,7 +68,7 @@ try{
     const g=window.__game;
     const state=window.__sessionProfile={histogram:new Uint32Array(2001),frames:0,maxFrameMs:0,
       warFrames:0,saves:0,saveAttempts:0,failedSaves:0,deepDraws:0,costs:{},losses:[],previousFrame:null,
-      renderedFrames:0,renderedAtSample:0,previousRender:null,maxRenderGapMs:0};
+      renderedFrames:0,renderedAtSample:0,previousRender:null,maxRenderGapMs:0,renderStartedAt:performance.now()};
     g.renderer.domElement.addEventListener('webglcontextlost',event=>state.losses.push({at:performance.now(),status:event.statusMessage}));
     const watchDeep=mesh=>{
       if(!mesh.userData.deep)return;
@@ -126,6 +126,7 @@ try{
       g.scene.traverse(object=>{for(const attribute of [...Object.values(object.geometry?.attributes??{}),object.geometry?.index]){
         const buffer=attribute?.array?.buffer;if(buffer&&!buffers.has(buffer)){buffers.add(buffer);geometryBytes+=buffer.byteLength;}
       }});
+      s.maxRenderGapMs=window.__profileFixtureModule.renderGapMs(s,performance.now());
       const sample={phase,playing:g.isPlaying,stop:g.crashedWith??null,chunks:g.world.chunks.size,
         drawnFrames:s.renderedFrames-s.renderedAtSample,
         geometryBytes,calls:g.renderer.info.render.calls,triangles:g.renderer.info.render.triangles,
@@ -154,6 +155,7 @@ try{
   const totals=await page.evaluate(async()=>{
     const s=window.__sessionProfile;
     await Promise.all(s.pendingSaves??[]);
+    s.maxRenderGapMs=window.__profileFixtureModule.renderGapMs(s,performance.now());
     return {frames:s.frames,maxFrameMs:s.maxFrameMs,warFrames:s.warFrames,saves:s.saves,
       saveAttempts:s.saveAttempts,failedSaves:s.failedSaves,
       histogram:Array.from(s.histogram),losses:s.losses,saveCompletionMs:s.saveCompletions??[],

@@ -1,5 +1,10 @@
 export const PROFILE_PHASES=['settlement','war','travel','return','caves','recovery'];
 
+/** Include a display stall that has not ended with another draw yet. */
+export function renderGapMs(state,now){
+  return Math.max(state.maxRenderGapMs??0,now-(state.previousRender??state.renderStartedAt));
+}
+
 export function observeSave(state,save,completion=null){
   state.saveAttempts++;
   try{

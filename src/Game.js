@@ -1723,8 +1723,17 @@ export class Game {
 
   /** Saves what's open (waiting for it, as leaving does), then reloads the page. */
   async reloadForFeatures() {
-    try { await this.saveAndWait(); } catch { /* the backup copy is kept either way */ }
+    if (this.world && !this.title && !this.showcase && !this.scenery && !this.discarded) {
+      let saved=false;
+      try { saved=await this.saveAndWait(); } catch { /* Keep this world open. */ }
+      if (saved!==true) {
+        this.ui?.toast({kind:'xp',title:'Could not save your world',
+          body:'Kept it open. Try saving again before reloading.'});
+        return false;
+      }
+    }
     location.reload();
+    return true;
   }
 
   runFeature(feature, method, args) {
