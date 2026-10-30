@@ -388,6 +388,35 @@ such as upgrade costs retain the existing PR defaults unless review exposes
 a gameplay defect. Independent read-only reviews are running for military,
 guardian and deferred-module boundaries; one final combined review follows.
 
+### TECH-8 / TECH-18 follow-up, 30 October
+
+Owner: "Claude finished your tasks, can you do the next one?" ChatGPT is
+continuing the explicitly unfinished sustained performance/recovery work on
+`codex/sustained-performance-recovery`, based on main `48e6379`. Claude's
+IMP/TECH-7 work stays integrated; PR #255's Work Hall UI is separate work.
+
+**Design:** verify real world-opening/recovery paths, then run the fixed-seed
+30-minute hardware settlement/war/travel/cave workload with confirmed saves
+and restore. Distinguish game-loop cadence from actual rendered frames: the
+previous short shader-warmup run recorded an 8,092 ms render gap despite
+continuing loop updates. Reproduce before changing shader scheduling; retain
+all materials, detail, light settings and existing shader diagnostics. Repair
+demonstrated game errors and add executable regressions. No engine migration,
+database changes, new dependencies or weakened performance budgets.
+
+- [ ] Correct the profiler's asynchronous fixture reference and reject
+  misleading no-render evidence; capture actual frame gaps and state.
+- [ ] Reproduce world opening/freezes and repair demonstrated causes with
+  failing-first checks, including any remaining lazy-Sky reference error.
+- [ ] Verify local save/reopen/import, optional-feature failure recovery,
+  render equivalence and unchanged performance/resource budgets.
+- [ ] Run the final 30-minute hardware session; record exact revision,
+  graphics/backend, real frames, saves/restore, stalls and resource trends.
+- [ ] Independent review, relevant full checks/build/browser tests, commit,
+  push and PR. Update this single list when integrated under standing merge
+  authorization. Original owner worlds/Reload and real iPhone behavior stay
+  explicitly unverified unless reproduced on those inputs/devices.
+
 ## 6. Cline's queue
 
 All CL tasks below are complete. Section 12 retains their historical briefs
