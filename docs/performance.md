@@ -418,3 +418,104 @@ full 30-minute scenario on this pipeline and test real iPhone suspension and
 rendering. The owner's original Reload has not been reproduced or certified
 fixed, and forced termination of an uncommitted large save remains limited
 by the best-effort lifecycle fallback described above.
+
+## Render scheduling and recovery, 30 October 2026
+
+PR #256 repairs a regression in #251's shader warm-up guard. Three.js updates
+transparent DoubleSide material versions during its own back/front passes.
+The guard interpreted those updates as new shader work and repeatedly withheld
+rendering, even though the simulation continued. A fixed-scene FlameView
+regression reproduces this without changing gameplay, lights or geometry.
+
+Warm-up now gates only the initial draw of a graphics context, for at most
+500 ms; completion, rejection or that deadline opens the ordinary render path.
+New materials, lighting changes, disposal and streaming cannot close it again.
+Context restoration gets a new bounded pass and ignores stale completions.
+The per-frame scene traversal, signatures and material listeners are removed.
+Material sides, transparency, lighting, view distance and shader diagnostics
+are preserved. The deadline bounds this scheduling guard, not time spent
+inside a driver call; later first-use shader stalls can still occur.
+
+The local one-minute diagnostic comparison used the same fixed-seed workload,
+Radeon RX 7900 GRE, ANGLE D3D11/WebGL 2, 1920 × 1080 and automatic graphics.
+The before run used main `48e6379` game code; the repair was subsequently
+committed as `c76a5b3`. Both runs include settlement, live war, travel, return,
+caves and recovery. They are short diagnostics, not sustained certification.
+
+| Measurement | Before | Bounded initial warm-up |
+|---|---|---|
+| Actual renderer calls | 1,364 | 3,485 |
+| Maximum gap between renderer calls | 8,115.6 ms | 715.8 ms |
+| Maximum game-loop frame interval | 122.4 ms | 750.9 ms |
+
+The old loop interval hid seconds without a new image. The repaired renderer
+delivers frames again, while its ordinary first-use driver stall is visible
+in the measurements. Neither counter measures physical monitor scanout or
+GPU execution time. The final long-session profiler therefore records actual
+draws in every phase and samples time since the last draw, including a freeze
+that never resumes. It rejects missing drawing evidence and gaps above one
+second. This is a freeze guard, not an FPS target. Historical reports without
+these counters do not establish that presentation was continuous.
+
+Two related recovery defects are fixed: Sky anchor-chain hover used an
+unqualified function after its module became deferred, and optional-feature
+Reload proceeded even when saving failed. Hover is safe before and after
+Sky readiness. A playable world now reloads only after confirmed persistence;
+false/rejected saves keep its live edits open. Title/showcase/scenery and
+deliberately discarded sessions remain reloadable without inventing a save.
+
+Failing-first Node checks cover material-version churn, deadlines, restoration,
+stale completions, failure fallbacks, actual Game hover, save confirmation and
+unfinished render gaps. Browser checks cover 30 real renderer draws with
+FlameView, world placement/save/reopen/import, delayed/failed optional loading,
+and a failed save followed by an actual successful reload/reopen retaining
+the latest edit. The new renderer and recovery browser checks run in CI.
+Local full regression passed **7,699 checks across 315 files**, build and
+unchanged performance/resource budgets. The full-game comparison retained
+identical pixels (761 → 746 calls; 2,494,578 → 2,351,566 triangles).
+
+### Completed sustained desktop run
+
+`artifacts/performance/30-oct-sustained-final.json` records **1,800.016 seconds**
+on exact runtime/profiler revision `8d1d3a3`, Chrome 156.0.8078.49, Radeon
+RX 7900 GRE through ANGLE D3D11/WebGL 2, 1920 × 1080. Pixel ratio stayed 1;
+automatic graphics, render distance 234, antialiasing, smoothing, lights, AO,
+atmosphere and grass were retained. Later changes only adjust the CI fixture
+and document results; the game and profiler are identical to that revision.
+
+The workload retained **56 validated buildings and 55 villagers** through six
+five-minute phases: settlement, live war (up to eight attackers), travel,
+return, verified underground caves and recovery. It recorded **107,747 loop
+intervals and 107,748 renderer calls**, about 59.86 draws/second overall, with
+actual drawing in every phase. There were **zero validation failures, page
+errors, game stops or context losses**. Maximum render gap was **717.6 ms**;
+maximum loop interval 750.0 ms, histogram p95 at most 17 ms and p99 at most
+18 ms. Twelve intervals exceeded 50 ms; three exceeded 250 ms. These remaining
+stalls are visible evidence, not a claim of perfectly smooth performance.
+
+All **six scheduled autosaves committed**, with zero failed attempts, and a
+newer persisted payload restored. Game-thread dispatch cost ranged from
+**4.6 to 16.0 ms**, and asynchronous completion from **87.4 to 170.5 ms**.
+Fresh-page save/reopen and failed-save/confirmed-reload are separately verified
+by the browser tests; the long-session end check restores the persisted payload.
+
+Loaded chunks peaked at **1,147** during travel and returned to **797** in
+recovery. Sampled CPU geometry buffers peaked at **252.96 MB** and settled at
+**220.38 MB**; these counters exclude total GPU memory. Textures reached **47**
+and stayed there across return, caves and recovery. Sampled JS heap peaked at
+617.49 MB and ended at 419.20 MB; this is not total process/worker memory or
+proof against leaks over longer or different workloads.
+
+Renderer submission remained the largest measured cumulative CPU component,
+with a **712.1 ms** maximum call. Remesh draining reached **31.3 ms**, far-terrain
+updates 30.1 ms and settler updates 54.4 ms. Method times overlap. Further work
+should measure these paths and cold shader variants on representative devices,
+preserving frame delivery and visual equivalence. Physical-iPhone behavior
+and the owner's original saved-world/Reload problem are still unverified.
+
+CI passed **7,718 checks across 315 files**, build and browser recovery checks
+on the same game code. The software-WebGL CI fixture checks thirty continuous
+draws and one preparation; it reports driver timings instead of imposing an
+uncalibrated fifteen-second performance cap. Its hang watchdog does not replace
+or weaken the hardware profiler's one-second display-freeze guard or any
+existing geometry/resource budget.

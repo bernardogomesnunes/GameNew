@@ -46,8 +46,8 @@ that an agent's later checkout has passed them. Re-fetch/recheck before work.
 
 | Priority / state | Existing IDs | What the next agent should do |
 |---|---|---|
-| First: unresolved lag / Reload | TECH-18 | #242 fixes the measured normal-autosave stall and localStorage capacity path with background binary IndexedDB saves. Profile remaining render-submission/meshing spikes. Reproduce the owner's actual Reload using diagnostics or a saved world; the original crash is unresolved. |
-| First: sustained performance | TECH-8; playtests under TECH-17 and TECH-9 | #241 records the 30-minute baseline with failed persistence; #242's 11-minute hardware follow-up confirms two actual autosaves and restore with 4–15 ms game-thread save work. Repeat a full 30 minutes on the new pipeline and profile physical iPhone hardware. Remaining render/mesh stalls prevent an overall performance sign-off. |
+| First: unresolved lag / Reload | TECH-18 | #256 repairs repeated shader presentation gating (an 8.1-second display gap), unsafe recovery reload after failed saving, and a Sky-chain hover error. Desktop rendering/meshing spikes remain; reproduce the owner's affected worlds and original Reload using diagnostics. Physical-iPhone behavior is unverified. |
+| First: sustained performance | TECH-8; playtests under TECH-17 and TECH-9 | #256 completes a passing 30-minute hardware follow-up: 56 buildings, 55 villagers, live war, travel/caves, 107,748 actual draws and six confirmed autosaves plus newer persisted-payload restore. Worst render gap 717.6 ms. Profile remaining submission/meshing spikes and physical iPhone hardware; this is a desktop result, not an overall performance sign-off. |
 | Done: smaller first download | TECH-7 | War, Sky and showcase code load only when needed (#251). Measured gain is small: about 34 KB of 1,768 KB. Further startup gains would need splitting the rest of `Game.js` (TECH-10). |
 | Follow-up maintenance | TECH-10 | Extract one Game.js subsystem per PR with existing behavior preserved. Coordinate files with other agents; a refactor alone is not an FPS improvement. |
 | Discussed crafting follow-up | CRAFT-8 | Define the timing/dragging/animation interaction before implementing it. Current crafting is a sequence of action buttons; the richer interaction is not delivered. Keep this behind the performance priority. |
@@ -404,18 +404,33 @@ all materials, detail, light settings and existing shader diagnostics. Repair
 demonstrated game errors and add executable regressions. No engine migration,
 database changes, new dependencies or weakened performance budgets.
 
-- [ ] Correct the profiler's asynchronous fixture reference and reject
+- [x] Correct the profiler's asynchronous fixture reference and reject
   misleading no-render evidence; capture actual frame gaps and state.
-- [ ] Reproduce world opening/freezes and repair demonstrated causes with
+- [x] Reproduce world opening/freezes and repair demonstrated causes with
   failing-first checks, including any remaining lazy-Sky reference error.
-- [ ] Verify local save/reopen/import, optional-feature failure recovery,
+- [x] Verify local save/reopen/import, optional-feature failure recovery,
   render equivalence and unchanged performance/resource budgets.
-- [ ] Run the final 30-minute hardware session; record exact revision,
+- [x] Run the final 30-minute hardware session; record exact revision,
   graphics/backend, real frames, saves/restore, stalls and resource trends.
-- [ ] Independent review, relevant full checks/build/browser tests, commit,
-  push and PR. Update this single list when integrated under standing merge
-  authorization. Original owner worlds/Reload and real iPhone behavior stay
-  explicitly unverified unless reproduced on those inputs/devices.
+- [x] Independent review, relevant full checks/build/browser tests, commit,
+  push and PR #256. Integration requires the current required checks under
+  standing merge authorization. Original owner worlds/Reload and real iPhone
+  behavior stay explicitly unverified unless reproduced on those inputs/devices.
+
+**Verified outcome:** runtime/profiler revision `8d1d3a3` completed 1,800.016
+seconds on the RX 7900 GRE with 107,748 actual renderer calls, six committed
+autosaves, newer persisted payload restored and zero validation failures,
+page errors, game stops or context losses. All six phases drew frames. The
+maximum render gap was 717.6 ms, p95 loop interval at most 17 ms and p99 at
+most 18 ms. Chunks peaked at 1,147 and returned to 797; sampled geometry
+peaked at 252.96 MB and settled at 220.38 MB (not total VRAM). Local regression:
+7,699 checks / 315 files; CI regression: 7,718 checks / 315 files. Build,
+unchanged performance/resource budgets, identical-pixel rendering and actual
+save/reload/open browser checks passed. Final review found failed-save Reload
+and unfinished-gap measurement defects; both have failing-first repairs.
+The initial-only 500 ms warm-up deliberately preserves ordinary rendering for
+later variants: cold shader stalls still occur (712.1 ms maximum renderer call)
+and need separate measured work. No graphics or detail reduction was made.
 
 ## 6. Cline's queue
 
@@ -538,7 +553,7 @@ supersede that historical review; do not repeat its already completed work.
 | TECH-5 | **Limit how often a client can write to the database.** | Claude | S | bounded client queue implemented; server enforcement prepared in 0006, not activated |
 | TECH-6 | **Make land in the background** (a Web Worker): background terrain generation and a bounded main-thread fallback are implemented. Meshing, uploads and rendering still require profiling; the worker does not establish that all streaming stutter is solved. | Claude | L | done for worker generation; integrated into main 21 October; remaining stalls are TECH-18/TECH-8 |
 | TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude; ChatGPT, Claude | M | done, #251: map/story/war/Sky/showcase load when needed; the first download is only about 34 KB smaller (1,768 to 1,734 KB) |
-| TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Any agent; desktop measurements by ChatGPT in #241/#242 | M | partial: 30-minute baseline and three hot-path fixes #241; background local persistence #242 passes an 11-minute hardware run with two confirmed autosaves/restore. Repeat full 30 minutes on the new pipeline; remaining submission/meshing spikes and physical-iPhone profiling remain |
+| TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Any agent; desktop measurements by ChatGPT in #241/#242/#256 | M | desktop follow-up passed in #256: 30 minutes, 56 buildings/55 villagers, six confirmed autosaves and newer persisted-payload restore; three earlier hot-path fixes #241 and presentation freeze repair #256. Remaining submission/meshing spikes and physical-iPhone profiling stay open |
 | TECH-9 | **The phone memory overlay**: optional counter shown with `?debug`, for finding memory growth on a phone. | ChatGPT | S | done; integrated into main 21 October; phone profiling remains |
 | TECH-10 | **Split `src/Game.js`** (over 8,000 lines as of this audit; measure again before work) by system (war, vehicles, building, input, saving), one part per PR, alongside other work. | Claude | L | to do in separate subsystem PRs; new workers/jobs/peer helpers are outside Game.js |
 | TECH-11 | **Type checks on the save format and the block list**, to catch the kind of mismatch that once broke saved worlds' mode. | Claude | M | done; integrated into main 21 October |
@@ -548,7 +563,7 @@ supersede that historical review; do not repeat its already completed work.
 | TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | done; integrated into main 21 October |
 | TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
 | TECH-17 | **Performance safeguards for future additions**: fixed-seed crest/slope/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource/disposal checks, shared streaming allowance and a required PR performance workflow. #239 adds an actual 802-chunk forest rendering comparison/cost gate; existing budgets are unchanged. Commands and limits in `docs/performance.md`. | ChatGPT | M | implementation integrated (#234, included with #236; full-game gate #239); real-phone check pending |
-| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on a weak-GPU iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | Any agent; #239/#241/#242 implemented by ChatGPT | M | partial: diagnostics/render reduction #239; streaming/minimap fixes #241; measured normal-autosave stall/capacity fix #242. Original Reload, rendering spikes and physical-iPhone verification remain; no engine migration approved |
+| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on a weak-GPU iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | Any agent; #239/#241/#242/#256 implemented by ChatGPT | M | partial: diagnostics/render reduction #239, streaming/minimap #241, background local saving #242, repeated presentation-freeze and recovery fixes plus passing 30-minute desktop evidence #256. Original owner worlds/Reload, cold-render spikes and physical-iPhone verification remain; no engine migration approved |
 
 ### TECH-18 implementation plan, 23 October
 
