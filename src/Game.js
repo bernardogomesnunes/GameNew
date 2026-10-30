@@ -1262,7 +1262,11 @@ export class Game {
         return false;
       }
     }
-    if (!this.cloud?.signedIn) return false;
+    if (!this.cloud?.signedIn) {
+      this.ui.toast({ kind: 'xp', title: 'Sign in to open this world',
+        body: 'This world lives on your account, and this browser is not signed in right now.' });
+      return false;
+    }
     try {
       return await this.restoreFromCloud(id) !== false;
     } catch (err) {
@@ -1409,7 +1413,13 @@ export class Game {
       onSelectItem: (id) => { this.selectedItemId = id; },
       // Opening a world by its id. There is no "open by name" any more,
       // because there is no second copy of anything to tell apart by name.
-      onOpenWorld: (id) => this.withLoading('Opening your world…', () => this.openWorld(id)),
+      // A world that does not open leaves you on the worlds screen, not in the
+      // title scene behind it with the screen already closed.
+      onOpenWorld: async (id) => {
+        const opened = await this.withLoading('Opening your world…', () => this.openWorld(id)).catch(() => false);
+        if (opened === false) this.ui.openHome();
+        return opened;
+      },
       onDeleteWorld: async (id) => {
         if (id === this.worldId) { this.discarded = true; this.pendingSave = false; }
         // Its unsent copy goes too, or the next startup uploads it again.
