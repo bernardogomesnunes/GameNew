@@ -38,3 +38,20 @@ let unsupportedCalls=0;
 const fallback = new ShaderWarmup({extensions:{has:()=>false},compileAsync(){unsupportedCalls++;}});
 assert.equal(fallback.ready(scene,camera),true);assert.equal(unsupportedCalls,0);
 console.log('PASS browsers without parallel compilation keep the existing rendering path');
+
+// A compile that never answers cannot freeze the picture for good.
+const hung = new ShaderWarmup({extensions:{has:()=>true},compileAsync:()=>new Promise(()=>{})});
+assert.equal(hung.ready(scene,camera,0),false);
+assert.equal(hung.ready(scene,camera,1000),false);
+assert.equal(hung.ready(scene,camera,2000),true,'draws after the wait limit');
+assert.equal(hung.ready(scene,camera,2016),true,'and keeps drawing');
+// A scene whose shader set changes on every frame cannot freeze it either.
+let n = 0; const churn = new ShaderWarmup({extensions:{has:()=>true},compileAsync:()=>Promise.resolve()});
+let drawn = false;
+for (let ms = 0; ms <= 3000; ms += 16) {
+  scene.add(new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial()));
+  if (churn.ready(scene,camera,ms)) drawn = true;
+  await Promise.resolve(); await Promise.resolve();
+}
+assert.equal(drawn,true,'a constantly changing scene is still drawn');
+console.log('PASS warm-up waits at most 1.5 s before drawing anyway');

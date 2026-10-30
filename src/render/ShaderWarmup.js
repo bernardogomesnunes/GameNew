@@ -1,3 +1,5 @@
+const MAX_WAIT_MS = 1500;
+
 /** Prepare GPU programs without synchronously waiting for their first draw. */
 export class ShaderWarmup {
   constructor(renderer) {
@@ -40,11 +42,23 @@ export class ShaderWarmup {
       + lights.sort().join(',') + '|' + [...variants].sort().join('|');
   }
 
-  ready(scene, camera) {
+  /**
+   * True when the frame may be drawn. Waiting is capped: a compile that never
+   * answers, or a scene whose shader set changes every frame, used to skip
+   * every draw for good, freezing the last picture on screen while the world
+   * kept running. After MAX_WAIT_MS blocked the frame draws anyway, and
+   * warm-up switches itself off for the session.
+   */
+  ready(scene, camera, now = performance.now()) {
     if (!this.supported) return true;
     const key = this.signature(scene,camera);
+    if (key === this.readyKey && !this.pending) { this.blockedSince = null; return true; }
+    this.blockedSince ??= now;
+    if (now - this.blockedSince > MAX_WAIT_MS) {
+      this.supported = false; this.pending = null; this.blockedSince = null;
+      return true;
+    }
     if (this.pending) return false;
-    if (key === this.readyKey) return true;
     const job = {};
     this.pending = job;
     try {
