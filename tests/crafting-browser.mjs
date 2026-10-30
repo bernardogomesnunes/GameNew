@@ -25,7 +25,7 @@ try {
     && (!document.querySelector('#loading') || document.querySelector('#loading').classList.contains('ld-gone')), null, { timeout: 120_000 });
   await page.evaluate(async () => {
     const game = window.__game;
-    await game.newWorld({ mode: 'creative', name: 'Crafting checks', seed: 71823, silent: true });
+    game.newWorld({ mode: 'creative', name: 'Crafting checks', seed: 71823, silent: true });
     game.ui.hideBlocker();
     // A real finite bag in the harmless Creative scene: verify actual payments.
     const { Inventory } = await import('/src/items/Inventory.js');

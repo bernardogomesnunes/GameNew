@@ -19,10 +19,10 @@ Current item reference, generated from the item registry by `node scripts/update
 | Moss | Lifted from a forest floor | 500 | — |
 | Gravel | Dig gravel deposits, or grind stone at a stone mill | 500 | — |
 | Clay | Dug from wetland ground, or washed from dirt by a river | 500 | — |
-| White Log | Cut from birch trees | 500 | — |
+| White Wood | Cut from birch trees | 500 | — |
 | White Leaves | Stripped from birch trees | 500 | — |
 | Pink Leaves | Gathered from pink-blossomed birch trees | 500 | — |
-| Dark Log | Cut from the dark forest | 500 | — |
+| Dark Wood | Cut from the dark forest | 500 | — |
 | Dark Leaves | Stripped from the dark forest | 500 | — |
 | Lava | Scooped from a cavern | 100 | — |
 | Dark Moss | Lifted from the dark forest floor | 500 | — |

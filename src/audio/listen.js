@@ -12,7 +12,7 @@ import { BIOMES } from '../config/biomes.js';
 import { BLOCKS_BY_ID, isLava, isLavaFlow } from '../config/blocks.js';
 import { daylightAt } from '../render/DayCycle.js';
 import { landmarksFor } from '../world/landmarks.js';
-import { skyAt, FLOOR as SKY_FLOOR, ISLAND_R } from '../world/skyLocation.js';
+import { skyAt, FLOOR as SKY_FLOOR, ISLAND_R } from '../world/skyKingdom.js';
 
 /** Seconds between looks around. */
 export const LOOK_EVERY = 0.5;

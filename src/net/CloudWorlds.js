@@ -135,10 +135,8 @@ export class CloudWorlds {
       }
     }
 
-    // No saved position (an older upload wrote none): on the ground at home,
-    // not at the top of the world, where the first thing you see is empty sky.
     const spawn = meta.spawn || (meta.worldGen
-      ? { x: meta.worldGen.homeX + 0.5, y: world.gen.heightAt(meta.worldGen.homeX, meta.worldGen.homeZ) + 2, z: meta.worldGen.homeZ + 0.5 }
+      ? { x: meta.worldGen.homeX, y: meta.height - 4, z: meta.worldGen.homeZ }
       : { x: meta.sizeX / 2, y: meta.height - 4, z: meta.sizeZ / 2 });
     return {
       world,

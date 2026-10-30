@@ -27,7 +27,6 @@ const BYTEA_PREFIX = '\\x';
  * halved and asked for again.
  */
 const CHUNK_PAGE = 100;
-const PARALLEL_PAGE = 40;
 
 /** Postgres `bytea` crosses JSON as a hex string, both directions. */
 export function bytesToHex(bytes) {
@@ -36,16 +35,10 @@ export function bytesToHex(bytes) {
   return out;
 }
 
-// Digit value by char code: the world's chunks are megabytes of hex, and a
-// parseInt per byte was seconds of a phone's time.
-const HEX = new Uint8Array(128);
-for (let i = 0; i < 10; i++) HEX[48 + i] = i;
-for (let i = 0; i < 6; i++) { HEX[97 + i] = 10 + i; HEX[65 + i] = 10 + i; }
-
 export function hexToBytes(hex) {
   const body = hex.startsWith(BYTEA_PREFIX) ? hex.slice(2) : hex;
   const out = new Uint8Array(body.length / 2);
-  for (let i = 0; i < out.length; i++) out[i] = (HEX[body.charCodeAt(i * 2)] << 4) | HEX[body.charCodeAt(i * 2 + 1)];
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(body.substr(i * 2, 2), 16);
   return out;
 }
 
@@ -273,33 +266,6 @@ export class NeonTransport {
     return { revision };
   }
 
-  /**
-   * Every page at once, a few in flight: a big world's chunks are several MB
-   * and one page after another left the loading bar parked for half a minute.
-   * The cheap key list says how many pages there are. Any failure returns
-   * null and the caller goes back to one page at a time.
-   */
-  async pullChunkPagesTogether(worldId) {
-    try {
-      const at = (i) => this.request(`/world_chunks?select=cx,cz,rle&world_id=eq.${worldId}&order=cx.asc,cz.asc&limit=${PARALLEL_PAGE}&offset=${i * PARALLEL_PAGE}`);
-      const first = await at(0);
-      // A small world is that one request.
-      if (!Array.isArray(first)) return null;
-      if (first.length < PARALLEL_PAGE) return first;
-      const keys = await this.request(`/world_chunks?select=cx,cz&world_id=eq.${worldId}&order=cx.asc,cz.asc`);
-      if (!Array.isArray(keys)) return null;
-      const pages = Math.ceil(keys.length / PARALLEL_PAGE);
-      const got = [first];
-      let next = 1;
-      const lane = async () => {
-        while (next < pages) { const i = next++; got[i] = await at(i); }
-      };
-      await Promise.all(Array.from({ length: Math.min(4, pages - 1) }, lane));
-      const rows = got.flat().filter(Boolean);
-      return rows.length === keys.length ? rows : null;
-    } catch { return null; }
-  }
-
   async pullWorld(worldId, attempt = 0) {
     await this.ensurePlayer();
     const worlds = await this.request(`/worlds?select=*&id=eq.${worldId}&deleted_at=is.null&limit=1`);
@@ -307,15 +273,12 @@ export class NeonTransport {
     const w = worlds[0];
     // A page at a time (see CHUNK_PAGE), in a fixed order so no page skips
     // or repeats a chunk.
-    let rows = await this.pullChunkPagesTogether(worldId);
-    if (!rows) {
-      rows = [];
-      await inPages(Infinity, async (from, size) => {
-        const page = await this.request(`/world_chunks?select=cx,cz,rle&world_id=eq.${worldId}&order=cx.asc,cz.asc&limit=${size}&offset=${from}`);
-        rows.push(...(page ?? []));
-        return (page?.length ?? 0) < size ? null : size;
-      });
-    }
+    const rows = [];
+    await inPages(Infinity, async (from, size) => {
+      const page = await this.request(`/world_chunks?select=cx,cz,rle&world_id=eq.${worldId}&order=cx.asc,cz.asc&limit=${size}&offset=${from}`);
+      rows.push(...(page ?? []));
+      return (page?.length ?? 0) < size ? null : size;
+    });
     if (this.atomicSaves) {
       const after = await this.request(`/worlds?select=revision&id=eq.${worldId}&deleted_at=is.null&limit=1`);
       if (!after?.length || Number(after[0].revision) !== Number(w.revision)) {

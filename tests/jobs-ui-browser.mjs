@@ -9,7 +9,7 @@ try{
   page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
   await page.goto(server.resolvedUrls.local[0]);await page.waitForFunction(()=>window.__game&&!window.__game.booting,null,{timeout:120000});
   await page.evaluate(async()=>{
-    const game=window.__game;await game.newWorld({mode:'creative',seed:71823,silent:true});game.ui.hideBlocker();
+    const game=window.__game;game.newWorld({mode:'creative',seed:71823,silent:true});game.ui.hideBlocker();
     const {Inventory}=await import('/src/items/Inventory.js');const d=game.duilt,bag=new Inventory();
     d.inventory=bag;d.crafting.inventory=bag;d.jobs.inventory=bag;d.settlers.inventory=bag;
     // Isolate job controls from population arrivals; navigation and building

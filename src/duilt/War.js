@@ -1,4 +1,4 @@
-import { FIRST_ROUND_DAYS, ROUND_GAP_DAYS, WARN_DAYS, RETRY_DAYS, LAST_ROUND } from '../config/warState.js';
+import { FIRST_ROUND_DAYS, ROUND_GAP_DAYS, WARN_DAYS, RETRY_DAYS, LAST_ROUND } from '../config/war.js';
 
 /**
  * Where the war with the Stone Kingdom stands — config/war.js has the why.

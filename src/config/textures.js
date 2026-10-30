@@ -168,9 +168,9 @@ export const BLOCK_TEXTURES = {
   'Dark Calçada':  { setts: 5, joint: [1.85, 1.8, 1.72], depth: 0.3, speck: 0.03, bump: 0.6 },
   'Sky Marble':    { veins: 2, vein: [0.84, 0.9, 1.06], marks: 10, flecks: [[1.24, 1.08, 0.66]], mottle: 0.04, edge: 0.06, depth: 0.14, speck: 0.012 },
   // Birch: white bark with dark dashes. Dark oak: deeper furrows.
-  'White Log':     { bark: 4, birch: true, marks: 10, flecks: [[0.6, 0.6, 0.62]], depth: 0.5, speck: 0.03, bump: 0.3,
+  'White Wood':    { bark: 4, birch: true, marks: 10, flecks: [[0.6, 0.6, 0.62]], depth: 0.5, speck: 0.03, bump: 0.3,
                      top: { rings: 3, heart: [1.04, 0.98, 0.86], depth: 0.2, speck: 0.03, lift: 0 } },
-  'Dark Log':      { strips: 1, dashes: 20, marks: 6, flecks: [[0.86, 0.95, 0.82]], depth: 0.5, bump: 0.7,
+  'Dark Wood':     { strips: 1, dashes: 20, marks: 6, flecks: [[0.86, 0.95, 0.82]], depth: 0.5, bump: 0.7,
                      top: { rings: 2.5, heart: [1.85, 1.7, 1.55], depth: 0.25, speck: 0.04, lift: 0 } },
   'White Leaves':  { leaves: 100, flecks: [[1.02, 1.02, 1.02], [1, 1, 1], [0.93, 0.95, 0.97]], depth: 0.26, holes: 6, gaps: 14, bite: 6 },
   'Pink Leaves':   { leaves: 100, blossom: 10, flecks: [[1.06, 0.96, 1.0], [1, 1, 1], [0.96, 1.02, 1.04]], depth: 0.28, holes: 6, gaps: 14, bite: 6 },

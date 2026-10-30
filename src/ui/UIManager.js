@@ -2496,11 +2496,8 @@ export class UIManager {
   }
 
   /** Every storehouse at once — a storage controller, or a town hall's panel. */
-  /** Opens the bench, searching for `query`, or limited to one `station`'s recipes. */
-  openBench(query = '', station = null) {
-    // `station` limits it to what is made at that placed station (a bleach
-    // bucket, a forge, a planing bench); without it, every recipe.
-    if (this.duiltUI) this.duiltUI.benchStation = station;
+  /** Opens the bench, searching for `query` — what a wood mill opens on. */
+  openBench(query = '') {
     this.openPanel('panel-bench');
     const search = this.q('#bench-search');
     if (search) {

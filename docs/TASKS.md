@@ -46,9 +46,9 @@ that an agent's later checkout has passed them. Re-fetch/recheck before work.
 
 | Priority / state | Existing IDs | What the next agent should do |
 |---|---|---|
-| First: unresolved lag / Reload | TECH-18 | #256 repairs repeated shader presentation gating (an 8.1-second display gap), unsafe recovery reload after failed saving, and a Sky-chain hover error. Desktop rendering/meshing spikes remain; reproduce the owner's affected worlds and original Reload using diagnostics. Physical-iPhone behavior is unverified. |
-| First: sustained performance | TECH-8; playtests under TECH-17 and TECH-9 | #256 completes a passing 30-minute hardware follow-up: 56 buildings, 55 villagers, live war, travel/caves, 107,748 actual draws and six confirmed autosaves plus newer persisted-payload restore. Worst render gap 717.6 ms. Profile remaining submission/meshing spikes and physical iPhone hardware; this is a desktop result, not an overall performance sign-off. |
-| Done: smaller first download | TECH-7 | War, Sky and showcase code load only when needed (#251). Measured gain is small: about 34 KB of 1,768 KB. Further startup gains would need splitting the rest of `Game.js` (TECH-10). |
+| First: unresolved lag / Reload | TECH-18 | #242 fixes the measured normal-autosave stall and localStorage capacity path with background binary IndexedDB saves. Profile remaining render-submission/meshing spikes. Reproduce the owner's actual Reload using diagnostics or a saved world; the original crash is unresolved. |
+| First: sustained performance | TECH-8; playtests under TECH-17 and TECH-9 | #241 records the 30-minute baseline with failed persistence; #242's 11-minute hardware follow-up confirms two actual autosaves and restore with 4–15 ms game-thread save work. Repeat a full 30 minutes on the new pipeline and profile physical iPhone hardware. Remaining render/mesh stalls prevent an overall performance sign-off. |
+| Follow-up implementation | TECH-7 | Finish lazy loading war/Sky modules; map/story already load lazily. Check the download/bundle change and exercise late-game routes, saves and cancelled loads. |
 | Follow-up maintenance | TECH-10 | Extract one Game.js subsystem per PR with existing behavior preserved. Coordinate files with other agents; a refactor alone is not an FPS improvement. |
 | Discussed crafting follow-up | CRAFT-8 | Define the timing/dragging/animation interaction before implementing it. Current crafting is a sequence of action buttons; the richer interaction is not delivered. Keep this behind the performance priority. |
 | Partial: model-backed Battle | OLD-3; ASK-3 | Local LM Studio strategies work. Finish a separately configured authenticated hosted/mobile connection only after the owner supplies/chooses the endpoint arrangement; see `docs/local-ai.md`. |
@@ -327,110 +327,11 @@ owner and block the task until answered.
 | IMP-4 | **Building emojis out, text only.** "Buildings emojis look disgusting, can we remove them and leave only text here?" Every building spec in `config/structures.js` carries an `icon` emoji, shown by `ui/DuiltUI.js` in the building panel, the finish list and the claim list. Remove the emoji from those places and show the name alone. Check the layout on a phone, since the icon column gives the row its shape. Skills and goals use their own icons; leave them unless the owner says. | Any agent | done, #245 |
 | IMP-5 | **Aurelion kills what you attack.** "Aurelion should kill the mobs the user attacks." In hunt mode Aurelion picks the nearest enemy (`world/Guardian.js`). Make it choose the creature you last hit instead, in every mode, and finish it quickly. **Decided 29 October:** "ONLY ENEMIES YES": bandits, raiders and war soldiers, never farm animals. | Any agent | done, #246 |
 | IMP-6 | **Carpentry rebuilt around tools used on things, not carried.** "We should not have the carpentry tools all of them in bag to craft stuff, one thing usually per items. So carpenter planer should be placed and give more planks. Saw should be held, chisel can break blocks and turn them into decorative blocks, saw could turn planks into a template for furniture, and then placing that template and using an item called toolbox on it will make it a piece of furniture." This replaces the interim rule in PR #243 (furniture needs only the saw in the bag). Parts: (a) the **plane** is a placed station that turns logs into more planks; (b) the **saw** is held, and used on planks makes a furniture template; (c) the **chisel** breaks a block into its decorative version; (d) a **toolbox** item, used on a placed template, finishes it into the furniture piece. Big and touches recipes, items, placement and the crafting panel. **Decided 29 October:** build in phases ("yes"): the placed plane first, then saw templates and the toolbox. Still to choose when building phase 1: does the plane replace the wood mill's plank bonus or sit beside it, and what a placed template looks like. | Any agent | phase 1 (the placed Planing Bench, 3 planks a log) done, #249; saw templates, chisel and toolbox (phases 2 and 3) to do; supersedes PR #243's interim rule once built |
-| IMP-10 | **BIG PRIORITY: review every crafting interaction, one interface each.** "Let's add as a big priority to review all interactions with buildings foundry kiln and the items forge bleach mill carpenter items and stone mill. Each one needs its own interface. Only saw should be held to craft stuff, the rest should be placed." Also: "Forge should be placed like the bucket and there should be an interface to make stuff there." Decided 29 October: **held** tools are the saw (furniture, beds, paintings), the chisel ("held, breaks blocks into decorative ones") and the weapon mold ("Weapon mold held"); **placed** are the plane (a Planing Bench since #249) and the mallet ("plane mallet should be placed"). Placed blocks: forge, bleach bucket, wood mill, stone mill, planing bench, mallet. Buildings: workshop, foundry, kiln, engineering centre, university, temple, and the **Work Hall** (owner, 29 October: "Another one that we need to add to the review of interfaces is work building. It has weird stuff there"; several of these panels were reworked by Codex, so check what each shows against what it does). Steps: (1) PR #253 gives every placed block its own list of recipes instead of the whole workbench; (2) audit each one on a phone: what opens, what it lists, what it needs in the bag; (3) the mallet as a placed bench, and drop the plane and mallet from the bag rules (bows still ask for the plane tool); (4) the chisel as a held tool that breaks a block into its decorative form; (5) check the kiln and foundry panels one by one. Do not merge steps; one PR each. | Any agent | in progress: step 1 (each placed block lists its own recipes) done with #254; the forge's own make-it-here process is planned for later (owner, 29 October: "This needs to be done in forge when placing it, I should add there the items, and have the process. But that's planed, we can tackle it later") |
-| IMP-11 | **Dark and white logs by name.** "Dark log does not appear to me." The item was called "Dark Wood" and the recipe "Char Dark Wood", so searching for a log found nothing. Owner, 29 October: "dark logs item should always be called dark logs, same for every item, one name per each." Every item now has one name: the item and the block it places share it (Turf, Turned Soil, Gold, White Log, Dark Log were the five that differed), and a workbench tile is titled with the item it makes, not a separate recipe name. Seeds and their plants, and ores and their gems, are different things and keep their own names. A test checks it. | Any agent | done in the PR that adds this line |
-| IMP-12 | **The working logic of the game, after IMP-10.** Owner, 29 October: "After fixing that we should Persue the working logic of the game." Needs the owner's description of what "working logic" covers before work starts (for example: how villagers take jobs and carry goods, how buildings produce, or how the Work Hall assigns work). | Any agent | waiting on the owner; after IMP-10 |
 | IMP-7 | **The map works in the past and the future.** "Map should work on past and future." What the map does today in the Past (dinosaurs) and the Future (futurians, the Archive) has not been checked; the owner says it does not work there. First reproduce it. Then make the map and minimap read the world you are in: terrain, your position and the markers that exist there. **Owner's answer 29 October:** "not getting this one". Needs the owner's description in plain words first: when you travel to the Past or the Future and open the map, what do you see (nothing, the home world, the wrong place)? Reproduce it in the game before building. | Any agent | waiting on the owner |
 | IMP-8 | **Explain the showcase.** "What the hell is the showcase? It broke my game, explain me what it is." It is a workshop tool behind the menu's "Show the workshop tools" switch: one Creative test world with every building, animal and person at once, for checking how the game looks; never saved. Its menu card and section now say so, that it is heavy, and that opening it saves and closes your world; it asks before opening. Found while doing it: **Save and leave could not get you out of the showcase** (it is never saved, so the save counted as failed and kept you in it since SAVE-3); now it leaves. | Claude | done, #252 |
 | IMP-9 | **What broke when the showcase opened.** The owner says it "broke my game". Find out which: a crash, a freeze, a lost world, or a bad save. If opening it can overwrite or lose the world you were in, that is a bug to fix. If it only is heavy, cap what it builds on phones. **Owner's answer 29 October:** "I dont know what this is either". So the showcase was probably not what broke the game. Do not spend time on it until the owner sees the break again; then record the device, the world and the last action (the Reload screen's Download diagnostics does this). | Any agent | on hold, no repro; the Save-and-leave trap found under IMP-8 is fixed and may have been it |
 
 ---
-
-### ChatGPT execution batch, 29 October
-
-**Spec:** owner's request in this chat: IMP-2 then IMP-3 (levels 1–3 hold
-10/20/40; beds decorative), IMP-4 text-only buildings, IMP-5 last-hit enemy
-priority, then remaining TECH-18/TECH-8 lag/Reload investigation and TECH-7
-deferred war/Sky code. Keep visuals, world detail and existing saves intact.
-No production database changes, engine migration, new dependencies or raised
-performance limits. Work in the current checkout, preserve external worktrees.
-
-**Architecture:** reuse and retain Claude's existing commits from #247 and
-#246, with review repairs on `codex/military-guardian-performance`; IMP-4 is
-already in main via #245. Share capacity rules through `soldierCap`, retain
-existing Evolve/save formats, and validate each formation slot. Feed guardian
-priority only from successful player attacks on combat enemies, including
-arrows, with the same rule in all guardian modes; never farm animals or
-peaceful travellers. Defer genuinely optional war/Sky modules at explicit
-readiness boundaries, preserving synchronous terrain generation after load.
-Measure remaining frame costs before optimizing them; confirm render
-equivalence and run a full 30-minute save-crossing workload on the final code.
-
-**Outcome (checked and finished by Claude on 29 October; ChatGPT ran out of
-credits partway):** PR #251.
-- [x] IMP-2/3: #247's levels, plus formation spots that are never inside
-  blocks or over holes, and trained soldiers kept (not lost) when a level is
-  lost. Browser check: Barracks and Garrison Evolve/train/full at 10, 20, 40.
-- [x] IMP-5: Aurelion finishes the last enemy you struck, by blow or arrow,
-  in every order; never farm animals or peaceful people.
-- [x] Big armies drawn in bounded instanced batches; shader preparation kept
-  off the frame that first shows something.
-- [x] TECH-7: war, Sky and showcase code load only when needed, before any
-  world that needs them opens. Measured: the first download is about 34 KB
-  smaller (1,768 KB to 1,734 KB), a small gain. A part that fails to download
-  offers Reload (after saving), since a browser never re-fetches a failed one.
-- [x] Checks: full `npm test`, build, performance budgets, and the browser
-  checks (smoke, inventory, crash diagnostics, full-game rendering with
-  identical pixels, lazy world/production, local saves, improvements, jobs,
-  Storage Remote, crafting). Land and the floating island generate block for
-  block the same as main. The two-player battle browser check can't connect
-  in the cloud container (fails the same on main).
-- [ ] Not done: the 30-minute session profile and the remaining render/mesh
-  spikes (TECH-8, TECH-18); the owner's original Reload and phone checks.
-
-**Review focus:** queued training must not duplicate/drop soldiers across
-reloads; blocked parade ground must not spawn inside solids or over voids;
-enemy focus must never make civilians/animals enemies; deferred loading must
-never omit terrain/saved state or apply to a world that has been replaced;
-long-session resource trends and actual persistence must be verified rather
-than inferred from a short rendering test. Optional implementation details
-such as upgrade costs retain the existing PR defaults unless review exposes
-a gameplay defect. Independent read-only reviews are running for military,
-guardian and deferred-module boundaries; one final combined review follows.
-
-### TECH-8 / TECH-18 follow-up, 30 October
-
-Owner: "Claude finished your tasks, can you do the next one?" ChatGPT is
-continuing the explicitly unfinished sustained performance/recovery work on
-`codex/sustained-performance-recovery`, based on main `48e6379`. Claude's
-IMP/TECH-7 work stays integrated; PR #255's Work Hall UI is separate work.
-
-**Design:** verify real world-opening/recovery paths, then run the fixed-seed
-30-minute hardware settlement/war/travel/cave workload with confirmed saves
-and restore. Distinguish game-loop cadence from actual rendered frames: the
-previous short shader-warmup run recorded an 8,092 ms render gap despite
-continuing loop updates. Reproduce before changing shader scheduling; retain
-all materials, detail, light settings and existing shader diagnostics. Repair
-demonstrated game errors and add executable regressions. No engine migration,
-database changes, new dependencies or weakened performance budgets.
-
-- [x] Correct the profiler's asynchronous fixture reference and reject
-  misleading no-render evidence; capture actual frame gaps and state.
-- [x] Reproduce world opening/freezes and repair demonstrated causes with
-  failing-first checks, including any remaining lazy-Sky reference error.
-- [x] Verify local save/reopen/import, optional-feature failure recovery,
-  render equivalence and unchanged performance/resource budgets.
-- [x] Run the final 30-minute hardware session; record exact revision,
-  graphics/backend, real frames, saves/restore, stalls and resource trends.
-- [x] Independent review, relevant full checks/build/browser tests, commit,
-  push and PR #256. Integration requires the current required checks under
-  standing merge authorization. Original owner worlds/Reload and real iPhone
-  behavior stay explicitly unverified unless reproduced on those inputs/devices.
-
-**Verified outcome:** runtime/profiler revision `8d1d3a3` completed 1,800.016
-seconds on the RX 7900 GRE with 107,748 actual renderer calls, six committed
-autosaves, newer persisted payload restored and zero validation failures,
-page errors, game stops or context losses. All six phases drew frames. The
-maximum render gap was 717.6 ms, p95 loop interval at most 17 ms and p99 at
-most 18 ms. Chunks peaked at 1,147 and returned to 797; sampled geometry
-peaked at 252.96 MB and settled at 220.38 MB (not total VRAM). Local regression:
-7,699 checks / 315 files; CI regression: 7,718 checks / 315 files. Build,
-unchanged performance/resource budgets, identical-pixel rendering and actual
-save/reload/open browser checks passed. Final review found failed-save Reload
-and unfinished-gap measurement defects; both have failing-first repairs.
-The initial-only 500 ms warm-up deliberately preserves ordinary rendering for
-later variants: cold shader stalls still occur (712.1 ms maximum renderer call)
-and need separate measured work. No graphics or detail reduction was made.
 
 ## 6. Cline's queue
 
@@ -552,8 +453,8 @@ supersede that historical review; do not repeat its already completed work.
 | TECH-4 | **Text put on screen escaped by default.** About 70 places write HTML; the ones that show your text are escaped by hand. One helper that always escapes, so a future change can't slip. | Claude | M | done; integrated into main 21 October |
 | TECH-5 | **Limit how often a client can write to the database.** | Claude | S | bounded client queue implemented; server enforcement prepared in 0006, not activated |
 | TECH-6 | **Make land in the background** (a Web Worker): background terrain generation and a bounded main-thread fallback are implemented. Meshing, uploads and rendering still require profiling; the worker does not establish that all streaming stutter is solved. | Claude | L | done for worker generation; integrated into main 21 October; remaining stalls are TECH-18/TECH-8 |
-| TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude; ChatGPT, Claude | M | done, #251: map/story/war/Sky/showcase load when needed; the first download is only about 34 KB smaller (1,768 to 1,734 KB) |
-| TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Any agent; desktop measurements by ChatGPT in #241/#242/#256 | M | desktop follow-up passed in #256: 30 minutes, 56 buildings/55 villagers, six confirmed autosaves and newer persisted-payload restore; three earlier hot-path fixes #241 and presentation freeze repair #256. Remaining submission/meshing spikes and physical-iPhone profiling stay open |
+| TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude | M | map/story artwork load lazily; war/Sky module split remains |
+| TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Any agent; desktop measurements by ChatGPT in #241/#242 | M | partial: 30-minute baseline and three hot-path fixes #241; background local persistence #242 passes an 11-minute hardware run with two confirmed autosaves/restore. Repeat full 30 minutes on the new pipeline; remaining submission/meshing spikes and physical-iPhone profiling remain |
 | TECH-9 | **The phone memory overlay**: optional counter shown with `?debug`, for finding memory growth on a phone. | ChatGPT | S | done; integrated into main 21 October; phone profiling remains |
 | TECH-10 | **Split `src/Game.js`** (over 8,000 lines as of this audit; measure again before work) by system (war, vehicles, building, input, saving), one part per PR, alongside other work. | Claude | L | to do in separate subsystem PRs; new workers/jobs/peer helpers are outside Game.js |
 | TECH-11 | **Type checks on the save format and the block list**, to catch the kind of mismatch that once broke saved worlds' mode. | Claude | M | done; integrated into main 21 October |
@@ -563,7 +464,7 @@ supersede that historical review; do not repeat its already completed work.
 | TECH-15 | **Crash and frame-rate reports** from players' devices, before any public launch. | Claude | M | done; integrated into main 21 October |
 | TECH-16 | **Keep the database awake** once there are players (a paid compute that doesn't sleep), or the first save after a quiet spell waits seconds. | Owner | S | waiting |
 | TECH-17 | **Performance safeguards for future additions**: fixed-seed crest/slope/forest/cave/settlement budgets, 24-animal simulation, isolated browser GPU-resource/disposal checks, shared streaming allowance and a required PR performance workflow. #239 adds an actual 802-chunk forest rendering comparison/cost gate; existing budgets are unchanged. Commands and limits in `docs/performance.md`. | ChatGPT | M | implementation integrated (#234, included with #236; full-game gate #239); real-phone check pending |
-| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on a weak-GPU iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | Any agent; #239/#241/#242/#256 implemented by ChatGPT | M | partial: diagnostics/render reduction #239, streaming/minimap #241, background local saving #242, repeated presentation-freeze and recovery fixes plus passing 30-minute desktop evidence #256. Original owner worlds/Reload, cold-render spikes and physical-iPhone verification remain; no engine migration approved |
+| TECH-18 | GPU stability before new features: the owner reports the game's Reload screen and substantial lag on a weak-GPU iPhone and a Windows PC with a 16 GB dedicated GPU. Diagnose the actual failure, reduce demonstrated rendering waste and evaluate an engine/app move using comparable workloads. | Any agent; #239/#241/#242 implemented by ChatGPT | M | partial: diagnostics/render reduction #239; streaming/minimap fixes #241; measured normal-autosave stall/capacity fix #242. Original Reload, rendering spikes and physical-iPhone verification remain; no engine migration approved |
 
 ### TECH-18 implementation plan, 23 October
 

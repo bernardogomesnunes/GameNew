@@ -66,8 +66,6 @@ export class SettlerView {
   constructor(scene, role = 'settlers') {
     this.scene = scene;
     this.role = role;
-    this.visible = true;
-    this.overflow = [];
     const { height, width } = SETTLERS.build;
     // Legs, a body, a head with hair, and two arms (playtest, P3: "people
     // ... with arms and legs that swing as they walk").
@@ -125,19 +123,8 @@ export class SettlerView {
   }
 
   /** Redraws every settler where they now are. Called each frame. */
-  update(people, start = 0, end = people.length) {
-    const length = end - start;
-    const batches = Math.max(0, Math.ceil(length / MAX) - 1);
-    while (this.overflow.length > batches) this.overflow.pop().dispose();
-    for (let i = 0; i < batches; i++) {
-      if (!this.overflow[i]) {
-        this.overflow[i] = new SettlerView(this.scene, this.role);
-        this.overflow[i].setVisible(this.visible);
-      }
-      const from = start + (i + 1) * MAX;
-      this.overflow[i].update(people, from, Math.min(end, from + MAX));
-    }
-    const n = Math.min(length, MAX);
+  update(people) {
+    const n = Math.min(people.length, MAX);
     const now = performance.now() / 1000;
     for (const m of this.meshes) m.count = m === this.limbs ? n * 4 : m === this.parts ? n * SLOTS : n;
     this.crowds.begin();
@@ -145,7 +132,7 @@ export class SettlerView {
     const { legH, bodyH, headH, width } = this;
 
     for (let i = 0; i < n; i++) {
-      const p = people[start + i];
+      const p = people[i];
       // Face the way they are walking; standing still keeps the last heading.
       if (p.target) {
         const dx = p.target.x - p.x, dz = p.target.z - p.z;
@@ -409,19 +396,14 @@ export class SettlerView {
   }
 
   setVisible(on) {
-    this.visible = on;
     for (const m of this.meshes) m.visible = on;
     this.crowds.setVisible(on);
-    for (const batch of this.overflow) batch.setVisible(on);
   }
 
   dispose() {
-    for (const batch of this.overflow) batch.dispose();
-    this.overflow.length = 0;
     this.crowds.dispose();
     for (const m of this.meshes) {
       this.scene.remove(m);
-      m.dispose();
       m.geometry.dispose();
       m.material.dispose();
     }

@@ -49,7 +49,7 @@ A better tool is never slower. It lasts longer, hits harder, and does the wrong 
 
 ## Processing and work steps
 
-A Quarry now supplies **Stone only**. Use a Stone Mill for Cobblestone, Marble and Stone Brick, or tint Stone with Clay into Orange Stone. Fire Stone at a Forge for Dark Grey Stone or Dark Stone. Wash Stone in a placed Bleach Bucket for White Stone. Turquoise remains a natural deposit. Existing natural marble and coloured seams remain mineable too. Wood works the same way: wash 2 Wood in the Bleach Bucket for 2 White Log, or fire 5 Wood at a Forge for 4 Dark Log (one log burns as fuel).
+A Quarry now supplies **Stone only**. Use a Stone Mill for Cobblestone, Marble and Stone Brick, or tint Stone with Clay into Orange Stone. Fire Stone at a Forge for Dark Grey Stone or Dark Stone. Wash Stone in a placed Bleach Bucket for White Stone. Turquoise remains a natural deposit. Existing natural marble and coloured seams remain mineable too. Wood works the same way: wash 2 Wood in the Bleach Bucket for 2 White Wood, or fire 5 Wood at a Forge for 4 Dark Wood (one log burns as fuel).
 
 A Stone Mill costs 10 Stone and 4 Planks, so you can build one before you have processed cobble. Wash 3 Dirt into 1 Clay by water if you need clay for your first Forge.
 
@@ -113,12 +113,12 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Fence → 2 Fence | 1 Planks | — | 3 | — |
 | Gate → 1 Gate | 3 Planks | — | 3 | — |
 | Door → 1 Door | 4 Planks | — | 1 | — |
-| White Planks → 2 White Planks | 1 White Log | — | 1 | — |
+| White Planks → 2 White Planks | 1 White Wood | — | 1 | — |
 | White Fence → 2 White Fence | 1 White Planks | — | 3 | — |
 | White Gate → 1 White Gate | 3 White Planks | — | 3 | — |
 | White Door → 1 White Door | 4 White Planks | — | 1 | — |
 | White Trapdoor → 2 White Trapdoor | 3 White Planks | — | 1 | — |
-| Dark Planks → 2 Dark Planks | 1 Dark Log | — | 1 | — |
+| Dark Planks → 2 Dark Planks | 1 Dark Wood | — | 1 | — |
 | Dark Fence → 2 Dark Fence | 1 Dark Planks | — | 3 | — |
 | Dark Gate → 1 Dark Gate | 3 Dark Planks | — | 3 | — |
 | Dark Door → 1 Dark Door | 4 Dark Planks | — | 1 | — |
@@ -170,7 +170,7 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Vase → 1 Vase | 2 Clay | — | 3 | — |
 | Urn → 1 Urn | 2 Copper Ingot | — | 5 | — |
 | White Banner → 1 White Banner | 3 Wool, 1 Planks | — | 4 | — |
-| Black Banner → 1 Black Banner | 3 Wool, 1 Planks, 1 Dark Log | — | 4 | — |
+| Black Banner → 1 Black Banner | 3 Wool, 1 Planks, 1 Dark Wood | — | 4 | — |
 | Glass jar → 1 Glass Jar | 1 Glass | — | 4 | — |
 | Firefly Lantern → 1 Firefly Lantern | 1 Jar of Fireflies, 1 Planks | — | 4 | — |
 | Calçada → 4 Calçada | 2 Stone | — | 3 | — |
@@ -336,8 +336,8 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Recipe / result | Ingredients | Reusable tools | Age | Condition |
 | --- | --- | --- | --- | --- |
 | Iron Sword → 1 Iron Sword | 2 Wood, 3 Iron Ingot | Weapon Mold | 5 | — |
-| Dark Stone → 4 Dark Stone | 4 Stone, 1 Dark Log | — | 4 | — |
-| Dark Brick → 4 Dark Brick | 4 Brick, 1 Dark Log | — | 4 | — |
+| Dark Stone → 4 Dark Stone | 4 Stone, 1 Dark Wood | — | 4 | — |
+| Dark Brick → 4 Dark Brick | 4 Brick, 1 Dark Wood | — | 4 | — |
 | Gold Sword → 1 Gold Sword | 2 Wood, 3 Gold | Weapon Mold | 8 | — |
 | Sky Sword → 1 Sky Sword | 2 Wood, 3 Sky Marble, 1 Gold | Weapon Mold | 10 | — |
 | Dark Sword → 1 Dark Sword | 2 Wood, 3 Dark Stone, 1 Iron Ingot | Weapon Mold | 10 | — |
@@ -349,8 +349,8 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Recipe / result | Ingredients | Reusable tools | Age | Condition |
 | --- | --- | --- | --- | --- |
 | Planks (mill) → 3 Planks | 1 Wood | — | 3 | — |
-| White Planks (mill) → 3 White Planks | 1 White Log | — | 3 | — |
-| Dark Planks (mill) → 3 Dark Planks | 1 Dark Log | — | 3 | — |
+| White Planks (mill) → 3 White Planks | 1 White Wood | — | 3 | — |
+| Dark Planks (mill) → 3 Dark Planks | 1 Dark Wood | — | 3 | — |
 | Door (mill) → 1 Door | 3 Planks | — | 3 | — |
 | Trapdoor (mill) → 2 Trapdoor | 2 Planks | — | 3 | — |
 | White Door (mill) → 1 White Door | 3 White Planks | — | 3 | — |
@@ -359,8 +359,8 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Dark Trapdoor (mill) → 2 Dark Trapdoor | 2 Dark Planks | — | 3 | — |
 | Plank Stairs (mill) → 3 Plank Stairs | 2 Planks | — | 3 | — |
 | Stripped Oak Log → 1 Stripped Oak Log | 1 Wood | — | 3 | — |
-| Stripped White Log → 1 Stripped White Log | 1 White Log | — | 3 | — |
-| Stripped Dark Log → 1 Stripped Dark Log | 1 Dark Log | — | 3 | — |
+| Stripped White Log → 1 Stripped White Log | 1 White Wood | — | 3 | — |
+| Stripped Dark Log → 1 Stripped Dark Log | 1 Dark Wood | — | 3 | — |
 | Cabinet → 1 Cabinet | 4 Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
 | Wardrobe → 1 Wardrobe | 7 Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
 | Bedside Table → 1 Bedside Table | 3 Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |

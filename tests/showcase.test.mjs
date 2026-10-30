@@ -1,5 +1,3 @@
-import { ensureSkyTerrain } from '../src/core/optionalFeatures.js';
-await ensureSkyTerrain();
 import { readFileSync, existsSync } from 'node:fs';
 import {
   SHOWCASE_SEED, SHOWCASE_TIMES, SHOWCASE_SPOTS, SHOWCASE_SPOTS_BY_ID, SHOWCASE_BUILDINGS, SHOWCASE_FIGURES,
@@ -27,7 +25,7 @@ import { daylightAt } from '../src/render/DayCycle.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
-const game = read('../src/runtime/ShowcaseRuntime.js') + read('../src/Game.js');
+const game = read('../src/Game.js');
 const ui = read('../src/ui/UIManager.js');
 const mobsSrc = read('../src/world/Mobs.js');
 const wanderSrc = read('../src/world/Wanderers.js');
@@ -203,7 +201,7 @@ ok('and the plan says how to use it', /tools\/showcase-shots\.mjs/.test(plan));
   const lab = SHOWCASE_BUILDINGS.filter((b) => b.place === 'lab');
   ok('the lab has a cottage of its own and a stand of every block', lab.map((b) => b.id).sort().join() === 'lab_cottage,lab_materials');
   const named = standBlocks().map((id) => BLOCKS_BY_ID.get(id).name);
-  ok(`the stand holds the everyday blocks (${named.length} in all)`, ['Turf', 'Dirt', 'Wood', 'Planks', 'Stone', 'Leaves'].every((n) => named.includes(n)) && named.length > 60);
+  ok(`the stand holds the everyday blocks (${named.length} in all)`, ['Grass', 'Dirt', 'Wood', 'Planks', 'Stone', 'Leaves'].every((n) => named.includes(n)) && named.length > 60);
   ok('and the lab has close spots at eye height', ['lab-garden', 'lab-stand'].every((id) => SHOWCASE_SPOTS_BY_ID.get(id)?.group === 'lab'));
 }
 
