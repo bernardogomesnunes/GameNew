@@ -32,11 +32,11 @@ try{
     return url.hostname==='127.0.0.1'||['blob:','data:'].includes(url.protocol)?route.continue():route.abort();
   });
   await page.goto(server.resolvedUrls.local[0]);
-  await page.waitForFunction(()=>window.__game&&!window.__game.booting&&document.querySelector('#loading')?.classList.contains('ld-gone'),null,{timeout:120000});
+  await page.waitForFunction(()=>window.__game&&!window.__game.booting&&(!document.querySelector('#loading')||document.querySelector('#loading').classList.contains('ld-gone')),null,{timeout:120000});
   report.fixture=await page.evaluate(async()=>{
     const fixture=await import('/tools/performance/profile-world.js');
     window.__profileFixtureModule=fixture;
-    return window.__profileFixture=fixture.prepareProfileWorld(window.__game);
+    return window.__profileFixture=await fixture.prepareProfileWorld(window.__game);
   });
   report.backend=await page.evaluate(()=>window.__game.graphicsBackend);
   report.browserVersion=browser.version();
@@ -68,7 +68,7 @@ try{
     const g=window.__game;
     const state=window.__sessionProfile={histogram:new Uint32Array(2001),frames:0,maxFrameMs:0,
       warFrames:0,saves:0,saveAttempts:0,failedSaves:0,deepDraws:0,costs:{},losses:[],previousFrame:null,
-      renderedFrames:0,previousRender:null,maxRenderGapMs:0};
+      renderedFrames:0,renderedAtSample:0,previousRender:null,maxRenderGapMs:0,renderStartedAt:performance.now()};
     g.renderer.domElement.addEventListener('webglcontextlost',event=>state.losses.push({at:performance.now(),status:event.statusMessage}));
     const watchDeep=mesh=>{
       if(!mesh.userData.deep)return;
@@ -126,7 +126,9 @@ try{
       g.scene.traverse(object=>{for(const attribute of [...Object.values(object.geometry?.attributes??{}),object.geometry?.index]){
         const buffer=attribute?.array?.buffer;if(buffer&&!buffers.has(buffer)){buffers.add(buffer);geometryBytes+=buffer.byteLength;}
       }});
+      s.maxRenderGapMs=window.__profileFixtureModule.renderGapMs(s,performance.now());
       const sample={phase,playing:g.isPlaying,stop:g.crashedWith??null,chunks:g.world.chunks.size,
+        drawnFrames:s.renderedFrames-s.renderedAtSample,
         geometryBytes,calls:g.renderer.info.render.calls,triangles:g.renderer.info.render.triangles,
         ...g.renderer.info.memory,population:g.duilt.settlers.population,buildings:g.duilt.structures.list().length,
         warStage:g.duilt.war.stage,warParty:g.wanderers.warParty?.band.filter(p=>!p.dead&&!p.done).length??0,
@@ -138,7 +140,7 @@ try{
         heap:performance.memory?.usedJSHeapSize??null,costs:s.costs};
       const x=Math.floor(g.player.position.x),y=Math.floor(g.player.position.y),z=Math.floor(g.player.position.z);
       sample.headroom=g.world.hasChunk(x>>4,z>>4)&&[0,1,2].every(dy=>g.world.getBlock(x,y+dy,z)===0);
-      s.costs={};s.deepDraws=0;
+      s.costs={};s.deepDraws=0;s.renderedAtSample=s.renderedFrames;
       // Fixture maintenance keeps the observer alive; it does not disable any
       // update system, revive a dead player or hide a stopped/paused game.
       if(!g.duilt.health.dead)g.duilt.health.value=20;
@@ -153,6 +155,7 @@ try{
   const totals=await page.evaluate(async()=>{
     const s=window.__sessionProfile;
     await Promise.all(s.pendingSaves??[]);
+    s.maxRenderGapMs=window.__profileFixtureModule.renderGapMs(s,performance.now());
     return {frames:s.frames,maxFrameMs:s.maxFrameMs,warFrames:s.warFrames,saves:s.saves,
       saveAttempts:s.saveAttempts,failedSaves:s.failedSaves,
       histogram:Array.from(s.histogram),losses:s.losses,saveCompletionMs:s.saveCompletions??[],

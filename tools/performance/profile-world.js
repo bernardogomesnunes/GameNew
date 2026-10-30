@@ -2,7 +2,7 @@
 import { STARTER_DESIGNS } from '../../src/config/starterDesigns.js';
 import { WAR_AGE } from '../../src/config/ages.js';
 import { caveSite, deepCaveColumn } from '../../src/world/deepCaves.js';
-export { observeSave } from './profile-report.js';
+export { observeSave, renderGapMs } from './profile-report.js';
 
 export function undergroundView(world){
   for(const [rx,rz] of [[0,1],[1,1],[-1,1],[0,2]]){

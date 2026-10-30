@@ -25,6 +25,7 @@ jobs:
       - run: npm run test:performance:browser
       - run: node tests/full-game-rendering-browser.mjs
       - run: node tests/local-save-browser.mjs
+      - run: node tests/shader-warmup-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
