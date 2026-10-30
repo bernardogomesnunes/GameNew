@@ -32,7 +32,7 @@ try{
     return url.hostname==='127.0.0.1'||['blob:','data:'].includes(url.protocol)?route.continue():route.abort();
   });
   await page.goto(server.resolvedUrls.local[0]);
-  await page.waitForFunction(()=>window.__game&&!window.__game.booting&&document.querySelector('#loading')?.classList.contains('ld-gone'),null,{timeout:120000});
+  await page.waitForFunction(()=>window.__game&&!window.__game.booting&&(!document.querySelector('#loading')||document.querySelector('#loading').classList.contains('ld-gone')),null,{timeout:120000});
   report.fixture=await page.evaluate(async()=>{
     const fixture=await import('/tools/performance/profile-world.js');
     window.__profileFixtureModule=fixture;

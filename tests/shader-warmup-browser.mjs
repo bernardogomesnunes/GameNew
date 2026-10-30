@@ -13,7 +13,8 @@ server.middlewares.use((request, response, next) => {
 let browser;
 try {
   await server.listen();
-  browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined });
+  browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || undefined,
+    args: process.env.RENDER_HARDWARE ? [] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 640, height: 480 } });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
