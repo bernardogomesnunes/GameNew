@@ -8,7 +8,7 @@ import { UNITS_BY_ID, LEGACY_UNIT, SOLDIER_CAPS } from '../config/soldiers.js';
  *
  *   Soldiers  a barracks trains who you pay it to (config/soldiers.js —
  *             warriors, swordsmen, archers and catapult crews), one at a
- *             time while you play, up to their building's capacity. They stand at
+ *             time while you play, up to a soldier a bunk. They stand at
  *             their barracks, and when anything of the Stone Kingdom's — or
  *             a raiding bandit — comes within reach of it, they go for it:
  *             swords close in, archers shoot from where they are, a crew
@@ -125,10 +125,10 @@ export class Defenders {
 
   /**
    * Brings the posts in line with the buildings standing now: a barracks's
-   * soldiers trained as the days pass, two archers on each
+   * soldiers trained up to its bunks as the days pass, two archers on each
    * watchtower, and nobody left at a building that's gone or broken.
    *
-   * @param buildings  [{ id, type, region, valid, cap }] — your claimed ones
+   * @param buildings  [{ id, type, region, valid, beds }] — your claimed ones
    * @param days       the world's own count of days (DuiltGame.days)
    * @returns          who finished training just now: [{ unit, of, left }],
    *                   `left` being how many are still in line behind them
@@ -137,20 +137,9 @@ export class Defenders {
     const joined = [];
     // Ids as strings throughout: the training is saved as JSON, whose keys are.
     const standing = new Map(buildings.filter((b) => b.valid).map((b) => [String(b.id), { ...b, id: String(b.id) }]));
-    this.soldiers = this.soldiers.filter((s) => {
-      const b = standing.get(s.post.of);
-      // A lost level benches overflow; its paid roster stays intact, also
-      // across saves. Restoring the level lets those slots form up again.
-      return ['barracks', 'military'].includes(b?.type)
-        && s.slot >= 0 && s.slot < Math.min(MAX_SOLDIERS, b.cap ?? SOLDIER_CAPS[0]);
-    });
+    this.soldiers = this.soldiers.filter((s) => ['barracks', 'military'].includes(standing.get(s.post.of)?.type));
     this.archers = this.archers.filter((a) => standing.get(a.post.of)?.type === 'watchtower');
     for (const id of Object.keys(this.trained)) if (!['barracks', 'military'].includes(standing.get(id)?.type)) delete this.trained[id];
-    const occupied = new Set();
-    for (const s of this.people) {
-      occupied.add(`${Math.floor(s.post.x)},${Math.floor(s.post.z)}`);
-      occupied.add(`${Math.floor(s.x)},${Math.floor(s.z)}`);
-    }
 
     for (const b of standing.values()) {
       if (b.type === 'watchtower') {
@@ -168,19 +157,15 @@ export class Defenders {
         if (!t.queue.length) t.since = days;
         // Everyone on the roster stands at their place in front of it:
         // whoever isn't there yet comes out. `cap` is the building's level.
-        const cap = Math.min(MAX_SOLDIERS, b.cap ?? SOLDIER_CAPS[0]);
+        const bunks = Math.min(MAX_SOLDIERS, b.cap ?? SOLDIER_CAPS[0]);
+        const yard = this.parade(b.region);
         const here = this.soldiers.filter((s) => s.post.of === b.id);
-        let spots;
-        t.roster.slice(0, cap).forEach((unit, i) => {
-          if (here.some((s) => s.slot === i)) return;
-          spots ??= this.paradeSpots(b.region, occupied);
-          const spot = spots.shift();
-          // No clear ground yet: keep the trained slot and retry next sync.
-          if (!spot) return;
+        t.roster.slice(0, bunks).forEach((unit, i) => {
+          if (!yard || here.some((s) => s.slot === i)) return;
+          const spot = { x: yard.x + (i % 8) - 4, y: yard.y, z: yard.z - Math.floor(i / 8) };
           const s = this.person(UNITS_BY_ID.get(unit)?.kind ?? 'soldier', spot, b.id, unit);
           s.slot = i;
           this.soldiers.push(s);
-          occupied.add(`${spot.x},${spot.z}`);
         });
       }
     }
@@ -217,25 +202,25 @@ export class Defenders {
   }
 
   /**
-   * Distinct places in front of the building, nearest its middle first.
-   * Each column gets its own floor and headroom check. The bounded search
-   * stays within the old formation's six-block front strip and never reads
-   * unloaded columns: looking for room must not generate more terrain.
+   * Where a barracks's soldiers form up: open ground just outside it,
+   * nearest the middle of its front (-z) — out where they can march from,
+   * not shut in a yard behind a gate.
    */
-  paradeSpots(r, occupied) {
+  parade(r) {
     const cx = (r.minX + r.maxX) / 2;
-    const spots = [];
-    for (let z = r.minZ - 6; z < r.minZ; z++) {
+    let best = null;
+    for (let z = r.minZ - 3; z <= r.maxZ + 3; z++) {
       for (let x = r.minX - 3; x <= r.maxX + 3; x++) {
-        if (occupied.has(`${x},${z}`) || !this.world.inBounds(x, 1, z)) continue;
-        // groundAt refuses unloaded columns, water, leaves, tall obstacles,
-        // and floors without two blocks of headroom; it also handles slabs.
-        const y = groundAt(this.world, x + 0.5, z + 0.5, r.minY + 1, TALL);
-        if (y == null || y <= 0) continue;
-        spots.push({ x, y, z, d: Math.abs(x - cx) + Math.abs(z - (r.minZ - 2)) * 2 });
+        const inside = x >= r.minX && x <= r.maxX && z >= r.minZ && z <= r.maxZ;
+        if (inside) continue;
+        for (let y = r.minY - 1; y <= r.minY + 2; y++) {
+          if (!this.standable(x, y, z)) continue;
+          const d = Math.abs(x - cx) + Math.abs(z - (r.minZ - 2)) * 2;
+          if (!best || d < best.d) best = { x, y, z, d };
+        }
       }
     }
-    return spots.sort((a, b) => a.d - b.d);
+    return best;
   }
 
   standable(x, y, z) {

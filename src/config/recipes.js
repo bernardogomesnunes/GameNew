@@ -1674,8 +1674,8 @@ RECIPES.push(
   // Wood takes the same two treatments as rock: a wash in the bleach bucket to
   // bring out pale grain, a firing in the forge to char it dark. One unit in,
   // one unit out; the forge also burns one as fuel.
-  { id: 'wood_white', name: 'Bleach White Log', station: 'bleach_bucket', age: 3, inputs: { wood: 2 }, output: { id: 'white_wood', count: 2 }, batch: 8, steps: ['Lay the logs in the bath', 'Wash and dry'], blurb: 'Wash logs in wood-ash bleach to bring out a pale grain.' },
-  { id: 'wood_dark', name: 'Char Dark Log', station: 'forge', age: 3, inputs: { wood: 5 }, output: { id: 'dark_wood', count: 4 }, batch: 8, steps: ['Load the logs', 'Char and cool'], blurb: 'A slow firing chars logs dark. One log in five is burnt as fuel.' },
+  { id: 'wood_white', name: 'Bleach White Wood', station: 'bleach_bucket', age: 3, inputs: { wood: 2 }, output: { id: 'white_wood', count: 2 }, batch: 8, steps: ['Lay the logs in the bath', 'Wash and dry'], blurb: 'Wash logs in wood-ash bleach to bring out a pale grain.' },
+  { id: 'wood_dark', name: 'Char Dark Wood', station: 'forge', age: 3, inputs: { wood: 5 }, output: { id: 'dark_wood', count: 4 }, batch: 8, steps: ['Load the logs', 'Char and cool'], blurb: 'A slow firing chars logs dark. One log in five is burnt as fuel.' },
   { id: 'stone_orange', name: 'Tint Orange Stone', station: 'stone_mill', age: 3, inputs: { stone: 4, clay: 1 }, output: { id: 'stone_orange', count: 4 }, batch: 8, steps: ['Grind the clay tint', 'Dress the stone'], blurb: 'Dress rock with warm clay pigment.' },
   { id: 'wash_clay', name: 'Wash Clay', station: 'hand', age: 1, needs: 'water', inputs: { dirt: 3 }, output: { id: 'clay', count: 1 }, batch: 8, steps: ['Sift the earth', 'Wash out the clay'], blurb: 'Wash earth by the river to separate the clay. A source for your first forge.' },
   { id: 'weapon_mold', name: 'Weapon Mold', station: 'hand', age: 3, inputs: { clay: 3, stone: 1 }, output: { id: 'weapon_mold', count: 1 }, blurb: 'A reusable clay mold for casting weapon blanks.' },

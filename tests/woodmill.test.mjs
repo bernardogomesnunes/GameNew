@@ -47,7 +47,7 @@ ok('it is modelled: a bench, a blade, a log', boxesFor('wood_mill').length >= 10
 }
 // CL-10 (asked for directly: the mills' search had their names written in it):
 // the bench opens with nothing typed; standing by the mill, its own way shows.
-ok('Place on it opens the bench, on what is made there', /stationOf\(aimed\.block\)\) return void this\.ui\.openBench\('', stationOf\(aimed\.block\)\);/.test(game)
+ok('Place on it opens the bench, on what is made there', /stationOf\(aimed\.block\)\) return void this\.ui\.openBench\(\);/.test(game)
   && /if \(stationOf\(id\)\) return 'Use';/.test(game));
 
 // --- wood goes further ---------------------------------------------------------------------

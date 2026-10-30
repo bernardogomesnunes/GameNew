@@ -123,7 +123,7 @@ ok('and hidden entirely in a build with no cloud to sign in to',
 
 ok('opening a world fetches it from the account', /await this\.restoreFromCloud\(id\)/.test(game));
 ok('and an imported file becomes a world on the account too',
-  /if \(await this\.loadFromData\(\{ \.\.\.data, worldId: newWorldId\(\) \}\) === false\) return false;\r?\n\s*this\.worldIsLocal = !this\.cloud\?\.signedIn;\r?\n\s*this\.saveNow\(\);/.test(game));
+  /this\.loadFromData\(\{ \.\.\.data, worldId: newWorldId\(\) \}\);\r?\n\s*this\.saveNow\(\);/.test(game));
 // Previous-world persistence ordering is exercised through openWorld in
 // local-save-confirmation.test.mjs rather than a source-length expression.
 ok('deleting takes the account copy', /this\.cloud\?\.delete\(id\)/.test(game));

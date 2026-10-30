@@ -1023,11 +1023,11 @@ export const STRUCTURES = [
   // From Age 5, so they can stand before the war comes at Age 6. Asked for
   // directly: "use this opportunity to make them detailed" — so each one
   // asks for the things that make it what it is (battlements on a wall, a
-  // gate in a gatehouse, arms in a barracks), not just a heap of
+  // gate in a gatehouse, bunks and arms in a barracks), not just a heap of
   // stone. What they do is in Game/Defenders: claimed walls, gatehouses and
   // towers take three blows a block to break; a gatehouse shuts its gate
   // when a round is coming; a watchtower posts two archers on its top; a
-  // barracks trains who you pay it to, up to its level's capacity (config/soldiers.js).
+  // barracks trains who you pay it to, a soldier a bunk (config/soldiers.js).
   {
     id: 'wall',
     name: 'Stone Wall',
@@ -1156,7 +1156,7 @@ export const STRUCTURES = [
     name: 'Barracks',
     icon: '⚔️',
     age: 8,
-    blurb: 'A hall with arms on the walls and a yard to train in. Train warriors, swordsmen, archers and catapult crews here for food and gear — they go out to meet the Stone Kingdom\'s army. It holds 10 soldiers; evolve it for 20, then 40. Beds are only furniture.',
+    blurb: 'A hall of bunks with arms on the walls and a yard to train in. Train warriors, swordsmen, archers and catapult crews here, a soldier a bunk, for food and gear — they go out to meet the Stone Kingdom\'s army.',
     minSize: 7,
     maxSize: 18,
     cost: { iron_ingot: 4, planks: 10 },

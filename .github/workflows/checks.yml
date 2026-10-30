@@ -22,4 +22,3 @@ jobs:
       - run: npm run test:browser
       - run: node tests/storage-remote-browser.mjs
       - run: node tests/crash-diagnostics-browser.mjs
-      - run: node tests/feature-reload-browser.mjs

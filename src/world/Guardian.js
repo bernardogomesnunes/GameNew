@@ -43,6 +43,7 @@ const COUNTER = 2;
 /** Further than this from you and it catches up at once rather than running across the map. */
 const LEASH = 40;
 /** IMP-5: how long it keeps going for what you last struck, and how fast it closes in. */
+const FOCUS_SECONDS = 12;
 const FOCUS_HASTE = 1.3;
 const TALL = 2;
 
@@ -66,16 +67,18 @@ export class Guardian {
     this.hurt = 0;
     /** The enemy you last struck (set by `focus`), so it goes for that one first. */
     this.focused = null;
+    this.focusClock = 0;
   }
 
   /**
    * You struck this enemy. The guardian goes for it before anything nearer,
-   * until it is beaten or out of reach, in every order. Only enemies it is
-   * given in `tick` count, so a farm animal
+   * for a few seconds, in every order but "stay" (which still only guards what
+   * comes close). Only enemies it is given in `tick` count, so a farm animal
    * or a peaceful traveller is never its target.
    */
   focus(enemy) {
     this.focused = enemy;
+    this.focusClock = FOCUS_SECONDS;
   }
 
   get name() {
@@ -118,17 +121,17 @@ export class Guardian {
     const range = this.mode === 'attack' ? HUNT_RANGE : GUARD_RANGE;
     let target = null, best = range;
     for (const e of enemies) {
-      if (e.dead) continue;
       const d = Math.hypot(e.x - centre.x, e.z - centre.z);
       if (d < best) { best = d; target = e; }
     }
     // What you struck comes first. It lapses when it dies, leaves the list of
-    // enemies or runs off past the leash.
+    // enemies, runs off past the leash, or the clock runs out.
+    this.focusClock = Math.max(0, this.focusClock - dt);
     const f = this.focused;
-    const chased = f && !f.dead && enemies.includes(f)
+    const chased = f && this.focusClock > 0 && !f.dead && enemies.includes(f)
       && Math.hypot(f.x - this.x, f.z - this.z) <= LEASH;
     if (!chased) this.focused = null;
-    else target = f;
+    else if (this.mode !== 'stay') target = f;
     const hasty = target && target === this.focused;
     this.target = target;
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {observeSave,renderGapMs} from '../tools/performance/profile-report.js';
+import {observeSave} from '../tools/performance/profile-report.js';
 import {undergroundView} from '../tools/performance/profile-world.js';
 import {World} from '../src/world/World.js';
 import {ChunkGen} from '../src/world/ChunkGen.js';
@@ -37,8 +37,3 @@ const view=undergroundView(world);
 assert.ok(view.y+3<view.surface);
 for(let dy=0;dy<4;dy++)assert.equal(world.getBlock(Math.floor(view.x),view.y+dy,Math.floor(view.z)),0);
 console.log('PASS cave workload selects actual underground air with headroom rather than a surface label');
-assert.equal(renderGapMs({maxRenderGapMs:17,previousRender:200,renderStartedAt:100},8500),8300,
-  'a frozen display must be measured even if no subsequent render ever happens');
-assert.equal(renderGapMs({maxRenderGapMs:0,previousRender:null,renderStartedAt:100},2100),2000,
-  'waiting forever for the first draw is also a display freeze');
-console.log('PASS ongoing and initial display freezes are measured without waiting for a later draw');

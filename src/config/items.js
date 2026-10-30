@@ -64,10 +64,10 @@ export const ITEMS = [
   // added alongside the terrain overhaul. Same shape as Wood/Leaves above:
   // gathered, not crafted, which is why they carry no recipe (see
   // shapes.test.mjs's NATURAL set).
-  { id: 'white_wood', name: 'White Log', kind: 'raw', stackTo: STACK_BULK, color: 0xe8e0d0, glyph: 'log', block: 41, madeBy: 'Cut from birch trees' },
+  { id: 'white_wood', name: 'White Wood', kind: 'raw', stackTo: STACK_BULK, color: 0xe8e0d0, glyph: 'log', block: 41, madeBy: 'Cut from birch trees' },
   { id: 'white_leaves', name: 'White Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0xd7e3ab, glyph: 'leaf', block: 42, madeBy: 'Stripped from birch trees' },
   { id: 'pink_leaves', name: 'Pink Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0xf2b6cf, glyph: 'leaf', block: 517, madeBy: 'Gathered from pink-blossomed birch trees' },
-  { id: 'dark_wood', name: 'Dark Log', kind: 'raw', stackTo: STACK_BULK, color: 0x6b4a3a, glyph: 'log', block: 43, madeBy: 'Cut from the dark forest' },
+  { id: 'dark_wood', name: 'Dark Wood', kind: 'raw', stackTo: STACK_BULK, color: 0x6b4a3a, glyph: 'log', block: 43, madeBy: 'Cut from the dark forest' },
   { id: 'dark_leaves', name: 'Dark Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x4a7a52, glyph: 'leaf', block: 44, madeBy: 'Stripped from the dark forest' },
   { id: 'lava', name: 'Lava', kind: 'raw', stackTo: STACK_GOODS, color: 0xe8672c, glyph: 'water', block: 45, madeBy: 'Scooped from a cavern' },
   { id: 'dark_moss', name: 'Dark Moss', kind: 'raw', stackTo: STACK_BULK, color: 0x4a6045, glyph: 'moss', block: 46, madeBy: 'Lifted from the dark forest floor' },

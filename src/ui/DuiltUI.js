@@ -345,7 +345,6 @@ export class DuiltUI {
           <input id="buildings-search" class="panel-search" type="search" placeholder="Search — a farm, stone, settlers…" autocomplete="off" enterkeyhint="search">
           <div id="buildings-list"></div>`,
         'panel-bench': `
-          <div id="bench-station" class="export-note" hidden></div>
           <input id="bench-search" class="panel-search" type="search" placeholder="Search — an axe, planks, stone…" autocomplete="off" enterkeyhint="search">
           <div id="bench-list"></div>`,
         'panel-building': `
@@ -945,24 +944,18 @@ export class DuiltUI {
   renderHealth() {
     const d = this.duilt;
     const box = this.q('#vital-health');
-    if (!d || !box) { this.healthRender = null; return; }
+    if (!d || !box) return;
     box.hidden = !!d.sandbox;
-    if (box.hidden) { this.healthRender = null; return; }
+    if (box.hidden) return;
     const v = d.health.value;
-    const armour = d.armour();
-    // Inventory and hunger changes also call this renderer. Keep the hearts
-    // in place unless their values, world, or actual HUD element changed.
-    const previous = this.healthRender;
-    if (previous?.world === d && previous.box === box && previous.value === v
-      && previous.armour === armour && previous.sandbox === box.hidden) return;
     const heart = (fill) => `<span class="heart ${fill}"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.4-4.5-9.4-9C1.1 8.2 3.1 4.5 6.7 4.5c2.2 0 3.7 1.2 5.3 3.1 1.6-1.9 3.1-3.1 5.3-3.1 3.6 0 5.6 3.7 4.1 7-2 4.5-9.4 9-9.4 9Z"/></svg>`
       + `<span class="heart-red"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.4-4.5-9.4-9C1.1 8.2 3.1 4.5 6.7 4.5c2.2 0 3.7 1.2 5.3 3.1 1.6-1.9 3.1-3.1 5.3-3.1 3.6 0 5.6 3.7 4.1 7-2 4.5-9.4 9-9.4 9Z"/></svg></span></span>`;
+    const armour = d.armour();
     box.innerHTML = Array.from({ length: 10 }, (_, i) => heart(v >= 2 * (i + 1) ? 'full' : v === 2 * i + 1 ? 'half' : 'empty')).join('')
       // What you're wearing, beside the hearts: a shield and its points.
       + (armour ? `<span class="armour-badge"><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6Z"/></svg><b>${armour}</b></span>` : '');
     box.classList.toggle('low', v <= 6);
     box.title = `Health: ${v / 2} of 10 hearts${armour ? ` · ${armour} armour` : ''}`;
-    this.healthRender = { world: d, box, value: v, armour, sandbox: box.hidden };
   }
 
   /**
@@ -2157,18 +2150,7 @@ export class DuiltUI {
       search.addEventListener('input', () => this.renderBench());
     }
     const query = search?.value ?? '';
-    // Used at a placed station (a bleach bucket, a forge, a planing bench...):
-    // only what is made there, with a way back to everything.
-    const only = this.benchStation ?? null;
-    const note = this.q('#bench-station');
-    if (note) {
-      note.hidden = !only;
-      if (only) {
-        note.innerHTML = `${escapeHtml(stationName(only))}: what is made here. <button class="secondary" id="bench-all" type="button">Show every recipe</button>`;
-        this.q('#bench-all').addEventListener('click', () => { this.benchStation = null; this.renderBench(); });
-      }
-    }
-    const recipes = oneWayEach(only ? all.filter((r) => r.station === only) : all).filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
+    const recipes = oneWayEach(all).filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
     if (!recipes.length) {
       this.q('#bench-list').innerHTML = `<div class="sub" style="margin:8px 0">Nothing you can make matches “${escapeHtml(query.trim())}”.</div>`;
       return;
@@ -2219,7 +2201,7 @@ export class DuiltUI {
       return `
         <div class="recipe-tile ${r.ok ? '' : 'blocked'}">
           <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(name)}" data-tip-info="${escapeAttr(r.blurb ?? '')}">${icon}${count}</span>
-          <strong class="recipe-name">${escapeHtml(name)}</strong>
+          <strong class="recipe-name">${r.name.replace(/ \(mill\)$/, '')}</strong>
           ${r.station !== 'hand' ? `<span class="recipe-station${r.atStation ? ' at' : ''}">${stationName(r.station)}</span>` : ''}
           <span class="recipe-cost">${inputs}</span>
           ${takes}

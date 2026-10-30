@@ -21,7 +21,7 @@ import { Sound } from '../src/audio/Sound.js';
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
-const game = ['WarRuntime','SkyRuntime'].map(name=>readFileSync(new URL(`../src/runtime/${name}.js`,import.meta.url),'utf8')).join('\n') + readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const take = (key, i = 0) => render(key, seeded(seedOf(`${key}#${i}`)));
 
@@ -58,10 +58,10 @@ ok('doors, gates and trapdoors each open and shut their own way',
 
 const by = (name) => BLOCKS.find((b) => b.name === name);
 ok('blocks sound like what they are: grass rustles, sand hisses, gold clangs, glass rings',
-  soundOf(by('Turf')) === 'grass' && soundOf(by('Moss')) === 'grass' && soundOf(by('Dirt')) === 'dirt' && soundOf(by('Sand')) === 'sand'
+  soundOf(by('Grass')) === 'grass' && soundOf(by('Moss')) === 'grass' && soundOf(by('Dirt')) === 'dirt' && soundOf(by('Sand')) === 'sand'
   && soundOf(by('Gravel')) === 'gravel' && soundOf(by('Snow')) === 'snow' && soundOf(by('Stone')) === 'stone' && soundOf(by('Iron Ore')) === 'stone'
   && soundOf(by('Planks')) === 'wood' && soundOf(by('Leaves')) === 'plant' && soundOf(by('Glass')) === 'glass' && soundOf(by('Framed Window')) === 'glass'
-  && soundOf(by('Gold')) === 'metal' && soundOf(by('Chain')) === 'metal' && soundOf(by('Red Rug')) === 'cloth'
+  && soundOf(by('Gold Block')) === 'metal' && soundOf(by('Chain')) === 'metal' && soundOf(by('Red Rug')) === 'cloth'
   && soundOf(by('Water')) === 'water' && soundOf(by('Lava')) === 'lava' && soundOf(null) === 'dirt');
 ok('the old test still holds: stone, planks and glass', soundOf(BLOCKS_BY_ID.get(3)) === 'stone' && soundOf(BLOCKS_BY_ID.get(7)) === 'wood' && soundOf(BLOCKS_BY_ID.get(10)) === 'glass');
 ok('every block has a sound that exists', BLOCKS.every((b) => MATERIAL_NAMES.includes(soundOf(b))));

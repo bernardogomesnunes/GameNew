@@ -39,7 +39,7 @@ import { ageOf, ageIntro, FINAL_AGE, WAR_AGE, OLD_AGE, AGES_VERSION } from '../c
 import { pickTale, TALES_BY_ID } from '../config/tales.js';
 import { War } from './War.js';
 import { SkyWar } from './SkyWar.js';
-import { skyAt, ISLAND_R } from '../world/skyLocation.js';
+import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
 import { Defenders, MAX_SOLDIERS } from '../world/Defenders.js';
 import { UNITS_BY_ID, unitCost, payForUnit, soldierCap, SOLDIER_CAPS } from '../config/soldiers.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';

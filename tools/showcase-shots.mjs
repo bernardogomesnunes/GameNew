@@ -105,10 +105,10 @@ try {
   await page.waitForFunction(() => !!window.__game, null, { timeout: 60_000 });
   // The models (render/Models.js) load after the game starts; wait for them.
   await ev(() => window.__game.modelsLoaded, null, 120_000);
-  const opened = await ev(async ({ labels, hud, hand }) => {
+  const opened = await ev(({ labels, hud, hand }) => {
     const g = window.__game;
     g.ui.hideBlocker();
-    const ok = await g.openShowcase();
+    const ok = g.openShowcase();
     g.ui.closeAllPanels();
     g.player.view = 'first';
     g.showcase.labels = labels;

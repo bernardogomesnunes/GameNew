@@ -5,8 +5,7 @@ import { CHUNK_SIZE } from './World.js';
 import { stampLandmarks, landmarksFor } from './landmarks.js';
 import { roadAt, roadBlock } from './roads.js';
 import { stampKingdom } from './kingdom.js';
-import { stampSkyTerrain as stampSky } from '../core/optionalFeatures.js';
-import { hash01 } from './hash.js';
+import { stampSky } from './skyKingdom.js';
 import { inFuture, stampFuture, FUTURE_GROUND } from './future.js';
 import { stampRivals, rivalSites } from './rivals.js';
 import { deepCaveColumn, stampDeepCaves, stampCaveRuins } from './deepCaves.js';
@@ -127,7 +126,12 @@ const MAX_TREE_CHANCE = 0.2;
  * Integer hashing rather than a seeded PRNG: the point is that the answer
  * depends only on where you ask, never on what was asked before.
  */
-export { hash01 } from './hash.js';
+export function hash01(x, z, salt) {
+  let h = Math.imul(x | 0, 0x27d4eb2d) ^ Math.imul(z | 0, 0x165667b1) ^ Math.imul(salt | 0, 0x9e3779b1);
+  h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
 
 export class ChunkGen {
   /**

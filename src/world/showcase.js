@@ -6,8 +6,7 @@ import { isFluid } from '../config/blocks.js';
 import { landmarkDesigns, landmarksFor, PLACE_NAMES } from './landmarks.js';
 import { labDesigns } from './labDesigns.js';
 import { kingdomFor, CITY_HALF } from './kingdom.js';
-import { FLOOR, ISLAND_R } from './skyLocation.js';
-import { skyPlan as skyFor } from '../core/optionalFeatures.js';
+import { skyFor, FLOOR, ISLAND_R } from './skyKingdom.js';
 
 /**
  * The showcase: a Creative world laid out for looking at

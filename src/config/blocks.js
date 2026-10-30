@@ -36,7 +36,7 @@ const LAVA_FLOW_BASE = 115;
 export const LAVA = 45;
 
 export const BLOCKS = [
-  { id: 1, name: 'Turf', glyph: 'grass', color: 0x7fc254, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
+  { id: 1, name: 'Grass', glyph: 'grass', color: 0x7fc254, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
   { id: 2, name: 'Dirt', glyph: 'dirt', color: 0x9c6e48, soil: true, material: 'dirt', cost: { wood: 1 }, unlock: null },
   // Lighter, nearer cobblestone (asked for directly: "Stone needs to be
   // lighter like cobble") — it was a dull mid grey.
@@ -63,7 +63,7 @@ export const BLOCKS = [
   // from goals (asked for directly: "avoid soft blocking the game"), and
   // Marble and Obsidian waited on achievements that no longer exist.
   { id: 12, name: 'Snow', glyph: 'snow', color: 0xf4f8fb, cost: { wood: 1 }, unlock: null },
-  { id: 13, name: 'Gold', glyph: 'gold', color: 0xf9d040, material: 'stone', cost: { gold: 1 }, unlock: null },
+  { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xf9d040, material: 'stone', cost: { gold: 1 }, unlock: null },
   { id: 14, name: 'Obsidian', glyph: 'obsidian', color: 0x2b163f, material: 'stone', cost: { stone: 4 }, unlock: null },
   { id: 15, name: 'Red Glass', glyph: 'pane', color: 0xe86a62, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: null },
   { id: 16, name: 'Blue Glass', glyph: 'pane', color: 0x6a92e6, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: null },
@@ -75,7 +75,7 @@ export const BLOCKS = [
   { id: 20, name: 'Sapling', glyph: 'sprout', color: 0x6fbf4a, shape: 'sapling', material: 'plant', cost: { wood: 1 }, unlock: null },
   // Dark, turned earth in furrows — requested directly: "Farm should be
   // dirt." It used to be a pale tan you could take for sand.
-  { id: 21, name: 'Turned Soil', glyph: 'farmland', color: 0x6a4529, material: 'dirt', cost: { wood: 1 }, unlock: null },
+  { id: 21, name: 'Farmland', glyph: 'farmland', color: 0x6a4529, material: 'dirt', cost: { wood: 1 }, unlock: null },
   // Ground the biomes are made of. Six kinds of country used to share four
   // top blocks between them, so a meadow, a forest, the highlands and a
   // wetland were all the same green: you could walk from one to another and
@@ -165,9 +165,9 @@ export const BLOCKS = [
   // kind of wood: a pale trunk and canopy for a birch-like grove, and a
   // deep, dark pairing for a denser one. Same `cost`/`unlock` shape as the
   // original Wood/Leaves so they behave identically once cut and carried.
-  { id: 41, name: 'White Log', glyph: 'log', color: 0xe4dfd4, material: 'wood', cost: { wood: 2 }, unlock: null },
+  { id: 41, name: 'White Wood', glyph: 'log', color: 0xe4dfd4, material: 'wood', cost: { wood: 2 }, unlock: null },
   { id: 42, name: 'White Leaves', glyph: 'leaf', color: 0xc6dc80, material: 'plant', cost: { wood: 1 }, unlock: null },
-  { id: 43, name: 'Dark Log', glyph: 'log', color: 0x553826, material: 'wood', cost: { wood: 2 }, unlock: null },
+  { id: 43, name: 'Dark Wood', glyph: 'log', color: 0x553826, material: 'wood', cost: { wood: 2 }, unlock: null },
   { id: 44, name: 'Dark Leaves', glyph: 'leaf', color: 0x2f6a3a, material: 'plant', cost: { wood: 1 }, unlock: null },
 
   // Found in the deep caverns under the tall mountains, never placed from a

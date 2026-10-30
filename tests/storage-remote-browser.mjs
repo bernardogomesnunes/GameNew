@@ -27,9 +27,9 @@ try {
   await page.waitForFunction(() => window.__game && !window.__game.booting
     && (!document.querySelector('#loading') || document.querySelector('#loading').classList.contains('ld-gone')),
   null, { timeout: 120_000 });
-  await page.evaluate(async () => {
+  await page.evaluate(() => {
     const g = window.__game;
-    await g.newWorld({ mode: 'creative', name: 'Storage Remote browser check', seed: 71823, silent: true });
+    g.newWorld({ mode: 'creative', name: 'Storage Remote browser check', seed: 71823, silent: true });
     g.ui.refreshForMode();
     g.ui.hideBlocker();
     g.duilt.inventory.slots[0] = { id: 'storage_remote', count: 1, wear: 0 };

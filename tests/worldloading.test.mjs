@@ -51,7 +51,7 @@ const game = src('Game.js'), ui = src('ui/UIManager.js'), loading = src('ui/load
 
 ok('creating a world puts it up', /onNewWorld: \(mode, name, options\) => this\.withLoading\('Building the world…'/.test(game));
 ok('  entered first, inside the tap, then made', /onCreate: \(mode, name, options\) => \{ this\.enterWorld\(\); this\.cb\.onNewWorld\(mode, name, options\); \}/.test(ui));
-ok('opening one too', /onOpenWorld: async \(id\) => \{[^}]*this\.withLoading\('Opening your world…'/.test(game));
+ok('opening one too', /onOpenWorld: \(id\) => this\.withLoading\('Opening your world…'/.test(game));
 ok('and going back to your worlds', /onGoHome: \(\) => \(this\.title \? true : this\.withLoading\('Back to your worlds…'/.test(game));
 ok('drawn before the work starts, gone after the land round you is drawn', /loadingShow\(label\);\s*await nextPaint\(\);/.test(game)
   && /followDrawing\(\(\) => \(this\.title \? this\.titleProgress\(\) : this\.drawnAround\(this\.player\?\.position\)\)/.test(game) && /finally \{\s*this\.booting = false;\s*loadingDone\(\);/.test(game));
