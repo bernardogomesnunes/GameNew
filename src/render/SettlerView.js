@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { SETTLERS } from '../config/settlers.js';
 import { SKINS, HAIRS } from '../config/avatar.js';
-import { outfitOf } from '../config/outfits.js';
+import { outfitOf, JOB_OUTFITS } from '../config/outfits.js';
 import { modelKit, Crowds } from './Models.js';
 
 /**
@@ -44,6 +44,20 @@ const SETTLER_LOOKS = 6, CITIZEN_LOOKS = 4;
  * archer is the Stone Kingdom's, and settlers and citizens come in several
  * looks, one per person.
  */
+/** Where a model's torso, head and right arm sit, in their bones' frames, for work clothes. */
+function fitOf(kit) {
+  const box = (name) => {
+    const i = kit.bones.findIndex((b) => b.name === name);
+    const g = kit.bones[i]?.geometry;
+    if (i < 0 || !g) return null;
+    g.computeBoundingBox();
+    const { min, max } = g.boundingBox;
+    return { i, minY: min.y, maxY: max.y, h: max.y - min.y, w: max.x - min.x, d: max.z - min.z, cx: (min.x + max.x) / 2, cz: (min.z + max.z) / 2 };
+  };
+  const body = box('body'), head = box('head'), arm = box('arm_r');
+  return body && head && arm ? { body, head, arm } : null;
+}
+
 export function personModel(p, role, who = personHash(p)) {
   const k = p.kind;
   if (!k || k === 'settler') return who % SETTLER_LOOKS ? `settler_${who % SETTLER_LOOKS}` : 'settler';
@@ -193,10 +207,12 @@ export class SettlerView {
         pose.head = [0, idle ? Math.sin(now * 0.7 + (personHash(p) % 1000) * 2.399) * 0.16 : 0, 0];
         pose.arm_r[0] = -(raised ?? -swing * 0.8);
         pose.arm_l[0] = -(raised ?? swing * 0.8);
-        this.crowds.get(kit).add(base, pose, this.modelTint(p));
+        const crowd = this.crowds.get(kit);
+        crowd.add(base, pose, this.modelTint(p));
         for (const mesh of [this.bodies, this.heads, this.hair]) mesh.setMatrixAt(i, NOTHING);
         for (let k = 0; k < 4; k++) this.limbs.setMatrixAt(i * 4 + k, NOTHING);
         for (let k = 0; k < SLOTS; k++) this.parts.setMatrixAt(i * SLOTS + k, NOTHING);
+        if (p.job && JOB_OUTFITS[p.job]) this.workClothes(i, crowd, kit, JOB_OUTFITS[p.job]);
         continue;
       }
       place(this.heads, idleHead, legH + bodyH + headH / 2, 0);
@@ -248,6 +264,65 @@ export class SettlerView {
   }
 
   /** The same flashes as coatColour, over a model's own colours: null when there are none. */
+  /**
+   * A villager at work, on their own model (config/outfits.js JOB_OUTFITS):
+   * a vest over the torso in the job's colour, the job's hat, and its tool in
+   * the right hand. Placed on the bones the crowd has just posed, so they
+   * move with the body, head and arm.
+   */
+  workClothes(i, crowd, kit, o) {
+    const fit = kit._fit ??= fitOf(kit);
+    if (!fit) return;
+    const parts = this.parts, at = i * SLOTS, m = this._m, t = this._t;
+    const put = (slot, bone, x, y, z, sx, sy, sz, hex) => {
+      m.copy(crowd.mats[bone]).multiply(t.makeTranslation(x, y, z)).multiply(t.makeScale(sx, sy, sz));
+      parts.setMatrixAt(at + slot, m);
+      parts.setColorAt(at + slot, this._colour.setHex(hex));
+    };
+    const b = fit.body, h = fit.head, a = fit.arm;
+    // The vest: a shell just outside the torso, from the belt to the chest.
+    put(CAPE, b.i, b.cx, b.minY + b.h * 0.55, b.cz, b.w * 1.06, b.h * 0.62, b.d * 1.12, o.vest);
+    // The hat.
+    const top = h.maxY, hw = h.w, hd = h.d, hat = o.hatColour ?? 0x5a4030;
+    if (o.hat === 'straw') {
+      put(HAT, h.i, h.cx, top + 0.06, h.cz, hw * 0.92, 0.12, hd * 0.92, hat);
+      put(HAT_EXTRA, h.i, h.cx, top + 0.01, h.cz, hw * 1.7, 0.03, hd * 1.7, hat);
+    } else if (o.hat === 'helm') {
+      put(HAT, h.i, h.cx, top + 0.05, h.cz, hw * 1.08, 0.14, hd * 1.08, hat);
+      put(HAT_EXTRA, h.i, h.cx, top - 0.01, h.cz - hd * 0.5, hw * 1.08, 0.03, hd * 0.3, hat);
+    } else if (o.hat === 'hood') {
+      put(HAT, h.i, h.cx, top - h.h * 0.35, h.cz + hd * 0.08, hw * 1.12, h.h * 0.85, hd * 1.02, hat);
+    } else {
+      put(HAT, h.i, h.cx, top + 0.04, h.cz, hw * 1.04, 0.1, hd * 1.04, hat);
+      put(HAT_EXTRA, h.i, h.cx, top + 0.0, h.cz - hd * 0.6, hw * 0.9, 0.025, hd * 0.4, hat);
+    }
+    // The tool, held in the right hand: a handle down from the hand and its head.
+    const hand = a.minY + 0.06;
+    const WOODEN = 0x7a5232, IRON = 0x8a8f96;
+    const tool = {
+      axe: [0.55, IRON, [0.05, 0.16, 0.18]],
+      hoe: [0.9, IRON, [0.05, 0.05, 0.2]],
+      pick: [0.6, IRON, [0.05, 0.06, 0.34]],
+      hammer: [0.45, IRON, [0.12, 0.1, 0.18]],
+      tongs: [0.5, 0x3a3a3a, [0.04, 0.12, 0.06]],
+      staff: [1.1, WOODEN, [0.09, 0.09, 0.09]],
+      sack: [0, 0xc8b48a, [0.26, 0.3, 0.2]],
+      ledger: [0, 0x6b2f2a, [0.06, 0.28, 0.2]],
+      mug: [0, 0xb08a5a, [0.12, 0.14, 0.12]],
+    }[o.tool];
+    if (!tool) return;
+    const [len, hex, [sx, sy, sz]] = tool;
+    if (len > 0) {
+      // Gripped in the middle, upright in the hand, its working end on top.
+      // A model faces -z: the tool is held out in front of the hand.
+      const front = a.cz - a.d / 2 - 0.05;
+      put(GEAR, a.i, a.cx, hand, front, 0.08, len, 0.08, WOODEN);
+      put(GEAR_2, a.i, a.cx, hand + len / 2 - sy * 0.75, front - sz * 0.75 + 0.06, sx * 1.5, sy * 1.5, sz * 1.5, hex);
+    } else {
+      put(GEAR, a.i, a.cx, hand - sy * 0.5, a.cz - a.d / 2 - sz * 0.7, sx * 1.5, sy * 1.5, sz * 1.5, hex);
+    }
+  }
+
   modelTint(p) {
     if (!(p.hurt > 0 || (p.windup > 0 && p.winding) || p.frozen > 0 || p.burning > 0 || p.stunned > 0)) return null;
     const c = this._tint.set(1, 1, 1);

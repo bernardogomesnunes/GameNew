@@ -74,3 +74,35 @@ export function outfitOf(person) {
   if (person?.unit === 'shield_guard') return { hat: 'helm', visor: true, gear: 'spear', shield: true };
   return OUTFITS[person?.kind] ?? GROUP_OUTFITS[person?.kind] ?? null;
 }
+
+/**
+ * Work clothes (owner, 31 October: villagers "remain as they are and have a
+ * change of style and avatar when they get a job", "the job should match").
+ * A villager keeps their own model and face; at work they wear a vest in the
+ * job's colour, the job's hat and its tool in the right hand (see
+ * SettlerView.workClothes). Back to their own look when the job ends.
+ *
+ *   name   what the job is called
+ *   vest   the work vest's colour
+ *   hat    'cap', 'straw' (a wide brim), 'helm' (a hard hat) or 'hood'
+ *   hatColour
+ *   tool   'axe', 'hoe', 'pick', 'hammer', 'sack', 'tongs', 'staff', 'ledger' or 'mug'
+ */
+export const JOB_OUTFITS = {
+  woodcutter: { name: 'Woodcutter', vest: 0x4f6b3a, hat: 'cap', hatColour: 0x3a4a2a, tool: 'axe' },
+  farmer: { name: 'Farmer', vest: 0x8a6a3a, hat: 'straw', hatColour: 0xd9b860, tool: 'hoe' },
+  miner: { name: 'Miner', vest: 0x5a5a62, hat: 'helm', hatColour: 0xc9a227, tool: 'pick' },
+  kiln_worker: { name: 'Kiln worker', vest: 0x8a3f2a, hat: 'cap', hatColour: 0x5a2a1a, tool: 'tongs' },
+  trader: { name: 'Market trader', vest: 0x2f5a8a, hat: 'cap', hatColour: 0x1f3a5a, tool: 'sack' },
+  clerk: { name: 'Clerk', vest: 0x2a2a3a, hat: 'cap', hatColour: 0x1a1a24, tool: 'ledger' },
+  innkeeper: { name: 'Innkeeper', vest: 0xece6d8, hat: 'cap', hatColour: 0x7a5a3a, tool: 'mug' },
+  acolyte: { name: 'Acolyte', vest: 0xf2ead2, hat: 'hood', hatColour: 0xd9c27a, tool: 'staff' },
+  builder: { name: 'Builder', vest: 0xd9822b, hat: 'helm', hatColour: 0xe8c04f, tool: 'hammer' },
+  hauler: { name: 'Carrier', vest: 0x7a5a3a, hat: 'cap', hatColour: 0x5a4030, tool: 'sack' },
+};
+
+/** The job a building gives the villager working it (config/structures.js ids). */
+export const JOB_FOR_BUILDING = {
+  forest: 'woodcutter', farm: 'farmer', village: 'farmer', quarry: 'miner', mine: 'miner',
+  kiln: 'kiln_worker', market: 'trader', townhall: 'clerk', tavern: 'innkeeper', temple: 'acolyte',
+};

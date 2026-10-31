@@ -35,6 +35,7 @@ function setup() {
     return s;
   };
   for (let i = 0; i < 3; i++) add('house', { minX: 10 + i * 8, maxX: 14 + i * 8, minY: 11, maxY: 14, minZ: 10, maxZ: 14 });
+  add('work_hall', { minX: 50, maxX: 54, minY: 11, maxY: 14, minZ: 50, maxZ: 54 });
   const quarry = add('quarry', { minX: 20, maxX: 25, minY: 11, maxY: 13, minZ: 20, maxZ: 25 });
   let r = 0;
   const rand = () => { r = (r * 1103515245 + 12345) % 2147483648; return r / 2147483648; };
