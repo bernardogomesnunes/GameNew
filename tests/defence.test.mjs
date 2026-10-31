@@ -79,7 +79,7 @@ for (const [block, shape] of [[WEAPON_RACK, 'weapon_rack'], [TRAINING_DUMMY, 'tr
   const item = ITEMS_BY_ID.get(ITEM_FOR_BLOCK.get(block));
   ok(`${item?.name}: modelled (${PROP_SHAPES[shape]?.length} pieces), turned four ways, made at the bench, drawn in the bag`,
     PROP_SHAPES[shape]?.length >= 12 && BLOCKS_BY_ID.get(block + 3)?.stateOf === block
-    && RECIPES.some((r) => r.output.id === item.id && r.station === 'hand') && (itemIcon(item) ?? '').includes('<svg'));
+    && RECIPES.some((r) => r.output.id === item.id && ['hand', 'workbench'].includes(r.station)) && (itemIcon(item) ?? '').includes('<svg'));
 }
 
 // --- the soldiers and the archers ----------------------------------------------------------------
@@ -125,7 +125,8 @@ for (const [block, shape] of [[WEAPON_RACK, 'weapon_rack'], [TRAINING_DUMMY, 'tr
   ok(`the tower's archers shoot what comes in range (${shots.length} arrows home in 10 s)`, shots.length >= 4 && shots.every((s) => s.by.kind === 'archer' && s.e === far));
   // It's gone: back to their posts.
   for (let i = 0; i < 400; i++) d.tick(0.05, [], {});
-  ok('nothing left to fight, they go back to their posts', d.soldiers.every((s) => Math.hypot(s.x - s.post.x, s.z - s.post.z) < 0.6));
+  // IMP-17: at rest they stroll within 4 blocks of their post, not stand on it.
+  ok('nothing left to fight, they go back to their posts', d.soldiers.every((s) => Math.hypot(s.x - s.post.x, s.z - s.post.z) < 5.2));
 
   // A soldier falls: gone, and another costs the same again.
   const s0 = d.soldiers[0];

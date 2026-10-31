@@ -1,7 +1,9 @@
 import { SETTLERS, settlerName, settlerColour } from '../config/settlers.js';
 import { STRUCTURES_BY_ID } from '../config/structures.js';
 import { ITEMS } from '../config/items.js';
-import {settlerFloor,settlerRoute} from './settlerNavigation.js';
+import {settlerFloor,settlerRoute,doorWise} from './settlerNavigation.js';
+import {doorPart} from '../config/blocks.js';
+import {isLoaded} from '../world/Mobs.js';
 
 /** Everything edible, least nourishing first — what settlers work down through. */
 const FOODS = ITEMS.filter((i) => i.kind === 'food').sort((a, b) => (a.feeds ?? 0) - (b.feeds ?? 0));
@@ -36,6 +38,8 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
  * walking allowance: traversal probes from the previous feet, one step up.
  */
 const FLOOR_SCAN = 4;
+/** Seconds a door a villager opened stays open after they have gone through. */
+const DOOR_HOLD = 1.5;
 
 export class Settlers {
   /**
@@ -169,6 +173,7 @@ export class Settlers {
     }
 
     for (const p of this.people) this.walk(p, dtSeconds);
+    this.closeDoors(dtSeconds);
   }
 
   /** Somebody moves in, takes the emptiest house, and looks for work. */
@@ -362,6 +367,28 @@ export class Settlers {
     return y;
   }
 
+  /** The nearest cell within 3 blocks where they fit at about their own height, or null. */
+  floorBeside(p) {
+    const bx=Math.floor(p.x),bz=Math.floor(p.z);
+    for(let r=1;r<=3;r++) for(let dx=-r;dx<=r;dx++) for(let dz=-r;dz<=r;dz++) {
+      if(Math.max(Math.abs(dx),Math.abs(dz))!==r)continue;
+      const x=bx+dx+.5,z=bz+dz+.5,y=settlerFloor(this.paths,x,z,p.y);
+      if(y!=null&&Math.abs(y-p.y)<=1)return {x,y,z};
+    }
+    return null;
+  }
+
+  /** Where someone saved at (x, y, z) stands now: their own floor if it is still there. */
+  loadedFloor(p) {
+    if (Number.isFinite(p.y) && p.y > 0) {
+      // Not loaded yet (no chunk): keep the saved height; walk() settles them.
+      if (!isLoaded(this.world, p.x, p.z)) return p.y;
+      const floor = settlerFloor(this.paths, p.x, p.z, p.y);
+      if (floor != null) return floor;
+    }
+    return this.groundAt(p.x, p.z);
+  }
+
   placeOf(id) {
     const s = this.structures.list().find((v) => v.id === id);
     return s ? centreOf(s.region) : null;
@@ -475,7 +502,11 @@ export class Settlers {
       // Construction may bury somebody who was resting. Recover them onto
       // that new floor, while never using this scan to climb during travel.
       const buried=p.wait>0 && this.world.isSolid(Math.floor(p.x),Math.floor(p.y),Math.floor(p.z));
-      if(below<p.y || !supported || buried)p.y=below;
+      // Buried by a wall going up round them: out to the nearest floor beside
+      // it at their own height, not up onto whatever is on top (a roof).
+      const beside=buried?this.floorBeside(p):null;
+      if(beside){p.x=beside.x;p.z=beside.z;p.y=beside.y;}
+      else if(below<p.y || !supported || buried)p.y=below;
     }
 
     if (p.wait > 0) {
@@ -509,14 +540,56 @@ export class Settlers {
         p.wait=lo+this.rand()*(hi-lo);p.target=null;p._route=null;break;
       }
       const step=Math.min(.2,remaining,d),nx=p.x+dx/d*step,nz=p.z+dz/d*step;
-      const ny=settlerFloor(this.world,nx,nz,p.y);
+      const ny=settlerFloor(this.paths,nx,nz,p.y);
       if(ny==null) {
         if(planned){p.target=null;p._route=null;p.wait=2;p.atWork=false;break;}
-        p._route=settlerRoute(this.world,p,p.target);planned=true;
+        p._route=settlerRoute(this.paths,p,p.target);planned=true;
         if(!p._route?.length){p.target=null;p.wait=2;p.atWork=false;break;}
         continue;
       }
       p.x=nx;p.z=nz;p.y=ny;remaining-=step;
+      this.passDoors(p);
+    }
+  }
+
+  /** The world with shut doors as ways through: villagers open them (doorWise). */
+  get paths() {
+    return doorWise(this.world);
+  }
+
+  /**
+   * A villager stepping into a shut door's cell opens it (`doors.open`, set
+   * by Game), and it is shut again once nobody has been in it for a moment
+   * (closeDoors). Without `doors` (the tests, a world with no Game) they
+   * walk through as if it had opened.
+   */
+  passDoors(p) {
+    const x=Math.floor(p.x),z=Math.floor(p.z);
+    for(const y of [Math.floor(p.y),Math.floor(p.y)+1]) {
+      const part=doorPart(this.world.getBlock(x,y,z));
+      if(!part)continue;
+      const key=`${x},${y-(part.top?1:0)},${z}`;
+      this.openedDoors??=new Map();
+      const held=this.openedDoors.get(key);
+      if(held){held.left=DOOR_HOLD;return;}
+      if(part.open)return;   // opened by somebody else: theirs to shut
+      if(this.doors?.open(x,y,z)===false)return;
+      this.openedDoors.set(key,{x,y,z,left:DOOR_HOLD});
+      return;
+    }
+  }
+
+  /** Shuts the doors villagers opened, once nobody has stood in them for DOOR_HOLD seconds. */
+  closeDoors(dt) {
+    if(!this.openedDoors?.size)return;
+    for(const [key,d] of this.openedDoors) {
+      const inside=this.people.some(p=>Math.floor(p.x)===d.x&&Math.floor(p.z)===d.z&&Math.abs(Math.floor(p.y)-d.y)<=1);
+      if(inside){d.left=DOOR_HOLD;continue;}
+      d.left-=dt;
+      if(d.left>0)continue;
+      // Someone (you) standing in it: it stays open for now.
+      if(this.doors?.close(d.x,d.y,d.z)===false){d.left=DOOR_HOLD;continue;}
+      this.openedDoors.delete(key);
     }
   }
 
@@ -558,8 +631,11 @@ export class Settlers {
     // The saved height is where the ground was when the tab shut; anything
     // built under them since would leave them standing in it until their next
     // step, which can be several seconds of looking like nobody is home.
+    // IMP-16, roofs: groundAt reads the column's top, which under eaves or
+    // indoors is the roof. The saved floor is kept when it still holds them
+    // (settlerFloor, from the saved height); only otherwise the column's top.
     this.people = data.people.map((p) => ({
-      ...p, y: this.groundAt(p.x, p.z), target: null, wait: 1 + this.rand() * 3, atWork: false,
+      ...p, y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false,
     }));
     this.nextId = data.nextId ?? this.people.length;
     // Houses and workplaces may have been taken down while we were away.

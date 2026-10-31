@@ -33,6 +33,7 @@ import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SyncState } from './storage/WorldSync.js';
 import { LocalWorlds } from './storage/LocalWorlds.js';
 import { restoreWorldSnapshot } from './storage/WorldSnapshot.js';
+import { SELF_BLOCK_SECONDS } from './duilt/VillagerJobs.js';
 import { putBackup, getBackup, dropBackup } from './storage/BackupStore.js';
 import { claimRegion, blocksIn, claimHint } from './tools/ClaimArea.js';
 
@@ -2942,7 +2943,7 @@ export class Game {
     }
     if (aimed && aimed.block === STORAGE_CONTROLLER && this.selectedBlockId !== STORAGE_INTERFACE) return void this.ui.openStores();
     // At a wood mill (#32), the bench, showing what's made there.
-    if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block));
+    if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block), aimed);
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
     // At a war tent, Place makes camp there; at the dark god's altar, the oath.
@@ -3982,6 +3983,8 @@ export class Game {
 
   configureVillagerJobs() {
     const d=this.duilt;
+    // IMP-16: villagers open the doors on their way and shut them behind.
+    d.settlers.doors={open:(x,y,z)=>this.villagerDoor(x,y,z,true),close:(x,y,z)=>this.villagerDoor(x,y,z,false)};
     d.jobs.canPlace=c=>this.world===d.world && d.territory.contains(c.x,c.z) && !d.structures.blocking([c]) && (c.next===AIR || !this.blockOverlapsPlayerAABB(c));
     d.jobs.placeBlock=c=>this.applyChanges([c],{chargeResources:false,gather:false});
     d.jobs.onBuildComplete=job=>{
@@ -4016,6 +4019,19 @@ export class Game {
       const region = {minX:b.x,maxX:b.x+e.x,minY:b.y,maxY:b.y+e.y,minZ:b.z,maxZ:b.z+e.z};
       const result = this.duilt.jobs.enqueueBuild({...plan,name:design.name,type:typeId,designId:design.id,region});
       this.ui.toast({kind:result.ok?'challenge':'xp',title:result.ok?`${design.name} queued for builders`:'Cannot queue this building',body:result.ok?'Assign builders at the Work Hall. Reserved materials stay with this order.':result.reason});
+      if (result.ok) this.editedAt=Date.now();
+      return;
+    }
+    // IMP-20: placed by you in a Duilt world, it goes up block by block on
+    // its own, 1.5 times as slow as with villagers, and is claimed when it
+    // is done (configureVillagerJobs' onBuildComplete). Creative stays
+    // instant, and so does a mine, whose stair is dug as it is placed.
+    if (!this.duilt.sandbox && typeId !== 'mine') {
+      const e = design.extent;
+      const region = {minX:b.x,maxX:b.x+e.x,minY:b.y,maxY:b.y+e.y,minZ:b.z,maxZ:b.z+e.z};
+      const result = this.duilt.jobs.enqueueBuild({...plan,name:design.name,type:typeId,designId:design.id,region},undefined,{self:true});
+      const minutes = result.ok ? Math.max(1, Math.round(result.job.changes.length * SELF_BLOCK_SECONDS / 60)) : 0;
+      this.ui.toast({kind:result.ok?'challenge':'xp',title:result.ok?`${design.name} is going up`:'Cannot place that',body:result.ok?`About ${minutes} min. Builders at a Work Hall are faster.`:result.reason});
       if (result.ok) this.editedAt=Date.now();
       return;
     }
@@ -6569,6 +6585,28 @@ export class Game {
     }
     this.remeshDirty();
     this.editedAt = Date.now();
+  }
+
+  /**
+   * A villager swinging a door (Settlers.passDoors): both halves, and the
+   * one paired beside it, as toggleGate does for you. Quiet, and it never
+   * shuts on you: false when it can't, so they try again in a moment.
+   */
+  villagerDoor(x, y, z, open) {
+    if (!this.world?.inBounds(x, y, z)) return false;
+    const block = this.world.getBlock(x, y, z), door = doorPart(block);
+    if (!door) return false;
+    if (door.open === open) return true;
+    const at = { x, y, z, block };
+    const cells = [...this.doorCells(at), ...this.doorPartnerCells(at, door)];
+    if (!open && cells.some((c) => this.blockOverlapsPlayerAABB(c))) return false;
+    for (const c of cells) {
+      const part = doorPart(c.block);
+      this.world.setBlock(c.x, c.y, c.z, doorBlock({ ...part, open }));
+    }
+    this.remeshDirty();
+    this.editedAt = Date.now();
+    return true;
   }
 
   /**

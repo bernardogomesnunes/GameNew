@@ -39,7 +39,7 @@ ok('sky armour is white steel and gold; stone, blackened iron',
   ok('which wears out, one at a time', items.every((i) => i.durability > 0 && i.stackTo === 1));
   ok('and isn\'t a tool, so it goes in the chest with the rest when you die', items.every((i) => !isTool(i.id)));
   ok('each made at the bench, from things that exist',
-    ARMOUR_PIECES.every((p) => RECIPES.some((r) => r.output.id === p.id && r.station === 'hand' && Object.keys(r.inputs).every((k) => ITEMS_BY_ID.has(k)))));
+    ARMOUR_PIECES.every((p) => RECIPES.some((r) => r.output.id === p.id && ['hand', 'workbench'].includes(r.station) && Object.keys(r.inputs).every((k) => ITEMS_BY_ID.has(k)))));
   ok('leather from hides at Age 1; the metal sets from the foundry\'s iron', RECIPES.find((r) => r.id === 'armour_leather_body').inputs.hide
     && ['sky', 'stone'].every((s) => RECIPES.find((r) => r.id === `armour_${s}_body`).inputs.iron_ingot && RECIPES.find((r) => r.id === `armour_${s}_body`).age === 5));
   ok('modelled in the bag — a helm, a cuirass, greaves — in each set\'s colours',

@@ -13,6 +13,7 @@ import { tierStatus, validateStructure, inspect } from '../structures/validate.j
 import { Hunger } from '../survival/Hunger.js';
 import { Health } from '../survival/Health.js';
 import { Skills } from '../progression/Skills.js';
+import { StationWork } from './StationWork.js';
 import { Crafting } from './Crafting.js';
 import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
@@ -204,6 +205,8 @@ export class DuiltGame {
     // What the university is researching now, if anything: { id, name,
     // started, days } — `started` on the world's day count (this.days).
     this.studying = null;
+    // IMP-15: the spots at placed stations and the foundry, working on their own.
+    this.stationWork = new StationWork({ bag: () => this.inventory });
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
@@ -1435,6 +1438,10 @@ export class DuiltGame {
     // interval only decides how promptly you're told, not how much you get.
     this.settlers.tick(dtSeconds);
     this.jobs.tick(dtSeconds);
+    this.stationWork.tick(dtSeconds);
+    // Every couple of seconds: a spot whose station was broken gives its items back.
+    this.sincePrune = (this.sincePrune ?? 0) + dtSeconds;
+    if (this.sincePrune > 2) { this.sincePrune = 0; this.stationWork.prune((key, station) => this.spotStands(key, station)); }
 
     const now = Date.now();
     // Running again after being put away, without having been told: the
@@ -1466,6 +1473,7 @@ export class DuiltGame {
   resumeClock(now = Date.now()) {
     if (this.awaySince == null) return;
     this.structures.skipAway(now - this.awaySince, { now });
+    this.jobs.owe(now - this.awaySince);
     this.awaySince = null;
     this.lastCollect = now;
   }
@@ -2062,6 +2070,24 @@ export class DuiltGame {
 
   // ---- persistence ----
 
+  /** The spot key for a placed station block, or a building. */
+  static spotKey(at) {
+    return at.structureId != null ? `s:${at.structureId}` : `${at.x},${at.y},${at.z}`;
+  }
+
+  /** Whether the station a spot belongs to still stands. */
+  spotStands(key, station) {
+    if (key.startsWith('s:')) {
+      const s = this.structures.list().find((v) => String(v.id) === key.slice(2));
+      return !!s?.valid && (STRUCTURES_BY_ID.get(s.type)?.station === station || (station === 'forge' && STRUCTURES_BY_ID.get(s.type)?.station === 'foundry'));
+    }
+    const [x, y, z] = key.split(',').map(Number);
+    if (![x, y, z].every(Number.isFinite)) return false;
+    // Not loaded: it may well stand; it is checked again once it is.
+    if (this.world.endless && !this.world.hasChunk(x >> 4, z >> 4)) return true;
+    return stationOf(this.world.getBlock(x, y, z)) === station;
+  }
+
   toJSON() {
     return {
       inventory: this.inventory.toJSON(),
@@ -2103,6 +2129,7 @@ export class DuiltGame {
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
       jobs: this.jobs.toJSON(),
+      stationWork: this.stationWork.toJSON(),
       herd: herdToJSON(this.herd),
       machines: this.machines.map((m) => ({
         ...(m.kind ? { kind: m.kind } : {}),
@@ -2194,6 +2221,7 @@ export class DuiltGame {
     this.skills.loadJSON(data.skills);
     this.settlers.loadJSON(data.settlers);
     this.jobs.loadJSON(data.jobs);
+    this.stationWork.loadJSON(data.stationWork);
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
@@ -2230,7 +2258,11 @@ export class DuiltGame {
     // The time it was closed isn't paid for (asked for directly: "game closed
     // no production"): only what came due while it was open and wasn't
     // collected before it was saved.
-    if (Number.isFinite(data.savedAt)) this.structures.skipAway(Date.now() - data.savedAt);
+    if (Number.isFinite(data.savedAt)) {
+      this.structures.skipAway(Date.now() - data.savedAt);
+      // Villager builds are the exception: they go on while the game is closed.
+      this.jobs.owe(Date.now() - data.savedAt);
+    }
     this.lastCollect = Date.now();
     const gained = this.structures.collect({
       now: Date.now(),

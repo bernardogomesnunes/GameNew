@@ -133,21 +133,39 @@ export class SettlerView {
 
     for (let i = 0; i < n; i++) {
       const p = people[i];
-      // Face the way they are walking; standing still keeps the last heading.
-      if (p.target) {
+      // Face the way they are walking, turning there over a few frames
+      // (IMP-16: "natural movements"); standing still keeps the heading.
+      // With no target, whoever moves them (an archer aiming) owns the heading.
+      if (!p.target) p._heading = null;
+      else {
         const dx = p.target.x - p.x, dz = p.target.z - p.z;
-        if (dx || dz) p.facing = Math.atan2(dx, dz);
+        if (dx || dz) p._heading = Math.atan2(dx, dz);
+      }
+      if (p._heading != null) {
+        if (p.facing == null) p.facing = p._heading;
+        const turn = Math.atan2(Math.sin(p._heading - p.facing), Math.cos(p._heading - p.facing));
+        p.facing += Math.abs(turn) < 0.02 ? turn : turn * 0.25;
       }
       // How far they've walked, for the swing of their arms and legs.
       const moved = p._lx == null ? 0 : Math.hypot(p.x - p._lx, p.z - p._lz);
       p._lx = p.x; p._lz = p.z;
+      const walking = moved > 0.002;
       p._walk = (p._walk ?? 0) + Math.min(moved, 0.5);
-      p._stride = Math.max(0, Math.min(1, (p._stride ?? 0) + (moved > 0.002 ? 0.15 : -0.1)));
-      const swing = Math.sin(p._walk * 5) * 0.6 * p._stride;
+      if (walking) p._stride = Math.min(1, (p._stride ?? 0) + 0.15);
+      else if ((p._stride ?? 0) > 0) {
+        // Stopping: they finish the step they are in, so both legs come
+        // together straight (IMP-16: "they need to stop with both legs
+        // straight"), instead of freezing mid-stride while it fades.
+        const phase = p._walk * 5, next = Math.ceil(phase / Math.PI) * Math.PI;
+        const left = next - phase;
+        if (left < 0.08) { p._walk = next / 5; p._stride = 0; }
+        else p._walk += Math.min(left, 0.35) / 5;
+      }
+      const swing = Math.sin(p._walk * 5) * 0.6 * (p._stride ?? 0);
       // A villager at either end of their route is resting, not frozen: keep
       // their legs settling straight and let them glance around occasionally.
       const idle = !p.target && !(p.windup > 0 && p.winding) && !(p.strike > 0);
-      const idleHead = idle ? Math.sin(now * 1.1 + (p.id ?? i) * 2.399) * width * 0.07 : 0;
+      const idleHead = idle ? Math.sin(now * 1.1 + (personHash(p) % 1000) * 2.399) * width * 0.07 : 0;
 
       this._e.set(0, p.facing ?? 0, 0);
       this._q.setFromEuler(this._e);
@@ -172,7 +190,7 @@ export class SettlerView {
         const pose = this._pose;
         pose.leg_r[0] = -swing;
         pose.leg_l[0] = swing;
-        pose.head = [0, idle ? Math.sin(now * 0.7 + (p.id ?? i) * 2.399) * 0.16 : 0, 0];
+        pose.head = [0, idle ? Math.sin(now * 0.7 + (personHash(p) % 1000) * 2.399) * 0.16 : 0, 0];
         pose.arm_r[0] = -(raised ?? -swing * 0.8);
         pose.arm_l[0] = -(raised ?? swing * 0.8);
         this.crowds.get(kit).add(base, pose, this.modelTint(p));

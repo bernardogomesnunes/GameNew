@@ -38,7 +38,7 @@ try {
     const p = game.player.position;
     const x = Math.floor(p.x), y = Math.floor(p.y), z = Math.floor(p.z);
     window.craftCheck.origin = { x, y, z };
-    for (const [dx, id] of [[1,380], [2,525], [3,524], [-1,341]]) game.world.setBlock(x+dx,y,z,id);
+    for (const [dx, id] of [[1,380], [2,525], [3,524], [-1,341], [-2,527], [-3,529]]) game.world.setBlock(x+dx,y,z,id);
     game.duilt.structures.structures.push({ id: 98765, type: 'workshop', valid: true, tier: 0,
       region: { minX:x, maxX:x, minY:y, maxY:y, minZ:z, maxZ:z } });
   });
@@ -170,7 +170,9 @@ try {
       bag.slots.fill(null);
       for (const [part,n] of Object.entries(r.inputs)) bag.add(part,n*batches);
       for (const tool of r.tools ?? []) bag.add(tool,1);
-      game.ui.openBench(r.name);
+      // A station's recipes are on its own panel (IMP-13/14), and the menu
+      // bench keeps Ages 1 and 2 (IMP-19).
+      game.ui.openBench(r.name, r.station === 'hand' ? null : r.station);
     }, {id,batches});
   }
 } finally {

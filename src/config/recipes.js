@@ -1663,12 +1663,12 @@ for (const id of STONE_MILLED) {
 // the mill alternatives, so a second recipe cannot bypass the work tools.
 // IMP-10 step 3: the mallet is no longer a bag tool (the Joinery Bench is
 // placed); the item stays so old bags keep it. The plane stays for bows.
-const CARPENTRY_TOOLS = ['carpentry_saw', 'carpentry_chisel', 'carpentry_plane'];
+const CARPENTRY_TOOLS = ['carpentry_saw', 'carpentry_chisel'];
 RECIPES.push(
   { id: 'forge', name: 'Forge', station: 'hand', age: 3, inputs: { stone: 12, clay: 4 }, output: { id: 'forge', count: 1 }, blurb: 'Place a forge for darkening rock and shaping weapons over a fire.' },
   // IMP-6, phase 1: the plane is placed, and gives more planks. A log is two
   // planks by hand; at the bench it is three, from the second age on.
-  { id: 'planing_bench', name: 'Planing Bench', station: 'hand', age: 2, inputs: { planks: 6, stone: 2 }, output: { id: 'planing_bench', count: 1 }, blurb: 'A bench with a plane set in it. Place it, stand by it and logs give three planks, not two.' },
+  { id: 'planing_bench', name: 'Planing Bench', station: 'hand', age: 1, inputs: { planks: 6, stone: 2 }, output: { id: 'planing_bench', count: 1 }, blurb: 'A bench with a plane set in it. Place it, stand by it and logs give three planks, not two.' },
   { id: 'bench_planks', name: 'Planks (planing bench)', station: 'planing_bench', age: 2, inputs: { wood: 1 }, output: { id: 'planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log at the planing bench, not two.' },
   { id: 'joinery_bench', name: 'Joinery Bench', station: 'hand', age: 2, inputs: { planks: 6, wood: 2, stone: 2 }, output: { id: 'joinery_bench', count: 1 }, blurb: 'A bench with a mallet and pegs. Place it and stand by it: fences, gates and chests take fewer planks.' },
   { id: 'bleach_bucket', name: 'Bleach Bucket', station: 'hand', age: 3, inputs: { bucket_water: 1, wood: 2 }, output: { id: 'bleach_bucket', count: 1 }, blurb: 'Burn wood for ash and mix with water. Place the bucket, then wash stone or wood in it.' },
@@ -1682,7 +1682,7 @@ RECIPES.push(
   { id: 'stone_orange', name: 'Tint Orange Stone', station: 'stone_mill', age: 3, inputs: { stone: 4, clay: 1 }, output: { id: 'stone_orange', count: 4 }, batch: 8, steps: ['Grind the clay tint', 'Dress the stone'], blurb: 'Dress rock with warm clay pigment.' },
   { id: 'wash_clay', name: 'Wash Clay', station: 'hand', age: 1, needs: 'water', inputs: { dirt: 3 }, output: { id: 'clay', count: 1 }, batch: 8, steps: ['Sift the earth', 'Wash out the clay'], blurb: 'Wash earth by the river to separate the clay. A source for your first forge.' },
   { id: 'weapon_mold', name: 'Weapon Mold', station: 'hand', age: 3, inputs: { clay: 3, stone: 1 }, output: { id: 'weapon_mold', count: 1 }, blurb: 'A reusable clay mold for casting weapon blanks.' },
-  ...CARPENTRY_TOOLS.map((id) => ({ id, name: id.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' '), station: 'hand', age: 1, inputs: { wood: 2, stone: 2 }, output: { id, count: 1 }, blurb: 'A reusable carpenter’s tool. Furniture, beds and paintings need only the saw in your bag; the chisel is for wooden swords and the plane for bows.' })),
+  ...CARPENTRY_TOOLS.map((id) => ({ id, name: id.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' '), station: 'hand', age: 1, inputs: { wood: 2, stone: 2 }, output: { id, count: 1 }, blurb: 'A reusable carpenter’s tool. Furniture, beds, paintings and bows need only the saw in your bag; the chisel is for wooden swords.' })),
 );
 const furniture = new Set([...FURNITURE_ITEM.values(), 'bed', 'painting', 'chair_red', 'panel_twotone']);
 for (const r of RECIPES) {
@@ -1702,7 +1702,10 @@ for (const r of RECIPES) {
     r.station = 'forge';
     r.steps = ['Load the hearth', 'Fire and cool'];
   }
-  if (r.id === 'bow') { r.tools = ['carpentry_saw', 'carpentry_plane']; r.steps = ['Shape the bow', 'Smooth and string']; }
+  // IMP-18: "the carpentry plane still needs to be in my bag to be used
+  // instead of placed". The bow is planed at a placed Planing Bench now;
+  // only the saw stays in the bag.
+  if (r.id === 'bow') { r.station = 'planing_bench'; r.tools = ['carpentry_saw']; r.steps = ['Shape the bow', 'Plane it smooth', 'String it']; }
   if (/^sword_/.test(r.output.id) && !r.name.startsWith('Upgrade:')) {
     const metal = !['sword_wood', 'sword_stone'].includes(r.output.id);
     r.tools = metal ? ['weapon_mold'] : ['carpentry_chisel'];
@@ -1729,6 +1732,17 @@ for (const [id, planks, count] of JOINED) {
     blurb: `${r.blurb ?? ''} Fewer planks at the joinery bench.`.trim(),
   });
 }
+
+// IMP-19: the bench from the menu keeps Ages 1 and 2 ("on the bench that I
+// have from the menu I should only be able to craft the more simple stuff").
+// Everything made by hand from Age 3 on moves to a placed Workbench, made by
+// hand at Age 3 (owner's choice, so Age 3 is never stuck) or at a workshop.
+export const MENU_MAX_AGE = 2;
+for (const r of RECIPES) if (r.station === 'hand' && r.age > MENU_MAX_AGE) r.station = 'workbench';
+RECIPES.push(
+  { id: 'workbench', name: 'Workbench', station: 'hand', age: 3, inputs: { planks: 8, wood: 2, stone: 2 }, output: { id: 'workbench', count: 1 }, blurb: 'Place it anywhere: everything from the third age on is made at it.' },
+  { id: 'workshop_workbench', name: 'Workbench', station: 'workshop', age: 4, inputs: { planks: 8, wood: 2, stone: 2 }, output: { id: 'workbench', count: 1 }, blurb: 'Place it anywhere: everything from the third age on is made at it.' },
+);
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 

@@ -2,8 +2,21 @@ import { Inventory } from '../items/Inventory.js';
 import { ITEMS_BY_ID, ITEM_FOR_BLOCK } from '../config/items.js';
 import { BLOCKS_BY_ID } from '../config/blocks.js';
 import { settlerFloor, settlerRoute } from './settlerNavigation.js';
+import { isLoaded } from '../world/Mobs.js';
 
 const SPEED = 2.2, ACTION_SECONDS = .8, CARRY_LIMIT = 32;
+/**
+ * IMP-12: "Build with villagers should show them placing the blocks and take
+ * time to be done". A builder swings at each block for BUILD_SECONDS (two
+ * blows, SWING_SHOWS each, the arm the people view raises for `strike`)
+ * before it goes in. While the game is closed a builder is counted at one
+ * block every BLOCK_SECONDS_AWAY (the swing plus a walk between blocks), and
+ * those blocks go in when the game is next open (owed).
+ */
+export const BUILD_SECONDS = 1.6, BLOCK_SECONDS_AWAY = 3;
+const SWING_SHOWS = .3;
+/** IMP-20: "0.5 faster only": your own building, a block every 1.5 times a builder's. */
+export const SELF_BLOCK_SECONDS = BLOCK_SECONDS_AWAY * 1.5;
 const centre = r => ({x:(r.minX+r.maxX+1)/2,z:(r.minZ+r.maxZ+1)/2});
 const distance = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
 const clone = v => JSON.parse(JSON.stringify(v));
@@ -58,8 +71,8 @@ export class VillagerJobs {
   }
 
   /** plan.changes uses the same absolute {x,y,z,prev,next} cells as starterPlacement. */
-  enqueueBuild(plan,funding=this.inventory) {
-    if(!this.structures.list().some(s=>s.type==='work_hall'&&s.valid))return {ok:false,reason:'Build a working Work Hall first.'};
+  enqueueBuild(plan,funding=this.inventory,{self=false}={}) {
+    if(!self&&!this.structures.list().some(s=>s.type==='work_hall'&&s.valid))return {ok:false,reason:'Build a working Work Hall first.'};
     if(!Array.isArray(plan?.changes)||!plan.changes.length||plan.changes.length>100000)return {ok:false,reason:'Choose a building design to queue.'};
     if(this.builds.filter(j=>j.state==='queued').length>=16)return {ok:false,reason:'Finish or cancel a queued build before adding another.'};
     const unique=new Map();
@@ -75,7 +88,7 @@ export class VillagerJobs {
     for(const c of changes) { const id=ITEM_FOR_BLOCK.get(c.next);if(id)escrow[id]=(escrow[id]??0)+1; }
     if(!funding.hasAll(escrow))return {ok:false,reason:'Collect the full design materials before queuing it.',missing:funding.missing(escrow)};
     if(!funding.spend(escrow))return {ok:false,reason:'Your building materials changed. Try again.'};
-    const job={id:this.nextId++,name:plan.name??plan.design?.name??'Building',type:plan.type??plan.design?.structure,designId:plan.designId??plan.design?.id,region:clone(plan.region??this.regionFor(changes)),changes,cursor:0,escrow,state:'queued',reason:null};
+    const job={id:this.nextId++,name:plan.name??plan.design?.name??'Building',type:plan.type??plan.design?.structure,designId:plan.designId??plan.design?.id,region:clone(plan.region??this.regionFor(changes)),changes,cursor:0,escrow,state:'queued',reason:null,...(self?{self:true,timer:0}:{})};
     this.builds.push(job);this.changed();return {ok:true,job};
   }
 
@@ -163,7 +176,7 @@ export class VillagerJobs {
   }
 
   build(p,a,dt) {
-    const job=this.builds.find(j=>j.state==='queued');
+    const job=this.builds.find(j=>j.state==='queued'&&!j.self);
     if(!job){a.status='Waiting for a building order';return;}
     const c=job.changes[job.cursor];
     a.status=`Building ${job.name} (${job.cursor}/${job.changes.length})`;
@@ -179,16 +192,32 @@ export class VillagerJobs {
       else a.status='Waiting for room beside the next block';
       return;
     }
-    if(!this.move(p,a,{x:c.x+.5,z:c.z+.5},dt))return;
+    // Time owed from while the game was closed: these blocks go in without
+    // the walk, as long as their ground is loaded.
+    const owed=this.owedSeconds>=BLOCK_SECONDS_AWAY && isLoaded(this.world,c.x+.5,c.z+.5);
+    if(!owed && !this.move(p,a,{x:c.x+.5,z:c.z+.5},dt))return;
     if(this.canPlace&&!this.canPlace(c,job)){job.reason='The next block is protected';return;}
     const current=this.world.getBlock(c.x,c.y,c.z);
     if(current!==c.prev&&current!==c.next){job.reason='The site changed — clear or cancel this build';return;}
-    a.action=(a.action??0)+dt;if(a.action<ACTION_SECONDS)return;a.action=0;
+    if(owed) this.owedSeconds-=BLOCK_SECONDS_AWAY;
+    else {
+      // Facing the block, a blow at the start and half way: you see it go in.
+      p.facing=Math.atan2(c.x+.5-p.x,c.z+.5-p.z);
+      const was=a.action??0;a.action=was+dt;
+      if(was===0||(was<BUILD_SECONDS/2&&a.action>=BUILD_SECONDS/2))p.strike=SWING_SHOWS;
+      if(a.action<BUILD_SECONDS)return;
+      a.action=0;
+    }
+    this.putIn(job,c,current);
+  }
+
+  /** The next block of `job` goes in, paid from its escrow. Whether it did. */
+  putIn(job,c,current) {
     const item=ITEM_FOR_BLOCK.get(c.next);
     if(current!==c.next) {
-      if(item&&!(job.escrow[item]>0)){job.reason='Building material missing from escrow';return;}
+      if(item&&!(job.escrow[item]>0)){job.reason='Building material missing from escrow';return false;}
       const placed=this.placeBlock?this.placeBlock({...c,prev:current},job):this.world.setBlock(c.x,c.y,c.z,c.next)!==false;
-      if(!placed){job.reason='The next block cannot be placed';return;}
+      if(!placed){job.reason='The next block cannot be placed';return false;}
       if(item && --job.escrow[item]===0)delete job.escrow[item];
     }
     // A player may have placed this cell meanwhile: its reserved material is
@@ -197,6 +226,25 @@ export class VillagerJobs {
     if(job.cursor===job.changes.length) {
       job.state='completed';this.refund(job);
       this.onBuildComplete?.(job);
+    }
+    return true;
+  }
+
+  /**
+   * IMP-20: a building you placed yourself goes up on its own, one block every
+   * SELF_BLOCK_SECONDS (villagers are half as fast again), wherever you are in
+   * the world. Not while the game is closed: it is not owed that time.
+   */
+  selfBuild(job,dt) {
+    job.timer=Math.min((job.timer??0)+dt,SELF_BLOCK_SECONDS*2);
+    while(job.state==='queued'&&job.timer>=SELF_BLOCK_SECONDS) {
+      const c=job.changes[job.cursor];
+      if(!isLoaded(this.world,c.x+.5,c.z+.5)){job.reason='Waiting for you to come near';return;}
+      if(this.canPlace&&!this.canPlace(c,job)){job.reason='The next block is protected';return;}
+      const current=this.world.getBlock(c.x,c.y,c.z);
+      if(current!==c.prev&&current!==c.next){job.reason='The site changed — clear or cancel this build';return;}
+      if(!this.putIn(job,c,current))return;
+      job.timer-=SELF_BLOCK_SECONDS;
     }
   }
 
@@ -235,9 +283,11 @@ export class VillagerJobs {
   tick(dt) {
     if(!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.5); // no offline construction or teleporting on a long frame
+    for(const job of this.builds)if(job.self&&job.state==='queued')this.selfBuild(job,dt);
     for(const a of this.assignments.values()) {
       const p=this.person(a.personId);
       if(!p){this.returnCargo(a);continue;}
+      if(p.strike>0)p.strike=Math.max(0,p.strike-dt);
       p.workId=null;p.target=null;p.atWork=false;
       if(!this.hall(a.hallId)){a.status='Work Hall needs repair';continue;}
       if(p.hungry){a.status='Hungry — waiting for food';continue;}
@@ -246,12 +296,26 @@ export class VillagerJobs {
     }
   }
   changed(){this.bus?.emit('jobs:changed',{});}
+  /**
+   * The game was closed (or put away) for `ms`: building goes on meanwhile
+   * (owner, 31 October: "For this case we should break that rule"), one
+   * block every BLOCK_SECONDS_AWAY for each builder able to work, placed
+   * when the game is open again. Hauling and production still wait.
+   */
+  owe(ms) {
+    if(!(ms>0)||!this.builds.some(j=>j.state==='queued'&&!j.self))return;
+    const builders=[...this.assignments.values()].filter(a=>a.role==='builder'&&!this.person(a.personId)?.hungry&&this.hall(a.hallId)).length;
+    if(!builders)return;
+    const left=this.builds.filter(j=>j.state==='queued'&&!j.self).reduce((n,j)=>n+j.changes.length-j.cursor,0);
+    this.owedSeconds=Math.min((this.owedSeconds??0)+ms/1000*builders,left*BLOCK_SECONDS_AWAY);
+  }
   toJSON() {
-    return {version:1,nextId:this.nextId,assignments:[...this.assignments.values()].map(a=>({personId:a.personId,role:a.role,hallId:a.hallId,carrying:a.carrying?{...a.carrying}:null,destination:a.destination})),builds:clone(this.builds),supplies:[...this.hallSupplies].map(([hallId,inv])=>({hallId,inventory:inv.toJSON()}))};
+    return {version:1,nextId:this.nextId,owedSeconds:this.owedSeconds||0,assignments:[...this.assignments.values()].map(a=>({personId:a.personId,role:a.role,hallId:a.hallId,carrying:a.carrying?{...a.carrying}:null,destination:a.destination})),builds:clone(this.builds),supplies:[...this.hallSupplies].map(([hallId,inv])=>({hallId,inventory:inv.toJSON()}))};
   }
   loadJSON(data) {
     if(!data)return;
     this.nextId=Number.isSafeInteger(data.nextId)&&data.nextId>0?data.nextId:1;
+    this.owedSeconds=Number.isFinite(data.owedSeconds)&&data.owedSeconds>0?data.owedSeconds:0;
     const builds=Array.isArray(data.builds)?data.builds:[];
     const validCell = c => [c.x,c.y,c.z,c.next,c.prev].every(Number.isSafeInteger)
       && this.world.inBounds(c.x,c.y,c.z) && (c.next===0 || BLOCKS_BY_ID.has(c.next))

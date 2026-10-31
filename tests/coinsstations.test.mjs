@@ -31,11 +31,11 @@ for (let i = 0; i < 200; i++) if (lootFor('cave', i * 7, 20, i * 13, 1234).coin)
 ok('and some do, but not all', found > 40 && found < 200);
 
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
-ok('a station\'s popup lists what it makes', /\$\{this\.stationRecipesHtml\(spec\)\}/.test(ui)
+ok('a station\'s popup lists what it makes', /\$\{this\.stationRecipesHtml\(spec, structure\)\}/.test(ui)
   && /d\.crafting\.available\(d\.age, \{ station: spec\.station, near, atStations: d\.stationsNear\(near\) \}\)/.test(ui));
 ok('with Make buttons that craft where you stand', /this\.wireCraft\(body, /.test(ui)
   && /d\.crafting\.craft\(b\.dataset\.craft, times,\s*\{ near: pos, atStations: d\.stationsNear\(pos\) \}\)/.test(ui));
-ok('the bench draws the same tiles', /list\.innerHTML = this\.recipeGridHtml\(recipes\);/.test(ui));
+ok('the bench draws the same tiles', /this\.recipeGridHtml\(recipes\)/.test(ui) && /list\.innerHTML = spots \+/.test(ui));
 ok('a tile: big icon, name, ingredients, Make', /class="recipe-tile[\s\S]*class="recipe-icon"[\s\S]*class="recipe-name"[\s\S]*class="recipe-cost"[\s\S]*data-craft=/.test(ui));
 const stations = STRUCTURES.filter((s) => s.station).map((s) => s.station);
 ok('every station building gets one', ['workshop', 'foundry', 'university', 'temple', 'engineering'].every((s) => stations.includes(s)));

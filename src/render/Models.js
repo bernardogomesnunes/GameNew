@@ -19,6 +19,8 @@ import * as THREE from 'three';
  */
 
 const kits = new Map();   // id → kit
+/** A person's limbs: straight at rest whatever pose the model was saved in. */
+const STRAIGHT_LIMBS = new Set(['leg_l', 'leg_r', 'arm_l', 'arm_r']);
 let loading = null;
 
 /** Starts loading every model, once. Resolves when they're all in (or failed). */
@@ -87,9 +89,13 @@ export function makeKit(id, scene, mergeGeometries) {
   const index = new Map();
   const walk = (node, parent) => {
     const i = bones.length;
+    const name = node === root ? 'root' : short(node.name);
     const bone = {
-      name: node === root ? 'root' : short(node.name), parent,
-      position: node.position.clone(), quaternion: node.quaternion.clone(), scale: node.scale.clone(),
+      name, parent,
+      // IMP-16: every person model was saved mid-stride (legs ±28°, arms
+      // 14° and 22° about x), so standing still still looked like walking.
+      // Their limbs rest straight; the walk swing is added on top (SettlerView).
+      position: node.position.clone(), quaternion: STRAIGHT_LIMBS.has(name) ? new THREE.Quaternion() : node.quaternion.clone(), scale: node.scale.clone(),
       geometry: null,
     };
     bones.push(bone);

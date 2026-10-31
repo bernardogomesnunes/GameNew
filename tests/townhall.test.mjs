@@ -28,7 +28,7 @@ ok('the storage controller is a block', BLOCKS_BY_ID.get(STORAGE_CONTROLLER)?.na
 ok('and an item that places it', ITEMS_BY_ID.get('storage_controller')?.block === STORAGE_CONTROLLER
   && ITEM_FOR_BLOCK.get(STORAGE_CONTROLLER) === 'storage_controller');
 const recipe = RECIPES_BY_ID.get('storage_controller');
-ok('made at the bench from its parts', recipe?.station === 'hand' && recipe.inputs === CONTROLLER_PARTS);
+ok('made at the bench from its parts', ['hand', 'workbench'].includes(recipe?.station) && recipe.inputs === CONTROLLER_PARTS);
 ok('Place on it says Open', swingLabel(STORAGE_CONTROLLER) === 'Open');
 ok('it has a panel of its own', PANELS.some((p) => p.id === 'panel-stores'));
 
