@@ -940,6 +940,14 @@ BLOCKS.push(
   { id: JOINERY_BENCH, name: 'Joinery Bench', glyph: 'planks', color: 0xa77b52, material: 'wood', station: 'joinery_bench', unlock: null },
 );
 
+// IMP-19: "workshop should have an item (new one) called workbench. That
+// should allow to do all the crafting". Placed anywhere, it is where every
+// recipe from Age 3 on is made; the bench from the menu keeps Ages 1 and 2.
+export const WORKBENCH = 529;
+BLOCKS.push(
+  { id: WORKBENCH, name: 'Workbench', glyph: 'planks', color: 0x9c7348, material: 'wood', station: 'workbench', unlock: null },
+);
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in

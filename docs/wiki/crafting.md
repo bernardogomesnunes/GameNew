@@ -1,6 +1,6 @@
 # Crafting
 
-Open the Workbench with **E**. It lists every recipe with a search box. A recipe is greyed out when you lack an ingredient or stand in the wrong place, and the panel says which.
+Open the Bench with **E**. It lists what you make by hand in Ages 1 and 2, with a search box. From Age 3, make a **Workbench** (by hand: 8 planks, 2 logs and 2 stone; or at a workshop), place it anywhere and use it: it lists everything, the simple things included. Each placed station (a mill, the forge, a bleach bucket, a planing or joinery bench) opens its own panel with only its own recipes. A recipe is greyed out when you lack an ingredient, and the panel says which.
 
 - Recipes you use constantly make several at once ("Planks ×2").
 - Each recipe unlocks at an age. In Creative they are all open.
@@ -10,7 +10,8 @@ Open the Workbench with **E**. It lists every recipe with a search box. A recipe
 
 | Station | How to reach it |
 |---|---|
-| Anywhere (Workbench) | Nothing needed |
+| Anywhere (Bench, Ages 1 and 2) | Nothing needed |
+| Workbench (Age 3 on) | A placed Workbench nearby |
 | Workshop | Stand in a claimed Workshop |
 | Foundry | Stand at a claimed Foundry |
 | Planing Bench | Make the Planing Bench block (Age 1, 6 planks and 2 stone), place it and stand nearby: a log gives 3 planks instead of 2, and bows are made here |
@@ -24,7 +25,7 @@ Open the Workbench with **E**. It lists every recipe with a search box. A recipe
 | Bleach Bucket | Place the filled Bleach Bucket and stand nearby |
 | Compost Bin | Place the bin and mix leaves with spare crop seeds |
 
-Where something can be made two ways (by hand and at a mill), the Workbench shows only one tile: the cheaper mill recipe when you stand at the mill, the hand recipe anywhere else.
+Where something can be made two ways (by hand and at a mill), the panel shows only one tile: the cheaper mill recipe when you stand at the mill, the hand recipe anywhere else.
 
 ## The mills
 

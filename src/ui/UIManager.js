@@ -2858,6 +2858,6 @@ function timeAgo(ms) {
  */
 export function newGearAt(age) {
   return RECIPES
-    .filter((r) => r.age === age && ['hand', 'forge'].includes(r.station) && ['tool', 'armour'].includes(ITEMS_BY_ID.get(r.output.id)?.kind))
+    .filter((r) => r.age === age && ['hand', 'workbench', 'forge'].includes(r.station) && ['tool', 'armour'].includes(ITEMS_BY_ID.get(r.output.id)?.kind))
     .map((r) => r.name);
 }

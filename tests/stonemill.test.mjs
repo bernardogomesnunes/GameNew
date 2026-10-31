@@ -17,7 +17,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 // --- the machine --------------------------------------------------------------------------------
 
 ok('the stone mill is a block you stand by, like the wood mill', stationOf(STONE_MILL) === 'stone_mill' && BLOCKS_BY_ID.get(STONE_MILL).facesYou);
-ok('made by hand, from Age 3', RECIPES_BY_ID.get('stone_mill')?.station === 'hand' && RECIPES_BY_ID.get('stone_mill').age === 3 && ITEMS_BY_ID.get('stone_mill')?.block === STONE_MILL);
+ok('made by hand, from Age 3', ['hand', 'workbench'].includes(RECIPES_BY_ID.get('stone_mill')?.station) && RECIPES_BY_ID.get('stone_mill').age === 3 && ITEMS_BY_ID.get('stone_mill')?.block === STONE_MILL);
 
 // --- what it grinds -----------------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ ok('walls, bricks, stairs, roof tiles, pillars, chimneys and calçada among them
   const tiles = (atStations) => oneWayEach(c.available(5, { station: null, atStations }));
   const count = (list, out) => list.filter((r) => r.output.id === out).length;
   const away = tiles([]), mill = tiles(['wood_mill']), stoneMill = tiles(['stone_mill']);
-  ok('away from a mill: one trapdoor, the hand one', count(away, 'trapdoor') === 1 && away.find((r) => r.output.id === 'trapdoor').station === 'hand');
+  ok('away from a mill: one trapdoor, the hand one', count(away, 'trapdoor') === 1 && ['hand', 'workbench'].includes(away.find((r) => r.output.id === 'trapdoor').station));
   ok('at the wood mill: one trapdoor, the mill\'s cheaper one', count(mill, 'trapdoor') === 1 && mill.find((r) => r.output.id === 'trapdoor').station === 'wood_mill');
   ok('at the stone mill: one stone wall, the mill\'s', count(stoneMill, 'wall_stone') === 1 && stoneMill.find((r) => r.output.id === 'wall_stone').station === 'stone_mill');
   ok('and gravel, which only the mill makes, is still there to find (greyed) away from it', count(away, 'gravel') === 2);

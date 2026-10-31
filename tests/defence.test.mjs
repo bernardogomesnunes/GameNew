@@ -79,7 +79,7 @@ for (const [block, shape] of [[WEAPON_RACK, 'weapon_rack'], [TRAINING_DUMMY, 'tr
   const item = ITEMS_BY_ID.get(ITEM_FOR_BLOCK.get(block));
   ok(`${item?.name}: modelled (${PROP_SHAPES[shape]?.length} pieces), turned four ways, made at the bench, drawn in the bag`,
     PROP_SHAPES[shape]?.length >= 12 && BLOCKS_BY_ID.get(block + 3)?.stateOf === block
-    && RECIPES.some((r) => r.output.id === item.id && r.station === 'hand') && (itemIcon(item) ?? '').includes('<svg'));
+    && RECIPES.some((r) => r.output.id === item.id && ['hand', 'workbench'].includes(r.station)) && (itemIcon(item) ?? '').includes('<svg'));
 }
 
 // --- the soldiers and the archers ----------------------------------------------------------------

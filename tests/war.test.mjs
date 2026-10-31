@@ -247,7 +247,7 @@ const north = { x: 128, z: -1000 };
 
 {
   const horn = ITEMS_BY_ID.get('war_horn');
-  ok('a war horn, made at the bench in the war\'s age', !!horn && RECIPES.some((r) => r.output.id === 'war_horn' && r.station === 'hand' && r.age === WAR_AGE));
+  ok('a war horn, made at the bench in the war\'s age', !!horn && RECIPES.some((r) => r.output.id === 'war_horn' && ['hand', 'workbench'].includes(r.station) && r.age === WAR_AGE));
   ok('  drawn as a horn', (itemIcon(horn) ?? '').includes('<svg'));
   ok('  Break with it calls the next round', /war_horn: 'blowHorn'/.test(game) && /war\.horn\(d\.days\)/.test(game));
 }

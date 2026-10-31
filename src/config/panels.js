@@ -160,10 +160,10 @@ export const PANELS = [
   },
   {
     id: 'panel-bench',
-    title: 'Workbench',
+    title: 'Bench',
     // A placed station's own name goes up here (IMP-13) — see renderBench.
     titleId: 'bench-title',
-    sub: 'Make tools and blocks. Some need a workshop nearby.',
+    sub: 'Simple things by hand. Place a Workbench for the rest.',
     subId: 'bench-sub',
     wide: true,
     layer: 'duilt',

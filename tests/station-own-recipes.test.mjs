@@ -17,7 +17,7 @@ assert.ok(/r\.station === only/.test(duiltUI), 'the list is limited to that stat
 // IMP-14: no way out to the workbench's recipes from a station.
 assert.ok(!/id="bench-all"/.test(duiltUI), 'no "Show every recipe" at a station');
 // IMP-13: the station's own name is the title.
-assert.ok(/title\.textContent = only \? stationTitle\(only\) : 'Workbench'/.test(duiltUI), 'titled with the station');
+assert.ok(/title\.textContent = only \? stationTitle\(only\) : 'Bench'/.test(duiltUI), 'titled with the station');
 console.log('PASS using a placed station opens only what is made there');
 
 // And each station block has recipes of its own to show.

@@ -36,6 +36,7 @@ export const ITEMS = [
   { id: 'bleach_bucket', name: 'Bleach Bucket', kind: 'refined', stackTo: 1, color: 0xdde8d7, glyph: 'bucket', block: 524, madeBy: 'Water and wood ash mixed in a bucket — place it to wash stone pale' },
   { id: 'planing_bench', name: 'Planing Bench', kind: 'refined', stackTo: 10, color: 0xb98a5a, glyph: 'planks', block: 527, madeBy: 'Build from planks and stone — place it and plane logs into more planks' },
   { id: 'joinery_bench', name: 'Joinery Bench', kind: 'refined', stackTo: 10, color: 0xa77b52, glyph: 'planks', block: 528, madeBy: 'Build from planks, logs and stone. Place it and joint fences, gates and chests from fewer planks' },
+  { id: 'workbench', name: 'Workbench', kind: 'refined', stackTo: 10, color: 0x9c7348, glyph: 'planks', block: 529, madeBy: 'Made by hand or at a workshop. Place it anywhere and make everything from the third age on there' },
   { id: 'forge', name: 'Forge', kind: 'refined', stackTo: 10, color: 0x655367, glyph: 'stone', block: 525, madeBy: 'Build from stone and clay — place it to darken rock and forge weapons' },
   ...[
     ['carpentry_saw', 'Carpentry Saw', 'Cuts planks to length'],

@@ -80,7 +80,7 @@ ok('every close button says what it is, for a screen reader',
 }
 
 // Everything the rest of the UI reaches for by id must resolve.
-ok('a declared panel resolves by id', panelDef('panel-bench')?.title === 'Workbench');
+ok('a declared panel resolves by id', panelDef('panel-bench')?.title === 'Bench');
 ok('an undeclared one resolves to nothing', panelDef('panel-nope') === null);
 
 // A body supplied for a panel that is not on this layer would silently vanish.

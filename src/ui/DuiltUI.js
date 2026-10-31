@@ -122,9 +122,11 @@ export function oneWayEach(recipes) {
   for (const r of recipes) if (!r.study) ways.set(r.output.id, [...(ways.get(r.output.id) ?? []), r]);
   return recipes.filter((r) => {
     const same = r.study ? [] : ways.get(r.output.id);
-    const hand = same.filter((o) => o.station === 'hand'), there = same.filter((o) => o.station !== 'hand' && o.atStation);
+    // The bench's own recipes: by hand, or at a placed Workbench (IMP-19).
+    const bench = (o) => o.station === 'hand' || o.station === 'workbench';
+    const hand = same.filter(bench), there = same.filter((o) => !bench(o) && o.atStation);
     if (!hand.length || hand.length === same.length) return true;
-    if (r.station === 'hand') return !there.some((o) => o.output.id === r.output.id && sameStuff(o, r));
+    if (bench(r)) return !there.some((o) => o.output.id === r.output.id && sameStuff(o, r));
     return r.atStation || !hand.some((o) => sameStuff(o, r));
   });
 }
@@ -2254,11 +2256,16 @@ export class DuiltUI {
     // out to the rest from a station.
     const only = this.benchStation ?? null;
     const title = this.q('#bench-title'), sub = this.q('#bench-sub');
-    if (title) title.textContent = only ? stationTitle(only) : 'Workbench';
-    if (sub) sub.textContent = only ? 'What is made here.' : 'Make tools and blocks. Some need a workshop nearby.';
+    if (title) title.textContent = only ? stationTitle(only) : 'Bench';
+    if (sub) sub.textContent = only === 'workbench' ? 'Everything you can make, from the simple things up.'
+      : only ? 'What is made here.' : 'Simple things by hand. Place a Workbench for the rest.';
     const note = this.q('#bench-station');
     if (note) note.hidden = true;
-    const recipes = oneWayEach(only ? all.filter((r) => r.station === only) : all).filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
+    // IMP-19: the menu bench lists what is made by hand (Ages 1 and 2); a
+    // placed Workbench lists that and everything made at it.
+    const here = only === 'workbench' ? (r) => r.station === 'hand' || r.station === 'workbench'
+      : only ? (r) => r.station === only : (r) => r.station === 'hand';
+    const recipes = oneWayEach(all.filter(here)).filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
     if (!recipes.length) {
       this.q('#bench-list').innerHTML = `<div class="sub" style="margin:8px 0">Nothing you can make matches “${escapeHtml(query.trim())}”.</div>`;
       return;

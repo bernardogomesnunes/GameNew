@@ -39,7 +39,7 @@ try {
   assert.equal(seen.title, 'Forge');
   assert.equal(seen.showAll, false, 'no way to every recipe from a station');
   assert.ok(seen.tiles > 0 && seen.tiles <= seen.forgeRecipes, `only forge recipes (${seen.tiles} of ${seen.forgeRecipes})`);
-  assert.equal(seen.menuTitle, 'Workbench');
+  assert.equal(seen.menuTitle, 'Bench');
   assert.deepEqual(errors, []);
-  console.log(`PASS a placed forge is titled Forge and lists only its ${seen.tiles} recipes; the menu bench is the Workbench`);
+  console.log(`PASS a placed forge is titled Forge and lists only its ${seen.tiles} recipes; the menu bench is the Bench`);
 } finally { await browser?.close(); await server.close(); }

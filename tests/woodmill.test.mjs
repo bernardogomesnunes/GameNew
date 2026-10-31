@@ -29,7 +29,7 @@ const recipe = (id) => RECIPES.find((r) => r.id === id);
 // --- the mill itself ---------------------------------------------------------------------
 
 ok('the wood mill is a block you put down, made at the bench in Age 3',
-  PLACEABLE_BLOCKS.some((b) => b.id === WOOD_MILL) && recipe('wood_mill')?.station === 'hand' && recipe('wood_mill').age === 3);
+  PLACEABLE_BLOCKS.some((b) => b.id === WOOD_MILL) && ['hand', 'workbench'].includes(recipe('wood_mill')?.station) && recipe('wood_mill').age === 3);
 ok('it is a station, whichever way it faces', [0, 1, 2, 3].every((k) => stationOf(WOOD_MILL + k) === 'wood_mill'));
 ok('it is modelled: a bench, a blade, a log', boxesFor('wood_mill').length >= 10);
 {

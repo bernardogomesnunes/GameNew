@@ -1733,6 +1733,17 @@ for (const [id, planks, count] of JOINED) {
   });
 }
 
+// IMP-19: the bench from the menu keeps Ages 1 and 2 ("on the bench that I
+// have from the menu I should only be able to craft the more simple stuff").
+// Everything made by hand from Age 3 on moves to a placed Workbench, made by
+// hand at Age 3 (owner's choice, so Age 3 is never stuck) or at a workshop.
+export const MENU_MAX_AGE = 2;
+for (const r of RECIPES) if (r.station === 'hand' && r.age > MENU_MAX_AGE) r.station = 'workbench';
+RECIPES.push(
+  { id: 'workbench', name: 'Workbench', station: 'hand', age: 3, inputs: { planks: 8, wood: 2, stone: 2 }, output: { id: 'workbench', count: 1 }, blurb: 'Place it anywhere: everything from the third age on is made at it.' },
+  { id: 'workshop_workbench', name: 'Workbench', station: 'workshop', age: 4, inputs: { planks: 8, wood: 2, stone: 2 }, output: { id: 'workbench', count: 1 }, blurb: 'Place it anywhere: everything from the third age on is made at it.' },
+);
+
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
 /**
