@@ -39,9 +39,9 @@ export const ITEMS = [
   { id: 'forge', name: 'Forge', kind: 'refined', stackTo: 10, color: 0x655367, glyph: 'stone', block: 525, madeBy: 'Build from stone and clay — place it to darken rock and forge weapons' },
   ...[
     ['carpentry_saw', 'Carpentry Saw', 'Cuts planks to length'],
-    ['carpentry_chisel', 'Carpentry Chisel', 'Cuts mortises and carved details'],
-    ['carpentry_plane', 'Carpentry Plane', 'Smooths the timber for bows'],
-    ['carpentry_mallet', 'Carpentry Mallet', 'An old loose mallet. Joints are now made at a placed Joinery Bench'],
+    ['carpentry_chisel', 'Carpentry Chisel', 'Held, Break carves stone into bricks and bricks into pillars'],
+    ['carpentry_plane', 'Carpentry Plane', 'Smooths the timber'],
+    ['carpentry_mallet', 'Carpentry Mallet', 'Fits the joints together'],
     ['weapon_mold', 'Weapon Mold', 'Shapes a weapon before forging'],
   ].map(([id, name, madeBy]) => ({ id, name, madeBy: madeBy + ' — reusable; keep it in your bag', kind: 'tool', stackTo: 1, color: 0xb99673, glyph: 'axe', durability: null,
     // IMP-10 step 3: no longer made, so not one to collect; old bags keep it.

@@ -73,6 +73,7 @@ const TOOL_ACTION_LABELS = {
   kombucha: ['Drink', 'Place'],
   coffee: ['Drink', 'Place'],
   coffee_beans: ['Eat', 'Throw'],
+  carpentry_chisel: ['Chisel', 'Place'],
 };
 
 function el(html) {
