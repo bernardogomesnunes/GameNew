@@ -125,7 +125,8 @@ for (const [block, shape] of [[WEAPON_RACK, 'weapon_rack'], [TRAINING_DUMMY, 'tr
   ok(`the tower's archers shoot what comes in range (${shots.length} arrows home in 10 s)`, shots.length >= 4 && shots.every((s) => s.by.kind === 'archer' && s.e === far));
   // It's gone: back to their posts.
   for (let i = 0; i < 400; i++) d.tick(0.05, [], {});
-  ok('nothing left to fight, they go back to their posts', d.soldiers.every((s) => Math.hypot(s.x - s.post.x, s.z - s.post.z) < 0.6));
+  // IMP-17: at rest they stroll within 4 blocks of their post, not stand on it.
+  ok('nothing left to fight, they go back to their posts', d.soldiers.every((s) => Math.hypot(s.x - s.post.x, s.z - s.post.z) < 5.2));
 
   // A soldier falls: gone, and another costs the same again.
   const s0 = d.soldiers[0];
