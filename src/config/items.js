@@ -38,7 +38,7 @@ export const ITEMS = [
   { id: 'forge', name: 'Forge', kind: 'refined', stackTo: 10, color: 0x655367, glyph: 'stone', block: 525, madeBy: 'Build from stone and clay — place it to darken rock and forge weapons' },
   ...[
     ['carpentry_saw', 'Carpentry Saw', 'Cuts planks to length'],
-    ['carpentry_chisel', 'Carpentry Chisel', 'Cuts mortises and carved details'],
+    ['carpentry_chisel', 'Carpentry Chisel', 'Held, Break carves stone into bricks and bricks into pillars'],
     ['carpentry_plane', 'Carpentry Plane', 'Smooths the timber'],
     ['carpentry_mallet', 'Carpentry Mallet', 'Fits the joints together'],
     ['weapon_mold', 'Weapon Mold', 'Shapes a weapon before forging'],

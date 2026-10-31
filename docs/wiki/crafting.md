@@ -53,7 +53,7 @@ A Quarry now supplies **Stone only**. Use a Stone Mill for Cobblestone, Marble a
 
 A Stone Mill costs 10 Stone and 4 Planks, so you can build one before you have processed cobble. Wash 3 Dirt into 1 Clay by water if you need clay for your first Forge.
 
-Craft a **Carpentry Saw** (2 Wood and 2 Stone) and keep it in your bag: it is the only tool furniture, beds and paintings need, in every wood. The Chisel, Plane and Mallet (same cost) are for swords and bows. A Wood Mill alone is insufficient. These tools and the Weapon Mold are reusable.
+Craft a **Carpentry Saw** (2 Wood and 2 Stone) and keep it in your bag: it is the only tool furniture, beds and paintings need, in every wood. The Chisel, Plane and Mallet (same cost) are for swords and bows. A Wood Mill alone is insufficient. Held, the Chisel carves blocks: Break turns stone or cobblestone into stone brick, sandstone into sandstone brick, dark stone into dark brick, a brick into a pillar and marble into a marble pillar. These tools and the Weapon Mold are reusable.
 
 For processing, furniture and weapons, choose Make to open the work steps. The panel shows the total output and material bill. Select a batch count before the first action, then perform the actions in order, or Cancel. Materials are spent only when the last action succeeds. Closing the popup cancels unfinished work. Walking away from the station, losing a tool or running short of materials blocks the work; a bulk job never silently finishes fewer batches. Cancel and restart to change its quantity.
 

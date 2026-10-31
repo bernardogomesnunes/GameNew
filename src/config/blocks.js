@@ -1260,3 +1260,16 @@ export function costResourceOf(id) {
   const cost = BLOCKS_BY_ID.get(id)?.cost;
   return cost ? Object.keys(cost)[0] : null;
 }
+
+// IMP-10 step 4: "chisel can break blocks and turn them into decorative
+// blocks". Held, Break with the Carpentry Chisel turns the block you point at
+// into the next one here. Nothing is spent or gathered.
+export const CHISELLED = new Map([
+  [3, 329],     // Stone -> Stone Brick
+  [8, 329],     // Cobblestone -> Stone Brick
+  [329, 165],   // Stone Brick -> Stone Pillar
+  [333, 334],   // Sandstone -> Sandstone Brick
+  [156, 157],   // Dark Stone -> Dark Brick
+  [157, 167],   // Dark Brick -> Dark Pillar
+  [17, 166],    // Marble -> Marble Pillar
+]);
