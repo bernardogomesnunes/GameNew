@@ -933,6 +933,13 @@ BLOCKS.push(
   { id: PLANING_BENCH, name: 'Planing Bench', glyph: 'planks', color: 0xb98a5a, material: 'wood', station: 'planing_bench', unlock: null },
 );
 
+// IMP-10, step 3: "plane mallet should be placed". The mallet fits joints, so
+// its bench makes the jointed wood pieces (fences, gates, chests) for less.
+export const JOINERY_BENCH = 528;
+BLOCKS.push(
+  { id: JOINERY_BENCH, name: 'Joinery Bench', glyph: 'planks', color: 0xa77b52, material: 'wood', station: 'joinery_bench', unlock: null },
+);
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in
