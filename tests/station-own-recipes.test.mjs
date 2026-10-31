@@ -10,9 +10,9 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const duiltUI = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 
-assert.ok(/stationOf\(aimed\.block\)\) return void this\.ui\.openBench\('', stationOf\(aimed\.block\)\)/.test(game), 'Place on a station opens its own recipes');
+assert.ok(/stationOf\(aimed\.block\)\) return void this\.ui\.openBench\('', stationOf\(aimed\.block\), aimed\)/.test(game), 'Place on a station opens its own recipes');
 assert.ok(/onOpenBench: \(\) => this\.ui\.openBench\(\)/.test(game), 'the menu still opens everything');
-assert.ok(/openBench\(query = '', station = null\)/.test(ui) && /duiltUI\.benchStation = station/.test(ui));
+assert.ok(/openBench\(query = '', station = null, at = null\)/.test(ui) && /duiltUI\.benchStation = station/.test(ui));
 assert.ok(/r\.station === only/.test(duiltUI), 'the list is limited to that station');
 // IMP-14: no way out to the workbench's recipes from a station.
 assert.ok(!/id="bench-all"/.test(duiltUI), 'no "Show every recipe" at a station');

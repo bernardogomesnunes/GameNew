@@ -16,7 +16,8 @@ import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
 import { BLOCKS } from '../config/blocks.js';
-import { howToGet, RECIPES } from '../config/recipes.js';
+import { StationWork, usesSpots, batchSeconds } from '../duilt/StationWork.js';
+import { howToGet, RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
 import { designsForStructure, starterDesign } from '../prefabs/HouseDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
 import { WEAR_SLOTS, SLOT_NAMES, ARMOUR_PER_POINT } from '../config/armour.js';
@@ -679,6 +680,7 @@ export class DuiltUI {
     if (structure.type==='work_hall') this.renderWorkHall(structure);
     body.querySelector('[data-evolve]')?.addEventListener('click', () => actions.onEvolve?.());
     this.wireCraft(body, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
+    if (body.querySelector('[data-spot]')) this.wireSpot(body, `s:${structure.id}`, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache), 'panel-building');
     this.wireCraftMissing(body, structure, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
@@ -733,7 +735,7 @@ export class DuiltUI {
       ${structure.type === 'foundry' ? this.foundryStockHtml(spec) : ''}
       ${structure.type === 'sanctuary_white' || structure.type === 'sanctuary_black' ? this.cubeHtml() : ''}
       ${levelSec}
-      ${this.stationRecipesHtml(spec)}
+      ${this.stationRecipesHtml(spec, structure)}
       ${this.buildingToolsHtml(structure, spec, locked)}`;
   }
 
@@ -2265,14 +2267,18 @@ export class DuiltUI {
     // placed Workbench lists that and everything made at it.
     const here = only === 'workbench' ? (r) => r.station === 'hand' || r.station === 'workbench'
       : only ? (r) => r.station === only : (r) => r.station === 'hand';
-    const recipes = oneWayEach(all.filter(here)).filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
-    if (!recipes.length) {
-      this.q('#bench-list').innerHTML = `<div class="sub" style="margin:8px 0">Nothing you can make matches “${escapeHtml(query.trim())}”.</div>`;
+    // IMP-15: at a placed station its transformations go through its spots;
+    // the tiles below are what is still made the old way there.
+    const spotKey = only && this.benchSpot ? this.benchSpot : null;
+    const spots = spotKey ? this.spotHtml(spotKey, only) : '';
+    const recipes = oneWayEach(all.filter(here)).filter((r) => !(spots && usesSpots(r))).filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
+    const list = this.q('#bench-list');
+    if (!recipes.length && !spots) {
+      list.innerHTML = `<div class="sub" style="margin:8px 0">Nothing you can make matches “${escapeHtml(query.trim())}”.</div>`;
       return;
     }
-
-    const list = this.q('#bench-list');
-    list.innerHTML = this.recipeGridHtml(recipes);
+    list.innerHTML = spots + (recipes.length ? `<div class="recipe-grid">${this.recipeGridHtml(recipes)}</div>` : '');
+    if (spots) this.wireSpot(list, spotKey, () => this.renderBench(), 'panel-bench');
     this.wireCraft(list, () => this.renderBench());
   }
 
@@ -2449,15 +2455,102 @@ export class DuiltUI {
    * nearby functionality cause I love it"). The bench still lists them all;
    * this is the same recipes, with the building you are standing at.
    */
-  stationRecipesHtml(spec) {
+  stationRecipesHtml(spec, structure = null) {
     const d = this.duilt;
     if (!d || !spec?.station) return '';
     const near = this.game.player?.position;
-    const recipes = d.crafting.available(d.age, { station: spec.station, near, atStations: d.stationsNear(near) });
+    // IMP-15: a foundry's transformations go through its spots.
+    const spots = structure && structure.valid ? this.spotHtml(`s:${structure.id}`, spec.station) : '';
+    const recipes = d.crafting.available(d.age, { station: spec.station, near, atStations: d.stationsNear(near) })
+      .filter((r) => !(spots && usesSpots(r)));
+    if (spots && !recipes.length) return spots;
     const body = recipes.length
       ? `<div class="recipe-grid">${this.recipeGridHtml(recipes)}</div>`
       : '<p class="dim">Nothing to make here yet. More comes next age.</p>';
-    return `<div class="building-sec building-make"><h4>${spec.station === 'university' ? 'Research' : 'Make here'}</h4>${body}</div>`;
+    return `${spots}<div class="building-sec building-make"><h4>${spec.station === 'university' ? 'Research' : 'Make here'}</h4>${body}</div>`;
+  }
+
+  /**
+   * IMP-15: a station's spots, shaped like the barracks: what is in it and
+   * what has come out, the one in work with its bar and time left, and a
+   * button for each thing it turns one item into. Tapping one puts in as
+   * many as your bag pays for (up to MAX_BATCHES); they come out one at a
+   * time while you do other things. Empty when the station has none.
+   */
+  spotHtml(key, station) {
+    const d = this.duilt, w = d?.stationWork;
+    if (!w) return '';
+    const age = d.sandbox ? FINAL_AGE : d.age;
+    const recipes = StationWork.recipesAt(station).filter((r) => r.age <= age && !d.crafting.hidden?.(r) && !d.crafting.locked?.(r));
+    if (!recipes.length) return '';
+    const s = w.spot(key), r = s ? RECIPES_BY_ID.get(s.recipeId) : null;
+    const pct = s?.batches ? Math.round(s.progress * 100) : 0;
+    const now = !s ? '<p class="dim">Put something in: it comes out in its new form, one at a time, while you do other things.</p>' : `
+        <div class="spot-row">
+          <span class="spot-slot" data-spot-in>${s.batches ? Object.entries(r.inputs).map(([id, n]) => itemChip(id, n * s.batches)).join('') : '<span class="dim">Empty</span>'}</span>
+          <span class="spot-arrow" aria-hidden="true">→</span>
+          <span class="spot-slot" data-spot-out>${s.out ? itemChip(r.output.id, s.out) : '<span class="dim">Nothing yet</span>'}</span>
+        </div>
+        ${s.batches ? `<div class="train-queue"><div class="train-row now">
+          <span class="train-name">${escapeHtml(itemName(r.output.id))}</span>
+          <span class="train-when" data-spot-left>${w.secondsLeft(key)} s left</span>
+          <div class="research-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i data-spot-bar style="width:${pct}%"></i></div>
+        </div></div>` : ''}
+        <div class="building-inline">
+          ${s.out ? `<button class="primary" data-spot-take>Take ${s.out} ${escapeHtml(itemName(r.output.id).toLowerCase())}</button>` : ''}
+          ${s.batches ? '<button class="secondary" data-spot-back>Take back what is waiting</button>' : ''}
+        </div>`;
+    const inv = d.inventory;
+    const tiles = recipes.map((x) => {
+      const busy = s && s.recipeId !== x.id && (s.batches || s.out);
+      const tools = (x.tools ?? []).filter((id) => !inv?.endless && inv.countOf(id) < 1);
+      const short = inv?.endless ? [] : Object.entries(x.inputs).filter(([id, n]) => inv.countOf(id) < n).map(([id, n]) => `${n - inv.countOf(id)} ${itemName(id).toLowerCase()}`);
+      const can = !busy && !tools.length && !short.length;
+      const takes = Object.entries(x.inputs).map(([id, n]) => itemChip(id, n)).join('');
+      const why = busy ? 'Take out what is in it first' : tools.length ? `Keep ${tools.map(itemName).join(', ')} in your bag` : short.length ? `Needs ${short.join(', ')}` : '';
+      return `<button class="train-unit${can ? '' : ' cant'}" data-spot-put="${escapeAttr(x.id)}" ${can ? '' : 'aria-disabled="true"'}>
+        <strong>${escapeHtml(itemName(x.output.id))}${x.output.count > 1 ? ` ×${x.output.count}` : ''}</strong>
+        <span class="recipe-cost">${takes}</span><span>${batchSeconds(x)} s each</span>
+        ${why ? `<span class="short">${escapeHtml(why)}</span>` : ''}
+      </button>`;
+    }).join('');
+    return `
+      <div class="building-sec station-spot" data-spot="${escapeAttr(key)}">
+        <h4>At work</h4>
+        ${now}
+        <h4>Put in</h4>
+        <p class="dim">Tap one to put in as many as your bag holds for it.</p>
+        <div class="spot-put">${tiles}</div>
+      </div>`;
+  }
+
+  /** The spot's buttons, and its bar kept moving while `panel` is open. */
+  wireSpot(root, key, rerender, panel) {
+    const d = this.duilt, w = d?.stationWork;
+    if (!w) return;
+    const say = (title) => this.bus.emit('toast', { kind: 'xp', title });
+    root.querySelectorAll('[data-spot-put]').forEach((b) => b.addEventListener('click', () => {
+      const r = w.put(key, b.dataset.spotPut, 64);
+      if (!r.ok) say(r.reason); else this.renderBag?.();
+      rerender();
+    }));
+    root.querySelector('[data-spot-take]')?.addEventListener('click', () => {
+      const moved = w.take(key);
+      if (!moved) say('Your bag is full');
+      this.renderBag?.(); rerender();
+    });
+    root.querySelector('[data-spot-back]')?.addEventListener('click', () => { w.takeBack(key); this.renderBag?.(); rerender(); });
+    clearInterval(this.spotTimer);
+    const shape = () => { const s = w.spot(key); return s ? `${s.batches}/${s.out}` : ''; };
+    const was = shape();
+    this.spotTimer = setInterval(() => {
+      if (!this.panels.isOpen(panel) || !root.isConnected) { clearInterval(this.spotTimer); return; }
+      if (shape() !== was) { clearInterval(this.spotTimer); rerender(); return; }
+      const s = w.spot(key);
+      const bar = root.querySelector('[data-spot-bar]'), left = root.querySelector('[data-spot-left]');
+      if (bar && s) bar.style.width = `${Math.round(s.progress * 100)}%`;
+      if (left) left.textContent = `${w.secondsLeft(key)} s left`;
+    }, 500);
   }
 
   // ---- skills ----

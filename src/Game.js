@@ -2942,7 +2942,7 @@ export class Game {
     }
     if (aimed && aimed.block === STORAGE_CONTROLLER && this.selectedBlockId !== STORAGE_INTERFACE) return void this.ui.openStores();
     // At a wood mill (#32), the bench, showing what's made there.
-    if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block));
+    if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block), aimed);
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
     // At a war tent, Place makes camp there; at the dark god's altar, the oath.

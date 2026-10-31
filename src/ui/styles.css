@@ -2252,3 +2252,17 @@ button.busy { cursor: progress; opacity: 0.92; }
   background-repeat: no-repeat; background-position: right 10px center; background-size: 12px 8px;
 }
 #ui-root .work-hall .job-select:disabled { opacity: 0.55; cursor: default; }
+
+/* IMP-15: a station's spots — what goes in, what comes out, and the one in
+   work between them, laid out like the barracks' training line. */
+.station-spot .spot-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.station-spot .spot-slot { flex: 1; min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  padding: 6px; border: 1px dashed rgba(35,42,45,0.25); box-sizing: border-box; }
+.station-spot .spot-arrow { font-size: 18px; opacity: 0.6; }
+.station-spot .spot-put { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+/* The bench list is itself a tile grid; the spots and any tiles under them
+   span its full width (IMP-15). */
+#bench-list > .station-spot, #bench-list > .recipe-grid { grid-column: 1 / -1; }
+.station-spot .spot-put .train-unit { width: 100%; box-sizing: border-box; min-height: 44px; }
+.station-spot .train-row { grid-template-columns: 1fr auto; }
+.station-spot .train-row .research-bar { grid-column: 1 / -1; }
