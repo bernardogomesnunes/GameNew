@@ -231,8 +231,11 @@ for (const age of AGES) {
   ok(`age ${age.age} can build ${available.length} kinds of thing`, available.length > 0);
   ok(`  and nothing from a later age leaks in`, available.every((s) => s.age <= age.age));
 }
+// IMP-18: the bow is made at a placed Planing Bench, itself an Age 1 make;
+// what age 1 never asks for is a building.
+const PLACED = new Set((await import('../src/config/blocks.js')).BLOCKS.map((b) => b.station).filter(Boolean));
 ok('age 1 has no workshop recipes to be confused by',
-  recipesFor(1).every((r) => r.station === 'hand'));
+  recipesFor(1).every((r) => r.station === 'hand' || PLACED.has(r.station)));
 ok('the later ages do', recipesFor(FINAL_AGE).some((r) => r.station === 'workshop'));
 
 // Over 64 KB of output: exiting straight away, into a pipe that's slow to be

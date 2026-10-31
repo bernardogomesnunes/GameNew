@@ -40,12 +40,13 @@ export const ITEMS = [
   ...[
     ['carpentry_saw', 'Carpentry Saw', 'Cuts planks to length'],
     ['carpentry_chisel', 'Carpentry Chisel', 'Held, Break carves stone into bricks and bricks into pillars'],
-    ['carpentry_plane', 'Carpentry Plane', 'Smooths the timber'],
-    ['carpentry_mallet', 'Carpentry Mallet', 'Fits the joints together'],
+    ['carpentry_plane', 'Carpentry Plane', 'An old loose plane. Bows are planed at a placed Planing Bench now'],
+    ['carpentry_mallet', 'Carpentry Mallet', 'An old loose mallet. Joints are made at a placed Joinery Bench now'],
     ['weapon_mold', 'Weapon Mold', 'Shapes a weapon before forging'],
   ].map(([id, name, madeBy]) => ({ id, name, madeBy: madeBy + ' — reusable; keep it in your bag', kind: 'tool', stackTo: 1, color: 0xb99673, glyph: 'axe', durability: null,
     // IMP-10 step 3: no longer made, so not one to collect; old bags keep it.
-    ...(id === 'carpentry_mallet' ? { noBook: true } : {}) })),
+    // IMP-18: the plane too.
+    ...(id === 'carpentry_mallet' || id === 'carpentry_plane' ? { noBook: true } : {}) })),
   // --- raw materials, gathered from the world -----------------------------
   { id: 'dirt', name: 'Dirt', kind: 'raw', stackTo: STACK_BULK, color: 0xc69972, glyph: 'dirt', block: 2, madeBy: 'Foraged from the ground' },
   { id: 'wood', name: 'Wood', kind: 'raw', stackTo: STACK_BULK, color: 0xcc9e72, glyph: 'log', block: 4, madeBy: 'Cut from trees' },

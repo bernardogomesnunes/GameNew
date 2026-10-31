@@ -13,7 +13,7 @@ Open the Workbench with **E**. It lists every recipe with a search box. A recipe
 | Anywhere (Workbench) | Nothing needed |
 | Workshop | Stand in a claimed Workshop |
 | Foundry | Stand at a claimed Foundry |
-| Planing Bench | Make the Planing Bench block (Age 2, 6 planks and 2 stone), place it and stand nearby: a log gives 3 planks instead of 2 |
+| Planing Bench | Make the Planing Bench block (Age 1, 6 planks and 2 stone), place it and stand nearby: a log gives 3 planks instead of 2, and bows are made here |
 | Joinery Bench | Make the Joinery Bench block (Age 2, 6 planks, 2 logs and 2 stone), place it and stand nearby: a plank gives 3 fences, a gate takes 2 planks and a chest 4 |
 | Wood Mill | Make the Wood Mill block (Age 3) and stand within 4 blocks |
 | Stone Mill | Make the Stone Mill block (Age 3) and stand within 4 blocks |
