@@ -46,8 +46,10 @@ check('age 3 hand crafting makes a reusable remote with no terrain requirement',
   inventory.add('planks', 4); inventory.add('glass', 1); inventory.add('copper_ingot', 2);
   const crafting = new Crafting({ inventory, world: {} });
   assert.equal(crafting.availableRecipe('storage_remote', 2), null);
-  assert.equal(crafting.availableRecipe('storage_remote', 3)?.ok, true);
-  assert.equal(crafting.craft('storage_remote').ok, true);
+  assert.equal(crafting.availableRecipe('storage_remote', 3, { atStations: ['workbench'] })?.ok, true);
+  // IMP-19: from Age 3 it is made at a placed Workbench.
+  assert.equal(crafting.craft('storage_remote').ok, false);
+  assert.equal(crafting.craft('storage_remote', 1, { atStations: ['workbench'] }).ok, true);
   assert.equal(inventory.countOf('storage_remote'), 1);
   assert.equal(ITEMS_BY_ID.get('storage_remote')?.durability, null);
   assert.equal(ITEMS_BY_ID.get('storage_remote')?.block, undefined);

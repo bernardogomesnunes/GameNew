@@ -23,7 +23,7 @@ ok('that turns, its other facings states of it',
   [1, 2, 3].every((d) => isCatapult(turned(CATAPULT, d)) && facingOf(turned(CATAPULT, d)) === d && BLOCKS_BY_ID.get(CATAPULT + d).stateOf === CATAPULT));
 ok('one in the block list, not four', PLACEABLE_BLOCKS.filter((b) => b.catapult).length === 1);
 ok('modelled: wheels, a frame, an arm and a stone in the cup', boxesFor('catapult').length >= 15 && boxesFor('catapult').some((b) => b.maxY > 1.2));
-ok('built at the bench from Age 4', RECIPES.some((r) => r.output.id === 'catapult' && r.station === 'hand' && r.age === 4));
+ok('built at the bench from Age 4', RECIPES.some((r) => r.output.id === 'catapult' && ['hand', 'workbench'].includes(r.station) && r.age === 4));
 ok('picked up as a catapult, whichever way it faced', ITEM_FOR_BLOCK.get(CATAPULT + 3) === 'catapult' && ITEMS_BY_ID.get('catapult').block === CATAPULT);
 ok('and drawn as one', typeof GLYPHS.catapult === 'string');
 

@@ -2498,10 +2498,11 @@ export class UIManager {
 
   /** Every storehouse at once — a storage controller, or a town hall's panel. */
   /** Opens the bench, searching for `query`, or limited to one `station`'s recipes. */
-  openBench(query = '', station = null) {
+  openBench(query = '', station = null, at = null) {
     // `station` limits it to what is made at that placed station (a bleach
-    // bucket, a forge, a planing bench); without it, every recipe.
-    if (this.duiltUI) this.duiltUI.benchStation = station;
+    // bucket, a forge, a planing bench); without it, every recipe. `at` is
+    // the placed block, whose spots it shows (IMP-15).
+    if (this.duiltUI) { this.duiltUI.benchStation = station; this.duiltUI.benchSpot = station && at ? `${at.x},${at.y},${at.z}` : null; }
     this.openPanel('panel-bench');
     const search = this.q('#bench-search');
     if (search) {
@@ -2858,6 +2859,6 @@ function timeAgo(ms) {
  */
 export function newGearAt(age) {
   return RECIPES
-    .filter((r) => r.age === age && ['hand', 'forge'].includes(r.station) && ['tool', 'armour'].includes(ITEMS_BY_ID.get(r.output.id)?.kind))
+    .filter((r) => r.age === age && ['hand', 'workbench', 'forge'].includes(r.station) && ['tool', 'armour'].includes(ITEMS_BY_ID.get(r.output.id)?.kind))
     .map((r) => r.name);
 }

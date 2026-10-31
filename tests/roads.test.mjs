@@ -25,7 +25,7 @@ ok('white is white and dark is dark', (BLOCKS_BY_ID.get(CALCADA).color >> 16) > 
 ok('little square setts in mortar', textureFor('calcada')?.setts > 0 && /if \(recipe\.setts\)/.test(textures));
 ok('and the wave of dark stone through white', textureFor('calcada_wave')?.wave === true && /if \(recipe\.wave\)/.test(textures));
 ok('made at the bench from stone', ['calcada', 'calcada_dark', 'calcada_wave'].every((id) =>
-  ITEMS_BY_ID.get(id)?.block && RECIPES.some((r) => r.output.id === id && r.station === 'hand')));
+  ITEMS_BY_ID.get(id)?.block && RECIPES.some((r) => r.output.id === id && ['hand', 'workbench'].includes(r.station))));
 
 // --- old roads -----------------------------------------------------------------------------------
 
