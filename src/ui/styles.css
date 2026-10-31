@@ -2234,3 +2234,21 @@ button.busy { cursor: progress; opacity: 0.92; }
 .craft-work label { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .craft-work input { width: 64px; min-width: 0; min-height: 44px; box-sizing: border-box; }
 .craft-work button { width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; white-space: normal; }
+
+/* The Work Hall (IMP-10): a row per villager, supply and order, with pickers
+   drawn like the rest of the game instead of the phone's own dropdown. */
+.work-hall .job-row {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px;
+  padding: 8px 0; border-bottom: 1px solid rgba(35,42,45,0.08);
+}
+.work-hall .job-name { font-weight: 700; min-width: 0; }
+.work-hall .job-status { grid-column: 1 / -1; font-size: 13px; }
+.work-hall .job-deposit { grid-template-columns: 1fr auto; border-bottom: 0; }
+.work-hall .job-small { justify-self: start; grid-column: 1 / -1; }
+#ui-root .work-hall .job-select {
+  -webkit-appearance: none; appearance: none; font-size: 16px; min-height: 44px;
+  padding: 6px 34px 6px 10px; border-radius: 0; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M0 0h12L6 8z' fill='%234a3220'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 12px 8px;
+}
+#ui-root .work-hall .job-select:disabled { opacity: 0.55; cursor: default; }
