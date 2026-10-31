@@ -1,5 +1,3 @@
-import { loadGameFeature } from '../src/core/gameFeatures.js';
-await loadGameFeature('war');
 import { readFileSync } from 'node:fs';
 import { World } from '../src/world/World.js';
 import { DESIGN_FOR_STRUCTURE } from '../src/config/starterDesigns.js';
@@ -22,7 +20,7 @@ import { Wanderers } from '../src/world/Wanderers.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const rng = (seed) => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
-const game = ['WarRuntime', 'SkyRuntime', 'ShowcaseRuntime'].map(name => readFileSync(new URL(`../src/runtime/${name}.js`, import.meta.url), 'utf8')).join('\n') + readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 
 const KINDS = ['wall', 'gatehouse', 'watchtower', 'barracks'];
 

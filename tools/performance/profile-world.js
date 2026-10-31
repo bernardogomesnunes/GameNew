@@ -19,8 +19,8 @@ export function undergroundView(world){
   throw new Error('No validated underground air position for the cave workload');
 }
 
-export async function prepareProfileWorld(game) {
-  await game.newWorld({mode:'duilt',name:'Test world 1',seed:4242,silent:true});
+export function prepareProfileWorld(game) {
+  game.newWorld({mode:'duilt',name:'Test world 1',seed:4242,silent:true});
   game.renderer.setAnimationLoop(null);
   const world=game.world,d=game.duilt;
   const home={x:world.centreX,z:world.centreZ};
@@ -61,8 +61,7 @@ export async function prepareProfileWorld(game) {
     fixture:'56 validated buildings; populated Duilt settlement; observer healed/fed between samples; actual war updates'};
 }
 
-export async function profilePhase(game,fixture,name,step=0){
-  if(name==='war'&&game.prepareFeatures&&!await game.prepareFeatures(['war']))throw new Error('War feature did not become ready for profiling');
+export function profilePhase(game,fixture,name,step=0){
   const d=game.duilt;
   if(name==='war'&&!d.war.atWar){
     d.declareWar();d.war.round=7;d.war.stage='warned';d.war.due=d.days;

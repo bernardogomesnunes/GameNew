@@ -29,6 +29,61 @@ new is asked for: add it with the owner's words quoted.
 
 ---
 
+## 0. Start here: state on 31 October 2026
+
+### The white screen of 29 to 31 October, and what it changed
+
+From the 29 October evening merges until 31 October, opening any world froze the
+picture, then the 3D view went blank (the page background, `#eef5f4`) while the
+interface kept working. It happened on the owner's phone, desktop and laptop.
+It never reproduced in headless Chromium, including the owner's real 289-chunk
+world, a signed-in open, the production build and the live CSP.
+
+- **Live site branch.** Vercel deploys production from `main` (checked by the owner
+  on 31 October: deployment of 078faea, source `main`, environment Production).
+  An earlier note here blamed `claude/voxel-sandbox-game-heuhyq`; that was wrong.
+  Why the first test after the rollback still failed is not known (likely tested
+  before the deploy finished, or on a cached page).
+- **Rollback.** #262 restored `main` to 5419dae (after #252). The game worked once
+  that reached the live branch. #263 and #264 then brought back everything except
+  the parts listed below.
+- **Likely cause, not proven:** #251's commit 2a70f9b. It delays loading of the war
+  and Sky code and adds a shader warm-up that skips drawing while shaders compile.
+  #256 and #259 changed that warm-up but never reached the live game before the rollback.
+
+Still out of `main` (in git history, to bring back only with a phone test):
+
+| What | Commit or PR | Why it is out |
+|---|---|---|
+| Delayed loading of war, Sky and showcase code; shader warm-up that withholds frames | 2a70f9b (#251), 269273d, 2424cac | likely white-screen cause |
+| Soldiers drawn in instanced batches | 394799e (#251) | performance only; rendering change |
+| Warm-up time limits | #256 (Codex), #259 | fixes for 2a70f9b, not needed without it |
+| Account test for imported worlds | 47b8f8e | expects #251's import code |
+
+Back in `main`: station recipes (49bb620), one name per item (#254), failed open
+returns to the worlds screen (#257), CSP fonts (#258), faster cloud opening (#260),
+saved position kept (#261), Aurelion finishing your target and safe soldier
+formations (#264, raiders still count as enemies).
+
+### Open now, in order
+
+| ID | What | Status |
+|---|---|---|
+| HOUSE-4 | Vercel production deploys from `main`; nothing to change. `claude/voxel-sandbox-game-heuhyq` is no longer needed and can be deleted with the others (HOUSE-1). | done, checked 31 October |
+| HOUSE-5 | **Preview logins.** Neon Auth trusts only `https://duild-seven.vercel.app`, so signing in fails on Vercel preview links. Adding a preview address needs the owner's yes (it is a security setting). | waiting on the owner |
+| SAVE-7 | **A stored upload backup must not stall the game.** `Game.sendUnsent` rebuilds the whole unsent world copy at sign-in. It also wrote `spawn = null` over the account's position (fixed in #261). Make it fail fast, drop a copy that keeps failing, and never block opening a world. | to do |
+| PERF-2 | **Bring back 2a70f9b and 394799e safely, if still wanted.** Only with a Vercel preview tested on the owner's phone and desktop (needs HOUSE-5). Start without the shader warm-up gate. | to do, after HOUSE-5 |
+| IMP-10 | Crafting interfaces, one per station (below). Step 1 (stations open their own recipes) is in `main`. | in progress |
+| IMP-12 | Working logic: villagers working and building, building first (below). | answered 29 October: "Working logic is villagers working yes, and building. Building requires more attention I think." Start with villagers building; after IMP-10 |
+| TECH-WH | **PR #255, the Work Hall panel**, is open from before the rollback. Merge current `main` into it and recheck before merging. | current `main` merged in 31 October; tests and build pass; ready to merge |
+| SAVE-6a | Atomic saves (migration 0006): validated on the Neon branch `atomic-saves-validation`, not applied. Needs the owner's go, `VITE_ATOMIC_SAVES=true` in Vercel, a redeploy, then the migration. | waiting on the owner |
+| HOUSE-1 | Delete the old branches on GitHub's Branches page, `claude/voxel-sandbox-game-heuhyq` included. | owner action |
+
+Data change made during the incident: the cloud world "Testing new migration and
+gameplay" had `spawn = null` and was set to `{x: -0.5, y: 104, z: 8.5}` (ground at home).
+
+---
+
 ## Agent handoff — checked 23 October 2026
 
 The owner is taking a break from this project to focus on others and may use
@@ -48,7 +103,7 @@ that an agent's later checkout has passed them. Re-fetch/recheck before work.
 |---|---|---|
 | First: unresolved lag / Reload | TECH-18 | #242 fixes the measured normal-autosave stall and localStorage capacity path with background binary IndexedDB saves. Profile remaining render-submission/meshing spikes. Reproduce the owner's actual Reload using diagnostics or a saved world; the original crash is unresolved. |
 | First: sustained performance | TECH-8; playtests under TECH-17 and TECH-9 | #241 records the 30-minute baseline with failed persistence; #242's 11-minute hardware follow-up confirms two actual autosaves and restore with 4–15 ms game-thread save work. Repeat a full 30 minutes on the new pipeline and profile physical iPhone hardware. Remaining render/mesh stalls prevent an overall performance sign-off. |
-| Done: smaller first download | TECH-7 | War, Sky and showcase code load only when needed (#251). Measured gain is small: about 34 KB of 1,768 KB. Further startup gains would need splitting the rest of `Game.js` (TECH-10). |
+| Follow-up implementation | TECH-7 | Finish lazy loading war/Sky modules; map/story already load lazily. Check the download/bundle change and exercise late-game routes, saves and cancelled loads. |
 | Follow-up maintenance | TECH-10 | Extract one Game.js subsystem per PR with existing behavior preserved. Coordinate files with other agents; a refactor alone is not an FPS improvement. |
 | Discussed crafting follow-up | CRAFT-8 | Define the timing/dragging/animation interaction before implementing it. Current crafting is a sequence of action buttons; the richer interaction is not delivered. Keep this behind the performance priority. |
 | Partial: model-backed Battle | OLD-3; ASK-3 | Local LM Studio strategies work. Finish a separately configured authenticated hosted/mobile connection only after the owner supplies/chooses the endpoint arrangement; see `docs/local-ai.md`. |
@@ -322,71 +377,19 @@ owner and block the task until answered.
 | ID | What | Who | Status |
 |---|---|---|---|
 | IMP-1 | **Explorers give saplings and other materials.** "Dark logs reminded me of something, we need explorers to give saplings and other materials when approaches, saplings should grow to trees." Saplings already grow into trees in 10 game days (`duilt/Saplings.js`) and leaves drop them; explorers already speak (`EXPLORER_TALK`) but give nothing. Add a gift when you approach and talk to one: saplings first, then a few raw materials the explorer carries from where they came. **Decided 29 October:** "Each explorer should have 2 gifts available, that can be taken. since we have them passing by this should work." So each explorer carries two gifts, taken one at a time, and is empty after both. Saplings first; the second is a raw material. Still to choose when building: which materials (dark and white logs, seeds, clay). | Any agent | done, #248: two gifts per explorer, given when you talk to them |
-| IMP-2 | **Barracks: upgrade it and train more, no bed count.** "would be nice to update the building and allow to create more, remove the number of beds logic." Today the barracks needs 4 beds, 2 weapon racks, 2 training pieces and a 30-block hall, and holds a soldier a bunk. Replace the bed rule with the building's level: each upgrade (the same Evolve path other buildings use) raises how many soldiers it can train and hold. **Decided 29 October:** 10, 20 and 40 soldiers for levels 1 to 3 ("Im ok with those numbers"). Beds become decoration only and drop out of the requirements. | Any agent | done, #247: levels 10, 20, 40; Evolve upgrades; beds no longer count |
+| IMP-2 | **Barracks: upgrade it and train more, no bed count.** "would be nice to update the building and allow to create more, remove the number of beds logic." Today the barracks needs 4 beds, 2 weapon racks, 2 training pieces and a 30-block hall, and holds a soldier a bunk. Replace the bed rule with the building's level: each upgrade (the same Evolve path other buildings use) raises how many soldiers it can train and hold. **Decided 29 October:** 10, 20 and 40 soldiers for levels 1 to 3 ("Im ok with those numbers"). Beds become decoration only and drop out of the requirements. | Any agent | done, #247: levels 10, 20, 40; Evolve upgrades; beds no longer count. Safe formations in front of the building, #264 |
 | IMP-3 | **Garrison follows the same rule.** "Garrison with the building from the user to activate It is pretty cool, but it's better if we have the same rule here, to update the building and allow to create more too." The garrison (`id: military`, Age 8) is built from your own walls, then trains soldiers on request. Give it levels like IMP-2, with the same cap-by-level rule, so both military buildings work alike. Do after IMP-2 so they share one implementation. | Any agent | done, #247, with IMP-2 |
 | IMP-4 | **Building emojis out, text only.** "Buildings emojis look disgusting, can we remove them and leave only text here?" Every building spec in `config/structures.js` carries an `icon` emoji, shown by `ui/DuiltUI.js` in the building panel, the finish list and the claim list. Remove the emoji from those places and show the name alone. Check the layout on a phone, since the icon column gives the row its shape. Skills and goals use their own icons; leave them unless the owner says. | Any agent | done, #245 |
-| IMP-5 | **Aurelion kills what you attack.** "Aurelion should kill the mobs the user attacks." In hunt mode Aurelion picks the nearest enemy (`world/Guardian.js`). Make it choose the creature you last hit instead, in every mode, and finish it quickly. **Decided 29 October:** "ONLY ENEMIES YES": bandits, raiders and war soldiers, never farm animals. | Any agent | done, #246 |
+| IMP-5 | **Aurelion kills what you attack.** "Aurelion should kill the mobs the user attacks." In hunt mode Aurelion picks the nearest enemy (`world/Guardian.js`). Make it choose the creature you last hit instead, in every mode, and finish it quickly. **Decided 29 October:** "ONLY ENEMIES YES": bandits, raiders and war soldiers, never farm animals. | Any agent | done, #246; finishes your last target until beaten, #264 |
 | IMP-6 | **Carpentry rebuilt around tools used on things, not carried.** "We should not have the carpentry tools all of them in bag to craft stuff, one thing usually per items. So carpenter planer should be placed and give more planks. Saw should be held, chisel can break blocks and turn them into decorative blocks, saw could turn planks into a template for furniture, and then placing that template and using an item called toolbox on it will make it a piece of furniture." This replaces the interim rule in PR #243 (furniture needs only the saw in the bag). Parts: (a) the **plane** is a placed station that turns logs into more planks; (b) the **saw** is held, and used on planks makes a furniture template; (c) the **chisel** breaks a block into its decorative version; (d) a **toolbox** item, used on a placed template, finishes it into the furniture piece. Big and touches recipes, items, placement and the crafting panel. **Decided 29 October:** build in phases ("yes"): the placed plane first, then saw templates and the toolbox. Still to choose when building phase 1: does the plane replace the wood mill's plank bonus or sit beside it, and what a placed template looks like. | Any agent | phase 1 (the placed Planing Bench, 3 planks a log) done, #249; saw templates, chisel and toolbox (phases 2 and 3) to do; supersedes PR #243's interim rule once built |
-| IMP-10 | **BIG PRIORITY: review every crafting interaction, one interface each.** "Let's add as a big priority to review all interactions with buildings foundry kiln and the items forge bleach mill carpenter items and stone mill. Each one needs its own interface. Only saw should be held to craft stuff, the rest should be placed." Also: "Forge should be placed like the bucket and there should be an interface to make stuff there." Decided 29 October: **held** tools are the saw (furniture, beds, paintings), the chisel ("held, breaks blocks into decorative ones") and the weapon mold ("Weapon mold held"); **placed** are the plane (a Planing Bench since #249) and the mallet ("plane mallet should be placed"). Placed blocks: forge, bleach bucket, wood mill, stone mill, planing bench, mallet. Buildings: workshop, foundry, kiln, engineering centre, university, temple, and the **Work Hall** (owner, 29 October: "Another one that we need to add to the review of interfaces is work building. It has weird stuff there"; several of these panels were reworked by Codex, so check what each shows against what it does). Owner, 29 October: "I think overall the experience of crafting in the game is shitty, but work hall has some drop-downs that are off styling." The Work Hall pickers and supply buttons are fixed in the Work Hall PR; the crafting experience as a whole is the rest of this task. **Reference to copy:** owner, 29 October: "Barracks is a fairly well achieved example of a specialised ui for it's context." The barracks panel (`barracksHtml` in `ui/DuiltUI.js`) shows what is there now (the roster, a count against the limit), what is in progress (a training queue with a progress bar and time left), and one button per thing it makes with its price and what is short. Each station and building interface should follow that shape. Steps: (1) PR #253 gives every placed block its own list of recipes instead of the whole workbench; (2) audit each one on a phone: what opens, what it lists, what it needs in the bag; (3) the mallet as a placed bench, and drop the plane and mallet from the bag rules (bows still ask for the plane tool); (4) the chisel as a held tool that breaks a block into its decorative form; (5) check the kiln and foundry panels one by one. Do not merge steps; one PR each. | Any agent | in progress: step 1 (each placed block lists its own recipes) done with #254; the forge's own make-it-here process is planned for later (owner, 29 October: "This needs to be done in forge when placing it, I should add there the items, and have the process. But that's planed, we can tackle it later") |
-| IMP-11 | **Dark and white logs by name.** "Dark log does not appear to me." The item was called "Dark Wood" and the recipe "Char Dark Wood", so searching for a log found nothing. Owner, 29 October: "dark logs item should always be called dark logs, same for every item, one name per each." Every item now has one name: the item and the block it places share it (Turf, Turned Soil, Gold, White Log, Dark Log were the five that differed), and a workbench tile is titled with the item it makes, not a separate recipe name. Seeds and their plants, and ores and their gems, are different things and keep their own names. A test checks it. | Any agent | done in the PR that adds this line |
+| IMP-10 | **BIG PRIORITY: review every crafting interaction, one interface each.** "Let's add as a big priority to review all interactions with buildings foundry kiln and the items forge bleach mill carpenter items and stone mill. Each one needs its own interface. Only saw should be held to craft stuff, the rest should be placed." Also: "Forge should be placed like the bucket and there should be an interface to make stuff there." Decided 29 October: **held** tools are the saw (furniture, beds, paintings), the chisel ("held, breaks blocks into decorative ones") and the weapon mold ("Weapon mold held"); **placed** are the plane (a Planing Bench since #249) and the mallet ("plane mallet should be placed"). Placed blocks: forge, bleach bucket, wood mill, stone mill, planing bench, mallet. Buildings: workshop, foundry, kiln, engineering centre, university, temple, and the **Work Hall** (owner, 29 October: "Another one that we need to add to the review of interfaces is work building. It has weird stuff there"; several of these panels were reworked by Codex, so check what each shows against what it does). Steps: (1) PR #253 gives every placed block its own list of recipes instead of the whole workbench; (2) audit each one on a phone: what opens, what it lists, what it needs in the bag; (3) the mallet as a placed bench, and drop the plane and mallet from the bag rules (bows still ask for the plane tool); (4) the chisel as a held tool that breaks a block into its decorative form; (5) check the kiln and foundry panels one by one. Do not merge steps; one PR each. **Owner's notes, 29 to 30 October:** the model to follow is the barracks panel ("Barracks is a fairly well achieved example of a specialised ui for it's context"). Keep the bench's item-crafting screen as it is ("I don't want to change the interface of the crafting of an item in the bench, this is unnecessary"). The overall feel needs work ("overall the experience of crafting in the game is shitty"). The Work Hall "has some drop-downs that are off styling": PR #255 restyles its job pickers and supply picker and is still open. Steps to add: (6) the Work Hall panel, PR #255; (7) the forge's own make-it-here process, later. | Any agent | in progress: step 1 (each placed block lists its own recipes) in main via #263; the forge's own make-it-here process is planned for later (owner, 29 October: "This needs to be done in forge when placing it, I should add there the items, and have the process. But that's planed, we can tackle it later") |
+| IMP-11 | **Dark and white logs by name.** "Dark log does not appear to me." The item was called "Dark Wood" and the recipe "Char Dark Wood", so searching for a log found nothing. Owner, 29 October: "dark logs item should always be called dark logs, same for every item, one name per each." Every item now has one name: the item and the block it places share it (Turf, Turned Soil, Gold, White Log, Dark Log were the five that differed), and a workbench tile is titled with the item it makes, not a separate recipe name. Seeds and their plants, and ores and their gems, are different things and keep their own names. A test checks it. | Any agent | done, #254 (rolled back by #262, back in #263) |
 | IMP-12 | **The working logic of the game, after IMP-10.** Owner, 29 October: "After fixing that we should Persue the working logic of the game." Owner, 29 October: "Working logic is villagers working yes, and building. Building requires more attention I think." So: villagers taking jobs and carrying goods, and above all villagers building (queued designs, how they fetch materials, place blocks and finish). Start with building. | Any agent | to do, after IMP-10; building first |
 | IMP-7 | **The map works in the past and the future.** "Map should work on past and future." What the map does today in the Past (dinosaurs) and the Future (futurians, the Archive) has not been checked; the owner says it does not work there. First reproduce it. Then make the map and minimap read the world you are in: terrain, your position and the markers that exist there. **Owner's answer 29 October:** "not getting this one". Needs the owner's description in plain words first: when you travel to the Past or the Future and open the map, what do you see (nothing, the home world, the wrong place)? Reproduce it in the game before building. | Any agent | waiting on the owner |
 | IMP-8 | **Explain the showcase.** "What the hell is the showcase? It broke my game, explain me what it is." It is a workshop tool behind the menu's "Show the workshop tools" switch: one Creative test world with every building, animal and person at once, for checking how the game looks; never saved. Its menu card and section now say so, that it is heavy, and that opening it saves and closes your world; it asks before opening. Found while doing it: **Save and leave could not get you out of the showcase** (it is never saved, so the save counted as failed and kept you in it since SAVE-3); now it leaves. | Claude | done, #252 |
 | IMP-9 | **What broke when the showcase opened.** The owner says it "broke my game". Find out which: a crash, a freeze, a lost world, or a bad save. If opening it can overwrite or lose the world you were in, that is a bug to fix. If it only is heavy, cap what it builds on phones. **Owner's answer 29 October:** "I dont know what this is either". So the showcase was probably not what broke the game. Do not spend time on it until the owner sees the break again; then record the device, the world and the last action (the Reload screen's Download diagnostics does this). | Any agent | on hold, no repro; the Save-and-leave trap found under IMP-8 is fixed and may have been it |
 
 ---
-
-### ChatGPT execution batch, 29 October
-
-**Spec:** owner's request in this chat: IMP-2 then IMP-3 (levels 1–3 hold
-10/20/40; beds decorative), IMP-4 text-only buildings, IMP-5 last-hit enemy
-priority, then remaining TECH-18/TECH-8 lag/Reload investigation and TECH-7
-deferred war/Sky code. Keep visuals, world detail and existing saves intact.
-No production database changes, engine migration, new dependencies or raised
-performance limits. Work in the current checkout, preserve external worktrees.
-
-**Architecture:** reuse and retain Claude's existing commits from #247 and
-#246, with review repairs on `codex/military-guardian-performance`; IMP-4 is
-already in main via #245. Share capacity rules through `soldierCap`, retain
-existing Evolve/save formats, and validate each formation slot. Feed guardian
-priority only from successful player attacks on combat enemies, including
-arrows, with the same rule in all guardian modes; never farm animals or
-peaceful travellers. Defer genuinely optional war/Sky modules at explicit
-readiness boundaries, preserving synchronous terrain generation after load.
-Measure remaining frame costs before optimizing them; confirm render
-equivalence and run a full 30-minute save-crossing workload on the final code.
-
-**Outcome (checked and finished by Claude on 29 October; ChatGPT ran out of
-credits partway):** PR #251.
-- [x] IMP-2/3: #247's levels, plus formation spots that are never inside
-  blocks or over holes, and trained soldiers kept (not lost) when a level is
-  lost. Browser check: Barracks and Garrison Evolve/train/full at 10, 20, 40.
-- [x] IMP-5: Aurelion finishes the last enemy you struck, by blow or arrow,
-  in every order; never farm animals or peaceful people.
-- [x] Big armies drawn in bounded instanced batches; shader preparation kept
-  off the frame that first shows something.
-- [x] TECH-7: war, Sky and showcase code load only when needed, before any
-  world that needs them opens. Measured: the first download is about 34 KB
-  smaller (1,768 KB to 1,734 KB), a small gain. A part that fails to download
-  offers Reload (after saving), since a browser never re-fetches a failed one.
-- [x] Checks: full `npm test`, build, performance budgets, and the browser
-  checks (smoke, inventory, crash diagnostics, full-game rendering with
-  identical pixels, lazy world/production, local saves, improvements, jobs,
-  Storage Remote, crafting). Land and the floating island generate block for
-  block the same as main. The two-player battle browser check can't connect
-  in the cloud container (fails the same on main).
-- [ ] Not done: the 30-minute session profile and the remaining render/mesh
-  spikes (TECH-8, TECH-18); the owner's original Reload and phone checks.
-
-**Review focus:** queued training must not duplicate/drop soldiers across
-reloads; blocked parade ground must not spawn inside solids or over voids;
-enemy focus must never make civilians/animals enemies; deferred loading must
-never omit terrain/saved state or apply to a world that has been replaced;
-long-session resource trends and actual persistence must be verified rather
-than inferred from a short rendering test. Optional implementation details
-such as upgrade costs retain the existing PR defaults unless review exposes
-a gameplay defect. Independent read-only reviews are running for military,
-guardian and deferred-module boundaries; one final combined review follows.
 
 ## 6. Cline's queue
 
@@ -508,7 +511,7 @@ supersede that historical review; do not repeat its already completed work.
 | TECH-4 | **Text put on screen escaped by default.** About 70 places write HTML; the ones that show your text are escaped by hand. One helper that always escapes, so a future change can't slip. | Claude | M | done; integrated into main 21 October |
 | TECH-5 | **Limit how often a client can write to the database.** | Claude | S | bounded client queue implemented; server enforcement prepared in 0006, not activated |
 | TECH-6 | **Make land in the background** (a Web Worker): background terrain generation and a bounded main-thread fallback are implemented. Meshing, uploads and rendering still require profiling; the worker does not establish that all streaming stutter is solved. | Claude | L | done for worker generation; integrated into main 21 October; remaining stalls are TECH-18/TECH-8 |
-| TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude; ChatGPT, Claude | M | done, #251: map/story/war/Sky/showcase load when needed; the first download is only about 34 KB smaller (1,768 to 1,734 KB) |
+| TECH-7 | **Smaller first download**: the game loads as one large file (1.4 MB on 6 October, more now). Load the war, story, Sky Kingdom and map code only when needed. Faster start-up. | Claude | M | map/story artwork load lazily; war/Sky module split remains |
 | TECH-8 | **Profile a long session and a war round** (30 minutes, a big settlement), fix the top three slowdowns or memory leaks. | Any agent; desktop measurements by ChatGPT in #241/#242 | M | partial: 30-minute baseline and three hot-path fixes #241; background local persistence #242 passes an 11-minute hardware run with two confirmed autosaves/restore. Repeat full 30 minutes on the new pipeline; remaining submission/meshing spikes and physical-iPhone profiling remain |
 | TECH-9 | **The phone memory overlay**: optional counter shown with `?debug`, for finding memory growth on a phone. | ChatGPT | S | done; integrated into main 21 October; phone profiling remains |
 | TECH-10 | **Split `src/Game.js`** (over 8,000 lines as of this audit; measure again before work) by system (war, vehicles, building, input, saving), one part per PR, alongside other work. | Claude | L | to do in separate subsystem PRs; new workers/jobs/peer helpers are outside Game.js |

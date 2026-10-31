@@ -21,7 +21,7 @@ globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const src = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), 'utf8');
-const game = ['WarRuntime', 'SkyRuntime'].map(name => src(`runtime/${name}.js`)).join('\n') + src('Game.js');
+const game = src('Game.js');
 
 // --- where they are ----------------------------------------------------------------------------------------
 
@@ -124,7 +124,7 @@ ok('their army comes the way the Stone Kingdom\'s does, from their side, in thei
 ok('  beaten or not, it\'s settled — and dying loses it', /b\.resolve\(r, won, d\.days\);/.test(game) && /for \(const party of \[this\.wanderers\?\.warParty, this\.wanderers\?\.rivalParty\]\)/.test(game));
 ok('Place on a standard (a tap too): taken once the garrison\'s down', /if \(aimed && aimed\.block === WAR_STANDARD\) return void this\.takeStandard\(aimed\);/.test(game)
   && /aimed\.block === WAR_STANDARD \|\| isCatapult/.test(game) && /The garrison holds the standard/.test(game) && /b\.conquer\(r, d\.days\)/.test(game));
-ok('their cities on your map from the start, in their colours', /if \(d\.battle\) for \(const r of gameFeature\('war'\)\.rivalSites\(gen\)\) out\.push\(\{ kind: 'rival'/.test(game)
+ok('their cities on your map from the start, in their colours', /if \(d\.battle\) for \(const r of rivalSites\(gen\)\) out\.push\(\{ kind: 'rival'/.test(game)
   && /s\.colour \?\? SITE_COLOURS/.test(src('render/WorldMap.js')));
 
 process.exit(f ? 1 : 0);

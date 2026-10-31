@@ -67,8 +67,7 @@ try{
   await page.evaluate(()=>{
     const g=window.__game;
     const state=window.__sessionProfile={histogram:new Uint32Array(2001),frames:0,maxFrameMs:0,
-      warFrames:0,saves:0,saveAttempts:0,failedSaves:0,deepDraws:0,costs:{},losses:[],previousFrame:null,
-      renderedFrames:0,previousRender:null,maxRenderGapMs:0};
+      warFrames:0,saves:0,saveAttempts:0,failedSaves:0,deepDraws:0,costs:{},losses:[],previousFrame:null};
     g.renderer.domElement.addEventListener('webglcontextlost',event=>state.losses.push({at:performance.now(),status:event.statusMessage}));
     const watchDeep=mesh=>{
       if(!mesh.userData.deep)return;
@@ -89,10 +88,6 @@ try{
       for(const name of names){
         const original=object[name];
         object[name]=function(...args){const start=performance.now();try{
-          if(label==='renderer'){
-            if(state.previousRender!=null)state.maxRenderGapMs=Math.max(state.maxRenderGapMs,start-state.previousRender);
-            state.previousRender=start;state.renderedFrames++;
-          }
           return name==='saveNow'
             ?window.__profileFixtureModule.observeSave(state,()=>original.apply(this,args),()=>g.saving??true)
             :original.apply(this,args);
@@ -155,8 +150,7 @@ try{
     await Promise.all(s.pendingSaves??[]);
     return {frames:s.frames,maxFrameMs:s.maxFrameMs,warFrames:s.warFrames,saves:s.saves,
       saveAttempts:s.saveAttempts,failedSaves:s.failedSaves,
-      histogram:Array.from(s.histogram),losses:s.losses,saveCompletionMs:s.saveCompletions??[],
-      renderedFrames:s.renderedFrames,maxRenderGapMs:s.maxRenderGapMs};
+      histogram:Array.from(s.histogram),losses:s.losses,saveCompletionMs:s.saveCompletions??[]};
   });
   report.contextLosses=totals.losses;delete totals.losses;report.totals=totals;
   report.persistence.lastSavedAt=await page.evaluate(async()=>{

@@ -2,7 +2,7 @@ import { hash01 } from './ChunkGen.js';
 import { landmarksFor, siteNear, emergingDesign, emergingLandmark } from './landmarks.js';
 import { inPast } from './past.js';
 import { inFuture } from './future.js';
-import { skyAt, TOWER_OUT } from './skyLocation.js';
+import { skyAt, TOWER_OUT } from './skyKingdom.js';
 
 import { EMERGING_INTERVAL, EMERGING_LIMIT, EMERGING_KINDS, emergingState, installEmergingPlaces } from './emergingPlaceState.js';
 export { EMERGING_INTERVAL, EMERGING_LIMIT, emergingState, installEmergingPlaces } from './emergingPlaceState.js';

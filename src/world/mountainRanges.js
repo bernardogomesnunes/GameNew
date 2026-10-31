@@ -1,7 +1,7 @@
 import { MASSIF_REGION, massifSite } from './massifs.js';
 import { inPast } from './past.js';
 import { inFuture } from './future.js';
-import { skyAt, TOWER_OUT } from './skyLocation.js';
+import { skyAt, TOWER_OUT } from './skyKingdom.js';
 
 // Connected terrain-first ranges shared by ChunkGen and BiomeMap.
 // One scalar landform, evaluated in world coordinates, with no chunk state,

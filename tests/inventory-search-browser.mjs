@@ -24,9 +24,9 @@ try {
     await page.goto(server.resolvedUrls.local[0]);
     await page.waitForFunction(() => window.__game && !window.__game.booting
       && document.querySelector('#loading')?.classList.contains('ld-gone'), null, { timeout: 120_000 });
-    await page.evaluate(async () => {
+    await page.evaluate(() => {
       const g = window.__game;
-      await g.newWorld({ mode: 'creative', name: 'Inventory search check', seed: 71823, silent: true });
+      g.newWorld({ mode: 'creative', name: 'Inventory search check', seed: 71823, silent: true });
       g.ui.refreshForMode(); g.ui.hideBlocker();
       g.duilt.inventory.slots = Array.from({ length: 120 }, () => ({ id: 'stone', count: 1, wear: 0 }));
       g.duilt.inventory.slots[16] = null;

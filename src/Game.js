@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { ShaderWarmup } from './render/ShaderWarmup.js';
 import { World, CHUNK_SIZE } from './world/World.js';
 import { ChunkMesher, WIND } from './world/ChunkMesher.js';
 import { PlayerController } from './player/PlayerController.js';
@@ -45,8 +44,12 @@ const UNSENT_KEY = 'voxelgame:unsent';
 const makeChunkGen = (o) => new ChunkGen(o);
 
 /** Everything about a world that has to survive, as plain JSON. */
-function serialiseWorldState({ world, mode, economy, duilt, territoryBounds }) {
-  return { world: world.serialize({ keepBounds: territoryBounds }), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null };
+function serialiseWorldState({ world, mode, economy, duilt, territoryBounds, player }) {
+  // Where you stand rides along: the unsent copy that goes up later must not
+  // overwrite the account's saved position with nothing.
+  const at = player?.position;
+  return { world: world.serialize({ keepBounds: territoryBounds }), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null,
+    ...(at ? { player: { x: at.x, y: at.y, z: at.z, yaw: player.yaw, pitch: player.pitch } } : {}) };
 }
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
@@ -108,11 +111,9 @@ import { inPast, pastArrival } from './world/past.js';
 import { inFuture, futureArrival, FUTURE_GROUND } from './world/future.js';
 import { FutureView } from './render/FutureView.js';
 import { RECIPES } from './config/recipes.js';
-import { Rivals } from './duilt/Rivals.js';
-
-import { skyAt, SKY_REACH } from './world/skyLocation.js';
-import { gameFeature, loadGameFeature } from './core/gameFeatures.js';
-import { FeatureScope } from './core/FeatureScope.js';
+import { Rivals, FALL_DAYS } from './duilt/Rivals.js';
+import { rivalSites, standardAt, RIVAL_HEX } from './world/rivals.js';
+import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js';
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
 import { Suspicion, SUSPICION, AMBUSH } from './duilt/Suspicion.js';
 import { MarkerView } from './render/MarkerView.js';
@@ -122,7 +123,7 @@ import { SkyMist } from './render/SkyMist.js';
 import { MODE_WORDS as ARMY_WORDS, MARCH_DAYS } from './world/Army.js';
 import { INTRO } from './ui/StoryText.js';
 import { SOLDIER } from './world/Defenders.js';
-import { LAST_ROUND } from './config/warState.js';
+import { ROUNDS, LAST_ROUND, ROUND_GOLD, companyWords } from './config/war.js';
 import { WaterFlow, LavaFlow } from './world/WaterFlow.js';
 import { WANDERERS, NEWS } from './config/wanderers.js';
 import { TRADERS_BY_ID } from './config/traders.js';
@@ -131,6 +132,7 @@ import { MobView } from './render/MobView.js';
 // The showcase (docs/history/plan-look-and-sound.md, section 1): see openShowcase.
 import { ShowcaseView } from './render/ShowcaseView.js';
 import { TITLE_SEED, TITLE_SITE, TITLE_TIME, TITLE_HERDS, titlePlaceBlocks, orbitPose, orbitHeight, messengerPath } from './world/titleScene.js';
+import { SHOWCASE_SEED, SHOWCASE_TIMES, SHOWCASE_SPOTS_BY_ID, SHOWCASE_BUILDINGS, SHOWCASE_FIGURES, findShowcaseSite, flattenShowcase, placeBlocks, showcaseLabels, spotPose } from './world/showcase.js';
 import { Defenders } from './world/Defenders.js';
 import { Army } from './world/Army.js';
 import { Guardian } from './world/Guardian.js';
@@ -1193,7 +1195,9 @@ export class Game {
         world,
         name: held.name,
         mode: held.state.mode,
-        player: null,
+        player: Number.isFinite(held.state.player?.y)
+          ? { position: { x: held.state.player.x, y: held.state.player.y, z: held.state.player.z }, yaw: held.state.player.yaw, pitch: held.state.player.pitch }
+          : null,
         gamification: null,
         economy: { toJSON: () => held.state.economy ?? {} },
         duilt: held.state.duilt,
@@ -1256,15 +1260,21 @@ export class Game {
 
     if (this.local.has(id)) {
       try {
-        return await this.restoreFromLocal(id) !== false;
+        await this.restoreFromLocal(id);
+        return true;
       } catch (err) {
         this.ui.toast({ kind: 'xp', title: 'Could not open that world', body: err.message });
         return false;
       }
     }
-    if (!this.cloud?.signedIn) return false;
+    if (!this.cloud?.signedIn) {
+      this.ui.toast({ kind: 'xp', title: 'Sign in to open this world',
+        body: 'This world lives on your account, and this browser is not signed in right now.' });
+      return false;
+    }
     try {
-      return await this.restoreFromCloud(id) !== false;
+      await this.restoreFromCloud(id);
+      return true;
     } catch (err) {
       this.ui.toast({ kind: 'xp', title: 'Could not open that world', body: err.message });
       return false;
@@ -1409,7 +1419,13 @@ export class Game {
       onSelectItem: (id) => { this.selectedItemId = id; },
       // Opening a world by its id. There is no "open by name" any more,
       // because there is no second copy of anything to tell apart by name.
-      onOpenWorld: (id) => this.withLoading('Opening your world…', () => this.openWorld(id)),
+      // A world that does not open leaves you on the worlds screen, not in the
+      // title scene behind it with the screen already closed.
+      onOpenWorld: async (id) => {
+        const opened = await this.withLoading('Opening your world…', () => this.openWorld(id)).catch(() => false);
+        if (opened === false) this.ui.openHome();
+        return opened;
+      },
       onDeleteWorld: async (id) => {
         if (id === this.worldId) { this.discarded = true; this.pendingSave = false; }
         // Its unsent copy goes too, or the next startup uploads it again.
@@ -1444,8 +1460,8 @@ export class Game {
           // An imported file is a new world, not a second copy of wherever it
           // came from: it gets a fresh id and follows the same rule any new
           // world does for where it lives — see newWorld's own note.
-          if (await this.loadFromData({ ...data, worldId: newWorldId() }) === false) return false;
           this.worldIsLocal = !this.cloud?.signedIn;
+          this.loadFromData({ ...data, worldId: newWorldId() });
           this.saveNow();
           for (const t of data.templates) {
             if (!this.templates.get(t.id)) this.templates.templates.push(t);
@@ -1458,7 +1474,7 @@ export class Game {
         }
       },
       onGoHome: () => (this.title ? true : this.withLoading('Back to your worlds…', () => this.openTitle())),
-      onNewWorld: (mode, name, options) => this.withLoading('Building the world…', async () => { if (await this.newWorld({ mode, name, localAI: options?.localAI }) === false) return false; this.ui.closePanel('panel-menu'); }),
+      onNewWorld: (mode, name, options) => this.withLoading('Building the world…', () => { this.newWorld({ mode, name, localAI: options?.localAI }); this.ui.closePanel('panel-menu'); }),
       onInviteBattle: () => this.openPeerBattle(),
       onExportDiagnostics:()=>this.diagnostics.download(this.diagnosticContext()),
       onRenameWorld: (name) => { this.worldName = name; this.saveNow(); },
@@ -1697,60 +1713,8 @@ export class Game {
     this.player.setBounds(walled ? t.bounds() : null);
   }
 
-  /** Optional systems finish loading before their state can advance or terrain can be generated. */
-  prepareFeatures(features, work = () => true, { replace = false } = {}) {
-    this.featureScope ??= new FeatureScope();
-    if (replace) { this.featureScope.cancel(); this.featureLoads?.clear(); }
-    const marker = {};
-    this.featureLoads ??= new Set();
-    this.featureLoads.add(marker);
-    this.featureLoading = true;
-    this.featureFailure = null;
-    const revision = this.featureScope.revision;
-    return this.featureScope.run(() => Promise.all(features.map(loadGameFeature)), work)
-      .catch(error => {
-        if (revision !== this.featureScope.revision) return false;
-        this.featureFailure = true;
-        // A browser remembers a module that failed to download and never
-        // asks for it again, so trying again in this page cannot work. The
-        // world in hand was not replaced: save it, then reload.
-        this.ui?.toast({ kind: 'xp', title: 'Could not load this part of the game',
-          body: 'Check your connection, then reload. Your world is saved first.',
-          action: { label: 'Reload', onClick: () => this.reloadForFeatures() } });
-        return false;
-      }).finally(() => { this.featureLoads.delete(marker); this.featureLoading = this.featureLoads.size > 0; });
-  }
-
-  /** Saves what's open (waiting for it, as leaving does), then reloads the page. */
-  async reloadForFeatures() {
-    try { await this.saveAndWait(); } catch { /* the backup copy is kept either way */ }
-    location.reload();
-  }
-
-  runFeature(feature, method, args) {
-    const ready = gameFeature(feature);
-    if (ready) return ready.methods[method].apply(this, args);
-    return this.prepareFeatures(feature === 'showcase' ? ['war', 'sky', 'showcase'] : [feature],
-      () => gameFeature(feature).methods[method].apply(this, args));
-  }
-
-  ensureLiveFeatures() {
-    if (this.featureLoading || this.featureFailure || !this.duilt || this.title) return;
-    const features = [];
-    if (this.duilt.ring === 'black' || this.duilt.army.active) features.push('sky');
-    if (this.duilt.war.atWar || this.duilt.battle || this.wanderers?.list.some(person => {
-      const spec = WANDERERS[person.kind];
-      return person.war || person.mount || spec?.siege || spec?.beast;
-    })) features.push('war');
-    if (features.some(feature => !gameFeature(feature))) void this.prepareFeatures(features, () => true);
-  }
-
   /** Duilt owns scene objects (the border), so swapping worlds must clean up. */
   disposeDuilt() {
-    this.featureScope?.cancel();
-    this.featureLoads?.clear();
-    this.featureLoading = null;
-    this.featureFailure = null;
     if (!this.acceptingPeerSnapshot) {
       this.peerPanel?.dispose();this.peerPanel=null;this.peerSession=null;
       this.clearPeerAvatar();
@@ -1765,10 +1729,6 @@ export class Game {
   }
 
   newWorld({ silent, mode = this.mode, name, scenery = false, title = false, seed, localAI = false } = {}) {
-    const features = title ? [] : mode === BATTLE ? ['war'] : mode !== DUILT ? ['sky'] : [];
-    if (features.some(feature => !gameFeature(feature))) {
-      return this.prepareFeatures(features, () => this.newWorld({ silent, mode, name, scenery, title, seed, localAI }), { replace: true });
-    }
     // Battle (backlog batch 4, E) is Duilt's rules with three rivals in the
     // world (duilt/Rivals.js) — a Duilt world with `battle` on its settlement.
     const battle = mode === BATTLE;
@@ -1830,7 +1790,6 @@ export class Game {
     // own note on exactly what it switches off.
     const sandbox = mode !== DUILT;
     this.duilt = new DuiltGame({ world: this.world, scene: this.scene, bus: this.bus, sandbox });
-    if (this.world.gen) this.world.gen.sky = !title && this.skyOpen();
     this.configureVillagerJobs();
     // Not for the title scene: nobody plays in it, and a kit of one of everything
     // was hundreds of bag changes at every start (reported directly: "The
@@ -1910,11 +1869,6 @@ export class Game {
   }
 
   loadFromData(data, { silent } = {}) {
-    const d = data.duilt;
-    const features = [];
-    if (data.mode !== DUILT || d?.ring === 'black' || d?.army?.sworn || data.world.gen?.sky) features.push('sky');
-    if (d?.battle || ['waiting', 'warned', 'fighting'].includes(d?.war?.stage) || d?.age >= 10) features.push('war');
-    if (features.some(feature => !gameFeature(feature))) return this.prepareFeatures(features, () => this.loadFromData(data, { silent }), { replace: true });
     this.world = data.world;
     this.showcase = null;
     this.title = null;
@@ -1969,11 +1923,6 @@ export class Game {
       }
     }
     if (sandbox) this.duilt.grantCreativeKit();
-    if (this.world.gen) {
-      this.world.gen.sky = this.skyOpen();
-      this.world.gen.battle = !!this.duilt.battle;
-      this.world.gen.skyCut = sandbox ? null : this.duilt.skyWar.cut;
-    }
     // The world's clock picks up where it was left.
     if (this.dayCycle) this.dayCycle.time = this.duilt.dayTime ?? MORNING;
     this.gamification.setDuilt(this.duilt);
@@ -3951,10 +3900,10 @@ export class Game {
       getSnapshot:()=>buildWorldPayload({...this.saveState(),name:this.worldName}),
       onPeer:peer=>{this.peerSession=peer;if(!peer)this.clearPeerAvatar();},
       onPosition:position=>{this.peerPosition=position;this.peerAvatar??=new AvatarView(this.scene);},
-      onSnapshot:async payload=>{
+      onSnapshot:payload=>{
         const data=parseWorldPayload(JSON.stringify(payload));
         this.acceptingPeerSnapshot=true;
-        try{if(await this.loadFromData({...data,worldId:newWorldId()})===false)return false;this.worldIsLocal=true;}
+        try{this.loadFromData({...data,worldId:newWorldId()});this.worldIsLocal=true;}
         finally{this.acceptingPeerSnapshot=false;}
         return true;
       },
@@ -4086,7 +4035,8 @@ export class Game {
   async restoreFromCloud(id, { silent = false } = {}) {
     if (!this.cloud) throw new Error('This build has no cloud configured.');
     const data = await this.cloud.restore(id);
-    const loaded = await this.loadFromData({
+    this.worldIsLocal = false;
+    this.loadFromData({
       world: data.world,
       mode: data.mode,
       player: data.player,
@@ -4096,8 +4046,6 @@ export class Game {
       worldId: id,
       worldName: data.name,
     }, { silent });
-    if (loaded === false) return false;
-    this.worldIsLocal = false;
     // Nothing further to offer: this is the newer copy.
     this.offeredPull = null;
     // Write it back, then record the handshake — after the save, so the
@@ -4133,7 +4081,8 @@ export class Game {
   async restoreFromLocal(id, { silent = false } = {}) {
     const data = await this.local.restore(id);
     const world = restoreWorldSnapshot(data.world);
-    const loaded = await this.loadFromData({
+    this.worldIsLocal = true;
+    this.loadFromData({
       world,
       mode: data.mode,
       player: data.player,
@@ -4143,8 +4092,6 @@ export class Game {
       worldId: id,
       worldName: data.name,
     }, { silent });
-    if (loaded === false) return false;
-    this.worldIsLocal = true;
     // Progression is shared across every local world in this browser, the
     // same split CloudWorlds keeps between an account's worlds and its one
     // progression row — so it only loads in when it is actually ahead,
@@ -4753,7 +4700,7 @@ export class Game {
   guardianEnemy(p, includeDead = false) {
     const spec = WANDERERS[p?.kind];
     return !!(spec?.hp && (spec.hits || spec.siege) && !spec.flees
-      && (includeDead || !p.dead) && this.wanderers?.hostileOf(p));
+      && (includeDead || !p.dead) && (p.raider || this.wanderers?.hostileOf(p)));
   }
 
   /** Only successful player hits change priority; a lethal latest hit clears it. */
@@ -5101,34 +5048,114 @@ export class Game {
    * they want to find there.
    */
   tickWar() {
-    if (!this.duilt || this.duilt.sandbox || !this.duilt.war.atWar) return;
-    return this.runFeature('war', 'tickWar', []);
+    const d = this.duilt;
+    if (!d || d.sandbox || !this.wanderers) return;
+    const war = d.war;
+    if (war.stage === 'fighting') {
+      if (this.wanderers.warParty) this.watchRound();
+      else this.sendRound();
+      return;
+    }
+    if (!war.atWar) return;
+    const home = this.settlementCentre(), p = this.player.position;
+    if (Math.hypot(p.x - home.x, p.z - home.z) > WAR_HOME_RANGE) return;
+    const what = war.tick(d.days);
+    if (what === 'warn') {
+      const shut = this.shutGates();
+      if (shut) this.ui?.toast({ kind: 'challenge', title: 'The gates are shut', body: `${shut === 1 ? 'Your gatehouse has' : `${shut} gatehouses have`} closed for the round` });
+      const dir = this.kingdomDirection() ?? 'north';
+      this.sound?.horn();
+      this.ui?.toast({
+        kind: 'challenge',
+        title: `War horns to the ${dir}`,
+        body: `Round ${war.round} of ${LAST_ROUND}: ${companyWords(war.round, WANDERERS)}. They'll be at your border in about a minute.`,
+      });
+    } else if (what === 'start') {
+      this.sendRound();
+    }
   }
 
   /** The round that's due, at the edge of your land on the Stone Kingdom's side. */
   sendRound() {
-
-    return this.runFeature('war', 'sendRound', []);
+    const war = this.duilt.war;
+    const home = this.settlementCentre();
+    const k = this.wanderers.landmarks.find((l) => l.kind === 'kingdom');
+    const towards = k ? { x: k.x, z: k.z } : { x: home.x, z: home.z - 1000 };
+    const band = this.wanderers.sendWarband(home, towards, this.duilt.territory.size / 2, ROUNDS[war.round - 1].who, war.round);
+    if (!band) return; // nowhere loaded to gather yet — next frame
+    this.wanderers.warParty = { round: war.round, band, died: false };
+    const dir = compass(band[0].x - home.x, band[0].z - home.z);
+    this.ui?.toast({
+      kind: 'challenge',
+      title: `Round ${war.round} of ${LAST_ROUND} — they're here`,
+      body: `${companyWords(war.round, WANDERERS)}, coming in from the ${dir}. Beat them back.`,
+    });
   }
 
   /** Whether the round at your walls is over yet, and how it went. */
   watchRound() {
-
-    return this.runFeature('war', 'watchRound', []);
+    const party = this.wanderers.warParty;
+    if (party.band.some((p) => !p.dead && !p.done)) return;
+    this.wanderers.warParty = null;
+    const d = this.duilt, war = d.war, n = party.round;
+    const won = !party.died && !party.band.some((p) => p.escaped);
+    const res = war.resolve(won, d.days);
+    if (res === 'lost') {
+      this.ui?.toast({
+        kind: 'xp',
+        title: `Round ${n} lost`,
+        body: party.died ? 'They beat you, and went home with what they came for. They\'ll be back.'
+          : 'Some of them got away with what they took. They\'ll be back — the round comes again.',
+      });
+      return;
+    }
+    const gold = ROUND_GOLD(n);
+    d.collect({ gold });
+    if (res === 'victory') {
+      this.ui?.toast({
+        kind: 'achievement',
+        title: 'The dark army is broken',
+        body: `All ten rounds beaten, the Warlord with them. The raids are over for good — the white god's light is on your land. +${gold} gold`,
+      });
+      d.endWhitePath();
+      d.checkAgeAdvance();
+      this.editedAt = Date.now();
+      return;
+    }
+    this.ui?.toast({
+      kind: 'achievement',
+      title: `Round ${n} of ${LAST_ROUND} won`,
+      body: `+${gold} gold. Round ${war.round} comes in a day or so — or sound a war horn when you're ready.`,
+    });
+    this.editedAt = Date.now();
   }
 
   // ---- Battle: the rivals (duilt/Rivals.js, world/rivals.js) ----
 
   /** The rivals' cities as places people live, and what their guards need to know. */
   syncRivals() {
-    if (!this.duilt?.battle) return;
-    return this.runFeature('war', 'syncRivals', []);
+    const w = this.wanderers, gen = this.world?.gen;
+    if (!w || !gen) return;
+    w.rivalState = (lm) => {
+      const b = this.duilt?.battle, r = b?.list[lm?.rival];
+      if (!r) return null;
+      return { garrison: b.garrison(r), fallen: b.fallen(r, this.duilt.days), colour: rivalColour(r.id) };
+    };
+    const has = w.landmarks.some((l) => l.kind === 'rival');
+    if (!!this.duilt?.battle === has) return;
+    w.landmarks = has ? w.landmarks.filter((l) => l.kind !== 'rival')
+      : [...w.landmarks, ...rivalSites(gen).map((s) => ({ kind: 'rival', rival: s.id, name: s.name, x: s.x, z: s.z, y: s.y, half: s.half, people: s.people }))];
   }
 
   /** Who you're up against, said once as the world opens. */
   battleWelcome() {
-
-    return this.runFeature('war', 'battleWelcome', []);
+    const home = this.settlementCentre();
+    const names = rivalSites(this.world.gen).map((r) => `${r.name} to the ${compass(r.x - home.x, r.z - home.z)}`);
+    this.ui.toast({
+      kind: 'challenge', title: 'Battle: three rivals',
+      body: `${names.join(', ')} — about 5,000 blocks out, on your map. Build up: once you've a barracks, their armies come. Take a city's standard to break its strength.`,
+      duration: 10000,
+    });
   }
 
   /**
@@ -5137,20 +5164,65 @@ export class Game {
    * at a time, and only while you're home, as the Stone Kingdom's rounds are.
    */
   tickRivals() {
-    if (!this.duilt?.battle) return;
-    return this.runFeature('war', 'tickRivals', []);
+    const d = this.duilt, b = d?.battle;
+    if (!b || d.sandbox || !this.wanderers || this.peerSession?.role==='guest') return;
+    if (b.localAI && import.meta.env?.DEV) {
+      this.localRivalAI ??= new LocalRivalAI({onStatus:status=>{
+        if (this.localAIStatus === status) return;
+        this.localAIStatus = status;
+        this.ui?.toast({kind:'challenge',title:status==='connected'?'LM Studio rivals connected':'LM Studio unavailable',body:status==='connected'?'Your model is choosing rival strategies.':'Normal rival strategies continue; the model will be tried again.'});
+      }});
+      void this.localRivalAI.tick(b);
+    }
+    b.grow(d.days);
+    if (!b.armed && d.structures.countOf('barracks') > 0 && b.arm(d.days)) {
+      this.editedAt = Date.now();
+      this.ui?.toast({ kind: 'challenge', title: 'Your barracks is up — and the rivals have seen it', body: 'Their armies will come for you now, one city at a time. Raise soldiers, build walls.', duration: 8000 });
+    }
+    const party = this.wanderers.rivalParty;
+    if (party) return void this.watchRivals(party);
+    const fighting = b.fighting();
+    if (fighting) return void this.sendRivals(fighting);
+    if (this.wanderers.warParty) return; // the Stone Kingdom's round first
+    const home = this.settlementCentre(), p = this.player.position;
+    if (Math.hypot(p.x - home.x, p.z - home.z) > WAR_HOME_RANGE) return;
+    const due = b.tick(d.days);
+    if (!due) return;
+    const site = rivalSites(this.world.gen)[due.rival.id];
+    if (due.what === 'warn') {
+      this.sound?.horn();
+      this.ui?.toast({
+        kind: 'challenge',
+        title: `${site.name} marches on you`,
+        body: `${rivalWords(b.company(due.rival))}, from the ${compass(site.x - home.x, site.z - home.z)}. They'll be at your border in about a minute.`,
+      });
+    } else this.sendRivals(due.rival);
   }
 
   /** A rival's army, at the edge of your land on their side, in their colour. */
   sendRivals(r) {
-
-    return this.runFeature('war', 'sendRivals', [r]);
+    const home = this.settlementCentre();
+    const site = rivalSites(this.world.gen)[r.id];
+    const band = this.wanderers.sendWarband(home, site, this.duilt.territory.size / 2, this.duilt.battle.company(r), 0);
+    if (!band) return; // nowhere loaded to gather yet — next frame
+    for (const q of band) { q.rival = r.id; if (!WANDERERS[q.kind].siege) q.colour = rivalColour(r.id); }
+    this.wanderers.rivalParty = { rival: r.id, band, died: false };
+    this.ui?.toast({ kind: 'challenge', title: `${site.name}'s army is here`, body: `Coming in from the ${compass(band[0].x - home.x, band[0].z - home.z)}. Beat them back.` });
   }
 
   /** Whether a rival's army is done with, and how it went. */
   watchRivals(party) {
-
-    return this.runFeature('war', 'watchRivals', [party]);
+    if (party.band.some((q) => !q.dead && !q.done)) return;
+    this.wanderers.rivalParty = null;
+    const d = this.duilt, b = d.battle, r = b.list[party.rival];
+    const site = rivalSites(this.world.gen)[r.id];
+    const won = !party.died && !party.band.some((q) => q.escaped);
+    b.resolve(r, won, d.days);
+    this.editedAt = Date.now();
+    if (!won) return void this.ui?.toast({ kind: 'xp', title: `${site.name} got the better of you`, body: 'They went home with what they came for — and a little stronger for it.' });
+    const gold = 2 + Math.round(r.strength);
+    d.collect({ gold });
+    this.ui?.toast({ kind: 'achievement', title: `${site.name}'s army is beaten`, body: `+${gold} gold. They're weaker for it — for now.` });
   }
 
   /**
@@ -5158,8 +5230,22 @@ export class Game {
    * yours until they've rebuilt — their strength halved, and tribute paid.
    */
   takeStandard(aimed) {
-
-    return this.runFeature('war', 'takeStandard', [aimed]);
+    const d = this.duilt, b = d?.battle;
+    if (!b) return;
+    const site = rivalSites(this.world.gen).find((s) => Math.abs(s.x - aimed.x) <= s.half && Math.abs(s.z - aimed.z) <= s.half);
+    if (!site) return;
+    const r = b.list[site.id];
+    if (b.fallen(r, d.days)) {
+      const left = Math.max(1, Math.ceil(r.fallenUntil - d.days));
+      return void this.ui.toast({ kind: 'xp', title: `${site.name} is yours`, body: `For now: they'll have rebuilt in ${left === 1 ? 'a day' : `${left} days`}.` });
+    }
+    const guards = (this.wanderers?.list ?? []).filter((q) => q.landmark?.rival === site.id && q.kind === 'rival_guard' && !q.dead).length;
+    if (guards) return void this.ui.toast({ kind: 'challenge', title: 'The garrison holds the standard', body: `${guards} of them still stand. Beat them first.` });
+    const gold = b.conquer(r, d.days);
+    d.collect({ gold });
+    this.editedAt = Date.now();
+    this.sound?.lift?.();
+    this.ui.toast({ kind: 'achievement', title: `You took ${site.name}`, body: `+${gold} gold in tribute. Their strength is broken in half, and no army comes from them while they rebuild — about ${FALL_DAYS} days.`, duration: 8000 });
   }
 
   /**
@@ -5322,14 +5408,37 @@ export class Game {
 
   /** At the altar, with the Black Ring on your hand: the King's thousand are yours. */
   swearOath() {
-    if (!this.duilt || this.duilt.sandbox) return;
-    return this.runFeature('sky', 'swearOath', []);
+    const d = this.duilt;
+    if (!d || d.sandbox) return;
+    if (d.army.sworn) return void this.ui?.toast({ kind: 'xp', title: 'You are sworn already', body: `${d.army.total} warriors answer to you` });
+    if (d.ringWorn() !== 'black') {
+      return void this.ui?.toast({
+        kind: 'xp', title: 'The altar is cold',
+        body: d.ring === 'white' ? 'The dark god turns from the White Ring' : d.ring === 'black' ? 'Put the Black Ring on, and kneel again' : 'Only the bearer of the Black Ring can swear here',
+      });
+    }
+    d.army.swear(d.days);
+    this.sound?.gong();
+    this.ui?.toast({
+      kind: 'achievement',
+      title: 'You swore to the dark god',
+      body: `The Stone King keeps his word: ${d.army.total} warriors march with you. Order them from the ⚔ banner — follow, hold, attack, or form a line.`,
+    });
+    this.ui?.duiltUI?.renderArmy?.();
+    this.editedAt = Date.now();
   }
 
   /** At a war tent: camp here. You wake here, and the army holds round it. */
   makeCamp({ x, y, z }) {
-    if (!this.duilt) return;
-    return this.runFeature('sky', 'makeCamp', [{ x, y, z }]);
+    const d = this.duilt;
+    if (!d) return;
+    d.spawn = { x, y, z };
+    if (d.army.active) d.army.command('hold', { x: x + 0.5, z: z + 2.5 }, this.player.yaw);
+    this.ui?.toast({
+      kind: 'challenge', title: 'You made camp',
+      body: d.army.active ? 'You\'ll wake here, and the army holds round it. Order them on from the ⚔ banner.' : 'You\'ll wake here when you fall.',
+    });
+    this.ui?.duiltUI?.renderArmy?.();
   }
 
   // ---- the Sky Kingdom (world/skyKingdom.js) ----
@@ -5356,7 +5465,7 @@ export class Game {
       out.push({ kind: 'sky', name: 'Sky Kingdom', x: s.x, z: s.z });
     }
     // Battle: the rivals' cities, from the start — you know who you're up against.
-    if (d.battle) for (const r of gameFeature('war').rivalSites(gen)) out.push({ kind: 'rival', name: r.name, x: r.x, z: r.z, colour: gameFeature('war').RIVAL_HEX[r.id] });
+    if (d.battle) for (const r of rivalSites(gen)) out.push({ kind: 'rival', name: r.name, x: r.x, z: r.z, colour: RIVAL_HEX[r.id] });
     return out;
   }
 
@@ -5381,7 +5490,7 @@ export class Game {
       return true;
     }
     if (kind === 'sky' && this.skyOpen()) {
-      const s = gameFeature('sky').skyFor(gen);
+      const s = skyFor(gen);
       const l = s.landings.reduce((best, l) => (Math.hypot(l.x - home.x, l.z - home.z) < Math.hypot(best.x - home.x, best.z - home.z) ? l : best));
       this.player.flying = false;
       this.player.teleport(l.arrive.x, l.arrive.y, l.arrive.z);
@@ -5495,8 +5604,68 @@ export class Game {
    * so anything done in it is forgotten.
    */
   openShowcase({ spot = 'overview', time = 'day' } = {}) {
-
-    return this.runFeature('showcase', 'openShowcase', [{ spot, time }]);
+    this.saveNow();
+    this.newWorld({ mode: CREATIVE, name: 'Showcase', scenery: true, silent: true, seed: SHOWCASE_SEED });
+    const gen = this.world.gen;
+    const site = findShowcaseSite(gen);
+    if (!site) return false;
+    flattenShowcase(this.world, site);
+    // The buildings through the same starterPlacement a tap on a design
+    // goes through; the places the way the world lays them.
+    for (const b of SHOWCASE_BUILDINGS) {
+      if (!b.structure) continue;
+      const plan = this.duilt.starterPlacement(b.structure, { x: site.x + b.anchor.x, y: site.y, z: site.z + b.anchor.z });
+      for (const c of plan.changes ?? []) this.world.setBlock(c.x, c.y, c.z, c.next);
+    }
+    for (const [x, y, z, id] of placeBlocks(site)) this.world.setBlock(x, y, z, id);
+    // The Sky city is laid only while this is set (Creative has it anyway — skyOpen).
+    gen.sky = true;
+    this.syncMobs();
+    // Nobody wanders through the pictures: no herds, no explorers.
+    this.mobs.cap = 0;
+    this.wanderers.untilExplorer = Infinity;
+    // Everyone in the same lists the game draws them from, made by the same
+    // code that makes them in play, then stood still (`still`: Mobs and
+    // Wanderers leave them be). Names and coats are fixed rather than rolled,
+    // so a face is the same face in every picture.
+    const figures = { settlers: [], defenders: [], warriors: [], guardians: [] };
+    const defenders = new Defenders({ world: this.world });
+    const army = new Army({ world: this.world });
+    for (const g of SHOWCASE_FIGURES) {
+      for (const f of g.figures) {
+        const x = site.x + f.x, y = site.y, z = site.z + f.z;
+        const still = { still: true, facing: f.facing, target: null, speed: 0 };
+        if (f.kind === 'mob') {
+          this.mobs.list.push(Object.assign(this.mobs.make(MOBS_BY_ID.get(f.type), x, y, z), still));
+        } else if (f.kind === 'wanderer') {
+          const make = (kind) => this.wanderers.person(kind, x, y, z, { ...still, name: f.label, colour: WANDERERS[kind].colours[0] });
+          const p = make(f.type);
+          this.wanderers.list.push(p);
+          if (f.rider) {
+            const r = make(f.rider);
+            r.mount = p;
+            p.rider = r;
+            this.wanderers.list.push(r);
+          }
+        } else if (f.kind === 'settler') {
+          figures.settlers.push({ id: `showcase-${f.n}`, name: settlerName(f.n), colour: settlerColour(f.n), x, y, z, ...still });
+        } else if (f.kind === 'defender') {
+          figures.defenders.push(Object.assign(defenders.person(f.type, { x: x - 0.5, y, z: z - 0.5 }, null), still));
+        } else if (f.kind === 'warrior') {
+          army.total = army.field.length + 1;
+          army.muster({ x, y, z }, 0);
+          figures.warriors.push(Object.assign(army.field.at(-1), { x, y, z }, still));
+        } else if (f.kind === 'guardian') {
+          figures.guardians.push(Object.assign(new Guardian({ world: this.world, ring: f.type, home: { x, y, z } }), still));
+        }
+      }
+    }
+    this.showcase = { site, figures, labelSpots: showcaseLabels(site), labels: true, spot: null };
+    this.rebuildAllChunks();
+    this.ui?.refreshForMode();
+    this.showcaseTime(time);
+    this.showcaseSpot(spot);
+    return true;
   }
 
   /**
@@ -5506,13 +5675,23 @@ export class Game {
    * picture wants. Returns whether there was such a spot.
    */
   showcaseSpot(id, { settle = false } = {}) {
-
-    return this.runFeature('showcase', 'showcaseSpot', [id, { settle }]);
+    const spot = SHOWCASE_SPOTS_BY_ID.get(id);
+    if (!this.showcase || !spot) return false;
+    const pose = spotPose(spot, { site: this.showcase.site, gen: this.world.gen, world: this.world });
+    if (!pose) return false;
+    const eye = this.player.eyePosition().y - this.player.position.y;
+    this.player.flying = true;
+    this.player.teleport(pose.eye.x, pose.eye.y - eye, pose.eye.z);
+    this.player.yaw = pose.yaw;
+    this.player.pitch = pose.pitch;
+    this.showcase.spot = id;
+    if (settle) this.finishLoading();
+    return true;
   }
 
   /** The showcase's hour: 'day', 'dusk', 'night' (SHOWCASE_TIMES), or a time 0..1. It holds there. */
   showcaseTime(when) {
-    const t = typeof when === 'number' ? when : ({ day: 0.36, dusk: 0.745, night: 0.95 })[when];
+    const t = typeof when === 'number' ? when : SHOWCASE_TIMES[when];
     if (t == null) return false;
     this.dayCycle.time = t;
     if (this.duilt) this.duilt.dayTime = t;
@@ -5547,8 +5726,9 @@ export class Game {
 
   /** The island, planned, when you're near enough to meet its people — and it hasn't fallen. */
   skyNear() {
-    if (!this.skyOpen() || this.duilt.skyFallen) return null; const at=skyAt(this.world.gen), p=this.player.position; if(Math.hypot(at.x-p.x,at.z-p.z)>=SKY_PEOPLE)return null;
-    return this.runFeature('sky', 'skyNear', []);
+    if (!this.skyOpen() || this.duilt.skyFallen) return null;
+    const at = skyAt(this.world.gen), p = this.player.position;
+    return Math.hypot(at.x - p.x, at.z - p.z) < SKY_PEOPLE ? skyFor(this.world.gen) : null;
   }
 
   /**
@@ -5584,8 +5764,33 @@ export class Game {
   }
 
   rideLift({ x, y, z }) {
-
-    return this.runFeature('sky', 'rideLift', [{ x, y, z }]);
+    const ride = this.world.gen ? liftAt(this.world.gen, x, y, z) : null;
+    if (!ride) {
+      const own = this.chainLift(x, y, z);
+      if (!own) return void this.ui?.toast({ kind: 'xp', title: 'It goes nowhere yet', body: 'Hang chain straight up or down from it, with another sky lift at the far end — it rides the chain between them.' });
+      this.player.teleport(own.to.x, own.to.y, own.to.z);
+      this.player.velocity?.set?.(0, 0, 0);
+      this.sound?.lift();
+      return void this.ui?.toast({ kind: 'challenge', title: own.up ? 'Up the chain' : 'Down the chain', body: `${own.links} links` });
+    }
+    const i = skyFor(this.world.gen).towers.indexOf(ride.tower);
+    if (this.duilt && !this.duilt.sandbox && this.duilt.skyWar.chains[i]) {
+      this.ui?.toast({ kind: 'xp', title: 'Its chain is cut', body: 'This lift goes nowhere now — another tower\'s still might' });
+      return;
+    }
+    const from = { x: this.player.position.x, z: this.player.position.z };
+    this.player.teleport(ride.to.x, ride.to.y, ride.to.z);
+    const army = this.duilt?.army;
+    if (army?.active && army.mode === 'follow') {
+      for (const w of army.field) {
+        if (Math.hypot(w.x - from.x, w.z - from.z) > 30) continue;
+        w.x = ride.to.x + (Math.random() - 0.5) * 3; w.z = ride.to.z + (Math.random() - 0.5) * 3; w.y = ride.to.y;
+      }
+    }
+    this.sound?.lift();
+    this.ui?.toast(ride.up
+      ? { kind: 'challenge', title: 'Up the chain to the Sky Kingdom', body: this.wanderers?.skyHostile() ? 'Its guards know the Black Ring. Bring down the Sky King in his palace.' : 'White marble and gold, a long way up' }
+      : { kind: 'challenge', title: 'Down to the anchor tower' });
   }
 
   /**
@@ -5595,8 +5800,24 @@ export class Game {
    * there is seen to in die()).
    */
   tickSkyAttack() {
-    if (!this.duilt || this.duilt.sandbox || this.duilt.ring !== 'black' || this.duilt.skyFallen) return;
-    return this.runFeature('sky', 'tickSkyAttack', []);
+    const d = this.duilt, gen = this.world?.gen;
+    if (!d || d.sandbox || d.ring !== 'black' || d.skyFallen || !gen) return;
+    const at = skyAt(gen), p = this.player.position;
+    const far = Math.hypot(at.x - p.x, at.z - p.z);
+    const war = d.skyWar;
+    if (!war.attack) {
+      if (far > SKY_ATTACK_IN) return;
+      war.begin(d.days, d.army.active ? d.army.total : 0);
+      this.ui?.toast({
+        kind: 'challenge', title: 'The attack on the Sky Kingdom has begun',
+        body: this.disguised()
+          ? 'In the Sky armour they take you for one of their own. Walk, keep your distance, don\'t linger — and keep the Black Ring out of sight. Watch the 👁 meter.'
+          : 'Bring down the Sky King in his palace. Fall here, or lose your army, and you\'re driven back home — and the Sky Kingdom will tax you for it.',
+      });
+      return;
+    }
+    if (far > SKY_ATTACK_OUT) { war.withdraw(); return; }
+    if (war.attack.army > 0 && d.army.total === 0) this.skyAttackLost('army');
   }
 
   /**
@@ -5605,14 +5826,28 @@ export class Game {
    * of your losses.
    */
   skyAttackLost(how) {
-
-    return this.runFeature('sky', 'skyAttackLost', [how]);
+    const d = this.duilt;
+    const r = d.loseSkyAttack();
+    if (!r) return;
+    if (how === 'army') {
+      const home = this.homeSpawn();
+      this.player.teleport(home.x, home.y, home.z);
+    }
+    const pct = Math.round(r.rate * 100);
+    this.ui?.toast({
+      kind: 'xp',
+      title: 'The attack on the Sky Kingdom failed',
+      body: `${how === 'army' ? 'Your army was wiped out' : 'You fell'}, and you were driven back home. `
+        + `The Sky Kingdom now takes ${pct}% of what your buildings make, until it falls. `
+        + (d.army.sworn ? (r.replaced ? `The Stone King sends ${r.replaced} warriors to make up your losses.` : r.lost ? 'The Stone King sends no more warriors.' : '') : ''),
+    });
+    this.ui?.duiltUI?.renderArmy?.();
+    this.editedAt = Date.now();
   }
 
   /** The Sky King is down: the Sky Kingdom falls. */
   skyKingDown() {
-
-    return this.runFeature('sky', 'skyKingDown', []);
+    this.skyFalls(false);
   }
 
   /**
@@ -5620,8 +5855,30 @@ export class Game {
    * all cut and its island sunk until it had to give in.
    */
   skyFalls(yielded) {
-
-    return this.runFeature('sky', 'skyFalls', [yielded]);
+    const d = this.duilt;
+    const taxed = d?.skyWar.failures > 0;
+    if (d && yielded) d.skyWar.yielded = true;
+    if (!d || !d.bringDownSky()) return;
+    // Its guards lay down their arms: nobody on the island fights you now.
+    for (const p of this.wanderers?.list ?? []) {
+      if (!WANDERERS[p.kind]?.sky) continue;
+      p.angry = false; p.target = null; p.speed = 0;
+    }
+    this.sound?.rumble();
+    this.ui?.toast({
+      kind: 'achievement',
+      title: yielded ? 'The Sky Kingdom yields' : 'The Sky Kingdom has fallen',
+      body: d.sandbox ? 'Its King is down.' : `${yielded ? 'Sunk low on its cut chains, it can hold out no longer: its King comes down from his throne' : 'Its King is down'}, and its guards lay down their arms.${taxed ? ' Its taxes end.' : ''} The island is your land now: build on it as you would at home.`,
+    });
+    if (d.sandbox) return;
+    // The Stone King keeps his word: honour, and gold from his treasury.
+    const gained = d.collect({ gold: SKY_TRIBUTE }) ?? {};
+    this.ui?.toast({
+      kind: 'achievement',
+      title: 'The Stone King honours you',
+      body: `He names you Lord of the Sky, above every lord he has${gained.gold ? `, and sends ${gained.gold} gold from his treasury` : ''}. Speak to him in his keep.`,
+    });
+    this.editedAt = Date.now();
   }
 
   /**
@@ -5631,8 +5888,24 @@ export class Game {
    * Returns whether the press was spent on a chain.
    */
   cutChainAt(hit) {
-    if (!this.duilt || this.duilt.sandbox || this.duilt.ring !== 'black' || !hit) return false;
-    return this.runFeature('sky', 'cutChainAt', [hit]);
+    const d = this.duilt, gen = this.world?.gen;
+    if (!d || d.sandbox || d.ring !== 'black' || d.skyFallen || !gen || !hit) return false;
+    if (this.world.getBlock(hit.x, hit.y, hit.z) !== CHAIN) return false;
+    const i = chainAt(gen, hit.x, hit.y, hit.z);
+    if (i < 0) return false;
+    const r = d.skyWar.cutChain(i, d.days);
+    if (!r) return false;
+    // Every link of it, gone.
+    for (const [x, y, z] of skyFor(gen).towers[i].chain) {
+      if (this.world.getBlock(x, y, z) === CHAIN) this.world.setBlock(x, y, z, AIR);
+    }
+    this.remeshDirty();
+    this.sound?.chain?.();
+    this.ui?.toast(r.sinking
+      ? { kind: 'achievement', title: 'The last chain is cut', body: `Nothing holds the Sky Kingdom up now. It will sink lower day by day — in ${SINK_DAYS} days it must yield.` }
+      : { kind: 'challenge', title: `An anchor chain is cut — ${CHAINS - r.left} of ${CHAINS}`, body: `Its lift goes nowhere now. Cut the other ${r.left} and the island will sink until it yields.` });
+    this.editedAt = Date.now();
+    return true;
   }
 
   // ---- going home in disguise (duilt/Suspicion.js) ----
@@ -5656,20 +5929,60 @@ export class Game {
    * open battle. Leave the island and it's forgotten.
    */
   tickDisguise(dt) {
-    if (!this.duilt || this.duilt.sandbox || this.duilt.ring !== 'black') { this.suspicion.reset(); this.markerView.update([]); this.ui?.duiltUI?.renderSuspicion?.(null); return; }
-    return this.runFeature('sky', 'tickDisguise', [dt]);
+    const d = this.duilt;
+    const on = this.disguised();
+    if (!on) {
+      const gen = this.world?.gen, p = this.player.position;
+      const away = !gen || !this.skyOpen() || Math.hypot(skyAt(gen).x - p.x, skyAt(gen).z - p.z) > SKY_ATTACK_OUT;
+      if (away || d?.skyFallen) this.suspicion.reset();
+      this.markerView.update([]);
+      this.ui?.duiltUI?.renderSuspicion?.(null);
+      return;
+    }
+    const p = this.player.position;
+    const sky = this.wanderers.list.filter((q) => WANDERERS[q.kind]?.sky && !q.dead);
+    if (!this.suspicion.discovered) {
+      const palace = skyFor(this.world.gen).palace;
+      const worn = Object.values(d.worn).map((w) => w?.id ?? '');
+      this.suspicion.tick(dt, {
+        ring: d.ringWorn() === 'black',
+        running: !!this.player.running,
+        darkGear: worn.some((id) => DARK_GEAR.test(id)) || DARK_GEAR.test(this.selectedItemId ?? ''),
+        nearGuards: sky.filter((q) => q.kind !== 'sky_king' && Math.hypot(q.x - p.x, q.z - p.z) < SUSPICION.near && Math.abs(q.y - p.y) < 3).length,
+        inThrone: p.x >= palace.minX && p.x <= palace.maxX + 1 && p.z >= palace.minZ && p.z <= palace.maxZ + 1 && Math.abs(p.y - 172) < 4,
+        warriors: d.army.active ? d.army.field.filter((w) => Math.hypot(w.x - p.x, w.z - p.z) < 14).length : 0,
+      });
+      if (this.suspicion.discovered) this.revealDisguise();
+    }
+    // A ? over each guard near enough to be looking you over; a ! over those who know.
+    const s = this.suspicion;
+    this.markerView.update(sky.filter((q) => q.kind !== 'sky_king' || s.discovered)
+      .filter((q) => Math.hypot(q.x - p.x, q.z - p.z) < (s.discovered ? 24 : 10))
+      .filter(() => s.discovered || s.level > 25)
+      .map((q) => ({ x: q.x, y: q.y, z: q.z, mark: s.discovered ? '!' : '?' })));
+    this.ui?.duiltUI?.renderSuspicion?.({ level: s.level / SUSPICION.max, rising: s.rising, reason: s.reason, discovered: s.discovered });
   }
 
   /** Seen through: every guard near knows you now, and comes. */
   revealDisguise() {
-
-    return this.runFeature('sky', 'revealDisguise', []);
+    if (!this.suspicion.discovered) this.suspicion.reveal();
+    const p = this.player.position;
+    for (const q of this.wanderers?.list ?? []) {
+      if (WANDERERS[q.kind]?.sky && Math.hypot(q.x - p.x, q.z - p.z) < 30) q.angry = true;
+    }
   }
 
   /** Its chains all cut, the island sinks: a word each day, and in SINK_DAYS it yields. */
   tickSinking() {
-    if (!this.duilt?.skyWar.sinkingSince && this.duilt?.skyWar.sinkingSince !== 0) return;
-    return this.runFeature('sky', 'tickSinking', []);
+    const d = this.duilt;
+    if (!d || d.sandbox || d.ring !== 'black' || d.skyFallen) return;
+    const s = d.skyWar.sinking(d.days);
+    if (!s) return;
+    if (s.left <= 0) return void this.skyFalls(true);
+    if (s.day > d.skyWar.toldDay) {
+      d.skyWar.toldDay = s.day;
+      this.ui?.toast({ kind: 'challenge', title: 'The Sky Kingdom sinks lower', body: `Its waterfalls run thin and its towers lean. ${Math.ceil(s.left)} more day${Math.ceil(s.left) === 1 ? '' : 's'} and it must yield.` });
+    }
   }
 
   // ---- the expedition: the army sent ahead to the Sky Kingdom (world/Army.js) ----
@@ -5689,44 +6002,150 @@ export class Game {
    * nearest home, out of the tower guards' sight, facing the island.
    */
   expeditionCampSpot() {
-
-    return this.runFeature('sky', 'expeditionCampSpot', []);
+    const gen = this.world.gen, s = skyFor(gen);
+    const home = { x: gen.biomes?.centreX ?? 0, z: gen.biomes?.centreZ ?? 0 };
+    const t = s.towers.reduce((best, t) => (Math.hypot(t.x - home.x, t.z - home.z) < Math.hypot(best.x - home.x, best.z - home.z) ? t : best));
+    const { ux, uz } = t.landing;
+    // Dry and level ground (seen: a camp pitched in a lake): try further
+    // out and to either side until the tents, fire and banners all fit.
+    const camp = (x, z) => {
+      const y = gen.heightAt(x, z);
+      for (let dx = -6; dx <= 6; dx++) {
+        for (let dz = -3; dz <= 3; dz++) {
+          if (gen.waterLevelAt?.(x + dx, z + dz) || Math.abs(gen.heightAt(x + dx, z + dz) - y) > 1) return null;
+        }
+      }
+      return { x, y, z, facing: Math.atan2(ux, uz) };
+    };
+    for (let out = EXPEDITION_OUT; out <= EXPEDITION_OUT + 60; out += 6) {
+      for (const side of [0, 8, -8, 16, -16, 24, -24]) {
+        const at = camp(Math.round(t.x + ux * out + uz * side), Math.round(t.z + uz * out - ux * side));
+        if (at) return at;
+      }
+    }
+    const x = Math.round(t.x + ux * EXPEDITION_OUT), z = Math.round(t.z + uz * EXPEDITION_OUT);
+    return { x, y: Math.max(gen.heightAt(x, z), gen.waterLevelAt?.(x, z) ?? 0), z, facing: Math.atan2(ux, uz) };
   }
 
   /** From the map: the army marches for the Sky Kingdom, and you go on with your day. */
   sendExpedition() {
-
-    return this.runFeature('sky', 'sendExpedition', []);
+    const d = this.duilt, st = this.expeditionState();
+    if (!st?.ready) return false;
+    d.army.sendTo(this.expeditionCampSpot(), d.days, MARCH_DAYS);
+    this.ui?.toast({
+      kind: 'challenge', title: 'Your army marches for the Sky Kingdom',
+      body: `It will make camp below the island in ${MARCH_DAYS} days. They still eat every day on the road — keep your storehouses stocked.`,
+    });
+    this.ui?.duiltUI?.renderArmy?.();
+    this.editedAt = Date.now();
+    return true;
   }
 
   /** The march is over: tents and a fire on the ground below the Sky Kingdom, and that's where you wake now. */
   makeExpeditionCamp() {
-
-    return this.runFeature('sky', 'makeExpeditionCamp', []);
+    const d = this.duilt, c = d.army.camp;
+    if (!c) return;
+    const { x, z } = c;
+    const gen = this.world.gen;
+    // The ground cleared first (seen: a camp pitched in the canopy of a
+    // forest, and you joining it inside a tree): everything standing on it,
+    // round the fire and out to where you'll arrive, is cut down.
+    for (let dx = -CAMP_CLEAR; dx <= CAMP_CLEAR; dx++) {
+      for (let dz = -CAMP_CLEAR; dz <= CAMP_CLEAR; dz++) {
+        if (dx * dx + dz * dz > CAMP_CLEAR * CAMP_CLEAR) continue;
+        const g = gen.heightAt(x + dx, z + dz);
+        if (gen.waterLevelAt?.(x + dx, z + dz)) continue;
+        for (let by = g; by < g + 18; by++) {
+          if (this.world.getBlock(x + dx, by, z + dz) !== AIR) this.world.setBlock(x + dx, by, z + dz, AIR);
+        }
+      }
+    }
+    // Each piece on its own column's ground, however the land slopes.
+    const put = (bx, bz, id) => {
+      const by = gen.heightAt(bx, bz);
+      this.world.setBlock(bx, by, bz, id);
+      return { x: bx, y: by, z: bz };
+    };
+    // Three tents in a row, a fire in front of them, a black banner each end.
+    const tents = [-3, 0, 3].map((dx) => {
+      put(x + dx, z + 3, WAR_TENT_BACK); // two blocks long: the back behind the flap
+      return put(x + dx, z + 2, turned(WAR_TENT, 0));
+    });
+    put(x, z - 1, CAMPFIRE);
+    put(x - 5, z + 2, BLACK_BANNER); put(x + 5, z + 2, BLACK_BANNER);
+    d.spawn = tents[1];
+    this.remeshDirty();
+    this.ui?.toast({ kind: 'challenge', title: 'Your army has made camp below the Sky Kingdom', body: 'Join it from the map. You\'ll wake at its tents now, too.' });
+    this.ui?.duiltUI?.renderArmy?.();
+    this.editedAt = Date.now();
   }
 
   /** From the map: to the army's camp, below the Sky Kingdom. */
   joinExpedition() {
-
-    return this.runFeature('sky', 'joinExpedition', []);
+    const c = this.duilt?.army.camp;
+    if (!c || !this.expeditionState()?.camped) return false;
+    this.player.flying = false;
+    // In front of the camp, on the island's side, clear of the ranks round the fire.
+    const f = this.duilt.army.anchor?.facing ?? 0;
+    const jx = Math.floor(c.x - Math.sin(f) * 8), jz = Math.floor(c.z - Math.cos(f) * 8);
+    this.player.teleport(jx + 0.5, this.world.gen.heightAt(jx, jz) + 0.5, jz + 0.5);
+    const at = skyAt(this.world.gen), p = this.player.position;
+    this.player.yaw = Math.atan2(-(at.x - p.x), -(at.z - p.z));
+    this.player.pitch = 0.35;
+    this.ui?.toast({ kind: 'challenge', title: 'You join your army at its camp', body: `${this.duilt.army.total} warriors, holding. Order them on from the ⚔ banner.` });
+    return true;
   }
 
   /** An order from the command wheel. */
   commandArmy(mode) {
-    if (!this.duilt?.army.active) return;
-    return this.runFeature('sky', 'commandArmy', [mode]);
+    const army = this.duilt?.army;
+    if (!army?.active) return;
+    if (army.marching) return void this.ui?.toast({ kind: 'xp', title: 'Your army is on the march', body: 'It can\'t hear you from here — join it at its camp when it arrives' });
+    if (army.camp && army.away(this.player.position)) return void this.ui?.toast({ kind: 'xp', title: 'Your army is at its camp', body: 'It can\'t hear you from here — join it from the map' });
+    army.command(mode, this.player.position, this.player.yaw);
+    this.ui?.toast({ kind: 'challenge', title: `Your army — ${ARMY_WORDS[mode]}`, body: `${army.total} warriors` });
+    this.ui?.duiltUI?.renderArmy?.();
   }
 
   /** The army each frame: marching, fighting, and once a day, eating. */
   tickArmy(dt) {
-    if (!this.duilt?.army.active) { if(this.duilt?.army)this.duilt.army.field=[]; return; }
-    return this.runFeature('sky', 'tickArmy', [dt]);
+    const d = this.duilt;
+    if (!d || d.sandbox || !d.army.active || !this.wanderers) { if (d?.army) d.army.field = d.army.active ? d.army.field : []; return; }
+    const p = this.player.position;
+    const hostile = this.wanderers.hostile();
+    const enemies = this.wanderers.list.filter((e) => WANDERERS[e.kind].hp && !e.dead && !e.done
+      && (e.war || e.raider || e.angry || (hostile && e.kind === 'bandit') || (WANDERERS[e.kind].sky && this.wanderers.skyHostile()))
+      && Math.hypot(e.x - p.x, e.z - p.z) < 60);
+    const before = d.army.total;
+    d.army.tick(dt, p, this.player.yaw, enemies, {
+      strike: (e, damage, w) => {
+        const res = this.wanderers.hit(e, damage, w.x, w.z);
+        if (res?.killed) d.collect(res.drops);
+      },
+    });
+    // The expedition: the day it reaches the Sky Kingdom, it makes camp.
+    if (d.army.update(d.days) === 'arrived') this.makeExpeditionCamp();
+    const meal = d.army.eat(d.days, (n) => this.takeRations(n));
+    if (meal?.deserted) {
+      this.ui?.toast({ kind: 'xp', title: `${meal.deserted} of your warriors deserted`, body: `There wasn't enough to eat — ${meal.got} of ${meal.need} rations. Keep food in your bag or storehouses.` });
+    }
+    if (d.army.total !== before || meal) this.ui?.duiltUI?.renderArmy?.();
+    if (!d.army.total && before) this.ui?.toast({ kind: 'xp', title: 'Your army is gone', body: 'Every last warrior has fallen or walked away' });
   }
 
   /** Up to n food for the army, cheapest first: from your bag, then your storehouses. */
   takeRations(n) {
-
-    return this.runFeature('sky', 'takeRations', [n]);
+    const d = this.duilt;
+    const foods = ITEMS.filter((i) => i.kind === 'food').sort((a, b) => (a.feeds ?? 0) - (b.feeds ?? 0));
+    let got = 0;
+    for (const inv of [d.inventory, ...d.structures.stores().map((s) => s.store)]) {
+      for (const f of foods) {
+        if (got >= n) return got;
+        const take = Math.min(n - got, inv.countOf(f.id));
+        if (take > 0) { inv.remove(f.id, take); got += take; }
+      }
+    }
+    return got;
   }
 
   /**
@@ -5756,8 +6175,23 @@ export class Game {
 
   /** The war horn: call the next round now, when you're ready for it. */
   blowHorn() {
-
-    return this.runFeature('war', 'blowHorn', []);
+    const d = this.duilt;
+    if (!d || d.sandbox) return;
+    this.sound?.horn();
+    const war = d.war;
+    if (!war.atWar) {
+      this.ui?.toast({ kind: 'xp', title: 'Your horn sounds over the hills', body: war.stage === 'won' ? 'Nobody answers. The war is over.' : 'Nobody answers — the Stone Kingdom isn\'t at war with you.' });
+      return;
+    }
+    if (war.stage === 'fighting') {
+      this.ui?.toast({ kind: 'xp', title: 'They\'re already here', body: `Round ${war.round} is at your walls` });
+      return;
+    }
+    if (war.horn(d.days)) {
+      this.ui?.toast({ kind: 'challenge', title: 'You sounded the war horn', body: `Round ${war.round} of ${LAST_ROUND} answers. They'll come in about a minute.` });
+    } else {
+      this.ui?.toast({ kind: 'xp', title: 'They\'re already coming', body: `Round ${war.round} is on its way` });
+    }
   }
 
   /**
@@ -7233,7 +7667,6 @@ export class Game {
   get phase() {
     if (!this.ui) return 'home';
     if (this.ui.isHomeOpen()) return 'home';
-    if (this.featureLoading || this.featureFailure) return 'paused';
     if (this.ui.isAnyPanelOpen()) return 'paused';
     return 'playing';
   }
@@ -7283,7 +7716,6 @@ export class Game {
     const dt = Math.min(frameDelta, 0.1);
     if(this.peerSession?.ready&&this.player)this.peerSession.updatePosition({...this.player.position,yaw:this.player.yaw,pitch:this.player.pitch});
     if(this.peerAvatar&&this.peerPosition)this.peerAvatar.update(dt,{position:this.peerPosition,yaw:this.peerPosition.yaw,pitch:this.peerPosition.pitch??0},{look:this.controls.avatar,visible:!!this.peerSession?.connected});
-    this.ensureLiveFeatures();
     this.syncPhase();
     const playing = this.isPlaying;
     this.syncMobs();
@@ -7422,9 +7854,7 @@ export class Game {
     const gen = this.world?.gen;
     this.futureView.update(gen && this.player?.position, performance.now() / 1000, gen?.biomes.centreX, gen?.biomes.centreZ);
     this.guardianView.update(this.duilt?.guardian, dt);
-    if ((this.shaderWarmup ??= new ShaderWarmup(this.renderer)).ready(this.scene, this.camera)) {
-      this.renderer.render(this.scene, this.camera);
-    }
+    this.renderer.render(this.scene, this.camera);
   }
 
   /**
@@ -7769,9 +8199,9 @@ export class Game {
     const painting = hit && isPainting(hit.block);
     const mill = hit && stationOf(hit.block);
     let lift = hit && hit.block === SKY_LIFT
-      ? (this.world.gen && gameFeature('sky')?.liftAt(this.world.gen, hit.x, hit.y, hit.z)) || this.chainLift(hit.x, hit.y, hit.z) || 'nowhere' : null;
+      ? (this.world.gen && liftAt(this.world.gen, hit.x, hit.y, hit.z)) || this.chainLift(hit.x, hit.y, hit.z) || 'nowhere' : null;
     const sw = this.duilt && !this.duilt.sandbox ? this.duilt.skyWar : null;
-    if (lift?.tower && sw?.chains[gameFeature('sky').skyFor(this.world.gen).towers.indexOf(lift.tower)]) lift = 'cut';
+    if (lift && lift !== 'nowhere' && sw?.chains[skyFor(this.world.gen).towers.indexOf(lift.tower)]) lift = 'cut';
     // An anchor tower's chain, on the dark path: Break cuts it.
     const chainLink = hit && hit.block === CHAIN && sw && this.duilt.ring === 'black' && !this.duilt.skyFallen && chainAt(this.world.gen, hit.x, hit.y, hit.z) >= 0;
     const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
@@ -7907,4 +8337,15 @@ function distSq(chunk, px, pz) {
 
 function newWorldId() {
   return crypto.randomUUID();
+}
+
+/** A rival's colour as a number, for their people's coats. */
+function rivalColour(id) {
+  return parseInt(RIVAL_HEX[id].slice(1), 16);
+}
+
+/** An army in a sentence: "5 rival soldiers, 2 archers and a battering ram". */
+function rivalWords(who) {
+  const parts = who.map(([kind, n]) => (n === 1 ? WANDERERS[kind].one : `${n} ${WANDERERS[kind].many}`));
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
 }

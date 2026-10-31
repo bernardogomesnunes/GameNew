@@ -189,8 +189,7 @@ export class World {
     if (!this.endless || !create) return undefined;
     const chunk = new Chunk(cx, cz, this.height);
     this.chunks.set(key, chunk);
-    try { this.gen.fill(this, chunk); }
-    catch (error) { this.chunks.delete(key); throw error; }
+    this.gen.fill(this, chunk);
     // A place the land comes with — a city's lanterns, a camp's fire — is
     // written straight into the chunk, never through setBlock, so it would
     // never light. Not lava or glowing ore: there's no end of those down
