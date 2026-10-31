@@ -61,7 +61,10 @@ try {
     assert.ok(searchBox.y >= 0 && searchBox.y + searchBox.height <= height, 'Search remains in view');
     assert.ok(emptyMessage.y >= 0 && emptyMessage.y + emptyMessage.height <= height, 'Results remain in view');
     mkdirSync('artifacts/performance', { recursive: true });
-    await page.screenshot({ path: `artifacts/performance/inventory-search-${width}x${height}.png` });
+    // The picture is a review artifact. Under a busy CI runner the software
+    // renderer has taken over 30 seconds to hand it over (PR #268), so it gets
+    // longer than Playwright's default before the run fails on it.
+    await page.screenshot({ path: `artifacts/performance/inventory-search-${width}x${height}.png`, timeout: 90_000 });
     assert.deepEqual(errors, []);
     console.log(`PASS inventory search, fixed panel height, no results and real slot move at ${width}x${height}`);
     await page.close();
