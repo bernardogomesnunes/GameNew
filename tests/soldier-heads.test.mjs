@@ -48,3 +48,17 @@ console.log('PASS a modelled soldier with a text id keeps its head');
   assert.ok(Math.abs(p.facing + Math.PI / 2) < 0.03, 'and ends facing the way they walk');
   console.log('PASS they turn towards where they walk over a few frames');
 }
+
+// IMP-16: the models were saved mid-stride; their limbs rest straight.
+{
+  const { makeKit } = await import('../src/render/Models.js');
+  const root = new THREE.Group(); root.name = 'walker';
+  const leg = new THREE.Group(); leg.name = 'walker_leg_l'; leg.quaternion.setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.49);
+  const head = new THREE.Group(); head.name = 'walker_head'; head.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), 0.3);
+  root.add(leg, head);
+  const kit = makeKit('walker', root, () => null);
+  const bone = (n) => kit.bones.find((b) => b.name === n);
+  assert.ok(bone('leg_l').quaternion.equals(new THREE.Quaternion()), 'a leg rests straight');
+  assert.ok(!bone('head').quaternion.equals(new THREE.Quaternion()), 'other bones keep their pose');
+  console.log('PASS limbs saved mid-stride rest straight; nothing else is touched');
+}
