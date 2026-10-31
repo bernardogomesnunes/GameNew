@@ -39,10 +39,11 @@ interface kept working. It happened on the owner's phone, desktop and laptop.
 It never reproduced in headless Chromium, including the owner's real 289-chunk
 world, a signed-in open, the production build and the live CSP.
 
-- **Live site branch.** Vercel deploys production from `claude/voxel-sandbox-game-heuhyq`,
-  not `main`. That branch stayed on the #251 merge (3b892bf), so no fix and no
-  rollback reached the live game until the branch was fast-forwarded to `main`.
-  See HOUSE-4.
+- **Live site branch.** Vercel deploys production from `main` (checked by the owner
+  on 31 October: deployment of 078faea, source `main`, environment Production).
+  An earlier note here blamed `claude/voxel-sandbox-game-heuhyq`; that was wrong.
+  Why the first test after the rollback still failed is not known (likely tested
+  before the deploy finished, or on a cached page).
 - **Rollback.** #262 restored `main` to 5419dae (after #252). The game worked once
   that reached the live branch. #263 and #264 then brought back everything except
   the parts listed below.
@@ -68,7 +69,7 @@ formations (#264, raiders still count as enemies).
 
 | ID | What | Status |
 |---|---|---|
-| HOUSE-4 | **Set Vercel's Production Branch to `main`** (Vercel, project "duild", Settings, Git). Until then every merge needs `git push origin origin/main:refs/heads/claude/voxel-sandbox-game-heuhyq` (a fast-forward) to go live. | owner action |
+| HOUSE-4 | Vercel production deploys from `main`; nothing to change. `claude/voxel-sandbox-game-heuhyq` is no longer needed and can be deleted with the others (HOUSE-1). | done, checked 31 October |
 | HOUSE-5 | **Preview logins.** Neon Auth trusts only `https://duild-seven.vercel.app`, so signing in fails on Vercel preview links. Adding a preview address needs the owner's yes (it is a security setting). | waiting on the owner |
 | SAVE-7 | **A stored upload backup must not stall the game.** `Game.sendUnsent` rebuilds the whole unsent world copy at sign-in. It also wrote `spawn = null` over the account's position (fixed in #261). Make it fail fast, drop a copy that keeps failing, and never block opening a world. | to do |
 | PERF-2 | **Bring back 2a70f9b and 394799e safely, if still wanted.** Only with a Vercel preview tested on the owner's phone and desktop (needs HOUSE-5). Start without the shader warm-up gate. | to do, after HOUSE-5 |
@@ -76,7 +77,7 @@ formations (#264, raiders still count as enemies).
 | IMP-12 | Working logic: villagers working and building, building first (below). | answered 29 October: "Working logic is villagers working yes, and building. Building requires more attention I think." Start with villagers building; after IMP-10 |
 | TECH-WH | **PR #255, the Work Hall panel**, is open from before the rollback. Merge current `main` into it and recheck before merging. | open PR |
 | SAVE-6a | Atomic saves (migration 0006): validated on the Neon branch `atomic-saves-validation`, not applied. Needs the owner's go, `VITE_ATOMIC_SAVES=true` in Vercel, a redeploy, then the migration. | waiting on the owner |
-| HOUSE-1 | Delete the old branches on GitHub's Branches page, but keep `claude/voxel-sandbox-game-heuhyq` until HOUSE-4 is done. | owner action |
+| HOUSE-1 | Delete the old branches on GitHub's Branches page, `claude/voxel-sandbox-game-heuhyq` included. | owner action |
 
 Data change made during the incident: the cloud world "Testing new migration and
 gameplay" had `spawn = null` and was set to `{x: -0.5, y: 104, z: 8.5}` (ground at home).
