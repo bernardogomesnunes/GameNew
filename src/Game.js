@@ -65,7 +65,7 @@ import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { Diagnostics, describeGraphicsBackend } from './core/Diagnostics.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting, CHISELLED } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
 import { mineStairs } from './duilt/mineStairs.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
@@ -357,7 +357,7 @@ const CRACK_LINGER_MS = 450;
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand', carpentry_chisel: 'chiselBlock' };
 const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', compost: 'compostSelected', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace', helix: 'setDownMachine', flying_machine: 'wearSelected', dino_whistle: 'blowWhistle' };
 /**
  * Whether saved progression `a` is further along than `b`. By level first:
@@ -4287,6 +4287,26 @@ export class Game {
   }
 
   /** Place compost on a growing crop to advance it one stage. */
+  /**
+   * IMP-10 step 4: Break with the chisel held turns the block you point at
+   * into its decorative form (CHISELLED): stone to stone brick, brick to a
+   * pillar. The usual land, lock and peer rules apply (applyChanges); nothing
+   * is spent or gathered.
+   */
+  chiselBlock() {
+    const hit = this.raycast();
+    if (this.hitBandit(hit) || this.hitMob(hit)) return;
+    if (!hit) return;
+    const prev = this.world.getBlock(hit.x, hit.y, hit.z);
+    const next = CHISELLED.get(prev);
+    if (!next) {
+      this.ui.toast({ kind: 'xp', title: 'The chisel does not shape that', body: 'It carves stone, cobblestone, sandstone, marble and dark stone into bricks and pillars' });
+      return;
+    }
+    const done = this.applyChanges([{ x: hit.x, y: hit.y, z: hit.z, prev, next }], { chargeResources: false, gather: false });
+    if (done) this.sound?.dig(soundOf(BLOCKS_BY_ID.get(prev)));
+  }
+
   compostSelected() {
     if (!this.duilt) return;
     const hit = this.raycast();

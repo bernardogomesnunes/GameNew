@@ -933,6 +933,13 @@ BLOCKS.push(
   { id: PLANING_BENCH, name: 'Planing Bench', glyph: 'planks', color: 0xb98a5a, material: 'wood', station: 'planing_bench', unlock: null },
 );
 
+// IMP-10, step 3: "plane mallet should be placed". The mallet fits joints, so
+// its bench makes the jointed wood pieces (fences, gates, chests) for less.
+export const JOINERY_BENCH = 528;
+BLOCKS.push(
+  { id: JOINERY_BENCH, name: 'Joinery Bench', glyph: 'planks', color: 0xa77b52, material: 'wood', station: 'joinery_bench', unlock: null },
+);
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in
@@ -1260,3 +1267,16 @@ export function costResourceOf(id) {
   const cost = BLOCKS_BY_ID.get(id)?.cost;
   return cost ? Object.keys(cost)[0] : null;
 }
+
+// IMP-10 step 4: "chisel can break blocks and turn them into decorative
+// blocks". Held, Break with the Carpentry Chisel turns the block you point at
+// into the next one here. Nothing is spent or gathered.
+export const CHISELLED = new Map([
+  [3, 329],     // Stone -> Stone Brick
+  [8, 329],     // Cobblestone -> Stone Brick
+  [329, 165],   // Stone Brick -> Stone Pillar
+  [333, 334],   // Sandstone -> Sandstone Brick
+  [156, 157],   // Dark Stone -> Dark Brick
+  [157, 167],   // Dark Brick -> Dark Pillar
+  [17, 166],    // Marble -> Marble Pillar
+]);
