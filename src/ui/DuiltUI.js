@@ -15,6 +15,7 @@ import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
+import { BLOCKS } from '../config/blocks.js';
 import { howToGet, RECIPES } from '../config/recipes.js';
 import { designsForStructure, starterDesign } from '../prefabs/HouseDesigns.js';
 import { MAX_HUNGER } from '../survival/Hunger.js';
@@ -71,6 +72,13 @@ function withArticle(name) {
  *
  *   have   how many you hold, or null to leave it unsaid (what a recipe makes)
  */
+/** A station's name for a panel title: the block that is it ('Wood Mill'), or its id in words. */
+function stationTitle(station) {
+  const block = BLOCKS.find((b) => b.station === station);
+  const words = stationName(station);
+  return block?.name ?? words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 function itemChip(id, n, { have = null, short = false } = {}) {
   const spec = ITEMS_BY_ID.get(id);
   const icon = itemIcon(spec, { size: 22 }) ?? glyphSvg(spec?.glyph, { size: 16, color: spec?.color });
@@ -2240,15 +2248,16 @@ export class DuiltUI {
     const query = search?.value ?? '';
     // Used at a placed station (a bleach bucket, a forge, a planing bench...):
     // only what is made there, with a way back to everything.
+    // IMP-13: "when opening a thing like wood mill or any other I shouldn't
+    // see workbench ... I should see what I opened". IMP-14: "The recipes
+    // should not show bench recipes": only what is made here, and no way
+    // out to the rest from a station.
     const only = this.benchStation ?? null;
+    const title = this.q('#bench-title'), sub = this.q('#bench-sub');
+    if (title) title.textContent = only ? stationTitle(only) : 'Workbench';
+    if (sub) sub.textContent = only ? 'What is made here.' : 'Make tools and blocks. Some need a workshop nearby.';
     const note = this.q('#bench-station');
-    if (note) {
-      note.hidden = !only;
-      if (only) {
-        note.innerHTML = `${escapeHtml(stationName(only))}: what is made here. <button class="secondary" id="bench-all" type="button">Show every recipe</button>`;
-        this.q('#bench-all').addEventListener('click', () => { this.benchStation = null; this.renderBench(); });
-      }
-    }
+    if (note) note.hidden = true;
     const recipes = oneWayEach(only ? all.filter((r) => r.station === only) : all).filter((r) => matchesSearch(query, [r.name, r.blurb, r.station, stationName(r.station), itemName(r.output.id), ...Object.keys(r.inputs).map(itemName)]));
     if (!recipes.length) {
       this.q('#bench-list').innerHTML = `<div class="sub" style="margin:8px 0">Nothing you can make matches “${escapeHtml(query.trim())}”.</div>`;
