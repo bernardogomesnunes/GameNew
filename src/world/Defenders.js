@@ -32,6 +32,8 @@ export const HUNGRY_STRENGTH = 0.6;
 /** A blow or an arrow from `s`, as hard as they can manage today. */
 export const blowOf = (s, hits) => (s.hungry ? Math.max(1, Math.round(hits * HUNGRY_STRENGTH)) : hits);
 const ARROW_SPEED = 26;
+/** Idle soldiers walk within this many blocks of their post, resting REST_MIN to REST_MIN + REST_MORE seconds between walks. */
+const PATROL = 4, REST_MIN = 3, REST_MORE = 7;
 const TALL = 2;
 const TABARD = 0xdfe6f2, STEEL = 0xb9bec6, ARCHER_COAT = 0x5f7f4a, HOOD = 0x3f5a34;
 
@@ -283,12 +285,36 @@ export class Defenders {
     this.standEasy(s, dt, u);
   }
 
-  /** Nothing to fight: back to the post, and get their breath back there. */
+  /**
+   * Nothing to fight: they stroll round their post the way villagers walk
+   * between jobs (IMP-17: "make sure they ... have the same logic of
+   * movement as the villagers"), resting a few seconds between walks and
+   * getting their breath back while they rest. Back from a fight, the first
+   * walk is home to the post.
+   */
   standEasy(s, dt, u) {
     s.foe = null;
+    const speed = (u?.speed ?? SOLDIER.speed) * 0.45;
     const away = Math.hypot(s.x - s.post.x, s.z - s.post.z);
-    if (away > 0.4) { s.target = { x: s.post.x, z: s.post.z }; this.step(s, s.post.x, s.post.z, dt, (u?.speed ?? SOLDIER.speed) * 0.7); }
-    else { s.target = null; s.speed = 0; if (!s.hungry) s.hp = Math.min(u?.hp ?? SOLDIER.hp, s.hp + dt * 0.5); }
+    if (!s.stroll && away > PATROL + 1) s.stroll = { x: s.post.x, z: s.post.z };
+    if (s.stroll) {
+      const left = Math.hypot(s.stroll.x - s.x, s.stroll.z - s.z);
+      const moved = left > 0.3 && stepAround(this.world, s, s.stroll.x, s.stroll.z, dt, speed);
+      if (moved) { s.target = { x: s.stroll.x, z: s.stroll.z }; return; }
+      // There, or the way is blocked: stop and rest before the next walk.
+      s.stroll = null;
+      s.rest = REST_MIN + this.rand() * REST_MORE;
+    }
+    s.target = null; s.speed = 0;
+    if (!s.hungry) s.hp = Math.min(u?.hp ?? SOLDIER.hp, s.hp + dt * 0.5);
+    s.rest = (s.rest ?? this.rand() * REST_MORE) - dt;
+    if (s.rest > 0) return;
+    // Out to somewhere near the post, or back to the post itself.
+    if (away > 0.6) s.stroll = { x: s.post.x, z: s.post.z };
+    else {
+      const a = this.rand() * Math.PI * 2, r = 1.5 + this.rand() * (PATROL - 1.5);
+      s.stroll = { x: s.post.x + Math.sin(a) * r, z: s.post.z + Math.cos(a) * r };
+    }
   }
 
   /** The enemy nearest `at`, within `range` of it, or null. */

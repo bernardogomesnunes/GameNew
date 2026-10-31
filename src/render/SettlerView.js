@@ -147,7 +147,7 @@ export class SettlerView {
       // A villager at either end of their route is resting, not frozen: keep
       // their legs settling straight and let them glance around occasionally.
       const idle = !p.target && !(p.windup > 0 && p.winding) && !(p.strike > 0);
-      const idleHead = idle ? Math.sin(now * 1.1 + (p.id ?? i) * 2.399) * width * 0.07 : 0;
+      const idleHead = idle ? Math.sin(now * 1.1 + (personHash(p) % 1000) * 2.399) * width * 0.07 : 0;
 
       this._e.set(0, p.facing ?? 0, 0);
       this._q.setFromEuler(this._e);
@@ -172,7 +172,7 @@ export class SettlerView {
         const pose = this._pose;
         pose.leg_r[0] = -swing;
         pose.leg_l[0] = swing;
-        pose.head = [0, idle ? Math.sin(now * 0.7 + (p.id ?? i) * 2.399) * 0.16 : 0, 0];
+        pose.head = [0, idle ? Math.sin(now * 0.7 + (personHash(p) % 1000) * 2.399) * 0.16 : 0, 0];
         pose.arm_r[0] = -(raised ?? -swing * 0.8);
         pose.arm_l[0] = -(raised ?? swing * 0.8);
         this.crowds.get(kit).add(base, pose, this.modelTint(p));
