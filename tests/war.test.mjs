@@ -275,7 +275,8 @@ ok('falling in a round sends them home', /party\.died = true;\s*for \(const q of
 ok('rams and siege stones break your buildings', /onBatter: \(p, cells\) => this\.siegeBreak\(/.test(game) && /if \(stone\.enemy\) \{\s*this\.siegeBreak\(craterCells/.test(game));
 ok('  and a building they break stops working until you mend it', /siegeBreak[\s\S]{0,1300}this\.duilt\.structures\.revalidateAround\(changes\)/.test(game));
 ok('the siege engines and the beast are drawn', /this\.armyView\.update\(strangers, \[\.\.\.\(this\.wanderers\?\.arrows/.test(game));
-ok('your guardian fights them too', /p\.raider \|\| p\.war\)/.test(game));
+ok('your guardian fights them too', /guardianEnemy\(p, includeDead = false\)[\s\S]{0,300}p\.raider \|\| this\.wanderers\?\.hostileOf\(p\)/.test(game)
+  && /hostileOf\(p\) \{\s*if \(p\.war \|\| p\.angry\) return true;/.test(readFileSync(new URL('../src/world/Wanderers.js', import.meta.url), 'utf8')));
 ok('victory finishes the game, once the last age is done too', /res === 'victory'[\s\S]{0,500}d\.checkAgeAdvance\(\)/.test(game));
 
 process.exit(f ? 1 : 0);
