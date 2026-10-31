@@ -27,3 +27,24 @@ modelled.update([{ id: 'd2', kind: 'footman', x: 0, y: 0, z: 0 }]);
 const crowd = modelled.crowds.byId.get('footman');
 assert.ok(finite(crowd.meshes[2], 0), 'the model head bone has a real matrix');
 console.log('PASS a modelled soldier with a text id keeps its head');
+
+// IMP-16: stopping, they finish the step and stand with both legs straight.
+{
+  const v = new SettlerView(scene, 'settlers');
+  const p = { id: 3, kind: 'settler', x: 0, y: 0, z: 0, target: { x: 10, z: 0 } };
+  for (let i = 0; i < 7; i++) { p.x += 0.13; v.update([p]); }
+  p.target = null;
+  for (let i = 0; i < 30; i++) v.update([p]);
+  assert.equal(p._stride, 0);
+  assert.ok(Math.abs(Math.sin(p._walk * 5)) < 1e-9, 'legs together, straight');
+  console.log('PASS stopping, they finish the step and stand with both legs straight');
+}
+{
+  const v = new SettlerView(scene, 'settlers');
+  const p = { id: 4, kind: 'settler', x: 0, y: 0, z: 0, facing: 0, target: { x: -5, z: 0 } };
+  v.update([p]);
+  assert.ok(p.facing < 0 && p.facing > -Math.PI / 2, 'a turn takes more than a frame');
+  for (let i = 0; i < 40; i++) v.update([p]);
+  assert.ok(Math.abs(p.facing + Math.PI / 2) < 0.03, 'and ends facing the way they walk');
+  console.log('PASS they turn towards where they walk over a few frames');
+}

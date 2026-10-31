@@ -49,6 +49,9 @@ function setup() {
   const {world,settlers,p}=setup();p.wait=10;p.target=null;
   world.setBlock(5,5,10,3);world.setBlock(5,6,10,3);
   settlers.walk(p,.1);
-  assert.equal(p.y,7,'construction under an idle villager recovers them onto the new floor');
+  // IMP-16: lifted onto what was built round them is how villagers ended up
+  // on roofs; they step out beside it instead, at their own height.
+  assert.equal(p.y,5,'construction round an idle villager moves them out beside it');
+  assert.ok(!(Math.floor(p.x)===5&&Math.floor(p.z)===10),'out of the built cell');
 }
 console.log('PASS settlers route around tall walls, step onto platforms and resist large-dt tunnelling');

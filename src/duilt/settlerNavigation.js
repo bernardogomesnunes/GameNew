@@ -1,4 +1,21 @@
 import {groundAt,bodyFits,isLoaded} from '../world/Mobs.js';
+import {doorPart} from '../config/blocks.js';
+
+/**
+ * The world as a villager sees it (IMP-16: "It seems that they can't open
+ * doors"): a shut door is a way through, because they open it on the way
+ * (Settlers.passDoors). Everything else is the world itself.
+ */
+const views=new WeakMap();
+export function doorWise(world) {
+  let v=views.get(world);
+  if(!v) {
+    v=Object.create(world);
+    v.collisionBoxAt=(x,y,z)=>doorPart(world.getBlock(x|0,y|0,z|0))?null:world.collisionBoxAt(x,y,z);
+    views.set(world,v);
+  }
+  return v;
+}
 
 const TALL=1.8, HALF=.28, SEARCH_LIMIT=512;
 
