@@ -948,6 +948,13 @@ BLOCKS.push(
   { id: WORKBENCH, name: 'Workbench', glyph: 'planks', color: 0x9c7348, material: 'wood', station: 'workbench', unlock: null },
 );
 
+// CRAFT3D-1: the carpentry counter, where furniture is sawn and fitted
+// together in a close-up (render/CounterView.js).
+export const COUNTER = 530;
+BLOCKS.push(
+  { id: COUNTER, name: 'Counter', glyph: 'planks', color: 0xa87a4c, material: 'wood', station: 'counter', unlock: null },
+);
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in

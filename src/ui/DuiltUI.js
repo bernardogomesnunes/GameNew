@@ -2266,8 +2266,10 @@ export class DuiltUI {
     const only = this.benchStation ?? null;
     const title = this.q('#bench-title'), sub = this.q('#bench-sub');
     if (title) title.textContent = only ? stationTitle(only) : 'Bench';
-    if (sub) sub.textContent = only === 'workbench' ? 'Everything you can make, from the simple things up.'
-      : only ? 'What is made here.' : 'Simple things by hand. Place a Workbench for the rest.';
+    // CRAFT3D-1: furniture left these benches for the carpentry counter.
+    const furnitureNote = !only || only === 'workbench' || only === 'wood_mill' ? ' Furniture is made at a Counter.' : '';
+    if (sub) sub.textContent = (only === 'workbench' ? 'Everything you can make, from the simple things up.'
+      : only ? 'What is made here.' : 'Simple things by hand. Place a Workbench for the rest.') + furnitureNote;
     const note = this.q('#bench-station');
     if (note) note.hidden = true;
     // IMP-19: the menu bench lists what is made by hand (Ages 1 and 2); a

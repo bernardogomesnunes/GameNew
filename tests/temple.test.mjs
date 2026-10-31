@@ -12,7 +12,7 @@ import { STRUCTURES_BY_ID } from '../src/config/structures.js';
 import { DESIGN_FOR_STRUCTURE } from '../src/config/starterDesigns.js';
 import { SUNSTONE_ORE, NIGHTSTONE_ORE, CHEST, isChest, lightOf, BLOCKS_BY_ID } from '../src/config/blocks.js';
 import { ITEMS_BY_ID, ITEM_FOR_BLOCK } from '../src/config/items.js';
-import { RECIPES } from '../src/config/recipes.js';
+import { RECIPES, FURNITURE_AGE } from '../src/config/recipes.js';
 import { boxesFor } from '../src/world/propShapes.js';
 
 /**
@@ -211,7 +211,7 @@ ok('holy water is drunk with Break', /holy_water: 'drinkSelected'/.test(game));
   // opened only at Age 8.
   const temple = STRUCTURES_BY_ID.get('temple');
   const byOutput = (id) => RECIPES.find((r) => r.output.id === id);
-  const table = byOutput('table_marble'), marble = byOutput('marble'), oak = byOutput('table_oak');
+  const table = byOutput('table_marble'), marble = byOutput('marble'), oak = { age: FURNITURE_AGE.get('table_oak') };
   ok(`a Marble Table, for the altar, can be made by the temple's age (${temple.age}): table Age ${table.age}, marble Age ${marble.age}`,
     table.age <= temple.age && marble.age <= temple.age && table.age === oak.age);
 }

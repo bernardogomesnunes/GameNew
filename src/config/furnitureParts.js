@@ -2,6 +2,9 @@ import { PROP_SHAPES, boxesFor } from '../world/propShapes.js';
 import { ITEMS_BY_ID, FURNITURE_ITEM } from './items.js';
 import { BLOCKS_BY_ID } from './blocks.js';
 
+/** What each piece costs, as its old recipe did (captured in recipes.js before those went). */
+export { FURNITURE_COST as COST, FURNITURE_AGE as AGE } from './recipes.js';
+
 /**
  * CRAFT3D-1: the furniture made at the carpentry counter, and its parts.
  *

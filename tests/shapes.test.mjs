@@ -3,6 +3,7 @@ import { World } from '../src/world/World.js';
 import { PlayerController } from '../src/player/PlayerController.js';
 import { BLOCKS, BLOCKS_BY_ID, shapeOf, lightOf } from '../src/config/blocks.js';
 import { ITEMS_BY_ID } from '../src/config/items.js';
+import { FURNITURE_COST } from '../src/config/recipes.js';
 import { RECIPES } from '../src/config/recipes.js';
 import { boxesFor } from '../src/world/propShapes.js';
 
@@ -62,7 +63,8 @@ const LANTERN = 26, SLAB_STONE = 27, STAIRS_STONE = 29, CHAIR_OAK = 33, RUG_GREE
     // Crops are grown from seeds saved from a harvest, not made either.
     if (item && !NATURAL.has(id) && !BLOCKS_BY_ID.get(id).crop) {
       const recipe = RECIPES.find((r) => r.output.id === item.id);
-      ok(`${item.name} is craftable`, !!recipe);
+      // CRAFT3D-1: furniture is made at the carpentry counter, with no recipe.
+      ok(`${item.name} is craftable`, !!recipe || FURNITURE_COST.has(item.id));
     }
   }
 }

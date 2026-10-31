@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { World } from '../src/world/World.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
 import { STRUCTURES_BY_ID } from '../src/config/structures.js';
-import { RECIPES } from '../src/config/recipes.js';
+import { RECIPES, FURNITURE_AGE } from '../src/config/recipes.js';
 import { PANELS } from '../src/config/panels.js';
 
 /**
@@ -27,7 +27,7 @@ ok('and on a computer, K opens them', PANELS.find((p) => p.id === 'panel-skills'
 const uni = STRUCTURES_BY_ID.get('university'), eng = STRUCTURES_BY_ID.get('engineering');
 // Age 3, with the workshop that makes the tables it needs (asked for directly: "University move to age 3").
 ok('a University, from Age 4, is a station: desks under a roof', uni.age === 4 && uni.station === 'university' && uni.requires.some((r) => r.id === 'desks'));
-ok('and the tables it asks for can be made by then', RECIPES.find((r) => r.id === 'table_oak').age <= uni.age);
+ok('and the tables it asks for can be made by then', Math.max(FURNITURE_AGE.get('table_oak'), RECIPES.find((r) => r.id === 'counter').age) <= uni.age);
 ok('an Engineering Centre, from Age 4, needs engineering studied first', eng.age === 4 && eng.station === 'engineering' && eng.research === 'engineering');
 
 // --- studying -------------------------------------------------------------------------------

@@ -18,15 +18,17 @@ assert.equal(RECIPES_BY_ID.get('stone_white').station, 'bleach_bucket');
 assert.equal(stationOf(RECIPES_BY_ID.get('bleach_bucket').output.id === 'bleach_bucket' ? 524 : 0), 'bleach_bucket');
 assert.ok(BLOCKS_BY_ID.get(525)?.station === 'forge');
 console.log('PASS rock processing has forge and placed bleach bucket');
-const furniture = RECIPES_BY_ID.get('table_oak');
+// CRAFT3D-1: furniture is made at the carpentry counter; reusable tools are
+// checked on the bow (the saw, kept, at the planing bench).
+const furniture = RECIPES_BY_ID.get('bow');
 for (const [id,n] of Object.entries(furniture.inputs)) inv.add(id,n*2);
-const opts = { atStations: ['wood_mill','workshop'] };
+const opts = { atStations: ['planing_bench'] };
 assert.equal(craft.craft(furniture.id, 1, opts).ok, false);
 for (const tool of furniture.tools) inv.add(tool,1);
 assert.equal(craft.craft(furniture.id, 1, opts).ok, true);
 for (const tool of furniture.tools) assert.equal(inv.countOf(tool),1);
-console.log('PASS furniture needs reusable carpentry tools even at a mill');
-for (const id of ['table_oak','bed','painting']) assert.deepEqual(RECIPES_BY_ID.get(id).tools, ['carpentry_saw'], `${id} needs one tool`);
+console.log('PASS a reusable tool is kept after making with it');
+for (const id of ['table_oak','bed','painting']) assert.ok(!RECIPES_BY_ID.has(id), `${id} is made at the counter`);
 assert.equal(RECIPES_BY_ID.get('wood_white').station, 'bleach_bucket');
 assert.equal(RECIPES_BY_ID.get('wood_dark').station, 'forge');
 assert.equal(RECIPES_BY_ID.get('wood_white').output.id, 'white_wood');
@@ -67,11 +69,13 @@ for (const [part,n] of Object.entries(RECIPES_BY_ID.get('sword_iron').inputs)) s
 smelt.add('weapon_mold',1);
 assert.equal(forge.craft('sword_iron',1,{atStations:['foundry']}).ok,true);
 console.log('PASS existing foundries can also forge weapons');
-const available = craft.available(12,{station:null,atStations:['forge','workshop','wood_mill']}).find(r=>r.id==='table_oak');
+// The bow stands in for furniture (made at the carpentry counter now).
+inv.add('planks', 3); inv.add('string', 3);
+const available = craft.available(12,{station:null,atStations:['planing_bench']}).find(r=>r.id==='bow');
 assert.equal(available.ok,true);
 inv.remove('carpentry_saw',1);
-assert.equal(craft.available(12,{station:null,atStations:['workshop']}).find(r=>r.id==='table_oak').ok,false);
-assert.match(craft.craft('table_oak',1,{atStations:['workshop']}).reason,/Saw/);
+assert.equal(craft.available(12,{station:null,atStations:['planing_bench']}).find(r=>r.id==='bow').ok,false);
+assert.match(craft.craft('bow',1,{atStations:['planing_bench']}).reason,/Saw/);
 console.log('PASS removing a reusable tool after opening the panel blocks the craft');
 
 const alternate = RECIPES_BY_ID.get('stone_mill_stone_brick');
@@ -102,16 +106,8 @@ for (const edge of [15, -1]) {
 }
 console.log('PASS nearby crafting checks read existing chunks without generating terrain');
 
-const panel = RECIPES_BY_ID.get('panel_twotone');
-const panelBag = new Inventory();
-const panelCraft = new Crafting({ inventory: panelBag, world: {} });
-for (const [id,n] of Object.entries(panel.inputs)) panelBag.add(id,n);
-assert.equal(panelCraft.craft(panel.id,1,{atStations:['wood_mill']}).ok,false,
-  'Two-tone wall panels need the same saw as other wooden panels');
-for (const tool of furniture.tools) panelBag.add(tool,1);
-assert.equal(panelCraft.craft(panel.id,1,{atStations:['wood_mill']}).ok,true);
-assert.ok(panel.steps?.length > 1);
-console.log('PASS two-tone wooden panels need the saw and work steps');
+assert.ok(!RECIPES_BY_ID.has('panel_twotone'), 'two-tone panels are made at the counter too');
+console.log('PASS two-tone wooden panels are made at the counter');
 
 for (const id of [...FURNITURE_ITEM.values(), 'bed', 'painting', 'chair_red', 'panel_twotone']) {
   for (const r of RECIPES_BY_ID.values()) {
@@ -120,4 +116,4 @@ for (const id of [...FURNITURE_ITEM.values(), 'bed', 'painting', 'chair_red', 'p
     assert.ok(r.steps?.length > 1, `${r.id} has work steps`);
   }
 }
-console.log('PASS all wooden furniture colours and recipe variants share the one-tool rule and steps');
+console.log('PASS no furniture recipe is left to break the one-tool rule');

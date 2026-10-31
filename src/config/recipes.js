@@ -1744,6 +1744,23 @@ RECIPES.push(
   { id: 'workshop_workbench', name: 'Workbench', station: 'workshop', age: 4, inputs: { planks: 8, wood: 2, stone: 2 }, output: { id: 'workbench', count: 1 }, blurb: 'Place it anywhere: everything from the third age on is made at it.' },
 );
 
+// CRAFT3D-1: furniture is made only at a carpentry counter (owner, 31
+// October: "Templates only"). Each piece keeps the planks it cost here, for
+// the counter to charge; then every furniture recipe goes, wherever it was.
+export const FURNITURE_COST = new Map();
+for (const r of RECIPES) {
+  if (!furniture.has(r.output.id)) continue;
+  const was = FURNITURE_COST.get(r.output.id);
+  if (!was || (was.station === 'wood_mill' && r.station !== 'wood_mill')) FURNITURE_COST.set(r.output.id, { station: r.station, inputs: { ...r.inputs } });
+}
+/** The age each piece was first made in (its old recipe's), for the counter to unlock it by. */
+export const FURNITURE_AGE = new Map();
+for (const r of RECIPES) if (furniture.has(r.output.id)) FURNITURE_AGE.set(r.output.id, Math.min(FURNITURE_AGE.get(r.output.id) ?? 99, r.age));
+for (const [id, c] of FURNITURE_COST) FURNITURE_COST.set(id, c.inputs);
+for (let i = RECIPES.length - 1; i >= 0; i--) if (furniture.has(RECIPES[i].output.id)) RECIPES.splice(i, 1);
+RECIPES.push({ id: 'counter', name: 'Counter', station: 'workbench', age: 3, inputs: { planks: 6, wood: 2 }, output: { id: 'counter', count: 1 },
+  blurb: 'Place it and make furniture on it: saw the parts, then fit them together.' });
+
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
 /**
