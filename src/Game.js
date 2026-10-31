@@ -157,6 +157,75 @@ const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guar
 const LEAVE_SAVE_WAIT_MS = 15000;
 /** After an upload fails, the first try again; each one after waits twice as long, up to the second. */
 const UPLOAD_RETRY_MS = 30_000, UPLOAD_RETRY_MAX_MS = 5 * 60_000;
+// SAVE-7: how long a caller waits for the unsent copy, how many failed tries
+// before it stops by itself, and how long it waits while a world opens.
+const UNSENT_WAIT_MS = 20_000, UNSENT_MAX_TRIES = 3, UNSENT_LATER_MS = 15_000;
+const UNSENT_TRIES_KEY = 'voxelgame:unsent-tries';
+
+/** Failed tries for this one copy (a world id and when it was put aside). */
+function unsentTries(held) {
+  try {
+    const t = JSON.parse(localStorage.getItem(UNSENT_TRIES_KEY) || 'null');
+    return t?.worldId === held.worldId && t?.at === held.at ? t.tries : 0;
+  } catch { return 0; }
+}
+function setUnsentTries(held, tries) {
+  try {
+    if (tries) localStorage.setItem(UNSENT_TRIES_KEY, JSON.stringify({ worldId: held.worldId, at: held.at, tries }));
+    else localStorage.removeItem(UNSENT_TRIES_KEY);
+  } catch { /* private window */ }
+}
+
+/** The work behind Game.sendUnsent: one copy, one try. */
+async function sendHeldCopy(game) {
+  let held = null;
+  try { held = JSON.parse(localStorage.getItem(UNSENT_KEY) || 'null'); } catch { held = null; }
+  // Too big for localStorage, it went to the bigger store (keepSafe).
+  held ??= await getBackup();
+  if (!held?.worldId || !held.state) return false;
+  const tries = unsentTries(held);
+  if (tries >= UNSENT_MAX_TRIES) return false;
+  let mine;
+  try {
+    const list = await game.cloudList({ maxAgeMs: 0 });
+    mine = list.find((w) => w.id === held.worldId) ?? null;
+  } catch {
+    return false;   // no connection: not counted, it keeps until there is one
+  }
+  // Keep an absent world's backup without resurrecting a possible delete.
+  // Check before rebuilding terrain: a blocked upload needs only metadata.
+  if (!mine && game.syncState.agreedFor(held.worldId)) return false;
+  try {
+    const world = World.deserialize(held.state.world, { makeGen: makeChunkGen });
+    const res = await game.cloud.save(held.worldId, {
+      world,
+      name: held.name,
+      mode: held.state.mode,
+      player: Number.isFinite(held.state.player?.y)
+        ? { position: { x: held.state.player.x, y: held.state.player.y, z: held.state.player.z }, yaw: held.state.player.yaw, pitch: held.state.player.pitch }
+        : null,
+      gamification: null,
+      economy: { toJSON: () => held.state.economy ?? {} },
+      duilt: held.state.duilt,
+      revision: (mine?.revision ?? 0) + 1,
+    });
+    game.syncState.agree(held.worldId, res.revision);
+    setUnsentTries(held, 0);
+    // Only this world's copy: one put aside for another world meanwhile stays.
+    game.dropSafeCopy(held.worldId);
+    game.forgetCloudList();
+    return true;
+  } catch {
+    setUnsentTries(held, tries + 1);
+    if (tries + 1 >= UNSENT_MAX_TRIES) {
+      game.bus?.emit?.('toast', {
+        kind: 'xp', title: 'An old copy could not be sent',
+        body: `"${held.name ?? 'A world'}" failed ${UNSENT_MAX_TRIES} times, so it is no longer sent at start-up. It stays on this device until you save that world again.`,
+      });
+    }
+    return false;
+  }
+}
 /** How much land round the title scene's middle, and under its camera, is ready before the worlds screen shows. */
 const TITLE_READY_REACH = 24, TITLE_EYE_REACH = 16;
 /** How fast the touch stick walks at its rim, against a key's full walking pace. */
@@ -1174,42 +1243,29 @@ export class Game {
     } catch { /* private window */ }
   }
 
-  /** Anything that never made it up last time goes up now. */
-  async sendUnsent() {
-    if (!this.cloud?.signedIn) return false;
-    let held = null;
-    try { held = JSON.parse(localStorage.getItem(UNSENT_KEY) || 'null'); } catch { held = null; }
-    // Too big for localStorage, it went to the bigger store (keepSafe).
-    held ??= await getBackup();
-    if (!held?.worldId || !held.state) return false;
-    try {
-      const list = await this.cloudList({ maxAgeMs: 0 });
-      const mine = list.find((w) => w.id === held.worldId) ?? null;
-      // Keep an absent world's backup without resurrecting a possible delete.
-      // Check before rebuilding terrain: a blocked upload needs only metadata.
-      if (!mine && this.syncState.agreedFor(held.worldId)) {
-        return false;
-      }
-      const world = World.deserialize(held.state.world, { makeGen: makeChunkGen });
-      const res = await this.cloud.save(held.worldId, {
-        world,
-        name: held.name,
-        mode: held.state.mode,
-        player: Number.isFinite(held.state.player?.y)
-          ? { position: { x: held.state.player.x, y: held.state.player.y, z: held.state.player.z }, yaw: held.state.player.yaw, pitch: held.state.player.pitch }
-          : null,
-        gamification: null,
-        economy: { toJSON: () => held.state.economy ?? {} },
-        duilt: held.state.duilt,
-        revision: (mine?.revision ?? 0) + 1,
-      });
-      this.syncState.agree(held.worldId, res.revision);
-      this.dropSafeCopy();
-      this.forgetCloudList();
-      return true;
-    } catch {
-      return false;   // still no; it keeps until there is a connection
+  /**
+   * Anything that never made it up last time goes up now.
+   *
+   * SAVE-7: this must never stall the game. Rebuilding the copy is a whole
+   * world's worth of work on the main thread, so it waits while a world is
+   * being opened, runs once at a time (sign-in and startup both ask), and a
+   * caller waits at most UNSENT_WAIT_MS for it. A copy that fails
+   * UNSENT_MAX_TRIES times with the account answering is not tried again by
+   * itself; it stays on the device until a newer copy replaces it.
+   */
+  sendUnsent() {
+    if (!this.cloud?.signedIn) return Promise.resolve(false);
+    if (this.loadingWorld) {
+      clearTimeout(this.unsentTimer);
+      this.unsentTimer = setTimeout(() => { this.sendUnsent().catch(() => {}); }, UNSENT_LATER_MS);
+      return Promise.resolve(false);
     }
+    if (!this.sendingUnsent) {
+      this.sendingUnsent = sendHeldCopy(this).finally(() => { this.sendingUnsent = null; });
+    }
+    let timer;
+    const late = new Promise((resolve) => { timer = setTimeout(() => resolve(false), UNSENT_WAIT_MS); });
+    return Promise.race([this.sendingUnsent, late]).finally(() => clearTimeout(timer));
   }
 
   /**
@@ -1230,6 +1286,8 @@ export class Game {
    * Gone once that's done, or at once if `work` came to nothing.
    */
   async withLoading(label, work) {
+    // SAVE-7: an unsent copy waits until this is done (sendUnsent).
+    this.loadingWorld = (this.loadingWorld ?? 0) + 1;
     loadingShow(label);
     await nextPaint();
     try {
@@ -1243,6 +1301,7 @@ export class Game {
     } finally {
       this.booting = false;
       loadingDone();
+      this.loadingWorld -= 1;
     }
   }
 

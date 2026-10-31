@@ -951,6 +951,7 @@ export class DuiltUI {
     if (tax > 0 && this.makesOf(structure, spec, level)) out.push(`Taxes: the Sky Kingdom takes ${Math.round(tax * 100)}% of what it makes, until it falls.`);
     if (structure.type === 'barracks') out.push('Trains soldiers who go out to fight anything that comes at your land.');
     if (structure.type === 'military') out.push('Train spear guards here; they defend your land when enemies come.');
+    if (structure.type === 'work_hall') out.push('Give villagers building and carrying jobs, and leave supplies for them to carry.');
     if (!out.length && !this.makesOf(structure, spec, level)) out.push('Makes nothing. It counts toward your age goals.');
     return out;
   }
@@ -1788,20 +1789,47 @@ export class DuiltUI {
     const d=this.duilt,body=this.q('#building-body');
     if(!d?.jobs||!body)return;
     let section=body.querySelector('[data-work-hall]');
-    if(!section){section=document.createElement('section');section.dataset.workHall='1';body.append(section);}
+    if(!section){section=document.createElement('section');section.dataset.workHall='1';section.className='work-hall';body.append(section);}
     const roles=[['automatic','Normal work'],['builder','Builder'],['hauler','Carry supplies']];
     const stock=d.jobs.supplyForHall(hall.id);
     const supplies=stock.slots.filter(Boolean).map(s=>`${s.count} ${itemName(s.id)}`).join(', ');
     const available=[...new Set(d.inventory.slots.filter(Boolean).map(s=>s.id))].filter(id=>ITEMS_BY_ID.get(id)?.kind!=='tool'&&!ITEMS_BY_ID.get(id)?.wears);
-    section.innerHTML=`<h4>Villager jobs</h4><p class="dim">Builders place queued designs. Carriers walk supplies from this hall to your stores. Hungry villagers stop for food.</p>
-      ${d.settlers.people.map(p=>{const a=d.jobs.assignment(p.id);return `<label class="building-line">${escapeHtml(p.name??`Villager ${p.id}`)} <select data-job-person="${p.id}" ${hall.valid?'':'disabled'}>${roles.map(([id,name])=>`<option value="${id}" ${(a?.role??'automatic')===id?'selected':''}>${name}</option>`).join('')}</select><span class="dim">${escapeHtml(a?.status??'Normal work')}</span>${a?.carrying?`<button class="secondary" data-job-cargo="${p.id}">Return carried goods</button>`:''}</label>`;}).join('')||'<p class="dim">Build extra homes so villagers can move in.</p>'}
-      <h4>Supplies to carry</h4><p>${escapeHtml(supplies||'No supplies waiting.')}</p>
-      ${available.map(id=>`<button class="secondary" data-job-deposit="${escapeAttr(id)}">Put up to 32 ${escapeHtml(itemName(id))}</button>`).join('')}
+    const off=hall.valid?'':'disabled';
+    // One row per villager: name, then the job picker, then what they are doing.
+    const people=d.settlers.people.map(p=>{
+      const a=d.jobs.assignment(p.id);
+      return `<div class="job-row">
+        <span class="job-name">${escapeHtml(p.name??`Villager ${p.id}`)}</span>
+        <select class="job-select" data-job-person="${p.id}" aria-label="${escapeAttr(`Job for ${p.name??`villager ${p.id}`}`)}" ${off}>${roles.map(([id,name])=>`<option value="${id}" ${(a?.role??'automatic')===id?'selected':''}>${name}</option>`).join('')}</select>
+        ${a?.status && a.status!==roles.find(([id])=>id===(a.role??'automatic'))?.[1]?`<span class="job-status dim">${escapeHtml(a.status)}</span>`:''}
+        ${a?.carrying?`<button class="secondary job-small" data-job-cargo="${p.id}">Return carried goods</button>`:''}
+      </div>`;
+    }).join('')||'<p class="dim">Build extra homes so villagers can move in.</p>';
+    // Supplies: one picker and one button, not a button for every item in the bag.
+    const first=available[0]??'';
+    const deposit=available.length?`<div class="job-row job-deposit">
+        <select class="job-select" data-job-deposit-item aria-label="Item to put in the hall">${available.map(id=>`<option value="${escapeAttr(id)}">${escapeHtml(itemName(id))}</option>`).join('')}</select>
+        <button class="secondary" data-job-deposit="${escapeAttr(first)}">Put up to 32 in</button>
+      </div>`:'<p class="dim">Nothing in your bag to put in.</p>';
+    const orders=d.jobs.builds.map(j=>`<div class="job-row">
+        <span class="job-name">${escapeHtml(j.name)}</span>
+        <span class="job-status dim">${j.cursor} of ${j.changes.length} blocks · ${escapeHtml(j.reason??j.state)}</span>
+        ${j.state==='queued'?`<button class="secondary job-small" data-job-cancel="${j.id}">Cancel and refund</button>`:`<button class="secondary job-small" data-job-refund="${j.id}">Collect remaining materials</button>`}
+      </div>`).join('')||'<p class="dim">Choose Build with villagers from the building list.</p>';
+    section.innerHTML=`<h4>Villager jobs</h4>
+      <p class="dim">Builders place queued designs. Carriers walk supplies from this hall to your stores. Hungry villagers stop for food.</p>
+      ${people}
+      <h4>Supplies to carry</h4>
+      <p>${escapeHtml(supplies||'No supplies waiting.')}</p>
+      ${deposit}
       <button class="secondary" data-job-recover>Return supplies to my bag</button>
-      <h4>Building orders</h4>${d.jobs.builds.map(j=>`<p>${escapeHtml(j.name)} · ${j.cursor}/${j.changes.length} · ${escapeHtml(j.reason??j.state)} ${j.state==='queued'?`<button class="secondary" data-job-cancel="${j.id}">Cancel and refund</button>`:`<button class="secondary" data-job-refund="${j.id}">Collect remaining materials</button>`}</p>`).join('')||'<p class="dim">Choose Build with villagers from the building list.</p>'}`;
+      <h4>Building orders</h4>
+      ${orders}`;
     const report=result=>{if(result?.ok===false)this.bus.emit('toast',{kind:'xp',title:result.reason??'Could not change that job'});this.renderWorkHall(hall);};
     section.querySelectorAll('[data-job-person]').forEach(el=>el.addEventListener('change',()=>report(d.jobs.assign(Number(el.dataset.jobPerson),el.value,hall.id))));
-    section.querySelectorAll('[data-job-deposit]').forEach(el=>el.addEventListener('click',()=>report(d.jobs.deposit(hall.id,el.dataset.jobDeposit,32))));
+    const pick=section.querySelector('[data-job-deposit-item]'),put=section.querySelector('[data-job-deposit]');
+    pick?.addEventListener('change',()=>{put.dataset.jobDeposit=pick.value;});
+    put?.addEventListener('click',()=>report(d.jobs.deposit(hall.id,put.dataset.jobDeposit,32)));
     section.querySelectorAll('[data-job-cancel]').forEach(el=>el.addEventListener('click',()=>report(d.jobs.cancelBuild(Number(el.dataset.jobCancel)))));
     section.querySelectorAll('[data-job-refund]').forEach(el=>el.addEventListener('click',()=>report(d.jobs.collectRefund(Number(el.dataset.jobRefund)))));
     section.querySelectorAll('[data-job-cargo]').forEach(el=>el.addEventListener('click',()=>report(d.jobs.recoverCargo(Number(el.dataset.jobCargo)))));
