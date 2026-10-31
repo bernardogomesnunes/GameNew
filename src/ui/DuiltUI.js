@@ -719,6 +719,8 @@ export class DuiltUI {
       </div>
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
       ${structure.type === 'barracks' || structure.type === 'military' ? this.barracksHtml(structure) : ''}
+      ${structure.type === 'kiln' ? this.firingHtml(structure, spec) : ''}
+      ${structure.type === 'foundry' ? this.foundryStockHtml(spec) : ''}
       ${structure.type === 'sanctuary_white' || structure.type === 'sanctuary_black' ? this.cubeHtml() : ''}
       ${levelSec}
       ${this.stationRecipesHtml(spec)}
@@ -842,6 +844,63 @@ export class DuiltUI {
    * pop-up is open (Game.phase), so this is where it had got to when you
    * opened it — the bar moves on by itself only if the clock does.
    */
+  /**
+   * IMP-10 step 5: the kiln, shaped like the barracks. What comes out of a
+   * firing, how far the one going is, and what it is waiting on.
+   */
+  firingHtml(structure, spec) {
+    const d = this.duilt;
+    if (!d || !structure.valid) return '';
+    const now = this.firingProgress(structure, spec);
+    if (!now) return '';
+    const out = Object.entries(producesAt(spec, structure.tier ?? 0)).map(([id, n]) => itemChip(id, n)).join('');
+    return `
+      <div class="building-sec">
+        <h4>Firing</h4>
+        <p class="evolve-cost">Each firing <span class="recipe-cost">${out}</span></p>
+        <div class="train-queue">
+          <div class="train-row now">
+            <span class="train-name">${now.ratio >= 1 ? 'Done' : 'In the fire'}</span>
+            <span class="train-when">${escapeHtml(now.text)}</span>
+            <div class="research-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(now.ratio * 100)}"><i style="width:${Math.round(now.ratio * 100)}%"></i></div>
+          </div>
+        </div>
+        <p class="dim">It needs sand or earth within 6 blocks. What it makes goes to your bag, or a storehouse when the bag is full.</p>
+      </div>`;
+  }
+
+  /** How far a timed building is through its cycle, and the time left, or null. */
+  firingProgress(structure, spec, nowMs = Date.now()) {
+    const every = intervalAt(spec, structure.tier ?? 0);
+    if (!every || !Number.isFinite(structure.lastPaidAt)) return null;
+    const period = every * 1000 * (this.duilt?.structures?.dayScale ?? 1);
+    const elapsed = Math.max(0, nowMs - structure.lastPaidAt);
+    if (elapsed >= period) return { ratio: 1, text: 'Waiting for room in your bag or a storehouse' };
+    const ratio = elapsed / period, secs = Math.ceil((period - elapsed) / 1000);
+    const text = secs >= 3600 ? `${Math.floor(secs / 3600)} h ${Math.ceil((secs % 3600) / 60)} min left`
+      : secs >= 60 ? `${Math.ceil(secs / 60)} min left` : `${secs} s left`;
+    return { ratio, text };
+  }
+
+  /**
+   * IMP-10 step 5: the foundry says what it can work from your bag before
+   * its recipes: each ore its recipes take, and how much of it you carry.
+   */
+  foundryStockHtml(spec) {
+    const d = this.duilt;
+    if (!d || !spec?.station) return '';
+    const ids = [...new Set(RECIPES.filter((r) => r.station === spec.station).flatMap((r) => Object.keys(r.inputs)))];
+    if (!ids.length) return '';
+    const inv = d.inventory;
+    const have = ids.map((id) => `${itemChip(id, inv?.endless ? '∞' : inv?.countOf(id) ?? 0)}`).join('');
+    return `
+      <div class="building-sec">
+        <h4>In your bag</h4>
+        <p class="evolve-cost"><span class="recipe-cost">${have}</span></p>
+        <p class="dim">What its recipes take, and how much you carry. Stand near the foundry and make it below.</p>
+      </div>`;
+  }
+
   trainingProgress(structure) {
     const d = this.duilt, t = d?.defenders.barracks(structure.id);
     if (!t?.queue.length) return { ratio: 0, text: '' };
