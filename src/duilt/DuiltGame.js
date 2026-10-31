@@ -1466,6 +1466,7 @@ export class DuiltGame {
   resumeClock(now = Date.now()) {
     if (this.awaySince == null) return;
     this.structures.skipAway(now - this.awaySince, { now });
+    this.jobs.owe(now - this.awaySince);
     this.awaySince = null;
     this.lastCollect = now;
   }
@@ -2230,7 +2231,11 @@ export class DuiltGame {
     // The time it was closed isn't paid for (asked for directly: "game closed
     // no production"): only what came due while it was open and wasn't
     // collected before it was saved.
-    if (Number.isFinite(data.savedAt)) this.structures.skipAway(Date.now() - data.savedAt);
+    if (Number.isFinite(data.savedAt)) {
+      this.structures.skipAway(Date.now() - data.savedAt);
+      // Villager builds are the exception: they go on while the game is closed.
+      this.jobs.owe(Date.now() - data.savedAt);
+    }
     this.lastCollect = Date.now();
     const gained = this.structures.collect({
       now: Date.now(),

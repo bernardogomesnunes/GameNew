@@ -33,6 +33,7 @@ import { GamificationEngine } from './gamification/GamificationEngine.js';
 import { SyncState } from './storage/WorldSync.js';
 import { LocalWorlds } from './storage/LocalWorlds.js';
 import { restoreWorldSnapshot } from './storage/WorldSnapshot.js';
+import { SELF_BLOCK_SECONDS } from './duilt/VillagerJobs.js';
 import { putBackup, getBackup, dropBackup } from './storage/BackupStore.js';
 import { claimRegion, blocksIn, claimHint } from './tools/ClaimArea.js';
 
@@ -4018,6 +4019,19 @@ export class Game {
       const region = {minX:b.x,maxX:b.x+e.x,minY:b.y,maxY:b.y+e.y,minZ:b.z,maxZ:b.z+e.z};
       const result = this.duilt.jobs.enqueueBuild({...plan,name:design.name,type:typeId,designId:design.id,region});
       this.ui.toast({kind:result.ok?'challenge':'xp',title:result.ok?`${design.name} queued for builders`:'Cannot queue this building',body:result.ok?'Assign builders at the Work Hall. Reserved materials stay with this order.':result.reason});
+      if (result.ok) this.editedAt=Date.now();
+      return;
+    }
+    // IMP-20: placed by you in a Duilt world, it goes up block by block on
+    // its own, 1.5 times as slow as with villagers, and is claimed when it
+    // is done (configureVillagerJobs' onBuildComplete). Creative stays
+    // instant, and so does a mine, whose stair is dug as it is placed.
+    if (!this.duilt.sandbox && typeId !== 'mine') {
+      const e = design.extent;
+      const region = {minX:b.x,maxX:b.x+e.x,minY:b.y,maxY:b.y+e.y,minZ:b.z,maxZ:b.z+e.z};
+      const result = this.duilt.jobs.enqueueBuild({...plan,name:design.name,type:typeId,designId:design.id,region},undefined,{self:true});
+      const minutes = result.ok ? Math.max(1, Math.round(result.job.changes.length * SELF_BLOCK_SECONDS / 60)) : 0;
+      this.ui.toast({kind:result.ok?'challenge':'xp',title:result.ok?`${design.name} is going up`:'Cannot place that',body:result.ok?`About ${minutes} min. Builders at a Work Hall are faster.`:result.reason});
       if (result.ok) this.editedAt=Date.now();
       return;
     }
