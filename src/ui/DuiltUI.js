@@ -16,6 +16,7 @@ import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
 import { BLOCKS } from '../config/blocks.js';
+import { JOB_FOR_BUILDING, JOB_OUTFITS } from '../config/outfits.js';
 import { StationWork, usesSpots, batchSeconds } from '../duilt/StationWork.js';
 import { howToGet, RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
 import { designsForStructure, starterDesign } from '../prefabs/HouseDesigns.js';
@@ -958,6 +959,12 @@ export class DuiltUI {
     if (summary?.granary) out.push(summary.items ? `${summary.items} things, ${summary.used} kind${summary.used === 1 ? '' : 's'}. No limit.` : 'Empty. Keeps all your farms grow, with no limit.');
     else if (summary) out.push(summary.items ? `${summary.items} things in ${summary.used} of ${summary.size} slots.` : `Empty — ${summary.size} slots.`);
     if (spec?.stores) out.push('Reach every storehouse from here.');
+    // Jobs come with the Work Hall (owner, 31 October): say so where it matters.
+    if (JOB_FOR_BUILDING[structure.type] && this.duilt?.settlers && !this.duilt.settlers.jobsOpen) out.push('Build a Work Hall and a villager will come to work here, in work clothes.');
+    else if (JOB_FOR_BUILDING[structure.type]) {
+      const worker = this.duilt?.settlers?.people.find((p) => p.workId === structure.id);
+      if (worker) out.push(`${worker.name ?? 'A villager'} works here as a ${JOB_OUTFITS[JOB_FOR_BUILDING[structure.type]].name.toLowerCase()}.`);
+    }
     const tax = this.duilt?.skyTaxRate?.() ?? 0;
     // The Sky Kingdom's share, after a lost attack on it (duilt/SkyWar.js).
     if (tax > 0 && this.makesOf(structure, spec, level)) out.push(`Taxes: the Sky Kingdom takes ${Math.round(tax * 100)}% of what it makes, until it falls.`);

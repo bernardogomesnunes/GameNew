@@ -1,4 +1,5 @@
 import { SETTLERS, settlerName, settlerColour } from '../config/settlers.js';
+import { JOB_FOR_BUILDING } from '../config/outfits.js';
 import { STRUCTURES_BY_ID } from '../config/structures.js';
 import { ITEMS } from '../config/items.js';
 import {settlerFloor,settlerRoute,doorWise} from './settlerNavigation.js';
@@ -172,6 +173,15 @@ export class Settlers {
       this.eat({ onlyHungry: true });
     }
 
+    // No Work Hall (any more): nobody works. With one, everyone's job is
+    // written on them for the people view to dress them (p.job).
+    const open = this.jobsOpen;
+    const types = new Map(this.structures.list().map((s) => [s.id, s.type]));
+    for (const p of this.people) {
+      if (!open && p.workId != null) { p.workId = null; p.atWork = false; }
+      const role = this.jobs?.assignment?.(p.id)?.role;
+      p.job = open ? (role === 'builder' || role === 'hauler' ? role : JOB_FOR_BUILDING[types.get(p.workId)] ?? null) : null;
+    }
     for (const p of this.people) this.walk(p, dtSeconds);
     this.closeDoors(dtSeconds);
   }
@@ -293,8 +303,18 @@ export class Settlers {
    * One worker per building: two people standing in the same quarry should not
    * double it, and spreading out is what makes a second quarry worth building.
    */
+  /**
+   * Whether jobs are given at all: only once a working Work Hall stands
+   * (owner, 31 October: villagers get a job "only ... when the work
+   * building is placed"). Before it, villagers live and walk but work nowhere.
+   */
+  get jobsOpen() {
+    return this.structures.list().some((s) => s.type === 'work_hall' && s.valid);
+  }
+
   assignWork(person) {
     if (this.jobs?.controls(person)) { person.workId = null; return null; }
+    if (!this.jobsOpen) { person.workId = null; return null; }
     const home = this.structures.list().find((s) => s.id === person.homeId);
     if (!home) { person.workId = null; return null; }
     const from = centreOf(home.region);

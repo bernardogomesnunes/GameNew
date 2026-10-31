@@ -23,7 +23,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const FARMLAND = 21, WATER = 11;
 
 /** A world with a farm's worth of tilled ground beside water. */
-function setup({ beds = 0, food = 0 } = {}) {
+function setup({ beds = 0, food = 0, hall = true } = {}) {
   const world = new World({ sizeX: 64, sizeZ: 64, height: 32 });
   for (let x = 0; x < 64; x++) for (let z = 0; z < 64; z++) {
     world.setBlock(x, 10, z, 1);
@@ -52,6 +52,8 @@ function setup({ beds = 0, food = 0 } = {}) {
   }, houses++);
   for (let i = 0; i < beds; i++) addHouse();
   if (food) inventory.add('vegetables', food);
+  // Jobs are given only once a Work Hall stands (owner, 31 October).
+  if (hall) add('work_hall', { minX: 50, maxX: 54, minY: 11, maxY: 14, minZ: 50, maxZ: 54 });
 
   let r = 0;
   const rand = () => { r = (r * 1103515245 + 12345) % 2147483648; return r / 2147483648; };
