@@ -201,7 +201,7 @@ ok('and the plan says how to use it', /tools\/showcase-shots\.mjs/.test(plan));
   const lab = SHOWCASE_BUILDINGS.filter((b) => b.place === 'lab');
   ok('the lab has a cottage of its own and a stand of every block', lab.map((b) => b.id).sort().join() === 'lab_cottage,lab_materials');
   const named = standBlocks().map((id) => BLOCKS_BY_ID.get(id).name);
-  ok(`the stand holds the everyday blocks (${named.length} in all)`, ['Grass', 'Dirt', 'Wood', 'Planks', 'Stone', 'Leaves'].every((n) => named.includes(n)) && named.length > 60);
+  ok(`the stand holds the everyday blocks (${named.length} in all)`, ['Turf', 'Dirt', 'Wood', 'Planks', 'Stone', 'Leaves'].every((n) => named.includes(n)) && named.length > 60);
   ok('and the lab has close spots at eye height', ['lab-garden', 'lab-stand'].every((id) => SHOWCASE_SPOTS_BY_ID.get(id)?.group === 'lab'));
 }
 

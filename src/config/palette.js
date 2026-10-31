@@ -47,12 +47,12 @@ const P = PALETTE;
  */
 export const BLOCK_COLOURS = {
   // The ground.
-  Grass: P.spring, Ground: P.spring, Dirt: P.cocoa, Farmland: 0x7a4c40, Sand: 0xf0dca2, Snow: 0xf6f4fb,
+  Turf: P.spring, Ground: P.spring, Dirt: P.cocoa, 'Turned Soil': 0x7a4c40, Sand: 0xf0dca2, Snow: 0xf6f4fb,
   Moss: P.moss, 'Dark Moss': 0x66806e, 'Forest Floor': 0x6e5a52, 'Jungle Floor': 0x586e56, 'Fern Turf': 0xa6c288,
   Gravel: 0xa7a0b4, Clay: 0xc2988a, Silt: 0x8f9a8a, 'Sand Path': 0xe2c290,
   // Trees.
   Wood: P.plumwood, Leaves: P.teal, Sapling: 0x9cc08e,
-  'White Wood': 0xefe6ea, 'White Leaves': 0xeeeef0, 'Pink Leaves': 0xf2b6cf, 'Dark Wood': 0x4e3646, 'Dark Leaves': P.deepTeal,
+  'White Log': 0xefe6ea, 'White Leaves': 0xeeeef0, 'Pink Leaves': 0xf2b6cf, 'Dark Log': 0x4e3646, 'Dark Leaves': P.deepTeal,
   'Stripped Oak Log': 0xd6a87e, 'Stripped White Log': 0xf2e8ee, 'Stripped Dark Log': 0x8a5e6a,
   // Stone.
   Stone: P.stone, Cobblestone: 0xc6bdd6, 'Stone Brick': 0xb2abc2, 'Stone Mill': 0xa29cb2,
@@ -84,7 +84,7 @@ export const BLOCK_COLOURS = {
   // Glass, water, lava, light.
   Glass: 0xd8e2f8, 'Red Glass': 0xec7a92, 'Blue Glass': 0x8a96e8, 'Tinted Glass': 0x5a8fbe,
   Water: P.water, Lava: 0xff7a3a, Lantern: P.lantern, 'Firefly Lantern': 0xe2f2a0, 'Lit Window': 0xffe2a0,
-  Amethyst: 0xb48ae6, 'Way Out': 0xc4a8ff, 'Gold Block': 0xf6cf5a, 'Gold Trim': 0xf6cf5a, Chandelier: 0x5d5568, Chain: 0x5e5e74,
+  Amethyst: 0xb48ae6, 'Way Out': 0xc4a8ff, 'Gold': 0xf6cf5a, 'Gold Trim': 0xf6cf5a, Chandelier: 0x5d5568, Chain: 0x5e5e74,
   // Cloth.
   'Red Chair': 0xc75a72, 'Red Rug': 0xc4566e, 'Blue Rug': 0x6c7fd0, 'Green Rug': 0x7fa894, Bed: 0xc4566e,
   'White Banner': 0xf7f2f4, 'Black Banner': 0x2e2a3e, 'War Tent': 0x6e5c5a, 'War Standard': 0xd0a84a,

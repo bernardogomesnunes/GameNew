@@ -44,8 +44,12 @@ const UNSENT_KEY = 'voxelgame:unsent';
 const makeChunkGen = (o) => new ChunkGen(o);
 
 /** Everything about a world that has to survive, as plain JSON. */
-function serialiseWorldState({ world, mode, economy, duilt, territoryBounds }) {
-  return { world: world.serialize({ keepBounds: territoryBounds }), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null };
+function serialiseWorldState({ world, mode, economy, duilt, territoryBounds, player }) {
+  // Where you stand rides along: the unsent copy that goes up later must not
+  // overwrite the account's saved position with nothing.
+  const at = player?.position;
+  return { world: world.serialize({ keepBounds: territoryBounds }), mode, economy: economy?.toJSON?.() ?? {}, duilt: duilt ?? null,
+    ...(at ? { player: { x: at.x, y: at.y, z: at.z, yaw: player.yaw, pitch: player.pitch } } : {}) };
 }
 import { loadSettings, saveSettings, QualityController, DISTANCES } from './render/graphics.js';
 import { isTyping } from './ui/Panels.js';
@@ -1191,7 +1195,9 @@ export class Game {
         world,
         name: held.name,
         mode: held.state.mode,
-        player: null,
+        player: Number.isFinite(held.state.player?.y)
+          ? { position: { x: held.state.player.x, y: held.state.player.y, z: held.state.player.z }, yaw: held.state.player.yaw, pitch: held.state.player.pitch }
+          : null,
         gamification: null,
         economy: { toJSON: () => held.state.economy ?? {} },
         duilt: held.state.duilt,
@@ -1261,7 +1267,11 @@ export class Game {
         return false;
       }
     }
-    if (!this.cloud?.signedIn) return false;
+    if (!this.cloud?.signedIn) {
+      this.ui.toast({ kind: 'xp', title: 'Sign in to open this world',
+        body: 'This world lives on your account, and this browser is not signed in right now.' });
+      return false;
+    }
     try {
       await this.restoreFromCloud(id);
       return true;
@@ -1409,7 +1419,13 @@ export class Game {
       onSelectItem: (id) => { this.selectedItemId = id; },
       // Opening a world by its id. There is no "open by name" any more,
       // because there is no second copy of anything to tell apart by name.
-      onOpenWorld: (id) => this.withLoading('Opening your world…', () => this.openWorld(id)),
+      // A world that does not open leaves you on the worlds screen, not in the
+      // title scene behind it with the screen already closed.
+      onOpenWorld: async (id) => {
+        const opened = await this.withLoading('Opening your world…', () => this.openWorld(id)).catch(() => false);
+        if (opened === false) this.ui.openHome();
+        return opened;
+      },
       onDeleteWorld: async (id) => {
         if (id === this.worldId) { this.discarded = true; this.pendingSave = false; }
         // Its unsent copy goes too, or the next startup uploads it again.
@@ -1638,7 +1654,7 @@ export class Game {
       onShowcaseSpot: (id) => this.showcaseSpot(id),
       onShowcaseTime: (t) => this.showcaseTime(t),
       onOpenBuildings: () => this.ui.openPanel('panel-buildings'),
-      onOpenBench: () => this.ui.openPanel('panel-bench'),
+      onOpenBench: () => this.ui.openBench(),
     };
   }
 
@@ -2867,7 +2883,7 @@ export class Game {
     }
     if (aimed && aimed.block === STORAGE_CONTROLLER && this.selectedBlockId !== STORAGE_INTERFACE) return void this.ui.openStores();
     // At a wood mill (#32), the bench, showing what's made there.
-    if (aimed && stationOf(aimed.block)) return void this.ui.openBench();
+    if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block));
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
     // At a war tent, Place makes camp there; at the dark god's altar, the oath.
