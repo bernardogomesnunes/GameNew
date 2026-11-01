@@ -2266,3 +2266,22 @@ button.busy { cursor: progress; opacity: 0.92; }
 .station-spot .spot-put .train-unit { width: 100%; box-sizing: border-box; min-height: 44px; }
 .station-spot .train-row { grid-template-columns: 1fr auto; }
 .station-spot .train-row .research-bar { grid-column: 1 / -1; }
+
+/* CRAFT3D-1: the bar over the carpentry counter's close-up. Low on the
+   screen, so the counter top stays in view; the picture under it takes drags. */
+.counter-bar {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 40;
+  width: min(560px, calc(100vw - 32px)); box-sizing: border-box; padding: 10px 12px;
+  background: var(--panel-bg, #f3e6c8); border: 2px solid var(--panel-border, #4a3220); border-radius: 10px;
+  pointer-events: auto;
+}
+.counter-bar[hidden] { display: none; }
+.counter-bar .counter-say { margin: 0 0 8px; font-size: 14px; }
+.counter-bar .counter-pieces { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px; }
+.counter-bar .counter-piece { flex: 0 0 auto; min-height: 44px; padding: 6px 10px; white-space: nowrap; }
+.counter-bar .counter-piece.cant { opacity: 0.55; }
+.counter-bar .counter-actions { display: flex; gap: 8px; }
+.counter-bar button { min-height: 44px; }
+/* At the counter only its bar and the toasts show: the rest of the HUD
+   would cover the counter top and take the drags. */
+#ui-root.at-counter > *:not(.counter-bar):not(#toast-stack) { visibility: hidden; }
