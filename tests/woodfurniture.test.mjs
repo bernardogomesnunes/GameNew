@@ -1,6 +1,6 @@
 import { BLOCKS_BY_ID, WOOD_FURNITURE, countsAs, turned, facingOf, shapeOf } from '../src/config/blocks.js';
 import { ITEMS, ITEMS_BY_ID, FURNITURE_ITEM } from '../src/config/items.js';
-import { RECIPES } from '../src/config/recipes.js';
+import { RECIPES, FURNITURE_COST, FURNITURE_AGE } from '../src/config/recipes.js';
 import { boxesFor, boxColor } from '../src/world/propShapes.js';
 import { shapeSvg } from '../src/config/cubes.js';
 
@@ -39,11 +39,11 @@ for (const wood of ['white', 'dark']) {
   for (const k of KEYS) {
     const item = ITEMS_BY_ID.get(FURNITURE_ITEM.get(`${wood}:${k}`));
     const oakItem = ITEMS_BY_ID.get(FURNITURE_ITEM.get(`oak:${k}`));
-    const r = RECIPES.find((x) => x.output.id === item?.id);
-    const oakR = RECIPES.find((x) => x.output.id === oakItem.id && !x.inputs.dark_planks);
+    // CRAFT3D-1: made at the carpentry counter, costing what the oak piece does.
+    const r = FURNITURE_COST.get(item?.id), oakR = FURNITURE_COST.get(oakItem.id);
     if (!item || !r || item.block !== of(wood, k).id
-      || r.station !== oakR.station || r.age !== oakR.age || r.output.count !== oakR.output.count
-      || r.inputs[`${wood}_planks`] !== oakR.inputs.planks || r.inputs.planks) {
+      || FURNITURE_AGE.get(item.id) !== FURNITURE_AGE.get(oakItem.id)
+      || r[`${wood}_planks`] !== oakR.planks || r.planks) {
       ok(`${W} ${k}: an item, made where the oak one is, from ${planks.name.toLowerCase()}`, false);
     }
   }

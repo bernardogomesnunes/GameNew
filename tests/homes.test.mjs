@@ -4,7 +4,7 @@ import { World } from '../src/world/World.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
 import { BED, BED_HEAD, PAINTING, bedPart, pairPart, pairOther, WAR_TENT, WAR_TENT_BACK, isTent, isPainting, turned, facingOf, mirrored, FACING_STEP, BLOCKS_BY_ID } from '../src/config/blocks.js';
 import { ITEMS_BY_ID, ITEM_FOR_BLOCK } from '../src/config/items.js';
-import { RECIPES } from '../src/config/recipes.js';
+import { RECIPES, FURNITURE_COST, FURNITURE_AGE } from '../src/config/recipes.js';
 import { DESIGN_FOR_STRUCTURE } from '../src/config/starterDesigns.js';
 import { validateStructure } from '../src/structures/validate.js';
 import { boxesFor } from '../src/world/propShapes.js';
@@ -23,7 +23,7 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 
 // --- the bed ------------------------------------------------------------------------------
 
-ok('a bed is a thing you make and hold', ITEMS_BY_ID.get('bed')?.block === BED && RECIPES.some((r) => r.output.id === 'bed' && r.station === 'hand' && r.age === 1));
+ok('a bed is a thing you make and hold', ITEMS_BY_ID.get('bed')?.block === BED && FURNITURE_COST.has('bed') && FURNITURE_AGE.get('bed') === 1);
 ok('two blocks long: a foot and a head, each modelled', boxesFor('bed_foot').length >= 5 && boxesFor('bed_head').some((b) => b.maxY > 0.8));
 ok('it turns the way you face, head and foot alike', [0, 1, 2, 3].every((d) => facingOf(turned(BED, d)) === d && facingOf(turned(BED_HEAD, d)) === d));
 ok('the mirror turns it too', bedPart(mirrored(turned(BED, 1), { flipX: true })).facing === 3);
@@ -50,7 +50,7 @@ ok('drawn whole in the bag', (itemIcon(ITEMS_BY_ID.get('bed')) ?? '').startsWith
 
 // --- the painting ---------------------------------------------------------------------------
 
-ok('a painting is a thing you make and hold', ITEMS_BY_ID.get('painting')?.block === PAINTING && RECIPES.some((r) => r.output.id === 'painting' && r.age === 1));
+ok('a painting is a thing you make and hold', ITEMS_BY_ID.get('painting')?.block === PAINTING && FURNITURE_COST.has('painting') && FURNITURE_AGE.get('painting') === 1);
 ok('flat on the wall, framed, with a landscape in it', boxesFor('painting').every((b) => b.maxZ <= 0.08) && boxesFor('painting').length >= 8);
 {
   const w = new World({ sizeX: 8, sizeZ: 8, height: 8 });

@@ -14,6 +14,7 @@ import { Hunger } from '../survival/Hunger.js';
 import { Health } from '../survival/Health.js';
 import { Skills } from '../progression/Skills.js';
 import { StationWork } from './StationWork.js';
+import { Counters } from './Counter.js';
 import { Crafting } from './Crafting.js';
 import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
@@ -207,6 +208,8 @@ export class DuiltGame {
     this.studying = null;
     // IMP-15: the spots at placed stations and the foundry, working on their own.
     this.stationWork = new StationWork({ bag: () => this.inventory });
+    // CRAFT3D-1: each carpentry counter's furniture in progress.
+    this.counters = new Counters({ bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload) });
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
@@ -1441,7 +1444,11 @@ export class DuiltGame {
     this.stationWork.tick(dtSeconds);
     // Every couple of seconds: a spot whose station was broken gives its items back.
     this.sincePrune = (this.sincePrune ?? 0) + dtSeconds;
-    if (this.sincePrune > 2) { this.sincePrune = 0; this.stationWork.prune((key, station) => this.spotStands(key, station)); }
+    if (this.sincePrune > 2) {
+      this.sincePrune = 0;
+      this.stationWork.prune((key, station) => this.spotStands(key, station));
+      this.counters.prune((key) => this.spotStands(key, 'counter'));
+    }
 
     const now = Date.now();
     // Running again after being put away, without having been told: the
@@ -2130,6 +2137,7 @@ export class DuiltGame {
       settlers: this.settlers.toJSON(),
       jobs: this.jobs.toJSON(),
       stationWork: this.stationWork.toJSON(),
+      counters: this.counters.toJSON(),
       herd: herdToJSON(this.herd),
       machines: this.machines.map((m) => ({
         ...(m.kind ? { kind: m.kind } : {}),
@@ -2222,6 +2230,7 @@ export class DuiltGame {
     this.settlers.loadJSON(data.settlers);
     this.jobs.loadJSON(data.jobs);
     this.stationWork.loadJSON(data.stationWork);
+    this.counters.loadJSON(data.counters);
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));

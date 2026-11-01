@@ -8,6 +8,7 @@ import {
   stationOf, logOnFace, quarterTurned, panelOnFace, facingOf, countsAs, endAxisOf,
 } from '../src/config/blocks.js';
 import { ITEMS_BY_ID, ITEM_FOR_BLOCK } from '../src/config/items.js';
+import { FURNITURE_COST } from '../src/config/recipes.js';
 import { RECIPES } from '../src/config/recipes.js';
 import { itemIcon } from '../src/config/cubes.js';
 import { boxesFor } from '../src/world/propShapes.js';
@@ -43,7 +44,7 @@ ok('it is modelled: a bench, a blade, a log', boxesFor('wood_mill').length >= 10
   const at = g.crafting.available(3, { station: null, atStations: g.stationsNear({ x: 16.5, y: 1, z: 16.5 }) });
   const away = g.crafting.available(3, { station: null, atStations: [] });
   ok('by it, its recipes can be made; away, they say where to go',
-    at.find((r) => r.id === 'cabinet').atStation && /Stand at your wood mill/.test(away.find((r) => r.id === 'cabinet').reason));
+    at.find((r) => r.id === 'mill_door').atStation && /Stand at your wood mill/.test(away.find((r) => r.id === 'mill_door').reason));
 }
 // CL-10 (asked for directly: the mills' search had their names written in it):
 // the bench opens with nothing typed; standing by the mill, its own way shows.
@@ -78,8 +79,9 @@ for (const [mill, hand] of [['mill_door', 'door'], ['mill_trapdoor', 'trapdoor']
 
 {
   const kinds = [[CABINET, 'cabinet'], [WARDROBE, 'wardrobe'], [BEDSIDE_TABLE, 'bedside_table']];
-  ok('a cabinet, a wardrobe and a bedside table, made at the mill',
-    kinds.every(([id, item]) => ITEM_FOR_BLOCK.get(id) === item && recipe(item)?.station === 'wood_mill'));
+  // CRAFT3D-1: made at the carpentry counter now, for what they cost at the mill.
+  ok('a cabinet, a wardrobe and a bedside table, made at the counter',
+    kinds.every(([id, item]) => ITEM_FOR_BLOCK.get(id) === item && !recipe(item) && FURNITURE_COST.has(item)));
   ok('each modelled, each with an icon', kinds.every(([id, item]) => boxesFor(BLOCKS_BY_ID.get(id).shape).length >= 4 && (itemIcon(ITEMS_BY_ID.get(item)) ?? '').startsWith('<svg')));
   ok('they face you, like a chest', kinds.every(([id]) => BLOCKS_BY_ID.get(id).facesYou) && /\|\| BLOCKS_BY_ID\.get\(type\)\?\.facesYou \? look \+ 2 : look/.test(game));
   const w = new World({ sizeX: 16, sizeZ: 16, height: 8 });
@@ -92,8 +94,8 @@ for (const [mill, hand] of [['mill_door', 'door'], ['mill_trapdoor', 'trapdoor']
 
 {
   ok('panels: plain, patterned and two-tone', PANELS.map((id) => ITEM_FOR_BLOCK.get(id)).join() === 'panel_plain,panel_pattern,panel_twotone'
-    && PANELS.every((id) => recipe(ITEM_FOR_BLOCK.get(id))?.station === 'wood_mill'));
-  ok('the two-tone one is two woods', recipe('panel_twotone').inputs.planks > 0 && recipe('panel_twotone').inputs.dark_planks > 0
+    && PANELS.every((id) => FURNITURE_COST.has(ITEM_FOR_BLOCK.get(id))));
+  ok('the two-tone one is two woods', FURNITURE_COST.get('panel_twotone').planks > 0 && FURNITURE_COST.get('panel_twotone').dark_planks > 0
     && new Set(boxesFor('panel_twotone').map((b) => b.color)).size >= 2);
   ok('each a sixteenth thick, flat on its back face', PANELS.every((id) => boxesFor(BLOCKS_BY_ID.get(id).shape).every((b) => b.minZ >= 0 && b.maxZ <= 0.1)));
   // On the face pointed at: its back against the block behind it.

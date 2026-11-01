@@ -44,7 +44,7 @@ try {
   });
 
   // Early processing, all work steps, bulk payment and reusable tools.
-  for (const id of ['cobblestone', 'stone_mill_stone_brick', 'marble', 'stone_white', 'stone_grey', 'stone_orange', 'dark_stone', 'dark_brick', 'sky_marble', 'bed', 'cabinet', 'table_oak', 'sword_wood', 'sword_iron', 'bow']) {
+  for (const id of ['cobblestone', 'stone_mill_stone_brick', 'marble', 'stone_white', 'stone_grey', 'stone_orange', 'dark_stone', 'dark_brick', 'sky_marble', 'sword_wood', 'sword_iron', 'bow']) {
     await prepare(id, id === 'stone_white' ? 3 : 1);
     const button = page.locator(`[data-craft="${id}"][data-times="1"]`);
     await button.tap();

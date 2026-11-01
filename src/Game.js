@@ -34,6 +34,8 @@ import { SyncState } from './storage/WorldSync.js';
 import { LocalWorlds } from './storage/LocalWorlds.js';
 import { restoreWorldSnapshot } from './storage/WorldSnapshot.js';
 import { SELF_BLOCK_SECONDS } from './duilt/VillagerJobs.js';
+import { CounterView } from './render/CounterView.js';
+import { CounterBar } from './ui/CounterBar.js';
 import { putBackup, getBackup, dropBackup } from './storage/BackupStore.js';
 import { claimRegion, blocksIn, claimHint } from './tools/ClaimArea.js';
 
@@ -2204,6 +2206,7 @@ export class Game {
       // on "b", which on a phone buried the keyboard under a panel.
       if (isTyping(e)) return;
 
+      if (e.code === 'Escape' && this.counterView?.active) { this.endCounter(); return; }
       if (e.code === 'Escape') {
         // Putting down what you are holding comes before putting away panels.
         if (this.moving) { this.cancelMove(); return; }
@@ -2733,6 +2736,8 @@ export class Game {
   requestPointerLock() {
     // Not over the story: it's read first, then the world.
     if (this.ui.story?.open) return;
+    // Nor at the carpentry counter: its parts are dragged with a free pointer.
+    if (this.counterView?.active) return;
     if (this.ui.isAnyPanelOpen()) this.closeAllPanels();
     this.renderer.domElement.requestPointerLock?.();
   }
@@ -2943,6 +2948,7 @@ export class Game {
     }
     if (aimed && aimed.block === STORAGE_CONTROLLER && this.selectedBlockId !== STORAGE_INTERFACE) return void this.ui.openStores();
     // At a wood mill (#32), the bench, showing what's made there.
+    if (aimed && stationOf(aimed.block) === 'counter') return void this.startCounter(aimed);
     if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block), aimed);
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
@@ -6322,6 +6328,67 @@ export class Game {
   // a ring show where it will — and Break throws. Place again, or walking
   // off, lets go.
 
+  /**
+   * CRAFT3D-1: the carpentry counter at `at`, close up. The world waits (see
+   * phase), the camera moves over the counter (CounterView.update), the bar
+   * takes the controls, and dragging on the picture moves the parts.
+   */
+  startCounter(at) {
+    if (!this.duilt) return;
+    if (!this.counterView) {
+      this.counterView = new CounterView({ scene: this.scene, camera: this.camera, counters: this.duilt.counters, bus: this.bus,
+        onDone: ({ item, took }) => {
+          this.ui.toast(took ? { kind: 'challenge', title: `${itemName(item)} made`, body: 'In your bag' } : { kind: 'xp', title: `${itemName(item)} is ready`, body: 'Make room in your bag; it waits on the counter' });
+          this.counterBar?.render();
+          this.editedAt = Date.now();
+        } });
+      this.counterBar = new CounterBar({ root: this.uiRoot, view: this.counterView, counters: this.duilt.counters,
+        age: () => (this.duilt?.sandbox ? Infinity : this.duilt?.age ?? 1), onLeave: () => this.endCounter() });
+      this.bindCounterPointer();
+    }
+    this.counterView.counters = this.duilt.counters;
+    this.counterBar.counters = this.duilt.counters;
+    this.counterView.start(`${at.x},${at.y},${at.z}`, at);
+    this.counterBar.show();
+    this.uiRoot.classList.add('at-counter');
+    this.ui.hideBlocker?.();
+  }
+
+  endCounter() {
+    this.counterView?.end();
+    this.uiRoot.classList.remove('at-counter');
+    this.counterBar?.hide();
+    this.player?.syncCamera?.();
+  }
+
+  /** Dragging a part on the picture: pick it up, follow the pointer over the top, drop it. */
+  bindCounterPointer() {
+    // On the window, first: the touch look surface lies over the canvas, and
+    // would take the drag for turning the camera.
+    const el = this.renderer.domElement;
+    const ndc = (e) => { const r = el.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1]; };
+    let held = -1;
+    window.addEventListener('pointerdown', (e) => {
+      if (!this.counterView?.active || e.target.closest?.('.counter-bar')) return;
+      held = this.counterView.partAt(...ndc(e));
+      e.preventDefault(); e.stopPropagation();
+    }, true);
+    window.addEventListener('pointermove', (e) => {
+      if (held < 0 || !this.counterView?.active) return;
+      const p = this.counterView.pointOnTop(...ndc(e), held);
+      if (p) this.counterView.dragTo(held, p);
+      e.stopPropagation();
+    }, true);
+    const up = (e) => {
+      if (held < 0) return;
+      if (this.counterView?.active) { this.counterView.drop(held); this.counterBar.render(); }
+      held = -1;
+      e.stopPropagation();
+    };
+    window.addEventListener('pointerup', up, true);
+    window.addEventListener('pointercancel', up, true);
+  }
+
   manCatapult(hit) {
     this.manning = { x: hit.x, y: hit.y, z: hit.z, reload: 0, v: null };
     this.digTarget = null;
@@ -7784,6 +7851,8 @@ export class Game {
   get phase() {
     if (!this.ui) return 'home';
     if (this.ui.isHomeOpen()) return 'home';
+    // CRAFT3D-1: at the carpentry counter the world waits, as behind a panel.
+    if (this.counterView?.active) return 'paused';
     if (this.ui.isAnyPanelOpen()) return 'paused';
     return 'playing';
   }
@@ -7971,6 +8040,7 @@ export class Game {
     const gen = this.world?.gen;
     this.futureView.update(gen && this.player?.position, performance.now() / 1000, gen?.biomes.centreX, gen?.biomes.centreZ);
     this.guardianView.update(this.duilt?.guardian, dt);
+    if (this.counterView?.active) this.counterView.update(dt);
     this.renderer.render(this.scene, this.camera);
   }
 

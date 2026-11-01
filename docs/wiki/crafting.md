@@ -12,6 +12,7 @@ Open the Bench with **E**. It lists what you make by hand in Ages 1 and 2, with 
 |---|---|
 | Anywhere (Bench, Ages 1 and 2) | Nothing needed |
 | Workbench (Age 3 on) | A placed Workbench nearby |
+| Counter (Age 3 on) | Furniture: a placed Counter. Use it to saw a plank into the piece's parts and fit them together |
 | Workshop | Stand in a claimed Workshop |
 | Foundry | Stand at a claimed Foundry |
 | Planing Bench | Make the Planing Bench block (Age 1, 6 planks and 2 stone), place it and stand nearby: a log gives 3 planks instead of 2, and bows are made here |
@@ -488,3 +489,8 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Recipe / result | Ingredients | Reusable tools | Age | Condition |
 | --- | --- | --- | --- | --- |
 | Wash White Stone → 2 White Stone | 2 Stone | — | 3 | — |
+
+
+## The Counter (furniture)
+
+Furniture is made only at a **Counter** (made at a Workbench from 6 planks and 2 logs, Age 3). Use a placed Counter: the view moves in close over it. Pick a piece, tap **Saw** once for each part (the planks are paid at the first cut), then drag each part onto its place in the pale outline. Patterned panels end with a few taps of the **Chisel**. Keep the Carpentry Saw (and the Chisel for patterned panels) in your bag. Leave halfway and the parts wait on that Counter.
