@@ -140,3 +140,20 @@ process.exitCode = failures ? 1 : 0;
   });
 }
 process.exitCode = failures ? 1 : 0;
+
+check('breaking with a full bag sends the rest to a storehouse, else keeps it for later', () => {
+  const full = () => { const b = new Inventory(); b.add('planks', 4); b.add('carpentry_saw', 1); return b; };
+  const bag = full();
+  const sent = [];
+  let room = false;
+  const c = new Counters({ bag: () => bag, deliver: (p) => { if (!room) return false; sent.push(p); return true; } });
+  c.choose(K, 'table_oak'); cutAll(c, K); fitAll(c, K);
+  for (let i = 0; bag.add('stone', 999) === 0 && i < 99; i++);
+  c.prune(() => false);
+  assert.ok(c.work(K), 'nowhere to put it: still kept, nothing lost');
+  room = true;
+  c.prune(() => false);
+  assert.deepEqual(sent, [{ table_oak: 1 }]);
+  assert.equal(c.work(K), null);
+});
+process.exitCode = failures ? 1 : 0;

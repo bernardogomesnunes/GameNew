@@ -105,3 +105,37 @@ process.exitCode = failures ? 1 : 0;
   else console.log('PASS pointer over a place lands on it');
 }
 process.exitCode = failures ? 1 : 0;
+
+// A finished piece that did not fit in the bag is handed over when the counter is opened again.
+{
+  const { view, counters, bag } = setup();
+  view.start('10,5,20', at); view.pick('table_oak');
+  const n = partsFor('table_oak').length;
+  for (let i = 0; i < n; i++) { view.saw(); view.update(0.81); }
+  for (let i = 0; i < n - 1; i++) { view.dragTo(i, view.slotOf(i)); view.drop(i); }
+  for (let i = 0; bag.add('stone', 999) === 0 && i < 99; i++);
+  view.dragTo(n - 1, view.slotOf(n - 1)); view.drop(n - 1);
+  view.update(0.016);
+  const waiting = !!counters.work('10,5,20')?.done;
+  view.end();
+  bag.remove('stone', 999);
+  view.start('10,5,20', at);
+  view.update(0.016);
+  const ok = waiting && bag.countOf('table_oak') === 1 && counters.work('10,5,20') === null;
+  if (!ok) { failures++; console.log('FAIL a waiting piece is handed over on the next visit'); } else console.log('PASS a waiting piece is handed over on the next visit');
+}
+// Leaving in the frame after the last fit does not carry the hand-over to the next counter.
+{
+  const { view, counters } = setup();
+  view.start('10,5,20', at); view.pick('table_oak');
+  const n = partsFor('table_oak').length;
+  for (let i = 0; i < n; i++) { view.saw(); view.update(0.81); }
+  for (let i = 0; i < n; i++) { view.dragTo(i, view.slotOf(i)); view.drop(i); }
+  view.end();
+  const done = [];
+  view.onDone = (e) => done.push(e);
+  view.start('1,1,1', { x: 1, y: 1, z: 1 });
+  view.update(0.016);
+  if (done.length || !counters.work('10,5,20')?.done) { failures++; console.log('FAIL leaving clears the pending hand-over'); } else console.log('PASS leaving clears the pending hand-over');
+}
+process.exitCode = failures ? 1 : 0;

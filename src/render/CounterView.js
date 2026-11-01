@@ -54,6 +54,8 @@ export class CounterView {
     this.offHurt = this.bus?.on('health:change', (e) => { if (e?.hurt > 0) this.end(); });
     const w = this.counters.work(key);
     if (w) this.pick(w.item, { resume: true });
+    // A piece finished on an earlier visit, which did not fit then: hand it over now.
+    this.finishIfDone();
   }
 
   /** Closes it, and takes back everything it put in the scene. */
@@ -68,6 +70,7 @@ export class CounterView {
     this.offHurt = null;
     this.key = null;
     this.sawing = 0;
+    this.pendingTake = false;
   }
 
   /**
@@ -170,7 +173,7 @@ export class CounterView {
   }
 
   finishIfDone() {
-    if (!this.counters.work(this.key)?.done) return;
+    if (!this.active || !this.counters.work(this.key)?.done) return;
     this.pendingTake = true;
   }
 

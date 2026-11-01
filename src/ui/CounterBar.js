@@ -52,11 +52,12 @@ export class CounterBar {
     const cut = this.counters.canCut(key);
     const say = note || (w.cut < n ? (cut.ok ? `Saw the ${itemName(w.item).toLowerCase()}'s parts: ${w.cut} of ${n} cut.` : cut.reason)
       : fitted < n ? `Drag each part onto its place: ${fitted} of ${n} fitted.`
-        : isPatterned(w.item) && !w.carved ? 'Carve the pattern with the chisel.' : 'Done.');
+        : isPatterned(w.item) && !w.carved ? 'Carve the pattern with the chisel.' : 'Done. Make room in your bag and take it.');
     this.el.innerHTML = `<p class="counter-say">${escapeHtml(say)}</p>
       <div class="counter-actions">
         ${w.cut < n ? `<button class="primary" data-saw ${cut.ok ? '' : 'disabled'}>Saw (${w.cut} of ${n})</button>` : ''}
         ${isPatterned(w.item) && fitted === n && !w.carved ? '<button class="primary" data-carve>Carve</button>' : ''}
+        ${w.done ? '<button class="primary" data-take>Take it</button>' : ''}
         <button class="secondary" data-leave>Leave</button>
       </div>`;
   }
@@ -73,6 +74,8 @@ export class CounterBar {
     } else if ('carve' in b.dataset) {
       const r = this.view.carve();
       this.render(r.ok ? '' : r.reason);
+    } else if ('take' in b.dataset) {
+      this.view.finishIfDone();
     } else if ('leave' in b.dataset) this.onLeave();
   }
 }

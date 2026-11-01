@@ -111,26 +111,60 @@ export class Counters {
   prune(stands) {
     for (const [key, w] of [...this.counters]) {
       if (stands(key)) continue;
-      const bag = this.bag();
-      if (this.done(w)) bag.add(w.item, 1);
+      const owed = {};
+      if (this.done(w)) owed[w.item] = 1;
       else if (w.paid) {
         const left = w.fitted.filter((f) => !f).length / w.fitted.length;
         for (const [id, n] of Object.entries(COST.get(w.item))) {
           const back = Math.floor(n * left);
-          if (back > 0) bag.add(id, back);
+          if (back > 0) owed[id] = back;
         }
       }
+      // What the bag cannot hold goes to a storehouse. With room in neither,
+      // it stays owed here and is tried again at the next prune: never lost.
+      const bag = this.bag(), rest = {};
+      for (const [id, n] of Object.entries(owed)) {
+        const fits = Math.min(n, bag.roomFor(id, n));
+        if (fits > 0) bag.add(id, fits);
+        if (n - fits > 0) rest[id] = n - fits;
+      }
+      if (Object.keys(rest).length && !this.deliver(rest)) {
+        if (this.done(w)) continue;
+        // Keep only what is still owed, as a paid piece with nothing to cut.
+        this.owed ??= new Map();
+        this.owed.set(key, rest);
+        this.counters.delete(key);
+        continue;
+      }
       this.counters.delete(key);
+    }
+    // Owed from earlier breaks: the bag or a storehouse, when there is room.
+    for (const [key, rest] of [...(this.owed ?? [])]) {
+      const bag = this.bag(), still = {};
+      for (const [id, n] of Object.entries(rest)) {
+        const fits = Math.min(n, bag.roomFor(id, n));
+        if (fits > 0) bag.add(id, fits);
+        if (n - fits > 0) still[id] = n - fits;
+      }
+      if (!Object.keys(still).length || this.deliver(still)) this.owed.delete(key);
+      else this.owed.set(key, still);
     }
   }
 
   toJSON() {
-    return [...this.counters].map(([key, w]) => ({ key, ...w }));
+    return [...this.counters].map(([key, w]) => ({ key, ...w }))
+      .concat([...(this.owed ?? [])].map(([key, owed]) => ({ key, owed })));
   }
 
   loadJSON(list) {
     this.counters.clear();
+    this.owed = new Map();
     for (const w of Array.isArray(list) ? list : []) {
+      if (typeof w?.key === 'string' && w.owed && typeof w.owed === 'object') {
+        const owed = Object.fromEntries(Object.entries(w.owed).filter(([, n]) => Number.isSafeInteger(n) && n > 0));
+        if (Object.keys(owed).length) this.owed.set(w.key, owed);
+        continue;
+      }
       if (typeof w?.key !== 'string' || !FURNITURE.includes(w.item)) continue;
       const n = partsFor(w.item).length;
       const fitted = Array.from({ length: n }, (_, i) => !!w.fitted?.[i]);
