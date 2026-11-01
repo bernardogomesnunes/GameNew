@@ -15,7 +15,7 @@ import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
-import { BLOCKS } from '../config/blocks.js';
+import { BLOCKS, stationOf } from '../config/blocks.js';
 import { JOB_FOR_BUILDING, JOB_OUTFITS } from '../config/outfits.js';
 import { StationWork, usesSpots, batchSeconds } from '../duilt/StationWork.js';
 import { howToGet, RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
@@ -681,6 +681,12 @@ export class DuiltUI {
     if (structure.type==='work_hall') this.renderWorkHall(structure);
     body.querySelector('[data-evolve]')?.addEventListener('click', () => actions.onEvolve?.());
     this.wireCraft(body, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
+    body.querySelectorAll('[data-open-station]').forEach((b) => b.addEventListener('click', () => {
+      const [x, y, z] = b.dataset.openStation.split(',').map(Number), at = { x, y, z };
+      this.closePanel('panel-building');
+      if (b.dataset.station === 'counter') this.game.startCounter?.(at);
+      else this.game.ui.openBench('', b.dataset.station, at);
+    }));
     if (body.querySelector('[data-spot]')) this.wireSpot(body, `s:${structure.id}`, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache), 'panel-building');
     this.wireCraftMissing(body, structure, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
@@ -732,6 +738,7 @@ export class DuiltUI {
       </div>
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
       ${structure.type === 'barracks' || structure.type === 'military' ? this.barracksHtml(structure) : ''}
+      ${structure.type === 'workshop' ? this.workshopHtml(structure) : ''}
       ${structure.type === 'kiln' ? this.firingHtml(structure, spec) : ''}
       ${structure.type === 'foundry' ? this.foundryStockHtml(spec) : ''}
       ${structure.type === 'sanctuary_white' || structure.type === 'sanctuary_black' ? this.cubeHtml() : ''}
@@ -861,6 +868,50 @@ export class DuiltUI {
    * IMP-10 step 5: the kiln, shaped like the barracks. What comes out of a
    * firing, how far the one going is, and what it is waiting on.
    */
+  /**
+   * CRAFT3D-1: the stations placed inside a Workshop (owner, 31 October:
+   * "place them in the workshop building to centralise every work piece"),
+   * each with its work in progress. Scans only the building's own cells.
+   */
+  workshopStations(structure) {
+    const d = this.duilt, world = d?.world ?? this.game?.world, r = structure.region;
+    if (!world || !r) return [];
+    if ((r.maxX - r.minX + 1) * (r.maxY - r.minY + 1) * (r.maxZ - r.minZ + 1) > 4096) return [];
+    const out = [];
+    for (let x = r.minX; x <= r.maxX; x++) for (let y = r.minY; y <= r.maxY; y++) for (let z = r.minZ; z <= r.maxZ; z++) {
+      const station = stationOf(world.getBlock(x, y, z));
+      if (!station) continue;
+      const key = `${x},${y},${z}`;
+      let state = 'Free';
+      if (station === 'counter') {
+        const w = d.counters?.work(key);
+        if (w) {
+          const n = w.fitted.length, fitted = w.fitted.filter(Boolean).length;
+          state = w.done ? `${itemName(w.item)}: ready` : w.cut < n ? `${itemName(w.item)}: ${w.cut} of ${n} cut` : `${itemName(w.item)}: ${fitted} of ${n} fitted`;
+        }
+      } else {
+        const s = d.stationWork?.spot(key);
+        if (s?.batches) state = `${s.batches} waiting`;
+        else if (s?.out) state = `${s.out} ready`;
+      }
+      out.push({ station, at: { x, y, z }, state });
+    }
+    return out;
+  }
+
+  workshopHtml(structure) {
+    const list = this.workshopStations(structure);
+    const rows = list.map((s) => `<div class="train-row">
+        <span class="train-name">${escapeHtml(stationTitle(s.station))}</span>
+        <span class="train-when">${escapeHtml(s.state)}</span>
+        <button class="secondary job-small" data-open-station="${s.at.x},${s.at.y},${s.at.z}" data-station="${escapeAttr(s.station)}">Open</button>
+      </div>`).join('');
+    return `<div class="building-sec workshop-stations">
+        <h4>Stations here</h4>
+        ${rows ? `<div class="train-queue">${rows}</div>` : '<p class="dim">Place a Counter, a Planing Bench, a Wood Mill or a Forge inside to work them from here.</p>'}
+      </div>`;
+  }
+
   firingHtml(structure, spec) {
     const d = this.duilt;
     if (!d || !structure.valid) return '';
