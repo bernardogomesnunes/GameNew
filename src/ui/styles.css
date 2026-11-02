@@ -2288,3 +2288,9 @@ button.busy { cursor: progress; opacity: 0.92; }
 /* The Workbench's machines row and the rest, each spanning the list. */
 #bench-list > .bench-machines, #bench-list > .bench-group { grid-column: 1 / -1; }
 .bench-group { margin: 8px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+/* CRAFT3D-3: the crucible's bar shares the counter's look. */
+.crucible-bar .counter-piece small { display: block; font-size: 11px; opacity: 0.8; }
+.crucible-bar [aria-pressed="true"] { outline: 2px solid var(--accent, #c98a2b); }
+.crucible-bar .pour-gauge { position: relative; height: 18px; margin: 0 0 8px; border: 2px solid var(--panel-border, #4a3220); background: #2a1e18; }
+.crucible-bar .pour-window { position: absolute; top: 0; bottom: 0; background: rgba(120, 200, 120, 0.45); }
+.crucible-bar .pour-level { position: absolute; left: 0; top: 0; bottom: 0; background: #ffa53a; }

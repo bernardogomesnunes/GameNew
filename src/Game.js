@@ -36,6 +36,7 @@ import { restoreWorldSnapshot } from './storage/WorldSnapshot.js';
 import { SELF_BLOCK_SECONDS } from './duilt/VillagerJobs.js';
 import { CloseUp } from './render/CloseUp.js';
 import { CounterMachine } from './render/CounterMachine.js';
+import { CrucibleMachine } from './render/CrucibleMachine.js';
 import { putBackup, getBackup, dropBackup } from './storage/BackupStore.js';
 import { claimRegion, blocksIn, claimHint } from './tools/ClaimArea.js';
 
@@ -2949,6 +2950,7 @@ export class Game {
     if (aimed && aimed.block === STORAGE_CONTROLLER && this.selectedBlockId !== STORAGE_INTERFACE) return void this.ui.openStores();
     // At a wood mill (#32), the bench, showing what's made there.
     if (aimed && stationOf(aimed.block) === 'counter') return void this.startCounter(aimed);
+    if (aimed && stationOf(aimed.block) === 'crucible') return void this.startCrucible(aimed);
     if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block), aimed);
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
@@ -6358,6 +6360,20 @@ export class Game {
       } });
     this.counterMachine.use(this.duilt.counters);
     this.openMachine(this.counterMachine, at);
+  }
+
+  /** CRAFT3D-3: the crucible at `at`, if a foundry stands round it. */
+  startCrucible(at) {
+    if (!this.duilt) return;
+    if (!this.duilt.inFoundry(`${at.x},${at.y},${at.z}`)) {
+      this.ui.toast({ kind: 'xp', title: "A crucible needs a foundry's heat", body: 'Place it inside one.' });
+      return;
+    }
+    this.crucibleMachine ??= new CrucibleMachine({ scene: this.scene, camera: this.camera, uiRoot: this.uiRoot, crucibles: this.duilt.crucibles,
+      age: () => (this.duilt?.sandbox ? Infinity : this.duilt?.age ?? 1), onLeave: () => this.endMachine(),
+      onPoured: () => { this.editedAt = Date.now(); } });
+    this.crucibleMachine.use(this.duilt.crucibles);
+    this.openMachine(this.crucibleMachine, at);
   }
 
   endMachine() {
