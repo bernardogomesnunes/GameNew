@@ -28,8 +28,6 @@ assert.match(html, /Brick/);
 assert.equal(DuiltUI.prototype.firingHtml.call(ui, { valid: false, lastPaidAt: 0 }, kiln), '');
 console.log('PASS the kiln panel shows each firing and its bar');
 
-const stock = DuiltUI.prototype.foundryStockHtml.call(ui, foundry);
-assert.match(stock, /In your bag/);
-assert.match(stock, /Iron Ore/);
-assert.match(stock, /<b>7<\/b>/);
-console.log('PASS the foundry panel shows the ore you carry');
+// CRAFT3D-3: the foundry melts in its crucible; its panel no longer lists ore.
+assert.equal(DuiltUI.prototype.stationRecipesHtml.call({ duilt: {} }, foundry).includes('Crucible'), true);
+console.log('PASS the foundry panel points to its crucible');

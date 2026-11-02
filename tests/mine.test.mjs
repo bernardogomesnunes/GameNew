@@ -30,7 +30,7 @@ ok('everything it brings up is a real item', [1, 2, 3, 4, 5].every((l) => Object
 
 ok(`opens with the foundry that smelts it (mine Age ${mine.age}, foundry Age ${foundry.age})`, mine.age === foundry.age);
 for (const ore of ['copper_ore', 'iron_ore', 'gold_ore']) {
-  const smelt = RECIPES.find((r) => r.inputs?.[ore] && r.station === 'foundry');
+  const smelt = RECIPES.find((r) => r.inputs?.[ore] && r.station === 'crucible');
   ok(`the foundry smelts its ${ore.replace('_', ' ')} by then`, !!smelt && smelt.age <= mine.age);
 }
 

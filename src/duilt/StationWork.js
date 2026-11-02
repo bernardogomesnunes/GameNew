@@ -20,7 +20,7 @@ import { RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
  */
 
 /** Stations whose single-input recipes go through the spots; the forge's do whatever their inputs. */
-const SPOT_STATIONS = new Set(['forge', 'foundry', 'bleach_bucket', 'stone_mill', 'wood_mill', 'planing_bench', 'joinery_bench']);
+const SPOT_STATIONS = new Set(['forge', 'bleach_bucket', 'stone_mill', 'wood_mill', 'planing_bench', 'joinery_bench']);
 /** Most a spot holds of what is put in, in batches. */
 export const MAX_BATCHES = 64;
 
@@ -165,6 +165,14 @@ export class StationWork {
   loadJSON(list) {
     this.spots.clear();
     for (const s of Array.isArray(list) ? list : []) {
+      // CRAFT3D-3: the foundry's work moved to its crucible; what a saved
+      // foundry spot held comes back to the bag, once.
+      if (s?.station === 'foundry' && RECIPES_BY_ID.get(s.recipeId)) {
+        const r = RECIPES_BY_ID.get(s.recipeId), int = (n) => (Number.isSafeInteger(n) && n > 0 ? n : 0);
+        for (const [id, n] of Object.entries(r.inputs)) if (int(s.batches)) this.bag().add(id, n * int(s.batches));
+        if (int(s.out)) this.bag().add(r.output.id, int(s.out));
+        continue;
+      }
       if (typeof s?.key !== 'string' || !usesSpots(RECIPES_BY_ID.get(s.recipeId))) continue;
       const int = (n) => (Number.isSafeInteger(n) && n >= 0 ? n : 0);
       this.spots.set(s.key, { station: s.station, recipeId: s.recipeId, batches: Math.min(int(s.batches), MAX_BATCHES),

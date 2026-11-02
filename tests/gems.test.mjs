@@ -49,7 +49,7 @@ ok('diamond tools and a diamond sword, at the bench from the war\'s age', tools.
 ok(`the diamond sword hits hardest of all (${ITEMS_BY_ID.get('sword_diamond').damage})`, [...ITEMS_BY_ID.values()].filter((i) => i.weapon || /^sword_/.test(i.id)).every((i) => (i.damage ?? 0) <= ITEMS_BY_ID.get('sword_diamond').damage));
 const diamond = ARMOUR_PIECES.filter((p) => p.set === 'diamond');
 ok(`diamond armour, four pieces, ${diamond.reduce((n, p) => n + p.points, 0)} points — the most`, diamond.length === 4 && diamond.every((p) => RECIPES.some((r) => r.output.id === p.id && r.inputs.diamond > 0)));
-ok('a ruby strikes a purse of coins at the foundry', RECIPES_BY_ID.get('strike_ruby_coins')?.station === 'foundry' && RECIPES_BY_ID.get('strike_ruby_coins').output.count >= 20);
+ok('a ruby strikes a purse of coins at the foundry', RECIPES_BY_ID.get('strike_ruby_coins')?.station === 'crucible' && RECIPES_BY_ID.get('strike_ruby_coins').output.count >= 20);
 
 // --- where else they turn up -------------------------------------------------------------------------
 

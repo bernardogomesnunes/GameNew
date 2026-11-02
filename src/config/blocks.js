@@ -955,6 +955,13 @@ BLOCKS.push(
   { id: COUNTER, name: 'Counter', glyph: 'planks', color: 0xa87a4c, material: 'wood', station: 'counter', unlock: null },
 );
 
+// CRAFT3D-3: the foundry's crucible, where ore is melted and poured into a
+// mould in a close-up (render/CrucibleView.js). Works inside a foundry.
+export const CRUCIBLE = 531;
+BLOCKS.push(
+  { id: CRUCIBLE, name: 'Crucible', glyph: 'stone', color: 0x7a4a3a, material: 'stone', station: 'crucible', unlock: null },
+);
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in

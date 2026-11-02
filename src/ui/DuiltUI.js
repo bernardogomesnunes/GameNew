@@ -744,9 +744,8 @@ export class DuiltUI {
       </div>
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
       ${structure.type === 'barracks' || structure.type === 'military' ? this.barracksHtml(structure) : ''}
-      ${structure.type === 'workshop' ? this.workshopHtml(structure) : ''}
+      ${structure.type === 'workshop' || structure.type === 'foundry' ? this.workshopHtml(structure) : ''}
       ${structure.type === 'kiln' ? this.firingHtml(structure, spec) : ''}
-      ${structure.type === 'foundry' ? this.foundryStockHtml(spec) : ''}
       ${structure.type === 'sanctuary_white' || structure.type === 'sanctuary_black' ? this.cubeHtml() : ''}
       ${levelSec}
       ${this.stationRecipesHtml(spec, structure)}
@@ -914,7 +913,7 @@ export class DuiltUI {
       </div>`).join('');
     return `<div class="building-sec workshop-stations">
         <h4>Stations here</h4>
-        ${rows ? `<div class="train-queue">${rows}</div>` : '<p class="dim">Place a Counter, a Planing Bench, a Wood Mill or a Forge inside to work them from here.</p>'}
+        ${rows ? `<div class="train-queue">${rows}</div>` : (structure.type === 'foundry' ? '<p class="dim">No crucible inside yet.</p>' : '<p class="dim">Place a Counter, a Planing Bench, a Wood Mill or a Forge inside to work them from here.</p>')}
       </div>`;
   }
 
@@ -2530,6 +2529,8 @@ export class DuiltUI {
   stationRecipesHtml(spec, structure = null) {
     const d = this.duilt;
     if (!d || !spec?.station) return '';
+    // CRAFT3D-3: the foundry melts in a crucible placed inside it.
+    if (spec.station === 'foundry') return '<div class="building-sec"><p class="building-line">Place a Crucible inside to melt and pour.</p></div>';
     const near = this.game.player?.position;
     // IMP-15: a foundry's transformations go through its spots.
     const spots = structure && structure.valid ? this.spotHtml(`s:${structure.id}`, spec.station) : '';

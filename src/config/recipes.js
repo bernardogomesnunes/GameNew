@@ -1761,6 +1761,12 @@ for (let i = RECIPES.length - 1; i >= 0; i--) if (furniture.has(RECIPES[i].outpu
 RECIPES.push({ id: 'counter', name: 'Counter', station: 'workbench', age: 3, inputs: { planks: 6, wood: 2 }, output: { id: 'counter', count: 1 },
   blurb: 'Place it and make furniture on it: saw the parts, then fit them together.' });
 
+// CRAFT3D-3: the foundry's recipes are made in its crucible now (owner, 1
+// November: "the foundry to melt stuff"), melted and poured by hand.
+for (const r of RECIPES) if (r.station === 'foundry') r.station = 'crucible';
+RECIPES.push({ id: 'crucible', name: 'Crucible', station: 'workbench', age: 5, inputs: { stone: 8, clay: 2 }, output: { id: 'crucible', count: 1 },
+  blurb: 'Place it inside a foundry: melt ore and pour it into an ingot or coin mould.' });
+
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
 /**

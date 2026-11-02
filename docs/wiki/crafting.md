@@ -494,3 +494,8 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 ## The Counter (furniture)
 
 Furniture is made only at a **Counter** (made at a Workbench from 6 planks and 2 logs, Age 3). Use a placed Counter: the view moves in close over it. Pick a piece, tap **Saw** once for each part (the planks are paid at the first cut), then drag each part onto its place in the pale outline. Patterned panels end with a few taps of the **Chisel**. Keep the Carpentry Saw (and the Chisel for patterned panels) in your bag. Leave halfway and the parts wait on that Counter.
+
+
+## The Crucible (melting and pouring)
+
+The foundry's work is done in a **Crucible** (made at a Workbench from 8 stone and 2 clay, Age 5), placed inside a Foundry building: it needs the foundry's heat. Use it to load ore, gold, copper ingots, rubies or logs; each batch melts on its own (ore 45 s, coins 25 s, charcoal 30 s), also while you are elsewhere. Pick the ingot or coin mould and hold **Pour**: let go when the mould is full (between 90% and 105%). Too little runs back into the pot; too much spills and is lost. Charcoal is burnt, not poured: take the coal.

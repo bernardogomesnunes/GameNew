@@ -20,8 +20,8 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const coin = ITEMS_BY_ID.get('coin');
 ok('coins are an item, with an icon of their own', !!coin && !!itemIcon(coin, { size: 22 }));
 const strike = RECIPES.filter((r) => r.output?.id === 'coin');
-ok('struck at the foundry', strike.length >= 1 && strike.every((r) => r.station === 'foundry'));
-ok('and only there', recipesFor(9, 'foundry').some((r) => r.output.id === 'coin'));
+ok('struck at the foundry', strike.length >= 1 && strike.every((r) => r.station === 'crucible'));
+ok('and only there', recipesFor(9, 'crucible').some((r) => r.output.id === 'coin'));
 
 ok('every kind of chest can hold coins', Object.values(LOOT).every((t) => t.items.some(([id]) => id === 'coin')));
 ok('added last, so a chest still rolls what it rolled before',
