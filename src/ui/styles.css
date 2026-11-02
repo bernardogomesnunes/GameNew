@@ -2285,3 +2285,6 @@ button.busy { cursor: progress; opacity: 0.92; }
 /* At the counter only its bar and the toasts show: the rest of the HUD
    would cover the counter top and take the drags. */
 #ui-root.at-counter > *:not(.counter-bar):not(#toast-stack) { visibility: hidden; }
+/* The Workbench's machines row and the rest, each spanning the list. */
+#bench-list > .bench-machines, #bench-list > .bench-group { grid-column: 1 / -1; }
+.bench-group { margin: 8px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }

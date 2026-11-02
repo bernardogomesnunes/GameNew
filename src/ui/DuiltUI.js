@@ -74,6 +74,12 @@ function withArticle(name) {
  *
  *   have   how many you hold, or null to leave it unsaid (what a recipe makes)
  */
+/** Whether a recipe makes a machine: an item that places a station block (a Counter, a Forge, a mill...). */
+export function isMachine(recipe) {
+  const block = ITEMS_BY_ID.get(recipe.output?.id)?.block;
+  return block != null && !!BLOCKS.find((b) => b.id === block)?.station;
+}
+
 /** A station's name for a panel title: the block that is it ('Wood Mill'), or its id in words. */
 function stationTitle(station) {
   const block = BLOCKS.find((b) => b.station === station);
@@ -2337,7 +2343,13 @@ export class DuiltUI {
       list.innerHTML = `<div class="sub" style="margin:8px 0">Nothing you can make matches “${escapeHtml(query.trim())}”.</div>`;
       return;
     }
-    list.innerHTML = spots + (recipes.length ? `<div class="recipe-grid">${this.recipeGridHtml(recipes)}</div>` : '');
+    // At a placed Workbench the machines come first, in their own row
+    // (owner, 1 November), so the Counter or a Forge is not lost among the rest.
+    const machines = only === 'workbench' ? recipes.filter(isMachine) : [];
+    const rest = machines.length ? recipes.filter((r) => !isMachine(r)) : recipes;
+    list.innerHTML = spots
+      + (machines.length ? `<div class="bench-machines"><h4 class="bench-group">Machines</h4><div class="recipe-grid">${this.recipeGridHtml(machines)}</div></div>` : '')
+      + (rest.length ? `${machines.length ? '<h4 class="bench-group">Everything else</h4>' : ''}<div class="recipe-grid">${this.recipeGridHtml(rest)}</div>` : '');
     if (spots) this.wireSpot(list, spotKey, () => this.renderBench(), 'panel-bench');
     this.wireCraft(list, () => this.renderBench());
   }
