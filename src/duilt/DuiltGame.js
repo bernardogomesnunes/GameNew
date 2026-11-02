@@ -15,6 +15,7 @@ import { Health } from '../survival/Health.js';
 import { Skills } from '../progression/Skills.js';
 import { StationWork } from './StationWork.js';
 import { Counters } from './Counter.js';
+import { Crucibles } from './Crucible.js';
 import { Crafting } from './Crafting.js';
 import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
@@ -210,6 +211,8 @@ export class DuiltGame {
     this.stationWork = new StationWork({ bag: () => this.inventory });
     // CRAFT3D-1: each carpentry counter's furniture in progress.
     this.counters = new Counters({ bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload) });
+    // CRAFT3D-3: each crucible's melt and pour, heated only inside a foundry.
+    this.crucibles = new Crucibles({ bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: (key) => this.inFoundry(key) });
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
@@ -1442,12 +1445,14 @@ export class DuiltGame {
     this.settlers.tick(dtSeconds);
     this.jobs.tick(dtSeconds);
     this.stationWork.tick(dtSeconds);
+    this.crucibles.tick(dtSeconds);
     // Every couple of seconds: a spot whose station was broken gives its items back.
     this.sincePrune = (this.sincePrune ?? 0) + dtSeconds;
     if (this.sincePrune > 2) {
       this.sincePrune = 0;
       this.stationWork.prune((key, station) => this.spotStands(key, station));
       this.counters.prune((key) => this.spotStands(key, 'counter'));
+      this.crucibles.prune((key) => this.spotStands(key, 'crucible'));
     }
 
     const now = Date.now();
@@ -2082,6 +2087,13 @@ export class DuiltGame {
     return at.structureId != null ? `s:${at.structureId}` : `${at.x},${at.y},${at.z}`;
   }
 
+  /** Whether the block at "x,y,z" stands inside a valid Foundry (a crucible's heat). */
+  inFoundry(key) {
+    const [x, y, z] = key.split(',').map(Number);
+    return this.structures.list().some((s) => s.valid && s.type === 'foundry'
+      && x >= s.region.minX && x <= s.region.maxX && y >= s.region.minY && y <= s.region.maxY && z >= s.region.minZ && z <= s.region.maxZ);
+  }
+
   /** Whether the station a spot belongs to still stands. */
   spotStands(key, station) {
     if (key.startsWith('s:')) {
@@ -2138,6 +2150,7 @@ export class DuiltGame {
       jobs: this.jobs.toJSON(),
       stationWork: this.stationWork.toJSON(),
       counters: this.counters.toJSON(),
+      crucibles: this.crucibles.toJSON(),
       herd: herdToJSON(this.herd),
       machines: this.machines.map((m) => ({
         ...(m.kind ? { kind: m.kind } : {}),
@@ -2231,6 +2244,7 @@ export class DuiltGame {
     this.jobs.loadJSON(data.jobs);
     this.stationWork.loadJSON(data.stationWork);
     this.counters.loadJSON(data.counters);
+    this.crucibles.loadJSON(data.crucibles);
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
