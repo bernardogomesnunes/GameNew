@@ -58,7 +58,7 @@ export class Crucibles {
     if (n <= 0) return { ok: false, reason: room <= 0 ? 'The pot is full.' : 'Not enough in your bag.' };
     if (!bag.spend(bill(recipe, n))) return { ok: false, reason: 'Your bag changed. Try again.' };
     if (p) p.waiting += n;
-    else this.pots.set(key, { recipeId, waiting: n, progress: 0, molten: 0, mould: 'ingot', out: 0 });
+    else this.pots.set(key, { recipeId, waiting: n, progress: 0, molten: 0, mould: mouldFor(recipe) ?? 'ingot', out: 0 });
     return { ok: true, batches: n };
   }
 

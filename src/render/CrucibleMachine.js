@@ -22,6 +22,9 @@ export class CrucibleMachine {
   end() { this.view.end(); this.bar.hide(); }
 
   update(dt) {
+    // The world waits while a machine is open (Game.phase), but the pot in
+    // front of you keeps melting: you came to watch it.
+    this.view.crucibles.tick(dt);
     this.view.update(dt);
     // The bar is drawn again when what is in the pot changes (a batch melts).
     const s = this.view.key ? this.view.crucibles.state(this.view.key) : null;

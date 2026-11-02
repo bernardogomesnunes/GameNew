@@ -61,6 +61,19 @@ try {
   const after = await page.evaluate(() => ({ ingots: crucibleCheck.bag.countOf('iron_ingot'), say: document.querySelector('.crucible-bar .counter-say').textContent }));
   await shot('done');
   assert.equal(after.ingots, 1, `an iron ingot in the bag (${after.say})`);
+  // A hold released off the button still pours, and never sticks.
+  await page.evaluate(() => window.__game.duilt.crucibles.tick(45.1));
+  await page.waitForSelector('[data-pour]:not([disabled])');
+  const p2 = await page.locator('[data-pour]').boundingBox(), m2 = await page.locator('[data-mould="coin"]').boundingBox();
+  await page.mouse.move(p2.x + p2.width / 2, p2.y + p2.height / 2);
+  await page.mouse.down();
+  await page.waitForFunction(() => window.__game.crucibleMachine.view.level > 0.2, null, { timeout: 30_000, polling: 'raf' });
+  await page.mouse.move(m2.x + m2.width / 2, m2.y + m2.height / 2);
+  await page.mouse.up();
+  const stuck = await page.evaluate(() => ({ holding: window.__game.crucibleMachine.view.holding, level: window.__game.crucibleMachine.view.level, say: document.querySelector('.crucible-bar .counter-say').textContent }));
+  assert.equal(stuck.holding, false, 'released off the button: not holding');
+  assert.equal(stuck.level, 0);
+  assert.match(stuck.say, /Too little|Poured|spilt/, 'it poured at the level reached');
   assert.deepEqual(errors, []);
   console.log('PASS in a foundry: iron ore loaded, melted, poured at the right moment, an iron ingot in the bag');
 } finally { await browser?.close(); await server.close(); }

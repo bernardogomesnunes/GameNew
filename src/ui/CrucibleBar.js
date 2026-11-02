@@ -21,11 +21,16 @@ export class CrucibleBar {
     root.append(this.el);
     this.el.addEventListener('click', (e) => this.click(e));
     // Pour is held: down starts it, up (or the finger sliding off) pours.
-    const hold = (on) => (e) => { if (!e.target.closest?.('[data-pour]')) return; e.preventDefault(); this.pour(on); };
-    this.el.addEventListener('pointerdown', hold(true));
-    this.el.addEventListener('pointerup', hold(false));
-    this.el.addEventListener('pointerleave', () => this.pour(false));
-    this.el.addEventListener('pointercancel', () => this.pour(false));
+    // The release is listened for on the window, so letting go anywhere
+    // (off the button, off the bar) pours, and a hold can never stick.
+    const release = () => { window.removeEventListener('pointerup', release, true); window.removeEventListener('pointercancel', release, true); this.pour(false); };
+    this.el.addEventListener('pointerdown', (e) => {
+      if (!e.target.closest?.('[data-pour]')) return;
+      e.preventDefault();
+      window.addEventListener('pointerup', release, true);
+      window.addEventListener('pointercancel', release, true);
+      this.pour(true);
+    });
   }
 
   show() { this.el.hidden = false; this.render(); }

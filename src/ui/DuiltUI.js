@@ -691,6 +691,7 @@ export class DuiltUI {
       const [x, y, z] = b.dataset.openStation.split(',').map(Number), at = { x, y, z };
       this.closePanel('panel-building');
       if (b.dataset.station === 'counter') this.game.startCounter?.(at);
+      else if (b.dataset.station === 'crucible') this.game.startCrucible?.(at);
       else this.game.ui.openBench('', b.dataset.station, at);
     }));
     if (body.querySelector('[data-spot]')) this.wireSpot(body, `s:${structure.id}`, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache), 'panel-building');

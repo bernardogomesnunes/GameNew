@@ -148,3 +148,20 @@ process.exitCode = failures ? 1 : 0;
   });
 }
 process.exitCode = failures ? 1 : 0;
+
+check('a new pot starts in the mould its recipe pours into', () => {
+  const { bag, c } = setup({ ore: 0 });
+  bag.add('gold', 1);
+  c.load(K, 'strike_coins', 1);
+  assert.equal(c.state(K).mould, 'coin');
+});
+{
+  const { Crafting } = await import('../src/duilt/Crafting.js');
+  check('crucible recipes cannot be made as plain crafts, even beside one', () => {
+    const bag = new Inventory(); bag.add('iron_ore', 2);
+    const craft = new Crafting({ inventory: bag, world: null });
+    assert.equal(craft.craft('smelt_iron', 1, { atStations: ['crucible', 'foundry'] }).ok, false);
+    assert.equal(bag.countOf('iron_ingot'), 0);
+  });
+}
+process.exitCode = failures ? 1 : 0;

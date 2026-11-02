@@ -63,3 +63,21 @@ check('nothing molten: holding does not fill', () => {
   assert.equal(view.level, 0);
 });
 process.exitCode = failures ? 1 : 0;
+
+// While the close-up is open the world waits, but the pot keeps melting.
+{
+  const { CrucibleMachine } = await import('../src/render/CrucibleMachine.js');
+  globalThis.document ??= undefined;
+  const { scene, camera, crucibles } = setup();
+  const uiRoot = { append() {} };
+  const fakeDoc = { createElement: () => ({ className: '', hidden: true, addEventListener() {}, append() {}, querySelector: () => null, set innerHTML(v) {} }) };
+  const was = globalThis.document; globalThis.document = fakeDoc;
+  try {
+    const m = new CrucibleMachine({ scene, camera, uiRoot, crucibles });
+    crucibles.load(K, 'smelt_iron', 1);
+    m.start(K, AT);
+    m.update(45.1);
+    check('the pot melts while you watch it', () => assert.equal(crucibles.state(K).molten, 1));
+  } finally { globalThis.document = was; }
+}
+process.exitCode = failures ? 1 : 0;
