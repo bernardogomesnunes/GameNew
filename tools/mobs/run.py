@@ -10,7 +10,7 @@ after the socket is the addon's own code.
 
     BLENDER_MCP_DISABLE_TELEMETRY=1 python tools/mobs/run.py art/mobs [group ...] [--only id,id]
 
-Groups: featured animals creatures people vehicles (default: all). Writes
+Groups: featured animals creatures people vehicles machines (default: all). Writes
 each model to public/models/<id>.glb (and public/models/index.json, the list
 the game loads), and into the art folder renders/<id>.png, one contact
 sheet per group in sheets/, and stats.json.
@@ -24,7 +24,7 @@ only = None
 if '--only' in args:
     i = args.index('--only'); only = set(args[i + 1].split(',')); del args[i:i + 2]
 out = os.path.abspath(args[0] if args else 'art/mobs')
-groups = args[1:] or ['featured', 'animals', 'creatures', 'people', 'vehicles']
+groups = args[1:] or ['featured', 'animals', 'creatures', 'people', 'vehicles', 'machines']
 for d in ('', 'renders', 'sheets'):
     os.makedirs(os.path.join(out, d), exist_ok=True)
 here = os.path.dirname(os.path.abspath(__file__))

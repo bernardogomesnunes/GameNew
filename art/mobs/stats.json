@@ -779,5 +779,49 @@
   "kb": 17.3,
   "name": "Flying car 6",
   "group": "vehicles"
+ },
+ "crucible_hearth": {
+  "cubes": 10,
+  "triangles": 120,
+  "atlas": [
+   128,
+   16
+  ],
+  "kb": 16.5,
+  "name": "Crucible hearth",
+  "group": "machines"
+ },
+ "crucible_pot": {
+  "cubes": 4,
+  "triangles": 48,
+  "atlas": [
+   128,
+   16
+  ],
+  "kb": 7.6,
+  "name": "Crucible pot",
+  "group": "machines"
+ },
+ "carpentry_plank": {
+  "cubes": 1,
+  "triangles": 12,
+  "atlas": [
+   128,
+   16
+  ],
+  "kb": 3.8,
+  "name": "Plank",
+  "group": "machines"
+ },
+ "carpentry_saw": {
+  "cubes": 2,
+  "triangles": 24,
+  "atlas": [
+   128,
+   16
+  ],
+  "kb": 4.7,
+  "name": "Panel saw",
+  "group": "machines"
  }
 }

@@ -23,7 +23,7 @@ try {
   await page.waitForFunction(() => window.__game && !window.__game.booting
     && (!document.querySelector('#loading') || document.querySelector('#loading').classList.contains('ld-gone')), null, { timeout: 120_000 });
   mkdirSync('artifacts/crafting', { recursive: true });
-  const shot = async (name) => { await page.waitForTimeout(200); await page.screenshot({ path: `artifacts/crafting/crucible-${name}.png`, timeout: 90_000 }); };
+  const shot = async (name) => { await page.waitForTimeout(1500); await page.screenshot({ path: `artifacts/crafting/crucible-${name}.png`, timeout: 90_000 }); };
   await page.evaluate(async () => {
     const game = window.__game;
     game.newWorld({ mode: 'creative', name: 'Foundry', seed: 71823, silent: true });
@@ -34,7 +34,13 @@ try {
     game.duilt.inventory = bag;
     const p = game.player.position;
     const at = { x: Math.floor(p.x) + 2, y: Math.floor(p.y), z: Math.floor(p.z) };
+    // A stone-brick foundry floor, clear of grass, as a built foundry has.
+    for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) {
+      game.world.setBlock(at.x + dx, at.y - 1, at.z + dz, 329);
+      for (let dy = 0; dy <= 2; dy++) game.world.setBlock(at.x + dx, at.y + dy, at.z + dz, 0);
+    }
     game.world.setBlock(at.x, at.y, at.z, 531);
+    await game.modelsLoaded;
     game.duilt.structures.structures.push({ id: 99901, type: 'foundry', valid: true, tier: 0, lastPaidAt: Date.now(),
       region: { minX: at.x - 3, maxX: at.x + 3, minY: at.y - 1, maxY: at.y + 3, minZ: at.z - 3, maxZ: at.z + 3 } });
     window.crucibleCheck = { bag, at, key: `${at.x},${at.y},${at.z}` };
@@ -48,6 +54,10 @@ try {
   await page.evaluate(() => window.__game.duilt.crucibles.tick(45.1));
   await page.waitForSelector('[data-pour]:not([disabled])');
   await shot('molten');
+  // A still of the pot tipped and the mould three-quarters full (not a pour: holding stays off).
+  await page.evaluate(() => { window.__game.crucibleMachine.view.level = 0.75; });
+  await shot('tilt');
+  await page.evaluate(() => { window.__game.crucibleMachine.view.level = 0; });
   // Hold Pour until the mould is full, then let go.
   const pour = page.locator('[data-pour]');
   const box = await pour.boundingBox();
