@@ -16,3 +16,8 @@ try:
     GROUPS['vehicles'] = vehicles.VEHICLES
 except ImportError:
     pass
+try:
+    import machines
+    GROUPS['machines'] = machines.MACHINES
+except ImportError:
+    pass

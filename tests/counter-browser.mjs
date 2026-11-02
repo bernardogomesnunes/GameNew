@@ -23,7 +23,7 @@ try {
   await page.waitForFunction(() => window.__game && !window.__game.booting
     && (!document.querySelector('#loading') || document.querySelector('#loading').classList.contains('ld-gone')), null, { timeout: 120_000 });
   mkdirSync('artifacts/crafting', { recursive: true });
-  const shot = async (name) => { await page.waitForTimeout(150); await page.screenshot({ path: `artifacts/crafting/counter-${name}.png`, timeout: 90_000 }); };
+  const shot = async (name) => { await page.waitForTimeout(1500); await page.screenshot({ path: `artifacts/crafting/counter-${name}.png`, timeout: 90_000 }); };
   await page.evaluate(async () => {
     const game = window.__game;
     game.newWorld({ mode: 'creative', name: 'Counter', seed: 71823, silent: true });
@@ -37,6 +37,7 @@ try {
     game.world.setBlock(at.x, at.y, at.z, 530);
     game.remeshDirty?.();
     window.counterCheck = { bag, at };
+    await game.modelsLoaded;
     game.startCounter(at);
   });
   await page.waitForSelector('.counter-bar:not([hidden])');

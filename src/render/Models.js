@@ -260,3 +260,27 @@ export function poseBone(bone, x = 0, y = 0, z = 0) {
   if (!bone) return;
   bone.quaternion.copy(bone.userData.rest.quaternion).multiply(_q.setFromEuler(_e.set(x, y, z)));
 }
+
+/**
+ * CRAFT3D close-ups: a still copy of model `id`, one mesh per bone that has
+ * boxes (a hearth or a saw is one draw call), with its own copy of the
+ * material so a view can turn its glow up and down. Its geometry is the
+ * kit's, shared: userData.sharedGeometry tells a view not to dispose it.
+ * Null until the model has loaded.
+ */
+export function stillCopy(id) {
+  const kit = modelKit(id);
+  if (!kit) return null;
+  const material = kit.material.clone();
+  const nodes = kit.bones.map((b) => {
+    const o = b.geometry ? new THREE.Mesh(b.geometry, material) : new THREE.Group();
+    o.position.copy(b.position); o.quaternion.copy(b.quaternion); o.scale.copy(b.scale);
+    o.name = b.name;
+    if (o.isMesh) o.userData.sharedGeometry = true;
+    return o;
+  });
+  kit.bones.forEach((b, i) => { if (b.parent >= 0) nodes[b.parent].add(nodes[i]); });
+  const root = nodes[0];
+  root.userData.material = material;
+  return root;
+}

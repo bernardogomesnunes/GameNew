@@ -38,7 +38,7 @@ ok('coal is in the high peaks', BIOMES.find((b) => b.id === 'mountains2').ores.s
 ok('and a mine brings it up', STRUCTURES_BY_ID.get('mine').produces.coal > 0);
 ok('or wood burns down to it at the foundry — dearer than digging it', (() => {
   const r = RECIPES_BY_ID.get('charcoal');
-  return r?.station === 'foundry' && r.output.id === 'coal' && r.inputs.wood >= 3 && r.age <= 5;
+  return r?.station === 'crucible' && r.output.id === 'coal' && r.inputs.wood >= 3 && r.age <= 5;
 })());
 ok('engine, cars and rail are worked out at the engineering centre, in Age 8, from iron',
   ['rail', 'locomotive', 'rail_car'].every((id) => { const r = RECIPES_BY_ID.get(id); return r?.station === 'engineering' && r.age === 8 && r.inputs.iron_ingot > 0; }));

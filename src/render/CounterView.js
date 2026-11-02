@@ -3,6 +3,7 @@ import { partsFor } from '../config/furnitureParts.js';
 import { boxColor } from '../world/propShapes.js';
 import { ITEMS_BY_ID } from '../config/items.js';
 import { BLOCKS_BY_ID } from '../config/blocks.js';
+import { stillCopy } from './Models.js';
 
 /**
  * CRAFT3D-1: the carpentry counter, close up, in the game's own scene and
@@ -62,7 +63,7 @@ export class CounterView {
   end() {
     if (this.group) {
       this.scene.remove(this.group);
-      this.group.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+      this.group.traverse((o) => { if (o.isMesh) { if (!o.userData.sharedGeometry) o.geometry.dispose(); o.material.dispose(); } });
     }
     this.group = null;
     this.parts = [];
@@ -83,7 +84,7 @@ export class CounterView {
       const r = this.counters.choose(this.key, itemId);
       if (!r.ok) return r;
     }
-    if (this.group) { this.scene.remove(this.group); this.group.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } }); }
+    if (this.group) { this.scene.remove(this.group); this.group.traverse((o) => { if (o.isMesh) { if (!o.userData.sharedGeometry) o.geometry.dispose(); o.material.dispose(); } }); }
     this.item = itemId;
     const base = BLOCKS_BY_ID.get(ITEMS_BY_ID.get(itemId)?.block)?.color ?? 0xc49360;
     const g = this.group = new THREE.Group();
@@ -107,6 +108,20 @@ export class CounterView {
     this.sawMesh.position.set(0, 0.12, 0);
     this.plank.add(this.sawMesh);
     g.add(this.plank);
+    // Owner, 2 November ("3d looks awful"): the plank and saw models once loaded, the boxes before.
+    const plankModel = stillCopy('carpentry_plank'), sawModel = stillCopy('carpentry_saw');
+    if (plankModel && sawModel) {
+      this.plank.material.visible = false;
+      plankModel.scale.setScalar(SCALE);
+      plankModel.position.y = -0.06 * SCALE;
+      this.plank.add(plankModel);
+      for (const m of this.sawMesh.children) m.visible = false;
+      // Bigger than true scale and leant toward the camera, so the blade and teeth read from above.
+      sawModel.scale.setScalar(0.9);
+      sawModel.rotation.x = -Math.PI / 4;
+      sawModel.position.y = -0.06 * SCALE;
+      this.sawMesh.add(sawModel);
+    }
     // The parts: in the row in front once cut, in the outline once fitted.
     const w = this.counters.work(this.key);
     this.parts = specs.map(({ box, tone }, i) => {
@@ -213,7 +228,7 @@ export class CounterView {
       this.pendingTake = false;
       const item = this.item, took = this.counters.take(this.key);
       this.onDone?.({ item, took });
-      if (took && this.group) { this.scene.remove(this.group); this.group.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } }); this.group = null; this.parts = []; }
+      if (took && this.group) { this.scene.remove(this.group); this.group.traverse((o) => { if (o.isMesh) { if (!o.userData.sharedGeometry) o.geometry.dispose(); o.material.dispose(); } }); this.group = null; this.parts = []; }
     }
   }
 }
@@ -221,7 +236,27 @@ export class CounterView {
 /** A box from a part's bounds, placed relative to `centre` and scaled to the counter. */
 function boxMesh(box, centre, color, extra = {}) {
   const geo = new THREE.BoxGeometry((box.maxX - box.minX) * SCALE, (box.maxY - box.minY) * SCALE, (box.maxZ - box.minZ) * SCALE);
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color, ...extra }));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color, map: extra.transparent ? null : grain(), ...extra }));
   mesh.position.set(((box.minX + box.maxX) / 2 - centre.x) * SCALE, ((box.minY + box.maxY) / 2 - centre.y) * SCALE, ((box.minZ + box.maxZ) / 2 - centre.z) * SCALE);
   return mesh;
+}
+
+let grainTexture = null;
+/**
+ * A 16 x 16 pixel wood grain, grey, tinted by each part's colour: the cut
+ * parts look like the planks they came from. Made once, shared, never disposed.
+ */
+function grain() {
+  if (grainTexture || typeof document === 'undefined') return grainTexture;
+  const data = new Uint8Array(16 * 16 * 4);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const r = Math.abs(Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1;
+    const v = y % 4 === 3 ? 170 : r > 0.85 ? 205 : r > 0.6 ? 232 : 255;
+    data.set([v, v, v, 255], (y * 16 + x) * 4);
+  }
+  grainTexture = new THREE.DataTexture(data, 16, 16);
+  grainTexture.magFilter = grainTexture.minFilter = THREE.NearestFilter;
+  grainTexture.colorSpace = THREE.SRGBColorSpace;
+  grainTexture.needsUpdate = true;
+  return grainTexture;
 }

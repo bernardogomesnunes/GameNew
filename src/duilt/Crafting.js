@@ -41,6 +41,8 @@ export class Crafting {
    */
   atStation(r, atStations) {
     if (r.station === 'hand') return true;
+    // CRAFT3D-3: the crucible's recipes are melted and poured in its close-up, never crafted.
+    if (r.station === 'crucible') return false;
     if (r.station === 'forge' && atStations.includes('foundry')) return true;
     if (!atStations.includes(r.station)) return false;
     return !r.tier || atStations.includes(`${r.station}@${r.tier}`);
