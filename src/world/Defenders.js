@@ -32,8 +32,15 @@ export const HUNGRY_STRENGTH = 0.6;
 /** A blow or an arrow from `s`, as hard as they can manage today. */
 export const blowOf = (s, hits) => (s.hungry ? Math.max(1, Math.round(hits * HUNGRY_STRENGTH)) : hits);
 const ARROW_SPEED = 26;
-/** Idle soldiers walk within this many blocks of their post, resting REST_MIN to REST_MIN + REST_MORE seconds between walks. */
-const PATROL = 4, REST_MIN = 3, REST_MORE = 7;
+/**
+ * Idle soldiers patrol within PATROL blocks of their post, resting REST_MIN
+ * to REST_MIN + REST_MORE seconds between walks; a walk that is blocked ends
+ * with a short BLOCKED pause, then they head somewhere else (owner, 4
+ * November: they "seem stuck in one place").
+ */
+const PATROL = 7, REST_MIN = 1, REST_MORE = 3.5, BLOCKED = 0.4;
+/** A walk that has not got GIVE_UP_BY blocks nearer in GIVE_UP_AFTER seconds is given up. */
+const GIVE_UP_AFTER = 2.5, GIVE_UP_BY = 0.5;
 const TALL = 2;
 const TABARD = 0xdfe6f2, STEEL = 0xb9bec6, ARCHER_COAT = 0x5f7f4a, HOOD = 0x3f5a34;
 
@@ -299,22 +306,43 @@ export class Defenders {
     if (!s.stroll && away > PATROL + 1) s.stroll = { x: s.post.x, z: s.post.z };
     if (s.stroll) {
       const left = Math.hypot(s.stroll.x - s.x, s.stroll.z - s.z);
-      const moved = left > 0.3 && stepAround(this.world, s, s.stroll.x, s.stroll.z, dt, speed);
+      // Shuffling against a wall gets them no nearer: they give that walk up.
+      const st = s.stroll;
+      if (st.best == null || left < st.best - GIVE_UP_BY) { st.best = left; st.since = 0; }
+      else st.since += dt;
+      const stuck = st.since > GIVE_UP_AFTER;
+      const moved = left > 0.3 && !stuck && stepAround(this.world, s, s.stroll.x, s.stroll.z, dt, speed);
       if (moved) { s.target = { x: s.stroll.x, z: s.stroll.z }; return; }
-      // There, or the way is blocked: stop and rest before the next walk.
+      // There: rest a while. Blocked: a moment's pause, then somewhere else.
       s.stroll = null;
-      s.rest = REST_MIN + this.rand() * REST_MORE;
+      s.rest = left > 0.3 ? BLOCKED : REST_MIN + this.rand() * REST_MORE;
     }
     s.target = null; s.speed = 0;
     if (!s.hungry) s.hp = Math.min(u?.hp ?? SOLDIER.hp, s.hp + dt * 0.5);
     s.rest = (s.rest ?? this.rand() * REST_MORE) - dt;
     if (s.rest > 0) return;
-    // Out to somewhere near the post, or back to the post itself.
-    if (away > 0.6) s.stroll = { x: s.post.x, z: s.post.z };
-    else {
-      const a = this.rand() * Math.PI * 2, r = 1.5 + this.rand() * (PATROL - 1.5);
-      s.stroll = { x: s.post.x + Math.sin(a) * r, z: s.post.z + Math.cos(a) * r };
+    // Far out: back toward the post. Otherwise a new spot round it, one
+    // they can stand on, so the walk is not over before it starts.
+    if (away > PATROL - 1) { s.stroll = { x: s.post.x, z: s.post.z }; return; }
+    for (let tries = 0; tries < 6 && !s.stroll; tries++) {
+      const a = this.rand() * Math.PI * 2, r = 2 + this.rand() * (PATROL - 2);
+      const x = s.post.x + Math.sin(a) * r, z = s.post.z + Math.cos(a) * r;
+      if (this.clearWalk(s, x, z)) s.stroll = { x, z };
     }
+    if (!s.stroll) s.rest = BLOCKED;
+  }
+
+  /** Whether `s` can walk straight to (x, z): ground all the way, no step over 1, room to stand. */
+  clearWalk(s, x, z) {
+    const n = Math.ceil(Math.hypot(x - s.x, z - s.z) / 0.5);
+    let y = s.y;
+    for (let i = 1; i <= n; i++) {
+      const px = s.x + ((x - s.x) * i) / n, pz = s.z + ((z - s.z) * i) / n;
+      const g = groundAt(this.world, px, pz, y, TALL);
+      if (g == null || Math.abs(g - y) > 1 || !bodyFits(this.world, px, pz, g)) return false;
+      y = g;
+    }
+    return true;
   }
 
   /** The enemy nearest `at`, within `range` of it, or null. */

@@ -823,5 +823,16 @@
   "kb": 4.7,
   "name": "Panel saw",
   "group": "machines"
+ },
+ "shield_guard": {
+  "cubes": 9,
+  "triangles": 108,
+  "atlas": [
+   128,
+   64
+  ],
+  "kb": 19.9,
+  "name": "Spear guard",
+  "group": "people"
  }
 }

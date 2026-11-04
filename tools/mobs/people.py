@@ -338,6 +338,10 @@ PEOPLE = [
     person('footman', 'Footman', hat='cap', hatColour='#7a5a3a', coat='#8a6a4a', trim='#5a4030', gear='sword', gearColour='#afafb7', trousers='#4a3a30', skin='tan'),
     person('swordsman', 'Swordsman', hat='helm', hatColour=C['steel3'], plume='#3a5aa8', coat='#3a5aa8', trim=C['gold'], gear='sword', shield=('#3a5aa8', C['gold'])),
     person('bowman', 'Bowman', hat='hood', hatColour='#3f5a34', coat='#4f6a40', trousers='#3a3024', gear='bow', quiver=C['woodDark']),
+    # The Garrison's spear guard (owner, 4 November: "still headless"): it had no
+    # model, and the stand-in's helm box hid the whole face. An open-face helm here.
+    person('shield_guard', 'Spear guard', hat='helm', hatColour=C['steel3'], hatTrim=C['gold'], coat=C['teal'], trim=C['gold'],
+           gear='spear', gearColour='#afafb7', shield=(C['teal'], C['gold']), skin='light'),
     person('crew', 'Siege crew', hat='cap', hatColour='#5a4030', coat='#7a6a52', apron='#5a4030', trousers='#4a3a30', skin='dark', hair='#2a1e16'),
     # Out in the world.
     person('hermit', 'Hermit', hat='hood', hatColour='#6b6355', beard='#d9d4c8', hair='#d9d4c8', coat='#7a7062', robe=True, belt='#4a3a2a',
