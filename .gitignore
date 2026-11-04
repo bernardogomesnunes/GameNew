@@ -26,6 +26,7 @@ dist-ssr
 # Local benchmark reports (CI uploads them as artifacts)
 artifacts/performance/
 artifacts/crafting/
+artifacts/soldiers/
 
 # Python bytecode (tools/mobs)
 __pycache__/
