@@ -44,6 +44,15 @@ world, a signed-in open, the production build and the live CSP.
   An earlier note here blamed `claude/voxel-sandbox-game-heuhyq`; that was wrong.
   Why the first test after the rollback still failed is not known (likely tested
   before the deploy finished, or on a cached page).
+- **Live site stuck on 31 October (found 5 November).** The bundle served at
+  duild-seven.vercel.app has the Planing Bench and the Garrison but none of #273
+  (soldiers' heads, patrols), #280 (work clothes) or #283 to #287 (Counter,
+  Crucible, Machines row, spear guard model). So nothing merged after about
+  b8125ab reached players: Vercel stopped putting new `main` deployments live,
+  Cause: Vercel's production branch (Settings, Environments, Production, Branch
+  Tracking) was set to an older branch. The owner set it to `main` on 5 November
+  and the live bundle then had the Crucible, the straight legs and the spear guard
+  model.
 - **Rollback.** #262 restored `main` to 5419dae (after #252). The game worked once
   that reached the live branch. #263 and #264 then brought back everything except
   the parts listed below.
@@ -400,6 +409,7 @@ owner and block the task until answered.
 | IMP-22 | **No army in the Stone Kingdom battle.** Owner, 5 November: "Built the sanctuary for the first time in duilt, have aurelion and triggered the battle with the stone kingdom. I did not see any warrior, either my army moved. But I received a message saying my archers brought me some gold." So the battle started (the archers' gold message came), but neither the Stone Kingdom's warriors nor the owner's army showed or moved. Reproduce from a save with the sanctuary and Aurelion: check `army.field` and the wanderers' war party, where they spawn, and whether WarriorView and ArmyView draw them. | Any agent | to do |
 | IMP-23 | **A left-hand slot, and shields.** Owner, 5 November: "I think we need to add a slot for left hand and add a shield to the game too." A second hand slot beside the hotbar (an off-hand), and a shield item to hold in it: blocks or lessens a blow while held up. To choose with the owner: how you raise it on a phone (a button, or always up while not swinging), how much it blocks, what shields are made of and at which Age, and whether a torch or other items can go in the left hand too. | Any agent + Owner | to do, design first |
 | IMP-24 | **Doors with detail.** Owner, 5 November: "Doors need better 3d too ..., they look dull and silly. They need detail." Doors drawn as pixel-textured models like the machines and people (tools/mobs): planks, a frame, hinges, a handle, and per wood or metal kind. | Any agent | to do |
+| IMP-25 | **Touch look and tap stopped working once.** Owner, 5 November, on the phone: the left stick still moved the avatar, but dragging to turn the view and tapping to break blocks did nothing. Closing the browser and opening it again fixed it. Not reproduced yet. Look for a touch that never ended (a lost `touchend`/`pointercancel`, for example when the page was left or a panel opened mid-drag) leaving the look handler thinking a finger is still down, and for anything that blocks touches over the view (an overlay left open). | Any agent | to do, reproduce first |
 
 ## 5b. Crafting in 3D, one dedicated process per machine (31 October)
 
