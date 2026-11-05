@@ -7962,7 +7962,6 @@ export class Game {
       this.grass.update(this.world, this.player.position, performance.now(), { enabled: this.graphics.grass !== false });
       // The wind in the leaves (ChunkMesher's WIND).
       WIND.value = performance.now() / 1000;
-      this.settlerView.update(this.withShowcase('settlers', this.duilt?.settlers.people ?? []));
       this.mobs.tick(dt, this.player.position, { lure: LURES.has(this.selectedItemId) });
       this.tamePens();
       if (this.world.gen) {
@@ -8050,6 +8049,10 @@ export class Game {
       ...strangers.filter((p) => !WANDERERS[p.kind].siege && !WANDERERS[p.kind].beast),
       ...this.tradersFacingYou(),
     ]);
+    // Villagers are redrawn while the game waits too (a panel open), as your
+    // soldiers are: whoever was mid-stride finishes the step and stands
+    // straight (owner, 4 November: "the villagers stop with the legs wrong").
+    this.settlerView.update(this.withShowcase('settlers', this.duilt?.settlers.people ?? []));
     const ours = this.duilt?.defenders;
     this.defenderView.update(this.withShowcase('defenders', ours?.people ?? []));
     this.warriorView.update(this.withShowcase('warriors', this.duilt?.army.field ?? []));
