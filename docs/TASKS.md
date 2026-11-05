@@ -49,9 +49,10 @@ world, a signed-in open, the production build and the live CSP.
   (soldiers' heads, patrols), #280 (work clothes) or #283 to #287 (Counter,
   Crucible, Machines row, spear guard model). So nothing merged after about
   b8125ab reached players: Vercel stopped putting new `main` deployments live,
-  most likely since the manual promote or rollback of 31 October. Fix in Vercel:
-  promote the newest `main` deployment to Production, and keep the production
-  domain following new `main` deployments.
+  Cause: Vercel's production branch (Settings, Environments, Production, Branch
+  Tracking) was set to an older branch. The owner set it to `main` on 5 November
+  and the live bundle then had the Crucible, the straight legs and the spear guard
+  model.
 - **Rollback.** #262 restored `main` to 5419dae (after #252). The game worked once
   that reached the live branch. #263 and #264 then brought back everything except
   the parts listed below.
