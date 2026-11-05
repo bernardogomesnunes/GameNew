@@ -175,6 +175,8 @@ def person(id, name, **kw):
     if hat == 'helm':
         cubes.append(box('helm', 'head', (-4.5, 23.5, -4.5), (4.5, 32.5, 4.5), shell(hc, o['hatTrim'], True, o['visor'])))
     elif hat == 'hood':
+        # A hood darker than the coat, with a trim at its hem: seen from behind, a
+        # hood the coat's colour read as no head at all (owner, 5 November).
         cubes.append(box('hood', 'head', (-4.5, 23.5, -4.5), (4.5, 32.5, 4.5), shell(hc, o['hatTrim'], True)))
         cubes.append(box('hood_peak', 'head', (-2, 32.5, -1), (2, 34, 4.5), {'all': lambda p, f: p.grain([hc, shade(hc, 0.9)])}))
         cubes.append(box('hood_drape', 'body', (-4.75, 21.5, -2.5), (4.75, 24.5, 2.75), {'all': lambda p, f: p.grain([hc, shade(hc, 0.85)]).row(-1, shade(hc, 0.7))}))
@@ -334,10 +336,10 @@ PEOPLE = [
     person('settler', 'Settler', coat=C['teal'], shirt=C['paper'], trousers='#5a4636', hair='#6b4a2e'),
     person('soldier', 'Soldier', hat='helm', hatColour=C['steel3'], hatTrim=C['teal'], coat=C['teal'], trim=C['gold'],
            emblem=C['gold'], gear='sword', shield=(C['teal'], C['gold']), emblemGlow=G['tealMid'], trousers=C['tealDeep']),
-    person('archer', 'Archer', hat='hood', hatColour=C['tealDark'], coat=C['teal'], trousers='#5a4636', gear='bow', quiver=C['wood'], skin='light'),
+    person('archer', 'Archer', hat='hood', hatColour=C['tealDeep'], hatTrim=C['gold'], coat=C['teal'], trousers='#5a4636', gear='bow', quiver=C['wood'], skin='light'),
     person('footman', 'Footman', hat='cap', hatColour='#7a5a3a', coat='#8a6a4a', trim='#5a4030', gear='sword', gearColour='#afafb7', trousers='#4a3a30', skin='tan'),
     person('swordsman', 'Swordsman', hat='helm', hatColour=C['steel3'], plume='#3a5aa8', coat='#3a5aa8', trim=C['gold'], gear='sword', shield=('#3a5aa8', C['gold'])),
-    person('bowman', 'Bowman', hat='hood', hatColour='#3f5a34', coat='#4f6a40', trousers='#3a3024', gear='bow', quiver=C['woodDark']),
+    person('bowman', 'Bowman', hat='hood', hatColour='#24321d', hatTrim='#a8743f', coat='#5f7f4a', trousers='#3a3024', gear='bow', quiver=C['woodDark']),
     # The Garrison's spear guard (owner, 4 November: "still headless"): it had no
     # model, and the stand-in's helm box hid the whole face. An open-face helm here.
     person('shield_guard', 'Spear guard', hat='helm', hatColour=C['steel3'], hatTrim=C['gold'], coat=C['teal'], trim=C['gold'],
