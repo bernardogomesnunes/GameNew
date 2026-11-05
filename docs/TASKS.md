@@ -44,6 +44,14 @@ world, a signed-in open, the production build and the live CSP.
   An earlier note here blamed `claude/voxel-sandbox-game-heuhyq`; that was wrong.
   Why the first test after the rollback still failed is not known (likely tested
   before the deploy finished, or on a cached page).
+- **Live site stuck on 31 October (found 5 November).** The bundle served at
+  duild-seven.vercel.app has the Planing Bench and the Garrison but none of #273
+  (soldiers' heads, patrols), #280 (work clothes) or #283 to #287 (Counter,
+  Crucible, Machines row, spear guard model). So nothing merged after about
+  b8125ab reached players: Vercel stopped putting new `main` deployments live,
+  most likely since the manual promote or rollback of 31 October. Fix in Vercel:
+  promote the newest `main` deployment to Production, and keep the production
+  domain following new `main` deployments.
 - **Rollback.** #262 restored `main` to 5419dae (after #252). The game worked once
   that reached the live branch. #263 and #264 then brought back everything except
   the parts listed below.
