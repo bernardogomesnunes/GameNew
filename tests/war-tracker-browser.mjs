@@ -40,6 +40,7 @@ try {
   assert.match(ahead.text, /^Round 2 · 4 of 4 left · \d+ m$/, ahead.text);
   const deg = (t) => Number(/rotate\((-?\d+)deg\)/.exec(t)[1]);
   assert.ok(Math.abs(deg(ahead.arrow)) <= 20, `facing them, the arrow points up (${ahead.arrow})`);
+  assert.equal(await page.evaluate(() => document.querySelector('#vital-war .war-bar i').style.width), '100%', 'a new round: the bar is full');
   await page.waitForFunction(() => !document.querySelector('#toast-stack .toast'), null, { timeout: 30_000 }).catch(() => {});
   await page.screenshot({ path: 'artifacts/war/tracker.png' });
   await page.evaluate(() => { window.__game.player.yaw += Math.PI; });
@@ -47,6 +48,8 @@ try {
   // Two beaten: the count goes down.
   await page.evaluate(() => { const band = window.__game.wanderers.warParty.band; band[0].hp = 0; band[0].dead = true; band[1].hp = 0; band[1].dead = true; });
   await page.waitForFunction(() => / 2 of 4 left /.test(document.querySelector('#vital-war .war-text').textContent), null, { timeout: 15_000 });
+  // IMP-27: the bar empties as they fall (full at the start, half with 2 of 4 left).
+  assert.equal(await page.evaluate(() => document.querySelector('#vital-war .war-bar i').style.width), '50%', 'two of four down: the bar is half full');
   // All beaten: the round ends and the tracker goes.
   await page.evaluate(() => { for (const p of window.__game.wanderers.warParty.band) { p.hp = 0; p.dead = true; } });
   await page.waitForSelector('#vital-war', { state: 'hidden', timeout: 30_000 });
