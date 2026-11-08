@@ -223,18 +223,32 @@ const north = { x: 128, z: -1000 };
 }
 
 {
-  // A raider gets away with your things: escaped, and the round is lost.
+  // Owner, 8 November: the raid reaches the village, robs it, and "starts
+  // killing everyone"; villagers can die; the round ends only when every
+  // attacker is dead. A round's raider robs a storehouse, then stays and
+  // turns on the villagers, and does not run home hurt.
   const world = flat();
   const region = { minX: 126, maxX: 130, minY: 1, maxY: 4, minZ: 126, maxZ: 130 };
+  const villager = { name: 'Ada', x: 134.5, y: 1, z: 128.5, hp: 10 };
+  const blows = [];
   const w = new Wanderers({
     world, rand: rng(6),
     stores: () => [{ structure: { id: 's' }, region }],
     onSteal: () => ({ planks: 5 }),
+    villagers: () => (villager.hp > 0 ? [villager] : []),
+    onFoe: (p, f, hits) => { blows.push(f); f.hp -= hits; },
   });
   w.untilMessenger = w.untilExplorer = 1e9;
   const [b] = w.sendWarband(home, north, 40, [['bandit', 1]], 1);
-  for (let i = 0; i < 3000 && !b.done; i++) w.tick(0.05, { x: 250, y: 1, z: 250 });
-  ok('a raider who gets home with your things has escaped', b.done && b.escaped && b.loot.planks === 5);
+  for (let i = 0; i < 3000 && !b.loot; i++) w.tick(0.05, { x: 250, y: 1, z: 250 });
+  ok('a round\'s raider robs a storehouse', b.loot?.planks === 5);
+  for (let i = 0; i < 1200 && villager.hp > 0; i++) w.tick(0.05, { x: 250, y: 1, z: 250 });
+  ok(`then turns on the villagers until they fall (${blows.length} blows)`, villager.hp <= 0 && blows.every((f) => f === villager));
+  for (let i = 0; i < 600; i++) w.tick(0.05, { x: 250, y: 1, z: 250 });
+  ok('and stays: it does not go home with what it took', !b.done && !b.escaped && w.list.includes(b));
+  b.hp = 1;
+  for (let i = 0; i < 200; i++) w.tick(0.05, { x: 250, y: 1, z: 250 });
+  ok('badly hurt, it fights on: the round ends only when it is dead', !b.done && w.list.includes(b));
   ok('and the army doesn\'t wait for dark, or go home at dawn', !w.night());
 
   const [c] = w.sendWarband(home, north, 40, [['soldier', 1]], 7);

@@ -80,7 +80,7 @@ export class Wanderers {
     hostile = () => false, night = () => false, stores = () => [],
     onAttack = null, onSteal = null, onRaid = null, kingdomHostile = () => false,
     buildings = () => [], inLand = () => false, onBatter = null, onThrow = null,
-    foes = () => [], onFoe = null,
+    foes = () => [], onFoe = null, villagers = () => [],
     sky = () => null, skyHostile = () => false, onSkyKing = null, onRoyal = null,
   }) {
     this.world = world;
@@ -105,6 +105,10 @@ export class Wanderers {
     // than you is who a raider fights.
     this.foes = foes;
     this.onFoe = onFoe;
+    // Your villagers (duilt/Settlers.js): a round's attackers kill them too
+    // (owner, 8 November: the raid "reaches the village and starts killing
+    // everyone"). Their blows go through onFoe, like a soldier's.
+    this.villagers = villagers;
     // The Sky Kingdom (world/skyKingdom.js): the island while it's there to
     // be visited — the dark path, until it falls — whether its people fight
     // you, and word that its King is down.
@@ -798,11 +802,15 @@ export class Wanderers {
     const hostile = this.hostileOf(p);
 
     // Badly hurt, or frightened (the black guardian — scare()): it runs.
-    if (p.hp <= spec.fleeBelow || p.fear > 0) {
+    // A round's attackers fight to the end (owner, 8 November: the round
+    // ends only when every one of them is dead); frightened, they fall back
+    // and come again.
+    if ((p.hp <= spec.fleeBelow && !p.war) || p.fear > 0) {
       if (d > spec.aggro * 2) {
         // Got away. A camp bandit licks its wounds; a raider goes home —
         // with whatever it took, if it took anything.
-        if (p.raider || p.war) { p.done = true; p.escaped = hasLoot(p); return true; }
+        if (p.war) return false;
+        if (p.raider) { p.done = true; p.escaped = hasLoot(p); return true; }
         p.recover = (p.recover ?? 0) + dt;
         if (p.recover >= RECOVER_EVERY) { p.recover = 0; p.hp += 1; }
         return false;
@@ -844,6 +852,11 @@ export class Wanderers {
     let foe = null, fd = d;
     if (hostile && (p.war || p.raider || spec.sky)) {
       for (const f of this.foes()) {
+        if (f.hp <= 0) continue;
+        const e = Math.hypot(f.x - p.x, f.z - p.z);
+        if (e < fd && Math.abs(f.y - p.y) < 4) { fd = e; foe = f; }
+      }
+      if (p.war) for (const f of this.villagers()) {
         if (f.hp <= 0) continue;
         const e = Math.hypot(f.x - p.x, f.z - p.z);
         if (e < fd && Math.abs(f.y - p.y) < 4) { fd = e; foe = f; }
@@ -894,9 +907,19 @@ export class Wanderers {
     // A raid: to a storehouse (or to you, if there isn't one), then away.
     // The army doesn't wait for dark, or go home at dawn.
     const daylight = !this.night() && !p.war;
+    // A round's attackers, once they have robbed a storehouse (or found
+    // none): through the village after whoever is left, you included, until
+    // they are killed (owner, 8 November).
+    if (p.war && p.stage === 'rampage') {
+      const v = this.nearestVictim(p, player);
+      p.target = { x: v.x, z: v.z };
+      p.speed = spec.run;
+      return true;
+    }
     if (p.stage === 'coming') {
       const store = this.nearestStore(p);
       if (!store && !this.stores().length) {
+        if (p.war) { p.stage = 'rampage'; return true; }
         p.target = { x: player.x, z: player.z };
         p.speed = spec.speed;
         if (daylight) p.stage = 'leaving';
@@ -904,7 +927,7 @@ export class Wanderers {
       }
       if (store && store.d < 2.5) {
         p.loot = this.onSteal?.(p, store.structure) ?? {};
-        p.stage = 'leaving';
+        p.stage = p.war ? 'rampage' : 'leaving';
       } else if (store) {
         p.target = store.at;
         p.speed = spec.speed;
@@ -917,6 +940,19 @@ export class Wanderers {
     p.speed = spec.run;
     if (Math.hypot(p.home.x - p.x, p.home.z - p.z) < 3) { p.done = true; p.escaped = hasLoot(p); }
     return true;
+  }
+
+  /** Who a rampaging attacker goes after: the nearest villager or soldier standing, else you. */
+  nearestVictim(p, player) {
+    let best = player, bd = Math.hypot(player.x - p.x, player.z - p.z);
+    for (const list of [this.villagers(), this.foes()]) {
+      for (const f of list) {
+        if (!(f.hp > 0)) continue;
+        const e = Math.hypot(f.x - p.x, f.z - p.z);
+        if (e < bd) { bd = e; best = f; }
+      }
+    }
+    return best;
   }
 
   /** One blow's weight, never quite the same twice: { hits, heavy }. */

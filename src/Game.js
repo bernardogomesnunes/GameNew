@@ -11,9 +11,10 @@ import { clearPlan, clearCells, cellBounds } from './tools/ClearTool.js';
 import { CLEARS_BY_ID } from './config/clears.js';
 import { SelectionHighlight } from './tools/SelectionHighlight.js';
 import { BuildGhost } from './tools/BuildGhost.js';
+import { strangersToDraw } from './render/strangersToDraw.js';
 import { warTrack } from './duilt/warTracker.js';
 import { loadModels } from './render/Models.js';
-import { SettlerView } from './render/SettlerView.js';
+import { SettlerView, MAX as PEOPLE_MAX } from './render/SettlerView.js';
 import { CloudAuth } from './net/CloudAuth.js';
 import { CloudWorlds } from './net/CloudWorlds.js';
 import { isCloudConfigured } from './net/cloudConfig.js';
@@ -5505,6 +5506,13 @@ export class Game {
 
   /** A raider's blow on one of your soldiers — or one of your army. */
   soldierHit(p, soldier, hits) {
+    // A villager (owner, 8 November: the raid "starts killing everyone").
+    if (this.duilt?.settlers.people.includes(soldier)) {
+      if (this.duilt.settlers.hurt(soldier, hits)) {
+        this.ui?.toast({ kind: 'xp', title: `${soldier.name ?? 'A villager'} was killed by the raiders`, body: 'Their bed is free for the next to come.' });
+      }
+      return;
+    }
     if (soldier.kind === 'warrior') {
       if (this.duilt.army.hurt(soldier, hits)) this.ui?.duiltUI?.renderArmy?.();
       return;
@@ -8058,10 +8066,13 @@ export class Game {
     // What's heard here: the place and the hour, archers loosing, the music.
     if (this.world) hear(this, dt, playing);
     const strangers = this.wanderers?.list ?? [];
-    this.wanderView.update([
+    // At most PEOPLE_MAX drawn: over that, anyone fighting you first, then the
+    // nearest (IMP-22: a kingdom's guards had taken every place, and a round's
+    // attackers, added last, were never drawn).
+    this.wanderView.update(strangersToDraw([
       ...strangers.filter((p) => !WANDERERS[p.kind].siege && !WANDERERS[p.kind].beast),
       ...this.tradersFacingYou(),
-    ]);
+    ], this.player?.position ?? { x: 0, z: 0 }, PEOPLE_MAX, this._strangersDrawn ??= []));
     // Villagers are redrawn while the game waits too (a panel open), as your
     // soldiers are: whoever was mid-stride finishes the step and stands
     // straight (owner, 4 November: "the villagers stop with the legs wrong").
@@ -8199,6 +8210,7 @@ export class Game {
         onThrow: (p, at) => this.enemyThrows(p, at),
         // Your soldiers stand between them and you.
         foes: () => [...(this.duilt?.defenders.soldiers ?? []), ...(this.duilt?.army.field ?? [])],
+        villagers: () => (this.duilt && !this.duilt.sandbox ? this.duilt.settlers.people : []),
         onFoe: (p, soldier, hits) => this.soldierHit(p, soldier, hits),
         // The Sky Kingdom: there while it stands, on the dark path (and in
         // Creative, to look at); its people fight the Black Ring.
