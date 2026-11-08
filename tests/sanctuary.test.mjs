@@ -114,6 +114,12 @@ for (const [id, ring] of [['sanctuary_white', 'white'], ['sanctuary_black', 'bla
   const blows = [];
   for (let i = 0; i < 120; i++) stag.tick(1 / 30, { x: stag.x, y: 1, z: stag.z }, [bandit], { strike: (e, n) => blows.push([e, n]) });
   ok(`a bandit near you, it goes for it (${blows.length} blows in four seconds)`, blows.length >= 3 && blows.every(([e, n]) => e === bandit && n === GUARDIANS.white.hits));
+  // Owner, 8 November: Aurelion fires a beam from where it stands; only
+  // something at its side can hit it back.
+  ok('from a few blocks off it takes nothing back: it fires from where it stands', stag.hp === GUARDIANS.white.hp && Math.hypot(stag.x - bandit.x, stag.z - bandit.z) > GUARDIANS.white.reach);
+  const close = { ...bandit, x: stag.x + 1.5 };
+  stag.cooldown = 0;
+  stag.tick(1 / 30, { x: stag.x, y: 1, z: stag.z }, [close], { strike() {} });
   ok('and takes some back', stag.hp < GUARDIANS.white.hp);
 
   // Downed and back.

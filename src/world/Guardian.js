@@ -23,6 +23,9 @@ export const GUARDIANS = {
   white: {
     name: 'Aurelion', about: 'the white stag', hp: 60, speed: 6.5, hits: 6, every: 0.9, reach: 2.4,
     heal: { range: 7, every: 3 },
+    // Owner, 8 November: "a distance attack, like fire a beam out of its
+    // mouth". It stops within `range` of what it fights and fires.
+    beam: { range: 10, every: 1.4, hits: 6 },
   },
   black: {
     name: 'Umbra', about: 'the shadow beast', hp: 70, speed: 4.8, hits: 8, every: 1.2, reach: 2.4,
@@ -72,6 +75,8 @@ export class Guardian {
     this.hurt = 0;
     /** Seconds left of the lunge that shows a blow (GuardianView). */
     this.striking = 0;
+    /** The beam it last fired, for GuardianView: { x, y, z } where it struck and `t` seconds left to show. */
+    this.beam = null;
     /** The enemy you last struck (set by `focus`), so it goes for that one first. */
     this.focused = null;
   }
@@ -104,6 +109,7 @@ export class Guardian {
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.hurt = Math.max(0, this.hurt - dt);
     this.striking = Math.max(0, this.striking - dt);
+    if (this.beam && (this.beam.t -= dt) <= 0) this.beam = null;
     if (this.downed > 0) {
       this.downed -= dt;
       if (this.downed <= 0) {
@@ -145,22 +151,25 @@ export class Guardian {
 
     if (target) {
       const d = Math.hypot(target.x - this.x, target.z - this.z);
-      if (d > this.spec.reach * 0.8) this.stepTowards(target.x, target.z, dt, this.spec.speed * (hasty ? FOCUS_HASTE : 1.15));
+      const beam = this.spec.beam;
+      // A beam from where it stands; else close in to strike.
+      const stand = beam ? beam.range * 0.9 : this.spec.reach * 0.8;
+      if (d > stand) this.stepTowards(target.x, target.z, dt, this.spec.speed * (hasty ? FOCUS_HASTE : 1.15));
       else this.moving = false;
       // Face what it fights, moving or not.
       this.facing = Math.atan2(target.x - this.x, target.z - this.z);
-      if (d <= this.spec.reach && this.cooldown <= 0) {
+      if (beam && d <= beam.range && this.cooldown <= 0) {
+        this.cooldown = beam.every;
+        this.striking = STRIKE_SHOWS;
+        this.beam = { x: target.x, y: target.y ?? this.y, z: target.z, t: STRIKE_SHOWS };
+        on.strike?.(target, beam.hits);
+        // At its side, what it fires at hits back.
+        if (d <= this.spec.reach && this.takeCounter(on)) return;
+      } else if (!beam && d <= this.spec.reach && this.cooldown <= 0) {
         this.cooldown = this.spec.every;
         this.striking = STRIKE_SHOWS;
         on.strike?.(target, this.spec.hits);
-        this.hp -= COUNTER;
-        this.hurt = 0.25;
-        if (this.hp <= 0) {
-          this.hp = 0;
-          this.downed = DOWNED_SECONDS;
-          on.downed?.();
-          return;
-        }
+        if (this.takeCounter(on)) return;
       }
     } else if (this.mode === 'follow' && toPlayer > 3.5) {
       // A little behind and to the side of you, not underfoot.
@@ -188,6 +197,18 @@ export class Guardian {
     }
     // Slowly back to full while nothing's happening.
     if (!target) this.hp = Math.min(this.spec.hp, this.hp + dt * 0.5);
+  }
+
+  /** A blow back from what it fights at close quarters. True when that downs it. */
+  takeCounter(on) {
+    this.hp -= COUNTER;
+    this.hurt = 0.25;
+    if (this.hp > 0) return false;
+    this.hp = 0;
+    this.downed = DOWNED_SECONDS;
+    this.beam = null;
+    on.downed?.();
+    return true;
   }
 
   stepTowards(tx, tz, dt, speed) {

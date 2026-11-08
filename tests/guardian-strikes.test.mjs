@@ -35,3 +35,18 @@ console.log('PASS it turns to what it strikes, and the blow shows as a lunge');
   assert.ok(g.x > x0 + 5, `and runs to it (${(g.x - x0).toFixed(1)} blocks)`);
 }
 console.log('PASS told to attack, it hunts round you as well as round itself');
+
+// Owner, 8 November: "a distance attack, like fire a beam out of its mouth".
+{
+  const g = make('stay');
+  const foe = { x: 48, y: 1, z: 40.5, hp: 99 };   // 7.5 blocks off
+  const strikes = [];
+  const x0 = g.x;
+  g.tick(0.05, { x: 40.5, y: 1, z: 40.5 }, [foe], { strike: (e, n) => strikes.push(n) });
+  assert.equal(strikes.length, 1, 'it fires at what is 7.5 blocks off');
+  assert.ok(g.beam && Math.abs(g.beam.x - foe.x) < 1e-9, 'the beam goes to it');
+  assert.equal(g.x, x0, 'from where it stands');
+  for (let i = 0; i < 20; i++) g.tick(0.05, { x: 40.5, y: 1, z: 40.5 }, [], {});
+  assert.equal(g.beam, null, 'and fades');
+}
+console.log('PASS it fires a beam from where it stands, out to 10 blocks');
