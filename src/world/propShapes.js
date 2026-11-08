@@ -66,18 +66,39 @@ export const PROP_SHAPES = {
   rug: [
     { minX: 0.03, maxX: 0.97, minY: 0, maxY: 0.04, minZ: 0.03, maxZ: 0.97 },
   ],
-  // A door, shut, across the middle of its cell, hinged at x = 0. The
-  // bottom half has a handle on both faces; the top half a window.
+  // A door, shut, across the middle of its cell, hinged at x = 0. IMP-24
+  // (owner, 8 November: "Doors need better 3d too, they look dull and silly.
+  // They need detail."): a frame of stiles and rails, recessed panels a shade
+  // lighter, iron hinge straps across both faces, and an iron handle on a
+  // lock plate. The top half has a window: glass, crossed by glazing bars.
   door: [
-    { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
-    { minX: 0.78, maxX: 0.9, minY: 0.86, maxY: 0.96, minZ: DOOR_Z0 - 0.06, maxZ: DOOR_Z1 + 0.06 },
+    { minX: 0, maxX: 0.14, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.86, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.14, maxX: 0.86, minY: 0, maxY: 0.12, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.14, maxX: 0.86, minY: 0.5, maxY: 0.6, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    // Two panels, set back into the frame.
+    { minX: 0.14, maxX: 0.86, minY: 0.12, maxY: 0.5, minZ: DOOR_Z0 + 0.04, maxZ: DOOR_Z1 - 0.04, tone: 1.08 },
+    { minX: 0.14, maxX: 0.86, minY: 0.6, maxY: 1, minZ: DOOR_Z0 + 0.04, maxZ: DOOR_Z1 - 0.04, tone: 1.08 },
+    // Hinge straps, iron, across both faces from the hinge side.
+    { minX: 0, maxX: 0.36, minY: 0.16, maxY: 0.22, minZ: DOOR_Z0 - 0.02, maxZ: DOOR_Z1 + 0.02, color: 0x3a3632 },
+    { minX: 0, maxX: 0.36, minY: 0.78, maxY: 0.84, minZ: DOOR_Z0 - 0.02, maxZ: DOOR_Z1 + 0.02, color: 0x3a3632 },
+    // The lock plate and the handle, on both faces.
+    { minX: 0.76, maxX: 0.84, minY: 0.66, maxY: 0.84, minZ: DOOR_Z0 - 0.02, maxZ: DOOR_Z1 + 0.02, color: 0x3a3632 },
+    { minX: 0.74, maxX: 0.86, minY: 0.86, maxY: 0.92, minZ: DOOR_Z0 - 0.07, maxZ: DOOR_Z1 + 0.07, color: 0x2b2725 },
   ],
   door_top: [
-    { minX: 0, maxX: 0.2, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
-    { minX: 0.8, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
-    { minX: 0.2, maxX: 0.8, minY: 0, maxY: 0.3, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
-    { minX: 0.2, maxX: 0.8, minY: 0.8, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
-    { minX: 0.47, maxX: 0.53, minY: 0.3, maxY: 0.8, minZ: DOOR_Z0 + 0.06, maxZ: DOOR_Z1 - 0.06 },
+    { minX: 0, maxX: 0.14, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.86, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.14, maxX: 0.86, minY: 0.88, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.14, maxX: 0.86, minY: 0.3, maxY: 0.38, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    // A panel under the window.
+    { minX: 0.14, maxX: 0.86, minY: 0, maxY: 0.3, minZ: DOOR_Z0 + 0.04, maxZ: DOOR_Z1 - 0.04, tone: 1.08 },
+    // The window: glass, and glazing bars across it.
+    { minX: 0.14, maxX: 0.86, minY: 0.38, maxY: 0.88, minZ: DOOR_Z0 + 0.07, maxZ: DOOR_Z1 - 0.07, color: 0xa9d8d2, pane: true },
+    { minX: 0.47, maxX: 0.53, minY: 0.38, maxY: 0.88, minZ: DOOR_Z0 + 0.03, maxZ: DOOR_Z1 - 0.03, tone: 0.86 },
+    { minX: 0.14, maxX: 0.86, minY: 0.6, maxY: 0.66, minZ: DOOR_Z0 + 0.03, maxZ: DOOR_Z1 - 0.03, tone: 0.86 },
+    // The top hinge strap.
+    { minX: 0, maxX: 0.36, minY: 0.12, maxY: 0.18, minZ: DOOR_Z0 - 0.02, maxZ: DOOR_Z1 + 0.02, color: 0x3a3632 },
   ],
 };
 
@@ -176,6 +197,7 @@ PROP_SHAPES.door_open_top = PROP_SHAPES.door_top.map(swing);
 
 function swing(b) {
   return {
+    ...b,
     minX: Math.max(0, b.minZ - DOOR_Z0), maxX: b.maxZ - DOOR_Z0,
     minY: b.minY, maxY: b.maxY,
     minZ: b.minX, maxZ: b.maxX,
@@ -963,3 +985,77 @@ export function boxColor(box, base) {
 export function boxesFor(shape) {
   return PROP_SHAPES[shape] ?? PROP_SHAPES.slab;
 }
+
+// IMP-30 (owner, 8 November): "the planer, the storage controller and the
+// workbench should have 3Ds that make sense. Not planks. Planer and workbench
+// are both kind of tables, with planer has a machine to cut and plane the
+// wood, workbench has drawers below. Storage controller should be some kind
+// of screen." All face -z, as the mills do.
+const B30_IRON = 0x4c4a55, B30_IRON_DARK = 0x2c2a31, B30_STEEL = 0xc9ced6, B30_DARK = 0x6b4a2e;
+// The planing bench: a table on four legs, an iron planer on top with its
+// cutter drum and blade, feed rollers either side, and a plank going in
+// rough and coming out planed, a few shavings by it, and the crank.
+PROP_SHAPES.planing_bench = [
+  { minX: 0.06, maxX: 0.16, minY: 0, maxY: 0.62, minZ: 0.1, maxZ: 0.2, color: B30_DARK },
+  { minX: 0.84, maxX: 0.94, minY: 0, maxY: 0.62, minZ: 0.1, maxZ: 0.2, color: B30_DARK },
+  { minX: 0.06, maxX: 0.16, minY: 0, maxY: 0.62, minZ: 0.8, maxZ: 0.9, color: B30_DARK },
+  { minX: 0.84, maxX: 0.94, minY: 0, maxY: 0.62, minZ: 0.8, maxZ: 0.9, color: B30_DARK },
+  { minX: 0.1, maxX: 0.9, minY: 0.2, maxY: 0.26, minZ: 0.45, maxZ: 0.55, color: B30_DARK },
+  { minX: 0.02, maxX: 0.98, minY: 0.62, maxY: 0.72, minZ: 0.06, maxZ: 0.94, tone: 1.1 },
+  // The planer: an iron body, the cutter drum through it, its blade bright on top.
+  { minX: 0.32, maxX: 0.68, minY: 0.72, maxY: 0.88, minZ: 0.2, maxZ: 0.8, color: B30_IRON },
+  { minX: 0.44, maxX: 0.56, minY: 0.8, maxY: 1.0, minZ: 0.26, maxZ: 0.74, color: B30_IRON_DARK },
+  { minX: 0.47, maxX: 0.53, minY: 0.98, maxY: 1.02, minZ: 0.3, maxZ: 0.7, color: B30_STEEL },
+  // Feed rollers, in and out.
+  { minX: 0.24, maxX: 0.32, minY: 0.72, maxY: 0.8, minZ: 0.24, maxZ: 0.76, color: 0x6f817d },
+  { minX: 0.68, maxX: 0.76, minY: 0.72, maxY: 0.8, minZ: 0.24, maxZ: 0.76, color: 0x6f817d },
+  // The plank: rough going in, planed and paler coming out.
+  { minX: 0.04, maxX: 0.3, minY: 0.72, maxY: 0.78, minZ: 0.38, maxZ: 0.62, color: 0xb07a44 },
+  { minX: 0.7, maxX: 0.96, minY: 0.72, maxY: 0.77, minZ: 0.38, maxZ: 0.62, color: 0xe2bd86 },
+  { minX: 0.78, maxX: 0.9, minY: 0.72, maxY: 0.75, minZ: 0.1, maxZ: 0.2, color: 0xf0d6a0 },
+  { minX: 0.82, maxX: 0.94, minY: 0.72, maxY: 0.74, minZ: 0.22, maxZ: 0.3, color: 0xf0d6a0 },
+  // The crank on its side.
+  { minX: 0.98, maxX: 1, minY: 0.74, maxY: 0.9, minZ: 0.46, maxZ: 0.54, color: B30_IRON_DARK },
+  { minX: 0.98, maxX: 1, minY: 0.86, maxY: 0.9, minZ: 0.46, maxZ: 0.66, color: B30_IRON_DARK },
+];
+// The workbench: a thick top over a cabinet of three drawers, a vice on its
+// front corner, a hammer and a saw left on top.
+PROP_SHAPES.workbench = [
+  { minX: 0.04, maxX: 0.96, minY: 0, maxY: 0.06, minZ: 0.1, maxZ: 0.94, color: HANDLE },
+  { minX: 0.04, maxX: 0.96, minY: 0.06, maxY: 0.82, minZ: 0.1, maxZ: 0.94 },
+  { minX: 0, maxX: 1, minY: 0.82, maxY: 0.92, minZ: 0.04, maxZ: 0.96, tone: 1.18 },
+  // Three drawers, each with its handle.
+  { minX: 0.08, maxX: 0.92, minY: 0.58, maxY: 0.78, minZ: 0.07, maxZ: 0.1, tone: 1.08 },
+  { minX: 0.08, maxX: 0.92, minY: 0.34, maxY: 0.54, minZ: 0.07, maxZ: 0.1, tone: 1.08 },
+  { minX: 0.08, maxX: 0.92, minY: 0.1, maxY: 0.3, minZ: 0.07, maxZ: 0.1, tone: 1.08 },
+  { minX: 0.42, maxX: 0.58, minY: 0.66, maxY: 0.7, minZ: 0.04, maxZ: 0.07, color: HANDLE },
+  { minX: 0.42, maxX: 0.58, minY: 0.42, maxY: 0.46, minZ: 0.04, maxZ: 0.07, color: HANDLE },
+  { minX: 0.42, maxX: 0.58, minY: 0.18, maxY: 0.22, minZ: 0.04, maxZ: 0.07, color: HANDLE },
+  // The vice on the front left of the top, its screw sticking out.
+  { minX: 0.04, maxX: 0.22, minY: 0.74, maxY: 0.9, minZ: 0, maxZ: 0.04, color: B30_IRON },
+  { minX: 0.11, maxX: 0.15, minY: 0.78, maxY: 0.82, minZ: -0.06, maxZ: 0, color: B30_IRON_DARK },
+  // A hammer and a saw on top.
+  { minX: 0.62, maxX: 0.74, minY: 0.92, maxY: 0.98, minZ: 0.28, maxZ: 0.36, color: B30_IRON },
+  { minX: 0.66, maxX: 0.7, minY: 0.92, maxY: 0.95, minZ: 0.36, maxZ: 0.62, color: B30_DARK },
+  { minX: 0.16, maxX: 0.5, minY: 0.92, maxY: 0.935, minZ: 0.6, maxZ: 0.74, color: B30_STEEL },
+  { minX: 0.5, maxX: 0.58, minY: 0.92, maxY: 0.96, minZ: 0.62, maxZ: 0.72, color: B30_DARK },
+];
+// The storage controller: a cabinet with a screen standing on it, its
+// rows of stored things glowing, and a panel of buttons in front.
+const SCREEN_BG = 0x134a42, SCREEN_ROW = 0x8ff5e0, BEZEL = 0x2b2b33;
+PROP_SHAPES.storage_controller = [
+  { minX: 0.1, maxX: 0.9, minY: 0, maxY: 0.5, minZ: 0.2, maxZ: 0.9 },
+  { minX: 0.06, maxX: 0.94, minY: 0.5, maxY: 0.56, minZ: 0.14, maxZ: 0.94, tone: 1.15 },
+  // The screen: a dark bezel, the glass, and four rows lit on it.
+  { minX: 0.1, maxX: 0.9, minY: 0.56, maxY: 1.0, minZ: 0.56, maxZ: 0.72, color: BEZEL },
+  { minX: 0.15, maxX: 0.85, minY: 0.61, maxY: 0.95, minZ: 0.55, maxZ: 0.56, color: SCREEN_BG, glow: true },
+  { minX: 0.2, maxX: 0.62, minY: 0.86, maxY: 0.89, minZ: 0.545, maxZ: 0.55, color: SCREEN_ROW, glow: true },
+  { minX: 0.2, maxX: 0.74, minY: 0.79, maxY: 0.82, minZ: 0.545, maxZ: 0.55, color: SCREEN_ROW, glow: true },
+  { minX: 0.2, maxX: 0.5, minY: 0.72, maxY: 0.75, minZ: 0.545, maxZ: 0.55, color: SCREEN_ROW, glow: true },
+  { minX: 0.2, maxX: 0.68, minY: 0.65, maxY: 0.68, minZ: 0.545, maxZ: 0.55, color: SCREEN_ROW, glow: true },
+  // The button panel, and three lit buttons on it.
+  { minX: 0.2, maxX: 0.8, minY: 0.56, maxY: 0.6, minZ: 0.2, maxZ: 0.42, color: 0x3a3840 },
+  { minX: 0.27, maxX: 0.35, minY: 0.6, maxY: 0.62, minZ: 0.26, maxZ: 0.34, color: 0xffe27a, glow: true },
+  { minX: 0.46, maxX: 0.54, minY: 0.6, maxY: 0.62, minZ: 0.26, maxZ: 0.34, color: 0x4fd8bf, glow: true },
+  { minX: 0.65, maxX: 0.73, minY: 0.6, maxY: 0.62, minZ: 0.26, maxZ: 0.34, color: 0xff6a4a, glow: true },
+];

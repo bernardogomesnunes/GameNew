@@ -475,7 +475,7 @@ BLOCKS.push(
  * storehouse at once — see Game.openStores and DuiltUI.renderStores.
  */
 export const STORAGE_CONTROLLER = 239;
-BLOCKS.push({ id: STORAGE_CONTROLLER, name: 'Storage Controller', glyph: 'controller', color: 0xa5814f, material: 'wood', unlock: null });
+BLOCKS.push({ id: STORAGE_CONTROLLER, name: 'Storage Controller', glyph: 'controller', color: 0xa5814f, shape: 'storage_controller', material: 'wood', unlock: null });
 export const STORAGE_INTERFACE = 526;
 BLOCKS.push({ id: STORAGE_INTERFACE, name: 'Storage Interface', glyph: 'controller', color: 0x91b9a1, material: 'wood', unlock: null });
 
@@ -930,7 +930,7 @@ BLOCKS.push(
 // IMP-6, phase 1: "carpenter planer should be placed and give more planks".
 export const PLANING_BENCH = 527;
 BLOCKS.push(
-  { id: PLANING_BENCH, name: 'Planing Bench', glyph: 'planks', color: 0xb98a5a, material: 'wood', station: 'planing_bench', unlock: null },
+  { id: PLANING_BENCH, name: 'Planing Bench', glyph: 'planks', color: 0xb98a5a, shape: 'planing_bench', material: 'wood', station: 'planing_bench', unlock: null },
 );
 
 // IMP-10, step 3: "plane mallet should be placed". The mallet fits joints, so
@@ -945,7 +945,7 @@ BLOCKS.push(
 // recipe from Age 3 on is made; the bench from the menu keeps Ages 1 and 2.
 export const WORKBENCH = 529;
 BLOCKS.push(
-  { id: WORKBENCH, name: 'Workbench', glyph: 'planks', color: 0x9c7348, material: 'wood', station: 'workbench', unlock: null },
+  { id: WORKBENCH, name: 'Workbench', glyph: 'planks', color: 0x9c7348, shape: 'workbench', material: 'wood', station: 'workbench', unlock: null },
 );
 
 // CRAFT3D-1: the carpentry counter, where furniture is sawn and fitted
