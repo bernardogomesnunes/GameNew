@@ -199,6 +199,9 @@ export class DuiltUI {
         <!-- A barracks training somebody (asked for directly: "add the
              progress in the ui too"): who's next out, a bar, the time left. -->
         <button type="button" class="vital vital-training" id="vital-training" hidden></button>
+        <!-- IMP-22: a round on, fought out of sight: how many are left, and
+             an arrow to the nearest with how far (owner: "I don't see them"). -->
+        <div class="vital vital-war" id="vital-war" role="status" hidden><span class="war-arrow"></span><span class="war-text"></span></div>
         <button class="vital-eat" id="btn-eat" hidden>Eat</button>
         <!--
           Population sits beside hunger because it is the same kind of fact:
@@ -1146,6 +1149,26 @@ export class DuiltUI {
         this.bus.emit('toast', { kind: 'xp', title: `Training ${names.length === 1 ? 'a soldier' : `${names.length} soldiers`}`, body: names.join(', ') });
       });
     }
+  }
+
+  /**
+   * IMP-22: the round being fought. `track` is duilt/warTracker.js's (null
+   * hides it). Text is rewritten only when it changes; the arrow turns in
+   * 10 degree steps.
+   */
+  renderWar(track, round) {
+    const box = this.q('#vital-war');
+    if (!box) return;
+    const deg = track ? Math.round((track.turn * 180) / Math.PI / 10) * 10 : 0;
+    const key = track ? `${round}:${track.left}:${track.total}:${Math.round(track.dist / 5) * 5}:${deg}` : '';
+    if (key === this.warKey) return;
+    this.warKey = key;
+    box.hidden = !track;
+    if (!track) return;
+    const far = Math.round(track.dist);
+    box.querySelector('.war-text').textContent = `Round ${round} · ${track.left} of ${track.total} left · ${far} m`;
+    box.querySelector('.war-arrow').style.transform = `rotate(${deg}deg)`;
+    box.title = `The nearest attacker is ${far} blocks away; the arrow points to them from where you look`;
   }
 
   /** The army's banner: how many are left, and what they're doing. Hidden until you have one. */
