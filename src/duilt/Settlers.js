@@ -33,6 +33,13 @@ const centreOf = (r) => ({
 });
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+/**
+ * A villager's health. Owner, 8 November: a round's attackers reach the
+ * village "and start killing everyone"; villagers can die. Out of a fight
+ * they heal back to full.
+ */
+export const VILLAGER_HP = 10;
+const VILLAGER_HEAL = 0.5; // a second
 
 /**
  * Recover the floor at spawn/load or after construction. This is not a
@@ -182,6 +189,12 @@ export class Settlers {
       const role = this.jobs?.assignment?.(p.id)?.role;
       p.job = open ? (role === 'builder' || role === 'hauler' ? role : JOB_FOR_BUILDING[types.get(p.workId)] ?? null) : null;
     }
+    for (const p of this.people) {
+      if (!(p.hp > 0)) p.hp = VILLAGER_HP;
+      if (p.hurt > 0) p.hurt = Math.max(0, p.hurt - dtSeconds);
+      if (p.calm > 0) p.calm -= dtSeconds;
+      else if (p.hp < VILLAGER_HP) p.hp = Math.min(VILLAGER_HP, p.hp + VILLAGER_HEAL * dtSeconds);
+    }
     for (const p of this.people) this.walk(p, dtSeconds);
     this.closeDoors(dtSeconds);
   }
@@ -207,6 +220,7 @@ export class Settlers {
       atWork: false,
       // Nobody arrives hungry; the first meal after they get here decides.
       hungry: false,
+      hp: VILLAGER_HP,
     };
     this.people.push(person);
     this.assignWork(person);
@@ -631,6 +645,20 @@ export class Settlers {
     for (const p of this.people) {
       if (p.workId != null && !alive.has(p.workId)) { p.workId = null; p.target = null; p.wait = 1; }
     }
+  }
+
+  /**
+   * A blow on a villager (a round's attacker). True when it killed them:
+   * they are gone, and their bed is free for whoever comes next.
+   */
+  hurt(person, hits) {
+    if (!this.people.includes(person)) return false;
+    person.hp = (person.hp > 0 ? person.hp : VILLAGER_HP) - hits;
+    person.hurt = 0.4;
+    person.calm = 8; // no healing until 8 s after the last blow
+    if (person.hp > 0) return false;
+    this.people = this.people.filter((p) => p !== person);
+    return true;
   }
 
   // ---- persistence ---------------------------------------------------------
