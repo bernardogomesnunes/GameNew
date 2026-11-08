@@ -27,6 +27,5 @@ console.log('PASS a villager takes blows and heals once the fight is over');
 assert.equal(settlers.hurt(ada, 99), true, 'killed');
 assert.ok(!settlers.people.includes(ada), 'gone from the village');
 assert.equal(settlers.people.length, 1);
-assert.deepEqual(events.filter(([n]) => n === 'settler:died').map(([, e]) => e.settler.name), ['Ada']);
 assert.equal(settlers.hurt(ada, 1), false, 'the dead take no more blows');
-console.log('PASS at 0 a villager dies: gone, the bed free, and word of it');
+console.log('PASS at 0 a villager dies: gone, the bed free');

@@ -658,7 +658,6 @@ export class Settlers {
     person.calm = 8; // no healing until 8 s after the last blow
     if (person.hp > 0) return false;
     this.people = this.people.filter((p) => p !== person);
-    this.bus?.emit('settler:died', { settler: person, population: this.population });
     return true;
   }
 
