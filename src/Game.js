@@ -11,6 +11,7 @@ import { clearPlan, clearCells, cellBounds } from './tools/ClearTool.js';
 import { CLEARS_BY_ID } from './config/clears.js';
 import { SelectionHighlight } from './tools/SelectionHighlight.js';
 import { BuildGhost } from './tools/BuildGhost.js';
+import { warTrack } from './duilt/warTracker.js';
 import { loadModels } from './render/Models.js';
 import { SettlerView } from './render/SettlerView.js';
 import { CloudAuth } from './net/CloudAuth.js';
@@ -5178,6 +5179,17 @@ export class Game {
     }
   }
 
+  /** IMP-22: the round's attackers from where you are, for the HUD; null when no round is on. */
+  warTracking() {
+    const band = this.duilt?.war.stage === 'fighting' ? this.wanderers?.warParty?.band : null;
+    if (!band || !this.player) return null;
+    // Flat look direction from the yaw (lookDirection() makes a new vector each call).
+    const yaw = this.player.yaw;
+    this._warLook ??= { x: 0, z: 0 };
+    this._warLook.x = -Math.sin(yaw); this._warLook.z = -Math.cos(yaw);
+    return warTrack(band, this.player.position, this._warLook);
+  }
+
   /** The round that's due, at the edge of your land on the Stone Kingdom's side. */
   sendRound() {
     const war = this.duilt.war;
@@ -7951,6 +7963,7 @@ export class Game {
         this.dayCycle.nightSight = this.duilt.wearing('night');
         this.ui?.duiltUI?.renderBoosts();
         this.ui?.duiltUI?.renderTraining();
+        this.ui?.duiltUI?.renderWar(this.warTracking(), this.duilt.war.round);
         this.ui?.duiltUI?.renderArmy();
         this.player.jumpScale = white ? WHITE_RING_JUMP : 1;
       }
