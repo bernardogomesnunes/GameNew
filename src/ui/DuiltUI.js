@@ -201,7 +201,7 @@ export class DuiltUI {
         <button type="button" class="vital vital-training" id="vital-training" hidden></button>
         <!-- IMP-22: a round on, fought out of sight: how many are left, and
              an arrow to the nearest with how far (owner: "I don't see them"). -->
-        <div class="vital vital-war" id="vital-war" role="status" hidden><span class="war-arrow"></span><span class="war-text"></span></div>
+        <div class="vital vital-war" id="vital-war" role="status" hidden><span class="war-arrow"></span><span class="war-text"></span><span class="war-bar"><i></i></span></div>
         <button class="vital-eat" id="btn-eat" hidden>Eat</button>
         <!--
           Population sits beside hunger because it is the same kind of fact:
@@ -1167,6 +1167,9 @@ export class DuiltUI {
     if (!track) return;
     const far = Math.round(track.dist);
     box.querySelector('.war-text').textContent = `Round ${round} · ${track.left} of ${track.total} left · ${far} m`;
+    // IMP-27 (owner, 8 November): "a bar on top, that empties when a soldier
+    // is killed": full when the round arrives, empty when the last one falls.
+    box.querySelector('.war-bar i').style.width = `${Math.round((100 * track.left) / Math.max(1, track.total))}%`;
     box.querySelector('.war-arrow').style.transform = `rotate(${deg}deg)`;
     box.title = `The nearest attacker is ${far} blocks away; the arrow points to them from where you look`;
   }
