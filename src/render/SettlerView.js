@@ -17,7 +17,7 @@ import { modelKit, Crowds } from './Models.js';
  * on a phone.
  */
 
-const MAX = 64;
+export const MAX = 64;
 /**
  * The small parts of a person (docs/history/plan-look-and-sound.md, section 5: "faces:
  * eyes and a mouth ... hands ... outfits that say who they are ... a weapon or
