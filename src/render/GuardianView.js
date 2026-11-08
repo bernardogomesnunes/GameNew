@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { dress, poseBone } from './Models.js';
+import { STRIKE_SHOWS } from '../world/Guardian.js';
 
 /**
  * The guardian, drawn (Phase 7d): a few boxes each, legs that swing as it
@@ -102,6 +103,18 @@ export class GuardianView {
     legs.forEach((l, i) => { l.rotation.x = (i === 0 || i === 3 ? swing : -swing); });
     if (model) swingLegs(model.bones, swing);
     group.position.y += Math.sin(this.clock * 2) * 0.03 + (guardian.moving ? Math.abs(Math.sin(this.clock * 12)) * 0.06 : 0);
+    // A blow: it rears, then drives forward head down at what it strikes
+    // (owner, 8 November: it "stays in place and they die").
+    const k = guardian.striking > 0 ? 1 - guardian.striking / STRIKE_SHOWS : 0;
+    const lunge = k > 0 ? Math.sin(k * Math.PI) : 0;
+    const rear = k > 0 && k < 0.35 ? Math.sin((k / 0.35) * Math.PI) : 0;
+    group.position.x += Math.sin(guardian.facing) * lunge * 0.55;
+    group.position.z += Math.cos(guardian.facing) * lunge * 0.55;
+    group.position.y += rear * 0.25;
+    if (model) {
+      poseBone(model.bones.body, -rear * 0.35 + lunge * 0.12);
+      poseBone(model.bones.head, -lunge * 0.7);
+    } else group.rotation.x = -rear * 0.3 + lunge * 0.15;
   }
 
   dispose() {

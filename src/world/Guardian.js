@@ -44,6 +44,12 @@ const COUNTER = 2;
 const LEASH = 40;
 /** IMP-5: how long it keeps going for what you last struck, and how fast it closes in. */
 const FOCUS_HASTE = 1.3;
+/**
+ * How long a blow shows as a lunge (owner, 8 November: "Aurelion does not
+ * attack them, it stays in place and they die"): its blows landed with
+ * nothing to see.
+ */
+export const STRIKE_SHOWS = 0.4;
 const TALL = 2;
 
 export class Guardian {
@@ -64,6 +70,8 @@ export class Guardian {
     this.facing = 0;
     this.moving = false;
     this.hurt = 0;
+    /** Seconds left of the lunge that shows a blow (GuardianView). */
+    this.striking = 0;
     /** The enemy you last struck (set by `focus`), so it goes for that one first. */
     this.focused = null;
   }
@@ -95,6 +103,7 @@ export class Guardian {
   tick(dt, player, enemies = [], on = {}) {
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.hurt = Math.max(0, this.hurt - dt);
+    this.striking = Math.max(0, this.striking - dt);
     if (this.downed > 0) {
       this.downed -= dt;
       if (this.downed <= 0) {
@@ -113,13 +122,15 @@ export class Guardian {
       this.y = groundAt(this.world, this.x, this.z, player.y + 2, TALL) ?? player.y;
     }
 
-    // Who to go after.
+    // Who to go after. Told to attack, anything near it or near you (owner,
+    // 8 November: it "stays in place and they die" round you).
     const centre = this.mode === 'attack' ? this : this.mode === 'follow' ? player : this;
     const range = this.mode === 'attack' ? HUNT_RANGE : GUARD_RANGE;
     let target = null, best = range;
     for (const e of enemies) {
       if (e.dead) continue;
-      const d = Math.hypot(e.x - centre.x, e.z - centre.z);
+      let d = Math.hypot(e.x - centre.x, e.z - centre.z);
+      if (this.mode === 'attack') d = Math.min(d, Math.hypot(e.x - player.x, e.z - player.z));
       if (d < best) { best = d; target = e; }
     }
     // What you struck comes first. It lapses when it dies, leaves the list of
@@ -136,8 +147,11 @@ export class Guardian {
       const d = Math.hypot(target.x - this.x, target.z - this.z);
       if (d > this.spec.reach * 0.8) this.stepTowards(target.x, target.z, dt, this.spec.speed * (hasty ? FOCUS_HASTE : 1.15));
       else this.moving = false;
+      // Face what it fights, moving or not.
+      this.facing = Math.atan2(target.x - this.x, target.z - this.z);
       if (d <= this.spec.reach && this.cooldown <= 0) {
         this.cooldown = this.spec.every;
+        this.striking = STRIKE_SHOWS;
         on.strike?.(target, this.spec.hits);
         this.hp -= COUNTER;
         this.hurt = 0.25;
