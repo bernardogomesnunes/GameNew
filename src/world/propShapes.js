@@ -66,18 +66,39 @@ export const PROP_SHAPES = {
   rug: [
     { minX: 0.03, maxX: 0.97, minY: 0, maxY: 0.04, minZ: 0.03, maxZ: 0.97 },
   ],
-  // A door, shut, across the middle of its cell, hinged at x = 0. The
-  // bottom half has a handle on both faces; the top half a window.
+  // A door, shut, across the middle of its cell, hinged at x = 0. IMP-24
+  // (owner, 8 November: "Doors need better 3d too, they look dull and silly.
+  // They need detail."): a frame of stiles and rails, recessed panels a shade
+  // lighter, iron hinge straps across both faces, and an iron handle on a
+  // lock plate. The top half has a window: glass, crossed by glazing bars.
   door: [
-    { minX: 0, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
-    { minX: 0.78, maxX: 0.9, minY: 0.86, maxY: 0.96, minZ: DOOR_Z0 - 0.06, maxZ: DOOR_Z1 + 0.06 },
+    { minX: 0, maxX: 0.14, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.86, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.14, maxX: 0.86, minY: 0, maxY: 0.12, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.14, maxX: 0.86, minY: 0.5, maxY: 0.6, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    // Two panels, set back into the frame.
+    { minX: 0.14, maxX: 0.86, minY: 0.12, maxY: 0.5, minZ: DOOR_Z0 + 0.04, maxZ: DOOR_Z1 - 0.04, tone: 1.08 },
+    { minX: 0.14, maxX: 0.86, minY: 0.6, maxY: 1, minZ: DOOR_Z0 + 0.04, maxZ: DOOR_Z1 - 0.04, tone: 1.08 },
+    // Hinge straps, iron, across both faces from the hinge side.
+    { minX: 0, maxX: 0.36, minY: 0.16, maxY: 0.22, minZ: DOOR_Z0 - 0.02, maxZ: DOOR_Z1 + 0.02, color: 0x3a3632 },
+    { minX: 0, maxX: 0.36, minY: 0.78, maxY: 0.84, minZ: DOOR_Z0 - 0.02, maxZ: DOOR_Z1 + 0.02, color: 0x3a3632 },
+    // The lock plate and the handle, on both faces.
+    { minX: 0.76, maxX: 0.84, minY: 0.66, maxY: 0.84, minZ: DOOR_Z0 - 0.02, maxZ: DOOR_Z1 + 0.02, color: 0x3a3632 },
+    { minX: 0.74, maxX: 0.86, minY: 0.86, maxY: 0.92, minZ: DOOR_Z0 - 0.07, maxZ: DOOR_Z1 + 0.07, color: 0x2b2725 },
   ],
   door_top: [
-    { minX: 0, maxX: 0.2, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
-    { minX: 0.8, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
-    { minX: 0.2, maxX: 0.8, minY: 0, maxY: 0.3, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
-    { minX: 0.2, maxX: 0.8, minY: 0.8, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1 },
-    { minX: 0.47, maxX: 0.53, minY: 0.3, maxY: 0.8, minZ: DOOR_Z0 + 0.06, maxZ: DOOR_Z1 - 0.06 },
+    { minX: 0, maxX: 0.14, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.86, maxX: 1, minY: 0, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.14, maxX: 0.86, minY: 0.88, maxY: 1, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    { minX: 0.14, maxX: 0.86, minY: 0.3, maxY: 0.38, minZ: DOOR_Z0, maxZ: DOOR_Z1, tone: 0.86 },
+    // A panel under the window.
+    { minX: 0.14, maxX: 0.86, minY: 0, maxY: 0.3, minZ: DOOR_Z0 + 0.04, maxZ: DOOR_Z1 - 0.04, tone: 1.08 },
+    // The window: glass, and glazing bars across it.
+    { minX: 0.14, maxX: 0.86, minY: 0.38, maxY: 0.88, minZ: DOOR_Z0 + 0.07, maxZ: DOOR_Z1 - 0.07, color: 0xa9d8d2, pane: true },
+    { minX: 0.47, maxX: 0.53, minY: 0.38, maxY: 0.88, minZ: DOOR_Z0 + 0.03, maxZ: DOOR_Z1 - 0.03, tone: 0.86 },
+    { minX: 0.14, maxX: 0.86, minY: 0.6, maxY: 0.66, minZ: DOOR_Z0 + 0.03, maxZ: DOOR_Z1 - 0.03, tone: 0.86 },
+    // The top hinge strap.
+    { minX: 0, maxX: 0.36, minY: 0.12, maxY: 0.18, minZ: DOOR_Z0 - 0.02, maxZ: DOOR_Z1 + 0.02, color: 0x3a3632 },
   ],
 };
 
@@ -176,6 +197,7 @@ PROP_SHAPES.door_open_top = PROP_SHAPES.door_top.map(swing);
 
 function swing(b) {
   return {
+    ...b,
     minX: Math.max(0, b.minZ - DOOR_Z0), maxX: b.maxZ - DOOR_Z0,
     minY: b.minY, maxY: b.maxY,
     minZ: b.minX, maxZ: b.maxX,
