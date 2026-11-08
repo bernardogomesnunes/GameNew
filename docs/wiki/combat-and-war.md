@@ -81,7 +81,9 @@ The war begins the moment you reach **Age 10**, whichever ring you bear. The wal
 - The first round comes half a game day after the declaration. Rounds come 1.5 game days apart.
 - A war horn sounds about a minute of play before each round, saying how many are coming and from where.
 - You can sound your own **War Horn** (2 Hide, 1 Gold, 1 Planks; Age 10) to call the next round early.
-- A round you lose comes again a day later. There is no game over. Raiders loot a share of your storehouses.
+- Each round marches into your village. The attackers rob a storehouse, then turn on whoever is left: your soldiers, your villagers and you. They fight to the end: a round is won only when every one of them is dead.
+- Villagers have 10 health and heal once a fight has passed them by. A villager who is killed is gone, and their bed waits for the next to come.
+- A round you lose (you fall) comes again a day later. There is no game over. Raiders loot a share of your storehouses.
 - A round you win pays gold: 6 for round 1, up to 24 for round 10.
 - Forge the **Black Ring** and the Stone King calls his army home. The war is off. That is the dark path.
 

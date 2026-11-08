@@ -5506,6 +5506,13 @@ export class Game {
 
   /** A raider's blow on one of your soldiers — or one of your army. */
   soldierHit(p, soldier, hits) {
+    // A villager (owner, 8 November: the raid "starts killing everyone").
+    if (this.duilt?.settlers.people.includes(soldier)) {
+      if (this.duilt.settlers.hurt(soldier, hits)) {
+        this.ui?.toast({ kind: 'xp', title: `${soldier.name ?? 'A villager'} was killed by the raiders`, body: 'Their bed is free for the next to come.' });
+      }
+      return;
+    }
     if (soldier.kind === 'warrior') {
       if (this.duilt.army.hurt(soldier, hits)) this.ui?.duiltUI?.renderArmy?.();
       return;
@@ -8203,6 +8210,7 @@ export class Game {
         onThrow: (p, at) => this.enemyThrows(p, at),
         // Your soldiers stand between them and you.
         foes: () => [...(this.duilt?.defenders.soldiers ?? []), ...(this.duilt?.army.field ?? [])],
+        villagers: () => (this.duilt && !this.duilt.sandbox ? this.duilt.settlers.people : []),
         onFoe: (p, soldier, hits) => this.soldierHit(p, soldier, hits),
         // The Sky Kingdom: there while it stands, on the dark path (and in
         // Creative, to look at); its people fight the Black Ring.
