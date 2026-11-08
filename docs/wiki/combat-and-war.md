@@ -57,6 +57,7 @@ Build a **Barracks**. A new one holds 10 soldiers; evolve it for 20, then 40. A 
 | Archer | 3 food, a Bow, 20 Arrows | 14 | Arrow up to 20 blocks, 3 damage, every 2 seconds |
 | Catapult crew | 5 food, a Catapult, 10 Stone | 16 | Sets up a catapult in front of the barracks and lobs stones up to 38 blocks |
 
+- They defend the town round their barracks: warriors and swordsmen meet attackers that come within 16 blocks of their post and chase no further than 22. Archers shoot from their post at anything within 20 blocks and do not walk out.
 - A fallen soldier is gone. Training another costs the same again.
 - Hungry soldiers hit at 60% until fed.
 - A bar on your screen shows who is nearest to finishing training.
