@@ -25,19 +25,41 @@ export function tuftHash(x, z, salt = 0) {
   return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
 }
 
+/**
+ * IMP-29 (owner, 8 November: "Grass looks shitty, it's just two points, I
+ * would like it to be detailed, like real grass, some taller, some small,
+ * with thin leaves"). One tuft: BLADES thin blades scattered over a small
+ * patch, each a tapered quad to its middle and a point above, bending
+ * outward, some short and some tall. Root dark, tip light and a little
+ * warmer, as grass is. 3 triangles a blade.
+ */
+export const BLADES = 11;
+
 function tuftGeometry() {
-  // Five blades, each a tapered quad standing on the ground, fanned round.
   const pos = [], col = [], idx = [];
-  const blades = [[0, 0.42, 0.13], [1.25, 0.3, 0.11], [2.5, 0.48, 0.12], [3.75, 0.36, 0.1], [5, 0.44, 0.12]];
-  for (const [a, h, w] of blades) {
-    const cx = Math.cos(a) * w, cz = Math.sin(a) * w;
-    const lean = 0.08;
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < BLADES; i++) {
+    // Where it grows, which way it faces and leans, how tall and thin.
+    const ra = rnd() * Math.PI * 2, rr = Math.sqrt(rnd()) * 0.22;
+    const bx = Math.cos(ra) * rr, bz = Math.sin(ra) * rr;
+    const face = rnd() * Math.PI * 2, fx = Math.cos(face), fz = Math.sin(face);
+    const lean = ra + (rnd() - 0.5) * 1.2, lx = Math.cos(lean), lz = Math.sin(lean);
+    const tall = i % 4 === 0 ? 0.55 + rnd() * 0.25 : 0.18 + rnd() * 0.3;
+    const w = 0.022 + rnd() * 0.016, bend = (0.1 + rnd() * 0.12) * tall;
+    const mid = tall * 0.55;
     const b = pos.length / 3;
-    pos.push(-cx, 0, -cz, cx, 0, cz, cx * 0.25 + lean * Math.sin(a), h, cz * 0.25 - lean * Math.cos(a), -cx * 0.25 + lean * Math.sin(a), h, -cz * 0.25 - lean * Math.cos(a));
-    // Root to tip a little lighter than they were: the tufts read as the
-    // same fresh grass as the ground, not dark spikes on it.
-    col.push(0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 1.28, 1.26, 1.12, 1.28, 1.26, 1.12);
-    idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+    // Root (2), middle (2), tip (1): the middle bends a little, the tip more.
+    pos.push(
+      bx - fx * w, 0, bz - fz * w,
+      bx + fx * w, 0, bz + fz * w,
+      bx + lx * bend * 0.35 + fx * w * 0.6, mid, bz + lz * bend * 0.35 + fz * w * 0.6,
+      bx + lx * bend * 0.35 - fx * w * 0.6, mid, bz + lz * bend * 0.35 - fz * w * 0.6,
+      bx + lx * bend, tall, bz + lz * bend,
+    );
+    const tip = 1.2 + rnd() * 0.15;
+    col.push(0.62, 0.66, 0.6, 0.62, 0.66, 0.6, 0.98, 1, 0.95, 0.98, 1, 0.95, tip, tip * 1.02, tip * 0.82);
+    idx.push(b, b + 1, b + 2, b, b + 2, b + 3, b + 3, b + 2, b + 4);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -64,8 +86,10 @@ export class GrassView {
           #ifdef USE_INSTANCING
             vec2 at = vec2(instanceMatrix[3].x, instanceMatrix[3].z);
             float sway = sin(uTime * 1.6 + at.x * 0.7 + at.y * 0.9) + 0.5 * sin(uTime * 2.7 + at.y * 1.3);
-            transformed.x += sway * 0.05 * position.y;
-            transformed.z += sway * 0.035 * position.y;
+            // The tip bends most: a blade sways from its root.
+            float bendY = position.y * position.y * 2.2;
+            transformed.x += sway * 0.05 * bendY;
+            transformed.z += sway * 0.035 * bendY;
           #endif`);
     };
     this.material = material;
