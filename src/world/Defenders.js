@@ -21,7 +21,12 @@ import { UNITS_BY_ID, LEGACY_UNIT, SOLDIER_CAPS } from '../config/soldiers.js';
  * enemies and what a blow or an arrow does to one.
  */
 
-export const SOLDIER = { hp: 24, hits: 4, reach: 1.9, every: 1.1, speed: 3.2, range: 28, leash: 44 };
+/**
+ * `range`: they meet what comes within this of their post; `leash`: they chase
+ * no further out. Owner, 8 November: "They should raid my city, not die 40
+ * blocks out. They should come and attack my soldiers" (were 28 and 44).
+ */
+export const SOLDIER = { hp: 24, hits: 4, reach: 1.9, every: 1.1, speed: 3.2, range: 16, leash: 22 };
 export const TOWER_ARCHER = { range: 26, every: 2.2, damage: 3 };
 /** A barracks trains a soldier in this much of a game day. Melee stats for a soldier of no unit (the showcase's). */
 export const TRAIN_DAYS = 0.15;
@@ -357,20 +362,23 @@ export class Defenders {
   }
 
   /**
-   * A barracks archer: out from its post towards whatever's coming, only as
-   * far as it takes to have it in range, and shooting from there.
+   * A barracks archer: shoots from its post at whatever comes in range, and
+   * does not walk out to meet it (owner, 8 November: "They should raid my
+   * city, not die 40 blocks out"). Off its post (back from a stroll), it
+   * walks back first.
    */
   bowman(s, u, dt, enemies) {
     const r = u.ranged;
     s.cooldown = Math.max(0, s.cooldown - dt);
     s.hurt = Math.max(0, s.hurt - dt);
-    const target = this.nearestTo(s.post, enemies, SOLDIER.range);
+    const target = this.nearestTo(s, enemies, r.range);
     s.foe = target;
-    const away = Math.hypot(s.x - s.post.x, s.z - s.post.z);
-    if (!target || away >= SOLDIER.leash) return this.standEasy(s, dt, u);
+    if (!target) return this.standEasy(s, dt, u);
     const d = Math.hypot(target.x - s.x, target.z - s.z);
-    if (d > r.range * 0.85) { s.target = { x: target.x, z: target.z }; this.step(s, target.x, target.z, dt, u.speed); }
+    const away = Math.hypot(s.x - s.post.x, s.z - s.post.z);
+    if (away > 2) { s.target = { x: s.post.x, z: s.post.z }; this.step(s, s.post.x, s.post.z, dt, u.speed); }
     else { s.target = null; s.speed = 0; }
+    s.stroll = null;
     s.facing = Math.atan2(target.x - s.x, target.z - s.z);
     if (d <= r.range && s.cooldown <= 0) {
       s.cooldown = r.every;
