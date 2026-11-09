@@ -39,6 +39,9 @@ const herd = (kinds) => kinds.flatMap(([type, n]) => Array.from({ length: n }, (
 ok('chickens give eggs, and meat', JSON.stringify(penProduce(pen, herd([['chicken', 2]]))) === JSON.stringify({ egg: 2, raw_meat: 1 }));
 ok('sheep wool, and meat; cows milk, and meat', penProduce(pen, herd([['sheep', 1]])).raw_meat === 1 && penProduce(pen, herd([['cow', 3]])).raw_meat === 1 && penProduce(pen, herd([['cow', 3]])).milk === 2);
 ok('pigs as before', penProduce(pen, herd([['pig', 3]])).raw_meat === 2);
+// Owner, 9 November: "Would be nice for the farm to generate a bit if it has cows."
+ok('cows give a little hide too: one a cycle, however many', penProduce(pen, herd([['cow', 1]])).hide === 1 && penProduce(pen, herd([['cow', 3]])).hide === 1);
+ok('no cows, no hide', !penProduce(pen, herd([['sheep', 2], ['pig', 2], ['chicken', 2]])).hide);
 ok('never more than two meat a cycle, however full the pen', penProduce(pen, herd([['pig', 3], ['cow', 2], ['sheep', 2], ['chicken', 2]])).raw_meat === 2);
 
 // --- sorting a store ---------------------------------------------------------------

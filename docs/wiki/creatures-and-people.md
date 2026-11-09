@@ -16,7 +16,7 @@ Animals roam the wild. Hunt them for meat and hides, or keep some in a [Pen](bui
 | Chicken | Plains, oak forest, wetland | 2 | 1 raw meat, 1 to 3 feather | Can be penned |
 | Horse | Plains | 12 | 2 to 3 raw meat, 1 to 2 hide | Bolts. Tame it, then ride it |
 
-**Keeping animals:** fence in an area with a gate, hold food, lead them in, and shut the gate. A claimed Pen makes meat and its animals’ eggs, milk or wool. The Pen is an Age 4 goal.
+**Keeping animals:** fence in an area with a gate, hold food, lead them in, and shut the gate. A claimed Pen makes meat and its animals’ eggs, milk or wool, and 1 hide a cycle while it has cows. The Pen is an Age 4 goal.
 
 **Taming a horse:** hold fruit or vegetables and Place on it. A tamed horse can be ridden and can pull a cart. See [Vehicles](vehicles.md).
 
