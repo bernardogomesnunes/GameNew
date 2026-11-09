@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { dress, poseBone } from './Models.js';
+import { STRIKE_SHOWS } from '../world/Guardian.js';
 
 /**
  * The guardian, drawn (Phase 7d): a few boxes each, legs that swing as it
@@ -77,9 +78,20 @@ export class GuardianView {
     this.scene = scene;
     this.shown = null;
     this.clock = 0;
+    // Aurelion's beam (owner, 8 November: "fire a beam out of its mouth"):
+    // one bright bar from its mouth to what it hits, and a flash there.
+    const glow = (color) => new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.beam = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0, 0.5), glow(0xfff1b8));
+    this.flash = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), glow(0xffe27a));
+    this.beam.visible = this.flash.visible = false;
+    this.beam.frustumCulled = this.flash.frustumCulled = false;
+    scene.add(this.beam, this.flash);
+    this._from = new THREE.Vector3();
+    this._to = new THREE.Vector3();
   }
 
   update(guardian, dt = 1 / 60) {
+    this.beam.visible = this.flash.visible = false;
     if (!guardian || guardian.downed > 0) {
       if (this.shown) this.shown.group.visible = false;
       return;
@@ -102,10 +114,45 @@ export class GuardianView {
     legs.forEach((l, i) => { l.rotation.x = (i === 0 || i === 3 ? swing : -swing); });
     if (model) swingLegs(model.bones, swing);
     group.position.y += Math.sin(this.clock * 2) * 0.03 + (guardian.moving ? Math.abs(Math.sin(this.clock * 12)) * 0.06 : 0);
+    // A blow: it rears, then drives forward head down at what it strikes
+    // (owner, 8 November: it "stays in place and they die").
+    const k = guardian.striking > 0 ? 1 - guardian.striking / STRIKE_SHOWS : 0;
+    const lunge = k > 0 ? Math.sin(k * Math.PI) : 0;
+    const rear = k > 0 && k < 0.35 ? Math.sin((k / 0.35) * Math.PI) : 0;
+    group.position.x += Math.sin(guardian.facing) * lunge * 0.55;
+    group.position.z += Math.cos(guardian.facing) * lunge * 0.55;
+    group.position.y += rear * 0.25;
+    if (model) {
+      poseBone(model.bones.body, -rear * 0.35 + lunge * 0.12);
+      poseBone(model.bones.head, -lunge * 0.7);
+    } else group.rotation.x = -rear * 0.3 + lunge * 0.15;
+    // The beam, from its mouth to where it struck, fading as it goes.
+    const b = guardian.beam;
+    if (b) {
+      const fade = Math.max(0, Math.min(1, b.t / STRIKE_SHOWS));
+      this._from.set(group.position.x + Math.sin(guardian.facing) * 0.95, group.position.y + 1.45, group.position.z + Math.cos(guardian.facing) * 0.95);
+      this._to.set(b.x, b.y + 1, b.z);
+      const len = this._from.distanceTo(this._to);
+      if (len > 0.1) {
+        this.beam.position.copy(this._from);
+        this.beam.lookAt(this._to);
+        const w = 0.06 + 0.1 * fade;
+        this.beam.scale.set(w, w, len);
+        this.beam.material.opacity = 0.35 + 0.65 * fade;
+        this.beam.visible = true;
+        const f = 0.3 + 0.5 * (1 - fade);
+        this.flash.position.copy(this._to);
+        this.flash.scale.setScalar(f);
+        this.flash.rotation.y = this.clock * 6;
+        this.flash.material.opacity = fade;
+        this.flash.visible = true;
+      }
+    }
   }
 
   dispose() {
     if (this.shown) this.scene.remove(this.shown.group);
     this.shown = null;
+    for (const m of [this.beam, this.flash]) { this.scene.remove(m); m.geometry.dispose(); m.material.dispose(); }
   }
 }
