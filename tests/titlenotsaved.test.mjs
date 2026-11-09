@@ -24,6 +24,7 @@ function fake() {
     async sendUnsent() { g.sentHeld++; return true; },
     dropSafeCopy() {},
     uploadFailed() {}, uploadLanded() {},
+    async checkWorldSession() { return true; },
     ui: null,
   };
   return g;
