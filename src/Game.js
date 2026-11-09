@@ -8061,6 +8061,14 @@ export class Game {
     // The showcase holds the hour it was set to, for its pictures.
     if ((playing || watchingTrainingPost) && !this.showcase && !this.title) this.dayCycle.advance(dt);
     if (watchingTrainingPost) this.syncDefence();
+    // A station's work (the forge, the mills: IMP-15) and the crucible's
+    // melting go on while a panel is open over them (owner, 9 November: "The
+    // progress bar of the forge only loads if I close it and open it"). The
+    // crucible close-up ticks its own pot (CrucibleMachine), so not twice.
+    if (!playing && this.duilt && !this.duilt.sandbox && this.ui?.isAnyPanelOpen?.()) {
+      this.duilt.stationWork.tick(dt);
+      if (!this.closeUp?.active) this.duilt.crucibles.tick(dt);
+    }
     if (this.duilt) {
       this.duilt.dayTime = this.dayCycle.time;
       // The world's own count of days, for saplings to grow by.

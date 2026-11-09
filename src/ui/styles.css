@@ -820,6 +820,9 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 .vital-training { gap: 5px; padding: 4px 8px; font-size: 11px; font-weight: 700; color: #3c4650; font-variant-numeric: tabular-nums; cursor: pointer; }
 .vital-training[hidden] { display: none; }
 /* IMP-22: the round being fought, and an arrow to the nearest attacker. */
+.crucible-bar .melt-row { display: flex; align-items: center; gap: 8px; margin: 4px 0 8px; font-size: 12px; }
+.crucible-bar .melt-bar { flex: 1; min-width: 80px; }
+.crucible-bar .melt-bar i { background: #ff8a3a; }
 #vitals .vital.vital-war { gap: 6px; padding: 4px 8px; font-size: 11px; font-weight: 700; color: #fff4ea; background: #8a2a20; font-variant-numeric: tabular-nums; }
 #vitals .vital-war[hidden] { display: none; }
 .vital-war .war-bar { width: 64px; height: 8px; background: rgba(0, 0, 0, 0.45); border: 1px solid #2b1d12; flex: none; }
