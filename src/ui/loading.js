@@ -50,6 +50,18 @@ export function loadingShow(label) {
   loadingProgress(6, label);
 }
 
+/**
+ * Steps the screen aside while the game asks something on the way in, and
+ * back after (Game.takeWorldSession). It sits over the whole page, so a
+ * question drawn by the game's own interface would be under it, out of sight
+ * (owner, 9 November: a relaunch "stays on 10 per cent of the bar").
+ */
+export function loadingAside(aside) {
+  if (typeof document === 'undefined') return;
+  const root = el();
+  if (root) root.style.visibility = aside ? 'hidden' : '';
+}
+
 /** Fades it out and removes it. */
 export function loadingDone() {
   const root = el();

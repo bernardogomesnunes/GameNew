@@ -145,7 +145,7 @@ import { WorldSession } from './storage/WorldSession.js';
 import { Army } from './world/Army.js';
 import { Guardian } from './world/Guardian.js';
 import { settlerName, settlerColour } from './config/settlers.js';
-import { loadingShow, loadingProgress, loadingDone, nextPaint, followDrawing } from './ui/loading.js';
+import { loadingShow, loadingProgress, loadingDone, loadingAside, nextPaint, followDrawing } from './ui/loading.js';
 
 const REACH = 7;
 /** The god's wand's beam (useWand): how often, how fast, how hard. */
@@ -4255,11 +4255,12 @@ export class Game {
     const other = await s.check(id);
     if (other) {
       const ago = other.secondsAgo < 5 ? 'just now' : `${other.secondsAgo} seconds ago`;
+      loadingAside(true);
       const yes = await this.ui.confirm({
         title: 'This world is open somewhere else',
         body: `It is open on ${other.device} (last active ${ago}). Open it here and close it there? Anything not yet saved there is lost.`,
         ok: 'Open it here',
-      });
+      }).finally(() => loadingAside(false));
       if (yes !== true) return false;
     }
     await s.claim(id);
