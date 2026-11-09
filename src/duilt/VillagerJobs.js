@@ -78,7 +78,7 @@ export class VillagerJobs {
     const unique=new Map();
     for(const c of plan.changes) {
       if(![c.x,c.y,c.z,c.next].every(Number.isSafeInteger)||!this.world.inBounds(c.x,c.y,c.z)||c.next<0||c.next!==0&&!BLOCKS_BY_ID.has(c.next)||BLOCKS_BY_ID.get(c.next)?.system)return {ok:false,reason:'The design contains an invalid block.'};
-      if(this.canPlace && !this.canPlace(c,plan))return {ok:false,reason:'The building would cross protected land.'};
+      if(this.canPlace && !this.canPlace(c,plan))return {ok:false,reason:this.placeProblem?.(c)??'The building would cross protected land.'};
       unique.set(cellKey(c),{x:c.x,y:c.y,z:c.z,prev:c.prev??this.world.getBlock(c.x,c.y,c.z),next:c.next});
     }
     const changes=[...unique.values()].sort((a,b)=>a.y-b.y||a.z-b.z||a.x-b.x);
