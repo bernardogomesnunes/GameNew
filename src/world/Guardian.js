@@ -1,4 +1,4 @@
-import { groundAt } from './Mobs.js';
+import { groundAt, surfaceAt } from './Mobs.js';
 
 /**
  * The guardian (Phase 7d, docs/history/plan-phase7-lore.md): what your god sends
@@ -127,6 +127,10 @@ export class Guardian {
       this.x = player.x - 2; this.z = player.z - 2;
       this.y = groundAt(this.world, this.x, this.z, player.y + 2, TALL) ?? player.y;
     }
+    // Brought up beside you in the air (you flew off in the Helix), it
+    // comes down to the ground under it, not to where you land (owner, 9
+    // November: it "stays on the air even when I get back down").
+    this.settle();
 
     // Who to go after. Told to attack, anything near it or near you (owner,
     // 8 November: it "stays in place and they die" round you).
@@ -211,6 +215,17 @@ export class Guardian {
     return true;
   }
 
+  /**
+   * Down to the ground when nothing is under its feet: the top of the
+   * column it stands in, if that is lower than it is. Never upward, so a
+   * guardian in a cave stays in it.
+   */
+  settle() {
+    if (groundAt(this.world, this.x, this.z, this.y + 0.5, TALL) != null) return;
+    const top = surfaceAt(this.world, Math.floor(this.x), Math.floor(this.z));
+    if (top != null && top < this.y) this.y = top;
+  }
+
   stepTowards(tx, tz, dt, speed) {
     const dx = tx - this.x, dz = tz - this.z, d = Math.hypot(dx, dz);
     if (d < 0.05) { this.moving = false; return; }
@@ -221,6 +236,7 @@ export class Guardian {
     const g = groundAt(this.world, nx, nz, this.y + 1.5, TALL);
     this.x = nx; this.z = nz;
     if (g != null) this.y = g;
+    else this.settle();
     this.facing = Math.atan2(dx, dz);
     this.moving = true;
   }
