@@ -4028,10 +4028,7 @@ export class Game {
       this.ui.toast({ kind: 'xp', title: 'Cannot place that', body: plan.reason });
       return;
     }
-    // IMP-26 (owner, 8 November: "Builders are building but I'm not seeing
-    // their avatar placing blocks"): with builders at a Work Hall, what you
-    // place goes to them, so they are seen putting it up.
-    if (workers || design.workers || (!this.duilt.sandbox && typeId !== 'mine' && this.duilt.jobs.hasBuilders())) {
+    if (workers || design.workers) {
       const e = design.extent;
       const region = {minX:b.x,maxX:b.x+e.x,minY:b.y,maxY:b.y+e.y,minZ:b.z,maxZ:b.z+e.z};
       const result = this.duilt.jobs.enqueueBuild({...plan,name:design.name,type:typeId,designId:design.id,region});

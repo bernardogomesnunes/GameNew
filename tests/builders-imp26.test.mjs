@@ -71,7 +71,12 @@ console.log('PASS word that the builder started, once, with the first block');
 console.log('PASS the outline of each building being put up, gone when it is done');
 
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
-assert.match(game, /workers \|\| design\.workers \|\| \(!this\.duilt\.sandbox && typeId !== 'mine' && this\.duilt\.jobs\.hasBuilders\(\)\)/);
+// "Place" and "Build with builders" stay two things: the UI passed only the
+// type, dropping the design picked and "with builders" (the real cause of no
+// builder ever being seen: nothing reached them).
+const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
+assert.match(ui, /onStampStarter = \(id, designId, workers\) => this\.cb\.onStampStarter\(id, designId, workers\)/);
+assert.match(game, /if \(workers \|\| design\.workers\) \{/);
 assert.match(game, /d\.jobs\.onBuildStarted=\(job,p\)=>this\.ui\?\.toast/);
 assert.match(game, /this\.buildSites\.update\(/);
-console.log('PASS with builders at a Work Hall, what you place goes to them; the word and the outlines are wired');
+console.log('PASS "Build with builders" reaches the builders and "Place" builds it yourself; the word and the outlines are wired');
