@@ -25,7 +25,7 @@ import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
 import { runStreamingWork } from './world/streamingWork.js';
 import { FarTerrain } from './render/FarTerrain.js';
 import { SkyClouds } from './render/SkyClouds.js';
-import { DayCycle, MORNING, daylightAt, gameDaysText } from './render/DayCycle.js';
+import { DayCycle, MORNING, daylightAt, gameDaysText, GAME_DAY_SECONDS } from './render/DayCycle.js';
 import { Sound, soundOf } from './audio/Sound.js';
 import { hear } from './audio/listen.js';
 import { loadControls, saveControls } from './config/controls.js';
@@ -5329,6 +5329,17 @@ export class Game {
     }
   }
 
+  /** Between rounds: { seconds, away } until the next one sets out, or null. */
+  warComing() {
+    const d = this.duilt, war = d?.war;
+    if (!war || d.sandbox || war.stage === 'fighting') return null;
+    const left = war.daysToNext(d.days);
+    if (left == null) return null;
+    const home = this.settlementCentre(), p = this.player?.position;
+    const away = !!p && Math.hypot(p.x - home.x, p.z - home.z) > WAR_HOME_RANGE;
+    return { seconds: left * GAME_DAY_SECONDS, away };
+  }
+
   /** IMP-22: the round's attackers from where you are, for the HUD; null when no round is on. */
   warTracking() {
     const band = this.duilt?.war.stage === 'fighting' ? this.wanderers?.warParty?.band : null;
@@ -8127,7 +8138,7 @@ export class Game {
         this.dayCycle.nightSight = this.duilt.wearing('night');
         this.ui?.duiltUI?.renderBoosts();
         this.ui?.duiltUI?.renderTraining();
-        this.ui?.duiltUI?.renderWar(this.warTracking(), this.duilt.war.round);
+        this.ui?.duiltUI?.renderWar(this.warTracking(), this.duilt.war.round, this.warComing());
         this.ui?.duiltUI?.renderArmy();
         this.player.jumpScale = white ? WHITE_RING_JUMP : 1;
       }
