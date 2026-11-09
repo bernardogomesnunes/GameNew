@@ -12,6 +12,7 @@ import { CLEARS_BY_ID } from './config/clears.js';
 import { SelectionHighlight } from './tools/SelectionHighlight.js';
 import { BuildGhost } from './tools/BuildGhost.js';
 import { strangersToDraw } from './render/strangersToDraw.js';
+import { BuildSitesView } from './render/BuildSitesView.js';
 import { warTrack } from './duilt/warTracker.js';
 import { loadModels } from './render/Models.js';
 import { SettlerView, MAX as PEOPLE_MAX } from './render/SettlerView.js';
@@ -600,6 +601,8 @@ export class Game {
     this.hoverBox.visible = false;
     this.scene.add(this.hoverBox);
     this.selection = new SelectionHighlight(this.scene);
+    // IMP-26: the outline of every building being put up.
+    this.buildSites = new BuildSitesView(this.scene);
     this.ghost = new BuildGhost(this.scene);
     this.settlerView = new SettlerView(this.scene);
     this.mobView = new MobView(this.scene);
@@ -4007,6 +4010,7 @@ export class Game {
       return null;
     };
     d.jobs.placeBlock=c=>this.applyChanges([c],{chargeResources:false,gather:false});
+    d.jobs.onBuildStarted=(job,p)=>this.ui?.toast({kind:'challenge',title:`${p?.name ?? 'Your builder'} started on the ${job.name}`,body:'Builders put up a block at a time; its outline shows where it goes.'});
     d.jobs.onBuildComplete=job=>{
       const claim=d.claim(job.region,job.type);
       if (!claim.ok) d.waitFor(job.region,job.type,claim.reason);
@@ -4038,7 +4042,7 @@ export class Game {
       const e = design.extent;
       const region = {minX:b.x,maxX:b.x+e.x,minY:b.y,maxY:b.y+e.y,minZ:b.z,maxZ:b.z+e.z};
       const result = this.duilt.jobs.enqueueBuild({...plan,name:design.name,type:typeId,designId:design.id,region});
-      this.ui.toast({kind:result.ok?'challenge':'xp',title:result.ok?`${design.name} queued for builders`:'Cannot queue this building',body:result.ok?'Assign builders at the Work Hall. Reserved materials stay with this order.':result.reason});
+      this.ui.toast({kind:result.ok?'challenge':'xp',title:result.ok?`${design.name} queued for builders`:'Cannot queue this building',body:result.ok?(this.duilt.jobs.hasBuilders()?'Your builders will walk over and put it up, a block at a time.':'Assign builders at the Work Hall. Reserved materials stay with this order.'):result.reason});
       if (result.ok) this.editedAt=Date.now();
       return;
     }
@@ -8087,6 +8091,7 @@ export class Game {
     // soldiers are: whoever was mid-stride finishes the step and stands
     // straight (owner, 4 November: "the villagers stop with the legs wrong").
     this.settlerView.update(this.withShowcase('settlers', this.duilt?.settlers.people ?? []));
+    this.buildSites.update(this.duilt && !this.duilt.sandbox ? this.duilt.jobs.builds : []);
     const ours = this.duilt?.defenders;
     this.defenderView.update(this.withShowcase('defenders', ours?.people ?? []));
     this.warriorView.update(this.withShowcase('warriors', this.duilt?.army.field ?? []));
