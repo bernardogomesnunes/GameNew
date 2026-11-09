@@ -1020,7 +1020,7 @@ export class DuiltUI {
   buildingDoes(structure, spec, level, summary) {
     const out = [];
     if (spec?.fromCrops && !Object.keys(this.duilt?.producesFor(structure) ?? {}).length) out.push('Plant seeds below and it grows them.');
-    if (spec?.fromAnimals && !Object.keys(penProduce(structure, this.duilt?.herd ?? [])).length) out.push('Lead sheep, cows or chickens in. They give wool, milk and eggs.');
+    if (spec?.fromAnimals && !Object.keys(penProduce(structure, this.duilt?.herd ?? [])).length) out.push('Lead sheep, cows or chickens in. They give wool, milk, eggs and meat, and cows a little hide.');
     if (spec?.grantsCapacity) out.push(`Home for ${spec.grantsCapacity === 1 ? 'one family' : `${spec.grantsCapacity} families`}.`);
     if (spec?.station === 'university') out.push('Research skills and engineering here.');
     else if (spec?.station) {
