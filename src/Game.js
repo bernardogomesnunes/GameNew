@@ -183,6 +183,15 @@ function setUnsentTries(held, tries) {
   } catch { /* private window */ }
 }
 
+/**
+ * Whether the account's copy of a world (`mine`, from the world list) is newer
+ * than the one this device last agreed on: somebody saved it elsewhere since.
+ * Uploading then would write an older world over a newer one.
+ */
+export function staleAgainst(mine, agreed) {
+  return !!(mine && agreed && Number(mine.revision) > Number(agreed.revision));
+}
+
 /** The work behind Game.sendUnsent: one copy, one try. */
 async function sendHeldCopy(game) {
   let held = null;
@@ -202,6 +211,18 @@ async function sendHeldCopy(game) {
   // Keep an absent world's backup without resurrecting a possible delete.
   // Check before rebuilding terrain: a blocked upload needs only metadata.
   if (!mine && game.syncState.agreedFor(held.worldId)) return false;
+  // Saved on another device after this copy was put aside: the account has
+  // the newer world, and this old copy must not go over it (owner, 9
+  // November: logging in on the desktop wrote an Age 8 world over the Age 10
+  // one played on the phone). It stays on this device, and is not sent again.
+  if (staleAgainst(mine, game.syncState.agreedFor(held.worldId))) {
+    setUnsentTries(held, UNSENT_MAX_TRIES);
+    game.bus?.emit?.('toast', {
+      kind: 'xp', title: 'An older copy was not sent',
+      body: `"${held.name ?? 'A world'}" was saved on another device since. That newer save is kept. This copy stays on this device only.`,
+    });
+    return false;
+  }
   try {
     const world = World.deserialize(held.state.world, { makeGen: makeChunkGen });
     const res = await game.cloud.save(held.worldId, {
@@ -1143,16 +1164,15 @@ export class Game {
           this.uploadFailed({ retry: false });
           return false;
         }
-        // Somebody else saved this world since we opened it. Refusing would
-        // strand the afternoon in hand, so it goes up — but it is said out
-        // loud, because quietly writing over another device is the one thing
-        // this must never do without telling you.
-        if (mine && agreed && mine.revision > agreed.revision) {
-          this.bus.emit('toast', {
-            kind: 'xp',
-            title: 'This world was open somewhere else',
-            body: 'Your changes are the ones kept. Close it on the other device.',
-          });
+        // Somebody else saved this world since we opened it. It used to go
+        // up anyway, and an old session on one device wrote an Age 8 world
+        // over the Age 10 one played on another (owner, 9 November). The
+        // newer save is kept now: nothing goes up, and the copy put aside by
+        // keepSafe stays on this device.
+        if (staleAgainst(mine, agreed)) {
+          this.saveError = 'This world was saved on another device after you opened it here. That newer save is kept. Reload to play it; changes made here stay on this device only.';
+          this.uploadFailed({ retry: false });
+          return false;
         }
         await this.saveToCloud(this.worldName, { quiet: true, revision: (mine?.revision ?? 0) + 1 });
         this.pendingSave = false;

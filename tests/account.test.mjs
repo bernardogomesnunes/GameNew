@@ -152,13 +152,13 @@ ok('and sent on the next sign-in or startup', /sendUnsent\(\)/.test(game));
 
 // --- two devices with the same world open -------------------------------------
 
-// There is one copy, so this is no longer a fork to reconcile — but writing
-// over somebody else's save without a word is the one thing it must not do.
+// Owner, 9 November: an old desktop session wrote an Age 8 world over the
+// Age 10 one played on the phone. A world saved elsewhere since is never
+// written over now: the newer save is kept, and this device's copy stays here.
 ok('a world saved elsewhere while you had it open is noticed',
-  /mine\.revision > agreed\.revision/.test(game));
-ok('and said out loud', /This world was open somewhere else/.test(game));
-ok('while your changes are still the ones kept',
-  /Your changes are the ones kept/.test(game));
+  /staleAgainst\(mine, agreed\)/.test(game) && /Number\(mine\.revision\) > Number\(agreed\.revision\)/.test(game));
+ok('and the newer save is the one kept', /That newer save is kept/.test(game));
+ok('nothing says your older changes win any more', !/Your changes are the ones kept/.test(game));
 
 // --- the list must not lie ----------------------------------------------------
 

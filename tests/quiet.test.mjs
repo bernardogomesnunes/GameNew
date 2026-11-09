@@ -33,7 +33,7 @@ ok('no "Not saved to your account yet" every few minutes — said once, then ret
   (game.match(/Not saved to your account yet/g) ?? []).length === 1 && /if \(!this\.uploadTrouble\) \{\s*this\.uploadTrouble = true;/.test(game));
 ok('no "made it up after all"', !/made it up after all/.test(game));
 ok('a browser out of room says so once a session, not on every autosave', /if \(!this\.toldSaveError\) \{\s*this\.toldSaveError = true;/.test(game));
-ok('a world changed on another device is still said out loud', /This world was open somewhere else/.test(game));
+ok('a world changed on another device is still said out loud', /saved on another device after you opened it here/.test(game));
 
 // --- removed -------------------------------------------------------------------------------------------
 
