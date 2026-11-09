@@ -17,6 +17,11 @@ try:
 except ImportError:
     pass
 try:
+    import dragons
+    GROUPS['dragons'] = dragons.DRAGONS
+except ImportError:
+    pass
+try:
     import machines
     GROUPS['machines'] = machines.MACHINES
 except ImportError:

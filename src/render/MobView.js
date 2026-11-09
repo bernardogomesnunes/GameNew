@@ -95,6 +95,84 @@ const NO_LEG = new THREE.Matrix4().makeScale(0, 0, 0);
  * nine is a Moon Cow, cream with glowing teal runes, a blanket and a crystal
  * floating over its head. The same cow is always the same one.
  */
+/**
+ * A dragon's wings, neck, jaw and tail (tools/mobs/dragons.py's bones). In
+ * the air its wings beat (slower for the big one), the tips trailing the arm
+ * so the stroke ripples out to them; climbing it beats harder, sinking it
+ * holds them out in a glide. Its tail waves up and down behind it, each part
+ * after the one before, and its neck rolls with the beat. On the ground the
+ * wings fold back along its sides and it walks, the tail swinging side to
+ * side. Now and then it opens its jaw in a roar.
+ */
+/** Models built with a jointed neck, jaw and three-part tail (tools/mobs/dinos.py). */
+const CHAINED = new Set(['raptor', 'trike', 'longneck']);
+
+/**
+ * A dinosaur's neck, jaw and tail (owner, 9 November: "animation wise improve
+ * too"). The tail swings side to side, each part after the one before, faster
+ * as it walks; the neck bobs with each step and the long-neck's sways slowly
+ * up and down as it looks about; a raptor on the hunt snaps its jaws, and the
+ * others open theirs in a call now and then.
+ */
+export function dinoPose(pose, m, now, phase, look, nod, swing) {
+  const t = now + phase;
+  const walking = m.speed > 0;
+  const step = Math.sin((m.stride ?? 0) * 2.2);
+  const rate = walking ? 2.4 : 0.8;
+  for (let i = 0; i < 3; i++) pose[`tail${i}`] = [0.04 * i, Math.sin(t * rate - i * 0.9) * (walking ? 0.22 : 0.12), 0];
+  if (m.type === 'longneck') {
+    const browse = Math.sin(t * 0.35) * 0.12;
+    pose.neck0 = [(m.grazing ? 0.5 : browse) + (walking ? step * 0.03 : 0), look * 0.5, 0];
+    pose.neck1 = [m.grazing ? 0.6 : -browse * 0.5, look * 0.6, 0];
+    pose.head = [m.grazing ? 0.4 : nod, look * 0.3, 0];
+  } else {
+    pose.neck0 = [(m.grazing ? 0.45 : 0) + (walking ? step * 0.06 : nod), look * 0.4, 0];
+    pose.neck1 = [m.grazing ? 0.35 : 0, look * 0.4, 0];
+    pose.head = [m.grazing ? 0.3 : nod, look * 0.3, 0];
+  }
+  const snap = m.chasing ? Math.max(0, Math.sin(t * 7)) * 0.5 : Math.min(1, Math.max(0, Math.sin(t * 0.45) - 0.93) / 0.07) * 0.45;
+  pose.jaw = [snap, 0, 0];
+}
+
+export function dragonPose(pose, m, now, phase, look, nod) {
+  const big = m.type === 'elder_dragon';
+  const air = m.airborne && m.dying <= 0;
+  const t = now + phase;
+  if (air) {
+    const climb = m.climb ?? 0;
+    const glide = climb < -1.5 ? 1 : 0;
+    const rate = (big ? 3.2 : 4.6) * (climb > 1 ? 1.25 : 1);
+    const beat = Math.sin(t * rate);
+    const amp = (big ? 0.62 : 0.75) * (1 - glide * 0.85);
+    const arm = beat * amp + glide * 0.12;
+    const tip = Math.sin(t * rate - 0.9) * amp * 0.75 + glide * 0.08;
+    pose.wing_r = [0, 0, arm];
+    pose.wing_l = [0, 0, -arm];
+    pose.wingtip_r = [0, 0, tip];
+    pose.wingtip_l = [0, 0, -tip];
+    for (let i = 0; i < 3; i++) pose[`tail${i}`] = [Math.sin(t * rate * 0.5 - i * 0.8) * 0.12, Math.sin(t * 0.7 - i * 0.6) * 0.08, 0];
+    pose.neck0 = [-0.15 + Math.sin(t * rate - 1.4) * 0.05, look * 0.4, 0];
+    pose.neck1 = [0.25 + Math.sin(t * rate - 1.8) * 0.05, look * 0.4, 0];
+    pose.head = [-0.1, look * 0.3, 0];
+    // In the air every leg is drawn up under it.
+    for (const k of ['leg_fl', 'leg_fr', 'leg_bl', 'leg_br', 'leg_l', 'leg_r']) pose[k] = [-0.6, 0, 0];
+  } else {
+    const fold = 1.15;
+    pose.wing_r = [0, -fold, -0.45];
+    pose.wing_l = [0, fold, 0.45];
+    pose.wingtip_r = [0, -2.2, 0.3];
+    pose.wingtip_l = [0, 2.2, -0.3];
+    const sway = Math.sin((m.stride ?? 0) * 1.6 + t * 0.6);
+    for (let i = 0; i < 3; i++) pose[`tail${i}`] = [0.05, Math.sin(t * 0.9 - i * 0.7) * 0.18 + sway * 0.1, 0];
+    pose.neck0 = [nod, look * 0.5, 0];
+    pose.neck1 = [nod * 0.5, look * 0.5, 0];
+    pose.head = [nod, look * 0.4, 0];
+  }
+  // A roar now and then: the jaw drops for a second every ten or so.
+  const roar = Math.max(0, Math.sin(t * 0.55) - 0.92) / 0.08;
+  pose.jaw = [Math.min(1, roar) * 0.55, 0, 0];
+}
+
 export function mobModel(m) {
   if (m.type === 'cow' && Number.isInteger(m.id) && m.id % 9 === 4) return 'moon_cow';
   return m.type;
@@ -164,7 +242,10 @@ export class MobView {
       const nod = idle ? Math.sin(now * 1.8 + phase * 1.7) * 0.035 : 0;
       // Toppling: rolls onto its side over the dying time.
       const roll = m.dying > 0 ? (1 - m.dying / 0.6) * (Math.PI / 2) : 0;
-      this._e.set(0, m.facing, roll);
+      // A dragon in the air leans into its turns and tips its nose up or
+      // down with its climb (Mobs.fly).
+      const air = spec.flies && m.airborne && m.dying <= 0;
+      this._e.set(air ? Math.max(-0.35, Math.min(0.35, -(m.climb ?? 0) * 0.06)) : 0, m.facing, roll + (air ? -(m.bank ?? 0) : 0), 'YXZ');
       this._q.setFromEuler(this._e);
       this._base.compose(this._v.set(m.x, m.y, m.z), this._q, this._s.set(1, 1, 1));
 
@@ -180,6 +261,8 @@ export class MobView {
         pose.head = [m.grazing ? -0.6 : nod, look, 0];
         pose.neck = [m.grazing ? -0.5 : nod * 0.65, look * 0.55, 0];
         pose.tail = [0, Math.sin((m.stride ?? 0) * 3) * 0.3, 0];
+        if (spec.flies) dragonPose(pose, m, now, phase, look, nod);
+        else if (CHAINED.has(m.type)) dinoPose(pose, m, now, phase, look, nod, swing);
         this._turned.multiplyMatrices(this._base, TURN);
         this.crowds.get(kit).add(this._turned, pose, flash ? this._tint.copy(HURT_TINT).lerp(this._c.set(1, 1, 1), 1 - flash) : null);
         this.bodies.setMatrixAt(i, NO_LEG);

@@ -99,35 +99,35 @@
   "group": "animals"
  },
  "raptor": {
-  "cubes": 9,
-  "triangles": 108,
+  "cubes": 31,
+  "triangles": 372,
   "atlas": [
    128,
-   32
+   128
   ],
-  "kb": 18.7,
+  "kb": 52.3,
   "name": "Raptor",
   "group": "animals"
  },
  "trike": {
-  "cubes": 13,
-  "triangles": 156,
+  "cubes": 38,
+  "triangles": 456,
   "atlas": [
-   128,
+   512,
    128
   ],
-  "kb": 29.8,
+  "kb": 84.8,
   "name": "Triceratops",
   "group": "animals"
  },
  "longneck": {
-  "cubes": 13,
-  "triangles": 156,
+  "cubes": 45,
+  "triangles": 540,
   "atlas": [
-   256,
-   128
+   512,
+   256
   ],
-  "kb": 36.2,
+  "kb": 120.7,
   "name": "Long-neck",
   "group": "animals"
  },
@@ -834,5 +834,49 @@
   "kb": 19.9,
   "name": "Spear guard",
   "group": "people"
+ },
+ "elder_dragon": {
+  "cubes": 79,
+  "triangles": 948,
+  "atlas": [
+   512,
+   512
+  ],
+  "kb": 188.1,
+  "name": "Elder Dragon",
+  "group": "dragons"
+ },
+ "fire_drake": {
+  "cubes": 73,
+  "triangles": 876,
+  "atlas": [
+   256,
+   256
+  ],
+  "kb": 127.8,
+  "name": "Fire Drake",
+  "group": "dragons"
+ },
+ "frost_wyvern": {
+  "cubes": 65,
+  "triangles": 780,
+  "atlas": [
+   256,
+   128
+  ],
+  "kb": 112.6,
+  "name": "Frost Wyvern",
+  "group": "dragons"
+ },
+ "storm_dragon": {
+  "cubes": 75,
+  "triangles": 900,
+  "atlas": [
+   256,
+   256
+  ],
+  "kb": 130.4,
+  "name": "Storm Dragon",
+  "group": "dragons"
  }
 }

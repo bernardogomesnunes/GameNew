@@ -723,5 +723,8 @@ WARBEAST = quad(
     tail=lambda B: [box('tail', 'tail', (-1.5, B['y1'] - 12, B['z1']), (1.5, B['y1'], B['z1'] + 3), {'all': lambda p, f: p.grain(['#1a1618', '#2a2628']).row(-1, G['red'])})],
 )
 
+# The dinosaurs, rebuilt bigger with jointed necks and tails (dinos.py,
+# 9 November); the boxes above stay for reference.
+from dinos import RAPTOR, TRIKE, LONGNECK  # noqa: E402
 ANIMALS = [DEER_M, RABBIT, BOAR_M, GOAT_M, SHEEP, PIG_M, CHICKEN, HORSE_M, RAPTOR, TRIKE, LONGNECK, BASILISK]
 CREATURES = [AURELION, UMBRA, WARBEAST]

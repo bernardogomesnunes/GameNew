@@ -68,6 +68,7 @@ export class Mobs {
       if (m.still) continue;
       // Being ridden: where it goes is where you go (Game.tickRide).
       if (m.ridden) continue;
+      if (MOBS_BY_ID.get(m.type)?.flies) { this.fly(m, dt, player); continue; }
       this.think(m, dt, player, lure);
       this.move(m, dt);
     }
@@ -120,6 +121,15 @@ export class Mobs {
       if (this.avoid?.(Math.floor(hx), Math.floor(hz))) continue;
       const y = i ? this.groundAt(hx, hz, ground, spec) : ground;
       if (y == null) continue;
+      // A flier comes in on the wing, high over where it will circle.
+      if (spec.flies) {
+        const d = this.make(spec, hx, y + spec.flies.alt, hz);
+        d.home = { x: hx, z: hz };
+        d.airborne = true;
+        this.list.push(d);
+        made++;
+        continue;
+      }
       this.list.push(this.make(spec, hx, y, hz));
       made++;
     }
@@ -338,6 +348,71 @@ export class Mobs {
       }
     }
     this.fall(m, dt, spec);
+  }
+
+  /**
+   * A dragon (config/mobs.js `flies`): circles its home high over the ground,
+   * rising and falling a little, banking into the turn. Every so often it
+   * comes down somewhere near to rest, then takes off again; a blow sends it
+   * straight back up and further off. `airborne`, `bank` and `climb` are for
+   * MobView: wings beating, folded or held out in a glide.
+   */
+  fly(m, dt, player) {
+    const spec = MOBS_BY_ID.get(m.type), f = spec.flies;
+    m.hurt = Math.max(0, m.hurt - dt);
+    if (m.dying > 0) {
+      m.dying -= dt;
+      m.airborne = false;
+      this.fall(m, dt, spec);
+      if (m.dying <= 0) m.dead = true;
+      return;
+    }
+    m.home ??= { x: m.x, z: m.z };
+    m.flightT = (m.flightT ?? this.rand() * 100) + dt;
+    m.timer -= dt;
+    if (m.fleeFor > 0) {
+      // Struck: up and away, then a new home further off.
+      m.fleeFor -= dt;
+      m.timer = Math.max(m.timer, 20);
+      if (!m.airborne) { m.airborne = true; m.vy = 0; }
+      m.home = { x: m.home.x + (m.x - player.x) * 0.02, z: m.home.z + (m.z - player.z) * 0.02 };
+    }
+    if (!m.airborne) {
+      // Resting on the ground; off again when the rest is over.
+      m.speed = 0;
+      m.bank = 0; m.climb = 0;
+      this.fall(m, dt, spec);
+      if (m.timer <= 0) { m.airborne = true; m.timer = 40 + this.rand() * 40; }
+      return;
+    }
+    const ground = surfaceAt(this.world, Math.floor(m.x), Math.floor(m.z));
+    const landing = m.timer <= 0 && m.fleeFor <= 0;
+    // Round the home, a little wider and narrower as it goes.
+    const r = f.radius * (0.85 + 0.15 * Math.sin(m.flightT * 0.13 + m.id));
+    const ang = Math.atan2(m.x - m.home.x, m.z - m.home.z) + (f.speed / r) * dt * (m.id % 2 ? 1 : -1);
+    const tx = m.home.x + Math.sin(ang) * r, tz = m.home.z + Math.cos(ang) * r;
+    const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz) || 1;
+    const step = Math.min(d, f.speed * dt * (landing ? 0.6 : 1));
+    const heading = Math.atan2(dx, dz);
+    const turn = Math.atan2(Math.sin(heading - m.facing), Math.cos(heading - m.facing));
+    const maxTurn = 1.6 * dt;
+    m.facing += Math.max(-maxTurn, Math.min(maxTurn, turn));
+    m.x += Math.sin(m.facing) * step;
+    m.z += Math.cos(m.facing) * step;
+    m.stride += step;
+    m.speed = f.speed;
+    m.bank = Math.max(-0.6, Math.min(0.6, turn * 1.4));
+    // Height: over the ground below by `alt`, a slow swell; down to it to land.
+    const want = landing ? (ground ?? m.y) : (ground ?? m.y - f.alt) + f.alt + Math.sin(m.flightT * 0.4 + m.id) * 3;
+    const dy = Math.max(-6 * dt, Math.min(4 * dt, want - m.y));
+    m.y += dy;
+    m.climb = dy / Math.max(1e-3, dt);
+    if (landing && ground != null && m.y - ground < 0.3) {
+      m.y = ground;
+      m.airborne = false;
+      m.timer = 10 + this.rand() * 15;
+      m.home = { x: m.x, z: m.z };
+    }
   }
 
   /** Settles onto whatever is under it — a block dug away drops it down. */
