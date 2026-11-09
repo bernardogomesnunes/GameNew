@@ -3999,6 +3999,16 @@ export class Game {
     // IMP-16: villagers open the doors on their way and shut them behind.
     d.settlers.doors={open:(x,y,z)=>this.villagerDoor(x,y,z,true),close:(x,y,z)=>this.villagerDoor(x,y,z,false)};
     d.jobs.canPlace=c=>this.world===d.world && d.territory.contains(c.x,c.z) && !d.structures.blocking([c]) && (c.next===AIR || !this.blockOverlapsPlayerAABB(c));
+    // Why a block of a design can't go where it would (owner, 8 November:
+    // placing a village in Age 9 only said "would cross protected land").
+    d.jobs.placeProblem=c=>{
+      if(this.world!==d.world)return 'This world is not the one being built in.';
+      if(!d.territory.contains(c.x,c.z))return 'Part of it is outside your land. Move it in, or grow your land first.';
+      const s=d.structures.blocking([c]);
+      if(s)return `It would build over your ${STRUCTURES_BY_ID.get(s.type)?.name ?? 'building'}. Move it clear of it.`;
+      if(c.next!==AIR&&this.blockOverlapsPlayerAABB(c))return 'You are standing where it would be built. Step out of its outline and place it again.';
+      return null;
+    };
     d.jobs.placeBlock=c=>this.applyChanges([c],{chargeResources:false,gather:false});
     d.jobs.onBuildStarted=(job,p)=>this.ui?.toast({kind:'challenge',title:`${p?.name ?? 'Your builder'} started on the ${job.name}`,body:'Builders put up a block at a time; its outline shows where it goes.'});
     d.jobs.onBuildComplete=job=>{
