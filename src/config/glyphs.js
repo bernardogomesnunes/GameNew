@@ -92,6 +92,8 @@ export const GLYPHS = {
   greaves: 'M6 5h12v3H6ZM7 8h4v11H7ZM13 8h4v11h-4ZM7 13h4M13 13h4',
   boots: 'M6 5h5v9h4l4 3v2H6ZM6 17h13M8 5v9',
   backpack: 'M7 9a5 5 0 0 1 10 0v10H7ZM10 6V4h4v2M7 12h10M10 15h4v3h-4Z',
+  // A heater shield: flat top, a point below, a boss in the middle.
+  shield: 'M5 4h14v7c0 4.5-3 7.5-7 9.5C8 18.5 5 15.5 5 11ZM12 4v16.5M9.5 10.5h5',
   ring: 'M12 9a5.5 5.5 0 1 0 .01 0M12 9 10 6h4ZM10 6l2-2 2 2',
   wand: 'M6 18 15 9M15 9l1.5-4 1.5 4 4 1.5-4 1.5-1.5 4-1.5-4-4-1.5Z',
   // Phase 7a.

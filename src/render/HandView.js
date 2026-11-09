@@ -46,6 +46,15 @@ export class HandView {
     this.fist.position.set(0.04, -0.04, 0.08);
     this.fist.rotation.set(0.25, -0.15, 0);
     this.group.add(this.fist);
+    // The left hand (IMP-23): a shield, low on the left, its face to you.
+    this.left = new THREE.Group();
+    camera.add(this.left);
+    this.shield = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
+    this.shield.scale.setScalar(0.3);
+    this.shield.rotation.set(-0.12, 0.55, 0.06);
+    this.left.add(this.shield);
+    this.left.visible = false;
+    this.offKey = undefined;
     this.phase = 0;
     this.swing = 0;
     this.key = undefined;
@@ -61,8 +70,15 @@ export class HandView {
    * in towards the middle, upright, with an arrow on the string pulled back
    * as far as you've drawn it.
    */
-  update(dt, player, { held = {}, look, visible, draw = 0 }) {
+  update(dt, player, { held = {}, look, visible, draw = 0, offhand = null }) {
     this.group.visible = visible;
+    this.left.visible = visible && !!offhand && !(draw > 0);
+    if (offhand !== this.offKey) {
+      this.offKey = offhand;
+      const geo = offhand ? heldGeometryFor({ itemId: offhand }) : null;
+      if (geo) this.shield.geometry = geo;
+      else this.left.visible = false;
+    }
     if (!visible) return;
     const key = held.itemId ?? held.blockId ?? null;
     if (key !== this.key) {
@@ -110,6 +126,12 @@ export class HandView {
       -REACH + chop * 0.06 + pull * 0.08,
     );
     this.group.rotation.set(-chop * 0.9, chop * 0.25, pull * 0.25);
+    // The shield, low on the left, bobbing with your stride the other way.
+    this.left.position.set(
+      -halfW * 0.78 - Math.sin(this.phase) * 0.02 * bob,
+      -halfH * 0.9 - Math.abs(Math.cos(this.phase)) * 0.025 * bob,
+      -REACH,
+    );
     // The arrow on the string, its tail coming back towards you as you draw.
     if (!this.nocked) {
       this.nocked = new THREE.Group();

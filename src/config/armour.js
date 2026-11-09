@@ -23,8 +23,30 @@
  * The ring slot is for the ring you forge at the top of the Temple (7c).
  */
 
-export const WEAR_SLOTS = ['head', 'body', 'legs', 'feet', 'back', 'ring'];
-export const SLOT_NAMES = { head: 'Head', body: 'Body', legs: 'Legs', feet: 'Feet', back: 'Back', ring: 'Ring' };
+export const WEAR_SLOTS = ['head', 'body', 'legs', 'feet', 'back', 'ring', 'offhand'];
+export const SLOT_NAMES = { head: 'Head', body: 'Body', legs: 'Legs', feet: 'Feet', back: 'Back', ring: 'Ring', offhand: 'Left hand' };
+
+/**
+ * Shields, held in the left hand (IMP-23; owner, 5 November: "I think we need
+ * to add a slot for left hand and add a shield to the game too"; 9 November:
+ * "Shield should be 3d beautiful like other items"). A shield adds its
+ * `points` of armour like any piece, and turns a whole blow aside `block` of
+ * the time (DuiltGame.absorb). Each blow it meets wears it, as armour wears.
+ *
+ *   main   the face; trim the rim and boss; mark the device painted on it
+ */
+export const SHIELDS = [
+  { id: 'shield_wood', name: 'Wooden Shield', age: 1, points: 1, block: 0.15, durability: 120,
+    inputs: { planks: 6, hide: 1 }, main: 0x9a6b3e, trim: 0x6b4a30, mark: 0xc8402e,
+    madeBy: 'Planks under a hide face, bound with a hide rim' },
+  { id: 'shield_iron', name: 'Iron Shield', age: 5, points: 2, block: 0.25, durability: 300,
+    inputs: { iron_ingot: 5, planks: 2 }, main: 0x7d5538, trim: 0xc9ced6, mark: 0x3f6fb0,
+    madeBy: 'Oak boards faced and rimmed with iron from your foundry' },
+  { id: 'shield_diamond', name: 'Diamond Shield', age: 10, points: 3, block: 0.35, durability: 700,
+    inputs: { diamond: 3, iron_ingot: 2, planks: 2 }, main: 0x9fe8f2, trim: 0x6a7480, mark: 0xf0cf62,
+    madeBy: 'Diamond plates on an iron frame: the best shield there is' },
+];
+export const SHIELDS_BY_ID = new Map(SHIELDS.map((s) => [s.id, s]));
 
 /**
  * Backpacks (backlog batch 3, #1: "Crafted, worn in the boots/ring row.

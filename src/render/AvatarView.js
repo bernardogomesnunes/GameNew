@@ -60,6 +60,16 @@ export class AvatarView {
     this.held.scale.setScalar(0.42);
     this.held.rotation.y = -Math.PI / 2;
     this.hand.add(this.held);
+    // The left hand (IMP-23): a shield strapped on the forearm, its face
+    // forward and a little out, the way the Garrison's spear guards carry theirs.
+    this.shield = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
+    this.shield.scale.setScalar(0.72);
+    this.shield.position.set(-0.06, -0.78, -0.17);
+    // Half a turn: the model's face is +z, the avatar faces -z.
+    this.shield.rotation.set(-0.3, Math.PI - 0.12, 0);
+    this.shield.visible = false;
+    this.arms[0].add(this.shield);
+    this.shieldKey = null;
     // Head: face forward is -z, the way the camera looks at yaw 0.
     this.head = new THREE.Group();
     this.head.position.set(0, 1.4, 0);
@@ -117,7 +127,16 @@ export class AvatarView {
     const s = Math.sin(this.phase) * 0.7 * stride;
     this.legs[0].hip.rotation.x = s;
     this.legs[1].hip.rotation.x = -s;
-    this.arms[0].rotation.x = -s * 0.8;
+    const shielded = ITEMS_BY_ID.get(worn.offhand?.id)?.wears === 'offhand';
+    // With a shield on, the left arm is held forward, the shield before you.
+    this.arms[0].rotation.x = shielded ? 0.3 - s * 0.25 : -s * 0.8;
+    const shieldId = shielded ? worn.offhand.id : null;
+    if (shieldId !== this.shieldKey) {
+      this.shieldKey = shieldId;
+      const geo = shieldId ? heldGeometryFor({ itemId: shieldId }) : null;
+      this.shield.visible = !!geo;
+      if (geo) this.shield.geometry = geo;
+    }
     // The right arm: a swing on a strike, else the walk, raised a little to hold.
     this.swing = Math.max(0, this.swing - dt * 4);
     const holding = !!(held.itemId || held.blockId != null);

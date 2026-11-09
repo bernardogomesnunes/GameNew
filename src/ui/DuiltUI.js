@@ -1492,7 +1492,7 @@ export class DuiltUI {
     this.refreshSlotTip();
   }
 
-  /** The five things you wear, each its own slot with its name under it. */
+  /** The seven things you wear, each its own slot with its name under it. */
   renderWear() {
     const d = this.duilt, grid = this.q('#bag-wear-grid');
     if (!d || !grid) return;
@@ -1504,11 +1504,11 @@ export class DuiltUI {
       const inner = spec
         ? `<span class="swatch swatch-cube">${itemIcon(spec, { size: 34 }) ?? glyphSvg(spec.glyph, { size: 20, color: spec.color })}</span>`
           + (spec.durability ? `<span class="wear"><i style="width:${Math.round((1 - piece.wear / spec.durability) * 100)}%"></i></span>` : '')
-        : `<span class="wear-ghost">${glyphSvg({ head: 'helm', body: 'cuirass', legs: 'greaves', feet: 'boots', back: 'backpack', ring: 'ring' }[k], { size: 22, color: 0x9aa0a6 })}</span>`;
+        : `<span class="wear-ghost">${glyphSvg({ head: 'helm', body: 'cuirass', legs: 'greaves', feet: 'boots', back: 'backpack', ring: 'ring', offhand: 'shield' }[k], { size: 22, color: 0x9aa0a6 })}</span>`;
       const what = spec?.armour ? `${spec.armour} armour` : spec?.bagSlots ? `+${spec.bagSlots} bag slots` : '';
       const tip = spec ? `${spec.name}${what ? ` · ${what}` : ''} — tap to take off` : `${SLOT_NAMES[k]} — nothing on`;
       return `<div class="wear-cell"><button class="bag-slot wear-slot${spec ? '' : ' empty'}${fits === k ? ' fits' : ''}" data-wear="${k}"
-        aria-label="${escapeAttr(tip)}" data-tip="${escapeAttr(spec ? spec.name : SLOT_NAMES[k])}" data-tip-info="${escapeAttr(spec ? `${what ? `${what} · ` : ''}tap to take off` : k === 'ring' ? 'Forged at the Temple' : k === 'back' ? 'Lift a backpack from your bag, then tap here' : 'Lift a piece from your bag, then tap here')}">${inner}</button>
+        aria-label="${escapeAttr(tip)}" data-tip="${escapeAttr(spec ? spec.name : SLOT_NAMES[k])}" data-tip-info="${escapeAttr(spec ? `${what ? `${what} · ` : ''}tap to take off` : k === 'ring' ? 'Forged at the Temple' : k === 'back' ? 'Lift a backpack from your bag, then tap here' : k === 'offhand' ? 'Lift a shield from your bag, then tap here' : 'Lift a piece from your bag, then tap here')}">${inner}</button>
         <span class="wear-label">${SLOT_NAMES[k]}</span></div>`;
     }).join('');
     grid.querySelectorAll('[data-wear]').forEach((btn) => btn.addEventListener('click', () => this.tapWear(btn.dataset.wear)));

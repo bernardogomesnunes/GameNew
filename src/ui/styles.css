@@ -877,7 +877,7 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
   overscroll-behavior: contain; }
 .bag-empty { grid-column: 1 / -1; margin: 8px 0; }
 /* What you're wearing (Phase 7b): four slots in a row, each named under it. */
-.bag-wear-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 56px)); gap: 8px; margin: 8px 0 4px; padding: 2px; }
+.bag-wear-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 52px)); gap: 8px; margin: 8px 0 4px; padding: 2px; }
 .wear-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; }
 .wear-cell .bag-slot { width: 100%; }
 .wear-label { font-size: 11px; color: var(--text-dim); }

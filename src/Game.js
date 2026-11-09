@@ -2315,7 +2315,7 @@ export class Game {
       : this.selectedItemId ? { itemId: this.selectedItemId } : { blockId: this.selectedBlockId };
     const third = this.player.view !== 'first';
     this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third });
-    this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning, draw: this.drawing ? this.drawPower() : 0 });
+    this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning, draw: this.drawing ? this.drawPower() : 0, offhand: this.duilt?.worn?.offhand?.id ?? null });
     // The flying machine went with it: you come down on its wings.
     if (this.player.flying && !this.player.canFly()) {
       this.player.flying = false;

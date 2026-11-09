@@ -1,4 +1,4 @@
-import { ARMOUR_PIECES, BACKPACKS } from './armour.js';
+import { ARMOUR_PIECES, BACKPACKS, SHIELDS } from './armour.js';
 import { CONTROLLER_PARTS } from './structures.js';
 import { tieredRecipes } from './tiers.js';
 import { SKILLS, MAX_LEVEL } from './skills.js';
@@ -1612,6 +1612,14 @@ for (const p of ARMOUR_PIECES) {
   RECIPES.push({
     id: p.id, name: p.name, station: 'hand', age: p.age, inputs: p.inputs, output: { id: p.id, count: 1 },
     blurb: `${p.points} armour, worn on the ${p.slot === 'body' ? 'body' : p.slot}. ${p.madeBy}.`,
+  });
+}
+
+// Shields (IMP-23): by hand, held in the left hand.
+for (const s of SHIELDS) {
+  RECIPES.push({
+    id: s.id, name: s.name, station: 'hand', age: s.age, inputs: s.inputs, output: { id: s.id, count: 1 },
+    blurb: `${s.points} armour in your left hand, and it turns aside ${Math.round(s.block * 100)}% of blows. ${s.madeBy}.`,
   });
 }
 

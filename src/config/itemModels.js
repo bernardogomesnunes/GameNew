@@ -1,5 +1,5 @@
 import { CROPS } from './crops.js';
-import { ARMOUR_PIECES, BACKPACKS } from './armour.js';
+import { ARMOUR_PIECES, BACKPACKS, SHIELDS } from './armour.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 import { TOOL_TIERS } from './tiers.js';
 
@@ -181,6 +181,41 @@ const backpackModel = (m, t) => [
   box(0.28, 0.08, 0.24, 0.36, 0.76, 0.3, t), box(0.64, 0.08, 0.24, 0.72, 0.76, 0.3, t), // the straps
 ];
 for (const b of BACKPACKS) ITEM_MODELS[b.id] = backpackModel(b.main, b.trim);
+
+// Shields (IMP-23; owner, 9 November: "Shield should be 3d beautiful like
+// other items"). A heater shield standing upright, its face towards you
+// (+z): boards in two shades with a painted device, a rim proud of the face,
+// a domed boss, the point stepped down to a tip, and the grip on its back.
+const shieldModel = (face, trim, mark) => {
+  const shade = (c, k) => {
+    const r = Math.round(((c >> 16) & 255) * k), g = Math.round(((c >> 8) & 255) * k), bl = Math.round((c & 255) * k);
+    return (Math.min(255, r) << 16) | (Math.min(255, g) << 8) | Math.min(255, bl);
+  };
+  const dark = shade(face, 0.82), light = shade(face, 1.1);
+  return [
+    // The body: boards side by side, then the point stepping in.
+    box(0.2, 0.34, 0.44, 0.35, 0.96, 0.56, face), box(0.35, 0.34, 0.44, 0.5, 0.96, 0.56, dark),
+    box(0.5, 0.34, 0.44, 0.65, 0.96, 0.56, face), box(0.65, 0.34, 0.44, 0.8, 0.96, 0.56, dark),
+    box(0.24, 0.2, 0.44, 0.76, 0.34, 0.56, light),
+    box(0.32, 0.1, 0.44, 0.68, 0.2, 0.56, face),
+    box(0.42, 0.02, 0.44, 0.58, 0.1, 0.56, dark),
+    // The rim, a little proud of the face all round.
+    box(0.17, 0.92, 0.42, 0.83, 1.0, 0.6, trim),
+    box(0.17, 0.34, 0.42, 0.22, 0.92, 0.6, trim), box(0.78, 0.34, 0.42, 0.83, 0.92, 0.6, trim),
+    box(0.21, 0.2, 0.42, 0.27, 0.36, 0.6, trim), box(0.73, 0.2, 0.42, 0.79, 0.36, 0.6, trim),
+    box(0.29, 0.08, 0.42, 0.35, 0.22, 0.6, trim), box(0.65, 0.08, 0.42, 0.71, 0.22, 0.6, trim),
+    box(0.39, 0, 0.42, 0.61, 0.08, 0.6, trim),
+    // The device: a cross in the house colour, on the face.
+    box(0.46, 0.2, 0.56, 0.54, 0.92, 0.585, mark),
+    box(0.24, 0.6, 0.56, 0.76, 0.68, 0.585, mark),
+    // The boss, domed: two steps out from the middle.
+    box(0.4, 0.54, 0.56, 0.6, 0.74, 0.62, trim),
+    box(0.45, 0.59, 0.62, 0.55, 0.69, 0.66, light === face ? trim : shade(trim, 1.15)),
+    // The grip on the back.
+    box(0.44, 0.48, 0.38, 0.56, 0.8, 0.44, 0x5e4128),
+  ];
+};
+for (const s of SHIELDS) ITEM_MODELS[s.id] = shieldModel(s.main, s.trim, s.mark);
 
 // Swords (the playtest list, P6/P7): a blade standing on its point's end,
 // a crossguard and a wrapped grip with a pommel.
