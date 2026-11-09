@@ -50,6 +50,12 @@ try {
   await page.locator('[data-load="smelt_iron"]').tap();
   assert.equal(await page.evaluate(() => crucibleCheck.bag.countOf('iron_ore')), 0, 'two batches went in');
   await shot('load');
+  // The melting bar (owner, 9 November): there, and moving while you watch.
+  const melt0 = await page.evaluate(() => document.querySelector('.crucible-bar [data-melt-bar]')?.style.width ?? null);
+  assert.ok(melt0 !== null, 'a melting bar while something melts');
+  await page.evaluate(() => window.__game.duilt.crucibles.tick(9));
+  await page.waitForFunction((w0) => document.querySelector('.crucible-bar [data-melt-bar]').style.width !== w0, melt0, { timeout: 15_000 });
+  assert.match(await page.evaluate(() => document.querySelector('.crucible-bar [data-melt-left]').textContent), /^\d+ s$/);
   // Time passes in the world (the game's own tick runs it while playing).
   await page.evaluate(() => window.__game.duilt.crucibles.tick(45.1));
   await page.waitForSelector('[data-pour]:not([disabled])');

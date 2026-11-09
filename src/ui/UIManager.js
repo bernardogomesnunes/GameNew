@@ -1006,7 +1006,10 @@ export class UIManager {
     this.duiltUI = new DuiltUI(this.root, { game: this.game, bus: this.bus, panels: this.panels });
     // The hotbar is a view of the bag in Duilt, so it re-renders with it.
     this.duiltUI.onBagChanged = () => { if (this.cb.isDuilt?.()) this.buildHotbar(); };
-    this.duiltUI.onStampStarter = (id) => this.cb.onStampStarter(id);
+    // Every argument through (owner, 8 November: "the place building and
+    // build with builders seems to do the same thing"): this passed only the
+    // type, so the design picked and "with builders" were both dropped.
+    this.duiltUI.onStampStarter = (id, designId, workers) => this.cb.onStampStarter(id, designId, workers);
     this.duiltUI.onLeave = () => { this.closeAllPanels(); this.openHome(); };
     this.refreshForDuilt();
   }

@@ -52,6 +52,20 @@ export class CrucibleBar {
     if (el) el.style.width = `${Math.min(100, level * 80)}%`;
   }
 
+  /**
+   * The melting bar (owner, 9 November: "the crucible needs progress bar on
+   * the melting"): how far the batch in the fire has got, and the seconds
+   * left. Called every frame; it only touches two elements.
+   */
+  showMelt() {
+    const key = this.view.key, s = key ? this.crucibles.state(key) : null;
+    const bar = this.el.querySelector('[data-melt-bar]'), left = this.el.querySelector('[data-melt-left]');
+    if (!s || !bar) return;
+    const recipe = RECIPES.find((r) => r.id === s.recipeId);
+    bar.style.width = `${Math.round(s.progress * 100)}%`;
+    if (left) left.textContent = `${Math.ceil((1 - s.progress) * meltSeconds(recipe))} s`;
+  }
+
   recipes() {
     return RECIPES.filter((r) => r.station === 'crucible' && r.age <= this.age());
   }
@@ -69,7 +83,11 @@ export class CrucibleBar {
     const state = !s ? 'Load something to melt. It melts on its own, also while you are away.'
       : `${s.waiting} melting, ${s.molten} molten${s.out ? `, ${s.out} ${itemName(recipe.output.id).toLowerCase()} ready` : ''}.`
         + (poured && s.molten ? ` Hold Pour and let go when the mould is full (${Math.round(POUR_MIN * 100)} to ${Math.round(POUR_MAX * 100)}%).` : '');
+    const melting = s?.waiting ? `<div class="melt-row"><span class="melt-name">Melting ${escapeHtml(itemName(recipe.output.id).toLowerCase())}</span>
+        <div class="research-bar melt-bar" role="progressbar" aria-label="How far the batch has melted"><i data-melt-bar style="width:${Math.round(s.progress * 100)}%"></i></div>
+        <b data-melt-left>${Math.ceil((1 - s.progress) * meltSeconds(recipe))} s</b></div>` : '';
     this.el.innerHTML = `<p class="counter-say">${escapeHtml(note ? `${note} ${state}` : state)}</p>
+      ${melting}
       ${poured ? `<div class="pour-gauge" aria-label="How full the mould is"><i class="pour-window" style="left:${POUR_MIN * 80}%;width:${(POUR_MAX - POUR_MIN) * 80}%"></i><i class="pour-level" data-pour-level style="width:0%"></i></div>` : ''}
       <div class="counter-pieces">${tiles}</div>
       <div class="counter-actions">
