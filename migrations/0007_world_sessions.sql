@@ -1,3 +1,4 @@
+-- Applied to the live database on 9 November 2026 (owner: "yes").
 -- One open session per world (owner, 9 November: "We can deal with opening the
 -- world at the same time gracefully, by telling the user if another session is
 -- open, if the user wants to proceed we will close that another session.")
