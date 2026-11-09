@@ -5,16 +5,20 @@
  * user wants to proceed we will close that another session."
  *
  * Each browser tab gets its own id. Opening a world reads who has it open
- * (`check`); taking it writes this tab's id (`claim`); a heartbeat (`beat`)
- * keeps it fresh and is how a tab learns another one took the world over.
+ * (`check`); taking it writes this tab's id (`claim`); `beat`, at every save
+ * and when the tab comes back to the front, keeps it fresh and is how a tab
+ * learns another one took the world over.
  * The table lives in migrations/0007. Where it is missing, every call says
  * "unknown" and the game goes on as it did before.
  */
 
-/** A session not heard from in this long is gone: its tab closed or slept. */
-export const SESSION_FRESH_MS = 75_000;
-/** How often an open world says it is still open. */
-export const HEARTBEAT_MS = 25_000;
+/**
+ * A session not heard from in this long is gone: its tab closed or slept.
+ * A session says it is still open at every save (the autosave comes every
+ * 5 minutes) and when its tab comes back to the front, so 6 minutes covers
+ * one missed autosave. Nothing polls on a timer (tests/healing).
+ */
+export const SESSION_FRESH_MS = 6 * 60_000;
 
 function newId() {
   try { return crypto.randomUUID(); } catch { return `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`; }

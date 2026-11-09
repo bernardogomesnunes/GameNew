@@ -3,10 +3,11 @@
 -- open, if the user wants to proceed we will close that another session.")
 --
 -- A row says which browser tab has the world open and when it last said so.
--- Opening a world reads it: a row seen in the last 75 seconds from another
+-- Opening a world reads it: a row seen in the last 6 minutes from another
 -- tab means the world is open elsewhere, and the player chooses whether to
--- take it over. Taking it over writes this tab's id; the other tab's next
--- heartbeat finds its id gone and closes itself without saving. Additive and
+-- take it over. Taking it over writes this tab's id; the other tab finds its
+-- id gone at its next save, or when it comes back to the front, and closes
+-- itself without saving. Additive and
 -- safe on a live database: nothing else reads or writes this table, and a
 -- client that cannot find it carries on as before.
 create table world_sessions (

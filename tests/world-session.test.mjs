@@ -42,7 +42,7 @@ assert.equal(await desk.beat(), 'mine');
 console.log('PASS taking it over closes the other session at its next heartbeat');
 
 t.clock += SESSION_FRESH_MS + 1000;
-assert.equal(await phone.check('w1'), null, 'a session silent past 75 s is gone');
+assert.equal(await phone.check('w1'), null, 'a session silent past 6 minutes is gone');
 await desk.release();
 assert.equal(t.rows.has('w1'), false, 'leaving lets it go');
 console.log('PASS a closed or sleeping session does not block, and leaving lets the world go');
@@ -71,13 +71,11 @@ function game(answer) {
   assert.match(g.asked[0].title, /open somewhere else/);
   assert.match(g.asked[0].body, /iPhone, Safari/);
   assert.equal(tt.rows.get('w1').session_id, 'other-tab-99', 'no: the other session keeps it');
-  clearInterval(g.sessionBeat);
 }
 {
   const { g, tt } = game(true);
   assert.equal(await g.takeWorldSession('w1'), true);
   assert.equal(tt.rows.get('w1').session_id, g.worldSession.id, 'yes: this tab has it now');
-  clearInterval(g.sessionBeat);
   // The other tab, now: its heartbeat finds it gone and it stops saving.
   g.worldId = 'w1'; g.worldIsLocal = false;
   tt.rows.set('w1', { session_id: 'third-tab-77', device: 'Mac, Chrome', seen_at: new Date().toISOString() });

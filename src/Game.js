@@ -141,7 +141,7 @@ import { ShowcaseView } from './render/ShowcaseView.js';
 import { TITLE_SEED, TITLE_SITE, TITLE_TIME, TITLE_HERDS, titlePlaceBlocks, orbitPose, orbitHeight, messengerPath } from './world/titleScene.js';
 import { SHOWCASE_SEED, SHOWCASE_TIMES, SHOWCASE_SPOTS_BY_ID, SHOWCASE_BUILDINGS, SHOWCASE_FIGURES, findShowcaseSite, flattenShowcase, placeBlocks, showcaseLabels, spotPose } from './world/showcase.js';
 import { Defenders, ORDERS } from './world/Defenders.js';
-import { WorldSession, HEARTBEAT_MS } from './storage/WorldSession.js';
+import { WorldSession } from './storage/WorldSession.js';
 import { Army } from './world/Army.js';
 import { Guardian } from './world/Guardian.js';
 import { settlerName, settlerColour } from './config/settlers.js';
@@ -4262,12 +4262,18 @@ export class Game {
     }
     await s.claim(id);
     this.sessionTaken = false;
-    clearInterval(this.sessionBeat);
-    this.sessionBeat = setInterval(() => this.checkWorldSession(), HEARTBEAT_MS);
+    // No timer (tests/healing: nothing polls the account): the session is
+    // checked at every save and whenever this tab comes back to the front,
+    // and let go when the page closes.
+    if (!this.sessionWatched && typeof document !== 'undefined') {
+      this.sessionWatched = true;
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.checkWorldSession(); });
+      globalThis.addEventListener?.('pagehide', () => { this.worldSession?.release(); });
+    }
     return true;
   }
 
-  /** The heartbeat: still ours, or did another tab take the world over? Whether it is still ours. */
+  /** Still ours, or did another tab take the world over? Whether it is still ours. */
   async checkWorldSession() {
     const s = this.worldSession;
     if (!s?.worldId || this.worldIsLocal || s.worldId !== this.worldId) return true;
@@ -4285,7 +4291,6 @@ export class Game {
     this.sessionTaken = true;
     this.discarded = true;
     this.pendingSave = false;
-    clearInterval(this.sessionBeat);
     if (this.worldSession) this.worldSession.worldId = null;
     this.ui?.confirm?.({
       title: 'This world was opened somewhere else',
@@ -4296,7 +4301,6 @@ export class Game {
 
   /** Lets go of the world, so the next device to open it is not asked. */
   releaseWorldSession() {
-    clearInterval(this.sessionBeat);
     return this.worldSession?.release();
   }
 
