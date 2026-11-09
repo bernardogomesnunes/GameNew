@@ -22,7 +22,7 @@ const at = (g, id) => g.inventory.slots.findIndex((s) => s?.id === id);
 
 // --- made, and worn in the row --------------------------------------------------------
 
-ok('its own slot, in the row between the boots and the ring', WEAR_SLOTS.indexOf('back') === WEAR_SLOTS.indexOf('feet') + 1 && WEAR_SLOTS.at(-1) === 'ring');
+ok('its own slot, in the row between the boots and the ring', WEAR_SLOTS.indexOf('back') === WEAR_SLOTS.indexOf('feet') + 1 && WEAR_SLOTS.indexOf('ring') === WEAR_SLOTS.indexOf('back') + 1);
 ok('leather: +10, by hand from Age 1, of hide and string',
   ITEMS_BY_ID.get('backpack_leather')?.bagSlots === 10 && recipe('backpack_leather')?.station === 'hand' && recipe('backpack_leather').age === 1
   && recipe('backpack_leather').inputs.hide > 0 && recipe('backpack_leather').inputs.string > 0);

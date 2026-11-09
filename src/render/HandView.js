@@ -60,6 +60,11 @@ export class HandView {
     this.key = undefined;
   }
 
+  /** A blow turned aside by the shield: it jerks up and back for a moment. */
+  block() {
+    this.blocked = 1;
+  }
+
   /** Strike or place: a quick chop down and back. */
   strike() {
     this.swing = 1;
@@ -126,11 +131,14 @@ export class HandView {
       -REACH + chop * 0.06 + pull * 0.08,
     );
     this.group.rotation.set(-chop * 0.9, chop * 0.25, pull * 0.25);
-    // The shield, low on the left, bobbing with your stride the other way.
+    // The shield, low on the left, bobbing with your stride the other way,
+    // and jerking up towards the middle when it turns a blow aside.
+    this.blocked = Math.max(0, (this.blocked ?? 0) - dt * 4);
+    const jerk = Math.sin(this.blocked * Math.PI);
     this.left.position.set(
-      -halfW * 0.78 - Math.sin(this.phase) * 0.02 * bob,
-      -halfH * 0.9 - Math.abs(Math.cos(this.phase)) * 0.025 * bob,
-      -REACH,
+      -halfW * (0.78 - 0.18 * jerk) - Math.sin(this.phase) * 0.02 * bob,
+      -halfH * (0.9 - 0.3 * jerk) - Math.abs(Math.cos(this.phase)) * 0.025 * bob,
+      -REACH + jerk * 0.05,
     );
     // The arrow on the string, its tail coming back towards you as you draw.
     if (!this.nocked) {

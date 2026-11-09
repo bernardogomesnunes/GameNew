@@ -803,6 +803,8 @@ export class Game {
         ? 'It follows you, fights for you and heals you while you\'re near. Tap it to tell it to stay or to hunt.'
         : 'It follows you and fights for you, and bandits that come near it lose their nerve. Tap it to tell it to stay or to hunt.',
     }));
+    // A shield turned a blow aside (IMP-23): the clang of it, and it jerks up.
+    this.bus.on('shield:blocked', () => { this.sound?.strike({ weapon: true }); this.handView?.block(); });
     this.bus.on('war:declared', () => {
       const dir = this.kingdomDirection();
       this.ui?.toast({
