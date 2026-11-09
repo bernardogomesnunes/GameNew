@@ -31,6 +31,7 @@ export class CrucibleMachine {
     const shape = s ? `${s.waiting}/${s.molten}/${s.out}/${s.mould}` : '';
     if (shape !== this.shape) { this.shape = shape; this.bar.render(); }
     this.bar.showLevel(this.view.level);
+    this.bar.showMelt();
   }
 
   pointerDown() { this.bar.pour(true); }

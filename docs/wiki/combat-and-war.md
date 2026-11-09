@@ -82,27 +82,27 @@ Raiders break blocks for real. A claimed building that loses blocks stops workin
 The war begins the moment you reach **Age 10**, whichever ring you bear. The wall comes down and the Stone Kingdom declares war.
 
 - The game cannot be finished while the war is on.
-- The first round comes half a game day after the declaration. Rounds come 1.5 game days apart.
+- The first round comes half a game day after the declaration. The next comes about 3 minutes after you win one.
 - A war horn sounds about a minute of play before each round, saying how many are coming and from where.
 - You can sound your own **War Horn** (2 Hide, 1 Gold, 1 Planks; Age 10) to call the next round early.
 - Each round marches into your village. The attackers rob a storehouse, then turn on whoever is left: your soldiers, your villagers and you. They fight to the end: a round is won only when every one of them is dead.
 - Villagers have 10 health and heal once a fight has passed them by. A villager who is killed is gone, and their bed waits for the next to come.
-- A round you lose (you fall) comes again a day later. There is no game over. Raiders loot a share of your storehouses.
+- A round you lose (you fall) comes again about 5 minutes later. There is no game over. Raiders loot a share of your storehouses.
 - A round you win pays gold: 6 for round 1, up to 24 for round 10.
 - Forge the **Black Ring** and the Stone King calls his army home. The war is off. That is the dark path.
 
 | Round | Who comes |
 |---|---|
 | 1 | 3 bandits |
-| 2 | 4 bandits |
-| 3 | 5 bandits |
-| 4 | 3 bandits, 2 archers, a battering ram |
-| 5 | 3 bandits, 3 archers, a battering ram |
-| 6 | 2 bandits, a soldier, 4 archers, a battering ram |
-| 7 | 4 soldiers, 3 archers, a siege catapult |
-| 8 | 4 soldiers, 3 archers, a siege catapult, a battering ram |
-| 9 | 5 soldiers, 3 archers, 2 siege catapults |
-| 10 | The Warlord on his black beast, 4 soldiers, 3 archers, a siege catapult |
+| 2 | 5 bandits |
+| 3 | 7 bandits |
+| 4 | 5 bandits, 3 archers, a battering ram |
+| 5 | 6 bandits, 4 archers, a battering ram |
+| 6 | 4 bandits, 2 soldiers, 6 archers, a battering ram |
+| 7 | 8 soldiers, 6 archers, a siege catapult |
+| 8 | 9 soldiers, 6 archers, a siege catapult, a battering ram |
+| 9 | 11 soldiers, 6 archers, 2 siege catapults |
+| 10 | The Warlord on his black beast, 11 soldiers, 6 archers, a siege catapult (20 in all) |
 
 Win round 10 and the raids end for good. Fireflies drift across your land at night, and the white ending plays. See [Lore and story](lore.md).
 
