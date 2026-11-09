@@ -22,7 +22,7 @@ const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8'
 
 // --- the sets ---------------------------------------------------------------------------
 
-ok('six places to wear things: head, body, legs, feet (playtest, P6), a backpack (batch 3, #1) and a ring', WEAR_SLOTS.join() === 'head,body,legs,feet,back,ring');
+ok('seven places to wear things: head, body, legs, feet (playtest, P6), a backpack (batch 3, #1), a ring and a shield in the left hand (IMP-23)', WEAR_SLOTS.join() === 'head,body,legs,feet,back,ring,offhand');
 ok('six sets in tiers — leather, iron, gold, diamond (backlog batch 4), sky, dark (key stone) — of four pieces each, boots and all',
   ARMOUR_SETS.map((s) => s.key).join() === 'leather,iron,gold,diamond,sky,stone' && ARMOUR_PIECES.length === 24);
 ok('diamond is the strongest, and lasts longest', ARMOUR_SETS.every((s) => s.key === 'diamond' || ARMOUR_PIECES.filter((p) => p.set === s.key).reduce((n, p) => n + p.points, 0) < ARMOUR_PIECES.filter((p) => p.set === 'diamond').reduce((n, p) => n + p.points, 0))

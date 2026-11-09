@@ -74,6 +74,11 @@ Current item reference, generated from the item registry by `node scripts/update
 | Item | How to get it / use | Stack | Details |
 | --- | --- | --- | --- |
 | Bleach Bucket | Water and wood ash mixed in a bucket — place it to wash stone pale | 1 | — |
+| Planing Bench | Build from planks and stone — place it and plane logs into more planks | 10 | — |
+| Joinery Bench | Build from planks, logs and stone. Place it and joint fences, gates and chests from fewer planks | 10 | — |
+| Crucible | Made at a Workbench. Place it inside a foundry to melt ore and pour it into a mould | 10 | — |
+| Counter | Made at a Workbench. Place it and make furniture on it: saw the parts, fit them together | 10 | — |
+| Workbench | Made by hand or at a workshop. Place it anywhere and make everything from the third age on there | 10 | — |
 | Forge | Build from stone and clay — place it to darken rock and forge weapons | 10 | — |
 | Planks | Sawn from wood | 500 | — |
 | Turned Soil | Dirt broken up for planting | 500 | — |
@@ -155,11 +160,11 @@ Current item reference, generated from the item registry by `node scripts/update
 | Stripped Oak Log | An oak log with its bark taken off, at the wood mill | 500 | — |
 | Stripped White Log | A white log with its bark taken off, at the wood mill | 500 | — |
 | Stripped Dark Log | A dark log with its bark taken off, at the wood mill | 500 | — |
-| Cabinet | Made at the wood mill — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| Wardrobe | Made at the wood mill — taller than you — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| Bedside Table | Made at the wood mill — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| Wood Panel | Boards for a wall, at the wood mill — goes flat on the face you point at — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 500 | — |
-| Patterned Panel | Raised squares for a wall, at the wood mill — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 500 | — |
+| Cabinet | Made at the wood mill — keep a Carpentry Saw in your bag | 100 | — |
+| Wardrobe | Made at the wood mill — taller than you — keep a Carpentry Saw in your bag | 100 | — |
+| Bedside Table | Made at the wood mill — keep a Carpentry Saw in your bag | 100 | — |
+| Wood Panel | Boards for a wall, at the wood mill — goes flat on the face you point at — keep a Carpentry Saw in your bag | 500 | — |
+| Patterned Panel | Raised squares for a wall, at the wood mill — keep a Carpentry Saw in your bag | 500 | — |
 | Two-tone Panel | Dark below, light above, a rail between — at the wood mill | 500 | — |
 | Stone Mill | Built at the bench — stand by it and stone goes further, and it grinds gravel; Place on it to use it | 100 | — |
 | Rail | Iron on wooden sleepers, at an engineering centre — lay it in a line, and it joins up round corners and up a step | 500 | — |
@@ -173,9 +178,9 @@ Current item reference, generated from the item registry by `node scripts/update
 | Stone Brick Chimney | Stone brick round a flue — stack them, and the top one smokes | 500 | — |
 | Brick Chimney | Brick round a flue — stack them, and the top one smokes | 500 | — |
 | Plank Stairs | Cut into steps from planks | 500 | — |
-| Oak Table | Built at the workshop — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
+| Oak Table | Built at the workshop — keep a Carpentry Saw in your bag | 100 | — |
 | Marble Table | Cut and dressed at the workshop | 100 | — |
-| Oak Chair | Built at the workshop — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
+| Oak Chair | Built at the workshop — keep a Carpentry Saw in your bag | 100 | — |
 | Red Chair | Built at the workshop, finished in brick red | 100 | — |
 | Red Rug | Woven at the workshop, dyed with brick | 100 | — |
 | Blue Rug | Woven at the workshop, dyed with glass | 100 | — |
@@ -204,20 +209,20 @@ Current item reference, generated from the item registry by `node scripts/update
 | Future Lamp | The Future's street lamp: a cold bright light | 100 | — |
 | Sky Lift | The Sky Kingdom's own — at its anchor towers, Place on one to ride the chain | 100 | — |
 | War Horn | Made at the bench — Break with it in hand calls the Stone Kingdom's next round now | 1 | — |
-| White Table | Built at the workshop — in white wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| White Chair | Built at the workshop — in white wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| White Cabinet | Made at the wood mill — in white wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| White Wardrobe | Made at the wood mill — taller than you — in white wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| White Bedside Table | Made at the wood mill — in white wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| White Panel | Boards for a wall, at the wood mill — goes flat on the face you point at — in white wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 500 | — |
-| White Patterned Panel | Raised squares for a wall, at the wood mill — in white wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 500 | — |
-| Dark Table | Built at the workshop — in dark wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| Dark Chair | Built at the workshop — in dark wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| Dark Cabinet | Made at the wood mill — in dark wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| Dark Wardrobe | Made at the wood mill — taller than you — in dark wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| Dark Bedside Table | Made at the wood mill — in dark wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 100 | — |
-| Dark Panel | Boards for a wall, at the wood mill — goes flat on the face you point at — in dark wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 500 | — |
-| Dark Patterned Panel | Raised squares for a wall, at the wood mill — in dark wood — keep a Carpentry Saw, Chisel, Plane and Mallet in your bag | 500 | — |
+| White Table | Built at the workshop — in white wood — keep a Carpentry Saw in your bag | 100 | — |
+| White Chair | Built at the workshop — in white wood — keep a Carpentry Saw in your bag | 100 | — |
+| White Cabinet | Made at the wood mill — in white wood — keep a Carpentry Saw in your bag | 100 | — |
+| White Wardrobe | Made at the wood mill — taller than you — in white wood — keep a Carpentry Saw in your bag | 100 | — |
+| White Bedside Table | Made at the wood mill — in white wood — keep a Carpentry Saw in your bag | 100 | — |
+| White Panel | Boards for a wall, at the wood mill — goes flat on the face you point at — in white wood — keep a Carpentry Saw in your bag | 500 | — |
+| White Patterned Panel | Raised squares for a wall, at the wood mill — in white wood — keep a Carpentry Saw in your bag | 500 | — |
+| Dark Table | Built at the workshop — in dark wood — keep a Carpentry Saw in your bag | 100 | — |
+| Dark Chair | Built at the workshop — in dark wood — keep a Carpentry Saw in your bag | 100 | — |
+| Dark Cabinet | Made at the wood mill — in dark wood — keep a Carpentry Saw in your bag | 100 | — |
+| Dark Wardrobe | Made at the wood mill — taller than you — in dark wood — keep a Carpentry Saw in your bag | 100 | — |
+| Dark Bedside Table | Made at the wood mill — in dark wood — keep a Carpentry Saw in your bag | 100 | — |
+| Dark Panel | Boards for a wall, at the wood mill — goes flat on the face you point at — in dark wood — keep a Carpentry Saw in your bag | 500 | — |
+| Dark Patterned Panel | Raised squares for a wall, at the wood mill — in dark wood — keep a Carpentry Saw in your bag | 500 | — |
 
 ## Food
 
@@ -251,9 +256,9 @@ Current item reference, generated from the item registry by `node scripts/update
 | Item | How to get it / use | Stack | Details |
 | --- | --- | --- | --- |
 | Carpentry Saw | Cuts planks to length — reusable; keep it in your bag | 1 | — |
-| Carpentry Chisel | Cuts mortises and carved details — reusable; keep it in your bag | 1 | — |
-| Carpentry Plane | Smooths the timber — reusable; keep it in your bag | 1 | — |
-| Carpentry Mallet | Fits the joints together — reusable; keep it in your bag | 1 | — |
+| Carpentry Chisel | Held, Break carves stone into bricks and bricks into pillars — reusable; keep it in your bag | 1 | — |
+| Carpentry Plane | An old loose plane. Bows are planed at a placed Planing Bench now — reusable; keep it in your bag | 1 | — |
+| Carpentry Mallet | An old loose mallet. Joints are made at a placed Joinery Bench now — reusable; keep it in your bag | 1 | — |
 | Weapon Mold | Shapes a weapon before forging — reusable; keep it in your bag | 1 | — |
 | Stone Axe | Crafted from wood and stone | 1 | 120 durability; Cutting trees quickly |
 | Stone Pickaxe | Crafted from wood and stone | 1 | 120 durability; Mining stone quickly |
@@ -268,6 +273,7 @@ Current item reference, generated from the item registry by `node scripts/update
 | Chalk line | Crafted at the bench | 1 | Mirroring what you place |
 | Cart | Built from planks and wood | 1 | Carrying forty slots on a horse |
 | Helix | Built at an engineering centre from iron, glass and planks | 1 | Set it down and fly it |
+| Storage Remote | Hold and tap or right click to browse this world’s stores from anywhere — reusable | 1 | — |
 | Dinosaur Whistle | Carved from hide and string | 1 | Place to call your dinosaurs to follow — or to stay |
 | The God's Wand | Taken from a god's stash, in his cube | 1 | — |
 | Iron Axe | Crafted at the bench from iron | 1 | 300 durability; Cutting trees quickly |
@@ -325,6 +331,9 @@ Current item reference, generated from the item registry by `node scripts/update
 | Dark Cuirass | Blackened iron, as the Stone Kingdom wears it | 1 | Worn: body; 5 armour; 300 durability |
 | Dark Greaves | Blackened iron, as the Stone Kingdom wears it | 1 | Worn: legs; 3 armour; 300 durability |
 | Dark Boots | Blackened iron, as the Stone Kingdom wears it | 1 | Worn: feet; 2 armour; 300 durability |
+| Wooden Shield | Planks under a hide face, bound with a hide rim. Turns aside 15% of blows | 1 | Worn: offhand; 1 armour; 120 durability |
+| Iron Shield | Oak boards faced and rimmed with iron from your foundry. Turns aside 25% of blows | 1 | Worn: offhand; 2 armour; 300 durability |
+| Diamond Shield | Diamond plates on an iron frame: the best shield there is. Turns aside 35% of blows | 1 | Worn: offhand; 3 armour; 700 durability |
 | Swift Leather Boots | Leather Boots upgraded at a temple — faster on your feet | 1 | Worn: feet; 1 armour; 80 durability |
 | Swift Iron Boots | Iron Boots upgraded at a temple — faster on your feet | 1 | Worn: feet; 1 armour; 200 durability |
 | Swift Gold Boots | Gold Boots upgraded at a temple — faster on your feet | 1 | Worn: feet; 1 armour; 160 durability |

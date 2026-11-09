@@ -83,57 +83,26 @@ A few upgraded pieces also turn up in forgotten temple, monument and mine chests
 
 Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Counts are per batch. Reusable tools stay in your bag. The recipe tile checks your age, available space, materials, tools and station. Research and temple recipes may have additional progress conditions.
 
-### Anywhere
+### Workbench
 
 | Recipe / result | Ingredients | Reusable tools | Age | Condition |
 | --- | --- | --- | --- | --- |
 | Storage Interface → 1 Storage Interface | 6 Planks, 2 Glass, 2 Copper Ingot | — | 3 | — |
-| Compost Bin → 1 Compost Bin | 6 Planks, 4 Leaves | — | 2 | — |
-| Stone Axe → 1 Stone Axe | 2 Wood, 3 Stone | — | 1 | — |
-| Stone Pickaxe → 1 Stone Pickaxe | 3 Wood, 4 Stone | — | 1 | — |
-| Stone Shovel → 1 Stone Shovel | 2 Wood, 2 Stone | — | 1 | — |
-| Stone from cobblestone → 1 Stone | 2 Cobblestone | — | 1 | — |
-| Stone from white stone → 1 Stone | 1 White Stone | — | 1 | — |
-| Stone from marble → 1 Stone | 1 Marble | — | 1 | — |
-| Bucket → 1 Bucket | 4 Wood | — | 1 | — |
-| Fill the bucket → 1 Bucket of Water | 1 Bucket | — | 1 | Near water |
-| Empty the bucket → 1 Bucket | 1 Bucket of Water | — | 1 | — |
-| Turn soil → 1 Turned Soil | 1 Dirt | — | 1 | — |
-| Sapling → 1 Sapling | 4 Leaves | — | 1 | — |
-| Planks → 2 Planks | 1 Wood | — | 1 | — |
-| Cook meat → 2 Cooked Meat | 2 Raw Meat, 1 Wood | — | 1 | — |
+| Storage Remote → 1 Storage Remote | 4 Planks, 1 Glass, 2 Copper Ingot | — | 3 | — |
 | Cart → 1 Cart | 16 Planks, 4 Wood | — | 3 | — |
 | Dinosaur Whistle → 1 Dinosaur Whistle | 2 Hide, 2 String | — | 11 | — |
-| Plank Slab → 2 Plank Slab | 1 Planks | — | 1 | — |
-| Plank Stairs → 1 Plank Stairs | 1 Planks | — | 1 | — |
-| Chest → 1 Chest | 6 Planks | — | 1 | — |
 | Storage Controller → 1 Storage Controller | 8 Planks, 2 Glass, 4 Brick | — | 5 | — |
-| Wooden Sword → 1 Wooden Sword | 2 Wood, 3 Planks | Carpentry Chisel | 1 | — |
 | Stone Sword → 1 Stone Sword | 2 Wood, 5 Stone | Carpentry Chisel | 3 | — |
-| Bed → 1 Bed | 4 Planks, 3 Leaves | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 1 | — |
-| Painting → 1 Painting | 2 Planks, 1 Dirt, 1 Leaves | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 1 | — |
 | Catapult → 1 Catapult | 10 Planks, 4 Wood, 6 Stone | — | 4 | — |
 | Fence → 2 Fence | 1 Planks | — | 3 | — |
 | Gate → 1 Gate | 3 Planks | — | 3 | — |
-| Door → 1 Door | 4 Planks | — | 1 | — |
-| White Planks → 2 White Planks | 1 White Log | — | 1 | — |
 | White Fence → 2 White Fence | 1 White Planks | — | 3 | — |
 | White Gate → 1 White Gate | 3 White Planks | — | 3 | — |
-| White Door → 1 White Door | 4 White Planks | — | 1 | — |
-| White Trapdoor → 2 White Trapdoor | 3 White Planks | — | 1 | — |
-| Dark Planks → 2 Dark Planks | 1 Dark Log | — | 1 | — |
 | Dark Fence → 2 Dark Fence | 1 Dark Planks | — | 3 | — |
 | Dark Gate → 1 Dark Gate | 3 Dark Planks | — | 3 | — |
-| Dark Door → 1 Dark Door | 4 Dark Planks | — | 1 | — |
-| Dark Trapdoor → 2 Dark Trapdoor | 3 Dark Planks | — | 1 | — |
-| String → 1 String | 3 Hemp Fibre | — | 1 | — |
-| Bow → 1 Bow | 3 Planks, 3 String | Carpentry Saw, Carpentry Plane | 1 | — |
-| Arrows → 4 Arrow | 1 Planks, 1 String | — | 1 | — |
 | Wood Mill → 1 Wood Mill | 8 Planks, 4 Cobblestone | — | 3 | — |
 | Stone Mill → 1 Stone Mill | 10 Stone, 4 Planks | — | 3 | — |
-| Sandstone → 1 Sandstone | 4 Sand | — | 1 | — |
 | Sandstone Brick → 4 Sandstone Brick | 4 Sandstone | — | 3 | — |
-| Sand Path → 2 Sand Path | 2 Sand | — | 1 | — |
 | Sandstone Wall → 4 Sandstone Wall | 3 Sandstone | — | 3 | — |
 | Stone Brick Wall → 4 Stone Brick Wall | 3 Stone Brick | — | 3 | — |
 | Stone Brick Chimney → 2 Stone Brick Chimney | 3 Stone Brick | — | 3 | — |
@@ -147,13 +116,6 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Orange Stone Wall → 4 Orange Stone Wall | 3 Orange Stone | — | 3 | — |
 | Stone Slab → 2 Stone Slab | 1 Stone | — | 3 | — |
 | Brick Roof Tiles → 2 Brick Roof Tiles | 1 Brick | — | 4 | — |
-| Stone Roof Tiles → 2 Stone Roof Tiles | 1 Stone | — | 1 | — |
-| Teal Roof Tiles → 2 Teal Roof Tiles | 1 Stone, 1 Leaves | — | 1 | — |
-| Mint Roof Tiles → 3 Mint Roof Tiles | 1 Stone, 1 Leaves, 1 Sand | — | 1 | — |
-| Lilac Roof Tiles → 2 Lilac Roof Tiles | 1 Stone, 1 White Leaves | — | 2 | — |
-| Curled Trim → 2 Curled Trim | 1 Planks | — | 1 | — |
-| Hanging Vines → 2 Hanging Vines | 2 Leaves | — | 1 | — |
-| Wisteria → 2 Wisteria | 2 White Leaves | — | 2 | — |
 | Red Mushroom Cap → 2 Red Mushroom Cap | 1 Clay, 1 Leaves | — | 3 | — |
 | Lilac Mushroom Cap → 2 Lilac Mushroom Cap | 1 Clay, 1 White Leaves | — | 3 | — |
 | Mushroom Stem → 2 Mushroom Stem | 1 Clay, 1 Sand | — | 3 | — |
@@ -168,8 +130,6 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Stone Pillar → 2 Stone Pillar | 3 Stone | — | 4 | — |
 | Marble Pillar → 2 Marble Pillar | 2 Marble | — | 8 | — |
 | Dark Pillar → 2 Dark Pillar | 2 Dark Stone | — | 4 | — |
-| Trapdoor → 2 Trapdoor | 3 Planks | — | 1 | — |
-| Framed Window → 1 Framed Window | 2 Planks, 2 Sand | — | 1 | — |
 | Vase → 1 Vase | 2 Clay | — | 3 | — |
 | Urn → 1 Urn | 2 Copper Ingot | — | 5 | — |
 | White Banner → 1 White Banner | 3 Wool, 1 Planks | — | 4 | — |
@@ -202,10 +162,6 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Diamond Axe → 1 Diamond Axe | 2 Wood, 3 Diamond, 1 Iron Ingot | — | 10 | — |
 | Diamond Pickaxe → 1 Diamond Pickaxe | 2 Wood, 3 Diamond, 1 Iron Ingot | — | 10 | — |
 | Diamond Shovel → 1 Diamond Shovel | 2 Wood, 2 Diamond, 1 Iron Ingot | — | 10 | — |
-| Leather Cap → 1 Leather Cap | 3 Hide | — | 1 | — |
-| Leather Tunic → 1 Leather Tunic | 5 Hide | — | 1 | — |
-| Leather Leggings → 1 Leather Leggings | 4 Hide | — | 1 | — |
-| Leather Boots → 1 Leather Boots | 2 Hide | — | 1 | — |
 | Iron Helm → 1 Iron Helm | 3 Iron Ingot | — | 5 | — |
 | Iron Cuirass → 1 Iron Cuirass | 5 Iron Ingot | — | 5 | — |
 | Iron Greaves → 1 Iron Greaves | 4 Iron Ingot | — | 5 | — |
@@ -226,16 +182,69 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Dark Cuirass → 1 Dark Cuirass | 4 Iron Ingot, 2 Dark Stone | — | 5 | — |
 | Dark Greaves → 1 Dark Greaves | 3 Iron Ingot, 1 Dark Stone | — | 5 | — |
 | Dark Boots → 1 Dark Boots | 2 Iron Ingot, 1 Dark Stone | — | 5 | — |
-| Leather Backpack → 1 Leather Backpack | 4 Hide, 2 String | — | 1 | — |
+| Iron Shield → 1 Iron Shield | 5 Iron Ingot, 2 Planks | — | 5 | — |
+| Diamond Shield → 1 Diamond Shield | 3 Diamond, 2 Iron Ingot, 2 Planks | — | 10 | — |
 | Reinforced Backpack → 1 Reinforced Backpack | 1 Leather Backpack, 2 Iron Ingot, 2 Hide | — | 5 | — |
 | Forge → 1 Forge | 12 Stone, 4 Clay | — | 3 | — |
 | Bleach Bucket → 1 Bleach Bucket | 1 Bucket of Water, 2 Wood | — | 3 | — |
-| Wash Clay → 1 Clay | 3 Dirt | — | 1 | Near water |
 | Weapon Mold → 1 Weapon Mold | 3 Clay, 1 Stone | — | 3 | — |
+| Counter → 1 Counter | 6 Planks, 2 Wood | — | 3 | — |
+| Crucible → 1 Crucible | 8 Stone, 2 Clay | — | 5 | — |
+
+### Anywhere
+
+| Recipe / result | Ingredients | Reusable tools | Age | Condition |
+| --- | --- | --- | --- | --- |
+| Compost Bin → 1 Compost Bin | 6 Planks, 4 Leaves | — | 2 | — |
+| Stone Axe → 1 Stone Axe | 2 Wood, 3 Stone | — | 1 | — |
+| Stone Pickaxe → 1 Stone Pickaxe | 3 Wood, 4 Stone | — | 1 | — |
+| Stone Shovel → 1 Stone Shovel | 2 Wood, 2 Stone | — | 1 | — |
+| Stone from cobblestone → 1 Stone | 2 Cobblestone | — | 1 | — |
+| Stone from white stone → 1 Stone | 1 White Stone | — | 1 | — |
+| Stone from marble → 1 Stone | 1 Marble | — | 1 | — |
+| Bucket → 1 Bucket | 4 Wood | — | 1 | — |
+| Fill the bucket → 1 Bucket of Water | 1 Bucket | — | 1 | Near water |
+| Empty the bucket → 1 Bucket | 1 Bucket of Water | — | 1 | — |
+| Turn soil → 1 Turned Soil | 1 Dirt | — | 1 | — |
+| Sapling → 1 Sapling | 4 Leaves | — | 1 | — |
+| Planks → 2 Planks | 1 Wood | — | 1 | — |
+| Cook meat → 2 Cooked Meat | 2 Raw Meat, 1 Wood | — | 1 | — |
+| Plank Slab → 2 Plank Slab | 1 Planks | — | 1 | — |
+| Plank Stairs → 1 Plank Stairs | 1 Planks | — | 1 | — |
+| Chest → 1 Chest | 6 Planks | — | 1 | — |
+| Wooden Sword → 1 Wooden Sword | 2 Wood, 3 Planks | Carpentry Chisel | 1 | — |
+| Door → 1 Door | 4 Planks | — | 1 | — |
+| White Planks → 2 White Planks | 1 White Log | — | 1 | — |
+| White Door → 1 White Door | 4 White Planks | — | 1 | — |
+| White Trapdoor → 2 White Trapdoor | 3 White Planks | — | 1 | — |
+| Dark Planks → 2 Dark Planks | 1 Dark Log | — | 1 | — |
+| Dark Door → 1 Dark Door | 4 Dark Planks | — | 1 | — |
+| Dark Trapdoor → 2 Dark Trapdoor | 3 Dark Planks | — | 1 | — |
+| String → 1 String | 3 Hemp Fibre | — | 1 | — |
+| Arrows → 4 Arrow | 1 Planks, 1 String | — | 1 | — |
+| Sandstone → 1 Sandstone | 4 Sand | — | 1 | — |
+| Sand Path → 2 Sand Path | 2 Sand | — | 1 | — |
+| Stone Roof Tiles → 2 Stone Roof Tiles | 1 Stone | — | 1 | — |
+| Teal Roof Tiles → 2 Teal Roof Tiles | 1 Stone, 1 Leaves | — | 1 | — |
+| Mint Roof Tiles → 3 Mint Roof Tiles | 1 Stone, 1 Leaves, 1 Sand | — | 1 | — |
+| Lilac Roof Tiles → 2 Lilac Roof Tiles | 1 Stone, 1 White Leaves | — | 2 | — |
+| Curled Trim → 2 Curled Trim | 1 Planks | — | 1 | — |
+| Hanging Vines → 2 Hanging Vines | 2 Leaves | — | 1 | — |
+| Wisteria → 2 Wisteria | 2 White Leaves | — | 2 | — |
+| Trapdoor → 2 Trapdoor | 3 Planks | — | 1 | — |
+| Framed Window → 1 Framed Window | 2 Planks, 2 Sand | — | 1 | — |
+| Leather Cap → 1 Leather Cap | 3 Hide | — | 1 | — |
+| Leather Tunic → 1 Leather Tunic | 5 Hide | — | 1 | — |
+| Leather Leggings → 1 Leather Leggings | 4 Hide | — | 1 | — |
+| Leather Boots → 1 Leather Boots | 2 Hide | — | 1 | — |
+| Wooden Shield → 1 Wooden Shield | 6 Planks, 1 Hide | — | 1 | — |
+| Leather Backpack → 1 Leather Backpack | 4 Hide, 2 String | — | 1 | — |
+| Planing Bench → 1 Planing Bench | 6 Planks, 2 Stone | — | 1 | — |
+| Joinery Bench → 1 Joinery Bench | 6 Planks, 2 Wood, 2 Stone | — | 2 | — |
+| Wash Clay → 1 Clay | 3 Dirt | — | 1 | Near water |
 | Carpentry Saw → 1 Carpentry Saw | 2 Wood, 2 Stone | — | 1 | — |
 | Carpentry Chisel → 1 Carpentry Chisel | 2 Wood, 2 Stone | — | 1 | — |
-| Carpentry Plane → 1 Carpentry Plane | 2 Wood, 2 Stone | — | 1 | — |
-| Carpentry Mallet → 1 Carpentry Mallet | 2 Wood, 2 Stone | — | 1 | — |
+| Workbench → 1 Workbench | 8 Planks, 2 Wood, 2 Stone | — | 3 | — |
 
 ### Stone Mill
 
@@ -287,20 +296,14 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Fairy Lights → 4 Fairy Lights | 1 Glass, 1 String | — | 4 | — |
 | Lantern → 1 Lantern | 2 Planks, 1 Glass | — | 4 | — |
 | Chandelier → 1 Chandelier | 1 Iron Ingot, 1 Planks | — | 4 | — |
-| Oak Table → 1 Oak Table | 4 Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 4 | — |
-| Oak Chair → 1 Oak Chair | 3 Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 4 | — |
-| Red Chair → 1 Red Chair | 2 Planks, 1 Brick | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 4 | — |
 | Green Rug → 1 Green Rug | 4 Leaves | — | 4 | — |
 | Red Rug → 1 Red Rug | 3 Leaves, 1 Brick | — | 4 | — |
 | Blue Rug → 1 Blue Rug | 3 Leaves, 1 Glass | — | 4 | — |
 | Marble Table → 1 Marble Table | 3 Marble | — | 4 | — |
-| White Table → 1 White Table | 4 White Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 4 | — |
-| White Chair → 1 White Chair | 3 White Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 4 | — |
-| Dark Table → 1 Dark Table | 4 Dark Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 4 | — |
-| Dark Chair → 1 Dark Chair | 3 Dark Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 4 | — |
 | Beer → 2 Beer | 3 Potatoes | — | 4 | — |
 | Kombucha → 2 Kombucha | 2 Fruit, 1 Leaves | — | 4 | — |
 | Coffee → 2 Coffee | 3 Coffee Beans | — | 4 | — |
+| Workbench → 1 Workbench | 8 Planks, 2 Wood, 2 Stone | — | 4 | — |
 
 ### Engineering
 
@@ -322,7 +325,7 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Steam Engine → 1 Steam Engine | 24 Iron Ingot, 8 Brick, 8 Planks | — | 8 | — |
 | Rail Car → 1 Rail Car | 12 Iron Ingot, 12 Planks | — | 8 | — |
 
-### Foundry
+### Crucible
 
 | Recipe / result | Ingredients | Reusable tools | Age | Condition |
 | --- | --- | --- | --- | --- |
@@ -346,6 +349,14 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Dark Sword → 1 Dark Sword | 2 Wood, 3 Dark Stone, 1 Iron Ingot | Weapon Mold | 10 | — |
 | Diamond Sword → 1 Diamond Sword | 2 Wood, 3 Diamond, 1 Iron Ingot | Weapon Mold | 10 | — |
 | Temper Grey Stone → 4 Dark Grey Stone | 4 Stone, 1 Wood | — | 3 | — |
+| Char Dark Log → 4 Dark Log | 5 Wood | — | 3 | — |
+
+### Planing Bench
+
+| Recipe / result | Ingredients | Reusable tools | Age | Condition |
+| --- | --- | --- | --- | --- |
+| Bow → 1 Bow | 3 Planks, 3 String | Carpentry Saw | 1 | — |
+| Planks (planing bench) → 3 Planks | 1 Wood | — | 2 | — |
 
 ### Wood Mill
 
@@ -364,22 +375,6 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Stripped Oak Log → 1 Stripped Oak Log | 1 Wood | — | 3 | — |
 | Stripped White Log → 1 Stripped White Log | 1 White Log | — | 3 | — |
 | Stripped Dark Log → 1 Stripped Dark Log | 1 Dark Log | — | 3 | — |
-| Cabinet → 1 Cabinet | 4 Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| Wardrobe → 1 Wardrobe | 7 Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| Bedside Table → 1 Bedside Table | 3 Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| Wood Panel → 4 Wood Panel | 1 Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| Patterned Panel → 4 Patterned Panel | 2 Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| Two-tone Panel → 4 Two-tone Panel | 1 Planks, 1 Dark Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| White Cabinet → 1 White Cabinet | 4 White Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| White Wardrobe → 1 White Wardrobe | 7 White Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| White Bedside Table → 1 White Bedside Table | 3 White Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| White Panel → 4 White Panel | 1 White Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| White Patterned Panel → 4 White Patterned Panel | 2 White Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| Dark Cabinet → 1 Dark Cabinet | 4 Dark Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| Dark Wardrobe → 1 Dark Wardrobe | 7 Dark Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| Dark Bedside Table → 1 Dark Bedside Table | 3 Dark Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| Dark Panel → 4 Dark Panel | 1 Dark Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
-| Dark Patterned Panel → 4 Dark Patterned Panel | 2 Dark Planks | Carpentry Saw, Carpentry Chisel, Carpentry Plane, Carpentry Mallet | 3 | — |
 
 ### Compost
 
@@ -489,13 +484,16 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Recipe / result | Ingredients | Reusable tools | Age | Condition |
 | --- | --- | --- | --- | --- |
 | Wash White Stone → 2 White Stone | 2 Stone | — | 3 | — |
+| Bleach White Log → 2 White Log | 2 Wood | — | 3 | — |
 
+### Joinery Bench
 
-## The Counter (furniture)
-
-Furniture is made only at a **Counter** (made at a Workbench from 6 planks and 2 logs, Age 3). Use a placed Counter: the view moves in close over it. Pick a piece, tap **Saw** once for each part (the planks are paid at the first cut), then drag each part onto its place in the pale outline. Patterned panels end with a few taps of the **Chisel**. Keep the Carpentry Saw (and the Chisel for patterned panels) in your bag. Leave halfway and the parts wait on that Counter.
-
-
-## The Crucible (melting and pouring)
-
-The foundry's work is done in a **Crucible** (made at a Workbench from 8 stone and 2 clay, Age 5), placed inside a Foundry building: it needs the foundry's heat. Use it to load ore, gold, copper ingots, rubies or logs; each batch melts on its own (ore 45 s, coins 25 s, charcoal 30 s), also while you are elsewhere. Pick the ingot or coin mould and hold **Pour**: let go when the mould is full (between 90% and 105%). Too little runs back into the pot; too much spills and is lost. Charcoal is burnt, not poured: take the coal.
+| Recipe / result | Ingredients | Reusable tools | Age | Condition |
+| --- | --- | --- | --- | --- |
+| Fence → 3 Fence | 1 Planks | — | 3 | — |
+| White Fence → 3 White Fence | 1 White Planks | — | 3 | — |
+| Dark Fence → 3 Dark Fence | 1 Dark Planks | — | 3 | — |
+| Gate → 1 Gate | 2 Planks | — | 3 | — |
+| White Gate → 1 White Gate | 2 White Planks | — | 3 | — |
+| Dark Gate → 1 Dark Gate | 2 Dark Planks | — | 3 | — |
+| Chest → 1 Chest | 4 Planks | — | 2 | — |

@@ -1,6 +1,6 @@
 import { BLOCKS, BLOCKS_BY_ID, WOOD_FURNITURE } from './blocks.js';
 import { CROPS, cropBaseOf } from './crops.js';
-import { ARMOUR_PIECES, BACKPACKS } from './armour.js';
+import { ARMOUR_PIECES, BACKPACKS, SHIELDS } from './armour.js';
 import { tieredItems } from './tiers.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 
@@ -497,6 +497,15 @@ export const ITEMS = [
     glyph: { head: 'helm', body: 'cuirass', legs: 'greaves', feet: 'boots' }[p.slot],
     wears: p.slot, armour: p.points, set: p.set, durability: p.durability, madeBy: p.madeBy,
     ...(p.disguise ? { disguise: p.disguise } : {}),
+  })),
+
+  // --- shields (IMP-23) — see config/armour.js -----------------------------
+  // Held in the left hand: armour like a piece, and `block`, the share of
+  // blows turned aside whole.
+  ...SHIELDS.map((s) => ({
+    id: s.id, name: s.name, kind: 'armour', stackTo: STACK_TOOL, color: s.main, glyph: 'shield',
+    wears: 'offhand', armour: s.points, block: s.block, durability: s.durability,
+    madeBy: `${s.madeBy}. Turns aside ${Math.round(s.block * 100)}% of blows`,
   })),
 
   // --- backpacks (batch 3, #1) — see config/armour.js ----------------------

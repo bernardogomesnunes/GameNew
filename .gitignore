@@ -31,3 +31,6 @@ artifacts/war/
 
 # Python bytecode (tools/mobs)
 __pycache__/
+
+# Screenshots written by the browser tests
+artifacts/

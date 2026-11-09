@@ -248,7 +248,11 @@ Walls with people behind them. Nothing has tested them yet, and that is rather t
 - Available from Age 8; claim region 6–18 blocks on a side.
 - Claim fee: 20 Stone, 10 Planks.
 
-Train guards in the building panel.
+| Level | Name | Average output / game day | Storage slots | Level fee |
+| --- | --- | --- | --- | --- |
+| 1 | A Garrison | — | — | None |
+| 2 | A Bastion | — | — | 40 Stone, 20 Planks |
+| 3 | A Citadel | — | — | 80 Stone, 40 Planks, 6 Iron Ingot |
 
 ### Stone Wall
 
@@ -279,12 +283,16 @@ See the building panel for its purpose and claim requirements.
 
 ### Barracks
 
-A hall with arms on the walls and a yard to train in. Train warriors, swordsmen, archers and catapult crews here for food and gear — they go out to meet the Stone Kingdom's army. It holds 10 soldiers; evolve it to a Drill Hall for 20 (4 weapon racks, 4 dummies or targets, 6 iron ingots and 20 planks) and a Fortress Barracks for 40 (8 and 8, 12 iron ingots, 40 planks). Beds are only furniture.
+A hall with arms on the walls and a yard to train in. Train warriors, swordsmen, archers and catapult crews here for food and gear — they go out to meet the Stone Kingdom's army. It holds 10 soldiers; evolve it for 20, then 40. Beds are only furniture.
 
 - Available from Age 8; claim region 7–18 blocks on a side.
 - Claim fee: 4 Iron Ingot, 10 Planks.
 
-See the building panel for its purpose and claim requirements.
+| Level | Name | Average output / game day | Storage slots | Level fee |
+| --- | --- | --- | --- | --- |
+| 1 | A Barracks | — | — | None |
+| 2 | A Drill Hall | — | — | 6 Iron Ingot, 20 Planks |
+| 3 | A Fortress Barracks | — | — | 12 Iron Ingot, 40 Planks |
 
 ### Village
 

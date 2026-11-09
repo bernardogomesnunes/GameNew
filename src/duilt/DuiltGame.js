@@ -1806,6 +1806,20 @@ export class DuiltGame {
    * piece that took it a little more worn. A piece worn through falls apart.
    */
   absorb(amount) {
+    // A shield in the left hand (IMP-23) turns a whole blow aside `block` of
+    // the time; the blow still wears it.
+    const shield = this.worn.offhand;
+    const shieldSpec = ITEMS_BY_ID.get(shield?.id);
+    if (shieldSpec?.block && (this.rand ?? Math.random)() < shieldSpec.block) {
+      shield.wear += 1;
+      if (shield.wear >= shieldSpec.durability) {
+        this.worn.offhand = null;
+        this.bus?.emit('toast', { kind: 'xp', title: `${shieldSpec.name} fell apart`, body: 'Worn through — make another' });
+      }
+      this.inventory.changed();
+      this.bus?.emit('shield:blocked', { id: shieldSpec.id });
+      return 0;
+    }
     const points = this.armour();
     if (!points) return amount;
     for (const k of WEAR_SLOTS) {
