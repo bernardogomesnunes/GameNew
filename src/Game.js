@@ -996,12 +996,12 @@ export class Game {
    * kept aside (keepSafe) and sent the next time.
    */
   async leaveWorld(save = true) {
-    if (!save) { this.discarded = true; this.releaseWorldSession(); return false; }
+    if (!save) { this.discarded = true; this.releaseWorldSession?.(); return false; }
     // The showcase is never saved (openShowcase), so there's nothing to wait
     // for: Save and leave used to call that a failed save and keep you in it.
     if (this.showcase) return true;
     const saved = await this.saveAndWait();
-    if (saved) this.releaseWorldSession();
+    if (saved) this.releaseWorldSession?.();
     return saved;
   }
 
