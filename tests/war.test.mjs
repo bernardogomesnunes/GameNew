@@ -44,8 +44,12 @@ ok('7–9: Stone soldiers in armour, and catapults', [7, 8, 9].every((n) => kind
 ok('10: the Warlord on a black beast', kinds(10).includes('warlord') && kinds(10).includes('warbeast'));
 const size = (n) => ROUNDS[n - 1].who.reduce((t, [, c]) => t + c, 0);
 ok(`each bigger than the last, or as big (${ROUNDS.map((_, i) => size(i + 1)).join(', ')})`, ROUNDS.every((_, i) => i === 0 || size(i + 1) >= size(i)));
+// Owner, 9 November: more each round, "until 10 they should be 20"; and they
+// come "a couple of minutes in game after killing one batch".
+ok(`round 10 brings 20 (${size(10)}), each round more than the last`, size(10) === 20 && ROUNDS.every((_, i) => i === 0 || size(i + 1) > size(i)));
+ok(`the next round about 3 minutes after one is won (${ROUND_GAP_DAYS} of a ~20-minute day)`, ROUND_GAP_DAYS * 20 <= 4 && ROUND_GAP_DAYS > WARN_DAYS);
 ok('everyone in them is someone who can be fought', ROUNDS.every((r) => r.who.every(([k]) => WANDERERS[k]?.hp > 0)));
-ok('and told in words', companyWords(4, WANDERERS) === '3 bandits, 2 archers and a battering ram'
+ok('and told in words', companyWords(4, WANDERERS) === '5 bandits, 3 archers and a battering ram'
   && companyWords(10, WANDERERS).startsWith('the Warlord on his black beast'));
 ok('hurt by the army is its own cause, and armour takes it', HIT_CAUSES.has('army') && /army: 'The Stone Kingdom\\'s army beat you'/.test(game));
 
@@ -59,11 +63,11 @@ ok('hurt by the army is its own cause, and armour takes it', HIT_CAUSES.has('arm
   ok('nothing yet', w.tick(10.1) === null);
   ok('a minute off, you hear it', w.tick(10 + FIRST_ROUND_DAYS - WARN_DAYS / 2) === 'warn' && w.stage === 'warned');
   ok('then it sets out', w.tick(10 + FIRST_ROUND_DAYS + WARN_DAYS) === 'start' && w.stage === 'fighting');
-  ok('won: on to round 2, a day and a half off', w.resolve(true, 11) === 'won' && w.round === 2 && w.due === 11 + ROUND_GAP_DAYS);
+  ok('won: on to round 2, a few minutes off', w.resolve(true, 11) === 'won' && w.round === 2 && w.due === 11 + ROUND_GAP_DAYS);
   ok('the horn calls it now', w.horn(11) && w.due === 11 + WARN_DAYS && w.stage === 'waiting');
   ok('but not twice', !w.horn(11));
   w.tick(11); w.tick(11 + WARN_DAYS);
-  ok('lost: the same round again, a day off', w.resolve(false, 12) === 'lost' && w.round === 2 && w.lost === 1 && w.due === 12 + RETRY_DAYS);
+  ok('lost: the same round again, a few minutes off', w.resolve(false, 12) === 'lost' && w.round === 2 && w.lost === 1 && w.due === 12 + RETRY_DAYS);
   // A round that came due while you were away still gives you a minute.
   ok('overdue, there\'s still warning', w.tick(50) === 'warn' && w.due === 50 + WARN_DAYS && w.tick(50) === null);
   w.tick(51);
@@ -142,7 +146,7 @@ const north = { x: 128, z: -1000 };
   const band = w.sendWarband(home, north, 40, ROUNDS[3].who, 4);
   ok(`round 4 turns up: ${band.length} of them`, band.length === size(4) && band.every((p) => p.war && p.round === 4));
   ok('from the Stone Kingdom\'s side, past your border', band.every((p) => p.z < home.z - 40 && Math.abs(p.x - home.x) < 12));
-  ok('the bandits and archers come to rob; the ram comes for your walls', band.filter((p) => p.raider).length === 5 && !band.find((p) => p.kind === 'ram').raider);
+  ok('the bandits and archers come to rob; the ram comes for your walls', band.filter((p) => p.raider).length === 8 && !band.find((p) => p.kind === 'ram').raider);
   ok('archers and soldiers wear a helm or a hood', band.filter((p) => p.kind === 'archer').every((p) => p.helm === WANDERERS.archer.helm));
 
   // You walk off: they don't vanish.
