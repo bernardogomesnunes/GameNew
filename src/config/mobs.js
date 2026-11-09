@@ -151,10 +151,12 @@ MOBS.push(
 // ground they circle (alt), how fast (speed) and how wide (radius); now and
 // then one comes down to rest, and a blow sends it back up and away
 // (Mobs.fly). Their models are tools/mobs/dragons.py; their wings, neck and
-// tail are moved by MobView. Rare, high up in the mountains and the Past.
+// tail are moved by MobView. Kept out of the world for now (owner, 9
+// November: "let's keep dragons out of the game"): no biome spawns them
+// until the dragon nests come (TASKS IMP-45).
 MOBS.push(
   {
-    id: 'elder_dragon', name: 'Elder Dragon', biomes: ['mountains2'], weight: 0.08,
+    id: 'elder_dragon', name: 'Elder Dragon', biomes: [], weight: 0.08,
     herd: [1, 1], hp: 400, walk: 1.2, run: 4, skittish: false,
     flies: { alt: 30, speed: 11, radius: 60 },
     body: { w: 2.75, h: 2.25, l: 5.75 }, head: 1.6, leg: 1.9,
@@ -162,7 +164,7 @@ MOBS.push(
     drops: { raw_meat: [16, 24], hide: [8, 12] },
   },
   {
-    id: 'fire_drake', name: 'Fire Drake', biomes: ['mountains1', 'desert', 'pastJungle'], weight: 0.15,
+    id: 'fire_drake', name: 'Fire Drake', biomes: [], weight: 0.15,
     herd: [1, 1], hp: 120, walk: 1.4, run: 5, skittish: false,
     flies: { alt: 20, speed: 10, radius: 34 },
     body: { w: 1.4, h: 1.1, l: 2.75 }, head: 0.9, leg: 1,
@@ -170,7 +172,7 @@ MOBS.push(
     drops: { raw_meat: [6, 9], hide: [3, 5] },
   },
   {
-    id: 'frost_wyvern', name: 'Frost Wyvern', biomes: ['mountains2', 'mountains1'], weight: 0.15,
+    id: 'frost_wyvern', name: 'Frost Wyvern', biomes: [], weight: 0.15,
     herd: [1, 1], hp: 100, walk: 1.4, run: 5, skittish: false, legs: 2,
     flies: { alt: 22, speed: 10.5, radius: 36 },
     body: { w: 1.1, h: 1, l: 2.5 }, head: 0.85, leg: 1.1,
@@ -178,7 +180,7 @@ MOBS.push(
     drops: { raw_meat: [5, 8], hide: [3, 4] },
   },
   {
-    id: 'storm_dragon', name: 'Storm Dragon', biomes: ['plains', 'pastFerns'], weight: 0.08,
+    id: 'storm_dragon', name: 'Storm Dragon', biomes: [], weight: 0.08,
     herd: [1, 1], hp: 110, walk: 1.4, run: 5, skittish: false,
     flies: { alt: 26, speed: 12, radius: 44 },
     body: { w: 1.25, h: 1.05, l: 2.9 }, head: 0.9, leg: 0.95,

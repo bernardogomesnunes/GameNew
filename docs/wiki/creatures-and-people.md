@@ -75,13 +75,4 @@ The [Past](time-travel.md) has Raptors, Triceratops and Long-necks. Tame a Rapto
 
 Raptors stand about 3 blocks tall, Triceratops 4 blocks tall and 8 long, and Long-necks 13 blocks to the top of the head.
 
-Four kinds of dragon fly over the world. They circle high above their home and land now and then to rest. Hit one and it takes off again.
-
-| Dragon | Where | Size |
-|---|---|---|
-| Elder Dragon | High mountains, rare | 16 blocks long, 20 across the wings |
-| Fire Drake | Mountains, desert, the Past's jungle | 6 blocks long |
-| Frost Wyvern | Mountains; two legs | 5 blocks long |
-| Storm Dragon | Plains, the Past's ferns | 6 blocks long |
-
 The Basilisk is a dangerous, untameable jungle creature that drops Basilisk Scales. Futurians live around the Future's arrival plaza and talk about their city and university. Once you have read the Archive, their guidance acknowledges that knowledge.

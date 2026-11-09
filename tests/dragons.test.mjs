@@ -18,7 +18,10 @@ for (const id of DRAGONS) {
 }
 const len = (id) => MOBS_BY_ID.get(id).body.l;
 assert.ok(DRAGONS.slice(1).every((id) => len('elder_dragon') > len(id) * 1.8), 'the Elder Dragon is by far the biggest');
-console.log('PASS four dragons, each with its model, the Elder Dragon by far the biggest');
+const { mobsForBiome } = await import('../src/config/mobs.js');
+const { BIOMES } = await import('../src/config/biomes.js');
+assert.ok(BIOMES.every((b) => !mobsForBiome(b.id).some((m) => DRAGONS.includes(m.id))), 'no biome spawns a dragon yet (IMP-45)');
+console.log('PASS four dragons, each with its model, the Elder Dragon by far the biggest, none spawning yet');
 
 assert.ok(MOBS_BY_ID.get('raptor').leg >= 1.1 && MOBS_BY_ID.get('trike').body.l >= 3.5 && MOBS_BY_ID.get('longneck').leg + MOBS_BY_ID.get('longneck').body.h + MOBS_BY_ID.get('longneck').neck.up >= 12);
 console.log('PASS the dinosaurs are bigger: a raptor 3 blocks tall, a triceratops near 4 long, a long-neck 13 tall');
