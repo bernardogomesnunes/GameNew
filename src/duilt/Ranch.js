@@ -17,6 +17,8 @@ import { MOBS_BY_ID } from '../config/mobs.js';
 /** What each kind of animal gives, kept in a pen. */
 export const PEN_YIELD = { chicken: 'egg', sheep: 'wool', cow: 'milk', pig: 'raw_meat' };
 const PER_KIND = 2;
+/** Hide a pen with cows in it gives each cycle. */
+export const HIDE_PER_CYCLE = 1;
 
 /** Whether a point is inside a claimed region (block coordinates, inclusive). */
 export function inside(region, x, y, z) {
@@ -45,6 +47,10 @@ export function penProduce(pen, herd) {
     if (item && item !== 'raw_meat') meat++;
   }
   if (meat) out.raw_meat = Math.min(PER_KIND, (out.raw_meat ?? 0) + meat);
+  // A little hide from cows (owner, 9 November: "Would be nice for the farm
+  // to generate a bit if it has cows"): one a cycle, however many, for the
+  // leather armour and backpacks (config/armour.js).
+  if (byKind.cow) out.hide = HIDE_PER_CYCLE;
   return out;
 }
 
