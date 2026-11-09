@@ -1692,6 +1692,12 @@ body.editing-building #building-hint {
 .train-unit span { color: var(--text-dim); }
 .train-unit .short { color: var(--bad, #c0503a); }
 .train-unit.cant { opacity: 0.6; }
+.soldier-orders { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 6px 0 2px; }
+.soldier-order {
+  padding: 6px 4px; border: 1px solid var(--panel-border); border-radius: 8px; background: var(--panel-bg-2, rgba(255,255,255,0.04));
+  color: inherit; font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.soldier-order.on { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); font-weight: 600; }
 .train-queue { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; }
 .train-row {
   display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 2px 8px; padding: 5px 8px;

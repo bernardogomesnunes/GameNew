@@ -47,6 +47,31 @@ const PATROL = 7, REST_MIN = 1, REST_MORE = 3.5, BLOCKED = 0.4;
 /** A walk that has not got GIVE_UP_BY blocks nearer in GIVE_UP_AFTER seconds is given up. */
 const GIVE_UP_AFTER = 2.5, GIVE_UP_BY = 0.5;
 const TALL = 2;
+
+/**
+ * What a barracks's or Garrison's soldiers do between fights (IMP-37). Owner,
+ * 9 November: "soldiers from barracks and garrison should have order:
+ * defense which have then ready to defend the village, around the building,
+ * patrol (which has 1 of them patrol the village) and formation to call all
+ * of them to the front of the building. They are always gathering at the
+ * front now."
+ *
+ *   defend     posts spread all round the building, two blocks out from its
+ *              walls; each strolls within DEFEND_ROAM of its post
+ *   patrol     the same, except one sword (the first trained) walks a loop
+ *              round the whole village and fights whatever it meets
+ *   formation  everyone lined up in front of the building, standing still
+ */
+export const ORDERS = [
+  { id: 'defend', name: 'Defend', blurb: 'Spread round the building, ready for anything that comes at the village.' },
+  { id: 'patrol', name: 'Patrol', blurb: 'One of them walks round the village; the rest stand round the building.' },
+  { id: 'formation', name: 'Formation', blurb: 'All of them lined up in front of the building.' },
+];
+export const DEFAULT_ORDER = 'defend';
+const ORDER_IDS = new Set(ORDERS.map((o) => o.id));
+const DEFEND_ROAM = 3;
+/** How far out from the village's buildings the patrol walks, and how near a corner counts as reached. */
+const ROUTE_MARGIN = 4, AT_CORNER = 1.2;
 const TABARD = 0xdfe6f2, STEEL = 0xb9bec6, ARCHER_COAT = 0x5f7f4a, HOOD = 0x3f5a34;
 
 /**
@@ -84,6 +109,28 @@ export class Defenders {
     // first that many fight weaker until they're fed.
     this.hungry = 0;
     this.nextId = 1;
+    // Per barracks: its standing order (ORDERS); missing means DEFAULT_ORDER.
+    this.orders = {};
+    // Barracks whose soldiers need new posts: their order changed, or
+    // somebody joined.
+    this.repost = new Set();
+    // The patrol's loop round the village: [{ x, z }], from sync.
+    this.route = [];
+  }
+
+  /** A barracks's standing order: 'defend', 'patrol' or 'formation'. */
+  orderOf(id) {
+    return this.orders[String(id)] ?? DEFAULT_ORDER;
+  }
+
+  /** Gives barracks `id` a standing order; its soldiers walk to their new places on the next sync. */
+  setOrder(id, order) {
+    if (!ORDER_IDS.has(order)) return false;
+    const key = String(id);
+    if (this.orderOf(key) === order) return true;
+    this.orders[key] = order;
+    this.repost.add(key);
+    return true;
   }
 
   /** Everyone of yours, to draw. */
@@ -144,10 +191,12 @@ export class Defenders {
    *
    * @param buildings  [{ id, type, region, valid, cap }] — your claimed ones
    * @param days       the world's own count of days (DuiltGame.days)
+   * @param village    { minX, maxX, minZ, maxZ } round all your buildings, for
+   *                   the patrol's loop; without it, the loop goes round the barracks
    * @returns          who finished training just now: [{ unit, of, left }],
    *                   `left` being how many are still in line behind them
    */
-  sync(buildings, days) {
+  sync(buildings, days, village = null) {
     const joined = [];
     // Ids as strings throughout: the training is saved as JSON, whose keys are.
     const standing = new Map(buildings.filter((b) => b.valid).map((b) => [String(b.id), { ...b, id: String(b.id) }]));
@@ -160,6 +209,7 @@ export class Defenders {
     });
     this.archers = this.archers.filter((a) => standing.get(a.post.of)?.type === 'watchtower');
     for (const id of Object.keys(this.trained)) if (!['barracks', 'military'].includes(standing.get(id)?.type)) delete this.trained[id];
+    for (const id of Object.keys(this.orders)) if (!['barracks', 'military'].includes(standing.get(id)?.type)) delete this.orders[id];
     const occupied = new Set();
     for (const s of this.people) {
       occupied.add(`${Math.floor(s.post.x)},${Math.floor(s.post.z)}`);
@@ -195,10 +245,125 @@ export class Defenders {
           s.slot = i;
           this.soldiers.push(s);
           occupied.add(`${spot.x},${spot.z}`);
+          this.repost.add(b.id);
         });
+        if (this.repost.has(b.id)) this.placeAll(b, village);
       }
     }
     return joined;
+  }
+
+  /**
+   * Gives every soldier of barracks `b` its place for the barracks's order
+   * (ORDERS), and they walk there from wherever they are. One with no
+   * ground for a place keeps the one it had.
+   */
+  placeAll(b, village) {
+    const order = this.orderOf(b.id);
+    const mine = this.soldiers.filter((s) => s.post.of === b.id).sort((a, c) => a.slot - c.slot);
+    const occupied = new Set();
+    for (const s of this.people) {
+      if (s.post.of === b.id) continue;
+      occupied.add(`${Math.floor(s.post.x)},${Math.floor(s.post.z)}`);
+    }
+    const all = order === 'formation' ? this.paradeSpots(b.region, occupied) : this.spreadSpots(this.ringSpots(b.region, occupied), mine.length);
+    const patroller = order === 'patrol' ? mine.find((s) => { const u = UNITS_BY_ID.get(s.unit); return !u?.ranged && !u?.siege; }) : null;
+    if (patroller) this.route = this.loopRound(village ?? b.region);
+    let i = 0;
+    for (const s of mine) {
+      s.patrol = s === patroller;
+      s.hold = order === 'formation';
+      s.roam = order === 'formation' ? 0 : DEFEND_ROAM;
+      s.leg = s.patrol ? this.nearestCorner(s) : null;
+      if (s.patrol) continue;
+      const spot = all[i++];
+      if (!spot) continue;
+      s.post.x = spot.x + 0.5; s.post.y = spot.y; s.post.z = spot.z + 0.5;
+      s.round = b.region;
+      this.walkHome(s);
+      s.rest = 0;
+    }
+    this.repost.delete(b.id);
+  }
+
+  /**
+   * Sends `s` back to its post, round the corners of its building when the
+   * building stands between them: [corner, ..., post] in `s.via`.
+   */
+  walkHome(s) {
+    const post = { x: s.post.x, z: s.post.z };
+    const r = s.round;
+    s.via = null;
+    if (!r) return void (s.stroll = post);
+    const inside = (x, z) => x > r.minX - 0.6 && x < r.maxX + 1.6 && z > r.minZ - 0.6 && z < r.maxZ + 1.6;
+    const clear = (a, c) => {
+      const n = Math.ceil(Math.hypot(c.x - a.x, c.z - a.z) / 0.5);
+      for (let i = 1; i < n; i++) if (inside(a.x + ((c.x - a.x) * i) / n, a.z + ((c.z - a.z) * i) / n)) return false;
+      return true;
+    };
+    const from = { x: s.x, z: s.z };
+    if (clear(from, post)) return void (s.stroll = post);
+    const xs = [r.minX - 1.5, r.maxX + 2.5], zs = [r.minZ - 1.5, r.maxZ + 2.5];
+    const corners = [{ x: xs[0], z: zs[0] }, { x: xs[1], z: zs[0] }, { x: xs[1], z: zs[1] }, { x: xs[0], z: zs[1] }];
+    const ways = [...corners.map((c) => [c]), ...corners.flatMap((c, i) => [[c, corners[(i + 1) % 4]], [corners[(i + 1) % 4], c]])];
+    let best = null, bestLen = Infinity;
+    for (const w of ways) {
+      const pts = [from, ...w, post];
+      let len = 0, ok = true;
+      for (let i = 1; i < pts.length && ok; i++) { ok = clear(pts[i - 1], pts[i]); len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z); }
+      if (ok && len < bestLen) { best = w; bestLen = len; }
+    }
+    if (!best) return void (s.stroll = post);
+    s.via = [...best.slice(1).map((c) => ({ ...c })), post];
+    s.stroll = { ...best[0] };
+  }
+
+  /**
+   * Places to stand all round a building, two blocks out from its walls,
+   * clockwise from its front-left corner. The same checks as paradeSpots.
+   */
+  ringSpots(r, occupied) {
+    const cx = (r.minX + r.maxX) / 2, cz = (r.minZ + r.maxZ) / 2;
+    const spots = [];
+    const x0 = r.minX - 2, x1 = r.maxX + 2, z0 = r.minZ - 2, z1 = r.maxZ + 2;
+    const add = (x, z) => {
+      if (occupied.has(`${x},${z}`) || !this.world.inBounds(x, 1, z)) return;
+      const y = groundAt(this.world, x + 0.5, z + 0.5, r.minY + 1, TALL);
+      if (y == null || y <= 0) return;
+      spots.push({ x, y, z, a: Math.atan2(x + 0.5 - cx, -(z + 0.5 - cz)) });
+    };
+    for (let x = x0; x <= x1; x++) { add(x, z0); add(x, z1); }
+    for (let z = z0 + 1; z < z1; z++) { add(x0, z); add(x1, z); }
+    return spots.sort((a, b) => a.a - b.a);
+  }
+
+  /**
+   * `n` of `spots` (sorted round the building), as evenly spaced round it as
+   * they go, the first in the middle of its front: one soldier alone stands
+   * where it came out.
+   */
+  spreadSpots(spots, n) {
+    if (spots.length <= n) return spots;
+    let first = 0;
+    spots.forEach((p, i) => { if (Math.abs(p.a) < Math.abs(spots[first].a)) first = i; });
+    const out = [];
+    for (let k = 0; k < n; k++) out.push(spots[(first + Math.floor((k * spots.length) / n)) % spots.length]);
+    return out;
+  }
+
+  /** The patrol's loop: the corners and middles of the edges of `r`, ROUTE_MARGIN out, in walking order. */
+  loopRound(r) {
+    const x0 = r.minX - ROUTE_MARGIN, x1 = r.maxX + ROUTE_MARGIN, z0 = r.minZ - ROUTE_MARGIN, z1 = r.maxZ + ROUTE_MARGIN;
+    const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2;
+    return [[x0, z0], [mx, z0], [x1, z0], [x1, mz], [x1, z1], [mx, z1], [x0, z1], [x0, mz]]
+      .filter(([x, z]) => this.world.inBounds(Math.floor(x), 1, Math.floor(z)))
+      .map(([x, z]) => ({ x: x + 0.5, z: z + 0.5 }));
+  }
+
+  nearestCorner(s) {
+    let best = 0, d = Infinity;
+    this.route.forEach((c, i) => { const e = Math.hypot(c.x - s.x, c.z - s.z); if (e < d) { d = e; best = i; } });
+    return best;
   }
 
   /** A figure of yours: a tower's archer, or one of a barracks's soldiers trained as `unit`. */
@@ -280,10 +445,10 @@ export class Defenders {
     const m = u?.melee ?? SOLDIER, speed = u?.speed ?? SOLDIER.speed;
     s.cooldown = Math.max(0, s.cooldown - dt);
     s.hurt = Math.max(0, s.hurt - dt);
-    const target = this.nearestTo(s.post, enemies, SOLDIER.range);
+    const target = this.nearestTo(s.patrol ? s : s.post, enemies, SOLDIER.range);
     s.target = target ? { x: target.x, z: target.z } : null;
     s.foe = target;
-    const away = Math.hypot(s.x - s.post.x, s.z - s.post.z);
+    const away = s.patrol ? 0 : Math.hypot(s.x - s.post.x, s.z - s.post.z);
     if (target && away < SOLDIER.leash) {
       const d = Math.hypot(target.x - s.x, target.z - s.z);
       if (d > m.reach * 0.8) this.step(s, target.x, target.z, dt, speed);
@@ -294,7 +459,23 @@ export class Defenders {
       }
       return;
     }
+    if (s.patrol && this.route.length) return void this.walkRound(s, dt, u);
     this.standEasy(s, dt, u);
+  }
+
+  /** The patrol: on round the village's loop, corner to corner, at a walk; a blocked leg is skipped. */
+  walkRound(s, dt, u) {
+    s.foe = null;
+    const leg = (s.leg ?? 0) % this.route.length;
+    const c = this.route[leg];
+    const left = Math.hypot(c.x - s.x, c.z - s.z);
+    const w = s.walk && s.walk.leg === leg ? s.walk : (s.walk = { leg, best: left, since: 0 });
+    if (left < w.best - GIVE_UP_BY) { w.best = left; w.since = 0; } else w.since += dt;
+    const moved = left > AT_CORNER && w.since <= GIVE_UP_AFTER * 2
+      && stepAround(this.world, s, c.x, c.z, dt, (u?.speed ?? SOLDIER.speed) * 0.55);
+    if (moved) { s.target = { x: c.x, z: c.z }; return; }
+    s.leg = (leg + 1) % this.route.length;
+    s.target = null; s.speed = 0;
   }
 
   /**
@@ -306,9 +487,10 @@ export class Defenders {
    */
   standEasy(s, dt, u) {
     s.foe = null;
-    const speed = (u?.speed ?? SOLDIER.speed) * 0.45;
+    const speed = (u?.speed ?? SOLDIER.speed) * (s.hold ? 0.8 : 0.45);
+    const roam = s.roam ?? PATROL;
     const away = Math.hypot(s.x - s.post.x, s.z - s.post.z);
-    if (!s.stroll && away > PATROL + 1) s.stroll = { x: s.post.x, z: s.post.z };
+    if (!s.stroll && away > (s.hold ? 0.4 : roam + 1)) this.walkHome(s);
     if (s.stroll) {
       const left = Math.hypot(s.stroll.x - s.x, s.stroll.z - s.z);
       // Shuffling against a wall gets them no nearer: they give that walk up.
@@ -318,19 +500,24 @@ export class Defenders {
       const stuck = st.since > GIVE_UP_AFTER;
       const moved = left > 0.3 && !stuck && stepAround(this.world, s, s.stroll.x, s.stroll.z, dt, speed);
       if (moved) { s.target = { x: s.stroll.x, z: s.stroll.z }; return; }
+      // Round a corner of the building: on to the next one, or the post.
+      if (s.via?.length && (left <= 0.3 || stuck)) { s.stroll = s.via.shift(); return; }
       // There: rest a while. Blocked: a moment's pause, then somewhere else.
       s.stroll = null;
+      s.via = null;
       s.rest = left > 0.3 ? BLOCKED : REST_MIN + this.rand() * REST_MORE;
     }
     s.target = null; s.speed = 0;
     if (!s.hungry) s.hp = Math.min(u?.hp ?? SOLDIER.hp, s.hp + dt * 0.5);
+    // In formation they stand where they are put.
+    if (s.hold) return;
     s.rest = (s.rest ?? this.rand() * REST_MORE) - dt;
     if (s.rest > 0) return;
     // Far out: back toward the post. Otherwise a new spot round it, one
     // they can stand on, so the walk is not over before it starts.
-    if (away > PATROL - 1) { s.stroll = { x: s.post.x, z: s.post.z }; return; }
+    if (away > roam - 1) return void this.walkHome(s);
     for (let tries = 0; tries < 6 && !s.stroll; tries++) {
-      const a = this.rand() * Math.PI * 2, r = 2 + this.rand() * (PATROL - 2);
+      const a = this.rand() * Math.PI * 2, r = Math.min(2, roam / 2) + this.rand() * (roam - Math.min(2, roam / 2));
       const x = s.post.x + Math.sin(a) * r, z = s.post.z + Math.cos(a) * r;
       if (this.clearWalk(s, x, z)) s.stroll = { x, z };
     }
@@ -493,7 +680,7 @@ export class Defenders {
   }
 
   toJSON() {
-    return { trained: this.trained };
+    return { trained: this.trained, orders: this.orders };
   }
 
   loadJSON(data) {
@@ -505,6 +692,9 @@ export class Defenders {
       if (Number.isInteger(t.count)) this.trained[id] = { roster: Array(Math.min(t.count, MAX_SOLDIERS)).fill(LEGACY_UNIT), queue: [], since: t.since };
       else this.trained[id] = { roster: known(t.roster).slice(0, MAX_SOLDIERS), queue: known(t.queue), since: t.since };
     }
+    this.orders = {};
+    for (const [id, o] of Object.entries(data?.orders ?? {})) if (ORDER_IDS.has(o)) this.orders[id] = o;
+    this.repost = new Set();
     this.soldiers = [];
     this.archers = [];
   }

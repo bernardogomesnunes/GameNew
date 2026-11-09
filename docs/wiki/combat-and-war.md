@@ -58,6 +58,10 @@ Build a **Barracks**. A new one holds 10 soldiers; evolve it for 20, then 40. A 
 | Catapult crew | 5 food, a Catapult, 10 Stone | 16 | Sets up a catapult in front of the barracks and lobs stones up to 38 blocks |
 
 - They defend the town round their barracks: warriors and swordsmen meet attackers that come within 16 blocks of their post and chase no further than 22. Archers shoot from their post at anything within 20 blocks and do not walk out.
+- Give them an order from the barracks or Garrison pop-up:
+  - **Defend** (the start): they spread all round the building, two blocks out, and stroll near their own places.
+  - **Patrol**: one warrior or swordsman walks a loop round the whole village and fights what it meets. The rest stand round the building.
+  - **Formation**: all of them line up in front of the building and stand still.
 - A fallen soldier is gone. Training another costs the same again.
 - Hungry soldiers hit at 60% until fed.
 - A bar on your screen shows who is nearest to finishing training.
