@@ -1167,14 +1167,31 @@ export class DuiltUI {
    * hides it). Text is rewritten only when it changes; the arrow turns in
    * 10 degree steps.
    */
-  renderWar(track, round) {
+  renderWar(track, round, coming = null) {
     const box = this.q('#vital-war');
     if (!box) return;
+    // Between rounds (owner, 9 November, on the desktop: "not seeing the top
+    // indication that the warriors are coming"): the next round and how long
+    // until it sets out, with no arrow or bar yet. `coming` is { seconds,
+    // away }, away meaning you are too far from home for it to come.
+    if (!track && coming) {
+      const s = Math.max(0, Math.ceil(coming.seconds));
+      const when = coming.away ? 'when you are home' : s >= 60 ? `in ${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')} s` : `in ${s} s`;
+      const key = `next:${round}:${when}`;
+      if (key === this.warKey) return;
+      this.warKey = key;
+      box.hidden = false;
+      box.classList.add('coming');
+      box.querySelector('.war-text').textContent = `Round ${round} comes ${when}`;
+      box.title = coming.away ? 'A round only comes while you are near home' : 'The next round of the war';
+      return;
+    }
     const deg = track ? Math.round((track.turn * 180) / Math.PI / 10) * 10 : 0;
     const key = track ? `${round}:${track.left}:${track.total}:${Math.round(track.dist / 5) * 5}:${deg}` : '';
     if (key === this.warKey) return;
     this.warKey = key;
     box.hidden = !track;
+    box.classList.remove('coming');
     if (!track) return;
     const far = Math.round(track.dist);
     box.querySelector('.war-text').textContent = `Round ${round} · ${track.left} of ${track.total} left · ${far} m`;
