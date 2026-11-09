@@ -5055,10 +5055,15 @@ export class Game {
     }
     // A settler stops and turns to you while they talk, then goes back to
     // whatever they were on the way to.
+    // A builder or hauler at a Work Hall only turns to you: their work goes
+    // on while you talk (owner, 9 November: "if I talk with the npc it should
+    // not stop the building").
     if (who === 'settler') {
       person.facing = Math.atan2(me.x - person.x, me.z - person.z);
-      if (person.target) { person.target = null; person.atWork = !person.atWork; }
-      person.wait = Math.max(person.wait ?? 0, 4);
+      if (!this.duilt?.jobs?.controls?.(person)) {
+        if (person.target) { person.target = null; person.atWork = !person.atWork; }
+        person.wait = Math.max(person.wait ?? 0, 4);
+      }
     }
     this.ui?.toast({ kind: 'talk', title, body: `“${line}”${gift ? `\n${gift}` : ''}`, duration: gift ? 8000 : 6000 });
   }
