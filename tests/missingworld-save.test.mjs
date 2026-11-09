@@ -18,6 +18,7 @@ function session({ rows = [], agreed = { revision: 2 }, error = null } = {}) {
     async saveToCloud(name, options) { calls.saves++; calls.revision = options.revision; },
     dropSafeCopy() { calls.drops++; },
     uploadFailed() {}, uploadLanded() {},
+    async checkWorldSession() { return true; },
   };
   return { game, calls };
 }

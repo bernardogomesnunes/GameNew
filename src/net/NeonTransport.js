@@ -300,6 +300,54 @@ export class NeonTransport {
     } catch { return null; }
   }
 
+  // ---- who has a world open (migrations/0007, storage/WorldSession.js) ----
+  // Each returns undefined once the table has turned out to be missing, so a
+  // database without 0007 behaves as before.
+
+  sessionsMissing(err) {
+    if (err?.status === 404 || /world_sessions|PGRST20[05]|42P01/.test(err?.message ?? '')) { this.noSessions = true; return true; }
+    return false;
+  }
+
+  async readWorldSession(worldId) {
+    if (this.noSessions) return undefined;
+    try {
+      const rows = await this.request(`/world_sessions?select=session_id,device,seen_at&world_id=eq.${worldId}&limit=1`);
+      return rows?.[0] ?? null;
+    } catch (err) { if (this.sessionsMissing(err)) return undefined; throw err; }
+  }
+
+  async claimWorldSession(worldId, { sessionId, device }) {
+    if (this.noSessions) return undefined;
+    const playerId = await this.ensurePlayer();
+    try {
+      await this.request('/world_sessions?on_conflict=world_id', {
+        method: 'POST', prefer: 'resolution=merge-duplicates,return=minimal',
+        body: [{ world_id: worldId, player_id: playerId, session_id: sessionId, device, seen_at: new Date().toISOString() }],
+      });
+      return true;
+    } catch (err) { if (this.sessionsMissing(err)) return undefined; throw err; }
+  }
+
+  /** true: still this session's; false: another session has it now. */
+  async touchWorldSession(worldId, sessionId) {
+    if (this.noSessions) return undefined;
+    try {
+      const rows = await this.request(`/world_sessions?world_id=eq.${worldId}&session_id=eq.${encodeURIComponent(sessionId)}`, {
+        method: 'PATCH', prefer: 'return=representation', body: { seen_at: new Date().toISOString() },
+      });
+      return Array.isArray(rows) && rows.length > 0;
+    } catch (err) { if (this.sessionsMissing(err)) return undefined; throw err; }
+  }
+
+  async releaseWorldSession(worldId, sessionId) {
+    if (this.noSessions) return undefined;
+    try {
+      await this.request(`/world_sessions?world_id=eq.${worldId}&session_id=eq.${encodeURIComponent(sessionId)}`, { method: 'DELETE', prefer: 'return=minimal' });
+      return true;
+    } catch (err) { if (this.sessionsMissing(err)) return undefined; throw err; }
+  }
+
   async pullWorld(worldId, attempt = 0) {
     await this.ensurePlayer();
     const worlds = await this.request(`/worlds?select=*&id=eq.${worldId}&deleted_at=is.null&limit=1`);

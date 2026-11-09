@@ -141,6 +141,7 @@ import { ShowcaseView } from './render/ShowcaseView.js';
 import { TITLE_SEED, TITLE_SITE, TITLE_TIME, TITLE_HERDS, titlePlaceBlocks, orbitPose, orbitHeight, messengerPath } from './world/titleScene.js';
 import { SHOWCASE_SEED, SHOWCASE_TIMES, SHOWCASE_SPOTS_BY_ID, SHOWCASE_BUILDINGS, SHOWCASE_FIGURES, findShowcaseSite, flattenShowcase, placeBlocks, showcaseLabels, spotPose } from './world/showcase.js';
 import { Defenders, ORDERS } from './world/Defenders.js';
+import { WorldSession } from './storage/WorldSession.js';
 import { Army } from './world/Army.js';
 import { Guardian } from './world/Guardian.js';
 import { settlerName, settlerColour } from './config/settlers.js';
@@ -183,6 +184,15 @@ function setUnsentTries(held, tries) {
   } catch { /* private window */ }
 }
 
+/**
+ * Whether the account's copy of a world (`mine`, from the world list) is newer
+ * than the one this device last agreed on: somebody saved it elsewhere since.
+ * Uploading then would write an older world over a newer one.
+ */
+export function staleAgainst(mine, agreed) {
+  return !!(mine && agreed && Number(mine.revision) > Number(agreed.revision));
+}
+
 /** The work behind Game.sendUnsent: one copy, one try. */
 async function sendHeldCopy(game) {
   let held = null;
@@ -202,6 +212,18 @@ async function sendHeldCopy(game) {
   // Keep an absent world's backup without resurrecting a possible delete.
   // Check before rebuilding terrain: a blocked upload needs only metadata.
   if (!mine && game.syncState.agreedFor(held.worldId)) return false;
+  // Saved on another device after this copy was put aside: the account has
+  // the newer world, and this old copy must not go over it (owner, 9
+  // November: logging in on the desktop wrote an Age 8 world over the Age 10
+  // one played on the phone). It stays on this device, and is not sent again.
+  if (staleAgainst(mine, game.syncState.agreedFor(held.worldId))) {
+    setUnsentTries(held, UNSENT_MAX_TRIES);
+    game.bus?.emit?.('toast', {
+      kind: 'xp', title: 'An older copy was not sent',
+      body: `"${held.name ?? 'A world'}" was saved on another device since. That newer save is kept. This copy stays on this device only.`,
+    });
+    return false;
+  }
   try {
     const world = World.deserialize(held.state.world, { makeGen: makeChunkGen });
     const res = await game.cloud.save(held.worldId, {
@@ -974,11 +996,13 @@ export class Game {
    * kept aside (keepSafe) and sent the next time.
    */
   async leaveWorld(save = true) {
-    if (!save) { this.discarded = true; return false; }
+    if (!save) { this.discarded = true; this.releaseWorldSession?.(); return false; }
     // The showcase is never saved (openShowcase), so there's nothing to wait
     // for: Save and leave used to call that a failed save and keep you in it.
     if (this.showcase) return true;
-    return this.saveAndWait();
+    const saved = await this.saveAndWait();
+    if (saved) this.releaseWorldSession?.();
+    return saved;
   }
 
   /**
@@ -1143,17 +1167,19 @@ export class Game {
           this.uploadFailed({ retry: false });
           return false;
         }
-        // Somebody else saved this world since we opened it. Refusing would
-        // strand the afternoon in hand, so it goes up — but it is said out
-        // loud, because quietly writing over another device is the one thing
-        // this must never do without telling you.
-        if (mine && agreed && mine.revision > agreed.revision) {
-          this.bus.emit('toast', {
-            kind: 'xp',
-            title: 'This world was open somewhere else',
-            body: 'Your changes are the ones kept. Close it on the other device.',
-          });
+        // Somebody else saved this world since we opened it. It used to go
+        // up anyway, and an old session on one device wrote an Age 8 world
+        // over the Age 10 one played on another (owner, 9 November). The
+        // newer save is kept now: nothing goes up, and the copy put aside by
+        // keepSafe stays on this device.
+        if (staleAgainst(mine, agreed)) {
+          this.saveError = 'This world was saved on another device after you opened it here. That newer save is kept. Reload to play it; changes made here stay on this device only.';
+          this.uploadFailed({ retry: false });
+          return false;
         }
+        // Taken over by another tab or device since the last heartbeat: not
+        // a word more goes up from here.
+        if (!await this.checkWorldSession()) return false;
         await this.saveToCloud(this.worldName, { quiet: true, revision: (mine?.revision ?? 0) + 1 });
         this.pendingSave = false;
         this.saveError = null;
@@ -1341,8 +1367,7 @@ export class Game {
       return false;
     }
     try {
-      await this.restoreFromCloud(id);
-      return true;
+      return (await this.restoreFromCloud(id)) !== false;
     } catch (err) {
       this.ui.toast({ kind: 'xp', title: 'Could not open that world', body: err.message });
       return false;
@@ -4166,6 +4191,7 @@ export class Game {
 
   async restoreFromCloud(id, { silent = false } = {}) {
     if (!this.cloud) throw new Error('This build has no cloud configured.');
+    if (!await this.takeWorldSession(id)) return false;
     const data = await this.cloud.restore(id);
     this.worldIsLocal = false;
     this.loadFromData({
@@ -4205,6 +4231,77 @@ export class Game {
     if (!silent) {
       this.ui.closePanel('panel-menu');
     }
+  }
+
+  // ---- one open session per world (storage/WorldSession.js) ----
+
+  /** This tab's session, made the first time a cloud world opens. */
+  worldSessionFor() {
+    if (!this.cloud?.transport) return null;
+    return (this.worldSession ??= new WorldSession({ transport: this.cloud.transport }));
+  }
+
+  /**
+   * Before a cloud world opens: if another tab or device has it open, asks
+   * whether to open it here and close it there (owner, 9 November). Yes takes
+   * it over; no leaves it where it is. Whether to go on opening it.
+   */
+  async takeWorldSession(id) {
+    const s = this.worldSessionFor();
+    if (!s) return true;
+    if (s.worldId && s.worldId !== id) await s.release();
+    const other = await s.check(id);
+    if (other) {
+      const ago = other.secondsAgo < 5 ? 'just now' : `${other.secondsAgo} seconds ago`;
+      const yes = await this.ui.confirm({
+        title: 'This world is open somewhere else',
+        body: `It is open on ${other.device} (last active ${ago}). Open it here and close it there? Anything not yet saved there is lost.`,
+        ok: 'Open it here',
+      });
+      if (yes !== true) return false;
+    }
+    await s.claim(id);
+    this.sessionTaken = false;
+    // No timer (tests/healing: nothing polls the account): the session is
+    // checked at every save and whenever this tab comes back to the front,
+    // and let go when the page closes.
+    if (!this.sessionWatched && typeof document !== 'undefined') {
+      this.sessionWatched = true;
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.checkWorldSession(); });
+      globalThis.addEventListener?.('pagehide', () => { this.worldSession?.release(); });
+    }
+    return true;
+  }
+
+  /** Still ours, or did another tab take the world over? Whether it is still ours. */
+  async checkWorldSession() {
+    const s = this.worldSession;
+    if (!s?.worldId || this.worldIsLocal || s.worldId !== this.worldId) return true;
+    if (await s.beat() !== 'lost') return true;
+    this.worldSessionTaken();
+    return false;
+  }
+
+  /**
+   * Another tab or device took this world over: this one stops saving at
+   * once, so it cannot write over the newer session, and offers a reload.
+   */
+  worldSessionTaken() {
+    if (this.sessionTaken) return;
+    this.sessionTaken = true;
+    this.discarded = true;
+    this.pendingSave = false;
+    if (this.worldSession) this.worldSession.worldId = null;
+    this.ui?.confirm?.({
+      title: 'This world was opened somewhere else',
+      body: 'It was opened on another device or tab, so this one is closed. Nothing more is saved here.',
+      ok: 'Reload',
+    }).then(() => globalThis.location?.reload?.());
+  }
+
+  /** Lets go of the world, so the next device to open it is not asked. */
+  releaseWorldSession() {
+    return this.worldSession?.release();
   }
 
   // ---- local ----
