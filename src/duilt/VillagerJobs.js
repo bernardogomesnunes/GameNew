@@ -1,6 +1,7 @@
 import { Inventory } from '../items/Inventory.js';
 import { ITEMS_BY_ID, ITEM_FOR_BLOCK } from '../config/items.js';
 import { BLOCKS_BY_ID } from '../config/blocks.js';
+import { STRUCTURES_BY_ID } from '../config/structures.js';
 import { settlerFloor, settlerRoute } from './settlerNavigation.js';
 import { isLoaded } from '../world/Mobs.js';
 
@@ -21,6 +22,7 @@ const centre = r => ({x:(r.minX+r.maxX+1)/2,z:(r.minZ+r.maxZ+1)/2});
 const distance = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
 const clone = v => JSON.parse(JSON.stringify(v));
 const cellKey = c => `${c.x},${c.y},${c.z}`;
+const inside = (r,c) => r && c.x>=r.minX&&c.x<=r.maxX&&c.y>=r.minY&&c.y<=r.maxY&&c.z>=r.minZ&&c.z<=r.maxZ;
 
 /** Real work orders: material escrow belongs to the queue, carried goods to
  * the worker. Neither is paid a second time after loading a saved world. */
@@ -38,6 +40,8 @@ export class VillagerJobs {
   person(id) { return this.settlers.people.find(p=>p.id===id); }
   controls(person) { const a=this.assignments.get(typeof person==='object'?person.id:person); return !!a && a.role!=='automatic'; }
   assignment(personId) { return this.assignments.get(personId) ?? null; }
+  /** IMP-26: whether anyone is working as a builder at a standing Work Hall now. */
+  hasBuilders() { return [...this.assignments.values()].some(a=>a.role==='builder'&&this.hall(a.hallId)&&this.person(a.personId)); }
   supplyForHall(id) {
     if(!this.hallSupplies.has(id)) this.hallSupplies.set(id,new Inventory({slots:40}));
     return this.hallSupplies.get(id);
@@ -82,8 +86,17 @@ export class VillagerJobs {
       unique.set(cellKey(c),{x:c.x,y:c.y,z:c.z,prev:c.prev??this.world.getBlock(c.x,c.y,c.z),next:c.next});
     }
     const changes=[...unique.values()].sort((a,b)=>a.y-b.y||a.z-b.z||a.x-b.x);
+    // IMP-26 (owner, 8 November: "not collapse with other buildings"): no
+    // block of it inside a building you have, named.
+    const regions=this.structures.list().filter(s=>s.region);
+    for(const c of changes) {
+      if(c.next===0)continue;
+      const hit=regions.find(s=>inside(s.region,c));
+      if(hit)return {ok:false,reason:`It would overlap your ${STRUCTURES_BY_ID.get(hit.type)?.name??'building'}. Move it clear of it.`};
+    }
     const keys=new Set(changes.map(cellKey));
-    if(this.builds.some(j=>j.state==='queued'&&j.changes.slice(j.cursor).some(c=>keys.has(cellKey(c)))))return {ok:false,reason:'Another building is already queued on that site.'};
+    const clash=this.builds.find(j=>j.state==='queued'&&j.changes.slice(j.cursor).some(c=>keys.has(cellKey(c))));
+    if(clash)return {ok:false,reason:`It would overlap ${clash.name}, already being built there.`};
     const escrow={};
     for(const c of changes) { const id=ITEM_FOR_BLOCK.get(c.next);if(id)escrow[id]=(escrow[id]??0)+1; }
     if(!funding.hasAll(escrow))return {ok:false,reason:'Collect the full design materials before queuing it.',missing:funding.missing(escrow)};
@@ -208,7 +221,9 @@ export class VillagerJobs {
       if(a.action<BUILD_SECONDS)return;
       a.action=0;
     }
-    this.putIn(job,c,current);
+    const first=job.cursor===0;
+    // IMP-26: word that the builders have started, with the first block.
+    if(this.putIn(job,c,current)&&first&&!owed)this.onBuildStarted?.(job,p);
   }
 
   /** The next block of `job` goes in, paid from its escrow. Whether it did. */
