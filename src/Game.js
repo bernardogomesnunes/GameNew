@@ -139,7 +139,7 @@ import { MobView } from './render/MobView.js';
 import { ShowcaseView } from './render/ShowcaseView.js';
 import { TITLE_SEED, TITLE_SITE, TITLE_TIME, TITLE_HERDS, titlePlaceBlocks, orbitPose, orbitHeight, messengerPath } from './world/titleScene.js';
 import { SHOWCASE_SEED, SHOWCASE_TIMES, SHOWCASE_SPOTS_BY_ID, SHOWCASE_BUILDINGS, SHOWCASE_FIGURES, findShowcaseSite, flattenShowcase, placeBlocks, showcaseLabels, spotPose } from './world/showcase.js';
-import { Defenders } from './world/Defenders.js';
+import { Defenders, ORDERS } from './world/Defenders.js';
 import { Army } from './world/Army.js';
 import { Guardian } from './world/Guardian.js';
 import { settlerName, settlerColour } from './config/settlers.js';
@@ -3324,7 +3324,19 @@ export class Game {
       onCompostFarm: () => this.compostFarm(structure),
       // A barracks (batch 3, #29): who to train. How many it holds is its level.
       onTrain: (unit) => this.trainSoldier(structure, unit),
+      // IMP-37: what they do between fights — defend, patrol or formation.
+      onSoldierOrder: (order) => this.soldierOrder(structure, order),
     };
+  }
+
+  /** Gives a barracks's or Garrison's soldiers a standing order (Defenders ORDERS); they move on the next sync. */
+  soldierOrder(structure, order) {
+    if (!this.duilt?.defenders.setOrder(structure.id, order)) return;
+    this.defenceSyncedAt = 0;
+    this.syncDefence();
+    const o = ORDERS.find((x) => x.id === order);
+    this.ui.toast({ kind: 'xp', title: `Order: ${o.name}`, body: o.blurb });
+    if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(structure, this.buildingActions(structure));
   }
 
   /** Trains a soldier at a barracks (DuiltGame.trainSoldier), saying why not when it can't. */
@@ -5479,7 +5491,14 @@ export class Game {
         .filter((s) => s.type === 'barracks' || s.type === 'military' || s.type === 'watchtower')
         .map((s) => ({ id: s.id, type: s.type, region: s.region, valid: s.valid, cap: s.type === 'barracks' || s.type === 'military' ? soldierCap(s) : 0 }));
       // Each one out of training says so (asked for directly: "show the progress").
-      for (const j of d.defenders.sync(posts, d.days)) {
+      // The patrol's loop goes round all your buildings (IMP-37).
+      let village = null;
+      for (const s of d.structures.list()) {
+        if (!s.valid || !s.region) continue;
+        const r = s.region;
+        village = village ? { minX: Math.min(village.minX, r.minX), maxX: Math.max(village.maxX, r.maxX), minZ: Math.min(village.minZ, r.minZ), maxZ: Math.max(village.maxZ, r.maxZ) } : { minX: r.minX, maxX: r.maxX, minZ: r.minZ, maxZ: r.maxZ };
+      }
+      for (const j of d.defenders.sync(posts, d.days, village)) {
         const u = UNITS_BY_ID.get(j.unit);
         const post = d.structures.list().find((s) => String(s.id) === String(j.of));
         const postName = post?.type === 'military' ? 'Garrison' : 'barracks';

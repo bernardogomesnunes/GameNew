@@ -221,7 +221,7 @@ ok('the pop-up lists who is in training, in order, the first with a filling bar 
 ok('  read off the clock: done / TRAIN_DAYS, and the time that leaves',
   /\(d\.days - t\.since\) \/ TRAIN_DAYS/.test(ui) && /min left/.test(ui) && /Done — out when you close this/.test(ui));
 ok('and each one out of training says so, with how many are still in line',
-  /for \(const j of d\.defenders\.sync\(posts, d\.days\)\)/.test(game) && /is ready`/.test(game) && /more in training at the \$\{postName\}/.test(game));
+  /for \(const j of d\.defenders\.sync\(posts, d\.days, village\)\)/.test(game) && /is ready`/.test(game) && /more in training at the \$\{postName\}/.test(game));
 ok('  and kept moving while it is open, redrawn when one comes out', /setInterval\(\(\) => this\.tickBarracks\(\), 500\)/.test(ui)
   && /if \(shape !== this\.barracksShape\) return void this\.showBuilding/.test(ui) && /clearInterval\(this\.barracksTimer\)/.test(ui));
 ok('the game pays and puts them in line, by the building\'s level', /onTrain: \(unit\) => this\.trainSoldier\(structure, unit\)/.test(game) && /this\.duilt\.trainSoldier\(structure, unit\)/.test(game));

@@ -10,7 +10,7 @@ import { UNITS, UNITS_BY_ID, unitCost, soldierCap, SOLDIER_CAPS } from '../confi
 
 /** What's drawn beside each kind of soldier in a barracks's line. */
 const UNIT_GLYPHS = { warrior: 'sword', swordsman: 'sword', archer: 'bow', crew: 'catapult', shield_guard: 'sword' };
-import { TRAIN_DAYS, MAX_SOLDIERS } from '../world/Defenders.js';
+import { TRAIN_DAYS, MAX_SOLDIERS, ORDERS } from '../world/Defenders.js';
 import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
@@ -703,6 +703,7 @@ export class DuiltUI {
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
     body.querySelector('[data-farm-compost]')?.addEventListener('click', () => actions.onCompostFarm?.());
     body.querySelectorAll('[data-train]').forEach((b) => b.addEventListener('click', () => actions.onTrain?.(b.dataset.train)));
+    body.querySelectorAll('[data-soldier-order]').forEach((b) => b.addEventListener('click', () => actions.onSoldierOrder?.(b.dataset.soldierOrder)));
     body.querySelector('[data-cube]')?.addEventListener('click', () => { this.closePanel('panel-building'); actions.onCube?.(); });
     if ((structure.type === 'barracks' || structure.type === 'military') && this.duilt) {
       const t = this.duilt.defenders.barracks(structure.id);
@@ -859,12 +860,22 @@ export class DuiltUI {
       <div class="building-sec">
         <h4>${structure.type === 'military' ? 'Spear guards' : 'Soldiers'} · ${t.roster.length} of ${cap}</h4>
         <p class="building-line">${t.roster.length ? escapeHtml(tally(t.roster)) : t.queue.length ? 'Nobody out yet.' : 'Nobody yet — train them below.'}</p>
+        ${t.roster.length ? this.ordersHtml(structure) : ''}
         ${hungry ? `<p class="building-line bad">${hungry === 1 ? 'One is' : `${hungry} are`} hungry — they hit softer and don't recover until fed. Put food in a storehouse.</p>` : ''}
         ${t.queue.length ? `<h4>Training · ${t.queue.length}</h4>` : ''}
         ${training}
         ${room > 0 ? '<p class="dim">Train one — paid now, out of your bag:</p>' : `<p class="dim">Full — ${cap} at most here.${nextCap ? ` Evolve this building to hold ${nextCap}.` : ''}</p>`}
         <div class="train-units">${buttons}</div>
       </div>`;
+  }
+
+  /** IMP-37: the barracks's standing order, a button each — Defend, Patrol, Formation. */
+  ordersHtml(structure) {
+    const now = this.duilt.defenders.orderOf(structure.id);
+    return `<div class="soldier-orders" role="group" aria-label="Orders">
+        ${ORDERS.map((o) => `<button class="soldier-order${o.id === now ? ' on' : ''}" data-soldier-order="${o.id}" aria-pressed="${o.id === now}" title="${escapeAttr(o.blurb)}">${escapeHtml(o.name)}</button>`).join('')}
+      </div>
+      <p class="dim">${escapeHtml(ORDERS.find((o) => o.id === now).blurb)}</p>`;
   }
 
   /**
