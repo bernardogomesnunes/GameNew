@@ -3942,6 +3942,27 @@ export class Game {
   }
 
   /**
+   * Slides a stamped building away from you until you are out of its
+   * outline. Owner, 8 and 9 November: placing a village in Age 9 kept
+   * failing. The village is 26 blocks wide and centred where you aim, so
+   * aiming at ground under 10 blocks away put you inside it, and a block
+   * may not be built where you stand. It moves along the way you face, so
+   * it still lands in front of you.
+   */
+  clearOfPlayer(anchor, extent) {
+    if (!extent) return anchor;
+    const p = this.player.position, gap = 1;
+    const inside = (a) => p.x > a.x - gap && p.x < a.x + extent.x + 1 + gap && p.z > a.z - gap && p.z < a.z + extent.z + 1 + gap;
+    if (!inside(anchor)) return anchor;
+    const { x: fx, z: fz } = this.player.lookDirection();
+    const out = { ...anchor };
+    if (Math.abs(fx) >= Math.abs(fz)) out.x = fx > 0 ? Math.ceil(p.x + gap) : Math.floor(p.x - gap) - extent.x - 1;
+    else out.z = fz > 0 ? Math.ceil(p.z + gap) : Math.floor(p.z - gap) - extent.z - 1;
+    out.y = this.world.surfaceHeight(out.x, out.z);
+    return out;
+  }
+
+  /**
    * Keeps a stamped building inside your land.
    *
    * Aiming near your own border used to be a refusal — you pressed Place, the
@@ -4035,7 +4056,7 @@ export class Game {
     if (!this.duilt) return;
     const design = starterDesign(typeId, designId);
     if (!design) return;
-    const aimed = this.stampAnchor(design?.extent);
+    const aimed = this.clearOfPlayer(this.stampAnchor(design?.extent), design?.extent);
     const b = this.fitInsideLand(aimed, design?.extent);
     // Follow the ground where it actually landed, or a slide sideways leaves
     // the building floating off a slope.
