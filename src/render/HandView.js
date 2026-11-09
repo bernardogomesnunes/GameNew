@@ -46,12 +46,15 @@ export class HandView {
     this.fist.position.set(0.04, -0.04, 0.08);
     this.fist.rotation.set(0.25, -0.15, 0);
     this.group.add(this.fist);
-    // The left hand (IMP-23): a shield, low on the left, its face to you.
+    // The left hand (IMP-23): a shield, low on the left, its painted face
+    // turned away from you towards what comes at you; you see its back, the
+    // boards and the grip in your fist (owner, 9 November: "it should be
+    // showing the back of it").
     this.left = new THREE.Group();
     camera.add(this.left);
     this.shield = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
     this.shield.scale.setScalar(0.3);
-    this.shield.rotation.set(-0.12, 0.55, 0.06);
+    this.shield.rotation.set(-0.12, Math.PI - 0.12, -0.06);
     this.left.add(this.shield);
     this.left.visible = false;
     this.offKey = undefined;
