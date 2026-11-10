@@ -1152,7 +1152,11 @@ export class UIManager {
     };
     zone.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      if (id !== null) return;
+      // IMP-25 (owner, 10 November: next to a lot of warriors "game freezes
+      // my camera"): a finger the look zone still thinks is down, but that
+      // is no longer on the screen, never blocks a new one.
+      if (id !== null && [...e.touches].some((t) => t.identifier === id)) return;
+      clearTimeout(timer);
       stopFinishing();
       const t = e.changedTouches[0];
       id = t.identifier;
@@ -1184,10 +1188,15 @@ export class UIManager {
       for (const t of e.changedTouches) {
         if (t.identifier !== id) continue;
         clearTimeout(timer);
-        if (drawing) { drawing = false; this.cb.onDrawEnd?.(); }
-        else if (holding) this.cb.onBreakHold?.(false);
-        else if (!moved && e.type === 'touchend') tap(start);
+        // The finger is up before anything it set off runs: a tap that
+        // throws (a busy fight, many warriors) used to leave id set, and
+        // every later touch on the view was ignored until a reload.
         id = null;
+        const wasDrawing = drawing, wasHolding = holding;
+        drawing = holding = false;
+        if (wasDrawing) this.cb.onDrawEnd?.();
+        else if (wasHolding) this.cb.onBreakHold?.(false);
+        else if (!moved && e.type === 'touchend') tap(start);
       }
     };
     zone.addEventListener('touchend', end);
