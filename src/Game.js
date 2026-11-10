@@ -4071,6 +4071,8 @@ export class Game {
     };
     d.jobs.placeBlock=c=>this.applyChanges([c],{chargeResources:false,gather:false});
     d.jobs.onBuildStarted=(job,p)=>this.ui?.toast({kind:'challenge',title:`${p?.name ?? 'Your builder'} started on the ${job.name}`,body:'Builders put up a block at a time; its outline shows where it goes.'});
+    // Owner, 9 November: a build stopped with no word why. Say it once per reason.
+    d.jobs.onBuildHeld=(job,reason)=>this.ui?.toast({kind:'xp',title:`The ${job.name} is waiting`,body:reason});
     d.jobs.onBuildComplete=job=>{
       const claim=d.claim(job.region,job.type);
       if (!claim.ok) d.waitFor(job.region,job.type,claim.reason);
