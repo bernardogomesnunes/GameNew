@@ -1,6 +1,6 @@
 import { Inventory } from '../items/Inventory.js';
 import { ITEMS_BY_ID, ITEM_FOR_BLOCK } from '../config/items.js';
-import { BLOCKS_BY_ID } from '../config/blocks.js';
+import { BLOCKS_BY_ID, isWater } from '../config/blocks.js';
 import { STRUCTURES_BY_ID } from '../config/structures.js';
 import { settlerFloor, settlerRoute } from './settlerNavigation.js';
 import { isLoaded } from '../world/Mobs.js';
@@ -22,6 +22,19 @@ const centre = r => ({x:(r.minX+r.maxX+1)/2,z:(r.minZ+r.maxZ+1)/2});
 const distance = (a,b) => Math.hypot(a.x-b.x,a.z-b.z);
 const clone = v => JSON.parse(JSON.stringify(v));
 const cellKey = c => `${c.x},${c.y},${c.z}`;
+/**
+ * Owner, 9 November: "the builder is stopped and not working for a while".
+ * Ground the world changes by itself (dirt taking turf, a sapling, leaves,
+ * crops, water running in) is built over: the block the order expected was
+ * the ground, and it is still ground. A block someone placed still stops it.
+ */
+export const settles = id => {
+  if(id===0||isWater(id))return true;
+  const b=BLOCKS_BY_ID.get(id);
+  return !!b && (b.soil || ((b.glyph==='leaf'||b.glyph==='sprout') && b.material==='plant'));
+};
+/** A refused order waits this long before its builders try it again; meanwhile they work the next one. */
+export const HOLD_SECONDS = 5;
 const inside = (r,c) => r && c.x>=r.minX&&c.x<=r.maxX&&c.y>=r.minY&&c.y<=r.maxY&&c.z>=r.minZ&&c.z<=r.maxZ;
 
 /** Real work orders: material escrow belongs to the queue, carried goods to
@@ -188,9 +201,24 @@ export class VillagerJobs {
     return distance(p,target)<=reach;
   }
 
+  /** The order stops at this block for `reason`: its builders turn to the next order meanwhile. */
+  hold(job,reason) {
+    job.reason=reason;job.held=HOLD_SECONDS;
+    if(job.told!==reason){job.told=reason;this.onBuildHeld?.(job,reason);}
+  }
+
+  /** The current block of `job` as it stands, or why it can't go in. */
+  site(job,c) {
+    if(this.canPlace&&!this.canPlace(c,job))return {reason:'The next block is protected'};
+    const current=this.world.getBlock(c.x,c.y,c.z);
+    if(current!==c.prev&&current!==c.next&&!settles(current))return {reason:'The site changed — clear or cancel this build'};
+    return {current};
+  }
+
   build(p,a,dt) {
-    const job=this.builds.find(j=>j.state==='queued'&&!j.self);
-    if(!job){a.status='Waiting for a building order';return;}
+    const queued=this.builds.filter(j=>j.state==='queued'&&!j.self);
+    const job=queued.find(j=>!(j.held>0));
+    if(!job){a.status=queued.length?`Waiting: ${queued[0].reason??'the next block can\'t go in yet'}`:'Waiting for a building order';return;}
     const c=job.changes[job.cursor];
     a.status=`Building ${job.name} (${job.cursor}/${job.changes.length})`;
     // Never wall a worker into the cell being placed. Step into the aisle
@@ -209,9 +237,8 @@ export class VillagerJobs {
     // the walk, as long as their ground is loaded.
     const owed=this.owedSeconds>=BLOCK_SECONDS_AWAY && isLoaded(this.world,c.x+.5,c.z+.5);
     if(!owed && !this.move(p,a,{x:c.x+.5,z:c.z+.5},dt))return;
-    if(this.canPlace&&!this.canPlace(c,job)){job.reason='The next block is protected';return;}
-    const current=this.world.getBlock(c.x,c.y,c.z);
-    if(current!==c.prev&&current!==c.next){job.reason='The site changed — clear or cancel this build';return;}
+    const {current,reason}=this.site(job,c);
+    if(reason){this.hold(job,reason);a.action=0;return;}
     if(owed) this.owedSeconds-=BLOCK_SECONDS_AWAY;
     else {
       // Facing the block, a blow at the start and half way: you see it go in.
@@ -230,14 +257,14 @@ export class VillagerJobs {
   putIn(job,c,current) {
     const item=ITEM_FOR_BLOCK.get(c.next);
     if(current!==c.next) {
-      if(item&&!(job.escrow[item]>0)){job.reason='Building material missing from escrow';return false;}
+      if(item&&!(job.escrow[item]>0)){this.hold(job,'Building material missing from escrow');return false;}
       const placed=this.placeBlock?this.placeBlock({...c,prev:current},job):this.world.setBlock(c.x,c.y,c.z,c.next)!==false;
-      if(!placed){job.reason='The next block cannot be placed';return false;}
+      if(!placed){this.hold(job,'The next block cannot be placed');return false;}
       if(item && --job.escrow[item]===0)delete job.escrow[item];
     }
     // A player may have placed this cell meanwhile: its reserved material is
     // left over and returned when the order completes, rather than lost.
-    job.cursor++;job.reason=null;this.changed();
+    job.cursor++;job.reason=null;job.told=null;this.changed();
     if(job.cursor===job.changes.length) {
       job.state='completed';this.refund(job);
       this.onBuildComplete?.(job);
@@ -255,9 +282,8 @@ export class VillagerJobs {
     while(job.state==='queued'&&job.timer>=SELF_BLOCK_SECONDS) {
       const c=job.changes[job.cursor];
       if(!isLoaded(this.world,c.x+.5,c.z+.5)){job.reason='Waiting for you to come near';return;}
-      if(this.canPlace&&!this.canPlace(c,job)){job.reason='The next block is protected';return;}
-      const current=this.world.getBlock(c.x,c.y,c.z);
-      if(current!==c.prev&&current!==c.next){job.reason='The site changed — clear or cancel this build';return;}
+      const {current,reason}=this.site(job,c);
+      if(reason){this.hold(job,reason);return;}
       if(!this.putIn(job,c,current))return;
       job.timer-=SELF_BLOCK_SECONDS;
     }
@@ -298,6 +324,7 @@ export class VillagerJobs {
   tick(dt) {
     if(!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.5); // no offline construction or teleporting on a long frame
+    for(const job of this.builds)if(job.held>0)job.held=Math.max(0,job.held-dt);
     for(const job of this.builds)if(job.self&&job.state==='queued')this.selfBuild(job,dt);
     for(const a of this.assignments.values()) {
       const p=this.person(a.personId);

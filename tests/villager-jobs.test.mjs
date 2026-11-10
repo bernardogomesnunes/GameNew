@@ -91,3 +91,28 @@ assert.equal(tiny.countOf('planks'),2);
 assert.equal(resumed.collectRefund(order.job.id).ok,true);
 assert.equal(tiny.countOf('planks'),2);
 console.log('PASS full-bag cancellation preserves refundable escrow through saving');
+// Owner, 9 November: "the builder is stopped and not working for a while".
+{
+  const w=new World({sizeX:48,sizeZ:32,height:24});
+  for(let x=0;x<48;x++)for(let z=0;z<32;z++)w.setBlock(x,0,z,2);
+  const inv=new Inventory();inv.add('planks',8);
+  const p={id:0,x:3.5,y:1,z:4.5,homeId:3,workId:2,hungry:false};
+  const held=[];
+  const j=new VillagerJobs({world:w,settlers:{people:[p]},structures,inventory:inv});
+  j.onBuildHeld=(job,reason)=>held.push(reason);
+  j.assign(0,'builder',1);
+  // Ground that changed by itself is built over: dirt that took turf, a sapling.
+  const grown=j.enqueueBuild({name:'Path',changes:[{x:10,y:0,z:8,next:7},{x:11,y:1,z:8,next:7}]});assert.equal(grown.ok,true);
+  w.setBlock(10,0,8,1);w.setBlock(11,1,8,20);
+  // A block someone placed stops only its own order: the next one goes up.
+  const stuck=j.enqueueBuild({name:'Shed',changes:[{x:16,y:1,z:12,next:7}]});assert.equal(stuck.ok,true);
+  const after=j.enqueueBuild({name:'Fence',changes:[{x:18,y:1,z:14,next:7}]});assert.equal(after.ok,true);
+  w.setBlock(16,1,12,3);
+  for(let n=0;n<1500;n++)j.tick(.1);
+  assert.equal(w.getBlock(10,0,8),7);assert.equal(w.getBlock(11,1,8),7);
+  assert.equal(grown.job.state,'completed');
+  assert.equal(w.getBlock(16,1,12),3);assert.match(stuck.job.reason,/site changed/);
+  assert.equal(w.getBlock(18,1,14),7);assert.equal(after.job.state,'completed');
+  assert.deepEqual(held,['The site changed — clear or cancel this build']);
+  console.log('PASS changed ground is built over, and a stuck order no longer stops the others');
+}
