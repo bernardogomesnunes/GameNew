@@ -1,4 +1,5 @@
 import { groundAt, bodyFits } from './Mobs.js';
+import { ease, drift, fall } from './bodies.js';
 import { roofPart } from '../config/blocks.js';
 import { UNITS_BY_ID, LEGACY_UNIT, SOLDIER_CAPS } from '../config/soldiers.js';
 
@@ -82,17 +83,39 @@ const TABARD = 0xdfe6f2, STEEL = 0xb9bec6, ARCHER_COAT = 0x5f7f4a, HOOD = 0x3f5a
 export function stepAround(world, s, tx, tz, dt, speed) {
   const dx = tx - s.x, dz = tz - s.z, d = Math.hypot(dx, dz);
   if (d < 0.05) return false;
+  // Up to speed over a few steps and slowing into where they're going, not
+  // full speed from the first frame to the last. Standing (speed 0, set by
+  // whoever stopped them), they start from nothing again.
+  const was = s.speed > 0 ? s.pace ?? speed : 0;
+  const want = Math.min(speed, Math.max(SLOWEST, Math.sqrt(2 * BRAKE * d)));
+  s.pace = ease(was, want, want > was ? ACCEL : BRAKE, dt);
   s.speed = speed;
-  const len = Math.min(d, speed * dt);
+  const len = Math.min(d, s.pace * dt);
   const a = Math.atan2(dx, dz);
-  for (const turn of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]) {
-    const nx = s.x + Math.sin(a + turn) * len, nz = s.z + Math.cos(a + turn) * len;
+  for (let i = 0; i < TURNS.length; i++) {
+    const nx = s.x + Math.sin(a + TURNS[i]) * len, nz = s.z + Math.cos(a + TURNS[i]) * len;
     const g = groundAt(world, nx, nz, s.y, TALL);
     if (g == null || !bodyFits(world, nx, nz, g)) continue;
-    s.x = nx; s.z = nz; s.y = g;
+    s.x = nx; s.z = nz;
+    // Up a step at once; down off one is a fall (settle).
+    if (g > s.y) { s.y = g; s.vy = 0; }
     return true;
   }
+  s.pace = 0;
   return false;
+}
+const TURNS = [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8];
+// Blocks a second, each second: how a soldier gathers speed and loses it.
+const ACCEL = 12, BRAKE = 16, SLOWEST = 1;
+
+/**
+ * What the ground does to someone on foot each frame, whatever they are
+ * doing: carried back by a blow that landed on them (bodies.js), and down
+ * onto whatever is under them — a block dug away drops them, at a fall.
+ */
+export function settle(world, s, dt) {
+  if (s.kx || s.kz) drift(world, s, dt, TALL);
+  fall(world, s, dt, TALL);
 }
 
 export class Defenders {
@@ -434,6 +457,7 @@ export class Defenders {
       if (u?.ranged) this.bowman(s, u, dt, enemies);
       else if (u?.siege) this.crew(s, u, dt, enemies, on);
       else this.soldier(s, dt, enemies, on);
+      settle(this.world, s, dt);
     }
     this.soldiers = this.soldiers.filter((s) => s.hp > 0);
     for (const a of this.archers) this.archer(a, dt, enemies);

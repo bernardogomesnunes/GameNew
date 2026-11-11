@@ -2,7 +2,7 @@ import { WANDERERS, WANDERER_NAMES, NEWS, rollExplorerGifts } from '../config/wa
 import { STUN_SECONDS, BURN_SECONDS, BURN_DAMAGE, FREEZE_SECONDS, FREEZE_SLOW } from '../config/upgrades.js';
 import { landmarksFor } from './landmarks.js';
 import { groundAt, surfaceAt, isLoaded, bodyFits } from './Mobs.js';
-import { knock, drift } from './bodies.js';
+import { knock, drift, freeFall } from './bodies.js';
 
 /**
  * The people out in the world who aren't yours.
@@ -1051,7 +1051,8 @@ export class Wanderers {
       }
     }
     const ground = groundAt(this.world, p.x, p.z, p.y, TALL);
-    if (ground == null) return;
+    // Over a pit deeper than they can see the bottom of, they fall into it.
+    if (ground == null) { if (p.perch == null) freeFall(this.world, p, dt); return; }
     if (p.y <= ground && !(p.vy > 0)) { p.y = ground; p.vy = 0; return; }
     p.vy = (p.vy ?? 0) - 22 * dt;
     p.y = Math.max(ground, p.y + p.vy * dt);

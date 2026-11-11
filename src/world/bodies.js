@@ -75,14 +75,14 @@ export function drift(world, b, dt, tall = 2, half = BODY_HALF, floorMin = -Infi
   const top = here + 0.05;
   const nx = b.x + kx * dt, nz = b.z + kz * dt;
   let g = groundAt(world, nx, nz, from, tall, swim);
-  if (g != null && g <= top && g >= floorMin && bodyFits(world, nx, nz, g, 1.8, half)) { b.x = nx; b.z = nz; }
+  if (g != null && g <= top && g >= floorMin && bodyFits(world, nx, nz, Math.max(g, b.y), 1.8, half)) { b.x = nx; b.z = nz; }
   else {
     // Against a wall: along it, whichever way is open.
     g = groundAt(world, nx, b.z, from, tall, swim);
-    if (g != null && g <= top && g >= floorMin && bodyFits(world, nx, b.z, g, 1.8, half)) { b.x = nx; b.kz = 0; }
+    if (g != null && g <= top && g >= floorMin && bodyFits(world, nx, b.z, Math.max(g, b.y), 1.8, half)) { b.x = nx; b.kz = 0; }
     else {
       g = groundAt(world, b.x, nz, from, tall, swim);
-      if (g != null && g <= top && g >= floorMin && bodyFits(world, b.x, nz, g, 1.8, half)) { b.z = nz; b.kx = 0; }
+      if (g != null && g <= top && g >= floorMin && bodyFits(world, b.x, nz, Math.max(g, b.y), 1.8, half)) { b.z = nz; b.kx = 0; }
       else { b.kx = 0; b.kz = 0; return false; }
     }
   }
@@ -99,11 +99,27 @@ export function drift(world, b, dt, tall = 2, half = BODY_HALF, floorMin = -Infi
 export function fall(world, b, dt, tall = 2) {
   const vy = b.vy ?? 0;
   const ground = groundAt(world, b.x, b.z, b.y, tall);
-  if (ground == null) { b.vy = 0; return; }
+  if (ground == null) { if (!freeFall(world, b, dt)) b.vy = 0; return; }
   if (vy <= 0 && b.y <= ground) { b.y = ground; b.vy = 0; return; }
   b.vy = vy - GRAVITY * dt;
   b.y += b.vy * dt;
   if (b.y <= ground) { b.y = ground; b.vy = 0; }
+}
+
+/**
+ * Nothing to stand on within reach (groundAt looks three blocks down) and
+ * nothing but air there: it falls through it this frame, and finds the
+ * ground when it gets near — a pit dug under someone used to leave them
+ * hanging over it. False when what's under them is something else (water,
+ * leaves, a fence, unmade land), where they stay as they are.
+ */
+export function freeFall(world, b, dt) {
+  const bx = Math.floor(b.x), bz = Math.floor(b.z), base = Math.floor(b.y);
+  if (base < 4 || !world.getBlock) return false;
+  for (let y = base + 1; y >= base - 3; y--) if (world.getBlock(bx, y, bz) !== 0) return false;
+  b.vy = Math.max(-30, (b.vy ?? 0) - GRAVITY * dt);
+  b.y += Math.max(-2.5, b.vy * dt);
+  return true;
 }
 
 // ---- the crowd: bodies pushing each other apart ---------------------------------
@@ -112,9 +128,9 @@ export function fall(world, b, dt, tall = 2) {
 const CELL = 2.5;
 const TABLE = 1024;           // hash buckets; a power of two
 /** The part of an overlap undone in one frame: all of it at once makes a packed crowd shake. */
-const STIFF = 0.5;
+const STIFF = 0.8;
 /** The furthest one frame's push moves anybody. */
-const MAX_PUSH = 0.2;
+const MAX_PUSH = 0.3;
 /** Bodies further apart than this in height don't touch (one on a wall, one below it). */
 const REACH_Y = 1.5;
 /** A push never takes anybody up or down more than this: not up a step, not off a ledge. */
@@ -152,6 +168,8 @@ export class Crowd {
     this.radius = f32(this.radius); this.inv = f32(this.inv);
     this.tall = f32(this.tall); this.half = f32(this.half);
     this.ax = f32(this.ax); this.az = f32(this.az);
+    // Where each is, read once a pass: the pair test then touches numbers only.
+    this.px = new Float64Array(capacity); this.py = new Float64Array(capacity); this.pz = new Float64Array(capacity);
     this.cx = i32(this.cx); this.cz = i32(this.cz); this.next = i32(this.next);
     this.flags = new Uint8Array(capacity);
   }
@@ -182,13 +200,24 @@ export class Crowd {
     return i;
   }
 
-  /** Pushes apart whoever overlaps. Returns how many pairs were touching. */
-  resolve(world) {
-    const { n, bodies, radius, inv, ax, az, cx, cz, next, head } = this;
+  /**
+   * Pushes apart whoever overlaps. Returns how many pairs were touching.
+   * A second pass, only when somebody was: in a packed crowd one pass
+   * leaves the ones in the middle squeezed from both sides.
+   */
+  resolve(world, passes = 2) {
+    const touching = this.pass(world);
+    for (let i = 1; i < passes && touching; i++) if (!this.pass(world)) break;
+    return touching;
+  }
+
+  pass(world) {
+    const { n, bodies, radius, inv, ax, az, cx, cz, next, head, px, py, pz } = this;
     head.fill(-1);
     for (let i = 0; i < n; i++) {
       const b = bodies[i];
       ax[i] = 0; az[i] = 0;
+      px[i] = b.x; py[i] = b.y; pz[i] = b.z;
       const x = cx[i] = Math.floor(b.x / CELL), z = cz[i] = Math.floor(b.z / CELL);
       const h = ((x * 73856093) ^ (z * 19349663)) & (TABLE - 1);
       next[i] = head[h];
@@ -196,27 +225,26 @@ export class Crowd {
     }
     let touching = 0;
     for (let i = 0; i < n; i++) {
-      const a = bodies[i], x = cx[i], z = cz[i];
+      const x = cx[i], z = cz[i], ax0 = px[i], ay0 = py[i], az0 = pz[i], ri = radius[i], ii = inv[i];
       for (let ox = -1; ox <= 1; ox++) {
         for (let oz = -1; oz <= 1; oz++) {
           const nx = x + ox, nz = z + oz;
           for (let j = head[((nx * 73856093) ^ (nz * 19349663)) & (TABLE - 1)]; j >= 0; j = next[j]) {
             // Each pair once; and only who is really in that cell (two cells can share a bucket).
             if (j <= i || cx[j] !== nx || cz[j] !== nz) continue;
-            const share = inv[i] + inv[j];
-            if (share === 0) continue;
-            const b = bodies[j];
-            const min = radius[i] + radius[j];
-            let dx = a.x - b.x, dz = a.z - b.z;
+            const min = ri + radius[j];
+            let dx = ax0 - px[j], dz = az0 - pz[j];
             const d2 = dx * dx + dz * dz;
             if (d2 >= min * min) continue;
-            const dy = a.y - b.y;
+            const dy = ay0 - py[j];
             if (dy > REACH_Y || dy < -REACH_Y) continue;
+            const share = ii + inv[j];
+            if (share === 0) continue;
             let d = Math.sqrt(d2);
             // Exactly in one another: apart along a line that depends only on who they are.
             if (d < 1e-4) { dx = Math.sin(i * 2.399 + j); dz = Math.cos(i * 2.399 + j); d = 1; }
             const push = ((min - d) * STIFF) / (d * share);
-            ax[i] += dx * push * inv[i]; az[i] += dz * push * inv[i];
+            ax[i] += dx * push * ii; az[i] += dz * push * ii;
             ax[j] -= dx * push * inv[j]; az[j] -= dz * push * inv[j];
             touching++;
           }
@@ -233,7 +261,8 @@ export class Crowd {
     let px = this.ax[i], pz = this.az[i];
     const p = Math.hypot(px, pz);
     if (p > MAX_PUSH) { px *= MAX_PUSH / p; pz *= MAX_PUSH / p; }
-    if (this.flags[i] & 1) { b.pushX = px; b.pushZ = pz; return; }
+    // Moved here only as far as the others can tell; its owner does the real move.
+    if (this.flags[i] & 1) { b.pushX += px; b.pushZ += pz; b.x += px; b.z += pz; return; }
     if (this.stand(world, i, b.x + px, b.z + pz)) return;
     // Against a wall or an edge: along it.
     if (px !== 0 && this.stand(world, i, b.x + px, b.z)) return;
@@ -242,7 +271,15 @@ export class Crowd {
 
   /** Puts body i at (x, z) if it can stand there without climbing, dropping or entering a wall. */
   stand(world, i, x, z) {
-    const b = this.bodies[i];
+    const b = this.bodies[i], h = this.half[i];
+    // Still over the same blocks it stands on now: nothing new to run into,
+    // and no need to ask the world (most pushes are a few hundredths).
+    if (Math.floor(x) === Math.floor(b.x) && Math.floor(z) === Math.floor(b.z)
+      && Math.floor(x - h) === Math.floor(b.x - h) && Math.floor(x + h) === Math.floor(b.x + h)
+      && Math.floor(z - h) === Math.floor(b.z - h) && Math.floor(z + h) === Math.floor(b.z + h)) {
+      b.x = x; b.z = z;
+      return true;
+    }
     const g = groundAt(world, x, z, b.y, this.tall[i]);
     if (g == null || g > b.y + PUSH_STEP || g < b.y - PUSH_STEP) return false;
     if (b.perch != null && g < b.perch - 0.6) return false;

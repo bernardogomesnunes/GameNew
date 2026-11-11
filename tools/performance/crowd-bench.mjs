@@ -71,15 +71,19 @@ const tick = () => {
   armies[1].tick(DT, you, 0, enemies, {});
   mobs.tick(DT, you, { lure: true });
   if (crowd) {
+    const t = performance.now();
     who.mobs = mobs.list;
     bodies.gatherCrowd(crowd, who);
     for (const w of armies[0].field) crowd.add(w);
     for (const w of armies[1].field) crowd.add(w);
     crowd.resolve(world);
+    crowdMs += performance.now() - t;
   }
 };
+let crowdMs = 0;
 
 for (let i = 0; i < WARM; i++) tick();
+crowdMs = 0;
 const times = new Float64Array(TICKS);
 let overlapping = 0;
 globalThis.gc?.();
@@ -91,6 +95,7 @@ for (let i = 0; i < TICKS; i++) {
   times[i] = performance.now() - t;
 }
 const total = performance.now() - started;
+const crowdTotal = crowdMs;
 const grown = process.memoryUsage().heapUsed - heap;
 for (let i = 0; i < 200; i++) { tick(); overlapping += overlaps(); }
 times.sort();
@@ -98,6 +103,8 @@ const out = {
   bodies: armies[0].field.length + armies[1].field.length + mobs.list.length + 1,
   crowd: !!crowd,
   msPerTick: +(total / TICKS).toFixed(4),
+  // Of that, the pushing apart itself (the rest is everybody walking and thinking).
+  crowdMsPerTick: crowd ? +(crowdTotal / TICKS).toFixed(4) : 0,
   p95: +times[Math.floor(TICKS * 0.95)].toFixed(4),
   worst: +times[TICKS - 1].toFixed(4),
   // Only meaningful with --expose-gc; without it a collection lands in the middle.

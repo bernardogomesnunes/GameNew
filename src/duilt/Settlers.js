@@ -1,3 +1,4 @@
+import { drift } from '../world/bodies.js';
 import { SETTLERS, settlerName, settlerColour } from '../config/settlers.js';
 import { JOB_FOR_BUILDING } from '../config/outfits.js';
 import { STRUCTURES_BY_ID } from '../config/structures.js';
@@ -518,6 +519,8 @@ export class Settlers {
    * around buildings when the direct line is blocked.
    */
   walk(p, dt) {
+    // Struck by a raider (Game.soldierHit): carried back a step, whatever they were at.
+    if (p.kx || p.kz) drift(this.world, p, dt);
     if (this.jobs?.controls(p)) return;
     // Every tick, not only after a step. Somebody standing outside their house
     // while you lay a path under them should end up on the path, and somebody

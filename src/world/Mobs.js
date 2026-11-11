@@ -1,7 +1,7 @@
 import { MOBS_BY_ID, mobsForBiome } from '../config/mobs.js';
 import { BIOMES } from '../config/biomes.js';
 import { isFluid } from '../config/blocks.js';
-import { knock, drift, ease, turnTo } from './bodies.js';
+import { knock, drift, ease, turnTo, freeFall } from './bodies.js';
 
 /**
  * The animals living around you: where they turn up, how they get about,
@@ -403,7 +403,7 @@ export class Mobs {
       // Afloat it bobs to its level, up as well as down.
       if (m.swimming && m.y < ground) { m.y = Math.min(ground, m.y + 3 * dt); m.vy = 0; return; }
     }
-    if (ground == null) { m.vy = 0; return; }
+    if (ground == null) { if (!freeFall(this.world, m, dt)) m.vy = 0; return; }
     if (m.vy <= 0 && m.y <= ground) { m.y = ground; m.vy = 0; return; }
     m.vy -= GRAVITY * dt;
     m.y += m.vy * dt;
