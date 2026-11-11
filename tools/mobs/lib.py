@@ -176,6 +176,8 @@ def build(model, x_offset=0.0):
     for ci, cube in enumerate(model['cubes']):
         name, bone, a, b, paint = cube[:5]
         for fi, face in enumerate(FACES):
+            if face in paint.get('skip', ()):      # a face nothing can see: not built, not drawn
+                continue
             w, h = face_size(face, a, b)
             p = P(w, h, ci * 7 + fi + 1)
             fn = paint.get(face) or paint.get('all')
@@ -240,6 +242,8 @@ def build(model, x_offset=0.0):
         pivot = Vector(origins[bone])
         verts, faces, uvs = [], [], []
         for face in FACES:
+            if face in paint.get('skip', ()):
+                continue
             t = next(t for t in tiles if t['ci'] == ci and t['face'] == face)
             cs = [Vector(c) for c in corners(face, a, b)]
             if rot:
@@ -261,7 +265,7 @@ def build(model, x_offset=0.0):
         ob = bpy.data.objects.new(mesh.name, mesh)
         bpy.context.collection.objects.link(ob)
         ob.parent = empties[bone]
-        tri += 12
+        tri += 2 * len(faces)
     return dict(root=root, empties=empties, atlas=(W, H), triangles=tri, cubes=len(model['cubes']))
 
 
@@ -367,9 +371,11 @@ def render_one(model, path, time='day', samples=16, size=480, yaw=-30):
 # --------------------------------------------------------------------------
 # Shapes shared by many models.
 
-def box(name, bone, a, b, paint, rot=None):
-    """A cube entry; `paint` a painter or a colour."""
-    p = paint if isinstance(paint, dict) else {'all': paint}
+def box(name, bone, a, b, paint, rot=None, skip=()):
+    """A cube entry; `paint` a painter or a colour; `skip` the faces left out (hidden against another box)."""
+    p = dict(paint) if isinstance(paint, dict) else {'all': paint}
+    if skip:
+        p['skip'] = tuple(skip)
     return (name, bone, tuple(a), tuple(b), p) + ((rot,) if rot else ())
 
 
