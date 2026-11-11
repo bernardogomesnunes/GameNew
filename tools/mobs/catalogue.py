@@ -1,10 +1,10 @@
 """Every model, by group, in the order the contact sheets show them."""
-import featured, animals
+import featured, fauna
 
 GROUPS = {
-    'featured': [featured.COW, featured.MOON_COW, featured.EXPLORER, featured.SKY],
-    'animals': [featured.COW] + animals.ANIMALS,
-    'creatures': [featured.MOON_COW] + animals.CREATURES,
+    'featured': [fauna.COW, fauna.MOON_COW, featured.EXPLORER, featured.SKY],
+    'animals': [fauna.COW] + fauna.ANIMALS,
+    'creatures': [fauna.MOON_COW] + fauna.CREATURES,
 }
 try:
     import people

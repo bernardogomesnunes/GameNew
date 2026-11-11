@@ -165,19 +165,6 @@ def antler_paint(p, face):
     p.row(0, C['paper3'])
 
 
-DEER_M = quad(
-    'deer', 'Deer', (8, 9, 18), (6, 6, 7), 10, 3, deer_body, deer_face,
-    legs_paint(DEER, '#3a2a1e', 1),
-    features=lambda H, B: [
-        hbox('snout', H, 1.5, 3, -2, 3, 3, 2, deer_face),
-        *pair(hbox('ear_l', H, -2, 0, 3, 2, 3, 1, fur(DEER))),
-        *pair(hbox('antler_l', H, 0.5, -6, 3, 1, 7, 1, antler_paint)),
-        *pair(hbox('tine_l', H, -2.5, -5, 3, 3, 1, 1, antler_paint)),
-        *pair(hbox('tine_l_hi', H, 1.5, -8, 2, 1, 1, 3, antler_paint)),
-        box('throat', 'head', (H['x0'] + 1, H['y0'] - 1, H['z0'] + 3), (H['x1'] - 1, H['y0'] + 1, H['z1']), C['paper2']),
-    ],
-    tail=lambda B: [box('tail', 'tail', (-1.5, B['y1'] - 3, B['z1']), (1.5, B['y1'], B['z1'] + 1.5), {'all': C['paper'], 'north': DEER[0]})],
-)
 
 # --------------------------------------------------------------------------
 # Rabbit.
@@ -192,16 +179,6 @@ def rab_face(p, face):
         p.set(p.w // 2, p.h - 2, C['pink'])
 
 
-RABBIT = quad(
-    'rabbit', 'Rabbit', (5, 5, 7), (5, 5, 5), 2, 2, fur(RAB, C['paper']), rab_face,
-    legs_paint(RAB, C['paper2'], 1), head_lift=0.6,
-    features=lambda H, B: [
-        *pair(hbox('ear_l', H, 0.5, -5, 2, 1.5, 5, 1, {'all': fur(RAB), 'north': lambda p, f: p.fill(C['pink']).border(RAB[0], 'lr')})),
-        box('haunch_l', 'body', (B['x0'] - 0.5, B['y0'], B['z1'] - 4), (B['x0'] + 1.5, B['y0'] + 3, B['z1'] - 0.5), fur(RAB)),
-        box('haunch_r', 'body', (B['x1'] - 1.5, B['y0'], B['z1'] - 4), (B['x1'] + 0.5, B['y0'] + 3, B['z1'] - 0.5), fur(RAB)),
-    ],
-    tail=lambda B: [box('tail', 'tail', (-1, B['y1'] - 3, B['z1']), (1, B['y1'] - 1, B['z1'] + 1.5), C['white'])],
-)
 
 # --------------------------------------------------------------------------
 # Boar.
@@ -230,17 +207,6 @@ def boar_snout(p, face):
         p.set(1, 1, C['ink']).set(p.w - 2, 1, C['ink'])
 
 
-BOAR_M = quad(
-    'boar', 'Boar', (10, 9, 16), (7, 7, 6), 5, 3, boar_body, boar_face,
-    legs_paint(['#4d3c31', '#5a463a'], C['ink'], 1),
-    features=lambda H, B: [
-        hbox('snout', H, 1.5, 3.5, -2, 4, 3, 2, boar_snout),
-        *pair(hbox('tusk_l', H, 0.5, 3, -2.5, 1, 3, 1, {'all': '#f2ede4', 'up': C['white']})),
-        *pair(hbox('ear_l', H, 0, -2, 2, 2, 2, 1, fur(BOAR))),
-        box('mane', 'body', (-1.5, B['y1'], B['z0']), (1.5, B['y1'] + 2, B['z0'] + 9), fur(['#3e3028', '#2f241e'])),
-    ],
-    tail=lambda B: [box('tail', 'tail', (-0.5, B['y1'] - 6, B['z1']), (0.5, B['y1'] - 1, B['z1'] + 1), fur(BOAR))],
-)
 
 # --------------------------------------------------------------------------
 # Goat.
@@ -262,17 +228,6 @@ def goat_horn(p, face):
     p.row(0, '#9c927f')
 
 
-GOAT_M = quad(
-    'goat', 'Goat', (8, 8, 13), (5, 6, 6), 7, 2, fur(GOAT, '#cfc8ba'), goat_face,
-    legs_paint(['#9c958a', '#b0a99e'], '#3a3530', 1),
-    features=lambda H, B: [
-        *pair(hbox('horn_l', H, 0.5, -3, 2, 1.5, 3, 1.5, goat_horn)),
-        *pair(hbox('horn_l_back', H, 0.5, -3.5, 3.5, 1.5, 1.5, 3, goat_horn)),
-        *pair(hbox('ear_l', H, -2, 1, 3, 2, 1, 1, fur(GOAT))),
-        hbox('beard', H, 1.5, 6, 0.5, 2, 3, 1, fur(['#cfc8ba', '#bdb6a8'])),
-    ],
-    tail=lambda B: [box('tail', 'tail', (-1, B['y1'] - 2, B['z1']), (1, B['y1'] + 1, B['z1'] + 1), fur(GOAT))],
-)
 
 # --------------------------------------------------------------------------
 # Sheep: a wool body in lumps, a dark face.
@@ -297,17 +252,6 @@ def sheep_face(p, face):
         p.set(p.w // 2, p.h - 2, '#3a302a')
 
 
-SHEEP = quad(
-    'sheep', 'Sheep', (10, 9, 15), (5, 6, 5), 6, 2.5, wool, sheep_face,
-    legs_paint(SHEEP_FACE, '#2f2824', 1), head_lift=0.3,
-    features=lambda H, B: [
-        box('fleece', 'body', (B['x0'] - 1, B['y0'] + 1, B['z0'] + 1), (B['x1'] + 1, B['y1'] + 1, B['z1'] - 1), wool),
-        box('fleece_rump', 'body', (B['x0'] + 1, B['y0'] + 2, B['z1'] - 1), (B['x1'] - 1, B['y1'], B['z1'] + 1), wool),
-        hbox('wool_cap', H, 0, -1.5, 1, 5, 2, 4, wool),
-        *pair(hbox('ear_l', H, -2.5, 1, 2, 2.5, 1, 1.5, fur(SHEEP_FACE))),
-    ],
-    tail=lambda B: [box('tail', 'tail', (-1, B['y1'] - 4, B['z1'] + 0.5), (1, B['y1'] - 1, B['z1'] + 2), wool)],
-)
 
 # --------------------------------------------------------------------------
 # Pig.
@@ -327,18 +271,6 @@ def pig_snout(p, face):
         p.set(1, 1, '#8a4a48').set(p.w - 2, 1, '#8a4a48')
 
 
-PIG_M = quad(
-    'pig', 'Pig', (9, 8, 14), (7, 7, 6), 4, 3, fur(PIG, '#f2c4bc'), pig_face,
-    legs_paint(PIG, '#c98a80', 1), head_lift=0.3,
-    features=lambda H, B: [
-        hbox('snout', H, 1.5, 3.5, -1, 4, 3, 1, pig_snout),
-        *pair(hbox('ear_l', H, 0, -1.5, 1, 2.5, 2, 1, fur(['#dea49a', '#d4968c']), (20, 0, 0))),
-    ],
-    tail=lambda B: [
-        box('tail', 'tail', (-0.5, B['y1'] - 3, B['z1']), (0.5, B['y1'] - 1, B['z1'] + 1.5), fur(PIG)),
-        box('tail_curl', 'tail', (-0.5, B['y1'] - 1, B['z1'] + 1), (0.5, B['y1'] + 0.5, B['z1'] + 2), fur(PIG)),
-    ],
-)
 
 # --------------------------------------------------------------------------
 # Chicken.
@@ -360,18 +292,6 @@ def hen_wing(p, face):
         p.row(-1, '#cfc6b4').set(0, 1, '#cfc6b4')
 
 
-CHICKEN = quad(
-    'chicken', 'Chicken', (5, 5, 6), (4, 4, 3), 3, 1, fur(HEN), hen_face,
-    legs_paint(['#e0a64a'], '#c98a2a', 1), legs=2, head_lift=1.0,
-    features=lambda H, B: [
-        hbox('beak', H, 1, 1.5, -1.5, 2, 1, 1.5, '#e0a64a'),
-        hbox('comb', H, 1.5, -1.5, 0.5, 1, 1.5, 2, '#d23a2a'),
-        hbox('wattle', H, 1.5, 2.5, -0.5, 1, 1.5, 1, '#d23a2a'),
-        box('wing_l', 'body', (B['x0'] - 0.75, B['y0'] + 1, B['z0'] + 1), (B['x0'], B['y1'] - 1, B['z1'] - 1), hen_wing),
-        box('wing_r', 'body', (B['x1'], B['y0'] + 1, B['z0'] + 1), (B['x1'] + 0.75, B['y1'] - 1, B['z1'] - 1), hen_wing),
-    ],
-    tail=lambda B: [box('tail', 'tail', (-1.5, B['y1'] - 1, B['z1'] - 1), (1.5, B['y1'] + 2, B['z1'] + 1), fur(HEN))],
-)
 
 # --------------------------------------------------------------------------
 # Horse: a stepped neck, a mane, a long head with a white blaze.
@@ -390,20 +310,6 @@ def horse_face(p, face):
         p.rect(x, 1, 2, 2, C['ink']).set(x if face == 'west' else x + 1, 1, G['tealMid'])
 
 
-HORSE_M = quad(
-    'horse', 'Horse', (10, 12, 24), (6, 6, 11), 14, 3.5, fur(HORSE, '#7a4e2e'), horse_face,
-    legs_paint(['#4a3020', '#5a3a28'], '#1e1610', 2, band=C['paper']),
-    neck=(14, 6, 6, 3),
-    features=lambda H, B: [
-        hbox('mane_head', H, 2, -1, 4, 2, 1.5, 7, fur(MANE)),
-        *pair(hbox('ear_l', H, 0.5, -2, 8, 1.5, 2.5, 1.5, fur(HORSE))),
-        *[box(f'mane{i}', 'neck', (-1, B['y1'] - 1 + i * 14 / 3, B['z0'] - i * 2 + 4), (1, B['y1'] + 5 + i * 14 / 3, B['z0'] - i * 2 + 6.5), fur(MANE)) for i in range(3)],
-    ],
-    tail=lambda B: [
-        box('tail', 'tail', (-1.5, B['y1'] - 4, B['z1']), (1.5, B['y1'], B['z1'] + 3), fur(MANE)),
-        box('tail_fall', 'tail', (-1.5, B['y1'] - 14, B['z1'] + 1.5), (1.5, B['y1'] - 4, B['z1'] + 4), fur(MANE)),
-    ],
-)
 
 # --------------------------------------------------------------------------
 # Raptor: two legs, a long stiff tail, a crest, stripes.
@@ -575,23 +481,6 @@ def crown_gem(p, face):
     p.fill(G['teal']).border(G['tealMid'])
 
 
-BASILISK = quad(
-    'basilisk', 'Basilisk', (18, 14, 40), (14, 11, 15), 7, 5, bas_body, bas_face,
-    legs_paint(['#243a20', '#2f4a2a'], '#16241a', 2), head_lift=0.5,
-    features=lambda H, B: [
-        *[box(f'spine{i}', 'body', (-1, B['y1'], B['z0'] + 4 + i * 7), (1, B['y1'] + 4 - i % 2, B['z0'] + 7 + i * 7), gold_spike) for i in range(5)],
-        hbox('crown', H, 2, -2, 3, 10, 2, 8, {'all': lambda p, f: p.grain([C['gold'], C['goldDark']]).row(0, C['goldDeep'])}),
-        *pair(hbox('crown_spike_l', H, 2, -5, 3, 2, 3, 2, gold_spike)),
-        hbox('crown_spike_mid', H, 6, -6, 3, 2, 4, 2, gold_spike),
-        hbox('crown_gem', H, 6.25, -1.5, 2.5, 1.5, 1.5, 1, crown_gem),
-    ],
-    tail=lambda B: [
-        box('tail', 'tail', (-6, B['y1'] - 12, B['z1']), (6, B['y1'] - 2, B['z1'] + 10), bas_body),
-        box('tail_mid', 'tail', (-4, B['y1'] - 12, B['z1'] + 10), (4, B['y1'] - 5, B['z1'] + 18), bas_body),
-        box('tail_end', 'tail', (-2, B['y1'] - 12, B['z1'] + 18), (2, B['y1'] - 8, B['z1'] + 24), bas_body),
-        box('tail_tip', 'tail', (-1, B['y1'] - 12, B['z1'] + 24), (1, B['y1'] - 9, B['z1'] + 27), gold_spike),
-    ],
-)
 
 # --------------------------------------------------------------------------
 # The guardians and the Warlord's beast.
@@ -622,21 +511,6 @@ def glow_antler(p, face):
     p.row(0, G['gold'])
 
 
-AURELION = quad(
-    'aurelion', 'Aurelion, the white stag', (10, 11, 22), (7, 7, 8), 13, 3.5, light_body, light_face,
-    legs_paint(LIGHT, C['gold'], 2, band=G['gold']),
-    features=lambda H, B: [
-        hbox('snout', H, 2, 3.5, -2, 3, 3.5, 2, {'all': light_body, 'north': lambda p, f: p.grain(LIGHT).set(1, p.h - 2, C['paper3'])}),
-        *pair(hbox('ear_l', H, -2, 0, 3, 2, 3, 1, light_body)),
-        *pair(hbox('antler_l', H, 0.5, -9, 3, 1.5, 10, 1.5, glow_antler)),
-        *pair(hbox('tine_l', H, -3, -7, 3, 3.5, 1.5, 1.5, glow_antler)),
-        *pair(hbox('tine_l_hi', H, -1.5, -11, 3, 1.5, 3, 1.5, glow_antler)),
-        *pair(hbox('tine_l_fwd', H, 0.5, -5, 0, 1.5, 1.5, 3, glow_antler)),
-        box('mane', 'body', (B['x0'] + 1, B['y0'] - 1, B['z0'] - 0.5), (B['x1'] - 1, B['y0'] + 6, B['z0'] + 4), {'all': lambda p, f: p.grain([C['paper'], C['white']]).row(-1, G['gold'])}),
-    ],
-    tail=lambda B: [box('tail', 'tail', (-1.5, B['y1'] - 4, B['z1']), (1.5, B['y1'], B['z1'] + 2), {'all': G['gold']})],
-    scale=1.25,
-)
 
 SHADOW = ['#1d1a22', '#24202b', '#16131a']
 
@@ -664,20 +538,6 @@ def shadow_spike(p, face):
     p.row(0, G['violet'])
 
 
-UMBRA = quad(
-    'umbra', 'Umbra, the black beast', (11, 11, 22), (8, 7, 8), 11, 3.5, shadow_body, shadow_face,
-    legs_paint(SHADOW, '#0e0c12', 2), head_lift=0.3,
-    features=lambda H, B: [
-        hbox('jaw', H, 1, 4, -3, 6, 3, 3, shadow_face),
-        *pair(hbox('ear_l', H, 0, -3, 4, 2, 3, 2, shadow_spike)),
-        *[box(f'spike{i}', 'body', (-1, B['y1'], B['z0'] + 1 + i * 4.5), (1, B['y1'] + 4 - (i % 2) * 2, B['z0'] + 3 + i * 4.5), shadow_spike) for i in range(5)],
-    ],
-    tail=lambda B: [
-        box('tail', 'tail', (-1.5, B['y1'] - 4, B['z1']), (1.5, B['y1'] - 1, B['z1'] + 7), shadow_body),
-        box('tail_tip', 'tail', (-1, B['y1'] - 3.5, B['z1'] + 7), (1, B['y1'] - 1.5, B['z1'] + 9), shadow_spike),
-    ],
-    scale=1.25,
-)
 
 WB = ['#2a2628', '#332e30', '#221e20']
 
@@ -709,22 +569,4 @@ def iron_horn(p, face):
     p.row(0, '#9a9aa6')
 
 
-WARBEAST = quad(
-    'warbeast', "The Warlord's beast", (14, 15, 30), (8, 8, 12), 15, 5, war_body, war_face,
-    legs_paint(WB, C['iron2'], 3, band=C['iron3']),
-    neck=(12, 6, 9, 3),
-    features=lambda H, B: [
-        box('barding', 'body', (B['x0'] - 0.75, B['y0'] + 3, B['z0'] + 2), (B['x1'] + 0.75, B['y1'] + 0.5, B['z1'] - 6), war_plate),
-        box('saddle', 'body', (B['x0'] + 2, B['y1'] + 0.5, B['z0'] + 9), (B['x1'] - 2, B['y1'] + 2.5, B['z0'] + 17), {'all': '#6b1f24', 'up': lambda p, f: p.fill('#6b1f24').border('#9a2c2c')}),
-        hbox('chamfron', H, 1, -0.5, -0.5, 6, 4, 7, war_plate),
-        *pair(hbox('horn_l', H, -1, -5, 3, 2, 6, 2, iron_horn, (-30, 0, 0))),
-        *[box(f'mane{i}', 'neck', (-1, B['y1'] + i * 4, B['z0'] - i * 2 + 4), (1, B['y1'] + 5 + i * 4, B['z0'] - i * 2 + 7), shadow_spike) for i in range(3)],
-    ],
-    tail=lambda B: [box('tail', 'tail', (-1.5, B['y1'] - 12, B['z1']), (1.5, B['y1'], B['z1'] + 3), {'all': lambda p, f: p.grain(['#1a1618', '#2a2628']).row(-1, G['red'])})],
-)
 
-# The dinosaurs, rebuilt bigger with jointed necks and tails (dinos.py,
-# 9 November); the boxes above stay for reference.
-from dinos import RAPTOR, TRIKE, LONGNECK  # noqa: E402
-ANIMALS = [DEER_M, RABBIT, BOAR_M, GOAT_M, SHEEP, PIG_M, CHICKEN, HORSE_M, RAPTOR, TRIKE, LONGNECK, BASILISK]
-CREATURES = [AURELION, UMBRA, WARBEAST]
