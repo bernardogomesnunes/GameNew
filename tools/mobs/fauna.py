@@ -317,6 +317,168 @@ HORSE_M = beast(
     tail=(25, 12), features=horse_features,
 )
 
+# --------------------------------------------------------------------------
+# Basilisk: a crowned serpent-lizard out of legend, low on sprawled legs,
+# with a jaw that opens and a tail in four parts. It glows.
+
+from dragons import jaw_paint, shade  # noqa: E402
+
+BAS_UNDER = ['#9aa86a', '#8a985a']
+
+
+def bas_snout(p, face):
+    bas_body(p, face)
+    if face == 'north':
+        p.set(2, 1, C['ink']).set(p.w - 3, 1, C['ink'])
+    if face in ('north', 'east', 'west'):
+        p.row(-1, '#1a2a16')
+        for x in range(0, p.w, 2):
+            p.set(x, p.h - 1, '#efe6cf')
+
+
+def bas_foot(bname, x, z):
+    s = 1 if x > 0 else -1
+    return [box(f'{bname}_claw{k}', bname, (x + dx - 0.75, 0, z - 5), (x + dx + 0.75, 1.5, z - 2), gold_spike) for k, dx in enumerate((-1.5 * s, 0, 1.5 * s))]
+
+
+def bas_bones(H, B):
+    return [('tail1', 'tail', (0, 12, 32)), ('tail2', 'tail1', (0, 11.5, 43)), ('tail3', 'tail2', (0, 11, 53))]
+
+
+def bas_features(H, B):
+    y1, z1, M = H['y1'], H['z1'], H['m']
+    gold = {'all': lambda p, f: p.grain([C['gold'], C['goldDark']]).row(0, C['goldDeep'])}
+    under = {'all': bas_body, 'down': lambda p, f: p.grain(BAS_UNDER)}
+    return [
+        box('ridge', 'body', (-5, 20, -17), (5, 21.5, 17), bas_body),
+        box('belly', 'body', (-7, 4, -16), (7, 5, 16), lambda p, f: p.grain(BAS_UNDER)),
+        *[box(f'spine{i}', 'body', (-1, 21.5, -16 + i * 6.5), (1, 25.5 - i % 2 * 1.5, -13 + i * 6.5), gold_spike) for i in range(6)],
+        box('jaw', 'jaw', (-4.5, H['y0'] - 0.5, M['z0'] + 1), (4.5, H['y0'] + 2.5, z1 - 2), jaw_paint(BAS_UNDER[0], '#efe6cf')),
+        *sides(box('hood', 'head', (-9.5, H['y0'] + 1, z1 - 3), (-6, y1 + 2.5, z1 - 1.5), {'all': bas_body, 'north': lambda p, f: p.grain(['#4f7a3a', '#3a5a32']).border(C['goldDark'])}, (0, -28, 0))),
+        box('crown', 'head', (-5, y1, z1 - 7), (5, y1 + 2, z1 - 1), gold),
+        *sides(box('crown_spike', 'head', (-5, y1 + 2, z1 - 6.5), (-3, y1 + 5, z1 - 4.5), gold_spike)),
+        box('crown_spike_mid', 'head', (-1, y1 + 2, z1 - 7), (1, y1 + 6.5, z1 - 5), gold_spike),
+        box('crown_gem', 'head', (-1, y1 + 0.25, z1 - 7.5), (1, y1 + 1.75, z1 - 7), crown_gem),
+        box('tail', 'tail', (-6, 7, 20), (6, 17.5, 32), under),
+        box('tail1', 'tail1', (-4.5, 8, 32), (4.5, 15.5, 43), under),
+        box('tail_spine', 'tail1', (-1, 15.5, 35), (1, 18, 38), gold_spike),
+        box('tail2', 'tail2', (-3, 8.5, 43), (3, 14, 53), under),
+        box('tail3', 'tail3', (-1.75, 9, 53), (1.75, 13, 61), under),
+        box('tail_tip', 'tail3', (-1, 9.5, 61), (1, 12.5, 65), gold_spike),
+    ]
+
+
+BASILISK = beast(
+    'basilisk', 'Basilisk', torso=[(-20, -8, 16, 6, 19), (-8, 8, 18, 5, 20), (8, 20, 15, 6, 18)], leg=7, hide=bas_body,
+    limbs=dict(w=4, x=10, hx=9.5, fz=-14, hz=14, knee=5, upper=(6.5, 4, 7), hind=(6.5, 4.5, 8), foot=bas_foot,
+               paint=(bas_body, legs_paint(['#243a20', '#2f4a2a'], '#16241a', 2))),
+    neck=dict(at=(14, -18), to=(19, -27), w=11, h=10, grow=3),
+    head=dict(size=(13, 9, 9), pitch=-8, paint=skull(['#3a5a32', '#2f4a2a'], row=2, size=2, eye=G['gold'], glint=None, inset=2),
+              muzzle=dict(size=(10, 5.5, 8), lift=2.5, paint=bas_snout)),
+    tail=(13, 20), features=bas_features, bones=bas_bones,
+)
+
+# --------------------------------------------------------------------------
+# The guardians and the Warlord's beast.
+
+def light_skull(p, face):
+    if face == 'north':
+        p.stamp(['.#.', '###', '.#.'], {'#': G['gold']}, None, 0)
+    elif face == 'up':
+        p.col(p.w // 2, G['gold'])
+
+
+def aurelion_features(H, B):
+    y1, z1 = H['y1'], H['z1']
+    ruff = {'all': lambda p, f: p.grain([C['paper'], C['white']]).row(-1, G['gold'])}
+    return [
+        tube('ruff', 'neck', (18.5, -11.5), (27, -15.5), 6, 3, ruff, grow=1),
+        box('chest', 'body', (-4, 14, -11.75), (4, 21, -11), ruff),
+        *sides(box('ear', 'ears', (-5.5, y1 - 1.5, z1 - 2.5), (-3, y1 + 2, z1 - 1.5), light_body, (0, 0, 35))),
+        *sides(tube('antler', 'head', (y1 - 0.5, z1 - 2), (y1 + 7, z1 + 1), 1.5, 1.5, glow_antler, x=-2.25)),
+        *sides(tube('antler_hi', 'head', (y1 + 6.5, z1 + 1), (y1 + 13, z1 - 2), 1.5, 1.5, glow_antler, x=-3.75)),
+        *sides(tube('tine_brow', 'head', (y1 + 1.5, z1 - 2), (y1 + 4, z1 - 6), 1.25, 1.25, glow_antler, x=-2.25)),
+        *sides(tube('tine_back', 'head', (y1 + 7, z1 + 1), (y1 + 10.5, z1 + 4.5), 1.25, 1.25, glow_antler, x=-3.75)),
+        *sides(tube('tine_front', 'head', (y1 + 10, z1 - 0.5), (y1 + 12, z1 - 4), 1.25, 1.25, glow_antler, x=-5)),
+        box('tail', 'tail', (-1.5, 19.5, 11), (1.5, 23.5, 13), {'all': G['gold']}),
+    ]
+
+
+AURELION = beast(
+    'aurelion', 'Aurelion, the white stag', torso=[(-11, -4, 10, 13, 24.5), (-4, 4, 9, 14, 23.5), (4, 11, 10.5, 13.5, 24.5)], leg=13, hide=light_body,
+    limbs=dict(w=2.5, x=3.75, hx=3.75, fz=-8.5, hz=8, knee=7, upper=(3.5, 3, 4), hind=(4, 4.5, 6), hock=1,
+               paint=(fur(LIGHT), legs_paint(LIGHT, C['gold'], 2, band=G['gold']))),
+    neck=dict(at=(22, -9), to=(32, -14), w=4.5, h=5.5, grow=3, paint=fur(LIGHT)),
+    head=dict(size=(6, 6, 6.5), pitch=-22, paint=skull(LIGHT, row=1, eye=G['tealMid'], glint=G['teal'], extra=light_skull),
+              muzzle=dict(size=(4, 3.5, 3.5), lift=0.5, paint=nose(LIGHT, C['paper3'], mouth=C['paper3']))),
+    tail=(23.5, 11), features=aurelion_features, scale=1.25,
+)
+
+
+def shadow_snout(p, face):
+    p.grain(SHADOW)
+    if face in ('north', 'east', 'west'):
+        p.row(-1, '#0e0c12')
+        for x in range(0, p.w, 2):
+            p.set(x, p.h - 1, '#cfc8d8')
+
+
+def umbra_features(H, B):
+    y1, z1, M = H['y1'], H['z1'], H['m']
+    tops = [23.5, 23.5, 23.5, 21.5, 21.5, 20.5, 20.5]
+    return [
+        box('hump', 'body', (-4, 23.5, -10.5), (4, 25, -4), shadow_body),
+        box('jaw', 'jaw', (-2.75, H['y0'] - 0.25, M['z0'] + 0.5), (2.75, H['y0'] + 2.25, z1 - 2), jaw_paint('#16131a', '#cfc8d8')),
+        *sides(box('ear', 'ears', (-4, y1 - 1, z1 - 2.5), (-2, y1 + 3.5, z1 - 1), shadow_spike, (18, 0, 16))),
+        *[box(f'spike{i}', 'body', (-1, tops[i] + (1.5 if i < 2 else 0), -9.5 + i * 3), (1, tops[i] + (5.5 if i < 2 else 3.5) - i % 2 * 1.5, -8 + i * 3), shadow_spike) for i in range(7)],
+        tube('tail', 'tail', (19.5, 11), (15.5, 19), 3, 3, shadow_body, grow=1),
+        tube('tail_tip', 'tail', (15.5, 19), (14.5, 22.5), 2, 2, shadow_spike),
+    ]
+
+
+UMBRA = beast(
+    'umbra', 'Umbra, the black beast', torso=[(-11, -3, 12, 11, 23.5), (-3, 4, 10.5, 12, 21.5), (4, 11, 9.5, 12, 20.5)], leg=11, hide=shadow_body,
+    limbs=dict(w=3, x=4.25, hx=3.5, fz=-8, hz=8, knee=6, upper=(4.5, 4, 5), hind=(4, 4, 6), hock=1,
+               paint=(fur(SHADOW), legs_paint(SHADOW, '#0e0c12', 2, band='#4a3a5a'))),
+    neck=dict(at=(19, -10), to=(21, -15), w=7, h=7.5),
+    head=dict(size=(8, 7, 7), pitch=-10, paint=skull(SHADOW, row=2, eye=G['violet'], glint=None),
+              muzzle=dict(size=(6, 3.5, 5), lift=2.5, paint=shadow_snout)),
+    tail=(19.5, 11), features=umbra_features, scale=1.25,
+)
+
+
+def war_muzzle(p, face):
+    p.grain(WB)
+    if face == 'north':
+        p.set(1, 1, '#4a1a14').set(p.w - 2, 1, '#4a1a14').row(-1, C['ink'])
+
+
+def war_features(H, B):
+    y1, z1 = H['y1'], H['z1']
+    return [
+        box('barding', 'body', (-7.75, 18, -13), (7.75, 31, 9), war_plate),
+        box('saddle', 'body', (-5, 31, -6), (5, 33, 2), {'all': '#6b1f24', 'up': lambda p, f: p.fill('#6b1f24').border('#9a2c2c')}),
+        box('peytral', 'body', (-6, 17, -15.75), (6, 27, -15), war_plate),
+        tube('crest', 'neck', (29.5, -9.5), (40, -15.5), 2, 3, {'all': lambda p, f: p.grain(['#1a1618', '#2a2628']).row(0, '#7a2a20')}, grow=1),
+        box('chamfron', 'head', (-3.5, y1 - 0.5, H['m']['z0'] + 1), (3.5, y1 + 0.75, z1 - 1), war_plate),
+        *sides(tube('horn', 'head', (y1 - 1, z1 - 2), (y1 + 5, z1 - 0.5), 2, 2, iron_horn, x=-4.25)),
+        *sides(tube('horn_tip', 'head', (y1 + 4.5, z1 - 0.5), (y1 + 8, z1 - 4), 1.5, 1.5, iron_horn, x=-4.75)),
+        *sides(box('ear', 'ears', (-4.5, y1 - 2.5, z1 - 2), (-3.5, y1 + 0.5, z1 - 0.5), fur(WB), (0, 0, 25))),
+        tube('dock', 'tail', (28, 15), (25, 17.5), 3, 3, fur(['#1a1618', '#2a2628']), grow=1),
+        box('tail_fall', 'tail', (-1.5, 11, 16.5), (1.5, 25.5, 19.5), {'all': lambda p, f: p.grain(['#1a1618', '#2a2628']).row(-1, G['red'])}),
+    ]
+
+
+WARBEAST = beast(
+    'warbeast', "The Warlord's beast", torso=[(-15, -6, 14, 15, 30.5), (-6, 6, 13, 15.5, 29.5), (6, 15, 14.5, 15, 30)], leg=15, hide=war_body,
+    limbs=dict(w=4.5, x=5, hx=5, fz=-11.5, hz=11, knee=8, upper=(6, 4, 6.5), hind=(6, 5, 8), hock=1,
+               paint=(war_body, legs_paint(WB, C['iron2'], 3, band=C['iron3']))),
+    neck=dict(at=(26, -13), to=(37, -19), w=7, h=9, grow=3),
+    head=dict(size=(8, 8, 8), back=0.35, up=0.55, pitch=-35, paint=skull(WB, row=2, eye=G['red'], glint=None),
+              muzzle=dict(size=(6.5, 6, 6), paint=war_muzzle)),
+    tail=(28, 15), features=war_features,
+)
+
 from dinos import RAPTOR, TRIKE, LONGNECK  # noqa: E402
-ANIMALS = [DEER_M, RABBIT, BOAR_M, GOAT_M, SHEEP, PIG_M, CHICKEN, HORSE_M, RAPTOR, TRIKE, LONGNECK]
-CREATURES = []
+ANIMALS = [DEER_M, RABBIT, BOAR_M, GOAT_M, SHEEP, PIG_M, CHICKEN, HORSE_M, RAPTOR, TRIKE, LONGNECK, BASILISK]
+CREATURES = [AURELION, UMBRA, WARBEAST]

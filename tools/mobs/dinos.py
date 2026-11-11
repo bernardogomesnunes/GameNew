@@ -15,6 +15,7 @@ other, and legs with a heavy thigh.
 """
 from lib import *
 from dragons import shade, scales, belly, horn_paint, jaw_paint
+from beasts import tube
 
 
 def pair(cube):
@@ -56,7 +57,7 @@ def head_p(hide, eye, dark):
     return f
 
 
-def dino(id, name, body, legs, neck, head, tail, hide, cols, two_legs=False, features=None, neck_boxes=3):
+def dino(id, name, body, legs, neck, head, tail, hide, cols, two_legs=False, features=None, neck_boxes=3, shape=(0.04, 0.0), neck_taper=0.36):
     """
     body (w, h, l); legs (height, width); neck (rise, reach, width); head
     (w, h, length); tail (length of each of three parts, base width).
@@ -69,22 +70,31 @@ def dino(id, name, body, legs, neck, head, tail, hide, cols, two_legs=False, fea
     dark, under, eye = cols['dark'], cols['under'], cols['eye']
     B = dict(x0=-w / 2, x1=w / 2, y0=lh, y1=lh + h, z0=-l / 2, z1=l / 2)
     bones = [('body', None, (0, lh + h / 2, 0))]
-    cubes = [box('body', 'body', (B['x0'], B['y0'], B['z0']), (B['x1'], B['y1'], B['z1']), hide)]
-    # A rounder back: a narrower ridge along the top.
-    cubes.append(box('back', 'body', (B['x0'] + w * 0.15, B['y1'], B['z0'] + l * 0.12), (B['x1'] - w * 0.15, B['y1'] + h * 0.12, B['z1'] - l * 0.12), hide))
-    cubes.append(box('belly', 'body', (B['x0'] + w * 0.1, B['y0'] - h * 0.1, B['z0'] + l * 0.15), (B['x1'] - w * 0.1, B['y0'], B['z1'] - l * 0.2), {'all': belly(under, shade(under, 0.85))}))
+    # The body in three parts (reviewed 11 November: "off in sizes and form"):
+    # shoulders, a barrel that sags below and arches above, and narrower hips,
+    # so the back and the belly have a line to them.
+    front, rear = shape
+    trunk = {'all': hide, 'down': belly(under, shade(under, 0.85))}
+    za, zb = B['z0'] + l * 0.3, B['z1'] - l * 0.3
+    cubes = [
+        box('chest', 'body', (-w * 0.46, B['y0'] + h * 0.04, B['z0']), (w * 0.46, B['y1'] + h * front, za), trunk),
+        box('barrel', 'body', (B['x0'], B['y0'] - h * 0.08, za), (B['x1'], B['y1'] + h * (0.1 + (front + rear) / 2), zb), trunk),
+        box('hips', 'body', (-w * 0.44, B['y0'] + h * 0.1, zb), (w * 0.44, B['y1'] + h * rear, B['z1']), trunk),
+    ]
 
+    # The neck: boxes laid along its line and tapering to the head, in place of steps.
     n0 = (0, B['y1'] - nw * 0.7, B['z0'] + nw * 0.3)
     n1 = (0, n0[1] + rise / 2, n0[2] - reach / 2)
     hd = (0, n0[1] + rise, n0[2] - reach)
     bones += [('neck0', 'body', n0), ('neck1', 'neck0', n1), ('head', 'neck1', hd)]
+    parts = 1 if neck_boxes <= 3 else 2
     for i, (a, b, bone) in enumerate([(n0, n1, 'neck0'), (n1, hd, 'neck1')]):
-        cw = nw * (1 - 0.18 * i)
-        for k in range(neck_boxes):
-            t0, t1 = k / neck_boxes, (k + 1) / neck_boxes
-            y0 = a[1] + (b[1] - a[1]) * t0 - cw / 2
-            z0 = a[2] + (b[2] - a[2]) * t1 - cw / 2
-            cubes.append(box(f'neck{i}_{k}', bone, (-cw / 2, y0, z0), (cw / 2, y0 + abs(b[1] - a[1]) / neck_boxes + cw, z0 + cw + abs(b[2] - a[2]) / neck_boxes), hide))
+        for k in range(parts):
+            t0, t1 = k / parts, (k + 1) / parts
+            cw = nw * (1 - neck_taper * (i + (t0 + t1) / 2) / 2)
+            pa = (a[1] + (b[1] - a[1]) * t0, a[2] + (b[2] - a[2]) * t0)
+            pb = (a[1] + (b[1] - a[1]) * t1, a[2] + (b[2] - a[2]) * t1)
+            cubes.append(tube(f'neck{i}_{k}', bone, pa, pb, cw, cw * 1.12, hide, grow=cw * 0.55))
 
     H = dict(x0=-hw / 2, x1=hw / 2, y0=hd[1] - hh * 0.45, y1=hd[1] + hh * 0.55, z0=hd[2] - hl * 0.6, z1=hd[2] + hl * 0.4)
     hp = head_p(hide, eye, dark)
@@ -100,10 +110,31 @@ def dino(id, name, body, legs, neck, head, tail, hide, cols, two_legs=False, fea
         bones.append((bone, prev, pos))
         cw = tw * (1 - 0.3 * i)
         drop = tw * 0.12
-        cubes.append(box(bone, bone, (-cw / 2, pos[1] - cw / 2 - drop, pos[2]), (cw / 2, pos[1] + cw / 2 - drop, pos[2] + tl), hide))
+        # Each part in two steps, so the tail narrows evenly to its tip.
+        cubes.append(box(bone, bone, (-cw / 2, pos[1] - cw / 2 - drop, pos[2]), (cw / 2, pos[1] + cw / 2 - drop, pos[2] + tl / 2), hide))
+        c2 = cw * 0.85
+        cubes.append(box(bone + '_b', bone, (-c2 / 2, pos[1] - c2 / 2 - drop, pos[2] + tl / 2), (c2 / 2, pos[1] + c2 / 2 - drop, pos[2] + tl), hide))
         prev, pos = bone, (0, pos[1] - drop, pos[2] + tl)
 
     leg_p = {'all': hide, 'down': solid(dark)}
+    claw_p = horn_paint(cols.get('claw', '#e8dcc0'))
+    if two_legs:
+        # A runner's leg: a heavy thigh forward to the knee, the shin back to
+        # the ankle, then down to long toes, the inner one a raised sickle claw.
+        for bname, s in (('leg_l', -1), ('leg_r', 1)):
+            x, z = s * (w / 2 - lw / 2 + 1), l * 0.12
+            bones.append((bname, 'body', (x, lh + 3, z)))
+            knee, ankle = (lh * 0.6, z - lw * 0.9), (lh * 0.3, z + lw * 0.9)
+            cubes.append(tube(bname + '_thigh', bname, knee, (lh + 4, z + lw * 0.3), lw * 1.5, lw * 2.1, leg_p, x=x, grow=lw * 0.5))
+            cubes.append(tube(bname + '_shin', bname, knee, ankle, lw * 0.95, lw * 1.1, leg_p, x=x, grow=lw * 0.6))
+            cubes.append(tube(bname, bname, (1.5, z - lw * 0.2), ankle, lw * 0.75, lw * 0.85, leg_p, x=x, grow=lw * 0.4))
+            cubes.append(box(bname + '_foot', bname, (x - lw / 2 - 0.5, 0, z - lw * 1.4), (x + lw / 2 + 0.5, 2, z + lw * 0.2), leg_p))
+            for k, dx in enumerate((-lw / 3 * s, lw / 3 * s)):
+                cubes.append(box(f'{bname}_toe{k}', bname, (x + dx - 0.6, 0, z - lw * 1.4 - 1.5), (x + dx + 0.6, 1.2, z - lw * 1.4), claw_p))
+            cubes.append(box(bname + '_sickle', bname, (x - s * lw / 2 - 0.6, 1.2, z - lw * 1.4 - 0.5), (x - s * lw / 2 + 0.6, 4.2, z - lw * 1.4 + 0.8), claw_p, (-35, 0, 0)))
+        if features:
+            cubes += features(H, B)
+        return dict(id=id, name=name, bones=bones, cubes=cubes, anim={}, scale=1)
     if two_legs:
         spots = {'leg_l': (-w / 2 + lw / 2 + 0.5, l * 0.12), 'leg_r': (w / 2 - lw / 2 - 0.5, l * 0.12)}
     else:
@@ -150,7 +181,7 @@ def frill_p(p, face):
 
 TRIKE = dino(
     'trike', 'Triceratops', body=(32, 28, 60), legs=(18, 9), neck=(4, 8, 18), head=(22, 18, 28), tail=(18, 14),
-    hide=TRI_HIDE, cols=dict(dark='#4e4232', under='#c8b890', eye='#2a1e14'), neck_boxes=2,
+    hide=TRI_HIDE, cols=dict(dark='#4e4232', under='#c8b890', eye='#2a1e14'), neck_boxes=2, shape=(-0.02, 0.08),
     features=lambda H, B: [
         box('frill', 'head', (H['x0'] - 7, H['y0'] + 2, H['z1'] - 3), (H['x1'] + 7, H['y1'] + 14, H['z1'] - 0.5), {'all': frill_p}, (20, 0, 0)),
         box('beak', 'head', (-4, H['y0'] + 1, H['z0'] - 4), (4, H['y0'] + 8, H['z0'] + 1), {'all': '#4e4232', 'up': '#5a4c38'}),
@@ -162,10 +193,10 @@ TRIKE = dino(
 LN_HIDE = mottled('#7f8a90', '#646d72', '#c0c7ca')
 LONGNECK = dino(
     'longneck', 'Long-neck', body=(40, 38, 84), legs=(46, 13), neck=(120, 60, 14), head=(12, 10, 20), tail=(34, 18),
-    hide=LN_HIDE, cols=dict(dark='#4a5155', under='#c0c7ca', eye='#2a2420'), neck_boxes=5,
+    hide=LN_HIDE, cols=dict(dark='#4a5155', under='#c0c7ca', eye='#2a2420'), neck_boxes=5, shape=(0.12, -0.06), neck_taper=0.5,
     features=lambda H, B: [
         # A ridge of plates down the back.
-        *[box(f'plate{k}', 'body', (-1.5, B['y1'] + 4, B['z0'] + 10 + k * 12), (1.5, B['y1'] + 9, B['z0'] + 16 + k * 12), {'all': '#646d72'}) for k in range(6)],
+        *[box(f'plate{k}', 'body', (-1.5, B['y1'] + 4, B['z0'] + 27 + k * 8), (1.5, B['y1'] + 9, B['z0'] + 32 + k * 8), {'all': '#646d72'}) for k in range(4)],
     ],
 )
 

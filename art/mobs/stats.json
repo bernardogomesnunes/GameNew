@@ -99,90 +99,90 @@
   "group": "animals"
  },
  "raptor": {
-  "cubes": 31,
-  "triangles": 372,
+  "cubes": 32,
+  "triangles": 384,
   "atlas": [
    128,
    128
   ],
-  "kb": 52.3,
+  "kb": 53.4,
   "name": "Raptor",
   "group": "animals"
  },
  "trike": {
-  "cubes": 38,
-  "triangles": 456,
+  "cubes": 39,
+  "triangles": 468,
   "atlas": [
-   512,
-   128
+   256,
+   256
   ],
-  "kb": 84.8,
+  "kb": 82.9,
   "name": "Triceratops",
   "group": "animals"
  },
  "longneck": {
-  "cubes": 45,
-  "triangles": 540,
+  "cubes": 40,
+  "triangles": 480,
   "atlas": [
    512,
    256
   ],
-  "kb": 120.7,
+  "kb": 104.6,
   "name": "Long-neck",
   "group": "animals"
  },
  "basilisk": {
-  "cubes": 20,
-  "triangles": 240,
+  "cubes": 48,
+  "triangles": 576,
   "atlas": [
-   128,
+   256,
    128
   ],
-  "kb": 38.8,
+  "kb": 80.3,
   "name": "Basilisk",
   "group": "animals"
  },
  "moon_cow": {
-  "cubes": 20,
-  "triangles": 240,
+  "cubes": 31,
+  "triangles": 372,
   "atlas": [
    128,
    64
   ],
-  "kb": 36.5,
+  "kb": 49.8,
   "name": "Moon Cow",
   "group": "creatures"
  },
  "aurelion": {
-  "cubes": 19,
-  "triangles": 228,
+  "cubes": 29,
+  "triangles": 348,
   "atlas": [
    128,
    64
   ],
-  "kb": 34.4,
+  "kb": 46.7,
   "name": "Aurelion, the white stag",
   "group": "creatures"
  },
  "umbra": {
-  "cubes": 16,
-  "triangles": 192,
+  "cubes": 27,
+  "triangles": 324,
   "atlas": [
    128,
    64
   ],
-  "kb": 29.9,
+  "kb": 43.4,
   "name": "Umbra, the black beast",
   "group": "creatures"
  },
  "warbeast": {
-  "cubes": 18,
-  "triangles": 216,
+  "cubes": 27,
+  "triangles": 324,
   "atlas": [
    128,
    128
   ],
-  "kb": 36.3,
+  "kb": 47.6,
   "name": "The Warlord's beast",
   "group": "creatures"
  },
