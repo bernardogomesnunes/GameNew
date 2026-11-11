@@ -3,6 +3,7 @@ import { SETTLERS } from '../config/settlers.js';
 import { SKINS, HAIRS } from '../config/avatar.js';
 import { outfitOf, JOB_OUTFITS } from '../config/outfits.js';
 import { modelKit, Crowds } from './Models.js';
+import { makePose, makeState, posePerson, traitsOf, GEAR_BOW, ATTACK_TIME, DRAW_TIME } from './personPose.js';
 
 /**
  * The settlers, drawn.
@@ -133,13 +134,18 @@ export class SettlerView {
     this.crowds = new Crowds(scene, MAX);
     this._modelScale = new THREE.Vector3().setScalar(height / 2);
     this._tint = new THREE.Color();
-    this._pose = { leg_l: [0, 0, 0], leg_r: [0, 0, 0], arm_l: [0, 0, 0], arm_r: [0, 0, 0] };
+    // One pose and one state for the lot, refilled per person (render/personPose.js).
+    this._pose = makePose();
+    this._state = makeState();
+    this._last = null;
   }
 
   /** Redraws every settler where they now are. Called each frame. */
   update(people) {
     const n = Math.min(people.length, MAX);
     const now = performance.now() / 1000;
+    const dt = this._last == null ? 0 : Math.min(0.1, Math.max(0, now - this._last));
+    this._last = now;
     for (const m of this.meshes) m.count = m === this.limbs ? n * 4 : m === this.parts ? n * SLOTS : n;
     this.crowds.begin();
     if (!n) { this.crowds.end(); return; }
@@ -198,15 +204,36 @@ export class SettlerView {
       const kit = modelKit(personModel(p, this.role));
       const raised = p.windup > 0 && p.winding ? -2.7 : p.strike > 0 ? -1.6 * (p.strike / 0.3) : null;
       if (kit) {
+        const traits = traitsOf(kit.id);
+        const winding = p.windup > 0 && !!p.winding;
+        // A blow starts when Wanderers set `strike`, or when a defender's
+        // `cooldown` jumps back up (Defenders keep no `strike`).
+        const cd = p.cooldown ?? 0;
+        if ((p.strike > 0 && !(p._ls > 0)) || cd > (p._cd ?? cd) + 0.05) { p._atk = 0; p._heavy = !!p._wound; }
+        p._ls = p.strike ?? 0; p._cd = cd; p._wound = winding;
+        if (p._atk >= 0) { p._atk += dt / ATTACK_TIME; if (p._atk >= 1) p._atk = -1; }
+        const pace = dt > 0 ? moved / dt : 0;
+        p._run = (p._run ?? 0) + (Math.min(1, Math.max(0, (pace - 2.4) / 2.2)) - (p._run ?? 0)) * 0.2;
+        const st = this._state;
+        st.phase = p._walk * 5;
+        st.stride = p._stride ?? 0;
+        st.run = p._run;
+        st.now = now;
+        st.seed = (personHash(p) % 1000) * 0.00628;
+        st.idle = idle;
+        st.tool = p.atWork && !p.target && p.job ? JOB_OUTFITS[p.job]?.tool ?? null : null;
+        st.attack = p._atk >= 0 ? p._atk : -1;
+        st.heavy = !!p._heavy;
+        st.windup = winding;
+        st.draw = traits.gear === GEAR_BOW && cd > 0 && cd < DRAW_TIME && !walking && (p.foe === undefined || p.foe) ? 1 - cd / DRAW_TIME : 0;
+        st.hurt = p.hurt > 0 ? Math.min(1, p.hurt / 0.3) : 0;
+        st.stunned = p.stunned > 0;
+        st.frozen = p.frozen > 0;
+        const pose = posePerson(this._pose, st, traits);
         this._e.set(0, (p.facing ?? 0) + TURN, 0);
         this._q.setFromEuler(this._e);
-        base.compose(this._pos.set(p.x, p.y, p.z), this._q, this._modelScale);
-        const pose = this._pose;
-        pose.leg_r[0] = -swing;
-        pose.leg_l[0] = swing;
-        pose.head = [0, idle ? Math.sin(now * 0.7 + (personHash(p) % 1000) * 2.399) * 0.16 : 0, 0];
-        pose.arm_r[0] = -(raised ?? -swing * 0.8);
-        pose.arm_l[0] = -(raised ?? swing * 0.8);
+        // The hips sink as the legs swing out, so the feet stay on the ground.
+        base.compose(this._pos.set(p.x, p.y - pose.drop * this._modelScale.y * (kit.bones[0]?.scale.y ?? 1), p.z), this._q, this._modelScale);
         const crowd = this.crowds.get(kit);
         crowd.add(base, pose, this.modelTint(p));
         for (const mesh of [this.bodies, this.heads, this.hair]) mesh.setMatrixAt(i, NOTHING);

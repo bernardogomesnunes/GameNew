@@ -8,6 +8,7 @@ Kingdom dark iron with a red glow behind the visor; the Sky Kingdom white
 steel and gold; the dark god and his shades violet; the white god gold.
 """
 from lib import *
+from lib import _hash
 
 SKIN = dict(
     light=('#e8b98a', '#c99668'), mid=('#d9a066', '#b97f4a'), tan=('#b97a4a', '#9a6238'),
@@ -29,7 +30,54 @@ DEFAULT = dict(
 
 def shade(hexc, f=0.78):
     r, g, b = (int(hexc[i:i + 2], 16) for i in (1, 3, 5))
-    return '#%02x%02x%02x' % tuple(min(255, int(v * f)) for v in (r, g, b))
+    return '#%02x%02x%02x' % tuple(max(0, min(255, int(v * f))) for v in (r, g, b))
+
+
+def mix(a, b, t=0.5):
+    ca, cb = ([int(h[i:i + 2], 16) for i in (1, 3, 5)] for h in (a, b))
+    return '#%02x%02x%02x' % tuple(int(x + (y - x) * t) for x, y in zip(ca, cb))
+
+
+def cloth(p, c, face=None, fleck=0.14):
+    """Cloth, leather or plate lit from above: flat colour, a few flecks, the top
+    face lighter and the underside darker. Glow colours are left as they are."""
+    if c in GLOW_SET:
+        return p.fill(c)
+    base = shade(c, 1.07) if face == 'up' else shade(c, 0.72) if face == 'down' else c
+    p.fill(base)
+    for y in range(p.h):
+        for x in range(p.w):
+            r = _hash(x, y, p.seed)
+            if r < fleck:
+                p.set(x, y, shade(base, 0.92))
+            elif r > 1 - fleck * 0.45:
+                p.set(x, y, shade(base, 1.06))
+    return p
+
+
+# Today's triangles per model (12 a box, before faces could be left out): the
+# most each may have. A war round draws dozens of these at once.
+BUDGET = {'settler': 300, 'soldier': 120, 'archer': 180, 'footman': 132, 'swordsman': 144, 'bowman': 180, 'shield_guard': 108,
+          'crew': 108, 'hermit': 132, 'messenger': 120, 'bandit': 156, 'citizen': 288, 'merchant': 132, 'trader': 144, 'tribe': 180,
+          'city_guard': 108, 'rival_soldier': 108, 'rival_guard': 108, 'futurian': 72, 'guard': 108, 'warrior': 108, 'stone_archer': 180,
+          'king': 204, 'warlord': 144, 'sky_guard': 120, 'royal_guard': 132, 'sky_king': 216, 'seraph': 168, 'white_god': 204,
+          'dark_god': 216, 'shade': 144, 'settler_1': 324, 'settler_2': 336, 'settler_3': 300, 'settler_4': 300, 'settler_5': 324,
+          'citizen_1': 312, 'citizen_2': 300, 'citizen_3': 312}
+
+
+def triangles(cubes):
+    return sum(2 * (6 - len(c[4].get('skip', ()))) for c in cubes)
+
+
+def tilt(cube, pivot, deg):
+    """A box swung about x round `pivot` (what a hand holds): tip up for +deg."""
+    name, bone, a, b, paint = cube[:5]
+    c = [(a[i] + b[i]) / 2 for i in range(3)]
+    t = math.radians(deg)
+    y, z = c[1] - pivot[1], c[2] - pivot[2]
+    n = (c[0], pivot[1] + y * math.cos(t) - z * math.sin(t), pivot[2] + y * math.sin(t) + z * math.cos(t))
+    d = [n[i] - c[i] for i in range(3)]
+    return (name, bone, tuple(a[i] + d[i] for i in range(3)), tuple(b[i] + d[i] for i in range(3)), paint, (deg, 0, 0))
 
 
 def person(id, name, **kw):
@@ -37,6 +85,8 @@ def person(id, name, **kw):
     skin, skin2 = SKIN[o['skin']]
     coat, coat2 = o['coat'], o['coat2'] or shade(o['coat'])
     plate, plate2, plate3 = o['plate']
+    void = o['skin'] == 'void'
+    metal = o['trim'] or C['gold']
 
     # --- painters ---------------------------------------------------------
     def face_pixels(p, ox, oy, w):
@@ -45,237 +95,351 @@ def person(id, name, **kw):
         if o['glowEyes']:
             p.set(cx - 3, oy + 1, o['glowEyes']).set(cx - 2, oy + 1, o['glowEyes'])
             p.set(cx + 1, oy + 1, o['glowEyes']).set(cx + 2, oy + 1, o['glowEyes'])
+            if not void:
+                p.rect(cx - 3, oy, 2, 1, shade(skin2, 0.8)).rect(cx + 1, oy, 2, 1, shade(skin2, 0.8))
+                p.rect(cx - 1, oy + 3, 2, 1, shade(skin2, 0.75))
             return
-        p.rect(cx - 3, oy, 2, 1, shade(o['hair'], 0.9) if o['hair'] else skin2)
-        p.rect(cx + 1, oy, 2, 1, shade(o['hair'], 0.9) if o['hair'] else skin2)
+        brow = shade(o['hair'], 0.9) if o['hair'] else skin2
+        p.rect(cx - 3, oy, 2, 1, brow).rect(cx + 1, oy, 2, 1, brow)
         p.set(cx - 3, oy + 1, C['white']).set(cx - 2, oy + 1, o['eye'])
         p.set(cx + 1, oy + 1, o['eye']).set(cx + 2, oy + 1, C['white'])
+        if not o['goblin']:
+            blush = mix(skin, C['pink'], 0.45)
+            p.set(cx - 3, oy + 2, blush).set(cx + 2, oy + 2, blush)
         p.set(cx - 1, oy + 2, skin2).set(cx, oy + 2, skin2)
-        p.rect(cx - 1, oy + 3, 2, 1, shade(skin2, 0.8))
+        p.rect(cx - 1, oy + 3, 2, 1, shade(skin2, 0.72))
         if o['beard']:
-            p.rect(cx - 3, oy + 3, 6, 2, o['beard']).set(cx - 1, oy + 3, shade(skin2, 0.8)).set(cx, oy + 3, shade(skin2, 0.8))
-            p.rect(cx - 2, oy + 5, 4, 1, o['beard'])
+            bd = o['beard']
+            p.rect(cx - 3, oy + 3, 6, 2, bd).set(cx - 1, oy + 3, shade(skin2, 0.72)).set(cx, oy + 3, shade(skin2, 0.72))
+            p.rect(cx - 2, oy + 5, 4, 1, shade(bd, 0.88))
 
     def head(p, face):
-        p.grain([skin, skin2] if o['skin'] != 'void' else [skin])
+        cloth(p, skin, face, 0.1 if not void else 0)
         hair = o['hair']
+        front = (lambda i: p.w - 1 - i) if face == 'east' else (lambda i: i)   # px from the front edge
         if face == 'north':
             if hair:
-                p.row(0, hair).set(0, 1, hair).set(p.w - 1, 1, hair)
+                p.row(0, hair).set(0, 1, hair).set(p.w - 1, 1, hair).set(1, 1, shade(hair, 0.9)).set(p.w - 2, 1, hair)
             face_pixels(p, 0, 3, p.w)
+            p.row(-1, shade(skin, 0.9))
+            if o['beard']:
+                p.rect(2, 7, 4, 1, shade(o['beard'], 0.88))
         elif face == 'south':
             if hair:
-                p.grain([hair, shade(hair, 0.85)]).row(-1, skin2)
+                cloth(p, hair, None, 0.2).row(-1, skin2)
+                p.rect(2, 1, 1, 4, shade(hair, 1.12)).rect(5, 2, 1, 4, shade(hair, 0.85))
+            else:
+                p.row(-1, skin2)
         elif face in ('east', 'west'):
             if hair:
                 p.rect(0, 0, p.w, 3, hair)
-                p.rect(p.w - 3 if face == 'east' else 0, 3, 3, 3, hair)
-            p.set(p.w // 2, 4, skin2)
+                for i in range(4, p.w):
+                    p.rect(front(i), 3, 1, 3 if i > 5 else 2, hair)          # down behind the ear
+                p.set(front(0), 3, hair)                                     # a sideburn
+            p.set(front(3), 4, skin2).set(front(3), 5, shade(skin2, 0.85))    # the ear
             if o['beard']:
-                p.rect(0 if face == 'west' else p.w - 3, 6, 3, 2, o['beard'])
+                for i in range(3):
+                    p.rect(front(i), 6, 1, 2, o['beard'])
+            p.row(-1, shade(skin, 0.9))
         elif face == 'up' and hair:
-            p.grain([hair, shade(hair, 0.85)])
+            cloth(p, hair, 'up', 0.2)
+            p.rect(3, 1, 1, 5, shade(hair, 0.86))                            # a parting
 
-    def shell(colour, trim=None, opening=True, visor=False):
-        """A helm or hood: the face shows through an opening, or a visor slit."""
+    def shell(colour, trim=None, opening=True, visor=False, steel=False):
+        """A helm or hood: the face shows through an opening, or a visor's eye slits."""
+        lo, hi = shade(colour, 0.82), shade(colour, 1.14)
         def f(p, face):
-            p.grain([colour, shade(colour, 0.9), shade(colour, 1.1) if colour != '#000000' else colour])
+            cloth(p, colour, face, 0.1)
+            side = face in ('north', 'south', 'east', 'west')
+            if steel and side:
+                p.row(1, hi).row(-2, lo)                       # light off the dome, shade at the rim
             if face == 'north':
                 if visor:
-                    p.rect(1, 4, p.w - 2, 2, C['ink'])
-                    g = o['visorGlow']
-                    if g:
-                        p.set(2, 4, g).set(3, 4, g).set(p.w - 4, 4, g).set(p.w - 3, 4, g)
-                    p.rect(p.w // 2, 1, 1, 6, trim or shade(colour, 0.7))
+                    g = o['visorGlow'] or C['ink']
+                    p.row(3, lo)
+                    p.rect(1, 4, 3, 2, C['ink']).rect(p.w - 4, 4, 3, 2, C['ink'])      # two eye slits
+                    p.rect(1, 4, 3, 1, g).rect(p.w - 4, 4, 3, 1, g)
+                    p.rect(p.w // 2, 2, 1, 6, trim or hi)                               # the nose ridge
+                    for x in (2, 6):
+                        p.set(x, 7, C['ink'])                                           # breath holes
                 elif opening:
-                    p.rect(2, 2, p.w - 4, 6, skin if o['skin'] != 'void' else C['ink'])
-                    if o['skin'] != 'void':
-                        p.row(2, shade(skin, 0.75))   # the shadow under the brim
+                    p.rect(2, 2, p.w - 4, 6, skin if not void else C['ink'])
+                    if not void:
+                        p.rect(2, 2, p.w - 4, 1, shade(skin, 0.72))    # the shadow under the brim
                     face_pixels(p, 1, 3, p.w - 1)
+                    if steel:
+                        p.rect(p.w // 2, 0, 1, 4, hi)          # a nose guard down from the brow
+                        p.rect(1, 5, 1, 3, lo).rect(p.w - 2, 5, 1, 3, lo)   # cheek plates
+                    else:
+                        p.rect(1, 2, 1, 6, lo).rect(p.w - 2, 2, 1, 6, lo)   # the hood's inner edge
                 if trim:
                     p.row(0, trim)
-            elif face in ('east', 'west', 'south') and trim:
-                p.row(0, trim)
+            elif side:
+                if trim:
+                    p.row(0, trim)
+                if steel:
+                    p.set(1, 3, hi).set(p.w - 2, 3, hi)        # rivets
+                    if face == 'south':
+                        p.rect(0, p.h - 3, p.w, 1, lo)         # the neck guard
+                else:
+                    p.rect(p.w // 2, 1, 1, p.h - 3, lo)        # a fold
+            elif face == 'up' and steel:
+                p.rect(p.w // 2, 0, 1, p.h, hi)                # the ridge over the top
             if face != 'north' and face != 'up' and trim:
                 p.row(-1, trim)
         return f
 
     def torso(p, face):
+        side = face in ('north', 'south', 'east', 'west')
         if o['armour'] == 'plate':
-            p.grain([plate, plate2])
+            cloth(p, plate, face, 0.1)
             if face == 'north':
-                p.border(o['trim'] or C['gold'], 'lrt')
+                p.rect(1, 1, 6, 1, shade(plate, 1.12))                       # light across the chest
+                p.rect(1, 6, 6, 1, plate3).rect(0, 10, p.w, 1, plate2).rect(0, 11, p.w, 1, plate3)   # the plates of the belly
+                p.border(metal, 'lrt')
                 if o['emblem']:
                     p.stamp(['..#..', '.#.#.', '#.#.#', '.#.#.', '..#..'], {'#': o['emblem']}, None, 2)
                 if o['emblemGlow']:
                     p.rect(3, 4, 2, 2, o['emblemGlow'])
             elif face == 'south':
-                p.col(p.w // 2, plate3)
+                p.col(p.w // 2, plate3).row(0, metal).rect(0, 10, p.w, 1, plate2).rect(0, 11, p.w, 1, plate3)
+            elif side:
+                p.row(0, metal).rect(0, 10, p.w, 2, plate3)
         else:
-            p.grain([coat, coat2])
+            cloth(p, coat, face)
+            if side:
+                p.row(-1, coat2)
             if face == 'north':
                 if o['shirt']:
-                    p.rect(2, 0, 4, p.h, o['shirt']).col(2, shade(coat, 0.7)).col(5, shade(coat, 0.7))
-                    p.set(4, 3, shade(o['shirt'], 0.8)).set(4, 6, shade(o['shirt'], 0.8))
+                    sh = o['shirt']
+                    p.rect(3, 0, 2, p.h, sh).set(2, 0, sh).set(5, 0, sh).set(2, 1, sh).set(5, 1, sh)   # an open collar
+                    p.rect(2, 2, 1, p.h - 2, shade(coat, 0.72)).rect(5, 2, 1, p.h - 2, shade(coat, 0.72))
+                    p.set(4, 3, shade(sh, 0.78)).set(4, 6, shade(sh, 0.78))                       # buttons
+                else:
+                    p.set(3, 0, coat2).set(4, 0, coat2).set(3, 1, coat2)                          # the neck of it
+                    p.rect(1, 2, 1, 5, shade(coat, 1.08))
                 if o['trim']:
                     p.row(0, o['trim'])
                     if o['robe']:
                         p.col(4, o['trim'])
+                    elif o['emblem'] and not o['shirt']:
+                        p.rect(2, 1, 4, 7, shade(coat, 1.1)).rect(2, 1, 1, 7, o['trim']).rect(5, 1, 1, 7, o['trim'])   # a tabard
                 if o['emblem']:
                     p.stamp(['.#.', '###', '.#.'], {'#': o['emblem']}, None, 3)
+            elif face == 'south':
+                p.rect(p.w // 2, 1, 1, 7, coat2)                                                  # the seam down the back
             if o['trim'] and face in ('east', 'west', 'south'):
                 p.row(0, o['trim'])
         if o['satchel'] and face in ('north', 'south'):
             for i in range(8):
                 p.set(i if face == 'north' else 7 - i, i + 1, '#3a2414')
-        if o['belt'] and face != 'up' and face != 'down':
-            p.row(8, o['belt']).row(9, o['belt'])
+        if o['belt'] and side:
+            p.row(8, o['belt']).row(9, shade(o['belt'], 0.82))
             if face == 'north' and o['buckle']:
                 p.rect(3, 8, 2, 2, o['buckle'])
 
     def arm(p, face):
+        side = face in ('north', 'south', 'east', 'west')
         if o['armour']:
-            p.grain([plate2, plate3] if o['armour'] == 'plate' else [C['steel3'], C['steel4']])
+            a1, a2 = (plate2, plate3) if o['armour'] == 'plate' else (C['steel3'], C['steel4'])
+            cuff = metal if o['trim'] else plate
+            cloth(p, a1, face, 0.1)
+            if face == 'down':
+                p.fill(a2)
+            elif side:
+                p.rect(0, 0, p.w, 3, plate).row(3, metal)                    # the shoulder plate
+                p.row(6, a2)                                                 # the elbow
+                p.rect(0, p.h - 4, p.w, 4, cuff).row(-4, shade(cuff, 0.8))   # the gauntlet
+                p.row(-1, a2)
+            elif face == 'up':
+                p.fill(shade(plate, 1.08))
         else:
-            p.grain([coat, coat2])
-        if face == 'down':
-            p.fill(skin if not o['armour'] else plate3)
-        elif face != 'up':
-            if o['armour']:
-                p.rect(0, p.h - 4, p.w, 4, o['trim'] or plate).row(-4, shade(o['trim'] or plate, 0.8))
-            else:
-                if o['trim']:
-                    p.row(-4, o['trim'])
-                p.rect(0, p.h - 3, p.w, 3, skin).set(1, p.h - 1, skin2)
+            cloth(p, coat, face)
+            if face == 'down':
+                p.fill(skin2)
+            elif side:
+                p.row(0, shade(coat, 1.08)).row(6, coat2)                    # the shoulder, the crook of the elbow
+                p.row(-4, o['trim'] or coat2)                                # the cuff
+                p.rect(0, p.h - 3, p.w, 3, skin).row(-1, skin2)              # the hand
+                if face == 'north':
+                    p.set(p.w // 2, p.h - 2, skin2)
 
     def leg(p, face):
+        side = face in ('north', 'south', 'east', 'west')
+        boots = o['boots']
         if o['armour'] == 'plate':
-            p.grain([plate, plate2])
-            if face not in ('up', 'down'):
-                p.row(4, o['trim'] or C['gold'])
+            cloth(p, plate, face, 0.1)
+            if side:
+                p.row(0, plate3).rect(0, 4, p.w, 1, metal).rect(0, 5, p.w, 1, plate2)   # the knee
+                if face == 'north':
+                    p.rect(1, 6, 1, 2, shade(plate, 1.12))
         else:
-            p.grain([o['trousers'], shade(o['trousers'], 0.88)])
+            tr = o['trousers']
+            cloth(p, tr, face)
+            if side:
+                p.row(0, shade(tr, 0.86))
+                if face == 'north':
+                    p.rect(1, 4, 2, 1, shade(tr, 0.86))                      # the knee
         if face == 'down':
-            p.fill(o['boots'])
-        elif face != 'up':
-            p.rect(0, p.h - 4, p.w, 4, o['boots']).row(-1, shade(o['boots'], 0.7))
-            if not o['armour']:
-                p.row(-5, shade(o['trousers'], 0.7))
+            p.fill(shade(boots, 0.6))
+        elif side:
+            p.rect(0, p.h - 4, p.w, 4, boots).row(-4, shade(boots, 1.25)).row(-1, shade(boots, 0.65))
+            if face == 'north':
+                p.set(1, p.h - 2, shade(boots, 1.2))
 
     # --- boxes ------------------------------------------------------------
+    # Legs a little apart and arms slimmer than the body is deep: a figure,
+    # where two slabs side by side read as a brick.
     cubes = [
-        box('leg_l', 'leg_l', (-4, 0, -2), (0, 12, 2), leg),
-        box('leg_r', 'leg_r', (0, 0, -2), (4, 12, 2), leg),
-        box('torso', 'body', (-4, 12, -2), (4, 24, 2), torso),
-        box('arm_l', 'arm_l', (-8, 12, -2), (-4, 24, 2), arm),
-        box('arm_r', 'arm_r', (4, 12, -2), (8, 24, 2), arm),
+        box('leg_l', 'leg_l', (-3.8, 0, -2), (-0.3, 12, 2), leg),
+        box('leg_r', 'leg_r', (0.3, 0, -2), (3.8, 12, 2), leg),
+        box('torso', 'body', (-4, 12, -2), (4, 24, 2), torso, skip=('up',)),
+        box('arm_l', 'arm_l', (-7, 12, -1.75), (-4, 24, 1.75), arm),
+        box('arm_r', 'arm_r', (4, 12, -1.75), (7, 24, 1.75), arm),
     ]
+    extras = []          # nice to have, in order, while the model's triangles allow
     hat = o['hat']
     hc = o['hatColour'] or (C['iron'] if hat == 'helm' else coat)
     if hat == 'helm':
-        cubes.append(box('helm', 'head', (-4.5, 23.5, -4.5), (4.5, 32.5, 4.5), shell(hc, o['hatTrim'], True, o['visor'])))
+        cubes.append(box('helm', 'head', (-4.5, 23.5, -4.5), (4.5, 32.5, 4.5), shell(hc, o['hatTrim'], True, o['visor'], steel=True)))
     elif hat == 'hood':
         # A hood darker than the coat, with a trim at its hem: seen from behind, a
         # hood the coat's colour read as no head at all (owner, 5 November).
         cubes.append(box('hood', 'head', (-4.5, 23.5, -4.5), (4.5, 32.5, 4.5), shell(hc, o['hatTrim'], True)))
-        cubes.append(box('hood_peak', 'head', (-2, 32.5, -1), (2, 34, 4.5), {'all': lambda p, f: p.grain([hc, shade(hc, 0.9)])}))
-        cubes.append(box('hood_drape', 'body', (-4.75, 21.5, -2.5), (4.75, 24.5, 2.75), {'all': lambda p, f: p.grain([hc, shade(hc, 0.85)]).row(-1, shade(hc, 0.7))}))
+        cubes.append(box('hood_peak', 'head', (-2, 32.5, -1), (2, 34, 4.5), {'all': lambda p, f: cloth(p, hc, f)}, skip=('down',)))
+        cubes.append(box('hood_drape', 'body', (-4.75, 21.5, -2.5), (4.75, 24.5, 2.75),
+                         {'all': lambda p, f: cloth(p, hc, f).row(-1, shade(hc, 0.7))}, skip=('down',)))
     else:
         cubes.append(box('head', 'head', (-4, 24, -4), (4, 32, 4), head))
     if hat == 'cap':
-        cap = lambda p, f: p.grain([hc, shade(hc, 0.88)]).row(-1, o['hatTrim'] or shade(hc, 0.7))
-        cubes.append(box('cap', 'head', (-4.5, 30.5, -4.5), (4.5, 33, 4.5), cap))
-        cubes.append(box('cap_brim', 'head', (-4.5, 30.5, -6.5), (4.5, 31.25, -4.5), cap))
+        def cap(p, f):
+            cloth(p, hc, f)
+            if f in ('north', 'south', 'east', 'west'):
+                p.row(-1, o['hatTrim'] or shade(hc, 0.7))
+        cubes.append(box('cap', 'head', (-4.5, 30.5, -4.5), (4.5, 33, 4.5), cap, skip=('down',)))
+        cubes.append(box('cap_brim', 'head', (-4.5, 30.5, -6.5), (4.5, 31.25, -4.5), lambda p, f: cloth(p, hc, f), skip=('south',)))
     elif hat == 'crown':
         gold = hc if o['hatColour'] else C['gold']
-        band = lambda p, f: p.grain([gold, shade(gold, 0.85)]).row(-1, shade(gold, 0.7))
-        cubes.append(box('crown', 'head', (-4.5, 30.5, -4.5), (4.5, 33, 4.5), band))
+        def band(p, f):
+            cloth(p, gold, f, 0.1)
+            if f in ('north', 'south', 'east', 'west'):
+                p.row(0, shade(gold, 1.15)).row(-1, shade(gold, 0.7))
+        cubes.append(box('crown', 'head', (-4.5, 30.5, -4.5), (4.5, 33, 4.5), band, skip=('down',)))
         for i, (x, z) in enumerate(((-4.5, -4.5), (3, -4.5), (-4.5, 3), (3, 3), (-0.75, -4.5))):
             tall = 3 if i == 4 else 2
-            cubes.append(box(f'crown_pt{i}', 'head', (x, 33, z), (x + 1.5, 33 + tall, z + 1.5), band))
-        cubes.append(box('crown_gem', 'head', (-0.75, 31, -4.75), (0.75, 32.5, -4.5), {'all': o['crownGem']}))
+            cubes.append(box(f'crown_pt{i}', 'head', (x, 33, z), (x + 1.5, 33 + tall, z + 1.5), band, skip=('down',)))
+        cubes.append(box('crown_gem', 'head', (-0.75, 31, -4.75), (0.75, 32.5, -4.5), {'all': o['crownGem']}, skip=('south',)))
     if o['plume']:
         pl = o['plume']
-        cubes.append(box('plume', 'head', (-0.75, 32.5, -2), (0.75, 37, 3), {'all': lambda p, f: p.grain([pl, shade(pl, 0.9)])}))
-        cubes.append(box('plume_tail', 'head', (-0.75, 31, 3), (0.75, 35, 5.5), {'all': lambda p, f: p.grain([pl, shade(pl, 0.85)])}))
+        feather = lambda p, f: cloth(p, pl, f, 0.2)
+        cubes.append(box('plume', 'head', (-0.75, 32.5, -2), (0.75, 37, 3), feather, skip=('down',)))
+        cubes.append(box('plume_tail', 'head', (-0.75, 31, 3), (0.75, 35, 5.5), feather))
     if o['goblin']:
-        ear = lambda p, f: p.grain([skin, skin2]).set(1, 1, C['pink']) if f == 'north' else p.grain([skin, skin2])
+        ear = lambda p, f: cloth(p, skin, f).set(1, 1, C['pink']) if f == 'north' else cloth(p, skin, f)
         cubes += [box('ear_l', 'head', (-8, 27, -0.5), (-4, 30, 0.5), ear, (0, 0, -15)),
                   box('ear_r', 'head', (4, 27, -0.5), (8, 30, 0.5), ear, (0, 0, 15)),
-                  box('nose', 'head', (-0.75, 26.5, -7), (0.75, 28, -4), {'all': lambda p, f: p.grain([skin2, skin])})]
+                  box('nose', 'head', (-0.75, 26.5, -7), (0.75, 28, -4), {'all': lambda p, f: cloth(p, skin2, f)}, skip=('south',))]
     if o['cape']:
         cp, ct = o['cape'], o['capeTrim']
         def cape(p, face):
-            p.grain([cp, shade(cp, 0.88)])
+            cloth(p, cp, face)
+            if face in ('north', 'south'):
+                for x in (2, 6):
+                    p.rect(x, 2, 1, p.h - 4, shade(cp, 0.86))    # folds
             if ct:
                 p.border(ct, 'lrb')
         cubes.append(box('cape', 'body', (-4.5, 4, 2), (4.5, 24, 3), cape))
     if o['skirt'] or o['robe']:
         lo = 2 if o['robe'] else 8
         def skirt(p, face):
-            p.grain([coat, coat2]).row(-1, o['trim'] or shade(coat, 0.7))
+            cloth(p, coat, face)
+            if face in ('north', 'south', 'east', 'west'):
+                for x in range(1, p.w, 3):
+                    p.rect(x, 1, 1, p.h - 2, coat2)              # folds
+                p.row(-1, o['trim'] or shade(coat, 0.7))
             if face == 'north' and o['robe'] and o['trim']:
                 p.col(p.w // 2, o['trim'])
-        cubes.append(box('skirt', 'body', (-4.5, lo, -2.5), (4.5, 12.5, 2.5), skirt))
+        cubes.append(box('skirt', 'body', (-4.5, lo, -2.5), (4.5, 12.5, 2.5), skirt, skip=('up',)))
     if o['scarf']:
         sc = o['scarf']
-        cubes.append(box('scarf', 'body', (-4.5, 22, -2.5), (4.5, 24.5, 2.5), {'all': lambda p, f: p.grain([sc, shade(sc, 0.85)])}))
-        cubes.append(box('scarf_mask', 'head', (-4.25, 24, -4.25), (4.25, 27, -3.75), {'all': lambda p, f: p.grain([sc, shade(sc, 0.85)])}))
+        cubes.append(box('scarf', 'body', (-4.5, 22, -2.5), (4.5, 24.5, 2.5), {'all': lambda p, f: cloth(p, sc, f)}, skip=('down',)))
+        cubes.append(box('scarf_mask', 'head', (-4.25, 24, -4.25), (4.25, 27, -3.75), {'all': lambda p, f: cloth(p, sc, f)}, skip=('south',)))
     if o['apron']:
         ap = o['apron']
-        cubes.append(box('apron', 'body', (-3, 6, -2.75), (3, 21, -2), {'all': lambda p, f: p.grain([ap, shade(ap, 0.9)]).row(4, shade(ap, 0.7))}))
+        cubes.append(box('apron', 'body', (-3, 6, -2.75), (3, 21, -2), {'all': lambda p, f: cloth(p, ap, f).row(4, shade(ap, 0.7))}, skip=('south',)))
     if o['satchel']:
         sa = o['satchel']
-        cubes.append(box('satchel', 'body', (4, 9, -2), (6.5, 14, 2.5), {'all': lambda p, f: p.grain([sa, shade(sa, 0.85)]).row(0, shade(sa, 0.7))}))
-        cubes.append(box('scroll', 'body', (4.5, 14, 0), (6, 16.5, 1.5), {'all': lambda p, f: p.grain([C['paper'], C['paper2']]).row(0, C['red'])}))
+        cubes.append(box('satchel', 'body', (1.5, 9, -3.5), (4.5, 14, -2), {'all': lambda p, f: cloth(p, sa, f).row(0, shade(sa, 0.7))}, skip=('south',)))
+        cubes.append(box('scroll', 'body', (2.25, 14, -3.25), (3.75, 16, -2), {'all': lambda p, f: cloth(p, C['paper'], f).row(0, C['red'])}, skip=('south', 'down')))
     if o['quiver']:
         q = o['quiver']
-        cubes.append(box('quiver', 'body', (-3, 13, 2), (0, 25, 4.5), {'all': lambda p, f: p.grain([q, shade(q, 0.85)]).row(0, shade(q, 0.6))}))
+        cubes.append(box('quiver', 'body', (-3, 13, 2), (0, 25, 4.5), {'all': lambda p, f: cloth(p, q, f).row(0, shade(q, 0.6))}, skip=('north',)))
         for i, x in enumerate((-2.5, -1.25)):
-            cubes.append(box(f'arrow{i}', 'body', (x, 25, 2.75), (x + 0.75, 27.5, 3.5), {'all': '#e8e2d6', 'up': C['red']}))
+            cubes.append(box(f'arrow{i}', 'body', (x, 25, 2.75), (x + 0.75, 27.5, 3.5), {'all': '#e8e2d6', 'up': C['red']}, skip=('down',)))
     if o['shield']:
+        # Carried on the forearm, its painted face forward: what they are behind.
         s1, s2 = o['shield']
         def shield(p, face):
-            if face == 'west':
-                p.grain([s1, shade(s1, 0.9)]).border(s2)
-                p.stamp(['.#.', '###', '.#.'], {'#': s2})
-                if o['emblemGlow']:
-                    p.set(p.w // 2, p.h // 2, o['emblemGlow'])
+            if face == 'north':
+                cloth(p, s1, None, 0.1).border(s2)
+                p.rect(p.w // 2 - 1, 2, 2, p.h - 4, s2).rect(1, p.h // 2 - 1, p.w - 2, 2, s2)
+                p.rect(p.w // 2 - 1, p.h // 2 - 1, 2, 2, o['emblemGlow'] or shade(s2, 1.2))
+            elif face == 'south':
+                cloth(p, C['wood'], None).border(s2)
             else:
                 p.fill(s2)
-        cubes.append(box('shield', 'arm_l', (-9.5, 10, -5), (-8.5, 22, 5), shield))
+        cubes.append(box('shield', 'arm_l', (-9, 10.5, -3), (-3, 21.5, -2), shield))
     if o['wings']:
         from featured import wing
         cubes += [box('wing_l', 'wing_l', (-14, 17, 2.5), (-2, 28, 3.5), wing),
                   box('wing_l_low', 'wing_l', (-10, 9, 2.5), (-2, 17, 3.5), wing),
                   box('wing_r', 'wing_r', (2, 17, 2.5), (14, 28, 3.5), wing),
                   box('wing_r_low', 'wing_r', (2, 9, 2.5), (10, 17, 3.5), wing)]
+    if o['armour'] == 'plate':
+        # Shoulder plates in one piece across the back of the neck: the arms swing under them.
+        def yoke(p, face):
+            cloth(p, plate, face, 0.1)
+            if face in ('north', 'south', 'east', 'west'):
+                p.row(0, shade(plate, 1.12)).row(-1, metal)
+        extras.append(box('pauldrons', 'body', (-7.6, 21.5, -2.6), (7.6, 24.8, 2.6), yoke, skip=('down',)))
+    if id == 'soldier':
+        extras.append(box('crest', 'head', (-0.75, 32.5, -3.5), (0.75, 34.5, 4.5), lambda p, f: cloth(p, C['teal'], f).row(0, C['tealLight']), skip=('down',)))
+    if id == 'warlord':
+        extras.append(box('horns', 'head', (-7.5, 29.5, -1), (7.5, 31.5, 1), lambda p, f: cloth(p, '#b8b0a0', f).col(0, C['redDark']).col(-1, C['redDark'])))
 
-    # Gear, in the right hand.
+    # Gear, in the right hand: a sword tipped up and ahead from the fist, a spear
+    # or staff upright in front of it, a bow across it (upright once the arm is raised).
     gc, gg = o['gearColour'], o['gearGlow']
-    steel = lambda p, f: p.grain([gc or C['steel2'], shade(gc or C['steel2'], 0.85)]).row(0, gg or C['white'])
-    wood = lambda p, f: p.grain([C['wood'], C['woodDark']])
+    hand = (5.5, 13.5, -1.75)
     if o['gear'] == 'sword':
-        cubes += [box('grip', 'arm_r', (5.5, 12, -1.5), (6.5, 14, 1.5), wood),
-                  box('guard', 'arm_r', (4.5, 12, -3), (7.5, 14, -2), {'all': lambda p, f: p.grain([C['gold'], C['goldDark']])}),
-                  box('blade', 'arm_r', (5.5, 12.25, -12), (6.5, 13.75, -3),
-                      {'all': lambda p, f: p.grain([gc or C['steel'], shade(gc or C['steel'], 0.88)]).col(0, gg or C['white'])})]
+        bc = gc or C['steel']
+        def blade(p, f):
+            cloth(p, bc, f, 0.08)
+            if f in ('east', 'west'):
+                p.row(0, gg or C['white']).row(-1, shade(bc, 0.8))
+            elif f == 'up':
+                p.fill(gg or C['white'])
+        hilt = lambda p, f: cloth(p, C['gold'], f, 0.1)
+        cubes += [tilt(box('guard', 'arm_r', (4.9, 11.6, -3.3), (6.1, 15.4, -2.3), hilt), hand, 38),
+                  tilt(box('blade', 'arm_r', (5.1, 12.5, -15), (5.9, 14.5, -3.3), blade, skip=('south',)), hand, 38)]
+        extras.append(tilt(box('pommel', 'arm_r', (4.9, 12.7, 1.75), (6.1, 14.3, 3), hilt, skip=('north',)), hand, 38))
     elif o['gear'] == 'spear':
-        cubes += [box('shaft', 'arm_r', (5.5, -2, -1.5), (6.5, 34, -0.5), {'all': lambda p, f: p.grain([gc or C['wood'], shade(gc or C['wood'], 0.8)])}),
-                  box('spear_head', 'arm_r', (5, 34, -2), (7, 39, 0), {'all': gg or C['steel']} if gg else steel)]
+        steel = lambda p, f: cloth(p, gc or C['steel2'], f, 0.1).row(0, gg or C['white'])
+        cubes += [box('shaft', 'arm_r', (5, -2, -2.9), (6, 34, -1.9), {'all': lambda p, f: cloth(p, gc or C['wood'], f)}, skip=('up', 'down')),
+                  box('spear_head', 'arm_r', (4.5, 34, -3.4), (6.5, 39.5, -1.4), {'all': gg or C['steel']} if gg else steel, skip=('down',))]
     elif o['gear'] == 'staff':
-        cubes += [box('staff', 'arm_r', (5.5, -1, -1.5), (6.5, 34, -0.5), {'all': lambda p, f: p.grain([gc or C['wood'], C['woodDark']])}),
-                  box('staff_head', 'arm_r', (4.75, 34, -2.25), (7.25, 37.5, 0.25), {'all': gg or C['paper']}, (0, 45, 0))]
+        cubes += [box('staff', 'arm_r', (5, -1, -2.9), (6, 34, -1.9), {'all': lambda p, f: cloth(p, gc or C['wood'], f)}, skip=('up', 'down')),
+                  box('staff_head', 'arm_r', (4.25, 34, -3.65), (6.75, 37.5, -1.15), {'all': gg or C['paper']}, (0, 45, 0))]
     elif o['gear'] == 'bow':
         bc = gc or C['wood']
-        bow = lambda p, f: p.grain([bc, shade(bc, 0.8)])
-        cubes += [box('bow_grip', 'arm_r', (5.5, 11, -3), (6.5, 16, -2), bow),
-                  box('bow_top', 'arm_r', (5.5, 16, -2.5), (6.5, 22, -1.5), bow),
-                  box('bow_low', 'arm_r', (5.5, 5, -2.5), (6.5, 11, -1.5), bow),
-                  box('bow_string', 'arm_r', (5.75, 5.5, -0.75), (6.25, 21.5, -0.25), {'all': '#e8e2d6'})]
+        bow = lambda p, f: cloth(p, bc, f)
+        cubes += [box('bow_grip', 'arm_r', (5, 10.9, -3.5), (6, 12, 3.5), bow),
+                  box('bow_top', 'arm_r', (5, 11.6, -9), (6, 12.7, -3.5), bow, (-14, 0, 0)),
+                  box('bow_low', 'arm_r', (5, 11.6, 3.5), (6, 12.7, 9), bow, (14, 0, 0)),
+                  box('bow_string', 'arm_r', (5.3, 13.4, -8.7), (5.7, 13.8, 8.7), {'all': '#e8e2d6'}, skip=('north', 'south'))]
 
-    bones = [('body', None, (0, 12, 0)), ('head', 'body', (0, 24, 0)), ('arm_l', 'body', (-6, 22, 0)),
-             ('arm_r', 'body', (6, 22, 0)), ('leg_l', None, (-2, 12, 0)), ('leg_r', None, (2, 12, 0))]
+    bones = [('body', None, (0, 12, 0)), ('head', 'body', (0, 24, 0)), ('arm_l', 'body', (-5.5, 22, 0)),
+             ('arm_r', 'body', (5.5, 22, 0)), ('leg_l', None, (-2, 12, 0)), ('leg_r', None, (2, 12, 0))]
     anim = {'leg_l': swing(28), 'leg_r': swing(-28), 'arm_l': swing(-22),
             'arm_r': swing(8 if o['gear'] in ('spear', 'staff', 'bow') else 14),
             'head': [(1, (0, -4, 0)), (13, (0, 4, 0)), (25, (0, -4, 0))]}
@@ -289,41 +453,46 @@ def person(id, name, **kw):
     # retaining their own scale, palette, bones and walk cycle.
     if id == 'settler' or id.startswith('settler_') or id == 'citizen' or id.startswith('citizen_'):
         accent = o['trim'] or o['shirt'] or C['paper']
-        cloth = lambda p, f: p.fill(coat).row(-1, coat2)
-        leather = lambda p, f: p.fill(o['belt']).row(0, shade(o['belt'], 1.2))
+        plain = lambda c: (lambda p, f: cloth(p, c, f, 0.08))
+        hem = lambda p, f: cloth(p, coat, f).row(-1, coat2)
+        leather = lambda p, f: cloth(p, o['belt'], f).row(0, shade(o['belt'], 1.2))
         cubes += [
-            box('collar_l', 'body', (-3.5, 21.5, -2.7), (-0.5, 24.2, -2), accent),
-            box('collar_r', 'body', (0.5, 21.5, -2.7), (3.5, 24.2, -2), accent),
-            box('coat_hem', 'body', (-4.3, 11.5, -2.3), (4.3, 13, 2.3), cloth),
-            box('pocket', 'body', (-3.6, 15, -2.7), (-0.8, 18, -2), cloth),
-            box('pocket_flap', 'body', (-3.7, 17.6, -3), (-0.7, 18.5, -2.5), coat2),
-            box('belt_pouch', 'body', (3.5, 11, -1.5), (5.5, 14, 1), leather),
-            box('pouch_clasp', 'body', (4, 12.5, -1.8), (4.8, 13.4, -1.5), o['buckle']),
-            box('nose', 'head', (-0.8, 26.4, -4.8), (0.8, 28, -4), skin2),
-            box('ear_l', 'head', (-4.6, 26.5, -0.8), (-4, 28.5, 0.8), skin),
-            box('ear_r', 'head', (4, 26.5, -0.8), (4.6, 28.5, 0.8), skin),
+            box('collar_l', 'body', (-3.5, 21.5, -2.7), (-0.5, 24.2, -2), plain(accent), skip=('south',)),
+            box('collar_r', 'body', (0.5, 21.5, -2.7), (3.5, 24.2, -2), plain(accent), skip=('south',)),
+            box('coat_hem', 'body', (-4.3, 11.5, -2.3), (4.3, 13, 2.3), hem, skip=('up',)),
+            box('pocket', 'body', (-3.6, 15, -2.7), (-0.8, 18, -2), hem, skip=('south',)),
+            box('pocket_flap', 'body', (-3.7, 17.6, -3), (-0.7, 18.5, -2.5), plain(coat2), skip=('south',)),
+            box('belt_pouch', 'body', (1, 10.5, 2), (3.6, 13.5, 3.2), leather, skip=('north',)),
+            box('pouch_clasp', 'body', (1.9, 12, 3.2), (2.7, 12.9, 3.5), o['buckle'], skip=('north',)),
+            box('nose', 'head', (-0.8, 26.4, -4.8), (0.8, 28, -4), plain(skin2), skip=('south',)),
+            box('ear_l', 'head', (-4.6, 26.5, -0.8), (-4, 28.5, 0.8), plain(skin), skip=('east',)),
+            box('ear_r', 'head', (4, 26.5, -0.8), (4.6, 28.5, 0.8), plain(skin), skip=('west',)),
         ]
-        for side, x in [('l', -8), ('r', 4)]:
-            cubes.append(box(f'cuff_{side}', f'arm_{side}', (x - 0.2, 14.5, -2.2), (x + 4.2, 16, 2.2), accent))
-        for side, x in [('l', -4), ('r', 0)]:
-            cubes += [box(f'boot_toe_{side}', f'leg_{side}', (x, 0.5, -3), (x + 4, 3, -1.5), o['boots']),
-                      box(f'boot_sole_{side}', f'leg_{side}', (x - 0.1, 0, -3.1), (x + 4.1, 0.6, 2.1), shade(o['boots'], 0.65))]
+        for side, x in [('l', -7), ('r', 4)]:
+            cubes.append(box(f'cuff_{side}', f'arm_{side}', (x - 0.2, 14.5, -1.95), (x + 3.2, 16, 1.95), plain(accent), skip=('up', 'down')))
+        for side, x in [('l', -3.8), ('r', 0.3)]:
+            cubes += [box(f'boot_toe_{side}', f'leg_{side}', (x, 0.5, -3), (x + 3.5, 3, -2), plain(o['boots']), skip=('south',)),
+                      box(f'boot_sole_{side}', f'leg_{side}', (x - 0.1, 0, -3.1), (x + 3.6, 0.6, 2.1), plain(shade(o['boots'], 0.65)), skip=('up',))]
         if o['hair'] and not hat:
             hair = o['hair']
-            cubes += [box('hair_top', 'head', (-4.2, 31, -4.1), (4.2, 32.6, 4.2), hair),
-                      box('hair_fringe', 'head', (-4.2, 29.8, -4.3), (-0.5, 31.4, -3.6), hair),
-                      box('hair_side', 'head', (3.5, 27.8, 1.5), (4.4, 31.2, 4.3), shade(hair, 0.85))]
+            cubes += [box('hair_top', 'head', (-4.2, 31, -4.1), (4.2, 32.6, 4.2), lambda p, f: cloth(p, hair, f, 0.2), skip=('down',)),
+                      box('hair_fringe', 'head', (-4.2, 29.8, -4.3), (-0.5, 31.4, -3.6), plain(hair), skip=('south', 'up')),
+                      box('hair_side', 'head', (3.5, 27.8, 1.5), (4.4, 31.2, 4.3), plain(shade(hair, 0.85)), skip=('west', 'up'))]
         if o['beard']:
-            cubes.append(box('beard_tip', 'head', (-2, 23, -4.5), (2, 25.5, -3.8), o['beard']))
+            cubes.append(box('beard_tip', 'head', (-2, 23, -4.5), (2, 25.5, -3.8), plain(o['beard']), skip=('south',)))
         # Different accessories read at playing distance, beyond colour swaps.
         if id in ('settler_2', 'citizen_1'):
-            cubes.append(box('apron_bib', 'body', (-2.8, 13, -3), (2.8, 21.2, -2.5), C['paper2']))
-            cubes.append(box('apron_skirt', 'body', (-3, 6.5, -2.9), (3, 13, -2.3), C['paper2']))
+            cubes.append(box('apron_bib', 'body', (-2.8, 13, -3), (2.8, 21.2, -2.5), plain(C['paper2']), skip=('south',)))
+            cubes.append(box('apron_skirt', 'body', (-3, 6.5, -2.9), (3, 13, -2.3), plain(C['paper2']), skip=('south', 'up')))
         if id in ('settler_4', 'citizen_2'):
-            cubes.append(box('shoulder_wrap', 'body', (-4.7, 21.5, -2.6), (4.7, 23.8, 2.6), accent))
+            cubes.append(box('shoulder_wrap', 'body', (-4.7, 21.5, -2.6), (4.7, 23.8, 2.6), plain(accent), skip=('down',)))
         if id in ('settler_1', 'settler_5', 'citizen_3'):
-            cubes.append(box('small_pack', 'body', (-3, 14, 2), (3, 21, 4), leather))
-            cubes.append(box('pack_flap', 'body', (-3.2, 19.5, 2), (3.2, 21.5, 4.4), coat2))
+            cubes.append(box('small_pack', 'body', (-3, 14, 2), (3, 21, 4), leather, skip=('north',)))
+            cubes.append(box('pack_flap', 'body', (-3.2, 19.5, 2), (3.2, 21.5, 4.4), plain(coat2), skip=('north',)))
+    for extra in extras:
+        if triangles(cubes) + triangles([extra]) <= BUDGET.get(id, 0):
+            cubes.append(extra)
+    assert triangles(cubes) <= BUDGET.get(id, 10 ** 6), (id, triangles(cubes))
     return dict(id=id, name=name, bones=bones, cubes=cubes, anim=anim, rest=rest, scale=o['scale'])
 
 
