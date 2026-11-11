@@ -2,6 +2,7 @@ import { WANDERERS, WANDERER_NAMES, NEWS, rollExplorerGifts } from '../config/wa
 import { STUN_SECONDS, BURN_SECONDS, BURN_DAMAGE, FREEZE_SECONDS, FREEZE_SLOW } from '../config/upgrades.js';
 import { landmarksFor } from './landmarks.js';
 import { groundAt, surfaceAt, isLoaded, bodyFits } from './Mobs.js';
+import { knock, drift } from './bodies.js';
 
 /**
  * The people out in the world who aren't yours.
@@ -458,7 +459,7 @@ export class Wanderers {
    * anyone else this is null and the swing goes on to whatever's behind.
    * Hitting one makes the whole camp angry, whatever the age.
    */
-  hit(p, damage, fromX, fromZ) {
+  hit(p, damage, fromX, fromZ, power = 1) {
     const spec = WANDERERS[p.kind];
     if (!spec?.hp) return null;
     p.hp -= damage;
@@ -475,17 +476,15 @@ export class Wanderers {
       for (const [id, n] of Object.entries(p.loot ?? {})) drops[id] = (drops[id] ?? 0) + n;
       return { killed: true, drops };
     }
-    // Knocked back half a block, if there's ground there — not a siege
-    // engine or a beast that size. Only ever along the ground or down off
-    // it, never up a step: a blow used to lift a bandit you'd trapped in a
-    // hole straight out over its edge (reported: "locked one in a hole and
-    // when I beat them they go out of the hole").
-    if (spec.siege || spec.beast || spec.noKnock) return { killed: false, drops: {} };
-    const away = Math.atan2(p.x - fromX, p.z - fromZ);
-    const kx = p.x + Math.sin(away) * 0.6, kz = p.z + Math.cos(away) * 0.6;
-    const ground = groundAt(this.world, kx, kz, p.y, TALL);
-    if (ground != null && ground <= p.y + 0.05 && !(p.perch != null && ground < p.perch - 0.6) && this.fits(p, kx, kz, ground)) { p.x = kx; p.z = kz; }
-    p.vy = 1.5;
+    // Knocked back along the blow with a small hop (bodies.js: about half a
+    // block for a fist, `power` more for a sword) — not a siege engine or a
+    // beast that size. It is carried out a frame at a time in move(), only
+    // ever along the ground or down off it, never up a step: a blow used to
+    // lift a bandit you'd trapped in a hole straight out over its edge
+    // (reported: "locked one in a hole and when I beat them they go out of
+    // the hole").
+    if (spec.siege || spec.beast || spec.noKnock || p.mount) return { killed: false, drops: {} };
+    knock(p, fromX, fromZ, power);
     return { killed: false, drops: {} };
   }
 
@@ -1007,7 +1006,20 @@ export class Wanderers {
     return d <= r ? { x, z } : { x: p.home.x + (dx / d) * r, z: p.home.z + (dz / d) * r };
   }
 
+  /**
+   * Somewhere to stand at (x, z), and room for the whole of them there —
+   * not just their middle — so nobody walks through the side of a wall.
+   */
+  footing(p, x, z) {
+    const g = groundAt(this.world, x, z, p.y, TALL);
+    // Up a tree, never a step below the floor they stand on.
+    if (g != null && p.perch != null && g < p.perch - 0.6) return null;
+    return g != null && this.fits(p, x, z, g) ? g : null;
+  }
+
   move(p, dt) {
+    // Thrown by a blow (hit): carried back a little way first.
+    if (p.kx || p.kz) drift(this.world, p, dt, TALL, WANDERERS[p.kind]?.siege ? 0.05 : undefined, p.perch != null ? p.perch - 0.6 : -Infinity);
     if (p.target && p.speed > 0) {
       const dx = p.target.x - p.x, dz = p.target.z - p.z;
       const dist = Math.hypot(dx, dz);
@@ -1016,21 +1028,13 @@ export class Wanderers {
       } else {
         const step = Math.min(dist, p.speed * dt);
         let nx = p.x + (dx / dist) * step, nz = p.z + (dz / dist) * step;
-        // Somewhere to stand, and room for the whole of them there — not
-        // just their middle — so nobody walks through the side of a wall.
-        const footing = (x, z) => {
-          const g = groundAt(this.world, x, z, p.y, TALL);
-          // Up a tree, never a step below the floor they stand on.
-          if (g != null && p.perch != null && g < p.perch - 0.6) return null;
-          return g != null && this.fits(p, x, z, g) ? g : null;
-        };
-        let ground = footing(nx, nz);
+        let ground = this.footing(p, nx, nz);
         if (ground == null && Math.abs(dx) > 0.05) {
-          const g = footing(p.x + Math.sign(dx) * step, p.z);
+          const g = this.footing(p, p.x + Math.sign(dx) * step, p.z);
           if (g != null) { nx = p.x + Math.sign(dx) * step; nz = p.z; ground = g; }
         }
         if (ground == null && Math.abs(dz) > 0.05) {
-          const g = footing(p.x, p.z + Math.sign(dz) * step);
+          const g = this.footing(p, p.x, p.z + Math.sign(dz) * step);
           if (g != null) { nx = p.x; nz = p.z + Math.sign(dz) * step; ground = g; }
         }
         if (ground == null) {
@@ -1048,8 +1052,8 @@ export class Wanderers {
     }
     const ground = groundAt(this.world, p.x, p.z, p.y, TALL);
     if (ground == null) return;
-    if (p.y <= ground) { p.y = ground; p.vy = 0; return; }
-    p.vy -= 22 * dt;
+    if (p.y <= ground && !(p.vy > 0)) { p.y = ground; p.vy = 0; return; }
+    p.vy = (p.vy ?? 0) - 22 * dt;
     p.y = Math.max(ground, p.y + p.vy * dt);
   }
 }
