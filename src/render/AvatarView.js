@@ -230,7 +230,7 @@ export class AvatarView {
 
     // Arms: against the legs; up in a jump, out in a fall, back in flight.
     const armSwing = Math.sin(this.phase - 0.25) * (0.55 + 0.35 * run) * stride * ground;
-    const out = 0.05 + 0.03 * stride + 0.015 * breath * still + (airborne ? (vy > 0 ? 0.25 : 0.7) : 0) * air + 0.2 * dipLand * 10 * 0.3;
+    const out = 0.05 + 0.03 * stride + 0.015 * breath * still + (airborne ? (vy > 0 ? 0.25 : 0.7) : 0) * air + dipLand * 0.6;
     let armL = -armSwing, armR = armSwing, outL = -out, outR = out;
     if (airborne) { const up = (vy > 0 ? 0.5 : 0.2) * air; armL += up; armR += up; }
     if (flying) { const backArm = -0.6 * air * Math.min(1, speed / 6); armL += backArm; armR += backArm; }
