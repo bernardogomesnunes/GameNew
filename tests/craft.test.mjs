@@ -152,4 +152,11 @@ ok('starter refuses without materials', !broke.starterPlacement('house', anchor)
   ok(`every design fits against every border (${failed.join('; ') || 'all fit'})`, failed.length === 0);
 }
 
+// Owner, 12 November: "Roofs need workbench" — the hint said the workbench for everything.
+{
+  const { howToGet } = await import('../src/config/recipes.js');
+  ok('a roof tile made by hand says so', /^make it by hand/.test(howToGet('roof_teal')));
+  ok('furniture says the Counter', howToGet('table_oak') === 'make it at a Counter');
+}
+
 process.exit(f?1:0);

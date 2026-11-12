@@ -1787,14 +1787,20 @@ export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
  * a new recipe explains its own output the moment it exists.
  */
 export function howToGet(itemId, blockName = null) {
-  const recipe = RECIPES.find((r) => r.output.id === itemId);
+  // The easiest way first: by hand, then the earliest age. Owner, 12 November:
+  // "Roofs need workbench" — this said "at the workbench" for everything,
+  // roof tiles made by hand from Age 1 included.
+  const rank = (r) => (r.station === 'hand' ? 0 : 1) * 100 + r.age;
+  const recipe = RECIPES.filter((r) => r.output.id === itemId).sort((a, b) => rank(a) - rank(b))[0];
   if (recipe) {
     const from = Object.entries(recipe.inputs)
       .map(([id, n]) => `${n} ${id.replace(/_/g, ' ')}`).join(' and ');
+    const where = recipe.station === 'hand' ? 'by hand' : `at a ${recipe.station.replace(/_/g, ' ')}`;
     return recipe.needs === 'water'
-      ? `make it at the workbench by the river, from ${from}`
-      : `make it at the workbench from ${from}`;
+      ? `make it ${where} by the river, from ${from}`
+      : `make it ${where} from ${from}`;
   }
+  if (FURNITURE_COST.has(itemId)) return 'make it at a Counter';
   if (blockName) return `break ${blockName.toLowerCase()} to collect it`;
   return null;
 }
