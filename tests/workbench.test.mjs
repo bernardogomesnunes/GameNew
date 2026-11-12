@@ -21,7 +21,7 @@ assert.ok(hand.every((r) => r.age <= MENU_MAX_AGE || r.id === 'workbench'), 'the
 assert.ok(RECIPES.some((r) => r.station === 'workbench' && r.age === 3), 'Age 3 things are made at the Workbench');
 assert.ok(!RECIPES.some((r) => r.station === 'workbench' && r.age <= MENU_MAX_AGE), 'nothing from Ages 1 and 2 needs it');
 assert.equal(RECIPES_BY_ID.get('workbench').station, 'hand');
-assert.equal(RECIPES_BY_ID.get('workbench').age, 3, 'made by hand from Age 3, so Age 3 is never stuck');
+assert.equal(RECIPES_BY_ID.get('workbench').age, 1, 'made by hand from Age 1 (owner, 12 November: from the start)');
 assert.equal(RECIPES_BY_ID.get('workshop_workbench').station, 'workshop', 'and at a workshop');
 console.log('PASS the menu bench keeps Ages 1 and 2; Age 3 on is made at a Workbench');
 
