@@ -1,6 +1,7 @@
 import { MOBS_BY_ID, mobsForBiome } from '../config/mobs.js';
 import { BIOMES } from '../config/biomes.js';
 import { isFluid } from '../config/blocks.js';
+import { knock, drift, ease, turnTo, freeFall } from './bodies.js';
 
 /**
  * The animals living around you: where they turn up, how they get about,
@@ -29,6 +30,12 @@ const LURE = 10;            // how far a farm animal notices food in your hand
 const HEEL = 2;             // and how close it comes before it stops
 const STEP = 1;             // the highest ledge an animal walks up
 const DROP = 3;             // the furthest drop it will walk off
+// Speed is gained and lost, not switched: blocks a second, each second, for
+// something a person's weight. Heavier animals take longer both ways (WEIGH).
+const ACCEL = 14, BRAKE = 18, WEIGH = 0.08;
+const SLOWEST = 0.6;        // braking into a destination never drops below this
+const TURN = 3, TURN_FAST = 9; // radians a second: at a walk, and running for it
+const SWIM_SLOW = 0.6;      // how much of its speed an animal keeps in water
 
 const LEAVES = new Set([5, 42, 44, 517]);
 
@@ -58,7 +65,13 @@ export class Mobs {
     // they were put and do nothing at all, so a picture of them is the same
     // picture every time.
     // Nor are horses you've tamed (`owned`, see Game.tameHorse).
-    this.list = this.list.filter((m) => !m.dead && (m.penId || m.owned || m.still || Math.hypot(m.x - player.x, m.z - player.z) < DESPAWN));
+    const list = this.list;
+    let kept = 0;
+    for (let i = 0; i < list.length; i++) {
+      const m = list[i];
+      if (!m.dead && (m.penId || m.owned || m.still || Math.hypot(m.x - player.x, m.z - player.z) < DESPAWN)) list[kept++] = m;
+    }
+    list.length = kept;
     this.sinceSpawn += dt;
     if (this.sinceSpawn >= SPAWN_EVERY && this.wild() < this.cap) {
       this.sinceSpawn = 0;
@@ -142,6 +155,9 @@ export class Mobs {
       facing: this.rand() * Math.PI * 2, hp: spec.hp,
       target: null, speed: 0, timer: this.rand() * 2,
       grazing: false, fleeFor: 0, hurt: 0, dying: 0, dead: false, stride: 0,
+      // How fast it is really going (`speed` is how fast it means to), which
+      // way, and what a blow has left it carrying (bodies.js).
+      pace: 0, hx: 0, hz: 0, kx: 0, kz: 0, swimming: false,
     };
   }
 
@@ -171,8 +187,18 @@ export class Mobs {
   }
 
   /** Where an animal of this species would stand — see groundAt below. */
-  groundAt(x, z, fromY, spec) {
-    return groundAt(this.world, x, z, fromY, Math.max(1, Math.ceil(spec.leg + spec.body.h)));
+  groundAt(x, z, fromY, spec, swim = 0) {
+    return groundAt(this.world, x, z, fromY, Math.max(1, Math.ceil(spec.leg + spec.body.h)), swim);
+  }
+
+  /**
+   * Where this animal can go next, which for one that swims (`spec.swims`)
+   * includes water — when it has a reason to cross (running, hunting,
+   * following you) or is in it already. One at a wander keeps to the land.
+   */
+  footing(m, x, z, spec) {
+    const swim = spec.swims && (m.swimming || m.fleeFor > 0 || m.chasing || m.follow) ? spec.swims : 0;
+    return this.groundAt(x, z, m.y + (m.swimming ? swim : 0), spec, swim);
   }
 
   // ---- behaving -----------------------------------------------------------
@@ -203,8 +229,11 @@ export class Mobs {
       m.fleeFor = 0;
       // Round whatever stopped it (a trunk, a boulder) before coming on again.
       if (m.detour > 0 && d > attack.reach && m.target) { m.detour -= dt; m.speed = spec.run; return; }
-      if (d > attack.reach * 0.8) { m.target = { x: player.x, z: player.z }; m.speed = spec.run; }
-      else { m.target = null; m.speed = 0; m.facing = Math.atan2(-dx, -dz); }
+      if (d > attack.reach * 0.8) {
+        // The same target each frame, moved: a chase makes no garbage.
+        if (m.target) { m.target.x = player.x; m.target.z = player.z; } else m.target = { x: player.x, z: player.z };
+        m.speed = spec.run;
+      } else { m.target = null; m.speed = 0; m.facing = turnTo(m.facing, Math.atan2(-dx, -dz), TURN_FAST * dt); }
       if (d <= attack.reach && m.biteIn <= 0) {
         m.biteIn = attack.every;
         this.onBite?.(m, attack.damage);
@@ -247,7 +276,7 @@ export class Mobs {
       } else {
         m.target = null;
         m.speed = 0;
-        m.facing = Math.atan2(-dx, -dz);
+        m.facing = turnTo(m.facing, Math.atan2(-dx, -dz), TURN_FAST * dt);
       }
       m.timer = 0;
       return;
@@ -293,7 +322,10 @@ export class Mobs {
 
   move(m, dt) {
     const spec = MOBS_BY_ID.get(m.type);
-    if (m.dying > 0) return this.fall(m, dt, spec);
+    // Thrown by a blow (hit): carried on a little way, whatever it was doing.
+    if (m.kx || m.kz) drift(this.world, m, dt, Math.max(1, Math.ceil(spec.leg + spec.body.h)), Math.min(0.28, spec.radius), -Infinity, spec.swims ?? 0);
+    if (m.dying > 0) { m.pace = 0; return this.fall(m, dt, spec); }
+    const weigh = 1 + spec.mass * WEIGH;
     if (m.target && m.speed > 0) {
       const dx = m.target.x - m.x, dz = m.target.z - m.z;
       const dist = Math.hypot(dx, dz);
@@ -304,26 +336,33 @@ export class Mobs {
         // decision itself may choose a normal grazing pause.
         m.timer = 0;
       } else {
-        const step = Math.min(dist, m.speed * dt);
+        // Up to speed and down again over a few steps, not in one frame: it
+        // brakes into where it's going, goes slower in water, and slower
+        // still while it is facing the wrong way — it turns, then goes.
+        const aim = Math.atan2(dx, dz) - m.facing;
+        const top = m.speed * (m.swimming ? SWIM_SLOW : 1) * Math.max(0.3, Math.cos(aim));
+        const want = Math.min(top, Math.max(SLOWEST, Math.sqrt(2 * (BRAKE / weigh) * dist)));
+        const pace = m.pace ?? 0;
+        m.pace = ease(pace, want, (want > pace ? ACCEL : BRAKE) / weigh, dt);
+        const step = Math.min(dist, m.pace * dt);
         let nx = m.x + (dx / dist) * step, nz = m.z + (dz / dist) * step;
-        let ground = this.groundAt(nx, nz, m.y, spec);
+        let ground = this.footing(m, nx, nz, spec);
         // Blocked head-on: slide along whatever's in the way, one axis at a
         // time, rather than stopping dead against it. It's what lets an
         // animal being led work its way along a fence to the gate.
         if (ground == null && Math.abs(dx) > 0.05) {
-          const g = this.groundAt(m.x + Math.sign(dx) * step, m.z, m.y, spec);
+          const g = this.footing(m, m.x + Math.sign(dx) * step, m.z, spec);
           if (g != null) { nx = m.x + Math.sign(dx) * step; nz = m.z; ground = g; }
         }
         if (ground == null && Math.abs(dz) > 0.05) {
-          const g = this.groundAt(m.x, m.z + Math.sign(dz) * step, m.y, spec);
+          const g = this.footing(m, m.x, m.z + Math.sign(dz) * step, spec);
           if (g != null) { nx = m.x; nz = m.z + Math.sign(dz) * step; ground = g; }
         }
         // Turn along the actual movement (including sliding round a fence),
         // taking the shortest arc across +/- PI rather than snapping.
-        const heading = Math.atan2(nx - m.x, nz - m.z);
-        const turn = Math.atan2(Math.sin(heading - m.facing), Math.cos(heading - m.facing));
-        const maxTurn = (m.fleeFor > 0 || m.chasing ? 9 : 3) * dt;
-        m.facing += Math.max(-maxTurn, Math.min(maxTurn, turn));
+        if (step > 1e-6) {
+          m.facing = turnTo(m.facing, Math.atan2(nx - m.x, nz - m.z), (m.fleeFor > 0 || m.chasing ? TURN_FAST : TURN) * dt);
+        }
         if (ground == null && (m.chasing || m.follow)) {
           // Coming for you and something's in the way: off to one side a
           // few steps, then at you again (see think) — a raptor in the
@@ -333,19 +372,31 @@ export class Mobs {
           const a = Math.atan2(dx, dz) + m.detourSide * Math.PI * 0.42;
           m.target = { x: m.x + Math.sin(a) * 5, z: m.z + Math.cos(a) * 5 };
           m.detour = 1;
+          m.pace = 0;
         } else if (ground == null) {
           // A wall, a cliff, water, or unmade land: give up on that way and
           // think again next frame.
           m.target = null;
           m.speed = 0;
           m.timer = 0;
+          m.pace = 0;
         } else {
+          if (step > 1e-6) { m.hx = (nx - m.x) / step; m.hz = (nz - m.z) / step; }
           m.x = nx;
           m.z = nz;
           m.stride += step;
-          if (ground > m.y) { m.y = ground; m.vy = 0; }
+          // Up a step at once; down off one is a fall, and so is into water.
+          if (ground > m.y && !m.swimming) { m.y = ground; m.vy = 0; }
         }
       }
+    } else if (m.pace > 0) {
+      // Nowhere to go any more: it doesn't stop dead, it pulls up.
+      m.pace = ease(m.pace, 0, BRAKE / weigh, dt);
+      const step = m.pace * dt;
+      const nx = m.x + m.hx * step, nz = m.z + m.hz * step;
+      const ground = step > 1e-6 ? this.footing(m, nx, nz, spec) : null;
+      if (ground == null || ground > m.y + 0.01) m.pace = 0;
+      else { m.x = nx; m.z = nz; m.stride += step; }
     }
     this.fall(m, dt, spec);
   }
@@ -415,10 +466,19 @@ export class Mobs {
     }
   }
 
-  /** Settles onto whatever is under it — a block dug away drops it down. */
+  /**
+   * Settles onto whatever is under it — a block dug away drops it down, and
+   * one that swims comes to rest afloat, its back out of the water.
+   */
   fall(m, dt, spec) {
-    const ground = this.groundAt(m.x, m.z, m.y, spec);
-    if (ground == null) { m.vy = 0; return; }
+    const swim = spec.swims ?? 0;
+    const ground = this.groundAt(m.x, m.z, m.y + (m.swimming ? swim : 0), spec, swim);
+    if (swim) {
+      m.swimming = ground != null && isFluid(this.world.getBlock(Math.floor(m.x), Math.floor(ground), Math.floor(m.z)));
+      // Afloat it bobs to its level, up as well as down.
+      if (m.swimming && m.y < ground) { m.y = Math.min(ground, m.y + 3 * dt); m.vy = 0; return; }
+    }
+    if (ground == null) { if (!freeFall(this.world, m, dt)) m.vy = 0; return; }
     if (m.vy <= 0 && m.y <= ground) { m.y = ground; m.vy = 0; return; }
     m.vy -= GRAVITY * dt;
     m.y += m.vy * dt;
@@ -453,11 +513,15 @@ export class Mobs {
    * One blow from (fromX, fromZ). It runs either way; at zero it topples
    * and this hands back what it left behind.
    */
-  hit(m, damage, fromX, fromZ) {
+  hit(m, damage, fromX, fromZ, power = 1) {
     const spec = MOBS_BY_ID.get(m.type);
     m.hp -= damage;
     m.hurt = HURT_FLASH;
     m.grazing = false;
+    // Thrown back along the blow with a hop, by its size (bodies.js): a
+    // chicken flies, a triceratops barely shifts. `power` is 1 for a fist,
+    // more for a sword. One you're sat on stays under you.
+    if (!m.ridden && !m.still) knock(m, fromX, fromZ, power, spec.mass);
     if (m.hp <= 0) {
       m.dying = DYING_TIME;
       m.target = null;
@@ -473,11 +537,6 @@ export class Mobs {
     }
     m.fleeFor = FLEE_TIME;
     m.timer = 0;
-    m.vy = 4; // a startled hop
-    const away = Math.atan2(m.x - fromX, m.z - fromZ);
-    const kx = m.x + Math.sin(away) * 0.5, kz = m.z + Math.cos(away) * 0.5;
-    const ground = this.groundAt(kx, kz, m.y, spec);
-    if (ground != null) { m.x = kx; m.z = kz; }
     return { killed: false, drops: {} };
   }
 
@@ -517,18 +576,23 @@ export function surfaceAt(world, x, z) {
 /**
  * Where something `tall` blocks high would stand at (x, z) coming from
  * height `fromY`: a step up of one at most, a drop of three at most,
- * headroom for its body, and never into water. Null means it can't go
- * there. A fence or a shut gate is too tall to step (World.collisionBoxAt);
+ * headroom for its body, and never into water — unless it swims, `swim`
+ * blocks deep. Null means it can't go there. A fence or a shut gate is too tall to step (World.collisionBoxAt);
  * an open gate has nothing in the way at all.
  */
-export function groundAt(world, x, z, fromY, tall) {
+export function groundAt(world, x, z, fromY, tall, swim = 0) {
   if (!isLoaded(world, x, z)) return null;
   const bx = Math.floor(x), bz = Math.floor(z);
   const base = Math.floor(fromY);
   for (let y = base + STEP; y >= base - DROP; y--) {
     const box = world.collisionBoxAt(bx, y, bz);
     if (!box) {
-      if (isFluid(world.getBlock(bx, y, bz))) return null;
+      if (isFluid(world.getBlock(bx, y, bz))) {
+        // A swimmer floats `swim` below the top of the water (fromY is that
+        // top while it swims) — but not up a waterfall.
+        if (!swim || y + 1 > fromY + STEP + 0.01) return null;
+        return y + 1 - swim;
+      }
       continue;
     }
     if (LEAVES.has(world.getBlock(bx, y, bz))) return null;
@@ -555,13 +619,20 @@ export function bodyFits(world, x, z, footY, tall = 1.8, half = BODY_HALF) {
   // From the knee up: anything lower is a step their feet go up, the way
   // the middle of them does (groundAt), and a corner over the next step up
   // must not stop them climbing it.
-  const from = footY + STEP + 0.01;
-  for (const [ox, oz] of [[-half, -half], [half, -half], [-half, half], [half, half]]) {
-    const bx = Math.floor(x + ox), bz = Math.floor(z + oz);
-    for (let y = Math.floor(from); y <= Math.floor(footY + tall - 0.01); y++) {
-      const box = world.collisionBoxAt(bx, y, bz);
-      if (box && box.maxY > from && box.minY < footY + tall) return false;
+  const from = footY + STEP + 0.01, top = footY + tall;
+  const y0 = Math.floor(from), y1 = Math.floor(top - 0.01);
+  const x0 = Math.floor(x - half), x1 = Math.floor(x + half);
+  const z0 = Math.floor(z - half), z1 = Math.floor(z + half);
+  // The four corners, each column once: a body inside one block is one column.
+  for (let bx = x0; ; bx = x1) {
+    for (let bz = z0; ; bz = z1) {
+      for (let y = y0; y <= y1; y++) {
+        const box = world.collisionBoxAt(bx, y, bz);
+        if (box && box.maxY > from && box.minY < top) return false;
+      }
+      if (bz === z1) break;
     }
+    if (bx === x1) break;
   }
   return true;
 }
@@ -569,17 +640,18 @@ export function bodyFits(world, x, z, footY, tall = 1.8, half = BODY_HALF) {
 /** Distance along a ray to where it enters a box, or null if it misses. */
 export function rayBox(o, d, minX, minY, minZ, maxX, maxY, maxZ) {
   let tmin = 0, tmax = Infinity;
-  for (const [oo, dd, lo, hi] of [[o.x, d.x, minX, maxX], [o.y, d.y, minY, maxY], [o.z, d.z, minZ, maxZ]]) {
+  for (let axis = 0; axis < 3; axis++) {
+    const oo = axis === 0 ? o.x : axis === 1 ? o.y : o.z, dd = axis === 0 ? d.x : axis === 1 ? d.y : d.z;
+    const lo = axis === 0 ? minX : axis === 1 ? minY : minZ, hi = axis === 0 ? maxX : axis === 1 ? maxY : maxZ;
     if (Math.abs(dd) < 1e-9) {
       if (oo < lo || oo > hi) return null;
       continue;
     }
     let t1 = (lo - oo) / dd, t2 = (hi - oo) / dd;
-    if (t1 > t2) [t1, t2] = [t2, t1];
-    tmin = Math.max(tmin, t1);
-    tmax = Math.min(tmax, t2);
+    if (t1 > t2) { const t = t1; t1 = t2; t2 = t; }
+    if (t1 > tmin) tmin = t1;
+    if (t2 < tmax) tmax = t2;
     if (tmin > tmax) return null;
   }
   return tmin;
 }
-

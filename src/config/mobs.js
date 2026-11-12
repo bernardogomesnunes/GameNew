@@ -188,6 +188,18 @@ MOBS.push(
     drops: { raw_meat: [5, 8], hide: [3, 5] },
   },
 );
+// How much room each takes and how hard it is to shift (world/bodies.js),
+// from its size: `mass` is in people (a person is 1 — a chicken 0.1, a cow
+// 2.6, a triceratops 16), `radius` the circle it keeps clear round itself.
+// `swims` is how deep it floats, for the ones that take to water when they
+// have somewhere to be: running from you, hunting you, following you.
+const PERSON_VOLUME = 0.27;
+const SWIMMERS = new Set(['deer', 'boar', 'horse', 'raptor']);
+for (const m of MOBS) {
+  m.mass ??= Math.max(0.08, (m.body.w * m.body.h * m.body.l) / PERSON_VOLUME);
+  m.radius ??= Math.min(1.2, Math.max(0.2, (m.body.w + m.body.l) / 4));
+  if (SWIMMERS.has(m.id)) m.swims ??= Math.min(0.9, m.leg + m.body.h * 0.5);
+}
 
 export const MOBS_BY_ID = new Map(MOBS.map((m) => [m.id, m]));
 

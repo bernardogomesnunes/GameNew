@@ -21,6 +21,8 @@ const SNEAK_DROP = 0.28;
 const SNEAK_EASE = 12;
 // A heavy blow's shove: how fast it throws you back, how high, and how quickly it dies away.
 const KNOCK_SPEED = 9, KNOCK_LIFT = 5.5, KNOCK_FADE = 6;
+// An ordinary blow: about half a block back.
+const NUDGE_SPEED = 3;
 const FLY_SPEED = 10;
 const FLY_SPRINT_SPEED = 20;
 // Coming down under a flying machine's wings with the flying turned off: a
@@ -398,6 +400,15 @@ export class PlayerController {
     this.knock.x = (dx / d) * strength;
     this.knock.z = (dz / d) * strength;
     if (this.grounded) { this.velocity.y = KNOCK_LIFT; this.grounded = false; }
+  }
+
+  /** Moved back a step along (dx, dz) by an ordinary blow: no lift, and it fades like a heavy one. */
+  nudge(dx, dz, strength = NUDGE_SPEED) {
+    if (this.flying) return;
+    const d = Math.hypot(dx, dz);
+    if (d < 1e-6) return;
+    this.knock.x = (dx / d) * strength;
+    this.knock.z = (dz / d) * strength;
   }
 
   teleport(x, y, z) {

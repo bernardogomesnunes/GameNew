@@ -1,4 +1,5 @@
 import { groundAt, surfaceAt } from './Mobs.js';
+import { ease, turnTo } from './bodies.js';
 
 /**
  * The guardian (Phase 7d, docs/history/plan-phase7-lore.md): what your god sends
@@ -54,6 +55,8 @@ const FOCUS_HASTE = 1.3;
  */
 export const STRIKE_SHOWS = 0.4;
 const TALL = 2;
+// Blocks a second, each second, and radians a second: a great beast, quick on its feet.
+const ACCEL = 20, BRAKE = 24, TURN = 10;
 
 export class Guardian {
   constructor({ world, ring, home, state = null }) {
@@ -160,7 +163,7 @@ export class Guardian {
       const stand = beam ? beam.range * 0.9 : this.spec.reach * 0.8;
       if (d > stand) this.stepTowards(target.x, target.z, dt, this.spec.speed * (hasty ? FOCUS_HASTE : 1.15));
       else this.moving = false;
-      // Face what it fights, moving or not.
+      if (d <= stand) this.facing = turnTo(this.facing, Math.atan2(target.x - this.x, target.z - this.z), TURN * dt);
       this.facing = Math.atan2(target.x - this.x, target.z - this.z);
       if (beam && d <= beam.range && this.cooldown <= 0) {
         this.cooldown = beam.every;
@@ -229,7 +232,12 @@ export class Guardian {
   stepTowards(tx, tz, dt, speed) {
     const dx = tx - this.x, dz = tz - this.z, d = Math.hypot(dx, dz);
     if (d < 0.05) { this.moving = false; return; }
-    const step = Math.min(d, speed * dt);
+    // It gathers speed and slows into where it's going, and turns its head
+    // round to the way it runs rather than snapping to it.
+    const was = this.moving ? this.pace ?? speed : 0;
+    const want = Math.min(speed, Math.max(1.5, Math.sqrt(2 * BRAKE * d)));
+    this.pace = ease(was, want, want > was ? ACCEL : BRAKE, dt);
+    const step = Math.min(d, this.pace * dt);
     const nx = this.x + (dx / d) * step, nz = this.z + (dz / d) * step;
     // It climbs what a deer could and goes round nothing — a guardian is
     // never stuck behind a fence for long: it just finds its feet past it.
@@ -237,7 +245,7 @@ export class Guardian {
     this.x = nx; this.z = nz;
     if (g != null) this.y = g;
     else this.settle();
-    this.facing = Math.atan2(dx, dz);
+    this.facing = turnTo(this.facing ?? Math.atan2(dx, dz), Math.atan2(dx, dz), TURN * dt);
     this.moving = true;
   }
 
