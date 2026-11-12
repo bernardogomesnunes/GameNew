@@ -73,4 +73,6 @@ Tree people and city folk ignore you. Strike one, or take from a house's chest, 
 
 The [Past](time-travel.md) has Raptors, Triceratops and Long-necks. Tame a Raptor with Raw Meat; tame the herbivores with Fruit or Carrots. Place on a tamed dinosaur to ride. A Dinosaur Whistle switches nearby companions between following and staying, and following companions fight nearby threats. Eggs set down by the player hatch tame after two game days.
 
+Raptors stand about 3 blocks tall, Triceratops 4 blocks tall and 8 long, and Long-necks 13 blocks to the top of the head.
+
 The Basilisk is a dangerous, untameable jungle creature that drops Basilisk Scales. Futurians live around the Future's arrival plaza and talk about their city and university. Once you have read the Archive, their guidance acknowledges that knowledge.

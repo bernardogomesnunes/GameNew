@@ -45,7 +45,7 @@ ok('the actions that were silent or borrowed another sound now have their own',
   && /openChest[\s\S]{0,300}sound\?\.chest\(\)/.test(game)
   && /blowHorn\(\) \{[\s\S]{0,120}sound\?\.horn\(\)/.test(game)
   && /swearOath[\s\S]{0,900}sound\?\.gong\(\)/.test(game)
-  && /hitMob[\s\S]{0,700}sound\?\.strike\(\{ weapon/.test(game) && /hitBandit[\s\S]{0,1200}sound\?\.strike\(\{ weapon/.test(game)
+  && /hitMob[\s\S]{0,800}sound\?\.strike\(\{ weapon/.test(game) && /hitBandit[\s\S]{0,1300}sound\?\.strike\(\{ weapon/.test(game)
   && /creak\(!shutting, door \? 'door' : trap \? 'trapdoor' : 'gate'\)/.test(game)
   && /sound\?\.dig\(soundOf/.test(game)
   && /sound\.land\(underfoot\(\)/.test(game));

@@ -1,5 +1,5 @@
 import { groundAt } from './Mobs.js';
-import { stepAround } from './Defenders.js';
+import { stepAround, settle } from './Defenders.js';
 
 /**
  * Your army, on the dark path (docs/history/plan-phase7-lore.md): the thousand
@@ -152,9 +152,15 @@ export class Army {
     // On the march, or holding somewhere you're nowhere near (their camp, say): nobody here.
     if (!this.active || this.march || this.away(player)) { this.field = []; return; }
     this.muster(player, facing);
-    const live = enemies.filter((e) => !e.dead && !e.done);
-    this.field.forEach((w, i) => this.warrior(w, i, dt, player, facing, live, on));
-    this.field = this.field.filter((w) => w.hp > 0);
+    // The same lists every frame, emptied and filled: thirty warriors make no garbage.
+    const live = this._live ??= [];
+    live.length = 0;
+    for (let i = 0; i < enemies.length; i++) if (!enemies[i].dead && !enemies[i].done) live.push(enemies[i]);
+    const field = this.field;
+    for (let i = 0; i < field.length; i++) this.warrior(field[i], i, dt, player, facing, live, on);
+    let kept = 0;
+    for (let i = 0; i < field.length; i++) if (field[i].hp > 0) field[kept++] = field[i];
+    field.length = kept;
   }
 
   /** Fresh warriors march in from behind you, up to ON_FIELD, while there are any to send. */
@@ -177,6 +183,11 @@ export class Army {
   }
 
   warrior(w, i, dt, player, facing, enemies, on) {
+    this.act(w, i, dt, player, facing, enemies, on);
+    settle(this.world, w, dt);
+  }
+
+  act(w, i, dt, player, facing, enemies, on) {
     w.cooldown = Math.max(0, w.cooldown - dt);
     w.hurt = Math.max(0, w.hurt - dt);
     // Who to fight: anything close to them; in attack, anything near you.
@@ -195,7 +206,7 @@ export class Army {
     w.foe = foe;
     if (foe) {
       const d = Math.hypot(foe.x - w.x, foe.z - w.z);
-      w.target = { x: foe.x, z: foe.z };
+      if (w.target) { w.target.x = foe.x; w.target.z = foe.z; } else w.target = { x: foe.x, z: foe.z };
       if (d > WARRIOR.reach * 0.8) stepAround(this.world, w, foe.x, foe.z, dt, WARRIOR.speed);
       else w.speed = 0;
       if (d <= WARRIOR.reach && w.cooldown <= 0) {
@@ -209,6 +220,7 @@ export class Army {
     if (this.mode !== 'hold' && this.mode !== 'line' && Math.hypot(w.x - player.x, w.z - player.z) > STRAGGLE) {
       w.x = s.x; w.z = s.z;
       w.y = groundAt(this.world, s.x, s.z, player.y + 4, TALL) ?? player.y;
+      w.vy = 0; w.kx = 0; w.kz = 0;
     }
     const d = Math.hypot(s.x - w.x, s.z - w.z);
     if (d > 0.4) {

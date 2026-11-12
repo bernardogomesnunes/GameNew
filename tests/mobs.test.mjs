@@ -38,7 +38,8 @@ const player = { x: 80, y: 5, z: 80 };
 // --- the species table is sound ------------------------------------------------
 
 const biomeIds = new Set(BIOMES.map((b) => b.id));
-ok('every species lives in real biomes', MOBS.every((m) => m.biomes.length && m.biomes.every((b) => biomeIds.has(b))));
+// The dragons are kept out of the world until IMP-45 (owner, 9 November): no biome yet.
+ok('every species lives in real biomes', MOBS.every((m) => (m.biomes.length || m.flies) && m.biomes.every((b) => biomeIds.has(b))));
 ok('every drop is a real item', MOBS.every((m) => Object.keys(m.drops).every((id) => ITEMS_BY_ID.has(id))));
 ok('every land biome but the desert\'s sands has something big enough to eat',
   ['plains', 'forestOak', 'forestBirch', 'forestDark', 'mountains1', 'wetland'].every((b) => MOBS.some((m) => m.biomes.includes(b) && m.drops.raw_meat)));

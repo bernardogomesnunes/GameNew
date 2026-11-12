@@ -99,7 +99,8 @@ import { cubeSite, cubeDesign, WAY_OUT, CUBE_SIZE } from './world/godCube.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood, isTool, BARE_HANDS, ITEM_FOR_BLOCK } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
-import { Mobs, rayBox, bodyFits } from './world/Mobs.js';
+import { Mobs, rayBox } from './world/Mobs.js';
+import { Crowd, gatherCrowd, knock, SWORD_KNOCK, ARROW_KNOCK } from './world/bodies.js';
 import { landmarksFor, PLACE_NAMES } from './world/landmarks.js';
 import { LOOT } from './duilt/Loot.js';
 import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './world/Projectiles.js';
@@ -804,7 +805,7 @@ export class Game {
         : 'It follows you and fights for you, and bandits that come near it lose their nerve. Tap it to tell it to stay or to hunt.',
     }));
     // A shield turned a blow aside (IMP-23): the clang of it, and it jerks up.
-    this.bus.on('shield:blocked', () => { this.sound?.strike({ weapon: true }); this.handView?.block(); });
+    this.bus.on('shield:blocked', () => { this.sound?.strike({ weapon: true }); this.handView?.block(); this.avatarView?.block(); });
     this.bus.on('war:declared', () => {
       const dir = this.kingdomDirection();
       this.ui?.toast({
@@ -2316,7 +2317,7 @@ export class Game {
     const held = this.selectedItemId === BARE_HANDS ? {}
       : this.selectedItemId ? { itemId: this.selectedItemId } : { blockId: this.selectedBlockId };
     const third = this.player.view !== 'first';
-    this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third });
+    this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third, draw: this.drawing ? this.drawPower() : 0 });
     this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning, draw: this.drawing ? this.drawPower() : 0, offhand: this.duilt?.worn?.offhand?.id ?? null });
     // The flying machine went with it: you come down on its wings.
     if (this.player.flying && !this.player.canFly()) {
@@ -4756,7 +4757,7 @@ export class Game {
     this.digTarget = null;
     const tool = ITEMS_BY_ID.get(this.selectedItemId);
     const { x, z } = this.player.position;
-    const { killed, drops } = this.mobs.hit(mob, this.blowDamage(tool), x, z);
+    const { killed, drops } = this.mobs.hit(mob, this.blowDamage(tool), x, z, this.blowKnock(tool));
     this.sound?.strike({ weapon: !!tool?.weapon });
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
@@ -4890,13 +4891,13 @@ export class Game {
   arrowHit(arrow, hit) {
     const damage = arrow.damage ?? ARROW_DAMAGE;
     if (hit.kind === 'mob') {
-      const { killed, drops } = this.mobs.hit(hit.mob, damage, arrow.x - arrow.vx, arrow.z - arrow.vz);
+      const { killed, drops } = this.mobs.hit(hit.mob, damage, arrow.x - arrow.vx, arrow.z - arrow.vz, ARROW_KNOCK);
       this.sound?.strike({ weapon: true });
       if (killed) this.mobFell(hit.mob, drops);
       return;
     }
     const p = hit.person;
-    const res = this.wanderers.hit(p, damage, arrow.x - arrow.vx, arrow.z - arrow.vz);
+    const res = this.wanderers.hit(p, damage, arrow.x - arrow.vx, arrow.z - arrow.vz, ARROW_KNOCK);
     if (!res) return;
     this.sound?.strike({ weapon: true });
     this.focusGuardian(p, res);
@@ -4936,7 +4937,7 @@ export class Game {
     const { x, z } = this.player.position;
     // Struck in disguise: the first blow lands unseen, and hard — and then they know.
     const ambush = WANDERERS[p.kind]?.sky && this.unseen();
-    const res = this.wanderers.hit(p, this.blowDamage(tool) * (ambush ? AMBUSH : 1), x, z);
+    const res = this.wanderers.hit(p, this.blowDamage(tool) * (ambush ? AMBUSH : 1), x, z, this.blowKnock(tool));
     if (ambush) this.revealDisguise();
     if (!res) return false;
     // An upgraded sword (playtest, P6): stuns, burns or freezes as it lands.
@@ -5278,7 +5279,11 @@ export class Game {
     // Knocked up off your feet a little, so a blow is felt and not just seen;
     // a heavy one throws you back, away from whoever struck it.
     if (blow.heavy) this.player.knockBack(this.player.position.x - p.x, this.player.position.z - p.z);
-    else if (this.player.grounded) this.player.velocity.y = 4.5;
+    else {
+      // Any blow moves you back a step (IMP-28), as yours move them.
+      if (this.player.grounded) this.player.velocity.y = 4.5;
+      this.player.nudge(this.player.position.x - p.x, this.player.position.z - p.z);
+    }
     // Their swing, and its weight; the hurt itself is heard from Health.
     this.sound?.swing();
     this.sound?.blow(!!blow.heavy, { x: p.x, z: p.z });
@@ -5678,6 +5683,8 @@ export class Game {
 
   /** A raider's blow on one of your soldiers — or one of your army. */
   soldierHit(p, soldier, hits) {
+    // Knocked back along the blow (IMP-28); a villager without the hop.
+    if (p && soldier) knock(soldier, p.x, p.z, 1, 1, !this.duilt?.settlers.people.includes(soldier));
     // A villager (owner, 8 November: the raid "starts killing everyone").
     if (this.duilt?.settlers.people.includes(soldier)) {
       if (this.duilt.settlers.hurt(soldier, hits)) {
@@ -6450,22 +6457,30 @@ export class Game {
    * — reported: "the NPCs don't look like entities".
    */
   keepApart() {
-    if (!this.wanderers || this.player.flying) return;
-    const p = this.player.position;
-    for (const q of this.wanderers.list) {
-      const spec = WANDERERS[q.kind];
-      if (!spec?.hp || q.dead || q.mount) continue;
-      if (Math.abs(q.y - p.y) > 1.7) continue;
-      const reach = spec.siege || spec.beast ? 1.0 : 0.6;
-      const dx = p.x - q.x, dz = p.z - q.z, d = Math.hypot(dx, dz);
-      if (d >= reach) continue;
-      const ux = d > 1e-4 ? dx / d : 1, uz = d > 1e-4 ? dz / d : 0;
-      const overlap = reach - d;
-      this.player.moveAndCollide(ux * overlap * 0.7, 0, uz * overlap * 0.7);
-      if (spec.siege || spec.beast) continue;
-      const nx = q.x - ux * overlap * 0.3, nz = q.z - uz * overlap * 0.3;
-      if (bodyFits(this.world, nx, nz, q.y)) { q.x = nx; q.z = nz; }
-    }
+    // Everybody who takes up room, through one grid (world/bodies.js): the
+    // cost goes with how many there are, not its square, and nothing is
+    // allocated — it was next to many warriors that the camera froze.
+    const d = this.duilt, p = this.player.position;
+    const crowd = this._crowd ??= new Crowd();
+    const who = this._crowdWho ??= { mobs: null, wanderers: null, settlers: null, soldiers: null, warriors: null, guardian: null, player: null };
+    const self = this._crowdSelf ??= { x: 0, y: 0, z: 0, pushX: 0, pushZ: 0 };
+    self.x = p.x; self.y = p.y; self.z = p.z;
+    who.mobs = this.mobs?.list ?? null;
+    who.wanderers = this.wanderers?.list ?? null;
+    who.settlers = d?.settlers?.people ?? null;
+    who.soldiers = d?.defenders?.soldiers ?? null;
+    who.warriors = d?.army?.field ?? null;
+    who.guardian = d?.guardian ?? null;
+    // In the air, in the saddle or at the controls, you aren't in anybody's way.
+    who.player = this.player.flying || this.riding || this.piloting || this.driving ? null : self;
+    gatherCrowd(crowd, who).resolve(this.world);
+    // You are moved through your own collision, so nobody walks you into a wall.
+    if (who.player && (self.pushX || self.pushZ)) this.player.moveAndCollide(self.pushX, 0, self.pushZ);
+  }
+
+  /** How far a blow with this in your hand throws what it lands on: a sword further than a fist. */
+  blowKnock(tool) {
+    return tool?.weapon && !tool.ranged ? SWORD_KNOCK : 1;
   }
 
   /** The war horn: call the next round now, when you're ready for it. */
@@ -7198,6 +7213,8 @@ export class Game {
     const taken = this.duilt.hurt(damage, 'dinosaur');
     if (!taken) return;
     if (this.player.grounded) this.player.velocity.y = 4.5;
+    // Thrown back by its weight: a raptor's bite a step, a triceratops's horn a few.
+    this.player.nudge(this.player.position.x - m.x, this.player.position.z - m.z, Math.min(7, 2.5 + Math.sqrt(MOBS_BY_ID.get(m.type)?.mass ?? 1)));
     this.sound?.blow?.(damage >= 4, { x: m.x, z: m.z });
   }
 

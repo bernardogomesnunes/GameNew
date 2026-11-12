@@ -102,7 +102,9 @@ MOBS.push(
     id: 'raptor', name: 'Raptor', biomes: ['pastJungle', 'pastFerns'], weight: 3,
     herd: [2, 3], hp: 18, walk: 2.2, run: 8.4, skittish: false,
     hunts: { aggro: 16, give: 30, damage: 3, reach: 1.8, every: 1.1 },
-    body: { w: 0.42, h: 0.5, l: 1.1 }, head: 0.4, leg: 0.8, legs: 2,
+    // Rebuilt bigger (tools/mobs/dinos.py, 9 November): 3 blocks to the top
+    // of its head, 5 nose to tail.
+    body: { w: 0.69, h: 0.75, l: 1.5 }, head: 0.5, leg: 1.12, legs: 2,
     colour: 0x6d7f45, headColour: 0x7d8f50, legColour: 0x55633a,
     drops: { raw_meat: [2, 3], hide: [1, 1] },
     tameWith: ['raw_meat'], rideable: true,
@@ -112,7 +114,8 @@ MOBS.push(
     id: 'trike', name: 'Triceratops', biomes: ['pastFerns', 'pastJungle'], weight: 3,
     herd: [2, 3], hp: 40, walk: 1.0, run: 5.8, skittish: false,
     charges: { damage: 4, reach: 2.4, every: 1.4, for: 8 },
-    body: { w: 1.4, h: 1.2, l: 2.6 }, head: 0.9, leg: 0.8,
+    // 4 blocks high and 8 long, frill and horns.
+    body: { w: 2, h: 1.75, l: 3.75 }, head: 1.4, leg: 1.12,
     colour: 0x8a7a5a, headColour: 0x9a8a68, legColour: 0x6a5c42,
     drops: { raw_meat: [5, 8], hide: [2, 4] },
     tameWith: ['vegetables', 'fruit'], rideable: true,
@@ -121,7 +124,8 @@ MOBS.push(
   {
     id: 'longneck', name: 'Long-neck', biomes: ['pastFerns'], weight: 2,
     herd: [1, 2], hp: 60, walk: 0.9, run: 3.6, skittish: false,
-    body: { w: 1.8, h: 1.8, l: 3.6 }, head: 0.7, leg: 2.0, neck: { up: 3, out: 1.4, w: 0.55 },
+    // 13 blocks to the top of its head and 15 long.
+    body: { w: 2.5, h: 2.4, l: 5.25 }, head: 0.75, leg: 2.9, neck: { up: 7.5, out: 3.75, w: 0.9 },
     colour: 0x7f8a90, headColour: 0x8e999f, legColour: 0x646d72,
     drops: { raw_meat: [8, 12], hide: [3, 5] },
     tameWith: ['vegetables', 'fruit'], rideable: true,
@@ -139,6 +143,63 @@ MOBS.push(
     drops: { raw_meat: [6, 10], basilisk_scale: [2, 4] },
   },
 );
+
+
+// Dragons (owner, 9 November: "model a set of different dragons, like 4
+// types. One super big, the other three a bit smaller ... Dragons should have
+// some dynamic movements of wings"). They fly: `flies` is how high over the
+// ground they circle (alt), how fast (speed) and how wide (radius); now and
+// then one comes down to rest, and a blow sends it back up and away
+// (Mobs.fly). Their models are tools/mobs/dragons.py; their wings, neck and
+// tail are moved by MobView. Kept out of the world for now (owner, 9
+// November: "let's keep dragons out of the game"): no biome spawns them
+// until the dragon nests come (TASKS IMP-45).
+MOBS.push(
+  {
+    id: 'elder_dragon', name: 'Elder Dragon', biomes: [], weight: 0.08,
+    herd: [1, 1], hp: 400, walk: 1.2, run: 4, skittish: false,
+    flies: { alt: 30, speed: 11, radius: 60 },
+    body: { w: 2.75, h: 2.25, l: 5.75 }, head: 1.6, leg: 1.9,
+    colour: 0x2a1e26, headColour: 0x2a1e26, legColour: 0x120c12,
+    drops: { raw_meat: [16, 24], hide: [8, 12] },
+  },
+  {
+    id: 'fire_drake', name: 'Fire Drake', biomes: [], weight: 0.15,
+    herd: [1, 1], hp: 120, walk: 1.4, run: 5, skittish: false,
+    flies: { alt: 20, speed: 10, radius: 34 },
+    body: { w: 1.4, h: 1.1, l: 2.75 }, head: 0.9, leg: 1,
+    colour: 0xb8361e, headColour: 0xb8361e, legColour: 0x6a1a10,
+    drops: { raw_meat: [6, 9], hide: [3, 5] },
+  },
+  {
+    id: 'frost_wyvern', name: 'Frost Wyvern', biomes: [], weight: 0.15,
+    herd: [1, 1], hp: 100, walk: 1.4, run: 5, skittish: false, legs: 2,
+    flies: { alt: 22, speed: 10.5, radius: 36 },
+    body: { w: 1.1, h: 1, l: 2.5 }, head: 0.85, leg: 1.1,
+    colour: 0xa8d4ee, headColour: 0xa8d4ee, legColour: 0x5a8ab0,
+    drops: { raw_meat: [5, 8], hide: [3, 4] },
+  },
+  {
+    id: 'storm_dragon', name: 'Storm Dragon', biomes: [], weight: 0.08,
+    herd: [1, 1], hp: 110, walk: 1.4, run: 5, skittish: false,
+    flies: { alt: 26, speed: 12, radius: 44 },
+    body: { w: 1.25, h: 1.05, l: 2.9 }, head: 0.9, leg: 0.95,
+    colour: 0x2f7a4a, headColour: 0x2f7a4a, legColour: 0x1a4a2c,
+    drops: { raw_meat: [5, 8], hide: [3, 5] },
+  },
+);
+// How much room each takes and how hard it is to shift (world/bodies.js),
+// from its size: `mass` is in people (a person is 1 — a chicken 0.1, a cow
+// 2.6, a triceratops 16), `radius` the circle it keeps clear round itself.
+// `swims` is how deep it floats, for the ones that take to water when they
+// have somewhere to be: running from you, hunting you, following you.
+const PERSON_VOLUME = 0.27;
+const SWIMMERS = new Set(['deer', 'boar', 'horse', 'raptor']);
+for (const m of MOBS) {
+  m.mass ??= Math.max(0.08, (m.body.w * m.body.h * m.body.l) / PERSON_VOLUME);
+  m.radius ??= Math.min(1.2, Math.max(0.2, (m.body.w + m.body.l) / 4));
+  if (SWIMMERS.has(m.id)) m.swims ??= Math.min(0.9, m.leg + m.body.h * 0.5);
+}
 
 export const MOBS_BY_ID = new Map(MOBS.map((m) => [m.id, m]));
 

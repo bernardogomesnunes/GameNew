@@ -70,7 +70,7 @@ const flat = (size = 64, floorY = 0) => {
   }
   ok(`walking round a corner, it goes round it, not through (${clipped} frames inside the stone)`, clipped === 0 && Math.hypot(b.x - 22.6, b.z - 22.4) < 1.5);
 
-  ok('you can\'t walk through anyone you can fight, nor they through you', /this\.player\.update\(dt\);\s*this\.keepApart\(\);/.test(game) && /keepApart\(\) \{[\s\S]{0,900}this\.player\.moveAndCollide\(ux \* overlap/.test(game));
+  ok('you can\'t walk through anyone you can fight, nor they through you', /this\.player\.update\(dt\);\s*this\.keepApart\(\);/.test(game) && /keepApart\(\) \{[\s\S]{0,1600}gatherCrowd\(crowd, who\)\.resolve\(this\.world\);[\s\S]{0,300}this\.player\.moveAndCollide\(self\.pushX, 0, self\.pushZ\)/.test(game));
   ok('and every figure has a shadow on the ground under it', /this\.shadows = new THREE\.InstancedMesh/.test(view) && /place\(this\.shadows, 0, 0\.03, 0\)/.test(view));
 }
 

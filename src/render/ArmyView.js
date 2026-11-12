@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { dress, poseBone } from './Models.js';
+import { GAITS, gaitPose, makePose, applyPose } from './mobGaits.js';
 import { WANDERERS } from '../config/wanderers.js';
 import { beast } from './GuardianView.js';
 
@@ -71,11 +72,8 @@ function beastModel() {
   return { group: b.group, legs: b.legs, mats };
 }
 
-/** The diagonal pairs of a model's four legs, swung by `s`. */
-function swingLegs(bones, s) {
-  poseBone(bones.leg_fl, s); poseBone(bones.leg_br, s);
-  poseBone(bones.leg_fr, -s); poseBone(bones.leg_bl, -s);
-}
+const BEAST = { p: 0, moving: false, running: false, size: 1.6, t: 0, grazing: false, chasing: false, look: 0, nod: 0 };
+const POSE = makePose();
 
 export class ArmyView {
   constructor(scene) {
@@ -135,7 +133,16 @@ export class ArmyView {
         const log = model.bones.log;
         if (log && m.swing) log.position.z = log.userData.rest.position.z - m.swing.position.z / 0.7;
         if (m.swing) poseBone(model.bones.arm, m.swing.rotation.x);
-        if (m.legs) swingLegs(model.bones, m.legs[0].rotation.x);
+        if (m.legs) {
+          // The war beast: a heavy four-beat walk, its feet keeping pace with the ground.
+          const st = BEAST;
+          st.moving = moved > 0.002;
+          st.p = (m.walk ?? 0) / 0.96;
+          st.t = performance.now() / 1000;
+          gaitPose(POSE, GAITS.warbeast, st);
+          applyPose(model.bones, POSE);
+          m.group.position.y += POSE.lift;
+        }
       }
     }
     for (const [p, m] of this.shown) {
