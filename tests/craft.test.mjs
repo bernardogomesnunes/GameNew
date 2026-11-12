@@ -159,4 +159,10 @@ ok('starter refuses without materials', !broke.starterPlacement('house', anchor)
   ok('furniture says the Counter', howToGet('table_oak') === 'make it at a Counter');
 }
 
+// Owner, 12 November, Age 3: a building's first level up wants a light, and none was made before Age 4.
+{
+  const { RECIPES } = await import('../src/config/recipes.js');
+  ok('a lantern is made by hand from Age 1, so the Workbench lists it too', RECIPES.some((r) => r.output.id === 'lantern' && r.station === 'hand' && r.age === 1));
+}
+
 process.exit(f?1:0);
