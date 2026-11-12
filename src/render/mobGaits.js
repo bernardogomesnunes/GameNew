@@ -18,6 +18,8 @@
  * Nothing here allocates: a pose's arrays are made once and written in place.
  */
 
+import { poseBone } from './Models.js';
+
 const TAU = Math.PI * 2;
 const frac = (x) => x - Math.floor(x);
 
@@ -57,20 +59,20 @@ const STRIDE = { walk: [1.5, 0.15], trot: [2, 0.3], gallop: [3.2, 1], hop: [0, 1
  * last), and its ears (up: pricked, laid back at a run; side: out sideways).
  */
 export const GAITS = {
-  cow: { walk: 'walk', run: 'trot', graze: [-0.85, -0.3], tail: 'swish', ears: 'side', heavy: 1 },
-  moon_cow: { walk: 'walk', run: 'trot', graze: [-0.85, -0.3], tail: 'swish', ears: 'side', heavy: 1 },
-  deer: { walk: 'walk', run: 'gallop', graze: [-1.35, -0.25], tail: 'flag', ears: 'up' },
+  cow: { walk: 'walk', run: 'trot', graze: [-1.25, -0.55], tail: 'swish', ears: 'side', heavy: 1 },
+  moon_cow: { walk: 'walk', run: 'trot', graze: [-1.25, -0.55], tail: 'swish', ears: 'side', heavy: 1 },
+  deer: { walk: 'walk', run: 'gallop', graze: [-1.9, 0.45], tail: 'flag', ears: 'up' },
   rabbit: { walk: 'hop', run: 'hop', graze: [0, -0.35], tail: 'flag', ears: 'up' },
   boar: { walk: 'walk', run: 'trot', graze: [0, -0.5], tail: 'curl', ears: 'up', heavy: 0.6 },
-  goat: { walk: 'walk', run: 'gallop', graze: [-1.2, -0.3], tail: 'flag', ears: 'side' },
-  sheep: { walk: 'walk', run: 'trot', graze: [-0.9, -0.45], tail: 'flag', ears: 'side' },
+  goat: { walk: 'walk', run: 'gallop', graze: [-1.8, 0.3], tail: 'flag', ears: 'side' },
+  sheep: { walk: 'walk', run: 'trot', graze: [-1.3, -0.5], tail: 'flag', ears: 'side' },
   pig: { walk: 'walk', run: 'trot', graze: [0, -0.45], tail: 'curl', ears: 'up', heavy: 0.6 },
   chicken: { walk: 'strut', run: 'strut', graze: [-0.7, -0.5], tail: 'flag', ears: null },
-  horse: { walk: 'walk', run: 'gallop', graze: [-1.3, 0.1], tail: 'swish', ears: 'up' },
+  horse: { walk: 'walk', run: 'gallop', graze: [-1.95, 0.6], tail: 'swish', ears: 'up' },
   basilisk: { walk: 'crawl', run: 'crawl', graze: [-0.2, -0.1], tail: 'chain', ears: null, jaw: 1 },
-  aurelion: { walk: 'walk', run: 'gallop', graze: [-1.2, -0.2], tail: 'flag', ears: 'up' },
+  aurelion: { walk: 'walk', run: 'gallop', graze: [-1.8, 0.4], tail: 'flag', ears: 'up' },
   umbra: { walk: 'walk', run: 'gallop', graze: [-0.4, -0.2], tail: 'lash', ears: 'up', jaw: 1 },
-  warbeast: { walk: 'walk', run: 'trot', graze: [-1.0, 0.1], tail: 'swish', ears: 'up', heavy: 1 },
+  warbeast: { walk: 'walk', run: 'trot', graze: [-1.7, 0.45], tail: 'swish', ears: 'up', heavy: 1 },
 };
 
 const BONES = ['body', 'neck', 'head', 'ears', 'jaw', 'tail', 'tail1', 'tail2', 'tail3', 'leg_fl', 'leg_fr', 'leg_bl', 'leg_br', 'leg_l', 'leg_r', 'wing_l', 'wing_r', 'crystal'];
@@ -192,7 +194,7 @@ export function gaitPose(pose, g, s) {
       const peck = Math.max(0, nibble) ** 3;
       neck = g.graze[0] * (0.35 + peck * 0.65) * down;
       head = g.graze[1] * (0.4 + peck * 0.6) * down;
-      pitch = -0.25 * (0.4 + peck * 0.6) * down;
+      pitch = -0.4 * (0.4 + peck * 0.6) * down;
     } else {
       neck = g.graze[0] * down + nibble * 0.03 * down;
       head = g.graze[1] * down + nibble * 0.05 * down;
@@ -262,3 +264,88 @@ export function beastPose(pose, m, spec, now, phase, look, nod) {
   return gaitPose(pose, g, s);
 }
 const SCRATCH = { p: 0, moving: false, running: false, size: 1, t: 0, grazing: false, chasing: false, look: 0, nod: 0 };
+
+/** Turns a dressed model's bones (Models.dress) to a pose. */
+export function applyPose(bones, pose) {
+  for (let i = 0; i < BONES.length; i++) {
+    const b = bones[BONES[i]];
+    if (!b) continue;
+    const r = pose[BONES[i]];
+    poseBone(b, r[0], r[1], r[2]);
+  }
+}
+
+const TAILS = ['tail0', 'tail1', 'tail2'];
+
+/**
+ * A dinosaur (tools/mobs/dinos.py: a neck in two parts, a head with a jaw, a
+ * tail in three), reviewed 11 November. The raptor runs like a bird, leaning
+ * into it with its neck out and its tail held stiff behind; the triceratops
+ * walks four beats with a heavy roll and trots when it charges, its horns
+ * down; the long-neck paces slowly, its neck swaying. The tail swings part
+ * after part, in time with the stride. Grazing, the neck goes down (it went
+ * up before: the turn was the wrong way round), and the jaw opens downwards.
+ */
+export function dinoPose(pose, m, now, phase, look, nod, swing, spec) {
+  const t = now + phase;
+  const moving = m.speed > 0;
+  const running = moving && (spec ? m.speed >= (spec.walk + spec.run) / 2 : m.speed > 3);
+  const leg = spec?.leg ?? 1.12;
+  const size = leg + (spec?.body.h ?? 1);
+  const raptor = m.type === 'raptor', longneck = m.type === 'longneck';
+  const gait = raptor ? 'strut' : running ? 'trot' : 'walk';
+  const p = (m.stride ?? 0) / strideLength(gait, leg, m.speed) + phase;
+  const a = p * TAU;
+  const reach = moving ? (raptor ? (running ? 0.8 : 0.55) : running ? 0.5 : 0.36) : 0;
+  let pitch = 0, roll = 0, lift = 0;
+
+  if (raptor) {
+    put(pose, 'leg_l', legWave(p) * reach, 0, 0);
+    put(pose, 'leg_r', legWave(p + 0.5) * reach, 0, 0);
+    if (moving) {
+      lift = Math.abs(Math.sin(a)) * (running ? 0.1 : 0.04);
+      roll = Math.sin(a) * 0.05;
+      pitch = running ? -0.16 : -0.04;
+    }
+  } else {
+    const beats = BEATS[gait];
+    put(pose, 'leg_fl', legWave(p - beats[0]) * reach, 0, 0);
+    put(pose, 'leg_fr', legWave(p - beats[1]) * reach, 0, 0);
+    put(pose, 'leg_bl', legWave(p - beats[2]) * reach, 0, 0);
+    put(pose, 'leg_br', legWave(p - beats[3]) * reach, 0, 0);
+    if (moving) {
+      lift = (0.5 - 0.5 * Math.cos(a * 2)) * (running ? 0.035 : 0.012) * size;
+      roll = Math.sin(a) * (longneck ? 0.025 : 0.045);
+      pitch = running ? Math.sin(a * 2) * 0.02 : 0;
+    }
+  }
+  put(pose, 'body', pitch, 0, roll);
+  pose.lift = lift;
+
+  // The tail: side to side, each part after the one before; at a run the
+  // raptor's is held up stiff and only its end whips.
+  const beat = moving ? a : t * 0.8;
+  const amp = moving ? (raptor && running ? 0.1 : 0.2) : 0.12;
+  for (let i = 0; i < 3; i++) put(pose, TAILS[i], i === 0 ? -pitch * 0.8 : 0, Math.sin(beat - 0.6 - i * 0.9) * amp * (1 + i * 0.25), i === 0 ? -roll : 0);
+
+  // The neck and head.
+  const step = moving ? Math.sin(a * 2 + 0.6) : 0;
+  const up = m.grazing ? pulse(t, 0.5, 0.12) : 0;
+  const down = m.grazing ? 1 - up : 0;
+  const nibble = down * Math.sin(t * 6) * 0.04;
+  const glance = m.grazing ? up * Math.sin(t * 0.9) * 0.5 : look;
+  if (longneck) {
+    const browse = Math.sin(t * 0.35) * 0.12;
+    put(pose, 'neck0', m.grazing ? -0.85 * down : browse + step * 0.025, glance * 0.5, 0);
+    put(pose, 'neck1', m.grazing ? -0.75 * down : -browse * 0.5, glance * 0.6, 0);
+    put(pose, 'head', m.grazing ? -0.3 * down + nibble : nod - browse * 0.5, glance * 0.3, -roll);
+  } else {
+    // A raptor at a run stretches its neck out ahead; a triceratops charging drops its horns.
+    const thrust = running ? (raptor ? -0.3 : m.chasing ? -0.22 : -0.08) : 0;
+    put(pose, 'neck0', -0.45 * down + thrust - pitch * 0.5 + (moving ? step * 0.05 : nod), glance * 0.4, 0);
+    put(pose, 'neck1', -0.35 * down + (raptor && moving ? -step * 0.04 : 0), glance * 0.4, 0);
+    put(pose, 'head', -0.25 * down + nibble + (running ? (raptor ? 0.34 : m.chasing ? -0.2 : 0) : moving ? 0 : nod), glance * (raptor ? 0.5 : 0.3), -roll);
+  }
+  const snap = m.chasing ? Math.max(0, Math.sin(t * 7)) * 0.5 : pulse(t, 0.45, 0.07) * 0.45;
+  put(pose, 'jaw', -snap, 0, 0);
+}

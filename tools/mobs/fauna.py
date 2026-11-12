@@ -137,7 +137,7 @@ RABBIT = beast(
     'rabbit', 'Rabbit', torso=[(-3.5, -0.5, 4.5, 1.5, 6), (-0.5, 3.5, 5.5, 1, 7)], leg=1.5, hide=fur(RAB, C['paper']),
     limbs=dict(w=1.5, x=1.5, hx=2.25, fz=-2.5, hz=1.75, knee=1, upper=(1.5, 1, 1.5), hind=(2, 3, 3.5), foot=rabbit_foot,
                paint=(fur(RAB), fur(RAB, bottom=C['paper2']))),
-    head=dict(at=(6.5, -3), size=(4.5, 4.5, 4.5), back=0.35, paint=skull(RAB, row=1, size=1, inset=1),
+    head=dict(at=(6.5, -3), size=(4.5, 4.5, 4.5), back=0.35, paint=skull(RAB, row=1, size=1, inset=1, glint=None),
               muzzle=dict(size=(2.5, 2, 1), lift=0.5, paint={'all': fur([C['paper'], RAB[2]]), 'north': lambda p, f: p.fill(C['paper']).set(p.w // 2, 0, C['pink'])})),
     tail=(4.5, 3.5), features=rabbit_features,
 )

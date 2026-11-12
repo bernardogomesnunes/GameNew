@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { dress, poseBone } from './Models.js';
+import { dress } from './Models.js';
+import { GAITS, gaitPose, makePose, applyPose } from './mobGaits.js';
 import { STRIKE_SHOWS } from '../world/Guardian.js';
 
 /**
@@ -67,11 +68,10 @@ export function beast() {
   return { group: g, legs };
 }
 
-/** The diagonal pairs of a model's four legs, swung by `s`. */
-function swingLegs(bones, s) {
-  poseBone(bones.leg_fl, s); poseBone(bones.leg_br, s);
-  poseBone(bones.leg_fr, -s); poseBone(bones.leg_bl, -s);
-}
+/** What a guardian is doing, for its gait (render/mobGaits.js). */
+const STATE = { p: 0, moving: false, running: false, size: 2.4, t: 0, grazing: false, chasing: false, look: 0, nod: 0 };
+/** Where the beam leaves each one's mouth: [forward, up] in blocks. */
+const MOUTH = { white: [1.6, 2.2], black: [1.7, 1.6] };
 
 export class GuardianView {
   constructor(scene) {
@@ -88,6 +88,7 @@ export class GuardianView {
     scene.add(this.beam, this.flash);
     this._from = new THREE.Vector3();
     this._to = new THREE.Vector3();
+    this._pose = makePose();
   }
 
   update(guardian, dt = 1 / 60) {
@@ -112,8 +113,7 @@ export class GuardianView {
     // breath either way.
     const swing = guardian.moving ? Math.sin(this.clock * 12) * 0.6 : 0;
     legs.forEach((l, i) => { l.rotation.x = (i === 0 || i === 3 ? swing : -swing); });
-    if (model) swingLegs(model.bones, swing);
-    group.position.y += Math.sin(this.clock * 2) * 0.03 + (guardian.moving ? Math.abs(Math.sin(this.clock * 12)) * 0.06 : 0);
+    group.position.y += Math.sin(this.clock * 2) * 0.03 + (guardian.moving && !model ? Math.abs(Math.sin(this.clock * 12)) * 0.06 : 0);
     // A blow: it rears, then drives forward head down at what it strikes
     // (owner, 8 November: it "stays in place and they die").
     const k = guardian.striking > 0 ? 1 - guardian.striking / STRIKE_SHOWS : 0;
@@ -123,14 +123,28 @@ export class GuardianView {
     group.position.z += Math.cos(guardian.facing) * lunge * 0.55;
     group.position.y += rear * 0.25;
     if (model) {
-      poseBone(model.bones.body, -rear * 0.35 + lunge * 0.12);
-      poseBone(model.bones.head, -lunge * 0.7);
+      // A gallop when it moves: the hind pair then the fore pair, the body
+      // rocking and leaving the ground each stride, its neck out; standing,
+      // it looks about, its ears flick and its tail swings.
+      const st = STATE, pose = this._pose;
+      st.p = this.clock * 2.1;
+      st.moving = st.running = !!guardian.moving;
+      st.t = this.clock;
+      st.chasing = guardian.striking > 0;
+      st.look = guardian.moving ? 0 : Math.sin(this.clock * 0.9) * 0.2;
+      st.nod = guardian.moving ? 0 : Math.sin(this.clock * 1.6) * 0.03;
+      gaitPose(pose, GAITS[guardian.ring === 'white' ? 'aurelion' : 'umbra'], st);
+      pose.body[0] += -rear * 0.35 + lunge * 0.12;
+      pose.head[0] += -lunge * 0.7;
+      applyPose(model.bones, pose);
+      group.position.y += pose.lift;
     } else group.rotation.x = -rear * 0.3 + lunge * 0.15;
     // The beam, from its mouth to where it struck, fading as it goes.
     const b = guardian.beam;
     if (b) {
       const fade = Math.max(0, Math.min(1, b.t / STRIKE_SHOWS));
-      this._from.set(group.position.x + Math.sin(guardian.facing) * 0.95, group.position.y + 1.45, group.position.z + Math.cos(guardian.facing) * 0.95);
+      const [fwd, high] = model ? MOUTH[guardian.ring] ?? MOUTH.white : [0.95, 1.45];
+      this._from.set(group.position.x + Math.sin(guardian.facing) * fwd, group.position.y + high, group.position.z + Math.cos(guardian.facing) * fwd);
       this._to.set(b.x, b.y + 1, b.z);
       const len = this._from.distanceTo(this._to);
       if (len > 0.1) {
