@@ -37,12 +37,13 @@ const bill = { planks: 12, cobblestone: 8, lantern: 1 };
 }
 
 {
-  // No workshop: a lantern can't be made anywhere you have.
+  // No workshop: the lantern is the stone-shaded one, by hand (owner, 12
+  // November: a lantern from the start), and the glass is left alone.
   const g = make();
   g.inventory.add('wood', 10); g.inventory.add('stone', 4); g.inventory.add('glass', 1);
   const { made, still } = g.craftMissing(bill);
   ok('hand work makes planks; cobble waits for a stone mill', made.planks > 0 && !made.cobblestone && still.cobblestone === 8);
-  ok('and the lantern, which needs a workshop you don\'t have, is left — and said', still.lantern === 1 && g.inventory.countOf('glass') === 1);
+  ok('and the lantern is made by hand from planks and stone, the glass untouched', made.lantern === 1 && !still.lantern && g.inventory.countOf('glass') === 1);
 }
 
 {
