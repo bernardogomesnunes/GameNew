@@ -1,4 +1,5 @@
 // Renders models alone on a plain background, to check them: node tools/model-view.mjs ids poseJSON out.png [yawDeg] [pitchDeg]
+// A pose of {"state": {...}} is a person's state (src/render/personPose.js makeState), posed the way SettlerView poses them.
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +18,7 @@ await page.evaluate(async ([ids, pose, yaw, pitch]) => {
   const g = window.__game; await g.modelsLoaded;
   const THREE = await import('/node_modules/three/build/three.module.js');
   const { Crowd, modelKit } = await import('/src/render/Models.js');
+  const { makePose, makeState, posePerson, traitsOf } = await import('/src/render/personPose.js');
   document.body.innerHTML = '';
   document.body.style.margin = 0;
   for (const id of ids) {
@@ -25,7 +27,9 @@ await page.evaluate(async ([ids, pose, yaw, pitch]) => {
     document.body.appendChild(r.domElement); r.domElement.style.display = 'inline-block';
     const scene = new THREE.Scene();
     scene.add(new THREE.HemisphereLight(0xffffff, 0x9a8a7a, 1.6)); const d = new THREE.DirectionalLight(0xffffff, 1.8); d.position.set(3, 6, 4); scene.add(d);
-    const c = new Crowd(scene, kit, 1); c.begin(); c.add(new THREE.Matrix4(), JSON.parse(pose)); c.end();
+    const c = new Crowd(scene, kit, 1); c.begin(); const given = JSON.parse(pose);
+    const posed = given.state ? posePerson(makePose(), { ...makeState(), ...given.state }, traitsOf(id)) : given;
+    c.add(new THREE.Matrix4().makeTranslation(0, -(posed.drop ?? 0), 0), posed); c.end();
     const box = new THREE.Box3();
     for (const m of c.meshes) if (m) { m.computeBoundingBox?.(); m.updateMatrixWorld(); const b = new THREE.Box3().setFromObject(m); box.union(b); }
     const s = box.getSize(new THREE.Vector3()), ctr = box.getCenter(new THREE.Vector3());

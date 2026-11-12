@@ -7,7 +7,9 @@ import { ITEMS_BY_ID } from '../config/items.js';
  * What you hold, in first person (playtest, P7): drawn in your right hand
  * at the bottom right of the screen — a sword, a tool, the bucket, a fruit,
  * the block you're about to place — or your bare fist when there's nothing.
- * It bobs as you walk, and swings when you strike or place.
+ * It bobs as you walk (more at a run), drifts a little as you breathe, lags
+ * behind a jump and dips as you land, and swings when you strike or place.
+ * Empty-handed, you see your fist and the cuff of your sleeve.
  *
  * It hangs off the camera, so it goes wherever you look.
  */
@@ -42,7 +44,11 @@ export class HandView {
     this.cube.visible = false;
     this.group.add(this.cube);
     this.fistMat = new THREE.MeshLambertMaterial({ color: 0xe0b48e });
-    this.fist = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.34), this.fistMat);
+    this.fist = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.2).translate(0, 0, -0.07), this.fistMat);
+    this.sleeveMat = new THREE.MeshLambertMaterial({ color: 0x4a7a8a });
+    this.fist.add(new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.14, 0.22).translate(0, 0, 0.14), this.sleeveMat));
+    const knuckles = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.035, 0.03).translate(0, 0.03, -0.165), this.fistMat);
+    this.fist.add(knuckles);
     this.fist.position.set(0.04, -0.04, 0.08);
     this.fist.rotation.set(0.25, -0.15, 0);
     this.group.add(this.fist);
@@ -61,6 +67,10 @@ export class HandView {
     this.phase = 0;
     this.swing = 0;
     this.key = undefined;
+    this.clock = 0;
+    this.lag = 0;     // how far the hand trails a jump or a fall
+    this.land = 0;    // a dip on coming down
+    this.wasAir = false;
   }
 
   /** A blow turned aside by the shield: it jerks up and back for a moment. */
@@ -112,15 +122,27 @@ export class HandView {
       this.cube.rotation.copy(this.item.rotation);
       this.cube.scale.setScalar(0.18);
     }
-    this.fistMat.color.setHex(lookColours(look).skin);
+    const colours = lookColours(look);
+    this.fistMat.color.setHex(colours.skin);
+    this.sleeveMat.color.setHex(colours.shirt);
 
     // Bob with your stride, side to side and up and down.
     const v = player.velocity ?? { x: 0, z: 0 };
     const speed = player.flying ? 0 : Math.hypot(v.x, v.z);
     this.phase += dt * speed * 1.9;
-    const bob = Math.min(1, speed / 4.3);
-    this.swing = Math.max(0, this.swing - dt * 5);
-    const chop = Math.sin(this.swing * Math.PI);
+    const bob = Math.min(1, speed / 4.3) * (1 + 0.5 * Math.min(1, Math.max(0, (speed - 4.6) / 2.5)));
+    this.swing = Math.max(0, this.swing - dt * 4.2);
+    // Quick into the blow, slower coming back from it.
+    const chop = this.swing > 0 ? Math.sin(Math.pow(1 - this.swing, 0.7) * Math.PI) : 0;
+    // Breathing; trailing a jump and a fall; a dip on landing.
+    this.clock += dt;
+    const breathe = Math.sin(this.clock * 1.6) * 0.004;
+    const air = !player.flying && !player.swimming && player.grounded === false;
+    this.lag += (Math.max(-0.045, Math.min(0.045, air ? -(v.y ?? 0) * 0.006 : 0)) - this.lag) * Math.min(1, dt * 10);
+    if (this.wasAir && !air) this.land = 1;
+    this.wasAir = air;
+    this.land = Math.max(0, this.land - dt * 5);
+    const drift = breathe + this.lag - Math.sin(this.land * Math.PI) * 0.03;
     // Low and to the right of the middle — worked out from what the
     // camera can see, so a tall phone screen doesn't push it out of sight.
     const halfH = Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)) * REACH;
@@ -130,17 +152,17 @@ export class HandView {
     const settle = 1 - pull * 0.7;
     this.group.position.set(
       halfW * (0.62 - 0.4 * pull) + Math.sin(this.phase) * 0.025 * bob * settle,
-      -halfH * (0.62 - 0.3 * pull) - Math.abs(Math.cos(this.phase)) * 0.03 * bob * settle - chop * 0.08,
+      -halfH * (0.62 - 0.3 * pull) - Math.abs(Math.cos(this.phase)) * 0.03 * bob * settle - chop * 0.08 + drift * settle,
       -REACH + chop * 0.06 + pull * 0.08,
     );
-    this.group.rotation.set(-chop * 0.9, chop * 0.25, pull * 0.25);
+    this.group.rotation.set(-chop * 0.9, chop * 0.25, pull * 0.25 - chop * 0.15);
     // The shield, low on the left, bobbing with your stride the other way,
     // and jerking up towards the middle when it turns a blow aside.
     this.blocked = Math.max(0, (this.blocked ?? 0) - dt * 4);
     const jerk = Math.sin(this.blocked * Math.PI);
     this.left.position.set(
       -halfW * (0.78 - 0.18 * jerk) - Math.sin(this.phase) * 0.02 * bob,
-      -halfH * (0.9 - 0.3 * jerk) - Math.abs(Math.cos(this.phase)) * 0.025 * bob,
+      -halfH * (0.9 - 0.3 * jerk) - Math.abs(Math.cos(this.phase)) * 0.025 * bob + drift,
       -REACH + jerk * 0.05,
     );
     // The arrow on the string, its tail coming back towards you as you draw.
