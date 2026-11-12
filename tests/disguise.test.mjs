@@ -52,7 +52,7 @@ const run = (s, seconds, signs) => { for (let t = 0; t < seconds; t += 0.05) s.t
   ok('and stay discovered, however you behave after', caught.discovered);
   caught.reset();
   ok('until you\'ve left the island', !caught.discovered && caught.level === 0);
-  ok(`your first blow, unseen, lands ${AMBUSH} times as hard`, AMBUSH >= 2 && /const ambush = WANDERERS\[p\.kind\]\?\.sky && this\.unseen\(\);\s*const res = this\.wanderers\.hit\(p, this\.blowDamage\(tool\) \* \(ambush \? AMBUSH : 1\), x, z\);\s*if \(ambush\) this\.revealDisguise\(\);/.test(game));
+  ok(`your first blow, unseen, lands ${AMBUSH} times as hard`, AMBUSH >= 2 && /const ambush = WANDERERS\[p\.kind\]\?\.sky && this\.unseen\(\);\s*const res = this\.wanderers\.hit\(p, this\.blowDamage\(tool\) \* \(ambush \? AMBUSH : 1\), x, z, this\.blowKnock\(tool\)\);\s*if \(ambush\) this\.revealDisguise\(\);/.test(game));
 }
 
 // --- running, as the guards see it -------------------------------------------------------------------
