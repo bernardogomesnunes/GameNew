@@ -4,6 +4,8 @@
 
 - Break (left click) attacks. Swords hit hardest.
 - Blows vary. About one in six is heavy: twice as hard, and it throws the target back.
+- Every hit knocks its target back a little, with a small hop. A sword knocks further than a fist. Small animals fly; a triceratops barely moves.
+- Bodies take up room. Walking into an animal, a villager or a soldier nudges them aside, and a big animal nudges you.
 - Drinks help: Beer for quicker blows, Kombucha for +2 on every hit, Coffee for speed.
 - Temple upgrades add Thunder (stun), Fire (burn) and Ice (freeze) to a Stone or Iron Sword.
 - Armour cuts damage. See [Items](items.md#armour).

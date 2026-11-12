@@ -115,7 +115,8 @@ export function fall(world, b, dt, tall = 2) {
  */
 export function freeFall(world, b, dt) {
   const bx = Math.floor(b.x), bz = Math.floor(b.z), base = Math.floor(b.y);
-  if (base < 4 || !world.getBlock) return false;
+  // Land not made yet is not a pit.
+  if (base < 4 || !world.getBlock || !world.hasChunk?.(bx >> 4, bz >> 4)) return false;
   for (let y = base + 1; y >= base - 3; y--) if (world.getBlock(bx, y, bz) !== 0) return false;
   b.vy = Math.max(-30, (b.vy ?? 0) - GRAVITY * dt);
   b.y += Math.max(-2.5, b.vy * dt);
