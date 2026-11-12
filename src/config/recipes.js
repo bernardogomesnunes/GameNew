@@ -1239,11 +1239,12 @@ export const RECIPES = [
   // Owner, 12 November, Age 3: "I can't see the lantern in the workbench".
   // Every building's first level up wants a light, and lanterns, chandeliers
   // and firefly lanterns all came at Age 4 at the earliest. A plainer one,
-  // stone-shaded with no glass, is made at the Workbench from the start.
+  // stone-shaded with no glass, is made by hand from the start (so it shows
+  // on the menu bench and at a placed Workbench, which lists the same).
   {
     id: 'lantern_workbench',
     name: 'Lantern',
-    station: 'workbench',
+    station: 'hand',
     age: 1,
     inputs: { planks: 2, stone: 2 },
     output: { id: 'lantern', count: 1 },
