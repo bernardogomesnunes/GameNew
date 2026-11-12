@@ -2,8 +2,28 @@ import { PROP_SHAPES, boxesFor } from '../world/propShapes.js';
 import { ITEMS_BY_ID, FURNITURE_ITEM } from './items.js';
 import { BLOCKS_BY_ID } from './blocks.js';
 
+import { FURNITURE_AGE } from './recipes.js';
+import { STARTER_DESIGNS } from './starterDesigns.js';
+import { STRUCTURES_BY_ID } from './structures.js';
+import { ITEM_FOR_BLOCK } from './items.js';
+
 /** What each piece costs, as its old recipe did (captured in recipes.js before those went). */
-export { FURNITURE_COST as COST, FURNITURE_AGE as AGE } from './recipes.js';
+export { FURNITURE_COST as COST } from './recipes.js';
+
+/**
+ * The age each piece opens at the Counter. Never later than the first
+ * building whose design has it in (owner, 12 November, a new world: the
+ * Starter cabin wants a bed and a painting and the Work Hall a table and a
+ * chair, all Age 1, while the Counter and the table only came at Ages 3 and 4).
+ */
+export const AGE = new Map(FURNITURE_AGE);
+for (const d of STARTER_DESIGNS) {
+  const age = STRUCTURES_BY_ID.get(d.structure)?.age ?? 1;
+  for (const b of d.blocks) {
+    const id = ITEM_FOR_BLOCK.get(b.type);
+    if (AGE.has(id) && AGE.get(id) > age) AGE.set(id, age);
+  }
+}
 
 /**
  * CRAFT3D-1: the furniture made at the carpentry counter, and its parts.
