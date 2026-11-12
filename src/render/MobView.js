@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { MOBS_BY_ID } from '../config/mobs.js';
 import { modelKit, Crowds } from './Models.js';
+import { GAITS, beastPose, dinoPose, makePose, put } from './mobGaits.js';
 
 /**
  * The animals, drawn: a body, a head and four legs each, out of one unit
@@ -107,32 +108,7 @@ const NO_LEG = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Models built with a jointed neck, jaw and three-part tail (tools/mobs/dinos.py). */
 const CHAINED = new Set(['raptor', 'trike', 'longneck']);
 
-/**
- * A dinosaur's neck, jaw and tail (owner, 9 November: "animation wise improve
- * too"). The tail swings side to side, each part after the one before, faster
- * as it walks; the neck bobs with each step and the long-neck's sways slowly
- * up and down as it looks about; a raptor on the hunt snaps its jaws, and the
- * others open theirs in a call now and then.
- */
-export function dinoPose(pose, m, now, phase, look, nod, swing) {
-  const t = now + phase;
-  const walking = m.speed > 0;
-  const step = Math.sin((m.stride ?? 0) * 2.2);
-  const rate = walking ? 2.4 : 0.8;
-  for (let i = 0; i < 3; i++) pose[`tail${i}`] = [0.04 * i, Math.sin(t * rate - i * 0.9) * (walking ? 0.22 : 0.12), 0];
-  if (m.type === 'longneck') {
-    const browse = Math.sin(t * 0.35) * 0.12;
-    pose.neck0 = [(m.grazing ? 0.5 : browse) + (walking ? step * 0.03 : 0), look * 0.5, 0];
-    pose.neck1 = [m.grazing ? 0.6 : -browse * 0.5, look * 0.6, 0];
-    pose.head = [m.grazing ? 0.4 : nod, look * 0.3, 0];
-  } else {
-    pose.neck0 = [(m.grazing ? 0.45 : 0) + (walking ? step * 0.06 : nod), look * 0.4, 0];
-    pose.neck1 = [m.grazing ? 0.35 : 0, look * 0.4, 0];
-    pose.head = [m.grazing ? 0.3 : nod, look * 0.3, 0];
-  }
-  const snap = m.chasing ? Math.max(0, Math.sin(t * 7)) * 0.5 : Math.min(1, Math.max(0, Math.sin(t * 0.45) - 0.93) / 0.07) * 0.45;
-  pose.jaw = [snap, 0, 0];
-}
+export { dinoPose };
 
 export function dragonPose(pose, m, now, phase, look, nod) {
   const big = m.type === 'elder_dragon';
@@ -216,7 +192,7 @@ export class MobView {
     this.crowds = new Crowds(scene, MAX);
     this._turned = new THREE.Matrix4();
     this._tint = new THREE.Color();
-    this._pose = {};
+    this._pose = makePose();
   }
 
   update(mobs) {
@@ -254,15 +230,22 @@ export class MobView {
       // Its model, if that has loaded: the boxes for this one are put away.
       const kit = modelKit(mobModel(m)) ?? modelKit(m.type);
       if (kit) {
-        const swing = m.speed > 0 ? Math.sin(m.stride * (5 / Math.max(0.3, leg + 0.2))) * 0.55 : 0;
         const pose = this._pose;
-        pose.leg_fl = pose.leg_br = pose.leg_l = [swing, 0, 0];
-        pose.leg_fr = pose.leg_bl = pose.leg_r = [-swing, 0, 0];
-        pose.head = [m.grazing ? -0.6 : nod, look, 0];
-        pose.neck = [m.grazing ? -0.5 : nod * 0.65, look * 0.55, 0];
-        pose.tail = [0, Math.sin((m.stride ?? 0) * 3) * 0.3, 0];
-        if (spec.flies) dragonPose(pose, m, now, phase, look, nod);
-        else if (CHAINED.has(m.type)) dinoPose(pose, m, now, phase, look, nod, swing);
+        pose.lift = 0;
+        if (spec.flies) {
+          const swing = m.speed > 0 ? Math.sin(m.stride * (5 / Math.max(0.3, leg + 0.2))) * 0.55 : 0;
+          put(pose, 'body', 0, 0, 0);
+          put(pose, 'leg_fl', swing, 0, 0); put(pose, 'leg_br', swing, 0, 0); put(pose, 'leg_l', swing, 0, 0);
+          put(pose, 'leg_fr', -swing, 0, 0); put(pose, 'leg_bl', -swing, 0, 0); put(pose, 'leg_r', -swing, 0, 0);
+          dragonPose(pose, m, now, phase, look, nod);
+        } else if (CHAINED.has(m.type)) dinoPose(pose, m, now, phase, look, nod, 0, spec);
+        else if (GAITS[m.type]) {
+          // Its gait, the bob of its body, its neck, ears and tail (render/mobGaits.js).
+          beastPose(pose, m, spec, now, phase, look, nod);
+          if (m.type === 'cow') put(pose, 'crystal', 0, (now + phase) * 0.8, 0);   // the Moon Cow's, turning
+        }
+        // The bob of a trot, the leap of a gallop or a hop: the whole animal, off the ground.
+        if (pose.lift && !(m.dying > 0)) this._base.elements[13] += pose.lift;
         this._turned.multiplyMatrices(this._base, TURN);
         this.crowds.get(kit).add(this._turned, pose, flash ? this._tint.copy(HURT_TINT).lerp(this._c.set(1, 1, 1), 1 - flash) : null);
         this.bodies.setMatrixAt(i, NO_LEG);
