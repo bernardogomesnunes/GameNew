@@ -1,4 +1,5 @@
-import { sampleTerrainGrid, paintGrid, drawHeadingArrow, worldToCanvas } from './mapDraw.js';
+import { sampleTerrainGrid, paintGrid, drawHeadingArrow, worldToCanvas, sampleWorldGrid } from './mapDraw.js';
+import { BLOCKS_BY_ID } from '../config/blocks.js';
 
 /** How far out each zoom step shows, in blocks. */
 export const MAP_ZOOMS = [300, 600, 1200];
@@ -10,14 +11,20 @@ export const MAP_ZOOMS = [300, 600, 1200];
  * this wide is real work, and nothing about the ground moves while a panel
  * is open over it the way you do.
  */
-export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], step = null, home = null, territory = null, places = [], sites = [], pins = [] } = {}) {
+/** A block's colour as CSS, for the map read off real blocks. */
+const blockCss = (id) => {
+  const c = BLOCKS_BY_ID.get(id)?.color;
+  return c == null || !id ? null : `#${c.toString(16).padStart(6, '0')}`;
+};
+
+export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], step = null, home = null, territory = null, places = [], sites = [], pins = [], world = null } = {}) {
   const ctx = canvas.getContext('2d');
   const { width, height } = canvas;
   // Coarser sampling the wider the view — a 1200-block view sampled every
   // 2 blocks is 600x600 cells for a view nothing on screen can resolve
   // past a few hundred pixels of anyway.
   const cellStep = step ?? Math.max(2, Math.round(radius / 150));
-  const { size, cells } = sampleTerrainGrid(gen, x, z, { radius, step: cellStep });
+  const { size, cells } = world ? sampleWorldGrid(world, blockCss, x, z, { radius, step: cellStep }) : sampleTerrainGrid(gen, x, z, { radius, step: cellStep });
   paintGrid(ctx, width, height, size, cells);
 
   if (territory) {

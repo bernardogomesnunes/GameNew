@@ -33,6 +33,10 @@ import { CLEARS, clearArtSvg } from '../config/clears.js';
 import { Minimap } from '../render/Minimap.js';
 import { nextPaint } from './loading.js';
 import { SHOWCASE_SPOTS, SHOWCASE_TIMES } from '../world/showcase.js';
+import { inPast } from '../world/past.js';
+import { inFuture } from '../world/future.js';
+/** How far the map reaches in the Past or the Future, where it is read off loaded blocks. */
+const ERA_MAP_RADIUS = 150;
 
 /**
  * Items that act on the world directly through Break/Place while selected,
@@ -2816,11 +2820,14 @@ export class UIManager {
     const { x, z, yaw, zoomIndex } = this.mapView;
     const radius = MAP_ZOOMS[zoomIndex];
     const duilt = this.game.duilt;
-    const territory = duilt && !duilt.sandbox ? duilt.territory.bounds() : null;
-    const home = gen.biomes ? { x: gen.biomes.centreX, z: gen.biomes.centreZ } : null;
-    const sites = this.game.kingdomSites?.() ?? [];
-    const places = (duilt?.foundPlaces() ?? []).filter((p) => !(p.kind === 'kingdom' && sites.some((s) => s.kind === 'kingdom')));
-    drawWorldMap(canvas, gen, x, z, yaw, { radius, home, territory, places, sites, pins: duilt?.pins ?? [] });
+    // IMP-7: in the Past or the Future the map is that land, read off its
+    // blocks; home's border, its kingdoms and places belong to the present.
+    const cx = gen.biomes?.centreX ?? 0, era = inPast(x, cx) || inFuture(x, cx);
+    const territory = duilt && !duilt.sandbox && !era ? duilt.territory.bounds() : null;
+    const home = gen.biomes && !era ? { x: gen.biomes.centreX, z: gen.biomes.centreZ } : null;
+    const sites = era ? [] : this.game.kingdomSites?.() ?? [];
+    const places = era ? [] : (duilt?.foundPlaces() ?? []).filter((p) => !(p.kind === 'kingdom' && sites.some((s) => s.kind === 'kingdom')));
+    drawWorldMap(canvas, gen, x, z, yaw, { radius: era ? Math.min(radius, ERA_MAP_RADIUS) : radius, home, territory, places, sites, pins: duilt?.pins ?? [], world: era ? this.game.world : null });
     // Owner, 15 November: "Map should show coordinates where I'm standing".
     const at = this.game.player.position, coords = this.q('#map-coords');
     if (coords) coords.textContent = `You are at ${Math.floor(at.x)}, ${Math.floor(at.y)}, ${Math.floor(at.z)} (east, height, south)`;
@@ -2828,7 +2835,7 @@ export class UIManager {
     // path, the expedition: send the army ahead, or join it at its camp.
     const travel = this.q('#map-travel');
     if (travel) {
-      const go = duilt?.sandbox ? sites : [];
+      const go = duilt?.sandbox && !era ? sites : [];
       const ex = this.game.expeditionState?.();
       travel.innerHTML = go.map((s) => `<button class="primary" data-travel="${s.kind}">Travel to the ${s.name}</button>`).join('')
         + (ex?.ready ? `<button class="primary" data-expedition="send">Send the army to the Sky Kingdom</button>` : '')
@@ -2846,7 +2853,7 @@ export class UIManager {
       }
     }
     const scale = this.q('#map-scale');
-    if (scale) scale.textContent = `± ${radius} blocks`;
+    if (scale) scale.textContent = `± ${era ? Math.min(radius, ERA_MAP_RADIUS) : radius} blocks`;
     const zoomOut = this.q('#map-zoom-out');
     const zoomIn = this.q('#map-zoom-in');
     if (zoomOut) zoomOut.disabled = zoomIndex === MAP_ZOOMS.length - 1;
