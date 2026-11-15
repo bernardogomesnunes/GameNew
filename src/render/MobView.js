@@ -146,7 +146,8 @@ export function dragonPose(pose, m, now, phase, look, nod) {
   }
   // A roar now and then: the jaw drops for a second every ten or so.
   const roar = Math.max(0, Math.sin(t * 0.55) - 0.92) / 0.08;
-  pose.jaw = [Math.min(1, roar) * 0.55, 0, 0];
+  // Breathing fire (IMP-47), its mouth is wide open for as long as the fire lasts.
+  pose.jaw = [m.breathing > 0 ? 0.6 : Math.min(1, roar) * 0.55, 0, 0];
 }
 
 export function mobModel(m) {
