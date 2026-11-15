@@ -132,7 +132,7 @@ ok('lava takes two hearts a second', LAVA_PER_SECOND === 4);
 // --- in the game ---------------------------------------------------------------------
 
 ok('falls and lava hurt as you play', /feelHurt\(\)[\s\S]{0,400}fallDamage\(fall\)[\s\S]{0,400}LAVA_PER_SECOND/.test(game));
-ok('resting at home heals faster', /this\.duilt\.tick\(dt, \{ resting: this\.restingAtHome\(wasAt\) \}\)/.test(game));
+ok('resting at home heals faster', /this\.duilt\.tick\(dt, \{ resting: this\.restingAtHome\(wasAt\)[^}]*\}\)/.test(game));
 ok('dying sends you home and leaves the chest', /this\.bus\.on\('health:died'/.test(game) && /leaveGrave\(x, y, z\)/.test(game) && /this\.player\.teleport\(home\.x, home\.y, home\.z\)/.test(game));
 ok('Place opens a chest', /isChest\(aimed\.block\)\) return void this\.openChest\(aimed\)/.test(game));
 ok('a chest with things in it can\'t be broken', /Empty the chest first/.test(game));

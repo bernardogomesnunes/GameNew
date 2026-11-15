@@ -175,7 +175,7 @@ export const PLACE_NAMES = {
   kingdom: 'The Stone Kingdom', hermit: 'The hermit\'s hut', camp: 'A bandit camp',
   ruin: 'An old ruin', ruined_temple: 'A forgotten temple', mine: 'An abandoned mine', monument: 'A monument',
   tribe: 'A tree tribe', city: 'A city', ruined_city: 'An abandoned city', outpost: 'A Stone Kingdom outpost',
-  caravan: 'A dune caravan', mossfolk: 'A mossfolk village',
+  caravan: 'A dune caravan', mossfolk: 'A mossfolk village', dragon_nest: 'A dragon\'s nest',
 };
 
 /**
@@ -355,6 +355,31 @@ function ruinBlocks(roll) {
   blocks.push([3, 0, -3, CHEST + 2]);
   blocks.push([2, 0, -3, COBBLE]);
   blocks.push([3, 1, -2, LEAVES]);
+  return blocks;
+}
+
+/**
+ * IMP-45 (owner, 9 November: "a nest with a relic next to it cause dragons
+ * like gold"): a scorched bowl of obsidian and dark stone, its rim built up
+ * with gravel and bones of stone, gold blocks heaped in it, and the hoard's
+ * chest with the relic in it. The dragon that keeps it circles overhead.
+ */
+function nestBlocks(roll) {
+  const blocks = [];
+  const h = (a, b) => hash01(a * 13 + Math.floor(roll * 1000), b * 19, 7403);
+  for (let dx = -6; dx <= 6; dx++) {
+    for (let dz = -6; dz <= 6; dz++) {
+      const r = Math.hypot(dx, dz);
+      if (r > 6.4) continue;
+      blocks.push([dx, -1, dz, h(dx, dz) < 0.35 ? 14 : DARK_STONE]);
+      if (r > 4.6) {
+        blocks.push([dx, 0, dz, h(dz, dx) < 0.5 ? 23 : DARK_STONE]);
+        if (h(dx + 7, dz) < 0.45) blocks.push([dx, 1, dz, 23]);
+      } else if (r > 1.5 && h(dx - 3, dz + 5) < 0.3) blocks.push([dx, 0, dz, 13]);
+    }
+  }
+  blocks.push([0, 0, 0, 13], [1, 0, 0, 13], [0, 0, 1, 13], [0, 1, 0, 13]);
+  blocks.push([0, 0, -3, CHEST + 2]);
   return blocks;
 }
 
@@ -739,6 +764,8 @@ const PLACES = [
   { kind: 'ruined_temple', count: 2, at: [450, 950], half: 8, build: ruinedTempleBlocks },
   { kind: 'mine', count: 2, at: [300, 850], half: 9, build: mineBlocks },
   { kind: 'monument', count: 2, at: [380, 900], half: 5, build: monumentBlocks },
+  // IMP-45: dragon nests, far out, each with its dragon (world/Mobs.js nests).
+  { kind: 'dragon_nest', count: 2, at: [650, 1150], half: 7, build: nestBlocks },
 ];
 
 /**

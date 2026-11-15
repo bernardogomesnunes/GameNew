@@ -1,5 +1,5 @@
 import { Granary } from '../items/Granary.js';
-import { STRUCTURES_BY_ID, holdsAt, isStore, hasLevels, producesAt, intervalAt, scaleProduce, yieldAt } from '../config/structures.js';
+import { STRUCTURES_BY_ID, forestYield, holdsAt, isStore, hasLevels, producesAt, intervalAt, scaleProduce, yieldAt } from '../config/structures.js';
 import { Inventory } from '../items/Inventory.js';
 import { ITEMS_BY_ID } from '../config/items.js';
 import { cropOf, FARM_ITEMS } from '../config/crops.js';
@@ -544,7 +544,8 @@ export class StructureRegistry {
       // A pen's output is whatever lives in it (see duilt/Ranch.js), asked
       // for here rather than read off the spec.
       // A farm's, whatever grows in it.
-      const produces = spec.fromAnimals || spec.fromCrops ? scaleProduce(producesFor?.(s) ?? {}, yieldAt(spec, tier)) : producesAt(spec, tier);
+      let produces = spec.fromAnimals || spec.fromCrops ? scaleProduce(producesFor?.(s) ?? {}, yieldAt(spec, tier)) : producesAt(spec, tier);
+      if (spec.woods && s.wood) produces = forestYield(produces, s.wood);
       if (!everySeconds) continue;
 
       const periodMs = everySeconds * 1000 * this.dayScale;
@@ -646,6 +647,7 @@ export class StructureRegistry {
         // the highest level paid for — see climb and evolve.
         ...(s.credit ? { credit: s.credit } : {}),
         ...(s.paidTo ? { paidTo: s.paidTo } : {}),
+        ...(s.wood && s.wood !== 'oak' ? { wood: s.wood } : {}),
       })),
     };
   }

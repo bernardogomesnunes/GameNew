@@ -23,7 +23,7 @@ import { starterDesign } from '../prefabs/HouseDesigns.js';
 import { VillagerJobs } from './VillagerJobs.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool, stackLimit } from '../config/items.js';
 import { MILESTONES } from '../config/skills.js';
-import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, PRODUCTION_PACE } from '../config/structures.js';
+import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, PRODUCTION_PACE, FOREST_WOODS } from '../config/structures.js';
 import { AIR, BLOCKS_BY_ID, isFluid, doorPart, stationOf } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
@@ -101,6 +101,9 @@ const FIND_WORDS = { ruin: 'a ruin', hermit: 'the hermit\'s hut', kingdom: 'the 
 /** How many points you can mark on the map, and how long a name one takes. */
 export const MAX_PINS = 50, PIN_NAME_MAX = 24;
 
+/** The Sky King's gifts (IMP-31): a sky sword, a set of sky armour, and gold ingots. */
+export const SKY_GIFT = { sword_sky: 1, armour_sky_head: 1, armour_sky_body: 1, armour_sky_legs: 1, armour_sky_feet: 1, gold: 20 };
+
 export class DuiltGame {
   constructor({ world, scene, bus, age = 1, sandbox = false }) {
     this.world = world;
@@ -172,6 +175,8 @@ export class DuiltGame {
     this.heard = new Set(); // the tales you've been told (config/tales.js)
     // The dark path's end: the Sky King brought down (world/skyKingdom.js).
     this.skyFallen = false;
+    /** IMP-31: whether the Sky King has given his gifts. */
+    this.skyGift = false;
     // The painting you wake by after a fall, if you chose one (playtest, P1).
     this.spawn = null;
     // Drinks going (playtest, P5): { haste | strength | speed: seconds left }.
@@ -457,6 +462,25 @@ export class DuiltGame {
     }
     this.hunger.exertion = 1;
     return gained;
+  }
+
+  /**
+   * IMP-31 (owner, 8 November): "If I come in good terms to the sky kingdom
+   * after beating the stone raid, sky king should give me some loot. Sword,
+   * armour, and gold." Good terms: the Stone Kingdom's war won, the Black
+   * Ring not borne, the Sky Kingdom not fallen. Given once. The gifts it
+   * gave, or null when not due.
+   */
+  skyGiftDue() {
+    return !this.sandbox && !this.skyGift && this.war.stage === 'won' && this.ring !== 'black' && !this.skyFallen;
+  }
+
+  giveSkyGift() {
+    if (!this.skyGiftDue()) return null;
+    // Kept for you until the bag has room for all of it.
+    if (Object.entries(SKY_GIFT).some(([id, n]) => this.inventory.roomFor(id, n) < n)) return { full: true };
+    this.skyGift = true;
+    return { gave: this.collect({ ...SKY_GIFT }) };
   }
 
   /**
@@ -1413,7 +1437,7 @@ export class DuiltGame {
 
   // ---- the clock ----
 
-  tick(dtSeconds, { resting = false } = {}) {
+  tick(dtSeconds, { resting = false, regen = false } = {}) {
     if (Math.floor(this.days) !== this.emergingPlaces.checkedDay) {
       const added = ensureEmergingPlaces(this);
       if (added.length) this.bus?.emit('places:emerged', { places: added });
@@ -1428,7 +1452,8 @@ export class DuiltGame {
       this.hunger.tick(dtSeconds * this.skills.hungerRelief());
       this.hunger.exertion = Math.max(0, this.hunger.exertion - dtSeconds); // decays back to resting
       // Heals while you're fed, faster resting in a house.
-      this.health.tick(dtSeconds, { hungerRatio: this.hunger.ratio, resting });
+      // IMP-45: the Dragon Axe held, you heal without eating, as fast as resting at home.
+      this.health.tick(dtSeconds, { hungerRatio: regen ? 1 : this.hunger.ratio, resting: resting || regen });
       // Age 1's lessons happen in the bag, not in a building: a look a
       // second is plenty to notice a pickaxe made or a bucket filled.
       if (this.age === 1) {
@@ -1686,6 +1711,16 @@ export class DuiltGame {
     this.tradedWith.add(traderId);
     this.bus?.emit('duilt:bought', { trader: traderId, itemId: id, count: n, price });
     return { ok: true, id, n, price, name: itemName(id) };
+  }
+
+  /** IMP-33: which wood a forest grows ('oak', 'white' or 'dark'); white and dark from Age 3. */
+  setForestWood(id, wood) {
+    const s = this.structures.list().find((x) => x.id === id);
+    const kind = FOREST_WOODS[wood];
+    if (!s || !STRUCTURES_BY_ID.get(s.type)?.woods || !kind) return { ok: false, reason: 'Not a forest.' };
+    if (!this.sandbox && this.age < kind.age) return { ok: false, reason: `${kind.name} forests come at Age ${kind.age}.` };
+    s.wood = wood;
+    return { ok: true };
   }
 
   /** What a building makes that depends on what's in it: a pen's animals, a farm's crops. */
@@ -2155,6 +2190,7 @@ export class DuiltGame {
       research: this.research,
       studying: this.studying,
       skyFallen: this.skyFallen || undefined,
+      skyGift: this.skyGift || undefined,
       guardian: this.guardian?.toJSON() ?? null,
       spawn: this.spawn,
       boosts: { ...this.boosts },
@@ -2230,6 +2266,7 @@ export class DuiltGame {
     this.studying = st && RECIPES_BY_ID.get(st.id)?.study && Number.isFinite(st.started) && Number.isFinite(st.days)
       ? { id: st.id, name: String(st.name ?? RECIPES_BY_ID.get(st.id).result), started: st.started, days: st.days } : null;
     this.skyFallen = data.skyFallen === true;
+    this.skyGift = data.skyGift === true;
     this.holdSky();
     const sp = data.spawn;
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;

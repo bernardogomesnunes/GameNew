@@ -1609,6 +1609,9 @@ RECIPES.push(
     inputs: { nightstone: 3, obsidian: 4, devotion: 12 }, output: { id: 'ring_black', count: 1 },
     blurb: 'Hammered on the anvil. Obsidian and Nightstone: a dark spark hurts whoever strikes you. The White Ring is closed to you after.',
   },
+  // IMP-45: the best weapon in the game, from what dragons shed.
+  { id: 'dragon_axe', name: 'Dragon Axe', station: 'forge', age: 8, inputs: { dragon_scale: 6, dragon_claw: 3, diamond: 2, wood: 2 }, output: { id: 'dragon_axe', count: 1 },
+    tools: ['weapon_mold'], blurb: 'One blow fells any animal, dinosaur, dragon or person, but not a god. Held, you heal without eating.' },
   // CRAFT3D-2 (owner: "I'm seeing string, with a tool to treat hemp"): a
   // spinning wheel twists the fibre into more string than hands do.
   { id: 'string_spun', name: 'String', station: 'spinning_wheel', age: 1, inputs: { hemp_fibre: 3 }, output: { id: 'string', count: 2 }, batch: 4, blurb: 'Spun on the wheel: twice what your hands twist from the same fibre.' },

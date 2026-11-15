@@ -842,7 +842,7 @@
    512,
    512
   ],
-  "kb": 188.1,
+  "kb": 190.9,
   "name": "Elder Dragon",
   "group": "dragons"
  },
@@ -853,7 +853,7 @@
    256,
    256
   ],
-  "kb": 127.8,
+  "kb": 129.1,
   "name": "Fire Drake",
   "group": "dragons"
  },
@@ -862,9 +862,9 @@
   "triangles": 780,
   "atlas": [
    256,
-   128
+   256
   ],
-  "kb": 112.6,
+  "kb": 115.5,
   "name": "Frost Wyvern",
   "group": "dragons"
  },
@@ -875,7 +875,7 @@
    256,
    256
   ],
-  "kb": 130.4,
+  "kb": 132.0,
   "name": "Storm Dragon",
   "group": "dragons"
  }

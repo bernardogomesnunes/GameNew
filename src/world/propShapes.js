@@ -139,6 +139,18 @@ PROP_SHAPES.spinning_wheel = [
   { minX: 0.6, maxX: 0.74, minY: 0.6, maxY: 0.66, minZ: 0.44, maxZ: 0.56, color: 0xe6dcc0 },
 ];
 
+// IMP-45: a dragon scale and a dragon claw, lying on top of the block below.
+PROP_SHAPES.dragon_scale = [
+  { minX: 0.25, maxX: 0.75, minY: 0, maxY: 0.06, minZ: 0.3, maxZ: 0.72, color: 0x8a2a3a },
+  { minX: 0.31, maxX: 0.69, minY: 0.06, maxY: 0.1, minZ: 0.36, maxZ: 0.64, color: 0xb8364a },
+  { minX: 0.4, maxX: 0.6, minY: 0, maxY: 0.05, minZ: 0.22, maxZ: 0.3, color: 0x6a1a26 },
+];
+PROP_SHAPES.dragon_claw = [
+  { minX: 0.35, maxX: 0.65, minY: 0, maxY: 0.1, minZ: 0.55, maxZ: 0.75, color: 0xd8ccb0 },
+  { minX: 0.4, maxX: 0.6, minY: 0, maxY: 0.12, minZ: 0.38, maxZ: 0.55, color: 0xe6dcc0 },
+  { minX: 0.44, maxX: 0.56, minY: 0, maxY: 0.1, minZ: 0.25, maxZ: 0.38, color: 0xf0e8d4 },
+];
+
 // A chandelier hanging from the top of its cell: a chain, a hub, a cross of
 // arms, and a candle burning at the end of each.
 PROP_SHAPES.chandelier = [

@@ -151,41 +151,49 @@ MOBS.push(
 // ground they circle (alt), how fast (speed) and how wide (radius); now and
 // then one comes down to rest, and a blow sends it back up and away
 // (Mobs.fly). Their models are tools/mobs/dragons.py; their wings, neck and
-// tail are moved by MobView. Kept out of the world for now (owner, 9
-// November: "let's keep dragons out of the game"): no biome spawns them
-// until the dragon nests come (TASKS IMP-45).
+// tail are moved by MobView. No biome spawns them: each keeps a nest
+// (IMP-45, world/landmarks.js), circles over it, breathes fire at whoever
+// comes near (`breath`) and sheds scales and claws (`sheds`).
 MOBS.push(
   {
     id: 'elder_dragon', name: 'Elder Dragon', biomes: [], weight: 0.08,
     herd: [1, 1], hp: 400, walk: 1.2, run: 4, skittish: false,
     flies: { alt: 30, speed: 11, radius: 60 },
-    body: { w: 2.75, h: 2.25, l: 5.75 }, head: 1.6, leg: 1.9,
+    body: { w: 4.1, h: 3.4, l: 8.6 }, head: 3.25, leg: 2.85,
+    breath: { range: 26, every: 5, damage: 6 },
     colour: 0x2a1e26, headColour: 0x2a1e26, legColour: 0x120c12,
     drops: { raw_meat: [16, 24], hide: [8, 12] },
+    sheds: { dragon_scale: [3, 6], dragon_claw: [1, 3] },
   },
   {
     id: 'fire_drake', name: 'Fire Drake', biomes: [], weight: 0.15,
     herd: [1, 1], hp: 120, walk: 1.4, run: 5, skittish: false,
     flies: { alt: 20, speed: 10, radius: 34 },
-    body: { w: 1.4, h: 1.1, l: 2.75 }, head: 0.9, leg: 1,
+    body: { w: 1.4, h: 1.1, l: 2.75 }, head: 1.2, leg: 1,
+    breath: { range: 18, every: 6, damage: 3 },
     colour: 0xb8361e, headColour: 0xb8361e, legColour: 0x6a1a10,
     drops: { raw_meat: [6, 9], hide: [3, 5] },
+    sheds: { dragon_scale: [1, 3], dragon_claw: [0, 1] },
   },
   {
     id: 'frost_wyvern', name: 'Frost Wyvern', biomes: [], weight: 0.15,
     herd: [1, 1], hp: 100, walk: 1.4, run: 5, skittish: false, legs: 2,
     flies: { alt: 22, speed: 10.5, radius: 36 },
-    body: { w: 1.1, h: 1, l: 2.5 }, head: 0.85, leg: 1.1,
+    body: { w: 1.1, h: 1, l: 2.5 }, head: 1.15, leg: 1.1,
+    breath: { range: 18, every: 6, damage: 3 },
     colour: 0xa8d4ee, headColour: 0xa8d4ee, legColour: 0x5a8ab0,
     drops: { raw_meat: [5, 8], hide: [3, 4] },
+    sheds: { dragon_scale: [1, 3], dragon_claw: [0, 1] },
   },
   {
     id: 'storm_dragon', name: 'Storm Dragon', biomes: [], weight: 0.08,
     herd: [1, 1], hp: 110, walk: 1.4, run: 5, skittish: false,
     flies: { alt: 26, speed: 12, radius: 44 },
-    body: { w: 1.25, h: 1.05, l: 2.9 }, head: 0.9, leg: 0.95,
+    body: { w: 1.25, h: 1.05, l: 2.9 }, head: 1.2, leg: 0.95,
+    breath: { range: 20, every: 6, damage: 3 },
     colour: 0x2f7a4a, headColour: 0x2f7a4a, legColour: 0x1a4a2c,
     drops: { raw_meat: [5, 8], hide: [3, 5] },
+    sheds: { dragon_scale: [1, 3], dragon_claw: [0, 1] },
   },
 );
 // How much room each takes and how hard it is to shift (world/bodies.js),

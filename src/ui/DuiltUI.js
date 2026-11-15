@@ -14,7 +14,7 @@ import { TRAIN_DAYS, MAX_SOLDIERS, ORDERS } from '../world/Defenders.js';
 import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
-import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE } from '../config/structures.js';
+import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE, FOREST_WOODS, forestYield } from '../config/structures.js';
 import { BLOCKS, stationOf } from '../config/blocks.js';
 import { JOB_FOR_BUILDING, JOB_OUTFITS } from '../config/outfits.js';
 import { StationWork, usesSpots, batchSeconds } from '../duilt/StationWork.js';
@@ -702,6 +702,12 @@ export class DuiltUI {
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
     body.querySelector('[data-farm-compost]')?.addEventListener('click', () => actions.onCompostFarm?.());
+    body.querySelector('[data-forest-wood]')?.addEventListener('change', (e) => {
+      const r = this.duilt?.setForestWood(structure.id, e.target.value);
+      if (!r?.ok) this.bus.emit('toast', { kind: 'xp', title: r?.reason ?? 'Could not change that' });
+      else this.game.editedAt = Date.now();
+      this.showBuilding(structure, this.buildingActionsCache);
+    });
     body.querySelectorAll('[data-train]').forEach((b) => b.addEventListener('click', () => actions.onTrain?.(b.dataset.train)));
     body.querySelectorAll('[data-soldier-order]').forEach((b) => b.addEventListener('click', () => actions.onSoldierOrder?.(b.dataset.soldierOrder)));
     body.querySelector('[data-cube]')?.addEventListener('click', () => { this.closePanel('panel-building'); actions.onCube?.(); });
@@ -718,6 +724,16 @@ export class DuiltUI {
       this.confirm({ title: `Delete this ${spec?.name?.toLowerCase() ?? 'building'}?`, body: 'Its blocks stay where they are.', ok: 'Delete', danger: true })
         .then((yes) => { if (yes) actions.onDelete?.(); });
     });
+  }
+
+  /** IMP-33: which wood a forest grows, white and dark from Age 3. */
+  forestWoodHtml(structure) {
+    const d = this.duilt, age = d?.sandbox ? Infinity : d?.age ?? 1;
+    const open = Object.entries(FOREST_WOODS).filter(([, w]) => w.age <= age);
+    if (open.length < 2) return '';
+    const now = structure.wood ?? 'oak';
+    return `<label class="building-line">Grows
+      <select data-forest-wood aria-label="Which wood this forest grows">${open.map(([k, w]) => `<option value="${k}" ${k === now ? 'selected' : ''}>${escapeHtml(w.name)}</option>`).join('')}</select></label>`;
   }
 
   buildingBodyHtml(structure, spec, locked) {
@@ -747,6 +763,7 @@ export class DuiltUI {
           ${spec?.stores ? `<button class="${summary ? 'secondary' : 'primary'}" data-stores>Every storehouse</button>` : ''}
         </div>` : ''}
       </div>
+      ${spec?.woods ? this.forestWoodHtml(structure) : ''}
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
       ${structure.type === 'barracks' || structure.type === 'military' ? this.barracksHtml(structure) : ''}
       ${structure.type === 'workshop' || structure.type === 'foundry' ? this.workshopHtml(structure) : ''}
@@ -1056,6 +1073,7 @@ export class DuiltUI {
     if ((spec?.fromCrops || spec?.fromAnimals) && produces && (level?.yield ?? 1) !== 1) {
       produces = Object.fromEntries(Object.entries(produces).map(([k, v]) => [k, Math.ceil(v * level.yield)]));
     }
+    if (spec?.woods && structure?.wood && produces) produces = forestYield(produces, structure.wood);
     const every = rate?.everySeconds ?? spec?.everySeconds;
     if (!produces || !Object.keys(produces).length || !every) return null;
     const out = {};

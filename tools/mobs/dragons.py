@@ -1,4 +1,7 @@
 """
+IMP-45 (owner, 9 November: "dragon big needs to be bigger. And bigger head
+too"): every head 1.35 times, the Elder Dragon drawn 1.5 times over.
+
 Dragons (owner, 9 November: "Could you model a set of different dragons,
 like 4 types. One super big, the other three a bit smaller ... Dragons
 should have some dynamic movements of wings and all that").
@@ -116,7 +119,7 @@ def jaw_paint(main, teeth):
     return f
 
 
-def dragon(id, name, body, legs, neck, head, tail, wings, cols, spikes=2, horns=None, two_legs=False, extra=None):
+def dragon(id, name, body, legs, neck, head, tail, wings, cols, spikes=2, horns=None, two_legs=False, extra=None, scale=1):
     """
     body (w, h, l); legs (height, width); neck (rise, reach, width); head
     (w, h, length); tail (length of each of the three parts, base width);
@@ -226,12 +229,12 @@ def dragon(id, name, body, legs, neck, head, tail, wings, cols, spikes=2, horns=
             cubes.append(box(f'{bname}_claw{k}', bname, (x + dx - 0.6, 0, z - lw / 2 - 3.5), (x + dx + 0.6, 1.2, z - lw / 2 - 2), horn_paint(cols['horn'])))
     if extra:
         cubes += extra(H, B)
-    return dict(id=id, name=name, bones=bones, cubes=cubes, anim={}, scale=1)
+    return dict(id=id, name=name, bones=bones, cubes=cubes, anim={}, scale=scale)
 
 
 ELDER = dragon(
-    'elder_dragon', 'Elder Dragon',
-    body=(44, 36, 92), legs=(30, 12), neck=(46, 40, 16), head=(26, 20, 42),
+    'elder_dragon', 'Elder Dragon', scale=1.5,
+    body=(44, 36, 92), legs=(30, 12), neck=(46, 40, 16), head=(35.1, 27, 56.7),
     tail=(40, 18), wings=(70, 90, 64), spikes=5, horns=(26, 4, (-28, 0, 0)),
     cols=dict(main='#2a1e26', dark='#120c12', light='#4a3040', under='#c8962e', skin='#6a1a20', vein='#3a0c10',
               bone='#3a2a30', horn='#d8c8a0', eye='#ffcf3a', glow='#ffe58a'),
@@ -239,7 +242,7 @@ ELDER = dragon(
 
 FIRE = dragon(
     'fire_drake', 'Fire Drake',
-    body=(22, 18, 44), legs=(16, 6), neck=(22, 20, 9), head=(15, 12, 23),
+    body=(22, 18, 44), legs=(16, 6), neck=(22, 20, 9), head=(20.2, 16.2, 31.1),
     tail=(20, 9), wings=(34, 42, 30), spikes=3, horns=(12, 2.5, (-35, 0, 0)),
     cols=dict(main='#b8361e', dark='#6a1a10', light='#e8642a', under='#f0b24a', skin='#d8642a', vein='#8a2a12',
               bone='#6a1a10', horn='#2a1e1e', eye='#ffe14a', glow='#fff2a0'),
@@ -247,7 +250,7 @@ FIRE = dragon(
 
 FROST = dragon(
     'frost_wyvern', 'Frost Wyvern',
-    body=(18, 16, 40), legs=(18, 6), neck=(24, 18, 8), head=(14, 11, 22),
+    body=(18, 16, 40), legs=(18, 6), neck=(24, 18, 8), head=(18.9, 14.9, 29.7),
     tail=(22, 8), wings=(36, 46, 32), spikes=4, horns=(10, 2, (-40, 0, 0)), two_legs=True,
     cols=dict(main='#a8d4ee', dark='#5a8ab0', light='#e8f6ff', under='#f4fbff', skin='#cfe8f6', vein='#7aa8cc',
               bone='#5a8ab0', horn='#e8f6ff', eye='#3ad0ff', glow='#bff2ff'),
@@ -259,7 +262,7 @@ FROST = dragon(
 
 STORM = dragon(
     'storm_dragon', 'Storm Dragon',
-    body=(20, 17, 46), legs=(15, 6), neck=(22, 22, 9), head=(15, 12, 23),
+    body=(20, 17, 46), legs=(15, 6), neck=(22, 22, 9), head=(20.2, 16.2, 31.1),
     tail=(22, 8), wings=(36, 44, 30), spikes=2, horns=(9, 2, (-45, 0, 0)),
     cols=dict(main='#2f7a4a', dark='#1a4a2c', light='#5ab070', under='#e8d65a', skin='#3a8a5a', vein='#e8d65a',
               bone='#1a4a2c', horn='#f2e8a0', eye='#ffef6a', glow='#fff8c0'),
