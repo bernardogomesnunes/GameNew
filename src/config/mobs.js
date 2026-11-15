@@ -154,12 +154,14 @@ MOBS.push(
 // tail are moved by MobView. No biome spawns them: each keeps a nest
 // (IMP-45, world/landmarks.js), circles over it, breathes fire at whoever
 // comes near (`breath`) and sheds scales and claws (`sheds`).
+// Sizes are the models' (IMP-47): body, leg and head in blocks, and `mouth`,
+// where its fire leaves it: how far up from its feet and out ahead of its middle.
 MOBS.push(
   {
     id: 'elder_dragon', name: 'Elder Dragon', biomes: [], weight: 0.08,
     herd: [1, 1], hp: 400, walk: 1.2, run: 4, skittish: false,
     flies: { alt: 30, speed: 11, radius: 60 },
-    body: { w: 4.1, h: 3.4, l: 8.6 }, head: 3.25, leg: 2.85,
+    body: { w: 4.3, h: 3.4, l: 8.6 }, head: 2.7, leg: 2.6, mouth: { up: 9.4, out: 12.2 },
     breath: { range: 26, every: 5, damage: 6 },
     colour: 0x2a1e26, headColour: 0x2a1e26, legColour: 0x120c12,
     drops: { raw_meat: [16, 24], hide: [8, 12] },
@@ -169,7 +171,7 @@ MOBS.push(
     id: 'fire_drake', name: 'Fire Drake', biomes: [], weight: 0.15,
     herd: [1, 1], hp: 120, walk: 1.4, run: 5, skittish: false,
     flies: { alt: 20, speed: 10, radius: 34 },
-    body: { w: 1.4, h: 1.1, l: 2.75 }, head: 1.2, leg: 1,
+    body: { w: 1.3, h: 1, l: 2.6 }, head: 0.7, leg: 0.8, mouth: { up: 2.4, out: 3.2 },
     breath: { range: 18, every: 6, damage: 3 },
     colour: 0xb8361e, headColour: 0xb8361e, legColour: 0x6a1a10,
     drops: { raw_meat: [6, 9], hide: [3, 5] },
@@ -179,7 +181,7 @@ MOBS.push(
     id: 'frost_wyvern', name: 'Frost Wyvern', biomes: [], weight: 0.15,
     herd: [1, 1], hp: 100, walk: 1.4, run: 5, skittish: false, legs: 2,
     flies: { alt: 22, speed: 10.5, radius: 36 },
-    body: { w: 1.1, h: 1, l: 2.5 }, head: 1.15, leg: 1.1,
+    body: { w: 0.95, h: 0.8, l: 2.4 }, head: 0.6, leg: 0.95, mouth: { up: 2.8, out: 3.05 },
     breath: { range: 18, every: 6, damage: 3 },
     colour: 0xa8d4ee, headColour: 0xa8d4ee, legColour: 0x5a8ab0,
     drops: { raw_meat: [5, 8], hide: [3, 4] },
@@ -189,7 +191,7 @@ MOBS.push(
     id: 'storm_dragon', name: 'Storm Dragon', biomes: [], weight: 0.08,
     herd: [1, 1], hp: 110, walk: 1.4, run: 5, skittish: false,
     flies: { alt: 26, speed: 12, radius: 44 },
-    body: { w: 1.25, h: 1.05, l: 2.9 }, head: 1.2, leg: 0.95,
+    body: { w: 1.05, h: 0.9, l: 3 }, head: 0.65, leg: 0.75, mouth: { up: 2.4, out: 3.85 },
     breath: { range: 20, every: 6, damage: 3 },
     colour: 0x2f7a4a, headColour: 0x2f7a4a, legColour: 0x1a4a2c,
     drops: { raw_meat: [5, 8], hide: [3, 5] },
