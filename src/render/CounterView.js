@@ -31,7 +31,9 @@ const CAMERA_UP = 2.2, CAMERA_BACK = 1.8;
  * nearer, and a touch that just misses a part takes the nearest one within
  * FINGER of it (in screen halves: 0.14 is about a fingertip on a phone).
  */
-const TOUCH_NEAR = 0.78, FINGER = 0.14;
+const TOUCH_NEAR = 0.85, FINGER = 0.14;
+/** A cut part waiting in the row is drawn this much bigger than in its place, to be seen and picked. */
+const WAIT_SCALE = 1.7;
 const COARSE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
 export class CounterView {
@@ -139,7 +141,7 @@ export class CounterView {
         .sub(this._v.set((box.minX + box.maxX) / 2 - this.centre.x, box.minY - this.centre.y, (box.minZ + box.maxZ) / 2 - this.centre.z).multiplyScalar(SCALE))
         .add(mesh.position);
       mesh.visible = !!w && i < w.cut;
-      mesh.position.copy(w?.fitted[i] ? mesh.userData.slot : mesh.userData.home);
+      this.rest(mesh, !!w?.fitted[i]);
       g.add(mesh);
       return mesh;
     });
@@ -173,10 +175,18 @@ export class CounterView {
     return r;
   }
 
+  /** Puts a part where it belongs: in its place at true size, or waiting in the row, bigger, its foot on the top. */
+  rest(m, fitted) {
+    m.scale.setScalar(fitted ? 1 : WAIT_SCALE);
+    m.position.copy(fitted ? m.userData.slot : m.userData.home);
+    if (!fitted) m.position.y += (m.geometry.parameters.height * (WAIT_SCALE - 1)) / 2;
+  }
+
   /** Moves part `i` so it sits at `point` (a scene position on the top). */
   dragTo(i, point) {
     const m = this.parts[i];
     if (!m?.visible) return;
+    m.scale.setScalar(1);
     m.position.copy(point).sub(this.group.position);
     m.position.y = m.userData.slot.y;
   }
@@ -191,7 +201,7 @@ export class CounterView {
       this.finishIfDone();
       return true;
     }
-    m.position.copy(this.counters.work(this.key)?.fitted[i] ? m.userData.slot : m.userData.home);
+    this.rest(m, !!this.counters.work(this.key)?.fitted[i]);
     return false;
   }
 
