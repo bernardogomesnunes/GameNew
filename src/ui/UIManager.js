@@ -543,8 +543,13 @@ export class UIManager {
             <span id="map-scale"></span>
             <button class="secondary" id="map-zoom-in">Zoom in</button>
           </div>
+          <div id="map-coords"></div>
+          <div id="map-pins">
+            <input id="map-pin-name" type="text" maxlength="24" placeholder="Name a point" aria-label="Name for a point on the map">
+            <button class="secondary" id="map-pin-here">Mark where I stand</button>
+          </div>
           <div id="map-travel" class="building-actions"></div>
-          <div class="export-note">A snapshot from where you were standing when you opened it — reopen to recentre.</div>`,
+          <div class="export-note">A snapshot from where you were standing when you opened it — reopen to recentre. Tap the map to mark a point; tap a point to remove it.</div>`,
         'panel-clear': `
           <div id="clear-list"></div>
           <div class="export-note" id="clear-note"></div>`,
@@ -2768,6 +2773,30 @@ export class UIManager {
       zoomOut.addEventListener('click', () => this.stepMapZoom(1));
       zoomIn.dataset.wired = '1';
       zoomIn.addEventListener('click', () => this.stepMapZoom(-1));
+      // Owner, 15 November: "add interest points to it". A tap on the map
+      // marks that spot with the name in the box; a tap on a point removes it.
+      const name = this.q('#map-pin-name');
+      const mark = (wx, wz) => {
+        const r = this.game.duilt?.addPin(wx, wz, name.value);
+        if (!r?.ok) return void this.toast({ kind: 'xp', title: r?.reason ?? 'Could not mark that' });
+        name.value = '';
+        this.game.editedAt = Date.now();
+        this.drawMap();
+      };
+      this.q('#map-pin-here').addEventListener('click', () => mark(this.game.player.position.x, this.game.player.position.z));
+      canvas.addEventListener('click', async (e) => {
+        if (!this.mapView || !this.mapModule) return;
+        const box = canvas.getBoundingClientRect(), radius = this.mapModule.MAP_ZOOMS[this.mapView.zoomIndex];
+        const wx = this.mapView.x + ((e.clientX - box.left) / box.width - 0.5) * radius * 2;
+        const wz = this.mapView.z + ((e.clientY - box.top) / box.height - 0.5) * radius * 2;
+        const pins = this.game.duilt?.pins ?? [], reach = (radius * 2 / box.width) * 22;
+        const hit = pins.findIndex((p) => Math.hypot(p.x - wx, p.z - wz) <= reach);
+        if (hit < 0) return mark(wx, wz);
+        if (!await this.confirm({ title: `Remove "${pins[hit].name}" from the map?`, ok: 'Remove' })) return;
+        this.game.duilt.removePin(pins.indexOf(pins[hit]));
+        this.game.editedAt = Date.now();
+        this.drawMap();
+      });
     }
   }
 
@@ -2791,7 +2820,10 @@ export class UIManager {
     const home = gen.biomes ? { x: gen.biomes.centreX, z: gen.biomes.centreZ } : null;
     const sites = this.game.kingdomSites?.() ?? [];
     const places = (duilt?.foundPlaces() ?? []).filter((p) => !(p.kind === 'kingdom' && sites.some((s) => s.kind === 'kingdom')));
-    drawWorldMap(canvas, gen, x, z, yaw, { radius, home, territory, places, sites });
+    drawWorldMap(canvas, gen, x, z, yaw, { radius, home, territory, places, sites, pins: duilt?.pins ?? [] });
+    // Owner, 15 November: "Map should show coordinates where I'm standing".
+    const at = this.game.player.position, coords = this.q('#map-coords');
+    if (coords) coords.textContent = `You are at ${Math.floor(at.x)}, ${Math.floor(at.y)}, ${Math.floor(at.z)} (east, height, south)`;
     // In Creative, a button to go and look at each kingdom. On the dark
     // path, the expedition: send the army ahead, or join it at its camp.
     const travel = this.q('#map-travel');

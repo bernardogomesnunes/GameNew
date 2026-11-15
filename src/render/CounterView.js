@@ -25,6 +25,14 @@ const SNAP = 0.15;
 const SCALE = 0.55;
 /** Far enough up and back that the whole top fits a phone held upright (390 px wide). */
 const CAMERA_UP = 2.2, CAMERA_BACK = 1.8;
+/**
+ * Owner, 15 November: "the items need to be bigger and pieces too, cause in
+ * mobile it's hard to pick them". Under a finger the camera sits this much
+ * nearer, and a touch that just misses a part takes the nearest one within
+ * FINGER of it (in screen halves: 0.14 is about a fingertip on a phone).
+ */
+const TOUCH_NEAR = 0.78, FINGER = 0.14;
+const COARSE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
 export class CounterView {
   constructor({ scene, camera, counters, bus = null, onDone = null }) {
@@ -196,7 +204,15 @@ export class CounterView {
   partAt(ndcX, ndcY) {
     this._ray.setFromCamera({ x: ndcX, y: ndcY }, this.camera);
     const hit = this._ray.intersectObjects(this.parts.filter((m) => m.visible), false)[0];
-    return hit ? this.parts.indexOf(hit.object) : -1;
+    if (hit) return this.parts.indexOf(hit.object);
+    let best = -1, bestD = FINGER;
+    this.parts.forEach((m, i) => {
+      if (!m.visible) return;
+      m.getWorldPosition(this._v).project(this.camera);
+      const d = Math.hypot(this._v.x - ndcX, this._v.y - ndcY);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    return best;
   }
 
   /**
@@ -213,7 +229,8 @@ export class CounterView {
   /** Each frame: the camera over the counter, the saw stroke, a finished piece taken. */
   update(dt) {
     if (!this.active) return;
-    this.camera.position.set(this.top.x, this.top.y + CAMERA_UP, this.top.z + CAMERA_BACK);
+    const near = COARSE ? TOUCH_NEAR : 1;
+    this.camera.position.set(this.top.x, this.top.y + CAMERA_UP * near, this.top.z + CAMERA_BACK * near);
     this.camera.lookAt(this.top);
     if (this.sawing > 0) {
       this.sawing = Math.max(0, this.sawing - dt);
