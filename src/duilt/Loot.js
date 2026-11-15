@@ -107,6 +107,12 @@ export const LOOT = {
       ['armour_leather_feet', 0.25, 1, 1], ['armour_stone_body_warded', 0.04, 1, 1], ['coin', 0.55, 5, 15]],
     ring: 0.08,
   },
+  // IMP-45: a dragon's hoard, and the relic it keeps.
+  dragon_nest: {
+    name: 'A dragon\'s hoard',
+    items: [['dragon_relic', 1, 1, 1], ['gold', 1, 8, 16], ['ruby', 0.6, 1, 3], ['diamond', 0.5, 1, 3], ['dragon_scale', 0.7, 1, 3], ['coin', 1, 40, 90]],
+    ring: 0.15,
+  },
   monument: {
     name: 'What was left at the monument',
     items: [['gold', 0.9, 4, 9], ['sword_iron', 0.3, 1, 1], ['armour_stone_body', 0.2, 1, 1], ['armour_sky_body', 0.15, 1, 1],

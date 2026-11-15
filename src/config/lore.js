@@ -106,6 +106,12 @@ export const LORE = [
       : 'People talk of a beast that walks some lord\'s land at night — a guardian, sent by a god.'),
   },
   {
+    id: 'dragons', title: 'The dragons', icon: '🐉',
+    known: (k) => k.found.has('dragon_nest') || learned(k, 'dragons'),
+    hint: 'Far out, past the cities, something circles over a hoard of gold. Find its nest.',
+    text: () => 'Older than both kingdoms, the dragons kept to the far wilds, each over its own nest. They love gold as the gods love prayer, and each guards a relic from before the sky was lifted. They burn whoever comes near. What they shed (scale and claw) is the only thing hard enough to make an axe no creature but a god can stand against.',
+  },
+  {
     id: 'chains', title: 'The four chains', icon: '⛓',
     known: (k) => learned(k, 'towers') || k.state.sworn,
     hint: 'Only those who mean to take the sky need to know.',

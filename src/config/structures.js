@@ -27,6 +27,19 @@ const ALTARS = [32, GOLD, 180, 181];
 const LIGHTS = [26, 85, 190, 533];
 const WINDOWS = [GLASS, 15, 16, 176, 177, 178, 179];
 const GILDING = [159, GOLD];
+/** A forest's trees, in any of the three woods (IMP-33). */
+const FOREST_LOGS = [WOOD, 41, 43], FOREST_LEAVES = [LEAVES, 42, 44];
+/** The woods a forest can grow, from what age, and what each yields in place of oak. */
+export const FOREST_WOODS = {
+  oak: { name: 'Oak', age: 1, swap: {} },
+  white: { name: 'White wood', age: 3, swap: { wood: 'white_wood', leaves: 'white_leaves' } },
+  dark: { name: 'Dark wood', age: 3, swap: { wood: 'dark_wood', leaves: 'dark_leaves' } },
+};
+/** What a forest set to `wood` yields in place of `produces`. */
+export function forestYield(produces, wood) {
+  const swap = FOREST_WOODS[wood]?.swap ?? {};
+  return Object.fromEntries(Object.entries(produces).map(([id, n]) => [swap[id] ?? id, n]));
+}
 const BANNERS = [182, 183, 184, 185, 186, 187, 188, 189];
 // The Sanctuaries' (Phase 7d).
 const WHITE_STONE = [MARBLE, 158, 159, 166];
@@ -155,13 +168,13 @@ export const STRUCTURES = [
     requires: [
       {
         id: 'trunks',
-        test: (ctx) => count(ctx, [WOOD]) >= 12,
-        say: (ctx) => `Needs ${12 - count(ctx, [WOOD])} more wood — grow or plant more trees`,
+        test: (ctx) => count(ctx, FOREST_LOGS) >= 12,
+        say: (ctx) => `Needs ${12 - count(ctx, FOREST_LOGS)} more logs — grow or plant more trees`,
       },
       {
         id: 'canopy',
-        test: (ctx) => count(ctx, [LEAVES]) >= 20,
-        say: (ctx) => `Needs ${20 - count(ctx, [LEAVES])} more leaves — the trees are too bare`,
+        test: (ctx) => count(ctx, FOREST_LEAVES) >= 20,
+        say: (ctx) => `Needs ${20 - count(ctx, FOREST_LEAVES)} more leaves — the trees are too bare`,
       },
       {
         id: 'soil',
@@ -182,6 +195,11 @@ export const STRUCTURES = [
     produces: { wood: 6, leaves: 1, fruit: 1 },
     everySeconds: 21600,
     skill: 'foraging',
+    // IMP-33 (owner, 8 November): "I should be able to build white leaves and
+    // dark wood farms ... the card should have a way to select which one.
+    // This should only be available after age 3." Any trees count; the card's
+    // choice (structure.wood) picks what it yields. See forestYield.
+    woods: true,
   },
 
   {

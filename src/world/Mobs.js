@@ -39,13 +39,25 @@ const SWIM_SLOW = 0.6;      // how much of its speed an animal keeps in water
 
 const LEAVES = new Set([5, 42, 44, 517]);
 
+/** IMP-45: how often nests are looked at, how near you must be, and how long a fallen nest's dragon takes to come back. */
+const NEST_EVERY = 3, NEST_NEAR = 160, NEST_RESPAWN_MS = 20 * 60 * 1000;
+/** How long a breath of fire lasts on screen. */
+export const BREATH_SECONDS = 1.2;
+
 export class Mobs {
   /**
    * @param avoid  (x, z) => true where nothing should spawn — your own
    *               settlement, so a herd doesn't appear in the middle of it.
    */
-  constructor({ world, rand = Math.random, avoid = null, cap = CAP, onBite = null }) {
+  constructor({ world, rand = Math.random, avoid = null, cap = CAP, onBite = null, onBreath = null }) {
     this.world = world;
+    // (dragon, damage): a dragon's fire reaching you (IMP-45).
+    this.onBreath = onBreath;
+    /** IMP-45: the dragon nests, { key, x, y, z, type }, each keeping one dragon. */
+    this.nests = [];
+    /** When each nest's dragon was last brought down (ms), so it is a while coming back. */
+    this.nestSlain = new Map();
+    this.sinceNests = NEST_EVERY;
     // (mob, damage): a dinosaur's bite landing on you — Game hurts you for it.
     this.onBite = onBite;
     this.rand = rand;
@@ -72,6 +84,8 @@ export class Mobs {
       if (!m.dead && (m.penId || m.owned || m.still || Math.hypot(m.x - player.x, m.z - player.z) < DESPAWN)) list[kept++] = m;
     }
     list.length = kept;
+    this.sinceNests += dt;
+    if (this.sinceNests >= NEST_EVERY) { this.sinceNests = 0; this.tendNests(player); }
     this.sinceSpawn += dt;
     if (this.sinceSpawn >= SPAWN_EVERY && this.wild() < this.cap) {
       this.sinceSpawn = 0;
@@ -84,6 +98,25 @@ export class Mobs {
       if (MOBS_BY_ID.get(m.type)?.flies) { this.fly(m, dt, player); continue; }
       this.think(m, dt, player, lure);
       this.move(m, dt);
+    }
+  }
+
+  /**
+   * IMP-45: a nest near you that has no dragon gets its own back, circling
+   * over it, unless that dragon fell less than NEST_RESPAWN_MS ago.
+   */
+  tendNests(player, now = Date.now()) {
+    for (const n of this.nests) {
+      if (Math.hypot(n.x - player.x, n.z - player.z) > NEST_NEAR) continue;
+      if (this.list.some((m) => m.nest === n.key && !m.dead)) continue;
+      if (now - (this.nestSlain.get(n.key) ?? -Infinity) < NEST_RESPAWN_MS) continue;
+      const spec = MOBS_BY_ID.get(n.type);
+      if (!spec?.flies) continue;
+      const d = this.make(spec, n.x + 0.5, n.y + spec.flies.alt, n.z + 0.5);
+      d.home = { x: n.x + 0.5, z: n.z + 0.5 };
+      d.nest = n.key;
+      d.airborne = true;
+      this.list.push(d);
     }
   }
 
@@ -426,7 +459,19 @@ export class Mobs {
       m.fleeFor -= dt;
       m.timer = Math.max(m.timer, 20);
       if (!m.airborne) { m.airborne = true; m.vy = 0; }
-      m.home = { x: m.home.x + (m.x - player.x) * 0.02, z: m.home.z + (m.z - player.z) * 0.02 };
+      // A dragon with a nest keeps to it.
+      if (!m.nest) m.home = { x: m.home.x + (m.x - player.x) * 0.02, z: m.home.z + (m.z - player.z) * 0.02 };
+    }
+    // IMP-45: fire at whoever comes near. It turns to you and breathes, and
+    // the flames (`breathing`, drawn by FireBreathView) reach you at once.
+    m.breathIn = Math.max(0, (m.breathIn ?? spec.breath?.every ?? 0) - dt);
+    m.breathing = Math.max(0, (m.breathing ?? 0) - dt);
+    const reach = spec.breath && player ? Math.hypot(player.x - m.x, player.y - m.y, player.z - m.z) : Infinity;
+    if (spec.breath && m.airborne && reach <= spec.breath.range && m.breathIn <= 0) {
+      m.breathIn = spec.breath.every;
+      m.breathing = BREATH_SECONDS;
+      m.breathAt = { x: player.x, y: player.y + 1, z: player.z };
+      this.onBreath?.(m, spec.breath.damage);
     }
     if (!m.airborne) {
       // Resting on the ground; off again when the rest is over.
@@ -444,7 +489,7 @@ export class Mobs {
     const tx = m.home.x + Math.sin(ang) * r, tz = m.home.z + Math.cos(ang) * r;
     const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz) || 1;
     const step = Math.min(d, f.speed * dt * (landing ? 0.6 : 1));
-    const heading = Math.atan2(dx, dz);
+    const heading = m.breathing > 0 && m.breathAt ? Math.atan2(m.breathAt.x - m.x, m.breathAt.z - m.z) : Math.atan2(dx, dz);
     const turn = Math.atan2(Math.sin(heading - m.facing), Math.cos(heading - m.facing));
     const maxTurn = 1.6 * dt;
     m.facing += Math.max(-maxTurn, Math.min(maxTurn, turn));
@@ -523,6 +568,7 @@ export class Mobs {
     // more for a sword. One you're sat on stays under you.
     if (!m.ridden && !m.still) knock(m, fromX, fromZ, power, spec.mass);
     if (m.hp <= 0) {
+      if (m.nest) this.nestSlain.set(m.nest, Date.now());
       m.dying = DYING_TIME;
       m.target = null;
       m.speed = 0;

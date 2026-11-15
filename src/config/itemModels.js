@@ -369,6 +369,11 @@ ITEM_MODELS.jar = [
 const ingot = (main, top) => [box(0.16, 0, 0.3, 0.84, 0.14, 0.7, main), box(0.22, 0.14, 0.35, 0.78, 0.24, 0.65, top)];
 ITEM_MODELS.iron_ingot = ingot(0xb3b8bf, 0xd6dae0);
 ITEM_MODELS.gold = ingot(0xe9b82c, 0xf9d040);
+// IMP-45: the Dragon Axe, a crimson head with a bone edge.
+ITEM_MODELS.dragon_axe = axeModel(0x8a2a3a, 0xf0e8d4);
+// The relic from a dragon's hoard: a gold cup with a red stone.
+ITEM_MODELS.dragon_relic = [box(0.36, 0, 0.36, 0.64, 0.08, 0.64, 0xc8962e), box(0.45, 0.08, 0.45, 0.55, 0.3, 0.55, 0xe9b82c),
+  box(0.3, 0.3, 0.3, 0.7, 0.62, 0.7, 0xf3cf6a), box(0.44, 0.44, 0.27, 0.56, 0.54, 0.3, 0xb8364a)];
 ITEM_MODELS.copper_ingot = ingot(0xc27a4e, 0xdd9a6c);
 // Coins: a short stack, and one more lying beside it.
 ITEM_MODELS.coin = [

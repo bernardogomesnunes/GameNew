@@ -87,6 +87,7 @@ import { TrainView } from './render/TrainView.js';
 import { RAIL, BUNKER } from './world/Trains.js';
 import { CartView } from './render/CartView.js';
 import { FlameView } from './render/FlameView.js';
+import { FireBreathView } from './render/FireBreathView.js';
 import { SmokeView } from './render/SmokeView.js';
 import { GrassView } from './render/GrassView.js';
 import { ArrowView } from './render/ArrowView.js';
@@ -101,9 +102,12 @@ import { cubeSite, cubeDesign, WAY_OUT, CUBE_SIZE } from './world/godCube.js';
 import { TOOL_FOR, toolEffectiveness, itemName, ITEMS, ITEMS_BY_ID, isFood, isTool, BARE_HANDS, ITEM_FOR_BLOCK } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf, cropBlock } from './config/crops.js';
-import { Mobs, rayBox } from './world/Mobs.js';
+import { Mobs, rayBox, surfaceAt } from './world/Mobs.js';
 import { Crowd, gatherCrowd, knock, SWORD_KNOCK, ARROW_KNOCK } from './world/bodies.js';
 import { landmarksFor, PLACE_NAMES } from './world/landmarks.js';
+import { DRAGON_SCALE, DRAGON_CLAW } from './config/blocks.js';
+/** IMP-45: what one blow of the Dragon Axe does: more than any creature but a god has. */
+const DRAGON_AXE_BLOW = 100000;
 import { LOOT } from './duilt/Loot.js';
 import { Projectiles, bestAim, predictArc, craterCells, MAX_RANGE } from './world/Projectiles.js';
 import { ProjectileView } from './render/ProjectileView.js';
@@ -639,6 +643,7 @@ export class Game {
     this.machineView = new MachineView(this.scene);
     this.trainView = new TrainView(this.scene);
     this.flames = new FlameView(this.scene);
+    this.fireBreath = new FireBreathView(this.scene);
     this.smoke = new SmokeView(this.scene);
     this.grass = new GrassView(this.scene);
     this.arrowView = new ArrowView(this.scene);
@@ -4591,7 +4596,9 @@ export class Game {
   }
 
   /** How hard a blow lands: the tool's damage (a fist 1), plus kombucha's. */
-  blowDamage(tool) {
+  blowDamage(tool, target = null) {
+    // IMP-45: the Dragon Axe fells anything in one blow, but not a god.
+    if (tool?.id === 'dragon_axe' && target && !target.god) return DRAGON_AXE_BLOW;
     // Bare hands take a whole heart — asked for directly: "without weapons
     // 1 heart should go".
     return (tool?.damage ?? FIST_DAMAGE) + (this.duilt?.boosted('strength') ? KOMBUCHA_DAMAGE : 0);
@@ -4762,8 +4769,10 @@ export class Game {
     this.digTarget = null;
     const tool = ITEMS_BY_ID.get(this.selectedItemId);
     const { x, z } = this.player.position;
-    const { killed, drops } = this.mobs.hit(mob, this.blowDamage(tool), x, z, this.blowKnock(tool));
+    const { killed, drops } = this.mobs.hit(mob, this.blowDamage(tool, { god: false }), x, z, this.blowKnock(tool));
     this.sound?.strike({ weapon: !!tool?.weapon });
+    // A dragon struck now and then sheds a scale (IMP-45).
+    if (MOBS_BY_ID.get(mob.type)?.sheds && !killed && Math.random() < 0.15) this.shedDragon(mob, { dragon_scale: 1 });
     if (tool?.damage && this.duilt && this.duilt.inventory.useTool(tool.id) === 'worn') {
       this.ui.toast({ kind: 'xp', title: `${tool.name} broke`, body: 'Worn out — craft another' });
     }
@@ -4774,6 +4783,11 @@ export class Game {
   /** An animal brought down, by a blow or an arrow: experience, what it left, and saying so. */
   mobFell(mob, drops) {
     const spec = MOBS_BY_ID.get(mob.type);
+    if (spec.sheds) {
+      const shed = {};
+      for (const [id, [lo, hi]] of Object.entries(spec.sheds)) shed[id] = lo + Math.floor(Math.random() * (hi - lo + 1));
+      this.shedDragon(mob, shed);
+    }
     // Experience for a hunt — not for one of your own penned animals.
     if (!mob.penId) {
       this.gamification.onKill({ kind: 'mob', hp: spec.hp, name: `a ${spec.name.toLowerCase()}` });
@@ -4942,7 +4956,7 @@ export class Game {
     const { x, z } = this.player.position;
     // Struck in disguise: the first blow lands unseen, and hard — and then they know.
     const ambush = WANDERERS[p.kind]?.sky && this.unseen();
-    const res = this.wanderers.hit(p, this.blowDamage(tool) * (ambush ? AMBUSH : 1), x, z, this.blowKnock(tool));
+    const res = this.wanderers.hit(p, this.blowDamage(tool, { god: !!WANDERERS[p.kind]?.god }) * (ambush ? AMBUSH : 1), x, z, this.blowKnock(tool));
     if (ambush) this.revealDisguise();
     if (!res) return false;
     // An upgraded sword (playtest, P6): stuns, burns or freezes as it lands.
@@ -6235,6 +6249,24 @@ export class Game {
    * when it's full you're discovered — every guard near knows you, and it's
    * open battle. Leave the island and it's forgotten.
    */
+  /** IMP-31: on good terms, the Sky King's gifts, the first time you come to his kingdom. */
+  checkSkyGift() {
+    const d = this.duilt;
+    if (d?.skyGiftDue() && this.skyOpen()) {
+      const gen = this.world?.gen, at = this.player.position;
+      if (gen && Math.hypot(skyAt(gen).x - at.x, skyAt(gen).z - at.z) <= SKY_ATTACK_OUT) {
+        const got = d.giveSkyGift();
+        if (got?.gave) {
+          this.editedAt = Date.now();
+          this.ui?.toast({ kind: 'achievement', title: 'Gifts from the Sky King', body: 'For breaking the Stone Kingdom\'s raids: a sky sword, a set of sky armour and 20 gold ingots.' });
+        } else if (got?.full && !this.skyGiftAsked) {
+          this.skyGiftAsked = true;
+          this.ui?.toast({ kind: 'challenge', title: 'The Sky King has gifts for you', body: 'Make room for 5 pieces of gear and 20 gold ingots, and come back.' });
+        }
+      }
+    }
+  }
+
   tickDisguise(dt) {
     const d = this.duilt;
     const on = this.disguised();
@@ -7234,6 +7266,40 @@ export class Game {
     this.sound?.blow?.(damage >= 4, { x: m.x, z: m.z });
   }
 
+  /** IMP-45: a dragon's fire reaching you. */
+  dragonFire(m, damage) {
+    if (!this.duilt || this.duilt.sandbox) return;
+    const taken = this.duilt.hurt(damage, 'dragon');
+    if (!taken) return;
+    this.player.nudge(this.player.position.x - m.x, this.player.position.z - m.z, 3);
+    this.sound?.blow?.(true, { x: m.x, z: m.z });
+  }
+
+  /**
+   * IMP-45 (owner: "Dragons drop claws and scales randomly ... pick them by
+   * click break on them"): what a dragon sheds lands on the ground near it,
+   * a scale or claw on top of a block, to be broken to pick up.
+   */
+  shedDragon(mob, items) {
+    const blocks = { dragon_scale: DRAGON_SCALE, dragon_claw: DRAGON_CLAW };
+    let placed = 0;
+    for (const [id, n] of Object.entries(items)) {
+      for (let k = 0; k < n; k++) {
+        for (let tries = 0; tries < 8; tries++) {
+          const x = Math.floor(mob.x + (Math.random() - 0.5) * 6), z = Math.floor(mob.z + (Math.random() - 0.5) * 6);
+          const top = surfaceAt(this.world, x, z);
+          if (top == null) continue;
+          const y = Math.ceil(top);
+          if (this.world.getBlock(x, y, z) !== AIR) continue;
+          this.world.setBlock(x, y, z, blocks[id]);
+          placed++;
+          break;
+        }
+      }
+    }
+    return placed;
+  }
+
   /** Eggs whose time has come (DuiltGame.hatchDue): out comes a dinosaur, tame, and yours. */
   hatchEggs(dt) {
     this.eggClock = (this.eggClock ?? 0) + dt;
@@ -8183,7 +8249,7 @@ export class Game {
       this.cubeTick();
       this.stepSounds(wasAt, wasSwimming);
       if (this.duilt) {
-        if(this.peerSession?.role!=='guest')this.duilt.tick(dt, { resting: this.restingAtHome(wasAt) });
+        if(this.peerSession?.role!=='guest')this.duilt.tick(dt, { resting: this.restingAtHome(wasAt), regen: this.selectedItemId === 'dragon_axe' });
         this.feelHurt(dt);
         // The White Ring (Phase 7c): faster on your feet, and a higher jump.
         const white = this.duilt.ringWorn() === 'white';
@@ -8201,6 +8267,7 @@ export class Game {
       this.updateCracks();
       this.lights.update(this.world, this.player.position, { enabled: this.graphics.lights !== false, look: this.player.lookDirection(), night: 1 - (this.dayCycle?.light?.day ?? 1) });
       this.flames.update(this.world, this.player.position);
+      this.fireBreath.update(this.mobs?.list);
       this.smoke.update(this.world, this.player.position);
       this.grass.update(this.world, this.player.position, performance.now(), { enabled: this.graphics.grass !== false });
       // The wind in the leaves (ChunkMesher's WIND).
@@ -8223,6 +8290,7 @@ export class Game {
       this.tickArmy(dt);
       this.tickSkyAttack();
       this.tickSinking();
+      this.checkSkyGift();
       this.tickDisguise(dt);
       // The border, drawn again where its ground has loaded since.
       this.duilt?.territory.refreshIfStale();
@@ -8395,7 +8463,14 @@ export class Game {
         world: this.world,
         avoid: (x, z) => !!(this.duilt && !this.duilt.sandbox && this.duilt.territory.contains(x, z)),
         onBite: (m, damage) => this.dinoBites(m, damage),
+        onBreath: (m, damage) => this.dragonFire(m, damage),
       });
+      // IMP-45: each dragon nest keeps one dragon: the first an Elder Dragon, the rest one of the three smaller ones.
+      const smaller = ['fire_drake', 'frost_wyvern', 'storm_dragon'];
+      this.mobs.nests = landmarksFor(this.world.gen).filter((l) => l.kind === 'dragon_nest').map((l, i) => ({
+        key: `dragon_nest@${l.x},${l.z}`, x: l.x, y: l.y, z: l.z,
+        type: i === 0 ? 'elder_dragon' : smaller[Math.abs(l.x * 31 + l.z * 17) % smaller.length],
+      }));
       this.mobsHerdOf = null;
     }
     if (this.fireflies?.world !== this.world) this.fireflies = new Fireflies({ world: this.world });

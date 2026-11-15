@@ -62,8 +62,8 @@ const struck = (type, power = 1) => {
   ok(`a sword knocks further than a fist (${sword.went.toFixed(2)} against ${deer.went.toFixed(2)})`, sword.went > deer.went * 1.3);
   ok('Game hits harder with a sword in hand, and an arrow less',
     /blowKnock\(tool\) \{\s*return tool\?\.weapon && !tool\.ranged \? SWORD_KNOCK : 1;/.test(game)
-    && /this\.mobs\.hit\(mob, this\.blowDamage\(tool\), x, z, this\.blowKnock\(tool\)\)/.test(game)
-    && /this\.wanderers\.hit\(p, this\.blowDamage\(tool\) \* \(ambush \? AMBUSH : 1\), x, z, this\.blowKnock\(tool\)\)/.test(game)
+    && /this\.mobs\.hit\(mob, this\.blowDamage\(tool(, \{[^}]*\})?\), x, z, this\.blowKnock\(tool\)\)/.test(game)
+    && /this\.wanderers\.hit\(p, this\.blowDamage\(tool(, \{[^}]*\})?\) \* \(ambush \? AMBUSH : 1\), x, z, this\.blowKnock\(tool\)\)/.test(game)
     && /arrow\.z - arrow\.vz, ARROW_KNOCK\)/.test(game));
   // The one that fights back is thrown too, and still turns on you.
   const mobs = new Mobs({ world: flat(), rand: rng(2), cap: 0 });

@@ -204,6 +204,12 @@ export const ITEMS = [
   // With the bow in hand, Break looses an arrow (Game.shootBow).
   { id: 'hemp_fibre', name: 'Hemp Fibre', kind: 'raw', stackTo: STACK_BULK, color: 0xc9b98a, glyph: 'fibre', madeBy: 'Picked from ripe hemp' },
   { id: 'spinning_wheel', name: 'Spinning Wheel', kind: 'refined', stackTo: 10, color: 0xa87a4c, glyph: 'string', block: 534, madeBy: 'Made by hand from oak planks and a log. Place it and spin hemp into string' },
+  { id: 'dragon_scale', name: 'Dragon Scale', kind: 'raw', stackTo: STACK_GOODS, color: 0x8a2a3a, glyph: 'crystal', block: 535, madeBy: 'Shed by a dragon. Break it where it lies to pick it up' },
+  { id: 'dragon_claw', name: 'Dragon Claw', kind: 'raw', stackTo: STACK_GOODS, color: 0xe6dcc0, glyph: 'crystal', block: 536, madeBy: 'Shed by a dragon. Break it where it lies to pick it up' },
+  { id: 'dragon_relic', name: 'Dragon Relic', kind: 'raw', stackTo: STACK_GOODS, color: 0xf3cf6a, glyph: 'gold', madeBy: 'Kept in a dragon\'s hoard. Its story is in the Lore book' },
+  { id: 'dragon_axe', name: 'Dragon Axe', kind: 'tool', stackTo: 1, color: 0x8a2a3a, glyph: 'axe', durability: 4000, damage: 9,
+    effectiveness: { wood: 'fast', plant: 'fast', dirt: 'normal', stone: 'normal' },
+    madeBy: 'Dragon scales and claws on a diamond edge. One blow fells anything but a god; held, you heal without eating' },
   { id: 'string', name: 'String', kind: 'refined', stackTo: STACK_BULK, color: 0xe6dcc0, glyph: 'string', madeBy: 'Hemp fibre, spun at the bench' },
   { id: 'arrow', name: 'Arrow', kind: 'refined', stackTo: STACK_BULK, color: 0xb08a5a, glyph: 'arrow', madeBy: 'Planks and string, at the bench — the bow shoots them' },
   {
