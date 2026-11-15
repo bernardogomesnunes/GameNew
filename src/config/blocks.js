@@ -955,6 +955,12 @@ BLOCKS.push(
   { id: COUNTER, name: 'Counter', glyph: 'planks', color: 0xa87a4c, material: 'wood', station: 'counter', unlock: null },
 );
 
+// CRAFT3D-2: the spinning wheel, where hemp fibre is spun into string.
+export const SPINNING_WHEEL = 534;
+BLOCKS.push(
+  { id: SPINNING_WHEEL, name: 'Spinning Wheel', glyph: 'string', color: 0xa87a4c, material: 'wood', shape: 'spinning_wheel', station: 'spinning_wheel', unlock: null },
+);
+
 // CRAFT3D-3: the foundry's crucible, where ore is melted and poured into a
 // mould in a close-up (render/CrucibleView.js). Works inside a foundry.
 export const CRUCIBLE = 531;

@@ -1596,6 +1596,23 @@ RECIPES.push(
     inputs: { nightstone: 3, obsidian: 4, devotion: 12 }, output: { id: 'ring_black', count: 1 },
     blurb: 'Obsidian and Nightstone. A dark spark hurts whoever strikes you. Forge it, and the White Ring is closed to you.',
   },
+  // CRAFT3D-5 (owner: "Crafting the dark and white ring would be nice to have
+  // this mechanic too in the forge"): the same rings hammered at a forge, once
+  // a temple has been raised to its fourth level (DuiltGame's `locked`).
+  {
+    id: 'ring_white_forge', name: 'Forge the White Ring', station: 'forge', age: 4, ring: 'white', needsTemple: 4,
+    inputs: { sunstone: 3, gold: 4, devotion: 12 }, output: { id: 'ring_white', count: 1 },
+    blurb: 'Hammered on the anvil. Gold and Sunstone: you move faster and jump higher. The Black Ring is closed to you after.',
+  },
+  {
+    id: 'ring_black_forge', name: 'Forge the Black Ring', station: 'forge', age: 4, ring: 'black', needsTemple: 4,
+    inputs: { nightstone: 3, obsidian: 4, devotion: 12 }, output: { id: 'ring_black', count: 1 },
+    blurb: 'Hammered on the anvil. Obsidian and Nightstone: a dark spark hurts whoever strikes you. The White Ring is closed to you after.',
+  },
+  // CRAFT3D-2 (owner: "I'm seeing string, with a tool to treat hemp"): a
+  // spinning wheel twists the fibre into more string than hands do.
+  { id: 'string_spun', name: 'String', station: 'spinning_wheel', age: 1, inputs: { hemp_fibre: 3 }, output: { id: 'string', count: 2 }, batch: 4, blurb: 'Spun on the wheel: twice what your hands twist from the same fibre.' },
+  { id: 'spinning_wheel', name: 'Spinning Wheel', station: 'hand', age: 1, inputs: { planks: 4, wood: 1 }, output: { id: 'spinning_wheel', count: 1 }, blurb: 'Place it, then spin hemp fibre into string on it.' },
 );
 
 // Tools past stone (backlog batch 2), from config/tiers.js.

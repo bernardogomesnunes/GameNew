@@ -40,6 +40,8 @@ import { SELF_BLOCK_SECONDS } from './duilt/VillagerJobs.js';
 import { CloseUp } from './render/CloseUp.js';
 import { CounterMachine } from './render/CounterMachine.js';
 import { CrucibleMachine } from './render/CrucibleMachine.js';
+import { BenchMachine } from './render/BenchMachine.js';
+import { BENCH_MACHINES } from './duilt/BenchWork.js';
 import { putBackup, getBackup, dropBackup } from './storage/BackupStore.js';
 import { claimRegion, blocksIn, claimHint } from './tools/ClaimArea.js';
 
@@ -2984,6 +2986,7 @@ export class Game {
     // At a wood mill (#32), the bench, showing what's made there.
     if (aimed && stationOf(aimed.block) === 'counter') return void this.startCounter(aimed);
     if (aimed && stationOf(aimed.block) === 'crucible') return void this.startCrucible(aimed);
+    if (aimed && BENCH_MACHINES[stationOf(aimed.block)]) return void this.startBench(aimed, stationOf(aimed.block));
     if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block), aimed);
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
@@ -6583,6 +6586,17 @@ export class Game {
       onPoured: () => { this.editedAt = Date.now(); } });
     this.crucibleMachine.use(this.duilt.crucibles);
     this.openMachine(this.crucibleMachine, at);
+  }
+
+  /** CRAFT3D-2, 4 to 7: a bench machine (wood mill, forge, spinning wheel...) in close-up. */
+  startBench(at, station) {
+    if (!this.duilt) return;
+    this.benchMachine ??= new BenchMachine({ scene: this.scene, camera: this.camera, uiRoot: this.uiRoot, game: this,
+      onLeave: () => this.endMachine(),
+      onMany: (st, spot) => { this.endMachine(); this.ui.openBench('', st, spot); },
+      onMade: () => { this.editedAt = Date.now(); } });
+    this.benchMachine.use(station);
+    this.openMachine(this.benchMachine, at);
   }
 
   endMachine() {
