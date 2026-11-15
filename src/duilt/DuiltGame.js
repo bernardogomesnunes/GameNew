@@ -98,6 +98,9 @@ const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds_carrot: 4, seeds_potat
 /** How a quest names the place it sends you to. */
 const FIND_WORDS = { ruin: 'a ruin', hermit: 'the hermit\'s hut', kingdom: 'the Stone Kingdom' };
 
+/** How many points you can mark on the map, and how long a name one takes. */
+export const MAX_PINS = 50, PIN_NAME_MAX = 24;
+
 export class DuiltGame {
   constructor({ world, scene, bus, age = 1, sandbox = false }) {
     this.world = world;
@@ -175,6 +178,8 @@ export class DuiltGame {
     this.boosts = {};
     // Places you've found out in the world (playtest, P4), as "kind@x,z".
     this.found = new Set();
+    /** Points you marked on the map yourself: { x, z, name }. */
+    this.pins = [];
     // The places you've taken treasure from — a city's, a tribe's, an
     // outpost's — the same keys as `found`. Age 11's goals read it.
     this.raided = new Set();
@@ -2065,6 +2070,22 @@ export class DuiltGame {
   }
 
   /** The places you've found, as { kind, x, z } — for the map. */
+  /**
+   * A point of interest marked on the map (owner, 15 November: "add interest
+   * points to it"). Named by you, or "Point N"; fifty at most.
+   */
+  addPin(x, z, name = '') {
+    if (!Number.isFinite(x) || !Number.isFinite(z)) return { ok: false, reason: 'Nowhere to mark.' };
+    if (this.pins.length >= MAX_PINS) return { ok: false, reason: `The map holds ${MAX_PINS} points. Remove one first.` };
+    const pin = { x: Math.round(x), z: Math.round(z), name: String(name).trim().slice(0, PIN_NAME_MAX) || `Point ${this.pins.length + 1}` };
+    this.pins.push(pin);
+    return { ok: true, pin };
+  }
+
+  removePin(index) {
+    return this.pins.splice(index, 1).length === 1;
+  }
+
   foundPlaces() {
     return [...this.found].map((k) => {
       const [kind, at] = k.split('@');
@@ -2137,6 +2158,7 @@ export class DuiltGame {
       spawn: this.spawn,
       boosts: { ...this.boosts },
       found: [...this.found],
+      pins: this.pins.map((p) => ({ ...p })),
       emergingPlaces: emergingState(this.emergingPlaces),
       raided: [...this.raided],
       ...(this.battle ? { battle: this.battle.toJSON() } : {}),
@@ -2211,6 +2233,8 @@ export class DuiltGame {
     const sp = data.spawn;
     this.spawn = sp && [sp.x, sp.y, sp.z].every(Number.isFinite) ? { x: sp.x, y: sp.y, z: sp.z } : null;
     this.found = new Set(Array.isArray(data.found) ? data.found.filter((k) => typeof k === 'string') : []);
+    this.pins = (Array.isArray(data.pins) ? data.pins : []).filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.z) && typeof p.name === 'string')
+      .slice(0, MAX_PINS).map((p) => ({ x: Math.round(p.x), z: Math.round(p.z), name: p.name.slice(0, PIN_NAME_MAX) }));
     this.raided = new Set(Array.isArray(data.raided) ? data.raided.filter((k) => typeof k === 'string') : []);
     this.battle = data.battle ? Rivals.fromJSON(data.battle) : null;
     const time = data.time ?? {};

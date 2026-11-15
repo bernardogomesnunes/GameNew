@@ -41,14 +41,14 @@ export const BLOCKS = [
   // Lighter, nearer cobblestone (asked for directly: "Stone needs to be
   // lighter like cobble") — it was a dull mid grey.
   { id: 3, name: 'Stone', glyph: 'stone', color: 0xbab8b3, material: 'stone', cost: { stone: 1 }, unlock: null },
-  { id: 4, name: 'Wood', glyph: 'log', color: 0x93704c, material: 'wood', cost: { wood: 2 }, unlock: null },
+  { id: 4, name: 'Oak Log', glyph: 'log', color: 0x93704c, material: 'wood', cost: { wood: 2 }, unlock: null },
   // Opaque on purpose. At 0.9 the transparency was invisible, but it put every
   // tree in the game into the depth-write-disabled transparent pass, which the
   // renderer re-sorts on every camera move — the shimmer you saw walking
   // through a forest. Opaque leaves also merge into the single opaque draw call.
   { id: 5, name: 'Leaves', glyph: 'leaf', color: 0x5dab45, material: 'plant', cost: { wood: 1 }, unlock: null },
   { id: 6, name: 'Sand', glyph: 'sand', color: 0xe4cf92, material: 'dirt', cost: { wood: 1 }, unlock: null },
-  { id: 7, name: 'Planks', glyph: 'planks', color: 0xc49360, material: 'wood', cost: { wood: 1 }, unlock: null },
+  { id: 7, name: 'Oak Planks', glyph: 'planks', color: 0xc49360, material: 'wood', cost: { wood: 1 }, unlock: null },
   { id: 8, name: 'Cobblestone', glyph: 'cobble', color: 0xc8c6c2, material: 'stone', cost: { stone: 1 }, unlock: null },
   { id: 9, name: 'Brick', glyph: 'brick', color: 0xb5583f, material: 'stone', cost: { brick: 1 }, unlock: null },
   { id: 10, name: 'Glass', glyph: 'pane', color: 0xc2e5f2, transparent: true, opacity: 0.35, cost: { glass: 1 }, unlock: null },
@@ -63,7 +63,7 @@ export const BLOCKS = [
   // from goals (asked for directly: "avoid soft blocking the game"), and
   // Marble and Obsidian waited on achievements that no longer exist.
   { id: 12, name: 'Snow', glyph: 'snow', color: 0xf4f8fb, cost: { wood: 1 }, unlock: null },
-  { id: 13, name: 'Gold', glyph: 'gold', color: 0xf9d040, material: 'stone', cost: { gold: 1 }, unlock: null },
+  { id: 13, name: 'Gold Block', glyph: 'gold', color: 0xf9d040, material: 'stone', cost: { gold: 1 }, unlock: null },
   { id: 14, name: 'Obsidian', glyph: 'obsidian', color: 0x2b163f, material: 'stone', cost: { stone: 4 }, unlock: null },
   { id: 15, name: 'Red Glass', glyph: 'pane', color: 0xe86a62, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: null },
   { id: 16, name: 'Blue Glass', glyph: 'pane', color: 0x6a92e6, transparent: true, opacity: 0.45, cost: { glass: 2 }, unlock: null },
@@ -994,6 +994,17 @@ quad(COMPOST_BIN, { name: 'Compost Bin', glyph: 'moss', color: 0x76523b, shape: 
 // Separate blossom from white foliage without renumbering saved blocks.
 export const PINK_LEAVES = 517;
 BLOCKS.push({ id: PINK_LEAVES, name: 'Pink Leaves', glyph: 'leaf', color: 0xf2b6cf, material: 'plant', cost: { wood: 1 }, unlock: null });
+
+// Owner, 15 November: iron blocks, and torches. A torch is a small light: it
+// counts where a building wants one, and reaches less far than a lantern.
+export const IRON_BLOCK = 532, TORCH = 533;
+BLOCKS.push(
+  { id: IRON_BLOCK, name: 'Iron Block', glyph: 'gold', color: 0xc7c7cd, material: 'stone', unlock: null },
+  {
+    id: TORCH, name: 'Torch', glyph: 'lantern', color: 0xffb347, material: 'wood', shape: 'torch',
+    light: { color: 0xffb870, intensity: 4, distance: 12, decay: 1, y: 0.9 }, unlock: null,
+  },
+);
 
 // The storybook palette (config/palette.js) paints every block it names; the
 // colour each was written with above is kept as `formerColor`, which an item

@@ -747,6 +747,10 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 }
 #map-scale { font-size: 12px; color: var(--text-dim); min-width: 90px; text-align: center; }
 #map-controls button:disabled { opacity: 0.4; cursor: default; }
+#map-coords { font-size: 13px; text-align: center; margin: 6px 0; }
+#map-pins { display: flex; gap: 8px; justify-content: center; margin: 6px 0; }
+#map-pins input { flex: 1 1 auto; min-width: 0; max-width: 220px; min-height: 44px; padding: 0 10px; }
+#map-pins button { min-height: 44px; }
 
 /* ============================================================
    Duilt — bag, vitals, goals, claiming, skills.
@@ -2295,6 +2299,10 @@ button.busy { cursor: progress; opacity: 0.92; }
 .counter-bar .counter-say { margin: 0 0 8px; font-size: 14px; }
 .counter-bar .counter-pieces { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px; }
 .counter-bar .counter-piece { flex: 0 0 auto; min-height: 44px; padding: 6px 10px; white-space: nowrap; }
+@media (pointer: coarse) {
+  .counter-bar .counter-piece { min-height: 56px; padding: 10px 16px; font-size: 16px; }
+  .counter-bar .counter-pieces { gap: 10px; }
+}
 .counter-bar .counter-piece.cant { opacity: 0.55; }
 .counter-bar .counter-actions { display: flex; gap: 8px; }
 .counter-bar button { min-height: 44px; }

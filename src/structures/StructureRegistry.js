@@ -1,6 +1,7 @@
 import { Granary } from '../items/Granary.js';
 import { STRUCTURES_BY_ID, holdsAt, isStore, hasLevels, producesAt, intervalAt, scaleProduce, yieldAt } from '../config/structures.js';
 import { Inventory } from '../items/Inventory.js';
+import { ITEMS_BY_ID } from '../config/items.js';
 import { cropOf, FARM_ITEMS } from '../config/crops.js';
 
 /** Planting, growing or picking a crop: a crop or nothing, before and after. */
@@ -131,7 +132,7 @@ export class StructureRegistry {
     if (tierDef.cost && (s.paidTo ?? 0) < status.tier + 1) {
       const short = this.inventory?.missing(tierDef.cost) ?? {};
       if (Object.keys(short).length) {
-        return { ok: false, reason: `Needs ${Object.entries(short).map(([id, n]) => `${n} more ${id.replace(/_/g, ' ')}`).join(' and ')} in your bag.` };
+        return { ok: false, reason: `Needs ${Object.entries(short).map(([id, n]) => `${n} more ${(ITEMS_BY_ID.get(id)?.name ?? id.replace(/_/g, ' ')).toLowerCase()}`).join(' and ')} in your bag.` };
       }
       this.inventory.spend(tierDef.cost);
     }

@@ -154,20 +154,20 @@ function leanings(id) {
 }
 {
   // Fresher: not a palette of greys. The everyday materials carry real colour.
-  const lively = ['Turf', 'Leaves', 'Dirt', 'Sand', 'Planks', 'Brick', 'Water', 'Gold', 'Wood', 'Moss', 'Turned Soil', 'Lava'];
+  const lively = ['Turf', 'Leaves', 'Dirt', 'Sand', 'Oak Planks', 'Brick', 'Water', 'Gold Block', 'Oak Log', 'Moss', 'Turned Soil', 'Lava'];
   const dull = lively.filter((n) => chroma(colourOf(n)) < 20);
   ok(`everyday materials are properly coloured (${dull.join(', ') || 'none dull'})`, dull.length === 0);
   const cubesC = cubes.map((b) => chroma(b.color));
   const coloured = cubesC.filter((c) => c > 10).length;
   ok(`most full blocks are not grey (${coloured} of ${cubesC.length})`, coloured / cubesC.length > 0.6);
   // Similar materials told apart.
-  for (const [a, b] of [['Stone', 'Cobblestone'], ['Turf', 'Moss'], ['Dirt', 'Turned Soil'], ['Sand', 'Gravel'], ['Marble', 'Sky Marble'], ['Brick', 'Dark Brick'], ['Planks', 'Wood'], ['Gold', 'Gold Trim']]) {
+  for (const [a, b] of [['Stone', 'Cobblestone'], ['Turf', 'Moss'], ['Dirt', 'Turned Soil'], ['Sand', 'Gravel'], ['Marble', 'Sky Marble'], ['Brick', 'Dark Brick'], ['Oak Planks', 'Oak Log'], ['Gold Block', 'Gold Trim']]) {
     const d = deltaE(colourOf(a), colourOf(b));
     ok(`${a} and ${b} differ in colour or in pattern (ΔE ${d.toFixed(1)})`, d >= 6 || blockTexture(BLOCKS.find((x) => x.name === a)) !== blockTexture(BLOCKS.find((x) => x.name === b)));
   }
   ok('sky marble is cool and near white', lab(BLOCKS_BY_ID.get(SKY_MARBLE).color).L > 90 && lab(BLOCKS_BY_ID.get(SKY_MARBLE).color).b < 0);
   // A slab, a stair or a wall is the same colour as the block it is cut from.
-  for (const [cut, whole] of [['Stone Slab', 'Stone'], ['Plank Stairs', 'Planks'], ['Brick Wall', 'Brick'], ['Dark Stone Wall', 'Dark Stone'], ['Cobblestone Wall', 'Cobblestone']]) {
+  for (const [cut, whole] of [['Stone Slab', 'Stone'], ['Plank Stairs', 'Oak Planks'], ['Brick Wall', 'Brick'], ['Dark Stone Wall', 'Dark Stone'], ['Cobblestone Wall', 'Cobblestone']]) {
     ok(`${cut} matches ${whole}`, colourOf(cut) === colourOf(whole));
   }
 }

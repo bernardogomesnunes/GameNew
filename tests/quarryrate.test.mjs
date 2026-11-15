@@ -22,14 +22,14 @@ const quarry = STRUCTURES_BY_ID.get('quarry');
 function perDay(tier) {
   const produces = producesAt(quarry, tier);
   const everySeconds = intervalAt(quarry, tier);
-  return Object.values(produces).reduce((a, b) => a + b, 0) * 86400 / everySeconds;
+  return produces.stone * 86400 / everySeconds;
 }
 
 // Plain stone only: finishing is done through the processing stations.
 ok('the first quarry produces twelve stone a day', perDay(0) === 12);
 const kiln = STRUCTURES_BY_ID.get('kiln');
 const per = (spec, tier, id) => (producesAt(spec, tier)[id] ?? 0) * 86400 / intervalAt(spec, tier);
-ok('every level gives only stone', quarry.tiers.every((_,i) => Object.keys(producesAt(quarry,i)).join() === 'stone'));
+ok('every level gives stone, and coal for torches (owner, 15 November)', quarry.tiers.every((_,i) => Object.keys(producesAt(quarry,i)).join() === 'stone,coal'));
 ok(`a first quarry makes more stone (${per(quarry, 0, 'stone')}) than a first kiln makes brick (${per(kiln, 0, 'brick')})`,
   per(quarry, 0, 'stone') > per(kiln, 0, 'brick'));
 ok('clay is no longer quarry output', quarry.tiers.every((_, i) => per(quarry, i, 'clay') === 0));

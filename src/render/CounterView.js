@@ -25,6 +25,16 @@ const SNAP = 0.15;
 const SCALE = 0.55;
 /** Far enough up and back that the whole top fits a phone held upright (390 px wide). */
 const CAMERA_UP = 2.2, CAMERA_BACK = 1.8;
+/**
+ * Owner, 15 November: "the items need to be bigger and pieces too, cause in
+ * mobile it's hard to pick them". Under a finger the camera sits this much
+ * nearer, and a touch that just misses a part takes the nearest one within
+ * FINGER of it (in screen halves: 0.14 is about a fingertip on a phone).
+ */
+const TOUCH_NEAR = 0.85, FINGER = 0.14;
+/** A cut part waiting in the row is drawn this much bigger than in its place, to be seen and picked. */
+const WAIT_SCALE = 1.7;
+const COARSE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
 export class CounterView {
   constructor({ scene, camera, counters, bus = null, onDone = null }) {
@@ -131,7 +141,7 @@ export class CounterView {
         .sub(this._v.set((box.minX + box.maxX) / 2 - this.centre.x, box.minY - this.centre.y, (box.minZ + box.maxZ) / 2 - this.centre.z).multiplyScalar(SCALE))
         .add(mesh.position);
       mesh.visible = !!w && i < w.cut;
-      mesh.position.copy(w?.fitted[i] ? mesh.userData.slot : mesh.userData.home);
+      this.rest(mesh, !!w?.fitted[i]);
       g.add(mesh);
       return mesh;
     });
@@ -165,10 +175,18 @@ export class CounterView {
     return r;
   }
 
+  /** Puts a part where it belongs: in its place at true size, or waiting in the row, bigger, its foot on the top. */
+  rest(m, fitted) {
+    m.scale.setScalar(fitted ? 1 : WAIT_SCALE);
+    m.position.copy(fitted ? m.userData.slot : m.userData.home);
+    if (!fitted) m.position.y += (m.geometry.parameters.height * (WAIT_SCALE - 1)) / 2;
+  }
+
   /** Moves part `i` so it sits at `point` (a scene position on the top). */
   dragTo(i, point) {
     const m = this.parts[i];
     if (!m?.visible) return;
+    m.scale.setScalar(1);
     m.position.copy(point).sub(this.group.position);
     m.position.y = m.userData.slot.y;
   }
@@ -183,7 +201,7 @@ export class CounterView {
       this.finishIfDone();
       return true;
     }
-    m.position.copy(this.counters.work(this.key)?.fitted[i] ? m.userData.slot : m.userData.home);
+    this.rest(m, !!this.counters.work(this.key)?.fitted[i]);
     return false;
   }
 
@@ -196,7 +214,15 @@ export class CounterView {
   partAt(ndcX, ndcY) {
     this._ray.setFromCamera({ x: ndcX, y: ndcY }, this.camera);
     const hit = this._ray.intersectObjects(this.parts.filter((m) => m.visible), false)[0];
-    return hit ? this.parts.indexOf(hit.object) : -1;
+    if (hit) return this.parts.indexOf(hit.object);
+    let best = -1, bestD = FINGER;
+    this.parts.forEach((m, i) => {
+      if (!m.visible) return;
+      m.getWorldPosition(this._v).project(this.camera);
+      const d = Math.hypot(this._v.x - ndcX, this._v.y - ndcY);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    return best;
   }
 
   /**
@@ -213,7 +239,8 @@ export class CounterView {
   /** Each frame: the camera over the counter, the saw stroke, a finished piece taken. */
   update(dt) {
     if (!this.active) return;
-    this.camera.position.set(this.top.x, this.top.y + CAMERA_UP, this.top.z + CAMERA_BACK);
+    const near = COARSE ? TOUCH_NEAR : 1;
+    this.camera.position.set(this.top.x, this.top.y + CAMERA_UP * near, this.top.z + CAMERA_BACK * near);
     this.camera.lookAt(this.top);
     if (this.sawing > 0) {
       this.sawing = Math.max(0, this.sawing - dt);

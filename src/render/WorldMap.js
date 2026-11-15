@@ -10,7 +10,7 @@ export const MAP_ZOOMS = [300, 600, 1200];
  * this wide is real work, and nothing about the ground moves while a panel
  * is open over it the way you do.
  */
-export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], step = null, home = null, territory = null, places = [], sites = [] } = {}) {
+export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], step = null, home = null, territory = null, places = [], sites = [], pins = [] } = {}) {
   const ctx = canvas.getContext('2d');
   const { width, height } = canvas;
   // Coarser sampling the wider the view — a 1200-block view sampled every
@@ -62,6 +62,19 @@ export function drawWorldMap(canvas, gen, x, z, yaw, { radius = MAP_ZOOMS[1], st
   // of this view, as the Sky Kingdom always is — an arrow on the edge
   // pointing the way, with how far.
   for (const s of sites) drawSite(ctx, s, x, z, radius, width, height);
+
+  // Your own points (owner, 15 November): a red-headed pin and its name.
+  ctx.font = 'bold 16px system-ui, sans-serif';
+  for (const p of pins) {
+    if (Math.abs(p.x - x) >= radius || Math.abs(p.z - z) >= radius) continue;
+    const [px, py] = worldToCanvas(p.x, p.z, x, z, radius, width, height);
+    ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2);
+    ctx.fillStyle = '#e0483c'; ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+    const w = ctx.measureText(p.name).width, lx = Math.max(4, Math.min(width - w - 4, px - w / 2)), ly = py > 30 ? py - 13 : py + 24;
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)'; ctx.strokeText(p.name, lx, ly);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(p.name, lx, ly);
+  }
 
   drawHeadingArrow(ctx, width / 2, height / 2, yaw, 10);
 }

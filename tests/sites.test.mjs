@@ -55,7 +55,7 @@ for (const { world, origin } of worlds) {
       // Read the ground the site was chosen on, before its own builder piled
       // stone or trees on top of it.
       const under = world.getBlock(site.x, site.y - 1, site.z);
-      const grown = new Set(idsOf(['wood', 'leaves', 'stone', 'cobblestone', 'sapling']));
+      const grown = new Set(idsOf(['oak log', 'leaves', 'stone', 'cobblestone', 'sapling']));
       if (!allowed.has(under) && !grown.has(under)) groundBad++;
     }
     if (needs.headroom && site.spec === 'spawn') {

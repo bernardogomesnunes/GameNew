@@ -91,7 +91,7 @@ const propBoxes = (world) => propVerts(world) / 24;
   ok('the back stands behind the front', back.x === 5 && back.z === 6);
   ok('and returns to the front', (({ x, z }) => x === 5 && z === 5)(pairOther(pairPart(WAR_TENT_BACK), back.x, back.z)));
   const forest = STRUCTURES.find?.((s) => s.id === 'forest') ?? STRUCTURES.forest;
-  ok('a wood farm makes 20 wood a day', forest && forest.produces.wood * (86400 / forest.everySeconds) === 20);
+  ok('a wood farm makes 24 wood a day (owner, 15 November: raised a bit from 20)', forest && forest.produces.wood * (86400 / forest.everySeconds) === 24);
 }
 
 process.exit(f ? 1 : 0);

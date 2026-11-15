@@ -24,7 +24,7 @@ export const MINE_FLOOR = 12;
 const PILLARS = [165, 166, 167];
 const STONEWORK = [STONE, COBBLE, BRICK, MARBLE, 156, 157, 158, 159, ...PILLARS];
 const ALTARS = [32, GOLD, 180, 181];
-const LIGHTS = [26, 85, 190];
+const LIGHTS = [26, 85, 190, 533];
 const WINDOWS = [GLASS, 15, 16, 176, 177, 178, 179];
 const GILDING = [159, GOLD];
 const BANNERS = [182, 183, 184, 185, 186, 187, 188, 189];
@@ -125,7 +125,7 @@ function work(measure, n, { item, per = 1, key = item, fit = null, say, blocks =
     short, item, key, per, blocks, ...(fit ? { fit } : {}),
   };
 }
-const LIGHT_ITEMS = ['lantern', 'firefly_lantern', 'chandelier'];
+const LIGHT_ITEMS = ['lantern', 'firefly_lantern', 'chandelier', 'torch'];
 
 
 /** Counts matching blocks in the region. */
@@ -178,7 +178,8 @@ export const STRUCTURES = [
     // Raised to 20 wood a day (backlog batch 2): every 6 hours, 5 wood. The
     // foraged extras ride the same cycle, 4 a day each. No seeds: those come
     // from farms and grass now, a crop at a time.
-    produces: { wood: 5, leaves: 1, fruit: 1 },
+    // Owner, 15 November: "raise the production of wood a bit" (was 5).
+    produces: { wood: 6, leaves: 1, fruit: 1 },
     everySeconds: 21600,
     skill: 'foraging',
   },
@@ -296,7 +297,8 @@ export const STRUCTURES = [
     // the building itself, that turn it into something worth having
     // staffed, climbing toward that same ceiling rather than past it.
     // Quarry output is plain rock; use a mill, forge or bleach bath to finish it.
-    produces: { stone: 2 },
+    // And coal (owner, 15 November: "coal that quarry gives"), for torches.
+    produces: { stone: 2, coal: 1 },
     everySeconds: 14400,
     skill: 'building',
     /**
@@ -320,7 +322,7 @@ export const STRUCTURES = [
       { id: 'seam', name: 'A Scrape', blurb: 'A scrape at the rock. Barely worth the walk.', needs: [] },
       {
         id: 'face', name: 'A Working Face', blurb: 'Wide enough to work properly.',
-        produces: { stone: 2 }, everySeconds: 13800,
+        produces: { stone: 2, coal: 1 }, everySeconds: 13800,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 40, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 16, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
@@ -328,7 +330,7 @@ export const STRUCTURES = [
       },
       {
         id: 'deepcut', name: 'A Deep Dig', blurb: 'Dug back far enough to keep two haulers busy.',
-        produces: { stone: 2 }, everySeconds: 13200,
+        produces: { stone: 2, coal: 1 }, everySeconds: 13200,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 60, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 28, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
@@ -336,7 +338,7 @@ export const STRUCTURES = [
       },
       {
         id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, opened right up.',
-        produces: { stone: 2 }, everySeconds: 12600,
+        produces: { stone: 2, coal: 1 }, everySeconds: 12600,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 90, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 44, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
@@ -344,7 +346,7 @@ export const STRUCTURES = [
       },
       {
         id: 'openpit', name: 'An Open Pit', blurb: 'As much rock as a claim this size can show.',
-        produces: { stone: 2 }, everySeconds: 12000,
+        produces: { stone: 2, coal: 1 }, everySeconds: 12000,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 130, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 64, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),

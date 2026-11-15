@@ -18,7 +18,7 @@ r = g.crafting.craft('axe', 1);
 ok('refuses when short, with a reason', !r.ok || g.inventory.countOf('wood') >= 0);
 const poor = new DuiltGame({ world, scene: new THREE.Scene(), bus: null });
 r = poor.crafting.craft('axe', 1);
-ok('empty bag refusal names the shortfall', !r.ok && /more wood/i.test(r.reason));
+ok('empty bag refusal names the shortfall', !r.ok && /more oak log/i.test(r.reason));
 
 // water condition
 const dry = { x: origin.minX, y: 40, z: origin.minZ };

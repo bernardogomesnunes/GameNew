@@ -72,7 +72,7 @@ import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { Diagnostics, describeGraphicsBackend } from './core/Diagnostics.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting, CHISELLED } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, bedPart, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting, CHISELLED } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
 import { mineStairs } from './duilt/mineStairs.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
@@ -2910,7 +2910,7 @@ export class Game {
     // adding coal with click"); with coal in hand a tap used to be Break,
     // and took the train to bits instead of firing it.
     if (this.trainTarget(aimed) || this.machineTarget(aimed)) return places();
-    if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || isTent(aimed.block)
+    if (aimed && (swings(aimed.block) || isChest(aimed.block) || isPainting(aimed.block) || bedPart(aimed.block) || isTent(aimed.block)
       || aimed.block === STORAGE_CONTROLLER || aimed.block === STORAGE_INTERFACE || stationOf(aimed.block)
       || aimed.block === SKY_LIFT || aimed.block === WAY_OUT || aimed.block === TIME_MACHINE || aimed.block === ARCHIVE || aimed.block === WAR_STANDARD || isCatapult(aimed.block)
       || (aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)))) return places();
@@ -2987,6 +2987,8 @@ export class Game {
     if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block), aimed);
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
+    // At a bed, Place sleeps the night through (owner, 15 November).
+    if (aimed && bedPart(aimed.block)) return void this.sleep();
     // At a war tent, Place makes camp there; at the dark god's altar, the oath.
     if (aimed && isTent(aimed.block)) return void this.makeCamp(aimed);
     if (aimed && aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)) return void this.swearOath();
@@ -7369,6 +7371,23 @@ export class Game {
   }
 
   /** Place on a painting: that's where you wake after you fall (playtest, P1). */
+  /**
+   * Sleep in a bed through the night (owner, 15 November): at night, Place
+   * on a bed and it is morning. The world's day count moves on by the hours
+   * slept, so saplings and research do too. Not while a war round is on.
+   */
+  sleep() {
+    const d = this.duilt;
+    if (!d || !this.dayCycle) return false;
+    if (daylightAt(this.dayCycle.time).day > 0.35) return void this.ui.toast({ kind: 'xp', title: 'You can only sleep at night' });
+    if (d.war?.stage === 'fighting') return void this.ui.toast({ kind: 'xp', title: 'No sleeping through a battle' });
+    d.days += (MORNING - this.dayCycle.time + 1) % 1;
+    this.dayCycle.time = d.dayTime = MORNING;
+    this.editedAt = Date.now();
+    this.ui.toast({ kind: 'challenge', title: 'Good morning', body: 'You slept the night through.' });
+    return true;
+  }
+
   setSpawn({ x, y, z }) {
     if (!this.duilt) return;
     this.duilt.spawn = { x, y, z };
