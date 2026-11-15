@@ -121,6 +121,14 @@ PROP_SHAPES.lantern = [
   { minX: 0.42, maxX: 0.58, minY: 0.74, maxY: 0.78, minZ: 0.48, maxZ: 0.52, color: IRON },
 ];
 
+// A torch standing in the floor: an oak stick, a coal head, a flame.
+PROP_SHAPES.torch = [
+  { minX: 0.45, maxX: 0.55, minY: 0, maxY: 0.55, minZ: 0.45, maxZ: 0.55, color: 0x8a6238 },
+  { minX: 0.42, maxX: 0.58, minY: 0.55, maxY: 0.66, minZ: 0.42, maxZ: 0.58, color: 0x2f2d31 },
+  { minX: 0.43, maxX: 0.57, minY: 0.66, maxY: 0.84, minZ: 0.43, maxZ: 0.57, color: WICK, glow: true },
+  { minX: 0.46, maxX: 0.54, minY: 0.84, maxY: 0.94, minZ: 0.46, maxZ: 0.54, color: FLAME, glow: true },
+];
+
 // A chandelier hanging from the top of its cell: a chain, a hub, a cross of
 // arms, and a candle burning at the end of each.
 PROP_SHAPES.chandelier = [

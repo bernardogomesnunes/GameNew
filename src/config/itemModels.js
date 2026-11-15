@@ -368,6 +368,7 @@ ITEM_MODELS.jar = [
 // Ingots: a bar with a narrower top.
 const ingot = (main, top) => [box(0.16, 0, 0.3, 0.84, 0.14, 0.7, main), box(0.22, 0.14, 0.35, 0.78, 0.24, 0.65, top)];
 ITEM_MODELS.iron_ingot = ingot(0xb3b8bf, 0xd6dae0);
+ITEM_MODELS.gold = ingot(0xe9b82c, 0xf9d040);
 ITEM_MODELS.copper_ingot = ingot(0xc27a4e, 0xdd9a6c);
 // Coins: a short stack, and one more lying beside it.
 ITEM_MODELS.coin = [

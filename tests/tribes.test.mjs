@@ -61,7 +61,7 @@ const DECK = 12;
 {
   const ids = design.blocks.map((b) => b[3]);
   const count = (re) => ids.filter((id) => re.test(name(id))).length;
-  ok(`giant trees: ${count(/^Wood$/)} blocks of trunk`, count(/^Wood$/) > 400);
+  ok(`giant trees: ${count(/^Oak Log$/)} blocks of trunk`, count(/^Oak Log$/) > 400);
   ok(`vibrant greens: ${count(/Leaves/)} leaves, moss through them`, count(/Leaves/) > 800 && count(/Moss/) > 20);
   ok('firefly lanterns among them', count(/Firefly Lantern/) >= 8);
   ok('two chests', ids.filter((id) => /Chest/.test(name(id))).length === 2);

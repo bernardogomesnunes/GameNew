@@ -35,7 +35,7 @@ ok('stone is lighter, close to cobblestone', lum(by('Stone').color) > 170 && lum
 ok('its slab, stairs and wall match it', ['Stone Slab', 'Stone Stairs', 'Stone Wall'].every((n) => by(n).color === by('Stone').color));
 
 // --- "Logs texture looks odd ... round forms ... lighter ... white log ... thinner and more grey"
-ok('the log is lighter wood', lum(by('Wood').color) > lum(0x7d5a3a));
+ok('the log is lighter wood', lum(by('Oak Log').color) > lum(0x7d5a3a));
 ok('no round knots on any log', !TEXTURES.log.knots && !BLOCK_TEXTURES['Dark Log'].knots);
 const tex = readFileSync(new URL('../src/render/BlockTextures.js', import.meta.url), 'utf8');
 ok('birch dashes are one pixel and grey', !/thick = hash01\(i, 43, salt\)/.test(tex) && /tint\(c, x \+ d, y, \[0\.92, 0\.92, 0\.95\]\)/.test(tex));

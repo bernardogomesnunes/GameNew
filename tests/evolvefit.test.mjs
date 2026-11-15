@@ -88,7 +88,7 @@ const sh = g.claim(shedRegion, 'storehouse');
 ok('a shed claims', sh.ok);
 const shedPlan = g.evolvePlan(sh.structure);
 ok('its next level\'s planks can come from the bag instead of being built in',
-  (shedPlan.ok && shedPlan.pay?.planks > 0) || /more planks[\s\S]*in your bag/.test(shedPlan.reason));
+  (shedPlan.ok && shedPlan.pay?.planks > 0) || /more oak planks[\s\S]*in your bag/.test(shedPlan.reason));
 const shedWants = tierStatus(world, shedRegion, 'storehouse', sh.structure.tier).next.wants;
 ok('and planks show as a pill, not a sentence', shedWants.some((w) => w.item === 'planks' && w.n > 0 && !w.fit));
 

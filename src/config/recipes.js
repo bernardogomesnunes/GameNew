@@ -3,7 +3,7 @@ import { CONTROLLER_PARTS } from './structures.js';
 import { tieredRecipes } from './tiers.js';
 import { SKILLS, MAX_LEVEL } from './skills.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
-import { FURNITURE_ITEM } from './items.js';
+import { FURNITURE_ITEM, ITEMS_BY_ID } from './items.js';
 import { CROPS } from './crops.js';
 
 /**
@@ -1236,6 +1236,12 @@ export const RECIPES = [
     output: { id: 'lantern', count: 1 },
     blurb: 'A real light, not a decoration — see it burn from across your land.',
   },
+  // Owner, 15 November: gold and iron blocks, four ingots each way; torches.
+  { id: 'gold_block', name: 'Gold Block', station: 'workbench', age: 5, inputs: { gold: 4 }, output: { id: 'gold_block', count: 1 }, blurb: 'Four ingots, cast as one block to build with.' },
+  { id: 'gold_from_block', name: 'Gold Ingots', station: 'workbench', age: 5, inputs: { gold_block: 1 }, output: { id: 'gold', count: 4 }, blurb: 'A gold block, back into its four ingots.' },
+  { id: 'iron_block', name: 'Iron Block', station: 'workbench', age: 5, inputs: { iron_ingot: 4 }, output: { id: 'iron_block', count: 1 }, blurb: 'Four ingots, cast as one block to build with.' },
+  { id: 'iron_from_block', name: 'Iron Ingots', station: 'workbench', age: 5, inputs: { iron_block: 1 }, output: { id: 'iron_ingot', count: 4 }, blurb: 'An iron block, back into its four ingots.' },
+  { id: 'torch', name: 'Torch', station: 'hand', age: 3, inputs: { planks: 1, coal: 1 }, output: { id: 'torch', count: 4 }, blurb: 'A small light. A quarry digs the coal.' },
   // Owner, 12 November, Age 3: "I can't see the lantern in the workbench".
   // Every building's first level up wants a light, and lanterns, chandeliers
   // and firefly lanterns all came at Age 4 at the earliest. A plainer one,
@@ -1808,7 +1814,7 @@ export function howToGet(itemId, blockName = null) {
   const recipe = RECIPES.filter((r) => r.output.id === itemId).sort((a, b) => rank(a) - rank(b))[0];
   if (recipe) {
     const from = Object.entries(recipe.inputs)
-      .map(([id, n]) => `${n} ${id.replace(/_/g, ' ')}`).join(' and ');
+      .map(([id, n]) => `${n} ${(ITEMS_BY_ID.get(id)?.name ?? id.replace(/_/g, ' ')).toLowerCase()}`).join(' and ');
     const where = recipe.station === 'hand' ? 'by hand' : `at a ${recipe.station.replace(/_/g, ' ')}`;
     return recipe.needs === 'water'
       ? `make it ${where} by the river, from ${from}`

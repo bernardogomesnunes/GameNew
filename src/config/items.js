@@ -42,7 +42,7 @@ export const ITEMS = [
   { id: 'forge', name: 'Forge', kind: 'refined', stackTo: 10, color: 0x655367, glyph: 'stone', block: 525, madeBy: 'Build from stone and clay — place it to darken rock and forge weapons' },
   ...[
     ['carpentry_saw', 'Carpentry Saw', 'Cuts planks to length'],
-    ['carpentry_chisel', 'Carpentry Chisel', 'Held, Break carves stone into bricks and bricks into pillars'],
+    ['carpentry_chisel', 'Chisel', 'Held, Break carves stone into bricks and bricks into pillars'],
     ['carpentry_plane', 'Carpentry Plane', 'An old loose plane. Bows are planed at a placed Planing Bench now'],
     ['carpentry_mallet', 'Carpentry Mallet', 'An old loose mallet. Joints are made at a placed Joinery Bench now'],
     ['weapon_mold', 'Weapon Mold', 'Shapes a weapon before forging'],
@@ -52,7 +52,7 @@ export const ITEMS = [
     ...(id === 'carpentry_mallet' || id === 'carpentry_plane' ? { noBook: true } : {}) })),
   // --- raw materials, gathered from the world -----------------------------
   { id: 'dirt', name: 'Dirt', kind: 'raw', stackTo: STACK_BULK, color: 0xc69972, glyph: 'dirt', block: 2, madeBy: 'Foraged from the ground' },
-  { id: 'wood', name: 'Wood', kind: 'raw', stackTo: STACK_BULK, color: 0xcc9e72, glyph: 'log', block: 4, madeBy: 'Cut from trees' },
+  { id: 'wood', name: 'Oak Log', kind: 'raw', stackTo: STACK_BULK, color: 0xcc9e72, glyph: 'log', block: 4, madeBy: 'Cut from trees' },
   { id: 'leaves', name: 'Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x82c675, glyph: 'leaf', block: 5, madeBy: 'Stripped from trees' },
   { id: 'stone', name: 'Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stone', block: 3, madeBy: 'Break rock blocks, or collect Stone from a quarry' },
   // The rarer rocks underground (world/ChunkGen.js's rock layers).
@@ -81,7 +81,7 @@ export const ITEMS = [
   { id: 'forest_floor', name: 'Forest Floor', kind: 'raw', stackTo: STACK_BULK, color: 0x8a7a48, glyph: 'moss', block: 147, madeBy: 'Raked up in a giant grove' },
 
   // --- worked materials ----------------------------------------------------
-  { id: 'planks', name: 'Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'planks', block: 7, madeBy: 'Sawn from wood' },
+  { id: 'planks', name: 'Oak Planks', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'planks', block: 7, madeBy: 'Sawn from oak logs' },
   { id: 'farmland', name: 'Turned Soil', kind: 'refined', stackTo: STACK_BULK, color: 0xc4986c, glyph: 'farmland', block: 21, madeBy: 'Dirt broken up for planting' },
   { id: 'compost_bin', name: 'Compost Bin', kind: 'refined', stackTo: STACK_GOODS, color: 0x76523b, glyph: 'moss', block: 520, madeBy: 'Built from planks and leaves' },
   { id: 'compost', name: 'Compost', kind: 'refined', stackTo: STACK_GOODS, color: 0x5c4030, glyph: 'moss', madeBy: 'Leaves and seeds mixed at a compost bin — use on a crop or add to a farm to move growing crops ahead one stage' },
@@ -91,7 +91,14 @@ export const ITEMS = [
   { id: 'brick', name: 'Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'brick', block: 9, madeBy: 'Fired from earth in a kiln' },
   { id: 'glass', name: 'Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xb9dce8, glyph: 'pane', block: 10, madeBy: 'Fired from sand in a kiln' },
   { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: 'Dress Stone into Marble at a stone mill' },
-  { id: 'gold', name: 'Gold', kind: 'raw', stackTo: STACK_GOODS, color: 0xf9d040, glyph: 'gold', block: 13, madeBy: 'Smelted from gold ore at a foundry. A mine brings the ore up from its third level' },
+  // Owner, 15 November: "There should be a gold ingot ... Tools and armour
+  // should be made with gold ingots. We should have iron blocks too." The
+  // item every recipe, chest and trader calls `gold` is the ingot; the block
+  // is made from four of them, and gives them back.
+  { id: 'gold', name: 'Gold Ingot', kind: 'refined', stackTo: STACK_GOODS, color: 0xf9d040, glyph: 'gold', madeBy: 'Smelted from gold ore at a foundry. A mine brings the ore up from its third level' },
+  { id: 'gold_block', name: 'Gold Block', kind: 'refined', stackTo: STACK_BULK, color: 0xf9d040, glyph: 'gold', block: 13, madeBy: 'Four gold ingots at a Workbench' },
+  { id: 'iron_block', name: 'Iron Block', kind: 'refined', stackTo: STACK_BULK, color: 0xc7c7cd, glyph: 'gold', block: 532, madeBy: 'Four iron ingots at a Workbench' },
+  { id: 'torch', name: 'Torch', kind: 'refined', stackTo: STACK_GOODS, color: 0xffb347, glyph: 'lantern', block: 533, madeBy: 'A stick of oak with coal at its head. A quarry digs coal' },
 
   // --- growing things ------------------------------------------------------
   // Each crop's own seeds come up as that crop — see config/crops.js. There

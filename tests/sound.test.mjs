@@ -60,8 +60,8 @@ const by = (name) => BLOCKS.find((b) => b.name === name);
 ok('blocks sound like what they are: grass rustles, sand hisses, gold clangs, glass rings',
   soundOf(by('Turf')) === 'grass' && soundOf(by('Moss')) === 'grass' && soundOf(by('Dirt')) === 'dirt' && soundOf(by('Sand')) === 'sand'
   && soundOf(by('Gravel')) === 'gravel' && soundOf(by('Snow')) === 'snow' && soundOf(by('Stone')) === 'stone' && soundOf(by('Iron Ore')) === 'stone'
-  && soundOf(by('Planks')) === 'wood' && soundOf(by('Leaves')) === 'plant' && soundOf(by('Glass')) === 'glass' && soundOf(by('Framed Window')) === 'glass'
-  && soundOf(by('Gold')) === 'metal' && soundOf(by('Chain')) === 'metal' && soundOf(by('Red Rug')) === 'cloth'
+  && soundOf(by('Oak Planks')) === 'wood' && soundOf(by('Leaves')) === 'plant' && soundOf(by('Glass')) === 'glass' && soundOf(by('Framed Window')) === 'glass'
+  && soundOf(by('Gold Block')) === 'metal' && soundOf(by('Chain')) === 'metal' && soundOf(by('Red Rug')) === 'cloth'
   && soundOf(by('Water')) === 'water' && soundOf(by('Lava')) === 'lava' && soundOf(null) === 'dirt');
 ok('the old test still holds: stone, planks and glass', soundOf(BLOCKS_BY_ID.get(3)) === 'stone' && soundOf(BLOCKS_BY_ID.get(7)) === 'wood' && soundOf(BLOCKS_BY_ID.get(10)) === 'glass');
 ok('every block has a sound that exists', BLOCKS.every((b) => MATERIAL_NAMES.includes(soundOf(b))));

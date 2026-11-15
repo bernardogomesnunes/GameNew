@@ -29,21 +29,21 @@ const forestAfter = (seconds, opts = {}) => {
 };
 
 const game = { dayLengthSeconds: GAME_DAY_SECONDS };
-ok('a forest gives 20 wood in one game day', forestAfter(GAME_DAY_SECONDS, game).got.wood === 20);
+ok('a forest gives 24 wood in one game day', forestAfter(GAME_DAY_SECONDS, game).got.wood === 24);
 {
   // Played through: the game collects every few seconds while you play.
   const { reg, t0 } = forestAfter(0, game);
   let wood = 0;
   for (let t = 5; t <= 3 * GAME_DAY_SECONDS; t += 5) wood += reg.collect({ now: t0 + t * 1000 }).wood ?? 0;
-  ok(`and 60 over three played days (${wood})`, wood === 60);
+  ok(`and 72 over three played days (${wood})`, wood === 72);
 }
-ok('5 every quarter of a game day — nearly four minutes', forestAfter(GAME_DAY_SECONDS / 4, game).got.wood === 5 && !forestAfter(GAME_DAY_SECONDS / 4 - 1, game).got.wood);
+ok('6 every quarter of a game day — nearly four minutes', forestAfter(GAME_DAY_SECONDS / 4, game).got.wood === 6 && !forestAfter(GAME_DAY_SECONDS / 4 - 1, game).got.wood);
 {
   const { reg, t0 } = forestAfter(0, game);
   ok('the next payout is counted in game time too', reg.nextPayoutIn({ now: t0 }) === GAME_DAY_SECONDS / 4);
 }
-ok('away overnight pays two game days, not a mountain', forestAfter(8 * 3600, game).got.wood === 40);
-ok('a registry left on real days still pays by real days', forestAfter(GAME_DAY_SECONDS).got.wood === undefined && forestAfter(6 * 3600).got.wood === 5);
+ok('away overnight pays two game days, not a mountain', forestAfter(8 * 3600, game).got.wood === 48);
+ok('a registry left on real days still pays by real days', forestAfter(GAME_DAY_SECONDS).got.wood === undefined && forestAfter(6 * 3600).got.wood === 6);
 
 const duilt = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.url), 'utf8');
 ok('Duilt runs its buildings on game days, at PRODUCTION_PACE', /new StructureRegistry\(\{ world, bus, inventory: this\.inventory, dayLengthSeconds: GAME_DAY_SECONDS \/ PRODUCTION_PACE \}\)/.test(duilt));
@@ -61,10 +61,10 @@ ok('Duilt runs its buildings on game days, at PRODUCTION_PACE', /new StructureRe
       if (perGameDay > most) { most = perGameDay; who = `${spec.id} ${id}`; }
     }
   }
-  ok(`at its first level no building makes more than 4 of anything a game day (most: ${who}, ${most})`, most <= 4 && most >= 3);
+  ok(`at its first level no building makes more than 5 of anything a game day (most: ${who}, ${most})`, most <= 5 && most >= 3);
   const forest = forestAfter(GAME_DAY_SECONDS, { dayLengthSeconds: GAME_DAY_SECONDS / PRODUCTION_PACE }).got.wood ?? 0;
   const fiveDays = (() => { const { reg, t0 } = forestAfter(0, { dayLengthSeconds: GAME_DAY_SECONDS / PRODUCTION_PACE }); let w = 0; for (let t = 5; t <= 5 * GAME_DAY_SECONDS; t += 5) w += reg.collect({ now: t0 + t * 1000 }).wood ?? 0; return w; })();
-  ok(`a forest makes 4 wood a game day at that pace (${fiveDays} over five days)`, fiveDays === 20 && forest <= 5);
+  ok(`a forest makes nearly 5 wood a game day at that pace (${fiveDays} over five days)`, fiveDays === 24 && forest <= 6);
 }
 
 process.exit(f ? 1 : 0);

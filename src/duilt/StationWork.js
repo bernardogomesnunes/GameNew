@@ -1,4 +1,5 @@
 import { RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
+import { ITEMS_BY_ID } from '../config/items.js';
 
 /**
  * IMP-15: transformations as a place-it-in, watch-it-change process.
@@ -69,7 +70,7 @@ export class StationWork {
     if (!usesSpots(recipe)) return { ok: false, reason: 'That is not made here.' };
     if (!Number.isSafeInteger(batches) || batches < 1) return { ok: false, reason: 'Put in at least one.' };
     const tools = (recipe.tools ?? []).filter((id) => this.bag().countOf(id) < 1);
-    if (tools.length) return { ok: false, reason: `Keep ${tools.map((id) => id.replace(/_/g, ' ')).join(', ')} in your bag.` };
+    if (tools.length) return { ok: false, reason: `Keep ${tools.map((id) => (ITEMS_BY_ID.get(id)?.name ?? id.replace(/_/g, ' ')).toLowerCase()).join(', ')} in your bag.` };
     const s = this.spots.get(key);
     if (s && s.recipeId !== recipeId && (s.batches > 0 || s.out > 0)) return { ok: false, reason: 'Take out what is here first.' };
     const room = MAX_BATCHES - (s?.recipeId === recipeId ? s.batches : 0);
