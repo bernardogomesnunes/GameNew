@@ -221,6 +221,7 @@ export class DuiltGame {
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
+        : r.needsTemple && !this.sandbox && !this.structures.list().some((s) => s.type === 'temple' && s.valid && (s.tier ?? 0) >= r.needsTemple) ? `Raise a temple to level ${r.needsTemple + 1} first`
         : r.study && this.studying ? `The university is busy with ${this.studying.name.toLowerCase()} — ${this.researchLeftText()} left`
         // The Future's materials: read its Archive first (world/future.js).
         : r.future && !this.time.futureKnown ? 'Knowledge from the Future — read the Archive in its university, and bring it home' : null),

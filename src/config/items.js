@@ -203,6 +203,7 @@ export const ITEMS = [
   // fibre spun into string; string and planks into a bow and its arrows.
   // With the bow in hand, Break looses an arrow (Game.shootBow).
   { id: 'hemp_fibre', name: 'Hemp Fibre', kind: 'raw', stackTo: STACK_BULK, color: 0xc9b98a, glyph: 'fibre', madeBy: 'Picked from ripe hemp' },
+  { id: 'spinning_wheel', name: 'Spinning Wheel', kind: 'refined', stackTo: 10, color: 0xa87a4c, glyph: 'string', block: 534, madeBy: 'Made by hand from oak planks and a log. Place it and spin hemp into string' },
   { id: 'string', name: 'String', kind: 'refined', stackTo: STACK_BULK, color: 0xe6dcc0, glyph: 'string', madeBy: 'Hemp fibre, spun at the bench' },
   { id: 'arrow', name: 'Arrow', kind: 'refined', stackTo: STACK_BULK, color: 0xb08a5a, glyph: 'arrow', madeBy: 'Planks and string, at the bench — the bow shoots them' },
   {

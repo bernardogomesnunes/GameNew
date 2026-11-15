@@ -129,6 +129,16 @@ PROP_SHAPES.torch = [
   { minX: 0.46, maxX: 0.54, minY: 0.84, maxY: 0.94, minZ: 0.46, maxZ: 0.54, color: FLAME, glow: true },
 ];
 
+// A spinning wheel: a stool, a wheel standing on it, and the spindle.
+PROP_SHAPES.spinning_wheel = [
+  { minX: 0.15, maxX: 0.85, minY: 0.3, maxY: 0.38, minZ: 0.3, maxZ: 0.7, color: 0x9c7348 },
+  ...[[0.18, 0.33], [0.76, 0.33], [0.18, 0.61], [0.76, 0.61]].map(([x, z]) => ({ minX: x, maxX: x + 0.06, minY: 0, maxY: 0.3, minZ: z, maxZ: z + 0.06, color: 0x7a5636 })),
+  { minX: 0.25, maxX: 0.29, minY: 0.38, maxY: 0.95, minZ: 0.25, maxZ: 0.75, color: 0x8a6238 },
+  { minX: 0.23, maxX: 0.31, minY: 0.62, maxY: 0.7, minZ: 0.46, maxZ: 0.54, color: 0x4a4340 },
+  { minX: 0.62, maxX: 0.72, minY: 0.38, maxY: 0.6, minZ: 0.45, maxZ: 0.55, color: 0x7a5636 },
+  { minX: 0.6, maxX: 0.74, minY: 0.6, maxY: 0.66, minZ: 0.44, maxZ: 0.56, color: 0xe6dcc0 },
+];
+
 // A chandelier hanging from the top of its cell: a chain, a hub, a cross of
 // arms, and a candle burning at the end of each.
 PROP_SHAPES.chandelier = [
