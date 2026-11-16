@@ -29,6 +29,30 @@ export function sampleTerrainGrid(gen, centreX, centreZ, { radius, step }) {
   return { size, step, cells };
 }
 
+/**
+ * IMP-7 (owner, 15 November: "the map should show the render of the map and
+ * its coordinates"): the Past and the Future are built, not just generated,
+ * so there the map is read off the real blocks, the top one of each column
+ * already loaded; what isn't loaded stays dark. Never loads a chunk to look.
+ */
+export function sampleWorldGrid(world, colourOf, centreX, centreZ, { radius, step }) {
+  const size = Math.max(1, Math.round((radius * 2) / step));
+  const cells = new Array(size * size);
+  for (let gz = 0; gz < size; gz++) {
+    for (let gx = 0; gx < size; gx++) {
+      const wx = Math.round(centreX - radius + gx * step), wz = Math.round(centreZ - radius + gz * step);
+      let colour = '#1d1a22';
+      if (world.hasChunk(wx >> 4, wz >> 4)) {
+        const y = world.surfaceHeight(wx, wz);
+        const id = world.getBlock(wx, y, wz) || world.getBlock(wx, y - 1, wz);
+        colour = colourOf(id) ?? colour;
+      }
+      cells[gz * size + gx] = colour;
+    }
+  }
+  return { size, step, cells };
+}
+
 /** Where a world point lands on a canvas centred on (cx, cz) covering ±radius. */
 export function worldToCanvas(wx, wz, cx, cz, radius, canvasW, canvasH) {
   return [

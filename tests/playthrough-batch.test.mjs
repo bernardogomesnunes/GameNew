@@ -52,3 +52,12 @@ const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf
 assert.ok(/bedPart\(aimed\.block\)\) return void this\.sleep\(\)/.test(game) && /this\.dayCycle\.time = d\.dayTime = MORNING/.test(game), 'Place on a bed sleeps to morning');
 assert.ok(/id="map-coords"/.test(ui) && /You are at \$\{Math\.floor\(at\.x\)\}/.test(ui), 'the map says where you stand');
 console.log('PASS a bed sleeps the night through; the map shows your coordinates');
+
+// IMP-7 (owner, 15 November): in the Past and the Future the map is the land there, read off its blocks.
+{
+  const { sampleWorldGrid } = await import('../src/render/mapDraw.js');
+  const world = { hasChunk: (cx) => cx >= 0, surfaceHeight: () => 5, getBlock: (x, y) => (y === 5 ? 3 : 0) };
+  const { cells } = sampleWorldGrid(world, (id) => (id === 3 ? '#stone' : null), 0, 0, { radius: 32, step: 16 });
+  assert.ok(cells.includes('#stone') && cells.includes('#1d1a22'), 'loaded columns show their top block; the rest stays dark');
+  console.log('PASS the map in the Past and the Future is read off the loaded blocks');
+}
