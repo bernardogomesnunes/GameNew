@@ -44,7 +44,7 @@ ok('it is modelled: a bench, a blade, a log', boxesFor('wood_mill').length >= 10
   const at = g.crafting.available(3, { station: null, atStations: g.stationsNear({ x: 16.5, y: 1, z: 16.5 }) });
   const away = g.crafting.available(3, { station: null, atStations: [] });
   ok('by it, its recipes can be made; away, they say where to go',
-    at.find((r) => r.id === 'mill_door').atStation && /Stand at your wood mill/.test(away.find((r) => r.id === 'mill_door').reason));
+    at.find((r) => r.id === 'mill_stairs_plank').atStation && /Stand at your wood mill/.test(away.find((r) => r.id === 'mill_stairs_plank').reason));
 }
 // CL-10 (asked for directly: the mills' search had their names written in it):
 // the bench opens with nothing typed; standing by the mill, its own way shows.
@@ -55,11 +55,13 @@ ok('Place on it opens the bench, on what is made there', /stationOf\(aimed\.bloc
 
 ok('the mill and workshop no longer make planks (the Planing Bench does)', !['mill_planks', 'mill_planks_white', 'mill_planks_dark', 'planks_fine'].some((id) => recipe(id)));
 const perPlank = (r) => Object.values(r.inputs).reduce((a, b) => a + b, 0) / r.output.count;
-for (const [mill, hand] of [['mill_door', 'door'], ['mill_trapdoor', 'trapdoor'], ['mill_stairs_plank', 'stairs_plank'],
-  ['mill_door_white', 'door_white'], ['mill_trapdoor_dark', 'trapdoor_dark']]) {
+// CRAFT-9 part 2: the mill saws (stairs, slabs, trim); doors and trapdoors are joined at the Joinery Bench.
+for (const [mill, hand] of [['mill_stairs_plank', 'stairs_plank'], ['mill_slab_plank', 'slab_plank'], ['mill_trim_curl', 'trim_curl']]) {
   ok(`${recipe(mill).output.id} for less at the mill (${perPlank(recipe(mill))} a piece, not ${perPlank(recipe(hand))})`,
     recipe(mill).station === 'wood_mill' && recipe(mill).output.id === recipe(hand).output.id && perPlank(recipe(mill)) < perPlank(recipe(hand)));
 }
+ok('the mill no longer joins doors or trapdoors',
+  !['mill_door', 'mill_trapdoor', 'mill_door_white', 'mill_trapdoor_white', 'mill_door_dark', 'mill_trapdoor_dark'].some((id) => recipe(id)));
 
 // --- stripped logs -------------------------------------------------------------------------
 

@@ -15,14 +15,21 @@ assert.equal(BLOCKS_BY_ID.get(JOINERY_BENCH).name, 'Joinery Bench');
 assert.equal(RECIPES_BY_ID.get('joinery_bench').station, 'hand');
 console.log('PASS the joinery bench is a placeable station block made by hand');
 
-for (const id of ['fence', 'gate', 'chest']) {
+// CRAFT-9 part 2: door, trapdoor and chest keep a dearer hand recipe; fences and gates are made only here.
+for (const id of ['door', 'trapdoor', 'chest', 'door_white', 'trapdoor_dark']) {
   const hand = RECIPES_BY_ID.get(id), bench = RECIPES_BY_ID.get(`joinery_${id}`);
   assert.equal(bench.station, 'joinery_bench');
   assert.equal(bench.output.id, hand.output.id);
-  const per = (r) => r.inputs.planks / r.output.count;
+  const per = (r) => Object.values(r.inputs)[0] / r.output.count;
   assert.ok(per(bench) < per(hand), `${id} costs fewer planks at the bench`);
 }
-console.log('PASS fences, gates and chests take fewer planks at the bench');
+for (const id of ['fence', 'gate', 'fence_white', 'gate_white', 'fence_dark', 'gate_dark']) {
+  assert.ok(!RECIPES_BY_ID.has(id), `${id} has no workbench recipe`);
+  assert.equal(RECIPES_BY_ID.get(`joinery_${id}`).station, 'joinery_bench');
+}
+assert.deepEqual(RECIPES_BY_ID.get('joinery_door').inputs, { planks: 3 });
+assert.deepEqual(RECIPES_BY_ID.get('joinery_trapdoor').inputs, { planks: 2 });
+console.log('PASS doors, trapdoors and chests take fewer planks at the bench; fences and gates are made only there');
 
 assert.ok(!RECIPES.some((r) => r.output.id === 'carpentry_mallet'), 'no mallet recipe');
 assert.ok(!RECIPES.some((r) => r.tools?.includes('carpentry_mallet')), 'nothing asks for the mallet');
