@@ -27,13 +27,13 @@ console.log('PASS fences, gates and chests take fewer planks at the bench');
 assert.ok(!RECIPES.some((r) => r.output.id === 'carpentry_mallet'), 'no mallet recipe');
 assert.ok(!RECIPES.some((r) => r.tools?.includes('carpentry_mallet')), 'nothing asks for the mallet');
 assert.ok(ITEMS_BY_ID.has('carpentry_mallet'), 'old bags keep the item');
-// IMP-18: the bow is made at the placed Planing Bench; nothing asks for the plane.
+// CRAFT-9: the bow is made by hand; nothing asks for the plane.
 assert.deepEqual(RECIPES_BY_ID.get('bow').tools, ['carpentry_saw']);
-assert.equal(RECIPES_BY_ID.get('bow').station, 'planing_bench');
+assert.equal(RECIPES_BY_ID.get('bow').station, 'hand');
 assert.ok(!RECIPES.some((r) => r.tools?.includes('carpentry_plane')), 'nothing asks for the plane');
 assert.ok(!RECIPES.some((r) => r.output.id === 'carpentry_plane'), 'no plane recipe');
 assert.ok(RECIPES_BY_ID.get('planing_bench').age <= RECIPES_BY_ID.get('bow').age, 'the bench comes no later than the bow');
-console.log('PASS the mallet and the plane left the bag rules; the bow is made at the Planing Bench');
+console.log('PASS the mallet and the plane left the bag rules; the bow is made by hand');
 
 const inv = new Inventory();
 inv.add('planks', 4);

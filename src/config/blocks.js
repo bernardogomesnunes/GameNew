@@ -962,10 +962,12 @@ BLOCKS.push(
 );
 
 // IMP-45: what a dragon sheds, lying on the ground to be picked up.
-export const DRAGON_SCALE = 535, DRAGON_CLAW = 536;
+export const DRAGON_SCALE = 535, DRAGON_CLAW = 536, EGG_DRAGON = 537;
 BLOCKS.push(
   { id: DRAGON_SCALE, name: 'Dragon Scale', glyph: 'crystal', color: 0x8a2a3a, material: 'stone', shape: 'dragon_scale', unlock: null },
   { id: DRAGON_CLAW, name: 'Dragon Claw', glyph: 'crystal', color: 0xe6dcc0, material: 'stone', shape: 'dragon_claw', unlock: null },
+  // Owner, 16 November: "pick a dragon egg and hatch it, and it would be my pet and defend me".
+  { id: EGG_DRAGON, name: 'Dragon Egg', glyph: 'egg', color: 0x8a2a3a, shape: 'egg', material: 'stone', unlock: null },
 );
 
 // CRAFT3D-3: the foundry's crucible, where ore is melted and poured into a

@@ -105,7 +105,7 @@ import { CROPS, cropOf, cropBlock } from './config/crops.js';
 import { Mobs, rayBox, surfaceAt } from './world/Mobs.js';
 import { Crowd, gatherCrowd, knock, SWORD_KNOCK, ARROW_KNOCK } from './world/bodies.js';
 import { landmarksFor, PLACE_NAMES } from './world/landmarks.js';
-import { DRAGON_SCALE, DRAGON_CLAW } from './config/blocks.js';
+import { DRAGON_SCALE, DRAGON_CLAW, EGG_DRAGON } from './config/blocks.js';
 /** IMP-45: what one blow of the Dragon Axe does: more than any creature but a god has. */
 const DRAGON_AXE_BLOW = 100000;
 import { LOOT } from './duilt/Loot.js';
@@ -158,13 +158,17 @@ const REACH = 7;
 /** The god's wand's beam (useWand): how often, how fast, how hard. */
 const WAND_EVERY_MS = 350, WAND_BEAM_SPEED = 70, WAND_BEAM_DAMAGE = 12;
 /** Which dinosaur is in which egg (world/past.js). */
-const EGG_TYPE = { [EGG_RAPTOR]: 'raptor', [EGG_TRIKE]: 'trike', [EGG_LONGNECK]: 'longneck' };
+const EGG_TYPE = { [EGG_RAPTOR]: 'raptor', [EGG_TRIKE]: 'trike', [EGG_LONGNECK]: 'longneck', [EGG_DRAGON]: 'dragon_egg' };
+/** What a dragon egg hatches into: one of the three smaller dragons, by where it was laid. */
+const HATCHLINGS = ['fire_drake', 'frost_wyvern', 'storm_dragon'];
 /**
  * Your dinosaurs (Game.tickPack): how far the whistle carries; how close
  * they keep; how far from them (and you) they'll go for something; how far
  * behind one catches you up (or how long getting no nearer); how far off
  * one's lost to you; and how near it has to be to come through time.
  */
+/** How near you a foe must be for your dragon to go for it. */
+const PET_FIGHT = 28;
 const WHISTLE_REACH = 60, PACK_HEEL = 4, PACK_FIGHT = 14, PACK_CATCH_UP = 40, PACK_STUCK = 3, PACK_LOST = 120, PACK_TRAVEL = 24;
 /** Out in the world, who'll stop for a word (config/talk.js). */
 const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard', 'futurian', 'caravaner', 'mossfolk']);
@@ -4692,6 +4696,7 @@ export class Game {
   /** Up on the horse: you steer, it goes where you go, faster than on foot. */
   startRide(m) {
     if (!m?.owned || this.riding || this.piloting) return;
+    if (MOBS_BY_ID.get(m.type)?.flies) return void this.ui.toast({ kind: 'xp', title: 'Your dragon is too young to carry you' });
     this.ui.closePanel?.('panel-store');
     this.player.flying = false;
     this.player.teleport?.(m.x, m.y, m.z) ?? this.player.position.set(m.x, m.y, m.z);
@@ -7276,6 +7281,38 @@ export class Game {
   }
 
   /**
+   * Your dragons (hatched from an egg), each frame: the nearest thing coming
+   * for you, a raider, a soldier, a hunting beast or a wild dragon, is
+   * theirs to burn (Mobs.fly breathes at `m.foe`).
+   */
+  tickPetDragons() {
+    const pets = (this.duilt?.mounts ?? []).filter((m) => !m.dead && m.owned && MOBS_BY_ID.get(m.type)?.flies);
+    if (!pets.length) return;
+    const p = this.player.position, hostile = this.wanderers?.hostile();
+    const people = (this.wanderers?.list ?? []).filter((e) => WANDERERS[e.kind].hp && !e.dead && !WANDERERS[e.kind].god && (hostile || e.angry || e.raider || e.war || this.wanderers.hostileOf(e)));
+    const beasts = (this.mobs?.list ?? []).filter((e) => !e.owned && !e.dead && !(e.dying > 0) && (e.chasing || e.angryFor > 0 || (MOBS_BY_ID.get(e.type)?.flies && e.breathAt)));
+    for (const m of pets) {
+      let foe = null, best = PET_FIGHT;
+      for (const e of [...people, ...beasts]) {
+        const d = Math.hypot(e.x - p.x, e.z - p.z);
+        if (d < best) { foe = e; best = d; }
+      }
+      m.foe = foe;
+    }
+  }
+
+  /** A pet dragon's fire reaching its foe: burnt, and what it carried into your bag. */
+  petDragonFire(m, foe, damage) {
+    const spec = MOBS_BY_ID.get(m.type);
+    const person = this.wanderers?.list.includes(foe);
+    const res = person ? this.wanderers.hit(foe, damage, m.x, m.z) : this.mobs.hit(foe, damage, m.x, m.z);
+    if (!res?.killed) return;
+    const gained = this.duilt?.collect(res.drops) ?? {};
+    const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+    this.ui.toast({ kind: 'xp', title: `Your ${spec.name.toLowerCase()} burnt ${foe.name ?? `a ${MOBS_BY_ID.get(foe.type)?.name.toLowerCase()}`}`, body: got || undefined });
+  }
+
+  /**
    * IMP-45 (owner: "Dragons drop claws and scales randomly ... pick them by
    * click break on them"): what a dragon sheds lands on the ground near it,
    * a scale or claw on top of a block, to be broken to pick up.
@@ -7311,7 +7348,7 @@ export class Game {
       if (!this.world.hasChunk(e.x >> 4, e.z >> 4)) { this.duilt.eggs.push(e); continue; }
       // Picked up again since: nothing to hatch.
       if (EGG_TYPE[this.world.getBlock(e.x, e.y, e.z)] !== e.type) continue;
-      const spec = MOBS_BY_ID.get(e.type);
+      const spec = MOBS_BY_ID.get(e.type === 'dragon_egg' ? HATCHLINGS[Math.abs(e.x * 7 + e.z * 13) % HATCHLINGS.length] : e.type);
       if (!spec) continue;
       this.world.setBlock(e.x, e.y, e.z, 0);
       this.remeshDirty();
@@ -7322,7 +7359,9 @@ export class Game {
       this.duilt.time.hatched += 1;
       hatched = true;
       this.editedAt = Date.now();
-      this.ui.toast({ kind: 'achievement', title: `A ${spec.name.toLowerCase()} hatched`, body: 'Tame, and yours. Place on it to ride.', duration: 6000 });
+      if (spec.flies) { m.follow = true; m.airborne = true; m.y += 2; }
+      this.ui.toast({ kind: 'achievement', title: `A ${spec.name.toLowerCase()} hatched`, duration: 6000,
+        body: spec.flies ? 'Yours. It flies with you and burns whatever comes for you.' : 'Tame, and yours. Place on it to ride.' });
     }
     if (hatched) this.gamification?.checkAchievements(null);
   }
@@ -8307,6 +8346,7 @@ export class Game {
       this.lookForPlaces(dt);
       this.hatchEggs(dt);
       this.tickPack(dt);
+      this.tickPetDragons();
       // The first time it gets properly dark (config/moments.js).
       if (this.duilt && !this.duilt.moments.includes('first_night') && daylightAt(this.dayCycle.time).day < 0.25) this.tellMoment('first_night');
       this.tickBreaking(performance.now());
@@ -8464,6 +8504,7 @@ export class Game {
         avoid: (x, z) => !!(this.duilt && !this.duilt.sandbox && this.duilt.territory.contains(x, z)),
         onBite: (m, damage) => this.dinoBites(m, damage),
         onBreath: (m, damage) => this.dragonFire(m, damage),
+        onPetBreath: (m, foe, damage) => this.petDragonFire(m, foe, damage),
       });
       // IMP-45: each dragon nest keeps one dragon: the first an Elder Dragon, the rest one of the three smaller ones.
       const smaller = ['fire_drake', 'frost_wyvern', 'storm_dragon'];

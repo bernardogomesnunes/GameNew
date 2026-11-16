@@ -32,6 +32,8 @@ const CAMERA_UP = 2.2, CAMERA_BACK = 1.8;
  * FINGER of it (in screen halves: 0.14 is about a fingertip on a phone).
  */
 const TOUCH_NEAR = 0.85, FINGER = 0.14;
+/** How far beside the outline a touch drop still counts as on it. */
+const TOUCH_MARGIN = 0.15;
 /** A cut part waiting in the row is drawn this much bigger than in its place, to be seen and picked. */
 const WAIT_SCALE = 1.7;
 const COARSE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
@@ -105,6 +107,7 @@ export class CounterView {
     for (const { box } of specs) { lo.min(this._v.set(box.minX, box.minY, box.minZ)); hi.max(this._v.set(box.maxX, box.maxY, box.maxZ)); }
     this.centre = new THREE.Vector3((lo.x + hi.x) / 2, lo.y, (lo.z + hi.z) / 2);
     this.width = (hi.x - lo.x) * SCALE;
+    this.depth = (hi.z - lo.z) * SCALE;
     // The outline: one see-through box per part, merged into one mesh's worth of children.
     const outline = new THREE.Group();
     for (const { box } of specs) outline.add(boxMesh(box, this.centre, 0xffffff, { transparent: true, opacity: 0.22, depthWrite: false }));
@@ -191,11 +194,20 @@ export class CounterView {
     m.position.y = m.userData.slot.y;
   }
 
+  /** Whether a point on the top is over the piece's outline, or within a finger of it. */
+  overOutline(p) {
+    return Math.abs(p.x) <= this.width / 2 + TOUCH_MARGIN && Math.abs(p.z) <= this.depth / 2 + TOUCH_MARGIN;
+  }
+
   /** Lets go of part `i`: in its place it fits, anywhere else it goes back. */
   drop(i) {
     const m = this.parts[i];
     if (!m?.visible) return false;
-    const near = Math.hypot(m.position.x - m.userData.slot.x, m.position.z - m.userData.slot.z) <= SNAP;
+    // Owner, 16 November: "when I drop the piece on top of the furniture it
+    // goes to its place. This should be mobile only". On a touch screen a
+    // part let go anywhere over the outline (or just beside it) fits.
+    const near = COARSE ? this.overOutline(m.position)
+      : Math.hypot(m.position.x - m.userData.slot.x, m.position.z - m.userData.slot.z) <= SNAP;
     if (near && this.counters.fit(this.key, i).ok) {
       m.position.copy(m.userData.slot);
       this.finishIfDone();

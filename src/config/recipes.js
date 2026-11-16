@@ -348,16 +348,6 @@ export const RECIPES = [
     batch: 8,
     blurb: 'Sand, taken hot enough to forget it was sand.',
   },
-  {
-    id: 'planks_fine',
-    name: 'Planks',
-    station: 'workshop',
-    age: 4,
-    inputs: { wood: 1 },
-    output: { id: 'planks', count: 4 },
-    batch: 8,
-    blurb: 'The same log, cut properly. Twice what you get by hand.',
-  },
 
   // --- Age 4: the foundry ---------------------------------------------------
   //
@@ -717,36 +707,6 @@ export const RECIPES = [
     inputs: { planks: 8, cobblestone: 4 },
     output: { id: 'wood_mill', count: 1 },
     blurb: 'A saw bench. Stand by it and wood goes further. Place on it to use it.',
-  },
-  {
-    id: 'mill_planks',
-    name: 'Planks (mill)',
-    station: 'wood_mill',
-    age: 3,
-    inputs: { wood: 1 },
-    output: { id: 'planks', count: 3 },
-    batch: 8,
-    blurb: 'Three planks to a log at the mill, not two.',
-  },
-  {
-    id: 'mill_planks_white',
-    name: 'White Planks (mill)',
-    station: 'wood_mill',
-    age: 3,
-    inputs: { white_wood: 1 },
-    output: { id: 'white_planks', count: 3 },
-    batch: 8,
-    blurb: 'Three planks to a log at the mill, not two.',
-  },
-  {
-    id: 'mill_planks_dark',
-    name: 'Dark Planks (mill)',
-    station: 'wood_mill',
-    age: 3,
-    inputs: { dark_wood: 1 },
-    output: { id: 'dark_planks', count: 3 },
-    batch: 8,
-    blurb: 'Three planks to a log at the mill, not two.',
   },
   {
     id: 'mill_door',
@@ -1717,7 +1677,9 @@ RECIPES.push(
   // IMP-6, phase 1: the plane is placed, and gives more planks. A log is two
   // planks by hand; at the bench it is three, from the second age on.
   { id: 'planing_bench', name: 'Planing Bench', station: 'hand', age: 1, inputs: { planks: 6, stone: 2 }, output: { id: 'planing_bench', count: 1 }, blurb: 'A bench with a plane set in it. Place it, stand by it and logs give three planks, not two.' },
-  { id: 'bench_planks', name: 'Planks (planing bench)', station: 'planing_bench', age: 2, inputs: { wood: 1 }, output: { id: 'planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log at the planing bench, not two.' },
+  { id: 'bench_planks', name: 'Planks (planing bench)', station: 'planing_bench', age: 1, inputs: { wood: 1 }, output: { id: 'planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log at the planing bench, not two.' },
+  { id: 'bench_planks_white', name: 'White Planks (planing bench)', station: 'planing_bench', age: 1, inputs: { white_wood: 1 }, output: { id: 'white_planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log of white wood at the planing bench, not two.' },
+  { id: 'bench_planks_dark', name: 'Dark Planks (planing bench)', station: 'planing_bench', age: 1, inputs: { dark_wood: 1 }, output: { id: 'dark_planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log of dark wood at the planing bench, not two.' },
   { id: 'joinery_bench', name: 'Joinery Bench', station: 'hand', age: 2, inputs: { planks: 6, wood: 2, stone: 2 }, output: { id: 'joinery_bench', count: 1 }, blurb: 'A bench with a mallet and pegs. Place it and stand by it: fences, gates and chests take fewer planks.' },
   { id: 'bleach_bucket', name: 'Bleach Bucket', station: 'hand', age: 3, inputs: { bucket_water: 1, wood: 2 }, output: { id: 'bleach_bucket', count: 1 }, blurb: 'Burn wood for ash and mix with water. Place the bucket, then wash stone or wood in it.' },
   { id: 'stone_white', name: 'Wash White Stone', station: 'bleach_bucket', age: 3, inputs: { stone: 2 }, output: { id: 'stone_white', count: 2 }, batch: 8, steps: ['Place rock in the bath', 'Wash and lift out'], blurb: 'Wash rock in wood-ash bleach to bring out its pale surface.' },
@@ -1750,10 +1712,8 @@ for (const r of RECIPES) {
     r.station = 'forge';
     r.steps = ['Load the hearth', 'Fire and cool'];
   }
-  // IMP-18: "the carpentry plane still needs to be in my bag to be used
-  // instead of placed". The bow is planed at a placed Planing Bench now;
-  // only the saw stays in the bag.
-  if (r.id === 'bow') { r.station = 'planing_bench'; r.tools = ['carpentry_saw']; r.steps = ['Shape the bow', 'Plane it smooth', 'String it']; }
+  // CRAFT-9: the bow is made by hand again; the Planing Bench only planes planks.
+  if (r.id === 'bow') r.tools = ['carpentry_saw'];
   if (/^sword_/.test(r.output.id) && !r.name.startsWith('Upgrade:')) {
     const metal = !['sword_wood', 'sword_stone'].includes(r.output.id);
     r.tools = metal ? ['weapon_mold'] : ['carpentry_chisel'];

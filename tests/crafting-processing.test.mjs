@@ -19,10 +19,10 @@ assert.equal(stationOf(RECIPES_BY_ID.get('bleach_bucket').output.id === 'bleach_
 assert.ok(BLOCKS_BY_ID.get(525)?.station === 'forge');
 console.log('PASS rock processing has forge and placed bleach bucket');
 // CRAFT3D-1: furniture is made at the carpentry counter; reusable tools are
-// checked on the bow (the saw, kept, at the planing bench).
+// checked on the bow (the saw, kept, by hand).
 const furniture = RECIPES_BY_ID.get('bow');
 for (const [id,n] of Object.entries(furniture.inputs)) inv.add(id,n*2);
-const opts = { atStations: ['planing_bench'] };
+const opts = { atStations: [] };
 assert.equal(craft.craft(furniture.id, 1, opts).ok, false);
 for (const tool of furniture.tools) inv.add(tool,1);
 assert.equal(craft.craft(furniture.id, 1, opts).ok, true);
@@ -71,11 +71,11 @@ assert.equal(forge.craft('sword_iron',1,{atStations:['foundry']}).ok,true);
 console.log('PASS existing foundries can also forge weapons');
 // The bow stands in for furniture (made at the carpentry counter now).
 inv.add('planks', 3); inv.add('string', 3);
-const available = craft.available(12,{station:null,atStations:['planing_bench']}).find(r=>r.id==='bow');
+const available = craft.available(12,{station:null,atStations:[]}).find(r=>r.id==='bow');
 assert.equal(available.ok,true);
 inv.remove('carpentry_saw',1);
-assert.equal(craft.available(12,{station:null,atStations:['planing_bench']}).find(r=>r.id==='bow').ok,false);
-assert.match(craft.craft('bow',1,{atStations:['planing_bench']}).reason,/Saw/);
+assert.equal(craft.available(12,{station:null,atStations:[]}).find(r=>r.id==='bow').ok,false);
+assert.match(craft.craft('bow',1,{atStations:[]}).reason,/Saw/);
 console.log('PASS removing a reusable tool after opening the panel blocks the craft');
 
 const alternate = RECIPES_BY_ID.get('stone_mill_stone_brick');
