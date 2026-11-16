@@ -836,46 +836,46 @@
   "group": "people"
  },
  "elder_dragon": {
-  "cubes": 79,
-  "triangles": 948,
+  "cubes": 149,
+  "triangles": 1386,
   "atlas": [
    512,
    512
   ],
-  "kb": 190.9,
+  "kb": 304.2,
   "name": "Elder Dragon",
   "group": "dragons"
  },
  "fire_drake": {
-  "cubes": 73,
-  "triangles": 876,
+  "cubes": 126,
+  "triangles": 1158,
   "atlas": [
    256,
    256
   ],
-  "kb": 129.1,
+  "kb": 188.0,
   "name": "Fire Drake",
   "group": "dragons"
  },
  "frost_wyvern": {
-  "cubes": 65,
-  "triangles": 780,
+  "cubes": 111,
+  "triangles": 986,
   "atlas": [
    256,
-   256
+   128
   ],
-  "kb": 115.5,
+  "kb": 162.5,
   "name": "Frost Wyvern",
   "group": "dragons"
  },
  "storm_dragon": {
-  "cubes": 75,
-  "triangles": 900,
+  "cubes": 127,
+  "triangles": 1170,
   "atlas": [
    256,
-   256
+   128
   ],
-  "kb": 132.0,
+  "kb": 184.8,
   "name": "Storm Dragon",
   "group": "dragons"
  }

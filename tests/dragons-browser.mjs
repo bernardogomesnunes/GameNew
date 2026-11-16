@@ -41,6 +41,19 @@ try {
   await page.screenshot({ path: 'artifacts/dragons/sky.png' });
   const flying = await page.evaluate(() => window.__d.map((m) => ({ id: m.type, up: m.airborne, y: Math.round(m.y) })));
   assert.ok(flying.every((f) => f.up), JSON.stringify(flying));
+  // IMP-47: the fire, a stream of small tongues from the drake's mouth down to you.
+  const fire = await page.evaluate(async () => {
+    const g = window.__game, p = g.player.position, [elder, drake] = window.__d;
+    drake.x = p.x - 9; drake.y = p.y + 9; drake.z = p.z - 15; drake.home = { x: drake.x, z: drake.z - 20 };
+    window.__fire = setInterval(() => {
+      for (const m of [elder, drake]) { m.breathing = 0.6; m.breathAt = { x: p.x + (m === elder ? 8 : 5), y: p.y, z: p.z - (m === elder ? 22 : 11) }; }
+    }, 5);
+    await new Promise((r) => setTimeout(r, 400));
+    return { tongues: g.fireBreath.flames.count, smoke: g.fireBreath.smoke.count, meshes: [g.fireBreath.flames.isInstancedMesh, g.fireBreath.smoke.isInstancedMesh] };
+  });
+  await page.screenshot({ path: 'artifacts/dragons/fire.png' });
+  await page.evaluate(() => clearInterval(window.__fire));
+  assert.ok(fire.tongues > 60 && fire.smoke > 0 && fire.meshes.every(Boolean), JSON.stringify(fire));
   await page.evaluate(async () => {
     const g = window.__game, { MOBS_BY_ID } = await import('/src/config/mobs.js');
     const p = g.player.position;
@@ -54,6 +67,7 @@ try {
   await page.waitForTimeout(1500);
   await page.screenshot({ path: 'artifacts/dragons/dinos.png' });
   assert.deepEqual(errors, []);
+  console.log(`PASS two dragons breathe fire in a real page: ${fire.tongues} tongues and ${fire.smoke} puffs of smoke`);
   console.log(`PASS four dragons fly in a real page (${flying.map((f) => `${f.id} at ${f.y}`).join(', ')}), and the new dinosaurs walk`);
 } finally {
   await browser?.close();

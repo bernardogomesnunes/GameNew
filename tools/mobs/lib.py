@@ -326,8 +326,9 @@ def render_one(model, path, time='day', samples=16, size=480, yaw=-30):
     clear_scene()
     sc = bpy.context.scene
     sc.frame_set(1)
-    info = build(model)
-    info['root'].rotation_euler.z = math.radians(yaw)
+    # `show`: a pose for the picture alone (a dragon's wings half raised), never exported.
+    info = build(dict(model, rest={**model.get('rest', {}), **model['show']}) if model.get('show') else model)
+    info['root'].rotation_euler.z = math.radians(model.get('show_yaw', yaw))
     bpy.context.view_layer.update()
     pts = [ob.matrix_world @ Vector(c) for ob in bpy.data.objects if ob.type == 'MESH' for c in ob.bound_box]
     lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
