@@ -43,16 +43,20 @@ const LEAVES = new Set([5, 42, 44, 517]);
 const NEST_EVERY = 3, NEST_NEAR = 160, NEST_RESPAWN_MS = 20 * 60 * 1000;
 /** How long a breath of fire lasts on screen. */
 export const BREATH_SECONDS = 1.2;
+/** Your own dragon circles this close over you, this high. */
+const PET_RADIUS = 7, PET_ALT = 7;
 
 export class Mobs {
   /**
    * @param avoid  (x, z) => true where nothing should spawn — your own
    *               settlement, so a herd doesn't appear in the middle of it.
    */
-  constructor({ world, rand = Math.random, avoid = null, cap = CAP, onBite = null, onBreath = null }) {
+  constructor({ world, rand = Math.random, avoid = null, cap = CAP, onBite = null, onBreath = null, onPetBreath = null }) {
     this.world = world;
     // (dragon, damage): a dragon's fire reaching you (IMP-45).
     this.onBreath = onBreath;
+    // (your dragon, its foe, damage): your pet's fire reaching what came for you.
+    this.onPetBreath = onPetBreath;
     /** IMP-45: the dragon nests, { key, x, y, z, type }, each keeping one dragon. */
     this.nests = [];
     /** When each nest's dragon was last brought down (ms), so it is a while coming back. */
@@ -452,6 +456,8 @@ export class Mobs {
       return;
     }
     m.home ??= { x: m.x, z: m.z };
+    // Your own dragon circles over you, close and low, and never lands far off.
+    if (m.owned && player) { m.home = { x: player.x, z: player.z }; m.fleeFor = 0; m.timer = Math.max(m.timer, 5); if (!m.airborne) m.airborne = true; }
     m.flightT = (m.flightT ?? this.rand() * 100) + dt;
     m.timer -= dt;
     if (m.fleeFor > 0) {
@@ -466,8 +472,15 @@ export class Mobs {
     // the flames (`breathing`, drawn by FireBreathView) reach you at once.
     m.breathIn = Math.max(0, (m.breathIn ?? spec.breath?.every ?? 0) - dt);
     m.breathing = Math.max(0, (m.breathing ?? 0) - dt);
-    const reach = spec.breath && player ? Math.hypot(player.x - m.x, player.y - m.y, player.z - m.z) : Infinity;
-    if (spec.breath && m.airborne && reach <= spec.breath.range && m.breathIn <= 0) {
+    // Yours breathes at what came for you (m.foe, from Game.tickPetDragons), never at you.
+    const at = m.owned ? m.foe : player;
+    const reach = spec.breath && at ? Math.hypot(at.x - m.x, (at.y ?? m.y) - m.y, at.z - m.z) : Infinity;
+    if (m.owned && at && spec.breath && reach <= spec.breath.range * 1.5 && m.breathIn <= 0) {
+      m.breathIn = spec.breath.every * 0.6;
+      m.breathing = BREATH_SECONDS;
+      m.breathAt = { x: at.x, y: (at.y ?? m.y) + 1, z: at.z };
+      this.onPetBreath?.(m, at, spec.breath.damage * 2);
+    } else if (!m.owned && spec.breath && m.airborne && reach <= spec.breath.range && m.breathIn <= 0) {
       m.breathIn = spec.breath.every;
       m.breathing = BREATH_SECONDS;
       m.breathAt = { x: player.x, y: player.y + 1, z: player.z };
@@ -484,7 +497,7 @@ export class Mobs {
     const ground = surfaceAt(this.world, Math.floor(m.x), Math.floor(m.z));
     const landing = m.timer <= 0 && m.fleeFor <= 0;
     // Round the home, a little wider and narrower as it goes.
-    const r = f.radius * (0.85 + 0.15 * Math.sin(m.flightT * 0.13 + m.id));
+    const r = (m.owned ? PET_RADIUS : f.radius) * (0.85 + 0.15 * Math.sin(m.flightT * 0.13 + m.id));
     const ang = Math.atan2(m.x - m.home.x, m.z - m.home.z) + (f.speed / r) * dt * (m.id % 2 ? 1 : -1);
     const tx = m.home.x + Math.sin(ang) * r, tz = m.home.z + Math.cos(ang) * r;
     const dx = tx - m.x, dz = tz - m.z, d = Math.hypot(dx, dz) || 1;
@@ -499,7 +512,8 @@ export class Mobs {
     m.speed = f.speed;
     m.bank = Math.max(-0.6, Math.min(0.6, turn * 1.4));
     // Height: over the ground below by `alt`, a slow swell; down to it to land.
-    const want = landing ? (ground ?? m.y) : (ground ?? m.y - f.alt) + f.alt + Math.sin(m.flightT * 0.4 + m.id) * 3;
+    const alt = m.owned ? PET_ALT : f.alt;
+    const want = landing ? (ground ?? m.y) : (ground ?? m.y - alt) + alt + Math.sin(m.flightT * 0.4 + m.id) * (m.owned ? 1 : 3);
     const dy = Math.max(-6 * dt, Math.min(4 * dt, want - m.y));
     m.y += dy;
     m.climb = dy / Math.max(1e-3, dt);
