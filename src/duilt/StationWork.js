@@ -46,8 +46,10 @@ export function batchSeconds(recipe) {
 
 /**
  * Recipes removed in CRAFT-9 (plank recipes at the wood mill), each mapped to
- * the planing bench recipe with the same input and output item. Saved work on
- * one carries on as the new recipe.
+ * the planing bench recipe with the same input and output item. A saved spot
+ * on one stands at a wood mill, so the next prune (DuiltGame.spotStands)
+ * finds no planing bench there and hands its logs and planks back to the
+ * bag: nothing is lost. Without the map the spot would be dropped unpaid.
  */
 const RENAMED_RECIPES = new Map([
   ['mill_planks', 'bench_planks'],
