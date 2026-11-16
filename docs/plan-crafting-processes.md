@@ -158,5 +158,6 @@ Each PR is playable alone and updates `docs/TASKS.md`.
 ## 7. Open questions for the owner
 
 1. Parts: do they stay on the table (this plan), or become bag items sawn at the Wood Mill (legs, boards) and carried to the table? Bag items add 6 items and one more trip.
+   **Owner, 16 November:** "it depends, like planks to do slabs, yes, the saw we already have it, let's keep it simple, chisel exists too if needed. So would be nice to keep 2 3 max items to help craft stuff besides the placed block." Decided: furniture parts stay on the table, no new part items. Bag items are only real materials, like planks into slabs. A machine needs at most 2 or 3 things besides its placed block: the existing Carpentry Saw and Chisel, and the material itself. No new tools.
 2. Hand recipes: do the Age 1 and 2 hand copies (planks, door, chest) stay for good, or disappear once the machine is placed?
 3. The clean stroke: planing bench only, or every hold-and-release machine (1 extra per batch on a let-go between 95% and 100%)?
