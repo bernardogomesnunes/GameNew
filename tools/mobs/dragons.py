@@ -423,7 +423,7 @@ def dragon(id, name, cols, body, legs, neck, head, tail, wings, crown, scale=1, 
     # Where the fire leaves it, and how big it stands, in blocks (config/mobs.js).
     m['mouth'] = dict(up=round((lip + hh * 0.05) * scale / 16, 2), out=round(-z0 * scale / 16, 2))
     m['size'] = dict(w=round(w * scale / 16, 2), h=round(h * scale / 16, 2), l=round(l * scale / 16, 2), leg=round(lh * scale / 16, 2),
-                     head=round(hw * 1.2 * scale / 16, 2), span=round(2 * tips[0][0] * scale / 16, 1),
+                     head=round((hw + hl) / 2 * scale / 16, 2), span=round(2 * tips[0][0] * scale / 16, 1),
                      long=round((pos[2] - z0) * scale / 16, 1))
     return m
 
