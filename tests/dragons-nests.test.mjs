@@ -53,3 +53,30 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 assert.ok(/tool\?\.id === 'dragon_axe' && target && !target\.god\) return DRAGON_AXE_BLOW/.test(game), 'one blow, but not a god');
 assert.ok(/regen: this\.selectedItemId === 'dragon_axe'/.test(game), 'held, you heal without eating');
 console.log('PASS the Dragon Axe fells anything but a god, and heals you while held');
+
+// Owner, 16 November: "pick a dragon egg and hatch it, and it would be my pet and defend me".
+{
+  const { EGG_DRAGON } = await import('../src/config/blocks.js');
+  assert.equal(ITEM_FOR_BLOCK.get(EGG_DRAGON), 'egg_dragon');
+  assert.ok(landmarkDesigns().some((d) => d.kind === 'dragon_nest' && d.blocks.some((b) => b[3] === EGG_DRAGON)), 'every nest holds an egg');
+  const world = { getBlock: () => 0, surfaceHeight: () => 10, height: 64, collisionBoxAt: () => null, hasChunk: () => true, biomeIndex: () => 0 };
+  const burnt = [], scorched = [];
+  const mobs = new Mobs({ world, rand: () => 0.5, onBreath: (m, d) => scorched.push(d), onPetBreath: (m, foe, d) => burnt.push([foe, d]) });
+  const pet = mobs.make(MOBS_BY_ID.get('fire_drake'), 0, 18, 0);
+  pet.owned = true; pet.breathIn = 0;
+  mobs.list.push(pet);
+  const player = { x: 40, y: 10, z: 0 };
+  mobs.fly(pet, 0.1, player);
+  assert.deepEqual(pet.home, { x: 40, z: 0 }, 'your dragon circles over you');
+  assert.equal(scorched.length, 0, 'and never breathes at you');
+  const raider = { x: 42, y: 10, z: 2 };
+  pet.foe = raider; pet.x = 40; pet.y = 18; pet.breathIn = 0;
+  mobs.fly(pet, 0.1, player);
+  assert.equal(burnt[0][0], raider, 'it burns what came for you');
+  assert.equal(burnt[0][1], 6, 'twice as hard as a wild one breathes');
+  console.log('PASS a dragon egg in every nest; your hatched dragon follows you and burns what comes for you');
+}
+const g2 = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+assert.ok(/\[EGG_DRAGON\]: 'dragon_egg'/.test(g2) && /HATCHLINGS\[/.test(g2), 'a dragon egg hatches into one of the smaller dragons');
+assert.ok(/this\.tickPetDragons\(\);/.test(g2), 'your dragons look for what is coming for you every frame');
+console.log('PASS the egg hatches a young dragon, which picks its foe every frame');
