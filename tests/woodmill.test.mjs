@@ -53,8 +53,7 @@ ok('Place on it opens the bench, on what is made there', /stationOf\(aimed\.bloc
 
 // --- wood goes further ---------------------------------------------------------------------
 
-ok('three planks to a log, not two — every wood', [['mill_planks', 'planks'], ['mill_planks_white', 'white_planks'], ['mill_planks_dark', 'dark_planks']]
-  .every(([id, out]) => recipe(id)?.output.id === out && recipe(id).output.count === 3 && recipe('planks').output.count === 2));
+ok('the mill and workshop no longer make planks (the Planing Bench does)', !['mill_planks', 'mill_planks_white', 'mill_planks_dark', 'planks_fine'].some((id) => recipe(id)));
 const perPlank = (r) => Object.values(r.inputs).reduce((a, b) => a + b, 0) / r.output.count;
 for (const [mill, hand] of [['mill_door', 'door'], ['mill_trapdoor', 'trapdoor'], ['mill_stairs_plank', 'stairs_plank'],
   ['mill_door_white', 'door_white'], ['mill_trapdoor_dark', 'trapdoor_dark']]) {

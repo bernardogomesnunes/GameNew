@@ -33,7 +33,7 @@ const bill = { planks: 12, cobblestone: 8, lantern: 1 };
   ok(`all of it, from wood, stone and glass in the bag (${JSON.stringify(made)})`, !Object.keys(still).length
     && g.inventory.countOf('planks') >= 12 && g.inventory.countOf('cobblestone') >= 8 && g.inventory.countOf('lantern') === 1);
   ok('the lantern\'s planks came on top of the twelve, not out of them', g.inventory.countOf('planks') >= 12);
-  ok('the workshop\'s planks (four a log) — you have one, so it\'s the cheaper way', g.inventory.countOf('wood') >= 10 - 4);
+  ok('the workshop makes no planks now (CRAFT-9): they come by hand, two a log', g.inventory.countOf('wood') <= 10 - 6);
 }
 
 {
