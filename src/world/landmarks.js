@@ -380,6 +380,8 @@ function nestBlocks(roll) {
   }
   blocks.push([0, 0, 0, 13], [1, 0, 0, 13], [0, 0, 1, 13], [0, 1, 0, 13]);
   blocks.push([0, 0, -3, CHEST + 2]);
+  // The dragon's egg, in the bowl beside the hoard: break it to take it.
+  blocks.push([2, 0, 2, 537]);
   return blocks;
 }
 

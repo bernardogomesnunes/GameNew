@@ -61,8 +61,10 @@ try {
   for (let i = 0; i < 5; i++) {
     const [from, to] = await page.evaluate((i) => {
       const v = window.__game.counterView, m = v.partMesh(i);
-      const a = m.getWorldPosition(m.position.clone()), b = v.slotOf(i);
-      return [[a.x, a.y, a.z], [b.x, b.y, b.z]];
+      // Owner, 16 November (phones): drop it anywhere on the outline and it
+      // goes to its place, so every part is let go at the outline's middle.
+      const a = m.getWorldPosition(m.position.clone()), b = v.slotOf(i), c = v.group.position;
+      return [[a.x, a.y, a.z], [c.x, b.y, c.z]];
     }, i);
     const a = await screenOf(...from), b = await screenOf(...to);
     await page.mouse.move(a.x, a.y); await page.mouse.down();
@@ -76,5 +78,5 @@ try {
   const made = await page.evaluate(() => counterCheck.bag.countOf('table_oak'));
   assert.equal(made, 1, 'an oak table in the bag');
   assert.deepEqual(errors, []);
-  console.log('PASS at a placed counter: pick, saw five parts, drag them into place, an oak table in the bag; leaving halfway keeps the parts');
+  console.log('PASS at a placed counter: pick, saw five parts, drop each anywhere on the outline (a phone), an oak table in the bag; leaving halfway keeps the parts');
 } finally { await browser?.close(); await server.close(); }
