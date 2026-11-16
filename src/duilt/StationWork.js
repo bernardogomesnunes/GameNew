@@ -44,6 +44,17 @@ export function batchSeconds(recipe) {
   return 15;
 }
 
+/**
+ * Recipes removed in CRAFT-9 (plank recipes at the wood mill), each mapped to
+ * the planing bench recipe with the same input and output item. Saved work on
+ * one carries on as the new recipe.
+ */
+const RENAMED_RECIPES = new Map([
+  ['mill_planks', 'bench_planks'],
+  ['mill_planks_white', 'bench_planks_white'],
+  ['mill_planks_dark', 'bench_planks_dark'],
+]);
+
 export class StationWork {
   /** `bag` () => the bag to pay from and give to, read each time (it can be swapped). */
   constructor({ inventory = null, bag = null }) {
@@ -165,7 +176,7 @@ export class StationWork {
 
   loadJSON(list) {
     this.spots.clear();
-    for (const s of Array.isArray(list) ? list : []) {
+    for (let s of Array.isArray(list) ? list : []) {
       // CRAFT3D-3: the foundry's work moved to its crucible; what a saved
       // foundry spot held comes back to the bag, once.
       if (s?.station === 'foundry' && RECIPES_BY_ID.get(s.recipeId)) {
@@ -174,6 +185,8 @@ export class StationWork {
         if (int(s.out)) this.bag().add(r.output.id, int(s.out));
         continue;
       }
+      const renamed = RENAMED_RECIPES.get(s?.recipeId);
+      if (renamed) s = { ...s, recipeId: renamed, station: RECIPES_BY_ID.get(renamed).station };
       if (typeof s?.key !== 'string' || !usesSpots(RECIPES_BY_ID.get(s.recipeId))) continue;
       const int = (n) => (Number.isSafeInteger(n) && n >= 0 ? n : 0);
       this.spots.set(s.key, { station: s.station, recipeId: s.recipeId, batches: Math.min(int(s.batches), MAX_BATCHES),

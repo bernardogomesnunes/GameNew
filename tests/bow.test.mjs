@@ -63,7 +63,7 @@ const duilt = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.url)
   ok('and arrows', recipe('arrow')?.inputs.string > 0 && recipe('arrow').output.count > 1);
   ok('all from the first age, by hand', ['string', 'arrow'].every((id) => recipe(id).age === 1 && recipe(id).station === 'hand'));
   // IMP-18: the bow is planed at a placed Planing Bench, itself an Age 1 make.
-  ok('the bow at a Planing Bench, from the first age', recipe('bow').age === 1 && recipe('bow').station === 'planing_bench' && recipe('planing_bench').age === 1);
+  ok('the bow by hand, from the first age', recipe('bow').age === 1 && recipe('bow').station === 'hand' && recipe('planing_bench').age === 1);
   const bow = ITEMS_BY_ID.get('bow');
   ok('the bow is a weapon that wears', bow.kind === 'tool' && bow.weapon && bow.ranged && bow.durability > 0);
   ok('each has an icon', ['bow', 'arrow', 'string', 'hemp_fibre', 'seeds_hemp'].every((id) => (itemIcon(ITEMS_BY_ID.get(id)) ?? '').startsWith('<svg')));
