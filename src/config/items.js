@@ -206,6 +206,8 @@ export const ITEMS = [
   { id: 'spinning_wheel', name: 'Spinning Wheel', kind: 'refined', stackTo: 10, color: 0xa87a4c, glyph: 'string', block: 534, madeBy: 'Made by hand from oak planks and a log. Place it and spin hemp into string' },
   { id: 'dragon_scale', name: 'Dragon Scale', kind: 'raw', stackTo: STACK_GOODS, color: 0x8a2a3a, glyph: 'crystal', block: 535, madeBy: 'Shed by a dragon. Break it where it lies to pick it up' },
   { id: 'dragon_claw', name: 'Dragon Claw', kind: 'raw', stackTo: STACK_GOODS, color: 0xe6dcc0, glyph: 'crystal', block: 536, madeBy: 'Shed by a dragon. Break it where it lies to pick it up' },
+  { id: 'egg_dragon', name: 'Dragon Egg', kind: 'raw', stackTo: STACK_GOODS, color: 0x8a2a3a, glyph: 'egg', block: 537,
+    madeBy: 'Lying in a dragon\'s nest. Set it down and it hatches in two days: a young dragon, yours, that flies with you and burns what comes for you' },
   { id: 'dragon_relic', name: 'Dragon Relic', kind: 'raw', stackTo: STACK_GOODS, color: 0xf3cf6a, glyph: 'gold', madeBy: 'Kept in a dragon\'s hoard. Its story is in the Lore book' },
   { id: 'dragon_axe', name: 'Dragon Axe', kind: 'tool', stackTo: 1, color: 0x8a2a3a, glyph: 'axe', durability: 4000, damage: 9,
     effectiveness: { wood: 'fast', plant: 'fast', dirt: 'normal', stone: 'normal' },
