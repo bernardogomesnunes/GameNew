@@ -5,19 +5,31 @@ import { chainLineHtml } from './chainLine.js';
 import { meltSeconds, mouldFor, MAX_BATCHES, POUR_MIN, POUR_MAX } from '../duilt/Crucible.js';
 
 /**
+ * The words each kind of pot uses. CRAFT-9 part 6: the Kiln Oven fires and
+ * is drawn where the crucible melts and is poured; it has no mould to pick.
+ */
+const WORDS = {
+  crucible: { station: 'crucible', verb: 'Pour', ing: 'Melting', state: 'melting', done: 'molten', load: 'Load something to melt. It melts on its own, also while you are away.',
+    hold: 'Hold Pour and let go when the mould is full', made: 'Poured', short: 'Too little: it ran back into the pot. Hold longer.', over: 'Too much: it spilt over and was lost.', bar: 'How far the batch has melted', gauge: 'How full the mould is' },
+  kiln: { station: 'kiln_oven', verb: 'Draw', ing: 'Firing', state: 'firing', done: 'fired', load: 'Load clay or sand to fire. It fires on its own, also while you are away.',
+    hold: 'Hold Draw and let go when the tray reaches the mouth', made: 'Drawn', short: 'Not out yet: the tray slid back in. Hold longer.', over: 'Too far: it fell off the tray and cracked.', bar: 'How far the batch has fired', gauge: 'How far the tray is out' },
+};
+
+/**
  * CRAFT3D-3: the buttons over the crucible close-up. What it can melt (a tap
  * loads as much as the bag pays for), the mould, Pour (hold, let go when it
  * is full), Take, and Leave; a line saying what is happening and what to do.
  */
 export class CrucibleBar {
-  constructor({ root, view, crucibles, age = () => Infinity, onLeave = () => {}, onPoured = () => {} }) {
+  constructor({ root, view, crucibles, kind = 'crucible', age = () => Infinity, onLeave = () => {}, onPoured = () => {} }) {
+    this.words = WORDS[kind] ?? WORDS.crucible;
     this.view = view;
     this.crucibles = crucibles;
     this.age = age;
     this.onLeave = onLeave;
     this.onPoured = onPoured;
     this.el = document.createElement('div');
-    this.el.className = 'counter-bar machine-bar crucible-bar';
+    this.el.className = `counter-bar machine-bar crucible-bar${kind === 'kiln' ? ' kiln-bar' : ''}`;
     this.el.hidden = true;
     root.append(this.el);
     this.el.addEventListener('click', (e) => this.click(e));
@@ -34,16 +46,20 @@ export class CrucibleBar {
     });
   }
 
-  show() { this.el.hidden = false; this.render(); }
+  show() { this.el.hidden = false; this.said = ''; this.render(); }
   hide() { this.el.hidden = true; }
 
   pour(on) {
     const r = this.view.holdPour(on);
     if (!r) return;
-    const say = r.result === 'made' ? `Poured: ${r.made.count} ${itemName(r.made.id).toLowerCase()}.`
-      : r.result === 'short' ? 'Too little: it ran back into the pot. Hold longer.'
-        : r.result === 'spilt' ? 'Too much: it spilt over and was lost.' : '';
+    const w = this.words;
+    const say = r.result === 'made' ? `${w.made}: ${r.made.count} ${itemName(r.made.id).toLowerCase()}.`
+      : r.result === 'short' ? w.short
+        : r.result === 'spilt' ? w.over : '';
     this.onPoured(r);
+    // What came of the pour stays on the bar until the next tap, also when a
+    // batch melts (or fires) meanwhile and the bar is drawn again.
+    this.said = say;
     this.render(say);
   }
 
@@ -68,10 +84,10 @@ export class CrucibleBar {
   }
 
   recipes() {
-    return RECIPES.filter((r) => r.station === 'crucible' && r.age <= this.age());
+    return RECIPES.filter((r) => r.station === this.words.station && r.age <= this.age());
   }
 
-  render(note = '') {
+  render(note = this.said ?? '') {
     if (this.el.hidden) return;
     const key = this.view.key, s = key ? this.crucibles.state(key) : null;
     const recipe = s ? RECIPES.find((r) => r.id === s.recipeId) : null;
@@ -80,30 +96,31 @@ export class CrucibleBar {
       const takes = Object.entries(r.inputs).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' + ');
       return `<button class="counter-piece${busy ? ' cant' : ''}" data-load="${r.id}" ${busy ? 'disabled' : ''}>${escapeHtml(itemName(r.output.id))}${r.output.count > 1 ? ` ×${r.output.count}` : ''}<small> ${escapeHtml(takes)} · ${meltSeconds(r)} s</small></button>`;
     }).join('');
-    const poured = recipe && mouldFor(recipe);
-    const state = !s ? 'Load something to melt. It melts on its own, also while you are away.'
-      : `${s.waiting} melting, ${s.molten} molten${s.out ? `, ${s.out} ${itemName(recipe.output.id).toLowerCase()} ready` : ''}.`
-        + (poured && s.molten ? ` Hold Pour and let go when the mould is full (${Math.round(POUR_MIN * 100)} to ${Math.round(POUR_MAX * 100)}%).` : '');
-    const melting = s?.waiting ? `<div class="melt-row"><span class="melt-name">Melting ${escapeHtml(itemName(recipe.output.id).toLowerCase())}</span>
-        <div class="research-bar melt-bar" role="progressbar" aria-label="How far the batch has melted"><i data-melt-bar style="width:${Math.round(s.progress * 100)}%"></i></div>
+    const w = this.words, poured = recipe && mouldFor(recipe), moulds = poured && poured !== 'tray';
+    const state = !s ? w.load
+      : `${s.waiting} ${w.state}, ${s.molten} ${w.done}${s.out ? `, ${s.out} ${itemName(recipe.output.id).toLowerCase()} ready` : ''}.`
+        + (poured && s.molten ? ` ${w.hold} (${Math.round(POUR_MIN * 100)} to ${Math.round(POUR_MAX * 100)}%).` : '');
+    const melting = s?.waiting ? `<div class="melt-row"><span class="melt-name">${w.ing} ${escapeHtml(itemName(recipe.output.id).toLowerCase())}</span>
+        <div class="research-bar melt-bar" role="progressbar" aria-label="${w.bar}"><i data-melt-bar style="width:${Math.round(s.progress * 100)}%"></i></div>
         <b data-melt-left>${Math.ceil((1 - s.progress) * meltSeconds(recipe))} s</b></div>` : '';
     this.el.innerHTML = `${chainLineHtml(recipe?.output?.id ?? this.recipes()[0]?.output?.id, 'crucible')}<p class="counter-say">${escapeHtml(note ? `${note} ${state}` : state)}</p>
       ${melting}
-      ${poured ? `<div class="pour-gauge" aria-label="How full the mould is"><i class="pour-window" style="left:${POUR_MIN * 80}%;width:${(POUR_MAX - POUR_MIN) * 80}%"></i><i class="pour-level" data-pour-level style="width:0%"></i></div>` : ''}
+      ${poured ? `<div class="pour-gauge" aria-label="${w.gauge}"><i class="pour-window" style="left:${POUR_MIN * 80}%;width:${(POUR_MAX - POUR_MIN) * 80}%"></i><i class="pour-level" data-pour-level style="width:0%"></i></div>` : ''}
       <div class="counter-pieces">${tiles}</div>
       <div class="counter-actions">
-        ${poured ? `<button class="secondary" data-mould="ingot" ${s.mould === 'ingot' ? 'aria-pressed="true"' : ''}>Ingot mould</button>
-        <button class="secondary" data-mould="coin" ${s.mould === 'coin' ? 'aria-pressed="true"' : ''}>Coin mould</button>
-        <button class="primary" data-pour ${this.view.canPour() ? '' : 'disabled'}>Pour (hold)</button>` : ''}
+        ${moulds ? `<button class="secondary" data-mould="ingot" ${s.mould === 'ingot' ? 'aria-pressed="true"' : ''}>Ingot mould</button>
+        <button class="secondary" data-mould="coin" ${s.mould === 'coin' ? 'aria-pressed="true"' : ''}>Coin mould</button>` : ''}
         ${s?.out ? '<button class="primary" data-take>Take</button>' : ''}
         <button class="secondary" data-leave>Leave</button>
-      </div>`;
+      </div>
+      ${poured ? `<button class="primary machine-action" data-pour ${this.view.canPour() ? '' : 'disabled'}>${w.verb} (hold)</button>` : ''}`;
   }
 
   click(e) {
     const b = e.target.closest('button');
     if (!b || b.disabled) return;
     const key = this.view.key;
+    this.said = '';
     if (b.dataset.load) {
       const r = this.crucibles.load(key, b.dataset.load, MAX_BATCHES);
       this.render(r.ok ? `Loaded ${r.batches}.` : r.reason);

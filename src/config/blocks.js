@@ -987,6 +987,14 @@ BLOCKS.push(
   { id: CRUCIBLE, name: 'Crucible', glyph: 'stone', color: 0x7a4a3a, material: 'stone', station: 'crucible', unlock: null },
 );
 
+// CRAFT-9 part 6: the Kiln Oven, where clay is fired into brick and vases and
+// sand into glass, then drawn out by hand in a close-up (render/CrucibleView.js,
+// kind 'kiln'). Works inside a kiln. Its door faces -z, as the mills do.
+export const KILN_OVEN = 539;
+BLOCKS.push(
+  { id: KILN_OVEN, name: 'Kiln Oven', glyph: 'brick', color: 0x9a4e36, shape: 'kiln_oven', material: 'stone', station: 'kiln_oven', unlock: null },
+);
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in

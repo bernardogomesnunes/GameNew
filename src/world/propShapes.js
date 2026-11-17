@@ -1147,3 +1147,24 @@ PROP_SHAPES.storage_controller = [
   { minX: 0.46, maxX: 0.54, minY: 0.6, maxY: 0.62, minZ: 0.26, maxZ: 0.34, color: 0x4fd8bf, glow: true },
   { minX: 0.65, maxX: 0.73, minY: 0.6, maxY: 0.62, minZ: 0.26, maxZ: 0.34, color: 0xff6a4a, glow: true },
 ];
+// CRAFT-9 part 6: the Kiln Oven, facing -z as the mills do. A brick body on
+// a darker plinth, a stepped crown and a chimney at the back, an iron door
+// under a pale lintel, and the fire glowing in the gap below the door and at
+// the chimney's mouth.
+const KILN_MOUTH = 0x2a1610, KILN_FIRE = 0xff7a2a, KILN_DOOR = 0x4c4a55;
+PROP_SHAPES.kiln_oven = [
+  { minX: 0.04, maxX: 0.96, minY: 0, maxY: 0.12, minZ: 0.04, maxZ: 0.96, tone: 0.8 },
+  { minX: 0.08, maxX: 0.92, minY: 0.12, maxY: 0.72, minZ: 0.1, maxZ: 0.9 },
+  { minX: 0.14, maxX: 0.86, minY: 0.72, maxY: 0.82, minZ: 0.16, maxZ: 0.84, tone: 1.08 },
+  { minX: 0.26, maxX: 0.74, minY: 0.82, maxY: 0.88, minZ: 0.28, maxZ: 0.72, tone: 1.08 },
+  // The chimney, its rim, and the glow in its mouth.
+  { minX: 0.58, maxX: 0.78, minY: 0.82, maxY: 1.1, minZ: 0.58, maxZ: 0.78, tone: 0.85 },
+  { minX: 0.56, maxX: 0.8, minY: 1.1, maxY: 1.14, minZ: 0.56, maxZ: 0.8, tone: 0.7 },
+  { minX: 0.61, maxX: 0.75, minY: 1.14, maxY: 1.15, minZ: 0.61, maxZ: 0.75, color: KILN_FIRE, glow: true },
+  // The mouth, the fire under the door, the door and its handle, the lintel.
+  { minX: 0.26, maxX: 0.74, minY: 0.14, maxY: 0.6, minZ: 0.085, maxZ: 0.1, color: KILN_MOUTH },
+  { minX: 0.3, maxX: 0.7, minY: 0.16, maxY: 0.3, minZ: 0.075, maxZ: 0.085, color: KILN_FIRE, glow: true },
+  { minX: 0.28, maxX: 0.72, minY: 0.3, maxY: 0.58, minZ: 0.06, maxZ: 0.085, color: KILN_DOOR },
+  { minX: 0.6, maxX: 0.66, minY: 0.42, maxY: 0.48, minZ: 0.04, maxZ: 0.06, color: 0xc9ced6 },
+  { minX: 0.22, maxX: 0.78, minY: 0.6, maxY: 0.67, minZ: 0.07, maxZ: 0.1, color: 0xd8c2a8 },
+];

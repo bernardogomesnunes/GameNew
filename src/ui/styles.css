@@ -2344,3 +2344,7 @@ button.busy { cursor: progress; opacity: 0.92; }
 .bench-bar .chisel-marks { display: flex; gap: 8px; justify-content: center; margin: 0 0 8px; }
 .bench-bar .chisel-mark { width: 44px; height: 14px; border: 2px dashed #f4f1ea; border-radius: 3px; background: #6b6660; }
 .bench-bar .chisel-mark.done { border-style: solid; border-color: var(--panel-border, #4a3220); background: #ffa53a; }
+/* CRAFT-9 part 6: the held action (Pour, Draw) at the bottom centre of the
+   bar, 56 px tall, under the thumb. */
+.crucible-bar .machine-action { display: block; width: 100%; min-height: 56px; margin: 8px 0 0; font-size: 18px; }
+.kiln-bar .melt-bar i { background: #e0703a; }
