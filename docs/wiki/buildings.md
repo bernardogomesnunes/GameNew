@@ -40,10 +40,10 @@ Standing trees that keep giving, instead of a stump you cut once.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
-| 1 | Humble Forest | 4 Wood, 0.8 Leaves, 0.8 Fruit | — | None |
-| 2 | Tended Forest | 6.4 Wood, 1.6 Leaves, 1.6 Fruit | — | 12 Planks, 8 Cobblestone |
-| 3 | Thriving Forest | 10.4 Wood, 2.4 Leaves, 2.4 Fruit | — | 20 Planks, 15 Coins |
-| 4 | Renowned Forest | 14.4 Wood, 3.2 Leaves, 3.2 Fruit | — | 4 Iron Ingot, 40 Coins |
+| 1 | Humble Forest | 4.8 Oak Log, 0.8 Leaves, 0.8 Fruit | — | None |
+| 2 | Tended Forest | 7.2 Oak Log, 1.6 Leaves, 1.6 Fruit | — | 12 Oak Planks, 8 Cobblestone |
+| 3 | Thriving Forest | 12 Oak Log, 2.4 Leaves, 2.4 Fruit | — | 20 Oak Planks, 15 Coins |
+| 4 | Renowned Forest | 16.8 Oak Log, 3.2 Leaves, 3.2 Fruit | — | 4 Iron Ingot, 40 Coins |
 
 ### Farm
 
@@ -55,8 +55,8 @@ Turned soil beside fresh water. Put a seed in for each crop you want — up to f
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
 | 1 | Humble Farm | Planted crops; ×1 yield | — | None |
-| 2 | Tended Farm | Planted crops; ×1.5 yield | — | 12 Planks, 8 Cobblestone |
-| 3 | Thriving Farm | Planted crops; ×2.5 yield | — | 20 Planks, 15 Coins |
+| 2 | Tended Farm | Planted crops; ×1.5 yield | — | 12 Oak Planks, 8 Cobblestone |
+| 3 | Thriving Farm | Planted crops; ×2.5 yield | — | 20 Oak Planks, 15 Coins |
 | 4 | Renowned Farm | Planted crops; ×3.5 yield | — | 4 Iron Ingot, 40 Coins |
 
 ### House
@@ -78,11 +78,11 @@ A hole you dig into rock, open to the sky.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
-| 1 | A Scrape | 2.4 Stone | — | None |
-| 2 | A Working Face | 2.5 Stone | — | None |
-| 3 | A Deep Dig | 2.62 Stone | — | None |
-| 4 | A Quarry Face | 2.74 Stone | — | None |
-| 5 | An Open Pit | 2.88 Stone | — | None |
+| 1 | A Scrape | 2.4 Stone, 1.2 Coal | — | None |
+| 2 | A Working Face | 2.5 Stone, 1.25 Coal | — | None |
+| 3 | A Deep Dig | 2.62 Stone, 1.31 Coal | — | None |
+| 4 | A Quarry Face | 2.74 Stone, 1.37 Coal | — | None |
+| 5 | An Open Pit | 2.88 Stone, 1.44 Coal | — | None |
 
 ### Pen
 
@@ -94,8 +94,8 @@ A fence with a gate, and animals inside it. Lead them in with food in your hand,
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
 | 1 | Humble Pen | Animals in the pen; ×1 yield | — | None |
-| 2 | Tended Pen | Animals in the pen; ×1.5 yield | — | 12 Planks, 8 Cobblestone |
-| 3 | Thriving Pen | Animals in the pen; ×2.5 yield | — | 20 Planks, 15 Coins |
+| 2 | Tended Pen | Animals in the pen; ×1.5 yield | — | 12 Oak Planks, 8 Cobblestone |
+| 3 | Thriving Pen | Animals in the pen; ×2.5 yield | — | 20 Oak Planks, 15 Coins |
 | 4 | Renowned Pen | Animals in the pen; ×3.5 yield | — | 4 Iron Ingot, 40 Coins |
 
 ### Storehouse
@@ -151,8 +151,8 @@ Earth and sand go in. Brick and glass come out.
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
 | 1 | Humble Kiln | 1.2 Brick, 1.2 Glass | — | None |
-| 2 | Tended Kiln | 2.4 Brick, 2.4 Glass | — | 12 Planks, 8 Cobblestone |
-| 3 | Thriving Kiln | 3.6 Brick, 3.6 Glass | — | 20 Planks, 15 Coins |
+| 2 | Tended Kiln | 2.4 Brick, 2.4 Glass | — | 12 Oak Planks, 8 Cobblestone |
+| 3 | Thriving Kiln | 3.6 Brick, 3.6 Glass | — | 20 Oak Planks, 15 Coins |
 | 4 | Renowned Kiln | 4.8 Brick, 4.8 Glass | — | 4 Iron Ingot, 40 Coins |
 
 ### Market
@@ -160,27 +160,27 @@ Earth and sand go in. Brick and glass come out.
 Somewhere the things your buildings make change hands.
 
 - Available from Age 5; claim region 6–20 blocks on a side.
-- Claim fee: 10 Planks.
+- Claim fee: 10 Oak Planks.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
-| 1 | Humble Market | 2.4 Carrots, 2.4 Fruit, 2.4 Planks | — | None |
-| 2 | Tended Market | 4.8 Carrots, 4.8 Fruit, 4.8 Planks | — | 12 Planks, 8 Cobblestone |
-| 3 | Thriving Market | 7.2 Carrots, 7.2 Fruit, 7.2 Planks | — | 20 Planks, 15 Coins |
-| 4 | Renowned Market | 9.6 Carrots, 9.6 Fruit, 9.6 Planks | — | 4 Iron Ingot, 40 Coins |
+| 1 | Humble Market | 2.4 Carrots, 2.4 Fruit, 2.4 Oak Planks | — | None |
+| 2 | Tended Market | 4.8 Carrots, 4.8 Fruit, 4.8 Oak Planks | — | 12 Oak Planks, 8 Cobblestone |
+| 3 | Thriving Market | 7.2 Carrots, 7.2 Fruit, 7.2 Oak Planks | — | 20 Oak Planks, 15 Coins |
+| 4 | Renowned Market | 9.6 Carrots, 9.6 Fruit, 9.6 Oak Planks | — | 4 Iron Ingot, 40 Coins |
 
 ### Town Hall
 
 Where the town keeps its accounts. Comes with a storage controller that reaches every storehouse.
 
 - Available from Age 5; claim region 7–20 blocks on a side.
-- Claim fee: 8 Planks, 2 Glass, 4 Brick.
+- Claim fee: 8 Oak Planks, 2 Glass, 4 Brick.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
 | 1 | Humble Town Hall | 2.4 Coins | — | None |
-| 2 | Tended Town Hall | 4.8 Coins | — | 12 Planks, 8 Cobblestone |
-| 3 | Thriving Town Hall | 7.2 Coins | — | 20 Planks, 15 Coins |
+| 2 | Tended Town Hall | 4.8 Coins | — | 12 Oak Planks, 8 Cobblestone |
+| 3 | Thriving Town Hall | 7.2 Coins | — | 20 Oak Planks, 15 Coins |
 | 4 | Renowned Town Hall | 9.6 Coins | — | 4 Iron Ingot, 40 Coins |
 
 ### Townhouse
@@ -188,7 +188,7 @@ Where the town keeps its accounts. Comes with a storage controller that reaches 
 More roof than one family needs, so more than one family lives under it.
 
 - Available from Age 5; claim region 6–16 blocks on a side.
-- Claim fee: 16 Planks.
+- Claim fee: 16 Oak Planks.
 - Adds housing capacity: 3.
 
 See the building panel for its purpose and claim requirements.
@@ -198,14 +198,14 @@ See the building panel for its purpose and claim requirements.
 Somewhere to eat, drink and hear the news. Small coin changes hands too.
 
 - Available from Age 5; claim region 5–14 blocks on a side.
-- Claim fee: 8 Planks, 4 Brick.
+- Claim fee: 8 Oak Planks, 4 Brick.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
-| 1 | Humble Tavern | 2 Gold | — | None |
-| 2 | Tended Tavern | 4 Gold | — | 12 Planks, 8 Cobblestone |
-| 3 | Thriving Tavern | 6 Gold | — | 20 Planks, 15 Coins |
-| 4 | Renowned Tavern | 8 Gold | — | 4 Iron Ingot, 40 Coins |
+| 1 | Humble Tavern | 2 Gold Ingot | — | None |
+| 2 | Tended Tavern | 4 Gold Ingot | — | 12 Oak Planks, 8 Cobblestone |
+| 3 | Thriving Tavern | 6 Gold Ingot | — | 20 Oak Planks, 15 Coins |
+| 4 | Renowned Tavern | 8 Gold Ingot | — | 4 Iron Ingot, 40 Coins |
 
 ### Foundry
 
@@ -222,7 +222,7 @@ Craft recipes here.
 Everything easy is above ground. This is not above ground.
 
 - Available from Age 5; claim region 4–16 blocks on a side.
-- Claim fee: 8 Planks.
+- Claim fee: 8 Oak Planks.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
@@ -246,13 +246,13 @@ Harvest storage.
 Walls with people behind them. Nothing has tested them yet, and that is rather the point.
 
 - Available from Age 8; claim region 6–18 blocks on a side.
-- Claim fee: 20 Stone, 10 Planks.
+- Claim fee: 20 Stone, 10 Oak Planks.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
 | 1 | A Garrison | — | — | None |
-| 2 | A Bastion | — | — | 40 Stone, 20 Planks |
-| 3 | A Citadel | — | — | 80 Stone, 40 Planks, 6 Iron Ingot |
+| 2 | A Bastion | — | — | 40 Stone, 20 Oak Planks |
+| 3 | A Citadel | — | — | 80 Stone, 40 Oak Planks, 6 Iron Ingot |
 
 ### Stone Wall
 
@@ -277,7 +277,7 @@ See the building panel for its purpose and claim requirements.
 A tall tower with a lookout on top. Two archers keep watch from it and shoot at anything of the Stone Kingdom's that comes in range.
 
 - Available from Age 8; claim region 5–9 blocks on a side.
-- Claim fee: 6 Planks.
+- Claim fee: 6 Oak Planks.
 
 See the building panel for its purpose and claim requirements.
 
@@ -286,35 +286,35 @@ See the building panel for its purpose and claim requirements.
 A hall with arms on the walls and a yard to train in. Train warriors, swordsmen, archers and catapult crews here for food and gear — they go out to meet the Stone Kingdom's army. It holds 10 soldiers; evolve it for 20, then 40. Beds are only furniture.
 
 - Available from Age 8; claim region 7–18 blocks on a side.
-- Claim fee: 4 Iron Ingot, 10 Planks.
+- Claim fee: 4 Iron Ingot, 10 Oak Planks.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
 | 1 | A Barracks | — | — | None |
-| 2 | A Drill Hall | — | — | 6 Iron Ingot, 20 Planks |
-| 3 | A Fortress Barracks | — | — | 12 Iron Ingot, 40 Planks |
+| 2 | A Drill Hall | — | — | 6 Iron Ingot, 20 Oak Planks |
+| 3 | A Fortress Barracks | — | — | 12 Iron Ingot, 40 Oak Planks |
 
 ### Village
 
 A forest, a farm, housing and a shed, folded into one claim — everything a start needs, raised at once.
 
 - Available from Age 10; claim region 14–28 blocks on a side.
-- Claim fee: 20 Wood, 4 Carrot Seeds, 4 Potato Seeds.
+- Claim fee: 20 Oak Log, 4 Carrot Seeds, 4 Potato Seeds.
 - Adds housing capacity: 3.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
-| 1 | Humble Village | 3 Wood, 1 Leaves, 1 Carrots, 1 Carrot Seeds | — | None |
-| 2 | Tended Village | 5 Wood, 2 Leaves, 2 Carrots, 2 Carrot Seeds | — | 12 Planks, 8 Cobblestone |
-| 3 | Thriving Village | 8 Wood, 3 Leaves, 3 Carrots, 3 Carrot Seeds | — | 20 Planks, 15 Coins |
-| 4 | Renowned Village | 11 Wood, 4 Leaves, 4 Carrots, 4 Carrot Seeds | — | 4 Iron Ingot, 40 Coins |
+| 1 | Humble Village | 3 Oak Log, 1 Leaves, 1 Carrots, 1 Carrot Seeds | — | None |
+| 2 | Tended Village | 5 Oak Log, 2 Leaves, 2 Carrots, 2 Carrot Seeds | — | 12 Oak Planks, 8 Cobblestone |
+| 3 | Thriving Village | 8 Oak Log, 3 Leaves, 3 Carrots, 3 Carrot Seeds | — | 20 Oak Planks, 15 Coins |
+| 4 | Renowned Village | 11 Oak Log, 4 Leaves, 4 Carrots, 4 Carrot Seeds | — | 4 Iron Ingot, 40 Coins |
 
 ### Monument
 
 Nothing useful. That is the point of it.
 
 - Available from Age 10; claim region 7–24 blocks on a side.
-- Claim fee: 4 Gold.
+- Claim fee: 4 Gold Ingot.
 
 See the building panel for its purpose and claim requirements.
 
@@ -323,7 +323,7 @@ See the building panel for its purpose and claim requirements.
 Somewhere to pray. Offerings and worshippers turn into devotion, and devotion into blessings.
 
 - Available from Age 4; claim region 4–20 blocks on a side.
-- Claim fee: 1 Gold.
+- Claim fee: 1 Gold Ingot.
 - Crafting station: Temple.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |

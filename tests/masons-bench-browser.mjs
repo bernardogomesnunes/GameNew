@@ -82,7 +82,7 @@ try {
     // A click on the picture taps too.
     for (let i = 0; i < 3; i++) await page.mouse.click(640, 300);
     assert.equal(await page.evaluate(() => masonCheck.bag.countOf('wall_stone')), 12, 'three clicks: 6 more');
-    assert.match(await page.locator('.bench-bar .counter-say').textContent(), /Made 6 stone wall/);
+    assert.match(await page.locator('.bench-bar .counter-say').textContent(), /Made 6 stone walls\./);
     await page.keyboard.press('Escape');
     assert.equal(await page.evaluate(() => window.__game.closeUp.active), false);
     assert.deepEqual(errors, []);

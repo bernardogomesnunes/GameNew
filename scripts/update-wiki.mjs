@@ -11,7 +11,8 @@ let stale = false;
 const clean = value => String(value ?? '').replaceAll('|', '\\|').replaceAll('\n', ' ');
 const table = (heads, rows) => [heads, heads.map(()=>'---'), ...rows].map(row => '| ' + row.map(clean).join(' | ') + ' |').join('\n');
 const goods = value => Object.entries(value ?? {}).map(([id,n])=>`${n} ${itemName(id)}`).join(', ') || 'None';
-const station = id => id === 'hand' ? 'Anywhere' : id.replaceAll('_',' ').replace(/\b\w/g, c=>c.toUpperCase());
+const STATION_NAMES = { bleach_bucket: 'Wash Tub', masons_bench: "Mason's Bench", counter: "Carpenter's Table" };
+const station = id => id === 'hand' ? 'Anywhere' : STATION_NAMES[id] ?? id.replaceAll('_',' ').replace(/\b\w/g, c=>c.toUpperCase());
 function save(name, text) {
   const path = new URL('../docs/wiki/' + name, import.meta.url);
   const before = readFileSync(path,'utf8').replaceAll('\r\n','\n');

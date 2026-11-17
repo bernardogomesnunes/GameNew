@@ -56,7 +56,7 @@ export class BenchBar {
       ${gauge}
       <div class="counter-pieces">${tiles}</div>
       <div class="counter-actions">
-        <button class="secondary" data-many>Many at once</button>
+        <button class="secondary" data-many title="Many at once">Many</button>
         <button class="primary" data-work ${chosen?.ok ? '' : 'disabled'}>${escapeHtml(machine.verb)} (${machine.taps ? 'tap' : 'hold'})</button>
         <button class="secondary" data-leave>Leave</button>
       </div>`;
