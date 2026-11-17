@@ -1070,6 +1070,64 @@ PROP_SHAPES.workbench = [
   { minX: 0.16, maxX: 0.5, minY: 0.92, maxY: 0.935, minZ: 0.6, maxZ: 0.74, color: B30_STEEL },
   { minX: 0.5, maxX: 0.58, minY: 0.92, maxY: 0.96, minZ: 0.62, maxZ: 0.72, color: B30_DARK },
 ];
+// CRAFT-9: the Carpenter's Table (block 530, once the Counter, a plain cube).
+// A thick top on four stout legs with rails under it, a vise on the front
+// left corner, a saw hung on one side and planks kept on the shelf below.
+// The top is level with the cell's top and left clear: the close-up
+// (render/CounterView.js) lays the piece out on it.
+const CT_LEG = 0.74, CT_RAIL = 0.88, CT_PLANK = 0xe2bd86, CT_PLANK_DARK = 0xcfa56c;
+PROP_SHAPES.carpenters_table = [
+  // Four legs.
+  ...[[0.06, 0.1], [0.8, 0.1], [0.06, 0.76], [0.8, 0.76]].map(([x, z]) => ({ minX: x, maxX: x + 0.14, minY: 0, maxY: 0.84, minZ: z, maxZ: z + 0.14, tone: CT_LEG })),
+  // The top, thick, a shade lighter, over the legs on every side.
+  { minX: 0, maxX: 1, minY: 0.84, maxY: 1, minZ: 0.04, maxZ: 0.96, tone: 1.16 },
+  // Rails under the top: front, back and both sides.
+  { minX: 0.2, maxX: 0.8, minY: 0.72, maxY: 0.84, minZ: 0.12, maxZ: 0.18, tone: CT_RAIL },
+  { minX: 0.2, maxX: 0.8, minY: 0.72, maxY: 0.84, minZ: 0.82, maxZ: 0.88, tone: CT_RAIL },
+  { minX: 0.08, maxX: 0.14, minY: 0.72, maxY: 0.84, minZ: 0.24, maxZ: 0.76, tone: CT_RAIL },
+  { minX: 0.86, maxX: 0.92, minY: 0.72, maxY: 0.84, minZ: 0.24, maxZ: 0.76, tone: CT_RAIL },
+  // The shelf between the legs, and three planks waiting on it.
+  { minX: 0.1, maxX: 0.9, minY: 0.16, maxY: 0.22, minZ: 0.14, maxZ: 0.86, tone: 0.94 },
+  { minX: 0.16, maxX: 0.84, minY: 0.22, maxY: 0.28, minZ: 0.26, maxZ: 0.48, color: CT_PLANK },
+  { minX: 0.2, maxX: 0.8, minY: 0.22, maxY: 0.28, minZ: 0.52, maxZ: 0.74, color: CT_PLANK_DARK },
+  { minX: 0.18, maxX: 0.82, minY: 0.28, maxY: 0.34, minZ: 0.38, maxZ: 0.6, color: CT_PLANK },
+  // The vise on the front left corner: an iron jaw with a wooden cheek, its screw and its bar.
+  { minX: 0.06, maxX: 0.36, minY: 0.8, maxY: 1.0, minZ: 0, maxZ: 0.04, color: B30_IRON },
+  { minX: 0.08, maxX: 0.34, minY: 0.9, maxY: 1.02, minZ: 0.01, maxZ: 0.04, color: CT_PLANK_DARK },
+  { minX: 0.19, maxX: 0.23, minY: 0.84, maxY: 0.88, minZ: -0.07, maxZ: 0, color: B30_IRON_DARK },
+  { minX: 0.12, maxX: 0.3, minY: 0.85, maxY: 0.87, minZ: -0.08, maxZ: -0.06, color: B30_STEEL },
+  // The saw, hung by its handle from a peg on the right side: blade, bright toothed edge, handle.
+  { minX: 0.96, maxX: 1.0, minY: 0.74, maxY: 0.78, minZ: 0.66, maxZ: 0.7, color: B30_IRON_DARK },
+  { minX: 0.95, maxX: 0.985, minY: 0.56, maxY: 0.76, minZ: 0.6, maxZ: 0.76, color: B30_DARK },
+  { minX: 0.96, maxX: 0.975, minY: 0.2, maxY: 0.56, minZ: 0.6, maxZ: 0.74, color: B30_STEEL },
+  { minX: 0.96, maxX: 0.975, minY: 0.2, maxY: 0.56, minZ: 0.58, maxZ: 0.6, color: 0xeef1f5 },
+];
+// CRAFT-9 part 4: the Mason's Bench, a heavy oak bench with a stone top. A
+// block of stone stands on it with three chalk lines across it, a chisel and
+// a mallet lie in front, chips at its foot, and a cut slab waits on the shelf.
+const MASON_OAK = 0x8a6238, MASON_TOP = 0x9b968e, MASON_STONE = 0xb7b3ab, CHALK = 0xf4f1ea;
+PROP_SHAPES.masons_bench = [
+  ...[[0.06, 0.1], [0.82, 0.1], [0.06, 0.78], [0.82, 0.78]].map(([x, z]) => ({ minX: x, maxX: x + 0.12, minY: 0, maxY: 0.58, minZ: z, maxZ: z + 0.12, color: MASON_OAK })),
+  // A shelf low between the legs, a cut slab on it.
+  { minX: 0.1, maxX: 0.9, minY: 0.16, maxY: 0.22, minZ: 0.14, maxZ: 0.86, color: 0x7a5636 },
+  { minX: 0.2, maxX: 0.62, minY: 0.22, maxY: 0.3, minZ: 0.3, maxZ: 0.7, color: MASON_STONE },
+  // The stone top, thick, over a lip of oak.
+  { minX: 0.02, maxX: 0.98, minY: 0.58, maxY: 0.62, minZ: 0.06, maxZ: 0.94, color: MASON_OAK },
+  { minX: 0, maxX: 1, minY: 0.62, maxY: 0.7, minZ: 0.04, maxZ: 0.96, color: MASON_TOP },
+  // The block being worked, its three chalk lines across the top.
+  { minX: 0.3, maxX: 0.72, minY: 0.7, maxY: 0.96, minZ: 0.36, maxZ: 0.78, color: MASON_STONE },
+  ...[0.38, 0.5, 0.62].map((x) => ({ minX: x, maxX: x + 0.03, minY: 0.96, maxY: 0.975, minZ: 0.4, maxZ: 0.74, color: CHALK })),
+  // The chisel: a steel blade into a wooden grip, lying in front.
+  { minX: 0.5, maxX: 0.72, minY: 0.7, maxY: 0.725, minZ: 0.16, maxZ: 0.2, color: B30_STEEL },
+  { minX: 0.72, maxX: 0.88, minY: 0.7, maxY: 0.74, minZ: 0.15, maxZ: 0.21, color: B30_DARK },
+  // The mallet: a round-ish wooden head on a short handle.
+  { minX: 0.08, maxX: 0.22, minY: 0.7, maxY: 0.82, minZ: 0.12, maxZ: 0.28, color: 0xb98a5a },
+  { minX: 0.22, maxX: 0.42, minY: 0.73, maxY: 0.77, minZ: 0.18, maxZ: 0.22, color: B30_DARK },
+  // Chips knocked off, by the block and on the ground.
+  { minX: 0.76, maxX: 0.82, minY: 0.7, maxY: 0.73, minZ: 0.5, maxZ: 0.56, color: MASON_STONE },
+  { minX: 0.8, maxX: 0.84, minY: 0.7, maxY: 0.72, minZ: 0.64, maxZ: 0.68, color: MASON_STONE },
+  { minX: 0.4, maxX: 0.46, minY: 0, maxY: 0.03, minZ: 0.02, maxZ: 0.08, color: MASON_STONE },
+];
 // The storage controller: a cabinet with a screen standing on it, its
 // rows of stored things glowing, and a panel of buttons in front.
 const SCREEN_BG = 0x134a42, SCREEN_ROW = 0x8ff5e0, BEZEL = 0x2b2b33;
@@ -1088,4 +1146,25 @@ PROP_SHAPES.storage_controller = [
   { minX: 0.27, maxX: 0.35, minY: 0.6, maxY: 0.62, minZ: 0.26, maxZ: 0.34, color: 0xffe27a, glow: true },
   { minX: 0.46, maxX: 0.54, minY: 0.6, maxY: 0.62, minZ: 0.26, maxZ: 0.34, color: 0x4fd8bf, glow: true },
   { minX: 0.65, maxX: 0.73, minY: 0.6, maxY: 0.62, minZ: 0.26, maxZ: 0.34, color: 0xff6a4a, glow: true },
+];
+// CRAFT-9 part 6: the Kiln Oven, facing -z as the mills do. A brick body on
+// a darker plinth, a stepped crown and a chimney at the back, an iron door
+// under a pale lintel, and the fire glowing in the gap below the door and at
+// the chimney's mouth.
+const KILN_MOUTH = 0x2a1610, KILN_FIRE = 0xff7a2a, KILN_DOOR = 0x4c4a55;
+PROP_SHAPES.kiln_oven = [
+  { minX: 0.04, maxX: 0.96, minY: 0, maxY: 0.12, minZ: 0.04, maxZ: 0.96, tone: 0.8 },
+  { minX: 0.08, maxX: 0.92, minY: 0.12, maxY: 0.72, minZ: 0.1, maxZ: 0.9 },
+  { minX: 0.14, maxX: 0.86, minY: 0.72, maxY: 0.82, minZ: 0.16, maxZ: 0.84, tone: 1.08 },
+  { minX: 0.26, maxX: 0.74, minY: 0.82, maxY: 0.88, minZ: 0.28, maxZ: 0.72, tone: 1.08 },
+  // The chimney, its rim, and the glow in its mouth.
+  { minX: 0.58, maxX: 0.78, minY: 0.82, maxY: 1.1, minZ: 0.58, maxZ: 0.78, tone: 0.85 },
+  { minX: 0.56, maxX: 0.8, minY: 1.1, maxY: 1.14, minZ: 0.56, maxZ: 0.8, tone: 0.7 },
+  { minX: 0.61, maxX: 0.75, minY: 1.14, maxY: 1.15, minZ: 0.61, maxZ: 0.75, color: KILN_FIRE, glow: true },
+  // The mouth, the fire under the door, the door and its handle, the lintel.
+  { minX: 0.26, maxX: 0.74, minY: 0.14, maxY: 0.6, minZ: 0.085, maxZ: 0.1, color: KILN_MOUTH },
+  { minX: 0.3, maxX: 0.7, minY: 0.16, maxY: 0.3, minZ: 0.075, maxZ: 0.085, color: KILN_FIRE, glow: true },
+  { minX: 0.28, maxX: 0.72, minY: 0.3, maxY: 0.58, minZ: 0.06, maxZ: 0.085, color: KILN_DOOR },
+  { minX: 0.6, maxX: 0.66, minY: 0.42, maxY: 0.48, minZ: 0.04, maxZ: 0.06, color: 0xc9ced6 },
+  { minX: 0.22, maxX: 0.78, minY: 0.6, maxY: 0.67, minZ: 0.07, maxZ: 0.1, color: 0xd8c2a8 },
 ];

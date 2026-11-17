@@ -8,9 +8,9 @@ const text = (id) => recipeChain(id)?.text ?? null;
 assert.equal(text('planks'), 'Oak Log > Planing Bench > Oak Planks');
 assert.equal(text('slab_plank'), 'Oak Log > Planing Bench > Oak Planks > Wood Mill > Plank Slab');
 assert.equal(text('door'), 'Oak Log > Planing Bench > Oak Planks > Joinery Bench > Door');
-assert.equal(text('brick'), 'Stone > Stone Mill > Cobblestone > Workshop > Brick');
-assert.equal(text('glass'), 'Stone > Stone Mill > Sand > Workshop > Glass');
-assert.equal(text('chair_oak'), 'Oak Log > Planing Bench > Oak Planks > Counter > Oak Chair');
+assert.equal(text('brick'), 'Clay > Kiln Oven > Brick');
+assert.equal(text('glass'), 'Stone > Stone Mill > Sand > Kiln Oven > Glass');
+assert.equal(text('chair_oak'), "Oak Log > Planing Bench > Oak Planks > Carpenter's Table > Oak Chair");
 console.log('PASS chains for planks, slab, door, brick, glass and a chair read from the recipes');
 
 assert.equal(text('wood'), null, 'a raw log has no chain');

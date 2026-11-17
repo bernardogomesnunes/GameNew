@@ -1,4 +1,4 @@
-import { RECIPES_BY_ID, recipesFor } from '../config/recipes.js';
+import { RECIPES_BY_ID, recipesFor, stationWords } from '../config/recipes.js';
 import { itemName } from '../config/items.js';
 
 /**
@@ -10,8 +10,8 @@ import { itemName } from '../config/items.js';
  * ingredient or standing in the wrong place.
  */
 
-/** A station as it's written for people: wood_mill is "wood mill". */
-export const stationName = (station) => String(station).replace(/_/g, ' ');
+/** A station as it's written for people: wood_mill is "wood mill" (config/recipes.js). */
+export const stationName = stationWords;
 
 const WATER_BLOCK = 11;
 const WATER_RANGE = 4;
@@ -43,6 +43,8 @@ export class Crafting {
     if (r.station === 'hand') return true;
     // CRAFT3D-3: the crucible's recipes are melted and poured in its close-up, never crafted.
     if (r.station === 'crucible') return false;
+    // CRAFT-9 part 6: and the Kiln Oven's are fired and drawn in its close-up.
+    if (r.station === 'kiln_oven') return false;
     if (r.station === 'forge' && atStations.includes('foundry')) return true;
     if (!atStations.includes(r.station)) return false;
     return !r.tier || atStations.includes(`${r.station}@${r.tier}`);

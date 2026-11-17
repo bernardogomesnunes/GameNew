@@ -2310,8 +2310,16 @@ button.busy { cursor: progress; opacity: 0.92; }
   .counter-bar .counter-pieces { gap: 10px; }
 }
 .counter-bar .counter-piece.cant { opacity: 0.55; }
-.counter-bar .counter-actions { display: flex; gap: 8px; }
+/* CRAFT-9: every machine's action buttons sit bottom centre, 56 px tall, under the thumb. */
+.counter-bar .counter-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .counter-bar button { min-height: 44px; }
+.counter-bar .counter-actions button { min-height: 56px; min-width: 84px; padding: 0 10px; font-size: 16px; touch-action: none; }
+/* The Carpenter's Table: the part to fit next is ringed; the key numbers show only with a keyboard. */
+.table-bar .counter-pieces { justify-content: safe center; }
+.table-bar .counter-piece.next { outline: 3px solid var(--accent, #c98a2b); outline-offset: -3px; }
+.table-bar .counter-piece[disabled] { opacity: 0.45; text-decoration: line-through; }
+.table-bar kbd { display: inline-block; min-width: 18px; margin-right: 4px; border: 1px solid currentColor; border-radius: 4px; font: inherit; font-size: 12px; text-align: center; opacity: 0.8; }
+@media (pointer: coarse) { .table-bar kbd { display: none; } }
 /* At the counter only its bar and the toasts show: the rest of the HUD
    would cover the counter top and take the drags. */
 #ui-root.at-machine > *:not(.counter-bar):not(.machine-bar):not(#toast-stack) { visibility: hidden; }
@@ -2324,6 +2332,19 @@ button.busy { cursor: progress; opacity: 0.92; }
 /* CRAFT3D-3: the crucible's bar shares the counter's look. */
 .crucible-bar .counter-piece small, .bench-bar .counter-piece small { display: block; font-size: 11px; opacity: 0.8; }
 .crucible-bar [aria-pressed="true"] { outline: 2px solid var(--accent, #c98a2b); }
-.crucible-bar .pour-gauge, .bench-bar .pour-gauge { position: relative; height: 18px; margin: 0 0 8px; border: 2px solid var(--panel-border, #4a3220); background: #2a1e18; }
-.crucible-bar .pour-window, .bench-bar .pour-window { position: absolute; top: 0; bottom: 0; background: rgba(120, 200, 120, 0.45); }
-.crucible-bar .pour-level, .bench-bar .pour-level { position: absolute; left: 0; top: 0; bottom: 0; background: #ffa53a; }
+.crucible-bar .pour-gauge, .bench-bar .pour-gauge, .table-bar .pour-gauge { position: relative; height: 18px; margin: 0 0 8px; border: 2px solid var(--panel-border, #4a3220); background: #2a1e18; }
+.crucible-bar .pour-window, .bench-bar .pour-window, .table-bar .pour-window { position: absolute; top: 0; bottom: 0; background: rgba(120, 200, 120, 0.45); }
+.crucible-bar .pour-level, .bench-bar .pour-level, .table-bar .pour-level { position: absolute; left: 0; top: 0; bottom: 0; background: #ffa53a; }
+/* CRAFT-9: a bench's action in the middle of the bottom row, 56 px tall, under the thumb. */
+.bench-bar .counter-actions { display: grid; grid-template-columns: 1fr auto 1fr; }
+.bench-bar .counter-actions [data-many] { justify-self: end; }
+.bench-bar .counter-actions [data-leave] { justify-self: start; }
+.bench-bar .counter-actions [data-work] { min-height: 56px; min-width: 132px; font-size: 17px; }
+/* CRAFT-9 part 4: the Mason's Bench's three chalk marks, filled as each is tapped. */
+.bench-bar .chisel-marks { display: flex; gap: 8px; justify-content: center; margin: 0 0 8px; }
+.bench-bar .chisel-mark { width: 44px; height: 14px; border: 2px dashed #f4f1ea; border-radius: 3px; background: #6b6660; }
+.bench-bar .chisel-mark.done { border-style: solid; border-color: var(--panel-border, #4a3220); background: #ffa53a; }
+/* CRAFT-9 part 6: the held action (Pour, Draw) at the bottom centre of the
+   bar, 56 px tall, under the thumb. */
+.crucible-bar .machine-action { display: block; width: 100%; min-height: 56px; margin: 8px 0 0; font-size: 18px; }
+.kiln-bar .melt-bar i { background: #e0703a; }

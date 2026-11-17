@@ -6,11 +6,17 @@ import { RECIPES_BY_ID } from '../config/recipes.js';
  * batch is poured into the ingot or coin mould by hand. Charcoal is burnt,
  * not poured. Keyed by the block's position ("x,y,z"), saved with the world.
  * Nothing here draws; render/CrucibleView.js turns a held Pour into a level.
+ *
+ * CRAFT-9 part 6: the Kiln Oven is the same pot with another station. Clay
+ * or sand is loaded, fires on its own (only inside a kiln), and each fired
+ * batch is drawn out on the tray by hand: the same window, the same rule.
+ * Its mould is always 'tray'.
  */
 export const POUR_MIN = 0.90, POUR_MAX = 1.05, MAX_BATCHES = 16;
 
-/** Seconds one batch takes to melt (or burn): ore 45, coins 25, charcoal 30. */
+/** Seconds one batch takes to melt (or burn, or fire): ore 45, coins 25, charcoal 30; a kiln recipe says its own. */
 export function meltSeconds(recipe) {
+  if (recipe.seconds) return recipe.seconds;
   if (recipe.output.id === 'coal') return 30;
   if (recipe.output.id === 'coin') return 25;
   return 45;
@@ -18,6 +24,7 @@ export function meltSeconds(recipe) {
 
 /** Which mould a recipe pours into, or null when it is not poured. */
 export function mouldFor(recipe) {
+  if (recipe.station === 'kiln_oven') return 'tray';
   if (recipe.output.id === 'coal') return null;
   return recipe.output.id === 'coin' ? 'coin' : 'ingot';
 }
@@ -30,7 +37,9 @@ export class Crucibles {
    * @param deliver (payload) => whether a storehouse took it
    * @param heated  (key) => whether a valid foundry stands round this crucible
    */
-  constructor({ bag, deliver = () => false, heated = () => true }) {
+  constructor({ station = 'crucible', bag, deliver = () => false, heated = () => true }) {
+    /** 'crucible' or 'kiln_oven': only that station's recipes are loaded here. */
+    this.station = station;
     this.bag = bag;
     this.deliver = deliver;
     this.heated = heated;
@@ -48,7 +57,7 @@ export class Crucibles {
   /** Puts in as many batches of `recipeId` as the bag pays for, up to MAX_BATCHES in all. */
   load(key, recipeId, batches = 1) {
     const recipe = RECIPES_BY_ID.get(recipeId);
-    if (!recipe || recipe.station !== 'crucible') return { ok: false, reason: 'That is not made in a crucible.' };
+    if (!recipe || recipe.station !== this.station) return { ok: false, reason: `That is not made in a ${this.station === 'kiln_oven' ? 'Kiln Oven' : 'crucible'}.` };
     const p = this.pots.get(key);
     if (p && p.recipeId !== recipeId) return { ok: false, reason: 'Finish what is in the pot first.' };
     const room = MAX_BATCHES - (p ? p.waiting + p.molten : 0);
@@ -131,13 +140,18 @@ export class Crucibles {
     return Object.keys(rest).length && !this.deliver(rest) ? rest : null;
   }
 
-  /** Broken crucibles give back their unmelted inputs and waiting outputs; the molten is lost. */
+  /**
+   * Broken crucibles give back their unmelted inputs and waiting outputs; the
+   * molten is lost. A broken Kiln Oven also gives back what was fired and not
+   * yet drawn: fired ware is solid, so it is handed over whole.
+   */
   prune(stands) {
     for (const [key, p] of [...this.pots]) {
       if (stands(key)) continue;
       const recipe = RECIPES_BY_ID.get(p.recipeId), items = {};
       for (const [id, n] of Object.entries(bill(recipe, p.waiting))) if (n > 0) items[id] = n;
-      if (p.out) items[recipe.output.id] = (items[recipe.output.id] ?? 0) + p.out;
+      const whole = p.out + (this.station === 'kiln_oven' ? p.molten * recipe.output.count : 0);
+      if (whole) items[recipe.output.id] = (items[recipe.output.id] ?? 0) + whole;
       this.pots.delete(key);
       const rest = this.giveBack(items);
       if (rest) this.owed.set(key, rest);
@@ -158,9 +172,11 @@ export class Crucibles {
     for (const p of Array.isArray(list) ? list : []) {
       if (typeof p?.key !== 'string') continue;
       if (p.owed && typeof p.owed === 'object') { this.owed.set(p.key, Object.fromEntries(Object.entries(p.owed).filter(([, n]) => int(n) > 0))); continue; }
-      if (RECIPES_BY_ID.get(p.recipeId)?.station !== 'crucible') continue;
+      const recipe = RECIPES_BY_ID.get(p.recipeId);
+      if (recipe?.station !== this.station) continue;
+      const mould = mouldFor(recipe) === 'tray' ? 'tray' : p.mould === 'coin' ? 'coin' : 'ingot';
       this.pots.set(p.key, { recipeId: p.recipeId, waiting: Math.min(int(p.waiting), MAX_BATCHES), molten: Math.min(int(p.molten), MAX_BATCHES),
-        progress: Number.isFinite(p.progress) ? Math.min(Math.max(p.progress, 0), 0.999) : 0, mould: p.mould === 'coin' ? 'coin' : 'ingot', out: int(p.out) });
+        progress: Number.isFinite(p.progress) ? Math.min(Math.max(p.progress, 0), 0.999) : 0, mould, out: int(p.out) });
     }
   }
 }

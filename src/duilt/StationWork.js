@@ -21,7 +21,7 @@ import { ITEMS_BY_ID } from '../config/items.js';
  */
 
 /** Stations whose single-input recipes go through the spots; the forge's do whatever their inputs. */
-const SPOT_STATIONS = new Set(['forge', 'bleach_bucket', 'stone_mill', 'wood_mill', 'planing_bench', 'joinery_bench']);
+const SPOT_STATIONS = new Set(['forge', 'bleach_bucket', 'stone_mill', 'wood_mill', 'planing_bench', 'joinery_bench', 'masons_bench']);
 /** Most a spot holds of what is put in, in batches. */
 export const MAX_BATCHES = 64;
 
@@ -49,18 +49,32 @@ export function batchSeconds(recipe) {
  * and output item that replaced it: plank recipes at the wood mill (part 1,
  * now at the planing bench) and door and trapdoor recipes at the wood mill
  * (part 2, now at the joinery bench). loadJSON rewrites a saved spot on one
- * to the new recipe and its station. A saved spot stands at a wood mill, so
- * the next prune (DuiltGame.spotStands) finds no matching bench there and
- * hands its logs, planks and finished items back to the bag: nothing is
- * lost. Without the map the spot would be dropped unpaid.
+ * to the new recipe and its station. A saved spot stands at a wood mill or
+ * a stone mill, so the next prune (DuiltGame.spotStands) finds no matching
+ * bench there and hands its inputs and finished items back to the bag:
+ * nothing is lost. Without the map the spot would be dropped unpaid.
  * Part 5: the plain stone brick recipe (4 stone for 4) is gone; a saved spot
  * on it becomes the mill's `stone_mill_stone_brick` (4 stone for 6), same
  * station, so it keeps working and the saved batches stay.
  * Orange stone moved from the stone mill to the Wash Tub under the same id
  * `stone_orange`. It has two inputs, so it never used a spot: nothing saved
  * names it and it needs no entry.
- * The workbench fence and gate recipes are not listed: the workbench is not
- * a spot station, so no saved spot can name them.
+ * Part 4 moves stone shaping from the stone mill to the Mason's Bench: the
+ * 21 single-input stone_mill_* shaping recipes map to mason_*, and marble
+ * keeps its id with its station moved (a saved marble spot stands at a stone
+ * mill, so the prune refunds it the same way). stone_mill_calcada_wave is not
+ * listed: it takes two inputs, so it was never made through a spot.
+ * The workbench fence and gate recipes (part 2) and the 24 workbench stone
+ * copies (part 4) are not listed: the workbench is not a spot station, so no
+ * saved spot can name them.
+ * Part 6 removes no recipe id at a spot station. Brick and glass keep their
+ * ids and move from the workshop to the Kiln Oven; the workshop is not a spot
+ * station, so no saved spot names them. A saved spot can not name a Kiln Oven
+ * recipe either: loadJSON drops any spot whose recipe fails usesSpots, and a
+ * kiln_oven recipe always fails it. Its pots live in DuiltGame.kilnOvens
+ * (duilt/Crucible.js). When the oven is broken, that prune hands the unfired
+ * clay and sand, the fired ware not yet drawn and the drawn ware still
+ * waiting back to the bag, else a storehouse, else keeps it owed.
  */
 const RENAMED_RECIPES = new Map([
   ['mill_planks', 'bench_planks'],
@@ -73,6 +87,28 @@ const RENAMED_RECIPES = new Map([
   ['mill_trapdoor_white', 'joinery_trapdoor_white'],
   ['mill_trapdoor_dark', 'joinery_trapdoor_dark'],
   ['stone_brick', 'stone_mill_stone_brick'],
+  ['stone_mill_stairs_stone', 'mason_stairs_stone'],
+  ['stone_mill_roof_stone', 'mason_roof_stone'],
+  ['stone_mill_roof_brick', 'mason_roof_brick'],
+  ['stone_mill_wall_stone', 'mason_wall_stone'],
+  ['stone_mill_wall_cobble', 'mason_wall_cobble'],
+  ['stone_mill_wall_brick', 'mason_wall_brick'],
+  ['stone_mill_wall_dark', 'mason_wall_dark'],
+  ['stone_mill_wall_stone_brick', 'mason_wall_stone_brick'],
+  ['stone_mill_wall_sandstone', 'mason_wall_sandstone'],
+  ['stone_mill_wall_dark_brick', 'mason_wall_dark_brick'],
+  ['stone_mill_wall_marble', 'mason_wall_marble'],
+  ['stone_mill_wall_sky_marble', 'mason_wall_sky_marble'],
+  ['stone_mill_wall_white_stone', 'mason_wall_white_stone'],
+  ['stone_mill_wall_grey_stone', 'mason_wall_grey_stone'],
+  ['stone_mill_wall_turquoise', 'mason_wall_turquoise'],
+  ['stone_mill_wall_orange', 'mason_wall_orange'],
+  ['stone_mill_chimney_stone_brick', 'mason_chimney_stone_brick'],
+  ['stone_mill_chimney_brick', 'mason_chimney_brick'],
+  ['stone_mill_pillar_stone', 'mason_pillar_stone'],
+  ['stone_mill_pillar_marble', 'mason_pillar_marble'],
+  ['stone_mill_pillar_dark', 'mason_pillar_dark'],
+  ['marble', 'marble'],
 ]);
 
 export class StationWork {

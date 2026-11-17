@@ -17,7 +17,12 @@ export const BENCH_MACHINES = {
   bleach_bucket: { verb: 'Dip', tool: 'dip', seconds: 1.5 },
   forge: { verb: 'Hammer', tool: 'hammer', seconds: 1.6 },
   spinning_wheel: { verb: 'Spin', tool: 'wheel', seconds: 1.5 },
+  // CRAFT-9 part 4: tapped, not held (chiselTap).
+  masons_bench: { verb: 'Chisel', tool: 'chisel', taps: 3 },
 };
+
+/** Chalk marks on the stone at the Mason's Bench: one tap each, the last makes the batch. */
+export const CHISEL_TAPS = 3;
 
 /**
  * One stroke at `level` (1 is a full gauge) on `recipeId`.
@@ -34,4 +39,19 @@ export function benchStroke(crafting, recipeId, level, { near = null, atStations
   }
   const r = crafting.craft(recipeId, 1, { near, atStations });
   return r.ok ? { result: 'made', made: { id: status.output.id, count: status.output.count } } : { result: 'none', reason: r.reason };
+}
+
+/**
+ * CRAFT-9 part 4: one chisel tap at the Mason's Bench. Three chalk marks
+ * stand on the stone; `done` is how many were tapped before this one. The
+ * third tap makes one batch by benchStroke's rules (station, tools, age,
+ * room). A tap spends nothing until then, and nothing spoils.
+ * Returns { result: 'tap', done } for a mark, or benchStroke's result.
+ */
+export function chiselTap(crafting, recipeId, done, { near = null, atStations = [], age = Infinity } = {}) {
+  const status = crafting.availableRecipe(recipeId, age, { near, atStations });
+  if (!status) return { result: 'none', reason: 'That is not made here.' };
+  if (!status.ok) return { result: 'none', reason: status.reason };
+  if (done + 1 < CHISEL_TAPS) return { result: 'tap', done: done + 1 };
+  return benchStroke(crafting, recipeId, 1, { near, atStations, age });
 }

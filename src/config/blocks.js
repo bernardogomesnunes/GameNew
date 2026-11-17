@@ -948,11 +948,13 @@ BLOCKS.push(
   { id: WORKBENCH, name: 'Workbench', glyph: 'planks', color: 0x9c7348, shape: 'workbench', material: 'wood', station: 'workbench', unlock: null },
 );
 
-// CRAFT3D-1: the carpentry counter, where furniture is sawn and fitted
-// together in a close-up (render/CounterView.js).
+// CRAFT3D-1: the Carpenter's Table, where furniture is sawn and fitted
+// together in a close-up (render/CounterView.js). CRAFT-9: it was the
+// Counter, a plain cube. The id, the station and the item id `counter` stay,
+// so a table placed in an old world is still one, drawn as a table.
 export const COUNTER = 530;
 BLOCKS.push(
-  { id: COUNTER, name: 'Counter', glyph: 'planks', color: 0xa87a4c, material: 'wood', station: 'counter', unlock: null },
+  { id: COUNTER, name: "Carpenter's Table", glyph: 'planks', color: 0xa87a4c, shape: 'carpenters_table', material: 'wood', station: 'counter', unlock: null },
 );
 
 // CRAFT3D-2: the spinning wheel, where hemp fibre is spun into string.
@@ -970,11 +972,27 @@ BLOCKS.push(
   { id: EGG_DRAGON, name: 'Dragon Egg', glyph: 'egg', color: 0x8a2a3a, shape: 'egg', material: 'stone', unlock: null },
 );
 
+// CRAFT-9 part 4: the Mason's Bench, where cut stone is shaped into walls,
+// slabs, stairs, pillars, chimneys and roofs with chisel taps
+// (render/BenchView.js).
+export const MASONS_BENCH = 538;
+BLOCKS.push(
+  { id: MASONS_BENCH, name: "Mason's Bench", glyph: 'stone', color: 0x8f8a82, shape: 'masons_bench', material: 'stone', station: 'masons_bench', unlock: null },
+);
+
 // CRAFT3D-3: the foundry's crucible, where ore is melted and poured into a
 // mould in a close-up (render/CrucibleView.js). Works inside a foundry.
 export const CRUCIBLE = 531;
 BLOCKS.push(
   { id: CRUCIBLE, name: 'Crucible', glyph: 'stone', color: 0x7a4a3a, material: 'stone', station: 'crucible', unlock: null },
+);
+
+// CRAFT-9 part 6: the Kiln Oven, where clay is fired into brick and vases and
+// sand into glass, then drawn out by hand in a close-up (render/CrucibleView.js,
+// kind 'kiln'). Works inside a kiln. Its door faces -z, as the mills do.
+export const KILN_OVEN = 539;
+BLOCKS.push(
+  { id: KILN_OVEN, name: 'Kiln Oven', glyph: 'brick', color: 0x9a4e36, shape: 'kiln_oven', material: 'stone', station: 'kiln_oven', unlock: null },
 );
 
 // The storybook look for buildings (asked for directly: they "need to fit

@@ -24,8 +24,9 @@ ok('three calçada blocks: white, dark and the wave', [CALCADA, CALCADA_DARK, CA
 ok('white is white and dark is dark', (BLOCKS_BY_ID.get(CALCADA).color >> 16) > 0xd0 && (BLOCKS_BY_ID.get(CALCADA_DARK).color >> 16) < 0x60);
 ok('little square setts in mortar', textureFor('calcada')?.setts > 0 && /if \(recipe\.setts\)/.test(textures));
 ok('and the wave of dark stone through white', textureFor('calcada_wave')?.wave === true && /if \(recipe\.wave\)/.test(textures));
-ok('made at the bench from stone', ['calcada', 'calcada_dark', 'calcada_wave'].every((id) =>
-  ITEMS_BY_ID.get(id)?.block && RECIPES.some((r) => r.output.id === id && ['hand', 'workbench'].includes(r.station))));
+// CRAFT-9 part 4: setts are cut at the stone mill, the wave laid at the Mason's Bench.
+ok('cut at the stone mill, the wave laid at the Mason\'s Bench', ['calcada', 'calcada_dark', 'calcada_wave'].every((id) =>
+  ITEMS_BY_ID.get(id)?.block && RECIPES.some((r) => r.output.id === id && (id === 'calcada_wave' ? 'masons_bench' : 'stone_mill') === r.station)));
 
 // --- old roads -----------------------------------------------------------------------------------
 

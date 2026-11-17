@@ -181,15 +181,22 @@ export const RECIPES = [
   // These are the first recipes with a station. Making them at the bench in
   // your pocket would make the workshop a box you build once and never visit,
   // which is the opposite of the point of putting it somewhere.
+  //
+  // CRAFT-9 part 6: brick and glass left the workshop for the Kiln Oven (a
+  // placed block, inside a kiln). They are loaded, fired and drawn in its
+  // close-up (duilt/Crucible.js), never crafted from a list. `seconds` is
+  // how long one batch fires. Brick was 3 dirt and 1 cobblestone at the
+  // workshop; 1 clay is 3 dirt washed by a river, so the earth is the same
+  // and the cobblestone is saved.
   {
     id: 'brick',
     name: 'Brick',
-    station: 'workshop',
+    station: 'kiln_oven',
     age: 4,
-    inputs: { dirt: 3, cobblestone: 1 },
+    inputs: { clay: 1 },
     output: { id: 'brick', count: 2 },
-    batch: 6,
-    blurb: 'Earth, shaped and fired. Holds a wall up far better than it has any right to.',
+    seconds: 20,
+    blurb: 'Clay, shaped and fired. Holds a wall up far better than it has any right to.',
   },
   {
     id: 'cart',
@@ -341,11 +348,11 @@ export const RECIPES = [
   {
     id: 'glass',
     name: 'Glass',
-    station: 'workshop',
+    station: 'kiln_oven',
     age: 4,
     inputs: { sand: 2 },
     output: { id: 'glass', count: 1 },
-    batch: 8,
+    seconds: 25,
     blurb: 'Sand, taken hot enough to forget it was sand.',
   },
 
@@ -1387,6 +1394,21 @@ export const RECIPES = [
     batch: 4,
     blurb: 'A painted vase, for a shelf or a doorstep.',
   },
+  // CRAFT-9 part 6: the Kiln Oven fires a vase from half the clay the vase
+  // above takes (owner, 16 November: "it should be less expensive in these
+  // machines"). That one is a hand recipe of Age 3, so IMP-19 makes it at the
+  // Workbench; it stays for Age 3, before the oven. The plan's table says 2
+  // clay here; the owner's answer (a machine always costs less) wins.
+  {
+    id: 'kiln_vase',
+    name: 'Vase',
+    station: 'kiln_oven',
+    age: 4,
+    inputs: { clay: 1 },
+    output: { id: 'vase', count: 1 },
+    seconds: 30,
+    blurb: 'A vase fired hard in the oven, for a shelf or a doorstep.',
+  },
   {
     id: 'urn',
     name: 'Urn',
@@ -1589,26 +1611,49 @@ for (const [key, e] of Object.entries(UPGRADES)) {
 }
 
 // At the stone mill (asked for directly: "make all the variations easier and
-// cheaper"): every block cut from stone — bricks, walls, stairs, roof tiles,
-// pillars, chimneys, calçada — half as much again for the same stone. Not
-// the slab (two slabs make a whole stone block, and that breaks back into
-// stone) nor anything that turns back into raw stone: no loop at the mill
-// makes stone out of nothing.
-const STONE_MILLED = [
-  'stone_brick', 'sandstone_brick', 'stairs_stone', 'roof_stone', 'roof_brick',
+// cheaper"): stone cut into bricks and setts, half as much again for the same
+// stone. Not the slab (two slabs make a whole stone block, and that breaks
+// back into stone) nor anything that turns back into raw stone: no loop at
+// the mill makes stone out of nothing.
+const STONE_MILLED = ['stone_brick', 'sandstone_brick', 'calcada', 'calcada_dark'];
+// CRAFT-9 part 4: the Mason's Bench shapes cut stone, at the mill's old
+// yields (a wall: 3 stone into 6 at the bench, 4 at the old workbench copy).
+// The 24 workbench copies go: these are made only at the bench, as the
+// bricks and setts are only at the mill. The roof slate keeps its Age 1 hand
+// recipe (1 stone into 2); the bench gives 3.
+const MASON_SHAPED = [
+  'stairs_stone', 'roof_stone', 'roof_brick',
   'wall_stone', 'wall_cobble', 'wall_brick', 'wall_dark', 'wall_stone_brick', 'wall_sandstone', 'wall_dark_brick',
   'wall_marble', 'wall_sky_marble', 'wall_white_stone', 'wall_grey_stone', 'wall_turquoise', 'wall_orange',
-  'chimney_stone_brick', 'chimney_brick', 'pillar_stone', 'pillar_marble', 'pillar_dark',
-  'calcada', 'calcada_dark', 'calcada_wave',
+  'chimney_stone_brick', 'chimney_brick', 'pillar_stone', 'pillar_marble', 'pillar_dark', 'calcada_wave',
 ];
-for (const id of STONE_MILLED) {
-  const r = RECIPES.find((x) => x.id === id);
-  RECIPES.push({
-    ...r, id: `stone_mill_${id}`, station: 'stone_mill', age: Math.max(3, r.age),
-    output: { ...r.output, count: Math.ceil(r.output.count * 1.5) }, batch: r.batch ?? 8,
-    blurb: `${r.blurb ?? ''} Half as much again at the stone mill.`.trim(),
-  });
+const MASON_STEPS = ['Chalk the marks', 'Chisel along them'];
+for (const [ids, station, prefix] of [[STONE_MILLED, 'stone_mill', 'stone_mill_'], [MASON_SHAPED, 'masons_bench', 'mason_']]) {
+  for (const id of ids) {
+    const r = RECIPES.find((x) => x.id === id);
+    RECIPES.push({
+      ...r, id: `${prefix}${id}`, station, age: Math.max(3, r.age),
+      output: { ...r.output, count: Math.ceil(r.output.count * 1.5) }, batch: r.batch ?? 8,
+      ...(station === 'masons_bench' ? { steps: MASON_STEPS } : {}),
+      blurb: `${r.blurb ?? ''} ${station === 'stone_mill' ? 'Half as much again at the stone mill.' : "Shaped at the Mason's Bench."}`.trim(),
+    });
+  }
 }
+// The workbench copies of what the mill cuts and the bench shapes (24, all
+// from Age 3 on). A copy made by hand in Ages 1 and 2 (the roof slate) stays,
+// and so does the stone brick: it is cut at the mill already.
+const MASON_COPIES = new Set([...STONE_MILLED, ...MASON_SHAPED].filter((id) => id !== 'stone_brick'));
+for (let i = RECIPES.length - 1; i >= 0; i--) {
+  const r = RECIPES[i];
+  if (MASON_COPIES.has(r.id) && r.station === 'hand' && r.age > 2) RECIPES.splice(i, 1);
+}
+RECIPES.push(
+  { id: 'masons_bench', name: "Mason's Bench", station: 'hand', age: 3, inputs: { stone: 6, planks: 4 }, output: { id: 'masons_bench', count: 1 },
+    blurb: 'A stone-topped bench with a chisel. Place it and tap the chalk marks: cut stone becomes walls, slabs, stairs, pillars, chimneys and roofs.' },
+  // New at the bench: the stone slab. Two slabs, as at the workbench: a third would make stone from nothing.
+  { id: 'mason_slab_stone', name: 'Stone Slab', station: 'masons_bench', age: 3, inputs: { stone: 1 }, output: { id: 'slab_stone', count: 2 }, batch: 8,
+    steps: MASON_STEPS, blurb: "Stone split into two slabs at the Mason's Bench." },
+);
 
 // CRAFT-9 part 5: the plain stone brick recipe (4 stone for 4) goes. The mill's
 // copy (4 stone for 6) is the one stone brick recipe. Its id stays
@@ -1653,9 +1698,14 @@ for (const r of RECIPES) {
     r.tools = ['carpentry_saw'];
     r.steps = ['Measure and saw', 'Fit the joints', 'Assemble'];
   }
-  if (['marble', 'cobblestone', 'stone_brick'].includes(r.output.id)) {
+  if (['cobblestone', 'stone_brick'].includes(r.output.id)) {
     r.station = 'stone_mill';
     r.steps = ['Load the rock', 'Cut and dress'];
+  }
+  // CRAFT-9 part 4: marble is dressed at the Mason's Bench (the recipe id stays).
+  if (r.id === 'marble') {
+    r.station = 'masons_bench';
+    r.steps = MASON_STEPS;
   }
   if (r.id === 'marble') r.age = 3;
   if (r.output.id === 'sky_marble') r.steps = ['Grind the glass polish', 'Polish the marble'];
@@ -1720,7 +1770,7 @@ RECIPES.push(
   { id: 'workshop_workbench', name: 'Workbench', station: 'workshop', age: 4, inputs: { planks: 8, wood: 2, stone: 2 }, output: { id: 'workbench', count: 1 }, blurb: 'Place it anywhere: everything from the third age on is made at it.' },
 );
 
-// CRAFT3D-1: furniture is made only at a carpentry counter (owner, 31
+// CRAFT3D-1: furniture is made only at a Carpenter's Table (owner, 31
 // October: "Templates only"). Each piece keeps the planks it cost here, for
 // the counter to charge; then every furniture recipe goes, wherever it was.
 export const FURNITURE_COST = new Map();
@@ -1735,8 +1785,8 @@ for (const r of RECIPES) if (furniture.has(r.output.id)) FURNITURE_AGE.set(r.out
 for (const [id, c] of FURNITURE_COST) FURNITURE_COST.set(id, c.inputs);
 for (let i = RECIPES.length - 1; i >= 0; i--) if (furniture.has(RECIPES[i].output.id)) RECIPES.splice(i, 1);
 // Made by hand from Age 1: the first house and the Work Hall are furnished from it.
-RECIPES.push({ id: 'counter', name: 'Counter', station: 'hand', age: 1, inputs: { planks: 6, wood: 2 }, output: { id: 'counter', count: 1 },
-  blurb: 'Place it and make furniture on it: saw the parts, then fit them together.' });
+RECIPES.push({ id: 'counter', name: "Carpenter's Table", station: 'hand', age: 1, inputs: { planks: 6, wood: 2 }, output: { id: 'counter', count: 1 },
+  blurb: 'Place it and make furniture on it: one saw stroke cuts the parts, then tap each into place.' });
 
 // CRAFT3D-3: the foundry's recipes are made in its crucible now (owner, 1
 // November: "the foundry to melt stuff"), melted and poured by hand.
@@ -1744,7 +1794,19 @@ for (const r of RECIPES) if (r.station === 'foundry') r.station = 'crucible';
 RECIPES.push({ id: 'crucible', name: 'Crucible', station: 'workbench', age: 5, inputs: { stone: 8, clay: 2 }, output: { id: 'crucible', count: 1 },
   blurb: 'Place it inside a foundry: melt ore and pour it into an ingot or coin mould.' });
 
+// CRAFT-9 part 6: the Kiln Oven, from Age 4, the age of the kiln it stands in.
+// A hand recipe of Age 4; IMP-19 makes every hand recipe past Age 2 at the
+// Workbench (the menu keeps Ages 1 and 2), so it is made there, as the
+// crucible is.
+RECIPES.push({ id: 'kiln_oven', name: 'Kiln Oven', station: 'workbench', age: 4, inputs: { cobblestone: 8, clay: 2 }, output: { id: 'kiln_oven', count: 1 },
+  blurb: 'Place it inside a kiln: load clay or sand, let it fire, then draw out brick, glass or a vase.' });
+
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
+
+/** A station as it's written for people: wood_mill is "wood mill", masons_bench "mason's bench". */
+export function stationWords(station) {
+  return station === 'masons_bench' ? "mason's bench" : String(station).replace(/_/g, ' ');
+}
 
 /**
  * Where an item comes from, in one line a player can act on.
@@ -1762,12 +1824,12 @@ export function howToGet(itemId, blockName = null) {
   if (recipe) {
     const from = Object.entries(recipe.inputs)
       .map(([id, n]) => `${n} ${(ITEMS_BY_ID.get(id)?.name ?? id.replace(/_/g, ' ')).toLowerCase()}`).join(' and ');
-    const where = recipe.station === 'hand' ? 'by hand' : `at a ${recipe.station.replace(/_/g, ' ')}`;
+    const where = recipe.station === 'hand' ? 'by hand' : `at a ${stationWords(recipe.station)}`;
     return recipe.needs === 'water'
       ? `make it ${where} by the river, from ${from}`
       : `make it ${where} from ${from}`;
   }
-  if (FURNITURE_COST.has(itemId)) return 'make it at a Counter';
+  if (FURNITURE_COST.has(itemId)) return "make it at a Carpenter's Table";
   if (blockName) return `break ${blockName.toLowerCase()} to collect it`;
   return null;
 }

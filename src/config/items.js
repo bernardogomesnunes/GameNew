@@ -36,8 +36,10 @@ export const ITEMS = [
   { id: 'bleach_bucket', name: 'Wash Tub', kind: 'refined', stackTo: 1, color: 0xdde8d7, glyph: 'bucket', block: 524, madeBy: 'Water and wood ash mixed in a bucket — place it to wash stone pale or tint it orange, and to bleach logs' },
   { id: 'planing_bench', name: 'Planing Bench', kind: 'refined', stackTo: 10, color: 0xb98a5a, glyph: 'planks', block: 527, madeBy: 'Build from planks and stone — place it and plane logs into more planks' },
   { id: 'joinery_bench', name: 'Joinery Bench', kind: 'refined', stackTo: 10, color: 0xa77b52, glyph: 'planks', block: 528, madeBy: 'Build from planks, logs and stone. Place it and join doors, trapdoors, fences, gates and chests' },
+  { id: 'masons_bench', name: "Mason's Bench", kind: 'refined', stackTo: 10, color: 0x8f8a82, glyph: 'stone', block: 538, madeBy: 'Made at a Workbench from stone and planks. Place it and chisel stone into walls, slabs, stairs, pillars, chimneys and roofs' },
   { id: 'crucible', name: 'Crucible', kind: 'refined', stackTo: 10, color: 0x7a4a3a, glyph: 'stone', block: 531, madeBy: 'Made at a Workbench. Place it inside a foundry to melt ore and pour it into a mould' },
-  { id: 'counter', name: 'Counter', kind: 'refined', stackTo: 10, color: 0xa87a4c, glyph: 'planks', block: 530, madeBy: 'Made by hand. Place it and make furniture on it: saw the parts, fit them together' },
+  { id: 'kiln_oven', name: 'Kiln Oven', kind: 'refined', stackTo: 10, color: 0x9a4e36, glyph: 'brick', block: 539, madeBy: 'Made at a Workbench. Place it inside a kiln to fire clay into brick and vases, and sand into glass' },
+  { id: 'counter', name: "Carpenter's Table", kind: 'refined', stackTo: 10, color: 0xa87a4c, glyph: 'planks', block: 530, madeBy: 'Made by hand. Place it and make furniture on it: one saw stroke cuts the parts, then tap each into place' },
   { id: 'workbench', name: 'Workbench', kind: 'refined', stackTo: 10, color: 0x9c7348, glyph: 'planks', block: 529, madeBy: 'Made by hand or at a workshop. Place it anywhere and make everything from the third age on there' },
   { id: 'forge', name: 'Forge', kind: 'refined', stackTo: 10, color: 0x655367, glyph: 'stone', block: 525, madeBy: 'Build from stone and clay — place it to darken rock and forge weapons' },
   ...[
@@ -88,9 +90,9 @@ export const ITEMS = [
 
   // --- what the quarry, kiln and mine give back ----------------------------
   { id: 'cobblestone', name: 'Cobblestone', kind: 'raw', stackTo: STACK_BULK, color: 0xc8c6c2, glyph: 'cobble', block: 8, madeBy: 'Split Stone into Cobblestone at a stone mill' },
-  { id: 'brick', name: 'Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'brick', block: 9, madeBy: 'Fired from earth in a kiln' },
-  { id: 'glass', name: 'Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xb9dce8, glyph: 'pane', block: 10, madeBy: 'Fired from sand in a kiln' },
-  { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: 'Dress Stone into Marble at a stone mill' },
+  { id: 'brick', name: 'Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'brick', block: 9, madeBy: 'Fired from clay in a Kiln Oven. A kiln also gives one every 4 hours' },
+  { id: 'glass', name: 'Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xb9dce8, glyph: 'pane', block: 10, madeBy: 'Fired from sand in a Kiln Oven. A kiln also gives one every 4 hours' },
+  { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: "Dress Stone into Marble at a Mason's Bench" },
   // Owner, 15 November: "There should be a gold ingot ... Tools and armour
   // should be made with gold ingots. We should have iron blocks too." The
   // item every recipe, chest and trader calls `gold` is the ingot; the block
@@ -310,7 +312,7 @@ export const ITEMS = [
   { id: 'pillar_dark', name: 'Dark Pillar', kind: 'refined', stackTo: STACK_BULK, color: 0x4f4b57, glyph: 'pillar', block: 167, madeBy: 'Turned from dark stone — stack them into a column' },
   { id: 'trapdoor', name: 'Trapdoor', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08a60, glyph: 'trapdoor', block: 168, madeBy: 'Knocked together from planks — Place opens and shuts it' },
   { id: 'window', name: 'Framed Window', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a7350, glyph: 'window', block: 176, madeBy: 'Planks and sand, framed at the bench' },
-  { id: 'vase', name: 'Vase', kind: 'refined', stackTo: STACK_GOODS, color: 0xc9825c, glyph: 'vase', block: 180, madeBy: 'Thrown from clay and painted' },
+  { id: 'vase', name: 'Vase', kind: 'refined', stackTo: STACK_GOODS, color: 0xc9825c, glyph: 'vase', block: 180, madeBy: 'Thrown from 2 clay at a Workbench, or fired from 1 clay in a Kiln Oven' },
   { id: 'urn', name: 'Urn', kind: 'refined', stackTo: STACK_GOODS, color: 0xb08d57, glyph: 'urn', block: 181, madeBy: 'Beaten from copper' },
   { id: 'banner_white', name: 'White Banner', kind: 'refined', stackTo: STACK_GOODS, color: 0xf4f1ea, glyph: 'banner', block: 182, madeBy: 'Woven white, with the gold sun of the sky' },
   { id: 'banner_black', name: 'Black Banner', kind: 'refined', stackTo: STACK_GOODS, color: 0x2e2a33, glyph: 'banner', block: 186, madeBy: 'Woven black, with the red tower of the stone' },

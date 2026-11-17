@@ -2030,6 +2030,9 @@ export class Game {
       }
     }
     if (sandbox) this.duilt.grantCreativeKit();
+    // CRAFT-9 part 4: an older world past Age 3 was given a Mason's Bench on load.
+    if (this.duilt.gifted && this.ui) setTimeout(() => this.ui.toast({ kind: 'challenge', title: "A Mason's Bench, in your bag",
+      body: 'Walls, pillars, chimneys and shaped roofs are chiselled at it now. Place it and tap the chalk marks.' }), 900);
     // The world's clock picks up where it was left.
     if (this.dayCycle) this.dayCycle.time = this.duilt.dayTime ?? MORNING;
     this.gamification.setDuilt(this.duilt);
@@ -2245,6 +2248,10 @@ export class Game {
       });
     }
 
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' && this.closeUp?.active) this.closeUp.machine.keyUp?.();
+      if (e.code === 'Space' && this.closeUp?.machine?.keyHold) this.closeUp.machine.keyHold(false);
+    });
     window.addEventListener('keydown', (e) => {
       // Nothing in here is a shortcut while you are filling in a form. Typing an
       // email address used to open the workbench on "e" and the buildings panel
@@ -2252,6 +2259,13 @@ export class Game {
       if (isTyping(e)) return;
 
       if (e.code === 'Escape' && this.closeUp?.active) { this.endMachine(); return; }
+      // CRAFT-9: at a machine its own keys come first (the Carpenter's Table: Space holds Saw, 1 to 4 tap a part).
+      if (this.closeUp?.active && this.closeUp.machine.key?.(e.code, true, e.repeat)) { e.preventDefault(); return; }
+      // CRAFT-9 part 6: at a machine that holds an action (the crucible, the
+      // Kiln Oven), Space holds it on a desktop; its keyup below lets go.
+      if (e.code === 'Space' && this.closeUp?.machine?.keyHold) { e.preventDefault(); if (!e.repeat) this.closeUp.machine.keyHold(true); return; }
+      // CRAFT-9: Space works a bench machine on a desktop: held for a held one, a tap for the Mason's Bench.
+      if (e.code === 'Space' && this.closeUp?.active) { e.preventDefault(); document.activeElement?.blur?.(); if (!e.repeat) this.closeUp.machine.keyDown?.(); return; }
       if (e.code === 'Escape') {
         // Putting down what you are holding comes before putting away panels.
         if (this.moving) { this.cancelMove(); return; }
@@ -2995,6 +3009,7 @@ export class Game {
     // At a wood mill (#32), the bench, showing what's made there.
     if (aimed && stationOf(aimed.block) === 'counter') return void this.startCounter(aimed);
     if (aimed && stationOf(aimed.block) === 'crucible') return void this.startCrucible(aimed);
+    if (aimed && stationOf(aimed.block) === 'kiln_oven') return void this.startKilnOven(aimed);
     if (aimed && BENCH_MACHINES[stationOf(aimed.block)]) return void this.startBench(aimed, stationOf(aimed.block));
     if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block), aimed);
     // And at a painting, Place makes it where you wake (playtest, P1).
@@ -6584,27 +6599,29 @@ export class Game {
    * waits (see phase), the machine moves the camera, its bar takes the
    * controls, and presses on the picture go to the machine.
    */
-  /** The Counter's 3D view (tests and the counter's own bar read it). */
+  /** The Carpenter's Table's 3D view (tests and the table's own bar read it). */
   get counterView() {
     return this.counterMachine?.view ?? null;
   }
 
   openMachine(machine, at) {
     if (!this.closeUp) {
-      this.closeUp = new CloseUp({ uiRoot: this.uiRoot, onEnd: () => this.player?.syncCamera?.() });
+      this.closeUp = new CloseUp({ uiRoot: this.uiRoot, onEnd: () => { this.player?.releaseKeys?.(); this.player?.syncCamera?.(); } });
       this.bindMachinePointer();
+      // A key let go ends what it held (Space on the Carpenter's Table's saw).
+      window.addEventListener('keyup', (e) => { if (this.closeUp?.active) this.closeUp.machine.key?.(e.code, false, false); });
     }
     this.closeUp.open(machine, `${at.x},${at.y},${at.z}`, at);
     this.ui.hideBlocker?.();
   }
 
-  /** CRAFT3D-1: the carpentry counter at `at`. */
+  /** CRAFT3D-1: the Carpenter's Table (block 530, station `counter`) at `at`. */
   startCounter(at) {
     if (!this.duilt) return;
     this.counterMachine ??= new CounterMachine({ scene: this.scene, camera: this.camera, uiRoot: this.uiRoot, counters: this.duilt.counters, bus: this.bus,
       age: () => (this.duilt?.sandbox ? Infinity : this.duilt?.age ?? 1), onLeave: () => this.endMachine(),
       onDone: ({ item, took }) => {
-        this.ui.toast(took ? { kind: 'challenge', title: `${itemName(item)} made`, body: 'In your bag' } : { kind: 'xp', title: `${itemName(item)} is ready`, body: 'Make room in your bag; it waits on the counter' });
+        this.ui.toast(took ? { kind: 'challenge', title: `${itemName(item)} made`, body: 'In your bag' } : { kind: 'xp', title: `${itemName(item)} is ready`, body: 'Make room in your bag; it waits on the table' });
         this.editedAt = Date.now();
       } });
     this.counterMachine.use(this.duilt.counters);
@@ -6623,6 +6640,20 @@ export class Game {
       onPoured: () => { this.editedAt = Date.now(); } });
     this.crucibleMachine.use(this.duilt.crucibles);
     this.openMachine(this.crucibleMachine, at);
+  }
+
+  /** CRAFT-9 part 6: the Kiln Oven at `at`, if a kiln stands round it. */
+  startKilnOven(at) {
+    if (!this.duilt) return;
+    if (!this.duilt.inBuilding(`${at.x},${at.y},${at.z}`, 'kiln')) {
+      this.ui.toast({ kind: 'xp', title: "A Kiln Oven needs a kiln's heat", body: 'Place it inside one.' });
+      return;
+    }
+    this.kilnMachine ??= new CrucibleMachine({ scene: this.scene, camera: this.camera, uiRoot: this.uiRoot, crucibles: this.duilt.kilnOvens, kind: 'kiln',
+      age: () => (this.duilt?.sandbox ? Infinity : this.duilt?.age ?? 1), onLeave: () => this.endMachine(),
+      onPoured: () => { this.editedAt = Date.now(); } });
+    this.kilnMachine.use(this.duilt.kilnOvens);
+    this.openMachine(this.kilnMachine, at);
   }
 
   /** CRAFT3D-2, 4 to 7: a bench machine (wood mill, forge, spinning wheel...) in close-up. */
@@ -8387,7 +8418,7 @@ export class Game {
     // crucible close-up ticks its own pot (CrucibleMachine), so not twice.
     if (!playing && this.duilt && !this.duilt.sandbox && this.ui?.isAnyPanelOpen?.()) {
       this.duilt.stationWork.tick(dt);
-      if (!this.closeUp?.active) this.duilt.crucibles.tick(dt);
+      if (!this.closeUp?.active) { this.duilt.crucibles.tick(dt); this.duilt.kilnOvens.tick(dt); }
     }
     if (this.duilt) {
       this.duilt.dayTime = this.dayCycle.time;

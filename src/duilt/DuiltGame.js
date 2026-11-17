@@ -177,6 +177,8 @@ export class DuiltGame {
     this.skyFallen = false;
     /** IMP-31: whether the Sky King has given his gifts. */
     this.skyGift = false;
+    /** CRAFT-9 part 4: the Mason's Bench given to a world past Age 3 on its first load (masonsBenchGift), or null. */
+    this.gifted = null;
     // The painting you wake by after a fall, if you chose one (playtest, P1).
     this.spawn = null;
     // Drinks going (playtest, P5): { haste | strength | speed: seconds left }.
@@ -223,6 +225,8 @@ export class DuiltGame {
     this.counters = new Counters({ bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload) });
     // CRAFT3D-3: each crucible's melt and pour, heated only inside a foundry.
     this.crucibles = new Crucibles({ bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: (key) => this.inFoundry(key) });
+    // CRAFT-9 part 6: each Kiln Oven's firing and draw, heated only inside a kiln.
+    this.kilnOvens = new Crucibles({ station: 'kiln_oven', bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: (key) => this.inBuilding(key, 'kiln') });
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
@@ -462,6 +466,22 @@ export class DuiltGame {
     }
     this.hunger.exertion = 1;
     return gained;
+  }
+
+  /**
+   * CRAFT-9 part 4: walls, pillars, chimneys and shaped roofs are made only
+   * at a Mason's Bench now. A save from before it (`given` false) at Age 3
+   * or later gets one in the bag, once, so none of them is out of reach. A
+   * full bag puts it off to the next load: the save is marked only when it
+   * goes in. Sets `gifted` for Game to say so.
+   */
+  masonsBenchGift(given) {
+    this.gifted = null;
+    this.masonsBenchOwed = !given && !this.sandbox && this.age >= 3;
+    if (!this.masonsBenchOwed || this.inventory.roomFor('masons_bench', 1) < 1) return;
+    this.inventory.add('masons_bench', 1);
+    this.masonsBenchOwed = false;
+    this.gifted = 'masons_bench';
   }
 
   /**
@@ -1477,6 +1497,7 @@ export class DuiltGame {
     this.jobs.tick(dtSeconds);
     this.stationWork.tick(dtSeconds);
     this.crucibles.tick(dtSeconds);
+    this.kilnOvens.tick(dtSeconds);
     // Every couple of seconds: a spot whose station was broken gives its items back.
     this.sincePrune = (this.sincePrune ?? 0) + dtSeconds;
     if (this.sincePrune > 2) {
@@ -1484,6 +1505,7 @@ export class DuiltGame {
       this.stationWork.prune((key, station) => this.spotStands(key, station));
       this.counters.prune((key) => this.spotStands(key, 'counter'));
       this.crucibles.prune((key) => this.spotStands(key, 'crucible'));
+      this.kilnOvens.prune((key) => this.spotStands(key, 'kiln_oven'));
     }
 
     const now = Date.now();
@@ -2160,8 +2182,13 @@ export class DuiltGame {
 
   /** Whether the block at "x,y,z" stands inside a valid Foundry (a crucible's heat). */
   inFoundry(key) {
+    return this.inBuilding(key, 'foundry');
+  }
+
+  /** Whether the block at "x,y,z" stands inside a valid building of `type` ('foundry', 'kiln'). */
+  inBuilding(key, type) {
     const [x, y, z] = key.split(',').map(Number);
-    return this.structures.list().some((s) => s.valid && s.type === 'foundry'
+    return this.structures.list().some((s) => s.valid && s.type === type
       && x >= s.region.minX && x <= s.region.maxX && y >= s.region.minY && y <= s.region.maxY && z >= s.region.minZ && z <= s.region.maxZ);
   }
 
@@ -2191,6 +2218,8 @@ export class DuiltGame {
       studying: this.studying,
       skyFallen: this.skyFallen || undefined,
       skyGift: this.skyGift || undefined,
+      // CRAFT-9 part 4: written by every save from now on, so the gift on load comes once.
+      masonsBench: this.masonsBenchOwed ? undefined : true,
       guardian: this.guardian?.toJSON() ?? null,
       spawn: this.spawn,
       boosts: { ...this.boosts },
@@ -2224,6 +2253,7 @@ export class DuiltGame {
       stationWork: this.stationWork.toJSON(),
       counters: this.counters.toJSON(),
       crucibles: this.crucibles.toJSON(),
+      kilnOvens: this.kilnOvens.toJSON(),
       herd: herdToJSON(this.herd),
       machines: this.machines.map((m) => ({
         ...(m.kind ? { kind: m.kind } : {}),
@@ -2308,6 +2338,7 @@ export class DuiltGame {
     }
     // A backpack on: its slots come back with it (the saved bag has them too).
     if (!this.inventory.endless) this.inventory.grow(this.bagSize());
+    this.masonsBenchGift(data.masonsBench === true);
     this.chests.clear();
     for (const c of Array.isArray(data.chests) ? data.chests : []) {
       if (typeof c?.key !== 'string') continue;
@@ -2321,6 +2352,7 @@ export class DuiltGame {
     this.stationWork.loadJSON(data.stationWork);
     this.counters.loadJSON(data.counters);
     this.crucibles.loadJSON(data.crucibles);
+    this.kilnOvens.loadJSON(data.kilnOvens);
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));

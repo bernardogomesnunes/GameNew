@@ -3,12 +3,14 @@ import { CrucibleBar } from '../ui/CrucibleBar.js';
 
 /**
  * CRAFT3D-3's Crucible as a close-up machine (render/CloseUp.js). Holding on
- * the picture pours too, the same as holding the Pour button.
+ * the picture pours too, the same as holding the Pour button, and so does
+ * holding Space on a desktop. CRAFT-9 part 6: `kind` 'kiln' is the Kiln
+ * Oven, the same machine with an oven, a tray and Draw.
  */
 export class CrucibleMachine {
-  constructor({ scene, camera, uiRoot, crucibles, age, onLeave, onPoured }) {
-    this.view = new CrucibleView({ scene, camera, crucibles });
-    this.bar = new CrucibleBar({ root: uiRoot, view: this.view, crucibles, age, onLeave, onPoured });
+  constructor({ scene, camera, uiRoot, crucibles, kind = 'crucible', age, onLeave, onPoured }) {
+    this.view = new CrucibleView({ scene, camera, crucibles, kind });
+    this.bar = new CrucibleBar({ root: uiRoot, view: this.view, crucibles, kind, age, onLeave, onPoured });
     this.barEl = this.bar.el;
     this.shape = '';
   }
@@ -36,4 +38,6 @@ export class CrucibleMachine {
 
   pointerDown() { this.bar.pour(true); }
   pointerUp() { this.bar.pour(false); }
+  /** Space on a desktop: held, it pours (or draws); let go, it stops. */
+  keyHold(on) { this.bar.pour(on); }
 }
