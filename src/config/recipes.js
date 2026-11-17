@@ -181,15 +181,22 @@ export const RECIPES = [
   // These are the first recipes with a station. Making them at the bench in
   // your pocket would make the workshop a box you build once and never visit,
   // which is the opposite of the point of putting it somewhere.
+  //
+  // CRAFT-9 part 6: brick and glass left the workshop for the Kiln Oven (a
+  // placed block, inside a kiln). They are loaded, fired and drawn in its
+  // close-up (duilt/Crucible.js), never crafted from a list. `seconds` is
+  // how long one batch fires. Brick was 3 dirt and 1 cobblestone at the
+  // workshop; 1 clay is 3 dirt washed by a river, so the earth is the same
+  // and the cobblestone is saved.
   {
     id: 'brick',
     name: 'Brick',
-    station: 'workshop',
+    station: 'kiln_oven',
     age: 4,
-    inputs: { dirt: 3, cobblestone: 1 },
+    inputs: { clay: 1 },
     output: { id: 'brick', count: 2 },
-    batch: 6,
-    blurb: 'Earth, shaped and fired. Holds a wall up far better than it has any right to.',
+    seconds: 20,
+    blurb: 'Clay, shaped and fired. Holds a wall up far better than it has any right to.',
   },
   {
     id: 'cart',
@@ -341,11 +348,11 @@ export const RECIPES = [
   {
     id: 'glass',
     name: 'Glass',
-    station: 'workshop',
+    station: 'kiln_oven',
     age: 4,
     inputs: { sand: 2 },
     output: { id: 'glass', count: 1 },
-    batch: 8,
+    seconds: 25,
     blurb: 'Sand, taken hot enough to forget it was sand.',
   },
 
@@ -1387,6 +1394,19 @@ export const RECIPES = [
     batch: 4,
     blurb: 'A painted vase, for a shelf or a doorstep.',
   },
+  // CRAFT-9 part 6: the Kiln Oven fires a vase from half the clay the hand
+  // recipe takes (owner, 16 November: "it should be less expensive in these
+  // machines"). The hand recipe stays for Age 3, before the oven.
+  {
+    id: 'kiln_vase',
+    name: 'Vase',
+    station: 'kiln_oven',
+    age: 4,
+    inputs: { clay: 1 },
+    output: { id: 'vase', count: 1 },
+    seconds: 30,
+    blurb: 'A vase fired hard in the oven, for a shelf or a doorstep.',
+  },
   {
     id: 'urn',
     name: 'Urn',
@@ -1735,6 +1755,10 @@ RECIPES.push({ id: 'counter', name: 'Counter', station: 'hand', age: 1, inputs: 
 for (const r of RECIPES) if (r.station === 'foundry') r.station = 'crucible';
 RECIPES.push({ id: 'crucible', name: 'Crucible', station: 'workbench', age: 5, inputs: { stone: 8, clay: 2 }, output: { id: 'crucible', count: 1 },
   blurb: 'Place it inside a foundry: melt ore and pour it into an ingot or coin mould.' });
+
+// CRAFT-9 part 6: the Kiln Oven, made by hand from Age 4, the age of the kiln it stands in.
+RECIPES.push({ id: 'kiln_oven', name: 'Kiln Oven', station: 'hand', age: 4, inputs: { cobblestone: 8, clay: 2 }, output: { id: 'kiln_oven', count: 1 },
+  blurb: 'Place it inside a kiln: load clay or sand, let it fire, then draw out brick, glass or a vase.' });
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
