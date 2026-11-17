@@ -92,7 +92,7 @@ export class CounterBar {
         ${sawn ? '' : `<button class="primary" data-saw ${cut.ok ? '' : 'disabled'}>Saw (hold)</button>`}
         ${isPatterned(w.item) && fitted === n && !w.carved ? '<button class="primary" data-carve>Carve</button>' : ''}
         ${w.done && settled ? '<button class="primary" data-take>Take it</button>' : ''}
-        ${!w.paid && w.cut === 0 ? '<button class="secondary" data-back>Other piece</button>' : ''}
+        ${!w.paid && w.cut === 0 ? '<button class="secondary" data-back>Back</button>' : ''}
         <button class="secondary" data-leave>Leave</button>
       </div>`;
   }

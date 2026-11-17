@@ -2307,7 +2307,7 @@ button.busy { cursor: progress; opacity: 0.92; }
 /* CRAFT-9: every machine's action buttons sit bottom centre, 56 px tall, under the thumb. */
 .counter-bar .counter-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .counter-bar button { min-height: 44px; }
-.counter-bar .counter-actions button { min-height: 56px; min-width: 104px; padding: 0 16px; font-size: 16px; touch-action: none; }
+.counter-bar .counter-actions button { min-height: 56px; min-width: 84px; padding: 0 10px; font-size: 16px; touch-action: none; }
 /* The Carpenter's Table: the part to fit next is ringed; the key numbers show only with a keyboard. */
 .table-bar .counter-pieces { justify-content: safe center; }
 .table-bar .counter-piece.next { outline: 3px solid var(--accent, #c98a2b); outline-offset: -3px; }
