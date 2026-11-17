@@ -55,7 +55,7 @@ for (const id of COPIES) assert.ok(!RECIPES_BY_ID.has(id), `the workbench copy $
 const hand = RECIPES_BY_ID.get('roof_stone');
 assert.equal(hand.station, 'hand');
 assert.ok(RECIPES_BY_ID.get('mason_roof_stone').output.count > hand.output.count, 'cheaper at the bench than by hand');
-assert.ok(RECIPES_BY_ID.get('stone_brick'), 'the stone brick (cut at the mill) stays');
+assert.ok(RECIPES_BY_ID.get('stone_mill_stone_brick'), 'the stone brick (cut at the mill) stays');
 for (const id of ['wall_stone', 'pillar_dark', 'chimney_stone_brick']) assert.match(howToGet(id), /at a mason's bench/);
 console.log('PASS the 24 workbench copies are gone; the hand roof slate gives 2, the bench 3; howToGet names the bench');
 
