@@ -8,7 +8,11 @@
  * being drawn — counted chunk by chunk.
  */
 
+import { growGround } from './groundGrow.js';
+
 const el = () => document.getElementById('loading');
+/** The growing ground, while a world's screen is up (loadingShow with `world`). */
+let ground = null;
 /** Near enough all there: the last few chunks at the edge fill in under the fade. */
 const ENOUGH = 0.95;
 
@@ -22,6 +26,7 @@ export function loadingProgress(pct, label) {
   if (fill) fill.style.width = `${to}%`;
   root.setAttribute('aria-valuenow', String(to));
   if (label) root.querySelector('.ld-label').textContent = label;
+  ground?.set(to);
 }
 
 /**
@@ -30,10 +35,10 @@ export function loadingProgress(pct, label) {
  * a loading as we have in the beginning"). Its look is still in index.html;
  * only the markup is made again, since loadingDone took it away.
  */
-export function loadingShow(label) {
+export function loadingShow(label, { world = false } = {}) {
   let root = el();
   // Still fading out from last time: that one goes now, a fresh one comes.
-  if (root?.classList.contains('ld-gone')) { root.remove(); root = null; }
+  if (root?.classList.contains('ld-gone') || root?.dataset.fading) { ground?.stop(); ground = null; root.remove(); root = null; }
   if (!root) {
     root = document.createElement('div');
     root.id = 'loading';
@@ -46,6 +51,17 @@ export function loadingShow(label) {
       + '<div class="ld-bar"><div class="ld-track"><div class="ld-fill"></div></div></div>'
       + '<p class="ld-label"></p></div>';
     document.body.appendChild(root);
+  }
+  // A world being opened or made gets daylight and the growing ground; the
+  // start of the game and the way back to the worlds keep the night sky.
+  root.classList.toggle('ld-world', world);
+  if (world && !ground) {
+    const canvas = document.createElement('canvas');
+    canvas.className = 'ld-grow';
+    canvas.setAttribute('aria-hidden', 'true');
+    root.prepend(canvas);
+    const reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    ground = growGround(canvas, { reduced });
   }
   loadingProgress(6, label);
 }
@@ -65,10 +81,18 @@ export function loadingAside(aside) {
 /** Fades it out and removes it. */
 export function loadingDone() {
   const root = el();
-  if (!root || root.classList.contains('ld-gone')) return;
+  if (!root || root.classList.contains('ld-gone') || root.dataset.fading) return;
   loadingProgress(100);
-  root.classList.add('ld-gone');
-  setTimeout(() => root.remove(), 600);
+  root.dataset.fading = '1';
+  // The ground gets a moment to reach the top before the screen fades.
+  const grown = ground;
+  ground = null;
+  const fade = () => {
+    root.classList.add('ld-gone');
+    setTimeout(() => { grown?.stop(); root.remove(); }, 600);
+  };
+  if (!grown) return fade();
+  grown.fill().then(fade);
 }
 
 /** Resolves after the browser has drawn what's changed, so a label shows before a long step. */

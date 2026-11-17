@@ -1334,10 +1334,10 @@ export class Game {
    * being drawn, made faster under it as at the start (see `booting`).
    * Gone once that's done, or at once if `work` came to nothing.
    */
-  async withLoading(label, work) {
+  async withLoading(label, work, { world = true } = {}) {
     // SAVE-7: an unsent copy waits until this is done (sendUnsent).
     this.loadingWorld = (this.loadingWorld ?? 0) + 1;
-    loadingShow(label);
+    loadingShow(label, { world });
     await nextPaint();
     try {
       const ok = await work();
@@ -1580,7 +1580,7 @@ export class Game {
           this.ui.toast({ kind: 'xp', title: 'Could not import', body: err.message });
         }
       },
-      onGoHome: () => (this.title ? true : this.withLoading('Back to your worlds…', () => this.openTitle())),
+      onGoHome: () => (this.title ? true : this.withLoading('Back to your worlds…', () => this.openTitle(), { world: false })),
       onNewWorld: (mode, name, options) => this.withLoading('Building the world…', () => { this.newWorld({ mode, name, localAI: options?.localAI }); this.ui.closePanel('panel-menu'); }),
       onInviteBattle: () => this.openPeerBattle(),
       onExportDiagnostics:()=>this.diagnostics.download(this.diagnosticContext()),
