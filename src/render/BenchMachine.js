@@ -3,6 +3,12 @@ import { BenchBar } from '../ui/BenchBar.js';
 import { BENCH_MACHINES, benchStroke, chiselTap } from '../duilt/BenchWork.js';
 import { itemName } from '../config/items.js';
 
+/** "Made 6 cobblestone walls.": plural s when more than one and the name has none. */
+export const madeText = ({ id, count }) => {
+  const name = itemName(id).toLowerCase();
+  return `Made ${count} ${count > 1 && !/s$/.test(name) ? `${name}s` : name}.`;
+};
+
 /**
  * A bench machine as a close-up (render/CloseUp.js). `game` gives the world's
  * crafting, the stations you stand at and the age; holding on the picture
@@ -63,7 +69,7 @@ export class BenchMachine {
     const r = benchStroke(this.game.duilt.crafting, this.picked, this.view.level, this.ctx());
     this.view.level = 0;
     if (r.result === 'made') { this.view.made(); this.onMade?.(r); }
-    this.render(r.result === 'made' ? `Made ${r.made.count} ${itemName(r.made.id).toLowerCase()}.`
+    this.render(r.result === 'made' ? madeText(r.made)
       : r.result === 'short' ? `Not far enough: nothing spent. Hold ${this.machine.verb} longer.`
         : r.result === 'spoilt' ? 'Too far: the batch was spoilt and its materials lost.' : r.reason ?? '');
   }
@@ -80,7 +86,7 @@ export class BenchMachine {
     }
     this.taps = 0;
     if (r.result === 'made') { this.view.tapped(this.machine.taps); this.view.made(); this.onMade?.(r); }
-    this.render(r.result === 'made' ? `Made ${r.made.count} ${itemName(r.made.id).toLowerCase()}.` : r.reason ?? '');
+    this.render(r.result === 'made' ? madeText(r.made) : r.reason ?? '');
   }
 
   update(dt) {

@@ -7,13 +7,13 @@ Current item reference, generated from the item registry by `node scripts/update
 | Item | How to get it / use | Stack | Details |
 | --- | --- | --- | --- |
 | Dirt | Foraged from the ground | 500 | — |
-| Wood | Cut from trees | 500 | — |
+| Oak Log | Cut from trees | 500 | — |
 | Leaves | Stripped from trees | 500 | — |
 | Stone | Break rock blocks, or collect Stone from a quarry | 500 | — |
-| White Stone | Washed pale in a placed bleach bucket, or mined from pale rock | 500 | — |
+| White Stone | Washed pale in a placed Wash Tub, or mined from pale rock | 500 | — |
 | Turquoise Stone | Mined from a rare blue-green seam | 500 | — |
 | Dark Grey Stone | Darkened over a forge, or mined from dark rock | 500 | — |
-| Orange Stone | Stone tinted with clay at a stone mill, or mined from an orange seam | 500 | — |
+| Orange Stone | Stone and clay washed in a placed Wash Tub, or mined from an orange seam | 500 | — |
 | Sand | Dug from the riverbank | 500 | — |
 | Turf | Cut from the plains | 500 | — |
 | Moss | Lifted from a forest floor | 500 | — |
@@ -28,7 +28,6 @@ Current item reference, generated from the item registry by `node scripts/update
 | Dark Moss | Lifted from the dark forest floor | 500 | — |
 | Forest Floor | Raked up in a giant grove | 500 | — |
 | Cobblestone | Split Stone into Cobblestone at a stone mill | 500 | — |
-| Gold | Smelted from gold ore at a foundry. A mine brings the ore up from its third level | 100 | — |
 | Carrot Seeds | Saved from a ripe carrot | 100 | — |
 | Potato Seeds | Saved from a ripe potato | 100 | — |
 | Cabbage Seeds | Saved from a ripe cabbage | 100 | — |
@@ -43,6 +42,10 @@ Current item reference, generated from the item registry by `node scripts/update
 | Wool | Hunted from sheep | 100 | — |
 | Feather | Hunted from chickens | 100 | — |
 | Hemp Fibre | Picked from ripe hemp | 500 | — |
+| Dragon Scale | Shed by a dragon. Break it where it lies to pick it up | 100 | — |
+| Dragon Claw | Shed by a dragon. Break it where it lies to pick it up | 100 | — |
+| Dragon Egg | Lying in a dragon's nest. Set it down and it hatches in two days: a young dragon, yours, that flies with you and burns what comes for you | 100 | — |
+| Dragon Relic | Kept in a dragon's hoard. Its story is in the Lore book | 100 | — |
 | Jar of Fireflies | Caught at night — an empty jar, and Break on a swarm | 100 | — |
 | Diamond | Dug from the deepest rock, near the bottom of the world — rare. A mine at its fifth level brings some up | 100 | — |
 | Ruby | Found in the rock of the high peaks; a foundry strikes coins from it | 100 | — |
@@ -73,20 +76,27 @@ Current item reference, generated from the item registry by `node scripts/update
 
 | Item | How to get it / use | Stack | Details |
 | --- | --- | --- | --- |
-| Bleach Bucket | Water and wood ash mixed in a bucket — place it to wash stone pale | 1 | — |
+| Wash Tub | Water and wood ash mixed in a bucket — place it to wash stone pale or tint it orange, and to bleach logs | 1 | — |
 | Planing Bench | Build from planks and stone — place it and plane logs into more planks | 10 | — |
-| Joinery Bench | Build from planks, logs and stone. Place it and joint fences, gates and chests from fewer planks | 10 | — |
+| Joinery Bench | Build from planks, logs and stone. Place it and join doors, trapdoors, fences, gates and chests | 10 | — |
+| Mason's Bench | Made at a Workbench from stone and planks. Place it and chisel stone into walls, slabs, stairs, pillars, chimneys and roofs | 10 | — |
 | Crucible | Made at a Workbench. Place it inside a foundry to melt ore and pour it into a mould | 10 | — |
-| Counter | Made at a Workbench. Place it and make furniture on it: saw the parts, fit them together | 10 | — |
+| Kiln Oven | Made at a Workbench. Place it inside a kiln to fire clay into brick and vases, and sand into glass | 10 | — |
+| Carpenter's Table | Made by hand. Place it and make furniture on it: one saw stroke cuts the parts, then tap each into place | 10 | — |
 | Workbench | Made by hand or at a workshop. Place it anywhere and make everything from the third age on there | 10 | — |
 | Forge | Build from stone and clay — place it to darken rock and forge weapons | 10 | — |
-| Planks | Sawn from wood | 500 | — |
+| Oak Planks | Sawn from oak logs | 500 | — |
 | Turned Soil | Dirt broken up for planting | 500 | — |
 | Compost Bin | Built from planks and leaves | 100 | — |
 | Compost | Leaves and seeds mixed at a compost bin — use on a crop or add to a farm to move growing crops ahead one stage | 100 | — |
-| Brick | Fired from earth in a kiln | 500 | — |
-| Glass | Fired from sand in a kiln | 500 | — |
-| Marble | Dress Stone into Marble at a stone mill | 500 | — |
+| Brick | Fired from clay in a Kiln Oven. A kiln also gives one every 4 hours | 500 | — |
+| Glass | Fired from sand in a Kiln Oven. A kiln also gives one every 4 hours | 500 | — |
+| Marble | Dress Stone into Marble at a Mason's Bench | 500 | — |
+| Gold Ingot | Smelted from gold ore at a foundry. A mine brings the ore up from its third level | 100 | — |
+| Gold Block | Four gold ingots at a Workbench | 500 | — |
+| Iron Block | Four iron ingots at a Workbench | 500 | — |
+| Torch | A stick of oak with coal at its head. A quarry digs coal | 100 | — |
+| Spinning Wheel | Made by hand from oak planks and a log. Place it and spin hemp into string | 10 | — |
 | String | Hemp fibre, spun at the bench | 500 | — |
 | Arrow | Planks and string, at the bench — the bow shoots them | 500 | — |
 | Brick Roof Tiles | Fired from brick into curved tiles | 500 | — |
@@ -126,7 +136,7 @@ Current item reference, generated from the item registry by `node scripts/update
 | Dark Pillar | Turned from dark stone — stack them into a column | 500 | — |
 | Trapdoor | Knocked together from planks — Place opens and shuts it | 100 | — |
 | Framed Window | Planks and sand, framed at the bench | 100 | — |
-| Vase | Thrown from clay and painted | 100 | — |
+| Vase | Thrown from 2 clay at a Workbench, or fired from 1 clay in a Kiln Oven | 100 | — |
 | Urn | Beaten from copper | 100 | — |
 | White Banner | Woven white, with the gold sun of the sky | 100 | — |
 | Black Banner | Woven black, with the red tower of the stone | 100 | — |
@@ -256,7 +266,7 @@ Current item reference, generated from the item registry by `node scripts/update
 | Item | How to get it / use | Stack | Details |
 | --- | --- | --- | --- |
 | Carpentry Saw | Cuts planks to length — reusable; keep it in your bag | 1 | — |
-| Carpentry Chisel | Held, Break carves stone into bricks and bricks into pillars — reusable; keep it in your bag | 1 | — |
+| Chisel | Held, Break carves stone into bricks and bricks into pillars — reusable; keep it in your bag | 1 | — |
 | Carpentry Plane | An old loose plane. Bows are planed at a placed Planing Bench now — reusable; keep it in your bag | 1 | — |
 | Carpentry Mallet | An old loose mallet. Joints are made at a placed Joinery Bench now — reusable; keep it in your bag | 1 | — |
 | Weapon Mold | Shapes a weapon before forging — reusable; keep it in your bag | 1 | — |
@@ -268,6 +278,7 @@ Current item reference, generated from the item registry by `node scripts/update
 | Wooden Sword | Crafted at the bench — keep a Carpentry Chisel in your bag | 1 | 100 durability; Fighting bandits |
 | Stone Sword | Crafted at the bench — keep a Carpentry Chisel in your bag | 1 | 160 durability; Fighting bandits |
 | Iron Sword | Forge from its listed materials at a Forge or Foundry — keep a Weapon Mold in your bag | 1 | 300 durability; Fighting bandits |
+| Dragon Axe | Dragon scales and claws on a diamond edge. One blow fells anything but a god; held, you heal without eating | 1 | 4000 durability |
 | Bow | Planks and string, at the bench — keep a Carpentry Saw and Plane in your bag | 1 | 200 durability; Hunting and fighting from a distance |
 | Pry bar | Crafted at the bench | 1 | Clearing a lot of blocks at once |
 | Chalk line | Crafted at the bench | 1 | Mirroring what you place |

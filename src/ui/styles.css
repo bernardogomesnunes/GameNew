@@ -2309,6 +2309,11 @@ button.busy { cursor: progress; opacity: 0.92; }
   .counter-bar .counter-piece { min-height: 56px; padding: 10px 16px; font-size: 16px; }
   .counter-bar .counter-pieces { gap: 10px; }
 }
+/* Phones: wrap the pieces into rows so all of them show, no sideways scroll. */
+@media (max-width: 600px) {
+  .counter-bar .counter-pieces { flex-wrap: wrap; overflow-x: visible; justify-content: center; max-height: 38vh; overflow-y: auto; }
+  .counter-bar .counter-piece { min-height: 48px; padding: 8px 10px; font-size: 14px; }
+}
 .counter-bar .counter-piece.cant { opacity: 0.55; }
 /* CRAFT-9: every machine's action buttons sit bottom centre, 56 px tall, under the thumb. */
 .counter-bar .counter-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
@@ -2337,7 +2342,7 @@ button.busy { cursor: progress; opacity: 0.92; }
 .crucible-bar .pour-level, .bench-bar .pour-level, .table-bar .pour-level { position: absolute; left: 0; top: 0; bottom: 0; background: #ffa53a; }
 /* CRAFT-9: a bench's action in the middle of the bottom row, 56 px tall, under the thumb. */
 .bench-bar .counter-actions { display: grid; grid-template-columns: 1fr auto 1fr; }
-.bench-bar .counter-actions [data-many] { justify-self: end; }
+.bench-bar .counter-actions [data-many] { justify-self: end; white-space: nowrap; }
 .bench-bar .counter-actions [data-leave] { justify-self: start; }
 .bench-bar .counter-actions [data-work] { min-height: 56px; min-width: 132px; font-size: 17px; }
 /* CRAFT-9 part 4: the Mason's Bench's three chalk marks, filled as each is tapped. */
