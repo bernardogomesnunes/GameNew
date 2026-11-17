@@ -35,7 +35,7 @@ export class BenchBar {
   }
 
   /** `recipes` are Crafting.recipeStatus results; `picked` the chosen one's id. */
-  render({ machine, recipes, picked, say, taps = 0 }) {
+  render({ machine, recipes, picked, say }) {
     const chosen = recipes.find((r) => r.id === picked);
     const tiles = recipes.map((r) => {
       const takes = Object.entries(r.inputs).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' + ');
@@ -43,20 +43,13 @@ export class BenchBar {
     }).join('');
     const line = say || (!recipes.length ? 'Nothing is made here at this age.'
       : !chosen ? 'Pick what to make.'
-        : !chosen.ok ? chosen.reason
-          : machine.taps ? `Tap ${machine.verb} on each chalk mark: the ${machine.taps === 3 ? 'third' : 'last'} tap makes the batch.`
-            : `Hold ${machine.verb} and let go when the bar is in the light band.`);
-    // A tapped machine (the Mason's Bench) shows its chalk marks, lit as they are tapped; nothing spoils, so no window.
-    const gauge = machine.taps
-      ? `<div class="chisel-marks" aria-label="Chalk marks tapped">${Array.from({ length: machine.taps }, (_, i) => `<i class="chisel-mark${i < taps ? ' done' : ''}"></i>`).join('')}</div>`
-      : `<div class="pour-gauge" aria-label="How far the work has gone"><i class="pour-window" style="left:${WORK_MIN * 80}%;width:${(WORK_MAX - WORK_MIN) * 80}%"></i><i class="pour-level" data-work-level style="width:0%"></i></div>`;
-    // The action sits in the middle of the bottom row, under the thumb.
+        : chosen.ok ? `Hold ${machine.verb} and let go when the bar is in the light band.` : chosen.reason);
     this.el.innerHTML = `<p class="counter-say">${escapeHtml(line)}</p>
-      ${gauge}
+      <div class="pour-gauge" aria-label="How far the work has gone"><i class="pour-window" style="left:${WORK_MIN * 80}%;width:${(WORK_MAX - WORK_MIN) * 80}%"></i><i class="pour-level" data-work-level style="width:0%"></i></div>
       <div class="counter-pieces">${tiles}</div>
       <div class="counter-actions">
+        <button class="primary" data-work ${chosen?.ok ? '' : 'disabled'}>${escapeHtml(machine.verb)} (hold)</button>
         <button class="secondary" data-many>Many at once</button>
-        <button class="primary" data-work ${chosen?.ok ? '' : 'disabled'}>${escapeHtml(machine.verb)} (${machine.taps ? 'tap' : 'hold'})</button>
         <button class="secondary" data-leave>Leave</button>
       </div>`;
   }

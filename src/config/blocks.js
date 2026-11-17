@@ -970,14 +970,6 @@ BLOCKS.push(
   { id: EGG_DRAGON, name: 'Dragon Egg', glyph: 'egg', color: 0x8a2a3a, shape: 'egg', material: 'stone', unlock: null },
 );
 
-// CRAFT-9 part 4: the Mason's Bench, where cut stone is shaped into walls,
-// slabs, stairs, pillars, chimneys and roofs with chisel taps
-// (render/BenchView.js).
-export const MASONS_BENCH = 538;
-BLOCKS.push(
-  { id: MASONS_BENCH, name: "Mason's Bench", glyph: 'stone', color: 0x8f8a82, shape: 'masons_bench', material: 'stone', station: 'masons_bench', unlock: null },
-);
-
 // CRAFT3D-3: the foundry's crucible, where ore is melted and poured into a
 // mould in a close-up (render/CrucibleView.js). Works inside a foundry.
 export const CRUCIBLE = 531;

@@ -1070,32 +1070,6 @@ PROP_SHAPES.workbench = [
   { minX: 0.16, maxX: 0.5, minY: 0.92, maxY: 0.935, minZ: 0.6, maxZ: 0.74, color: B30_STEEL },
   { minX: 0.5, maxX: 0.58, minY: 0.92, maxY: 0.96, minZ: 0.62, maxZ: 0.72, color: B30_DARK },
 ];
-// CRAFT-9 part 4: the Mason's Bench, a heavy oak bench with a stone top. A
-// block of stone stands on it with three chalk lines across it, a chisel and
-// a mallet lie in front, chips at its foot, and a cut slab waits on the shelf.
-const MASON_OAK = 0x8a6238, MASON_TOP = 0x9b968e, MASON_STONE = 0xb7b3ab, CHALK = 0xf4f1ea;
-PROP_SHAPES.masons_bench = [
-  ...[[0.06, 0.1], [0.82, 0.1], [0.06, 0.78], [0.82, 0.78]].map(([x, z]) => ({ minX: x, maxX: x + 0.12, minY: 0, maxY: 0.58, minZ: z, maxZ: z + 0.12, color: MASON_OAK })),
-  // A shelf low between the legs, a cut slab on it.
-  { minX: 0.1, maxX: 0.9, minY: 0.16, maxY: 0.22, minZ: 0.14, maxZ: 0.86, color: 0x7a5636 },
-  { minX: 0.2, maxX: 0.62, minY: 0.22, maxY: 0.3, minZ: 0.3, maxZ: 0.7, color: MASON_STONE },
-  // The stone top, thick, over a lip of oak.
-  { minX: 0.02, maxX: 0.98, minY: 0.58, maxY: 0.62, minZ: 0.06, maxZ: 0.94, color: MASON_OAK },
-  { minX: 0, maxX: 1, minY: 0.62, maxY: 0.7, minZ: 0.04, maxZ: 0.96, color: MASON_TOP },
-  // The block being worked, its three chalk lines across the top.
-  { minX: 0.3, maxX: 0.72, minY: 0.7, maxY: 0.96, minZ: 0.36, maxZ: 0.78, color: MASON_STONE },
-  ...[0.38, 0.5, 0.62].map((x) => ({ minX: x, maxX: x + 0.03, minY: 0.96, maxY: 0.975, minZ: 0.4, maxZ: 0.74, color: CHALK })),
-  // The chisel: a steel blade into a wooden grip, lying in front.
-  { minX: 0.5, maxX: 0.72, minY: 0.7, maxY: 0.725, minZ: 0.16, maxZ: 0.2, color: B30_STEEL },
-  { minX: 0.72, maxX: 0.88, minY: 0.7, maxY: 0.74, minZ: 0.15, maxZ: 0.21, color: B30_DARK },
-  // The mallet: a round-ish wooden head on a short handle.
-  { minX: 0.08, maxX: 0.22, minY: 0.7, maxY: 0.82, minZ: 0.12, maxZ: 0.28, color: 0xb98a5a },
-  { minX: 0.22, maxX: 0.42, minY: 0.73, maxY: 0.77, minZ: 0.18, maxZ: 0.22, color: B30_DARK },
-  // Chips knocked off, by the block and on the ground.
-  { minX: 0.76, maxX: 0.82, minY: 0.7, maxY: 0.73, minZ: 0.5, maxZ: 0.56, color: MASON_STONE },
-  { minX: 0.8, maxX: 0.84, minY: 0.7, maxY: 0.72, minZ: 0.64, maxZ: 0.68, color: MASON_STONE },
-  { minX: 0.4, maxX: 0.46, minY: 0, maxY: 0.03, minZ: 0.02, maxZ: 0.08, color: MASON_STONE },
-];
 // The storage controller: a cabinet with a screen standing on it, its
 // rows of stored things glowing, and a panel of buttons in front.
 const SCREEN_BG = 0x134a42, SCREEN_ROW = 0x8ff5e0, BEZEL = 0x2b2b33;

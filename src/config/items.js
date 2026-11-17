@@ -36,7 +36,6 @@ export const ITEMS = [
   { id: 'bleach_bucket', name: 'Bleach Bucket', kind: 'refined', stackTo: 1, color: 0xdde8d7, glyph: 'bucket', block: 524, madeBy: 'Water and wood ash mixed in a bucket — place it to wash stone pale' },
   { id: 'planing_bench', name: 'Planing Bench', kind: 'refined', stackTo: 10, color: 0xb98a5a, glyph: 'planks', block: 527, madeBy: 'Build from planks and stone — place it and plane logs into more planks' },
   { id: 'joinery_bench', name: 'Joinery Bench', kind: 'refined', stackTo: 10, color: 0xa77b52, glyph: 'planks', block: 528, madeBy: 'Build from planks, logs and stone. Place it and join doors, trapdoors, fences, gates and chests' },
-  { id: 'masons_bench', name: "Mason's Bench", kind: 'refined', stackTo: 10, color: 0x8f8a82, glyph: 'stone', block: 538, madeBy: 'Made at a Workbench from stone and planks. Place it and chisel stone into walls, slabs, stairs, pillars, chimneys and roofs' },
   { id: 'crucible', name: 'Crucible', kind: 'refined', stackTo: 10, color: 0x7a4a3a, glyph: 'stone', block: 531, madeBy: 'Made at a Workbench. Place it inside a foundry to melt ore and pour it into a mould' },
   { id: 'counter', name: 'Counter', kind: 'refined', stackTo: 10, color: 0xa87a4c, glyph: 'planks', block: 530, madeBy: 'Made by hand. Place it and make furniture on it: saw the parts, fit them together' },
   { id: 'workbench', name: 'Workbench', kind: 'refined', stackTo: 10, color: 0x9c7348, glyph: 'planks', block: 529, madeBy: 'Made by hand or at a workshop. Place it anywhere and make everything from the third age on there' },
@@ -91,7 +90,7 @@ export const ITEMS = [
   { id: 'cobblestone', name: 'Cobblestone', kind: 'raw', stackTo: STACK_BULK, color: 0xc8c6c2, glyph: 'cobble', block: 8, madeBy: 'Split Stone into Cobblestone at a stone mill' },
   { id: 'brick', name: 'Brick', kind: 'refined', stackTo: STACK_BULK, color: 0xd1887a, glyph: 'brick', block: 9, madeBy: 'Fired from earth in a kiln' },
   { id: 'glass', name: 'Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xb9dce8, glyph: 'pane', block: 10, madeBy: 'Fired from sand in a kiln' },
-  { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: "Dress Stone into Marble at a Mason's Bench" },
+  { id: 'marble', name: 'Marble', kind: 'refined', stackTo: STACK_BULK, color: 0xe3dbc8, glyph: 'marble', block: 17, madeBy: 'Dress Stone into Marble at a stone mill' },
   // Owner, 15 November: "There should be a gold ingot ... Tools and armour
   // should be made with gold ingots. We should have iron blocks too." The
   // item every recipe, chest and trader calls `gold` is the ingot; the block

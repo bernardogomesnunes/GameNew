@@ -177,8 +177,6 @@ export class DuiltGame {
     this.skyFallen = false;
     /** IMP-31: whether the Sky King has given his gifts. */
     this.skyGift = false;
-    /** CRAFT-9 part 4: the Mason's Bench given to a world past Age 3 on its first load (masonsBenchGift), or null. */
-    this.gifted = null;
     // The painting you wake by after a fall, if you chose one (playtest, P1).
     this.spawn = null;
     // Drinks going (playtest, P5): { haste | strength | speed: seconds left }.
@@ -464,22 +462,6 @@ export class DuiltGame {
     }
     this.hunger.exertion = 1;
     return gained;
-  }
-
-  /**
-   * CRAFT-9 part 4: walls, pillars, chimneys and shaped roofs are made only
-   * at a Mason's Bench now. A save from before it (`given` false) at Age 3
-   * or later gets one in the bag, once, so none of them is out of reach. A
-   * full bag puts it off to the next load: the save is marked only when it
-   * goes in. Sets `gifted` for Game to say so.
-   */
-  masonsBenchGift(given) {
-    this.gifted = null;
-    this.masonsBenchOwed = !given && !this.sandbox && this.age >= 3;
-    if (!this.masonsBenchOwed || this.inventory.roomFor('masons_bench', 1) < 1) return;
-    this.inventory.add('masons_bench', 1);
-    this.masonsBenchOwed = false;
-    this.gifted = 'masons_bench';
   }
 
   /**
@@ -2209,8 +2191,6 @@ export class DuiltGame {
       studying: this.studying,
       skyFallen: this.skyFallen || undefined,
       skyGift: this.skyGift || undefined,
-      // CRAFT-9 part 4: written by every save from now on, so the gift on load comes once.
-      masonsBench: this.masonsBenchOwed ? undefined : true,
       guardian: this.guardian?.toJSON() ?? null,
       spawn: this.spawn,
       boosts: { ...this.boosts },
@@ -2328,7 +2308,6 @@ export class DuiltGame {
     }
     // A backpack on: its slots come back with it (the saved bag has them too).
     if (!this.inventory.endless) this.inventory.grow(this.bagSize());
-    this.masonsBenchGift(data.masonsBench === true);
     this.chests.clear();
     for (const c of Array.isArray(data.chests) ? data.chests : []) {
       if (typeof c?.key !== 'string') continue;
