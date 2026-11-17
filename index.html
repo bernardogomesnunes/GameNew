@@ -22,11 +22,26 @@
       #loading {
         position: fixed; inset: 0; z-index: 100000; display: flex; align-items: center; justify-content: center;
         padding: 16px; font-family: 'Pixelify Sans', system-ui, sans-serif; font-weight: 700;
-        background:
-          linear-gradient(180deg, transparent 0 72%, #5aa53a 72% 75%, #2f6b23 75% 76%, #8a5a32 76% 100%),
-          linear-gradient(180deg, #7fb9e6 0%, #add7f5 72%);
+        /* Starting the game: a night sky with the logo (owner, 17 November:
+           "first loading screen is the same as opening a world. It shouldn't"). */
+        background: radial-gradient(ellipse at 50% 120%, #1d3350 0%, #101a2b 55%, #0a0e14 100%);
         transition: opacity 0.45s ease;
       }
+      /* Pixel stars: one 2px dot drawn many times, twinkling as a group. */
+      #loading::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 2px; height: 2px; background: transparent;
+        box-shadow: 8vw 12vh #fff, 22vw 6vh #cfe0ff, 37vw 18vh #fff, 54vw 9vh #fff, 68vw 15vh #cfe0ff, 83vw 7vh #fff,
+          93vw 22vh #fff, 13vw 30vh #cfe0ff, 46vw 33vh #fff, 76vw 31vh #fff, 5vw 52vh #cfe0ff, 28vw 58vh #fff,
+          61vw 55vh #fff, 89vw 49vh #cfe0ff, 17vw 77vh #fff, 42vw 84vh #cfe0ff, 71vw 80vh #fff, 95vw 88vh #fff;
+        animation: ld-twinkle 2.4s steps(2) infinite;
+      }
+      @keyframes ld-twinkle { 50% { opacity: 0.45; } }
+      /* Opening or making a world: daylight, and the ground grows up behind
+         the bar until it fills the screen (src/ui/loading.js, growGround). */
+      #loading.ld-world { background: linear-gradient(180deg, #6fb0e3 0%, #add7f5 100%); }
+      #loading.ld-world::before { display: none; }
+      #loading .ld-grow { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+      #loading .ld-card { position: relative; }
       #loading.ld-gone { opacity: 0; pointer-events: none; }
       #loading .ld-card { width: 100%; max-width: 340px; text-align: center; }
       #loading .ld-logo {
@@ -55,7 +70,7 @@
         margin: 18px 0 0; font-size: 16px; color: #fff;
         text-shadow: 2px 2px 0 #2b1d12, -1px -1px 0 #2b1d12, 1px -1px 0 #2b1d12, -1px 1px 0 #2b1d12;
       }
-      @media (prefers-reduced-motion: reduce) { #loading .ld-fill::after { animation: none; display: none; } }
+      @media (prefers-reduced-motion: reduce) { #loading .ld-fill::after { animation: none; display: none; } #loading::before { animation: none; } }
     </style>
   </head>
   <body>

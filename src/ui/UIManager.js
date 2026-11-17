@@ -488,6 +488,10 @@ export class UIManager {
             <div class="field-row">
               <input type="password" id="cloud-password" placeholder="Password" autocomplete="current-password" />
             </div>
+            <!-- Right above the button, red and read out: a wrong password used
+                 to show as small grey text under "Create an account instead",
+                 where a phone's keyboard covers it (owner, 17 November). -->
+            <div class="form-error" id="cloud-error" role="alert" aria-live="assertive" hidden></div>
             <div class="field-row">
               <button class="primary" id="btn-cloud-signin">Sign in</button>
             </div>
@@ -526,7 +530,6 @@ export class UIManager {
             -->
             <div class="export-note">Your worlds stay on your account. You will not be able to open them again until you sign back in.</div>
           </div>
-          <div class="export-note" id="cloud-error" hidden></div>
           <div id="cloud-status" hidden></div>
           <div id="cloud-block" hidden></div>
 `,
@@ -2069,20 +2072,36 @@ export class UIManager {
       const label = btn.textContent;
       btn.disabled = true;
       btn.textContent = 'Working\u2026';
-      this.q('#cloud-error').hidden = true;
+      this.clearAccountError();
       try {
         await fn();
       } catch (err) {
-        const box = this.q('#cloud-error');
-        box.textContent = err.message;
-        box.hidden = false;
+        this.showAccountError(err.message || 'Could not sign in. Try again.', err.field);
       } finally {
         btn.disabled = false;
         btn.textContent = label;
         this.refreshCloudPanel();
       }
     };
-    const creds = () => [this.q('#cloud-email').value.trim(), this.q('#cloud-password').value];
+    const creds = () => {
+      const email = this.q('#cloud-email').value.trim();
+      const password = this.q('#cloud-password').value;
+      // Caught here, before a trip to the server that can only say no.
+      const stop = (message, field) => { throw Object.assign(new Error(message), { field }); };
+      if (!email) stop('Type your email.', 'email');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) stop('That does not look like an email address.', 'email');
+      if (!password) stop('Type your password.', 'password');
+      if (this.accountMode === 'create' && password.length < 8) stop('Pick a longer password (at least 8 characters).', 'password');
+      return [email, password];
+    };
+    // Typing again clears the red: the message was about what was there before.
+    for (const id of ['#cloud-email', '#cloud-password']) {
+      this.q(id).addEventListener('input', () => this.clearAccountError());
+    }
+    // Enter in either box does what the button does.
+    for (const id of ['#cloud-email', '#cloud-password']) {
+      this.q(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') this.q('#btn-cloud-signin').click(); });
+    }
 
     // One or the other, never both at once. Two equally weighted buttons under
     // one password field is a guess about which one you meant, and getting it
@@ -2104,6 +2123,7 @@ export class UIManager {
     applyAccountMode();
     this.q('#btn-account-switch').addEventListener('click', () => {
       this.accountMode = this.accountMode === 'create' ? 'signin' : 'create';
+      this.clearAccountError();
       applyAccountMode();
     });
     // Signing in is a way into your worlds, not a destination. Getting in used
@@ -2124,6 +2144,35 @@ export class UIManager {
       });
     }));
     this.q('#btn-cloud-signout').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignOut()));
+  }
+
+  /**
+   * A failed sign-in, said where it's seen: red, above the button, and the
+   * box it's about outlined. Wrong password: that box is selected, so typing
+   * replaces it.
+   */
+  showAccountError(message, field = null) {
+    const box = this.q('#cloud-error');
+    if (!box) return;
+    box.textContent = message;
+    box.hidden = false;
+    // Restarted so a second wrong try shakes again.
+    box.classList.remove('shake');
+    void box.offsetWidth;
+    box.classList.add('shake');
+    const which = field ?? (/password|match/i.test(message) ? 'password' : /email/i.test(message) ? 'email' : null);
+    for (const f of ['email', 'password']) {
+      this.q(`#cloud-${f}`)?.setAttribute('aria-invalid', String(f === which));
+    }
+    const input = which && this.q(`#cloud-${which}`);
+    if (input) { input.focus(); input.select?.(); }
+    box.scrollIntoView?.({ block: 'nearest' });
+  }
+
+  clearAccountError() {
+    const box = this.q('#cloud-error');
+    if (box) box.hidden = true;
+    for (const f of ['email', 'password']) this.q(`#cloud-${f}`)?.removeAttribute('aria-invalid');
   }
 
   /** The worlds screen's two doors open the same panel on the right side of it. */

@@ -1172,6 +1172,29 @@ scholar"). Its body says:
 
 ---
 
+## 13. Accounts and the way in (17 November)
+
+From `analysis-accounts.md`. ACCT-1 to ACCT-8 come before a public launch.
+
+| ID | What | Status |
+|---|---|---|
+| LOGIN-1 | A wrong password showed no visible error (owner, 17 November). The message now shows in red above Sign in, outlines the field and selects the password; SDK errors become plain sentences. | done in this PR |
+| LOGIN-2 | The start screen matched the world loading screen (owner, 17 November). Start: night sky with pixel stars. Opening or making a world: pixel ground grows behind the bar until it fills the screen. Test: `tests/loading-screens-browser.mjs`. | done in this PR |
+| ACCT-1 | Move sign-in off the archived branch: paid plan, user export, Neon Auth onto `production` (with TECH-19). | Owner decision: plan and database change |
+| ACCT-2 | Forgot password flow; revoke sessions on reset. | open |
+| ACCT-3 | Send auth email from our own domain (Resend or Postmark, SPF, DKIM, DMARC). | Owner: domain and email account |
+| ACCT-4 | Email verification on sign-up (OTP). | open, needs ACCT-3 |
+| ACCT-5 | Delete my account and download my data (GDPR, App Store). | open, needs database approval |
+| ACCT-6 | Privacy policy, terms and an age gate (COPPA, GDPR). | Owner: legal text |
+| ACCT-7 | Cloudflare Turnstile on sign-up and sign-in. | open |
+| ACCT-8 | Own domain in trusted origins; `allow_localhost` off in production, on a dev branch. | Owner: domain |
+| ACCT-9 | Sign in with Google and Apple, with our own OAuth keys. | open |
+| ACCT-10 | Sign out of all devices; session list; session length decided. | open |
+| ACCT-11 | Chosen, unique player name. | open |
+| ACCT-12 | Auth webhook and log export, alerts, an admin lookup for support. | open |
+| ACCT-13 | Database capacity: compute awake, higher CU ceiling, `world_chunks.player_id`, region. | open, needs database approval |
+| ACCT-14 | Revision check so two devices on one world do not overwrite each other. | open |
+
 ## The old planning docs (history)
 
 Moved to `docs/history/`. They're the record of what was asked and how it
@@ -1188,6 +1211,7 @@ was done; nothing in them is open that isn't listed above.
 | `plan-playtest-improvements.md` | P1 to P9 from the first playtest: done. |
 | `next-session.md` | Notes from the phase 6 and 7 work: done. |
 | `analysis-scaling.md` | The code, speed, safety and scaling review of 6 October (section 11). |
+| `analysis-accounts.md` | Accounts and sign-in for a public launch, 17 November (section 13). |
 | `plan-visuals-and-caves.md` | ChatGPT's plan and notes for the caves, stone, leaves and villagers (#230). |
 | `plan-world-scale-and-villagers.md` | ChatGPT's plan for the bigger mountains, plains, giant trees and villagers' walking (#231). |
 
