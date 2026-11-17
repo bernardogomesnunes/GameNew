@@ -53,6 +53,12 @@ export function batchSeconds(recipe) {
  * the next prune (DuiltGame.spotStands) finds no matching bench there and
  * hands its logs, planks and finished items back to the bag: nothing is
  * lost. Without the map the spot would be dropped unpaid.
+ * Part 5: the plain stone brick recipe (4 stone for 4) is gone; a saved spot
+ * on it becomes the mill's `stone_mill_stone_brick` (4 stone for 6), same
+ * station, so it keeps working and the saved batches stay.
+ * Orange stone moved from the stone mill to the Wash Tub under the same id
+ * `stone_orange`. It has two inputs, so it never used a spot: nothing saved
+ * names it and it needs no entry.
  * The workbench fence and gate recipes are not listed: the workbench is not
  * a spot station, so no saved spot can name them.
  */
@@ -66,6 +72,7 @@ const RENAMED_RECIPES = new Map([
   ['mill_trapdoor', 'joinery_trapdoor'],
   ['mill_trapdoor_white', 'joinery_trapdoor_white'],
   ['mill_trapdoor_dark', 'joinery_trapdoor_dark'],
+  ['stone_brick', 'stone_mill_stone_brick'],
 ]);
 
 export class StationWork {

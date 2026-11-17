@@ -31,6 +31,8 @@ const milled = RECIPES.filter((r) => r.id.startsWith('stone_mill_'));
 ok(`${milled.length} stone recipes have a mill way`, milled.length >= 20);
 ok('each for the same stone, half as much again or more', milled.every((m) => {
   const r = at(m.id.slice('stone_mill_'.length));
+  // CRAFT-9 part 5: the plain stone brick recipe is gone; the mill's is the only one.
+  if (!r) return m.id === 'stone_mill_stone_brick';
   return m.station === 'stone_mill' && JSON.stringify(m.inputs) === JSON.stringify(r.inputs) && m.output.id === r.output.id && m.output.count >= r.output.count * 1.5;
 }));
 ok('walls, bricks, stairs, roof tiles, pillars, chimneys and calçada among them',
@@ -41,7 +43,7 @@ ok('walls, bricks, stairs, roof tiles, pillars, chimneys and calçada among them
 {
   const RAW = new Set(['stone', 'cobblestone', 'marble', 'stone_white', 'stone_grey', 'stone_turquoise', 'stone_orange', 'sandstone']);
   const millOut = new Set(RECIPES.filter((r) => r.station === 'stone_mill').map((r) => r.output.id));
-  ok('the mill processes stone into cobble, marble and coloured stone', ['cobblestone','marble','stone_orange'].every(id => millOut.has(id)));
+  ok('the mill processes stone into cobble and marble; the Wash Tub tints orange stone (CRAFT-9 part 5)', ['cobblestone','marble'].every(id => millOut.has(id)) && at('stone_orange').station === 'bleach_bucket');
   ok('reclaiming cobble cannot multiply stone', at('cobblestone').output.count / at('cobblestone').inputs.stone * at('stone_from_cobblestone').output.count / at('stone_from_cobblestone').inputs.cobblestone <= 1);
   const slabs = SLABS.map((s) => ITEM_FOR_BLOCK.get(s.id));
   ok('slabs aren\'t made cheaper there', !RECIPES.some((r) => r.station === 'stone_mill' && slabs.includes(r.output.id)));

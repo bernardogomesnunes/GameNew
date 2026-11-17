@@ -33,7 +33,7 @@ export const STACK_TOOL = 1;
 // ground it came from — with the same tool-only items (below) pastelised on
 // their own since they have no block to match.
 export const ITEMS = [
-  { id: 'bleach_bucket', name: 'Bleach Bucket', kind: 'refined', stackTo: 1, color: 0xdde8d7, glyph: 'bucket', block: 524, madeBy: 'Water and wood ash mixed in a bucket — place it to wash stone pale' },
+  { id: 'bleach_bucket', name: 'Wash Tub', kind: 'refined', stackTo: 1, color: 0xdde8d7, glyph: 'bucket', block: 524, madeBy: 'Water and wood ash mixed in a bucket — place it to wash stone pale or tint it orange, and to bleach logs' },
   { id: 'planing_bench', name: 'Planing Bench', kind: 'refined', stackTo: 10, color: 0xb98a5a, glyph: 'planks', block: 527, madeBy: 'Build from planks and stone — place it and plane logs into more planks' },
   { id: 'joinery_bench', name: 'Joinery Bench', kind: 'refined', stackTo: 10, color: 0xa77b52, glyph: 'planks', block: 528, madeBy: 'Build from planks, logs and stone. Place it and join doors, trapdoors, fences, gates and chests' },
   { id: 'crucible', name: 'Crucible', kind: 'refined', stackTo: 10, color: 0x7a4a3a, glyph: 'stone', block: 531, madeBy: 'Made at a Workbench. Place it inside a foundry to melt ore and pour it into a mould' },
@@ -56,10 +56,10 @@ export const ITEMS = [
   { id: 'leaves', name: 'Leaves', kind: 'raw', stackTo: STACK_BULK, color: 0x82c675, glyph: 'leaf', block: 5, madeBy: 'Stripped from trees' },
   { id: 'stone', name: 'Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stone', block: 3, madeBy: 'Break rock blocks, or collect Stone from a quarry' },
   // The rarer rocks underground (world/ChunkGen.js's rock layers).
-  { id: 'stone_white', name: 'White Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xe4e0d8, glyph: 'stone', block: 235, madeBy: 'Washed pale in a placed bleach bucket, or mined from pale rock' },
+  { id: 'stone_white', name: 'White Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xe4e0d8, glyph: 'stone', block: 235, madeBy: 'Washed pale in a placed Wash Tub, or mined from pale rock' },
   { id: 'stone_turquoise', name: 'Turquoise Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x63b5ab, glyph: 'stone', block: 236, madeBy: 'Mined from a rare blue-green seam' },
   { id: 'stone_grey', name: 'Dark Grey Stone', kind: 'raw', stackTo: STACK_BULK, color: 0x6c6b6a, glyph: 'stone', block: 238, madeBy: 'Darkened over a forge, or mined from dark rock' },
-  { id: 'stone_orange', name: 'Orange Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xd38d57, glyph: 'stone', block: 237, madeBy: 'Stone tinted with clay at a stone mill, or mined from an orange seam' },
+  { id: 'stone_orange', name: 'Orange Stone', kind: 'raw', stackTo: STACK_BULK, color: 0xd38d57, glyph: 'stone', block: 237, madeBy: 'Stone and clay washed in a placed Wash Tub, or mined from an orange seam' },
   { id: 'sand', name: 'Sand', kind: 'raw', stackTo: STACK_BULK, color: 0xded09f, glyph: 'sand', block: 6, madeBy: 'Dug from the riverbank' },
   { id: 'grass', name: 'Turf', kind: 'raw', stackTo: STACK_BULK, color: 0x97cc81, glyph: 'grass', block: 1, madeBy: 'Cut from the plains' },
   // What the other kinds of country are made of. Without these, digging up a
