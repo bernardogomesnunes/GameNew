@@ -141,7 +141,7 @@ export const TEXTURES = {
  */
 export const BLOCK_TEXTURES = {
   'Storage Interface': { lines: 'planks', band: 4, marks: 4, depth: 0.26, bump: 0.35, shine: 0.2 },
-  'Bleach Bucket': { lines: 'planks', band: 3, depth: 0.2, bump: 0.25,
+  'Wash Tub': { lines: 'planks', band: 3, depth: 0.2, bump: 0.25,
     top: { ripples: 3, mottle: 0.04, depth: 0.12 } },
   // Keep the approved pale stone's quieter surface independent of rough rock.
   'White Stone': { rockFaces: 3, hue: 0.12, depth: 0.2, bump: 0.2 },

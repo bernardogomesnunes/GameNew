@@ -923,7 +923,7 @@ BLOCKS.push(
 // Placeable processing stations; IDs preserve all existing saved blocks.
 export const BLEACH_BUCKET = 524, FORGE = 525;
 BLOCKS.push(
-  { id: BLEACH_BUCKET, name: 'Bleach Bucket', glyph: 'bucket', color: 0xdde8d7, material: 'wood', station: 'bleach_bucket', unlock: null },
+  { id: BLEACH_BUCKET, name: 'Wash Tub', glyph: 'bucket', color: 0xdde8d7, material: 'wood', station: 'bleach_bucket', unlock: null },
   { id: FORGE, name: 'Forge', glyph: 'stone', color: 0x655367, material: 'stone', station: 'forge', unlock: null },
 );
 

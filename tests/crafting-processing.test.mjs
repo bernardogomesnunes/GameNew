@@ -45,7 +45,7 @@ assert.equal(craft.craft('planks',NaN).ok,false);
 assert.equal(craft.craft('planks',0.5).ok,false);
 console.log('PASS invalid batch counts are rejected');
 
-for (const id of ['marble','cobblestone','stone_brick','stone_white','stone_grey','stone_orange','dark_stone','dark_brick','wood_white','wood_dark']) {
+for (const id of ['marble','cobblestone','stone_mill_stone_brick','stone_white','stone_grey','stone_orange','dark_stone','dark_brick','wood_white','wood_dark']) {
   const r = RECIPES_BY_ID.get(id);
   const bag = new Inventory();
   const bench = new Crafting({ inventory: bag, world: { getBlock: () => 0 } });
