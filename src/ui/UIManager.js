@@ -481,6 +481,27 @@ export class UIManager {
           </div>`,
         'panel-account': `
 
+          <!--
+            The email's 6-digit code (ACCT-4): after creating an account, or
+            signing in to one whose email was never confirmed. Typing it
+            proves the email is yours, which also stops anyone else joining
+            your account through Google or a team invite later.
+          -->
+          <div id="cloud-code-step" hidden>
+            <p class="code-sent" id="cloud-code-sent">We sent a 6-digit code to your email.</p>
+            <div class="field-row">
+              <input type="text" id="cloud-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="6-digit code" />
+            </div>
+            <div class="form-error" id="cloud-code-error" role="alert" aria-live="assertive" hidden></div>
+            <div class="field-row">
+              <button class="primary" id="btn-cloud-verify">Confirm</button>
+            </div>
+            <div class="export-note">
+              No email after a minute? Look in spam, or <button class="home-link" id="btn-cloud-resend">send a new code</button>.
+              <br><button class="home-link" id="btn-cloud-code-back">Use a different email</button>
+            </div>
+          </div>
+
           <div id="cloud-signed-out">
             <div class="field-row">
               <input type="email" id="cloud-email" placeholder="Email" autocomplete="email" />
@@ -2130,9 +2151,10 @@ export class UIManager {
     // to leave you on a panel still titled "Create an account", holding three
     // unexplained buttons — so it closes and puts you on the worlds list,
     // which is where you were trying to go.
-    this.q('#btn-cloud-signin').addEventListener('click', (e) => busy(e.currentTarget, async () => {
-      await (this.accountMode === 'create' ? this.cb.onCloudSignUp(...creds()) : this.cb.onCloudSignIn(...creds()));
+    const signedIn = () => {
       this.q('#cloud-password').value = '';
+      this.q('#cloud-code').value = '';
+      this.showCodeStep(null);
       this.closePanel('panel-account');
       // Forget what we knew: it was answered for whoever was signed in before.
       this.home.cloudWorlds = null;
@@ -2142,7 +2164,36 @@ export class UIManager {
         title: this.accountMode === 'create' ? 'Account created' : 'Signed in',
         body: 'New worlds can live on your account now.',
       });
+    };
+    this.q('#btn-cloud-signin').addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      const [email, password] = creds();
+      try {
+        await (this.accountMode === 'create' ? this.cb.onCloudSignUp(email, password) : this.cb.onCloudSignIn(email, password));
+      } catch (err) {
+        // Not an error: the next step is the code that was just emailed.
+        if (err.needsCode) { this.codeFor = { email, password }; this.showCodeStep(email); return; }
+        throw err;
+      }
+      signedIn();
     }));
+    this.q('#btn-cloud-verify').addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      const code = this.q('#cloud-code').value.replace(/\D/g, '');
+      if (code.length !== 6) throw Object.assign(new Error('The code is 6 numbers. Type all of them.'), { field: 'code' });
+      const { email, password } = this.codeFor ?? {};
+      await this.cb.onCloudVerify(email, code, password, this.accountMode === 'create');
+      this.codeFor = null;
+      signedIn();
+    }));
+    this.q('#btn-cloud-resend').addEventListener('click', (e) => busy(e.currentTarget, async () => {
+      await this.cb.onCloudResendCode(this.codeFor?.email);
+      this.toast({ kind: 'xp', title: 'New code sent', body: this.codeFor?.email ?? '' });
+    }));
+    this.q('#btn-cloud-code-back').addEventListener('click', () => { this.codeFor = null; this.showCodeStep(null); });
+    // Six numbers typed (or pasted from the email): confirm without a tap.
+    this.q('#cloud-code').addEventListener('input', (e) => {
+      this.clearAccountError();
+      if (e.target.value.replace(/\D/g, '').length === 6) this.q('#btn-cloud-verify').click();
+    });
     this.q('#btn-cloud-signout').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignOut()));
   }
 
@@ -2152,7 +2203,8 @@ export class UIManager {
    * replaces it.
    */
   showAccountError(message, field = null) {
-    const box = this.q('#cloud-error');
+    const box = this.q(this.codeFor ? '#cloud-code-error' : '#cloud-error');
+    if (this.codeFor) field = 'code';
     if (!box) return;
     box.textContent = message;
     box.hidden = false;
@@ -2161,7 +2213,7 @@ export class UIManager {
     void box.offsetWidth;
     box.classList.add('shake');
     const which = field ?? (/password|match/i.test(message) ? 'password' : /email/i.test(message) ? 'email' : null);
-    for (const f of ['email', 'password']) {
+    for (const f of ['email', 'password', 'code']) {
       this.q(`#cloud-${f}`)?.setAttribute('aria-invalid', String(f === which));
     }
     const input = which && this.q(`#cloud-${which}`);
@@ -2170,9 +2222,24 @@ export class UIManager {
   }
 
   clearAccountError() {
-    const box = this.q('#cloud-error');
-    if (box) box.hidden = true;
-    for (const f of ['email', 'password']) this.q(`#cloud-${f}`)?.removeAttribute('aria-invalid');
+    for (const id of ['#cloud-error', '#cloud-code-error']) { const box = this.q(id); if (box) box.hidden = true; }
+    for (const f of ['email', 'password', 'code']) this.q(`#cloud-${f}`)?.removeAttribute('aria-invalid');
+  }
+
+  /** Shows the code step for `email`, or (null) goes back to email and password. */
+  showCodeStep(email) {
+    const step = this.q('#cloud-code-step');
+    if (!step) return;
+    this.clearAccountError();
+    step.hidden = !email;
+    this.q('#cloud-signed-out').hidden = !!email || !!this.cb.getCloudUser?.();
+    if (!email) return;
+    this.q('#account-title').textContent = 'Check your email';
+    this.q('#account-sub').textContent = 'One last step: confirm the email is yours.';
+    this.q('#cloud-code-sent').textContent = `We sent a 6-digit code to ${email}. Type it here.`;
+    const input = this.q('#cloud-code');
+    input.value = '';
+    input.focus();
   }
 
   /** The worlds screen's two doors open the same panel on the right side of it. */
@@ -2190,7 +2257,10 @@ export class UIManager {
 
     const user = this.cb.getCloudUser();
     this.q('#cloud-status').textContent = user ? `\u00b7 ${user.email || user.name || 'signed in'}` : '';
-    this.q('#cloud-signed-out').hidden = !!user;
+    // Waiting on the emailed code: that step stays up in place of the form.
+    const coding = !user && !!this.codeFor;
+    this.q('#cloud-signed-out').hidden = !!user || coding;
+    this.q('#cloud-code-step').hidden = !coding;
     this.q('#cloud-signed-in').hidden = !user;
     // The panel is two different things and only one of them is "Sign in".
     // Signed in it was still headed "Sign in", under a line offering to keep
@@ -2204,6 +2274,9 @@ export class UIManager {
       if (title) title.textContent = 'Your account';
       if (sub) sub.textContent = 'Your worlds are kept here, not in this browser.';
       this.refreshAccountSummary();
+    } else if (coding) {
+      if (title) title.textContent = 'Check your email';
+      if (sub) sub.textContent = 'One last step: confirm the email is yours.';
     } else {
       if (title) title.textContent = this.accountMode === 'create' ? 'Create an account' : 'Sign in';
       if (sub) sub.textContent = 'Sign in to keep your worlds and play them on any device.';
