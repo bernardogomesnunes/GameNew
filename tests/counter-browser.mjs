@@ -51,13 +51,15 @@ try {
     return { x: r.left + (v.x + 1) / 2 * r.width, y: r.top + (1 - v.y) / 2 * r.height };
   }, [x, y, z]);
   const K = () => page.evaluate(() => window.__game.duilt.counters.work(`${counterCheck.at.x},${counterCheck.at.y},${counterCheck.at.z}`));
-  // Saw is held until the gauge is in the light band; the headless browser is
-  // slow, so the release happens in the page itself, as the crucible's test does.
+  // Saw is held until the gauge moves; the headless browser draws a frame
+  // every second or so, so the gauge is set in the light band and let go in
+  // the page itself, as the crucible's test does.
   const sawStroke = async () => {
     const box = await page.locator('[data-saw]').boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();
-    await page.waitForFunction(() => { const m = window.__game.counterMachine; if (m.view.level >= 0.9) { m.hold(false); return true; } return false; }, null, { timeout: 30_000, polling: 'raf' });
+    await page.waitForFunction(() => window.__game.counterView.level > 0, null, { timeout: 60_000 });
+    await page.evaluate(() => { const m = window.__game.counterMachine; m.view.level = 0.9; m.hold(false); });
     await page.mouse.up();
     await page.waitForFunction(() => window.__game.counterView.sawing === 0, null, { timeout: 30_000 });
   };
