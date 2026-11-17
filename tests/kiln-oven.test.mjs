@@ -30,10 +30,10 @@ check('block 539 is the Kiln Oven, a station with a low-poly shape and glow', ()
   assert.ok(PROP_SHAPES[b.shape].some((x) => x.glow), 'the fire glows');
   assert.equal(BLOCKS_BY_ID.get(538)?.name !== 'Kiln Oven', true);
 });
-check('the kiln_oven item places block 539, made by hand in Age 4 from what exists', () => {
+check('the kiln_oven item places block 539, made at the Workbench in Age 4 from what exists', () => {
   assert.equal(ITEMS_BY_ID.get('kiln_oven').block, 539);
   const r = RECIPES_BY_ID.get('kiln_oven');
-  assert.equal(r.station, 'hand'); assert.equal(r.age, 4);
+  assert.equal(r.station, 'workbench'); assert.equal(r.age, 4);
   for (const id of Object.keys(r.inputs)) assert.ok(ITEMS_BY_ID.has(id), id);
 });
 check('brick, glass and vase are fired in the Kiln Oven, none at the workshop', () => {
@@ -54,7 +54,7 @@ check('the texts name the Kiln Oven', () => {
   assert.match(howToGet('brick'), /kiln oven/);
   assert.match(howToGet('glass'), /kiln oven/);
   for (const id of ['brick', 'glass', 'vase']) assert.match(ITEMS_BY_ID.get(id).madeBy, /Kiln Oven/, id);
-  assert.match(ITEMS_BY_ID.get('kiln_oven').madeBy, /by hand/);
+  assert.match(ITEMS_BY_ID.get('kiln_oven').madeBy, /Workbench/);
 });
 check('only kiln recipes load, and each draws onto the tray', () => {
   const { k } = setup();

@@ -1758,8 +1758,11 @@ for (const r of RECIPES) if (r.station === 'foundry') r.station = 'crucible';
 RECIPES.push({ id: 'crucible', name: 'Crucible', station: 'workbench', age: 5, inputs: { stone: 8, clay: 2 }, output: { id: 'crucible', count: 1 },
   blurb: 'Place it inside a foundry: melt ore and pour it into an ingot or coin mould.' });
 
-// CRAFT-9 part 6: the Kiln Oven, made by hand from Age 4, the age of the kiln it stands in.
-RECIPES.push({ id: 'kiln_oven', name: 'Kiln Oven', station: 'hand', age: 4, inputs: { cobblestone: 8, clay: 2 }, output: { id: 'kiln_oven', count: 1 },
+// CRAFT-9 part 6: the Kiln Oven, from Age 4, the age of the kiln it stands in.
+// A hand recipe of Age 4; IMP-19 makes every hand recipe past Age 2 at the
+// Workbench (the menu keeps Ages 1 and 2), so it is made there, as the
+// crucible is.
+RECIPES.push({ id: 'kiln_oven', name: 'Kiln Oven', station: 'workbench', age: 4, inputs: { cobblestone: 8, clay: 2 }, output: { id: 'kiln_oven', count: 1 },
   blurb: 'Place it inside a kiln: load clay or sand, let it fire, then draw out brick, glass or a vase.' });
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
