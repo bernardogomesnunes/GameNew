@@ -33,6 +33,8 @@ export const FLY_SECONDS = 0.3;
 const SCALE = 0.55;
 /** Far enough up and back that the whole top fits a phone held upright (390 px wide). */
 const CAMERA_UP = 2.2, CAMERA_BACK = 1.8;
+/** Held upright, the view looks this far nearer the player (in blocks), so the bar leaves the row of parts clear. */
+const PORTRAIT_AHEAD = 0.5;
 /**
  * Owner, 15 November: "the items need to be bigger and pieces too, cause in
  * mobile it's hard to pick them". Under a finger the camera sits this much
@@ -65,6 +67,7 @@ export class CounterView {
     this.parts = [];
     this.slots = [];
     this._v = new THREE.Vector3();
+    this._look = new THREE.Vector3();
     this._ray = new THREE.Raycaster();
     this._plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     this._hit = new THREE.Vector3();
@@ -357,8 +360,12 @@ export class CounterView {
   update(dt) {
     if (!this.active) return;
     const near = COARSE ? TOUCH_NEAR : 1;
-    this.camera.position.set(this.top.x, this.top.y + CAMERA_UP * near, this.top.z + CAMERA_BACK * near);
-    this.camera.lookAt(this.top);
+    // On a screen held upright the bar covers the lower third: the view moves
+    // toward the player so the row of parts sits above the bar.
+    const ahead = this.camera.aspect < 1 ? PORTRAIT_AHEAD : 0;
+    this.camera.position.set(this.top.x, this.top.y + CAMERA_UP * near, this.top.z + CAMERA_BACK * near + ahead);
+    this._look.set(this.top.x, this.top.y, this.top.z + ahead);
+    this.camera.lookAt(this._look);
     this.clock += dt;
     if (this.holding) {
       this.level = Math.min(1.25, this.level + dt / SAW_HOLD_SECONDS);
@@ -401,7 +408,7 @@ export class CounterView {
     this.parts.forEach((m, i) => {
       const lit = !m.userData.placed && m.visible && (i === next || (w.quick && next >= 0));
       m.material.emissive.setHex(lit ? GLOW : 0x000000);
-      m.material.emissiveIntensity = lit ? 0.15 + 0.3 * pulse : 0;
+      m.material.emissiveIntensity = lit ? 0.3 + 0.35 * pulse : 0;
       const slot = this.slots[i];
       slot.visible = !m.userData.placed;
       slot.material.color.setHex(lit ? LIT : 0xffffff);
