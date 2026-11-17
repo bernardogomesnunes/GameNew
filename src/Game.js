@@ -2252,6 +2252,8 @@ export class Game {
       if (isTyping(e)) return;
 
       if (e.code === 'Escape' && this.closeUp?.active) { this.endMachine(); return; }
+      // CRAFT-9: at a machine its own keys come first (the Carpenter's Table: Space holds Saw, 1 to 4 tap a part).
+      if (this.closeUp?.active && this.closeUp.machine.key?.(e.code, true, e.repeat)) { e.preventDefault(); return; }
       if (e.code === 'Escape') {
         // Putting down what you are holding comes before putting away panels.
         if (this.moving) { this.cancelMove(); return; }
@@ -6584,27 +6586,29 @@ export class Game {
    * waits (see phase), the machine moves the camera, its bar takes the
    * controls, and presses on the picture go to the machine.
    */
-  /** The Counter's 3D view (tests and the counter's own bar read it). */
+  /** The Carpenter's Table's 3D view (tests and the table's own bar read it). */
   get counterView() {
     return this.counterMachine?.view ?? null;
   }
 
   openMachine(machine, at) {
     if (!this.closeUp) {
-      this.closeUp = new CloseUp({ uiRoot: this.uiRoot, onEnd: () => this.player?.syncCamera?.() });
+      this.closeUp = new CloseUp({ uiRoot: this.uiRoot, onEnd: () => { this.player?.releaseKeys?.(); this.player?.syncCamera?.(); } });
       this.bindMachinePointer();
+      // A key let go ends what it held (Space on the Carpenter's Table's saw).
+      window.addEventListener('keyup', (e) => { if (this.closeUp?.active) this.closeUp.machine.key?.(e.code, false, false); });
     }
     this.closeUp.open(machine, `${at.x},${at.y},${at.z}`, at);
     this.ui.hideBlocker?.();
   }
 
-  /** CRAFT3D-1: the carpentry counter at `at`. */
+  /** CRAFT3D-1: the Carpenter's Table (block 530, station `counter`) at `at`. */
   startCounter(at) {
     if (!this.duilt) return;
     this.counterMachine ??= new CounterMachine({ scene: this.scene, camera: this.camera, uiRoot: this.uiRoot, counters: this.duilt.counters, bus: this.bus,
       age: () => (this.duilt?.sandbox ? Infinity : this.duilt?.age ?? 1), onLeave: () => this.endMachine(),
       onDone: ({ item, took }) => {
-        this.ui.toast(took ? { kind: 'challenge', title: `${itemName(item)} made`, body: 'In your bag' } : { kind: 'xp', title: `${itemName(item)} is ready`, body: 'Make room in your bag; it waits on the counter' });
+        this.ui.toast(took ? { kind: 'challenge', title: `${itemName(item)} made`, body: 'In your bag' } : { kind: 'xp', title: `${itemName(item)} is ready`, body: 'Make room in your bag; it waits on the table' });
         this.editedAt = Date.now();
       } });
     this.counterMachine.use(this.duilt.counters);

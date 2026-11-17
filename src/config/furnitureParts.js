@@ -26,14 +26,15 @@ for (const d of STARTER_DESIGNS) {
 }
 
 /**
- * CRAFT3D-1: the furniture made at the carpentry counter, and its parts.
+ * CRAFT3D-1, CRAFT-9: the furniture made at the Carpenter's Table, and its parts.
  *
  * A piece's parts are the boxes its block is drawn from (world/propShapes.js),
  * so every piece, a new one included, can be cut and fitted with no data of
- * its own. Merged down to MAX_PARTS, so a piece is never more than 8 cuts.
+ * its own. Matching boxes are one part (the 4 legs of a table fit with one
+ * tap), and the rest merge down to MAX_PARTS: a piece is at most 4 fits.
  */
 export const FURNITURE = [...FURNITURE_ITEM.values(), 'bed', 'painting', 'chair_red', 'panel_twotone'];
-export const MAX_PARTS = 8;
+export const MAX_PARTS = 4;
 const PATTERNED = new Set(['panel_pattern', 'panel_pattern_white', 'panel_pattern_dark']);
 
 /** Whether the piece ends with the chisel (carved patterns). */
@@ -57,33 +58,55 @@ const hull = (a, b) => ({
   minX: Math.min(a.minX, b.minX), maxX: Math.max(a.maxX, b.maxX),
   minY: Math.min(a.minY, b.minY), maxY: Math.max(a.maxY, b.maxY),
   minZ: Math.min(a.minZ, b.minZ), maxZ: Math.max(a.maxZ, b.maxZ),
-  tone: a.tone ?? b.tone,
 });
 
 /** What a part is called, from its shape and place. */
 function nameOf(b, shape) {
   const w = Math.min(b.maxX - b.minX, b.maxZ - b.minZ), h = b.maxY - b.minY;
-  if (b.minY === 0 && w < 0.3 && h > w) return 'leg';
+  if (b.minY === 0 && Math.max(b.maxX - b.minX, b.maxZ - b.minZ) < 0.3 && h > w) return 'leg';
   if (h < 0.15 && b.minY >= 0.3) return /chair/.test(shape) ? 'seat' : 'top';
   if (h > 0.3 && w < 0.15 && b.minY > 0.3) return 'back';
   return 'panel';
 }
 
-/** The parts of `itemId`: { name, box, tone }, top and seat first, at most MAX_PARTS. */
+const size = (b) => [b.maxX - b.minX, b.maxY - b.minY, b.maxZ - b.minZ];
+/** Two boxes of one size, one name and one colour are the same part, cut twice. */
+const matching = (a, b, shape) => size(a).every((n, i) => Math.abs(n - size(b)[i]) < 1e-6)
+  && a.tone === b.tone && a.color === b.color && nameOf(a, shape) === nameOf(b, shape);
+const volumeOf = (boxes) => boxes.reduce((n, b) => n + volume(b), 0);
+const touching = (a, b) => a.some((x) => b.some((y) => touch(x, y)));
+
+/**
+ * The parts of `itemId`, at most MAX_PARTS, lowest first (legs, then the top).
+ * Each is { name, count, boxes, box }: `boxes` are what is drawn (each with its
+ * own tone or colour), `box` is the space they take together, and `count` is
+ * how many matching boxes it is (4 for a table's legs), 1 for a mixed part.
+ */
 export function partsFor(itemId) {
-  let boxes = boxesOf(itemId).map(({ minX, maxX, minY, maxY, minZ, maxZ, tone }) => ({ minX, maxX, minY, maxY, minZ, maxZ, tone }));
-  while (boxes.length > MAX_PARTS) {
-    let best = null;
-    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
-      if (!touch(boxes[i], boxes[j])) continue;
-      const v = volume(boxes[i]) + volume(boxes[j]);
-      if (!best || v < best.v) best = { i, j, v };
-    }
-    // Nothing touching: the two smallest merge anyway.
-    if (!best) { const by = boxes.map((b, i) => [volume(b), i]).sort((a, b) => a[0] - b[0]); best = { i: by[0][1], j: by[1][1] }; }
-    const merged = hull(boxes[best.i], boxes[best.j]);
-    boxes = boxes.filter((_, k) => k !== best.i && k !== best.j).concat(merged);
-  }
   const shape = BLOCKS_BY_ID.get(ITEMS_BY_ID.get(itemId)?.block)?.shape ?? '';
-  return boxes.map((box) => ({ name: nameOf(box, shape), box, ...(box.tone ? { tone: box.tone } : {}) }));
+  const boxes = boxesOf(itemId).map(({ minX, maxX, minY, maxY, minZ, maxZ, tone, color }) => ({ minX, maxX, minY, maxY, minZ, maxZ, tone, color }));
+  let groups = [];
+  for (const b of boxes) {
+    const g = groups.find((g) => matching(g.boxes[0], b, shape));
+    if (g) g.boxes.push(b);
+    else groups.push({ name: nameOf(b, shape), boxes: [b], same: true });
+  }
+  while (groups.length > MAX_PARTS) {
+    // The two smallest that touch become one; with nothing touching, the two smallest.
+    let best = null;
+    for (let i = 0; i < groups.length; i++) for (let j = i + 1; j < groups.length; j++) {
+      const v = volumeOf(groups[i].boxes) + volumeOf(groups[j].boxes), near = touching(groups[i].boxes, groups[j].boxes);
+      if (!best || (near && !best.near) || (near === best.near && v < best.v)) best = { i, j, v, near };
+    }
+    const a = groups[best.i], b = groups[best.j], big = volumeOf(a.boxes) >= volumeOf(b.boxes) ? a : b;
+    groups = groups.filter((_, k) => k !== best.i && k !== best.j).concat({ name: big.name, boxes: [...a.boxes, ...b.boxes], same: false });
+  }
+  return groups.map((g) => ({ name: g.name, count: g.same ? g.boxes.length : 1, boxes: g.boxes, box: g.boxes.reduce(hull) }))
+    .sort((a, b) => a.box.minY - b.box.minY || volume(b.box) - volume(a.box));
+}
+
+/** What a part is called on a button: "Top", "4 legs". */
+export function partLabel(part) {
+  const name = part.count > 1 ? `${part.count} ${part.name}s` : part.name;
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }

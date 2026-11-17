@@ -2,14 +2,19 @@ import { partsFor, isPatterned, COST, FURNITURE } from '../config/furnitureParts
 import { itemName } from '../config/items.js';
 
 /**
- * CRAFT3D-1: the carpentry counter's rules. Furniture is made only here:
- * pick a piece, saw a plank into its parts (paid at the first cut), fit every
- * part onto the outline, carve patterned pieces with the chisel, take it.
+ * CRAFT3D-1, CRAFT-9: the Carpenter's Table's rules (the block was called the
+ * Counter, and keeps the id `counter`). Furniture is made only here: pick a
+ * piece, one saw stroke cuts every part (the planks are paid then), fit each
+ * of its 4 parts at most onto the outline, carve patterned pieces with the
+ * chisel, take it. "Make another" starts the same piece again, and one fit
+ * then places every part.
  *
- * Each placed counter keeps its own work by its position ("x,y,z"), saved
+ * Each placed table keeps its own work by its position ("x,y,z"), saved
  * with the world. Nothing here draws or reads the world: render/CounterView.js
- * draws it, and Game says which counters still stand (prune).
+ * draws it, and Game says which tables still stand (prune).
  */
+/** The save's shape: 2 since a piece has 4 parts at most and one cut. */
+const SAVE_VERSION = 2;
 const SAW = 'carpentry_saw', CHISEL = 'carpentry_chisel';
 
 export class Counters {
@@ -20,8 +25,10 @@ export class Counters {
   constructor({ bag, deliver = () => false }) {
     this.bag = bag;
     this.deliver = deliver;
-    /** key → { item, cut, fitted: boolean[], carved, paid } */
+    /** key → { item, cut, fitted: boolean[], carved, paid, quick } */
     this.counters = new Map();
+    /** key → the piece last finished there, for "Make another". Not saved. */
+    this.last = new Map();
   }
 
   /** What is on the counter at `key`, with `done` worked out, or null. */
@@ -34,16 +41,38 @@ export class Counters {
     return w.fitted.length > 0 && w.fitted.every(Boolean) && (!isPatterned(w.item) || w.carved);
   }
 
-  /** Starts `itemId` on an empty counter. Costs nothing until the first cut. */
-  choose(key, itemId) {
-    if (!FURNITURE.includes(itemId)) return { ok: false, reason: 'That is not made at a counter.' };
+  /**
+   * Starts `itemId` on an empty table. Costs nothing until the cut.
+   * `quick` (Make another): one fit places every part.
+   */
+  choose(key, itemId, { quick = false } = {}) {
+    if (!FURNITURE.includes(itemId)) return { ok: false, reason: "That is not made at a Carpenter's Table." };
     const w = this.counters.get(key);
-    if (w && (w.paid || w.cut > 0)) return { ok: false, reason: `Finish the ${itemName(w.item).toLowerCase()} first, or break the counter.` };
-    this.counters.set(key, { item: itemId, cut: 0, fitted: partsFor(itemId).map(() => false), carved: false, paid: false });
+    if (w && (w.paid || w.cut > 0)) return { ok: false, reason: `Finish the ${itemName(w.item).toLowerCase()} first, or break the table.` };
+    this.counters.set(key, { item: itemId, cut: 0, fitted: partsFor(itemId).map(() => false), carved: false, paid: false, quick: !!quick });
     return { ok: true };
   }
 
-  /** Whether the next cut can be made, and why not. */
+  /** Puts away a piece that was picked and not yet sawn (nothing was paid). */
+  unchoose(key) {
+    const w = this.counters.get(key);
+    if (!w || w.paid || w.cut > 0) return false;
+    this.counters.delete(key);
+    return true;
+  }
+
+  /** The piece last finished at `key`, or null. */
+  lastMade(key) {
+    return this.last.get(key) ?? null;
+  }
+
+  /** Make another: the piece last finished here again, every part placed by one fit. */
+  again(key) {
+    const item = this.lastMade(key);
+    return item ? this.choose(key, item, { quick: true }) : { ok: false, reason: 'Pick a piece first.' };
+  }
+
+  /** Whether the cut can be made, and why not. */
   canCut(key) {
     const w = this.counters.get(key);
     if (!w) return { ok: false, reason: 'Pick a piece first.' };
@@ -63,7 +92,7 @@ export class Counters {
     return { ok: true };
   }
 
-  /** One saw cut: the next part comes off. The planks are paid at the first. */
+  /** The one saw stroke: every part comes off, and the planks are paid. */
   cut(key) {
     const can = this.canCut(key);
     if (!can.ok) return can;
@@ -72,15 +101,26 @@ export class Counters {
       if (!this.bag().spend(COST.get(w.item))) return { ok: false, reason: 'Your bag changed. Try again.' };
       w.paid = true;
     }
-    return { ok: true, part: w.cut++ };
+    w.cut = w.fitted.length;
+    return { ok: true, parts: w.cut };
   }
 
-  /** Part `part` goes into its place in the outline. Only parts already cut. */
+  /**
+   * Part `part` goes into its place in the outline. Only once the piece is
+   * cut. On a piece made again (quick), every part goes in with it.
+   */
   fit(key, part) {
     const w = this.counters.get(key);
     if (!w || !Number.isInteger(part) || part < 0 || part >= w.cut) return { ok: false, done: false };
-    w.fitted[part] = true;
+    if (w.quick) w.fitted.fill(true);
+    else w.fitted[part] = true;
     return { ok: true, done: this.done(w) };
+  }
+
+  /** The first cut part not yet fitted (the one that glows), or -1. */
+  next(key) {
+    const w = this.counters.get(key);
+    return w && w.cut > 0 ? w.fitted.findIndex((f, i) => !f && i < w.cut) : -1;
   }
 
   /** The chisel's taps on a fitted patterned piece. */
@@ -93,22 +133,24 @@ export class Counters {
     return { ok: true };
   }
 
-  /** The finished piece to the bag, else a storehouse; it waits on the counter if neither has room. */
+  /** The finished piece to the bag, else a storehouse; it waits on the table if neither has room. */
   take(key) {
     const w = this.counters.get(key);
     if (!w || !this.done(w)) return false;
     const bag = this.bag();
     if (bag.roomFor(w.item, 1) >= 1) bag.add(w.item, 1);
     else if (!this.deliver({ [w.item]: 1 })) return false;
+    this.last.set(key, w.item);
     this.counters.delete(key);
     return true;
   }
 
   /**
-   * Counters that no longer stand give back what was not used: a finished
+   * Tables that no longer stand give back what was not used: a finished
    * piece whole, else the planks for the parts not yet fitted (rounded down).
    */
   prune(stands) {
+    for (const key of [...this.last.keys()]) if (!stands(key)) this.last.delete(key);
     for (const [key, w] of [...this.counters]) {
       if (stands(key)) continue;
       const owed = {};
@@ -152,7 +194,7 @@ export class Counters {
   }
 
   toJSON() {
-    return [...this.counters].map(([key, w]) => ({ key, ...w }))
+    return [...this.counters].map(([key, w]) => ({ key, v: SAVE_VERSION, ...w }))
       .concat([...(this.owed ?? [])].map(([key, owed]) => ({ key, owed })));
   }
 
@@ -167,9 +209,21 @@ export class Counters {
       }
       if (typeof w?.key !== 'string' || !FURNITURE.includes(w.item)) continue;
       const n = partsFor(w.item).length;
+      if (w.v !== SAVE_VERSION) {
+        // A world saved when a piece had up to 8 parts, each with its own cut
+        // (CRAFT-9). What was paid is kept. A finished piece stays finished;
+        // a half-built one has every part cut and back in the row.
+        const old = Array.isArray(w.fitted) ? w.fitted : [];
+        const whole = old.length > 0 && old.every(Boolean);
+        const begun = !!w.paid || w.cut > 0;
+        this.counters.set(w.key, { item: w.item, cut: begun ? n : 0, fitted: Array.from({ length: n }, () => whole),
+          carved: whole && !!w.carved, paid: begun, quick: false });
+        continue;
+      }
       const fitted = Array.from({ length: n }, (_, i) => !!w.fitted?.[i]);
-      const cut = Math.min(n, Math.max(0, Number.isSafeInteger(w.cut) ? w.cut : 0));
-      this.counters.set(w.key, { item: w.item, cut, fitted, carved: !!w.carved, paid: !!w.paid });
+      // One stroke cuts every part: a piece is cut or it is not.
+      const cut = w.cut > 0 ? n : 0;
+      this.counters.set(w.key, { item: w.item, cut, fitted, carved: !!w.carved, paid: !!w.paid, quick: !!w.quick });
     }
   }
 }

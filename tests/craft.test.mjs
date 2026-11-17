@@ -156,7 +156,7 @@ ok('starter refuses without materials', !broke.starterPlacement('house', anchor)
 {
   const { howToGet } = await import('../src/config/recipes.js');
   ok('a roof tile made by hand says so', /^make it by hand/.test(howToGet('roof_teal')));
-  ok('furniture says the Counter', howToGet('table_oak') === 'make it at a Counter');
+  ok("furniture says the Carpenter's Table", howToGet('table_oak') === "make it at a Carpenter's Table");
 }
 
 // Owner, 12 November, Age 3: a building's first level up wants a light, and none was made before Age 4.
