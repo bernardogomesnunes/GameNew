@@ -2,6 +2,7 @@ import { FURNITURE, AGE, partsFor, isPatterned } from '../config/furnitureParts.
 import { itemName } from '../config/items.js';
 import { RECIPES_BY_ID } from '../config/recipes.js';
 import { escapeHtml } from './html.js';
+import { chainLineHtml } from './chainLine.js';
 
 /**
  * CRAFT3D-1: the buttons over the counter close-up (render/CounterView.js).
@@ -53,7 +54,7 @@ export class CounterBar {
     const say = note || (w.cut < n ? (cut.ok ? `Saw the ${itemName(w.item).toLowerCase()}'s parts: ${w.cut} of ${n} cut.` : cut.reason)
       : fitted < n ? `Drag each part onto its place: ${fitted} of ${n} fitted.`
         : isPatterned(w.item) && !w.carved ? 'Carve the pattern with the chisel.' : 'Done. Make room in your bag and take it.');
-    this.el.innerHTML = `<p class="counter-say">${escapeHtml(say)}</p>
+    this.el.innerHTML = `${chainLineHtml(w.item, 'counter')}<p class="counter-say">${escapeHtml(say)}</p>
       <div class="counter-actions">
         ${w.cut < n ? `<button class="primary" data-saw ${cut.ok ? '' : 'disabled'}>Saw (${w.cut} of ${n})</button>` : ''}
         ${isPatterned(w.item) && fitted === n && !w.carved ? '<button class="primary" data-carve>Carve</button>' : ''}

@@ -1,5 +1,6 @@
 import { itemName } from '../config/items.js';
 import { escapeHtml } from './html.js';
+import { chainLineHtml } from './chainLine.js';
 import { WORK_MIN, WORK_MAX } from '../duilt/BenchWork.js';
 
 /**
@@ -35,7 +36,7 @@ export class BenchBar {
   }
 
   /** `recipes` are Crafting.recipeStatus results; `picked` the chosen one's id. */
-  render({ machine, recipes, picked, say }) {
+  render({ machine, recipes, picked, say, station = null }) {
     const chosen = recipes.find((r) => r.id === picked);
     const tiles = recipes.map((r) => {
       const takes = Object.entries(r.inputs).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' + ');
@@ -44,7 +45,7 @@ export class BenchBar {
     const line = say || (!recipes.length ? 'Nothing is made here at this age.'
       : !chosen ? 'Pick what to make.'
         : chosen.ok ? `Hold ${machine.verb} and let go when the bar is in the light band.` : chosen.reason);
-    this.el.innerHTML = `<p class="counter-say">${escapeHtml(line)}</p>
+    this.el.innerHTML = `${chainLineHtml(chosen?.output?.id, station)}<p class="counter-say">${escapeHtml(line)}</p>
       <div class="pour-gauge" aria-label="How far the work has gone"><i class="pour-window" style="left:${WORK_MIN * 80}%;width:${(WORK_MAX - WORK_MIN) * 80}%"></i><i class="pour-level" data-work-level style="width:0%"></i></div>
       <div class="counter-pieces">${tiles}</div>
       <div class="counter-actions">

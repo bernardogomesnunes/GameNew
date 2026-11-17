@@ -1,6 +1,7 @@
 import { RECIPES } from '../config/recipes.js';
 import { itemName } from '../config/items.js';
 import { escapeHtml } from './html.js';
+import { chainLineHtml } from './chainLine.js';
 import { meltSeconds, mouldFor, MAX_BATCHES, POUR_MIN, POUR_MAX } from '../duilt/Crucible.js';
 
 /**
@@ -86,7 +87,7 @@ export class CrucibleBar {
     const melting = s?.waiting ? `<div class="melt-row"><span class="melt-name">Melting ${escapeHtml(itemName(recipe.output.id).toLowerCase())}</span>
         <div class="research-bar melt-bar" role="progressbar" aria-label="How far the batch has melted"><i data-melt-bar style="width:${Math.round(s.progress * 100)}%"></i></div>
         <b data-melt-left>${Math.ceil((1 - s.progress) * meltSeconds(recipe))} s</b></div>` : '';
-    this.el.innerHTML = `<p class="counter-say">${escapeHtml(note ? `${note} ${state}` : state)}</p>
+    this.el.innerHTML = `${chainLineHtml(recipe?.output?.id ?? this.recipes()[0]?.output?.id, 'crucible')}<p class="counter-say">${escapeHtml(note ? `${note} ${state}` : state)}</p>
       ${melting}
       ${poured ? `<div class="pour-gauge" aria-label="How full the mould is"><i class="pour-window" style="left:${POUR_MIN * 80}%;width:${(POUR_MAX - POUR_MIN) * 80}%"></i><i class="pour-level" data-pour-level style="width:0%"></i></div>` : ''}
       <div class="counter-pieces">${tiles}</div>
