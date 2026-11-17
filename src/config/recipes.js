@@ -1720,7 +1720,7 @@ RECIPES.push(
   { id: 'workshop_workbench', name: 'Workbench', station: 'workshop', age: 4, inputs: { planks: 8, wood: 2, stone: 2 }, output: { id: 'workbench', count: 1 }, blurb: 'Place it anywhere: everything from the third age on is made at it.' },
 );
 
-// CRAFT3D-1: furniture is made only at a carpentry counter (owner, 31
+// CRAFT3D-1: furniture is made only at a Carpenter's Table (owner, 31
 // October: "Templates only"). Each piece keeps the planks it cost here, for
 // the counter to charge; then every furniture recipe goes, wherever it was.
 export const FURNITURE_COST = new Map();
@@ -1735,8 +1735,8 @@ for (const r of RECIPES) if (furniture.has(r.output.id)) FURNITURE_AGE.set(r.out
 for (const [id, c] of FURNITURE_COST) FURNITURE_COST.set(id, c.inputs);
 for (let i = RECIPES.length - 1; i >= 0; i--) if (furniture.has(RECIPES[i].output.id)) RECIPES.splice(i, 1);
 // Made by hand from Age 1: the first house and the Work Hall are furnished from it.
-RECIPES.push({ id: 'counter', name: 'Counter', station: 'hand', age: 1, inputs: { planks: 6, wood: 2 }, output: { id: 'counter', count: 1 },
-  blurb: 'Place it and make furniture on it: saw the parts, then fit them together.' });
+RECIPES.push({ id: 'counter', name: "Carpenter's Table", station: 'hand', age: 1, inputs: { planks: 6, wood: 2 }, output: { id: 'counter', count: 1 },
+  blurb: 'Place it and make furniture on it: one saw stroke cuts the parts, then tap each into place.' });
 
 // CRAFT3D-3: the foundry's recipes are made in its crucible now (owner, 1
 // November: "the foundry to melt stuff"), melted and poured by hand.
@@ -1767,7 +1767,7 @@ export function howToGet(itemId, blockName = null) {
       ? `make it ${where} by the river, from ${from}`
       : `make it ${where} from ${from}`;
   }
-  if (FURNITURE_COST.has(itemId)) return 'make it at a Counter';
+  if (FURNITURE_COST.has(itemId)) return "make it at a Carpenter's Table";
   if (blockName) return `break ${blockName.toLowerCase()} to collect it`;
   return null;
 }

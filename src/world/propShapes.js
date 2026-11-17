@@ -1070,6 +1070,38 @@ PROP_SHAPES.workbench = [
   { minX: 0.16, maxX: 0.5, minY: 0.92, maxY: 0.935, minZ: 0.6, maxZ: 0.74, color: B30_STEEL },
   { minX: 0.5, maxX: 0.58, minY: 0.92, maxY: 0.96, minZ: 0.62, maxZ: 0.72, color: B30_DARK },
 ];
+// CRAFT-9: the Carpenter's Table (block 530, once the Counter, a plain cube).
+// A thick top on four stout legs with rails under it, a vise on the front
+// left corner, a saw hung on one side and planks kept on the shelf below.
+// The top is level with the cell's top and left clear: the close-up
+// (render/CounterView.js) lays the piece out on it.
+const CT_LEG = 0.74, CT_RAIL = 0.88, CT_PLANK = 0xe2bd86, CT_PLANK_DARK = 0xcfa56c;
+PROP_SHAPES.carpenters_table = [
+  // Four legs.
+  ...[[0.06, 0.1], [0.8, 0.1], [0.06, 0.76], [0.8, 0.76]].map(([x, z]) => ({ minX: x, maxX: x + 0.14, minY: 0, maxY: 0.84, minZ: z, maxZ: z + 0.14, tone: CT_LEG })),
+  // The top, thick, a shade lighter, over the legs on every side.
+  { minX: 0, maxX: 1, minY: 0.84, maxY: 1, minZ: 0.04, maxZ: 0.96, tone: 1.16 },
+  // Rails under the top: front, back and both sides.
+  { minX: 0.2, maxX: 0.8, minY: 0.72, maxY: 0.84, minZ: 0.12, maxZ: 0.18, tone: CT_RAIL },
+  { minX: 0.2, maxX: 0.8, minY: 0.72, maxY: 0.84, minZ: 0.82, maxZ: 0.88, tone: CT_RAIL },
+  { minX: 0.08, maxX: 0.14, minY: 0.72, maxY: 0.84, minZ: 0.24, maxZ: 0.76, tone: CT_RAIL },
+  { minX: 0.86, maxX: 0.92, minY: 0.72, maxY: 0.84, minZ: 0.24, maxZ: 0.76, tone: CT_RAIL },
+  // The shelf between the legs, and three planks waiting on it.
+  { minX: 0.1, maxX: 0.9, minY: 0.16, maxY: 0.22, minZ: 0.14, maxZ: 0.86, tone: 0.94 },
+  { minX: 0.16, maxX: 0.84, minY: 0.22, maxY: 0.28, minZ: 0.26, maxZ: 0.48, color: CT_PLANK },
+  { minX: 0.2, maxX: 0.8, minY: 0.22, maxY: 0.28, minZ: 0.52, maxZ: 0.74, color: CT_PLANK_DARK },
+  { minX: 0.18, maxX: 0.82, minY: 0.28, maxY: 0.34, minZ: 0.38, maxZ: 0.6, color: CT_PLANK },
+  // The vise on the front left corner: an iron jaw with a wooden cheek, its screw and its bar.
+  { minX: 0.06, maxX: 0.36, minY: 0.8, maxY: 1.0, minZ: 0, maxZ: 0.04, color: B30_IRON },
+  { minX: 0.08, maxX: 0.34, minY: 0.9, maxY: 1.02, minZ: 0.01, maxZ: 0.04, color: CT_PLANK_DARK },
+  { minX: 0.19, maxX: 0.23, minY: 0.84, maxY: 0.88, minZ: -0.07, maxZ: 0, color: B30_IRON_DARK },
+  { minX: 0.12, maxX: 0.3, minY: 0.85, maxY: 0.87, minZ: -0.08, maxZ: -0.06, color: B30_STEEL },
+  // The saw, hung by its handle from a peg on the right side: blade, bright toothed edge, handle.
+  { minX: 0.96, maxX: 1.0, minY: 0.74, maxY: 0.78, minZ: 0.66, maxZ: 0.7, color: B30_IRON_DARK },
+  { minX: 0.95, maxX: 0.985, minY: 0.56, maxY: 0.76, minZ: 0.6, maxZ: 0.76, color: B30_DARK },
+  { minX: 0.96, maxX: 0.975, minY: 0.2, maxY: 0.56, minZ: 0.6, maxZ: 0.74, color: B30_STEEL },
+  { minX: 0.96, maxX: 0.975, minY: 0.2, maxY: 0.56, minZ: 0.58, maxZ: 0.6, color: 0xeef1f5 },
+];
 // The storage controller: a cabinet with a screen standing on it, its
 // rows of stored things glowing, and a panel of buttons in front.
 const SCREEN_BG = 0x134a42, SCREEN_ROW = 0x8ff5e0, BEZEL = 0x2b2b33;

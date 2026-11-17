@@ -948,11 +948,13 @@ BLOCKS.push(
   { id: WORKBENCH, name: 'Workbench', glyph: 'planks', color: 0x9c7348, shape: 'workbench', material: 'wood', station: 'workbench', unlock: null },
 );
 
-// CRAFT3D-1: the carpentry counter, where furniture is sawn and fitted
-// together in a close-up (render/CounterView.js).
+// CRAFT3D-1: the Carpenter's Table, where furniture is sawn and fitted
+// together in a close-up (render/CounterView.js). CRAFT-9: it was the
+// Counter, a plain cube. The id, the station and the item id `counter` stay,
+// so a table placed in an old world is still one, drawn as a table.
 export const COUNTER = 530;
 BLOCKS.push(
-  { id: COUNTER, name: 'Counter', glyph: 'planks', color: 0xa87a4c, material: 'wood', station: 'counter', unlock: null },
+  { id: COUNTER, name: "Carpenter's Table", glyph: 'planks', color: 0xa87a4c, shape: 'carpenters_table', material: 'wood', station: 'counter', unlock: null },
 );
 
 // CRAFT3D-2: the spinning wheel, where hemp fibre is spun into string.

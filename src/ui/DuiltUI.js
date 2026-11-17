@@ -74,7 +74,7 @@ function withArticle(name) {
  *
  *   have   how many you hold, or null to leave it unsaid (what a recipe makes)
  */
-/** Whether a recipe makes a machine: an item that places a station block (a Counter, a Forge, a mill...). */
+/** Whether a recipe makes a machine: an item that places a station block (a Carpenter's Table, a Forge, a mill...). */
 export function isMachine(recipe) {
   const block = ITEMS_BY_ID.get(recipe.output?.id)?.block;
   return block != null && !!BLOCKS.find((b) => b.id === block)?.station;
@@ -924,7 +924,7 @@ export class DuiltUI {
         const w = d.counters?.work(key);
         if (w) {
           const n = w.fitted.length, fitted = w.fitted.filter(Boolean).length;
-          state = w.done ? `${itemName(w.item)}: ready` : w.cut < n ? `${itemName(w.item)}: ${w.cut} of ${n} cut` : `${itemName(w.item)}: ${fitted} of ${n} fitted`;
+          state = w.done ? `${itemName(w.item)}: ready` : w.cut < n ? `${itemName(w.item)}: to saw` : `${itemName(w.item)}: ${fitted} of ${n} fitted`;
         }
       } else {
         const s = d.stationWork?.spot(key);
@@ -945,7 +945,7 @@ export class DuiltUI {
       </div>`).join('');
     return `<div class="building-sec workshop-stations">
         <h4>Stations here</h4>
-        ${rows ? `<div class="train-queue">${rows}</div>` : (structure.type === 'foundry' ? '<p class="dim">No crucible inside yet.</p>' : '<p class="dim">Place a Counter, a Planing Bench, a Wood Mill or a Forge inside to work them from here.</p>')}
+        ${rows ? `<div class="train-queue">${rows}</div>` : (structure.type === 'foundry' ? '<p class="dim">No crucible inside yet.</p>' : '<p class="dim">Place a Carpenter\'s Table, a Planing Bench, a Wood Mill or a Forge inside to work them from here.</p>')}
       </div>`;
   }
 
@@ -2396,7 +2396,7 @@ export class DuiltUI {
     const title = this.q('#bench-title'), sub = this.q('#bench-sub');
     if (title) title.textContent = only ? stationTitle(only) : 'Bench';
     // CRAFT3D-1: furniture left these benches for the carpentry counter.
-    const furnitureNote = !only || only === 'workbench' || only === 'wood_mill' ? ' Furniture is made at a Counter.' : '';
+    const furnitureNote = !only || only === 'workbench' || only === 'wood_mill' ? " Furniture is made at a Carpenter's Table." : '';
     if (sub) sub.textContent = (only === 'workbench' ? 'Everything you can make, from the simple things up.'
       : only ? 'What is made here.' : 'Simple things by hand. Place a Workbench for the rest.') + furnitureNote;
     const note = this.q('#bench-station');
@@ -2416,7 +2416,7 @@ export class DuiltUI {
       return;
     }
     // At a placed Workbench the machines come first, in their own row
-    // (owner, 1 November), so the Counter or a Forge is not lost among the rest.
+    // (owner, 1 November), so the Carpenter's Table or a Forge is not lost among the rest.
     const machines = only === 'workbench' ? recipes.filter(isMachine) : [];
     const rest = machines.length ? recipes.filter((r) => !isMachine(r)) : recipes;
     list.innerHTML = spots
