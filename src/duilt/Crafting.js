@@ -1,4 +1,4 @@
-import { RECIPES_BY_ID, recipesFor } from '../config/recipes.js';
+import { RECIPES_BY_ID, recipesFor, stationWords } from '../config/recipes.js';
 import { itemName } from '../config/items.js';
 
 /**
@@ -10,8 +10,8 @@ import { itemName } from '../config/items.js';
  * ingredient or standing in the wrong place.
  */
 
-/** A station as it's written for people: wood_mill is "wood mill". */
-export const stationName = (station) => String(station).replace(/_/g, ' ');
+/** A station as it's written for people: wood_mill is "wood mill" (config/recipes.js). */
+export const stationName = stationWords;
 
 const WATER_BLOCK = 11;
 const WATER_RANGE = 4;

@@ -1589,26 +1589,49 @@ for (const [key, e] of Object.entries(UPGRADES)) {
 }
 
 // At the stone mill (asked for directly: "make all the variations easier and
-// cheaper"): every block cut from stone — bricks, walls, stairs, roof tiles,
-// pillars, chimneys, calçada — half as much again for the same stone. Not
-// the slab (two slabs make a whole stone block, and that breaks back into
-// stone) nor anything that turns back into raw stone: no loop at the mill
-// makes stone out of nothing.
-const STONE_MILLED = [
-  'stone_brick', 'sandstone_brick', 'stairs_stone', 'roof_stone', 'roof_brick',
+// cheaper"): stone cut into bricks and setts, half as much again for the same
+// stone. Not the slab (two slabs make a whole stone block, and that breaks
+// back into stone) nor anything that turns back into raw stone: no loop at
+// the mill makes stone out of nothing.
+const STONE_MILLED = ['stone_brick', 'sandstone_brick', 'calcada', 'calcada_dark'];
+// CRAFT-9 part 4: the Mason's Bench shapes cut stone, at the mill's old
+// yields (a wall: 3 stone into 6 at the bench, 4 at the old workbench copy).
+// The 24 workbench copies go: these are made only at the bench, as the
+// bricks and setts are only at the mill. The roof slate keeps its Age 1 hand
+// recipe (1 stone into 2); the bench gives 3.
+const MASON_SHAPED = [
+  'stairs_stone', 'roof_stone', 'roof_brick',
   'wall_stone', 'wall_cobble', 'wall_brick', 'wall_dark', 'wall_stone_brick', 'wall_sandstone', 'wall_dark_brick',
   'wall_marble', 'wall_sky_marble', 'wall_white_stone', 'wall_grey_stone', 'wall_turquoise', 'wall_orange',
-  'chimney_stone_brick', 'chimney_brick', 'pillar_stone', 'pillar_marble', 'pillar_dark',
-  'calcada', 'calcada_dark', 'calcada_wave',
+  'chimney_stone_brick', 'chimney_brick', 'pillar_stone', 'pillar_marble', 'pillar_dark', 'calcada_wave',
 ];
-for (const id of STONE_MILLED) {
-  const r = RECIPES.find((x) => x.id === id);
-  RECIPES.push({
-    ...r, id: `stone_mill_${id}`, station: 'stone_mill', age: Math.max(3, r.age),
-    output: { ...r.output, count: Math.ceil(r.output.count * 1.5) }, batch: r.batch ?? 8,
-    blurb: `${r.blurb ?? ''} Half as much again at the stone mill.`.trim(),
-  });
+const MASON_STEPS = ['Chalk the marks', 'Chisel along them'];
+for (const [ids, station, prefix] of [[STONE_MILLED, 'stone_mill', 'stone_mill_'], [MASON_SHAPED, 'masons_bench', 'mason_']]) {
+  for (const id of ids) {
+    const r = RECIPES.find((x) => x.id === id);
+    RECIPES.push({
+      ...r, id: `${prefix}${id}`, station, age: Math.max(3, r.age),
+      output: { ...r.output, count: Math.ceil(r.output.count * 1.5) }, batch: r.batch ?? 8,
+      ...(station === 'masons_bench' ? { steps: MASON_STEPS } : {}),
+      blurb: `${r.blurb ?? ''} ${station === 'stone_mill' ? 'Half as much again at the stone mill.' : "Shaped at the Mason's Bench."}`.trim(),
+    });
+  }
 }
+// The workbench copies of what the mill cuts and the bench shapes (24, all
+// from Age 3 on). A copy made by hand in Ages 1 and 2 (the roof slate) stays,
+// and so does the stone brick: it is cut at the mill already.
+const MASON_COPIES = new Set([...STONE_MILLED, ...MASON_SHAPED].filter((id) => id !== 'stone_brick'));
+for (let i = RECIPES.length - 1; i >= 0; i--) {
+  const r = RECIPES[i];
+  if (MASON_COPIES.has(r.id) && r.station === 'hand' && r.age > 2) RECIPES.splice(i, 1);
+}
+RECIPES.push(
+  { id: 'masons_bench', name: "Mason's Bench", station: 'hand', age: 3, inputs: { stone: 6, planks: 4 }, output: { id: 'masons_bench', count: 1 },
+    blurb: 'A stone-topped bench with a chisel. Place it and tap the chalk marks: cut stone becomes walls, slabs, stairs, pillars, chimneys and roofs.' },
+  // New at the bench: the stone slab. Two slabs, as at the workbench: a third would make stone from nothing.
+  { id: 'mason_slab_stone', name: 'Stone Slab', station: 'masons_bench', age: 3, inputs: { stone: 1 }, output: { id: 'slab_stone', count: 2 }, batch: 8,
+    steps: MASON_STEPS, blurb: "Stone split into two slabs at the Mason's Bench." },
+);
 
 // Processing and reusable tools are applied to every recipe variant, including
 // the mill alternatives, so a second recipe cannot bypass the work tools.
@@ -1645,9 +1668,14 @@ for (const r of RECIPES) {
     r.tools = ['carpentry_saw'];
     r.steps = ['Measure and saw', 'Fit the joints', 'Assemble'];
   }
-  if (['marble', 'cobblestone', 'stone_brick'].includes(r.output.id)) {
+  if (['cobblestone', 'stone_brick'].includes(r.output.id)) {
     r.station = 'stone_mill';
     r.steps = ['Load the rock', 'Cut and dress'];
+  }
+  // CRAFT-9 part 4: marble is dressed at the Mason's Bench (the recipe id stays).
+  if (r.id === 'marble') {
+    r.station = 'masons_bench';
+    r.steps = MASON_STEPS;
   }
   if (r.id === 'marble') r.age = 3;
   if (r.output.id === 'sky_marble') r.steps = ['Grind the glass polish', 'Polish the marble'];
@@ -1738,6 +1766,11 @@ RECIPES.push({ id: 'crucible', name: 'Crucible', station: 'workbench', age: 5, i
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
+/** A station as it's written for people: wood_mill is "wood mill", masons_bench "mason's bench". */
+export function stationWords(station) {
+  return station === 'masons_bench' ? "mason's bench" : String(station).replace(/_/g, ' ');
+}
+
 /**
  * Where an item comes from, in one line a player can act on.
  *
@@ -1754,7 +1787,7 @@ export function howToGet(itemId, blockName = null) {
   if (recipe) {
     const from = Object.entries(recipe.inputs)
       .map(([id, n]) => `${n} ${(ITEMS_BY_ID.get(id)?.name ?? id.replace(/_/g, ' ')).toLowerCase()}`).join(' and ');
-    const where = recipe.station === 'hand' ? 'by hand' : `at a ${recipe.station.replace(/_/g, ' ')}`;
+    const where = recipe.station === 'hand' ? 'by hand' : `at a ${stationWords(recipe.station)}`;
     return recipe.needs === 'water'
       ? `make it ${where} by the river, from ${from}`
       : `make it ${where} from ${from}`;
