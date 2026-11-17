@@ -695,6 +695,7 @@ export class DuiltUI {
       this.closePanel('panel-building');
       if (b.dataset.station === 'counter') this.game.startCounter?.(at);
       else if (b.dataset.station === 'crucible') this.game.startCrucible?.(at);
+      else if (b.dataset.station === 'kiln_oven') this.game.startKilnOven?.(at);
       else this.game.ui.openBench('', b.dataset.station, at);
     }));
     if (body.querySelector('[data-spot]')) this.wireSpot(body, `s:${structure.id}`, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache), 'panel-building');
@@ -766,7 +767,7 @@ export class DuiltUI {
       ${spec?.woods ? this.forestWoodHtml(structure) : ''}
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
       ${structure.type === 'barracks' || structure.type === 'military' ? this.barracksHtml(structure) : ''}
-      ${structure.type === 'workshop' || structure.type === 'foundry' ? this.workshopHtml(structure) : ''}
+      ${structure.type === 'workshop' || structure.type === 'foundry' || structure.type === 'kiln' ? this.workshopHtml(structure) : ''}
       ${structure.type === 'kiln' ? this.firingHtml(structure, spec) : ''}
       ${structure.type === 'sanctuary_white' || structure.type === 'sanctuary_black' ? this.cubeHtml() : ''}
       ${levelSec}
@@ -926,6 +927,12 @@ export class DuiltUI {
           const n = w.fitted.length, fitted = w.fitted.filter(Boolean).length;
           state = w.done ? `${itemName(w.item)}: ready` : w.cut < n ? `${itemName(w.item)}: ${w.cut} of ${n} cut` : `${itemName(w.item)}: ${fitted} of ${n} fitted`;
         }
+      } else if (station === 'crucible' || station === 'kiln_oven') {
+        // CRAFT-9 part 6: a crucible's or a Kiln Oven's pot.
+        const p = (station === 'crucible' ? d.crucibles : d.kilnOvens)?.state(key);
+        if (p?.waiting) state = `${p.waiting} ${station === 'crucible' ? 'melting' : 'firing'}`;
+        else if (p?.molten) state = `${p.molten} to ${station === 'crucible' ? 'pour' : 'draw'}`;
+        else if (p?.out) state = `${p.out} ready`;
       } else {
         const s = d.stationWork?.spot(key);
         if (s?.batches) state = `${s.batches} waiting`;
@@ -945,7 +952,7 @@ export class DuiltUI {
       </div>`).join('');
     return `<div class="building-sec workshop-stations">
         <h4>Stations here</h4>
-        ${rows ? `<div class="train-queue">${rows}</div>` : (structure.type === 'foundry' ? '<p class="dim">No crucible inside yet.</p>' : '<p class="dim">Place a Counter, a Planing Bench, a Wood Mill or a Forge inside to work them from here.</p>')}
+        ${rows ? `<div class="train-queue">${rows}</div>` : (structure.type === 'foundry' ? '<p class="dim">No crucible inside yet.</p>' : structure.type === 'kiln' ? '<p class="dim">No Kiln Oven inside yet. Place one to fire clay and sand.</p>' : '<p class="dim">Place a Counter, a Planing Bench, a Wood Mill or a Forge inside to work them from here.</p>')}
       </div>`;
   }
 

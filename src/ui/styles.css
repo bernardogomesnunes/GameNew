@@ -2321,3 +2321,7 @@ button.busy { cursor: progress; opacity: 0.92; }
 .crucible-bar .pour-gauge, .bench-bar .pour-gauge { position: relative; height: 18px; margin: 0 0 8px; border: 2px solid var(--panel-border, #4a3220); background: #2a1e18; }
 .crucible-bar .pour-window, .bench-bar .pour-window { position: absolute; top: 0; bottom: 0; background: rgba(120, 200, 120, 0.45); }
 .crucible-bar .pour-level, .bench-bar .pour-level { position: absolute; left: 0; top: 0; bottom: 0; background: #ffa53a; }
+/* CRAFT-9 part 6: the held action (Pour, Draw) at the bottom centre of the
+   bar, 56 px tall, under the thumb. */
+.crucible-bar .machine-action { display: block; width: 100%; min-height: 56px; margin: 8px 0 0; font-size: 18px; }
+.kiln-bar .melt-bar i { background: #e0703a; }

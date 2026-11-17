@@ -1394,9 +1394,11 @@ export const RECIPES = [
     batch: 4,
     blurb: 'A painted vase, for a shelf or a doorstep.',
   },
-  // CRAFT-9 part 6: the Kiln Oven fires a vase from half the clay the hand
-  // recipe takes (owner, 16 November: "it should be less expensive in these
-  // machines"). The hand recipe stays for Age 3, before the oven.
+  // CRAFT-9 part 6: the Kiln Oven fires a vase from half the clay the vase
+  // above takes (owner, 16 November: "it should be less expensive in these
+  // machines"). That one is a hand recipe of Age 3, so IMP-19 makes it at the
+  // Workbench; it stays for Age 3, before the oven. The plan's table says 2
+  // clay here; the owner's answer (a machine always costs less) wins.
   {
     id: 'kiln_vase',
     name: 'Vase',

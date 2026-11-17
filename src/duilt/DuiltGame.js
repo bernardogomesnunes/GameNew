@@ -223,6 +223,8 @@ export class DuiltGame {
     this.counters = new Counters({ bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload) });
     // CRAFT3D-3: each crucible's melt and pour, heated only inside a foundry.
     this.crucibles = new Crucibles({ bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: (key) => this.inFoundry(key) });
+    // CRAFT-9 part 6: each Kiln Oven's firing and draw, heated only inside a kiln.
+    this.kilnOvens = new Crucibles({ station: 'kiln_oven', bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: (key) => this.inBuilding(key, 'kiln') });
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
@@ -1477,6 +1479,7 @@ export class DuiltGame {
     this.jobs.tick(dtSeconds);
     this.stationWork.tick(dtSeconds);
     this.crucibles.tick(dtSeconds);
+    this.kilnOvens.tick(dtSeconds);
     // Every couple of seconds: a spot whose station was broken gives its items back.
     this.sincePrune = (this.sincePrune ?? 0) + dtSeconds;
     if (this.sincePrune > 2) {
@@ -1484,6 +1487,7 @@ export class DuiltGame {
       this.stationWork.prune((key, station) => this.spotStands(key, station));
       this.counters.prune((key) => this.spotStands(key, 'counter'));
       this.crucibles.prune((key) => this.spotStands(key, 'crucible'));
+      this.kilnOvens.prune((key) => this.spotStands(key, 'kiln_oven'));
     }
 
     const now = Date.now();
@@ -2160,8 +2164,13 @@ export class DuiltGame {
 
   /** Whether the block at "x,y,z" stands inside a valid Foundry (a crucible's heat). */
   inFoundry(key) {
+    return this.inBuilding(key, 'foundry');
+  }
+
+  /** Whether the block at "x,y,z" stands inside a valid building of `type` ('foundry', 'kiln'). */
+  inBuilding(key, type) {
     const [x, y, z] = key.split(',').map(Number);
-    return this.structures.list().some((s) => s.valid && s.type === 'foundry'
+    return this.structures.list().some((s) => s.valid && s.type === type
       && x >= s.region.minX && x <= s.region.maxX && y >= s.region.minY && y <= s.region.maxY && z >= s.region.minZ && z <= s.region.maxZ);
   }
 
@@ -2224,6 +2233,7 @@ export class DuiltGame {
       stationWork: this.stationWork.toJSON(),
       counters: this.counters.toJSON(),
       crucibles: this.crucibles.toJSON(),
+      kilnOvens: this.kilnOvens.toJSON(),
       herd: herdToJSON(this.herd),
       machines: this.machines.map((m) => ({
         ...(m.kind ? { kind: m.kind } : {}),
@@ -2321,6 +2331,7 @@ export class DuiltGame {
     this.stationWork.loadJSON(data.stationWork);
     this.counters.loadJSON(data.counters);
     this.crucibles.loadJSON(data.crucibles);
+    this.kilnOvens.loadJSON(data.kilnOvens);
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));

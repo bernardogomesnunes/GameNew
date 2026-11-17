@@ -55,6 +55,14 @@ export function batchSeconds(recipe) {
  * lost. Without the map the spot would be dropped unpaid.
  * The workbench fence and gate recipes are not listed: the workbench is not
  * a spot station, so no saved spot can name them.
+ * Part 6 removes no recipe id at a spot station. Brick and glass keep their
+ * ids and move from the workshop to the Kiln Oven; the workshop is not a spot
+ * station, so no saved spot names them. A saved spot can not name a Kiln Oven
+ * recipe either: loadJSON drops any spot whose recipe fails usesSpots, and a
+ * kiln_oven recipe always fails it. Its pots live in DuiltGame.kilnOvens
+ * (duilt/Crucible.js). When the oven is broken, that prune hands the unfired
+ * clay and sand, the fired ware not yet drawn and the drawn ware still
+ * waiting back to the bag, else a storehouse, else keeps it owed.
  */
 const RENAMED_RECIPES = new Map([
   ['mill_planks', 'bench_planks'],
