@@ -2335,3 +2335,12 @@ button.busy { cursor: progress; opacity: 0.92; }
 .crucible-bar .pour-gauge, .bench-bar .pour-gauge, .table-bar .pour-gauge { position: relative; height: 18px; margin: 0 0 8px; border: 2px solid var(--panel-border, #4a3220); background: #2a1e18; }
 .crucible-bar .pour-window, .bench-bar .pour-window, .table-bar .pour-window { position: absolute; top: 0; bottom: 0; background: rgba(120, 200, 120, 0.45); }
 .crucible-bar .pour-level, .bench-bar .pour-level, .table-bar .pour-level { position: absolute; left: 0; top: 0; bottom: 0; background: #ffa53a; }
+/* CRAFT-9: a bench's action in the middle of the bottom row, 56 px tall, under the thumb. */
+.bench-bar .counter-actions { display: grid; grid-template-columns: 1fr auto 1fr; }
+.bench-bar .counter-actions [data-many] { justify-self: end; }
+.bench-bar .counter-actions [data-leave] { justify-self: start; }
+.bench-bar .counter-actions [data-work] { min-height: 56px; min-width: 132px; font-size: 17px; }
+/* CRAFT-9 part 4: the Mason's Bench's three chalk marks, filled as each is tapped. */
+.bench-bar .chisel-marks { display: flex; gap: 8px; justify-content: center; margin: 0 0 8px; }
+.bench-bar .chisel-mark { width: 44px; height: 14px; border: 2px dashed #f4f1ea; border-radius: 3px; background: #6b6660; }
+.bench-bar .chisel-mark.done { border-style: solid; border-color: var(--panel-border, #4a3220); background: #ffa53a; }
