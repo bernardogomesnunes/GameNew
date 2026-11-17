@@ -45,7 +45,7 @@ export class CrucibleBar {
     });
   }
 
-  show() { this.el.hidden = false; this.render(); }
+  show() { this.el.hidden = false; this.said = ''; this.render(); }
   hide() { this.el.hidden = true; }
 
   pour(on) {
@@ -56,6 +56,9 @@ export class CrucibleBar {
       : r.result === 'short' ? w.short
         : r.result === 'spilt' ? w.over : '';
     this.onPoured(r);
+    // What came of the pour stays on the bar until the next tap, also when a
+    // batch melts (or fires) meanwhile and the bar is drawn again.
+    this.said = say;
     this.render(say);
   }
 
@@ -83,7 +86,7 @@ export class CrucibleBar {
     return RECIPES.filter((r) => r.station === this.words.station && r.age <= this.age());
   }
 
-  render(note = '') {
+  render(note = this.said ?? '') {
     if (this.el.hidden) return;
     const key = this.view.key, s = key ? this.crucibles.state(key) : null;
     const recipe = s ? RECIPES.find((r) => r.id === s.recipeId) : null;
@@ -116,6 +119,7 @@ export class CrucibleBar {
     const b = e.target.closest('button');
     if (!b || b.disabled) return;
     const key = this.view.key;
+    this.said = '';
     if (b.dataset.load) {
       const r = this.crucibles.load(key, b.dataset.load, MAX_BATCHES);
       this.render(r.ok ? `Loaded ${r.batches}.` : r.reason);
