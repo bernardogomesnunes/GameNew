@@ -109,7 +109,7 @@ export class CloudAuth {
     // to it — capturing it now means the very first accessToken() call after
     // signing in already has a token, rather than needing a round trip of
     // its own to go and ask for one.
-    const result = await client.auth.signIn.email({ email, password }, { onSuccess: this.captureJwt });
+    const result = await client.auth.signIn.email({ email, password }, { onSuccess: this.captureJwt }).catch(rethrowReadable);
     this.user = unwrapUser(result);
     this.ready = true;
     this.bus?.emit('cloud:auth', { user: this.summary() });
@@ -121,7 +121,7 @@ export class CloudAuth {
     // Better Auth wants a display name; the local part of the email is a
     // reasonable default and keeps the form to two fields.
     const name = email.split('@')[0] || 'Builder';
-    const result = await client.auth.signUp.email({ email, password, name }, { onSuccess: this.captureJwt });
+    const result = await client.auth.signUp.email({ email, password, name }, { onSuccess: this.captureJwt }).catch(rethrowReadable);
     this.user = unwrapUser(result);
     this.ready = true;
     this.bus?.emit('cloud:auth', { user: this.summary() });
@@ -339,12 +339,31 @@ export function readableTokenError(err) {
     + ' account, so they are waiting whenever it answers.';
 }
 
-function readableAuthError(error) {
+/**
+ * The auth SDK throws on a refused sign-in (a 401 comes back as an error, not
+ * in the payload), so its words reach the panel unless they are caught here.
+ */
+function rethrowReadable(err) {
+  throw Object.assign(new Error(readableAuthError(err)), { status: err?.status, cause: err });
+}
+
+export function readableAuthError(error) {
   const code = String(error?.code || '');
   const message = String(error?.message || '');
+  const status = Number(error?.status ?? error?.statusCode ?? 0);
   const hay = `${code} ${message}`.toUpperCase();
+  if (status === 429 || hay.includes('RATE_LIMIT') || hay.includes('TOO MANY')) {
+    return 'Too many tries. Wait a minute, then try again.';
+  }
+  if (error instanceof TypeError || /FAILED TO FETCH|NETWORKERROR|LOAD FAILED/.test(hay)) {
+    return 'Could not reach the sign-in server. Check your connection and try again.';
+  }
+  if (hay.includes('INVALID_CREDENTIALS') || hay.includes('INVALID EMAIL OR PASSWORD') || (status === 401 && !hay.includes('SESSION'))) {
+    return 'Wrong email or password. Check both and try again.';
+  }
+  if (status >= 500) return 'The sign-in server is having trouble. Try again in a minute.';
   if (hay.includes('INVALID_EMAIL_OR_PASSWORD') || hay.includes('INVALID_PASSWORD')) {
-    return 'That email and password do not match.';
+    return 'Wrong email or password. Check both and try again.';
   }
   if (hay.includes('USER_ALREADY_EXISTS') || hay.includes('EXISTING')) {
     return 'There is already an account with that email — sign in instead.';
