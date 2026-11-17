@@ -43,7 +43,7 @@ export class BenchMachine {
     return d.crafting.available(c.age, { station: this.station, near: c.near, atStations: c.atStations });
   }
 
-  render(say = '') { this.bar.render({ machine: this.machine, recipes: this.recipes(), picked: this.picked, say }); }
+  render(say = '') { this.bar.render({ machine: this.machine, recipes: this.recipes(), picked: this.picked, say, station: this.station }); }
 
   pick(id) {
     this.picked = id;

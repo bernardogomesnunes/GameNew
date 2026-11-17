@@ -12,6 +12,7 @@ import { LazyStoryView } from './LazyStoryView.js';
 import { html, escapeHtml } from './html.js';
 import { askConfirm } from './Confirm.js';
 import { BOOK, BOOK_GROUPS, bookGroup } from '../duilt/Collection.js';
+import { chainLineHtml } from './chainLine.js';
 import { TRADERS, CITY_TRADERS } from '../config/traders.js';
 import { ago } from '../duilt/Notices.js';
 import { LORE, loreKnowledge } from '../config/lore.js';
@@ -1989,6 +1990,7 @@ export class UIManager {
       const sold = [...TRADERS, ...CITY_TRADERS].filter((t) => t.goods.some(([id]) => id === item.id)).map((t) => t.name);
       detail.hidden = false;
       detail.innerHTML = `<strong>${escapeHtml(item.name)}</strong>${c.have.has(item.id) ? ' ✓' : ''}
+        ${chainLineHtml(item.id)}
         <p>${escapeHtml((item.madeBy ?? '').replace(/([^.!?])$/, '$1.'))}${sold.length ? ` Sold by ${escapeHtml(sold.join(' and '))}.` : ''}</p>`;
     }));
   }

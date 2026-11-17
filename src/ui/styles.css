@@ -2297,6 +2297,12 @@ button.busy { cursor: progress; opacity: 0.92; }
 }
 .counter-bar[hidden] { display: none; }
 .counter-bar .counter-say { margin: 0 0 8px; font-size: 14px; }
+/* CRAFT-9 part 7: the chain line, one small wrapping line above the bar's text. */
+.chain-line { margin: 0 0 4px; font-size: 12px; line-height: 1.3; opacity: 0.85; overflow-wrap: anywhere; }
+.chain-line .chain-station { font-weight: 700; }
+.chain-line .chain-station.here { text-decoration: underline; color: var(--accent, #8a3b12); }
+.chain-line .chain-sep { opacity: 0.6; }
+.book-detail .chain-line { margin: 4px 0 0; }
 .counter-bar .counter-pieces { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px; }
 .counter-bar .counter-piece { flex: 0 0 auto; min-height: 44px; padding: 6px 10px; white-space: nowrap; }
 @media (pointer: coarse) {
