@@ -45,16 +45,27 @@ export function batchSeconds(recipe) {
 }
 
 /**
- * Recipes removed in CRAFT-9 (plank recipes at the wood mill), each mapped to
- * the planing bench recipe with the same input and output item. A saved spot
- * on one stands at a wood mill, so the next prune (DuiltGame.spotStands)
- * finds no planing bench there and hands its logs and planks back to the
- * bag: nothing is lost. Without the map the spot would be dropped unpaid.
+ * Recipes removed in CRAFT-9, each mapped to the recipe with the same input
+ * and output item that replaced it: plank recipes at the wood mill (part 1,
+ * now at the planing bench) and door and trapdoor recipes at the wood mill
+ * (part 2, now at the joinery bench). loadJSON rewrites a saved spot on one
+ * to the new recipe and its station. A saved spot stands at a wood mill, so
+ * the next prune (DuiltGame.spotStands) finds no matching bench there and
+ * hands its logs, planks and finished items back to the bag: nothing is
+ * lost. Without the map the spot would be dropped unpaid.
+ * The workbench fence and gate recipes are not listed: the workbench is not
+ * a spot station, so no saved spot can name them.
  */
 const RENAMED_RECIPES = new Map([
   ['mill_planks', 'bench_planks'],
   ['mill_planks_white', 'bench_planks_white'],
   ['mill_planks_dark', 'bench_planks_dark'],
+  ['mill_door', 'joinery_door'],
+  ['mill_door_white', 'joinery_door_white'],
+  ['mill_door_dark', 'joinery_door_dark'],
+  ['mill_trapdoor', 'joinery_trapdoor'],
+  ['mill_trapdoor_white', 'joinery_trapdoor_white'],
+  ['mill_trapdoor_dark', 'joinery_trapdoor_dark'],
 ]);
 
 export class StationWork {

@@ -55,9 +55,9 @@ ok('walls, bricks, stairs, roof tiles, pillars, chimneys and calçada among them
   const c = new Crafting({ inventory: inv, world: null });
   const tiles = (atStations) => oneWayEach(c.available(5, { station: null, atStations }));
   const count = (list, out) => list.filter((r) => r.output.id === out).length;
-  const away = tiles([]), mill = tiles(['wood_mill']), stoneMill = tiles(['stone_mill']);
+  const away = tiles([]), mill = tiles(['joinery_bench']), stoneMill = tiles(['stone_mill']);
   ok('away from a mill: one trapdoor, the hand one', count(away, 'trapdoor') === 1 && ['hand', 'workbench'].includes(away.find((r) => r.output.id === 'trapdoor').station));
-  ok('at the wood mill: one trapdoor, the mill\'s cheaper one', count(mill, 'trapdoor') === 1 && mill.find((r) => r.output.id === 'trapdoor').station === 'wood_mill');
+  ok('at the joinery bench: one trapdoor, the bench\'s cheaper one', count(mill, 'trapdoor') === 1 && mill.find((r) => r.output.id === 'trapdoor').station === 'joinery_bench');
   ok('at the stone mill: one stone wall, the mill\'s', count(stoneMill, 'wall_stone') === 1 && stoneMill.find((r) => r.output.id === 'wall_stone').station === 'stone_mill');
   ok('and gravel, which only the mill makes, is still there to find (greyed) away from it', count(away, 'gravel') === 2);
   ok('stone made two ways by hand keeps both', count(away, 'stone') >= 3);

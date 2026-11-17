@@ -709,63 +709,6 @@ export const RECIPES = [
     blurb: 'A saw bench. Stand by it and wood goes further. Place on it to use it.',
   },
   {
-    id: 'mill_door',
-    name: 'Door (mill)',
-    station: 'wood_mill',
-    age: 3,
-    inputs: { planks: 3 },
-    output: { id: 'door', count: 1 },
-    blurb: 'A door for three planks, not four.',
-  },
-  {
-    id: 'mill_trapdoor',
-    name: 'Trapdoor (mill)',
-    station: 'wood_mill',
-    age: 3,
-    inputs: { planks: 2 },
-    output: { id: 'trapdoor', count: 2 },
-    batch: 4,
-    blurb: 'Two trapdoors for two planks.',
-  },
-  {
-    id: 'mill_door_white',
-    name: 'White Door (mill)',
-    station: 'wood_mill',
-    age: 3,
-    inputs: { white_planks: 3 },
-    output: { id: 'door_white', count: 1 },
-    blurb: 'A door for three planks, not four.',
-  },
-  {
-    id: 'mill_trapdoor_white',
-    name: 'White Trapdoor (mill)',
-    station: 'wood_mill',
-    age: 3,
-    inputs: { white_planks: 2 },
-    output: { id: 'trapdoor_white', count: 2 },
-    batch: 4,
-    blurb: 'Two trapdoors for two planks.',
-  },
-  {
-    id: 'mill_door_dark',
-    name: 'Dark Door (mill)',
-    station: 'wood_mill',
-    age: 3,
-    inputs: { dark_planks: 3 },
-    output: { id: 'door_dark', count: 1 },
-    blurb: 'A door for three planks, not four.',
-  },
-  {
-    id: 'mill_trapdoor_dark',
-    name: 'Dark Trapdoor (mill)',
-    station: 'wood_mill',
-    age: 3,
-    inputs: { dark_planks: 2 },
-    output: { id: 'trapdoor_dark', count: 2 },
-    batch: 4,
-    blurb: 'Two trapdoors for two planks.',
-  },
-  {
     id: 'mill_stairs_plank',
     name: 'Plank Stairs (mill)',
     station: 'wood_mill',
@@ -1680,7 +1623,7 @@ RECIPES.push(
   { id: 'bench_planks', name: 'Planks (planing bench)', station: 'planing_bench', age: 1, inputs: { wood: 1 }, output: { id: 'planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log at the planing bench, not two.' },
   { id: 'bench_planks_white', name: 'White Planks (planing bench)', station: 'planing_bench', age: 1, inputs: { white_wood: 1 }, output: { id: 'white_planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log of white wood at the planing bench, not two.' },
   { id: 'bench_planks_dark', name: 'Dark Planks (planing bench)', station: 'planing_bench', age: 1, inputs: { dark_wood: 1 }, output: { id: 'dark_planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log of dark wood at the planing bench, not two.' },
-  { id: 'joinery_bench', name: 'Joinery Bench', station: 'hand', age: 2, inputs: { planks: 6, wood: 2, stone: 2 }, output: { id: 'joinery_bench', count: 1 }, blurb: 'A bench with a mallet and pegs. Place it and stand by it: fences, gates and chests take fewer planks.' },
+  { id: 'joinery_bench', name: 'Joinery Bench', station: 'hand', age: 2, inputs: { planks: 6, wood: 2, stone: 2 }, output: { id: 'joinery_bench', count: 1 }, blurb: 'A bench with a mallet and pegs. Place it and stand by it: doors, trapdoors and chests take fewer planks, and fences and gates are made only here.' },
   { id: 'bleach_bucket', name: 'Bleach Bucket', station: 'hand', age: 3, inputs: { bucket_water: 1, wood: 2 }, output: { id: 'bleach_bucket', count: 1 }, blurb: 'Burn wood for ash and mix with water. Place the bucket, then wash stone or wood in it.' },
   { id: 'stone_white', name: 'Wash White Stone', station: 'bleach_bucket', age: 3, inputs: { stone: 2 }, output: { id: 'stone_white', count: 2 }, batch: 8, steps: ['Place rock in the bath', 'Wash and lift out'], blurb: 'Wash rock in wood-ash bleach to bring out its pale surface.' },
   { id: 'stone_grey', name: 'Temper Grey Stone', station: 'forge', age: 3, inputs: { stone: 4, wood: 1 }, output: { id: 'stone_grey', count: 4 }, batch: 8, steps: ['Load the rock', 'Heat and cool'], blurb: 'A short firing darkens rock to grey.' },
@@ -1722,13 +1665,20 @@ for (const r of RECIPES) {
   }
 }
 
-// IMP-10 step 3: the jointed pieces cost less at a placed Joinery Bench. The
-// hand recipes stay; each bench recipe is the same piece for fewer planks.
+// IMP-10 step 3, CRAFT-9 part 2: the Joinery Bench joins boards into one
+// piece. Each row is [hand recipe id, planks, count]. Door, trapdoor and chest
+// keep their hand recipe (Ages 1 and 2) and cost fewer planks here: door 3
+// not 4, trapdoor 2 not 3, chest 4 not 6. Fences and gates have no hand
+// recipe any more: the loop below copies them to the bench and then deletes
+// the workbench copy.
 const JOINED = [
   ['fence', 1, 3], ['fence_white', 1, 3], ['fence_dark', 1, 3],
   ['gate', 2, 1], ['gate_white', 2, 1], ['gate_dark', 2, 1],
+  ['door', 3, 1], ['door_white', 3, 1], ['door_dark', 3, 1],
+  ['trapdoor', 2, 2], ['trapdoor_white', 2, 2], ['trapdoor_dark', 2, 2],
   ['chest', 4, 1],
 ];
+const BENCH_ONLY = /^(fence|gate)/;
 for (const [id, planks, count] of JOINED) {
   const r = RECIPES.find((x) => x.id === id);
   if (!r) continue;
@@ -1737,9 +1687,18 @@ for (const [id, planks, count] of JOINED) {
     ...r, id: `joinery_${id}`, station: 'joinery_bench', age: Math.max(2, r.age),
     inputs: { [wood]: planks }, output: { ...r.output, count }, batch: r.batch ?? 8,
     steps: ['Cut the joints', 'Peg them with the mallet'],
-    blurb: `${r.blurb ?? ''} Fewer planks at the joinery bench.`.trim(),
+    blurb: `${r.blurb ?? ''} ${BENCH_ONLY.test(id) ? 'Joined at the joinery bench.' : 'Fewer planks at the joinery bench.'}`.trim(),
   });
 }
+for (let i = RECIPES.length - 1; i >= 0; i--) if (BENCH_ONLY.test(RECIPES[i].id) && RECIPES[i].station !== 'joinery_bench') RECIPES.splice(i, 1);
+
+// CRAFT-9 part 2: the wood mill saws plank slabs and trim, three to a plank
+// (by hand: two). Pushed after the hand recipes so a lookup by output id finds
+// the hand recipe, and its age, first.
+RECIPES.push(
+  { id: 'mill_slab_plank', name: 'Plank Slab (mill)', station: 'wood_mill', age: 3, inputs: { planks: 1 }, output: { id: 'slab_plank', count: 3 }, batch: 8, blurb: 'Three slabs from one plank at the mill, not two by hand.' },
+  { id: 'mill_trim_curl', name: 'Curled Trim (mill)', station: 'wood_mill', age: 3, inputs: { planks: 1 }, output: { id: 'trim_curl', count: 3 }, batch: 8, blurb: 'Three curls from one plank at the mill, not two by hand.' },
+);
 
 // IMP-19: the bench from the menu keeps Ages 1 and 2 ("on the bench that I
 // have from the menu I should only be able to craft the more simple stuff").
