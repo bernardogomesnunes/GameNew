@@ -2030,6 +2030,9 @@ export class Game {
       }
     }
     if (sandbox) this.duilt.grantCreativeKit();
+    // CRAFT-9 part 4: an older world past Age 3 was given a Mason's Bench on load.
+    if (this.duilt.gifted && this.ui) setTimeout(() => this.ui.toast({ kind: 'challenge', title: "A Mason's Bench, in your bag",
+      body: 'Walls, pillars, chimneys and shaped roofs are chiselled at it now. Place it and tap the chalk marks.' }), 900);
     // The world's clock picks up where it was left.
     if (this.dayCycle) this.dayCycle.time = this.duilt.dayTime ?? MORNING;
     this.gamification.setDuilt(this.duilt);
@@ -2245,6 +2248,9 @@ export class Game {
       });
     }
 
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space' && this.closeUp?.active) this.closeUp.machine.keyUp?.();
+    });
     window.addEventListener('keydown', (e) => {
       // Nothing in here is a shortcut while you are filling in a form. Typing an
       // email address used to open the workbench on "e" and the buildings panel
@@ -2252,6 +2258,8 @@ export class Game {
       if (isTyping(e)) return;
 
       if (e.code === 'Escape' && this.closeUp?.active) { this.endMachine(); return; }
+      // CRAFT-9: Space works a bench machine on a desktop: held for a held one, a tap for the Mason's Bench.
+      if (e.code === 'Space' && this.closeUp?.active) { e.preventDefault(); if (!e.repeat) this.closeUp.machine.keyDown?.(); return; }
       if (e.code === 'Escape') {
         // Putting down what you are holding comes before putting away panels.
         if (this.moving) { this.cancelMove(); return; }
