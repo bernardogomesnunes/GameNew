@@ -1610,6 +1610,11 @@ for (const id of STONE_MILLED) {
   });
 }
 
+// CRAFT-9 part 5: the plain stone brick recipe (4 stone for 4) goes. The mill's
+// copy (4 stone for 6) is the one stone brick recipe. Its id stays
+// `stone_mill_stone_brick`; StationWork.RENAMED_RECIPES maps the old id to it.
+RECIPES.splice(RECIPES.findIndex((x) => x.id === 'stone_brick'), 1);
+
 // Processing and reusable tools are applied to every recipe variant, including
 // the mill alternatives, so a second recipe cannot bypass the work tools.
 // IMP-10 step 3: the mallet is no longer a bag tool (the Joinery Bench is
@@ -1624,15 +1629,18 @@ RECIPES.push(
   { id: 'bench_planks_white', name: 'White Planks (planing bench)', station: 'planing_bench', age: 1, inputs: { white_wood: 1 }, output: { id: 'white_planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log of white wood at the planing bench, not two.' },
   { id: 'bench_planks_dark', name: 'Dark Planks (planing bench)', station: 'planing_bench', age: 1, inputs: { dark_wood: 1 }, output: { id: 'dark_planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log of dark wood at the planing bench, not two.' },
   { id: 'joinery_bench', name: 'Joinery Bench', station: 'hand', age: 2, inputs: { planks: 6, wood: 2, stone: 2 }, output: { id: 'joinery_bench', count: 1 }, blurb: 'A bench with a mallet and pegs. Place it and stand by it: doors, trapdoors and chests take fewer planks, and fences and gates are made only here.' },
-  { id: 'bleach_bucket', name: 'Bleach Bucket', station: 'hand', age: 3, inputs: { bucket_water: 1, wood: 2 }, output: { id: 'bleach_bucket', count: 1 }, blurb: 'Burn wood for ash and mix with water. Place the bucket, then wash stone or wood in it.' },
-  { id: 'stone_white', name: 'Wash White Stone', station: 'bleach_bucket', age: 3, inputs: { stone: 2 }, output: { id: 'stone_white', count: 2 }, batch: 8, steps: ['Place rock in the bath', 'Wash and lift out'], blurb: 'Wash rock in wood-ash bleach to bring out its pale surface.' },
+  // CRAFT-9 part 5: the bleach bucket is the Wash Tub. The id stays so old
+// worlds and bags keep it.
+  { id: 'bleach_bucket', name: 'Wash Tub', station: 'hand', age: 3, inputs: { bucket_water: 1, wood: 2 }, output: { id: 'bleach_bucket', count: 1 }, blurb: 'Burn wood for ash and mix with water. Place the tub, then wash stone or wood in it.' },
+  { id: 'stone_white', name: 'Wash White Stone', station: 'bleach_bucket', age: 3, inputs: { stone: 2 }, output: { id: 'stone_white', count: 2 }, batch: 8, steps: ['Place rock in the bath', 'Wash and lift out'], blurb: 'Wash rock in wood-ash bleach in the tub to bring out its pale surface.' },
   { id: 'stone_grey', name: 'Temper Grey Stone', station: 'forge', age: 3, inputs: { stone: 4, wood: 1 }, output: { id: 'stone_grey', count: 4 }, batch: 8, steps: ['Load the rock', 'Heat and cool'], blurb: 'A short firing darkens rock to grey.' },
   // Wood takes the same two treatments as rock: a wash in the bleach bucket to
   // bring out pale grain, a firing in the forge to char it dark. One unit in,
   // one unit out; the forge also burns one as fuel.
-  { id: 'wood_white', name: 'Bleach White Log', station: 'bleach_bucket', age: 3, inputs: { wood: 2 }, output: { id: 'white_wood', count: 2 }, batch: 8, steps: ['Lay the logs in the bath', 'Wash and dry'], blurb: 'Wash logs in wood-ash bleach to bring out a pale grain.' },
+  { id: 'wood_white', name: 'Bleach White Log', station: 'bleach_bucket', age: 3, inputs: { wood: 2 }, output: { id: 'white_wood', count: 2 }, batch: 8, steps: ['Lay the logs in the bath', 'Wash and dry'], blurb: 'Wash logs in wood-ash bleach in the tub to bring out a pale grain.' },
   { id: 'wood_dark', name: 'Char Dark Log', station: 'forge', age: 3, inputs: { wood: 5 }, output: { id: 'dark_wood', count: 4 }, batch: 8, steps: ['Load the logs', 'Char and cool'], blurb: 'A slow firing chars logs dark. One log in five is burnt as fuel.' },
-  { id: 'stone_orange', name: 'Tint Orange Stone', station: 'stone_mill', age: 3, inputs: { stone: 4, clay: 1 }, output: { id: 'stone_orange', count: 4 }, batch: 8, steps: ['Grind the clay tint', 'Dress the stone'], blurb: 'Dress rock with warm clay pigment.' },
+  // CRAFT-9 part 5: orange stone is washed at the Wash Tub, not ground at the mill.
+  { id: 'stone_orange', name: 'Wash Orange Stone', station: 'bleach_bucket', age: 3, inputs: { stone: 4, clay: 1 }, output: { id: 'stone_orange', count: 4 }, batch: 8, steps: ['Mix the clay tint into the bath', 'Wash and lift out'], blurb: 'Wash rock in a warm clay bath to tint it orange.' },
   { id: 'wash_clay', name: 'Wash Clay', station: 'hand', age: 1, needs: 'water', inputs: { dirt: 3 }, output: { id: 'clay', count: 1 }, batch: 8, steps: ['Sift the earth', 'Wash out the clay'], blurb: 'Wash earth by the river to separate the clay. A source for your first forge.' },
   { id: 'weapon_mold', name: 'Weapon Mold', station: 'hand', age: 3, inputs: { clay: 3, stone: 1 }, output: { id: 'weapon_mold', count: 1 }, blurb: 'A reusable clay mold for casting weapon blanks.' },
   ...CARPENTRY_TOOLS.map((id) => ({ id, name: id.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' '), station: 'hand', age: 1, inputs: { wood: 2, stone: 2 }, output: { id, count: 1 }, blurb: 'A reusable carpenter’s tool. Furniture, beds, paintings and bows need only the saw in your bag; the chisel is for wooden swords.' })),
