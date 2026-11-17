@@ -1630,7 +1630,7 @@ RECIPES.push(
   { id: 'bench_planks_dark', name: 'Dark Planks (planing bench)', station: 'planing_bench', age: 1, inputs: { dark_wood: 1 }, output: { id: 'dark_planks', count: 3 }, batch: 8, steps: ['Set the log on the bench', 'Plane it square'], blurb: 'Three planks to a log of dark wood at the planing bench, not two.' },
   { id: 'joinery_bench', name: 'Joinery Bench', station: 'hand', age: 2, inputs: { planks: 6, wood: 2, stone: 2 }, output: { id: 'joinery_bench', count: 1 }, blurb: 'A bench with a mallet and pegs. Place it and stand by it: doors, trapdoors and chests take fewer planks, and fences and gates are made only here.' },
   // CRAFT-9 part 5: the bleach bucket is the Wash Tub. The id stays so old
-// worlds and bags keep it.
+  // worlds and bags keep it.
   { id: 'bleach_bucket', name: 'Wash Tub', station: 'hand', age: 3, inputs: { bucket_water: 1, wood: 2 }, output: { id: 'bleach_bucket', count: 1 }, blurb: 'Burn wood for ash and mix with water. Place the tub, then wash stone or wood in it.' },
   { id: 'stone_white', name: 'Wash White Stone', station: 'bleach_bucket', age: 3, inputs: { stone: 2 }, output: { id: 'stone_white', count: 2 }, batch: 8, steps: ['Place rock in the bath', 'Wash and lift out'], blurb: 'Wash rock in wood-ash bleach in the tub to bring out its pale surface.' },
   { id: 'stone_grey', name: 'Temper Grey Stone', station: 'forge', age: 3, inputs: { stone: 4, wood: 1 }, output: { id: 'stone_grey', count: 4 }, batch: 8, steps: ['Load the rock', 'Heat and cool'], blurb: 'A short firing darkens rock to grey.' },
