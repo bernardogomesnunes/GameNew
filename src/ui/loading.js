@@ -38,7 +38,7 @@ export function loadingProgress(pct, label) {
 export function loadingShow(label, { world = false } = {}) {
   let root = el();
   // Still fading out from last time: that one goes now, a fresh one comes.
-  if (root?.classList.contains('ld-gone') || root?.dataset.fading) { ground?.stop(); ground = null; root.remove(); root = null; }
+  if (root?.classList.contains('ld-gone') || root?.getAttribute('data-fading')) { ground?.stop(); ground = null; root.remove(); root = null; }
   if (!root) {
     root = document.createElement('div');
     root.id = 'loading';
@@ -54,7 +54,7 @@ export function loadingShow(label, { world = false } = {}) {
   }
   // A world being opened or made gets daylight and the growing ground; the
   // start of the game and the way back to the worlds keep the night sky.
-  root.classList.toggle('ld-world', world);
+  if (world) root.classList.add('ld-world'); else root.classList.remove?.('ld-world');
   if (world && !ground) {
     const canvas = document.createElement('canvas');
     canvas.className = 'ld-grow';
@@ -81,9 +81,9 @@ export function loadingAside(aside) {
 /** Fades it out and removes it. */
 export function loadingDone() {
   const root = el();
-  if (!root || root.classList.contains('ld-gone') || root.dataset.fading) return;
+  if (!root || root.classList.contains('ld-gone') || root.getAttribute('data-fading')) return;
   loadingProgress(100);
-  root.dataset.fading = '1';
+  root.setAttribute('data-fading', '1');
   // The ground gets a moment to reach the top before the screen fades.
   const grown = ground;
   ground = null;
