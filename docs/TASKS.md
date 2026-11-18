@@ -1191,7 +1191,7 @@ From `analysis-accounts.md`. ACCT-1 to ACCT-8 come before a public launch.
 | ACCT-9 | Sign in with Google and Apple, with our own OAuth keys. Owner agreed 17 November; after ACCT-4. Owner creates the Google Cloud OAuth client. | next |
 | ACCT-10 | Sign out of all devices; session list; session length decided. | open |
 | ACCT-11 | Chosen, unique player name. | open |
-| ACCT-16 | A new account on a device showed the previous account's worlds (owner, 18 November). The database was clean: the new account had no player row and no worlds. Fixed on the device: the remembered list and the Data API token are tied to the account. | done in this PR |
+| ACCT-16 | A new account on a device showed the previous account's worlds (owner, 18 November). The database was clean: the new account had no player row and no worlds. Cause: `players.device_key` is unique, the first account held this phone's key, so the second account's row was refused (409, shown as "That world changed elsewhere") and the error path showed the remembered list. Fixed: the key carries the account, the cached player id resets on account change, and the remembered list and Data API token are tied to the account. | done in #340 |
 | ACCT-15 | Teams (Neon Auth organization plugin) stay on for multiplayer (owner, 17 November). Safe once ACCT-4 is required. | decided |
 | ACCT-12 | Auth webhook and log export, alerts, an admin lookup for support. | open |
 | ACCT-13 | Database capacity: compute awake, higher CU ceiling, `world_chunks.player_id`, region. | open, needs database approval |
