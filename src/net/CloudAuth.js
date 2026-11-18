@@ -104,6 +104,8 @@ export class CloudAuth {
 
   async signIn(email, password) {
     const client = await this.load();
+    // Whoever was signed in before: their token must never answer for this one.
+    this.forgetToken();
     // Caught here too, not only on getSession: signing in is itself a fresh
     // trip to the server, and Managed Better Auth attaches the same header
     // to it — capturing it now means the very first accessToken() call after
@@ -123,6 +125,8 @@ export class CloudAuth {
 
   async signUp(email, password) {
     const client = await this.load();
+    // Whoever was signed in before: their token must never answer for this one.
+    this.forgetToken();
     // Better Auth wants a display name; the local part of the email is a
     // reasonable default and keeps the form to two fields.
     const name = email.split('@')[0] || 'Builder';
@@ -144,6 +148,8 @@ export class CloudAuth {
    */
   async verifyCode(email, otp) {
     const client = await this.load();
+    // Whoever was signed in before: their token must never answer for this one.
+    this.forgetToken();
     const result = await client.auth.emailOtp.verifyEmail({ email, otp: String(otp).trim() }, { onSuccess: this.captureJwt })
       .catch(rethrowReadable);
     if (result?.error) throw new Error(readableAuthError(result.error));
@@ -168,9 +174,13 @@ export class CloudAuth {
     this.user = null;
     // A JWT left over from whoever was signed in before must never answer
     // for whoever signs in next.
+    this.forgetToken();
+    this.bus?.emit('cloud:auth', { user: null });
+  }
+
+  forgetToken() {
     this.jwt = null;
     this.jwtAt = 0;
-    this.bus?.emit('cloud:auth', { user: null });
   }
 
   /** Bound once so it can be handed to the SDK as a plain callback. */
@@ -223,6 +233,9 @@ export class CloudAuth {
    */
   async accessToken() {
     if (!this.client || !this.user) return null;
+    // Owner, 18 November: a new account's worlds screen showed the previous
+    // account's worlds. A token whose subject is somebody else is dropped.
+    if (this.jwt && !tokenIsFor(this.jwt, this.user.id)) this.forgetToken();
     if (this.jwt && Date.now() - this.jwtAt < JWT_LIFETIME_MS - JWT_REFRESH_MARGIN_MS) {
       return this.jwt;
     }
@@ -237,6 +250,7 @@ export class CloudAuth {
       console.error('[duilt] session refresh failed', err);
       throw failure(err, '/auth/get-session');
     }
+    if (this.jwt && !tokenIsFor(this.jwt, this.user.id)) this.forgetToken();
     if (this.jwt) return this.jwt;
     // The session check succeeded but no header came with it — signed out
     // server-side, most likely, since that is the one case Managed Better
@@ -275,6 +289,21 @@ function unwrapUser(result) {
   const user = userFrom(result);
   if (!user) throw new Error('Signed in, but no account came back. Try again.');
   return user;
+}
+
+/**
+ * Whether a JWT was issued to `userId`. Its subject is read without checking
+ * the signature: the Data API checks that. This only stops the game sending
+ * the wrong account's token. An unreadable token counts as not theirs.
+ */
+export function tokenIsFor(jwt, userId) {
+  try {
+    const part = String(jwt).split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const json = JSON.parse(atob(part + '='.repeat((4 - (part.length % 4)) % 4)));
+    return String(json.sub) === String(userId);
+  } catch {
+    return false;
+  }
 }
 
 /** An error that means: the email was never confirmed. */

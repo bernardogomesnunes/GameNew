@@ -70,7 +70,11 @@ const BASE = 'https://ep-test-abc.c-2.us-east-2.aws.neon.tech/neondb';
  * fresh `createClient()` call — see the file header for why a second one
  * would not be testing anything real.
  */
-function signedIn(jwt = 'header.payload.sig') {
+/** A token shaped like a real one, issued to `sub`. */
+const jwtFor = (sub) => `h.${Buffer.from(JSON.stringify({ sub })).toString('base64url')}.sig`;
+const U1 = jwtFor('u1');
+
+function signedIn(jwt = U1) {
   const auth = new CloudAuth(null);
   auth.client = createClient(BASE);
   auth.user = { id: 'u1', email: 'someone@example.com', name: 'Someone' };
@@ -96,7 +100,7 @@ const { auth, calls, restore } = signedIn();
   let token = null, threw = null;
   try { token = await auth.accessToken(); } catch (err) { threw = err; }
 
-  ok(`asking for a token returns the one from the header: ${token}`, token === 'header.payload.sig');
+  ok(`asking for a token returns the one from the header: ${token}`, token === U1);
   ok('and it did not throw', threw === null);
   // Carries `?disableCookieCache=true` — see checkSession's `fresh` option —
   // so this deliberate refresh is a real round trip rather than risking
@@ -109,7 +113,7 @@ const { auth, calls, restore } = signedIn();
 {
   const before = calls.length;
   const second = await auth.accessToken();
-  ok('the second ask returns the same token', second === 'header.payload.sig');
+  ok('the second ask returns the same token', second === U1);
   ok('without asking the network again', calls.length === before);
 }
 
@@ -124,12 +128,21 @@ const { auth, calls, restore } = signedIn();
 
 // --- signing out never lets a stale token answer for the next account ---------
 {
-  ok('the token is cached going in', auth.jwt === 'header.payload.sig');
+  ok('the token is cached going in', auth.jwt === U1);
   await auth.signOut().catch(() => {});
   ok('signing out clears it', auth.jwt === null);
 }
 
 restore();
+
+// --- a token issued to another account is never handed out --------------------
+{
+  const other = signedIn(jwtFor('u1'));
+  other.auth.jwt = jwtFor('someone-else'); other.auth.jwtAt = Date.now();
+  const token = await other.auth.accessToken();
+  ok('another account\'s token is dropped for a fresh one', token === jwtFor('u1'));
+  other.restore();
+}
 
 // --- both retired method names still exist as a documented hazard, not as
 //     something this file relies on --------------------------------------------

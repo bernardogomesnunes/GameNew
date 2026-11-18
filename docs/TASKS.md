@@ -1183,7 +1183,7 @@ From `analysis-accounts.md`. ACCT-1 to ACCT-8 come before a public launch.
 | ACCT-1 | Move sign-in off the archived branch: paid plan, user export, Neon Auth onto `production` (with TECH-19). | Owner decision: plan and database change |
 | ACCT-2 | Forgot password flow; revoke sessions on reset. | open |
 | ACCT-3 | Send auth email from our own domain (Resend or Postmark, SPF, DKIM, DMARC). | Owner: domain and email account |
-| ACCT-4 | Email verification with a 6-digit emailed code, at sign-up and at sign-in for unconfirmed accounts. Also closes the Google-linking and team-invite takeover flaws (CVE-2026-53516, CVE-2026-53514). | game code in this PR (`tests/email-code-browser.mjs`); then Neon Auth: `verify_email_on_sign_up`, `verify_email_on_sign_in` and `require_email_verification` on. Codes come from Neon's shared sender until ACCT-3 |
+| ACCT-4 | Email verification with a 6-digit emailed code, at sign-up and at sign-in for unconfirmed accounts. Closes the Google-linking and team-invite takeover flaws (CVE-2026-53516, CVE-2026-53514). | game code live (#339). Neon settings turned on 18 November, but the owner's test sign-up at 20:34 got a session with no code: the running sign-in service keeps its data on `production` while its settings sit on the archived branch (TECH-19). Not yet in effect |
 | ACCT-5 | Delete my account and download my data (GDPR, App Store). | open, needs database approval |
 | ACCT-6 | Privacy policy, terms and an age gate (COPPA, GDPR). | Owner: legal text |
 | ACCT-7 | Cloudflare Turnstile on sign-up and sign-in. | open |
@@ -1191,6 +1191,7 @@ From `analysis-accounts.md`. ACCT-1 to ACCT-8 come before a public launch.
 | ACCT-9 | Sign in with Google and Apple, with our own OAuth keys. Owner agreed 17 November; after ACCT-4. Owner creates the Google Cloud OAuth client. | next |
 | ACCT-10 | Sign out of all devices; session list; session length decided. | open |
 | ACCT-11 | Chosen, unique player name. | open |
+| ACCT-16 | A new account on a device showed the previous account's worlds (owner, 18 November). The database was clean: the new account had no player row and no worlds. Fixed on the device: the remembered list and the Data API token are tied to the account. | done in this PR |
 | ACCT-15 | Teams (Neon Auth organization plugin) stay on for multiplayer (owner, 17 November). Safe once ACCT-4 is required. | decided |
 | ACCT-12 | Auth webhook and log export, alerts, an admin lookup for support. | open |
 | ACCT-13 | Database capacity: compute awake, higher CU ceiling, `world_chunks.player_id`, region. | open, needs database approval |
