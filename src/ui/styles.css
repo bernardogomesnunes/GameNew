@@ -2309,7 +2309,7 @@ button.busy { cursor: progress; opacity: 0.92; }
 /* CRAFT-9 part 7: the chain line, one small wrapping line above the bar's text. */
 .chain-line { margin: 0 0 4px; font-size: 12px; line-height: 1.3; opacity: 0.85; overflow-wrap: anywhere; }
 .chain-line .chain-station { font-weight: 700; }
-.chain-line .chain-station.here { text-decoration: underline; color: var(--accent, #8a3b12); }
+.chain-line .chain-station.here { text-decoration: underline; color: var(--px-grass-dark, #2f6b23); }
 .chain-line .chain-sep { opacity: 0.6; }
 .book-detail .chain-line { margin: 4px 0 0; }
 .counter-bar .counter-pieces { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 6px; }
@@ -2324,13 +2324,32 @@ button.busy { cursor: progress; opacity: 0.92; }
   .counter-bar .counter-piece { min-height: 48px; padding: 8px 10px; font-size: 14px; }
 }
 .counter-bar .counter-piece.cant { opacity: 0.55; }
+/* Owner, 18 November: the machines' choices show the item's 3D picture, in
+   the game's paper and wood (src/ui/pieceTile.js). The colour is set here
+   because iPhone Safari draws unstyled button text in system blue. */
+.counter-bar .counter-piece { color: var(--px-text, #2b1d12); background: var(--px-paper, #f4e7c5);
+  border: 2px solid var(--px-wood-dark, #4a2e19); box-shadow: inset 0 -3px 0 var(--px-paper-3, #d6bd85);
+  -webkit-tap-highlight-color: transparent; }
+.counter-bar .piece-tile { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px;
+  width: 104px; min-height: 0; padding: 6px 4px 7px; white-space: normal; text-align: center; }
+.counter-bar .piece-pic { position: relative; width: 44px; height: 44px; display: grid; place-items: center; }
+.counter-bar .piece-pic svg { display: block; }
+.counter-bar .piece-pic b { position: absolute; right: -8px; bottom: -2px; padding: 0 3px; font-size: 12px; line-height: 16px;
+  color: #fff; background: var(--px-wood-dark, #4a2e19); }
+.counter-bar .piece-name { font-size: 13px; line-height: 1.15; }
+.counter-bar .piece-tile small { font-size: 11px; line-height: 1.2; opacity: 0.75; }
+.counter-bar .piece-tile[aria-pressed="true"] { background: #e3f0cf; border-color: var(--px-grass-dark, #2f6b23);
+  box-shadow: inset 0 -3px 0 var(--px-grass, #5aa53a), 0 0 0 2px var(--px-grass, #5aa53a); }
+@media (max-width: 600px) {
+  .counter-bar .piece-tile { width: calc((100% - 20px) / 3); min-height: 0; padding: 6px 2px 7px; font-size: 13px; }
+}
 /* CRAFT-9: every machine's action buttons sit bottom centre, 56 px tall, under the thumb. */
 .counter-bar .counter-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .counter-bar button { min-height: 44px; }
 .counter-bar .counter-actions button { min-height: 56px; min-width: 84px; padding: 0 10px; font-size: 16px; touch-action: none; }
 /* The Carpenter's Table: the part to fit next is ringed; the key numbers show only with a keyboard. */
 .table-bar .counter-pieces { justify-content: safe center; }
-.table-bar .counter-piece.next { outline: 3px solid var(--accent, #c98a2b); outline-offset: -3px; }
+.table-bar .counter-piece.next { outline: 3px solid #f1c84b; outline-offset: -3px; border-color: var(--px-wood-dark, #4a2e19); }
 .table-bar .counter-piece[disabled] { opacity: 0.45; text-decoration: line-through; }
 .table-bar kbd { display: inline-block; min-width: 18px; margin-right: 4px; border: 1px solid currentColor; border-radius: 4px; font: inherit; font-size: 12px; text-align: center; opacity: 0.8; }
 @media (pointer: coarse) { .table-bar kbd { display: none; } }
@@ -2345,7 +2364,7 @@ button.busy { cursor: progress; opacity: 0.92; }
 .bench-group { margin: 8px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
 /* CRAFT3D-3: the crucible's bar shares the counter's look. */
 .crucible-bar .counter-piece small, .bench-bar .counter-piece small { display: block; font-size: 11px; opacity: 0.8; }
-.crucible-bar [aria-pressed="true"] { outline: 2px solid var(--accent, #c98a2b); }
+.crucible-bar [aria-pressed="true"] { outline: 3px solid #f1c84b; outline-offset: -3px; }
 .crucible-bar .pour-gauge, .bench-bar .pour-gauge, .table-bar .pour-gauge { position: relative; height: 18px; margin: 0 0 8px; border: 2px solid var(--panel-border, #4a3220); background: #2a1e18; }
 .crucible-bar .pour-window, .bench-bar .pour-window, .table-bar .pour-window { position: absolute; top: 0; bottom: 0; background: rgba(120, 200, 120, 0.45); }
 .crucible-bar .pour-level, .bench-bar .pour-level, .table-bar .pour-level { position: absolute; left: 0; top: 0; bottom: 0; background: #ffa53a; }

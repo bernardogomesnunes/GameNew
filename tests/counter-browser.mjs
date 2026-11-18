@@ -1,6 +1,6 @@
 // CRAFT3D-1 and CRAFT-9 part 3 in a real page, on a phone: place a Carpenter's
 // Table, open it, make an oak table with one held saw stroke, a tap and a
-// drag; leave halfway and come back; then Make another with one stroke and one tap.
+// drag; leave halfway and come back; then Make another with one stroke and one Place.
 import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 import { chromium } from 'playwright';
@@ -104,9 +104,11 @@ try {
   await page.locator('[data-again]').tap();
   await sawStroke();
   await shot('again');
-  await page.locator('[data-part="1"]').tap();
+  // Owner, 18 November: on a phone one Place puts every part in; no part buttons.
+  assert.equal(await page.locator('.table-bar [data-part]').count(), 0, 'no part buttons on a phone');
+  await page.locator('[data-place-all]').tap();
   await page.waitForFunction(() => counterCheck.bag.countOf('table_oak') === 2, null, { timeout: 30_000 });
   assert.equal(await page.evaluate(() => counterCheck.bag.countOf('planks')), 0);
   assert.deepEqual(errors, []);
-  console.log("PASS at a placed Carpenter's Table on a phone: pick, one held saw stroke, tap the legs, drop the top anywhere on the outline, an oak table in the bag; leaving halfway keeps the parts; Make another takes one stroke and one tap");
+  console.log("PASS at a placed Carpenter's Table on a phone: pick, one held saw stroke, tap the legs, drop the top anywhere on the outline, an oak table in the bag; leaving halfway keeps the parts; Make another takes one stroke and one Place");
 } finally { await browser?.close(); await server.close(); }

@@ -4,6 +4,11 @@ import { RECIPES_BY_ID } from '../config/recipes.js';
 import { WORK_MIN, WORK_MAX } from '../duilt/BenchWork.js';
 import { escapeHtml } from './html.js';
 import { chainLineHtml } from './chainLine.js';
+import { pieceTile } from './pieceTile.js';
+
+/** A touch screen: parts go in with one Place (owner, 18 November). Same test as the rest of the game's touch controls. */
+const isTouch = () => (typeof document !== 'undefined' && document.body?.classList.contains('touch'))
+  || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches);
 
 /**
  * CRAFT3D-1, CRAFT-9: the buttons over the Carpenter's Table's close-up
@@ -22,13 +27,14 @@ export class CounterBar {
    * @param onHold (on) => Saw is held or let go
    * @param onPart (i) => part `i` was tapped
    */
-  constructor({ root, view, counters, age = () => Infinity, onLeave = () => {}, onHold = () => {}, onPart = () => {} }) {
+  constructor({ root, view, counters, age = () => Infinity, onLeave = () => {}, onHold = () => {}, onPart = () => {}, onPlaceAll = () => {} }) {
     this.view = view;
     this.counters = counters;
     this.age = age;
     this.onLeave = onLeave;
     this.onHold = onHold;
     this.onPart = onPart;
+    this.onPlaceAll = onPlaceAll;
     this.el = document.createElement('div');
     this.el.className = 'counter-bar table-bar';
     this.el.hidden = true;
@@ -68,7 +74,7 @@ export class CounterBar {
       const last = key ? this.counters.lastMade(key) : null, again = last ? this.counters.ready(last) : null;
       const tiles = this.pieces().map((id) => {
         const can = this.counters.ready(id);
-        return `<button class="counter-piece${can.ok ? '' : ' cant'}" data-piece="${id}" title="${escapeHtml(can.reason ?? '')}">${escapeHtml(itemName(id))}</button>`;
+        return pieceTile({ id, attrs: `data-piece="${escapeHtml(id)}"`, cls: can.ok ? '' : 'cant', title: can.reason ?? '' });
       }).join('');
       const say = note || (last ? (again.ok ? `Make another ${itemName(last).toLowerCase()}, or pick a piece.` : again.reason) : 'Pick a piece to make.');
       this.el.innerHTML = `<p class="counter-say">${escapeHtml(say)}</p><div class="counter-pieces">${tiles}</div>
@@ -82,15 +88,19 @@ export class CounterBar {
     const sawn = w.cut >= n, cut = this.counters.canCut(key), next = this.counters.next(key);
     const settled = !this.view.flying && !this.view.pendingTake;
     const say = note || (!sawn ? (cut.ok ? `Hold Saw and let go in the light band. One stroke cuts the ${itemName(w.item).toLowerCase()}'s ${n === 1 ? 'part' : `${n} parts`}.` : cut.reason)
-      : fitted < n ? (w.quick ? 'Tap a part: every part flies to its place.' : `Tap a part and it flies to its place, or drag it: ${fitted} of ${n} fitted.`)
+      : fitted < n ? (isTouch() ? `Tap Place and the parts go together, or drag one: ${fitted} of ${n} fitted.`
+        : w.quick ? 'Tap a part: every part flies to its place.' : `Tap a part and it flies to its place, or drag it: ${fitted} of ${n} fitted.`)
         : isPatterned(w.item) && !w.carved ? 'Carve the pattern with the chisel.'
           : settled ? 'Done. Make room in your bag and take it.' : 'Done.');
     const gauge = sawn ? '' : `<div class="pour-gauge" aria-label="How far the saw has gone"><i class="pour-window" style="left:${WORK_MIN * 80}%;width:${(WORK_MAX - WORK_MIN) * 80}%"></i><i class="pour-level" data-work-level style="width:0%"></i></div>`;
-    const chips = sawn && fitted < n ? `<div class="counter-pieces">${parts.map((p, i) =>
+    // On a phone the parts go in with one Place; with a mouse each part is its own button (and key).
+    const placing = sawn && fitted < n, TOUCH = isTouch();
+    const chips = placing && !TOUCH ? `<div class="counter-pieces">${parts.map((p, i) =>
       `<button class="counter-piece${i === next || (w.quick && !w.fitted[i]) ? ' next' : ''}" data-part="${i}" ${w.fitted[i] ? 'disabled' : ''}><kbd>${i + 1}</kbd> ${escapeHtml(partLabel(p))}</button>`).join('')}</div>` : '';
     this.el.innerHTML = `${chainLineHtml(w.item, 'counter')}<p class="counter-say">${escapeHtml(say)}</p>${gauge}${chips}
       <div class="counter-actions">
         ${sawn ? '' : `<button class="primary" data-saw ${cut.ok ? '' : 'disabled'}>Saw (hold)</button>`}
+        ${placing && TOUCH ? `<button class="primary" data-place-all ${this.view.flying ? 'disabled' : ''}>Place</button>` : ''}
         ${isPatterned(w.item) && fitted === n && !w.carved ? '<button class="primary" data-carve>Carve</button>' : ''}
         ${w.done && settled ? '<button class="primary" data-take>Take it</button>' : ''}
         ${!w.paid && w.cut === 0 ? '<button class="secondary" data-back>Back</button>' : ''}
@@ -104,6 +114,8 @@ export class CounterBar {
     if (b.dataset.piece) {
       const r = this.view.pick(b.dataset.piece);
       this.render(r.ok ? '' : r.reason);
+    } else if ('placeAll' in b.dataset) {
+      this.onPlaceAll?.();
     } else if (b.dataset.part) {
       this.onPart(Number(b.dataset.part));
     } else if ('again' in b.dataset) {
