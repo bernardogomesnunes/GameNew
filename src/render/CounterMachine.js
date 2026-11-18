@@ -1,4 +1,4 @@
-import { CounterView } from './CounterView.js';
+import { CounterView, FLY_SECONDS } from './CounterView.js';
 import { CounterBar } from '../ui/CounterBar.js';
 
 /** A press that moves less than this (in screen halves) is a tap, more is a drag. */
@@ -13,7 +13,7 @@ const TAP = 0.03;
 export class CounterMachine {
   constructor({ scene, camera, uiRoot, counters, bus, age, onDone, onLeave }) {
     this.view = new CounterView({ scene, camera, counters, bus, onDone: (e) => { onDone?.(e); this.bar.render(); } });
-    this.bar = new CounterBar({ root: uiRoot, view: this.view, counters, age, onLeave, onHold: (on) => this.hold(on), onPart: (i) => this.tap(i) });
+    this.bar = new CounterBar({ root: uiRoot, view: this.view, counters, age, onLeave, onHold: (on) => this.hold(on), onPart: (i) => this.tap(i), onPlaceAll: () => this.placeAll() });
     this.barEl = this.bar.el;
     this.held = -1;
   }
@@ -50,6 +50,24 @@ export class CounterMachine {
     const ok = this.view.tapFit(i);
     this.bar.render();
     return ok;
+  }
+
+  /**
+   * Phones: one Place puts every cut part in its place, one after the other
+   * (owner, 18 November: "we can have one button saying place that place all
+   * the items"). Each one flies as a tap would, a fly's length apart.
+   */
+  placeAll() {
+    clearTimeout(this.placing);
+    const step = () => {
+      const key = this.view.key, w = key ? this.view.counters.work(key) : null;
+      if (!w) return;
+      let i = this.view.counters.next(key);
+      if (i < 0) i = w.fitted.findIndex((f, k) => !f && k < w.cut);
+      if (i < 0 || !this.tap(i)) return;
+      this.placing = setTimeout(step, FLY_SECONDS * 1000 + 60);
+    };
+    step();
   }
 
   /** Desktop keys: Space holds Saw, 1 to 4 tap a part. True when the key was the table's. */

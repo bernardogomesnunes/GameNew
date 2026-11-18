@@ -2,6 +2,7 @@ import { RECIPES } from '../config/recipes.js';
 import { itemName } from '../config/items.js';
 import { escapeHtml } from './html.js';
 import { chainLineHtml } from './chainLine.js';
+import { pieceTile } from './pieceTile.js';
 import { meltSeconds, mouldFor, MAX_BATCHES, POUR_MIN, POUR_MAX } from '../duilt/Crucible.js';
 
 /**
@@ -94,7 +95,8 @@ export class CrucibleBar {
     const tiles = this.recipes().map((r) => {
       const busy = s && s.recipeId !== r.id;
       const takes = Object.entries(r.inputs).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' + ');
-      return `<button class="counter-piece${busy ? ' cant' : ''}" data-load="${r.id}" ${busy ? 'disabled' : ''}>${escapeHtml(itemName(r.output.id))}${r.output.count > 1 ? ` ×${r.output.count}` : ''}<small> ${escapeHtml(takes)} · ${meltSeconds(r)} s</small></button>`;
+      return pieceTile({ id: r.output.id, count: r.output.count, sub: `${takes} · ${meltSeconds(r)} s`, attrs: `data-load="${escapeHtml(r.id)}"`,
+        cls: busy ? 'cant' : '', disabled: busy });
     }).join('');
     const w = this.words, poured = recipe && mouldFor(recipe), moulds = poured && poured !== 'tray';
     const state = !s ? w.load

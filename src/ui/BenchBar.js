@@ -1,6 +1,7 @@
 import { itemName } from '../config/items.js';
 import { escapeHtml } from './html.js';
 import { chainLineHtml } from './chainLine.js';
+import { pieceTile } from './pieceTile.js';
 import { WORK_MIN, WORK_MAX } from '../duilt/BenchWork.js';
 
 /**
@@ -40,7 +41,8 @@ export class BenchBar {
     const chosen = recipes.find((r) => r.id === picked);
     const tiles = recipes.map((r) => {
       const takes = Object.entries(r.inputs).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(' + ');
-      return `<button class="counter-piece${r.ok ? '' : ' cant'}" data-pick="${escapeHtml(r.id)}" ${r.id === picked ? 'aria-pressed="true"' : ''} title="${escapeHtml(r.reason ?? '')}">${escapeHtml(itemName(r.output.id))}${r.output.count > 1 ? ` ×${r.output.count}` : ''}<small> ${escapeHtml(takes)}</small></button>`;
+      return pieceTile({ id: r.output.id, count: r.output.count, sub: takes, attrs: `data-pick="${escapeHtml(r.id)}"`,
+        cls: r.ok ? '' : 'cant', pressed: r.id === picked, title: r.reason ?? '' });
     }).join('');
     const line = say || (!recipes.length ? 'Nothing is made here at this age.'
       : !chosen ? 'Pick what to make.'
