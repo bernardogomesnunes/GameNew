@@ -1688,6 +1688,19 @@ export class Game {
       isCloudConfigured: () => !!this.cloud,
       getCloudUser: () => this.cloudAuth.summary(),
       onCloudRestoreSession: () => this.cloudAuth.restore(),
+      // The email's 6-digit code: confirms it and, on the server's say, signs
+      // in. If it only confirmed, the password typed a moment ago signs in.
+      onCloudVerify: async (email, code, password, creating) => {
+        const user = await this.cloudAuth.verifyCode(email, code);
+        if (!user) return this.ui.cb.onCloudSignIn(email, password);
+        await this.sendUnsent();
+        const moved = await this.migrateLocalWorlds();
+        this.forgetCloudList();
+        this.ui.home?.forgetWorlds?.();
+        this.ui.home?.render();
+        return { moved, creating };
+      },
+      onCloudResendCode: (email) => this.cloudAuth.resendCode(email),
       onCloudSignIn: async (email, password) => {
         await this.cloudAuth.signIn(email, password);
         await this.sendUnsent();

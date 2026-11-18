@@ -109,7 +109,12 @@ export class CloudAuth {
     // to it — capturing it now means the very first accessToken() call after
     // signing in already has a token, rather than needing a round trip of
     // its own to go and ask for one.
-    const result = await client.auth.signIn.email({ email, password }, { onSuccess: this.captureJwt }).catch(rethrowReadable);
+    const result = await client.auth.signIn.email({ email, password }, { onSuccess: this.captureJwt }).catch((err) => {
+      // Never confirmed: the server has emailed a code (verify_email_on_sign_in).
+      if (isUnconfirmed(err)) throw needsCode(email);
+      return rethrowReadable(err);
+    });
+    if (isUnconfirmed(result?.error)) throw needsCode(email);
     this.user = unwrapUser(result);
     this.ready = true;
     this.bus?.emit('cloud:auth', { user: this.summary() });
@@ -122,10 +127,40 @@ export class CloudAuth {
     // reasonable default and keeps the form to two fields.
     const name = email.split('@')[0] || 'Builder';
     const result = await client.auth.signUp.email({ email, password, name }, { onSuccess: this.captureJwt }).catch(rethrowReadable);
-    this.user = unwrapUser(result);
+    // With confirmation required, the account is made but not signed in: a
+    // code is on its way to the email, and the session comes with the code.
+    const user = unwrapUser(result);
+    if (!hasSession(result)) throw needsCode(email);
+    this.user = user;
     this.ready = true;
     this.bus?.emit('cloud:auth', { user: this.summary() });
     return this.user;
+  }
+
+  /**
+   * Confirms the email with the 6-digit code it was sent. The server signs
+   * you in with it (auto_sign_in_after_verification); returns the user, or
+   * null when it confirmed but did not sign in, so the caller signs in.
+   */
+  async verifyCode(email, otp) {
+    const client = await this.load();
+    const result = await client.auth.emailOtp.verifyEmail({ email, otp: String(otp).trim() }, { onSuccess: this.captureJwt })
+      .catch(rethrowReadable);
+    if (result?.error) throw new Error(readableAuthError(result.error));
+    const user = userFrom(result);
+    if (!user || !hasSession(result)) return null;
+    this.user = user;
+    this.ready = true;
+    this.bus?.emit('cloud:auth', { user: this.summary() });
+    return this.user;
+  }
+
+  /** Sends a new code to `email`. */
+  async resendCode(email) {
+    const client = await this.load();
+    const result = await client.auth.emailOtp.sendVerificationOtp({ email, type: 'email-verification' })
+      .catch(rethrowReadable);
+    if (result?.error) throw new Error(readableAuthError(result.error));
   }
 
   async signOut() {
@@ -242,6 +277,23 @@ function unwrapUser(result) {
   return user;
 }
 
+/** An error that means: the email was never confirmed. */
+function isUnconfirmed(err) {
+  const hay = `${err?.code ?? ''} ${err?.message ?? ''}`.toUpperCase();
+  return hay.includes('EMAIL_NOT_VERIFIED') || hay.includes('EMAIL_NOT_CONFIRMED') || hay.includes('EMAIL VERIFICATION REQUIRED');
+}
+
+/** Thrown when the next step is typing the code sent to `email`. */
+export function needsCode(email) {
+  return Object.assign(new Error(`We sent a 6-digit code to ${email}.`), { needsCode: true, email });
+}
+
+/** Whether a sign-up or code answer came with a session (signed in) or not. */
+export function hasSession(result) {
+  const data = result?.data ?? result;
+  return Boolean(data?.token || data?.session);
+}
+
 function userFrom(result) {
   const data = result?.data ?? result;
   const user = data?.user ?? (data?.id ? data : null);
@@ -352,12 +404,15 @@ export function readableAuthError(error) {
   const message = String(error?.message || '');
   const status = Number(error?.status ?? error?.statusCode ?? 0);
   const hay = `${code} ${message}`.toUpperCase();
+  if (hay.includes('TOO_MANY_ATTEMPTS') || hay.includes('TOO MANY ATTEMPTS')) return 'Too many wrong codes. Send a new one.';
   if (status === 429 || hay.includes('RATE_LIMIT') || hay.includes('TOO MANY')) {
     return 'Too many tries. Wait a minute, then try again.';
   }
   if (error instanceof TypeError || /FAILED TO FETCH|NETWORKERROR|LOAD FAILED/.test(hay)) {
     return 'Could not reach the sign-in server. Check your connection and try again.';
   }
+  if (hay.includes('INVALID_OTP') || hay.includes('INVALID OTP')) return 'That code is not right. Check the email and type it again.';
+  if (hay.includes('OTP_EXPIRED') || hay.includes('OTP EXPIRED')) return 'That code has expired. Send a new one.';
   if (hay.includes('INVALID_CREDENTIALS') || hay.includes('INVALID EMAIL OR PASSWORD') || (status === 401 && !hay.includes('SESSION'))) {
     return 'Wrong email or password. Check both and try again.';
   }
