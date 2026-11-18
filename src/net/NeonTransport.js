@@ -141,9 +141,12 @@ export class NeonTransport {
    * and RLS resolves ownership through it, so it has to exist before any write.
    */
   async ensurePlayer() {
-    if (this.playerId) return this.playerId;
     const me = this.auth.summary();
     if (!me) throw new Error('Sign in to sync worlds to the cloud.');
+    // Found for one account, it is never the answer for the next one signed in here.
+    if (this.playerId && this.playerFor === me.id) return this.playerId;
+    this.playerId = null;
+    this.playerFor = me.id;
 
     const existing = await this.request(`/players?select=id&limit=1`);
     if (existing?.length) {
@@ -151,13 +154,15 @@ export class NeonTransport {
       return this.playerId;
     }
 
-    // device_key is still the local install's id: it is not an identity, but it
-    // is a useful record of which browser a cloud account was first opened from.
+    // device_key records which browser a cloud account was first opened from.
     const created = await this.request('/players', {
       method: 'POST',
       prefer: 'return=representation',
       body: [{
-        device_key: deviceKey(),
+        // Unique in the table, so it carries the account too: a second
+        // account on the same phone was refused its row with a 409 (owner,
+        // 18 November), and every list and save after that failed.
+        device_key: `${deviceKey()}:${me.id}`,
         auth_user_id: me.id,
         display_name: me.name || me.email || null,
       }],

@@ -1492,16 +1492,35 @@ export class Game {
     return sortWorlds([...this.local.list(), ...(this.cloud ? this.rememberedWorlds() : [])]);
   }
 
+  /** Who the remembered list belongs to: the signed-in account, once known. */
+  rememberedFor() {
+    return this.cloudAuth?.ready ? (this.cloudAuth.user?.id ?? null) : undefined;
+  }
+
   /** The account's list, as last seen — only what a row on the screen needs. */
   rememberWorlds(rows) {
     try {
-      localStorage.setItem(WORLDS_SEEN, JSON.stringify(rows.map(({ id, name, mode, battle, age, updatedAt }) => ({ id, name, mode, battle, age, updatedAt }))));
+      // Kept with the account it came from (owner, 18 November: a new
+      // account showed the previous one's worlds), see rememberedWorlds.
+      const user = this.cloudAuth?.user?.id ?? null;
+      localStorage.setItem(WORLDS_SEEN, JSON.stringify({ user, rows: rows.map(({ id, name, mode, battle, age, updatedAt }) => ({ id, name, mode, battle, age, updatedAt })) }));
     } catch { /* a full or blocked storage just means no head start next time */ }
   }
 
+  /**
+   * The account's list as last seen, only for that account. Before the
+   * session check has answered, the last account on this device is the best
+   * guess (signing out forgets it); once it has, a different account, or
+   * nobody, sees none of it. A list saved before it carried its account
+   * shows only before that answer.
+   */
   rememberedWorlds() {
     try {
-      const rows = JSON.parse(localStorage.getItem(WORLDS_SEEN) ?? '[]');
+      const saved = JSON.parse(localStorage.getItem(WORLDS_SEEN) ?? '[]');
+      const owner = Array.isArray(saved) ? undefined : saved?.user;
+      const rows = Array.isArray(saved) ? saved : saved?.rows;
+      const now = this.rememberedFor();
+      if (now !== undefined && (now === null || owner !== now)) return [];
       return Array.isArray(rows) ? rows.filter((r) => r && typeof r.id === 'string') : [];
     } catch {
       return [];
