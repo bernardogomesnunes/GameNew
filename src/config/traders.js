@@ -84,7 +84,7 @@ export const TRADERS = [
       ['seeds_carrot', 4, 2], ['seeds_potato', 4, 2], ['seeds_cabbage', 4, 2], ['seeds_lettuce', 4, 2],
       ['seeds_pepper', 3, 3], ['seeds_zucchini', 3, 3], ['seeds_broccoli', 3, 3], ['seeds_coffee', 3, 4],
       ['sapling', 2, 3], ['egg', 4, 2], ['milk', 2, 3], ['wool', 4, 3], ['feather', 4, 2], ['hide', 2, 3],
-      ['seeds_hemp', 4, 2], ['hemp_fibre', 6, 2], ['string', 4, 3],
+      ['seeds_hemp', 4, 2], ['seeds_cotton', 4, 2], ['hemp_fibre', 6, 2], ['string', 4, 3],
     ],
     rare: [
       ['potato', 6, 3, 1], ['cabbage', 6, 3, 1], ['lettuce', 6, 3, 1], ['pepper', 6, 3, 2], ['zucchini', 6, 3, 2],
@@ -120,7 +120,7 @@ export const CITY_TRADERS = [
     goods: [
       ['cooked_meat', 4, 3], ['fruit', 6, 2], ['vegetables', 6, 2], ['egg', 6, 2], ['milk', 2, 3],
       ['beer', 2, 3], ['kombucha', 2, 3], ['coffee', 2, 3], ['wool', 4, 3],
-      ['seeds_pepper', 3, 3], ['seeds_zucchini', 3, 3], ['seeds_broccoli', 3, 3], ['seeds_coffee', 3, 4], ['seeds_hemp', 4, 2],
+      ['seeds_pepper', 3, 3], ['seeds_zucchini', 3, 3], ['seeds_broccoli', 3, 3], ['seeds_coffee', 3, 4], ['seeds_hemp', 4, 2], ['seeds_cotton', 4, 2],
     ],
   },
 ];
