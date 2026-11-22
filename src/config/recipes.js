@@ -1801,6 +1801,10 @@ RECIPES.push({ id: 'crucible', name: 'Crucible', station: 'workbench', age: 5, i
 RECIPES.push({ id: 'kiln_oven', name: 'Kiln Oven', station: 'workbench', age: 4, inputs: { cobblestone: 8, clay: 2 }, output: { id: 'kiln_oven', count: 1 },
   blurb: 'Place it inside a kiln: load clay or sand, let it fire, then draw out brick, glass or a vase.' });
 
+// PLAY-7: the quarry hut's tool rack.
+RECIPES.push({ id: 'tool_rack', name: 'Tool Rack', station: 'workbench', age: 3, inputs: { planks: 3, stone: 2 }, output: { id: 'tool_rack', count: 1 },
+  blurb: 'A pickaxe, a shovel and a hammer on a rack. A quarry hut keeps one.' });
+
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
 /** A station as it's written for people: wood_mill is "wood mill", masons_bench "mason's bench". */

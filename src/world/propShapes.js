@@ -788,6 +788,23 @@ PROP_SHAPES.weapon_rack = [
   { minX: 0.64, maxX: 0.98, minY: 0.3, maxY: 0.54, minZ: 0.7, maxZ: 0.76, color: 0x8a5a36 },
   { minX: 0.76, maxX: 0.86, minY: 0.36, maxY: 0.48, minZ: 0.66, maxZ: 0.7, color: IRON },
 ];
+// A tool rack (PLAY-7): two posts and a rail against the back of the cell,
+// a pickaxe, a shovel and a hammer leaning in it.
+PROP_SHAPES.tool_rack = [
+  { minX: 0.04, maxX: 0.12, minY: 0, maxY: 0.98, minZ: 0.8, maxZ: 0.9 },
+  { minX: 0.88, maxX: 0.96, minY: 0, maxY: 0.98, minZ: 0.8, maxZ: 0.9 },
+  { minX: 0.04, maxX: 0.96, minY: 0.14, maxY: 0.2, minZ: 0.76, maxZ: 0.84 },
+  { minX: 0.04, maxX: 0.96, minY: 0.72, maxY: 0.78, minZ: 0.76, maxZ: 0.84 },
+  // A pickaxe: haft, and a head across the top.
+  { minX: 0.22, maxX: 0.26, minY: 0.06, maxY: 0.9, minZ: 0.7, maxZ: 0.74, color: HILT },
+  { minX: 0.1, maxX: 0.38, minY: 0.9, maxY: 0.98, minZ: 0.69, maxZ: 0.75, color: STEEL },
+  // A shovel: haft, grip and blade.
+  { minX: 0.48, maxX: 0.52, minY: 0.26, maxY: 0.96, minZ: 0.7, maxZ: 0.74, color: HILT },
+  { minX: 0.42, maxX: 0.58, minY: 0.05, maxY: 0.28, minZ: 0.69, maxZ: 0.75, color: STEEL },
+  // A hammer: haft and block head.
+  { minX: 0.76, maxX: 0.8, minY: 0.08, maxY: 0.8, minZ: 0.7, maxZ: 0.74, color: HILT },
+  { minX: 0.66, maxX: 0.9, minY: 0.8, maxY: 0.94, minZ: 0.68, maxZ: 0.76, color: IRON },
+];
 // A training dummy: a post in a cross-foot, a straw-stuffed sack of a body
 // with arms out, a head with a red mark painted on it, and one on the chest.
 PROP_SHAPES.training_dummy = [

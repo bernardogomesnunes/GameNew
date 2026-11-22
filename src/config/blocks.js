@@ -525,6 +525,9 @@ BLOCKS.push(
 // barracks wall, a straw dummy to beat in the yard, and a target to shoot
 // at. Each faces you the way a chair does.
 export const WEAPON_RACK = 212, TRAINING_DUMMY = 216, ARCHERY_TARGET = 220;
+// A rack of digging tools (PLAY-7): pickaxe, shovel and hammer, for the hut at a quarry.
+export const TOOL_RACK = 540;
+quad(TOOL_RACK, { name: 'Tool Rack', glyph: 'rack', color: 0x7a5636, shape: 'tool_rack', material: 'wood', unlock: null });
 quad(WEAPON_RACK, { name: 'Weapon Rack', glyph: 'rack', color: 0x7a5636, shape: 'weapon_rack', material: 'wood', unlock: null });
 quad(TRAINING_DUMMY, { name: 'Training Dummy', glyph: 'dummy', color: 0xd9b866, shape: 'training_dummy', material: 'plant', unlock: null });
 quad(ARCHERY_TARGET, { name: 'Archery Target', glyph: 'target', color: 0xe9e2cf, shape: 'archery_target', material: 'wood', unlock: null });

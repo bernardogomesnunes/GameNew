@@ -78,11 +78,11 @@ A hole you dig into rock, open to the sky.
 
 | Level | Name | Average output / game day | Storage slots | Level fee |
 | --- | --- | --- | --- | --- |
-| 1 | A Scrape | 2.4 Stone, 1.2 Coal | — | None |
-| 2 | A Working Face | 2.5 Stone, 1.25 Coal | — | None |
-| 3 | A Deep Dig | 2.62 Stone, 1.31 Coal | — | None |
-| 4 | A Quarry Face | 2.74 Stone, 1.37 Coal | — | None |
-| 5 | An Open Pit | 2.88 Stone, 1.44 Coal | — | None |
+| 1 | A Scrape | 2.67 Stone, 0.67 White Stone, 0.67 Dark Grey Stone, 0.67 Orange Stone, 0.67 Turquoise Stone, 1.33 Coal | — | None |
+| 2 | A Working Face | 2.74 Stone, 0.69 White Stone, 0.69 Dark Grey Stone, 0.69 Orange Stone, 0.69 Turquoise Stone, 1.37 Coal | — | None |
+| 3 | A Deep Dig | 2.82 Stone, 0.71 White Stone, 0.71 Dark Grey Stone, 0.71 Orange Stone, 0.71 Turquoise Stone, 1.41 Coal | — | None |
+| 4 | A Quarry Face | 2.91 Stone, 0.73 White Stone, 0.73 Dark Grey Stone, 0.73 Orange Stone, 0.73 Turquoise Stone, 1.45 Coal | — | None |
+| 5 | An Open Pit | 3 Stone, 0.75 White Stone, 0.75 Dark Grey Stone, 0.75 Orange Stone, 0.75 Turquoise Stone, 1.5 Coal | — | None |
 
 ### Pen
 

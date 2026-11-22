@@ -441,6 +441,7 @@ export const ITEMS = [
   { id: 'kombucha', name: 'Kombucha', kind: 'drink', stackTo: 10, color: 0xd0705a, glyph: 'flask', boost: 'strength', madeBy: 'Brewed at a workshop from fruit and leaves — +2 on every hit for three minutes' },
   { id: 'coffee', name: 'Coffee', kind: 'drink', stackTo: 10, color: 0x6b4630, glyph: 'flask', boost: 'speed', madeBy: 'Brewed at a workshop from coffee beans — faster on your feet for three minutes' },
   // The defence buildings' furnishings (White path).
+  { id: 'tool_rack', name: 'Tool Rack', kind: 'refined', stackTo: STACK_GOODS, color: 0x7a5636, glyph: 'rack', block: 540, madeBy: 'Planks and stone knocked into a rack for a pickaxe, a shovel and a hammer — a quarry hut keeps one' },
   { id: 'weapon_rack', name: 'Weapon Rack', kind: 'refined', stackTo: STACK_GOODS, color: 0x7a5636, glyph: 'rack', block: 212, madeBy: 'A sword, a spear, an axe and a shield on a rack — a barracks needs one' },
   { id: 'training_dummy', name: 'Training Dummy', kind: 'refined', stackTo: STACK_GOODS, color: 0xd9b866, glyph: 'dummy', block: 216, madeBy: 'Straw on a post, for soldiers to practise on' },
   { id: 'archery_target', name: 'Archery Target', kind: 'refined', stackTo: STACK_GOODS, color: 0xe9e2cf, glyph: 'target', block: 220, madeBy: 'Painted rings on a straw boss, for archers to practise on' },

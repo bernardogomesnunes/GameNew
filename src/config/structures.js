@@ -111,8 +111,8 @@ const plural = (n, word) => `${n} more ${word}${n === 1 ? '' : 's'}`;
  *           ever reach it without unlocking it first. Anything that's part
  *           of the walls has no `fit`, and is built in with Change it.
  */
-function want(blocks, n, item, word, { fit = null, say = null } = {}) {
-  return work((ctx) => count(ctx, blocks), n, { item, key: item, fit, say: say ?? ((k) => plural(k, word)), blocks });
+function want(blocks, n, item, word, { fit = null, say = null, floor = false } = {}) {
+  return work((ctx) => count(ctx, blocks), n, { item, key: item, fit, floor, say: say ?? ((k) => plural(k, word)), blocks });
 }
 
 /**
@@ -130,19 +130,24 @@ function want(blocks, n, item, word, { fit = null, say = null } = {}) {
  *            the structure's own `credit` — see StructureRegistry.evolve):
  *            the level is yours from then on, blocks or no blocks
  */
-function work(measure, n, { item, per = 1, key = item, fit = null, say, blocks = null }) {
+function work(measure, n, { item, per = 1, key = item, fit = null, floor = false, say, blocks = null }) {
   const short = (ctx) => Math.max(0, n - measure(ctx) - (ctx.credit?.[key] ?? 0));
   return {
     test: (ctx) => short(ctx) === 0,
     say: (ctx) => say(short(ctx)),
-    short, item, key, per, blocks, ...(fit ? { fit } : {}),
+    short, item, key, per, blocks, ...(fit ? { fit } : {}), ...(floor ? { floor } : {}),
   };
 }
+/** The quarry's stone machines: a mason's bench, and a stone mill in any of its four facings. */
+const QUARRY_BENCH = [538], QUARRY_MILL = [380, 381, 382, 383];
 const LIGHT_ITEMS = ['lantern', 'firefly_lantern', 'chandelier', 'torch'];
 
 
 /** Counts matching blocks in the region. */
 const count = (ctx, ids) => ctx.countOf(ids);
+
+/** One quarry cycle: plain rock, every coloured stone, and coal for torches. */
+const QUARRY_YIELD = { stone: 4, stone_white: 1, stone_grey: 1, stone_orange: 1, stone_turquoise: 1, coal: 2 };
 
 export const STRUCTURES = [
   {
@@ -306,18 +311,17 @@ export const STRUCTURES = [
         say: () => 'Open it to the sky — it can’t be underground',
       },
     ],
-    // Stone has fewer sinks than wood or food — you don't eat it, and most
-    // recipes want a handful, not a steady stream — so it piled up faster
-    // than anything else and, once storehouses filled, started eating bag
-    // slots by the stack. A fresh scrape at the rock is worth barely
-    // anything — ten stone a day, already under the 10-15/day ceiling
-    // asked for across every building — and it is the levels below, not
-    // the building itself, that turn it into something worth having
-    // staffed, climbing toward that same ceiling rather than past it.
-    // Quarry output is plain rock; use a mill, forge or bleach bath to finish it.
+    // Stone has fewer sinks than wood or food, so it stays under the 10-15 a
+    // day ceiling asked for across every building: 13.3 a day at the first
+    // rung, climbing to 15 at the last. Owner, 22 November: "Quarry generates
+    // few stone, and should generate all variants of color." A cycle now
+    // hands over four stone, and one of each coloured stone (white, dark grey,
+    // orange and turquoise), so every variety the game has turns up without a trip
+    // through the wash tub or forge. The tub and forge stay the way to make
+    // more of white and grey (CRAFT-2); this is the small steady supply.
     // And coal (owner, 15 November: "coal that quarry gives"), for torches.
-    produces: { stone: 2, coal: 1 },
-    everySeconds: 14400,
+    produces: QUARRY_YIELD,
+    everySeconds: 25920,
     skill: 'building',
     /**
      * How a quarry grows — the first building to use the same ladder a
@@ -336,38 +340,46 @@ export const STRUCTURES = [
     // pays and in how often one runs — but stone tops out at fifteen a
     // day even at the last rung, not the 480 the old flat 8-per-120s rate
     // worked out to.
+    // Machines come with the rungs: a mason's bench at the third (a stone
+    // cutter's table), a stone mill at the fourth, and a second of each at
+    // the last. Evolve sets them down from the bag, as it does a light.
     tiers: [
-      { id: 'seam', name: 'A Scrape', blurb: 'A scrape at the rock. Barely worth the walk.', needs: [] },
+      { id: 'seam', name: 'A Scrape', blurb: 'A scrape at the rock, and a tool hut beside it.', needs: [] },
       {
         id: 'face', name: 'A Working Face', blurb: 'Wide enough to work properly.',
-        produces: { stone: 2, coal: 1 }, everySeconds: 13800,
+        produces: QUARRY_YIELD, everySeconds: 25200,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 40, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 16, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
         ],
       },
       {
-        id: 'deepcut', name: 'A Deep Dig', blurb: 'Dug back far enough to keep two haulers busy.',
-        produces: { stone: 2, coal: 1 }, everySeconds: 13200,
+        id: 'deepcut', name: 'A Deep Dig', blurb: 'Dug back far enough to keep two haulers busy, with a mason\'s bench to cut the stone.',
+        produces: QUARRY_YIELD, everySeconds: 24480,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 60, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 28, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
+          want(QUARRY_BENCH, 1, 'masons_bench', "mason's bench", { fit: ['masons_bench'], floor: true }),
         ],
       },
       {
-        id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, opened right up.',
-        produces: { stone: 2, coal: 1 }, everySeconds: 12600,
+        id: 'quarryface', name: 'A Quarry Face', blurb: 'A proper face of rock, with a stone mill grinding beside it.',
+        produces: QUARRY_YIELD, everySeconds: 23760,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 90, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 44, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
+          want(QUARRY_BENCH, 1, 'masons_bench', "mason's bench", { fit: ['masons_bench'], floor: true }),
+          want(QUARRY_MILL, 1, 'stone_mill', 'stone mill', { fit: ['stone_mill'], floor: true }),
         ],
       },
       {
-        id: 'openpit', name: 'An Open Pit', blurb: 'As much rock as a claim this size can show.',
-        produces: { stone: 2, coal: 1 }, everySeconds: 12000,
+        id: 'openpit', name: 'An Open Pit', blurb: 'As much rock as a claim this size can show, worked by two benches and two mills.',
+        produces: QUARRY_YIELD, everySeconds: 23040,
         needs: [
           work((ctx) => count(ctx, [STONE, COBBLE]), 130, { item: 'planks', per: 2, key: 'rock', say: (k) => `Uncover ${k} more stone blocks in it` }),
           work((ctx) => ctx.countOf(0), 64, { item: 'planks', per: 2, key: 'dug', say: (k) => `Dig out ${k} more blocks from it` }),
+          want(QUARRY_BENCH, 2, 'masons_bench', "mason's bench", { fit: ['masons_bench'], floor: true }),
+          want(QUARRY_MILL, 2, 'stone_mill', 'stone mill', { fit: ['stone_mill'], floor: true }),
         ],
       },
     ],

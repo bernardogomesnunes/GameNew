@@ -200,6 +200,7 @@ Current item reference, generated from the item registry by `node scripts/update
 | Iron Ingot | Smelted at a foundry | 100 | — |
 | Copper Ingot | Smelted at a foundry | 100 | — |
 | Coins | Struck at a foundry, or found in old chests | 500 | — |
+| Tool Rack | Planks and stone knocked into a rack for a pickaxe, a shovel and a hammer — a quarry hut keeps one | 100 | — |
 | Weapon Rack | A sword, a spear, an axe and a shield on a rack — a barracks needs one | 100 | — |
 | Training Dummy | Straw on a post, for soldiers to practise on | 100 | — |
 | Archery Target | Painted rings on a straw boss, for archers to practise on | 100 | — |

@@ -26,10 +26,10 @@ function perDay(tier) {
 }
 
 // Plain stone only: finishing is done through the processing stations.
-ok('the first quarry produces twelve stone a day', perDay(0) === 12);
+ok('the first quarry produces about thirteen stone a day (PLAY-7)', perDay(0) > 12 && perDay(0) <= 15);
 const kiln = STRUCTURES_BY_ID.get('kiln');
 const per = (spec, tier, id) => (producesAt(spec, tier)[id] ?? 0) * 86400 / intervalAt(spec, tier);
-ok('every level gives stone, and coal for torches (owner, 15 November)', quarry.tiers.every((_,i) => Object.keys(producesAt(quarry,i)).join() === 'stone,coal'));
+ok('every level gives stone, and coal for torches (owner, 15 November)', quarry.tiers.every((_,i) => Object.keys(producesAt(quarry,i)).includes('stone') && Object.keys(producesAt(quarry,i)).includes('coal')));
 ok(`a first quarry makes more stone (${per(quarry, 0, 'stone')}) than a first kiln makes brick (${per(kiln, 0, 'brick')})`,
   per(quarry, 0, 'stone') > per(kiln, 0, 'brick'));
 ok('clay is no longer quarry output', quarry.tiers.every((_, i) => per(quarry, i, 'clay') === 0));

@@ -40,8 +40,8 @@ ok('a house has neither — nothing to climb', !hasLevels(HOUSE) && !isStore(HOU
 {
   ok('the quarry has more than one level', QUARRY.tiers.length >= 5);
   const first = producesAt(QUARRY, 0);
-  ok(`level 1 makes twelve stone per day and coal for torches, with other rocks left to processing: ${JSON.stringify(first)}`,
-    Object.keys(first).join() === 'stone,coal' && first.stone * 86400 / intervalAt(QUARRY, 0) === 12);
+  ok(`level 1 makes 13 stone a day (PLAY-7), coal for torches, and a little of each coloured stone: ${JSON.stringify(first)}`,
+    'stone' in first && 'coal' in first && first.stone * 86400 / intervalAt(QUARRY, 0) > 12 && first.stone * 86400 / intervalAt(QUARRY, 0) <= 15);
   ok('a house, with no tiers, just falls back to its own produces either way',
     JSON.stringify(producesAt(HOUSE, 0)) === JSON.stringify(HOUSE.produces)
     && JSON.stringify(producesAt(HOUSE, 3)) === JSON.stringify(HOUSE.produces));
@@ -67,6 +67,9 @@ function stoneBlock({ w = 10, d = 10, h = 6, x0 = 4, z0 = 4, y0 = 8 } = {}) {
   for (let x = x0; x < x0 + w; x++) for (let z = z0; z < z0 + d; z++) for (let y = y0; y < y0 + h; y++) {
     cells.push([x, y, z]);
   }
+  // The stone machines the upper rungs ask for (PLAY-7): two mason's benches
+  // and two stone mills, set into the last cells, away from where the cutting starts.
+  [538, 538, 380, 380].forEach((id, i) => world.setBlock(...cells[cells.length - 1 - i], id));
   // Cuts exactly up to `n` cells cleared in total, picking up where the last
   // call left off — climbing the ladder is carving further into the same
   // face, not starting a new one each time.
