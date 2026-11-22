@@ -130,7 +130,7 @@ export const ITEMS = [
   { id: 'cooked_meat', name: 'Cooked Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xb7825c, glyph: 'meat', feeds: 32, madeBy: 'Cook Raw Meat with Wood at the workbench' },
 
   // --- what animals leave behind -------------------------------------------
-  { id: 'hide', name: 'Hide', kind: 'raw', stackTo: STACK_GOODS, color: 0xb99372, glyph: 'hide', madeBy: 'Hunted from deer, boar, goats and cows' },
+  { id: 'hide', name: 'Hide', kind: 'raw', stackTo: STACK_GOODS, color: 0xb99372, glyph: 'hide', madeBy: 'Hunted from deer, boar, goats and cows. Tan it into leather at a Tanning Vat' },
   { id: 'wool', name: 'Wool', kind: 'raw', stackTo: STACK_GOODS, color: 0xefebe2, glyph: 'wool', madeBy: 'Hunted from sheep' },
   { id: 'egg', name: 'Egg', kind: 'food', stackTo: STACK_FOOD, color: 0xf2e6cf, glyph: 'egg', feeds: 10, madeBy: 'Laid by hens in a pen' },
   { id: 'milk', name: 'Milk', kind: 'food', stackTo: STACK_FOOD, color: 0xf4f1ea, glyph: 'milk', feeds: 14, madeBy: 'From cows in a pen' },
