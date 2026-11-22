@@ -157,7 +157,7 @@ ok('a tool hits harder than a fist', ['axe', 'pickaxe', 'shovel'].every((id) => 
   const [lo, hi] = spec.drops.raw_meat;
   ok(`and it leaves meat in range (${second.drops.raw_meat})`, second.drops.raw_meat >= lo && second.drops.raw_meat <= hi);
   ok('a dying animal can\'t be picked again', mobs.pick(eye, toward, 7) === null);
-  for (let i = 0; i < 20; i++) mobs.tick(0.05, player);
+  for (let i = 0; i < 32; i++) mobs.tick(0.05, player);   // PLAY-4: the death plays over 1.4 s
   ok('and it\'s gone once it has toppled', mobs.list.length === 0);
 }
 

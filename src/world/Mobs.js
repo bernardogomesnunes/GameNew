@@ -2,6 +2,8 @@ import { MOBS_BY_ID, mobsForBiome } from '../config/mobs.js';
 import { BIOMES } from '../config/biomes.js';
 import { isFluid } from '../config/blocks.js';
 import { knock, drift, ease, turnTo, freeFall } from './bodies.js';
+// How long a hit shows red, and a kill plays out (PLAY-4).
+import { HURT_FLASH, DYING_TIME } from './mobDeath.js';
 
 /**
  * The animals living around you: where they turn up, how they get about,
@@ -23,8 +25,6 @@ const SPAWN_MAX = 60;       // ...nor so far out you'll never meet them
 const DESPAWN = 96;         // gone once you're this far away
 const SCARE = 7;            // how close a skittish animal lets you come
 const FLEE_TIME = 4;        // seconds of running after a scare or a hit
-const HURT_FLASH = 0.25;    // seconds an animal shows red after a hit
-const DYING_TIME = 0.6;     // seconds it takes to topple before it's gone
 const GRAVITY = 22;
 const LURE = 10;            // how far a farm animal notices food in your hand
 const HEEL = 2;             // and how close it comes before it stops
