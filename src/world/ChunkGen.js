@@ -45,6 +45,18 @@ const GRAVEL_POCKET = 0.72, GRAVEL_SHIFT = 517.3;
 /** Ore anywhere in rock, not only where a biome is rich in it: rare. */
 const STRAY_ORES = [[38, 0.0016], [39, 0.0016], [40, 0.0005]];
 /**
+ * Ore clusters (PLAY-5): each iron or copper ore that fill() places is the
+ * seed of a small face-connected cluster, copper 3 to 4 blocks, iron 2 to 3.
+ * Gold stays single. The cluster size is a hash of the seed block, so the
+ * same seed always makes the same cluster. Clusters only replace rock, stay
+ * inside the chunk being filled, and so can be shorter than asked at a chunk
+ * edge or beside a cave. Only chunks generated after this change have them:
+ * a saved chunk keeps the single ores it was stored with.
+ */
+const IRON_ORE_ID = 38, COPPER_ORE_ID = 39;
+const CLUSTER_SIZES = { [IRON_ORE_ID]: [2, 3], [COPPER_ORE_ID]: [3, 4] };
+const CLUSTER_DIRS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+/**
  * Diamonds (backlog batch 4): only in the deepest rock, below DIAMOND_TOP,
  * and rarer there than gold is anywhere.
  */
@@ -536,6 +548,7 @@ export class ChunkGen {
     for (let gz = 0; gz < W; gz++) for (let gx = 0; gx < W; gx++) heights[gz * W + gx] = this.heightAt(ox - M + gx, oz - M + gz);
     const heightOf = (a, b) => heights[(b - oz + M) * W + (a - ox + M)];
 
+    const oreSeeds = [];
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
         const x = ox + lx, z = oz + lz;
@@ -600,6 +613,7 @@ export class ChunkGen {
                 || (hasOres && this.oreAt(x, y, z, index))
                 || this.strayOreAt(x, y, z)
                 || (layered ? this.rockAt(x, y, z, rockFloor) : s.rock);
+              if (block === IRON_ORE_ID || block === COPPER_ORE_ID) oreSeeds.push(lx, y, lz, block);
             }
           } else if (y < h - 1) block = outcrop && y >= h - 3 ? outcropBlock : y < bedFrom ? s.bed : under;
           else block = water ? bed : outcrop ? outcropBlock : top;
@@ -625,6 +639,8 @@ export class ChunkGen {
         }
       }
     }
+
+    for (let i = 0; i < oreSeeds.length; i += 4) this.growCluster(chunk, oreSeeds[i], oreSeeds[i + 1], oreSeeds[i + 2], oreSeeds[i + 3]);
 
     stampDeepCaves(this, chunk, CHUNK_SIZE);
     stampCaveRuins(this, chunk, CHUNK_SIZE);
@@ -655,6 +671,33 @@ export class ChunkGen {
     stampRivals(this, chunk, CHUNK_SIZE);
 
     chunk.dirty = true;
+  }
+
+  /**
+   * Grows the cluster around one iron or copper seed block, in local chunk
+   * coordinates. Each step picks one rock block touching the cluster by a
+   * face (hash-chosen, so deterministic) and turns it into the same ore.
+   */
+  growCluster(chunk, sx, sy, sz, ore) {
+    const [lo, hi] = CLUSTER_SIZES[ore];
+    const ox = chunk.cx * CHUNK_SIZE, oz = chunk.cz * CHUNK_SIZE;
+    const want = lo + Math.floor(hash01(ox + sx, oz + sz, this.seed ^ (0x7c1d + sy * 0x9e37)) * (hi - lo + 1));
+    const cells = [[sx, sy, sz]];
+    const isHost = (b) => b === STONE_ID || b === COBBLE_ID || b === GRAVEL_ID || ROCK_LAYERS.some(([id]) => id === b);
+    for (let step = 1; cells.length < want; step++) {
+      const open = [];
+      for (const [cx, cy, cz] of cells) {
+        for (const [dx, dy, dz] of CLUSTER_DIRS) {
+          const nx = cx + dx, ny = cy + dy, nz = cz + dz;
+          if (nx < 0 || nz < 0 || nx >= CHUNK_SIZE || nz >= CHUNK_SIZE || ny < 0 || ny >= chunk.height) continue;
+          if (isHost(chunk.get(nx, ny, nz))) open.push([nx, ny, nz]);
+        }
+      }
+      if (!open.length) return;
+      const pick = open[Math.floor(hash01(ox + sx + step * 31, oz + sz, this.seed ^ (0x3a91 + sy * 0x9e37 + step)) * open.length)];
+      chunk.set(pick[0], pick[1], pick[2], ore);
+      cells.push(pick);
+    }
   }
 
   /** Writes one tree, keeping only what falls inside the given chunk. */
