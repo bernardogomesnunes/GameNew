@@ -1540,7 +1540,7 @@ RECIPES.push(
   // CRAFT3D-2 (owner: "I'm seeing string, with a tool to treat hemp"): a
   // spinning wheel twists the fibre into more string than hands do.
   { id: 'string_spun', name: 'String', station: 'spinning_wheel', age: 1, inputs: { hemp_fibre: 3 }, output: { id: 'string', count: 2 }, batch: 4, blurb: 'Spun on the wheel: twice what your hands twist from the same fibre.' },
-  { id: 'spinning_wheel', name: 'Spinning Wheel', station: 'hand', age: 1, inputs: { planks: 4, wood: 1 }, output: { id: 'spinning_wheel', count: 1 }, blurb: 'Place it, then spin hemp fibre into string on it.' },
+  { id: 'spinning_wheel', name: 'Spinning Wheel', station: 'hand', age: 1, inputs: { planks: 4, wood: 1 }, output: { id: 'spinning_wheel', count: 1 }, blurb: 'Place it, then spin hemp fibre, wool or cotton into string on it.' },
 );
 
 // Tools past stone (backlog batch 2), from config/tiers.js.
@@ -1816,7 +1816,10 @@ RECIPES.push(
 // --- end PLAY-9 ---
 
 // --- PLAY-10: string from wool and cotton (docs/design/play-9-10.md) ----------
-// Empty until the PLAY-10 agent adds string_wool and string_cotton here.
+RECIPES.push(
+  { id: 'string_wool', name: 'String', station: 'spinning_wheel', age: 1, inputs: { wool: 1 }, output: { id: 'string', count: 1 }, batch: 4, blurb: 'Wool spun fine on the wheel.' },
+  { id: 'string_cotton', name: 'String', station: 'spinning_wheel', age: 1, inputs: { cotton: 1 }, output: { id: 'string', count: 1 }, batch: 4, blurb: 'Cotton spun on the wheel: the finest string from a field.' },
+);
 // --- end PLAY-10 ---
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));

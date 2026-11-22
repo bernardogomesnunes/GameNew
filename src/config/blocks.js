@@ -960,7 +960,7 @@ BLOCKS.push(
   { id: COUNTER, name: "Carpenter's Table", glyph: 'planks', color: 0xa87a4c, shape: 'carpenters_table', material: 'wood', station: 'counter', unlock: null },
 );
 
-// CRAFT3D-2: the spinning wheel, where hemp fibre is spun into string.
+// CRAFT3D-2: the spinning wheel, where hemp fibre, wool and cotton are spun into string.
 export const SPINNING_WHEEL = 534;
 BLOCKS.push(
   { id: SPINNING_WHEEL, name: 'Spinning Wheel', glyph: 'string', color: 0xa87a4c, material: 'wood', shape: 'spinning_wheel', station: 'spinning_wheel', unlock: null },
