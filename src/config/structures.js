@@ -607,7 +607,8 @@ export const STRUCTURES = [
       {
         id: 'shell',
         test: (ctx) => count(ctx, [COBBLE, BRICK, STONE]) >= 18,
-        say: (ctx) => `Needs ${18 - count(ctx, [COBBLE, BRICK, STONE])} more stone or brick in the shell`,
+        // PLAY-6 (owner, 22 November): the hint read as if bricks were needed.
+        say: (ctx) => `Needs ${18 - count(ctx, [COBBLE, BRICK, STONE])} more cobblestone or stone in the walls (brick works too)`,
       },
       {
         id: 'chamber',
