@@ -168,6 +168,7 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Weapon Mold → 1 Weapon Mold | 3 Clay, 1 Stone | — | 3 | — |
 | Crucible → 1 Crucible | 8 Stone, 2 Clay | — | 5 | — |
 | Kiln Oven → 1 Kiln Oven | 8 Cobblestone, 2 Clay | — | 4 | — |
+| Tool Rack → 1 Tool Rack | 3 Oak Planks, 2 Stone | — | 3 | — |
 
 ### Anywhere
 

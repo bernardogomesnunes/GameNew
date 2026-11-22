@@ -943,7 +943,7 @@ export class DuiltGame {
     for (const need of missing) {
       let left = need.short(ctx);
       if (need.fit && !buyAll) {
-        const kind = need.fit.includes('chest') ? 'chest' : 'light';
+        const kind = need.fit.includes('chest') || need.floor ? 'chest' : 'light';
         const spots = this.fitSpots(structure.region, kind, taken);
         for (const item of need.fit) {
           const have = this.sandbox ? left : this.inventory.countOf(item) - (spare[item] ?? 0);

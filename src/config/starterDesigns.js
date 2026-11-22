@@ -14,7 +14,7 @@
 import { ITEM_FOR_BLOCK } from './items.js';
 import {
   doorBlock, roofBlock, roofPart, turned, CHEST, BED, BED_HEAD, FACING_STEP, PAINTING, WEAPON_RACK, TRAINING_DUMMY, ARCHERY_TARGET,
-  TRAPDOOR_OPEN, STONE_BRICK, CHIMNEYS, LOG_SIDE_BASE,
+  TRAPDOOR_OPEN, TOOL_RACK, STONE_BRICK, CHIMNEYS, LOG_SIDE_BASE,
   CAP_RED, CAP_LILAC, MUSHROOM_STEM, STAINED_GLASS, HANGING_VINES, WISTERIA, FAIRY_LIGHTS, CURL,
 } from './blocks.js';
 import { ROOFS_BY_ID } from './roofs.js';
@@ -382,16 +382,34 @@ function storehouseBlocks() {
 }
 
 /**
- * A cut face of rock, open to the sky.
+ * A cut face of rock, open to the sky, with a tool hut beside it.
  *
  * A quarry has to be a hole in something — the rules ask for air inside it as
  * well as stone, so this places a pad and takes a bite out of the top of it.
+ * Owner, 22 November: it "looks like a water tank that is empty". So beside
+ * the pit stands a small timber hut (PLAY-7): four posts, a plank back wall,
+ * a plank roof over a ridge, a tool rack with a pickaxe, a shovel and a
+ * hammer, a chest, a lantern, and a heap of cut stone by the door. The stone
+ * machines come with the levels (config/structures.js's quarry tiers).
  */
 function quarryBlocks() {
-  return [
-    ...slab(0, 0, 6, 6, 0, STONE),
-    ...slab(0, 0, 6, 6, 1, STONE).filter((b) => b.dx < 1 || b.dx > 3 || b.dz < 1 || b.dz > 3),
-  ];
+  const g = grid();
+  g.add(slab(0, 0, 6, 6, 0, STONE));
+  g.add(slab(0, 0, 6, 6, 1, STONE).filter((b) => b.dx < 1 || b.dx > 3 || b.dz < 1 || b.dz > 3));
+  // The hut's floor, and its four posts.
+  g.box(6, 0, 0, 9, 0, 5, COBBLE);
+  for (const [x, z] of [[7, 1], [9, 1], [7, 4], [9, 4]]) g.box(x, 1, z, x, 2, z, WOOD);
+  // A plank back wall, a plank roof with a ridge over it.
+  g.box(7, 1, 4, 9, 2, 4, PLANKS);
+  g.box(6, 3, 0, 9, 3, 5, PLANKS);
+  g.box(7, 4, 1, 8, 4, 4, PLANKS);
+  // Inside: the tool rack against the back wall, a chest, a lantern.
+  g.put(8, 1, 3, TOOL_RACK);
+  g.put(9, 1, 2, CHEST);
+  g.put(8, 2, 2, LANTERN_BLOCK);
+  // Cut stone heaped by the door.
+  g.put(6, 1, 4, COBBLE); g.put(6, 1, 5, COBBLE); g.put(6, 2, 5, COBBLE); g.put(7, 1, 5, STONE);
+  return g.blocks();
 }
 
 /** A stone hearth with a sealed cobble chamber standing on it. */
@@ -1091,8 +1109,8 @@ export const STARTER_DESIGNS = [
     id: 'starter_quarry',
     structure: 'quarry',
     name: 'Starter cut',
-    size: 6,
-    footprint: '6 × 6',
+    size: 10,
+    footprint: '10 × 6',
     note: 'Put it where the sky can see it — not in a cave.',
     blocks: quarryBlocks(),
   },
