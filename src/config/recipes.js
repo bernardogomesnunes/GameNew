@@ -1805,6 +1805,20 @@ RECIPES.push({ id: 'kiln_oven', name: 'Kiln Oven', station: 'workbench', age: 4,
 RECIPES.push({ id: 'tool_rack', name: 'Tool Rack', station: 'workbench', age: 3, inputs: { planks: 3, stone: 2 }, output: { id: 'tool_rack', count: 1 },
   blurb: 'A pickaxe, a shovel and a hammer on a rack. A quarry hut keeps one.' });
 
+// --- PLAY-9: leather (docs/design/play-9-10.md) -------------------------------
+// The vat by hand from Age 1, as the spinning wheel is; leather only at the vat.
+RECIPES.push(
+  { id: 'tanning_vat', name: 'Tanning Vat', station: 'hand', age: 1, inputs: { planks: 6, stone: 2 }, output: { id: 'tanning_vat', count: 1 },
+    blurb: 'Place it, then soak hides with oak bark into leather.' },
+  { id: 'leather', name: 'Leather', station: 'tanning_vat', age: 1, inputs: { hide: 2, wood: 1 }, output: { id: 'leather', count: 2 }, batch: 4,
+    blurb: 'Hides soaked with oak bark until they turn to leather. Armour, shields and backpacks need it.' },
+);
+// --- end PLAY-9 ---
+
+// --- PLAY-10: string from wool and cotton (docs/design/play-9-10.md) ----------
+// Empty until the PLAY-10 agent adds string_wool and string_cotton here.
+// --- end PLAY-10 ---
+
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
 /** A station as it's written for people: wood_mill is "wood mill", masons_bench "mason's bench". */

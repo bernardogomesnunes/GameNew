@@ -998,6 +998,15 @@ BLOCKS.push(
   { id: KILN_OVEN, name: 'Kiln Oven', glyph: 'brick', color: 0x9a4e36, shape: 'kiln_oven', material: 'stone', station: 'kiln_oven', unlock: null },
 );
 
+// PLAY-9 (docs/design/play-9-10.md): the Tanning Vat, where hides soak with
+// oak bark into leather. A bench machine, dipped as the Wash Tub is. Ids
+// 545-547 are kept for PLAY-9; 548-551 are cotton's crop (config/crops.js)
+// and 552-555 are kept for PLAY-10.
+export const TANNING_VAT = 544;
+BLOCKS.push(
+  { id: TANNING_VAT, name: 'Tanning Vat', glyph: 'bucket', color: 0x8a6440, shape: 'tanning_vat', material: 'wood', station: 'tanning_vat', unlock: null },
+);
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in

@@ -533,6 +533,19 @@ export const ITEMS = [
     id: b.id, name: b.name, kind: 'gear', stackTo: 1, color: b.main, glyph: 'backpack',
     wears: 'back', bagSlots: b.slots, madeBy: `${b.madeBy} — wear it for ${b.slots} more bag slots`,
   })),
+
+  // --- PLAY-9: leather (docs/design/play-9-10.md) ----------------------------
+  // Owner, 22 November: "add a mechanic to do leather, instead of using the
+  // animal skins". Hides soak with oak bark in a placed Tanning Vat.
+  { id: 'leather', name: 'Leather', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a6b45, glyph: 'hide', madeBy: 'Hides soaked with oak bark in a placed Tanning Vat' },
+  { id: 'tanning_vat', name: 'Tanning Vat', kind: 'refined', stackTo: 10, color: 0x8a6440, glyph: 'bucket', block: 544, madeBy: 'Made by hand from oak planks and stone. Place it and tan hides into leather' },
+  // --- end PLAY-9 ---
+
+  // --- PLAY-10: cotton (docs/design/play-9-10.md) ----------------------------
+  // Its seeds are made from CROPS above (seeds_cotton, block 548); this is
+  // what a ripe plant gives. Spun into string at the Spinning Wheel.
+  { id: 'cotton', name: 'Cotton', kind: 'raw', stackTo: STACK_BULK, color: 0xf4f1ea, glyph: 'wool', madeBy: 'Picked from ripe cotton. Spin it into string at a Spinning Wheel' },
+  // --- end PLAY-10 ---
 ];
 
 // Furniture in every wood (backlog batch 3) — see blocks.js WOOD_FURNITURE.
