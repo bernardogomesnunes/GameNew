@@ -281,9 +281,9 @@ export class HomeScreen {
     try {
       this.cloudWorlds = (await this.cb.listCloudWorlds?.()) ?? [];
       this.cloudError = null;
-      this.cloudSignIn = false;
       this.cloudDetail = null;
       this.stopHealing();
+      this.cloudSignIn = false;
     } catch (err) {
       // Said out loud, not swallowed — but the local list rides along on the
       // error (see Game.js's listAllWorlds), so losing the account never
