@@ -1217,6 +1217,7 @@ From the owner's playtest notes, 22 November. Ordered by the suggested priority;
 | PLAY-11 | **Crafting review.** Some items can be crafted two ways. List every duplicate and keep one way. After the first ending (dark or light warriors), a factory building with many machines automates all crafting and only needs materials. | Large | open, needs a design first |
 | PLAY-12 | Military buildings: weapons research and army organisation. | Large | open, needs a design first |
 | PLAY-13 | Politics: villagers get angry without jobs or food, with consequences. Builds on JOBS and the hunger counter (CL-12). | Large | open, needs a design first |
+| PLAY-24 | Storehouse: fold the "Won't take from deliveries" chips so the shelf gets more room. | Small | done |
 
 ## The old planning docs (history)
 
