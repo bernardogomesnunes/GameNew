@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { MOBS_BY_ID } from '../config/mobs.js';
 import { modelKit, Crowds } from './Models.js';
 import { GAITS, beastPose, dinoPose, makePose, put } from './mobGaits.js';
+import { deathPose, hurtFlash } from '../world/mobDeath.js';
+import { PoofView } from './PoofView.js';
 
 /**
  * The animals, drawn: a body, a head and four legs each, out of one unit
@@ -157,7 +159,7 @@ export function mobModel(m) {
 
 /** A model faces -z; an animal here faces +z. */
 const TURN = new THREE.Matrix4().makeRotationY(Math.PI);
-const HURT_TINT = new THREE.Color(1, 0.45, 0.42);
+const HURT_TINT = new THREE.Color(1, 0.22, 0.2);
 
 export class MobView {
   constructor(scene) {
@@ -194,11 +196,13 @@ export class MobView {
     this._turned = new THREE.Matrix4();
     this._tint = new THREE.Color();
     this._pose = makePose();
+    this.poof = new PoofView(scene);
   }
 
   update(mobs) {
     const n = Math.min(mobs.length, MAX);
     const now = performance.now() / 1000;
+    this.poof.update(now * 1000);
     this.bodies.count = n;
     this.heads.count = n;
     this.legs.count = n * 4;
@@ -217,16 +221,23 @@ export class MobView {
       const phase = (m.id ?? i) * 2.399;
       const look = idle ? Math.sin(now * 1.15 + phase) * 0.16 : 0;
       const nod = idle ? Math.sin(now * 1.8 + phase * 1.7) * 0.035 : 0;
-      // Toppling: rolls onto its side over the dying time.
-      const roll = m.dying > 0 ? (1 - m.dying / 0.6) * (Math.PI / 2) : 0;
+      // Dying (PLAY-4): topples onto its side, lies red, then shrinks into
+      // the ground with a puff of dust.
+      const death = deathPose(m.dying);
+      const roll = death ? death.roll : 0;
+      if (death?.fading && !m.poofed) {
+        m.poofed = true;
+        this.poof.burst(m.x, m.y, m.z, Math.max(spec.body.w, spec.body.l));
+      }
       // A dragon in the air leans into its turns and tips its nose up or
       // down with its climb (Mobs.fly).
       const air = spec.flies && m.airborne && m.dying <= 0;
       this._e.set(air ? Math.max(-0.35, Math.min(0.35, -(m.climb ?? 0) * 0.06)) : 0, m.facing, roll + (air ? -(m.bank ?? 0) : 0), 'YXZ');
       this._q.setFromEuler(this._e);
-      this._base.compose(this._v.set(m.x, m.y, m.z), this._q, this._s.set(1, 1, 1));
+      const k = death ? Math.max(0.001, death.scale) : 1;
+      this._base.compose(this._v.set(m.x, m.y - (death?.sink ?? 0), m.z), this._q, this._s.set(k, k, k));
 
-      const flash = m.hurt > 0 ? Math.min(1, m.hurt / 0.25) * 0.7 : 0;
+      const flash = death ? Math.max(death.flash, hurtFlash(m.hurt)) : hurtFlash(m.hurt);
 
       // Its model, if that has loaded: the boxes for this one are put away.
       const kit = modelKit(mobModel(m)) ?? modelKit(m.type);
@@ -339,5 +350,6 @@ export class MobView {
   setVisible(on) {
     for (const m of [this.bodies, this.heads, this.legs, this.details]) m.visible = on;
     this.crowds.setVisible(on);
+    this.poof.setVisible(on);
   }
 }

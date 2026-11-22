@@ -15,7 +15,7 @@ await check('account size limit gives an actionable message without paging retri
   const old = globalThis.fetch;
   globalThis.fetch = async () => ({ ok: false, status: 400, text: async () => JSON.stringify({code:'23514', message:'violates check constraint "worlds_duilt_size"'}) });
   try {
-    await assert.rejects(() => transport.send('/worlds', {}), e => /too large to save to your account/.test(e.message) && /Export/.test(e.message) && !e.tooLarge);
+    await assert.rejects(() => transport.send('/worlds', {}), e => /too large to save to your account/.test(e.message) && /stays on this device/.test(e.message) && !e.tooLarge);
   } finally { globalThis.fetch = old; }
 });
 await check('account list fetches only Battle metadata and preserves its flag', async () => {

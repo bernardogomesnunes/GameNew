@@ -287,7 +287,6 @@ export class UIManager {
       <div id="top-buttons">
         <button class="icon-btn touch-moved" id="btn-stats" title="Goals (G)">${icon('stats')}<span>Goals</span></button>
         <button class="icon-btn touch-moved" id="btn-templates" title="Save a build, and stamp it anywhere">${icon('paste')}<span>Designs</span></button>
-        <button class="icon-btn touch-moved" id="btn-roof" title="Pitch a roof over the building you point at">${icon('roof')}<span>Roof</span></button>
         <button class="icon-btn touch-moved" id="btn-map" title="Map (M)">${icon('map')}<span>Map</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-bag" title="Your bag (I)" hidden>${icon('bag')}<span>Bag</span></button>
         <button class="icon-btn duilt-only touch-moved" id="btn-buildings" title="What you can build (B)" hidden>${icon('home')}<span>Build</span></button>
@@ -434,16 +433,6 @@ export class UIManager {
             <div class="field-row" style="margin-top:10px">
               <button class="secondary" id="ctl-reset">Back to the defaults</button>
             </div>
-          </div>
-
-          <div class="menu-section" id="menu-files" hidden>
-            <button class="menu-back" data-menu-back="1">${icon('chevron', 14)}<span>Menu</span></button>
-            <div class="field-row" style="margin-bottom:0; flex-wrap:wrap;">
-              <button class="secondary" id="btn-export-world">Export world</button>
-              <button class="secondary" id="btn-export-vox">Export .vox</button>
-              <button class="secondary" id="btn-import-world">Import a file</button>
-            </div>
-            <div class="export-note">A world file restores everything, designs included. The .vox opens in MagicaVoxel and Blender.</div>
           </div>
 
           <!-- The showcase (world/showcase.js): a workshop tool, behind the switch. -->
@@ -633,9 +622,8 @@ export class UIManager {
           <button class="touch-btn needs-tool" id="t-clear" data-tool="clear" hidden>${icon('clear')}<span>Clear</span></button>
           <button class="touch-btn needs-tool" id="t-symmetry" data-tool="mirror" hidden>${icon('symmetry')}<span>Mirror</span></button>
           <button class="touch-btn" id="t-designs">${icon('paste')}<span>Designs</span></button>
-          <button class="touch-btn" id="t-roof">${icon('roof')}<span>Roof</span></button>
-          <!-- Beside Roof, not a level down in Settings: the goals are what
-               teaches the game, and Settings is where you go between builds. -->
+          <!-- PLAY-3 (owner, 22 November): Roof left the menu. Goals stays
+               here, not in Settings: the goals teach the game. -->
           <button class="touch-btn" id="t-stats">${icon('stats')}<span>Goals</span></button>
           <button class="touch-btn" id="t-map">${icon('map')}<span>Map</span></button>
           <!-- Playtest, P3: your eyes, behind you, in front of you. -->
@@ -864,7 +852,7 @@ export class UIManager {
     this.q('#btn-stats').addEventListener('click', () => this.openPanel('panel-stats'));
     this.q('#btn-map').addEventListener('click', () => this.openPanel('panel-map'));
     this.q('#btn-templates').addEventListener('click', () => this.toolButton('design', 'panel-templates'));
-    this.q('#btn-roof').addEventListener('click', () => this.toolButton('roof', 'panel-roof'));
+    this.q('#btn-roof')?.addEventListener('click', () => this.toolButton('roof', 'panel-roof'));
     this.q('#tool-cancel').addEventListener('click', () => this.cb.onCancelTool?.());
     this.q('#tool-cancel').addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -1006,9 +994,9 @@ export class UIManager {
       this.closePanel('panel-menu');
       this.openHome();
     });
-    this.q('#btn-export-world').addEventListener('click', () => this.cb.onExportWorld(this.q('#save-name').value));
-    this.q('#btn-export-vox').addEventListener('click', () => this.cb.onExportVox(this.q('#save-name').value));
-    this.q('#btn-import-world').addEventListener('click', () => this.cb.onImportWorld());
+    this.q('#btn-export-world')?.addEventListener('click', () => this.cb.onExportWorld(this.q('#save-name').value));
+    this.q('#btn-export-vox')?.addEventListener('click', () => this.cb.onExportVox(this.q('#save-name').value));
+    this.q('#btn-import-world')?.addEventListener('click', () => this.cb.onImportWorld());
     // The showcase: open it, or move about it once it's open.
     this.q('#btn-showcase-open').addEventListener('click', async () => {
       // Asked first, so nobody opens it by accident (IMP-8).

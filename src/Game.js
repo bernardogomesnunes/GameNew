@@ -1197,7 +1197,7 @@ export class Game {
         // allow the next ordinary save to check again. Explicit deletion is
         // handled separately by onDeleteWorld.
         if (!mine && agreed) {
-          this.saveError = 'This world was not found in the current account. It has not been recreated and your pending backup has not been removed. Check that you are in the right account and try saving again. You can also export this world before leaving.';
+          this.saveError = 'This world was not found in the current account. It has not been recreated and your pending backup has not been removed. Check that you are in the right account and try saving again. Your changes stay on this device.';
           // Not tried again by itself: it's the account to check, not the connection.
           this.uploadFailed({ retry: false });
           return false;
