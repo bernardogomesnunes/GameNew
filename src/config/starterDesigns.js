@@ -397,7 +397,7 @@ function quarryBlocks() {
   g.add(slab(0, 0, 6, 6, 0, STONE));
   g.add(slab(0, 0, 6, 6, 1, STONE).filter((b) => b.dx < 1 || b.dx > 3 || b.dz < 1 || b.dz > 3));
   // The hut's floor, and its four posts.
-  g.box(6, 0, 0, 9, 0, 5, COBBLE);
+  g.box(6, 0, 0, 9, 0, 5, STONE);   // stone, not cobble: a first-age building
   for (const [x, z] of [[7, 1], [9, 1], [7, 4], [9, 4]]) g.box(x, 1, z, x, 2, z, WOOD);
   // A plank back wall, a plank roof with a ridge over it.
   g.box(7, 1, 4, 9, 2, 4, PLANKS);
@@ -408,7 +408,7 @@ function quarryBlocks() {
   g.put(9, 1, 2, CHEST);
   g.put(8, 2, 2, LANTERN_BLOCK);
   // Cut stone heaped by the door.
-  g.put(6, 1, 4, COBBLE); g.put(6, 1, 5, COBBLE); g.put(6, 2, 5, COBBLE); g.put(7, 1, 5, STONE);
+  g.put(6, 1, 4, STONE); g.put(6, 1, 5, STONE); g.put(6, 2, 5, STONE); g.put(7, 1, 5, STONE);
   return g.blocks();
 }
 
