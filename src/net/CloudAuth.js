@@ -1,4 +1,4 @@
-import { CLOUD, isCloudConfigured } from './cloudConfig.js';
+import { authUrl, chooseAuthDirect, deriveUrls, isCloudConfigured } from './cloudConfig.js';
 import { isOurBug, keepTrying } from './retry.js';
 
 /**
@@ -48,8 +48,11 @@ export class CloudAuth {
     if (this.client) return this.client;
     if (!this.configured) throw new Error('Cloud sync is not configured for this build.');
     const { createClient } = await import('@neondatabase/neon-js');
-    // One URL derives both the auth service and the Data API.
-    this.client = createClient(CLOUD.neonUrl);
+    // Sign-in through the page's own address (authUrl, PLAY-1); the Data API
+    // straight to Neon, since its token travels in a header, not a cookie.
+    const url = authUrl();
+    this.viaSite = url !== deriveUrls().auth;
+    this.client = createClient({ auth: { url }, dataApi: { url: deriveUrls().dataApi } });
     return this.client;
   }
 
@@ -110,6 +113,15 @@ export class CloudAuth {
     });
   }
 
+  /** Whether a fresh session check, over the network, finds the user signed in. */
+  async sessionKept() {
+    try {
+      return Boolean(userFrom(await this.checkSession(this.client, { fresh: true })));
+    } catch {
+      return false;
+    }
+  }
+
   /** Asks the sign-in service again, after a check that could not answer. */
   async recheck() {
     this.ready = false;
@@ -117,7 +129,7 @@ export class CloudAuth {
     return this.restore();
   }
 
-  async signIn(email, password) {
+  async signIn(email, password, { retried = false } = {}) {
     const client = await this.load();
     // Whoever was signed in before: their token must never answer for this one.
     this.forgetToken();
@@ -133,6 +145,15 @@ export class CloudAuth {
     });
     if (isUnconfirmed(result?.error)) throw needsCode(email);
     this.user = unwrapUser(result);
+    // PLAY-1: through the page's own address the session lives in a cookie
+    // the browser must keep. If it did not (the service set it for another
+    // domain), go back to Neon directly, for good on this device, and sign
+    // in again there.
+    if (this.viaSite && !retried && !(await this.sessionKept())) {
+      chooseAuthDirect();
+      this.client = null;
+      return this.signIn(email, password, { retried: true });
+    }
     this.ready = true;
     this.bus?.emit('cloud:auth', { user: this.summary() });
     return this.user;

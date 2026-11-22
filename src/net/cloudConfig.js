@@ -43,3 +43,36 @@ export function deriveUrls(neonUrl = CLOUD.neonUrl) {
     dataApi: `${sub('apirest')}${path}/rest/v1`,
   };
 }
+
+/**
+ * Where the game reaches the sign-in service.
+ *
+ * PLAY-1 (owner, 22 November): on iPhone the sign-in was lost between visits
+ * and once mid-game. The session cookie lived on Neon's domain, a third party
+ * to the game's page, and iPhone browsers (Safari and Chrome both run WebKit)
+ * block or purge third-party cookies. So on a deployed page the sign-in goes
+ * through the page's own address: `/neonauth` on the same site, which
+ * vercel.json (and vite.config.js in development) pass on to Neon. The cookie
+ * is then the game's own. `VITE_AUTH_DIRECT=true` goes straight to Neon, as
+ * before.
+ */
+export const AUTH_PATH = '/neonauth';
+
+export function authUrl(loc = globalThis.location, neonUrl = CLOUD.neonUrl) {
+  const direct = deriveUrls(neonUrl).auth;
+  if (!direct || env.VITE_AUTH_DIRECT === 'true' || authDirectChosen()) return direct;
+  if (!loc || !/^https?:$/.test(loc.protocol ?? '')) return direct;
+  return `${loc.origin}${AUTH_PATH}`;
+}
+
+
+/** Set once a sign-in through the page's own address did not keep its cookie. */
+export const AUTH_DIRECT_KEY = 'duilt:auth-direct';
+
+function authDirectChosen() {
+  try { return globalThis.localStorage?.getItem(AUTH_DIRECT_KEY) === '1'; } catch { return false; }
+}
+
+export function chooseAuthDirect() {
+  try { globalThis.localStorage?.setItem(AUTH_DIRECT_KEY, '1'); } catch { /* stays for this tab only */ }
+}
