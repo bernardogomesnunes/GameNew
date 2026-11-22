@@ -1225,6 +1225,8 @@ From the owner's playtest notes, 22 November. Ordered by the suggested priority;
 | PLAY-19 | **Cauldron meals.** A Cauldron cooks dried mushroom with meat and vegetables into meals. It can reuse the Crucible close-up. Needs PLAY-16. | Medium | open, needs a design first |
 | PLAY-20 | **Food values.** Raw food feeds little, cooked food feeds the most. Today Carrots feed 22 and Cooked Meat 32, the only cooked food. Lower fruit, vegetables and raw meat; Cauldron meals (PLAY-19) feed the most. | Medium | open, needs a design first |
 | PLAY-21 | **Food names.** The item `vegetables` is named Carrots; Coffee Beans count as food (feeds 4). Rename or reclassify. | Small | open |
+| PLAY-22 | **Sell at the market.** Owner, 22 November: "on a market we should be able to sell items too not only buy". Traders buy what you hand them and pay in coins. Each trader buys the kinds of goods it sells (Grub rocks, wood and food; Snikkit ores and weapons). The sell price sits below the buy price (about half), so buying and selling back never makes coins. | Medium | open, needs a design first |
+| PLAY-23 | **Recurring sales.** Owner: "set recurrent sells ... daily or every other day". At a market, set an order: item, how many, every 1 or 2 days. It takes the goods from your storehouse and puts the coins there. It skips a day when stock runs short. Needs PLAY-22. | Medium | open, needs a design first |
 
 ## The old planning docs (history)
 
