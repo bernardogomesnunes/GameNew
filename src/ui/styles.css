@@ -2393,5 +2393,5 @@ button.busy { cursor: progress; opacity: 0.92; }
 #sleep-overlay .sleep-zs span:nth-child(2) { animation-delay: 1s; font-size: 22px; }
 #sleep-overlay .sleep-zs span:nth-child(3) { animation-delay: 2s; font-size: 16px; }
 @keyframes sleep-z { 0% { opacity: 0; transform: translate(0, 0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(34px, -70px); } }
-#sleep-overlay .sleep-wake { position: absolute; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); pointer-events: auto; min-height: 44px; padding: 10px 22px; font: inherit; font-weight: 700; color: #fff; background: rgba(20, 28, 64, 0.85); border: 2px solid #9fb0ff; border-radius: 8px; cursor: pointer; }
+#sleep-overlay .sleep-wake { position: absolute; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); transform: translateX(-50%); pointer-events: auto; min-height: 44px; padding: 10px 22px; font: inherit; font-weight: 700; color: #fff; background: rgba(20, 28, 64, 0.85); border: 2px solid #9fb0ff; border-radius: 8px; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { #sleep-overlay .sleep-zs span { animation: none; opacity: 0.9; } #sleep-overlay .sleep-zs span:nth-child(2) { transform: translate(18px, -26px); } #sleep-overlay .sleep-zs span:nth-child(3) { transform: translate(34px, -50px); } }
