@@ -32,6 +32,7 @@ const toward = (from, to, k) => from + (to - from) * Math.min(1, k);
 export class AvatarView {
   constructor(scene) {
     this.group = new THREE.Group();
+    this.group.rotation.order = 'YXZ'; // turn first, then lie back (see `lie`)
     this.group.visible = false;
     scene.add(this.group);
     const mat = (color = 0xffffff) => new THREE.MeshLambertMaterial({ color });
@@ -140,7 +141,7 @@ export class AvatarView {
    * limbs are moving, what it's wearing and holding. `draw` (0..1) is how
    * far a bow is drawn.
    */
-  update(dt, player, { look, worn = {}, held = {}, visible, draw = 0 }) {
+  update(dt, player, { look, worn = {}, held = {}, visible, draw = 0, lie = null }) {
     this.group.visible = visible;
     if (!visible) { this._last = null; return; }
     const p = player.position;
@@ -271,6 +272,26 @@ export class AvatarView {
       const geo = heldGeometryFor(held);
       this.held.visible = !!geo;
       if (geo) this.held.geometry = geo;
+    }
+
+    // Asleep (PLAY-8): on the back along the bed, head on the pillow end, limbs
+    // easing to rest. `lie` = { x, y, z, dir: {x, z}, amount 0..1 } for the bed's
+    // middle, which way its head lies, and how far down you are.
+    if (lie && lie.amount > 0) {
+      const a = ease(lie.amount), rest = 1 - a;
+      const bedYaw = Math.atan2(lie.dir.x, lie.dir.z);
+      const turn = Math.atan2(Math.sin(bedYaw - player.yaw), Math.cos(bedYaw - player.yaw));
+      this.group.rotation.set(a * Math.PI / 2, player.yaw + turn * a, 0);
+      // Feet at the foot of the mattress, a body's depth above its top.
+      const fx = lie.x - lie.dir.x * 0.95, fz = lie.z - lie.dir.z * 0.95, fy = lie.y + 0.68 + Math.sin(this.clock * 1.4) * 0.006;
+      this.group.position.set(p.x + (fx - p.x) * a, p.y + (fy - p.y) * a, p.z + (fz - p.z) * a);
+      for (const leg of this.legs) leg.hip.rotation.x *= rest;
+      this.torso.rotation.x *= rest; this.torso.rotation.y *= rest; this.torso.rotation.z *= rest;
+      this.head.rotation.set(this.head.rotation.x * rest, this.head.rotation.y * rest, this.head.rotation.z * rest);
+      this.arms[0].rotation.set(this.arms[0].rotation.x * rest, 0, this.arms[0].rotation.z * rest - 0.05 * a);
+      this.arms[1].rotation.set(this.arms[1].rotation.x * rest, 0, this.arms[1].rotation.z * rest + 0.05 * a);
+    } else {
+      this.group.rotation.x = 0;
     }
   }
 }
