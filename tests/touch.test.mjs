@@ -147,7 +147,7 @@ ok('nothing is laid out in a row', !/class="row"/.test(ui));
 
 // --- everything occasional is behind More -------------------------------------
 
-for (const id of ['t-bag', 't-bench', 't-build', 't-skills', 't-designs', 't-roof', 't-screen']) {
+for (const id of ['t-bag', 't-bench', 't-build', 't-skills', 't-designs', 't-screen']) {
   ok(`${id} is behind More`, tray.includes(`id="${id}"`));
 }
 // Fly changes what every other control does. Behind More it was a mode you
@@ -184,8 +184,9 @@ ok('and now also a way in from the corner, the same as Roof and Designs have',
 ok('and still in the tray', tray.includes('id="t-stats"'));
 {
   const order = [...tray.matchAll(/id="(t-[a-z]+)"/g)].map((m) => m[1]);
-  ok(`and next to Roof (${order.join(', ')})`,
-    Math.abs(order.indexOf('t-stats') - order.indexOf('t-roof')) === 1);
+  // PLAY-3: Roof left the tray; Goals now sits beside Designs.
+  ok(`and next to Designs (${order.join(', ')})`,
+    Math.abs(order.indexOf('t-stats') - order.indexOf('t-designs')) === 1);
 }
 // Made, not given.
 ok('Clear and Mirror are there only once you have made the tool',

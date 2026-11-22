@@ -504,7 +504,7 @@ function describeError(status, detail) {
   }
   if (status === 409) return 'That world changed elsewhere. Reload it before saving again.';
   if (/\b(?:world_chunks|worlds|progression|templates)_[a-z_]+_size\b/.test(detail) && /check constraint|23514/i.test(detail)) {
-    return 'This world is too large to save to your account. Export a copy to keep your progress.';
+    return 'This world is too large to save to your account. It stays on this device.';
   }
   if (status >= 500) return 'The cloud is unreachable right now. Your local save is untouched.';
   return `Cloud request failed (${status}). ${detail.slice(0, 160)}`;

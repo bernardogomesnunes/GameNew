@@ -63,8 +63,9 @@ ok('the goals are not a settings card', !MENU_BY_ID.has('menu-achievements'));
   // Graphics and Files were folded behind a switch, which put two of the three
   // things people open settings for behind a button labelled "workshop tools".
   const plain = menuFor({ cloud: true });
-  ok('settings holds the notifications, the world, the graphics, the controls and the files',
-    plain.map((m) => m.id).join() === 'menu-notices,menu-world,menu-graphics,menu-controls,menu-files,menu-profile');
+  // PLAY-3 (owner, 22 November): Files left Settings.
+  ok('settings holds the notifications, the world, the graphics and the controls',
+    plain.map((m) => m.id).join() === 'menu-notices,menu-world,menu-graphics,menu-controls,menu-profile');
   // The switch has one thing behind it now: the showcase, a workshop tool
   // for judging how the game looks (docs/history/plan-look-and-sound.md, section 1).
   ok('and none of it is behind a switch any more', plain.every((m) => !m.dev));

@@ -59,12 +59,7 @@ export const MENU = [
     icon: 'sliders',
     blurb: 'Change the keys, field of view, mouse speed and volume.',
   },
-  {
-    id: 'menu-files',
-    name: 'Files',
-    icon: 'file',
-    blurb: 'Export this world or a .vox model, or import a world from a file.',
-  },
+  // PLAY-3 (owner, 22 November): Files (export and import) left Settings.
   {
     id: 'menu-profile',
     name: 'Profile',
