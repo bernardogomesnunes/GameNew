@@ -47,7 +47,7 @@ for (const spec of LEVELLED) {
 const { world, origin } = generateDuiltWorld({ sizeX: 256, sizeZ: 256, seed: 11 });
 const g = new DuiltGame({ world, scene: new THREE.Scene(), bus: { emit() {} } });
 // What levels ask for — the bag has room for these, not for one of everything.
-const topUp = () => { for (const id of ['planks', 'cobblestone', 'coin', 'iron_ingot', 'lantern', 'chest', 'stone', 'window', 'pillar_stone', 'gold_trim', 'banner_white', 'devotion', 'weapon_rack', 'training_dummy']) g.inventory.add(id, Math.max(0, 300 - g.inventory.countOf(id))); };
+const topUp = () => { for (const id of ['planks', 'cobblestone', 'coin', 'iron_ingot', 'lantern', 'chest', 'stone', 'window', 'pillar_stone', 'gold_trim', 'banner_white', 'devotion', 'weapon_rack', 'training_dummy']) g.inventory.add(id, Math.max(0, 300 - g.inventory.countOf(id))); for (const id of ['masons_bench', 'stone_mill']) g.inventory.add(id, Math.max(0, 3 - g.inventory.countOf(id))); };
 const gy = 40;
 let slot = 0;
 for (const spec of LEVELLED) {
