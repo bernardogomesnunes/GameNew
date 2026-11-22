@@ -1932,6 +1932,7 @@ export class Game {
     const battle = mode === BATTLE;
     if (battle) mode = DUILT;
     this.mode = mode;
+    this.endSleep();
     this.showcase = null;
     this.title = null;
     // Nothing is open for changes in a world you've only just entered.
@@ -2067,6 +2068,7 @@ export class Game {
   }
 
   loadFromData(data, { silent } = {}) {
+    this.endSleep();
     this.world = data.world;
     this.showcase = null;
     this.title = null;
@@ -2434,7 +2436,7 @@ export class Game {
     const held = this.selectedItemId === BARE_HANDS ? {}
       : this.selectedItemId ? { itemId: this.selectedItemId } : { blockId: this.selectedBlockId };
     const third = this.player.view !== 'first';
-    this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third, draw: this.drawing ? this.drawPower() : 0, lie: this.sleeping ? { x: this.sleeping.centre.x, y: this.sleeping.centre.y, z: this.sleeping.centre.z, dir: this.sleeping.dir, amount: this.sleeping.lie } : null });
+    this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held: this.sleeping ? {} : held, visible: playing && third, draw: this.drawing ? this.drawPower() : 0, lie: this.sleeping ? { x: this.sleeping.centre.x, y: this.sleeping.centre.y, z: this.sleeping.centre.z, dir: this.sleeping.dir, amount: this.sleeping.lie } : null });
     this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning, draw: this.drawing ? this.drawPower() : 0, offhand: this.duilt?.worn?.offhand?.id ?? null });
     // The flying machine went with it: you come down on its wings.
     if (this.player.flying && !this.player.canFly()) {
@@ -7657,6 +7659,10 @@ export class Game {
     p.pitch = -0.42;
     p.syncCamera();
     this.sleeping.veil.hidden = false;
+    // The HUD steps aside while you sleep (review of PLAY-8): no hotbar,
+    // crosshair, aim box or touch controls over the picture of you in bed.
+    document.body.classList.add('is-sleeping');
+    if (this.hoverBox) this.hoverBox.visible = false;
     this.editedAt = Date.now();
     return true;
   }
@@ -7695,6 +7701,18 @@ export class Game {
     if (r.done) this.wake(true);
   }
 
+  /** A sleep cut off by the world closing: put the HUD back, without a toast or a move. */
+  endSleep() {
+    const s = this.sleeping;
+    if (!s) return;
+    this.sleeping = null;
+    this.player.view = s.view;
+    this.player.viewReach = s.viewReach;
+    s.shade.style.opacity = '0';
+    s.veil.hidden = true;
+    document.body.classList.remove('is-sleeping');
+  }
+
   /** Up, beside the bed: at the end of the night, or early (the clock stays where it got to). */
   wake(finished = false) {
     const s = this.sleeping;
@@ -7706,6 +7724,7 @@ export class Game {
     p.teleport(s.stand.x, s.stand.y, s.stand.z);
     s.shade.style.opacity = '0';
     s.veil.hidden = true;
+    document.body.classList.remove('is-sleeping');
     if (finished) this.dayCycle.time = s.target;
     this.duilt.dayTime = this.dayCycle.time;
     this.editedAt = Date.now();
@@ -9036,7 +9055,7 @@ export class Game {
     // The single block under the crosshair, except while a roof is queued —
     // there the whole building is highlighted and one more box on top of it is
     // just noise.
-    if (hit && !this.pendingRoof && !this.pendingClear) {
+    if (hit && !this.pendingRoof && !this.pendingClear && !this.sleeping) {
       this.hoverBox.visible = true;
       this.hoverBox.position.set(hit.x + 0.5, hit.y + 0.5, hit.z + 0.5);
     } else {

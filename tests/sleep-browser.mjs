@@ -51,6 +51,11 @@ try {
   await shot('avatar-in-bed');
   const mid = await page.evaluate(() => ({ t: window.__game.dayCycle.time, sleeping: !!window.__game.sleeping }));
   assert.ok(mid.sleeping, 'still asleep after a few seconds');
+  // Review of PLAY-8: the HUD steps aside, and nothing is held in bed.
+  const hud = await page.evaluate(() => ({ cls: document.body.classList.contains('is-sleeping'),
+    hotbar: getComputedStyle(document.querySelector('#hotbar-wrap')).visibility,
+    box: window.__game.hoverBox?.visible ?? false }));
+  assert.deepEqual(hud, { cls: true, hotbar: 'hidden', box: false }, 'no hotbar or aim box while asleep');
   assert.ok(mid.t > start && mid.t < 0.32, `clock running on (${mid.t})`);
   // Early wake with a movement key: the time stays where it got to.
   await page.keyboard.press('KeyW');
@@ -62,6 +67,11 @@ try {
   await page.waitForFunction(() => !window.__game.sleeping, null, { timeout: 120_000 });
   const end = await page.evaluate(() => window.__game.dayCycle.time);
   assert.ok(Math.abs(end - 0.32) < 1e-6, `morning (${end})`);
+  // A world closing mid-sleep leaves nothing behind.
+  await page.evaluate(() => { const b = window.bed; window.__game.dayCycle.time = 0; window.__game.sleep({ x: b.x, y: b.y, z: b.z, block: 193 }); });
+  const cut = await page.evaluate(() => { const g = window.__game; g.newWorld({ mode: 'creative', name: 'After', seed: 5, silent: true });
+    return { sleeping: !!g.sleeping, cls: document.body.classList.contains('is-sleeping'), veil: document.querySelector('#sleep-overlay').hidden }; });
+  assert.deepEqual(cut, { sleeping: false, cls: false, veil: true }, 'a new world ends the sleep');
   assert.deepEqual(errors, []);
   console.log('sleep-browser: ok');
 } finally {
