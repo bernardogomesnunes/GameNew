@@ -1,10 +1,4 @@
 {
-  "rewrites": [
-    {
-      "source": "/neonauth/:path*",
-      "destination": "https://ep-quiet-firefly-ae3s1zgl.neonauth.c-2.us-east-2.aws.neon.tech/neondb/auth/:path*"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -17,3 +11,4 @@
     }
   ]
 }
+

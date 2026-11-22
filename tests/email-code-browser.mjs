@@ -20,23 +20,19 @@ try {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const calls = [];
-  let siteCalls = 0;
   let signedIn = false;
   const user = { id: 'u1', email: 'new@duilt.test', name: 'new', emailVerified: false };
   await page.route('**/*', (route) => {
     const req = route.request();
     const u = new URL(req.url());
-    // PLAY-1: sign-in goes through the page's own address, /neonauth.
-    const viaSite = u.pathname.startsWith('/neonauth/');
-    if (u.hostname === '127.0.0.1' && !viaSite) return route.continue();
+    if (u.hostname === '127.0.0.1') return route.continue();
     const headers = { 'access-control-allow-origin': req.headers().origin || '*', 'access-control-allow-credentials': 'true',
       'access-control-allow-headers': '*', 'access-control-expose-headers': 'set-auth-jwt' };
     if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
     const json = (status, body) => route.fulfill({ status, headers, contentType: 'application/json', body: JSON.stringify(body) });
-    if (!viaSite && !u.hostname.includes('neonauth')) return json(200, []);
-    const path = viaSite ? u.pathname.replace(/^\/neonauth/, '') : u.pathname.replace(/^.*\/auth/, '');
+    if (!u.hostname.includes('neonauth')) return json(200, []);
+    const path = u.pathname.replace(/^.*\/auth/, '');
     calls.push(path);
-    if (viaSite) siteCalls += 1;
     if (path === '/sign-up/email') return json(200, { token: null, user });
     if (path === '/sign-in/email') return json(403, { code: 'EMAIL_NOT_VERIFIED', message: 'Email not verified' });
     if (path === '/email-otp/send-verification-otp') return json(200, { success: true });
@@ -76,7 +72,6 @@ try {
   await page.waitForFunction(() => true);
   await page.waitForTimeout(500);
   assert.ok(calls.includes('/email-otp/send-verification-otp'), 'a new code was asked for');
-  assert.equal(siteCalls, calls.length, 'every sign-in call went through the page\'s own /neonauth');
 
   // The right code: signed in, panel closed.
   await page.fill('#cloud-code', '123456');
