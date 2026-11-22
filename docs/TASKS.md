@@ -1198,6 +1198,26 @@ From `analysis-accounts.md`. ACCT-1 to ACCT-8 come before a public launch.
 | ACCT-13 | Database capacity: compute awake, higher CU ceiling, `world_chunks.player_id`, region. | open, needs database approval |
 | ACCT-14 | Revision check so two devices on one world do not overwrite each other. | open |
 
+## 14. Playtest notes (22 November)
+
+From the owner's playtest notes, 22 November. Ordered by the suggested priority; the owner picks what to tackle.
+
+| ID | What | Size | Status |
+|---|---|---|---|
+| PLAY-1 | **Saving failed and the world list emptied.** At 00:47 on 22 November, Save and "Save and leave" both refused. After signing in again the world list was empty. Owner: "I want a place to store a world, and whenever I pick that world it opens. If I save it will save there." Step 1: find the cause (database state of that player, the save path, TECH-19 key change). Step 2: simplify to one world, one place, one save target. Overlaps SAVE-1 to SAVE-7 and ACCT-14. | Large | part 1 in this PR. Read 22 November (owner approved): player c9673f78 still holds 46 worlds; last save landed 00:40:02; no `save_failures` row, because logging needs the same sign-in that was lost; new sign-ins on 19, 21 (twice) and 22 November show the session is not kept between visits on iPhone Safari. Fixed: a failed session check no longer reads as signed out; a lost sign-in says so and offers Sign in; failed saves are kept on the phone and sent once an upload lands. Left: why the session is lost (likely Safari and the sign-in cookie on another domain; a same-site auth proxy is the candidate fix), and the simpler one-world-one-save design |
+| PLAY-2 | Item counts in the inventory are hard to read. Use the black number from the hotbar. | Small | open |
+| PLAY-3 | Remove the Roof tool from the menu and the Files section from Settings. | Small | open |
+| PLAY-4 | **Hits and deaths on mobs.** The red hit flash is too short to see, and a killed mob vanishes at once. Longer hit flash with a knock-back, then a death animation (fall over, fade or puff) before removal. Code: `src/world/Mobs.js`. | Small | open |
+| PLAY-5 | Ore clusters: copper in clusters of 3 to 4, iron 2 to 3, gold stays single. New worlds and newly generated chunks only. | Small | open |
+| PLAY-6 | The Kiln's hint "Needs N more stone or brick in the shell" reads as if bricks are needed, which looks like a loop (Kiln needs brick, brick needs a Kiln Oven, the oven needs a Kiln). Cobblestone or stone is enough. Reword the hint. | Small | open |
+| PLAY-7 | **Quarry.** Gives too little stone; should give every stone colour. It looks like an empty water tank. Level 1: a small hut with tools. Higher levels: stone machines. | Medium | open |
+| PLAY-8 | Sleeping: the avatar lies in the bed for 10 seconds while the night passes, then day. | Medium | open |
+| PLAY-9 | Leather: a way to make leather (tanning) in place of raw animal skins. | Medium | open |
+| PLAY-10 | String: a spinning machine that makes string from wool or cotton. Cotton becomes a crop with seeds. | Medium | open |
+| PLAY-11 | **Crafting review.** Some items can be crafted two ways. List every duplicate and keep one way. After the first ending (dark or light warriors), a factory building with many machines automates all crafting and only needs materials. | Large | open, needs a design first |
+| PLAY-12 | Military buildings: weapons research and army organisation. | Large | open, needs a design first |
+| PLAY-13 | Politics: villagers get angry without jobs or food, with consequences. Builds on JOBS and the hunger counter (CL-12). | Large | open, needs a design first |
+
 ## The old planning docs (history)
 
 Moved to `docs/history/`. They're the record of what was asked and how it

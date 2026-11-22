@@ -144,7 +144,7 @@ export class HomeScreen {
         -->
         ${this.cloudError ? '' : `<button class="px-btn px-big" data-new="1">${pixelIcon('plus', 20)}<span>Create new world</span></button>`}
         <button class="px-btn px-big px-stone" data-worlds="1">${pixelIcon('open', 20)}<span>Open world</span>${rows.length ? `<b class="px-count">${rows.length}</b>` : ''}</button>
-        ${this.cloudError ? `<p class="home-warn">${pixelIcon('warn', 14)} Could not reach your account — open your worlds to see why.</p>` : ''}
+        ${this.cloudError ? `<p class="home-warn">${pixelIcon('warn', 14)} ${this.cloudSignIn ? 'You were signed out. Sign in with Account to see your worlds.' : 'Could not reach your account — open your worlds to see why.'}</p>` : ''}
         <div class="home-row">
           <!--
             A build with no cloud configured at all has nothing this button
@@ -179,7 +179,7 @@ export class HomeScreen {
       </div>
       ${failed ? `
         <div class="home-gate warn">
-          <strong>Could not reach your account</strong>
+          <strong>${this.cloudSignIn ? 'You were signed out' : 'Could not reach your account'}</strong>
           <p>${escapeHtml(failed)}</p>
           ${this.cloudDetail ? `
             <details class="home-detail">
@@ -187,8 +187,8 @@ export class HomeScreen {
               <code id="home-detail-text">${escapeHtml(this.cloudDetail)}</code>
               <button class="secondary" data-copy-detail="1">Copy</button>
             </details>` : ''}
-          <div class="home-actions"><button class="secondary" data-retry="1">Try again</button></div>
-          ${this.healAttempt < HEAL_GAPS.length
+          <div class="home-actions">${this.cloudSignIn ? '<button data-signin="1">Sign in</button>' : '<button class="secondary" data-retry="1">Try again</button>'}</div>
+          ${this.cloudSignIn ? '' : this.healAttempt < HEAL_GAPS.length
             ? '<p class="home-quiet">Still trying on its own — you do not have to wait here.</p>'
             : '<p class="home-quiet">It has stopped trying on its own.</p>'}
         </div>` : ''}
@@ -231,6 +231,7 @@ export class HomeScreen {
         e.target.textContent = 'Select it by hand — copying is blocked here';
       }
     });
+    this.body.querySelector('[data-signin]')?.addEventListener('click', () => this.cb.onAccount?.());
     this.body.querySelector('[data-retry]')?.addEventListener('click', () => {
       // A deliberate tap starts the patience over: you have told it you are
       // here and waiting, which is different from a screen left open.
@@ -282,6 +283,7 @@ export class HomeScreen {
       this.cloudError = null;
       this.cloudDetail = null;
       this.stopHealing();
+      this.cloudSignIn = false;
     } catch (err) {
       // Said out loud, not swallowed — but the local list rides along on the
       // error (see Game.js's listAllWorlds), so losing the account never
@@ -290,13 +292,15 @@ export class HomeScreen {
       // very different sentences and the player has to be able to tell them
       // apart, but neither has to mean an empty screen.
       this.cloudError = err?.message || 'The account did not answer.';
+      // PLAY-1: lost sign-in. Asking again will not help; signing in will.
+      this.cloudSignIn = Boolean(err?.signIn);
       // And the technical version, folded away under it. Nobody can debug a
       // photograph of the readable sentence — it says the same thing whether
       // the database is asleep, a route is answering 500, or the browser threw
       // the reply away, and those are three different repairs.
       this.cloudDetail = err?.detail ?? null;
       this.cloudWorlds = err?.partial ?? this.cloudWorlds ?? [];
-      this.startHealing();
+      if (!this.cloudSignIn) this.startHealing();
     } finally {
       this.cloudPending = false;
       if (this.step === 'home') this.renderMenu();

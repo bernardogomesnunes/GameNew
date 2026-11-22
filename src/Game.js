@@ -392,6 +392,27 @@ const SKY_TRIBUTE = 64;
 // The account's worlds as last seen, kept on the device so the worlds
 // screen can show them the instant it opens (Game.knownWorlds).
 const WORLDS_SEEN = 'voxelgame:worlds-seen';
+const KEPT_FAILURES = 'duilt:cloud-failures';
+
+/** Saves that failed, kept on the device: the last 20, with time and detail. */
+export function keepFailure(worldId, err, store = globalThis.localStorage) {
+  try {
+    const list = JSON.parse(store.getItem(KEPT_FAILURES) ?? '[]');
+    list.push({ at: new Date().toISOString(), worldId, status: err?.status ?? null, message: String(err?.detail ?? err?.message ?? err).slice(0, 300) });
+    store.setItem(KEPT_FAILURES, JSON.stringify(list.slice(-20)));
+  } catch { /* a full or blocked storage loses only the diagnosis */ }
+}
+
+/** Sends the kept failures to the account's log, then forgets them. */
+export async function sendKeptFailures(cloud, store = globalThis.localStorage) {
+  let list;
+  try { list = JSON.parse(store.getItem(KEPT_FAILURES) ?? '[]'); store.removeItem(KEPT_FAILURES); } catch { return 0; }
+  if (!cloud || !Array.isArray(list)) return 0;
+  for (const f of list) {
+    await cloud.reportFailure(f.worldId, { status: f.status, message: `[kept ${f.at}] ${f.message}` }).catch(() => {});
+  }
+  return list.length;
+}
 /** Most recently touched first. */
 const sortWorlds = (rows) => rows.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
 
@@ -1200,6 +1221,7 @@ export class Game {
         this.dropSafeCopy();
         this.ui?.home?.forgetWorlds?.();
         this.uploadLanded();
+        sendKeptFailures(this.cloud);
         return true;
       } catch (err) {
         // Left pending on purpose: the next save tries again, and the copy put
@@ -1208,6 +1230,10 @@ export class Game {
         // Best effort, and never awaited: a broken save_failures write must
         // never be the reason a retry gets delayed.
         this.cloud?.reportFailure(this.worldId, err).catch(() => {});
+        // That report needs a working sign-in, which is the thing most often
+        // missing (PLAY-1: nothing was logged on 22 November). Kept here too,
+        // and sent once an upload lands.
+        keepFailure(this.worldId, err);
         // Nothing is lost meanwhile: the copy keepSafe put aside survives a closed tab,
         // and sendUnsent sends it the next time the game starts.
         this.uploadFailed();
@@ -1463,12 +1489,16 @@ export class Game {
     // seconds later. The screen used to ask before the account's session had
     // been picked back up, so the first answer was "signed out: only what's
     // in this browser". Wait for the session, so the first answer is whole.
+    // PLAY-1: a check that could not answer is asked again before listing.
+    if (this.cloud && this.cloudAuth.checkError) await this.cloudAuth.recheck();
     if (this.cloud && !this.cloudAuth.ready) await this.cloudAuth.restore();
     let localError;
     try{await this.local.refresh?.();}catch(error){localError=error;}
     const local = this.local.list();
     localError??=this.local.storageError;
     if (!this.cloud?.signedIn) {
+      const lost = this.cloud ? this.lostSignIn() : null;
+      if (lost) { lost.partial = local; throw lost; }
       if(localError){localError.partial=local;throw localError;}return local;
     }
     try {
@@ -1525,6 +1555,34 @@ export class Game {
     } catch {
       return [];
     }
+  }
+
+  /**
+   * Why an account's worlds are missing from the list while nobody is
+   * signed in, or null when that is simply the state chosen.
+   *
+   * Owner, 22 November: saving stopped at 00:47 and, after signing in
+   * again, the list was empty. The worlds were all in the account. A session
+   * check that failed, or a session that vanished, read as "signed out", and
+   * an empty list said nothing about why. Signing out on purpose forgets the
+   * remembered list, so a remembered list here means the sign-in was lost.
+   */
+  lostSignIn() {
+    if (this.cloudAuth?.checkError) {
+      const err = new Error('Could not check your sign-in just now. Your worlds are kept on your account; try again in a moment.');
+      err.detail = this.cloudAuth.checkError.detail;
+      return err;
+    }
+    let count = 0;
+    try {
+      const saved = JSON.parse(localStorage.getItem(WORLDS_SEEN) ?? '[]');
+      if (!Array.isArray(saved) && saved?.user && Array.isArray(saved.rows)) count = saved.rows.length;
+    } catch { /* nothing remembered */ }
+    if (!count) return null;
+    const err = new Error(`You were signed out. Sign in again with Account to see your ${count === 1 ? 'world' : `${count} worlds`}. Nothing is lost: they are kept on your account.`);
+    err.detail = 'No session from /auth/get-session';
+    err.signIn = true;
+    return err;
   }
 
   forgetRememberedWorlds() {

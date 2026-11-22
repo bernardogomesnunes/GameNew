@@ -63,11 +63,19 @@ export class CloudAuth {
     // Asked for by the worlds list and the start-up at the same moment: one
     // session check, both waiting on it.
     this.restoring ??= (async () => {
+      // PLAY-1 (owner, 22 November): a session check that failed read as
+      // "signed out", and the worlds list came up empty with no word why.
+      // A refusal (401, 403, no session) is signed out. Anything else is
+      // "could not check", kept in checkError so the list can say so.
+      this.checkError = null;
       try {
         const client = await this.load();
-        this.user = userFrom(await this.checkSession(client));
-      } catch {
+        const result = await this.checkSession(client);
+        if (result?.error && !isRefusal(result.error)) throw result.error;
+        this.user = userFrom(result);
+      } catch (err) {
         this.user = null;
+        if (!isRefusal(err)) this.checkError = failure(err, '/auth/get-session');
       }
       this.ready = true;
       this.bus?.emit('cloud:auth', { user: this.summary() });
@@ -100,6 +108,13 @@ export class CloudAuth {
       query: fresh ? { disableCookieCache: true } : undefined,
       fetchOptions: { onSuccess: this.captureJwt },
     });
+  }
+
+  /** Asks the sign-in service again, after a check that could not answer. */
+  async recheck() {
+    this.ready = false;
+    this.restoring = null;
+    return this.restore();
   }
 
   async signIn(email, password) {
@@ -321,6 +336,12 @@ export function needsCode(email) {
 export function hasSession(result) {
   const data = result?.data ?? result;
   return Boolean(data?.token || data?.session);
+}
+
+/** The service said no (signed out, expired). Not a failure to answer. */
+function isRefusal(err) {
+  const status = err?.status ?? err?.body?.status;
+  return status === 401 || status === 403;
 }
 
 function userFrom(result) {
