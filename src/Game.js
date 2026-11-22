@@ -25,6 +25,7 @@ import { ChunkGen, WORLD_HEIGHT } from './world/ChunkGen.js';
 import { runStreamingWork } from './world/streamingWork.js';
 import { FarTerrain } from './render/FarTerrain.js';
 import { SkyClouds } from './render/SkyClouds.js';
+import { sleepAt, wakesOn } from './world/sleep.js';
 import { DayCycle, MORNING, daylightAt, gameDaysText, GAME_DAY_SECONDS } from './render/DayCycle.js';
 import { Sound, soundOf } from './audio/Sound.js';
 import { hear } from './audio/listen.js';
@@ -74,7 +75,7 @@ import { UIManager } from './ui/UIManager.js';
 import { EventBus } from './core/EventBus.js';
 import { Diagnostics, describeGraphicsBackend } from './core/Diagnostics.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
-import { AIR, WATER, BLOCKS_BY_ID, bedPart, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting, CHISELLED } from './config/blocks.js';
+import { AIR, WATER, BLOCKS_BY_ID, bedPart, FACING_STEP, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting, CHISELLED } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
 import { mineStairs } from './duilt/mineStairs.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
@@ -2297,7 +2298,7 @@ export class Game {
     });
 
     document.addEventListener('mousemove', (e) => {
-      if (!this.pointerLocked) return;
+      if (!this.pointerLocked || this.sleeping) return;
       const k = 0.0022 * (this.controls.sensitivity ?? 1);
       this.player.look(e.movementX * k, e.movementY * k);
     });
@@ -2347,6 +2348,7 @@ export class Game {
       // email address used to open the workbench on "e" and the buildings panel
       // on "b", which on a phone buried the keyboard under a panel.
       if (isTyping(e)) return;
+      if (this.sleeping && wakesOn(e.code, this.controls.keys)) { this.wake(); return; }
 
       if (e.code === 'Escape' && this.closeUp?.active) { this.endMachine(); return; }
       // CRAFT-9: at a machine its own keys come first (the Carpenter's Table: Space holds Saw, 1 to 4 tap a part).
@@ -2432,7 +2434,7 @@ export class Game {
     const held = this.selectedItemId === BARE_HANDS ? {}
       : this.selectedItemId ? { itemId: this.selectedItemId } : { blockId: this.selectedBlockId };
     const third = this.player.view !== 'first';
-    this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third, draw: this.drawing ? this.drawPower() : 0 });
+    this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held, visible: playing && third, draw: this.drawing ? this.drawPower() : 0, lie: this.sleeping ? { x: this.sleeping.centre.x, y: this.sleeping.centre.y, z: this.sleeping.centre.z, dir: this.sleeping.dir, amount: this.sleeping.lie } : null });
     this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning, draw: this.drawing ? this.drawPower() : 0, offhand: this.duilt?.worn?.offhand?.id ?? null });
     // The flying machine went with it: you come down on its wings.
     if (this.player.flying && !this.player.canFly()) {
@@ -2960,6 +2962,7 @@ export class Game {
   }
 
   primaryAction() {
+    if (this.sleeping) return;
     this.avatarView?.strike();
     this.handView?.strike();
     if (this.moving) return void this.cancelMove();
@@ -2990,6 +2993,7 @@ export class Game {
    * to eat, a bucket to fill. Returns 'place' or 'break'.
    */
   tapAction(at = null) {
+    if (this.sleeping) return;
     if (this.moving) { this.secondaryAction(); return 'place'; }
     const breaks = () => { this.primaryAction(); return 'break'; };
     const places = () => { this.secondaryAction(); return 'place'; };
@@ -3039,6 +3043,7 @@ export class Game {
   }
 
   secondaryAction() {
+    if (this.sleeping) return;
     this.avatarView?.strike();
     this.handView?.strike();
     // The held remote uses this world's existing shelves, wherever you aim.
@@ -3105,7 +3110,7 @@ export class Game {
     // And at a painting, Place makes it where you wake (playtest, P1).
     if (aimed && isPainting(aimed.block)) return void this.setSpawn(aimed);
     // At a bed, Place sleeps the night through (owner, 15 November).
-    if (aimed && bedPart(aimed.block)) return void this.sleep();
+    if (aimed && bedPart(aimed.block)) return void this.sleep(aimed);
     // At a war tent, Place makes camp there; at the dark god's altar, the oath.
     if (aimed && isTent(aimed.block)) return void this.makeCamp(aimed);
     if (aimed && aimed.block === NIGHTSTONE_ORE && this.isAltar(aimed)) return void this.swearOath();
@@ -7612,20 +7617,101 @@ export class Game {
 
   /** Place on a painting: that's where you wake after you fall (playtest, P1). */
   /**
-   * Sleep in a bed through the night (owner, 15 November): at night, Place
-   * on a bed and it is morning. The world's day count moves on by the hours
+   * Sleep in a bed (owner, 15 November; PLAY-8, 22 November): at night, Place
+   * on a bed and you lie down for SLEEP_SECONDS (world/sleep.js) while the
+   * clock runs on to morning. The world's day count moves on by the hours
    * slept, so saplings and research do too. Not while a war round is on.
+   * `aimed` is the bed block hit; either half will do.
    */
-  sleep() {
+  sleep(aimed) {
     const d = this.duilt;
-    if (!d || !this.dayCycle) return false;
+    if (!d || !this.dayCycle || this.sleeping) return false;
     if (daylightAt(this.dayCycle.time).day > 0.35) return void this.ui.toast({ kind: 'xp', title: 'You can only sleep at night' });
     if (d.war?.stage === 'fighting') return void this.ui.toast({ kind: 'xp', title: 'No sleeping through a battle' });
-    d.days += (MORNING - this.dayCycle.time + 1) % 1;
-    this.dayCycle.time = d.dayTime = MORNING;
+    const part = aimed && bedPart(aimed.block);
+    if (!part) return false;
+    // The bed's two halves, foot to head along its facing.
+    const [dx, dz] = FACING_STEP[part.facing];
+    const foot = part.head ? { x: aimed.x - dx, z: aimed.z - dz } : { x: aimed.x, z: aimed.z };
+    const centre = { x: foot.x + 0.5 + dx * 0.5, y: aimed.y, z: foot.z + 0.5 + dz * 0.5 };
+    // Beside the bed, on whichever long side has room to stand.
+    let stand = null;
+    const w = this.world;
+    for (const side of [1, -1]) {
+      const sx = Math.floor(centre.x - dz * side), sz = Math.floor(centre.z + dx * side);
+      if (w.isCollidable(sx, aimed.y - 1, sz) && !w.isCollidable(sx, aimed.y, sz) && !w.isCollidable(sx, aimed.y + 1, sz)) { stand = { x: sx + 0.5, y: aimed.y, z: sz + 0.5 }; break; }
+    }
+    stand ??= this.standingNear(Math.floor(centre.x), aimed.y, Math.floor(centre.z)) ?? { x: this.player.position.x, y: this.player.position.y, z: this.player.position.z };
+    const p = this.player;
+    this.sleeping = {
+      t: 0, start: this.dayCycle.time, target: MORNING, centre, stand, dir: { x: dx, z: dz }, lie: 0,
+      view: p.view, viewReach: p.viewReach, hp: d.health?.value ?? null, ...this.sleepOverlay(),
+    };
+    p.flying = false;
+    p.teleport(stand.x, stand.y, stand.z);
+    // Looking at the bed from beside it, over your own shoulder: the avatar
+    // is drawn lying in it, so third person is the only view that shows it.
+    p.view = 'behind';
+    p.viewReach = 3.6;
+    p.yaw = Math.atan2(-(centre.x - stand.x), -(centre.z - stand.z));
+    p.pitch = -0.42;
+    p.syncCamera();
+    this.sleeping.veil.hidden = false;
     this.editedAt = Date.now();
-    this.ui.toast({ kind: 'challenge', title: 'Good morning', body: 'You slept the night through.' });
     return true;
+  }
+
+  /** The dark veil, the Zzz and the Wake up button, made once and kept. */
+  sleepOverlay() {
+    if (!this._sleepDom) {
+      const root = document.createElement('div');
+      root.id = 'sleep-overlay';
+      root.hidden = true;
+      root.innerHTML = '<div class="sleep-veil"></div><div class="sleep-zs"><span>Z</span><span>Z</span><span>z</span></div><button type="button" class="sleep-wake">Wake up</button>';
+      document.body.appendChild(root);
+      root.querySelector('.sleep-wake').addEventListener('click', () => this.wake());
+      this._sleepDom = { veil: root, shade: root.querySelector('.sleep-veil') };
+    }
+    return this._sleepDom;
+  }
+
+  /** Each frame asleep: the clock, the veil, the avatar lying down; morning ends it. */
+  tickSleep(dt) {
+    const s = this.sleeping, p = this.player;
+    s.t += dt;
+    const reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const r = sleepAt(s.t, { start: s.start, target: s.target, reduced });
+    this.dayCycle.time = r.time;
+    s.shade.style.opacity = String(r.dim);
+    s.lie = r.lie;
+    // Held still: no looking about, no drifting, the camera on the bed.
+    p.yaw = Math.atan2(-(s.centre.x - s.stand.x), -(s.centre.z - s.stand.z));
+    p.pitch = -0.42;
+    p.velocity.set(0, 0, 0);
+    p.syncCamera();
+    // Hurt in your sleep: you wake.
+    const hp = this.duilt?.health?.value;
+    if (s.hp != null && hp != null && hp < s.hp - 0.01) return void this.wake();
+    if (r.done) this.wake(true);
+  }
+
+  /** Up, beside the bed: at the end of the night, or early (the clock stays where it got to). */
+  wake(finished = false) {
+    const s = this.sleeping;
+    if (!s) return;
+    this.sleeping = null;
+    const p = this.player;
+    p.view = s.view;
+    p.viewReach = s.viewReach;
+    p.teleport(s.stand.x, s.stand.y, s.stand.z);
+    s.shade.style.opacity = '0';
+    s.veil.hidden = true;
+    if (finished) this.dayCycle.time = s.target;
+    this.duilt.dayTime = this.dayCycle.time;
+    this.editedAt = Date.now();
+    this.ui.toast(finished
+      ? { kind: 'challenge', title: 'Good morning', body: 'You slept the night through.' }
+      : { kind: 'xp', title: 'You woke early' });
   }
 
   setSpawn({ x, y, z }) {
@@ -8400,7 +8486,7 @@ export class Game {
       this.quality.tick(dt);
       const wasAt = { x: this.player.position.x, z: this.player.position.z };
       const wasSwimming = this.player.swimming;
-      this.player.update(dt);
+      if (this.sleeping) this.player.syncCamera(); else this.player.update(dt);
       this.keepApart();
       this.tickRide(dt);
       this.tickPilot();
@@ -8500,7 +8586,8 @@ export class Game {
     const clockWas = this.dayCycle.time;
     const watchingTrainingPost = !playing && ['barracks', 'military'].includes(this.ui?.duiltUI?.building?.type) && this.ui.isPanelOpen?.('panel-building');
     // The showcase holds the hour it was set to, for its pictures.
-    if ((playing || watchingTrainingPost) && !this.showcase && !this.title) this.dayCycle.advance(dt);
+    if (this.sleeping && playing) this.tickSleep(dt);
+    else if ((playing || watchingTrainingPost) && !this.showcase && !this.title) this.dayCycle.advance(dt);
     if (watchingTrainingPost) this.syncDefence();
     // A station's work (the forge, the mills: IMP-15) and the crucible's
     // melting go on while a panel is open over them (owner, 9 November: "The

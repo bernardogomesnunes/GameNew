@@ -2383,3 +2383,15 @@ button.busy { cursor: progress; opacity: 0.92; }
    bar, 56 px tall, under the thumb. */
 .crucible-bar .machine-action { display: block; width: 100%; min-height: 56px; margin: 8px 0 0; font-size: 18px; }
 .kiln-bar .melt-bar i { background: #e0703a; }
+
+/* Sleeping in a bed (PLAY-8): a dim over the picture, floating Zs, a way out. */
+#sleep-overlay { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
+#sleep-overlay[hidden] { display: none; }
+#sleep-overlay .sleep-veil { position: absolute; inset: 0; background: #070b1c; opacity: 0; transition: opacity 0.4s linear; }
+#sleep-overlay .sleep-zs { position: absolute; left: 50%; top: 38%; width: 0; height: 0; font: 700 28px/1 'Courier New', monospace; color: #e9eeff; text-shadow: 2px 2px 0 #1a2350; }
+#sleep-overlay .sleep-zs span { position: absolute; left: 0; top: 0; opacity: 0; animation: sleep-z 3s linear infinite; }
+#sleep-overlay .sleep-zs span:nth-child(2) { animation-delay: 1s; font-size: 22px; }
+#sleep-overlay .sleep-zs span:nth-child(3) { animation-delay: 2s; font-size: 16px; }
+@keyframes sleep-z { 0% { opacity: 0; transform: translate(0, 0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(34px, -70px); } }
+#sleep-overlay .sleep-wake { position: absolute; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); pointer-events: auto; min-height: 44px; padding: 10px 22px; font: inherit; font-weight: 700; color: #fff; background: rgba(20, 28, 64, 0.85); border: 2px solid #9fb0ff; border-radius: 8px; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { #sleep-overlay .sleep-zs span { animation: none; opacity: 0.9; } #sleep-overlay .sleep-zs span:nth-child(2) { transform: translate(18px, -26px); } #sleep-overlay .sleep-zs span:nth-child(3) { transform: translate(34px, -50px); } }
