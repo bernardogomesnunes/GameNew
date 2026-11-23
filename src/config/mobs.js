@@ -77,7 +77,7 @@ export const MOBS = [
 
 // The horse (asked for directly: "horses with wooden carts, at age 2 — you
 // need to have a horse and build the cart and apply the cart to the horse").
-// Wild on the plains and quick to bolt; hold fruit or vegetables and press
+// Wild on the plains and quick to bolt; hold fruit or carrots and press
 // Place on one to tame it (Game.tameHorse), then use a cart on it.
 MOBS.push({
   id: 'horse', name: 'Horse', biomes: ['plains'], weight: 2,

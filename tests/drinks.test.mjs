@@ -43,7 +43,7 @@ ok('break with one selected drinks it', ['beer', 'kombucha', 'coffee'].every((id
 {
   const coffee = CROPS.find((c) => c.kind === 'coffee');
   ok('coffee grows on farmland like any crop', !!coffee && ITEMS_BY_ID.get('seeds_coffee')?.block === cropBlock('coffee', 0));
-  ok('its beans you can brew, or chew', coffee.produce === 'coffee_beans' && isFood('coffee_beans'));
+  ok('its beans you brew, not eat', coffee.produce === 'coffee_beans' && !isFood('coffee_beans'));
   ok('its blocks are real and clash with nothing', [0, 1, 2, 3].every((s) => BLOCKS_BY_ID.get(cropBlock('coffee', s))?.crop?.kind === 'coffee')
     && new Set(CROP_IDS).size === CROP_IDS.length && cropOf(cropBlock('coffee', 3)).stage === 3);
   ok('the other crops are where they always were', cropBlock('carrot', 0) === 119 && cropBlock('broccoli', 3) === 146);

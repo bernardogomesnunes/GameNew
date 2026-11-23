@@ -19,6 +19,8 @@ const NO_COLLISION_SHAPES = new Set(['rug', 'rail', 'gate_open', 'door_open', 'd
   'egg',
   // The storybook look: what hangs from above, and a curl of trim on a roof.
   'vines', 'wisteria', 'fairy_lights', 'curl']);
+// PLAY-14..21: wild mushrooms, which you walk through.
+for (const s of ['mushroom_red', 'mushroom_lilac', 'mushroom_pale']) NO_COLLISION_SHAPES.add(s);
 // Taller than its cell: a fence, or a shut gate, stops you at a block and a
 // half — past jumping, and past anything an animal can step.
 const FENCE_HEIGHT = 1.5;

@@ -365,6 +365,32 @@ ITEM_MODELS.cotton = stack([
   [0.12, 0.12, 0, 0.08, 0x6b5a3a], [0.24, 0.24, 0.08, 0.2, 0xece6da],
   [0.3, 0.3, 0.2, 0.4, 0xf7f4ec], [0.2, 0.2, 0.4, 0.52, 0xece6da],
 ]);
+// --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// PLAY-16: dried mushrooms, two flat shrivelled caps and a small stem.
+const dried = (c) => [
+  box(0.1, 0, 0.2, 0.4, 0.06, 0.44, c), box(0.17, 0.06, 0.25, 0.35, 0.1, 0.39, c),
+  box(0.5, 0, 0.5, 0.8, 0.06, 0.74, c), box(0.57, 0.06, 0.55, 0.75, 0.1, 0.69, c),
+  box(0.42, 0, 0.12, 0.5, 0.05, 0.2, 0xd8ccb4),
+];
+ITEM_MODELS.dried_red = dried(0x9a3a3a);
+ITEM_MODELS.dried_lilac = dried(0x7a5c98);
+ITEM_MODELS.dried_pale = dried(0xb8a27e);
+// PLAY-17: mushroom flour, a sack with a heap of flour on top.
+ITEM_MODELS.mushroom_flour = [
+  ...stack([[0.22, 0.18, 0, 0.5, 0xd8ccb0], [0.16, 0.13, 0.5, 0.62, 0xc9b38a]]),
+  box(0.3, 0.62, 0.36, 0.7, 0.66, 0.64, 0xe9dfcb),
+];
+// PLAY-19: a bowl of a meal: an oak bowl, what is in it, and up to two lumps on top.
+const bowl = (color, lumps = []) => [
+  box(0.2, 0, 0.2, 0.8, 0.22, 0.8, 0x8a6238),
+  box(0.26, 0.2, 0.26, 0.74, 0.25, 0.74, color),
+  ...lumps.slice(0, 2).map((c, i) => box(0.3 + i * 0.26, 0.25, 0.36 + i * 0.08, 0.4 + i * 0.26, 0.35, 0.46 + i * 0.08, c)),
+];
+ITEM_MODELS.hunters_stew = bowl(0x8a5a2a, [0xb7825c, 0xe8873a]);
+ITEM_MODELS.forest_broth = bowl(0x9a7a3a, [0x3e7b3c, 0xb8a27e]);
+ITEM_MODELS.mushroom_soup = bowl(0xb59ac0, [0x7a5c98]);
+ITEM_MODELS.mushroom_dumplings = bowl(0xd8c39a, [0xe6d3a8, 0xe6d3a8]);
+// --- end PLAY-14..21 ---
 // A jar of fireflies: glass, a cork, and the lights inside.
 ITEM_MODELS.fireflies = [
   ...stack([[0.22, 0.22, 0, 0.62, 0xcfe6d8]]),
