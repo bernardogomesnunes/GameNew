@@ -318,6 +318,20 @@ Nothing useful. That is the point of it.
 
 See the building panel for its purpose and claim requirements.
 
+### Factory
+
+A big roofed hall of machines. Each kind of machine inside runs one recipe on its own, from your storehouses. Opens once the war is won or the Sky Kingdom falls.
+
+- Available from Age 10; claim region 8–24 blocks on a side.
+- Claim fee: 8 Iron Ingot, 24 Brick, 6 Glass.
+
+| Level | Name | Average output / game day | Storage slots | Level fee |
+| --- | --- | --- | --- | --- |
+| 1 | Humble Factory | — | — | None |
+| 2 | Tended Factory | — | — | 12 Oak Planks, 8 Cobblestone |
+| 3 | Thriving Factory | — | — | 20 Oak Planks, 15 Coins |
+| 4 | Renowned Factory | — | — | 4 Iron Ingot, 40 Coins |
+
 ### Temple
 
 Somewhere to pray. Offerings and worshippers turn into devotion, and devotion into blessings.

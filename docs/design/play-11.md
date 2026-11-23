@@ -411,3 +411,4 @@ The owner said "do everything we have pending" and did not answer the open quest
 | 4. Coins | Left out | The design leaves them out. One run makes 10 to 25, above the 12 a day cap |
 | 5. 12 a day a line, or exempt from the house rule | 12 a day a line, ladder 12, 18, 30, 42 | The design's number. Keeps the house rule |
 | 6. Rings: temple or forge | Forge. Temple copies `ring_white` and `ring_black` removed | Owner's instruction and the design's recommendation. `tests/temple.test.mjs` now forges at the forge with a level 5 temple standing |
+| 7. Panel rate (the design says both "a game day, times `PRODUCTION_PACE`" and "12 a day") | The panel reads a game day at `PRODUCTION_PACE`: 12 a building day shows "2.4 a day" | Every building panel reads rates this way. The engine keeps 12 a building day |

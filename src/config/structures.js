@@ -1359,7 +1359,7 @@ export const STRUCTURES = [
     icon: '🏭',
     age: 10,
     afterEnding: true,
-    blurb: 'A big roofed hall of machines. Each kind of machine inside runs one recipe on its own, from your storehouses.',
+    blurb: 'A big roofed hall of machines. Each kind of machine inside runs one recipe on its own, from your storehouses. Opens once the war is won or the Sky Kingdom falls.',
     minSize: 8,
     maxSize: 24,
     cost: { iron_ingot: 8, brick: 24, glass: 6 },
