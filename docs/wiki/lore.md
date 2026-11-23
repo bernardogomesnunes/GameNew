@@ -40,7 +40,7 @@ If you forge neither ring, the war still comes at Age 10 and you must still beat
 - The Temple makes devotion over time, more with worshipping settlers.
 - Offerings add devotion: fruit (6), a harvest (4 carrots), a meal (2 cooked meat), gold (the best), or a lit candle.
 - Holy Water (1 Glass, 1 Devotion) heals four hearts. It needs a Chapel.
-- At the High Temple you can forge a ring. Sunstone and Nightstone are the hunt: very rare crystals on deep cave walls and in chests.
+- Once a temple is a High Temple, you can forge a ring at a forge. Sunstone and Nightstone are the hunt: very rare crystals on deep cave walls and in chests.
 
 ## The Sanctuary and the guardian
 

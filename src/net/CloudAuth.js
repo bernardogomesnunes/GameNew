@@ -28,6 +28,19 @@ import { captchaOptions } from './turnstile.js';
 // that starts just before expiry does not lose the race against the clock.
 const JWT_LIFETIME_MS = 15 * 60_000;
 const JWT_REFRESH_MARGIN_MS = 2 * 60_000;
+const RESET_FLAG = 'duilt.revokeAfterReset';
+
+/** Where the reset email's link lands: this page, flagged so the game opens the reset step. */
+function defaultResetUrl() {
+  return `${globalThis.location?.origin ?? ''}/?reset=1`;
+}
+
+function remember(key, value) {
+  try { value == null ? globalThis.localStorage?.removeItem(key) : globalThis.localStorage?.setItem(key, value); } catch { /* private window */ }
+}
+function recall(key) {
+  try { return globalThis.localStorage?.getItem(key) ?? null; } catch { return null; }
+}
 
 export class CloudAuth {
   constructor(bus) {
@@ -135,6 +148,7 @@ export class CloudAuth {
     if (isUnconfirmed(result?.error)) throw needsCode(email);
     this.user = unwrapUser(result);
     this.ready = true;
+    await this.finishPendingReset();
     this.bus?.emit('cloud:auth', { user: this.summary() });
     return this.user;
   }
@@ -183,6 +197,91 @@ export class CloudAuth {
     const result = await client.auth.emailOtp.sendVerificationOtp({ email, type: 'email-verification' })
       .catch(rethrowReadable);
     if (result?.error) throw new Error(readableAuthError(result.error));
+  }
+
+  // ---- forgotten password (ACCT-2) ------------------------------------------
+
+  /**
+   * Asks for a reset email. Better Auth answers the same whether or not the
+   * email has an account, so this never says which. The link in the email
+   * lands on `redirectTo` with `?token=...` (or `?error=INVALID_TOKEN`).
+   */
+  async requestPasswordReset(email, redirectTo = defaultResetUrl()) {
+    const client = await this.load();
+    const result = await client.auth.requestPasswordReset({ email, redirectTo }).catch(rethrowReadable);
+    if (result?.error) throw new Error(readableAuthError(result.error));
+  }
+
+  /**
+   * Sets the new password from the emailed token. Neon's
+   * `revoke_sessions_on_password_reset` is off and is the owner's setting
+   * (ACCT-2), so the game revokes the other sessions itself: the flag set here
+   * makes the next sign-in with the new password call revokeOtherSessions.
+   */
+  async resetPassword(token, newPassword) {
+    const client = await this.load();
+    const result = await client.auth.resetPassword({ token, newPassword }).catch(rethrowReadable);
+    if (result?.error) throw new Error(readableResetError(result.error));
+    remember(RESET_FLAG, '1');
+    return true;
+  }
+
+  /** After a reset, the first sign-in signs every other device out. Never throws. */
+  async finishPendingReset() {
+    if (recall(RESET_FLAG) !== '1') return;
+    try {
+      await this.revokeOtherSessions();
+      remember(RESET_FLAG, null);
+    } catch (err) {
+      console.error('[duilt] could not revoke other sessions after reset', err);
+    }
+  }
+
+  // ---- sessions (ACCT-10) ---------------------------------------------------
+
+  /** Every active session of this account, newest activity first, this one marked. */
+  async listSessions() {
+    const client = await this.load();
+    const [list, current] = await Promise.all([
+      client.auth.listSessions().catch(rethrowReadable),
+      client.auth.getSession({ query: { disableCookieCache: true } }).catch(() => null),
+    ]);
+    if (list?.error) throw new Error(readableAuthError(list.error));
+    const rows = list?.data ?? (Array.isArray(list) ? list : []);
+    const here = current?.data?.session ?? current?.session ?? null;
+    return rows
+      .map((s) => ({
+        id: s.id,
+        token: s.token,
+        device: describeDevice(s.userAgent),
+        lastActive: s.updatedAt ?? s.createdAt ?? null,
+        current: Boolean(here && (s.token === here.token || s.id === here.id)),
+      }))
+      .sort((a, b) => Number(b.current) - Number(a.current) || new Date(b.lastActive) - new Date(a.lastActive));
+  }
+
+  /** Signs one other device out. */
+  async revokeSession(token) {
+    const client = await this.load();
+    const result = await client.auth.revokeSession({ token }).catch(rethrowReadable);
+    if (result?.error) throw new Error(readableAuthError(result.error));
+  }
+
+  /** Signs every device out except this one. */
+  async revokeOtherSessions() {
+    const client = await this.load();
+    const result = await client.auth.revokeOtherSessions().catch(rethrowReadable);
+    if (result?.error) throw new Error(readableAuthError(result.error));
+  }
+
+  /** Signs every device out, this one included. */
+  async revokeAllSessions() {
+    const client = await this.load();
+    const result = await client.auth.revokeSessions().catch(rethrowReadable);
+    if (result?.error) throw new Error(readableAuthError(result.error));
+    this.user = null;
+    this.forgetToken();
+    this.bus?.emit('cloud:auth', { user: null });
   }
 
   async signOut() {
@@ -479,4 +578,40 @@ export function readableAuthError(error) {
   }
   if (hay.includes('INVALID_EMAIL')) return 'That does not look like an email address.';
   return message || 'Could not sign in. Try again.';
+}
+
+/** The reset link was refused: say whether the link or the password is the trouble. */
+export function readableResetError(error) {
+  const hay = `${error?.code ?? ''} ${error?.message ?? ''}`.toUpperCase();
+  if (hay.includes('INVALID_TOKEN') || hay.includes('INVALID TOKEN') || hay.includes('EXPIRED')) {
+    return 'That reset link has expired or was already used. Ask for a new one.';
+  }
+  if (hay.includes('PASSWORD_TOO_SHORT') || hay.includes('TOO SHORT')) return 'Pick a longer password (at least 8 characters).';
+  if (hay.includes('PASSWORD_TOO_LONG') || hay.includes('TOO LONG')) return 'That password is too long.';
+  return readableAuthError(error);
+}
+
+/** "Chrome on Android" from a user-agent string. Unknown strings read "Unknown device". */
+export function describeDevice(ua) {
+  const s = String(ua ?? '');
+  if (!s) return 'Unknown device';
+  const os = /iPhone/.test(s) ? 'iPhone' : /iPad/.test(s) ? 'iPad' : /Android/.test(s) ? 'Android'
+    : /Windows/.test(s) ? 'Windows' : /Mac OS X|Macintosh/.test(s) ? 'Mac' : /CrOS/.test(s) ? 'ChromeOS'
+      : /Linux/.test(s) ? 'Linux' : null;
+  const browser = /Edg\//.test(s) ? 'Edge' : /OPR\/|Opera/.test(s) ? 'Opera' : /Firefox|FxiOS/.test(s) ? 'Firefox'
+    : /Chrome|CriOS/.test(s) ? 'Chrome' : /Safari/.test(s) ? 'Safari' : null;
+  if (browser && os) return `${browser} on ${os}`;
+  return browser || os || 'Unknown device';
+}
+
+/** "just now", "5 minutes ago", "3 days ago". */
+export function agoText(when, now = Date.now()) {
+  const t = new Date(when).getTime();
+  if (!Number.isFinite(t)) return 'unknown';
+  const sec = Math.max(0, Math.round((now - t) / 1000));
+  if (sec < 60) return 'just now';
+  const unit = (n, name) => `${n} ${name}${n === 1 ? '' : 's'} ago`;
+  if (sec < 3600) return unit(Math.floor(sec / 60), 'minute');
+  if (sec < 86400) return unit(Math.floor(sec / 3600), 'hour');
+  return unit(Math.floor(sec / 86400), 'day');
 }

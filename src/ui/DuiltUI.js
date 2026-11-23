@@ -736,6 +736,7 @@ export class DuiltUI {
     });
     body.querySelectorAll('[data-train]').forEach((b) => b.addEventListener('click', () => actions.onTrain?.(b.dataset.train)));
     if (structure.type === 'market') this.wireOrderCancel(body, structure.id, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
+    if (structure.type === 'factory') this.wireFactoryLines(body, structure); // PLAY-11
     body.querySelectorAll('[data-soldier-order]').forEach((b) => b.addEventListener('click', () => actions.onSoldierOrder?.(b.dataset.soldierOrder)));
     this.wireWarHall(body, structure);  // PLAY-12
     body.querySelector('[data-cube]')?.addEventListener('click', () => { this.closePanel('panel-building'); actions.onCube?.(); });
@@ -753,6 +754,67 @@ export class DuiltUI {
         .then((yes) => { if (yes) actions.onDelete?.(); });
     });
   }
+
+  // ---- PLAY-11: the Factory's lines ----
+
+  /** One <option> list for a line: Off, then what the stores can feed, then the rest; a search narrows it. */
+  factoryOptionsHtml(row, query = '') {
+    const q = query.trim().toLowerCase();
+    const label = (r) => `${r.name} ×${r.count}`;
+    const match = (r) => !q || r.id === row.recipe || label(r).toLowerCase().includes(q) || itemName(r.output).toLowerCase().includes(q);
+    const list = row.recipes.filter(match).sort((a, b) => (b.stocked - a.stocked) || label(a).localeCompare(label(b)));
+    return `<option value="" ${row.recipe ? '' : 'selected'}>Off</option>${list.map((r) => {
+      const taken = r.takenBy && r.id !== row.recipe;
+      return `<option value="${escapeAttr(r.id)}" ${r.id === row.recipe ? 'selected' : ''} ${taken ? 'disabled' : ''}>${escapeHtml(label(r))}${taken ? ` (the ${escapeHtml(r.takenBy)} line makes this)` : r.stocked ? '' : ' (stores short)'}</option>`;
+    }).join('')}`;
+  }
+
+  /** A line's state, said plainly: Off, Running, Waiting for..., or stalled. */
+  factoryStateHtml(row) {
+    if (!row.recipe) return '';
+    if (row.stalled) return '<p class="building-line bad">Stopped: no room in the storehouses or your bag.</p>';
+    if (row.short.length) {
+      const want = row.short.map((x) => `${x.n} ${itemName(x.item).toLowerCase()} (${x.have} in stores)`).join(', ');
+      return `<p class="building-line bad">Waiting for ${escapeHtml(want)}.</p>`;
+    }
+    return '<p class="building-line ok">Running.</p>';
+  }
+
+  /** The Lines section: one row per machine kind inside, each with its recipe picker. */
+  factoryLinesHtml(structure) {
+    const data = this.duilt?.factoryLines(structure.id);
+    if (!data) return '';
+    this.factoryRows = data.rows;
+    const perDay = (n) => Math.round(n * PRODUCTION_PACE * 10) / 10;
+    const rows = data.rows.map((row) => `
+      <div class="factory-line" data-factory-line="${escapeAttr(row.station)}">
+        <div class="factory-line-head"><strong>${escapeHtml(row.name)}</strong>
+          <span class="factory-rate">${row.recipe ? `${perDay(row.daily)} ${escapeHtml(itemName(row.output).toLowerCase())} a day` : ''}</span></div>
+        ${row.recipes.length > 20 ? `<input type="search" class="factory-search" data-factory-search="${escapeAttr(row.station)}" placeholder="Search ${row.recipes.length} recipes" aria-label="Search the ${escapeAttr(row.name)} recipes">` : ''}
+        <select data-factory-pick="${escapeAttr(row.station)}" aria-label="What the ${escapeAttr(row.name)} line makes">${this.factoryOptionsHtml(row)}</select>
+        ${this.factoryStateHtml(row)}
+      </div>`).join('');
+    return `<div class="building-sec factory-lines">
+      <div class="building-sec-head"><h4>Lines</h4><span class="level-pill">${data.running} of ${data.max} running</span></div>
+      ${data.rows.length ? rows : '<p class="building-line">Place machines inside: a Workbench, a Planing Bench, a Stone Mill...</p>'}
+      <p class="dim">Each line takes its materials from your storehouses and sends what it makes to them, then your bag.</p>
+    </div>`;
+  }
+
+  wireFactoryLines(body, structure) {
+    body.querySelectorAll('[data-factory-pick]').forEach((sel) => sel.addEventListener('change', () => {
+      const r = this.duilt?.setFactoryLine(structure.id, sel.dataset.factoryPick, sel.value || null);
+      if (!r?.ok) this.bus.emit('toast', { kind: 'xp', title: r?.reason ?? 'Could not change that' });
+      else if (this.game) this.game.editedAt = Date.now();
+      this.showBuilding(structure, this.buildingActionsCache);
+    }));
+    body.querySelectorAll('[data-factory-search]').forEach((input) => input.addEventListener('input', () => {
+      const row = this.factoryRows?.find((x) => x.station === input.dataset.factorySearch);
+      const sel = body.querySelector(`[data-factory-pick="${input.dataset.factorySearch}"]`);
+      if (row && sel) sel.innerHTML = this.factoryOptionsHtml(row, input.value);
+    }));
+  }
+  // PLAY-11 end
 
   /** IMP-33: which wood a forest grows, white and dark from Age 3. */
   forestWoodHtml(structure) {
@@ -800,6 +862,7 @@ export class DuiltUI {
       ${structure.type === 'market' ? `<div class="building-sec"><h4>Standing sell orders</h4>${this.ordersHtml(structure)}<p class="dim">Talk to a trader to add one.</p></div>` : ''}
       ${structure.type === 'sanctuary_white' || structure.type === 'sanctuary_black' ? this.cubeHtml() : ''}
       ${levelSec}
+      ${structure.type === 'factory' ? this.factoryLinesHtml(structure) : '' /* PLAY-11 */}
       ${this.stationRecipesHtml(spec, structure)}
       ${this.buildingToolsHtml(structure, spec, locked)}`;
   }
@@ -1231,6 +1294,7 @@ export class DuiltUI {
     if (structure.type === 'war_hall') out.push('Every company in one list. Give orders, or send one to march on a rival city.');  // PLAY-12
     if (structure.type === 'military') out.push('Train spear guards here; they defend your land when enemies come.');
     if (structure.type === 'work_hall') out.push('Give villagers building and carrying jobs, and leave supplies for them to carry.');
+    if (structure.type === 'factory') out.push('Each kind of machine inside runs one recipe on its own. It takes the materials from your storehouses.'); // PLAY-11
     if (!out.length && !this.makesOf(structure, spec, level)) out.push('Makes nothing. It counts toward your age goals.');
     return out;
   }
@@ -1700,7 +1764,7 @@ export class DuiltUI {
       const what = spec?.armour ? `${spec.armour} armour` : spec?.bagSlots ? `+${spec.bagSlots} bag slots` : '';
       const tip = spec ? `${spec.name}${what ? ` · ${what}` : ''} — tap to take off` : `${SLOT_NAMES[k]} — nothing on`;
       return `<div class="wear-cell"><button class="bag-slot wear-slot${spec ? '' : ' empty'}${fits === k ? ' fits' : ''}" data-wear="${k}"
-        aria-label="${escapeAttr(tip)}" data-tip="${escapeAttr(spec ? spec.name : SLOT_NAMES[k])}" data-tip-info="${escapeAttr(spec ? `${what ? `${what} · ` : ''}tap to take off` : k === 'ring' ? 'Forged at the Temple' : k === 'back' ? 'Lift a backpack from your bag, then tap here' : k === 'offhand' ? 'Lift a shield from your bag, then tap here' : 'Lift a piece from your bag, then tap here')}">${inner}</button>
+        aria-label="${escapeAttr(tip)}" data-tip="${escapeAttr(spec ? spec.name : SLOT_NAMES[k])}" data-tip-info="${escapeAttr(spec ? `${what ? `${what} · ` : ''}tap to take off` : k === 'ring' ? 'Forged at a forge' /* PLAY-11 */ : k === 'back' ? 'Lift a backpack from your bag, then tap here' : k === 'offhand' ? 'Lift a shield from your bag, then tap here' : 'Lift a piece from your bag, then tap here')}">${inner}</button>
         <span class="wear-label">${SLOT_NAMES[k]}</span></div>`;
     }).join('');
     grid.querySelectorAll('[data-wear]').forEach((btn) => btn.addEventListener('click', () => this.tapWear(btn.dataset.wear)));
@@ -1730,7 +1794,7 @@ export class DuiltUI {
       const r = d.takeOff(k);
       this.bus.emit('toast', { kind: 'xp', title: r.ok ? `Took off the ${itemName(r.id).toLowerCase()}` : r.reason });
     } else {
-      this.bus.emit('toast', { kind: 'xp', title: k === 'ring' ? 'Your ring is forged at the Temple'
+      this.bus.emit('toast', { kind: 'xp', title: k === 'ring' ? 'Your ring is forged at a forge, once a temple is a High Temple' /* PLAY-11 */
         : k === 'back' ? 'Make a backpack at the bench, lift it from your bag, then tap Back'
           : `Lift a piece of armour from your bag, then tap ${SLOT_NAMES[k]}` });
     }

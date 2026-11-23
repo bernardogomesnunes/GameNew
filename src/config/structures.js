@@ -14,6 +14,8 @@
  * to explain itself: "needs 2 more dirt" teaches, "invalid" infuriates.
  */
 
+import { stationOf } from './blocks.js'; // PLAY-11
+
 const GRASS = 1, DIRT = 2, STONE = 3, WOOD = 4, LEAVES = 5, SAND = 6, PLANKS = 7,
       COBBLE = 8, BRICK = 9, GLASS = 10, WATER = 11, GOLD = 13, MARBLE = 17,
       SAPLING = 20, FARMLAND = 21, FENCE = 47, GATE = 48, GATE_OPEN = 49;
@@ -148,6 +150,18 @@ const count = (ctx, ids) => ctx.countOf(ids);
 
 /** One quarry cycle: plain rock, every coloured stone, and coal for torches. */
 const QUARRY_YIELD = { stone: 4, stone_white: 1, stone_grey: 1, stone_orange: 1, stone_turquoise: 1, coal: 2 };
+
+// PLAY-11: the Factory's machines — the station blocks a line can run.
+// Order is the order the panel lists them in.
+export const FACTORY_STATIONS = ['workbench', 'planing_bench', 'wood_mill', 'joinery_bench', 'stone_mill', 'masons_bench',
+  'bleach_bucket', 'forge', 'spinning_wheel', 'tanning_vat', 'kiln_oven', 'crucible', 'compost'];
+/** The machine kinds standing in a region (from an inspect() ctx's tally), in FACTORY_STATIONS order. */
+export function factoryMachines(ctx) {
+  const found = new Set();
+  for (const [id, n] of ctx.tally ?? []) { const st = n > 0 ? stationOf(id) : null; if (st) found.add(st); }
+  return FACTORY_STATIONS.filter((st) => found.has(st));
+}
+// PLAY-11 end
 
 export const STRUCTURES = [
   {
@@ -1336,6 +1350,41 @@ export const STRUCTURES = [
     skill: 'politics',
   },
 
+  // PLAY-11: the Factory (docs/design/play-11.md). Opens once a world has an
+  // ending (DuiltGame.storyRefuses). The machine blocks inside are its lines:
+  // one recipe per machine kind, inputs from the storehouses, all or none,
+  // up to 12 of the output a building day (structures/Factory.js).
+  {
+    id: 'factory',
+    name: 'Factory',
+    icon: '🏭',
+    age: 10,
+    afterEnding: true,
+    optional: true, // no age goal asks for it: it comes after the last one
+    blurb: 'A big roofed hall of machines. Each kind of machine inside runs one recipe on its own, from your storehouses. Opens once the war is won or the Sky Kingdom falls.',
+    minSize: 8,
+    maxSize: 24,
+    cost: { iron_ingot: 8, brick: 24, glass: 6 },
+    requires: [
+      {
+        id: 'machines',
+        test: (ctx) => factoryMachines(ctx).length >= 3,
+        say: (ctx) => `Needs ${3 - factoryMachines(ctx).length} more kind${3 - factoryMachines(ctx).length === 1 ? '' : 's'} of machine inside (a Planing Bench, a Stone Mill, a Workbench...)`,
+      },
+      {
+        id: 'hall',
+        test: (ctx) => ctx.shelteredVolume() >= 60,
+        say: (ctx) => ctx.shelteredVolume() === 0
+          ? 'Needs a hall inside — walls all round and a roof over the top'
+          : `Make the hall bigger — ${60 - ctx.shelteredVolume()} more blocks of space under the roof`,
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    skill: 'building',
+  },
+  // PLAY-11 end
+
   // ---- Phase 7c: the Temple ------------------------------------------------
   //
   // A place of worship, from Age 3 (docs/history/plan-phase7-lore.md). It makes
@@ -1343,7 +1392,7 @@ export const STRUCTURES = [
   // (the same staffing every building has), and from offerings you bring it
   // (recipes at the temple: food, gold, a lantern). It climbs from a Shrine
   // to a High Temple by building it up, and each rung asks devotion too.
-  // At the top it forges a ring: the White or the Black — one, for good.
+  // At the top a forge can forge a ring: the White or the Black — one, for good (PLAY-11).
   {
     id: 'temple',
     name: 'Temple',
@@ -1380,8 +1429,8 @@ export const STRUCTURES = [
     everySeconds: 21600,
     skill: 'building',
     // Each rung is built, then paid for in devotion (`cost`, spent from your
-    // bag when you evolve it — see StructureRegistry.evolve). The High
-    // Temple is where a ring is forged (recipes.js, `tier: 4`).
+    // bag when you evolve it — see StructureRegistry.evolve). PLAY-11: a
+    // High Temple opens the rings at a forge (recipes.js, `needsTemple: 4`).
     tiers: [
       { id: 'shrine', name: 'A Shrine', blurb: 'An altar, a light, and a roof over them.', needs: [] },
       {
@@ -1410,7 +1459,7 @@ export const STRUCTURES = [
         ],
       },
       {
-        id: 'high', name: 'The High Temple', blurb: 'Banners hang in it. Here the rings are forged — the White, or the Black.',
+        id: 'high', name: 'The High Temple', blurb: 'Banners hang in it. With it raised, a forge can forge a ring — the White, or the Black.' /* PLAY-11 */,
         // More than the Great Temple's three a cycle: it used to make exactly
         // the same, so the last level gave nothing for its 25 devotion.
         produces: { devotion: 4 }, everySeconds: 21600, cost: { devotion: 25 },
@@ -1616,6 +1665,10 @@ for (const spec of STRUCTURES) {
   const makes = Object.keys(spec.produces ?? {}).length || spec.fromCrops || spec.fromAnimals;
   if (makes && spec.everySeconds) spec.tiers = standardTiers(spec);
 }
+
+// PLAY-11: the Factory makes nothing by itself but climbs the standard ladder;
+// each level's `yield` is its lines' daily cap over 12 (structures/Factory.js).
+for (const spec of STRUCTURES) if (spec.id === 'factory') spec.tiers = standardTiers(spec);
 
 export const STRUCTURES_BY_ID = new Map(STRUCTURES.map((s) => [s.id, s]));
 

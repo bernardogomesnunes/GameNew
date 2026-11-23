@@ -187,7 +187,7 @@ This is the last age. Finishing it finishes the game.
 ## Notes on particular goals
 
 - **Evolve a building a level (Age 6):** give any building what its next level asks for (usually a lamp), then press Evolve in its pop-up. The "Craft what's missing" button makes the lamp for you.
-- **Forge a ring (Age 7):** build the Temple up to the High Temple, then forge the White Ring or the Black Ring. This is a one-way choice. See [Lore and story](lore.md).
+- **Forge a ring (Age 7):** build the Temple up to the High Temple, then forge the White Ring or the Black Ring at a forge. This is a one-way choice. See [Lore and story](lore.md).
 - **End the war (Age 10):** on the white path, win the Ten Rounds. On the dark path, bring down the Sky Kingdom. See [Combat and war](combat-and-war.md).
 - **Take a building to Renowned (Age 10):** the top level of any building (Renowned, or the High Temple).
 - **Take a city's treasure (Age 11):** taking from a living city is theft: its guards come for you and its merchants shut their stalls to you. An abandoned city is safer.

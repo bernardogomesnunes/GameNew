@@ -35,6 +35,8 @@ for (const spec of LEVELLED) {
       : b.slots != null ? b.slots > a.slots
       // IMP-2, IMP-3: barracks and Garrison levels give room, not goods.
       : ['barracks', 'military'].includes(spec.id) ? SOLDIER_CAPS[t] > SOLDIER_CAPS[t - 1]
+      // PLAY-11: a Factory's level raises its lines' cap (yield 1, 1.5, 2.5, 3.5).
+      : spec.id === 'factory' ? yieldAt(spec, t) > yieldAt(spec, t - 1)
       : perDay(spec, t) > perDay(spec, t - 1);
     if (!gain) better = false;
   }

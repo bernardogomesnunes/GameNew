@@ -150,8 +150,10 @@ function shrine() {
     offerings.length >= 4 && ['fruit', 'gold', 'lantern'].every((id) => offerings.some((r) => r.inputs[id])));
   const hw = RECIPES.find((r) => r.id === 'holy_water');
   ok('a chapel blesses water', hw.station === 'temple' && hw.tier === 1 && hw.inputs.devotion);
-  const white = RECIPES.find((r) => r.id === 'ring_white'), black = RECIPES.find((r) => r.id === 'ring_black');
-  ok('the High Temple forges the rings', white.tier === 4 && black.tier === 4);
+  // PLAY-11: the temple copies are gone; the rings are forged at the forge, once a High Temple stands.
+  const white = RECIPES.find((r) => r.id === 'ring_white_forge'), black = RECIPES.find((r) => r.id === 'ring_black_forge');
+  ok('the forge makes the rings, once a High Temple stands', white.station === 'forge' && black.station === 'forge' && white.needsTemple === 4 && black.needsTemple === 4);
+  ok('and the temple has no ring recipe', !RECIPES.some((r) => r.station === 'temple' && r.ring));
   ok('the White Ring from Sunstone and gold, the Black from Nightstone and obsidian, both with devotion',
     white.inputs.sunstone && white.inputs.gold && white.inputs.devotion && black.inputs.nightstone && black.inputs.obsidian && black.inputs.devotion);
   ok('and they are worn in the ring slot', ['ring_white', 'ring_black'].every((id) => ITEMS_BY_ID.get(id).wears === 'ring'));
@@ -167,20 +169,22 @@ function shrine() {
   g.inventory.add('devotion', 30);
 
   const atShrine = ['temple', 'temple@0'];
-  const atHigh = ['temple', 'temple@0', 'temple@1', 'temple@2', 'temple@3', 'temple@4'];
+  const atForge = ['forge'];
+  const raiseHighTemple = () => { g.structures.list = () => [{ type: 'temple', valid: true, tier: 4 }]; };
   ok('offerings are made at the temple', g.crafting.craft('offer_fruit', 2, { atStations: atShrine }).ok && g.inventory.countOf('devotion') === 32);
   ok('not anywhere else', !g.crafting.craft('offer_fruit', 1, { atStations: [] }).ok);
   const early = g.crafting.craft('holy_water', 1, { atStations: atShrine });
   ok(`holy water needs a chapel, not a shrine (${early.reason})`, !early.ok);
   ok('at a chapel it\'s blessed', g.crafting.craft('holy_water', 1, { atStations: ['temple', 'temple@0', 'temple@1'] }).ok && g.inventory.countOf('holy_water') === 2);
-  const tooSoon = g.crafting.available(4, { station: null, atStations: atShrine }).find((r) => r.id === 'ring_white');
+  const tooSoon = g.crafting.available(4, { station: null, atStations: atForge }).find((r) => r.id === 'ring_white_forge');
   ok(`a ring can't be forged below the High Temple (${tooSoon.reason})`, !tooSoon.ok && /level 5/.test(tooSoon.reason));
+  raiseHighTemple();
 
-  const forged = g.crafting.craft('ring_white', 1, { atStations: atHigh });
-  ok('at the High Temple, the White Ring is forged', forged.ok && g.inventory.countOf('ring_white') === 1 && g.ring === 'white');
-  const other = g.crafting.craft('ring_black', 1, { atStations: atHigh });
+  const forged = g.crafting.craft('ring_white_forge', 1, { atStations: atForge });
+  ok('at the forge, with a High Temple raised, the White Ring is forged', forged.ok && g.inventory.countOf('ring_white') === 1 && g.ring === 'white');
+  const other = g.crafting.craft('ring_black_forge', 1, { atStations: atForge });
   ok(`and the Black Ring is closed for good (${other.reason})`, !other.ok && g.inventory.countOf('ring_black') === 0);
-  const avail = g.crafting.available(4, { station: null, atStations: atHigh }).find((r) => r.id === 'ring_black');
+  const avail = g.crafting.available(4, { station: null, atStations: atForge }).find((r) => r.id === 'ring_black_forge');
   ok('the bench says so too', !avail.ok && /White Ring/.test(avail.reason));
 
   // Wear it.

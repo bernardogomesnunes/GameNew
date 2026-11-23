@@ -11,6 +11,7 @@ import { INTRO, ENDINGS, endingFor } from './StoryText.js';
 import { LazyStoryView } from './LazyStoryView.js';
 import { html, escapeHtml } from './html.js';
 import { askConfirm } from './Confirm.js';
+import { agoText } from '../net/CloudAuth.js';
 import { BOOK, BOOK_GROUPS, bookGroup } from '../duilt/Collection.js';
 import { chainLineHtml } from './chainLine.js';
 import { TRADERS, CITY_TRADERS, buysFor } from '../config/traders.js';
@@ -491,6 +492,38 @@ export class UIManager {
             </div>
           </div>
 
+          <!-- ACCT-2: forgotten password. Asks for the email, sends the link. -->
+          <div id="cloud-forgot-step" hidden>
+            <div class="field-row">
+              <input type="email" id="cloud-forgot-email" placeholder="Email" autocomplete="email" />
+            </div>
+            <div class="form-error" id="cloud-forgot-error" role="alert" aria-live="assertive" hidden></div>
+            <p class="code-sent" id="cloud-forgot-sent" role="status" hidden></p>
+            <div class="field-row">
+              <button class="primary" id="btn-cloud-forgot-send">Send reset link</button>
+            </div>
+            <div class="export-note">
+              <button class="home-link acct-link" id="btn-cloud-forgot-back">Back to sign in</button>
+            </div>
+          </div>
+
+          <!-- ACCT-2: what the emailed link opens. The token is read from the URL and kept in memory only. -->
+          <div id="cloud-reset-step" hidden>
+            <div class="field-row">
+              <input type="password" id="cloud-new-password" placeholder="New password" autocomplete="new-password" />
+            </div>
+            <div class="field-row">
+              <input type="password" id="cloud-new-password2" placeholder="New password again" autocomplete="new-password" />
+            </div>
+            <div class="form-error" id="cloud-reset-error" role="alert" aria-live="assertive" hidden></div>
+            <div class="field-row">
+              <button class="primary" id="btn-cloud-reset">Set new password</button>
+            </div>
+            <div class="export-note" id="cloud-reset-expired" hidden>
+              <button class="home-link acct-link" id="btn-cloud-reset-again">Send me a new link</button>
+            </div>
+          </div>
+
           <div id="cloud-signed-out">
             <div class="field-row">
               <input type="email" id="cloud-email" placeholder="Email" autocomplete="email" />
@@ -503,10 +536,12 @@ export class UIManager {
                  where a phone's keyboard covers it (owner, 17 November). -->
             <div class="captcha-row" id="cloud-captcha" hidden></div>
             <div class="form-error" id="cloud-error" role="alert" aria-live="assertive" hidden></div>
+            <div class="form-note" id="cloud-note" role="status" hidden></div>
             <div class="field-row">
               <button class="primary" id="btn-cloud-signin">Sign in</button>
             </div>
             <div class="export-note">
+              <button class="home-link acct-link" id="btn-cloud-forgot">Forgot password?</button><br>
               New here? <button class="home-link" id="btn-account-switch">Create an account instead</button>
             </div>
           </div>
@@ -531,6 +566,17 @@ export class UIManager {
             <div class="field-row">
               <button class="secondary" id="btn-cloud-signout">Sign out</button>
             </div>
+            <!-- ACCT-10: where this account is signed in, and a way to end any of it. -->
+            <section class="sessions" id="account-sessions" aria-labelledby="sessions-head">
+              <h4 id="sessions-head">Where you are signed in</h4>
+              <ul class="sessions-list" id="sessions-list"><li class="sessions-empty">Loading\u2026</li></ul>
+              <div class="form-error" id="sessions-error" role="alert" aria-live="assertive" hidden></div>
+              <div class="sessions-actions">
+                <button class="secondary" id="btn-sessions-others">Sign out other devices</button>
+                <button class="secondary" id="btn-sessions-all">Sign out everywhere</button>
+              </div>
+              <div class="export-note">Sessions last 7 days and renew each time you use the game.</div>
+            </section>
             <!--
               This used to promise that signing out "leaves every world on this
               device exactly where it is", which was true right up until worlds
@@ -2192,6 +2238,212 @@ export class UIManager {
       if (e.target.value.replace(/\D/g, '').length === 6) this.q('#btn-cloud-verify').click();
     });
     this.q('#btn-cloud-signout').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignOut()));
+    this.wireReset();
+    this.wireSessions();
+    this.openResetLink();
+  }
+
+  /** ACCT-2: forgot password, and setting the new one from the emailed link. */
+  wireReset() {
+    const emailOk = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const fail = (id, message) => {
+      const box = this.q(id);
+      box.textContent = message;
+      box.hidden = false;
+      box.classList.remove('shake');
+      void box.offsetWidth;
+      box.classList.add('shake');
+    };
+    const hide = (...ids) => { for (const id of ids) this.q(id).hidden = true; };
+    const goForgot = () => {
+      this.accountStep = 'forgot';
+      this.clearAccountError();
+      hide('#cloud-forgot-error', '#cloud-forgot-sent');
+      const typed = this.q('#cloud-email').value.trim();
+      if (typed && !this.q('#cloud-forgot-email').value) this.q('#cloud-forgot-email').value = typed;
+      this.refreshCloudPanel();
+      this.q('#cloud-forgot-email').focus();
+    };
+    this.q('#btn-cloud-forgot').addEventListener('click', goForgot);
+    this.q('#btn-cloud-reset-again').addEventListener('click', () => { this.resetToken = null; goForgot(); });
+    this.q('#btn-cloud-forgot-back').addEventListener('click', () => {
+      this.accountStep = null;
+      this.refreshCloudPanel();
+    });
+    const send = async (btn) => {
+      const email = this.q('#cloud-forgot-email').value.trim();
+      hide('#cloud-forgot-error', '#cloud-forgot-sent');
+      if (!email) return fail('#cloud-forgot-error', 'Type your email.');
+      if (!emailOk(email)) return fail('#cloud-forgot-error', 'That does not look like an email address.');
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Working\u2026';
+      try {
+        await this.cb.onCloudForgot(email);
+        // The same words whether or not the email has an account.
+        const sent = this.q('#cloud-forgot-sent');
+        sent.textContent = `If ${email} has an account, a reset link is on its way. Look in spam if it does not arrive in a minute.`;
+        sent.hidden = false;
+        this.q('#cloud-email').value = email;
+      } catch (err) {
+        fail('#cloud-forgot-error', err.message || 'Could not send the email. Try again.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    };
+    this.q('#btn-cloud-forgot-send').addEventListener('click', (e) => send(e.currentTarget));
+    this.q('#cloud-forgot-email').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.q('#btn-cloud-forgot-send').click(); });
+
+    const setNew = async (btn) => {
+      hide('#cloud-reset-error');
+      const a = this.q('#cloud-new-password').value;
+      const b = this.q('#cloud-new-password2').value;
+      if (!this.resetToken) return fail('#cloud-reset-error', 'This page needs the link from your email. Ask for a new one.');
+      if (a.length < 8) return fail('#cloud-reset-error', 'Pick a longer password (at least 8 characters).');
+      if (a !== b) return fail('#cloud-reset-error', 'The two passwords do not match.');
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Working\u2026';
+      try {
+        await this.cb.onCloudReset(this.resetToken, a);
+        this.resetToken = null;
+        this.accountStep = null;
+        this.q('#cloud-new-password').value = '';
+        this.q('#cloud-new-password2').value = '';
+        this.accountMode = 'signin';
+        this.applyAccountMode?.();
+        const note = this.q('#cloud-note');
+        note.textContent = 'Password changed. Sign in with the new one.';
+        note.hidden = false;
+        this.refreshCloudPanel();
+        this.q('#cloud-password').focus();
+      } catch (err) {
+        fail('#cloud-reset-error', err.message || 'Could not set the password. Try again.');
+        if (/expired|already used/i.test(err.message)) this.q('#cloud-reset-expired').hidden = false;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    };
+    this.q('#btn-cloud-reset').addEventListener('click', (e) => setNew(e.currentTarget));
+    for (const id of ['#cloud-new-password', '#cloud-new-password2']) {
+      this.q(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') this.q('#btn-cloud-reset').click(); });
+    }
+    // Typing a password again clears the "password changed" note.
+    this.q('#cloud-password').addEventListener('input', () => { this.q('#cloud-note').hidden = true; });
+  }
+
+  /**
+   * The emailed link lands on `/?reset=1&token=...` (or `&error=INVALID_TOKEN`).
+   * The token is moved into memory and the address bar is cleaned, so it stays
+   * out of history and screenshots.
+   */
+  openResetLink() {
+    let params;
+    try { params = new URLSearchParams(globalThis.location?.search ?? ''); } catch { return; }
+    if (!params.has('reset')) return;
+    const token = params.get('token');
+    const error = params.get('error');
+    try {
+      params.delete('reset'); params.delete('token'); params.delete('error');
+      const rest = params.toString();
+      globalThis.history?.replaceState(null, '', `${location.pathname}${rest ? `?${rest}` : ''}${location.hash}`);
+    } catch { /* the address stays as it is */ }
+    this.resetToken = token || null;
+    this.accountStep = 'reset';
+    this.q('#cloud-reset-expired').hidden = true;
+    this.openPanel('panel-account');
+    this.refreshCloudPanel();
+    if (!token || error) {
+      const box = this.q('#cloud-reset-error');
+      box.textContent = 'That reset link has expired or was already used. Ask for a new one.';
+      box.hidden = false;
+      this.q('#cloud-reset-expired').hidden = false;
+      this.resetToken = null;
+    } else {
+      this.q('#cloud-new-password').focus();
+    }
+  }
+
+  /** ACCT-10: the session list and the sign-out-of-devices buttons. */
+  wireSessions() {
+    const run = async (btn, fn) => {
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Working\u2026';
+      const box = this.q('#sessions-error');
+      box.hidden = true;
+      try { await fn(); } catch (err) {
+        box.textContent = err.message || 'That did not work. Try again.';
+        box.hidden = false;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    };
+    this.q('#btn-sessions-others').addEventListener('click', (e) => run(e.currentTarget, async () => {
+      await this.cb.onCloudRevokeOthers();
+      this.toast({ kind: 'xp', title: 'Other devices signed out', body: 'This one stays signed in' });
+      await this.refreshSessions({ force: true });
+    }));
+    this.q('#btn-sessions-all').addEventListener('click', (e) => run(e.currentTarget, async () => {
+      const yes = await this.confirm({
+        title: 'Sign out everywhere?',
+        body: 'Every device is signed out, this one too. Your worlds stay on your account.',
+        ok: 'Sign out everywhere', danger: true,
+      });
+      if (!yes) return;
+      await this.cb.onCloudRevokeAll();
+      this.sessionsFor = null;
+      this.refreshCloudPanel();
+    }));
+    this.q('#sessions-list').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-token]');
+      if (!btn) return;
+      run(btn, async () => {
+        await this.cb.onCloudRevokeSession(btn.dataset.token);
+        await this.refreshSessions({ force: true });
+      });
+    });
+  }
+
+  /** Fetches and draws the session list. Once per sign-in unless forced. */
+  async refreshSessions({ force = false } = {}) {
+    const list = this.q('#sessions-list');
+    const user = this.cb.getCloudUser?.();
+    if (!list || !user) return;
+    if (!force && this.sessionsFor === user.id) return;
+    this.sessionsFor = user.id;
+    try {
+      const rows = await this.cb.onCloudSessions();
+      list.replaceChildren();
+      for (const s of rows) {
+        const li = document.createElement('li');
+        li.className = 'session-row';
+        const info = document.createElement('div');
+        info.className = 'session-info';
+        const name = document.createElement('strong');
+        name.textContent = s.device;
+        const when = document.createElement('span');
+        when.textContent = s.current ? 'This device, active now' : `Last active ${agoText(s.lastActive)}`;
+        info.append(name, when);
+        li.append(info);
+        if (!s.current) {
+          const btn = document.createElement('button');
+          btn.className = 'secondary session-end';
+          btn.dataset.token = s.token;
+          btn.textContent = 'Sign out';
+          btn.setAttribute('aria-label', `Sign out ${s.device}`);
+          li.append(btn);
+        }
+        list.append(li);
+      }
+      if (!rows.length) list.innerHTML = '<li class="sessions-empty">No sessions found.</li>';
+    } catch (err) {
+      this.sessionsFor = null;
+      list.innerHTML = '<li class="sessions-empty">Could not load your sessions.</li>';
+    }
   }
 
   /** Draws the Turnstile check once, when the form first opens. Does nothing without a site key. */
@@ -2270,21 +2522,35 @@ export class UIManager {
     this.q('#cloud-status').textContent = user ? `\u00b7 ${user.email || user.name || 'signed in'}` : '';
     // Waiting on the emailed code: that step stays up in place of the form.
     const coding = !user && !!this.codeFor;
-    this.q('#cloud-signed-out').hidden = !!user || coding;
+    // ACCT-2: asking for a reset link, or setting the new password from it.
+    const step = this.accountStep ?? null;
+    const forgetting = !user && !coding && step === 'forgot';
+    const resetting = step === 'reset';
+    const form = !user && !coding && !forgetting && !resetting;
+    this.q('#cloud-signed-out').hidden = !form;
     this.q('#cloud-code-step').hidden = !coding;
-    this.q('#cloud-signed-in').hidden = !user;
+    this.q('#cloud-forgot-step').hidden = !forgetting;
+    this.q('#cloud-reset-step').hidden = !resetting;
+    this.q('#cloud-signed-in').hidden = !user || resetting;
     // The panel is two different things and only one of them is "Sign in".
     // Signed in it was still headed "Sign in", under a line offering to keep
     // worlds off this device — advice for somebody who has already taken it.
     const title = this.q('#account-title');
     const sub = this.q('#account-sub');
-    if (user) {
+    if (resetting) {
+      if (title) title.textContent = 'New password';
+      if (sub) sub.textContent = 'Pick a password you have not used elsewhere.';
+    } else if (forgetting) {
+      if (title) title.textContent = 'Reset your password';
+      if (sub) sub.textContent = 'We will email you a link to choose a new one.';
+    } else if (user) {
       const who = user.email || user.name || 'Signed in';
       this.q('#account-email').textContent = who;
       this.q('#account-initial').textContent = (who[0] || '?').toUpperCase();
       if (title) title.textContent = 'Your account';
       if (sub) sub.textContent = 'Your worlds are kept here, not in this browser.';
       this.refreshAccountSummary();
+      this.refreshSessions();
     } else if (coding) {
       if (title) title.textContent = 'Check your email';
       if (sub) sub.textContent = 'One last step: confirm the email is yours.';
@@ -2292,6 +2558,9 @@ export class UIManager {
       if (title) title.textContent = this.accountMode === 'create' ? 'Create an account' : 'Sign in';
       if (sub) sub.textContent = 'Sign in to keep your worlds and play them on any device.';
     }
+    // Forgot password only makes sense when signing in, not creating.
+    const forgot = this.q('#btn-cloud-forgot');
+    if (forgot) forgot.hidden = this.accountMode === 'create';
     this.refreshAccountLabel();
   }
 
