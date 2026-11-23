@@ -366,6 +366,15 @@ ITEM_MODELS.cotton = stack([
   [0.3, 0.3, 0.2, 0.4, 0xf7f4ec], [0.2, 0.2, 0.4, 0.52, 0xece6da],
 ]);
 // --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// PLAY-16: dried mushrooms, two flat shrivelled caps and a small stem.
+const dried = (c) => [
+  box(0.1, 0, 0.2, 0.4, 0.06, 0.44, c), box(0.17, 0.06, 0.25, 0.35, 0.1, 0.39, c),
+  box(0.5, 0, 0.5, 0.8, 0.06, 0.74, c), box(0.57, 0.06, 0.55, 0.75, 0.1, 0.69, c),
+  box(0.42, 0, 0.12, 0.5, 0.05, 0.2, 0xd8ccb4),
+];
+ITEM_MODELS.dried_red = dried(0x9a3a3a);
+ITEM_MODELS.dried_lilac = dried(0x7a5c98);
+ITEM_MODELS.dried_pale = dried(0xb8a27e);
 // --- end PLAY-14..21 ---
 // A jar of fireflies: glass, a cork, and the lights inside.
 ITEM_MODELS.fireflies = [

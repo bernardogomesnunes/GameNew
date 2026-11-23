@@ -10,6 +10,9 @@ import { meltSeconds, mouldFor, MAX_BATCHES, POUR_MIN, POUR_MAX } from '../duilt
  * is drawn where the crucible melts and is poured; it has no mould to pick.
  */
 const WORDS = {
+  // PLAY-16: the Dehydrator dries like the Kiln fires: load, wait, draw out the tray.
+  dehydrator: { station: 'dehydrator', verb: 'Take out', ing: 'Drying', state: 'drying', done: 'dried', load: 'Load mushrooms to dry. They dry on their own, also while you are away.',
+    hold: 'Hold Take out and let go when the tray reaches the front', made: 'Taken out', short: 'Not out yet: the tray slid back in. Hold longer.', over: 'Too far: it tipped off the tray and was lost.', bar: 'How far the batch has dried', gauge: 'How far the tray is out' },
   crucible: { station: 'crucible', verb: 'Pour', ing: 'Melting', state: 'melting', done: 'molten', load: 'Load something to melt. It melts on its own, also while you are away.',
     hold: 'Hold Pour and let go when the mould is full', made: 'Poured', short: 'Too little: it ran back into the pot. Hold longer.', over: 'Too much: it spilt over and was lost.', bar: 'How far the batch has melted', gauge: 'How full the mould is' },
   kiln: { station: 'kiln_oven', verb: 'Draw', ing: 'Firing', state: 'firing', done: 'fired', load: 'Load clay or sand to fire. It fires on its own, also while you are away.',
@@ -30,7 +33,7 @@ export class CrucibleBar {
     this.onLeave = onLeave;
     this.onPoured = onPoured;
     this.el = document.createElement('div');
-    this.el.className = `counter-bar machine-bar crucible-bar${kind === 'kiln' ? ' kiln-bar' : ''}`;
+    this.el.className = `counter-bar machine-bar crucible-bar${kind === 'kiln' || kind === 'dehydrator' ? ' kiln-bar' : ''}`;
     this.el.hidden = true;
     root.append(this.el);
     this.el.addEventListener('click', (e) => this.click(e));

@@ -1024,6 +1024,11 @@ for (const [kind, name, base] of MUSHY_LOG_BLOCKS) {
     BLOCKS.push({ id: base + stage, name: `${name} Mushy Log`, glyph: 'log', color: 0x6b4a2e, shape: `mushy_${kind}_${stage}`, material: 'wood', ...(stage ? { stateOf: base } : {}), unlock: null });
   }
 }
+// PLAY-16: the Dehydrator, dried mushrooms by waiting (Crucible.js, station 'dehydrator').
+export const DEHYDRATOR = 568;
+BLOCKS.push(
+  { id: DEHYDRATOR, name: 'Dehydrator', glyph: 'cabinet', color: 0x9c7348, shape: 'dehydrator', material: 'wood', station: 'dehydrator', unlock: null },
+);
 // --- end PLAY-14..21 ---
 
 // The storybook look for buildings (asked for directly: they "need to fit

@@ -3108,6 +3108,7 @@ export class Game {
     if (aimed && stationOf(aimed.block) === 'counter') return void this.startCounter(aimed);
     if (aimed && stationOf(aimed.block) === 'crucible') return void this.startCrucible(aimed);
     if (aimed && stationOf(aimed.block) === 'kiln_oven') return void this.startKilnOven(aimed);
+    if (aimed && stationOf(aimed.block) === 'dehydrator') return void this.startDehydrator(aimed); // PLAY-16
     if (aimed && BENCH_MACHINES[stationOf(aimed.block)]) return void this.startBench(aimed, stationOf(aimed.block));
     if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block), aimed);
     // And at a painting, Place makes it where you wake (playtest, P1).
@@ -6754,6 +6755,16 @@ export class Game {
     this.openMachine(this.kilnMachine, at);
   }
 
+  /** PLAY-16: the Dehydrator at `at`: no building needed, it dries on its own. */
+  startDehydrator(at) {
+    if (!this.duilt) return;
+    this.dehydratorMachine ??= new CrucibleMachine({ scene: this.scene, camera: this.camera, uiRoot: this.uiRoot, crucibles: this.duilt.dehydrators, kind: 'dehydrator',
+      age: () => (this.duilt?.sandbox ? Infinity : this.duilt?.age ?? 1), onLeave: () => this.endMachine(),
+      onPoured: () => { this.editedAt = Date.now(); } });
+    this.dehydratorMachine.use(this.duilt.dehydrators);
+    this.openMachine(this.dehydratorMachine, at);
+  }
+
   /** CRAFT3D-2, 4 to 7: a bench machine (wood mill, forge, spinning wheel...) in close-up. */
   startBench(at, station) {
     if (!this.duilt) return;
@@ -8634,7 +8645,7 @@ export class Game {
     // crucible close-up ticks its own pot (CrucibleMachine), so not twice.
     if (!playing && this.duilt && !this.duilt.sandbox && this.ui?.isAnyPanelOpen?.()) {
       this.duilt.stationWork.tick(dt);
-      if (!this.closeUp?.active) { this.duilt.crucibles.tick(dt); this.duilt.kilnOvens.tick(dt); }
+      if (!this.closeUp?.active) { this.duilt.crucibles.tick(dt); this.duilt.kilnOvens.tick(dt); this.duilt.dehydrators.tick(dt); }
     }
     if (this.duilt) {
       this.duilt.dayTime = this.dayCycle.time;

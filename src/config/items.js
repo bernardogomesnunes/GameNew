@@ -557,6 +557,11 @@ export const ITEMS = [
   { id: 'mushy_log_red', name: 'Red Mushy Log', kind: 'refined', stackTo: 10, color: 0x6b4a2e, glyph: 'log', block: 556, madeBy: 'Logs seeded with red mushrooms. Place it: in ten days it is covered in them' },
   { id: 'mushy_log_lilac', name: 'Lilac Mushy Log', kind: 'refined', stackTo: 10, color: 0x6b4a2e, glyph: 'log', block: 559, madeBy: 'Logs seeded with lilac mushrooms. Place it: in ten days it is covered in them' },
   { id: 'mushy_log_pale', name: 'Pale Mushy Log', kind: 'refined', stackTo: 10, color: 0x6b4a2e, glyph: 'log', block: 562, madeBy: 'Logs seeded with pale mushrooms. Place it: in ten days it is covered in them' },
+  // PLAY-16: the Dehydrator and what comes out of it.
+  { id: 'dehydrator', name: 'Dehydrator', kind: 'refined', stackTo: 10, color: 0x9c7348, glyph: 'cabinet', block: 568, madeBy: 'Made by hand from planks and string. Place it and dry mushrooms on its trays' },
+  { id: 'dried_red', name: 'Dried Red Mushroom', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a3a3a, glyph: 'mushroom', madeBy: 'Red mushrooms dried at a Dehydrator. Pressed into Red Mushroom Caps at the workbench' },
+  { id: 'dried_lilac', name: 'Dried Lilac Mushroom', kind: 'refined', stackTo: STACK_GOODS, color: 0x7a5c98, glyph: 'mushroom', madeBy: 'Lilac mushrooms dried at a Dehydrator. For Lilac Mushroom Caps and the Cauldron' },
+  { id: 'dried_pale', name: 'Dried Pale Mushroom', kind: 'refined', stackTo: STACK_GOODS, color: 0xb8a27e, glyph: 'mushroom', madeBy: 'Pale mushrooms dried at a Dehydrator. Grind it into flour at a Stone Mill, or cook it in a Cauldron' },
   // --- end PLAY-14..21 ---
 ];
 

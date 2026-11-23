@@ -232,6 +232,8 @@ export class DuiltGame {
     this.crucibles = new Crucibles({ bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: (key) => this.inFoundry(key) });
     // CRAFT-9 part 6: each Kiln Oven's firing and draw, heated only inside a kiln.
     this.kilnOvens = new Crucibles({ station: 'kiln_oven', bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: (key) => this.inBuilding(key, 'kiln') });
+    // PLAY-16: each Dehydrator's drying and draw. It needs no building round it.
+    this.dehydrators = new Crucibles({ station: 'dehydrator', bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: () => true });
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
@@ -1518,6 +1520,7 @@ export class DuiltGame {
     this.stationWork.tick(dtSeconds);
     this.crucibles.tick(dtSeconds);
     this.kilnOvens.tick(dtSeconds);
+    this.dehydrators.tick(dtSeconds); // PLAY-16
     // Every couple of seconds: a spot whose station was broken gives its items back.
     this.sincePrune = (this.sincePrune ?? 0) + dtSeconds;
     if (this.sincePrune > 2) {
@@ -1526,6 +1529,7 @@ export class DuiltGame {
       this.counters.prune((key) => this.spotStands(key, 'counter'));
       this.crucibles.prune((key) => this.spotStands(key, 'crucible'));
       this.kilnOvens.prune((key) => this.spotStands(key, 'kiln_oven'));
+      this.dehydrators.prune((key) => this.spotStands(key, 'dehydrator')); // PLAY-16
     }
 
     const now = Date.now();
@@ -2550,6 +2554,7 @@ export class DuiltGame {
       counters: this.counters.toJSON(),
       crucibles: this.crucibles.toJSON(),
       kilnOvens: this.kilnOvens.toJSON(),
+      dehydrators: this.dehydrators.toJSON(), // PLAY-16
       herd: herdToJSON(this.herd),
       machines: this.machines.map((m) => ({
         ...(m.kind ? { kind: m.kind } : {}),
@@ -2652,6 +2657,7 @@ export class DuiltGame {
     this.counters.loadJSON(data.counters);
     this.crucibles.loadJSON(data.crucibles);
     this.kilnOvens.loadJSON(data.kilnOvens);
+    this.dehydrators.loadJSON(data.dehydrators); // PLAY-16
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));

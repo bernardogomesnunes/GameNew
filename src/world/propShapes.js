@@ -1244,4 +1244,20 @@ export function mushyBoxes(kind, stage) {
   return boxes;
 }
 for (const kind of Object.keys(MUSH_CAPS)) for (let s = 0; s < 3; s++) PROP_SHAPES[`mushy_${kind}_${s}`] = mushyBoxes(kind, s);
+// PLAY-16: the Dehydrator, facing -z. A cabinet with its front open, three
+// trays of drying slices, a roof board and a front rail. 11 boxes, no glow.
+const DEHY_WOOD = 0x9c7348, DEHY_ROOF = 0x8a6440, DEHY_TRAY = 0xc9b38a;
+PROP_SHAPES.dehydrator = [
+  mushBox(0.14, 0.86, 0, 0.86, 0.74, 0.8, DEHY_WOOD),
+  mushBox(0.14, 0.2, 0, 0.86, 0.2, 0.74, DEHY_WOOD),
+  mushBox(0.8, 0.86, 0, 0.86, 0.2, 0.74, DEHY_WOOD),
+  mushBox(0.1, 0.9, 0.86, 0.92, 0.16, 0.84, DEHY_ROOF),
+  mushBox(0.18, 0.82, 0.2, 0.23, 0.22, 0.76, DEHY_TRAY),
+  mushBox(0.18, 0.82, 0.42, 0.45, 0.22, 0.76, DEHY_TRAY),
+  mushBox(0.18, 0.82, 0.64, 0.67, 0.22, 0.76, DEHY_TRAY),
+  mushBox(0.26, 0.44, 0.23, 0.26, 0.3, 0.5, 0x9a3a3a),
+  mushBox(0.5, 0.7, 0.45, 0.48, 0.3, 0.5, 0xb8a27e),
+  mushBox(0.3, 0.5, 0.67, 0.7, 0.3, 0.5, 0x7a5c98),
+  mushBox(0.14, 0.86, 0, 0.06, 0.18, 0.22, DEHY_ROOF),
+];
 // --- end PLAY-14..21 ---

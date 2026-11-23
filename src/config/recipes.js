@@ -1832,6 +1832,17 @@ RECIPES.push(
   { id: 'mushy_log_pale', name: 'Pale Mushy Log', station: 'hand', age: 2, inputs: { wood: 4, mushroom_pale: 2 }, output: { id: 'mushy_log_pale', count: 1 }, batch: 4,
     blurb: 'A pile of oak logs seeded with mushrooms. Place it; in ten days break it for 15 to 25.' },
 );
+// PLAY-16: the Dehydrator by hand, and three dryings. 4 fresh make 2 dried, 30 s a batch.
+RECIPES.push(
+  { id: 'dehydrator', name: 'Dehydrator', station: 'hand', age: 2, inputs: { planks: 6, string: 2 }, output: { id: 'dehydrator', count: 1 },
+    blurb: 'Place it, then dry mushrooms on its trays.' },
+  { id: 'dry_red', name: 'Dried Red Mushroom', station: 'dehydrator', age: 2, inputs: { mushroom_red: 4 }, output: { id: 'dried_red', count: 2 }, seconds: 30,
+    blurb: 'Red caps dried hard, for building.' },
+  { id: 'dry_lilac', name: 'Dried Lilac Mushroom', station: 'dehydrator', age: 2, inputs: { mushroom_lilac: 4 }, output: { id: 'dried_lilac', count: 2 }, seconds: 30,
+    blurb: 'Lilac caps dried for the pot or for building.' },
+  { id: 'dry_pale', name: 'Dried Pale Mushroom', station: 'dehydrator', age: 2, inputs: { mushroom_pale: 4 }, output: { id: 'dried_pale', count: 2 }, seconds: 30,
+    blurb: 'Pale mushrooms dried for the pot or the mill.' },
+);
 // --- end PLAY-14..21 ---
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
