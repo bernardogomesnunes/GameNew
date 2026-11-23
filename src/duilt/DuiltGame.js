@@ -1465,6 +1465,7 @@ export class DuiltGame {
       const added = ensureEmergingPlaces(this);
       if (added.length) this.bus?.emit('places:emerged', { places: added });
     }
+    this.checkMarketDay();
     this.serveTrains(dtSeconds);
     this.untilBook = (this.untilBook ?? 0) - dtSeconds;
     if (this.untilBook <= 0) { this.untilBook = 1; this.noteCollection(); }
@@ -1883,6 +1884,135 @@ export class DuiltGame {
     this.bus?.emit('duilt:sold', { trader: traderId, itemId, count: done.length, coins });
     const short = done.length < Math.floor(lots) ? 'purse' : null;
     return { ok: true, n: done.length, coins, lots: done.length, short, reason: short ? `${t.name} ran out of coins today.` : null };
+  }
+
+  // ---- standing sell orders (PLAY-23) ----
+
+  /** The market structure with this id, or null. */
+  marketOf(marketId) {
+    const s = this.structures.list().find((x) => x.id === marketId);
+    return s?.type === 'market' ? s : null;
+  }
+
+  /** A market's standing orders, in id order, for the panel. */
+  sellOrders(marketId) {
+    return [...(this.marketOf(marketId)?.orders ?? [])].sort((a, b) => a.id - b.id);
+  }
+
+  /** The most lots of an item one order can ask for: a full purse. */
+  maxOrderLots(itemId) {
+    const p = sellPrice(itemId);
+    return p ? Math.max(0, Math.floor(PURSE / p.coins)) : 0;
+  }
+
+  /**
+   * Sets a standing order at a market: every `every` (1 or 2) game days, sell
+   * `lots` lots of `itemId` to `traderId` out of the storehouses. The first
+   * run is `every` days from today. Returns { ok, order, reason }.
+   */
+  addSellOrder(marketId, traderId, itemId, lots, every) {
+    if (this.sandbox || this.inventory.endless) return { ok: false, reason: 'Nothing to sell in Creative.' };
+    const m = this.marketOf(marketId);
+    if (!m) return { ok: false, reason: 'That is not a market.' };
+    const tier = m.tier ?? 0;
+    if (!tradersFor(tier).some((t) => t.id === traderId)) return { ok: false, reason: 'That trader does not live at this market yet.' };
+    const t = TRADERS_BY_ID.get(traderId);
+    if (!buysFor(t).some((r) => r[0] === itemId) || ITEMS_BY_ID.get(itemId)?.durability) return { ok: false, reason: `${t.name} does not buy that in an order.` };
+    if (every !== 1 && every !== 2) return { ok: false, reason: 'Every day or every 2 days.' };
+    const cap = this.maxOrderLots(itemId);
+    if (!Number.isInteger(lots) || lots < 1 || lots > cap) return { ok: false, reason: `Between 1 and ${cap} lots.` };
+    const slots = orderSlots(tier);
+    m.orders ??= [];
+    if (m.orders.length >= slots) return { ok: false, reason: `All ${slots} order slots are taken. Evolve the market for more.` };
+    m.nextOrder = Math.max(m.nextOrder ?? 1, ...m.orders.map((o) => o.id + 1));
+    const order = { id: m.nextOrder++, trader: traderId, item: itemId, lots, every, next: Math.floor(this.days) + every, last: null };
+    m.orders.push(order);
+    return { ok: true, order };
+  }
+
+  /** Cancels one standing order. */
+  cancelSellOrder(marketId, orderId) {
+    const m = this.marketOf(marketId);
+    const i = m?.orders?.findIndex((o) => o.id === orderId) ?? -1;
+    if (i < 0) return false;
+    m.orders.splice(i, 1);
+    return true;
+  }
+
+  /** What the day turn does: once when the whole game day changes. */
+  checkMarketDay() {
+    const day = Math.floor(this.days ?? 0);
+    if (day <= (this.marketDay ?? 0)) return null;
+    this.marketDay = day;
+    return this.runSellOrders(day);
+  }
+
+  /**
+   * Runs every standing order that is due on `day`, once each, market by
+   * market and order by order. The purse refills first. Goods come from the
+   * storehouses only; coins go to the bag, then the storehouses. Sells the
+   * whole lots it can. Returns { sold: [{ marketId, trader, item, n, coins, short }] }.
+   */
+  runSellOrders(day) {
+    const sold = [];
+    if (this.sandbox || this.inventory.endless) return { sold };
+    if (this.purses?.day !== day) this.purses = { day, spent: {} };
+    for (const m of this.structures.list()) {
+      if (m.type !== 'market' || !m.orders?.length) continue;
+      for (const o of [...m.orders].sort((a, b) => a.id - b.id)) {
+        if (o.next > day) continue;
+        o.next = day + o.every;
+        const row = { marketId: m.id, trader: o.trader, item: o.item, n: 0, coins: 0, short: null };
+        if (!m.valid) row.short = 'broken';
+        else if (!tradersFor(m.tier ?? 0).some((t) => t.id === o.trader)) row.short = 'gone';
+        else {
+          const stores = {
+            count: () => this.sellStock(o.item, { bag: false }),
+            remove: (n) => (this.takeFromStoresExact(o.item, n)
+              ? () => { const left = this.inventory.add(o.item, n); if (left) this.structures.deliver({ [o.item]: left }); }
+              : null),
+          };
+          const r = this.sellLots(o.trader, o.item, o.lots, { take: stores });
+          row.n = r.n; row.coins = r.coins;
+          row.short = r.ok ? r.short : (r.short ?? 'gone');
+        }
+        o.last = { day, lots: row.n ? Math.round(row.n / (sellPrice(o.item)?.lot || 1)) : 0, coins: row.coins, short: row.short };
+        sold.push(row);
+      }
+    }
+    if (sold.length) {
+      const said = sold.filter((r) => r.n > 0).map((r) => `${r.n} ${itemName(r.item).toLowerCase()}`);
+      const coins = sold.reduce((n, r) => n + r.coins, 0);
+      const short = [...new Set(sold.filter((r) => r.short).map((r) => `${itemName(r.item)} order short.`))];
+      const body = [said.length ? `Sold ${said.join(', ')} for ${coins} coin${coins === 1 ? '' : 's'}.` : '', ...short].filter(Boolean).join(' ');
+      this.bus?.emit('toast', { kind: 'xp', title: 'Market', body });
+      this.bus?.emit('market:sold', { day, sold });
+    }
+    return { sold };
+  }
+
+  /** After a load: drops orders that make no sense now, clamps the rest. */
+  validateSellOrders() {
+    const day = Math.floor(this.days ?? 0);
+    for (const m of this.structures.structures) {
+      if (m.type !== 'market') { delete m.orders; delete m.nextOrder; continue; }
+      if (!Array.isArray(m.orders)) { delete m.orders; continue; }
+      const slots = orderSlots(m.tier ?? 0);
+      const seen = new Set();
+      m.orders = m.orders.filter((o) => {
+        const t = TRADERS_BY_ID.get(o?.trader);
+        if (!t || !Number.isInteger(o.id) || seen.has(o.id) || !buysFor(t).some((r) => r[0] === o.item)) return false;
+        if (ITEMS_BY_ID.get(o.item)?.durability) return false;
+        seen.add(o.id);
+        o.every = o.every === 1 ? 1 : 2;
+        o.lots = Math.max(1, Math.min(this.maxOrderLots(o.item), Math.floor(Number(o.lots)) || 1));
+        o.next = Math.max(day, Number.isFinite(o.next) ? Math.floor(o.next) : day);
+        o.last = o.last && typeof o.last === 'object' ? o.last : null;
+        return true;
+      }).slice(0, slots);
+      m.nextOrder = Math.max(Number.isInteger(m.nextOrder) ? m.nextOrder : 1, ...m.orders.map((o) => o.id + 1));
+      if (!m.orders.length) { delete m.orders; delete m.nextOrder; }
+    }
   }
 
   /** IMP-33: which wood a forest grows ('oak', 'white' or 'dark'); white and dark from Age 3. */
@@ -2535,6 +2665,7 @@ export class DuiltGame {
     this.purses = { day: Number.isFinite(pu?.day) ? pu.day : Math.floor(this.days), spent: {} };
     for (const [id, n] of Object.entries(pu?.spent ?? {})) if (TRADERS_BY_ID.has(id) && Number.isFinite(n) && n > 0) this.purses.spent[id] = Math.min(PURSE, n);
     this.marketDay = Number.isFinite(data.marketDay) ? data.marketDay : Math.floor(this.days);
+    this.validateSellOrders();
     this.emergingPlaces = emergingState(data.emergingPlaces ?? this.world.gen?.emergingPlaces);
     installEmergingPlaces(this.world.gen, this.emergingPlaces);
     this.war.loadJSON(data.war);
