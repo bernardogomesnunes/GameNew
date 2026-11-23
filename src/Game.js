@@ -7673,7 +7673,7 @@ export class Game {
       const root = document.createElement('div');
       root.id = 'sleep-overlay';
       root.hidden = true;
-      root.innerHTML = '<div class="sleep-veil"></div><div class="sleep-zs"><span>Z</span><span>Z</span><span>z</span></div><button type="button" class="sleep-wake">Wake up</button>';
+      root.innerHTML = '<div class="sleep-veil"></div><div class="sleep-zs"><span>Z</span><span>Z</span><span>z</span></div><button type="button" class="primary sleep-wake">Wake up</button>';
       document.body.appendChild(root);
       root.querySelector('.sleep-wake').addEventListener('click', () => this.wake());
       this._sleepDom = { veil: root, shade: root.querySelector('.sleep-veil') };

@@ -19,7 +19,20 @@
  * — and goodsFor puts RARE_SHOWN of them out, a different pick every
  * RARE_EVERY game days. Nothing that decides the story: no Sky or Dark gear,
  * no ring ore.
+ *
+ * Selling (PLAY-22/23, docs/design/play-22-23.md). Asked for directly: "on a
+ * market we should be able to sell items too not only buy. And set recurrent
+ * sells. So with time we produce a lot of items in game. Food for example,
+ * ore and stone. It would be nice to take profit of it. Selling should be
+ * paid in gold coins to allow to buy new stuff and allow to set daly or
+ * every other day sells." Every trader buys what it sells (sellPrice), and
+ * a `buys` list covers produced goods nobody sells. The owner's decisions of
+ * 23 November: no trader sells gold (they still buy it), and stone, wood,
+ * planks and food pay close to what they cost (BULK_GOODS).
  */
+
+import { ITEMS_BY_ID, itemName } from './items.js';
+import { RECIPES } from './recipes.js';
 
 /** How often a trader's rare shelf changes, in game days; and how much is on it. */
 export const RARE_EVERY = 2, RARE_SHOWN = 2;
@@ -40,6 +53,11 @@ export const TRADERS = [
       ['clay', 8, 4, 1], ['snow', 8, 3, 1], ['moss', 8, 3, 1], ['dark_moss', 8, 4, 2], ['silt', 8, 3, 1],
       ['coal', 8, 5, 3], ['sky_marble', 4, 9, 5], ['obsidian', 4, 12, 6],
     ],
+    // What this trader buys but does not sell: [item, lot, coins].
+    buys: [
+      ['stone_grey', 32, 3], ['sand', 128, 1], ['gravel', 64, 1], ['sandstone', 32, 1], ['leaves', 32, 3],
+      ['white_planks', 32, 1], ['dark_planks', 32, 1],
+    ],
   },
   {
     id: 'smith',
@@ -48,16 +66,18 @@ export const TRADERS = [
     coat: 0x4a4e57,
     cap: 0x2c2f35,
     goods: [
-      ['iron_ore', 4, 4], ['copper_ore', 4, 3], ['gold_ore', 3, 8], ['iron_ingot', 2, 6],
+      ['iron_ore', 4, 4], ['copper_ore', 4, 7], ['iron_ingot', 2, 6],
       ['sword_stone', 1, 4], ['sword_iron', 1, 14], ['axe_iron', 1, 10], ['pickaxe_iron', 1, 12],
       ['bow', 1, 8], ['arrow', 8, 3],
       ['armour_leather_head', 1, 4], ['armour_leather_body', 1, 6], ['armour_leather_legs', 1, 5], ['armour_leather_feet', 1, 4],
       ['armour_iron_head', 1, 12], ['armour_iron_body', 1, 18], ['armour_iron_legs', 1, 15], ['armour_iron_feet', 1, 12],
     ],
     rare: [
-      ['coal', 8, 5, 3], ['gold', 3, 8, 5], ['ruby', 1, 35, 8], ['diamond', 1, 50, 10],
+      ['coal', 8, 5, 3], ['ruby', 1, 35, 8], ['diamond', 1, 50, 10],
       ['sword_diamond', 1, 120, 10], ['pickaxe_diamond', 1, 110, 10],
     ],
+    // No trader sells gold; they all buy it (owner, 23 November).
+    buys: [['copper_ingot', 2, 2], ['gold_ore', 3, 4], ['gold', 1, 4]],
   },
   {
     id: 'glazier',
@@ -71,8 +91,9 @@ export const TRADERS = [
       ['rug_red', 2, 3], ['rug_blue', 2, 3], ['rug_green', 2, 3], ['painting', 1, 5], ['amethyst', 2, 8],
     ],
     rare: [
-      ['fireflies', 2, 5, 3], ['obsidian', 2, 12, 6], ['firefly_lantern', 1, 7, 5], ['sky_marble', 4, 9, 5], ['gold', 3, 8, 5], ['dark_brick', 8, 6, 5],
+      ['fireflies', 2, 5, 3], ['obsidian', 2, 12, 6], ['firefly_lantern', 1, 7, 5], ['sky_marble', 4, 9, 5], ['dark_brick', 8, 6, 5],
     ],
+    buys: [['stone_brick', 32, 1], ['sandstone_brick', 32, 1]],
   },
   {
     id: 'seedwife',
@@ -90,6 +111,7 @@ export const TRADERS = [
       ['potato', 6, 3, 1], ['cabbage', 6, 3, 1], ['lettuce', 6, 3, 1], ['pepper', 6, 3, 2], ['zucchini', 6, 3, 2],
       ['broccoli', 6, 3, 2], ['coffee_beans', 6, 4, 3], ['raw_meat', 4, 2, 1],
     ],
+    buys: [['leather', 2, 1], ['cotton', 6, 1]],
   },
 ];
 
@@ -106,10 +128,11 @@ export const CITY_TRADERS = [
     coat: 0x7a2f3a,
     cap: 0x3a1f25,
     goods: [
-      ['marble', 8, 5], ['sky_marble', 4, 9], ['gold', 3, 7], ['gold_trim', 4, 6], ['amethyst', 2, 8],
+      ['marble', 8, 5], ['sky_marble', 4, 9], ['gold_trim', 4, 6], ['amethyst', 2, 8],
       ['window', 4, 4], ['chandelier', 1, 6], ['painting', 1, 5], ['firefly_lantern', 2, 6],
       ['diamond', 1, 45], ['ruby', 1, 30], ['sword_gold', 1, 22], ['armour_gold_head', 1, 18], ['armour_gold_body', 1, 26], ['armour_gold_legs', 1, 22], ['armour_gold_feet', 1, 18],
     ],
+    buys: [['gold', 1, 4]],
   },
   {
     id: 'provisioner',
@@ -122,6 +145,8 @@ export const CITY_TRADERS = [
       ['beer', 2, 3], ['kombucha', 2, 3], ['coffee', 2, 3], ['wool', 4, 3],
       ['seeds_pepper', 3, 3], ['seeds_zucchini', 3, 3], ['seeds_broccoli', 3, 3], ['seeds_coffee', 3, 4], ['seeds_hemp', 4, 2], ['seeds_cotton', 4, 2],
     ],
+    // The same prices as Bramble's rare shelf gives (sellPrice reads the cheapest offer).
+    buys: [['potato', 12, 5], ['cabbage', 12, 5], ['lettuce', 12, 5], ['pepper', 12, 5], ['zucchini', 12, 5], ['broccoli', 12, 5], ['raw_meat', 8, 3]],
   },
 ];
 
@@ -159,3 +184,155 @@ export function tradersFor(tier = 0) {
 
 /** A goblin's skin, and the cap they all wear. */
 export const GOBLIN_SKIN = 0x8fb35a;
+
+// ---- selling (PLAY-22/23) ----
+
+/** Coins a trader can pay out in one game day, shared by hand sales and standing orders. */
+export const PURSE = 20;
+
+/**
+ * Never bought: coins, and what the story hangs on. The rare shelf already
+ * holds "nothing that decides the story"; this is the same line for selling.
+ */
+export const NEVER_BOUGHT = new Set([
+  'coin', 'devotion', 'dirt', 'grass', 'water', 'lava',
+  'sunstone', 'nightstone', 'dragon_scale', 'dragon_claw', 'egg_dragon', 'dragon_relic', 'basilisk_scale',
+  'ring_white', 'ring_black', 'god_wand', 'holy_water', 'time_machine',
+]);
+
+/**
+ * Stone, wood, planks and food (owner, 23 November: they "sell for more than
+ * half the buy price"). They are what a town makes most of, so they pay
+ * 2p - 1 coins for twice the buy lot: 32 stone for 3 where Grub sells 16 for
+ * 2, three quarters of the buy rate. Everything else pays half, rounded down.
+ */
+export const BULK_GOODS = new Set([
+  'stone', 'cobblestone', 'stone_white', 'stone_grey', 'wood', 'white_wood', 'dark_wood',
+  'planks', 'white_planks', 'dark_planks',
+]);
+const isBulk = (id) => BULK_GOODS.has(id) || ITEMS_BY_ID.get(id)?.kind === 'food';
+
+let offerCache = null;
+/** The cheapest offer per unit of every item any of the 6 traders sells: Map(item -> { lot, price }). */
+function offers() {
+  if (offerCache) return offerCache;
+  offerCache = new Map();
+  for (const t of [...TRADERS, ...CITY_TRADERS]) {
+    for (const [id, lot, price] of [...(t.goods ?? []), ...(t.rare ?? [])]) {
+      const have = offerCache.get(id);
+      if (!have || price / lot < have.price / have.lot) offerCache.set(id, { lot, price });
+    }
+  }
+  return offerCache;
+}
+
+let buysCache = null;
+function buysRows() {
+  if (buysCache) return buysCache;
+  buysCache = new Map();
+  for (const t of [...TRADERS, ...CITY_TRADERS]) {
+    for (const [id, lot, coins] of t.buys ?? []) if (!buysCache.has(id)) buysCache.set(id, { lot, coins });
+  }
+  return buysCache;
+}
+
+let acqCache = null;
+/**
+ * The cheapest cost in coins of one unit of every item that can be had by
+ * buying it, or by crafting it from things that can be had: Map(item -> coins).
+ * Coin recipes and studies are not routes.
+ */
+function acquire() {
+  if (acqCache) return acqCache;
+  acqCache = new Map([...offers()].map(([id, o]) => [id, o.price / o.lot]));
+  for (let pass = 0; pass < 16; pass++) {
+    let moved = false;
+    for (const r of RECIPES) {
+      if (r.study || r.output.id === 'coin') continue;
+      const c = routeCost(r);
+      if (c != null && c < (acqCache.get(r.output.id) ?? Infinity) - 1e-12) { acqCache.set(r.output.id, c); moved = true; }
+    }
+    if (!moved) break;
+  }
+  return acqCache;
+}
+
+/** Coins to make one unit of a recipe's output from items that can be had, by the cheapest routes; null if one cannot. */
+function routeCost(r, direct = false) {
+  let cost = 0;
+  for (const [id, n] of Object.entries(r.inputs)) {
+    const o = direct ? offers().get(id) : null;
+    const unit = direct ? (o ? o.price / o.lot : undefined) : acqCache.get(id);
+    if (unit == null) return null;
+    cost += unit * n;
+  }
+  return cost / (r.output.count || 1);
+}
+
+const priceCache = new Map();
+/**
+ * What a trader pays for an item: { lot, coins }, or null if nobody buys it.
+ * The cheapest offer of any trader sets it (half, rounded down, min 1 a lot;
+ * bulk goods 2p - 1 for two lots). A made item is capped by its recipe: when
+ * every input can be bought, the lot pays at most half the inputs' buy cost
+ * (bulk goods: one coin under it), and under what it costs by the cheapest
+ * route, crafted inputs included, so buying or making and then selling never
+ * gains coins. Items on a `buys` row start from the row.
+ */
+export function sellPrice(itemId) {
+  if (priceCache.has(itemId)) return priceCache.get(itemId);
+  let out = null;
+  if (!NEVER_BOUGHT.has(itemId) && ITEMS_BY_ID.has(itemId)) {
+    const o = offers().get(itemId);
+    const row = buysRows().get(itemId);
+    if (o || row) {
+      const bulk = isBulk(itemId);
+      let lot = o ? (bulk ? o.lot * 2 : o.lot) : row.lot;
+      const coins = o ? (bulk ? 2 * o.price - 1 : Math.max(1, Math.floor(o.price / 2))) : row.coins;
+      let half = Infinity, route = Infinity;
+      for (const r of RECIPES) {
+        if (r.output.id !== itemId || r.study) continue;
+        const d = routeCost(r, true);
+        if (d != null) half = Math.min(half, d);
+      }
+      acquire();
+      for (const r of RECIPES) {
+        if (r.output.id !== itemId || r.study) continue;
+        const c = routeCost(r);
+        if (c != null) route = Math.min(route, c);
+      }
+      const cap = (l) => Math.min(
+        half < Infinity ? (bulk ? Math.ceil(half * l - 1e-9) - 1 : Math.floor((half * l) / 2)) : Infinity,
+        route < Infinity ? Math.ceil(route * l - 1e-9) - 1 : Infinity,
+      );
+      // A lot too small to pay a whole coin under its cost doubles until it can.
+      while (cap(lot) < 1 && lot < 4096) lot *= 2;
+      out = { lot, coins: Math.max(1, Math.min(coins * (lot / (o ? (bulk ? o.lot * 2 : o.lot) : row.lot)), cap(lot))) };
+    }
+  }
+  priceCache.set(itemId, out);
+  return out;
+}
+
+/** What a trader buys: [[item, lot, coins]] in name order. Their own goods and rare shelf (any day), plus their `buys`. */
+export function buysFor(trader) {
+  const ids = new Set([...(trader?.goods ?? []), ...(trader?.rare ?? []), ...(trader?.buys ?? [])].map((g) => g[0]));
+  return [...ids].map((id) => ({ id, p: sellPrice(id) })).filter((x) => x.p)
+    .sort((a, b) => itemName(a.id).localeCompare(itemName(b.id)))
+    .map(({ id, p }) => [id, p.lot, p.coins]);
+}
+
+/** Order slots at a market level: 2 for each trader living there (2, 4, 6, 8). */
+export function orderSlots(tier = 0) {
+  return 2 * tradersFor(tier).length;
+}
+
+/**
+ * Coins for one lot of something worn: tools and armour lose their value with
+ * their wear. Under 1 coin it is not bought.
+ */
+export function wornCoins(itemId, coins, wear = 0) {
+  const dur = ITEMS_BY_ID.get(itemId)?.durability;
+  if (!dur || !wear) return coins;
+  return Math.max(0, Math.floor(coins * (1 - Math.min(wear, dur) / dur)));
+}
