@@ -547,6 +547,10 @@ export const ITEMS = [
   { id: 'cotton', name: 'Cotton', kind: 'raw', stackTo: STACK_BULK, color: 0xf4f1ea, glyph: 'wool', madeBy: 'Picked from ripe cotton. Spin it into string at a Spinning Wheel' },
   // --- end PLAY-10 ---
 
+  // --- PLAY-12: the War Table (docs/design/play-12.md) -----------------------
+  { id: 'war_table', name: 'War Table', kind: 'refined', stackTo: 10, color: 0x8a6440, glyph: 'rack', block: 571, madeBy: 'Made by hand from planks, string and gold. A War Hall plans its marches on one' },
+  // --- end PLAY-12 ---
+
   // --- PLAY-14..21 (docs/design/play-14-21.md) ---
   // PLAY-14: wild and logged mushrooms. Raw, not food: the red one is a fly
   // agaric, and an edible fresh one would be eaten out of a storehouse first.
