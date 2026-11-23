@@ -88,9 +88,9 @@ function line(d, fac, station, recipe, at) {
 
 // 3. Which recipes a line runs.
 {
-  ok('the workbench line runs 132 recipes', factoryRecipes('workbench').length === 132);
+  ok('the workbench line runs 139 recipes', factoryRecipes('workbench').length === 139);
   const all = FACTORY_STATIONS.flatMap((st) => factoryRecipes(st));
-  ok(`220 recipes across the 13 machines (${all.length})`, all.length === 220);
+  ok(`228 recipes across the 13 machines (${all.length})`, all.length === 228);
   ok('none needs a ring, water, a temple or a temple level', all.every((r) => !r.ring && !r.needs && r.needsTemple == null && r.tier == null));
   ok('no line makes coins', all.every((r) => r.output.id !== 'coin'));
   ok('every Factory recipe is a registry recipe, so tests/selling.test.mjs covers it for loops', all.every((r) => RECIPES.includes(r)));
