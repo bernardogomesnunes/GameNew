@@ -77,7 +77,6 @@ const TOOL_ACTION_LABELS = {
   beer: ['Drink', 'Place'],
   kombucha: ['Drink', 'Place'],
   coffee: ['Drink', 'Place'],
-  coffee_beans: ['Eat', 'Throw'],
   carpentry_chisel: ['Chisel', 'Place'],
 };
 

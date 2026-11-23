@@ -1008,6 +1008,14 @@ BLOCKS.push(
 );
 
 // --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// PLAY-14: the wild mushrooms, which are also what their items place.
+// Ids 556-570 are PLAY-14..21's (docs/design/play-14-21.md); 571-575 are spare.
+export const MUSHROOM_RED = 565, MUSHROOM_LILAC = 566, MUSHROOM_PALE = 567;
+BLOCKS.push(
+  { id: MUSHROOM_RED, name: 'Red Mushroom', glyph: 'mushroom', color: 0xd2484f, shape: 'mushroom_red', material: 'plant', unlock: null },
+  { id: MUSHROOM_LILAC, name: 'Lilac Mushroom', glyph: 'mushroom', color: 0xa178d0, shape: 'mushroom_lilac', material: 'plant', unlock: null },
+  { id: MUSHROOM_PALE, name: 'Pale Mushroom', glyph: 'mushroom', color: 0xe6d6b8, shape: 'mushroom_pale', material: 'plant', unlock: null },
+);
 // --- end PLAY-14..21 ---
 
 // The storybook look for buildings (asked for directly: they "need to fit
@@ -1022,8 +1030,8 @@ BLOCKS.push(
 export const CAP_RED = 505, CAP_LILAC = 506, MUSHROOM_STEM = 507, STAINED_GLASS = 508,
   HANGING_VINES = 509, WISTERIA = 510, FAIRY_LIGHTS = 511, CURL = 512;
 BLOCKS.push(
-  { id: CAP_RED, name: 'Red Mushroom Cap', glyph: 'fruit', color: 0xd2484f, material: 'plant', unlock: null },
-  { id: CAP_LILAC, name: 'Lilac Mushroom Cap', glyph: 'fruit', color: 0xa178d0, material: 'plant', unlock: null },
+  { id: CAP_RED, name: 'Red Mushroom Cap', glyph: 'mushroom', color: 0xd2484f, material: 'plant', unlock: null },
+  { id: CAP_LILAC, name: 'Lilac Mushroom Cap', glyph: 'mushroom', color: 0xa178d0, material: 'plant', unlock: null },
   { id: MUSHROOM_STEM, name: 'Mushroom Stem', glyph: 'log', color: 0xefe4cf, material: 'plant', unlock: null },
   { id: STAINED_GLASS, name: 'Stained Glass', glyph: 'pane', color: 0xd99a6a, transparent: true, opacity: 0.6, material: 'stone', unlock: null },
   { id: HANGING_VINES, name: 'Hanging Vines', glyph: 'leaf', color: 0x5e9a5a, shape: 'vines', material: 'plant', unlock: null },

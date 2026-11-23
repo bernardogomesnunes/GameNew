@@ -161,7 +161,7 @@ export const RECIPES = [
     inputs: { raw_meat: 2, wood: 1 },
     output: { id: 'cooked_meat', count: 2 },
     batch: 4,
-    blurb: 'A log on a fire. Six times the meal raw meat is.',
+    blurb: 'A log on a fire. Seven times the meal raw meat is.',
   },
 
   // --- Age 2: what stone is good for --------------------------------------
@@ -205,7 +205,7 @@ export const RECIPES = [
     age: 3,
     inputs: { planks: 16, wood: 4 },
     output: { id: 'cart', count: 1 },
-    blurb: 'Tame a horse (fruit or vegetables in your hand, then Place on it), then use this on it. Forty slots, and you can ride it.',
+    blurb: 'Tame a horse (fruit or carrots in your hand, then Place on it), then use this on it. Forty slots, and you can ride it.',
   },
   {
     id: 'flying_machine',

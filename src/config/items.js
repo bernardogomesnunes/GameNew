@@ -113,27 +113,27 @@ export const ITEMS = [
   { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fcd8b, glyph: 'sprout', block: 20, madeBy: 'Craft from Leaves, or find when breaking leaves — place on soil to grow a tree' },
 
   // --- food. Fruit spoils, preserves do not -------------------------------
-  { id: 'fruit', name: 'Fruit', kind: 'food', stackTo: STACK_FOOD, color: 0xdc928f, glyph: 'fruit', feeds: 12, madeBy: 'Picked from a forest' },
+  { id: 'fruit', name: 'Fruit', kind: 'food', stackTo: STACK_FOOD, color: 0xdc928f, glyph: 'fruit', feeds: 8, madeBy: 'Picked from a forest' },
   // The farm's crops. Carrots are the vegetables the game always had — the
   // id stays so everything that already made or used them still does.
-  { id: 'vegetables', name: 'Carrots', kind: 'food', stackTo: STACK_FOOD, color: 0xe8873a, glyph: 'vegetable', feeds: 22, madeBy: 'Harvested from a farm' },
-  { id: 'coffee_beans', name: 'Coffee Beans', kind: 'food', stackTo: STACK_FOOD, color: 0xb8362e, glyph: 'seeds', feeds: 4, madeBy: 'Picked from a coffee plant — brew them, or chew them' },
-  { id: 'potato', name: 'Potatoes', kind: 'food', stackTo: STACK_FOOD, color: 0xc9a46c, glyph: 'vegetable', feeds: 20, madeBy: 'Dug from a farm' },
-  { id: 'cabbage', name: 'Cabbage', kind: 'food', stackTo: STACK_FOOD, color: 0xa9cf86, glyph: 'vegetable', feeds: 18, madeBy: 'Cut from a farm' },
-  { id: 'lettuce', name: 'Lettuce', kind: 'food', stackTo: STACK_FOOD, color: 0xb6de86, glyph: 'vegetable', feeds: 12, madeBy: 'Picked from a farm' },
-  { id: 'pepper', name: 'Peppers', kind: 'food', stackTo: STACK_FOOD, color: 0xd84a3c, glyph: 'vegetable', feeds: 14, madeBy: 'Picked from a farm' },
-  { id: 'zucchini', name: 'Zucchini', kind: 'food', stackTo: STACK_FOOD, color: 0x3f7a35, glyph: 'vegetable', feeds: 16, madeBy: 'Cut from a farm' },
-  { id: 'broccoli', name: 'Broccoli', kind: 'food', stackTo: STACK_FOOD, color: 0x3e7b3c, glyph: 'vegetable', feeds: 18, madeBy: 'Cut from a farm' },
+  { id: 'vegetables', name: 'Carrots', kind: 'food', stackTo: STACK_FOOD, color: 0xe8873a, glyph: 'vegetable', feeds: 10, madeBy: 'Harvested from a farm' },
+  { id: 'coffee_beans', name: 'Coffee Beans', kind: 'raw', stackTo: STACK_GOODS, color: 0xb8362e, glyph: 'seeds', madeBy: 'Picked from a coffee plant. Brew them into coffee at a workshop' },
+  { id: 'potato', name: 'Potatoes', kind: 'food', stackTo: STACK_FOOD, color: 0xc9a46c, glyph: 'vegetable', feeds: 6, madeBy: 'Dug from a farm' },
+  { id: 'cabbage', name: 'Cabbage', kind: 'food', stackTo: STACK_FOOD, color: 0xa9cf86, glyph: 'vegetable', feeds: 7, madeBy: 'Cut from a farm' },
+  { id: 'lettuce', name: 'Lettuce', kind: 'food', stackTo: STACK_FOOD, color: 0xb6de86, glyph: 'vegetable', feeds: 5, madeBy: 'Picked from a farm' },
+  { id: 'pepper', name: 'Peppers', kind: 'food', stackTo: STACK_FOOD, color: 0xd84a3c, glyph: 'vegetable', feeds: 6, madeBy: 'Picked from a farm' },
+  { id: 'zucchini', name: 'Zucchini', kind: 'food', stackTo: STACK_FOOD, color: 0x3f7a35, glyph: 'vegetable', feeds: 6, madeBy: 'Cut from a farm' },
+  { id: 'broccoli', name: 'Broccoli', kind: 'food', stackTo: STACK_FOOD, color: 0x3e7b3c, glyph: 'vegetable', feeds: 7, madeBy: 'Cut from a farm' },
   // Hunted. Raw is barely worth eating on purpose: the fire is what makes
   // meat worth the chase — see the cook_meat recipe.
-  { id: 'raw_meat', name: 'Raw Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xd98b85, glyph: 'meat', feeds: 5, madeBy: 'Dropped by hunted animals and produced by occupied pens — cook it with Wood for a better meal' },
-  { id: 'cooked_meat', name: 'Cooked Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xb7825c, glyph: 'meat', feeds: 32, madeBy: 'Cook Raw Meat with Wood at the workbench' },
+  { id: 'raw_meat', name: 'Raw Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xd98b85, glyph: 'meat', feeds: 4, madeBy: 'Dropped by hunted animals and produced by occupied pens — cook it with Wood for a better meal' },
+  { id: 'cooked_meat', name: 'Cooked Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xb7825c, glyph: 'meat', feeds: 28, madeBy: 'Cook Raw Meat with Wood at the workbench' },
 
   // --- what animals leave behind -------------------------------------------
   { id: 'hide', name: 'Hide', kind: 'raw', stackTo: STACK_GOODS, color: 0xb99372, glyph: 'hide', madeBy: 'Hunted from deer, boar, goats and cows. Tan it into leather at a Tanning Vat' },
   { id: 'wool', name: 'Wool', kind: 'raw', stackTo: STACK_GOODS, color: 0xefebe2, glyph: 'wool', madeBy: 'Hunted from sheep' },
-  { id: 'egg', name: 'Egg', kind: 'food', stackTo: STACK_FOOD, color: 0xf2e6cf, glyph: 'egg', feeds: 10, madeBy: 'Laid by hens in a pen' },
-  { id: 'milk', name: 'Milk', kind: 'food', stackTo: STACK_FOOD, color: 0xf4f1ea, glyph: 'milk', feeds: 14, madeBy: 'From cows in a pen' },
+  { id: 'egg', name: 'Egg', kind: 'food', stackTo: STACK_FOOD, color: 0xf2e6cf, glyph: 'egg', feeds: 4, madeBy: 'Laid by hens in a pen' },
+  { id: 'milk', name: 'Milk', kind: 'food', stackTo: STACK_FOOD, color: 0xf4f1ea, glyph: 'milk', feeds: 8, madeBy: 'From cows in a pen' },
   { id: 'feather', name: 'Feather', kind: 'raw', stackTo: STACK_GOODS, color: 0xe9e4da, glyph: 'feather', madeBy: 'Hunted from chickens' },
 
   // --- tools. One per slot, and they wear ---------------------------------
@@ -278,8 +278,8 @@ export const ITEMS = [
   { id: 'roof_teal', name: 'Teal Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x3f9a92, glyph: 'rooftile', block: 460, madeBy: 'Slates stained teal with crushed leaves' },
   { id: 'roof_mint', name: 'Mint Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x8fd1b0, glyph: 'rooftile', block: 475, madeBy: 'Slates stained mint: leaves, and sand to pale them' },
   { id: 'roof_lilac', name: 'Lilac Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x9f86d6, glyph: 'rooftile', block: 490, madeBy: 'Slates stained lilac with blossom' },
-  { id: 'cap_red', name: 'Red Mushroom Cap', kind: 'refined', stackTo: STACK_BULK, color: 0xd2484f, glyph: 'fruit', block: 505, madeBy: 'Shaped from clay and leaves, the way the old houses grow them' },
-  { id: 'cap_lilac', name: 'Lilac Mushroom Cap', kind: 'refined', stackTo: STACK_BULK, color: 0xa178d0, glyph: 'fruit', block: 506, madeBy: 'Shaped from clay and blossom' },
+  { id: 'cap_red', name: 'Red Mushroom Cap', kind: 'refined', stackTo: STACK_BULK, color: 0xd2484f, glyph: 'mushroom', block: 505, madeBy: 'Shaped from clay and leaves, the way the old houses grow them' },
+  { id: 'cap_lilac', name: 'Lilac Mushroom Cap', kind: 'refined', stackTo: STACK_BULK, color: 0xa178d0, glyph: 'mushroom', block: 506, madeBy: 'Shaped from clay and blossom' },
   { id: 'mushroom_stem', name: 'Mushroom Stem', kind: 'refined', stackTo: STACK_BULK, color: 0xefe4cf, glyph: 'log', block: 507, madeBy: 'Shaped from clay and sand' },
   { id: 'glass_stained', name: 'Stained Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xd99a6a, glyph: 'pane', block: 508, madeBy: 'Glass in pieces of colour, leaded together at a workshop' },
   { id: 'vines', name: 'Hanging Vines', kind: 'refined', stackTo: STACK_BULK, color: 0x5e9a5a, glyph: 'leaf', block: 509, madeBy: 'Twisted from leaves. Hangs from whatever is above it' },
@@ -548,6 +548,11 @@ export const ITEMS = [
   // --- end PLAY-10 ---
 
   // --- PLAY-14..21 (docs/design/play-14-21.md) ---
+  // PLAY-14: wild and logged mushrooms. Raw, not food: the red one is a fly
+  // agaric, and an edible fresh one would be eaten out of a storehouse first.
+  { id: 'mushroom_red', name: 'Red Mushroom', kind: 'raw', stackTo: STACK_GOODS, color: 0xd2484f, glyph: 'mushroom', block: 565, madeBy: 'Picked in oak and dark forests, or grown on a Red Mushy Log. Not to be eaten: dry it for building' },
+  { id: 'mushroom_lilac', name: 'Lilac Mushroom', kind: 'raw', stackTo: STACK_GOODS, color: 0xa178d0, glyph: 'mushroom', block: 566, madeBy: 'Picked in dark forests, or grown on a Lilac Mushy Log. Dry it at a Dehydrator' },
+  { id: 'mushroom_pale', name: 'Pale Mushroom', kind: 'raw', stackTo: STACK_GOODS, color: 0xe6d6b8, glyph: 'mushroom', block: 567, madeBy: 'Picked in oak and birch forests, or grown on a Pale Mushy Log. Dry it at a Dehydrator' },
   // --- end PLAY-14..21 ---
 ];
 

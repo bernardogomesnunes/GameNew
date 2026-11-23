@@ -1206,4 +1206,21 @@ PROP_SHAPES.tanning_vat = [
   { minX: 0.64, maxX: 0.68, minY: 0.6, maxY: 1, minZ: 0.6, maxZ: 0.64, color: 0x8a6238 },
 ];
 // --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// PLAY-14: a wild mushroom, one big and one small, facing -z. 6 boxes, 8 for red.
+const MUSH_STEM = 0xefe4cf, MUSH_CAPS = { red: 0xd2484f, lilac: 0xa178d0, pale: 0xe6d6b8 };
+const mushBox = (minX, maxX, minY, maxY, minZ, maxZ, color) => ({ minX, maxX, minY, maxY, minZ, maxZ, color });
+for (const [kind, cap] of Object.entries(MUSH_CAPS)) {
+  PROP_SHAPES[`mushroom_${kind}`] = [
+    mushBox(0.44, 0.56, 0, 0.3, 0.44, 0.56, MUSH_STEM),
+    mushBox(0.3, 0.7, 0.3, 0.42, 0.3, 0.7, cap),
+    mushBox(0.38, 0.62, 0.42, 0.48, 0.38, 0.62, cap),
+    mushBox(0.2, 0.26, 0, 0.16, 0.62, 0.68, MUSH_STEM),
+    mushBox(0.13, 0.33, 0.16, 0.24, 0.55, 0.75, cap),
+    mushBox(0.18, 0.28, 0.24, 0.27, 0.6, 0.7, cap),
+    ...(kind === 'red' ? [
+      mushBox(0.4, 0.46, 0.48, 0.49, 0.42, 0.48, 0xf4ece0),
+      mushBox(0.55, 0.6, 0.48, 0.49, 0.52, 0.58, 0xf4ece0),
+    ] : []),
+  ];
+}
 // --- end PLAY-14..21 ---

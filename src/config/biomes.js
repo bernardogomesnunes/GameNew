@@ -47,6 +47,8 @@ const WILD_HEMP = 340;
 // No saplings in the wild: a sapling is only ever one somebody planted
 // (playtest, P8 — see duilt/Saplings.js).
 const MOSS = 22, GRAVEL = 23, CLAY = 24, SILT = 25;
+// PLAY-14..21: wild mushrooms (docs/design/play-14-21.md).
+const MUSH_RED = 565, MUSH_LILAC = 566, MUSH_PALE = 567;
 const WHITE_WOOD = 41, WHITE_LEAVES = 42, DARK_WOOD = 43, DARK_LEAVES = 44, DARK_MOSS = 46;
 const FOREST_FLOOR = 147;
 const IRON_ORE = 38, COPPER_ORE = 39, GOLD_ORE = 40, COAL_ORE = 379, RUBY_ORE = 251;
@@ -81,6 +83,8 @@ export const BIOMES = [
     // at your feet, not only by counting the trunks.
     surface: { top: MOSS, under: DIRT, depth: 3, rock: STONE },
     trees: { chance: 0.11, trunk: [5, 8], canopy: 2, wood: WOOD, leaves: LEAVES },
+    // PLAY-14: red and pale mushrooms on the moss.
+    scatter: [{ block: MUSH_RED, chance: 0.003, on: MOSS }, { block: MUSH_PALE, chance: 0.003, on: MOSS }],
   },
   {
     // Cooler and drier than the oak wood, with a pale trunk and canopy —
@@ -97,7 +101,7 @@ export const BIOMES = [
     // On the map, its pale leaves set it apart from the plains' same grass.
     mapTint: WHITE_LEAVES,
     trees: { chance: 0.1, trunk: [4, 7], canopy: 2, wood: WHITE_WOOD, leaves: WHITE_LEAVES },
-    scatter: [{ block: WILD_HEMP, chance: 0.002, on: GRASS }],
+    scatter: [{ block: WILD_HEMP, chance: 0.002, on: GRASS }, { block: MUSH_PALE, chance: 0.003, on: GRASS }], // PLAY-14: pale mushrooms after the hemp
   },
   {
     // Warmer, wetter, denser: the darkest and thickest of the three.
@@ -109,6 +113,8 @@ export const BIOMES = [
     // Its own deeper, shadier moss — see config/blocks.js's Dark Moss.
     surface: { top: DARK_MOSS, under: DIRT, depth: 3, rock: STONE },
     trees: { chance: 0.13, trunk: [6, 9], canopy: 2, wood: DARK_WOOD, leaves: DARK_LEAVES },
+    // PLAY-14: lilac and red mushrooms on the dark moss.
+    scatter: [{ block: MUSH_LILAC, chance: 0.004, on: DARK_MOSS }, { block: MUSH_RED, chance: 0.002, on: DARK_MOSS }],
   },
   {
     // Requested directly: "we can have a biome full of gigantic trees that
