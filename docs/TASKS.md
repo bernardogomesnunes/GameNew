@@ -1218,6 +1218,7 @@ From the owner's playtest notes, 22 November. Ordered by the suggested priority;
 | PLAY-12 | Military buildings: weapons research and army organisation. | Large | open, needs a design first |
 | PLAY-13 | Politics: villagers get angry without jobs or food, with consequences. Builds on JOBS and the hunger counter (CL-12). | Large | open, needs a design first |
 | PLAY-24 | Storehouse: fold the "Won't take from deliveries" chips so the shelf gets more room. | Small | done |
+| PLAY-25 | Sleep: the Wake up button uses the game's green pixel button (`button.primary`) in place of its own blue style. | Small | done |
 
 ## The old planning docs (history)
 
