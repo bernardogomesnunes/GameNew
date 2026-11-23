@@ -559,8 +559,8 @@ export class DuiltUI {
   }
 
   onPanelClosed(id) {
-    if (id === 'panel-town') this.closeTownPanel(); // PLAY-13
     this.hideSlotTip();
+    if (id === 'panel-town') this.closeTownPanel(); // PLAY-13
     // Closing a popup cancels its unpaid work, even if its DOM is reused.
     this.q('#' + id)?.querySelectorAll('.craft-work').forEach(work => work.remove());
     if (id === 'panel-bag') this.held = null;
