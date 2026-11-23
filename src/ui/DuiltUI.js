@@ -7,6 +7,10 @@ import { Granary } from '../items/Granary.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { farmSeedSlots } from '../duilt/Crops.js';
 import { UNITS, UNITS_BY_ID, unitCost, soldierCap, SOLDIER_CAPS } from '../config/soldiers.js';
+import { learntNames } from '../config/research.js';  // PLAY-12
+import { unitStats } from '../config/soldiers.js';  // PLAY-12
+import { companyPower, cityPower, forecast as marchForecast } from '../duilt/marchBattle.js';  // PLAY-12
+import { RIVAL_HEX } from '../world/rivals.js';  // PLAY-12
 
 /** What's drawn beside each kind of soldier in a barracks's line. */
 const UNIT_GLYPHS = { warrior: 'sword', swordsman: 'sword', archer: 'bow', crew: 'catapult', shield_guard: 'sword' };
@@ -234,6 +238,7 @@ export class DuiltUI {
         <button type="button" class="vital" id="vital-people" title="Settlers" hidden>
           <span class="vital-icon">👤</span>
           <span class="vital-count" id="people-count">0</span>
+          <span class="people-dot" id="people-dot" hidden></span><!-- PLAY-13 -->
         </button>
       </div>
 
@@ -348,6 +353,10 @@ export class DuiltUI {
           <div id="stores-bag-grid" class="store-slots" hidden></div>
           </section>
           </div>`,
+        'panel-town': `
+          <!-- PLAY-13: one row a villager, worst mood first. -->
+          <div id="town-head" class="town-head"></div>
+          <div id="town-list" class="town-list"></div>`,
         'panel-claim': `
           <div id="claim-list"></div>`,
         'panel-buildings': `
@@ -519,6 +528,7 @@ export class DuiltUI {
       });
     });
     this.bus.on('settler:fed', () => { this.saidHungry = null; this.renderVitals(); });
+    this.wireMood(); // PLAY-13
     this.bus.on('settler:arrived', ({ settler, population }) => {
       this.renderVitals();
       this.bus.emit('toast', {
@@ -549,14 +559,16 @@ export class DuiltUI {
     if (id === 'panel-buildings') this.renderBuildings();
     if (id === 'panel-bench') this.renderBench();
     if (id === 'panel-finish') this.renderFinish();
+    if (id === 'panel-town') this.openTownPanel(); // PLAY-13
   }
 
   onPanelClosed(id) {
     this.hideSlotTip();
+    if (id === 'panel-town') this.closeTownPanel(); // PLAY-13
     // Closing a popup cancels its unpaid work, even if its DOM is reused.
     this.q('#' + id)?.querySelectorAll('.craft-work').forEach(work => work.remove());
     if (id === 'panel-bag') this.held = null;
-    if (id === 'panel-building') this.building = null;
+    if (id === 'panel-building') { this.building = null; this.warPick = null; }  // PLAY-12: the picker is forgotten too
     // The open storehouse is forgotten on the way out, so the next one you
     // walk up to cannot be answered with the last one's shelves.
     if (id === 'panel-store') this.store = null;
@@ -726,6 +738,7 @@ export class DuiltUI {
     if (structure.type === 'market') this.wireOrderCancel(body, structure.id, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
     if (structure.type === 'factory') this.wireFactoryLines(body, structure); // PLAY-11
     body.querySelectorAll('[data-soldier-order]').forEach((b) => b.addEventListener('click', () => actions.onSoldierOrder?.(b.dataset.soldierOrder)));
+    this.wireWarHall(body, structure);  // PLAY-12
     body.querySelector('[data-cube]')?.addEventListener('click', () => { this.closePanel('panel-building'); actions.onCube?.(); });
     if ((structure.type === 'barracks' || structure.type === 'military') && this.duilt) {
       const t = this.duilt.defenders.barracks(structure.id);
@@ -842,6 +855,7 @@ export class DuiltUI {
       </div>
       ${spec?.woods ? this.forestWoodHtml(structure) : ''}
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
+      ${structure.type === 'war_hall' ? this.warHallHtml(structure) : '' /* PLAY-12 */}
       ${structure.type === 'barracks' || structure.type === 'military' ? this.barracksHtml(structure) : ''}
       ${structure.type === 'workshop' || structure.type === 'foundry' || structure.type === 'kiln' ? this.workshopHtml(structure) : ''}
       ${structure.type === 'kiln' ? this.firingHtml(structure, spec) : ''}
@@ -918,7 +932,8 @@ export class DuiltUI {
     if (!d) return '';
     const t = d.defenders.barracks(structure.id);
     const cap = Math.min(MAX_SOLDIERS, soldierCap(structure));
-    const room = cap - t.roster.length - t.queue.length;
+    const away = d.defenders.awayCount(structure.id);  // PLAY-12
+    const room = cap - t.roster.length - t.queue.length - away;
     const nextCap = SOLDIER_CAPS[(structure.tier ?? 0) + 1];
     // Soldiers eat with the town (Settlers); those who went without fight weaker.
     const hungry = Math.min(d.settlers.soldiersHungry ?? 0, t.roster.length);
@@ -944,9 +959,10 @@ export class DuiltUI {
     const gearName = (id, n) => `${n > 1 ? `${n} ` : ''}${itemName(id).toLowerCase()}${n > 1 && !itemName(id).endsWith('s') ? 's' : ''}`;
     const units = structure.type === 'military' ? UNITS.filter((u) => u.id === 'shield_guard') : UNITS.filter((u) => u.id !== 'shield_guard');
     const buttons = units.map((u) => {
-      const cost = unitCost(u, d.inventory);
+      const cost = unitCost(u, d.inventory, d.research);
       const can = cost.ok && room > 0;
-      const price = [`${u.food} food`, ...Object.entries(u.gear).map(([id, n]) => gearName(id, n))].join(', ');
+      const researched = unitStats(u, d.research);  // PLAY-12: Iron Arms and Sky Arms change the gear
+      const price = [`${u.food} food`, ...Object.entries(researched.gear).map(([id, n]) => gearName(id, n))].join(', ');
       return `<button class="train-unit${can ? '' : ' cant'}" data-train="${u.id}" title="${escapeAttr(u.blurb)}">
         <strong>${escapeHtml(u.name)}</strong><span>${escapeHtml(price)}</span>
         ${cost.ok ? '' : `<span class="short">Needs ${escapeHtml(cost.short.join(', '))}</span>`}
@@ -954,9 +970,11 @@ export class DuiltUI {
     }).join('');
     return `
       <div class="building-sec">
-        <h4>${structure.type === 'military' ? 'Spear guards' : 'Soldiers'} · ${t.roster.length} of ${cap}</h4>
-        <p class="building-line">${t.roster.length ? escapeHtml(tally(t.roster)) : t.queue.length ? 'Nobody out yet.' : 'Nobody yet — train them below.'}</p>
+        <h4>${structure.type === 'military' ? 'Spear guards' : 'Soldiers'} · ${t.roster.length + away} of ${cap}</h4>
+        <p class="building-line">${t.roster.length ? escapeHtml(tally(t.roster)) : away ? '' : t.queue.length ? 'Nobody out yet.' : 'Nobody yet — train them below.'}</p>
+        ${this.marchLineHtml(structure)}
         ${t.roster.length ? this.ordersHtml(structure) : ''}
+        ${t.roster.length && d.hasWarHall?.() ? this.marchButtonHtml(structure) : ''}
         ${hungry ? `<p class="building-line bad">${hungry === 1 ? 'One is' : `${hungry} are`} hungry — they hit softer and don't recover until fed. Put food in a storehouse.</p>` : ''}
         ${t.queue.length ? `<h4>Training · ${t.queue.length}</h4>` : ''}
         ${training}
@@ -964,6 +982,135 @@ export class DuiltUI {
         <div class="train-units">${buttons}</div>
       </div>`;
   }
+
+  // --- PLAY-12 (docs/design/play-12.md): the War Hall and the March order ----
+
+  /** "Barracks 1 · Drill Hall": a company's name and its level, from the building's tiers. */
+  companyTitle(s) {
+    const d = this.duilt, spec = STRUCTURES_BY_ID.get(s.type);
+    const tier = spec?.tiers?.[Math.min(s.tier ?? 0, (spec.tiers?.length ?? 1) - 1)];
+    return `${d.companyName(s)}${tier?.name ? ` · ${tier.name.replace(/^An? /, '')}` : ''}`;
+  }
+
+  /** Minutes of play for `days` game days, as "12 min". */
+  marchLeftText(days) {
+    const mins = Math.max(1, Math.ceil(Math.max(0, days) * GAME_DAY_SECONDS / 60));
+    return `${mins} min`;
+  }
+
+  /** Where a company is now: at home with its order, marching, or coming home. */
+  companyState(s) {
+    const d = this.duilt, m = d.defenders.marchOf(s.id);
+    if (!m) return `At home: ${ORDERS.find((o) => o.id === d.defenders.orderOf(s.id))?.name ?? 'Defend'}`;
+    const name = d.rivalName(m.rival);
+    if (!m.result) return `Marching to ${name}: arrives in ${this.marchLeftText(m.arrives - d.days)}`;
+    return `Coming home: ${this.marchLeftText(m.home - d.days)}`;
+  }
+
+  /** The line a barracks shows while its company is away. */
+  marchLineHtml(structure) {
+    const d = this.duilt, m = d?.defenders.marchOf(structure.id);
+    if (!m) return '';
+    return `<p class="building-line march-away"><strong>On the march.</strong> ${m.units.length} ${m.units.length === 1 ? 'soldier' : 'soldiers'}. ${escapeHtml(this.companyState(structure))}</p>`;
+  }
+
+  /** The March button of a barracks's pop-up, or its picker once pressed. Shown only where a War Hall stands. */
+  marchButtonHtml(structure) {
+    const d = this.duilt;
+    if (d.defenders.marchOf(structure.id)) return '';
+    if (String(this.warPick) === String(structure.id)) return this.marchPickerHtml(structure);
+    return `<div class="soldier-orders march-one"><button class="soldier-order march-open" data-march-open="${structure.id}">March</button></div>`;
+  }
+
+  /** The three rivals as rows: name, colour, strength, guards, the forecast, and Send. */
+  marchPickerHtml(s) {
+    const d = this.duilt;
+    const rows = (d.battle?.list ?? []).map((r) => {
+      const f = d.marchForecast(s, r.id);
+      const fallen = d.battle.fallen(r, d.days);
+      const name = d.rivalName(r.id);
+      const why = fallen ? `Yours until day ${Math.ceil(r.fallenUntil)}` : '';
+      return `<div class="rival-pick${fallen ? ' fallen' : ''}">
+        <span class="rival-dot" style="background:${RIVAL_HEX[r.id] ?? '#888'}"></span>
+        <span class="rival-name"><strong>${escapeHtml(name)}</strong><small>Strength ${Math.round(r.strength)} · ${f?.guards ?? 0} guards</small></span>
+        <span class="rival-forecast ${fallen ? '' : f?.forecast.word ?? ''}">${escapeHtml(fallen ? why : f?.forecast.text ?? '')}</span>
+        <button class="secondary rival-send${fallen ? ' cannot' : ''}" data-march-send="${s.id}:${r.id}">Send</button>
+      </div>`;
+    }).join('');
+    return `<div class="march-picker" role="group" aria-label="Pick a rival to march on">
+      <button class="secondary march-back" data-march-back>Back</button>
+      <p class="dim">${escapeHtml(d.companyName(s))} walks there for a game day, fights, and walks back.</p>
+      ${rows || '<p class="dim">No rival cities in this world.</p>'}
+    </div>`;
+  }
+
+  /** The War Hall's list: one card per company, or the picker for one of them. */
+  warHallHtml(structure) {
+    const d = this.duilt;
+    if (!d) return '';
+    const posts = d.companies();
+    const pick = posts.find((s) => String(s.id) === String(this.warPick));
+    if (pick) return `<div class="building-sec war-hall">${this.marchPickerHtml(pick)}</div>`;
+    this.warPick = null;
+    if (!posts.length) return '<div class="building-sec war-hall"><h4>Companies</h4><p class="dim">No barracks or Garrison stands yet. Each one is a company.</p></div>';
+    // The strongest rival's garrison, for the power bar.
+    const strongest = Math.max(0, ...(d.battle?.list ?? []).map((r) => cityPower(d.battle.garrison(r))));
+    const cards = posts.map((s) => {
+      const t = d.defenders.barracks(s.id), m = d.defenders.marchOf(s.id);
+      const units = [...t.roster, ...(m?.units ?? [])];
+      const cap = Math.min(MAX_SOLDIERS, soldierCap(s));
+      const tally = UNITS.map((u) => [u, units.filter((x) => x === u.id).length]).filter(([, n]) => n)
+        .map(([u, n]) => `${n} ${n === 1 ? u.name.toLowerCase() : u.plural}`).join(', ');
+      const power = companyPower(units, d.research, Math.min(units.length, d.defenders.hungry));
+      const pct = strongest ? Math.min(100, Math.round(power / strongest * 100)) : 0;
+      const now = d.defenders.orderOf(s.id);
+      const out = !!m;
+      return `<div class="company-card${out ? ' away' : ''}" data-company="${s.id}">
+        <div class="company-head"><strong>${escapeHtml(this.companyTitle(s))}</strong></div>
+        <p class="building-line">${escapeHtml(tally || 'Nobody yet')} · ${units.length + t.queue.length} of ${cap}</p>
+        <p class="building-line company-power">Power <b>${power}</b>${strongest ? ` <span class="dim">against ${strongest} at the strongest rival</span>` : ''}</p>
+        ${strongest ? `<div class="research-bar" role="progressbar" aria-label="Power against the strongest rival" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div>` : ''}
+        <p class="company-state${out ? ' on' : ''}">${escapeHtml(this.companyState(s))}</p>
+        <div class="company-orders" role="group" aria-label="Orders for ${escapeAttr(d.companyName(s))}">
+          ${ORDERS.map((o) => `<button class="soldier-order${!out && o.id === now ? ' on' : ''}" data-company-order="${s.id}:${o.id}" aria-pressed="${!out && o.id === now}" title="${escapeAttr(o.blurb)}">${escapeHtml(o.name)}</button>`).join('')}
+          <button class="soldier-order march-open${d.battle && !out && t.roster.length ? '' : ' cant'}" data-march-open="${s.id}" title="${escapeAttr(d.battle ? 'Walk to a rival city, fight its guards, and come home' : 'Marches go to rival cities, which only a Battle world has')}">March</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="building-sec war-hall"><h4>Companies · ${posts.length}</h4><div class="company-list">${cards}</div></div>`;
+  }
+
+  /** The War Hall's and the barracks's March buttons, the picker's Back and Send, and the hall's order buttons. */
+  wireWarHall(body, structure) {
+    const d = this.duilt;
+    if (!d) return;
+    const again = () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache);
+    const post = (id) => d.companies().find((s) => String(s.id) === String(id));
+    body.querySelectorAll('[data-company-order]').forEach((b) => b.addEventListener('click', () => {
+      const [id, order] = b.dataset.companyOrder.split(':'), s = post(id);
+      if (s) this.game.soldierOrder?.(s, order);
+    }));
+    body.querySelectorAll('[data-march-open]').forEach((b) => b.addEventListener('click', () => {
+      const s = post(b.dataset.marchOpen);
+      if (!s) return;
+      // Say why not, rather than open a picker that cannot send.
+      const why = !d.battle ? 'Marches go to rival cities, and only a Battle world has them'
+        : d.defenders.marches.length ? 'A company is already out: one march at a time'
+        : !d.defenders.barracks(s.id).roster.length ? 'Nobody here to send' : null;
+      if (why) return void this.bus.emit('toast', { kind: 'xp', title: "Can't march", body: why });
+      this.warPick = String(s.id);
+      again();
+    }));
+    body.querySelector('[data-march-back]')?.addEventListener('click', () => { this.warPick = null; again(); });
+    body.querySelectorAll('[data-march-send]').forEach((b) => b.addEventListener('click', () => {
+      const [id, rival] = b.dataset.marchSend.split(':'), s = post(id);
+      if (!s) return;
+      this.warPick = null;
+      this.game.marchCompany?.(s, Number(rival));
+      again();
+    }));
+  }
+  // --- end PLAY-12 ---
 
   /** IMP-37: the barracks's standing order, a button each — Defend, Patrol, Formation. */
   ordersHtml(structure) {
@@ -1143,6 +1290,8 @@ export class DuiltUI {
     // The Sky Kingdom's share, after a lost attack on it (duilt/SkyWar.js).
     if (tax > 0 && this.makesOf(structure, spec, level)) out.push(`Taxes: the Sky Kingdom takes ${Math.round(tax * 100)}% of what it makes, until it falls.`);
     if (structure.type === 'barracks') out.push('Trains soldiers who go out to fight anything that comes at your land.');
+    if (structure.type === 'armoury') out.push('Research arms here, one piece at a time. Every soldier you have gets stronger.');  // PLAY-12
+    if (structure.type === 'war_hall') out.push('Every company in one list. Give orders, or send one to march on a rival city.');  // PLAY-12
     if (structure.type === 'military') out.push('Train spear guards here; they defend your land when enemies come.');
     if (structure.type === 'work_hall') out.push('Give villagers building and carrying jobs, and leave supplies for them to carry.');
     if (structure.type === 'factory') out.push('Each kind of machine inside runs one recipe on its own. It takes the materials from your storehouses.'); // PLAY-11
@@ -1389,6 +1538,7 @@ export class DuiltUI {
     box.classList.toggle('full', population >= target && target > 0 && !hungry);
     box.classList.toggle('hungry', hungry > 0);
     if (!hungry) this.saidHungry = false;
+    this.renderMoodDot(box, d.settlers); // PLAY-13
   }
 
   /**
@@ -1404,6 +1554,7 @@ export class DuiltUI {
     if (!d) return;
     const { population, target, houses, hungry, soldiers } = d.settlers;
     if (hungry) return this.giveFood();
+    if (population > 0) return this.game.ui.openPanel('panel-town'); // PLAY-13: nobody hungry, so show the town
     const say = (title, body) => this.bus.emit('toast', { kind: 'xp', title, body });
     // The soldiers are counted with everyone (they live in the barracks).
     const camp = soldiers ? ` and ${soldiers} soldier${soldiers === 1 ? '' : 's'}` : '';
@@ -1823,8 +1974,118 @@ export class DuiltUI {
     const left = s.feedHungry();
     this.renderVitals();
     this.bus.emit('toast', left
-      ? { kind: 'xp', title: 'Not enough food', body: `${left} still hungry. There's nothing more to eat in the granary, the storehouses or your bag.` }
-      : { kind: 'challenge', title: 'Everyone has eaten', body: 'Back to work' });
+      ? { kind: 'xp', title: 'Not enough food', body: `${left} still hungry. There's nothing more to eat in the granary, the storehouses or your bag.`, action: { label: 'See people', onClick: () => this.game.ui.openPanel('panel-town') } } // PLAY-13
+      : { kind: 'challenge', title: 'Everyone has eaten', body: 'Back to work', action: { label: 'See people', onClick: () => this.game.ui.openPanel('panel-town') } }); // PLAY-13
+  }
+
+  // ---- PLAY-13: mood ---------------------------------------------------------
+
+  wireMood() {
+    this.bus.on('settler:band', () => { this.renderVitals(); if (this.panels.isOpen('panel-town')) this.renderTown(); });
+    this.bus.on('settler:mood', ({ settler, band, reason, name }) => {
+      if (band !== 'angry' && band !== 'furious') return; // Grumbling: the bubble is enough
+      const food = reason === 'food';
+      const days = Math.max(1, Math.floor((settler.idleFor ?? 0) / GAME_DAY_SECONDS));
+      const why = food ? 'no food' : `no work for ${days} day${days === 1 ? '' : 's'}`;
+      const advice = food
+        ? 'Fill a granary or storehouse, or give them some from your bag.'
+        : 'Build a farm, forest or quarry within 40 blocks of their house, or make them a carrier at the Work Hall.';
+      this.bus.emit('toast', {
+        kind: 'xp',
+        title: band === 'furious' ? `${name} will leave tomorrow` : `${name} is angry: ${why}`,
+        body: advice,
+        action: food ? { label: 'Give food', onClick: () => this.giveFood() } : { label: 'Show', onClick: () => this.game.ui.openPanel('panel-town') },
+        duration: 12000,
+      });
+    });
+    this.bus.on('settler:left', ({ reason, cause, name, days } = {}) => {
+      if (reason !== 'angry') return;
+      this.bus.emit('toast', {
+        kind: 'xp',
+        title: `${name} left: ${cause === 'food' ? 'no food' : 'no work'}`,
+        body: `Their house stands empty for ${days ?? 2} days.`,
+        duration: 12000,
+      });
+      if (this.panels.isOpen('panel-town')) this.renderTown();
+    });
+  }
+
+  /** The dot in the people counter: the worst band present, with the worst case in the tooltip. */
+  renderMoodDot(box, settlers) {
+    const dot = this.q('#people-dot');
+    if (!dot) return;
+    const { worst, worstPerson } = settlers.moodSummary();
+    dot.hidden = !worst;
+    dot.dataset.band = worst ?? '';
+    if (worst && worstPerson) {
+      const why = worstPerson.hungry ? 'no food' : 'no work';
+      box.title = `${worstPerson.name} is ${worst}: ${why}. Tap to see your people.`;
+    }
+  }
+
+  openTownPanel() {
+    this.townHtml = null;
+    this.renderTown();
+    clearInterval(this.townTimer);
+    this.townTimer = setInterval(() => { if (this.panels.isOpen('panel-town')) this.renderTown(); }, 2000);
+  }
+
+  closeTownPanel() {
+    clearInterval(this.townTimer);
+    this.townTimer = null;
+  }
+
+  /** Opens the Work Hall's pop-up so somebody can be given a role, or says to build one. */
+  findWork() {
+    const hall = this.duilt?.structures.list().find((s) => s.type === 'work_hall' && s.valid);
+    if (!hall) {
+      return this.bus.emit('toast', { kind: 'xp', title: 'Build a Work Hall', body: 'Villagers get jobs once a Work Hall stands. Then build a farm, forest or quarry near their houses.' });
+    }
+    this.game.ui.openBuilding(hall, this.game.buildingActions(hall));
+  }
+
+  /** The Town panel: header line, then one row a villager, worst first. */
+  renderTown() {
+    const d = this.duilt;
+    const list = this.q('#town-list'), head = this.q('#town-head');
+    if (!d || !list || !head) return;
+    const s = d.settlers;
+    const sum = s.moodSummary();
+    const people = [...s.people].sort((a, b) => a.mood - b.mood);
+    const sub = this.q('#town-sub');
+    const avg = sum.average == null ? '-' : Math.round(sum.average);
+    head.textContent = people.length
+      ? `Town mood ${avg}. ${sum.angry} angry, ${sum.leaving} leaving.`
+      : 'Nobody lives here yet. Build a second house and somebody will move in.';
+    if (sub) sub.textContent = s.arrivalsStopped ? 'Word has got round: nobody new comes while your people are unhappy.' : 'Mood, jobs and what each villager needs.';
+    const JOB = { builder: 'Builder', hauler: 'Carrier', woodcutter: 'Woodcutter', farmer: 'Farmer', miner: 'Miner', kiln_worker: 'Kiln worker', trader: 'Trader', clerk: 'Clerk', innkeeper: 'Innkeeper', acolyte: 'Acolyte' };
+    const html = people.map((p) => {
+      const band = p.band ?? 'content';
+      const days = Math.floor((p.idleFor ?? 0) / GAME_DAY_SECONDS);
+      const employed = s.hasJob(p);
+      const job = employed ? (JOB[p.job] ?? 'Working') : 'No job';
+      let reason = 'Content';
+      if (p.hungry) reason = 'Hungry';
+      else if (!employed) reason = days >= 1 ? `No job for ${days} day${days === 1 ? '' : 's'}` : 'No job yet';
+      else if (band !== 'content') reason = 'Recovering';
+      const left = band === 'furious' ? Math.max(0, 1 - (p.furiousFor ?? 0) / GAME_DAY_SECONDS) : null;
+      const leaves = left == null ? '' : `<span class="town-leaves">Leaves in ${left.toFixed(1)} days</span>`;
+      const give = p.hungry ? '<button class="secondary" data-town-food>Give food</button>' : '';
+      const find = !employed ? '<button class="secondary" data-town-work>Find work</button>' : '';
+      return `<div class="town-row" data-band="${band}" data-person="${p.id}">
+        <span class="town-name">${escapeHtml(p.name)}</span>
+        <span class="town-job">${escapeHtml(job)}</span>
+        <span class="town-bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p.mood)}" aria-label="Mood"><span class="town-fill" style="width:${Math.round(p.mood)}%"></span></span>
+        <span class="town-reason">${escapeHtml(reason)}</span>${leaves}
+        ${give || find ? `<span class="town-actions">${give}${find}</span>` : ''}
+      </div>`;
+    }).join('');
+    // Redrawn only when something changed, so a tap never lands on a row that is being replaced.
+    if (html === this.townHtml) return;
+    this.townHtml = html;
+    list.innerHTML = html;
+    list.querySelectorAll('[data-town-food]').forEach((b) => b.addEventListener('click', () => { this.giveFood(); this.renderTown(); }));
+    list.querySelectorAll('[data-town-work]').forEach((b) => b.addEventListener('click', () => this.findWork()));
   }
 
   // ---- storehouses ----
@@ -2040,7 +2301,7 @@ export class DuiltUI {
     const people=d.settlers.people.map(p=>{
       const a=d.jobs.assignment(p.id);
       return `<div class="job-row">
-        <span class="job-name">${escapeHtml(p.name??`Villager ${p.id}`)}</span>
+        <span class="job-name"><span class="mood-dot" data-band="${p.band??'content'}" title="${escapeAttr(p.band??'content')}"></span>${escapeHtml(p.name??`Villager ${p.id}`)}</span><!-- PLAY-13 -->
         <select class="job-select" data-job-person="${p.id}" aria-label="${escapeAttr(`Job for ${p.name??`villager ${p.id}`}`)}" ${off}>${roles.map(([id,name])=>`<option value="${id}" ${(a?.role??'automatic')===id?'selected':''}>${name}</option>`).join('')}</select>
         ${a?.status && a.status!==roles.find(([id])=>id===(a.role??'automatic'))?.[1]?`<span class="job-status dim">${escapeHtml(a.status)}</span>`:''}
         ${a?.carrying?`<button class="secondary job-small" data-job-cargo="${p.id}">Return carried goods</button>`:''}
@@ -2544,14 +2805,14 @@ export class DuiltUI {
       // bar and the time left instead of a button.
       const count = r.study ? `<b>Lv ${r.level}</b>` : r.output.count > 1 ? `<b>×${r.output.count}</b>` : '';
       const name = r.study ? r.result : itemName(r.output.id);
-      const going = r.study ? d.researchProgress?.() : null;
+      const going = r.study ? d.researchProgress?.(r.station) : null;
       if (going && going.id === r.id) {
         return `
         <div class="recipe-tile researching">
           <span class="recipe-icon">${icon}${count}</span>
           <strong class="recipe-name">${escapeHtml(r.result)}</strong>
           <div class="research-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(going.ratio * 100)}"><i style="width:${Math.round(going.ratio * 100)}%"></i></div>
-          <div class="research-left">Researching · ${escapeHtml(d.researchLeftText())} left</div>
+          <div class="research-left">Researching · ${escapeHtml(d.researchLeftText(r.station))} left</div>
         </div>`;
       }
       const verb = r.study ? 'Research' : 'Make';
@@ -2877,7 +3138,11 @@ export class DuiltUI {
     const body = recipes.length
       ? `<div class="recipe-grid">${this.recipeGridHtml(recipes)}</div>`
       : '<p class="dim">Nothing to make here yet. More comes next age.</p>';
-    return `${spots}<div class="building-sec building-make"><h4>${spec.station === 'university' ? 'Research' : 'Make here'}</h4>${body}</div>`;
+    // PLAY-12: the Armoury lists what it has learnt above its research.
+    const learnt = spec.station === 'armoury' ? learntNames(d.research) : [];
+    const learntLine = spec.station === 'armoury'
+      ? `<p class="building-line armoury-learnt">${learnt.length ? `Learnt: ${escapeHtml(learnt.join(', '))}` : 'Nothing learnt yet.'}</p>` : '';
+    return `${spots}<div class="building-sec building-make"><h4>${spec.station === 'university' || spec.station === 'armoury' ? 'Research' : 'Make here'}</h4>${learntLine}${body}</div>`;
   }
 
   /**

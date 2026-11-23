@@ -43,6 +43,22 @@ export const SETTLER_TALK = {
   ],
 };
 
+// PLAY-13: how a villager sounds once mood has soured, by band and by reason.
+export const MOOD_TALK = {
+  grumbling: {
+    food: ['The larder is thin and my stomach knows it.', 'I could eat. I could eat a great deal.'],
+    work: ['Days of nothing to do. It wears on a person.', 'A job would be nice. Any job.'],
+  },
+  angry: {
+    food: ['No food again. I didn\'t come here to go hungry.', 'You have a whole land and nothing for us to eat?'],
+    work: ['Four days with nothing to do. I didn\'t come here to stand about.', 'Build something that needs working, or find me a place at the Work Hall.'],
+  },
+  leaving: {
+    food: ['One more day like this and I\'m gone.', 'Feed us, or I take my bag and go.'],
+    work: ['One more day with nothing to do and I\'m gone.', 'I\'ll find a town that has work for me.'],
+  },
+};
+
 /** By what they work at — said instead of the general working lines, now and then. */
 export const JOB_TALK = {
   farm: ['The soil\'s good here. Plant me something new and I\'ll grow it.', 'Rain\'s due. The carrots will like that.'],
@@ -208,6 +224,11 @@ export function talkLine({ who, person, job = null, jobId = null, at = null, lan
   if (who === 'warrior') return fill(pick(WARRIOR_TALK), vars);
 
   // A settler: what's on their mind first, then whatever else.
+  // PLAY-13: a soured mood speaks before anything else.
+  const moodPool = person.band && person.band !== 'content'
+    ? MOOD_TALK[person.band === 'furious' ? 'leaving' : person.band]?.[person.hungry ? 'food' : 'work']
+    : null;
+  if (moodPool) return fill(pick(moodPool), vars);
   if (person.hungry) return fill(pick(SETTLER_TALK.hungry), vars);
   if (!job) return fill(said % 2 ? pick(SETTLER_TALK.any) : pick(SETTLER_TALK.jobless), vars);
   const own = JOB_TALK[jobId];

@@ -1536,6 +1536,73 @@ export const STRUCTURES = [
   },
 ];
 
+// --- PLAY-12 (docs/design/play-12.md): the Armoury and the War Hall ----------
+// Both are optional, like the Work Hall: no Age goal needs them.
+const FORGE_BLOCK = 525, WAR_TABLE_BLOCK = 571;
+const ARMOURY_WALLS = [STONE, COBBLE, BRICK];
+STRUCTURES.push(
+  {
+    id: 'armoury', name: 'Armoury', icon: '🗡️', age: 8, optional: true,
+    blurb: 'A stone hall with a forge and racks of arms. Research arms here, one piece at a time: better swords, arrows, guards and catapults for every soldier you have.',
+    minSize: 6, maxSize: 14, cost: { iron_ingot: 4, planks: 12 },
+    station: 'armoury',
+    requires: [
+      {
+        id: 'shell',
+        test: (ctx) => count(ctx, ARMOURY_WALLS) >= 60,
+        say: (ctx) => `Needs ${60 - count(ctx, ARMOURY_WALLS)} more stone, cobble or brick: arms are kept behind stone`,
+      },
+      { id: 'forge', test: (ctx) => count(ctx, [FORGE_BLOCK]) >= 1, say: () => 'Needs a forge inside to try the arms' },
+      {
+        id: 'arms',
+        test: (ctx) => count(ctx, RACKS) >= 2,
+        say: (ctx) => `Needs ${plural(2 - count(ctx, RACKS), 'weapon rack')}`,
+      },
+      { id: 'plans', test: (ctx) => count(ctx, DESKS) >= 1, say: () => 'Needs a table to draw the plans on' },
+      {
+        id: 'room',
+        test: (ctx) => ctx.shelteredVolume() >= 20,
+        say: () => 'Needs a hall: walls all round and a roof over it',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    skill: 'politics',
+  },
+  {
+    id: 'war_hall', name: 'War Hall', icon: '🗺️', age: 9, optional: true,
+    blurb: 'Every company of soldiers in one list. Give orders from here, and send a company to march on a rival city.',
+    minSize: 6, maxSize: 14, cost: { gold: 4, planks: 12 },
+    requires: [
+      {
+        id: 'shell',
+        test: (ctx) => count(ctx, WALLING) >= 70,
+        say: (ctx) => `Needs ${70 - count(ctx, WALLING)} more stone, cobble, brick or dark stone`,
+      },
+      { id: 'table', test: (ctx) => count(ctx, [WAR_TABLE_BLOCK]) >= 1, say: () => 'Needs a war table to plan on' },
+      {
+        id: 'banners',
+        test: (ctx) => count(ctx, BANNERS) >= 2,
+        say: (ctx) => `Needs ${plural(2 - count(ctx, BANNERS), 'banner')} on the walls`,
+      },
+      {
+        id: 'lights',
+        test: (ctx) => count(ctx, LIGHTS) >= 2,
+        say: (ctx) => `Needs ${plural(2 - count(ctx, LIGHTS), 'light')} to read the maps by`,
+      },
+      {
+        id: 'room',
+        test: (ctx) => ctx.shelteredVolume() >= 24,
+        say: () => 'Needs a hall: walls all round and a roof over it',
+      },
+    ],
+    produces: {},
+    everySeconds: 0,
+    skill: 'politics',
+  },
+);
+// --- end PLAY-12 ---
+
 /**
  * Levels for every building that makes something. Asked for directly:
  * "Let's work on the level up farms and buildings as a whole please. Let's

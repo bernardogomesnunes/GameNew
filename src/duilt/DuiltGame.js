@@ -1,4 +1,6 @@
-import { Rivals } from './Rivals.js';
+import { Rivals, WON as RIVAL_WON, MAX_STRENGTH as RIVAL_MAX } from './Rivals.js';
+import { MARCH_DAYS, companyPower, cityPower, forecast, resolve as resolveMarch, survivors } from './marchBattle.js';  // PLAY-12
+import { rivalSites } from '../world/rivals.js';  // PLAY-12
 import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { Crops, harvestOf, farmProduce, tendFarm, farmSeedSlots } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND, cropOf, RIPE } from '../config/crops.js';
@@ -47,6 +49,7 @@ import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
 import { Defenders, MAX_SOLDIERS } from '../world/Defenders.js';
 import { UNITS_BY_ID, unitCost, payForUnit, soldierCap, SOLDIER_CAPS } from '../config/soldiers.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';
+import { RESEARCH_BY_ID, RESEARCH_IDS } from '../config/research.js';  // PLAY-12
 import { Trains, CAR_SLOTS, PART_LENGTH } from '../world/Trains.js';
 // PLAY-11: the Factory.
 import { endingFor } from '../config/lore.js';
@@ -229,6 +232,9 @@ export class DuiltGame {
     // What the university is researching now, if anything: { id, name,
     // started, days } — `started` on the world's day count (this.days).
     this.studying = null;
+    // PLAY-12: the Armoury's own slot, same shape as `studying`, so a study
+    // at the university never blocks arms research and the other way round.
+    this.armouryStudy = null;
     // IMP-15: the spots at placed stations and the foundry, working on their own.
     this.stationWork = new StationWork({ bag: () => this.inventory });
     // CRAFT3D-1: each carpentry counter's furniture in progress.
@@ -245,7 +251,9 @@ export class DuiltGame {
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
         : r.needsTemple && !this.sandbox && !this.structures.list().some((s) => s.type === 'temple' && s.valid && (s.tier ?? 0) >= r.needsTemple) ? `Raise a temple to level ${r.needsTemple + 1} first`
-        : r.study && this.studying ? `The university is busy with ${this.studying.name.toLowerCase()} — ${this.researchLeftText()} left`
+        : r.armsRing && !this.sandbox && !this.ring ? 'Forge a ring first — its arms follow it'
+        : r.armsRing && this.ring && this.ring !== r.armsRing ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
+        : r.study && this.studySlot(r.station) ? `The ${r.station === 'armoury' ? 'armoury' : 'university'} is busy with ${this.studySlot(r.station).name.toLowerCase()} — ${this.researchLeftText(r.station)} left`
         // The Future's materials: read its Archive first (world/future.js).
         : r.future && !this.time.futureKnown ? 'Knowledge from the Future — read the Archive in its university, and bring it home' : null),
       hidden: (r) => this.studyHidden(r),
@@ -281,7 +289,20 @@ export class DuiltGame {
   studyHidden(r) {
     if (!r.study) return false;
     if (r.study === 'engineering') return !!this.research.engineering;
+    // PLAY-12: the Armoury's pieces. Learnt ones are hidden, and so are the
+    // rest of a group (Sky Arms or Dark Arms) once one is; one whose
+    // `after` isn't learnt yet is not offered.
+    if (RESEARCH_BY_ID.has(r.study)) {
+      if (this.research[r.study]) return true;
+      if (r.group && [...RESEARCH_BY_ID.values()].some((p) => p.group === r.group && this.research[p.id])) return true;
+      return !!r.after && !this.research[r.after];
+    }
     return this.skills.levelOf(r.study) !== r.level - 1;
+  }
+
+  /** PLAY-12: the study running at a station (`university` or `armoury`), or null. */
+  studySlot(station = 'university') {
+    return station === 'armoury' ? this.armouryStudy : this.studying;
   }
 
   /**
@@ -302,20 +323,21 @@ export class DuiltGame {
    */
   startStudy(r) {
     if (this.sandbox) return this.study(r);
-    this.studying = { id: r.id, name: r.result ?? r.name, started: this.days, days: DuiltGame.researchDays(r) };
-    this.bus?.emit('research:started', { ...this.studying });
+    const st = { id: r.id, name: r.result ?? r.name, started: this.days, days: DuiltGame.researchDays(r) };
+    if (r.station === 'armoury') this.armouryStudy = st; else this.studying = st;
+    this.bus?.emit('research:started', { ...st, station: r.station });
   }
 
-  /** How far the research is: { id, name, done, days, ratio }, or null. */
-  researchProgress() {
-    const st = this.studying;
+  /** How far the research is at a station: { id, name, done, days, ratio }, or null. */
+  researchProgress(station = 'university') {
+    const st = this.studySlot(station);
     if (!st) return null;
     const done = Math.max(0, Math.min(st.days, this.days - st.started));
     return { ...st, done, ratio: done / st.days };
   }
 
-  researchLeftText() {
-    const p = this.researchProgress();
+  researchLeftText(station = 'university') {
+    const p = this.researchProgress(station);
     if (!p) return '';
     const left = p.days - p.done;
     return gameDaysText(left);
@@ -323,13 +345,18 @@ export class DuiltGame {
 
   /** Finishes the research once its days are up. Returns what was learnt, or null. */
   finishResearch() {
-    const p = this.researchProgress();
-    if (!p || p.done < p.days) return null;
-    const r = RECIPES_BY_ID.get(p.id);
-    this.studying = null;
-    if (r) this.study(r);
-    this.bus?.emit('research:finished', { id: p.id, name: p.name });
-    return p;
+    // PLAY-12: the Armoury's slot finishes the same way.
+    let learnt = null;
+    for (const station of ['university', 'armoury']) {
+      const p = this.researchProgress(station);
+      if (!p || p.done < p.days) continue;
+      const r = RECIPES_BY_ID.get(p.id);
+      if (station === 'armoury') this.armouryStudy = null; else this.studying = null;
+      if (r) this.study(r);
+      this.bus?.emit('research:finished', { id: p.id, name: p.name, station });
+      learnt ??= p;
+    }
+    return learnt;
   }
 
   /** What studying does: a skill up a level, or a piece of research learnt. */
@@ -337,6 +364,11 @@ export class DuiltGame {
     if (r.study === 'engineering') {
       this.research.engineering = true;
       this.bus?.emit('research:done', { id: 'engineering', name: 'Engineering' });
+      return;
+    }
+    if (RESEARCH_BY_ID.has(r.study)) {
+      this.research[r.study] = true;
+      this.bus?.emit('research:done', { id: r.study, name: RESEARCH_BY_ID.get(r.study).name });
       return;
     }
     const need = MILESTONES[r.level - 1];
@@ -2254,18 +2286,143 @@ export class DuiltGame {
     if (s.type === 'military' && unitId !== 'shield_guard') return { ok: false, reason: 'A Garrison trains spear guards' };
     const t = this.defenders.barracks(s.id);
     const cap = Math.min(MAX_SOLDIERS, soldierCap(s));
-    const room = cap - t.roster.length - t.queue.length;
+    const room = cap - t.roster.length - t.queue.length - this.defenders.awayCount(s.id);  // PLAY-12: a company on the march keeps its bunks
     if (room <= 0) {
       const next = SOLDIER_CAPS[(s.tier ?? 0) + 1];
       return { ok: false, reason: `Full — ${cap} soldiers at most here${next ? `. Evolve it to hold ${next}` : ''}` };
     }
-    const cost = unitCost(unit, this.inventory);
+    const cost = unitCost(unit, this.inventory, this.research);  // PLAY-12: researched gear
     if (!cost.ok) return { ok: false, reason: `Needs ${cost.short.join(', ')}` };
-    payForUnit(unit, this.inventory);
+    payForUnit(unit, this.inventory, this.research);
     this.defenders.order(s.id, unitId, this.days);
     this.bus?.emit('duilt:training', { structure: s, unit: unitId });
     return { ok: true, unit };
   }
+
+  // --- PLAY-12 (docs/design/play-12.md): the War Hall and the march ----------
+
+  /** A company's name: its building's name and number, "Barracks 1", "Garrison 2". */
+  companyName(s) {
+    const same = this.structures.list().filter((x) => x.type === s.type && (x.valid || x.id === s.id));
+    const n = Math.max(0, same.findIndex((x) => x.id === s.id)) + 1;
+    return `${s.type === 'military' ? 'Garrison' : 'Barracks'} ${n}`;
+  }
+
+  /** Every barracks and Garrison standing, in building order: the companies. */
+  companies() {
+    return this.structures.list().filter((x) => ['barracks', 'military'].includes(x.type) && x.valid);
+  }
+
+  /** Whether a War Hall stands. */
+  hasWarHall() {
+    return this.structures.list().some((x) => x.type === 'war_hall' && x.valid);
+  }
+
+  /** A rival city's name, or "Rival N" where the land is not loaded. */
+  rivalName(id) {
+    try { return rivalSites(this.world.gen)[id]?.name ?? `Rival ${id + 1}`; } catch { return `Rival ${id + 1}`; }
+  }
+
+  /**
+   * What a march of building `s` on rival `rivalId` would come to now:
+   * { ours, theirs, guards, forecast } — or null where there is no such rival.
+   */
+  marchForecast(s, rivalId) {
+    const r = this.battle?.list[rivalId];
+    if (!r) return null;
+    const units = this.defenders.barracks(s.id).roster;
+    const hungry = Math.min(units.length, this.defenders.hungry);
+    const guards = this.battle.garrison(r);
+    const ours = companyPower(units, this.research, hungry), theirs = cityPower(guards);
+    return { ours, theirs, guards, forecast: forecast(ours, theirs, units.length) };
+  }
+
+  /**
+   * The March order: building `s`'s whole company leaves for rival
+   * `rivalId`'s city. Refused with a reason where it cannot go: no War Hall,
+   * not a Battle world, one company already out, nobody to send, the city
+   * already fallen. They fight when they arrive (tickMarches).
+   */
+  marchCompany(s, rivalId) {
+    const refuse = (reason) => ({ ok: false, reason });
+    if (!this.hasWarHall()) return refuse('Raise a War Hall first: it plans the marches');
+    if (!this.battle) return refuse('Marches go to rival cities, and only a Battle world has them');
+    if (!['barracks', 'military'].includes(s?.type) || !s.valid) return refuse('Only a standing barracks or Garrison sends a company');
+    if (this.defenders.marches.length) return refuse('A company is already out: one march at a time');
+    if (!this.defenders.barracks(s.id).roster.length) return refuse('Nobody here to send');
+    const r = this.battle.list[rivalId];
+    if (!r) return refuse('No such rival');
+    if (this.battle.fallen(r, this.days)) return refuse(`${this.rivalName(rivalId)}'s city is yours until day ${Math.ceil(r.fallenUntil)}`);
+    const m = this.defenders.march(s.id, rivalId, this.days, MARCH_DAYS);
+    if (!m) return refuse('Nobody here to send');
+    const reg = s.region;
+    if (reg) m.at = { x: (reg.minX + reg.maxX) / 2, z: (reg.minZ + reg.maxZ) / 2 };
+    this.bus?.emit('march:started', { of: m.of, company: this.companyName(s), rival: rivalId, rivalName: this.rivalName(rivalId), count: m.units.length, arrives: m.arrives });
+    return { ok: true, march: m };
+  }
+
+  /** The battle, worked out by numbers when a company reaches the city. Sets the march's result. */
+  fightMarch(m) {
+    const r = this.battle?.list[m.rival];
+    const s = this.structures.list().find((x) => String(x.id) === m.of);
+    const company = s ? this.companyName(s) : 'The company';
+    const rivalName = this.rivalName(m.rival);
+    // The city fell to somebody else while they walked: they turn round.
+    if (!r || this.battle.fallen(r, this.days)) {
+      m.result = { won: false, lost: [], gold: 0, refused: true };
+      this.bus?.emit('march:fought', { of: m.of, company, rivalName, won: false, refused: true, lost: 0, gold: 0 });
+      return m.result;
+    }
+    const hungry = Math.min(m.units.length, this.defenders.hungry);
+    const ours = companyPower(m.units, this.research, hungry), theirs = cityPower(this.battle.garrison(r));
+    const out = resolveMarch(ours, theirs, m.units, this.research);
+    let gold = 0;
+    if (out.won) {
+      gold = this.battle.conquer(r, this.days);
+      this.collect({ gold });
+    } else {
+      r.strength = Math.min(RIVAL_MAX, r.strength + RIVAL_WON);
+    }
+    m.result = { won: out.won, lost: out.lost, gold, refused: false };
+    m.units = survivors(m.units, out.lost);
+    this.bus?.emit('march:fought', { of: m.of, company, rivalName, won: out.won, refused: false, lost: out.lost.length, gold, left: m.units.length });
+    return m.result;
+  }
+
+  /**
+   * A company back from the march. Its own building takes it; with that
+   * broken or unclaimed, the survivors join the nearest barracks or
+   * Garrison with room, and any that fit nowhere are lost.
+   */
+  marchHome(m) {
+    const posts = this.companies();
+    const own = posts.find((x) => String(x.id) === m.of);
+    const company = own ? this.companyName(own) : 'The company';
+    let left = m.units, placed = 0, to = own ?? null;
+    if (own) {
+      placed = this.defenders.bringHome(own.id, left, soldierCap(own));
+      left = left.slice(placed);
+    }
+    if (left.length) {
+      const dist = (x) => (m.at && x.region ? Math.hypot((x.region.minX + x.region.maxX) / 2 - m.at.x, (x.region.minZ + x.region.maxZ) / 2 - m.at.z) : 0);
+      for (const x of posts.filter((p) => p !== own).sort((a, b) => dist(a) - dist(b))) {
+        if (!left.length) break;
+        const put = this.defenders.bringHome(x.id, left, soldierCap(x));
+        if (put) { to ??= x; placed += put; left = left.slice(put); }
+      }
+    }
+    this.bus?.emit('march:home', { of: m.of, company, placed, lost: left.length, to: to ? this.companyName(to) : null });
+    return { placed, lost: left.length };
+  }
+
+  /** Moves the marches on: arrivals fight, homecomers go back to their posts. Called every frame. */
+  tickMarches() {
+    if (!this.defenders.marches.length) return;
+    const { arrivals, homecomings } = this.defenders.tickMarches(this.days);
+    for (const m of arrivals) this.fightMarch(m);
+    for (const m of homecomings) this.marchHome(m);
+  }
+  // --- end PLAY-12 ---
 
   /** Takes a crop back out of a farm: it stops growing there, and its seed comes back. */
   unsowFarm(s, kind) {
@@ -2651,6 +2808,7 @@ export class DuiltGame {
       ring: this.ring,
       research: this.research,
       studying: this.studying,
+      armouryStudy: this.armouryStudy,  // PLAY-12
       skyFallen: this.skyFallen || undefined,
       skyGift: this.skyGift || undefined,
       // CRAFT-9 part 4: written by every save from now on, so the gift on load comes once.
@@ -2731,10 +2889,16 @@ export class DuiltGame {
     this.hunger.loadJSON(data.hunger);
     this.health.loadJSON(data.health);
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
-    this.research = data.research && typeof data.research === 'object' ? { engineering: !!data.research.engineering } : {};
-    const st = data.studying;
-    this.studying = st && RECIPES_BY_ID.get(st.id)?.study && Number.isFinite(st.started) && Number.isFinite(st.days)
-      ? { id: st.id, name: String(st.name ?? RECIPES_BY_ID.get(st.id).result), started: st.started, days: st.days } : null;
+    // PLAY-12: engineering and the Armoury's pieces; unknown ids and anything not `true` are dropped.
+    this.research = {};
+    if (data.research && typeof data.research === 'object') {
+      for (const id of RESEARCH_IDS) if (data.research[id] === true) this.research[id] = true;
+    }
+    const studyOf = (st, station) => (st && RECIPES_BY_ID.get(st.id)?.study && RECIPES_BY_ID.get(st.id).station === station
+      && Number.isFinite(st.started) && Number.isFinite(st.days)
+      ? { id: st.id, name: String(st.name ?? RECIPES_BY_ID.get(st.id).result), started: st.started, days: st.days } : null);
+    this.studying = studyOf(data.studying, 'university');
+    this.armouryStudy = studyOf(data.armouryStudy, 'armoury');
     this.skyFallen = data.skyFallen === true;
     this.skyGift = data.skyGift === true;
     this.holdSky();
@@ -2832,7 +2996,7 @@ export class DuiltGame {
     installEmergingPlaces(this.world.gen, this.emergingPlaces);
     this.war.loadJSON(data.war);
     this.skyWar.loadJSON(data.skyWar);
-    this.defenders.loadJSON(data.defenders);
+    this.defenders.loadJSON(data.defenders, { battle: !!this.battle });  // PLAY-12: marches need rivals
     this.army.loadJSON(data.army);
     // A world already at the last age from before there was a war: it starts now.
     this.declareWar();

@@ -2437,3 +2437,66 @@ body.is-sleeping #building-hint { visibility: hidden; }
 #ui-root .factory-line select, #ui-root .factory-line .factory-search { display: block; width: 100%; min-height: 44px; box-sizing: border-box; margin-top: 6px; }
 .factory-line .building-line.ok { color: var(--px-grass-dark, #3d7a2a); }
 /* PLAY-11 end */
+
+/* PLAY-13: villager mood. Band colours match the bubbles over their heads
+   (render/SettlerView.js, config/mood.js). */
+#vital-people { position: relative; }
+.people-dot { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; border-radius: 50%; background: #e0b43a; }
+.people-dot[data-band="angry"] { background: #e07a2e; }
+.people-dot[data-band="furious"] { background: #d23a2a; }
+.mood-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; vertical-align: middle; background: #5a9e4b; }
+.mood-dot[data-band="grumbling"] { background: #e0b43a; }
+.mood-dot[data-band="angry"] { background: #e07a2e; }
+.mood-dot[data-band="furious"] { background: #d23a2a; }
+.town-head { margin: 0 0 10px; font-weight: 700; font-size: 14px; }
+.town-list { display: grid; gap: 8px; }
+.town-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center;
+  min-height: 44px; padding: 8px 10px; border: 1px solid var(--panel-border); border-radius: 10px;
+  background: rgba(35,42,45,0.035); min-width: 0;
+}
+.town-name { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.town-job { font-size: 13px; color: var(--text-dim); text-align: right; }
+.town-bar { grid-column: 1 / -1; display: block; height: 8px; border-radius: 4px; background: rgba(35,42,45,0.12); overflow: hidden; }
+.town-fill { display: block; height: 100%; background: #5a9e4b; }
+.town-row[data-band="grumbling"] .town-fill { background: #e0b43a; }
+.town-row[data-band="angry"] .town-fill { background: #e07a2e; }
+.town-row[data-band="furious"] .town-fill { background: #d23a2a; }
+.town-reason, .town-leaves { font-size: 13px; color: var(--text-dim); min-width: 0; overflow-wrap: anywhere; }
+.town-leaves { text-align: right; color: #d23a2a; font-weight: 700; }
+.town-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.town-actions button { min-height: 44px; }
+
+/* --- PLAY-12 (docs/design/play-12.md): the War Hall's company cards and the March picker --- */
+.company-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin: 4px 0; }
+.company-card { padding: 8px 10px; border: 1px solid var(--panel-border); border-radius: 10px; background: var(--panel-bg-2, rgba(255,255,255,0.04)); min-width: 0; }
+.company-card.away { border-color: var(--accent); background: var(--accent-dim); }
+.company-head strong { font-size: 14px; overflow-wrap: anywhere; }
+.company-power b { font-size: 15px; }
+.company-state { margin: 4px 0 2px; font-size: 12.5px; color: var(--text-dim); }
+.company-state.on { color: var(--accent); font-weight: 600; }
+.company-orders { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 6px 0 2px; }
+.company-orders .soldier-order, .march-one .soldier-order { min-height: 44px; }
+.soldier-order.cant { opacity: 0.55; }
+.march-one { grid-template-columns: minmax(0, 1fr); }
+.march-picker { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.march-back { align-self: flex-start; min-height: 44px; padding: 0 16px; }
+.rival-pick { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto auto; align-items: center; gap: 6px 8px; padding: 6px 8px; border: 1px solid var(--panel-border); border-radius: 8px; font-size: 12.5px; }
+.rival-pick.fallen { opacity: 0.55; }
+.rival-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.35); }
+.rival-name { display: flex; flex-direction: column; min-width: 0; }
+.rival-name small { color: var(--text-dim); font-size: 11.5px; }
+.rival-forecast { font-size: 12px; text-align: right; color: var(--text-dim); }
+.rival-forecast.win { color: var(--accent); font-weight: 600; }
+.rival-forecast.close { color: #b8862e; font-weight: 600; }
+.rival-forecast.loss { color: var(--bad, #c0503a); font-weight: 600; }
+.rival-send { min-height: 44px; padding: 0 14px; }
+@media (max-width: 480px) {
+  .rival-pick { grid-template-columns: 14px minmax(0, 1fr) auto; }
+  .rival-forecast { grid-column: 2 / 3; text-align: left; }
+  .rival-send { grid-row: 1 / span 2; grid-column: 3; }
+}
+@media (min-width: 900px) {
+  #panel-building .panel:has(.war-hall) { max-width: 720px; }
+  .war-hall .company-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

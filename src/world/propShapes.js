@@ -1205,6 +1205,24 @@ PROP_SHAPES.tanning_vat = [
   // The paddle's handle, standing up out of the liquor.
   { minX: 0.64, maxX: 0.68, minY: 0.6, maxY: 1, minZ: 0.6, maxZ: 0.64, color: 0x8a6238 },
 ];
+
+// --- PLAY-12 (docs/design/play-12.md) -----------------------------------------
+// The War Table: four legs, a top, a parchment map and three figures, one of
+// yours (blue) and two of the rivals' (red). Front is -z.
+const WT_LEG = 0x7a5636, WT_TOP = 0x8a6440, WT_MAP = 0xd9c79a, WT_YOU = 0x3b5fa8, WT_RIVAL = 0x9a2c2c;
+PROP_SHAPES.war_table = [
+  { minX: 0.04, maxX: 0.1, minY: 0, maxY: 0.7, minZ: 0.04, maxZ: 0.1, color: WT_LEG },
+  { minX: 0.9, maxX: 0.96, minY: 0, maxY: 0.7, minZ: 0.04, maxZ: 0.1, color: WT_LEG },
+  { minX: 0.04, maxX: 0.1, minY: 0, maxY: 0.7, minZ: 0.9, maxZ: 0.96, color: WT_LEG },
+  { minX: 0.9, maxX: 0.96, minY: 0, maxY: 0.7, minZ: 0.9, maxZ: 0.96, color: WT_LEG },
+  { minX: 0.04, maxX: 0.96, minY: 0.7, maxY: 0.78, minZ: 0.04, maxZ: 0.96, color: WT_TOP },
+  { minX: 0.1, maxX: 0.9, minY: 0.78, maxY: 0.79, minZ: 0.1, maxZ: 0.9, color: WT_MAP },
+  { minX: 0.2, maxX: 0.3, minY: 0.79, maxY: 0.9, minZ: 0.6, maxZ: 0.7, color: WT_YOU },
+  { minX: 0.65, maxX: 0.75, minY: 0.79, maxY: 0.9, minZ: 0.25, maxZ: 0.35, color: WT_RIVAL },
+  { minX: 0.45, maxX: 0.55, minY: 0.79, maxY: 0.9, minZ: 0.4, maxZ: 0.5, color: WT_RIVAL },
+];
+// --- end PLAY-12 ---
+
 // --- PLAY-14..21 (docs/design/play-14-21.md) ---
 // PLAY-14: a wild mushroom, one big and one small, facing -z. 6 boxes, 8 for red.
 const MUSH_STEM = 0xefe4cf, MUSH_CAPS = { red: 0xd2484f, lilac: 0xa178d0, pale: 0xe6d6b8 };
