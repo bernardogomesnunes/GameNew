@@ -68,7 +68,6 @@ import { STRUCTURES_BY_ID, structureName, MINE_FLOOR } from './config/structures
 import { DESIGN_FOR_STRUCTURE } from './config/starterDesigns.js';
 import { starterDesign } from './prefabs/HouseDesigns.js';
 import { TerrainWorkerQueue } from './world/TerrainWorkerQueue.js';
-import { LocalRivalAI } from './duilt/LocalRivalAI.js';
 import { applyPeerWorldEdits } from './net/applyPeerWorldEdits.js';
 import { buildWorldPayload, exportWorldFile, exportVoxFile, parseWorldPayload, pickFile } from './storage/WorldExport.js';
 import { UIManager } from './ui/UIManager.js';
@@ -119,13 +118,11 @@ import { GuardianView } from './render/GuardianView.js';
 import { MODE_WORDS } from './world/Guardian.js';
 import { tameInto } from './duilt/Ranch.js';
 import { Wanderers, compass } from './world/Wanderers.js';
-import { ArmyView, EngineView } from './render/ArmyView.js';
 import { UNITS_BY_ID, soldierCap } from './config/soldiers.js';
 import { blowOf } from './world/Defenders.js';
 import { NIGHTSTONE_ORE, SKY_LIFT, STORAGE_CONTROLLER, STORAGE_INTERFACE, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE, isTent, TIME_MACHINE, EGG_RAPTOR, EGG_TRIKE, EGG_LONGNECK, ARCHIVE, WAR_STANDARD } from './config/blocks.js';
 import { inPast, pastArrival } from './world/past.js';
 import { inFuture, futureArrival, FUTURE_GROUND } from './world/future.js';
-import { FutureView } from './render/FutureView.js';
 import { RECIPES } from './config/recipes.js';
 import { Rivals, FALL_DAYS } from './duilt/Rivals.js';
 import { rivalSites, standardAt, RIVAL_HEX } from './world/rivals.js';
@@ -133,9 +130,7 @@ import { skyFor, skyAt, liftAt, chainAt, SKY_REACH } from './world/skyKingdom.js
 import { CHAINS, SINK_DAYS } from './duilt/SkyWar.js';
 import { Suspicion, SUSPICION, AMBUSH } from './duilt/Suspicion.js';
 import { MarkerView } from './render/MarkerView.js';
-import { SkyBeacon } from './render/SkyBeacon.js';
 import { gradeRenderer, Motes } from './render/atmosphere.js';
-import { SkyMist } from './render/SkyMist.js';
 import { MODE_WORDS as ARMY_WORDS, MARCH_DAYS } from './world/Army.js';
 import { INTRO } from './ui/StoryText.js';
 import { SOLDIER } from './world/Defenders.js';
@@ -607,7 +602,8 @@ export class Game {
     this.dayCycle = new DayCycle(this.scene, { ambient, sun, hemi, clouds: this.clouds });
     // The air: pollen in the sun, and mist and cloud round the Sky Kingdom.
     this.motes = new Motes(this.scene);
-    this.skyMist = new SkyMist(this.scene);
+    // (SkyMist, SkyBeacon, ArmyView, FutureView load on first sight: lazyView.)
+    this.atmosphereOn = true;
     this.setAtmosphere(this.graphics.atmosphere !== false);
     this.lights = new LightManager(this.scene);
     this.gamification?.dispose?.();
@@ -677,7 +673,6 @@ export class Game {
     this.handView = new HandView(this.scene, this.camera);
     // Hermit, bandits, explorers, messengers — drawn like settlers.
     this.wanderView = new SettlerView(this.scene, 'wanderers');
-    this.skyBeacon = new SkyBeacon(this.scene);
     // In disguise on the island: how near you are to being seen through,
     // and the ? and ! over the guards' heads (duilt/Suspicion.js).
     this.suspicion = new Suspicion();
@@ -686,10 +681,7 @@ export class Game {
     this.fireflyView = new FireflyView(this.scene);
     this.guardianView = new GuardianView(this.scene);
     // The Stone Kingdom's rams, catapults and beast, and its arrows.
-    this.armyView = new ArmyView(this.scene);
-    this.engineView = new EngineView(this.scene);
     // The Future's trams and flying cars.
-    this.futureView = new FutureView(this.scene);
     // Your soldiers and tower archers (the defence buildings).
     this.defenderView = new SettlerView(this.scene, 'defenders');
     // Your army, on the dark path.
@@ -5619,12 +5611,15 @@ export class Game {
     const d = this.duilt, b = d?.battle;
     if (!b || d.sandbox || !this.wanderers || this.peerSession?.role==='guest') return;
     if (b.localAI && import.meta.env?.DEV) {
-      this.localRivalAI ??= new LocalRivalAI({onStatus:status=>{
-        if (this.localAIStatus === status) return;
-        this.localAIStatus = status;
-        this.ui?.toast({kind:'challenge',title:status==='connected'?'LM Studio rivals connected':'LM Studio unavailable',body:status==='connected'?'Your model is choosing rival strategies.':'Normal rival strategies continue; the model will be tried again.'});
-      }});
-      void this.localRivalAI.tick(b);
+      this.lazyView('localRivalAI', true, async () => {
+        const { LocalRivalAI } = await import('./duilt/LocalRivalAI.js');
+        return new LocalRivalAI({onStatus:status=>{
+          if (this.localAIStatus === status) return;
+          this.localAIStatus = status;
+          this.ui?.toast({kind:'challenge',title:status==='connected'?'LM Studio rivals connected':'LM Studio unavailable',body:status==='connected'?'Your model is choosing rival strategies.':'Normal rival strategies continue; the model will be tried again.'});
+        }});
+      });
+      void this.localRivalAI?.tick(b);
     }
     b.grow(d.days);
     if (!b.armed && d.structures.countOf('barracks') > 0 && b.arm(d.days)) {
@@ -8484,11 +8479,26 @@ export class Game {
     return { needsReload };
   }
 
+  /**
+   * A rarely-seen view or helper whose code loads on first need (TECH-7).
+   * Returns it once built, else null (and starts the load when `need`).
+   * A failed load is retried on the next need.
+   */
+  lazyView(key, need, load) {
+    if (this[key]) return this[key];
+    this.lazyLoads ??= {};
+    if (need && !this.lazyLoads[key]) {
+      this.lazyLoads[key] = load().then((v) => { this[key] = v; }, (e) => { console.error(e); }).finally(() => { delete this.lazyLoads[key]; });
+    }
+    return null;
+  }
+
   /** The graphics setting for the air: low mist, motes, the Sky Kingdom's cloud. */
   setAtmosphere(on) {
     this.dayCycle.atmosphere = on;
     this.motes.enabled = on;
-    this.skyMist.enabled = on;
+    this.atmosphereOn = on;
+    if (this.skyMist) this.skyMist.enabled = on;
   }
 
   /** Motes round you, and the cloud round the Sky Kingdom, by the time of day. */
@@ -8496,7 +8506,11 @@ export class Game {
     if (!this.player) return;
     const l = this.dayCycle.light;
     this.motes.update(dt, this.camera.position, l.day, l.dusk, this.renderer.domElement.height);
-    this.skyMist.update(this.skyOpen() ? skyAt(this.world.gen) : null, this.camera.position, this.dayCycle.cloudColor);
+    const sky = this.skyOpen();
+    this.lazyView('skyMist', sky, async () => {
+      const { SkyMist } = await import('./render/SkyMist.js');
+      const v = new SkyMist(this.scene); v.enabled = this.atmosphereOn; return v;
+    })?.update(sky ? skyAt(this.world.gen) : null, this.camera.position, this.dayCycle.cloudColor);
   }
 
   /**
@@ -8616,7 +8630,9 @@ export class Game {
         this.world.gen.skyCut = this.duilt && !this.duilt.sandbox ? this.duilt.skyWar.cut : null;
       }
       // Its light, low in the sky that way, from anywhere you can't see the island itself.
-      this.skyBeacon.update(this.skyOpen() ? skyAt(this.world.gen) : null, this.player.position, 1 - daylightAt(this.dayCycle.time).day, this.dayCycle.cloudColor);
+      const skyUp = this.skyOpen();
+      this.lazyView('skyBeacon', skyUp, async () => new (await import('./render/SkyBeacon.js')).SkyBeacon(this.scene))
+        ?.update(skyUp ? skyAt(this.world.gen) : null, this.player.position, 1 - daylightAt(this.dayCycle.time).day, this.dayCycle.cloudColor);
       this.wanderers.tick(dt, this.player.position);
       this.tickWar();
       this.tickRivals();
@@ -8717,13 +8733,21 @@ export class Game {
     this.defenderView.update(this.withShowcase('defenders', ours?.people ?? []));
     this.warriorView.update(this.withShowcase('warriors', this.duilt?.army.field ?? []));
     this.showcaseView.update(this.showcase, dt);
-    this.armyView.update(strangers, [...(this.wanderers?.arrows ?? []), ...(ours?.arrows ?? [])], dt);
-    this.engineView.update(ours?.engines ?? []);
+    const armyArrows = [...(this.wanderers?.arrows ?? []), ...(ours?.arrows ?? [])];
+    const armyIn = !!(strangers?.length || armyArrows.length || ours?.engines?.length);
+    this.lazyView('armyView', armyIn, async () => {
+      const m = await import('./render/ArmyView.js');
+      this.engineView = new m.EngineView(this.scene);
+      return new m.ArmyView(this.scene);
+    })?.update(strangers, armyArrows, dt);
+    this.engineView?.update(ours?.engines ?? []);
     this.projectileView.update(this.projectiles?.list ?? []);
     this.arrowView.update(this.arrows?.list ?? []);
     this.fireflyView.update(this.fireflies);
     const gen = this.world?.gen;
-    this.futureView.update(gen && this.player?.position, performance.now() / 1000, gen?.biomes.centreX, gen?.biomes.centreZ);
+    this.lazyView('futureView', !!(gen && this.player && inFuture(this.player.position.x, gen.biomes.centreX)),
+      async () => new (await import('./render/FutureView.js')).FutureView(this.scene))
+      ?.update(gen && this.player?.position, performance.now() / 1000, gen?.biomes.centreX, gen?.biomes.centreZ);
     this.guardianView.update(this.duilt?.guardian, dt);
     this.closeUp?.update(dt);
     this.renderer.render(this.scene, this.camera);

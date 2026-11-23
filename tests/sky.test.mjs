@@ -421,7 +421,7 @@ ok('a lift anywhere else goes nowhere', liftAt(gen, at.x, 0, at.z) === null);
   ok(`from home: a light low in the sky that way, drawn ${Math.round(d)} out`, Math.abs(d - BEACON_FAR) < 1
     && Math.abs(Math.atan2(b.z - eye.z, b.x - eye.x) - Math.atan2(at.z - eye.z, at.x - eye.x)) < 1e-6 && b.y > eye.y + 50 && b.size > 40);
   ok('close enough to see the island itself, it goes', placeBeacon(at, { x: at.x + BEACON_NEAR - 10, y: 110, z: at.z }) === null);
-  ok('drawn every frame, only where there is a Sky Kingdom', /this\.skyBeacon\.update\(this\.skyOpen\(\) \? skyAt\(this\.world\.gen\) : null/.test(game));
+  ok('drawn every frame, only where there is a Sky Kingdom', /lazyView\('skyBeacon', skyUp[\s\S]{0,200}\?\.update\(skyUp \? skyAt\(this\.world\.gen\) : null/.test(game));
   ok('the sworn King points the way', NEWS.king.sworn.some((l) => l.includes('{dir}')) && /lines\[this\.kingLine\]\.replace\('\{dir\}'/.test(game));
 }
 
