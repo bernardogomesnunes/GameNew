@@ -833,7 +833,8 @@ export const STRUCTURES = [
       {
         id: 'shell',
         test: (ctx) => count(ctx, [STONE, COBBLE, BRICK]) >= 26,
-        say: (ctx) => `Needs ${26 - count(ctx, [STONE, COBBLE, BRICK])} more stone or brick in the shell — the fire has to hold`,
+        // PLAY-6 (owner, 22 November): same fix as the kiln — cobblestone counts, brick is optional.
+        say: (ctx) => `Needs ${26 - count(ctx, [STONE, COBBLE, BRICK])} more cobblestone or stone in the shell (brick works too) — the fire has to hold`,
       },
       {
         // A bigger, hotter chamber than the kiln's own two cells — this is

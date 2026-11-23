@@ -31,3 +31,9 @@ console.log('PASS the kiln panel shows each firing and its bar');
 // CRAFT3D-3: the foundry melts in its crucible; its panel no longer lists ore.
 assert.equal(DuiltUI.prototype.stationRecipesHtml.call({ duilt: {} }, foundry).includes('Crucible'), true);
 console.log('PASS the foundry panel points to its crucible');
+
+// PLAY-6: the foundry's shell hint counts what is missing and names cobblestone, like the kiln's.
+const shellHint = (s, n) => s.requires.find((r) => r.id === 'shell').say({ countOf: () => n });
+assert.equal(shellHint(kiln, 4), 'Needs 14 more cobblestone or stone in the walls (brick works too)');
+assert.equal(shellHint(foundry, 6), 'Needs 20 more cobblestone or stone in the shell (brick works too) — the fire has to hold');
+console.log('PASS the kiln and foundry shell hints count what is missing and say brick is optional');
