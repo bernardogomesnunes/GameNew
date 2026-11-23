@@ -90,3 +90,13 @@ Endpoints the game calls on Neon Auth (Better Auth client): `requestPasswordRese
 - Free: 60,000 MAU per project for auth, 1 GB storage, 5 GB egress a month. Running out of compute hours or egress suspends the database until the next month.
 - Launch: up to 1M MAU per project, usage-based compute and storage.
 - `production` used 636 MB of egress so far this month, with a handful of players. At a few hundred daily players the free egress runs out first.
+
+## Delete my account and download my data (ACCT-5, 23 November)
+
+Account panel, section "Your data".
+
+- **Download my data** builds one JSON file in the browser from the normal reads (worlds list, each world's metadata and chunks, progression, designs). Chunk bytes are base64. A world that cannot be read is listed under `failed` in the file. It works with or without migration 0009.
+- **Delete my account** asks twice: a yes/no showing the world count, then the word DELETE typed out. The game then (1) calls `delete_my_account_data()` (migration 0009), which deletes for the caller's own JWT identity only, (2) asks Neon Auth to delete the sign-in user (Better Auth `deleteUser`), (3) signs out. Saves are blocked in the client between steps 1 and 3 so an autosave cannot re-create a world.
+- **The button is hidden** until the database answers the function's dry run. A database without 0009 shows only Download.
+- **Neon setting needed for step 2.** Better Auth answers 404 from `/delete-user` unless the server has `user.deleteUser.enabled`. The game cannot change that, and the Neon Auth settings this project's tools expose do not list it (read in code, not tested against the live service: the auth config could not be read in this task). If Neon has not enabled it, the game data is still deleted, the player is signed out, and the panel says: "Your worlds and progress are deleted. Your sign-in record could not be removed from the game". The owner then removes the user in the Neon console (Auth, Users) or by asking Neon to enable user deletion.
+- **Fresh session.** Better Auth refuses `deleteUser` on a session older than its freshness window unless the password is sent. The panel then shows a password field, and retries only the sign-in step. The data is not deleted twice.

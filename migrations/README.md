@@ -82,6 +82,10 @@ before reviewing/application of 0006. No live migration was run for this work.
 - `0008_world_chunks_player_id.sql` — TECH-14, **not applied yet**. Adds
   `world_chunks.player_id` (filled by a trigger from the owning world), an
   index, and a second select policy. Old builds keep working unchanged.
+- `0009_delete_my_account_data.sql` — ACCT-5, **not applied yet**. One function,
+  `delete_my_account_data(p_dry_run)`, that deletes the caller's worlds,
+  chunks, progression, designs and player row. It takes no user id: it acts
+  on `auth.user_id()` from the caller's own JWT.
 
 ## Checking the live database
 

@@ -353,6 +353,34 @@ export class NeonTransport {
     } catch (err) { if (this.sessionsMissing(err)) return undefined; throw err; }
   }
 
+  // ---- account deletion (migrations/0009) ----------------------------------
+
+  /**
+   * What "Delete my account" would remove, counted and not deleted
+   * (`delete_my_account_data(p_dry_run := true)`). Returns undefined when the
+   * database has no such function yet, so the panel hides the button.
+   */
+  async accountDeletePreview() {
+    if (this.noAccountDelete) return undefined;
+    try {
+      return await this.request('/rpc/delete_my_account_data', { method: 'POST', body: { p_dry_run: true } });
+    } catch (err) { if (isMissingThing(err)) { this.noAccountDelete = true; return undefined; } throw err; }
+  }
+
+  /** Deletes every world, chunk and row this account owns. The database checks whose JWT it is. */
+  async deleteAccountData() {
+    if (this.noAccountDelete) throw new Error('This database cannot delete accounts yet.');
+    const counts = await this.request('/rpc/delete_my_account_data', { method: 'POST', body: { p_dry_run: false } });
+    // The player row is gone: a later sign-in makes a new one.
+    this.playerId = null;
+    return counts;
+  }
+
+  async pullTemplates() {
+    await this.ensurePlayer();
+    return (await this.request('/templates?select=*&order=created_at.asc')) ?? [];
+  }
+
   async pullWorld(worldId, attempt = 0) {
     await this.ensurePlayer();
     const worlds = await this.request(`/worlds?select=*&id=eq.${worldId}&deleted_at=is.null&limit=1`);
@@ -486,6 +514,16 @@ export class NeonTransport {
       }],
     });
   }
+}
+
+/**
+ * True when a Data API error means "this function or table does not exist
+ * here", i.e. the database has not had the migration yet (PostgREST: 404,
+ * PGRST202/PGRST205, or Postgres 42883/42P01). Used so new UI hides itself
+ * on a database that is older than the app.
+ */
+export function isMissingThing(err) {
+  return err?.status === 404 || /PGRST20[25]|42883|42P01|could not find the (function|table)/i.test(err?.message ?? '');
 }
 
 /**

@@ -577,6 +577,30 @@ export class UIManager {
               </div>
               <div class="export-note">Sessions last 7 days and renew each time you use the game.</div>
             </section>
+            <!-- ACCT-5: a copy of everything, and the way out for good. The delete half stays hidden until the database has migration 0009. -->
+            <section class="sessions" id="account-data" aria-labelledby="data-head">
+              <h4 id="data-head">Your data</h4>
+              <div class="export-note" id="data-note">Download a copy of your worlds and progress as one file.</div>
+              <div class="form-error" id="data-error" role="alert" aria-live="assertive" hidden></div>
+              <div class="form-note" id="data-status" role="status" aria-live="polite" hidden></div>
+              <div class="sessions-actions">
+                <button class="secondary" id="btn-data-download">Download my data</button>
+                <button class="secondary danger" id="btn-data-delete" hidden>Delete my account</button>
+              </div>
+              <div class="data-delete-box" id="data-delete-box" hidden>
+                <p class="export-note" id="data-delete-summary"></p>
+                <label for="data-delete-type" class="data-label">Type DELETE to confirm</label>
+                <input type="text" id="data-delete-type" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+                <div id="data-delete-pass-row" hidden>
+                  <label for="data-delete-pass" class="data-label">Your password</label>
+                  <input type="password" id="data-delete-pass" autocomplete="current-password" />
+                </div>
+                <div class="sessions-actions">
+                  <button class="primary danger" id="btn-data-delete-go" disabled>Delete everything for good</button>
+                  <button class="secondary" id="btn-data-delete-cancel">Keep my account</button>
+                </div>
+              </div>
+            </section>
             <!--
               This used to promise that signing out "leaves every world on this
               device exactly where it is", which was true right up until worlds
@@ -2240,6 +2264,7 @@ export class UIManager {
     this.q('#btn-cloud-signout').addEventListener('click', (e) => busy(e.currentTarget, () => this.cb.onCloudSignOut()));
     this.wireReset();
     this.wireSessions();
+    this.wireAccountData();
     this.openResetLink();
   }
 
@@ -2408,6 +2433,112 @@ export class UIManager {
     });
   }
 
+  /**
+   * ACCT-5: "Download my data" and "Delete my account".
+   *
+   * Download is built in the browser from the ordinary read paths, so it is
+   * always offered. Delete needs the database function from migration 0009:
+   * the preview call finds out whether it exists, and the button stays
+   * hidden on a database that is older than this build. Deleting asks twice:
+   * a yes/no first, then DELETE typed out.
+   */
+  wireAccountData() {
+    const err = (msg) => { const b = this.q('#data-error'); b.textContent = msg || ''; b.hidden = !msg; };
+    const status = (msg) => { const b = this.q('#data-status'); b.textContent = msg || ''; b.hidden = !msg; };
+    const typed = this.q('#data-delete-type');
+    const go = this.q('#btn-data-delete-go');
+    const syncGo = () => { go.disabled = typed.value.trim() !== 'DELETE'; };
+    typed.addEventListener('input', syncGo);
+    this.q('#btn-data-download').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const label = btn.textContent;
+      btn.disabled = true; err(''); status('');
+      try {
+        btn.textContent = 'Preparing\u2026';
+        const r = await this.cb.onCloudDownloadData(({ done, total, name }) => {
+          btn.textContent = total ? `Preparing ${Math.min(done + 1, total)} of ${total}\u2026` : 'Preparing\u2026';
+          void name;
+        });
+        status(`Saved ${r.worlds} ${r.worlds === 1 ? 'world' : 'worlds'} to a file.${r.failed ? ` ${r.failed} could not be read and are listed in the file.` : ''}`);
+      } catch (e2) {
+        err(e2.message || 'Could not build the download. Try again.');
+      } finally { btn.disabled = false; btn.textContent = label; }
+    });
+    const closeBox = () => {
+      this.q('#data-delete-box').hidden = true;
+      this.q('#btn-data-delete').hidden = false;
+      typed.value = ''; this.q('#data-delete-pass').value = '';
+      this.q('#data-delete-pass-row').hidden = true;
+      this.deleteDataGone = false;
+      syncGo();
+    };
+    this.q('#btn-data-delete').addEventListener('click', async () => {
+      err(''); status('');
+      const counts = this.deletePreview;
+      const worlds = counts?.worlds ?? 0;
+      // First ask.
+      const yes = await this.confirm({
+        title: 'Delete your account?',
+        body: `${worlds} ${worlds === 1 ? 'world' : 'worlds'} and your progress will be deleted from the cloud, and your sign-in removed. This cannot be undone. Download your data first if you want a copy.`,
+        ok: 'Continue', danger: true,
+      });
+      if (!yes) return;
+      // Second ask: type it.
+      this.q('#data-delete-summary').textContent = `This deletes ${worlds} ${worlds === 1 ? 'world' : 'worlds'}${counts?.chunks ? ` (${counts.chunks} saved areas)` : ''}, your progress and designs, then signs you out.`;
+      this.q('#data-delete-box').hidden = false;
+      this.q('#btn-data-delete').hidden = true;
+      typed.value = ''; syncGo(); typed.focus();
+    });
+    this.q('#btn-data-delete-cancel').addEventListener('click', () => { err(''); closeBox(); });
+    go.addEventListener('click', async () => {
+      if (typed.value.trim() !== 'DELETE') return;
+      const label = go.textContent;
+      go.disabled = true; go.textContent = 'Deleting\u2026'; err('');
+      try {
+        const password = this.q('#data-delete-pass').value;
+        const result = await this.cb.onCloudDeleteAccount({ password, dataDeleted: this.deleteDataGone });
+        closeBox();
+        this.deletePreviewFor = null;
+        this.sessionsFor = null;
+        this.toast({
+          kind: 'xp', title: 'Account deleted',
+          body: result?.authUserDeleted ? 'Your worlds and sign-in are gone' : 'Your worlds are gone. Your sign-in could not be removed from here',
+        });
+        this.refreshCloudPanel();
+        if (!result?.authUserDeleted) {
+          this.showAccountError('Your worlds and progress are deleted. Your sign-in record could not be removed from the game: the sign-in service has not turned account deletion on. Ask the game owner to remove it.');
+        }
+      } catch (e2) {
+        if (e2.reason === 'needs-password' || e2.reason === 'wrong-password') {
+          // The game data is already gone; only the sign-in step is left.
+          this.deleteDataGone = true;
+          this.q('#data-delete-pass-row').hidden = false;
+          this.q('#data-delete-pass').focus();
+        }
+        err(e2.message || 'That did not work. Try again.');
+      } finally { go.textContent = label; syncGo(); }
+    });
+  }
+
+  /** Asks the database whether account deletion exists, once per sign-in; shows the button only if so. */
+  async refreshAccountData() {
+    const user = this.cb.getCloudUser?.();
+    const btn = this.q('#btn-data-delete');
+    if (!btn || !user) return;
+    if (this.deletePreviewFor === user.id) return;
+    this.deletePreviewFor = user.id;
+    try {
+      const counts = await this.cb.onCloudDeletePreview?.();
+      this.deletePreview = counts ?? null;
+      // A database without migration 0009 answers undefined: no delete button.
+      if (!this.q('#data-delete-box').hidden) return;
+      btn.hidden = !counts;
+    } catch {
+      this.deletePreviewFor = null;
+      btn.hidden = true;
+    }
+  }
+
   /** Fetches and draws the session list. Once per sign-in unless forced. */
   async refreshSessions({ force = false } = {}) {
     const list = this.q('#sessions-list');
@@ -2551,6 +2682,7 @@ export class UIManager {
       if (sub) sub.textContent = 'Your worlds are kept here, not in this browser.';
       this.refreshAccountSummary();
       this.refreshSessions();
+      this.refreshAccountData();
     } else if (coding) {
       if (title) title.textContent = 'Check your email';
       if (sub) sub.textContent = 'One last step: confirm the email is yours.';

@@ -2087,6 +2087,11 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 .session-end { flex: none; min-height: 44px; min-width: 76px; }
 .sessions-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
 .sessions-actions button { width: 100%; min-height: 44px; }
+/* ACCT-5: the typed-confirmation box under "Delete my account". */
+.data-delete-box { margin-top: 10px; padding: 10px 12px; border: 2px solid var(--danger, #c0392b); }
+.data-label { display: block; margin: 8px 0 4px; font-size: 13px; font-weight: 700; }
+#data-delete-type, #data-delete-pass { width: 100%; padding: 10px 12px; font-size: 16px; min-height: 44px; box-sizing: border-box; }
+#btn-data-download, #btn-data-delete, #btn-data-delete-go, #btn-data-delete-cancel { min-height: 44px; width: 100%; }
 /* Framed now, so the rows need room inside the frame. */
 .skill-row, .stat-row.framed, .challenge-card { padding: 10px 12px; }
 

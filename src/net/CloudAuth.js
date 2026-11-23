@@ -284,6 +284,44 @@ export class CloudAuth {
     this.bus?.emit('cloud:auth', { user: null });
   }
 
+  /**
+   * ACCT-5: asks Neon Auth to delete this sign-in (Better Auth `deleteUser`).
+   *
+   * Better Auth answers 404 when the server has not turned the feature on
+   * (`user.deleteUser.enabled`), and 403 when the session is older than its
+   * freshness window and no password came with the request. Both are named
+   * on the thrown error as `reason` so the panel can say the right thing:
+   *   'unavailable'    the Neon Auth service has not enabled deleting users
+   *   'needs-password' send the password and ask again
+   *   'wrong-password' the password was refused
+   * Success signs this device out locally, the way revokeAllSessions does.
+   */
+  async deleteAccount(password = '') {
+    const client = await this.load();
+    if (typeof client.auth.deleteUser !== 'function') {
+      throw Object.assign(new Error('This sign-in service cannot delete accounts from the game.'), { reason: 'unavailable' });
+    }
+    const classify = (error) => {
+      const status = Number(error?.status ?? error?.statusCode ?? 0);
+      const hay = `${error?.code ?? ''} ${error?.message ?? ''}`.toUpperCase();
+      const reason = status === 404 ? 'unavailable'
+        : /INVALID_PASSWORD|INVALID PASSWORD/.test(hay) ? 'wrong-password'
+          : status === 403 || /FRESH|REAUTH|SESSION_EXPIRED|SESSION EXPIRED/.test(hay) ? 'needs-password'
+            : null;
+      const message = reason === 'unavailable' ? 'This sign-in service does not allow deleting accounts from the game.'
+        : reason === 'wrong-password' ? 'That password is not right.'
+          : reason === 'needs-password' ? 'For safety, type your password to finish.'
+            : readableAuthError(error);
+      return Object.assign(new Error(message), { reason, status, cause: error });
+    };
+    let result;
+    try { result = await client.auth.deleteUser(password ? { password } : {}); } catch (err) { throw classify(err); }
+    if (result?.error) throw classify(result.error);
+    this.user = null;
+    this.forgetToken();
+    this.bus?.emit('cloud:auth', { user: null });
+  }
+
   async signOut() {
     if (this.client) await this.client.auth.signOut().catch(() => {});
     this.user = null;
