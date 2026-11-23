@@ -1465,9 +1465,9 @@ for (const [key, id] of FURNITURE_ITEM) {
 }
 
 // The Temple (Phase 7c). Offerings turn what you have into devotion; a
-// chapel (tier 1) blesses water; the High Temple (tier 4) forges a ring —
-// the White or the Black, and once one is forged the other is closed to
-// you for good (`ring`, see Crafting's `locked`).
+// chapel (tier 1) blesses water. PLAY-11: the rings are forged at a forge
+// once a High Temple (tier 4) stands — the White or the Black, and once one
+// is forged the other is closed to you for good (`ring`, Crafting's `locked`).
 RECIPES.push(
   { id: 'offer_fruit', name: 'Offer fruit', station: 'temple', age: 4, inputs: { fruit: 6 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'Laid on the altar.' },
   { id: 'offer_harvest', name: 'Offer a harvest', station: 'temple', age: 4, inputs: { vegetables: 4 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'The first of what the farm gave.' },

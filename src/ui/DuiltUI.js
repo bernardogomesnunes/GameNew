@@ -1546,7 +1546,7 @@ export class DuiltUI {
       const what = spec?.armour ? `${spec.armour} armour` : spec?.bagSlots ? `+${spec.bagSlots} bag slots` : '';
       const tip = spec ? `${spec.name}${what ? ` · ${what}` : ''} — tap to take off` : `${SLOT_NAMES[k]} — nothing on`;
       return `<div class="wear-cell"><button class="bag-slot wear-slot${spec ? '' : ' empty'}${fits === k ? ' fits' : ''}" data-wear="${k}"
-        aria-label="${escapeAttr(tip)}" data-tip="${escapeAttr(spec ? spec.name : SLOT_NAMES[k])}" data-tip-info="${escapeAttr(spec ? `${what ? `${what} · ` : ''}tap to take off` : k === 'ring' ? 'Forged at the Temple' : k === 'back' ? 'Lift a backpack from your bag, then tap here' : k === 'offhand' ? 'Lift a shield from your bag, then tap here' : 'Lift a piece from your bag, then tap here')}">${inner}</button>
+        aria-label="${escapeAttr(tip)}" data-tip="${escapeAttr(spec ? spec.name : SLOT_NAMES[k])}" data-tip-info="${escapeAttr(spec ? `${what ? `${what} · ` : ''}tap to take off` : k === 'ring' ? 'Forged at a forge' /* PLAY-11 */ : k === 'back' ? 'Lift a backpack from your bag, then tap here' : k === 'offhand' ? 'Lift a shield from your bag, then tap here' : 'Lift a piece from your bag, then tap here')}">${inner}</button>
         <span class="wear-label">${SLOT_NAMES[k]}</span></div>`;
     }).join('');
     grid.querySelectorAll('[data-wear]').forEach((btn) => btn.addEventListener('click', () => this.tapWear(btn.dataset.wear)));
@@ -1576,7 +1576,7 @@ export class DuiltUI {
       const r = d.takeOff(k);
       this.bus.emit('toast', { kind: 'xp', title: r.ok ? `Took off the ${itemName(r.id).toLowerCase()}` : r.reason });
     } else {
-      this.bus.emit('toast', { kind: 'xp', title: k === 'ring' ? 'Your ring is forged at the Temple'
+      this.bus.emit('toast', { kind: 'xp', title: k === 'ring' ? 'Your ring is forged at a forge, once a temple is a High Temple' /* PLAY-11 */
         : k === 'back' ? 'Make a backpack at the bench, lift it from your bag, then tap Back'
           : `Lift a piece of armour from your bag, then tap ${SLOT_NAMES[k]}` });
     }

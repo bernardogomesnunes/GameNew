@@ -1379,8 +1379,8 @@ export const STRUCTURES = [
     everySeconds: 21600,
     skill: 'building',
     // Each rung is built, then paid for in devotion (`cost`, spent from your
-    // bag when you evolve it — see StructureRegistry.evolve). The High
-    // Temple is where a ring is forged (recipes.js, `tier: 4`).
+    // bag when you evolve it — see StructureRegistry.evolve). PLAY-11: a
+    // High Temple opens the rings at a forge (recipes.js, `needsTemple: 4`).
     tiers: [
       { id: 'shrine', name: 'A Shrine', blurb: 'An altar, a light, and a roof over them.', needs: [] },
       {
@@ -1409,7 +1409,7 @@ export const STRUCTURES = [
         ],
       },
       {
-        id: 'high', name: 'The High Temple', blurb: 'Banners hang in it. Here the rings are forged — the White, or the Black.',
+        id: 'high', name: 'The High Temple', blurb: 'Banners hang in it. With it raised, a forge can forge a ring — the White, or the Black.' /* PLAY-11 */,
         // More than the Great Temple's three a cycle: it used to make exactly
         // the same, so the last level gave nothing for its 25 devotion.
         produces: { devotion: 4 }, everySeconds: 21600, cost: { devotion: 25 },

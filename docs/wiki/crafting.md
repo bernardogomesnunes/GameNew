@@ -160,7 +160,7 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Dark Boots → 1 Dark Boots | 2 Iron Ingot, 1 Dark Stone | — | 5 | — |
 | Iron Shield → 1 Iron Shield | 5 Iron Ingot, 2 Oak Planks | — | 5 | — |
 | Diamond Shield → 1 Diamond Shield | 3 Diamond, 2 Iron Ingot, 2 Oak Planks | — | 10 | — |
-| Reinforced Backpack → 1 Reinforced Backpack | 1 Leather Backpack, 2 Iron Ingot, 2 Hide | — | 5 | — |
+| Reinforced Backpack → 1 Reinforced Backpack | 1 Leather Backpack, 2 Iron Ingot, 2 Leather | — | 5 | — |
 | Mason's Bench → 1 Mason's Bench | 6 Stone, 4 Oak Planks | — | 3 | — |
 | Forge → 1 Forge | 12 Stone, 4 Clay | — | 3 | — |
 | Wash Tub → 1 Wash Tub | 1 Bucket of Water, 2 Oak Log | — | 3 | — |
@@ -214,12 +214,12 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Trapdoor → 2 Trapdoor | 3 Oak Planks | — | 1 | — |
 | Framed Window → 1 Framed Window | 2 Oak Planks, 2 Sand | — | 1 | — |
 | Spinning Wheel → 1 Spinning Wheel | 4 Oak Planks, 1 Oak Log | — | 1 | — |
-| Leather Cap → 1 Leather Cap | 3 Hide | — | 1 | — |
-| Leather Tunic → 1 Leather Tunic | 5 Hide | — | 1 | — |
-| Leather Leggings → 1 Leather Leggings | 4 Hide | — | 1 | — |
-| Leather Boots → 1 Leather Boots | 2 Hide | — | 1 | — |
-| Wooden Shield → 1 Wooden Shield | 6 Oak Planks, 1 Hide | — | 1 | — |
-| Leather Backpack → 1 Leather Backpack | 4 Hide, 2 String | — | 1 | — |
+| Leather Cap → 1 Leather Cap | 3 Leather | — | 1 | — |
+| Leather Tunic → 1 Leather Tunic | 5 Leather | — | 1 | — |
+| Leather Leggings → 1 Leather Leggings | 4 Leather | — | 1 | — |
+| Leather Boots → 1 Leather Boots | 2 Leather | — | 1 | — |
+| Wooden Shield → 1 Wooden Shield | 6 Oak Planks, 1 Leather | — | 1 | — |
+| Leather Backpack → 1 Leather Backpack | 4 Leather, 2 String | — | 1 | — |
 | Planing Bench → 1 Planing Bench | 6 Oak Planks, 2 Stone | — | 1 | — |
 | Joinery Bench → 1 Joinery Bench | 6 Oak Planks, 2 Oak Log, 2 Stone | — | 2 | — |
 | Wash Clay → 1 Clay | 3 Dirt | — | 1 | Near water |
@@ -227,6 +227,7 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Carpentry Chisel → 1 Chisel | 2 Oak Log, 2 Stone | — | 1 | — |
 | Workbench → 1 Workbench | 8 Oak Planks, 2 Oak Log, 2 Stone | — | 1 | — |
 | Carpenter's Table → 1 Carpenter's Table | 6 Oak Planks, 2 Oak Log | — | 1 | — |
+| Tanning Vat → 1 Tanning Vat | 6 Oak Planks, 2 Stone | — | 1 | — |
 
 ### Stone Mill
 
@@ -264,7 +265,6 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Beer → 2 Beer | 3 Potatoes | — | 4 | — |
 | Kombucha → 2 Kombucha | 2 Fruit, 1 Leaves | — | 4 | — |
 | Coffee → 2 Coffee | 3 Coffee Beans | — | 4 | — |
-| Workbench → 1 Workbench | 8 Oak Planks, 2 Oak Log, 2 Stone | — | 4 | — |
 
 ### Engineering
 
@@ -368,6 +368,7 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Compost — Broccoli Seeds → 1 Compost | 4 Leaves, 1 Broccoli Seeds | — | 2 | — |
 | Compost — Coffee Seeds → 1 Compost | 4 Leaves, 1 Coffee Seeds | — | 2 | — |
 | Compost — Hemp Seeds → 1 Compost | 4 Leaves, 1 Hemp Seeds | — | 2 | — |
+| Compost — Cotton Seeds → 1 Compost | 4 Leaves, 1 Cotton Seeds | — | 2 | — |
 
 ### Temple
 
@@ -379,8 +380,6 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Offer gold → 2 Devotion | 1 Gold Ingot | — | 4 | — |
 | Light a candle → 1 Devotion | 1 Lantern | — | 4 | — |
 | Holy Water → 2 Holy Water | 1 Glass, 1 Devotion | — | 4 | Building level 2 |
-| Forge the White Ring → 1 White Ring | 3 Sunstone, 4 Gold Ingot, 12 Devotion | — | 4 | Building level 5; Choosing one ring closes the other |
-| Forge the Black Ring → 1 Black Ring | 3 Nightstone, 4 Obsidian, 12 Devotion | — | 4 | Building level 5; Choosing one ring closes the other |
 | Upgrade: Swift → 1 Swift Leather Boots | 1 Leather Boots, 3 Devotion, 3 Coffee Beans | — | 4 | Building level 3 |
 | Upgrade: Swift → 1 Swift Iron Boots | 1 Iron Boots, 3 Devotion, 3 Coffee Beans | — | 4 | Building level 3 |
 | Upgrade: Swift → 1 Swift Gold Boots | 1 Gold Boots, 3 Devotion, 3 Coffee Beans | — | 4 | Building level 3 |
@@ -417,6 +416,8 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Recipe / result | Ingredients | Reusable tools | Age | Condition |
 | --- | --- | --- | --- | --- |
 | String → 2 String | 3 Hemp Fibre | — | 1 | — |
+| String → 1 String | 1 Wool | — | 1 | — |
+| String → 1 String | 1 Cotton | — | 1 | — |
 
 ### University
 
@@ -497,3 +498,9 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | White Trapdoor → 2 White Trapdoor | 2 White Planks | — | 2 | — |
 | Dark Trapdoor → 2 Dark Trapdoor | 2 Dark Planks | — | 2 | — |
 | Chest → 1 Chest | 4 Oak Planks | — | 2 | — |
+
+### Tanning Vat
+
+| Recipe / result | Ingredients | Reusable tools | Age | Condition |
+| --- | --- | --- | --- | --- |
+| Leather → 2 Leather | 2 Hide, 1 Oak Log | — | 1 | — |
