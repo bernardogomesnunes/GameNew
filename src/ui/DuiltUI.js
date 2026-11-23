@@ -708,6 +708,7 @@ export class DuiltUI {
       else if (b.dataset.station === 'crucible') this.game.startCrucible?.(at);
       else if (b.dataset.station === 'kiln_oven') this.game.startKilnOven?.(at);
       else if (b.dataset.station === 'dehydrator') this.game.startDehydrator?.(at); // PLAY-16
+      else if (b.dataset.station === 'cauldron') this.game.startCauldron?.(at); // PLAY-19
       else this.game.ui.openBench('', b.dataset.station, at);
     }));
     if (body.querySelector('[data-spot]')) this.wireSpot(body, `s:${structure.id}`, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache), 'panel-building');
@@ -941,10 +942,10 @@ export class DuiltUI {
           const n = w.fitted.length, fitted = w.fitted.filter(Boolean).length;
           state = w.done ? `${itemName(w.item)}: ready` : w.cut < n ? `${itemName(w.item)}: to saw` : `${itemName(w.item)}: ${fitted} of ${n} fitted`;
         }
-      } else if (station === 'crucible' || station === 'kiln_oven' || station === 'dehydrator') {
+      } else if (station === 'crucible' || station === 'kiln_oven' || station === 'dehydrator' || station === 'cauldron') {
         // CRAFT-9 part 6: a crucible's or a Kiln Oven's pot (PLAY-16: and a Dehydrator's).
-        const p = (station === 'crucible' ? d.crucibles : station === 'dehydrator' ? d.dehydrators : d.kilnOvens)?.state(key);
-        const doing = { crucible: ['melting', 'pour'], kiln_oven: ['firing', 'draw'], dehydrator: ['drying', 'take out'] }[station];
+        const p = (station === 'crucible' ? d.crucibles : station === 'dehydrator' ? d.dehydrators : station === 'cauldron' ? d.cauldrons : d.kilnOvens)?.state(key);
+        const doing = { crucible: ['melting', 'pour'], kiln_oven: ['firing', 'draw'], dehydrator: ['drying', 'take out'], cauldron: ['simmering', 'serve'] }[station];
         if (p?.waiting) state = `${p.waiting} ${doing[0]}`;
         else if (p?.molten) state = `${p.molten} to ${doing[1]}`;
         else if (p?.out) state = `${p.out} ready`;

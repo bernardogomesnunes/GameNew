@@ -23,8 +23,8 @@ export function meltSeconds(recipe) {
 }
 
 // PLAY-14..21: stations whose ware is always one fixed mould; their ware is
-// solid, so a broken one hands it over whole. PLAY-19 adds the Cauldron's bowl.
-export const STATION_MOULD = { kiln_oven: 'tray', dehydrator: 'tray' };
+// solid, so a broken one hands it over whole. The Cauldron's meals are poured into a bowl.
+export const STATION_MOULD = { kiln_oven: 'tray', dehydrator: 'tray', cauldron: 'bowl' };
 const STATION_NAMES = { crucible: 'crucible', kiln_oven: 'Kiln Oven', dehydrator: 'Dehydrator', cauldron: 'Cauldron' };
 
 /** Which mould a recipe pours into, or null when it is not poured. */

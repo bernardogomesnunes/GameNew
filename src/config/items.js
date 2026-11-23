@@ -566,6 +566,12 @@ export const ITEMS = [
   { id: 'mushroom_flour', name: 'Mushroom Flour', kind: 'refined', stackTo: STACK_GOODS, color: 0xe9dfcb, glyph: 'sand', madeBy: 'Dried pale mushroom ground at a Stone Mill' },
   // PLAY-18: the one new building item.
   { id: 'mushroom_plaster', name: 'Mushroom Plaster', kind: 'refined', stackTo: STACK_BULK, color: 0xe9dcc2, glyph: 'wall', block: 570, madeBy: 'Mushroom flour, sand and clay, set into a pale wall' },
+  // PLAY-19: the Cauldron and its meals. Meals feed 36 to 50, over Cooked Meat's 28.
+  { id: 'cauldron', name: 'Cauldron', kind: 'refined', stackTo: 10, color: 0x2f2f33, glyph: 'bucket', block: 569, madeBy: 'Made by hand from cobblestone and clay. Place it and cook meals of dried mushroom, meat and vegetables' },
+  { id: 'hunters_stew', name: "Hunter's Stew", kind: 'food', stackTo: STACK_FOOD, color: 0x8a5a2a, glyph: 'bowl', feeds: 50, madeBy: 'Meat, carrot, potato and dried pale mushroom, simmered in a Cauldron' },
+  { id: 'forest_broth', name: 'Forest Broth', kind: 'food', stackTo: STACK_FOOD, color: 0x9a7a3a, glyph: 'bowl', feeds: 40, madeBy: 'Meat, broccoli, zucchini and dried lilac mushroom, simmered in a Cauldron' },
+  { id: 'mushroom_soup', name: 'Mushroom Soup', kind: 'food', stackTo: STACK_FOOD, color: 0xb59ac0, glyph: 'bowl', feeds: 36, madeBy: 'Dried lilac mushroom, milk and cabbage, simmered in a Cauldron' },
+  { id: 'mushroom_dumplings', name: 'Mushroom Dumplings', kind: 'food', stackTo: STACK_FOOD, color: 0xe6d3a8, glyph: 'bowl', feeds: 44, madeBy: 'Mushroom flour, egg, dried pale mushroom and pepper, cooked in a Cauldron' },
   // --- end PLAY-14..21 ---
 ];
 

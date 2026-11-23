@@ -1853,6 +1853,19 @@ RECIPES.push(
   { id: 'mushroom_plaster', name: 'Mushroom Plaster', station: 'workbench', age: 3, inputs: { mushroom_flour: 1, sand: 1, clay: 1 }, output: { id: 'mushroom_plaster', count: 4 }, batch: 8,
     blurb: 'Flour, sand and clay set into a pale, soft wall for the mushroom houses.' },
 );
+// PLAY-19: the Cauldron by hand, and four meals. 40 s a batch, 2 meals out.
+RECIPES.push(
+  { id: 'cauldron', name: 'Cauldron', station: 'hand', age: 2, inputs: { cobblestone: 6, clay: 2 }, output: { id: 'cauldron', count: 1 },
+    blurb: 'Place it, then cook meals of dried mushroom, meat and vegetables.' },
+  { id: 'hunters_stew', name: "Hunter's Stew", station: 'cauldron', age: 2, inputs: { raw_meat: 2, vegetables: 1, potato: 1, dried_pale: 1 }, output: { id: 'hunters_stew', count: 2 }, seconds: 40,
+    blurb: 'Meat, carrot, potato and dried pale mushroom simmered together. The meal of a working day.' },
+  { id: 'forest_broth', name: 'Forest Broth', station: 'cauldron', age: 2, inputs: { raw_meat: 1, broccoli: 1, zucchini: 1, dried_lilac: 1 }, output: { id: 'forest_broth', count: 2 }, seconds: 40,
+    blurb: 'A thin broth of meat, greens and lilac mushroom.' },
+  { id: 'mushroom_soup', name: 'Mushroom Soup', station: 'cauldron', age: 3, inputs: { dried_lilac: 2, milk: 1, cabbage: 1 }, output: { id: 'mushroom_soup', count: 2 }, seconds: 40,
+    blurb: 'Lilac mushroom, milk and cabbage, creamy and warm.' },
+  { id: 'mushroom_dumplings', name: 'Mushroom Dumplings', station: 'cauldron', age: 3, inputs: { mushroom_flour: 1, egg: 1, dried_pale: 1, pepper: 1 }, output: { id: 'mushroom_dumplings', count: 2 }, seconds: 40,
+    blurb: 'Flour dumplings with pale mushroom and pepper.' },
+);
 // --- end PLAY-14..21 ---
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));

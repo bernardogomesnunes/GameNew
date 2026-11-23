@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RECIPES_BY_ID } from '../config/recipes.js';
 import { mouldFor } from '../duilt/Crucible.js';
 import { stillCopy } from './Models.js';
+import { ITEMS_BY_ID } from '../config/items.js';
 
 /**
  * CRAFT3D-3: the crucible close up, on the real block in the world. A pot
@@ -81,6 +82,18 @@ export class CrucibleView {
     this.coinMould = box(0.3, 0.06, 0.3, 0x5a5048, 0.35, 0.03, 0.22);
     this.metal = box(1, 1, 1, METAL, 0, 0, 0, { emissive: METAL, emissiveIntensity: 0.8 });
     this.metal.visible = false;
+    // PLAY-19: the Cauldron is this pot in iron, pouring into a wooden bowl. No models, no coin mould.
+    if (this.kind === 'cauldron') {
+      this.pot.material.color.setHex(0x2f2f33);
+      this.pot.material.emissive.setHex(0xff7a2a);
+      this.ingotMould.material.color.setHex(0x8a6238);
+      this.ingotMould.scale.set(0.3 / 0.34, 0.1 / 0.08, 0.3 / 0.2);
+      this.ingotMould.position.set(0.35, 0.05, 0);
+      this.coinMould.visible = false;
+      this.metal.material.emissiveIntensity = 0;
+      this.scene.add(g);
+      return;
+    }
     this.dressModels();
     this.scene.add(g);
   }
@@ -223,6 +236,7 @@ export class CrucibleView {
     this.potPivot.rotation.z = -Math.min(1, this.level) * (Math.PI / 3);
     // The metal runs out over the chosen mould and rises with the level.
     const mould = s?.mould === 'coin' ? this.coinMould : this.ingotMould;
+    if (this.kind === 'cauldron' && s) this.metal.material.color.setHex(ITEMS_BY_ID.get(RECIPES_BY_ID.get(s.recipeId)?.output.id)?.color ?? 0x8a5a2a);
     this.metal.visible = this.level > 0;
     if (this.metal.visible) {
       const g = mould.geometry.parameters, k = mould.scale, l = Math.min(this.level, 1.25);

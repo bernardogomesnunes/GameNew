@@ -380,6 +380,16 @@ ITEM_MODELS.mushroom_flour = [
   ...stack([[0.22, 0.18, 0, 0.5, 0xd8ccb0], [0.16, 0.13, 0.5, 0.62, 0xc9b38a]]),
   box(0.3, 0.62, 0.36, 0.7, 0.66, 0.64, 0xe9dfcb),
 ];
+// PLAY-19: a bowl of a meal: an oak bowl, what is in it, and up to two lumps on top.
+const bowl = (color, lumps = []) => [
+  box(0.2, 0, 0.2, 0.8, 0.22, 0.8, 0x8a6238),
+  box(0.26, 0.2, 0.26, 0.74, 0.25, 0.74, color),
+  ...lumps.slice(0, 2).map((c, i) => box(0.3 + i * 0.26, 0.25, 0.36 + i * 0.08, 0.4 + i * 0.26, 0.35, 0.46 + i * 0.08, c)),
+];
+ITEM_MODELS.hunters_stew = bowl(0x8a5a2a, [0xb7825c, 0xe8873a]);
+ITEM_MODELS.forest_broth = bowl(0x9a7a3a, [0x3e7b3c, 0xb8a27e]);
+ITEM_MODELS.mushroom_soup = bowl(0xb59ac0, [0x7a5c98]);
+ITEM_MODELS.mushroom_dumplings = bowl(0xd8c39a, [0xe6d3a8, 0xe6d3a8]);
 // --- end PLAY-14..21 ---
 // A jar of fireflies: glass, a cork, and the lights inside.
 ITEM_MODELS.fireflies = [

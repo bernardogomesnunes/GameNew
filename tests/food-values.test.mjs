@@ -11,11 +11,15 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const TABLE = {
   fruit: 8, vegetables: 10, potato: 6, cabbage: 7, lettuce: 5, pepper: 6, zucchini: 6, broccoli: 7,
   raw_meat: 4, egg: 4, milk: 8, cooked_meat: 28,
+  mushroom_soup: 36, forest_broth: 40, mushroom_dumplings: 44, hunters_stew: 50,
 };
 for (const [id, feeds] of Object.entries(TABLE)) ok(`${id} feeds ${feeds}`, ITEMS_BY_ID.get(id)?.feeds === feeds);
 
 const RAW = ['fruit', 'vegetables', 'potato', 'cabbage', 'lettuce', 'pepper', 'zucchini', 'broccoli', 'raw_meat', 'egg', 'milk'];
 ok('every raw food feeds 10 or less', RAW.every((id) => ITEMS_BY_ID.get(id).feeds <= 10));
+const MEALS = ['mushroom_soup', 'forest_broth', 'mushroom_dumplings', 'hunters_stew'];
+ok('cooked meat is 28, below every Cauldron meal', ITEMS_BY_ID.get('cooked_meat').feeds === 28 && MEALS.every((id) => ITEMS_BY_ID.get(id).feeds > 28));
+ok('meals feed 36 to 50', MEALS.every((id) => { const v = ITEMS_BY_ID.get(id).feeds; return v >= 36 && v <= 50; }));
 ok('nothing raw feeds more than anything cooked', Math.max(...RAW.map((id) => ITEMS_BY_ID.get(id).feeds)) < 28);
 ok('drinks still have no feeds', ['beer', 'kombucha', 'coffee'].every((id) => ITEMS_BY_ID.get(id).feeds == null));
 ok('cook_meat blurb says seven times', /Seven times/.test(RECIPES.find((r) => r.id === 'cook_meat').blurb));
@@ -32,7 +36,7 @@ ok('cook_meat blurb says seven times', /Seven times/.test(RECIPES.find((r) => r.
   const names = FOODS.map((x) => x.id);
   ok('soldiers eat fruit before carrots', names.indexOf('fruit') < names.indexOf('vegetables'));
   ok('and no coffee beans', !names.includes('coffee_beans'));
-  ok('cheapest first: raw meat leads, meals trail', names[0] === 'raw_meat' || ITEMS_BY_ID.get(names[0]).feeds === 4);
+  ok('cheapest first: a 4 leads, the meals trail in order', ITEMS_BY_ID.get(names[0]).feeds === 4 && names.slice(-4).join() === MEALS.join());
 }
 
 process.exit(f ? 1 : 0);

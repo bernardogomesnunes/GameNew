@@ -1260,4 +1260,21 @@ PROP_SHAPES.dehydrator = [
   mushBox(0.3, 0.5, 0.67, 0.7, 0.3, 0.5, 0x7a5c98),
   mushBox(0.14, 0.86, 0, 0.06, 0.18, 0.22, DEHY_ROOF),
 ];
+// PLAY-19: the Cauldron, over its own embers. 3 legs, embers, a pot with a belly
+// band, 4 rim boxes, the stew and a ladle: 14 boxes with the glow of the embers.
+const CAULDRON_IRON = 0x2f2f33;
+PROP_SHAPES.cauldron = [
+  mushBox(0.22, 0.26, 0, 0.14, 0.22, 0.26, CAULDRON_IRON),
+  mushBox(0.7, 0.74, 0, 0.14, 0.22, 0.26, CAULDRON_IRON),
+  mushBox(0.46, 0.5, 0, 0.14, 0.72, 0.76, CAULDRON_IRON),
+  { ...mushBox(0.32, 0.68, 0.02, 0.06, 0.32, 0.68, 0xff7a2a), glow: true },
+  mushBox(0.2, 0.8, 0.12, 0.58, 0.2, 0.8, CAULDRON_IRON),
+  mushBox(0.16, 0.84, 0.24, 0.44, 0.16, 0.84, 0x3a3a40),
+  mushBox(0.2, 0.8, 0.58, 0.64, 0.2, 0.24, 0x45454c),
+  mushBox(0.2, 0.8, 0.58, 0.64, 0.76, 0.8, 0x45454c),
+  mushBox(0.2, 0.24, 0.58, 0.64, 0.24, 0.76, 0x45454c),
+  mushBox(0.76, 0.8, 0.58, 0.64, 0.24, 0.76, 0x45454c),
+  mushBox(0.24, 0.76, 0.56, 0.58, 0.24, 0.76, 0x8a5a2a),
+  mushBox(0.62, 0.66, 0.56, 0.92, 0.3, 0.34, 0x8a6238),
+];
 // --- end PLAY-14..21 ---

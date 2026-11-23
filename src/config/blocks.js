@@ -1034,6 +1034,11 @@ export const MUSHROOM_PLASTER = 570;
 BLOCKS.push(
   { id: MUSHROOM_PLASTER, name: 'Mushroom Plaster', glyph: 'wall', color: 0xe9dcc2, material: 'stone', unlock: null },
 );
+// PLAY-19: the Cauldron, meals by simmering (Crucible.js, station 'cauldron').
+export const CAULDRON = 569;
+BLOCKS.push(
+  { id: CAULDRON, name: 'Cauldron', glyph: 'bucket', color: 0x2f2f33, shape: 'cauldron', material: 'stone', station: 'cauldron', unlock: null },
+);
 // --- end PLAY-14..21 ---
 
 // The storybook look for buildings (asked for directly: they "need to fit
