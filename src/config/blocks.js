@@ -1007,6 +1007,9 @@ BLOCKS.push(
   { id: TANNING_VAT, name: 'Tanning Vat', glyph: 'bucket', color: 0x8a6440, shape: 'tanning_vat', material: 'wood', station: 'tanning_vat', unlock: null },
 );
 
+// --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// --- end PLAY-14..21 ---
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in

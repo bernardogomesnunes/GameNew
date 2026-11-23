@@ -1822,6 +1822,9 @@ RECIPES.push(
 );
 // --- end PLAY-10 ---
 
+// --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// --- end PLAY-14..21 ---
+
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
 /** A station as it's written for people: wood_mill is "wood mill", masons_bench "mason's bench". */

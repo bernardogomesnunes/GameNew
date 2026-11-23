@@ -546,6 +546,9 @@ export const ITEMS = [
   // what a ripe plant gives. Spun into string at the Spinning Wheel.
   { id: 'cotton', name: 'Cotton', kind: 'raw', stackTo: STACK_BULK, color: 0xf4f1ea, glyph: 'wool', madeBy: 'Picked from ripe cotton. Spin it into string at a Spinning Wheel' },
   // --- end PLAY-10 ---
+
+  // --- PLAY-14..21 (docs/design/play-14-21.md) ---
+  // --- end PLAY-14..21 ---
 ];
 
 // Furniture in every wood (backlog batch 3) — see blocks.js WOOD_FURNITURE.

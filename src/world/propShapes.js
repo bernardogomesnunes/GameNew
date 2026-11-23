@@ -1205,3 +1205,5 @@ PROP_SHAPES.tanning_vat = [
   // The paddle's handle, standing up out of the liquor.
   { minX: 0.64, maxX: 0.68, minY: 0.6, maxY: 1, minZ: 0.6, maxZ: 0.64, color: 0x8a6238 },
 ];
+// --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// --- end PLAY-14..21 ---

@@ -365,6 +365,8 @@ ITEM_MODELS.cotton = stack([
   [0.12, 0.12, 0, 0.08, 0x6b5a3a], [0.24, 0.24, 0.08, 0.2, 0xece6da],
   [0.3, 0.3, 0.2, 0.4, 0xf7f4ec], [0.2, 0.2, 0.4, 0.52, 0xece6da],
 ]);
+// --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// --- end PLAY-14..21 ---
 // A jar of fireflies: glass, a cork, and the lights inside.
 ITEM_MODELS.fireflies = [
   ...stack([[0.22, 0.22, 0, 0.62, 0xcfe6d8]]),
