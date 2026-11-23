@@ -490,7 +490,7 @@ export const STRUCTURES = [
         blurb: 'A hard floor and a proper span. Everything you own fits in here.',
         needs: [
           want([PLANKS, WOOD, BRICK], 140, 'planks', 'planks', { say: (n) => `${n} more planks, wood or brick` }),
-          want([STONE, COBBLE, BRICK], 25, 'stone', 'stone', { say: (n) => `${n} more stone or brick, for a floor that will take the weight` }),
+          want([STONE, COBBLE, BRICK], 25, 'stone', 'stone', { say: (n) => `${n} more cobblestone, stone or brick, for a floor that will take the weight` }),
           work((ctx) => ctx.shelteredVolume(), 40, { item: 'planks', key: 'space', say: (k) => `Make the room inside much bigger — ${k} more blocks of space under the roof` }),
         ],
       },
