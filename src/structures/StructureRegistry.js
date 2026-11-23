@@ -437,7 +437,9 @@ export class StructureRegistry {
     const i = this.structures.findIndex((s) => s.id === id);
     if (i === -1) return false;
     const [gone] = this.structures.splice(i, 1);
-    this.bus?.emit('structure:removed', { structure: gone });
+    const orders = gone.orders?.length ?? 0;
+    this.bus?.emit('structure:removed', { structure: gone, orders });
+    if (orders) this.bus?.emit('toast', { kind: 'xp', title: 'Market', body: `The market's ${orders} standing order${orders === 1 ? ' was' : 's were'} cancelled.` });
     return true;
   }
 
@@ -648,6 +650,8 @@ export class StructureRegistry {
         ...(s.credit ? { credit: s.credit } : {}),
         ...(s.paidTo ? { paidTo: s.paidTo } : {}),
         ...(s.wood && s.wood !== 'oak' ? { wood: s.wood } : {}),
+        // A market's standing sell orders (PLAY-23).
+        ...(s.orders?.length ? { orders: s.orders, nextOrder: s.nextOrder } : {}),
       })),
     };
   }

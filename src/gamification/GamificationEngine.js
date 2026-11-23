@@ -129,6 +129,9 @@ export class GamificationEngine {
     // The market and the building ladder (the batch's traders and levels):
     // checked as they happen, so a goal can ask what just did.
     this.on('duilt:bought', (e = {}) => this.checkAchievements({ type: 'bought', ...e }));
+    this.on('duilt:sold', (e = {}) => this.checkAchievements({ type: 'sold', ...e }));
+    // A day turn's standing orders sold something (PLAY-23).
+    this.on('market:sold', () => this.checkAchievements(null));
     // Places found and story moments told: the secrets ask about both.
     this.on('duilt:found', () => this.checkAchievements(null));
     this.on('duilt:moment', () => this.checkAchievements(null));
