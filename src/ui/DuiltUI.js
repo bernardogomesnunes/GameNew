@@ -297,8 +297,10 @@ export class DuiltUI {
             never blocked — this only steers deliver(), see StructureRegistry.
           -->
           <div id="store-routing" class="store-routing" hidden>
-            <span class="store-routing-label">Won't take from deliveries:</span>
-            <div id="store-routing-chips" class="store-routing-chips"></div>
+            <button type="button" class="store-fold" id="btn-store-routing" aria-expanded="false">
+              <span>Won't take from deliveries</span><span id="store-routing-count" class="store-fold-count"></span><span class="store-fold-arrow" aria-hidden="true">▸</span>
+            </button>
+            <div id="store-routing-chips" class="store-routing-chips" hidden></div>
           </div>
           </section>
           <section class="split-col split-bag" data-drop="bag">
@@ -400,6 +402,10 @@ export class DuiltUI {
     this.q('#btn-store-sort').addEventListener('click', () => this.sortStore());
     this.q('#btn-store-bag').addEventListener('click', () => {
       this.storeBagOpen = !this.storeBagOpen;
+      this.renderStore();
+    });
+    this.q('#btn-store-routing').addEventListener('click', () => {
+      this.storeRoutingOpen = !this.storeRoutingOpen;
       this.renderStore();
     });
     this.q('#btn-stores-all').addEventListener('click', () => this.storeAllAway());
@@ -1882,6 +1888,12 @@ export class DuiltUI {
     box.hidden = false;
 
     const excludes = new Set(summary.structure.excludes ?? []);
+    // Folded by default, like the bag under it: the shelves get the room.
+    chips.hidden = !this.storeRoutingOpen;
+    this.q('#btn-store-routing')?.setAttribute('aria-expanded', String(!!this.storeRoutingOpen));
+    const refused = PRODUCIBLE_ITEMS.filter((id) => excludes.has(id)).length;
+    const tally = this.q('#store-routing-count');
+    if (tally) tally.textContent = refused ? `${refused} refused` : 'none refused';
     chips.innerHTML = PRODUCIBLE_ITEMS.map((id) => {
       const spec = ITEMS_BY_ID.get(id);
       const off = excludes.has(id);
