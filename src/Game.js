@@ -793,10 +793,24 @@ export class Game {
     });
     this.bus.on('health:died', ({ cause }) => this.die(cause));
     // University research takes days (DuiltGame.startStudy): said when it starts and when it's done.
-    this.bus.on('research:started', ({ name, days }) => this.ui?.toast({ kind: 'challenge', title: `Researching ${name}`, body: `Takes ${gameDaysText(days)} — see how it's going at the university` }));
-    this.bus.on('research:finished', ({ name }) => {
-      this.ui?.toast({ kind: 'achievement', title: `Research done: ${name}`, body: 'The university is free for the next thing' });
+    this.bus.on('research:started', ({ name, days, station }) => this.ui?.toast({ kind: 'challenge', title: `Researching ${name}`, body: `Takes ${gameDaysText(days)} — see how it's going at the ${station === 'armoury' ? 'armoury' : 'university'}` }));
+    this.bus.on('research:finished', ({ name, station }) => {
+      this.ui?.toast({ kind: 'achievement', title: `Research done: ${name}`, body: `The ${station === 'armoury' ? 'armoury' : 'university'} is free for the next thing` });
       this.editedAt = Date.now();
+    });
+    // PLAY-12 (docs/design/play-12.md): a company's march, said at each step.
+    this.bus.on('march:started', ({ company, rivalName, count }) => this.ui?.toast({ kind: 'challenge', title: `${company} marched on ${rivalName}`, body: `${count} soldiers. They arrive in a game day.`, duration: 6000 }));
+    this.bus.on('march:fought', ({ company, rivalName, won, refused, lost, gold }) => {
+      this.editedAt = Date.now();
+      if (refused) return void this.ui?.toast({ kind: 'xp', title: `${company} turned back`, body: `${rivalName}'s city was already taken.` });
+      this.ui?.toast(won
+        ? { kind: 'achievement', title: `${company} took ${rivalName}`, body: `${gold} gold. ${lost} fell.`, duration: 8000 }
+        : { kind: 'xp', title: `${company} lost at ${rivalName}`, body: `${lost} fell. The rest are walking home.`, duration: 8000 });
+    });
+    this.bus.on('march:home', ({ company, placed, lost }) => {
+      this.editedAt = Date.now();
+      this.defenceSyncedAt = 0;
+      this.ui?.toast({ kind: 'xp', title: `${company} is home`, body: lost ? `${placed} back at their posts, ${lost} with nowhere to go.` : `${placed} back at their posts.` });
     });
     // Story moments (config/moments.js): the first stranger who stays, the first altar.
     this.bus.on('settler:arrived', () => this.tellMoment('first_settler'));
@@ -3493,7 +3507,20 @@ export class Game {
     this.syncDefence();
     const o = ORDERS.find((x) => x.id === order);
     this.ui.toast({ kind: 'xp', title: `Order: ${o.name}`, body: o.blurb });
-    if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(structure, this.buildingActions(structure));
+    // PLAY-12: from a War Hall's list the pop-up on screen is the hall's, not the company's.
+    const shown = this.ui.duiltUI?.building ?? structure;
+    if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(shown, this.buildingActions(shown));
+  }
+
+  /** PLAY-12: sends a company on the march (DuiltGame.marchCompany), saying why not when it cannot go. */
+  marchCompany(structure, rivalId) {
+    const r = this.duilt.marchCompany(structure, rivalId);
+    if (!r.ok) return void this.ui.toast({ kind: 'xp', title: "Can't march", body: r.reason });
+    this.editedAt = Date.now();
+    this.defenceSyncedAt = 0;
+    this.syncDefence();
+    const shown = this.ui.duiltUI?.building ?? structure;
+    if (this.ui.isPanelOpen('panel-building')) this.ui.openBuilding(shown, this.buildingActions(shown));
   }
 
   /** Trains a soldier at a barracks (DuiltGame.trainSoldier), saying why not when it can't. */
@@ -8622,6 +8649,7 @@ export class Game {
       this.duilt.days += (this.dayCycle.time - clockWas + 1) % 1;
       // Research at the university finishes when its days are up.
       this.duilt.finishResearch();
+      this.duilt.tickMarches();  // PLAY-12
     }
     this.dayCycle.apply(this.camera, this.horizon);
     this.updateAir(dt);

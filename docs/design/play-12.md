@@ -328,7 +328,9 @@ Worked battles:
 | 10 warriors, no research | 550 | win (1.53x), 4 fall | loss | loss |
 | 10 warriors, Iron Arms | 910 | win, 2 fall | win (1.52x), 4 fall | loss (1.08x) |
 | 10 swordsmen | 1,600 | win, 2 fall | win, 2 fall | win, 3 fall |
-| 20 swordsmen, Shield Drill and Sky Arms | 4,800 | win, 1 falls | win, 1 falls | win, 1 falls |
+| 20 swordsmen, Shield Drill and Sky Arms | 4,800 | win, 1 falls | win, 2 fall | win, 2 fall |
+
+The last row first read "1 falls" in all three columns. The loss formula `ceil(roster x 0.5 x theirs / ours)` gives 1, 2 and 2 (0.75, 1.25 and 1.75 rounded up). The table now matches the formula, and `tests/march-battle.test.mjs` checks it.
 
 A first barracks at Age 8 can take a weak rival. A Drill Hall of swordsmen takes any. A swordsman costs 4 food, an iron sword and a cuirass, so 3 losses a march is a real price.
 

@@ -141,6 +141,8 @@ export class Defenders {
     this.route = [];
     // PLAY-12: what the Armoury has researched (the save's `research` map), given in sync.
     this.research = {};
+    // PLAY-12: companies on the march (see march()).
+    this.marches = [];
   }
 
   /** PLAY-12: a unit as research has made it (config/soldiers.js unitStats). */
@@ -175,7 +177,7 @@ export class Defenders {
 
   /** How many soldiers your barracks have trained between them — who live in the town. */
   get residents() {
-    return Object.values(this.trained).reduce((n, t) => n + t.roster.length, 0);
+    return Object.values(this.trained).reduce((n, t) => n + t.roster.length, 0) + this.awayCount();
   }
 
   /**
@@ -722,11 +724,64 @@ export class Defenders {
     return true;
   }
 
-  toJSON() {
-    return { trained: this.trained, orders: this.orders };
+  // --- PLAY-12 (docs/design/play-12.md): the march ---------------------------
+
+  /** How many of building `id`'s soldiers are on the march (all buildings, without `id`). Their bunks stay theirs. */
+  awayCount(id = null) {
+    return this.marches.reduce((n, m) => n + (id == null || m.of === String(id) ? m.units.length : 0), 0);
   }
 
-  loadJSON(data) {
+  /** The march building `id`'s company is on, or null. */
+  marchOf(id) {
+    return this.marches.find((m) => m.of === String(id)) ?? null;
+  }
+
+  /**
+   * Sends building `id`'s whole company off: its soldiers walk off the field
+   * and wait out the march in `marches`. One company at a time. Returns the
+   * march, or null when there is nobody to send or one is already out.
+   * `arrives` and `home` are on the world's day count.
+   */
+  march(id, rival, days, daysEach = 1) {
+    const key = String(id), t = this.trained[key];
+    if (this.marches.length || !t?.roster.length) return null;
+    const m = { of: key, units: t.roster.splice(0), rival, since: days, arrives: days + daysEach, home: days + 2 * daysEach, result: null };
+    this.soldiers = this.soldiers.filter((s) => s.post.of !== key);
+    this.marches.push(m);
+    return m;
+  }
+
+  /**
+   * Moves the marches on to `days`. Returns { arrivals, homecomings }:
+   * `arrivals` have reached the city and want a `result` (the caller works
+   * the battle out and sets it, and the survivors in `units`); `homecomings`
+   * are back and are taken off the list for the caller to put away
+   * (bringHome).
+   */
+  tickMarches(days) {
+    const arrivals = this.marches.filter((m) => !m.result && days >= m.arrives);
+    const homecomings = this.marches.filter((m) => m.result && days >= m.home);
+    if (homecomings.length) this.marches = this.marches.filter((m) => !homecomings.includes(m));
+    return { arrivals, homecomings };
+  }
+
+  /** Puts a company's units on building `id`'s roster, as many as fit under `cap`. Returns how many went in. */
+  bringHome(id, units, cap = MAX_SOLDIERS) {
+    const key = String(id);
+    const t = this.trained[key] ?? (this.trained[key] = { roster: [], queue: [], since: 0 });
+    const room = Math.max(0, Math.min(MAX_SOLDIERS, cap) - t.roster.length - t.queue.length - this.awayCount(key));
+    const put = units.slice(0, room);
+    t.roster.push(...put);
+    if (put.length) this.repost.add(key);
+    return put.length;
+  }
+
+  toJSON() {
+    return { trained: this.trained, orders: this.orders, ...(this.marches.length ? { marches: this.marches } : {}) };
+  }
+
+  loadJSON(data, { battle = true } = {}) {
+    this.marches = [];
     this.trained = {};
     const known = (list) => (Array.isArray(list) ? list.filter((u) => UNITS_BY_ID.has(u)) : []);
     for (const [id, t] of Object.entries(data?.trained ?? {})) {
@@ -737,6 +792,27 @@ export class Defenders {
     }
     this.orders = {};
     for (const [id, o] of Object.entries(data?.orders ?? {})) if (ORDER_IDS.has(o)) this.orders[id] = o;
+    // PLAY-12: companies on the march. Rivals exist only in a Battle world:
+    // anywhere else the company is already home, back on its roster.
+    for (const m of Array.isArray(data?.marches) ? data.marches : []) {
+      const units = known(m?.units);
+      if (!units.length || !Number.isFinite(m.arrives) || !Number.isFinite(m.home)) continue;
+      const of = String(m.of);
+      if (!battle) {
+        const t = this.trained[of] ?? (this.trained[of] = { roster: [], queue: [], since: 0 });
+        t.roster.push(...units);
+        t.roster = t.roster.slice(0, MAX_SOLDIERS);
+        continue;
+      }
+      const r = m.result;
+      this.marches.push({
+        of, units, rival: Number.isInteger(m.rival) ? m.rival : 0, since: Number.isFinite(m.since) ? m.since : m.arrives - 1,
+        arrives: m.arrives, home: m.home,
+        at: Number.isFinite(m.at?.x) && Number.isFinite(m.at?.z) ? { x: m.at.x, z: m.at.z } : null,
+        result: r && typeof r === 'object' ? { won: r.won === true, lost: known(r.lost), gold: Number.isFinite(r.gold) ? r.gold : 0, refused: r.refused === true } : null,
+      });
+    }
+    this.marches = this.marches.slice(0, 1);
     this.repost = new Set();
     this.soldiers = [];
     this.archers = [];
