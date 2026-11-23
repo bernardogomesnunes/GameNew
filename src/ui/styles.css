@@ -2067,6 +2067,7 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 .form-error { margin: 0 0 12px; padding: 9px 12px; border: 2px solid #b8402f; background: #fbe3dc;
   color: #7a1f12; font-size: 14px; line-height: 1.4; font-weight: 600; }
 .form-error.shake { animation: form-shake 0.32s steps(4); }
+.captcha-row { margin: 0 0 12px; max-width: 100%; overflow: hidden; }
 @keyframes form-shake { 25% { transform: translateX(-6px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
 #ui-root #cloud-email[aria-invalid="true"], #ui-root #cloud-password[aria-invalid="true"], #ui-root #cloud-code[aria-invalid="true"] { border-color: #b8402f; box-shadow: 0 0 0 2px rgba(184, 64, 47, 0.35); }
 @media (prefers-reduced-motion: reduce) { .form-error.shake { animation: none; } }

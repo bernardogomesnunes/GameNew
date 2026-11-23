@@ -53,9 +53,9 @@ ok('signing in sweeps up whatever was only ever saved in this browser',
   /async migrateLocalWorlds\(\)/.test(game));
 ok('one world failing to move does not sink the rest, or lose it',
   /async migrateLocalWorlds\(\)[\s\S]{0,600}for \(const row of this\.local\.list\(\)\)[\s\S]{0,600}catch \{/.test(game));
-ok('sign-in runs the sweep', /await this\.cloudAuth\.signIn\(email, password\);[\s\S]{0,200}await this\.migrateLocalWorlds\(\);/.test(game));
+ok('sign-in runs the sweep', /await this\.cloudAuth\.signIn\(email, password(?:, captchaToken)?\);[\s\S]{0,200}await this\.migrateLocalWorlds\(\);/.test(game));
 ok('so does sign-up — an existing local world is not only for people who already had an account',
-  /await this\.cloudAuth\.signUp\(email, password\);\s*\n\s*const moved = await this\.migrateLocalWorlds\(\);/.test(game));
+  /await this\.cloudAuth\.signUp\(email, password(?:, captchaToken)?\);\s*\n\s*const moved = await this\.migrateLocalWorlds\(\);/.test(game));
 
 // --- no account is required to play -------------------------------------------
 

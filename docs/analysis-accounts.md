@@ -56,6 +56,23 @@ Today's sign-in can carry a few thousand players. The plan limits are not the bl
 13. **ACCT-13: database capacity.** Keep compute awake (TECH-16), raise the autoscaling ceiling above 2 CU, and add `player_id` to `world_chunks` so row-level security stops running a subquery per row (`analysis-scaling.md`). Add a second region, or a read replica, if many players are far from us-east-2. EU players' data residency is a GDPR question too.
 14. **ACCT-14: two devices on one world.** Saves are last-writer-wins today. Shared or multi-device play needs the revision check described in `analysis-scaling.md`.
 
+## ACCT-7 setup: Cloudflare Turnstile
+
+The code is built and off by default. Two switches turn it on: a build variable (the widget) and a Neon Auth setting (the check). Do the widget first, then the check, or every sign-in is refused.
+
+1. Cloudflare dashboard, Turnstile, Add widget. Hostnames: the production domain, the Vercel preview domain, and `localhost` for development. Mode: Managed. Copy the **site key** (public) and the **secret key** (private).
+2. Vercel, Project, Settings, Environment Variables: add `VITE_TURNSTILE_SITE_KEY` = the site key, for Production (and Preview if wanted). Redeploy, because Vite reads it at build time. The secret key never goes here.
+3. Check the widget: open Sign in on the deployed site. A Turnstile box appears under the password field, and the Network tab shows `challenges.cloudflare.com` loaded only after the form opens.
+4. Neon Console, the project, Auth, captcha setting (Better Auth `captcha` plugin): provider Cloudflare Turnstile, paste the **secret key**, save. The server then reads the token from the `x-captcha-response` header on sign-up and sign-in and rejects requests without a valid one. The exact label may differ by console version.
+5. Test sign-up and sign-in on the live site. Then try one without the widget (curl to the sign-up route), which must fail.
+
+Details:
+- With no `VITE_TURNSTILE_SITE_KEY`, no script loads, no widget shows and no header is sent. Sign-in works as before.
+- `vercel.json` allows `https://challenges.cloudflare.com` in `script-src` and `frame-src`. Nothing else changed in the policy.
+- A token works once. The form asks for a new one after every attempt.
+- Gap: the sign-in the app runs after a confirmed email code (only if the server did not sign in on its own) sends no token. With `auto_sign_in_after_verification` on, that path is not used.
+- Google and Apple sign-in (ACCT-9) are not covered by the plugin's header check and are untouched.
+
 ## Passwords and sessions (ACCT-2, ACCT-10, 23 November)
 
 Endpoints the game calls on Neon Auth (Better Auth client): `requestPasswordReset`, `resetPassword`, `listSessions`, `revokeSession`, `revokeOtherSessions`, `revokeSessions`, plus `getSession` to mark this device.

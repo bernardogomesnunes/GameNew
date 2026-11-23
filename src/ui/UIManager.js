@@ -36,6 +36,7 @@ import { Minimap } from '../render/Minimap.js';
 import { nextPaint } from './loading.js';
 import { SHOWCASE_SPOTS, SHOWCASE_TIMES } from '../world/showcase.js';
 import { inPast } from '../world/past.js';
+import { isTurnstileEnabled, mountTurnstile } from '../net/turnstile.js';
 import { inFuture } from '../world/future.js';
 /** How far the map reaches in the Past or the Future, where it is read off loaded blocks. */
 const ERA_MAP_RADIUS = 150;
@@ -533,6 +534,7 @@ export class UIManager {
             <!-- Right above the button, red and read out: a wrong password used
                  to show as small grey text under "Create an account instead",
                  where a phone's keyboard covers it (owner, 17 November). -->
+            <div class="captcha-row" id="cloud-captcha" hidden></div>
             <div class="form-error" id="cloud-error" role="alert" aria-live="assertive" hidden></div>
             <div class="form-note" id="cloud-note" role="status" hidden></div>
             <div class="field-row">
@@ -841,7 +843,7 @@ export class UIManager {
       // to hide it first, so closing one left you standing in whichever world
       // was last loaded — one you never chose, already falling.
       onSettings: () => this.openPanel('panel-menu'),
-      onAccount: (mode) => { if (mode) this.setAccountMode(mode); this.openPanel('panel-account'); },
+      onAccount: (mode) => { if (mode) this.setAccountMode(mode); this.openPanel('panel-account'); this.mountCaptcha(); },
     });
     // The screen is already on when the page loads, so draw it now rather than
     // waiting for something to re-open it.
@@ -2201,9 +2203,16 @@ export class UIManager {
     };
     this.q('#btn-cloud-signin').addEventListener('click', (e) => busy(e.currentTarget, async () => {
       const [email, password] = creds();
+      // '' with the switch off, and then nothing extra is sent.
+      const captcha = this.captcha?.token() ?? '';
+      if (this.captchaStarted && !captcha) {
+        throw new Error('Wait for the human check to finish, then try again.');
+      }
       try {
-        await (this.accountMode === 'create' ? this.cb.onCloudSignUp(email, password) : this.cb.onCloudSignIn(email, password));
+        await (this.accountMode === 'create' ? this.cb.onCloudSignUp(email, password, captcha) : this.cb.onCloudSignIn(email, password, captcha));
       } catch (err) {
+        // A token works once, pass or fail: ask for a fresh one.
+        this.captcha?.reset();
         // Not an error: the next step is the code that was just emailed.
         if (err.needsCode) { this.codeFor = { email, password }; this.showCodeStep(email); return; }
         throw err;
@@ -2435,6 +2444,20 @@ export class UIManager {
       this.sessionsFor = null;
       list.innerHTML = '<li class="sessions-empty">Could not load your sessions.</li>';
     }
+  }
+
+  /** Draws the Turnstile check once, when the form first opens. Does nothing without a site key. */
+  mountCaptcha() {
+    if (this.captchaStarted || !isTurnstileEnabled()) return;
+    this.captchaStarted = true;
+    const el = this.q('#cloud-captcha');
+    if (!el) return;
+    el.hidden = false;
+    mountTurnstile(el).then((c) => { this.captcha = c; }).catch((err) => {
+      this.captchaStarted = false;
+      el.hidden = true;
+      this.showAccountError(err.message);
+    });
   }
 
   /**

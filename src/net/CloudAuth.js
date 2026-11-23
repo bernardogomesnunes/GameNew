@@ -1,5 +1,6 @@
 import { CLOUD, isCloudConfigured } from './cloudConfig.js';
 import { isOurBug, keepTrying } from './retry.js';
+import { captchaOptions } from './turnstile.js';
 
 /**
  * Sign-in, and nothing else.
@@ -130,7 +131,7 @@ export class CloudAuth {
     return this.restore();
   }
 
-  async signIn(email, password) {
+  async signIn(email, password, captchaToken = '') {
     const client = await this.load();
     // Whoever was signed in before: their token must never answer for this one.
     this.forgetToken();
@@ -139,7 +140,7 @@ export class CloudAuth {
     // to it — capturing it now means the very first accessToken() call after
     // signing in already has a token, rather than needing a round trip of
     // its own to go and ask for one.
-    const result = await client.auth.signIn.email({ email, password }, { onSuccess: this.captureJwt }).catch((err) => {
+    const result = await client.auth.signIn.email({ email, password }, { onSuccess: this.captureJwt, ...captchaOptions(captchaToken) }).catch((err) => {
       // Never confirmed: the server has emailed a code (verify_email_on_sign_in).
       if (isUnconfirmed(err)) throw needsCode(email);
       return rethrowReadable(err);
@@ -152,14 +153,14 @@ export class CloudAuth {
     return this.user;
   }
 
-  async signUp(email, password) {
+  async signUp(email, password, captchaToken = '') {
     const client = await this.load();
     // Whoever was signed in before: their token must never answer for this one.
     this.forgetToken();
     // Better Auth wants a display name; the local part of the email is a
     // reasonable default and keeps the form to two fields.
     const name = email.split('@')[0] || 'Builder';
-    const result = await client.auth.signUp.email({ email, password, name }, { onSuccess: this.captureJwt }).catch(rethrowReadable);
+    const result = await client.auth.signUp.email({ email, password, name }, { onSuccess: this.captureJwt, ...captchaOptions(captchaToken) }).catch(rethrowReadable);
     // With confirmation required, the account is made but not signed in: a
     // code is on its way to the email, and the session comes with the code.
     const user = unwrapUser(result);
