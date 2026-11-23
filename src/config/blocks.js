@@ -1051,6 +1051,14 @@ BLOCKS.push(
   },
 );
 
+// PLAY-12 (docs/design/play-12.md): the War Table the War Hall plans on.
+// 571 (556-570 are the mushroom work's).
+export const WAR_TABLE = 571;
+BLOCKS.push(
+  { id: WAR_TABLE, name: 'War Table', glyph: 'rack', color: 0x8a6440, shape: 'war_table', material: 'wood', unlock: null },
+);
+// --- end PLAY-12 ---
+
 // The storybook palette (config/palette.js) paints every block it names; the
 // colour each was written with above is kept as `formerColor`, which an item
 // made of the block reads to stay as much lighter or darker than it as it was.

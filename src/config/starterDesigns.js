@@ -1315,6 +1315,81 @@ export const STARTER_DESIGNS = [
   },
 ];
 
+// --- PLAY-12 (docs/design/play-12.md): the Armoury and the War Hall ----------
+/**
+ * The Armoury: 9 x 7, cobble walls with brick quoins, a slate gable running
+ * the long way, a forge at the east end under a brick chimney, two weapon
+ * racks on the back wall, and an oak table with a lantern by the west wall.
+ * The outside is -z.
+ */
+function armouryBlocks() {
+  const g = grid();
+  const W = 9, D = 7;
+  g.box(0, 0, 0, W - 1, 0, D - 1, PLANKS);
+  for (let y = 1; y <= 4; y++) {
+    for (let x = 0; x < W; x++) { g.put(x, y, 0, COBBLE); g.put(x, y, D - 1, COBBLE); }
+    for (let z = 0; z < D; z++) { g.put(0, y, z, COBBLE); g.put(W - 1, y, z, COBBLE); }
+  }
+  for (const [x, z] of [[0, 0], [W - 1, 0], [0, D - 1], [W - 1, D - 1]]) g.box(x, 1, z, x, 4, z, BRICK);
+  g.box(0, 5, 0, W - 1, 5, D - 1, PLANKS);
+  g.add(gable(0, 0, W, D, 6, SLATE, COBBLE));
+  // The front: a door in the middle, a window either side.
+  g.add(door(4, 1, 0));
+  for (const x of [2, 6]) g.put(x, 2, 0, WINDOW);
+  for (const z of [2, 4]) { g.put(0, 2, z, WINDOW + 1); g.put(W - 1, 2, z, WINDOW + 1); }
+  // Two racks of arms on the back wall, the bay between them.
+  g.put(3, 1, D - 2, turned(WEAPON_RACK, 0)); g.put(5, 1, D - 2, turned(WEAPON_RACK, 0));
+  // The forge at the east end, its chimney through the roof.
+  g.put(W - 2, 1, 3, 525);
+  for (let y = 2; y <= 9; y++) g.put(W - 2, y, 3, 331);
+  // The plans: an oak table with a lantern, by the west wall.
+  g.put(1, 1, 3, OAK_TABLE_); g.put(1, 2, 3, LANTERN);
+  g.put(1, 1, 2, turned(OAK_CHAIR, 1));
+  return g.blocks();
+}
+
+/**
+ * The War Hall: 9 x 9, stone walls with dark brick quoins and string
+ * course, a hip roof, a door on the front with two banners either side, the
+ * War Table in the middle under two chandeliers, a lantern in each corner.
+ */
+function warHallBlocks() {
+  const g = grid();
+  const W = 9;
+  g.box(0, 0, 0, W - 1, 0, W - 1, PLANKS);
+  for (let y = 1; y <= 5; y++) {
+    for (let i = 0; i < W; i++) { g.put(i, y, 0, STONE); g.put(i, y, W - 1, STONE); g.put(0, y, i, STONE); g.put(W - 1, y, i, STONE); }
+  }
+  for (const [x, z] of [[0, 0], [W - 1, 0], [0, W - 1], [W - 1, W - 1]]) g.box(x, 1, z, x, 5, z, DARK_BRICK);
+  for (let i = 0; i < W; i++) { g.put(i, 5, 0, DARK_BRICK); g.put(i, 5, W - 1, DARK_BRICK); g.put(0, 5, i, DARK_BRICK); g.put(W - 1, 5, i, DARK_BRICK); }
+  g.box(0, 6, 0, W - 1, 6, W - 1, PLANKS);
+  g.add(pitched(0, 0, W, W, 7, SLATE, STONE, 'hip'));
+  g.add(door(4, 1, 0));
+  for (const x of [2, 6]) { g.put(x, 2, 0, WINDOW); g.put(x, 3, 0, WINDOW); }
+  for (const z of [2, 4, 6]) { g.put(0, 3, z, WINDOW + 1); g.put(W - 1, 3, z, WINDOW + 1); }
+  // Two banners either side of the door, inside, in the white ring's colour.
+  for (const x of [2, 3, 5, 6]) g.put(x, 3, 1, turned(WHITE_BANNER, 2));
+  // The War Table, under two chandeliers.
+  g.put(4, 1, 4, 571);
+  g.put(3, 5, 4, CHANDELIER); g.put(5, 5, 4, CHANDELIER);
+  for (const [x, z] of [[1, 1], [W - 2, 1], [1, W - 2], [W - 2, W - 2]]) g.put(x, 1, z, LANTERN);
+  return g.blocks();
+}
+
+STARTER_DESIGNS.push(
+  {
+    id: 'starter_armoury', structure: 'armoury', name: 'Armoury', size: 9, footprint: '9 x 7',
+    note: 'Research arms here, one at a time. Each piece takes days.',
+    blocks: armouryBlocks(),
+  },
+  {
+    id: 'starter_war_hall', structure: 'war_hall', name: 'War Hall', size: 9, footprint: '9 x 9',
+    note: 'Every company in one place. Send one to march from here.',
+    blocks: warHallBlocks(),
+  },
+);
+// --- end PLAY-12 ---
+
 // The first themed designs established the house, storehouse and market
 // motifs. Carry that visual language through the rest of the catalogue while
 // giving each roof its own pastel pairing. The transformation only replaces
@@ -1324,6 +1399,7 @@ const ROOF_PAIRS = {
   university: [4, 3], engineering: [3, 2], kiln: [2, 4], foundry: [4, 2],
   granary: [3, 2], military: [2, 4], gatehouse: [4, 2], watchtower: [2, 3],
   barracks: [3, 4], village: [3, 2], temple: [4, 2],
+  armoury: [2, 4], war_hall: [4, 2], // PLAY-12
   house: [2, 3], storehouse: [3, 2], market: [4, 3],
 };
 

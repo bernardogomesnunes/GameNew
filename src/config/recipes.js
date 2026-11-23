@@ -1822,6 +1822,13 @@ RECIPES.push(
 );
 // --- end PLAY-10 ---
 
+// --- PLAY-12: the War Table (docs/design/play-12.md) --------------------------
+RECIPES.push(
+  { id: 'war_table', name: 'War Table', station: 'hand', age: 9, inputs: { planks: 6, string: 2, gold: 1 }, output: { id: 'war_table', count: 1 },
+    blurb: 'A map with figures on it. A War Hall needs one to plan its marches.' },
+);
+// --- end PLAY-12 ---
+
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
 /** A station as it's written for people: wood_mill is "wood mill", masons_bench "mason's bench". */

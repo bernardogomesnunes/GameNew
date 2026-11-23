@@ -188,7 +188,7 @@ Requirements:
 | id | Test | Hint |
 |---|---|---|
 | `shell` | `WALLING` >= 70 | "Needs N more stone, cobble, brick or dark stone" |
-| `table` | War Table (block 556) >= 1 | "Needs a war table to plan on" |
+| `table` | War Table (block 571) >= 1 | "Needs a war table to plan on" |
 | `banners` | `BANNERS` (182-189) >= 2 | "Needs N more banners on the walls" |
 | `lights` | `LIGHTS` >= 2 | "Needs N more lights to read the maps by" |
 | `room` | sheltered volume >= 24 | "Needs a hall: walls all round and a roof over it" |
@@ -199,7 +199,7 @@ One War Hall is enough. A second one adds nothing in the first version.
 
 | Field | Value |
 |---|---|
-| block id | 556 (proposed: 556-559 for PLAY-12; check `blocks.js` before coding, other PLAY designs may claim the same) |
+| block id | 571 (556-570 are taken by the mushroom work; 572 is spare) |
 | item | `war_table`, refined, stackTo 10 |
 | recipe | hand, Age 9, planks 6, string 2, gold 1 |
 | shape | `PROP_SHAPES.war_table`, 9 boxes |
@@ -340,7 +340,7 @@ Each chunk is one PR with its tests. Chunks 1 to 4 are the first version.
 
 | File | Change |
 |---|---|
-| `src/config/blocks.js` | `WAR_TABLE = 556`, prop block, material wood |
+| `src/config/blocks.js` | `WAR_TABLE = 571`, prop block, material wood |
 | `src/config/items.js` | `war_table` item, PLAY-12 block at the end |
 | `src/config/recipes.js` | `war_table` recipe, PLAY-12 block at the end |
 | `src/world/propShapes.js` | `PROP_SHAPES.war_table`, 9 boxes |
@@ -398,7 +398,7 @@ Master Armoury level, Diamond Arms, Crossbows, Forced March, Cavalry, the Hold o
 - Effects on every soldier through `unitStats`.
 - War Hall with company cards and the existing 3 orders.
 - March to a rival city in Battle worlds, resolved by numbers, one company at a time.
-- War Table block 556.
+- War Table block 571.
 - Chunks 1 to 4, about 9 new test files.
 
 ## Open questions for the owner

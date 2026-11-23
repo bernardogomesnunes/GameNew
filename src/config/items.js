@@ -546,6 +546,10 @@ export const ITEMS = [
   // what a ripe plant gives. Spun into string at the Spinning Wheel.
   { id: 'cotton', name: 'Cotton', kind: 'raw', stackTo: STACK_BULK, color: 0xf4f1ea, glyph: 'wool', madeBy: 'Picked from ripe cotton. Spin it into string at a Spinning Wheel' },
   // --- end PLAY-10 ---
+
+  // --- PLAY-12: the War Table (docs/design/play-12.md) -----------------------
+  { id: 'war_table', name: 'War Table', kind: 'refined', stackTo: 10, color: 0x8a6440, glyph: 'rack', block: 571, madeBy: 'Made by hand from planks, string and gold. A War Hall plans its marches on one' },
+  // --- end PLAY-12 ---
 ];
 
 // Furniture in every wood (backlog batch 3) — see blocks.js WOOD_FURNITURE.
