@@ -27,4 +27,5 @@ export const PROBES = {
   '0007': `select ${has.table('world_sessions')} as applied`,
   '0008': `select (${has.column('world_chunks', 'player_id')} and ${has.policy('world_chunks', 'chunks_owner_select_by_player')}) as applied`,
   '0009': `select ${has.fn('delete_my_account_data')} as applied`,
+  '0010': `select (${has.table('player_names')} and ${has.fn('claim_player_name')} and ${has.fn('my_player_name')}) as applied`,
 };

@@ -2087,6 +2087,16 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 .session-end { flex: none; min-height: 44px; min-width: 76px; }
 .sessions-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
 .sessions-actions button { width: 100%; min-height: 44px; }
+/* ACCT-11: the player name row, and the name card's buttons. */
+.account-name { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
+.account-name-text { display: flex; flex-direction: column; min-width: 0; }
+.account-name-text .data-label { margin: 0 0 2px; }
+.account-name-text strong { font-size: 15px; overflow-wrap: anywhere; }
+.account-name button { flex: none; min-height: 44px; min-width: 120px; }
+.name-card #name-input { width: 100%; padding: 10px 12px; font-size: 16px; min-height: 44px; box-sizing: border-box; margin-bottom: 8px; }
+.name-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.name-actions button { min-height: 44px; width: 100%; }
+.name-card .form-error { margin: 0 0 8px; }
 /* ACCT-5: the typed-confirmation box under "Delete my account". */
 .data-delete-box { margin-top: 10px; padding: 10px 12px; border: 2px solid var(--danger, #c0392b); }
 .data-label { display: block; margin: 8px 0 4px; font-size: 13px; font-weight: 700; }
@@ -2123,6 +2133,7 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 /* The confirm dialog: a cross in the corner instead of a Cancel button. */
 .confirm-card { position: relative; padding-right: 48px; }
 .confirm-close { position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; font-size: 18px; line-height: 1; padding: 0; cursor: pointer; }
+.name-card .confirm-close { width: 44px; height: 44px; top: 4px; right: 4px; }
 .confirm-actions button { min-width: 120px; }
 /* Numbers in a clear face. At these sizes the pixel font's 2 reads as an 8 —
    a cost or a count you misread is worse than one that looks less pixel. */

@@ -1833,12 +1833,15 @@ export class Game {
         this.forgetRememberedWorlds();
         this.ui.toast({ kind: 'xp', title: 'Signed out everywhere', body: 'Sign in again to open your worlds' });
       },
+      // ACCT-11: the chosen player name (undefined: this database has no names).
+      onCloudPlayerName: () => this.cloud?.transport.getPlayerName(),
+      onCloudClaimName: (name) => this.cloud.transport.claimPlayerName(name),
       // ACCT-5: download everything, and delete the account. Both are hidden by
       // the panel when the database has no delete function yet (migration 0009).
       onCloudDeletePreview: () => this.cloud?.transport.accountDeletePreview(),
       onCloudDownloadData: async (onProgress) => {
         const result = await buildAccountExport({
-          transport: this.cloud.transport, user: this.cloudAuth.summary(), onProgress,
+          transport: this.cloud.transport, user: this.cloudAuth.summary(), playerName: this.ui.playerName ?? null, onProgress,
         });
         downloadBlob(accountExportFilename(), result.blob);
         return { worlds: result.worlds, chunks: result.chunks, failed: result.failed.length };

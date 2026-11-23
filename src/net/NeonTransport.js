@@ -2,6 +2,7 @@ import { CLOUD, deriveUrls } from './cloudConfig.js';
 import { describeFailure } from './CloudAuth.js';
 import { keepTrying } from './retry.js';
 import { clientWrites } from './WriteQueue.js';
+import { playerNameFailure } from './playerName.js';
 
 /**
  * SyncEngine transport over the Neon Data API (PostgREST).
@@ -374,6 +375,37 @@ export class NeonTransport {
     // The player row is gone: a later sign-in makes a new one.
     this.playerId = null;
     return counts;
+  }
+
+  // ---- chosen player name (migrations/0010) ---------------------------------
+  // Each returns undefined once the functions turn out to be missing, so a
+  // database without 0010 behaves as before and the panel hides the name UI.
+
+  /** The chosen name, null when there is none yet, undefined when the database has no names. */
+  async getPlayerName() {
+    if (this.noNames) return undefined;
+    try {
+      return (await this.request('/rpc/my_player_name', { method: 'POST', body: {} })) ?? null;
+    } catch (err) { if (isMissingThing(err)) { this.noNames = true; return undefined; } throw err; }
+  }
+
+  /** Whether nobody else has this name (case ignored). undefined when unsupported. */
+  async playerNameAvailable(name) {
+    if (this.noNames) return undefined;
+    try {
+      return await this.request('/rpc/player_name_available', { method: 'POST', body: { p_name: name } });
+    } catch (err) { if (isMissingThing(err)) { this.noNames = true; return undefined; } throw err; }
+  }
+
+  /** Claims or changes the name. Throws an error carrying `reason`: taken, invalid, signin, other. */
+  async claimPlayerName(name) {
+    if (this.noNames) throw new Error('This database cannot store player names yet.');
+    try {
+      return await this.request('/rpc/claim_player_name', { method: 'POST', body: { p_name: name } });
+    } catch (err) {
+      const f = playerNameFailure(err);
+      throw Object.assign(new Error(f.message), { reason: f.reason, status: err.status, cause: err });
+    }
   }
 
   async pullTemplates() {

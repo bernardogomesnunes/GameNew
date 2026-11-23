@@ -11,6 +11,7 @@ import { INTRO, ENDINGS, endingFor } from './StoryText.js';
 import { LazyStoryView } from './LazyStoryView.js';
 import { html, escapeHtml } from './html.js';
 import { askConfirm } from './Confirm.js';
+import { askPlayerName } from './NamePrompt.js';
 import { agoText } from '../net/CloudAuth.js';
 import { BOOK, BOOK_GROUPS, bookGroup } from '../duilt/Collection.js';
 import { chainLineHtml } from './chainLine.js';
@@ -562,6 +563,14 @@ export class UIManager {
                 <strong id="account-email">Signed in</strong>
                 <span id="account-holds">Your worlds are kept here.</span>
               </div>
+            </div>
+            <!-- ACCT-11: the chosen player name. Hidden until the database has migration 0010. -->
+            <div class="account-name" id="account-name-row" hidden>
+              <div class="account-name-text">
+                <span class="data-label" id="account-name-label">Player name</span>
+                <strong id="account-name-value">Not chosen yet</strong>
+              </div>
+              <button class="secondary" id="btn-name-edit">Choose a name</button>
             </div>
             <div class="field-row">
               <button class="secondary" id="btn-cloud-signout">Sign out</button>
@@ -2138,7 +2147,7 @@ export class UIManager {
   /** Label on the worlds screen, so you can see whether you are signed in. */
   refreshAccountLabel() {
     const user = this.cb.getCloudUser?.();
-    this.home?.setAccount(user ? (user.email || user.name || 'Account') : 'Sign in');
+    this.home?.setAccount(user ? (this.playerName || user.email || user.name || 'Account') : 'Sign in');
   }
 
   hideBlocker() {
@@ -2224,6 +2233,8 @@ export class UIManager {
         title: this.accountMode === 'create' ? 'Account created' : 'Signed in',
         body: 'New worlds can live on your account now.',
       });
+      // ACCT-11: no chosen name yet: ask once. Skipping is fine.
+      this.offerPlayerName();
     };
     this.q('#btn-cloud-signin').addEventListener('click', (e) => busy(e.currentTarget, async () => {
       const [email, password] = creds();
@@ -2265,6 +2276,7 @@ export class UIManager {
     this.wireReset();
     this.wireSessions();
     this.wireAccountData();
+    this.q('#btn-name-edit').addEventListener('click', () => this.choosePlayerName({ first: false }));
     this.openResetLink();
   }
 
@@ -2539,6 +2551,67 @@ export class UIManager {
     }
   }
 
+  // ---- ACCT-11: the chosen player name ----
+
+  /** Reads the name once per sign-in: a string, null (none yet) or undefined (the database has no names). */
+  async refreshPlayerName({ force = false } = {}) {
+    const user = this.cb.getCloudUser?.();
+    if (!user) return undefined;
+    if (!force && this.nameFor === user.id) return this.playerName;
+    this.nameFor = user.id;
+    try { this.playerName = await this.cb.onCloudPlayerName?.(); } catch { this.nameFor = null; this.playerName = undefined; }
+    this.drawPlayerName();
+    return this.playerName;
+  }
+
+  drawPlayerName() {
+    const row = this.q('#account-name-row');
+    if (!row) return;
+    // undefined: this database has no names, so there is nothing to show.
+    row.hidden = this.playerName === undefined;
+    this.q('#account-name-value').textContent = this.playerName || 'Not chosen yet';
+    this.q('#btn-name-edit').textContent = this.playerName ? 'Change name' : 'Choose a name';
+    const user = this.cb.getCloudUser?.();
+    if (user) {
+      const who = this.playerName || user.email || user.name || 'Signed in';
+      this.q('#account-email').textContent = who;
+      this.q('#account-initial').textContent = (who[0] || '?').toUpperCase();
+    }
+    this.refreshAccountLabel();
+  }
+
+  nameSkipKey(user) { return `duilt.nameSkipped.${user.id}`; }
+
+  /** After a sign-in: asks for a name when there is none and it was not skipped before. */
+  async offerPlayerName() {
+    const user = this.cb.getCloudUser?.();
+    if (!user) return;
+    const name = await this.refreshPlayerName({ force: true });
+    if (name !== null) return;
+    try { if (localStorage.getItem(this.nameSkipKey(user))) return; } catch { /* asked again, which is harmless */ }
+    await this.choosePlayerName({ first: true });
+  }
+
+  async choosePlayerName({ first = false } = {}) {
+    const user = this.cb.getCloudUser?.();
+    if (!user) return null;
+    const saved = await askPlayerName(this.root, {
+      title: first ? 'Choose a player name' : (this.playerName ? 'Change your player name' : 'Choose a player name'),
+      body: first ? 'It is the name that shows for you. You can skip this and choose one later in your account.' : '',
+      initial: this.playerName ?? '',
+      skip: first ? 'Skip for now' : 'Cancel',
+      save: async (name) => { await this.cb.onCloudClaimName(name); },
+    });
+    if (saved) {
+      this.playerName = saved;
+      this.drawPlayerName();
+      this.toast({ kind: 'xp', title: 'Player name saved', body: saved });
+    } else if (first) {
+      try { localStorage.setItem(this.nameSkipKey(user), '1'); } catch { /* asked again next time */ }
+    }
+    return saved;
+  }
+
   /** Fetches and draws the session list. Once per sign-in unless forced. */
   async refreshSessions({ force = false } = {}) {
     const list = this.q('#sessions-list');
@@ -2663,6 +2736,7 @@ export class UIManager {
     this.q('#cloud-forgot-step').hidden = !forgetting;
     this.q('#cloud-reset-step').hidden = !resetting;
     this.q('#cloud-signed-in').hidden = !user || resetting;
+    if (!user && this.nameFor) { this.nameFor = null; this.playerName = undefined; }
     // The panel is two different things and only one of them is "Sign in".
     // Signed in it was still headed "Sign in", under a line offering to keep
     // worlds off this device — advice for somebody who has already taken it.
@@ -2675,7 +2749,7 @@ export class UIManager {
       if (title) title.textContent = 'Reset your password';
       if (sub) sub.textContent = 'We will email you a link to choose a new one.';
     } else if (user) {
-      const who = user.email || user.name || 'Signed in';
+      const who = this.playerName || user.email || user.name || 'Signed in';
       this.q('#account-email').textContent = who;
       this.q('#account-initial').textContent = (who[0] || '?').toUpperCase();
       if (title) title.textContent = 'Your account';
@@ -2683,6 +2757,7 @@ export class UIManager {
       this.refreshAccountSummary();
       this.refreshSessions();
       this.refreshAccountData();
+      this.refreshPlayerName();
     } else if (coding) {
       if (title) title.textContent = 'Check your email';
       if (sub) sub.textContent = 'One last step: confirm the email is yours.';

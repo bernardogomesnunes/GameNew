@@ -86,6 +86,10 @@ before reviewing/application of 0006. No live migration was run for this work.
   `delete_my_account_data(p_dry_run)`, that deletes the caller's worlds,
   chunks, progression, designs and player row. It takes no user id: it acts
   on `auth.user_id()` from the caller's own JWT.
+- `0010_player_names.sql` — ACCT-11, **not applied yet**. Table `player_names`
+  (keyed by auth user id, unique ignoring case) and functions
+  `claim_player_name`, `my_player_name`, `player_name_available`. Writes go
+  only through the claim function.
 
 ## Checking the live database
 
