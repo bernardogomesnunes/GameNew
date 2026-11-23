@@ -25,7 +25,7 @@ import { WEAR_SLOTS, SLOT_NAMES, ARMOUR_PER_POINT } from '../config/armour.js';
 import { glyphSvg } from '../config/glyphs.js';
 import { itemIcon } from '../config/cubes.js';
 import { renderPanels } from './Panel.js';
-import { TRADERS_BY_ID, goodsFor, restockIn } from '../config/traders.js';
+import { TRADERS, TRADERS_BY_ID, goodsFor, restockIn, tradersFor, buysFor, sellPrice, orderSlots, PURSE } from '../config/traders.js';
 import { icon } from './icons.js';
 import { pixelIcon } from './pixelIcons.js';
 import { bindSlotDrag } from './SlotDrag.js';
@@ -374,7 +374,12 @@ export class DuiltUI {
         'panel-building': `
           <div id="building-body"></div>`,
         'panel-trade': `
+          <div id="trade-switch" class="trade-switch" role="group" aria-label="Buy or sell">
+            <button class="secondary" data-trade-tab="buy" aria-pressed="true">Buy</button>
+            <button class="secondary" data-trade-tab="sell" aria-pressed="false">Sell</button>
+          </div>
           <div id="trade-coins" class="trade-coins"></div>
+          <div id="trade-orders"></div>
           <div id="trade-list" class="recipe-grid"></div>`,
         'panel-finish': `
           <div id="finish-body"></div>`,
@@ -716,6 +721,7 @@ export class DuiltUI {
       this.showBuilding(structure, this.buildingActionsCache);
     });
     body.querySelectorAll('[data-train]').forEach((b) => b.addEventListener('click', () => actions.onTrain?.(b.dataset.train)));
+    if (structure.type === 'market') this.wireOrderCancel(body, structure.id, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
     body.querySelectorAll('[data-soldier-order]').forEach((b) => b.addEventListener('click', () => actions.onSoldierOrder?.(b.dataset.soldierOrder)));
     body.querySelector('[data-cube]')?.addEventListener('click', () => { this.closePanel('panel-building'); actions.onCube?.(); });
     if ((structure.type === 'barracks' || structure.type === 'military') && this.duilt) {
@@ -775,6 +781,7 @@ export class DuiltUI {
       ${structure.type === 'barracks' || structure.type === 'military' ? this.barracksHtml(structure) : ''}
       ${structure.type === 'workshop' || structure.type === 'foundry' || structure.type === 'kiln' ? this.workshopHtml(structure) : ''}
       ${structure.type === 'kiln' ? this.firingHtml(structure, spec) : ''}
+      ${structure.type === 'market' ? `<div class="building-sec"><h4>Standing sell orders</h4>${this.ordersHtml(structure)}<p class="dim">Talk to a trader to add one.</p></div>` : ''}
       ${structure.type === 'sanctuary_white' || structure.type === 'sanctuary_black' ? this.cubeHtml() : ''}
       ${levelSec}
       ${this.stationRecipesHtml(spec, structure)}
@@ -2516,6 +2523,24 @@ export class DuiltUI {
     this.trader = person;
     const sub = this.q('#trade-sub');
     if (sub) sub.textContent = `${t.name} — ${t.trade.toLowerCase()}`;
+    // Creative has an endless bag and coins buy nothing there: no Sell tab.
+    const canSell = !d.sandbox && !d.inventory.endless;
+    if (!canSell) this.tradeTab = 'buy';
+    const tab = this.tradeTab === 'sell' ? 'sell' : 'buy';
+    const sw = this.q('#trade-switch');
+    sw.hidden = !canSell;
+    sw.querySelectorAll('[data-trade-tab]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(b.dataset.tradeTab === tab));
+      b.classList.toggle('on', b.dataset.tradeTab === tab);
+      b.onclick = () => { this.tradeTab = b.dataset.tradeTab; this.showTrader(person); };
+    });
+    this.q('#trade-orders').innerHTML = '';
+    if (tab === 'sell') this.renderSell(person, t);
+    else this.renderBuy(person, t);
+  }
+
+  renderBuy(person, t) {
+    const d = this.duilt;
     const coins = d.inventory.countOf('coin');
     this.q('#trade-coins').innerHTML = `${itemChip('coin', coins)} <span>${d.sandbox ? 'Free in Creative' : `You have ${coins} coin${coins === 1 ? '' : 's'}. Strike more at a foundry, or find them in chests.`}</span>`;
     const list = this.q('#trade-list');
@@ -2543,6 +2568,159 @@ export class DuiltUI {
         : { kind: 'xp', title: 'Cannot buy that', body: res.reason });
       this.showTrader(person);
     }));
+  }
+
+
+  /** One line for an order's last run, and what fell short. */
+  orderLast(o) {
+    const l = o.last;
+    if (!l) return 'not run yet';
+    const name = itemName(o.item).toLowerCase();
+    const why = { stock: `short of ${name}`, purse: 'the trader\'s purse ran dry', room: 'no room for the coins', gone: 'the trader has left', broken: 'the market is broken' }[l.short];
+    return why ? `${why}: sold ${l.lots} of ${o.lots}` : `sold ${l.lots} of ${o.lots}`;
+  }
+
+  /** A market's standing orders, one row each: the trader's Sell tab and the market's own panel. */
+  ordersHtml(market) {
+    const d = this.duilt;
+    const orders = d.sellOrders(market.id);
+    const slots = orderSlots(market.tier ?? 0);
+    const day = Math.floor(d.days ?? 0);
+    const rows = orders.map((o) => {
+      const tr = TRADERS_BY_ID.get(o.trader);
+      const n = o.lots * (sellPrice(o.item)?.lot ?? 1);
+      const spec = ITEMS_BY_ID.get(o.item);
+      const icon = itemIcon(spec, { size: 28 }) ?? glyphSvg(spec?.glyph, { size: 22, color: spec?.color ?? 0x888888 });
+      const left = Math.max(0, o.next - day);
+      return `<div class="order-row" data-order="${o.id}">
+        <span class="order-icon">${icon}</span>
+        <span class="order-text"><strong>${n} ${escapeHtml(itemName(o.item).toLowerCase())} ${o.every === 1 ? 'every day' : 'every 2 days'} to ${escapeHtml(tr?.name ?? '')}</strong>
+          <small>${left <= 0 ? 'next at the day turn' : `next in ${left} day${left === 1 ? '' : 's'}`} · ${escapeHtml(this.orderLast(o))}</small></span>
+        <button class="secondary" data-order-cancel="${o.id}">Cancel</button>
+      </div>`;
+    }).join('');
+    return `<div class="trade-orders"><div class="trade-orders-head"><strong>Standing orders</strong><span data-order-count>(${orders.length} of ${slots})</span></div>${rows || '<p class="dim">None yet. Press Repeat on a tile to set one.</p>'}</div>`;
+  }
+
+  wireOrderCancel(root, marketId, rerender) {
+    const d = this.duilt;
+    root.querySelectorAll('[data-order-cancel]').forEach((b) => b.addEventListener('click', () => {
+      const ok = d.cancelSellOrder(marketId, Number(b.dataset.orderCancel));
+      if (ok) this.game.editedAt = Date.now();
+      this.bus.emit('toast', { kind: 'xp', title: ok ? 'Order cancelled' : 'No such order' });
+      rerender();
+    }));
+  }
+
+  /**
+   * The Sell tab: what this trader buys, as the Buy tab's tiles. Held goods
+   * first, the rest greyed. Hand sales draw on the bag and the storehouses.
+   * At a market you own, Repeat turns a sale into a standing order.
+   */
+  renderSell(person, t) {
+    const d = this.duilt;
+    const bagCoins = d.inventory.countOf('coin');
+    const shelved = d.sellStock('coin', { bag: false });
+    const left = d.purseLeft(t.id);
+    const market = person.marketId != null ? d.marketOf(person.marketId) : null;
+    const head = this.q('#trade-coins');
+    head.innerHTML = `${itemChip('coin', bagCoins)} <span>You have ${bagCoins} coin${bagCoins === 1 ? '' : 's'}. ${escapeHtml(t.name)} has ${left} of ${PURSE} left today.</span>
+      ${shelved > 0 ? `<button class="secondary" data-take-coins>Take ${shelved} from storehouses</button>` : ''}`;
+    head.querySelector('[data-take-coins]')?.addEventListener('click', () => {
+      const n = d.takeFromStores('coin');
+      this.bus.emit('toast', { kind: 'xp', title: n ? `Took ${n} coin${n === 1 ? '' : 's'}` : 'Your bag is full' });
+      this.showTrader(person);
+    });
+    const orders = this.q('#trade-orders');
+    if (market) {
+      orders.innerHTML = this.ordersHtml(market);
+      this.wireOrderCancel(orders, market.id, () => this.showTrader(person));
+    }
+    const rows = buysFor(t).map(([id, lot, coins]) => {
+      const bag = d.inventory.countOf(id), shed = d.sellStock(id, { bag: false });
+      return { id, lot, coins, bag, shed, held: bag + shed, worn: !!ITEMS_BY_ID.get(id)?.durability };
+    });
+    rows.sort((a, b) => (b.held > 0) - (a.held > 0));
+    const list = this.q('#trade-list');
+    const later = market && tradersFor(market.tier ?? 0).length < TRADERS.length ? TRADERS[tradersFor(market.tier ?? 0).length] : null;
+    list.innerHTML = (later ? `<div class="trade-rare-head">${escapeHtml(later.name)} buys ${escapeHtml(later.trade.toLowerCase())} and arrives at the market's next level.</div>` : '')
+      + rows.map((r) => {
+        const spec = ITEMS_BY_ID.get(r.id);
+        const icon = itemIcon(spec, { size: 40 }) ?? glyphSvg(spec?.glyph, { size: 30, color: spec?.color ?? 0x888888 });
+        const lots = Math.floor(r.held / r.lot);
+        const maxN = r.worn ? Math.min(r.held, Math.floor(left / Math.max(1, r.coins))) : Math.min(lots, Math.floor(left / r.coins));
+        const have = r.worn ? `You have ${r.held}` : `You have ${r.bag}${r.shed ? ` + ${r.shed} in storehouses` : ''} (${lots} lot${lots === 1 ? '' : 's'})`;
+        return `<div class="recipe-tile sell-tile ${r.held ? '' : 'blocked'}" data-sell-tile="${r.id}">
+          <span class="recipe-icon" role="button" tabindex="0" data-tip="${escapeAttr(itemName(r.id))}" data-tip-info="${escapeAttr(spec?.madeBy ?? '')}">${icon}${r.lot > 1 ? `<b>×${r.lot}</b>` : ''}</span>
+          <strong class="recipe-name">${escapeHtml(itemName(r.id))}</strong>
+          <span class="recipe-cost">Pays ${itemChip('coin', r.coins)}</span>
+          <span class="sell-have">${have}</span>
+          <div class="recipe-actions">
+            <button class="secondary${r.held ? '' : ' cannot'}" data-sell="${r.id}">Sell</button>
+            ${maxN >= 2 ? `<button class="secondary" data-sell-max="${r.id}" data-n="${maxN}">×${maxN}</button>` : ''}
+            ${market && !r.worn ? `<button class="secondary" data-repeat="${r.id}">Repeat</button>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    const sell = (id, n) => {
+      const res = d.sellTo(t.id, id, n);
+      this.bus.emit('toast', res.ok
+        ? { kind: 'challenge', title: `Sold ${res.n} ${res.name.toLowerCase()}`, body: `${res.coins} coin${res.coins === 1 ? '' : 's'} from ${t.name}${res.reason ? `. ${res.reason}` : ''}` }
+        : { kind: 'xp', title: 'Cannot sell that', body: res.reason });
+      this.showTrader(person);
+    };
+    list.querySelectorAll('[data-sell]').forEach((b) => b.addEventListener('click', () => sell(b.dataset.sell, 1)));
+    list.querySelectorAll('[data-sell-max]').forEach((b) => b.addEventListener('click', () => sell(b.dataset.sellMax, Number(b.dataset.n))));
+    list.querySelectorAll('[data-repeat]').forEach((b) => b.addEventListener('click', () => this.openRepeat(person, t, market, b.closest('.recipe-tile'), b.dataset.repeat)));
+  }
+
+  /** The Repeat form inside a Sell tile: lots, every 1 or 2 days, Save. */
+  openRepeat(person, t, market, tile, id) {
+    const d = this.duilt;
+    this.q('#trade-list').querySelectorAll('.craft-work').forEach((w) => w.remove());
+    const p = sellPrice(id);
+    const cap = Math.max(1, d.maxOrderLots(id));
+    const name = itemName(id).toLowerCase();
+    const shed = d.sellStock(id, { bag: false });
+    const work = document.createElement('form');
+    work.className = 'craft-work order-form';
+    work.innerHTML = `<label>Lots <span class="order-lots"><button type="button" class="secondary" data-lots-step="-1" aria-label="One lot fewer">−</button><input data-order-lots type="number" min="1" max="${cap}" value="1" inputmode="numeric"><button type="button" class="secondary" data-lots-step="1" aria-label="One lot more">+</button></span></label>
+      <p data-order-summary></p>
+      <div class="order-every" role="group" aria-label="Every"><button type="button" class="secondary" data-every="1" aria-pressed="true">Day</button><button type="button" class="secondary" data-every="2" aria-pressed="false">2 days</button></div>
+      <p>From your storehouses (${shed} ${escapeHtml(name)} there now)</p>
+      <p data-order-error class="warn" role="status" aria-live="polite"></p>
+      <button type="submit" class="primary" data-order-save>Save</button>
+      <button type="button" class="secondary" data-order-cancel-form>Cancel</button>`;
+    tile.append(work);
+    const input = work.querySelector('[data-order-lots]');
+    let every = 1;
+    const lots = () => Number(input.value);
+    const summary = () => {
+      const n = lots();
+      work.querySelector('[data-order-summary]').textContent = Number.isInteger(n) && n >= 1 && n <= cap
+        ? `= ${n * p.lot} ${name}, ${n * p.coins} coin${n * p.coins === 1 ? '' : 's'}`
+        : `Choose 1 to ${cap} lots.`;
+    };
+    input.addEventListener('input', summary);
+    work.querySelectorAll('[data-lots-step]').forEach((b) => b.addEventListener('click', () => {
+      input.value = String(Math.min(cap, Math.max(1, (lots() || 1) + Number(b.dataset.lotsStep))));
+      summary();
+    }));
+    work.querySelectorAll('[data-every]').forEach((b) => b.addEventListener('click', () => {
+      every = Number(b.dataset.every);
+      work.querySelectorAll('[data-every]').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    }));
+    work.querySelector('[data-order-cancel-form]').addEventListener('click', () => work.remove());
+    work.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const res = d.addSellOrder(market.id, t.id, id, lots(), every);
+      if (!res.ok) { work.querySelector('[data-order-error]').textContent = res.reason; return; }
+      this.game.editedAt = Date.now();
+      this.bus.emit('toast', { kind: 'challenge', title: `Order set: ${res.order.lots * p.lot} ${name} ${every === 1 ? 'every day' : 'every 2 days'}`, body: `To ${t.name}, from your storehouses.` });
+      this.showTrader(person);
+    });
+    summary();
+    input.focus();
   }
 
   /** The Make buttons in `root`: craft where you stand, say how it went, redraw. */
