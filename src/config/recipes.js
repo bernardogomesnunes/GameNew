@@ -1824,7 +1824,7 @@ RECIPES.push(
 
 // --- PLAY-12: the War Table (docs/design/play-12.md) --------------------------
 RECIPES.push(
-  { id: 'war_table', name: 'War Table', station: 'hand', age: 9, inputs: { planks: 6, string: 2, gold: 1 }, output: { id: 'war_table', count: 1 },
+  { id: 'war_table', name: 'War Table', station: 'workbench', age: 9, inputs: { planks: 6, string: 2, gold: 1 }, output: { id: 'war_table', count: 1 },
     blurb: 'A map with figures on it. A War Hall needs one to plan its marches.' },
 );
 

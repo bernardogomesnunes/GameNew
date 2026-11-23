@@ -30,7 +30,7 @@ ok('War Table shape has 9 boxes', PROP_SHAPES.war_table?.length === 9 && BLOCKS_
 const item = ITEMS_BY_ID.get('war_table');
 ok('War Table item: refined, stack 10, places block 571', item?.block === 571 && item.stackTo === 10 && item.kind === 'refined');
 const rec = RECIPES_BY_ID.get('war_table');
-ok('War Table recipe: hand, Age 9, planks 6, string 2, gold 1', rec?.station === 'hand' && rec.age === 9 && rec.inputs.planks === 6 && rec.inputs.string === 2 && rec.inputs.gold === 1);
+ok('War Table recipe: workbench (hand recipes past Age 2 are made there), Age 9, planks 6, string 2, gold 1', rec?.station === 'workbench' && rec.age === 9 && rec.inputs.planks === 6 && rec.inputs.string === 2 && rec.inputs.gold === 1);
 
 // The structures.
 const arm = STRUCTURES_BY_ID.get('armoury'), hall = STRUCTURES_BY_ID.get('war_hall');
