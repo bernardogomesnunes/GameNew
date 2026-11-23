@@ -613,6 +613,8 @@ export class StructureRegistry {
   skipAway(ms, { now = Date.now() } = {}) {
     if (!(ms > 0)) return;
     for (const s of this.structures) s.lastPaidAt = Math.min(now, (s.lastPaidAt ?? now) + ms);
+    // PLAY-11: a Factory's lines skip the time away too.
+    for (const s of this.structures) for (const l of s.lines ?? []) l.at = Math.min(now, (l.at ?? now) + ms);
   }
 
   /** Seconds until the next payout from any building, or null if none produce. */
@@ -652,6 +654,8 @@ export class StructureRegistry {
         ...(s.wood && s.wood !== 'oak' ? { wood: s.wood } : {}),
         // A market's standing sell orders (PLAY-23).
         ...(s.orders?.length ? { orders: s.orders, nextOrder: s.nextOrder } : {}),
+        // PLAY-11: a Factory's lines, { station, recipe, at } each.
+        ...(s.lines?.length ? { lines: s.lines.map((l) => ({ station: l.station, recipe: l.recipe ?? null, at: l.at })) } : {}),
       })),
     };
   }

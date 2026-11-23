@@ -2428,6 +2428,16 @@ body.is-sleeping #building-hint { visibility: hidden; }
 .order-every button { min-height: 44px; }
 .order-every button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); font-weight: 600; }
 
+/* PLAY-11: the Factory's lines. */
+.factory-lines .factory-line { padding: 8px 0; border-top: 1px solid var(--px-line, rgba(0,0,0,0.12)); }
+.factory-lines .factory-line:first-of-type { border-top: 0; }
+.factory-line-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.factory-line-head strong { font-size: 14px; color: var(--px-text); }
+.factory-rate { font-size: 12.5px; color: var(--text-dim); white-space: nowrap; }
+#ui-root .factory-line select, #ui-root .factory-line .factory-search { display: block; width: 100%; min-height: 44px; box-sizing: border-box; margin-top: 6px; }
+.factory-line .building-line.ok { color: var(--px-grass-dark, #3d7a2a); }
+/* PLAY-11 end */
+
 /* PLAY-13: villager mood. Band colours match the bubbles over their heads
    (render/SettlerView.js, config/mood.js). */
 #vital-people { position: relative; }

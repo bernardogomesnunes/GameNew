@@ -37,8 +37,9 @@ Current item reference, generated from the item registry by `node scripts/update
 | Broccoli Seeds | Saved from a ripe broccoli | 100 | — |
 | Coffee Seeds | Saved from a ripe coffee | 100 | — |
 | Hemp Seeds | Saved from a ripe hemp | 100 | — |
+| Cotton Seeds | Saved from a ripe cotton | 100 | — |
 | Sapling | Craft from Leaves, or find when breaking leaves — place on soil to grow a tree | 100 | — |
-| Hide | Hunted from deer, boar, goats and cows | 100 | — |
+| Hide | Hunted from deer, boar, goats and cows. Tan it into leather at a Tanning Vat | 100 | — |
 | Wool | Hunted from sheep | 100 | — |
 | Feather | Hunted from chickens | 100 | — |
 | Hemp Fibre | Picked from ripe hemp | 500 | — |
@@ -71,6 +72,7 @@ Current item reference, generated from the item registry by `node scripts/update
 | Triceratops Egg | Lying in the Past's jungles and fern plains — set it down and it hatches, tame, in two days | 100 | — |
 | Long-neck Egg | Lying in the Past's fern plains — set it down and it hatches, tame, in two days | 100 | — |
 | Basilisk Scale | From the Basilisk, a crowned beast out of legend deep in the Past's jungle — if you can bring it down | 100 | — |
+| Cotton | Picked from ripe cotton. Spin it into string at a Spinning Wheel | 500 | — |
 
 ## Made and built
 
@@ -83,7 +85,7 @@ Current item reference, generated from the item registry by `node scripts/update
 | Crucible | Made at a Workbench. Place it inside a foundry to melt ore and pour it into a mould | 10 | — |
 | Kiln Oven | Made at a Workbench. Place it inside a kiln to fire clay into brick and vases, and sand into glass | 10 | — |
 | Carpenter's Table | Made by hand. Place it and make furniture on it: one saw stroke cuts the parts, then tap each into place | 10 | — |
-| Workbench | Made by hand or at a workshop. Place it anywhere and make everything from the third age on there | 10 | — |
+| Workbench | Made by hand. Place it anywhere and make everything from the third age on there | 10 | — |
 | Forge | Build from stone and clay — place it to darken rock and forge weapons | 10 | — |
 | Oak Planks | Sawn from oak logs | 500 | — |
 | Turned Soil | Dirt broken up for planting | 500 | — |
@@ -96,8 +98,8 @@ Current item reference, generated from the item registry by `node scripts/update
 | Gold Block | Four gold ingots at a Workbench | 500 | — |
 | Iron Block | Four iron ingots at a Workbench | 500 | — |
 | Torch | A stick of oak with coal at its head. A quarry digs coal | 100 | — |
-| Spinning Wheel | Made by hand from oak planks and a log. Place it and spin hemp into string | 10 | — |
-| String | Hemp fibre, spun at the bench | 500 | — |
+| Spinning Wheel | Made by hand from oak planks and a log. Place it and spin hemp, wool or cotton into string | 10 | — |
+| String | Hemp, wool or cotton, spun at a Spinning Wheel | 500 | — |
 | Arrow | Planks and string, at the bench — the bow shoots them | 500 | — |
 | Brick Roof Tiles | Fired from brick into curved tiles | 500 | — |
 | Stone Roof Tiles | Split from stone into slates | 500 | — |
@@ -113,7 +115,7 @@ Current item reference, generated from the item registry by `node scripts/update
 | Fairy Lights | Little glass bulbs on a string, made at a workshop | 500 | — |
 | Curled Trim | A plank steamed into a curl, for a gable's tip or the end of an eave | 500 | — |
 | Chandelier | Wrought from iron and hung with candles | 100 | — |
-| Lantern | Crafted from planks and glass | 100 | — |
+| Lantern | Planks with a stone shade, made by hand | 100 | — |
 | Stone Slab | Split from cut stone | 500 | — |
 | Plank Slab | Sawn thin from planks | 500 | — |
 | Stone Stairs | Cut into steps from stone | 500 | — |
@@ -220,6 +222,8 @@ Current item reference, generated from the item registry by `node scripts/update
 | Future Lamp | The Future's street lamp: a cold bright light | 100 | — |
 | Sky Lift | The Sky Kingdom's own — at its anchor towers, Place on one to ride the chain | 100 | — |
 | War Horn | Made at the bench — Break with it in hand calls the Stone Kingdom's next round now | 1 | — |
+| Leather | Hides soaked with oak bark in a placed Tanning Vat | 100 | — |
+| Tanning Vat | Made by hand from oak planks and stone. Place it and tan hides into leather | 10 | — |
 | White Table | Built at the workshop — in white wood — keep a Carpentry Saw in your bag | 100 | — |
 | White Chair | Built at the workshop — in white wood — keep a Carpentry Saw in your bag | 100 | — |
 | White Cabinet | Made at the wood mill — in white wood — keep a Carpentry Saw in your bag | 100 | — |
@@ -319,10 +323,10 @@ Current item reference, generated from the item registry by `node scripts/update
 | Item | How to get it / use | Stack | Details |
 | --- | --- | --- | --- |
 | Collector's Crown | Given for collecting every item there is | 1 | Worn: head; 5 armour; Infinity durability |
-| Leather Cap | Stitched from hides | 1 | Worn: head; 1 armour; 80 durability |
-| Leather Tunic | Stitched from hides | 1 | Worn: body; 2 armour; 80 durability |
-| Leather Leggings | Stitched from hides | 1 | Worn: legs; 1 armour; 80 durability |
-| Leather Boots | Stitched from hides | 1 | Worn: feet; 1 armour; 80 durability |
+| Leather Cap | Stitched from leather | 1 | Worn: head; 1 armour; 80 durability |
+| Leather Tunic | Stitched from leather | 1 | Worn: body; 2 armour; 80 durability |
+| Leather Leggings | Stitched from leather | 1 | Worn: legs; 1 armour; 80 durability |
+| Leather Boots | Stitched from leather | 1 | Worn: feet; 1 armour; 80 durability |
 | Iron Helm | Plate from your foundry | 1 | Worn: head; 2 armour; 200 durability |
 | Iron Cuirass | Plate from your foundry | 1 | Worn: body; 3 armour; 200 durability |
 | Iron Greaves | Plate from your foundry | 1 | Worn: legs; 2 armour; 200 durability |
@@ -343,7 +347,7 @@ Current item reference, generated from the item registry by `node scripts/update
 | Dark Cuirass | Blackened iron, as the Stone Kingdom wears it | 1 | Worn: body; 5 armour; 300 durability |
 | Dark Greaves | Blackened iron, as the Stone Kingdom wears it | 1 | Worn: legs; 3 armour; 300 durability |
 | Dark Boots | Blackened iron, as the Stone Kingdom wears it | 1 | Worn: feet; 2 armour; 300 durability |
-| Wooden Shield | Planks under a hide face, bound with a hide rim. Turns aside 15% of blows | 1 | Worn: offhand; 1 armour; 120 durability |
+| Wooden Shield | Planks under a leather face, bound with a leather rim. Turns aside 15% of blows | 1 | Worn: offhand; 1 armour; 120 durability |
 | Iron Shield | Oak boards faced and rimmed with iron from your foundry. Turns aside 25% of blows | 1 | Worn: offhand; 2 armour; 300 durability |
 | Diamond Shield | Diamond plates on an iron frame: the best shield there is. Turns aside 35% of blows | 1 | Worn: offhand; 3 armour; 700 durability |
 | Swift Leather Boots | Leather Boots upgraded at a temple — faster on your feet | 1 | Worn: feet; 1 armour; 80 durability |
@@ -376,12 +380,12 @@ Current item reference, generated from the item registry by `node scripts/update
 | Item | How to get it / use | Stack | Details |
 | --- | --- | --- | --- |
 | Plainer | Built at a workshop from planks and wool | 1 | Worn: body; Wear it to glide down from somewhere high |
-| Leather Backpack | Hide and string, stitched at the bench — wear it for 10 more bag slots | 1 | Worn: back |
+| Leather Backpack | Leather and string, stitched at the bench — wear it for 10 more bag slots | 1 | Worn: back |
 | Reinforced Backpack | A leather backpack with iron at the seams — wear it for 20 more bag slots | 1 | Worn: back |
 
 ## Rings
 
 | Item | How to get it / use | Stack | Details |
 | --- | --- | --- | --- |
-| White Ring | Gold and Sunstone, forged at the High Temple — you move faster and jump higher | 1 | Worn: ring |
-| Black Ring | Obsidian and Nightstone, forged at the High Temple — a dark spark hurts whoever strikes you | 1 | Worn: ring |
+| White Ring | Gold and Sunstone, forged at a forge, once a temple is a High Temple — you move faster and jump higher | 1 | Worn: ring |
+| Black Ring | Obsidian and Nightstone, forged at a forge, once a temple is a High Temple — a dark spark hurts whoever strikes you | 1 | Worn: ring |

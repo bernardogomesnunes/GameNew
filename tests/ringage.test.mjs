@@ -20,19 +20,20 @@ function atAge7(ring) {
   g.territory.setAge(7);
   const t = Date.now();
   for (const type of ['temple', 'engineering', 'granary']) {
-    g.structures.structures.push({ id: g.structures.nextId++, type, region: { minX: 0, maxX: 3, minY: 10, maxY: 13, minZ: 0, maxZ: 3 }, valid: true, locked: true, claimedAt: t, lastPaidAt: t, brokenReason: null, excludes: [], tier: 0 });
+    g.structures.structures.push({ id: g.structures.nextId++, type, region: { minX: 0, maxX: 3, minY: 10, maxY: 13, minZ: 0, maxZ: 3 }, valid: true, locked: true, claimedAt: t, lastPaidAt: t, brokenReason: null, excludes: [], tier: type === 'temple' ? 4 : 0 });
   }
   g.inventory.add('sunstone', 3); g.inventory.add('gold', 4);
   g.inventory.add('nightstone', 3); g.inventory.add('obsidian', 4);
   g.inventory.add('devotion', 30);
   return g;
 }
-const atHigh = ['temple', 'temple@0', 'temple@1', 'temple@2', 'temple@3', 'temple@4'];
+// PLAY-11: rings are forged at a forge, with the High Temple (tier 4) standing.
+const atForge = ['forge'];
 
 for (const ring of ['white', 'black']) {
   const g = atAge7();
   ok(`${ring}: everything but the ring done, still Age 7`, g.age === 7 && g.ageGoals().filter((x) => !x.done).map((x) => x.id).join() === 'ring');
-  const forged = g.crafting.craft(`ring_${ring}`, 1, { atStations: atHigh });
+  const forged = g.crafting.craft(`ring_${ring}_forge`, 1, { atStations: atForge });
   ok(`  the ring forged, it's Age 8 at once (age ${g.age})`, forged.ok && g.ring === ring && g.age === 8);
 }
 

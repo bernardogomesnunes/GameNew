@@ -1037,16 +1037,6 @@ export const RECIPES = [
     blurb: 'A low stone wall that joins its neighbours, with a post at every turn.',
   },
   {
-    id: 'slab_stone',
-    name: 'Stone Slab',
-    station: 'hand',
-    age: 3,
-    inputs: { stone: 1 },
-    output: { id: 'slab_stone', count: 2 },
-    batch: 8,
-    blurb: 'Split thin instead of split rough — two slabs from one block.',
-  },
-  {
     id: 'roof_brick',
     name: 'Brick Roof Tiles',
     station: 'hand',
@@ -1137,15 +1127,6 @@ export const RECIPES = [
     batch: 6,
     blurb: 'Cut into a step instead of a slab.',
   },
-  {
-    id: 'lantern',
-    name: 'Lantern',
-    station: 'workshop',
-    age: 4,
-    inputs: { planks: 2, glass: 1 },
-    output: { id: 'lantern', count: 1 },
-    blurb: 'A real light, not a decoration — see it burn from across your land.',
-  },
   // Owner, 15 November: gold and iron blocks, four ingots each way; torches.
   { id: 'gold_block', name: 'Gold Block', station: 'workbench', age: 5, inputs: { gold: 4 }, output: { id: 'gold_block', count: 1 }, blurb: 'Four ingots, cast as one block to build with.' },
   { id: 'gold_from_block', name: 'Gold Ingots', station: 'workbench', age: 5, inputs: { gold_block: 1 }, output: { id: 'gold', count: 4 }, blurb: 'A gold block, back into its four ingots.' },
@@ -1164,7 +1145,7 @@ export const RECIPES = [
     age: 1,
     inputs: { planks: 2, stone: 2 },
     output: { id: 'lantern', count: 1 },
-    blurb: 'A stone-shaded lantern, a light for your first buildings. The workshop makes a glass one.',
+    blurb: 'A stone-shaded lantern, a light for your first buildings.',
   },
   {
     id: 'chandelier',
@@ -1484,9 +1465,9 @@ for (const [key, id] of FURNITURE_ITEM) {
 }
 
 // The Temple (Phase 7c). Offerings turn what you have into devotion; a
-// chapel (tier 1) blesses water; the High Temple (tier 4) forges a ring —
-// the White or the Black, and once one is forged the other is closed to
-// you for good (`ring`, see Crafting's `locked`).
+// chapel (tier 1) blesses water. PLAY-11: the rings are forged at a forge
+// once a High Temple (tier 4) stands — the White or the Black, and once one
+// is forged the other is closed to you for good (`ring`, Crafting's `locked`).
 RECIPES.push(
   { id: 'offer_fruit', name: 'Offer fruit', station: 'temple', age: 4, inputs: { fruit: 6 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'Laid on the altar.' },
   { id: 'offer_harvest', name: 'Offer a harvest', station: 'temple', age: 4, inputs: { vegetables: 4 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'The first of what the farm gave.' },
@@ -1511,16 +1492,6 @@ RECIPES.push(
   { id: 'chain', name: 'Chain', station: 'hand', age: 5, inputs: { iron_ingot: 1 }, output: { id: 'chain', count: 4 }, batch: 4, blurb: 'Iron links, a block of them at a time. Hang a lantern from it.' },
   { id: 'war_horn', name: 'War Horn', station: 'hand', age: 10, inputs: { hide: 2, gold: 1, planks: 1 }, output: { id: 'war_horn', count: 1 }, blurb: 'Sound it and the Stone Kingdom\'s next round comes now, not when it likes.' },
   { id: 'holy_water', name: 'Holy Water', station: 'temple', tier: 1, age: 4, inputs: { glass: 1, devotion: 1 }, output: { id: 'holy_water', count: 2 }, batch: 4, blurb: 'Blessed at a chapel or better. Drink it to heal four hearts.' },
-  {
-    id: 'ring_white', name: 'Forge the White Ring', station: 'temple', tier: 4, age: 4, ring: 'white',
-    inputs: { sunstone: 3, gold: 4, devotion: 12 }, output: { id: 'ring_white', count: 1 },
-    blurb: 'Gold and Sunstone. You move faster and jump higher. Forge it, and the Black Ring is closed to you.',
-  },
-  {
-    id: 'ring_black', name: 'Forge the Black Ring', station: 'temple', tier: 4, age: 4, ring: 'black',
-    inputs: { nightstone: 3, obsidian: 4, devotion: 12 }, output: { id: 'ring_black', count: 1 },
-    blurb: 'Obsidian and Nightstone. A dark spark hurts whoever strikes you. Forge it, and the White Ring is closed to you.',
-  },
   // CRAFT3D-5 (owner: "Crafting the dark and white ring would be nice to have
   // this mechanic too in the forge"): the same rings hammered at a forge, once
   // a temple has been raised to its fourth level (DuiltGame's `locked`).
@@ -1767,7 +1738,6 @@ export const MENU_MAX_AGE = 2;
 for (const r of RECIPES) if (r.station === 'hand' && r.age > MENU_MAX_AGE) r.station = 'workbench';
 RECIPES.push(
   { id: 'workbench', name: 'Workbench', station: 'hand', age: 1, inputs: { planks: 8, wood: 2, stone: 2 }, output: { id: 'workbench', count: 1 }, blurb: 'Place it anywhere: everything from the third age on is made at it.' },
-  { id: 'workshop_workbench', name: 'Workbench', station: 'workshop', age: 4, inputs: { planks: 8, wood: 2, stone: 2 }, output: { id: 'workbench', count: 1 }, blurb: 'Place it anywhere: everything from the third age on is made at it.' },
 );
 
 // CRAFT3D-1: furniture is made only at a Carpenter's Table (owner, 31
