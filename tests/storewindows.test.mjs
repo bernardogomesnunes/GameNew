@@ -103,4 +103,14 @@ ok('stacks are dragged between them: bag to shelves or controller, and back',
   && /else if \(src\.kind === 'store' && kind === 'bag'\) this\.takeFromStore\(src\.ref\);/.test(ui)
   && /else if \(src\.kind === 'stores' && kind === 'bag'\) this\.takeFromStores\(src\.ref\);/.test(ui));
 
+// --- the "Won't take from deliveries" chips fold, like the bag (PLAY-24) -----------
+ok('the routing chips sit behind a fold button, shut by default',
+  /<button type="button" class="store-fold" id="btn-store-routing" aria-expanded="false">[\s\S]*?id="store-routing-count"[\s\S]*?store-fold-arrow[\s\S]*?<div id="store-routing-chips" class="store-routing-chips" hidden>/.test(ui));
+ok('pressing the fold flips storeRoutingOpen and the chips follow it',
+  /#btn-store-routing'\)\.addEventListener\('click', \(\) => \{\s*this\.storeRoutingOpen = !this\.storeRoutingOpen;/.test(ui)
+  && /chips\.hidden = !this\.storeRoutingOpen;/.test(ui));
+ok('the fold counts what the shed refuses', /refused \? `\$\{refused\} refused` : 'none refused'/.test(ui));
+ok('the shelf is allowed more height than before (60vh, 58vh on a phone)',
+  /#store-grid \{ max-height: 60vh; \}/.test(css) && /#store-grid \{ max-height: 58vh; \}/.test(css));
+
 process.exit(f ? 1 : 0);

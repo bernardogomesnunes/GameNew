@@ -979,8 +979,8 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 }
 #store-hotbar-grid, #stores-hotbar-grid { max-height: none; }
 /* The shelves get the room; the bag folds up under them (asked for directly). */
-#store-grid { max-height: 52vh; }
-#panel-store.bag-open #store-grid { max-height: 30vh; }
+#store-grid { max-height: 60vh; }
+#panel-store.bag-open #store-grid { max-height: 36vh; }
 #store-bag-grid[hidden], #stores-bag-grid[hidden] { display: none; }
 .store-fold { display: flex; align-items: center; gap: 8px; width: 100%; margin: 12px 0 0; padding: 8px 10px; background: transparent; border: 1px solid var(--panel-border); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; text-align: left; }
 .store-fold-count { color: var(--text-dim); font-weight: 400; margin-left: auto; }
@@ -990,7 +990,8 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
 /* What a shed's own deliveries skip — a manual move can still put any of
    these on the shelf, this only keeps a fast producer from filling it. */
 .store-routing { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--panel-border); }
-.store-routing-label { font-size: 11.5px; color: var(--text-dim); }
+.store-routing .store-fold { margin-top: 0; }
+.store-routing-chips[hidden] { display: none; }
 .store-routing-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .routing-chip {
   display: flex; align-items: center; gap: 5px; padding: 5px 10px 5px 8px;
@@ -1042,8 +1043,8 @@ body.touch-act-look.touch-walk-right #touch-buttons-left { right: auto; left: 12
   #bag-grid { max-height: 42vh; }
   #store-grid, #store-hotbar-grid, #store-bag-grid, #stores-hotbar-grid, #stores-bag-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
   #store-bag-grid, #stores-bag-grid { max-height: 24vh; }
-  #store-grid { max-height: 50vh; }
-  #panel-store.bag-open #store-grid { max-height: 26vh; }
+  #store-grid { max-height: 58vh; }
+  #panel-store.bag-open #store-grid { max-height: 32vh; }
   .bag-slot { min-height: 52px; }
   .panel-wide { max-width: 100%; }
   /* A hint, not an announcement — it sat in the middle of the thumb zone. */
