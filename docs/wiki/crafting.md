@@ -1,6 +1,6 @@
 # Crafting
 
-Open the Bench with **E**. It lists what you make by hand in Ages 1 and 2, with a search box. From Age 3, make a **Workbench** (by hand: 8 planks, 2 logs and 2 stone; or at a workshop), place it anywhere and use it: it lists everything, the simple things included. Each placed station (a mill, the forge, a Wash Tub, a Kiln Oven, a planing, joinery or mason's bench, a Carpenter's Table) opens its own panel with only its own recipes. A recipe is greyed out when you lack an ingredient, and the panel says which.
+Open the Bench with **E**. It lists what you make by hand in Ages 1 and 2, with a search box. From Age 3, make a **Workbench** (by hand: 8 planks, 2 logs and 2 stone), place it anywhere and use it: it lists everything, the simple things included. Each placed station (a mill, the forge, a Wash Tub, a Kiln Oven, a planing, joinery or mason's bench, a Carpenter's Table) opens its own panel with only its own recipes. A recipe is greyed out when you lack an ingredient, and the panel says which.
 
 - Recipes you use constantly make several at once ("Planks ×2").
 - Each recipe unlocks at an age. In Creative they are all open.
@@ -98,7 +98,6 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Catapult → 1 Catapult | 10 Oak Planks, 4 Oak Log, 6 Stone | — | 4 | — |
 | Wood Mill → 1 Wood Mill | 8 Oak Planks, 4 Cobblestone | — | 3 | — |
 | Stone Mill → 1 Stone Mill | 10 Stone, 4 Oak Planks | — | 3 | — |
-| Stone Slab → 2 Stone Slab | 1 Stone | — | 3 | — |
 | Red Mushroom Cap → 2 Red Mushroom Cap | 1 Clay, 1 Leaves | — | 3 | — |
 | Lilac Mushroom Cap → 2 Lilac Mushroom Cap | 1 Clay, 1 White Leaves | — | 3 | — |
 | Mushroom Stem → 2 Mushroom Stem | 1 Clay, 1 Sand | — | 3 | — |
@@ -257,7 +256,6 @@ Generated from the current recipe registry by `node scripts/update-wiki.mjs`. Co
 | Plainer → 1 Plainer | 24 Oak Planks, 12 Wool | — | 4 | — |
 | Stained Glass → 2 Stained Glass | 2 Glass | — | 4 | — |
 | Fairy Lights → 4 Fairy Lights | 1 Glass, 1 String | — | 4 | — |
-| Lantern → 1 Lantern | 2 Oak Planks, 1 Glass | — | 4 | — |
 | Chandelier → 1 Chandelier | 1 Iron Ingot, 1 Oak Planks | — | 4 | — |
 | Green Rug → 1 Green Rug | 4 Leaves | — | 4 | — |
 | Red Rug → 1 Red Rug | 3 Leaves, 1 Brick | — | 4 | — |

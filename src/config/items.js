@@ -40,7 +40,7 @@ export const ITEMS = [
   { id: 'crucible', name: 'Crucible', kind: 'refined', stackTo: 10, color: 0x7a4a3a, glyph: 'stone', block: 531, madeBy: 'Made at a Workbench. Place it inside a foundry to melt ore and pour it into a mould' },
   { id: 'kiln_oven', name: 'Kiln Oven', kind: 'refined', stackTo: 10, color: 0x9a4e36, glyph: 'brick', block: 539, madeBy: 'Made at a Workbench. Place it inside a kiln to fire clay into brick and vases, and sand into glass' },
   { id: 'counter', name: "Carpenter's Table", kind: 'refined', stackTo: 10, color: 0xa87a4c, glyph: 'planks', block: 530, madeBy: 'Made by hand. Place it and make furniture on it: one saw stroke cuts the parts, then tap each into place' },
-  { id: 'workbench', name: 'Workbench', kind: 'refined', stackTo: 10, color: 0x9c7348, glyph: 'planks', block: 529, madeBy: 'Made by hand or at a workshop. Place it anywhere and make everything from the third age on there' },
+  { id: 'workbench', name: 'Workbench', kind: 'refined', stackTo: 10, color: 0x9c7348, glyph: 'planks', block: 529, madeBy: 'Made by hand. Place it anywhere and make everything from the third age on there' },
   { id: 'forge', name: 'Forge', kind: 'refined', stackTo: 10, color: 0x655367, glyph: 'stone', block: 525, madeBy: 'Build from stone and clay — place it to darken rock and forge weapons' },
   ...[
     ['carpentry_saw', 'Carpentry Saw', 'Cuts planks to length'],
@@ -287,7 +287,7 @@ export const ITEMS = [
   { id: 'fairy_lights', name: 'Fairy Lights', kind: 'refined', stackTo: STACK_BULK, color: 0xffe2a8, glyph: 'lantern', block: 511, madeBy: 'Little glass bulbs on a string, made at a workshop' },
   { id: 'trim_curl', name: 'Curled Trim', kind: 'refined', stackTo: STACK_BULK, color: 0xa0784e, glyph: 'planks', block: 512, madeBy: 'A plank steamed into a curl, for a gable\'s tip or the end of an eave' },
   { id: 'chandelier', name: 'Chandelier', kind: 'refined', stackTo: STACK_GOODS, color: 0x5d5552, glyph: 'chandelier', block: 85, madeBy: 'Wrought from iron and hung with candles' },
-  { id: 'lantern', name: 'Lantern', kind: 'refined', stackTo: STACK_GOODS, color: 0xffd27a, glyph: 'lantern', block: 26, madeBy: 'Crafted from planks and glass' },
+  { id: 'lantern', name: 'Lantern', kind: 'refined', stackTo: STACK_GOODS, color: 0xffd27a, glyph: 'lantern', block: 26, madeBy: 'Planks with a stone shade, made by hand' },
   { id: 'slab_stone', name: 'Stone Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'slab', block: 27, madeBy: 'Split from cut stone' },
   { id: 'slab_plank', name: 'Plank Slab', kind: 'refined', stackTo: STACK_BULK, color: 0xd1b38c, glyph: 'slab', block: 28, madeBy: 'Sawn thin from planks' },
   { id: 'stairs_stone', name: 'Stone Stairs', kind: 'refined', stackTo: STACK_BULK, color: 0xafafb6, glyph: 'stair', block: 29, madeBy: 'Cut into steps from stone' },
@@ -486,11 +486,11 @@ export const ITEMS = [
   { id: 'holy_water', name: 'Holy Water', kind: 'drink', stackTo: 10, color: 0xbfe3f5, glyph: 'flask', heals: 8, madeBy: 'Blessed at a chapel — drink it to heal four hearts' },
   {
     id: 'ring_white', name: 'White Ring', kind: 'ring', stackTo: STACK_TOOL, color: 0xf2e2a4, glyph: 'ring', wears: 'ring', ring: 'white',
-    madeBy: 'Gold and Sunstone, forged at the High Temple — you move faster and jump higher',
+    madeBy: 'Gold and Sunstone, forged at a forge, once a temple is a High Temple — you move faster and jump higher',
   },
   {
     id: 'ring_black', name: 'Black Ring', kind: 'ring', stackTo: STACK_TOOL, color: 0x3a3045, glyph: 'ring', wears: 'ring', ring: 'black',
-    madeBy: 'Obsidian and Nightstone, forged at the High Temple — a dark spark hurts whoever strikes you',
+    madeBy: 'Obsidian and Nightstone, forged at a forge, once a temple is a High Temple — a dark spark hurts whoever strikes you',
   },
   // The god's stash (world/godCube.js): the wand. Break picks the block you
   // point at to copy, or, at anything further off, looses a beam; Place

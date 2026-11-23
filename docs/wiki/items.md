@@ -83,7 +83,7 @@ Current item reference, generated from the item registry by `node scripts/update
 | Crucible | Made at a Workbench. Place it inside a foundry to melt ore and pour it into a mould | 10 | — |
 | Kiln Oven | Made at a Workbench. Place it inside a kiln to fire clay into brick and vases, and sand into glass | 10 | — |
 | Carpenter's Table | Made by hand. Place it and make furniture on it: one saw stroke cuts the parts, then tap each into place | 10 | — |
-| Workbench | Made by hand or at a workshop. Place it anywhere and make everything from the third age on there | 10 | — |
+| Workbench | Made by hand. Place it anywhere and make everything from the third age on there | 10 | — |
 | Forge | Build from stone and clay — place it to darken rock and forge weapons | 10 | — |
 | Oak Planks | Sawn from oak logs | 500 | — |
 | Turned Soil | Dirt broken up for planting | 500 | — |
@@ -383,5 +383,5 @@ Current item reference, generated from the item registry by `node scripts/update
 
 | Item | How to get it / use | Stack | Details |
 | --- | --- | --- | --- |
-| White Ring | Gold and Sunstone, forged at the High Temple — you move faster and jump higher | 1 | Worn: ring |
-| Black Ring | Obsidian and Nightstone, forged at the High Temple — a dark spark hurts whoever strikes you | 1 | Worn: ring |
+| White Ring | Gold and Sunstone, forged at a forge, once a temple is a High Temple — you move faster and jump higher | 1 | Worn: ring |
+| Black Ring | Obsidian and Nightstone, forged at a forge, once a temple is a High Temple — a dark spark hurts whoever strikes you | 1 | Worn: ring |

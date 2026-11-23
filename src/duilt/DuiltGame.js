@@ -584,7 +584,7 @@ export class DuiltGame {
   ringRefuses(spec) {
     if (!spec?.ring || this.sandbox) return null;
     const god = spec.ring === 'white' ? 'White' : 'Black';
-    if (!this.ring) return `Only the bearer of the ${god} Ring can raise this — forge one at the High Temple`;
+    if (!this.ring) return `Only the bearer of the ${god} Ring can raise this — forge one at a forge, once a temple is a High Temple`;
     if (this.ring !== spec.ring) return `You bear the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the ${god} Sanctuary is not for you`;
     return null;
   }

@@ -398,3 +398,16 @@ At 390 and 1440 wide: the Factory panel shows one row per machine kind, the pick
 4. Coins: a gold coin run makes 10, a ruby run 25. Leave coins out (this design), or allow one run a day as the exception?
 5. "Automates all crafting": is 12 an item a day a line enough, or does the owner want the Factory exempt from the house rule?
 6. The rings: temple or forge (table rows 27 and 28)?
+
+## Decided by default, 23 November
+
+The owner said "do everything we have pending" and did not answer the open questions. Each takes the design's own recommendation, or the smaller scope where it gave none. The owner can still change them.
+
+| Question | Decision | Why |
+| --- | --- | --- |
+| 1. Workshop and Engineering recipes in the Factory | Left out | The design leaves them out. They are buildings, not machines. Smaller scope |
+| 2. Furniture from `FURNITURE_COST` | Left out | The design leaves it out. The Carpenter's Table close-up is the point of furniture |
+| 3. Truce opens the Factory | No. Only `white`, `dark` and `yielded` endings | The design's rule: `endingFor(d)` not null. A truce gives no ending |
+| 4. Coins | Left out | The design leaves them out. One run makes 10 to 25, above the 12 a day cap |
+| 5. 12 a day a line, or exempt from the house rule | 12 a day a line, ladder 12, 18, 30, 42 | The design's number. Keeps the house rule |
+| 6. Rings: temple or forge | Forge. Temple copies `ring_white` and `ring_black` removed | Owner's instruction and the design's recommendation. `tests/temple.test.mjs` now forges at the forge with a level 5 temple standing |
