@@ -47,6 +47,11 @@ import { Defenders, MAX_SOLDIERS } from '../world/Defenders.js';
 import { UNITS_BY_ID, unitCost, payForUnit, soldierCap, SOLDIER_CAPS } from '../config/soldiers.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';
 import { Trains, CAR_SLOTS, PART_LENGTH } from '../world/Trains.js';
+// PLAY-11: the Factory.
+import { endingFor } from '../config/lore.js';
+import { factoryMachines } from '../config/structures.js';
+import { runLines, cleanLines, factoryRecipes, isLineRecipe, maxLines, lineDaily, MACHINE_NAMES } from '../structures/Factory.js';
+// PLAY-11 end
 
 /** Game days a dinosaur egg takes to hatch once it's set down. */
 export const HATCH_DAYS = 2;
@@ -557,7 +562,7 @@ export class DuiltGame {
       const check = validateStructure(this.world, region, spec.id);
       const overlapping = this.structures.overlaps(region);
       const inside = this.territory.containsRegion(region);
-      const wrongGod = this.ringRefuses(spec) ?? this.researchRefuses(spec);
+      const wrongGod = this.ringRefuses(spec) ?? this.researchRefuses(spec) ?? this.storyRefuses(spec); // PLAY-11: storyRefuses
       let ok = check.ok && !overlapping && inside && !wrongGod;
       let reason = check.reason;
       if (wrongGod) reason = wrongGod;
@@ -590,7 +595,7 @@ export class DuiltGame {
   }
 
   claim(region, typeId) {
-    const wrongGod = this.ringRefuses(STRUCTURES_BY_ID.get(typeId)) ?? this.researchRefuses(STRUCTURES_BY_ID.get(typeId));
+    const wrongGod = this.ringRefuses(STRUCTURES_BY_ID.get(typeId)) ?? this.researchRefuses(STRUCTURES_BY_ID.get(typeId)) ?? this.storyRefuses(STRUCTURES_BY_ID.get(typeId)); // PLAY-11: storyRefuses
     if (wrongGod) return { ok: false, reason: wrongGod };
     if (!this.territory.containsRegion(region)) {
       return { ok: false, reason: 'That reaches outside your land' };
@@ -1525,6 +1530,7 @@ export class DuiltGame {
         producesFor: (s) => this.producesFor(s),
         taxRate: this.skyTaxRate(),
       });
+      this.runFactories(now); // PLAY-11: after the other buildings
       this.countTaxes();
       this.payGifts();
     }
@@ -2014,6 +2020,131 @@ export class DuiltGame {
       if (!m.orders.length) { delete m.orders; delete m.nextOrder; }
     }
   }
+
+  // ---- PLAY-11: the Factory ----
+
+  /** Why a building waits for the story's end — the Factory (PLAY-11) — or null. */
+  storyRefuses(spec) {
+    if (!spec?.afterEnding || this.sandbox || endingFor(this)) return null;
+    return 'Finish the war first: win it, or bring down the Sky Kingdom';
+  }
+
+  /** Takes every input out of the standing storehouses, or nothing. Returns an undo, or null. */
+  takeAllFromStores(inputs) {
+    const stores = this.structures.stores().map((x) => x.store);
+    for (const [id, n] of Object.entries(inputs)) {
+      if (stores.reduce((t, st) => t + st.countOf(id), 0) < n) return null;
+    }
+    const took = [];
+    for (const [id, n] of Object.entries(inputs)) {
+      let left = n;
+      for (const st of stores) {
+        if (left <= 0) break;
+        const got = st.remove(id, Math.min(left, st.countOf(id)));
+        if (got) took.push([st, id, got]);
+        left -= got;
+      }
+    }
+    return () => { for (const [st, id, n] of took) st.add(id, n); };
+  }
+
+  /** The Factory structure with this id, or null. */
+  factoryOf(id) {
+    const s = this.structures.list().find((x) => x.id === id);
+    return s?.type === 'factory' ? s : null;
+  }
+
+  /** The machine kinds standing inside a structure's region. */
+  machinesIn(s) {
+    return factoryMachines(inspect(this.world, s.region));
+  }
+
+  /** A line for every machine kind inside, in panel order; lines whose machine is gone are dropped. */
+  syncFactoryLines(s, present = this.machinesIn(s), now = Date.now()) {
+    const had = new Map((s.lines ?? []).map((l) => [l.station, l]));
+    s.lines = present.map((st) => had.get(st) ?? { station: st, recipe: null, at: now });
+    return s.lines;
+  }
+
+  /**
+   * The Factory panel's rows: each machine kind inside, its recipe, what it
+   * makes a building day, and what it is short of in the storehouses.
+   */
+  factoryLines(id) {
+    const s = this.factoryOf(id);
+    if (!s) return null;
+    const tier = s.tier ?? 0;
+    const lines = this.syncFactoryLines(s);
+    const stock = (item) => this.structures.stores().reduce((t, x) => t + x.store.countOf(item), 0);
+    return {
+      max: maxLines(tier),
+      running: lines.filter((l) => l.recipe).length,
+      rows: lines.map((l) => {
+        const recipe = l.recipe ? RECIPES_BY_ID.get(l.recipe) : null;
+        const short = recipe ? Object.entries(recipe.inputs).filter(([item, n]) => stock(item) < n)
+          .map(([item, n]) => ({ item, n, have: stock(item) })) : [];
+        const others = new Map(lines.filter((o) => o !== l && o.recipe)
+          .map((o) => [RECIPES_BY_ID.get(o.recipe)?.output.id, MACHINE_NAMES[o.station] ?? o.station]));
+        return {
+          station: l.station, name: MACHINE_NAMES[l.station] ?? l.station, recipe: l.recipe,
+          daily: recipe ? lineDaily(recipe, tier) : 0, output: recipe?.output.id ?? null,
+          short, stalled: !!l.stalled,
+          recipes: factoryRecipes(l.station).map((r) => ({
+            id: r.id, name: r.name, output: r.output.id, count: r.output.count,
+            stocked: Object.entries(r.inputs).every(([item, n]) => stock(item) >= n),
+            takenBy: others.get(r.output.id) ?? null,
+          })),
+        };
+      }),
+    };
+  }
+
+  /** Sets one line's recipe (null turns it off). Returns { ok, reason }. */
+  setFactoryLine(id, station, recipeId) {
+    const s = this.factoryOf(id);
+    if (!s) return { ok: false, reason: 'That is not a factory.' };
+    const lines = this.syncFactoryLines(s);
+    const line = lines.find((l) => l.station === station);
+    if (!line) return { ok: false, reason: `There is no ${MACHINE_NAMES[station] ?? 'such machine'} inside.` };
+    if (recipeId == null || recipeId === '') { line.recipe = null; line.waiting = null; line.stalled = false; return { ok: true }; }
+    if (!isLineRecipe(station, recipeId)) return { ok: false, reason: `The ${MACHINE_NAMES[station]} line cannot make that.` };
+    const out = RECIPES_BY_ID.get(recipeId).output.id;
+    const twin = lines.find((l) => l !== line && l.recipe && RECIPES_BY_ID.get(l.recipe)?.output.id === out);
+    if (twin) return { ok: false, reason: `The ${MACHINE_NAMES[twin.station]} line makes this.` };
+    const max = maxLines(s.tier ?? 0);
+    if (!line.recipe && lines.filter((l) => l.recipe).length >= max) return { ok: false, reason: `All ${max} lines are running. Evolve the Factory for more.` };
+    if (line.recipe !== recipeId) { line.recipe = recipeId; line.at = Date.now(); line.waiting = null; line.stalled = false; }
+    return { ok: true };
+  }
+
+  /** Runs every Factory's lines that are due: inputs from the storehouses, output to them, then the bag. */
+  runFactories(now = Date.now()) {
+    const made = {};
+    const capMs = Math.min(8 * 3600_000, 2 * 86400_000 * this.structures.dayScale);
+    for (const s of this.structures.list()) {
+      if (s.type !== 'factory' || !s.valid || !s.lines?.some((l) => l.recipe)) continue;
+      const present = this.machinesIn(s);
+      this.syncFactoryLines(s, present, now);
+      const r = runLines(s, {
+        now, dayScale: this.structures.dayScale, capMs, present,
+        take: (inputs) => this.takeAllFromStores(inputs),
+        deliver: (out) => this.structures.deliver(out),
+      });
+      for (const [k, n] of Object.entries(r.made)) made[k] = (made[k] ?? 0) + n;
+    }
+    if (Object.keys(made).length) this.bus?.emit('structure:produced', { gained: made });
+    return made;
+  }
+
+  /** After a load: lines only on factories, each with a known machine and a recipe it can run, or off. */
+  validateFactoryLines() {
+    for (const s of this.structures.structures) {
+      if (s.type !== 'factory') { delete s.lines; continue; }
+      if (s.lines != null) s.lines = cleanLines(s.lines);
+      if (!s.lines?.length) delete s.lines;
+    }
+  }
+  // PLAY-11 end
 
   /** IMP-33: which wood a forest grows ('oak', 'white' or 'dark'); white and dark from Age 3. */
   setForestWood(id, wood) {
@@ -2666,6 +2797,7 @@ export class DuiltGame {
     for (const [id, n] of Object.entries(pu?.spent ?? {})) if (TRADERS_BY_ID.has(id) && Number.isFinite(n) && n > 0) this.purses.spent[id] = Math.min(PURSE, n);
     this.marketDay = Number.isFinite(data.marketDay) ? data.marketDay : Math.floor(this.days);
     this.validateSellOrders();
+    this.validateFactoryLines(); // PLAY-11
     this.emergingPlaces = emergingState(data.emergingPlaces ?? this.world.gen?.emergingPlaces);
     installEmergingPlaces(this.world.gen, this.emergingPlaces);
     this.war.loadJSON(data.war);
@@ -2689,6 +2821,7 @@ export class DuiltGame {
       producesFor: (s) => this.producesFor(s),
       taxRate: this.skyTaxRate(),
     });
+    this.runFactories(Date.now()); // PLAY-11
     this.countTaxes();
     return gained;
   }
