@@ -1,7 +1,7 @@
 import { groundAt, bodyFits } from './Mobs.js';
 import { ease, drift, fall } from './bodies.js';
 import { roofPart } from '../config/blocks.js';
-import { UNITS_BY_ID, LEGACY_UNIT, SOLDIER_CAPS } from '../config/soldiers.js';
+import { UNITS_BY_ID, LEGACY_UNIT, SOLDIER_CAPS, unitStats, towerArcherStats } from '../config/soldiers.js';
 
 /**
  * Your side of the war (the defence buildings — config/structures.js): the
@@ -139,6 +139,20 @@ export class Defenders {
     this.repost = new Set();
     // The patrol's loop round the village: [{ x, z }], from sync.
     this.route = [];
+    // PLAY-12: what the Armoury has researched (the save's `research` map), given in sync.
+    this.research = {};
+    // PLAY-12: companies on the march (see march()).
+    this.marches = [];
+  }
+
+  /** PLAY-12: a unit as research has made it (config/soldiers.js unitStats). */
+  stats(unit) {
+    return unitStats(UNITS_BY_ID.get(unit), this.research);
+  }
+
+  /** PLAY-12: a watchtower archer's shot, with Fletching. */
+  towerShot() {
+    return towerArcherStats(TOWER_ARCHER, this.research);
   }
 
   /** A barracks's standing order: 'defend', 'patrol' or 'formation'. */
@@ -163,7 +177,7 @@ export class Defenders {
 
   /** How many soldiers your barracks have trained between them — who live in the town. */
   get residents() {
-    return Object.values(this.trained).reduce((n, t) => n + t.roster.length, 0);
+    return Object.values(this.trained).reduce((n, t) => n + t.roster.length, 0) + this.awayCount();
   }
 
   /**
@@ -219,8 +233,14 @@ export class Defenders {
    * @returns          who finished training just now: [{ unit, of, left }],
    *                   `left` being how many are still in line behind them
    */
-  sync(buildings, days, village = null) {
+  sync(buildings, days, village = null, research = null) {
     const joined = [];
+    if (research) this.research = research;
+    // Research that raises hp reaches soldiers already out: they gain the difference.
+    for (const s of this.soldiers) {
+      const u = this.stats(s.unit);
+      if (u && s.maxHp !== u.hp) { s.hp = Math.max(1, s.hp + u.hp - (s.maxHp ?? u.hp)); s.maxHp = u.hp; }
+    }
     // Ids as strings throughout: the training is saved as JSON, whose keys are.
     const standing = new Map(buildings.filter((b) => b.valid).map((b) => [String(b.id), { ...b, id: String(b.id) }]));
     this.soldiers = this.soldiers.filter((s) => {
@@ -264,7 +284,7 @@ export class Defenders {
           const spot = spots.shift();
           // No clear ground yet: keep the trained slot and retry next sync.
           if (!spot) return;
-          const s = this.person(UNITS_BY_ID.get(unit)?.kind ?? 'soldier', spot, b.id, unit);
+          const s = this.person(this.stats(unit)?.kind ?? 'soldier', spot, b.id, unit);
           s.slot = i;
           this.soldiers.push(s);
           occupied.add(`${spot.x},${spot.z}`);
@@ -290,7 +310,7 @@ export class Defenders {
       occupied.add(`${Math.floor(s.post.x)},${Math.floor(s.post.z)}`);
     }
     const all = order === 'formation' ? this.paradeSpots(b.region, occupied) : this.spreadSpots(this.ringSpots(b.region, occupied), mine.length);
-    const patroller = order === 'patrol' ? mine.find((s) => { const u = UNITS_BY_ID.get(s.unit); return !u?.ranged && !u?.siege; }) : null;
+    const patroller = order === 'patrol' ? mine.find((s) => { const u = this.stats(s.unit); return !u?.ranged && !u?.siege; }) : null;
     if (patroller) this.route = this.loopRound(village ?? b.region);
     let i = 0;
     for (const s of mine) {
@@ -391,12 +411,12 @@ export class Defenders {
 
   /** A figure of yours: a tower's archer, or one of a barracks's soldiers trained as `unit`. */
   person(kind, spot, of, unit = null) {
-    const u = UNITS_BY_ID.get(unit);
+    const u = this.stats(unit);
     const tower = kind === 'archer' && !u;
     return {
       id: `d${this.nextId++}`, kind, unit, x: spot.x + 0.5, y: spot.y, z: spot.z + 0.5,
       post: { x: spot.x + 0.5, y: spot.y, z: spot.z + 0.5, of },
-      hp: u?.hp ?? (tower ? 1 : SOLDIER.hp), cooldown: this.rand() * 1.5, hurt: 0,
+      hp: u?.hp ?? (tower ? 1 : SOLDIER.hp), maxHp: u?.hp ?? SOLDIER.hp, cooldown: this.rand() * 1.5, hurt: 0,
       colour: tower ? ARCHER_COAT : TABARD, helm: tower ? HOOD : STEEL,
       name: u ? `Your ${u.name.toLowerCase()}` : tower ? 'Your archer' : 'Your soldier',
       target: null, speed: 0,
@@ -453,7 +473,7 @@ export class Defenders {
     let hungry = this.hungry;
     for (const s of this.soldiers) s.hungry = hungry-- > 0;
     for (const s of this.soldiers) {
-      const u = UNITS_BY_ID.get(s.unit);
+      const u = this.stats(s.unit);
       if (u?.ranged) this.bowman(s, u, dt, enemies);
       else if (u?.siege) this.crew(s, u, dt, enemies, on);
       else this.soldier(s, dt, enemies, on);
@@ -465,7 +485,7 @@ export class Defenders {
   }
 
   soldier(s, dt, enemies, on) {
-    const u = UNITS_BY_ID.get(s.unit);
+    const u = this.stats(s.unit);
     const m = u?.melee ?? SOLDIER, speed = u?.speed ?? SOLDIER.speed;
     s.cooldown = Math.max(0, s.cooldown - dt);
     s.hurt = Math.max(0, s.hurt - dt);
@@ -657,7 +677,8 @@ export class Defenders {
 
   archer(a, dt, enemies) {
     a.cooldown = Math.max(0, a.cooldown - dt);
-    let target = null, best = TOWER_ARCHER.range;
+    const shot = this.towerShot();
+    let target = null, best = shot.range;
     for (const e of enemies) {
       if (e.dead) continue;
       const d = Math.hypot(e.x - a.x, e.z - a.z);
@@ -667,8 +688,8 @@ export class Defenders {
     if (!target) return;
     a.facing = Math.atan2(target.x - a.x, target.z - a.z);
     if (a.cooldown > 0) return;
-    a.cooldown = TOWER_ARCHER.every;
-    this.loose(a, target, TOWER_ARCHER.damage);
+    a.cooldown = shot.every;
+    this.loose(a, target, shot.damage);
   }
 
   flyArrows(dt, on) {
@@ -703,11 +724,64 @@ export class Defenders {
     return true;
   }
 
-  toJSON() {
-    return { trained: this.trained, orders: this.orders };
+  // --- PLAY-12 (docs/design/play-12.md): the march ---------------------------
+
+  /** How many of building `id`'s soldiers are on the march (all buildings, without `id`). Their bunks stay theirs. */
+  awayCount(id = null) {
+    return this.marches.reduce((n, m) => n + (id == null || m.of === String(id) ? m.units.length : 0), 0);
   }
 
-  loadJSON(data) {
+  /** The march building `id`'s company is on, or null. */
+  marchOf(id) {
+    return this.marches.find((m) => m.of === String(id)) ?? null;
+  }
+
+  /**
+   * Sends building `id`'s whole company off: its soldiers walk off the field
+   * and wait out the march in `marches`. One company at a time. Returns the
+   * march, or null when there is nobody to send or one is already out.
+   * `arrives` and `home` are on the world's day count.
+   */
+  march(id, rival, days, daysEach = 1) {
+    const key = String(id), t = this.trained[key];
+    if (this.marches.length || !t?.roster.length) return null;
+    const m = { of: key, units: t.roster.splice(0), rival, since: days, arrives: days + daysEach, home: days + 2 * daysEach, result: null };
+    this.soldiers = this.soldiers.filter((s) => s.post.of !== key);
+    this.marches.push(m);
+    return m;
+  }
+
+  /**
+   * Moves the marches on to `days`. Returns { arrivals, homecomings }:
+   * `arrivals` have reached the city and want a `result` (the caller works
+   * the battle out and sets it, and the survivors in `units`); `homecomings`
+   * are back and are taken off the list for the caller to put away
+   * (bringHome).
+   */
+  tickMarches(days) {
+    const arrivals = this.marches.filter((m) => !m.result && days >= m.arrives);
+    const homecomings = this.marches.filter((m) => m.result && days >= m.home);
+    if (homecomings.length) this.marches = this.marches.filter((m) => !homecomings.includes(m));
+    return { arrivals, homecomings };
+  }
+
+  /** Puts a company's units on building `id`'s roster, as many as fit under `cap`. Returns how many went in. */
+  bringHome(id, units, cap = MAX_SOLDIERS) {
+    const key = String(id);
+    const t = this.trained[key] ?? (this.trained[key] = { roster: [], queue: [], since: 0 });
+    const room = Math.max(0, Math.min(MAX_SOLDIERS, cap) - t.roster.length - t.queue.length - this.awayCount(key));
+    const put = units.slice(0, room);
+    t.roster.push(...put);
+    if (put.length) this.repost.add(key);
+    return put.length;
+  }
+
+  toJSON() {
+    return { trained: this.trained, orders: this.orders, ...(this.marches.length ? { marches: this.marches } : {}) };
+  }
+
+  loadJSON(data, { battle = true } = {}) {
+    this.marches = [];
     this.trained = {};
     const known = (list) => (Array.isArray(list) ? list.filter((u) => UNITS_BY_ID.has(u)) : []);
     for (const [id, t] of Object.entries(data?.trained ?? {})) {
@@ -718,6 +792,27 @@ export class Defenders {
     }
     this.orders = {};
     for (const [id, o] of Object.entries(data?.orders ?? {})) if (ORDER_IDS.has(o)) this.orders[id] = o;
+    // PLAY-12: companies on the march. Rivals exist only in a Battle world:
+    // anywhere else the company is already home, back on its roster.
+    for (const m of Array.isArray(data?.marches) ? data.marches : []) {
+      const units = known(m?.units);
+      if (!units.length || !Number.isFinite(m.arrives) || !Number.isFinite(m.home)) continue;
+      const of = String(m.of);
+      if (!battle) {
+        const t = this.trained[of] ?? (this.trained[of] = { roster: [], queue: [], since: 0 });
+        t.roster.push(...units);
+        t.roster = t.roster.slice(0, MAX_SOLDIERS);
+        continue;
+      }
+      const r = m.result;
+      this.marches.push({
+        of, units, rival: Number.isInteger(m.rival) ? m.rival : 0, since: Number.isFinite(m.since) ? m.since : m.arrives - 1,
+        arrives: m.arrives, home: m.home,
+        at: Number.isFinite(m.at?.x) && Number.isFinite(m.at?.z) ? { x: m.at.x, z: m.at.z } : null,
+        result: r && typeof r === 'object' ? { won: r.won === true, lost: known(r.lost), gold: Number.isFinite(r.gold) ? r.gold : 0, refused: r.refused === true } : null,
+      });
+    }
+    this.marches = this.marches.slice(0, 1);
     this.repost = new Set();
     this.soldiers = [];
     this.archers = [];
