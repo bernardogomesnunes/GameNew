@@ -10,7 +10,7 @@
  *
  * The sets, in tiers (backlog batch 2: "stone, iron, gold, sky and dark …
  * and armour" — leather is armour's first tier, as stone is the tools'):
- *   leather  what anyone can make from hides, early on;
+ *   leather  what anyone can make from leather, tanned from hides, early on;
  *   iron     plate from the foundry, Age 4;
  *   gold     softer but better — Age 5, from the mine;
  *   sky      white steel and gold — and since you were born in the sky,
@@ -37,8 +37,8 @@ export const SLOT_NAMES = { head: 'Head', body: 'Body', legs: 'Legs', feet: 'Fee
  */
 export const SHIELDS = [
   { id: 'shield_wood', name: 'Wooden Shield', age: 1, points: 1, block: 0.15, durability: 120,
-    inputs: { planks: 6, hide: 1 }, main: 0x9a6b3e, trim: 0x6b4a30, mark: 0xc8402e,
-    madeBy: 'Planks under a hide face, bound with a hide rim' },
+    inputs: { planks: 6, leather: 1 }, main: 0x9a6b3e, trim: 0x6b4a30, mark: 0xc8402e,
+    madeBy: 'Planks under a leather face, bound with a leather rim' },
   { id: 'shield_iron', name: 'Iron Shield', age: 5, points: 2, block: 0.25, durability: 300,
     inputs: { iron_ingot: 5, planks: 2 }, main: 0x7d5538, trim: 0xc9ced6, mark: 0x3f6fb0,
     madeBy: 'Oak boards faced and rimmed with iron from your foundry' },
@@ -55,9 +55,9 @@ export const SHIELDS_BY_ID = new Map(SHIELDS.map((s) => [s.id, s]));
  * The reinforced one is the leather one with iron at the seams.
  */
 export const BACKPACKS = [
-  { id: 'backpack_leather', name: 'Leather Backpack', slots: 10, age: 1, inputs: { hide: 4, string: 2 },
-    main: 0x9a6b45, trim: 0x6b4a30, madeBy: 'Hide and string, stitched at the bench' },
-  { id: 'backpack_reinforced', name: 'Reinforced Backpack', slots: 20, age: 5, inputs: { backpack_leather: 1, iron_ingot: 2, hide: 2 },
+  { id: 'backpack_leather', name: 'Leather Backpack', slots: 10, age: 1, inputs: { leather: 4, string: 2 },
+    main: 0x9a6b45, trim: 0x6b4a30, madeBy: 'Leather and string, stitched at the bench' },
+  { id: 'backpack_reinforced', name: 'Reinforced Backpack', slots: 20, age: 5, inputs: { backpack_leather: 1, iron_ingot: 2, leather: 2 },
     main: 0x7d5538, trim: 0xc9ced6, madeBy: 'A leather backpack with iron at the seams' },
 ];
 
@@ -72,12 +72,12 @@ export const ARMOUR_SETS = [
     key: 'leather', name: 'Leather', age: 1, durability: 80,
     main: 0x9a6b45, trim: 0x6b4a30,
     pieces: {
-      head: { name: 'Leather Cap', points: 1, inputs: { hide: 3 } },
-      body: { name: 'Leather Tunic', points: 2, inputs: { hide: 5 } },
-      legs: { name: 'Leather Leggings', points: 1, inputs: { hide: 4 } },
-      feet: { name: 'Leather Boots', points: 1, inputs: { hide: 2 } },
+      head: { name: 'Leather Cap', points: 1, inputs: { leather: 3 } },
+      body: { name: 'Leather Tunic', points: 2, inputs: { leather: 5 } },
+      legs: { name: 'Leather Leggings', points: 1, inputs: { leather: 4 } },
+      feet: { name: 'Leather Boots', points: 1, inputs: { leather: 2 } },
     },
-    madeBy: 'Stitched from hides',
+    madeBy: 'Stitched from leather',
   },
   {
     key: 'iron', name: 'Iron', age: 5, durability: 200,

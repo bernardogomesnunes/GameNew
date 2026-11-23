@@ -1185,3 +1185,23 @@ PROP_SHAPES.kiln_oven = [
   { minX: 0.6, maxX: 0.66, minY: 0.42, maxY: 0.48, minZ: 0.04, maxZ: 0.06, color: 0xc9ced6 },
   { minX: 0.22, maxX: 0.78, minY: 0.6, maxY: 0.67, minZ: 0.07, maxZ: 0.1, color: 0xd8c2a8 },
 ];
+// PLAY-9: the Tanning Vat, facing -z. An oak tub in two iron hoops, its rim
+// round a dark bark liquor, a hide hung over the front rim and a stirring
+// paddle standing in it. 11 boxes.
+const VAT_OAK = 0x8a6440, VAT_RIM = 0x9c7348, VAT_LIQUOR = 0x5a3a22, VAT_HIDE = 0xb99372;
+PROP_SHAPES.tanning_vat = [
+  { minX: 0.12, maxX: 0.88, minY: 0, maxY: 0.58, minZ: 0.12, maxZ: 0.88, color: VAT_OAK },
+  { minX: 0.1, maxX: 0.9, minY: 0.1, maxY: 0.14, minZ: 0.1, maxZ: 0.9, color: IRON },
+  { minX: 0.1, maxX: 0.9, minY: 0.44, maxY: 0.48, minZ: 0.1, maxZ: 0.9, color: IRON },
+  { minX: 0.18, maxX: 0.82, minY: 0.58, maxY: 0.6, minZ: 0.18, maxZ: 0.82, color: VAT_LIQUOR },
+  // The rim: four staves' tops round the liquor.
+  { minX: 0.12, maxX: 0.88, minY: 0.58, maxY: 0.66, minZ: 0.12, maxZ: 0.18, color: VAT_RIM },
+  { minX: 0.12, maxX: 0.88, minY: 0.58, maxY: 0.66, minZ: 0.82, maxZ: 0.88, color: VAT_RIM },
+  { minX: 0.12, maxX: 0.18, minY: 0.58, maxY: 0.66, minZ: 0.18, maxZ: 0.82, color: VAT_RIM },
+  { minX: 0.82, maxX: 0.88, minY: 0.58, maxY: 0.66, minZ: 0.18, maxZ: 0.82, color: VAT_RIM },
+  // A hide over the front rim: the flap on top and the part hanging down.
+  { minX: 0.3, maxX: 0.7, minY: 0.66, maxY: 0.69, minZ: 0.08, maxZ: 0.3, color: VAT_HIDE },
+  { minX: 0.3, maxX: 0.7, minY: 0.32, maxY: 0.69, minZ: 0.08, maxZ: 0.11, color: VAT_HIDE },
+  // The paddle's handle, standing up out of the liquor.
+  { minX: 0.64, maxX: 0.68, minY: 0.6, maxY: 1, minZ: 0.6, maxZ: 0.64, color: 0x8a6238 },
+];

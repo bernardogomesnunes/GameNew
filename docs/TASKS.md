@@ -1212,11 +1212,21 @@ From the owner's playtest notes, 22 November. Ordered by the suggested priority;
 | PLAY-6 | The Kiln's hint "Needs N more stone or brick in the shell" reads as if bricks are needed, which looks like a loop (Kiln needs brick, brick needs a Kiln Oven, the oven needs a Kiln). Cobblestone or stone is enough. Reword the hint. | Small | done in claude/play-6-kiln-hint: hint now says cobblestone or stone |
 | PLAY-7 | **Quarry.** Gives too little stone; should give every stone colour. It looks like an empty water tank. Level 1: a small hut with tools. Higher levels: stone machines. | Medium | done in claude/play-7-quarry: quarry gives 13 stone a day plus white, grey, orange and turquoise stone; tool hut at level 1, mason's benches and stone mills at levels 3 to 5 |
 | PLAY-8 | Sleeping: the avatar lies in the bed for 10 seconds while the night passes, then day. | Medium | done in claude/play-8-sleep: Place on a bed at night lies the avatar down for 10 s (third-person view of the bed), clock runs to morning, dim and Zzz, Wake up button or movement key ends it early (src/world/sleep.js) |
-| PLAY-9 | Leather: a way to make leather (tanning) in place of raw animal skins. | Medium | open |
-| PLAY-10 | String: a spinning machine that makes string from wool or cotton. Cotton becomes a crop with seeds. | Medium | open |
+| PLAY-9 | Leather: a way to make leather (tanning) in place of raw animal skins. | Medium | done: Tanning Vat (block 544) soaks 2 hide and 1 log into 2 leather; 7 armour, backpack and shield recipes take leather (docs/design/play-9-10.md) |
+| PLAY-10 | String: a spinning machine that makes string from wool or cotton. Cotton becomes a crop with seeds. | Medium | done: the Spinning Wheel also spins wool or cotton 1:1; cotton is a field crop (blocks 548-551), seeds from turf and from Bramble and Mabel |
 | PLAY-11 | **Crafting review.** Some items can be crafted two ways. List every duplicate and keep one way. After the first ending (dark or light warriors), a factory building with many machines automates all crafting and only needs materials. | Large | open, needs a design first |
 | PLAY-12 | Military buildings: weapons research and army organisation. | Large | open, needs a design first |
 | PLAY-13 | Politics: villagers get angry without jobs or food, with consequences. Builds on JOBS and the hunger counter (CL-12). | Large | open, needs a design first |
+| PLAY-14 | **Mushroom items.** 3 kinds of real mushroom as items (red, lilac, pale, matching the existing caps and stem). | Small | open, needs a design first |
+| PLAY-15 | **Mushy Log.** A placed pile of logs that grows mushrooms: after 10 days it gives 15 to 25 (about 20). Needs PLAY-14. | Medium | open, needs a design first |
+| PLAY-16 | **Dehydrator.** A machine that dries mushrooms into dried mushroom. Needs PLAY-14. | Medium | open, needs a design first |
+| PLAY-17 | **Mushroom flour.** A mill grinds mushrooms into mushroom flour. Reuse the Stone Mill (380) or Wood Mill (341) to avoid a duplicate machine (PLAY-11). Needs PLAY-14. | Medium | open, needs a design first |
+| PLAY-18 | **Mushroom building items.** Building items made at the workbench and bench from dried mushroom or mushroom flour. The Red Cap, Lilac Cap and Mushroom Stem are shaped from clay today and switch to real mushrooms. Needs PLAY-16 and PLAY-17. | Medium | open, needs a design first |
+| PLAY-19 | **Cauldron meals.** A Cauldron cooks dried mushroom with meat and vegetables into meals. It can reuse the Crucible close-up. Needs PLAY-16. | Medium | open, needs a design first |
+| PLAY-20 | **Food values.** Raw food feeds little, cooked food feeds the most. Today Carrots feed 22 and Cooked Meat 32, the only cooked food. Lower fruit, vegetables and raw meat; Cauldron meals (PLAY-19) feed the most. | Medium | open, needs a design first |
+| PLAY-21 | **Food names.** The item `vegetables` is named Carrots; Coffee Beans count as food (feeds 4). Rename or reclassify. | Small | open |
+| PLAY-22 | **Sell at the market.** Owner, 22 November: "on a market we should be able to sell items too not only buy". Traders buy what you hand them and pay in coins. Each trader buys the kinds of goods it sells (Grub rocks, wood and food; Snikkit ores and weapons). The sell price sits below the buy price (about half), so buying and selling back never makes coins. | Medium | open, needs a design first |
+| PLAY-23 | **Recurring sales.** Owner: "set recurrent sells ... daily or every other day". At a market, set an order: item, how many, every 1 or 2 days. It takes the goods from your storehouse and puts the coins there. It skips a day when stock runs short. Needs PLAY-22. | Medium | open, needs a design first |
 
 ## The old planning docs (history)
 
