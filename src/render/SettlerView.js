@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SETTLERS } from '../config/settlers.js';
+import { BANDS } from '../config/mood.js'; // PLAY-13
 import { SKINS, HAIRS } from '../config/avatar.js';
 import { outfitOf, JOB_OUTFITS } from '../config/outfits.js';
 import { modelKit, Crowds } from './Models.js';
@@ -77,6 +78,43 @@ function personHash(p) {
   return (p._hash = h >>> 0);
 }
 
+// PLAY-13: bubble size and lift in blocks, and the band colours (config/mood.js).
+const BUBBLE = { size: 0.8, lift: 0.55 };
+const BUBBLE_BANDS = Object.fromEntries(BANDS.filter((b) => b.colour).map((b) => [b.id, b.colour]));
+
+/** A 2 by 3 atlas of 64 px cells: a white bubble to tint, with a dark icon. Cell 0 a bowl, cell 1 a crossed hammer. */
+function bubbleAtlas() {
+  if (typeof document === 'undefined') {
+    const t = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+    t.needsUpdate = true;
+    return t;
+  }
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 192;
+  const g = c.getContext('2d');
+  const bubble = (ox, oy) => {
+    g.fillStyle = '#fff'; g.strokeStyle = '#2a2018'; g.lineWidth = 3;
+    g.beginPath(); g.arc(ox + 32, oy + 28, 24, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(ox + 24, oy + 48); g.lineTo(ox + 32, oy + 62); g.lineTo(ox + 40, oy + 48); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.moveTo(ox + 26, oy + 47); g.lineTo(ox + 38, oy + 47); g.strokeStyle = '#fff'; g.stroke();
+    g.strokeStyle = '#2a2018';
+  };
+  // The canvas is drawn top-down; texture v runs bottom-up, so the first row of cells is the bottom third.
+  const row = (r) => (2 - r) * 64;
+  bubble(0, row(0)); bubble(64, row(0));
+  g.fillStyle = '#2a2018'; g.strokeStyle = '#2a2018'; g.lineWidth = 4; g.lineCap = 'round';
+  // Bowl.
+  g.beginPath(); g.moveTo(16, row(0) + 24); g.lineTo(48, row(0) + 24); g.arc(32, row(0) + 24, 16, 0, Math.PI); g.closePath(); g.fill();
+  // Crossed hammers.
+  const ox = 64, oy = row(0);
+  g.beginPath(); g.moveTo(ox + 20, oy + 40); g.lineTo(ox + 44, oy + 16); g.moveTo(ox + 44, oy + 40); g.lineTo(ox + 20, oy + 16); g.stroke();
+  g.fillRect(ox + 14, oy + 10, 14, 8); g.fillRect(ox + 36, oy + 10, 14, 8);
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export class SettlerView {
   constructor(scene, role = 'settlers') {
     this.scene = scene;
@@ -132,6 +170,7 @@ export class SettlerView {
     this._size = new THREE.Vector3();
     // Each kind's model, once loaded, drawn in place of the boxes.
     this.crowds = new Crowds(scene, MAX);
+    this.makeBubbles(scene); // PLAY-13
     this._modelScale = new THREE.Vector3().setScalar(height / 2);
     this._tint = new THREE.Color();
     // One pose and one state for the lot, refilled per person (render/personPose.js).
@@ -147,6 +186,7 @@ export class SettlerView {
     const dt = this._last == null ? 0 : Math.min(0.1, Math.max(0, now - this._last));
     this._last = now;
     for (const m of this.meshes) m.count = m === this.limbs ? n * 4 : m === this.parts ? n * SLOTS : n;
+    this.updateBubbles(people, n); // PLAY-13
     this.crowds.begin();
     if (!n) { this.crowds.end(); return; }
     const { legH, bodyH, headH, width } = this;
@@ -515,8 +555,74 @@ export class SettlerView {
     return best ? { person: best, t: bestT } : null;
   }
 
+  // PLAY-13: thought bubbles over the heads of villagers at Grumbling or worse.
+  // One instanced plane for all of them: one draw call, and none while everyone
+  // is Content. The icon is a cell of one canvas atlas, picked per instance.
+  makeBubbles(scene) {
+    this.bubbles = null;
+    if (this.role !== 'settlers') return;
+    const texture = bubbleAtlas();
+    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false });
+    material.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader
+        .replace('#include <common>', '#include <common>\nattribute vec2 cell;')
+        .replace('#include <uv_vertex>', '#include <uv_vertex>\n#ifdef USE_MAP\n  vMapUv = (mapTransform * vec3(uv * vec2(0.5, 1.0 / 3.0) + cell, 1.0)).xy;\n#endif');
+    };
+    const geometry = new THREE.PlaneGeometry(BUBBLE.size, BUBBLE.size);
+    this._cells = new THREE.InstancedBufferAttribute(new Float32Array(MAX * 2), 2);
+    geometry.setAttribute('cell', this._cells);
+    const mesh = new THREE.InstancedMesh(geometry, material, MAX);
+    mesh.frustumCulled = false;
+    mesh.castShadow = false;
+    mesh.renderOrder = 3;
+    mesh.count = 0;
+    mesh.visible = false;
+    mesh.onBeforeRender = (renderer, sc, camera) => this.faceCamera(camera);
+    scene.add(mesh);
+    this.bubbles = mesh;
+    this._bubbleAt = new Float32Array(MAX * 3);
+    this.meshes.push(mesh);
+  }
+
+  /** Who gets a bubble: Grumbling or worse, in the colour of the band, the icon by reason. */
+  updateBubbles(people, n) {
+    const mesh = this.bubbles;
+    if (!mesh) return;
+    let k = 0;
+    for (let i = 0; i < n; i++) {
+      const p = people[i];
+      const band = BUBBLE_BANDS[p.band];
+      if (!band || !Number.isFinite(p.y)) continue;
+      this._colour.set(band);
+      mesh.setColorAt(k, this._colour);
+      this._cells.setXY(k, p.hungry ? 0 : 0.5, 0);
+      this._bubbleAt[k * 3] = p.x;
+      this._bubbleAt[k * 3 + 1] = p.y + SETTLERS.build.height + BUBBLE.lift;
+      this._bubbleAt[k * 3 + 2] = p.z;
+      k++;
+    }
+    mesh.count = k;
+    mesh.visible = k > 0;
+    this._cells.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    this.faceCamera(null);
+  }
+
+  /** Turns every bubble to look at the camera (called as the mesh is drawn). */
+  faceCamera(camera) {
+    const mesh = this.bubbles;
+    if (!mesh || !mesh.count) return;
+    if (camera) this._q.copy(camera.quaternion); else this._q.identity();
+    for (let i = 0; i < mesh.count; i++) {
+      this._pos.set(this._bubbleAt[i * 3], this._bubbleAt[i * 3 + 1], this._bubbleAt[i * 3 + 2]);
+      this._m.compose(this._pos, this._q, this._scale);
+      mesh.setMatrixAt(i, this._m);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+
   setVisible(on) {
-    for (const m of this.meshes) m.visible = on;
+    for (const m of this.meshes) m.visible = on && (m !== this.bubbles || m.count > 0);
     this.crowds.setVisible(on);
   }
 
@@ -525,6 +631,7 @@ export class SettlerView {
     for (const m of this.meshes) {
       this.scene.remove(m);
       m.geometry.dispose();
+      m.material.map?.dispose(); // PLAY-13
       m.material.dispose();
     }
   }

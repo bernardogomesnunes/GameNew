@@ -135,6 +135,15 @@ export const PANELS = [
     // No key: it opens from a storage controller, or a town hall's panel —
     // the block is the thing you build to reach your stores from afar.
   },
+  // PLAY-13: every villager's mood, job and what they need.
+  {
+    id: 'panel-town',
+    title: 'Your people',
+    subId: 'town-sub',
+    layer: 'duilt',
+    mode: 'duilt',
+    label: 'Town',
+  },
   {
     id: 'panel-claim',
     title: 'What is this?',

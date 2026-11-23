@@ -54,8 +54,9 @@ export const SETTLERS = {
    *
    * Deliberately not a gate on who moves in: houses decide that, and food
    * deciding it as well made "why is nobody coming" a question with two
-   * answers. Nobody starves and nobody leaves — they just stop working, and
-   * you can see it in what your buildings hand over.
+   * answers. Nobody starves. Hunger and having no job sour a villager's mood
+   * (config/mood.js, PLAY-13), and one who stays Furious for a day moves out,
+   * leaving the house empty for two days.
    */
   // Once a game day (render/DayCycle.js GAME_DAY_SECONDS — backlog batch 3,
   // #10: "Settlers take a little food from your storehouses each day").

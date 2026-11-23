@@ -238,6 +238,7 @@ export class DuiltUI {
         <button type="button" class="vital" id="vital-people" title="Settlers" hidden>
           <span class="vital-icon">👤</span>
           <span class="vital-count" id="people-count">0</span>
+          <span class="people-dot" id="people-dot" hidden></span><!-- PLAY-13 -->
         </button>
       </div>
 
@@ -352,6 +353,10 @@ export class DuiltUI {
           <div id="stores-bag-grid" class="store-slots" hidden></div>
           </section>
           </div>`,
+        'panel-town': `
+          <!-- PLAY-13: one row a villager, worst mood first. -->
+          <div id="town-head" class="town-head"></div>
+          <div id="town-list" class="town-list"></div>`,
         'panel-claim': `
           <div id="claim-list"></div>`,
         'panel-buildings': `
@@ -523,6 +528,7 @@ export class DuiltUI {
       });
     });
     this.bus.on('settler:fed', () => { this.saidHungry = null; this.renderVitals(); });
+    this.wireMood(); // PLAY-13
     this.bus.on('settler:arrived', ({ settler, population }) => {
       this.renderVitals();
       this.bus.emit('toast', {
@@ -553,10 +559,12 @@ export class DuiltUI {
     if (id === 'panel-buildings') this.renderBuildings();
     if (id === 'panel-bench') this.renderBench();
     if (id === 'panel-finish') this.renderFinish();
+    if (id === 'panel-town') this.openTownPanel(); // PLAY-13
   }
 
   onPanelClosed(id) {
     this.hideSlotTip();
+    if (id === 'panel-town') this.closeTownPanel(); // PLAY-13
     // Closing a popup cancels its unpaid work, even if its DOM is reused.
     this.q('#' + id)?.querySelectorAll('.craft-work').forEach(work => work.remove());
     if (id === 'panel-bag') this.held = null;
@@ -1466,6 +1474,7 @@ export class DuiltUI {
     box.classList.toggle('full', population >= target && target > 0 && !hungry);
     box.classList.toggle('hungry', hungry > 0);
     if (!hungry) this.saidHungry = false;
+    this.renderMoodDot(box, d.settlers); // PLAY-13
   }
 
   /**
@@ -1481,6 +1490,7 @@ export class DuiltUI {
     if (!d) return;
     const { population, target, houses, hungry, soldiers } = d.settlers;
     if (hungry) return this.giveFood();
+    if (population > 0) return this.game.ui.openPanel('panel-town'); // PLAY-13: nobody hungry, so show the town
     const say = (title, body) => this.bus.emit('toast', { kind: 'xp', title, body });
     // The soldiers are counted with everyone (they live in the barracks).
     const camp = soldiers ? ` and ${soldiers} soldier${soldiers === 1 ? '' : 's'}` : '';
@@ -1900,8 +1910,118 @@ export class DuiltUI {
     const left = s.feedHungry();
     this.renderVitals();
     this.bus.emit('toast', left
-      ? { kind: 'xp', title: 'Not enough food', body: `${left} still hungry. There's nothing more to eat in the granary, the storehouses or your bag.` }
-      : { kind: 'challenge', title: 'Everyone has eaten', body: 'Back to work' });
+      ? { kind: 'xp', title: 'Not enough food', body: `${left} still hungry. There's nothing more to eat in the granary, the storehouses or your bag.`, action: { label: 'See people', onClick: () => this.game.ui.openPanel('panel-town') } } // PLAY-13
+      : { kind: 'challenge', title: 'Everyone has eaten', body: 'Back to work', action: { label: 'See people', onClick: () => this.game.ui.openPanel('panel-town') } }); // PLAY-13
+  }
+
+  // ---- PLAY-13: mood ---------------------------------------------------------
+
+  wireMood() {
+    this.bus.on('settler:band', () => { this.renderVitals(); if (this.panels.isOpen('panel-town')) this.renderTown(); });
+    this.bus.on('settler:mood', ({ settler, band, reason, name }) => {
+      if (band !== 'angry' && band !== 'furious') return; // Grumbling: the bubble is enough
+      const food = reason === 'food';
+      const days = Math.max(1, Math.floor((settler.idleFor ?? 0) / GAME_DAY_SECONDS));
+      const why = food ? 'no food' : `no work for ${days} day${days === 1 ? '' : 's'}`;
+      const advice = food
+        ? 'Fill a granary or storehouse, or give them some from your bag.'
+        : 'Build a farm, forest or quarry within 40 blocks of their house, or make them a carrier at the Work Hall.';
+      this.bus.emit('toast', {
+        kind: 'xp',
+        title: band === 'furious' ? `${name} will leave tomorrow` : `${name} is angry: ${why}`,
+        body: advice,
+        action: food ? { label: 'Give food', onClick: () => this.giveFood() } : { label: 'Show', onClick: () => this.game.ui.openPanel('panel-town') },
+        duration: 12000,
+      });
+    });
+    this.bus.on('settler:left', ({ reason, cause, name, days } = {}) => {
+      if (reason !== 'angry') return;
+      this.bus.emit('toast', {
+        kind: 'xp',
+        title: `${name} left: ${cause === 'food' ? 'no food' : 'no work'}`,
+        body: `Their house stands empty for ${days ?? 2} days.`,
+        duration: 12000,
+      });
+      if (this.panels.isOpen('panel-town')) this.renderTown();
+    });
+  }
+
+  /** The dot in the people counter: the worst band present, with the worst case in the tooltip. */
+  renderMoodDot(box, settlers) {
+    const dot = this.q('#people-dot');
+    if (!dot) return;
+    const { worst, worstPerson } = settlers.moodSummary();
+    dot.hidden = !worst;
+    dot.dataset.band = worst ?? '';
+    if (worst && worstPerson) {
+      const why = worstPerson.hungry ? 'no food' : 'no work';
+      box.title = `${worstPerson.name} is ${worst}: ${why}. Tap to see your people.`;
+    }
+  }
+
+  openTownPanel() {
+    this.townHtml = null;
+    this.renderTown();
+    clearInterval(this.townTimer);
+    this.townTimer = setInterval(() => { if (this.panels.isOpen('panel-town')) this.renderTown(); }, 2000);
+  }
+
+  closeTownPanel() {
+    clearInterval(this.townTimer);
+    this.townTimer = null;
+  }
+
+  /** Opens the Work Hall's pop-up so somebody can be given a role, or says to build one. */
+  findWork() {
+    const hall = this.duilt?.structures.list().find((s) => s.type === 'work_hall' && s.valid);
+    if (!hall) {
+      return this.bus.emit('toast', { kind: 'xp', title: 'Build a Work Hall', body: 'Villagers get jobs once a Work Hall stands. Then build a farm, forest or quarry near their houses.' });
+    }
+    this.game.ui.openBuilding(hall, this.game.buildingActions(hall));
+  }
+
+  /** The Town panel: header line, then one row a villager, worst first. */
+  renderTown() {
+    const d = this.duilt;
+    const list = this.q('#town-list'), head = this.q('#town-head');
+    if (!d || !list || !head) return;
+    const s = d.settlers;
+    const sum = s.moodSummary();
+    const people = [...s.people].sort((a, b) => a.mood - b.mood);
+    const sub = this.q('#town-sub');
+    const avg = sum.average == null ? '-' : Math.round(sum.average);
+    head.textContent = people.length
+      ? `Town mood ${avg}. ${sum.angry} angry, ${sum.leaving} leaving.`
+      : 'Nobody lives here yet. Build a second house and somebody will move in.';
+    if (sub) sub.textContent = s.arrivalsStopped ? 'Word has got round: nobody new comes while your people are unhappy.' : 'Mood, jobs and what each villager needs.';
+    const JOB = { builder: 'Builder', hauler: 'Carrier', woodcutter: 'Woodcutter', farmer: 'Farmer', miner: 'Miner', kiln_worker: 'Kiln worker', trader: 'Trader', clerk: 'Clerk', innkeeper: 'Innkeeper', acolyte: 'Acolyte' };
+    const html = people.map((p) => {
+      const band = p.band ?? 'content';
+      const days = Math.floor((p.idleFor ?? 0) / GAME_DAY_SECONDS);
+      const employed = s.hasJob(p);
+      const job = employed ? (JOB[p.job] ?? 'Working') : 'No job';
+      let reason = 'Content';
+      if (p.hungry) reason = 'Hungry';
+      else if (!employed) reason = days >= 1 ? `No job for ${days} day${days === 1 ? '' : 's'}` : 'No job yet';
+      else if (band !== 'content') reason = 'Recovering';
+      const left = band === 'furious' ? Math.max(0, 1 - (p.furiousFor ?? 0) / GAME_DAY_SECONDS) : null;
+      const leaves = left == null ? '' : `<span class="town-leaves">Leaves in ${left.toFixed(1)} days</span>`;
+      const give = p.hungry ? '<button class="secondary" data-town-food>Give food</button>' : '';
+      const find = !employed ? '<button class="secondary" data-town-work>Find work</button>' : '';
+      return `<div class="town-row" data-band="${band}" data-person="${p.id}">
+        <span class="town-name">${escapeHtml(p.name)}</span>
+        <span class="town-job">${escapeHtml(job)}</span>
+        <span class="town-bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p.mood)}" aria-label="Mood"><span class="town-fill" style="width:${Math.round(p.mood)}%"></span></span>
+        <span class="town-reason">${escapeHtml(reason)}</span>${leaves}
+        ${give || find ? `<span class="town-actions">${give}${find}</span>` : ''}
+      </div>`;
+    }).join('');
+    // Redrawn only when something changed, so a tap never lands on a row that is being replaced.
+    if (html === this.townHtml) return;
+    this.townHtml = html;
+    list.innerHTML = html;
+    list.querySelectorAll('[data-town-food]').forEach((b) => b.addEventListener('click', () => { this.giveFood(); this.renderTown(); }));
+    list.querySelectorAll('[data-town-work]').forEach((b) => b.addEventListener('click', () => this.findWork()));
   }
 
   // ---- storehouses ----
@@ -2117,7 +2237,7 @@ export class DuiltUI {
     const people=d.settlers.people.map(p=>{
       const a=d.jobs.assignment(p.id);
       return `<div class="job-row">
-        <span class="job-name">${escapeHtml(p.name??`Villager ${p.id}`)}</span>
+        <span class="job-name"><span class="mood-dot" data-band="${p.band??'content'}" title="${escapeAttr(p.band??'content')}"></span>${escapeHtml(p.name??`Villager ${p.id}`)}</span><!-- PLAY-13 -->
         <select class="job-select" data-job-person="${p.id}" aria-label="${escapeAttr(`Job for ${p.name??`villager ${p.id}`}`)}" ${off}>${roles.map(([id,name])=>`<option value="${id}" ${(a?.role??'automatic')===id?'selected':''}>${name}</option>`).join('')}</select>
         ${a?.status && a.status!==roles.find(([id])=>id===(a.role??'automatic'))?.[1]?`<span class="job-status dim">${escapeHtml(a.status)}</span>`:''}
         ${a?.carrying?`<button class="secondary job-small" data-job-cargo="${p.id}">Return carried goods</button>`:''}
