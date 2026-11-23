@@ -278,9 +278,9 @@ export const ITEMS = [
   { id: 'roof_teal', name: 'Teal Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x3f9a92, glyph: 'rooftile', block: 460, madeBy: 'Slates stained teal with crushed leaves' },
   { id: 'roof_mint', name: 'Mint Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x8fd1b0, glyph: 'rooftile', block: 475, madeBy: 'Slates stained mint: leaves, and sand to pale them' },
   { id: 'roof_lilac', name: 'Lilac Roof Tiles', kind: 'refined', stackTo: STACK_BULK, color: 0x9f86d6, glyph: 'rooftile', block: 490, madeBy: 'Slates stained lilac with blossom' },
-  { id: 'cap_red', name: 'Red Mushroom Cap', kind: 'refined', stackTo: STACK_BULK, color: 0xd2484f, glyph: 'mushroom', block: 505, madeBy: 'Shaped from clay and leaves, the way the old houses grow them' },
-  { id: 'cap_lilac', name: 'Lilac Mushroom Cap', kind: 'refined', stackTo: STACK_BULK, color: 0xa178d0, glyph: 'mushroom', block: 506, madeBy: 'Shaped from clay and blossom' },
-  { id: 'mushroom_stem', name: 'Mushroom Stem', kind: 'refined', stackTo: STACK_BULK, color: 0xefe4cf, glyph: 'log', block: 507, madeBy: 'Shaped from clay and sand' },
+  { id: 'cap_red', name: 'Red Mushroom Cap', kind: 'refined', stackTo: STACK_BULK, color: 0xd2484f, glyph: 'mushroom', block: 505, madeBy: 'Pressed from dried red mushrooms at the workbench' },
+  { id: 'cap_lilac', name: 'Lilac Mushroom Cap', kind: 'refined', stackTo: STACK_BULK, color: 0xa178d0, glyph: 'mushroom', block: 506, madeBy: 'Pressed from dried lilac mushrooms at the workbench' },
+  { id: 'mushroom_stem', name: 'Mushroom Stem', kind: 'refined', stackTo: STACK_BULK, color: 0xefe4cf, glyph: 'log', block: 507, madeBy: 'Mushroom flour pressed into a pale stalk' },
   { id: 'glass_stained', name: 'Stained Glass', kind: 'refined', stackTo: STACK_BULK, color: 0xd99a6a, glyph: 'pane', block: 508, madeBy: 'Glass in pieces of colour, leaded together at a workshop' },
   { id: 'vines', name: 'Hanging Vines', kind: 'refined', stackTo: STACK_BULK, color: 0x5e9a5a, glyph: 'leaf', block: 509, madeBy: 'Twisted from leaves. Hangs from whatever is above it' },
   { id: 'wisteria', name: 'Wisteria', kind: 'refined', stackTo: STACK_BULK, color: 0xb48ae0, glyph: 'leaf', block: 510, madeBy: 'Gathered from blossom. Hangs from whatever is above it' },
@@ -564,6 +564,8 @@ export const ITEMS = [
   { id: 'dried_pale', name: 'Dried Pale Mushroom', kind: 'refined', stackTo: STACK_GOODS, color: 0xb8a27e, glyph: 'mushroom', madeBy: 'Pale mushrooms dried at a Dehydrator. Grind it into flour at a Stone Mill, or cook it in a Cauldron' },
   // PLAY-17: ground at the Stone Mill from dried pale mushroom.
   { id: 'mushroom_flour', name: 'Mushroom Flour', kind: 'refined', stackTo: STACK_GOODS, color: 0xe9dfcb, glyph: 'sand', madeBy: 'Dried pale mushroom ground at a Stone Mill' },
+  // PLAY-18: the one new building item.
+  { id: 'mushroom_plaster', name: 'Mushroom Plaster', kind: 'refined', stackTo: STACK_BULK, color: 0xe9dcc2, glyph: 'wall', block: 570, madeBy: 'Mushroom flour, sand and clay, set into a pale wall' },
   // --- end PLAY-14..21 ---
 ];
 

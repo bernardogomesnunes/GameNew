@@ -1104,17 +1104,17 @@ export const RECIPES = [
   },
   {
     id: 'cap_red', name: 'Red Mushroom Cap', station: 'hand', age: 3,
-    inputs: { clay: 1, leaves: 1 }, output: { id: 'cap_red', count: 2 }, batch: 8,
+    inputs: { dried_red: 1 }, output: { id: 'cap_red', count: 2 }, batch: 8,
     blurb: 'Red with pale spots. Put one on a stem, or let it grow out of a roof.',
   },
   {
     id: 'cap_lilac', name: 'Lilac Mushroom Cap', station: 'hand', age: 3,
-    inputs: { clay: 1, white_leaves: 1 }, output: { id: 'cap_lilac', count: 2 }, batch: 8,
+    inputs: { dried_lilac: 1 }, output: { id: 'cap_lilac', count: 2 }, batch: 8,
     blurb: 'A lilac cap, spotted pale.',
   },
   {
     id: 'mushroom_stem', name: 'Mushroom Stem', station: 'hand', age: 3,
-    inputs: { clay: 1, sand: 1 }, output: { id: 'mushroom_stem', count: 2 }, batch: 8,
+    inputs: { mushroom_flour: 1 }, output: { id: 'mushroom_stem', count: 2 }, batch: 8,
     blurb: 'The pale stalk a cap sits on.',
   },
   {
@@ -1847,6 +1847,11 @@ RECIPES.push(
 RECIPES.push(
   { id: 'mill_mushroom_flour', name: 'Mushroom Flour', station: 'stone_mill', age: 3, inputs: { dried_pale: 1 }, output: { id: 'mushroom_flour', count: 1 }, batch: 8,
     blurb: 'Dried pale mushroom ground to a fine flour.' },
+);
+// PLAY-18: Mushroom Plaster, a pale soft wall (Age 3: a hand recipe past Age 2 is a Workbench one, IMP-19; this block is after that rewrite).
+RECIPES.push(
+  { id: 'mushroom_plaster', name: 'Mushroom Plaster', station: 'workbench', age: 3, inputs: { mushroom_flour: 1, sand: 1, clay: 1 }, output: { id: 'mushroom_plaster', count: 4 }, batch: 8,
+    blurb: 'Flour, sand and clay set into a pale, soft wall for the mushroom houses.' },
 );
 // --- end PLAY-14..21 ---
 

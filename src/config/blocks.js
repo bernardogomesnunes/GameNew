@@ -1029,6 +1029,11 @@ export const DEHYDRATOR = 568;
 BLOCKS.push(
   { id: DEHYDRATOR, name: 'Dehydrator', glyph: 'cabinet', color: 0x9c7348, shape: 'dehydrator', material: 'wood', station: 'dehydrator', unlock: null },
 );
+// PLAY-18: Mushroom Plaster, a full cube, pale and soft, for the mushroom houses.
+export const MUSHROOM_PLASTER = 570;
+BLOCKS.push(
+  { id: MUSHROOM_PLASTER, name: 'Mushroom Plaster', glyph: 'wall', color: 0xe9dcc2, material: 'stone', unlock: null },
+);
 // --- end PLAY-14..21 ---
 
 // The storybook look for buildings (asked for directly: they "need to fit
