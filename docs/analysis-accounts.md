@@ -13,7 +13,7 @@ Today's sign-in can carry a few thousand players. The plan limits are not the bl
 | Auth service | Neon Auth (managed Better Auth) on branch `auth (keep: holds sign-in)` (br-old-snow). That branch is **archived** since 12 November. Game data is on `production` (br-red-sound). See TECH-19. |
 | Sign-in methods | Email and password only. Sign-up is open. |
 | Email verification | Off: `verify_email_on_sign_up` false, `require_email_verification` false. |
-| Password reset | No flow in the game. `revoke_sessions_on_password_reset` is false. |
+| Password reset | Flow added 23 November (ACCT-2). `revoke_sessions_on_password_reset` is still false; the game revokes other sessions itself after the next sign-in. |
 | Emails | Shared sender `auth@mail.myneon.app`, named "Neon Auth". |
 | Google sign-in | Turned on in Neon with Neon's shared keys. The game has no Google button. |
 | Allowed origins | `https://duild-seven.vercel.app` only, plus `allow_localhost` true. |
@@ -55,6 +55,18 @@ Today's sign-in can carry a few thousand players. The plan limits are not the bl
 
 13. **ACCT-13: database capacity.** Keep compute awake (TECH-16), raise the autoscaling ceiling above 2 CU, and add `player_id` to `world_chunks` so row-level security stops running a subquery per row (`analysis-scaling.md`). Add a second region, or a read replica, if many players are far from us-east-2. EU players' data residency is a GDPR question too.
 14. **ACCT-14: two devices on one world.** Saves are last-writer-wins today. Shared or multi-device play needs the revision check described in `analysis-scaling.md`.
+
+## Passwords and sessions (ACCT-2, ACCT-10, 23 November)
+
+Endpoints the game calls on Neon Auth (Better Auth client): `requestPasswordReset`, `resetPassword`, `listSessions`, `revokeSession`, `revokeOtherSessions`, `revokeSessions`, plus `getSession` to mark this device.
+
+**Reset flow.** "Forgot password?" sends `requestPasswordReset` with `redirectTo` set to this app's origin plus `/?reset=1`. The emailed link goes through Neon Auth and lands on `/?reset=1&token=...` (or `&error=INVALID_TOKEN`). The game moves the token into memory, clears it from the address bar, and shows a new-password panel. The reply is the same whether or not the email has an account.
+
+**Revoking sessions on reset.** `revoke_sessions_on_password_reset` is false on Neon, and changing it is a Neon setting, so the game does not touch it. A reset leaves the browser signed out, so there is no session to revoke with yet. The game sets a flag at reset and calls `revokeOtherSessions` right after the next successful sign-in (flag kept in `localStorage`, cleared on success). Gap: a thief's session lives until that sign-in. Setting the flag to true in Neon closes the gap and needs no code change.
+
+**Session length.** Decision: keep Neon Auth's default. Better Auth's default is `expiresIn` 7 days with `updateAge` 1 day, so a session ends after 7 days idle and renews when used after a day. Neon Auth does not let the client change it, and the game does not try. Read from the Better Auth source in `node_modules`; the live Neon value was not read in this task. Check the live value with `get_neon_auth_config` if it matters.
+
+**Session list.** The account panel shows each session as browser and system (from the user-agent) with last active time. This device is marked and has no Sign out. "Sign out other devices" calls `revokeOtherSessions`. "Sign out everywhere" asks first, calls `revokeSessions`, and signs this device out too.
 
 ## Costs, from Neon's published plans (17 November 2026)
 

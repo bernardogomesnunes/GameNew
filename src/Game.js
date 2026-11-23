@@ -1820,6 +1820,18 @@ export class Game {
             : 'Every world you build is kept on it',
         });
       },
+      // ACCT-2: the reset email, and the new password from its link.
+      onCloudForgot: (email) => this.cloudAuth.requestPasswordReset(email),
+      onCloudReset: (token, password) => this.cloudAuth.resetPassword(token, password),
+      // ACCT-10: sessions.
+      onCloudSessions: () => this.cloudAuth.listSessions(),
+      onCloudRevokeSession: (token) => this.cloudAuth.revokeSession(token),
+      onCloudRevokeOthers: () => this.cloudAuth.revokeOtherSessions(),
+      onCloudRevokeAll: async () => {
+        await this.cloudAuth.revokeAllSessions();
+        this.forgetRememberedWorlds();
+        this.ui.toast({ kind: 'xp', title: 'Signed out everywhere', body: 'Sign in again to open your worlds' });
+      },
       onCloudSignOut: async () => {
         await this.cloudAuth.signOut();
         // Somebody else may sign in on this device next: don't show them these.
