@@ -1187,7 +1187,7 @@ From `analysis-accounts.md`. ACCT-1 to ACCT-8 come before a public launch.
 | ACCT-4 | Email verification with a 6-digit emailed code, at sign-up and at sign-in for unconfirmed accounts. Closes the Google-linking and team-invite takeover flaws (CVE-2026-53516, CVE-2026-53514). | done: game code #339; required on `production` 18 November; owner tested. Codes come from Neon's shared sender until ACCT-3 |
 | ACCT-5 | Delete my account and download my data (GDPR, App Store). | open, needs database approval |
 | ACCT-6 | Privacy policy, terms and an age gate (COPPA, GDPR). | Owner: legal text |
-| ACCT-7 | Cloudflare Turnstile on sign-up and sign-in. | open |
+| ACCT-7 | Cloudflare Turnstile on sign-up and sign-in. | done (pending merge, needs owner key): widget behind `VITE_TURNSTILE_SITE_KEY`, token in `x-captcha-response`, CSP allows challenges.cloudflare.com; owner steps in docs/analysis-accounts.md |
 | ACCT-8 | Own domain in trusted origins; `allow_localhost` off in production, on a dev branch. | Owner: domain |
 | ACCT-9 | Sign in with Google and Apple, with our own OAuth keys. Owner agreed 17 November; after ACCT-4. Owner creates the Google Cloud OAuth client. | next |
 | ACCT-10 | Sign out of all devices; session list; session length decided. | open |

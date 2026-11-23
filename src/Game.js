@@ -1794,8 +1794,8 @@ export class Game {
         return { moved, creating };
       },
       onCloudResendCode: (email) => this.cloudAuth.resendCode(email),
-      onCloudSignIn: async (email, password) => {
-        await this.cloudAuth.signIn(email, password);
+      onCloudSignIn: async (email, password, captchaToken) => {
+        await this.cloudAuth.signIn(email, password, captchaToken);
         await this.sendUnsent();
         const moved = await this.migrateLocalWorlds();
         this.forgetCloudList();
@@ -1806,8 +1806,8 @@ export class Game {
           body: moved ? 'Your worlds are here' : 'Welcome back',
         });
       },
-      onCloudSignUp: async (email, password) => {
-        await this.cloudAuth.signUp(email, password);
+      onCloudSignUp: async (email, password, captchaToken) => {
+        await this.cloudAuth.signUp(email, password, captchaToken);
         const moved = await this.migrateLocalWorlds();
         this.forgetCloudList();
         this.ui.home?.forgetWorlds?.();
