@@ -411,3 +411,19 @@ Master Armoury level, Diamond Arms, Crossbows, Forced March, Cavalry, the Hold o
 6. Should research also strengthen the dark path's 1,000 warriors?
 7. Are the names Armoury and War Hall right?
 8. One company on the march at a time, or one per War Hall level?
+
+## Decided by default, 23 November
+
+The owner said "do everything we have pending" and did not answer the open questions. Each takes the doc's recommendation. Where the doc gave none, the smaller scope is chosen. The owner can overturn any row.
+
+| Question | Decision | Why |
+|---|---|---|
+| 1. Research upgrades trained soldiers? | Yes, every soldier of the unit, old and new, free. | Decision 3 of this doc. No per-soldier tag, so rosters and saves stay a list of unit ids. |
+| 2. Armoury at Age 8 or Age 5? | Age 8, with the barracks. | The doc's table. Nothing to arm before soldiers exist, and no Age goal moves. |
+| 3. March outside Battle worlds? | No. Battle worlds only. | Decision 8. Rival cities exist only there. Outposts and tribes wait for the later version. |
+| 4. March by numbers, or go with the company? | By numbers. The player may stay home. | Decision 6. Live battles are later. |
+| 5. Company per building, or mixed squads? | One company per barracks or Garrison. | Decision 5. Mixed squads wait for a later version. |
+| 6. Research strengthens the dark path's 1,000 warriors? | No. | They are the Stone King's. `Army.js` is untouched. |
+| 7. Names Armoury and War Hall? | Keep both. | Names are one-line edits later. |
+| 8. One march at a time, or one per War Hall level? | One at a time. | Decision 7. Keeps tribute at most 15 gold a day, under the house rule. |
+| Block id for the War Table | 571, not 556. | 556-570 are taken by the mushroom work. 572 stays spare. |
