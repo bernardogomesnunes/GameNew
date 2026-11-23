@@ -2070,7 +2070,22 @@ button.primary:disabled, button.secondary:disabled { filter: grayscale(0.6) brig
 @keyframes form-shake { 25% { transform: translateX(-6px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
 #ui-root #cloud-email[aria-invalid="true"], #ui-root #cloud-password[aria-invalid="true"], #ui-root #cloud-code[aria-invalid="true"] { border-color: #b8402f; box-shadow: 0 0 0 2px rgba(184, 64, 47, 0.35); }
 @media (prefers-reduced-motion: reduce) { .form-error.shake { animation: none; } }
-#btn-cloud-signin, #btn-cloud-verify { width: 100%; padding: 12px 16px; font-size: 17px; }
+#btn-cloud-signin, #btn-cloud-verify, #btn-cloud-forgot-send, #btn-cloud-reset { width: 100%; padding: 12px 16px; font-size: 17px; }
+#cloud-forgot-email, #cloud-new-password, #cloud-new-password2 { width: 100%; padding: 10px 12px; font-size: 16px; margin-bottom: 4px; min-height: 44px; box-sizing: border-box; }
+/* ACCT-2/10: text buttons that are still 44px tall to tap. */
+.acct-link { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+.form-note { margin: 0 0 12px; padding: 9px 12px; border: 2px solid #4a7a2a; background: #e4f1d6;
+  color: #26420f; font-size: 14px; line-height: 1.4; font-weight: 600; }
+.sessions { margin-top: 18px; padding-top: 12px; border-top: 2px solid var(--panel-border, #5a3e22); }
+.sessions h4 { margin: 0 0 8px; font-size: 15px; }
+.sessions-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.session-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; }
+.session-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.session-info strong { font-size: 15px; overflow-wrap: anywhere; }
+.session-info span, .sessions-empty { font-size: 12.5px; color: var(--text-dim); line-height: 1.45; }
+.session-end { flex: none; min-height: 44px; min-width: 76px; }
+.sessions-actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.sessions-actions button { width: 100%; min-height: 44px; }
 /* Framed now, so the rows need room inside the frame. */
 .skill-row, .stat-row.framed, .challenge-card { padding: 10px 12px; }
 

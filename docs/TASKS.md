@@ -1182,7 +1182,7 @@ From `analysis-accounts.md`. ACCT-1 to ACCT-8 come before a public launch.
 | LOGIN-1 | A wrong password showed no visible error (owner, 17 November). The message now shows in red above Sign in, outlines the field and selects the password; SDK errors become plain sentences. | done in this PR |
 | LOGIN-2 | The start screen matched the world loading screen (owner, 17 November). Start: night sky with pixel stars. Opening or making a world: pixel ground grows behind the bar until it fills the screen. Test: `tests/loading-screens-browser.mjs`. | done in this PR |
 | ACCT-1 | Sign-in settings now live on `production` (TECH-19). Left: choose the long-term provider and plan (owner, 17 November: not paying Neon now, provider choice open). | Owner decision: provider and plan |
-| ACCT-2 | Forgot password flow; revoke sessions on reset. | open |
+| ACCT-2 | Forgot password flow; revoke sessions on reset. | done (pending merge): "Forgot password?" on sign-in sends Better Auth's reset email; the link opens a new-password panel; the first sign-in after a reset calls revokeOtherSessions (the Neon flag `revoke_sessions_on_password_reset` is still false, owner's setting). Reset mail comes from Neon's shared sender until ACCT-3 |
 | ACCT-3 | Send auth email from our own domain (Resend or Postmark, SPF, DKIM, DMARC). | Owner: domain and email account |
 | ACCT-4 | Email verification with a 6-digit emailed code, at sign-up and at sign-in for unconfirmed accounts. Closes the Google-linking and team-invite takeover flaws (CVE-2026-53516, CVE-2026-53514). | done: game code #339; required on `production` 18 November; owner tested. Codes come from Neon's shared sender until ACCT-3 |
 | ACCT-5 | Delete my account and download my data (GDPR, App Store). | open, needs database approval |
@@ -1190,7 +1190,7 @@ From `analysis-accounts.md`. ACCT-1 to ACCT-8 come before a public launch.
 | ACCT-7 | Cloudflare Turnstile on sign-up and sign-in. | open |
 | ACCT-8 | Own domain in trusted origins; `allow_localhost` off in production, on a dev branch. | Owner: domain |
 | ACCT-9 | Sign in with Google and Apple, with our own OAuth keys. Owner agreed 17 November; after ACCT-4. Owner creates the Google Cloud OAuth client. | next |
-| ACCT-10 | Sign out of all devices; session list; session length decided. | open |
+| ACCT-10 | Sign out of all devices; session list; session length decided. | done (pending merge): account panel lists active sessions (browser, system, last active), signs out one, all other devices, or everywhere. Session length stays at Better Auth's 7 days, renewed daily on use (`docs/analysis-accounts.md`) |
 | ACCT-11 | Chosen, unique player name. | open |
 | ACCT-16 | A new account on a device showed the previous account's worlds (owner, 18 November). The database was clean: the new account had no player row and no worlds. Cause: `players.device_key` is unique, the first account held this phone's key, so the second account's row was refused (409, shown as "That world changed elsewhere") and the error path showed the remembered list. Fixed: the key carries the account, the cached player id resets on account change, and the remembered list and Data API token are tied to the account. | done in #340 |
 | ACCT-15 | Teams (Neon Auth organization plugin) stay on for multiplayer (owner, 17 November). Safe once ACCT-4 is required. | decided |
