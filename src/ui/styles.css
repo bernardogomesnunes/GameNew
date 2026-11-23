@@ -2427,3 +2427,32 @@ body.is-sleeping #building-hint { visibility: hidden; }
 .order-every { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .order-every button { min-height: 44px; }
 .order-every button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+
+/* PLAY-13: villager mood. Band colours match the bubbles over their heads
+   (render/SettlerView.js, config/mood.js). */
+#vital-people { position: relative; }
+.people-dot { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; border-radius: 50%; background: #e0b43a; }
+.people-dot[data-band="angry"] { background: #e07a2e; }
+.people-dot[data-band="furious"] { background: #d23a2a; }
+.mood-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; vertical-align: middle; background: #5a9e4b; }
+.mood-dot[data-band="grumbling"] { background: #e0b43a; }
+.mood-dot[data-band="angry"] { background: #e07a2e; }
+.mood-dot[data-band="furious"] { background: #d23a2a; }
+.town-head { margin: 0 0 10px; font-weight: 700; font-size: 14px; }
+.town-list { display: grid; gap: 8px; }
+.town-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center;
+  min-height: 44px; padding: 8px 10px; border: 1px solid var(--panel-border); border-radius: 10px;
+  background: rgba(35,42,45,0.035); min-width: 0;
+}
+.town-name { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.town-job { font-size: 13px; color: var(--text-dim); text-align: right; }
+.town-bar { grid-column: 1 / -1; display: block; height: 8px; border-radius: 4px; background: rgba(35,42,45,0.12); overflow: hidden; }
+.town-fill { display: block; height: 100%; background: #5a9e4b; }
+.town-row[data-band="grumbling"] .town-fill { background: #e0b43a; }
+.town-row[data-band="angry"] .town-fill { background: #e07a2e; }
+.town-row[data-band="furious"] .town-fill { background: #d23a2a; }
+.town-reason, .town-leaves { font-size: 13px; color: var(--text-dim); min-width: 0; overflow-wrap: anywhere; }
+.town-leaves { text-align: right; color: #d23a2a; font-weight: 700; }
+.town-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.town-actions button { min-height: 44px; }

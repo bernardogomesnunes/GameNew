@@ -209,6 +209,7 @@ export class Settlers {
     for (const p of [...this.people]) {
       if (!Number.isFinite(p.mood)) Object.assign(p, newMood(MOOD.legacyMood));
       const { band, from } = moodStep(p, dt, { hungry: !!p.hungry, hasJob: this.hasJob(p) });
+      if (band !== from) this.bus?.emit('settler:band', { settler: p, band, from }); // PLAY-13
       if (band === 'content') p.said = null;
       else if (bandRank(band) > bandRank(from) && bandRank(band) > bandRank(p.said ?? 'content')) {
         p.said = band;
