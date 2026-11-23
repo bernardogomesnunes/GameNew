@@ -6,6 +6,8 @@ import { ITEMS } from '../config/items.js';
 import {settlerFloor,settlerRoute,doorWise} from './settlerNavigation.js';
 import {doorPart} from '../config/blocks.js';
 import {isLoaded} from '../world/Mobs.js';
+import { MOOD, MOOD_DAY } from '../config/mood.js'; // PLAY-13
+import { newMood, loadMood, step as moodStep, shouldLeave, bandRank } from './Mood.js'; // PLAY-13
 
 /** Everything edible, least nourishing first — what settlers work down through. */
 const FOODS = ITEMS.filter((i) => i.kind === 'food').sort((a, b) => (a.feeds ?? 0) - (b.feeds ?? 0));
@@ -76,6 +78,8 @@ export class Settlers {
     this.nextId = 0;
     this.sinceArrival = 0;
     this.sinceMeal = 0;
+    this.emptyHouses = new Map(); // PLAY-13: houseId -> seconds left empty after somebody left angry
+    this.arrivalsStopped = false; // PLAY-13: word has got round
   }
 
   get population() {
@@ -108,7 +112,7 @@ export class Settlers {
   }
 
   get hasRoom() {
-    return this.population < this.target;
+    return this.population < this.target - this.emptyCount; // PLAY-13: houses left empty don't count
   }
 
   /**
@@ -151,10 +155,84 @@ export class Settlers {
 
   /** Why nobody new is coming, in one line, or null when somebody is on the way. */
   blockedReason() {
-    if (this.hasRoom) return null;
+    if (this.hasRoom) return this.arrivalsStopped ? 'Word has got round: nobody new comes while your people are unhappy' : null; // PLAY-13
     if (this.houses === 0) return 'Nowhere to live — build a house';
     if (this.houses === 1) return 'This one is yours — build another and somebody will move in';
     return 'Everyone has a roof — build another house for another household';
+  }
+
+  // ---- PLAY-13: mood ---------------------------------------------------------
+
+  /** Houses standing empty after somebody left angry. */
+  get emptyCount() {
+    return this.emptyHouses.size;
+  }
+
+  /** Whether a villager has a job: a staffed building, or a Work Hall role. */
+  hasJob(p) {
+    if (!this.jobsOpen) return false;
+    const a = this.jobs?.assignment?.(p.id);
+    if (a && a.role !== 'automatic' && (this.jobs.hall?.(a.hallId) ?? true)) return true;
+    return p.workId != null;
+  }
+
+  /** The main reason a villager is unhappy: 'food', 'work' or null. */
+  moodReason(p) {
+    if (p.hungry) return 'food';
+    return this.hasJob(p) ? null : 'work';
+  }
+
+  /** Average mood, the worst band present, and who is closest to leaving. */
+  moodSummary() {
+    const people = this.people;
+    const average = people.length ? people.reduce((n, p) => n + p.mood, 0) / people.length : null;
+    let worst = null, worstPerson = null;
+    for (const p of people) {
+      const b = p.band ?? 'content';
+      if (b === 'content') continue;
+      if (!worstPerson || bandRank(b) > bandRank(worst) || (b === worst && p.mood < worstPerson.mood)) { worst = b; worstPerson = p; }
+    }
+    return {
+      average,
+      worst,
+      worstPerson,
+      angry: people.filter((p) => bandRank(p.band ?? 'content') >= bandRank('angry')).length,
+      leaving: people.filter((p) => p.band === 'furious').length,
+    };
+  }
+
+  /** Mood for everyone: rates, band changes, leaving, the arrivals pause. */
+  moodTick(dt) {
+    for (const [id, left] of this.emptyHouses) {
+      if (left - dt <= 0) this.emptyHouses.delete(id); else this.emptyHouses.set(id, left - dt);
+    }
+    for (const p of [...this.people]) {
+      if (!Number.isFinite(p.mood)) Object.assign(p, newMood(MOOD.legacyMood));
+      const { band, from } = moodStep(p, dt, { hungry: !!p.hungry, hasJob: this.hasJob(p) });
+      if (band === 'content') p.said = null;
+      else if (bandRank(band) > bandRank(from) && bandRank(band) > bandRank(p.said ?? 'content')) {
+        p.said = band;
+        this.bus?.emit('settler:mood', { settler: p, band, from, reason: this.moodReason(p), name: p.name });
+      }
+      if (shouldLeave(p)) this.leave(p, 'angry');
+    }
+    // Word gets round: no arrivals while the town is sour, until it mends.
+    const avg = this.moodSummary().average;
+    if (avg != null) {
+      if (avg < MOOD.arrivals.stop) this.arrivalsStopped = true;
+      else if (avg >= MOOD.arrivals.resume) this.arrivalsStopped = false;
+    } else this.arrivalsStopped = false;
+  }
+
+  /** Somebody moves out. Their cargo goes back to the Work Hall; their house stands empty a while. */
+  leave(p, reason = 'angry') {
+    if (!this.people.includes(p)) return false;
+    const cause = this.moodReason(p) ?? 'work';
+    this.jobs?.dismiss?.(p.id);
+    this.people = this.people.filter((q) => q !== p);
+    if (reason === 'angry' && p.homeId != null) this.emptyHouses.set(p.homeId, MOOD.emptyHouseDays * MOOD_DAY);
+    this.bus?.emit('settler:left', { count: 1, population: this.population, reason, cause, name: p.name, days: MOOD.emptyHouseDays });
+    return true;
   }
 
   // ---- arrivals ------------------------------------------------------------
@@ -165,7 +243,7 @@ export class Settlers {
     this.sinceArrival += dtSeconds;
     if (this.sinceArrival >= SETTLERS.arriveEverySeconds) {
       this.sinceArrival = 0;
-      if (this.hasRoom) this.arrive();
+      if (this.hasRoom && !this.arrivalsStopped) this.arrive(); // PLAY-13
     }
 
     this.sinceMeal += dtSeconds;
@@ -190,6 +268,7 @@ export class Settlers {
       const role = this.jobs?.assignment?.(p.id)?.role;
       p.job = open ? (role === 'builder' || role === 'hauler' ? role : JOB_FOR_BUILDING[types.get(p.workId)] ?? null) : null;
     }
+    this.moodTick(dtSeconds); // PLAY-13
     for (const p of this.people) {
       if (!(p.hp > 0)) p.hp = VILLAGER_HP;
       if (p.hurt > 0) p.hurt = Math.max(0, p.hurt - dtSeconds);
@@ -222,6 +301,7 @@ export class Settlers {
       // Nobody arrives hungry; the first meal after they get here decides.
       hungry: false,
       hp: VILLAGER_HP,
+      ...newMood(), // PLAY-13
     };
     this.people.push(person);
     this.assignWork(person);
@@ -237,9 +317,9 @@ export class Settlers {
    * of going to work — so an empty larder shows up as buildings producing what
    * they would produce with nobody in them.
    *
-   * Nobody starves and nobody leaves over it. Food not being a matter of life
-   * and death is the point: it decides how well the place runs, and the houses
-   * decide who lives in it.
+   * Nobody starves over it. Hunger sours mood (PLAY-13) and a villager who
+   * stays Furious for a day moves out, so the houses and the larder together
+   * decide who lives here.
    */
   eat({ onlyHungry = false } = {}) {
     if (!this.people.length && !this.soldiers) return 0;
@@ -296,7 +376,7 @@ export class Settlers {
    * always ends up without a settler in it — yours.
    */
   pickHome() {
-    const taken = new Set(this.people.map((p) => p.homeId));
+    const taken = new Set([...this.people.map((p) => p.homeId), ...this.emptyHouses.keys()]); // PLAY-13
     const free = this.structures.list().filter((s) => s.valid
       && (STRUCTURES_BY_ID.get(s.type)?.grantsCapacity ?? 0) > 0
       && !taken.has(s.id));
@@ -305,7 +385,8 @@ export class Settlers {
     // Politics buys people beyond the houses; they double up in the fullest
     // house rather than not existing.
     const houses = this.structures.list().filter((s) => s.valid
-      && (STRUCTURES_BY_ID.get(s.type)?.grantsCapacity ?? 0) > 0);
+      && (STRUCTURES_BY_ID.get(s.type)?.grantsCapacity ?? 0) > 0
+      && !this.emptyHouses.has(s.id)); // PLAY-13
     if (!houses.length) return null;
     const count = new Map();
     for (const p of this.people) count.set(p.homeId, (count.get(p.homeId) ?? 0) + 1);
@@ -355,12 +436,15 @@ export class Settlers {
    * does not get the bonus.
    */
   staffedIds() {
-    return new Set(this.people.filter((p) => p.workId != null && !p.hungry && !this.jobs?.controls(p)).map((p) => p.workId));
+    // PLAY-13: an Angry or Furious worker refuses the job, so it is not staffed.
+    return new Set(this.people.filter((p) => p.workId != null && !p.hungry && !this.jobs?.controls(p) && MOOD.workBonusScale[p.band ?? 'content'] > 0).map((p) => p.workId));
   }
 
   /** What a building's output is multiplied by, given who works it. */
   bonusFor(structureId) {
-    return this.staffedIds().has(structureId) ? 1 + SETTLERS.workBonus : 1;
+    // PLAY-13: a Grumbling worker gives half the bonus (+25% for +50%).
+    const w = this.people.find((p) => p.workId === structureId && !p.hungry && !this.jobs?.controls(p));
+    return w ? 1 + SETTLERS.workBonus * (MOOD.workBonusScale[w.band ?? 'content'] ?? 1) : 1;
   }
 
   // ---- getting about -------------------------------------------------------
@@ -635,6 +719,7 @@ export class Settlers {
     const alive = new Set(this.structures.list().filter((s) => s.valid).map((s) => s.id));
     const before = this.population;
     this.people = this.people.filter((p) => alive.has(p.homeId));
+    for (const id of [...this.emptyHouses.keys()]) if (!alive.has(id)) this.emptyHouses.delete(id); // PLAY-13
     // Pulling houses down can also put the settlement over its own rule — two
     // people and one house left means somebody is sleeping in your kitchen.
     // The most recent arrivals move on, newest first.
@@ -673,7 +758,10 @@ export class Settlers {
         id: p.id, name: p.name, colour: p.colour,
         homeId: p.homeId, workId: p.workId, hungry: !!p.hungry,
         x: p.x, y: p.y, z: p.z,
+        mood: Math.round(p.mood * 10) / 10, idleFor: Math.round(p.idleFor ?? 0), // PLAY-13
+        furiousFor: Math.round(p.furiousFor ?? 0), said: p.said ?? null, // PLAY-13
       })),
+      emptyHouses: [...this.emptyHouses].map(([id, left]) => [id, Math.round(left)]), // PLAY-13
     };
   }
 
@@ -686,8 +774,9 @@ export class Settlers {
     // indoors is the roof. The saved floor is kept when it still holds them
     // (settlerFloor, from the saved height); only otherwise the column's top.
     this.people = data.people.map((p) => ({
-      ...p, y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false,
+      ...p, ...loadMood(p), y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false, // PLAY-13
     }));
+    this.emptyHouses = new Map((data.emptyHouses ?? []).filter((e) => Array.isArray(e) && Number.isFinite(e[1]) && e[1] > 0)); // PLAY-13
     this.nextId = data.nextId ?? this.people.length;
     // Houses and workplaces may have been taken down while we were away.
     this.revalidate();
