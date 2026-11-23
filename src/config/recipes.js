@@ -1827,6 +1827,18 @@ RECIPES.push(
   { id: 'war_table', name: 'War Table', station: 'hand', age: 9, inputs: { planks: 6, string: 2, gold: 1 }, output: { id: 'war_table', count: 1 },
     blurb: 'A map with figures on it. A War Hall needs one to plan its marches.' },
 );
+
+// The Armoury's research: one study recipe a piece (config/research.js), made
+// at the Armoury, learnt after 1 + level game days (DuiltGame.startStudy).
+import { RESEARCH } from './research.js';
+for (const p of RESEARCH) {
+  RECIPES.push({
+    id: `study_${p.id}`, name: `Research ${p.name.toLowerCase()}`, station: 'armoury', age: p.age,
+    study: p.id, level: p.level, inputs: p.cost, output: { id: null, count: 1 },
+    result: p.name, blurb: p.effect,
+    ...(p.after ? { after: p.after } : {}), ...(p.ring ? { armsRing: p.ring } : {}), ...(p.group ? { group: p.group } : {}),
+  });
+}
 // --- end PLAY-12 ---
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));

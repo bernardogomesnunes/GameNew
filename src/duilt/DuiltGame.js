@@ -46,6 +46,7 @@ import { skyAt, ISLAND_R } from '../world/skyKingdom.js';
 import { Defenders, MAX_SOLDIERS } from '../world/Defenders.js';
 import { UNITS_BY_ID, unitCost, payForUnit, soldierCap, SOLDIER_CAPS } from '../config/soldiers.js';
 import { Army, ARMY_SIZE } from '../world/Army.js';
+import { RESEARCH_BY_ID, RESEARCH_IDS } from '../config/research.js';  // PLAY-12
 import { Trains, CAR_SLOTS, PART_LENGTH } from '../world/Trains.js';
 
 /** Game days a dinosaur egg takes to hatch once it's set down. */
@@ -222,6 +223,9 @@ export class DuiltGame {
     // What the university is researching now, if anything: { id, name,
     // started, days } — `started` on the world's day count (this.days).
     this.studying = null;
+    // PLAY-12: the Armoury's own slot, same shape as `studying`, so a study
+    // at the university never blocks arms research and the other way round.
+    this.armouryStudy = null;
     // IMP-15: the spots at placed stations and the foundry, working on their own.
     this.stationWork = new StationWork({ bag: () => this.inventory });
     // CRAFT3D-1: each carpentry counter's furniture in progress.
@@ -234,7 +238,9 @@ export class DuiltGame {
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
         : r.needsTemple && !this.sandbox && !this.structures.list().some((s) => s.type === 'temple' && s.valid && (s.tier ?? 0) >= r.needsTemple) ? `Raise a temple to level ${r.needsTemple + 1} first`
-        : r.study && this.studying ? `The university is busy with ${this.studying.name.toLowerCase()} — ${this.researchLeftText()} left`
+        : r.armsRing && !this.sandbox && !this.ring ? 'Forge a ring first — its arms follow it'
+        : r.armsRing && this.ring && this.ring !== r.armsRing ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
+        : r.study && this.studySlot(r.station) ? `The ${r.station === 'armoury' ? 'armoury' : 'university'} is busy with ${this.studySlot(r.station).name.toLowerCase()} — ${this.researchLeftText(r.station)} left`
         // The Future's materials: read its Archive first (world/future.js).
         : r.future && !this.time.futureKnown ? 'Knowledge from the Future — read the Archive in its university, and bring it home' : null),
       hidden: (r) => this.studyHidden(r),
@@ -270,7 +276,20 @@ export class DuiltGame {
   studyHidden(r) {
     if (!r.study) return false;
     if (r.study === 'engineering') return !!this.research.engineering;
+    // PLAY-12: the Armoury's pieces. Learnt ones are hidden, and so are the
+    // rest of a group (Sky Arms or Dark Arms) once one is; one whose
+    // `after` isn't learnt yet is not offered.
+    if (RESEARCH_BY_ID.has(r.study)) {
+      if (this.research[r.study]) return true;
+      if (r.group && [...RESEARCH_BY_ID.values()].some((p) => p.group === r.group && this.research[p.id])) return true;
+      return !!r.after && !this.research[r.after];
+    }
     return this.skills.levelOf(r.study) !== r.level - 1;
+  }
+
+  /** PLAY-12: the study running at a station (`university` or `armoury`), or null. */
+  studySlot(station = 'university') {
+    return station === 'armoury' ? this.armouryStudy : this.studying;
   }
 
   /**
@@ -291,20 +310,21 @@ export class DuiltGame {
    */
   startStudy(r) {
     if (this.sandbox) return this.study(r);
-    this.studying = { id: r.id, name: r.result ?? r.name, started: this.days, days: DuiltGame.researchDays(r) };
-    this.bus?.emit('research:started', { ...this.studying });
+    const st = { id: r.id, name: r.result ?? r.name, started: this.days, days: DuiltGame.researchDays(r) };
+    if (r.station === 'armoury') this.armouryStudy = st; else this.studying = st;
+    this.bus?.emit('research:started', { ...st });
   }
 
-  /** How far the research is: { id, name, done, days, ratio }, or null. */
-  researchProgress() {
-    const st = this.studying;
+  /** How far the research is at a station: { id, name, done, days, ratio }, or null. */
+  researchProgress(station = 'university') {
+    const st = this.studySlot(station);
     if (!st) return null;
     const done = Math.max(0, Math.min(st.days, this.days - st.started));
     return { ...st, done, ratio: done / st.days };
   }
 
-  researchLeftText() {
-    const p = this.researchProgress();
+  researchLeftText(station = 'university') {
+    const p = this.researchProgress(station);
     if (!p) return '';
     const left = p.days - p.done;
     return gameDaysText(left);
@@ -312,13 +332,18 @@ export class DuiltGame {
 
   /** Finishes the research once its days are up. Returns what was learnt, or null. */
   finishResearch() {
-    const p = this.researchProgress();
-    if (!p || p.done < p.days) return null;
-    const r = RECIPES_BY_ID.get(p.id);
-    this.studying = null;
-    if (r) this.study(r);
-    this.bus?.emit('research:finished', { id: p.id, name: p.name });
-    return p;
+    // PLAY-12: the Armoury's slot finishes the same way.
+    let learnt = null;
+    for (const station of ['university', 'armoury']) {
+      const p = this.researchProgress(station);
+      if (!p || p.done < p.days) continue;
+      const r = RECIPES_BY_ID.get(p.id);
+      if (station === 'armoury') this.armouryStudy = null; else this.studying = null;
+      if (r) this.study(r);
+      this.bus?.emit('research:finished', { id: p.id, name: p.name });
+      learnt ??= p;
+    }
+    return learnt;
   }
 
   /** What studying does: a skill up a level, or a piece of research learnt. */
@@ -326,6 +351,11 @@ export class DuiltGame {
     if (r.study === 'engineering') {
       this.research.engineering = true;
       this.bus?.emit('research:done', { id: 'engineering', name: 'Engineering' });
+      return;
+    }
+    if (RESEARCH_BY_ID.has(r.study)) {
+      this.research[r.study] = true;
+      this.bus?.emit('research:done', { id: r.study, name: RESEARCH_BY_ID.get(r.study).name });
       return;
     }
     const need = MILESTONES[r.level - 1];
@@ -2496,6 +2526,7 @@ export class DuiltGame {
       ring: this.ring,
       research: this.research,
       studying: this.studying,
+      armouryStudy: this.armouryStudy,  // PLAY-12
       skyFallen: this.skyFallen || undefined,
       skyGift: this.skyGift || undefined,
       // CRAFT-9 part 4: written by every save from now on, so the gift on load comes once.
@@ -2573,10 +2604,16 @@ export class DuiltGame {
     this.hunger.loadJSON(data.hunger);
     this.health.loadJSON(data.health);
     this.ring = data.ring === 'white' || data.ring === 'black' ? data.ring : null;
-    this.research = data.research && typeof data.research === 'object' ? { engineering: !!data.research.engineering } : {};
-    const st = data.studying;
-    this.studying = st && RECIPES_BY_ID.get(st.id)?.study && Number.isFinite(st.started) && Number.isFinite(st.days)
-      ? { id: st.id, name: String(st.name ?? RECIPES_BY_ID.get(st.id).result), started: st.started, days: st.days } : null;
+    // PLAY-12: engineering and the Armoury's pieces; unknown ids and anything not `true` are dropped.
+    this.research = {};
+    if (data.research && typeof data.research === 'object') {
+      for (const id of RESEARCH_IDS) if (data.research[id] === true) this.research[id] = true;
+    }
+    const studyOf = (st, station) => (st && RECIPES_BY_ID.get(st.id)?.study && RECIPES_BY_ID.get(st.id).station === station
+      && Number.isFinite(st.started) && Number.isFinite(st.days)
+      ? { id: st.id, name: String(st.name ?? RECIPES_BY_ID.get(st.id).result), started: st.started, days: st.days } : null);
+    this.studying = studyOf(data.studying, 'university');
+    this.armouryStudy = studyOf(data.armouryStudy, 'armoury');
     this.skyFallen = data.skyFallen === true;
     this.skyGift = data.skyGift === true;
     this.holdSky();

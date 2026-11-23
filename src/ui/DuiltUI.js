@@ -7,6 +7,7 @@ import { Granary } from '../items/Granary.js';
 import { penProduce } from '../duilt/Ranch.js';
 import { farmSeedSlots } from '../duilt/Crops.js';
 import { UNITS, UNITS_BY_ID, unitCost, soldierCap, SOLDIER_CAPS } from '../config/soldiers.js';
+import { learntNames } from '../config/research.js';  // PLAY-12
 
 /** What's drawn beside each kind of soldier in a barracks's line. */
 const UNIT_GLYPHS = { warrior: 'sword', swordsman: 'sword', archer: 'bow', crew: 'catapult', shield_guard: 'sword' };
@@ -2477,14 +2478,14 @@ export class DuiltUI {
       // bar and the time left instead of a button.
       const count = r.study ? `<b>Lv ${r.level}</b>` : r.output.count > 1 ? `<b>×${r.output.count}</b>` : '';
       const name = r.study ? r.result : itemName(r.output.id);
-      const going = r.study ? d.researchProgress?.() : null;
+      const going = r.study ? d.researchProgress?.(r.station) : null;
       if (going && going.id === r.id) {
         return `
         <div class="recipe-tile researching">
           <span class="recipe-icon">${icon}${count}</span>
           <strong class="recipe-name">${escapeHtml(r.result)}</strong>
           <div class="research-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(going.ratio * 100)}"><i style="width:${Math.round(going.ratio * 100)}%"></i></div>
-          <div class="research-left">Researching · ${escapeHtml(d.researchLeftText())} left</div>
+          <div class="research-left">Researching · ${escapeHtml(d.researchLeftText(r.station))} left</div>
         </div>`;
       }
       const verb = r.study ? 'Research' : 'Make';
@@ -2810,7 +2811,11 @@ export class DuiltUI {
     const body = recipes.length
       ? `<div class="recipe-grid">${this.recipeGridHtml(recipes)}</div>`
       : '<p class="dim">Nothing to make here yet. More comes next age.</p>';
-    return `${spots}<div class="building-sec building-make"><h4>${spec.station === 'university' ? 'Research' : 'Make here'}</h4>${body}</div>`;
+    // PLAY-12: the Armoury lists what it has learnt above its research.
+    const learnt = spec.station === 'armoury' ? learntNames(d.research) : [];
+    const learntLine = spec.station === 'armoury'
+      ? `<p class="building-line armoury-learnt">${learnt.length ? `Learnt: ${escapeHtml(learnt.join(', '))}` : 'Nothing learnt yet.'}</p>` : '';
+    return `${spots}<div class="building-sec building-make"><h4>${spec.station === 'university' || spec.station === 'armoury' ? 'Research' : 'Make here'}</h4>${learntLine}${body}</div>`;
   }
 
   /**
