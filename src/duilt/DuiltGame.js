@@ -27,7 +27,7 @@ import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, 
 import { AIR, BLOCKS_BY_ID, isFluid, doorPart, stationOf } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
-import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN, goodsFor } from '../config/traders.js';
+import { tradersFor, TRADERS_BY_ID, GOBLIN_SKIN, goodsFor, PURSE, sellPrice, buysFor, orderSlots, wornCoins } from '../config/traders.js';
 import { QUESTS, QUESTS_BY_ID } from '../config/quests.js';
 import { MOMENTS } from '../config/moments.js';
 import { RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
@@ -150,6 +150,9 @@ export class DuiltGame {
     // Bare dirt next to turf grows over in 5 to 50 game days (TurfSpread).
     this.turf = new TurfSpread();
     this.days = 0;
+    // PLAY-22/23: coins each trader has paid out today, and the game day standing orders last ran.
+    this.purses = { day: 0, spent: {} };
+    this.marketDay = 0;
     this.emergingPlaces = emergingState(world.gen?.emergingPlaces);
     // What a broken leaf drops besides itself: Math.random, unless a test
     // wants it to be sure.
@@ -1735,6 +1738,153 @@ export class DuiltGame {
     return { ok: true, id, n, price, name: itemName(id) };
   }
 
+  // ---- selling (PLAY-22/23) ----
+
+  /** Coins a trader can still pay out today. One purse per trader across all markets; it refills when the game day turns. */
+  purseLeft(traderId) {
+    const day = Math.floor(this.days ?? 0);
+    if (!this.purses || this.purses.day !== day) this.purses = { day, spent: {} };
+    return Math.max(0, PURSE - (this.purses.spent[traderId] ?? 0));
+  }
+
+  /** Stock of an item in the bag and in every storehouse (broken ones too, as the storage controller reads them). */
+  sellStock(itemId, { bag = true, stores = true } = {}) {
+    let n = bag ? this.inventory.countOf(itemId) : 0;
+    if (stores) for (const s of this.structures.structures) if (s.store) n += s.store.countOf(itemId);
+    return n;
+  }
+
+  /** Takes exactly `n` of an item out of the storehouses, or nothing; returns `n` or 0. Not for tools. */
+  takeFromStoresExact(itemId, n) {
+    if (!(n > 0) || isTool(itemId)) return 0;
+    const holders = this.structures.structures.filter((s) => s.store && s.store.countOf(itemId) > 0);
+    if (holders.reduce((t, s) => t + s.store.countOf(itemId), 0) < n) return 0;
+    let left = n;
+    for (const s of holders) {
+      if (left <= 0) break;
+      left -= s.store.remove(itemId, Math.min(left, s.store.countOf(itemId)));
+    }
+    return n;
+  }
+
+  /** Puts coins somewhere: the bag if they fit, else the storehouses (then what room the bag has). All or nothing. */
+  giveCoins(coins) {
+    if (coins <= 0) return true;
+    if (this.inventory.roomFor('coin', coins) >= coins) { this.inventory.add('coin', coins); return true; }
+    return this.structures.deliver({ coin: coins });
+  }
+
+  /**
+   * The core of every sale, hand or order: sells whole lots of an item to a
+   * trader, up to what the source has and the purse covers.
+   *   take: { count(), remove(n) -> () => undo }  where the goods come from
+   *   room: (coins) => boolean                    false stops the sale before it starts (optional)
+   * Coins go to the bag first, then the storehouses; if neither can hold
+   * them, the goods go back. Returns { ok, n, coins, lots, short, reason }.
+   */
+  sellLots(traderId, itemId, lots, { take, room } = {}) {
+    const t = TRADERS_BY_ID.get(traderId);
+    const price = sellPrice(itemId);
+    if (this.sandbox || this.inventory.endless) return { ok: false, n: 0, coins: 0, lots: 0, short: null, reason: 'Nothing to sell in Creative.' };
+    if (!t || !price || !buysFor(t).some((r) => r[0] === itemId)) return { ok: false, n: 0, coins: 0, lots: 0, short: null, reason: `${t?.name ?? 'They'} do${t ? 'es' : ''} not buy that.` };
+    const { lot, coins: per } = price;
+    const have = take.count();
+    const left = this.purseLeft(traderId);
+    const byStock = Math.floor(have / lot);
+    const byPurse = Math.floor(left / per);
+    const want = Math.max(0, Math.floor(lots));
+    if (byStock < 1) {
+      const need = lot - have;
+      return { ok: false, n: 0, coins: 0, lots: 0, short: 'stock', reason: `Needs ${need} more ${itemName(itemId).toLowerCase()} for a lot.` };
+    }
+    if (byPurse < 1) return { ok: false, n: 0, coins: 0, lots: 0, short: 'purse', reason: `${t.name} has no more coins today. Back tomorrow.` };
+    const sold = Math.min(want, byStock, byPurse);
+    if (sold < 1) return { ok: false, n: 0, coins: 0, lots: 0, short: null, reason: 'Nothing to sell.' };
+    const short = sold < want ? (byPurse <= byStock ? 'purse' : 'stock') : null;
+    const n = sold * lot, coins = sold * per;
+    if (room && !room(coins)) return { ok: false, n: 0, coins: 0, lots: 0, short: 'room', reason: 'Nowhere to put the coins.' };
+    const undo = take.remove(n);
+    if (!undo) return { ok: false, n: 0, coins: 0, lots: 0, short: 'stock', reason: 'The goods are gone.' };
+    if (!this.giveCoins(coins)) {
+      undo();
+      return { ok: false, n: 0, coins: 0, lots: 0, short: 'room', reason: 'Your bag and storehouses are full. Nowhere to put the coins.' };
+    }
+    this.purses.spent[traderId] = (this.purses.spent[traderId] ?? 0) + coins;
+    this.tally.trade += 1;
+    this.tradedWith.add(traderId);
+    this.bus?.emit('duilt:sold', { trader: traderId, itemId, count: n, coins });
+    const reason = short === 'purse' ? `${t.name} ran out of coins today.` : short === 'stock' ? 'Sold what there was.' : null;
+    return { ok: true, n, coins, lots: sold, short, reason };
+  }
+
+  /**
+   * Sells to a trader by hand, `lots` lots of an item, from the bag and then
+   * the storehouses the storage controller reaches. A worn tool or armour
+   * piece sells one at a time, the least worn first, for less as it wears.
+   * Returns { ok, n, coins, lots, reason }, with the item's name in `name`.
+   */
+  sellTo(traderId, itemId, lots = 1) {
+    const base = { name: itemName(itemId) };
+    if (ITEMS_BY_ID.get(itemId)?.durability) return { ...base, ...this.sellWorn(traderId, itemId, lots) };
+    const bag = this.inventory;
+    const source = {
+      count: () => this.sellStock(itemId),
+      remove: (n) => {
+        const fromBag = Math.min(bag.countOf(itemId), n);
+        const fromStores = n - fromBag;
+        if (fromStores > 0 && this.sellStock(itemId, { bag: false }) < fromStores) return null;
+        if (fromBag) bag.remove(itemId, fromBag);
+        if (fromStores && !this.takeFromStoresExact(itemId, fromStores)) { bag.add(itemId, fromBag); return null; }
+        return () => {
+          // Back to where it came from: the bag first, the rest on the shelves.
+          let rest = bag.add(itemId, n);
+          if (rest) this.structures.deliver({ [itemId]: rest });
+        };
+      },
+    };
+    return { ...base, ...this.sellLots(traderId, itemId, lots, { take: source }) };
+  }
+
+  /** Tools and armour: each piece for what its wear leaves of the price. */
+  sellWorn(traderId, itemId, lots) {
+    const t = TRADERS_BY_ID.get(traderId);
+    const price = sellPrice(itemId);
+    const fail = (reason, short = null) => ({ ok: false, n: 0, coins: 0, lots: 0, short, reason });
+    if (this.sandbox || this.inventory.endless) return fail('Nothing to sell in Creative.');
+    if (!t || !price || !buysFor(t).some((r) => r[0] === itemId)) return fail(`${t?.name ?? 'They'} do${t ? 'es' : ''} not buy that.`);
+    const pieces = [];
+    const add = (inv) => inv.slots.forEach((sl, i) => {
+      if (sl?.id === itemId) pieces.push({ inv, i, coins: wornCoins(itemId, price.coins, sl.wear ?? 0), wear: sl.wear ?? 0 });
+    });
+    add(this.inventory);
+    for (const s of this.structures.structures) if (s.store) add(s.store);
+    pieces.sort((a, b) => b.coins - a.coins);
+    const worth = pieces.filter((p) => p.coins >= 1);
+    if (!worth.length) return fail(pieces.length ? 'Too worn to sell.' : `Needs 1 ${itemName(itemId).toLowerCase()}.`, 'stock');
+    let left = this.purseLeft(traderId);
+    if (left < worth[0].coins) return fail(`${t.name} has no more coins today. Back tomorrow.`, 'purse');
+    const done = [];
+    let coins = 0;
+    for (const p of worth) {
+      if (done.length >= Math.max(1, Math.floor(lots))) break;
+      if (p.coins > left) continue;
+      done.push(p); left -= p.coins; coins += p.coins;
+    }
+    const kept = done.map((p) => ({ ...p, slot: p.inv.slots[p.i] }));
+    for (const p of kept) p.inv.slots[p.i] = null;
+    for (const p of kept) p.inv.changed();
+    if (!this.giveCoins(coins)) {
+      for (const p of kept) { p.inv.slots[p.i] = p.slot; p.inv.changed(); }
+      return fail('Your bag and storehouses are full. Nowhere to put the coins.', 'room');
+    }
+    this.purses.spent[traderId] = (this.purses.spent[traderId] ?? 0) + coins;
+    this.tally.trade += 1;
+    this.tradedWith.add(traderId);
+    this.bus?.emit('duilt:sold', { trader: traderId, itemId, count: done.length, coins });
+    const short = done.length < Math.floor(lots) ? 'purse' : null;
+    return { ok: true, n: done.length, coins, lots: done.length, short, reason: short ? `${t.name} ran out of coins today.` : null };
+  }
+
   /** IMP-33: which wood a forest grows ('oak', 'white' or 'dark'); white and dark from Age 3. */
   setForestWood(id, wood) {
     const s = this.structures.list().find((x) => x.id === id);
@@ -2277,6 +2427,8 @@ export class DuiltGame {
       saplings: this.saplings.toJSON(),
       turf: this.turf.toJSON(),
       days: this.days,
+      purses: { day: this.purses.day, spent: { ...this.purses.spent } },
+      marketDay: this.marketDay,
       savedAt: Date.now(),
     };
   }
@@ -2378,6 +2530,11 @@ export class DuiltGame {
     this.saplings.loadJSON(data.saplings);
     this.turf.loadJSON(data.turf);
     this.days = Number.isFinite(data.days) ? data.days : 0;
+    // A save from before selling has full purses; a stale day refills them (purseLeft).
+    const pu = data.purses;
+    this.purses = { day: Number.isFinite(pu?.day) ? pu.day : Math.floor(this.days), spent: {} };
+    for (const [id, n] of Object.entries(pu?.spent ?? {})) if (TRADERS_BY_ID.has(id) && Number.isFinite(n) && n > 0) this.purses.spent[id] = Math.min(PURSE, n);
+    this.marketDay = Number.isFinite(data.marketDay) ? data.marketDay : Math.floor(this.days);
     this.emergingPlaces = emergingState(data.emergingPlaces ?? this.world.gen?.emergingPlaces);
     installEmergingPlaces(this.world.gen, this.emergingPlaces);
     this.war.loadJSON(data.war);
