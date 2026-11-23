@@ -36,6 +36,10 @@ export const CROPS = [
   // (config/biomes.js `scatter`), and its seed turns up in turf like any
   // field crop's.
   { kind: 'hemp', name: 'Hemp', produce: 'hemp_fibre', leaf: 0x5f8f3e, crop: 0xa3a85a, base: 337, fibre: true },
+  // PLAY-10 (owner, 22 November: "cotton that should be an item with seeds
+  // to farm"): a field crop like hemp, its blocks at 548-551. Picked ripe it
+  // gives cotton, spun into string at the wheel. Seeds turn up in turf.
+  { kind: 'cotton', name: 'Cotton', produce: 'cotton', leaf: 0x6f9a4a, crop: 0xf4f1ea, base: 548, fibre: true },
 ];
 export const CROPS_BY_KIND = new Map(CROPS.map((c) => [c.kind, c]));
 
@@ -126,6 +130,14 @@ export function cropBoxes(kind, stage) {
       box(0.18, 0.28, 0.46, 0.82, 0.34, 0.54, c.leaf), box(0.46, 0.4, 0.2, 0.54, 0.46, 0.8, c.leaf),
       box(0.24, 0.56, 0.46, 0.76, 0.62, 0.54, c.leaf), box(0.46, 0.66, 0.26, 0.54, 0.72, 0.74, c.leaf),
       box(0.4, 0.82, 0.4, 0.6, 1, 0.6, c.crop),
+    ];
+    case 'cotton': return [
+      // PLAY-10: a woody stalk, two cross leaves, and open white bolls.
+      box(0.46, 0, 0.46, 0.54, 0.72, 0.54, 0x6b5a3a),
+      box(0.2, 0.3, 0.44, 0.8, 0.36, 0.56, c.leaf), box(0.44, 0.42, 0.22, 0.56, 0.48, 0.78, c.leaf),
+      box(0.16, 0.44, 0.36, 0.3, 0.58, 0.5, c.crop), box(0.66, 0.5, 0.5, 0.8, 0.64, 0.64, c.crop),
+      box(0.38, 0.58, 0.16, 0.52, 0.72, 0.3, c.crop), box(0.5, 0.62, 0.68, 0.64, 0.76, 0.82, c.crop),
+      box(0.4, 0.72, 0.4, 0.6, 0.88, 0.6, c.crop),
     ];
     default: return tuft(0.5, 0.5, c.leaf);
   }

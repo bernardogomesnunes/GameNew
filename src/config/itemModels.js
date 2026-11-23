@@ -354,6 +354,17 @@ ITEM_MODELS.wool = [
   ...stack([[0.2, 0.2, 0, 0.1, 0xe8e2d6], [0.3, 0.3, 0.1, 0.4, 0xf2ede4], [0.22, 0.22, 0.4, 0.56, 0xe8e2d6]]),
   box(0.66, 0, 0.46, 0.86, 0.04, 0.52, 0xe8e2d6),
 ];
+// PLAY-9: leather, a tanned sheet folded over on itself, tied with a strap.
+ITEM_MODELS.leather = [
+  box(0.16, 0, 0.22, 0.84, 0.08, 0.78, 0x8a5a36),
+  box(0.16, 0.08, 0.22, 0.84, 0.14, 0.62, 0x9a6b45),
+  box(0.44, 0, 0.2, 0.54, 0.16, 0.8, 0x5e4128),
+];
+// PLAY-10: a cotton boll, white fluff on its brown husk.
+ITEM_MODELS.cotton = stack([
+  [0.12, 0.12, 0, 0.08, 0x6b5a3a], [0.24, 0.24, 0.08, 0.2, 0xece6da],
+  [0.3, 0.3, 0.2, 0.4, 0xf7f4ec], [0.2, 0.2, 0.4, 0.52, 0xece6da],
+]);
 // A jar of fireflies: glass, a cork, and the lights inside.
 ITEM_MODELS.fireflies = [
   ...stack([[0.22, 0.22, 0, 0.62, 0xcfe6d8]]),

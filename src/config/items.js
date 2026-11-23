@@ -130,7 +130,7 @@ export const ITEMS = [
   { id: 'cooked_meat', name: 'Cooked Meat', kind: 'food', stackTo: STACK_FOOD, color: 0xb7825c, glyph: 'meat', feeds: 32, madeBy: 'Cook Raw Meat with Wood at the workbench' },
 
   // --- what animals leave behind -------------------------------------------
-  { id: 'hide', name: 'Hide', kind: 'raw', stackTo: STACK_GOODS, color: 0xb99372, glyph: 'hide', madeBy: 'Hunted from deer, boar, goats and cows' },
+  { id: 'hide', name: 'Hide', kind: 'raw', stackTo: STACK_GOODS, color: 0xb99372, glyph: 'hide', madeBy: 'Hunted from deer, boar, goats and cows. Tan it into leather at a Tanning Vat' },
   { id: 'wool', name: 'Wool', kind: 'raw', stackTo: STACK_GOODS, color: 0xefebe2, glyph: 'wool', madeBy: 'Hunted from sheep' },
   { id: 'egg', name: 'Egg', kind: 'food', stackTo: STACK_FOOD, color: 0xf2e6cf, glyph: 'egg', feeds: 10, madeBy: 'Laid by hens in a pen' },
   { id: 'milk', name: 'Milk', kind: 'food', stackTo: STACK_FOOD, color: 0xf4f1ea, glyph: 'milk', feeds: 14, madeBy: 'From cows in a pen' },
@@ -205,7 +205,7 @@ export const ITEMS = [
   // fibre spun into string; string and planks into a bow and its arrows.
   // With the bow in hand, Break looses an arrow (Game.shootBow).
   { id: 'hemp_fibre', name: 'Hemp Fibre', kind: 'raw', stackTo: STACK_BULK, color: 0xc9b98a, glyph: 'fibre', madeBy: 'Picked from ripe hemp' },
-  { id: 'spinning_wheel', name: 'Spinning Wheel', kind: 'refined', stackTo: 10, color: 0xa87a4c, glyph: 'string', block: 534, madeBy: 'Made by hand from oak planks and a log. Place it and spin hemp into string' },
+  { id: 'spinning_wheel', name: 'Spinning Wheel', kind: 'refined', stackTo: 10, color: 0xa87a4c, glyph: 'string', block: 534, madeBy: 'Made by hand from oak planks and a log. Place it and spin hemp, wool or cotton into string' },
   { id: 'dragon_scale', name: 'Dragon Scale', kind: 'raw', stackTo: STACK_GOODS, color: 0x8a2a3a, glyph: 'crystal', block: 535, madeBy: 'Shed by a dragon. Break it where it lies to pick it up' },
   { id: 'dragon_claw', name: 'Dragon Claw', kind: 'raw', stackTo: STACK_GOODS, color: 0xe6dcc0, glyph: 'crystal', block: 536, madeBy: 'Shed by a dragon. Break it where it lies to pick it up' },
   { id: 'egg_dragon', name: 'Dragon Egg', kind: 'raw', stackTo: STACK_GOODS, color: 0x8a2a3a, glyph: 'egg', block: 537,
@@ -214,7 +214,7 @@ export const ITEMS = [
   { id: 'dragon_axe', name: 'Dragon Axe', kind: 'tool', stackTo: 1, color: 0x8a2a3a, glyph: 'axe', durability: 4000, damage: 9,
     effectiveness: { wood: 'fast', plant: 'fast', dirt: 'normal', stone: 'normal' },
     madeBy: 'Dragon scales and claws on a diamond edge. One blow fells anything but a god; held, you heal without eating' },
-  { id: 'string', name: 'String', kind: 'refined', stackTo: STACK_BULK, color: 0xe6dcc0, glyph: 'string', madeBy: 'Hemp fibre, spun at the bench' },
+  { id: 'string', name: 'String', kind: 'refined', stackTo: STACK_BULK, color: 0xe6dcc0, glyph: 'string', madeBy: 'Hemp, wool or cotton, spun at a Spinning Wheel' },
   { id: 'arrow', name: 'Arrow', kind: 'refined', stackTo: STACK_BULK, color: 0xb08a5a, glyph: 'arrow', madeBy: 'Planks and string, at the bench — the bow shoots them' },
   {
     id: 'bow', name: 'Bow', kind: 'tool', stackTo: STACK_TOOL, color: 0x9a6c40, glyph: 'bow',
@@ -533,6 +533,19 @@ export const ITEMS = [
     id: b.id, name: b.name, kind: 'gear', stackTo: 1, color: b.main, glyph: 'backpack',
     wears: 'back', bagSlots: b.slots, madeBy: `${b.madeBy} — wear it for ${b.slots} more bag slots`,
   })),
+
+  // --- PLAY-9: leather (docs/design/play-9-10.md) ----------------------------
+  // Owner, 22 November: "add a mechanic to do leather, instead of using the
+  // animal skins". Hides soak with oak bark in a placed Tanning Vat.
+  { id: 'leather', name: 'Leather', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a6b45, glyph: 'hide', madeBy: 'Hides soaked with oak bark in a placed Tanning Vat' },
+  { id: 'tanning_vat', name: 'Tanning Vat', kind: 'refined', stackTo: 10, color: 0x8a6440, glyph: 'bucket', block: 544, madeBy: 'Made by hand from oak planks and stone. Place it and tan hides into leather' },
+  // --- end PLAY-9 ---
+
+  // --- PLAY-10: cotton (docs/design/play-9-10.md) ----------------------------
+  // Its seeds are made from CROPS above (seeds_cotton, block 548); this is
+  // what a ripe plant gives. Spun into string at the Spinning Wheel.
+  { id: 'cotton', name: 'Cotton', kind: 'raw', stackTo: STACK_BULK, color: 0xf4f1ea, glyph: 'wool', madeBy: 'Picked from ripe cotton. Spin it into string at a Spinning Wheel' },
+  // --- end PLAY-10 ---
 ];
 
 // Furniture in every wood (backlog batch 3) — see blocks.js WOOD_FURNITURE.

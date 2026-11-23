@@ -17,6 +17,7 @@ export const BENCH_MACHINES = {
   bleach_bucket: { verb: 'Dip', tool: 'dip', seconds: 1.5 },
   forge: { verb: 'Hammer', tool: 'hammer', seconds: 1.6 },
   spinning_wheel: { verb: 'Spin', tool: 'wheel', seconds: 1.5 },
+  tanning_vat: { verb: 'Soak', tool: 'dip', seconds: 1.6 },
   // CRAFT-9 part 4: tapped, not held (chiselTap).
   masons_bench: { verb: 'Chisel', tool: 'chisel', taps: 3 },
 };

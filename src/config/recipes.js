@@ -1540,7 +1540,7 @@ RECIPES.push(
   // CRAFT3D-2 (owner: "I'm seeing string, with a tool to treat hemp"): a
   // spinning wheel twists the fibre into more string than hands do.
   { id: 'string_spun', name: 'String', station: 'spinning_wheel', age: 1, inputs: { hemp_fibre: 3 }, output: { id: 'string', count: 2 }, batch: 4, blurb: 'Spun on the wheel: twice what your hands twist from the same fibre.' },
-  { id: 'spinning_wheel', name: 'Spinning Wheel', station: 'hand', age: 1, inputs: { planks: 4, wood: 1 }, output: { id: 'spinning_wheel', count: 1 }, blurb: 'Place it, then spin hemp fibre into string on it.' },
+  { id: 'spinning_wheel', name: 'Spinning Wheel', station: 'hand', age: 1, inputs: { planks: 4, wood: 1 }, output: { id: 'spinning_wheel', count: 1 }, blurb: 'Place it, then spin hemp fibre, wool or cotton into string on it.' },
 );
 
 // Tools past stone (backlog batch 2), from config/tiers.js.
@@ -1804,6 +1804,23 @@ RECIPES.push({ id: 'kiln_oven', name: 'Kiln Oven', station: 'workbench', age: 4,
 // PLAY-7: the quarry hut's tool rack.
 RECIPES.push({ id: 'tool_rack', name: 'Tool Rack', station: 'workbench', age: 3, inputs: { planks: 3, stone: 2 }, output: { id: 'tool_rack', count: 1 },
   blurb: 'A pickaxe, a shovel and a hammer on a rack. A quarry hut keeps one.' });
+
+// --- PLAY-9: leather (docs/design/play-9-10.md) -------------------------------
+// The vat by hand from Age 1, as the spinning wheel is; leather only at the vat.
+RECIPES.push(
+  { id: 'tanning_vat', name: 'Tanning Vat', station: 'hand', age: 1, inputs: { planks: 6, stone: 2 }, output: { id: 'tanning_vat', count: 1 },
+    blurb: 'Place it, then soak hides with oak bark into leather.' },
+  { id: 'leather', name: 'Leather', station: 'tanning_vat', age: 1, inputs: { hide: 2, wood: 1 }, output: { id: 'leather', count: 2 }, batch: 4,
+    blurb: 'Hides soaked with oak bark until they turn to leather. Armour, shields and backpacks need it.' },
+);
+// --- end PLAY-9 ---
+
+// --- PLAY-10: string from wool and cotton (docs/design/play-9-10.md) ----------
+RECIPES.push(
+  { id: 'string_wool', name: 'String', station: 'spinning_wheel', age: 1, inputs: { wool: 1 }, output: { id: 'string', count: 1 }, batch: 4, blurb: 'Wool spun fine on the wheel.' },
+  { id: 'string_cotton', name: 'String', station: 'spinning_wheel', age: 1, inputs: { cotton: 1 }, output: { id: 'string', count: 1 }, batch: 4, blurb: 'Cotton spun on the wheel: the finest string from a field.' },
+);
+// --- end PLAY-10 ---
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
