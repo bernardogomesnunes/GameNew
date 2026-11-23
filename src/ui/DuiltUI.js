@@ -1816,6 +1816,7 @@ export class DuiltUI {
   }
 
   openTownPanel() {
+    this.townHtml = null;
     this.renderTown();
     clearInterval(this.townTimer);
     this.townTimer = setInterval(() => { if (this.panels.isOpen('panel-town')) this.renderTown(); }, 2000);
@@ -1850,7 +1851,7 @@ export class DuiltUI {
       : 'Nobody lives here yet. Build a second house and somebody will move in.';
     if (sub) sub.textContent = s.arrivalsStopped ? 'Word has got round: nobody new comes while your people are unhappy.' : 'Mood, jobs and what each villager needs.';
     const JOB = { builder: 'Builder', hauler: 'Carrier', woodcutter: 'Woodcutter', farmer: 'Farmer', miner: 'Miner', kiln_worker: 'Kiln worker', trader: 'Trader', clerk: 'Clerk', innkeeper: 'Innkeeper', acolyte: 'Acolyte' };
-    list.innerHTML = people.map((p) => {
+    const html = people.map((p) => {
       const band = p.band ?? 'content';
       const days = Math.floor((p.idleFor ?? 0) / GAME_DAY_SECONDS);
       const employed = s.hasJob(p);
@@ -1871,6 +1872,10 @@ export class DuiltUI {
         ${give || find ? `<span class="town-actions">${give}${find}</span>` : ''}
       </div>`;
     }).join('');
+    // Redrawn only when something changed, so a tap never lands on a row that is being replaced.
+    if (html === this.townHtml) return;
+    this.townHtml = html;
+    list.innerHTML = html;
     list.querySelectorAll('[data-town-food]').forEach((b) => b.addEventListener('click', () => { this.giveFood(); this.renderTown(); }));
     list.querySelectorAll('[data-town-work]').forEach((b) => b.addEventListener('click', () => this.findWork()));
   }
