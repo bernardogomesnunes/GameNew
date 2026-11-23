@@ -1,7 +1,7 @@
 import { groundAt, bodyFits } from './Mobs.js';
 import { ease, drift, fall } from './bodies.js';
 import { roofPart } from '../config/blocks.js';
-import { UNITS_BY_ID, LEGACY_UNIT, SOLDIER_CAPS } from '../config/soldiers.js';
+import { UNITS_BY_ID, LEGACY_UNIT, SOLDIER_CAPS, unitStats, towerArcherStats } from '../config/soldiers.js';
 
 /**
  * Your side of the war (the defence buildings — config/structures.js): the
@@ -139,6 +139,18 @@ export class Defenders {
     this.repost = new Set();
     // The patrol's loop round the village: [{ x, z }], from sync.
     this.route = [];
+    // PLAY-12: what the Armoury has researched (the save's `research` map), given in sync.
+    this.research = {};
+  }
+
+  /** PLAY-12: a unit as research has made it (config/soldiers.js unitStats). */
+  stats(unit) {
+    return unitStats(UNITS_BY_ID.get(unit), this.research);
+  }
+
+  /** PLAY-12: a watchtower archer's shot, with Fletching. */
+  towerShot() {
+    return towerArcherStats(TOWER_ARCHER, this.research);
   }
 
   /** A barracks's standing order: 'defend', 'patrol' or 'formation'. */
@@ -219,8 +231,14 @@ export class Defenders {
    * @returns          who finished training just now: [{ unit, of, left }],
    *                   `left` being how many are still in line behind them
    */
-  sync(buildings, days, village = null) {
+  sync(buildings, days, village = null, research = null) {
     const joined = [];
+    if (research) this.research = research;
+    // Research that raises hp reaches soldiers already out: they gain the difference.
+    for (const s of this.soldiers) {
+      const u = this.stats(s.unit);
+      if (u && s.maxHp !== u.hp) { s.hp = Math.max(1, s.hp + u.hp - (s.maxHp ?? u.hp)); s.maxHp = u.hp; }
+    }
     // Ids as strings throughout: the training is saved as JSON, whose keys are.
     const standing = new Map(buildings.filter((b) => b.valid).map((b) => [String(b.id), { ...b, id: String(b.id) }]));
     this.soldiers = this.soldiers.filter((s) => {
@@ -264,7 +282,7 @@ export class Defenders {
           const spot = spots.shift();
           // No clear ground yet: keep the trained slot and retry next sync.
           if (!spot) return;
-          const s = this.person(UNITS_BY_ID.get(unit)?.kind ?? 'soldier', spot, b.id, unit);
+          const s = this.person(this.stats(unit)?.kind ?? 'soldier', spot, b.id, unit);
           s.slot = i;
           this.soldiers.push(s);
           occupied.add(`${spot.x},${spot.z}`);
@@ -290,7 +308,7 @@ export class Defenders {
       occupied.add(`${Math.floor(s.post.x)},${Math.floor(s.post.z)}`);
     }
     const all = order === 'formation' ? this.paradeSpots(b.region, occupied) : this.spreadSpots(this.ringSpots(b.region, occupied), mine.length);
-    const patroller = order === 'patrol' ? mine.find((s) => { const u = UNITS_BY_ID.get(s.unit); return !u?.ranged && !u?.siege; }) : null;
+    const patroller = order === 'patrol' ? mine.find((s) => { const u = this.stats(s.unit); return !u?.ranged && !u?.siege; }) : null;
     if (patroller) this.route = this.loopRound(village ?? b.region);
     let i = 0;
     for (const s of mine) {
@@ -391,12 +409,12 @@ export class Defenders {
 
   /** A figure of yours: a tower's archer, or one of a barracks's soldiers trained as `unit`. */
   person(kind, spot, of, unit = null) {
-    const u = UNITS_BY_ID.get(unit);
+    const u = this.stats(unit);
     const tower = kind === 'archer' && !u;
     return {
       id: `d${this.nextId++}`, kind, unit, x: spot.x + 0.5, y: spot.y, z: spot.z + 0.5,
       post: { x: spot.x + 0.5, y: spot.y, z: spot.z + 0.5, of },
-      hp: u?.hp ?? (tower ? 1 : SOLDIER.hp), cooldown: this.rand() * 1.5, hurt: 0,
+      hp: u?.hp ?? (tower ? 1 : SOLDIER.hp), maxHp: u?.hp ?? SOLDIER.hp, cooldown: this.rand() * 1.5, hurt: 0,
       colour: tower ? ARCHER_COAT : TABARD, helm: tower ? HOOD : STEEL,
       name: u ? `Your ${u.name.toLowerCase()}` : tower ? 'Your archer' : 'Your soldier',
       target: null, speed: 0,
@@ -453,7 +471,7 @@ export class Defenders {
     let hungry = this.hungry;
     for (const s of this.soldiers) s.hungry = hungry-- > 0;
     for (const s of this.soldiers) {
-      const u = UNITS_BY_ID.get(s.unit);
+      const u = this.stats(s.unit);
       if (u?.ranged) this.bowman(s, u, dt, enemies);
       else if (u?.siege) this.crew(s, u, dt, enemies, on);
       else this.soldier(s, dt, enemies, on);
@@ -465,7 +483,7 @@ export class Defenders {
   }
 
   soldier(s, dt, enemies, on) {
-    const u = UNITS_BY_ID.get(s.unit);
+    const u = this.stats(s.unit);
     const m = u?.melee ?? SOLDIER, speed = u?.speed ?? SOLDIER.speed;
     s.cooldown = Math.max(0, s.cooldown - dt);
     s.hurt = Math.max(0, s.hurt - dt);
@@ -657,7 +675,8 @@ export class Defenders {
 
   archer(a, dt, enemies) {
     a.cooldown = Math.max(0, a.cooldown - dt);
-    let target = null, best = TOWER_ARCHER.range;
+    const shot = this.towerShot();
+    let target = null, best = shot.range;
     for (const e of enemies) {
       if (e.dead) continue;
       const d = Math.hypot(e.x - a.x, e.z - a.z);
@@ -667,8 +686,8 @@ export class Defenders {
     if (!target) return;
     a.facing = Math.atan2(target.x - a.x, target.z - a.z);
     if (a.cooldown > 0) return;
-    a.cooldown = TOWER_ARCHER.every;
-    this.loose(a, target, TOWER_ARCHER.damage);
+    a.cooldown = shot.every;
+    this.loose(a, target, shot.damage);
   }
 
   flyArrows(dt, on) {

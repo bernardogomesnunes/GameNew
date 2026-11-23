@@ -5782,7 +5782,7 @@ export class Game {
         const r = s.region;
         village = village ? { minX: Math.min(village.minX, r.minX), maxX: Math.max(village.maxX, r.maxX), minZ: Math.min(village.minZ, r.minZ), maxZ: Math.max(village.maxZ, r.maxZ) } : { minX: r.minX, maxX: r.maxX, minZ: r.minZ, maxZ: r.maxZ };
       }
-      for (const j of d.defenders.sync(posts, d.days, village)) {
+      for (const j of d.defenders.sync(posts, d.days, village, d.research)) {
         const u = UNITS_BY_ID.get(j.unit);
         const post = d.structures.list().find((s) => String(s.id) === String(j.of));
         const postName = post?.type === 'military' ? 'Garrison' : 'barracks';

@@ -8,6 +8,7 @@ import { penProduce } from '../duilt/Ranch.js';
 import { farmSeedSlots } from '../duilt/Crops.js';
 import { UNITS, UNITS_BY_ID, unitCost, soldierCap, SOLDIER_CAPS } from '../config/soldiers.js';
 import { learntNames } from '../config/research.js';  // PLAY-12
+import { unitStats } from '../config/soldiers.js';  // PLAY-12
 
 /** What's drawn beside each kind of soldier in a barracks's line. */
 const UNIT_GLYPHS = { warrior: 'sword', swordsman: 'sword', archer: 'bow', crew: 'catapult', shield_guard: 'sword' };
@@ -880,9 +881,10 @@ export class DuiltUI {
     const gearName = (id, n) => `${n > 1 ? `${n} ` : ''}${itemName(id).toLowerCase()}${n > 1 && !itemName(id).endsWith('s') ? 's' : ''}`;
     const units = structure.type === 'military' ? UNITS.filter((u) => u.id === 'shield_guard') : UNITS.filter((u) => u.id !== 'shield_guard');
     const buttons = units.map((u) => {
-      const cost = unitCost(u, d.inventory);
+      const cost = unitCost(u, d.inventory, d.research);
       const can = cost.ok && room > 0;
-      const price = [`${u.food} food`, ...Object.entries(u.gear).map(([id, n]) => gearName(id, n))].join(', ');
+      const researched = unitStats(u, d.research);  // PLAY-12: Iron Arms and Sky Arms change the gear
+      const price = [`${u.food} food`, ...Object.entries(researched.gear).map(([id, n]) => gearName(id, n))].join(', ');
       return `<button class="train-unit${can ? '' : ' cant'}" data-train="${u.id}" title="${escapeAttr(u.blurb)}">
         <strong>${escapeHtml(u.name)}</strong><span>${escapeHtml(price)}</span>
         ${cost.ok ? '' : `<span class="short">Needs ${escapeHtml(cost.short.join(', '))}</span>`}

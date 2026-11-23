@@ -2134,9 +2134,9 @@ export class DuiltGame {
       const next = SOLDIER_CAPS[(s.tier ?? 0) + 1];
       return { ok: false, reason: `Full — ${cap} soldiers at most here${next ? `. Evolve it to hold ${next}` : ''}` };
     }
-    const cost = unitCost(unit, this.inventory);
+    const cost = unitCost(unit, this.inventory, this.research);  // PLAY-12: researched gear
     if (!cost.ok) return { ok: false, reason: `Needs ${cost.short.join(', ')}` };
-    payForUnit(unit, this.inventory);
+    payForUnit(unit, this.inventory, this.research);
     this.defenders.order(s.id, unitId, this.days);
     this.bus?.emit('duilt:training', { structure: s, unit: unitId });
     return { ok: true, unit };
