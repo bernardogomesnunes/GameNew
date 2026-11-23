@@ -227,7 +227,7 @@ export class CrucibleView {
     const s = this.crucibles.state(this.key);
     // The pot glows as its batch melts, and stays bright while metal is molten.
     const glow = s ? (s.molten ? 1 : s.progress) : 0;
-    this.pot.material.emissiveIntensity = 0.9 * glow;
+    this.pot.material.emissiveIntensity = (this.kind === 'cauldron' ? 0.12 : 0.9) * glow;
     const flicker = s?.waiting ? 0.6 + 0.2 * Math.sin(performance.now() / 120) : 0.2;
     this.fire.material.emissiveIntensity = flicker;
     if (this.fireGlow) this.fireGlow.emissiveIntensity = 0.4 + flicker;
