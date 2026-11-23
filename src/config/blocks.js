@@ -1007,6 +1007,40 @@ BLOCKS.push(
   { id: TANNING_VAT, name: 'Tanning Vat', glyph: 'bucket', color: 0x8a6440, shape: 'tanning_vat', material: 'wood', station: 'tanning_vat', unlock: null },
 );
 
+// --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// PLAY-14: the wild mushrooms, which are also what their items place.
+// Ids 556-570 are PLAY-14..21's (docs/design/play-14-21.md); 571-575 are spare.
+export const MUSHROOM_RED = 565, MUSHROOM_LILAC = 566, MUSHROOM_PALE = 567;
+BLOCKS.push(
+  { id: MUSHROOM_RED, name: 'Red Mushroom', glyph: 'mushroom', color: 0xd2484f, shape: 'mushroom_red', material: 'plant', unlock: null },
+  { id: MUSHROOM_LILAC, name: 'Lilac Mushroom', glyph: 'mushroom', color: 0xa178d0, shape: 'mushroom_lilac', material: 'plant', unlock: null },
+  { id: MUSHROOM_PALE, name: 'Pale Mushroom', glyph: 'mushroom', color: 0xe6d6b8, shape: 'mushroom_pale', material: 'plant', unlock: null },
+);
+// PLAY-15: Mushy Logs, three stages each (bare, pinheads, ready). Later stages
+// are states of stage 0, as crop stages are.
+export const MUSHY_LOG_BLOCKS = [['red', 'Red', 556], ['lilac', 'Lilac', 559], ['pale', 'Pale', 562]];
+for (const [kind, name, base] of MUSHY_LOG_BLOCKS) {
+  for (let stage = 0; stage < 3; stage++) {
+    BLOCKS.push({ id: base + stage, name: `${name} Mushy Log`, glyph: 'log', color: 0x6b4a2e, shape: `mushy_${kind}_${stage}`, material: 'wood', ...(stage ? { stateOf: base } : {}), unlock: null });
+  }
+}
+// PLAY-16: the Dehydrator, dried mushrooms by waiting (Crucible.js, station 'dehydrator').
+export const DEHYDRATOR = 568;
+BLOCKS.push(
+  { id: DEHYDRATOR, name: 'Dehydrator', glyph: 'cabinet', color: 0x9c7348, shape: 'dehydrator', material: 'wood', station: 'dehydrator', unlock: null },
+);
+// PLAY-18: Mushroom Plaster, a full cube, pale and soft, for the mushroom houses.
+export const MUSHROOM_PLASTER = 570;
+BLOCKS.push(
+  { id: MUSHROOM_PLASTER, name: 'Mushroom Plaster', glyph: 'wall', color: 0xe9dcc2, material: 'stone', unlock: null },
+);
+// PLAY-19: the Cauldron, meals by simmering (Crucible.js, station 'cauldron').
+export const CAULDRON = 569;
+BLOCKS.push(
+  { id: CAULDRON, name: 'Cauldron', glyph: 'bucket', color: 0x2f2f33, shape: 'cauldron', material: 'stone', station: 'cauldron', unlock: null },
+);
+// --- end PLAY-14..21 ---
+
 // The storybook look for buildings (asked for directly: they "need to fit
 // more the mood and vibe of the mobs whimsical and mystical ... this might
 // require new blocks and lights", with four pictures — a mossy cottage in
@@ -1019,8 +1053,8 @@ BLOCKS.push(
 export const CAP_RED = 505, CAP_LILAC = 506, MUSHROOM_STEM = 507, STAINED_GLASS = 508,
   HANGING_VINES = 509, WISTERIA = 510, FAIRY_LIGHTS = 511, CURL = 512;
 BLOCKS.push(
-  { id: CAP_RED, name: 'Red Mushroom Cap', glyph: 'fruit', color: 0xd2484f, material: 'plant', unlock: null },
-  { id: CAP_LILAC, name: 'Lilac Mushroom Cap', glyph: 'fruit', color: 0xa178d0, material: 'plant', unlock: null },
+  { id: CAP_RED, name: 'Red Mushroom Cap', glyph: 'mushroom', color: 0xd2484f, material: 'plant', unlock: null },
+  { id: CAP_LILAC, name: 'Lilac Mushroom Cap', glyph: 'mushroom', color: 0xa178d0, material: 'plant', unlock: null },
   { id: MUSHROOM_STEM, name: 'Mushroom Stem', glyph: 'log', color: 0xefe4cf, material: 'plant', unlock: null },
   { id: STAINED_GLASS, name: 'Stained Glass', glyph: 'pane', color: 0xd99a6a, transparent: true, opacity: 0.6, material: 'stone', unlock: null },
   { id: HANGING_VINES, name: 'Hanging Vines', glyph: 'leaf', color: 0x5e9a5a, shape: 'vines', material: 'plant', unlock: null },

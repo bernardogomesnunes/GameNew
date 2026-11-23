@@ -3,6 +3,7 @@ import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { Crops, harvestOf, farmProduce, tendFarm, farmSeedSlots } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND, cropOf, RIPE } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
+import { MushyLogs, MUSHY_KINDS, mushyOf, mushyYield } from './MushyLogs.js'; // PLAY-14..21
 import { TurfSpread } from './TurfSpread.js';
 import { penProduce, herdToJSON } from './Ranch.js';
 import { MOBS_BY_ID } from '../config/mobs.js';
@@ -147,6 +148,7 @@ export class DuiltGame {
     // Saplings, and the world's own count of days for them to grow by: it
     // only runs while you play (Game adds each day as the clock turns).
     this.saplings = new Saplings();
+    this.mushyLogs = new MushyLogs(); // PLAY-15
     // Bare dirt next to turf grows over in 5 to 50 game days (TurfSpread).
     this.turf = new TurfSpread();
     this.days = 0;
@@ -230,6 +232,10 @@ export class DuiltGame {
     this.crucibles = new Crucibles({ bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: (key) => this.inFoundry(key) });
     // CRAFT-9 part 6: each Kiln Oven's firing and draw, heated only inside a kiln.
     this.kilnOvens = new Crucibles({ station: 'kiln_oven', bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: (key) => this.inBuilding(key, 'kiln') });
+    // PLAY-16: each Dehydrator's drying and draw. It needs no building round it.
+    this.dehydrators = new Crucibles({ station: 'dehydrator', bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: () => true });
+    // PLAY-19: each Cauldron's simmering and serving. It has its own fire.
+    this.cauldrons = new Crucibles({ station: 'cauldron', bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload), heated: () => true });
     this.crafting = new Crafting({
       inventory: this.inventory, world, skills: this.skills,
       locked: (r) => (r.ring && this.ring && this.ring !== r.ring ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
@@ -413,6 +419,20 @@ export class DuiltGame {
     const gained = {};
     for (const c of changes) {
       if (c.prev === AIR) continue;
+      // PLAY-15: a ready Mushy Log gives its mushrooms and is spent; an
+      // unready one falls through and gives the log back.
+      const mushy = mushyOf(c.prev);
+      if (mushy) {
+        const rec = this.mushyLogs.take(c.x, c.y, c.z);
+        if (mushy.stage === 2) {
+          const id = MUSHY_KINDS[mushy.kind].item;
+          const n = mushyYield(c.x, c.y, c.z, rec?.at ?? 0, this.world?.gen?.seed ?? 0);
+          const left = this.inventory.add(id, n);
+          if (n - left > 0) gained[id] = (gained[id] ?? 0) + n - left;
+          if (left > 0) this.bus?.emit('duilt:bagfull', { itemId: id, lost: left });
+          continue;
+        }
+      }
       // A crop gives its harvest, not just itself back.
       const harvest = harvestOf(c.prev);
       if (harvest) {
@@ -1502,6 +1522,8 @@ export class DuiltGame {
     this.stationWork.tick(dtSeconds);
     this.crucibles.tick(dtSeconds);
     this.kilnOvens.tick(dtSeconds);
+    this.dehydrators.tick(dtSeconds); // PLAY-16
+    this.cauldrons.tick(dtSeconds); // PLAY-19
     // Every couple of seconds: a spot whose station was broken gives its items back.
     this.sincePrune = (this.sincePrune ?? 0) + dtSeconds;
     if (this.sincePrune > 2) {
@@ -1510,6 +1532,8 @@ export class DuiltGame {
       this.counters.prune((key) => this.spotStands(key, 'counter'));
       this.crucibles.prune((key) => this.spotStands(key, 'crucible'));
       this.kilnOvens.prune((key) => this.spotStands(key, 'kiln_oven'));
+      this.dehydrators.prune((key) => this.spotStands(key, 'dehydrator')); // PLAY-16
+      this.cauldrons.prune((key) => this.spotStands(key, 'cauldron')); // PLAY-19
     }
 
     const now = Date.now();
@@ -2534,6 +2558,8 @@ export class DuiltGame {
       counters: this.counters.toJSON(),
       crucibles: this.crucibles.toJSON(),
       kilnOvens: this.kilnOvens.toJSON(),
+      dehydrators: this.dehydrators.toJSON(), // PLAY-16
+      cauldrons: this.cauldrons.toJSON(), // PLAY-19
       herd: herdToJSON(this.herd),
       machines: this.machines.map((m) => ({
         ...(m.kind ? { kind: m.kind } : {}),
@@ -2555,6 +2581,7 @@ export class DuiltGame {
       waiting: this.waiting,
       crops: this.crops.toJSON(),
       saplings: this.saplings.toJSON(),
+      mushyLogs: this.mushyLogs.toJSON(), // PLAY-15
       turf: this.turf.toJSON(),
       days: this.days,
       purses: { day: this.purses.day, spent: { ...this.purses.spent } },
@@ -2635,6 +2662,8 @@ export class DuiltGame {
     this.counters.loadJSON(data.counters);
     this.crucibles.loadJSON(data.crucibles);
     this.kilnOvens.loadJSON(data.kilnOvens);
+    this.dehydrators.loadJSON(data.dehydrators); // PLAY-16
+    this.cauldrons.loadJSON(data.cauldrons); // PLAY-19
     // Plain records until Game's Mobs takes them in (Mobs.adopt) and gives
     // them legs again. A save from before ranching simply has none.
     this.herd = (data.herd ?? []).map((r) => ({ ...r }));
@@ -2658,6 +2687,7 @@ export class DuiltGame {
     this.waiting = Array.isArray(data.waiting) ? data.waiting.filter((w) => w?.region && w.type) : [];
     this.crops.loadJSON(data.crops);
     this.saplings.loadJSON(data.saplings);
+    this.mushyLogs.loadJSON(data.mushyLogs); // PLAY-15
     this.turf.loadJSON(data.turf);
     this.days = Number.isFinite(data.days) ? data.days : 0;
     // A save from before selling has full purses; a stale day refills them (purseLeft).

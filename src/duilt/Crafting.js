@@ -45,6 +45,8 @@ export class Crafting {
     if (r.station === 'crucible') return false;
     // CRAFT-9 part 6: and the Kiln Oven's are fired and drawn in its close-up.
     if (r.station === 'kiln_oven') return false;
+    // PLAY-14..21: the Dehydrator's are dried in its close-up (and the Cauldron's, once it stands).
+    if (r.station === 'dehydrator' || r.station === 'cauldron') return false;
     if (r.station === 'forge' && atStations.includes('foundry')) return true;
     if (!atStations.includes(r.station)) return false;
     return !r.tier || atStations.includes(`${r.station}@${r.tier}`);

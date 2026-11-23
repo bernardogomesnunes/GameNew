@@ -23,9 +23,9 @@ ok('cannot eat what you lack', h.eat(new Inventory(), 'fruit').ok === false);
 
 // picks the food that wastes least
 const h2 = new Hunger(null);
-h2.value = MAX_HUNGER - 13;       // room for 13
+h2.value = MAX_HUNGER - 9;        // room for 9
 const inv2 = new Inventory();
-inv2.add('fruit', 1); inv2.add('vegetables', 1);   // fruit feeds 12, veg 22
+inv2.add('fruit', 1); inv2.add('vegetables', 1);   // fruit feeds 8, veg 10
 ok('eat button picks the least wasteful food', h2.bestFoodIn(inv2) === 'fruit');
 const full = new Hunger(null);
 ok('refuses to waste food on a full stomach', full.eat(inv2, 'fruit').ok === false);
