@@ -1215,7 +1215,7 @@ From the owner's playtest notes, 22 November. Ordered by the suggested priority;
 | PLAY-9 | Leather: a way to make leather (tanning) in place of raw animal skins. | Medium | done: Tanning Vat (block 544) soaks 2 hide and 1 log into 2 leather; 7 armour, backpack and shield recipes take leather (docs/design/play-9-10.md) |
 | PLAY-10 | String: a spinning machine that makes string from wool or cotton. Cotton becomes a crop with seeds. | Medium | done: the Spinning Wheel also spins wool or cotton 1:1; cotton is a field crop (blocks 548-551), seeds from turf and from Bramble and Mabel |
 | PLAY-11 | **Crafting review.** Some items can be crafted two ways. List every duplicate and keep one way. After the first ending (dark or light warriors), a factory building with many machines automates all crafting and only needs materials. | Large | open, needs a design first |
-| PLAY-12 | Military buildings: weapons research and army organisation. | Large | open, needs a design first |
+| PLAY-12 | Military buildings: weapons research and army organisation. | Large | done (first version): Armoury research, War Hall companies, March on rival cities, War Table block 571 (docs/design/play-12.md) |
 | PLAY-13 | Politics: villagers get angry without jobs or food, with consequences. Builds on JOBS and the hunger counter (CL-12). | Large | open, needs a design first |
 | PLAY-14 | **Mushroom items.** 3 kinds of real mushroom as items (red, lilac, pale, matching the existing caps and stem). | Small | open, needs a design first |
 | PLAY-15 | **Mushy Log.** A placed pile of logs that grows mushrooms: after 10 days it gives 15 to 25 (about 20). Needs PLAY-14. | Medium | open, needs a design first |
