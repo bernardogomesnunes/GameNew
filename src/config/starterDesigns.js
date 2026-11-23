@@ -1064,6 +1064,26 @@ function barracksBlocks() {
   return g.blocks();
 }
 
+// PLAY-11: a Factory — a brick hall, 12 x 12, glazed both long sides,
+// with a Workbench, a Planing Bench, a Stone Mill and a Mason's Bench on
+// the floor (structures.js `factory`: 3 machine kinds, 60 blocks under roof).
+function factoryBlocks() {
+  const g = grid();
+  const W = 12;
+  g.box(0, 0, 0, W - 1, 0, W - 1, STONE);
+  for (let y = 1; y <= 4; y++) {
+    for (let i = 0; i < W; i++) { g.put(i, y, 0, BRICK); g.put(i, y, W - 1, BRICK); g.put(0, y, i, BRICK); g.put(W - 1, y, i, BRICK); }
+  }
+  for (const x of [2, 4, 7, 9]) for (const z of [0, W - 1]) g.put(x, 2, z, WINDOW);
+  g.box(0, 5, 0, W - 1, 5, W - 1, PLANKS);
+  g.add(gable(0, 0, W, W, 6, TILE, BRICK));
+  g.add(door(5, 1, 0));
+  [529, 527, 380, 538].forEach((id, i) => g.put(2 + i * 2, 1, 8, id));
+  for (const [x, z] of [[1, 1], [W - 2, 1], [1, W - 2], [W - 2, W - 2]]) g.put(x, 1, z, LANTERN_BLOCK);
+  return g.blocks();
+}
+// PLAY-11 end
+
 export const STARTER_DESIGNS = [
   {
     id: 'starter_work_hall', structure: 'work_hall', name: 'Work Hall', size: 7, footprint: '7 × 7',
@@ -1313,6 +1333,17 @@ export const STARTER_DESIGNS = [
     note: 'Nothing may stand over it.',
     blocks: monumentBlocks(),
   },
+  // PLAY-11
+  {
+    id: 'starter_factory',
+    structure: 'factory',
+    name: 'Factory',
+    size: 12,
+    footprint: '12 × 12',
+    note: 'Opens once the war is won or the Sky Kingdom falls. Each machine inside runs one recipe from your storehouses.',
+    blocks: factoryBlocks(),
+  },
+  // PLAY-11 end
 ];
 
 // The first themed designs established the house, storehouse and market

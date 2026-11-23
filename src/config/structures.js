@@ -1359,6 +1359,7 @@ export const STRUCTURES = [
     icon: '🏭',
     age: 10,
     afterEnding: true,
+    optional: true, // no age goal asks for it: it comes after the last one
     blurb: 'A big roofed hall of machines. Each kind of machine inside runs one recipe on its own, from your storehouses. Opens once the war is won or the Sky Kingdom falls.',
     minSize: 8,
     maxSize: 24,
