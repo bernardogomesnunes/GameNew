@@ -375,6 +375,11 @@ const dried = (c) => [
 ITEM_MODELS.dried_red = dried(0x9a3a3a);
 ITEM_MODELS.dried_lilac = dried(0x7a5c98);
 ITEM_MODELS.dried_pale = dried(0xb8a27e);
+// PLAY-17: mushroom flour, a sack with a heap of flour on top.
+ITEM_MODELS.mushroom_flour = [
+  ...stack([[0.22, 0.18, 0, 0.5, 0xd8ccb0], [0.16, 0.13, 0.5, 0.62, 0xc9b38a]]),
+  box(0.3, 0.62, 0.36, 0.7, 0.66, 0.64, 0xe9dfcb),
+];
 // --- end PLAY-14..21 ---
 // A jar of fireflies: glass, a cork, and the lights inside.
 ITEM_MODELS.fireflies = [

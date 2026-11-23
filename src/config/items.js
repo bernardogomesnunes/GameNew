@@ -361,7 +361,7 @@ export const ITEMS = [
   { id: 'panel_plain', name: 'Wood Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xc49360, glyph: 'panel', block: 366, madeBy: 'Boards for a wall, at the wood mill — goes flat on the face you point at' },
   { id: 'panel_pattern', name: 'Patterned Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xc49360, glyph: 'panel', block: 370, madeBy: 'Raised squares for a wall, at the wood mill' },
   { id: 'panel_twotone', name: 'Two-tone Panel', kind: 'refined', stackTo: STACK_BULK, color: 0xd8b98c, glyph: 'panel', block: 374, madeBy: 'Dark below, light above, a rail between — at the wood mill' },
-  { id: 'stone_mill', name: 'Stone Mill', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a968f, glyph: 'stonemill', block: 380, madeBy: 'Built at the bench — stand by it and stone goes further, and it grinds gravel; Place on it to use it' },
+  { id: 'stone_mill', name: 'Stone Mill', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a968f, glyph: 'stonemill', block: 380, madeBy: 'Built at the bench — stand by it and stone goes further, and it grinds gravel and mushroom flour; Place on it to use it' },
   // Trains (backlog batch 2, Age 5) — see world/Trains.js.
   { id: 'rail', name: 'Rail', kind: 'refined', stackTo: STACK_BULK, color: 0x8d8f96, glyph: 'rail', block: 378, madeBy: 'Iron on wooden sleepers, at an engineering centre — lay it in a line, and it joins up round corners and up a step' },
   { id: 'diamond', name: 'Diamond', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fe8f2, glyph: 'crystal', madeBy: 'Dug from the deepest rock, near the bottom of the world — rare. A mine at its fifth level brings some up' },
@@ -562,6 +562,8 @@ export const ITEMS = [
   { id: 'dried_red', name: 'Dried Red Mushroom', kind: 'refined', stackTo: STACK_GOODS, color: 0x9a3a3a, glyph: 'mushroom', madeBy: 'Red mushrooms dried at a Dehydrator. Pressed into Red Mushroom Caps at the workbench' },
   { id: 'dried_lilac', name: 'Dried Lilac Mushroom', kind: 'refined', stackTo: STACK_GOODS, color: 0x7a5c98, glyph: 'mushroom', madeBy: 'Lilac mushrooms dried at a Dehydrator. For Lilac Mushroom Caps and the Cauldron' },
   { id: 'dried_pale', name: 'Dried Pale Mushroom', kind: 'refined', stackTo: STACK_GOODS, color: 0xb8a27e, glyph: 'mushroom', madeBy: 'Pale mushrooms dried at a Dehydrator. Grind it into flour at a Stone Mill, or cook it in a Cauldron' },
+  // PLAY-17: ground at the Stone Mill from dried pale mushroom.
+  { id: 'mushroom_flour', name: 'Mushroom Flour', kind: 'refined', stackTo: STACK_GOODS, color: 0xe9dfcb, glyph: 'sand', madeBy: 'Dried pale mushroom ground at a Stone Mill' },
   // --- end PLAY-14..21 ---
 ];
 

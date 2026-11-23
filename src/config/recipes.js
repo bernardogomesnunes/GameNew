@@ -850,7 +850,7 @@ export const RECIPES = [
     age: 3,
     inputs: { stone: 10, planks: 4 },
     output: { id: 'stone_mill', count: 1 },
-    blurb: 'A grindstone on a block of stone. Stand by it and stone goes further, and it grinds gravel. Place on it to use it.',
+    blurb: 'A grindstone on a block of stone. Stand by it and stone goes further, and it grinds gravel and mushroom flour. Place on it to use it.',
   },
   // What it grinds: gravel from rock, and sand from gravel.
   {
@@ -1842,6 +1842,11 @@ RECIPES.push(
     blurb: 'Lilac caps dried for the pot or for building.' },
   { id: 'dry_pale', name: 'Dried Pale Mushroom', station: 'dehydrator', age: 2, inputs: { mushroom_pale: 4 }, output: { id: 'dried_pale', count: 2 }, seconds: 30,
     blurb: 'Pale mushrooms dried for the pot or the mill.' },
+);
+// PLAY-17: flour is grinding, so it is at the Stone Mill.
+RECIPES.push(
+  { id: 'mill_mushroom_flour', name: 'Mushroom Flour', station: 'stone_mill', age: 3, inputs: { dried_pale: 1 }, output: { id: 'mushroom_flour', count: 1 }, batch: 8,
+    blurb: 'Dried pale mushroom ground to a fine flour.' },
 );
 // --- end PLAY-14..21 ---
 
