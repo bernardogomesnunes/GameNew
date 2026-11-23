@@ -3,6 +3,7 @@ import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { Crops, harvestOf, farmProduce, tendFarm, farmSeedSlots } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND, cropOf, RIPE } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
+import { MushyLogs, MUSHY_KINDS, mushyOf, mushyYield } from './MushyLogs.js'; // PLAY-14..21
 import { TurfSpread } from './TurfSpread.js';
 import { penProduce, herdToJSON } from './Ranch.js';
 import { MOBS_BY_ID } from '../config/mobs.js';
@@ -147,6 +148,7 @@ export class DuiltGame {
     // Saplings, and the world's own count of days for them to grow by: it
     // only runs while you play (Game adds each day as the clock turns).
     this.saplings = new Saplings();
+    this.mushyLogs = new MushyLogs(); // PLAY-15
     // Bare dirt next to turf grows over in 5 to 50 game days (TurfSpread).
     this.turf = new TurfSpread();
     this.days = 0;
@@ -413,6 +415,20 @@ export class DuiltGame {
     const gained = {};
     for (const c of changes) {
       if (c.prev === AIR) continue;
+      // PLAY-15: a ready Mushy Log gives its mushrooms and is spent; an
+      // unready one falls through and gives the log back.
+      const mushy = mushyOf(c.prev);
+      if (mushy) {
+        const rec = this.mushyLogs.take(c.x, c.y, c.z);
+        if (mushy.stage === 2) {
+          const id = MUSHY_KINDS[mushy.kind].item;
+          const n = mushyYield(c.x, c.y, c.z, rec?.at ?? 0, this.world?.gen?.seed ?? 0);
+          const left = this.inventory.add(id, n);
+          if (n - left > 0) gained[id] = (gained[id] ?? 0) + n - left;
+          if (left > 0) this.bus?.emit('duilt:bagfull', { itemId: id, lost: left });
+          continue;
+        }
+      }
       // A crop gives its harvest, not just itself back.
       const harvest = harvestOf(c.prev);
       if (harvest) {
@@ -2555,6 +2571,7 @@ export class DuiltGame {
       waiting: this.waiting,
       crops: this.crops.toJSON(),
       saplings: this.saplings.toJSON(),
+      mushyLogs: this.mushyLogs.toJSON(), // PLAY-15
       turf: this.turf.toJSON(),
       days: this.days,
       purses: { day: this.purses.day, spent: { ...this.purses.spent } },
@@ -2658,6 +2675,7 @@ export class DuiltGame {
     this.waiting = Array.isArray(data.waiting) ? data.waiting.filter((w) => w?.region && w.type) : [];
     this.crops.loadJSON(data.crops);
     this.saplings.loadJSON(data.saplings);
+    this.mushyLogs.loadJSON(data.mushyLogs); // PLAY-15
     this.turf.loadJSON(data.turf);
     this.days = Number.isFinite(data.days) ? data.days : 0;
     // A save from before selling has full purses; a stale day refills them (purseLeft).

@@ -1016,6 +1016,14 @@ BLOCKS.push(
   { id: MUSHROOM_LILAC, name: 'Lilac Mushroom', glyph: 'mushroom', color: 0xa178d0, shape: 'mushroom_lilac', material: 'plant', unlock: null },
   { id: MUSHROOM_PALE, name: 'Pale Mushroom', glyph: 'mushroom', color: 0xe6d6b8, shape: 'mushroom_pale', material: 'plant', unlock: null },
 );
+// PLAY-15: Mushy Logs, three stages each (bare, pinheads, ready). Later stages
+// are states of stage 0, as crop stages are.
+export const MUSHY_LOG_BLOCKS = [['red', 'Red', 556], ['lilac', 'Lilac', 559], ['pale', 'Pale', 562]];
+for (const [kind, name, base] of MUSHY_LOG_BLOCKS) {
+  for (let stage = 0; stage < 3; stage++) {
+    BLOCKS.push({ id: base + stage, name: `${name} Mushy Log`, glyph: 'log', color: 0x6b4a2e, shape: `mushy_${kind}_${stage}`, material: 'wood', ...(stage ? { stateOf: base } : {}), unlock: null });
+  }
+}
 // --- end PLAY-14..21 ---
 
 // The storybook look for buildings (asked for directly: they "need to fit

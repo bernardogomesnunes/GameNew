@@ -1223,4 +1223,25 @@ for (const [kind, cap] of Object.entries(MUSH_CAPS)) {
     ] : []),
   ];
 }
+// PLAY-15: a Mushy Log in three stages, logs along x. 4 boxes bare, 9 with
+// pinheads, 14 in flush (stem and cap pairs).
+const MUSHY_PINS = [[0.2, 0.28, 0.14], [0.7, 0.28, 0.86], [0.4, 0.54, 0.4], [0.8, 0.4, 0.36], [0.25, 0.4, 0.64]];
+export function mushyBoxes(kind, stage) {
+  const cap = MUSH_CAPS[kind];
+  const boxes = [
+    mushBox(0.06, 0.94, 0, 0.28, 0.12, 0.4, 0x6b4a2e),
+    mushBox(0.06, 0.94, 0, 0.28, 0.6, 0.88, 0x6b4a2e),
+    mushBox(0.1, 0.9, 0.26, 0.54, 0.36, 0.64, 0x7a5636),
+    mushBox(0.3, 0.6, 0.54, 0.56, 0.38, 0.62, 0x81c271),
+  ];
+  for (const [x, y, z] of MUSHY_PINS) {
+    if (stage === 1) boxes.push(mushBox(x, x + 0.06, y, y + 0.06, z, z + 0.06, cap));
+    else if (stage === 2) {
+      boxes.push(mushBox(x, x + 0.04, y, y + 0.08, z, z + 0.04, MUSH_STEM));
+      boxes.push(mushBox(x + 0.02 - 0.08, x + 0.02 + 0.08, y + 0.08, y + 0.14, z + 0.02 - 0.08, z + 0.02 + 0.08, cap));
+    }
+  }
+  return boxes;
+}
+for (const kind of Object.keys(MUSH_CAPS)) for (let s = 0; s < 3; s++) PROP_SHAPES[`mushy_${kind}_${s}`] = mushyBoxes(kind, s);
 // --- end PLAY-14..21 ---

@@ -553,6 +553,10 @@ export const ITEMS = [
   { id: 'mushroom_red', name: 'Red Mushroom', kind: 'raw', stackTo: STACK_GOODS, color: 0xd2484f, glyph: 'mushroom', block: 565, madeBy: 'Picked in oak and dark forests, or grown on a Red Mushy Log. Not to be eaten: dry it for building' },
   { id: 'mushroom_lilac', name: 'Lilac Mushroom', kind: 'raw', stackTo: STACK_GOODS, color: 0xa178d0, glyph: 'mushroom', block: 566, madeBy: 'Picked in dark forests, or grown on a Lilac Mushy Log. Dry it at a Dehydrator' },
   { id: 'mushroom_pale', name: 'Pale Mushroom', kind: 'raw', stackTo: STACK_GOODS, color: 0xe6d6b8, glyph: 'mushroom', block: 567, madeBy: 'Picked in oak and birch forests, or grown on a Pale Mushy Log. Dry it at a Dehydrator' },
+  // PLAY-15: logs seeded with mushrooms (duilt/MushyLogs.js).
+  { id: 'mushy_log_red', name: 'Red Mushy Log', kind: 'refined', stackTo: 10, color: 0x6b4a2e, glyph: 'log', block: 556, madeBy: 'Logs seeded with red mushrooms. Place it: in ten days it is covered in them' },
+  { id: 'mushy_log_lilac', name: 'Lilac Mushy Log', kind: 'refined', stackTo: 10, color: 0x6b4a2e, glyph: 'log', block: 559, madeBy: 'Logs seeded with lilac mushrooms. Place it: in ten days it is covered in them' },
+  { id: 'mushy_log_pale', name: 'Pale Mushy Log', kind: 'refined', stackTo: 10, color: 0x6b4a2e, glyph: 'log', block: 562, madeBy: 'Logs seeded with pale mushrooms. Place it: in ten days it is covered in them' },
   // --- end PLAY-14..21 ---
 ];
 

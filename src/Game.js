@@ -77,6 +77,7 @@ import { Diagnostics, describeGraphicsBackend } from './core/Diagnostics.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, bedPart, FACING_STEP, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting, CHISELLED } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
+import { mushyOf } from './duilt/MushyLogs.js'; // PLAY-14..21
 import { mineStairs } from './duilt/mineStairs.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/upgrades.js';
@@ -7948,6 +7949,12 @@ export class Game {
       const trees = grown.filter((c) => c.prev === SAPLING).length;
       this.ui?.toast({ kind: 'xp', title: trees > 1 ? `${trees} saplings have grown into trees` : 'A sapling has grown into a tree', body: 'Ten days in the ground' });
     }
+    // PLAY-15: Mushy Logs, through their stages.
+    const flushed = this.duilt.mushyLogs.grow(this.world, this.duilt.days);
+    if (flushed.length) {
+      this.remeshDirty();
+      if (flushed.some((c) => mushyOf(c.next)?.stage === 2)) this.ui?.toast({ kind: 'xp', title: 'Your Mushy Log is covered in mushrooms', body: 'Break it to pick them' });
+    }
   }
 
   /**
@@ -7979,6 +7986,16 @@ export class Game {
       fell = true;
     }
     if (fell) this.remeshDirty();
+  }
+
+  /** What a Mushy Log under the crosshair says: how long until it is covered (PLAY-15). */
+  mushyHint(hit) {
+    const m = mushyOf(hit.block);
+    const name = BLOCKS_BY_ID.get(hit.block)?.name ?? 'Mushy Log';
+    if (m.stage === 2) return `${name} · ready: break it to pick them`;
+    const left = this.duilt.mushyLogs.daysLeft(hit.x, hit.y, hit.z, this.duilt.days);
+    if (left == null) return `${name} · break it to take it back`;
+    return left > 1 ? `${name} · mushrooms in ${left} days` : `${name} · mushrooms by tomorrow`;
   }
 
   /** What a sapling under the crosshair says: how long until it's a tree. */
@@ -8151,6 +8168,9 @@ export class Game {
         if (TURFY.has(c.prev) || TURFY.has(c.next) || c.next === AIR) this.duilt.turf.consider(this.world, c.x, c.y, c.z, this.duilt.days, this.turfSkip());
         if (c.next === SAPLING && c.prev !== SAPLING) this.duilt.saplings.plant(c.x, c.y, c.z, this.duilt.days);
         else if (c.prev === SAPLING && c.next !== SAPLING) this.duilt.saplings.remove(c.x, c.y, c.z);
+        // PLAY-15: a Mushy Log counts its ten days from the day it went in.
+        // Removal is done by onBlocksBroken's take, so the harvest still has the record.
+        if (mushyOf(c.next)?.stage === 0 && !mushyOf(c.prev)) this.duilt.mushyLogs.plant(c.x, c.y, c.z, this.duilt.days, mushyOf(c.next).kind);
       }
     }
     // One sound for the edit, however many blocks it was: what it was made of.
@@ -9015,7 +9035,8 @@ export class Game {
     if (lift && lift !== 'nowhere' && sw?.chains[skyFor(this.world.gen).towers.indexOf(lift.tower)]) lift = 'cut';
     // An anchor tower's chain, on the dark path: Break cuts it.
     const chainLink = hit && hit.block === CHAIN && sw && this.duilt.ring === 'black' && !this.duilt.skyFallen && chainAt(this.world.gen, hit.x, hit.y, hit.z) >= 0;
-    const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
+    const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit)
+      : hit && this.duilt && mushyOf(hit.block) ? this.mushyHint(hit) : null; // PLAY-15
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
     const swing = hit && (gate || door || chest || catapult || trapdoor || painting || mill || (lift && lift !== 'nowhere' && lift !== 'cut')

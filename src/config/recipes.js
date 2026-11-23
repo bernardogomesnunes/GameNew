@@ -1823,6 +1823,15 @@ RECIPES.push(
 // --- end PLAY-10 ---
 
 // --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// PLAY-15: Mushy Logs.
+RECIPES.push(
+  { id: 'mushy_log_red', name: 'Red Mushy Log', station: 'hand', age: 2, inputs: { wood: 4, mushroom_red: 2 }, output: { id: 'mushy_log_red', count: 1 }, batch: 4,
+    blurb: 'A pile of oak logs seeded with mushrooms. Place it; in ten days break it for 15 to 25.' },
+  { id: 'mushy_log_lilac', name: 'Lilac Mushy Log', station: 'hand', age: 2, inputs: { wood: 4, mushroom_lilac: 2 }, output: { id: 'mushy_log_lilac', count: 1 }, batch: 4,
+    blurb: 'A pile of oak logs seeded with mushrooms. Place it; in ten days break it for 15 to 25.' },
+  { id: 'mushy_log_pale', name: 'Pale Mushy Log', station: 'hand', age: 2, inputs: { wood: 4, mushroom_pale: 2 }, output: { id: 'mushy_log_pale', count: 1 }, batch: 4,
+    blurb: 'A pile of oak logs seeded with mushrooms. Place it; in ten days break it for 15 to 25.' },
+);
 // --- end PLAY-14..21 ---
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
