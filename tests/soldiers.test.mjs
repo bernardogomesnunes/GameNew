@@ -227,6 +227,6 @@ ok('  and kept moving while it is open, redrawn when one comes out', /setInterva
 ok('the game pays and puts them in line, by the building\'s level', /onTrain: \(unit\) => this\.trainSoldier\(structure, unit\)/.test(game) && /this\.duilt\.trainSoldier\(structure, unit\)/.test(game));
 ok('the Garrison shows its training queue and offers spear guards', /structure\.type === 'barracks' \|\| structure\.type === 'military' \? this\.barracksHtml\(structure\)/.test(ui) && /structure\.type === 'military' \? UNITS\.filter\(\(u\) => u\.id === 'shield_guard'\)/.test(ui));
 ok('a crew\'s stone lands on the enemy, and only hurts them', /lob: \(engine, target, crew\) => this\.crewThrows\(engine, target, crew\)/.test(game) && /if \(stone\.crew\) \{/.test(game));
-ok('and its catapult is drawn', /this\.engineView\.update\(ours\?\.engines \?\? \[\]\)/.test(game));
+ok('and its catapult is drawn', /this\.engineView\?\.update\(ours\?\.engines \?\? \[\]\)/.test(game));
 
 process.exit(f ? 1 : 0);
