@@ -1222,3 +1222,77 @@ PROP_SHAPES.war_table = [
   { minX: 0.45, maxX: 0.55, minY: 0.79, maxY: 0.9, minZ: 0.4, maxZ: 0.5, color: WT_RIVAL },
 ];
 // --- end PLAY-12 ---
+
+// --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// PLAY-14: a wild mushroom, one big and one small, facing -z. 6 boxes, 8 for red.
+const MUSH_STEM = 0xefe4cf, MUSH_CAPS = { red: 0xd2484f, lilac: 0xa178d0, pale: 0xe6d6b8 };
+const mushBox = (minX, maxX, minY, maxY, minZ, maxZ, color) => ({ minX, maxX, minY, maxY, minZ, maxZ, color });
+for (const [kind, cap] of Object.entries(MUSH_CAPS)) {
+  PROP_SHAPES[`mushroom_${kind}`] = [
+    mushBox(0.44, 0.56, 0, 0.3, 0.44, 0.56, MUSH_STEM),
+    mushBox(0.3, 0.7, 0.3, 0.42, 0.3, 0.7, cap),
+    mushBox(0.38, 0.62, 0.42, 0.48, 0.38, 0.62, cap),
+    mushBox(0.2, 0.26, 0, 0.16, 0.62, 0.68, MUSH_STEM),
+    mushBox(0.13, 0.33, 0.16, 0.24, 0.55, 0.75, cap),
+    mushBox(0.18, 0.28, 0.24, 0.27, 0.6, 0.7, cap),
+    ...(kind === 'red' ? [
+      mushBox(0.4, 0.46, 0.48, 0.49, 0.42, 0.48, 0xf4ece0),
+      mushBox(0.55, 0.6, 0.48, 0.49, 0.52, 0.58, 0xf4ece0),
+    ] : []),
+  ];
+}
+// PLAY-15: a Mushy Log in three stages, logs along x. 4 boxes bare, 9 with
+// pinheads, 14 in flush (stem and cap pairs).
+const MUSHY_PINS = [[0.2, 0.28, 0.14], [0.7, 0.28, 0.86], [0.4, 0.54, 0.4], [0.8, 0.4, 0.36], [0.25, 0.4, 0.64]];
+export function mushyBoxes(kind, stage) {
+  const cap = MUSH_CAPS[kind];
+  const boxes = [
+    mushBox(0.06, 0.94, 0, 0.28, 0.12, 0.4, 0x6b4a2e),
+    mushBox(0.06, 0.94, 0, 0.28, 0.6, 0.88, 0x6b4a2e),
+    mushBox(0.1, 0.9, 0.26, 0.54, 0.36, 0.64, 0x7a5636),
+    mushBox(0.3, 0.6, 0.54, 0.56, 0.38, 0.62, 0x81c271),
+  ];
+  for (const [x, y, z] of MUSHY_PINS) {
+    if (stage === 1) boxes.push(mushBox(x, x + 0.06, y, y + 0.06, z, z + 0.06, cap));
+    else if (stage === 2) {
+      boxes.push(mushBox(x, x + 0.04, y, y + 0.08, z, z + 0.04, MUSH_STEM));
+      boxes.push(mushBox(x + 0.02 - 0.08, x + 0.02 + 0.08, y + 0.08, y + 0.14, z + 0.02 - 0.08, z + 0.02 + 0.08, cap));
+    }
+  }
+  return boxes;
+}
+for (const kind of Object.keys(MUSH_CAPS)) for (let s = 0; s < 3; s++) PROP_SHAPES[`mushy_${kind}_${s}`] = mushyBoxes(kind, s);
+// PLAY-16: the Dehydrator, facing -z. A cabinet with its front open, three
+// trays of drying slices, a roof board and a front rail. 11 boxes, no glow.
+const DEHY_WOOD = 0x9c7348, DEHY_ROOF = 0x8a6440, DEHY_TRAY = 0xc9b38a;
+PROP_SHAPES.dehydrator = [
+  mushBox(0.14, 0.86, 0, 0.86, 0.74, 0.8, DEHY_WOOD),
+  mushBox(0.14, 0.2, 0, 0.86, 0.2, 0.74, DEHY_WOOD),
+  mushBox(0.8, 0.86, 0, 0.86, 0.2, 0.74, DEHY_WOOD),
+  mushBox(0.1, 0.9, 0.86, 0.92, 0.16, 0.84, DEHY_ROOF),
+  mushBox(0.18, 0.82, 0.2, 0.23, 0.22, 0.76, DEHY_TRAY),
+  mushBox(0.18, 0.82, 0.42, 0.45, 0.22, 0.76, DEHY_TRAY),
+  mushBox(0.18, 0.82, 0.64, 0.67, 0.22, 0.76, DEHY_TRAY),
+  mushBox(0.26, 0.44, 0.23, 0.26, 0.3, 0.5, 0x9a3a3a),
+  mushBox(0.5, 0.7, 0.45, 0.48, 0.3, 0.5, 0xb8a27e),
+  mushBox(0.3, 0.5, 0.67, 0.7, 0.3, 0.5, 0x7a5c98),
+  mushBox(0.14, 0.86, 0, 0.06, 0.18, 0.22, DEHY_ROOF),
+];
+// PLAY-19: the Cauldron, over its own embers. 3 legs, embers, a pot with a belly
+// band, 4 rim boxes, the stew and a ladle: 14 boxes with the glow of the embers.
+const CAULDRON_IRON = 0x2f2f33;
+PROP_SHAPES.cauldron = [
+  mushBox(0.22, 0.26, 0, 0.14, 0.22, 0.26, CAULDRON_IRON),
+  mushBox(0.7, 0.74, 0, 0.14, 0.22, 0.26, CAULDRON_IRON),
+  mushBox(0.46, 0.5, 0, 0.14, 0.72, 0.76, CAULDRON_IRON),
+  { ...mushBox(0.32, 0.68, 0.02, 0.06, 0.32, 0.68, 0xff7a2a), glow: true },
+  mushBox(0.2, 0.8, 0.12, 0.58, 0.2, 0.8, CAULDRON_IRON),
+  mushBox(0.16, 0.84, 0.24, 0.44, 0.16, 0.84, 0x3a3a40),
+  mushBox(0.2, 0.8, 0.58, 0.64, 0.2, 0.24, 0x45454c),
+  mushBox(0.2, 0.8, 0.58, 0.64, 0.76, 0.8, 0x45454c),
+  mushBox(0.2, 0.24, 0.58, 0.64, 0.24, 0.76, 0x45454c),
+  mushBox(0.76, 0.8, 0.58, 0.64, 0.24, 0.76, 0x45454c),
+  mushBox(0.24, 0.76, 0.56, 0.58, 0.24, 0.76, 0x8a5a2a),
+  mushBox(0.62, 0.66, 0.56, 0.92, 0.3, 0.34, 0x8a6238),
+];
+// --- end PLAY-14..21 ---

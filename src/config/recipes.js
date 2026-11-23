@@ -161,7 +161,7 @@ export const RECIPES = [
     inputs: { raw_meat: 2, wood: 1 },
     output: { id: 'cooked_meat', count: 2 },
     batch: 4,
-    blurb: 'A log on a fire. Six times the meal raw meat is.',
+    blurb: 'A log on a fire. Seven times the meal raw meat is.',
   },
 
   // --- Age 2: what stone is good for --------------------------------------
@@ -205,7 +205,7 @@ export const RECIPES = [
     age: 3,
     inputs: { planks: 16, wood: 4 },
     output: { id: 'cart', count: 1 },
-    blurb: 'Tame a horse (fruit or vegetables in your hand, then Place on it), then use this on it. Forty slots, and you can ride it.',
+    blurb: 'Tame a horse (fruit or carrots in your hand, then Place on it), then use this on it. Forty slots, and you can ride it.',
   },
   {
     id: 'flying_machine',
@@ -850,7 +850,7 @@ export const RECIPES = [
     age: 3,
     inputs: { stone: 10, planks: 4 },
     output: { id: 'stone_mill', count: 1 },
-    blurb: 'A grindstone on a block of stone. Stand by it and stone goes further, and it grinds gravel. Place on it to use it.',
+    blurb: 'A grindstone on a block of stone. Stand by it and stone goes further, and it grinds gravel and mushroom flour. Place on it to use it.',
   },
   // What it grinds: gravel from rock, and sand from gravel.
   {
@@ -1104,17 +1104,17 @@ export const RECIPES = [
   },
   {
     id: 'cap_red', name: 'Red Mushroom Cap', station: 'hand', age: 3,
-    inputs: { clay: 1, leaves: 1 }, output: { id: 'cap_red', count: 2 }, batch: 8,
+    inputs: { dried_red: 1 }, output: { id: 'cap_red', count: 2 }, batch: 8,
     blurb: 'Red with pale spots. Put one on a stem, or let it grow out of a roof.',
   },
   {
     id: 'cap_lilac', name: 'Lilac Mushroom Cap', station: 'hand', age: 3,
-    inputs: { clay: 1, white_leaves: 1 }, output: { id: 'cap_lilac', count: 2 }, batch: 8,
+    inputs: { dried_lilac: 1 }, output: { id: 'cap_lilac', count: 2 }, batch: 8,
     blurb: 'A lilac cap, spotted pale.',
   },
   {
     id: 'mushroom_stem', name: 'Mushroom Stem', station: 'hand', age: 3,
-    inputs: { clay: 1, sand: 1 }, output: { id: 'mushroom_stem', count: 2 }, batch: 8,
+    inputs: { mushroom_flour: 1 }, output: { id: 'mushroom_stem', count: 2 }, batch: 8,
     blurb: 'The pale stalk a cap sits on.',
   },
   {
@@ -1840,6 +1840,52 @@ for (const p of RESEARCH) {
   });
 }
 // --- end PLAY-12 ---
+
+// --- PLAY-14..21 (docs/design/play-14-21.md) ---
+// PLAY-15: Mushy Logs.
+RECIPES.push(
+  { id: 'mushy_log_red', name: 'Red Mushy Log', station: 'hand', age: 2, inputs: { wood: 4, mushroom_red: 2 }, output: { id: 'mushy_log_red', count: 1 }, batch: 4,
+    blurb: 'A pile of oak logs seeded with mushrooms. Place it; in ten days break it for 15 to 25.' },
+  { id: 'mushy_log_lilac', name: 'Lilac Mushy Log', station: 'hand', age: 2, inputs: { wood: 4, mushroom_lilac: 2 }, output: { id: 'mushy_log_lilac', count: 1 }, batch: 4,
+    blurb: 'A pile of oak logs seeded with mushrooms. Place it; in ten days break it for 15 to 25.' },
+  { id: 'mushy_log_pale', name: 'Pale Mushy Log', station: 'hand', age: 2, inputs: { wood: 4, mushroom_pale: 2 }, output: { id: 'mushy_log_pale', count: 1 }, batch: 4,
+    blurb: 'A pile of oak logs seeded with mushrooms. Place it; in ten days break it for 15 to 25.' },
+);
+// PLAY-16: the Dehydrator by hand, and three dryings. 4 fresh make 2 dried, 30 s a batch.
+RECIPES.push(
+  { id: 'dehydrator', name: 'Dehydrator', station: 'hand', age: 2, inputs: { planks: 6, string: 2 }, output: { id: 'dehydrator', count: 1 },
+    blurb: 'Place it, then dry mushrooms on its trays.' },
+  { id: 'dry_red', name: 'Dried Red Mushroom', station: 'dehydrator', age: 2, inputs: { mushroom_red: 4 }, output: { id: 'dried_red', count: 2 }, seconds: 30,
+    blurb: 'Red caps dried hard, for building.' },
+  { id: 'dry_lilac', name: 'Dried Lilac Mushroom', station: 'dehydrator', age: 2, inputs: { mushroom_lilac: 4 }, output: { id: 'dried_lilac', count: 2 }, seconds: 30,
+    blurb: 'Lilac caps dried for the pot or for building.' },
+  { id: 'dry_pale', name: 'Dried Pale Mushroom', station: 'dehydrator', age: 2, inputs: { mushroom_pale: 4 }, output: { id: 'dried_pale', count: 2 }, seconds: 30,
+    blurb: 'Pale mushrooms dried for the pot or the mill.' },
+);
+// PLAY-17: flour is grinding, so it is at the Stone Mill.
+RECIPES.push(
+  { id: 'mill_mushroom_flour', name: 'Mushroom Flour', station: 'stone_mill', age: 3, inputs: { dried_pale: 1 }, output: { id: 'mushroom_flour', count: 1 }, batch: 8,
+    blurb: 'Dried pale mushroom ground to a fine flour.' },
+);
+// PLAY-18: Mushroom Plaster, a pale soft wall (Age 3: a hand recipe past Age 2 is a Workbench one, IMP-19; this block is after that rewrite).
+RECIPES.push(
+  { id: 'mushroom_plaster', name: 'Mushroom Plaster', station: 'workbench', age: 3, inputs: { mushroom_flour: 1, sand: 1, clay: 1 }, output: { id: 'mushroom_plaster', count: 4 }, batch: 8,
+    blurb: 'Flour, sand and clay set into a pale, soft wall for the mushroom houses.' },
+);
+// PLAY-19: the Cauldron by hand, and four meals. 40 s a batch, 2 meals out.
+RECIPES.push(
+  { id: 'cauldron', name: 'Cauldron', station: 'hand', age: 2, inputs: { cobblestone: 6, clay: 2 }, output: { id: 'cauldron', count: 1 },
+    blurb: 'Place it, then cook meals of dried mushroom, meat and vegetables.' },
+  { id: 'hunters_stew', name: "Hunter's Stew", station: 'cauldron', age: 2, inputs: { raw_meat: 2, vegetables: 1, potato: 1, dried_pale: 1 }, output: { id: 'hunters_stew', count: 2 }, seconds: 40,
+    blurb: 'Meat, carrot, potato and dried pale mushroom simmered together. The meal of a working day.' },
+  { id: 'forest_broth', name: 'Forest Broth', station: 'cauldron', age: 2, inputs: { raw_meat: 1, broccoli: 1, zucchini: 1, dried_lilac: 1 }, output: { id: 'forest_broth', count: 2 }, seconds: 40,
+    blurb: 'A thin broth of meat, greens and lilac mushroom.' },
+  { id: 'mushroom_soup', name: 'Mushroom Soup', station: 'cauldron', age: 3, inputs: { dried_lilac: 2, milk: 1, cabbage: 1 }, output: { id: 'mushroom_soup', count: 2 }, seconds: 40,
+    blurb: 'Lilac mushroom, milk and cabbage, creamy and warm.' },
+  { id: 'mushroom_dumplings', name: 'Mushroom Dumplings', station: 'cauldron', age: 3, inputs: { mushroom_flour: 1, egg: 1, dried_pale: 1, pepper: 1 }, output: { id: 'mushroom_dumplings', count: 2 }, seconds: 40,
+    blurb: 'Flour dumplings with pale mushroom and pepper.' },
+);
+// --- end PLAY-14..21 ---
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 

@@ -1093,7 +1093,7 @@ export const STARTER_DESIGNS = [
     name: 'Paddock',
     size: 6,
     footprint: '6 × 6',
-    note: 'Then lead animals in through the gate with vegetables or seeds in your hand.',
+    note: 'Then lead animals in through the gate with carrots or seeds in your hand.',
     // A ring of fence with a gate in the middle of one side.
     blocks: ring(0, 0, 6, 6, 0, FENCE).map((b) => (b.dx === 2 && b.dz === 0 ? { ...b, type: GATE } : b)),
   },
