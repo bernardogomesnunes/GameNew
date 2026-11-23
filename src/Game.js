@@ -77,6 +77,7 @@ import { Diagnostics, describeGraphicsBackend } from './core/Diagnostics.js';
 import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, bedPart, FACING_STEP, logOnFace, quarterTurned, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isLava, isLavaFlow, CHEST, CATAPULT, isCatapult, isFluid, isTrapdoor, isOpenTrapdoor, swungTrapdoor, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, isGate, isOpenGate, swungGate, pairPart, pairOther, isPainting, CHISELLED } from './config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from './duilt/Saplings.js';
+import { mushyOf } from './duilt/MushyLogs.js'; // PLAY-14..21
 import { mineStairs } from './duilt/mineStairs.js';
 import { BOOSTS, BEER_COOLDOWN, KOMBUCHA_DAMAGE, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/upgrades.js';
@@ -488,7 +489,7 @@ const CRACK_LINGER_MS = 450;
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', coffee_beans: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand', carpentry_chisel: 'chiselBlock' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand', carpentry_chisel: 'chiselBlock' };
 const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', compost: 'compostSelected', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace', helix: 'setDownMachine', flying_machine: 'wearSelected', dino_whistle: 'blowWhistle' };
 /**
  * Whether saved progression `a` is further along than `b`. By level first:
@@ -3107,6 +3108,8 @@ export class Game {
     if (aimed && stationOf(aimed.block) === 'counter') return void this.startCounter(aimed);
     if (aimed && stationOf(aimed.block) === 'crucible') return void this.startCrucible(aimed);
     if (aimed && stationOf(aimed.block) === 'kiln_oven') return void this.startKilnOven(aimed);
+    if (aimed && stationOf(aimed.block) === 'dehydrator') return void this.startDehydrator(aimed); // PLAY-16
+    if (aimed && stationOf(aimed.block) === 'cauldron') return void this.startCauldron(aimed); // PLAY-19
     if (aimed && BENCH_MACHINES[stationOf(aimed.block)]) return void this.startBench(aimed, stationOf(aimed.block));
     if (aimed && stationOf(aimed.block)) return void this.ui.openBench('', stationOf(aimed.block), aimed);
     // And at a painting, Place makes it where you wake (playtest, P1).
@@ -6753,6 +6756,26 @@ export class Game {
     this.openMachine(this.kilnMachine, at);
   }
 
+  /** PLAY-16: the Dehydrator at `at`: no building needed, it dries on its own. */
+  startDehydrator(at) {
+    if (!this.duilt) return;
+    this.dehydratorMachine ??= new CrucibleMachine({ scene: this.scene, camera: this.camera, uiRoot: this.uiRoot, crucibles: this.duilt.dehydrators, kind: 'dehydrator',
+      age: () => (this.duilt?.sandbox ? Infinity : this.duilt?.age ?? 1), onLeave: () => this.endMachine(),
+      onPoured: () => { this.editedAt = Date.now(); } });
+    this.dehydratorMachine.use(this.duilt.dehydrators);
+    this.openMachine(this.dehydratorMachine, at);
+  }
+
+  /** PLAY-19: the Cauldron at `at`: its own fire, so no building is needed. */
+  startCauldron(at) {
+    if (!this.duilt) return;
+    this.cauldronMachine ??= new CrucibleMachine({ scene: this.scene, camera: this.camera, uiRoot: this.uiRoot, crucibles: this.duilt.cauldrons, kind: 'cauldron',
+      age: () => (this.duilt?.sandbox ? Infinity : this.duilt?.age ?? 1), onLeave: () => this.endMachine(),
+      onPoured: () => { this.editedAt = Date.now(); } });
+    this.cauldronMachine.use(this.duilt.cauldrons);
+    this.openMachine(this.cauldronMachine, at);
+  }
+
   /** CRAFT3D-2, 4 to 7: a bench machine (wood mill, forge, spinning wheel...) in close-up. */
   startBench(at, station) {
     if (!this.duilt) return;
@@ -7948,6 +7971,12 @@ export class Game {
       const trees = grown.filter((c) => c.prev === SAPLING).length;
       this.ui?.toast({ kind: 'xp', title: trees > 1 ? `${trees} saplings have grown into trees` : 'A sapling has grown into a tree', body: 'Ten days in the ground' });
     }
+    // PLAY-15: Mushy Logs, through their stages.
+    const flushed = this.duilt.mushyLogs.grow(this.world, this.duilt.days);
+    if (flushed.length) {
+      this.remeshDirty();
+      if (flushed.some((c) => mushyOf(c.next)?.stage === 2)) this.ui?.toast({ kind: 'xp', title: 'Your Mushy Log is covered in mushrooms', body: 'Break it to pick them' });
+    }
   }
 
   /**
@@ -7979,6 +8008,16 @@ export class Game {
       fell = true;
     }
     if (fell) this.remeshDirty();
+  }
+
+  /** What a Mushy Log under the crosshair says: how long until it is covered (PLAY-15). */
+  mushyHint(hit) {
+    const m = mushyOf(hit.block);
+    const name = BLOCKS_BY_ID.get(hit.block)?.name ?? 'Mushy Log';
+    if (m.stage === 2) return `${name} · ready: break it to pick them`;
+    const left = this.duilt.mushyLogs.daysLeft(hit.x, hit.y, hit.z, this.duilt.days);
+    if (left == null) return `${name} · break it to take it back`;
+    return left > 1 ? `${name} · mushrooms in ${left} days` : `${name} · mushrooms by tomorrow`;
   }
 
   /** What a sapling under the crosshair says: how long until it's a tree. */
@@ -8151,6 +8190,9 @@ export class Game {
         if (TURFY.has(c.prev) || TURFY.has(c.next) || c.next === AIR) this.duilt.turf.consider(this.world, c.x, c.y, c.z, this.duilt.days, this.turfSkip());
         if (c.next === SAPLING && c.prev !== SAPLING) this.duilt.saplings.plant(c.x, c.y, c.z, this.duilt.days);
         else if (c.prev === SAPLING && c.next !== SAPLING) this.duilt.saplings.remove(c.x, c.y, c.z);
+        // PLAY-15: a Mushy Log counts its ten days from the day it went in.
+        // Removal is done by onBlocksBroken's take, so the harvest still has the record.
+        if (mushyOf(c.next)?.stage === 0 && !mushyOf(c.prev)) this.duilt.mushyLogs.plant(c.x, c.y, c.z, this.duilt.days, mushyOf(c.next).kind);
       }
     }
     // One sound for the edit, however many blocks it was: what it was made of.
@@ -8614,7 +8656,7 @@ export class Game {
     // crucible close-up ticks its own pot (CrucibleMachine), so not twice.
     if (!playing && this.duilt && !this.duilt.sandbox && this.ui?.isAnyPanelOpen?.()) {
       this.duilt.stationWork.tick(dt);
-      if (!this.closeUp?.active) { this.duilt.crucibles.tick(dt); this.duilt.kilnOvens.tick(dt); }
+      if (!this.closeUp?.active) { this.duilt.crucibles.tick(dt); this.duilt.kilnOvens.tick(dt); this.duilt.dehydrators.tick(dt); this.duilt.cauldrons.tick(dt); }
     }
     if (this.duilt) {
       this.duilt.dayTime = this.dayCycle.time;
@@ -9015,7 +9057,8 @@ export class Game {
     if (lift && lift !== 'nowhere' && sw?.chains[skyFor(this.world.gen).towers.indexOf(lift.tower)]) lift = 'cut';
     // An anchor tower's chain, on the dark path: Break cuts it.
     const chainLink = hit && hit.block === CHAIN && sw && this.duilt.ring === 'black' && !this.duilt.skyFallen && chainAt(this.world.gen, hit.x, hit.y, hit.z) >= 0;
-    const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit) : null;
+    const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit)
+      : hit && this.duilt && mushyOf(hit.block) ? this.mushyHint(hit) : null; // PLAY-15
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
     const swing = hit && (gate || door || chest || catapult || trapdoor || painting || mill || (lift && lift !== 'nowhere' && lift !== 'cut')

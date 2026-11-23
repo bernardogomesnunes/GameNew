@@ -22,9 +22,14 @@ export function meltSeconds(recipe) {
   return 45;
 }
 
+// PLAY-14..21: stations whose ware is always one fixed mould; their ware is
+// solid, so a broken one hands it over whole. The Cauldron's meals are poured into a bowl.
+export const STATION_MOULD = { kiln_oven: 'tray', dehydrator: 'tray', cauldron: 'bowl' };
+const STATION_NAMES = { crucible: 'crucible', kiln_oven: 'Kiln Oven', dehydrator: 'Dehydrator', cauldron: 'Cauldron' };
+
 /** Which mould a recipe pours into, or null when it is not poured. */
 export function mouldFor(recipe) {
-  if (recipe.station === 'kiln_oven') return 'tray';
+  if (STATION_MOULD[recipe.station]) return STATION_MOULD[recipe.station];
   if (recipe.output.id === 'coal') return null;
   return recipe.output.id === 'coin' ? 'coin' : 'ingot';
 }
@@ -38,7 +43,7 @@ export class Crucibles {
    * @param heated  (key) => whether a valid foundry stands round this crucible
    */
   constructor({ station = 'crucible', bag, deliver = () => false, heated = () => true }) {
-    /** 'crucible' or 'kiln_oven': only that station's recipes are loaded here. */
+    /** 'crucible', 'kiln_oven', 'dehydrator' or 'cauldron': only that station's recipes are loaded here. */
     this.station = station;
     this.bag = bag;
     this.deliver = deliver;
@@ -57,7 +62,7 @@ export class Crucibles {
   /** Puts in as many batches of `recipeId` as the bag pays for, up to MAX_BATCHES in all. */
   load(key, recipeId, batches = 1) {
     const recipe = RECIPES_BY_ID.get(recipeId);
-    if (!recipe || recipe.station !== this.station) return { ok: false, reason: `That is not made in a ${this.station === 'kiln_oven' ? 'Kiln Oven' : 'crucible'}.` };
+    if (!recipe || recipe.station !== this.station) return { ok: false, reason: `That is not made in a ${STATION_NAMES[this.station] ?? 'crucible'}.` };
     const p = this.pots.get(key);
     if (p && p.recipeId !== recipeId) return { ok: false, reason: 'Finish what is in the pot first.' };
     const room = MAX_BATCHES - (p ? p.waiting + p.molten : 0);
@@ -150,7 +155,7 @@ export class Crucibles {
       if (stands(key)) continue;
       const recipe = RECIPES_BY_ID.get(p.recipeId), items = {};
       for (const [id, n] of Object.entries(bill(recipe, p.waiting))) if (n > 0) items[id] = n;
-      const whole = p.out + (this.station === 'kiln_oven' ? p.molten * recipe.output.count : 0);
+      const whole = p.out + (STATION_MOULD[this.station] ? p.molten * recipe.output.count : 0);
       if (whole) items[recipe.output.id] = (items[recipe.output.id] ?? 0) + whole;
       this.pots.delete(key);
       const rest = this.giveBack(items);
@@ -174,7 +179,7 @@ export class Crucibles {
       if (p.owed && typeof p.owed === 'object') { this.owed.set(p.key, Object.fromEntries(Object.entries(p.owed).filter(([, n]) => int(n) > 0))); continue; }
       const recipe = RECIPES_BY_ID.get(p.recipeId);
       if (recipe?.station !== this.station) continue;
-      const mould = mouldFor(recipe) === 'tray' ? 'tray' : p.mould === 'coin' ? 'coin' : 'ingot';
+      const mould = STATION_MOULD[recipe.station] ?? (p.mould === 'coin' ? 'coin' : 'ingot');
       this.pots.set(p.key, { recipeId: p.recipeId, waiting: Math.min(int(p.waiting), MAX_BATCHES), molten: Math.min(int(p.molten), MAX_BATCHES),
         progress: Number.isFinite(p.progress) ? Math.min(Math.max(p.progress, 0), 0.999) : 0, mould, out: int(p.out) });
     }

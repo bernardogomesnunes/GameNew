@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RECIPES_BY_ID } from '../config/recipes.js';
 import { mouldFor } from '../duilt/Crucible.js';
 import { stillCopy } from './Models.js';
+import { ITEMS_BY_ID } from '../config/items.js';
 
 /**
  * CRAFT3D-3: the crucible close up, on the real block in the world. A pot
@@ -27,7 +28,10 @@ const METAL = 0xffa53a;
 /** CRAFT-9 part 6: the Kiln Oven's colours: brick shell, dark mouth, fire, tray. */
 const KILN_BRICK = 0x7e4434, KILN_ROOF = 0x63362b, KILN_DARK = 0x2a1610, KILN_FIRE = 0xff7a2a, KILN_TRAY = 0x5a5048;
 /** What sits on the tray: brick red, glass pale blue, a vase terracotta. */
-const WARE = { brick: 0xa8432c, glass: 0xb9dce8, vase: 0xc9825c };
+const WARE = { brick: 0xa8432c, glass: 0xb9dce8, vase: 0xc9825c, dried_red: 0x9a3a3a, dried_lilac: 0x7a5c98, dried_pale: 0xb8a27e };
+/** The palette startKiln builds with: the Kiln Oven's own, or the Dehydrator's (PLAY-16: a warm draught, no flames, no chimney). */
+const KILN_LOOK = { shell: KILN_BRICK, roof: KILN_ROOF, dark: KILN_DARK, fire: KILN_FIRE, fireMax: 1, tray: KILN_TRAY, chimney: true };
+const DEHYDRATOR_LOOK = { shell: 0x9c7348, roof: 0x8a6440, dark: 0x3a2a1c, fire: 0xffb46a, fireMax: 0.15, tray: 0xc9b38a, chimney: false };
 
 export class CrucibleView {
   /** `kind` 'crucible' (pot and moulds) or 'kiln' (the Kiln Oven: an oven mouth and a tray drawn out of it). */
@@ -60,7 +64,12 @@ export class CrucibleView {
     };
     // The oven is built facing +z and turned round, so its mouth faces -z,
     // the way the Kiln Oven block's door does; the camera stands on that side.
-    if (this.kind === 'kiln') { g.rotation.y = Math.PI; this.startKiln(box); this.scene.add(g); return; }
+    if (this.kind === 'kiln' || this.kind === 'dehydrator') {
+      g.rotation.y = Math.PI;
+      this.startKiln(box, this.kind === 'dehydrator' ? DEHYDRATOR_LOOK : KILN_LOOK);
+      this.scene.add(g);
+      return;
+    }
     this.fire = box(0.5, 0.06, 0.5, 0x3a1a0a, -0.25, 0.03, 0, { emissive: 0xff5a1a, emissiveIntensity: 0.4 });
     // The pot tilts about its front edge, towards the moulds.
     this.potPivot = new THREE.Group();
@@ -73,6 +82,18 @@ export class CrucibleView {
     this.coinMould = box(0.3, 0.06, 0.3, 0x5a5048, 0.35, 0.03, 0.22);
     this.metal = box(1, 1, 1, METAL, 0, 0, 0, { emissive: METAL, emissiveIntensity: 0.8 });
     this.metal.visible = false;
+    // PLAY-19: the Cauldron is this pot in iron, pouring into a wooden bowl. No models, no coin mould.
+    if (this.kind === 'cauldron') {
+      this.pot.material.color.setHex(0x2f2f33);
+      this.pot.material.emissive.setHex(0xff7a2a);
+      this.ingotMould.material.color.setHex(0x8a6238);
+      this.ingotMould.scale.set(0.3 / 0.34, 0.1 / 0.08, 0.3 / 0.2);
+      this.ingotMould.position.set(0.35, 0.05, 0);
+      this.coinMould.visible = false;
+      this.metal.material.emissiveIntensity = 0;
+      this.scene.add(g);
+      return;
+    }
     this.dressModels();
     this.scene.add(g);
   }
@@ -83,18 +104,19 @@ export class CrucibleView {
    * batch is fired, and a tray that slides out as Draw is held, carrying the
    * ware (brick, glass or a vase). Fourteen meshes, made here, none per frame.
    */
-  startKiln(box) {
+  startKiln(box, look = KILN_LOOK) {
+    this.look = look;
     // The shell: floor, back, two sides, a roof and a lintel over the mouth.
-    box(0.9, 0.08, 0.7, KILN_BRICK, 0, 0.04, -0.1);
-    box(0.9, 0.5, 0.1, KILN_BRICK, 0, 0.33, -0.4);
-    box(0.12, 0.5, 0.7, KILN_BRICK, -0.39, 0.33, -0.1);
-    box(0.12, 0.5, 0.7, KILN_BRICK, 0.39, 0.33, -0.1);
-    box(0.96, 0.12, 0.76, KILN_ROOF, 0, 0.64, -0.1);
-    box(0.16, 0.3, 0.16, KILN_ROOF, 0.26, 0.85, -0.3);
-    box(0.66, 0.1, 0.08, KILN_BRICK, 0, 0.53, 0.21);
-    box(0.66, 0.4, 0.02, KILN_DARK, 0, 0.32, -0.34);
+    box(0.9, 0.08, 0.7, look.shell, 0, 0.04, -0.1);
+    box(0.9, 0.5, 0.1, look.shell, 0, 0.33, -0.4);
+    box(0.12, 0.5, 0.7, look.shell, -0.39, 0.33, -0.1);
+    box(0.12, 0.5, 0.7, look.shell, 0.39, 0.33, -0.1);
+    box(0.96, 0.12, 0.76, look.roof, 0, 0.64, -0.1);
+    if (look.chimney !== false) box(0.16, 0.3, 0.16, look.roof, 0.26, 0.85, -0.3);
+    box(0.66, 0.1, 0.08, look.shell, 0, 0.53, 0.21);
+    box(0.66, 0.4, 0.02, look.dark, 0, 0.32, -0.34);
     // The fire: a bed of coals along the back wall of the chamber.
-    this.fire = box(0.58, 0.1, 0.12, KILN_DARK, 0, 0.13, -0.3, { emissive: KILN_FIRE, emissiveIntensity: 0.4 });
+    this.fire = box(0.58, 0.1, 0.12, look.dark, 0, 0.13, -0.3, { emissive: look.fire, emissiveIntensity: Math.min(0.4, look.fireMax) });
     // The door hinges on the left of the mouth and swings out towards you.
     this.doorPivot = new THREE.Group();
     this.doorPivot.position.set(-0.33, 0.08, 0.24);
@@ -105,9 +127,9 @@ export class CrucibleView {
     this.tray = new THREE.Group();
     this.tray.position.set(0, 0.14, -0.12);
     this.group.add(this.tray);
-    box(0.46, 0.03, 0.38, KILN_TRAY, 0, 0, 0, {}, this.tray);
+    box(0.46, 0.03, 0.38, look.tray, 0, 0, 0, {}, this.tray);
     box(0.04, 0.03, 0.4, 0x6b4a33, 0, 0, 0.36, {}, this.tray);
-    this.ware = box(0.24, 0.12, 0.16, WARE.brick, 0, 0.075, 0, { emissive: KILN_FIRE, emissiveIntensity: 0 }, this.tray);
+    this.ware = box(0.24, 0.12, 0.16, WARE.brick, 0, 0.075, 0, { emissive: look.fire, emissiveIntensity: 0 }, this.tray);
     this.wareId = null;
   }
 
@@ -120,6 +142,7 @@ export class CrucibleView {
     this.ware.material.opacity = id === 'glass' ? 0.75 : 1;
     if (id === 'vase') { this.ware.scale.set(0.7, 1.9, 1.1); this.ware.position.y = 0.13; }
     else if (id === 'glass') { this.ware.scale.set(1.1, 0.3, 1.3); this.ware.position.y = 0.03; }
+    else if (id.startsWith('dried_')) { this.ware.scale.set(1.1, 0.35, 1.2); this.ware.position.y = 0.03; }
     else { this.ware.scale.set(1, 1, 1); this.ware.position.y = 0.075; }
   }
 
@@ -130,8 +153,9 @@ export class CrucibleView {
     if (recipe) this.dressWare(recipe.output.id);
     // The ware glows as it fires and stays hot until drawn.
     this.ware.material.emissiveIntensity = s ? (s.molten ? 0.15 : 0.15 * s.progress) : 0;
+    if (this.look.fireMax < 1) this.ware.material.emissiveIntensity = 0;
     const flicker = s?.waiting ? 0.7 + 0.25 * Math.sin(performance.now() / 120) : 0.25;
-    this.fire.material.emissiveIntensity = flicker;
+    this.fire.material.emissiveIntensity = Math.min(flicker, this.look.fireMax);
     if (this.holding) this.level = Math.min(1.25, this.level + dt / FILL_SECONDS);
     // The door stands open while something fired waits, shut while it fires.
     const open = s?.molten || this.level > 0 ? 1 : 0;
@@ -191,7 +215,7 @@ export class CrucibleView {
 
   update(dt) {
     if (!this.active) return;
-    if (this.kind === 'kiln') {
+    if (this.kind === 'kiln' || this.kind === 'dehydrator') {
       const c = KILN_CAMERA[this.camera.aspect < 1 ? 'tall' : 'wide'];
       this.camera.position.set(this.top.x, this.top.y + c.up, this.top.z - c.back);
       this.camera.lookAt(this.top.x, this.top.y + c.look, this.top.z);
@@ -203,7 +227,7 @@ export class CrucibleView {
     const s = this.crucibles.state(this.key);
     // The pot glows as its batch melts, and stays bright while metal is molten.
     const glow = s ? (s.molten ? 1 : s.progress) : 0;
-    this.pot.material.emissiveIntensity = 0.9 * glow;
+    this.pot.material.emissiveIntensity = (this.kind === 'cauldron' ? 0.12 : 0.9) * glow;
     const flicker = s?.waiting ? 0.6 + 0.2 * Math.sin(performance.now() / 120) : 0.2;
     this.fire.material.emissiveIntensity = flicker;
     if (this.fireGlow) this.fireGlow.emissiveIntensity = 0.4 + flicker;
@@ -212,6 +236,7 @@ export class CrucibleView {
     this.potPivot.rotation.z = -Math.min(1, this.level) * (Math.PI / 3);
     // The metal runs out over the chosen mould and rises with the level.
     const mould = s?.mould === 'coin' ? this.coinMould : this.ingotMould;
+    if (this.kind === 'cauldron' && s) this.metal.material.color.setHex(ITEMS_BY_ID.get(RECIPES_BY_ID.get(s.recipeId)?.output.id)?.color ?? 0x8a5a2a);
     this.metal.visible = this.level > 0;
     if (this.metal.visible) {
       const g = mould.geometry.parameters, k = mould.scale, l = Math.min(this.level, 1.25);
