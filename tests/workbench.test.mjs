@@ -1,7 +1,7 @@
 // IMP-19: "workshop should have an item (new one) called workbench. That
 // should allow to do all the crafting, on the bench that I have from the menu
 // I should only be able to craft the more simple stuff." Decided: the menu
-// keeps Ages 1 and 2; the Workbench is made by hand at Age 3 or at a workshop.
+// keeps Ages 1 and 2; the Workbench is made by hand.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { RECIPES, RECIPES_BY_ID, MENU_MAX_AGE } from '../src/config/recipes.js';
@@ -22,7 +22,7 @@ assert.ok(RECIPES.some((r) => r.station === 'workbench' && r.age === 3), 'Age 3 
 assert.ok(!RECIPES.some((r) => r.station === 'workbench' && r.age <= MENU_MAX_AGE), 'nothing from Ages 1 and 2 needs it');
 assert.equal(RECIPES_BY_ID.get('workbench').station, 'hand');
 assert.equal(RECIPES_BY_ID.get('workbench').age, 1, 'made by hand from Age 1 (owner, 12 November: from the start)');
-assert.equal(RECIPES_BY_ID.get('workshop_workbench').station, 'workshop', 'and at a workshop');
+assert.equal(RECIPES_BY_ID.get('workshop_workbench'), undefined, 'PLAY-11: the workshop copy is gone, same inputs as the hand recipe');
 console.log('PASS the menu bench keeps Ages 1 and 2; Age 3 on is made at a Workbench');
 
 const bag = new Inventory();
