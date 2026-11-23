@@ -490,7 +490,7 @@ export const STRUCTURES = [
         blurb: 'A hard floor and a proper span. Everything you own fits in here.',
         needs: [
           want([PLANKS, WOOD, BRICK], 140, 'planks', 'planks', { say: (n) => `${n} more planks, wood or brick` }),
-          want([STONE, COBBLE, BRICK], 25, 'stone', 'stone', { say: (n) => `${n} more stone or brick, for a floor that will take the weight` }),
+          want([STONE, COBBLE, BRICK], 25, 'stone', 'stone', { say: (n) => `${n} more cobblestone, stone or brick, for a floor that will take the weight` }),
           work((ctx) => ctx.shelteredVolume(), 40, { item: 'planks', key: 'space', say: (k) => `Make the room inside much bigger — ${k} more blocks of space under the roof` }),
         ],
       },
@@ -833,7 +833,8 @@ export const STRUCTURES = [
       {
         id: 'shell',
         test: (ctx) => count(ctx, [STONE, COBBLE, BRICK]) >= 26,
-        say: (ctx) => `Needs ${26 - count(ctx, [STONE, COBBLE, BRICK])} more stone or brick in the shell — the fire has to hold`,
+        // PLAY-6 (owner, 22 November): same fix as the kiln — cobblestone counts, brick is optional.
+        say: (ctx) => `Needs ${26 - count(ctx, [STONE, COBBLE, BRICK])} more cobblestone or stone in the shell (brick works too) — the fire has to hold`,
       },
       {
         // A bigger, hotter chamber than the kiln's own two cells — this is
