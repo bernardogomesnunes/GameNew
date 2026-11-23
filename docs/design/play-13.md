@@ -238,3 +238,22 @@ Each chunk is one PR. Chunks 1 and 2 can be one PR if small. Every chunk ends wi
 6. A raid death: should it lower everyone's mood (grief, -10)?
 7. Riots: is losing 10% of one storehouse's goods acceptable, or should riots only stop production?
 8. Politics skill: should its levels soften anger (5% a level), as well as giving room for one more settler?
+
+## Decided by default, 23 November
+
+The owner said "do everything we have pending" without answering the open questions. Each row takes the doc's recommendation, or the smaller scope where the doc has none.
+
+| Question | Decision | Why |
+|---|---|---|
+| 1. Worst case in version 1 | Leaving. No protests or riots in version 1. | The doc puts protest and riot in chunk 5. Leaving needs no new save fields or trade hooks. |
+| 2. Grace period | 3 game days (45 minutes). | The doc's number. A newcomer waits at most 3 days before a Work Hall and a job exist. |
+| 3. Meal quality order | Keep worst first, as today. Quality does not enter version 1. | Version 1 ignores `feeds` (PLAY-20 not landed). Changing the order is a chunk 7 decision. |
+| 4. Idle builder or carrier | Counts as having a job. | The doc's version 1 rule. The Work Hall roles are then always a fix. |
+| 5. Soldier desertion | None. Soldiers have no mood. | Smaller scope. Soldiers already hit softer when hungry. |
+| 6. Raid death lowers mood | No. | Smaller scope. Listed under later versions in the doc. |
+| 7. Riot storehouse loss | No riots in version 1, so no loss. If riots come, they stop production only. | Smaller scope. Losing goods needs its own save and undo rules. |
+| 8. Politics softens anger | No. | Smaller scope. Chunk 6, not in version 1. |
+
+### Correction to the timings table
+
+The row "Fed, no job, newcomer" listed Grumbling on day 4. The model gives day 5.5. A fed newcomer gains +5 a day for 3 grace days (70 to 85), then loses 10 a day: Grumbling on day 5.5, Angry on day 7.5, Furious on day 9.5, leaves on day 10.5. The tests use these values. The other rows match the model.
