@@ -16,7 +16,7 @@ let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8'));
 const duiltGame = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.url), 'utf8');
 
 // --- the button only shows once tierStatus says the level is reachable -----
