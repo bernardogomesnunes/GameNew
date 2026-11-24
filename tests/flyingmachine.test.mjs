@@ -41,7 +41,7 @@ ok('with one, Fly takes off', p.flying === true);
 PlayerController.prototype.toggleFly.call(p);
 ok('and Fly again lands', p.flying === false);
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameLoad.js', import.meta.url), 'utf8'));
 const { world } = generateDuiltWorld({ sizeX: 64, sizeZ: 64, seed: 5 });
 const d = new DuiltGame({ world, scene: new THREE.Scene(), bus: { emit() {} } });
 d.inventory.add('flying_machine', 1);

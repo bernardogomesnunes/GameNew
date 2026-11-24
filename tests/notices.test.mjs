@@ -13,7 +13,7 @@ import { MENU_BY_ID } from '../src/config/menu.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameLoad.js', import.meta.url), 'utf8'));
 
 // --- the list ------------------------------------------------------------------------------------
 

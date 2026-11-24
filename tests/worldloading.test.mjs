@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const src = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), 'utf8');
-const game = src('Game.js'), ui = src('ui/UIManager.js'), loading = src('ui/loading.js'), html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const game = src('Game.js') + src('game/GameLoad.js'), ui = src('ui/UIManager.js'), loading = src('ui/loading.js'), html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 // --- the loading screen, again ---------------------------------------------------------------------
 

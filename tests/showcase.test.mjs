@@ -25,7 +25,7 @@ import { daylightAt } from '../src/render/DayCycle.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
-const game = read('../src/Game.js');
+const game = read('../src/Game.js') + read('../src/game/GameLoad.js');
 const ui = read('../src/ui/UIManager.js');
 const mobsSrc = read('../src/world/Mobs.js');
 const wanderSrc = read('../src/world/Wanderers.js');

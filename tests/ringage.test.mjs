@@ -51,7 +51,7 @@ for (const ring of ['white', 'black']) {
   ok('  and the check it gets as it opens moves it on', back.age === 8);
 }
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameLoad.js', import.meta.url), 'utf8'));
 ok('opening a world checks its age', /this\.applyTerritoryBounds\(\);[\s\S]{0,300}if \(!sandbox\) this\.duilt\.checkAgeAdvance\(\);/.test(game));
 
 process.exit(f ? 1 : 0);
