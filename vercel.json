@@ -9,6 +9,10 @@
         }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/auth-webhook.js": {
+      "includeFiles": ".env"
+    }
+  }
 }
-

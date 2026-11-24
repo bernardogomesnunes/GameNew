@@ -18,7 +18,7 @@ Today's sign-in can carry a few thousand players. The plan limits are not the bl
 | Google sign-in | Turned on in Neon with Neon's shared keys. The game has no Google button. |
 | Allowed origins | `https://duild-seven.vercel.app` only, plus `allow_localhost` true. |
 | Organization plugin | On (10 orgs, 100 members). The game does not use it. |
-| Webhooks and log export | None. |
+| Webhooks and log export | None on 17 November. Webhook receiver built in ACCT-12 (not yet switched on). Log export is not on this plan. |
 | Database | Free plan. Compute 0.25 to 2 CU, region `aws-us-east-2`, 1 GB storage cap per project. `production` holds 85 MB. |
 | Data access | Row-level security on every table, keyed on the JWT (see `analysis-scaling.md`). |
 | Account deletion and export | None. |
@@ -100,3 +100,30 @@ Account panel, section "Your data".
 - **The button is hidden** until the database answers the function's dry run. A database without 0009 shows only Download.
 - **Neon setting needed for step 2.** Better Auth answers 404 from `/delete-user` unless the server has `user.deleteUser.enabled`. The game cannot change that, and the Neon Auth settings this project's tools expose do not list it (read in code, not tested against the live service: the auth config could not be read in this task). If Neon has not enabled it, the game data is still deleted, the player is signed out, and the panel says: "Your worlds and progress are deleted. Your sign-in record could not be removed from the game". The owner then removes the user in the Neon console (Auth, Users) or by asking Neon to enable user deletion.
 - **Fresh session.** Better Auth refuses `deleteUser` on a session older than its freshness window unless the password is sent. The panel then shows a password field, and retries only the sign-in step. The data is not deleted twice.
+
+## ACCT-12 setup: webhook, alert, support lookup (24 November)
+
+Built, all additive. Nothing runs until the owner does the steps below.
+
+**Skipped: auth log export.** `get_neon_auth_config` returns `logs_export` null: this plan does not offer it. Revisit if the plan changes (ACCT-1).
+
+**Webhook receiver.** `api/auth-webhook.js` (Vercel function, URL `https://duild-seven.vercel.app/api/auth-webhook`). It checks Neon's Ed25519 detached JWS against the keys at `<Neon Auth URL>/.well-known/jwks.json`, rejects a timestamp more than 5 minutes off, and answers 401 on a bad signature, 500 if no auth URL can be found, 413 over 64 KB. For `user.created` it logs one JSON line: tag `neon-auth-webhook`, event id, user id, provider, email domain (not the address), verified flag. It writes nothing to the database. Read the lines in Vercel, project, Logs, search `neon-auth-webhook`.
+
+Do not subscribe `user.before_create`. Neon rejects the sign-up when that endpoint fails, so an outage would block every new account. `user.created` is non-blocking: a failing endpoint costs a log line only.
+
+**Alert.** `scripts/check-save-failures.mjs` counts `save_failures` rows from the last 24 hours and exits 1 over `SAVE_FAILURE_THRESHOLD` (default 10). `.github/workflows/save-failure-alert.yml` runs it daily at 06:17 UTC and on demand. A failed run makes GitHub email repository watchers.
+
+**Support lookup.** `ADMIN_DATABASE_URL='...' node scripts/admin-lookup.mjs <email | auth user id | player id> [--json]`. Prints the sign-in record, chosen name, worlds (live and deleted) with chunk counts, last save time, and the last 10 `save_failures`. Read-only: one select per statement, sent as a read-only batch, and the connection string is never printed.
+
+Both scripts need a role that can read across players. Row-level security hides other players' rows from ordinary roles. The project owner role bypasses it. Use the pooled connection string of `production` (br-red-sound-aea4rbqt).
+
+### Owner steps
+
+1. **Vercel**: nothing to add if `VITE_NEON_URL` is set for Production (it is: the game needs it). The function derives the Neon Auth URL from it, the same way the game does. Optional override: `NEON_AUTH_URL` (Neon Console, Auth, Configuration; no trailing slash). Redeploy so the new `api/` function is built.
+2. **Check the endpoint** after the deploy: `curl -i https://duild-seven.vercel.app/api/auth-webhook` answers 405. An unsigned POST answers 401.
+3. **Neon Console**, Auth, Configuration, Webhooks, branch `production`: enabled, URL `https://duild-seven.vercel.app/api/auth-webhook`, events `user.created` only, timeout 5. CLI equivalent: `neon neon-auth config webhook update --enabled --url https://duild-seven.vercel.app/api/auth-webhook --enabled-events user.created --timeout 5`.
+4. **Test**: create one test account. A `neon-auth-webhook` line with its user id appears in Vercel Logs within seconds. Delete the test account after.
+5. **GitHub**, repository Settings, Secrets and variables, Actions: secret `ALERTS_DATABASE_URL` = a `production` connection string for the owner role. Optional variable `SAVE_FAILURE_THRESHOLD`. Then Actions, Save failure alert, Run workflow once to confirm it prints a count and exits 0.
+6. **Support machine**: keep a connection string in the shell as `ADMIN_DATABASE_URL` when using the lookup. Never commit it.
+
+Limits: the webhook has no retry store, so a missed `user.created` is not replayed (Neon has no redelivery). The alert counts rows only; `save_failures` is written by the client after retries, so a player who cannot sign in logs nothing (PLAY-1).
