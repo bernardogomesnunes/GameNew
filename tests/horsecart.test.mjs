@@ -74,7 +74,7 @@ ok('never bolts from you', /spec\.skittish && !m\.owned/.test(src));
 ok('the one you sit on is never in your sights', /m\.dying > 0 \|\| m\.dead \|\| m\.ridden/.test(src));
 
 // --- riding ------------------------------------------------------------------------------
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameVehicles.js', import.meta.url), 'utf8');
 ok('Place on a horse is the horse\'s, before anything else', /const horse = this\.horseTarget\(aimed\);\s*if \(horse\) return void this\.useHorse\(horse\);/.test(game));
 ok('on horseback you go faster', /\* \(this\.riding \? RIDE_SPEED : 1\)/.test(game) && /RIDE_SPEED = 1\.9/.test(game));
 ok('the horse goes where you go', /this\.player\.update\(dt\);\s*this\.keepApart\(\);\s*this\.tickRide\(dt\);/.test(game));
