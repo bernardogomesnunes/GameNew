@@ -158,7 +158,7 @@ ok('and no box size to cycle', !/btn-size/.test(ui) && !/SELECTOR_SIZES/.test(ga
 // forgotten was on.
 ok('Break breaks unless a tool is queued', /if \(this\.pendingRoof\) return void this\.stampRoof\(\);/.test(game));
 ok('and a queued tool is the only thing that changes what a button does',
-  /get armed\(\) \{[\s\S]{0,120}pendingRoof \|\| this\.pendingTemplate/.test(game));
+  /function armed\(\) \{[\s\S]{0,120}pendingRoof \|\| this\.pendingTemplate/.test(game));
 ok('Place cancels rather than placing while something is queued',
   /if \(this\.armed\) return void this\.clearPending\(\);/.test(game));
 

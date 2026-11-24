@@ -36,7 +36,7 @@ const solid = plan.filter((c) => !roofPart(c.next));
 ok('a gable over a plank house has plank ends', solid.length > 0 && solid.every((c) => c.next === PLANKS));
 ok('and tiles over the top', plan.some((c) => roofPart(c.next)));
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 ok('what you lay is what the preview showed', (game.match(/roofTypeFor\([^)]*, b, roofUnder\(this\.world, b\.x, base, b\.z\)\)/g) ?? []).length === 2);
 
 process.exit(f ? 1 : 0);
