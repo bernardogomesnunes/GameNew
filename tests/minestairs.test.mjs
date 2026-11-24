@@ -104,7 +104,7 @@ function walkUp(world, region, top) {
   ok('  but the mine is still dug out and works', validateStructure(world, region, 'mine').ok && changes.every((c) => c.x > region.minX && c.x < region.maxX));
 }
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 ok('placed from the surface, a mine goes down to its depth', /if \(typeId === 'mine'\) b\.y = Math\.min\(b\.y, MINE_FLOOR\);/.test(game));
 ok('  its stair is cut before it is claimed', /const stairs = typeId === 'mine' \? this\.digMineStairs\(region, aimedY\) : null;\s*const claim = this\.duilt\.claim\(region, typeId\);/.test(game));
 ok('  free, the rock it cuts is not handed to you, and it is no challenge of yours', /this\.applyChanges\(dig, \{ chargeResources: false, gather: false \}\)/.test(game)
