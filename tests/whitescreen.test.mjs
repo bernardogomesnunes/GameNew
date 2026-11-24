@@ -45,7 +45,7 @@ const any = [...chunk.mesh.values()][0].geometry;
 ok('normals are a byte each, not a float', any.attributes.normal.array instanceof Int8Array && any.attributes.normal.normalized);
 ok('the texture layer is a byte', any.attributes.layer.array instanceof Uint8Array);
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameSave.js', import.meta.url), 'utf8'));
 ok('the game asks for deep meshes only within DEEP_RANGE', /this\.mesher\.deepNear = \(chunk\) => this\.chunkDistSq\(chunk\) <= DEEP_RANGE \* DEEP_RANGE;/.test(game));
 ok('and keeps them following you, frame by frame', /runStreamingWork\([^;]*\);\s*this\.updateDeep\(\);/.test(game));
 

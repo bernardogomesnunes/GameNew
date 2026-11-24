@@ -85,7 +85,7 @@ for (let x = 0; x <= 5; x++) for (let z = 0; z <= 5; z++) {
   ok('put away twice, it counts from the first', back.awaySince === t);
 }
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameSave.js', import.meta.url), 'utf8'));
 ok('hidden, the clocks stop and it saves; shown, they run again',
   /if \(document\.visibilityState === 'hidden'\) \{ this\.duilt\?\.pauseClock\(\); save\(\); \}\s*else this\.duilt\?\.resumeClock\(\);/.test(game)
   && /window\.addEventListener\('pagehide', \(\) => \{ this\.duilt\?\.pauseClock\(\); save\(\); \}\);/.test(game));
