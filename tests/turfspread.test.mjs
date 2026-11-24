@@ -41,7 +41,7 @@ ok('a claimed building\'s dirt is left bare', (() => { const t4 = new TurfSpread
 const back = new TurfSpread(); back.loadJSON(JSON.parse(JSON.stringify(t.toJSON())));
 ok('kept with the world', back.due.size === t.due.size);
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 ok('every edit to grass or dirt, or one that opens dirt to the sky, is looked at', /if \(TURFY\.has\(c\.prev\) \|\| TURFY\.has\(c\.next\) \|\| c\.next === AIR\) this\.duilt\.turf\.consider\(/.test(game));
 ok('and it spreads as the days go by, with the crops', /this\.duilt\.turf\.spread\(this\.world, this\.duilt\.days, this\.turfSkip\(\)\)/.test(game));
 

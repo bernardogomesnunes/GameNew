@@ -21,7 +21,7 @@ let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
 const PLANKS = 7, LOG = 4, DIRT = 2, GRASS = 1;
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 
 /** A world with flat ground at y=20, recorded as the ground, and nothing above. */
@@ -158,7 +158,7 @@ ok('and no box size to cycle', !/btn-size/.test(ui) && !/SELECTOR_SIZES/.test(ga
 // forgotten was on.
 ok('Break breaks unless a tool is queued', /if \(this\.pendingRoof\) return void this\.stampRoof\(\);/.test(game));
 ok('and a queued tool is the only thing that changes what a button does',
-  /get armed\(\) \{[\s\S]{0,120}pendingRoof \|\| this\.pendingTemplate/.test(game));
+  /function armed\(\) \{[\s\S]{0,120}pendingRoof \|\| this\.pendingTemplate/.test(game));
 ok('Place cancels rather than placing while something is queued',
   /if \(this\.armed\) return void this\.clearPending\(\);/.test(game));
 

@@ -56,7 +56,7 @@ ok('an unrecognised material is always normal, whatever is selected',
 
 // --- wired into breakBlock, the way holding/tapping already are -------------
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 
 ok('breakDelayFor reads the tool actually selected against what the block is made of',
   /breakDelayFor\(blockId\) \{\s*const material = materialOf\(blockId\);[\s\S]{0,250}toolEffectiveness\(this\.selectedItemId, material\)/.test(game));

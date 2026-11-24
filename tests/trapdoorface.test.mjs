@@ -22,7 +22,7 @@ ok('and shuts back onto the floor when that is where it stands', swungTrapdoor(T
 ok('or at the top of its cell when not', swungTrapdoor(TRAPDOOR_OPEN + 2) === TRAPDOOR + 2);
 const world = readFileSync(new URL('../src/world/World.js', import.meta.url), 'utf8');
 ok('shut on the floor, it is a low step you stand on', /shape === 'trapdoor_low'\) return \{ minY: y, maxY: y \+ 0\.1875 \}/.test(world));
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 ok('placing uses the face you point at', /trapdoorOnFace\(logOnFace\(this\.placedBlock\(type\), hit\.normal\), hit\.normal\)/.test(game));
 
 process.exit(f ? 1 : 0);

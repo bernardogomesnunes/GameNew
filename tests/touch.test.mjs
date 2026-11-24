@@ -301,7 +301,7 @@ ok('a dragged pixel turns you a set amount, scaled by your sensitivity, like the
 // turns it. So the cancel that sat under them was unreachable for any roof
 // with more than one way round — you could pick a gable and never put it down.
 {
-  const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+  const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
   ok('the turn still takes the second button, which is what caused this',
     /if \(this\.pendingRoof\?\.turns > 1\) return void this\.turnRoof\(\);/.test(game));
   // Three ways out, because the three places you would look are the readout,

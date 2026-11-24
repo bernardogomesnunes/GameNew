@@ -52,7 +52,7 @@ const walker = { ...swimmer(10.9), swimming: false, grounded: true };
 ok('on foot, a whole block is still too high to step', !PlayerController.prototype.stepUp.call(walker, 1, 0));
 
 // --- "Should be able to place blocks on water ... a lonely block of water a bucket should clear it out. If it's more like 2 don't"
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 ok('pointing at water, a block goes into it', /const into = hit\.block === WATER \|\| isFlowing\(hit\.block\);\s*const targets = into \? this\.computeTargets\(hit\.x, hit\.y, hit\.z\)/.test(game));
 ok('a bucket clears a lone water block, never one joined to more water',
   /const joined = \[\[1, 0, 0\][\s\S]{0,200}=== WATER\);\s*const cleared = !joined && this\.applyChanges\(\[\{ x: hit\.x, y: hit\.y, z: hit\.z, prev: WATER, next: AIR \}\]/.test(game));
