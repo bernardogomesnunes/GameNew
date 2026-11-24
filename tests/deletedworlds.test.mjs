@@ -13,7 +13,7 @@ let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
 const neon = readFileSync(new URL('../src/net/NeonTransport.js', import.meta.url), 'utf8');
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameSave.js', import.meta.url), 'utf8'));
 
 ok('a save never clears deleted_at', !/deleted_at:\s*null/.test(neon));
 ok('deleting is still a soft delete', /body: \{ deleted_at: new Date\(\)\.toISOString\(\) \}/.test(neon));

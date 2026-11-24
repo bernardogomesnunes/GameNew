@@ -87,7 +87,7 @@ function game(answer) {
 }
 console.log('PASS the game asks first; no keeps it there, yes takes it, and a taken-over tab stops saving');
 
-const src = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const src = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameSave.js', import.meta.url), 'utf8'));
 assert.match(src, /if \(!await this\.checkWorldSession\(\)\) return false;\s*await this\.saveToCloud/, 'flush checks before every upload');
 assert.match(src, /if \(!await this\.takeWorldSession\(id\)\) return false;/, 'restoreFromCloud asks before opening');
 const sql = readFileSync(new URL('../migrations/0007_world_sessions.sql', import.meta.url), 'utf8');
