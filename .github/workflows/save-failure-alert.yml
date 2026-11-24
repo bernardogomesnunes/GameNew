@@ -1,0 +1,23 @@
+name: Save failure alert
+# Read-only. Fails (and GitHub emails the repository watchers) when save_failures
+# has more than SAVE_FAILURE_THRESHOLD rows in the last 24 hours.
+# Needs the repository secret ALERTS_DATABASE_URL. Without it the job fails with exit 2.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-save-failures.mjs
+        env:
+          ALERTS_DATABASE_URL: ${{ secrets.ALERTS_DATABASE_URL }}
+          SAVE_FAILURE_THRESHOLD: ${{ vars.SAVE_FAILURE_THRESHOLD }}
