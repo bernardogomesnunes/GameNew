@@ -102,7 +102,7 @@ const sand = world({ extra: { sandbox: true } });
 ok('no quests in Creative', sand.questBoard().length === 0);
 
 // --- wired in ------------------------------------------------------------------------------------
-const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8'));
+const game = ((readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8')) + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8'));
 ok('hunting, evolving and trading are counted', /this\.duilt\?\.note\('hunt', mob\.type\)/.test(game) && /if \(r\.ok\) this\.duilt\.note\('evolve'\)/.test(game)
   && /this\.tally\.trade \+= 1;/.test(readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.url), 'utf8')));
 const eng = readFileSync(new URL('../src/gamification/GamificationEngine.js', import.meta.url), 'utf8');

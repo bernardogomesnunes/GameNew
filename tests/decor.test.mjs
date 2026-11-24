@@ -26,7 +26,7 @@ import { Crafting } from '../src/duilt/Crafting.js';
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8'));
 
 // --- every piece: a block, an item, a bench recipe, an icon ---------------------------
 
