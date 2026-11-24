@@ -16,7 +16,7 @@ globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const { Game } = await import('../src/Game.js');
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 
 ok('every dinosaur fights for you, the long-neck hardest', ['raptor', 'trike', 'longneck'].every((id) => MOBS_BY_ID.get(id).fight?.damage > 0)
   && MOBS_BY_ID.get('longneck').fight.damage > MOBS_BY_ID.get('raptor').fight.damage);
