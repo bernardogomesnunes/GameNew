@@ -11,7 +11,7 @@ import { Army, MARCH_DAYS, ON_FIELD } from '../src/world/Army.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const rng = (seed) => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8'));
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const hud = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 
@@ -82,7 +82,7 @@ ok('the map: send it, see it on the road, join it at its camp', /Send the army t
   && /game\.sendExpedition\(\)/.test(ui) && /game\.joinExpedition\(\)/.test(ui));
 ok('the camp is out beyond the anchor tower nearest home, facing the island', /expeditionCampSpot\(\) \{[\s\S]{0,400}s\.towers\.reduce\([\s\S]{0,900}t\.x \+ ux \* out/.test(game));
 ok('the day they arrive, the camp goes up', /if \(d\.army\.update\(d\.days\) === 'arrived'\) this\.makeExpeditionCamp\(\);/.test(game));
-const make = game.slice(game.indexOf('  makeExpeditionCamp() {'), game.indexOf('  joinExpedition() {'));
+const make = game.slice(game.indexOf('function makeExpeditionCamp() {'), game.indexOf('function joinExpedition() {'));
 ok('the ground cleared first: no tents in the canopy, no arriving inside a tree', /for \(let by = g; by < g \+ 18; by\+\+\) \{\s*if \(this\.world\.getBlock\(x \+ dx, by, z \+ dz\) !== AIR\) this\.world\.setBlock\(x \+ dx, by, z \+ dz, AIR\);/.test(make));
 ok('tents, a fire and black banners, each on its own ground', /turned\(WAR_TENT, 0\)/.test(make) && /CAMPFIRE/.test(make) && /BLACK_BANNER/.test(make) && /const by = gen\.heightAt\(bx, bz\);/.test(make));
 ok('and you wake at its middle tent now', /d\.spawn = tents\[1\];/.test(make));

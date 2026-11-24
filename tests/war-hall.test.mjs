@@ -9,7 +9,7 @@ import { Defenders } from '../src/world/Defenders.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8'));
 
 const reg = (x) => ({ minX: x, maxX: x + 12, minY: 4, maxY: 10, minZ: 20, maxZ: 33 });
 /** A Battle world with a barracks (id 7, level 1) holding `roster`, and a War Hall unless `hall` is false. */
