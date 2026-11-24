@@ -43,7 +43,7 @@ ok('Tomorrow\'s scholar: read the Archive', by('s_archive').check({ duilt: { ...
 
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 ok('a band of their own, hint until found', /secretsHtml\(done\)/.test(ui) && /A secret<\/div><div class="ach-desc">\$\{escapeHtml\(g\.hint\)\}/.test(ui));
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8'));
 ok('what they read is kept: the kinds hunted, the places found and told', /note\('hunt', mob\.type\)/.test(game) && /this\.bus\.emit\('duilt:found'/.test(game) && /this\.bus\.emit\('duilt:moment'/.test(game));
 const dg = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.url), 'utf8');
 ok('and saved with the world', /huntedKinds: \[\.\.\.this\.huntedKinds\],\s*tradedWith: \[\.\.\.this\.tradedWith\],/.test(dg));
