@@ -72,7 +72,7 @@ ok('no "cells" anywhere a building asks for something', !/cells of/.test(structu
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 ok('building it yourself is a checklist, folded under the button', /<details class="evolve-diy"><summary>Or build it yourself<\/summary>/.test(ui));
 ok('and it says how', /Press Change and build these in — it levels up by itself, and only the level's own cost is taken\./.test(ui));
-const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8')) + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
+const game = ((readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8')) + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8')) + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 ok('only while the building is open for changes', /growEditing\(changes\) \{\s*const s = this\.editingStructure;\s*if \(!s/.test(game)
   && (game.match(/this\.growEditing\(changes\);/g) ?? []).length === 2);
 

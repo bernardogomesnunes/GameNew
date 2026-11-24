@@ -81,7 +81,7 @@ ok('still works higher up the same wall', !!higherFootprint
 
 // --- wired into Game.js as a real tool, not just a helper function --------
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8')) + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 const duiltUi = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 
 ok('beginClaimColumn arms the tool with a default height',

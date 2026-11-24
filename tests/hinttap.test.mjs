@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8'));
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 
 ok('tapping the strip asks the game what it means', /else if \(this\.cb\.onHintTap\) this\.cb\.onHintTap\(\);/.test(ui));

@@ -19,7 +19,7 @@ import { inspect } from '../src/structures/validate.js';
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8'));
 
 const [OAK, ...MORE] = WOOD_SETS;
 ok('three woods: oak, white and dark', WOOD_SETS.map((s) => s.key).join() === 'oak,white,dark');

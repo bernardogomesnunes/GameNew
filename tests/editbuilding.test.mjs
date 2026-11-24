@@ -30,7 +30,7 @@ import { readFileSync } from 'node:fs';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8'));
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
 
@@ -58,7 +58,7 @@ ok('and locks it back up for real',
 
 ok('deleting the building you were editing drops the edit state instead of pinning a ghost',
   /this\.editingStructure\?\.id === structure\.id[\s\S]{0,100}this\.editingStructure = null/.test(
-    game.slice(game.indexOf('  deleteBuilding(structure) {'), game.indexOf('  cellsOf(r) {'))));
+    game.slice(game.indexOf('function deleteBuilding(structure) {'), game.indexOf('function cellsOf(r) {'))));
 ok('so does picking it up to move it',
   /beginMove\(structure\) \{[\s\S]{0,300}this\.editingStructure\?\.id === structure\.id[\s\S]{0,100}this\.editingStructure = null/.test(game));
 

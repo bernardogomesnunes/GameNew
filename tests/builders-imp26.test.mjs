@@ -70,7 +70,7 @@ console.log('PASS word that the builder started, once, with the first block');
 }
 console.log('PASS the outline of each building being put up, gone when it is done');
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8'));
 // "Place" and "Build with builders" stay two things: the UI passed only the
 // type, dropping the design picked and "with builders" (the real cause of no
 // builder ever being seen: nothing reached them).

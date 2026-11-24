@@ -112,7 +112,7 @@ ok('put it back and the level returns — not paid for twice', g.structures.clim
 // --- what the panel shows ----------------------------------------------------------------
 const st = tierStatus(world, t0.region, 'tavern', t0.tier, { credit: t0.credit });
 ok('each need says what Evolve takes instead', st.next.wants.every((w) => w.fit || w.price));
-const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8')) + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
+const game = ((readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8')) + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8')) + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 ok('editing a building climbs it after each change', (game.match(/this\.climbEditing\(changes\);/g) ?? []).length === 2);
 ok('but not halfway through an Evolve press', /if \(!this\.duilt \|\| this\.evolvingNow\) return;/.test(game));
 

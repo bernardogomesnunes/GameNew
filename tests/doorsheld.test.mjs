@@ -19,7 +19,7 @@ ok('and open or shut alike', doorMirrored(doorBlock({ open: true, facing: 0 }), 
 ok('a door facing the other way beside it is not a pair', !doorMirrored(shut(0), shut(2)));
 ok('a top half pairs with a top half', doorMirrored(shut(0, true), shut(0, true)) && !doorMirrored(shut(0, true), shut(0, false)));
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameStructures.js', import.meta.url), 'utf8'));
 ok('opening one of a pair opens both', /\[\.\.\.this\.doorCells\(hit\), \.\.\.this\.doorPartnerCells\(hit, door\)\]/.test(game));
 
 const held = readFileSync(new URL('../src/render/heldModel.js', import.meta.url), 'utf8');
