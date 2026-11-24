@@ -24,7 +24,7 @@ import { readFileSync, existsSync } from 'node:fs';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
-const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameSave.js', import.meta.url), 'utf8'));
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameSave.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameLoad.js', import.meta.url), 'utf8'));
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const home = readFileSync(new URL('../src/ui/HomeScreen.js', import.meta.url), 'utf8');
 const local = readFileSync(new URL('../src/storage/LocalWorlds.js', import.meta.url), 'utf8');

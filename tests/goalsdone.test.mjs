@@ -29,7 +29,7 @@ ok('level 9 with 23 xp is ahead of level 1 with 40', progressionAhead({ level: 9
 ok('and not the other way round', !progressionAhead({ level: 1, xp: 40 }, { level: 9, xp: 23 }));
 ok('the same level goes by xp', progressionAhead({ level: 3, xp: 50 }, { level: 3, xp: 10 }));
 ok('a fresh start is never ahead of anything', !progressionAhead({ level: 1, xp: 0 }, { level: 1, xp: 0 }));
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameLoad.js', import.meta.url), 'utf8'));
 ok('both the cloud and this browser merge that way', (game.match(/progressionAhead\((remote|local), this\.gamification\.toJSON\(\)\)/g) ?? []).length === 2);
 
 process.exit(f ? 1 : 0);
