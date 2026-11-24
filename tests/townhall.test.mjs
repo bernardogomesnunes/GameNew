@@ -113,7 +113,7 @@ ok('but leaves your tools with you', g3.inventory.countOf('axe') === 1);
 
 // --- wiring ---------------------------------------------------------------------
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameVehicles.js', import.meta.url), 'utf8');
 {
   let opened = 0, placed = 0;
   const session = { kingTarget: () => null, hermitTarget: () => null, traderTarget: () => null, talkTarget: () => null,

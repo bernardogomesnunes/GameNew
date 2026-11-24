@@ -41,7 +41,7 @@ ok('with one, Fly takes off', p.flying === true);
 PlayerController.prototype.toggleFly.call(p);
 ok('and Fly again lands', p.flying === false);
 
-const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameLoad.js', import.meta.url), 'utf8'));
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameLoad.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameVehicles.js', import.meta.url), 'utf8'));
 const { world } = generateDuiltWorld({ sizeX: 64, sizeZ: 64, seed: 5 });
 const d = new DuiltGame({ world, scene: new THREE.Scene(), bus: { emit() {} } });
 d.inventory.add('flying_machine', 1);
@@ -98,7 +98,7 @@ ok('it is still there when you come back', d2.machines.length === 1 && d2.machin
 ok('hit it and it is back in your bag', d.pickUpMachine(placed.machine).id === 'helix' && d.machines.length === 0 && d.inventory.countOf('helix') === 1);
 ok('holding it, Place sets it down, on its skids', /helix: 'setDownMachine'/.test(game) && /const x = hit\.x \+ 0\.5, y = hit\.y \+ 1 \+ HELIX_SKIDS, z = hit\.z \+ 0\.5;/.test(game));
 ok('Place on one climbs in', /const machine = this\.machineTarget\(aimed\);\s*if \(machine\) return void this\.pilot\(machine\);/.test(game));
-ok('in it you fly, as Creative does — hovering, nothing to glide', /this\.player\.flying = true;/.test(game.slice(game.indexOf('  pilot(m) {'), game.indexOf('  leaveMachine('))));
+ok('in it you fly, as Creative does — hovering, nothing to glide', /this\.player\.flying = true;/.test(game.slice(game.indexOf('function pilot(m) {'), game.indexOf('function leaveMachine('))));
 ok('  sat up in the cabin, over its skids, so it lands on them', /this\.player\.seatHeight = HELIX_SKIDS;/.test(game) && /m\.y = p\.position\.y \+ \(m\.kind === 'helix' \? HELIX_SKIDS : 0\);/.test(game));
 ok('the machine goes where you go', /this\.tickRide\(dt\);\s*this\.tickPilot\(\);/.test(game));
 ok('on the ground, Sneak gets you out', /if \(p\.grounded && \(p\.sneaking \|\| \(p\.flying && down\)\)\) this\.leaveMachine\(\);/.test(game));

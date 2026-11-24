@@ -13,7 +13,7 @@ import { landmarksFor } from '../src/world/landmarks.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const rng = (seed) => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameVehicles.js', import.meta.url), 'utf8');
 
 const stations = stationsFor([
   { kind: 'city', x: 600, z: 0, name: 'Testford' },
