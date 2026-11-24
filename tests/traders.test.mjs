@@ -43,7 +43,7 @@ ok('goblins: green, with a trader\'s cap, ears and a nose', placed.every((p) => 
 
 const view = readFileSync(new URL('../src/render/SettlerView.js', import.meta.url), 'utf8');
 ok('drawn in their own skin, ears out', /this\._colour\.setHex\(p\.skin \?\? SKINS\[who % SKINS\.length\]\)/.test(view) && /if \(o\.ears\) \{/.test(view));
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 ok('they are drawn with everyone else', /\.\.\.this\.tradersFacingYou\(\),/.test(game));
 ok('a tap on one opens their stall', /this\.traderTarget\(aimed\)/.test(game) && /if \(trader\) \{\s*this\.ui\.openTrader\(trader\);/.test(game));
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');

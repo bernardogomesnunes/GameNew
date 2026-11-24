@@ -23,7 +23,7 @@ import { DuiltGame } from '../src/duilt/DuiltGame.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const rng = (seed) => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 
 // --- the cube ---------------------------------------------------------------------------------------

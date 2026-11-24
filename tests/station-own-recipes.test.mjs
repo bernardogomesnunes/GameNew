@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { RECIPES } from '../src/config/recipes.js';
 import { stationOf } from '../src/config/blocks.js';
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const duiltUI = readFileSync(new URL('../src/ui/DuiltUI.js', import.meta.url), 'utf8');
 

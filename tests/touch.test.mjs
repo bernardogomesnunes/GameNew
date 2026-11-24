@@ -191,7 +191,7 @@ ok('and still in the tray', tray.includes('id="t-stats"'));
 // Made, not given.
 ok('Clear and Mirror are there only once you have made the tool',
   /id="t-clear" data-tool="clear" hidden/.test(ui) && /id="t-symmetry" data-tool="mirror" hidden/.test(ui));
-ok('and the game says which ones you hold', /heldTools:/.test(readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8')));
+ok('and the game says which ones you hold', /heldTools:/.test(readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8')));
 
 // --- the goal list is gone from the screen ------------------------------------
 
@@ -248,7 +248,7 @@ ok('the ones in the sheet stay solid', /\.touch-tray \.touch-btn \{ background: 
 // Most of a look is a small correction; a linear stick spends nearly all its
 // travel on speeds too fast to aim with.
 ok('a dragged pixel turns you a set amount, scaled by your sensitivity, like the mouse',
-  /onLookDrag: \(dx, dy\) => \{\s*const k = TOUCH_LOOK \* \(this\.controls\.sensitivity \?\? 1\);\s*this\.player\.look\(dx \* k, dy \* k\);/.test(readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8'))
+  /onLookDrag: \(dx, dy\) => \{\s*const k = TOUCH_LOOK \* \(this\.controls\.sensitivity \?\? 1\);\s*this\.player\.look\(dx \* k, dy \* k\);/.test(readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8'))
   && /onMove[^\n]*curve: 1\.6/.test(ui));
 
 // --- a phone on its side ------------------------------------------------------
@@ -301,7 +301,7 @@ ok('a dragged pixel turns you a set amount, scaled by your sensitivity, like the
 // turns it. So the cancel that sat under them was unreachable for any roof
 // with more than one way round — you could pick a gable and never put it down.
 {
-  const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
+  const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
   ok('the turn still takes the second button, which is what caused this',
     /if \(this\.pendingRoof\?\.turns > 1\) return void this\.turnRoof\(\);/.test(game));
   // Three ways out, because the three places you would look are the readout,

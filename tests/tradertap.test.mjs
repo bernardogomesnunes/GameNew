@@ -44,7 +44,7 @@ function PROP(shape) {
   ok('aimed along the finger, everything reads its line', seen[0] === 1 && seen[1] === -1);
   ok('and after, your own eyes again', player.eyePosition === own && player.eyePosition() === 'eye');
 }
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 ok('a tap hands on where the finger was', /else if \(!moved && e\.type === 'touchend'\) tap\(start\);/.test(ui) && /onTap: \(at\) => this\.tapAction\(at\)/.test(game));
 ok('someone under the finger is who it acts on: the King, the hermit, a trader, anyone who talks',

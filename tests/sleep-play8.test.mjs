@@ -58,7 +58,7 @@ for (const c of ['KeyW', 'KeyS', 'KeyA', 'KeyD', 'Space', 'ShiftLeft', 'Escape']
 assert.ok(!wakesOn('KeyE', binds));
 
 // Source: Place on a bed starts the sleep, and the sleep no longer jumps time.
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 assert.match(game, /bedPart\(aimed\.block\)\) return void this\.sleep\(aimed\)/);
 const body = game.slice(game.indexOf('  sleep(aimed) {'), game.indexOf('  /** The dark veil'));
 assert.ok(body.includes('this.sleeping = {'), 'sleep() starts a sleep');

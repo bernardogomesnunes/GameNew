@@ -13,7 +13,7 @@ import { World } from '../src/world/World.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const src = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), 'utf8');
-const game = src('Game.js'), ui = src('ui/UIManager.js'), hand = src('render/HandView.js'), duilt = src('ui/DuiltUI.js');
+const game = src('Game.js') + src('game/GameInput.js'), ui = src('ui/UIManager.js'), hand = src('render/HandView.js'), duilt = src('ui/DuiltUI.js');
 
 // --- how hard you drew it ------------------------------------------------------------------------
 

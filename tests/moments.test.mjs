@@ -23,7 +23,7 @@ ok('no story in Creative', sand.moment('first_night') === null);
 
 const dg = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.url), 'utf8');
 ok('kept with the world', /moments: this\.moments,/.test(dg) && /this\.moments = Array\.isArray\(data\.moments\)/.test(dg));
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 for (const id of ['first_night', 'first_hunt', 'first_settler', 'first_temple', 'first_fireflies', 'first_trader', 'first_fall']) {
   ok(`${id} is told when it happens`, game.includes(`'${id}'`));
 }

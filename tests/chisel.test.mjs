@@ -38,7 +38,7 @@ assert.equal(h.applied, null);
 assert.equal(h.toasts.length, 1);
 console.log('PASS a block it cannot shape is left alone, and it says so');
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameBuild.js', import.meta.url), 'utf8');
 assert.match(game, /carpentry_chisel: 'chiselBlock'/);
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 assert.match(ui, /carpentry_chisel: \['Chisel', 'Place'\]/);

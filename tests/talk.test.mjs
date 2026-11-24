@@ -9,7 +9,7 @@ import { talkLine, SETTLER_TALK, EXPLORER_TALK, JOB_TALK } from '../src/config/t
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 
 // --- settlers ------------------------------------------------------------------------------------
 

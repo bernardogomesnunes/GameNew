@@ -20,7 +20,7 @@ import { Arrows, ARROW_SPEED, ARROW_DAMAGE, STUCK_SECONDS } from '../src/world/A
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 const duilt = readFileSync(new URL('../src/duilt/DuiltGame.js', import.meta.url), 'utf8');
 
 // --- hemp -----------------------------------------------------------------------------

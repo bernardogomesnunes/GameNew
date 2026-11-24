@@ -13,7 +13,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../src/ui/styles.css', import.meta.url), 'utf8');
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 
 ok('by default you walk on the left, with the buttons by that thumb',
   DEFAULT_CONTROLS.walkSide === 'left' && DEFAULT_CONTROLS.actionSide === 'walk');

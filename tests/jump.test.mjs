@@ -117,7 +117,7 @@ const steps = (pl, n) => { let peak = pl.position.y; for (let i = 0; i < n; i++)
   ok('it starts off, and is a choice in Controls', DEFAULT_CONTROLS.autoJump === 'off' && /data-seg="autoJump"/.test(readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8')));
 }
 
-const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameLoad.js', import.meta.url), 'utf8'));
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameLoad.js', import.meta.url), 'utf8'));
 ok('the setting reaches you, made, loaded or changed', (game.match(/this\.player\.autoJump = this\.controls\.autoJump === 'on';/g) ?? []).length === 3);
 ok("the phone's Jump button, held, holds the jump", /this\.player\.jumpHeld = held && !this\.player\.flying;/.test(game));
 

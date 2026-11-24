@@ -54,7 +54,7 @@ globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
 
 // --- wired into Break/Place, the same way the bucket is ----------------------
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 
 ok('fruit and vegetables take over Break, like the bucket does',

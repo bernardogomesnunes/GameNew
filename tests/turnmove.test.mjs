@@ -31,7 +31,7 @@ ok('the ghost and the landing check follow', shown.length === 1 && g.updated);
 for (let i = 0; i < 3; i++) Game.prototype.turnMove.call(g);
 ok('four turns bring it back as it was', g.moving.extent.x === 2 && g.moving.blocks.map((b) => `${b.dx},${b.dz}`).join(' ') === '0,0 1,0 2,0' && g.moving.blocks[2].type === stair);
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 ok('R turns it, only while carrying a building', /if \(e\.code === turnKey && this\.moving\) this\.turnMove\(\);/.test(game));
 ok('and on a phone, tapping the hint does', /onHintTap: \(\) => \(this\.moving \? this\.turnMove\(\)/.test(game));
 

@@ -47,7 +47,7 @@ console.log('PASS a torch is made from oak planks and coal, and lights');
   console.log('PASS map points are named, saved with the world, removed, and capped');
 }
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 assert.ok(/bedPart\(aimed\.block\)\) return void this\.sleep\(aimed\)/.test(game) && /this\.dayCycle\.time = s\.target/.test(game) && /target: MORNING/.test(game), 'Place on a bed sleeps to morning (PLAY-8: over ten seconds, see sleep-play8)');
 assert.ok(/id="map-coords"/.test(ui) && /You are at \$\{Math\.floor\(at\.x\)\}/.test(ui), 'the map says where you stand');
