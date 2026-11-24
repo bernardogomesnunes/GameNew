@@ -1,7 +1,7 @@
 // ACCT-12: the Neon Auth webhook receiver verifies signatures and logs user.created.
 import crypto from 'node:crypto';
 import { handle, verifyWebhook, logLine, resetKeyCache } from '../api/_neon-webhook.js';
-import { POST, GET } from '../api/auth-webhook.js';
+import { POST, GET, authUrlFromEnv } from '../api/auth-webhook.js';
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
@@ -72,4 +72,7 @@ ok('route exports POST and GET', typeof POST === 'function' && (await GET()).sta
 ok('logLine tolerates an empty event', JSON.parse(logLine({})).tag === 'neon-auth-webhook');
 let threw = false; try { await verifyWebhook(body, {}, { authUrl: AUTH, fetchImpl, now: NOW }); } catch { threw = true; }
 ok('verifyWebhook throws without headers', threw);
+ok('auth url prefers NEON_AUTH_URL', authUrlFromEnv({ NEON_AUTH_URL: 'https://a.test/x/auth', VITE_NEON_URL: 'https://ep-a.c-2.aws.neon.tech/neondb' }) === 'https://a.test/x/auth');
+ok('auth url derives from VITE_NEON_URL', authUrlFromEnv({ VITE_NEON_URL: 'https://ep-a.c-2.aws.neon.tech/neondb/' }) === 'https://ep-a.neonauth.c-2.aws.neon.tech/neondb/auth');
+ok('auth url empty when nothing is set', authUrlFromEnv({}) === '');
 process.exit(f ? 1 : 0);

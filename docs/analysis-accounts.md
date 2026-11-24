@@ -107,7 +107,7 @@ Built, all additive. Nothing runs until the owner does the steps below.
 
 **Skipped: auth log export.** `get_neon_auth_config` returns `logs_export` null: this plan does not offer it. Revisit if the plan changes (ACCT-1).
 
-**Webhook receiver.** `api/auth-webhook.js` (Vercel function, URL `https://duild-seven.vercel.app/api/auth-webhook`). It checks Neon's Ed25519 detached JWS against the keys at `NEON_AUTH_URL/.well-known/jwks.json`, rejects a timestamp more than 5 minutes off, and answers 401 on a bad signature, 500 if `NEON_AUTH_URL` is unset, 413 over 64 KB. For `user.created` it logs one JSON line: tag `neon-auth-webhook`, event id, user id, provider, email domain (not the address), verified flag. It writes nothing to the database. Read the lines in Vercel, project, Logs, search `neon-auth-webhook`.
+**Webhook receiver.** `api/auth-webhook.js` (Vercel function, URL `https://duild-seven.vercel.app/api/auth-webhook`). It checks Neon's Ed25519 detached JWS against the keys at `<Neon Auth URL>/.well-known/jwks.json`, rejects a timestamp more than 5 minutes off, and answers 401 on a bad signature, 500 if no auth URL can be found, 413 over 64 KB. For `user.created` it logs one JSON line: tag `neon-auth-webhook`, event id, user id, provider, email domain (not the address), verified flag. It writes nothing to the database. Read the lines in Vercel, project, Logs, search `neon-auth-webhook`.
 
 Do not subscribe `user.before_create`. Neon rejects the sign-up when that endpoint fails, so an outage would block every new account. `user.created` is non-blocking: a failing endpoint costs a log line only.
 
@@ -119,7 +119,7 @@ Both scripts need a role that can read across players. Row-level security hides 
 
 ### Owner steps
 
-1. **Vercel**, Project, Settings, Environment Variables, Production: `NEON_AUTH_URL` = the Neon Auth URL of `production` (Neon Console, Auth, Configuration; same value the game uses for sign-in, no trailing slash). Redeploy.
+1. **Vercel**: nothing to add if `VITE_NEON_URL` is set for Production (it is: the game needs it). The function derives the Neon Auth URL from it, the same way the game does. Optional override: `NEON_AUTH_URL` (Neon Console, Auth, Configuration; no trailing slash). Redeploy so the new `api/` function is built.
 2. **Check the endpoint** after the deploy: `curl -i https://duild-seven.vercel.app/api/auth-webhook` answers 405. An unsigned POST answers 401.
 3. **Neon Console**, Auth, Configuration, Webhooks, branch `production`: enabled, URL `https://duild-seven.vercel.app/api/auth-webhook`, events `user.created` only, timeout 5. CLI equivalent: `neon neon-auth config webhook update --enabled --url https://duild-seven.vercel.app/api/auth-webhook --enabled-events user.created --timeout 5`.
 4. **Test**: create one test account. A `neon-auth-webhook` line with its user id appears in Vercel Logs within seconds. Delete the test account after.
