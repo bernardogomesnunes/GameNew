@@ -78,6 +78,32 @@ before reviewing/application of 0006. No live migration was run for this work.
   saves are best-effort logged to, so a broken save is visible by querying
   the database instead of only by a player noticing and reporting it.
 
+- `0005_cloud_limits.sql` through `0007_world_sessions.sql`: see each file's header.
+- `0008_world_chunks_player_id.sql` — TECH-14, **not applied yet**. Adds
+  `world_chunks.player_id` (filled by a trigger from the owning world), an
+  index, and a second select policy. Old builds keep working unchanged.
+- `0009_delete_my_account_data.sql` — ACCT-5, **not applied yet**. One function,
+  `delete_my_account_data(p_dry_run)`, that deletes the caller's worlds,
+  chunks, progression, designs and player row. It takes no user id: it acts
+  on `auth.user_id()` from the caller's own JWT.
+- `0010_player_names.sql` — ACCT-11, **not applied yet**. Table `player_names`
+  (keyed by auth user id, unique ignoring case) and functions
+  `claim_player_name`, `my_player_name`, `player_name_available`. Writes go
+  only through the claim function.
+
+## Checking the live database
+
+`scripts/check-migrations.mjs` lists the files here and says which the live
+database is missing. It is read-only (SELECT probes from
+`db/migration-probes.mjs`, sent as a read-only batch to Neon's SQL over HTTP
+endpoint):
+
+    MIGRATIONS_DATABASE_URL='postgresql://...' node scripts/check-migrations.mjs
+
+Exit 0: all applied. 1: at least one missing. 2: could not check. `--list`
+prints the files without connecting. Every new migration needs a probe in
+`db/migration-probes.mjs`; a test fails otherwise.
+
 ## `db/schema.mjs`
 
 Alongside the migrations, `db/schema.mjs` restates the specific constraints

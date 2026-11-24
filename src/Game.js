@@ -151,6 +151,7 @@ import { TITLE_SEED, TITLE_SITE, TITLE_TIME, TITLE_HERDS, titlePlaceBlocks, orbi
 import { SHOWCASE_SEED, SHOWCASE_TIMES, SHOWCASE_SPOTS_BY_ID, SHOWCASE_BUILDINGS, SHOWCASE_FIGURES, findShowcaseSite, flattenShowcase, placeBlocks, showcaseLabels, spotPose } from './world/showcase.js';
 import { Defenders, ORDERS } from './world/Defenders.js';
 import { WorldSession } from './storage/WorldSession.js';
+import { buildAccountExport, downloadBlob, accountExportFilename } from './storage/AccountExport.js';
 import { Army } from './world/Army.js';
 import { Guardian } from './world/Guardian.js';
 import { settlerName, settlerColour } from './config/settlers.js';
@@ -1831,6 +1832,41 @@ export class Game {
         await this.cloudAuth.revokeAllSessions();
         this.forgetRememberedWorlds();
         this.ui.toast({ kind: 'xp', title: 'Signed out everywhere', body: 'Sign in again to open your worlds' });
+      },
+      // ACCT-11: the chosen player name (undefined: this database has no names).
+      onCloudPlayerName: () => this.cloud?.transport.getPlayerName(),
+      onCloudClaimName: (name) => this.cloud.transport.claimPlayerName(name),
+      // ACCT-5: download everything, and delete the account. Both are hidden by
+      // the panel when the database has no delete function yet (migration 0009).
+      onCloudDeletePreview: () => this.cloud?.transport.accountDeletePreview(),
+      onCloudDownloadData: async (onProgress) => {
+        const result = await buildAccountExport({
+          transport: this.cloud.transport, user: this.cloudAuth.summary(), playerName: this.ui.playerName ?? null, onProgress,
+        });
+        downloadBlob(accountExportFilename(), result.blob);
+        return { worlds: result.worlds, chunks: result.chunks, failed: result.failed.length };
+      },
+      // dataDeleted: a retry after the sign-in step asked for a password; the data is already gone.
+      onCloudDeleteAccount: async ({ password = '', dataDeleted = false } = {}) => {
+        if (!dataDeleted) {
+          this.cloud.savesBlocked = true;
+          try { await this.cloud.transport.deleteAccountData(); } catch (err) { this.cloud.savesBlocked = false; throw err; }
+          this.cloudListCache = null;
+        }
+        let authUserDeleted = true;
+        try {
+          await this.cloudAuth.deleteAccount(password);
+        } catch (err) {
+          if (err.reason === 'needs-password' || err.reason === 'wrong-password') throw err;
+          // The sign-in service will not delete the user from here. The game data is gone; sign out.
+          authUserDeleted = false;
+          await this.cloudAuth.signOut();
+        }
+        this.forgetRememberedWorlds();
+        this.forgetCloudList();
+        this.ui.home?.forgetWorlds?.();
+        this.ui.home?.render();
+        return { authUserDeleted };
       },
       onCloudSignOut: async () => {
         await this.cloudAuth.signOut();

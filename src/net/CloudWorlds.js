@@ -24,6 +24,10 @@ export class CloudWorlds {
     this.bus = bus;
     this.transport = new NeonTransport(auth);
     this.sync = new SyncEngine({ transport: this.transport, bus });
+    // ACCT-5: set while an account is being deleted, so an autosave cannot put
+    // a world back after its rows were removed. Cleared by the next sign-in.
+    this.savesBlocked = false;
+    bus?.on?.('cloud:auth', ({ user } = {}) => { if (user) this.savesBlocked = false; });
   }
 
   get signedIn() {
@@ -39,6 +43,7 @@ export class CloudWorlds {
    * the UI can say "3 of 16 chunks" rather than a meaningless spinner.
    */
   async save(worldId, { world, name, mode, player, gamification, economy, duilt, revision, territoryBounds }) {
+    if (this.savesBlocked) throw new Error('This account is being deleted, so nothing is saved to it.');
     const meta = {
       name: name || 'Untitled world',
       mode,
