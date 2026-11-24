@@ -1,7 +1,7 @@
 // ACCT-12: the Neon Auth webhook receiver verifies signatures and logs user.created.
 import crypto from 'node:crypto';
 import { handle, verifyWebhook, logLine, resetKeyCache } from '../api/_neon-webhook.js';
-import { POST, GET, authUrlFromEnv } from '../api/auth-webhook.js';
+import { POST, GET, authUrlFromEnv, readDotEnv } from '../api/auth-webhook.js';
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
@@ -75,4 +75,6 @@ ok('verifyWebhook throws without headers', threw);
 ok('auth url prefers NEON_AUTH_URL', authUrlFromEnv({ NEON_AUTH_URL: 'https://a.test/x/auth', VITE_NEON_URL: 'https://ep-a.c-2.aws.neon.tech/neondb' }) === 'https://a.test/x/auth');
 ok('auth url derives from VITE_NEON_URL', authUrlFromEnv({ VITE_NEON_URL: 'https://ep-a.c-2.aws.neon.tech/neondb/' }) === 'https://ep-a.neonauth.c-2.aws.neon.tech/neondb/auth');
 ok('auth url empty when nothing is set', authUrlFromEnv({}) === '');
+ok('auth url falls back to the committed .env', authUrlFromEnv({}, readDotEnv()) === 'https://ep-quiet-firefly-ae3s1zgl.neonauth.c-2.us-east-2.aws.neon.tech/neondb/auth');
+ok('readDotEnv of a missing file is empty', Object.keys(readDotEnv(new URL('file:///nonexistent/.env'))).length === 0);
 process.exit(f ? 1 : 0);
