@@ -10,7 +10,7 @@ import { RECIPES } from '../src/config/recipes.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const read = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), 'utf8');
-const game = read('Game.js'), ui = read('ui/UIManager.js'), duilt = read('ui/DuiltUI.js'), home = read('ui/HomeScreen.js');
+const game = read('Game.js') + read('game/GameSave.js'), ui = read('ui/UIManager.js'), duilt = read('ui/DuiltUI.js'), home = read('ui/HomeScreen.js');
 const css = read('ui/styles.css'), confirmJs = read('ui/Confirm.js'), gam = read('gamification/GamificationEngine.js');
 
 // --- our own yes/no ----------------------------------------------------------------------------------
