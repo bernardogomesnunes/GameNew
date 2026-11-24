@@ -27,7 +27,7 @@ globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const src = (p) => readFileSync(new URL(`../src/${p}`, import.meta.url), 'utf8');
-const game = src('Game.js');
+const game = src('Game.js') + src('game/GameInput.js');
 
 // --- where it is ------------------------------------------------------------------------------------------
 
