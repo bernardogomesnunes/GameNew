@@ -49,7 +49,7 @@ assert.ok(LOOT.dragon_nest.items.some(([id, chance]) => id === 'dragon_relic' &&
 assert.ok(landmarkDesigns().some((d) => d.kind === 'dragon_nest' && d.blocks.some((b) => b[3] === 13)), 'a nest has gold in it');
 console.log('PASS scales and claws are blocks you break to pick up; the axe, the hoard and the relic');
 
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8'));
 assert.ok(/tool\?\.id === 'dragon_axe' && target && !target\.god\) return DRAGON_AXE_BLOW/.test(game), 'one blow, but not a god');
 assert.ok(/regen: this\.selectedItemId === 'dragon_axe'/.test(game), 'held, you heal without eating');
 console.log('PASS the Dragon Axe fells anything but a god, and heals you while held');
@@ -76,7 +76,7 @@ console.log('PASS the Dragon Axe fells anything but a god, and heals you while h
   assert.equal(burnt[0][1], 6, 'twice as hard as a wild one breathes');
   console.log('PASS a dragon egg in every nest; your hatched dragon follows you and burns what comes for you');
 }
-const g2 = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const g2 = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8'));
 assert.ok(/\[EGG_DRAGON\]: 'dragon_egg'/.test(g2) && /HATCHLINGS\[/.test(g2), 'a dragon egg hatches into one of the smaller dragons');
 assert.ok(/this\.tickPetDragons\(\);/.test(g2), 'your dragons look for what is coming for you every frame');
 console.log('PASS the egg hatches a young dragon, which picks its foe every frame');

@@ -17,7 +17,7 @@ import { WATER } from '../src/config/blocks.js';
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const rng = (seed) => { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8'));
 
 const flat = (size = 96, top = 0) => {
   const world = new World({ sizeX: size, sizeZ: size, height: 32 });

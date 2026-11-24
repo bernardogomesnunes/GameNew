@@ -20,7 +20,7 @@ import { isChest } from '../src/config/blocks.js';
 
 let f = 0;
 const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
-const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
+const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameWar.js', import.meta.url), 'utf8')) + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 const far = readFileSync(new URL('../src/render/FarTerrain.js', import.meta.url), 'utf8');
 
 const DARK_STONE = 156, DARK_BRICK = 157, GOLD_TRIM = 159, NIGHTSTONE = 192, WAVE = 211, AIR = 0;
