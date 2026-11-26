@@ -1,5 +1,6 @@
 import { createNoise2D, createNoise3D } from 'simplex-noise';
 import { BIOMES, BIOME_INDEX, surfaceFor } from '../config/biomes.js';
+import { LOG_SIDE_BASE } from '../config/blocks.js';
 import { BiomeMap } from './biomeMap.js';
 import { CHUNK_SIZE } from './World.js';
 import { stampLandmarks, landmarksFor } from './landmarks.js';
@@ -91,6 +92,14 @@ const PLAINS_INDEX = BIOME_INDEX.get('plains'), DESERT_INDEX = BIOME_INDEX.get('
  * as wide as a giant's crown and the branches under it.
  */
 export const FEATURE_MARGIN = 12;
+/** PLAY-26: widest mushroom patch, and the most any biome's patch or log centre rolls under. */
+const PATCH_MAX_RADIUS = Math.max(0, ...BIOMES.flatMap((b) => (b.patches ?? []).map((p) => p.radius[1])));
+const MAX_PATCH_CHANCE = Math.max(1e-9, ...BIOMES.flatMap((b) => (b.patches ?? []).map((p) => p.chance)));
+const MAX_LOG_CHANCE = Math.max(1e-9, ...BIOMES.map((b) => b.fallenLogs?.chance ?? 0));
+const LOG_MAX_LENGTH = Math.max(1, ...BIOMES.map((b) => b.fallenLogs?.length[1] ?? 1));
+/** The woods that have a lying log, in the order of blocks.js's LOGS. */
+const LOG_WOODS = [4, 41, 43];
+const WILD_HEMP_ID = 340;
 
 /**
  * Trees come in sizes. Requested directly: trees "definitely need more range
@@ -509,6 +518,112 @@ export class ChunkGen {
     return true;
   }
 
+  /**
+   * PLAY-26: the mushroom patches that reach a chunk, as { x, z, r, patch }.
+   * A centre is a column whose own rolls say so; asking from any chunk gives
+   * the same centres, so a patch over a border is drawn the same by both.
+   */
+  patchCentres(ox, oz) {
+    const out = [];
+    const R = PATCH_MAX_RADIUS;
+    for (let x = ox - R; x < ox + CHUNK_SIZE + R; x++) {
+      for (let z = oz - R; z < oz + CHUNK_SIZE + R; z++) {
+        const roll = hash01(x, z, this.seed ^ 0x7a31);
+        if (roll >= MAX_PATCH_CHANCE) continue;
+        const patches = BIOMES[this.biomeIndexAt(x, z)].patches;
+        if (!patches) continue;
+        patches.forEach((patch, i) => {
+          if (roll >= patch.chance) return;
+          const [lo, hi] = patch.radius;
+          out.push({ x, z, patch, r: lo + Math.floor(hash01(x, z, this.seed ^ (0x7b10 + i)) * (hi - lo + 1)) });
+        });
+      }
+    }
+    return out;
+  }
+
+  /** The patch mushroom on a column with this top ground, from these centres, or 0. */
+  patchAt(x, z, top, centres) {
+    for (const c of centres) {
+      if (c.patch.on != null && c.patch.on !== top) continue;
+      const dx = x - c.x, dz = z - c.z;
+      if (dx * dx + dz * dz > c.r * c.r + 0.5) continue;
+      if (hash01(x, z, this.seed ^ 0x7c21) >= c.patch.density) continue;
+      const blocks = c.patch.blocks;
+      return blocks[Math.floor(hash01(x, z, this.seed ^ 0x7c22) * blocks.length)];
+    }
+    return 0;
+  }
+
+  /**
+   * Whether column x, z is plain dry forest floor of biome index `index` at
+   * height h: no water, road, beach or outcrop, and the biome's own top.
+   */
+  plainFloorAt(x, z, index, h) {
+    if (this.biomeIndexAt(x, z) !== index || this.heightAt(x, z) !== h) return false;
+    const biome = BIOMES[index];
+    if (surfaceFor(biome, h) !== biome.surface.top) return false;
+    if (this.waterLevelAt(x, z) || roadAt(this, x, z) || this.beachAt(x, z, h)) return false;
+    return !this.outcropAt(x, z);
+  }
+
+  /** Whether a trunk stands on or beside x, z, or a giant's roots (2 out) reach it. */
+  treeNear(x, z) {
+    for (let dx = -2; dx <= 2; dx++) {
+      for (let dz = -2; dz <= 2; dz++) {
+        const tree = this.treeAt(x + dx, z + dz);
+        if (tree && (tree.giant || (Math.abs(dx) <= 1 && Math.abs(dz) <= 1))) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * PLAY-26: the fallen logs that reach a chunk, as { cells: [[x, y, z, block]] }
+   * with the mushrooms on and beside them. Pure in the seed, so both chunks
+   * a log spans work out the same one.
+   */
+  fallenLogsFor(ox, oz) {
+    const out = [];
+    const M = LOG_MAX_LENGTH - 1;
+    for (let x = ox - M; x < ox + CHUNK_SIZE + M; x++) {
+      for (let z = oz - M; z < oz + CHUNK_SIZE + M; z++) {
+        if (hash01(x, z, this.seed ^ 0x8d11) >= MAX_LOG_CHANCE) continue;
+        const index = this.biomeIndexAt(x, z);
+        const def = BIOMES[index].fallenLogs;
+        if (!def || hash01(x, z, this.seed ^ 0x8d11) >= def.chance) continue;
+        const alongZ = hash01(x, z, this.seed ^ 0x8d12) < 0.5;
+        const [lo, hi] = def.length;
+        const len = lo + Math.floor(hash01(x, z, this.seed ^ 0x8d13) * (hi - lo + 1));
+        const h = this.heightAt(x, z);
+        if (h < 1 || h + 2 >= this.height) continue;
+        const woodIndex = LOG_WOODS.indexOf(def.wood);
+        if (woodIndex < 0) continue;
+        const block = LOG_SIDE_BASE + 2 * woodIndex + (alongZ ? 1 : 0);
+        const dx = alongZ ? 0 : 1, dz = alongZ ? 1 : 0;
+        const columns = [];
+        for (let i = 0; i < len; i++) columns.push([x + dx * i, z + dz * i]);
+        if (!columns.every(([cx, cz]) => this.plainFloorAt(cx, cz, index, h) && !this.treeNear(cx, cz))) continue;
+        const cells = [];
+        columns.forEach(([cx, cz], i) => {
+          cells.push([cx, h, cz, block, true]);
+          if (hash01(cx, cz, this.seed ^ 0x8d14) < def.mushroomChance) {
+            cells.push([cx, h + 1, cz, def.mushrooms[Math.floor(hash01(cx, cz, this.seed ^ 0x8d15) * def.mushrooms.length)], false]);
+          }
+          // A few on the ground either side of it.
+          for (const side of [-1, 1]) {
+            const sx = cx + dz * side, sz = cz + dx * side;
+            if (hash01(sx, sz, this.seed ^ 0x8d16) >= def.mushroomChance * 0.3) continue;
+            if (!this.plainFloorAt(sx, sz, index, h) || this.treeNear(sx, sz)) continue;
+            cells.push([sx, h, sz, def.mushrooms[Math.floor(hash01(sx, sz, this.seed ^ 0x8d17) * def.mushrooms.length)], false]);
+          }
+        });
+        out.push({ x, z, len, alongZ, cells });
+      }
+    }
+    return out;
+  }
+
   /** What is scattered on a column — a boulder, a sapling — or 0. */
   scatterAt(x, z, top = null) {
     const biome = BIOMES[this.biomeIndexAt(x, z)];
@@ -548,6 +663,7 @@ export class ChunkGen {
     for (let gz = 0; gz < W; gz++) for (let gx = 0; gx < W; gx++) heights[gz * W + gx] = this.heightAt(ox - M + gx, oz - M + gz);
     const heightOf = (a, b) => heights[(b - oz + M) * W + (a - ox + M)];
 
+    const patches = this.patchCentres(ox, oz);
     const oreSeeds = [];
     for (let lx = 0; lx < CHUNK_SIZE; lx++) {
       for (let lz = 0; lz < CHUNK_SIZE; lz++) {
@@ -634,7 +750,7 @@ export class ChunkGen {
           for (let y = h; y < Math.min(water, this.height); y++) chunk.set(lx, y, lz, WATER);
           if (road && water <= this.height) chunk.set(lx, water - 1, lz, BRIDGE);
         } else if (!road) {
-          const sc = this.scatterAt(x, z, below);
+          const sc = this.patchAt(x, z, below, patches) || this.scatterAt(x, z, below);
           if (sc && h < this.height) chunk.set(lx, h, lz, sc);
         }
       }
@@ -653,6 +769,17 @@ export class ChunkGen {
       for (let z = oz - FEATURE_MARGIN; z < oz + CHUNK_SIZE + FEATURE_MARGIN; z++) {
         const tree = this.treeAt(x, z);
         if (tree) this.plant(chunk, x, z, tree);
+      }
+    }
+    // PLAY-26: fallen logs, after the trees so a log never takes a trunk's
+    // place. A log replaces the ground's own mushrooms; mushrooms on and
+    // beside it only go into air.
+    for (const log of this.fallenLogsFor(ox, oz)) {
+      for (const [bx, by, bz, block, isLog] of log.cells) {
+        const lx = bx - ox, lz = bz - oz;
+        if (lx < 0 || lz < 0 || lx >= CHUNK_SIZE || lz >= CHUNK_SIZE) continue;
+        const was = chunk.get(lx, by, lz);
+        if (was === 0 || (isLog && (was === WILD_HEMP_ID || (was >= 565 && was <= 567)))) chunk.set(lx, by, lz, block);
       }
     }
     // The hermit's hut and the bandits' camps, where they fall in this chunk.
