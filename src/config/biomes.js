@@ -37,6 +37,13 @@
  *   treeMaxHeight  if set, a tree only takes root below this ground height —
  *             the "only near the foot of the mountain" rule for both tiers.
  *   scatter   the odd boulder or patch, as { block, chance }
+ *   patches   PLAY-26: clusters of one kind of plant, as { blocks: [ids], chance,
+ *             radius: [lo, hi], density, on }. `chance` is per column for a
+ *             patch centre; every column within `radius` of it, whose top is
+ *             `on`, gets one of `blocks` with probability `density`.
+ *   fallenLogs  PLAY-26: logs lying on the ground, as { chance, length: [lo, hi],
+ *             wood, mushrooms: [ids], mushroomChance }. `chance` is per column
+ *             for one end of a log; `wood` is the upright wood id.
  *
  * Adding one is an entry here. Nothing else needs to know it exists.
  */
@@ -84,7 +91,10 @@ export const BIOMES = [
     surface: { top: MOSS, under: DIRT, depth: 3, rock: STONE },
     trees: { chance: 0.11, trunk: [5, 8], canopy: 2, wood: WOOD, leaves: LEAVES },
     // PLAY-14: red and pale mushrooms on the moss.
-    scatter: [{ block: MUSH_RED, chance: 0.003, on: MOSS }, { block: MUSH_PALE, chance: 0.003, on: MOSS }],
+    scatter: [{ block: MUSH_RED, chance: 0.002, on: MOSS }, { block: MUSH_PALE, chance: 0.002, on: MOSS }],
+    // PLAY-26: mushroom patches and fallen oak logs.
+    patches: [{ blocks: [MUSH_RED, MUSH_PALE], chance: 0.0015, radius: [2, 3], density: 0.45, on: MOSS }],
+    fallenLogs: { chance: 0.012, length: [3, 6], wood: WOOD, mushrooms: [MUSH_RED, MUSH_PALE], mushroomChance: 0.4 },
   },
   {
     // Cooler and drier than the oak wood, with a pale trunk and canopy —
@@ -101,7 +111,10 @@ export const BIOMES = [
     // On the map, its pale leaves set it apart from the plains' same grass.
     mapTint: WHITE_LEAVES,
     trees: { chance: 0.1, trunk: [4, 7], canopy: 2, wood: WHITE_WOOD, leaves: WHITE_LEAVES },
-    scatter: [{ block: WILD_HEMP, chance: 0.002, on: GRASS }, { block: MUSH_PALE, chance: 0.003, on: GRASS }], // PLAY-14: pale mushrooms after the hemp
+    scatter: [{ block: WILD_HEMP, chance: 0.002, on: GRASS }, { block: MUSH_PALE, chance: 0.002, on: GRASS }], // PLAY-14: pale mushrooms after the hemp
+    // PLAY-26: pale mushroom patches and fallen birch logs.
+    patches: [{ blocks: [MUSH_PALE], chance: 0.0015, radius: [2, 3], density: 0.45, on: GRASS }],
+    fallenLogs: { chance: 0.012, length: [3, 6], wood: WHITE_WOOD, mushrooms: [MUSH_PALE], mushroomChance: 0.4 },
   },
   {
     // Warmer, wetter, denser: the darkest and thickest of the three.
@@ -114,7 +127,10 @@ export const BIOMES = [
     surface: { top: DARK_MOSS, under: DIRT, depth: 3, rock: STONE },
     trees: { chance: 0.13, trunk: [6, 9], canopy: 2, wood: DARK_WOOD, leaves: DARK_LEAVES },
     // PLAY-14: lilac and red mushrooms on the dark moss.
-    scatter: [{ block: MUSH_LILAC, chance: 0.004, on: DARK_MOSS }, { block: MUSH_RED, chance: 0.002, on: DARK_MOSS }],
+    scatter: [{ block: MUSH_LILAC, chance: 0.003, on: DARK_MOSS }, { block: MUSH_RED, chance: 0.0015, on: DARK_MOSS }],
+    // PLAY-26: lilac and red mushroom patches and fallen dark logs.
+    patches: [{ blocks: [MUSH_LILAC, MUSH_RED], chance: 0.0015, radius: [2, 3], density: 0.45, on: DARK_MOSS }],
+    fallenLogs: { chance: 0.012, length: [3, 6], wood: DARK_WOOD, mushrooms: [MUSH_LILAC, MUSH_RED], mushroomChance: 0.4 },
   },
   {
     // Requested directly: "we can have a biome full of gigantic trees that
