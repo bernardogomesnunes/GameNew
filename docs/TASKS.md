@@ -1229,6 +1229,7 @@ From the owner's playtest notes, 22 November. Ordered by the suggested priority;
 | PLAY-23 | **Recurring sales.** Owner: "set recurrent sells ... daily or every other day". At a market, set an order: item, how many, every 1 or 2 days. It takes the goods from your storehouse and puts the coins there. It skips a day when stock runs short. Needs PLAY-22. | Medium | done: standing sell orders every 1 or 2 days, 2 slots per trader; goods from bag and storehouses, coins to the bag first |
 | PLAY-24 | Storehouse: fold the "Won't take from deliveries" chips so the shelf gets more room. | Small | done |
 | PLAY-25 | Sleep: the Wake up button uses the game's green pixel button (`button.primary`) in place of its own blue style. | Small | done |
+| PLAY-26 | **Mushroom patches and fallen logs.** Owner: "add patches and logs laid down with mushrooms". Forests grow clusters of mushrooms (radius 2 to 3, 45% dense) and lay fallen logs (3 to 6 long, own wood per forest) with mushrooms on top and beside. Seeded, border-safe, never on water or roads; untouched chunks gain them on regeneration. | Medium | done |
 
 ## The old planning docs (history)
 
