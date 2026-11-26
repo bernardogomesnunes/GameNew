@@ -469,6 +469,97 @@ built after the counter so it can reuse its view, bar and saving.
 
 ---
 
+## 5c. Living villagers, the wizard and magic (26 November)
+
+Owner, 26 November: "We need to add more interaction with mobs, and make
+them more interesting." The full request is split below into 7 groups and
+32 tasks. Each group gets a short design with the owner before building.
+Build order: A, B, C, then D to F together, then G last (it changes the
+economy of every world).
+
+What exists today: mood 0 to 100 from food and work (`duilt/Mood.js`,
+PLAY-13); jobs and building with visible placing (`duilt/VillagerJobs.js`,
+IMP-12); explorers with 2 gifts, saplings then one of 6 pack items
+(`config/wanderers.js` `EXPLORER_PACK`); one generic Fruit item that drops
+from leaves (6%, `LEAF_DROPS` in `duilt/DuiltGame.js`) and from 5 wanderer
+kinds; drinks with a `boost` (beer, kombucha, coffee); carrot, lettuce and
+broccoli crops; the University from Age 3; the Armoury and War Hall.
+
+### A. Villagers who live (small to medium)
+
+| ID | What | Who | Status |
+|---|---|---|---|
+| VIL-1 | **Sleep at night.** At dusk each villager walks home and lies in their bed; they get up at dawn. No work and no hauling at night. Soldiers sleep in barracks bunks. A villager without a bed sleeps by the fire. | Any agent | open |
+| VIL-2 | **Asks.** Each villager now and then asks for one thing (a food, a weapon, a tool, mushrooms, a drink), shown as a bubble over the head and in their panel. Giving it raises mood. Ignoring it costs nothing: the ask expires after a few game days. To choose: how much mood a gift gives, and how often a villager asks. | Any agent + Owner | open |
+| VIL-3 | **Three trades: farmer, woodworker, engineer.** Each villager has a trade, matched to the jobs that exist (farmer: fields, ranch, mill; woodworker: wood mill, carpentry, planing; engineer: building, machines, the mine). To choose: whether a villager can change trade, and where today's other jobs go. | Any agent + Owner | open |
+| VIL-4 | **Villager levels.** A villager gains experience by working. Each level raises work speed, build speed, strength and intelligence. Shown in their panel. | Any agent | open |
+| VIL-5 | **Buildings raise villager stats.** The University raises intelligence (faster work and building); military buildings (barracks, Armoury, War Hall) raise strength. The cap follows the Age: fairly strong by Age 7, very strong by Age 10. To choose: the numbers per Age. | Any agent + Owner | open |
+| VIL-6 | **Villagers defend the village.** When bandits come, villagers fight. A villager holding a weapon you gave them fights with it; without one they fight with fists or run. Builds on VIL-4 and VIL-5. | Any agent | open |
+
+### B. Explorers from other regions (small)
+
+| ID | What | Who | Status |
+|---|---|---|---|
+| EXP-1 | **Gifts from far away.** The second explorer gift draws from a wider pack: ores (iron, copper, gold, coal), food (fruit, bread, dried meat), the 3 mushrooms, leather, string, clay, the dark and white logs, seeds. Say where it came from ("from the northern hills"). | Any agent | open |
+
+### C. Fruit, pots and roots (medium)
+
+| ID | What | Who | Status |
+|---|---|---|---|
+| FRUIT-1 | **Four fruits.** Apple, grape, raspberry and passion fruit as food items, each with its own icon and 3D model. The generic Fruit item becomes Apple in old saves. | Any agent | open |
+| FRUIT-2 | **Acorns from trees.** Oak leaves drop acorns in place of fruit. To choose: what acorns are for (food for animals, planting oaks, a potion ingredient). Wanderers that drop fruit drop one of the 4 fruits. | Any agent + Owner | open |
+| FRUIT-3 | **Plant Pot.** A new item made at the workbench (clay or wood). Placed like a block. Fruit seeds go only in a pot. | Any agent | open |
+| FRUIT-4 | **Fruit plants.** A seed in a pot grows over several game days into a plant 3 to 4 blocks high, with its own 3D model per kind (apple tree, grape vine, raspberry bush, passion fruit vine). Ripe fruit shows on it. Hitting the plant picks the fruit and it grows again. | Any agent | open |
+| FRUIT-5 | **Roots.** Broccoli, carrot and lettuce plants also give a root when harvested (3 root items, or one Root item). Roots are potion ingredients. To choose: one root item or three. | Any agent + Owner | open |
+
+### D. The wizard (large)
+
+| ID | What | Who | Status |
+|---|---|---|---|
+| WIZ-1 | **Wizard's Hut.** A new building from Age 3. It is not an Age goal. A small hut with a forest look (moss roof, logs, mushrooms, a lantern). Built like any other building. | Any agent + Owner | open |
+| WIZ-2 | **The wizard.** A new person who moves in once the hut stands. By day he stands at the door; at night he is inside. His own model (robe, hat, staff). | Any agent | open |
+| WIZ-3 | **Wizard panel.** Talking to him opens his own panel with 4 tabs: Talk, Shop (fruit seeds, sold from the first visit), Quests, Recipes (the potions he has taught). | Any agent | open |
+| WIZ-4 | **Magic points.** From the wizard's arrival the player has a Magic level, shown with the stats. Points come from quests, wand training and every use of magic. Magic level raises wand damage and potion strength. | Any agent | open |
+| WIZ-5 | **Quest chain.** A fixed order of quests: bring materials, then train with the wand (hit targets, cast a number of times). Rewards in order: the Wand, then the Cauldron, then potion recipes one by one, then the Wizard Hat last. To choose: the list of quests. | Any agent + Owner | open |
+
+### E. Wand, hat and cauldron (medium)
+
+| ID | What | Who | Status |
+|---|---|---|---|
+| WAND-1 | **Wand.** Held like a weapon. Casts a magic bolt at range. Damage grows with Magic level. Only from the wizard. | Any agent | open |
+| WAND-2 | **Wand training.** Training targets at the hut; hitting them gives magic points. Part of the quests. | Any agent | open |
+| WAND-3 | **Wizard Hat.** Worn on the head. Gives defence, raises magic damage, and hurts a mob that hits you. The last quest reward, so hard to get. | Any agent | open |
+| WAND-4 | **Magic Cauldron.** A placed block from the wizard. Brew a taught potion from its ingredients. Uses the station pattern (input spot, a bar, output spot, IMP-15). | Any agent | open |
+
+### F. Potions (medium to large)
+
+Each potion is a drink with a timed effect, like today's `boost` drinks.
+Ingredients are things in the game plus roots and fruit. To choose with the
+owner: each potion's recipe and how long it lasts (the frost effect on mobs
+is set at 1 minute).
+
+| ID | What | Who | Status |
+|---|---|---|---|
+| POT-1 | **Potion effects system.** Timed effects with an icon and a countdown on the screen; several at once; saved with the player. | Any agent | open |
+| POT-2 | Night vision: the night looks like dusk. | Any agent | open |
+| POT-3 | Speed: walk and run faster. | Any agent | open |
+| POT-4 | Invisibility: mobs and bandits do not see you unless you hit them. The avatar is see-through. | Any agent | open |
+| POT-5 | Jump: jump higher. | Any agent | open |
+| POT-6 | Strength: hits do more damage. | Any agent | open |
+| POT-7 | **Fire.** Flames rise from your body. A mob that touches you, or that you hit, burns. | Any agent | open |
+| POT-8 | **Frost.** Blocks you walk on or touch get a layer of snow. A mob that touches you, or that you hit, is frozen in place for 1 minute with ice on it. | Any agent | open |
+
+### G. Buildings need workers (large, changes every world)
+
+| ID | What | Who | Status |
+|---|---|---|---|
+| WORK-1 | **Production needs a worker.** A building makes goods only while a villager works there. To choose: whether old worlds switch at once or get a grace period. | Any agent + Owner | open |
+| WORK-2 | **A mini game per building.** Until villagers arrive, you can work a building yourself with a short mini game that makes a few items. One small game per building kind (fields, mill, quarry, wood mill). To choose: which buildings get one first. | Any agent + Owner | open |
+| WORK-3 | **New villagers take a job.** A villager who moves in goes to a building without a worker, matching their trade (VIL-3). | Any agent | open |
+
+
+---
+
 ## 6. Cline's queue
 
 All CL tasks below are complete. Section 12 retains their historical briefs
