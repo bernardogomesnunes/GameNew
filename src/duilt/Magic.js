@@ -1,5 +1,6 @@
 import { LEVEL_POINTS, MAX_MAGIC_LEVEL, POINTS, WAND_BASE_DAMAGE, WAND_DAMAGE_PER_LEVEL, POTION_TIME_PER_LEVEL, SHOP, COIN } from '../config/magic.js';
 import { ITEMS_BY_ID } from '../config/items.js';
+import { WIZARD_QUESTS } from '../config/wizardQuests.js';
 
 /**
  * WIZ-4: the player's Magic points and level, and the wizard's state.
@@ -23,6 +24,8 @@ export class Magic {
     /** What he has given ('wand', 'cauldron', 'hat') and the potion recipes taught. */
     this.given = [];
     this.taught = [];
+    /** WAND-2: where the training targets stand, [{ x, y, z }]. */
+    this.targets = [];
   }
 
   arrive(home) {
@@ -85,8 +88,59 @@ export class Magic {
     return { ok: true, price: o.price };
   }
 
+  // ---- the quest chain (WIZ-5) ---------------------------------------------
+
+  /** The open quest, or null when the chain is finished (or magic is off). */
+  current() {
+    return this.active ? WIZARD_QUESTS[this.chain.step] ?? null : null;
+  }
+
+  /** Adds `n` to the open quest's counter if it counts `kind` and the level it asks is reached. */
+  note(kind, n = 1) {
+    const q = this.current();
+    if (!q || q.kind !== kind || (q.level && this.level < q.level)) return false;
+    this.chain.count[kind] = (this.chain.count[kind] ?? 0) + n;
+    return true;
+  }
+
+  /** How far the open quest is: { quest, have, need, ready, levelOk, items }. `inventory` is read for `bring`. */
+  progress(inventory = null) {
+    const q = this.current();
+    if (!q) return null;
+    const levelOk = !q.level || this.level >= q.level;
+    if (q.kind === 'bring') {
+      const items = Object.entries(q.items).map(([id, need]) => ({ id, need, have: Math.min(need, inventory?.countOf(id) ?? 0) }));
+      return { quest: q, levelOk, items, have: items.reduce((a, i) => a + i.have, 0), need: items.reduce((a, i) => a + i.need, 0), ready: levelOk && items.every((i) => i.have >= i.need) };
+    }
+    const have = Math.min(q.n, this.chain.count[q.kind] ?? 0);
+    return { quest: q, levelOk, items: [], have, need: q.n, ready: levelOk && have >= q.n };
+  }
+
+  /** Hands the open quest in: takes the items, gives points and the reward, opens the next. */
+  complete(inventory) {
+    const q = this.current();
+    if (!q) return { ok: false, reason: 'He has nothing more to ask.' };
+    const pr = this.progress(inventory);
+    if (!pr.levelOk) return { ok: false, reason: `You need Magic level ${q.level} first.` };
+    if (!pr.ready) return { ok: false, reason: q.kind === 'bring' ? 'You do not have all of it yet.' : 'Not done yet.' };
+    const item = q.reward?.item;
+    if (item && !ITEMS_BY_ID.has(item)) return { ok: false, reason: 'That reward is not made yet.' };
+    if (item && inventory.roomFor(item, 1) < 1) return { ok: false, reason: 'Your bag is full.' };
+    if (q.kind === 'bring') for (const [id, n] of Object.entries(q.items)) inventory.remove(id, n);
+    if (item) { inventory.add(item, 1); if (!this.given.includes(item)) this.given.push(item); }
+    if (q.reward?.recipe && !this.taught.includes(q.reward.recipe)) this.taught.push(q.reward.recipe);
+    const pts = this.add(q.points);
+    this.chain = { step: this.chain.step + 1, count: {} };
+    return { ok: true, quest: q, reward: q.reward ?? null, ...pts };
+  }
+
+  /** Whether he has taught `recipeId` (a potion). */
+  knows(recipeId) {
+    return this.taught.includes(recipeId);
+  }
+
   toJSON() {
-    return this.active ? { points: this.points, home: this.home, visits: this.visits, chain: this.chain, given: this.given, taught: this.taught } : null;
+    return this.active ? { points: this.points, home: this.home, visits: this.visits, chain: this.chain, given: this.given, taught: this.taught, targets: this.targets } : null;
   }
 
   loadJSON(d) {
@@ -102,6 +156,7 @@ export class Magic {
     const strs = (a) => (Array.isArray(a) ? [...new Set(a.filter((s) => typeof s === 'string'))] : []);
     this.given = strs(d.given);
     this.taught = strs(d.taught);
+    this.targets = (Array.isArray(d.targets) ? d.targets : []).filter((t) => t && [t.x, t.y, t.z].every(Number.isInteger)).slice(0, 6).map((t) => ({ x: t.x, y: t.y, z: t.z }));
   }
 }
 

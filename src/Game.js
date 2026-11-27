@@ -828,6 +828,9 @@ export class Game {
   tickBow(...args) { return GameWar.tickBow.apply(this, args); }
   arrowTarget(...args) { return GameWar.arrowTarget.apply(this, args); }
   arrowHit(...args) { return GameWar.arrowHit.apply(this, args); }
+  castWand(...args) { return GameWar.castWand.apply(this, args); } // WIZ-5
+  boltHitsBlock(...args) { return GameWar.boltHitsBlock.apply(this, args); } // WIZ-5
+  magicToast(...args) { return GameWar.magicToast.apply(this, args); } // WIZ-5
   banditTarget(...args) { return GameWar.banditTarget.apply(this, args); }
   hitBandit(...args) { return GameWar.hitBandit.apply(this, args); }
   guardianEnemy(...args) { return GameWar.guardianEnemy.apply(this, args); }
@@ -4213,6 +4216,7 @@ export class Game {
         world: this.world,
         hitTest: (from, dir, length) => this.arrowTarget(from, dir, length),
         onHit: (a, hit) => this.arrowHit(a, hit),
+        onBlock: (a, x, y, z) => this.boltHitsBlock(a, x, y, z), // WIZ-5
       });
     }
     if (this.projectiles?.world !== this.world) {

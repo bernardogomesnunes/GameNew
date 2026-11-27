@@ -42,6 +42,11 @@ export class ArrowView {
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     scene.add(this.mesh);
+    // WIZ-5: magic bolts, small glowing stones.
+    this.bolts = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.17, 0), new THREE.MeshBasicMaterial({ color: 0xc9a0ff }), MAX_ARROWS);
+    this.bolts.count = 0;
+    this.bolts.frustumCulled = false;
+    scene.add(this.bolts);
     this._m = new THREE.Matrix4();
     this._q = new THREE.Quaternion();
     this._p = new THREE.Vector3();
@@ -52,9 +57,14 @@ export class ArrowView {
 
   update(arrows) {
     const n = Math.min(arrows.length, MAX_ARROWS);
-    this.mesh.count = n;
+    let shafts = 0, bolts = 0;
     for (let i = 0; i < n; i++) {
       const a = arrows[i];
+      if (a.bolt) {
+        this._m.compose(this._p.set(a.x, a.y, a.z), this._q.identity(), this._s);
+        this.bolts.setMatrixAt(bolts++, this._m);
+        continue;
+      }
       // A stuck arrow keeps the way it was flying when it hit.
       if (!a.stuck) a.dir = { x: a.vx, y: a.vy, z: a.vz };
       const d = a.dir ?? { x: a.vx, y: a.vy, z: a.vz };
@@ -62,8 +72,11 @@ export class ArrowView {
       this._q.setFromUnitVectors(this._z, this._d);
       this._p.set(a.x, a.y, a.z);
       this._m.compose(this._p, this._q, this._s);
-      this.mesh.setMatrixAt(i, this._m);
+      this.mesh.setMatrixAt(shafts++, this._m);
     }
+    this.mesh.count = shafts;
+    this.bolts.count = bolts;
     this.mesh.instanceMatrix.needsUpdate = true;
+    this.bolts.instanceMatrix.needsUpdate = true;
   }
 }

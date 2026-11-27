@@ -65,7 +65,7 @@ const LANTERN = 26, SLAB_STONE = 27, STAIRS_STONE = 29, CHAIR_OAK = 33, RUG_GREE
       const recipe = RECIPES.find((r) => r.output.id === item.id);
       // CRAFT3D-1: furniture is made at the carpentry counter, with no recipe.
       // IMP-45: what a dragon sheds is picked up where it lies, never made.
-      ok(`${item.name} is craftable`, !!recipe || FURNITURE_COST.has(item.id) || ['dragon_scale', 'dragon_claw'].includes(item.id));
+      ok(`${item.name} is craftable`, !!recipe || FURNITURE_COST.has(item.id) || ['dragon_scale', 'dragon_claw', 'magic_cauldron'].includes(item.id));
     }
   }
 }

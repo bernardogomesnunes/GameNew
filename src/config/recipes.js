@@ -1857,6 +1857,17 @@ RECIPES.push(
 );
 // --- end PLAY-14..21 ---
 
+// WIZ-5: the Magic Cauldron's first brew. Potions follow (config/potions.js); a
+// recipe with `potion` is brewed only once the wizard has taught it.
+RECIPES.push(
+  { id: 'moonwater', name: 'Moonwater', station: 'magic_cauldron', age: 3, inputs: { water: 1, mushroom_pale: 1, leaves: 2 }, output: { id: 'moonwater', count: 1 }, seconds: 30,
+    blurb: 'The base of every potion.' },
+  // The wizard puts three by his hut; more can be made.
+  { id: 'training_target', name: 'Training Target', station: 'workbench', age: 3, inputs: { planks: 4, string: 1 }, output: { id: 'training_target', count: 1 },
+    blurb: 'A round target for the wand. Hits give Magic points.' },
+);
+// --- end WIZ-5 ---
+
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 
 /** A station as it's written for people: wood_mill is "wood mill", masons_bench "mason's bench". */

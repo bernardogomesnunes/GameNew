@@ -25,7 +25,7 @@ import { swings } from '../Game.js';
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand', carpentry_chisel: 'chiselBlock' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand', wizard_wand: 'castWand', carpentry_chisel: 'chiselBlock' };
 const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', compost: 'compostSelected', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace', helix: 'setDownMachine', flying_machine: 'wearSelected', dino_whistle: 'blowWhistle' };
 
 export function wireInput() {
