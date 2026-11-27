@@ -170,6 +170,10 @@ export class DuiltGame {
     // Bare dirt next to turf grows over in 5 to 50 game days (TurfSpread).
     this.turf = new TurfSpread();
     this.days = 0;
+    // WORK-1: buildings make goods only while a villager works there. Worlds
+    // saved before that get WORK_GRACE_DAYS of the old way (days to end on).
+    this.workGraceUntil = null;
+    this.workGraceTold = false;
     // PLAY-22/23: coins each trader has paid out today, and the game day standing orders last ran.
     this.purses = { day: 0, spent: {} };
     this.marketDay = 0;
@@ -1577,6 +1581,7 @@ export class DuiltGame {
       }
     }
 
+    this.workGraceStep();
     // Production is checked on a slow cadence; it's wall-clock based, so the
     // interval only decides how promptly you're told, not how much you get.
     this.settlers.tick(dtSeconds);
@@ -1609,6 +1614,7 @@ export class DuiltGame {
       this.lastCollect = now;
       this.structures.collect({
         now,
+        worked: this.workedIds(),
         yieldMultiplier: this.skills.gatherYield(),
         bonusFor: (id) => this.settlers.bonusFor(id),
         producesFor: (s) => this.producesFor(s),
@@ -1617,6 +1623,32 @@ export class DuiltGame {
       this.runFactories(now); // PLAY-11: after the other buildings
       this.countTaxes();
       this.payGifts();
+    }
+  }
+
+  /** WORK-1: whether the old-world grace is still running. */
+  get workGrace() {
+    return this.workGraceUntil != null && this.days < this.workGraceUntil;
+  }
+
+  /**
+   * WORK-1: the ids of the buildings with a villager at work, or null while
+   * every building runs (a sandbox, or the grace for old worlds).
+   */
+  workedIds() {
+    if (this.sandbox || this.workGrace) return null;
+    return this.settlers.staffedIds();
+  }
+
+  /** The grace's one notice when it is first seen, and its end. */
+  workGraceStep() {
+    if (this.workGraceUntil == null) return;
+    if (this.days >= this.workGraceUntil) {
+      this.workGraceUntil = null;
+      this.bus?.emit('toast', { kind: 'xp', title: 'Buildings need workers now', body: 'The grace is over. A building makes goods only while a villager works there.', duration: 12000 });
+    } else if (!this.workGraceTold) {
+      this.workGraceTold = true;
+      this.bus?.emit('toast', { kind: 'xp', title: 'Buildings will need workers', body: `From now on a building makes goods only while a villager works there. For ${WORK_GRACE_DAYS} game days yours still run on their own. Build a Work Hall and houses so villagers move in.`, duration: 15000 });
     }
   }
 
@@ -2895,6 +2927,8 @@ export class DuiltGame {
       skills: this.skills.toJSON(),
       settlers: this.settlers.toJSON(),
       jobs: this.jobs.toJSON(),
+      // WORK-1: marks a save made with the rule; the grace of an old world is kept.
+      staffedWork: true, workGraceUntil: this.workGraceUntil, workGraceTold: this.workGraceTold,
       stationWork: this.stationWork.toJSON(),
       counters: this.counters.toJSON(),
       crucibles: this.crucibles.toJSON(),
@@ -3041,6 +3075,15 @@ export class DuiltGame {
     this.fruitPlants.loadJSON(data.fruitPlants); // FRUIT-4 (older saves have none)
     this.turf.loadJSON(data.turf);
     this.days = Number.isFinite(data.days) ? data.days : 0;
+    // WORK-1: a save from before the rule has no mark: its buildings run on
+    // their own for WORK_GRACE_DAYS more, with a notice. Later saves keep theirs.
+    if (data.staffedWork === true) {
+      this.workGraceUntil = Number.isFinite(data.workGraceUntil) ? data.workGraceUntil : null;
+      this.workGraceTold = data.workGraceTold === true;
+    } else {
+      this.workGraceUntil = this.days + WORK_GRACE_DAYS;
+      this.workGraceTold = false;
+    }
     // A save from before selling has full purses; a stale day refills them (purseLeft).
     const pu = data.purses;
     this.purses = { day: Number.isFinite(pu?.day) ? pu.day : Math.floor(this.days), spent: {} };
@@ -3067,6 +3110,7 @@ export class DuiltGame {
     this.lastCollect = Date.now();
     const gained = this.structures.collect({
       now: Date.now(),
+      worked: this.workedIds(),
       yieldMultiplier: this.skills.gatherYield(),
       producesFor: (s) => this.producesFor(s),
       taxRate: this.skyTaxRate(),
@@ -3076,6 +3120,9 @@ export class DuiltGame {
     return gained;
   }
 }
+
+/** WORK-1: game days an old world's buildings still run without workers. */
+export const WORK_GRACE_DAYS = 3;
 
 export { ITEMS_BY_ID };
 

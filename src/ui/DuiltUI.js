@@ -20,7 +20,7 @@ import { TRAIN_DAYS, MAX_SOLDIERS, ORDERS } from '../world/Defenders.js';
 import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { stationName } from '../duilt/Crafting.js';
 import { CROPS } from '../config/crops.js';
-import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE, FOREST_WOODS, forestYield } from '../config/structures.js';
+import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE, FOREST_WOODS, forestYield, makesGoods } from '../config/structures.js';
 import { BLOCKS, stationOf } from '../config/blocks.js';
 import { JOB_FOR_BUILDING, JOB_OUTFITS } from '../config/outfits.js';
 import { StationWork, usesSpots, batchSeconds } from '../duilt/StationWork.js';
@@ -1299,6 +1299,12 @@ export class DuiltUI {
     else if (JOB_FOR_BUILDING[structure.type]) {
       const worker = this.duilt?.settlers?.people.find((p) => p.workId === structure.id);
       if (worker) out.push(`${worker.name ?? 'A villager'} works here as a ${JOB_OUTFITS[JOB_FOR_BUILDING[structure.type]].name.toLowerCase()}.`);
+    }
+    // WORK-1: nothing is made without somebody working here.
+    if (spec && makesGoods(spec) && this.duilt?.workedIds && !this.duilt.sandbox) {
+      if (this.duilt.workGrace) out.push('Works on its own for a few more days. After that it needs a villager.');
+      else if (this.duilt.workedIds()?.has(structure.id)) out.push('A villager works here, so it makes goods.');
+      else out.push('Makes nothing until a villager works here. Build a house and a Work Hall.');
     }
     const tax = this.duilt?.skyTaxRate?.() ?? 0;
     // The Sky Kingdom's share, after a lost attack on it (duilt/SkyWar.js).

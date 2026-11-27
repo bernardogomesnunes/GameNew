@@ -1757,6 +1757,14 @@ export function producesAt(spec, tier = 0) {
   return spec.tiers[clampTier(spec, tier)].produces ?? spec.produces ?? {};
 }
 
+/**
+ * WORK-1: whether a building of this kind makes goods on a clock, and so
+ * needs a villager at it. Pens and farms make what is in them.
+ */
+export function makesGoods(spec) {
+  return !!spec?.everySeconds && !!(Object.keys(spec.produces ?? {}).length || spec.fromCrops || spec.fromAnimals);
+}
+
 /** How long a cycle takes at a given tier — see producesAt, same fallback. */
 /**
  * How fast buildings work in a world against the rate written on them: a

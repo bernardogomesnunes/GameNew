@@ -528,7 +528,13 @@ export class StructureRegistry {
    * the fractions carried over so a building making one at a time still
    * pays its share. What was taken is in `this.lastTaxed`.
    */
-  collect({ now = Date.now(), yieldMultiplier = 1, bonusFor = null, producesFor = null, taxRate = 0 } = {}) {
+  collect({ now = Date.now(), yieldMultiplier = 1, bonusFor = null, producesFor = null, taxRate = 0, worked = null } = {}) {
+    // WORK-1: `worked` is the Set of building ids with a villager at work, or
+    // null when every building runs (a sandbox, or the grace for old worlds).
+    // An unworked building's clock stands still: nothing builds up to be
+    // paid when somebody arrives, and a half-made cycle waits.
+    const idle = Math.max(0, now - (this.lastCollectAt ?? now));
+    this.lastCollectAt = now;
     const gained = {};
     const taxed = {};
     const stalled = [];
@@ -549,6 +555,13 @@ export class StructureRegistry {
       let produces = spec.fromAnimals || spec.fromCrops ? scaleProduce(producesFor?.(s) ?? {}, yieldAt(spec, tier)) : producesAt(spec, tier);
       if (spec.woods && s.wood) produces = forestYield(produces, s.wood);
       if (!everySeconds) continue;
+      if (worked && !worked.has(s.id)) {
+        const period = everySeconds * 1000 * this.dayScale;
+        s.lastPaidAt = Math.min(now, (s.lastPaidAt ?? now) + idle);
+        // Whole cycles owed from before (an old world) are not paid later.
+        if (now - s.lastPaidAt >= period) s.lastPaidAt = now - ((now - s.lastPaidAt) % period);
+        continue;
+      }
 
       const periodMs = everySeconds * 1000 * this.dayScale;
       const elapsed = Math.min(now - s.lastPaidAt, capMs);
