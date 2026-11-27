@@ -70,6 +70,7 @@ for (let x = 0; x <= 5; x++) for (let z = 0; z <= 5; z++) {
   // An old save without a time on it still pays as before.
   const old = JSON.parse(JSON.stringify(saved));
   delete old.savedAt;
+  delete old.staffedWork; delete old.workGraceUntil; // WORK-1: saved before the rule, so graced
   const before = new DuiltGame({ world, scene, bus: null });
   ok('a save with no time on it is paid as it always was', Object.keys(before.loadJSON(old) ?? {}).length > 0);
 
