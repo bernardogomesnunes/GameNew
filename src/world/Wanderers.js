@@ -129,6 +129,8 @@ export class Wanderers {
     this.list = [];
     this.present = new Set();
     this.nextId = 1;
+    // POT-4: () => whether you are invisible.
+    this.unseen = null;
     this.untilExplorer = this.between(EXPLORER_EVERY) * 0.3;
     this.untilMessenger = this.between(MESSENGER_EVERY) * 0.5;
   }
@@ -169,6 +171,8 @@ export class Wanderers {
       if (p.strike > 0) p.strike = Math.max(0, p.strike - dt);
       if (p.fear > 0) p.fear = Math.max(0, p.fear - dt);
       if (this.suffer(p, dt)) continue;
+      // POT-8: frozen solid, it does nothing at all.
+      if (p.frozenSolid) { p.target = null; p.speed = 0; continue; }
       // The showcase's people (world/showcase.js) stand where they were put,
       // facing the camera — a rider still in the saddle.
       if (p.still) { this.riding(p); continue; }
@@ -189,11 +193,12 @@ export class Wanderers {
    * Thunder stuns, fire sets burning, ice freezes. A fresh strike starts its
    * time again; it doesn't stack.
    */
-  afflict(p, element) {
+  afflict(p, element, seconds = null) {
     if (!WANDERERS[p.kind]?.hp || p.dead) return;
     if (element === 'thunder') p.stunned = STUN_SECONDS;
-    else if (element === 'fire') { p.burning = BURN_SECONDS; p.burnTick = 1; }
-    else if (element === 'ice') p.frozen = FREEZE_SECONDS;
+    else if (element === 'fire') { p.burning = seconds ?? BURN_SECONDS; p.burnTick = 1; }
+    // A potion's ice (`seconds` given) holds them where they stand; a sword's only slows.
+    else if (element === 'ice') { p.frozen = seconds ?? FREEZE_SECONDS; if (seconds) { p.frozenSolid = true; p.target = null; p.speed = 0; } }
   }
 
   /**
@@ -204,6 +209,7 @@ export class Wanderers {
   suffer(p, dt) {
     if (p.stunned > 0) p.stunned = Math.max(0, p.stunned - dt);
     if (p.frozen > 0) p.frozen = Math.max(0, p.frozen - dt);
+    else p.frozenSolid = false;
     if (!(p.burning > 0)) return false;
     p.burning = Math.max(0, p.burning - dt);
     p.burnTick -= dt;
@@ -465,6 +471,7 @@ export class Wanderers {
     p.hp -= damage;
     p.hurt = HURT_FLASH;
     p.angry = true;
+    p.noticed = true; // POT-4
     // Someone who doesn't fight runs for it.
     if (spec.flees) p.fear = Math.max(p.fear ?? 0, FLEE_SECONDS);
     p.detour = 0;
@@ -796,6 +803,8 @@ export class Wanderers {
    * the bandit's move this frame; false leaves it to the camp's idling.
    */
   fight(p, dt, player, spec) {
+    // POT-4: invisible, you are not seen until you hit them (raids and wars go on).
+    if (!p.noticed && !p.raider && !p.war && this.unseen?.()) return false;
     const dx = player.x - p.x, dz = player.z - p.z;
     const d = Math.hypot(dx, dz) || 1;
     const hostile = this.hostileOf(p);

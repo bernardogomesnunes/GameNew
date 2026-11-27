@@ -1100,6 +1100,11 @@ BLOCKS.push(
   { id: MAGIC_TARGET, name: 'Training Target', glyph: 'target', color: 0x6f8fd9, shape: 'archery_target', material: 'wood', unlock: null },
   { id: MAGIC_CAULDRON, name: 'Magic Cauldron', glyph: 'bucket', color: 0x5b3f8f, shape: 'cauldron', material: 'stone', station: 'magic_cauldron', unlock: null },
 );
+// POT-8: the thin layer of snow a Frost potion leaves where you walk. Not placed by hand.
+export const FROST_LAYER = 602;
+BLOCKS.push(
+  { id: FROST_LAYER, name: 'Frost Layer', glyph: 'snow', color: 0xf4f8fb, shape: 'rug', material: 'stone', system: true, unlock: null },
+);
 // --- end WIZ-5 ---
 
 // The storybook palette (config/palette.js) paints every block it names; the

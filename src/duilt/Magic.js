@@ -71,6 +71,11 @@ export class Magic {
     return Math.round(base * (1 + POTION_TIME_PER_LEVEL * Math.max(0, this.level - 1)));
   }
 
+  /** A potion's flat bonus (strength): its base, plus 1 for every 3 Magic levels above 1. */
+  potionBonus(base) {
+    return base + Math.floor(Math.max(0, this.level - 1) / 3);
+  }
+
   /** The shop's lines whose item exists in the game. */
   offers() {
     return SHOP.filter((o) => ITEMS_BY_ID.has(o.item));

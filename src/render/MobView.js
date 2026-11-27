@@ -89,6 +89,7 @@ function featuresOf(spec, m) {
   return out;
 }
 const HURT_COLOUR = new THREE.Color(0xd9534f);
+const ICE_COLOUR = new THREE.Color(0x9fe6ff), EMBER_COLOUR = new THREE.Color(0xff7a3a);
 /** Where the legs stand, [x side, z side, which way it swings]: four at the corners, or a bird's two. */
 const CORNER_LEGS = [[-1, -1, 1], [1, 1, 1], [1, -1, -1], [-1, 1, -1]];
 const BIRD_LEGS = [[-1, 0, 1], [1, 0, -1], null, null];
@@ -160,6 +161,7 @@ export function mobModel(m) {
 /** A model faces -z; an animal here faces +z. */
 const TURN = new THREE.Matrix4().makeRotationY(Math.PI);
 const HURT_TINT = new THREE.Color(1, 0.22, 0.2);
+const ICE_TINT = new THREE.Color(0.55, 0.85, 1), EMBER_TINT = new THREE.Color(1, 0.5, 0.2);
 
 export class MobView {
   constructor(scene) {
@@ -238,6 +240,9 @@ export class MobView {
       this._base.compose(this._v.set(m.x, m.y - (death?.sink ?? 0), m.z), this._q, this._s.set(k, k, k));
 
       const flash = death ? Math.max(death.flash, hurtFlash(m.hurt)) : hurtFlash(m.hurt);
+      // POT-7/8: an ember glow while it burns, an icy blue while it is frozen.
+      this._ice = m.frozen > 0 ? 0.6 : 0;
+      this._burn = m.burning > 0 ? 0.3 + 0.25 * Math.abs(Math.sin(now * 11)) : 0;
 
       // Its model, if that has loaded: the boxes for this one are put away.
       const kit = modelKit(mobModel(m)) ?? modelKit(m.type);
@@ -259,7 +264,10 @@ export class MobView {
         // The bob of a trot, the leap of a gallop or a hop: the whole animal, off the ground.
         if (pose.lift && !(m.dying > 0)) this._base.elements[13] += pose.lift;
         this._turned.multiplyMatrices(this._base, TURN);
-        this.crowds.get(kit).add(this._turned, pose, flash ? this._tint.copy(HURT_TINT).lerp(this._c.set(1, 1, 1), 1 - flash) : null);
+        const base = flash ? this._tint.copy(HURT_TINT).lerp(this._c.set(1, 1, 1), 1 - flash) : (this._ice || this._burn ? this._tint.set(1, 1, 1) : null);
+        if (base && this._ice) base.lerp(ICE_TINT, this._ice);
+        if (base && this._burn) base.lerp(EMBER_TINT, this._burn);
+        this.crowds.get(kit).add(this._turned, pose, base);
         this.bodies.setMatrixAt(i, NO_LEG);
         this.heads.setMatrixAt(i, NO_LEG);
         for (let k = 0; k < 4; k++) this.legs.setMatrixAt(i * 4 + k, NO_LEG);
@@ -344,6 +352,8 @@ export class MobView {
   tint(hex, flash) {
     this._c.setHex(hex);
     if (flash) this._c.lerp(HURT_COLOUR, flash);
+    if (this._ice) this._c.lerp(ICE_COLOUR, this._ice);
+    if (this._burn) this._c.lerp(EMBER_COLOUR, this._burn);
     return this._c;
   }
 

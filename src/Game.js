@@ -57,7 +57,9 @@ import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, bedPart, FACING_STEP, isFlowing, turns, doorPart, isChest, isLava, isLavaFlow, CHEST, isCatapult, isTrapdoor, isOpenTrapdoor, stationOf, isGate, isOpenGate, isPainting } from './config/blocks.js';
 import { SAPLING } from './duilt/Saplings.js';
 import { mushyOf } from './duilt/MushyLogs.js'; // PLAY-14..21
-import { BOOSTS, COFFEE_SPEED } from './config/drinks.js';
+import { BOOSTS, COFFEE_SPEED, clockOf } from './config/drinks.js';
+import { SPEED_POTION, JUMP_POTION, TOUCH_REACH, FIRE_MOB_SECONDS, FROST_MOB_SECONDS, SNOW_LAYER_SECONDS } from './config/potions.js'; // POT-3, POT-5
+import { BodyFlames } from './render/BodyFlames.js'; // POT-7
 import { SWIFT_SPEED } from './config/upgrades.js';
 import { AvatarView } from './render/AvatarView.js';
 import { GliderView, MachineView } from './render/GliderView.js';
@@ -81,7 +83,7 @@ import { CROPS, cropOf } from './config/crops.js';
 import { Mobs, rayBox, surfaceAt } from './world/Mobs.js';
 import { Crowd, gatherCrowd } from './world/bodies.js';
 import { landmarksFor, PLACE_NAMES } from './world/landmarks.js';
-import { DRAGON_SCALE, DRAGON_CLAW, EGG_DRAGON } from './config/blocks.js';
+import { DRAGON_SCALE, DRAGON_CLAW, EGG_DRAGON, FROST_LAYER, isFluid } from './config/blocks.js';
 import { LOOT } from './duilt/Loot.js';
 import { Projectiles } from './world/Projectiles.js';
 import { ProjectileView } from './render/ProjectileView.js';
@@ -423,6 +425,7 @@ export class Game {
     this.machineView = new MachineView(this.scene);
     this.trainView = new TrainView(this.scene);
     this.flames = new FlameView(this.scene);
+    this.bodyFlames = new BodyFlames(this.scene); // POT-7
     this.fireBreath = new FireBreathView(this.scene);
     this.smoke = new SmokeView(this.scene);
     this.grass = new GrassView(this.scene);
@@ -829,6 +832,7 @@ export class Game {
   arrowTarget(...args) { return GameWar.arrowTarget.apply(this, args); }
   arrowHit(...args) { return GameWar.arrowHit.apply(this, args); }
   castWand(...args) { return GameWar.castWand.apply(this, args); } // WIZ-5
+  potionStrike(...args) { return GameWar.potionStrike.apply(this, args); } // POT-7, POT-8
   boltHitsBlock(...args) { return GameWar.boltHitsBlock.apply(this, args); } // WIZ-5
   magicToast(...args) { return GameWar.magicToast.apply(this, args); } // WIZ-5
   banditTarget(...args) { return GameWar.banditTarget.apply(this, args); }
@@ -1690,7 +1694,7 @@ export class Game {
     const held = this.selectedItemId === BARE_HANDS ? {}
       : this.selectedItemId ? { itemId: this.selectedItemId } : { blockId: this.selectedBlockId };
     const third = this.player.view !== 'first';
-    this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held: this.sleeping ? {} : held, visible: playing && third, draw: this.drawing ? this.drawPower() : 0, lie: this.sleeping ? { x: this.sleeping.centre.x, y: this.sleeping.centre.y, z: this.sleeping.centre.z, dir: this.sleeping.dir, amount: this.sleeping.lie } : null });
+    this.avatarView.update(dt, this.player, { look: this.controls.look, worn: this.duilt?.worn ?? {}, held: this.sleeping ? {} : held, visible: playing && third, ghost: !!this.duilt?.boosted('p_invis'), draw: this.drawing ? this.drawPower() : 0, lie: this.sleeping ? { x: this.sleeping.centre.x, y: this.sleeping.centre.y, z: this.sleeping.centre.z, dir: this.sleeping.dir, amount: this.sleeping.lie } : null });
     this.handView.update(dt, this.player, { look: this.controls.look, held, visible: playing && !third && !this.manning, draw: this.drawing ? this.drawPower() : 0, offhand: this.duilt?.worn?.offhand?.id ?? null });
     // The flying machine went with it: you come down on its wings.
     if (this.player.flying && !this.player.canFly()) {
@@ -2081,7 +2085,7 @@ export class Game {
     this.ui.toast(!r.ok
       ? { kind: 'xp', title: r.reason }
       : r.boost
-        ? { kind: 'challenge', title: `${BOOSTS[r.boost].name}: ${BOOSTS[r.boost].says.toLowerCase()}`, body: 'For three minutes' }
+        ? { kind: 'challenge', title: `${BOOSTS[r.boost].name}: ${BOOSTS[r.boost].says.toLowerCase()}`, body: `For ${clockOf(r.seconds)}` }
         : { kind: 'challenge', title: 'Blessed', body: `+${r.healed / 2} hearts` });
   }
 
@@ -2174,6 +2178,57 @@ export class Game {
     const best = found.sort((a, b) => a.t - b.t)[0];
     if (hit && this.inTheWay(hit, eye, dir, best.t)) return null;
     return best;
+  }
+
+  /**
+   * POT-4, 7 and 8, every frame: invisibility hides you from mobs and bandits;
+   * fire sets alight, and frost freezes for a minute, whatever touches you;
+   * frost leaves a layer of snow under your feet, fire flames round your body.
+   */
+  tickPotions(dt) {
+    const d = this.duilt;
+    if (!d) return;
+    const hide = () => !!d.boosted('p_invis');
+    if (this.mobs) { this.mobs.unseen = hide; this.mobs.onBurn ??= (m, drops) => this.mobFell(m, drops); }
+    if (this.wanderers) this.wanderers.unseen = hide;
+    const fire = d.boosted('p_fire'), frost = d.boosted('p_frost');
+    const sources = [];
+    const p = this.player.position;
+    if (fire || frost) {
+      for (const m of this.mobs?.list ?? []) {
+        if (m.dead || m.dying > 0 || m.owned || m.still) continue;
+        if (Math.abs(m.y - p.y) < 2 && Math.hypot(m.x - p.x, m.z - p.z) < TOUCH_REACH + (MOBS_BY_ID.get(m.type)?.body?.w ?? 0.5) * 0.5) this.potionAfflict(m, false);
+      }
+      for (const w of this.wanderers?.list ?? []) {
+        if (w.dead || !WANDERERS[w.kind]?.hp || !(w.angry || w.raider || w.war || this.wanderers.hostileOf(w))) continue;
+        if (Math.abs(w.y - p.y) < 2 && Math.hypot(w.x - p.x, w.z - p.z) < TOUCH_REACH + 0.4) this.potionAfflict(w, true);
+      }
+    }
+    if (fire) sources.push({ x: p.x, y: p.y, z: p.z, w: 0.7, h: 1.8, seed: 0 });
+    for (const m of this.mobs?.list ?? []) if (m.burning > 0 && !m.dead && sources.length < 12) sources.push({ x: m.x, y: m.y, z: m.z, w: MOBS_BY_ID.get(m.type)?.body?.w ?? 0.8, h: 1.2, seed: m.id });
+    for (const w of this.wanderers?.list ?? []) if (w.burning > 0 && !w.dead && sources.length < 12) sources.push({ x: w.x, y: w.y, z: w.z, w: 0.6, h: 1.8, seed: w.id });
+    this.bodyFlames.update(sources);
+    // POT-8: snow under your feet, melting after a while.
+    this.frostLayers ??= [];
+    if (frost && this.player.grounded) {
+      const x = Math.floor(p.x), y = Math.floor(p.y + 0.01), z = Math.floor(p.z);
+      if (this.world.getBlock(x, y, z) === 0 && this.world.isSolid(x, y - 1, z) && !isFluid(this.world.getBlock(x, y - 1, z))) {
+        this.world.setBlock(x, y, z, FROST_LAYER);
+        this.frostLayers.push({ x, y, z, left: SNOW_LAYER_SECONDS });
+      }
+    }
+    for (const l of this.frostLayers) {
+      l.left -= dt;
+      if (l.left <= 0 && this.world.getBlock(l.x, l.y, l.z) === FROST_LAYER) this.world.setBlock(l.x, l.y, l.z, 0);
+    }
+    this.frostLayers = this.frostLayers.filter((l) => l.left > 0);
+  }
+
+  /** Sets one mob (or bandit, `person`) alight and/or freezes it, by the potions going. */
+  potionAfflict(target, person) {
+    const d = this.duilt;
+    if (d?.boosted?.('p_fire')) (person ? this.wanderers : this.mobs).afflict(target, 'fire', FIRE_MOB_SECONDS);
+    if (d?.boosted?.('p_frost')) (person ? this.wanderers : this.mobs).afflict(target, 'ice', FROST_MOB_SECONDS);
   }
 
   /**
@@ -4001,15 +4056,16 @@ export class Game {
         // The White Ring (Phase 7c): faster on your feet, and a higher jump.
         const white = this.duilt.ringWorn() === 'white';
         this.player.speedScale = this.duilt.hunger.speedFactor * this.duilt.skills.moveSpeed() * (white ? WHITE_RING_SPEED : 1)
-          * (this.duilt.boosted('speed') ? COFFEE_SPEED : 1) * (this.duilt.wearing('swift') ? SWIFT_SPEED : 1)
+          * (this.duilt.boosted('speed') ? COFFEE_SPEED : 1) * (this.duilt.boosted('p_speed') ? SPEED_POTION : 1) * (this.duilt.wearing('swift') ? SWIFT_SPEED : 1)
           * (this.riding ? RIDE_SPEED : 1);
-        this.dayCycle.nightSight = this.duilt.wearing('night');
+        this.dayCycle.nightSight = this.duilt.wearing('night') || this.duilt.boosted('p_night'); // POT-2
         this.ui?.duiltUI?.renderBoosts();
         this.ui?.duiltUI?.renderMagic();
         this.ui?.duiltUI?.renderTraining();
         this.ui?.duiltUI?.renderWar(this.warTracking(), this.duilt.war.round, this.warComing());
         this.ui?.duiltUI?.renderArmy();
         this.player.jumpScale = white ? WHITE_RING_JUMP : 1;
+        if (this.duilt.boosted('p_jump')) this.player.jumpScale *= JUMP_POTION; // POT-5
       }
       this.updateHover();
       this.updateCracks();
@@ -4031,6 +4087,7 @@ export class Game {
       }
       // Its light, low in the sky that way, from anywhere you can't see the island itself.
       this.skyBeacon.update(this.skyOpen() ? skyAt(this.world.gen) : null, this.player.position, 1 - daylightAt(this.dayCycle.time).day, this.dayCycle.cloudColor);
+      this.tickPotions(dt);
       this.syncWizard();
       this.wanderers.tick(dt, this.player.position);
       this.tickWar();

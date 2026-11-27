@@ -19,6 +19,7 @@ import { BEER_COOLDOWN, KOMBUCHA_DAMAGE } from '../config/drinks.js';
 import { AvatarView } from '../render/AvatarView.js';
 import { ARROW_DAMAGE, drawShot, FULL_DRAW_MS, MIN_DRAW_MS, BOLT_SPEED } from '../world/Arrows.js';
 import { MAGIC_TARGET } from '../config/blocks.js';
+import { STRENGTH_DAMAGE } from '../config/potions.js';
 import { itemName, ITEMS, ITEMS_BY_ID } from '../config/items.js';
 import { MOBS_BY_ID } from '../config/mobs.js';
 import { rayBox } from '../world/Mobs.js';
@@ -173,11 +174,12 @@ export function strikeCooldown() {
 
 /** How hard a blow lands: the tool's damage (a fist 1), plus kombucha's. */
 export function blowDamage(tool, target = null) {
+  const potion = this.duilt?.boosted('p_strength') ? this.duilt.magic.potionBonus(STRENGTH_DAMAGE) : 0; // POT-6
   // IMP-45: the Dragon Axe fells anything in one blow, but not a god.
   if (tool?.id === 'dragon_axe' && target && !target.god) return DRAGON_AXE_BLOW;
   // Bare hands take a whole heart — asked for directly: "without weapons
   // 1 heart should go".
-  return (tool?.damage ?? FIST_DAMAGE) + (this.duilt?.boosted('strength') ? KOMBUCHA_DAMAGE : 0);
+  return (tool?.damage ?? FIST_DAMAGE) + (this.duilt?.boosted('strength') ? KOMBUCHA_DAMAGE : 0) + potion;
 }
 
 /**
@@ -201,6 +203,7 @@ export function hitMob(hit) {
   const tool = ITEMS_BY_ID.get(this.selectedItemId);
   const { x, z } = this.player.position;
   const { killed, drops } = this.mobs.hit(mob, this.blowDamage(tool, { god: false }), x, z, this.blowKnock(tool));
+  if (!killed) this.potionStrike(mob, false); // POT-7, POT-8
   this.sound?.strike({ weapon: !!tool?.weapon });
   // A dragon struck now and then sheds a scale (IMP-45).
   if (MOBS_BY_ID.get(mob.type)?.sheds && !killed && Math.random() < 0.15) this.shedDragon(mob, { dragon_scale: 1 });
@@ -342,6 +345,11 @@ export function arrowTarget(from, dir, length) {
   return wild ?? bandit;
 }
 
+/** POT-7, POT-8: a blow with fire or frost going sets alight or freezes what it hits. */
+export function potionStrike(target, person) {
+  this.potionAfflict(target, person);
+}
+
 /** WIZ-5: between casts, in ms. */
 export const CAST_COOLDOWN_MS = 500;
 
@@ -386,6 +394,7 @@ export function arrowHit(arrow, hit) {
     const { killed, drops } = this.mobs.hit(hit.mob, damage, arrow.x - arrow.vx, arrow.z - arrow.vz, ARROW_KNOCK);
     this.sound?.strike({ weapon: true });
     if (killed && arrow.bolt) this.duilt?.magic.note('kills'); // WIZ-5
+    if (!killed) this.potionStrike(hit.mob, false);
     if (killed) this.mobFell(hit.mob, drops);
     return;
   }
@@ -434,6 +443,7 @@ export function hitBandit(hit) {
   const res = this.wanderers.hit(p, this.blowDamage(tool, { god: !!WANDERERS[p.kind]?.god }) * (ambush ? AMBUSH : 1), x, z, this.blowKnock(tool));
   if (ambush) this.revealDisguise();
   if (!res) return false;
+  if (!res.killed) this.potionStrike(p, true); // POT-7, POT-8
   // An upgraded sword (playtest, P6): stuns, burns or freezes as it lands.
   if (tool?.element && !res.killed) this.wanderers.afflict(p, tool.element);
   this.sound?.strike({ weapon: !!tool?.weapon });

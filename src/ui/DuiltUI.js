@@ -2,6 +2,7 @@ import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/ite
 import { BOOSTS, clockOf } from '../config/drinks.js';
 import { WIZARD_TALK, COIN } from '../config/magic.js'; // WIZ-3
 import { WIZARD_QUESTS } from '../config/wizardQuests.js'; // WIZ-5
+import { POTIONS } from '../config/potions.js'; // POT-1
 import { FINAL_AGE } from '../config/ages.js';
 import { askConfirm } from './Confirm.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
@@ -1447,9 +1448,17 @@ export class DuiltUI {
         this.showWizard('quests');
       });
     } else {
-      const known = m.taught.map((id) => id.replace(/_/g, ' '));
-      body.innerHTML = `<p class="export-note">Brew at a Magic Cauldron. Moonwater is the base: water, a pale mushroom and 2 leaves.</p>`
-        + (known.length ? `<h4 class="bench-group">Taught</h4><p>${known.map((n) => escapeHtml(n)).join(' \u00b7 ')}</p>` : '<p class="dim">He has not taught you any potions yet.</p>');
+      const known = POTIONS.filter((p) => m.knows(p.id));
+      body.innerHTML = '<p class="export-note">Brew at a Magic Cauldron. Moonwater is the base: water, a pale mushroom and 2 leaves.</p>'
+        + (known.length ? `<div class="recipe-grid">${known.map((p) => {
+          const spec = ITEMS_BY_ID.get(`potion_${p.id}`);
+          const ico = itemIcon(spec, { size: 40 }) ?? glyphSvg('flask', { size: 30, color: p.color });
+          const mins = clockOf(m.potionSeconds(p.seconds));
+          return `<div class="recipe-tile"><span class="recipe-icon" data-tip="${escapeAttr(p.name)}" data-tip-info="${escapeAttr(p.says)}">${ico}</span>
+            <strong class="recipe-name">${escapeHtml(p.name)}</strong>
+            <span class="recipe-cost">${Object.entries(p.inputs).map(([id, n]) => itemChip(id, n)).join('')}</span>
+            <span class="dim">${escapeHtml(p.says)}. Lasts ${mins}.</span></div>`;
+        }).join('')}</div>` : '<p class="dim">He has not taught you any potions yet. Finish his quests.</p>');
     }
   }
 
