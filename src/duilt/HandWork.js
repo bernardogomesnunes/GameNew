@@ -11,7 +11,8 @@ import { SETTLERS } from '../config/settlers.js';
  * at a forest). The building then rests.
  *
  * The rest is what keeps it fair: it lasts as long as a worker, with their
- * bonus, would take to make the same number of items. Hand work is never
+ * bonus, would take to make the same number of swings' worth of items. The
+ * forest is the exception on yield: each round gives at least 10 logs. Hand work is never
  * faster than a villager at that building, and it is refused while a
  * villager works there.
  */
@@ -21,7 +22,9 @@ export const MIN_REST = 5;
 
 /** Each game: the building it works, its verb, how fast the marker moves (bar lengths a second) and how wide the window is (share of the bar). */
 export const HAND_GAMES = {
-  forest: { id: 'wood', verb: 'Chop', title: 'Chop wood', tool: 'axe', speed: 0.8, width: 0.24, hint: 'Tap Chop when the marker is in the lit notch.' },
+  // Owner, 27 November: "Each one should give at least 5 logs", then "Let's make 10". A round with
+  // a hit gives 4 logs a hit, never fewer than 10, on top of any leaves or fruit.
+  forest: { id: 'wood', verb: 'Chop', title: 'Chop wood', tool: 'axe', speed: 0.8, width: 0.24, hint: 'Tap Chop when the marker is in the lit notch.', logs: { perHit: 4, min: 10 } },
   quarry: { id: 'quarry', verb: 'Chip', title: 'Chip stone', tool: 'pickaxe', speed: 0.95, width: 0.2, hint: 'Tap Chip when the marker is on the crack.' },
   mine: { id: 'mine', verb: 'Pick', title: 'Pick ore', tool: 'pickaxe', speed: 1.05, width: 0.18, hint: 'Tap Pick when the marker is on the seam.' },
   farm: { id: 'farm', verb: 'Hoe', title: 'Work the soil', tool: 'hoe', speed: 0.7, width: 0.26, hint: 'Tap Hoe when the marker is over the row.' },
@@ -100,6 +103,12 @@ export class HandWork {
       const pick = Object.keys(table).reduce((a, b) => (credit[b] > credit[a] ? b : a));
       credit[pick] -= total;
       made[pick] = (made[pick] ?? 0) + 1;
+    }
+    const logs = gameFor(s.type)?.logs;
+    if (logs && n > 0) {
+      // The log is whatever the forest grows most of: oak, white or dark wood.
+      const log = Object.keys(table).reduce((a, b) => (table[b] > table[a] ? b : a));
+      made[log] = Math.max(logs.min, logs.perHit * n);
     }
     if (n > 0 && !this.deliver(made)) return { ok: false, reason: 'No room for it in your bag or a storehouse.' };
     const left = Math.max(MIN_REST, Math.round(n * this.secondsPerItem(s)));

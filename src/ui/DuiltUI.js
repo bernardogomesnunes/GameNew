@@ -912,7 +912,7 @@ export class DuiltUI {
     const rest = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
     return `<div class="building-sec hand-work" data-hand>
       <h4>${escapeHtml(g.title)}</h4>
-      ${st.ok ? `<p class="dim">${escapeHtml(g.hint)} ${SWINGS} swings, one item for each hit.</p>
+      ${st.ok ? `<p class="dim">${escapeHtml(g.hint)} ${SWINGS} swings, ${g.logs ? `${g.logs.perHit} logs for each hit, at least ${g.logs.min}` : 'one item for each hit'}.</p>
         <div class="hand-bar" data-hand-bar hidden><div class="hand-win" data-hand-win></div><div class="hand-mark" data-hand-mark></div></div>
         <div class="hand-dots" data-hand-dots aria-hidden="true">${'<span></span>'.repeat(SWINGS)}</div>
         <button class="primary hand-go" data-hand-go>Start</button>`
