@@ -10,7 +10,7 @@
  * `level` (optional) asks for a Magic level too. `points` go to Magic.
  * `reward` is one of { item, recipe } (what he gives), in the order the owner
  * asked for: the Wand, then the Cauldron, then the potion recipes one by one,
- * then the Wizard Hat last (its quest comes with the hat, in its own PR).
+ * then the Wizard Hat last.
  */
 
 /** What the Roots and Fruit quest asks for: one of each root, and apples (FRUIT-1, FRUIT-5). */
@@ -39,6 +39,9 @@ export const WIZARD_QUESTS = [
     blurb: 'Reach Magic level 4, then kill 15 mobs with the wand.', points: 30, reward: { recipe: 'frost' } },
   { id: 'unseen', name: 'Unseen', kind: 'casts', n: 100, level: 5,
     blurb: 'Reach Magic level 5, then cast the wand 100 times.', points: 40, reward: { recipe: 'invisibility' } },
+  // WAND-3: the last, and the hardest. Magic level 7 is 420 points, a long way on after the others.
+  { id: 'the_hat', name: 'The Pointed Hat', kind: 'bring', items: { diamond: 3, ruby: 2, gold: 8, mushroom_lilac: 6 }, level: 7,
+    blurb: 'Reach Magic level 7 and bring 3 diamonds, 2 rubies, 8 gold ingots and 6 lilac mushrooms. Then the hat is yours.', points: 60, reward: { item: 'wizard_hat' } },
 ];
 export const WIZARD_QUESTS_BY_ID = new Map(WIZARD_QUESTS.map((q) => [q.id, q]));
 

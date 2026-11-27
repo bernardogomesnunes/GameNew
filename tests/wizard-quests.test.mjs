@@ -18,7 +18,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 ok(`${WIZARD_QUESTS.length} quests (8 to 12)`, WIZARD_QUESTS.length >= 8 && WIZARD_QUESTS.length <= 12);
 ok('ids are unique', new Set(WIZARD_QUESTS.map((q) => q.id)).size === WIZARD_QUESTS.length);
 const rewards = WIZARD_QUESTS.map((q) => q.reward?.item ?? (q.reward?.recipe ? 'recipe' : null)).filter(Boolean);
-ok('the Wand first, the Cauldron second, then only recipes', rewards[0] === 'wizard_wand' && rewards[1] === 'magic_cauldron' && rewards.slice(2).every((r) => r === 'recipe'));
+ok('the Wand first, the Cauldron second, then only recipes, and the Hat last', rewards[0] === 'wizard_wand' && rewards[1] === 'magic_cauldron' && rewards.slice(2, -1).every((r) => r === 'recipe') && rewards.at(-1) === 'wizard_hat');
 ok('it mixes gather, brew, kills, targets and casts', ['bring', 'brew', 'kills', 'targets', 'casts'].every((k) => WIZARD_QUESTS.some((q) => q.kind === k)));
 ok('seven potion recipes are taught, one per quest', WIZARD_QUESTS.filter((q) => q.reward?.recipe).length === 7);
 ok('every item a quest asks for or gives exists', WIZARD_QUESTS.every((q) => Object.keys(q.items ?? {}).every((id) => ITEMS_BY_ID.has(id)) && (!q.reward?.item || ITEMS_BY_ID.has(q.reward.item))));

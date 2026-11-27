@@ -28,6 +28,12 @@ export const SHOP = [
   { item: 'seeds_passion', price: 14 },
 ];
 
+/**
+ * WAND-3: the Wizard Hat, worn on the head. Defence 3 (a leather cap is 1, iron
+ * 2), +2 wand damage, and whatever hits you takes `thorns` back.
+ */
+export const HAT = { item: 'wizard_hat', armour: 3, wandBonus: 2, thorns: 2 };
+
 /** The coin item the game spends. */
 export const COIN = 'coin';
 

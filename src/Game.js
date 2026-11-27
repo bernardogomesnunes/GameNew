@@ -837,6 +837,7 @@ export class Game {
   arrowHit(...args) { return GameWar.arrowHit.apply(this, args); }
   castWand(...args) { return GameWar.castWand.apply(this, args); } // WIZ-5
   potionStrike(...args) { return GameWar.potionStrike.apply(this, args); } // POT-7, POT-8
+  hatThorns(...args) { return GameWar.hatThorns.apply(this, args); } // WAND-3
   boltHitsBlock(...args) { return GameWar.boltHitsBlock.apply(this, args); } // WIZ-5
   magicToast(...args) { return GameWar.magicToast.apply(this, args); } // WIZ-5
   banditTarget(...args) { return GameWar.banditTarget.apply(this, args); }
@@ -3266,6 +3267,7 @@ export class Game {
     if (!this.duilt || this.duilt.sandbox || this.riding === m) return;
     const taken = this.duilt.hurt(damage, 'dinosaur');
     if (!taken) return;
+    this.hatThorns(m, false); // WAND-3
     if (this.player.grounded) this.player.velocity.y = 4.5;
     // Thrown back by its weight: a raptor's bite a step, a triceratops's horn a few.
     this.player.nudge(this.player.position.x - m.x, this.player.position.z - m.z, Math.min(7, 2.5 + Math.sqrt(MOBS_BY_ID.get(m.type)?.mass ?? 1)));

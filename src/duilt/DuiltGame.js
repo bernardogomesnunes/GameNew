@@ -58,7 +58,7 @@ import { Trains, CAR_SLOTS, PART_LENGTH } from '../world/Trains.js';
 import { endingFor } from '../config/lore.js';
 import { factoryMachines } from '../config/structures.js';
 import { Magic } from './Magic.js'; // WIZ-4
-import { HUT } from '../config/magic.js';
+import { HUT, HAT } from '../config/magic.js';
 import { MAGIC_TARGET } from '../config/blocks.js';
 import { runLines, cleanLines, factoryRecipes, isLineRecipe, maxLines, lineDaily, MACHINE_NAMES } from '../structures/Factory.js';
 // PLAY-11 end
@@ -2804,6 +2804,16 @@ export class DuiltGame {
       const [x, z] = at.split(',').map(Number);
       return { kind, x, z, raided: this.raided.has(k) };
     });
+  }
+
+  /** WAND-3: whether the Wizard Hat is on your head. */
+  wearsHat() {
+    return this.worn.head?.id === HAT.item;
+  }
+
+  /** WAND-3: what the hat adds to a wand bolt: 0 without it. */
+  hatMagicBonus() {
+    return this.wearsHat() ? HAT.wandBonus : 0;
   }
 
   /** Whether something you're wearing carries upgrade `key` (playtest, P6). */

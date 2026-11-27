@@ -600,6 +600,9 @@ export const ITEMS = [
   // POT-1: the potions, one drink each, lasting `boostSeconds` at Magic level 1.
   ...POTIONS.map((p) => ({ id: `potion_${p.id}`, name: `${p.name} Potion`, kind: 'drink', stackTo: 10, color: p.color, glyph: 'flask', boost: p.boost, boostSeconds: p.seconds,
     madeBy: `Brewed in a Magic Cauldron once the wizard has taught it. ${p.says}, for ${Math.round(p.seconds / 60 * 10) / 10} minutes (longer at higher Magic levels)` })),
+  // WAND-3: the last quest's reward. Not in the book, not upgradable: only the wizard gives it.
+  { id: 'wizard_hat', name: 'Wizard Hat', kind: 'armour', stackTo: STACK_TOOL, color: 0x3e2a6b, glyph: 'helm', wears: 'head', armour: 3, durability: 800, noBook: true,
+    madeBy: 'Given by the wizard for his last quest. Defence 3, +2 wand damage, and a mob that hits you takes 2 back' },
   { id: 'training_target', name: 'Training Target', kind: 'refined', stackTo: 10, color: 0x6f8fd9, glyph: 'target', block: 620,
     madeBy: 'Made at a workbench from planks and string. Hit it with the wand for Magic points; the wizard puts three by his hut' },
   { id: 'hunters_stew', name: "Hunter's Stew", kind: 'food', stackTo: STACK_FOOD, color: 0x8a5a2a, glyph: 'bowl', feeds: 50, madeBy: 'Meat, carrot, potato and dried pale mushroom, simmered in a Cauldron' },
