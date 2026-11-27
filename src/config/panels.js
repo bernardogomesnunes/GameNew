@@ -203,6 +203,15 @@ export const PANELS = [
     // No key: you open a stall by pointing at whoever keeps it.
   },
   {
+    // WIZ-3: opened by talking to the wizard, so it has no key.
+    id: 'panel-wizard',
+    title: 'The Wizard',
+    subId: 'wizard-sub',
+    layer: 'duilt',
+    mode: 'duilt',
+    label: 'Wizard',
+  },
+  {
     id: 'panel-finish',
     title: 'Finished',
     subId: 'finish-sub',
