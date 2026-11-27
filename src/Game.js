@@ -142,7 +142,7 @@ const HATCHLINGS = ['fire_drake', 'frost_wyvern', 'storm_dragon'];
 const PET_FIGHT = 28;
 const WHISTLE_REACH = 60, PACK_HEEL = 4, PACK_FIGHT = 14, PACK_CATCH_UP = 40, PACK_STUCK = 3, PACK_LOST = 120, PACK_TRAVEL = 24;
 /** Out in the world, who'll stop for a word (config/talk.js). */
-const TALKERS = new Set(['explorer', 'messenger', 'tribe', 'citizen', 'city_guard', 'futurian', 'caravaner', 'mossfolk']);
+const TALKERS = new Set(['wizard', 'explorer', 'messenger', 'tribe', 'citizen', 'city_guard', 'futurian', 'caravaner', 'mossfolk']);
 /** How much land round the title scene's middle, and under its camera, is ready before the worlds screen shows. */
 const TITLE_READY_REACH = 24, TITLE_EYE_REACH = 16;
 /** How fast the touch stick walks at its rim, against a key's full walking pace. */
@@ -2173,8 +2173,33 @@ export class Game {
     return best;
   }
 
+  /**
+   * WIZ-2: keeps the wizard's figure in the wanderers' list once he has come,
+   * at his door by day and inside by night, turned to you when you are near.
+   */
+  syncWizard() {
+    if (!this.wanderers) return;
+    const m = this.duilt?.magic;
+    let w = this.wanderers.list.find((p) => p.kind === 'wizard');
+    if (!m?.active || !m.home) {
+      if (w) this.wanderers.list = this.wanderers.list.filter((p) => p !== w);
+      return;
+    }
+    const night = daylightAt(this.dayCycle.time).day < 0.3;
+    const spot = night && m.home.inside ? m.home.inside : m.home;
+    if (!w) {
+      w = this.wanderers.person('wizard', spot.x, spot.y, spot.z, { still: true, name: 'the wizard', home: { x: m.home.x, z: m.home.z }, facing: 0 });
+      this.wanderers.list.push(w);
+    }
+    w.x = spot.x; w.y = spot.y; w.z = spot.z;
+    const p = this.player.position;
+    if (Math.hypot(p.x - w.x, p.z - w.z) < 8) w.facing = Math.atan2(p.x - w.x, p.z - w.z);
+  }
+
   /** The next line of a conversation (config/talk.js), in a speech bubble. */
   talkTo({ who, person }) {
+    // WIZ-3: the wizard has his own panel.
+    if (who === 'wizard') { this.duilt.magic.visits++; return void this.ui?.openWizard(); }
     const me = this.player.position;
     let title = person.name, line, gift = null;
     if (who === 'messenger') {
@@ -3976,6 +4001,7 @@ export class Game {
           * (this.riding ? RIDE_SPEED : 1);
         this.dayCycle.nightSight = this.duilt.wearing('night');
         this.ui?.duiltUI?.renderBoosts();
+        this.ui?.duiltUI?.renderMagic();
         this.ui?.duiltUI?.renderTraining();
         this.ui?.duiltUI?.renderWar(this.warTracking(), this.duilt.war.round, this.warComing());
         this.ui?.duiltUI?.renderArmy();
@@ -4001,6 +4027,7 @@ export class Game {
       }
       // Its light, low in the sky that way, from anywhere you can't see the island itself.
       this.skyBeacon.update(this.skyOpen() ? skyAt(this.world.gen) : null, this.player.position, 1 - daylightAt(this.dayCycle.time).day, this.dayCycle.cloudColor);
+      this.syncWizard();
       this.wanderers.tick(dt, this.player.position);
       this.tickWar();
       this.tickRivals();

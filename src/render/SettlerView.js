@@ -468,12 +468,17 @@ export class SettlerView {
       // Over the head and behind it, the face showing in front.
       put(HAT, 0, hc + headH * 0.1, -headW * 0.1, headW * 1.26, headH * 1.2, headW * 1.06, hatHex);
       put(HAT_EXTRA, 0, legH + bodyH * 0.9, -width * 0.05, width * 1.1, bodyH * 0.22, width * 0.72, hatHex);
+    } else if (o.hat === 'wizard') {
+      // A wide brim, and a cone of three narrowing blocks leaning back.
+      put(HAT, 0, top + headH * 0.04, 0, headW * 1.7, headH * 0.1, headW * 1.7, hatHex);
+      put(HAT_EXTRA, 0, top + headH * 0.5, -headW * 0.03, headW * 0.95, headH * 0.9, headW * 0.95, hatHex);
+      put(PLUME, 0, top + headH * 1.2, -headW * 0.1, headW * 0.5, headH * 0.7, headW * 0.5, hatHex);
     } else if (o.hat === 'cap') {
       put(HAT, 0, top + headH * 0.02, 0, headW * 1.06, headH * 0.24, headW * 1.06, hatHex);
       put(HAT_EXTRA, 0, top - headH * 0.06, front + headW * 0.12, headW * 0.9, 0.03, headW * 0.3, hatHex);
     } else { none(HAT); none(HAT_EXTRA); }
     if (o.plume) put(PLUME, 0, top + headH * 0.42, -headW * 0.05, 0.07, headH * 0.6, headW * 0.7, o.plume);
-    else if (o.hat !== 'crown') none(PLUME);
+    else if (o.hat !== 'crown' && o.hat !== 'wizard') none(PLUME);
 
     // A cape down the back.
     if (o.cape) {

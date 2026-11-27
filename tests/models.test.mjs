@@ -19,7 +19,8 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 const index = JSON.parse(readFileSync(new URL('../public/models/index.json', import.meta.url), 'utf8'));
 const shipped = (id) => index.includes(id) && existsSync(new URL(`../public/models/${id}.glb`, import.meta.url));
 ok('every animal has a model', MOBS.every((m) => shipped(m.id)));
-ok('every kind of person in the outfits has one', Object.keys(OUTFITS).every((k) => shipped(k)));
+// The wizard (WIZ-2) is drawn from boxes, with a pointed hat, robe and staff, until he has a model of his own.
+ok('every kind of person in the outfits has one', Object.keys(OUTFITS).filter((k) => k !== 'wizard').every((k) => shipped(k)));
 ok('settlers and citizens come in several looks',
   ['settler', 'settler_1', 'settler_5', 'citizen', 'citizen_3'].every(shipped));
 ok('the vehicles, siege engines and guardians have theirs',

@@ -21,6 +21,16 @@ export const WANDERERS = {
     hp: 10, flees: true, run: 3,
     drops: { fruit: [1, 3], seeds_lettuce: [1, 2] },
   },
+  // WIZ-2: the wizard of the hut (config/magic.js). Never roams: he stands at
+  // his door by day and goes in at night (Game.syncWizard). No hp: nobody
+  // strikes him.
+  wizard: {
+    noun: 'the wizard',
+    about: 'the wizard — tap to talk, shop and take his quests',
+    colours: [0x5b3f8f],
+    speed: 0,
+    roam: 0,
+  },
   // The Stone Kingdom's people (Phase 7e): guards at their posts, and the
   // King on his throne. Guards stand their ground — they never run — and
   // only fight the bearer of the White Ring, or anyone who strikes one.

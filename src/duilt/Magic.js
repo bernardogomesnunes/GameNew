@@ -14,7 +14,7 @@ export class Magic {
     /** Whether the wizard has arrived: magic exists from then on. */
     this.active = false;
     this.points = 0;
-    /** Where his hut stands: { x, y, z } at the door, or null. */
+    /** Where his hut stands: { x, y, z, inside: { x, y, z } } with the door spot first, or null. */
     this.home = null;
     /** Visits to his panel, for his talk lines. */
     this.visits = 0;
@@ -28,7 +28,7 @@ export class Magic {
   arrive(home) {
     if (this.active) return false;
     this.active = true;
-    this.home = home ? { x: home.x, y: home.y, z: home.z } : null;
+    this.home = pointOf(home);
     return true;
   }
 
@@ -94,8 +94,7 @@ export class Magic {
     if (!d || typeof d !== 'object') return;
     this.active = true;
     this.points = Number.isFinite(d.points) && d.points > 0 ? Math.floor(d.points) : 0;
-    const h = d.home;
-    this.home = h && [h.x, h.y, h.z].every(Number.isFinite) ? { x: h.x, y: h.y, z: h.z } : null;
+    this.home = pointOf(d.home);
     this.visits = Number.isFinite(d.visits) && d.visits > 0 ? Math.floor(d.visits) : 0;
     const c = d.chain;
     this.chain = { step: Number.isInteger(c?.step) && c.step >= 0 ? c.step : 0, count: {} };
@@ -104,4 +103,13 @@ export class Magic {
     this.given = strs(d.given);
     this.taught = strs(d.taught);
   }
+}
+
+/** A point { x, y, z } with its inside point if it has one; null if it is not a point. */
+function pointOf(h) {
+  const p = (q) => (q && [q.x, q.y, q.z].every(Number.isFinite) ? { x: q.x, y: q.y, z: q.z } : null);
+  const door = p(h);
+  if (!door) return null;
+  const inside = p(h.inside);
+  return inside ? { ...door, inside } : door;
 }
