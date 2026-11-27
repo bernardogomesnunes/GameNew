@@ -73,6 +73,24 @@ export const SETTLERS = {
 };
 
 /**
+ * WORK-3: the trades a villager has and the producing buildings each one works.
+ * A building not listed here (market, town hall, tavern, temple) takes anyone.
+ * Fields, ranches and the village are the farmer's; the forest is the
+ * woodworker's; quarries, mines and the kiln are the engineer's.
+ */
+export const TRADES = {
+  farmer: { name: 'Farmer', buildings: ['farm', 'village', 'pen'] },
+  woodworker: { name: 'Woodworker', buildings: ['forest'] },
+  engineer: { name: 'Engineer', buildings: ['quarry', 'mine', 'kiln'] },
+};
+export const TRADE_IDS = Object.keys(TRADES);
+
+/** The trade whose buildings include `type`, or null when anyone may work it. */
+export function tradeFor(type) {
+  return TRADE_IDS.find((t) => TRADES[t].buildings.includes(type)) ?? null;
+}
+
+/**
  * Names, so they read as people rather than units.
  *
  * Short, plain and from no particular place — a settler called "Villager 3" is
