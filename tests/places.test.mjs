@@ -6,7 +6,7 @@ import { landmarksFor, PLACE_NAMES } from '../src/world/landmarks.js';
 import { LOOT, lootFor } from '../src/duilt/Loot.js';
 import { NEWS } from '../src/config/wanderers.js';
 import { DuiltGame } from '../src/duilt/DuiltGame.js';
-import { ITEMS_BY_ID, isFood } from '../src/config/items.js';
+import { ITEMS_BY_ID, isFood, ANY_FRUIT } from '../src/config/items.js';
 import { isChest } from '../src/config/blocks.js';
 
 /**
@@ -91,7 +91,7 @@ const KINDS = ['ruin', 'ruined_temple', 'mine', 'monument'];
   ok('weapons', all.some((id) => ITEMS_BY_ID.get(id)?.damage >= 6));
   ok('food', all.some((id) => isFood(id)));
   ok('and the new drinks', ['beer', 'kombucha', 'coffee'].every((id) => all.includes(id)));
-  ok('every item real', all.every((id) => ITEMS_BY_ID.has(id)));
+  ok('every item real', all.every((id) => id === ANY_FRUIT || ITEMS_BY_ID.has(id)));
   ok('a ring ore: super rare', KINDS.every((k) => LOOT[k].ring > 0 && LOOT[k].ring <= 0.12));
   let rings = 0;
   for (let i = 0; i < 2000; i++) { const got = lootFor('ruin', i * 7, 40, i * 13, 99); if (got.sunstone || got.nightstone) rings++; }

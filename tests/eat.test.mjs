@@ -25,11 +25,11 @@ globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
   const { world } = generateDuiltWorld({ sizeX: 128, sizeZ: 128, height: 64, seed: 7 });
   const d = new DuiltGame({ world, scene, bus: null });
   d.hunger.value = 50; // hungry enough that eating isn't refused as wasteful
-  d.inventory.add('fruit', 3);
+  d.inventory.add('apple', 3);
 
-  const before = d.inventory.countOf('fruit');
-  const result = d.eat('fruit'); // exactly what Game.js's eatSelected passes
-  ok('eating the selected item takes one from the bag', d.inventory.countOf('fruit') === before - 1);
+  const before = d.inventory.countOf('apple');
+  const result = d.eat('apple'); // exactly what Game.js's eatSelected passes
+  ok('eating the selected item takes one from the bag', d.inventory.countOf('apple') === before - 1);
   ok('and restores hunger', result.ok && result.restored > 0);
 }
 
@@ -47,9 +47,9 @@ globalThis.window ??= { addEventListener() {}, removeEventListener() {} };
 
 {
   const inv = new Inventory();
-  inv.add('fruit', 3);
-  ok('throwing takes one from the bag', inv.remove('fruit', 1) === 1 && inv.countOf('fruit') === 2);
-  ok('with none left, throwing takes nothing', new Inventory().remove('fruit', 1) === 0);
+  inv.add('apple', 3);
+  ok('throwing takes one from the bag', inv.remove('apple', 1) === 1 && inv.countOf('apple') === 2);
+  ok('with none left, throwing takes nothing', new Inventory().remove('apple', 1) === 0);
 }
 
 // --- wired into Break/Place, the same way the bucket is ----------------------
@@ -58,7 +58,7 @@ const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + 
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 
 ok('fruit and vegetables take over Break, like the bucket does',
-  /BREAK_OVERRIDE = \{ bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected'[, }]/.test(game));
+  /BREAK_OVERRIDE = \{ bucket: 'fillBucket', apple: 'eatSelected', vegetables: 'eatSelected'[, }]/.test(game));
 ok('and so does any other food — meat, eggs, milk — without listing each one',
   /BREAK_OVERRIDE\[this\.selectedItemId\] \?\? \(isFood\(this\.selectedItemId\) \? 'eatSelected' : null\)/.test(game)
   && /PLACE_OVERRIDE\[this\.selectedItemId\] \?\? \(isFood\(this\.selectedItemId\) \? 'throwSelected' : null\)/.test(game)
@@ -66,11 +66,11 @@ ok('and so does any other food — meat, eggs, milk — without listing each one
 ok('eatSelected calls DuiltGame\'s own eat() with whatever is selected',
   /eatSelected\(\)[\s\S]{0,200}this\.duilt\.eat\(this\.selectedItemId\)/.test(game));
 ok('and food takes over Place too, throwing it away instead of building',
-  /PLACE_OVERRIDE = \{[\s\S]{0,100}fruit: 'throwSelected', vegetables: 'throwSelected'[, }]/.test(game));
+  /PLACE_OVERRIDE = \{[\s\S]{0,100}apple: 'throwSelected', vegetables: 'throwSelected'[, }]/.test(game));
 ok('throwSelected removes one unit of whatever is selected',
   /throwSelected\(\)[\s\S]{0,200}this\.duilt\.inventory\.remove\(id, 1\)/.test(game));
 ok('and food is a selectable hotbar slot, with its own hint',
-  /fruit: 'Break to eat'/.test(ui) && /vegetables: 'Break to eat'/.test(ui));
+  /apple: 'Break to eat'/.test(ui) && /vegetables: 'Break to eat'/.test(ui));
 ok('the two buttons say Eat and Throw while food is selected, not Break and Place',
   /fruit: \['Eat', 'Throw'\]/.test(ui) && /vegetables: \['Eat', 'Throw'\]/.test(ui));
 

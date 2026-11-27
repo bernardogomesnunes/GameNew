@@ -14,6 +14,7 @@ import { STRUCTURES_BY_ID } from '../config/structures.js';
 import { AIR, WATER, BLOCKS_BY_ID, logOnFace, materialOf, isFlowing, turns, turned, doorPart, doorBlock, mirrored, isChest, isCatapult, isFluid, trapdoorOnFace, slabOnFace, slabMerge, panelOnFace, stationOf, pairPart, pairOther, isPainting, CHISELLED, STORAGE_CONTROLLER, STORAGE_INTERFACE } from '../config/blocks.js';
 import { SAPLING, SAPLING_GROUND } from '../duilt/Saplings.js';
 import { mushyOf } from '../duilt/MushyLogs.js';
+import { plantOf, isRipeSegment, POT_BLOCK, FRUIT_PLANTS_BY_KIND, PICK_MIN, PICK_MAX } from '../config/fruitPlants.js';
 import { LOGS } from '../world/leafDecay.js';
 import { toolEffectiveness, itemName, ITEMS_BY_ID, isTool, BARE_HANDS, ITEM_FOR_BLOCK } from '../config/items.js';
 import { cropOf } from '../config/crops.js';
@@ -755,6 +756,8 @@ export function placeBlock() {
   // A bed or a tent: one thing in two blocks (blocks.js PAIRS).
   const pair = pairPart(held);
   const crop = cropOf(held);
+  // FRUIT-3: a fruit seed goes in a Plant Pot and nowhere else.
+  const potSeed = plantOf(held)?.segment === 'sprout';
   // Pointing at water, the block goes into it rather than on top of it:
   // that's how a pond is filled in, a block at a time (asked for directly:
   // "Should be able to place blocks on water, and remove it this way").
@@ -770,7 +773,8 @@ export function placeBlock() {
     // A seed goes in farmland and nowhere else; a sapling in the ground.
     if (crop && this.world.getBlock(t.x, t.y - 1, t.z) !== FARMLAND) continue;
     if (held === SAPLING && !SAPLING_GROUND.has(this.world.getBlock(t.x, t.y - 1, t.z))) continue;
-    if (this.blockOverlapsPlayerAABB(t) && !crop) continue;
+    if (potSeed && this.world.getBlock(t.x, t.y - 1, t.z) !== POT_BLOCK) continue;
+    if (this.blockOverlapsPlayerAABB(t) && !crop && !potSeed) continue;
     const prev = this.world.getBlock(t.x, t.y, t.z);
     if (prev === next) continue;
     if (door) {
@@ -806,6 +810,10 @@ export function placeBlock() {
     this.ui.toast({ kind: 'xp', title: 'Saplings go in the ground', body: 'Plant it on grass or dirt' });
     return;
   }
+  if (potSeed && !changes.length) {
+    this.ui.toast({ kind: 'xp', title: 'Fruit seeds go in a pot', body: 'Put down a Plant Pot and plant on top of it' });
+    return;
+  }
   if (crop && !changes.length) {
     this.ui.toast({ kind: 'xp', title: 'Seeds go in farmland', body: 'Put down farmland and plant on top of it' });
     return;
@@ -827,6 +835,85 @@ export function mushyHint(hit) {
   const left = this.duilt.mushyLogs.daysLeft(hit.x, hit.y, hit.z, this.duilt.days);
   if (left == null) return `${name} · break it to take it back`;
   return left > 1 ? `${name} · mushrooms in ${left} days` : `${name} · mushrooms by tomorrow`;
+}
+
+/**
+ * FRUIT-4: what breaking does around a fruit plant in a pot. A hit on the
+ * upper cells of a grown plant is never a break: it picks the fruit if ripe,
+ * and leaves the plant standing. Taking away the pot, or the plant's base (or
+ * its sprout or young form), takes the whole plant, cell by cell.
+ */
+export function withPlants(changes) {
+  const dups = (list, x, y, z) => list.some((o) => o.x === x && o.y === y && o.z === z);
+  const out = [];
+  const extra = [];
+  const pots = changes.filter((c) => c.prev === POT_BLOCK && c.next !== POT_BLOCK);
+  for (const c of changes) {
+    const p = plantOf(c.prev);
+    if (!p || !this.duilt) { out.push(c); continue; }
+    const potGoes = pots.some((o) => o.x === c.x && o.z === c.z && o.y === c.y - 1)
+      || changes.some((o) => o.x === c.x && o.z === c.z && o.y < c.y && o.y >= c.y - 4 && plantOf(o.prev) && !plantOf(o.next));
+    const wholeThing = ['sprout', 'young', 'base'].includes(p.segment);
+    if (c.next === AIR && !wholeThing && !potGoes) {
+      this.pickFruitPlant(c.x, c.y, c.z);
+      continue;
+    }
+    out.push(c);
+  }
+  // Whatever the plant stood on or in goes: every cell of its column above.
+  for (const c of out) {
+    const takes = (c.prev === POT_BLOCK && c.next !== POT_BLOCK) || (plantOf(c.prev) && !plantOf(c.next));
+    if (!takes) continue;
+    for (let y = c.y + 1; plantOf(this.world.getBlock(c.x, y, c.z)); y++) {
+      if (dups(out, c.x, y, c.z) || dups(extra, c.x, y, c.z)) continue;
+      extra.push({ x: c.x, y, z: c.z, prev: this.world.getBlock(c.x, y, c.z), next: AIR });
+    }
+  }
+  return extra.length ? [...out, ...extra] : out;
+}
+
+/**
+ * Hitting a fruit plant: picks 2 to 4 fruit if it is ripe, and it bears again
+ * in 1 to 2 game days. Not ripe, it says how long.
+ */
+export function pickFruitPlant(x, y, z) {
+  const base = this.duilt.fruitPlants.baseOf(this.world, x, y, z);
+  const rec = base && this.duilt.fruitPlants.get(base.x, base.y, base.z);
+  if (!rec) return false;
+  const today = this.duilt.days;
+  const spec = FRUIT_PLANTS_BY_KIND.get(rec.kind);
+  if (this.duilt.fruitPlants.stageOn(rec, today) !== 'grown' || !this.duilt.fruitPlants.ripeOn(rec, today)) {
+    const now = performance.now();
+    if (!this.plantHintAt || now - this.plantHintAt > 1500) {
+      this.plantHintAt = now;
+      this.ui?.toast({ kind: 'xp', title: `${spec.name} is not ripe`, body: this.fruitPlantHint({ x, y, z, block: this.world.getBlock(x, y, z) }) });
+    }
+    return false;
+  }
+  const rand = this.duilt.rand ? () => this.duilt.rand() : Math.random;
+  const n = PICK_MIN + Math.floor(rand() * (PICK_MAX - PICK_MIN + 1));
+  this.duilt.fruitPlants.markPicked(rec, today, rand);
+  const changes = this.duilt.fruitPlants.grow(this.world, today);
+  if (changes.length) this.remeshDirty?.();
+  const gained = this.duilt.collect({ [spec.fruit]: n });
+  const got = Object.values(gained).reduce((a, b) => a + b, 0);
+  this.ui?.toast({ kind: 'xp', title: `Picked ${got || n} ${itemName(spec.fruit).toLowerCase()}`, body: `The ${spec.name.toLowerCase()} bears again in ${rec.regrow} ${rec.regrow > 1 ? 'days' : 'day'}` });
+  return true;
+}
+
+/** What a fruit plant under the crosshair says: how long until it is ripe. */
+export function fruitPlantHint(hit) {
+  const p = plantOf(hit.block);
+  const spec = p && FRUIT_PLANTS_BY_KIND.get(p.kind);
+  if (!spec) return null;
+  if (isRipeSegment(p.segment)) return `${spec.name} · ripe: hit it to pick the fruit`;
+  const base = this.duilt.fruitPlants.baseOf(this.world, hit.x, hit.y, hit.z);
+  const rec = base && this.duilt.fruitPlants.get(base.x, base.y, base.z);
+  if (!rec) return `${spec.name} · break it to take it back`;
+  if (rec.blocked) return `${spec.name} · needs 4 blocks of room above its pot`;
+  const left = this.duilt.fruitPlants.daysLeft(rec, this.duilt.days);
+  if (rec.pickedAt != null && left <= 0) return `${spec.name} · fruit by tomorrow`;
+  return left > 1 ? `${spec.name} · fruit in ${left} days` : `${spec.name} · fruit by tomorrow`;
 }
 
 /** What a sapling under the crosshair says: how long until it's a tree. */
@@ -923,7 +1010,7 @@ export function applyChanges(changes, { viaSymmetry = false, chargeResources = t
     catch{this.ui.toast({kind:'xp',title:'Wait for the host world to finish loading'});}
     return false;
   }
-  changes = this.withUprooted(this.withBedHalves(this.withDoorHalves(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z)))));
+  changes = this.withUprooted(this.withBedHalves(this.withDoorHalves(this.withPlants(changes.filter((c) => !this.world.isIndestructible(c.x, c.y, c.z))))));
   if (!changes.length) return false;
 
   // Duilt has its own economy: the border says where, the bag says whether.
@@ -999,6 +1086,8 @@ export function applyChanges(changes, { viaSymmetry = false, chargeResources = t
       if (TURFY.has(c.prev) || TURFY.has(c.next) || c.next === AIR) this.duilt.turf.consider(this.world, c.x, c.y, c.z, this.duilt.days, this.turfSkip());
       if (c.next === SAPLING && c.prev !== SAPLING) this.duilt.saplings.plant(c.x, c.y, c.z, this.duilt.days);
       else if (c.prev === SAPLING && c.next !== SAPLING) this.duilt.saplings.remove(c.x, c.y, c.z);
+      // FRUIT-4: a seed put in a pot is sown from today.
+      if (plantOf(c.next)?.segment === 'sprout' && !plantOf(c.prev)) this.duilt.fruitPlants.plant(c.x, c.y, c.z, plantOf(c.next).kind, this.duilt.days);
       // PLAY-15: a Mushy Log counts its ten days from the day it went in.
       // Removal is done by onBlocksBroken's take, so the harvest still has the record.
       if (mushyOf(c.next)?.stage === 0 && !mushyOf(c.prev)) this.duilt.mushyLogs.plant(c.x, c.y, c.z, this.duilt.days, mushyOf(c.next).kind);

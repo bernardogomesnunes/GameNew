@@ -32,7 +32,7 @@ ok('Sky and Dark with Shield Drill: 240, 280', P('swordsman', 'shield_drill', 'a
 // Prices.
 const bag = () => {
   const g = new DuiltGame({ world: new World({ sizeX: 16, sizeZ: 16, height: 16 }), scene: new THREE.Scene(), bus: null });
-  g.inventory.add('fruit', 20); g.inventory.add('sword_stone', 1);
+  g.inventory.add('apple', 20); g.inventory.add('sword_stone', 1);
   return g;
 };
 {

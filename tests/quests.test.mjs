@@ -28,7 +28,7 @@ for (const s of STRUCTURES) {
   for (const t of s.tiers ?? []) for (const id of Object.keys(t.produces ?? {})) seen(id, s.age);
 }
 for (const m of MOBS) for (const id of Object.keys(m.drops ?? {})) seen(id, 1);
-seen('fruit', 1);
+seen('apple', 1);
 seen('fireflies', earliest.get('jar'));                    // caught at night, in a jar
 const KEYS = new Set(['id', 'age', 'from', 'title', 'ask', 'needs', 'reward', 'thanks']);
 
@@ -73,18 +73,18 @@ ok('Age 1 shows Age 1 quests and no later ones', d.questBoard().every((r) => r.q
 ok('not ready with nothing done', !row('q_fruit').ready && row('q_fruit').progress[0].have === 0);
 let r = d.handInQuest('q_fruit');
 ok('and refuses to be handed in early, saying why', !r.ok && /not done/i.test(r.reason));
-d.inventory.add('fruit', 6);
+d.inventory.add('apple', 6);
 ok('ready once the fruit is in the bag', row('q_fruit').ready);
 r = d.handInQuest('q_fruit');
-ok('handed in: the fruit goes, the seeds come', r.ok && d.inventory.countOf('fruit') === 0 && d.inventory.countOf('seeds_lettuce') === 2 && d.inventory.countOf('seeds_cabbage') === 2);
+ok('handed in: the fruit goes, the seeds come', r.ok && d.inventory.countOf('apple') === 0 && d.inventory.countOf('seeds_lettuce') === 2 && d.inventory.countOf('seeds_cabbage') === 2);
 ok('done, and can\'t be handed in twice', row('q_fruit').done && !d.handInQuest('q_fruit').ok);
 
 // A full bag keeps what it had.
 const full = world();
 for (let i = 0; i < 40; i++) full.inventory.slots[i] = { id: 'dirt', count: 999 };
-full.inventory.slots[0] = { id: 'fruit', count: 7 };  // one left over, so its slot stays full
+full.inventory.slots[0] = { id: 'apple', count: 7 };  // one left over, so its slot stays full
 r = full.handInQuest('q_fruit');
-ok('a bag too full for the reward: nothing taken, and it says why', !r.ok && /full/i.test(r.reason) && full.inventory.countOf('fruit') === 7);
+ok('a bag too full for the reward: nothing taken, and it says why', !r.ok && /full/i.test(r.reason) && full.inventory.countOf('apple') === 7);
 
 // Counts run from when a quest opened.
 const later = world({ age: 2 });

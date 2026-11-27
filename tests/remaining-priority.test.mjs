@@ -98,7 +98,7 @@ await check('granary stores retain their intentionally large crop counts', () =>
   const p = payload();
   p.duilt = { structures: { structures: [{ id:1, type:'granary', tier:0,
     region:{minX:0,maxX:1,minY:1,maxY:2,minZ:0,maxZ:1},
-    store:{slots:[{id:'fruit',count:1000000000}]} }] } };
+    store:{slots:[{id:'apple',count:1000000000}]} }] } };
   assert.equal(parseWorldPayload(JSON.stringify(p)).duilt.structures.structures[0].store.slots[0].count, 1000000000);
 });
 await check('oversized selected files are refused before reading', async () => {
