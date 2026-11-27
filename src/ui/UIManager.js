@@ -3128,6 +3128,12 @@ export class UIManager {
     this.duiltUI?.showBuilding(structure, actions);
   }
 
+  /** WIZ-3: the wizard's panel: Talk, Shop, Quests and Recipes. */
+  openWizard() {
+    this.openPanel('panel-wizard');
+    this.duiltUI?.showWizard();
+  }
+
   /** A market's trader, and what they sell. */
   openTrader(person) {
     this.openPanel('panel-trade');

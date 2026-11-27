@@ -4,7 +4,7 @@
  * everybody — settlers, wanderers, guards, kings, your soldiers and your army
  * — from the one model.
  *
- *   hat       'crown', 'helm', 'hood' or 'cap'; none shows their hair
+ *   hat       'crown', 'helm', 'hood', 'cap' or 'wizard' (a tall pointed hat); none shows their hair
  *   hatColour the hat's colour; without it, the person's own `helm`
  *   visor     a dark slit across a helm's face
  *   plume     a plume on top, this colour
@@ -30,6 +30,7 @@ export const OUTFITS = {
   sky_king: { hat: 'crown', cape: 0x3a5aa8, beard: 0xece6d8, gear: 'sword', gearColour: 0xe8c04f },
   // Out in the world.
   bandit: { hat: 'hood', hatColour: 0x2f2925, gear: 'sword' },
+  wizard: { hat: 'wizard', hatColour: 0x3e2a6b, cape: 0x4a3578, beard: 0xe6e2da, gear: 'staff' }, // WIZ-2
   hermit: { hat: 'hood', hatColour: 0x6b6355, beard: 0xd9d4c8, gear: 'staff' },
   explorer: { hat: 'cap', hatColour: 0x7a5a3a, gear: 'staff' },
   messenger: { hat: 'cap', hatColour: 0x2f4f7a },

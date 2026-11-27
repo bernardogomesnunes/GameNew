@@ -58,6 +58,8 @@ import { Trains, CAR_SLOTS, PART_LENGTH } from '../world/Trains.js';
 // PLAY-11: the Factory.
 import { endingFor } from '../config/lore.js';
 import { factoryMachines } from '../config/structures.js';
+import { Magic } from './Magic.js'; // WIZ-4
+import { HUT } from '../config/magic.js';
 import { runLines, cleanLines, factoryRecipes, isLineRecipe, maxLines, lineDaily, MACHINE_NAMES } from '../structures/Factory.js';
 // PLAY-11 end
 
@@ -208,6 +210,8 @@ export class DuiltGame {
     this.spawn = null;
     // Drinks going (playtest, P5): { haste | strength | speed: seconds left }.
     this.boosts = {};
+    // WIZ-4: Magic points and level; off until the wizard arrives.
+    this.magic = new Magic();
     // Places you've found out in the world (playtest, P4), as "kind@x,z".
     this.found = new Set();
     /** Points you marked on the map yourself: { x, z, name }. */
@@ -1604,6 +1608,7 @@ export class DuiltGame {
       this.dehydrators.prune((key) => this.spotStands(key, 'dehydrator')); // PLAY-16
       this.cauldrons.prune((key) => this.spotStands(key, 'cauldron')); // PLAY-19
       this.handWork.prune((id) => this.structures.list().some((x) => x.id === id)); // WORK-2
+      this.checkWizard(); // WIZ-2
     }
 
     const now = Date.now();
@@ -2824,6 +2829,20 @@ export class DuiltGame {
     return Object.values(this.worn).some((w) => w && ITEMS_BY_ID.get(w.id)?.upgrade === key);
   }
 
+  /**
+   * WIZ-2: the wizard moves in once a Wizard's Hut stands. Magic starts then,
+   * with his home at the hut. Called every couple of seconds. Returns whether he just arrived.
+   */
+  checkWizard() {
+    if (this.magic.active) return false;
+    const hut = this.structures.list().find((s) => s.type === HUT && s.valid);
+    if (!hut) return false;
+    const spots = wizardSpots(this.world, hut.region);
+    const arrived = this.magic.arrive({ ...spots.door, inside: spots.inside });
+    if (arrived) this.bus?.emit('wizard:arrived', { home: this.magic.home });
+    return arrived;
+  }
+
   /** Whether a drink's boost is going: 'haste', 'strength' or 'speed'. */
   boosted(name) {
     return (this.boosts[name] ?? 0) > 0;
@@ -2891,6 +2910,7 @@ export class DuiltGame {
       guardian: this.guardian?.toJSON() ?? null,
       spawn: this.spawn,
       boosts: { ...this.boosts },
+      magic: this.magic.toJSON() ?? undefined, // WIZ-4
       found: [...this.found],
       pins: this.pins.map((p) => ({ ...p })),
       emergingPlaces: emergingState(this.emergingPlaces),
@@ -3010,6 +3030,7 @@ export class DuiltGame {
     this.tradedWith = new Set(Array.isArray(data.tradedWith) ? data.tradedWith.filter((k) => TRADERS_BY_ID.has(k)) : []);
     this.questBoard();
     this.heard = new Set(Array.isArray(data.heard) ? data.heard.filter((k) => TALES_BY_ID.has(k)) : []);
+    this.magic.loadJSON(data.magic); // WIZ-4: an old save has none, and magic stays off
     this.boosts = {};
     for (const [name, left] of Object.entries(data.boosts ?? {})) if (BOOSTS[name] && Number.isFinite(left) && left > 0) this.boosts[name] = left;
     const gd = data.guardian;
@@ -3117,6 +3138,25 @@ export class DuiltGame {
 export const WORK_GRACE_DAYS = 3;
 
 export { ITEMS_BY_ID };
+
+/**
+ * Where the wizard stands: at the hut's door by day, inside by night. Finds a
+ * door block in the region and takes the open cell on its far side from the
+ * centre as outside; with no door found, the middle of the front edge.
+ */
+export function wizardSpots(world, r) {
+  const cx = (r.minX + r.maxX) / 2 + 0.5, cz = (r.minZ + r.maxZ) / 2 + 0.5;
+  const inside = { x: cx, y: r.minY + 1, z: cz };
+  const open = (x, y, z) => world.getBlock(x, y, z) === 0 && world.getBlock(x, y + 1, z) === 0;
+  for (let x = r.minX; x <= r.maxX; x++) for (let y = r.minY; y <= r.maxY; y++) for (let z = r.minZ; z <= r.maxZ; z++) {
+    const b = world.getBlock(x, y, z);
+    if (b < 69 || b > 84) continue;
+    const outs = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => ({ x: x + dx, z: z + dz }))
+      .filter((c) => open(c.x, y, c.z)).sort((a, b2) => Math.hypot(b2.x + 0.5 - cx, b2.z + 0.5 - cz) - Math.hypot(a.x + 0.5 - cx, a.z + 0.5 - cz));
+    if (outs.length) return { door: { x: outs[0].x + 0.5, y, z: outs[0].z + 0.5 }, inside };
+  }
+  return { door: { x: cx, y: r.minY, z: r.minZ - 0.5 }, inside };
+}
 
 function inRegion(r, x, y, z) {
   return x >= r.minX && x <= r.maxX && y >= r.minY && y <= r.maxY && z >= r.minZ && z <= r.maxZ;
