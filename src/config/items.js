@@ -4,6 +4,7 @@ import { FRUIT_PLANTS, POT_BLOCK, plantBlock } from './fruitPlants.js';
 import { ARMOUR_PIECES, BACKPACKS, SHIELDS } from './armour.js';
 import { tieredItems } from './tiers.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
+import { POTIONS } from './potions.js';
 
 /**
  * Item registry for Duilt.
@@ -596,6 +597,9 @@ export const ITEMS = [
     madeBy: 'Given by the wizard for his fourth quest. Place it and brew the potions he teaches' },
   { id: 'moonwater', name: 'Moonwater', kind: 'refined', stackTo: STACK_GOODS, color: 0x9fc8ff, glyph: 'flask',
     madeBy: 'Water, a pale mushroom and leaves, brewed in a Magic Cauldron. The base of the wizard\'s potions' },
+  // POT-1: the potions, one drink each, lasting `boostSeconds` at Magic level 1.
+  ...POTIONS.map((p) => ({ id: `potion_${p.id}`, name: `${p.name} Potion`, kind: 'drink', stackTo: 10, color: p.color, glyph: 'flask', boost: p.boost, boostSeconds: p.seconds,
+    madeBy: `Brewed in a Magic Cauldron once the wizard has taught it. ${p.says}, for ${Math.round(p.seconds / 60 * 10) / 10} minutes (longer at higher Magic levels)` })),
   { id: 'training_target', name: 'Training Target', kind: 'refined', stackTo: 10, color: 0x6f8fd9, glyph: 'target', block: 620,
     madeBy: 'Made at a workbench from planks and string. Hit it with the wand for Magic points; the wizard puts three by his hut' },
   { id: 'hunters_stew', name: "Hunter's Stew", kind: 'food', stackTo: STACK_FOOD, color: 0x8a5a2a, glyph: 'bowl', feeds: 50, madeBy: 'Meat, carrot, potato and dried pale mushroom, simmered in a Cauldron' },

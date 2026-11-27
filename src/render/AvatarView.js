@@ -136,13 +136,26 @@ export class AvatarView {
     this.blocked = 1;
   }
 
+  /** POT-4: see-through while invisible. */
+  setGhost(on) {
+    if (this._ghost === on) return;
+    this._ghost = on;
+    for (const m of [...Object.values(this.mats), ...Object.values(this.armourMats)]) {
+      m.transparent = on;
+      m.opacity = on ? 0.28 : 1;
+      m.depthWrite = !on;
+      m.needsUpdate = true;
+    }
+  }
+
   /**
    * Brings the figure in line with the player: where, which way, how its
    * limbs are moving, what it's wearing and holding. `draw` (0..1) is how
    * far a bow is drawn.
    */
-  update(dt, player, { look, worn = {}, held = {}, visible, draw = 0, lie = null }) {
+  update(dt, player, { look, worn = {}, held = {}, visible, draw = 0, lie = null, ghost = false }) {
     this.group.visible = visible;
+    this.setGhost(ghost);
     if (!visible) { this._last = null; return; }
     const p = player.position;
     this.group.position.set(p.x, p.y + (player.seatHeight || 0), p.z);

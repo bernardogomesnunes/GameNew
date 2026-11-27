@@ -51,8 +51,12 @@ export class Mobs {
    * @param avoid  (x, z) => true where nothing should spawn — your own
    *               settlement, so a herd doesn't appear in the middle of it.
    */
-  constructor({ world, rand = Math.random, avoid = null, cap = CAP, onBite = null, onBreath = null, onPetBreath = null }) {
+  constructor({ world, rand = Math.random, avoid = null, cap = CAP, onBite = null, onBreath = null, onPetBreath = null, onBurn = null }) {
     this.world = world;
+    // POT-4: () => whether you are invisible: mobs ignore you until you hit them (`noticed`).
+    this.unseen = null;
+    // POT-7: (mob, drops) — a mob burnt to death.
+    this.onBurn = onBurn;
     // (dragon, damage): a dragon's fire reaching you (IMP-45).
     this.onBreath = onBreath;
     // (your dragon, its foe, damage): your pet's fire reaching what came for you.
@@ -97,6 +101,9 @@ export class Mobs {
     }
     for (const m of this.list) {
       if (m.still) continue;
+      // POT-7/8: a burn eats a hit point a second; ice holds it where it stands.
+      if (this.suffer(m, dt)) continue;
+      if (m.frozen > 0) { m.target = null; m.speed = 0; continue; }
       // Being ridden: where it goes is where you go (Game.tickRide).
       if (m.ridden) continue;
       if (MOBS_BY_ID.get(m.type)?.flies) { this.fly(m, dt, player); continue; }
@@ -198,6 +205,35 @@ export class Mobs {
     };
   }
 
+  /**
+   * POT-7 and POT-8: set a mob burning ('fire', `seconds`) or freeze it in place
+   * ('ice', `seconds`): it does not move or think until it thaws. A fresh touch
+   * starts the time again.
+   */
+  afflict(m, element, seconds) {
+    if (m.dead || m.dying > 0 || m.owned || m.still) return;
+    if (element === 'fire') { m.burning = seconds; m.burnTick = 1; }
+    else if (element === 'ice') { m.frozen = seconds; m.target = null; m.speed = 0; }
+  }
+
+  /** The afflictions running down; a burn takes 1 hit point a second. Returns whether it died of it. */
+  suffer(m, dt) {
+    if (m.frozen > 0) m.frozen = Math.max(0, m.frozen - dt);
+    if (!(m.burning > 0) || m.dying > 0) return false;
+    m.burning = Math.max(0, m.burning - dt);
+    m.burnTick -= dt;
+    if (m.burnTick > 0) return false;
+    m.burnTick += 1;
+    m.hp -= 1;
+    m.hurt = HURT_FLASH;
+    if (m.hp > 0) return false;
+    m.dying = DYING_TIME;
+    m.target = null;
+    m.speed = 0;
+    this.onBurn?.(m, this.rollDrops(MOBS_BY_ID.get(m.type)));
+    return true;
+  }
+
   /** A species picked by weight, or null for a biome nothing lives in. */
   choose(options) {
     if (!options.length) return null;
@@ -257,7 +293,8 @@ export class Mobs {
     // Never one of yours.
     m.biteIn = Math.max(0, (m.biteIn ?? 0) - dt);
     if (m.angryFor > 0) m.angryFor -= dt;
-    const attack = m.owned || player.y == null ? null
+    const unseen = !m.noticed && this.unseen?.();
+    const attack = m.owned || player.y == null || unseen ? null
       : spec.hunts && (d < spec.hunts.aggro || (m.chasing && d < spec.hunts.give)) ? spec.hunts
       : spec.charges && m.angryFor > 0 ? spec.charges : null;
     if (attack && Math.abs(m.y - player.y) < 3) {
@@ -281,7 +318,7 @@ export class Mobs {
     m.chasing = false;
 
     // Your own horse doesn't bolt from you.
-    if (spec.skittish && !m.owned && d < SCARE && m.fleeFor <= 0) m.fleeFor = FLEE_TIME * 0.6;
+    if (spec.skittish && !m.owned && !unseen && d < SCARE && m.fleeFor <= 0) m.fleeFor = FLEE_TIME * 0.6;
     if (m.fleeFor > 0) {
       m.fleeFor -= dt;
       m.grazing = false;
@@ -576,6 +613,7 @@ export class Mobs {
     const spec = MOBS_BY_ID.get(m.type);
     m.hp -= damage;
     m.hurt = HURT_FLASH;
+    m.noticed = true; // POT-4: it knows you now, invisible or not
     m.grazing = false;
     // Thrown back along the blow with a hop, by its size (bodies.js): a
     // chicken flies, a triceratops barely shifts. `power` is 1 for a fist,

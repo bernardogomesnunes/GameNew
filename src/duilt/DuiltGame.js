@@ -2737,8 +2737,10 @@ export class DuiltGame {
     if (!this.inventory.has(itemId, 1)) return { ok: false, reason: 'You have none of that.' };
     if (spec.boost) {
       this.inventory.remove(itemId, 1);
-      this.boosts[spec.boost] = BOOST_SECONDS;
-      return { ok: true, boost: spec.boost, seconds: BOOST_SECONDS };
+      // POT-1: a potion lasts its own time, longer at higher Magic levels; a beer or coffee, three minutes.
+      const seconds = spec.boostSeconds ? this.magic.potionSeconds(spec.boostSeconds) : BOOST_SECONDS;
+      this.boosts[spec.boost] = seconds;
+      return { ok: true, boost: spec.boost, seconds };
     }
     if (this.health.value >= 20) return { ok: false, reason: 'You are not hurt.' };
     this.inventory.remove(itemId, 1);

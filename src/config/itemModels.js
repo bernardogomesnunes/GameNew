@@ -1,4 +1,5 @@
 import { CROPS } from './crops.js';
+import { POTIONS } from './potions.js';
 import { FRUIT_PLANTS, potBoxes } from './fruitPlants.js';
 import { ARMOUR_PIECES, BACKPACKS, SHIELDS } from './armour.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
@@ -565,6 +566,14 @@ ITEM_MODELS.god_wand = [
   box(0.46, 0, 0.46, 0.54, 0.7, 0.54, 0xd8cbb0), box(0.44, 0.1, 0.44, 0.56, 0.16, 0.56, 0xe8c04f),
   box(0.4, 0.7, 0.4, 0.6, 0.9, 0.6, 0xc8b0ff), box(0.46, 0.66, 0.34, 0.54, 0.94, 0.66, 0xe6dcff), box(0.34, 0.76, 0.46, 0.66, 0.84, 0.54, 0xe6dcff),
 ];
+
+// POT-1: a flask in the potion's colour, its stopper and a bright surface.
+for (const p of POTIONS) {
+  ITEM_MODELS[`potion_${p.id}`] = [
+    box(0.3, 0, 0.3, 0.7, 0.42, 0.7, p.color), box(0.4, 0.42, 0.4, 0.6, 0.64, 0.6, 0xe6f0ff), box(0.42, 0.64, 0.42, 0.58, 0.74, 0.58, 0x8a6a48),
+    box(0.34, 0.34, 0.34, 0.66, 0.44, 0.66, 0xffffff),
+  ];
+}
 
 // WIZ-5: the wizard's wand (a twisted wood stick with a violet crystal), his
 // Magic Cauldron, the training target, and Moonwater in a flask.
