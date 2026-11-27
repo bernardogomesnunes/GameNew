@@ -36,7 +36,7 @@ ok('cook_meat blurb says seven times', /Seven times/.test(RECIPES.find((r) => r.
   const names = FOODS.map((x) => x.id);
   ok('soldiers eat fruit before carrots', names.indexOf('apple') < names.indexOf('vegetables'));
   ok('and no coffee beans', !names.includes('coffee_beans'));
-  ok('cheapest first: the acorn (1) leads, the meals trail in order', names[0] === 'acorn' && ITEMS_BY_ID.get(names[0]).feeds === 1 && names.slice(-4).join() === MEALS.join());
+  ok('cheapest first (not counting the acorn): a 4 leads, the meals trail in order, the acorn comes last', ITEMS_BY_ID.get(names[0]).feeds === 4 && names.at(-1) === 'acorn' && names.slice(-5, -1).join() === MEALS.join());
 }
 
 process.exit(f ? 1 : 0);

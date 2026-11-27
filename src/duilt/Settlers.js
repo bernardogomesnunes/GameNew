@@ -2,7 +2,7 @@ import { drift } from '../world/bodies.js';
 import { SETTLERS, settlerName, settlerColour } from '../config/settlers.js';
 import { JOB_FOR_BUILDING } from '../config/outfits.js';
 import { STRUCTURES_BY_ID } from '../config/structures.js';
-import { ITEMS } from '../config/items.js';
+import { ITEMS, foodOrder } from '../config/items.js';
 import {settlerFloor,settlerRoute,doorWise} from './settlerNavigation.js';
 import {doorPart} from '../config/blocks.js';
 import {isLoaded} from '../world/Mobs.js';
@@ -10,7 +10,7 @@ import { MOOD, MOOD_DAY } from '../config/mood.js'; // PLAY-13
 import { newMood, loadMood, step as moodStep, shouldLeave, bandRank } from './Mood.js'; // PLAY-13
 
 /** Everything edible, least nourishing first — what settlers work down through. */
-const FOODS = ITEMS.filter((i) => i.kind === 'food').sort((a, b) => (a.feeds ?? 0) - (b.feeds ?? 0));
+const FOODS = ITEMS.filter((i) => i.kind === 'food').sort(foodOrder);
 
 /**
  * The population: who has moved in, where they sleep, and what they work on.
@@ -133,9 +133,13 @@ export class Settlers {
    * for the cheapest food in the first place that has any, or null.
    */
   nextMeal() {
-    for (const from of [...(this.stores?.() ?? []), this.inventory]) {
-      const food = from && this.larder(from)[0];
-      if (food) return { from, food };
+    const places = [...(this.stores?.() ?? []), this.inventory];
+    // A last-resort food (the acorn) only when no place has anything else.
+    for (const lastResort of [false, true]) {
+      for (const from of places) {
+        const food = from && this.larder(from).find((i) => !!i.lastResort === lastResort);
+        if (food) return { from, food };
+      }
     }
     return null;
   }
