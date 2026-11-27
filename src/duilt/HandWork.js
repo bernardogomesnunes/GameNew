@@ -12,7 +12,7 @@ import { SETTLERS } from '../config/settlers.js';
  *
  * The rest is what keeps it fair: it lasts as long as a worker, with their
  * bonus, would take to make the same number of swings' worth of items. The
- * forest is the exception on yield: each round gives at least 5 logs. Hand work is never
+ * forest is the exception on yield: each round gives at least 10 logs. Hand work is never
  * faster than a villager at that building, and it is refused while a
  * villager works there.
  */
@@ -22,9 +22,9 @@ export const MIN_REST = 5;
 
 /** Each game: the building it works, its verb, how fast the marker moves (bar lengths a second) and how wide the window is (share of the bar). */
 export const HAND_GAMES = {
-  // Owner, 27 November: "Each one should give at least 5 logs." A round with
-  // a hit gives 2 logs a hit, never fewer than 5, on top of any leaves or fruit.
-  forest: { id: 'wood', verb: 'Chop', title: 'Chop wood', tool: 'axe', speed: 0.8, width: 0.24, hint: 'Tap Chop when the marker is in the lit notch.', logs: { perHit: 2, min: 5 } },
+  // Owner, 27 November: "Each one should give at least 5 logs", then "Let's make 10". A round with
+  // a hit gives 4 logs a hit, never fewer than 10, on top of any leaves or fruit.
+  forest: { id: 'wood', verb: 'Chop', title: 'Chop wood', tool: 'axe', speed: 0.8, width: 0.24, hint: 'Tap Chop when the marker is in the lit notch.', logs: { perHit: 4, min: 10 } },
   quarry: { id: 'quarry', verb: 'Chip', title: 'Chip stone', tool: 'pickaxe', speed: 0.95, width: 0.2, hint: 'Tap Chip when the marker is on the crack.' },
   mine: { id: 'mine', verb: 'Pick', title: 'Pick ore', tool: 'pickaxe', speed: 1.05, width: 0.18, hint: 'Tap Pick when the marker is on the seam.' },
   farm: { id: 'farm', verb: 'Hoe', title: 'Work the soil', tool: 'hoe', speed: 0.7, width: 0.26, hint: 'Tap Hoe when the marker is over the row.' },

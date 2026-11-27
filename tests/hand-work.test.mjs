@@ -48,7 +48,7 @@ const secondsPerItem = (g, s) => {
     const got = Object.values(r.made).reduce((n, v) => n + v, 0);
     const after = g.inventory.slots.reduce((n, x) => n + (x?.count ?? 0), 0);
     if (name === 'forest') {
-      ok('forest: 3 hits make 6 logs, plus any leaves or fruit', r.ok && r.made.wood === 6 && after - before === got && Object.keys(r.made).every((id) => id in g.handProduces(s)));
+      ok('forest: 3 hits make 12 logs, plus any leaves or fruit', r.ok && r.made.wood === 12 && after - before === got && Object.keys(r.made).every((id) => id in g.handProduces(s)));
       ok(`forest: rests ${r.left}s, as long as 3 swings at a worker's pace`, r.left === Math.round(SWINGS * secondsPerItem(g, s)));
     } else {
       ok(`${name}: 3 hits make 3 items, all of what the building makes`, r.ok && got === 3 && after - before === 3 && Object.keys(r.made).every((id) => id in g.handProduces(s)));
@@ -70,9 +70,9 @@ const secondsPerItem = (g, s) => {
   g.handWork.tick(MIN_REST);
   ok('hits are capped at the swings', Object.values(g.handWorkRound(quarry, 99).made).reduce((n, v) => n + v, 0) === SWINGS);
   g.handWork.tick(9999);
-  ok('forest: one hit still gives 5 logs', g.handWorkRound(forest, 1).made.wood === 5);
+  ok('forest: one hit still gives 10 logs', g.handWorkRound(forest, 1).made.wood === 10);
   g.handWork.tick(9999);
-  ok('forest: two hits give 5 logs', g.handWorkRound(forest, 2).made.wood === 5);
+  ok('forest: two hits give 10 logs', g.handWorkRound(forest, 2).made.wood === 10);
   g.handWork.tick(9999);
 
   // Items follow the building's own proportions.
@@ -85,7 +85,7 @@ const secondsPerItem = (g, s) => {
   }
   // total rounds of 3 hits = 3*total items; the forest's earlier rounds were folded into the carry as well.
   const sum = Object.values(counts).reduce((n, v) => n + v, 0);
-  ok('forest: every round gives at least 5 logs, and only what the forest grows', counts.wood >= 5 * total && Object.keys(counts).every((k) => k in table));
+  ok('forest: every round gives at least 10 logs, and only what the forest grows', counts.wood >= 10 * total && Object.keys(counts).every((k) => k in table));
 
   // A villager at work: refused.
   g.settlers.people.push({ id: 1, name: 'Ana', homeId: 99, workId: quarry.id, hungry: false, band: 'content', mood: 80 });
