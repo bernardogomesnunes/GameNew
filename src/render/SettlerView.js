@@ -38,6 +38,8 @@ const FROST = new THREE.Color(0x9fe6ff), EMBER = new THREE.Color(0xff7a3a), SPAR
 
 /** A model is two blocks tall; a person here is SETTLERS.build.height. */
 const TURN = Math.PI;
+/** VIL-1: how far, as a share of a person's height, a lying body sits above the bed's surface. */
+const LIE_LIFT = 0.1;
 const SETTLER_LOOKS = 6, CITIZEN_LOOKS = 4;
 
 /**
@@ -190,6 +192,7 @@ export class SettlerView {
     this.crowds.begin();
     if (!n) { this.crowds.end(); return; }
     const { legH, bodyH, headH, width } = this;
+    const height = legH + bodyH + headH;
 
     for (let i = 0; i < n; i++) {
       const p = people[i];
@@ -227,7 +230,13 @@ export class SettlerView {
       const idle = !p.target && !(p.windup > 0 && p.winding) && !(p.strike > 0);
       const idleHead = idle ? Math.sin(now * 1.1 + (personHash(p) % 1000) * 2.399) * width * 0.07 : 0;
 
-      this._e.set(0, p.facing ?? 0, 0);
+      // VIL-1: asleep, on their back along the bed (p.lie 0..1, p.lieDir the way the head lies).
+      const lieT = p.lie > 0 && p.lieDir ? Math.min(1, p.lie) : 0, lieA = lieT * lieT * (3 - 2 * lieT);
+      const realY = p.y;
+      if (lieA > 0) p.y += lieA * LIE_LIFT * height;
+      const blend = (from, to) => from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * lieA;
+      const bedYaw = lieA > 0 ? Math.atan2(p.lieDir.x, p.lieDir.z) : 0;
+      this._e.set(-lieA * Math.PI / 2, lieA > 0 ? blend(p.facing ?? 0, bedYaw + Math.PI) : p.facing ?? 0, 0, 'YXZ');
       this._q.setFromEuler(this._e);
       const base = this._m;
 
@@ -237,7 +246,7 @@ export class SettlerView {
         mesh.setMatrixAt(i, base);
       };
       place(this.bodies, 0, legH + bodyH / 2, 0);
-      place(this.shadows, 0, 0.03, 0);
+      if (lieA > 0) this.shadows.setMatrixAt(i, NOTHING); else place(this.shadows, 0, 0.03, 0);
 
       // Their model, if it has loaded: posed, and the boxes put away. A model
       // faces -z, so it's turned round, and a turn about x is the other way.
@@ -270,7 +279,7 @@ export class SettlerView {
         st.stunned = p.stunned > 0;
         st.frozen = p.frozen > 0;
         const pose = posePerson(this._pose, st, traits);
-        this._e.set(0, (p.facing ?? 0) + TURN, 0);
+        this._e.set(lieA * Math.PI / 2, lieA > 0 ? blend((p.facing ?? 0) + TURN, bedYaw) : (p.facing ?? 0) + TURN, 0, 'YXZ');
         this._q.setFromEuler(this._e);
         // The hips sink as the legs swing out, so the feet stay on the ground.
         base.compose(this._pos.set(p.x, p.y - pose.drop * this._modelScale.y * (kit.bones[0]?.scale.y ?? 1), p.z), this._q, this._modelScale);
@@ -280,6 +289,7 @@ export class SettlerView {
         for (let k = 0; k < 4; k++) this.limbs.setMatrixAt(i * 4 + k, NOTHING);
         for (let k = 0; k < SLOTS; k++) this.parts.setMatrixAt(i * SLOTS + k, NOTHING);
         if (p.job && JOB_OUTFITS[p.job]) this.workClothes(i, crowd, kit, JOB_OUTFITS[p.job]);
+        p.y = realY;
         continue;
       }
       place(this.heads, idleHead, legH + bodyH + headH / 2, 0);
@@ -321,6 +331,7 @@ export class SettlerView {
       this.hair.setColorAt(i, this._colour);
 
       this.dressUp(i, p, who, hairHex, { limbArm: [-width * 0.64, width * 0.64], limbLeg: [-width * 0.24, width * 0.24], swing, raised, idleHead });
+      p.y = realY;
     }
 
     for (const m of this.meshes) {
