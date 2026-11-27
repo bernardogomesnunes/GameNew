@@ -41,3 +41,10 @@ const pending=awaiting.sendEditRequest([{x:3,y:1,z:3,prev:0,next:7}]);
 awaiting.dispose();await assert.rejects(pending,/closed/);
 assert.equal(awaiting.pending.size,0);assert.equal(awaiting.timers.size,0);
 console.log('PASS disconnect rejects outstanding requests and clears transfer timers');
+{
+  const { readFileSync } = await import('node:fs');
+  const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
+  const fill = ui.slice(ui.indexOf('populatePanel(id)'), ui.indexOf("if (id === 'panel-stats')"));
+  assert.match(fill, /#btn-invite-battle[\s\S]*hidden\s*=\s*!this\.game\.duilt\?\.battle/);
+  console.log('PASS the invite button shows only in a Battle world');
+}

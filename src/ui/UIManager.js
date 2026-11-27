@@ -1679,6 +1679,10 @@ export class UIManager {
       if (name) name.value = this.game.worldName || '';
       const hint = this.q('#save-hint');
       if (hint) hint.hidden = true;
+      // Only a Battle world can be shared with a friend (GameWar.openPeerBattle
+      // refuses any other), so the button shows only there.
+      const invite = this.q('#btn-invite-battle');
+      if (invite) invite.hidden = !this.game.duilt?.battle;
       // Always back at the index: reopening the menu and landing in whatever
       // section you left is a small mystery every time.
       this.showMenuSection(null);
