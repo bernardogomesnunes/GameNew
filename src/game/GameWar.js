@@ -862,6 +862,7 @@ export function tickDefence(dt) {
   const enemies = this.wanderers.list.filter((p) => WANDERERS[p.kind].hp && !p.dead && !p.done && (p.war || p.raider || p.angry));
   // Soldiers who went without their meal fight weaker (Defenders.tick).
   d.defenders.hungry = Math.min(d.settlers.soldiersHungry ?? 0, d.settlers.soldiers ?? 0);
+  d.defenders.dark = !!d.settlers.dark; // VIL-1: soldiers sleep in their barracks
   d.defenders.tick(dt, enemies, {
     strike: (e, damage, by) => this.defenderHits(e, damage, by),
     shot: (e, damage, by) => this.defenderHits(e, damage, by),
