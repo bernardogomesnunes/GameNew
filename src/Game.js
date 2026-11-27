@@ -2187,7 +2187,7 @@ export class Game {
   /** The next line of a conversation (config/talk.js), in a speech bubble. */
   talkTo({ who, person }) {
     // VIL-2: holding what a villager asked for, Place gives it to them.
-    if (who === 'settler' && this.giveToVillager(person)) return;
+    if (who === 'settler' && this.giveToVillager?.(person)) return;
     const me = this.player.position;
     let title = person.name, line, gift = null;
     if (who === 'messenger') {
