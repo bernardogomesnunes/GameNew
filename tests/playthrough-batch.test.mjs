@@ -50,7 +50,7 @@ console.log('PASS a torch is made from oak planks and coal, and lights');
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameInput.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
 assert.ok(/bedPart\(aimed\.block\)\) return void this\.sleep\(aimed\)/.test(game) && /this\.dayCycle\.time = s\.target/.test(game) && /target: MORNING/.test(game), 'Place on a bed sleeps to morning (PLAY-8: over ten seconds, see sleep-play8)');
-assert.ok(/id="map-coords"/.test(ui) && /You are at \$\{Math\.floor\(at\.x\)\}/.test(ui), 'the map says where you stand');
+assert.ok(/id="map-coords"/.test(ui) && /You are at x \$\{Math\.floor\(at\.x\)\}, y \$\{Math\.floor\(at\.y\)\}, z \$\{Math\.floor\(at\.z\)\}`/.test(ui), 'the map says where you stand');
 console.log('PASS a bed sleeps the night through; the map shows your coordinates');
 
 // IMP-7 (owner, 15 November): in the Past and the Future the map is the land there, read off its blocks.

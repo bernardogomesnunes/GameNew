@@ -3456,8 +3456,9 @@ export class UIManager {
     const places = era ? [] : (duilt?.foundPlaces() ?? []).filter((p) => !(p.kind === 'kingdom' && sites.some((s) => s.kind === 'kingdom')));
     drawWorldMap(canvas, gen, x, z, yaw, { radius: era ? Math.min(radius, ERA_MAP_RADIUS) : radius, home, territory, places, sites, pins: duilt?.pins ?? [], world: era ? this.game.world : null });
     // Owner, 15 November: "Map should show coordinates where I'm standing".
+    // Owner, 27 November: "the axes should be called x y z not east height south".
     const at = this.game.player.position, coords = this.q('#map-coords');
-    if (coords) coords.textContent = `You are at ${Math.floor(at.x)}, ${Math.floor(at.y)}, ${Math.floor(at.z)} (east, height, south)`;
+    if (coords) coords.textContent = `You are at x ${Math.floor(at.x)}, y ${Math.floor(at.y)}, z ${Math.floor(at.z)}`;
     // In Creative, a button to go and look at each kingdom. On the dark
     // path, the expedition: send the army ahead, or join it at its camp.
     const travel = this.q('#map-travel');
