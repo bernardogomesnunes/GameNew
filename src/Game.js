@@ -2464,10 +2464,14 @@ export class Game {
 
   // ---- the Sky Kingdom (world/skyKingdom.js) ----
 
-  /** Whether this world has the Sky Kingdom in it: the dark path — and Creative, to look at. */
+  /**
+   * Whether this world has the Sky Kingdom in it: every Duilt world. Owner,
+   * 27 November: "White ring does not have the city? Why?". The white path
+   * needs it for the Sky King's gifts (IMP-31); only the Black Ring fights it
+   * (skyHostile, the chains and the expedition check the ring themselves).
+   */
   skyOpen() {
-    const d = this.duilt;
-    return !!(d && this.world?.gen && (d.sandbox || d.ring === 'black'));
+    return !!(this.duilt && this.world?.gen);
   }
 
   /**
@@ -2481,7 +2485,7 @@ export class Game {
     const out = [];
     const stone = landmarksFor(gen).find((l) => l.kind === 'kingdom');
     if (stone && (d.sandbox || d.foundPlaces().some((p) => p.kind === 'kingdom'))) out.push({ kind: 'kingdom', name: 'Stone Kingdom', x: stone.x, z: stone.z });
-    if (this.skyOpen() && (d.sandbox || d.army.sworn)) {
+    if (this.skyOpen() && (d.sandbox || d.army.sworn || d.skyGiftDue())) {
       const s = skyAt(gen);
       out.push({ kind: 'sky', name: 'Sky Kingdom', x: s.x, z: s.z });
     }
