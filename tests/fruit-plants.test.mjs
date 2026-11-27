@@ -81,7 +81,7 @@ for (const p of FRUIT_PLANTS) {
   const g = rig();
   const base = sow(g, 'apple', 0);
   const fp = g.duilt.fruitPlants;
-  g.duilt.days = 1;
+  g.duilt.days = 4;
   fp.grow(g.world, g.duilt.days);
   const hit = { x: base.x, y: base.y + 2, z: base.z };
   let kept = g.withPlants([{ ...hit, prev: g.world.getBlock(hit.x, hit.y, hit.z), next: 0 }]);
