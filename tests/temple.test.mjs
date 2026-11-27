@@ -147,7 +147,7 @@ function shrine() {
 {
   const offerings = RECIPES.filter((r) => r.station === 'temple' && r.output.id === 'devotion');
   ok(`offerings at the temple turn food, gold and candles into devotion (${offerings.length})`,
-    offerings.length >= 4 && ['fruit', 'gold', 'lantern'].every((id) => offerings.some((r) => r.inputs[id])));
+    offerings.length >= 4 && ['apple', 'gold', 'lantern'].every((id) => offerings.some((r) => r.inputs[id])));
   const hw = RECIPES.find((r) => r.id === 'holy_water');
   ok('a chapel blesses water', hw.station === 'temple' && hw.tier === 1 && hw.inputs.devotion);
   // PLAY-11: the temple copies are gone; the rings are forged at the forge, once a High Temple stands.
@@ -162,7 +162,7 @@ function shrine() {
 {
   const world = new World({ sizeX: 32, sizeZ: 32, height: 32 });
   const g = new DuiltGame({ world, scene: new THREE.Scene(), bus: null });
-  g.inventory.add('fruit', 12);
+  g.inventory.add('apple', 12);
   g.inventory.add('glass', 2);
   g.inventory.add('sunstone', 3); g.inventory.add('gold', 4);
   g.inventory.add('nightstone', 3); g.inventory.add('obsidian', 4);

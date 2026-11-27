@@ -84,7 +84,7 @@ function settlement() {
 
   // Villagers eat from the granary first.
   const settlers = new Settlers({ world: reg.world, structures: reg, inventory, stores: () => reg.stores().map((x) => x.store) });
-  reg.storeFor(shed).add('fruit', 5);
+  reg.storeFor(shed).add('apple', 5);
   const meal = settlers.nextMeal();
   ok('a villager\'s meal comes from the granary before the storehouse', meal?.from === reg.storeFor(granary));
 

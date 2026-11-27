@@ -15,11 +15,13 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) failed+
   const gifts = rollExplorerGifts(() => 0);
   ok('an explorer carries two gifts', gifts.length === 2);
   ok('the first is a pair of saplings', gifts[0].give.sapling === 2);
-  ok('the second comes from their pack', JSON.stringify(gifts[1].give) === JSON.stringify(EXPLORER_PACK[0]));
-  ok('every pack item is a real item', EXPLORER_PACK.every((p) => Object.keys(p).every((id) => ITEMS_BY_ID.has(id))));
+  ok('the second comes from their pack', JSON.stringify(gifts[1].give) === JSON.stringify(EXPLORER_PACK[0].give));
+  ok('every pack item is a real item', EXPLORER_PACK.every((p) => Object.keys(p.give).every((id) => ITEMS_BY_ID.has(id))));
   const a = rollExplorerGifts(() => 0.99), b = rollExplorerGifts(() => 0.99);
-  a[1].give.clay = 99;
-  ok('gifts are copies, so taking one never edits the shared pack', !('clay' in b[1].give) || b[1].give.clay !== 99);
+  a[1].give.seeds_hemp = 99;
+  ok('gifts are copies, so taking one never edits the shared pack', b[1].give.seeds_hemp !== 99);
+  ok('every pack entry has a region and a positive count', EXPLORER_PACK.every((p) => p.region && Object.values(p.give).every((n) => n > 0)));
+  ok('the pack has 22 entries (18 plus the 4 fruit seeds)', EXPLORER_PACK.length === 22);
 }
 
 // A sent explorer has them.
@@ -31,6 +33,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) failed+
   ok('an explorer sent over the country carries two gifts', p?.kind === 'explorer' && p.gifts?.length === 2);
 }
 
+// An old save: a gift with no region still gives, with the plain line.
 // Handing them over, through the game's own method.
 const game = readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8');
 const body = game.slice(game.indexOf('  explorerGift(person) {'), game.indexOf('  /** The goblin traders'));
@@ -44,7 +47,7 @@ const me = { duilt, explorerGift };
   ok('the first talk gives two saplings', bag.sapling === 2 && /sapling/.test(first) && /one more thing/.test(first));
   ok('and one gift is left', person.gifts.length === 1);
   const second = me.explorerGift(person);
-  ok('the second talk gives the pack item', bag.dark_wood === 3 && /dark log/.test(second) && !/one more/.test(second));
+  ok('the second talk gives the pack item', bag.iron_ore === 3 && /^From the northern hills: 3 iron ore\.$/.test(second) && !/one more/.test(second));
   ok('after that they have nothing more', person.gifts.length === 0 && me.explorerGift(person) === null && bag.sapling === 2);
 }
 {
@@ -54,6 +57,11 @@ const me = { duilt, explorerGift };
   ok('with a full bag the gift stays with them', /bag is full/.test(line) && person.gifts.length === 2);
   const creative = { duilt: { sandbox: true, collect: duilt.collect }, explorerGift };
   ok('in Creative nothing is handed over', creative.explorerGift({ gifts: rollExplorerGifts(() => 0) }) === null);
+}
+{
+  const old = { gifts: [{ give: { clay: 2 } }] };
+  const line = me.explorerGift(old);
+  ok('a gift saved without a region still loads and gives', /They give you 2 clay\./.test(line) && old.gifts.length === 0);
 }
 ok('talking to an explorer gives the gift', /gift = this\.explorerGift\(person\)/.test(game));
 

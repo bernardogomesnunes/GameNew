@@ -57,6 +57,7 @@ import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, bedPart, FACING_STEP, isFlowing, turns, doorPart, isChest, isLava, isLavaFlow, CHEST, isCatapult, isTrapdoor, isOpenTrapdoor, stationOf, isGate, isOpenGate, isPainting } from './config/blocks.js';
 import { SAPLING } from './duilt/Saplings.js';
 import { mushyOf } from './duilt/MushyLogs.js'; // PLAY-14..21
+import { plantOf } from './config/fruitPlants.js'; // FRUIT-4
 import { BOOSTS, COFFEE_SPEED } from './config/drinks.js';
 import { SWIFT_SPEED } from './config/upgrades.js';
 import { AvatarView } from './render/AvatarView.js';
@@ -75,7 +76,7 @@ import { CrackView } from './render/CrackView.js';
 import { LEAVES, leafHeld, orphanLeaves } from './world/leafDecay.js';
 import { talkLine } from './config/talk.js';
 import { cubeSite, cubeDesign, WAY_OUT, CUBE_SIZE } from './world/godCube.js';
-import { TOOL_FOR, itemName, BARE_HANDS } from './config/items.js';
+import { TOOL_FOR, itemName, BARE_HANDS, FRUITS } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf } from './config/crops.js';
 import { Mobs, rayBox, surfaceAt } from './world/Mobs.js';
@@ -198,7 +199,7 @@ const AUTOSAVE_INTERVAL_MS = 5 * 60_000;
 // Minimap.js's own note), so this is dead weight on a phone regardless.
 const MINIMAP_INTERVAL_MS = 500;
 // What a farm animal will follow you for. See Mobs.think.
-const LURES = new Set(['vegetables', 'fruit', ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
+const LURES = new Set(['vegetables', ...FRUITS, ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
 /** How often planted crops are brought up to the stage their age says. */
 const CROP_TICK_SECONDS = 2;
 /** How near you come to a place, past its edge, to have found it. */
@@ -803,6 +804,9 @@ export class Game {
   placedBlock(...args) { return GameBuild.placedBlock.apply(this, args); }
   placeBlock(...args) { return GameBuild.placeBlock.apply(this, args); }
   mushyHint(...args) { return GameBuild.mushyHint.apply(this, args); }
+  withPlants(...args) { return GameBuild.withPlants.apply(this, args); }
+  pickFruitPlant(...args) { return GameBuild.pickFruitPlant.apply(this, args); }
+  fruitPlantHint(...args) { return GameBuild.fruitPlantHint.apply(this, args); }
   saplingHint(...args) { return GameBuild.saplingHint.apply(this, args); }
   withUprooted(...args) { return GameBuild.withUprooted.apply(this, args); }
   withDoorHalves(...args) { return GameBuild.withDoorHalves.apply(this, args); }
@@ -2196,10 +2200,23 @@ export class Game {
     if (Math.hypot(p.x - w.x, p.z - w.z) < 8) w.facing = Math.atan2(p.x - w.x, p.z - w.z);
   }
 
+  /** VIL-2: gives the held item to a villager who asked for it. False when it is not what they want. */
+  giveToVillager(person) {
+    const d = this.duilt, item = this.selectedItemId;
+    if (!d || d.sandbox || !item || person.ask?.item !== item) return false;
+    const r = d.settlers.give(person, item);
+    if (!r.ok) { this.ui?.toast({ kind: 'xp', title: r.reason }); return true; }
+    person.facing = Math.atan2(this.player.position.x - person.x, this.player.position.z - person.z);
+    this.ui?.toast({ kind: 'talk', title: person.name, body: `“Thank you! A ${itemName(item).toLowerCase()}, just what I wanted.” (+${Math.round(r.gain)} mood)`, duration: 5000 });
+    return true;
+  }
+
   /** The next line of a conversation (config/talk.js), in a speech bubble. */
   talkTo({ who, person }) {
     // WIZ-3: the wizard has his own panel.
     if (who === 'wizard') { this.duilt.magic.visits++; return void this.ui?.openWizard(); }
+    // VIL-2: holding what a villager asked for, Place gives it to them.
+    if (who === 'settler' && this.giveToVillager?.(person)) return;
     const me = this.player.position;
     let title = person.name, line, gift = null;
     if (who === 'messenger') {
@@ -2213,6 +2230,7 @@ export class Game {
         archiveRead: !!this.duilt?.time?.futureKnown,
         job: work ? structureName(work.type).toLowerCase() : null, jobId: work?.type ?? null,
       });
+      if (who === 'settler' && person.ask) line += ` I would love ${/^[aeiou]/i.test(itemName(person.ask.item)) ? 'an' : 'a'} ${itemName(person.ask.item).toLowerCase()}. Hold one and use Place on me.`; // VIL-2
       if (who === 'explorer') { title = `${person.name}, an explorer`; gift = this.explorerGift(person); }
       if (who === 'tribe') title = `${person.name} of the tree people`;
       if (who === 'city_guard') title = `${person.name}, of the city guard`;
@@ -2241,14 +2259,15 @@ export class Game {
     const next = person.gifts?.[0];
     if (!next || !this.duilt || this.duilt.sandbox) return null;
     const gained = this.duilt.collect(next.give);
-    const words = Object.entries(gained).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}${n > 1 && !itemName(id).toLowerCase().endsWith('s') ? 's' : ''}`);
+    const words = Object.entries(gained).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}${n > 1 && !/(s|ore|clay|coal|string|leather|meat|fruit)$/.test(itemName(id).toLowerCase()) ? 's' : ''}`);
     if (!words.length) return 'They offer you something, but your bag is full.';
     // A gift only partly taken stays partly on offer.
     for (const [id, n] of Object.entries(gained)) next.give[id] -= n;
     for (const id of Object.keys(next.give)) if (next.give[id] <= 0) delete next.give[id];
     if (!Object.keys(next.give).length) person.gifts.shift();
     const left = person.gifts.length;
-    return `They give you ${words.join(' and ')}.${left ? ' They have one more thing for you.' : ''}`;
+    const from = next.region ? `From ${next.region}: ${words.join(' and ')}.` : `They give you ${words.join(' and ')}.`;
+    return `${from}${left ? ' They have one more thing for you.' : ''}`;
   }
 
   /** The goblin traders in your markets, turned to look at you when you're near. */
@@ -3644,6 +3663,12 @@ export class Game {
       const trees = grown.filter((c) => c.prev === SAPLING).length;
       this.ui?.toast({ kind: 'xp', title: trees > 1 ? `${trees} saplings have grown into trees` : 'A sapling has grown into a tree', body: 'Ten days in the ground' });
     }
+    // FRUIT-4: fruit plants in pots, through their looks.
+    const sprouted = this.duilt.fruitPlants.grow(this.world, this.duilt.days);
+    if (sprouted.length) {
+      this.remeshDirty();
+      if (sprouted.some((c) => plantOf(c.next)?.segment.endsWith('_ripe') && !plantOf(c.prev)?.segment.endsWith('_ripe'))) this.ui?.toast({ kind: 'xp', title: 'A fruit plant is ripe', body: 'Hit it to pick the fruit' });
+    }
     // PLAY-15: Mushy Logs, through their stages.
     const flushed = this.duilt.mushyLogs.grow(this.world, this.duilt.days);
     if (flushed.length) {
@@ -4482,7 +4507,8 @@ export class Game {
     // An anchor tower's chain, on the dark path: Break cuts it.
     const chainLink = hit && hit.block === CHAIN && sw && this.duilt.ring === 'black' && !this.duilt.skyFallen && chainAt(this.world.gen, hit.x, hit.y, hit.z) >= 0;
     const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit)
-      : hit && this.duilt && mushyOf(hit.block) ? this.mushyHint(hit) : null; // PLAY-15
+      : hit && this.duilt && mushyOf(hit.block) ? this.mushyHint(hit) // PLAY-15
+      : hit && this.duilt && plantOf(hit.block) ? this.fruitPlantHint(hit) : null; // FRUIT-4
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
     const swing = hit && (gate || door || chest || catapult || trapdoor || painting || mill || (lift && lift !== 'nowhere' && lift !== 'cut')

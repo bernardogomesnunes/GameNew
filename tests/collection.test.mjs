@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { BOOK, BOOK_GROUPS, MILESTONES, Collection, bookGroup } from '../src/duilt/Collection.js';
-import { ITEMS_BY_ID, ITEM_FOR_BLOCK } from '../src/config/items.js';
+import { ITEMS_BY_ID, ITEM_FOR_BLOCK, FRUITS, ANY_FRUIT } from '../src/config/items.js';
+import { LEAF_DROPS, OAK_DROPS } from '../src/duilt/DuiltGame.js';
 import { RECIPES } from '../src/config/recipes.js';
 import { BLOCKS } from '../src/config/blocks.js';
 import { TRADERS, CITY_TRADERS } from '../src/config/traders.js';
@@ -32,7 +33,9 @@ for (const l of Object.values(LOOT)) for (const [id] of l.items) source.add(id);
 for (const s of STRUCTURES) { for (const id of Object.keys(s.produces ?? {})) source.add(id); for (const t of s.tiers ?? []) for (const id of Object.keys(t.produces ?? {})) source.add(id); }
 for (const w of Object.values(WANDERERS)) for (const id of Object.keys(w.drops ?? {})) source.add(id);
 for (const m of Object.values(MOBS ?? {})) for (const id of Object.keys(m.drops ?? {})) source.add(id);
-for (const c of CROPS) { source.add(c.produce); source.add(`seeds_${c.kind}`); }
+for (const c of CROPS) { source.add(c.produce); source.add(`seeds_${c.kind}`); if (c.root) source.add(c.root); }
+for (const [id] of [...LEAF_DROPS, ...OAK_DROPS]) source.add(id);
+if (source.has(ANY_FRUIT)) for (const id of FRUITS) source.add(id);
 const orphans = BOOK.filter((i) => !source.has(i.id)).map((i) => i.id);
 ok(`every one of the ${BOOK.length} items in the book can be had (${orphans.join(', ') || 'none missing'})`, !orphans.length);
 ok('no ring (one closes the other), no upgraded piece, no crown in it', !BOOK.some((i) => i.kind === 'ring' || i.upgrade || i.id === 'collector_crown'));

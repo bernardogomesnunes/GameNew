@@ -1,4 +1,5 @@
 import { CROPS } from './crops.js';
+import { FRUIT_PLANTS, potBoxes } from './fruitPlants.js';
 import { ARMOUR_PIECES, BACKPACKS, SHIELDS } from './armour.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 import { TOOL_TIERS } from './tiers.js';
@@ -55,13 +56,50 @@ export const ITEM_MODELS = {
     box(0.43, 0.31, 0.5, 0.48, 0.38, 0.68, 0xb29a69),
   ],
   // An apple.
-  fruit: [
+  apple: [
     ...stack([
       [0.16, 0.16, 0, 0.08, 0xc24a44], [0.25, 0.25, 0.08, 0.24, 0xd4584f], [0.3, 0.3, 0.24, 0.6, 0xdc5f55],
       [0.26, 0.26, 0.6, 0.76, 0xe0746a], [0.16, 0.16, 0.76, 0.84, 0xe4857b],
     ]),
     box(0.47, 0.84, 0.47, 0.53, 1, 0.53, STEM),
     box(0.53, 0.92, 0.46, 0.72, 0.97, 0.54, LEAF),
+  ],
+  // FRUIT-1: a bunch of grapes, a raspberry, a passion fruit; an acorn.
+  grape: [
+    box(0.47, 0.8, 0.47, 0.53, 1, 0.53, STEM),
+    box(0.53, 0.88, 0.44, 0.74, 0.95, 0.56, LEAF),
+    ...stack([[0.2, 0.2, 0.52, 0.8, 0x7b4a9c], [0.14, 0.14, 0.3, 0.52, 0x6c3d8c], [0.07, 0.07, 0.12, 0.3, 0x5e3280]]),
+    box(0.2, 0.46, 0.2, 0.34, 0.62, 0.34, 0x8a58ab), box(0.66, 0.44, 0.62, 0.8, 0.6, 0.76, 0x8a58ab),
+    box(0.62, 0.5, 0.24, 0.76, 0.66, 0.38, 0x7b4a9c), box(0.24, 0.5, 0.64, 0.38, 0.66, 0.78, 0x7b4a9c),
+  ],
+  raspberry: [
+    ...stack([[0.1, 0.1, 0, 0.1, 0xa8244a], [0.2, 0.2, 0.1, 0.34, 0xc2305a], [0.25, 0.25, 0.34, 0.62, 0xd0406a], [0.17, 0.17, 0.62, 0.78, 0xdc527a]]),
+    box(0.22, 0.4, 0.4, 0.28, 0.46, 0.46, 0xe98aa4), box(0.7, 0.3, 0.52, 0.76, 0.36, 0.58, 0xe98aa4),
+    box(0.44, 0.78, 0.44, 0.56, 0.84, 0.56, 0x4e8a3a), box(0.3, 0.84, 0.46, 0.7, 0.88, 0.54, 0x4e8a3a),
+  ],
+  passion_fruit: [
+    ...stack([[0.18, 0.18, 0.04, 0.14, 0x6d3470], [0.28, 0.28, 0.14, 0.34, 0x7e3f80], [0.3, 0.3, 0.34, 0.64, 0x8a4a86], [0.22, 0.22, 0.64, 0.78, 0x965a92]]),
+    box(0.45, 0.78, 0.45, 0.55, 0.9, 0.55, 0x5f8f3e),
+    // Cut face: yellow pulp with dark seeds.
+    box(0.36, 0.5, 0.58, 0.64, 0.62, 0.62, 0xf0c64a), box(0.44, 0.54, 0.62, 0.5, 0.58, 0.64, 0x3d2a1c), box(0.52, 0.52, 0.62, 0.58, 0.56, 0.64, 0x3d2a1c),
+  ],
+  acorn: [
+    ...stack([[0.1, 0.1, 0, 0.1, 0xa87a45], [0.17, 0.17, 0.1, 0.4, 0xb98a50]]),
+    ...stack([[0.24, 0.24, 0.4, 0.58, 0x6b4a2c], [0.2, 0.2, 0.58, 0.68, 0x7d5836]]),
+    box(0.46, 0.68, 0.46, 0.54, 0.8, 0.54, STEM),
+  ],
+  // FRUIT-5: roots lie on their side, a pale body with thin hairs.
+  broccoli_root: [
+    box(0.28, 0.12, 0.4, 0.72, 0.34, 0.6, 0xb9a77c), box(0.18, 0.14, 0.44, 0.3, 0.2, 0.5, 0xa08e62),
+    box(0.7, 0.2, 0.36, 0.84, 0.26, 0.42, 0xa08e62), box(0.4, 0.34, 0.44, 0.6, 0.44, 0.56, 0x7fa85e),
+  ],
+  carrot_root: [
+    box(0.12, 0.12, 0.44, 0.3, 0.2, 0.56, 0xc27a30), box(0.3, 0.1, 0.42, 0.52, 0.28, 0.58, 0xd9a05a),
+    box(0.52, 0.12, 0.4, 0.72, 0.3, 0.6, 0xe0aa66), box(0.72, 0.14, 0.4, 0.84, 0.26, 0.6, 0xc9ad7a),
+  ],
+  lettuce_root: [
+    box(0.3, 0.1, 0.38, 0.7, 0.3, 0.62, 0xd8d2a4), box(0.2, 0.12, 0.44, 0.32, 0.2, 0.5, 0xc4bd8c),
+    box(0.68, 0.16, 0.36, 0.8, 0.22, 0.44, 0xc4bd8c), box(0.42, 0.3, 0.44, 0.58, 0.4, 0.56, 0xb6de86),
   ],
   // Carrots lie along x, tip to the back, leaves at the front.
   // A carrot stood on its tip, leaves up.
@@ -140,6 +178,15 @@ for (const c of CROPS) {
     [0.34, 0.2, 0.66, 0.5, c.crop],
   ]);
 }
+
+// FRUIT-3: fruit seed packets (the fruit on the front) and the Plant Pot.
+for (const p of FRUIT_PLANTS) {
+  ITEM_MODELS[p.seed] = packet([
+    [0.46, 0.5, 0.54, 0.62, p.leaf],
+    [0.34, 0.2, 0.66, 0.5, p.crop],
+  ]);
+}
+ITEM_MODELS.plant_pot = potBoxes();
 
 // Armour (Phase 7b): a helm, a cuirass and a pair of greaves, in each set's
 // metal (or leather) with its trim.

@@ -44,7 +44,7 @@ check('four meal recipes as designed: 40 s, 2 out, at the cauldron only', () => 
   assert.equal(RECIPES_BY_ID.get('hunters_stew').age, 2); assert.equal(RECIPES_BY_ID.get('forest_broth').age, 2);
 });
 check('every meal is food and feeds more than any raw food and more than cooked meat', () => {
-  const raw = ['fruit', 'vegetables', 'potato', 'cabbage', 'lettuce', 'pepper', 'zucchini', 'broccoli', 'raw_meat', 'egg', 'milk'];
+  const raw = ['apple', 'vegetables', 'potato', 'cabbage', 'lettuce', 'pepper', 'zucchini', 'broccoli', 'raw_meat', 'egg', 'milk'];
   const feeds = { hunters_stew: 50, forest_broth: 40, mushroom_soup: 36, mushroom_dumplings: 44 };
   for (const id of MEALS) {
     const it = ITEMS_BY_ID.get(id);
