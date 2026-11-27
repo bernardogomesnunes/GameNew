@@ -100,7 +100,8 @@ for (const r of RECIPES) {
 
 // You cannot be sent to make something before the building exists.
 // Nor at a block before the recipe that makes the block (the wood mill).
-for (const r of RECIPES.filter((x) => x.station !== 'hand')) {
+// The Magic Cauldron is the wizard's gift, not made (WIZ-5): its recipes have no provider to compare.
+for (const r of RECIPES.filter((x) => x.station !== 'hand' && x.station !== 'magic_cauldron')) {
   const block = BLOCKS.find((b) => b.station === r.station && b.stateOf == null);
   const provider = STRUCTURES.find((s) => s.station === r.station)
     ?? (block && RECIPES.find((x) => x.output.id === ITEM_FOR_BLOCK.get(block.id)));

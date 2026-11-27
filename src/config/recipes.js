@@ -1,4 +1,5 @@
 import { ARMOUR_PIECES, BACKPACKS, SHIELDS } from './armour.js';
+import { POTIONS } from './potions.js';
 import { CONTROLLER_PARTS } from './structures.js';
 import { tieredRecipes } from './tiers.js';
 import { SKILLS, MAX_LEVEL } from './skills.js';
@@ -1862,6 +1863,20 @@ RECIPES.push(
     blurb: 'Flour dumplings with pale mushroom and pepper.' },
 );
 // --- end PLAY-14..21 ---
+
+// WIZ-5: the Magic Cauldron's first brew. Potions follow (config/potions.js); a
+// recipe with `potion` is brewed only once the wizard has taught it.
+RECIPES.push(
+  { id: 'moonwater', name: 'Moonwater', station: 'magic_cauldron', age: 3, inputs: { water: 1, mushroom_pale: 1, leaves: 2 }, output: { id: 'moonwater', count: 1 }, seconds: 30,
+    blurb: 'The base of every potion.' },
+  // POT-1..8: each potion, brewed once taught (`potion`), from Moonwater and what is in the game.
+  ...POTIONS.map((p) => ({ id: `brew_${p.id}`, name: `${p.name} Potion`, station: 'magic_cauldron', age: 3, potion: p.id, inputs: p.inputs, output: { id: `potion_${p.id}`, count: 1 }, seconds: p.brew,
+    blurb: `${p.says}.` })),
+  // The wizard puts three by his hut; more can be made.
+  { id: 'training_target', name: 'Training Target', station: 'workbench', age: 3, inputs: { planks: 4, string: 1 }, output: { id: 'training_target', count: 1 },
+    blurb: 'A round target for the wand. Hits give Magic points.' },
+);
+// --- end WIZ-5 ---
 
 export const RECIPES_BY_ID = new Map(RECIPES.map((r) => [r.id, r]));
 

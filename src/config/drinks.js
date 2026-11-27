@@ -10,6 +10,8 @@
  * three together is as strong as it gets.
  */
 
+import { POTIONS } from './potions.js';
+
 /** Seconds a boost lasts once drunk. */
 export const BOOST_SECONDS = 180;
 
@@ -17,6 +19,8 @@ export const BOOSTS = {
   haste: { drink: 'beer', name: 'Beer', says: 'Quicker blows', color: '#e0a83a' },
   strength: { drink: 'kombucha', name: 'Kombucha', says: '+2 on every hit', color: '#d0705a' },
   speed: { drink: 'coffee', name: 'Coffee', says: 'Faster on your feet', color: '#8a5a3a' },
+  // POT-1: the wizard's potions, one boost each (config/potions.js).
+  ...Object.fromEntries(POTIONS.map((p) => [p.boost, { drink: `potion_${p.id}`, name: `${p.name} potion`, says: p.says, color: `#${p.color.toString(16).padStart(6, '0')}`, potion: true }])),
 };
 
 /** Beer: how long between blows, as a fraction of the usual. */
