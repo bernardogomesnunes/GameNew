@@ -19,7 +19,7 @@ export const WANDERERS = {
     speed: 1.1,
     roam: 5,
     hp: 10, flees: true, run: 3,
-    drops: { fruit: [1, 3], seeds_lettuce: [1, 2] },
+    drops: { any_fruit: [1, 3], seeds_lettuce: [1, 2] },
   },
   // The Stone Kingdom's people (Phase 7e): guards at their posts, and the
   // King on his throne. Guards stand their ground — they never run — and
@@ -210,7 +210,7 @@ export const WANDERERS = {
     standOff: 6,
     aggro: 22, run: 3, fleeBelow: -1,
     leash: 40,
-    drops: { hemp_fibre: [1, 3], fruit: [0, 2], arrow: [1, 4] },
+    drops: { hemp_fibre: [1, 3], any_fruit: [0, 2], arrow: [1, 4] },
   },
   // The gods, in their cube (world/godCube.js) — whichever one you didn't
   // choose. Huge in strength, slow, heavy blows raised where you can see
@@ -256,7 +256,7 @@ export const WANDERERS = {
     roam: 5,
     hp: 10, flees: true, run: 3.6,
     neutral: true,
-    drops: { coin: [0, 3], fruit: [0, 1] },
+    drops: { coin: [0, 3], any_fruit: [0, 1] },
   },
   // Battle's rivals (world/rivals.js, duilt/Rivals.js): their soldiers, sent
   // at you in their own colours, and the garrison that guards their city —
@@ -295,7 +295,7 @@ export const WANDERERS = {
   caravaner: {
     noun: 'a caravaner', about: 'a traveller of the dune caravans, taking a rest',
     colours: [0xc58c52, 0x9a6847, 0x6f583d], speed: 1.2, roam: 5, hp: 10, flees: true, run: 3.4, neutral: true,
-    drops: { coin: [0, 3], fruit: [0, 1] },
+    drops: { coin: [0, 3], any_fruit: [0, 1] },
   },
   moss_guard: {
     noun: 'a mossfolk guard', about: 'a guardian of the mossfolk village',
@@ -303,12 +303,12 @@ export const WANDERERS = {
     colours: [0x54784a, 0x436147], helm: 0x829c60,
     speed: 1.3, roam: 4, hp: 22, hits: 2, reach: 1.8, every: 1.25, aggro: 12, run: 3.4, fleeBelow: -1,
     garrison: true, neutral: true,
-    drops: { fruit: [1, 3], hemp_fibre: [0, 2] },
+    drops: { any_fruit: [1, 3], hemp_fibre: [0, 2] },
   },
   mossfolk: {
     noun: 'a mossfolk villager', about: 'a mossfolk villager, among the lantern trees',
     colours: [0x748c56, 0x9c8557, 0x567866], speed: 1.25, roam: 5, hp: 10, flees: true, run: 3.5, neutral: true,
-    drops: { fruit: [0, 2], seeds_cabbage: [0, 1] },
+    drops: { any_fruit: [0, 2], seeds_cabbage: [0, 1] },
   },
   // The Future's people (world/future.js), about its plaza in pale suits.
   futurian: {
@@ -457,7 +457,7 @@ export const EXPLORER_PACK = [
   { give: { copper_ore: 4 }, region: 'the red canyons' },
   { give: { gold_ore: 1 }, region: 'the far mountains' },
   { give: { coal: 5 }, region: 'the high peaks' },
-  { give: { fruit: 4 }, region: 'the orchard country' },
+  { give: { apple: 4 }, region: 'the orchard country' },
   { give: { vegetables: 4 }, region: 'the river farms' },
   { give: { cooked_meat: 3 }, region: 'the herding plains' },
   { give: { mushroom_red: 2 }, region: 'the oak forests' },

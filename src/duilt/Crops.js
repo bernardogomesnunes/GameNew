@@ -86,7 +86,8 @@ export function harvestOf(blockId) {
   const c = cropOf(blockId);
   if (!c) return null;
   if (c.stage < RIPE) return { [`seeds_${c.kind}`]: 1 };
-  return { [CROPS_BY_KIND.get(c.kind).produce]: 2, [`seeds_${c.kind}`]: 2 };
+  const spec = CROPS_BY_KIND.get(c.kind);
+  return { [spec.produce]: 2, [`seeds_${c.kind}`]: 2, ...(spec.root ? { [spec.root]: 1 } : {}) };
 }
 
 /** How many crops one farm grows at once (backlog batch 2: "up to 4 crops"). */

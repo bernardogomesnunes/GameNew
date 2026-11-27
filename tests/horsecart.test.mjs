@@ -21,7 +21,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) f++; };
 // --- the horse and the cart -----------------------------------------------------------
 const horse = MOBS_BY_ID.get('horse');
 ok('horses live wild on the plains', horse?.biomes.includes('plains') && horse.rideable && horse.skittish);
-ok('they are tamed with fruit or carrots', horse.tameWith.includes('fruit') && horse.tameWith.includes('vegetables'));
+ok('they are tamed with fruit or carrots', horse.tameWith.includes('apple') && horse.tameWith.includes('vegetables'));
 ok('there is a cart', ITEMS_BY_ID.get('cart')?.glyph === 'cart' && Array.isArray(ITEM_MODELS.cart));
 const r = RECIPES.find((x) => x.output?.id === 'cart');
 ok('made by hand in Age 3, from planks and wood', ['hand', 'workbench'].includes(r?.station) && r.age === 3 && r.inputs.planks > 0 && r.inputs.wood > 0);
@@ -34,10 +34,10 @@ const mobs = new Mobs({ world });
 const m = mobs.make(horse, origin.minX + 4, 40, origin.minZ + 4);
 mobs.list.push(m);
 
-g.inventory.add('fruit', 2);
+g.inventory.add('apple', 2);
 ok('empty-handed, it will not be tamed', !g.tameHorse(m, null).ok && !m.owned);
-ok('with fruit in hand it is yours', g.tameHorse(m, 'fruit').ok && m.owned && g.mounts.includes(m));
-ok('and that took one fruit', g.inventory.countOf('fruit') === 1);
+ok('with fruit in hand it is yours', g.tameHorse(m, 'apple').ok && m.owned && g.mounts.includes(m));
+ok('and that took one fruit', g.inventory.countOf('apple') === 1);
 ok('no cart in the bag, no cart on the horse', !g.hitchCart(m).ok && !m.cart);
 g.inventory.add('cart', 1);
 ok('with a cart it hitches', g.hitchCart(m).ok && m.cart && m.inventory.size === CART_SLOTS);

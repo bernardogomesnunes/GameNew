@@ -34,7 +34,7 @@ ok('at the King, a tap speaks to him', tap({ kingTarget: () => ({}), selectedIte
 ok('at a settler or an explorer, a tap talks — even holding a tool', tap({ talkTarget: () => ({}), selectedItemId: 'stone_pickaxe' }) === 'place/place');
 ok('holding a tool, a tap digs (nothing to put down)', tap({ selectedItemId: 'stone_pickaxe' }) === 'break/break');
 ok('bare hands, a tap digs', tap({ selectedItemId: 'hands' }) === 'break/break');
-ok('holding fruit, a tap eats it', tap({ selectedItemId: 'fruit' }) === 'break/break');
+ok('holding fruit, a tap eats it', tap({ selectedItemId: 'apple' }) === 'break/break');
 ok('an empty bucket fills', tap({ selectedItemId: 'bucket' }) === 'break/break');
 ok('a full bucket pours', tap({ selectedItemId: 'bucket_water' }) === 'place/place');
 ok('a queued tool takes the tap for its corner or stamp', tap({ pendingClaim: {} }) === 'break/break' && tap({ pendingTemplate: {} }) === 'break/break');

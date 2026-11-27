@@ -113,7 +113,17 @@ export const ITEMS = [
   { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fcd8b, glyph: 'sprout', block: 20, madeBy: 'Craft from Leaves, or find when breaking leaves — place on soil to grow a tree' },
 
   // --- food. Fruit spoils, preserves do not -------------------------------
-  { id: 'fruit', name: 'Fruit', kind: 'food', stackTo: STACK_FOOD, color: 0xdc928f, glyph: 'fruit', feeds: 8, madeBy: 'Picked from a forest' },
+  // FRUIT-1: four fruits. The generic Fruit became the apple (LEGACY_ITEMS).
+  { id: 'apple', name: 'Apple', kind: 'food', stackTo: STACK_FOOD, color: 0xd4584f, glyph: 'fruit', feeds: 8, madeBy: 'Picked from a forest, or grown on an apple tree in a pot' },
+  { id: 'grape', name: 'Grapes', kind: 'food', stackTo: STACK_FOOD, color: 0x7b4a9c, glyph: 'grape', feeds: 8, madeBy: 'Picked from a grape vine in a pot' },
+  { id: 'raspberry', name: 'Raspberries', kind: 'food', stackTo: STACK_FOOD, color: 0xc2305a, glyph: 'berry', feeds: 8, madeBy: 'Picked from a raspberry bush in a pot' },
+  { id: 'passion_fruit', name: 'Passion Fruit', kind: 'food', stackTo: STACK_FOOD, color: 0x8a4a86, glyph: 'passion', feeds: 8, madeBy: 'Picked from a passion fruit vine in a pot' },
+  // FRUIT-2: oak leaves drop these. Barely a snack.
+  { id: 'acorn', name: 'Acorn', kind: 'food', lastResort: true, stackTo: STACK_FOOD, color: 0xa87a45, glyph: 'acorn', feeds: 1, madeBy: 'Dropped by oak leaves' },
+  // FRUIT-5: roots, a second harvest from three crops. Potion ingredients to come.
+  { id: 'broccoli_root', name: 'Broccoli Root', kind: 'raw', stackTo: STACK_GOODS, color: 0xb9a77c, glyph: 'root', madeBy: 'Dug up with a broccoli harvest. A potion ingredient' },
+  { id: 'carrot_root', name: 'Carrot Root', kind: 'raw', stackTo: STACK_GOODS, color: 0xd9a05a, glyph: 'root', madeBy: 'Dug up with a carrot harvest. A potion ingredient' },
+  { id: 'lettuce_root', name: 'Lettuce Root', kind: 'raw', stackTo: STACK_GOODS, color: 0xd8d2a4, glyph: 'root', madeBy: 'Dug up with a lettuce harvest. A potion ingredient' },
   // The farm's crops. Carrots are the vegetables the game always had — the
   // id stays so everything that already made or used them still does.
   { id: 'vegetables', name: 'Carrots', kind: 'food', stackTo: STACK_FOOD, color: 0xe8873a, glyph: 'vegetable', feeds: 10, madeBy: 'Harvested from a farm' },
@@ -686,7 +696,39 @@ export function toolEffectiveness(toolId, material) {
  * Items that are gone, and what a bag holding one gets instead when it is
  * loaded (items/Inventory.loadJSON).
  */
-export const LEGACY_ITEMS = { seeds: 'seeds_carrot' };
+export const LEGACY_ITEMS = { seeds: 'seeds_carrot', fruit: 'apple' };
+
+/** The four fruits (FRUIT-1). A drop table entry ANY_FRUIT gives one of these, picked at random. */
+export const FRUITS = ['apple', 'grape', 'raspberry', 'passion_fruit'];
+export const ANY_FRUIT = 'any_fruit';
+
+/**
+ * Item ids renamed since saves were written. migrateSavedItems rewrites them
+ * wherever a save holds item ids (storehouses, stations, jobs), as keys or values.
+ */
+export const RENAMED_ITEMS = { fruit: 'apple' };
+
+/** Walks a parsed save and renames old item ids in place. Counts under both names are added. */
+export function migrateSavedItems(node) {
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) {
+      if (typeof node[i] === 'string') node[i] = RENAMED_ITEMS[node[i]] ?? node[i];
+      else migrateSavedItems(node[i]);
+    }
+  } else if (node && typeof node === 'object') {
+    for (const k of Object.keys(node)) {
+      const v = node[k];
+      if (typeof v === 'string') { if (RENAMED_ITEMS[v] && k !== 'name') node[k] = RENAMED_ITEMS[v]; }
+      else migrateSavedItems(v);
+      const to = RENAMED_ITEMS[k];
+      if (to) {
+        node[to] = typeof node[to] === 'number' && typeof node[k] === 'number' ? node[to] + node[k] : node[k];
+        delete node[k];
+      }
+    }
+  }
+  return node;
+}
 
 /**
  * What an empty hotbar slot holds: nothing. Selecting one (backlog batch 2:
@@ -694,6 +736,12 @@ export const LEGACY_ITEMS = { seeds: 'seeds_carrot' };
  * no table knows — so it digs at bare-hand pace and Place builds nothing.
  */
 export const BARE_HANDS = 'hands';
+
+/**
+ * Order villagers and soldiers eat in: plainest first, but a `lastResort`
+ * food (the acorn) only when nothing else is left.
+ */
+export const foodOrder = (a, b) => (a.lastResort ? 1 : 0) - (b.lastResort ? 1 : 0) || (a.feeds ?? 0) - (b.feeds ?? 0);
 
 /** How much hunger one unit of this item restores, or 0 if it isn't food. */
 export function feedValue(id) {

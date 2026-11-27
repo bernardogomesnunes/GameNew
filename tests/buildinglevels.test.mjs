@@ -18,7 +18,7 @@ ok('a house, a workshop, a wall: nothing to level', !hasLevels(STRUCTURES_BY_ID.
 const forest = STRUCTURES_BY_ID.get('forest');
 const wood = [0, 1, 2, 3].map((t) => producesAt(forest, t).wood);
 ok('each rung makes more than the last', wood.every((w, i) => i === 0 || w > wood[i - 1]));
-ok('a single fruit still climbs', [0, 1, 2, 3].map((t) => producesAt(forest, t).fruit).join() === '1,2,3,4');
+ok('a single fruit still climbs', [0, 1, 2, 3].map((t) => producesAt(forest, t).apple).join() === '1,2,3,4');
 ok('every rung past the first is paid for', STANDARD_LEVELS.slice(1).every((l) => l.cost && Object.keys(l.cost).length));
 ok('and coins are part of the bill higher up', STANDARD_LEVELS.slice(2).every((l) => l.cost.coin > 0));
 
