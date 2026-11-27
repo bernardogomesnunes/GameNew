@@ -2216,7 +2216,7 @@ export class Game {
     const next = person.gifts?.[0];
     if (!next || !this.duilt || this.duilt.sandbox) return null;
     const gained = this.duilt.collect(next.give);
-    const words = Object.entries(gained).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}${n > 1 && !itemName(id).toLowerCase().endsWith('s') ? 's' : ''}`);
+    const words = Object.entries(gained).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}${n > 1 && !/(s|ore|clay|coal|string|leather|meat|fruit)$/.test(itemName(id).toLowerCase()) ? 's' : ''}`);
     if (!words.length) return 'They offer you something, but your bag is full.';
     // A gift only partly taken stays partly on offer.
     for (const [id, n] of Object.entries(gained)) next.give[id] -= n;
