@@ -937,6 +937,9 @@ export function tickDefence(dt) {
   // Soldiers who went without their meal fight weaker (Defenders.tick).
   d.defenders.hungry = Math.min(d.settlers.soldiersHungry ?? 0, d.settlers.soldiers ?? 0);
   d.defenders.dark = !!d.settlers.dark; // VIL-1: soldiers sleep in their barracks
+  // VIL-6: your villagers meet the same raiders (Settlers.defendStep).
+  d.settlers.threats = enemies;
+  d.settlers.strike = (e, damage, by) => this.villagerHits(e, damage, by);
   d.defenders.tick(dt, enemies, {
     strike: (e, damage, by) => this.defenderHits(e, damage, by),
     shot: (e, damage, by) => this.defenderHits(e, damage, by),
@@ -998,6 +1001,15 @@ export function defenderHits(e, damage, by) {
   const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
   const who = by.kind === 'archer' || by.kind === 'bowman' ? 'archers' : by.kind === 'crew' ? 'catapult crew' : 'soldiers';
   this.ui?.toast({ kind: 'xp', title: `Your ${who} brought down ${e.name}`, body: got || undefined });
+}
+
+/** VIL-6: a villager's blow landing on a raider. What a beaten one carried is yours, as with your soldiers. */
+export function villagerHits(e, damage, by) {
+  const res = this.wanderers.hit(e, damage, by.x, by.z);
+  if (!res?.killed) return;
+  const gained = this.duilt.collect(res.drops) ?? {};
+  const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+  this.ui?.toast({ kind: 'xp', title: `${by.name ?? 'A villager'} brought down ${e.name}`, body: got || undefined });
 }
 
 /** A raider's blow on one of your soldiers — or one of your army. */

@@ -2500,6 +2500,9 @@ body.is-sleeping #building-hint { visibility: hidden; }
 .town-reason, .town-leaves, .town-ask { font-size: 13px; color: var(--text-dim); min-width: 0; overflow-wrap: anywhere; }
 .town-ask { grid-column: 1 / -1; color: #8a6a1e; font-weight: 600; }
 .town-leaves { text-align: right; color: #d23a2a; font-weight: 700; }
+.town-stats, .town-arms { grid-column: 1 / -1; font-size: 13px; color: var(--text-dim); min-width: 0; overflow-wrap: anywhere; }
+.town-xp { grid-column: 1 / -1; display: block; height: 4px; border-radius: 2px; background: rgba(35,42,45,0.12); overflow: hidden; }
+.town-row .town-xp .town-xp-fill { background: #4a7fc4; }
 .town-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
 .town-actions button { min-height: 44px; }
 

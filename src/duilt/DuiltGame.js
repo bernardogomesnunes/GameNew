@@ -1630,6 +1630,7 @@ export class DuiltGame {
         producesFor: (s) => this.producesFor(s),
         taxRate: this.skyTaxRate(),
       });
+      this.settlers.creditMade(this.structures.lastMade); // VIL-4: experience for what they made
       this.runFactories(now); // PLAY-11: after the other buildings
       this.countTaxes();
       this.payGifts();
