@@ -16,6 +16,8 @@
  *
  * `drops` are [min, max] of each item on a kill.
  */
+import { FRUITS } from './items.js';
+
 export const MOBS = [
   {
     id: 'deer', name: 'Deer', biomes: ['forestOak', 'forestBirch', 'plains', 'giantGrove'], weight: 3,
@@ -85,7 +87,7 @@ MOBS.push({
   body: { w: 0.62, h: 0.75, l: 1.5 }, head: 0.42, leg: 0.9,
   colour: 0x8a5a36, headColour: 0x7a4e2e, legColour: 0x4a3020,
   drops: { raw_meat: [2, 3], hide: [1, 2] },
-  tameWith: ['fruit', 'vegetables'], rideable: true,
+  tameWith: [...FRUITS, 'vegetables'], rideable: true,
 });
 
 // The Past's dinosaurs (world/past.js — asked for directly: "a separate
@@ -118,7 +120,7 @@ MOBS.push(
     body: { w: 2, h: 1.75, l: 3.75 }, head: 1.4, leg: 1.12,
     colour: 0x8a7a5a, headColour: 0x9a8a68, legColour: 0x6a5c42,
     drops: { raw_meat: [5, 8], hide: [2, 4] },
-    tameWith: ['vegetables', 'fruit'], rideable: true,
+    tameWith: ['vegetables', ...FRUITS], rideable: true,
     fight: { damage: 6, reach: 2.6, every: 1.4 },
   },
   {
@@ -128,7 +130,7 @@ MOBS.push(
     body: { w: 2.5, h: 2.4, l: 5.25 }, head: 0.75, leg: 2.9, neck: { up: 7.5, out: 3.75, w: 0.9 },
     colour: 0x7f8a90, headColour: 0x8e999f, legColour: 0x646d72,
     drops: { raw_meat: [8, 12], hide: [3, 5] },
-    tameWith: ['vegetables', 'fruit'], rideable: true,
+    tameWith: ['vegetables', ...FRUITS], rideable: true,
     fight: { damage: 8, reach: 3.6, every: 2.2 },
   },
   // And the Past's one creature out of legend (D3: "dinosaurs and

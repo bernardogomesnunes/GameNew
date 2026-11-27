@@ -6,6 +6,8 @@ import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { Crops, harvestOf, farmProduce, tendFarm, farmSeedSlots } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND, cropOf, RIPE } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
+import { FruitPlants } from './FruitPlants.js'; // FRUIT-3, FRUIT-4
+import { plantOf, FRUIT_PLANTS_BY_KIND } from '../config/fruitPlants.js';
 import { MushyLogs, MUSHY_KINDS, mushyOf, mushyYield } from './MushyLogs.js'; // PLAY-14..21
 import { TurfSpread } from './TurfSpread.js';
 import { penProduce, herdToJSON } from './Ranch.js';
@@ -25,7 +27,7 @@ import { Settlers } from './Settlers.js';
 import { DESIGN_FOR_STRUCTURE } from '../config/starterDesigns.js';
 import { starterDesign } from '../prefabs/HouseDesigns.js';
 import { VillagerJobs } from './VillagerJobs.js';
-import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool, stackLimit } from '../config/items.js';
+import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool, stackLimit, migrateSavedItems } from '../config/items.js';
 import { MILESTONES } from '../config/skills.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, PRODUCTION_PACE, FOREST_WOODS } from '../config/structures.js';
 import { AIR, BLOCKS_BY_ID, isFluid, doorPart, stationOf } from '../config/blocks.js';
@@ -88,7 +90,10 @@ const chestKey = (x, y, z) => `${x},${y},${z}`;
 /** The leaves of every kind of tree. */
 const LEAF_BLOCKS = new Set([5, 42, 44, 517]);
 /** What a broken leaf might drop besides itself, and how often. */
-export const LEAF_DROPS = [['sapling', 0.1], ['fruit', 0.06]];
+export const LEAF_DROPS = [['sapling', 0.1]];
+/** FRUIT-2: oak leaves (block 5) also drop acorns, in place of the old fruit. */
+export const OAK_LEAF_BLOCK = 5;
+export const OAK_DROPS = [['acorn', 0.06]];
 /**
  * Grass, broken, now and then gives up seeds — so a farm can always be
  * planted. Asked for directly: "To build a farm I need seeds and there's no
@@ -103,7 +108,7 @@ const FARMLAND_BLOCK = 21;
 /** How near a station block (the wood mill) you have to stand to work at it. */
 const BLOCK_STATION_REACH = 4;
 
-const STARTING_KIT = { axe: 1, bucket: 1, fruit: 4, seeds_carrot: 4, seeds_potato: 4 };
+const STARTING_KIT = { axe: 1, bucket: 1, apple: 4, seeds_carrot: 4, seeds_potato: 4 };
 
 /** How a quest names the place it sends you to. */
 const FIND_WORDS = { ruin: 'a ruin', hermit: 'the hermit\'s hut', kingdom: 'the Stone Kingdom' };
@@ -158,6 +163,7 @@ export class DuiltGame {
     // only runs while you play (Game adds each day as the clock turns).
     this.saplings = new Saplings();
     this.mushyLogs = new MushyLogs(); // PLAY-15
+    this.fruitPlants = new FruitPlants(); // FRUIT-4
     // Bare dirt next to turf grows over in 5 to 50 game days (TurfSpread).
     this.turf = new TurfSpread();
     this.days = 0;
@@ -463,6 +469,15 @@ export class DuiltGame {
     const gained = {};
     for (const c of changes) {
       if (c.prev === AIR) continue;
+      // FRUIT-4: a plant taken away (its pot or base broken) gives its seed
+      // back, once, from the record it was sown with; a broken pot is
+      // given back by its own item. Nothing else of a plant is carried.
+      if (plantOf(c.prev)) {
+        const rec = this.fruitPlants.take(c.x, c.y, c.z);
+        const seed = rec ? FRUIT_PLANTS_BY_KIND.get(rec.kind)?.seed : null;
+        if (seed && this.inventory.add(seed, 1) === 0) gained[seed] = (gained[seed] ?? 0) + 1;
+        continue;
+      }
       // PLAY-15: a ready Mushy Log gives its mushrooms and is spent; an
       // unready one falls through and gives the log back.
       const mushy = mushyOf(c.prev);
@@ -490,7 +505,7 @@ export class DuiltGame {
       // Leaves, now and then, drop a sapling or a fruit as well as
       // themselves — the only way to new saplings out in the wild, now none
       // grow there by themselves (playtest, P8).
-      const extras = LEAF_BLOCKS.has(c.prev) ? LEAF_DROPS : c.prev === GRASS ? GRASS_DROPS : null;
+      const extras = LEAF_BLOCKS.has(c.prev) ? (c.prev === OAK_LEAF_BLOCK ? [...LEAF_DROPS, ...OAK_DROPS] : LEAF_DROPS) : c.prev === GRASS ? GRASS_DROPS : null;
       if (extras) {
         for (const [drop, chance] of extras) {
           if (this.rand() >= chance) continue;
@@ -2908,6 +2923,7 @@ export class DuiltGame {
       crops: this.crops.toJSON(),
       saplings: this.saplings.toJSON(),
       mushyLogs: this.mushyLogs.toJSON(), // PLAY-15
+      fruitPlants: this.fruitPlants.toJSON(), // FRUIT-4
       turf: this.turf.toJSON(),
       days: this.days,
       purses: { day: this.purses.day, spent: { ...this.purses.spent } },
@@ -2918,6 +2934,7 @@ export class DuiltGame {
 
   loadJSON(data) {
     if (!data) return;
+    migrateSavedItems(data); // fruit -> apple, in every bag, chest and store
     this.inventory.loadJSON(data.inventory);
     // A save from before the twelve ages: the same land or more (OLD_AGE).
     const was = data.territory?.age ?? 1;
@@ -3020,6 +3037,7 @@ export class DuiltGame {
     this.crops.loadJSON(data.crops);
     this.saplings.loadJSON(data.saplings);
     this.mushyLogs.loadJSON(data.mushyLogs); // PLAY-15
+    this.fruitPlants.loadJSON(data.fruitPlants); // FRUIT-4 (older saves have none)
     this.turf.loadJSON(data.turf);
     this.days = Number.isFinite(data.days) ? data.days : 0;
     // WORK-1: a save from before the rule has no mark: its buildings run on

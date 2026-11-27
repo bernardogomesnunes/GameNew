@@ -14,21 +14,21 @@ ok('hunger slows you but never stops you', h.speedFactor < 1 && h.speedFactor >=
 ok('and blocks sprinting', h.canSprint === false);
 
 const inv = new Inventory();
-inv.add('fruit', 3); inv.add('vegetables', 2);
+inv.add('apple', 3); inv.add('vegetables', 2);
 const before = h.value;
 let r = h.eat(inv, 'vegetables');
 ok('eating restores and consumes', r.ok && h.value > before && inv.countOf('vegetables') === 1);
 ok('cannot eat wood', h.eat(inv, 'wood').ok === false);
-ok('cannot eat what you lack', h.eat(new Inventory(), 'fruit').ok === false);
+ok('cannot eat what you lack', h.eat(new Inventory(), 'apple').ok === false);
 
 // picks the food that wastes least
 const h2 = new Hunger(null);
 h2.value = MAX_HUNGER - 9;        // room for 9
 const inv2 = new Inventory();
-inv2.add('fruit', 1); inv2.add('vegetables', 1);   // fruit feeds 8, veg 10
-ok('eat button picks the least wasteful food', h2.bestFoodIn(inv2) === 'fruit');
+inv2.add('apple', 1); inv2.add('vegetables', 1);   // fruit feeds 8, veg 10
+ok('eat button picks the least wasteful food', h2.bestFoodIn(inv2) === 'apple');
 const full = new Hunger(null);
-ok('refuses to waste food on a full stomach', full.eat(inv2, 'fruit').ok === false);
+ok('refuses to waste food on a full stomach', full.eat(inv2, 'apple').ok === false);
 
 // exertion burns faster
 const a = new Hunger(null), b = new Hunger(null);

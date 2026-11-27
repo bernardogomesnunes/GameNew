@@ -1,5 +1,6 @@
 import { CROPS, RIPE, cropBoxes } from '../config/crops.js';
 import { toneHex } from '../config/blocks.js';
+import { FRUIT_PLANTS, SEGMENTS as PLANT_SEGMENTS, plantBoxes, potBoxes } from '../config/fruitPlants.js';
 
 /**
  * What a non-cube block actually looks like: a handful of boxes in unit-cell
@@ -1296,3 +1297,7 @@ PROP_SHAPES.cauldron = [
   mushBox(0.62, 0.66, 0.56, 0.92, 0.3, 0.34, 0x8a6238),
 ];
 // --- end PLAY-14..21 ---
+
+// FRUIT-3, FRUIT-4: the Plant Pot and every segment of every fruit plant.
+PROP_SHAPES.plant_pot = potBoxes();
+for (const p of FRUIT_PLANTS) for (const s of PLANT_SEGMENTS) PROP_SHAPES[`fplant_${p.kind}_${s}`] = plantBoxes(p.kind, s);

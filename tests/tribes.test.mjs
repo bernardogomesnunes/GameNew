@@ -7,7 +7,7 @@ import { WANDERERS, NEWS } from '../src/config/wanderers.js';
 import { BIOMES } from '../src/config/biomes.js';
 import { BLOCKS_BY_ID } from '../src/config/blocks.js';
 import { LOOT } from '../src/duilt/Loot.js';
-import { ITEMS_BY_ID } from '../src/config/items.js';
+import { ANY_FRUIT, ITEMS_BY_ID } from '../src/config/items.js';
 import { talkLine, TRIBE_TALK } from '../src/config/talk.js';
 import { MOMENTS } from '../src/config/moments.js';
 
@@ -162,7 +162,7 @@ const flat = () => {
 
 // --- what they keep, and what they say ---------------------------------------------------------
 
-ok('their chest holds what the forest gives, and bows', LOOT.tribe.items.every(([id]) => ITEMS_BY_ID.has(id)) && LOOT.tribe.items.some(([id]) => id === 'bow'));
+ok('their chest holds what the forest gives, and bows', LOOT.tribe.items.every(([id]) => id === ANY_FRUIT || ITEMS_BY_ID.has(id)) && LOOT.tribe.items.some(([id]) => id === 'bow'));
 ok('taking from it is noticed', /if \(c && !d\.chestAt\(c\.x, c\.y, c\.z\)\?\.grave\) this\.game\.tookFromChest\?\.\(c\);/.test(ui)
   && /tookFromChest\(\{ x, z \}\)[\s\S]{0,900}l\.kind === 'tribe'[\s\S]{0,600}this\.wanderers\.anger\(lm\)/.test(game));
 ok('they\'ll talk, while they\'re not angry with you', /TALKERS = new Set\(\[[^\]]*'tribe'/.test(game) && /!p\.angry && !p\.dead/.test(game)

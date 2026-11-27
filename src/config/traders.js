@@ -47,7 +47,7 @@ export const TRADERS = [
     goods: [
       ['stone', 16, 2], ['cobblestone', 16, 2], ['stone_white', 8, 3], ['stone_turquoise', 8, 5], ['stone_orange', 8, 6],
       ['marble', 8, 6], ['wood', 16, 2], ['planks', 32, 2], ['white_wood', 8, 3], ['dark_wood', 8, 3],
-      ['fruit', 6, 2], ['vegetables', 6, 2], ['cooked_meat', 4, 3], ['coffee', 2, 3],
+      ['apple', 6, 2], ['vegetables', 6, 2], ['cooked_meat', 4, 3], ['coffee', 2, 3],
     ],
     rare: [
       ['clay', 8, 4, 1], ['snow', 8, 3, 1], ['moss', 8, 3, 1], ['dark_moss', 8, 4, 2], ['silt', 8, 3, 1],
@@ -141,7 +141,7 @@ export const CITY_TRADERS = [
     coat: 0x3f5a7a,
     cap: 0x2a3d55,
     goods: [
-      ['cooked_meat', 4, 3], ['fruit', 6, 2], ['vegetables', 6, 2], ['egg', 6, 2], ['milk', 2, 3],
+      ['cooked_meat', 4, 3], ['apple', 6, 2], ['vegetables', 6, 2], ['egg', 6, 2], ['milk', 2, 3],
       ['beer', 2, 3], ['kombucha', 2, 3], ['coffee', 2, 3], ['wool', 4, 3],
       ['seeds_pepper', 3, 3], ['seeds_zucchini', 3, 3], ['seeds_broccoli', 3, 3], ['seeds_coffee', 3, 4], ['seeds_hemp', 4, 2], ['seeds_cotton', 4, 2],
     ],

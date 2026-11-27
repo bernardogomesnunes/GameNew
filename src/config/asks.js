@@ -15,7 +15,7 @@ export const ASKS = {
   gift: { food: 8, drink: 10, mushroom: 12, tool: 12, weapon: 15 },
   /** What each kind draws from (item ids in config/items.js). */
   pool: {
-    food: ['fruit', 'cooked_meat', 'egg', 'milk', 'hunters_stew', 'mushroom_soup', 'mushroom_dumplings'],
+    food: ['apple', 'cooked_meat', 'egg', 'milk', 'hunters_stew', 'mushroom_soup', 'mushroom_dumplings'],
     drink: ['beer', 'kombucha', 'coffee'],
     mushroom: ['mushroom_red', 'mushroom_lilac', 'mushroom_pale'],
     tool: ['axe', 'pickaxe', 'shovel', 'bucket'],
