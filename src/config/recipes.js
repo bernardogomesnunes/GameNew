@@ -1811,6 +1811,12 @@ for (const p of RESEARCH) {
 }
 // --- end PLAY-12 ---
 
+// FRUIT-3: the Plant Pot, from clay, at the workbench.
+RECIPES.push(
+  { id: 'plant_pot', name: 'Plant Pot', station: 'workbench', age: 3, inputs: { clay: 3 }, output: { id: 'plant_pot', count: 1 },
+    blurb: 'A clay pot. Place it, then put a fruit seed in it.' },
+);
+
 // --- PLAY-14..21 (docs/design/play-14-21.md) ---
 // PLAY-15: Mushy Logs.
 RECIPES.push(

@@ -21,7 +21,7 @@ const ok = (n, c) => { console.log((c ? 'PASS ' : 'FAIL ') + n); if (!c) failed+
   a[1].give.seeds_hemp = 99;
   ok('gifts are copies, so taking one never edits the shared pack', b[1].give.seeds_hemp !== 99);
   ok('every pack entry has a region and a positive count', EXPLORER_PACK.every((p) => p.region && Object.values(p.give).every((n) => n > 0)));
-  ok('the pack has 18 entries', EXPLORER_PACK.length === 18);
+  ok('the pack has 22 entries (18 plus the 4 fruit seeds)', EXPLORER_PACK.length === 22);
 }
 
 // A sent explorer has them.

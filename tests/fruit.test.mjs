@@ -105,7 +105,7 @@ ok('root items exist with icons', ['broccoli_root', 'carrot_root', 'lettuce_root
       if (e.isDirectory()) walk(p);
       else if (p.endsWith('.js')) {
         const src = readFileSync(p, 'utf8').replace(/glyph: 'fruit'/g, '').replace(/^\s*fruit: 'M[^\n]*$/gm, '');
-        if (!p.endsWith('config/items.js') && /'fruit'|\bfruit: /.test(src)) hits.push(p);
+        if (!p.endsWith('config/items.js') && !p.endsWith('config/fruitPlants.js') && /'fruit'|\bfruit: /.test(src)) hits.push(p);
       }
     }
   };

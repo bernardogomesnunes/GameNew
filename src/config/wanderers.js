@@ -472,6 +472,14 @@ export const EXPLORER_PACK = [
   { give: { seeds_potato: 2 }, region: 'the highland farms' },
   { give: { seeds_hemp: 2 }, region: 'the spinners of the east' },
 ];
+// FRUIT-3: until the wizard sells fruit seeds, an explorer can carry one
+// (planted in a Plant Pot: config/fruitPlants.js).
+EXPLORER_PACK.push(
+  { give: { seeds_apple: 1 }, region: 'the orchard country' },
+  { give: { seeds_grape: 1 }, region: 'the southern vineyards' },
+  { give: { seeds_raspberry: 1 }, region: 'the berry hills' },
+  { give: { seeds_passion: 1 }, region: 'the warm coast' },
+);
 /** Each gift is {give, region?}. Gifts saved before regions existed have no region and still work. */
 export function rollExplorerGifts(rand = Math.random) {
   const extra = EXPLORER_PACK[Math.floor(rand() * EXPLORER_PACK.length)];
