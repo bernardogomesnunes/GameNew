@@ -948,9 +948,16 @@ BLOCKS.push(
 // should allow to do all the crafting". Placed anywhere, it is where every
 // recipe from Age 3 on is made; the bench from the menu keeps Ages 1 and 2.
 export const WORKBENCH = 529;
+// Owner, 27 November: "The workbench should always be placed with the
+// shelves facing me ... It should face all directions." It turns like the
+// Wood Mill (`facesYou`): its drawers face whoever puts it down. Ids 530 to
+// 532 were already taken, so its other three facings are 552 to 554.
+export const WORKBENCH_TURNS = [WORKBENCH, 552, 553, 554];
 BLOCKS.push(
-  { id: WORKBENCH, name: 'Workbench', glyph: 'planks', color: 0x9c7348, shape: 'workbench', material: 'wood', station: 'workbench', unlock: null },
+  { id: WORKBENCH, name: 'Workbench', glyph: 'planks', color: 0x9c7348, shape: 'workbench', material: 'wood', station: 'workbench', facing: 0, facesYou: true, turnIds: WORKBENCH_TURNS, unlock: null },
 );
+const workbench = BLOCKS[BLOCKS.length - 1];
+for (let f = 1; f <= 3; f++) BLOCKS.push({ ...workbench, id: WORKBENCH_TURNS[f], stateOf: WORKBENCH, facing: f, cost: undefined });
 
 // CRAFT3D-1: the Carpenter's Table, where furniture is sawn and fitted
 // together in a close-up (render/CounterView.js). CRAFT-9: it was the
@@ -1331,6 +1338,7 @@ export function turned(id, facing) {
   if (door) return doorBlock({ ...door, facing });
   if (isChest(id)) return CHEST + facing;
   if (isCatapult(id)) return CATAPULT + facing;
+  if (b.turnIds) return b.turnIds[facing];
   if (b.quad != null) return b.quad + facing;
   const baseId = b.stateOf ?? id;
   const k = TURNS.indexOf(baseId);
