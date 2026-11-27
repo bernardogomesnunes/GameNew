@@ -99,7 +99,7 @@ ok('every item a quest asks for or gives exists', WIZARD_QUESTS.every((q) => Obj
 
 // Blocks and items.
 ok('Training Target is block 600 with an item and a recipe', ITEMS_BY_ID.get('training_target')?.block === MAGIC_TARGET && !!RECIPES_BY_ID.get('training_target'));
-ok('Magic Cauldron is block 601, a station, placed from its item', stationOf(MAGIC_CAULDRON) === 'magic_cauldron' && ITEMS_BY_ID.get('magic_cauldron')?.block === MAGIC_CAULDRON);
+ok('Magic Cauldron is block 621, a station, placed from its item', stationOf(MAGIC_CAULDRON) === 'magic_cauldron' && ITEMS_BY_ID.get('magic_cauldron')?.block === MAGIC_CAULDRON);
 ok('the wand is a tool with no wear', ITEMS_BY_ID.get('wizard_wand')?.kind === 'tool' && ITEMS_BY_ID.get('wizard_wand').durability === null);
 
 // In the game: targets by the hut, restored, and the cauldron brewing.

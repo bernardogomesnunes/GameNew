@@ -592,11 +592,11 @@ export const ITEMS = [
   // WIZ-5: the wizard's gifts and the base of his potions (config/wizardQuests.js).
   { id: 'wizard_wand', name: "Wizard's Wand", kind: 'tool', stackTo: STACK_TOOL, color: 0xb48cff, glyph: 'wand', durability: null,
     noBook: true, madeBy: 'Given by the wizard for his first quest. Hold it and break to cast a bolt; it hits harder at higher Magic levels' },
-  { id: 'magic_cauldron', name: 'Magic Cauldron', kind: 'refined', stackTo: 10, color: 0x5b3f8f, glyph: 'bucket', block: 601, noBook: true,
+  { id: 'magic_cauldron', name: 'Magic Cauldron', kind: 'refined', stackTo: 10, color: 0x5b3f8f, glyph: 'bucket', block: 621, noBook: true,
     madeBy: 'Given by the wizard for his fourth quest. Place it and brew the potions he teaches' },
   { id: 'moonwater', name: 'Moonwater', kind: 'refined', stackTo: STACK_GOODS, color: 0x9fc8ff, glyph: 'flask',
     madeBy: 'Water, a pale mushroom and leaves, brewed in a Magic Cauldron. The base of the wizard\'s potions' },
-  { id: 'training_target', name: 'Training Target', kind: 'refined', stackTo: 10, color: 0x6f8fd9, glyph: 'target', block: 600,
+  { id: 'training_target', name: 'Training Target', kind: 'refined', stackTo: 10, color: 0x6f8fd9, glyph: 'target', block: 620,
     madeBy: 'Made at a workbench from planks and string. Hit it with the wand for Magic points; the wizard puts three by his hut' },
   { id: 'hunters_stew', name: "Hunter's Stew", kind: 'food', stackTo: STACK_FOOD, color: 0x8a5a2a, glyph: 'bowl', feeds: 50, madeBy: 'Meat, carrot, potato and dried pale mushroom, simmered in a Cauldron' },
   { id: 'forest_broth', name: 'Forest Broth', kind: 'food', stackTo: STACK_FOOD, color: 0x9a7a3a, glyph: 'bowl', feeds: 40, madeBy: 'Meat, broccoli, zucchini and dried lilac mushroom, simmered in a Cauldron' },

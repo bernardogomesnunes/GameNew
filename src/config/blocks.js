@@ -1095,8 +1095,8 @@ BLOCKS.push(
 // --- end PLAY-12 ---
 
 // WIZ-5: the training targets by the Wizard's Hut, and the Magic Cauldron he gives.
-// 600 and 601 (572 onward belong to other work in flight).
-export const MAGIC_TARGET = 600, MAGIC_CAULDRON = 601;
+// 620 and 621: 572 to 615 are the Plant Pot and fruit plants (config/fruitPlants.js).
+export const MAGIC_TARGET = 620, MAGIC_CAULDRON = 621;
 BLOCKS.push(
   { id: MAGIC_TARGET, name: 'Training Target', glyph: 'target', color: 0x6f8fd9, shape: 'archery_target', material: 'wood', unlock: null },
   { id: MAGIC_CAULDRON, name: 'Magic Cauldron', glyph: 'bucket', color: 0x5b3f8f, shape: 'cauldron', material: 'stone', station: 'magic_cauldron', unlock: null },
