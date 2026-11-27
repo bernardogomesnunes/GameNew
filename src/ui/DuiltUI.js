@@ -1981,6 +1981,10 @@ export class DuiltUI {
   // ---- PLAY-13: mood ---------------------------------------------------------
 
   wireMood() {
+    const redrawTown = () => { if (this.panels.isOpen('panel-town')) this.renderTown(); }; // VIL-2
+    this.bus.on('settler:ask', redrawTown);
+    this.bus.on('settler:asklapsed', redrawTown);
+    this.bus.on('settler:gift', redrawTown);
     this.bus.on('settler:band', () => { this.renderVitals(); if (this.panels.isOpen('panel-town')) this.renderTown(); });
     this.bus.on('settler:mood', ({ settler, band, reason, name }) => {
       if (band !== 'angry' && band !== 'furious') return; // Grumbling: the bubble is enough
@@ -2071,13 +2075,23 @@ export class DuiltUI {
       const left = band === 'furious' ? Math.max(0, 1 - (p.furiousFor ?? 0) / GAME_DAY_SECONDS) : null;
       const leaves = left == null ? '' : `<span class="town-leaves">Leaves in ${left.toFixed(1)} days</span>`;
       const give = p.hungry ? '<button class="secondary" data-town-food>Give food</button>' : '';
+      // VIL-2: what they have asked for, and a button to give it from the bag.
+      let ask = '', giveAsk = '';
+      if (p.ask) {
+        const name = ITEMS_BY_ID.get(p.ask.item)?.name ?? p.ask.item;
+        const daysLeft = Math.max(1, Math.ceil(p.ask.left / GAME_DAY_SECONDS));
+        const has = d.inventory.countOf(p.ask.item) > 0;
+        ask = `<span class="town-ask">Wants ${escapeHtml(name)} (${daysLeft} day${daysLeft === 1 ? '' : 's'} left)</span>`;
+        giveAsk = `<button class="secondary" data-town-gift ${has ? '' : 'disabled title="Not in your bag"'}>Give ${escapeHtml(name)}</button>`;
+      }
       const find = !employed ? '<button class="secondary" data-town-work>Find work</button>' : '';
       return `<div class="town-row" data-band="${band}" data-person="${p.id}">
         <span class="town-name">${escapeHtml(p.name)}</span>
         <span class="town-job">${escapeHtml(job)}</span>
         <span class="town-bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p.mood)}" aria-label="Mood"><span class="town-fill" style="width:${Math.round(p.mood)}%"></span></span>
         <span class="town-reason">${escapeHtml(reason)}</span>${leaves}
-        ${give || find ? `<span class="town-actions">${give}${find}</span>` : ''}
+        ${ask}
+        ${give || find || giveAsk ? `<span class="town-actions">${give}${giveAsk}${find}</span>` : ''}
       </div>`;
     }).join('');
     // Redrawn only when something changed, so a tap never lands on a row that is being replaced.
@@ -2085,6 +2099,15 @@ export class DuiltUI {
     this.townHtml = html;
     list.innerHTML = html;
     list.querySelectorAll('[data-town-food]').forEach((b) => b.addEventListener('click', () => { this.giveFood(); this.renderTown(); }));
+    list.querySelectorAll('[data-town-gift]').forEach((b) => b.addEventListener('click', () => {
+      const p = d.settlers.people.find((q) => q.id === Number(b.closest('[data-person]')?.dataset.person));
+      if (!p?.ask) return;
+      const r = d.settlers.give(p, p.ask.item);
+      this.bus.emit('toast', r.ok
+        ? { kind: 'xp', title: `${p.name} is happy`, body: `Mood +${Math.round(r.gain)}` }
+        : { kind: 'xp', title: r.reason });
+      this.renderTown();
+    }));
     list.querySelectorAll('[data-town-work]').forEach((b) => b.addEventListener('click', () => this.findWork()));
   }
 

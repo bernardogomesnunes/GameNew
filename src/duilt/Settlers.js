@@ -7,6 +7,9 @@ import {settlerFloor,settlerRoute,doorWise} from './settlerNavigation.js';
 import {doorPart} from '../config/blocks.js';
 import {isLoaded} from '../world/Mobs.js';
 import { MOOD, MOOD_DAY } from '../config/mood.js'; // PLAY-13
+import { isBedtime, bedsIn, bedPlace, bedKey, campfireNear, LIE_SECONDS } from './sleepSpots.js'; // VIL-1
+import { newAsks, loadAsks, step as askStep, receive as askReceive } from './Asks.js'; // VIL-2
+import { ITEMS_BY_ID } from '../config/items.js';
 import { newMood, loadMood, step as moodStep, shouldLeave, bandRank } from './Mood.js'; // PLAY-13
 
 /** Everything edible, least nourishing first — what settlers work down through. */
@@ -80,6 +83,8 @@ export class Settlers {
     this.sinceMeal = 0;
     this.emptyHouses = new Map(); // PLAY-13: houseId -> seconds left empty after somebody left angry
     this.arrivalsStopped = false; // PLAY-13: word has got round
+    this.night = null; // VIL-1: () => whether it is bedtime; DuiltGame sets it
+    this.dark = false; // VIL-1: the answer at the last tick
   }
 
   get population() {
@@ -240,6 +245,153 @@ export class Settlers {
     return true;
   }
 
+
+  // ---- VIL-1: sleep ----------------------------------------------------------
+
+  /** The centre of the town: the mean of the houses, or null. */
+  townCentre() {
+    const homes = this.structures.list().filter((s) => s.valid && (STRUCTURES_BY_ID.get(s.type)?.grantsCapacity ?? 0) > 0);
+    if (!homes.length) return null;
+    const cs = homes.map((s) => centreOf(s.region));
+    return { x: cs.reduce((n, c) => n + c.x, 0) / cs.length, z: cs.reduce((n, c) => n + c.z, 0) / cs.length };
+  }
+
+  /**
+   * Where `p` sleeps tonight: a free bed in their own house, then a bed in a
+   * house nobody lives in, then by a campfire near the town centre, then on
+   * the ground there. { kind, bedKey?, stand, lie: { x, y, z, dir } }.
+   */
+  sleepPlace(p) {
+    const taken = new Set(this.people.filter((q) => q !== p && q.sleep?.bedKey).map((q) => q.sleep.bedKey));
+    const lived = new Set(this.people.map((q) => q.homeId));
+    const homes = this.structures.list().filter((s) => s.valid && (STRUCTURES_BY_ID.get(s.type)?.grantsCapacity ?? 0) > 0);
+    const order = [...homes.filter((s) => s.id === p.homeId), ...homes.filter((s) => s.id !== p.homeId && !lived.has(s.id))];
+    for (const h of order) {
+      for (const bed of bedsIn(this.world, h.region)) {
+        if (taken.has(bedKey(bed))) continue;
+        const place = bedPlace(bed);
+        const stand = place.stands.map((s) => ({ ...s, y: settlerFloor(this.paths, s.x, s.z, bed.y) })).find((s) => s.y != null && Math.abs(s.y - bed.y) <= 1);
+        if (!stand) continue;
+        return { kind: 'bed', bedKey: bedKey(bed), stand, lie: { ...place.feet, dir: place.dir } };
+      }
+    }
+    const c = this.townCentre() ?? { x: p.x, z: p.z };
+    const fire = campfireNear(this.world, c.x, p.y, c.z, 20);
+    const ring = (about, from, to) => {
+      for (let tries = 0; tries < 16; tries++) {
+        const a = (p.id ?? 0) * 2.4 + tries * 0.9, r = from + (tries % 5) * (to - from) / 4;
+        const x = about.x + Math.cos(a) * r, z = about.z + Math.sin(a) * r;
+        if (this.standable(x, z)) return { x, z, a };
+      }
+      return null;
+    };
+    if (fire) {
+      const at = ring({ x: fire.x + 0.5, z: fire.z + 0.5 }, 1.8, 3.2);
+      if (at) return this.groundPlace('fire', at, { x: fire.x + 0.5, z: fire.z + 0.5 });
+    }
+    const at = ring(c, 2, 8);
+    return this.groundPlace('ground', at ?? { x: p.x, z: p.z }, null);
+  }
+
+  /** Lying on the floor at `at`, feet away from `toward` (a fire) so the head is nearer it. */
+  groundPlace(kind, at, toward) {
+    let dx = toward ? toward.x - at.x : 0, dz = toward ? toward.z - at.z : 1;
+    const d = Math.hypot(dx, dz) || 1;
+    dx /= d; dz /= d;
+    const y = this.groundAt(at.x, at.z);
+    return { kind, stand: { x: at.x, y, z: at.z }, lie: { x: at.x - dx * 0.9, y, z: at.z - dz * 0.9, dir: { x: dx, z: dz } } };
+  }
+
+  /** Walks `p` to `to`; 'arrived', 'moving' or 'stuck'. */
+  travel(p, to, dt) {
+    if (p._routeFor !== to) { p._route = null; p._routeFor = to; }
+    p.target = to;
+    let remaining = SETTLERS.walkSpeed * Math.min(Math.max(0, dt), 0.5), planned = false;
+    while (remaining > 1e-6) {
+      const aim = p._route?.[0] ?? to;
+      const dx = aim.x - p.x, dz = aim.z - p.z, d = Math.hypot(dx, dz);
+      if (d < 0.03) {
+        if (p._route?.length) { p._route.shift(); continue; }
+        p.target = null; p._route = null;
+        return 'arrived';
+      }
+      const step = Math.min(0.2, remaining, d), nx = p.x + dx / d * step, nz = p.z + dz / d * step;
+      const ny = settlerFloor(this.paths, nx, nz, p.y);
+      if (ny == null) {
+        if (planned) return 'stuck';
+        p._route = settlerRoute(this.paths, p, to); planned = true;
+        if (!p._route?.length) return 'stuck';
+        continue;
+      }
+      p.x = nx; p.z = nz; p.y = ny; remaining -= step;
+      this.passDoors(p);
+    }
+    return 'moving';
+  }
+
+  /**
+   * One step of bedtime for `p`. True while they are walking to bed or in it
+   * (nothing else moves them), false in the day or when a blow has woken them.
+   */
+  sleepStep(p, dt, night) {
+    if (!night) p.roused = false;
+    if (!night || p.roused) {
+      if (p.sleep) this.wake(p);
+      return false;
+    }
+    if (!p.sleep) { p.sleep = { ...this.sleepPlace(p), state: 'walking', stuck: 0 }; p.atWork = false; }
+    const s = p.sleep;
+    if (s.state === 'walking') {
+      if (p.kx || p.kz) drift(this.world, p, dt);
+      const r = this.travel(p, s.stand, dt);
+      if (r === 'stuck') s.stuck += dt; else s.stuck = 0;
+      // Cannot get there: lie down where they stand.
+      if (r === 'stuck' && s.stuck > 5) Object.assign(s, this.groundPlace('ground', { x: p.x, z: p.z }, null), { state: 'asleep' }), s.stand = { x: p.x, y: p.y, z: p.z };
+      else if (r === 'arrived') s.state = 'asleep';
+      if (s.state === 'asleep') { p.target = null; p._route = null; p.x = s.lie.x; p.y = s.lie.y; p.z = s.lie.z; p.lieDir = s.lie.dir; p.lie = 0; }
+      return true;
+    }
+    p.lie = Math.min(1, (p.lie ?? 0) + dt / LIE_SECONDS);
+    return true;
+  }
+
+  /** Up out of bed, onto their feet beside it. */
+  wake(p) {
+    const s = p.sleep;
+    p.sleep = null; p.lie = 0; p.lieDir = null;
+    if (s?.state === 'asleep' && s.stand) { p.x = s.stand.x; p.z = s.stand.z; p.y = s.stand.y; }
+    p.target = null; p._route = null; p.atWork = false; p.wait = 0.5 + this.rand() * 2;
+  }
+
+
+  // ---- VIL-2: asks -----------------------------------------------------------
+
+  /** Asks begin and lapse (duilt/Asks.js); the UI hears about each. */
+  asksTick(dt) {
+    for (const p of this.people) {
+      const was = p.ask?.item;
+      const event = askStep(p, dt, this.rand);
+      if (event === 'asked') this.bus?.emit('settler:ask', { settler: p, item: p.ask.item, name: p.name });
+      else if (event === 'lapsed') this.bus?.emit('settler:asklapsed', { settler: p, item: was, name: p.name });
+    }
+  }
+
+  /**
+   * Gives `p` what they asked for, from `from` (your bag). Returns
+   * { ok, gain, reason }. The item is taken only when it is what they want.
+   */
+  give(p, itemId, from = this.inventory) {
+    if (!this.people.includes(p)) return { ok: false, reason: 'That villager no longer lives here.' };
+    if (!p.ask) return { ok: false, reason: `${p.name} is not asking for anything.` };
+    if (p.ask.item !== itemId) return { ok: false, reason: `${p.name} wants ${ITEMS_BY_ID.get(p.ask.item)?.name ?? 'something else'}.` };
+    if (!(from?.countOf(itemId) > 0)) return { ok: false, reason: `You have no ${ITEMS_BY_ID.get(itemId)?.name ?? 'such thing'}.` };
+    from.remove(itemId, 1);
+    const gain = askReceive(p, itemId, this.rand);
+    if (p.band === 'content') p.said = null;
+    this.bus?.emit('settler:gift', { settler: p, item: itemId, gain, name: p.name });
+    return { ok: true, gain };
+  }
+
   // ---- arrivals ------------------------------------------------------------
 
   tick(dtSeconds) {
@@ -274,13 +426,16 @@ export class Settlers {
       p.job = open ? (role === 'builder' || role === 'hauler' ? role : JOB_FOR_BUILDING[types.get(p.workId)] ?? null) : null;
     }
     this.moodTick(dtSeconds); // PLAY-13
+    this.asksTick(dtSeconds); // VIL-2
     for (const p of this.people) {
       if (!(p.hp > 0)) p.hp = VILLAGER_HP;
       if (p.hurt > 0) p.hurt = Math.max(0, p.hurt - dtSeconds);
       if (p.calm > 0) p.calm -= dtSeconds;
       else if (p.hp < VILLAGER_HP) p.hp = Math.min(VILLAGER_HP, p.hp + VILLAGER_HEAL * dtSeconds);
     }
-    for (const p of this.people) this.walk(p, dtSeconds);
+    // VIL-1: at night everybody goes to bed; live work and walking stop.
+    this.dark = !!this.night?.();
+    for (const p of this.people) if (!this.sleepStep(p, dtSeconds, this.dark)) this.walk(p, dtSeconds);
     this.closeDoors(dtSeconds);
   }
 
@@ -307,6 +462,7 @@ export class Settlers {
       hungry: false,
       hp: VILLAGER_HP,
       ...newMood(), // PLAY-13
+      ...newAsks(this.rand), // VIL-2
     };
     this.people.push(person);
     this.assignWork(person);
@@ -646,7 +802,7 @@ export class Settlers {
       //
       // Hungry means not at work: they stay around home instead, which is what
       // an empty larder looks like from across the settlement.
-      const work = p.hungry || p.workId == null ? null : this.workSpot(p.workId);
+      const work = p.hungry || this.dark || p.workId == null ? null : this.workSpot(p.workId);
       p.atWork = !p.atWork && !!work;
       p.target = p.atWork
         ? work
@@ -749,6 +905,8 @@ export class Settlers {
     person.hp = (person.hp > 0 ? person.hp : VILLAGER_HP) - hits;
     person.hurt = 0.4;
     person.calm = 8; // no healing until 8 s after the last blow
+    person.roused = true; // VIL-1: a blow wakes them for the rest of the night
+    if (person.sleep) this.wake(person);
     if (person.hp > 0) return false;
     this.people = this.people.filter((p) => p !== person);
     return true;
@@ -762,9 +920,10 @@ export class Settlers {
       people: this.people.map((p) => ({
         id: p.id, name: p.name, colour: p.colour,
         homeId: p.homeId, workId: p.workId, hungry: !!p.hungry,
-        x: p.x, y: p.y, z: p.z,
+        x: p.sleep?.stand?.x ?? p.x, y: p.sleep?.stand?.y ?? p.y, z: p.sleep?.stand?.z ?? p.z, // VIL-1: saved on their feet, not in the bed
         mood: Math.round(p.mood * 10) / 10, idleFor: Math.round(p.idleFor ?? 0), // PLAY-13
         furiousFor: Math.round(p.furiousFor ?? 0), said: p.said ?? null, // PLAY-13
+        ask: p.ask ? { item: p.ask.item, left: Math.round(p.ask.left) } : null, nextAsk: Math.round(p.nextAsk ?? 0), // VIL-2
       })),
       emptyHouses: [...this.emptyHouses].map(([id, left]) => [id, Math.round(left)]), // PLAY-13
     };
@@ -779,7 +938,7 @@ export class Settlers {
     // indoors is the roof. The saved floor is kept when it still holds them
     // (settlerFloor, from the saved height); only otherwise the column's top.
     this.people = data.people.map((p) => ({
-      ...p, ...loadMood(p), y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false, // PLAY-13
+      ...p, ...loadMood(p), ...loadAsks(p, this.rand), y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false, // PLAY-13
     }));
     this.emptyHouses = new Map((data.emptyHouses ?? []).filter((e) => Array.isArray(e) && Number.isFinite(e[1]) && e[1] > 0)); // PLAY-13
     this.nextId = data.nextId ?? this.people.length;

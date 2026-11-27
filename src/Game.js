@@ -2177,8 +2177,21 @@ export class Game {
     return best;
   }
 
+  /** VIL-2: gives the held item to a villager who asked for it. False when it is not what they want. */
+  giveToVillager(person) {
+    const d = this.duilt, item = this.selectedItemId;
+    if (!d || d.sandbox || !item || person.ask?.item !== item) return false;
+    const r = d.settlers.give(person, item);
+    if (!r.ok) { this.ui?.toast({ kind: 'xp', title: r.reason }); return true; }
+    person.facing = Math.atan2(this.player.position.x - person.x, this.player.position.z - person.z);
+    this.ui?.toast({ kind: 'talk', title: person.name, body: `“Thank you! A ${itemName(item).toLowerCase()}, just what I wanted.” (+${Math.round(r.gain)} mood)`, duration: 5000 });
+    return true;
+  }
+
   /** The next line of a conversation (config/talk.js), in a speech bubble. */
   talkTo({ who, person }) {
+    // VIL-2: holding what a villager asked for, Place gives it to them.
+    if (who === 'settler' && this.giveToVillager?.(person)) return;
     const me = this.player.position;
     let title = person.name, line, gift = null;
     if (who === 'messenger') {
@@ -2192,6 +2205,7 @@ export class Game {
         archiveRead: !!this.duilt?.time?.futureKnown,
         job: work ? structureName(work.type).toLowerCase() : null, jobId: work?.type ?? null,
       });
+      if (who === 'settler' && person.ask) line += ` I would love ${/^[aeiou]/i.test(itemName(person.ask.item)) ? 'an' : 'a'} ${itemName(person.ask.item).toLowerCase()}. Hold one and use Place on me.`; // VIL-2
       if (who === 'explorer') { title = `${person.name}, an explorer`; gift = this.explorerGift(person); }
       if (who === 'tribe') title = `${person.name} of the tree people`;
       if (who === 'city_guard') title = `${person.name}, of the city guard`;

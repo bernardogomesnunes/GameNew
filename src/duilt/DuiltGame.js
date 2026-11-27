@@ -1,3 +1,4 @@
+import { isBedtime } from './sleepSpots.js'; // VIL-1
 import { Rivals, WON as RIVAL_WON, MAX_STRENGTH as RIVAL_MAX } from './Rivals.js';
 import { MARCH_DAYS, companyPower, cityPower, forecast, resolve as resolveMarch, survivors } from './marchBattle.js';  // PLAY-12
 import { rivalSites } from '../world/rivals.js';  // PLAY-12
@@ -284,6 +285,8 @@ export class DuiltGame {
       // The barracks's soldiers live here too, and eat with everyone.
       garrison: () => this.defenders?.residents ?? 0,
     });
+    // VIL-1: bedtime follows the day clock (Game keeps dayTime), except in a battle.
+    this.settlers.night = () => isBedtime(this.dayTime) && this.war?.stage !== 'fighting';
     this.jobs = new VillagerJobs({world,settlers:this.settlers,structures:this.structures,inventory:this.inventory,bus});
     this.lastCollect = Date.now();
   }
