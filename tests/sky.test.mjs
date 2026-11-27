@@ -207,7 +207,8 @@ ok('a lift anywhere else goes nowhere', liftAt(gen, at.x, 0, at.z) === null);
   stampSky(far, new Chunk(0, 0, 200), 16);
   ok(`and a chunk at home doesn't even plan it (reach ${SKY_REACH})`, far.skyCache === undefined);
   ok('ChunkGen lays it after the Stone Kingdom', /stampKingdom\([\s\S]{0,300}stampSky\(this, chunk, CHUNK_SIZE\)/.test(chunkGen));
-  ok('Game sets it from your ring: the Black — and Creative', /this\.world\.gen\.sky = this\.skyOpen\(\)/.test(game) && /d\.sandbox \|\| d\.ring === 'black'/.test(game));
+  ok('Game lays it in every Duilt world, white ring too', /this\.world\.gen\.sky = this\.skyOpen\(\)/.test(game) && /skyOpen\(\) \{\s*return !!\(this\.duilt && this\.world\?\.gen\);/.test(game));
+  ok('only the Black Ring fights it', /skyHostile: \(\) => !!\(this\.duilt && !this\.duilt\.sandbox && this\.duilt\.ring === 'black'/.test(game));
 }
 
 // --- the chains and lifts as blocks ----------------------------------------------------------------
@@ -431,7 +432,7 @@ ok('a lift anywhere else goes nowhere', liftAt(gen, at.x, 0, at.z) === null);
   const ui = readFileSync(new URL('../src/ui/UIManager.js', import.meta.url), 'utf8');
   const map = readFileSync(new URL('../src/render/WorldMap.js', import.meta.url), 'utf8');
   ok('the map marks both kingdoms: the Stone once found, the Sky once sworn — both from the start in Creative',
-    /d\.sandbox \|\| d\.foundPlaces\(\)\.some\(\(p\) => p\.kind === 'kingdom'\)/.test(game) && /this\.skyOpen\(\) && \(d\.sandbox \|\| d\.army\.sworn\)/.test(game));
+    /d\.sandbox \|\| d\.foundPlaces\(\)\.some\(\(p\) => p\.kind === 'kingdom'\)/.test(game) && /this\.skyOpen\(\) && \(d\.sandbox \|\| d\.army\.sworn \|\| d\.skyGiftDue\(\)\)/.test(game));
   ok('off the edge of the map, an arrow on the edge points the way, with how far', /for \(const s of sites\) drawSite\(/.test(map) && /`\$\{s\.name\} · \$\{far\.toLocaleString/.test(map));
   ok('in Creative, a Travel button for each, closing the map', /const go = duilt\?\.sandbox( && !era)? \? sites : \[\];/.test(ui) && /Travel to the \$\{s\.name\}/.test(ui) && /this\.game\.travelTo\(b\.dataset\.travel\)\) this\.closePanel\('panel-map'\)/.test(ui));
   ok('travel is Creative only: the Sky Kingdom at its gate nearest home, the Stone Kingdom from the air',
