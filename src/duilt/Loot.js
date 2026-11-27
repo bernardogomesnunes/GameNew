@@ -1,4 +1,5 @@
 import { hash01 } from '../world/ChunkGen.js';
+import { FRUITS, ANY_FRUIT } from '../config/items.js';
 
 /**
  * What's in a chest you find (Phase 7c): one left on a deep cave floor, in
@@ -25,7 +26,7 @@ export const LOOT = {
   },
   hermit: {
     name: 'The hermit\'s chest',
-    items: [['fruit', 0.8, 2, 5], ['seeds_cabbage', 0.7, 2, 4], ['egg', 0.3, 1, 3], ['lantern', 0.4, 1, 1], ['gold', 0.4, 1, 2], ['kombucha', 0.4, 1, 2], ['seeds_coffee', 0.5, 2, 4], ['coffee_beans', 0.4, 2, 5], ['coin', 0.35, 2, 8]],
+    items: [['any_fruit', 0.8, 2, 5], ['seeds_cabbage', 0.7, 2, 4], ['egg', 0.3, 1, 3], ['lantern', 0.4, 1, 1], ['gold', 0.4, 1, 2], ['kombucha', 0.4, 1, 2], ['seeds_coffee', 0.5, 2, 4], ['coffee_beans', 0.4, 2, 5], ['coin', 0.35, 2, 8]],
     ring: 0.2,
   },
   // Places to find (playtest, P4): "all with a chest with goodies: armour,
@@ -42,7 +43,7 @@ export const LOOT = {
   // the bows they hunt with. Take from it and the tribe sees.
   tribe: {
     name: 'The tree people\'s chest',
-    items: [['fruit', 0.8, 3, 6], ['hemp_fibre', 0.6, 2, 5], ['string', 0.5, 1, 3], ['arrow', 0.6, 4, 12], ['bow', 0.25, 1, 1],
+    items: [['any_fruit', 0.8, 3, 6], ['hemp_fibre', 0.6, 2, 5], ['string', 0.5, 1, 3], ['arrow', 0.6, 4, 12], ['bow', 0.25, 1, 1],
       ['seeds_hemp', 0.5, 2, 4], ['kombucha', 0.35, 1, 2], ['armour_leather_body', 0.15, 1, 1], ['gold', 0.4, 1, 3], ['coin', 0.5, 4, 14]],
     ring: 0.08,
   },
@@ -76,7 +77,7 @@ export const LOOT = {
   },
   mossfolk: {
     name: 'The mossfolk\'s offering chest',
-    items: [['fruit', 0.8, 3, 7], ['seeds_cabbage', 0.6, 2, 5], ['hemp_fibre', 0.55, 2, 5], ['firefly_lantern', 0.25, 1, 1], ['kombucha', 0.3, 1, 2], ['coin', 0.4, 3, 12]],
+    items: [['any_fruit', 0.8, 3, 7], ['seeds_cabbage', 0.6, 2, 5], ['hemp_fibre', 0.55, 2, 5], ['firefly_lantern', 0.25, 1, 1], ['kombucha', 0.3, 1, 2], ['coin', 0.4, 3, 12]],
     ring: 0.1,
   },
   // An abandoned city's houses: left in a hurry, and never come back for.
@@ -89,7 +90,7 @@ export const LOOT = {
   },
   ruin: {
     name: 'A chest in the rubble',
-    items: [['cooked_meat', 0.6, 1, 3], ['fruit', 0.5, 2, 4], ['sword_stone', 0.3, 1, 1], ['armour_leather_head', 0.2, 1, 1],
+    items: [['cooked_meat', 0.6, 1, 3], ['any_fruit', 0.5, 2, 4], ['sword_stone', 0.3, 1, 1], ['armour_leather_head', 0.2, 1, 1],
       ['armour_leather_body', 0.15, 1, 1], ['beer', 0.35, 1, 2], ['gold', 0.5, 1, 3], ['coin', 0.5, 3, 12]],
     ring: 0.05,
   },
@@ -116,7 +117,7 @@ export const LOOT = {
   monument: {
     name: 'What was left at the monument',
     items: [['gold', 0.9, 4, 9], ['sword_iron', 0.3, 1, 1], ['armour_stone_body', 0.2, 1, 1], ['armour_sky_body', 0.15, 1, 1],
-      ['kombucha', 0.3, 1, 2], ['beer', 0.3, 1, 2], ['fruit', 0.4, 2, 4],
+      ['kombucha', 0.3, 1, 2], ['beer', 0.3, 1, 2], ['any_fruit', 0.4, 2, 4],
       ['armour_stone_feet_swift', 0.06, 1, 1], ['sword_iron_fire', 0.04, 1, 1], ['sword_stone_ice', 0.05, 1, 1], ['coin', 0.7, 10, 30]],
     ring: 0.12,
   },
@@ -129,7 +130,8 @@ export function lootFor(kind, x, y, z, seed = 0) {
   const out = {};
   table.items.forEach(([id, chance, lo, hi], i) => {
     if (roll(i * 2) >= chance) return;
-    out[id] = lo + Math.floor(roll(i * 2 + 1) * (hi - lo + 1));
+    const item = id === ANY_FRUIT ? FRUITS[Math.floor(roll(i * 2 + 100) * FRUITS.length)] : id;
+    out[item] = (out[item] ?? 0) + lo + Math.floor(roll(i * 2 + 1) * (hi - lo + 1));
   });
   if (roll(90) < table.ring) out[roll(91) < 0.5 ? 'sunstone' : 'nightstone'] = 1 + (roll(92) < 0.25 ? 1 : 0);
   return out;

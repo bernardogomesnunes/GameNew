@@ -59,10 +59,10 @@ ok(`they eat once a game day (${SETTLERS.eatEverySeconds} s)`, SETTLERS.eatEvery
 
 {
   const { settlers, inventory, shelves } = setup();
-  shelves.add('fruit', 1);
+  shelves.add('apple', 1);
   inventory.add('vegetables', 5);
   meal(settlers);
-  ok('when the storehouse runs out, the bag makes up the rest', shelves.countOf('fruit') === 0 && inventory.countOf('vegetables') === 4 && settlers.hungry === 0);
+  ok('when the storehouse runs out, the bag makes up the rest', shelves.countOf('apple') === 0 && inventory.countOf('vegetables') === 4 && settlers.hungry === 0);
 }
 
 {
@@ -74,11 +74,11 @@ ok(`they eat once a game day (${SETTLERS.eatEverySeconds} s)`, SETTLERS.eatEvery
   meal(settlers);
   ok('hungry, they don\'t — but nobody leaves', settlers.bonusFor(quarry.id) === 1 && settlers.population === 2 && settlers.hungry === 2);
   // Food put away is eaten within the minute, not at tomorrow's meal.
-  shelves.add('fruit', 5);
+  shelves.add('apple', 5);
   settlers.tick(SETTLERS.retryHungrySeconds + 1);
-  ok(`food put away is eaten within ${SETTLERS.retryHungrySeconds} s`, settlers.hungry === 0 && shelves.countOf('fruit') === 3 && settlers.bonusFor(quarry.id) > 1);
+  ok(`food put away is eaten within ${SETTLERS.retryHungrySeconds} s`, settlers.hungry === 0 && shelves.countOf('apple') === 3 && settlers.bonusFor(quarry.id) > 1);
   settlers.tick(SETTLERS.retryHungrySeconds + 1);
-  ok('and nobody already fed eats twice', shelves.countOf('fruit') === 3);
+  ok('and nobody already fed eats twice', shelves.countOf('apple') === 3);
 }
 
 // CL-12: tapping the counter now feeds them, so the hint says that.

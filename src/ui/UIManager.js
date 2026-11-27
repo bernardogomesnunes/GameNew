@@ -51,8 +51,11 @@ const ERA_MAP_RADIUS = 150;
 const TOOL_HOTBAR_NOTES = {
   bucket: 'Break to scoop water',
   bucket_water: 'Place to pour it out',
-  fruit: 'Break to eat',
+  apple: 'Break to eat',
   vegetables: 'Break to eat',
+  grape: 'Break to eat',
+  raspberry: 'Break to eat',
+  passion_fruit: 'Break to eat',
 };
 
 /**
@@ -74,8 +77,11 @@ const PLACE_ONLY = new Set(['Turn', 'Let go', 'Throw']);
 const TOOL_ACTION_LABELS = {
   bucket: ['Fill', 'Place'],
   bucket_water: ['Break', 'Empty'],
-  fruit: ['Eat', 'Throw'],
+  apple: ['Eat', 'Throw'],
   vegetables: ['Eat', 'Throw'],
+  grape: ['Eat', 'Throw'],
+  raspberry: ['Eat', 'Throw'],
+  passion_fruit: ['Eat', 'Throw'],
   holy_water: ['Drink', 'Place'],
   beer: ['Drink', 'Place'],
   kombucha: ['Drink', 'Place'],

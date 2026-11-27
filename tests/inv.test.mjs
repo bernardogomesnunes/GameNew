@@ -11,7 +11,7 @@ ok('700 dirt held', inv.countOf('dirt') === 700);
 ok('spilled into two slots', inv.slots[0].count === 500 && inv.slots[1].count === 200);
 
 // food stacks shallower than bulk
-inv.add('fruit', 60);
+inv.add('apple', 60);
 ok('fruit caps at 50 per slot', inv.slots[2].count === 50 && inv.slots[3].count === 10);
 
 // tools never merge
@@ -21,8 +21,8 @@ ok('two axes take two slots', inv.countOf('axe') === 2 && inv.slots[4].count ===
 // all-or-nothing spending
 ok('short bill is refused', inv.spend({ dirt: 10, stone: 5 }) === false);
 ok('nothing was taken on refusal', inv.countOf('dirt') === 700);
-ok('affordable bill is paid', inv.spend({ dirt: 10, fruit: 5 }) === true);
-ok('both lines charged', inv.countOf('dirt') === 690 && inv.countOf('fruit') === 55);
+ok('affordable bill is paid', inv.spend({ dirt: 10, apple: 5 }) === true);
+ok('both lines charged', inv.countOf('dirt') === 690 && inv.countOf('apple') === 55);
 
 // what's missing, for the error message
 const miss = inv.missing({ dirt: 1000, seeds: 4 });

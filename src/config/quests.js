@@ -56,8 +56,8 @@ export const QUESTS = [
   },
   {
     id: 'q_fruit', age: 1, from: 'hermit', title: 'A bare orchard',
-    ask: '"My trees have gone bare this year. If your forest gives, send me six fruit, and I\'ll send you seeds for a garden."',
-    needs: { deliver: { fruit: 6 } },
+    ask: '"My trees have gone bare this year. If your forest gives, send me six apples, and I\'ll send you seeds for a garden."',
+    needs: { deliver: { apple: 6 } },
     reward: { items: { seeds_lettuce: 2, seeds_cabbage: 2 }, xp: 50 },
     thanks: 'Seeds come back wrapped in a leaf, with a note: "Lettuce and cabbage. Put one of each in your farm and it\'ll grow them for you."',
   },
@@ -171,7 +171,7 @@ export const QUESTS = [
   },
   {
     id: 'q_hermit', age: 10, from: 'hermit', title: 'Come yourself',
-    ask: '"You\'ve sent me fruit and glass and fireflies. Now come yourself — my hut is out past the hills."',
+    ask: '"You\'ve sent me apples and glass and fireflies. Now come yourself — my hut is out past the hills."',
     needs: { find: 'hermit' },
     reward: { items: { coin: 20 }, xp: 200 },
     thanks: 'The hermit takes your hand: "You still have the Sky Kingdom\'s look about you. Go well — and don\'t spend too long looking up."',

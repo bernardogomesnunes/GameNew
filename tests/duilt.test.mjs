@@ -11,7 +11,7 @@ const bus = { emit: (t, p) => events.push({ t, p }) };
 const g = new DuiltGame({ world, scene, bus });
 g.grantStartingKit();
 
-ok('starts with an axe, bucket and food', g.inventory.countOf('axe')===1 && g.inventory.countOf('bucket')===1 && g.inventory.countOf('fruit')===4);
+ok('starts with an axe, bucket and food', g.inventory.countOf('axe')===1 && g.inventory.countOf('bucket')===1 && g.inventory.countOf('apple')===4);
 ok('starts in Age 1 at 32 blocks', g.age === 1 && g.territory.size === 32);
 
 // --- the border ---

@@ -25,8 +25,8 @@ import { swings } from '../Game.js';
  * breakBlock, they change how it behaves — see TOOL_EFFECTIVENESS.
  */
 // Any food not listed eats on Break and throws on Place — see foodOverride.
-const BREAK_OVERRIDE = { bucket: 'fillBucket', fruit: 'eatSelected', vegetables: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand', carpentry_chisel: 'chiselBlock' };
-const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', fruit: 'throwSelected', vegetables: 'throwSelected', coffee_beans: 'throwSelected', compost: 'compostSelected', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace', helix: 'setDownMachine', flying_machine: 'wearSelected', dino_whistle: 'blowWhistle' };
+const BREAK_OVERRIDE = { bucket: 'fillBucket', apple: 'eatSelected', vegetables: 'eatSelected', grape: 'eatSelected', raspberry: 'eatSelected', passion_fruit: 'eatSelected', holy_water: 'drinkSelected', beer: 'drinkSelected', kombucha: 'drinkSelected', coffee: 'drinkSelected', war_horn: 'blowHorn', bow: 'shootBow', god_wand: 'useWand', carpentry_chisel: 'chiselBlock' };
+const PLACE_OVERRIDE = { bucket_water: 'emptyBucket', apple: 'throwSelected', vegetables: 'throwSelected', grape: 'throwSelected', raspberry: 'throwSelected', passion_fruit: 'throwSelected', coffee_beans: 'throwSelected', compost: 'compostSelected', locomotive: 'setDownTrain', rail_car: 'railCarHint', god_wand: 'wandPlace', helix: 'setDownMachine', flying_machine: 'wearSelected', dino_whistle: 'blowWhistle' };
 
 export function wireInput() {
   const canvas = this.renderer.domElement;

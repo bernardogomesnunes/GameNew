@@ -128,7 +128,7 @@ ok('animals follow you holding any of it', CROPS.every((c) => game.includes('c.p
 {
   // Reported directly: "improve the icons to the 3D version of each fruit
   // and veggie — now they are cards, weird, not matching the rest."
-  const foods = ['fruit', ...CROPS.map((c) => c.produce)];
+  const foods = ['apple', ...CROPS.map((c) => c.produce)];
   ok('every fruit and vegetable is drawn as a model', foods.every((id) => /<svg class="cube"/.test(itemIcon(ITEMS_BY_ID.get(id)) ?? '')));
   ok('and each one differently', new Set(foods.map((id) => itemIcon(ITEMS_BY_ID.get(id)))).size === foods.length);
   ok('seed packets differ by crop', new Set(CROPS.map((c) => itemIcon(ITEMS_BY_ID.get(`seeds_${c.kind}`)))).size === CROPS.length);

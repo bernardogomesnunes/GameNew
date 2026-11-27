@@ -81,7 +81,7 @@ ok('an axe is held with its blade the way you swing it, not out to the side',
 ok('in first person a tool is held as in third person: turned a quarter round, its blade ahead',
   /if \(pointing\) this\.item\.rotation\.set\(HOLD_TIP, -Math\.PI \/ 2 \+ HOLD_TURN, 0\)/.test(readFileSync(new URL('../src/render/HandView.js', import.meta.url), 'utf8')));
 ok('so are the tools and the bucket', ['axe', 'pickaxe', 'shovel', 'bucket', 'bucket_water'].every((id) => HELD_MODELS[id]?.length >= 2));
-ok('fruit too', heldBoxes({ itemId: 'fruit' }).length >= 2);
+ok('fruit too', heldBoxes({ itemId: 'apple' }).length >= 2);
 ok('a block, as itself', heldBoxes({ blockId: 1 }).length === 1 && heldBoxes({ blockId: 33 }).length > 1);
 ok(`and everything you can hold has something to show (${ITEMS.length} items)`, ITEMS.every((i) => heldGeometryFor({ itemId: i.id })));
 ok('in first person, in your hand at the bottom right; it swings when you strike or place',

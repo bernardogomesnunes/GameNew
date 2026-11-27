@@ -63,8 +63,8 @@ function stuff(inv) {
   reg.storeFor(shed).resize(HOLDS);
   ok('with a storehouse, a payout goes on its shelves, not in your bag',
     reg.deliver({ vegetables: 12 }) && reg.storeFor(shed).countOf('vegetables') === 12 && inventory.countOf('vegetables') === 0);
-  shed.excludes = ['fruit'];
-  ok('a storehouse set to skip something leaves it for your bag', reg.deliver({ fruit: 3 }) && inventory.countOf('fruit') === 3 && reg.storeFor(shed).countOf('fruit') === 0);
+  shed.excludes = ['apple'];
+  ok('a storehouse set to skip something leaves it for your bag', reg.deliver({ apple: 3 }) && inventory.countOf('apple') === 3 && reg.storeFor(shed).countOf('apple') === 0);
   shed.excludes = [];
   // Full shelves: the rest comes to the bag.
   const shelves = reg.storeFor(shed);

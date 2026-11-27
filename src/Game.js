@@ -75,7 +75,7 @@ import { CrackView } from './render/CrackView.js';
 import { LEAVES, leafHeld, orphanLeaves } from './world/leafDecay.js';
 import { talkLine } from './config/talk.js';
 import { cubeSite, cubeDesign, WAY_OUT, CUBE_SIZE } from './world/godCube.js';
-import { TOOL_FOR, itemName, BARE_HANDS } from './config/items.js';
+import { TOOL_FOR, itemName, BARE_HANDS, FRUITS } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf } from './config/crops.js';
 import { Mobs, rayBox, surfaceAt } from './world/Mobs.js';
@@ -198,7 +198,7 @@ const AUTOSAVE_INTERVAL_MS = 5 * 60_000;
 // Minimap.js's own note), so this is dead weight on a phone regardless.
 const MINIMAP_INTERVAL_MS = 500;
 // What a farm animal will follow you for. See Mobs.think.
-const LURES = new Set(['vegetables', 'fruit', ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
+const LURES = new Set(['vegetables', ...FRUITS, ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
 /** How often planted crops are brought up to the stage their age says. */
 const CROP_TICK_SECONDS = 2;
 /** How near you come to a place, past its edge, to have found it. */

@@ -22,11 +22,11 @@ const scene = { add() {}, remove() {} };
   const all = () => ITEMS.filter((i) => !i.grants).every((i) => inv.countOf(i.id) === 1);
   ok('a creative bag holds exactly one of everything', all());
 
-  const fruitAt = inv.slots.findIndex((s) => s?.id === 'fruit');
-  ok('the bin does nothing', inv.discard(fruitAt) === null && inv.countOf('fruit') === 1);
+  const fruitAt = inv.slots.findIndex((s) => s?.id === 'apple');
+  ok('the bin does nothing', inv.discard(fruitAt) === null && inv.countOf('apple') === 1);
   d.hunger.value = 10;
-  d.eat('fruit');
-  ok('eating doesn\'t use the food up', inv.countOf('fruit') === 1);
+  d.eat('apple');
+  ok('eating doesn\'t use the food up', inv.countOf('apple') === 1);
   ok('nor does spending on anything', inv.spend({ planks: 3, stone: 1 }) && inv.countOf('planks') === 1);
   for (let i = 0; i < 500; i++) inv.useTool('axe');
   ok('a tool never wears out', inv.countOf('axe') === 1 && inv.findTool('axe').slot.wear === 0);
@@ -36,10 +36,10 @@ const scene = { add() {}, remove() {} };
   inv.grow(inv.size + 2);
   const to = inv.slots.findIndex((s) => !s);
   inv.move(fruitAt, to);
-  ok('but things still move round the bag', inv.slots[to]?.id === 'fruit' && inv.countOf('fruit') === 1);
+  ok('but things still move round the bag', inv.slots[to]?.id === 'apple' && inv.countOf('apple') === 1);
   const store = new Inventory({ slots: 4 });
   inv.moveTo(store, to);
-  ok('handing something to a storehouse gives it a copy and keeps yours', store.countOf('fruit') === 1 && inv.countOf('fruit') === 1);
+  ok('handing something to a storehouse gives it a copy and keeps yours', store.countOf('apple') === 1 && inv.countOf('apple') === 1);
   ok('still one of everything after all that', all());
 }
 
@@ -59,9 +59,9 @@ const scene = { add() {}, remove() {} };
   const d = new DuiltGame({ world, scene, sandbox: false });
   d.grantStartingKit();
   const inv = d.inventory;
-  const before = inv.countOf('fruit');
-  inv.remove('fruit', 1);
-  ok('a Duilt bag still spends normally', inv.countOf('fruit') === before - 1);
+  const before = inv.countOf('apple');
+  inv.remove('apple', 1);
+  ok('a Duilt bag still spends normally', inv.countOf('apple') === before - 1);
 }
 
 process.exit(f ? 1 : 0);
