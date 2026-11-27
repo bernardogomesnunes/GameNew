@@ -1,7 +1,7 @@
 import { drift } from '../world/bodies.js';
-import { SETTLERS, settlerName, settlerColour } from '../config/settlers.js';
+import { SETTLERS, settlerName, settlerColour, TRADE_IDS, tradeFor } from '../config/settlers.js';
 import { JOB_FOR_BUILDING } from '../config/outfits.js';
-import { STRUCTURES_BY_ID } from '../config/structures.js';
+import { STRUCTURES_BY_ID, makesGoods } from '../config/structures.js';
 import { ITEMS, foodOrder } from '../config/items.js';
 import {settlerFloor,settlerRoute,doorWise} from './settlerNavigation.js';
 import {doorPart} from '../config/blocks.js';
@@ -453,6 +453,7 @@ export class Settlers {
       colour: settlerColour(n),
       homeId: home.id,
       workId: null,
+      trade: this.nextTrade(), // WORK-3
       x: at.x, z: at.z,
       y: this.groundAt(at.x, at.z),
       target: null,
@@ -569,6 +570,12 @@ export class Settlers {
     return this.structures.list().some((s) => s.type === 'work_hall' && s.valid);
   }
 
+  /** WORK-3: the trade with the fewest people so far; ties go to the first listed. */
+  nextTrade() {
+    const n = (t) => this.people.filter((p) => p.trade === t).length;
+    return TRADE_IDS.reduce((a, b) => (n(b) < n(a) ? b : a));
+  }
+
   assignWork(person) {
     if (this.jobs?.controls(person)) { person.workId = null; return null; }
     if (!this.jobsOpen) { person.workId = null; return null; }
@@ -577,13 +584,17 @@ export class Settlers {
     const from = centreOf(home.region);
     const staffed = new Set(this.people.map((p) => p.workId).filter((v) => v != null));
 
-    let best = null, bestD = Infinity;
+    // WORK-3: a building without a worker, in their own trade first (or any
+    // trade's, for a market or temple); only with none of those, any free one.
+    let best = null, bestD = Infinity, bestFit = false;
     for (const s of this.structures.list()) {
       if (!s.valid || s.id === person.homeId || staffed.has(s.id)) continue;
       const spec = STRUCTURES_BY_ID.get(s.type);
-      if (!spec?.everySeconds || !spec.produces || !Object.keys(spec.produces).length) continue;
+      if (!makesGoods(spec)) continue;
       const d = dist(from, centreOf(s.region));
-      if (d <= SETTLERS.workRange && d < bestD) { bestD = d; best = s; }
+      if (d > SETTLERS.workRange) continue;
+      const trade = tradeFor(s.type), fit = !trade || trade === person.trade;
+      if ((fit && !bestFit) || (fit === bestFit && d < bestD)) { bestD = d; best = s; bestFit = fit; }
     }
     person.workId = best?.id ?? null;
     return best;
@@ -919,7 +930,7 @@ export class Settlers {
       nextId: this.nextId,
       people: this.people.map((p) => ({
         id: p.id, name: p.name, colour: p.colour,
-        homeId: p.homeId, workId: p.workId, hungry: !!p.hungry,
+        homeId: p.homeId, workId: p.workId, trade: p.trade, hungry: !!p.hungry,
         x: p.sleep?.stand?.x ?? p.x, y: p.sleep?.stand?.y ?? p.y, z: p.sleep?.stand?.z ?? p.z, // VIL-1: saved on their feet, not in the bed
         mood: Math.round(p.mood * 10) / 10, idleFor: Math.round(p.idleFor ?? 0), // PLAY-13
         furiousFor: Math.round(p.furiousFor ?? 0), said: p.said ?? null, // PLAY-13
@@ -938,8 +949,10 @@ export class Settlers {
     // indoors is the roof. The saved floor is kept when it still holds them
     // (settlerFloor, from the saved height); only otherwise the column's top.
     this.people = data.people.map((p) => ({
-      ...p, ...loadMood(p), ...loadAsks(p, this.rand), y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false, // PLAY-13
+      ...p, trade: TRADE_IDS.includes(p.trade) ? p.trade : null, ...loadMood(p), ...loadAsks(p, this.rand), y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false, // PLAY-13
     }));
+    // WORK-3: a save from before trades hands them out now, evenly.
+    for (const p of this.people) if (!p.trade) p.trade = this.nextTrade();
     this.emptyHouses = new Map((data.emptyHouses ?? []).filter((e) => Array.isArray(e) && Number.isFinite(e[1]) && e[1] > 0)); // PLAY-13
     this.nextId = data.nextId ?? this.people.length;
     // Houses and workplaces may have been taken down while we were away.
