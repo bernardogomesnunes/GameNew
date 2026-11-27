@@ -17,7 +17,10 @@ import { buildWorldPayload, parseWorldPayload } from '../storage/WorldExport.js'
 import { AIR, BLOCKS_BY_ID, turned, doorPart, doorBlock, isChest, CATAPULT, isCatapult, isFluid, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE } from '../config/blocks.js';
 import { BEER_COOLDOWN, KOMBUCHA_DAMAGE } from '../config/drinks.js';
 import { AvatarView } from '../render/AvatarView.js';
-import { ARROW_DAMAGE, drawShot, FULL_DRAW_MS, MIN_DRAW_MS } from '../world/Arrows.js';
+import { ARROW_DAMAGE, drawShot, FULL_DRAW_MS, MIN_DRAW_MS, BOLT_SPEED } from '../world/Arrows.js';
+import { MAGIC_TARGET } from '../config/blocks.js';
+import { STRENGTH_DAMAGE } from '../config/potions.js';
+import { HAT } from '../config/magic.js';
 import { itemName, ITEMS, ITEMS_BY_ID } from '../config/items.js';
 import { MOBS_BY_ID } from '../config/mobs.js';
 import { rayBox } from '../world/Mobs.js';
@@ -172,11 +175,12 @@ export function strikeCooldown() {
 
 /** How hard a blow lands: the tool's damage (a fist 1), plus kombucha's. */
 export function blowDamage(tool, target = null) {
+  const potion = this.duilt?.boosted('p_strength') ? this.duilt.magic.potionBonus(STRENGTH_DAMAGE) : 0; // POT-6
   // IMP-45: the Dragon Axe fells anything in one blow, but not a god.
   if (tool?.id === 'dragon_axe' && target && !target.god) return DRAGON_AXE_BLOW;
   // Bare hands take a whole heart — asked for directly: "without weapons
   // 1 heart should go".
-  return (tool?.damage ?? FIST_DAMAGE) + (this.duilt?.boosted('strength') ? KOMBUCHA_DAMAGE : 0);
+  return (tool?.damage ?? FIST_DAMAGE) + (this.duilt?.boosted('strength') ? KOMBUCHA_DAMAGE : 0) + potion;
 }
 
 /**
@@ -200,6 +204,7 @@ export function hitMob(hit) {
   const tool = ITEMS_BY_ID.get(this.selectedItemId);
   const { x, z } = this.player.position;
   const { killed, drops } = this.mobs.hit(mob, this.blowDamage(tool, { god: false }), x, z, this.blowKnock(tool));
+  if (!killed) this.potionStrike(mob, false); // POT-7, POT-8
   this.sound?.strike({ weapon: !!tool?.weapon });
   // A dragon struck now and then sheds a scale (IMP-45).
   if (MOBS_BY_ID.get(mob.type)?.sheds && !killed && Math.random() < 0.15) this.shedDragon(mob, { dragon_scale: 1 });
@@ -341,12 +346,78 @@ export function arrowTarget(from, dir, length) {
   return wild ?? bandit;
 }
 
+/**
+ * WAND-3: a mob or a person who hit you takes the Wizard Hat's thorns back.
+ * Called after a blow that landed. A kill is counted like any other.
+ */
+export function hatThorns(attacker, person) {
+  const d = this.duilt;
+  if (!d?.wearsHat?.() || attacker.dead || attacker.dying > 0) return;
+  const { x, z } = this.player.position;
+  if (person) {
+    const res = this.wanderers?.hit(attacker, HAT.thorns, x, z);
+    if (res?.killed) {
+      this.personKilled(attacker);
+      const gained = d.collect(res.drops) ?? {};
+      const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+      this.ui?.toast({ kind: 'xp', title: `The hat's thorns felled ${attacker.name}`, body: got || undefined });
+    }
+    return;
+  }
+  const res = this.mobs?.hit(attacker, HAT.thorns, x, z);
+  if (res?.killed) this.mobFell(attacker, res.drops);
+}
+
+/** POT-7, POT-8: a blow with fire or frost going sets alight or freezes what it hits. */
+export function potionStrike(target, person) {
+  this.potionAfflict(target, person);
+}
+
+/** WIZ-5: between casts, in ms. */
+export const CAST_COOLDOWN_MS = 500;
+
+/**
+ * Break, with the Wizard's Wand in hand: a magic bolt from your eye, straight
+ * the way you look. Its damage is the wand's at your Magic level (plus a
+ * kombucha's). Each cast is a Magic point and counts for the open quest.
+ */
+export function castWand() {
+  const d = this.duilt;
+  if (!d?.magic.active) return;
+  const now = performance.now();
+  if (now - (this.lastCastAt ?? 0) < CAST_COOLDOWN_MS) return;
+  this.lastCastAt = now;
+  const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+  const damage = d.magic.wandDamage(d.hatMagicBonus?.() ?? 0) + (d.boosted('strength') ? KOMBUCHA_DAMAGE : 0);
+  this.arrows?.shoot({ x: eye.x + dir.x * 0.5, y: eye.y + dir.y * 0.5 - 0.1, z: eye.z + dir.z * 0.5 }, dir, BOLT_SPEED, damage, true);
+  this.handView?.strike();
+  this.sound?.strike({ weapon: true });
+  this.magicToast(d.magic.cast());
+  d.magic.note('casts');
+}
+
+/** A level-up toast, if a gain of Magic points crossed one. */
+export function magicToast(res) {
+  if (res?.leveled) this.ui?.toast({ kind: 'challenge', title: `Magic level ${res.leveled}`, body: 'Your wand hits harder and potions last longer' });
+}
+
+/** A bolt burst on a block: a training target scores. */
+export function boltHitsBlock(bolt, x, y, z) {
+  const d = this.duilt;
+  if (!d?.magic.active || this.world.getBlock(x, y, z) !== MAGIC_TARGET) return;
+  this.magicToast(d.magic.hitTarget());
+  d.magic.note('targets');
+  this.sound?.strike({ weapon: true });
+}
+
 /** An arrow found its mark. */
 export function arrowHit(arrow, hit) {
   const damage = arrow.damage ?? ARROW_DAMAGE;
   if (hit.kind === 'mob') {
     const { killed, drops } = this.mobs.hit(hit.mob, damage, arrow.x - arrow.vx, arrow.z - arrow.vz, ARROW_KNOCK);
     this.sound?.strike({ weapon: true });
+    if (killed && arrow.bolt) this.duilt?.magic.note('kills'); // WIZ-5
+    if (!killed) this.potionStrike(hit.mob, false);
     if (killed) this.mobFell(hit.mob, drops);
     return;
   }
@@ -355,6 +426,7 @@ export function arrowHit(arrow, hit) {
   if (!res) return;
   this.sound?.strike({ weapon: true });
   this.focusGuardian(p, res);
+  if (res.killed && arrow.bolt) this.duilt?.magic.note('kills'); // WIZ-5
   if (res.killed) this.banditFell(p, res);
 }
 
@@ -394,6 +466,7 @@ export function hitBandit(hit) {
   const res = this.wanderers.hit(p, this.blowDamage(tool, { god: !!WANDERERS[p.kind]?.god }) * (ambush ? AMBUSH : 1), x, z, this.blowKnock(tool));
   if (ambush) this.revealDisguise();
   if (!res) return false;
+  if (!res.killed) this.potionStrike(p, true); // POT-7, POT-8
   // An upgraded sword (playtest, P6): stuns, burns or freezes as it lands.
   if (tool?.element && !res.killed) this.wanderers.afflict(p, tool.element);
   this.sound?.strike({ weapon: !!tool?.weapon });
@@ -489,6 +562,7 @@ export function banditHits(p, hits, blow = {}) {
   if (!this.duilt || this.duilt.sandbox) return;
   const taken = this.duilt.hurt(hits, p.war ? 'army' : WANDERERS[p.kind]?.sky ? 'sky' : 'bandit');
   if (!taken) return;
+  this.hatThorns(p, true); // WAND-3
   // The Black Ring (Phase 7c): a dark spark back at whoever struck you.
   if (this.duilt.ringWorn() === 'black' && this.wanderers) {
     const res = this.wanderers.hit(p, BLACK_RING_SPARK, this.player.position.x, this.player.position.z);

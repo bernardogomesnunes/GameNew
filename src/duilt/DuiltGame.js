@@ -59,7 +59,8 @@ import { Trains, CAR_SLOTS, PART_LENGTH } from '../world/Trains.js';
 import { endingFor } from '../config/lore.js';
 import { factoryMachines } from '../config/structures.js';
 import { Magic } from './Magic.js'; // WIZ-4
-import { HUT } from '../config/magic.js';
+import { HUT, HAT } from '../config/magic.js';
+import { MAGIC_TARGET } from '../config/blocks.js';
 import { runLines, cleanLines, factoryRecipes, isLineRecipe, maxLines, lineDaily, MACHINE_NAMES } from '../structures/Factory.js';
 // PLAY-11 end
 
@@ -278,7 +279,9 @@ export class DuiltGame {
         : r.armsRing && this.ring && this.ring !== r.armsRing ? `You forged the ${this.ring === 'white' ? 'White' : 'Black'} Ring — the other is closed to you`
         : r.study && this.studySlot(r.station) ? `The ${r.station === 'armoury' ? 'armoury' : 'university'} is busy with ${this.studySlot(r.station).name.toLowerCase()} — ${this.researchLeftText(r.station)} left`
         // The Future's materials: read its Archive first (world/future.js).
-        : r.future && !this.time.futureKnown ? 'Knowledge from the Future — read the Archive in its university, and bring it home' : null),
+        : r.future && !this.time.futureKnown ? 'Knowledge from the Future — read the Archive in its university, and bring it home'
+        // WIZ-5: a potion is brewed only once the wizard has taught it.
+        : r.potion && !this.magic.knows(r.potion) ? 'The wizard has not taught you this yet' : null),
       hidden: (r) => this.studyHidden(r),
       onStudy: (r) => this.startStudy(r),
       onMade: (r) => {
@@ -1591,7 +1594,8 @@ export class DuiltGame {
     // interval only decides how promptly you're told, not how much you get.
     this.settlers.tick(dtSeconds);
     this.jobs.tick(dtSeconds);
-    this.stationWork.tick(dtSeconds);
+    // WIZ-5: each finished batch at a Magic Cauldron counts for the open brew quest.
+    for (const done of this.stationWork.tick(dtSeconds)) if (done.recipe.station === 'magic_cauldron') this.magic.note('brew');
     this.handWork.tick(dtSeconds); // WORK-2
     this.crucibles.tick(dtSeconds);
     this.kilnOvens.tick(dtSeconds);
@@ -1609,6 +1613,7 @@ export class DuiltGame {
       this.cauldrons.prune((key) => this.spotStands(key, 'cauldron')); // PLAY-19
       this.handWork.prune((id) => this.structures.list().some((x) => x.id === id)); // WORK-2
       this.checkWizard(); // WIZ-2
+      if (this.magic.active && this.magic.current()?.kind === 'targets') this.placeTargets(); // WAND-2
     }
 
     const now = Date.now();
@@ -2757,8 +2762,10 @@ export class DuiltGame {
     if (!this.inventory.has(itemId, 1)) return { ok: false, reason: 'You have none of that.' };
     if (spec.boost) {
       this.inventory.remove(itemId, 1);
-      this.boosts[spec.boost] = BOOST_SECONDS;
-      return { ok: true, boost: spec.boost, seconds: BOOST_SECONDS };
+      // POT-1: a potion lasts its own time, longer at higher Magic levels; a beer or coffee, three minutes.
+      const seconds = spec.boostSeconds ? this.magic.potionSeconds(spec.boostSeconds) : BOOST_SECONDS;
+      this.boosts[spec.boost] = seconds;
+      return { ok: true, boost: spec.boost, seconds };
     }
     if (this.health.value >= 20) return { ok: false, reason: 'You are not hurt.' };
     this.inventory.remove(itemId, 1);
@@ -2824,6 +2831,16 @@ export class DuiltGame {
     });
   }
 
+  /** WAND-3: whether the Wizard Hat is on your head. */
+  wearsHat() {
+    return this.worn.head?.id === HAT.item;
+  }
+
+  /** WAND-3: what the hat adds to a wand bolt: 0 without it. */
+  hatMagicBonus() {
+    return this.wearsHat() ? HAT.wandBonus : 0;
+  }
+
   /** Whether something you're wearing carries upgrade `key` (playtest, P6). */
   wearing(key) {
     return Object.values(this.worn).some((w) => w && ITEMS_BY_ID.get(w.id)?.upgrade === key);
@@ -2839,8 +2856,17 @@ export class DuiltGame {
     if (!hut) return false;
     const spots = wizardSpots(this.world, hut.region);
     const arrived = this.magic.arrive({ ...spots.door, inside: spots.inside });
-    if (arrived) this.bus?.emit('wizard:arrived', { home: this.magic.home });
+    if (arrived) {
+      this.magic.targets = targetSpots(this.world, spots.door, hut.region);
+      this.placeTargets();
+      this.bus?.emit('wizard:arrived', { home: this.magic.home });
+    }
     return arrived;
+  }
+
+  /** WAND-2: puts back any training target that has been broken, while a quest wants them. */
+  placeTargets() {
+    for (const t of this.magic.targets) if (this.world.getBlock(t.x, t.y, t.z) === 0) this.world.setBlock(t.x, t.y, t.z, MAGIC_TARGET);
   }
 
   /** Whether a drink's boost is going: 'haste', 'strength' or 'speed'. */
@@ -3156,6 +3182,25 @@ export function wizardSpots(world, r) {
     if (outs.length) return { door: { x: outs[0].x + 0.5, y, z: outs[0].z + 0.5 }, inside };
   }
   return { door: { x: cx, y: r.minY, z: r.minZ - 0.5 }, inside };
+}
+
+/**
+ * WAND-2: three spots for training targets, a few blocks out from the hut's
+ * door and side by side, each on the ground. Skips a spot with no ground.
+ */
+export function targetSpots(world, door, region) {
+  const cx = (region.minX + region.maxX) / 2 + 0.5, cz = (region.minZ + region.maxZ) / 2 + 0.5;
+  let ox = door.x - cx, oz = door.z - cz;
+  const len = Math.hypot(ox, oz) || 1;
+  ox /= len; oz /= len;
+  const out = [];
+  for (const side of [-3, 0, 3]) {
+    const x = Math.floor(door.x + ox * 5 - oz * side), z = Math.floor(door.z + oz * 5 + ox * side);
+    for (let y = Math.floor(door.y) + 3; y >= Math.floor(door.y) - 4; y--) {
+      if (world.getBlock(x, y, z) === 0 && world.getBlock(x, y - 1, z) !== 0) { out.push({ x, y, z }); break; }
+    }
+  }
+  return out;
 }
 
 function inRegion(r, x, y, z) {

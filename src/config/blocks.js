@@ -1094,6 +1094,20 @@ BLOCKS.push(
 );
 // --- end PLAY-12 ---
 
+// WIZ-5: the training targets by the Wizard's Hut, and the Magic Cauldron he gives.
+// 620 and 621: 572 to 615 are the Plant Pot and fruit plants (config/fruitPlants.js).
+export const MAGIC_TARGET = 620, MAGIC_CAULDRON = 621;
+BLOCKS.push(
+  { id: MAGIC_TARGET, name: 'Training Target', glyph: 'target', color: 0x6f8fd9, shape: 'archery_target', material: 'wood', unlock: null },
+  { id: MAGIC_CAULDRON, name: 'Magic Cauldron', glyph: 'bucket', color: 0x5b3f8f, shape: 'cauldron', material: 'stone', station: 'magic_cauldron', unlock: null },
+);
+// POT-8: the thin layer of snow a Frost potion leaves where you walk. Not placed by hand.
+export const FROST_LAYER = 622;
+BLOCKS.push(
+  { id: FROST_LAYER, name: 'Frost Layer', glyph: 'snow', color: 0xf4f8fb, shape: 'rug', material: 'stone', system: true, unlock: null },
+);
+// --- end WIZ-5 ---
+
 // The storybook palette (config/palette.js) paints every block it names; the
 // colour each was written with above is kept as `formerColor`, which an item
 // made of the block reads to stay as much lighter or darker than it as it was.
