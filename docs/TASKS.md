@@ -490,10 +490,10 @@ broccoli crops; the University from Age 3; the Armoury and War Hall.
 | ID | What | Who | Status |
 |---|---|---|---|
 | VIL-1 | **Sleep at night.** At dusk each villager walks home and lies in their bed; they get up at dawn. No work and no hauling at night. Soldiers sleep in barracks bunks. A villager without a bed sleeps by the fire. | Any agent | open |
-| VIL-2 | **Asks.** Each villager now and then asks for one thing (a food, a weapon, a tool, mushrooms, a drink), shown as a bubble over the head and in their panel. Giving it raises mood. Ignoring it costs nothing: the ask expires after a few game days. To choose: how much mood a gift gives, and how often a villager asks. | Any agent + Owner | open |
+| VIL-2 | **Asks.** Each villager now and then asks for one thing (a food, a weapon, a tool, mushrooms, a drink), shown as a bubble over the head and in their panel. Giving it raises mood. Ignoring it costs nothing: the ask expires after a few game days. **Decided 27 November:** the agent picks the mood numbers; the owner judges them in game. | Any agent | open |
 | VIL-3 | **Three trades: farmer, woodworker, engineer.** Each villager has a trade, matched to the jobs that exist (farmer: fields, ranch, mill; woodworker: wood mill, carpentry, planing; engineer: building, machines, the mine). To choose: whether a villager can change trade, and where today's other jobs go. | Any agent + Owner | open |
 | VIL-4 | **Villager levels.** A villager gains experience by working. Each level raises work speed, build speed, strength and intelligence. Shown in their panel. | Any agent | open |
-| VIL-5 | **Buildings raise villager stats.** The University raises intelligence (faster work and building); military buildings (barracks, Armoury, War Hall) raise strength. The cap follows the Age: fairly strong by Age 7, very strong by Age 10. To choose: the numbers per Age. | Any agent + Owner | open |
+| VIL-5 | **Buildings raise villager stats.** The University raises intelligence (faster work and building); military buildings (barracks, Armoury, War Hall) raise strength. **Decided 27 November:** strength does not follow the Age. It grows only from buildings and from working, and the buildings that raise it come with the player's own progress, so the two move together. Fairly strong around the Age 7 buildings, very strong around the Age 10 ones. | Any agent | open |
 | VIL-6 | **Villagers defend the village.** When bandits come, villagers fight. A villager holding a weapon you gave them fights with it; without one they fight with fists or run. Builds on VIL-4 and VIL-5. | Any agent | open |
 
 ### B. Explorers from other regions (small)
@@ -507,10 +507,10 @@ broccoli crops; the University from Age 3; the Armoury and War Hall.
 | ID | What | Who | Status |
 |---|---|---|---|
 | FRUIT-1 | **Four fruits.** Apple, grape, raspberry and passion fruit as food items, each with its own icon and 3D model. The generic Fruit item becomes Apple in old saves. | Any agent | open |
-| FRUIT-2 | **Acorns from trees.** Oak leaves drop acorns in place of fruit. To choose: what acorns are for (food for animals, planting oaks, a potion ingredient). Wanderers that drop fruit drop one of the 4 fruits. | Any agent + Owner | open |
+| FRUIT-2 | **Acorns from trees.** Oak leaves drop acorns in place of fruit. Wanderers that drop fruit drop one of the 4 fruits. **Decided 27 November:** acorns are food and fill very little hunger. | Any agent | open |
 | FRUIT-3 | **Plant Pot.** A new item made at the workbench (clay or wood). Placed like a block. Fruit seeds go only in a pot. | Any agent | open |
 | FRUIT-4 | **Fruit plants.** A seed in a pot grows over several game days into a plant 3 to 4 blocks high, with its own 3D model per kind (apple tree, grape vine, raspberry bush, passion fruit vine). Ripe fruit shows on it. Hitting the plant picks the fruit and it grows again. | Any agent | open |
-| FRUIT-5 | **Roots.** Broccoli, carrot and lettuce plants also give a root when harvested (3 root items, or one Root item). Roots are potion ingredients. To choose: one root item or three. | Any agent + Owner | open |
+| FRUIT-5 | **Roots.** Broccoli, carrot and lettuce plants also give a root when harvested (3 root items, or one Root item). Roots are potion ingredients. **Decided 27 November:** three root items, one per plant (broccoli root, carrot root, lettuce root). | Any agent | open |
 
 ### D. The wizard (large)
 
@@ -520,7 +520,7 @@ broccoli crops; the University from Age 3; the Armoury and War Hall.
 | WIZ-2 | **The wizard.** A new person who moves in once the hut stands. By day he stands at the door; at night he is inside. His own model (robe, hat, staff). | Any agent | open |
 | WIZ-3 | **Wizard panel.** Talking to him opens his own panel with 4 tabs: Talk, Shop (fruit seeds, sold from the first visit), Quests, Recipes (the potions he has taught). | Any agent | open |
 | WIZ-4 | **Magic points.** From the wizard's arrival the player has a Magic level, shown with the stats. Points come from quests, wand training and every use of magic. Magic level raises wand damage and potion strength. | Any agent | open |
-| WIZ-5 | **Quest chain.** A fixed order of quests: bring materials, then train with the wand (hit targets, cast a number of times). Rewards in order: the Wand, then the Cauldron, then potion recipes one by one, then the Wizard Hat last. To choose: the list of quests. | Any agent + Owner | open |
+| WIZ-5 | **Quest chain.** A fixed order of quests: bring materials, then train with the wand (hit targets, cast a number of times). Rewards in order: the Wand, then the Cauldron, then potion recipes one by one, then the Wizard Hat last. **Decided 27 November:** the agent writes the quests from these kinds: gather items, mix items in the cauldron, kill mobs with the wand, train at the targets. | Any agent | open |
 
 ### E. Wand, hat and cauldron (medium)
 
@@ -536,7 +536,8 @@ broccoli crops; the University from Age 3; the Armoury and War Hall.
 Each potion is a drink with a timed effect, like today's `boost` drinks.
 Ingredients are things in the game plus roots and fruit. To choose with the
 owner: each potion's recipe and how long it lasts (the frost effect on mobs
-is set at 1 minute).
+is set at 1 minute). **Decided 27 November:** the agent makes up the recipes
+from items in the game; the owner sees them in game once built.
 
 | ID | What | Who | Status |
 |---|---|---|---|
@@ -554,7 +555,7 @@ is set at 1 minute).
 | ID | What | Who | Status |
 |---|---|---|---|
 | WORK-1 | **Production needs a worker.** A building makes goods only while a villager works there. To choose: whether old worlds switch at once or get a grace period. | Any agent + Owner | open |
-| WORK-2 | **A mini game per building.** Until villagers arrive, you can work a building yourself with a short mini game that makes a few items. One small game per building kind (fields, mill, quarry, wood mill). To choose: which buildings get one first. | Any agent + Owner | open |
+| WORK-2 | **A mini game per building.** Until villagers arrive, you can work a building yourself with a short mini game that makes a few items. One small game per building kind (fields, mill, quarry, wood mill). **Decided 27 November:** four mini games: wood, quarry, mine and farm. | Any agent | open |
 | WORK-3 | **New villagers take a job.** A villager who moves in goes to a building without a worker, matching their trade (VIL-3). | Any agent | open |
 
 
