@@ -2223,7 +2223,8 @@ export class Game {
     for (const id of Object.keys(next.give)) if (next.give[id] <= 0) delete next.give[id];
     if (!Object.keys(next.give).length) person.gifts.shift();
     const left = person.gifts.length;
-    return `They give you ${words.join(' and ')}.${left ? ' They have one more thing for you.' : ''}`;
+    const from = next.region ? `From ${next.region}: ${words.join(' and ')}.` : `They give you ${words.join(' and ')}.`;
+    return `${from}${left ? ' They have one more thing for you.' : ''}`;
   }
 
   /** The goblin traders in your markets, turned to look at you when you're near. */
