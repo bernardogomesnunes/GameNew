@@ -52,7 +52,7 @@ ok('ago reads like a person would', ago(0, 30_000) === 'just now' && ago(0, 5 * 
 // --- what the buildings made while you were away ------------------------------------------------
 
 {
-  const earned = { wood: 12, stone: 9, vegetables: 6, seeds_carrot: 6, brick: 4, glass: 4, fruit: 3, cobblestone: 2 };
+  const earned = { wood: 12, stone: 9, vegetables: 6, seeds_carrot: 6, brick: 4, glass: 4, apple: 3, cobblestone: 2 };
   const { short, full } = earnedLines(earned, itemName);
   ok(`the toast: the biggest four, then how many more ("${short}")`, short.startsWith('12 ') && short.includes('and 4 more') && short.split(',').length === 4);
   ok('item names, not ids', !short.includes('seeds_carrot') && !full.includes('seeds_carrot'));

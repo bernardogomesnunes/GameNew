@@ -1,4 +1,5 @@
 import { WANDERERS, WANDERER_NAMES, NEWS, rollExplorerGifts } from '../config/wanderers.js';
+import { FRUITS, ANY_FRUIT } from '../config/items.js';
 import { STUN_SECONDS, BURN_SECONDS, BURN_DAMAGE, FREEZE_SECONDS, FREEZE_SLOW } from '../config/upgrades.js';
 import { landmarksFor } from './landmarks.js';
 import { groundAt, surfaceAt, isLoaded, bodyFits } from './Mobs.js';
@@ -536,9 +537,10 @@ export class Wanderers {
 
   rollDrops(drops = {}) {
     const out = {};
-    for (const [id, [lo, hi]] of Object.entries(drops)) {
+    for (const [key, [lo, hi]] of Object.entries(drops)) {
       const n = lo + Math.floor(this.rand() * (hi - lo + 1));
-      if (n > 0) out[id] = n;
+      const id = key === ANY_FRUIT ? FRUITS[Math.floor(this.rand() * FRUITS.length)] : key;
+      if (n > 0) out[id] = (out[id] ?? 0) + n;
     }
     return out;
   }

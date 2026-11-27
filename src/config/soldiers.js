@@ -1,4 +1,4 @@
-import { ITEMS } from './items.js';
+import { ITEMS, foodOrder } from './items.js';
 
 /**
  * What a barracks trains (backlog batch 3, #29: "Barracks train soldiers.
@@ -67,7 +67,7 @@ export const soldierCap = (structure) => SOLDIER_CAPS[Math.min(Math.max(structur
 export const LEGACY_UNIT = 'swordsman';
 
 /** Every food, plainest first — what a soldier's keep is paid in. */
-export const FOODS = ITEMS.filter((i) => i.kind === 'food').sort((a, b) => (a.feeds ?? 0) - (b.feeds ?? 0));
+export const FOODS = ITEMS.filter((i) => i.kind === 'food').sort(foodOrder);
 
 /** How much food `inventory` holds, in pieces. */
 export function foodIn(inventory) {

@@ -211,7 +211,7 @@ export const STRUCTURES = [
     // foraged extras ride the same cycle, 4 a day each. No seeds: those come
     // from farms and grass now, a crop at a time.
     // Owner, 15 November: "raise the production of wood a bit" (was 5).
-    produces: { wood: 6, leaves: 1, fruit: 1 },
+    produces: { wood: 6, leaves: 1, apple: 1 },
     everySeconds: 21600,
     skill: 'foraging',
     // IMP-33 (owner, 8 November): "I should be able to build white leaves and
@@ -692,7 +692,7 @@ export const STRUCTURES = [
     ],
     // Requested directly: no building should hand over more than 10-15 of
     // anything in a day — see the farm's own note above for the same fix.
-    produces: { vegetables: 1, fruit: 1, planks: 1 },
+    produces: { vegetables: 1, apple: 1, planks: 1 },
     everySeconds: 7200,
     skill: 'politics',
   },

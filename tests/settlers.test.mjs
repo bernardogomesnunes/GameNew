@@ -219,11 +219,11 @@ ok('and they walk slower than the player', SETTLERS.walkSpeed < 5);
 {
   const { settlers, inventory } = setup({ beds: 3, food: 0 });
   inventory.add('vegetables', 5);
-  inventory.add('fruit', 5);
+  inventory.add('apple', 5);
   for (let i = 0; i < 4; i++) settlers.tick(SETTLERS.arriveEverySeconds + 1);
   settlers.sinceMeal = 0;
   settlers.tick(SETTLERS.eatEverySeconds + 1);
-  ok('they eat the cheap food first', inventory.countOf('fruit') === 3);
+  ok('they eat the cheap food first', inventory.countOf('apple') === 3);
   ok('and leave the good stuff alone', inventory.countOf('vegetables') === 5);
 }
 

@@ -63,10 +63,10 @@ ok('the switch buttons are at least 44px tall', /\.trade-switch button \{[^}]*mi
 // City trader: no Repeat, no orders block
 {
   const { d, ui, els } = make();
-  d.inventory.add('fruit', 12);
+  d.inventory.add('apple', 12);
   ui.renderSell({ trader: 'provisioner' }, TRADERS_BY_ID.get('provisioner'));
   const html = els['#trade-list'].innerHTML;
-  ok('a city trader has Sell but no Repeat and no orders', /data-sell="fruit"/.test(html) && !/data-repeat/.test(html) && els['#trade-orders'].innerHTML === '');
+  ok('a city trader has Sell but no Repeat and no orders', /data-sell="apple"/.test(html) && !/data-repeat/.test(html) && els['#trade-orders'].innerHTML === '');
 }
 
 // Sandbox: no Sell tab
@@ -85,10 +85,10 @@ ok('the switch buttons are at least 44px tall', /\.trade-switch button \{[^}]*mi
 {
   const { d, ui, market } = make();
   d.addSellOrder(market.id, 'stonemonger', 'stone', 4, 1);
-  d.addSellOrder(market.id, 'stonemonger', 'fruit', 2, 2);
+  d.addSellOrder(market.id, 'stonemonger', 'apple', 2, 2);
   const html = ui.ordersHtml(market);
   ok('the orders block says (2 of 2) and has a Cancel per order', /\(2 of 2\)/.test(html) && (html.match(/data-order-cancel="/g) || []).length === 2);
-  ok('a row says amount, item, every and trader', /128 stone every day to Grub/.test(html) && /24 fruit every 2 days to Grub/.test(html));
+  ok('a row says amount, item, every and trader', /128 stone every day to Grub/.test(html) && /24 apple every 2 days to Grub/.test(html));
   ok('a row names the next run and the last result', /next in 1 day/.test(html) && /not run yet/.test(html));
   market.orders[0].last = { day: 1, lots: 2, coins: 6, short: 'stock' };
   ok('a short result says why', /short of stone: sold 2 of 4/.test(ui.ordersHtml(market)));

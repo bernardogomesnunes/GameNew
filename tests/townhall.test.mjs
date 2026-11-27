@@ -89,12 +89,12 @@ const shed = (id) => {
   return g3.structures.storeFor(st);
 };
 const a = shed(1), b = shed(2);
-a.add('planks', 50); a.add('fruit', 3);
+a.add('planks', 50); a.add('apple', 3);
 b.add('planks', 30); b.add('axe', 1, { wear: 7 });
 const totals = g3.storeTotals();
 const planks = totals.find((r) => r.id === 'planks');
 ok('planks are counted across both sheds', planks?.count === 80 && planks.stores === 2);
-ok('fruit is in one', totals.find((r) => r.id === 'fruit')?.stores === 1);
+ok('fruit is in one', totals.find((r) => r.id === 'apple')?.stores === 1);
 const names = totals.map((r) => itemName(r.id));
 ok('the list is sorted by name', names.join() === names.slice().sort((x, y) => x.localeCompare(y)).join());
 

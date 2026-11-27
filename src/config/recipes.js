@@ -206,7 +206,7 @@ export const RECIPES = [
     age: 3,
     inputs: { planks: 16, wood: 4 },
     output: { id: 'cart', count: 1 },
-    blurb: 'Tame a horse (fruit or carrots in your hand, then Place on it), then use this on it. Forty slots, and you can ride it.',
+    blurb: 'Tame a horse (a fruit or carrots in your hand, then Place on it), then use this on it. Forty slots, and you can ride it.',
   },
   {
     id: 'flying_machine',
@@ -1470,7 +1470,7 @@ for (const [key, id] of FURNITURE_ITEM) {
 // once a High Temple (tier 4) stands — the White or the Black, and once one
 // is forged the other is closed to you for good (`ring`, Crafting's `locked`).
 RECIPES.push(
-  { id: 'offer_fruit', name: 'Offer fruit', station: 'temple', age: 4, inputs: { fruit: 6 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'Laid on the altar.' },
+  { id: 'offer_fruit', name: 'Offer apples', station: 'temple', age: 4, inputs: { apple: 6 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'Laid on the altar.' },
   { id: 'offer_harvest', name: 'Offer a harvest', station: 'temple', age: 4, inputs: { vegetables: 4 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'The first of what the farm gave.' },
   { id: 'offer_meat', name: 'Offer a meal', station: 'temple', age: 4, inputs: { cooked_meat: 2 }, output: { id: 'devotion', count: 1 }, batch: 6, blurb: 'A feast for the god, eaten by the priests.' },
   { id: 'offer_gold', name: 'Offer gold', station: 'temple', age: 4, inputs: { gold: 1 }, output: { id: 'devotion', count: 2 }, batch: 8, blurb: 'Gold buys devotion faster than anything.' },
@@ -1482,7 +1482,7 @@ RECIPES.push(
   { id: 'calcada_wave', name: 'Calçada Wave', station: 'hand', age: 3, inputs: { calcada: 2, calcada_dark: 1 }, output: { id: 'calcada_wave', count: 3 }, batch: 6, blurb: 'The wave of dark through white, as on a Lisbon square.' },
   // Drinks (playtest, P5): a few minutes better at something — see config/drinks.js.
   { id: 'beer', name: 'Beer', station: 'workshop', age: 4, inputs: { potato: 3 }, output: { id: 'beer', count: 2 }, batch: 4, blurb: 'Potatoes, mashed and left to work. Quicker blows for three minutes.' },
-  { id: 'kombucha', name: 'Kombucha', station: 'workshop', age: 4, inputs: { fruit: 2, leaves: 1 }, output: { id: 'kombucha', count: 2 }, batch: 4, blurb: 'Fruit and leaf tea, soured. +2 on every hit for three minutes.' },
+  { id: 'kombucha', name: 'Kombucha', station: 'workshop', age: 4, inputs: { apple: 2, leaves: 1 }, output: { id: 'kombucha', count: 2 }, batch: 4, blurb: 'Fruit and leaf tea, soured. +2 on every hit for three minutes.' },
   { id: 'coffee', name: 'Coffee', station: 'workshop', age: 4, inputs: { coffee_beans: 3 }, output: { id: 'coffee', count: 2 }, batch: 4, blurb: 'Roasted, ground and brewed. Faster on your feet for three minutes.' },
   { id: 'weapon_rack', name: 'Weapon Rack', station: 'hand', age: 8, inputs: { planks: 3, iron_ingot: 2 }, output: { id: 'weapon_rack', count: 1 }, batch: 4, blurb: 'Arms on a rack, ready to hand. A barracks needs one.' },
   { id: 'training_dummy', name: 'Training Dummy', station: 'hand', age: 8, inputs: { planks: 2, wool: 1, leaves: 2 }, output: { id: 'training_dummy', count: 1 }, batch: 4, blurb: 'Something to hit that doesn\'t hit back.' },

@@ -69,7 +69,7 @@ const names = (events) => events.map(([n]) => n).filter((n) => n.startsWith('mar
 
   // Cap and food: away soldiers keep their bunks and still eat.
   ok('residents count the company away (they eat)', g.defenders.residents === 11 && g.defenders.awayCount(7) === 10);
-  g.inventory.add('fruit', 30); g.inventory.add('sword_iron', 12); g.inventory.add('armour_iron_body', 12);
+  g.inventory.add('apple', 30); g.inventory.add('sword_iron', 12); g.inventory.add('armour_iron_body', 12);
   const full = g.trainSoldier(b, 'swordsman');
   ok('the cap counts away soldiers: a level-1 barracks with 10 out is full', !full.ok && /Full/.test(full.reason));
 
