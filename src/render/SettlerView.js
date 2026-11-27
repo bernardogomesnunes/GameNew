@@ -81,6 +81,7 @@ function personHash(p) {
 }
 
 // PLAY-13: bubble size and lift in blocks, and the band colours (config/mood.js).
+const ASK_BUBBLE = '#f2c14e'; // VIL-2
 const BUBBLE = { size: 0.8, lift: 0.55 };
 const BUBBLE_BANDS = Object.fromEntries(BANDS.filter((b) => b.colour).map((b) => [b.id, b.colour]));
 
@@ -104,9 +105,17 @@ function bubbleAtlas() {
   // The canvas is drawn top-down; texture v runs bottom-up, so the first row of cells is the bottom third.
   const row = (r) => (2 - r) * 64;
   bubble(0, row(0)); bubble(64, row(0));
+  bubble(0, row(1)); // VIL-2: a wrapped gift
   g.fillStyle = '#2a2018'; g.strokeStyle = '#2a2018'; g.lineWidth = 4; g.lineCap = 'round';
   // Bowl.
   g.beginPath(); g.moveTo(16, row(0) + 24); g.lineTo(48, row(0) + 24); g.arc(32, row(0) + 24, 16, 0, Math.PI); g.closePath(); g.fill();
+  // VIL-2: gift box with a ribbon and a bow.
+  { const oy = row(1);
+    g.fillRect(19, oy + 22, 26, 18);
+    g.strokeStyle = '#fff'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(32, oy + 22); g.lineTo(32, oy + 40); g.moveTo(19, oy + 30); g.lineTo(45, oy + 30); g.stroke();
+    g.beginPath(); g.arc(27, oy + 18, 5, 0, Math.PI * 2); g.arc(37, oy + 18, 5, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = '#2a2018'; g.lineWidth = 4; }
   // Crossed hammers.
   const ox = 64, oy = row(0);
   g.beginPath(); g.moveTo(ox + 20, oy + 40); g.lineTo(ox + 44, oy + 16); g.moveTo(ox + 44, oy + 40); g.lineTo(ox + 20, oy + 16); g.stroke();
@@ -602,11 +611,12 @@ export class SettlerView {
     let k = 0;
     for (let i = 0; i < n; i++) {
       const p = people[i];
-      const band = BUBBLE_BANDS[p.band];
-      if (!band || !Number.isFinite(p.y)) continue;
-      this._colour.set(band);
+      // A mood bubble first; otherwise a gold gift bubble for an open ask (VIL-2), not while asleep.
+      const band = BUBBLE_BANDS[p.band], asking = !band && !!p.ask && !(p.lie > 0);
+      if ((!band && !asking) || !Number.isFinite(p.y)) continue;
+      this._colour.set(band ?? ASK_BUBBLE);
       mesh.setColorAt(k, this._colour);
-      this._cells.setXY(k, p.hungry ? 0 : 0.5, 0);
+      if (asking) this._cells.setXY(k, 0, 1 / 3); else this._cells.setXY(k, p.hungry ? 0 : 0.5, 0);
       this._bubbleAt[k * 3] = p.x;
       this._bubbleAt[k * 3 + 1] = p.y + SETTLERS.build.height + BUBBLE.lift;
       this._bubbleAt[k * 3 + 2] = p.z;
