@@ -1,6 +1,8 @@
 import { groundAt, bodyFits } from './Mobs.js';
 import { ease, drift, fall } from './bodies.js';
 import { roofPart } from '../config/blocks.js';
+import { doorWise } from '../duilt/settlerNavigation.js'; // VIL-1
+import { bedsIn, bedPlace, bedKey, LIE_SECONDS } from '../duilt/sleepSpots.js'; // VIL-1
 import { UNITS_BY_ID, LEGACY_UNIT, SOLDIER_CAPS, unitStats, towerArcherStats } from '../config/soldiers.js';
 
 /**
@@ -143,6 +145,9 @@ export class Defenders {
     this.research = {};
     // PLAY-12: companies on the march (see march()).
     this.marches = [];
+    // VIL-1: set each frame by the game: night, and nothing fighting.
+    this.dark = false;
+    this.regions = new Map(); // barracks id -> region, from sync
   }
 
   /** PLAY-12: a unit as research has made it (config/soldiers.js unitStats). */
@@ -235,6 +240,7 @@ export class Defenders {
    */
   sync(buildings, days, village = null, research = null) {
     const joined = [];
+    this.regions = new Map(buildings.filter((b) => b.valid && b.region).map((b) => [String(b.id), b.region]));
     if (research) this.research = research;
     // Research that raises hp reaches soldiers already out: they gain the difference.
     for (const s of this.soldiers) {
@@ -473,6 +479,12 @@ export class Defenders {
     let hungry = this.hungry;
     for (const s of this.soldiers) s.hungry = hungry-- > 0;
     for (const s of this.soldiers) {
+      // VIL-1: at night they sleep in the barracks, unless something comes.
+      if (!this.dark && s.bunk) this.rise(s);
+      if (this.dark && this.sleep(s, dt, enemies)) {
+        if (!s.bunk.asleep) settle(this.world, s, dt);
+        continue;
+      }
       const u = this.stats(s.unit);
       if (u?.ranged) this.bowman(s, u, dt, enemies);
       else if (u?.siege) this.crew(s, u, dt, enemies, on);
@@ -482,6 +494,73 @@ export class Defenders {
     this.soldiers = this.soldiers.filter((s) => s.hp > 0);
     for (const a of this.archers) this.archer(a, dt, enemies);
     this.flyArrows(dt, on);
+  }
+
+
+  /**
+   * VIL-1: a soldier's night. They walk to a bunk (a bed in their barracks,
+   * else a spot on its floor) and lie down; anything of the enemy's within
+   * range of their post, or a wound, wakes them. True while they are on the
+   * way or asleep, so they do not stroll or fight.
+   */
+  sleep(s, dt, enemies) {
+    const region = this.regions.get(s.post.of);
+    if (!region) return false;
+    if (s.hurt > 0 || this.nearestTo(s.post, enemies, SOLDIER.range)) { if (s.bunk) this.rise(s); return false; }
+    s.bunk ??= this.bunkFor(s, region);
+    const b = s.bunk;
+    if (!b) return false;
+    s.foe = null;
+    if (!b.asleep) {
+      const left = Math.hypot(b.stand.x - s.x, b.stand.z - s.z);
+      if (b.best == null || left < b.best - GIVE_UP_BY) { b.best = left; b.since = 0; } else b.since += dt;
+      const stuck = b.since > GIVE_UP_AFTER * 2;
+      if (left > 0.3 && !stuck && stepAround(doorWise(this.world), s, b.stand.x, b.stand.z, dt, (this.stats(s.unit)?.speed ?? SOLDIER.speed) * 0.55)) {
+        s.target = { x: b.stand.x, z: b.stand.z };
+        return true;
+      }
+      // There, or cannot get in: lie down where they are.
+      if (left > 0.3) { b.stand = { x: s.x, y: s.y, z: s.z }; b.lie = { x: s.x, y: s.y, z: s.z, dir: { x: 0, z: 1 } }; }
+      b.asleep = true;
+      s.x = b.lie.x; s.y = b.lie.y; s.z = b.lie.z;
+      s.lie = 0; s.lieDir = b.lie.dir; s.target = null; s.speed = 0; s.pace = 0;
+    }
+    s.lie = Math.min(1, (s.lie ?? 0) + dt / LIE_SECONDS);
+    if (!s.hungry) s.hp = Math.min(this.stats(s.unit)?.hp ?? SOLDIER.hp, s.hp + dt * 0.5);
+    return true;
+  }
+
+  /** Up from the bunk onto their feet, and back to their post. */
+  rise(s) {
+    const b = s.bunk;
+    s.bunk = null; s.lie = 0; s.lieDir = null;
+    if (b?.asleep && b.stand) { s.x = b.stand.x; s.y = b.stand.y; s.z = b.stand.z; }
+    s.stroll = null; s.via = null; s.rest = 0;
+    return true;
+  }
+
+  /** A bed in `region` nobody else has, else a free spot on its floor: { stand, lie, key, asleep }. */
+  bunkFor(s, region) {
+    const mates = this.soldiers.filter((o) => o !== s && o.bunk);
+    const taken = new Set(mates.map((o) => o.bunk.key));
+    const fit = (x, z, y) => {
+      const g = groundAt(this.world, x, z, y, TALL);
+      return g != null && Math.abs(g - y) <= 1 && bodyFits(this.world, x, z, g) ? g : null;
+    };
+    for (const bed of bedsIn(this.world, region)) {
+      const key = bedKey(bed);
+      if (taken.has(key)) continue;
+      const place = bedPlace(bed);
+      const stand = place.stands.map((p) => ({ ...p, y: fit(p.x, p.z, bed.y) })).find((p) => p.y != null);
+      if (stand) return { key, stand, lie: { ...place.feet, dir: place.dir }, asleep: false, best: null, since: 0 };
+    }
+    for (let y = region.minY; y < region.maxY; y++) for (let x = region.minX; x <= region.maxX; x++) for (let z = region.minZ; z <= region.maxZ; z++) {
+      const key = `f${x},${y},${z}`;
+      if (taken.has(key) || !this.standable(x, y, z)) continue;
+      const at = { x: x + 0.5, y, z: z + 0.5 };
+      return { key, stand: at, lie: { ...at, dir: { x: 0, z: 1 } }, asleep: false, best: null, since: 0 };
+    }
+    return null;
   }
 
   soldier(s, dt, enemies, on) {
