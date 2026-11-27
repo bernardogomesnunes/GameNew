@@ -455,6 +455,9 @@ export const NEWS = {
 export const EXPLORER_PACK = [
   { dark_wood: 3 }, { white_wood: 3 }, { clay: 4 }, { seeds_carrot: 2 }, { seeds_potato: 2 }, { stone: 6 },
 ];
+// FRUIT-3: until the wizard sells fruit seeds, an explorer can carry one
+// (planted in a Plant Pot: config/fruitPlants.js).
+EXPLORER_PACK.push({ seeds_apple: 1 }, { seeds_grape: 1 }, { seeds_raspberry: 1 }, { seeds_passion: 1 });
 export function rollExplorerGifts(rand = Math.random) {
   const extra = EXPLORER_PACK[Math.floor(rand() * EXPLORER_PACK.length)];
   return [{ give: { sapling: 2 } }, { give: { ...extra } }];

@@ -1,5 +1,6 @@
 import { BLOCKS, BLOCKS_BY_ID, WOOD_FURNITURE } from './blocks.js';
 import { CROPS, cropBaseOf } from './crops.js';
+import { FRUIT_PLANTS, POT_BLOCK, plantBlock } from './fruitPlants.js';
 import { ARMOUR_PIECES, BACKPACKS, SHIELDS } from './armour.js';
 import { tieredItems } from './tiers.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
@@ -109,6 +110,12 @@ export const ITEMS = [
   ...CROPS.map((c) => ({
     id: `seeds_${c.kind}`, name: `${c.name} Seeds`, kind: 'raw', stackTo: STACK_GOODS, color: c.crop, glyph: 'seeds',
     block: cropBaseOf(c), madeBy: `Saved from a ripe ${c.name.toLowerCase()}`,
+  })),
+  // FRUIT-3: fruit seeds go in a Plant Pot, never in the ground (duilt/FruitPlants.js).
+  { id: 'plant_pot', name: 'Plant Pot', kind: 'refined', stackTo: 20, color: 0xb85f3c, glyph: 'bucket', block: POT_BLOCK, madeBy: 'Made at a Workbench from clay or planks. Place it, then put a fruit seed in it' },
+  ...FRUIT_PLANTS.map((p) => ({
+    id: p.seed, name: `${p.name.replace(/ (Tree|Vine|Bush)$/, '')} Seeds`, kind: 'raw', stackTo: STACK_GOODS, color: p.crop, glyph: 'seeds',
+    block: plantBlock(p.kind, 'sprout'), madeBy: `Plant it in a Plant Pot: a ${p.name.toLowerCase()} in ${p.days} days`,
   })),
   { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fcd8b, glyph: 'sprout', block: 20, madeBy: 'Craft from Leaves, or find when breaking leaves — place on soil to grow a tree' },
 

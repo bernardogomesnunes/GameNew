@@ -259,7 +259,7 @@ export class World {
     if (id === AIR || isFluid(id)) return null;
     const shape = shapeOf(id);
     // Nor crops: you walk through a field.
-    if (NO_COLLISION_SHAPES.has(shape) || shape.startsWith('crop')) return null;
+    if (NO_COLLISION_SHAPES.has(shape) || shape.startsWith('crop') || shape.startsWith('fplant_')) return null;
     if (HALF_SHAPES.has(shape)) return { minY: y, maxY: y + 0.5 };
     // A slab in the top half of its cell: a ceiling you walk under, or a
     // floor half a block up.
