@@ -17,7 +17,8 @@ import { buildWorldPayload, parseWorldPayload } from '../storage/WorldExport.js'
 import { AIR, BLOCKS_BY_ID, turned, doorPart, doorBlock, isChest, CATAPULT, isCatapult, isFluid, CHAIN, WAR_TENT, WAR_TENT_BACK, CAMPFIRE } from '../config/blocks.js';
 import { BEER_COOLDOWN, KOMBUCHA_DAMAGE } from '../config/drinks.js';
 import { AvatarView } from '../render/AvatarView.js';
-import { ARROW_DAMAGE, drawShot, FULL_DRAW_MS, MIN_DRAW_MS } from '../world/Arrows.js';
+import { ARROW_DAMAGE, drawShot, FULL_DRAW_MS, MIN_DRAW_MS, BOLT_SPEED } from '../world/Arrows.js';
+import { MAGIC_TARGET } from '../config/blocks.js';
 import { itemName, ITEMS, ITEMS_BY_ID } from '../config/items.js';
 import { MOBS_BY_ID } from '../config/mobs.js';
 import { rayBox } from '../world/Mobs.js';
@@ -341,12 +342,50 @@ export function arrowTarget(from, dir, length) {
   return wild ?? bandit;
 }
 
+/** WIZ-5: between casts, in ms. */
+export const CAST_COOLDOWN_MS = 500;
+
+/**
+ * Break, with the Wizard's Wand in hand: a magic bolt from your eye, straight
+ * the way you look. Its damage is the wand's at your Magic level (plus a
+ * kombucha's). Each cast is a Magic point and counts for the open quest.
+ */
+export function castWand() {
+  const d = this.duilt;
+  if (!d?.magic.active) return;
+  const now = performance.now();
+  if (now - (this.lastCastAt ?? 0) < CAST_COOLDOWN_MS) return;
+  this.lastCastAt = now;
+  const eye = this.player.eyePosition(), dir = this.player.lookDirection();
+  const damage = d.magic.wandDamage(d.hatMagicBonus?.() ?? 0) + (d.boosted('strength') ? KOMBUCHA_DAMAGE : 0);
+  this.arrows?.shoot({ x: eye.x + dir.x * 0.5, y: eye.y + dir.y * 0.5 - 0.1, z: eye.z + dir.z * 0.5 }, dir, BOLT_SPEED, damage, true);
+  this.handView?.strike();
+  this.sound?.strike({ weapon: true });
+  this.magicToast(d.magic.cast());
+  d.magic.note('casts');
+}
+
+/** A level-up toast, if a gain of Magic points crossed one. */
+export function magicToast(res) {
+  if (res?.leveled) this.ui?.toast({ kind: 'challenge', title: `Magic level ${res.leveled}`, body: 'Your wand hits harder and potions last longer' });
+}
+
+/** A bolt burst on a block: a training target scores. */
+export function boltHitsBlock(bolt, x, y, z) {
+  const d = this.duilt;
+  if (!d?.magic.active || this.world.getBlock(x, y, z) !== MAGIC_TARGET) return;
+  this.magicToast(d.magic.hitTarget());
+  d.magic.note('targets');
+  this.sound?.strike({ weapon: true });
+}
+
 /** An arrow found its mark. */
 export function arrowHit(arrow, hit) {
   const damage = arrow.damage ?? ARROW_DAMAGE;
   if (hit.kind === 'mob') {
     const { killed, drops } = this.mobs.hit(hit.mob, damage, arrow.x - arrow.vx, arrow.z - arrow.vz, ARROW_KNOCK);
     this.sound?.strike({ weapon: true });
+    if (killed && arrow.bolt) this.duilt?.magic.note('kills'); // WIZ-5
     if (killed) this.mobFell(hit.mob, drops);
     return;
   }
@@ -355,6 +394,7 @@ export function arrowHit(arrow, hit) {
   if (!res) return;
   this.sound?.strike({ weapon: true });
   this.focusGuardian(p, res);
+  if (res.killed && arrow.bolt) this.duilt?.magic.note('kills'); // WIZ-5
   if (res.killed) this.banditFell(p, res);
 }
 

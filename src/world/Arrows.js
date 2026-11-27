@@ -39,6 +39,10 @@ export function drawShot(heldMs) {
 }
 /** An arrow still flying after this (off over the edge of everything) is gone. */
 const MAX_FLIGHT = 6;
+/** A magic bolt fades after this many seconds (about 60 blocks). */
+export const BOLT_FLIGHT = 1.5;
+/** Blocks per second for a magic bolt. */
+export const BOLT_SPEED = 40;
 const STEP = 1 / 120;
 
 export class Arrows {
@@ -47,8 +51,10 @@ export class Arrows {
    *                along that stretch, nearest first, or null
    * @param onHit   (arrow, hit) — an arrow found its mark
    */
-  constructor({ world, hitTest = null, onHit = null }) {
+  constructor({ world, hitTest = null, onHit = null, onBlock = null }) {
     this.world = world;
+    // WIZ-5: a magic bolt that met a block: (bolt, x, y, z).
+    this.onBlock = onBlock;
     this.hitTest = hitTest;
     this.onHit = onHit;
     this.list = [];
@@ -56,12 +62,12 @@ export class Arrows {
   }
 
   /** Looses an arrow from `from` along `dir` (need not be unit length), hitting for `damage`. */
-  shoot(from, dir, speed = ARROW_SPEED, damage = ARROW_DAMAGE) {
+  shoot(from, dir, speed = ARROW_SPEED, damage = ARROW_DAMAGE, bolt = false) {
     const len = Math.hypot(dir.x, dir.y, dir.z) || 1;
     const a = {
       id: this.nextId++, x: from.x, y: from.y, z: from.z,
       vx: (dir.x / len) * speed, vy: (dir.y / len) * speed, vz: (dir.z / len) * speed,
-      age: 0, stuck: false, damage,
+      age: 0, stuck: false, damage, ...(bolt ? { bolt: true } : {}),
     };
     this.list.push(a);
     return a;
@@ -78,7 +84,7 @@ export class Arrows {
       while (t < dt - 1e-9 && !a.stuck && !a.done) {
         const step = Math.min(STEP, dt - t);
         t += step;
-        a.vy -= ARROW_GRAVITY * step;
+        if (!a.bolt) a.vy -= ARROW_GRAVITY * step; // a magic bolt flies straight
         const dx = a.vx * step, dy = a.vy * step, dz = a.vz * step;
         const len = Math.hypot(dx, dy, dz);
         const hit = this.hitTest?.({ x: a.x, y: a.y, z: a.z }, { x: dx / len, y: dy / len, z: dz / len }, len);
@@ -89,6 +95,12 @@ export class Arrows {
           break;
         }
         const nx = a.x + dx, ny = a.y + dy, nz = a.z + dz;
+        if (a.bolt && (ny < 0 || this.world.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz)) !== 0)) {
+          // A bolt does not stick: it bursts on the block, and says which.
+          a.done = true;
+          this.onBlock?.(a, Math.floor(nx), Math.floor(ny), Math.floor(nz));
+          break;
+        }
         if (ny < 0 || this.world.collisionBoxAt(Math.floor(nx), Math.floor(ny), Math.floor(nz))) {
           // Stuck: its tip just in the block, the way it was going.
           a.x = a.x + dx * 0.6; a.y = a.y + dy * 0.6; a.z = a.z + dz * 0.6;
@@ -98,7 +110,7 @@ export class Arrows {
         }
         a.x = nx; a.y = ny; a.z = nz;
       }
-      if (!a.stuck && a.age > MAX_FLIGHT) a.done = true;
+      if (!a.stuck && a.age > (a.bolt ? BOLT_FLIGHT : MAX_FLIGHT)) a.done = true;
     }
     this.list = this.list.filter((a) => !a.done);
   }

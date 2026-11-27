@@ -566,6 +566,24 @@ ITEM_MODELS.god_wand = [
   box(0.4, 0.7, 0.4, 0.6, 0.9, 0.6, 0xc8b0ff), box(0.46, 0.66, 0.34, 0.54, 0.94, 0.66, 0xe6dcff), box(0.34, 0.76, 0.46, 0.66, 0.84, 0.54, 0xe6dcff),
 ];
 
+// WIZ-5: the wizard's wand (a twisted wood stick with a violet crystal), his
+// Magic Cauldron, the training target, and Moonwater in a flask.
+ITEM_MODELS.wizard_wand = [
+  box(0.46, 0, 0.46, 0.54, 0.7, 0.54, 0x6b4a2e), box(0.44, 0.12, 0.44, 0.56, 0.2, 0.56, 0x8a6a48),
+  box(0.42, 0.7, 0.42, 0.58, 0.9, 0.58, 0xb48cff), box(0.48, 0.66, 0.38, 0.52, 0.94, 0.62, 0xe6dcff),
+];
+ITEM_MODELS.training_target = [
+  box(0.46, 0, 0.3, 0.54, 0.5, 0.38, 0x6b4a2e), box(0.2, 0.3, 0.38, 0.8, 0.9, 0.46, 0xe9e2cf),
+  box(0.3, 0.4, 0.46, 0.7, 0.8, 0.5, 0x6f8fd9), box(0.4, 0.5, 0.5, 0.6, 0.7, 0.54, 0xd8304a),
+];
+ITEM_MODELS.magic_cauldron = [
+  box(0.16, 0, 0.16, 0.28, 0.2, 0.28, 0x2f2f33), box(0.72, 0, 0.16, 0.84, 0.2, 0.28, 0x2f2f33), box(0.44, 0, 0.78, 0.56, 0.2, 0.9, 0x2f2f33),
+  box(0.12, 0.2, 0.12, 0.88, 0.7, 0.88, 0x5b3f8f), box(0.2, 0.7, 0.2, 0.8, 0.76, 0.8, 0x9fc8ff),
+];
+ITEM_MODELS.moonwater = [
+  box(0.4, 0, 0.4, 0.6, 0.5, 0.6, 0x9fc8ff), box(0.44, 0.5, 0.44, 0.56, 0.7, 0.56, 0xe6f0ff), box(0.42, 0.7, 0.42, 0.58, 0.78, 0.58, 0x8a6a48),
+];
+
 // The Collector's Crown (duilt/Collection.js): a gold band with points.
 ITEM_MODELS.collector_crown = [
   box(0.24, 0.1, 0.24, 0.76, 0.3, 0.76, 0xf2c94c), box(0.3, 0.12, 0.3, 0.7, 0.28, 0.7, 0x6b4a1e),

@@ -1,6 +1,7 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
 import { BOOSTS, clockOf } from '../config/drinks.js';
 import { WIZARD_TALK, COIN } from '../config/magic.js'; // WIZ-3
+import { WIZARD_QUESTS } from '../config/wizardQuests.js'; // WIZ-5
 import { FINAL_AGE } from '../config/ages.js';
 import { askConfirm } from './Confirm.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
@@ -1431,9 +1432,30 @@ export class DuiltUI {
         this.showWizard('shop');
       }));
     } else if (tab === 'quests') {
-      body.innerHTML = '<p class="export-note">He has no quests for you yet.</p>';
+      const pr = m.progress(d.inventory);
+      const rewardWords = (q) => (q.reward?.item ? `the ${itemName(q.reward.item)}` : q.reward?.recipe ? `the ${q.reward.recipe.replace(/_/g, ' ')} recipe` : 'nothing but his thanks');
+      const done = WIZARD_QUESTS.slice(0, m.chain.step);
+      const next = WIZARD_QUESTS.slice(m.chain.step + 1);
+      body.innerHTML = (pr ? `<div class="building-sec"><h4>${escapeHtml(pr.quest.name)}</h4>
+          <p>${escapeHtml(pr.quest.blurb)}</p>
+          ${pr.items.length ? `<div class="recipe-cost">${pr.items.map((i) => itemChip(i.id, i.need, { have: i.have, short: i.have < i.need })).join('')}</div>` : `<div class="research-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${pr.need}" aria-valuenow="${pr.have}"><i style="width:${Math.round((pr.have / pr.need) * 100)}%"></i></div><p class="dim">${pr.have} of ${pr.need}</p>`}
+          ${pr.quest.level ? `<p class="${pr.levelOk ? 'dim' : 'warn'}">Needs Magic level ${pr.quest.level}</p>` : ''}
+          <p class="dim">Reward: ${escapeHtml(rewardWords(pr.quest))} and ${pr.quest.points} Magic points.</p>
+          <button class="primary${pr.ready ? '' : ' cannot'}" data-wiz-hand>Hand in</button></div>`
+        : '<p class="export-note">He has nothing more to ask of you.</p>')
+        + (done.length ? `<h4 class="bench-group">Done</h4><p class="dim">${done.map((q) => escapeHtml(q.name)).join(' \u00b7 ')}</p>` : '')
+        + (next.length ? `<h4 class="bench-group">Still to come</h4><p class="dim">${next.length} more, in order.</p>` : '');
+      body.querySelector('[data-wiz-hand]')?.addEventListener('click', () => {
+        const res = m.complete(d.inventory);
+        this.bus.emit('toast', res.ok ? { kind: 'challenge', title: `${res.quest.name} done`, body: `+${res.quest.points} Magic points${res.reward?.item ? `, ${itemName(res.reward.item)}` : res.reward?.recipe ? `, taught: ${res.reward.recipe.replace(/_/g, ' ')}` : ''}` } : { kind: 'xp', title: 'Not yet', body: res.reason });
+        if (res.leveled) this.bus.emit('toast', { kind: 'challenge', title: `Magic level ${res.leveled}` });
+        this.renderBag?.();
+        this.showWizard('quests');
+      });
     } else {
-      body.innerHTML = '<p class="export-note">He has not taught you any recipes yet.</p>';
+      const known = m.taught.map((id) => id.replace(/_/g, ' '));
+      body.innerHTML = `<p class="export-note">Brew at a Magic Cauldron. Moonwater is the base: water, a pale mushroom and 2 leaves.</p>`
+        + (known.length ? `<h4 class="bench-group">Taught</h4><p>${known.map((n) => escapeHtml(n)).join(' \u00b7 ')}</p>` : '<p class="dim">He has not taught you any potions yet.</p>');
     }
   }
 

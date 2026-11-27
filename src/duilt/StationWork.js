@@ -21,14 +21,15 @@ import { ITEMS_BY_ID } from '../config/items.js';
  */
 
 /** Stations whose single-input recipes go through the spots; the forge's do whatever their inputs. */
-const SPOT_STATIONS = new Set(['forge', 'bleach_bucket', 'stone_mill', 'wood_mill', 'planing_bench', 'joinery_bench', 'masons_bench']);
+const SPOT_STATIONS = new Set(['forge', 'bleach_bucket', 'stone_mill', 'wood_mill', 'planing_bench', 'joinery_bench', 'masons_bench', 'magic_cauldron']);
 /** Most a spot holds of what is put in, in batches. */
 export const MAX_BATCHES = 64;
 
 /** Whether `recipe` is made through a station's spots (IMP-15's rule). */
 export function usesSpots(recipe) {
   if (!recipe || !SPOT_STATIONS.has(recipe.station)) return false;
-  return recipe.station === 'forge' || Object.keys(recipe.inputs).length === 1;
+  // The forge and the Magic Cauldron (WIZ-5) take any inputs: a brew mixes several.
+  return recipe.station === 'forge' || recipe.station === 'magic_cauldron' || Object.keys(recipe.inputs).length === 1;
 }
 
 /**
