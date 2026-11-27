@@ -528,6 +528,12 @@ for (const p of POTIONS) {
   ];
 }
 
+// WAND-3: the Wizard Hat, a wide brim and a tall cone, a gold band.
+ITEM_MODELS.wizard_hat = [
+  box(0.1, 0.1, 0.1, 0.9, 0.18, 0.9, 0x3e2a6b), box(0.28, 0.18, 0.28, 0.72, 0.4, 0.72, 0x4a3578), box(0.28, 0.2, 0.28, 0.72, 0.26, 0.72, 0xe8c04f),
+  box(0.36, 0.4, 0.36, 0.64, 0.62, 0.64, 0x4a3578), box(0.42, 0.62, 0.42, 0.58, 0.82, 0.58, 0x3e2a6b), box(0.46, 0.82, 0.42, 0.62, 0.94, 0.58, 0x3e2a6b),
+];
+
 // WIZ-5: the wizard's wand (a twisted wood stick with a violet crystal), his
 // Magic Cauldron, the training target, and Moonwater in a flask.
 ITEM_MODELS.wizard_wand = [

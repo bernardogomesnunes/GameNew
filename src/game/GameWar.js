@@ -20,6 +20,7 @@ import { AvatarView } from '../render/AvatarView.js';
 import { ARROW_DAMAGE, drawShot, FULL_DRAW_MS, MIN_DRAW_MS, BOLT_SPEED } from '../world/Arrows.js';
 import { MAGIC_TARGET } from '../config/blocks.js';
 import { STRENGTH_DAMAGE } from '../config/potions.js';
+import { HAT } from '../config/magic.js';
 import { itemName, ITEMS, ITEMS_BY_ID } from '../config/items.js';
 import { MOBS_BY_ID } from '../config/mobs.js';
 import { rayBox } from '../world/Mobs.js';
@@ -345,6 +346,28 @@ export function arrowTarget(from, dir, length) {
   return wild ?? bandit;
 }
 
+/**
+ * WAND-3: a mob or a person who hit you takes the Wizard Hat's thorns back.
+ * Called after a blow that landed. A kill is counted like any other.
+ */
+export function hatThorns(attacker, person) {
+  const d = this.duilt;
+  if (!d?.wearsHat?.() || attacker.dead || attacker.dying > 0) return;
+  const { x, z } = this.player.position;
+  if (person) {
+    const res = this.wanderers?.hit(attacker, HAT.thorns, x, z);
+    if (res?.killed) {
+      this.personKilled(attacker);
+      const gained = d.collect(res.drops) ?? {};
+      const got = Object.entries(gained).map(([id, n]) => `+${n} ${itemName(id).toLowerCase()}`).join(', ');
+      this.ui?.toast({ kind: 'xp', title: `The hat's thorns felled ${attacker.name}`, body: got || undefined });
+    }
+    return;
+  }
+  const res = this.mobs?.hit(attacker, HAT.thorns, x, z);
+  if (res?.killed) this.mobFell(attacker, res.drops);
+}
+
 /** POT-7, POT-8: a blow with fire or frost going sets alight or freezes what it hits. */
 export function potionStrike(target, person) {
   this.potionAfflict(target, person);
@@ -539,6 +562,7 @@ export function banditHits(p, hits, blow = {}) {
   if (!this.duilt || this.duilt.sandbox) return;
   const taken = this.duilt.hurt(hits, p.war ? 'army' : WANDERERS[p.kind]?.sky ? 'sky' : 'bandit');
   if (!taken) return;
+  this.hatThorns(p, true); // WAND-3
   // The Black Ring (Phase 7c): a dark spark back at whoever struck you.
   if (this.duilt.ringWorn() === 'black' && this.wanderers) {
     const res = this.wanderers.hit(p, BLACK_RING_SPARK, this.player.position.x, this.player.position.z);
