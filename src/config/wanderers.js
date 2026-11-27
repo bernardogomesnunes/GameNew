@@ -463,9 +463,27 @@ export const NEWS = {
  * are taken they have nothing more to give.
  */
 export const EXPLORER_PACK = [
-  { dark_wood: 3 }, { white_wood: 3 }, { clay: 4 }, { seeds_carrot: 2 }, { seeds_potato: 2 }, { stone: 6 },
+  { give: { iron_ore: 3 }, region: 'the northern hills' },
+  { give: { copper_ore: 4 }, region: 'the red canyons' },
+  { give: { gold_ore: 1 }, region: 'the far mountains' },
+  { give: { coal: 5 }, region: 'the high peaks' },
+  { give: { fruit: 4 }, region: 'the orchard country' },
+  { give: { vegetables: 4 }, region: 'the river farms' },
+  { give: { cooked_meat: 3 }, region: 'the herding plains' },
+  { give: { mushroom_red: 2 }, region: 'the oak forests' },
+  { give: { mushroom_lilac: 2 }, region: 'the dark forests' },
+  { give: { mushroom_pale: 2 }, region: 'the birch woods' },
+  { give: { leather: 2 }, region: 'the tanners of the south' },
+  { give: { string: 3 }, region: 'the spinners of the east' },
+  { give: { clay: 4 }, region: 'the wetlands' },
+  { give: { dark_wood: 3 }, region: 'the dark forest' },
+  { give: { white_wood: 3 }, region: 'the birch country' },
+  { give: { seeds_carrot: 2 }, region: 'the river farms' },
+  { give: { seeds_potato: 2 }, region: 'the highland farms' },
+  { give: { seeds_hemp: 2 }, region: 'the spinners of the east' },
 ];
+/** Each gift is {give, region?}. Gifts saved before regions existed have no region and still work. */
 export function rollExplorerGifts(rand = Math.random) {
   const extra = EXPLORER_PACK[Math.floor(rand() * EXPLORER_PACK.length)];
-  return [{ give: { sapling: 2 } }, { give: { ...extra } }];
+  return [{ give: { sapling: 2 } }, { give: { ...extra.give }, region: extra.region }];
 }
