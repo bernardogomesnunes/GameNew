@@ -57,6 +57,7 @@ import { EconomyEngine } from './economy/EconomyEngine.js';
 import { AIR, WATER, BLOCKS_BY_ID, bedPart, FACING_STEP, isFlowing, turns, doorPart, isChest, isLava, isLavaFlow, CHEST, isCatapult, isTrapdoor, isOpenTrapdoor, stationOf, isGate, isOpenGate, isPainting } from './config/blocks.js';
 import { SAPLING } from './duilt/Saplings.js';
 import { mushyOf } from './duilt/MushyLogs.js'; // PLAY-14..21
+import { plantOf } from './config/fruitPlants.js'; // FRUIT-4
 import { BOOSTS, COFFEE_SPEED, clockOf } from './config/drinks.js';
 import { SPEED_POTION, JUMP_POTION, TOUCH_REACH, FIRE_MOB_SECONDS, FROST_MOB_SECONDS, SNOW_LAYER_SECONDS } from './config/potions.js'; // POT-3, POT-5
 import { BodyFlames } from './render/BodyFlames.js'; // POT-7
@@ -77,7 +78,7 @@ import { CrackView } from './render/CrackView.js';
 import { LEAVES, leafHeld, orphanLeaves } from './world/leafDecay.js';
 import { talkLine } from './config/talk.js';
 import { cubeSite, cubeDesign, WAY_OUT, CUBE_SIZE } from './world/godCube.js';
-import { TOOL_FOR, itemName, BARE_HANDS } from './config/items.js';
+import { TOOL_FOR, itemName, BARE_HANDS, FRUITS } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf } from './config/crops.js';
 import { Mobs, rayBox, surfaceAt } from './world/Mobs.js';
@@ -200,7 +201,7 @@ const AUTOSAVE_INTERVAL_MS = 5 * 60_000;
 // Minimap.js's own note), so this is dead weight on a phone regardless.
 const MINIMAP_INTERVAL_MS = 500;
 // What a farm animal will follow you for. See Mobs.think.
-const LURES = new Set(['vegetables', 'fruit', ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
+const LURES = new Set(['vegetables', ...FRUITS, ...CROPS.flatMap((c) => [c.produce, `seeds_${c.kind}`])]);
 /** How often planted crops are brought up to the stage their age says. */
 const CROP_TICK_SECONDS = 2;
 /** How near you come to a place, past its edge, to have found it. */
@@ -806,6 +807,9 @@ export class Game {
   placedBlock(...args) { return GameBuild.placedBlock.apply(this, args); }
   placeBlock(...args) { return GameBuild.placeBlock.apply(this, args); }
   mushyHint(...args) { return GameBuild.mushyHint.apply(this, args); }
+  withPlants(...args) { return GameBuild.withPlants.apply(this, args); }
+  pickFruitPlant(...args) { return GameBuild.pickFruitPlant.apply(this, args); }
+  fruitPlantHint(...args) { return GameBuild.fruitPlantHint.apply(this, args); }
   saplingHint(...args) { return GameBuild.saplingHint.apply(this, args); }
   withUprooted(...args) { return GameBuild.withUprooted.apply(this, args); }
   withDoorHalves(...args) { return GameBuild.withDoorHalves.apply(this, args); }
@@ -3717,6 +3721,12 @@ export class Game {
       const trees = grown.filter((c) => c.prev === SAPLING).length;
       this.ui?.toast({ kind: 'xp', title: trees > 1 ? `${trees} saplings have grown into trees` : 'A sapling has grown into a tree', body: 'Ten days in the ground' });
     }
+    // FRUIT-4: fruit plants in pots, through their looks.
+    const sprouted = this.duilt.fruitPlants.grow(this.world, this.duilt.days);
+    if (sprouted.length) {
+      this.remeshDirty();
+      if (sprouted.some((c) => plantOf(c.next)?.segment.endsWith('_ripe') && !plantOf(c.prev)?.segment.endsWith('_ripe'))) this.ui?.toast({ kind: 'xp', title: 'A fruit plant is ripe', body: 'Hit it to pick the fruit' });
+    }
     // PLAY-15: Mushy Logs, through their stages.
     const flushed = this.duilt.mushyLogs.grow(this.world, this.duilt.days);
     if (flushed.length) {
@@ -4558,7 +4568,8 @@ export class Game {
     // An anchor tower's chain, on the dark path: Break cuts it.
     const chainLink = hit && hit.block === CHAIN && sw && this.duilt.ring === 'black' && !this.duilt.skyFallen && chainAt(this.world.gen, hit.x, hit.y, hit.z) >= 0;
     const sapling = hit && hit.block === SAPLING && this.duilt ? this.saplingHint(hit)
-      : hit && this.duilt && mushyOf(hit.block) ? this.mushyHint(hit) : null; // PLAY-15
+      : hit && this.duilt && mushyOf(hit.block) ? this.mushyHint(hit) // PLAY-15
+      : hit && this.duilt && plantOf(hit.block) ? this.fruitPlantHint(hit) : null; // FRUIT-4
     // Says the button you'd actually press: the Open/Close thumb button, or
     // right click at a desk.
     const swing = hit && (gate || door || chest || catapult || trapdoor || painting || mill || (lift && lift !== 'nowhere' && lift !== 'cut')

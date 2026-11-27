@@ -46,15 +46,15 @@ function setup() {
   const { g, b } = setup();
   const nope = g.trainSoldier(b, 'warrior', 6);
   ok(`nothing in the bag, nobody trained — and it says what's short ("${nope.reason}")`, !nope.ok && /3 food/.test(nope.reason) && /stone sword/.test(nope.reason));
-  g.inventory.add('vegetables', 2); g.inventory.add('fruit', 5); g.inventory.add('sword_stone', 1);
+  g.inventory.add('vegetables', 2); g.inventory.add('apple', 5); g.inventory.add('sword_stone', 1);
   const food = foodIn(g.inventory);
   const r = g.trainSoldier(b, 'warrior', 6);
   ok('with them, a warrior is put in training', r.ok && g.defenders.barracks(7).queue.join() === 'warrior');
   ok('paid for out of the bag: three food, the plainest first, and the sword',
-    foodIn(g.inventory) === food - 3 && g.inventory.countOf('sword_stone') === 0 && g.inventory.countOf('fruit') === 2 && g.inventory.countOf('vegetables') === 2);
+    foodIn(g.inventory) === food - 3 && g.inventory.countOf('sword_stone') === 0 && g.inventory.countOf('apple') === 2 && g.inventory.countOf('vegetables') === 2);
 
   // Level, not beds (IMP-2): a barracks holds 10, 20 or 40.
-  g.inventory.add('fruit', 80);
+  g.inventory.add('apple', 80);
   for (let i = 0; i < 9; i++) { g.inventory.add('bow', 1); g.inventory.add('arrow', 20); g.trainSoldier(b, 'archer'); }
   const full = g.trainSoldier(b, 'archer');
   ok('a level-1 barracks holds ten: with the places taken, it says so and how to get more', !full.ok && /Full — 10/.test(full.reason) && /Evolve it to hold 20/.test(full.reason) && g.defenders.barracks(7).queue.length === 10);
@@ -66,7 +66,7 @@ function setup() {
   ok('only a standing barracks trains', !g.trainSoldier({ ...b, valid: false }, 'archer', 6).ok && !g.trainSoldier({ ...b, type: 'house' }, 'archer', 6).ok);
 
   const garrison = { ...b, id: 9, type: 'military' };
-  g.inventory.add('fruit', 8); g.inventory.add('weapon_rack', 1);
+  g.inventory.add('apple', 8); g.inventory.add('weapon_rack', 1);
   const guard = g.trainSoldier(garrison, 'shield_guard', 6);
   ok('a Garrison trains a requested spear guard, charging food and a weapon rack', guard.ok && g.defenders.barracks(9).queue.join() === 'shield_guard' && g.inventory.countOf('weapon_rack') === 0);
   ok('a Garrison refuses other units', !g.trainSoldier({ ...garrison, id: 10 }, 'warrior', 6).ok);
@@ -182,15 +182,15 @@ function oneOf(unit) {
   g.defenders.sync(post, TRAIN_DAYS * 2.01);
   ok(`trained, each lives in the town (${g.settlers.residents} residents, ${g.settlers.soldiers} of them soldiers)`, g.settlers.soldiers === 2 && g.settlers.residents === g.settlers.population + 2);
   // They eat with everyone, one each a day — from the storehouses, then the bag.
-  g.inventory.add('fruit', 5);
+  g.inventory.add('apple', 5);
   g.settlers.eat();
-  ok('and eat with everyone, one each', g.inventory.countOf('fruit') === 5 - 2 - g.settlers.population && g.settlers.hungry === 0);
-  g.inventory.remove('fruit', g.inventory.countOf('fruit'));
+  ok('and eat with everyone, one each', g.inventory.countOf('apple') === 5 - 2 - g.settlers.population && g.settlers.hungry === 0);
+  g.inventory.remove('apple', g.inventory.countOf('apple'));
   g.settlers.eat();
   ok('with nothing to eat, they go hungry with everyone', g.settlers.hungry === 2 + g.settlers.population);
-  g.inventory.add('fruit', 1);
+  g.inventory.add('apple', 1);
   g.settlers.eat({ onlyHungry: true });
-  ok('food put out goes to whoever went without', g.settlers.hungry === 1 + g.settlers.population && g.inventory.countOf('fruit') === 0);
+  ok('food put out goes to whoever went without', g.settlers.hungry === 1 + g.settlers.population && g.inventory.countOf('apple') === 0);
   const fallen = g.defenders.soldiers[0];
   g.defenders.hurt(fallen, 999);
   ok('a fallen soldier no longer lives here', g.settlers.soldiers === 1);

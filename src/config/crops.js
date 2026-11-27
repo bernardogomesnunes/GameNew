@@ -10,7 +10,8 @@
  *
  * A planted seed grows a stage every STAGE_SECONDS, whether you're watching
  * or not (see duilt/Crops.js). Broken ripe, a plant gives its crop and seeds
- * to plant again; broken early, just its seed back.
+ * to plant again; broken early, just its seed back. A crop with a `root`
+ * (FRUIT-5: carrot, lettuce, broccoli) also gives 1 of it when ripe.
  */
 
 /** Seconds a crop spends in each stage — ripe in about four and a half minutes. */
@@ -19,13 +20,13 @@ export const STAGE_SECONDS = 90;
 export const RIPE = 3;
 
 export const CROPS = [
-  { kind: 'carrot', name: 'Carrot', produce: 'vegetables', leaf: 0x6ea653, crop: 0xe8873a },
+  { kind: 'carrot', name: 'Carrot', produce: 'vegetables', root: 'carrot_root', leaf: 0x6ea653, crop: 0xe8873a },
   { kind: 'potato', name: 'Potato', produce: 'potato', leaf: 0x75a55a, crop: 0xc9a46c },
   { kind: 'cabbage', name: 'Cabbage', produce: 'cabbage', leaf: 0x7fae5e, crop: 0xa9cf86 },
-  { kind: 'lettuce', name: 'Lettuce', produce: 'lettuce', leaf: 0x8cc463, crop: 0xb6de86 },
+  { kind: 'lettuce', name: 'Lettuce', produce: 'lettuce', root: 'lettuce_root', leaf: 0x8cc463, crop: 0xb6de86 },
   { kind: 'pepper', name: 'Pepper', produce: 'pepper', leaf: 0x5c9a48, crop: 0xd84a3c },
   { kind: 'zucchini', name: 'Zucchini', produce: 'zucchini', leaf: 0x5f9a4c, crop: 0x3f7a35 },
-  { kind: 'broccoli', name: 'Broccoli', produce: 'broccoli', leaf: 0x5a8f4a, crop: 0x3e7b3c },
+  { kind: 'broccoli', name: 'Broccoli', produce: 'broccoli', root: 'broccoli_root', leaf: 0x5a8f4a, crop: 0x3e7b3c },
   // Coffee (playtest, P5): beans for the coffee that makes you quick. Its
   // blocks sit apart from the first seven's — the ids after those were
   // already taken — hence its own `base`.

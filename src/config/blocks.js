@@ -28,6 +28,7 @@
 // the same pale middle.
 import { CROPS, RIPE, cropBaseOf } from './crops.js';
 import { blockColour } from './palette.js';
+import { FRUIT_PLANTS, SEGMENTS as PLANT_SEGMENTS, POT_BLOCK, PLANT_BASE } from './fruitPlants.js';
 
 /** Flowing water of level L is block FLOW_BASE + L, for L in 1..7. */
 const FLOW_BASE = 49;
@@ -1094,14 +1095,14 @@ BLOCKS.push(
 // --- end PLAY-12 ---
 
 // WIZ-5: the training targets by the Wizard's Hut, and the Magic Cauldron he gives.
-// 600 and 601 (572 onward belong to other work in flight).
-export const MAGIC_TARGET = 600, MAGIC_CAULDRON = 601;
+// 620 and 621: 572 to 615 are the Plant Pot and fruit plants (config/fruitPlants.js).
+export const MAGIC_TARGET = 620, MAGIC_CAULDRON = 621;
 BLOCKS.push(
   { id: MAGIC_TARGET, name: 'Training Target', glyph: 'target', color: 0x6f8fd9, shape: 'archery_target', material: 'wood', unlock: null },
   { id: MAGIC_CAULDRON, name: 'Magic Cauldron', glyph: 'bucket', color: 0x5b3f8f, shape: 'cauldron', material: 'stone', station: 'magic_cauldron', unlock: null },
 );
 // POT-8: the thin layer of snow a Frost potion leaves where you walk. Not placed by hand.
-export const FROST_LAYER = 602;
+export const FROST_LAYER = 622;
 BLOCKS.push(
   { id: FROST_LAYER, name: 'Frost Layer', glyph: 'snow', color: 0xf4f8fb, shape: 'rug', material: 'stone', system: true, unlock: null },
 );
@@ -1115,6 +1116,21 @@ for (const b of BLOCKS) {
   b.formerColor = b.color;
   if (c != null) b.color = c;
 }
+
+// FRUIT-3, FRUIT-4: the Plant Pot, and a fruit plant's block per kind and
+// segment (config/fruitPlants.js). Plants are never placed by hand except as
+// a seed on a pot; they have no item of their own, so breaking one drops
+// nothing here (DuiltGame.onBlocksBroken gives the seed back).
+BLOCKS.push({ id: POT_BLOCK, name: 'Plant Pot', glyph: 'bucket', color: 0xb85f3c, shape: 'plant_pot', material: 'stone', unlock: null });
+FRUIT_PLANTS.forEach((p, k) => {
+  PLANT_SEGMENTS.forEach((segment, s) => {
+    BLOCKS.push({
+      id: PLANT_BASE + k * PLANT_SEGMENTS.length + s,
+      name: segment.endsWith('_ripe') ? `Ripe ${p.name}` : p.name,
+      glyph: 'sprout', color: p.leaf, shape: `fplant_${p.kind}_${segment}`, material: 'plant', unlock: null,
+    });
+  });
+});
 
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 

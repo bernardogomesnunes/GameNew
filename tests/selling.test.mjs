@@ -127,7 +127,7 @@ ok('order slots 2, 4, 6, 8 and the purse is 20', [0, 1, 2, 3].map(orderSlots).jo
 {
   const names = (t) => new Set(buysFor(t).map((r) => r[0]));
   const grub = names(TRADERS[0]), smith = names(TRADERS[1]), bramble = names(TRADERS[3]);
-  ok('Grub buys stone, wood, planks, fruit and vegetables', ['stone', 'wood', 'planks', 'fruit', 'vegetables'].every((i) => grub.has(i)));
+  ok('Grub buys stone, wood, planks, fruit and vegetables', ['stone', 'wood', 'planks', 'apple', 'vegetables'].every((i) => grub.has(i)));
   ok('Snikkit buys iron ore and copper ore', smith.has('iron_ore') && smith.has('copper_ore'));
   ok('Bramble buys leather and cotton', bramble.has('leather') && bramble.has('cotton'));
   ok('buysFor is in name order', buysFor(TRADERS[0]).map((r) => ITEMS_BY_ID.get(r[0]).name).join('|') === buysFor(TRADERS[0]).map((r) => ITEMS_BY_ID.get(r[0]).name).sort((a, b) => a.localeCompare(b)).join('|'));

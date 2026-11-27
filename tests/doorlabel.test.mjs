@@ -28,7 +28,7 @@ ui.setAimedSwing('Close');
 ok('at an open one, Close', labels.place === 'Close');
 ui.setAimedSwing(null);
 ok('looking away, it is Place again', labels.place === 'Place');
-ui.selectedItemId = 'fruit';
+ui.selectedItemId = 'apple';
 ui.setAimedSwing('Open');
 ok('whatever you are holding — even food, which would otherwise Throw', labels.place === 'Open' && labels.break === 'Eat');
 ui.setAimedSwing(null);
