@@ -29,7 +29,8 @@ import { starterDesign } from '../prefabs/HouseDesigns.js';
 import { VillagerJobs } from './VillagerJobs.js';
 import { ITEM_FOR_BLOCK, ITEMS_BY_ID, ITEMS, itemName, isTool, stackLimit, migrateSavedItems } from '../config/items.js';
 import { MILESTONES } from '../config/skills.js';
-import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, PRODUCTION_PACE, FOREST_WOODS } from '../config/structures.js';
+import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, hasLevels, producesAt, intervalAt, yieldAt, scaleProduce, forestYield, PRODUCTION_PACE, FOREST_WOODS } from '../config/structures.js';
+import { HandWork } from './HandWork.js'; // WORK-2
 import { AIR, BLOCKS_BY_ID, isFluid, doorPart, stationOf } from '../config/blocks.js';
 import { WEAR_SLOTS, HIT_CAUSES, throughArmour } from '../config/armour.js';
 import { lootFor, LOOT } from './Loot.js';
@@ -253,6 +254,13 @@ export class DuiltGame {
     this.armouryStudy = null;
     // IMP-15: the spots at placed stations and the foundry, working on their own.
     this.stationWork = new StationWork({ bag: () => this.inventory });
+    // WORK-2: working a forest, quarry, mine or farm by hand (HandWork.js).
+    this.handWork = new HandWork({
+      produces: (s) => this.handProduces(s),
+      cycleSeconds: (s) => intervalAt(STRUCTURES_BY_ID.get(s.type), s.tier ?? 0) * this.structures.dayScale,
+      staffed: (s) => !this.sandbox && this.settlers.staffedIds().has(s.id),
+      deliver: (payload) => this.structures.deliver(payload),
+    });
     // CRAFT3D-1: each carpentry counter's furniture in progress.
     this.counters = new Counters({ bag: () => this.inventory, deliver: (payload) => this.structures.deliver(payload) });
     // CRAFT3D-3: each crucible's melt and pour, heated only inside a foundry.
@@ -1588,6 +1596,7 @@ export class DuiltGame {
     this.jobs.tick(dtSeconds);
     // WIZ-5: each finished batch at a Magic Cauldron counts for the open brew quest.
     for (const done of this.stationWork.tick(dtSeconds)) if (done.recipe.station === 'magic_cauldron') this.magic.note('brew');
+    this.handWork.tick(dtSeconds); // WORK-2
     this.crucibles.tick(dtSeconds);
     this.kilnOvens.tick(dtSeconds);
     this.dehydrators.tick(dtSeconds); // PLAY-16
@@ -1602,6 +1611,7 @@ export class DuiltGame {
       this.kilnOvens.prune((key) => this.spotStands(key, 'kiln_oven'));
       this.dehydrators.prune((key) => this.spotStands(key, 'dehydrator')); // PLAY-16
       this.cauldrons.prune((key) => this.spotStands(key, 'cauldron')); // PLAY-19
+      this.handWork.prune((id) => this.structures.list().some((x) => x.id === id)); // WORK-2
       this.checkWizard(); // WIZ-2
       if (this.magic.active && this.magic.current()?.kind === 'targets') this.placeTargets(); // WAND-2
     }
@@ -1625,6 +1635,21 @@ export class DuiltGame {
       this.countTaxes();
       this.payGifts();
     }
+  }
+
+  /** WORK-2: what one cycle of `s` makes, the table a hand-worked round is weighed from. */
+  handProduces(s) {
+    const spec = STRUCTURES_BY_ID.get(s.type), tier = s.tier ?? 0;
+    let produces = spec.fromAnimals || spec.fromCrops ? scaleProduce(this.producesFor(s), yieldAt(spec, tier)) : producesAt(spec, tier);
+    if (spec.woods && s.wood) produces = forestYield(produces, s.wood);
+    return produces;
+  }
+
+  /** WORK-2: a round of hand work at `s` ended with `hits` landed swings. Returns { ok, made, left | reason }. */
+  handWorkRound(s, hits) {
+    const r = this.handWork.finish(s, hits);
+    if (r.ok && Object.keys(r.made).length) this.bus?.emit('structure:produced', { gained: r.made });
+    return r;
   }
 
   /** WORK-1: whether the old-world grace is still running. */
@@ -2943,6 +2968,7 @@ export class DuiltGame {
       // WORK-1: marks a save made with the rule; the grace of an old world is kept.
       staffedWork: true, workGraceUntil: this.workGraceUntil, workGraceTold: this.workGraceTold,
       stationWork: this.stationWork.toJSON(),
+      handWork: this.handWork.toJSON(), // WORK-2
       counters: this.counters.toJSON(),
       crucibles: this.crucibles.toJSON(),
       kilnOvens: this.kilnOvens.toJSON(),
@@ -3056,6 +3082,7 @@ export class DuiltGame {
     this.settlers.loadJSON(data.settlers);
     this.jobs.loadJSON(data.jobs);
     this.stationWork.loadJSON(data.stationWork);
+    this.handWork.loadJSON(data.handWork); // WORK-2
     this.counters.loadJSON(data.counters);
     this.crucibles.loadJSON(data.crucibles);
     this.kilnOvens.loadJSON(data.kilnOvens);
