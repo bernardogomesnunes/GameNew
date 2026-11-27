@@ -857,8 +857,10 @@ export class Wanderers {
         const e = Math.hypot(f.x - p.x, f.z - p.z);
         if (e < fd && Math.abs(f.y - p.y) < 4) { fd = e; foe = f; }
       }
-      if (p.war) for (const f of this.villagers()) {
-        if (f.hp <= 0) continue;
+      // A round's attackers go for any villager; a raiding bandit, only for
+      // the ones who have taken up arms against it (VIL-6, `fighting`).
+      if (p.war || p.raider) for (const f of this.villagers()) {
+        if (f.hp <= 0 || (!p.war && !f.fighting)) continue;
         const e = Math.hypot(f.x - p.x, f.z - p.z);
         if (e < fd && Math.abs(f.y - p.y) < 4) { fd = e; foe = f; }
       }

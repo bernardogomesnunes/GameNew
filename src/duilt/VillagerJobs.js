@@ -244,14 +244,17 @@ export class VillagerJobs {
     else {
       // Facing the block, a blow at the start and half way: you see it go in.
       p.facing=Math.atan2(c.x+.5-p.x,c.z+.5-p.z);
-      const was=a.action??0;a.action=was+dt/this.moodSlowdown(p); // PLAY-13: Grumbling builders are slower
+      const was=a.action??0;a.action=was+dt*this.buildSpeed(p)/this.moodSlowdown(p); // PLAY-13: Grumbling builders are slower; VIL-4/5: clever ones are quicker
       if(was===0||(was<BUILD_SECONDS/2&&a.action>=BUILD_SECONDS/2))p.strike=SWING_SHOWS;
       if(a.action<BUILD_SECONDS)return;
       a.action=0;
     }
     const first=job.cursor===0;
     // IMP-26: word that the builders have started, with the first block.
-    if(this.putIn(job,c,current)&&first&&!owed)this.onBuildStarted?.(job,p);
+    if(this.putIn(job,c,current)) {
+      this.settlers?.addXp?.(p,'block'); // VIL-4
+      if(first&&!owed)this.onBuildStarted?.(job,p);
+    }
   }
 
   /** The next block of `job` goes in, paid from its escrow. Whether it did. */
@@ -333,18 +336,24 @@ export class VillagerJobs {
       if(p.strike>0)p.strike=Math.max(0,p.strike-dt);
       // VIL-1: nobody builds or hauls at night; the cargo waits for morning.
       if(this.settlers.dark){a.status=p.sleep?'Asleep':'Walking home to bed';continue;}
+      if(p.fighting){a.status='Defending the village';continue;} // VIL-6
       p.workId=null;p.target=null;p.atWork=false;
       if(!this.hall(a.hallId)){a.status='Work Hall needs repair';continue;}
       if(p.hungry){a.status='Hungry — waiting for food';continue;}
       if(this.refuses(p)){a.status='Refusing to work';continue;} // PLAY-13
       if(a.role==='builder')this.build(p,a,dt);
       else if(a.role==='hauler')this.haul(p,a,dt);
+      if(this.busy(a))this.settlers?.addXp?.(p,'work',dt); // VIL-4: time on the job
     }
   }
   changed(){this.bus?.emit('jobs:changed',{});}
   // PLAY-13: mood. Angry and Furious villagers refuse work; Grumbling builders take 1.5 times as long.
   refuses(p){return !!p&&MOOD.workBonusScale[p.band??'content']===0;}
   moodSlowdown(p){return p?.band==='grumbling'?MOOD.grumblingBuildSlowdown:1;}
+  /** VIL-4, VIL-5: how fast this builder puts blocks in, from their intelligence. */
+  buildSpeed(p){return this.settlers?.statsOf?.(p)?.buildSpeed??1;}
+  /** Whether a worker's status says they are at it, not waiting. */
+  busy(a){return !/^(Waiting|Refusing|Hungry|Work Hall|Asleep|Walking home|Returning|Carrying goods)/.test(a.status??'');}
   /** A villager moves out: their cargo goes back to the hall supplies and their job ends. */
   dismiss(personId){
     const a=this.assignments.get(personId);if(!a)return;
@@ -358,7 +367,7 @@ export class VillagerJobs {
    */
   owe(ms) {
     if(!(ms>0)||!this.builds.some(j=>j.state==='queued'&&!j.self))return;
-    const builders=[...this.assignments.values()].filter(a=>a.role==='builder'&&!this.person(a.personId)?.hungry&&!this.refuses(this.person(a.personId))&&this.hall(a.hallId)).reduce((n,a)=>n+1/this.moodSlowdown(this.person(a.personId)),0); // PLAY-13
+    const builders=[...this.assignments.values()].filter(a=>a.role==='builder'&&!this.person(a.personId)?.hungry&&!this.refuses(this.person(a.personId))&&this.hall(a.hallId)).reduce((n,a)=>n+this.buildSpeed(this.person(a.personId))/this.moodSlowdown(this.person(a.personId)),0); // PLAY-13; VIL-4/5
     if(!builders)return;
     const left=this.builds.filter(j=>j.state==='queued'&&!j.self).reduce((n,j)=>n+j.changes.length-j.cursor,0);
     this.owedSeconds=Math.min((this.owedSeconds??0)+ms/1000*builders,left*BLOCK_SECONDS_AWAY);

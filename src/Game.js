@@ -76,7 +76,7 @@ import { CrackView } from './render/CrackView.js';
 import { LEAVES, leafHeld, orphanLeaves } from './world/leafDecay.js';
 import { talkLine } from './config/talk.js';
 import { cubeSite, cubeDesign, WAY_OUT, CUBE_SIZE } from './world/godCube.js';
-import { TOOL_FOR, itemName, BARE_HANDS, FRUITS } from './config/items.js';
+import { TOOL_FOR, ITEMS_BY_ID, itemName, BARE_HANDS, FRUITS } from './config/items.js';
 import { MOBS_BY_ID } from './config/mobs.js';
 import { CROPS, cropOf } from './config/crops.js';
 import { Mobs, rayBox, surfaceAt } from './world/Mobs.js';
@@ -864,6 +864,7 @@ export class Game {
   syncDefence(...args) { return GameWar.syncDefence.apply(this, args); }
   crewThrows(...args) { return GameWar.crewThrows.apply(this, args); }
   defenderHits(...args) { return GameWar.defenderHits.apply(this, args); }
+  villagerHits(...args) { return GameWar.villagerHits.apply(this, args); }
   soldierHit(...args) { return GameWar.soldierHit.apply(this, args); }
   isAltar(...args) { return GameWar.isAltar.apply(this, args); }
   swearOath(...args) { return GameWar.swearOath.apply(this, args); }
@@ -2203,7 +2204,15 @@ export class Game {
   /** VIL-2: gives the held item to a villager who asked for it. False when it is not what they want. */
   giveToVillager(person) {
     const d = this.duilt, item = this.selectedItemId;
-    if (!d || d.sandbox || !item || person.ask?.item !== item) return false;
+    if (!d || d.sandbox || !item) return false;
+    // VIL-6: a weapon in hand that they did not ask for is theirs to fight with.
+    if (person.ask?.item !== item) {
+      if (!ITEMS_BY_ID.get(item)?.weapon) return false;
+      const r = d.settlers.arm(person, item);
+      person.facing = Math.atan2(this.player.position.x - person.x, this.player.position.z - person.z);
+      this.ui?.toast({ kind: 'talk', title: person.name, body: r.ok ? `“I will stand with this if the bandits come.” (${itemName(item)})` : r.reason, duration: 5000 });
+      return true;
+    }
     const r = d.settlers.give(person, item);
     if (!r.ok) { this.ui?.toast({ kind: 'xp', title: r.reason }); return true; }
     person.facing = Math.atan2(this.player.position.x - person.x, this.player.position.z - person.z);

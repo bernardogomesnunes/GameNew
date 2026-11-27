@@ -536,6 +536,7 @@ export class StructureRegistry {
     const idle = Math.max(0, now - (this.lastCollectAt ?? now));
     this.lastCollectAt = now;
     const gained = {};
+    const made = {}; // VIL-4: items each building made this time, by id
     const taxed = {};
     const stalled = [];
     const capMs = Math.min(MAX_OFFLINE_HOURS * 3600_000, MAX_OFFLINE_DAYS * REAL_DAY_SECONDS * this.dayScale * 1000);
@@ -603,6 +604,7 @@ export class StructureRegistry {
       }
       for (const [item, amount] of Object.entries(payload)) {
         gained[item] = (gained[item] ?? 0) + amount;
+        made[s.id] = (made[s.id] ?? 0) + amount;
       }
       if (taxRate > 0) {
         s.taxCarry = carry;
@@ -612,6 +614,7 @@ export class StructureRegistry {
     }
 
     this.lastTaxed = taxed;
+    this.lastMade = made;
     if (Object.keys(gained).length) this.bus?.emit('structure:produced', { gained });
     if (stalled.length) this.bus?.emit('structure:stalled', { structures: stalled });
     return gained;

@@ -35,6 +35,8 @@ import { icon } from './icons.js';
 import { pixelIcon } from './pixelIcons.js';
 import { bindSlotDrag } from './SlotDrag.js';
 import { isDesktop } from './desktop.js';
+import { progress as levelProgress, attackOf } from '../duilt/Levels.js'; // VIL-4, VIL-6
+import { LEVELS } from '../config/levels.js';
 
 /**
  * The Duilt interface: the bag, the stomach, the claim menu and the goal list.
@@ -2059,6 +2061,11 @@ export class DuiltUI {
     this.bus.on('settler:ask', redrawTown);
     this.bus.on('settler:asklapsed', redrawTown);
     this.bus.on('settler:gift', redrawTown);
+    this.bus.on('settler:armed', redrawTown); // VIL-6
+    this.bus.on('settler:level', ({ name, level }) => { // VIL-4
+      this.bus.emit('toast', { kind: 'xp', title: `${name} reached level ${level}`, body: 'Faster at work and building, stronger and sharper.' });
+      redrawTown();
+    });
     this.bus.on('settler:band', () => { this.renderVitals(); if (this.panels.isOpen('panel-town')) this.renderTown(); });
     this.bus.on('settler:mood', ({ settler, band, reason, name }) => {
       if (band !== 'angry' && band !== 'furious') return; // Grumbling: the bubble is enough
@@ -2159,13 +2166,28 @@ export class DuiltUI {
         giveAsk = `<button class="secondary" data-town-gift ${has ? '' : 'disabled title="Not in your bag"'}>Give ${escapeHtml(name)}</button>`;
       }
       const find = !employed ? '<button class="secondary" data-town-work>Find work</button>' : '';
+      // VIL-4, VIL-5: level, experience (in 5% steps so the row is not redrawn every second) and stats.
+      const st = s.statsOf(p), lp = levelProgress(p.xp);
+      const share = Math.round(lp.share * 20) * 5;
+      const xpText = lp.need ? `${share}% to level ${st.level + 1}` : 'Top level';
+      const stats = `<span class="town-stats">Level ${st.level} of ${LEVELS.max} (${xpText}). Strength ${st.strength}, intelligence ${st.intelligence}. Work x${st.workSpeed.toFixed(2)}, build x${st.buildSpeed.toFixed(2)}. Health ${st.maxHp}.</span>
+        <span class="town-xp" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${share}" aria-label="Experience"><span class="town-fill town-xp-fill" style="width:${share}%"></span></span>`;
+      // VIL-6: the weapon they fight with, and what could be handed over.
+      const held = p.weapon ? ITEMS_BY_ID.get(p.weapon) : null;
+      const bagWeapon = [...ITEMS_BY_ID.values()].filter((i) => i.weapon && d.inventory.countOf(i.id) > 0 && i.id !== p.weapon)
+        .sort((a, b) => attackOf(b.id, 10).damage - attackOf(a.id, 10).damage)[0];
+      const hit = attackOf(p.weapon, st.strength);
+      const arms = `<span class="town-arms">${held ? `Holds ${escapeHtml(held.name)}: ${Math.round(hit.damage)} damage a blow.` : `No weapon: punches for ${hit.damage.toFixed(1)}, or runs home.`}</span>`;
+      const armBtns = `${bagWeapon ? `<button class="secondary" data-town-arm="${bagWeapon.id}">Give ${escapeHtml(bagWeapon.name)}</button>` : ''}${held ? '<button class="secondary" data-town-disarm>Take weapon back</button>' : ''}`;
       return `<div class="town-row" data-band="${band}" data-person="${p.id}">
         <span class="town-name">${escapeHtml(p.name)}</span>
         <span class="town-job">${escapeHtml(job)}</span>
         <span class="town-bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p.mood)}" aria-label="Mood"><span class="town-fill" style="width:${Math.round(p.mood)}%"></span></span>
         <span class="town-reason">${escapeHtml(reason)}</span>${leaves}
         ${ask}
-        ${give || find || giveAsk ? `<span class="town-actions">${give}${giveAsk}${find}</span>` : ''}
+        ${stats}
+        ${arms}
+        ${give || find || giveAsk || armBtns ? `<span class="town-actions">${give}${giveAsk}${find}${armBtns}</span>` : ''}
       </div>`;
     }).join('');
     // Redrawn only when something changed, so a tap never lands on a row that is being replaced.
@@ -2183,6 +2205,19 @@ export class DuiltUI {
       this.renderTown();
     }));
     list.querySelectorAll('[data-town-work]').forEach((b) => b.addEventListener('click', () => this.findWork()));
+    // VIL-6: hand a weapon over from the bag, or take it back.
+    const person = (b) => d.settlers.people.find((q) => q.id === Number(b.closest('[data-person]')?.dataset.person));
+    const said = (p, r, ok) => this.bus.emit('toast', r.ok ? { kind: 'xp', title: ok(p) } : { kind: 'xp', title: r.reason });
+    list.querySelectorAll('[data-town-arm]').forEach((b) => b.addEventListener('click', () => {
+      const p = person(b);
+      if (p) said(p, d.settlers.arm(p, b.dataset.townArm), (q) => `${q.name} holds ${itemName(q.weapon)}`);
+      this.renderTown();
+    }));
+    list.querySelectorAll('[data-town-disarm]').forEach((b) => b.addEventListener('click', () => {
+      const p = person(b);
+      if (p) said(p, d.settlers.disarm(p), (q) => `${q.name} gave the weapon back`);
+      this.renderTown();
+    }));
   }
 
   // ---- storehouses ----

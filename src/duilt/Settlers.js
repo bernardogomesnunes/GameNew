@@ -11,6 +11,8 @@ import { isBedtime, bedsIn, bedPlace, bedKey, campfireNear, LIE_SECONDS } from '
 import { newAsks, loadAsks, step as askStep, receive as askReceive } from './Asks.js'; // VIL-2
 import { ITEMS_BY_ID } from '../config/items.js';
 import { newMood, loadMood, step as moodStep, shouldLeave, bandRank } from './Mood.js'; // PLAY-13
+import { newXp, loadXp, gain as xpGain, statsFor, buildingBonuses, attackOf, weaponId } from './Levels.js'; // VIL-4, VIL-5, VIL-6
+import { DEFENCE } from '../config/levels.js';
 
 /** Everything edible, least nourishing first — what settlers work down through. */
 const FOODS = ITEMS.filter((i) => i.kind === 'food').sort(foodOrder);
@@ -45,7 +47,6 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
  * they heal back to full.
  */
 export const VILLAGER_HP = 10;
-const VILLAGER_HEAL = 0.5; // a second
 
 /**
  * Recover the floor at spawn/load or after construction. This is not a
@@ -85,6 +86,55 @@ export class Settlers {
     this.arrivalsStopped = false; // PLAY-13: word has got round
     this.night = null; // VIL-1: () => whether it is bedtime; DuiltGame sets it
     this.dark = false; // VIL-1: the answer at the last tick
+    this.threats = []; // VIL-6: raiders in the land; the game fills it each frame
+    this.strike = null; // VIL-6: (foe, damage, villager) => a villager's blow, set by the game
+    this.statClock = 0; // VIL-5: seconds since the buildings' bonus was last worked out
+    this.bonus = null;
+  }
+
+  // ---- VIL-4, VIL-5: levels and stats ----------------------------------------
+
+  /** { strength, intelligence } the standing buildings add, re-read about once a second. */
+  buildingBonus() {
+    if (!this.bonus) this.bonus = buildingBonuses(this.structures.list());
+    return this.bonus;
+  }
+
+  /** A villager's level, strength, intelligence, work speed, build speed and health. */
+  statsOf(p) {
+    return statsFor(p?.xp, this.buildingBonus());
+  }
+
+  /** Health at most: scales with strength (VIL-6). */
+  maxHp(p) {
+    return this.statsOf(p).maxHp;
+  }
+
+  /** Adds experience; says so when a level is reached. */
+  addXp(p, kind, n = 1) {
+    const level = xpGain(p, kind, n);
+    if (level) this.bus?.emit('settler:level', { settler: p, level, name: p.name });
+    return level;
+  }
+
+  /** Whether `p` is at their job now: a staffed building, awake, fed and willing. */
+  working(p) {
+    return p.workId != null && this.jobsOpen && !this.dark && !p.hungry && !p.sleep && !p.fighting
+      && !this.jobs?.controls(p) && MOOD.workBonusScale[p.band ?? 'content'] > 0;
+  }
+
+  /** The people at work get experience for the time (VIL-4). */
+  workTick(dt) {
+    const d = Math.min(dt, 1);
+    for (const p of this.people) if (this.working(p)) this.addXp(p, 'work', d);
+  }
+
+  /** Experience for what buildings made, { structureId: items } (StructureRegistry.lastMade). */
+  creditMade(made) {
+    for (const [id, n] of Object.entries(made ?? {})) {
+      const p = this.people.find((q) => String(q.workId) === id && !q.hungry && !this.jobs?.controls(q));
+      if (p) this.addXp(p, 'item', n);
+    }
   }
 
   get population() {
@@ -387,9 +437,121 @@ export class Settlers {
     if (!(from?.countOf(itemId) > 0)) return { ok: false, reason: `You have no ${ITEMS_BY_ID.get(itemId)?.name ?? 'such thing'}.` };
     from.remove(itemId, 1);
     const gain = askReceive(p, itemId, this.rand);
+    this.keepWeapon(p, itemId, from); // VIL-6: a weapon they asked for is theirs to fight with
     if (p.band === 'content') p.said = null;
     this.bus?.emit('settler:gift', { settler: p, item: itemId, gain, name: p.name });
     return { ok: true, gain };
+  }
+
+  // ---- VIL-6: weapons and defence --------------------------------------------
+
+  /**
+   * `p` takes `itemId` as their weapon when they have none, or when it hits
+   * harder and the one they had fits back in `to`. True when they did.
+   */
+  keepWeapon(p, itemId, to = this.inventory) {
+    if (!weaponId(itemId)) return false;
+    if (p.weapon) {
+      const hit = (id) => attackOf(id, 10).damage;
+      if (hit(itemId) <= hit(p.weapon) || !(to?.roomFor(p.weapon, 1) > 0)) return false;
+      to.add(p.weapon, 1);
+    }
+    p.weapon = itemId;
+    return true;
+  }
+
+  /**
+   * Gives `p` a weapon from `from` (your bag) to fight with. One at a time:
+   * a second one swaps with the first, which goes back to the bag.
+   * Returns { ok, reason }.
+   */
+  arm(p, itemId, from = this.inventory) {
+    if (!this.people.includes(p)) return { ok: false, reason: 'That villager no longer lives here.' };
+    if (!weaponId(itemId)) return { ok: false, reason: `${ITEMS_BY_ID.get(itemId)?.name ?? 'That'} is not a weapon.` };
+    if (!(from?.countOf(itemId) > 0)) return { ok: false, reason: `You have no ${ITEMS_BY_ID.get(itemId)?.name ?? 'such thing'}.` };
+    if (p.weapon === itemId) return { ok: false, reason: `${p.name} already holds one.` };
+    const old = p.weapon;
+    from.remove(itemId, 1);
+    if (old && from.add(old, 1)) { from.add(itemId, 1); return { ok: false, reason: 'Make room in your bag first.' }; }
+    p.weapon = itemId;
+    this.bus?.emit('settler:armed', { settler: p, item: itemId, name: p.name });
+    return { ok: true, old };
+  }
+
+  /** Takes `p`'s weapon back into the bag. Returns { ok, reason }. */
+  disarm(p, to = this.inventory) {
+    if (!p?.weapon) return { ok: false, reason: `${p?.name ?? 'They'} hold nothing.` };
+    if (!(to.roomFor(p.weapon, 1) > 0)) return { ok: false, reason: 'Make room in your bag first.' };
+    to.add(p.weapon, 1);
+    const item = p.weapon;
+    p.weapon = null;
+    this.bus?.emit('settler:armed', { settler: p, item: null, name: p.name });
+    return { ok: true, item };
+  }
+
+  /** Whoever has no use in the fight: the one nearest `p` among `this.threats`, with its distance. */
+  nearestThreat(p) {
+    let foe = null, fd = Infinity;
+    for (const e of this.threats ?? []) {
+      if (!(e.hp > 0) || e.dead || e.done) continue;
+      const d = dist(p, e);
+      if (d < fd && Math.abs((e.y ?? p.y) - p.y) < 4) { fd = d; foe = e; }
+    }
+    return { foe, d: fd };
+  }
+
+  /**
+   * VIL-6: one step of a villager's part in a raid. True while they are
+   * fighting or running home (nothing else moves them).
+   *
+   *   armed      wakes, goes for the nearest raider within DEFENCE.alarm and
+   *              strikes it with the weapon's damage scaled by strength; a
+   *              bow shoots from range. Below DEFENCE.fleeBelow health they
+   *              run home.
+   *   unarmed    runs home, and punches only a raider already in reach.
+   *   asleep     stays in bed unless armed.
+   *
+   * Soldiers are not villagers and keep their own rules (world/Defenders.js).
+   */
+  defendStep(p, dt) {
+    const quiet = () => {
+      if (p.fighting) { p.fighting = false; p.target = null; p._route = null; p._chase = null; p.wait = 0.5; }
+      return false;
+    };
+    if (!this.threats?.length) return quiet();
+    const { foe, d } = this.nearestThreat(p);
+    if (!foe || d > DEFENCE.alarm) return quiet();
+    const stats = this.statsOf(p);
+    const armed = !!weaponId(p.weapon) && (p.hp ?? stats.maxHp) > stats.maxHp * DEFENCE.fleeBelow;
+    if (p.sleep && !armed) return false; // in bed: a blow wakes them (hurt)
+    if (p.sleep) { p.roused = true; this.wake(p); }
+    p.fighting = true; p.atWork = false;
+    p.cool = Math.max(0, (p.cool ?? 0) - dt);
+    const hit = attackOf(armed ? p.weapon : null, stats.strength);
+    const run = dt * DEFENCE.runFactor;
+    const face = () => { p.facing = Math.atan2(foe.x - p.x, foe.z - p.z); };
+    const blow = () => {
+      p.cool = hit.every * (0.9 + this.rand() * 0.2);
+      p.strike = 0.3;
+      face();
+      this.strike?.(foe, hit.damage, p);
+    };
+    if (!armed) {
+      // Cornered: punch what is already in reach. Otherwise home.
+      if (d <= hit.reach) { p.target = null; if (p.cool <= 0) blow(); return true; }
+      p._chase ??= this.outdoorSpot(p.homeId) ?? this.placeOf(p.homeId);
+      if (p._chase && dist(p, p._chase) > 1) this.travel(p, p._chase, run); else p.target = null;
+      return true;
+    }
+    if (hit.ranged) {
+      if (d <= hit.range) { p.target = null; if (p.cool <= 0) blow(); else face(); return true; }
+    } else if (d <= hit.reach) { p.target = null; if (p.cool <= 0) blow(); else face(); return true; }
+    const stand = hit.ranged ? hit.range * 0.8 : hit.reach * 0.7;
+    const to = { x: foe.x - (foe.x - p.x) / (d || 1) * stand, z: foe.z - (foe.z - p.z) / (d || 1) * stand };
+    // The same spot until the raider has moved on, so the route is not re-planned every frame.
+    if (!p._chase || dist(p._chase, to) > 1.5) p._chase = to;
+    this.travel(p, p._chase, run);
+    return true;
   }
 
   // ---- arrivals ------------------------------------------------------------
@@ -428,14 +590,24 @@ export class Settlers {
     this.moodTick(dtSeconds); // PLAY-13
     this.asksTick(dtSeconds); // VIL-2
     for (const p of this.people) {
-      if (!(p.hp > 0)) p.hp = VILLAGER_HP;
+      const max = this.maxHp(p);
+      if (!(p.hp > 0)) p.hp = max;
+      else if (p.hpMax > 0 && p.hpMax !== max) p.hp *= max / p.hpMax; // VIL-5: a stronger village does not leave them looking wounded
+      p.hpMax = max;
       if (p.hurt > 0) p.hurt = Math.max(0, p.hurt - dtSeconds);
       if (p.calm > 0) p.calm -= dtSeconds;
-      else if (p.hp < VILLAGER_HP) p.hp = Math.min(VILLAGER_HP, p.hp + VILLAGER_HEAL * dtSeconds);
+      else if (p.hp < max) p.hp = Math.min(max, p.hp + max * DEFENCE.healShare * dtSeconds);
     }
+    this.statClock += dtSeconds;
+    if (this.statClock >= 1) { this.statClock = 0; this.bonus = null; } // VIL-5
+    this.workTick(dtSeconds); // VIL-4
     // VIL-1: at night everybody goes to bed; live work and walking stop.
     this.dark = !!this.night?.();
-    for (const p of this.people) if (!this.sleepStep(p, dtSeconds, this.dark)) this.walk(p, dtSeconds);
+    for (const p of this.people) {
+      if (p.strike > 0) p.strike = Math.max(0, p.strike - dtSeconds);
+      if (this.defendStep(p, dtSeconds)) continue; // VIL-6
+      if (!this.sleepStep(p, dtSeconds, this.dark)) this.walk(p, dtSeconds);
+    }
     this.closeDoors(dtSeconds);
   }
 
@@ -462,9 +634,13 @@ export class Settlers {
       // Nobody arrives hungry; the first meal after they get here decides.
       hungry: false,
       hp: VILLAGER_HP,
+      hpMax: VILLAGER_HP,
+      ...newXp(), // VIL-4
+      weapon: null, // VIL-6
       ...newMood(), // PLAY-13
       ...newAsks(this.rand), // VIL-2
     };
+    person.hp = person.hpMax = this.maxHp(person);
     this.people.push(person);
     this.assignWork(person);
     this.bus?.emit('settler:arrived', { settler: person, population: this.population });
@@ -616,7 +792,8 @@ export class Settlers {
   bonusFor(structureId) {
     // PLAY-13: a Grumbling worker gives half the bonus (+25% for +50%).
     const w = this.people.find((p) => p.workId === structureId && !p.hungry && !this.jobs?.controls(p));
-    return w ? 1 + SETTLERS.workBonus * (MOOD.workBonusScale[w.band ?? 'content'] ?? 1) : 1;
+    // VIL-4, VIL-5: a worker with more intelligence makes more in the same time.
+    return w ? (1 + SETTLERS.workBonus * (MOOD.workBonusScale[w.band ?? 'content'] ?? 1)) * this.statsOf(w).workSpeed : 1;
   }
 
   // ---- getting about -------------------------------------------------------
@@ -913,7 +1090,7 @@ export class Settlers {
    */
   hurt(person, hits) {
     if (!this.people.includes(person)) return false;
-    person.hp = (person.hp > 0 ? person.hp : VILLAGER_HP) - hits;
+    person.hp = (person.hp > 0 ? person.hp : this.maxHp(person)) - hits;
     person.hurt = 0.4;
     person.calm = 8; // no healing until 8 s after the last blow
     person.roused = true; // VIL-1: a blow wakes them for the rest of the night
@@ -931,6 +1108,7 @@ export class Settlers {
       people: this.people.map((p) => ({
         id: p.id, name: p.name, colour: p.colour,
         homeId: p.homeId, workId: p.workId, trade: p.trade, hungry: !!p.hungry,
+        xp: Math.round((p.xp ?? 0) * 10) / 10, weapon: p.weapon ?? null, // VIL-4, VIL-6
         x: p.sleep?.stand?.x ?? p.x, y: p.sleep?.stand?.y ?? p.y, z: p.sleep?.stand?.z ?? p.z, // VIL-1: saved on their feet, not in the bed
         mood: Math.round(p.mood * 10) / 10, idleFor: Math.round(p.idleFor ?? 0), // PLAY-13
         furiousFor: Math.round(p.furiousFor ?? 0), said: p.said ?? null, // PLAY-13
@@ -949,7 +1127,7 @@ export class Settlers {
     // indoors is the roof. The saved floor is kept when it still holds them
     // (settlerFloor, from the saved height); only otherwise the column's top.
     this.people = data.people.map((p) => ({
-      ...p, trade: TRADE_IDS.includes(p.trade) ? p.trade : null, ...loadMood(p), ...loadAsks(p, this.rand), y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false, // PLAY-13
+      ...p, trade: TRADE_IDS.includes(p.trade) ? p.trade : null, ...loadXp(p), weapon: weaponId(p.weapon), fighting: false, ...loadMood(p), ...loadAsks(p, this.rand), y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false, // PLAY-13
     }));
     // WORK-3: a save from before trades hands them out now, evenly.
     for (const p of this.people) if (!p.trade) p.trade = this.nextTrade();
