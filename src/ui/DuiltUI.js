@@ -1,5 +1,6 @@
 import { ITEMS_BY_ID, itemName, stackLimit, isTool, isFood } from '../config/items.js';
 import { BOOSTS, clockOf } from '../config/drinks.js';
+import { WIZARD_TALK, COIN } from '../config/magic.js'; // WIZ-3
 import { FINAL_AGE } from '../config/ages.js';
 import { askConfirm } from './Confirm.js';
 import { PLAYABLE_SLOTS } from '../items/Inventory.js';
@@ -200,6 +201,8 @@ export class DuiltUI {
         </div>
         <!-- Drinks going (playtest, P5): one chip each, counting down. -->
         <div class="vital vital-boosts" id="vital-boosts" hidden></div>
+        <!-- WIZ-4: Magic level, once the wizard has come. -->
+        <div class="vital vital-magic" id="vital-magic" hidden></div>
         <!-- A barracks training somebody (asked for directly: "add the
              progress in the ui too"): who's next out, a bar, the time left. -->
         <button type="button" class="vital vital-training" id="vital-training" hidden></button>
@@ -390,6 +393,14 @@ export class DuiltUI {
           <div id="trade-coins" class="trade-coins"></div>
           <div id="trade-orders"></div>
           <div id="trade-list" class="recipe-grid"></div>`,
+        'panel-wizard': `
+          <div id="wizard-tabs" class="trade-switch" role="group" aria-label="Wizard">
+            <button class="secondary" data-wiz-tab="talk">Talk</button>
+            <button class="secondary" data-wiz-tab="shop">Shop</button>
+            <button class="secondary" data-wiz-tab="quests">Quests</button>
+            <button class="secondary" data-wiz-tab="recipes">Recipes</button>
+          </div>
+          <div id="wizard-body"></div>`,
         'panel-finish': `
           <div id="finish-body"></div>`,
         'panel-skills': `
@@ -450,6 +461,8 @@ export class DuiltUI {
       this.onBagChanged?.();
     });
     this.bus.on('hunger:change', () => this.renderVitals());
+    // WIZ-2: the wizard has moved in.
+    this.bus.on('wizard:arrived', () => this.bus.emit('toast', { kind: 'challenge', title: 'A wizard has moved in', body: 'Talk to him at the hut. Magic has begun.' }));
     this.bus.on('health:change', ({ hurt }) => {
       this.renderHealth();
       if (hurt) this.flashHurt(false);
@@ -1367,6 +1380,61 @@ export class DuiltUI {
       + (armour ? `<span class="armour-badge"><svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6Z"/></svg><b>${armour}</b></span>` : '');
     box.classList.toggle('low', v <= 6);
     box.title = `Health: ${v / 2} of 10 hearts${armour ? ` · ${armour} armour` : ''}`;
+  }
+
+  /** WIZ-4: the Magic level chip, shown once the wizard has come. */
+  renderMagic() {
+    const box = this.q('#vital-magic');
+    const m = this.duilt?.magic;
+    if (!box) return;
+    const key = m?.active ? `${m.level}/${m.points}` : '';
+    if (key === this.magicKey) return;
+    this.magicKey = key;
+    box.hidden = !m?.active;
+    if (!m?.active) return;
+    const next = m.toNext();
+    box.title = `Magic level ${m.level}, ${m.points} points${next ? `, ${next} to the next level` : ', the highest level'}`;
+    box.innerHTML = `<span class="magic-chip">\u2728 Magic ${m.level}</span>`;
+  }
+
+  /** WIZ-3: the wizard's panel, on the tab last used. */
+  showWizard(tab = this.wizardTab ?? 'talk') {
+    const d = this.duilt, m = d?.magic;
+    if (!m?.active) return;
+    this.wizardTab = tab;
+    this.q('#wizard-sub').textContent = `Magic level ${m.level} \u00b7 ${m.points} points${m.toNext() ? ` \u00b7 ${m.toNext()} to level ${m.level + 1}` : ''}`;
+    this.q('#wizard-tabs').querySelectorAll('[data-wiz-tab]').forEach((b) => {
+      const on = b.dataset.wizTab === tab;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+      b.onclick = () => this.showWizard(b.dataset.wizTab);
+    });
+    const body = this.q('#wizard-body');
+    if (tab === 'talk') {
+      body.innerHTML = `<p class="export-note">\u201c${escapeHtml(WIZARD_TALK[m.visits % WIZARD_TALK.length])}\u201d</p>`;
+    } else if (tab === 'shop') {
+      const coins = d.inventory.countOf(COIN);
+      const offers = m.offers();
+      body.innerHTML = `<div class="trade-coins">${itemChip(COIN, coins)} <span>You have ${coins} coin${coins === 1 ? '' : 's'}.</span></div>`
+        + (offers.length ? `<div class="recipe-grid">${offers.map((o) => {
+          const spec = ITEMS_BY_ID.get(o.item);
+          const ico = itemIcon(spec, { size: 40 }) ?? glyphSvg(spec?.glyph, { size: 30, color: spec?.color ?? 0x888888 });
+          const afford = coins >= o.price;
+          return `<div class="recipe-tile ${afford ? '' : 'blocked'}"><span class="recipe-icon">${ico}</span>
+            <strong class="recipe-name">${escapeHtml(itemName(o.item))}</strong>
+            <span class="recipe-cost">${itemChip(COIN, o.price, { have: coins, short: !afford })}</span>
+            <div class="recipe-actions"><button class="secondary${afford ? '' : ' cannot'}" data-wiz-buy="${o.item}">Buy</button></div></div>`;
+        }).join('')}</div>` : '<p class="export-note">He has no seeds to sell yet. Fruit seeds come with the Plant Pot.</p>');
+      body.querySelectorAll('[data-wiz-buy]').forEach((b) => b.addEventListener('click', () => {
+        const res = m.buy(b.dataset.wizBuy, d.inventory);
+        this.bus.emit('toast', res.ok ? { kind: 'challenge', title: `Bought ${itemName(b.dataset.wizBuy).toLowerCase()}`, body: `${res.price} coins` } : { kind: 'xp', title: 'Cannot buy that', body: res.reason });
+        this.showWizard('shop');
+      }));
+    } else if (tab === 'quests') {
+      body.innerHTML = '<p class="export-note">He has no quests for you yet.</p>';
+    } else {
+      body.innerHTML = '<p class="export-note">He has not taught you any recipes yet.</p>';
+    }
   }
 
   /**
