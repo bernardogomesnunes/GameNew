@@ -112,7 +112,7 @@ export const ITEMS = [
     block: cropBaseOf(c), madeBy: `Saved from a ripe ${c.name.toLowerCase()}`,
   })),
   // FRUIT-3: fruit seeds go in a Plant Pot, never in the ground (duilt/FruitPlants.js).
-  { id: 'plant_pot', name: 'Plant Pot', kind: 'refined', stackTo: 20, color: 0xb85f3c, glyph: 'bucket', block: POT_BLOCK, madeBy: 'Made at a Workbench from clay or planks. Place it, then put a fruit seed in it' },
+  { id: 'plant_pot', name: 'Plant Pot', kind: 'refined', stackTo: 20, color: 0xb85f3c, glyph: 'bucket', block: POT_BLOCK, madeBy: 'Made at a Workbench from clay. Place it, then put a fruit seed in it' },
   ...FRUIT_PLANTS.map((p) => ({
     id: p.seed, name: `${p.name.replace(/ (Tree|Vine|Bush)$/, '')} Seeds`, kind: 'raw', stackTo: STACK_GOODS, color: p.crop, glyph: 'seeds',
     block: plantBlock(p.kind, 'sprout'), madeBy: `Plant it in a Plant Pot: a ${p.name.toLowerCase()} in ${p.days} days`,

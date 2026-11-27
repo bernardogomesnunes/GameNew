@@ -52,7 +52,7 @@ ok('four fruit seeds, each places its sprout', FRUIT_SEEDS.length === 4 && FRUIT
 ok('the pot and seeds have icons', ['plant_pot', ...FRUIT_SEEDS].every((id) => /<svg class="cube"/.test(itemIcon(ITEMS_BY_ID.get(id)) ?? '')));
 {
   const pots = RECIPES.filter((r) => r.output.id === 'plant_pot');
-  ok('made at the workbench from clay or planks', pots.length === 2 && pots.every((r) => r.station === 'workbench') && pots.some((r) => r.inputs.clay) && pots.some((r) => r.inputs.planks));
+  ok('made at the workbench from clay', pots.length === 1 && pots[0].station === 'workbench' && pots[0].inputs.clay === 3);
   ok('explorers can carry each fruit seed', FRUIT_SEEDS.every((s) => EXPLORER_PACK.some((p) => p[s] === 1)));
 }
 ok('plants are not walked into', (() => { const w = flat(); w.setBlock(3, 1, 3, plantBlock('apple', 'mid')); return w.collisionBoxAt(3, 1, 3) === null; })());
