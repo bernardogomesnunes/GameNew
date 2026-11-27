@@ -331,6 +331,8 @@ export class VillagerJobs {
       const p=this.person(a.personId);
       if(!p){this.returnCargo(a);continue;}
       if(p.strike>0)p.strike=Math.max(0,p.strike-dt);
+      // VIL-1: nobody builds or hauls at night; the cargo waits for morning.
+      if(this.settlers.dark){a.status=p.sleep?'Asleep':'Walking home to bed';continue;}
       p.workId=null;p.target=null;p.atWork=false;
       if(!this.hall(a.hallId)){a.status='Work Hall needs repair';continue;}
       if(p.hungry){a.status='Hungry — waiting for food';continue;}

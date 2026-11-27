@@ -2497,7 +2497,8 @@ body.is-sleeping #building-hint { visibility: hidden; }
 .town-row[data-band="grumbling"] .town-fill { background: #e0b43a; }
 .town-row[data-band="angry"] .town-fill { background: #e07a2e; }
 .town-row[data-band="furious"] .town-fill { background: #d23a2a; }
-.town-reason, .town-leaves { font-size: 13px; color: var(--text-dim); min-width: 0; overflow-wrap: anywhere; }
+.town-reason, .town-leaves, .town-ask { font-size: 13px; color: var(--text-dim); min-width: 0; overflow-wrap: anywhere; }
+.town-ask { grid-column: 1 / -1; color: #8a6a1e; font-weight: 600; }
 .town-leaves { text-align: right; color: #d23a2a; font-weight: 700; }
 .town-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
 .town-actions button { min-height: 44px; }
