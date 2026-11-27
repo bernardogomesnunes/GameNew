@@ -13,12 +13,8 @@
  * then the Wizard Hat last.
  */
 
-/**
- * What the Roots and Fruit quest asks for. Roots and the four fruits come with
- * their own work (FRUIT-1, FRUIT-5); until they are on main it asks for what
- * exists. Swap in carrot_root, broccoli_root, lettuce_root and apple here.
- */
-export const ROOT_QUEST_ITEMS = { broccoli: 4, lettuce: 4, fruit: 4 };
+/** What the Roots and Fruit quest asks for: one of each root, and apples (FRUIT-1, FRUIT-5). */
+export const ROOT_QUEST_ITEMS = { broccoli_root: 2, carrot_root: 2, lettuce_root: 2, apple: 4 };
 
 export const WIZARD_QUESTS = [
   { id: 'offerings', name: 'First Offerings', kind: 'bring', items: { mushroom_red: 3, leaves: 6 },
@@ -36,7 +32,7 @@ export const WIZARD_QUESTS = [
   { id: 'steady_hand', name: 'Steady Hand', kind: 'targets', n: 15,
     blurb: 'Hit the training targets 15 times.', points: 15, reward: { recipe: 'jump' } },
   { id: 'roots_and_fruit', name: 'Roots and Fruit', kind: 'bring', items: ROOT_QUEST_ITEMS,
-    blurb: 'Bring 4 broccoli, 4 lettuce and 4 fruit for the strength potion.', points: 20, reward: { recipe: 'strength' } },
+    blurb: 'Bring 2 broccoli roots, 2 carrot roots, 2 lettuce roots and 4 apples for the strength potion.', points: 20, reward: { recipe: 'strength' } },
   { id: 'fire_in_the_pot', name: 'Fire in the Pot', kind: 'brew', n: 6, level: 3,
     blurb: 'Reach Magic level 3, then brew 6 more batches.', points: 25, reward: { recipe: 'fire' } },
   { id: 'cold_hands', name: 'Cold Hands', kind: 'kills', n: 15, level: 4,
