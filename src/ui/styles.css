@@ -2533,3 +2533,13 @@ body.is-sleeping #building-hint { visibility: hidden; }
   #panel-building .panel:has(.war-hall) { max-width: 720px; }
   .war-hall .company-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* WORK-2: working a building by hand */
+.hand-bar { position: relative; height: 28px; margin: 10px 0 6px; background: var(--px-panel-dark, #3a3228); border: 2px solid var(--px-border, #1a1612); touch-action: manipulation; }
+.hand-win { position: absolute; top: 0; bottom: 0; background: var(--px-green, #6fa85a); opacity: .85; }
+.hand-mark { position: absolute; top: -3px; bottom: -3px; width: 6px; margin-left: -3px; background: var(--px-text, #f4ead6); box-shadow: 0 0 0 2px var(--px-border, #1a1612); }
+.hand-dots { display: flex; gap: 8px; margin: 6px 0; }
+.hand-dots span { width: 14px; height: 14px; border: 2px solid var(--px-border, #1a1612); background: transparent; }
+.hand-dots span.hit { background: var(--px-green, #6fa85a); }
+.hand-dots span.miss { background: var(--px-red-dark, #a33a2c); }
+.hand-go { min-height: 48px; width: 100%; font-size: 17px; }

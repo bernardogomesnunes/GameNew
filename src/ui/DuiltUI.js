@@ -21,6 +21,7 @@ import { CROPS } from '../config/crops.js';
 import { STRUCTURES, STRUCTURES_BY_ID, structuresForAge, PRODUCIBLE_ITEMS, producesAt, intervalAt, PRODUCTION_PACE, FOREST_WOODS, forestYield, makesGoods } from '../config/structures.js';
 import { BLOCKS, stationOf } from '../config/blocks.js';
 import { JOB_FOR_BUILDING, JOB_OUTFITS } from '../config/outfits.js';
+import { SWINGS, markerAt, nextTarget, landed } from '../duilt/HandWork.js'; // WORK-2
 import { StationWork, usesSpots, batchSeconds } from '../duilt/StationWork.js';
 import { howToGet, RECIPES, RECIPES_BY_ID } from '../config/recipes.js';
 import { designsForStructure, starterDesign } from '../prefabs/HouseDesigns.js';
@@ -727,6 +728,7 @@ export class DuiltUI {
     this.wireCraftMissing(body, structure, () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache));
     body.querySelectorAll('[data-sow]').forEach((b) => b.addEventListener('click', () => actions.onSow?.(b.dataset.sow)));
     body.querySelectorAll('[data-unsow]').forEach((b) => b.addEventListener('click', () => actions.onUnsow?.(b.dataset.unsow)));
+    this.wireHandWork(body, structure); // WORK-2
     body.querySelector('[data-farm-compost]')?.addEventListener('click', () => actions.onCompostFarm?.());
     body.querySelector('[data-forest-wood]')?.addEventListener('change', (e) => {
       const r = this.duilt?.setForestWood(structure.id, e.target.value);
@@ -855,6 +857,7 @@ export class DuiltUI {
       </div>
       ${spec?.woods ? this.forestWoodHtml(structure) : ''}
       ${spec?.fromCrops ? this.farmSeedsHtml(structure) : ''}
+      ${this.handWorkHtml(structure) /* WORK-2 */}
       ${structure.type === 'war_hall' ? this.warHallHtml(structure) : '' /* PLAY-12 */}
       ${structure.type === 'barracks' || structure.type === 'military' ? this.barracksHtml(structure) : ''}
       ${structure.type === 'workshop' || structure.type === 'foundry' || structure.type === 'kiln' ? this.workshopHtml(structure) : ''}
@@ -879,6 +882,83 @@ export class DuiltUI {
         <button class="tool-btn" data-change>${icon('hammer', 16)}<span>${locked ? 'Change' : 'Done'}</span></button>
         <button class="tool-btn danger" data-delete aria-label="Delete">${pixelIcon('trash', 16)}<span>Delete</span></button>
       </div>`;
+  }
+
+  // ---- WORK-2: working a building by hand ----
+
+  /** The small game at a forest, quarry, mine or farm: a bar, a lit window, a button. */
+  handWorkHtml(structure) {
+    const hw = this.duilt?.handWork;
+    const st = hw?.status(structure);
+    if (!st?.game) return '';
+    const g = st.game;
+    const rest = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+    return `<div class="building-sec hand-work" data-hand>
+      <h4>${escapeHtml(g.title)}</h4>
+      ${st.ok ? `<p class="dim">${escapeHtml(g.hint)} ${SWINGS} swings, one item for each hit.</p>
+        <div class="hand-bar" data-hand-bar hidden><div class="hand-win" data-hand-win></div><div class="hand-mark" data-hand-mark></div></div>
+        <div class="hand-dots" data-hand-dots aria-hidden="true">${'<span></span>'.repeat(SWINGS)}</div>
+        <button class="primary hand-go" data-hand-go>Start</button>`
+        : `<p class="dim" data-hand-rest>${escapeHtml(st.reason)}${st.left ? ` ${rest(st.left)} left.` : ''}</p>`}
+    </div>`;
+  }
+
+  wireHandWork(body, structure) {
+    clearInterval(this.handTimer);
+    cancelAnimationFrame(this.handFrame);
+    const root = body.querySelector('[data-hand]');
+    const hw = this.duilt?.handWork;
+    if (!root || !hw) return;
+    const redraw = () => this.building?.id === structure.id && this.showBuilding(structure, this.buildingActionsCache);
+    const st = hw.status(structure);
+    if (!st.ok) {
+      if (!st.left) return;
+      this.handTimer = setInterval(() => {
+        const left = hw.left(structure);
+        if (!root.isConnected) return clearInterval(this.handTimer);
+        if (left <= 0) { clearInterval(this.handTimer); return redraw(); }
+        const note = root.querySelector('[data-hand-rest]');
+        if (note) note.textContent = `${st.reason} ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} left.`;
+      }, 1000);
+      return;
+    }
+    const g = st.game;
+    const go = root.querySelector('[data-hand-go]'), bar = root.querySelector('[data-hand-bar]');
+    const win = root.querySelector('[data-hand-win]'), mark = root.querySelector('[data-hand-mark]');
+    const dots = [...root.querySelectorAll('[data-hand-dots] span')];
+    let running = false, swing = 0, hits = 0, target = 0, t0 = 0;
+    const arm = () => {
+      target = nextTarget(g.width);
+      win.style.left = `${(target - g.width / 2) * 100}%`;
+      win.style.width = `${g.width * 100}%`;
+    };
+    const frame = (now) => {
+      if (!root.isConnected) return;
+      mark.style.left = `${markerAt((now - t0) / 1000, g.speed) * 100}%`;
+      this.handFrame = requestAnimationFrame(frame);
+    };
+    go.addEventListener('click', () => {
+      if (!running) {
+        running = true; swing = 0; hits = 0;
+        bar.hidden = false; go.textContent = `${g.verb}!`;
+        arm();
+        t0 = performance.now();
+        this.handFrame = requestAnimationFrame(frame);
+        return;
+      }
+      const hit = landed(markerAt((performance.now() - t0) / 1000, g.speed), target, g.width);
+      dots[swing]?.classList.add(hit ? 'hit' : 'miss');
+      swing++;
+      if (hit) hits++;
+      if (swing < SWINGS) return arm();
+      cancelAnimationFrame(this.handFrame);
+      const r = this.duilt.handWorkRound(structure, hits);
+      const list = Object.entries(r.made ?? {}).map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`).join(', ');
+      this.bus.emit('toast', r.ok
+        ? { kind: list ? 'challenge' : 'xp', title: list ? `Made ${list}` : 'Nothing this time', body: `${hits} of ${SWINGS} swings landed` }
+        : { kind: 'xp', title: r.reason ?? 'Could not work it' });
+      redraw();
+    });
   }
 
   /**
