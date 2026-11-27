@@ -119,7 +119,7 @@ export const ITEMS = [
   { id: 'raspberry', name: 'Raspberries', kind: 'food', stackTo: STACK_FOOD, color: 0xc2305a, glyph: 'berry', feeds: 8, madeBy: 'Picked from a raspberry bush in a pot' },
   { id: 'passion_fruit', name: 'Passion Fruit', kind: 'food', stackTo: STACK_FOOD, color: 0x8a4a86, glyph: 'passion', feeds: 8, madeBy: 'Picked from a passion fruit vine in a pot' },
   // FRUIT-2: oak leaves drop these. Barely a snack.
-  { id: 'acorn', name: 'Acorn', kind: 'food', stackTo: STACK_FOOD, color: 0xa87a45, glyph: 'acorn', feeds: 1, madeBy: 'Dropped by oak leaves' },
+  { id: 'acorn', name: 'Acorn', kind: 'food', lastResort: true, stackTo: STACK_FOOD, color: 0xa87a45, glyph: 'acorn', feeds: 1, madeBy: 'Dropped by oak leaves' },
   // FRUIT-5: roots, a second harvest from three crops. Potion ingredients to come.
   { id: 'broccoli_root', name: 'Broccoli Root', kind: 'raw', stackTo: STACK_GOODS, color: 0xb9a77c, glyph: 'root', madeBy: 'Dug up with a broccoli harvest. A potion ingredient' },
   { id: 'carrot_root', name: 'Carrot Root', kind: 'raw', stackTo: STACK_GOODS, color: 0xd9a05a, glyph: 'root', madeBy: 'Dug up with a carrot harvest. A potion ingredient' },
@@ -736,6 +736,12 @@ export function migrateSavedItems(node) {
  * no table knows — so it digs at bare-hand pace and Place builds nothing.
  */
 export const BARE_HANDS = 'hands';
+
+/**
+ * Order villagers and soldiers eat in: plainest first, but a `lastResort`
+ * food (the acorn) only when nothing else is left.
+ */
+export const foodOrder = (a, b) => (a.lastResort ? 1 : 0) - (b.lastResort ? 1 : 0) || (a.feeds ?? 0) - (b.feeds ?? 0);
 
 /** How much hunger one unit of this item restores, or 0 if it isn't food. */
 export function feedValue(id) {

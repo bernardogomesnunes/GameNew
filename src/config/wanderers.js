@@ -457,7 +457,7 @@ export const EXPLORER_PACK = [
   { give: { copper_ore: 4 }, region: 'the red canyons' },
   { give: { gold_ore: 1 }, region: 'the far mountains' },
   { give: { coal: 5 }, region: 'the high peaks' },
-  { give: { fruit: 4 }, region: 'the orchard country' },
+  { give: { apple: 4 }, region: 'the orchard country' },
   { give: { vegetables: 4 }, region: 'the river farms' },
   { give: { cooked_meat: 3 }, region: 'the herding plains' },
   { give: { mushroom_red: 2 }, region: 'the oak forests' },

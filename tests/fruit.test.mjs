@@ -9,6 +9,9 @@ import { WANDERERS } from '../src/config/wanderers.js';
 import { Wanderers } from '../src/world/Wanderers.js';
 import { lootFor } from '../src/duilt/Loot.js';
 import { readFileSync, readdirSync } from 'node:fs';
+import { Settlers } from '../src/duilt/Settlers.js';
+import { Inventory } from '../src/items/Inventory.js';
+import { FOODS, foodIn } from '../src/config/soldiers.js';
 
 /** FRUIT-1, FRUIT-2, FRUIT-5: four fruits, acorns, roots, and old saves. */
 let f = 0;
@@ -75,6 +78,23 @@ ok('carrot, lettuce and broccoli give a root when ripe',
 ok('potato does not', Object.keys(harvestOf(cropBlock('potato', RIPE))).every((k) => !k.endsWith('_root')));
 ok('a green crop gives no root', Object.keys(harvestOf(cropBlock('carrot', 1))).join() === 'seeds_carrot');
 ok('root items exist with icons', ['broccoli_root', 'carrot_root', 'lettuce_root'].every(cube));
+
+// Acorns are eaten last (villagers and soldiers).
+{
+  const meal = (bag, store) => {
+    const st = Object.create(Settlers.prototype);
+    st.inventory = new Inventory(); st.inventory.add(...bag);
+    const shed = new Inventory(); if (store) shed.add(...store);
+    st.stores = () => (store ? [shed] : []);
+    return st.nextMeal();
+  };
+  ok('villagers eat an apple before an acorn in the same bag', meal(['apple', 1]) && (() => { const st = Object.create(Settlers.prototype); st.inventory = new Inventory(); st.inventory.add('acorn', 5); st.inventory.add('apple', 1); st.stores = () => []; return st.nextMeal().food.id === 'apple'; })());
+  ok('with only acorns left they eat acorns', (() => { const st = Object.create(Settlers.prototype); st.inventory = new Inventory(); st.inventory.add('acorn', 2); st.stores = () => []; return st.nextMeal().food.id === 'acorn'; })());
+  ok('an acorn in a storehouse waits while the bag holds an apple', meal(['apple', 1], ['acorn', 9]).food.id === 'apple');
+  ok('soldiers list the acorn last', FOODS.at(-1).id === 'acorn' && FOODS[0].id !== 'acorn');
+  const inv = new Inventory(); inv.add('acorn', 3); inv.add('apple', 2);
+  ok('and both count as keep', foodIn(inv) === 5);
+}
 
 // No source file still names the old item.
 {
