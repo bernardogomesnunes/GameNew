@@ -8,6 +8,8 @@ import {doorPart} from '../config/blocks.js';
 import {isLoaded} from '../world/Mobs.js';
 import { MOOD, MOOD_DAY } from '../config/mood.js'; // PLAY-13
 import { isBedtime, bedsIn, bedPlace, bedKey, campfireNear, LIE_SECONDS } from './sleepSpots.js'; // VIL-1
+import { newAsks, loadAsks, step as askStep, receive as askReceive } from './Asks.js'; // VIL-2
+import { ITEMS_BY_ID } from '../config/items.js';
 import { newMood, loadMood, step as moodStep, shouldLeave, bandRank } from './Mood.js'; // PLAY-13
 
 /** Everything edible, least nourishing first — what settlers work down through. */
@@ -357,6 +359,35 @@ export class Settlers {
     p.target = null; p._route = null; p.atWork = false; p.wait = 0.5 + this.rand() * 2;
   }
 
+
+  // ---- VIL-2: asks -----------------------------------------------------------
+
+  /** Asks begin and lapse (duilt/Asks.js); the UI hears about each. */
+  asksTick(dt) {
+    for (const p of this.people) {
+      const was = p.ask?.item;
+      const event = askStep(p, dt, this.rand);
+      if (event === 'asked') this.bus?.emit('settler:ask', { settler: p, item: p.ask.item, name: p.name });
+      else if (event === 'lapsed') this.bus?.emit('settler:asklapsed', { settler: p, item: was, name: p.name });
+    }
+  }
+
+  /**
+   * Gives `p` what they asked for, from `from` (your bag). Returns
+   * { ok, gain, reason }. The item is taken only when it is what they want.
+   */
+  give(p, itemId, from = this.inventory) {
+    if (!this.people.includes(p)) return { ok: false, reason: 'That villager no longer lives here.' };
+    if (!p.ask) return { ok: false, reason: `${p.name} is not asking for anything.` };
+    if (p.ask.item !== itemId) return { ok: false, reason: `${p.name} wants ${ITEMS_BY_ID.get(p.ask.item)?.name ?? 'something else'}.` };
+    if (!(from?.countOf(itemId) > 0)) return { ok: false, reason: `You have no ${ITEMS_BY_ID.get(itemId)?.name ?? 'such thing'}.` };
+    from.remove(itemId, 1);
+    const gain = askReceive(p, itemId, this.rand);
+    if (p.band === 'content') p.said = null;
+    this.bus?.emit('settler:gift', { settler: p, item: itemId, gain, name: p.name });
+    return { ok: true, gain };
+  }
+
   // ---- arrivals ------------------------------------------------------------
 
   tick(dtSeconds) {
@@ -391,6 +422,7 @@ export class Settlers {
       p.job = open ? (role === 'builder' || role === 'hauler' ? role : JOB_FOR_BUILDING[types.get(p.workId)] ?? null) : null;
     }
     this.moodTick(dtSeconds); // PLAY-13
+    this.asksTick(dtSeconds); // VIL-2
     for (const p of this.people) {
       if (!(p.hp > 0)) p.hp = VILLAGER_HP;
       if (p.hurt > 0) p.hurt = Math.max(0, p.hurt - dtSeconds);
@@ -426,6 +458,7 @@ export class Settlers {
       hungry: false,
       hp: VILLAGER_HP,
       ...newMood(), // PLAY-13
+      ...newAsks(this.rand), // VIL-2
     };
     this.people.push(person);
     this.assignWork(person);
@@ -886,6 +919,7 @@ export class Settlers {
         x: p.sleep?.stand?.x ?? p.x, y: p.sleep?.stand?.y ?? p.y, z: p.sleep?.stand?.z ?? p.z, // VIL-1: saved on their feet, not in the bed
         mood: Math.round(p.mood * 10) / 10, idleFor: Math.round(p.idleFor ?? 0), // PLAY-13
         furiousFor: Math.round(p.furiousFor ?? 0), said: p.said ?? null, // PLAY-13
+        ask: p.ask ? { item: p.ask.item, left: Math.round(p.ask.left) } : null, nextAsk: Math.round(p.nextAsk ?? 0), // VIL-2
       })),
       emptyHouses: [...this.emptyHouses].map(([id, left]) => [id, Math.round(left)]), // PLAY-13
     };
@@ -900,7 +934,7 @@ export class Settlers {
     // indoors is the roof. The saved floor is kept when it still holds them
     // (settlerFloor, from the saved height); only otherwise the column's top.
     this.people = data.people.map((p) => ({
-      ...p, ...loadMood(p), y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false, // PLAY-13
+      ...p, ...loadMood(p), ...loadAsks(p, this.rand), y: this.loadedFloor(p), target: null, wait: 1 + this.rand() * 3, atWork: false, // PLAY-13
     }));
     this.emptyHouses = new Map((data.emptyHouses ?? []).filter((e) => Array.isArray(e) && Number.isFinite(e[1]) && e[1] > 0)); // PLAY-13
     this.nextId = data.nextId ?? this.people.length;
