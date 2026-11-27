@@ -1,5 +1,6 @@
 import { BLOCKS, BLOCKS_BY_ID, WOOD_FURNITURE } from './blocks.js';
 import { CROPS, cropBaseOf } from './crops.js';
+import { FRUIT_PLANTS, POT_BLOCK, plantBlock } from './fruitPlants.js';
 import { ARMOUR_PIECES, BACKPACKS, SHIELDS } from './armour.js';
 import { tieredItems } from './tiers.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
@@ -110,6 +111,12 @@ export const ITEMS = [
   ...CROPS.map((c) => ({
     id: `seeds_${c.kind}`, name: `${c.name} Seeds`, kind: 'raw', stackTo: STACK_GOODS, color: c.crop, glyph: 'seeds',
     block: cropBaseOf(c), madeBy: `Saved from a ripe ${c.name.toLowerCase()}`,
+  })),
+  // FRUIT-3: fruit seeds go in a Plant Pot, never in the ground (duilt/FruitPlants.js).
+  { id: 'plant_pot', name: 'Plant Pot', kind: 'refined', stackTo: 20, color: 0xb85f3c, glyph: 'bucket', block: POT_BLOCK, madeBy: 'Made at a Workbench from clay. Place it, then put a fruit seed in it' },
+  ...FRUIT_PLANTS.map((p) => ({
+    id: p.seed, name: `${p.name.replace(/ (Tree|Vine|Bush)$/, '')} Seeds`, kind: 'raw', stackTo: STACK_GOODS, color: p.crop, glyph: 'seeds',
+    block: plantBlock(p.kind, 'sprout'), madeBy: `Plant it in a Plant Pot: a ${p.name.toLowerCase()} in ${p.days} days`,
   })),
   { id: 'sapling', name: 'Sapling', kind: 'raw', stackTo: STACK_GOODS, color: 0x9fcd8b, glyph: 'sprout', block: 20, madeBy: 'Craft from Leaves, or find when breaking leaves — place on soil to grow a tree' },
 
@@ -586,7 +593,7 @@ export const ITEMS = [
   // WIZ-5: the wizard's gifts and the base of his potions (config/wizardQuests.js).
   { id: 'wizard_wand', name: "Wizard's Wand", kind: 'tool', stackTo: STACK_TOOL, color: 0xb48cff, glyph: 'wand', durability: null,
     noBook: true, madeBy: 'Given by the wizard for his first quest. Hold it and break to cast a bolt; it hits harder at higher Magic levels' },
-  { id: 'magic_cauldron', name: 'Magic Cauldron', kind: 'refined', stackTo: 10, color: 0x5b3f8f, glyph: 'bucket', block: 601, noBook: true,
+  { id: 'magic_cauldron', name: 'Magic Cauldron', kind: 'refined', stackTo: 10, color: 0x5b3f8f, glyph: 'bucket', block: 621, noBook: true,
     madeBy: 'Given by the wizard for his fourth quest. Place it and brew the potions he teaches' },
   { id: 'moonwater', name: 'Moonwater', kind: 'refined', stackTo: STACK_GOODS, color: 0x9fc8ff, glyph: 'flask',
     madeBy: 'Water, a pale mushroom and leaves, brewed in a Magic Cauldron. The base of the wizard\'s potions' },
@@ -596,7 +603,7 @@ export const ITEMS = [
   // WAND-3: the last quest's reward. Not in the book, not upgradable: only the wizard gives it.
   { id: 'wizard_hat', name: 'Wizard Hat', kind: 'armour', stackTo: STACK_TOOL, color: 0x3e2a6b, glyph: 'helm', wears: 'head', armour: 3, durability: 800, noBook: true,
     madeBy: 'Given by the wizard for his last quest. Defence 3, +2 wand damage, and a mob that hits you takes 2 back' },
-  { id: 'training_target', name: 'Training Target', kind: 'refined', stackTo: 10, color: 0x6f8fd9, glyph: 'target', block: 600,
+  { id: 'training_target', name: 'Training Target', kind: 'refined', stackTo: 10, color: 0x6f8fd9, glyph: 'target', block: 620,
     madeBy: 'Made at a workbench from planks and string. Hit it with the wand for Magic points; the wizard puts three by his hut' },
   { id: 'hunters_stew', name: "Hunter's Stew", kind: 'food', stackTo: STACK_FOOD, color: 0x8a5a2a, glyph: 'bowl', feeds: 50, madeBy: 'Meat, carrot, potato and dried pale mushroom, simmered in a Cauldron' },
   { id: 'forest_broth', name: 'Forest Broth', kind: 'food', stackTo: STACK_FOOD, color: 0x9a7a3a, glyph: 'bowl', feeds: 40, madeBy: 'Meat, broccoli, zucchini and dried lilac mushroom, simmered in a Cauldron' },

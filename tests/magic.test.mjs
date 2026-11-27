@@ -33,10 +33,9 @@ const shop = new Magic();
 ok('shop closed before arrival', !shop.buy('seeds_apple', inv).ok);
 shop.arrive(null);
 ok('shop offers only existing items', shop.offers().every((o) => o.item && o.price > 0));
+ok('the shop sells all four fruit seeds', ['seeds_apple', 'seeds_grape', 'seeds_raspberry', 'seeds_passion'].every((id) => shop.offers().some((o) => o.item === id)));
 const offer = shop.offers()[0];
-if (offer) {
-  ok('buying without coins fails', !shop.buy(offer.item, inv).ok);
-  inv.add('coin', offer.price + 1);
-  ok('buying takes coins and gives the seed', shop.buy(offer.item, inv).ok && inv.countOf('coin') === 1 && inv.countOf(offer.item) === 1);
-} else ok('no fruit seeds on this branch yet: offers empty', shop.offers().length === 0);
+ok('buying without coins fails', !shop.buy(offer.item, inv).ok);
+inv.add('coin', offer.price + 1);
+ok('buying takes coins and gives the seed', shop.buy(offer.item, inv).ok && inv.countOf('coin') === 1 && inv.countOf(offer.item) === 1);
 process.exit(f ? 1 : 0);

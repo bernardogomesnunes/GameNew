@@ -1,3 +1,4 @@
+import { plantOf } from '../src/config/fruitPlants.js';
 import * as THREE from 'three';
 import { World } from '../src/world/World.js';
 import { PlayerController } from '../src/player/PlayerController.js';
@@ -56,12 +57,13 @@ const LANTERN = 26, SLAB_STONE = 27, STAIRS_STONE = 29, CHAIR_OAK = 33, RUG_GREE
   // no item of its own — see blocks.js's `stateOf`.
   // Nor does world furniture nobody places — Godstone and the way out of
   // the god's cube (world/godCube.js), like bedrock.
-  const newBlockIds = BLOCKS.filter((b) => b.id >= 26 && b.stateOf == null && !b.system).map((b) => b.id);
+  // FRUIT-4: a fruit plant's later cells are never held; its seed places the sprout.
+  const newBlockIds = BLOCKS.filter((b) => b.id >= 26 && b.stateOf == null && !b.system && (!plantOf(b.id) || plantOf(b.id).segment === 'sprout')).map((b) => b.id);
   for (const id of newBlockIds) {
     const item = [...ITEMS_BY_ID.values()].find((i) => i.block === id);
     ok(`block ${BLOCKS_BY_ID.get(id).name} has an item that places it`, !!item);
     // Crops are grown from seeds saved from a harvest, not made either.
-    if (item && !NATURAL.has(id) && !BLOCKS_BY_ID.get(id).crop) {
+    if (item && !NATURAL.has(id) && !BLOCKS_BY_ID.get(id).crop && !plantOf(id)) {
       const recipe = RECIPES.find((r) => r.output.id === item.id);
       // CRAFT3D-1: furniture is made at the carpentry counter, with no recipe.
       // IMP-45: what a dragon sheds is picked up where it lies, never made.

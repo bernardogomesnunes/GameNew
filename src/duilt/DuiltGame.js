@@ -6,6 +6,8 @@ import { GAME_DAY_SECONDS, gameDaysText } from '../render/DayCycle.js';
 import { Crops, harvestOf, farmProduce, tendFarm, farmSeedSlots } from './Crops.js';
 import { FIELD_CROPS, CROPS_BY_KIND, cropOf, RIPE } from '../config/crops.js';
 import { Saplings } from './Saplings.js';
+import { FruitPlants } from './FruitPlants.js'; // FRUIT-3, FRUIT-4
+import { plantOf, FRUIT_PLANTS_BY_KIND } from '../config/fruitPlants.js';
 import { MushyLogs, MUSHY_KINDS, mushyOf, mushyYield } from './MushyLogs.js'; // PLAY-14..21
 import { TurfSpread } from './TurfSpread.js';
 import { penProduce, herdToJSON } from './Ranch.js';
@@ -164,6 +166,7 @@ export class DuiltGame {
     // only runs while you play (Game adds each day as the clock turns).
     this.saplings = new Saplings();
     this.mushyLogs = new MushyLogs(); // PLAY-15
+    this.fruitPlants = new FruitPlants(); // FRUIT-4
     // Bare dirt next to turf grows over in 5 to 50 game days (TurfSpread).
     this.turf = new TurfSpread();
     this.days = 0;
@@ -469,6 +472,15 @@ export class DuiltGame {
     const gained = {};
     for (const c of changes) {
       if (c.prev === AIR) continue;
+      // FRUIT-4: a plant taken away (its pot or base broken) gives its seed
+      // back, once, from the record it was sown with; a broken pot is
+      // given back by its own item. Nothing else of a plant is carried.
+      if (plantOf(c.prev)) {
+        const rec = this.fruitPlants.take(c.x, c.y, c.z);
+        const seed = rec ? FRUIT_PLANTS_BY_KIND.get(rec.kind)?.seed : null;
+        if (seed && this.inventory.add(seed, 1) === 0) gained[seed] = (gained[seed] ?? 0) + 1;
+        continue;
+      }
       // PLAY-15: a ready Mushy Log gives its mushrooms and is spent; an
       // unready one falls through and gives the log back.
       const mushy = mushyOf(c.prev);
@@ -2923,6 +2935,7 @@ export class DuiltGame {
       crops: this.crops.toJSON(),
       saplings: this.saplings.toJSON(),
       mushyLogs: this.mushyLogs.toJSON(), // PLAY-15
+      fruitPlants: this.fruitPlants.toJSON(), // FRUIT-4
       turf: this.turf.toJSON(),
       days: this.days,
       purses: { day: this.purses.day, spent: { ...this.purses.spent } },
@@ -3037,6 +3050,7 @@ export class DuiltGame {
     this.crops.loadJSON(data.crops);
     this.saplings.loadJSON(data.saplings);
     this.mushyLogs.loadJSON(data.mushyLogs); // PLAY-15
+    this.fruitPlants.loadJSON(data.fruitPlants); // FRUIT-4 (older saves have none)
     this.turf.loadJSON(data.turf);
     this.days = Number.isFinite(data.days) ? data.days : 0;
     // A save from before selling has full purses; a stale day refills them (purseLeft).

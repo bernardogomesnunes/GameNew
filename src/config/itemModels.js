@@ -1,5 +1,6 @@
 import { CROPS } from './crops.js';
 import { POTIONS } from './potions.js';
+import { FRUIT_PLANTS, potBoxes } from './fruitPlants.js';
 import { ARMOUR_PIECES, BACKPACKS, SHIELDS } from './armour.js';
 import { UPGRADES, UPGRADABLE_SWORDS, upgradedId } from './upgrades.js';
 import { TOOL_TIERS } from './tiers.js';
@@ -178,6 +179,15 @@ for (const c of CROPS) {
     [0.34, 0.2, 0.66, 0.5, c.crop],
   ]);
 }
+
+// FRUIT-3: fruit seed packets (the fruit on the front) and the Plant Pot.
+for (const p of FRUIT_PLANTS) {
+  ITEM_MODELS[p.seed] = packet([
+    [0.46, 0.5, 0.54, 0.62, p.leaf],
+    [0.34, 0.2, 0.66, 0.5, p.crop],
+  ]);
+}
+ITEM_MODELS.plant_pot = potBoxes();
 
 // Armour (Phase 7b): a helm, a cuirass and a pair of greaves, in each set's
 // metal (or leather) with its trim.
