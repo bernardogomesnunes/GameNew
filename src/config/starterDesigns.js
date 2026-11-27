@@ -1421,6 +1421,31 @@ STARTER_DESIGNS.push(
 );
 // --- end PLAY-12 ---
 
+// --- WIZ-1: the Wizard's Hut ---
+/**
+ * A 5 x 5 log hut under a mossy hip roof (mint tiles patched with teal),
+ * vines under the eaves, red mushrooms at the door and on the roof, a lantern
+ * hung inside. The outside is -z.
+ */
+function wizardHutBlocks() {
+  const shell = room({ w: 5, h: 3, wall: WOOD, floor: PLANKS, tiles: MINT, shape: 'hip' });
+  const dressed = hungUnderEaves(mottled(shell, TEAL, 0.45), HANGING_VINES, 0.4);
+  const roofTop = topAt(dressed, 3, 3);
+  return [
+    ...dressed,
+    { dx: 3, dy: 2, dz: 3, type: LANTERN },
+    ...mushroom(0, 1, 0, 1, CAP_RED),
+    ...mushroom(6, 1, 1, 1, CAP_LILAC),
+    ...mushroom(3, roofTop + 1, 3, 1, CAP_RED),
+  ];
+}
+STARTER_DESIGNS.push({
+  id: 'starter_wizard_hut', structure: 'wizard_hut', name: "Wizard's Hut", size: 7, footprint: '7 x 7',
+  note: 'A forest hut with a lantern. A wizard moves in when it stands.',
+  blocks: wizardHutBlocks(),
+});
+// --- end WIZ-1 ---
+
 // The first themed designs established the house, storehouse and market
 // motifs. Carry that visual language through the rest of the catalogue while
 // giving each roof its own pastel pairing. The transformation only replaces
@@ -1431,6 +1456,7 @@ const ROOF_PAIRS = {
   granary: [3, 2], military: [2, 4], gatehouse: [4, 2], watchtower: [2, 3],
   barracks: [3, 4], village: [3, 2], temple: [4, 2],
   armoury: [2, 4], war_hall: [4, 2], // PLAY-12
+  wizard_hut: [3, 2], // WIZ-1
   house: [2, 3], storehouse: [3, 2], market: [4, 3],
 };
 

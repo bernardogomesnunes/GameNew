@@ -1603,6 +1603,43 @@ STRUCTURES.push(
 );
 // --- end PLAY-12 ---
 
+// --- WIZ-1: the Wizard's Hut. Optional, from Age 3: no Age goal asks for it. ---
+// A small forest hut: logs, a roof, mushrooms about it and a lantern. Once it
+// stands the wizard arrives (duilt/Magic.js, DuiltGame.checkWizard).
+const HUT_LOGS = [WOOD, 41, 43];
+const HUT_MUSHROOMS = [565, 566, 567, 505, 506];
+STRUCTURES.push({
+  id: 'wizard_hut', name: "Wizard's Hut", icon: '🧙', age: 3, optional: true,
+  blurb: 'A small hut in the forest style, with mushrooms at the door and a lantern lit. A wizard moves in once it stands.',
+  minSize: 4, maxSize: 10, cost: {},
+  requires: [
+    {
+      id: 'logs',
+      test: (ctx) => count(ctx, HUT_LOGS) >= 12,
+      say: (ctx) => `Needs ${plural(12 - count(ctx, HUT_LOGS), 'log')} in the walls`,
+    },
+    {
+      id: 'mushrooms',
+      test: (ctx) => count(ctx, HUT_MUSHROOMS) >= 2,
+      say: (ctx) => `Needs ${plural(2 - count(ctx, HUT_MUSHROOMS), 'mushroom')} growing by the hut`,
+    },
+    {
+      id: 'lantern',
+      test: (ctx) => count(ctx, LIGHTS) >= 1,
+      say: () => 'Needs a lantern',
+    },
+    {
+      id: 'room',
+      test: (ctx) => ctx.shelteredVolume() >= 6,
+      say: () => 'Needs a room: walls all round and a roof over it',
+    },
+  ],
+  produces: {},
+  everySeconds: 0,
+  skill: 'building',
+});
+// --- end WIZ-1 ---
+
 /**
  * Levels for every building that makes something. Asked for directly:
  * "Let's work on the level up farms and buildings as a whole please. Let's
