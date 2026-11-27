@@ -85,7 +85,7 @@ for (const p of FRUIT_PLANTS) {
   fp.grow(g.world, g.duilt.days);
   const hit = { x: base.x, y: base.y + 2, z: base.z };
   let kept = g.withPlants([{ ...hit, prev: g.world.getBlock(hit.x, hit.y, hit.z), next: 0 }]);
-  ok('hitting an unripe plant breaks nothing and picks nothing', kept.length === 0 && g.duilt.inventory.countOf('apple') === 4 && g.toasts.length === 1);
+  ok('hitting an unripe plant breaks nothing and picks nothing', kept.length === 0 && g.duilt.inventory.countOf('apple') === 0 && g.toasts.length === 1);
   g.duilt.days = 5;
   fp.grow(g.world, g.duilt.days);
   g.duilt.rand = () => 0;

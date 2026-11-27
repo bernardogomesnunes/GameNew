@@ -1103,6 +1103,21 @@ for (const b of BLOCKS) {
   if (c != null) b.color = c;
 }
 
+// FRUIT-3, FRUIT-4: the Plant Pot, and a fruit plant's block per kind and
+// segment (config/fruitPlants.js). Plants are never placed by hand except as
+// a seed on a pot; they have no item of their own, so breaking one drops
+// nothing here (DuiltGame.onBlocksBroken gives the seed back).
+BLOCKS.push({ id: POT_BLOCK, name: 'Plant Pot', glyph: 'bucket', color: 0xb85f3c, shape: 'plant_pot', material: 'stone', unlock: null });
+FRUIT_PLANTS.forEach((p, k) => {
+  PLANT_SEGMENTS.forEach((segment, s) => {
+    BLOCKS.push({
+      id: PLANT_BASE + k * PLANT_SEGMENTS.length + s,
+      name: segment.endsWith('_ripe') ? `Ripe ${p.name}` : p.name,
+      glyph: 'sprout', color: p.leaf, shape: `fplant_${p.kind}_${segment}`, material: 'plant', unlock: null,
+    });
+  });
+});
+
 export const BLOCKS_BY_ID = new Map(BLOCKS.map((b) => [b.id, b]));
 
 /**
@@ -1401,18 +1416,3 @@ export const CHISELLED = new Map([
   [157, 167],   // Dark Brick -> Dark Pillar
   [17, 166],    // Marble -> Marble Pillar
 ]);
-
-// FRUIT-3, FRUIT-4: the Plant Pot, and a fruit plant's block per kind and
-// segment (config/fruitPlants.js). Plants are never placed by hand except as
-// a seed on a pot; they have no item of their own, so breaking one drops
-// nothing here (DuiltGame.onBlocksBroken gives the seed back).
-BLOCKS.push({ id: POT_BLOCK, name: 'Plant Pot', glyph: 'bucket', color: 0xb85f3c, shape: 'plant_pot', material: 'stone', unlock: null });
-FRUIT_PLANTS.forEach((p, k) => {
-  PLANT_SEGMENTS.forEach((segment, s) => {
-    BLOCKS.push({
-      id: PLANT_BASE + k * PLANT_SEGMENTS.length + s,
-      name: segment.endsWith('_ripe') ? `Ripe ${p.name}` : p.name,
-      glyph: 'sprout', color: p.leaf, shape: `fplant_${p.kind}_${segment}`, material: 'plant', unlock: null,
-    });
-  });
-});
