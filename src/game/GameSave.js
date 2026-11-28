@@ -146,7 +146,7 @@ export function wireSaveOnLeave() {
   });
   const save = () => {
     // The Auto save setting off: only Save in the menu writes the world.
-    if (!this.autosaveOn()) return false;
+    if (this.autosaveOn?.() === false) return false;
     const queued=this.saveNow();
     if(this.worldIsLocal&&!this.discarded&&this.worldId&&this.local.saveEmergency){
       try{this.local.saveEmergency(this.worldId,{...this.saveState(),name:this.worldName});}

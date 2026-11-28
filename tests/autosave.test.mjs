@@ -22,7 +22,7 @@ ok('even one that has nothing to write, so it is not retried every frame', scene
 
 const game = (readFileSync(new URL('../src/Game.js', import.meta.url), 'utf8') + readFileSync(new URL('../src/game/GameSave.js', import.meta.url), 'utf8'));
 ok('the autosave only fires once its interval has passed since the last save',
-  /if \(performance\.now\(\) - this\.lastAutosave > AUTOSAVE_INTERVAL_MS\) this\.saveNow\(\);/.test(game)
+  /if \(this\.autosaveOn\(\) && performance\.now\(\) - this\.lastAutosave > AUTOSAVE_INTERVAL_MS\) this\.saveNow\(\);/.test(game)
   && /saveNow\(\) \{[\s\S]{0,600}this\.lastAutosave = performance\.now\(\);\s*if \(this\.discarded \|\| !this\.worldId\) return false;/.test(game));
 
 process.exit(f ? 1 : 0);

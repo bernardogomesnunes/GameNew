@@ -8,7 +8,7 @@ assert.match(graphics, /autosave: true,/, 'on by default');
 assert.match(game, /autosaveOn\(\) \{\s*return this\.graphics\?\.autosave !== false;/);
 assert.match(game, /if \(this\.autosaveOn\(\) && performance\.now\(\) - this\.lastAutosave > AUTOSAVE_INTERVAL_MS\) this\.saveNow\(\);/, 'the five-minute save asks the setting');
 assert.match(game, /saved = this\.autosaveOn\(\) && this\.saveNow\(\)/, 'a crash saves only with it on');
-assert.match(save, /const save = \(\) => \{\s*\/\/[^\n]*\n\s*if \(!this\.autosaveOn\(\)\) return false;/, 'hiding or closing the page saves only with it on');
+assert.match(save, /const save = \(\) => \{\s*\/\/[^\n]*\n\s*if \(this\.autosaveOn\?\.\(\) === false\) return false;/, 'hiding or closing the page saves only with it on');
 assert.match(ui, /id="btn-save">Save<\/button>\s*<label[^>]*>\s*<input type="checkbox" id="set-autosave" \/> Auto save world/, 'the switch sits by Save in the menu');
 assert.match(ui, /autosave\.addEventListener\('change', \(\) => this\.game\.setAutosave\(autosave\.checked\)\)/);
 
