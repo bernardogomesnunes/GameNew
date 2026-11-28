@@ -468,6 +468,9 @@ export class UIManager {
           <div class="menu-actions menu-resume">
             <button class="primary" id="btn-resume">Back to the world</button>
             <button class="secondary" id="btn-save">Save</button>
+            <label class="gfx-check" title="Saves every 5 minutes and when you put the game away. Off: only Save writes your world.">
+              <input type="checkbox" id="set-autosave" /> Auto save world
+            </label>
             <button class="secondary" id="btn-leave">Save and leave</button>
             <!--
               Leaving without saving is the undo for a whole session, so it is
@@ -2988,6 +2991,10 @@ export class UIManager {
     ao.addEventListener('change', apply);
     air.addEventListener('change', apply);
     grass.addEventListener('change', apply);
+    // Not a graphics setting, kept with them in the same store (render/graphics.js).
+    const autosave = this.q('#set-autosave');
+    autosave.checked = g.autosave !== false;
+    autosave.addEventListener('change', () => this.game.setAutosave(autosave.checked));
 
     // A live frame rate, so a change can be judged on more than a feeling.
     setInterval(() => {

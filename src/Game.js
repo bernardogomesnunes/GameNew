@@ -697,7 +697,7 @@ export class Game {
     try { this.diagnostics?.recordCrash(error, kind, this.diagnosticContext()); } catch { /* recovery takes priority over diagnostics */ }
     this.renderer.setAnimationLoop(null);
     let saved = false;
-    try { saved = this.saveNow(); } catch (err) { console.error(err); }
+    try { saved = this.autosaveOn() && this.saveNow(); } catch (err) { console.error(err); }
     const box = document.createElement('div');
     box.id = 'crash';
     box.setAttribute('role', 'alertdialog');
@@ -3962,6 +3962,16 @@ export class Game {
    * Antialiasing is fixed when the WebGL context is created, so that one alone
    * needs a reload — the menu says so rather than appearing to do nothing.
    */
+  /** Whether the game saves by itself (the Auto save setting); Save in the menu always saves. */
+  autosaveOn() {
+    return this.graphics?.autosave !== false;
+  }
+
+  setAutosave(on) {
+    this.graphics = { ...this.graphics, autosave: !!on };
+    saveSettings(this.graphics);
+  }
+
   applyGraphics(next) {
     const needsReload = next.antialias !== this.graphics.antialias;
     this.graphics = { ...this.graphics, ...next };
@@ -4159,7 +4169,7 @@ export class Game {
       this.tickPlacing(performance.now());
       this.tickBow();
       this.gamification.tick(performance.now());
-      if (performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.saveNow();
+      if (this.autosaveOn() && performance.now() - this.lastAutosave > AUTOSAVE_INTERVAL_MS) this.saveNow();
     }
 
     if (!playing) this.player.releaseKeys();

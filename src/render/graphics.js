@@ -37,6 +37,10 @@ export const DEFAULTS = {
   // Grass tufts on the turf near you (render/GrassView.js): one batch of a
   // few hundred little models, cheap, but off for the slowest phones.
   grass: true,
+  // Owner, 28 November: "a toggle for auto save world in settings ... if it's
+  // turned on we should auto save, if not we shouldn't". Off stops the
+  // five-minute save and the save when the page is hidden or closed.
+  autosave: true,
 };
 
 export const DISTANCES = {
